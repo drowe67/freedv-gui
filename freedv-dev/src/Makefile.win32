@@ -1,0 +1,52 @@
+# src/Makefile.win32
+# David Rowe 26 Oct 2012
+#
+# Makefile for Win32 on msys/Mingw to help David R get up to speed
+#
+# $ make -f Makefile.Win32
+
+CODEC2_PATH=$(HOME)/codec2-dev
+INCLUDE_PATH=/usr/local/include
+
+WX_CONFIG=wx-config
+WX_CPPFLAGS = $(shell $(WX_CONFIG) --cxxflags) -D__WXDEBUG__
+WX_LIBS = $(shell $(WX_CONFIG) --libs core, base, aui, adv, net)
+SVN_REVISION=$(shell svnversion)
+CODEC2_INC=$(CODEC2_PATH)/src 
+CODEC2_LIB=$(CODEC2_PATH)/build_win32/src/
+
+CPP_FLAGS = -D_NO_AUTOTOOLS_ -I$(INCLUDE_PATH) $(WX_CPPFLAGS) -I$(CODEC2_INC) -I../extern/include -I. -g -Wall -DSVN_REVISION=\"$(SVN_REVISION)\"
+LIBS = $(WX_LIBS) -L$(CODEC2_LIB) -lcodec2 -lm -lportaudiocpp -lportaudio -lpthread -lsndfile -lsamplerate -lhamlib -lsox -lspeexdsp
+
+OBJS = topFrame.o \
+fdmdv2_main.o \
+fdmdv2_plot.o \
+fdmdv2_plot_scalar.o \
+fdmdv2_plot_scatter.o \
+fdmdv2_plot_spectrum.o \
+fdmdv2_plot_waterfall.o \
+fdmdv2_pa_wrapper.o \
+dlg_audiooptions.o \
+dlg_ptt.o \
+dlg_options.o \
+dlg_filter.o \
+sox_biquad.o \
+hamlib.o \
+../../codec2-dev/src/golay23.o
+
+HDRS = version.h dlg_audiooptions.h dlg_ptt.h dlg_filter.h fdmdv2_main.h fdmdv2_defines.h fdmdv2_plot.h fdmdv2_plot_scalar.h fdmdv2_plot_waterfall.h fdmdv2_plot_scatter.h fdmdv2_plot_spectrum.h fdmdv2_pa_wrapper.h topFrame.h dlg_audiooptions.h topFrame.h varicode.h ../../codec2-dev/src/golay23.h hamlib.h
+
+all: freedv
+
+freedv: $(OBJS) 
+	g++ -o freedv $(OBJS) $(CPP_FLAGS) $(LIBS)
+
+%.o: %.cpp $(HDRS) Makefile.win32
+	g++ $(CPP_FLAGS) -c $< -o $@
+
+%.o: %.c $(HDRS) Makefile.win32
+	gcc $(CPP_FLAGS) -c $< -o $@
+
+clean:
+	rm -f *.o fdmdv2
+
