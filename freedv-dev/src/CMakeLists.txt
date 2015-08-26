@@ -36,7 +36,7 @@ set(FREEDV_SOURCES
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.
 add_executable(freedv WIN32 ${FREEDV_SOURCES} ${RES_FILES})
 target_link_libraries(freedv ${FREEDV_LINK_LIBS})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 if(FREEDV_STATIC_DEPS)
     add_dependencies(freedv ${FREEDV_STATIC_DEPS})
 endif(FREEDV_STATIC_DEPS)
