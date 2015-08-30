@@ -2,19 +2,24 @@
  Building and installing on Linux
 ==================================
 
+To build codec2, the build-essential and cmake packages will be required.
+If they are not already installed, you can install them by typing
+
+  $ sudo apt-get install build-essential cmake
+
 Quickstart 1
 -----------
 
 Builds static versions of wxWidgets, portaudio, codec2-dev, which are commonly
 missing on many Linux systems, or of the wrong (older) version.
 
-1/ Assuming the fdmdv2-dev source is checked out into ~/fdmdv2-dev:
+1/ Assuming the freedv-dev source is checked out into ~/freedv-dev:
 
-  $ sudo apt-get install libgtk2.0-dev libhamlib-dev libsamplerate-dev libasound2-dev libao-dev libgsm1-dev
-  $ cd fdmdv2-dev
+  $ sudo apt-get install libgtk2.0-dev libhamlib-dev libsamplerate-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev
+  $ cd freedv-dev
   $ mkdir build_linux
   $ cd build_linux
-  $ cmake -DBOOTSTRAP_WXWIDGETS=TRUE ~/fdmdv2-dev
+  $ cmake -DBOOTSTRAP_WXWIDGETS=TRUE ~/freedv-dev ../
   $ make
 
 2/ Then you can configure FreeDV using your local codec-dev, something like:
@@ -35,7 +40,7 @@ Quickstart 2
 
 1/ Assuming you have all the dependant libraries:
 
-  $ cd /path/to/fdmdv2
+  $ cd /path/to/freedv
   $ mkdir build_linux
   $ cd build_linux
   $ cmake ../ (defaults to /usr/local, use CMAKE_INSTALL_PREFIX to override)
@@ -61,7 +66,7 @@ Quickstart 2
 
 4/ Build WxWidgets
 
-  $ cd /path/to/fdmdv2-dev
+  $ cd /path/to/freedv-dev
   $ mkdir build_windows
   $ cd build_windows
   $ cmake -DBOOTSTRAP_WXWIDGETS=TRUE .. -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-Ubuntu-mingw32.cmake -DCMAKE_BUILD_TYPE=Debug
@@ -82,7 +87,7 @@ Quickstart 2
 ====================================
 
 The windows build is similar to linux and follows the same basic workflow,
-however, while codec2 and FreeDV (fdmdv2) build well on windows, some of the
+however, while codec2 and FreeDV (freedv) build well on windows, some of the
 dependencies do not. For that reson current windows releases are cross-compiled
 from linux.
 
@@ -114,7 +119,7 @@ NOTE: This forces "USE_STATIC_WXWIDGETS" to be true internally regarless of the
 value set manually.
 
 (from any directory, but empty directory outside of the source is prefered.)
-$ cmake -DBOOTSTRAP_WXWIDGETS=TRUE /path/to/fdmdv2
+$ cmake -DBOOTSTRAP_WXWIDGETS=TRUE /path/to/freedv
 $ make
 (wxWidgets is downloaded and built)
 $ cmake .

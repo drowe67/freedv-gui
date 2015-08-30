@@ -25,7 +25,7 @@
 #ifdef __WIN32__
 #include <wx/msw/registry.h>
 #endif
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__WXOSX__)
 #include <glob.h>
 #include <string.h>
 #endif
@@ -105,7 +105,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     staticBoxSizer31->Add(m_listCtrlPorts, 1, wxALIGN_CENTER, 0);
 #endif
 
-#ifdef __WXGTK__
+#if defined(__WXOSX__) || defined(__WXGTK__)
     wxBoxSizer* bSizer83;
     bSizer83 = new wxBoxSizer(wxHORIZONTAL);
 
@@ -257,12 +257,16 @@ void ComPortsDlg::populatePortList()
     m_listCtrlPorts->Append(aStr);
     m_cbSerialPort->Append(aStr);
 #endif
-#ifdef __WXGTK__
+#if defined(__WXGTK__) || defined(__WXOSX__)
     m_cbSerialPort->Clear();
     m_cbCtlDevicePath->Clear();
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__WXOSX__)
 	glob_t	gl;
+#ifdef __FreeBSD__
 	if(glob("/dev/tty*", GLOB_MARK, NULL, &gl)==0) {
+#else
+	if(glob("/dev/tty.*", GLOB_MARK, NULL, &gl)==0) {
+#endif
 		for(unsigned int i=0; i<gl.gl_pathc; i++) {
 			if(gl.gl_pathv[i][strlen(gl.gl_pathv[i])-1]=='/')
 				continue;
@@ -278,8 +282,10 @@ void ComPortsDlg::populatePortList()
 				continue;
 
 			/* Exclude initial-state and lock-state devices */
+#ifndef __WXOSX__
 			if(strchr(gl.gl_pathv[i], '.') != NULL)
 				continue;
+#endif
 
 			m_cbSerialPort->Append(gl.gl_pathv[i]);
 			m_cbCtlDevicePath->Append(gl.gl_pathv[i]);
@@ -323,7 +329,7 @@ void ComPortsDlg::ExchangeData(int inout)
 #ifdef __WXMSW__
         m_listCtrlPorts->SetStringSelection(str);
 #endif
-#ifdef __WXGTK__
+#if defined(__WXOSX__) || defined(__WXGTK__)
         m_cbCtlDevicePath->SetValue(str);
 #endif
         m_rbUseRTS->SetValue(wxGetApp().m_boolUseRTS);
@@ -354,7 +360,7 @@ void ComPortsDlg::ExchangeData(int inout)
 #ifdef __WXMSW__
         wxGetApp().m_strRigCtrlPort             = m_listCtrlPorts->GetStringSelection();
 #endif
-#ifdef __WXGTK__
+#if defined(__WXGTK__) || defined(__WXOSX__)
         wxGetApp().m_strRigCtrlPort             = m_cbCtlDevicePath->GetValue();
 #endif
         wxGetApp().m_boolUseRTS                 = m_rbUseRTS->GetValue();
