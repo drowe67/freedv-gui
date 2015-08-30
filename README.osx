@@ -84,11 +84,6 @@ $ cd freedv-1.0
 or 
 $ cd freedv-dev
 
-At the moment we will need to apply a few patches:
-
-patch src/dlg_ptt.cpp dlg_ptt_OSX.patch
-patch src/CMakeLists.txt cmake_OSX.patch
-
 $ mkdir build_osx && cd build_osx
 
 Assuming you are intending on building Codec2 as part of the build process, run:
