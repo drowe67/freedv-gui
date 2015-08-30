@@ -42,3 +42,22 @@ if(FREEDV_STATIC_DEPS)
 endif(FREEDV_STATIC_DEPS)
 install(TARGETS freedv
     RUNTIME DESTINATION bin)
+
+# Custom commands to build OSX images.
+if(APPLE)
+    add_custom_command(
+        TARGET freedv
+        POST_BUILD
+        COMMAND mkdir ARGS -p FreeDV.app/Contents/MacOS
+        COMMAND mkdir ARGS -p FreeDV.app/Contents/Resources/English.lproj
+        COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/info.plist FreeDV.app/Contents
+        COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/freedv.icns FreeDV.app/Contents/Resources
+        COMMAND echo ARGS -n "APPL????" > FreeDV.app/Contents/PkgInfo
+        COMMAND cp ARGS freedv FreeDV.app/Contents/MacOS/FreeDV
+        COMMAND dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @executable_path/../libs/
+        COMMAND mkdir dist_tmp
+        COMMAND cp -r FreeDV.app dist_tmp
+        COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO ./FreeDV.dmg
+        COMMAND rm -rf dist_tmp
+    )
+endif(APPLE)

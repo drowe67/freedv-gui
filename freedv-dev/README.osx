@@ -1,0 +1,112 @@
+Building under OSX is similar to building under linux, but there are some additional steps that need to be performed to produce a working app-bundle.
+
+For the following instructions, I'm assuming you will be placing everything in:
+/Users/<yourusername>/Dev/
+
+1/ DEPENDENCIES
+Using Macports, most of the appropriate dependencies can be installed by:
+
+$ sudo port install subversion git libtool libsamplerate sox portaudio dylibbundler cmake
+
+It should be fairly similar using HomeBrew, but you will need to replace all the /opt/ paths in the following instructions.
+
+1.1/ HAMLIB 
+First, we will need to build hamlib from source, as we need hamlib to be statically compiled (Macports won't do this..)
+
+$ git clone git://git.code.sf.net/p/hamlib/code hamlib-code
+$ cd hamlib-code
+
+You will now need to edit line 12 of autogen.sh, to change "libtoolize" to "glibtoolize"
+
+$ ./autogen.sh
+$ ./configure --disable-shared --prefix /Users/<your-username-here>/Dev/hamlib
+$ make
+$ make install
+
+You should now have an installation of hamlib in ~/Dev/hamlib
+
+Just in case you have hamlib installed via Macports, it may be a good idea to run
+$ sudo port deactivate hamlib
+
+1.2/ WXWIDGETS
+To be able to produce an appbundle, we need wxWidgets to be build statically. Again, Macports won't do this out of the box.
+
+Edit the wxWidgets-3.0 port file using:
+$ sudo port edit wxWidgets-3.0
+
+and add the following to the bottom of the file:
+
+variant static description { build a static version of the libraries with some other options... } {
+    configure.args-append       --enable-std_iostreams
+    configure.args-append       --disable-shared
+    configure.args-delete       --with-sdl
+    configure.args-delete       --with-opengl
+    set installtype release-static
+}
+
+Now you can build and install a static variant of wxWidgets with:
+$ sudo port install wxWidgets-3.0 +static
+
+Note: This will probably break anything else which is using wxWidgets. Once you have finished building FreeDV, you may
+want to go back to the dynamically compiled version using:
+$ sudo port install wxWidgets-3.0
+
+HomeBrew Users: Anyone know how to do the above?
+
+1.3/ CODEC2 LIBRARIES
+The FreeDV CMake procedure will automatically checkout and compile Codec2.
+If you want to build and install your own copy (i.e. for access to the command-line tools), you can do so:
+
+$ wget http://files.freedv.org/codec2/codec2-0.4.tar.gz
+or
+$ svn checkout https://svn.code.sf.net/p/freetel/code/codec2-dev/
+
+$ cd codec2-0.4
+or 
+cd codec2-dev
+$ mkdir build_osx && cd build_osx
+$ cmake ../ && make
+$ sudo make install
+
+3/ BUILDING FREEDV 
+Get the FreeDV source by either:
+
+Getting the current 'stable' release (1.0):
+$ wget http://files.freedv.org/freedv/freedv-1.0.tar.gz
+$ tar -xzf freedv-1.0.tar.gz
+
+or
+
+Checking the latest revision out from SVN:
+$ svn checkout https://svn.code.sf.net/p/freetel/code/freedv-dev/
+
+$ cd freedv-1.0
+or 
+$ cd freedv-dev
+
+At the moment we will need to apply a few patches:
+
+patch src/dlg_ptt.cpp dlg_ptt_OSX.patch
+patch src/CMakeLists.txt cmake_OSX.patch
+
+$ mkdir build_osx && cd build_osx
+
+Assuming you are intending on building Codec2 as part of the build process, run:
+
+$ cmake -DWXCONFIG=/opt/local/Library/Frameworks/wxWidgets.framework/Versions/wxWidgets/3.0/lib/wx/config/osx_cocoa-unicode-static-3.0 -DCMAKE_EXE_LINKER_FLAGS="-L/opt/local/lib" -DHAMLIB_INCLUDE_DIR=../../hamlib/include -DHAMLIB_LIBRARY=../../hamlib/lib/libhamlib.a ../
+
+Then, build FreeDV:
+$ make
+
+The build process will create an appbundle (FreeDV.app) and a compressed disk image (FreeDV.dmg) in ./build_osx/src
+Move these to wherever you want, and run!
+
+Happy DVing!
+
+Acknowledgements:
+A big thank you to Mooneer Salem, K6AQ, for walking me through this process, and figuring out how to solve the wxWidgets and Hamlib issues.
+
+Please e-mail any corrections to either the digitalvoice google group list, or myself, at:
+vk5qi(at)rfhead.net
+Mark Jessop VK5QI
+
