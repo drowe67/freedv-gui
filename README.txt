@@ -62,7 +62,7 @@ Quickstart 2
 
 3/ Checkout a fresh copy of codec2-dev and build for Windows, pointing to the generate_codebook built by a linux build of generate_codebook, using this cmake line
 
-  $ cmake .. -DCMAKE_TOOLCHAIN_FILE=../fdmdv2-dev/cmake/Toolchain-Ubuntu-mingw32.cmake -DUNITTEST=FALSE -DGENERATE_CODEBOOK=/home/david/codec2-dev/build_linux/src/generate_codebook 
+  $ cmake .. -DCMAKE_TOOLCHAIN_FILE=../freedv-dev/cmake/Toolchain-Ubuntu-mingw32.cmake -DUNITTEST=FALSE -DGENERATE_CODEBOOK=/home/david/codec2-dev/build_linux/src/generate_codebook 
 
 4/ Build WxWidgets
 
