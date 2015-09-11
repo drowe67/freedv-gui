@@ -38,7 +38,7 @@ class PlotScatter : public PlotPanel
 
     protected:
         COMP m_mem[SCATTER_MEM_SYMS_MAX];
-        COMP m_new_samples[FDMDV_NC_MAX+1];
+        COMP m_new_samples[MODEM_STATS_NC_MAX+1];
 
         void draw(wxAutoBufferedPaintDC&  dc);
         void OnPaint(wxPaintEvent& event);

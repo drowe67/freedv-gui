@@ -502,7 +502,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     g_rxDataOutFifo = fifo_create(MAX_CALLSIGN*VARICODE_MAX_BITS);
 
     sox_biquad_start();
-    golay23_init();
 
     g_testFrames = 0;
     g_test_frame_sync_state = 0;
@@ -880,12 +879,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     for (r=0; r<g_stats.nr; r++) {
         
-        if (g_pfreedv->mode == FREEDV_MODE_1600) {
+        if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600) {
             m_panelScatter->add_new_samples(&g_stats.rx_symbols[r][0]);
         }
-
-        if ((g_pfreedv->mode == FREEDV_MODE_700) || (g_pfreedv->mode == FREEDV_MODE_700B)) {
-
+        
+        if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B)) {
+            
             /* 
                FreeDV 700 uses diversity, so combine symbols for
                scatter plot, as combined symbols are used for
@@ -1134,22 +1133,21 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     // Run time update of FreeDV 700 tx clipper
 
-    g_pfreedv->clip = (int)wxGetApp().m_FreeDV700txClip;
+    freedv_set_clip(g_pfreedv, (int)wxGetApp().m_FreeDV700txClip);
 
     // Test Frame Bit Error Updates ------------------------------------
 
     // Toggle test frame mode at run time
 
-    if (!g_pfreedv->test_frames && wxGetApp().m_testFrames) {
+    if (!freedv_get_test_frames(g_pfreedv) && wxGetApp().m_testFrames) {
 
         // reset stats on check box off to on transition
 
-        g_pfreedv->test_frames = 1;
-        g_pfreedv->test_frame_sync_state = 0;
-        g_pfreedv->total_bits = 0;
-        g_pfreedv->total_bit_errors = 0;
+        freedv_set_test_frames(g_pfreedv, 1);
+        freedv_set_total_bits(g_pfreedv, 0);
+        freedv_set_total_bit_errors(g_pfreedv, 0);
     }
-    g_pfreedv->test_frames =  wxGetApp().m_testFrames;
+    freedv_set_test_frames(g_pfreedv, wxGetApp().m_testFrames);
     g_channel_noise =  wxGetApp().m_channel_noise;
 
     if (g_State) {
@@ -1157,14 +1155,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         // update stats on main page
 
-        sprintf(bits, "Bits: %d", (int)g_pfreedv->total_bits); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
-        sprintf(errors, "Errs: %d", (int)g_pfreedv->total_bit_errors); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
-        float b = (float)g_pfreedv->total_bit_errors/(1E-6+g_pfreedv->total_bits);
+        sprintf(bits, "Bits: %d", freedv_get_total_bits(g_pfreedv)); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
+        sprintf(errors, "Errs: %d", freedv_get_total_bit_errors(g_pfreedv)); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
+        float b = (float)freedv_get_total_bit_errors(g_pfreedv)/(1E-6+freedv_get_total_bits(g_pfreedv));
         sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
 
         // update error plots
 
-        int sz_error_pattern = g_pfreedv->sz_error_pattern;
+        int sz_error_pattern = freedv_get_sz_error_pattern(g_pfreedv);
         short error_pattern[sz_error_pattern];
 
         if (fifo_read(g_error_pattern_fifo, error_pattern, sz_error_pattern) == 0) {
@@ -1172,7 +1170,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
             /* both modes map IQ to alternate bits, but one same carrier */
 
-            if (g_pfreedv->mode == FREEDV_MODE_1600) {
+            if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600) {
                 /* FreeDV 1600 mapping from error pattern to bit on each carrier */
 
                 for(b=0; b<g_Nc*2; b++) {
@@ -1192,7 +1190,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 m_panelTestFrameErrorsHist->add_new_short_samples(0, g_error_hist, 2*FDMDV_NC_MAX, max_hist);
             }
        
-            if ((g_pfreedv->mode == FREEDV_MODE_700) || (g_pfreedv->mode == FREEDV_MODE_700B)) {
+            if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B)) {
                 int c;
 
                 /* FreeDV 700 mapping from error pattern to bit on each
@@ -1504,8 +1502,8 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     }
     else {
         g_analog = 0;
-        m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(g_pfreedv->modem_sample_rate/2)));
-        m_panelWaterfall->setFs(g_pfreedv->modem_sample_rate);
+        m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedv_get_modem_sample_rate(g_pfreedv)/2)));
+        m_panelWaterfall->setFs(freedv_get_modem_sample_rate(g_pfreedv));
     }
 
     g_State = 0;
@@ -1528,8 +1526,8 @@ void MainFrame::OnCallSignReset(wxCommandEvent& event)
 
 void MainFrame::OnBerReset(wxCommandEvent& event)
 {
-    g_pfreedv->total_bits = 0;
-    g_pfreedv->total_bit_errors = 0;
+    freedv_set_total_bits(g_pfreedv, 0);
+    freedv_set_total_bit_errors(g_pfreedv, 0);
     int i;
     for(i=0; i<2*g_Nc; i++)
         g_error_hist[i] = 0;
@@ -1694,7 +1692,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
             {
                 sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
                 sfInfo.channels   = 1;
-                sfInfo.samplerate = g_pfreedv->modem_sample_rate;
+                sfInfo.samplerate = freedv_get_modem_sample_rate(g_pfreedv);
             }
         }
         g_sfPlayFileFromRadio = sf_open(soundFile, SFM_READ, &sfInfo);
@@ -1794,13 +1792,13 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
             {
                 sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
                 sfInfo.channels   = 1;
-                sfInfo.samplerate = g_pfreedv->modem_sample_rate;
+                sfInfo.samplerate = freedv_get_modem_sample_rate(g_pfreedv);
             }
             else if(extension == wxT("wav"))
             {
                 sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
                 sfInfo.channels   = 1;
-                sfInfo.samplerate = g_pfreedv->modem_sample_rate;
+                sfInfo.samplerate = freedv_get_modem_sample_rate(g_pfreedv);
             } else {
                 wxMessageBox(wxT("Invalid file format"), wxT("Record File From Radio"), wxOK);
                 return;
@@ -2015,7 +2013,7 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
     wxString svnLatestRev("Can't determine latest SVN revision.");
 
     // Try to determine current SVN revision from the Internet
-    wxURL url(wxT("http://svn.code.sf.net/p/freetel/code/fdmdv2/"));
+    wxURL url(wxT("http://svn.code.sf.net/p/freetel/code/freedv-dev/"));
 
     if(url.GetError() == wxURL_NOERR)
     {
@@ -2132,13 +2130,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         // init freedv states
 
         g_pfreedv = freedv_open(g_mode);
-        g_pfreedv->callback_state = NULL;
-        g_pfreedv->freedv_get_next_tx_char = &my_get_next_tx_char;
-        g_pfreedv->freedv_put_next_rx_char = &my_put_next_rx_char;
+        freedv_set_callback_txt(g_pfreedv, &my_put_next_rx_char, &my_get_next_tx_char, NULL);
 
-        g_pfreedv->error_pattern_callback_state = (void*)m_panelTestFrameErrors;
-        g_pfreedv->freedv_put_error_pattern = &my_freedv_put_error_pattern;
-        g_error_pattern_fifo = fifo_create(2*g_pfreedv->sz_error_pattern);
+        freedv_set_callback_error_pattern(g_pfreedv, my_freedv_put_error_pattern, (void*)m_panelTestFrameErrors);
+        g_error_pattern_fifo = fifo_create(2*freedv_get_sz_error_pattern(g_pfreedv));
         g_error_hist = new short[FDMDV_NC_MAX*2];
         int i;
         for(i=0; i<2*FDMDV_NC_MAX; i++)
@@ -2154,18 +2149,18 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         // Init Speex pre-processor states
         // by inspecting Speex source it seems that only denoiser is on be default
 
-        g_speex_st = speex_preprocess_state_init(g_pfreedv->n_speech_samples, FS); 
+        g_speex_st = speex_preprocess_state_init(freedv_get_n_speech_samples(g_pfreedv), FS); 
 
         // adjust spectrum and waterfall freq scaling base on mode
 
-        m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(g_pfreedv->modem_sample_rate/2)));
-        m_panelWaterfall->setFs(g_pfreedv->modem_sample_rate);
+        m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedv_get_modem_sample_rate(g_pfreedv)/2)));
+        m_panelWaterfall->setFs(freedv_get_modem_sample_rate(g_pfreedv));
 
         // adjust scatter diagram for Number of FDM carriers
 
         // init Codec 2 LPC Post Filter
 
-        codec2_set_lpc_post_filter(g_pfreedv->codec2,
+        codec2_set_lpc_post_filter(freedv_get_codec2(g_pfreedv),
                                    wxGetApp().m_codec2LPCPostFilterEnable,
                                    wxGetApp().m_codec2LPCPostFilterBassBoost,
                                    wxGetApp().m_codec2LPCPostFilterBeta,
@@ -2190,7 +2185,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         // Init text msg decoding
 
-        varicode_set_code_num(&g_pfreedv->varicode_dec_states, wxGetApp().m_textEncoding);
+        freedv_set_varicode_code_num(g_pfreedv, wxGetApp().m_textEncoding);
         //printf("m_textEncoding = %d\n", wxGetApp().m_textEncoding);
         //printf("g_stats.snr: %f\n", g_stats.snr_est);
 
@@ -2544,8 +2539,8 @@ void MainFrame::startRxStream()
         g_rxUserdata->infifo2 = fifo_create(8*N48);
         printf("N48: %d\n", N48);
 
-        g_rxUserdata->rxinfifo = fifo_create(3 * g_pfreedv->n_speech_samples);
-        g_rxUserdata->rxoutfifo = fifo_create(2 * g_pfreedv->n_speech_samples);
+        g_rxUserdata->rxinfifo = fifo_create(3 * freedv_get_n_speech_samples(g_pfreedv));
+        g_rxUserdata->rxoutfifo = fifo_create(2 * freedv_get_n_speech_samples(g_pfreedv));
 
         // Init Equaliser Filters ------------------------------------------------------
 
@@ -3022,7 +3017,7 @@ void txRxProcessing()
     if (g_analog) 
         samplerate = FS;
     else
-        samplerate = g_pfreedv->modem_sample_rate;
+        samplerate = freedv_get_modem_sample_rate(g_pfreedv);
 
     //
     //  RX side processing --------------------------------------------
@@ -3091,8 +3086,8 @@ void txRxProcessing()
 
         // send latest squelch level to FreeDV API, as it handles squelch internally
 
-        g_pfreedv->squelch_en = g_SquelchActive;
-        g_pfreedv->snr_squelch_thresh = g_SquelchLevel;
+        freedv_set_squelch_en(g_pfreedv, g_SquelchActive);
+        freedv_set_snr_squelch_thresh(g_pfreedv, g_SquelchLevel);
         //fprintf(g_logfile, "snr_squelch_thresh: %f\n",  g_pfreedv->snr_squelch_thresh);
 
         // Get some audio to send to headphones/speaker.  If in analog
@@ -3169,7 +3164,7 @@ void txRxProcessing()
         {
             g_mutexProtectingCallbackData.Unlock();
 
-            int   nsam = g_soundCard2SampleRate * g_pfreedv->n_speech_samples/FS;
+            int   nsam = g_soundCard2SampleRate * freedv_get_n_speech_samples(g_pfreedv)/FS;
             assert(nsam <= 4*N48);
 
             // infifo2 is written to by another sound card so it may
@@ -3220,10 +3215,10 @@ void txRxProcessing()
 
             resample_for_plot(g_plotSpeechInFifo, in8k_short, nout, FS);
 
-            n_samples = g_pfreedv->n_nom_modem_samples;
+            n_samples = freedv_get_n_nom_modem_samples(g_pfreedv);
 
             if (g_analog) {
-                n_samples = g_pfreedv->n_speech_samples;
+                n_samples = freedv_get_n_speech_samples(g_pfreedv);
 
                 // Boost the "from mic" -> "to radio" audio in analog
                 // mode.  The need for the gain was found by
@@ -3241,14 +3236,14 @@ void txRxProcessing()
                 }
             }
             else {
-                COMP tx_fdm[g_pfreedv->n_nom_modem_samples];
-                COMP tx_fdm_offset[g_pfreedv->n_nom_modem_samples];
+                COMP tx_fdm[freedv_get_n_nom_modem_samples(g_pfreedv)];
+                COMP tx_fdm_offset[freedv_get_n_nom_modem_samples(g_pfreedv)];
                 int  i;
 
                 freedv_comptx(g_pfreedv, tx_fdm, in8k_short);
   
-                fdmdv_freq_shift_coh(tx_fdm_offset, tx_fdm, g_TxFreqOffsetHz, g_pfreedv->modem_sample_rate, &g_TxFreqOffsetPhaseRect, g_pfreedv->n_nom_modem_samples);
-                for(i=0; i<g_pfreedv->n_nom_modem_samples; i++)
+                freq_shift_coh(tx_fdm_offset, tx_fdm, g_TxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_TxFreqOffsetPhaseRect, freedv_get_n_nom_modem_samples(g_pfreedv));
+                for(i=0; i<freedv_get_n_nom_modem_samples(g_pfreedv); i++)
                     out8k_short[i] = tx_fdm_offset[i].real;
             }
 
@@ -3276,10 +3271,10 @@ void per_frame_rx_processing(
                                             FIFO    *input_fifo
                                         )
 {
-    short               input_buf[g_pfreedv->n_max_modem_samples];
-    short               output_buf[g_pfreedv->n_speech_samples];
-    COMP                rx_fdm[g_pfreedv->n_max_modem_samples];
-    COMP                rx_fdm_offset[g_pfreedv->n_max_modem_samples];
+    short               input_buf[freedv_get_n_max_modem_samples(g_pfreedv)];
+    short               output_buf[freedv_get_n_speech_samples(g_pfreedv)];
+    COMP                rx_fdm[freedv_get_n_max_modem_samples(g_pfreedv)];
+    COMP                rx_fdm_offset[freedv_get_n_max_modem_samples(g_pfreedv)];
     float               rx_spec[MODEM_STATS_NSPEC];
     int                 i;
     int                 nin, nin_prev, nout;
@@ -3287,7 +3282,7 @@ void per_frame_rx_processing(
     nin = freedv_nin(g_pfreedv);
     while (fifo_read(input_fifo, input_buf, nin) == 0)
     {
-        assert(nin <= g_pfreedv->n_max_modem_samples);
+        assert(nin <= freedv_get_n_max_modem_samples(g_pfreedv));
 
         nin_prev = nin;
         //fwrite(input_buf, sizeof(short), nin, ft);
@@ -3304,20 +3299,24 @@ void per_frame_rx_processing(
 
             /* enough noise to get a couple of % errors */
 
-            if (g_pfreedv->mode == FREEDV_MODE_1600)
+            if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600)
                 snr = 2.0;
-            if ((g_pfreedv->mode == FREEDV_MODE_700) || (g_pfreedv->mode == FREEDV_MODE_700))
+            if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700))
                 snr = -1.0;           
             fdmdv_simulate_channel(&g_sig_pwr_av, rx_fdm, nin, snr);
         }
-        fdmdv_freq_shift_coh(rx_fdm_offset, rx_fdm, g_RxFreqOffsetHz, g_pfreedv->modem_sample_rate, &g_RxFreqOffsetPhaseRect, nin);
+        freq_shift_coh(rx_fdm_offset, rx_fdm, g_RxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_RxFreqOffsetPhaseRect, nin);
         nout = freedv_comprx(g_pfreedv, output_buf, rx_fdm_offset);
         
         fifo_write(output_fifo, output_buf, nout);
         
         nin = freedv_nin(g_pfreedv);
-        g_State = g_pfreedv->sync;
+        g_State = freedv_get_sync(g_pfreedv);
         //fprintf(g_logfile, "g_State: %d g_stats.sync: %d snr: %f \n", g_State, g_stats.sync, f->snr);
+
+        // grab extended stats so we can plot spectrum, scatter diagram etc
+
+        freedv_get_modem_extended_stats(g_pfreedv, &g_stats);
 
         // compute rx spectrum 
 
@@ -3328,12 +3327,6 @@ void per_frame_rx_processing(
         for(i = 0; i<MODEM_STATS_NSPEC; i++) {
             g_avmag[i] = BETA * g_avmag[i] + (1.0 - BETA) * rx_spec[i];
         }
-
-        if (g_pfreedv->mode == FREEDV_MODE_1600)
-            fdmdv_get_demod_stats(g_pfreedv->fdmdv, &g_stats);
-        if ((g_pfreedv->mode == FREEDV_MODE_700) || (g_pfreedv->mode == FREEDV_MODE_700B))
-            cohpsk_get_demod_stats(g_pfreedv->cohpsk, &g_stats);
-
     }
 }
 
@@ -3694,4 +3687,24 @@ void my_put_next_rx_char(void *callback_state, char c) {
 
 void my_freedv_put_error_pattern(void *state, short error_pattern[], int sz_error_pattern) {
     fifo_write(g_error_pattern_fifo, error_pattern, sz_error_pattern);
+}
+
+void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin)
+{
+    COMP  foff_rect;
+    float mag;
+    int   i;
+
+    foff_rect.real = cosf(2.0*M_PI*foff/Fs);
+    foff_rect.imag = sinf(2.0*M_PI*foff/Fs);
+    for(i=0; i<nin; i++) {
+	*foff_phase_rect = cmult(*foff_phase_rect, foff_rect);
+	rx_fdm_fcorr[i] = cmult(rx_fdm[i], *foff_phase_rect);
+    }
+
+    /* normalise digital oscilator as the magnitude can drfift over time */
+
+    mag = cabsolute(*foff_phase_rect);
+    foff_phase_rect->real /= mag;	 
+    foff_phase_rect->imag /= mag;	 
 }

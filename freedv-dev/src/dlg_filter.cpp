@@ -543,8 +543,7 @@ void FilterDlg::setBeta(void) {
 
 void FilterDlg::setCodec2(void) {
     if (m_running) {
-        assert(g_pfreedv->codec2 != NULL);
-        codec2_set_lpc_post_filter(g_pfreedv->codec2, 
+        codec2_set_lpc_post_filter(freedv_get_codec2(g_pfreedv), 
                                m_codec2LPCPostFilterEnable->GetValue(), 
                                m_codec2LPCPostFilterBassBoost->GetValue(), 
                                m_beta, m_gamma);

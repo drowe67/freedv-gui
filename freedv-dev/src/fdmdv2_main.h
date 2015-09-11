@@ -65,9 +65,7 @@
 #endif
 
 #include "codec2.h"
-#include "codec2_fdmdv.h"
 #include "codec2_fifo.h"
-#include "golay23.h"
 #include "modem_stats.h"
 
 #include "topFrame.h"
@@ -610,5 +608,9 @@ void my_freedv_put_error_pattern(void *state, short error_pattern[], int sz_erro
 
 char my_get_next_tx_char(void *callback_state);
 void my_put_next_rx_char(void *callback_state, char c);
+
+// helper complex freq shift function
+
+void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin);
 
 #endif //__FDMDV2_MAIN__
