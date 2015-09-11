@@ -57,7 +57,7 @@ PlotScatter::PlotScatter(wxFrame* parent) : PlotPanel(parent)
 // changing number of carriers changes number of symbols to plot
 void PlotScatter::setNc(int Nc) {
     Nsym = Nc+1;
-    assert(Nsym <= (FDMDV_NC_MAX+1));
+    assert(Nsym <= (MODEM_STATS_NC_MAX+1));
     scatterMemSyms = ((int)(SCATTER_MEM_SECS*(Nsym/DT)));
     assert(scatterMemSyms <= SCATTER_MEM_SYMS_MAX);
 }

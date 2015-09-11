@@ -23,7 +23,7 @@
 
 #include "wx/wx.h"
 #include "freedv_api.h"
-#include "freedv_api_internal.h"
+#include "modem_stats.h"
 
 // Spectrogram and Waterfall
 
@@ -45,7 +45,7 @@
 #define SCATTER_MEM_SECS    10
 // (symbols/frame)/(graphics update period) = symbols/s sent to scatter memory
 // memory (symbols) = secs of memory * symbols/sec
-#define SCATTER_MEM_SYMS_MAX    ((int)(SCATTER_MEM_SECS*((FDMDV_NC_MAX+1)/DT)))
+#define SCATTER_MEM_SYMS_MAX    ((int)(SCATTER_MEM_SECS*((MODEM_STATS_NC_MAX+1)/DT)))
 
 // Waveform plotting constants
 
