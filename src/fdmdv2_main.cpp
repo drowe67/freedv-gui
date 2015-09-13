@@ -427,8 +427,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     int mode  = pConfig->Read(wxT("/Audio/mode"), (long)0);
     if (mode == 0)
         m_rb1600->SetValue(1);
-    if (mode == 1)
-        m_rb700->SetValue(1);
     if (mode == 2)
         m_rb700b->SetValue(1);
         
@@ -632,8 +630,6 @@ MainFrame::~MainFrame()
         int mode;
         if (m_rb1600->GetValue())
             mode = 0;
-        if (m_rb700->GetValue())
-            mode = 1;
         if (m_rb700b->GetValue())
             mode = 2;
         pConfig->Write(wxT("/Audio/mode"), mode);
@@ -891,7 +887,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_panelScatter->add_new_samples(&g_stats.rx_symbols[r][0]);
         }
         
-        if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B)) {
+        if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) {
             
             /* 
                FreeDV 700 uses diversity, so combine symbols for
@@ -1198,7 +1194,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 m_panelTestFrameErrorsHist->add_new_short_samples(0, g_error_hist, 2*FDMDV_NC_MAX, max_hist);
             }
        
-            if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B)) {
+            if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) {
                 int c;
 
                 /* FreeDV 700 mapping from error pattern to bit on each
@@ -2114,7 +2110,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_btnTogPTT->Enable();
 
         m_rb1600->Disable();
-        m_rb700->Disable();
         m_rb700b->Disable();
 
         // determine what mode we are using
@@ -2123,11 +2118,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             g_mode = FREEDV_MODE_1600;
             g_Nc = 16;
             m_panelScatter->setNc(g_Nc);
-        }
-        if (m_rb700->GetValue()) {
-            g_mode = FREEDV_MODE_700;
-            g_Nc = 14;
-            m_panelScatter->setNc(g_Nc/2-1);  /* due to diversity, -1 due to no pilot like FreeDV 1600 */
         }
         if (m_rb700b->GetValue()) {
             g_mode = FREEDV_MODE_700B;
@@ -2147,10 +2137,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         for(i=0; i<2*FDMDV_NC_MAX; i++)
             g_error_hist[i] = 0;
 
-        //if (g_mode == FREEDV_MODE_700)
-        //    cohpsk_set_verbose(g_pfreedv->cohpsk, 1);
-
-        //cohpsk_set_verbose(g_pfreedv->cohpsk, 1);
         assert(g_pfreedv != NULL);
         modem_stats_open(&g_stats);
 
@@ -2265,9 +2251,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_btnTogPTT->Disable();
         m_togBtnOnOff->SetLabel(wxT("Start"));
         m_rb1600->Enable();
-        m_rb700->Enable();
         m_rb700b->Enable();
 #ifdef DISABLED_FEATURE
+        m_rb700->Enable();
         m_rb1400old->Enable();
         m_rb1600Wide->Enable();
         m_rb1400->Enable();
@@ -3309,7 +3295,7 @@ void per_frame_rx_processing(
 
             if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600)
                 snr = 2.0;
-            if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700))
+            if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B)
                 snr = -1.0;           
             fdmdv_simulate_channel(&g_sig_pwr_av, rx_fdm, nin, snr);
         }
