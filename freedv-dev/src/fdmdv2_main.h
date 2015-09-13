@@ -155,6 +155,10 @@ class MainApp : public wxApp
 
         bool                m_boolHalfDuplex;
 
+        wxString            m_txtVoiceKeyerWaveFile;
+        wxString            m_txtVoiceKeyerRxPause;
+        wxString            m_txtVoiceKeyerRepeats;
+
         bool                m_boolHamlibUseForPTT;
         unsigned int        m_intHamlibRig;
         wxString            m_strHamlibSerialPort;

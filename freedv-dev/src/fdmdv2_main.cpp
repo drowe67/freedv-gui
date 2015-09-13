@@ -350,6 +350,10 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxGetApp().m_boolHalfDuplex     = pConfig->ReadBool(wxT("/Rig/HalfDuplex"),     true);
     wxGetApp().m_leftChannelVoxTone = pConfig->ReadBool("/Rig/leftChannelVoxTone",  false);
  
+    wxGetApp().m_txtVoiceKeyerWaveFile = pConfig->Read(wxT("/VoiceKeyer/WaveFile"), wxT("voicekeyer.wav"));
+    wxGetApp().m_txtVoiceKeyerRxPause = pConfig->Read(wxT("/VoiceKeyer/RxPause"), wxT("10"));
+    wxGetApp().m_txtVoiceKeyerRepeats = pConfig->Read(wxT("/VoiceKeyer/Repeats"), wxT("5"));
+ 
     wxGetApp().m_boolHamlibUseForPTT = pConfig->ReadBool("/Hamlib/UseForPTT", false);
     wxGetApp().m_intHamlibRig = pConfig->ReadLong("/Hamlib/RigName", 0);
     wxGetApp().m_strHamlibSerialPort = pConfig->Read("/Hamlib/SerialPort", "");
@@ -590,6 +594,10 @@ MainFrame::~MainFrame()
         pConfig->Write(wxT("/Audio/soundCard2InDeviceNum"),   g_soundCard2InDeviceNum);
         pConfig->Write(wxT("/Audio/soundCard2OutDeviceNum"),  g_soundCard2OutDeviceNum);
         pConfig->Write(wxT("/Audio/soundCard2SampleRate"),    g_soundCard2SampleRate );
+
+        pConfig->Write(wxT("/VoiceKeyer/WaveFile"), wxGetApp().m_txtVoiceKeyerWaveFile);
+        pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_txtVoiceKeyerRxPause);
+        pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_txtVoiceKeyerRepeats);
 
         pConfig->Write(wxT("/Rig/HalfDuplex"),              wxGetApp().m_boolHalfDuplex);
         pConfig->Write(wxT("/Rig/leftChannelVoxTone"),      wxGetApp().m_leftChannelVoxTone);
