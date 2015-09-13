@@ -55,6 +55,32 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     mainSizer->Add(staticBoxSizer28, 0, wxEXPAND, 5);
 
     //----------------------------------------------------------------------
+    // Voice Keyer 
+    //----------------------------------------------------------------------
+
+    wxStaticBoxSizer* staticBoxSizer28a = new wxStaticBoxSizer( new wxStaticBox(this, wxID_ANY, _("Voice Keyer")), wxHORIZONTAL);
+
+    wxStaticText *m_staticText28b = new wxStaticText(this, wxID_ANY, _("Wave File: "), wxDefaultPosition, wxDefaultSize, 0);
+    staticBoxSizer28a->Add(m_staticText28b, 0, wxALIGN_CENTER_VERTICAL, 5);    
+    m_txtCtrlVoiceKeyerWaveFile = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(200,-1), 0);
+    m_txtCtrlVoiceKeyerWaveFile->SetToolTip(_("Wave file to play for Voice Keyer"));
+    staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerWaveFile, 0, 0, 5);
+
+    wxStaticText *m_staticText28c = new wxStaticText(this, wxID_ANY, _("   Rx Pause: "), wxDefaultPosition, wxDefaultSize, 0);
+    staticBoxSizer28a->Add(m_staticText28c, 0, wxALIGN_CENTER_VERTICAL , 5);
+    m_txtCtrlVoiceKeyerRxPause = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+    m_txtCtrlVoiceKeyerRxPause->SetToolTip(_("How long to wait in Rx mode before repeat"));
+    staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerRxPause, 0, 0, 5);
+
+    wxStaticText *m_staticText28d = new wxStaticText(this, wxID_ANY, _("   Repeats: "), wxDefaultPosition, wxDefaultSize, 0);
+    staticBoxSizer28a->Add(m_staticText28d, 0, wxALIGN_CENTER_VERTICAL, 5);
+    m_txtCtrlVoiceKeyerRepeats = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+    m_txtCtrlVoiceKeyerRepeats->SetToolTip(_("How long to wait in Rx mode before repeat"));
+    staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerRepeats, 0, 0, 5);
+
+    mainSizer->Add(staticBoxSizer28a, 0, wxEXPAND, 5);
+
+    //----------------------------------------------------------------------
     // Hamlib for CAT PTT
     //----------------------------------------------------------------------
 
@@ -320,6 +346,12 @@ void ComPortsDlg::ExchangeData(int inout)
         m_ckHalfDuplex->SetValue(wxGetApp().m_boolHalfDuplex);
         m_ckLeftChannelVoxTone->SetValue(wxGetApp().m_leftChannelVoxTone);
 
+        /* Voice Keyer */
+
+        m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().m_txtVoiceKeyerWaveFile);
+        m_txtCtrlVoiceKeyerRxPause->SetValue(wxGetApp().m_txtVoiceKeyerRxPause);
+        m_txtCtrlVoiceKeyerRepeats->SetValue(wxGetApp().m_txtVoiceKeyerRepeats);
+
         m_ckUseHamlibPTT->SetValue(wxGetApp().m_boolHamlibUseForPTT);
         m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
         m_cbSerialPort->SetValue(wxGetApp().m_strHamlibSerialPort);
@@ -343,6 +375,15 @@ void ComPortsDlg::ExchangeData(int inout)
         pConfig->Write(wxT("/Rig/HalfDuplex"), wxGetApp().m_boolHalfDuplex);
         wxGetApp().m_leftChannelVoxTone = m_ckLeftChannelVoxTone->GetValue();
         pConfig->Write(wxT("/Rig/leftChannelVoxTone"), wxGetApp().m_leftChannelVoxTone);
+
+        /* Voice Keyer */
+
+        wxGetApp().m_txtVoiceKeyerWaveFile = m_txtCtrlVoiceKeyerWaveFile->GetValue();
+        pConfig->Write(wxT("/VoiceKeyer/WaveFile"), wxGetApp().m_txtVoiceKeyerWaveFile);
+        wxGetApp().m_txtVoiceKeyerRxPause = m_txtCtrlVoiceKeyerRxPause->GetValue();
+        pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_txtVoiceKeyerRxPause);
+        wxGetApp().m_txtVoiceKeyerRepeats = m_txtCtrlVoiceKeyerRepeats->GetValue();
+        pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_txtVoiceKeyerRepeats);
 
         /* Hamlib settings. */
 

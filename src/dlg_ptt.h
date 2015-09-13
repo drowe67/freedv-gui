@@ -50,6 +50,12 @@ class ComPortsDlg : public wxDialog
         wxCheckBox* m_ckHalfDuplex;
         wxCheckBox* m_ckLeftChannelVoxTone;
 
+        /* Voice Keyer */
+
+        wxTextCtrl   *m_txtCtrlVoiceKeyerWaveFile;
+        wxTextCtrl   *m_txtCtrlVoiceKeyerRxPause;
+        wxTextCtrl   *m_txtCtrlVoiceKeyerRepeats;
+
         /* Hamlib settings.*/
 
         wxCheckBox *m_ckUseHamlibPTT;
