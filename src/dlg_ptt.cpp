@@ -349,8 +349,8 @@ void ComPortsDlg::ExchangeData(int inout)
         /* Voice Keyer */
 
         m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().m_txtVoiceKeyerWaveFile);
-        m_txtCtrlVoiceKeyerRxPause->SetValue(wxGetApp().m_txtVoiceKeyerRxPause);
-        m_txtCtrlVoiceKeyerRepeats->SetValue(wxGetApp().m_txtVoiceKeyerRepeats);
+        m_txtCtrlVoiceKeyerRxPause->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRxPause));
+        m_txtCtrlVoiceKeyerRepeats->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRepeats));
 
         m_ckUseHamlibPTT->SetValue(wxGetApp().m_boolHamlibUseForPTT);
         m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
@@ -380,10 +380,13 @@ void ComPortsDlg::ExchangeData(int inout)
 
         wxGetApp().m_txtVoiceKeyerWaveFile = m_txtCtrlVoiceKeyerWaveFile->GetValue();
         pConfig->Write(wxT("/VoiceKeyer/WaveFile"), wxGetApp().m_txtVoiceKeyerWaveFile);
-        wxGetApp().m_txtVoiceKeyerRxPause = m_txtCtrlVoiceKeyerRxPause->GetValue();
-        pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_txtVoiceKeyerRxPause);
-        wxGetApp().m_txtVoiceKeyerRepeats = m_txtCtrlVoiceKeyerRepeats->GetValue();
-        pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_txtVoiceKeyerRepeats);
+        long tmp;
+        m_txtCtrlVoiceKeyerRxPause->GetValue().ToLong(&tmp); if (tmp < 0) tmp = 0; wxGetApp().m_intVoiceKeyerRxPause = (int)tmp;
+        pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_intVoiceKeyerRxPause);
+        m_txtCtrlVoiceKeyerRepeats->GetValue().ToLong(&tmp);
+        if (tmp < 0) tmp = 0; if (tmp > 100) tmp = 100;
+        wxGetApp().m_intVoiceKeyerRepeats = (int)tmp;
+        pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_intVoiceKeyerRepeats);
 
         /* Hamlib settings. */
 

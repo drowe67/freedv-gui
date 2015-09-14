@@ -351,8 +351,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxGetApp().m_leftChannelVoxTone = pConfig->ReadBool("/Rig/leftChannelVoxTone",  false);
  
     wxGetApp().m_txtVoiceKeyerWaveFile = pConfig->Read(wxT("/VoiceKeyer/WaveFile"), wxT("voicekeyer.wav"));
-    wxGetApp().m_txtVoiceKeyerRxPause = pConfig->Read(wxT("/VoiceKeyer/RxPause"), wxT("10"));
-    wxGetApp().m_txtVoiceKeyerRepeats = pConfig->Read(wxT("/VoiceKeyer/Repeats"), wxT("5"));
+    wxGetApp().m_intVoiceKeyerRxPause = pConfig->Read(wxT("/VoiceKeyer/RxPause"), 10);
+    wxGetApp().m_intVoiceKeyerRepeats = pConfig->Read(wxT("/VoiceKeyer/Repeats"), 5);
  
     wxGetApp().m_boolHamlibUseForPTT = pConfig->ReadBool("/Hamlib/UseForPTT", false);
     wxGetApp().m_intHamlibRig = pConfig->ReadLong("/Hamlib/RigName", 0);
@@ -521,6 +521,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     optionsDlg = new OptionsDlg(NULL);
     m_schedule_restore = false;
 
+    vk_state = VK_IDLE;
 }
 
 //-------------------------------------------------------------------------
@@ -594,8 +595,8 @@ MainFrame::~MainFrame()
         pConfig->Write(wxT("/Audio/soundCard2SampleRate"),    g_soundCard2SampleRate );
 
         pConfig->Write(wxT("/VoiceKeyer/WaveFile"), wxGetApp().m_txtVoiceKeyerWaveFile);
-        pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_txtVoiceKeyerRxPause);
-        pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_txtVoiceKeyerRepeats);
+        pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_intVoiceKeyerRxPause);
+        pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_intVoiceKeyerRepeats);
 
         pConfig->Write(wxT("/Rig/HalfDuplex"),              wxGetApp().m_boolHalfDuplex);
         pConfig->Write(wxT("/Rig/leftChannelVoxTone"),      wxGetApp().m_leftChannelVoxTone);
@@ -1250,6 +1251,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
     }
 
+    // Voice Keyer state machine
+
+    VoiceKeyerProcessEvent(VK_DT);
 }
 #endif
 
@@ -1444,14 +1448,14 @@ void MainFrame::togglePTT(void) {
 
     if(wxGetApp().m_boolUseSerialPTT && (com_handle != COM_HANDLE_INVALID)) {
         if (wxGetApp().m_boolUseRTS) {
-            printf("g_tx: %d m_boolRTSPos: %d serialLine: %d\n", g_tx, wxGetApp().m_boolRTSPos, g_tx == wxGetApp().m_boolRTSPos);
+            //fprintf(stderr, "g_tx: %d m_boolRTSPos: %d serialLine: %d\n", g_tx, wxGetApp().m_boolRTSPos, g_tx == wxGetApp().m_boolRTSPos);
             if (g_tx == wxGetApp().m_boolRTSPos)
                 raiseRTS();
             else
                 lowerRTS();
         }
         if (wxGetApp().m_boolUseDTR) {
-            printf("g_tx: %d m_boolDTRPos: %d serialLine: %d\n", g_tx, wxGetApp().m_boolDTRPos, g_tx == wxGetApp().m_boolDTRPos);
+            //fprintf(stderr, "g_tx: %d m_boolDTRPos: %d serialLine: %d\n", g_tx, wxGetApp().m_boolDTRPos, g_tx == wxGetApp().m_boolDTRPos);
             if (g_tx == wxGetApp().m_boolDTRPos)
                 raiseDTR();
             else
@@ -1466,6 +1470,160 @@ void MainFrame::togglePTT(void) {
     m_textLevel->SetLabel(wxT(""));
     m_gaugeLevel->SetValue(0);
 }
+
+/*
+   Voice Keyer:
+
+   + space bar turns keyer off
+   + 5 secs of valid sync turns it off
+
+   [ ] complete state machine and builds OK
+   [ ] file select dialog
+   [ ] test all states
+   [ ] restore size
+*/
+
+void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
+{
+    VoiceKeyerStartTx();
+    event.Skip();
+}
+
+
+int MainFrame::VoiceKeyerStartTx(void)
+{
+    int next_state;
+
+    // start playing wave file or die trying
+
+    SF_INFO sfInfo;
+    sfInfo.format = 0;
+
+    g_sfPlayFile = sf_open(wxGetApp().m_txtVoiceKeyerWaveFile, SFM_READ, &sfInfo);
+    if(g_sfPlayFile == NULL) {
+        wxString strErr = sf_strerror(NULL);
+        wxMessageBox(strErr, wxT("Couldn't open voice keyer wave file"), wxOK);
+        m_togBtnVoiceKeyer->SetValue(false);
+        next_state = VK_IDLE;
+    }
+    else {
+        SetStatusText(wxT("Voice Keyer: Playing File") + wxGetApp().m_txtVoiceKeyerWaveFile + wxT(" to Mic Input") , 0);
+        g_loopPlayFileToMicIn = false;
+        g_playFileToMicIn = true;
+
+        m_btnTogPTT->SetValue(true); togglePTT();
+        next_state = VK_TX;
+    }
+
+    return next_state;
+}
+
+
+void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
+    int next_state = vk_state;
+
+   switch(vk_state) {
+
+   case VK_IDLE:
+        if (vk_event == VK_START) {
+            // sample these puppies at start just in case they are changed while VK running
+            vk_rx_pause = wxGetApp().m_intVoiceKeyerRxPause;
+            vk_repeats = wxGetApp().m_intVoiceKeyerRepeats;
+
+            vk_repeat_counter = 0;
+            next_state = VoiceKeyerStartTx();
+        }
+        break;
+        
+    case VK_TX:
+
+        // In this state we are transmitting and playing a wave file
+        // to Mic In
+
+        if (vk_event == VK_SPACE_BAR) {
+            m_btnTogPTT->SetValue(false); togglePTT();
+            StopPlayFileToMicIn();
+            m_togBtnVoiceKeyer->SetValue(false);
+            next_state = VK_IDLE;
+        }
+
+        if (vk_event == VK_PLAY_FINISHED) {
+            m_btnTogPTT->SetValue(false); togglePTT();
+            vk_repeat_counter++;
+            if (vk_repeat_counter > vk_repeats) {
+                m_togBtnVoiceKeyer->SetValue(false);
+                next_state = VK_IDLE;
+            }
+            vk_rx_time = 0.0;
+            next_state = VK_RX;
+        }
+
+        break;
+
+    case VK_RX:
+
+        // in this state we are receiving and waiting for
+        // delay timer or valid sync
+
+        if (vk_event == VK_DT) {
+            vk_rx_time += DT;
+            if (vk_rx_time >= vk_rx_pause) {
+                next_state = VoiceKeyerStartTx();
+            }
+        }
+
+        if (vk_event == VK_SPACE_BAR) {
+            m_togBtnVoiceKeyer->SetValue(false);
+            next_state = VK_IDLE;
+        }
+
+        if (vk_event == VK_SYNC) {
+            vk_rx_time = 0;
+            next_state = VK_SYNC_WAIT;
+        }
+        break;
+
+    case VK_SYNC_WAIT:
+
+        // In this state we wait for valid sync to last
+        // VK_SYNC_WAIT_TIME seconds
+
+        if (vk_event == VK_SPACE_BAR) {
+            m_togBtnVoiceKeyer->SetValue(false);
+            next_state = VK_IDLE;
+        }
+
+       if (vk_event == VK_DT) {
+            vk_rx_time += DT;
+
+            // if we lose sync restart RX state
+
+            if (freedv_get_sync(g_pfreedv) == 0) {
+                vk_rx_time = 0.0;
+                next_state = VK_RX;
+            }
+
+            // drop out of voice keyer if we get a few seconds of valid sync
+
+            if (vk_rx_time >= VK_SYNC_WAIT_TIME) {
+                m_togBtnVoiceKeyer->SetValue(false);
+                next_state = VK_IDLE;
+            }
+        }
+        break;
+
+    default:
+        // catch anything we missed
+
+        m_btnTogPTT->SetValue(false); togglePTT();
+        m_togBtnVoiceKeyer->SetValue(false);
+        next_state = VK_IDLE;
+    }
+
+    fprintf(stderr, "VoiceKeyerProcessEvent: vk_state: %d vk_event: %d next_state: %d\n", vk_state, vk_event, next_state);
+    vk_state = next_state;
+}
+
 
 //-------------------------------------------------------------------------
 // OnTogBtnRxID()
@@ -1568,6 +1726,15 @@ static wxWindow* createMyExtraPlayFilePanel(wxWindow *parent)
     return new MyExtraPlayFilePanel(parent);
 }
 
+void MainFrame::StopPlayFileToMicIn(void)
+{
+    g_mutexProtectingCallbackData.Lock();
+    g_playFileToMicIn = false;
+    sf_close(g_sfPlayFile);
+    SetStatusText(wxT(""));
+    g_mutexProtectingCallbackData.Unlock();
+}
+
 //-------------------------------------------------------------------------
 // OnPlayFileToMicIn()
 //-------------------------------------------------------------------------
@@ -1575,13 +1742,9 @@ void MainFrame::OnPlayFileToMicIn(wxCommandEvent& event)
 {
     wxUnusedVar(event);
 
-    if(g_playFileToMicIn)
-    {
-        g_mutexProtectingCallbackData.Lock();
-        g_playFileToMicIn = false;
-        sf_close(g_sfPlayFile);
-        SetStatusText(wxT(""));
-        g_mutexProtectingCallbackData.Unlock();
+    if(g_playFileToMicIn) {
+        StopPlayFileToMicIn();
+        VoiceKeyerProcessEvent(VK_PLAY_FINISHED);
     }
     else
     {

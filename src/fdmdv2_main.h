@@ -120,6 +120,25 @@ extern int                 g_soundCard2InDeviceNum;
 extern int                 g_soundCard2OutDeviceNum;
 extern int                 g_soundCard2SampleRate;
 
+// Voice Keyer Constants
+
+#define VK_SYNC_WAIT_TIME 5.0
+
+// Voice Keyer States
+
+#define VK_IDLE      0
+#define VK_TX        1
+#define VK_RX        2
+#define VK_SYNC_WAIT 3
+
+// Voice Keyer Events
+
+#define VK_START         0
+#define VK_SPACE_BAR     1
+#define VK_PLAY_FINISHED 2
+#define VK_DT            3
+#define VK_SYNC          4
+
 class MainFrame;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -156,8 +175,8 @@ class MainApp : public wxApp
         bool                m_boolHalfDuplex;
 
         wxString            m_txtVoiceKeyerWaveFile;
-        wxString            m_txtVoiceKeyerRxPause;
-        wxString            m_txtVoiceKeyerRepeats;
+        int                 m_intVoiceKeyerRxPause;
+        int                 m_intVoiceKeyerRepeats;
 
         bool                m_boolHamlibUseForPTT;
         unsigned int        m_intHamlibRig;
@@ -473,6 +492,7 @@ class MainFrame : public TopFrame
         void OnToolsOptionsUI(wxUpdateUIEvent& event);
 
         void OnPlayFileToMicIn( wxCommandEvent& event );
+        void StopPlayFileToMicIn(void);
         void OnRecFileFromRadio( wxCommandEvent& event );
         void OnPlayFileFromRadio( wxCommandEvent& event );
 
@@ -492,6 +512,7 @@ class MainFrame : public TopFrame
         void OnTogBtnRxID( wxCommandEvent& event );
         void OnTogBtnTxID( wxCommandEvent& event );
         void OnTogBtnPTT( wxCommandEvent& event );
+        void OnTogBtnVoiceKeyerClick (wxCommandEvent& event);
         void OnTogBtnOnOff( wxCommandEvent& event );
 
         void OnCallSignReset( wxCommandEvent& event );
@@ -508,6 +529,9 @@ class MainFrame : public TopFrame
 #ifdef _USE_ONIDLE
         void OnIdle(wxIdleEvent &evt);
 #endif
+
+        void VoiceKeyerProcessEvent(int vk_event);
+        int VoiceKeyerStartTx(void);
 
     private:
         bool        m_useMemory;
@@ -537,6 +561,13 @@ class MainFrame : public TopFrame
         void*       designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q = 0.0);
         void        designEQFilters(paCallBackData *cb);
         void        deleteEQFilters(paCallBackData *cb);
+
+        // Voice Keyer States
+
+        int        vk_state;
+        int        vk_rx_pause;
+        int        vk_repeats, vk_repeat_counter;
+        float      vk_rx_time;
 };
 
 void txRxProcessing();
