@@ -1381,14 +1381,19 @@ int MainApp::FilterEvent(wxEvent& event)
             //fprintf(stderr,"frame->m_RxRunning: %d g_modal: %d\n",
             //        frame->m_RxRunning, g_modal);
             if (frame->m_RxRunning && !g_modal) {
-                if (frame->m_btnTogPTT->GetValue())
-                    frame->m_btnTogPTT->SetValue(false);
-                else
-                    frame->m_btnTogPTT->SetValue(true);
 
-                frame->togglePTT();
-                frame->VoiceKeyerProcessEvent(VK_SPACE_BAR);
+                // space bar controls rx/rx if keyer not running
+                if (frame->vk_state == VK_IDLE) {
+                    if (frame->m_btnTogPTT->GetValue())
+                        frame->m_btnTogPTT->SetValue(false);
+                    else
+                        frame->m_btnTogPTT->SetValue(true);
 
+                    frame->togglePTT();
+                }
+                else // spavce bar stops keyer
+                    frame->VoiceKeyerProcessEvent(VK_SPACE_BAR);
+                    
                 return true; // absorb space so we don't toggle control with focus (e.g. Start)
 
             }
@@ -1487,7 +1492,11 @@ void MainFrame::togglePTT(void) {
 
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
-    VoiceKeyerProcessEvent(VK_START);
+    if (vk_state == VK_IDLE)
+        VoiceKeyerProcessEvent(VK_START);
+    else
+        VoiceKeyerProcessEvent(VK_SPACE_BAR);
+        
     event.Skip();
 }
 
@@ -2278,6 +2287,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_togBtnOnOff->SetLabel(wxT("Stop"));
         m_btnTogPTT->Enable();
         m_togBtnVoiceKeyer->Enable();
+        vk_state = VK_IDLE;
 
         m_rb1600->Disable();
         m_rb700b->Disable();
@@ -2402,6 +2412,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             CloseSerialPort();
 
         m_btnTogPTT->SetValue(false);
+        VoiceKeyerProcessEvent(VK_SPACE_BAR);
 
         stopRxStream();
 
