@@ -203,6 +203,8 @@ TODO
         + shouldn't trigger sync logic, will be a problem with carriers
     [ ] "clip" led, encourage people to adjust gain to hit that occ when speaking
     [ ] Win32 record from radio time
+    [ ] Stuttering with squelch off
+        + Rpeorted by Mark VK5QI, can we repeat?
 
 [ ] FreeDV 700 improvements
     [ ] bpf filter after clipping to remove clicks
@@ -219,6 +221,12 @@ TODO
     [ ] switchable diversity (narrowband) option
         + measure difference on a few channels
         + blog
+    [ ] slow mode at half speed rather than repeating, or tx twice and sum
+    [ ] Can freedv remove ambient rf with a simple second Rx?
+    [ ] presence, posting to web site
+    [ ] explore relaxing sync 700 thresh
+    [ ] longer record files
+    [ ] two vertical lines in the waterfall representing the band limits of the 700B mode
 
 [X] win32
     [X] X-compile works
@@ -254,27 +262,63 @@ TODO
 USER GUIDE NOTES
 =================
 
-TODO: Put this in a more usable form, video tutorials etc
+TODO: Put this in a more usable form (maybe parse into HTML), video
+tutorials etc...
 
-1/ Error Histogram.  Displays BER of each carrier when in "test frame"
- mode.  As each QPSK carrier has 2 bits there are 2*Nc histogram
- points.
+1/ Error Histogram
+------------------
 
- Ideally all carriers will have about the same BER (+/- 20% after 5000
- total bit errors).  However problems can occur with filtering in the
- tx path.  If one carrier has less power, then it will have a higher
- BER.  The errors in this carrier will tend to dominate overall
- BER. For example if one carrier is attenuated due to SSB filter
- ripple in the tx path then the BER on that carrier will be higher.
- This is bad news for DV.
+Displays BER of each carrier when in "test frame"
+mode.  As each QPSK carrier has 2 bits there are 2*Nc histogram
+points.
 
- Suggested usage: Transmit FreeDV in test frame mode.  Use a 2nd rx
- (or get a friend) to monitor your rx signal with FreeDV in test frame
- mode.  Adjust your rx SNR to get a BER of a few % (e.g. reduce tx power,
- use a short antenna for the rx, point your beam away, adjust rx RF
- gain).  Monitor the error histogram for a few minutes, until you have
- say 5000 total bit errors.  You have a problem if the BER of any
- carrier is more than 20% different from the rest.
+Ideally all carriers will have about the same BER (+/- 20% after 5000
+total bit errors).  However problems can occur with filtering in the
+tx path.  If one carrier has less power, then it will have a higher
+BER.  The errors in this carrier will tend to dominate overall
+BER. For example if one carrier is attenuated due to SSB filter ripple
+in the tx path then the BER on that carrier will be higher.  This is
+bad news for DV.
 
-  A typical issue will be one carrier at 1.0, the others at 0.5,
-  indicating the poorer carrier BER is twice the larger.
+Suggested usage: 
+
+i) Transmit FreeDV in test frame mode.  Use a 2nd rx (or
+get a friend) to monitor your rx signal with FreeDV in test frame
+mode.  
+
+ii) Adjust your rx SNR to get a BER of a few % (e.g. reduce tx
+power, use a short antenna for the rx, point your beam away, adjust rx
+RF gain).  
+
+iii) Monitor the error histogram for a few minutes, until you
+have say 5000 total bit errors.  You have a problem if the BER of any
+carrier is more than 20% different from the rest.
+
+A typical issue will be one carrier at 1.0, the others at 0.5,
+indicating the poorer carrier BER is twice the larger.
+
+2/ Voice Keyer
+--------------
+
+Puts FreeDV and your radio into transmit, reads a wave
+file of your voice to call CQ, then switches to receive to see if
+anyone is replying.  If you press space bar the voice keyer stops.  If
+a signal with a valid sync is received for a few seconds the voice
+keyer stops.  The Tools-PTT dialog can be used to select the wave
+file, set the Rx delay, and number of times the tx/rx cycle repeats.
+
+3/ UDP Control port
+-------------------
+
+FreeDV can be controlled via UDP from other programs on the same host
+(127.0.0.1) using text strings.  The default port is 3000, and can be
+set Via Tools-Options.
+
+Currents commands:
+
+  "set txtmsg XXX" - sets the text/callsign ID string to XXX
+  "restore"        - Restores the FreeDV windowto full size if minimised
+  "ptton"          - PTT on (transmit)
+  "pttoff"         - PTT off (receive)
+
+Hint: "netcat" can be used to test this feature.
