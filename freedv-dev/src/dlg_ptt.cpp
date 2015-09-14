@@ -62,9 +62,12 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
 
     wxStaticText *m_staticText28b = new wxStaticText(this, wxID_ANY, _("Wave File: "), wxDefaultPosition, wxDefaultSize, 0);
     staticBoxSizer28a->Add(m_staticText28b, 0, wxALIGN_CENTER_VERTICAL, 5);    
-    m_txtCtrlVoiceKeyerWaveFile = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(400,-1), 0);
+    m_txtCtrlVoiceKeyerWaveFile = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
     m_txtCtrlVoiceKeyerWaveFile->SetToolTip(_("Wave file to play for Voice Keyer"));
     staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerWaveFile, 0, 0, 5);
+
+    m_buttonChooseVoiceKeyerWaveFile = new wxButton(this, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
+    staticBoxSizer28a->Add(m_buttonChooseVoiceKeyerWaveFile, 0, wxALIGN_CENTER_VERTICAL, 5);
 
     wxStaticText *m_staticText28c = new wxStaticText(this, wxID_ANY, _("   Rx Pause: "), wxDefaultPosition, wxDefaultSize, 0);
     staticBoxSizer28a->Add(m_staticText28c, 0, wxALIGN_CENTER_VERTICAL , 5);
@@ -211,6 +214,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnOK), NULL, this);
     m_buttonCancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnCancel), NULL, this);
     m_buttonApply->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnApply), NULL, this);
+    m_buttonChooseVoiceKeyerWaveFile->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnChooseVoiceKeyerWaveFile), NULL, this);
 }
 
 //-------------------------------------------------------------------------
@@ -225,6 +229,7 @@ ComPortsDlg::~ComPortsDlg()
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnOK), NULL, this);
     m_buttonCancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnCancel), NULL, this);
     m_buttonApply->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnApply), NULL, this);
+    m_buttonChooseVoiceKeyerWaveFile->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnChooseVoiceKeyerWaveFile), NULL, this);
 }
 
 //-------------------------------------------------------------------------
@@ -446,6 +451,22 @@ void ComPortsDlg::PTTUseSerialClicked(wxCommandEvent& event)
 void ComPortsDlg::OnApply(wxCommandEvent& event)
 {
     ExchangeData(EXCHANGE_DATA_OUT);
+}
+
+ void ComPortsDlg::OnChooseVoiceKeyerWaveFile(wxCommandEvent& event) {
+     wxFileDialog openFileDialog(
+                                 this,
+                                 wxT("Voice Keyer wave file"),
+                                 wxGetApp().m_txtVoiceKeyerWaveFile,
+                                 wxEmptyString,
+                                 wxT("WAV files (*.wav)|*.wav"),
+                                 wxFD_SAVE
+                                 );
+     if(openFileDialog.ShowModal() == wxID_CANCEL) {
+         return;     // the user changed their mind...
+     }
+
+     m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().m_txtVoiceKeyerWaveFile);
 }
 
 //-------------------------------------------------------------------------

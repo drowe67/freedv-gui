@@ -52,6 +52,7 @@ class ComPortsDlg : public wxDialog
 
         /* Voice Keyer */
 
+        wxButton     *m_buttonChooseVoiceKeyerWaveFile;
         wxTextCtrl   *m_txtCtrlVoiceKeyerWaveFile;
         wxTextCtrl   *m_txtCtrlVoiceKeyerRxPause;
         wxTextCtrl   *m_txtCtrlVoiceKeyerRepeats;
@@ -87,6 +88,8 @@ protected:
 
         void PTTUseHamLibClicked(wxCommandEvent& event);
         void PTTUseSerialClicked(wxCommandEvent& event);
+
+        void OnChooseVoiceKeyerWaveFile(wxCommandEvent& event);
 
         void OnOK(wxCommandEvent& event);
         void OnCancel(wxCommandEvent& event);

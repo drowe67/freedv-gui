@@ -1800,7 +1800,7 @@ void MainFrame::OnPlayFileToMicIn(wxCommandEvent& event)
                 sfInfo.samplerate = FS;
             }
         }
-        g_sfPlayFile = sf_open(soundFile, SFM_READ, &sfInfo);
+        g_sfPlayFile = sf_open(soundFile.c_str(), SFM_READ, &sfInfo);
         if(g_sfPlayFile == NULL)
         {
             wxString strErr = sf_strerror(NULL);
@@ -1877,7 +1877,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
                 sfInfo.samplerate = freedv_get_modem_sample_rate(g_pfreedv);
             }
         }
-        g_sfPlayFileFromRadio = sf_open(soundFile, SFM_READ, &sfInfo);
+        g_sfPlayFileFromRadio = sf_open(soundFile.c_str(), SFM_READ, &sfInfo);
         g_sfFs = sfInfo.samplerate;
         if(g_sfPlayFileFromRadio == NULL)
         {
@@ -2015,7 +2015,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         }
 #endif
 
-        g_sfRecFile = sf_open(soundFile, SFM_WRITE, &sfInfo);
+        g_sfRecFile = sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo);
         if(g_sfRecFile == NULL)
         {
             wxString strErr = sf_strerror(NULL);
