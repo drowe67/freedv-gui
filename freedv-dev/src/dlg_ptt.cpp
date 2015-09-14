@@ -62,19 +62,19 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
 
     wxStaticText *m_staticText28b = new wxStaticText(this, wxID_ANY, _("Wave File: "), wxDefaultPosition, wxDefaultSize, 0);
     staticBoxSizer28a->Add(m_staticText28b, 0, wxALIGN_CENTER_VERTICAL, 5);    
-    m_txtCtrlVoiceKeyerWaveFile = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(200,-1), 0);
+    m_txtCtrlVoiceKeyerWaveFile = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(400,-1), 0);
     m_txtCtrlVoiceKeyerWaveFile->SetToolTip(_("Wave file to play for Voice Keyer"));
     staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerWaveFile, 0, 0, 5);
 
     wxStaticText *m_staticText28c = new wxStaticText(this, wxID_ANY, _("   Rx Pause: "), wxDefaultPosition, wxDefaultSize, 0);
     staticBoxSizer28a->Add(m_staticText28c, 0, wxALIGN_CENTER_VERTICAL , 5);
-    m_txtCtrlVoiceKeyerRxPause = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+    m_txtCtrlVoiceKeyerRxPause = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
     m_txtCtrlVoiceKeyerRxPause->SetToolTip(_("How long to wait in Rx mode before repeat"));
     staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerRxPause, 0, 0, 5);
 
     wxStaticText *m_staticText28d = new wxStaticText(this, wxID_ANY, _("   Repeats: "), wxDefaultPosition, wxDefaultSize, 0);
     staticBoxSizer28a->Add(m_staticText28d, 0, wxALIGN_CENTER_VERTICAL, 5);
-    m_txtCtrlVoiceKeyerRepeats = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+    m_txtCtrlVoiceKeyerRepeats = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
     m_txtCtrlVoiceKeyerRepeats->SetToolTip(_("How long to wait in Rx mode before repeat"));
     staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerRepeats, 0, 0, 5);
 

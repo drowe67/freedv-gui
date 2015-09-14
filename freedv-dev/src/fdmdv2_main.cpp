@@ -446,6 +446,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     //m_togTxID->Disable();
     m_togBtnAnalog->Disable();
     m_btnTogPTT->Disable();
+    m_togBtnVoiceKeyer->Disable();
     //m_togBtnALC->Disable();
 
     // squelch settings
@@ -1386,6 +1387,7 @@ int MainApp::FilterEvent(wxEvent& event)
                     frame->m_btnTogPTT->SetValue(true);
 
                 frame->togglePTT();
+                frame->VoiceKeyerProcessEvent(VK_SPACE_BAR);
 
                 return true; // absorb space so we don't toggle control with focus (e.g. Start)
 
@@ -1477,7 +1479,7 @@ void MainFrame::togglePTT(void) {
    + space bar turns keyer off
    + 5 secs of valid sync turns it off
 
-   [ ] complete state machine and builds OK
+   [X] complete state machine and builds OK
    [ ] file select dialog
    [ ] test all states
    [ ] restore size
@@ -1485,7 +1487,7 @@ void MainFrame::togglePTT(void) {
 
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
-    VoiceKeyerStartTx();
+    VoiceKeyerProcessEvent(VK_START);
     event.Skip();
 }
 
@@ -1502,7 +1504,7 @@ int MainFrame::VoiceKeyerStartTx(void)
     g_sfPlayFile = sf_open(wxGetApp().m_txtVoiceKeyerWaveFile, SFM_READ, &sfInfo);
     if(g_sfPlayFile == NULL) {
         wxString strErr = sf_strerror(NULL);
-        wxMessageBox(strErr, wxT("Couldn't open voice keyer wave file"), wxOK);
+        wxMessageBox(strErr, wxT("Couldn't open:") + wxGetApp().m_txtVoiceKeyerWaveFile, wxOK);
         m_togBtnVoiceKeyer->SetValue(false);
         next_state = VK_IDLE;
     }
@@ -1522,20 +1524,21 @@ int MainFrame::VoiceKeyerStartTx(void)
 void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
     int next_state = vk_state;
 
-   switch(vk_state) {
+    switch(vk_state) {
 
-   case VK_IDLE:
+    case VK_IDLE:
         if (vk_event == VK_START) {
             // sample these puppies at start just in case they are changed while VK running
             vk_rx_pause = wxGetApp().m_intVoiceKeyerRxPause;
             vk_repeats = wxGetApp().m_intVoiceKeyerRepeats;
+            fprintf(stderr, "vk_rx_pause: %d vk_repeats: %d\n", vk_rx_pause, vk_repeats);
 
             vk_repeat_counter = 0;
             next_state = VoiceKeyerStartTx();
         }
         break;
         
-    case VK_TX:
+     case VK_TX:
 
         // In this state we are transmitting and playing a wave file
         // to Mic In
@@ -1554,13 +1557,15 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
                 m_togBtnVoiceKeyer->SetValue(false);
                 next_state = VK_IDLE;
             }
-            vk_rx_time = 0.0;
-            next_state = VK_RX;
+            else {
+                vk_rx_time = 0.0;
+                next_state = VK_RX;
+            }
         }
 
         break;
 
-    case VK_RX:
+     case VK_RX:
 
         // in this state we are receiving and waiting for
         // delay timer or valid sync
@@ -1583,7 +1588,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         }
         break;
 
-    case VK_SYNC_WAIT:
+     case VK_SYNC_WAIT:
 
         // In this state we wait for valid sync to last
         // VK_SYNC_WAIT_TIME seconds
@@ -1618,9 +1623,10 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         m_btnTogPTT->SetValue(false); togglePTT();
         m_togBtnVoiceKeyer->SetValue(false);
         next_state = VK_IDLE;
-    }
+   }
 
-    fprintf(stderr, "VoiceKeyerProcessEvent: vk_state: %d vk_event: %d next_state: %d\n", vk_state, vk_event, next_state);
+    if ((vk_event != VK_DT) || (vk_state != next_state))
+        fprintf(stderr, "VoiceKeyerProcessEvent: vk_state: %d vk_event: %d next_state: %d  vk_repeat_counter: %d\n", vk_state, vk_event, next_state, vk_repeat_counter);
     vk_state = next_state;
 }
 
@@ -2271,6 +2277,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_togBtnAnalog->Enable();
         m_togBtnOnOff->SetLabel(wxT("Stop"));
         m_btnTogPTT->Enable();
+        m_togBtnVoiceKeyer->Enable();
 
         m_rb1600->Disable();
         m_rb700b->Disable();
@@ -2412,6 +2419,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         //m_togTxID->Disable();
         m_togBtnAnalog->Disable();
         m_btnTogPTT->Disable();
+        m_togBtnVoiceKeyer->Disable();
         m_togBtnOnOff->SetLabel(wxT("Start"));
         m_rb1600->Enable();
         m_rb700b->Enable();
@@ -3766,6 +3774,18 @@ int MainFrame::PollUDP(void)
                     // note: if options dialog is open this will get overwritten
                     wxGetApp().m_callSign = val;
                 }  
+                sprintf(reply,"ok\n");
+            }
+            if (bufstr.StartsWith(_("ptton"), &itemToSet)) {
+                // note: if options dialog is open this will get overwritten
+                m_btnTogPTT->SetValue(true);
+                togglePTT();
+                sprintf(reply,"ok\n");
+            }
+            if (bufstr.StartsWith(_("pttoff"), &itemToSet)) {
+                // note: if options dialog is open this will get overwritten
+                m_btnTogPTT->SetValue(false);
+                togglePTT();
                 sprintf(reply,"ok\n");
             }
                 
