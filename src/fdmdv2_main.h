@@ -451,6 +451,8 @@ class MainFrame : public TopFrame
     int                     PollUDP();
     bool                    m_schedule_restore;
 
+    void VoiceKeyerProcessEvent(int vk_event);
+
     protected:
 
 #ifdef _WIN32
@@ -530,7 +532,6 @@ class MainFrame : public TopFrame
         void OnIdle(wxIdleEvent &evt);
 #endif
 
-        void VoiceKeyerProcessEvent(int vk_event);
         int VoiceKeyerStartTx(void);
 
     private:
