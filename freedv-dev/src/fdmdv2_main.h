@@ -451,6 +451,7 @@ class MainFrame : public TopFrame
     int                     PollUDP();
     bool                    m_schedule_restore;
 
+    int                     vk_state;
     void VoiceKeyerProcessEvent(int vk_event);
 
     protected:
@@ -565,7 +566,6 @@ class MainFrame : public TopFrame
 
         // Voice Keyer States
 
-        int        vk_state;
         int        vk_rx_pause;
         int        vk_repeats, vk_repeat_counter;
         float      vk_rx_time;
