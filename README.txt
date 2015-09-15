@@ -132,6 +132,8 @@ $ make install
  Building and installing on OSX
 ====================================
 
+Pls see README.osx
+
 ====================================
  Building and installing on FreeBSD
 ====================================
