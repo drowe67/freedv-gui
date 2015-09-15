@@ -174,6 +174,7 @@ class MainApp : public wxApp
 
         bool                m_boolHalfDuplex;
 
+        wxString            m_txtVoiceKeyerWaveFilePath;
         wxString            m_txtVoiceKeyerWaveFile;
         int                 m_intVoiceKeyerRxPause;
         int                 m_intVoiceKeyerRepeats;
