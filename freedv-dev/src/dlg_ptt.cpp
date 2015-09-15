@@ -457,7 +457,7 @@ void ComPortsDlg::OnApply(wxCommandEvent& event)
      wxFileDialog openFileDialog(
                                  this,
                                  wxT("Voice Keyer wave file"),
-                                 wxGetApp().m_txtVoiceKeyerWaveFile,
+                                 wxGetApp().m_txtVoiceKeyerWaveFilePath,
                                  wxEmptyString,
                                  wxT("WAV files (*.wav)|*.wav"),
                                  wxFD_SAVE
@@ -466,6 +466,9 @@ void ComPortsDlg::OnApply(wxCommandEvent& event)
          return;     // the user changed their mind...
      }
 
+     wxString fileName, extension;
+     wxGetApp().m_txtVoiceKeyerWaveFile = openFileDialog.GetPath();
+     wxFileName::SplitPath(wxGetApp().m_txtVoiceKeyerWaveFile, &wxGetApp().m_txtVoiceKeyerWaveFilePath, &fileName, &extension);
      m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().m_txtVoiceKeyerWaveFile);
 }
 
