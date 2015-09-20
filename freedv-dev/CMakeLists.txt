@@ -286,7 +286,7 @@ endif(NOT USE_STATIC_PORTAUDIO)
 #
 message(STATUS "Looking for hamlib...")
 find_path(HAMLIB_INCLUDE_DIR hamlib/rig.h)
-find_library(HAMLIB_LIBRARY hamlib)
+find_library(HAMLIB_LIBRARY hamlib PATH_SUFFIXES hamlib)
 message(STATUS "Hamlib library: ${HAMLIB_LIBRARY}")
 message(STATUS "Hamlib headers: ${HAMLIB_INCLUDE_DIR}")
 if(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
