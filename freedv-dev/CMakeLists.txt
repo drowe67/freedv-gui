@@ -453,6 +453,7 @@ if(WIN32)
     # Detect if we're doing a 32-bit or 64-bit windows build.
     if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
         set(CMAKE_CL_64 TRUE)
+        set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
     endif()
     if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
         set(CPACK_STRIP_FILES TRUE)
