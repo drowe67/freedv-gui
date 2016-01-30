@@ -271,8 +271,7 @@ class MainApp : public wxApp
 
         // Plugins -----------------------------------
 
-        wxString            m_txtPlugIn1;
-        wxString            m_txtPlugIn2;
+        wxString            m_txtPlugInParam[PLUGIN_MAX_PARAMS];
 
         // misc
 
@@ -583,8 +582,8 @@ class MainFrame : public TopFrame
 
         bool       m_plugIn;
         wxString   m_plugInName;
-        int        m_numPlugInParams;
-        wxString   m_plugInParams[PLUGIN_MAX_PARAMS];
+        int        m_numPlugInParam;
+        wxString   m_plugInParamName[PLUGIN_MAX_PARAMS];
 };
 
 void txRxProcessing();
