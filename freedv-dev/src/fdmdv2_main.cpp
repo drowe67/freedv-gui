@@ -524,6 +524,14 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     m_schedule_restore = false;
 
     vk_state = VK_IDLE;
+    
+    // Look for Plug In
+
+    m_plugIn = true;
+    m_plugInName = "MyModem";
+    m_numPlugInParams = 2;
+    m_plugInParams[0] = "Symbol Rate";
+    m_plugInParams[1] = "Num Tones";   
 }
 
 //-------------------------------------------------------------------------
@@ -2167,7 +2175,7 @@ void MainFrame::OnToolsComCfgUI(wxUpdateUIEvent& event)
 void MainFrame::OnToolsPlugInCfg(wxCommandEvent& event)
 {
     wxUnusedVar(event);
-    PlugInDlg *dlg = new PlugInDlg(NULL);
+    PlugInDlg *dlg = new PlugInDlg(m_plugInName, m_numPlugInParams, m_plugInParams);
     dlg->ShowModal();
     delete dlg;
 }

@@ -36,12 +36,13 @@
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class PlugInDlg
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-PlugInDlg::PlugInDlg(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
+PlugInDlg::PlugInDlg(const wxString& title, int numParams, wxString params[], wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
+
     wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
     this->SetSizer(mainSizer);
 
-    wxStaticBoxSizer* staticBoxSizer28a = new wxStaticBoxSizer( new wxStaticBox(this, wxID_ANY, _("Param1")), wxVERTICAL);
+    wxStaticBoxSizer* staticBoxSizer28a = new wxStaticBoxSizer( new wxStaticBox(this, wxID_ANY, params[0]), wxVERTICAL);
     m_txtCtrlPlugIn1 = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
     staticBoxSizer28a->Add(m_txtCtrlPlugIn1, 0, 0, 5);
     mainSizer->Add(staticBoxSizer28a, 0, wxEXPAND, 5);

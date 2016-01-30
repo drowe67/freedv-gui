@@ -40,17 +40,17 @@
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 class PlugInDlg : public wxDialog
 {
-     public:
-        PlugInDlg(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Plugin Config"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(450,300), long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER);
+    public:
+    PlugInDlg(const wxString& title = _("PTT Config"), int numParams = 0, wxString params[]=NULL, wxWindow* parent=NULL, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(450,300), long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER);
         virtual ~PlugInDlg();
         void    ExchangeData(int inout);
 
     protected:
-
         wxTextCtrl   *m_txtCtrlPlugIn1;
         wxTextCtrl   *m_txtCtrlPlugIn2;
         wxTextCtrl   *m_txtCtrlPlugIn3;
-        /* Ok - Cance */
+
+        /* Ok - Cancel */
 
         wxButton* m_buttonOK;
         wxButton* m_buttonCancel;

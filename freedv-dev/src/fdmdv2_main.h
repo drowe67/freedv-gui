@@ -578,6 +578,13 @@ class MainFrame : public TopFrame
         int        vk_rx_pause;
         int        vk_repeats, vk_repeat_counter;
         float      vk_rx_time;
+
+        // plugin details
+
+        bool       m_plugIn;
+        wxString   m_plugInName;
+        int        m_numPlugInParams;
+        wxString   m_plugInParams[PLUGIN_MAX_PARAMS];
 };
 
 void txRxProcessing();
