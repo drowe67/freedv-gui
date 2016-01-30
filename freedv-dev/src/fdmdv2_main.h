@@ -85,6 +85,7 @@
 #include "varicode.h"
 #include "sox_biquad.h"
 #include "comp_prim.h"
+#include "dlg_plugin.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -267,6 +268,11 @@ class MainApp : public wxApp
 
         bool                loadConfig();
         bool                saveConfig();
+
+        // Plugins -----------------------------------
+
+        wxString            m_txtPlugIn1;
+        wxString            m_txtPlugIn2;
 
         // misc
 
@@ -494,6 +500,8 @@ class MainFrame : public TopFrame
         void OnToolsFilter( wxCommandEvent& event );
         void OnToolsOptions(wxCommandEvent& event);
         void OnToolsOptionsUI(wxUpdateUIEvent& event);
+
+        void OnToolsPlugInCfg( wxCommandEvent& event );
 
         void OnPlayFileToMicIn( wxCommandEvent& event );
         void StopPlayFileToMicIn(void);
