@@ -2162,6 +2162,18 @@ void MainFrame::OnToolsComCfgUI(wxUpdateUIEvent& event)
 }
 
 //-------------------------------------------------------------------------
+// OnToolsPlugInCfg()
+//-------------------------------------------------------------------------
+void MainFrame::OnToolsPlugInCfg(wxCommandEvent& event)
+{
+    wxUnusedVar(event);
+    PlugInDlg *dlg = new PlugInDlg(NULL);
+    dlg->ShowModal();
+    delete dlg;
+}
+
+
+//-------------------------------------------------------------------------
 // OnHelpCheckUpdates()
 //-------------------------------------------------------------------------
 void MainFrame::OnHelpCheckUpdates(wxCommandEvent& event)
@@ -2184,67 +2196,16 @@ void MainFrame::OnHelpCheckUpdatesUI(wxUpdateUIEvent& event)
 void MainFrame::OnHelpAbout(wxCommandEvent& event)
 {
     wxUnusedVar(event);
-#ifdef _USE_ABOUT_DIALOG
-    int rv = 0;
-    AboutDlg *dlg = new AboutDlg(NULL);
-    rv = dlg->ShowModal();
-    if(rv == wxID_OK)
-    {
-        dlg->ExchangeData(EXCHANGE_DATA_OUT);
-    }
-    delete dlg;
-#else
-    wxString svnLatestRev("Can't determine latest SVN revision.");
-
-    // Try to determine current SVN revision from the Internet
-    wxURL url(wxT("http://svn.code.sf.net/p/freetel/code/freedv-dev/"));
-
-    if(url.GetError() == wxURL_NOERR)
-    {
-        wxString htmldata;
-        wxInputStream *in = url.GetInputStream();
-
-        if(in && in->IsOk())
-        {
-            //printf("In OK\n");
-            wxStringOutputStream html_stream(&htmldata);
-            in->Read(html_stream);
-            //wxLogDebug(htmldata);
-
-            wxString s("<h2>p/freetel/code - Revision ");
-            int startIndex = htmldata.find(s) + s.Length();
-            int endIndex = htmldata.find(wxT(": /fdmdv2</h2>"));
-            svnLatestRev = wxT("Latest svn revision: ") + htmldata.SubString(startIndex, endIndex-1);
-            //printf("startIndex: %d endIndex: %d\n", startIndex, endIndex);
-       }
-       delete in;
-    }
-
     wxString msg;
     msg.Printf( wxT("FreeDV %s\n\n")
-                wxT("Open Source Narrow Band Digital Voice over Radio\n\n")
+                wxT("Open Source Digital Voice\n\n")
                 wxT("For Help and Support visit: http://freedv.org\n\n")
-
-                wxT("How much have you spent on Ham gear this year?  How did it compare to FreeDV? ")
-                wxT("FreeDV repesents an open and free future for digital voice over Ham Radio. ")
-                wxT("Please help by donating just $10 here: http://freedv.org\n\n")
 
                 wxT("GNU Public License V2.1\n\n")
                 wxT("Copyright (c) David Witten KD0EAG and David Rowe VK5DGR\n\n")
-                wxT("svn revision: %s\n") + svnLatestRev, FREEDV_VERSION, SVN_REVISION);
+                wxT("svn revision: %s\n"), FREEDV_VERSION, SVN_REVISION);
 
     wxMessageBox(msg, wxT("About"), wxOK | wxICON_INFORMATION, this);
-
-#endif // _USE_ABOUT_DIALOG
-#ifdef USE_SIMPLE_ABOUT_DIALOG
-    wxUnusedVar(event);
-    wxAboutDialogInfo info;
-    info.SetCopyright(_("HAMLib Test"));
-    info.SetLicence(_("GPL v2 or later"));
-    info.SetDescription(_("Short description goes here"));
-    ::wxAboutBox(info);
-#endif // USE_SIMPLE_ABOUT_DIALOG
-
 }
 
 
@@ -2983,9 +2944,9 @@ void MainFrame::processTxtEvent(char event[]) {
             // if we found a match, lets run the replace regexp and issue the system command
 
             wxString event_str_rep = event_str;
-
+           
             if (re.Replace(&event_str_rep, regexp_replace) != 0) {
-                //printf("  found match!\n");
+                fprintf(stderr, "  found match! event_str: %s\n", (const char *)event_str.c_str());
                 found_match = true;
 
                 bool enableSystem = false;
@@ -2996,7 +2957,7 @@ void MainFrame::processTxtEvent(char event[]) {
 
                 if (spamTimer[rule].IsRunning()) {
                     enableSystem = false;
-                    //printf("  spam timer running\n");
+                    fprintf(stderr, "  spam timer running\n");
                 }
 
                 const char *event_out = event_str_rep.ToUTF8();

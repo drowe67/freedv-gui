@@ -3,6 +3,7 @@ set(FREEDV_SOURCES
     dlg_filter.cpp
     dlg_options.cpp
     dlg_ptt.cpp
+    dlg_plugin.cpp
     fdmdv2_main.cpp
     fdmdv2_pa_wrapper.cpp
     fdmdv2_plot.cpp
