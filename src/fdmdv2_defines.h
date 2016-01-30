@@ -98,5 +98,8 @@ enum
 #define CODEC2_LPC_PF_GAMMA 0.5
 #define CODEC2_LPC_PF_BETA  0.2
 
+// PlugIns ...
+
+#define PLUGIN_MAX_PARAMS 4
 
 #endif  //__FDMDV2_DEFINES__
