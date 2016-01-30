@@ -41,19 +41,18 @@
 class PlugInDlg : public wxDialog
 {
     public:
-    PlugInDlg(const wxString& title = _("PTT Config"), int numParams = 0, wxString params[]=NULL, wxWindow* parent=NULL, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(450,300), long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER);
+    PlugInDlg(const wxString& title = _("PTT Config"), int numParam = 0, wxString paramNames[]=NULL, wxWindow* parent=NULL, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(450,300), long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER);
         virtual ~PlugInDlg();
         void    ExchangeData(int inout);
 
     protected:
-        wxTextCtrl   *m_txtCtrlPlugIn1;
-        wxTextCtrl   *m_txtCtrlPlugIn2;
-        wxTextCtrl   *m_txtCtrlPlugIn3;
+        wxString    m_name;
+        int         m_numParam;
+        wxString    m_paramName[PLUGIN_MAX_PARAMS];
 
-        /* Ok - Cancel */
-
-        wxButton* m_buttonOK;
-        wxButton* m_buttonCancel;
+        wxTextCtrl* m_txtCtrlParam[PLUGIN_MAX_PARAMS];
+        wxButton*   m_buttonOK;
+        wxButton*   m_buttonCancel;
 
 
 protected:

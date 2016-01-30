@@ -36,21 +36,23 @@
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class PlugInDlg
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-PlugInDlg::PlugInDlg(const wxString& title, int numParams, wxString params[], wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
+PlugInDlg::PlugInDlg(const wxString& title, int numParam, wxString paramName[], wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
+    m_name = title;
+    m_numParam = numParam;
+    assert(m_numParam <= PLUGIN_MAX_PARAMS);
 
     wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
     this->SetSizer(mainSizer);
 
-    wxStaticBoxSizer* staticBoxSizer28a = new wxStaticBoxSizer( new wxStaticBox(this, wxID_ANY, params[0]), wxVERTICAL);
-    m_txtCtrlPlugIn1 = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
-    staticBoxSizer28a->Add(m_txtCtrlPlugIn1, 0, 0, 5);
-    mainSizer->Add(staticBoxSizer28a, 0, wxEXPAND, 5);
-
-    wxStaticBoxSizer* staticBoxSizer28b = new wxStaticBoxSizer( new wxStaticBox(this, wxID_ANY, _("Param2")), wxVERTICAL);
-    m_txtCtrlPlugIn2 = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
-    staticBoxSizer28b->Add(m_txtCtrlPlugIn2, 0, 0, 5);
-    mainSizer->Add(staticBoxSizer28b, 0, wxEXPAND, 5);
+    int i;
+    for (i=0; i<m_numParam; i++) {
+        m_paramName[i] = paramName[i];
+        wxStaticBoxSizer* staticBoxSizer28a = new wxStaticBoxSizer( new wxStaticBox(this, wxID_ANY, m_paramName[i]), wxVERTICAL);
+        m_txtCtrlParam[i]= new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
+        staticBoxSizer28a->Add(m_txtCtrlParam[i], 0, 0, 5);
+        mainSizer->Add(staticBoxSizer28a, 0, wxEXPAND, 5);
+    }
 
     //----------------------------------------------------------------------
     // OK - Cancel - Apply
@@ -107,18 +109,20 @@ void PlugInDlg::ExchangeData(int inout)
 {
     wxConfigBase *pConfig = wxConfigBase::Get();
     wxString str;
+    int i;
     
     if(inout == EXCHANGE_DATA_IN)
     {
-        m_txtCtrlPlugIn1->SetValue(wxGetApp().m_txtPlugIn1);
-        m_txtCtrlPlugIn2->SetValue(wxGetApp().m_txtPlugIn2);
+        for (i=0; i<m_numParam; i++) {
+            m_txtCtrlParam[i]->SetValue(wxGetApp().m_txtPlugInParam[i]);
+        }
     }
     if(inout == EXCHANGE_DATA_OUT)
     {
-        wxGetApp().m_txtPlugIn1 = m_txtCtrlPlugIn1->GetValue();
-        pConfig->Write(wxT("/PlugIn/txt1"), wxGetApp().m_txtPlugIn1);
-        wxGetApp().m_txtPlugIn2 = m_txtCtrlPlugIn2->GetValue();
-        pConfig->Write(wxT("/PlugIn/txt2"), wxGetApp().m_txtPlugIn2);
+        for (i=0; i<m_numParam; i++) {
+          wxGetApp().m_txtPlugInParam[i] = m_txtCtrlParam[i]->GetValue();
+          pConfig->Write(wxT("/PlugIn/" + m_name + "/" + m_paramName[i]), wxGetApp().m_txtPlugInParam[i]);
+        }
         pConfig->Flush();
     }
     delete wxConfigBase::Set((wxConfigBase *) NULL);
