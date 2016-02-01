@@ -62,6 +62,7 @@
 #else
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <dlfcn.h>
 #endif
 
 #include "codec2.h"
@@ -581,10 +582,12 @@ class MainFrame : public TopFrame
 
         // plugin details
 
+        void      *m_plugInHandle;
         bool       m_plugIn;
         wxString   m_plugInName;
         int        m_numPlugInParam;
         wxString   m_plugInParamName[PLUGIN_MAX_PARAMS];
+        void      *m_plugInStates;
 };
 
 void txRxProcessing();

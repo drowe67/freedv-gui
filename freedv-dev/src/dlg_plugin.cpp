@@ -121,7 +121,8 @@ void PlugInDlg::ExchangeData(int inout)
     {
         for (i=0; i<m_numParam; i++) {
           wxGetApp().m_txtPlugInParam[i] = m_txtCtrlParam[i]->GetValue();
-          pConfig->Write(wxT("/PlugIn/" + m_name + "/" + m_paramName[i]), wxGetApp().m_txtPlugInParam[i]);
+          wxString configStr = "/" + m_name + "/" + m_paramName[i];
+          pConfig->Write(configStr, wxGetApp().m_txtPlugInParam[i]);
         }
         pConfig->Flush();
     }

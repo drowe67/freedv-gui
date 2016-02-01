@@ -527,11 +527,50 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     
     // Look for Plug In
 
-    m_plugIn = true;
-    m_plugInName = "MyModem";
-    m_numPlugInParam = 2;
-    m_plugInParamName[0] = "Symbol Rate";
-    m_plugInParamName[1] = "Num Tones";   
+    m_plugIn = false;
+    m_plugInHandle = dlopen("/home/david/tmp/modem_api/afreedvplugin.so", RTLD_LAZY);
+    
+    if (m_plugInHandle) {
+        fprintf(stderr, "plugin: .so found\n");
+
+        // lets get some information abt the plugIn
+
+        void (*plugin_namefp)(char s[]);
+        void *(*plugin_openfp)(char *param_names[], int *nparams);
+
+        plugin_namefp = (void (*)(char*))dlsym(m_plugInHandle, "plugin_name");
+        plugin_openfp = (void* (*)(char**,int *))dlsym(m_plugInHandle, "plugin_open");
+
+        if ((plugin_namefp != NULL) && (plugin_openfp != NULL)) {
+
+            char s[256];
+            m_plugIn = true;
+            (plugin_namefp)(s);
+            fprintf(stderr, "plugin name: %s\n", s);
+            m_plugInName = s;
+
+            char param_name1[80], param_name2[80];
+            char *param_names[2] = {param_name1, param_name2};
+            int  nparams, i;
+            m_plugInStates = (plugin_openfp)(param_names, &nparams);
+            m_numPlugInParam = nparams;
+            for(i=0; i<nparams; i++) {
+                fprintf(stderr, "  plugin param name[%d]: %s\n", i, param_names[i]);
+                m_plugInParamName[i] = param_names[i];
+                wxString configStr = "/" + m_plugInName + "/" + m_plugInParamName[i];
+                wxGetApp().m_txtPlugInParam[i] = pConfig->Read(configStr, wxT(""));
+            }
+        }
+        else {
+           fprintf(stderr, "plugin: fps not found...\n");           
+        }
+    }
+
+    //m_plugIn = true;
+    //m_plugInName = "MyModem";
+    //m_numPlugInParam = 2;
+    //m_plugInParamName[0] = "Symbol Rate";
+    //m_plugInParamName[1] = "Num Tones";   
 }
 
 //-------------------------------------------------------------------------
@@ -543,6 +582,9 @@ MainFrame::~MainFrame()
     int y;
     int w;
     int h;
+
+    if (m_plugIn)
+        dlclose(m_plugInHandle);
 
     //fclose(ft);
     #ifdef __WXMSW__
@@ -2182,7 +2224,7 @@ void MainFrame::OnToolsPlugInCfg(wxCommandEvent& event)
                
 void MainFrame::OnToolsPlugInCfgUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning);
+    event.Enable(!m_RxRunning && m_plugIn);
 }
 
 
