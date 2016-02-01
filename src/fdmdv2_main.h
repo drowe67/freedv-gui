@@ -501,6 +501,7 @@ class MainFrame : public TopFrame
         void OnToolsOptionsUI(wxUpdateUIEvent& event);
 
         void OnToolsPlugInCfg( wxCommandEvent& event );
+        void OnToolsPlugInCfgUI( wxUpdateUIEvent& event );
 
         void OnPlayFileToMicIn( wxCommandEvent& event );
         void StopPlayFileToMicIn(void);
