@@ -1617,7 +1617,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
             next_state = VK_IDLE;
         }
 
-       if (vk_event == VK_DT) {
+        if (vk_event == VK_DT) {
             vk_rx_time += DT;
 
             // if we lose sync restart RX state
@@ -2178,6 +2178,11 @@ void MainFrame::OnToolsPlugInCfg(wxCommandEvent& event)
     PlugInDlg *dlg = new PlugInDlg(m_plugInName, m_numPlugInParam, m_plugInParamName);
     dlg->ShowModal();
     delete dlg;
+}
+               
+void MainFrame::OnToolsPlugInCfgUI(wxUpdateUIEvent& event)
+{
+    event.Enable(!m_RxRunning);
 }
 
 

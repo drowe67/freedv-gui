@@ -127,6 +127,7 @@ class TopFrame : public wxFrame
         virtual void OnToolsOptions( wxCommandEvent& event ) { event.Skip(); }
 
         virtual void OnToolsPlugInCfg( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnToolsPlugInCfgUI( wxUpdateUIEvent& event ) { event.Skip(); }
 
         virtual void OnToolsUDP( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsOptionsUI( wxUpdateUIEvent& event ) { event.Skip(); }
