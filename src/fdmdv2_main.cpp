@@ -528,19 +528,29 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     // Look for Plug In
 
     m_plugIn = false;
+    #ifdef __WXMSW__
+    wchar_t dll_path[] = L"/home/david/tmp/modem_api/afreedvplugin.dll";
+    m_plugInHandle = LoadLibrary(dll_path);
+    #else
     m_plugInHandle = dlopen("/home/david/tmp/modem_api/afreedvplugin.so", RTLD_LAZY);
+    #endif
     
     if (m_plugInHandle) {
-        fprintf(stderr, "plugin: .so found\n");
-
+        printf("plugin: .so found\n");
+        
         // lets get some information abt the plugIn
 
         void (*plugin_namefp)(char s[]);
         void *(*plugin_openfp)(char *param_names[], int *nparams);
 
+        #ifdef __WXMSW__
+        plugin_namefp = (void (*)(char*))GetProcAddress((HMODULE)m_plugInHandle, "plugin_name");
+        plugin_openfp = (void* (*)(char**,int *))GetProcAddress((HMODULE)m_plugInHandle, "plugin_open");
+        #else
         plugin_namefp = (void (*)(char*))dlsym(m_plugInHandle, "plugin_name");
         plugin_openfp = (void* (*)(char**,int *))dlsym(m_plugInHandle, "plugin_open");
-
+        #endif
+        
         if ((plugin_namefp != NULL) && (plugin_openfp != NULL)) {
 
             char s[256];
@@ -561,9 +571,13 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
                 wxGetApp().m_txtPlugInParam[i] = pConfig->Read(configStr, wxT(""));
             }
         }
+        
         else {
-           fprintf(stderr, "plugin: fps not found...\n");           
+            fprintf(stderr, "plugin: fps not found...\n");           
         }
+    }
+    else {
+        fprintf(stderr, "plugin not found...\n");           
     }
 
     //m_plugIn = true;
@@ -583,8 +597,13 @@ MainFrame::~MainFrame()
     int w;
     int h;
 
-    if (m_plugIn)
+    if (m_plugIn) {
+        #ifdef __WXMSW__
+        FreeLibrary((HMODULE)m_plugInHandle);
+        #else
         dlclose(m_plugInHandle);
+        #endif
+    }
 
     //fclose(ft);
     #ifdef __WXMSW__

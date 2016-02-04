@@ -10,19 +10,33 @@
      [ ] where do we put plugins?
      [ ] Windows build and test environment
 
-  $ gcc -Wall -fPIC -c afreedvplugin.c
-  $ gcc -shared -Wl,-soname,afreedvplugin.so -o afreedvplugin.so afreedvplugin.o
+  linux .so:
+    $ gcc -Wall -fPIC -c afreedvplugin.c
+    $ gcc -shared -Wl,-soname,afreedvplugin.so -o afreedvplugin.so afreedvplugin.o
+  win32 .dll:
+    $ i686-w64-mingw32-gcc -c afreedvplugin.c
+    $ i686-w64-mingw32-gcc -shared -o afreedvplugin.dll afreedvplugin.o -Wl,--out-implib,afreedvplugin_dll.a
+
 */
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
-/* functions plugin can call */
+#ifdef _WIN32_
+#define DLL __declspec(dllexport)
+#else
+#define DLL
+#endif
+
+
+#ifdef LATER
+/* functions plugin can call - not sure how to link to these */
 
 int plugin_alert(char string[]);
 int plugin_get_persistant(char name[], char value[]);
 int plugin_set_persistant(char name[], char value[]);
+#endif
 
 struct APLUGIN_STATES {
     int counter;
@@ -30,7 +44,7 @@ struct APLUGIN_STATES {
 
 /* plugin functions called by host, we need to write these */
 
-void plugin_name(char name[]) {
+void DLL plugin_name(char name[]) {
     sprintf(name, "aFreeDVplugIn");
 }
 
@@ -40,7 +54,7 @@ void plugin_name(char name[]) {
    storage as name/param_names[0], name/param_names[1] ....
 */
 
-void *plugin_open(char *param_names[], int *nparams) {
+void DLL *plugin_open(char *param_names[], int *nparams) {
     struct APLUGIN_STATES *states;
 
     strcpy(param_names[0], "SymbolRate");
@@ -49,7 +63,7 @@ void *plugin_open(char *param_names[], int *nparams) {
 
     states = (struct APLUGIN_STATES *)malloc(sizeof(struct APLUGIN_STATES));
     if (states == NULL) {
-        plugin_alert("Problem starting plugin!");
+        // TODO: plugin_alert("Problem starting plugin!");
         return NULL;
     }
     states->counter = 0;
@@ -57,17 +71,17 @@ void *plugin_open(char *param_names[], int *nparams) {
     return (void*)states;
 }
 
-void plugin_close(void *states) {
+void DLL plugin_close(void *states) {
     free(states);
 }
 
-void plugin_start(void *states) {
+void DLL plugin_start(void *states) {
 }
 
-void plugin_stop(void *states) {
+void DLL plugin_stop(void *states) {
 }
 
-void plugin_rx_samples(void *s, short samples[], int n) {
+void DLL plugin_rx_samples(void *s, short samples[], int n) {
     struct APLUGIN_STATES *states = (struct APLUGIN_STATES*)s;
     printf("Got n=%d samples!\n", n);
     printf("samples[0] = %d  samples[%d-1] = %d  counter = %d\n", samples[0], n, samples[n-1], states->counter++);
