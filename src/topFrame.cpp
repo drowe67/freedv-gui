@@ -28,7 +28,7 @@ extern int g_playFileFromRadioEventId;
 //=========================================================================
 // Code that lays out the main application window
 //=========================================================================
-TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(parent, id, title, pos, size, style)
+TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(parent, id, title, pos, size, style)
 {
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);
     this->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
@@ -69,7 +69,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     tools->Append(m_menuItemFilter);
 
     wxMenuItem* m_menuItemPlugIn;
-    m_menuItemPlugIn = new wxMenuItem(tools, wxID_ANY, wxString(_("PlugIn Config")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemPlugIn = new wxMenuItem(tools, wxID_ANY, plugInName + wxString(_(" Config")) , wxEmptyString, wxITEM_NORMAL);
     tools->Append(m_menuItemPlugIn);
 
     wxMenuItem* m_menuItemPlayFileToMicIn;
@@ -317,6 +317,12 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_rb1600 = new wxRadioButton( this, wxID_ANY, wxT("1600"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_mode->Add(m_rb1600, 0, wxALIGN_LEFT|wxALL, 1);
     m_rb1600->SetValue(true);
+
+    // Optional plug in
+
+    m_rbPlugIn = new wxRadioButton( this, wxID_ANY, plugInName, wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_mode->Add(m_rbPlugIn, 0, wxALIGN_LEFT|wxALL, 1);
+
 #ifdef DISABLED_FEATURE
     m_rb1600Wide = new wxRadioButton( this, wxID_ANY, wxT("1600 Wide"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_mode->Add(m_rb1600Wide, 0, wxALIGN_LEFT|wxALL, 1);
