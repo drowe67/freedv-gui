@@ -165,18 +165,75 @@ bool MainApp::OnInit()
     m_textVoiceOutput.Empty();
     m_strSampleRate.Empty();
     m_strBitrate.Empty();
+
+    // Look for Plug In
+
+    m_plugIn = false;
+    #ifdef __WXMSW__
+    wchar_t dll_path[] = L"/home/david/tmp/modem_api/afreedvplugin.dll";
+    m_plugInHandle = LoadLibrary(dll_path);
+    #else
+    m_plugInHandle = dlopen("/home/david/tmp/modem_api/afreedvplugin.so", RTLD_LAZY);
+    #endif
+    
+    if (m_plugInHandle) {
+        printf("plugin: .so found\n");
+        
+        // lets get some information abt the plugIn
+
+        void (*plugin_namefp)(char s[]);
+        void *(*plugin_openfp)(char *param_names[], int *nparams);
+
+        #ifdef __WXMSW__
+        plugin_namefp = (void (*)(char*))GetProcAddress((HMODULE)m_plugInHandle, "plugin_name");
+        plugin_openfp = (void* (*)(char**,int *))GetProcAddress((HMODULE)m_plugInHandle, "plugin_open");
+        #else
+        plugin_namefp = (void (*)(char*))dlsym(m_plugInHandle, "plugin_name");
+        plugin_openfp = (void* (*)(char**,int *))dlsym(m_plugInHandle, "plugin_open");
+        #endif
+        
+        if ((plugin_namefp != NULL) && (plugin_openfp != NULL)) {
+
+            char s[256];
+            m_plugIn = true;
+            (plugin_namefp)(s);
+            fprintf(stderr, "plugin name: %s\n", s);
+            m_plugInName = s;
+
+            char param_name1[80], param_name2[80];
+            char *param_names[2] = {param_name1, param_name2};
+            int  nparams, i;
+            m_plugInStates = (plugin_openfp)(param_names, &nparams);
+            m_numPlugInParam = nparams;
+            for(i=0; i<nparams; i++) {
+                fprintf(stderr, "  plugin param name[%d]: %s\n", i, param_names[i]);
+                m_plugInParamName[i] = param_names[i];
+                wxString configStr = "/" + m_plugInName + "/" + m_plugInParamName[i];
+                m_txtPlugInParam[i] = pConfig->Read(configStr, wxT(""));
+            }
+        }
+        
+        else {
+            fprintf(stderr, "plugin: fps not found...\n");           
+        }
+    }
+    else {
+        fprintf(stderr, "plugin not found...\n");           
+    }
+
     // Create the main application window
-    frame = new MainFrame(NULL);
+
+    frame = new MainFrame(m_plugInName, NULL);
     SetTopWindow(frame);
+
     // Should guarantee that the first plot tab defined is the one
     // displayed. But it doesn't when built from command line.  Why?
+
     frame->m_auiNbookCtrl->ChangeSelection(0);
     frame->Layout();
     frame->Show();
     g_parent =frame;
 
-    //ft = fopen("tmp.raw","wb");
-    //assert(ft != NULL);
 
     return true;
 }
@@ -186,13 +243,21 @@ bool MainApp::OnInit()
 //-------------------------------------------------------------------------
 int MainApp::OnExit()
 {
+    if (m_plugIn) {
+        #ifdef __WXMSW__
+        FreeLibrary((HMODULE)m_plugInHandle);
+        #else
+        dlclose(m_plugInHandle);
+        #endif
+    }
+
     return 0;
 }
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainFrame(wxFrame* pa->ent) : TopFrame(parent)
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
+MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInName, parent)
 {
     m_zoom              = 1.;
 
@@ -525,66 +590,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
 
     vk_state = VK_IDLE;
     
-    // Look for Plug In
-
-    m_plugIn = false;
-    #ifdef __WXMSW__
-    wchar_t dll_path[] = L"/home/david/tmp/modem_api/afreedvplugin.dll";
-    m_plugInHandle = LoadLibrary(dll_path);
-    #else
-    m_plugInHandle = dlopen("/home/david/tmp/modem_api/afreedvplugin.so", RTLD_LAZY);
-    #endif
-    
-    if (m_plugInHandle) {
-        printf("plugin: .so found\n");
-        
-        // lets get some information abt the plugIn
-
-        void (*plugin_namefp)(char s[]);
-        void *(*plugin_openfp)(char *param_names[], int *nparams);
-
-        #ifdef __WXMSW__
-        plugin_namefp = (void (*)(char*))GetProcAddress((HMODULE)m_plugInHandle, "plugin_name");
-        plugin_openfp = (void* (*)(char**,int *))GetProcAddress((HMODULE)m_plugInHandle, "plugin_open");
-        #else
-        plugin_namefp = (void (*)(char*))dlsym(m_plugInHandle, "plugin_name");
-        plugin_openfp = (void* (*)(char**,int *))dlsym(m_plugInHandle, "plugin_open");
-        #endif
-        
-        if ((plugin_namefp != NULL) && (plugin_openfp != NULL)) {
-
-            char s[256];
-            m_plugIn = true;
-            (plugin_namefp)(s);
-            fprintf(stderr, "plugin name: %s\n", s);
-            m_plugInName = s;
-
-            char param_name1[80], param_name2[80];
-            char *param_names[2] = {param_name1, param_name2};
-            int  nparams, i;
-            m_plugInStates = (plugin_openfp)(param_names, &nparams);
-            m_numPlugInParam = nparams;
-            for(i=0; i<nparams; i++) {
-                fprintf(stderr, "  plugin param name[%d]: %s\n", i, param_names[i]);
-                m_plugInParamName[i] = param_names[i];
-                wxString configStr = "/" + m_plugInName + "/" + m_plugInParamName[i];
-                wxGetApp().m_txtPlugInParam[i] = pConfig->Read(configStr, wxT(""));
-            }
-        }
-        
-        else {
-            fprintf(stderr, "plugin: fps not found...\n");           
-        }
-    }
-    else {
-        fprintf(stderr, "plugin not found...\n");           
-    }
-
-    //m_plugIn = true;
-    //m_plugInName = "MyModem";
-    //m_numPlugInParam = 2;
-    //m_plugInParamName[0] = "Symbol Rate";
-    //m_plugInParamName[1] = "Num Tones";   
 }
 
 //-------------------------------------------------------------------------
@@ -596,14 +601,6 @@ MainFrame::~MainFrame()
     int y;
     int w;
     int h;
-
-    if (m_plugIn) {
-        #ifdef __WXMSW__
-        FreeLibrary((HMODULE)m_plugInHandle);
-        #else
-        dlclose(m_plugInHandle);
-        #endif
-    }
 
     //fclose(ft);
     #ifdef __WXMSW__
@@ -2236,14 +2233,14 @@ void MainFrame::OnToolsComCfgUI(wxUpdateUIEvent& event)
 void MainFrame::OnToolsPlugInCfg(wxCommandEvent& event)
 {
     wxUnusedVar(event);
-    PlugInDlg *dlg = new PlugInDlg(m_plugInName, m_numPlugInParam, m_plugInParamName);
+    PlugInDlg *dlg = new PlugInDlg(wxGetApp().m_plugInName, wxGetApp().m_numPlugInParam, wxGetApp().m_plugInParamName);
     dlg->ShowModal();
     delete dlg;
 }
                
 void MainFrame::OnToolsPlugInCfgUI(wxUpdateUIEvent& event)
 {
-    event.Enable(!m_RxRunning && m_plugIn);
+    event.Enable(!m_RxRunning && wxGetApp().m_plugIn);
 }
 
 

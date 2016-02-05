@@ -274,6 +274,15 @@ class MainApp : public wxApp
 
         wxString            m_txtPlugInParam[PLUGIN_MAX_PARAMS];
 
+        // plugin details
+
+        void      *m_plugInHandle;
+        bool       m_plugIn;
+        wxString   m_plugInName;
+        int        m_numPlugInParam;
+        wxString   m_plugInParamName[PLUGIN_MAX_PARAMS];
+        void      *m_plugInStates;
+
         // misc
 
         bool       m_testFrames;
@@ -385,7 +394,7 @@ class UDPThread;
 class MainFrame : public TopFrame
 {
     public:
-        MainFrame(wxWindow *parent);
+        MainFrame(wxString plugInName, wxWindow *parent);
         virtual ~MainFrame();
 
         PlotSpectrum*           m_panelSpectrum;
@@ -579,15 +588,6 @@ class MainFrame : public TopFrame
         int        vk_rx_pause;
         int        vk_repeats, vk_repeat_counter;
         float      vk_rx_time;
-
-        // plugin details
-
-        void      *m_plugInHandle;
-        bool       m_plugIn;
-        wxString   m_plugInName;
-        int        m_numPlugInParam;
-        wxString   m_plugInParamName[PLUGIN_MAX_PARAMS];
-        void      *m_plugInStates;
 };
 
 void txRxProcessing();
