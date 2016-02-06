@@ -282,6 +282,7 @@ class MainApp : public wxApp
         int        m_numPlugInParam;
         wxString   m_plugInParamName[PLUGIN_MAX_PARAMS];
         void      *m_plugInStates;
+        void     (*m_plugin_startfp)(void *);
 
         // misc
 
@@ -667,5 +668,9 @@ void my_put_next_rx_char(void *callback_state, char c);
 // helper complex freq shift function
 
 void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin);
+
+// Helper function called by plugin
+
+int plugin_get_persistant(char name[], char value[]);
 
 #endif //__FDMDV2_MAIN__
