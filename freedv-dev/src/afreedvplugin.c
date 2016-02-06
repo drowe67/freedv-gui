@@ -37,14 +37,17 @@ int plugin_alert(char string[]);
 int plugin_get_persistant(char name[], char value[]);
 int plugin_set_persistant(char name[], char value[]);
 #endif
+static int (*plugin_get_persistant)(char name[], char value[]);
 
 struct APLUGIN_STATES {
+    int symbol_rate;
     int counter;
 };
 
 /* plugin functions called by host, we need to write these */
 
 void DLL plugin_name(char name[]) {
+
     sprintf(name, "aFreeDVplugIn");
 }
 
@@ -54,12 +57,23 @@ void DLL plugin_name(char name[]) {
    storage as name/param_names[0], name/param_names[1] ....
 */
 
-void DLL *plugin_open(char *param_names[], int *nparams) {
+void DLL *plugin_open(char *param_names[], 
+                      int *nparams, 
+                      int (*aplugin_get_persistant)(char *, char *))
+{
     struct APLUGIN_STATES *states;
+
+    /* set up function ptrs */
+
+    plugin_get_persistant = aplugin_get_persistant;
+ 
+    /* tell host how many persistent parameters we have and their names */
 
     strcpy(param_names[0], "SymbolRate");
     strcpy(param_names[1], "NumTones");
     *nparams = 2;
+
+    /* init local states */
 
     states = (struct APLUGIN_STATES *)malloc(sizeof(struct APLUGIN_STATES));
     if (states == NULL) {
@@ -67,7 +81,7 @@ void DLL *plugin_open(char *param_names[], int *nparams) {
         return NULL;
     }
     states->counter = 0;
-
+    
     return (void*)states;
 }
 
@@ -75,7 +89,12 @@ void DLL plugin_close(void *states) {
     free(states);
 }
 
-void DLL plugin_start(void *states) {
+void DLL plugin_start(void *s) {
+    struct APLUGIN_STATES *states = (struct APLUGIN_STATES*)s;
+    char txt[80];
+
+    (plugin_get_persistant)("SymbolRate",txt);
+    states->symbol_rate = atoi(txt);
 }
 
 void DLL plugin_stop(void *states) {

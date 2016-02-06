@@ -182,14 +182,16 @@ bool MainApp::OnInit()
         // lets get some information abt the plugIn
 
         void (*plugin_namefp)(char s[]);
-        void *(*plugin_openfp)(char *param_names[], int *nparams);
+        void *(*plugin_openfp)(char *param_names[], int *nparams, int (*aplugin_get_persistant)(char *, char *));
 
         #ifdef __WXMSW__
         plugin_namefp = (void (*)(char*))GetProcAddress((HMODULE)m_plugInHandle, "plugin_name");
         plugin_openfp = (void* (*)(char**,int *))GetProcAddress((HMODULE)m_plugInHandle, "plugin_open");
+        m_plugin_startfp = (void (*)(void *))GetProcAddress((HMODULE)m_plugInHandle, "plugin_start");
         #else
         plugin_namefp = (void (*)(char*))dlsym(m_plugInHandle, "plugin_name");
-        plugin_openfp = (void* (*)(char**,int *))dlsym(m_plugInHandle, "plugin_open");
+        plugin_openfp = (void* (*)(char**,int *, int (*)(char *, char *)))dlsym(m_plugInHandle, "plugin_open");
+        m_plugin_startfp = (void (*)(void *))dlsym(m_plugInHandle, "plugin_start");
         #endif
         
         if ((plugin_namefp != NULL) && (plugin_openfp != NULL)) {
@@ -203,13 +205,14 @@ bool MainApp::OnInit()
             char param_name1[80], param_name2[80];
             char *param_names[2] = {param_name1, param_name2};
             int  nparams, i;
-            m_plugInStates = (plugin_openfp)(param_names, &nparams);
+            m_plugInStates = (plugin_openfp)(param_names, &nparams, plugin_get_persistant);
             m_numPlugInParam = nparams;
             for(i=0; i<nparams; i++) {
-                fprintf(stderr, "  plugin param name[%d]: %s\n", i, param_names[i]);
                 m_plugInParamName[i] = param_names[i];
                 wxString configStr = "/" + m_plugInName + "/" + m_plugInParamName[i];
                 m_txtPlugInParam[i] = pConfig->Read(configStr, wxT(""));
+                //fprintf(stderr, "  plugin param name[%d]: %s\n", i, param_names[i]);
+                fprintf(stderr, "  plugin param name[%d]: %s values: %s\n", i, m_plugInParamName[i].mb_str().data(), m_txtPlugInParam[i].mb_str().data());
             }
         }
         
@@ -2325,6 +2328,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         m_rb1600->Disable();
         m_rb700b->Disable();
+        if (m_rbPlugIn)
+            m_rbPlugIn->Disable();
 
         // determine what mode we are using
 
@@ -2338,41 +2343,55 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             g_Nc = 14;
             m_panelScatter->setNc(g_Nc/2-1);  /* due to diversity, -1 due to no pilot like FreeDV 1600 */
         }
-   
-        // init freedv states
+        if (m_rbPlugIn->GetValue()) {
+            g_mode = -1;
 
-        g_pfreedv = freedv_open(g_mode);
-        freedv_set_callback_txt(g_pfreedv, &my_put_next_rx_char, &my_get_next_tx_char, NULL);
+            /* scale plots assuming Fs = 8000 Hz for now */
 
-        freedv_set_callback_error_pattern(g_pfreedv, my_freedv_put_error_pattern, (void*)m_panelTestFrameErrors);
-        g_error_pattern_fifo = fifo_create(2*freedv_get_sz_error_pattern(g_pfreedv));
-        g_error_hist = new short[FDMDV_NC_MAX*2];
-        int i;
-        for(i=0; i<2*FDMDV_NC_MAX; i++)
-            g_error_hist[i] = 0;
+            m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ)/8000.0);
+            m_panelWaterfall->setFs(8000.0);
 
-        assert(g_pfreedv != NULL);
-        modem_stats_open(&g_stats);
+            (wxGetApp().m_plugin_startfp)(wxGetApp().m_plugInStates);
+        }
 
-        // Init Speex pre-processor states
-        // by inspecting Speex source it seems that only denoiser is on be default
+        if (g_mode != -1) { 
+            // init freedv states
 
-        g_speex_st = speex_preprocess_state_init(freedv_get_n_speech_samples(g_pfreedv), FS); 
+            g_pfreedv = freedv_open(g_mode);
+            freedv_set_callback_txt(g_pfreedv, &my_put_next_rx_char, &my_get_next_tx_char, NULL);
 
-        // adjust spectrum and waterfall freq scaling base on mode
+            freedv_set_callback_error_pattern(g_pfreedv, my_freedv_put_error_pattern, (void*)m_panelTestFrameErrors);
+            g_error_pattern_fifo = fifo_create(2*freedv_get_sz_error_pattern(g_pfreedv));
+            g_error_hist = new short[FDMDV_NC_MAX*2];
+            int i;
+            for(i=0; i<2*FDMDV_NC_MAX; i++)
+                g_error_hist[i] = 0;
 
-        m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedv_get_modem_sample_rate(g_pfreedv)/2)));
-        m_panelWaterfall->setFs(freedv_get_modem_sample_rate(g_pfreedv));
+            assert(g_pfreedv != NULL);
+            modem_stats_open(&g_stats);
 
-        // adjust scatter diagram for Number of FDM carriers
+            // init Codec 2 LPC Post Filter
 
-        // init Codec 2 LPC Post Filter
+            codec2_set_lpc_post_filter(freedv_get_codec2(g_pfreedv),
+                                       wxGetApp().m_codec2LPCPostFilterEnable,
+                                       wxGetApp().m_codec2LPCPostFilterBassBoost,
+                                       wxGetApp().m_codec2LPCPostFilterBeta,
+                                       wxGetApp().m_codec2LPCPostFilterGamma);
 
-        codec2_set_lpc_post_filter(freedv_get_codec2(g_pfreedv),
-                                   wxGetApp().m_codec2LPCPostFilterEnable,
-                                   wxGetApp().m_codec2LPCPostFilterBassBoost,
-                                   wxGetApp().m_codec2LPCPostFilterBeta,
-                                   wxGetApp().m_codec2LPCPostFilterGamma);
+            // Init Speex pre-processor states
+            // by inspecting Speex source it seems that only denoiser is on be default
+
+            g_speex_st = speex_preprocess_state_init(freedv_get_n_speech_samples(g_pfreedv), FS); 
+
+            // adjust spectrum and waterfall freq scaling base on mode
+
+            m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedv_get_modem_sample_rate(g_pfreedv)/2)));
+            m_panelWaterfall->setFs(freedv_get_modem_sample_rate(g_pfreedv));
+
+            // Init text msg decoding
+
+            freedv_set_varicode_code_num(g_pfreedv, wxGetApp().m_textEncoding);
+        }
 
         g_State = 0;
         g_snr = 0.0;
@@ -2391,9 +2410,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_textLevel->SetLabel(wxT(""));
         m_gaugeLevel->SetValue(0);
 
-        // Init text msg decoding
-
-        freedv_set_varicode_code_num(g_pfreedv, wxGetApp().m_textEncoding);
         //printf("m_textEncoding = %d\n", wxGetApp().m_textEncoding);
         //printf("g_stats.snr: %f\n", g_stats.snr_est);
 
@@ -2452,11 +2468,14 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         // free up states
 
-        modem_stats_close(&g_stats);
-        delete g_error_hist;
-        fifo_destroy(g_error_pattern_fifo);
-        freedv_close(g_pfreedv);
-        speex_preprocess_state_destroy(g_speex_st);
+        if (g_mode == -1) {
+            modem_stats_close(&g_stats);
+            delete g_error_hist;
+            fifo_destroy(g_error_pattern_fifo);
+            freedv_close(g_pfreedv);
+            speex_preprocess_state_destroy(g_speex_st);
+        }
+
         m_newMicInFilter = m_newSpkOutFilter = true;
 
         m_togBtnSplit->Disable();
@@ -2468,6 +2487,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_togBtnOnOff->SetLabel(wxT("Start"));
         m_rb1600->Enable();
         m_rb700b->Enable();
+        if (m_rbPlugIn)
+            m_rbPlugIn->Enable();
+           
 #ifdef DISABLED_FEATURE
         m_rb700->Enable();
         m_rb1400old->Enable();
@@ -3930,3 +3952,11 @@ void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, CO
     foff_phase_rect->real /= mag;	 
     foff_phase_rect->imag /= mag;	 
 }
+
+int plugin_get_persistant(char name[], char value[]) {
+    wxString s = wxGetApp().m_txtPlugInParam[0];
+    strcpy(value, s.mb_str().data());
+    fprintf(stderr, "plugin_get_persistant called name: %s value: %s\n", name, s.mb_str().data());
+    return 0;
+}
+
