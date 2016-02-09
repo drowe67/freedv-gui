@@ -283,6 +283,8 @@ class MainApp : public wxApp
         wxString   m_plugInParamName[PLUGIN_MAX_PARAMS];
         void      *m_plugInStates;
         void     (*m_plugin_startfp)(void *);
+        void     (*m_plugin_stopfp)(void *);
+        void     (*m_plugin_rx_samplesfp)(void *, short *, int);
 
         // misc
 
