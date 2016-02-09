@@ -41,6 +41,7 @@ static int (*plugin_get_persistant)(char name[], char value[]);
 
 struct APLUGIN_STATES {
     int symbol_rate;
+    int num_tones;
     int counter;
 };
 
@@ -93,16 +94,24 @@ void DLL plugin_start(void *s) {
     struct APLUGIN_STATES *states = (struct APLUGIN_STATES*)s;
     char txt[80];
 
+    fprintf(stderr, "\nplugin_start\n");
+
     (plugin_get_persistant)("SymbolRate",txt);
     states->symbol_rate = atoi(txt);
+
+    (plugin_get_persistant)("NumTones",txt);
+    states->num_tones = atoi(txt);
+    
+    fprintf(stderr, "symbol_rate: %d num_tones: %d\n", states->symbol_rate, states->num_tones);
 }
 
 void DLL plugin_stop(void *states) {
+    fprintf(stderr, "\nplugin_stop\n");
 }
 
 void DLL plugin_rx_samples(void *s, short samples[], int n) {
     struct APLUGIN_STATES *states = (struct APLUGIN_STATES*)s;
-    printf("Got n=%d samples!\n", n);
-    printf("samples[0] = %d  samples[%d-1] = %d  counter = %d\n", samples[0], n, samples[n-1], states->counter++);
+    //fprintf(stderr, "Got n=%d samples!\n", n);
+    //fprintf(stderr, "samples[0] = %d  samples[%d-1] = %d  counter = %d\n", samples[0], n, samples[n-1], states->counter++);
 }
 
