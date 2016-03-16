@@ -186,7 +186,7 @@ bool MainApp::OnInit()
 
         #ifdef __WXMSW__
         plugin_namefp = (void (*)(char*))GetProcAddress((HMODULE)m_plugInHandle, "plugin_name");
-        plugin_openfp = (void* (*)(char**,int *))GetProcAddress((HMODULE)m_plugInHandle, "plugin_open");
+        plugin_openfp = (void* (*)(char**,int *, int (*)(char *, char *)))GetProcAddress((HMODULE)m_plugInHandle, "plugin_open");
         m_plugin_startfp = (void (*)(void *))GetProcAddress((HMODULE)m_plugInHandle, "plugin_start");
         m_plugin_stopfp = (void (*)(void *))GetProcAddress((HMODULE)m_plugInHandle, "plugin_stop");
         m_plugin_rx_samplesfp = (void (*)(void *, short *, int))GetProcAddress((HMODULE)m_plugInHandle, "plugin_rx_samples");
@@ -1657,9 +1657,18 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         // delay timer or valid sync
 
         if (vk_event == VK_DT) {
-            vk_rx_time += DT;
-            if (vk_rx_time >= vk_rx_pause) {
-                next_state = VoiceKeyerStartTx();
+            if (freedv_get_sync(g_pfreedv) == 1) {
+                // if we detect sync simulate a smooth transition to SYNC_WAIT State - TODO: review
+                if (vk_rx_time >= DT) {
+                    vk_rx_time -= DT;
+                } else {
+                    next_state = VK_SYNC_WAIT;
+                }
+            } else {
+                vk_rx_time += DT;
+                if (vk_rx_time >= vk_rx_pause) {
+                    next_state = VoiceKeyerStartTx();
+                }
             }
         }
 
@@ -1668,10 +1677,6 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
             next_state = VK_IDLE;
         }
 
-        if (vk_event == VK_SYNC) {
-            vk_rx_time = 0;
-            next_state = VK_SYNC_WAIT;
-        }
         break;
 
      case VK_SYNC_WAIT:
@@ -1685,13 +1690,15 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         }
 
         if (vk_event == VK_DT) {
-            vk_rx_time += DT;
-
-            // if we lose sync restart RX state
-
             if (freedv_get_sync(g_pfreedv) == 0) {
-                vk_rx_time = 0.0;
-                next_state = VK_RX;
+                // if we lose sync simulate a smooth transition to return in RX State - TODO: review
+                if (vk_rx_time >= DT) {
+                    vk_rx_time -= DT;
+                } else {
+                    next_state = VK_RX;
+                }
+            } else {
+                vk_rx_time += DT;
             }
 
             // drop out of voice keyer if we get a few seconds of valid sync
@@ -2782,8 +2789,8 @@ void MainFrame::startRxStream()
         g_rxUserdata->infifo2 = fifo_create(8*N48);
         printf("N48: %d\n", N48);
 
-        g_rxUserdata->rxinfifo = fifo_create(3 * N8);
-        g_rxUserdata->rxoutfifo = fifo_create(2 * N8);
+        g_rxUserdata->rxinfifo = fifo_create(10 * N8);
+        g_rxUserdata->rxoutfifo = fifo_create(10 * N8);
 
         // Init Equaliser Filters ------------------------------------------------------
 
@@ -3366,6 +3373,7 @@ void txRxProcessing()
             per_frame_rx_processing(cbData->rxoutfifo, cbData->rxinfifo);
             memset(out8k_short, 0, sizeof(short)*N8);
             fifo_read(cbData->rxoutfifo, out8k_short, N8);
+            //printf("out8k_short: %d\n", out8k_short[0]);
         }
 
 
@@ -3580,7 +3588,7 @@ void per_frame_rx_processing(
             }
             freq_shift_coh(rx_fdm_offset, rx_fdm, g_RxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_RxFreqOffsetPhaseRect, nin);
             nout = freedv_comprx(g_pfreedv, output_buf, rx_fdm_offset);
-        
+            //printf("nout %d outbuf_buf[0]: %d\n", nout, output_buf[0]);
             fifo_write(output_fifo, output_buf, nout);
         
             nin = freedv_nin(g_pfreedv);
