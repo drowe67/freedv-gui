@@ -130,7 +130,7 @@ SpeexPreprocessState *g_speex_st;
 // WxWidgets - initialize the application
 IMPLEMENT_APP(MainApp);
 
-//FILE *ft;
+FILE *ftest;
 FILE *g_logfile;
 
 //-------------------------------------------------------------------------
@@ -273,6 +273,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     #else
     g_logfile = stderr;
     #endif
+
 
     SetMinSize(wxSize(400,400));
 
@@ -600,7 +601,9 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     m_schedule_restore = false;
 
     vk_state = VK_IDLE;
-    
+
+    ftest = fopen("ftest.raw", "wb");
+    assert(ftest != NULL);
 }
 
 //-------------------------------------------------------------------------
@@ -613,7 +616,7 @@ MainFrame::~MainFrame()
     int w;
     int h;
 
-    //fclose(ft);
+    fclose(ftest);
     #ifdef __WXMSW__
     fclose(g_logfile);
     #endif
@@ -3336,7 +3339,7 @@ void txRxProcessing()
             short        insf_short[nsf];
             unsigned int n = sf_read_short(g_sfPlayFileFromRadio, insf_short, nsf);
             n8k = resample(cbData->insrcsf, in8k_short, insf_short, samplerate, g_sfFs, N8, nsf);
-            //fprintf(g_logfile, "n: %d nsnf: %d n8k: %d\n", n, nsf, n8k);
+            //fprintf(g_logfile, "n: %d nsf: %d n8k: %d samplerate: %d\n", n, nsf, n8k, samplerate);
             assert(n8k <= N8);
 
             if (n == 0) {
@@ -3514,11 +3517,17 @@ void txRxProcessing()
                 COMP tx_fdm_offset[freedv_get_n_nom_modem_samples(g_pfreedv)];
                 int  i;
 
-                freedv_comptx(g_pfreedv, tx_fdm, in8k_short);
+                if (g_mode == FREEDV_MODE_800XA) {
+                    /* 800XA doesn't support complex output just yet */
+                    freedv_tx(g_pfreedv, out8k_short, in8k_short);
+                }
+                else {
+                    freedv_comptx(g_pfreedv, tx_fdm, in8k_short);
   
-                freq_shift_coh(tx_fdm_offset, tx_fdm, g_TxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_TxFreqOffsetPhaseRect, freedv_get_n_nom_modem_samples(g_pfreedv));
-                for(i=0; i<freedv_get_n_nom_modem_samples(g_pfreedv); i++)
-                    out8k_short[i] = tx_fdm_offset[i].real;
+                    freq_shift_coh(tx_fdm_offset, tx_fdm, g_TxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_TxFreqOffsetPhaseRect, freedv_get_n_nom_modem_samples(g_pfreedv));
+                    for(i=0; i<freedv_get_n_nom_modem_samples(g_pfreedv); i++)
+                        out8k_short[i] = tx_fdm_offset[i].real;
+                }
             }
 
             // output one frame of modem signal
@@ -3541,9 +3550,9 @@ void txRxProcessing()
 //----------------------------------------------------------------
 
 void per_frame_rx_processing(
-                                            FIFO    *output_fifo,   // decoded speech samples
-                                            FIFO    *input_fifo
-                                        )
+                             FIFO    *output_fifo,   // decoded speech samples
+                             FIFO    *input_fifo
+                             )
 {
     float               rx_spec[MODEM_STATS_NSPEC];
     int                 i;
@@ -3587,7 +3596,7 @@ void per_frame_rx_processing(
             assert(nin <= freedv_get_n_max_modem_samples(g_pfreedv));
 
             nin_prev = nin;
-            //fwrite(input_buf, sizeof(short), nin, ft);
+            fwrite(input_buf, sizeof(short), nin, ftest);
 
             // demod per frame processing
             for(i=0; i<nin; i++) {
@@ -3608,7 +3617,7 @@ void per_frame_rx_processing(
             }
             freq_shift_coh(rx_fdm_offset, rx_fdm, g_RxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_RxFreqOffsetPhaseRect, nin);
             nout = freedv_comprx(g_pfreedv, output_buf, rx_fdm_offset);
-            //printf("nout %d outbuf_buf[0]: %d\n", nout, output_buf[0]);
+            printf("nout %d outbuf_buf[0]: %d\n", nout, output_buf[0]);
             fifo_write(output_fifo, output_buf, nout);
         
             nin = freedv_nin(g_pfreedv);
@@ -4018,7 +4027,7 @@ void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, CO
 	rx_fdm_fcorr[i] = cmult(rx_fdm[i], *foff_phase_rect);
     }
 
-    /* normalise digital oscilator as the magnitude can drfift over time */
+    /* normalise digital oscilator as the magnitude can drift over time */
 
     mag = cabsolute(*foff_phase_rect);
     foff_phase_rect->real /= mag;	 
