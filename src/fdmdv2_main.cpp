@@ -967,31 +967,44 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     m_panelSpectrum->m_newdata = true;
     m_panelSpectrum->Refresh();
 
-    /* update scatter plot -----------------------------------------------------------------*/
+    /* update scatter/eye plot ------------------------------------------------------------*/
 
-    for (r=0; r<g_stats.nr; r++) {
+    if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_800XA) {
+        /* FSK Mode - eye diagram ---------------------------------------------------------*/
         
-        if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600) {
-            m_panelScatter->add_new_samples(&g_stats.rx_symbols[r][0]);
+        /* add samples row by row */
+
+        int i;
+	for (i=0; i<g_stats.neyetr; i++) {
+            m_panelScatter->add_new_samples_eye(&g_stats.rx_eye[i][0], g_stats.neyesamp);
         }
+    }
+    else {
+        /* PSK Modes - scatter plot -------------------------------------------------------*/
+        for (r=0; r<g_stats.nr; r++) {
         
-        if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
+            if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600) {
+                m_panelScatter->add_new_samples_scatter(&g_stats.rx_symbols[r][0]);
+            }
+        
+            if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
             
-            /* 
-               FreeDV 700 uses diversity, so combine symbols for
-               scatter plot, as combined symbols are used for
-               demodulation.  Note we need to use a copy of the
-               symbols, as we are not sure when the stats will be
-               updated.
-            */
+                /* 
+                   FreeDV 700 uses diversity, so combine symbols for
+                   scatter plot, as combined symbols are used for
+                   demodulation.  Note we need to use a copy of the
+                   symbols, as we are not sure when the stats will be
+                   updated.
+                */
 
-            COMP rx_symbols_copy[g_Nc/2];
+                COMP rx_symbols_copy[g_Nc/2];
 
-            for(c=0; c<g_Nc/2; c++)
-                rx_symbols_copy[c] = cadd(g_stats.rx_symbols[r][c], g_stats.rx_symbols[r][c+g_Nc/2]);
-            m_panelScatter->add_new_samples(rx_symbols_copy);
-        }
+                for(c=0; c<g_Nc/2; c++)
+                    rx_symbols_copy[c] = cadd(g_stats.rx_symbols[r][c], g_stats.rx_symbols[r][c+g_Nc/2]);
+                m_panelScatter->add_new_samples_scatter(rx_symbols_copy);
+            }
        
+        }
     }
 
     m_panelScatter->Refresh();
@@ -2431,6 +2444,13 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         g_snr = 0.0;
         g_half_duplex = wxGetApp().m_boolHalfDuplex;
 
+        if (g_mode == FREEDV_MODE_800XA) {
+            m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_EYE);
+        }
+        else {
+            m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
+        }
+
         m_pcallsign = m_callsign;
         memset(m_callsign, 0, sizeof(m_callsign));
         m_checksumGood = m_checksumBad = 0;
@@ -3617,7 +3637,7 @@ void per_frame_rx_processing(
             }
             freq_shift_coh(rx_fdm_offset, rx_fdm, g_RxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_RxFreqOffsetPhaseRect, nin);
             nout = freedv_comprx(g_pfreedv, output_buf, rx_fdm_offset);
-            printf("nout %d outbuf_buf[0]: %d\n", nout, output_buf[0]);
+            //kprintf("nout %d outbuf_buf[0]: %d\n", nout, output_buf[0]);
             fifo_write(output_fifo, output_buf, nout);
         
             nin = freedv_nin(g_pfreedv);

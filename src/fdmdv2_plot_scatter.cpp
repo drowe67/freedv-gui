@@ -44,14 +44,18 @@ PlotScatter::PlotScatter(wxFrame* parent) : PlotPanel(parent)
         m_mem[i].imag = 0.0;
     }
 
-    m_filter_max_xy = 0.1;
+    m_filter_max_xy = m_filter_max_y = 0.1;
 
     // defaults so we start off with something sensible
 
     Nsym = 14+1;
     scatterMemSyms = ((int)(SCATTER_MEM_SECS*(Nsym/DT)));
     assert(scatterMemSyms <= SCATTER_MEM_SYMS_MAX);
-        
+
+    Ncol = 0;
+    memset(eye_mem, 0, sizeof(eye_mem));
+
+    mode = PLOT_SCATTER_MODE_SCATTER;
 }
 
 // changing number of carriers changes number of symbols to plot
@@ -69,7 +73,7 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
 {
     float x_scale;
     float y_scale;
-    int   i;
+    int   i,j;
     int   x;
     int   y;
     wxColour sym_to_colour[] = {wxColor(0,0,255), 
@@ -109,52 +113,114 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
     wxPen pen;
     pen.SetWidth(1); // note this is ignored by DrawPoint
 
-    // automatically scale, first measure the maximum value
+    if (mode == PLOT_SCATTER_MODE_SCATTER) {
 
-    float max_xy = 1E-12;
-    float real,imag;
-    for(i=0; i< scatterMemSyms; i++) {
-        real = fabs(m_mem[i].real);
-        imag = fabs(m_mem[i].imag);
-        if (real > max_xy)
-            max_xy = real;
-        if (imag > max_xy)
-            max_xy = imag;
+        // automatically scale, first measure the maximum value
+
+        float max_xy = 1E-12;
+        float real,imag;
+        for(i=0; i< scatterMemSyms; i++) {
+            real = fabs(m_mem[i].real);
+            imag = fabs(m_mem[i].imag);
+            if (real > max_xy)
+                max_xy = real;
+            if (imag > max_xy)
+                max_xy = imag;
+        }
+
+        // smooth it out and set a lower limit to prevent divide by 0 issues
+
+        m_filter_max_xy = BETA*m_filter_max_xy + (1 - BETA)*2.5*max_xy;
+        if (m_filter_max_xy < 0.001)
+            m_filter_max_xy = 0.001;
+
+        // quantise to log steps to prevent scatter scaling bobbing about too
+        // much as scaling varies
+
+        float quant_m_filter_max_xy = exp(floor(0.5+log(m_filter_max_xy)));
+        //printf("max_xy: %f m_filter_max_xy: %f quant_m_filter_max_xy: %f\n", max_xy, m_filter_max_xy, quant_m_filter_max_xy);
+
+        x_scale = (float)m_rGrid.GetWidth()/quant_m_filter_max_xy;
+        y_scale = (float)m_rGrid.GetHeight()/quant_m_filter_max_xy;
+
+        // draw all samples
+
+        for(i = 0; i < scatterMemSyms; i++) {
+            x = x_scale * m_mem[i].real + m_rGrid.GetWidth()/2;
+            y = y_scale * m_mem[i].imag + m_rGrid.GetHeight()/2;
+            x += PLOT_BORDER + XLEFT_OFFSET;
+            y += PLOT_BORDER;
+            pen.SetColour(sym_to_colour[i%Nsym]);
+            dc.SetPen(pen);
+            dc.DrawPoint(x, y);
+        }
     }
 
-    // smooth it out and set a lower limit to prevent didev by 0 issues
+    if (mode == PLOT_SCATTER_MODE_EYE) {
 
-    m_filter_max_xy = BETA*m_filter_max_xy + (1 - BETA)*2.5*max_xy;
-    if (m_filter_max_xy < 0.001)
-        m_filter_max_xy = 0.001;
-
-    // quantise to log steps to prevent scatter scaling bobbing about too
-    // much as scaling varies
-
-    float quant_m_filter_max_xy = exp(floor(0.5+log(m_filter_max_xy)));
-    //printf("max_xy: %f m_filter_max_xy: %f quant_m_filter_max_xy: %f\n", max_xy, m_filter_max_xy, quant_m_filter_max_xy);
-
-    x_scale = (float)m_rGrid.GetWidth()/quant_m_filter_max_xy;
-    y_scale = (float)m_rGrid.GetHeight()/quant_m_filter_max_xy;
-
-    // draw all samples
-
-    for(i = 0; i < scatterMemSyms; i++)
-    {
-        x = x_scale * m_mem[i].real + m_rGrid.GetWidth()/2;
-        y = y_scale * m_mem[i].imag + m_rGrid.GetHeight()/2;
-	x += PLOT_BORDER + XLEFT_OFFSET;
-	y += PLOT_BORDER;
-        pen.SetColour(sym_to_colour[i%Nsym]);
+        pen.SetColour(DARK_GREEN_COLOR);
+        pen.SetWidth(1);
         dc.SetPen(pen);
-	dc.DrawPoint(x, y);
+
+        // automatically scale, first measure the maximum Y value
+
+        float max_y = 1E-12;
+        float min_y = 1E+12;
+        for(i=0; i<SCATTER_EYE_MEM_ROWS; i++) {
+            for(j=0; j<Ncol; j++) {
+                if (eye_mem[i][j] > max_y) {
+                    max_y = eye_mem[i][j];
+                }
+                if (eye_mem[i][j] < min_y) {
+                    min_y = eye_mem[i][j];
+                }
+            }
+        }
+ 
+        // smooth it out and set a lower limit to prevent divide by 0 issues
+
+        m_filter_max_y = BETA*m_filter_max_y + (1 - BETA)*2.5*max_y;
+        if (m_filter_max_y < 0.001)
+            m_filter_max_y = 0.001;
+
+        // quantise to log steps to prevent scatter scaling bobbing about too
+        // much as scaling varies
+
+        float quant_m_filter_max_y = exp(floor(0.5+log(m_filter_max_y)));
+        //printf("min_y: %4.3f max_y: %4.3f quant_m_filter_max_y: %4.3f\n", min_y, max_y, quant_m_filter_max_y);
+
+        x_scale = (float)m_rGrid.GetWidth()/Ncol;
+        y_scale = (float)m_rGrid.GetHeight()/quant_m_filter_max_y;
+        //printf("GetWidth(): %d GetHeight(): %d\n", m_rGrid.GetWidth(), m_rGrid.GetHeight());
+
+        // plot eye traces row by row
+
+        int prev_x, prev_y;
+        prev_x = prev_y = 0;
+        for(i=0; i<SCATTER_EYE_MEM_ROWS; i++) {
+            //printf("row: ");
+            for(j=0; j<Ncol; j++) {
+                x = x_scale * j;
+                y = m_rGrid.GetHeight()*0.75 - y_scale * eye_mem[i][j];
+               //printf("%4d,%4d  ", x, y);
+                x += PLOT_BORDER + XLEFT_OFFSET;
+                y += PLOT_BORDER;
+                pen.SetColour(sym_to_colour[i%4]);
+                dc.SetPen(pen);
+                if (j)
+                    dc.DrawLine(x, y, prev_x, prev_y);
+                prev_x = x; prev_y = y;
+            }
+            //printf("\n");
+        }
+        
     }
 }
 
 //----------------------------------------------------------------
 // add_new_samples()
 //----------------------------------------------------------------
-void PlotScatter::add_new_samples(COMP samples[])
+void PlotScatter::add_new_samples_scatter(COMP samples[])
 {
     int i,j;
 
@@ -170,6 +236,31 @@ void PlotScatter::add_new_samples(COMP samples[])
     for(j=0; i < scatterMemSyms; i++,j++)
     {
         m_mem[i] = samples[j];
+    }
+}
+
+/* add a row of eye samples, updating buffer */
+
+void PlotScatter::add_new_samples_eye(float samples[], int n)
+{
+    int i,j;
+
+    Ncol = n; /* this should be constant for a given modem config */
+
+    assert(n <= PLOT_SCATTER_EYE_MAX_SAMPLES_ROW);
+
+    // eye traces are arrnaged in rows, shift memory of traces
+
+    for(i=0; i<SCATTER_EYE_MEM_ROWS-1; i++) {
+        for(j=0; j<Ncol; j++) {
+            eye_mem[i][j] = eye_mem[i+1][j];
+        }
+    }
+
+    // new samples in last row
+
+    for(j=0; j<Ncol; j++) {
+        eye_mem[SCATTER_EYE_MEM_ROWS-1][j] = samples[j];
     }
 }
 
@@ -196,4 +287,3 @@ void PlotScatter::OnSize(wxSizeEvent& event)
 void PlotScatter::OnShow(wxShowEvent& event)
 {
 }
-
