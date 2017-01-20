@@ -69,8 +69,10 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     tools->Append(m_menuItemFilter);
 
     wxMenuItem* m_menuItemPlugIn;
-    m_menuItemPlugIn = new wxMenuItem(tools, wxID_ANY, plugInName + wxString(_(" Config")) , wxEmptyString, wxITEM_NORMAL);
-    tools->Append(m_menuItemPlugIn);
+    if (!wxIsEmpty(plugInName)) {
+        m_menuItemPlugIn = new wxMenuItem(tools, wxID_ANY, plugInName + wxString(_(" Config")) , wxEmptyString, wxITEM_NORMAL);
+        tools->Append(m_menuItemPlugIn);
+    }
 
     wxMenuItem* m_menuItemPlayFileToMicIn;
     m_menuItemPlayFileToMicIn = new wxMenuItem(tools, wxID_ANY, wxString(_("Start/Stop Play File - Mic In")) , wxEmptyString, wxITEM_NORMAL);
@@ -322,10 +324,12 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     sbSizer_mode->Add(m_rb1600, 0, wxALIGN_LEFT|wxALL, 1);
     m_rb1600->SetValue(true);
 
-    // Optional plug in
+    if (!wxIsEmpty(plugInName)) {
+        // Optional plug in
 
-    m_rbPlugIn = new wxRadioButton( this, wxID_ANY, plugInName, wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_mode->Add(m_rbPlugIn, 0, wxALIGN_LEFT|wxALL, 1);
+        m_rbPlugIn = new wxRadioButton( this, wxID_ANY, plugInName, wxDefaultPosition, wxDefaultSize, 0);
+        sbSizer_mode->Add(m_rbPlugIn, 0, wxALIGN_LEFT|wxALL, 1);
+    }
 
 #ifdef DISABLED_FEATURE
     m_rb1600Wide = new wxRadioButton( this, wxID_ANY, wxT("1600 Wide"), wxDefaultPosition, wxDefaultSize, 0);
@@ -485,8 +489,10 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     this->Connect(m_menuItemOptions->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsOptions));
     this->Connect(m_menuItemOptions->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsOptionsUI));
 
-    this->Connect(m_menuItemPlugIn->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsPlugInCfg));
-    this->Connect(m_menuItemPlugIn->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsPlugInCfgUI));
+    if (!wxIsEmpty(plugInName)) {
+        this->Connect(m_menuItemPlugIn->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsPlugInCfg));
+        this->Connect(m_menuItemPlugIn->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsPlugInCfgUI));
+    }
 
     this->Connect(m_menuItemPlayFileToMicIn->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnPlayFileToMicIn));
     this->Connect(m_menuItemRecFileFromRadio->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnRecFileFromRadio));
