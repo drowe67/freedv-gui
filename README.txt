@@ -62,7 +62,7 @@ Quickstart 2
 
 3/ Checkout a fresh copy of codec2-dev and build for Windows, pointing to the generate_codebook built by a linux build of generate_codebook, using this cmake line
 
-  $ cmake .. -DCMAKE_TOOLCHAIN_FILE=../freedv-dev/cmake/Toolchain-Ubuntu-mingw32.cmake -DUNITTEST=FALSE -DGENERATE_CODEBOOK=/home/david/codec2-dev/build_linux/src/generate_codebook 
+  $ cmake .. -DCMAKE_TOOLCHAIN_FILE=/home/david/freedv-dev/cmake/Toolchain-Ubuntu-mingw32.cmake -DUNITTEST=FALSE -DGENERATE_CODEBOOK=/home/david/codec2-dev/build_linux/src/generate_codebook 
 
 4/ Build WxWidgets
 
@@ -81,6 +81,23 @@ Quickstart 2
 
   $ cmake -DBOOTSTRAP_WXWIDGETS=TRUE -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-Ubuntu-mingw32.cmake -DUSE_STATIC_PORTAUDIO=TRUE -DUSE_STATIC_SNDFILE=TRUE -DUSE_STATIC_SAMPLERATE=TRUE -DUSE_STATIC_SOX=TRUE -DUSE_STATIC_CODEC2=FALSE -DCODEC2_INCLUDE_DIRS=/home/david/tmp/codec2-dev/src -DCODEC2_LIBRARY=/home/david/tmp/codec2-dev/build_windows/src/libcodec2.dll.a -DHAMLIB_INCLUDE_DIR=hamlib-win32-1.2.15.3/include -DHAMLIB_LIBRARY=hamlib-win32-1.2.15.3/lib/gcc/libhamlib.dll.a -DCMAKE_BUILD_TYPE=Debug ..
   $ make
+
+7/ Test on Linux with "wine", this will tell you if any DLLs are missing:
+
+  $ wine src/freedv.exe
+
+8/ When moving to an actual Windows machine, I needed:
+
+  /usr/lib/gcc/i686-w64-mingw32/4.8/libstdc++-6.dll
+  /usr/lib/gcc/i686-w64-mingw32/4.8/libgcc_s_sjlj-1.dll
+  /usr/i686-w64-mingw32/lib/libwinpthread-1.dll
+
+  Wine seems to find these automagically, so I found them on my system by
+  looking at ~/.wine/system.reg for PATH:
+
+  [System\\CurrentControlSet\\Control\\Session Manager\\Environment] 1423800803
+  "PATH"=str(2):"C:\\windows\\system32;C:\\windows;C:\\windows\\system32\\wbem;Z:\\usr\\i686-w64-mingw32\\lib;Z:\\usr\\lib\\gcc\\i686-w64-mingw32\\4.8"
+
 
 ====================================
  Building and installing on Windows
