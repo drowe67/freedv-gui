@@ -130,7 +130,7 @@ SpeexPreprocessState *g_speex_st;
 // WxWidgets - initialize the application
 IMPLEMENT_APP(MainApp);
 
-FILE *ftest;
+//FILE *ftest;
 FILE *g_logfile;
 
 //-------------------------------------------------------------------------
@@ -170,10 +170,10 @@ bool MainApp::OnInit()
 
     m_plugIn = false;
     #ifdef __WXMSW__
-    wchar_t dll_path[] = L"/home/david/tmp/modem_api/afreedvplugin.dll";
+    wchar_t dll_path[] = L"afreedvplugin.dll";
     m_plugInHandle = LoadLibrary(dll_path);
     #else
-    m_plugInHandle = dlopen("/home/david/tmp/modem_api/afreedvplugin.so", RTLD_LAZY);
+    m_plugInHandle = dlopen("afreedvplugin.so", RTLD_LAZY);
     #endif
     
     if (m_plugInHandle) {
@@ -602,8 +602,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 
     vk_state = VK_IDLE;
 
-    ftest = fopen("ftest.raw", "wb");
-    assert(ftest != NULL);
+    //ftest = fopen("ftest.raw", "wb");
+    //assert(ftest != NULL);
 }
 
 //-------------------------------------------------------------------------
@@ -616,7 +616,7 @@ MainFrame::~MainFrame()
     int w;
     int h;
 
-    fclose(ftest);
+    //fclose(ftest);
     #ifdef __WXMSW__
     fclose(g_logfile);
     #endif
@@ -3616,7 +3616,7 @@ void per_frame_rx_processing(
             assert(nin <= freedv_get_n_max_modem_samples(g_pfreedv));
 
             nin_prev = nin;
-            fwrite(input_buf, sizeof(short), nin, ftest);
+            //fwrite(input_buf, sizeof(short), nin, ftest);
 
             // demod per frame processing
             for(i=0; i<nin; i++) {
