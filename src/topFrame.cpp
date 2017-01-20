@@ -324,6 +324,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     sbSizer_mode->Add(m_rb1600, 0, wxALIGN_LEFT|wxALL, 1);
     m_rb1600->SetValue(true);
 
+    m_rbPlugIn = NULL;
     if (!wxIsEmpty(plugInName)) {
         // Optional plug in
 

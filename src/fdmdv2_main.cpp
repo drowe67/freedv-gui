@@ -2367,7 +2367,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb700b->Disable();
         m_rb700c->Disable();
         m_rb800xa->Disable();
-        if (m_rbPlugIn)
+        if (m_rbPlugIn != NULL)
             m_rbPlugIn->Disable();
 
         // determine what mode we are using
@@ -2390,15 +2390,17 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (m_rb800xa->GetValue()) {
             g_mode = FREEDV_MODE_800XA;
         }
-        if (m_rbPlugIn->GetValue()) {
-            g_mode = -1;  /* TODO; a better way of handling (enumarating?) non-freedv modes */
+        if (m_rbPlugIn != NULL) {
+            if (m_rbPlugIn->GetValue()) {
+                g_mode = -1;  /* TODO; a better way of handling (enumarating?) non-freedv modes */
 
-            /* scale plots assuming Fs = 8000 Hz for now */
+                /* scale plots assuming Fs = 8000 Hz for now */
 
-            m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ)/8000.0);
-            m_panelWaterfall->setFs(8000.0);
+                m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ)/8000.0);
+                m_panelWaterfall->setFs(8000.0);
 
-            (wxGetApp().m_plugin_startfp)(wxGetApp().m_plugInStates);
+                (wxGetApp().m_plugin_startfp)(wxGetApp().m_plugInStates);
+            }
         }
 
         if (g_mode != -1) { 
@@ -2548,7 +2550,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb700b->Enable();
         m_rb700c->Enable();
         m_rb800xa->Enable();
-        if (m_rbPlugIn)
+        if (m_rbPlugIn != NULL)
             m_rbPlugIn->Enable();
            
 #ifdef DISABLED_FEATURE
