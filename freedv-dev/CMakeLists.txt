@@ -137,51 +137,6 @@ if(MINGW)
     enable_language(RC)
     set(CMAKE_RC_COMPILE_OBJECT
         "<CMAKE_RC_COMPILER> <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
-    # These are DLOPEN'ed and can't be automatically pulled in by dependency.
-    foreach(RUNTIME
-        hamlib-adat.dll
-        hamlib-alinco.dll
-        hamlib-amsat.dll
-        hamlib-aor.dll
-        hamlib-ars.dll
-        hamlib-celestron.dll
-        hamlib-drake.dll
-        hamlib-dummy.dll
-        hamlib-easycomm.dll
-        hamlib-flexradio.dll
-        hamlib-fodtrack.dll
-        hamlib-gs232a.dll
-        hamlib-heathkit.dll
-        hamlib-icom.dll
-        hamlib-jrc.dll
-        hamlib-kachina.dll
-        hamlib-kenwood.dll
-        hamlib-kit.dll
-        hamlib-lowe.dll
-        hamlib-m2.dll
-        hamlib-pcr.dll
-        hamlib-prm80.dll
-        hamlib-racal.dll
-        hamlib-rft.dll
-        hamlib-rotorez.dll
-        hamlib-rs.dll
-        hamlib-sartek.dll
-        hamlib-skanti.dll
-        hamlib-spid.dll
-        hamlib-tapr.dll
-        hamlib-tentec.dll
-        hamlib-ts7400.dll
-        hamlib-tuner.dll
-        hamlib-uniden.dll
-        hamlib-winradio.dll
-        hamlib-wj.dll
-        hamlib-yaesu.dll)
-        message(STATUS "Checking for ${RUNTIME}")
-        find_library(${RUNTIME}_LIB ${RUNTIME}
-            PATH_SUFFIXES hamlib)
-        message(STATUS "runtime found: ${${RUNTIME}_LIB}")
-        list(APPEND CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS ${${RUNTIME}_LIB})
-    endforeach()
     include(InstallRequiredSystemLibraries)
 endif(MINGW)
 
@@ -423,7 +378,7 @@ endif(wxWidgets_FOUND)
 #
 if(NOT USE_STATIC_SPEEXDSP)
     message(STATUS "Looking for Speex DSP library.")
-    find_path(SPEEXDSP_INCLUDE_DIR speex/speex.h)
+    find_path(SPEEXDSP_INCLUDE_DIR NAMES speex/speex.h speex/speexdsp_types.h)
     find_library(SPEEXDSP_LIBRARY speexdsp)
     message(STATUS "  Speex DSP headers: ${SPEEXDSP_INCLUDE_DIR}")
     message(STATUS "  Speex DSP library: ${SPEEXDSP_LIBRARY}")
