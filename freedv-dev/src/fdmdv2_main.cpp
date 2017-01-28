@@ -3183,6 +3183,7 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
     assert(argc <= SBQ_MAX_ARGS);
 
     sbq = sox_biquad_create(argc-1, (const char **)arg);
+    assert(sbq != NULL);
 
     return sbq;
 }
