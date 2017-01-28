@@ -30,6 +30,22 @@ set(FREEDV_SOURCES
     hamlib.h
     sox_biquad.h
     sox.h
+    sox/band.h
+    sox/biquad.c
+    sox/biquads.c
+    sox/biquad.h
+    sox/effects.c
+    sox/effects.h
+    sox/effects_i.c
+    sox/formats_i.c
+    sox/libsox.c
+    sox/soxconfig.h
+    sox/sox.h
+    sox/sox_i.h
+    sox/soxomp.h
+    sox/util.h
+    sox/xmalloc.h
+    sox/xmalloc.c
     topFrame.h
     version.h
 )
