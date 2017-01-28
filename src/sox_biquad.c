@@ -5,9 +5,13 @@
 // Authors:         David Rowe
 // 
 // To test:
-//          $ gcc sox_biquad.c -o sox_biquad -DSOX_BIQUAD_UNITTEST -Wall \
-//            /path/to/sox-14.4.0/src/.libs/libsox.a -lm -lsndfile
-//          $ ./sox_biquad
+/*
+          $ gcc sox_biquad.c sox/effects_i.c sox/effects.c sox/formats_i.c \
+            sox/biquad.c sox/biquads.c sox/xmalloc.c sox/libsox.c \
+            -o sox_biquad -DSOX_BIQUAD_UNITTEST -D__FREEDV__ \
+            -Wall -lm -lsndfile -g
+          $ ./sox_biquad
+*/
 //
 // License:
 //
@@ -104,7 +108,7 @@ void sox_biquad_filter(void *sbq, short out[], short in[], int n)
 #define N 20
 int main(void) {
     void *sbq;
-    char *argv[10];
+    const char *argv[] = {"highpass", "1000"};
     short in[N];
     short out[N];
     int   i, argc;;
@@ -114,7 +118,8 @@ int main(void) {
     in[0] = 8000;
 
     sox_biquad_start();
-    argv[0] = "highpass"; argv[1]="1000"; argc=1;
+    //argv[0] = "highpass"; argv[1]="1000"; 
+    argc=1;
     sbq = sox_biquad_create(argc, argv);
 
     sox_biquad_filter(sbq, out, in, N);
