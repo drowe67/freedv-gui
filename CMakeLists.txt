@@ -86,8 +86,6 @@ set(USE_STATIC_SNDFILE FALSE CACHE BOOL
     "Download and build static sndfile instead of the system library.")
 set(USE_STATIC_SAMPLERATE FALSE CACHE BOOL
     "Download and build static samplerate instead of the system library.")
-set(USE_STATIC_SOX FALSE CACHE BOOL
-    "Download and build static sox instead of the system library.")
 set(USE_STATIC_CODEC2 TRUE CACHE BOOL
     "Download and build static codec2 instead of the system library.")
 set(USE_STATIC_SPEEXDSP TRUE CACHE BOOL
@@ -99,7 +97,6 @@ if(USE_STATIC_DEPS)
     set(USE_STATIC_PORTAUDIO TRUE FORCE)
     set(USE_STATIC_SNDFILE TRUE FORCE)
     set(USE_STATIC_SAMPLERATE TRUE FORCE)
-    set(USE_STATIC_SOX TRUE FORCE)
     set(USE_STATIC_CODEC2 TRUE FORCE)
 endif(USE_STATIC_DEPS)
 
@@ -281,31 +278,6 @@ else(NOT USE_STATIC_SAMPLERATE)
     message(STATUS "Will attempt static build of samplerate.")
     include(cmake/BuildSamplerate.cmake)
 endif(NOT USE_STATIC_SAMPLERATE)
-
-#
-# Find sox library
-#
-if(NOT USE_STATIC_SOX)
-    message(STATUS "Looking for sox...")
-    find_library(LIBSOX_LIBRARY sox)
-    find_path(LIBSOX_INCLUDE_DIR NAMES sox/sox.h sox.h)
-    message(STATUS "  sox library: ${LIBSOX_LIBRARY}")
-    message(STATUS "  sox headers: ${LIBSOX_INCLUDE_DIR}")
-    if(LIBSOX_LIBRARY AND LIBSOX_INCLUDE_DIR)
-        list(APPEND FREEDV_LINK_LIBS ${LIBSOX_LIBRARY})
-        include_directories(${LIBSOX_INCLUDE_DIR})
-    else(LIBSOX_LIBRARY AND LIBSOX_INCLUDE_DIR)
-        message(FATAL_ERROR "sox library not found.
-On Linux systems try installing:
-    sox-devel (RPM based systems)
-    libsox-dev (DEB based systems)
-On Windows it's easiest to use the cmake option: USE_STATIC_SOX"
-        )
-    endif(LIBSOX_LIBRARY AND LIBSOX_INCLUDE_DIR)
-else(NOT USE_STATIC_SOX)
-    message(STATUS "Will attempt static build of sox.")
-    include(cmake/BuildSox.cmake)
-endif(NOT USE_STATIC_SOX)
 
 #    
 # sndfile Library
