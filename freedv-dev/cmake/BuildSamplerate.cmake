@@ -1,7 +1,7 @@
 set(SAMPLERATE_TARBALL "libsamplerate-0.1.8")
 
 if(MINGW AND CMAKE_CROSSCOMPILING)
-    set(CONFIGURE_COMMAND ./configure --build=${HOST} --host=${HOST} --target=${HOST} --prefix=${CMAKE_BINARY_DIR}/external/dist --disable-sndfile)
+    set(CONFIGURE_COMMAND ./configure --build=${HOST} --host=${HOST} --target=${HOST} --prefix=${CMAKE_BINARY_DIR}/external/dist --disable-sndfile --disable-fftw)
 else()
     set(CONFIGURE_COMMAND ./configure --prefix=${CMAKE_BINARY_DIR}/external/dist)
 endif()

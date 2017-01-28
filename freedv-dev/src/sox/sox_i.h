@@ -16,6 +16,8 @@
 #include "soxomp.h"  /* Note: soxomp.h includes soxconfig.h */
 #include "sox.h"
 
+#define __FREEDV__
+
 #if defined HAVE_FMEMOPEN
 #define _GNU_SOURCE
 #endif
