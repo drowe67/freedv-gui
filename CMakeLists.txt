@@ -145,10 +145,16 @@ endif(UNIX)
 
 # Find some standard headers and functions.
 include(CheckIncludeFiles)
-check_include_files("limits.h" HAVE_LIMITS_H)
-check_include_files("stddef.h" HAVE_STDDEF_H)
-check_include_files("stdlib.h" HAVE_STDLIB_H)
-check_include_files("string.h" HAVE_STRING_H)
+check_include_files("byteswap.h"   HAVE_BYTESWAP_H)
+check_include_files("limits.h"     HAVE_LIMITS_H)
+check_include_files("stddef.h"     HAVE_STDDEF_H)
+check_include_files("stdlib.h"     HAVE_STDLIB_H)
+check_include_files("string.h"     HAVE_STRING_H)
+check_include_files("strings.h"    HAVE_STRINGS_H)
+check_include_files("ltdl.h"       HAVE_LTDL_H)
+check_include_files("inttypes.h"   HAVE_INTTYPES_H)
+check_include_files("sys/stat.h"   HAVE_SYS_STAT_H)
+check_include_files("sys/types.h"  HAVE_SYS_TYPES_H)
 
 include(CheckTypeSize)
 check_type_size("int" SIZEOF_INT)
@@ -158,6 +164,13 @@ check_function_exists(floor HAVE_FLOOR)
 check_function_exists(memset HAVE_MEMSET)
 check_function_exists(pow HAVE_POW)
 check_function_exists(sqrt HAVE_SQRT)
+check_function_exists(fseeko HAVE_FSEEKO)
+check_function_exists(fmemopen HAVE_FMEMOPEN)
+check_function_exists(strcasecmp HAVE_STRCASECMP)
+check_function_exists(vsnprintf HAVE_VSNPRINTF)
+
+include(CheckSymbolExists)
+check_symbol_exists("_fseeki64" "stdio.h" HAVE__FSEEKI64)
 
 # fdmdv2_main.h requires patching to find config.h as it current looks in the
 # source directory and the generated file goes in the binary directory.
@@ -165,6 +178,10 @@ configure_file ("${PROJECT_SOURCE_DIR}/cmake/config.h.in"
                 "${PROJECT_BINARY_DIR}/config.h" )
 include_directories(${PROJECT_BINARY_DIR})
 add_definitions(-DHAVE_CONFIG_H)
+
+# Config file for bundled sox sources
+configure_file("${PROJECT_SOURCE_DIR}/cmake/soxconfig.h.in"
+               "${PROJECT_BINARY_DIR}/soxconfig.h")
 
 # Pthread Library
 find_package(Threads REQUIRED)
@@ -364,6 +381,25 @@ else()
     message(STATUS "Will attempt static build of speex.")
     include(cmake/BuildSpeex.cmake)
 endif()
+
+#
+# Find libdl for dlopen/dlclose
+#
+if(UNIX)
+    message(STATUS "Looking for dl library.")
+    find_library(DL_LIBRARY dl)
+    if(DL_LIBRARY)
+        message(STATUS "  dl library: ${DL_LIBRARY}")
+        list(APPEND FREEDV_LINK_LIBS ${DL_LIBRARY})
+    else()
+        message(FATAL_ERROR "dl library not found.
+On Linux systems try installing:
+    glibc-devel  (RPM based systems)
+    glibc-dev (DEB based systems)"
+        )
+    endif()
+endif(UNIX)
+
     
 #Freedv 
 add_subdirectory(src)

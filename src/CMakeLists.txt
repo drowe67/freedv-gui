@@ -29,7 +29,6 @@ set(FREEDV_SOURCES
     fdmdv2_plot_waterfall.h
     hamlib.h
     sox_biquad.h
-    sox.h
     sox/band.h
     sox/biquad.c
     sox/biquads.c
@@ -39,7 +38,6 @@ set(FREEDV_SOURCES
     sox/effects_i.c
     sox/formats_i.c
     sox/libsox.c
-    sox/soxconfig.h
     sox/sox.h
     sox/sox_i.h
     sox/soxomp.h
