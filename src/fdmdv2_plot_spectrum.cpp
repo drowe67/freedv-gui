@@ -29,6 +29,7 @@ void fdmdv2_clickTune(float frequency); // callback to pass new click freq
 BEGIN_EVENT_TABLE(PlotSpectrum, PlotPanel)
     EVT_MOTION          (PlotSpectrum::OnMouseMove)
     EVT_LEFT_DOWN       (PlotSpectrum::OnMouseLeftDown)
+    EVT_LEFT_DCLICK     (PlotSpectrum::OnMouseLeftDoubleClick)
     EVT_LEFT_UP         (PlotSpectrum::OnMouseLeftUp)
     EVT_MOUSEWHEEL      (PlotSpectrum::OnMouseWheelMoved)
     EVT_PAINT           (PlotSpectrum::OnPaint)
@@ -243,7 +244,7 @@ void PlotSpectrum::drawGraticule(wxAutoBufferedPaintDC&  dc)
 //-------------------------------------------------------------------------
 // OnMouseDown()
 //-------------------------------------------------------------------------
-void PlotSpectrum::OnMouseLeftDown(wxMouseEvent& event)
+void PlotSpectrum::OnMouseLeftDoubleClick(wxMouseEvent& event)
 {
     m_mouseDown = true;
     wxClientDC dc(this);

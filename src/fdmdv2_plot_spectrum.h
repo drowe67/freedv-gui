@@ -42,7 +42,7 @@ class PlotSpectrum : public PlotPanel
         void        OnShow(wxShowEvent& event);
         void        drawGraticule(wxAutoBufferedPaintDC& dc);
         void        draw(wxAutoBufferedPaintDC& dc);
-        void        OnMouseLeftDown(wxMouseEvent& event);
+        void        OnMouseLeftDoubleClick(wxMouseEvent& event);
 
    private:
         float       m_rxFreq;

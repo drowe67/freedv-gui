@@ -28,7 +28,7 @@ void fdmdv2_clickTune(float frequency); // callback to pass new click freq
 BEGIN_EVENT_TABLE(PlotWaterfall, PlotPanel)
     EVT_PAINT           (PlotWaterfall::OnPaint)
     EVT_MOTION          (PlotWaterfall::OnMouseMove)
-    EVT_LEFT_DOWN       (PlotWaterfall::OnMouseLeftDown)
+    EVT_LEFT_DCLICK     (PlotWaterfall::OnMouseLeftDoubleClick)
     EVT_RIGHT_DOWN      (PlotWaterfall::OnMouseRightDown)
     EVT_LEFT_UP         (PlotWaterfall::OnMouseLeftUp)
     EVT_MOUSEWHEEL      (PlotWaterfall::OnMouseWheelMoved)
@@ -449,7 +449,7 @@ void PlotWaterfall::plotPixelData()
 //-------------------------------------------------------------------------
 // OnMouseLeftDown()
 //-------------------------------------------------------------------------
-void PlotWaterfall::OnMouseLeftDown(wxMouseEvent& event)
+void PlotWaterfall::OnMouseLeftDoubleClick(wxMouseEvent& event)
 {
     m_mouseDown = true;
     wxClientDC dc(this);
