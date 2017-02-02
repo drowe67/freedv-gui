@@ -55,7 +55,7 @@ class PlotWaterfall : public PlotPanel
         void        drawGraticule(wxAutoBufferedPaintDC&  dc);
         void        draw(wxAutoBufferedPaintDC& dc);
         void        plotPixelData();
-        void        OnMouseLeftDown(wxMouseEvent& event);
+        void        OnMouseLeftDoubleClick(wxMouseEvent& event);
         void        OnMouseRightDown(wxMouseEvent& event);
 
     private:
