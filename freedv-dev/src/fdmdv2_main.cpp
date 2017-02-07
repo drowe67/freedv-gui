@@ -3393,6 +3393,24 @@ void txRxProcessing()
 
         //fprintf(g_logfile, "snr_squelch_thresh: %f\n",  g_pfreedv->snr_squelch_thresh);
 
+        // compute rx spectrum - do here so update rate in constant
+
+        COMP  rx_fdm[n8k];
+        float rx_spec[MODEM_STATS_NSPEC];
+        unsigned int   i;
+
+        for(i=0; i<n8k; i++) {
+            rx_fdm[i].real = in8k_short[i];
+            rx_fdm[i].imag = 0.0;
+        }            
+        modem_stats_get_rx_spectrum(&g_stats, rx_spec, rx_fdm, n8k);
+
+        // Average rx spectrum data using a simple IIR low pass filter
+
+        for(i = 0; i<MODEM_STATS_NSPEC; i++) {
+            g_avmag[i] = BETA * g_avmag[i] + (1.0 - BETA) * rx_spec[i];
+        }
+
         // Get some audio to send to headphones/speaker.  If in analog
         // mode we pass thru the "from radio" audio to the
         // headphones/speaker.
@@ -3400,6 +3418,7 @@ void txRxProcessing()
         if (g_analog) {
             memcpy(out8k_short, in8k_short, sizeof(short)*n8k);
             
+            #ifdef OLDSPEC
             // compute rx spectrum 
 
             COMP  rx_fdm[n8k];
@@ -3417,6 +3436,7 @@ void txRxProcessing()
             for(i = 0; i<MODEM_STATS_NSPEC; i++) {
                 g_avmag[i] = BETA * g_avmag[i] + (1.0 - BETA) * rx_spec[i];
             }
+            #endif
         }
         else {
             fifo_write(cbData->rxinfifo, in8k_short, n8k);
@@ -3581,7 +3601,9 @@ void per_frame_rx_processing(
                              FIFO    *input_fifo
                              )
 {
+    #ifdef OLDSPEC
     float               rx_spec[MODEM_STATS_NSPEC];
+    #endif
     int                 i;
 
     if (g_mode == -1) {
@@ -3589,15 +3611,17 @@ void per_frame_rx_processing(
 
         int   nin = 160; // TODO: hard code for now - some sort of plugin supplied param in future
         short input_buf[nin];
+
+        while (fifo_read(input_fifo, input_buf, nin) == 0) {
+            (wxGetApp().m_plugin_rx_samplesfp)(wxGetApp().m_plugInStates, input_buf, nin);
+        }
+
+        #ifdef OLD_SPEC
         COMP  rx_fdm[nin];
 
         for(i=0; i<nin; i++) {
             rx_fdm[i].real = (float)input_buf[i];
             rx_fdm[i].imag = 0.0;
-        }
-
-        while (fifo_read(input_fifo, input_buf, nin) == 0) {
-            (wxGetApp().m_plugin_rx_samplesfp)(wxGetApp().m_plugInStates, input_buf, nin);
         }
 
         modem_stats_get_rx_spectrum(&g_stats, rx_spec, rx_fdm, nin);
@@ -3607,6 +3631,7 @@ void per_frame_rx_processing(
         for(i = 0; i<MODEM_STATS_NSPEC; i++) {
             g_avmag[i] = BETA * g_avmag[i] + (1.0 - BETA) * rx_spec[i];
         }
+        #endif
 
     }
     else {
@@ -3616,13 +3641,16 @@ void per_frame_rx_processing(
         short               output_buf[freedv_get_n_speech_samples(g_pfreedv)];
         COMP                rx_fdm[freedv_get_n_max_modem_samples(g_pfreedv)];
         COMP                rx_fdm_offset[freedv_get_n_max_modem_samples(g_pfreedv)];
-        int                 nin, nin_prev, nout;
+        int                 nin, nout;
 
         nin = freedv_nin(g_pfreedv);
         while (fifo_read(input_fifo, input_buf, nin) == 0) {
             assert(nin <= freedv_get_n_max_modem_samples(g_pfreedv));
 
-            nin_prev = nin;
+            #ifdef OLD_SPEC
+            int nin_prev = nin;
+            #endif
+
             //fwrite(input_buf, sizeof(short), nin, ftest);
 
             // demod per frame processing
@@ -3655,6 +3683,7 @@ void per_frame_rx_processing(
 
             freedv_get_modem_extended_stats(g_pfreedv, &g_stats);
 
+            #ifdef OLD_SPEC
             // compute rx spectrum 
 
             modem_stats_get_rx_spectrum(&g_stats, rx_spec, rx_fdm, nin_prev); 
@@ -3664,6 +3693,7 @@ void per_frame_rx_processing(
             for(i = 0; i<MODEM_STATS_NSPEC; i++) {
                 g_avmag[i] = BETA * g_avmag[i] + (1.0 - BETA) * rx_spec[i];
             }
+            #endif
         }
     }
 
