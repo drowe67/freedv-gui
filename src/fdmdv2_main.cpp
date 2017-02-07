@@ -1236,9 +1236,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
     g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
 
-    // Run time update of FreeDV 700 tx clipper
 
     if (g_mode != -1)  {
+
+        // Run time update of FreeDV 700 tx clipper
+
         freedv_set_clip(g_pfreedv, (int)wxGetApp().m_FreeDV700txClip);
 
         // Test Frame Bit Error Updates ------------------------------------
@@ -1266,60 +1268,62 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             float b = (float)freedv_get_total_bit_errors(g_pfreedv)/(1E-6+freedv_get_total_bits(g_pfreedv));
             sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
 
-            // update error plots
+            // update error pattern plots if supported
 
             int sz_error_pattern = freedv_get_sz_error_pattern(g_pfreedv);
-            short error_pattern[sz_error_pattern];
+            if (sz_error_pattern) {
+                short error_pattern[sz_error_pattern];
 
-            if (fifo_read(g_error_pattern_fifo, error_pattern, sz_error_pattern) == 0) {
-                int i,b;
+                if (fifo_read(g_error_pattern_fifo, error_pattern, sz_error_pattern) == 0) {
+                    int i,b;
 
-                /* both modes map IQ to alternate bits, but one same carrier */
+                    /* both modes map IQ to alternate bits, but one same carrier */
 
-                if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600) {
-                    /* FreeDV 1600 mapping from error pattern to bit on each carrier */
+                    if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600) {
+                        /* FreeDV 1600 mapping from error pattern to bit on each carrier */
 
-                    for(b=0; b<g_Nc*2; b++) {
-                        for(i=b; i<sz_error_pattern; i+= 2*g_Nc) {
-                            m_panelTestFrameErrors->add_new_sample(b, b + 0.8*error_pattern[i]);
-                            g_error_hist[b] += error_pattern[i];
+                        for(b=0; b<g_Nc*2; b++) {
+                            for(i=b; i<sz_error_pattern; i+= 2*g_Nc) {
+                                m_panelTestFrameErrors->add_new_sample(b, b + 0.8*error_pattern[i]);
+                                g_error_hist[b] += error_pattern[i];
+                            }
+                            //if (b%2)
+                            //    printf("g_error_hist[%d]: %d\n", b/2, g_error_hist[b/2]);
                         }
-                        //if (b%2)
-                        //    printf("g_error_hist[%d]: %d\n", b/2, g_error_hist[b/2]);
+
+                        int max_hist = 0;
+                        for(b=0; b<g_Nc; b++)
+                            if (g_error_hist[b] > max_hist)
+                                max_hist = g_error_hist[b];
+
+                        m_panelTestFrameErrorsHist->add_new_short_samples(0, g_error_hist, 2*FDMDV_NC_MAX, max_hist);
                     }
-
-                    int max_hist = 0;
-                    for(b=0; b<g_Nc; b++)
-                        if (g_error_hist[b] > max_hist)
-                            max_hist = g_error_hist[b];
-
-                    m_panelTestFrameErrorsHist->add_new_short_samples(0, g_error_hist, 2*FDMDV_NC_MAX, max_hist);
-                }
        
-                if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
-                    int c;
+                    if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
+                        int c;
 
-                    /* FreeDV 700 mapping from error pattern to bit on each
-                       carrier.  Note we don't have access to carriers before
-                       diversity re-combination, so this won't give us the full
-                       picture, we have to assume Nc/2 carriers. */
+                        /* FreeDV 700 mapping from error pattern to bit on each
+                           carrier.  Note we don't have access to carriers before
+                           diversity re-combination, so this won't give us the full
+                           picture, we have to assume Nc/2 carriers. */
 
-                    for(i=0; i<sz_error_pattern; i++) {
-                        c = i/4;
-                        m_panelTestFrameErrors->add_new_sample(c, c + 0.8*error_pattern[i]);
-                        g_error_hist[c] += error_pattern[i];
-                        //printf("i: %d c: %d\n", i, c);
+                        for(i=0; i<sz_error_pattern; i++) {
+                            c = i/4;
+                            m_panelTestFrameErrors->add_new_sample(c, c + 0.8*error_pattern[i]);
+                            g_error_hist[c] += error_pattern[i];
+                            //printf("i: %d c: %d\n", i, c);
+                        }
+
+                        int max_hist = 0;
+                        for(b=0; b<g_Nc; b++)
+                            if (g_error_hist[b] > max_hist)
+                                max_hist = g_error_hist[b];
+                        m_panelTestFrameErrorsHist->add_new_short_samples(0, g_error_hist, 2*FDMDV_NC_MAX, max_hist);                
                     }
-
-                    int max_hist = 0;
-                    for(b=0; b<g_Nc; b++)
-                        if (g_error_hist[b] > max_hist)
-                            max_hist = g_error_hist[b];
-                    m_panelTestFrameErrorsHist->add_new_short_samples(0, g_error_hist, 2*FDMDV_NC_MAX, max_hist);                
-                }
  
-                m_panelTestFrameErrors->Refresh();       
-                m_panelTestFrameErrorsHist->Refresh();
+                    m_panelTestFrameErrors->Refresh();       
+                    m_panelTestFrameErrorsHist->Refresh();
+                }
             }
         }
     }
@@ -3844,6 +3848,14 @@ void fdmdv2_clickTune(float freq) {
     // if the click tune freq is 1500Hz, and FDMDV_CENTRE is 1200 Hz,
     // we need to shift the input signal centred on 1500Hz down to
     // 1200Hz, an offset of -300Hz.
+
+    // Bit of an "indent" as we are often trying to get it back
+    // exactly in the centre
+
+    if (fabs(FDMDV_FCENTRE - freq) < 10.0) {
+        freq = FDMDV_FCENTRE;
+        fprintf(stderr, "indent!\n");
+    }
 
     if (g_split) {
         g_RxFreqOffsetHz = FDMDV_FCENTRE - freq;
