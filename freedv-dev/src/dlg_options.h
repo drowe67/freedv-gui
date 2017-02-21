@@ -65,12 +65,17 @@ class OptionsDlg : public wxDialog
         void    OnClose(wxCloseEvent& event);
         void    OnInitDialog(wxInitDialogEvent& event);
  
+        void    OnTestFrame(wxScrollEvent& event);
+        void    OnChannelNoise(wxScrollEvent& event);
         void    OnFreeDV700txClip(wxScrollEvent& event);
+        void    OnFreeDV700scatterCombine(wxScrollEvent& event);
 
         wxTextCtrl   *m_txtCtrlCallSign; // TODO: this should be renamed to tx_txtmsg, and rename all related incl persis strge
         wxCheckBox   *m_ckboxTestFrame;
         wxCheckBox   *m_ckboxChannelNoise;
+        wxTextCtrl   *m_txtNoiseSNR;
         wxCheckBox   *m_ckboxFreeDV700txClip;
+        wxCheckBox   *m_ckboxFreeDV700scatterCombine;
 
         wxRadioButton *m_rb_textEncoding1;
         wxRadioButton *m_rb_textEncoding2;

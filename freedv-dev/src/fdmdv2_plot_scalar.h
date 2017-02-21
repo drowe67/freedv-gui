@@ -45,6 +45,7 @@ class PlotScalar: public PlotPanel
         ~PlotScalar();
          void add_new_sample(int channel, float sample);
          void add_new_short_samples(int channel, short samples[], int length, float scale_factor);
+         void setBarGraph(int abar_graph) { bar_graph = abar_graph; }
 
     protected:
 
@@ -59,14 +60,15 @@ class PlotScalar: public PlotPanel
          int      m_mini;
 	 int      m_samples;
 	 float   *m_mem;              
+         int      bar_graph;                 // non zero to plot bar graphs 
 
-        void draw(wxAutoBufferedPaintDC&  dc);
-	void drawGraticule(wxAutoBufferedPaintDC&  dc);
-        void OnPaint(wxPaintEvent& event);
-        void OnSize(wxSizeEvent& event);
-        void OnShow(wxShowEvent& event);
+         void draw(wxAutoBufferedPaintDC&  dc);
+         void drawGraticule(wxAutoBufferedPaintDC&  dc);
+         void OnPaint(wxPaintEvent& event);
+         void OnSize(wxSizeEvent& event);
+         void OnShow(wxShowEvent& event);
 
-        DECLARE_EVENT_TABLE()
+         DECLARE_EVENT_TABLE()
 };
 
 #endif // __FDMDV2_PLOT_SCALAR__

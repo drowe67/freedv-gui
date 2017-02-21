@@ -394,6 +394,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
         // Add Test Frame Errors window
         m_panelTestFrameErrorsHist = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 1.0, 1.0/(2*FDMDV_NC_MAX), 0.0, 1.0, 1.0/FDMDV_NC_MAX, 0.1, "%3.2f", 0);
         m_auiNbookCtrl->AddPage(m_panelTestFrameErrorsHist, L"Test Frame Histogram", true, wxNullBitmap);
+        m_panelTestFrameErrorsHist->setBarGraph(1);
     }
 
     wxGetApp().m_framesPerBuffer = pConfig->Read(wxT("/Audio/framesPerBuffer"), PA_FPB);
@@ -497,6 +498,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_udp_port = (int)pConfig->Read(wxT("/UDP/port"), 3000);
 
     wxGetApp().m_FreeDV700txClip = (float)pConfig->Read(wxT("/FreeDV700/txClip"), t);
+    wxGetApp().m_FreeDV700scatterCombine = (float)pConfig->Read(wxT("/FreeDV700/scatterCombine"), t);
+    wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
 
     int mode  = pConfig->Read(wxT("/Audio/mode"), (long)0);
     if (mode == 0)
@@ -710,6 +713,8 @@ MainFrame::~MainFrame()
         pConfig->Write(wxT("/Filter/SpkOutEQEnable"), wxGetApp().m_SpkOutEQEnable);
 
         pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
+        pConfig->Write(wxT("/FreeDV700/scatterCombine"), wxGetApp().m_FreeDV700scatterCombine);
+        pConfig->Write(wxT("/Noise/noise_snr"), wxGetApp().m_noise_snr);
 
         int mode;
         if (m_rb1600->GetValue())
@@ -989,19 +994,31 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         
             if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
             
-                /* 
-                   FreeDV 700 uses diversity, so combine symbols for
-                   scatter plot, as combined symbols are used for
-                   demodulation.  Note we need to use a copy of the
-                   symbols, as we are not sure when the stats will be
-                   updated.
-                */
+                if (wxGetApp().m_FreeDV700scatterCombine) {
+                    m_panelScatter->setNc(g_Nc/2); /* m_FreeDV700scatterCombine may have changed at run time */
 
-                COMP rx_symbols_copy[g_Nc/2];
+                    /* 
+                       FreeDV 700 uses diversity, so optionaly combine
+                       symbols for scatter plot, as combined symbols are
+                       used for demodulation.  Note we need to use a copy
+                       of the symbols, as we are not sure when the stats
+                       will be updated.
+                    */
 
-                for(c=0; c<g_Nc/2; c++)
-                    rx_symbols_copy[c] = cadd(g_stats.rx_symbols[r][c], g_stats.rx_symbols[r][c+g_Nc/2]);
-                m_panelScatter->add_new_samples_scatter(rx_symbols_copy);
+                    COMP rx_symbols_copy[g_Nc/2];
+
+                    for(c=0; c<g_Nc/2; c++)
+                        rx_symbols_copy[c] = fcmult(0.5, cadd(g_stats.rx_symbols[r][c], g_stats.rx_symbols[r][c+g_Nc/2]));
+                    m_panelScatter->add_new_samples_scatter(rx_symbols_copy);
+                }
+                else {
+                    m_panelScatter->setNc(g_Nc); /* m_FreeDV700scatterCombine may have changed at run time */
+                    /*
+                      Sometimes useful to plot carriers separately, e.g. to determine if tx carrier power is constant
+                      across carriers.
+                    */
+                    m_panelScatter->add_new_samples_scatter(&g_stats.rx_symbols[r][0]);
+                }
             }
        
         }
@@ -1280,7 +1297,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     /* both modes map IQ to alternate bits, but one same carrier */
 
                     if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600) {
-                        /* FreeDV 1600 mapping from error pattern to bit on each carrier */
+                        /* FreeDV 1600 mapping from error pattern to two bits on each carrier */
 
                         for(b=0; b<g_Nc*2; b++) {
                             for(i=b; i<sz_error_pattern; i+= 2*g_Nc) {
@@ -1292,9 +1309,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         }
 
                         int max_hist = 0;
-                        for(b=0; b<g_Nc; b++)
-                            if (g_error_hist[b] > max_hist)
+                        for(b=0; b<g_Nc; b++) {
+                            if (g_error_hist[b] > max_hist) {
                                 max_hist = g_error_hist[b];
+                            }
+                        }
 
                         m_panelTestFrameErrorsHist->add_new_short_samples(0, g_error_hist, 2*FDMDV_NC_MAX, max_hist);
                     }
@@ -1315,9 +1334,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         }
 
                         int max_hist = 0;
-                        for(b=0; b<g_Nc; b++)
-                            if (g_error_hist[b] > max_hist)
+                        for(b=0; b<g_Nc; b++) {
+                            if (g_error_hist[b] > max_hist) {
                                 max_hist = g_error_hist[b];
+                            }
+                            //printf("%4d ", g_error_hist[b]);
+                        }
+                        printf("\n");
                         m_panelTestFrameErrorsHist->add_new_short_samples(0, g_error_hist, 2*FDMDV_NC_MAX, max_hist);                
                     }
  
@@ -2379,17 +2402,27 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (m_rb1600->GetValue()) {
             g_mode = FREEDV_MODE_1600;
             g_Nc = 16;
-            m_panelScatter->setNc(g_Nc);
+            m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
         }
         if (m_rb700b->GetValue()) {
             g_mode = FREEDV_MODE_700B;
             g_Nc = 14;
-            m_panelScatter->setNc(g_Nc/2-1);  /* due to diversity, -1 due to no pilot like FreeDV 1600 */
+            if (wxGetApp().m_FreeDV700scatterCombine) {
+                m_panelScatter->setNc(g_Nc/2);  /* diversity combnation */
+            }
+            else {
+                m_panelScatter->setNc(g_Nc); 
+            }
         }
         if (m_rb700c->GetValue()) {
             g_mode = FREEDV_MODE_700C;
             g_Nc = 14;
-            m_panelScatter->setNc(g_Nc/2-1);  /* due to diversity, -1 due to no pilot like FreeDV 1600 */
+            if (wxGetApp().m_FreeDV700scatterCombine) {
+                m_panelScatter->setNc(g_Nc/2);  /* diversity combnation */
+            }
+            else {
+                m_panelScatter->setNc(g_Nc); 
+            }
         }
         if (m_rb800xa->GetValue()) {
             g_mode = FREEDV_MODE_800XA;
@@ -3660,15 +3693,7 @@ void per_frame_rx_processing(
             }
        
             if (g_channel_noise) {
-                float snr;
-
-                /* enough noise to get a couple of % errors */
-
-                if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600)
-                    snr = 2.0;
-                else
-                    snr = -1.0;           
-                fdmdv_simulate_channel(&g_sig_pwr_av, rx_fdm, nin, snr);
+                fdmdv_simulate_channel(&g_sig_pwr_av, rx_fdm, nin, wxGetApp().m_noise_snr);
             }
             freq_shift_coh(rx_fdm_offset, rx_fdm, g_RxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_RxFreqOffsetPhaseRect, nin);
             nout = freedv_comprx(g_pfreedv, output_buf, rx_fdm_offset);
