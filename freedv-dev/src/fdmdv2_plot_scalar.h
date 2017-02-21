@@ -44,8 +44,10 @@ class PlotScalar: public PlotPanel
 	       );
         ~PlotScalar();
          void add_new_sample(int channel, float sample);
+         void add_new_samples(int channel, float samples[], int length);
          void add_new_short_samples(int channel, short samples[], int length, float scale_factor);
-         void setBarGraph(int abar_graph) { bar_graph = abar_graph; }
+         void setBarGraph(int bar_graph) { m_bar_graph = bar_graph; }
+         void setLogY(int logy) { m_logy = logy; }
 
     protected:
 
@@ -60,7 +62,8 @@ class PlotScalar: public PlotPanel
          int      m_mini;
 	 int      m_samples;
 	 float   *m_mem;              
-         int      bar_graph;                 // non zero to plot bar graphs 
+         int      m_bar_graph;                 // non zero to plot bar graphs 
+         int      m_logy;                      // plot graph on log scale
 
          void draw(wxAutoBufferedPaintDC&  dc);
          void drawGraticule(wxAutoBufferedPaintDC&  dc);

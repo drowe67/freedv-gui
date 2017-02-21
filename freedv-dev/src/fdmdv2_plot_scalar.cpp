@@ -61,7 +61,8 @@ PlotScalar::PlotScalar(wxFrame* parent,
     assert(strlen(a_fmt) < 15);
     strcpy(m_a_fmt, a_fmt);
     m_mini = mini;
-    bar_graph = 0;
+    m_bar_graph = 0;
+    m_logy = 0;
 
     // work out number of samples we will store and allocate storage
 
@@ -101,6 +102,22 @@ void PlotScalar::add_new_sample(int channel, float sample)
 
 //----------------------------------------------------------------
 // add_new_samples()
+//----------------------------------------------------------------
+void  PlotScalar::add_new_samples(int channel, float samples[], int length)
+{
+    int i;
+    int offset = channel*m_samples;
+
+    assert(channel < m_channels);
+
+   for(i = 0; i < m_samples-length; i++)
+        m_mem[offset+i] = m_mem[offset+i+length];
+    for(; i < m_samples; i++)
+	m_mem[offset+i] = *samples++;
+}
+
+//----------------------------------------------------------------
+// add_new_short_samples()
 //----------------------------------------------------------------
 void  PlotScalar::add_new_short_samples(int channel, short samples[], int length, float scale_factor)
 {
@@ -184,7 +201,21 @@ void PlotScalar::draw(wxAutoBufferedPaintDC&  dc)
                 y += PLOT_BORDER;
             }
 
-            if (bar_graph) {
+            if (m_bar_graph) {
+
+                if (m_logy) {
+
+                    // can't take log(0)
+
+                    assert(m_a_min > 0.0); 
+                    assert(m_a_max > 0.0);
+
+                    float norm = (log10(a) - log10(m_a_min))/(log10(m_a_max) - log10(m_a_min));
+                    y = m_rGrid.GetHeight()*(1.0 - norm);
+                } else {
+                    y = m_rGrid.GetHeight() - a_to_py * a + m_a_min*a_to_py;
+                }
+
                 // use points to make a bar graph
 
                 int x1, x2, y1;
@@ -254,8 +285,14 @@ void PlotScalar::drawGraticule(wxAutoBufferedPaintDC&  dc)
     // Horizontal gridlines
 
     dc.SetPen(m_penDotDash);
-    for(a=m_a_min; a<m_a_max; a+=m_graticule_a_step) {
-	y = m_rGrid.GetHeight() - a*a_to_py + m_a_min*a_to_py;
+    for(a=m_a_min; a<m_a_max; ) {
+        if (m_logy) {
+            float norm = (log10(a) - log10(m_a_min))/(log10(m_a_max) - log10(m_a_min));
+            y = m_rGrid.GetHeight()*(1.0 - norm);
+        }
+	else {
+            y = m_rGrid.GetHeight() - a*a_to_py + m_a_min*a_to_py;
+        }
 	if (m_mini) {
             dc.DrawLine(0, y, m_rGrid.GetWidth(), y);
         }
@@ -268,6 +305,15 @@ void PlotScalar::drawGraticule(wxAutoBufferedPaintDC&  dc)
             sprintf(buf, m_a_fmt, a);
             GetTextExtent(buf, &text_w, &text_h);
             dc.DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
+        }
+
+        if (m_logy) {
+            // m_graticule_a_step ==  0.1 means 10 steps/decade
+            float log10_step_size = floor(log10(a));
+            a += pow(10,log10_step_size);
+        }
+        else {
+            a += m_graticule_a_step;
         }
    }
 

@@ -53,7 +53,7 @@ int                 g_total_bit_errors;
 int                 g_channel_noise;
 float               g_sig_pwr_av = 0.0;
 struct FIFO        *g_error_pattern_fifo;
-short              *g_error_hist;
+short              *g_error_hist, *g_error_histn;
  
 // time averaged magnitude spectrum used for waterfall and spectrum display
 float               g_avmag[MODEM_STATS_NSPEC];
@@ -391,10 +391,11 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 
     if(wxGetApp().m_show_test_frame_errors_hist)
     {
-        // Add Test Frame Errors window
-        m_panelTestFrameErrorsHist = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 1.0, 1.0/(2*FDMDV_NC_MAX), 0.0, 1.0, 1.0/FDMDV_NC_MAX, 0.1, "%3.2f", 0);
+        // Add Test Frame Historgram window.  1 column for every bit, 2 bits per carrier
+        m_panelTestFrameErrorsHist = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 1.0, 1.0/(2*FDMDV_NC_MAX), 0.001, 0.1, 1.0/FDMDV_NC_MAX, 0.1, "%0.0E", 0);
         m_auiNbookCtrl->AddPage(m_panelTestFrameErrorsHist, L"Test Frame Histogram", true, wxNullBitmap);
         m_panelTestFrameErrorsHist->setBarGraph(1);
+        m_panelTestFrameErrorsHist->setLogY(1);
     }
 
     wxGetApp().m_framesPerBuffer = pConfig->Read(wxT("/Audio/framesPerBuffer"), PA_FPB);
@@ -1294,7 +1295,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 if (fifo_read(g_error_pattern_fifo, error_pattern, sz_error_pattern) == 0) {
                     int i,b;
 
-                    /* both modes map IQ to alternate bits, but one same carrier */
+                    /* both modes map IQ to alternate bits, but on same carrier */
 
                     if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600) {
                         /* FreeDV 1600 mapping from error pattern to two bits on each carrier */
@@ -1330,18 +1331,20 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                             c = i/4;
                             m_panelTestFrameErrors->add_new_sample(c, c + 0.8*error_pattern[i]);
                             g_error_hist[c] += error_pattern[i];
+                            g_error_histn[c]++;
                             //printf("i: %d c: %d\n", i, c);
                         }
 
-                        int max_hist = 0;
-                        for(b=0; b<g_Nc; b++) {
-                            if (g_error_hist[b] > max_hist) {
-                                max_hist = g_error_hist[b];
-                            }
-                            //printf("%4d ", g_error_hist[b]);
+                        /* calculate BERs and send to plot */
+
+                        float ber[2*FDMDV_NC_MAX];
+                        for(b=0; b<2*FDMDV_NC_MAX; b++) {
+                            ber[b] = 0.0;
                         }
-                        printf("\n");
-                        m_panelTestFrameErrorsHist->add_new_short_samples(0, g_error_hist, 2*FDMDV_NC_MAX, max_hist);                
+                        for(b=0; b<g_Nc; b++) {
+                            ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
+                        }
+                        m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*FDMDV_NC_MAX);
                     }
  
                     m_panelTestFrameErrors->Refresh();       
@@ -1841,8 +1844,10 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
     freedv_set_total_bits(g_pfreedv, 0);
     freedv_set_total_bit_errors(g_pfreedv, 0);
     int i;
-    for(i=0; i<2*g_Nc; i++)
+    for(i=0; i<2*g_Nc; i++) {
         g_error_hist[i] = 0;
+        g_error_histn[i] = 0;
+    }
     
 }
 
@@ -2449,9 +2454,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             freedv_set_callback_error_pattern(g_pfreedv, my_freedv_put_error_pattern, (void*)m_panelTestFrameErrors);
             g_error_pattern_fifo = fifo_create(2*freedv_get_sz_error_pattern(g_pfreedv));
             g_error_hist = new short[FDMDV_NC_MAX*2];
+            g_error_histn = new short[FDMDV_NC_MAX*2];
             int i;
-            for(i=0; i<2*FDMDV_NC_MAX; i++)
+            for(i=0; i<2*FDMDV_NC_MAX; i++) {
                 g_error_hist[i] = 0;
+                g_error_histn[i] = 0;
+            }
 
             assert(g_pfreedv != NULL);
 
@@ -2569,6 +2577,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         else {
             // FreeDV clean up
             delete g_error_hist;
+            delete g_error_histn;
             fifo_destroy(g_error_pattern_fifo);
             freedv_close(g_pfreedv);
             speex_preprocess_state_destroy(g_speex_st);
