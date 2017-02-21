@@ -172,111 +172,6 @@ configure emacs:
                       (setq c-basic-offset 4)
                       )))
 
-====
-TODO
-====
-
-[ ] Open R&D questions
-    + Goal is to develop an open source DV mode that performs comparably to SSB
-    [ ] Does 700 perform OK next to SSB?
-        + approx same tx pk level (hard to measure exactly)
-        + try some low SNR channels
-        + try some fast fading/nasty channels
-    [ ] Is 700 speech quality acceptable?
-
-[X] test frames 
-    [X] freedv API support
-    [X] BER displayed on GUI for 700 and 1600
-    [X] plot error patterns for 700 and 1600
-        + callback for error patterns, or poll via stats interface
-    [X] plot error histograms for 700 and 1600
-        + map bit error to carrier, have done this in tcohpsk?
-        + how to reset histogram?  On error reset?
-        + histogram screen ... new code?
-        + test with filter
-
-[X] Bugs
-    [X] resync issue
-    [X] equalise power on 700 and 1600
-    [X] research real and complex PAPR
-    [X] waterfall and spectrum in analog mode
-    [X] The waterfall in analog mode appears to quit working sometimes?
-
-    [X] On TX, intermittently PTT will cause signal to be heard in speakers.  Toggle PTT or 
-        Stop/Start toggle and then starts working.
-    [X] Squelch control on 1600 mode will not open up squelch to 0 (appears to be around 2 dB)
-    [X] space bar keys PTT when entering text info box
-    [X] checksum based txt reception
-        + only print if valid
-    [X] IC7200 audio breakup
-    [ ] short varicode doesn't work
-        + #ifdef-ed out for now
-        + cld be broken in freedv_api
-    [X] On 700 audio sounds tinny and clicky when out of sync compared to 1600 why?
-        + clue: only when analog not pressed
-        + this was 7.5 to 8kHz interpolator bug
-    [X] spectrum and waterfall scale changes when analog pressed
-    [X] ocassional test frames error counter goes crazy
-    [ ] old Waterfall AGC
-    [ ] 700 syncs up to 1000Hz sine waves
-        + shouldn't trigger sync logic, will be a problem with carriers
-    [ ] "clip" led, encourage people to adjust gain to hit that occ when speaking
-    [ ] Win32 record from radio time
-    [ ] Stuttering with squelch off
-        + Rpeorted by Mark VK5QI, can we repeat?
-
-[ ] FreeDV 700 improvements
-    [ ] bpf filter after clipping to remove clicks
-        [ ] tcohpsk first, measure PAPR, impl loss
-    [ ] error masking
-        [ ] C version
-        [ ] training off air?  Switchable?
-        [ ] excitation params
-        [ ] training
-    [ ] plotting other demod stats like ch ampl and phase ests
-    [ ] profile with perf, different libresample routine
-    [ ] check for occassional freedv 700 loss of sync
-        + scatter seems to jump
-    [ ] switchable diversity (narrowband) option
-        + measure difference on a few channels
-        + blog
-    [ ] slow mode at half speed rather than repeating, or tx twice and sum
-    [ ] Can freedv remove ambient rf with a simple second Rx?
-    [ ] presence, posting to web site
-    [ ] explore relaxing sync 700 thresh
-    [ ] longer record files
-    [ ] two vertical lines in the waterfall representing the band limits of the 700B mode
-
-[X] win32
-    [X] X-compile works
-    [X] basic installer
-    [X] Win32 installer
-        + Richard has taken care of this
-
-[ ] Small fixes
-    [X] Playfile bug
-    [X] running again
-    [X] bump ver number
-    [X] long varicode default
-    [X] option to _not_ require checksum, on by default
-    [X] default squelch 2dB
-    [X] scatter diagram tweaks
-        + e.g. meaningful plots on fading channels in real time 
-        [X] agc with hysteresis
-            + changed to log steps
-        [X] longer persistance
-            + changed to 6 seconds
-        [X] diversity addtions on 700
-            + still not real obvious on plot
-            + might be useful to make this switchable
-    [X] scatter diagram different colours/carrier
-    [X] remember what mode you were in
-    [ ] cmd line file decode
-    [ ] Waterfall direction
-    [ ] documentation or use, walk through, you tube, blog posts
-
-[ ] Web support for Presence/spotting hooks
-
 =================
 USER GUIDE NOTES
 =================
@@ -341,3 +236,18 @@ Currents commands:
   "pttoff"         - PTT off (receive)
 
 Hint: "netcat" can be used to test this feature.
+
+4/ Full Duplex Testing with loopback
+------------------------------------
+
+FreeDV GUI can operate in full duplex mode which is useful for
+development as only one PC is required.  Tx and Rx signals can be
+looped back via an analog connection between the sound cards, or (on
+Linux) using the Alsa loopback module:
+
+$ sudo modprobe snd-aloop
+$ ./freedv
+
+In Tools - Audio Config - Receive Tab  - From Radio select -> Loopback: Loopback PCM (hw:1,0)
+                        - Transmit Tab - To Radio select   -> Loopback: Loopback PCM (hw:1,1)
+
