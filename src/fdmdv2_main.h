@@ -295,7 +295,15 @@ class MainApp : public wxApp
         int        FilterEvent(wxEvent& event);
         MainFrame *frame;
 
+        // 700 options
+
         bool       m_FreeDV700txClip;
+        bool       m_FreeDV700scatterCombine;
+
+        // Noise simulation
+
+        int        m_noise_snr;
+
     protected:
 };
 

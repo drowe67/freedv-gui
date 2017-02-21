@@ -61,6 +61,7 @@ PlotScalar::PlotScalar(wxFrame* parent,
     assert(strlen(a_fmt) < 15);
     strcpy(m_a_fmt, a_fmt);
     m_mini = mini;
+    bar_graph = 0;
 
     // work out number of samples we will store and allocate storage
 
@@ -122,7 +123,6 @@ void PlotScalar::draw(wxAutoBufferedPaintDC&  dc)
     float index_to_px;
     float a_to_py;
     int   i;
-    int   x, y;
     int   prev_x, prev_y;
     float a;
 
@@ -161,11 +161,10 @@ void PlotScalar::draw(wxAutoBufferedPaintDC&  dc)
 
     // plot each channel 
 
-    int offset;
+    int offset, x, y;
     for(offset=0; offset<m_channels*m_samples; offset+=m_samples) {
 
         for(i = 0; i < m_samples; i++) {
-            x = index_to_px * i;
             a = m_mem[offset+i];
             if (a < m_a_min) a = m_a_min;
             if (a > m_a_max) a = m_a_max;
@@ -174,6 +173,10 @@ void PlotScalar::draw(wxAutoBufferedPaintDC&  dc)
 
             y = m_rGrid.GetHeight() - a_to_py * a + m_a_min*a_to_py;
 
+            // regular point-point line graph
+
+            x = index_to_px * i;
+
             // put inside plot window
 
             if (!m_mini) {
@@ -181,9 +184,23 @@ void PlotScalar::draw(wxAutoBufferedPaintDC&  dc)
                 y += PLOT_BORDER;
             }
 
-            if (i)
-                dc.DrawLine(x, y, prev_x, prev_y);
-            prev_x = x; prev_y = y;
+            if (bar_graph) {
+                // use points to make a bar graph
+
+                int x1, x2, y1;
+
+                x1 = index_to_px * ((float)i - 0.5);
+                x2 = index_to_px * ((float)i + 0.5);
+                y1 = m_rGrid.GetHeight();
+                x1 += PLOT_BORDER + XLEFT_OFFSET; x2 += PLOT_BORDER + XLEFT_OFFSET;
+                y1 += PLOT_BORDER;
+                dc.DrawLine(x1, y1, x1, y); dc.DrawLine(x1, y, x2, y); dc.DrawLine(x2, y, x2, y1);
+            }
+            else {
+                if (i)
+                    dc.DrawLine(x, y, prev_x, prev_y);
+                prev_x = x; prev_y = y;
+            }
         }
     }
 
