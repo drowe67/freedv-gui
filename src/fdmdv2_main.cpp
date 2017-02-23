@@ -1305,19 +1305,23 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                             for(i=b; i<sz_error_pattern; i+= 2*g_Nc) {
                                 m_panelTestFrameErrors->add_new_sample(b, b + 0.8*error_pattern[i]);
                                 g_error_hist[b] += error_pattern[i];
+                                g_error_histn[b]++;
                             }
                             //if (b%2)
                             //    printf("g_error_hist[%d]: %d\n", b/2, g_error_hist[b/2]);
                         }
 
-                        int max_hist = 0;
-                        for(b=0; b<g_Nc; b++) {
-                            if (g_error_hist[b] > max_hist) {
-                                max_hist = g_error_hist[b];
-                            }
-                        }
+                         /* calculate BERs and send to plot */
 
-                        m_panelTestFrameErrorsHist->add_new_short_samples(0, g_error_hist, 2*FDMDV_NC_MAX, max_hist);
+                        float ber[2*FDMDV_NC_MAX];
+                        for(b=0; b<2*FDMDV_NC_MAX; b++) {
+                            ber[b] = 0.0;
+                        }
+                        for(b=0; b<g_Nc*2; b++) {
+                            ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
+                        }
+                        assert(g_Nc*2 <= 2*FDMDV_NC_MAX);
+                        m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*FDMDV_NC_MAX);
                     }
        
                     if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
