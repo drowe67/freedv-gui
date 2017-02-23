@@ -64,9 +64,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxFreeDV700txClip = new wxCheckBox(this, wxID_ANY, _("Clipping"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     m_ckboxFreeDV700txClip->SetToolTip(_("Clip FreeDv 700 tx waveform to reduce Peak to Average Power Ratio (PAPR)"));
     sbSizer_freedv700->Add(m_ckboxFreeDV700txClip, 0, wxALIGN_LEFT, 0);
-    m_ckboxFreeDV700scatterCombine = new wxCheckBox(this, wxID_ANY, _("Scatter Combine"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    m_ckboxFreeDV700scatterCombine->SetToolTip(_("Upper and Lower carriers combined for Scatter diagram"));
-    sbSizer_freedv700->Add(m_ckboxFreeDV700scatterCombine, 0, wxALIGN_LEFT, 0);
+    m_ckboxFreeDV700Combine = new wxCheckBox(this, wxID_ANY, _("Diversity Combine for plots"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDV700Combine->SetToolTip(_("Upper and Lower carriers combined for Scatter/Histogram plots"));
+    sbSizer_freedv700->Add(m_ckboxFreeDV700Combine, 0, wxALIGN_LEFT, 0);
 
     bSizer30->Add(sbSizer_freedv700,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 
@@ -200,7 +200,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxTestFrame->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnTestFrame), NULL, this);
     m_ckboxChannelNoise->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnChannelNoise), NULL, this);
     m_ckboxFreeDV700txClip->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700txClip), NULL, this);
-    m_ckboxFreeDV700scatterCombine->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700scatterCombine), NULL, this);
+    m_ckboxFreeDV700Combine->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700Combine), NULL, this);
 
     event_in_serial = 0;
     event_out_serial = 0;
@@ -223,7 +223,7 @@ OptionsDlg::~OptionsDlg()
     m_ckboxTestFrame->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnTestFrame), NULL, this);
     m_ckboxChannelNoise->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnChannelNoise), NULL, this);
     m_ckboxFreeDV700txClip->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700txClip), NULL, this);
-    m_ckboxFreeDV700scatterCombine->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700scatterCombine), NULL, this);
+    m_ckboxFreeDV700Combine->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700Combine), NULL, this);
 }
 
 
@@ -259,7 +259,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxEnableChecksum->SetValue(wxGetApp().m_enable_checksum);
 
         m_ckboxFreeDV700txClip->SetValue(wxGetApp().m_FreeDV700txClip);
-        m_ckboxFreeDV700scatterCombine->SetValue(wxGetApp().m_FreeDV700scatterCombine);
+        m_ckboxFreeDV700Combine->SetValue(wxGetApp().m_FreeDV700Combine);
     }
 
     if(inout == EXCHANGE_DATA_OUT)
@@ -301,7 +301,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_enable_checksum = m_ckboxEnableChecksum->GetValue();
 
         wxGetApp().m_FreeDV700txClip = m_ckboxFreeDV700txClip->GetValue();
-        wxGetApp().m_FreeDV700scatterCombine = m_ckboxFreeDV700scatterCombine->GetValue();
+        wxGetApp().m_FreeDV700Combine = m_ckboxFreeDV700Combine->GetValue();
 
         if (storePersistent) {
             pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
@@ -321,7 +321,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             pConfig->Write(wxT("/Events/spam_timer"), wxGetApp().m_events_spam_timer);
 
             pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
-            pConfig->Write(wxT("/FreeDV700/scatterCombine"), wxGetApp().m_FreeDV700scatterCombine);
 
             pConfig->Write(wxT("/Noise/noise_snr"),  wxGetApp().m_noise_snr);
 
@@ -382,8 +381,8 @@ void OptionsDlg::OnFreeDV700txClip(wxScrollEvent& event) {
     wxGetApp().m_FreeDV700txClip = m_ckboxFreeDV700txClip->GetValue();
 }
 
-void OptionsDlg::OnFreeDV700scatterCombine(wxScrollEvent& event) {
-    wxGetApp().m_FreeDV700scatterCombine = m_ckboxFreeDV700scatterCombine->GetValue();
+void OptionsDlg::OnFreeDV700Combine(wxScrollEvent& event) {
+    wxGetApp().m_FreeDV700Combine = m_ckboxFreeDV700Combine->GetValue();
 }
 
 void OptionsDlg::updateEventLog(wxString event_in, wxString event_out) {

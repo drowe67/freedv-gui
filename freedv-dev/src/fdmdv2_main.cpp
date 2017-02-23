@@ -499,7 +499,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_udp_port = (int)pConfig->Read(wxT("/UDP/port"), 3000);
 
     wxGetApp().m_FreeDV700txClip = (float)pConfig->Read(wxT("/FreeDV700/txClip"), t);
-    wxGetApp().m_FreeDV700scatterCombine = (float)pConfig->Read(wxT("/FreeDV700/scatterCombine"), t);
+    wxGetApp().m_FreeDV700Combine = 1;
     wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
 
     int mode  = pConfig->Read(wxT("/Audio/mode"), (long)0);
@@ -714,7 +714,6 @@ MainFrame::~MainFrame()
         pConfig->Write(wxT("/Filter/SpkOutEQEnable"), wxGetApp().m_SpkOutEQEnable);
 
         pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
-        pConfig->Write(wxT("/FreeDV700/scatterCombine"), wxGetApp().m_FreeDV700scatterCombine);
         pConfig->Write(wxT("/Noise/noise_snr"), wxGetApp().m_noise_snr);
 
         int mode;
@@ -995,8 +994,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         
             if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
             
-                if (wxGetApp().m_FreeDV700scatterCombine) {
-                    m_panelScatter->setNc(g_Nc/2); /* m_FreeDV700scatterCombine may have changed at run time */
+                if (wxGetApp().m_FreeDV700Combine) {
+                    m_panelScatter->setNc(g_Nc/2); /* m_FreeDV700Combine may have changed at run time */
 
                     /* 
                        FreeDV 700 uses diversity, so optionaly combine
@@ -1013,7 +1012,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     m_panelScatter->add_new_samples_scatter(rx_symbols_copy);
                 }
                 else {
-                    m_panelScatter->setNc(g_Nc); /* m_FreeDV700scatterCombine may have changed at run time */
+                    m_panelScatter->setNc(g_Nc); /* m_FreeDV700Combine may have changed at run time */
                     /*
                       Sometimes useful to plot carriers separately, e.g. to determine if tx carrier power is constant
                       across carriers.
@@ -1274,6 +1273,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             freedv_set_total_bit_errors(g_pfreedv, 0);
         }
         freedv_set_test_frames(g_pfreedv, wxGetApp().m_testFrames);
+        freedv_set_test_frames_diversity(g_pfreedv, wxGetApp().m_FreeDV700Combine);
         g_channel_noise =  wxGetApp().m_channel_noise;
 
         if (g_State) {
@@ -1289,6 +1289,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             // update error pattern plots if supported
 
             int sz_error_pattern = freedv_get_sz_error_pattern(g_pfreedv);
+            //fprintf(stderr, "sz_error_pattern: %d\n", sz_error_pattern);
             if (sz_error_pattern) {
                 short error_pattern[sz_error_pattern];
 
@@ -1321,18 +1322,34 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
        
                     if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
                         int c;
+                        fprintf(stderr, "after g_error_pattern_fifo read 2\n");
+                        
+                        /* 
+                           FreeDV 700 mapping from error pattern to bit on each carrier, see 
+                           data bit to carrier mapping in:
 
-                        /* FreeDV 700 mapping from error pattern to bit on each
-                           carrier.  Note we don't have access to carriers before
-                           diversity re-combination, so this won't give us the full
-                           picture, we have to assume Nc/2 carriers. */
+                              codec2-dev/octave/cohpsk_frame_design.ods
+ 
+                           We can plot a histogram of the errors/carrier before or after diversity
+                           recombination.  Actually one bar for each IQ bit in carrier order.
+                        */
+
+                        int hist_Nc = sz_error_pattern/4;
+                        fprintf(stderr, "hist_Nc: %d\n", hist_Nc);
 
                         for(i=0; i<sz_error_pattern; i++) {
-                            c = i/4;
+                            /* maps to IQ bits from each symbol to a "carrier" (actually one line for each IQ bit in carrier order) */
+                            c = floor(i/4);
+                            /* this will clock in 4 bits/carrier to plot */
                             m_panelTestFrameErrors->add_new_sample(c, c + 0.8*error_pattern[i]);
                             g_error_hist[c] += error_pattern[i];
                             g_error_histn[c]++;
-                            //printf("i: %d c: %d\n", i, c);
+                            printf("i: %d c: %d\n", i, c);
+                        }
+                        for(; i<2*MODEM_STATS_NC_MAX*4; i++) {
+                            c = floor(i/4);
+                            m_panelTestFrameErrors->add_new_sample(c, c);
+                            printf("i: %d c: %d\n", i, c);
                         }
 
                         /* calculate BERs and send to plot */
@@ -1341,9 +1358,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         for(b=0; b<2*FDMDV_NC_MAX; b++) {
                             ber[b] = 0.0;
                         }
-                        for(b=0; b<g_Nc; b++) {
+                        for(b=0; b<hist_Nc; b++) {
                             ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
                         }
+                        assert(hist_Nc <= 2*FDMDV_NC_MAX);
                         m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*FDMDV_NC_MAX);
                     }
  
@@ -1770,10 +1788,10 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         m_btnTogPTT->SetValue(false); togglePTT();
         m_togBtnVoiceKeyer->SetValue(false);
         next_state = VK_IDLE;
-   }
+    }
 
-    if ((vk_event != VK_DT) || (vk_state != next_state))
-        fprintf(stderr, "VoiceKeyerProcessEvent: vk_state: %d vk_event: %d next_state: %d  vk_repeat_counter: %d\n", vk_state, vk_event, next_state, vk_repeat_counter);
+    //if ((vk_event != VK_DT) || (vk_state != next_state))
+    //    fprintf(stderr, "VoiceKeyerProcessEvent: vk_state: %d vk_event: %d next_state: %d  vk_repeat_counter: %d\n", vk_state, vk_event, next_state, vk_repeat_counter);
     vk_state = next_state;
 }
 
@@ -2412,7 +2430,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (m_rb700b->GetValue()) {
             g_mode = FREEDV_MODE_700B;
             g_Nc = 14;
-            if (wxGetApp().m_FreeDV700scatterCombine) {
+            if (wxGetApp().m_FreeDV700Combine) {
                 m_panelScatter->setNc(g_Nc/2);  /* diversity combnation */
             }
             else {
@@ -2422,7 +2440,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (m_rb700c->GetValue()) {
             g_mode = FREEDV_MODE_700C;
             g_Nc = 14;
-            if (wxGetApp().m_FreeDV700scatterCombine) {
+            if (wxGetApp().m_FreeDV700Combine) {
                 m_panelScatter->setNc(g_Nc/2);  /* diversity combnation */
             }
             else {
@@ -2452,7 +2470,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             freedv_set_callback_txt(g_pfreedv, &my_put_next_rx_char, &my_get_next_tx_char, NULL);
 
             freedv_set_callback_error_pattern(g_pfreedv, my_freedv_put_error_pattern, (void*)m_panelTestFrameErrors);
-            g_error_pattern_fifo = fifo_create(2*freedv_get_sz_error_pattern(g_pfreedv));
+            g_error_pattern_fifo = fifo_create(2*freedv_get_sz_error_pattern(g_pfreedv)+1);
             g_error_hist = new short[FDMDV_NC_MAX*2];
             g_error_histn = new short[FDMDV_NC_MAX*2];
             int i;
@@ -4111,6 +4129,8 @@ void my_put_next_rx_char(void *callback_state, char c) {
 
 void my_freedv_put_error_pattern(void *state, short error_pattern[], int sz_error_pattern) {
     fifo_write(g_error_pattern_fifo, error_pattern, sz_error_pattern);
+    //fprintf(stderr, "my_freedv_put_error_pattern: sz_error_pattern: %d ret: %d used: %d\n", 
+    //        sz_error_pattern, ret, fifo_used(g_error_pattern_fifo) );
 }
 
 void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin)

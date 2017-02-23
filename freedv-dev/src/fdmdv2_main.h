@@ -298,7 +298,7 @@ class MainApp : public wxApp
         // 700 options
 
         bool       m_FreeDV700txClip;
-        bool       m_FreeDV700scatterCombine;
+        bool       m_FreeDV700Combine;
 
         // Noise simulation
 
