@@ -67,6 +67,7 @@ class OptionsDlg : public wxDialog
  
         void    OnTestFrame(wxScrollEvent& event);
         void    OnChannelNoise(wxScrollEvent& event);
+        void    OnAttnCarrierEn(wxScrollEvent& event);
         void    OnFreeDV700txClip(wxScrollEvent& event);
         void    OnFreeDV700Combine(wxScrollEvent& event);
 
@@ -74,6 +75,9 @@ class OptionsDlg : public wxDialog
         wxCheckBox   *m_ckboxTestFrame;
         wxCheckBox   *m_ckboxChannelNoise;
         wxTextCtrl   *m_txtNoiseSNR;
+        wxCheckBox   *m_ckboxAttnCarrierEn;
+        wxTextCtrl   *m_txtAttnCarrier;
+
         wxCheckBox   *m_ckboxFreeDV700txClip;
         wxCheckBox   *m_ckboxFreeDV700Combine;
 

@@ -304,6 +304,11 @@ class MainApp : public wxApp
 
         int        m_noise_snr;
 
+        // carrier attenuation
+
+        bool       m_attn_carrier_en;
+        int        m_attn_carrier;
+
     protected:
 };
 
