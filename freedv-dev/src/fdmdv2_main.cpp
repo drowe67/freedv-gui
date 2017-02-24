@@ -502,6 +502,9 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_FreeDV700Combine = 1;
     wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
 
+    wxGetApp().m_attn_carrier_en = 0;
+    wxGetApp().m_attn_carrier    = 0;
+
     int mode  = pConfig->Read(wxT("/Audio/mode"), (long)0);
     if (mode == 0)
         m_rb1600->SetValue(1);
@@ -1242,7 +1245,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
     }
 
+
     // Run time update of EQ filters -----------------------------------
+
     if (m_newMicInFilter || m_newSpkOutFilter) {
         g_mutexProtectingCallbackData.Lock();
         deleteEQFilters(g_rxUserdata);
@@ -1259,7 +1264,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // Run time update of FreeDV 700 tx clipper
 
         freedv_set_clip(g_pfreedv, (int)wxGetApp().m_FreeDV700txClip);
-
+        
         // Test Frame Bit Error Updates ------------------------------------
 
         // Toggle test frame mode at run time
@@ -1326,7 +1331,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
        
                     if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
                         int c;
-                        fprintf(stderr, "after g_error_pattern_fifo read 2\n");
+                        //fprintf(stderr, "after g_error_pattern_fifo read 2\n");
                         
                         /* 
                            FreeDV 700 mapping from error pattern to bit on each carrier, see 
@@ -1339,7 +1344,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         */
 
                         int hist_Nc = sz_error_pattern/4;
-                        fprintf(stderr, "hist_Nc: %d\n", hist_Nc);
+                        //fprintf(stderr, "hist_Nc: %d\n", hist_Nc);
 
                         for(i=0; i<sz_error_pattern; i++) {
                             /* maps to IQ bits from each symbol to a "carrier" (actually one line for each IQ bit in carrier order) */
@@ -1348,12 +1353,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                             m_panelTestFrameErrors->add_new_sample(c, c + 0.8*error_pattern[i]);
                             g_error_hist[c] += error_pattern[i];
                             g_error_histn[c]++;
-                            printf("i: %d c: %d\n", i, c);
+                            //printf("i: %d c: %d\n", i, c);
                         }
                         for(; i<2*MODEM_STATS_NC_MAX*4; i++) {
                             c = floor(i/4);
                             m_panelTestFrameErrors->add_new_sample(c, c);
-                            printf("i: %d c: %d\n", i, c);
+                            //printf("i: %d c: %d\n", i, c);
                         }
 
                         /* calculate BERs and send to plot */

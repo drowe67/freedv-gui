@@ -20,7 +20,9 @@
 //==========================================================================
 
 #include "dlg_options.h"
-extern bool g_modal;
+
+extern bool                g_modal;
+extern struct freedv      *g_pfreedv;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class OptionsDlg
@@ -34,22 +36,25 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     bSizer30 = new wxBoxSizer(wxVERTICAL);
 
     //------------------------------
-    // Test Frames check box
+    // Test Frames/Channel simulation check box
     //------------------------------
 
     wxStaticBoxSizer* sbSizer_testFrames;
-    wxStaticBox *sb_testFrames = new wxStaticBox(this, wxID_ANY, _("Test Frames"));
+    wxStaticBox *sb_testFrames = new wxStaticBox(this, wxID_ANY, _("Testing and Channel Simulation"));
     sbSizer_testFrames = new wxStaticBoxSizer(sb_testFrames, wxHORIZONTAL);
 
-    m_ckboxTestFrame = new wxCheckBox(this, wxID_ANY, _("Enable"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    m_ckboxTestFrame->SetToolTip(_("Send frames of known bits instead of compressed voice"));
+    m_ckboxTestFrame = new wxCheckBox(this, wxID_ANY, _("Test Frames"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_testFrames->Add(m_ckboxTestFrame, 0, wxALIGN_LEFT, 0);
 
-    m_ckboxChannelNoise = new wxCheckBox(this, wxID_ANY, _("Channel Noise SNR (dB):"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    m_ckboxChannelNoise->SetToolTip(_("Add simulated AWGN channel noise to received signal"));
+    m_ckboxChannelNoise = new wxCheckBox(this, wxID_ANY, _("Channel Noise   SNR (dB):"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_testFrames->Add(m_ckboxChannelNoise, 0, wxALIGN_LEFT, 0);
-    m_txtNoiseSNR = new wxTextCtrl(this, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtNoiseSNR = new wxTextCtrl(this, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_testFrames->Add(m_txtNoiseSNR, 0, wxALIGN_LEFT, 0);
+
+    m_ckboxAttnCarrierEn = new wxCheckBox(this, wxID_ANY, _("Attn Carrier  Carrier:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_testFrames->Add(m_ckboxAttnCarrierEn, 0, wxALIGN_LEFT, 0);
+    m_txtAttnCarrier = new wxTextCtrl(this, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    sbSizer_testFrames->Add(m_txtAttnCarrier, 0, wxALIGN_LEFT, 0);
 
     bSizer30->Add(sbSizer_testFrames,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 
@@ -62,10 +67,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_freedv700 = new wxStaticBoxSizer(sb_freedv700, wxHORIZONTAL);
 
     m_ckboxFreeDV700txClip = new wxCheckBox(this, wxID_ANY, _("Clipping"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    m_ckboxFreeDV700txClip->SetToolTip(_("Clip FreeDv 700 tx waveform to reduce Peak to Average Power Ratio (PAPR)"));
     sbSizer_freedv700->Add(m_ckboxFreeDV700txClip, 0, wxALIGN_LEFT, 0);
     m_ckboxFreeDV700Combine = new wxCheckBox(this, wxID_ANY, _("Diversity Combine for plots"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    m_ckboxFreeDV700Combine->SetToolTip(_("Upper and Lower carriers combined for Scatter/Histogram plots"));
     sbSizer_freedv700->Add(m_ckboxFreeDV700Combine, 0, wxALIGN_LEFT, 0);
 
     bSizer30->Add(sbSizer_freedv700,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
@@ -199,6 +202,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_ckboxTestFrame->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnTestFrame), NULL, this);
     m_ckboxChannelNoise->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnChannelNoise), NULL, this);
+    m_ckboxAttnCarrierEn->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnAttnCarrierEn), NULL, this);
+
     m_ckboxFreeDV700txClip->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700txClip), NULL, this);
     m_ckboxFreeDV700Combine->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700Combine), NULL, this);
 
@@ -222,6 +227,8 @@ OptionsDlg::~OptionsDlg()
 
     m_ckboxTestFrame->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnTestFrame), NULL, this);
     m_ckboxChannelNoise->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnChannelNoise), NULL, this);
+    m_ckboxAttnCarrierEn->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnAttnCarrierEn), NULL, this);
+
     m_ckboxFreeDV700txClip->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700txClip), NULL, this);
     m_ckboxFreeDV700Combine->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700Combine), NULL, this);
 }
@@ -238,8 +245,12 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
     {
         m_txtCtrlCallSign->SetValue(wxGetApp().m_callSign);
         m_ckboxTestFrame->SetValue(wxGetApp().m_testFrames);
+
         m_ckboxChannelNoise->SetValue(wxGetApp().m_channel_noise);
         m_txtNoiseSNR->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_noise_snr));
+
+        m_ckboxAttnCarrierEn->SetValue(wxGetApp().m_attn_carrier_en);
+        m_txtAttnCarrier->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_attn_carrier));
 
         m_ckbox_events->SetValue(wxGetApp().m_events);
         m_txt_spam_timer->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_events_spam_timer));
@@ -265,11 +276,18 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
     if(inout == EXCHANGE_DATA_OUT)
     {
         wxGetApp().m_callSign      = m_txtCtrlCallSign->GetValue();
+
         wxGetApp().m_testFrames    = m_ckboxTestFrame->GetValue();
+
         wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
         long noise_snr;
         m_txtNoiseSNR->GetValue().ToLong(&noise_snr);
         wxGetApp().m_noise_snr = (int)noise_snr;
+
+        wxGetApp().m_attn_carrier_en = m_ckboxAttnCarrierEn->GetValue();
+        long attn_carrier;
+        m_txtAttnCarrier->GetValue().ToLong(&attn_carrier);
+        wxGetApp().m_attn_carrier = (int)attn_carrier;
 
         wxGetApp().m_events        = m_ckbox_events->GetValue();
         long spam_timer;
@@ -367,14 +385,36 @@ void OptionsDlg::OnInitDialog(wxInitDialogEvent& event)
     ExchangeData(EXCHANGE_DATA_IN, false);
 }
 
+// immediately change flags rather using ExchangeData() so we can switch on and off at run time
+
 void OptionsDlg::OnTestFrame(wxScrollEvent& event) {
     wxGetApp().m_testFrames    = m_ckboxTestFrame->GetValue();
 }
 
-// immediately change flags rather using ExchangeData() so we can switch on and off at run time
-
 void OptionsDlg::OnChannelNoise(wxScrollEvent& event) {
     wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
+}
+
+//  Run time update of carrier amplitude attenuation
+
+void OptionsDlg::OnAttnCarrierEn(wxScrollEvent& event) {
+    long attn_carrier;
+    m_txtAttnCarrier->GetValue().ToLong(&attn_carrier);
+    wxGetApp().m_attn_carrier = (int)attn_carrier;
+
+    /* uncheck -> checked, attenuate selected carrier */
+
+    if (m_ckboxAttnCarrierEn->GetValue() && !wxGetApp().m_attn_carrier_en) {
+        freedv_set_carrier_ampl(g_pfreedv, wxGetApp().m_attn_carrier, 0.25);
+    }
+
+    /* checked -> unchecked, reset selected carrier */
+
+    if (!m_ckboxAttnCarrierEn->GetValue() && wxGetApp().m_attn_carrier_en) {
+        freedv_set_carrier_ampl(g_pfreedv, wxGetApp().m_attn_carrier, 1.0);
+    }
+        
+    wxGetApp().m_attn_carrier_en = m_ckboxAttnCarrierEn->GetValue();    
 }
 
 void OptionsDlg::OnFreeDV700txClip(wxScrollEvent& event) {
