@@ -166,6 +166,9 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     m_textBER = new wxStaticText(this, wxID_ANY, wxT("BER: 0.0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_ber->Add(m_textBER, 0, wxALIGN_LEFT, 1);
 
+    m_textResyncs = new wxStaticText(this, wxID_ANY, wxT("Resyncs: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    sbSizer_ber->Add(m_textResyncs, 0, wxALIGN_LEFT, 1);
+
     leftSizer->Add(sbSizer_ber,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 
     //------------------------------

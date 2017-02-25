@@ -48,9 +48,8 @@ int                 g_clip;
 int                 g_testFrames;
 int                 g_test_frame_sync_state;
 int                 g_test_frame_count;
-int                 g_total_bits;
-int                 g_total_bit_errors;
 int                 g_channel_noise;
+int                 g_resyncs;
 float               g_sig_pwr_av = 0.0;
 struct FIFO        *g_error_pattern_fifo;
 short              *g_error_hist, *g_error_histn;
@@ -73,7 +72,7 @@ struct FIFO         *g_txDataInFifo;
 struct FIFO         *g_rxDataOutFifo;
 
 // tx/rx processing states
-int                 g_State;
+int                 g_State, g_prev_State;
 paCallBackData     *g_rxUserdata;
 
 // FIFOs used for plotting waveforms
@@ -593,8 +592,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 
     g_testFrames = 0;
     g_test_frame_sync_state = 0;
-    g_total_bit_errors = 0;
-    g_total_bits = 0;
+    g_resyncs = 0;
     wxGetApp().m_testFrames = false;
 
     g_modal = false;
@@ -1132,14 +1130,19 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     // sync LED (Colours don't work on Windows) ------------------------
 
+    //fprintf(stderr, "g_State: %d  m_rbSync->GetValue(): %d\n", g_State, m_rbSync->GetValue());
     if (g_State) {
+        if (g_prev_State == 0) {
+            g_resyncs++;
+        }
         m_rbSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
-        m_rbSync->SetValue(true);
+        m_rbSync->SetValue(true);        
     }
     else {
         m_rbSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
         m_rbSync->SetValue(false);
     }
+    g_prev_State = g_State;
 
     // send Callsign ----------------------------------------------------
 
@@ -1282,7 +1285,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         g_channel_noise =  wxGetApp().m_channel_noise;
 
         if (g_State) {
-            char bits[80], errors[80], ber[80];
+            char bits[80], errors[80], ber[80], resyncs[80];
 
             // update stats on main page
 
@@ -1290,6 +1293,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             sprintf(errors, "Errs: %d", freedv_get_total_bit_errors(g_pfreedv)); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
             float b = (float)freedv_get_total_bit_errors(g_pfreedv)/(1E-6+freedv_get_total_bits(g_pfreedv));
             sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
+            sprintf(resyncs, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
 
             // update error pattern plots if supported
 
@@ -1848,7 +1852,7 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         m_panelWaterfall->setFs(freedv_get_modem_sample_rate(g_pfreedv));
     }
 
-    g_State = 0;
+    g_State = g_prev_State = 0;
     g_stats.snr_est = 0;
 
     event.Skip();
@@ -1870,6 +1874,7 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
 {
     freedv_set_total_bits(g_pfreedv, 0);
     freedv_set_total_bit_errors(g_pfreedv, 0);
+    g_resyncs = 0;
     int i;
     for(i=0; i<2*g_Nc; i++) {
         g_error_hist[i] = 0;
@@ -2514,7 +2519,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         }
 
         modem_stats_open(&g_stats);
-        g_State = 0;
+        g_State = g_prev_State = 0;
         g_snr = 0.0;
         g_half_duplex = wxGetApp().m_boolHalfDuplex;
 
@@ -3738,6 +3743,7 @@ void per_frame_rx_processing(
         
             nin = freedv_nin(g_pfreedv);
             g_State = freedv_get_sync(g_pfreedv);
+
             //fprintf(g_logfile, "g_State: %d g_stats.sync: %d snr: %f \n", g_State, g_stats.sync, f->snr);
 
             // grab extended stats so we can plot spectrum, scatter diagram etc
