@@ -33,7 +33,7 @@ class OptionsDlg : public wxDialog
     public:
     OptionsDlg( wxWindow* parent,
                wxWindowID id = wxID_ANY, const wxString& title = _("Options"), 
-                const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(600,630), 
+                const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(600,660), 
                long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
         ~OptionsDlg();
 
@@ -77,6 +77,10 @@ class OptionsDlg : public wxDialog
         wxTextCtrl   *m_txtNoiseSNR;
         wxCheckBox   *m_ckboxAttnCarrierEn;
         wxTextCtrl   *m_txtAttnCarrier;
+
+        wxCheckBox   *m_ckboxTone;
+        wxTextCtrl   *m_txtToneFreqHz;
+        wxTextCtrl   *m_txtToneAmplitude;
 
         wxCheckBox   *m_ckboxFreeDV700txClip;
         wxCheckBox   *m_ckboxFreeDV700Combine;
