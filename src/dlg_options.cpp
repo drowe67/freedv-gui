@@ -59,6 +59,25 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     bSizer30->Add(sbSizer_testFrames,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 
     //------------------------------
+    // Interfering tone
+    //------------------------------
+
+    wxStaticBoxSizer* sbSizer_tone;
+    wxStaticBox *sb_tone = new wxStaticBox(this, wxID_ANY, _("Simulated Interference Tone"));
+    sbSizer_tone = new wxStaticBoxSizer(sb_tone, wxHORIZONTAL);
+
+    m_ckboxTone = new wxCheckBox(this, wxID_ANY, _("Tone   Freq (Hz):"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_tone->Add(m_ckboxTone, 0, wxALIGN_LEFT, 0);
+    m_txtToneFreqHz = new wxTextCtrl(this, wxID_ANY,  "1000", wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    sbSizer_tone->Add(m_txtToneFreqHz, 0, wxALIGN_LEFT, 0);
+    wxStaticText *m_staticTextta = new wxStaticText(this, wxID_ANY, _(" Amplitude (pk): "), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_tone->Add(m_staticTextta, 0, wxALIGN_CENTER_VERTICAL, 5);    
+    m_txtToneAmplitude = new wxTextCtrl(this, wxID_ANY,  "1000", wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    sbSizer_tone->Add(m_txtToneAmplitude, 0, wxALIGN_LEFT, 0);
+
+    bSizer30->Add(sbSizer_tone,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+
+    //------------------------------
     // FreeDV 700 Options
     //------------------------------
 
@@ -249,6 +268,10 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxChannelNoise->SetValue(wxGetApp().m_channel_noise);
         m_txtNoiseSNR->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_noise_snr));
 
+        m_ckboxTone->SetValue(wxGetApp().m_tone);
+        m_txtToneFreqHz->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_tone_freq_hz));
+        m_txtToneAmplitude->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_tone_amplitude));
+
         m_ckboxAttnCarrierEn->SetValue(wxGetApp().m_attn_carrier_en);
         m_txtAttnCarrier->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_attn_carrier));
 
@@ -283,6 +306,14 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         long noise_snr;
         m_txtNoiseSNR->GetValue().ToLong(&noise_snr);
         wxGetApp().m_noise_snr = (int)noise_snr;
+
+        wxGetApp().m_tone    = m_ckboxTone->GetValue();
+        long tone_freq_hz, tone_amplitude;
+        m_txtToneFreqHz->GetValue().ToLong(&tone_freq_hz);
+        wxGetApp().m_tone_freq_hz = (int)tone_freq_hz;
+        m_txtToneAmplitude->GetValue().ToLong(&tone_amplitude);
+        wxGetApp().m_tone_amplitude = (int)tone_amplitude;
+
 
         wxGetApp().m_attn_carrier_en = m_ckboxAttnCarrierEn->GetValue();
         long attn_carrier;

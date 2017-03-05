@@ -53,7 +53,8 @@ int                 g_resyncs;
 float               g_sig_pwr_av = 0.0;
 struct FIFO        *g_error_pattern_fifo;
 short              *g_error_hist, *g_error_histn;
- 
+float               g_tone_phase;
+
 // time averaged magnitude spectrum used for waterfall and spectrum display
 float               g_avmag[MODEM_STATS_NSPEC];
 
@@ -504,6 +505,10 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_attn_carrier_en = 0;
     wxGetApp().m_attn_carrier    = 0;
 
+    wxGetApp().m_tone = 0;
+    wxGetApp().m_tone_freq_hz = 1000;
+    wxGetApp().m_tone_amplitude = 500;
+
     int mode  = pConfig->Read(wxT("/Audio/mode"), (long)0);
     if (mode == 0)
         m_rb1600->SetValue(1);
@@ -594,6 +599,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     g_test_frame_sync_state = 0;
     g_resyncs = 0;
     wxGetApp().m_testFrames = false;
+    g_tone_phase = 0.0;
 
     g_modal = false;
 
@@ -3465,6 +3471,21 @@ void txRxProcessing()
             freedv_set_snr_squelch_thresh(g_pfreedv, g_SquelchLevel);
         }
 
+        // Optional tone interferer
+
+        if (wxGetApp().m_tone) {
+            float w = 2.0*M_PI*wxGetApp().m_tone_freq_hz/freedv_get_modem_sample_rate(g_pfreedv);
+            float s;
+            unsigned int i;
+            for(i=0; i<n8k; i++) {
+                s = (float)wxGetApp().m_tone_amplitude*cos(g_tone_phase);   
+                in8k_short[i] += (int)s;             
+                g_tone_phase += w;
+                //fprintf(stderr, "%f\n", s);
+            }
+            g_tone_phase -= 2.0*M_PI*floor(g_tone_phase/(2.0*M_PI));                                         
+        }
+
         //fprintf(g_logfile, "snr_squelch_thresh: %f\n",  g_pfreedv->snr_squelch_thresh);
 
         // compute rx spectrum - do here so update rate in constant
@@ -3728,14 +3749,18 @@ void per_frame_rx_processing(
             //fwrite(input_buf, sizeof(short), nin, ftest);
 
             // demod per frame processing
+
             for(i=0; i<nin; i++) {
                 rx_fdm[i].real = (float)input_buf[i];
                 rx_fdm[i].imag = 0.0;
             }
        
+            // Optional channel noise
+
             if (g_channel_noise) {
                 fdmdv_simulate_channel(&g_sig_pwr_av, rx_fdm, nin, wxGetApp().m_noise_snr);
             }
+
             freq_shift_coh(rx_fdm_offset, rx_fdm, g_RxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_RxFreqOffsetPhaseRect, nin);
             nout = freedv_comprx(g_pfreedv, output_buf, rx_fdm_offset);
             //kprintf("nout %d outbuf_buf[0]: %d\n", nout, output_buf[0]);

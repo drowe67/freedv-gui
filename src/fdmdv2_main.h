@@ -309,6 +309,13 @@ class MainApp : public wxApp
         bool       m_attn_carrier_en;
         int        m_attn_carrier;
 
+        // tone interferer simulation
+
+        bool       m_tone;
+        int        m_tone_freq_hz;
+        int        m_tone_amplitude;
+
+
     protected:
 };
 
