@@ -6,6 +6,8 @@
 # mailing list: https://lists.sourceforge.net/lists/listinfo/freetel-codec2
 #
 
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.7" CACHE STRING "Minimum OS X deployment version")
+
 cmake_minimum_required(VERSION 2.8)
 
 # Prevent in-source builds to protect automake/autoconf config.
@@ -49,7 +51,6 @@ if(NOT CMAKE_BUILD_TYPE)
     message(STATUS "Build type not specified, defaulting to ${CMAKE_BUILD_TYPE}")
 endif(NOT CMAKE_BUILD_TYPE)
 
-
 # Work around for not using a svn working copy.
 add_definitions(-D_NO_AUTOTOOLS_)
 find_program(SVNVERSION_PATH svnversion)
@@ -72,7 +73,11 @@ endif()
 
 
 # Set default build flags.
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+if(APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -std=c++11")
+endif(APPLE)
 
 #
 # Setup cmake options
