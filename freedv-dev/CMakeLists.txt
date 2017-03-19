@@ -47,15 +47,15 @@ configure_file(cmake/version.h.in src/version.h @ONLY)
 
 # Set default build type
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release")
+    set(CMAKE_BUILD_TYPE "Debug")
     message(STATUS "Build type not specified, defaulting to ${CMAKE_BUILD_TYPE}")
 endif(NOT CMAKE_BUILD_TYPE)
 
 # Work around for not using a svn working copy.
 add_definitions(-D_NO_AUTOTOOLS_)
-find_program(SVNVERSION_PATH svnversion)
-if(SVNVERSION_PATH)
-    execute_process(COMMAND ${SVNVERSION_PATH} .
+find_program(SVN_PATH svn)
+if(SVN_PATH)
+    execute_process(COMMAND ${SVN_PATH} info --show-item revision
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         RESULT_VARIABLE SVN_REVISION_RESULT
         OUTPUT_VARIABLE SVN_CURRENT_REVISION
@@ -64,11 +64,12 @@ if(SVNVERSION_PATH)
 else()
     set(SVN_REVISION_RESULT 1)
 endif()
+
 if(SVN_REVISION_RESULT EQUAL 0)
-string(STRIP ${SVN_CURRENT_REVISION} SVN_REVISION)
-add_definitions(-DSVN_REVISION="${SVN_REVISION}")
+    string(STRIP ${SVN_CURRENT_REVISION} SVN_REVISION)
+    add_definitions(-DSVN_REVISION="${SVN_REVISION}")
 else()
-add_definitions(-DSVN_REVISION="Unversioned directory")
+    add_definitions(-DSVN_REVISION="None")
 endif()
 
 
