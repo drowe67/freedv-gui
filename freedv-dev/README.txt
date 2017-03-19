@@ -2,24 +2,46 @@
  Building and installing on Linux
 ==================================
 
-To build codec2, the build-essential and cmake packages will be required.
-If they are not already installed, you can install them by typing
+To build codec2, the build-essential and cmake packages will be required at
+a minimum. If they are not already installed, you can install them by typing
 
   $ sudo apt-get install build-essential cmake
 
+To install the required development libraries instead of building them
+statically:
+
+Debian/Ubuntu:
+
+  $ sudo apt-get install libwxgtk3.0-dev portaudio19-dev \
+    libhamlib-dev libsamplerate-dev libasound2-dev libao-dev libgsm1-dev \
+    libsndfile-dev
+
+Fedora:
+
+  $ sudo dnf install wxGTK3-devel portaudio-devel libsamplerate-devel \ 
+    libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
+    gsm-devel
+
+
+RHEL/CentOS and derivitves (requires Fedora EPEL repository)
+
+  $ sudo yum install wxGTK3-devel portaudio-devel libsamplerate-devel \ 
+    libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
+    gsm-devel
+
+
 Quickstart 1
------------
+------------
 
 Builds static versions of wxWidgets, portaudio, codec2-dev, which are commonly
 missing on many Linux systems, or of the wrong (older) version.
 
-1/ Assuming the freedv-dev source is checked out into ~/freedv-dev:
+1/ Assumes static build of wxWidgets and the freedv-dev source is checked out into ~/freedv-dev:
 
-  $ sudo apt-get install libgtk2.0-dev libhamlib-dev libsamplerate-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev
-  $ cd freedv-dev
+  $ cd ~/freedv-dev
   $ mkdir build_linux
   $ cd build_linux
-  $ cmake -DBOOTSTRAP_WXWIDGETS=TRUE ~/freedv-dev ../
+  $ cmake -DBOOTSTRAP_WXWIDGETS=TRUE ../
   $ make
 
 2/ Then you can configure FreeDV using your local codec-dev, something like:
@@ -35,6 +57,7 @@ missing on many Linux systems, or of the wrong (older) version.
    $ make
    $ ./src/freedv
 
+
 Quickstart 2
 ------------
 
@@ -47,7 +70,7 @@ Quickstart 2
   (if no errors)
   $ make
   (as root)
-  $ make install
+  # make install
 
 
 =======================================================
