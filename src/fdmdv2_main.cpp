@@ -269,7 +269,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     m_zoom              = 1.;
 
     #ifdef __WXMSW__
-    g_logfile = fopen("log.txt","wt");
+    g_logfile = stderr;
     #else
     g_logfile = stderr;
     #endif
