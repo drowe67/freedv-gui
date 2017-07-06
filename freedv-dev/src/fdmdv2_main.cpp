@@ -433,6 +433,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_boolHamlibUseForPTT = pConfig->ReadBool("/Hamlib/UseForPTT", false);
     wxGetApp().m_intHamlibRig = pConfig->ReadLong("/Hamlib/RigName", 0);
     wxGetApp().m_strHamlibSerialPort = pConfig->Read("/Hamlib/SerialPort", "");
+    wxGetApp().m_intHamlibSerialRate = pConfig->ReadLong("/Hamlib/SerialRate", 0);
     
     wxGetApp().m_boolUseSerialPTT   = pConfig->ReadBool(wxT("/Rig/UseSerialPTT"),   false);
     wxGetApp().m_strRigCtrlPort     = pConfig->Read(wxT("/Rig/Port"),               wxT(""));
@@ -512,8 +513,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     int mode  = pConfig->Read(wxT("/Audio/mode"), (long)0);
     if (mode == 0)
         m_rb1600->SetValue(1);
-    if (mode == 2)
-        m_rb700b->SetValue(1);
+    //if (mode == 2)
+    //    m_rb700b->SetValue(1);
     if (mode == 3)
         m_rb700c->SetValue(1);
     if (mode == 4)
@@ -697,6 +698,7 @@ MainFrame::~MainFrame()
         pConfig->Write("/Hamlib/UseForPTT", wxGetApp().m_boolHamlibUseForPTT);
         pConfig->Write("/Hamlib/RigName", wxGetApp().m_intHamlibRig);
         pConfig->Write("/Hamlib/SerialPort", wxGetApp().m_strHamlibSerialPort);
+        pConfig->Write("/Hamlib/SerialRate", wxGetApp().m_intHamlibSerialRate);
 
 
         pConfig->Write(wxT("/File/playFileToMicInPath"),    wxGetApp().m_playFileToMicInPath);
@@ -726,8 +728,8 @@ MainFrame::~MainFrame()
         int mode;
         if (m_rb1600->GetValue())
             mode = 0;
-        if (m_rb700b->GetValue())
-            mode = 2;
+        //if (m_rb700b->GetValue())
+        //    mode = 2;
         if (m_rb700c->GetValue())
             mode = 3;
         if (m_rb800xa->GetValue())
@@ -999,7 +1001,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 m_panelScatter->add_new_samples_scatter(&g_stats.rx_symbols[r][0]);
             }
         
-            if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
+            if (/*(freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) ||*/(freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
             
                 if (wxGetApp().m_FreeDV700Combine) {
                     m_panelScatter->setNc(g_Nc/2); /* m_FreeDV700Combine may have changed at run time */
@@ -1339,7 +1341,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*FDMDV_NC_MAX);
                     }
        
-                    if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
+                    if (/*(freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) || */(freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
                         int c;
                         //fprintf(stderr, "after g_error_pattern_fifo read 2\n");
                         
@@ -2402,7 +2404,8 @@ bool MainFrame::OpenHamlibRig() {
 
     int rig = wxGetApp().m_intHamlibRig;
     wxString port = wxGetApp().m_strHamlibSerialPort;
-    bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8));
+    int serial_rate = wxGetApp().m_intHamlibSerialRate;
+    bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate);
     if (status == false)
         wxMessageBox("Couldn't connect to Radio with hamlib", wxT("About"), wxOK | wxICON_ERROR, this);
  
@@ -2434,7 +2437,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         vk_state = VK_IDLE;
 
         m_rb1600->Disable();
-        m_rb700b->Disable();
+        //m_rb700b->Disable();
         m_rb700c->Disable();
         m_rb800xa->Disable();
         if (m_rbPlugIn != NULL)
@@ -2447,6 +2450,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             g_Nc = 16;
             m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
         }
+        #ifdef DISABLED
         if (m_rb700b->GetValue()) {
             g_mode = FREEDV_MODE_700B;
             g_Nc = 14;
@@ -2457,6 +2461,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 m_panelScatter->setNc(g_Nc); 
             }
         }
+        #endif
         if (m_rb700c->GetValue()) {
             g_mode = FREEDV_MODE_700C;
             g_Nc = 14;
@@ -2631,7 +2636,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_togBtnVoiceKeyer->Disable();
         m_togBtnOnOff->SetLabel(wxT("Start"));
         m_rb1600->Enable();
-        m_rb700b->Enable();
+        //m_rb700b->Enable();
         m_rb700c->Enable();
         m_rb800xa->Enable();
         if (m_rbPlugIn != NULL)

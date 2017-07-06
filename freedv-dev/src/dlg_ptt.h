@@ -62,6 +62,7 @@ class ComPortsDlg : public wxDialog
         wxCheckBox *m_ckUseHamlibPTT;
         wxComboBox *m_cbRigName;
         wxComboBox *m_cbSerialPort;
+        wxComboBox *m_cbSerialRate;
 
         Hamlib *m_hamlib;
 
@@ -95,6 +96,7 @@ protected:
         void OnCancel(wxCommandEvent& event);
         void OnApply(wxCommandEvent& event);
         virtual void OnInitDialog(wxInitDialogEvent& event);
+    
 };
 
 #endif // __COMPORTS_DIALOG__

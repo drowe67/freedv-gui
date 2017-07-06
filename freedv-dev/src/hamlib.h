@@ -13,7 +13,7 @@ class Hamlib {
         Hamlib();
         ~Hamlib();
         void populateComboBox(wxComboBox *cb);
-        bool connect(unsigned int rig_index, const char *serial_port);
+        bool connect(unsigned int rig_index, const char *serial_port, const int serial_rate);
         bool ptt(bool press);
         void close(void);
 
