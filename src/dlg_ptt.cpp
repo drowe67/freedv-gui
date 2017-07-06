@@ -87,6 +87,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     // Hamlib for CAT PTT
     //----------------------------------------------------------------------
 
+#ifdef TTT
     wxStaticBoxSizer* staticBoxSizer18 = new wxStaticBoxSizer( new wxStaticBox(this, wxID_ANY, _("Hamlib Settings")), wxVERTICAL);
 
     wxBoxSizer* gridSizer100 = new wxBoxSizer(wxHORIZONTAL);
@@ -114,6 +115,43 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
 
     staticBoxSizer18->Add(gridSizer100, 1);
     mainSizer->Add(staticBoxSizer18, 1);
+#endif
+
+    wxStaticBoxSizer* staticBoxSizer18 = new wxStaticBoxSizer( new wxStaticBox(this, wxID_ANY, _("Hamlib Settings")), wxHORIZONTAL);
+
+    /* Use Hamlib for PTT checkbox. */
+
+    m_ckUseHamlibPTT = new wxCheckBox(this, wxID_ANY, _("Use Hamlib PTT"), wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckUseHamlibPTT->SetValue(false);
+    staticBoxSizer18->Add(m_ckUseHamlibPTT, 0, wxALIGN_CENTER_VERTICAL, 0);
+
+    /* Hamlib Rig Type combobox. */
+
+    staticBoxSizer18->Add(new wxStaticText(this, wxID_ANY, _("Rig Model:"), wxDefaultPosition, wxDefaultSize, 0), 
+                      0, wxALIGN_CENTER_VERTICAL | wxLEFT, 20);
+    m_cbRigName = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0, NULL, wxCB_DROPDOWN);
+    /* TODO(Joel): this is a hack. At the least, need to gurantee that m_hamLib
+     * exists. */
+    wxGetApp().m_hamlib->populateComboBox(m_cbRigName);
+    m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
+    staticBoxSizer18->Add(m_cbRigName, 0, wxALIGN_CENTER_VERTICAL, 0);
+
+    /* Hamlib Serial Port combobox. */
+
+    staticBoxSizer18->Add(new wxStaticText(this, wxID_ANY, _("Serial Device:"), wxDefaultPosition, wxDefaultSize, 0), 
+                      0, wxALIGN_CENTER_VERTICAL | wxLEFT, 20);
+    m_cbSerialPort = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, -1), 0, NULL, wxCB_DROPDOWN);
+    staticBoxSizer18->Add(m_cbSerialPort, 0, wxALIGN_CENTER_VERTICAL, 0);
+
+    /* Hamlib Serial Rate combobox. */
+
+    staticBoxSizer18->Add(new wxStaticText(this, wxID_ANY, _("Serial Rate:"), wxDefaultPosition, wxDefaultSize, 0), 
+                      0, wxALIGN_CENTER_VERTICAL | wxLEFT, 20);
+    m_cbSerialRate = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, -1), 0, NULL, wxCB_DROPDOWN);
+    staticBoxSizer18->Add(m_cbSerialRate, 0, wxALIGN_CENTER_VERTICAL, 0);
+
+
+    mainSizer->Add(staticBoxSizer18, 0, wxEXPAND, 5);
 
     //----------------------------------------------------------------------
     // Serial port PTT
@@ -329,6 +367,14 @@ void ComPortsDlg::populatePortList()
     m_cbSerialPort->Append("/dev/ttyUSB1");
     m_cbSerialPort->Append("/dev/ttyS0");
     m_cbSerialPort->Append("/dev/ttyS1");
+
+    /* populate Hamlib serial rate combo box */
+
+    wxString serialRates[] = {"auto", "300", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"}; 
+    for(int i=0; i<WXSIZEOF(serialRates); i++) {
+        m_cbSerialRate->Append(serialRates[i]);
+    }
+
     m_cbCtlDevicePath->Clear();
     m_cbCtlDevicePath->Append("/dev/ttyUSB0");
     m_cbCtlDevicePath->Append("/dev/ttyUSB1");
@@ -357,9 +403,19 @@ void ComPortsDlg::ExchangeData(int inout)
         m_txtCtrlVoiceKeyerRxPause->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRxPause));
         m_txtCtrlVoiceKeyerRepeats->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRepeats));
 
+        /* Hamlib */
+
         m_ckUseHamlibPTT->SetValue(wxGetApp().m_boolHamlibUseForPTT);
         m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
         m_cbSerialPort->SetValue(wxGetApp().m_strHamlibSerialPort);
+
+        if (wxGetApp().m_intHamlibSerialRate == 0) {
+            m_cbSerialRate->SetSelection(0);
+        } else {
+            m_cbSerialRate->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intHamlibSerialRate));
+        }
+
+        /* Serial PTT */
 
         m_ckUseSerialPTT->SetValue(wxGetApp().m_boolUseSerialPTT);
         str = wxGetApp().m_strRigCtrlPort;
@@ -399,9 +455,19 @@ void ComPortsDlg::ExchangeData(int inout)
         wxGetApp().m_intHamlibRig = m_cbRigName->GetSelection();
         wxGetApp().m_strHamlibSerialPort = m_cbSerialPort->GetValue();
 
+        wxString s = m_cbSerialRate->GetValue();
+        if (s == "auto") {
+            wxGetApp().m_intHamlibSerialRate = 0;
+        } else {
+            m_cbSerialRate->GetValue().ToLong(&tmp); 
+            wxGetApp().m_intHamlibSerialRate = tmp;
+        }
+        fprintf(stderr, "serial rate: %ld\n", tmp);
+
         pConfig->Write(wxT("/Hamlib/UseForPTT"), wxGetApp().m_boolHamlibUseForPTT);
         pConfig->Write(wxT("/Hamlib/RigName"), wxGetApp().m_intHamlibRig);
         pConfig->Write(wxT("/Hamlib/SerialPort"), wxGetApp().m_strHamlibSerialPort);
+        pConfig->Write(wxT("/Hamlib/SerialRate"), wxGetApp().m_intHamlibSerialRate);
 
         /* Serial settings */
 

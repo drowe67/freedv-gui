@@ -81,12 +81,12 @@ void Hamlib::populateComboBox(wxComboBox *cb) {
     }
 }
 
-bool Hamlib::connect(unsigned int rig_index, const char *serial_port) {
+bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int serial_rate) {
     /* Look up model from index. */
     if (rig_index >= m_rigList.size()) {
         return false;
     }
-    printf("rig: %s %s (%d)\n", m_rigList[rig_index]->mfg_name,
+    fprintf(stderr, "rig: %s %s (%d)\n", m_rigList[rig_index]->mfg_name,
             m_rigList[rig_index]->model_name, m_rigList[rig_index]->rig_model);
 
 	if(m_rig) {
@@ -95,14 +95,28 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port) {
 	}
 
     /* Initialise, configure and open. */
+
     m_rig = rig_init(m_rigList[rig_index]->rig_model);
-    /* TODO: Also use baud rate from the screen. */
+
     if (!m_rig)
         return false;
+
+    /* TODO we may also need civaddr for Icom */
+
+    strncpy(m_rig->state.rigport.pathname, serial_port, FILPATHLEN - 1);
+    if (serial_rate) {
+        m_rig->state.rigport.parm.serial.rate = serial_rate;
+        fprintf(stderr, "hamlib: setting serial rate: %d\n", serial_rate);
+    }
+
+    /*
     token_t token = rig_token_lookup(m_rig, "rig_pathname");
+
     if (rig_set_conf(m_rig, token, serial_port) != RIG_OK) {
         return false;
     }
+    */
+
     if (rig_open(m_rig) == RIG_OK) {
         return true;
     }
