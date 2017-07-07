@@ -2,10 +2,9 @@
  Building and installing on Linux
 ==================================
 
-To build codec2, the build-essential and cmake packages will be required at
-a minimum. If they are not already installed, you can install them by typing
+First the basics:
 
-  $ sudo apt-get install build-essential cmake
+  $ sudo apt-get install build-essential cmake subversion
 
 To install the required development libraries instead of building them
 statically:
@@ -33,8 +32,21 @@ RHEL/CentOS and derivitves (requires Fedora EPEL repository)
 Quickstart 1
 ------------
 
+1/ Using a modern Linux, and the development library packages
+   installed above:
+
+  $ cd /path/to/freedv
+  $ mkdir build_linux
+  $ cd build_linux
+  $ cmake ../ 
+  $ make
+  $ ./src/freedv
+
+Quickstart 2
+------------
+
 Builds static versions of wxWidgets, portaudio, codec2-dev, which are commonly
-missing on many Linux systems, or of the wrong (older) version.
+missing on older Linux systems.
 
 1/ Assumes static build of wxWidgets and the freedv-dev source is checked out into ~/freedv-dev:
 
@@ -56,22 +68,6 @@ missing on many Linux systems, or of the wrong (older) version.
 
    $ make
    $ ./src/freedv
-
-
-Quickstart 2
-------------
-
-1/ Assuming you have all the dependant libraries:
-
-  $ cd /path/to/freedv
-  $ mkdir build_linux
-  $ cd build_linux
-  $ cmake ../ (defaults to /usr/local, use CMAKE_INSTALL_PREFIX to override)
-  (if no errors)
-  $ make
-  (as root)
-  # make install
-
 
 =======================================================
  Building for Windows on Ubuntu Linux (Cross compiling)
