@@ -316,7 +316,9 @@ class MainApp : public wxApp
         int        m_tone_freq_hz;
         int        m_tone_amplitude;
 
+        // Windows debug console
 
+        bool       m_debug_console;
     protected:
 };
 

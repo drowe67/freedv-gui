@@ -36,6 +36,50 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     bSizer30 = new wxBoxSizer(wxVERTICAL);
 
     //------------------------------
+    // Txt Msg Text Box
+    //------------------------------
+
+    wxStaticBoxSizer* sbSizer_callSign;
+    wxStaticBox *sb_textMsg = new wxStaticBox(this, wxID_ANY, _("Txt Msg"));
+    sbSizer_callSign = new wxStaticBoxSizer(sb_textMsg, wxVERTICAL);
+
+    m_txtCtrlCallSign = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+    m_txtCtrlCallSign->SetToolTip(_("Txt Msg you can send along with Voice"));
+    sbSizer_callSign->Add(m_txtCtrlCallSign, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 3);
+
+    bSizer30->Add(sbSizer_callSign,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+ 
+#ifdef __WXMSW__
+    //------------------------------
+    // debug console, for WIndows build make console pop up for debug messages
+    //------------------------------
+
+    wxStaticBoxSizer* sbSizer_console;
+    wxStaticBox *sb_console = new wxStaticBox(this, wxID_ANY, _("Debug"));
+    sbSizer_console = new wxStaticBoxSizer(sb_console, wxHORIZONTAL);
+
+    m_ckboxDebugConsole = new wxCheckBox(this, wxID_ANY, _("Show Console"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_console->Add(m_ckboxDebugConsole, 0, wxALIGN_LEFT, 0);
+
+    bSizer30->Add(sbSizer_console,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+#endif
+
+    //------------------------------
+    // FreeDV 700 Options
+    //------------------------------
+
+    wxStaticBoxSizer* sbSizer_freedv700;
+    wxStaticBox *sb_freedv700 = new wxStaticBox(this, wxID_ANY, _("FreeDV 700 Options"));
+    sbSizer_freedv700 = new wxStaticBoxSizer(sb_freedv700, wxHORIZONTAL);
+
+    m_ckboxFreeDV700txClip = new wxCheckBox(this, wxID_ANY, _("Clipping"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_freedv700->Add(m_ckboxFreeDV700txClip, 0, wxALIGN_LEFT, 0);
+    m_ckboxFreeDV700Combine = new wxCheckBox(this, wxID_ANY, _("Diversity Combine for plots"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_freedv700->Add(m_ckboxFreeDV700Combine, 0, wxALIGN_LEFT, 0);
+
+    bSizer30->Add(sbSizer_freedv700,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+
+    //------------------------------
     // Test Frames/Channel simulation check box
     //------------------------------
 
@@ -77,35 +121,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     bSizer30->Add(sbSizer_tone,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 
-    //------------------------------
-    // FreeDV 700 Options
-    //------------------------------
-
-    wxStaticBoxSizer* sbSizer_freedv700;
-    wxStaticBox *sb_freedv700 = new wxStaticBox(this, wxID_ANY, _("FreeDV 700 Options"));
-    sbSizer_freedv700 = new wxStaticBoxSizer(sb_freedv700, wxHORIZONTAL);
-
-    m_ckboxFreeDV700txClip = new wxCheckBox(this, wxID_ANY, _("Clipping"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_freedv700->Add(m_ckboxFreeDV700txClip, 0, wxALIGN_LEFT, 0);
-    m_ckboxFreeDV700Combine = new wxCheckBox(this, wxID_ANY, _("Diversity Combine for plots"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_freedv700->Add(m_ckboxFreeDV700Combine, 0, wxALIGN_LEFT, 0);
-
-    bSizer30->Add(sbSizer_freedv700,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
-
-    //------------------------------
-    // Txt Msg Text Box
-    //------------------------------
-
-    wxStaticBoxSizer* sbSizer_callSign;
-    wxStaticBox *sb_textMsg = new wxStaticBox(this, wxID_ANY, _("Txt Msg"));
-    sbSizer_callSign = new wxStaticBoxSizer(sb_textMsg, wxVERTICAL);
-
-    m_txtCtrlCallSign = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-    m_txtCtrlCallSign->SetToolTip(_("Txt Msg you can send along with Voice"));
-    sbSizer_callSign->Add(m_txtCtrlCallSign, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 3);
-
-    bSizer30->Add(sbSizer_callSign,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
- 
+#ifdef __EXPERIMENTAL_UDP__
     //------------------------------
     // Txt Encoding 
     //------------------------------
@@ -188,6 +204,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_udp->Add(m_txt_udp_port, 0, wxALIGN_CENTER_HORIZONTAL, 5);
 
     bSizer30->Add(sbSizer_udp,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+#endif
 
     //------------------------------
     // OK - Cancel - Apply Buttons 
@@ -204,7 +221,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_sdbSizer5Apply = new wxButton(this, wxID_APPLY);
     bSizer31->Add(m_sdbSizer5Apply, 0, wxALL, 2);
 
-    bSizer30->Add(bSizer31, 0, wxALIGN_RIGHT|wxALL, 0);
+    bSizer30->Add(bSizer31, 0, wxALIGN_CENTER_HORIZONTAL, 0);
 
     this->SetSizer(bSizer30);
     this->Layout();
@@ -225,6 +242,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_ckboxFreeDV700txClip->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700txClip), NULL, this);
     m_ckboxFreeDV700Combine->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700Combine), NULL, this);
+
+#ifdef __WXMSW__
+    m_ckboxDebugConsole->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnDebugConsole), NULL, this);
+#endif
 
     event_in_serial = 0;
     event_out_serial = 0;
@@ -250,6 +271,10 @@ OptionsDlg::~OptionsDlg()
 
     m_ckboxFreeDV700txClip->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700txClip), NULL, this);
     m_ckboxFreeDV700Combine->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700Combine), NULL, this);
+
+#ifdef __WXMSW__
+    m_ckboxDebugConsole->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnDebugConsole), NULL, this);
+#endif
 }
 
 
@@ -275,6 +300,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxAttnCarrierEn->SetValue(wxGetApp().m_attn_carrier_en);
         m_txtAttnCarrier->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_attn_carrier));
 
+#ifdef __EXPERIMENTAL_UDP__
         m_ckbox_events->SetValue(wxGetApp().m_events);
         m_txt_spam_timer->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_events_spam_timer));
 
@@ -291,9 +317,14 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             m_rb_textEncoding2->SetValue(true);
 #endif
         m_ckboxEnableChecksum->SetValue(wxGetApp().m_enable_checksum);
+#endif
 
         m_ckboxFreeDV700txClip->SetValue(wxGetApp().m_FreeDV700txClip);
         m_ckboxFreeDV700Combine->SetValue(wxGetApp().m_FreeDV700Combine);
+
+#ifdef __WXMSW__
+        m_ckboxDebugConsole->SetValue(wxGetApp().m_debug_console);
+#endif
     }
 
     if(inout == EXCHANGE_DATA_OUT)
@@ -320,6 +351,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtAttnCarrier->GetValue().ToLong(&attn_carrier);
         wxGetApp().m_attn_carrier = (int)attn_carrier;
 
+#ifdef __EXPERIMENTAL_UDP__
         wxGetApp().m_events        = m_ckbox_events->GetValue();
         long spam_timer;
         m_txt_spam_timer->GetValue().ToLong(&spam_timer);
@@ -348,9 +380,14 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             wxGetApp().m_textEncoding = 2;
 #endif
         wxGetApp().m_enable_checksum = m_ckboxEnableChecksum->GetValue();
+#endif
 
         wxGetApp().m_FreeDV700txClip = m_ckboxFreeDV700txClip->GetValue();
         wxGetApp().m_FreeDV700Combine = m_ckboxFreeDV700Combine->GetValue();
+
+#ifdef __WXMSW__
+        wxGetApp().m_debug_console = m_ckboxDebugConsole->GetValue();
+#endif
 
         if (storePersistent) {
             pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
@@ -372,6 +409,10 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
 
             pConfig->Write(wxT("/Noise/noise_snr"),  wxGetApp().m_noise_snr);
+
+#ifdef __WXMSW__
+            pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
+#endif
 
             pConfig->Flush();
         }
@@ -465,3 +506,16 @@ void OptionsDlg::updateEventLog(wxString event_in, wxString event_out) {
     m_txt_events_out->AppendText(event_out_with_serial+"\n");
 }
 
+
+void OptionsDlg::OnDebugConsole(wxScrollEvent& event) {
+    wxGetApp().m_debug_console = m_ckboxDebugConsole->GetValue();
+#ifdef __WXMSW__
+    // somewhere to send printfs while developing, causes conmsole to pop up on Windows
+    if (wxGetApp().m_debug_console) {
+        int ret = AllocConsole();
+        freopen("CONOUT$", "w", stdout); 
+        freopen("CONOUT$", "w", stderr); 
+        fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().m_debug_console);
+    } 
+#endif
+}

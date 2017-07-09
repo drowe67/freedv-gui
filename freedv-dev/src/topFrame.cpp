@@ -225,6 +225,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     bSizer15->Add(m_txtCtrlCallSign, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5);
     lowerSizer->Add(bSizer15, 1, wxEXPAND, 5);
 
+#ifdef __EXPERIMENTAL_UDP__
     wxStaticBoxSizer* sbSizer_Checksum = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Checksums")), wxHORIZONTAL);
 
     wxStaticText *goodLabel = new wxStaticText(this, wxID_ANY, wxT("Good: "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
@@ -238,6 +239,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     sbSizer_Checksum->Add(m_txtChecksumBad, 0, 0, 1);
 
     lowerSizer->Add(sbSizer_Checksum, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
+#endif
 
     //=====================================================
     // These are the buttons that autosend the userid (?)
