@@ -14,7 +14,7 @@ class Hamlib {
         ~Hamlib();
         void populateComboBox(wxComboBox *cb);
         bool connect(unsigned int rig_index, const char *serial_port, const int serial_rate);
-        bool ptt(bool press);
+        bool ptt(bool press, wxString &hamlibError);
         void close(void);
 
         typedef std::vector<const struct rig_caps *> riglist_t;

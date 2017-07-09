@@ -1630,8 +1630,11 @@ void MainFrame::togglePTT(void) {
 
     if (wxGetApp().m_boolHamlibUseForPTT) {        
         Hamlib *hamlib = wxGetApp().m_hamlib; 
+        wxString hamlibError;
         if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
-            hamlib->ptt(g_tx);
+            if (hamlib->ptt(g_tx, hamlibError) == false) {
+                wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
+            }
         }
     }
 
@@ -2435,7 +2438,7 @@ bool MainFrame::OpenHamlibRig() {
     int serial_rate = wxGetApp().m_intHamlibSerialRate;
     bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate);
     if (status == false)
-        wxMessageBox("Couldn't connect to Radio with hamlib", wxT("About"), wxOK | wxICON_ERROR, this);
+        wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
  
     return status;
 } 
@@ -2630,8 +2633,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         if (wxGetApp().m_boolHamlibUseForPTT) {
             Hamlib *hamlib = wxGetApp().m_hamlib; 
+            wxString hamlibError;
             if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
-                hamlib->ptt(false);
+                if (hamlib->ptt(false, hamlibError) == false) {
+                    wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
+                }
                 hamlib->close();
             }
         }
@@ -4073,8 +4079,7 @@ void MainFrame::CloseSerialPort(void)
         // always end with PTT in rx state
 
         SerialPTTRx();
-
-		closeComPort();
+        closeComPort();
     }
 }
 

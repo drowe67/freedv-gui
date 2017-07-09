@@ -287,8 +287,7 @@ void ComPortsDlg::populatePortList()
 
     /* populate Hamlib serial rate combo box */
 
-    wxString serialRates[] = {"auto", "300", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"}; 
-    fprintf(stderr, "populating serial rates...\n");
+    wxString serialRates[] = {"default", "300", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"}; 
     for(int i=0; i<WXSIZEOF(serialRates); i++) {
         m_cbSerialRate->Append(serialRates[i]);
     }
@@ -460,13 +459,13 @@ void ComPortsDlg::ExchangeData(int inout)
         wxGetApp().m_strHamlibSerialPort = m_cbSerialPort->GetValue();
 
         wxString s = m_cbSerialRate->GetValue();
-        if (s == "auto") {
+        if (s == "default") {
             wxGetApp().m_intHamlibSerialRate = 0;
         } else {
             m_cbSerialRate->GetValue().ToLong(&tmp); 
             wxGetApp().m_intHamlibSerialRate = tmp;
         }
-        fprintf(stderr, "serial rate: %ld\n", tmp);
+        fprintf(stderr, "serial rate: %d\n", wxGetApp().m_intHamlibSerialRate);
 
         pConfig->Write(wxT("/Hamlib/UseForPTT"), wxGetApp().m_boolHamlibUseForPTT);
         pConfig->Write(wxT("/Hamlib/RigName"), wxGetApp().m_intHamlibRig);
