@@ -33,7 +33,13 @@ class OptionsDlg : public wxDialog
     public:
     OptionsDlg( wxWindow* parent,
                wxWindowID id = wxID_ANY, const wxString& title = _("Options"), 
-                const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(600,660), 
+                const wxPoint& pos = wxDefaultPosition, 
+#ifdef __WXMSW__
+                /* we add debug console check box for windows */
+               const wxSize& size = wxSize(600,330), 
+#else
+               const wxSize& size = wxSize(600,300), 
+#endif
                long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
         ~OptionsDlg();
 
@@ -70,6 +76,7 @@ class OptionsDlg : public wxDialog
         void    OnAttnCarrierEn(wxScrollEvent& event);
         void    OnFreeDV700txClip(wxScrollEvent& event);
         void    OnFreeDV700Combine(wxScrollEvent& event);
+        void    OnDebugConsole(wxScrollEvent& event);
 
         wxTextCtrl   *m_txtCtrlCallSign; // TODO: this should be renamed to tx_txtmsg, and rename all related incl persis strge
         wxCheckBox   *m_ckboxTestFrame;
@@ -103,6 +110,8 @@ class OptionsDlg : public wxDialog
         wxButton*     m_sdbSizer5OK;
         wxButton*     m_sdbSizer5Cancel;
         wxButton*     m_sdbSizer5Apply;
+
+        wxCheckBox   *m_ckboxDebugConsole;
 
         unsigned int  event_in_serial, event_out_serial;
 

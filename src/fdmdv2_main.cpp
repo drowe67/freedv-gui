@@ -145,9 +145,7 @@ bool MainApp::OnInit()
     SetVendorName(wxT("CODEC2-Project"));
     SetAppName(wxT("FreeDV"));      // not needed, it's the default value
 
-    // DR - this is wrong define so won't be used on windows build, should be __WXMSW__
-    // So registry will be used for Win32
-#ifdef _WXMSW_
+#ifdef FILE_RATHER_THAN_REGISTRY
     // Force use of file-based configuration persistance on Windows platforma
     wxConfig *pConfig = new wxConfig();
     wxFileConfig *pFConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), wxT("FreeDV.conf"), wxT("FreeDV.conf"),  wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_RELATIVE_PATH);
@@ -502,6 +500,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_FreeDV700txClip = (float)pConfig->Read(wxT("/FreeDV700/txClip"), t);
     wxGetApp().m_FreeDV700Combine = 1;
     wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
+ 
+    wxGetApp().m_debug_console = (float)pConfig->Read(wxT("/Debug/console"), f);
 
     wxGetApp().m_attn_carrier_en = 0;
     wxGetApp().m_attn_carrier    = 0;
@@ -604,15 +604,29 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 
     g_modal = false;
 
+#ifdef __EXPERIMENTAL_UDP__
     // Start UDP listener thread
 
     m_UDPThread = NULL;
     startUDPThread();
+#endif
 
     optionsDlg = new OptionsDlg(NULL);
     m_schedule_restore = false;
 
     vk_state = VK_IDLE;
+
+    // Init optional Windows debug console so we can see all those printfs
+
+#ifdef __WXMSW__
+    if (wxGetApp().m_debug_console) {
+        // somewhere to send printfs while developing
+        int ret = AllocConsole();
+        freopen("CONOUT$", "w", stdout); 
+        freopen("CONOUT$", "w", stderr); 
+        fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().m_debug_console);
+    }
+#endif
 
     //ftest = fopen("ftest.raw", "wb");
     //assert(ftest != NULL);
@@ -638,7 +652,9 @@ MainFrame::~MainFrame()
         optionsDlg = NULL;
     }
 
+#ifdef __EXPERIMENTAL_UDP__
     stopUDPThread();
+#endif
 
     /* TOOD(Joel): the ownership of m_hamlib is probably wrong. */
     if (wxGetApp().m_hamlib) delete wxGetApp().m_hamlib;
@@ -724,6 +740,8 @@ MainFrame::~MainFrame()
 
         pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
         pConfig->Write(wxT("/Noise/noise_snr"), wxGetApp().m_noise_snr);
+
+        pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
 
         int mode;
         if (m_rb1600->GetValue())
@@ -1225,6 +1243,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     s.Printf("%s", m_callsign);
                     m_txtCtrlCallSign->SetValue(s);
 
+#ifdef __UDP_EXPERIMENTAL__
                     char s1[MAX_CALLSIGN];
                     sprintf(s1,"rx_txtmsg %s", m_callsign);
                     processTxtEvent(s1);
@@ -1232,11 +1251,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     m_checksumGood++;
                     s.Printf("%d", m_checksumGood);
                     m_txtChecksumGood->SetLabel(s);              
+#endif
                 }
                 else {
+#ifdef __UDP_EXPERIMENTAL__
                     m_checksumBad++;
                     s.Printf("%d", m_checksumBad);
                     m_txtChecksumBad->SetLabel(s);        
+#endif
                 }
             }
 
@@ -1401,6 +1423,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         m_schedule_restore = false;
     }
 
+#ifdef __UDP_EXPERIMENTAL__
     // Light Spam Timer LED if at least one timer is running
 
     int i;
@@ -1408,6 +1431,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     for(i=0; i<MAX_EVENT_RULES; i++)
         if (spamTimer[i].IsRunning())
             optionsDlg->SetSpamTimerLight(true);        
+#endif
 
     // Blink file playback status line
 
@@ -1595,7 +1619,9 @@ void MainFrame::togglePTT(void) {
         // rx-> tx transition, swap to Mic In page to monitor speech
         wxGetApp().m_rxNbookCtrl = m_auiNbookCtrl->GetSelection();
         m_auiNbookCtrl->ChangeSelection(m_auiNbookCtrl->GetPageIndex((wxWindow *)m_panelSpeechIn));
+#ifdef __UDP_EXPERIMENTAL__
         char e[80]; sprintf(e,"ptt"); processTxtEvent(e);
+#endif
     }
 
     g_tx = m_btnTogPTT->GetValue();
@@ -1873,9 +1899,11 @@ void MainFrame::OnCallSignReset(wxCommandEvent& event)
     wxString s;
     s.Printf("%s", m_callsign);
     m_txtCtrlCallSign->SetValue(s);
+#ifdef __UDP__EXPERIMENTAL__
     m_checksumGood = m_checksumBad = 0;
     m_txtChecksumGood->SetLabel(_("0"));
     m_txtChecksumBad->SetLabel(_("0"));
+#endif
 }
 
 void MainFrame::OnBerReset(wxCommandEvent& event)
@@ -2543,12 +2571,14 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         m_pcallsign = m_callsign;
         memset(m_callsign, 0, sizeof(m_callsign));
+#ifdef __UDP_EXPERIMENTAL__
         m_checksumGood = m_checksumBad = 0;
         wxString s;
         s.Printf("%d", m_checksumGood);
         m_txtChecksumGood->SetLabel(s);              
         s.Printf("%d", m_checksumBad);
         m_txtChecksumBad->SetLabel(s);        
+#endif
 
         m_maxLevel = 0;
         m_textLevel->SetLabel(wxT(""));
@@ -2575,7 +2605,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
 #endif // _USE_TIMER
         }
+#ifdef __UDP_EXPERIMENTAL__
         char e[80]; sprintf(e,"start"); processTxtEvent(e);
+#endif
     }
 
     // Stop was pressed or start up failed
@@ -2586,7 +2618,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         // Stop Running -------------------------------------------------
         //
 
+#ifdef __UDP_EXPERIMENTAL__
         optionsDlg->SetSpamTimerLight(false);
+#endif
 
 #ifdef _USE_TIMER
         m_plotTimer.Stop();
@@ -2649,7 +2683,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb1400->Enable();
         m_rb2000->Enable();
 #endif
+#ifdef __UDP_EXPERIMENTAL__
         char e[80]; sprintf(e,"stop"); processTxtEvent(e);
+#endif
     }
 }
 
@@ -4113,7 +4149,7 @@ int MainFrame::PollUDP(void)
 }
 
 void MainFrame::startUDPThread(void) {
-    printf("starting UDP thread!\n");
+    fprintf(stderr, "starting UDP thread!\n");
     m_UDPThread = new UDPThread;
     m_UDPThread->mf = this;
     if (m_UDPThread->Create() != wxTHREAD_NO_ERROR ) {

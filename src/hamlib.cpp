@@ -43,7 +43,7 @@ Hamlib::Hamlib() : m_rig(NULL) {
     /* Reset debug output. */
     rig_set_debug(RIG_DEBUG_VERBOSE);
 
-	m_rig = NULL;
+    m_rig = NULL;
 }
 
 Hamlib::~Hamlib() {
@@ -124,18 +124,22 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
 }
 
 bool Hamlib::ptt(bool press) {
-	if(!m_rig)
-		return false;
+    fprintf(stderr,"Hamlib::ptt: %d\n", press);
+
+    if(!m_rig)
+        return false;
     /* TODO(Joel): make ON_DATA and ON configurable. */
     ptt_t on = press ? RIG_PTT_ON : RIG_PTT_OFF;
     /* TODO(Joel): what should the VFO option be? */
-    return rig_set_ptt(m_rig, RIG_VFO_CURR, on) == RIG_OK;
+    int status = rig_set_ptt(m_rig, RIG_VFO_CURR, on) == RIG_OK;
+    fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", status);
+    return status;
 }
 
 void Hamlib::close(void) {
-	if(m_rig) {
-		rig_close(m_rig);
-		rig_cleanup(m_rig);
-		m_rig = NULL;
-	}
+    if(m_rig) {
+        rig_close(m_rig);
+        rig_cleanup(m_rig);
+        m_rig = NULL;
+    }
 }

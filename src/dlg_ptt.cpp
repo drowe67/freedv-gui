@@ -284,6 +284,15 @@ void ComPortsDlg::OnInitDialog(wxInitDialogEvent& event)
 //-------------------------------------------------------------------------
 void ComPortsDlg::populatePortList()
 {
+
+    /* populate Hamlib serial rate combo box */
+
+    wxString serialRates[] = {"auto", "300", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"}; 
+    fprintf(stderr, "populating serial rates...\n");
+    for(int i=0; i<WXSIZEOF(serialRates); i++) {
+        m_cbSerialRate->Append(serialRates[i]);
+    }
+
 #ifdef __WXMSW__
     m_listCtrlPorts->Clear();
     m_cbSerialPort->Clear();
@@ -368,13 +377,6 @@ void ComPortsDlg::populatePortList()
     m_cbSerialPort->Append("/dev/ttyS0");
     m_cbSerialPort->Append("/dev/ttyS1");
 
-    /* populate Hamlib serial rate combo box */
-
-    wxString serialRates[] = {"auto", "300", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"}; 
-    for(int i=0; i<WXSIZEOF(serialRates); i++) {
-        m_cbSerialRate->Append(serialRates[i]);
-    }
-
     m_cbCtlDevicePath->Clear();
     m_cbCtlDevicePath->Append("/dev/ttyUSB0");
     m_cbCtlDevicePath->Append("/dev/ttyUSB1");
@@ -382,6 +384,8 @@ void ComPortsDlg::populatePortList()
     m_cbCtlDevicePath->Append("/dev/ttyS1");
 #endif
 #endif
+
+
 }
 
 //-------------------------------------------------------------------------
