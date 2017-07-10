@@ -1,0 +1,84 @@
+======================
+FREEDV GUI USER MANUAL
+======================
+
+  
+Voice Keyer
+-----------
+
+Voice Keyer Button on Front Page
+Options-PTT Dialog
+
+Puts FreeDV and your radio into transmit, reads a wave file of your
+voice to call CQ, then switches to receive to see if anyone is
+replying.  If you press space bar the voice keyer stops.  If a signal
+with a valid sync is received for a few seconds the voice keyer stops.
+
+Options-PTT dialog can be used to select the wave file, set the Rx
+delay, and number of times the tx/rx cycle repeats.
+
+The wave file for the voice keyer should be in 8kHz mono 16 bit sample
+form.  Use a free application such as Audacity to convert a file you
+have recorded to this format.
+
+Test Frame Histogram
+--------------------
+
+Test Frame Histogram tab on Front Page
+
+Displays BER of each carrier when in "test frame" mode.  As each QPSK
+carrier has 2 bits there are 2*Nc histogram points.
+
+Ideally all carriers will have about the same BER (+/- 20% after 5000
+total bit errors).  However problems can occur with filtering in the
+tx path.  If one carrier has less power, then it will have a higher
+BER.  The errors in this carrier will tend to dominate overall
+BER. For example if one carrier is attenuated due to SSB filter ripple
+in the tx path then the BER on that carrier will be higher.  This is
+bad news for DV.
+
+Suggested usage: 
+
+i) Transmit FreeDV in test frame mode.  Use a 2nd rx (or
+get a friend) to monitor your rx signal with FreeDV in test frame
+mode.  
+
+ii) Adjust your rx SNR to get a BER of a few % (e.g. reduce tx
+power, use a short antenna for the rx, point your beam away, adjust rx
+RF gain).  
+
+iii) Monitor the error histogram for a few minutes, until you
+have say 5000 total bit errors.  You have a problem if the BER of any
+carrier is more than 20% different from the rest.
+
+A typical issue will be one carrier at 1.0, the others at 0.5,
+indicating the poorer carrier BER is twice the larger.
+
+Full Duplex Testing with loopback
+---------------------------------
+
+Options - Half Duplex check box
+
+FreeDV GUI can operate in full duplex mode which is useful for
+development of listening to your own FreeDV signal as only one PC is
+required.  Normal operation is half duplex.
+
+Tx and Rx signals can be looped back via an analog connection between
+the sound cards.
+
+On Linux, using the Alsa loopback module:
+
+  $ sudo modprobe snd-aloop
+  $ ./freedv
+
+  In Tools - Audio Config - Receive Tab  - From Radio select -> Loopback: Loopback PCM (hw:1,0)
+                          - Transmit Tab - To Radio select   -> Loopback: Loopback PCM (hw:1,1)
+
+TODO
+----
+
+[ ] Put this in a more usable form (maybe render into HTML)
+
+[ ] complete manual, at this stage just more obscure features
+    documented here, integrate with other on-line documentation
+    sources

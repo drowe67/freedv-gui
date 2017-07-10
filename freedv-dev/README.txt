@@ -1,4 +1,15 @@
 ==================================
+ FreeDV GUI README.txt
+==================================
+
+This document describes how to build the FreeDV GUI program for
+various operating systems.  See also:
+
+  http://freedv.org - introduction, documentation, downloads
+  RELEASE_NOTES.txt - changes made to each version
+  USER_MANUAL.txt   - FreeDV GUI Manual
+
+==================================
  Building and installing on Linux
 ==================================
 
@@ -191,82 +202,32 @@ configure emacs:
                       (setq c-basic-offset 4)
                       )))
 
-=================
-USER GUIDE NOTES
-=================
+FreeDV GUI TODO List
+--------------------
 
-TODO: Put this in a more usable form (maybe parse into HTML), video
-tutorials etc...
-
-1/ Error Histogram
-------------------
-
-Displays BER of each carrier when in "test frame"
-mode.  As each QPSK carrier has 2 bits there are 2*Nc histogram
-points.
-
-Ideally all carriers will have about the same BER (+/- 20% after 5000
-total bit errors).  However problems can occur with filtering in the
-tx path.  If one carrier has less power, then it will have a higher
-BER.  The errors in this carrier will tend to dominate overall
-BER. For example if one carrier is attenuated due to SSB filter ripple
-in the tx path then the BER on that carrier will be higher.  This is
-bad news for DV.
-
-Suggested usage: 
-
-i) Transmit FreeDV in test frame mode.  Use a 2nd rx (or
-get a friend) to monitor your rx signal with FreeDV in test frame
-mode.  
-
-ii) Adjust your rx SNR to get a BER of a few % (e.g. reduce tx
-power, use a short antenna for the rx, point your beam away, adjust rx
-RF gain).  
-
-iii) Monitor the error histogram for a few minutes, until you
-have say 5000 total bit errors.  You have a problem if the BER of any
-carrier is more than 20% different from the rest.
-
-A typical issue will be one carrier at 1.0, the others at 0.5,
-indicating the poorer carrier BER is twice the larger.
-
-2/ Voice Keyer
---------------
-
-Puts FreeDV and your radio into transmit, reads a wave
-file of your voice to call CQ, then switches to receive to see if
-anyone is replying.  If you press space bar the voice keyer stops.  If
-a signal with a valid sync is received for a few seconds the voice
-keyer stops.  The Tools-PTT dialog can be used to select the wave
-file, set the Rx delay, and number of times the tx/rx cycle repeats.
-
-3/ UDP Control port
--------------------
-
-FreeDV can be controlled via UDP from other programs on the same host
-(127.0.0.1) using text strings.  The default port is 3000, and can be
-set Via Tools-Options.
-
-Currents commands:
-
-  "set txtmsg XXX" - sets the text/callsign ID string to XXX
-  "restore"        - Restores the FreeDV windowto full size if minimised
-  "ptton"          - PTT on (transmit)
-  "pttoff"         - PTT off (receive)
-
-Hint: "netcat" can be used to test this feature.
-
-4/ Full Duplex Testing with loopback
-------------------------------------
-
-FreeDV GUI can operate in full duplex mode which is useful for
-development as only one PC is required.  Tx and Rx signals can be
-looped back via an analog connection between the sound cards, or (on
-Linux) using the Alsa loopback module:
-
-$ sudo modprobe snd-aloop
-$ ./freedv
-
-In Tools - Audio Config - Receive Tab  - From Radio select -> Loopback: Loopback PCM (hw:1,0)
-                        - Transmit Tab - To Radio select   -> Loopback: Loopback PCM (hw:1,1)
+[ ] Ubuntu packaging
+[ ] default sound card in/out setting for rx out of the box
+[ ] When application close on windows while "Start" down sometimes crashes
+    + Also on Linux it reports an unterminated thread when exiting
+[ ] Tool-Audio Config Dialog sound device names truncated on Windows
+[ ] Serialport::closeport() on Linux takes about 1 second 
+    + delays 'Stop' on main window test on Tools-PTT Test
+[ ] Voice keyer file name at bottom on main screen truncated
+    + need a bigger field
+[ ] Start/Stop file rec/playback, work out a better UI, 
+    maybe buttons on front page
+[ ] feature for evaluating yr own sound quality
+    + trap bad mic response/levels
+    + zero in on different sound quality from different users
+[ ] feeding audio over UDP say from from gqrx
+    + could also be used to netcat stored files
+[ ] refactoring
+    [ ] fdmdv2_main.cpp is way too long
+    [ ] rename fdmdv2*.cpp -> freedv*.cpp
+    [ ] dlg_ptt uses ComPortsDlg name internally, rename PttDlg or similar
+[ ] Add RSID
+    + use case, when would it be used?
+[ ] clean up dialogs
+    + were based on auto generation code
+    + must be an easier/clearer way to write them
 
