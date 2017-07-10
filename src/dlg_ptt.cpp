@@ -41,47 +41,14 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     this->SetSizer(mainSizer);
     
     //----------------------------------------------------------------------
-    // Half Duplex Flag for VOX PTT
+    // Vox tone option
     //----------------------------------------------------------------------
 
-    // DR: should this be on options dialog?
-
     wxStaticBoxSizer* staticBoxSizer28 = new wxStaticBoxSizer( new wxStaticBox(this, wxID_ANY, _("VOX PTT Settings")), wxHORIZONTAL);
-    m_ckHalfDuplex = new wxCheckBox(this, wxID_ANY, _("Half Duplex"), wxDefaultPosition, wxSize(-1,-1), 0);
-    staticBoxSizer28->Add(m_ckHalfDuplex, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
     m_ckLeftChannelVoxTone = new wxCheckBox(this, wxID_ANY, _("Left Channel Vox Tone"), wxDefaultPosition, wxSize(-1,-1), 0);
     staticBoxSizer28->Add(m_ckLeftChannelVoxTone, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
 
     mainSizer->Add(staticBoxSizer28, 0, wxEXPAND, 5);
-
-    //----------------------------------------------------------------------
-    // Voice Keyer 
-    //----------------------------------------------------------------------
-
-    wxStaticBoxSizer* staticBoxSizer28a = new wxStaticBoxSizer( new wxStaticBox(this, wxID_ANY, _("Voice Keyer")), wxHORIZONTAL);
-
-    wxStaticText *m_staticText28b = new wxStaticText(this, wxID_ANY, _("Wave File: "), wxDefaultPosition, wxDefaultSize, 0);
-    staticBoxSizer28a->Add(m_staticText28b, 0, wxALIGN_CENTER_VERTICAL, 5);    
-    m_txtCtrlVoiceKeyerWaveFile = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
-    m_txtCtrlVoiceKeyerWaveFile->SetToolTip(_("Wave file to play for Voice Keyer"));
-    staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerWaveFile, 0, 0, 5);
-
-    m_buttonChooseVoiceKeyerWaveFile = new wxButton(this, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
-    staticBoxSizer28a->Add(m_buttonChooseVoiceKeyerWaveFile, 0, wxALIGN_CENTER_VERTICAL, 5);
-
-    wxStaticText *m_staticText28c = new wxStaticText(this, wxID_ANY, _("   Rx Pause: "), wxDefaultPosition, wxDefaultSize, 0);
-    staticBoxSizer28a->Add(m_staticText28c, 0, wxALIGN_CENTER_VERTICAL , 5);
-    m_txtCtrlVoiceKeyerRxPause = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
-    m_txtCtrlVoiceKeyerRxPause->SetToolTip(_("How long to wait in Rx mode before repeat"));
-    staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerRxPause, 0, 0, 5);
-
-    wxStaticText *m_staticText28d = new wxStaticText(this, wxID_ANY, _("   Repeats: "), wxDefaultPosition, wxDefaultSize, 0);
-    staticBoxSizer28a->Add(m_staticText28d, 0, wxALIGN_CENTER_VERTICAL, 5);
-    m_txtCtrlVoiceKeyerRepeats = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
-    m_txtCtrlVoiceKeyerRepeats->SetToolTip(_("How long to wait in Rx mode before repeat"));
-    staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerRepeats, 0, 0, 5);
-
-    mainSizer->Add(staticBoxSizer28a, 0, wxEXPAND, 5);
 
     //----------------------------------------------------------------------
     // Hamlib for CAT PTT
@@ -252,7 +219,6 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnOK), NULL, this);
     m_buttonCancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnCancel), NULL, this);
     m_buttonApply->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnApply), NULL, this);
-    m_buttonChooseVoiceKeyerWaveFile->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnChooseVoiceKeyerWaveFile), NULL, this);
 }
 
 //-------------------------------------------------------------------------
@@ -267,7 +233,6 @@ ComPortsDlg::~ComPortsDlg()
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnOK), NULL, this);
     m_buttonCancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnCancel), NULL, this);
     m_buttonApply->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnApply), NULL, this);
-    m_buttonChooseVoiceKeyerWaveFile->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnChooseVoiceKeyerWaveFile), NULL, this);
 }
 
 //-------------------------------------------------------------------------
@@ -397,14 +362,7 @@ void ComPortsDlg::ExchangeData(int inout)
     
     if(inout == EXCHANGE_DATA_IN)
     {
-        m_ckHalfDuplex->SetValue(wxGetApp().m_boolHalfDuplex);
         m_ckLeftChannelVoxTone->SetValue(wxGetApp().m_leftChannelVoxTone);
-
-        /* Voice Keyer */
-
-        m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().m_txtVoiceKeyerWaveFile);
-        m_txtCtrlVoiceKeyerRxPause->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRxPause));
-        m_txtCtrlVoiceKeyerRepeats->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRepeats));
 
         /* Hamlib */
 
@@ -435,22 +393,9 @@ void ComPortsDlg::ExchangeData(int inout)
     }
     if(inout == EXCHANGE_DATA_OUT)
     {
-        wxGetApp().m_boolHalfDuplex = m_ckHalfDuplex->GetValue();
-        pConfig->Write(wxT("/Rig/HalfDuplex"), wxGetApp().m_boolHalfDuplex);
         wxGetApp().m_leftChannelVoxTone = m_ckLeftChannelVoxTone->GetValue();
         pConfig->Write(wxT("/Rig/leftChannelVoxTone"), wxGetApp().m_leftChannelVoxTone);
 
-        /* Voice Keyer */
-
-        wxGetApp().m_txtVoiceKeyerWaveFile = m_txtCtrlVoiceKeyerWaveFile->GetValue();
-        pConfig->Write(wxT("/VoiceKeyer/WaveFile"), wxGetApp().m_txtVoiceKeyerWaveFile);
-        long tmp;
-        m_txtCtrlVoiceKeyerRxPause->GetValue().ToLong(&tmp); if (tmp < 0) tmp = 0; wxGetApp().m_intVoiceKeyerRxPause = (int)tmp;
-        pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_intVoiceKeyerRxPause);
-        m_txtCtrlVoiceKeyerRepeats->GetValue().ToLong(&tmp);
-        if (tmp < 0) tmp = 0; if (tmp > 100) tmp = 100;
-        wxGetApp().m_intVoiceKeyerRepeats = (int)tmp;
-        pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_intVoiceKeyerRepeats);
 
         /* Hamlib settings. */
 
@@ -462,6 +407,7 @@ void ComPortsDlg::ExchangeData(int inout)
         if (s == "default") {
             wxGetApp().m_intHamlibSerialRate = 0;
         } else {
+            long tmp;
             m_cbSerialRate->GetValue().ToLong(&tmp); 
             wxGetApp().m_intHamlibSerialRate = tmp;
         }
@@ -520,25 +466,6 @@ void ComPortsDlg::PTTUseSerialClicked(wxCommandEvent& event)
 void ComPortsDlg::OnApply(wxCommandEvent& event)
 {
     ExchangeData(EXCHANGE_DATA_OUT);
-}
-
- void ComPortsDlg::OnChooseVoiceKeyerWaveFile(wxCommandEvent& event) {
-     wxFileDialog openFileDialog(
-                                 this,
-                                 wxT("Voice Keyer wave file"),
-                                 wxGetApp().m_txtVoiceKeyerWaveFilePath,
-                                 wxEmptyString,
-                                 wxT("WAV files (*.wav)|*.wav"),
-                                 wxFD_SAVE
-                                 );
-     if(openFileDialog.ShowModal() == wxID_CANCEL) {
-         return;     // the user changed their mind...
-     }
-
-     wxString fileName, extension;
-     wxGetApp().m_txtVoiceKeyerWaveFile = openFileDialog.GetPath();
-     wxFileName::SplitPath(wxGetApp().m_txtVoiceKeyerWaveFile, &wxGetApp().m_txtVoiceKeyerWaveFilePath, &fileName, &extension);
-     m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().m_txtVoiceKeyerWaveFile);
 }
 
 //-------------------------------------------------------------------------

@@ -49,6 +49,35 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     bSizer30->Add(sbSizer_callSign,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
  
+    //----------------------------------------------------------------------
+    // Voice Keyer 
+    //----------------------------------------------------------------------
+
+    wxStaticBoxSizer* staticBoxSizer28a = new wxStaticBoxSizer( new wxStaticBox(this, wxID_ANY, _("Voice Keyer")), wxHORIZONTAL);
+
+    wxStaticText *m_staticText28b = new wxStaticText(this, wxID_ANY, _("Wave File: "), wxDefaultPosition, wxDefaultSize, 0);
+    staticBoxSizer28a->Add(m_staticText28b, 0, wxALIGN_CENTER_VERTICAL, 5);    
+    m_txtCtrlVoiceKeyerWaveFile = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
+    m_txtCtrlVoiceKeyerWaveFile->SetToolTip(_("Wave file to play for Voice Keyer"));
+    staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerWaveFile, 0, 0, 5);
+
+    m_buttonChooseVoiceKeyerWaveFile = new wxButton(this, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
+    staticBoxSizer28a->Add(m_buttonChooseVoiceKeyerWaveFile, 0, wxALIGN_CENTER_VERTICAL, 5);
+
+    wxStaticText *m_staticText28c = new wxStaticText(this, wxID_ANY, _("   Rx Pause: "), wxDefaultPosition, wxDefaultSize, 0);
+    staticBoxSizer28a->Add(m_staticText28c, 0, wxALIGN_CENTER_VERTICAL , 5);
+    m_txtCtrlVoiceKeyerRxPause = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
+    m_txtCtrlVoiceKeyerRxPause->SetToolTip(_("How long to wait in Rx mode before repeat"));
+    staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerRxPause, 0, 0, 5);
+
+    wxStaticText *m_staticText28d = new wxStaticText(this, wxID_ANY, _("   Repeats: "), wxDefaultPosition, wxDefaultSize, 0);
+    staticBoxSizer28a->Add(m_staticText28d, 0, wxALIGN_CENTER_VERTICAL, 5);
+    m_txtCtrlVoiceKeyerRepeats = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
+    m_txtCtrlVoiceKeyerRepeats->SetToolTip(_("How long to wait in Rx mode before repeat"));
+    staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerRepeats, 0, 0, 5);
+
+    bSizer30->Add(staticBoxSizer28a,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+
 #ifdef __WXMSW__
     //------------------------------
     // debug console, for WIndows build make console pop up for debug messages
@@ -77,7 +106,17 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxFreeDV700Combine = new wxCheckBox(this, wxID_ANY, _("Diversity Combine for plots"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700Combine, 0, wxALIGN_LEFT, 0);
 
-    bSizer30->Add(sbSizer_freedv700,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+    bSizer30->Add(sbSizer_freedv700, 0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+
+    //------------------------------
+    // Half/Full duplex selection
+    //------------------------------
+
+    wxStaticBox *sb_duplex = new wxStaticBox(this, wxID_ANY, _("Half/Full Duplex Operation"));
+    wxStaticBoxSizer* sbSizer_duplex = new wxStaticBoxSizer(sb_duplex, wxHORIZONTAL);
+    m_ckHalfDuplex = new wxCheckBox(this, wxID_ANY, _("Half Duplex"), wxDefaultPosition, wxSize(-1,-1), 0);
+    sbSizer_duplex->Add(m_ckHalfDuplex, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
+    bSizer30->Add(sbSizer_duplex,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 
     //------------------------------
     // Test Frames/Channel simulation check box
@@ -247,6 +286,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxDebugConsole->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnDebugConsole), NULL, this);
 #endif
 
+    m_buttonChooseVoiceKeyerWaveFile->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFile), NULL, this);
+
     event_in_serial = 0;
     event_out_serial = 0;
 }
@@ -271,6 +312,7 @@ OptionsDlg::~OptionsDlg()
 
     m_ckboxFreeDV700txClip->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700txClip), NULL, this);
     m_ckboxFreeDV700Combine->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700Combine), NULL, this);
+    m_buttonChooseVoiceKeyerWaveFile->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFile), NULL, this);
 
 #ifdef __WXMSW__
     m_ckboxDebugConsole->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnDebugConsole), NULL, this);
@@ -288,6 +330,15 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
     if(inout == EXCHANGE_DATA_IN)
     {
         m_txtCtrlCallSign->SetValue(wxGetApp().m_callSign);
+
+        /* Voice Keyer */
+
+        m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().m_txtVoiceKeyerWaveFile);
+        m_txtCtrlVoiceKeyerRxPause->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRxPause));
+        m_txtCtrlVoiceKeyerRepeats->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRepeats));
+
+        m_ckHalfDuplex->SetValue(wxGetApp().m_boolHalfDuplex);
+
         m_ckboxTestFrame->SetValue(wxGetApp().m_testFrames);
 
         m_ckboxChannelNoise->SetValue(wxGetApp().m_channel_noise);
@@ -329,7 +380,22 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
     if(inout == EXCHANGE_DATA_OUT)
     {
-        wxGetApp().m_callSign      = m_txtCtrlCallSign->GetValue();
+        wxGetApp().m_callSign = m_txtCtrlCallSign->GetValue();
+
+        wxGetApp().m_boolHalfDuplex = m_ckHalfDuplex->GetValue();
+        pConfig->Write(wxT("/Rig/HalfDuplex"), wxGetApp().m_boolHalfDuplex);
+
+        /* Voice Keyer */
+
+        wxGetApp().m_txtVoiceKeyerWaveFile = m_txtCtrlVoiceKeyerWaveFile->GetValue();
+        pConfig->Write(wxT("/VoiceKeyer/WaveFile"), wxGetApp().m_txtVoiceKeyerWaveFile);
+        long tmp;
+        m_txtCtrlVoiceKeyerRxPause->GetValue().ToLong(&tmp); if (tmp < 0) tmp = 0; wxGetApp().m_intVoiceKeyerRxPause = (int)tmp;
+        pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_intVoiceKeyerRxPause);
+        m_txtCtrlVoiceKeyerRepeats->GetValue().ToLong(&tmp);
+        if (tmp < 0) tmp = 0; if (tmp > 100) tmp = 100;
+        wxGetApp().m_intVoiceKeyerRepeats = (int)tmp;
+        pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_intVoiceKeyerRepeats);
 
         wxGetApp().m_testFrames    = m_ckboxTestFrame->GetValue();
 
@@ -344,7 +410,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_tone_freq_hz = (int)tone_freq_hz;
         m_txtToneAmplitude->GetValue().ToLong(&tone_amplitude);
         wxGetApp().m_tone_amplitude = (int)tone_amplitude;
-
 
         wxGetApp().m_attn_carrier_en = m_ckboxAttnCarrierEn->GetValue();
         long attn_carrier;
@@ -465,6 +530,26 @@ void OptionsDlg::OnTestFrame(wxScrollEvent& event) {
 
 void OptionsDlg::OnChannelNoise(wxScrollEvent& event) {
     wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
+}
+
+
+void OptionsDlg::OnChooseVoiceKeyerWaveFile(wxCommandEvent& event) {
+     wxFileDialog openFileDialog(
+                                 this,
+                                 wxT("Voice Keyer wave file"),
+                                 wxGetApp().m_txtVoiceKeyerWaveFilePath,
+                                 wxEmptyString,
+                                 wxT("WAV files (*.wav)|*.wav"),
+                                 wxFD_SAVE
+                                 );
+     if(openFileDialog.ShowModal() == wxID_CANCEL) {
+         return;     // the user changed their mind...
+     }
+
+     wxString fileName, extension;
+     wxGetApp().m_txtVoiceKeyerWaveFile = openFileDialog.GetPath();
+     wxFileName::SplitPath(wxGetApp().m_txtVoiceKeyerWaveFile, &wxGetApp().m_txtVoiceKeyerWaveFilePath, &fileName, &extension);
+     m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().m_txtVoiceKeyerWaveFile);
 }
 
 //  Run time update of carrier amplitude attenuation

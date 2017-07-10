@@ -47,15 +47,7 @@ class ComPortsDlg : public wxDialog
         void    ExchangeData(int inout);
 
     protected:
-        wxCheckBox* m_ckHalfDuplex;
         wxCheckBox* m_ckLeftChannelVoxTone;
-
-        /* Voice Keyer */
-
-        wxButton     *m_buttonChooseVoiceKeyerWaveFile;
-        wxTextCtrl   *m_txtCtrlVoiceKeyerWaveFile;
-        wxTextCtrl   *m_txtCtrlVoiceKeyerRxPause;
-        wxTextCtrl   *m_txtCtrlVoiceKeyerRepeats;
 
         /* Hamlib settings.*/
 
@@ -89,8 +81,6 @@ protected:
 
         void PTTUseHamLibClicked(wxCommandEvent& event);
         void PTTUseSerialClicked(wxCommandEvent& event);
-
-        void OnChooseVoiceKeyerWaveFile(wxCommandEvent& event);
 
         void OnOK(wxCommandEvent& event);
         void OnCancel(wxCommandEvent& event);
