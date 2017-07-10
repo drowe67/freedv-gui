@@ -101,6 +101,7 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 		t.c_cflag = (
 					  CS8         /* 8 bits */
 					| CREAD       /* enable receiver */
+
 		/*
 		Fun snippet from the FreeBSD manpage:
 
@@ -111,6 +112,7 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 		*/
 					| CLOCAL      /* ignore modem status lines */
 					);
+
 		t.c_lflag = 0;	/* No local modes */
 		if(tcsetattr(com_handle, TCSANOW, &t)==-1) {
 			close(com_handle);
@@ -123,6 +125,8 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 	return true;
 }
 
+
+// fixme: this takes about one second to close under Linux
 
 void Serialport::closeport()
 {

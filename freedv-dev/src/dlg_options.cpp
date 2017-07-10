@@ -260,10 +260,14 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_sdbSizer5Apply = new wxButton(this, wxID_APPLY);
     bSizer31->Add(m_sdbSizer5Apply, 0, wxALL, 2);
 
-    bSizer30->Add(bSizer31, 0, wxALIGN_CENTER_HORIZONTAL, 0);
+    bSizer30->Add(bSizer31, 0, wxALIGN_CENTER, 0);
 
     this->SetSizer(bSizer30);
-    this->Layout();
+    if ( GetSizer() ) 
+    {
+         GetSizer()->Fit(this);
+    }
+     this->Layout();
 
     this->Centre(wxBOTH);
  
@@ -540,7 +544,7 @@ void OptionsDlg::OnChooseVoiceKeyerWaveFile(wxCommandEvent& event) {
                                  wxGetApp().m_txtVoiceKeyerWaveFilePath,
                                  wxEmptyString,
                                  wxT("WAV files (*.wav)|*.wav"),
-                                 wxFD_SAVE
+                                 wxFD_OPEN
                                  );
      if(openFileDialog.ShowModal() == wxID_CANCEL) {
          return;     // the user changed their mind...

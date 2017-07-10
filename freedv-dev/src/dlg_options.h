@@ -36,9 +36,9 @@ class OptionsDlg : public wxDialog
                 const wxPoint& pos = wxDefaultPosition, 
 #ifdef __WXMSW__
                 /* we add debug console check box for windows */
-                const wxSize& size = wxSize(600,360), 
+                const wxSize& size = wxSize(600,410), 
 #else
-                const wxSize& size = wxSize(600,360), 
+                const wxSize& size = wxSize(600,380), 
 #endif
                long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
         ~OptionsDlg();
