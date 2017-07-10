@@ -2,7 +2,19 @@
 FREEDV GUI USER MANUAL
 ======================
 
-  
+PTT Configuration
+-----------------
+
+Tools-PTT Dialog
+
+Hamlib comes with a default serial rate for each radio.  If your radio
+has a different serial rate change the Serial Rate drop down box to
+match your radio.
+
+When "Test" is pressed, the "Serial Params" field is populated and
+displayed.  This will help track down any mis-matches between Hamlib
+and your radio.
+
 Voice Keyer
 -----------
 
