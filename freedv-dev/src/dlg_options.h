@@ -36,9 +36,9 @@ class OptionsDlg : public wxDialog
                 const wxPoint& pos = wxDefaultPosition, 
 #ifdef __WXMSW__
                 /* we add debug console check box for windows */
-               const wxSize& size = wxSize(600,330), 
+                const wxSize& size = wxSize(600,360), 
 #else
-               const wxSize& size = wxSize(600,300), 
+                const wxSize& size = wxSize(600,360), 
 #endif
                long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
         ~OptionsDlg();
@@ -64,7 +64,9 @@ class OptionsDlg : public wxDialog
 
 
     protected:
+
         // Handlers for events.
+
         void    OnOK(wxCommandEvent& event);
         void    OnCancel(wxCommandEvent& event);
         void    OnApply(wxCommandEvent& event);
@@ -79,6 +81,18 @@ class OptionsDlg : public wxDialog
         void    OnDebugConsole(wxScrollEvent& event);
 
         wxTextCtrl   *m_txtCtrlCallSign; // TODO: this should be renamed to tx_txtmsg, and rename all related incl persis strge
+
+        wxCheckBox* m_ckHalfDuplex;
+
+        /* Voice Keyer */
+
+        wxButton     *m_buttonChooseVoiceKeyerWaveFile;
+        wxTextCtrl   *m_txtCtrlVoiceKeyerWaveFile;
+        wxTextCtrl   *m_txtCtrlVoiceKeyerRxPause;
+        wxTextCtrl   *m_txtCtrlVoiceKeyerRepeats;
+
+        /* test frames, other simulated channel impairments */
+
         wxCheckBox   *m_ckboxTestFrame;
         wxCheckBox   *m_ckboxChannelNoise;
         wxTextCtrl   *m_txtNoiseSNR;
@@ -114,6 +128,8 @@ class OptionsDlg : public wxDialog
         wxCheckBox   *m_ckboxDebugConsole;
 
         unsigned int  event_in_serial, event_out_serial;
+
+        void OnChooseVoiceKeyerWaveFile(wxCommandEvent& event);
 
      private:
 };
