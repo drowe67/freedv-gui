@@ -30,7 +30,6 @@
 
 #include <wx/tglbtn.h>
 #include <wx/app.h>
-//#include <wx/aboutdlg.h>
 #include "wx/rawbmp.h"
 #include "wx/file.h"
 #include "wx/filename.h"
@@ -53,7 +52,6 @@
 
 #include <samplerate.h>
 
-#include <hamlib.h> 
 #include <stdint.h>
 #include <speex/speex_preprocess.h>
 
@@ -87,6 +85,8 @@
 #include "sox_biquad.h"
 #include "comp_prim.h"
 #include "dlg_plugin.h"
+#include "hamlib.h"
+#include "serialport.h" 
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -106,13 +106,6 @@ enum {
 #define EXCHANGE_DATA_IN    0
 #define EXCHANGE_DATA_OUT   1
 
-#ifdef _WIN32
-#define COM_HANDLE_INVALID			INVALID_HANDLE_VALUE
-typedef HANDLE      com_handle_t;
-#else
-#define COM_HANDLE_INVALID			-1
-typedef int         com_handle_t;
-#endif
 
 extern int                 g_nSoundCards;
 extern int                 g_soundCard1InDeviceNum;
@@ -193,6 +186,7 @@ class MainApp : public wxApp
         bool                m_boolRTSPos;
         bool                m_boolUseDTR;
         bool                m_boolDTRPos;
+        Serialport         *m_serialport;
 
         // Play/Rec files
 
@@ -447,7 +441,7 @@ class MainFrame : public TopFrame
         txRxThread*             m_txRxThread;
 
         bool                    OpenHamlibRig();
-        void                    SetupSerialPort(void);
+        void                    OpenSerialPort(void);
         void                    CloseSerialPort(void);
         void                    SerialPTTRx(void);
 
@@ -497,20 +491,6 @@ class MainFrame : public TopFrame
     void VoiceKeyerProcessEvent(int vk_event);
 
     protected:
-
-#ifdef _WIN32
-#define COM_HANDLE_INVALID			INVALID_HANDLE_VALUE
-        com_handle_t  com_handle;
-#else
-#define COM_HANDLE_INVALID			-1
-        com_handle_t  com_handle;
-#endif
-        void raiseDTR(void);
-        void lowerDTR(void);
-        void raiseRTS(void);
-        void lowerRTS(void);
-        bool openComPort(const char *port);
-        void closeComPort(void);
 
         void setsnrBeta(bool snrSlow);
 

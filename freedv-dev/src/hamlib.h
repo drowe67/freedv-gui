@@ -16,6 +16,9 @@ class Hamlib {
         bool connect(unsigned int rig_index, const char *serial_port, const int serial_rate);
         bool ptt(bool press, wxString &hamlibError);
         void close(void);
+        int get_serial_rate(void);
+        int get_data_bits(void);
+        int get_stop_bits(void);
 
         typedef std::vector<const struct rig_caps *> riglist_t;
 

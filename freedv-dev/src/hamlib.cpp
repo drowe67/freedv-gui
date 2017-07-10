@@ -109,18 +109,23 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
     }
     fprintf(stderr, "hamlib: setting serial rate: %d\n", m_rig->state.rigport.parm.serial.rate);
 
-    /*
-    token_t token = rig_token_lookup(m_rig, "rig_pathname");
-
-    if (rig_set_conf(m_rig, token, serial_port) != RIG_OK) {
-        return false;
-    }
-    */
-
     if (rig_open(m_rig) == RIG_OK) {
         return true;
     }
+
     return false;
+}
+
+int Hamlib::get_serial_rate(void) {
+    return m_rig->state.rigport.parm.serial.rate;
+}
+
+int Hamlib::get_data_bits(void) {
+    return m_rig->state.rigport.parm.serial.data_bits;
+}
+
+int Hamlib::get_stop_bits(void) {
+    return m_rig->state.rigport.parm.serial.stop_bits;
 }
 
 bool Hamlib::ptt(bool press, wxString &hamlibError) {
