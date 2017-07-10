@@ -1,0 +1,7 @@
+V1.2.2 July 2017
+----------------
+
+1/ Improvements to Hamlib support, error message reporting, serial rate box.
+
+2/ Disabled unused UDP comms/egexp processing to clean up Options dialog.
+
