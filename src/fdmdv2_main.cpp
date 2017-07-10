@@ -279,6 +279,10 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 
     wxGetApp().m_hamlib = new Hamlib();
 
+    // Init Serialport library, but as for Hamlib we dont start talking to any rigs yet
+
+    wxGetApp().m_serialport = new Serialport();
+
     tools->AppendSeparator();
     wxMenuItem* m_menuItemToolsConfigDelete;
     m_menuItemToolsConfigDelete = new wxMenuItem(tools, wxID_ANY, wxString(_("&Restore defaults")) , wxT("Delete config file/keys and restore defaults"), wxITEM_NORMAL);
@@ -439,7 +443,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_boolRTSPos         = pConfig->ReadBool(wxT("/Rig/RTSPolarity"),    true);
     wxGetApp().m_boolUseDTR         = pConfig->ReadBool(wxT("/Rig/UseDTR"),         false);
     wxGetApp().m_boolDTRPos         = pConfig->ReadBool(wxT("/Rig/DTRPolarity"),    false);
-    com_handle = COM_HANDLE_INVALID;
+
+    assert(wxGetApp().m_serialport != NULL);
 
     // -----------------------------------------------------------------------
 
@@ -656,8 +661,8 @@ MainFrame::~MainFrame()
     stopUDPThread();
 #endif
 
-    /* TOOD(Joel): the ownership of m_hamlib is probably wrong. */
     if (wxGetApp().m_hamlib) delete wxGetApp().m_hamlib;
+    if (wxGetApp().m_serialport) delete wxGetApp().m_serialport;
 
     //MainApp *pApp = wxGetApp();
     wxConfigBase *pConfig = wxConfigBase::Get();
@@ -794,186 +799,11 @@ MainFrame::~MainFrame()
     delete wxConfigBase::Set((wxConfigBase *) NULL);
 }
 
-//----------------------------------------------------------------
-// closeComPort() closes the currently open com port
-//----------------------------------------------------------------
-void MainFrame::closeComPort(void)
-{
-#ifdef _WIN32
-	CloseHandle(com_handle);
-#else
-	close(com_handle);
-#endif
-	com_handle = COM_HANDLE_INVALID;
-}
-
-//----------------------------------------------------------------
-// openComPort() opens the com port specified by the string
-// ie: "COM1" on Windows or "/dev/ttyu0" on FreeBSD
-//----------------------------------------------------------------
-bool MainFrame::openComPort(const char *name)
-{
-	if(com_handle != COM_HANDLE_INVALID)
-		closeComPort();
-#ifdef _WIN32
-	{
-		COMMCONFIG CC;
-		DWORD CCsize=sizeof(CC);
-		COMMTIMEOUTS timeouts;
-		DCB	dcb;
-
-		if(GetDefaultCommConfigA(name, &CC, &CCsize)) {
-			CC.dcb.fOutxCtsFlow		= FALSE;
-			CC.dcb.fOutxDsrFlow		= FALSE;
-			CC.dcb.fDtrControl		= DTR_CONTROL_DISABLE;
-			CC.dcb.fDsrSensitivity	= FALSE;
-			CC.dcb.fRtsControl		= RTS_CONTROL_DISABLE;
-			SetDefaultCommConfigA(name, &CC, CCsize);
-		}
-
-		if((com_handle=CreateFileA(name
-			,GENERIC_READ|GENERIC_WRITE 	/* Access */
-			,0								/* Share mode */
-			,NULL							/* Security attributes */
-			,OPEN_EXISTING					/* Create access */
-			,FILE_ATTRIBUTE_NORMAL			/* File attributes */
-			,NULL							/* Template */
-			))==INVALID_HANDLE_VALUE)
-			return false;
-
-		if(GetCommTimeouts(com_handle, &timeouts)) {
-			timeouts.ReadIntervalTimeout=MAXDWORD;
-			timeouts.ReadTotalTimeoutMultiplier=0;
-			timeouts.ReadTotalTimeoutConstant=0;		// No-wait read timeout
-			timeouts.WriteTotalTimeoutMultiplier=0;
-			timeouts.WriteTotalTimeoutConstant=5000;	// 5 seconds
-			SetCommTimeouts(com_handle,&timeouts);
-		}
-
-		/* Force N-8-1 mode: */
-		if(GetCommState(com_handle, &dcb)==TRUE) {
-			dcb.ByteSize		= 8;
-			dcb.Parity			= NOPARITY;
-			dcb.StopBits		= ONESTOPBIT;
-			dcb.DCBlength		= sizeof(DCB);
-			dcb.fBinary			= TRUE;
-			dcb.fOutxCtsFlow	= FALSE;
-			dcb.fOutxDsrFlow	= FALSE;
-			dcb.fDtrControl		= DTR_CONTROL_DISABLE;
-			dcb.fDsrSensitivity	= FALSE;
-			dcb.fTXContinueOnXoff= TRUE;
-			dcb.fOutX			= FALSE;
-			dcb.fInX			= FALSE;
-			dcb.fRtsControl		= RTS_CONTROL_DISABLE;
-			dcb.fAbortOnError	= FALSE;
-			SetCommState(com_handle, &dcb);
-		}
-	}
-#else
-	{
-		struct termios t;
-
-		if((com_handle=open(name, O_NONBLOCK|O_RDWR))==COM_HANDLE_INVALID)
-			return false;
-
-		if(tcgetattr(com_handle, &t)==-1) {
-			close(com_handle);
-			com_handle = COM_HANDLE_INVALID;
-			return false;
-		}
-
-		t.c_iflag = (
-					  IGNBRK   /* ignore BREAK condition */
-					| IGNPAR   /* ignore (discard) parity errors */
-					);
-		t.c_oflag = 0;	/* No output processing */
-		t.c_cflag = (
-					  CS8         /* 8 bits */
-					| CREAD       /* enable receiver */
-		/*
-		Fun snippet from the FreeBSD manpage:
-
-			 If CREAD is set, the receiver is enabled.  Otherwise, no character is
-			 received.  Not all hardware supports this bit.  In fact, this flag is
-			 pretty silly and if it were not part of the termios specification it
-			 would be omitted.
-		*/
-					| CLOCAL      /* ignore modem status lines */
-					);
-		t.c_lflag = 0;	/* No local modes */
-		if(tcsetattr(com_handle, TCSANOW, &t)==-1) {
-			close(com_handle);
-			com_handle = COM_HANDLE_INVALID;
-			return false;
-		}
-		
-	}
-#endif
-	return true;
-}
 
 #ifdef _USE_ONIDLE
 void MainFrame::OnIdle(wxIdleEvent &evt) {
 }
 #endif
-
-//----------------------------------------------------------------
-// (raise|lower)(RTS|DTR)()
-//
-// Raises/lowers the specified signal
-//----------------------------------------------------------------
-void MainFrame::raiseDTR(void)
-{
-	if(com_handle == COM_HANDLE_INVALID)
-		return;
-#ifdef _WIN32
-	EscapeCommFunction(com_handle, SETDTR);
-#else
-	{	// For C89 happiness
-		int flags = TIOCM_DTR;
-		ioctl(com_handle, TIOCMBIS, &flags);
-	}
-#endif
-}
-void MainFrame::raiseRTS(void)
-{
-	if(com_handle == COM_HANDLE_INVALID)
-		return;
-#ifdef _WIN32
-	EscapeCommFunction(com_handle, SETRTS);
-#else
-	{	// For C89 happiness
-		int flags = TIOCM_RTS;
-		ioctl(com_handle, TIOCMBIS, &flags);
-	}
-#endif
-}
-void MainFrame::lowerDTR(void)
-{
-	if(com_handle == COM_HANDLE_INVALID)
-		return;
-#ifdef _WIN32
-	EscapeCommFunction(com_handle, CLRDTR);
-#else
-	{	// For C89 happiness
-		int flags = TIOCM_DTR;
-		ioctl(com_handle, TIOCMBIC, &flags);
-	}
-#endif
-}
-void MainFrame::lowerRTS(void)
-{
-	if(com_handle == COM_HANDLE_INVALID)
-		return;
-#ifdef _WIN32
-	EscapeCommFunction(com_handle, CLRRTS);
-#else
-	{	// For C89 happiness
-		int flags = TIOCM_RTS;
-		ioctl(com_handle, TIOCMBIC, &flags);
-	}
-#endif
-}
 
 
 #ifdef _USE_TIMER
@@ -1640,34 +1470,8 @@ void MainFrame::togglePTT(void) {
 
     // Serial PTT
 
-    /*  Truth table:
-
-          g_tx   RTSPos   RTS
-          -------------------
-          0      1        0
-          1      1        1
-          0      0        1
-          1      0        0
-
-          exclusive NOR
-    */
-
-    if(wxGetApp().m_boolUseSerialPTT && (com_handle != COM_HANDLE_INVALID)) {
-        if (wxGetApp().m_boolUseRTS) {
-            //fprintf(stderr, "g_tx: %d m_boolRTSPos: %d serialLine: %d\n", g_tx, wxGetApp().m_boolRTSPos, g_tx == wxGetApp().m_boolRTSPos);
-            if (g_tx == wxGetApp().m_boolRTSPos)
-                raiseRTS();
-            else
-                lowerRTS();
-        }
-        if (wxGetApp().m_boolUseDTR) {
-            //fprintf(stderr, "g_tx: %d m_boolDTRPos: %d serialLine: %d\n", g_tx, wxGetApp().m_boolDTRPos, g_tx == wxGetApp().m_boolDTRPos);
-            if (g_tx == wxGetApp().m_boolDTRPos)
-                raiseDTR();
-            else
-                lowerDTR();
-        }
- 
+    if (wxGetApp().m_boolUseSerialPTT && (wxGetApp().m_serialport->isopen())) {
+        wxGetApp().m_serialport->ptt(g_tx);
     }
 
     // reset level gauge
@@ -2343,21 +2147,7 @@ void MainFrame::OnToolsComCfg(wxCommandEvent& event)
 
     ComPortsDlg *dlg = new ComPortsDlg(NULL);
 
-    int rv = dlg->ShowModal();
-
-    // test Hamlib/Serial set up
-
-    if(rv == wxID_OK)
-    {
-        if (wxGetApp().m_boolHamlibUseForPTT) {
-            OpenHamlibRig();
-            wxGetApp().m_hamlib->close();
-        }
-        if (wxGetApp().m_boolUseSerialPTT) {
-            SetupSerialPort();
-            CloseSerialPort();
-        }
-    }
+    dlg->ShowModal();
 
     delete dlg;
 }
@@ -2595,7 +2385,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (wxGetApp().m_boolHamlibUseForPTT)
             OpenHamlibRig();
         if (wxGetApp().m_boolUseSerialPTT) {
-            SetupSerialPort();
+            OpenSerialPort();
         }
 
         // attempt to start sound cards and tx/rx processing
@@ -2642,8 +2432,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             }
         }
 
-        if (wxGetApp().m_boolUseSerialPTT)
+        if (wxGetApp().m_boolUseSerialPTT) {
             CloseSerialPort();
+        }
 
         m_btnTogPTT->SetValue(false);
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
@@ -4036,50 +3827,42 @@ void fdmdv2_clickTune(float freq) {
 }
 
 //----------------------------------------------------------------
-// SetupSerialPort()
+// OpenSerialPort()
 //----------------------------------------------------------------
-void MainFrame::SetupSerialPort(void)
+
+void MainFrame::OpenSerialPort(void)
 {
-    if(!wxGetApp().m_strRigCtrlPort.IsEmpty())
-    {
-        if(openComPort(wxGetApp().m_strRigCtrlPort.c_str()))
-        {
+    Serialport *serialport = wxGetApp().m_serialport;
+
+    if(!wxGetApp().m_strRigCtrlPort.IsEmpty()) {
+       serialport->openport(wxGetApp().m_strRigCtrlPort.c_str(), 
+                            wxGetApp().m_boolUseRTS, 
+                            wxGetApp().m_boolRTSPos, 
+                            wxGetApp().m_boolUseDTR,
+                            wxGetApp().m_boolDTRPos);
+       if (serialport->isopen()) {
             // always start PTT in Rx state
-            SerialPTTRx();
-        }
-        else
-        {
-            wxMessageBox("Couldn't open Serial Port", wxT("About"), wxOK | wxICON_ERROR, this);
-        }
+           serialport->ptt(false);
+       }
+       else {
+           wxMessageBox("Couldn't open Serial Port", wxT("About"), wxOK | wxICON_ERROR, this);
+       }
     }
 }
 
-void MainFrame::SerialPTTRx(void)
-{
-    printf("m_boolUseRTS: %d m_boolRTSPos: %d m_boolUseDTR: %d m_boolDTRPos: %d\n",
-           wxGetApp().m_boolUseRTS, wxGetApp().m_boolRTSPos, wxGetApp().m_boolUseDTR, wxGetApp().m_boolDTRPos);
-
-        if(wxGetApp().m_boolRTSPos) // RTS cleared LOW
-            lowerRTS();
-        else                        // RTS cleared HIGH
-            raiseRTS();
-
-        if(wxGetApp().m_boolDTRPos) // DTR cleared LOW
-            lowerDTR();
-        else                        // DTR cleared HIGH
-            raiseDTR();
-}
 
 //----------------------------------------------------------------
 // CloseSerialPort()
 //----------------------------------------------------------------
+
 void MainFrame::CloseSerialPort(void)
 {
-    if (com_handle != COM_HANDLE_INVALID) {
+    Serialport *serialport = wxGetApp().m_serialport;
+    if (serialport->isopen()) {
         // always end with PTT in rx state
 
-        SerialPTTRx();
-        closeComPort();
+        serialport->ptt(false);
+        serialport->closeport();
     }
 }
 

@@ -55,7 +55,6 @@ class ComPortsDlg : public wxDialog
         wxComboBox *m_cbRigName;
         wxComboBox *m_cbSerialPort;
         wxComboBox *m_cbSerialRate;
-
         Hamlib *m_hamlib;
 
         /* Serial Settings */
@@ -69,8 +68,9 @@ class ComPortsDlg : public wxDialog
         wxRadioButton *m_rbUseRTS;
         wxCheckBox    *m_ckDTRPos;
 
-        /* Ok - Cancel - Apply */
+        /* Test - Ok - Cancel - Apply */
 
+        wxButton* m_buttonTest;
         wxButton* m_buttonOK;
         wxButton* m_buttonCancel;
         wxButton* m_buttonApply;
@@ -81,6 +81,8 @@ protected:
 
         void PTTUseHamLibClicked(wxCommandEvent& event);
         void PTTUseSerialClicked(wxCommandEvent& event);
+
+        void OnTest(wxCommandEvent& event);
 
         void OnOK(wxCommandEvent& event);
         void OnCancel(wxCommandEvent& event);

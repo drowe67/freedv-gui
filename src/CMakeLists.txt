@@ -12,6 +12,7 @@ set(FREEDV_SOURCES
     fdmdv2_plot_spectrum.cpp
     fdmdv2_plot_waterfall.cpp
     hamlib.cpp
+    serialport.cpp
     topFrame.cpp
     sox_biquad.c
     comp.h
