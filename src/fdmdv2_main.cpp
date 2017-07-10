@@ -248,6 +248,7 @@ bool MainApp::OnInit()
 //-------------------------------------------------------------------------
 int MainApp::OnExit()
 {
+    fprintf(stderr, "MainApp::OnExit\n");
     if (m_plugIn) {
         #ifdef __WXMSW__
         FreeLibrary((HMODULE)m_plugInHandle);
@@ -647,6 +648,7 @@ MainFrame::~MainFrame()
     int w;
     int h;
 
+    fprintf(stderr, "MainFrame::~MainFrame()\n");
     //fclose(ftest);
     #ifdef __WXMSW__
     fclose(g_logfile);
@@ -664,18 +666,11 @@ MainFrame::~MainFrame()
     if (wxGetApp().m_hamlib) delete wxGetApp().m_hamlib;
     if (wxGetApp().m_serialport) delete wxGetApp().m_serialport;
 
-    //MainApp *pApp = wxGetApp();
     wxConfigBase *pConfig = wxConfigBase::Get();
     if(pConfig)
     {
         if (!IsIconized()) {
             GetClientSize(&w, &h);
-
-            // big hack - for some reason height shrinks by this much
-            // every time FreeDV runs!  I have no idea why
-
-            h += 23;
-
             GetPosition(&x, &y);
             printf("x = %d y = %d w = %d h = %d\n", x,y,w,h);
             pConfig->Write(wxT("/MainFrame/left"),               (long) x);
@@ -1288,6 +1283,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 //-------------------------------------------------------------------------
 void MainFrame::OnCloseFrame(wxCloseEvent& event)
 {
+    fprintf(stderr, "MainFrame::OnCloseFrame()\n");
     Pa_Terminate();
     Destroy();
 }
@@ -2049,6 +2045,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnExit(wxCommandEvent& event)
 {
+    fprintf(stderr, "MainFrame::OnExit\n");
     wxUnusedVar(event);
 #ifdef _USE_TIMER
     m_plotTimer.Stop();
@@ -2495,10 +2492,10 @@ void MainFrame::stopRxStream()
     {
         m_RxRunning = false;
 
-        fprintf(g_logfile, "waiting for thread to stop");
+        fprintf(stderr, "waiting for thread to stop\n");
         m_txRxThread->m_run = 0;
         m_txRxThread->Wait();
-        fprintf(g_logfile, "thread stopped");
+        fprintf(stderr, "thread stopped\n");
 
         m_rxInPa->stop();
         m_rxInPa->streamClose();

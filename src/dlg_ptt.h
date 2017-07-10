@@ -55,6 +55,7 @@ class ComPortsDlg : public wxDialog
         wxComboBox *m_cbRigName;
         wxComboBox *m_cbSerialPort;
         wxComboBox *m_cbSerialRate;
+        wxStaticText  *m_cbSerialParams;
         Hamlib *m_hamlib;
 
         /* Serial Settings */

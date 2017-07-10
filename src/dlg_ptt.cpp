@@ -54,45 +54,8 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     // Hamlib for CAT PTT
     //----------------------------------------------------------------------
 
-#ifdef PREV__
     wxStaticBoxSizer* staticBoxSizer18 = new wxStaticBoxSizer( new wxStaticBox(this, wxID_ANY, _("Hamlib Settings")), wxHORIZONTAL);
-
-    /* Use Hamlib for PTT checkbox. */
-
-    m_ckUseHamlibPTT = new wxCheckBox(this, wxID_ANY, _("Use Hamlib PTT"), wxDefaultPosition, wxSize(-1, -1), 0);
-    m_ckUseHamlibPTT->SetValue(false);
-    staticBoxSizer18->Add(m_ckUseHamlibPTT, 0, wxALIGN_CENTER_VERTICAL, 0);
-
-    /* Hamlib Rig Type combobox. */
-
-    staticBoxSizer18->Add(new wxStaticText(this, wxID_ANY, _("Rig Model:"), wxDefaultPosition, wxDefaultSize, 0), 
-                      0, wxALIGN_CENTER_VERTICAL | wxLEFT, 20);
-    m_cbRigName = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0, NULL, wxCB_DROPDOWN);
-    /* TODO(Joel): this is a hack. At the least, need to guarantee that m_hamLib
-     * exists. */
-    wxGetApp().m_hamlib->populateComboBox(m_cbRigName);
-    m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
-    staticBoxSizer18->Add(m_cbRigName, 0, wxALIGN_CENTER_VERTICAL, 0);
-
-    /* Hamlib Serial Port combobox. */
-
-    staticBoxSizer18->Add(new wxStaticText(this, wxID_ANY, _("Serial Device:"), wxDefaultPosition, wxDefaultSize, 0), 
-                      0, wxALIGN_CENTER_VERTICAL | wxLEFT, 20);
-    m_cbSerialPort = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, -1), 0, NULL, wxCB_DROPDOWN);
-    staticBoxSizer18->Add(m_cbSerialPort, 0, wxALIGN_CENTER_VERTICAL, 0);
-
-    /* Hamlib Serial Rate combobox. */
-
-    staticBoxSizer18->Add(new wxStaticText(this, wxID_ANY, _("Serial Rate:"), wxDefaultPosition, wxDefaultSize, 0), 
-                      0, wxALIGN_CENTER_VERTICAL | wxLEFT, 20);
-    m_cbSerialRate = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, -1), 0, NULL, wxCB_DROPDOWN);
-    staticBoxSizer18->Add(m_cbSerialRate, 0, wxALIGN_CENTER_VERTICAL, 0);
-
-    mainSizer->Add(staticBoxSizer18, 0, wxEXPAND, 5);
-#endif
-
-    wxStaticBoxSizer* staticBoxSizer18 = new wxStaticBoxSizer( new wxStaticBox(this, wxID_ANY, _("Hamlib Settings")), wxHORIZONTAL);
-    wxGridSizer* gridSizerhl = new wxGridSizer(4, 2, 0, 0);
+    wxGridSizer* gridSizerhl = new wxGridSizer(5, 2, 0, 0);
     staticBoxSizer18->Add(gridSizerhl, 1, wxEXPAND|wxALIGN_LEFT, 5);
 
     /* Use Hamlib for PTT checkbox. */
@@ -124,6 +87,11 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
                       0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
     m_cbSerialRate = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, -1), 0, NULL, wxCB_DROPDOWN);
     gridSizerhl->Add(m_cbSerialRate, 0, wxALIGN_CENTER_VERTICAL, 0);
+
+    gridSizerhl->Add(new wxStaticText(this, wxID_ANY, _("Serial Params:"), wxDefaultPosition, wxDefaultSize, 0), 
+                      0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
+    m_cbSerialParams = new wxStaticText(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, 0);
+    gridSizerhl->Add(m_cbSerialParams, 0, wxALIGN_CENTER_VERTICAL, 0);
 
     mainSizer->Add(staticBoxSizer18, 0, wxEXPAND, 5);
 
@@ -506,11 +474,11 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
         }
         else {
             wxString hamlib_serial_config;
-            hamlib_serial_config.sprintf("Serial config: %d, %d, %d", 
+            hamlib_serial_config.sprintf(" %d, %d, %d", 
                                          hamlib->get_serial_rate(),
                                          hamlib->get_data_bits(),
                                          hamlib->get_stop_bits());
-            wxMessageBox(hamlib_serial_config, wxT("Hamlib Serial Config"), wxOK | wxICON_INFORMATION, this);
+            m_cbSerialParams->SetLabel(hamlib_serial_config);
        }
 
         // toggle PTT
@@ -540,11 +508,15 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
 #if defined(__WXGTK__) || defined(__WXOSX__)
         ctrlport = m_cbCtlDevicePath->GetValue();
 #endif
+        fprintf(stderr, "opening serial port\n");
+
         bool success = serialport->openport(ctrlport.c_str(),
                                             m_rbUseRTS->GetValue(),
                                             m_ckRTSPos->IsChecked(),
                                             m_rbUseDTR->GetValue(),
                                             m_ckDTRPos->IsChecked());
+
+        fprintf(stderr, "serial port open\n");
 
         if (!success) {
             wxMessageBox("Couldn't open serial port", wxT("Error"), wxOK | wxICON_ERROR, this);
@@ -555,6 +527,10 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
         serialport->ptt(true);
         wxSleep(1);
         serialport->ptt(false);
+
+        fprintf(stderr, "closing serial port\n");
+        serialport->closeport();
+        fprintf(stderr, "serial port closed\n");
     }
     
 }
