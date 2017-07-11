@@ -2,6 +2,13 @@
 FREEDV GUI USER MANUAL
 ======================
 
+Introduction
+------------
+
+This document describes additional features in the latest FreeDV
+releases that haven't been documented in other sources.  See also
+freedv.org
+
 PTT Configuration
 -----------------
 
@@ -89,8 +96,5 @@ On Linux, using the Alsa loopback module:
 TODO
 ----
 
-[ ] Put this in a more usable form (maybe render into HTML)
+[ ] Merge this information into existing start up guides
 
-[ ] complete manual, at this stage just more obscure features
-    documented here, integrate with other on-line documentation
-    sources
