@@ -566,13 +566,19 @@ void OptionsDlg::OnAttnCarrierEn(wxScrollEvent& event) {
     /* uncheck -> checked, attenuate selected carrier */
 
     if (m_ckboxAttnCarrierEn->GetValue() && !wxGetApp().m_attn_carrier_en) {
-        freedv_set_carrier_ampl(g_pfreedv, wxGetApp().m_attn_carrier, 0.25);
+        if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C) {
+            freedv_set_carrier_ampl(g_pfreedv, wxGetApp().m_attn_carrier, 0.25);
+        } else {
+            wxMessageBox("Carrier attenuation feature only works on 700C", wxT("Warning"), wxOK | wxICON_WARNING, this);
+        }
     }
 
     /* checked -> unchecked, reset selected carrier */
 
     if (!m_ckboxAttnCarrierEn->GetValue() && wxGetApp().m_attn_carrier_en) {
-        freedv_set_carrier_ampl(g_pfreedv, wxGetApp().m_attn_carrier, 1.0);
+        if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C) {
+            freedv_set_carrier_ampl(g_pfreedv, wxGetApp().m_attn_carrier, 1.0);
+        }
     }
         
     wxGetApp().m_attn_carrier_en = m_ckboxAttnCarrierEn->GetValue();    
