@@ -3864,6 +3864,8 @@ void MainFrame::CloseSerialPort(void)
 }
 
 
+#ifdef __UDP_SUPPORT__
+
 //----------------------------------------------------------------
 // PollUDP() - see if any commands on UDP port
 //----------------------------------------------------------------
@@ -3976,6 +3978,7 @@ void *UDPThread::Entry() {
     return NULL;
 }
 
+#endif
 
 char my_get_next_tx_char(void *callback_state) {
     short ch = 0;
