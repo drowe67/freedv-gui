@@ -22,7 +22,18 @@ When "Test" is pressed, the "Serial Params" field is populated and
 displayed.  This will help track down any mis-matches between Hamlib
 and your radio.
 
-Voice Keyer
+Serial PTT support is complex.  We get many reports that FreeDV Hamlib
+PTT doesn't work on a particular radio, but may work fine with other
+programs such as Fldigi.  This is always a mis-match between the
+serial parameters Hamlib is using with FreeDV and your radio. For
+example you may have changed the default serial rate on your
+radio. Carefully check the serial parameters on your radio match those
+used by FreeDV in the PTT Dialog.
+
+If you are really stuck, download Hamlib and try to rigctl program
+from the command line.
+
+Voice Keyer 
 -----------
 
 Voice Keyer Button on Front Page
