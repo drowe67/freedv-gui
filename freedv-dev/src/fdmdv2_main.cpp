@@ -130,7 +130,7 @@ SpeexPreprocessState *g_speex_st;
 // WxWidgets - initialize the application
 IMPLEMENT_APP(MainApp);
 
-//FILE *ftest;
+FILE *ftest;
 FILE *g_logfile;
 
 //-------------------------------------------------------------------------
@@ -636,6 +636,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 
     //ftest = fopen("ftest.raw", "wb");
     //assert(ftest != NULL);
+
 }
 
 //-------------------------------------------------------------------------
@@ -2984,6 +2985,7 @@ void MainFrame::startRxStream()
     }
 }
 
+#ifdef __UDP_EPERIMENTAL__
 
 void MainFrame::processTxtEvent(char event[]) {
     int rule = 0;
@@ -3063,6 +3065,7 @@ void MainFrame::processTxtEvent(char event[]) {
         optionsDlg->updateEventLog(wxString(event), _("<no match>"));                     
     }
 }
+#endif
 
 
 #define SBQ_MAX_ARGS 4
@@ -3511,6 +3514,7 @@ void txRxProcessing()
             nout = resample(cbData->outsrc1, out48k_short, out8k_short, g_soundCard1SampleRate, samplerate, N48*4, n_samples);
             g_mutexProtectingCallbackData.Lock();
             ret = fifo_write(cbData->outfifo1, out48k_short, nout);
+            //fwrite(out48k_short, nout, sizeof(short), ftest);
             //fprintf(stderr,"nout: %d ret: %d N48*4: %d\n", nout, ret, N48*4);
 
             assert(ret != -1);
