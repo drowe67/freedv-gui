@@ -469,7 +469,8 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
         Hamlib *hamlib = wxGetApp().m_hamlib; 
         bool status = hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate);
         if (status == false) {
-            wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
+            wxMessageBox("Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
+            wxT("Error"), wxOK | wxICON_ERROR, this);
             return;
         }
         else {
@@ -485,14 +486,18 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
 
         wxString hamlibError;
         if (hamlib->ptt(true, hamlibError) == false) {
-            wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
+            wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError + 
+                         wxString(".  Make sure the Hamlib serial Device, Rate, and Paramss match your radio"), 
+                         wxT("Error"), wxOK | wxICON_ERROR, this);
             return;
         }
 
         wxSleep(1);
 
         if (hamlib->ptt(false, hamlibError) == false) {
-            wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
+            wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError +
+                         wxString(".  Make sure the Hamlib serial Device, Rate, and Paramss match your radio"), 
+                         wxT("Error"), wxOK | wxICON_ERROR, this);
         }
     }
 
