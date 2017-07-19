@@ -30,8 +30,8 @@ example you may have changed the default serial rate on your
 radio. Carefully check the serial parameters on your radio match those
 used by FreeDV in the PTT Dialog.
 
-If you are really stuck, download Hamlib and try to rigctl program
-from the command line.
+If you are really stuck, download Hamlib and test your radio's PTT
+using the command line rigctl program.
 
 Voice Keyer 
 -----------
