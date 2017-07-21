@@ -202,6 +202,34 @@ configure emacs:
                       (setq c-basic-offset 4)
                       )))
 
+====================================
+ Building an Ubuntu 16.04 Package 
+====================================
+
+1/ Set up instructions here:
+
+  http://packaging.ubuntu.com/html/
+
+  Section 2 has the setup, Section 6 is a good exercise to get started.  I followed
+  steps in Section 6 below without understanding all of them just yet....
+
+2/ Create a source tarball, e.g.for 1.2.2:
+
+  $ svn export http://svn.code.sf.net/p/freetel/code/freedv/tags/1.2.2 freedv-1.2.2; tar czf freedv-1.2.2.tgz freedv-1.2.2
+
+3/ use magic Ubuntu bzr add-on tools:
+
+  $ bzr dh-make freedv 1.2.2 freedv-1.2.2.tgz
+  (Press s for single)
+  $ cd freedv
+  $ bzr add debian/source/format
+  $ bzr commit -m "Initial commit of Debian packaging."
+  $ bzr builddeb -- -us -uc
+  $ cd ..; ls *.deb
+  $ sudo dpkg --install freedv_1.2.2-1_i386.deb
+  $ freedv
+  $ sudo apt-get remove freedv
+  
 FreeDV GUI TODO List
 --------------------
 
