@@ -1,8 +1,8 @@
-Source: fdmdv2
+Source: freedv
 Section: main
 Priority: optional
 Maintainer: Stuart Longland <stuartl@longlandclan.yi.org>
-Build-Depends: debhelper (>= 9), cmake, libcodec2-dev, libgtk2.0-dev,
+Build-Depends: debhelper (>= 9), cmake, 
  libhamlib-dev, libsamplerate-dev, libasound2-dev, libao-dev, libgsm1-dev,
  portaudio19-dev, libsox-dev, libsndfile1-dev, libwxgtk3.0-dev
 Standards-Version: 3.9.5
@@ -11,9 +11,10 @@ Homepage: http://www.freedv.org
 #Vcs-Browser: http://anonscm.debian.org/?p=collab-maint/freedv.git;a=summary
 
 Package: freedv
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcodec2
-Description: FreeDV: Open-Source Digital Voice modem
- FreeDV is a digital voice modem that can transmit voice-quality
- audio digitally over HF radio links in as little as 1.25kHz
- bandwidth in varying conditions.
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: FreeDV: Open-Source Digital Voice
+ FreeDV is a digital voice system for HF radio. This
+ GUI application allows you to run FreeDV with any SSB
+ radio.
+ 

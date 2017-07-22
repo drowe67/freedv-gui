@@ -26,5 +26,5 @@ include /usr/share/dpkg/default.mk
 override_dh_auto_configure:
 	dh_auto_configure -- \
 	       -DCMAKE_LIBRARY_PATH=$(DEB_HOST_MULTIARCH) \
-	       -DUSE_STATIC_CODEC2=FALSE \
-	       -DUSE_STATIC_SPEEXDSP=FALSE
+	       -DUSE_STATIC_CODEC2=TRUE \
+	       -DUSE_STATIC_SPEEXDSP=TRUE
