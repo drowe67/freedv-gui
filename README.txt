@@ -206,6 +206,11 @@ configure emacs:
  Building an Ubuntu 16.04 Package 
 ====================================
 
+Notes by David R, July 2017.  Work is progress....
+
+Method 1
+--------
+
 1/ Set up instructions here:
 
   http://packaging.ubuntu.com/html/
@@ -229,9 +234,32 @@ configure emacs:
   $ sudo dpkg --install freedv_1.2.2-1_i386.deb
   $ freedv
   $ sudo apt-get remove freedv
+
+Method 2
+--------
+
+More streamlined version (e.g. for test package based on SVN version 3255):
+
+  (Edit debian files in your version of freedv-dev)
+  $ cd tmp
+  $ svn export ~/freedv-dev freedv-dev; tar czf freedv-dev.tgz freedv-dev; rm -Rf freedv-dev
+  $ bzr dh-make freedv-dev 3255 freedv-dev.tgz
+  (Press s for single)
+  $ cd freedv-dev
+  $ bzr builddeb -- -us -uc
   
+Method 3
+--------
+
+Using Stuart Longlands debian files from 2015
+
+  (Edit debian files in your version of freedv-dev)
+  $ cd freedv-dev
+  $ dpkg-buildpackage -uc -us
+
+====================
 FreeDV GUI TODO List
---------------------
+====================
 
 [ ] Ubuntu packaging
 [ ] default sound card in/out setting for rx out of the box
