@@ -11,7 +11,7 @@ Homepage: http://www.freedv.org
 #Vcs-Browser: http://anonscm.debian.org/?p=collab-maint/freedv.git;a=summary
 
 Package: freedv
-Architecture: amd64
+Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: FreeDV: Open-Source Digital Voice
  FreeDV is a digital voice system for HF radio. This
