@@ -222,9 +222,6 @@ bool MainApp::OnInit()
             fprintf(stderr, "plugin: fps not found...\n");           
         }
     }
-    else {
-        fprintf(stderr, "plugin not found...\n");           
-    }
 
     // Create the main application window
 
@@ -248,7 +245,7 @@ bool MainApp::OnInit()
 //-------------------------------------------------------------------------
 int MainApp::OnExit()
 {
-    fprintf(stderr, "MainApp::OnExit\n");
+    //fprintf(stderr, "MainApp::OnExit\n");
     if (m_plugIn) {
         #ifdef __WXMSW__
         FreeLibrary((HMODULE)m_plugInHandle);
@@ -301,7 +298,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 
     // sanitise frame position as a first pass at Win32 registry bug
 
-    fprintf(g_logfile, "x = %d y = %d w = %d h = %d\n", x,y,w,h);
+    //fprintf(g_logfile, "x = %d y = %d w = %d h = %d\n", x,y,w,h);
     if (x < 0 || x > 2048) x = 20;
     if (y < 0 || y > 2048) y = 20;
     if (w < 0 || w > 2048) w = 800;
@@ -649,7 +646,7 @@ MainFrame::~MainFrame()
     int w;
     int h;
 
-    fprintf(stderr, "MainFrame::~MainFrame()\n");
+    //fprintf(stderr, "MainFrame::~MainFrame()\n");
     //fclose(ftest);
     #ifdef __WXMSW__
     fclose(g_logfile);
@@ -673,7 +670,7 @@ MainFrame::~MainFrame()
         if (!IsIconized()) {
             GetClientSize(&w, &h);
             GetPosition(&x, &y);
-            printf("x = %d y = %d w = %d h = %d\n", x,y,w,h);
+            //fprintf(stderr, "x = %d y = %d w = %d h = %d\n", x,y,w,h);
             pConfig->Write(wxT("/MainFrame/left"),               (long) x);
             pConfig->Write(wxT("/MainFrame/top"),                (long) y);
             pConfig->Write(wxT("/MainFrame/width"),              (long) w);
@@ -1284,7 +1281,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 //-------------------------------------------------------------------------
 void MainFrame::OnCloseFrame(wxCloseEvent& event)
 {
-    fprintf(stderr, "MainFrame::OnCloseFrame()\n");
+    //fprintf(stderr, "MainFrame::OnCloseFrame()\n");
     Pa_Terminate();
     Destroy();
 }
@@ -2046,7 +2043,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnExit(wxCommandEvent& event)
 {
-    fprintf(stderr, "MainFrame::OnExit\n");
+    //fprintf(stderr, "MainFrame::OnExit\n");
     wxUnusedVar(event);
 #ifdef _USE_TIMER
     m_plotTimer.Stop();
@@ -2614,7 +2611,7 @@ void MainFrame::startRxStream()
         if(g_soundCard2InDeviceNum != g_soundCard2OutDeviceNum)
             two_tx=true;
         
-        fprintf(g_logfile, "two_rx: %d two_tx: %d\n", two_rx, two_tx);
+        //fprintf(stderr, "two_rx: %d two_tx: %d\n", two_rx, two_tx);
         if(two_rx)
             m_rxOutPa = new PortAudioWrap();
         else

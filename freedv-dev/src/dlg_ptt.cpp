@@ -233,7 +233,8 @@ void ComPortsDlg::populatePortList()
     /* populate Hamlib serial rate combo box */
 
     wxString serialRates[] = {"default", "300", "1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"}; 
-    for(int i=0; i<WXSIZEOF(serialRates); i++) {
+    unsigned int i;
+    for(i=0; i<WXSIZEOF(serialRates); i++) {
         m_cbSerialRate->Append(serialRates[i]);
     }
 
