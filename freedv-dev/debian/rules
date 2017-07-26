@@ -28,3 +28,7 @@ override_dh_auto_configure:
 	       -DCMAKE_LIBRARY_PATH=$(DEB_HOST_MULTIARCH) \
 	       -DUSE_STATIC_CODEC2=TRUE \
 	       -DUSE_STATIC_SPEEXDSP=TRUE
+override_dh_shlibdeps:
+	dh_shlibdeps -- \
+          -l/lib/x86_64-linux-gnu \
+          -l/usr/lib/x86_64-linux-gnu
