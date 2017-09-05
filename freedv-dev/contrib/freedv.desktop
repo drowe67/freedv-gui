@@ -6,3 +6,4 @@ Icon=freedv
 Type=Application
 Terminal=false
 Categories=GTK;GNOME;AudioVideo;Audio;HamRadio;
+Comment=Digital Voice mode for HF Radio
