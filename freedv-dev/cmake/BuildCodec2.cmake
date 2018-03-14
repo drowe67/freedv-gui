@@ -23,7 +23,7 @@ set(CODEC2_LIBRARIES
     ${CMAKE_BINARY_DIR}/codec2-prefix/src/codec2-build/src/libcodec2.a)
 ExternalProject_Get_Property(codec2 BINARY_DIR)
 include_directories(${CMAKE_BINARY_DIR}/codec2-prefix/src/codec2/src 
-                    ${BINARY_DIR}/codec2
+                    ${BINARY_DIR}
 )
 list(APPEND FREEDV_LINK_LIBS ${CODEC2_LIBRARIES})
 list(APPEND FREEDV_STATIC_DEPS codec2)
