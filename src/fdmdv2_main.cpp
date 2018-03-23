@@ -1709,14 +1709,17 @@ void MainFrame::OnCallSignReset(wxCommandEvent& event)
 
 void MainFrame::OnBerReset(wxCommandEvent& event)
 {
-    freedv_set_total_bits(g_pfreedv, 0);
-    freedv_set_total_bit_errors(g_pfreedv, 0);
-    g_resyncs = 0;
-    int i;
-    for(i=0; i<2*g_Nc; i++) {
-        g_error_hist[i] = 0;
-        g_error_histn[i] = 0;
+    if (m_RxRunning)  {
+        freedv_set_total_bits(g_pfreedv, 0);
+        freedv_set_total_bit_errors(g_pfreedv, 0);
+        g_resyncs = 0;
+        int i;
+        for(i=0; i<2*g_Nc; i++) {
+            g_error_hist[i] = 0;
+            g_error_histn[i] = 0;
+        }
     }
+
     
 }
 
