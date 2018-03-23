@@ -2490,10 +2490,10 @@ void MainFrame::stopRxStream()
     {
         m_RxRunning = false;
 
-        fprintf(stderr, "waiting for thread to stop\n");
+        //fprintf(stderr, "waiting for thread to stop\n");
         m_txRxThread->m_run = 0;
         m_txRxThread->Wait();
-        fprintf(stderr, "thread stopped\n");
+        //fprintf(stderr, "thread stopped\n");
 
         m_rxInPa->stop();
         m_rxInPa->streamClose();
@@ -2749,7 +2749,7 @@ void MainFrame::startRxStream()
         g_rxUserdata->outfifo1 = fifo_create(10*N48);
         g_rxUserdata->outfifo2 = fifo_create(8*N48);
         g_rxUserdata->infifo2 = fifo_create(8*N48);
-        printf("N48: %d\n", N48);
+        //fprintf(stderr, "N48: %d\n", N48);
 
         g_rxUserdata->rxinfifo = fifo_create(10 * N8);
         g_rxUserdata->rxoutfifo = fifo_create(10 * N8);
@@ -3959,7 +3959,7 @@ void MainFrame::stopUDPThread(void) {
 }
 
 void *UDPThread::Entry() {
-    printf("UDP thread started!\n");
+    //fprintf(stderr, "UDP thread started!\n");
     while (m_run) {
         if (wxGetApp().m_udp_enable) {
             printf("m_udp_enable\n");
