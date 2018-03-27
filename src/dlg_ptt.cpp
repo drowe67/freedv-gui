@@ -69,7 +69,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
 
     gridSizerhl->Add(new wxStaticText(this, wxID_ANY, _("Rig Model:"), wxDefaultPosition, wxDefaultSize, 0), 
                       0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
-    m_cbRigName = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0, NULL, wxCB_DROPDOWN);
+    m_cbRigName = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
     wxGetApp().m_hamlib->populateComboBox(m_cbRigName);
     m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
     gridSizerhl->Add(m_cbRigName, 0, wxALIGN_CENTER_VERTICAL, 0);
