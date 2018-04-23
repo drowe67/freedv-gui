@@ -196,6 +196,21 @@ message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 #
 # Find codec2
 #
+if(CODEC2_BUILD_DIR)
+    message(STATUS "Using codec2 from build directory...")
+    load_cache(${CODEC2_BUILD_DIR} codec2_SOURCE_DIR)
+    get_filename_component(CODEC2_BUILD_INCLUDE_DIR ${CODEC2_BUILD_DIR} 
+        ABSOLUTE BASE_DIR ${CMAKE_BINARY_DIR})
+    message(STATUS "  Build dir: ${CODEC2_BUILD_INCLUDE_DIR}")
+    find_path(CODEC2_SOURCE_INCLUDE_DIR codec2.h
+        PATHS ${codec2_SOURCE_DIR}
+        PATH_SUFFIXES src
+        NO_DEFAULT_PATH)
+    message(STATUS "  Source include dir: ${CODEC2_SOURCE_INCLUDE_DIR}")
+    find_library(CODEC2_LIBRARY NAMES codec2 PATH_SUFFIXES src)
+    include_directories(${CODEC2_SOURCE_INCLUDE_DIR}
+        ${CODEC2_BUILD_INCLUDE_DIR})
+else(CODEC2_BUILD_DIR)
 if(NOT USE_STATIC_CODEC2)
     message(STATUS "Looking for codec2...")
     # 'CONFIG' removed due to incompatibility with cmake version
@@ -228,6 +243,8 @@ else(NOT USE_STATIC_CODEC2)
     message(STATUS "Will attempt static build of codec2.")
     include(cmake/BuildCodec2.cmake)
 endif(NOT USE_STATIC_CODEC2)
+endif(CODEC2_BUILD_DIR)
+
 
 #
 # Find or build portaudio Library
