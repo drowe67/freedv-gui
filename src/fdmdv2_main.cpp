@@ -521,6 +521,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     if (mode == 3)
         m_rb700c->SetValue(1);
     if (mode == 4)
+        m_rb700d->SetValue(1);
+    if (mode == 5)
         m_rb800xa->SetValue(1);
         
     pConfig->SetPath(wxT("/"));
@@ -631,9 +633,12 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     }
 #endif
 
-    //ftest = fopen("ftest.raw", "wb");
-    //assert(ftest != NULL);
-
+    #define FTEST
+    #ifdef FTEST
+    ftest = fopen("ftest.raw", "wb");
+    assert(ftest != NULL);
+    #endif
+    
 }
 
 //-------------------------------------------------------------------------
@@ -647,7 +652,9 @@ MainFrame::~MainFrame()
     int h;
 
     //fprintf(stderr, "MainFrame::~MainFrame()\n");
-    //fclose(ftest);
+    #ifdef FTEST
+    fclose(ftest);
+    #endif
     #ifdef __WXMSW__
     fclose(g_logfile);
     #endif
@@ -748,8 +755,10 @@ MainFrame::~MainFrame()
         //    mode = 2;
         if (m_rb700c->GetValue())
             mode = 3;
-        if (m_rb800xa->GetValue())
+        if (m_rb700d->GetValue())
             mode = 4;
+        if (m_rb800xa->GetValue())
+            mode = 5;
        pConfig->Write(wxT("/Audio/mode"), mode);
     }
 
@@ -838,7 +847,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         /* PSK Modes - scatter plot -------------------------------------------------------*/
         for (r=0; r<g_stats.nr; r++) {
         
-            if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600) {
+            if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700D)) {
                 m_panelScatter->add_new_samples_scatter(&g_stats.rx_symbols[r][0]);
             }
         
@@ -2258,6 +2267,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb1600->Disable();
         //m_rb700b->Disable();
         m_rb700c->Disable();
+        m_rb700d->Disable();
         m_rb800xa->Disable();
         if (m_rbPlugIn != NULL)
             m_rbPlugIn->Disable();
@@ -2290,6 +2300,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             else {
                 m_panelScatter->setNc(g_Nc); 
             }
+        }
+        if (m_rb700d->GetValue()) {
+            g_mode = FREEDV_MODE_700D;
+            g_Nc = 17;                         /* TODO: be nice if we didn't have to hard code this */
+            m_panelScatter->setNc(g_Nc); 
         }
         if (m_rb800xa->GetValue()) {
             g_mode = FREEDV_MODE_800XA;
@@ -2324,7 +2339,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             }
 
             assert(g_pfreedv != NULL);
-
+        
             // init Codec 2 LPC Post Filter
 
             codec2_set_lpc_post_filter(freedv_get_codec2(g_pfreedv),
@@ -2467,6 +2482,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb1600->Enable();
         //m_rb700b->Enable();
         m_rb700c->Enable();
+        m_rb700d->Enable();
         m_rb800xa->Enable();
         if (m_rbPlugIn != NULL)
             m_rbPlugIn->Enable();
@@ -2754,8 +2770,10 @@ void MainFrame::startRxStream()
         g_rxUserdata->infifo2 = fifo_create(8*N48);
         //fprintf(stderr, "N48: %d\n", N48);
 
-        g_rxUserdata->rxinfifo = fifo_create(10 * N8);
-        g_rxUserdata->rxoutfifo = fifo_create(10 * N8);
+        /* TODO: might be able to tune these on a per waveform basis */
+        
+        g_rxUserdata->rxinfifo = fifo_create(20 * N8);
+        g_rxUserdata->rxoutfifo = fifo_create(20 * N8);
 
         // Init Equaliser Filters ------------------------------------------------------
 
@@ -3578,6 +3596,7 @@ void per_frame_rx_processing(
         int                 nin, nout;
 
         nin = freedv_nin(g_pfreedv);
+        //fprintf(stderr, "nin: %d max_modem_samples: %d\n", nin, freedv_get_n_max_modem_samples(g_pfreedv));
         while (fifo_read(input_fifo, input_buf, nin) == 0) {
             assert(nin <= freedv_get_n_max_modem_samples(g_pfreedv));
 
@@ -3585,8 +3604,10 @@ void per_frame_rx_processing(
             int nin_prev = nin;
             #endif
 
-            //fwrite(input_buf, sizeof(short), nin, ftest);
-
+            #ifdef FTEST
+            fwrite(input_buf, sizeof(short), nin, ftest);
+            #endif
+            
             // demod per frame processing
 
             for(i=0; i<nin; i++) {

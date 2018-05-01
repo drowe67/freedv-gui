@@ -323,6 +323,8 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
 #endif
     m_rb700c = new wxRadioButton( this, wxID_ANY, wxT("700C"), wxDefaultPosition, wxDefaultSize,  wxRB_GROUP);
     sbSizer_mode->Add(m_rb700c, 0, wxALIGN_LEFT|wxALL, 1);
+    m_rb700d = new wxRadioButton( this, wxID_ANY, wxT("700D"), wxDefaultPosition, wxDefaultSize,  0);
+    sbSizer_mode->Add(m_rb700d, 0, wxALIGN_LEFT|wxALL, 1);
     m_rb800xa = new wxRadioButton( this, wxID_ANY, wxT("800XA"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_mode->Add(m_rb800xa, 0, wxALIGN_LEFT|wxALL, 1);
     m_rb1600 = new wxRadioButton( this, wxID_ANY, wxT("1600"), wxDefaultPosition, wxDefaultSize, 0);
