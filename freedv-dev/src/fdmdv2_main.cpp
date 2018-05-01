@@ -2764,11 +2764,11 @@ void MainFrame::startRxStream()
 
         // create FIFOs used to interface between different buffer sizes
 
-        g_rxUserdata->infifo1 = fifo_create(8*N48);
+        g_rxUserdata->infifo1 = fifo_create(10*N48);
         g_rxUserdata->outfifo1 = fifo_create(10*N48);
-        g_rxUserdata->outfifo2 = fifo_create(8*N48);
-        g_rxUserdata->infifo2 = fifo_create(8*N48);
-        //fprintf(stderr, "N48: %d\n", N48);
+        g_rxUserdata->outfifo2 = fifo_create(10*N48);
+        g_rxUserdata->infifo2 = fifo_create(10*N48);
+        fprintf(stderr, "N48: %d 10*N48: %d\n", N48, 10*N48);
 
         /* TODO: might be able to tune these on a per waveform basis */
         
@@ -3175,13 +3175,13 @@ int resample(SRC_STATE *src,
             )
 {
     SRC_DATA src_data;
-    float    input[N48*4];
-    float    output[N48*4];
+    float    input[N48*10];
+    float    output[N48*10];
     int      ret;
 
     assert(src != NULL);
-    assert(length_input_short <= N48*4);
-    assert(length_output_short <= N48*4);
+    assert(length_input_short <= N48*10);
+    assert(length_output_short <= N48*10);
 
     src_short_to_float_array(input_short, input, length_input_short);
 
@@ -3240,10 +3240,10 @@ void txRxProcessing()
     // signals in in48k/out48k are at a maximum sample rate of 48k, could be 44.1kHz
     // depending on sound hardware.
 
-    short           in8k_short[4*N8];
-    short           in48k_short[4*N48];
-    short           out8k_short[4*N8];
-    short           out48k_short[4*N48];
+    short           in8k_short[10*N8];
+    short           in48k_short[10*N48];
+    short           out8k_short[10*N8];
+    short           out48k_short[10*N48];
     int             nout, samplerate, n_samples;
 
     //fprintf(g_logfile, "start infifo1: %5d outfifo2: %5d\n", fifo_used(cbData->infifo1), fifo_used(cbData->outfifo2));
@@ -3264,6 +3264,8 @@ void txRxProcessing()
     int nsam = g_soundCard1SampleRate * (float)N8/FS;
     assert(nsam <= N48);
     g_mutexProtectingCallbackData.Lock();
+    fprintf(stderr, "RX nsam: %d fifo_used: %d fifo_free: %d\n",
+            nsam, fifo_used(cbData->infifo1), fifo_free(cbData->infifo1));
     while ((fifo_read(cbData->infifo1, in48k_short, nsam) == 0) && ((g_half_duplex && !g_tx) || !g_half_duplex)) 
     {
         g_mutexProtectingCallbackData.Unlock();
@@ -3397,8 +3399,8 @@ void txRxProcessing()
             //printf("out8k_short: %d\n", out8k_short[0]);
         }
 
-
         // Optional Spk Out EQ Filtering, need mutex as filter can change at run time
+
         g_mutexProtectingCallbackData.Lock();
         if (cbData->spkOutEQEnable) {
             sox_biquad_filter(cbData->sbqSpkOutBass,   out8k_short, out8k_short, N8);
@@ -3428,19 +3430,21 @@ void txRxProcessing()
     if ((g_mode != -1) && ((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
         int ret;
 
-        // Make sure we have q few frames of modulator output
+        // Make sure we have a few frames of modulator output
         // samples.  This also locks the modulator to the sample rate
         // of sound card 1.  We want to make sure that modulator
         // samples are uninterrupted by differences in sample rate
         // between this sound card and sound card 2.
 
         g_mutexProtectingCallbackData.Lock();
-        while((unsigned)fifo_used(cbData->outfifo1) < 6*N48)
-        {
+        unsigned int nsam_out_48 = g_soundCard2SampleRate * freedv_get_n_nom_modem_samples(g_pfreedv)/FS;
+        fprintf(stderr, "TX nsam_out_48: %d fifo_used: %d fifo_free: %d\n",
+                nsam_out_48, fifo_used(cbData->outfifo1), fifo_free(cbData->outfifo1));
+        while((unsigned)fifo_free(cbData->outfifo1) >= nsam_out_48) {
             g_mutexProtectingCallbackData.Unlock();
 
-            int   nsam = g_soundCard2SampleRate * freedv_get_n_speech_samples(g_pfreedv)/FS;
-            assert(nsam <= 4*N48);
+            int nsam_in_48 = g_soundCard2SampleRate * freedv_get_n_speech_samples(g_pfreedv)/FS;
+            assert(nsam_in_48 < 10*N48);
 
             // infifo2 is written to by another sound card so it may
             // over or underflow, but we don't realy care.  It will
@@ -3449,10 +3453,10 @@ void txRxProcessing()
             // again in the decoded audio at the other end.
 
             // zero speech input just in case infifo2 underflows
-            memset(in48k_short, 0, nsam*sizeof(short));
-            fifo_read(cbData->infifo2, in48k_short, nsam);
+            memset(in48k_short, 0, nsam_in_48*sizeof(short));
+            fifo_read(cbData->infifo2, in48k_short, nsam_in_48);
 
-            nout = resample(cbData->insrc2, in8k_short, in48k_short, FS, g_soundCard2SampleRate, 4*N8, nsam);
+            nout = resample(cbData->insrc2, in8k_short, in48k_short, FS, g_soundCard2SampleRate, 10*N8, nsam_in_48);
 
             // optionally use file for mic input signal
 
@@ -3529,11 +3533,11 @@ void txRxProcessing()
             }
 
             // output one frame of modem signal
-            nout = resample(cbData->outsrc1, out48k_short, out8k_short, g_soundCard1SampleRate, samplerate, N48*4, n_samples);
+            nout = resample(cbData->outsrc1, out48k_short, out8k_short, g_soundCard1SampleRate, samplerate, 10*N48, n_samples);
             g_mutexProtectingCallbackData.Lock();
             ret = fifo_write(cbData->outfifo1, out48k_short, nout);
             //fwrite(out48k_short, nout, sizeof(short), ftest);
-            //fprintf(stderr,"nout: %d ret: %d N48*4: %d\n", nout, ret, N48*4);
+            fprintf(stderr,"TX nout: %d ret: %d N48*10: %d\n", nout, ret, N48*10);
 
             assert(ret != -1);
         }

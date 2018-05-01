@@ -103,7 +103,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_ckboxFreeDV700txClip = new wxCheckBox(this, wxID_ANY, _("Clipping"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700txClip, 0, wxALIGN_LEFT, 0);
-    m_ckboxFreeDV700Combine = new wxCheckBox(this, wxID_ANY, _("Diversity Combine for plots"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDV700Combine = new wxCheckBox(this, wxID_ANY, _("700C Diversity Combine for plots"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700Combine, 0, wxALIGN_LEFT, 0);
 
     bSizer30->Add(sbSizer_freedv700, 0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
@@ -397,7 +397,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlVoiceKeyerRxPause->GetValue().ToLong(&tmp); if (tmp < 0) tmp = 0; wxGetApp().m_intVoiceKeyerRxPause = (int)tmp;
         pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_intVoiceKeyerRxPause);
         m_txtCtrlVoiceKeyerRepeats->GetValue().ToLong(&tmp);
-        if (tmp < 0) tmp = 0; if (tmp > 100) tmp = 100;
+        if (tmp < 0) {tmp = 0;} if (tmp > 100) {tmp = 100;}
         wxGetApp().m_intVoiceKeyerRepeats = (int)tmp;
         pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_intVoiceKeyerRepeats);
 
