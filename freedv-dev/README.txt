@@ -43,8 +43,7 @@ RHEL/CentOS and derivitves (requires Fedora EPEL repository)
 Quickstart 1
 ------------
 
-1/ Using a modern Linux, and the development library packages
-   installed above:
+Using a modern Linux, and the development library packages installed above:
 
   $ cd /path/to/freedv
   $ mkdir build_linux
@@ -54,6 +53,18 @@ Quickstart 1
   $ ./src/freedv
 
 Quickstart 2
+-------------
+
+Using a local build of codec2-dev that you may be developing:
+
+  $ cd /path/to/freedv
+  $ mkdir build_linux
+  $ cd build_linux
+  $ cmake -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=/path/to/codec2-dev/build_linux  ..
+  $ make
+  $ ./src/freedv
+
+Quickstart 3
 ------------
 
 Builds static versions of wxWidgets, portaudio, codec2-dev, which are commonly
@@ -69,9 +80,9 @@ missing on older Linux systems.
 
 2/ Then you can configure FreeDV using your local codec-dev, something like:
 
-  $ cmake -DCMAKE_BUILD_TYPE=Debug -DBOOTSTRAP_WXWIDGETS=TRUE -DCODEC2_INCLUDE_DIRS=/path/to/codec2-dev/src -DCODEC2_LIBRARY=/path/to/codec2-dev/build_linux/src/libcodec2.so -DUSE_STATIC_CODEC2=FALSE -DUSE_STATIC_PORTAUDIO=TRUE ../
+  $ cmake -DCMAKE_BUILD_TYPE=Debug -DBOOTSTRAP_WXWIDGETS=TRUE -DCODEC2_BUILD_DIR=/path/to/codec2-dev/build_linux -DUSE_STATIC_PORTAUDIO=TRUE ../
 
-3/ OR build a local copy of codec2-dev:
+3/ OR checkout and build a copy of codec2-dev:
 
   $ cmake -DBOOTSTRAP_WXWIDGETS=TRUE -DUSE_STATIC_CODEC2=TRUE -DUSE_STATIC_PORTAUDIO=TRUE  ../
   
@@ -202,88 +213,4 @@ configure emacs:
                       (setq c-basic-offset 4)
                       )))
 
-====================================
- Building an Ubuntu 16.04 Package 
-====================================
-
-Notes by David R, July 2017.  Work is progress....
-
-Method 1
---------
-
-1/ Set up instructions here:
-
-  http://packaging.ubuntu.com/html/
-
-  Section 2 has the setup, Section 6 is a good exercise to get started.  I followed
-  steps in Section 6 below without understanding all of them just yet....
-
-2/ Create a source tarball, e.g.for 1.2.2:
-
-  $ svn export http://svn.code.sf.net/p/freetel/code/freedv/tags/1.2.2 freedv-1.2.2; tar czf freedv-1.2.2.tgz freedv-1.2.2
-
-3/ use magic Ubuntu bzr add-on tools:
-
-  $ bzr dh-make freedv 1.2.2 freedv-1.2.2.tgz
-  (Press s for single)
-  $ cd freedv
-  $ bzr add debian/source/format
-  $ bzr commit -m "Initial commit of Debian packaging."
-  $ bzr builddeb -- -us -uc
-  $ cd ..; ls *.deb
-  $ sudo dpkg --install freedv_1.2.2-1_i386.deb
-  $ freedv
-  $ sudo apt-get remove freedv
-
-Method 2
---------
-
-More streamlined version (e.g. for test package based on SVN version 3255):
-
-  (Edit debian files in your version of freedv-dev)
-  $ cd tmp
-  $ svn export ~/freedv-dev freedv-dev; tar czf freedv-dev.tgz freedv-dev; rm -Rf freedv-dev
-  $ bzr dh-make freedv-dev 3255 freedv-dev.tgz
-  (Press s for single)
-  $ cd freedv-dev
-  $ bzr builddeb -- -us -uc
-  
-Method 3
---------
-
-Using Stuart Longlands debian files from 2015
-
-  (Edit debian files in your version of freedv-dev)
-  $ cd freedv-dev
-  $ dpkg-buildpackage -uc -us
-
-====================
-FreeDV GUI TODO List
-====================
-
-[ ] Ubuntu packaging
-[ ] default sound card in/out setting for rx out of the box
-[ ] When application close on windows while "Start" down sometimes crashes
-    + Also on Linux it reports an unterminated thread when exiting
-[ ] Tool-Audio Config Dialog sound device names truncated on Windows
-[ ] Serialport::closeport() on Linux takes about 1 second 
-    + delays 'Stop' on main window test on Tools-PTT Test
-[ ] Voice keyer file name at bottom on main screen truncated
-    + need a bigger field
-[ ] Start/Stop file rec/playback, work out a better UI, 
-    maybe buttons on front page
-[ ] feature for evaluating yr own sound quality
-    + trap bad mic response/levels
-    + zero in on different sound quality from different users
-[ ] feeding audio over UDP say from from gqrx
-    + could also be used to netcat stored files
-[ ] refactoring
-    [ ] fdmdv2_main.cpp is way too long
-    [ ] rename fdmdv2*.cpp -> freedv*.cpp
-    [ ] dlg_ptt uses ComPortsDlg name internally, rename PttDlg or similar
-[ ] Add RSID
-    + use case, when would it be used?
-[ ] clean up dialogs
-    + were based on auto generation code
-    + must be an easier/clearer way to write them
 
