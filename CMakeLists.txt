@@ -67,8 +67,10 @@ if("${_src_dir}" STREQUAL "freedv-dev")
         add_definitions(-DSVN_REVISION="${FREEDV_WC_REVISION}")
     else(Subversion_FOUND)
         message(WARNING "Subversion not found. Can not determine svn revision.")
-        add_definitions(-DSVN_REVISION="None")
+        add_definitions(-DSVN_REVISION="Unknown")
     endif(Subversion_FOUND)
+else()
+    add_definitions(-DSVN_REVISION="None")
 endif()
 
 
