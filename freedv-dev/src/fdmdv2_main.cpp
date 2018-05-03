@@ -942,7 +942,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     char snr[15];
     sprintf(snr, "%d", (int)(g_snr+0.5)); // round to nearest dB
 
-    //printf("snr_est: %f m_snrBeta: %f g_snr: %f snr_limited: %f\n", g_stats.snr_est,  m_snrBeta, g_snr, snr_limited);
+    //fprintf(stderr, "snr_est: %f m_snrBeta: %f g_snr: %f snr_limited: %f\n", g_stats.snr_est,  m_snrBeta, g_snr, snr_limited);
 
     wxString snr_string(snr);
     m_textSNR->SetLabel(snr_string);
@@ -2598,7 +2598,7 @@ void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDev
     if(inDevice != paNoDevice) {
         pa->setInputChannelCount(inputChannels);           // stereo input
         pa->setInputSampleFormat(PA_SAMPLE_TYPE);
-        pa->setInputLatency(pa->getInputDefaultLowLatency());
+        pa->setInputLatency(pa->getInputDefaultHighLatency());
         fprintf(stderr,"PA in; low: %f high: %f\n", pa->getInputDefaultLowLatency(), pa->getInputDefaultHighLatency());
         pa->setInputHostApiStreamInfo(NULL);
     }
@@ -2611,7 +2611,7 @@ void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDev
     if(outDevice != paNoDevice) {
         pa->setOutputChannelCount(2);                      // stereo output
         pa->setOutputSampleFormat(PA_SAMPLE_TYPE);
-        pa->setOutputLatency(pa->getOutputDefaultLowLatency());
+        pa->setOutputLatency(pa->getOutputDefaultHighLatency());
         fprintf(stderr,"PA out; low: %f high: %f\n", pa->getOutputDefaultLowLatency(), pa->getOutputDefaultHighLatency());
         pa->setOutputHostApiStreamInfo(NULL);
     }
