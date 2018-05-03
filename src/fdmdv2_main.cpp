@@ -96,6 +96,8 @@ int                 g_infifo1_full;
 int                 g_outfifo1_empty;
 int                 g_infifo2_full;
 int                 g_outfifo2_empty;
+int                 g_PAstatusFlags1;
+int                 g_PAstatusFlags2;
 
 // playing and recording from sound files
 
@@ -1256,7 +1258,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         /* FIFO under/overflow debug counters */
 
         char fifo_counters[80];
-        sprintf(fifo_counters, "%d %d %d %d", g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
+        sprintf(fifo_counters, "%d %d %d %d %d %d", g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty,g_PAstatusFlags1, g_PAstatusFlags2 );
         wxString fifo_counters_string(fifo_counters); m_textFifos->SetLabel(fifo_counters_string);
 
     }
@@ -1742,6 +1744,7 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
             g_error_histn[i] = 0;
         }
         g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
+        g_PAstatusFlags1 = g_PAstatusFlags2 = 0;
     }
 
     
@@ -2785,6 +2788,7 @@ void MainFrame::startRxStream()
         g_rxUserdata->infifo2 = fifo_create(10*N48);
         //fprintf(stderr, "N48: %d 10*N48: %d\n", N48, 10*N48);
         g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
+        g_PAstatusFlags1 = g_PAstatusFlags2 = 0;
         
         /* TODO: might be able to tune these on a per waveform basis */
         
@@ -3712,6 +3716,10 @@ int MainFrame::rxCallback(
     (void) timeInfo;
     (void) statusFlags;
 
+    if (statusFlags) {
+        g_PAstatusFlags1++;
+    }
+    
     wxMutexLocker lock(g_mutexProtectingCallbackData);
 
     //
@@ -3782,6 +3790,10 @@ int MainFrame::txCallback(
     short           indata[MAX_FPB];
     short           outdata[MAX_FPB];
 
+    if (statusFlags) {
+        g_PAstatusFlags2++;
+    }
+    
     wxMutexLocker lock(g_mutexProtectingCallbackData);
 
     // assemble a mono buffer and write to FIFO
