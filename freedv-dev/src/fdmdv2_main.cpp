@@ -90,6 +90,13 @@ int                 g_soundCard2InDeviceNum;
 int                 g_soundCard2OutDeviceNum;
 int                 g_soundCard2SampleRate;
 
+// PortAudio over/underflow counters
+
+int                 g_infifo1_full;
+int                 g_outfifo1_empty;
+int                 g_infifo2_full;
+int                 g_outfifo2_empty;
+
 // playing and recording from sound files
 
 SNDFILE            *g_sfPlayFile;
@@ -1245,6 +1252,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 }
             }
         }
+
+        /* FIFO under/overflow debug counters */
+
+        char fifo_counters[80];
+        sprintf(fifo_counters, "%d %d %d %d", g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
+        //wxString fifo_counters_string(fifo_counters); m_textFifos->SetLabel(fifo_counters_string);
+
     }
 
     // command from UDP thread that is best processed in main thread to avoid seg faults
@@ -2768,8 +2782,9 @@ void MainFrame::startRxStream()
         g_rxUserdata->outfifo1 = fifo_create(10*N48);
         g_rxUserdata->outfifo2 = fifo_create(10*N48);
         g_rxUserdata->infifo2 = fifo_create(10*N48);
-        fprintf(stderr, "N48: %d 10*N48: %d\n", N48, 10*N48);
-
+        //fprintf(stderr, "N48: %d 10*N48: %d\n", N48, 10*N48);
+        g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
+        
         /* TODO: might be able to tune these on a per waveform basis */
         
         g_rxUserdata->rxinfifo = fifo_create(20 * N8);
@@ -3668,6 +3683,7 @@ void per_frame_rx_processing(
 // + In dual sound card mode outfifo1 is the "to radio" modulator signal to the SSB tx.
 //
 //-------------------------------------------------------------------------
+
 int MainFrame::rxCallback(
                             const void      *inputBuffer,
                             void            *outputBuffer,
@@ -3691,9 +3707,6 @@ int MainFrame::rxCallback(
 
     wxMutexLocker lock(g_mutexProtectingCallbackData);
 
-    //fprintf(g_logfile, "cb1 statusFlags: 0x%x framesPerBuffer: %d rptr: 0x%x wptr: 0x%x \n", (int)statusFlags,
-    //        framesPerBuffer, rptr, wptr);
-
     //
     //  RX side processing --------------------------------------------
     //
@@ -3702,22 +3715,18 @@ int MainFrame::rxCallback(
 
     assert(framesPerBuffer < MAX_FPB);
 
-    if(rptr) {
-        //fprintf(g_logfile,"in %ld %d\n",  framesPerBuffer, g_in++);
-        //g_indata += framesPerBuffer;
+    if (rptr) {
         for(i = 0; i < framesPerBuffer; i++, rptr += cbData->inputChannels1)
             indata[i] = rptr[0];                       
         if (fifo_write(cbData->infifo1, indata, framesPerBuffer)) {
-            //fprintf(g_logfile, "infifo1 full\n");
+            g_infifo1_full++;
         }
-        //fifo_write(cbData->outfifo1, indata, framesPerBuffer);
     }
 
     // OK now set up output samples for this callback
 
-    if(wptr) {
-        //fprintf(g_logfile,"out %ld %d\n",  framesPerBuffer, g_out++);
-        if (fifo_read(cbData->outfifo1, outdata, framesPerBuffer) == 0) {
+    if (wptr) {
+         if (fifo_read(cbData->outfifo1, outdata, framesPerBuffer) == 0) {
 
             // write signal to both channels
 
@@ -3726,7 +3735,6 @@ int MainFrame::rxCallback(
                     cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/g_soundCard1SampleRate;
                     cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
                     wptr[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);                              
-                    //printf("%f %d\n", cbData->voxTonePhase, wptr[0]);
                 }
                 else
                     wptr[0] = outdata[i];
@@ -3735,7 +3743,7 @@ int MainFrame::rxCallback(
             }
         }
         else {
-            //fprintf(g_logfile, "outfifo1 empty\n");
+            g_outfifo1_empty++;
             // zero output if no data available
             for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
                 wptr[0] = 0;
@@ -3769,39 +3777,21 @@ int MainFrame::txCallback(
 
     wxMutexLocker lock(g_mutexProtectingCallbackData);
 
-    //    if (statusFlags)
-    //    printf("cb2 statusFlags: 0x%x\n", (int)statusFlags);
-
     // assemble a mono buffer and write to FIFO
 
     assert(framesPerBuffer < MAX_FPB);
 
-    if(rptr) {
+    if (rptr) {
         for(i = 0; i < framesPerBuffer; i++, rptr += cbData->inputChannels2)
             indata[i] = rptr[0];                        
-    }
-
-    //#define SC2_LOOPBACK
-#ifdef SC2_LOOPBACK
-    //TODO: This doesn't work unless using the same soundcard!
-
-    if(wptr) {
-        for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
-            wptr[0] = indata[i];
-            wptr[1] = indata[i];
-        }
-    }
-
-#else
-    if(rptr) {
         if (fifo_write(cbData->infifo2, indata, framesPerBuffer)) {
-            //fprintf(g_logfile, "infifo2 full\n");
+            g_infifo2_full++;
         }
     }
 
     // OK now set up output samples for this callback
 
-    if(wptr) {
+    if (wptr) {
         if (fifo_read(cbData->outfifo2, outdata, framesPerBuffer) == 0) {
 		
             // write signal to both channels */
@@ -3811,7 +3801,7 @@ int MainFrame::txCallback(
             }
         }
         else {
-            //fprintf(g_logfile, "outfifo2 empty\n");
+            g_outfifo2_empty++;
             // zero output if no data available
             for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
                 wptr[0] = 0;
@@ -3819,7 +3809,7 @@ int MainFrame::txCallback(
             }
         }
     }
-#endif
+    
     return paContinue;
 }
 
