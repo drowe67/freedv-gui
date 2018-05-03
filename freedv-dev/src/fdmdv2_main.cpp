@@ -1257,7 +1257,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         char fifo_counters[80];
         sprintf(fifo_counters, "%d %d %d %d", g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
-        //wxString fifo_counters_string(fifo_counters); m_textFifos->SetLabel(fifo_counters_string);
+        wxString fifo_counters_string(fifo_counters); m_textFifos->SetLabel(fifo_counters_string);
 
     }
 
@@ -1741,6 +1741,7 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
             g_error_hist[i] = 0;
             g_error_histn[i] = 0;
         }
+        g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
     }
 
     
@@ -3221,6 +3222,7 @@ int resample(SRC_STATE *src,
 // speech signals at a low sample rate.  We want a low sample rate so
 // we don't hammer the graphics system too hard.  Saves decimated data
 // to a fifo for plotting on screen.
+
 void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs)
 {
     int decimation = fs/WAVEFORM_PLOT_FS;
@@ -3245,6 +3247,11 @@ void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs)
     }
     fifo_write(plotFifo, dec_samples, nSamples);
 }
+
+
+//---------------------------------------------------------------------------------------------
+// Main real time procesing for tx and rx of FreeDV signals
+//---------------------------------------------------------------------------------------------
 
 void txRxProcessing()
 {
