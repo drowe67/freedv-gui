@@ -30,13 +30,14 @@ project(FreeDV)
 # Set FreeDV version and generate src/version.h
 #
 set(FREEDV_VERSION_MAJOR 1)
-set(FREEDV_VERSION_MINOR 2)
-set(FREEDV_VERSION_PATCH 2)
+set(FREEDV_VERSION_MINOR 3)
+set(FREEDV_VERSION_PATCH FALSE)
+set(FREEDV_VERSION_SUFFIX "devel")
+
 set(FREEDV_VERSION ${FREEDV_VERSION_MAJOR}.${FREEDV_VERSION_MINOR})
 if(FREEDV_VERSION_PATCH)
     set(FREEDV_VERSION ${FREEDV_VERSION}.${FREEDV_VERSION_PATCH})
 endif()
-set(FREEDV_VERSION_SUFFIX "devel")
 if(FREEDV_VERSION_SUFFIX)
     set(FREEDV_VERSION_STRING "${FREEDV_VERSION} ${FREEDV_VERSION_SUFFIX}")
 else()
@@ -53,23 +54,21 @@ endif(NOT CMAKE_BUILD_TYPE)
 
 # Work around for not using a svn working copy.
 add_definitions(-D_NO_AUTOTOOLS_)
-find_program(SVN_PATH svn)
-if(SVN_PATH)
-    execute_process(COMMAND ${SVN_PATH} info --show-item revision
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        RESULT_VARIABLE SVN_REVISION_RESULT
-        OUTPUT_VARIABLE SVN_CURRENT_REVISION
-        ERROR_QUIET
-    )
-else()
-    set(SVN_REVISION_RESULT 1)
-endif()
 
-if(SVN_REVISION_RESULT EQUAL 0)
-    string(STRIP ${SVN_CURRENT_REVISION} SVN_REVISION)
-    add_definitions(-DSVN_REVISION="${SVN_REVISION}")
-else()
-    add_definitions(-DSVN_REVISION="None")
+#
+# Find the svn revision if this is a working copy.
+#
+get_filename_component(_src_dir "${CMAKE_SOURCE_DIR}" NAME)
+if("${_src_dir}" STREQUAL "freedv-dev")
+    find_package(Subversion QUIET)
+    if(Subversion_FOUND)
+        Subversion_WC_INFO(${CMAKE_CURRENT_SOURCE_DIR} FREEDV)
+        message(STATUS "FreeDV svn revision: ${FREEDV_WC_REVISION}")
+        add_definitions(-DSVN_REVISION="${FREEDV_WC_REVISION}")
+    else(Subversion_FOUND)
+        message(WARNING "Subversion not found. Can not determine svn revision.")
+        add_definitions(-DSVN_REVISION="None")
+    endif(Subversion_FOUND)
 endif()
 
 
