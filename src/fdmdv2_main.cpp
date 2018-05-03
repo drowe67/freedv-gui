@@ -2599,6 +2599,7 @@ void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDev
         pa->setInputChannelCount(inputChannels);           // stereo input
         pa->setInputSampleFormat(PA_SAMPLE_TYPE);
         pa->setInputLatency(pa->getInputDefaultLowLatency());
+        fprintf(stderr,"PA in; low: %f high: %f\n", pa->getInputDefaultLowLatency(), pa->getInputDefaultHighLatency());
         pa->setInputHostApiStreamInfo(NULL);
     }
 
@@ -2611,6 +2612,7 @@ void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDev
         pa->setOutputChannelCount(2);                      // stereo output
         pa->setOutputSampleFormat(PA_SAMPLE_TYPE);
         pa->setOutputLatency(pa->getOutputDefaultLowLatency());
+        fprintf(stderr,"PA out; low: %f high: %f\n", pa->getOutputDefaultLowLatency(), pa->getOutputDefaultHighLatency());
         pa->setOutputHostApiStreamInfo(NULL);
     }
 
@@ -2620,7 +2622,7 @@ void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDev
       On Linux, setting this to wxGetApp().m_framesPerBuffer caused
       intermittant break up on the audio from my IC7200 on Ubuntu 14.
       After a day of bug hunting I found that 0, as recommended by the
-      PortAudio docunmentation, fixed the problem.
+      PortAudio documentation, fixed the problem.
     */
 
     //pa->setFramesPerBuffer(wxGetApp().m_framesPerBuffer);
