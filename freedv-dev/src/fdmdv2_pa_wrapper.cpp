@@ -208,6 +208,14 @@ PaTime  PortAudioWrap::getInputDefaultLowLatency()
 }
 
 //----------------------------------------------------------------
+// getInputDefaultHighLatency()
+//----------------------------------------------------------------
+PaTime  PortAudioWrap::getInputDefaultHighLatency()
+{
+    return Pa_GetDeviceInfo(m_inputBuffer.device)->defaultHighInputLatency;
+}
+
+//----------------------------------------------------------------
 // setOutputChannelCount()
 //----------------------------------------------------------------
 PaError PortAudioWrap::setOutputChannelCount(int count)
@@ -266,6 +274,14 @@ void PortAudioWrap::setOutputHostApiStreamInfo(void *info)
 PaTime  PortAudioWrap::getOutputDefaultLowLatency()
 {
     return Pa_GetDeviceInfo(m_outputBuffer.device)->defaultLowOutputLatency;
+}
+
+//----------------------------------------------------------------
+// getOutputDefaultHighLatency()
+//----------------------------------------------------------------
+PaTime  PortAudioWrap::getOutputDefaultHighLatency()
+{
+    return Pa_GetDeviceInfo(m_outputBuffer.device)->defaultHighOutputLatency;
 }
 
 //----------------------------------------------------------------

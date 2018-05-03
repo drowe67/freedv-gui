@@ -78,6 +78,7 @@ class PortAudioWrap
         PaError             setInputLatency(PaTime latency);
         void                setInputHostApiStreamInfo(void *info = NULL);
         PaTime              getInputDefaultLowLatency();
+        PaTime              getInputDefaultHighLatency();
         const char          *getDeviceName(PaDeviceIndex dev);
 
         PaError             setOutputDevice(PaDeviceIndex dev);
@@ -87,6 +88,7 @@ class PortAudioWrap
         PaError             setOutputLatency(PaTime latency);
         void                setOutputHostApiStreamInfo(void *info = NULL);
         PaTime              getOutputDefaultLowLatency();
+        PaTime              getOutputDefaultHighLatency();
 
         void                setFdmdvState(FDMDV* fdmdv_state)                       {this->m_pFDMDV_state = fdmdv_state;}
         void                setOutputBuffer(const PaStreamParameters& outputBuffer) {this->m_outputBuffer = outputBuffer;}
