@@ -3264,8 +3264,8 @@ void txRxProcessing()
     int nsam = g_soundCard1SampleRate * (float)N8/FS;
     assert(nsam <= N48);
     g_mutexProtectingCallbackData.Lock();
-    fprintf(stderr, "RX nsam: %d fifo_used: %d fifo_free: %d\n",
-            nsam, fifo_used(cbData->infifo1), fifo_free(cbData->infifo1));
+    //fprintf(stderr, "RX nsam: %d fifo_used: %d fifo_free: %d\n",
+    //        nsam, fifo_used(cbData->infifo1), fifo_free(cbData->infifo1));
     while ((fifo_read(cbData->infifo1, in48k_short, nsam) == 0) && ((g_half_duplex && !g_tx) || !g_half_duplex)) 
     {
         g_mutexProtectingCallbackData.Unlock();
@@ -3438,8 +3438,8 @@ void txRxProcessing()
 
         g_mutexProtectingCallbackData.Lock();
         unsigned int nsam_out_48 = g_soundCard2SampleRate * freedv_get_n_nom_modem_samples(g_pfreedv)/FS;
-        fprintf(stderr, "TX nsam_out_48: %d fifo_used: %d fifo_free: %d\n",
-                nsam_out_48, fifo_used(cbData->outfifo1), fifo_free(cbData->outfifo1));
+        //fprintf(stderr, "TX nsam_out_48: %d fifo_used: %d fifo_free: %d\n",
+        //        nsam_out_48, fifo_used(cbData->outfifo1), fifo_free(cbData->outfifo1));
         while((unsigned)fifo_free(cbData->outfifo1) >= nsam_out_48) {
             g_mutexProtectingCallbackData.Unlock();
 
@@ -3537,7 +3537,7 @@ void txRxProcessing()
             g_mutexProtectingCallbackData.Lock();
             ret = fifo_write(cbData->outfifo1, out48k_short, nout);
             //fwrite(out48k_short, nout, sizeof(short), ftest);
-            fprintf(stderr,"TX nout: %d ret: %d N48*10: %d\n", nout, ret, N48*10);
+            //fprintf(stderr,"TX nout: %d ret: %d N48*10: %d\n", nout, ret, N48*10);
 
             assert(ret != -1);
         }
