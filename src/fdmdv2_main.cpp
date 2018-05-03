@@ -96,8 +96,8 @@ int                 g_infifo1_full;
 int                 g_outfifo1_empty;
 int                 g_infifo2_full;
 int                 g_outfifo2_empty;
-int                 g_PAstatusFlags1;
-int                 g_PAstatusFlags2;
+int                 g_PAstatus1[4];
+int                 g_PAstatus2[4];
 
 // playing and recording from sound files
 
@@ -1258,9 +1258,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         /* FIFO under/overflow debug counters */
 
         char fifo_counters[80];
-        sprintf(fifo_counters, "%d %d %d %d %d %d", g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty,g_PAstatusFlags1, g_PAstatusFlags2 );
+        sprintf(fifo_counters, "%d %d %d %d", g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
         wxString fifo_counters_string(fifo_counters); m_textFifos->SetLabel(fifo_counters_string);
 
+        char pa_counters1[80];
+
+        // input: underflow overflow output: underflow overflow
+        sprintf(pa_counters1, "iu%d io%d ou%d oo%d", g_PAstatus1[0], g_PAstatus1[1], g_PAstatus1[2], g_PAstatus1[3]);
+        wxString pa_counters1_string(pa_counters1); m_textPA1->SetLabel(pa_counters1_string);
     }
 
     // command from UDP thread that is best processed in main thread to avoid seg faults
@@ -1744,7 +1749,9 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
             g_error_histn[i] = 0;
         }
         g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
-        g_PAstatusFlags1 = g_PAstatusFlags2 = 0;
+        for (int i=0; i<4; i++) {
+            g_PAstatus1[i] = g_PAstatus2[i] = 0;
+        }
     }
 
     
@@ -2788,8 +2795,10 @@ void MainFrame::startRxStream()
         g_rxUserdata->infifo2 = fifo_create(10*N48);
         //fprintf(stderr, "N48: %d 10*N48: %d\n", N48, 10*N48);
         g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
-        g_PAstatusFlags1 = g_PAstatusFlags2 = 0;
-        
+        g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
+        for (int i=0; i<4; i++) {
+            g_PAstatus1[i] = g_PAstatus2[i] = 0;
+        }        
         /* TODO: might be able to tune these on a per waveform basis */
         
         g_rxUserdata->rxinfifo = fifo_create(20 * N8);
@@ -3716,10 +3725,19 @@ int MainFrame::rxCallback(
     (void) timeInfo;
     (void) statusFlags;
 
-    if (statusFlags) {
-        g_PAstatusFlags1++;
+    if (statusFlags & 0x1) {  // input underflow
+        g_PAstatus1[0]++;  
     }
-    
+    if (statusFlags & 0x2) {  // input overflow
+        g_PAstatus1[1]++;
+    }
+    if (statusFlags & 0x4) {  // output underflow
+        g_PAstatus1[2]++;
+    }
+    if (statusFlags & 0x8) {  // output overflow
+        g_PAstatus1[3]++;
+    }
+   
     wxMutexLocker lock(g_mutexProtectingCallbackData);
 
     //
@@ -3790,8 +3808,17 @@ int MainFrame::txCallback(
     short           indata[MAX_FPB];
     short           outdata[MAX_FPB];
 
-    if (statusFlags) {
-        g_PAstatusFlags2++;
+    if (statusFlags & 0x1) { // input underflow
+        g_PAstatus2[0]++;
+    }
+    if (statusFlags & 0x2) { // input overflow
+        g_PAstatus2[1]++;
+    }
+    if (statusFlags & 0x4) { // output underflow
+        g_PAstatus2[2]++;
+    }
+    if (statusFlags & 0x8) { // output overflow
+        g_PAstatus2[3]++;
     }
     
     wxMutexLocker lock(g_mutexProtectingCallbackData);
