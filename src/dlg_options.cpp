@@ -131,7 +131,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_ckboxChannelNoise = new wxCheckBox(this, wxID_ANY, _("Channel Noise   SNR (dB):"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_testFrames->Add(m_ckboxChannelNoise, 0, wxALIGN_LEFT, 0);
-    m_txtNoiseSNR = new wxTextCtrl(this, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtNoiseSNR = new wxTextCtrl(this, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_NUMERIC));
     sbSizer_testFrames->Add(m_txtNoiseSNR, 0, wxALIGN_LEFT, 0);
 
     m_ckboxAttnCarrierEn = new wxCheckBox(this, wxID_ANY, _("Attn Carrier  Carrier:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
@@ -407,7 +407,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         long noise_snr;
         m_txtNoiseSNR->GetValue().ToLong(&noise_snr);
         wxGetApp().m_noise_snr = (int)noise_snr;
-
+        //fprintf(stderr, "noise_snr: %d\n", (int)noise_snr);
+        
         wxGetApp().m_tone    = m_ckboxTone->GetValue();
         long tone_freq_hz, tone_amplitude;
         m_txtToneFreqHz->GetValue().ToLong(&tone_freq_hz);
