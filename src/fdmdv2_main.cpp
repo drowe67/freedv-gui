@@ -511,7 +511,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 
     wxGetApp().m_FreeDV700txClip = (float)pConfig->Read(wxT("/FreeDV700/txClip"), t);
     wxGetApp().m_FreeDV700Combine = 1;
-    wxGetApp().m_FreeDV700Interleave = (int)pConfig->Read(wxT("/FreeDV700/ninterleave"), 1);
+    wxGetApp().m_FreeDV700Interleave = (int)pConfig->Read(wxT("/FreeDV700/interleave"), 1);
     wxGetApp().m_FreeDV700ManualUnSync = (float)pConfig->Read(wxT("/FreeDV700/manualUnSync"), f);
 
     wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
@@ -2301,6 +2301,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (m_rbPlugIn != NULL)
             m_rbPlugIn->Disable();
 
+        m_textSync->Enable();
+        m_textInterleaverSync->Enable();
+        
         // determine what mode we are using
 
         if (m_rb1600->GetValue()) {
@@ -2358,7 +2361,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 struct freedv_advanced adv;
                 adv.interleave_frames = wxGetApp().m_FreeDV700Interleave;
                 g_pfreedv = freedv_open_advanced(g_mode, &adv);
-                m_textInterleaverSync->SetLabel("Interleaver");
+                m_textInterleaverSync->SetLabel("Intrlvr ("+wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave)+")");
+                if (wxGetApp().m_FreeDV700ManualUnSync) {
+                    freedv_set_sync(g_pfreedv, FREEDV_SYNC_MANUAL);
+                } else {
+                    freedv_set_sync(g_pfreedv, FREEDV_SYNC_AUTO);
+                }
             } else {
                 g_pfreedv = freedv_open(g_mode);
                 m_textInterleaverSync->SetLabel("");
@@ -2402,7 +2410,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         }
 
         modem_stats_open(&g_stats);
-        g_State = g_prev_State = 0;
+        g_State = g_prev_State = g_interleaverSyncState = 0;
         g_snr = 0.0;
         g_half_duplex = wxGetApp().m_boolHalfDuplex;
 
@@ -2510,6 +2518,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         m_newMicInFilter = m_newSpkOutFilter = true;
 
+        m_textSync->Disable();
+        m_textInterleaverSync->Disable();
+        
         m_togBtnSplit->Disable();
         //m_togRxID->Disable();
         //m_togTxID->Disable();
