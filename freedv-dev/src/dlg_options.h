@@ -48,6 +48,8 @@ class OptionsDlg : public wxDialog
 
         bool    enableEventsChecked() {return m_ckbox_events->GetValue();}
 
+        void DisplayFifoPACounters();
+        
         void SetSpamTimerLight(bool state) {
 
             // Colours don't work on Windows
@@ -80,6 +82,8 @@ class OptionsDlg : public wxDialog
         void    OnFreeDV700Combine(wxScrollEvent& event);
         void    OnDebugConsole(wxScrollEvent& event);
 
+        void    OnFifoReset(wxCommandEvent& event);
+        
         wxTextCtrl   *m_txtCtrlCallSign; // TODO: this should be renamed to tx_txtmsg, and rename all related incl persis strge
 
         wxCheckBox* m_ckHalfDuplex;
@@ -120,6 +124,11 @@ class OptionsDlg : public wxDialog
 
         wxCheckBox   *m_ckbox_udp_enable;
         wxTextCtrl   *m_txt_udp_port;
+
+        wxButton*     m_BtnFifoReset;
+        wxStaticText  *m_textFifos;
+        wxStaticText  *m_textPA1;
+        wxStaticText  *m_textPA2;
 
         wxButton*     m_sdbSizer5OK;
         wxButton*     m_sdbSizer5Cancel;
