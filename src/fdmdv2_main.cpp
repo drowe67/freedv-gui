@@ -2599,7 +2599,7 @@ void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDev
         pa->setInputChannelCount(inputChannels);           // stereo input
         pa->setInputSampleFormat(PA_SAMPLE_TYPE);
         pa->setInputLatency(pa->getInputDefaultHighLatency());
-        fprintf(stderr,"PA in; low: %f high: %f\n", pa->getInputDefaultLowLatency(), pa->getInputDefaultHighLatency());
+        //fprintf(stderr,"PA in; low: %f high: %f\n", pa->getInputDefaultLowLatency(), pa->getInputDefaultHighLatency());
         pa->setInputHostApiStreamInfo(NULL);
     }
 
@@ -2612,7 +2612,7 @@ void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDev
         pa->setOutputChannelCount(2);                      // stereo output
         pa->setOutputSampleFormat(PA_SAMPLE_TYPE);
         pa->setOutputLatency(pa->getOutputDefaultHighLatency());
-        fprintf(stderr,"PA out; low: %f high: %f\n", pa->getOutputDefaultLowLatency(), pa->getOutputDefaultHighLatency());
+        //fprintf(stderr,"PA out; low: %f high: %f\n", pa->getOutputDefaultLowLatency(), pa->getOutputDefaultHighLatency());
         pa->setOutputHostApiStreamInfo(NULL);
     }
 
@@ -3574,7 +3574,7 @@ void txRxProcessing()
             g_mutexProtectingCallbackData.Lock();
             ret = fifo_write(cbData->outfifo1, out48k_short, nout);
             //fwrite(out48k_short, nout, sizeof(short), ftest);
-            //fprintf(stderr,"TX nout: %d ret: %d N48*10: %d\n", nout, ret, N48*10);
+            //fprintf(stderr,"TX write outfifo1 nout: %d ret: %d N48*10: %d\n", nout, ret, N48*10);
 
             assert(ret != -1);
         }
