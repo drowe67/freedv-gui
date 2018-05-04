@@ -547,6 +547,7 @@ class MainFrame : public TopFrame
 
         void OnCallSignReset( wxCommandEvent& event );
         void OnBerReset( wxCommandEvent& event );
+        void OnReSync( wxCommandEvent& event );
 
         //System Events
         void OnPaint(wxPaintEvent& event);

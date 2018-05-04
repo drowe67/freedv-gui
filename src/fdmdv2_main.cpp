@@ -73,7 +73,7 @@ struct FIFO         *g_txDataInFifo;
 struct FIFO         *g_rxDataOutFifo;
 
 // tx/rx processing states
-int                 g_State, g_prev_State;
+int                 g_State, g_prev_State, g_interleaverSyncState;
 paCallBackData     *g_rxUserdata;
 
 // FIFOs used for plotting waveforms
@@ -1005,15 +1005,18 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (g_prev_State == 0) {
             g_resyncs++;
         }
-        //m_rbSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
-        m_rbSync->SetValue(true);        
-    }
+        m_textSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
+     }
     else {
-        //m_rbSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
-        m_rbSync->SetValue(false);
-    }
+        m_textSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
+     }
     g_prev_State = g_State;
-
+    if (g_interleaverSyncState) {
+        m_textInterleaverSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
+    } else {
+        m_textInterleaverSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
+    }
+    
     // send Callsign ----------------------------------------------------
 
     char callsign[MAX_CALLSIGN];
@@ -1712,7 +1715,7 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         m_panelWaterfall->setFs(freedv_get_modem_sample_rate(g_pfreedv));
     }
 
-    g_State = g_prev_State = 0;
+    g_State = g_prev_State = g_interleaverSyncState = 0;
     g_stats.snr_est = 0;
 
     event.Skip();
@@ -1732,6 +1735,18 @@ void MainFrame::OnCallSignReset(wxCommandEvent& event)
 #endif
 }
 
+
+// Force manual resync, just in case demod gets stuck on false sync
+
+void MainFrame::OnReSync(wxCommandEvent& event)
+{
+    if (m_RxRunning)  {
+        fprintf(stderr,"OnReSync\n");
+        freedv_set_sync(g_pfreedv, FREEDV_SYNC_UNSYNC);
+    }  
+}
+
+
 void MainFrame::OnBerReset(wxCommandEvent& event)
 {
     if (m_RxRunning)  {
@@ -1743,9 +1758,7 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
             g_error_hist[i] = 0;
             g_error_histn[i] = 0;
         }
-    }
-
-    
+    }  
 }
 
 #ifdef ALC
@@ -2345,9 +2358,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 struct freedv_advanced adv;
                 adv.interleave_frames = wxGetApp().m_FreeDV700Interleave;
                 g_pfreedv = freedv_open_advanced(g_mode, &adv);
+                m_textInterleaverSync->SetLabel("Interleaver");
             } else {
                 g_pfreedv = freedv_open(g_mode);
-            }
+                m_textInterleaverSync->SetLabel("");
+           }
             
             freedv_set_callback_txt(g_pfreedv, &my_put_next_rx_char, &my_get_next_tx_char, NULL);
 
@@ -3667,6 +3682,7 @@ void per_frame_rx_processing(
         
             nin = freedv_nin(g_pfreedv);
             g_State = freedv_get_sync(g_pfreedv);
+            g_interleaverSyncState = freedv_get_sync_interleaver(g_pfreedv);
 
             //fprintf(g_logfile, "g_State: %d g_stats.sync: %d snr: %f \n", g_State, g_stats.sync, f->snr);
 
