@@ -1255,17 +1255,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             }
         }
 
-        /* FIFO under/overflow debug counters */
+        /* FIFO and PortAudio under/overflow debug counters */
 
-        char fifo_counters[80];
-        sprintf(fifo_counters, "%d %d %d %d", g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
-        wxString fifo_counters_string(fifo_counters); m_textFifos->SetLabel(fifo_counters_string);
-
-        char pa_counters1[80];
-
-        // input: underflow overflow output: underflow overflow
-        sprintf(pa_counters1, "iu%d io%d ou%d oo%d", g_PAstatus1[0], g_PAstatus1[1], g_PAstatus1[2], g_PAstatus1[3]);
-        wxString pa_counters1_string(pa_counters1); m_textPA1->SetLabel(pa_counters1_string);
+        optionsDlg->DisplayFifoPACounters();
     }
 
     // command from UDP thread that is best processed in main thread to avoid seg faults
@@ -1747,10 +1739,6 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
         for(i=0; i<2*g_Nc; i++) {
             g_error_hist[i] = 0;
             g_error_histn[i] = 0;
-        }
-        g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
-        for (int i=0; i<4; i++) {
-            g_PAstatus1[i] = g_PAstatus2[i] = 0;
         }
     }
 

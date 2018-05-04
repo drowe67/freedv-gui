@@ -24,6 +24,15 @@
 extern bool                g_modal;
 extern struct freedv      *g_pfreedv;
 
+// PortAudio over/underflow counters
+
+extern int                 g_infifo1_full;
+extern int                 g_outfifo1_empty;
+extern int                 g_infifo2_full;
+extern int                 g_outfifo2_empty;
+extern int                 g_PAstatus1[4];
+extern int                 g_PAstatus2[4];
+
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class OptionsDlg
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -245,6 +254,27 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     bSizer30->Add(sbSizer_udp,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 #endif
 
+    //----------------------------------------------------------
+    // FIFO and PortAudio under/overflow counters used for debug
+    //----------------------------------------------------------
+
+    wxStaticBoxSizer* sbSizer_fifo;
+    wxStaticBox* sb_fifo = new wxStaticBox(this, wxID_ANY, _("FIFO and PortAudio Debug Counters"));
+    sbSizer_fifo = new wxStaticBoxSizer(sb_fifo, wxVERTICAL);
+
+    m_BtnFifoReset = new wxButton(this, wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_fifo->Add(m_BtnFifoReset, 0,  wxALIGN_LEFT, 5);
+
+    m_textFifos = new wxStaticText(this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    sbSizer_fifo->Add(m_textFifos, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 1);
+
+    m_textPA1 = new wxStaticText(this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    sbSizer_fifo->Add(m_textPA1, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 1);
+    m_textPA2 = new wxStaticText(this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    sbSizer_fifo->Add(m_textPA2, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 1);
+
+    bSizer30->Add(sbSizer_fifo,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+
     //------------------------------
     // OK - Cancel - Apply Buttons 
     //------------------------------
@@ -292,6 +322,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_buttonChooseVoiceKeyerWaveFile->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFile), NULL, this);
 
+    m_BtnFifoReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
+
     event_in_serial = 0;
     event_out_serial = 0;
 }
@@ -317,6 +349,8 @@ OptionsDlg::~OptionsDlg()
     m_ckboxFreeDV700txClip->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700txClip), NULL, this);
     m_ckboxFreeDV700Combine->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700Combine), NULL, this);
     m_buttonChooseVoiceKeyerWaveFile->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFile), NULL, this);
+
+    m_BtnFifoReset->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
 
 #ifdef __WXMSW__
     m_ckboxDebugConsole->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnDebugConsole), NULL, this);
@@ -614,4 +648,35 @@ void OptionsDlg::OnDebugConsole(wxScrollEvent& event) {
         fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().m_debug_console);
     } 
 #endif
+}
+
+
+void OptionsDlg::OnFifoReset(wxCommandEvent& event)
+{
+    g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
+    for (int i=0; i<4; i++) {
+        g_PAstatus1[i] = g_PAstatus2[i] = 0;
+    }
+}
+
+
+void OptionsDlg::DisplayFifoPACounters() {
+    char fifo_counters[80];
+
+    sprintf(fifo_counters, "fifos: infull1: %d ooutempty1: %d infull2: %d outempty2: %d", g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
+    wxString fifo_counters_string(fifo_counters);
+    m_textFifos->SetLabel(fifo_counters_string);
+
+    char pa_counters1[80];
+
+    // input: underflow overflow output: underflow overflow
+    sprintf(pa_counters1, "PA1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_PAstatus1[0], g_PAstatus1[1], g_PAstatus1[2], g_PAstatus1[3]);
+    wxString pa_counters1_string(pa_counters1); m_textPA1->SetLabel(pa_counters1_string);
+
+    char pa_counters2[80];
+
+    // input: underflow overflow output: underflow overflow
+    sprintf(pa_counters2, "PA2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_PAstatus2[0], g_PAstatus2[1], g_PAstatus2[2], g_PAstatus2[3]);
+    wxString pa_counters2_string(pa_counters2);
+    m_textPA2->SetLabel(pa_counters2_string);
 }
