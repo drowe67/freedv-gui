@@ -105,6 +105,9 @@ class TopFrame : public wxFrame
         wxStaticText  *m_textResyncs;
 
         wxRadioButton *m_rbSync;
+        wxRadioButton *m_rbInterleaverSync;
+        wxButton      *m_BtnReSync;
+       
         wxRadioButton *m_rb1400old;
         wxRadioButton *m_rb1400;
         wxRadioButton *m_rb700;

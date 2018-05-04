@@ -511,6 +511,9 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 
     wxGetApp().m_FreeDV700txClip = (float)pConfig->Read(wxT("/FreeDV700/txClip"), t);
     wxGetApp().m_FreeDV700Combine = 1;
+    wxGetApp().m_FreeDV700Interleave = (int)pConfig->Read(wxT("/FreeDV700/ninterleave"), 1);
+    wxGetApp().m_FreeDV700ManualUnSync = (float)pConfig->Read(wxT("/FreeDV700/manualUnSync"), f);
+
     wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
  
     wxGetApp().m_debug_console = (float)pConfig->Read(wxT("/Debug/console"), f);
@@ -1002,11 +1005,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (g_prev_State == 0) {
             g_resyncs++;
         }
-        m_rbSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
+        //m_rbSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
         m_rbSync->SetValue(true);        
     }
     else {
-        m_rbSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
+        //m_rbSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
         m_rbSync->SetValue(false);
     }
     g_prev_State = g_State;
@@ -2338,7 +2341,14 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (g_mode != -1) { 
             // init freedv states
 
-            g_pfreedv = freedv_open(g_mode);
+            if (g_mode == FREEDV_MODE_700D) {
+                struct freedv_advanced adv;
+                adv.interleave_frames = wxGetApp().m_FreeDV700Interleave;
+                g_pfreedv = freedv_open_advanced(g_mode, &adv);
+            } else {
+                g_pfreedv = freedv_open(g_mode);
+            }
+            
             freedv_set_callback_txt(g_pfreedv, &my_put_next_rx_char, &my_get_next_tx_char, NULL);
 
             freedv_set_callback_error_pattern(g_pfreedv, my_freedv_put_error_pattern, (void*)m_panelTestFrameErrors);

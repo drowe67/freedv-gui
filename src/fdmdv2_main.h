@@ -294,7 +294,9 @@ class MainApp : public wxApp
 
         bool       m_FreeDV700txClip;
         bool       m_FreeDV700Combine;
-
+        int        m_FreeDV700Interleave;
+        bool       m_FreeDV700ManualUnSync;
+        
         // Noise simulation
 
         int        m_noise_snr;
