@@ -104,8 +104,8 @@ class TopFrame : public wxFrame
         wxStaticText  *m_textBER;
         wxStaticText  *m_textResyncs;
 
-        wxRadioButton *m_rbSync;
-        wxRadioButton *m_rbInterleaverSync;
+        wxStaticText  *m_textSync;
+        wxStaticText  *m_textInterleaverSync;
         wxButton      *m_BtnReSync;
        
         wxRadioButton *m_rb1400old;
@@ -176,6 +176,7 @@ class TopFrame : public wxFrame
 
         virtual void OnCallSignReset( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnBerReset( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnReSync( wxCommandEvent& event ) { event.Skip(); }
 
     public:
         wxToggleButton* m_togRxID;

@@ -144,13 +144,11 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     wxStaticBoxSizer* sbSizer3_33;
     sbSizer3_33 = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Sync")), wxVERTICAL);
 
-    m_rbSync = new wxRadioButton( this, wxID_ANY, wxT("Modem"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    //m_rbSync->SetForegroundColour( wxColour( 255, 0, 0 ) );
-    sbSizer3_33->Add(m_rbSync, 0, wxALIGN_LEFT, 1);
+    m_textSync = new wxStaticText(this, wxID_ANY, wxT("Modem"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
+    sbSizer3_33->Add(m_textSync, 0, wxALIGN_CENTER_HORIZONTAL, 1);
 
-    m_rbInterleaverSync = new wxRadioButton( this, wxID_ANY, wxT("Interleaver"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    //m_rbInterleaverSync->SetForegroundColour( wxColour( 255, 0, 0 ) );
-    sbSizer3_33->Add(m_rbInterleaverSync, 0, wxALIGN_LEFT , 1);
+    m_textInterleaverSync = new wxStaticText(this, wxID_ANY, wxT("Interleaver"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
+    sbSizer3_33->Add(m_textInterleaverSync, 0, wxALIGN_CENTER_HORIZONTAL , 1);
 
     m_BtnReSync = new wxButton(this, wxID_ANY, _("ReSync"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer3_33->Add(m_BtnReSync, 0, wxALIGN_CENTRE , 1);
@@ -545,6 +543,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
 
     m_BtnCallSignReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnCallSignReset), NULL, this);
     m_BtnBerReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnBerReset), NULL, this);
+    m_BtnReSync->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnReSync), NULL, this);
 }
 
 TopFrame::~TopFrame()
