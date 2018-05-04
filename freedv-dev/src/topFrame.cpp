@@ -144,9 +144,17 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     wxStaticBoxSizer* sbSizer3_33;
     sbSizer3_33 = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Sync")), wxVERTICAL);
 
-    m_rbSync = new wxRadioButton( this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    m_rbSync->SetForegroundColour( wxColour( 255, 0, 0 ) );
-    sbSizer3_33->Add(m_rbSync, 0, wxALIGN_CENTER|wxALL, 1);
+    m_rbSync = new wxRadioButton( this, wxID_ANY, wxT("Modem"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    //m_rbSync->SetForegroundColour( wxColour( 255, 0, 0 ) );
+    sbSizer3_33->Add(m_rbSync, 0, wxALIGN_LEFT, 1);
+
+    m_rbInterleaverSync = new wxRadioButton( this, wxID_ANY, wxT("Interleaver"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    //m_rbInterleaverSync->SetForegroundColour( wxColour( 255, 0, 0 ) );
+    sbSizer3_33->Add(m_rbInterleaverSync, 0, wxALIGN_LEFT , 1);
+
+    m_BtnReSync = new wxButton(this, wxID_ANY, _("ReSync"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer3_33->Add(m_BtnReSync, 0, wxALIGN_CENTRE , 1);
+
     leftSizer->Add(sbSizer3_33,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 
     //------------------------------
