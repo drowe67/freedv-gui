@@ -500,6 +500,14 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_FreeDV700Combine = m_ckboxFreeDV700Combine->GetValue();
         long interleave;
         m_txtInterleave->GetValue().ToLong(&interleave);
+        if (interleave < 1) {
+            interleave = 1;
+            m_txtInterleave->SetValue(wxString("1"));
+        }
+        if (interleave > 16) {
+            interleave = 16;
+            m_txtInterleave->SetValue(wxString("16"));
+        }
         wxGetApp().m_FreeDV700Interleave = (int)interleave;
         wxGetApp().m_FreeDV700ManualUnSync = m_ckboxFreeDV700ManualUnSync->GetValue();
 
