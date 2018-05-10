@@ -1,7 +1,7 @@
 set(SNDFILE_TARBALL "libsndfile-1.0.25")
 
 if(MINGW AND CMAKE_CROSSCOMPILING)
-    set(CONFIGURE_COMMAND ./configure --host=${HOST}  --prefix=${CMAKE_BINARY_DIR}/external/dist --disable-external-libs --disable-shared --disable-sqlite)
+    set(CONFIGURE_COMMAND ./configure --host=${HOST} --prefix=${CMAKE_BINARY_DIR}/external/dist --disable-external-libs --disable-shared --disable-sqlite)
 else()
     set(CONFIGURE_COMMAND ./configure --prefix=${CMAKE_BINARY_DIR}/external/dist --disable-external-libs --disable-shared --disable-external-libs)
 endif()
