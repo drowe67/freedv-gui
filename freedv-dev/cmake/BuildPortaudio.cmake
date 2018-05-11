@@ -29,9 +29,11 @@ ExternalProject_Add(portaudio
     INSTALL_COMMAND $(MAKE) install
 )
 if(WIN32)
+    find_library(WINMM winmm)
     set(PORTAUDIO_LIBRARIES 
         ${CMAKE_BINARY_DIR}/external/dist/lib/libportaudio.a
         ${CMAKE_BINARY_DIR}/external/dist/lib/libportaudiocpp.a
+        ${WINMM}
 )
 else(WIN32)
     find_library(RT rt)
