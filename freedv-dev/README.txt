@@ -92,53 +92,20 @@ missing on older Linux systems.
    $ ./src/freedv
 
 =======================================================
- Building for Windows on Ubuntu Linux (Cross compiling)
+ Building for Windows on Fedora 28 (Cross compiling)
 =======================================================
 
-1/ Install the cross compiling toolchain:
-
-  $ sudo apt-get install mingw-w64
-
-2/ Patch cmake using: http://www.cmake.org/gitweb?p=stage/cmake.git;a=patch;h=33286235048495ceafb636d549d9a4e8891967ae
-
-3/ Checkout a fresh copy of codec2-dev and build for Windows, pointing to the generate_codebook built by a linux build of generate_codebook, using this cmake line
-
-  $ cmake .. -DCMAKE_TOOLCHAIN_FILE=/home/david/freedv-dev/cmake/Toolchain-Ubuntu-mingw32.cmake -DUNITTEST=FALSE -DGENERATE_CODEBOOK=/home/david/codec2-dev/build_linux/src/generate_codebook 
-
-4/ Build WxWidgets
-
-  $ cd /path/to/freedv-dev
-  $ mkdir build_windows
-  $ cd build_windows
-  $ cmake -DBOOTSTRAP_WXWIDGETS=TRUE .. -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-Ubuntu-mingw32.cmake -DCMAKE_BUILD_TYPE=Debug
+  $ sudo dnf install mingw-w64*
+  $ sudo dnf copr enable hobbes1069/mingw
+  $ sudo dnf install mingw{32,64}-wxWidgets3
+  $ sudo dnf install mingw{32,64}-hamlib
+  $ cd ~/freedv-dev
+  $ mkdir build_windows && cd build_windows
+  $ mingw64-cmake
   $ make
-
-5/ Download and install the Windows version of Hamlib:
-
-  $ wget http://internode.dl.sourceforge.net/project/hamlib/hamlib/1.2.15.3/hamlib-win32-1.2.15.3.zip
-  $ unzip hamlib-win32-1.2.15.3.zip
-
-6/ Build All the libraries and FreeDV:
-
-  $ cmake -DBOOTSTRAP_WXWIDGETS=TRUE -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-Ubuntu-mingw32.cmake -DUSE_STATIC_PORTAUDIO=TRUE -DUSE_STATIC_SNDFILE=TRUE -DUSE_STATIC_SAMPLERATE=TRUE -DUSE_STATIC_CODEC2=FALSE -DCODEC2_INCLUDE_DIRS=/home/david/tmp/codec2-dev/src -DCODEC2_LIBRARY=/home/david/tmp/codec2-dev/build_windows/src/libcodec2.dll.a -DHAMLIB_INCLUDE_DIR=hamlib-win32-1.2.15.3/include -DHAMLIB_LIBRARY=hamlib-win32-1.2.15.3/lib/gcc/libhamlib.dll.a -DCMAKE_BUILD_TYPE=Debug ..
-  $ make
-
-7/ Test on Linux with "wine", this will tell you if any DLLs are missing:
-
-  $ wine src/freedv.exe
-
-8/ When moving to an actual Windows machine, I needed:
-
-  /usr/lib/gcc/i686-w64-mingw32/4.8/libstdc++-6.dll
-  /usr/lib/gcc/i686-w64-mingw32/4.8/libgcc_s_sjlj-1.dll
-  /usr/i686-w64-mingw32/lib/libwinpthread-1.dll
-
-  Wine seems to find these automagically, so I found them on my system by
-  looking at ~/.wine/system.reg for PATH:
-
-  [System\\CurrentControlSet\\Control\\Session Manager\\Environment] 1423800803
-  "PATH"=str(2):"C:\\windows\\system32;C:\\windows;C:\\windows\\system32\\wbem;Z:\\usr\\i686-w64-mingw32\\lib;Z:\\usr\\lib\\gcc\\i686-w64-mingw32\\4.8"
-
+  $ make package
+  
+WANTED: Instructions for cross compiling on Ubuntu 17 or 18
 
 ====================================
  Building and installing on Windows
@@ -212,5 +179,17 @@ configure emacs:
           (function (lambda ()
                       (setq c-basic-offset 4)
                       )))
+
+===============
+    TODO
+===============
+
+This software needs some maintenance and refactoring.  Patches
+welcome!
+
+[ ] Remove unnecessary PortAudio Wrapper layer
+[ ] break fdmdv2_main.cpp into smaller files
+[ ] rename src files from fdmdv2_ -> freedv_
+[ ] profile code and explore optimisations
 
 
