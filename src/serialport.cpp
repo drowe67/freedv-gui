@@ -3,6 +3,10 @@
 #include <unistd.h>
 #include "serialport.h"
 
+#ifdef _WIN32
+#include <strsafe.h>
+#endif
+
 Serialport::Serialport() {
     com_handle = COM_HANDLE_INVALID;
 }
@@ -37,7 +41,8 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
         DWORD CCsize=sizeof(CC);
         COMMTIMEOUTS timeouts;
         DCB	dcb;
-
+        TCHAR  lpszFunction[100];
+	
         if(GetDefaultCommConfigA(name, &CC, &CCsize)) {
                     
             CC.dcb.fOutxCtsFlow		= FALSE;
@@ -46,13 +51,13 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
             CC.dcb.fDsrSensitivity	= FALSE;
             CC.dcb.fRtsControl		= RTS_CONTROL_DISABLE;
             if (!SetDefaultCommConfigA(name, &CC, CCsize)) {
-                fprintf(stderr, "SetDefaultCommConfigA() failed\n");
+		StringCchPrintf(lpszFunction, 100, "%s", "SetDefaultCommConfigA");
                 goto error;
             }
             
         } else {
-            fprintf(stderr, "GetDefaultCommConfigA() failed\n");
-            goto error;
+	     StringCchPrintf(lpszFunction, 100, "%s", "GetDefaultCommConfigA");
+             goto error;
         }
 
         if((com_handle=CreateFileA(name
@@ -63,8 +68,8 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
                                    ,FILE_ATTRIBUTE_NORMAL       /* File attributes */
                                    ,NULL		        /* Template */
                                    ))==INVALID_HANDLE_VALUE) {
-            fprintf(stderr, "CreateFileA() failed\n");
-            goto error;
+	    StringCchPrintf(lpszFunction, 100, "%s", "CreateFileA");
+	    goto error;
         }
 
         if(GetCommTimeouts(com_handle, &timeouts)) {
@@ -75,7 +80,7 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
             timeouts.WriteTotalTimeoutConstant=5000;	// 5 seconds
             SetCommTimeouts(com_handle,&timeouts);
         } else {
-            fprintf(stderr, "GetCommTimeouts()failed\n");
+	    StringCchPrintf(lpszFunction, 100, "%s", "GetCommTimeouts");
             goto error;
         }
 
@@ -96,15 +101,19 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
             dcb.fRtsControl		= RTS_CONTROL_DISABLE;
             dcb.fAbortOnError	= FALSE;
             if (!SetCommState(com_handle, &dcb)) {
-                fprintf(stderr, "SetCommState() failed\n");
+  	        StringCchPrintf(lpszFunction, 100, "%s", "SetCommState");
                 goto error;           
             }
         } else {
-            fprintf(stderr, "GetCommState() failed\n");
+  	    StringCchPrintf(lpszFunction, 100, "%s", "GetCommState");
             goto error;           
         }
 
+	return true;
+	
     error:
+	fprintf(stderr, "%s failed\n", lpszFunction);
+	
         // Retrieve the system error message for the last-error code
 
         LPVOID lpMsgBuf;
@@ -133,6 +142,8 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 
         LocalFree(lpMsgBuf);
         LocalFree(lpDisplayBuf);
+
+	return false;
     }
 #else
 	{
