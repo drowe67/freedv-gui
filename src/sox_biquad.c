@@ -36,8 +36,6 @@
 #include "sox_biquad.h"
 
 
-#define N_MAX 1024
-
 int lsx_biquad_flow(sox_effect_t * effp, const sox_sample_t *ibuf,
                     sox_sample_t *obuf, size_t *isamp, size_t *osamp);
 
@@ -85,14 +83,12 @@ void sox_biquad_destroy(void *sbq) {
 void sox_biquad_filter(void *sbq, short out[], short in[], int n)
 {
     sox_effect_t *e = (sox_effect_t *)sbq;
-    sox_sample_t ibuf[N_MAX];
-    sox_sample_t obuf[N_MAX];
+    sox_sample_t ibuf[n];
+    sox_sample_t obuf[n];
     size_t isamp, osamp;
     unsigned int clips;
     SOX_SAMPLE_LOCALS; 
     int i;
-
-    assert(n <= N_MAX);
 
     clips = 0;
     for(i=0; i<n; i++)
