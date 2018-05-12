@@ -1006,15 +1006,19 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             g_resyncs++;
         }
         m_textSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
+	m_textSync->SetLabel("Modem");
      }
     else {
         m_textSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
+	m_textSync->SetLabel("Modem");
      }
     g_prev_State = g_State;
     if (g_interleaverSyncState) {
         m_textInterleaverSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
+	m_textInterleaverSync->SetLabel("Intrlvr ("+wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave)+")");
     } else {
         m_textInterleaverSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
+	m_textInterleaverSync->SetLabel("Intrlvr ("+wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave)+")");
     }
     
     // send Callsign ----------------------------------------------------
