@@ -17,8 +17,12 @@ Serialport::~Serialport() {
 
 bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useDTR, bool DTRPos)
 {
+    fprintf(stderr, "starting openport(), name: %s useRTS: %d RTSPos: %d useDTR: %d DTRPos: %d\n",
+            name, useRTS, RTSPos, useDTR, DTRPos);
+
     if (com_handle != COM_HANDLE_INVALID) {
         closeport();
+        fprintf(stderr, "comm_handle invalid, closing\n");
     }
 
     m_useRTS = useRTS;
@@ -26,60 +30,110 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
     m_useDTR = useDTR;
     m_DTRPos = DTRPos;
 
+    
 #ifdef _WIN32
-	{
-		COMMCONFIG CC;
-		DWORD CCsize=sizeof(CC);
-		COMMTIMEOUTS timeouts;
-		DCB	dcb;
+    {
+        COMMCONFIG CC;
+        DWORD CCsize=sizeof(CC);
+        COMMTIMEOUTS timeouts;
+        DCB	dcb;
 
-		if(GetDefaultCommConfigA(name, &CC, &CCsize)) {
-			CC.dcb.fOutxCtsFlow		= FALSE;
-			CC.dcb.fOutxDsrFlow		= FALSE;
-			CC.dcb.fDtrControl		= DTR_CONTROL_DISABLE;
-			CC.dcb.fDsrSensitivity	= FALSE;
-			CC.dcb.fRtsControl		= RTS_CONTROL_DISABLE;
-			SetDefaultCommConfigA(name, &CC, CCsize);
-		}
+        if(GetDefaultCommConfigA(name, &CC, &CCsize)) {
+                    
+            CC.dcb.fOutxCtsFlow		= FALSE;
+            CC.dcb.fOutxDsrFlow		= FALSE;
+            CC.dcb.fDtrControl		= DTR_CONTROL_DISABLE;
+            CC.dcb.fDsrSensitivity	= FALSE;
+            CC.dcb.fRtsControl		= RTS_CONTROL_DISABLE;
+            if (!SetDefaultCommConfigA(name, &CC, CCsize)) {
+                fprintf(stderr, "SetDefaultCommConfigA() failed\n");
+                goto error;
+            }
+            
+        } else {
+            fprintf(stderr, "GetDefaultCommConfigA() failed\n");
+            goto error;
+        }
 
-		if((com_handle=CreateFileA(name
-			,GENERIC_READ|GENERIC_WRITE 	/* Access */
-			,0								/* Share mode */
-			,NULL							/* Security attributes */
-			,OPEN_EXISTING					/* Create access */
-			,FILE_ATTRIBUTE_NORMAL			/* File attributes */
-			,NULL							/* Template */
-			))==INVALID_HANDLE_VALUE)
-			return false;
+        if((com_handle=CreateFileA(name
+                                   ,GENERIC_READ|GENERIC_WRITE 	/* Access */
+                                   ,0				/* Share mode */
+                                   ,NULL		 	/* Security attributes */
+                                   ,OPEN_EXISTING		/* Create access */
+                                   ,FILE_ATTRIBUTE_NORMAL       /* File attributes */
+                                   ,NULL		        /* Template */
+                                   ))==INVALID_HANDLE_VALUE) {
+            fprintf(stderr, "CreateFileA() failed\n");
+            goto error;
+        }
 
-		if(GetCommTimeouts(com_handle, &timeouts)) {
-			timeouts.ReadIntervalTimeout=MAXDWORD;
-			timeouts.ReadTotalTimeoutMultiplier=0;
-			timeouts.ReadTotalTimeoutConstant=0;		// No-wait read timeout
-			timeouts.WriteTotalTimeoutMultiplier=0;
-			timeouts.WriteTotalTimeoutConstant=5000;	// 5 seconds
-			SetCommTimeouts(com_handle,&timeouts);
-		}
+        if(GetCommTimeouts(com_handle, &timeouts)) {
+            timeouts.ReadIntervalTimeout=MAXDWORD;
+            timeouts.ReadTotalTimeoutMultiplier=0;
+            timeouts.ReadTotalTimeoutConstant=0;		// No-wait read timeout
+            timeouts.WriteTotalTimeoutMultiplier=0;
+            timeouts.WriteTotalTimeoutConstant=5000;	// 5 seconds
+            SetCommTimeouts(com_handle,&timeouts);
+        } else {
+            fprintf(stderr, "GetCommTimeouts()failed\n");
+            goto error;
+        }
 
-		/* Force N-8-1 mode: */
-		if(GetCommState(com_handle, &dcb)==TRUE) {
-			dcb.ByteSize		= 8;
-			dcb.Parity			= NOPARITY;
-			dcb.StopBits		= ONESTOPBIT;
-			dcb.DCBlength		= sizeof(DCB);
-			dcb.fBinary			= TRUE;
-			dcb.fOutxCtsFlow	= FALSE;
-			dcb.fOutxDsrFlow	= FALSE;
-			dcb.fDtrControl		= DTR_CONTROL_DISABLE;
-			dcb.fDsrSensitivity	= FALSE;
-			dcb.fTXContinueOnXoff= TRUE;
-			dcb.fOutX			= FALSE;
-			dcb.fInX			= FALSE;
-			dcb.fRtsControl		= RTS_CONTROL_DISABLE;
-			dcb.fAbortOnError	= FALSE;
-			SetCommState(com_handle, &dcb);
-		}
-	}
+        /* Force N-8-1 mode: */
+        if(GetCommState(com_handle, &dcb)==TRUE) {
+            dcb.ByteSize		= 8;
+            dcb.Parity			= NOPARITY;
+            dcb.StopBits		= ONESTOPBIT;
+            dcb.DCBlength		= sizeof(DCB);
+            dcb.fBinary			= TRUE;
+            dcb.fOutxCtsFlow	= FALSE;
+            dcb.fOutxDsrFlow	= FALSE;
+            dcb.fDtrControl		= DTR_CONTROL_DISABLE;
+            dcb.fDsrSensitivity	= FALSE;
+            dcb.fTXContinueOnXoff= TRUE;
+            dcb.fOutX			= FALSE;
+            dcb.fInX			= FALSE;
+            dcb.fRtsControl		= RTS_CONTROL_DISABLE;
+            dcb.fAbortOnError	= FALSE;
+            if (!SetCommState(com_handle, &dcb)) {
+                fprintf(stderr, "SetCommState() failed\n");
+                goto error;           
+            }
+        } else {
+            fprintf(stderr, "GetCommState() failed\n");
+            goto error;           
+        }
+
+    error:
+        // Retrieve the system error message for the last-error code
+
+        LPVOID lpMsgBuf;
+        LPVOID lpDisplayBuf;
+        DWORD dw = GetLastError(); 
+
+        FormatMessage(
+                      FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+                      FORMAT_MESSAGE_FROM_SYSTEM |
+                      FORMAT_MESSAGE_IGNORE_INSERTS,
+                      NULL,
+                      dw,
+                      MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                      (LPTSTR) &lpMsgBuf,
+                      0, NULL );
+
+        // Display the error message
+
+        lpDisplayBuf = (LPVOID)LocalAlloc(LMEM_ZEROINIT, 
+                                          (lstrlen((LPCTSTR)lpMsgBuf) + lstrlen((LPCTSTR)lpszFunction) + 40) * sizeof(TCHAR)); 
+        StringCchPrintf((LPTSTR)lpDisplayBuf, 
+                        LocalSize(lpDisplayBuf) / sizeof(TCHAR),
+                        TEXT("%s failed with error %d: %s"), 
+                        lpszFunction, dw, lpMsgBuf); 
+        MessageBox(NULL, (LPCTSTR)lpDisplayBuf, TEXT("Error"), MB_OK); 
+
+        LocalFree(lpMsgBuf);
+        LocalFree(lpDisplayBuf);
+    }
 #else
 	{
 		struct termios t;
