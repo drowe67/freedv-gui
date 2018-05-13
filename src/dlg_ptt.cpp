@@ -514,7 +514,9 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
 #if defined(__WXGTK__) || defined(__WXOSX__)
         ctrlport = m_cbCtlDevicePath->GetValue();
 #endif
-        fprintf(stderr, "opening serial port %s\n", ctrlport.c_str());
+        fprintf(stderr, "opening serial port: ");
+	fputs(ctrlport.c_str(), stderr);            // don't escape crazy Microsoft bakslash-ified comm port names
+	fprintf(stderr,"\n");
 
         bool success = serialport->openport(ctrlport.c_str(),
                                             m_rbUseRTS->GetValue(),

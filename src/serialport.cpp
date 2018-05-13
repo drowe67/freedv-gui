@@ -21,8 +21,8 @@ Serialport::~Serialport() {
 
 bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useDTR, bool DTRPos)
 {
-    fprintf(stderr, "starting openport(), name: %s useRTS: %d RTSPos: %d useDTR: %d DTRPos: %d\n",
-            name, useRTS, RTSPos, useDTR, DTRPos);
+    fprintf(stderr, "starting openport(), name: %s strlen(name): %d useRTS: %d RTSPos: %d useDTR: %d DTRPos: %d\n",
+            name, (int)strlen(name), useRTS, RTSPos, useDTR, DTRPos);
 
     if (com_handle != COM_HANDLE_INVALID) {
         closeport();
@@ -37,37 +37,62 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
     
 #ifdef _WIN32
     {
-        COMMCONFIG CC;
-        DWORD CCsize=sizeof(CC);
         COMMTIMEOUTS timeouts;
         DCB	dcb;
         TCHAR  lpszFunction[100];
 	
-        if(GetDefaultCommConfigA(name, &CC, &CCsize)) {
-                    
+        // As per:
+        //   [1] https://support.microsoft.com/en-us/help/115831/howto-specify-serial-ports-larger-than-com9
+        //   [2] Hamlib lib/termios.c, win32_serial_open()
+
+	/*  
+            To test change of COM port for USB serial device on Windows
+
+            1/ Run->devmgmnt.msc
+            2/ Change COM port Ports (COM & LPT) -> Serial Device -> Properties Tab -> Advanced
+            3/ Unplug USB serial devce and plug in again.  This is really important.  FreeDV won't recognise
+               new COM port number until this is done.
+            4/ Test PTT on FreeDV Tools->PTT
+	*/
+
+        TCHAR  nameWithStrangePrefix[100];
+        StringCchPrintf(nameWithStrangePrefix, 100, "\\\\.\\%s", name);
+        fputs("nameWithStrangePrefix: ", stderr);
+	fputs(nameWithStrangePrefix, stderr);
+	fprintf(stderr,"\n");
+
+#ifdef NOT_USED
+
+        COMMCONFIG CC;
+        DWORD CCsize=sizeof(CC);
+	memset(&CC, 0, CCsize);
+	CC.dwSize = CCsize;
+
+	/* Commented out by David May 13 2018, as it was failing after
+           "name" changed to "nameWithStrangePrefix" that is reqd for
+           support of COM ports above 9.  I am not sure if this is
+           needed as I can't see anything similar in Hamlib */
+	
+        if(GetDefaultCommConfigA(nameWithStrangePrefix, &CC, &CCsize)) {
+	    fprintf(stderr, "GetDefaultCommConfigA OK\n");         
             CC.dcb.fOutxCtsFlow		= FALSE;
             CC.dcb.fOutxDsrFlow		= FALSE;
             CC.dcb.fDtrControl		= DTR_CONTROL_DISABLE;
             CC.dcb.fDsrSensitivity	= FALSE;
             CC.dcb.fRtsControl		= RTS_CONTROL_DISABLE;
-            if (!SetDefaultCommConfigA(name, &CC, CCsize)) {
+            if (!SetDefaultCommConfigA(nameWithStrangePrefix, &CC, CCsize)) {
 		StringCchPrintf(lpszFunction, 100, "%s", "SetDefaultCommConfigA");
                 goto error;
             }
-            
+            fprintf(stderr, "SetDefaultCommConfigA OK\n");
         } else {
 	     StringCchPrintf(lpszFunction, 100, "%s", "GetDefaultCommConfigA");
              goto error;
         }
-
-        // As per:
-        //   https://support.microsoft.com/en-us/help/115831/howto-specify-serial-ports-larger-than-com9
-        
-        TCHAR  nameWithStrangePrefix[100];
-        StringCchPrintf(nameWithStrangePrefix, 100, "\\\\\\\\.\\\\%s", name);
-        fprintf(stderr, "nameWithStrangePrefix: %s\n");
-        if((com_handle=CreateFileA(name
-                                   ,fdwAccess 	                /* Access */
+#endif
+	
+        if((com_handle=CreateFileA(nameWithStrangePrefix
+                                   ,GENERIC_READ | GENERIC_WRITE/* Access */
                                    ,0				/* Share mode */
                                    ,NULL		 	/* Security attributes */
                                    ,OPEN_EXISTING		/* Create access */
@@ -76,15 +101,21 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
                                    ))==INVALID_HANDLE_VALUE) {
 	    StringCchPrintf(lpszFunction, 100, "%s", "CreateFileA");
 	    goto error;
-        }
-
+	}
+        fprintf(stderr, "CreateFileA OK\n");
+	
         if(GetCommTimeouts(com_handle, &timeouts)) {
+ 	    fprintf(stderr, "GetCommTimeouts OK\n");
             timeouts.ReadIntervalTimeout=MAXDWORD;
             timeouts.ReadTotalTimeoutMultiplier=0;
             timeouts.ReadTotalTimeoutConstant=0;		// No-wait read timeout
             timeouts.WriteTotalTimeoutMultiplier=0;
             timeouts.WriteTotalTimeoutConstant=5000;	// 5 seconds
-            SetCommTimeouts(com_handle,&timeouts);
+	    if (!SetCommTimeouts(com_handle,&timeouts)) {
+	      StringCchPrintf(lpszFunction, 100, "%s", "SetCommTimeouts");
+              goto error;	      
+	    }
+	    fprintf(stderr, "SetCommTimeouts OK\n");
         } else {
 	    StringCchPrintf(lpszFunction, 100, "%s", "GetCommTimeouts");
             goto error;
@@ -92,6 +123,8 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 
         /* Force N-8-1 mode: */
         if(GetCommState(com_handle, &dcb)==TRUE) {
+	    fprintf(stderr, "GetCommState OK\n");
+	    
             dcb.ByteSize		= 8;
             dcb.Parity			= NOPARITY;
             dcb.StopBits		= ONESTOPBIT;
@@ -110,11 +143,12 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
   	        StringCchPrintf(lpszFunction, 100, "%s", "SetCommState");
                 goto error;           
             }
+	    fprintf(stderr, "SetCommState OK\n");
         } else {
   	    StringCchPrintf(lpszFunction, 100, "%s", "GetCommState");
             goto error;           
         }
-
+	
 	return true;
 	
     error:

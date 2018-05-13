@@ -87,21 +87,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     bSizer30->Add(staticBoxSizer28a,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 
-#ifdef __WXMSW__
-    //------------------------------
-    // debug console, for WIndows build make console pop up for debug messages
-    //------------------------------
-
-    wxStaticBoxSizer* sbSizer_console;
-    wxStaticBox *sb_console = new wxStaticBox(this, wxID_ANY, _("Debug"));
-    sbSizer_console = new wxStaticBoxSizer(sb_console, wxHORIZONTAL);
-
-    m_ckboxDebugConsole = new wxCheckBox(this, wxID_ANY, _("Show Console"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_console->Add(m_ckboxDebugConsole, 0, wxALIGN_LEFT, 0);
-
-    bSizer30->Add(sbSizer_console,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
-#endif
-
     //------------------------------
     // FreeDV 700 Options
     //------------------------------
@@ -262,12 +247,27 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     bSizer30->Add(sbSizer_udp,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 #endif
 
+#ifdef __WXMSW__
+    //------------------------------
+    // debug console, for WIndows build make console pop up for debug messages
+    //------------------------------
+
+    wxStaticBoxSizer* sbSizer_console;
+    wxStaticBox *sb_console = new wxStaticBox(this, wxID_ANY, _("Debug: Windows"));
+    sbSizer_console = new wxStaticBoxSizer(sb_console, wxHORIZONTAL);
+
+    m_ckboxDebugConsole = new wxCheckBox(this, wxID_ANY, _("Show Console"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_console->Add(m_ckboxDebugConsole, 0, wxALIGN_LEFT, 0);
+
+    bSizer30->Add(sbSizer_console,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+#endif
+
     //----------------------------------------------------------
     // FIFO and PortAudio under/overflow counters used for debug
     //----------------------------------------------------------
 
     wxStaticBoxSizer* sbSizer_fifo;
-    wxStaticBox* sb_fifo = new wxStaticBox(this, wxID_ANY, _("FIFO and PortAudio Debug Counters"));
+    wxStaticBox* sb_fifo = new wxStaticBox(this, wxID_ANY, _("Debug: FIFO and PortAudio Under/Over Flow Counters"));
     sbSizer_fifo = new wxStaticBoxSizer(sb_fifo, wxVERTICAL);
 
     m_BtnFifoReset = new wxButton(this, wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
