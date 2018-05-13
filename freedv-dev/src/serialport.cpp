@@ -60,12 +60,18 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
              goto error;
         }
 
+        // As per:
+        //   https://support.microsoft.com/en-us/help/115831/howto-specify-serial-ports-larger-than-com9
+        
+        TCHAR  nameWithStrangePrefix[100];
+        StringCchPrintf(nameWithStrangePrefix, 100, "\\\\\\\\.\\\\%s", name);
+        fprintf(stderr, "nameWithStrangePrefix: %s\n");
         if((com_handle=CreateFileA(name
-                                   ,GENERIC_READ|GENERIC_WRITE 	/* Access */
+                                   ,fdwAccess 	                /* Access */
                                    ,0				/* Share mode */
                                    ,NULL		 	/* Security attributes */
                                    ,OPEN_EXISTING		/* Create access */
-                                   ,FILE_ATTRIBUTE_NORMAL       /* File attributes */
+                                   ,0                           /* File attributes */
                                    ,NULL		        /* Template */
                                    ))==INVALID_HANDLE_VALUE) {
 	    StringCchPrintf(lpszFunction, 100, "%s", "CreateFileA");
