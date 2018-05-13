@@ -33,6 +33,14 @@ used by FreeDV in the PTT Dialog.
 If you are really stuck, download Hamlib and test your radio's PTT
 using the command line rigctl program.
 
+Changing COM Port On Windows
+----------------------------
+
+If you change the COM port of a USB-Serial device in Device Manager,
+please unplug and plug back in the USB device.  Windows/FreeDV won't
+recognise the device on the new COM Port until it has been
+unplugged/plugged.
+
 Voice Keyer 
 -----------
 
