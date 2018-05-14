@@ -9,6 +9,62 @@ This document describes additional features in the latest FreeDV
 releases that haven't been documented in other sources.  See also
 freedv.org
 
+FreeDV V1.3, May 2018
+---------------------
+
+FreeDV GUI 1.3 includes the new 700D mode, which has a new modem and
+powerful Forward Error Correction (FEC) and optional interleaving.  It
+uses the same 700 bit/s speech codec at 700C. It operates error free
+at SNRs as low as -2dB, and has good HF channel performance.  It is
+around 10dB better than FreeDV 1600 on fading channels, and is
+competitive with SSB at low SNRs.
+
+Main GUI Page:
+
+  1) Separate indication of Modem and (for 700D) Interleaver Sync. The
+     number On the Interleaver Sync indicator is the interleaver size
+     in 160ms frames.
+     
+  2) ReSync button breaks 700D sync and forces it to try
+     again.  Useful if 700D gets a false sync in low SNR channels.
+
+Tools - Options:
+
+  1) 700D Interleaver: The interleaver averages out errors over
+     several frames, which improves performance for fast fading
+     channels, and channels with burst errors.  A 16 frame interleaver
+     will improve performance by 4dB.  However interleaving adds
+     delay, and delays sync.  Both the tx and rx must have the same
+     interleaver setting.  For example a setting of 2 means we average
+     errors over 2 160ms frames, and introduces 2x160=320ms delay in
+     both the Tx and Rx (640ms total).
+
+  2) 700D Manual Unsync: Sync must be broken manually (ReSync button)
+     when this option is selected.  Disables automatic falling out of
+     sync. May be useful for ensuring 700D stays in sync during long
+     fades, to avoid long resync delays with the interleaver.
+
+  3) Clipping: For 700C and 700D reduces the Peak/Average Power Ratio
+     (PAPR) (also known as Crest Factor) from 12dB to 8dB by clipping
+     the Tx signal.  This will add a little noise to the Tx spectrum
+     and Rx Scatter diagram, but MAY enable you to drive your Power
+     Amplifier harder.  Use with caution to avoid overloading your Power
+     Amplifier.
+     
+  4) Debug FIFO and PortAudio counters: used for debugging audio
+     drivers.  In particular, the PortAudio counters should not be
+     incremented when running, as this indicates samples are being
+     lost by the sound driver which will lead to sync problems.
+     Contact David for more information.
+  
+Changing COM Port On Windows, May 2018
+---------------------------------------
+
+If you change the COM port of a USB-Serial device in Device Manager,
+please unplug and plug back in the USB device.  Windows/FreeDV won't
+recognise the device on the new COM Port until it has been
+unplugged/plugged.
+
 PTT Configuration
 -----------------
 
@@ -24,7 +80,7 @@ and your radio.
 
 Serial PTT support is complex.  We get many reports that FreeDV Hamlib
 PTT doesn't work on a particular radio, but may work fine with other
-programs such as Fldigi.  This is always a mis-match between the
+programs such as Fldigi.  This is often a mis-match between the
 serial parameters Hamlib is using with FreeDV and your radio. For
 example you may have changed the default serial rate on your
 radio. Carefully check the serial parameters on your radio match those
@@ -32,14 +88,6 @@ used by FreeDV in the PTT Dialog.
 
 If you are really stuck, download Hamlib and test your radio's PTT
 using the command line rigctl program.
-
-Changing COM Port On Windows
-----------------------------
-
-If you change the COM port of a USB-Serial device in Device Manager,
-please unplug and plug back in the USB device.  Windows/FreeDV won't
-recognise the device on the new COM Port until it has been
-unplugged/plugged.
 
 Voice Keyer 
 -----------
