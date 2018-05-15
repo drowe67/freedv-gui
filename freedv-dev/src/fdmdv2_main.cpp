@@ -650,7 +650,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     ftest = fopen("ftest.raw", "wb");
     assert(ftest != NULL);
     #endif
-    
+
+    UDPInit();
 }
 
 //-------------------------------------------------------------------------
@@ -1762,7 +1763,7 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
             g_error_hist[i] = 0;
             g_error_histn[i] = 0;
         }
-    }  
+    }
 }
 
 #ifdef ALC
@@ -4136,3 +4137,48 @@ int plugin_get_persistant(char name[], char value[]) {
     return 0;
 }
 
+
+/*
+  Sending simple message via UDP
+
+  http://cool-emerald.blogspot.com.au/2018/01/udptcp-socket-programming-with-wxwidgets.html#udp
+*/
+
+
+void MainFrame::UDPInit(void) {
+    // Create the socket
+    
+    wxIPV4address addr_rx;
+    addr_rx.AnyAddress();
+    //addr_rx.Service(3000);
+    sock = new wxDatagramSocket(addr_rx);
+
+    // We use IsOk() here to see if the server is really listening
+
+    if (!sock->IsOk()) {
+        fprintf(stderr, "UDPInit: Could not listen at the specified port !\n");
+        return;
+    }
+    
+    wxIPV4address addrReal;
+    if (!sock->GetLocal(addrReal)){
+        fprintf(stderr, "UDPInit: Couldn't get the address we bound to\n");
+    }
+    else {
+        fprintf(stderr, "Server listening at %s:%u \n", (const char*)addrReal.IPAddress().c_str(), addrReal.Service());
+    }
+}
+
+
+void MainFrame::UDPSend(int port, char *buf, unsigned int n) {
+    fprintf(stderr, "UDPSend buf: %s n: %d\n", buf, n);
+
+    wxIPV4address addr_tx;
+    addr_tx.Hostname("localhost");
+    addr_tx.Service(port);
+ 
+    if ( sock->SendTo(addr_tx, (const void*)buf, n).LastCount() != n ) {
+        fprintf(stderr, "UDPSend: failed to send data");
+        return;
+    }
+}

@@ -592,6 +592,10 @@ class MainFrame : public TopFrame
         void        designEQFilters(paCallBackData *cb);
         void        deleteEQFilters(paCallBackData *cb);
 
+        wxDatagramSocket *sock;
+        void UDPInit(void);
+        void UDPSend(int port, char *buf, unsigned int n);
+
         // Voice Keyer States
 
         int        vk_rx_pause;
