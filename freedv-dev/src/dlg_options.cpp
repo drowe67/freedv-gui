@@ -32,6 +32,7 @@ extern int                 g_infifo2_full;
 extern int                 g_outfifo2_empty;
 extern int                 g_PAstatus1[4];
 extern int                 g_PAstatus2[4];
+extern wxDatagramSocket    *g_sock;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class OptionsDlg
@@ -263,6 +264,22 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 #endif
 
     //----------------------------------------------------------
+    // UDP Send Messages on Events
+    //----------------------------------------------------------
+
+    wxStaticBoxSizer* sbSizer_udp;
+    wxStaticBox* sb_udp = new wxStaticBox(this, wxID_ANY, _("UDP Messages"));
+    sbSizer_udp = new wxStaticBoxSizer(sb_udp, wxHORIZONTAL);
+    m_ckbox_udp_enable = new wxCheckBox(this, wxID_ANY, _("Enable UDP Messages   UDP Port Number:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_udp->Add(m_ckbox_udp_enable, 0,  wxALIGN_CENTER_HORIZONTAL, 5);
+    m_txt_udp_port = new wxTextCtrl(this, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    sbSizer_udp->Add(m_txt_udp_port, 0, wxALIGN_CENTER_HORIZONTAL, 5);
+    m_btn_udp_test = new wxButton(this, wxID_ANY, _("Test"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_udp->Add(m_btn_udp_test, 0,  wxALIGN_LEFT, 5);
+
+    bSizer30->Add(sbSizer_udp,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+
+    //----------------------------------------------------------
     // FIFO and PortAudio under/overflow counters used for debug
     //----------------------------------------------------------
 
@@ -331,6 +348,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_buttonChooseVoiceKeyerWaveFile->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFile), NULL, this);
 
     m_BtnFifoReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
+    m_btn_udp_test->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnUDPTest), NULL, this);
 
     event_in_serial = 0;
     event_out_serial = 0;
@@ -359,6 +377,7 @@ OptionsDlg::~OptionsDlg()
     m_buttonChooseVoiceKeyerWaveFile->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFile), NULL, this);
 
     m_BtnFifoReset->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
+    m_btn_udp_test->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnUDPTest), NULL, this);
 
 #ifdef __WXMSW__
     m_ckboxDebugConsole->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnDebugConsole), NULL, this);
@@ -397,6 +416,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxAttnCarrierEn->SetValue(wxGetApp().m_attn_carrier_en);
         m_txtAttnCarrier->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_attn_carrier));
 
+        m_ckbox_udp_enable->SetValue(wxGetApp().m_udp_enable);
+        m_txt_udp_port->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_udp_port));
+
 #ifdef __EXPERIMENTAL_UDP__
         m_ckbox_events->SetValue(wxGetApp().m_events);
         m_txt_spam_timer->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_events_spam_timer));
@@ -404,8 +426,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txt_events_regexp_match->SetValue(wxGetApp().m_events_regexp_match);
         m_txt_events_regexp_replace->SetValue(wxGetApp().m_events_regexp_replace);
         
-        m_ckbox_udp_enable->SetValue(wxGetApp().m_udp_enable);
-        m_txt_udp_port->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_udp_port));
 
 #ifdef SHORT_VARICODE
         if (wxGetApp().m_textEncoding == 1)
@@ -482,11 +502,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_events_regexp_match = m_txt_events_regexp_match->GetValue();
         wxGetApp().m_events_regexp_replace = m_txt_events_regexp_replace->GetValue();
  
-        wxGetApp().m_udp_enable     = m_ckbox_udp_enable->GetValue();
-        long port;
-        m_txt_udp_port->GetValue().ToLong(&port);
-        wxGetApp().m_udp_port       = (int)port;
-
 #ifdef SHORT_VARICODE
         if (m_rb_textEncoding1->GetValue())
             wxGetApp().m_textEncoding = 1;
@@ -495,6 +510,11 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 #endif
         wxGetApp().m_enable_checksum = m_ckboxEnableChecksum->GetValue();
 #endif
+
+        wxGetApp().m_udp_enable     = m_ckbox_udp_enable->GetValue();
+        long port;
+        m_txt_udp_port->GetValue().ToLong(&port);
+        wxGetApp().m_udp_port       = (int)port;
 
         wxGetApp().m_FreeDV700txClip = m_ckboxFreeDV700txClip->GetValue();
         wxGetApp().m_FreeDV700Combine = m_ckboxFreeDV700Combine->GetValue();
@@ -681,6 +701,13 @@ void OptionsDlg::OnFifoReset(wxCommandEvent& event)
     for (int i=0; i<4; i++) {
         g_PAstatus1[i] = g_PAstatus2[i] = 0;
     }
+}
+
+void OptionsDlg::OnUDPTest(wxCommandEvent& event)
+{
+    char s[80];
+    sprintf(s, "hello from FreeDV!");
+    UDPSend(wxGetApp().m_udp_port, s, strlen(s)+1);
 }
 
 

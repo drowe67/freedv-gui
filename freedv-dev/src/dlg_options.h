@@ -83,6 +83,7 @@ class OptionsDlg : public wxDialog
         void    OnDebugConsole(wxScrollEvent& event);
 
         void    OnFifoReset(wxCommandEvent& event);
+        void    OnUDPTest(wxCommandEvent& event);
         
         wxTextCtrl   *m_txtCtrlCallSign; // TODO: this should be renamed to tx_txtmsg, and rename all related incl persis strge
 
@@ -126,6 +127,7 @@ class OptionsDlg : public wxDialog
 
         wxCheckBox   *m_ckbox_udp_enable;
         wxTextCtrl   *m_txt_udp_port;
+        wxButton*     m_btn_udp_test;
 
         wxButton*     m_BtnFifoReset;
         wxStaticText  *m_textFifos;

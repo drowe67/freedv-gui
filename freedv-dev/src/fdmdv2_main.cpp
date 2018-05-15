@@ -136,11 +136,18 @@ wxMutex g_mutexProtectingCallbackData;
 
 SpeexPreprocessState *g_speex_st;
 
-// WxWidgets - initialize the application
-IMPLEMENT_APP(MainApp);
+// Option test file to log samples
 
 FILE *ftest;
 FILE *g_logfile;
+
+// UDP socket available to send messages
+
+wxDatagramSocket *g_sock;
+
+// WxWidgets - initialize the application
+
+IMPLEMENT_APP(MainApp);
 
 //-------------------------------------------------------------------------
 // OnInit()
@@ -4145,23 +4152,23 @@ int plugin_get_persistant(char name[], char value[]) {
 */
 
 
-void MainFrame::UDPInit(void) {
+void UDPInit(void) {
     // Create the socket
     
     wxIPV4address addr_rx;
     addr_rx.AnyAddress();
     //addr_rx.Service(3000);
-    sock = new wxDatagramSocket(addr_rx);
+    g_sock = new wxDatagramSocket(addr_rx);
 
     // We use IsOk() here to see if the server is really listening
 
-    if (!sock->IsOk()) {
+    if (!g_sock->IsOk()) {
         fprintf(stderr, "UDPInit: Could not listen at the specified port !\n");
         return;
     }
     
     wxIPV4address addrReal;
-    if (!sock->GetLocal(addrReal)){
+    if (!g_sock->GetLocal(addrReal)){
         fprintf(stderr, "UDPInit: Couldn't get the address we bound to\n");
     }
     else {
@@ -4170,14 +4177,14 @@ void MainFrame::UDPInit(void) {
 }
 
 
-void MainFrame::UDPSend(int port, char *buf, unsigned int n) {
+void UDPSend(int port, char *buf, unsigned int n) {
     fprintf(stderr, "UDPSend buf: %s n: %d\n", buf, n);
 
     wxIPV4address addr_tx;
     addr_tx.Hostname("localhost");
     addr_tx.Service(port);
  
-    if ( sock->SendTo(addr_tx, (const void*)buf, n).LastCount() != n ) {
+    if ( g_sock->SendTo(addr_tx, (const void*)buf, n).LastCount() != n ) {
         fprintf(stderr, "UDPSend: failed to send data");
         return;
     }

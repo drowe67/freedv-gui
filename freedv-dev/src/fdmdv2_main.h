@@ -548,7 +548,7 @@ class MainFrame : public TopFrame
         void OnCallSignReset( wxCommandEvent& event );
         void OnBerReset( wxCommandEvent& event );
         void OnReSync( wxCommandEvent& event );
-
+ 
         //System Events
         void OnPaint(wxPaintEvent& event);
         void OnSize( wxSizeEvent& event );
@@ -591,10 +591,6 @@ class MainFrame : public TopFrame
         void*       designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q = 0.0);
         void        designEQFilters(paCallBackData *cb);
         void        deleteEQFilters(paCallBackData *cb);
-
-        wxDatagramSocket *sock;
-        void UDPInit(void);
-        void UDPSend(int port, char *buf, unsigned int n);
 
         // Voice Keyer States
 
@@ -684,5 +680,8 @@ void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, CO
 // Helper function called by plugin
 
 int plugin_get_persistant(char name[], char value[]);
+
+void UDPSend(int port, char *buf, unsigned int n);
+void UDPInit(void);
 
 #endif //__FDMDV2_MAIN__
