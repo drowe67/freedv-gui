@@ -82,36 +82,48 @@ void Hamlib::populateComboBox(wxComboBox *cb) {
 }
 
 bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int serial_rate) {
+
     /* Look up model from index. */
+
     if (rig_index >= m_rigList.size()) {
+        fprintf(stderr, "rig_index invalid, returning\n");
         return false;
     }
+
     fprintf(stderr, "rig: %s %s (%d)\n", m_rigList[rig_index]->mfg_name,
             m_rigList[rig_index]->model_name, m_rigList[rig_index]->rig_model);
 
-	if(m_rig) {
-		printf("Closing old hamlib instance!\n");
-		close();
-	}
+    if(m_rig) {
+        fprintf(stderr, "Closing old hamlib instance!\n");
+        close();
+    }
 
     /* Initialise, configure and open. */
 
     m_rig = rig_init(m_rigList[rig_index]->rig_model);
 
-    if (!m_rig)
+    if (!m_rig) {
+        fprintf(stderr, "rig_init() failed, returning\n");
         return false;
+    }
+    fprintf(stderr, "rig_init() OK ....\n");
 
     /* TODO we may also need civaddr for Icom */
 
     strncpy(m_rig->state.rigport.pathname, serial_port, FILPATHLEN - 1);
     if (serial_rate) {
+        fprintf(stderr, "hamlib: setting serial rate: %d\n", serial_rate);
         m_rig->state.rigport.parm.serial.rate = serial_rate;
     }
-    fprintf(stderr, "hamlib: setting serial rate: %d\n", m_rig->state.rigport.parm.serial.rate);
+    fprintf(stderr, "hamlib: serial rate: %d\n", m_rig->state.rigport.parm.serial.rate);
+    fprintf(stderr, "hamlib: data_bits..: %d\n", m_rig->state.rigport.parm.serial.data_bits);
+    fprintf(stderr, "hamlib: stop_bits..: %d\n", m_rig->state.rigport.parm.serial.stop_bits);
 
     if (rig_open(m_rig) == RIG_OK) {
+        fprintf(stderr, "hamlib: rig_open() OK\n");
         return true;
     }
+    fprintf(stderr, "hamlib: rig_open() failed ...\n");
 
     return false;
 }
