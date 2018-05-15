@@ -95,7 +95,7 @@ set(USE_STATIC_SAMPLERATE FALSE CACHE BOOL
     "Download and build static samplerate instead of the system library.")
 set(USE_STATIC_CODEC2 TRUE CACHE BOOL
     "Download and build static codec2 instead of the system library.")
-set(USE_STATIC_SPEEXDSP TRUE CACHE BOOL
+set(USE_STATIC_SPEEXDSP FALSE CACHE BOOL
     "Download and build static speex instead of the system library.")
 set(BOOTSTRAP_WXWIDGETS FALSE CACHE BOOL
     "Download and build static wxWidgets instead of the system library.")
@@ -272,7 +272,7 @@ On Linux systems try installing:
 On Windows it's easiest to use the cmake option: USE_STATIC_PORTAUDIO"
         )
     endif()
-    if(NOT ${PORTAUDIO_VERSION} EQUAL 19)
+    if(NOT ${PORTAUDIO_VERSION} EQUAL 19 AND NOT MINGW)
         message(WARNING "Portaudio versions other than 19 are known to have issues. You have been warned!")
     endif()
 else(NOT USE_STATIC_PORTAUDIO)
@@ -286,8 +286,8 @@ endif(NOT USE_STATIC_PORTAUDIO)
 message(STATUS "Looking for hamlib...")
 find_path(HAMLIB_INCLUDE_DIR hamlib/rig.h)
 find_library(HAMLIB_LIBRARY hamlib PATH_SUFFIXES hamlib)
-message(STATUS "Hamlib library: ${HAMLIB_LIBRARY}")
-message(STATUS "Hamlib headers: ${HAMLIB_INCLUDE_DIR}")
+message(STATUS "  Hamlib library: ${HAMLIB_LIBRARY}")
+message(STATUS "  Hamlib headers: ${HAMLIB_INCLUDE_DIR}")
 if(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
     message(STATUS "Hamlib library found.")
     include_directories(${HAMLIB_INCLUDE_DIR})
@@ -404,6 +404,9 @@ if(NOT USE_STATIC_SPEEXDSP)
     if(SPEEXDSP_INCLUDE_DIR AND SPEEXDSP_LIBRARY)
         include_directories(${SPEEXDSP_INCLUDE_DIR})
         list(APPEND FREEDV_LINK_LIBS ${SPEEXDSP_LIBRARY})
+    elseif(MINGW)
+        message(STATUS "Could not find speexdsp, reverting to static build.")
+        include(cmake/BuildSpeex.cmake)
     else(SPEEXDSP_INCLUDE_DIR AND SPEEXDSP_LIBRARY)
         message(FATAL_ERROR "Speex DSP library not found!")
     endif(SPEEXDSP_INCLUDE_DIR AND SPEEXDSP_LIBRARY)
