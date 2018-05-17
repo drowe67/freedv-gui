@@ -95,10 +95,19 @@ missing on older Linux systems.
  Building for Windows on Fedora 28 (Cross compiling)
 =======================================================
 
-  $ sudo dnf install mingw-w64*
+Install basic MinGW development packages:
+  $ sudo dnf install mingw{32,64}-filesystem mingw{32,64}-binutils \
+    mingw{32,64}-gcc mingw{32/64}-crt mingw{32,64}-headers
+
+Install dependencies of FreeDV/Codec2:
+  $ sudo dnf install mingw{32,64}-speex
+
+Enable Freetel specific packages not currently in Fedora proper:
   $ sudo dnf copr enable hobbes1069/mingw
-  $ sudo dnf install mingw{32,64}-wxWidgets3
-  $ sudo dnf install mingw{32,64}-hamlib
+  $ sudo dnf install mingw{32,64}-wxWidgets3 mingw{32,64}-hamlib \
+    mingw{32,64}-portaudio mingw{32,64}-libsndfile
+
+Building FreeDV:
   $ cd ~/freedv-dev
   $ mkdir build_windows && cd build_windows
   $ mingw64-cmake
