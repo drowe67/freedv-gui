@@ -654,7 +654,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     }
 #endif
 
-    #define FTEST
+    //#define FTEST
     #ifdef FTEST
     ftest = fopen("ftest.raw", "wb");
     assert(ftest != NULL);
