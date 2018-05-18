@@ -728,19 +728,19 @@ void OptionsDlg::OnUDPTest(wxCommandEvent& event)
 
 
 void OptionsDlg::DisplayFifoPACounters() {
-    char fifo_counters[80];
+    char fifo_counters[256];
 
     sprintf(fifo_counters, "fifos: infull1: %d ooutempty1: %d infull2: %d outempty2: %d", g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
     wxString fifo_counters_string(fifo_counters);
     m_textFifos->SetLabel(fifo_counters_string);
 
-    char pa_counters1[80];
+    char pa_counters1[256];
 
     // input: underflow overflow output: underflow overflow
     sprintf(pa_counters1, "PA1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d framesPerBuf: %d", g_PAstatus1[0], g_PAstatus1[1], g_PAstatus1[2], g_PAstatus1[3], g_PAframesPerBuffer1);
     wxString pa_counters1_string(pa_counters1); m_textPA1->SetLabel(pa_counters1_string);
 
-    char pa_counters2[80];
+    char pa_counters2[256];
 
     // input: underflow overflow output: underflow overflow
     sprintf(pa_counters2, "PA2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d framesPerBuf: %d", g_PAstatus2[0], g_PAstatus2[1], g_PAstatus2[2], g_PAstatus2[3], g_PAframesPerBuffer2);
