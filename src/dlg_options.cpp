@@ -32,6 +32,8 @@ extern int                 g_infifo2_full;
 extern int                 g_outfifo2_empty;
 extern int                 g_PAstatus1[4];
 extern int                 g_PAstatus2[4];
+extern int                 g_PAframesPerBuffer1;
+extern int                 g_PAframesPerBuffer2;
 extern wxDatagramSocket    *g_sock;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -283,12 +285,20 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // FIFO and PortAudio under/overflow counters used for debug
     //----------------------------------------------------------
 
-    wxStaticBoxSizer* sbSizer_fifo;
     wxStaticBox* sb_fifo = new wxStaticBox(this, wxID_ANY, _("Debug: FIFO and PortAudio Under/Over Flow Counters"));
-    sbSizer_fifo = new wxStaticBoxSizer(sb_fifo, wxVERTICAL);
+    wxStaticBoxSizer* sbSizer_fifo = new wxStaticBoxSizer(sb_fifo, wxVERTICAL);
+
+    wxStaticBox* sb_fifo1 = new wxStaticBox(this, wxID_ANY, _(""));
+    wxStaticBoxSizer* sbSizer_fifo1 = new wxStaticBoxSizer(sb_fifo1, wxHORIZONTAL);
 
     m_BtnFifoReset = new wxButton(this, wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_fifo->Add(m_BtnFifoReset, 0,  wxALIGN_LEFT, 5);
+    sbSizer_fifo1->Add(m_BtnFifoReset, 0,  wxALIGN_LEFT, 5);
+    wxStaticText *m_staticTextPA1 = new wxStaticText(this, wxID_ANY, _("   framesPerBuffer"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_fifo1->Add(m_staticTextPA1, 0, wxALIGN_CENTER_VERTICAL , 5);
+    m_txtCtrlframesPerBuffer = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
+    sbSizer_fifo1->Add(m_txtCtrlframesPerBuffer, 0, 0, 5);
+
+    sbSizer_fifo->Add(sbSizer_fifo1, 0,  wxALIGN_LEFT, 5);
 
     m_textFifos = new wxStaticText(this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_fifo->Add(m_textFifos, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 1);
@@ -419,6 +429,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckbox_udp_enable->SetValue(wxGetApp().m_udp_enable);
         m_txt_udp_port->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_udp_port));
 
+        m_txtCtrlframesPerBuffer->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_framesPerBuffer));
+
 #ifdef __EXPERIMENTAL_UDP__
         m_ckbox_events->SetValue(wxGetApp().m_events);
         m_txt_spam_timer->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_events_spam_timer));
@@ -484,6 +496,10 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         long attn_carrier;
         m_txtAttnCarrier->GetValue().ToLong(&attn_carrier);
         wxGetApp().m_attn_carrier = (int)attn_carrier;
+
+        long framesPerBuffer;
+        m_txtCtrlframesPerBuffer->GetValue().ToLong(&framesPerBuffer);
+        wxGetApp().m_framesPerBuffer = (int)framesPerBuffer;
 
 #ifdef __EXPERIMENTAL_UDP__
         wxGetApp().m_events        = m_ckbox_events->GetValue();
@@ -721,13 +737,13 @@ void OptionsDlg::DisplayFifoPACounters() {
     char pa_counters1[80];
 
     // input: underflow overflow output: underflow overflow
-    sprintf(pa_counters1, "PA1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_PAstatus1[0], g_PAstatus1[1], g_PAstatus1[2], g_PAstatus1[3]);
+    sprintf(pa_counters1, "PA1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d framesPerBuf: %d", g_PAstatus1[0], g_PAstatus1[1], g_PAstatus1[2], g_PAstatus1[3], g_PAframesPerBuffer1);
     wxString pa_counters1_string(pa_counters1); m_textPA1->SetLabel(pa_counters1_string);
 
     char pa_counters2[80];
 
     // input: underflow overflow output: underflow overflow
-    sprintf(pa_counters2, "PA2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_PAstatus2[0], g_PAstatus2[1], g_PAstatus2[2], g_PAstatus2[3]);
+    sprintf(pa_counters2, "PA2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d framesPerBuf: %d", g_PAstatus2[0], g_PAstatus2[1], g_PAstatus2[2], g_PAstatus2[3], g_PAframesPerBuffer2);
     wxString pa_counters2_string(pa_counters2);
     m_textPA2->SetLabel(pa_counters2_string);
 }

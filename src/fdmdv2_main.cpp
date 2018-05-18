@@ -98,6 +98,8 @@ int                 g_infifo2_full;
 int                 g_outfifo2_empty;
 int                 g_PAstatus1[4];
 int                 g_PAstatus2[4];
+int                 g_PAframesPerBuffer1;
+int                 g_PAframesPerBuffer2;
 
 // playing and recording from sound files
 
@@ -414,7 +416,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
         m_panelTestFrameErrorsHist->setLogY(1);
     }
 
-    wxGetApp().m_framesPerBuffer = pConfig->Read(wxT("/Audio/framesPerBuffer"), PA_FPB);
+    wxGetApp().m_framesPerBuffer = pConfig->Read(wxT("/Audio/framesPerBuffer"), (int)PA_FPB);
 
     g_soundCard1InDeviceNum  = pConfig->Read(wxT("/Audio/soundCard1InDeviceNum"),         -1);
     g_soundCard1OutDeviceNum = pConfig->Read(wxT("/Audio/soundCard1OutDeviceNum"),        -1);
@@ -1149,7 +1151,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     }
     g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
     g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
-
 
     if (g_mode != -1)  {
 
@@ -2655,14 +2656,20 @@ void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDev
     // init params that affect input and output
 
     /*
+      DR 2013:
+
       On Linux, setting this to wxGetApp().m_framesPerBuffer caused
       intermittant break up on the audio from my IC7200 on Ubuntu 14.
       After a day of bug hunting I found that 0, as recommended by the
       PortAudio documentation, fixed the problem.
+
+      DR 2018:
+
+      During 700D testing some break up in from radio audio, so made
+      this adjustable again.
     */
 
-    //pa->setFramesPerBuffer(wxGetApp().m_framesPerBuffer);
-    pa->setFramesPerBuffer(0);
+    pa->setFramesPerBuffer(wxGetApp().m_framesPerBuffer);
 
     pa->setSampleRate(sampleRate);
     pa->setStreamFlags(paClipOff);
@@ -3777,7 +3784,7 @@ int MainFrame::rxCallback(
         g_PAstatus1[3]++;
     }
    
-    wxMutexLocker lock(g_mutexProtectingCallbackData);
+    g_PAframesPerBuffer1 = framesPerBuffer;
 
     //
     //  RX side processing --------------------------------------------
@@ -3860,12 +3867,12 @@ int MainFrame::txCallback(
         g_PAstatus2[3]++;
     }
     
-    wxMutexLocker lock(g_mutexProtectingCallbackData);
+    g_PAframesPerBuffer2 = framesPerBuffer;
 
     // assemble a mono buffer and write to FIFO
 
     assert(framesPerBuffer < MAX_FPB);
-
+    
     if (rptr) {
         for(i = 0; i < framesPerBuffer; i++, rptr += cbData->inputChannels2)
             indata[i] = rptr[0];                        
