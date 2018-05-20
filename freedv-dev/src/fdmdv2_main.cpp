@@ -75,6 +75,7 @@ struct FIFO         *g_rxDataOutFifo;
 // tx/rx processing states
 int                 g_State, g_prev_State, g_interleaverSyncState;
 paCallBackData     *g_rxUserdata;
+int                 g_dump_timing;
 
 // FIFOs used for plotting waveforms
 struct FIFO        *g_plotDemodInFifo;
@@ -660,6 +661,12 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     assert(ftest != NULL);
     #endif
 
+    /* experimental checkbox control of thread priority, used
+       to helpo debug 700D windows sound break up */
+    
+    wxGetApp().m_txRxThreadHighPriority = true;
+    g_dump_timing = 0;
+    
     UDPInit();
 }
 
@@ -3067,7 +3074,9 @@ void MainFrame::startRxStream()
             wxLogError(wxT("Can't create thread!"));
         }
 
-        m_txRxThread->SetPriority(WXTHREAD_MAX_PRIORITY);
+        if (wxGetApp().m_txRxThreadHighPriority) {
+            m_txRxThread->SetPriority(WXTHREAD_MAX_PRIORITY);
+        }
 
         if ( m_txRxThread->Run() != wxTHREAD_NO_ERROR )
         {
@@ -3308,11 +3317,12 @@ void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs)
 
 
 //---------------------------------------------------------------------------------------------
-// Main real time procesing for tx and rx of FreeDV signals
+// Main real time procesing for tx and rx of FreeDV signals, run in its own thread
 //---------------------------------------------------------------------------------------------
 
 void txRxProcessing()
 {
+    wxStopWatch sw;
 
     paCallBackData  *cbData = g_rxUserdata;
 
@@ -3626,6 +3636,9 @@ void txRxProcessing()
    
     //fprintf(g_logfile, "  end infifo1: %5d outfifo2: %5d\n", fifo_used(cbData->infifo1), fifo_used(cbData->outfifo2));
 
+    if (g_dump_timing) {
+        fprintf(stderr, "%4ld", sw.Time());
+    }
 }
 
 //----------------------------------------------------------------
@@ -3706,6 +3719,9 @@ void per_frame_rx_processing(
             }
 
             freq_shift_coh(rx_fdm_offset, rx_fdm, g_RxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_RxFreqOffsetPhaseRect, nin);
+            if (g_dump_timing) {
+                fprintf(stderr,"  rx");
+            }
             nout = freedv_comprx(g_pfreedv, output_buf, rx_fdm_offset);
             //kprintf("nout %d outbuf_buf[0]: %d\n", nout, output_buf[0]);
             fifo_write(output_fifo, output_buf, nout);

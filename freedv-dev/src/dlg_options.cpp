@@ -35,6 +35,7 @@ extern int                 g_PAstatus2[4];
 extern int                 g_PAframesPerBuffer1;
 extern int                 g_PAframesPerBuffer2;
 extern wxDatagramSocket    *g_sock;
+extern int                 g_dump_timing;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class OptionsDlg
@@ -297,6 +298,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_fifo1->Add(m_staticTextPA1, 0, wxALIGN_CENTER_VERTICAL , 5);
     m_txtCtrlframesPerBuffer = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
     sbSizer_fifo1->Add(m_txtCtrlframesPerBuffer, 0, 0, 5);
+    m_ckboxTxRxThreadPriority = new wxCheckBox(this, wxID_ANY, _("  txRxThreadPriority"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_fifo1->Add(m_ckboxTxRxThreadPriority, 0, wxALIGN_LEFT, 0);
+    m_ckboxTxRxDumpTiming = new wxCheckBox(this, wxID_ANY, _("  txRxDumpTiming"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_fifo1->Add(m_ckboxTxRxDumpTiming, 0, wxALIGN_LEFT, 0);
 
     sbSizer_fifo->Add(sbSizer_fifo1, 0,  wxALIGN_LEFT, 5);
 
@@ -430,7 +435,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txt_udp_port->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_udp_port));
 
         m_txtCtrlframesPerBuffer->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_framesPerBuffer));
-
+        m_ckboxTxRxThreadPriority->SetValue(wxGetApp().m_txRxThreadHighPriority);
+        m_ckboxTxRxDumpTiming->SetValue(g_dump_timing);
+        
 #ifdef __EXPERIMENTAL_UDP__
         m_ckbox_events->SetValue(wxGetApp().m_events);
         m_txt_spam_timer->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_events_spam_timer));
@@ -500,6 +507,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         long framesPerBuffer;
         m_txtCtrlframesPerBuffer->GetValue().ToLong(&framesPerBuffer);
         wxGetApp().m_framesPerBuffer = (int)framesPerBuffer;
+
+        wxGetApp().m_txRxThreadHighPriority = m_ckboxTxRxThreadPriority->GetValue();
+        g_dump_timing = m_ckboxTxRxDumpTiming->GetValue();
 
 #ifdef __EXPERIMENTAL_UDP__
         wxGetApp().m_events        = m_ckbox_events->GetValue();
