@@ -315,6 +315,11 @@ class MainApp : public wxApp
         // Windows debug console
 
         bool       m_debug_console;
+        
+        // debugging 700D audio break up
+        
+        bool       m_txRxThreadHighPriority;
+        
     protected:
 };
 
@@ -439,7 +444,7 @@ class MainFrame : public TopFrame
 
         PaError                 m_rxErr;
         PaError                 m_txErr;
-        
+
         txRxThread*             m_txRxThread;
 
         bool                    OpenHamlibRig();
