@@ -24,7 +24,7 @@ Debian/Ubuntu:
 
   $ sudo apt-get install libwxgtk3.0-dev portaudio19-dev \
     libhamlib-dev libsamplerate-dev libasound2-dev libao-dev libgsm1-dev \
-    libsndfile-dev
+    libsndfile-dev libspeexdsp-dev
 
 Fedora:
 

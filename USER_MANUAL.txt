@@ -48,15 +48,31 @@ Tools - Options:
      (PAPR) (also known as Crest Factor) from 12dB to 8dB by clipping
      the Tx signal.  This will add a little noise to the Tx spectrum
      and Rx Scatter diagram, but MAY enable you to drive your Power
-     Amplifier harder.  Use with caution to avoid overloading your Power
-     Amplifier.
+     Amplifier harder.  Use with caution to avoid overloading your
+     Power Amplifier.
      
   4) Debug FIFO and PortAudio counters: used for debugging audio
-     drivers.  In particular, the PortAudio counters should not be
-     incremented when running, as this indicates samples are being
-     lost by the sound driver which will lead to sync problems.
-     Contact David for more information.
-  
+     driver problems on 700D.  In particular, the PortAudio counters
+     (PA1 and PA2) should not be incremented when running, as this
+     indicates samples are being lost by the sound driver which will
+     lead to sync problems.  If you experience many resyncs or broken
+     audio on receive try adjusting framesPerBuffer; try 0, 128, 256,
+     512, 1024.  The txThreadPriority checkbox reduces the priority of
+     the main txRx thread in FreeDV which may help the sound driver
+     thread process samples.  The txRxDumpTiming check box dumps
+     timing information to a console that is used for debugging the
+     rx break up problem on 700D.
+
+  5) UDP Messages: When FreeDV syncs on a received signal for 5
+     seconds, it will send a "rx sync" UDP message to a Port on your
+     machine (localhost).  An external program or script listening on
+     this port can then take some action, for example send "spotting"
+     information to a web server or send an email your phone.  On
+     Linux you can test reception of messages using netcat:
+
+     $ nc -ul 3000
+     
+     
 Changing COM Port On Windows, May 2018
 ---------------------------------------
 
