@@ -1320,6 +1320,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     // Voice Keyer state machine
 
     VoiceKeyerProcessEvent(VK_DT);
+
+    // Detect Sync state machine
+
+    DetectSyncProcessEvent();
 }
 #endif
 
@@ -1689,6 +1693,65 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
     //if ((vk_event != VK_DT) || (vk_state != next_state))
     //    fprintf(stderr, "VoiceKeyerProcessEvent: vk_state: %d vk_event: %d next_state: %d  vk_repeat_counter: %d\n", vk_state, vk_event, next_state, vk_repeat_counter);
     vk_state = next_state;
+}
+
+
+// State machine to detect sync and send a UDP message
+
+void MainFrame::DetectSyncProcessEvent(void) {
+    int next_state = ds_state;
+
+    switch(ds_state) {
+
+    case DS_IDLE:
+        if (freedv_get_sync(g_pfreedv) == 1) {
+            next_state = DS_SYNC_WAIT;
+            ds_rx_time = 0;
+        }
+        break;
+
+    case DS_SYNC_WAIT:
+
+        // In this state we wait fo a few seconds of valid sync, then
+        // send UDP message
+
+        if (freedv_get_sync(g_pfreedv) == 0) {
+            next_state = DS_IDLE;
+        } else {
+            ds_rx_time += DT;
+        }
+
+        if (ds_rx_time >= DS_SYNC_WAIT_TIME) {
+            char s[100]; sprintf(s, "rx sync");
+            if (wxGetApp().m_udp_enable) {
+                UDPSend(wxGetApp().m_udp_port, s, strlen(s)+1);
+            }
+            ds_rx_time = 0;
+            next_state = DS_UNSYNC_WAIT;
+        }
+        break;
+
+    case DS_UNSYNC_WAIT:
+
+        // In this state we wait for sync to end
+
+        if (freedv_get_sync(g_pfreedv) == 0) {
+            ds_rx_time += DT;
+            if (ds_rx_time >= DS_SYNC_WAIT_TIME) {
+                next_state = DS_IDLE;
+            }
+        } else {
+            ds_rx_time = 0;
+        }
+        break;
+       
+    default:
+        // catch anything we missed
+
+        next_state = DS_IDLE;
+    }
+
+    ds_state = next_state;
 }
 
 
