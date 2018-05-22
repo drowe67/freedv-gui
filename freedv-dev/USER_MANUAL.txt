@@ -52,17 +52,33 @@ Tools - Options:
      Power Amplifier.
      
   4) Debug FIFO and PortAudio counters: used for debugging audio
-     driver problems on 700D.  In particular, the PortAudio counters
-     (PA1 and PA2) should not be incremented when running, as this
-     indicates samples are being lost by the sound driver which will
-     lead to sync problems.  If you experience many resyncs or broken
-     audio on receive try adjusting framesPerBuffer; try 0, 128, 256,
-     512, 1024.  The txThreadPriority checkbox reduces the priority of
-     the main txRx thread in FreeDV which may help the sound driver
-     thread process samples.  The txRxDumpTiming check box dumps
-     timing information to a console that is used for debugging the
-     rx break up problem on 700D.
+     problems on 700D.  During beta testing there were problems with
+     break up in the 700D Tx and Rx audio on Windows.
 
+     The PortAudio counters (PA1 and PA2) should not be incremented
+     when running, as this indicates samples are being lost by the
+     sound driver which will lead to sync problems.  If you experience
+     many resyncs or broken audio on receive try:
+
+     a) Adjusting framesPerBuffer; try 0, 128, 256, 512, 1024.
+
+     b) Shut down other applications that might be using audio, such
+        as Skype or your web browser.
+     
+     The txThreadPriority checkbox reduces the priority of
+     the main txRx thread in FreeDV which may help the sound driver
+     thread process samples.
+
+     The txRxDumpTiming check box dumps timing information to a
+     console that is used for debugging the rx break up problem on
+     700D.  Each number is how many ms the txRxThread took to run.
+
+     The txRxDumpTiming check box dumps the number of samples free in
+     the tx FIFO sending samples to the Tx.  If this hits zero, your
+     tx audio will break up and the rx will lose sync.  Tx audio break
+     up will also occur if you see "outfifo1" being incremented on the
+     "fifo" line during tx.  Try increasing the FifoSize.
+     
   5) UDP Messages: When FreeDV syncs on a received signal for 5
      seconds, it will send a "rx sync" UDP message to a Port on your
      machine (localhost).  An external program or script listening on

@@ -65,6 +65,7 @@
 #define NUM_CHANNELS        2                              // I think most sound cards prefer stereo we will convert to mono
 #define VOX_TONE_FREQ       1000.0                         // optional left channel vox tone freq
 #define VOX_TONE_AMP        30000                          // optional left channel vox tone amp
+#define FIFO_SIZE           320                            // default fifo size in ms
 
 #define MAX_BITS_PER_CODEC_FRAME 64                            // 1600 bit/s mode
 #define MAX_BYTES_PER_CODEC_FRAME (MAX_BITS_PER_CODEC_FRAME/8)
