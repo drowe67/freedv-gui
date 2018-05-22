@@ -76,6 +76,7 @@ struct FIFO         *g_rxDataOutFifo;
 int                 g_State, g_prev_State, g_interleaverSyncState;
 paCallBackData     *g_rxUserdata;
 int                 g_dump_timing;
+int                 g_dump_fifo_state;
 
 // FIFOs used for plotting waveforms
 struct FIFO        *g_plotDemodInFifo;
@@ -418,6 +419,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     }
 
     wxGetApp().m_framesPerBuffer = pConfig->Read(wxT("/Audio/framesPerBuffer"), (int)PA_FPB);
+    wxGetApp().m_fifoSize_ms = pConfig->Read(wxT("/Audio/fifoSize_ms"), (int)FIFO_SIZE);
 
     g_soundCard1InDeviceNum  = pConfig->Read(wxT("/Audio/soundCard1InDeviceNum"),         -1);
     g_soundCard1OutDeviceNum = pConfig->Read(wxT("/Audio/soundCard1OutDeviceNum"),        -1);
@@ -665,7 +667,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
        to helpo debug 700D windows sound break up */
     
     wxGetApp().m_txRxThreadHighPriority = true;
-    g_dump_timing = 0;
+    g_dump_timing = g_dump_fifo_state = 0;
     
     UDPInit();
 }
@@ -729,6 +731,7 @@ MainFrame::~MainFrame()
         pConfig->Write(wxT("/Audio/SquelchLevel"),          (int)(g_SquelchLevel*2.0));
 
         pConfig->Write(wxT("/Audio/framesPerBuffer"),       wxGetApp().m_framesPerBuffer);
+        pConfig->Write(wxT("/Audio/fifoSize_ms"),              wxGetApp().m_fifoSize_ms);
 
         pConfig->Write(wxT("/Audio/soundCard1InDeviceNum"),   g_soundCard1InDeviceNum);
         pConfig->Write(wxT("/Audio/soundCard1OutDeviceNum"),  g_soundCard1OutDeviceNum);
@@ -2902,23 +2905,46 @@ void MainFrame::startRxStream()
         g_rxUserdata->insrcsf = src_new(SRC_SINC_FASTEST, 1, &src_error);
         assert(g_rxUserdata->insrcsf != NULL);
 
-        // create FIFOs used to interface between different buffer sizes
+        // create FIFOs used to interface between Port Audio and txRx
+        // prcoessing loop, which iterates about once every 20ms.
+        // Sample rate conversion, stats for spectral plots, and
+        // transmit processng are all performed in the txRxProcessing
+        // loop.
 
-        g_rxUserdata->infifo1 = fifo_create(10*N48);
-        g_rxUserdata->outfifo1 = fifo_create(10*N48);
-        g_rxUserdata->outfifo2 = fifo_create(10*N48);
-        g_rxUserdata->infifo2 = fifo_create(10*N48);
-        //fprintf(stderr, "N48: %d 10*N48: %d\n", N48, 10*N48);
+        int soundCard1FifoSizeSamples = wxGetApp().m_fifoSize_ms*g_soundCard1SampleRate/1000;
+        int soundCard2FifoSizeSamples = wxGetApp().m_fifoSize_ms*g_soundCard2SampleRate/1000;
+        
+        g_rxUserdata->infifo1 = fifo_create(soundCard1FifoSizeSamples);
+        g_rxUserdata->outfifo1 = fifo_create(soundCard1FifoSizeSamples);
+        g_rxUserdata->outfifo2 = fifo_create(soundCard2FifoSizeSamples);
+        g_rxUserdata->infifo2 = fifo_create(soundCard2FifoSizeSamples);
+
+        fprintf(stderr, "fifoSize_ms: %d infifo1/outfilo1: %d infifo2/outfilo2: %d\n",
+                wxGetApp().m_fifoSize_ms, soundCard1FifoSizeSamples, soundCard2FifoSizeSamples);
+
+        // reset debug stats for FIFOs
+        
         g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
         g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
         for (int i=0; i<4; i++) {
             g_PAstatus1[i] = g_PAstatus2[i] = 0;
         }        
-        /* TODO: might be able to tune these on a per waveform basis */
-        
-        g_rxUserdata->rxinfifo = fifo_create(20 * N8);
-        g_rxUserdata->rxoutfifo = fifo_create(20 * N8);
 
+        // These FIFOs interface between the 20ms txRxProcessing()
+        // loop and the demodulator, which requires a variable number
+        // of input samples to adjust for timing clock differences
+        // between remote tx and rx.  These FIFOs also help with the
+        // different processing block size of different FreeDV modes.
+
+        // TODO: might be able to tune these on a per waveform basis, or refactor
+        // to a neater design with less layers of FIFOs
+        
+        int rxFifoSizeSamples = wxGetApp().m_fifoSize_ms*freedv_get_modem_sample_rate(g_pfreedv)/1000;
+        g_rxUserdata->rxinfifo = fifo_create(rxFifoSizeSamples);
+        g_rxUserdata->rxoutfifo = fifo_create(rxFifoSizeSamples);
+
+        fprintf(stderr, "rxFifoSizeSamples: %d\n",  rxFifoSizeSamples);
+        
         // Init Equaliser Filters ------------------------------------------------------
 
         m_newMicInFilter = m_newSpkOutFilter = true;
@@ -3600,7 +3626,7 @@ void txRxProcessing()
             assert(nsam_in_48 < 10*N48);
 
             // infifo2 is written to by another sound card so it may
-            // over or underflow, but we don't realy care.  It will
+            // over or underflow, but we don't really care.  It will
             // just result in a short interruption in audio being fed
             // to codec2_enc, possibly making a click every now and
             // again in the decoded audio at the other end.
@@ -3701,6 +3727,10 @@ void txRxProcessing()
 
     if (g_dump_timing) {
         fprintf(stderr, "%4ld", sw.Time());
+    }
+    if (g_dump_fifo_state) {
+        // just dump outfifo1 state atm as that is causing problems with 700D
+        fprintf(stderr, "%6d", fifo_free(cbData->outfifo1));
     }
 }
 

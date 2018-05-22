@@ -36,6 +36,7 @@ extern int                 g_PAframesPerBuffer1;
 extern int                 g_PAframesPerBuffer2;
 extern wxDatagramSocket    *g_sock;
 extern int                 g_dump_timing;
+extern int                 g_dump_fifo_state;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class OptionsDlg
@@ -292,19 +293,37 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox* sb_fifo1 = new wxStaticBox(this, wxID_ANY, _(""));
     wxStaticBoxSizer* sbSizer_fifo1 = new wxStaticBoxSizer(sb_fifo1, wxHORIZONTAL);
 
+    // first line
+    
     m_BtnFifoReset = new wxButton(this, wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_fifo1->Add(m_BtnFifoReset, 0,  wxALIGN_LEFT, 5);
-    wxStaticText *m_staticTextPA1 = new wxStaticText(this, wxID_ANY, _("   framesPerBuffer"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticTextPA1 = new wxStaticText(this, wxID_ANY, _("   PortAudio framesPerBuffer:"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_fifo1->Add(m_staticTextPA1, 0, wxALIGN_CENTER_VERTICAL , 5);
     m_txtCtrlframesPerBuffer = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
     sbSizer_fifo1->Add(m_txtCtrlframesPerBuffer, 0, 0, 5);
-    m_ckboxTxRxThreadPriority = new wxCheckBox(this, wxID_ANY, _("  txRxThreadPriority"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_fifo1->Add(m_ckboxTxRxThreadPriority, 0, wxALIGN_LEFT, 0);
-    m_ckboxTxRxDumpTiming = new wxCheckBox(this, wxID_ANY, _("  txRxDumpTiming"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_fifo1->Add(m_ckboxTxRxDumpTiming, 0, wxALIGN_LEFT, 0);
+    wxStaticText *m_staticTextFifo1 = new wxStaticText(this, wxID_ANY, _("   Fifo Size (ms):"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_fifo1->Add(m_staticTextFifo1, 0, wxALIGN_CENTER_VERTICAL , 5);
+    m_txtCtrlFifoSize = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
+    sbSizer_fifo1->Add(m_txtCtrlFifoSize, 0, 0, 5);
 
     sbSizer_fifo->Add(sbSizer_fifo1, 0,  wxALIGN_LEFT, 5);
 
+    // 2nd line
+    
+    wxStaticBox* sb_fifo2 = new wxStaticBox(this, wxID_ANY, _(""));
+    wxStaticBoxSizer* sbSizer_fifo2 = new wxStaticBoxSizer(sb_fifo2, wxHORIZONTAL);
+
+    m_ckboxTxRxThreadPriority = new wxCheckBox(this, wxID_ANY, _("  txRxThreadPriority"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_fifo2->Add(m_ckboxTxRxThreadPriority, 0, wxALIGN_LEFT, 0);
+    m_ckboxTxRxDumpTiming = new wxCheckBox(this, wxID_ANY, _("  txRxDumpTiming"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_fifo2->Add(m_ckboxTxRxDumpTiming, 0, wxALIGN_LEFT, 0);
+    m_ckboxTxRxDumpFifoState = new wxCheckBox(this, wxID_ANY, _("  txRxDumpFifoState"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_fifo2->Add(m_ckboxTxRxDumpFifoState, 0, wxALIGN_LEFT, 0);
+        
+    sbSizer_fifo->Add(sbSizer_fifo2, 0,  wxALIGN_LEFT, 5);
+    
+    // text lines with fifo counters
+    
     m_textFifos = new wxStaticText(this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_fifo->Add(m_textFifos, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 1);
 
@@ -435,8 +454,11 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txt_udp_port->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_udp_port));
 
         m_txtCtrlframesPerBuffer->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_framesPerBuffer));
+        m_txtCtrlFifoSize->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_fifoSize_ms));
+
         m_ckboxTxRxThreadPriority->SetValue(wxGetApp().m_txRxThreadHighPriority);
         m_ckboxTxRxDumpTiming->SetValue(g_dump_timing);
+        m_ckboxTxRxDumpFifoState->SetValue(g_dump_fifo_state);
         
 #ifdef __EXPERIMENTAL_UDP__
         m_ckbox_events->SetValue(wxGetApp().m_events);
@@ -508,8 +530,13 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlframesPerBuffer->GetValue().ToLong(&framesPerBuffer);
         wxGetApp().m_framesPerBuffer = (int)framesPerBuffer;
 
+        long FifoSize_ms;
+        m_txtCtrlFifoSize->GetValue().ToLong(&FifoSize_ms);
+        wxGetApp().m_fifoSize_ms = (int)FifoSize_ms;
+
         wxGetApp().m_txRxThreadHighPriority = m_ckboxTxRxThreadPriority->GetValue();
         g_dump_timing = m_ckboxTxRxDumpTiming->GetValue();
+        g_dump_fifo_state = m_ckboxTxRxDumpFifoState->GetValue();
 
 #ifdef __EXPERIMENTAL_UDP__
         wxGetApp().m_events        = m_ckbox_events->GetValue();
