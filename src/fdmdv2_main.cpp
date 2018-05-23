@@ -3609,6 +3609,13 @@ void txRxProcessing()
     if ((g_mode != -1) && ((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
         int ret;
 
+	if (g_dump_fifo_state) {
+	  // just dump outfifo1 state atm as that is causing problems with 700D
+	  // If this drops to zero we have a problem as we will run out of output samples
+	  // to send to the sound driver via PortAudio
+	  fprintf(stderr, "%6d", fifo_used(cbData->outfifo1));
+	}
+
         // Make sure we have a few frames of modulator output
         // samples.  This also locks the modulator to the sample rate
         // of sound card 1.  We want to make sure that modulator
@@ -3728,10 +3735,7 @@ void txRxProcessing()
     if (g_dump_timing) {
         fprintf(stderr, "%4ld", sw.Time());
     }
-    if (g_dump_fifo_state) {
-        // just dump outfifo1 state atm as that is causing problems with 700D
-        fprintf(stderr, "%6d", fifo_free(cbData->outfifo1));
-    }
+
 }
 
 //----------------------------------------------------------------
