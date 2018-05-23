@@ -132,6 +132,9 @@ else(BOOTSTRAP_WXWIDGETS AND NOT EXISTS ${WXCONFIG})
 #
 if(MINGW)
     message(STATUS "System is MinGW.")
+    # Default to static build of portaudio until I can figure out why the
+    # shared DLL doesn't work.
+    set(USE_STATIC_PORTAUDIO TRUE)
     # Setup HOST variable.
     include(cmake/MinGW.cmake)
     # This sets up the exe icon for windows under mingw.
