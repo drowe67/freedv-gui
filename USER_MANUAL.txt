@@ -55,15 +55,31 @@ Tools - Options:
      problems on 700D.  During beta testing there were problems with
      break up in the 700D Tx and Rx audio on Windows.
 
-     The PortAudio counters (PA1 and PA2) should not be incremented
-     when running, as this indicates samples are being lost by the
-     sound driver which will lead to sync problems.  If you experience
-     many resyncs or broken audio on receive try:
+     The PortAudio counters (PortAudio1 and PortAudio2) should not be
+     incremented when running in Tx or Rx, as this indicates samples
+     are being lost by the sound driver which will lead to sync
+     problems.
+
+     The Fifo counter outempty1 counter should not be incremented
+     during Tx, as this indicates FreeDV is not supplying samples fast
+     enough to the PortAudio drivers.  The results will be resyncs at
+     the receiver.
+
+     Check these counters by pressing Start, then Reset them and
+     observe the counters for 30 seconds.
+     
+     If the PortAudio counters are incrementing on receive try:
 
      a) Adjusting framesPerBuffer; try 0, 128, 256, 512, 1024.
 
      b) Shut down other applications that might be using audio, such
         as Skype or your web browser.
+
+     c) A different sound card rate such as 44.1kHz instead of 48kHz.
+     
+     If the outempty1 counter is incrementing on transmit try:
+
+     d) increasing the FifoSize.
      
      The txThreadPriority checkbox reduces the priority of
      the main txRx thread in FreeDV which may help the sound driver
@@ -77,7 +93,7 @@ Tools - Options:
      the tx FIFO sending samples to the Tx.  If this hits zero, your
      tx audio will break up and the rx will lose sync.  Tx audio break
      up will also occur if you see "outfifo1" being incremented on the
-     "fifo" line during tx.  Try increasing the FifoSize.
+     "Fifo" line during tx.  Try increasing the FifoSize.
      
   5) UDP Messages: When FreeDV syncs on a received signal for 5
      seconds, it will send a "rx sync" UDP message to a Port on your

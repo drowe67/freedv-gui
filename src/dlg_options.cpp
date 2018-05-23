@@ -295,8 +295,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     // first line
     
-    m_BtnFifoReset = new wxButton(this, wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_fifo1->Add(m_BtnFifoReset, 0,  wxALIGN_LEFT, 5);
     wxStaticText *m_staticTextPA1 = new wxStaticText(this, wxID_ANY, _("   PortAudio framesPerBuffer:"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_fifo1->Add(m_staticTextPA1, 0, wxALIGN_CENTER_VERTICAL , 5);
     m_txtCtrlframesPerBuffer = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
@@ -322,15 +320,20 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
         
     sbSizer_fifo->Add(sbSizer_fifo2, 0,  wxALIGN_LEFT, 5);
     
+    // Reset stats button
+    
+    m_BtnFifoReset = new wxButton(this, wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_fifo->Add(m_BtnFifoReset, 0,  wxALIGN_LEFT, 5);
+
     // text lines with fifo counters
     
-    m_textFifos = new wxStaticText(this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_fifo->Add(m_textFifos, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 1);
-
     m_textPA1 = new wxStaticText(this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_fifo->Add(m_textPA1, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 1);
     m_textPA2 = new wxStaticText(this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_fifo->Add(m_textPA2, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 1);
+
+    m_textFifos = new wxStaticText(this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    sbSizer_fifo->Add(m_textFifos, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 1);
 
     bSizer30->Add(sbSizer_fifo,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 
@@ -767,20 +770,20 @@ void OptionsDlg::OnUDPTest(wxCommandEvent& event)
 void OptionsDlg::DisplayFifoPACounters() {
     char fifo_counters[256];
 
-    sprintf(fifo_counters, "fifos: infull1: %d ooutempty1: %d infull2: %d outempty2: %d", g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
+    sprintf(fifo_counters, "Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d", g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
     wxString fifo_counters_string(fifo_counters);
     m_textFifos->SetLabel(fifo_counters_string);
 
     char pa_counters1[256];
 
     // input: underflow overflow output: underflow overflow
-    sprintf(pa_counters1, "PA1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d framesPerBuf: %d", g_PAstatus1[0], g_PAstatus1[1], g_PAstatus1[2], g_PAstatus1[3], g_PAframesPerBuffer1);
+    sprintf(pa_counters1, "PortAudio1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d framesPerBuf: %d", g_PAstatus1[0], g_PAstatus1[1], g_PAstatus1[2], g_PAstatus1[3], g_PAframesPerBuffer1);
     wxString pa_counters1_string(pa_counters1); m_textPA1->SetLabel(pa_counters1_string);
 
     char pa_counters2[256];
 
     // input: underflow overflow output: underflow overflow
-    sprintf(pa_counters2, "PA2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d framesPerBuf: %d", g_PAstatus2[0], g_PAstatus2[1], g_PAstatus2[2], g_PAstatus2[3], g_PAframesPerBuffer2);
+    sprintf(pa_counters2, "PortAudio2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d framesPerBuf: %d", g_PAstatus2[0], g_PAstatus2[1], g_PAstatus2[2], g_PAstatus2[3], g_PAframesPerBuffer2);
     wxString pa_counters2_string(pa_counters2);
     m_textPA2->SetLabel(pa_counters2_string);
 }
