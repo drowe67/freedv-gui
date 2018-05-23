@@ -1,4 +1,4 @@
-set(PORTAUDIO_TARBALL "pa_stable_v19_20111121")
+set(PORTAUDIO_TARBALL "pa_stable_v190600_20161030")
 
 # required linking libraries on linux. Not sure about windows.
 find_library(ALSA_LIBRARIES asound)
@@ -14,7 +14,7 @@ endif()
 # Make sure that configure knows what system we're using when cross-compiling.
 if(MINGW AND CMAKE_CROSSCOMPILING)
     include(cmake/MinGW.cmake)
-    set(CONFIGURE_COMMAND ./configure --host=${HOST} --target=${HOST} --enable-cxx --without-jack --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
+    set(CONFIGURE_COMMAND ./configure --host=${HOST} --target=${HOST} --enable-cxx --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
 else()
     set(CONFIGURE_COMMAND ./configure --enable-cxx --without-jack --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
 endif()
