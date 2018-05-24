@@ -301,6 +301,7 @@ class MainApp : public wxApp
         // 700 options
 
         bool       m_FreeDV700txClip;
+        bool       m_FreeDV700txBPF;
         bool       m_FreeDV700Combine;
         int        m_FreeDV700Interleave;
         bool       m_FreeDV700ManualUnSync;

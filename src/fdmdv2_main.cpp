@@ -522,6 +522,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_udp_port = (int)pConfig->Read(wxT("/UDP/port"), 3000);
 
     wxGetApp().m_FreeDV700txClip = (float)pConfig->Read(wxT("/FreeDV700/txClip"), t);
+    wxGetApp().m_FreeDV700txBPF = (float)pConfig->Read(wxT("/FreeDV700/txBPF"), t);
     wxGetApp().m_FreeDV700Combine = 1;
     wxGetApp().m_FreeDV700Interleave = (int)pConfig->Read(wxT("/FreeDV700/interleave"), 1);
     wxGetApp().m_FreeDV700ManualUnSync = (float)pConfig->Read(wxT("/FreeDV700/manualUnSync"), f);
@@ -1164,9 +1165,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     if (g_mode != -1)  {
 
-        // Run time update of FreeDV 700 tx clipper
+        // Run time update of FreeDV 700 tx clipper and 700D BPF
 
         freedv_set_clip(g_pfreedv, (int)wxGetApp().m_FreeDV700txClip);
+        freedv_set_tx_bpf(g_pfreedv, (int)wxGetApp().m_FreeDV700txBPF);
         
         // Test Frame Bit Error Updates ------------------------------------
 

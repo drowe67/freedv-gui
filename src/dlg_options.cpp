@@ -102,13 +102,12 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_ckboxFreeDV700txClip = new wxCheckBox(this, wxID_ANY, _("Clipping"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700txClip, 0, wxALIGN_LEFT, 0);
-    m_ckboxFreeDV700Combine = new wxCheckBox(this, wxID_ANY, _("700C Diversity Combine for plots   700D Interleaver:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDV700Combine = new wxCheckBox(this, wxID_ANY, _("700C Diversity Combine  700D Interleaver:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700Combine, 0, wxALIGN_LEFT, 0);
-
-    //wxStaticText *m_staticTexttb = new wxStaticText(this, wxID_ANY, _("   700D Interleave: "), wxDefaultPosition, wxDefaultSize, 0);
-    //sbSizer_freedv700->Add(m_staticTexttb, 0, wxALIGN_CENTRE_VERTICAL, 5);    
     m_txtInterleave = new wxTextCtrl(this, wxID_ANY,  wxString("1"), wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_freedv700->Add(m_txtInterleave, 0, wxALIGN_CENTRE_VERTICAL, 0);
+    m_ckboxFreeDV700txBPF = new wxCheckBox(this, wxID_ANY, _(" 700D Tx Band Pass Filter:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_freedv700->Add(m_ckboxFreeDV700txBPF, 0, wxALIGN_LEFT, 0);
 
     m_ckboxFreeDV700ManualUnSync = new wxCheckBox(this, wxID_ANY, _("700D Manual UnSync"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700ManualUnSync, 0, wxALIGN_LEFT, 0);
@@ -481,6 +480,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 #endif
 
         m_ckboxFreeDV700txClip->SetValue(wxGetApp().m_FreeDV700txClip);
+        m_ckboxFreeDV700txBPF->SetValue(wxGetApp().m_FreeDV700txBPF);
         m_ckboxFreeDV700Combine->SetValue(wxGetApp().m_FreeDV700Combine);
         m_txtInterleave->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave));
         m_ckboxFreeDV700ManualUnSync->SetValue(wxGetApp().m_FreeDV700ManualUnSync);
@@ -573,6 +573,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_udp_port       = (int)port;
 
         wxGetApp().m_FreeDV700txClip = m_ckboxFreeDV700txClip->GetValue();
+        wxGetApp().m_FreeDV700txBPF = m_ckboxFreeDV700txBPF->GetValue();
         wxGetApp().m_FreeDV700Combine = m_ckboxFreeDV700Combine->GetValue();
         long interleave;
         m_txtInterleave->GetValue().ToLong(&interleave);
@@ -609,6 +610,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             pConfig->Write(wxT("/Events/spam_timer"), wxGetApp().m_events_spam_timer);
 
             pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
+            pConfig->Write(wxT("/FreeDV700/txBPF"), wxGetApp().m_FreeDV700txBPF);
             pConfig->Write(wxT("/FreeDV700/interleave"), wxGetApp().m_FreeDV700Interleave);
             pConfig->Write(wxT("/FreeDV700/manualUnSync"), wxGetApp().m_FreeDV700ManualUnSync);
 
