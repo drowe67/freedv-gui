@@ -1187,16 +1187,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         freedv_set_test_frames_diversity(g_pfreedv, wxGetApp().m_FreeDV700Combine);
         g_channel_noise =  wxGetApp().m_channel_noise;
 
+        // update stats on main page
+
+        char bits[80], errors[80], ber[80], resyncs[80];
+        sprintf(bits, "Bits: %d", freedv_get_total_bits(g_pfreedv)); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
+        sprintf(errors, "Errs: %d", freedv_get_total_bit_errors(g_pfreedv)); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
+        float b = (float)freedv_get_total_bit_errors(g_pfreedv)/(1E-6+freedv_get_total_bits(g_pfreedv));
+        sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
+        sprintf(resyncs, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
+
         if (g_State) {
-            char bits[80], errors[80], ber[80], resyncs[80];
-
-            // update stats on main page
-
-            sprintf(bits, "Bits: %d", freedv_get_total_bits(g_pfreedv)); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
-            sprintf(errors, "Errs: %d", freedv_get_total_bit_errors(g_pfreedv)); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
-            float b = (float)freedv_get_total_bit_errors(g_pfreedv)/(1E-6+freedv_get_total_bits(g_pfreedv));
-            sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
-            sprintf(resyncs, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
 
             // update error pattern plots if supported
 
