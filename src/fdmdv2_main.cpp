@@ -36,13 +36,14 @@
 
 int g_in, g_out;
 
-// Global Codec2 & modem states - just one reqd for tx & rx
+// freedv states
 int                 g_Nc;
 int                 g_mode;
 struct freedv      *g_pfreedv;
 struct MODEM_STATS  g_stats;
 float               g_pwr_scale;
 int                 g_clip;
+int                 g_freedv_verbose;
 
 // test Frames
 int                 g_testFrames;
@@ -668,7 +669,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
        to helpo debug 700D windows sound break up */
     
     wxGetApp().m_txRxThreadHighPriority = true;
-    g_dump_timing = g_dump_fifo_state = 0;
+    g_dump_timing = g_dump_fifo_state = g_freedv_verbose = 0;
     
     UDPInit();
 }
@@ -1494,12 +1495,23 @@ void MainFrame::togglePTT(void) {
     {
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().m_rxNbookCtrl);
+
+        // enable sync text
+
+        m_textSync->Enable();
+        m_textInterleaverSync->Enable();
     }
     else
     {
         // rx-> tx transition, swap to Mic In page to monitor speech
         wxGetApp().m_rxNbookCtrl = m_auiNbookCtrl->GetSelection();
         m_auiNbookCtrl->ChangeSelection(m_auiNbookCtrl->GetPageIndex((wxWindow *)m_panelSpeechIn));
+
+        // disable sync text
+
+        m_textSync->Disable();
+        m_textInterleaverSync->Disable();
+        
 #ifdef __UDP_EXPERIMENTAL__
         char e[80]; sprintf(e,"ptt"); processTxtEvent(e);
 #endif
@@ -1530,6 +1542,7 @@ void MainFrame::togglePTT(void) {
     m_maxLevel = 0;
     m_textLevel->SetLabel(wxT(""));
     m_gaugeLevel->SetValue(0);
+           
 }
 
 /*
@@ -2459,6 +2472,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 g_pfreedv = freedv_open(g_mode);
                 m_textInterleaverSync->SetLabel("");
            }
+
+            freedv_set_verbose(g_pfreedv, g_freedv_verbose);
             
             freedv_set_callback_txt(g_pfreedv, &my_put_next_rx_char, &my_get_next_tx_char, NULL);
 
@@ -2474,7 +2489,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
             assert(g_pfreedv != NULL);
         
-            // init Codec 2 LPC Post Filter
+            // init Codec 2 LPC Post Filter (FreeDV 1600)
 
             codec2_set_lpc_post_filter(freedv_get_codec2(g_pfreedv),
                                        wxGetApp().m_codec2LPCPostFilterEnable,

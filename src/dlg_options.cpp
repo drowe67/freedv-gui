@@ -37,6 +37,7 @@ extern int                 g_PAframesPerBuffer2;
 extern wxDatagramSocket    *g_sock;
 extern int                 g_dump_timing;
 extern int                 g_dump_fifo_state;
+extern int                 g_freedv_verbose;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class OptionsDlg
@@ -106,7 +107,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_freedv700->Add(m_ckboxFreeDV700Combine, 0, wxALIGN_LEFT, 0);
     m_txtInterleave = new wxTextCtrl(this, wxID_ANY,  wxString("1"), wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_freedv700->Add(m_txtInterleave, 0, wxALIGN_CENTRE_VERTICAL, 0);
-    m_ckboxFreeDV700txBPF = new wxCheckBox(this, wxID_ANY, _(" 700D Tx Band Pass Filter:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDV700txBPF = new wxCheckBox(this, wxID_ANY, _(" 700D Tx Band Pass Filter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700txBPF, 0, wxALIGN_LEFT, 0);
 
     m_ckboxFreeDV700ManualUnSync = new wxCheckBox(this, wxID_ANY, _("700D Manual UnSync"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
@@ -315,8 +316,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxTxRxDumpTiming = new wxCheckBox(this, wxID_ANY, _("  txRxDumpTiming"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_fifo2->Add(m_ckboxTxRxDumpTiming, 0, wxALIGN_LEFT, 0);
     m_ckboxTxRxDumpFifoState = new wxCheckBox(this, wxID_ANY, _("  txRxDumpFifoState"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_fifo2->Add(m_ckboxTxRxDumpFifoState, 0, wxALIGN_LEFT, 0);
-        
+    sbSizer_fifo2->Add(m_ckboxTxRxDumpFifoState, 0, wxALIGN_LEFT, 0);   
+    m_ckboxFreeDVAPIVerbose = new wxCheckBox(this, wxID_ANY, _("  FreedvAPiVerbose"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_fifo2->Add(m_ckboxFreeDVAPIVerbose, 0, wxALIGN_LEFT, 0);   
+
     sbSizer_fifo->Add(sbSizer_fifo2, 0,  wxALIGN_LEFT, 5);
     
     // Reset stats button
@@ -461,7 +464,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxTxRxThreadPriority->SetValue(wxGetApp().m_txRxThreadHighPriority);
         m_ckboxTxRxDumpTiming->SetValue(g_dump_timing);
         m_ckboxTxRxDumpFifoState->SetValue(g_dump_fifo_state);
-        
+        m_ckboxFreeDVAPIVerbose->SetValue(g_freedv_verbose);
+       
 #ifdef __EXPERIMENTAL_UDP__
         m_ckbox_events->SetValue(wxGetApp().m_events);
         m_txt_spam_timer->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_events_spam_timer));
@@ -540,6 +544,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_txRxThreadHighPriority = m_ckboxTxRxThreadPriority->GetValue();
         g_dump_timing = m_ckboxTxRxDumpTiming->GetValue();
         g_dump_fifo_state = m_ckboxTxRxDumpFifoState->GetValue();
+        g_freedv_verbose = m_ckboxFreeDVAPIVerbose->GetValue();
 
 #ifdef __EXPERIMENTAL_UDP__
         wxGetApp().m_events        = m_ckbox_events->GetValue();
