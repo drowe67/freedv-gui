@@ -139,6 +139,7 @@ class OptionsDlg : public wxDialog
         wxCheckBox    *m_ckboxTxRxThreadPriority;
         wxCheckBox    *m_ckboxTxRxDumpTiming;
         wxCheckBox    *m_ckboxTxRxDumpFifoState;
+        wxCheckBox    *m_ckboxFreeDVAPIVerbose;
         
         wxButton*     m_sdbSizer5OK;
         wxButton*     m_sdbSizer5Cancel;

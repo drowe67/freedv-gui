@@ -62,7 +62,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 
     // LPC Post Filter --------------------------------------------------------
 
-    wxStaticBoxSizer* lpcpfs = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("LPC Post Filter")), wxHORIZONTAL);
+    wxStaticBoxSizer* lpcpfs = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("FreeDV 1600 LPC Post Filter")), wxHORIZONTAL);
 
     wxBoxSizer* left = new wxBoxSizer(wxVERTICAL);
 
@@ -485,6 +485,7 @@ void FilterDlg::OnMicInDefault(wxCommandEvent& event)
     setFreq(&m_MicInMid); setGain(&m_MicInMid); setQ(&m_MicInMid); 
 
     plotMicInFilterSpectrum();    
+    adjRunTimeMicInFilter();
 }
 
 void FilterDlg::OnSpkOutDefault(wxCommandEvent& event)
@@ -502,7 +503,8 @@ void FilterDlg::OnSpkOutDefault(wxCommandEvent& event)
     m_SpkOutMid.Q = 1.0;
     setFreq(&m_SpkOutMid); setGain(&m_SpkOutMid); setQ(&m_SpkOutMid); 
 
-    plotSpkOutFilterSpectrum();    
+    plotSpkOutFilterSpectrum();
+    adjRunTimeSpkOutFilter();
 }
 
 //-------------------------------------------------------------------------
