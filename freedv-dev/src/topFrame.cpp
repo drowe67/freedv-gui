@@ -162,7 +162,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     //------------------------------
 
     wxStaticBoxSizer* sbSizer_ber;
-    sbSizer_ber = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Bit Error Rate")), wxVERTICAL);
+    sbSizer_ber = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Stats")), wxVERTICAL);
 
     m_BtnBerReset = new wxButton(this, wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_ber->Add(m_BtnBerReset, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
@@ -175,6 +175,8 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     sbSizer_ber->Add(m_textBER, 0, wxALIGN_LEFT, 1);
     m_textResyncs = new wxStaticText(this, wxID_ANY, wxT("Resyncs: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_ber->Add(m_textResyncs, 0, wxALIGN_LEFT, 1);
+    m_textClockOffset = new wxStaticText(this, wxID_ANY, wxT("ClkOff: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    sbSizer_ber->Add(m_textClockOffset, 0, wxALIGN_LEFT, 1);
 
     leftSizer->Add(sbSizer_ber,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 

@@ -1189,12 +1189,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         // update stats on main page
 
-        char bits[80], errors[80], ber[80], resyncs[80];
+        char bits[80], errors[80], ber[80], resyncs[80], clockoffset[80];
         sprintf(bits, "Bits: %d", freedv_get_total_bits(g_pfreedv)); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
         sprintf(errors, "Errs: %d", freedv_get_total_bit_errors(g_pfreedv)); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
         float b = (float)freedv_get_total_bit_errors(g_pfreedv)/(1E-6+freedv_get_total_bits(g_pfreedv));
         sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
         sprintf(resyncs, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
+        sprintf(clockoffset, "ClkOff: %5d", (int)round(g_stats.clock_offset*1E5)*10);
+        wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
 
         if (g_State) {
 
