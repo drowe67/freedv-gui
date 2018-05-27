@@ -1035,12 +1035,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 	m_textSync->SetLabel("Modem");
      }
     g_prev_State = g_State;
-    if (g_interleaverSyncState) {
-        m_textInterleaverSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
-	m_textInterleaverSync->SetLabel("Intrlvr ("+wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave)+")");
-    } else {
-        m_textInterleaverSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
-	m_textInterleaverSync->SetLabel("Intrlvr ("+wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave)+")");
+    if (g_mode == FREEDV_MODE_700D) {
+        if (g_interleaverSyncState) {
+            m_textInterleaverSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
+            m_textInterleaverSync->SetLabel("Intrlvr ("+wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave)+")");
+        } else {
+            m_textInterleaverSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
+            m_textInterleaverSync->SetLabel("Intrlvr ("+wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave)+")");
+        }
     }
     
     // send Callsign ----------------------------------------------------
@@ -1195,12 +1197,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         float b = (float)freedv_get_total_bit_errors(g_pfreedv)/(1E-6+freedv_get_total_bits(g_pfreedv));
         sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
         sprintf(resyncs, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
-        sprintf(clockoffset, "ClkOff: %5d", (int)round(g_stats.clock_offset*1E5)*10);
-        wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
 
         if (g_State) {
 
-            // update error pattern plots if supported
+           sprintf(clockoffset, "ClkOff: %5d", (int)round(g_stats.clock_offset*1E6));
+           wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
+
+             // update error pattern plots if supported
 
             int sz_error_pattern = freedv_get_sz_error_pattern(g_pfreedv);
             //fprintf(stderr, "sz_error_pattern: %d\n", sz_error_pattern);
