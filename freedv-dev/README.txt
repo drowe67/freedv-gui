@@ -107,10 +107,10 @@ Enable Freetel specific packages not currently in Fedora proper:
   $ sudo dnf install mingw{32,64}-wxWidgets3 mingw{32,64}-hamlib \
     mingw{32,64}-portaudio mingw{32,64}-libsndfile
 
-Building FreeDV:
+Building FreeDV for 64 Bit windows:
   $ cd ~/freedv-dev
   $ mkdir build_windows && cd build_windows
-  $ mingw64-cmake
+  $ mingw64-cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_STATIC_SAMPLERATE=TRUE ..
   $ make
   $ make package
   
