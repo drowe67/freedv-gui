@@ -14,7 +14,7 @@ endif()
 # Make sure that configure knows what system we're using when cross-compiling.
 if(MINGW AND CMAKE_CROSSCOMPILING)
     include(cmake/MinGW.cmake)
-    set(CONFIGURE_COMMAND ./configure --host=${HOST} --target=${HOST} --enable-cxx --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
+    set(CONFIGURE_COMMAND ./configure --host=${HOST} --target=${HOST} --disable-cxx --disable-shared --with-winapi=directx --prefix=${CMAKE_BINARY_DIR}/external/dist)
 else()
     set(CONFIGURE_COMMAND ./configure --enable-cxx --without-jack --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
 endif()
@@ -28,21 +28,17 @@ ExternalProject_Add(portaudio
     BUILD_COMMAND $(MAKE)
     INSTALL_COMMAND $(MAKE) install
 )
+set(PORTAUDIO_LIBRARIES ${CMAKE_BINARY_DIR}/external/dist/lib/libportaudio.a)
+
 if(WIN32)
     find_library(WINMM winmm)
-    set(PORTAUDIO_LIBRARIES 
-        ${CMAKE_BINARY_DIR}/external/dist/lib/libportaudio.a
-        ${CMAKE_BINARY_DIR}/external/dist/lib/libportaudiocpp.a
-        ${WINMM}
+    find_library(DSOUND dsound)
+    list(APPEND PORTAUDIO_LIBRARIES ${WINMM} ${DSOUND}
 )
 else(WIN32)
     find_library(RT rt)
     find_library(ASOUND asound)
-    set(PORTAUDIO_LIBRARIES
-        ${CMAKE_BINARY_DIR}/external/dist/lib/libportaudio.a
-        ${CMAKE_BINARY_DIR}/external/dist/lib/libportaudiocpp.a
-        ${RT}
-        ${ASOUND}
+    set(PORTAUDIO_LIBRARIES ${RT} ${ASOUND}
     )
 endif(WIN32)
 include_directories(${CMAKE_BINARY_DIR}/external/dist/include)
