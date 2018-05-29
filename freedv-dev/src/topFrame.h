@@ -104,6 +104,8 @@ class TopFrame : public wxFrame
         wxStaticText  *m_textBER;
         wxStaticText  *m_textResyncs;
         wxStaticText  *m_textClockOffset;
+        wxStaticText  *m_textFreqOffset;
+        wxStaticText  *m_textSyncMetric;
 
         wxStaticText  *m_textSync;
         wxStaticText  *m_textInterleaverSync;

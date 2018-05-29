@@ -1191,13 +1191,18 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         // update stats on main page
 
-        char bits[80], errors[80], ber[80], resyncs[80], clockoffset[80];
+        char bits[80], errors[80], ber[80], resyncs[80], clockoffset[80], freqoffset[80], syncmetric[80];
         sprintf(bits, "Bits: %d", freedv_get_total_bits(g_pfreedv)); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
         sprintf(errors, "Errs: %d", freedv_get_total_bit_errors(g_pfreedv)); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
         float b = (float)freedv_get_total_bit_errors(g_pfreedv)/(1E-6+freedv_get_total_bits(g_pfreedv));
         sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
         sprintf(resyncs, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
 
+        sprintf(freqoffset, "FrqOff: %3.1f", g_stats.foff);
+        wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
+        sprintf(syncmetric, "Sync: %3.2f", g_stats.sync_metric);
+        wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
+        
         if (g_State) {
 
            sprintf(clockoffset, "ClkOff: %5d", (int)round(g_stats.clock_offset*1E6));
