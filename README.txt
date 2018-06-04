@@ -200,5 +200,8 @@ welcome!
 [ ] break fdmdv2_main.cpp into smaller files
 [ ] rename src files from fdmdv2_ -> freedv_
 [ ] profile code and explore optimisations
-
+[ ] The FreeDV waterfall doesn't pick up fast fading as well as
+    some other SDRS, would be good to review the code and
+    adjust
+    
 
