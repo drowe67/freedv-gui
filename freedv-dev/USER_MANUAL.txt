@@ -99,10 +99,14 @@ Tools - Options:
      seconds, it will send a "rx sync" UDP message to a Port on your
      machine (localhost).  An external program or script listening on
      this port can then take some action, for example send "spotting"
-     information to a web server or send an email your phone.  On
-     Linux you can test reception of messages using netcat:
+     information to a web server or send an email your phone.
 
-     $ nc -ul 3000
+     Enable UDP messages on Tools-Options, and test using the "Test"
+     button.
+     
+     On Linux you can test reception of messages using netcat:
+
+       $ nc -ul 3000
      
      An sample script to email you on FreeDV sync:
 
@@ -111,6 +115,7 @@ Tools - Options:
      Usage for Gmail:
 
        $ python send_email_on_sync.py --listen_port 3000 --smtp_server smtp.gmail.com --smtp_port 587 your@gmail.com your_pass
+
      
 Changing COM Port On Windows, May 2018
 ---------------------------------------

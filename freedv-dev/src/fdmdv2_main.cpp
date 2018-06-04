@@ -529,7 +529,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_FreeDV700ManualUnSync = (float)pConfig->Read(wxT("/FreeDV700/manualUnSync"), f);
 
     wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
- 
+    
     wxGetApp().m_debug_console = (float)pConfig->Read(wxT("/Debug/console"), f);
 
     wxGetApp().m_attn_carrier_en = 0;
@@ -631,6 +631,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     g_test_frame_sync_state = 0;
     g_resyncs = 0;
     wxGetApp().m_testFrames = false;
+    wxGetApp().m_channel_noise = false;
     g_tone_phase = 0.0;
 
     g_modal = false;
@@ -1187,7 +1188,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
         freedv_set_test_frames(g_pfreedv, wxGetApp().m_testFrames);
         freedv_set_test_frames_diversity(g_pfreedv, wxGetApp().m_FreeDV700Combine);
-        g_channel_noise =  wxGetApp().m_channel_noise;
+        g_channel_noise = wxGetApp().m_channel_noise;
 
         // update stats on main page
 
