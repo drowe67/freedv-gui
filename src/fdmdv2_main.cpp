@@ -274,7 +274,6 @@ int MainApp::OnExit()
         dlclose(m_plugInHandle);
         #endif
     }
-
     return 0;
 }
 
@@ -689,21 +688,25 @@ MainFrame::~MainFrame()
     #ifdef FTEST
     fclose(ftest);
     #endif
+
     #ifdef __WXMSW__
     fclose(g_logfile);
     #endif
-
-    if (optionsDlg != NULL) {
-        delete optionsDlg;
-        optionsDlg = NULL;
-    }
 
 #ifdef __EXPERIMENTAL_UDP__
     stopUDPThread();
 #endif
 
-    if (wxGetApp().m_hamlib) delete wxGetApp().m_hamlib;
-    if (wxGetApp().m_serialport) delete wxGetApp().m_serialport;
+    if (wxGetApp().m_hamlib)
+    {
+        wxGetApp().m_hamlib->close();
+        delete wxGetApp().m_hamlib;
+    }
+
+    if (wxGetApp().m_serialport)
+    {
+        delete wxGetApp().m_serialport;
+    }
 
     wxConfigBase *pConfig = wxConfigBase::Get();
     if(pConfig)
@@ -834,6 +837,11 @@ MainFrame::~MainFrame()
 #endif // _USE_ONIDLE
 
     delete wxConfigBase::Set((wxConfigBase *) NULL);
+
+    if (optionsDlg != NULL) {
+        delete optionsDlg;
+        optionsDlg = NULL;
+    }
 }
 
 

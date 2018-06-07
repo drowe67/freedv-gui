@@ -203,5 +203,8 @@ welcome!
 [ ] The FreeDV waterfall doesn't pick up fast fading as well as
     some other SDRS, would be good to review the code and
     adjust
-    
+[ ] On Windows, closing FreeDV GUI Windows crashes
+    + File Exit works OK
+[ ] Align license text in source file with LGPL
+
 
