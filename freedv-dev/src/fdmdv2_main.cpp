@@ -541,14 +541,14 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     int mode  = pConfig->Read(wxT("/Audio/mode"), (long)0);
     if (mode == 0)
         m_rb1600->SetValue(1);
-    //if (mode == 2)
-    //    m_rb700b->SetValue(1);
     if (mode == 3)
         m_rb700c->SetValue(1);
     if (mode == 4)
         m_rb700d->SetValue(1);
     if (mode == 5)
         m_rb800xa->SetValue(1);
+    if (mode == 6)
+        m_rb2400b->SetValue(1);
         
     pConfig->SetPath(wxT("/"));
 
@@ -789,14 +789,14 @@ MainFrame::~MainFrame()
         int mode;
         if (m_rb1600->GetValue())
             mode = 0;
-        //if (m_rb700b->GetValue())
-        //    mode = 2;
         if (m_rb700c->GetValue())
             mode = 3;
         if (m_rb700d->GetValue())
             mode = 4;
         if (m_rb800xa->GetValue())
             mode = 5;
+        if (m_rb2400b->GetValue())
+            mode = 6;
        pConfig->Write(wxT("/Audio/mode"), mode);
     }
 
@@ -2418,6 +2418,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb700c->Disable();
         m_rb700d->Disable();
         m_rb800xa->Disable();
+        m_rb2400b->Disable();
         if (m_rbPlugIn != NULL)
             m_rbPlugIn->Disable();
 
@@ -2461,6 +2462,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (m_rb800xa->GetValue()) {
             g_mode = FREEDV_MODE_800XA;
         }
+        if (m_rb2400b->GetValue()) {
+            g_mode = FREEDV_MODE_2400B;
+        }
         if (m_rbPlugIn != NULL) {
             if (m_rbPlugIn->GetValue()) {
                 g_mode = -1;  /* TODO; a better way of handling (enumarating?) non-freedv modes */
@@ -2478,6 +2482,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             // init freedv states
 
             if (g_mode == FREEDV_MODE_700D) {
+                // 700D has some init time stuff so treat it special
                 struct freedv_advanced adv;
                 adv.interleave_frames = wxGetApp().m_FreeDV700Interleave;
                 g_pfreedv = freedv_open_advanced(g_mode, &adv);
@@ -2536,7 +2541,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         g_snr = 0.0;
         g_half_duplex = wxGetApp().m_boolHalfDuplex;
 
-        if (g_mode == FREEDV_MODE_800XA) {
+        if ((g_mode == FREEDV_MODE_800XA) || (g_mode == FREEDV_MODE_2400A) || (g_mode == FREEDV_MODE_2400B)) {
             m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_EYE);
         }
         else {
@@ -2644,27 +2649,18 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_textInterleaverSync->Disable();
         
         m_togBtnSplit->Disable();
-        //m_togRxID->Disable();
-        //m_togTxID->Disable();
         m_togBtnAnalog->Disable();
         m_btnTogPTT->Disable();
         m_togBtnVoiceKeyer->Disable();
         m_togBtnOnOff->SetLabel(wxT("Start"));
         m_rb1600->Enable();
-        //m_rb700b->Enable();
         m_rb700c->Enable();
         m_rb700d->Enable();
         m_rb800xa->Enable();
+        m_rb2400b->Enable();
         if (m_rbPlugIn != NULL)
             m_rbPlugIn->Enable();
            
-#ifdef DISABLED_FEATURE
-        m_rb700->Enable();
-        m_rb1400old->Enable();
-        m_rb1600Wide->Enable();
-        m_rb1400->Enable();
-        m_rb2000->Enable();
-#endif
 #ifdef __UDP_EXPERIMENTAL__
         char e[80]; sprintf(e,"stop"); processTxtEvent(e);
 #endif

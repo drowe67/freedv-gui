@@ -119,7 +119,8 @@ class TopFrame : public wxFrame
         wxRadioButton *m_rb700d;
         wxRadioButton *m_rb800xa;
         wxRadioButton *m_rb1600;
-        wxRadioButton *m_rb2000;
+        wxRadioButton *m_rb2400a;
+        wxRadioButton *m_rb2400b;
         wxRadioButton *m_rb1600Wide;
         wxRadioButton *m_rbPlugIn;
 
