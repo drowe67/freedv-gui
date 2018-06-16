@@ -3451,24 +3451,29 @@ void txRxProcessing()
 
     paCallBackData  *cbData = g_rxUserdata;
 
-    // Buffers re-used by tx and rx processing
-    // signals in in48k/out48k are at a maximum sample rate of 48k, could be 44.1kHz
-    // depending on sound hardware.
+    // Buffers re-used by tx and rx processing.  We take samples from
+    // the sound card, and resample them for the freedv modem input
+    // sample rate.  Typically the sound card is running at 48 or 44.1
+    // kHz, and the modem at 8kHz, however some modems such as FreeDV
+    // 2400A/B and the horus baloon telemetry run at 48 kHz.
 
-    short           in8k_short[10*N8];
-    short           in48k_short[10*N48];
-    short           out8k_short[10*N8];
-    short           out48k_short[10*N48];
-    int             nout, samplerate, n_samples;
+    // allocate enough room for 20ms processing buffers at maximum
+    // sample rate of 48 kHz.  Note these buffer are used by rx and tx
+    // side processing
+    
+    short           infreedv[10*N48];
+    short           insound_card[10*N48];
+    short           outfreedv[10*N48];
+    short           outsound_card[10*N48];
+    int             nout, freedv_samplerate;
+    int             nfreedv;
 
-    //fprintf(g_logfile, "start infifo1: %5d outfifo2: %5d\n", fifo_used(cbData->infifo1), fifo_used(cbData->outfifo2));
-
-    // FreeDV 700 uses a modem sample rate of 7500 Hz which requires some special treatment
+    // analog mode runs at the standard FS = 8000 Hz
 
     if (g_analog || g_mode == -1) 
-        samplerate = FS;
+        freedv_samplerate = FS;
     else
-        samplerate = freedv_get_modem_sample_rate(g_pfreedv);
+        freedv_samplerate = freedv_get_modem_sample_rate(g_pfreedv);
 
     //
     //  RX side processing --------------------------------------------
@@ -3476,51 +3481,50 @@ void txRxProcessing()
 
     // while we have enough input samples available ...
 
+    // attempt to read one processing buffer of receive samples
+    // (20ms), number of samples is scaled for the sound card sample
+    // rate, so we get the right number of samples for the output
+    // decoded audio
+
     int nsam = g_soundCard1SampleRate * (float)N8/FS;
     assert(nsam <= N48);
-    g_mutexProtectingCallbackData.Lock();
-    //fprintf(stderr, "RX nsam: %d fifo_used: %d fifo_free: %d\n",
-    //        nsam, fifo_used(cbData->infifo1), fifo_free(cbData->infifo1));
-    while ((fifo_read(cbData->infifo1, in48k_short, nsam) == 0) && ((g_half_duplex && !g_tx) || !g_half_duplex)) 
-    {
-        g_mutexProtectingCallbackData.Unlock();
-        unsigned int n8k;
+    while ((fifo_read(cbData->infifo1, insound_card, nsam) == 0) && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
 
-        n8k = resample(cbData->insrc1, in8k_short, in48k_short, samplerate, g_soundCard1SampleRate, N8, nsam);
-        assert(n8k <= N8);
+        /* convert sound card sample rate FreeDV input sample rate */
+        
+        nfreedv = resample(cbData->insrc1, infreedv, insound_card, freedv_samplerate, g_soundCard1SampleRate, N48, nsam);
+        assert(nfreedv <= N48);
 
-        // optionally save "from radio" signal (write demod input to file)
+        // optionally save "from radio" signal (write demod input to file) ----------------------------
         // Really useful for testing and development as it allows us
         // to repeat tests using off air signals
 
         g_mutexProtectingCallbackData.Lock();
         if (g_recFileFromRadio && (g_sfRecFile != NULL)) {
             //printf("g_recFromRadioSamples: %d  n8k: %d \n", g_recFromRadioSamples);
-            if (g_recFromRadioSamples < n8k) {
-                sf_write_short(g_sfRecFile, in8k_short, g_recFromRadioSamples);
+            if (g_recFromRadioSamples < (unsigned)nfreedv) {
+                sf_write_short(g_sfRecFile, infreedv, g_recFromRadioSamples);
                 wxCommandEvent event( wxEVT_COMMAND_MENU_SELECTED, g_recFileFromRadioEventId );
                 // call stop/start record menu item, should be thread safe
                 g_parent->GetEventHandler()->AddPendingEvent( event );
                 g_recFromRadioSamples = 0;
-                //printf("finished recording g_recFromRadioSamples: %d n8k: %d!\n", g_recFileFromRadio, n8k);
             }
             else {
-                sf_write_short(g_sfRecFile, in8k_short, n8k);
-                g_recFromRadioSamples -= n8k;
+                sf_write_short(g_sfRecFile, infreedv, nfreedv);
+                g_recFromRadioSamples -= nfreedv;
             }
         }
         g_mutexProtectingCallbackData.Unlock();
 
-        // optionally read "from radio" signal from file (read demod input from file)
+        // optionally read "from radio" signal from file (read demod input from file) -----------------
 
         g_mutexProtectingCallbackData.Lock();
         if (g_playFileFromRadio && (g_sfPlayFileFromRadio != NULL)) {
-            unsigned int nsf = n8k*g_sfFs/samplerate;
-            short        insf_short[nsf];
-            unsigned int n = sf_read_short(g_sfPlayFileFromRadio, insf_short, nsf);
-            n8k = resample(cbData->insrcsf, in8k_short, insf_short, samplerate, g_sfFs, N8, nsf);
-            //fprintf(g_logfile, "n: %d nsf: %d n8k: %d samplerate: %d\n", n, nsf, n8k, samplerate);
-            assert(n8k <= N8);
+            unsigned int nsf = nfreedv*g_sfFs/freedv_samplerate;
+            short        insf[nsf];
+            unsigned int n = sf_read_short(g_sfPlayFileFromRadio, insf, nsf);
+            nfreedv = resample(cbData->insrcsf, infreedv, insf, freedv_samplerate, g_sfFs, N48, nsf);
+            assert(nfreedv <= N48);
 
             if (n == 0) {
                 if (g_loopPlayFileFromRadio)
@@ -3535,7 +3539,7 @@ void txRxProcessing()
         }
         g_mutexProtectingCallbackData.Unlock();
 
-        resample_for_plot(g_plotDemodInFifo, in8k_short, n8k, samplerate);
+        resample_for_plot(g_plotDemodInFifo, infreedv, nfreedv, freedv_samplerate);
 
         if (g_mode != -1) {
             // send latest squelch level to FreeDV API, as it handles squelch internally
@@ -3544,34 +3548,32 @@ void txRxProcessing()
             freedv_set_snr_squelch_thresh(g_pfreedv, g_SquelchLevel);
         }
 
-        // Optional tone interferer
+        // Optional tone interferer -----------------------------------------------------
 
         if (wxGetApp().m_tone) {
-            float w = 2.0*M_PI*wxGetApp().m_tone_freq_hz/freedv_get_modem_sample_rate(g_pfreedv);
+            float w = 2.0*M_PI*wxGetApp().m_tone_freq_hz/freedv_samplerate;
             float s;
-            unsigned int i;
-            for(i=0; i<n8k; i++) {
+            int i;
+            for(i=0; i<nfreedv; i++) {
                 s = (float)wxGetApp().m_tone_amplitude*cos(g_tone_phase);   
-                in8k_short[i] += (int)s;             
+                infreedv[i] += (int)s;             
                 g_tone_phase += w;
                 //fprintf(stderr, "%f\n", s);
             }
             g_tone_phase -= 2.0*M_PI*floor(g_tone_phase/(2.0*M_PI));                                         
         }
 
-        //fprintf(g_logfile, "snr_squelch_thresh: %f\n",  g_pfreedv->snr_squelch_thresh);
+        // compute rx spectrum - do here so update rate is constant across modes -------
 
-        // compute rx spectrum - do here so update rate in constant
-
-        COMP  rx_fdm[n8k];
+        COMP  rx_fdm[nfreedv];
         float rx_spec[MODEM_STATS_NSPEC];
-        unsigned int   i;
+        int i;
 
-        for(i=0; i<n8k; i++) {
-            rx_fdm[i].real = in8k_short[i];
+        for(i=0; i<nfreedv; i++) {
+            rx_fdm[i].real = infreedv[i];
             rx_fdm[i].imag = 0.0;
         }            
-        modem_stats_get_rx_spectrum(&g_stats, rx_spec, rx_fdm, n8k);
+        modem_stats_get_rx_spectrum(&g_stats, rx_spec, rx_fdm, nfreedv);
 
         // Average rx spectrum data using a simple IIR low pass filter
 
@@ -3584,60 +3586,48 @@ void txRxProcessing()
         // headphones/speaker.
 
         if (g_analog) {
-            memcpy(out8k_short, in8k_short, sizeof(short)*n8k);
-            
-            #ifdef OLDSPEC
-            // compute rx spectrum 
-
-            COMP  rx_fdm[n8k];
-            float rx_spec[MODEM_STATS_NSPEC];
-            unsigned int   i;
-
-            for(i=0; i<n8k; i++) {
-                rx_fdm[i].real = in8k_short[i];
-                rx_fdm[i].imag = 0.0;
-            }            
-            modem_stats_get_rx_spectrum(&g_stats, rx_spec, rx_fdm, n8k);
-
-            // Average rx spectrum data using a simple IIR low pass filter
-
-            for(i = 0; i<MODEM_STATS_NSPEC; i++) {
-                g_avmag[i] = BETA * g_avmag[i] + (1.0 - BETA) * rx_spec[i];
-            }
-            #endif
+            memcpy(outfreedv, infreedv, sizeof(short)*nfreedv);
         }
         else {
-            fifo_write(cbData->rxinfifo, in8k_short, n8k);
+            // Write 20ms chunks of input samples for modem rx processing
+
+            fifo_write(cbData->rxinfifo, infreedv, nfreedv);
             per_frame_rx_processing(cbData->rxoutfifo, cbData->rxinfifo);
-            memset(out8k_short, 0, sizeof(short)*N8);
-            fifo_read(cbData->rxoutfifo, out8k_short, N8);
-            //printf("out8k_short: %d\n", out8k_short[0]);
+            
+            // Read 20ms chunk of samples from modem rx processing,
+            // this will typically be decoded output speech, and is
+            // (currently at least) fixed at a sample rate of 8 kHz
+            
+            memset(outfreedv, 0, sizeof(short)*N8);
+            //fprintf(stderr, "rxoutfifo free: %d used: %d\n", fifo_free(cbData->rxoutfifo), fifo_used(cbData->rxoutfifo));
+            fifo_read(cbData->rxoutfifo, outfreedv, N8);
         }
 
         // Optional Spk Out EQ Filtering, need mutex as filter can change at run time
 
         g_mutexProtectingCallbackData.Lock();
         if (cbData->spkOutEQEnable) {
-            sox_biquad_filter(cbData->sbqSpkOutBass,   out8k_short, out8k_short, N8);
-            sox_biquad_filter(cbData->sbqSpkOutTreble, out8k_short, out8k_short, N8);
-            sox_biquad_filter(cbData->sbqSpkOutMid,    out8k_short, out8k_short, N8);
+            sox_biquad_filter(cbData->sbqSpkOutBass,   outfreedv, outfreedv, N8);
+            sox_biquad_filter(cbData->sbqSpkOutTreble, outfreedv, outfreedv, N8);
+            sox_biquad_filter(cbData->sbqSpkOutMid,    outfreedv, outfreedv, N8);
         }
         g_mutexProtectingCallbackData.Unlock();
 
-        resample_for_plot(g_plotSpeechOutFifo, out8k_short, N8, FS);
+        resample_for_plot(g_plotSpeechOutFifo, outfreedv, N8, FS);
 
-        g_mutexProtectingCallbackData.Lock();
+        // resample to output sound card rate
+        
         if (g_nSoundCards == 1) {
-            nout = resample(cbData->outsrc2, out48k_short, out8k_short, g_soundCard1SampleRate, FS, N48, N8);
-            fifo_write(cbData->outfifo1, out48k_short, nout);
+            nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, FS, N48, N8);
+            //fprintf(stderr, "nout %d, outfifo1 free: %d used: %d \n", nout, fifo_free(cbData->outfifo1), fifo_used(cbData->outfifo1));            
+            fifo_write(cbData->outfifo1, outsound_card, nout);
         }
         else {
-            nout = resample(cbData->outsrc2, out48k_short, out8k_short, g_soundCard2SampleRate, FS, N48, N8);
-            fifo_write(cbData->outfifo2, out48k_short, nout);
+            nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, FS, N48, N8);
+            fifo_write(cbData->outfifo2, outsound_card, nout);
         }
     }
-    g_mutexProtectingCallbackData.Unlock();
-
+ 
     //
     //  TX side processing --------------------------------------------
     //
@@ -3652,19 +3642,24 @@ void txRxProcessing()
 	  fprintf(stderr, "%6d", fifo_used(cbData->outfifo1));
 	}
 
-        // Make sure we have a few frames of modulator output
-        // samples.  This also locks the modulator to the sample rate
+        // This while loop locks the modulator to the sample rate
         // of sound card 1.  We want to make sure that modulator
         // samples are uninterrupted by differences in sample rate
         // between this sound card and sound card 2.
 
-        g_mutexProtectingCallbackData.Lock();
-        unsigned int nsam_out_48 = g_soundCard2SampleRate * freedv_get_n_nom_modem_samples(g_pfreedv)/FS;
-        //fprintf(stderr, "TX nsam_out_48: %d fifo_used: %d fifo_free: %d\n",
-        //        nsam_out_48, fifo_used(cbData->outfifo1), fifo_free(cbData->outfifo1));
-        while((unsigned)fifo_free(cbData->outfifo1) >= nsam_out_48) {
-            g_mutexProtectingCallbackData.Unlock();
+        // Run this while loop as soon as we have enough room for one
+        // frame of modem samples.  Aim is to keep it nice and full so
+        // we don't have any gaps ix tx signal.
 
+        unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * freedv_get_n_nom_modem_samples(g_pfreedv)/freedv_samplerate;
+
+        while((unsigned)fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {
+
+            // OK to generate a frame of modem output samples we need
+            // an input frame of speech samples from the microphone.
+            // The FreeDV input sample rate for speech samples is
+            // currently fixed at 8 kHz.
+            
             int nsam_in_48 = g_soundCard2SampleRate * freedv_get_n_speech_samples(g_pfreedv)/FS;
             assert(nsam_in_48 < 10*N48);
 
@@ -3675,16 +3670,17 @@ void txRxProcessing()
             // again in the decoded audio at the other end.
 
             // zero speech input just in case infifo2 underflows
-            memset(in48k_short, 0, nsam_in_48*sizeof(short));
-            fifo_read(cbData->infifo2, in48k_short, nsam_in_48);
 
-            nout = resample(cbData->insrc2, in8k_short, in48k_short, FS, g_soundCard2SampleRate, 10*N8, nsam_in_48);
+            memset(insound_card, 0, nsam_in_48*sizeof(short));
+            fifo_read(cbData->infifo2, insound_card, nsam_in_48);
+
+            nout = resample(cbData->insrc2, infreedv, insound_card, FS, g_soundCard2SampleRate, 10*N8, nsam_in_48);
 
             // optionally use file for mic input signal
 
             g_mutexProtectingCallbackData.Lock();
             if (g_playFileToMicIn && (g_sfPlayFile != NULL)) {
-                int n = sf_read_short(g_sfPlayFile, in8k_short, nout);
+                int n = sf_read_short(g_sfPlayFile, infreedv, nout);
                 //fprintf(stderr, "n: %d nout: %d\n", n, nout);
                 if (n != nout) {
                     if (g_loopPlayFileToMicIn)
@@ -3701,25 +3697,25 @@ void txRxProcessing()
             // Optional Speex pre-processor for acoustic noise reduction
 
             if (wxGetApp().m_speexpp_enable) {
-                speex_preprocess_run(g_speex_st, in8k_short);
+                speex_preprocess_run(g_speex_st, infreedv);
             }
 
             // Optional Mic In EQ Filtering, need mutex as filter can change at run time
 
             g_mutexProtectingCallbackData.Lock();
             if (cbData->micInEQEnable) {
-                sox_biquad_filter(cbData->sbqMicInBass, in8k_short, in8k_short, nout);
-                sox_biquad_filter(cbData->sbqMicInTreble, in8k_short, in8k_short, nout);
-                sox_biquad_filter(cbData->sbqMicInMid, in8k_short, in8k_short, nout);
+                sox_biquad_filter(cbData->sbqMicInBass, infreedv, infreedv, nout);
+                sox_biquad_filter(cbData->sbqMicInTreble, infreedv, infreedv, nout);
+                sox_biquad_filter(cbData->sbqMicInMid, infreedv, infreedv, nout);
             }
             g_mutexProtectingCallbackData.Unlock();
 
-            resample_for_plot(g_plotSpeechInFifo, in8k_short, nout, FS);
+            resample_for_plot(g_plotSpeechInFifo, infreedv, nout, FS);
 
-            n_samples = freedv_get_n_nom_modem_samples(g_pfreedv);
+            nfreedv = freedv_get_n_nom_modem_samples(g_pfreedv);
 
             if (g_analog) {
-                n_samples = freedv_get_n_speech_samples(g_pfreedv);
+                nfreedv = freedv_get_n_speech_samples(g_pfreedv);
 
                 // Boost the "from mic" -> "to radio" audio in analog
                 // mode.  The need for the gain was found by
@@ -3729,45 +3725,40 @@ void txRxProcessing()
                 // of the peak level for normal SSB voice. So we
                 // introduce 6dB gain to make analog SSB sound the
                 // same level as the digital.  Watch out for clipping.
-                for(int i=0; i<n_samples; i++) {
-                    float out = (float)in8k_short[i]*2.0;
+                for(int i=0; i<nfreedv; i++) {
+                    float out = (float)infreedv[i]*2.0;
                     if (out > 32767) out = 32767.0;
                     if (out < -32767) out = -32767.0;
-                    out8k_short[i] = out;
+                    outfreedv[i] = out;
                 }
             }
             else {
-                COMP tx_fdm[freedv_get_n_nom_modem_samples(g_pfreedv)];
-                COMP tx_fdm_offset[freedv_get_n_nom_modem_samples(g_pfreedv)];
+                COMP tx_fdm[nfreedv];
+                COMP tx_fdm_offset[nfreedv];
                 int  i;
 
                 if (g_mode == FREEDV_MODE_800XA) {
                     /* 800XA doesn't support complex output just yet */
-                    freedv_tx(g_pfreedv, out8k_short, in8k_short);
+                    freedv_tx(g_pfreedv, outfreedv, infreedv);
                 }
                 else {
-                    freedv_comptx(g_pfreedv, tx_fdm, in8k_short);
+                    freedv_comptx(g_pfreedv, tx_fdm, infreedv);
   
-                    freq_shift_coh(tx_fdm_offset, tx_fdm, g_TxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_TxFreqOffsetPhaseRect, freedv_get_n_nom_modem_samples(g_pfreedv));
-                    for(i=0; i<freedv_get_n_nom_modem_samples(g_pfreedv); i++)
-                        out8k_short[i] = tx_fdm_offset[i].real;
+                    freq_shift_coh(tx_fdm_offset, tx_fdm, g_TxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_TxFreqOffsetPhaseRect, nfreedv);
+                    for(i=0; i<nfreedv; i++)
+                        outfreedv[i] = tx_fdm_offset[i].real;
                 }
             }
 
             // output one frame of modem signal
-            nout = resample(cbData->outsrc1, out48k_short, out8k_short, g_soundCard1SampleRate, samplerate, 10*N48, n_samples);
-            g_mutexProtectingCallbackData.Lock();
-            ret = fifo_write(cbData->outfifo1, out48k_short, nout);
-            //fwrite(out48k_short, nout, sizeof(short), ftest);
-            //fprintf(stderr,"TX write outfifo1 nout: %d ret: %d N48*10: %d\n", nout, ret, N48*10);
+
+            nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, 10*N48, nfreedv);
+            ret = fifo_write(cbData->outfifo1, outsound_card, nout);
 
             assert(ret != -1);
         }
-        g_mutexProtectingCallbackData.Unlock();
     }
    
-    //fprintf(g_logfile, "  end infifo1: %5d outfifo2: %5d\n", fifo_used(cbData->infifo1), fifo_used(cbData->outfifo2));
-
     if (g_dump_timing) {
         fprintf(stderr, "%4ld", sw.Time());
     }
@@ -3783,10 +3774,7 @@ void per_frame_rx_processing(
                              FIFO    *input_fifo
                              )
 {
-    #ifdef OLDSPEC
-    float               rx_spec[MODEM_STATS_NSPEC];
-    #endif
-    int                 i;
+    int i;
 
     if (g_mode == -1) {
         // PlugIn processing ---------------------------------------------------
@@ -3797,24 +3785,6 @@ void per_frame_rx_processing(
         while (fifo_read(input_fifo, input_buf, nin) == 0) {
             (wxGetApp().m_plugin_rx_samplesfp)(wxGetApp().m_plugInStates, input_buf, nin);
         }
-
-        #ifdef OLD_SPEC
-        COMP  rx_fdm[nin];
-
-        for(i=0; i<nin; i++) {
-            rx_fdm[i].real = (float)input_buf[i];
-            rx_fdm[i].imag = 0.0;
-        }
-
-        modem_stats_get_rx_spectrum(&g_stats, rx_spec, rx_fdm, nin);
-
-        // Average rx spectrum data using a simple IIR low pass filter
-
-        for(i = 0; i<MODEM_STATS_NSPEC; i++) {
-            g_avmag[i] = BETA * g_avmag[i] + (1.0 - BETA) * rx_spec[i];
-        }
-        #endif
-
     }
     else {
         // FreeDV processing ----------------------------------------------------
@@ -3829,10 +3799,6 @@ void per_frame_rx_processing(
         //fprintf(stderr, "nin: %d max_modem_samples: %d\n", nin, freedv_get_n_max_modem_samples(g_pfreedv));
         while (fifo_read(input_fifo, input_buf, nin) == 0) {
             assert(nin <= freedv_get_n_max_modem_samples(g_pfreedv));
-
-            #ifdef OLD_SPEC
-            int nin_prev = nin;
-            #endif
 
             #ifdef FTEST
             fwrite(input_buf, sizeof(short), nin, ftest);
@@ -3851,14 +3817,17 @@ void per_frame_rx_processing(
                 fdmdv_simulate_channel(&g_sig_pwr_av, rx_fdm, nin, wxGetApp().m_noise_snr);
             }
 
+            // Optional frequency shifting
+            
             freq_shift_coh(rx_fdm_offset, rx_fdm, g_RxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_RxFreqOffsetPhaseRect, nin);
             if (g_dump_timing) {
                 fprintf(stderr,"  rx");
             }
             nout = freedv_comprx(g_pfreedv, output_buf, rx_fdm_offset);
-            //kprintf("nout %d outbuf_buf[0]: %d\n", nout, output_buf[0]);
+
             fifo_write(output_fifo, output_buf, nout);
-        
+            //fprintf(stderr, "ret = %d\n", ret);
+            
             nin = freedv_nin(g_pfreedv);
             g_State = freedv_get_sync(g_pfreedv);
             g_interleaverSyncState = freedv_get_sync_interleaver(g_pfreedv);
