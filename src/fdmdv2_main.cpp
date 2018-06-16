@@ -150,6 +150,10 @@ FILE *g_logfile;
 
 wxDatagramSocket *g_sock;
 
+// Horus Balloon telemetry support
+
+struct horus *g_horus;
+
 // WxWidgets - initialize the application
 
 IMPLEMENT_APP(MainApp);
@@ -256,7 +260,6 @@ bool MainApp::OnInit()
     frame->Layout();
     frame->Show();
     g_parent =frame;
-
 
     return true;
 }
@@ -530,6 +533,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
     
     wxGetApp().m_debug_console = (float)pConfig->Read(wxT("/Debug/console"), f);
+    g_freedv_verbose = pConfig->Read(wxT("/Debug/APIverbose"), (long)0);
 
     wxGetApp().m_attn_carrier_en = 0;
     wxGetApp().m_attn_carrier    = 0;
@@ -549,6 +553,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
         m_rb800xa->SetValue(1);
     if (mode == 6)
         m_rb2400b->SetValue(1);
+    if (mode == 7)
+        m_rbHorusBinary->SetValue(1);
         
     pConfig->SetPath(wxT("/"));
 
@@ -669,7 +675,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
        to helpo debug 700D windows sound break up */
     
     wxGetApp().m_txRxThreadHighPriority = true;
-    g_dump_timing = g_dump_fifo_state = g_freedv_verbose = 0;
+    g_dump_timing = g_dump_fifo_state = 0;
     
     UDPInit();
 }
@@ -797,6 +803,8 @@ MainFrame::~MainFrame()
             mode = 5;
         if (m_rb2400b->GetValue())
             mode = 6;
+        if (m_rbHorusBinary->GetValue())
+            mode = 7;
        pConfig->Write(wxT("/Audio/mode"), mode);
     }
 
@@ -876,56 +884,59 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     /* update scatter/eye plot ------------------------------------------------------------*/
 
-    if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_800XA) {
-        /* FSK Mode - eye diagram ---------------------------------------------------------*/
-        
-        /* add samples row by row */
-
-        int i;
-	for (i=0; i<g_stats.neyetr; i++) {
-            m_panelScatter->add_new_samples_eye(&g_stats.rx_eye[i][0], g_stats.neyesamp);
-        }
-    }
-    else {
-        /* PSK Modes - scatter plot -------------------------------------------------------*/
-        for (r=0; r<g_stats.nr; r++) {
-        
-            if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700D)) {
-                m_panelScatter->add_new_samples_scatter(&g_stats.rx_symbols[r][0]);
-            }
-        
-            if (/*(freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) ||*/(freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
+    if (g_mode != -1 ) {
+        if ((g_mode == FREEDV_MODE_800XA) || (g_mode == FREEDV_MODE_2400B) ) {
             
-                if (wxGetApp().m_FreeDV700Combine) {
-                    m_panelScatter->setNc(g_Nc/2); /* m_FreeDV700Combine may have changed at run time */
+            /* FSK Mode - eye diagram ---------------------------------------------------------*/
+        
+            /* add samples row by row */
 
-                    /* 
-                       FreeDV 700 uses diversity, so optionaly combine
-                       symbols for scatter plot, as combined symbols are
-                       used for demodulation.  Note we need to use a copy
-                       of the symbols, as we are not sure when the stats
-                       will be updated.
-                    */
-
-                    COMP rx_symbols_copy[g_Nc/2];
-
-                    for(c=0; c<g_Nc/2; c++)
-                        rx_symbols_copy[c] = fcmult(0.5, cadd(g_stats.rx_symbols[r][c], g_stats.rx_symbols[r][c+g_Nc/2]));
-                    m_panelScatter->add_new_samples_scatter(rx_symbols_copy);
-                }
-                else {
-                    m_panelScatter->setNc(g_Nc); /* m_FreeDV700Combine may have changed at run time */
-                    /*
-                      Sometimes useful to plot carriers separately, e.g. to determine if tx carrier power is constant
-                      across carriers.
-                    */
+            int i;
+            for (i=0; i<g_stats.neyetr; i++) {
+                m_panelScatter->add_new_samples_eye(&g_stats.rx_eye[i][0], g_stats.neyesamp);
+            }
+        }
+        else {
+            /* PSK Modes - scatter plot -------------------------------------------------------*/
+            for (r=0; r<g_stats.nr; r++) {
+        
+                if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700D)) {
                     m_panelScatter->add_new_samples_scatter(&g_stats.rx_symbols[r][0]);
                 }
-            }
+        
+                if (/*(freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) ||*/(freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
+            
+                    if (wxGetApp().m_FreeDV700Combine) {
+                        m_panelScatter->setNc(g_Nc/2); /* m_FreeDV700Combine may have changed at run time */
+
+                        /* 
+                           FreeDV 700 uses diversity, so optionaly combine
+                           symbols for scatter plot, as combined symbols are
+                           used for demodulation.  Note we need to use a copy
+                           of the symbols, as we are not sure when the stats
+                           will be updated.
+                        */
+
+                        COMP rx_symbols_copy[g_Nc/2];
+
+                        for(c=0; c<g_Nc/2; c++)
+                            rx_symbols_copy[c] = fcmult(0.5, cadd(g_stats.rx_symbols[r][c], g_stats.rx_symbols[r][c+g_Nc/2]));
+                        m_panelScatter->add_new_samples_scatter(rx_symbols_copy);
+                    }
+                    else {
+                        m_panelScatter->setNc(g_Nc); /* m_FreeDV700Combine may have changed at run time */
+                        /*
+                          Sometimes useful to plot carriers separately, e.g. to determine if tx carrier power is constant
+                          across carriers.
+                        */
+                        m_panelScatter->add_new_samples_scatter(&g_stats.rx_symbols[r][0]);
+                    }
+                }
        
+            }
         }
     }
-
+    
     m_panelScatter->Refresh();
 
     // Oscilliscope type speech plots -------------------------------------------------------
@@ -968,11 +979,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     // version of SNR.  The "Slow" checkbox controls the amount of
     // filtering.  The filtered snr also controls the squelch
 
-    g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*g_stats.snr_est;
-    float snr_limited = g_snr;
+    float snr_limited;
+    if (isnan(g_stats.snr_est) || isinf(g_stats.snr_est)) {
+        // some APIs pass us garbage, so lets trap it rather than bombing
+        snr_limited = g_snr;
+    }
+    else {
+        g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*g_stats.snr_est;
+    }
     if (snr_limited < -5.0) snr_limited = -5.0;
     if (snr_limited > 20.0) snr_limited = 20.0;
-
     char snr[15];
     sprintf(snr, "%d", (int)(g_snr+0.5)); // round to nearest dB
 
@@ -1342,13 +1358,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
     }
 
-    // Voice Keyer state machine
+    if (g_mode != -1) {
+        // Voice Keyer state machine
 
-    VoiceKeyerProcessEvent(VK_DT);
+        VoiceKeyerProcessEvent(VK_DT);
 
-    // Detect Sync state machine
+        // Detect Sync state machine
 
-    DetectSyncProcessEvent();
+        DetectSyncProcessEvent();
+    }
 }
 #endif
 
@@ -2044,7 +2062,12 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
             {
                 sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
                 sfInfo.channels   = 1;
-                sfInfo.samplerate = freedv_get_modem_sample_rate(g_pfreedv);
+                if (g_mode == -1) {
+                     sfInfo.samplerate = horus_get_Fs(g_horus);
+               }
+                else {
+                    sfInfo.samplerate = freedv_get_modem_sample_rate(g_pfreedv);
+                }
             }
         }
         g_sfPlayFileFromRadio = sf_open(soundFile.c_str(), SFM_READ, &sfInfo);
@@ -2064,9 +2087,9 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
         SetStatusText(wxT("Playing into from radio"), 0);
         if(extension == wxT("raw")) {
             wxString stringnumber = wxString::Format(wxT("%d"), (int)sfInfo.samplerate);
-            SetStatusText(wxT("raw file assuming Fs=") + stringnumber, 1);          
+            SetStatusText(wxT("raw file assuming Fs=") + stringnumber, 1);
         }
-        fprintf(g_logfile, "OnPlayFileFromRadio:: Playing File\n");
+        fprintf(stderr, "OnPlayFileFromRadio:: Playing File Fs = %d\n", (int)sfInfo.samplerate);
         g_playFileFromRadio = true;
         g_blink = 0.0;
     }
@@ -2137,6 +2160,14 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         wxLogDebug("soundFile: %s", soundFile);
         sfInfo.format = 0;
 
+        int sample_rate;
+        if (g_mode == -1) {
+            sample_rate = horus_get_Fs(g_horus);
+        }
+        else {
+            sample_rate = freedv_get_modem_sample_rate(g_pfreedv);
+        }
+        
         if(!extension.IsEmpty())
         {
             extension.LowerCase();
@@ -2144,13 +2175,13 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
             {
                 sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
                 sfInfo.channels   = 1;
-                sfInfo.samplerate = freedv_get_modem_sample_rate(g_pfreedv);
+                sfInfo.samplerate = sample_rate;
             }
             else if(extension == wxT("wav"))
             {
                 sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
                 sfInfo.channels   = 1;
-                sfInfo.samplerate = freedv_get_modem_sample_rate(g_pfreedv);
+                sfInfo.samplerate = sample_rate;
             } else {
                 wxMessageBox(wxT("Invalid file format"), wxT("Record File From Radio"), wxOK);
                 return;
@@ -2406,19 +2437,16 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         // modify some button states when running
 
-        m_togBtnSplit->Enable();
-        m_togBtnAnalog->Enable();
         m_togBtnOnOff->SetLabel(wxT("Stop"));
-        m_btnTogPTT->Enable();
-        m_togBtnVoiceKeyer->Enable();
+
         vk_state = VK_IDLE;
 
         m_rb1600->Disable();
-        //m_rb700b->Disable();
         m_rb700c->Disable();
         m_rb700d->Disable();
         m_rb800xa->Disable();
         m_rb2400b->Disable();
+        m_rbHorusBinary->Disable();
         if (m_rbPlugIn != NULL)
             m_rbPlugIn->Disable();
 
@@ -2432,18 +2460,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             g_Nc = 16;
             m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
         }
-        #ifdef DISABLED
-        if (m_rb700b->GetValue()) {
-            g_mode = FREEDV_MODE_700B;
-            g_Nc = 14;
-            if (wxGetApp().m_FreeDV700Combine) {
-                m_panelScatter->setNc(g_Nc/2);  /* diversity combnation */
-            }
-            else {
-                m_panelScatter->setNc(g_Nc); 
-            }
-        }
-        #endif
         if (m_rb700c->GetValue()) {
             g_mode = FREEDV_MODE_700C;
             g_Nc = 14;
@@ -2456,7 +2472,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         }
         if (m_rb700d->GetValue()) {
             g_mode = FREEDV_MODE_700D;
-            g_Nc = 17;                         /* TODO: be nice if we didn't have to hard code this */
+            g_Nc = 17;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
             m_panelScatter->setNc(g_Nc); 
         }
         if (m_rb800xa->GetValue()) {
@@ -2465,21 +2481,25 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (m_rb2400b->GetValue()) {
             g_mode = FREEDV_MODE_2400B;
         }
-        if (m_rbPlugIn != NULL) {
-            if (m_rbPlugIn->GetValue()) {
-                g_mode = -1;  /* TODO; a better way of handling (enumarating?) non-freedv modes */
+        if (m_rbHorusBinary->GetValue()) {
+            g_mode = -1;  /* TODO; a better way of handling (enumerating?) non-freedv modes */
 
-                /* scale plots assuming Fs = 8000 Hz for now */
+            g_horus = horus_open(HORUS_MODE_BINARY);
+            horus_set_verbose(g_horus, g_freedv_verbose);
+            
+            /* scale plots assuming Fs = 8000 Hz for now */
 
-                m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ)/8000.0);
-                m_panelWaterfall->setFs(8000.0);
-
-                (wxGetApp().m_plugin_startfp)(wxGetApp().m_plugInStates);
-            }
+            m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ)/horus_get_Fs(g_horus));
+            m_panelWaterfall->setFs(horus_get_Fs(g_horus));
         }
 
         if (g_mode != -1) { 
             // init freedv states
+
+            m_togBtnSplit->Enable();
+            m_togBtnAnalog->Enable();
+            m_btnTogPTT->Enable();
+            m_togBtnVoiceKeyer->Enable();
 
             if (g_mode == FREEDV_MODE_700D) {
                 // 700D has some init time stuff so treat it special
@@ -2534,19 +2554,22 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             // Init text msg decoding
 
             freedv_set_varicode_code_num(g_pfreedv, wxGetApp().m_textEncoding);
+
+            // scatter plot (PSK) or Eye (FSK) mode
+            
+            if ((g_mode == FREEDV_MODE_800XA) || (g_mode == FREEDV_MODE_2400A) || (g_mode == FREEDV_MODE_2400B)) {
+                m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_EYE);
+            }
+            else {
+                m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
+            }
+
         }
 
         modem_stats_open(&g_stats);
         g_State = g_prev_State = g_interleaverSyncState = 0;
         g_snr = 0.0;
         g_half_duplex = wxGetApp().m_boolHalfDuplex;
-
-        if ((g_mode == FREEDV_MODE_800XA) || (g_mode == FREEDV_MODE_2400A) || (g_mode == FREEDV_MODE_2400B)) {
-            m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_EYE);
-        }
-        else {
-            m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
-        }
 
         m_pcallsign = m_callsign;
         memset(m_callsign, 0, sizeof(m_callsign));
@@ -2631,8 +2654,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         // free up states, clean up
 
         if (g_mode == -1) {
-            // PlugIn clean up
-            (wxGetApp().m_plugin_stopfp)(wxGetApp().m_plugInStates);
+            // Horus clean up
+            horus_close(g_horus);
         }
         else {
             // FreeDV clean up
@@ -2658,6 +2681,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb700d->Enable();
         m_rb800xa->Enable();
         m_rb2400b->Enable();
+        m_rbHorusBinary->Enable();
         if (m_rbPlugIn != NULL)
             m_rbPlugIn->Enable();
            
@@ -2943,8 +2967,9 @@ void MainFrame::startRxStream()
         // transmit processng are all performed in the txRxProcessing
         // loop.
 
-        int soundCard1FifoSizeSamples = wxGetApp().m_fifoSize_ms*g_soundCard1SampleRate/1000;
-        int soundCard2FifoSizeSamples = wxGetApp().m_fifoSize_ms*g_soundCard2SampleRate/1000;
+        int m_fifoSize_ms = wxGetApp().m_fifoSize_ms;        
+        int soundCard1FifoSizeSamples = m_fifoSize_ms*g_soundCard1SampleRate/1000;
+        int soundCard2FifoSizeSamples = m_fifoSize_ms*g_soundCard2SampleRate/1000;
         
         g_rxUserdata->infifo1 = fifo_create(soundCard1FifoSizeSamples);
         g_rxUserdata->outfifo1 = fifo_create(soundCard1FifoSizeSamples);
@@ -2970,8 +2995,22 @@ void MainFrame::startRxStream()
 
         // TODO: might be able to tune these on a per waveform basis, or refactor
         // to a neater design with less layers of FIFOs
+
+        int modem_samplerate, rxFifoSizeSamples;
+        if (g_mode == -1) {
+            modem_samplerate = horus_get_Fs(g_horus);
+            rxFifoSizeSamples = horus_get_max_demod_in(g_horus);
+        }
+        else {
+            modem_samplerate = freedv_get_modem_sample_rate(g_pfreedv);
+            rxFifoSizeSamples = freedv_get_n_max_modem_samples(g_pfreedv);
+        }
+
+        // add an extra 40ms to gibve a bit of headroom for processing loop adding samples
+        // which operates on 20ms buffers
         
-        int rxFifoSizeSamples = wxGetApp().m_fifoSize_ms*freedv_get_modem_sample_rate(g_pfreedv)/1000;
+        rxFifoSizeSamples += 0.04*modem_samplerate;
+
         g_rxUserdata->rxinfifo = fifo_create(rxFifoSizeSamples);
         g_rxUserdata->rxoutfifo = fifo_create(rxFifoSizeSamples);
 
@@ -3466,10 +3505,15 @@ void txRxProcessing()
 
     // analog mode runs at the standard FS = 8000 Hz
 
-    if (g_analog || g_mode == -1) 
+    if (g_analog) {
         freedv_samplerate = FS;
-    else
+    }
+    if (g_mode == -1) {
+        freedv_samplerate = horus_get_Fs(g_horus);
+    }
+    else {
         freedv_samplerate = freedv_get_modem_sample_rate(g_pfreedv);
+    }
 
     //
     //  RX side processing --------------------------------------------
@@ -3495,7 +3539,6 @@ void txRxProcessing()
         // Really useful for testing and development as it allows us
         // to repeat tests using off air signals
 
-        g_mutexProtectingCallbackData.Lock();
         if (g_recFileFromRadio && (g_sfRecFile != NULL)) {
             //printf("g_recFromRadioSamples: %d  n8k: %d \n", g_recFromRadioSamples);
             if (g_recFromRadioSamples < (unsigned)nfreedv) {
@@ -3510,15 +3553,14 @@ void txRxProcessing()
                 g_recFromRadioSamples -= nfreedv;
             }
         }
-        g_mutexProtectingCallbackData.Unlock();
 
         // optionally read "from radio" signal from file (read demod input from file) -----------------
 
-        g_mutexProtectingCallbackData.Lock();
         if (g_playFileFromRadio && (g_sfPlayFileFromRadio != NULL)) {
             unsigned int nsf = nfreedv*g_sfFs/freedv_samplerate;
             short        insf[nsf];
             unsigned int n = sf_read_short(g_sfPlayFileFromRadio, insf, nsf);
+            //fprintf(stderr, "resample %d to %d\n", g_sfFs, freedv_samplerate);
             nfreedv = resample(cbData->insrcsf, infreedv, insf, freedv_samplerate, g_sfFs, N48, nsf);
             assert(nfreedv <= N48);
 
@@ -3533,7 +3575,6 @@ void txRxProcessing()
                 }
             }
         }
-        g_mutexProtectingCallbackData.Unlock();
 
         resample_for_plot(g_plotDemodInFifo, infreedv, nfreedv, freedv_samplerate);
 
@@ -3599,7 +3640,7 @@ void txRxProcessing()
             fifo_read(cbData->rxoutfifo, outfreedv, N8);
         }
 
-        // Optional Spk Out EQ Filtering, need mutex as filter can change at run time
+        // Optional Spk Out EQ Filtering, need mutex as filter can change at run time from another thread
 
         g_mutexProtectingCallbackData.Lock();
         if (cbData->spkOutEQEnable) {
@@ -3638,14 +3679,14 @@ void txRxProcessing()
 	  fprintf(stderr, "%6d", fifo_used(cbData->outfifo1));
 	}
 
-        // This while loop locks the modulator to the sample rate
-        // of sound card 1.  We want to make sure that modulator
-        // samples are uninterrupted by differences in sample rate
-        // between this sound card and sound card 2.
+        // This while loop locks the modulator to the sample rate of
+        // sound card 1.  We want to make sure that modulator samples
+        // are uninterrupted by differences in sample rate between
+        // this sound card and sound card 2.
 
         // Run this while loop as soon as we have enough room for one
-        // frame of modem samples.  Aim is to keep it nice and full so
-        // we don't have any gaps ix tx signal.
+        // frame of modem samples.  Aim is to keep outfifo1 nice and
+        // full so we don't have any gaps ix tx signal.
 
         unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * freedv_get_n_nom_modem_samples(g_pfreedv)/freedv_samplerate;
 
@@ -3674,7 +3715,6 @@ void txRxProcessing()
 
             // optionally use file for mic input signal
 
-            g_mutexProtectingCallbackData.Lock();
             if (g_playFileToMicIn && (g_sfPlayFile != NULL)) {
                 int n = sf_read_short(g_sfPlayFile, infreedv, nout);
                 //fprintf(stderr, "n: %d nout: %d\n", n, nout);
@@ -3688,7 +3728,6 @@ void txRxProcessing()
                     }
                 }
             }
-            g_mutexProtectingCallbackData.Unlock();
 
             // Optional Speex pre-processor for acoustic noise reduction
 
@@ -3765,6 +3804,12 @@ void txRxProcessing()
 // per_frame_rx_processing()
 //----------------------------------------------------------------
 
+// We need the extra layer of fifos to decouple 20ms processing loop
+// used for common processing across modes from variable size demod
+// processing.  For example demod nin is time varying to account for
+// sample clock and timing offsets and the demod processing frame
+// varies betwwen modes, e.g. 20ms (1600) or 160ms (700D)
+
 void per_frame_rx_processing(
                              FIFO    *output_fifo,   // decoded speech samples
                              FIFO    *input_fifo
@@ -3773,13 +3818,28 @@ void per_frame_rx_processing(
     int i;
 
     if (g_mode == -1) {
-        // PlugIn processing ---------------------------------------------------
+        // Horus processing ---------------------------------------------------
 
-        int   nin = 160; // TODO: hard code for now - some sort of plugin supplied param in future
+        int  nin = horus_nin(g_horus);
+        int  max_ascii_out = horus_get_max_ascii_out_len(g_horus);
+        char ascii_out[max_ascii_out];
+    
         short input_buf[nin];
 
         while (fifo_read(input_fifo, input_buf, nin) == 0) {
-            (wxGetApp().m_plugin_rx_samplesfp)(wxGetApp().m_plugInStates, input_buf, nin);
+            //fprintf(stderr, "per_frame: nin = %d input_fifo free: %d used: %d\n", nin, fifo_free(input_fifo), fifo_used(input_fifo));
+            if (horus_rx(g_horus, ascii_out, input_buf)) {
+                UDPSend(wxGetApp().m_udp_port, ascii_out, strlen(ascii_out)+1);
+                horus_get_modem_extended_stats(g_horus, &g_stats);
+            }
+
+            // Just echo modem audio as it's useful to listen to the modem signal
+            /* 
+               TODO this needs to beresamplesto 8 Khz as output sample
+               rate is fixed above.  Or maybe make output resampling
+               more generic.  
+               fifo_write(output_fifo, input_buf, nin);
+            */
         }
     }
     else {
@@ -3833,18 +3893,6 @@ void per_frame_rx_processing(
             // grab extended stats so we can plot spectrum, scatter diagram etc
 
             freedv_get_modem_extended_stats(g_pfreedv, &g_stats);
-
-            #ifdef OLD_SPEC
-            // compute rx spectrum 
-
-            modem_stats_get_rx_spectrum(&g_stats, rx_spec, rx_fdm, nin_prev); 
-            
-            // Average rx spectrum data using a simple IIR low pass filter
-
-            for(i = 0; i<MODEM_STATS_NSPEC; i++) {
-                g_avmag[i] = BETA * g_avmag[i] + (1.0 - BETA) * rx_spec[i];
-            }
-            #endif
         }
     }
 

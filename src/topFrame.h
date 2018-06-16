@@ -111,17 +111,13 @@ class TopFrame : public wxFrame
         wxStaticText  *m_textInterleaverSync;
         wxButton      *m_BtnReSync;
        
-        wxRadioButton *m_rb1400old;
-        wxRadioButton *m_rb1400;
-        wxRadioButton *m_rb700;
-        wxRadioButton *m_rb700b;
         wxRadioButton *m_rb700c;
         wxRadioButton *m_rb700d;
         wxRadioButton *m_rb800xa;
         wxRadioButton *m_rb1600;
         wxRadioButton *m_rb2400a;
         wxRadioButton *m_rb2400b;
-        wxRadioButton *m_rb1600Wide;
+        wxRadioButton *m_rbHorusBinary;
         wxRadioButton *m_rbPlugIn;
 
         // Virtual event handlers, overide them in your derived class
