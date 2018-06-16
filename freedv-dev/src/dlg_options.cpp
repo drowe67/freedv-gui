@@ -317,7 +317,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_fifo2->Add(m_ckboxTxRxDumpTiming, 0, wxALIGN_LEFT, 0);
     m_ckboxTxRxDumpFifoState = new wxCheckBox(this, wxID_ANY, _("  txRxDumpFifoState"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_fifo2->Add(m_ckboxTxRxDumpFifoState, 0, wxALIGN_LEFT, 0);   
-    m_ckboxFreeDVAPIVerbose = new wxCheckBox(this, wxID_ANY, _("  FreedvAPiVerbose"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDVAPIVerbose = new wxCheckBox(this, wxID_ANY, _("  APiVerbose"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_fifo2->Add(m_ckboxFreeDVAPIVerbose, 0, wxALIGN_LEFT, 0);   
 
     sbSizer_fifo->Add(sbSizer_fifo2, 0,  wxALIGN_LEFT, 5);
@@ -624,6 +624,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 #ifdef __WXMSW__
             pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
 #endif
+            pConfig->Write(wxT("/Debug/APIverbose"), g_freedv_verbose);
 
             pConfig->Flush();
         }

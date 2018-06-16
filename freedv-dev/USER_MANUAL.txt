@@ -9,6 +9,36 @@ This document describes additional features in the latest FreeDV
 releases that haven't been documented in other sources.  See also
 freedv.org
 
+Project Horus Support June 2018
+-------------------------------
+
+Horus Binary mode (HorusB) High Altitude Balloon (HAB) telemetry using
+the same FSK modem as used for 2400A/B and 800XA.  Nothing to do with
+FreeDV really, just a cool project that David wanted to support.
+
+Connect your UHF SSB radio to FreeDV, and it will output telemetry
+messages to the UDP port specified on Tools-Options "UDP Messages".
+For Horus work, the port 55690 is used. Check the "Enable UDP
+messages" checkbox.
+
+You can test Horus telemetry decodes by "Playing" this test file:
+
+  http://rowetel.com/downloads/horus/4fsk_binary_100Rb_8khzfs.wav
+  
+using Tools - Start/Stop Play File - from Radio.  On Linux, you can
+monitoring the messages using netcat:
+
+  $ nc -ul 55690 
+
+At the bottom of Tools-Options, the "APiVerbose" check box enables
+printing of verbose API debug messages to the console, which will also
+work in Windows if Tools-Options "Windows Debug Console" is checked.
+
+A Python script is required to upload the telemetry messages to the HabHub
+server, please see:
+
+  https://github.com/projecthorus/horusbinary#usage---via-freedv
+
 FreeDV V1.3, May 2018
 ---------------------
 
