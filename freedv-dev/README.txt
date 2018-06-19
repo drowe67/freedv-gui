@@ -204,5 +204,8 @@ welcome!
     some other SDRS, would be good to review the code and
     adjust
 [ ] Align license text in source file with LGPL
+[ ] GTK warning on fedora 28 when vert size of window so small we lose
+    PTT button
+    + need some way to limit size
 
 
