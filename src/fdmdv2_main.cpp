@@ -153,6 +153,7 @@ wxDatagramSocket *g_sock;
 // Horus Balloon telemetry support
 
 struct horus *g_horus;
+SRC_STATE    *g_horus_src;
 
 // WxWidgets - initialize the application
 
@@ -980,19 +981,23 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     // filtering.  The filtered snr also controls the squelch
 
     float snr_limited;
-    if (isnan(g_stats.snr_est) || isinf(g_stats.snr_est)) {
-        // some APIs pass us garbage, so lets trap it rather than bombing
-        snr_limited = g_snr;
+    // some APIs pass us invalid values, so lets trap it rather than bombing
+    if (!(isnan(g_stats.snr_est) || isinf(g_stats.snr_est))) {
+        if (g_mode == -1) {
+            // no averaging of SNR for horus telemetry, just report latest and greatest 
+            g_snr = g_stats.snr_est;
+        }
+        else {
+            g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*g_stats.snr_est;
+        }
     }
-    else {
-        g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*g_stats.snr_est;
-    }
+    snr_limited = g_snr;
     if (snr_limited < -5.0) snr_limited = -5.0;
     if (snr_limited > 20.0) snr_limited = 20.0;
     char snr[15];
     sprintf(snr, "%d", (int)(g_snr+0.5)); // round to nearest dB
 
-    //fprintf(stderr, "snr_est: %f m_snrBeta: %f g_snr: %f snr_limited: %f\n", g_stats.snr_est,  m_snrBeta, g_snr, snr_limited);
+    //fprintf(stderr, "g_mode: %d snr_est: %f m_snrBeta: %f g_snr: %f snr_limited: %f\n", g_mode, g_stats.snr_est,  m_snrBeta, g_snr, snr_limited);
 
     wxString snr_string(snr);
     m_textSNR->SetLabel(snr_string);
@@ -2491,6 +2496,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
             m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ)/horus_get_Fs(g_horus));
             m_panelWaterfall->setFs(horus_get_Fs(g_horus));
+
+            /* init a sample rate converted for monitoring modem signal */
+
+            int src_error;
+            g_horus_src = src_new(SRC_SINC_FASTEST, 1, &src_error);
+            assert(g_horus_src != NULL);
         }
 
         if (g_mode != -1) { 
@@ -2655,6 +2666,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         if (g_mode == -1) {
             // Horus clean up
+            src_delete(g_horus_src);
             horus_close(g_horus);
         }
         else {
@@ -3418,13 +3430,11 @@ int resample(SRC_STATE *src,
             )
 {
     SRC_DATA src_data;
-    float    input[N48*10];
-    float    output[N48*10];
+    float    input[length_input_short];
+    float    output[length_output_short];
     int      ret;
 
     assert(src != NULL);
-    assert(length_input_short <= N48*10);
-    assert(length_output_short <= N48*10);
 
     src_short_to_float_array(input_short, input, length_input_short);
 
@@ -3505,14 +3515,16 @@ void txRxProcessing()
 
     // analog mode runs at the standard FS = 8000 Hz
 
-    if (g_analog) {
-        freedv_samplerate = FS;
-    }
     if (g_mode == -1) {
         freedv_samplerate = horus_get_Fs(g_horus);
     }
     else {
-        freedv_samplerate = freedv_get_modem_sample_rate(g_pfreedv);
+        if (g_analog) {
+            freedv_samplerate = FS;
+        } 
+        else {
+            freedv_samplerate = freedv_get_modem_sample_rate(g_pfreedv);
+        }
     }
 
     //
@@ -3823,8 +3835,10 @@ void per_frame_rx_processing(
         int  nin = horus_nin(g_horus);
         int  max_ascii_out = horus_get_max_ascii_out_len(g_horus);
         char ascii_out[max_ascii_out];
-    
-        short input_buf[nin];
+
+        int nout_max = nin*FS/horus_get_Fs(g_horus);
+        int nout;
+        short input_buf[nin], output_buf[nout_max];
 
         while (fifo_read(input_fifo, input_buf, nin) == 0) {
             //fprintf(stderr, "per_frame: nin = %d input_fifo free: %d used: %d\n", nin, fifo_free(input_fifo), fifo_used(input_fifo));
@@ -3834,12 +3848,16 @@ void per_frame_rx_processing(
             }
 
             // Just echo modem audio as it's useful to listen to the modem signal
-            /* 
-               TODO this needs to beresamplesto 8 Khz as output sample
-               rate is fixed above.  Or maybe make output resampling
-               more generic.  
-               fifo_write(output_fifo, input_buf, nin);
-            */
+
+            // resample to 8kHz.  This is a bit annoying as it will
+            // then get resampled back to the sound card rate in
+            // txRxProcessing().  TODO: we need to add support to the
+            // freedv_api for sample rate at the speech side, not just
+            // the modem side
+            
+            nout = resample(g_horus_src, output_buf, input_buf, FS, horus_get_Fs(g_horus), nout_max, nin);
+            //fprintf(stderr, "nin: %d nout_max: %d nout: %d\n", nin, nout, nout_max);
+            fifo_write(output_fifo, output_buf, nout);            
         }
     }
     else {
