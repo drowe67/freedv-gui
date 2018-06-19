@@ -3832,21 +3832,28 @@ void per_frame_rx_processing(
     if (g_mode == -1) {
         // Horus processing ---------------------------------------------------
 
-        int  nin = horus_nin(g_horus);
-        int  max_ascii_out = horus_get_max_ascii_out_len(g_horus);
-        char ascii_out[max_ascii_out];
+        int   max_nin = horus_get_max_demod_in(g_horus);
+        int   max_ascii_out = horus_get_max_ascii_out_len(g_horus);
+        int   max_nout = max_nin*FS/horus_get_Fs(g_horus);
+        short input_buf[max_nin], output_buf[max_nout];
+        char  ascii_out[max_ascii_out];
+        int   nin, nout;
 
-        int nout_max = nin*FS/horus_get_Fs(g_horus);
-        int nout;
-        short input_buf[nin], output_buf[nout_max];
-
+        nin = horus_nin(g_horus);
         while (fifo_read(input_fifo, input_buf, nin) == 0) {
-            //fprintf(stderr, "per_frame: nin = %d input_fifo free: %d used: %d\n", nin, fifo_free(input_fifo), fifo_used(input_fifo));
+            if (g_freedv_verbose) {
+                fprintf(stderr, "per_frame: nin = %d input_fifo free: %d used: %d nin: %d\n", nin, fifo_free(input_fifo), fifo_used(input_fifo), nin);
+            }
             if (horus_rx(g_horus, ascii_out, input_buf)) {
                 UDPSend(wxGetApp().m_udp_port, ascii_out, strlen(ascii_out)+1);
                 horus_get_modem_extended_stats(g_horus, &g_stats);
             }
 
+            /* need to know how many samples demod wants next time */
+
+            nin = horus_nin(g_horus);
+            assert(nin <= max_nin);
+            
             // Just echo modem audio as it's useful to listen to the modem signal
 
             // resample to 8kHz.  This is a bit annoying as it will
@@ -3855,7 +3862,8 @@ void per_frame_rx_processing(
             // freedv_api for sample rate at the speech side, not just
             // the modem side
             
-            nout = resample(g_horus_src, output_buf, input_buf, FS, horus_get_Fs(g_horus), nout_max, nin);
+            nout = resample(g_horus_src, output_buf, input_buf, FS, horus_get_Fs(g_horus), max_nout, nin);
+            assert(nout <= max_nout);
             //fprintf(stderr, "nin: %d nout_max: %d nout: %d\n", nin, nout, nout_max);
             fifo_write(output_fifo, output_buf, nout);            
         }
