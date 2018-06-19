@@ -68,6 +68,7 @@ int   g_tx;
 float g_snr;
 bool  g_half_duplex;
 bool  g_modal;
+SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
 
 // sending and receiving Call Sign data
 struct FIFO         *g_txDataInFifo;
@@ -2492,11 +2493,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             g_horus = horus_open(HORUS_MODE_BINARY);
             horus_set_verbose(g_horus, g_freedv_verbose);
             
-            /* scale plots assuming Fs = 8000 Hz for now */
-
-            m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ)/horus_get_Fs(g_horus));
-            m_panelWaterfall->setFs(horus_get_Fs(g_horus));
-
             /* init a sample rate converted for monitoring modem signal */
 
             int src_error;
@@ -2578,6 +2574,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         }
 
         modem_stats_open(&g_stats);
+        int src_error;
+        g_spec_src = src_new(SRC_SINC_FASTEST, 1, &src_error);
+        assert(g_spec_src != NULL);
         g_State = g_prev_State = g_interleaverSyncState = 0;
         g_snr = 0.0;
         g_half_duplex = wxGetApp().m_boolHalfDuplex;
@@ -2660,6 +2659,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
 
         stopRxStream();
+        src_delete(g_spec_src);       
         modem_stats_close(&g_stats);
 
         // free up states, clean up
@@ -3614,15 +3614,34 @@ void txRxProcessing()
 
         // compute rx spectrum - do here so update rate is constant across modes -------
 
+        // if necc, resample to Fs = 8kHz for spectrum and waterfall
+        // TODO: for some future modes (like 2400A), it might be
+        // useful to have different Fs spectrum
+        
         COMP  rx_fdm[nfreedv];
         float rx_spec[MODEM_STATS_NSPEC];
-        int i;
-
+        int i, nspec;
         for(i=0; i<nfreedv; i++) {
             rx_fdm[i].real = infreedv[i];
-            rx_fdm[i].imag = 0.0;
         }            
-        modem_stats_get_rx_spectrum(&g_stats, rx_spec, rx_fdm, nfreedv);
+        if (freedv_samplerate == FS) {
+            for(i=0; i<nfreedv; i++) {
+                rx_fdm[i].real = infreedv[i];
+            }
+            nspec = nfreedv;
+        } else {
+            int   nfreedv_8kHz = nfreedv*FS/freedv_samplerate;
+            short infreedv_8kHz[nfreedv_8kHz];
+            nout = resample(g_spec_src, infreedv_8kHz, infreedv, FS, freedv_samplerate, nfreedv_8kHz, nfreedv);
+            //fprintf(stderr, "resampling, nfreedv: %d nout: %d nfreedv_8kHz: %d \n", nfreedv, nout, nfreedv_8kHz);
+            assert(nout <= nfreedv_8kHz);
+            for(i=0; i<nout; i++) {
+                rx_fdm[i].real = infreedv_8kHz[i];
+            }
+            nspec = nout;
+        }
+
+        modem_stats_get_rx_spectrum(&g_stats, rx_spec, rx_fdm, nspec);
 
         // Average rx spectrum data using a simple IIR low pass filter
 
@@ -3842,9 +3861,18 @@ void per_frame_rx_processing(
         nin = horus_nin(g_horus);
         while (fifo_read(input_fifo, input_buf, nin) == 0) {
             if (g_freedv_verbose) {
-                fprintf(stderr, "per_frame: nin = %d input_fifo free: %d used: %d nin: %d\n", nin, fifo_free(input_fifo), fifo_used(input_fifo), nin);
+                fprintf(stderr, "per_frame: nin = %d input_fifo free: %d used: %d\n", nin, fifo_free(input_fifo), fifo_used(input_fifo));
             }
             if (horus_rx(g_horus, ascii_out, input_buf)) {
+                // unfort fifo deals with shorts
+                short ch;
+                for (i=0; i<(int)strlen(ascii_out); i++) {
+                    ch = (short)ascii_out[i];
+                    fifo_write(g_rxDataOutFifo, &ch, 1);
+                }
+                ch = 13; // CR to make it appear on txt line
+                fifo_write(g_rxDataOutFifo, &ch, 1);
+
                 UDPSend(wxGetApp().m_udp_port, ascii_out, strlen(ascii_out)+1);
                 horus_get_modem_extended_stats(g_horus, &g_stats);
             }
