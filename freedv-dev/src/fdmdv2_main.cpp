@@ -1199,8 +1199,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     if (g_mode == -1)  {
         // Horus telemetry
-        char bits[80];
+        char bits[80], clockoffset[80], freqoffset[80];
         sprintf(bits, "Bits: %d", horus_get_total_payload_bits(g_horus)); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
+        sprintf(freqoffset, "FrqOff: %4.0f", g_stats.foff);
+        wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
+        /* can't get sensible number for this, perhaps as it's a burst modem */
+        //sprintf(clockoffset, "ClkOff: %5d", (int)round(g_stats.clock_offset*1E6));
+        //wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
     }
     else {
         // Run time update of FreeDV 700 tx clipper and 700D BPF
@@ -1240,10 +1245,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         
         if (g_State) {
 
-           sprintf(clockoffset, "ClkOff: %5d", (int)round(g_stats.clock_offset*1E6));
-           wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
+            sprintf(clockoffset, "ClkOff: %5d", (int)round(g_stats.clock_offset*1E6));
+            wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
 
-             // update error pattern plots if supported
+            // update error pattern plots if supported
 
             int sz_error_pattern = freedv_get_sz_error_pattern(g_pfreedv);
             //fprintf(stderr, "sz_error_pattern: %d\n", sz_error_pattern);
@@ -2508,6 +2513,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             int src_error;
             g_horus_src = src_new(SRC_SINC_FASTEST, 1, &src_error);
             assert(g_horus_src != NULL);
+
+            m_textSync->Disable();
+            m_textInterleaverSync->SetLabel("");
         }
 
         if (g_mode != -1) { 
@@ -3893,6 +3901,13 @@ void per_frame_rx_processing(
 
                 UDPSend(wxGetApp().m_udp_port, ascii_out, strlen(ascii_out));
                 horus_get_modem_extended_stats(g_horus, &g_stats);
+                if (g_freedv_verbose) {
+                    fprintf(stderr, "  fsk f_est: ");
+                    for(i=0; i<horus_get_mFSK(g_horus); i++) {
+                        fprintf(stderr, "%5.0f ", g_stats.f_est[i]);
+                    }
+                    fprintf(stderr, "\n");
+                }
             }
 
             /* need to know how many samples demod wants next time */
