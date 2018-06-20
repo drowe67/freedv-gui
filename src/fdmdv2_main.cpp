@@ -1197,8 +1197,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
     g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
 
-    if (g_mode != -1)  {
-
+    if (g_mode == -1)  {
+        // Horus telemetry
+        char bits[80];
+        sprintf(bits, "Bits: %d", horus_get_total_payload_bits(g_horus)); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
+    }
+    else {
         // Run time update of FreeDV 700 tx clipper and 700D BPF
 
         freedv_set_clip(g_pfreedv, (int)wxGetApp().m_FreeDV700txClip);
@@ -1896,7 +1900,9 @@ void MainFrame::OnReSync(wxCommandEvent& event)
 void MainFrame::OnBerReset(wxCommandEvent& event)
 {
     if (m_RxRunning)  {
-        if (g_mode != -1) {
+        if (g_mode == -1) {
+            horus_set_total_payload_bits(g_horus, 0);
+        } else {
             freedv_set_total_bits(g_pfreedv, 0);
             freedv_set_total_bit_errors(g_pfreedv, 0);
             g_resyncs = 0;
@@ -3690,9 +3696,17 @@ void txRxProcessing()
         // resample to output sound card rate
         
         if (g_nSoundCards == 1) {
-            nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, FS, N48, N8);
             //fprintf(stderr, "nout %d, outfifo1 free: %d used: %d \n", nout, fifo_free(cbData->outfifo1), fifo_used(cbData->outfifo1));            
-            fifo_write(cbData->outfifo1, outsound_card, nout);
+            if (g_mode == -1) {
+                // Horus demod is special case, just echo input samples as it's nice to hear the
+                // off-air modem signal
+                nout = resample(cbData->outsrc2, outsound_card, infreedv, g_soundCard1SampleRate, freedv_samplerate, N48, nfreedv);
+                fifo_write(cbData->outfifo1, outsound_card, nout);
+            }
+            else {
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, FS, N48, N8);
+                fifo_write(cbData->outfifo1, outsound_card, nout);
+            }
         }
         else {
             nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, FS, N48, N8);
@@ -3885,7 +3899,8 @@ void per_frame_rx_processing(
 
             nin = horus_nin(g_horus);
             assert(nin <= max_nin);
-            
+
+            #ifdef TT
             // Just echo modem audio as it's useful to listen to the modem signal
 
             // resample to 8kHz.  This is a bit annoying as it will
@@ -3897,7 +3912,8 @@ void per_frame_rx_processing(
             nout = resample(g_horus_src, output_buf, input_buf, FS, horus_get_Fs(g_horus), max_nout, nin);
             assert(nout <= max_nout);
             //fprintf(stderr, "nin: %d nout_max: %d nout: %d\n", nin, nout, nout_max);
-            fifo_write(output_fifo, output_buf, nout);            
+            fifo_write(output_fifo, output_buf, nout);
+            #endif
         }
     }
     else {
