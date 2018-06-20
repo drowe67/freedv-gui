@@ -1886,7 +1886,9 @@ void MainFrame::OnReSync(wxCommandEvent& event)
 {
     if (m_RxRunning)  {
         fprintf(stderr,"OnReSync\n");
-        freedv_set_sync(g_pfreedv, FREEDV_SYNC_UNSYNC);
+        if (g_mode != -1) {
+            freedv_set_sync(g_pfreedv, FREEDV_SYNC_UNSYNC);
+        }
     }  
 }
 
@@ -1894,13 +1896,15 @@ void MainFrame::OnReSync(wxCommandEvent& event)
 void MainFrame::OnBerReset(wxCommandEvent& event)
 {
     if (m_RxRunning)  {
-        freedv_set_total_bits(g_pfreedv, 0);
-        freedv_set_total_bit_errors(g_pfreedv, 0);
-        g_resyncs = 0;
-        int i;
-        for(i=0; i<2*g_Nc; i++) {
-            g_error_hist[i] = 0;
-            g_error_histn[i] = 0;
+        if (g_mode != -1) {
+            freedv_set_total_bits(g_pfreedv, 0);
+            freedv_set_total_bit_errors(g_pfreedv, 0);
+            g_resyncs = 0;
+            int i;
+            for(i=0; i<2*g_Nc; i++) {
+                g_error_hist[i] = 0;
+                g_error_histn[i] = 0;
+            }
         }
     }
 }
@@ -3873,7 +3877,7 @@ void per_frame_rx_processing(
                 ch = 13; // CR to make it appear on txt line
                 fifo_write(g_rxDataOutFifo, &ch, 1);
 
-                UDPSend(wxGetApp().m_udp_port, ascii_out, strlen(ascii_out)+1);
+                UDPSend(wxGetApp().m_udp_port, ascii_out, strlen(ascii_out));
                 horus_get_modem_extended_stats(g_horus, &g_stats);
             }
 
