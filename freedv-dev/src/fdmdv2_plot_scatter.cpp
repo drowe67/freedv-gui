@@ -158,6 +158,7 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
 
     if (mode == PLOT_SCATTER_MODE_EYE) {
 
+        // The same color will be used for all eye traces
         pen.SetColour(DARK_GREEN_COLOR);
         pen.SetWidth(1);
         dc.SetPen(pen);
@@ -205,8 +206,6 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
                //printf("%4d,%4d  ", x, y);
                 x += PLOT_BORDER + XLEFT_OFFSET;
                 y += PLOT_BORDER;
-                pen.SetColour(sym_to_colour[i%4]);
-                dc.SetPen(pen);
                 if (j)
                     dc.DrawLine(x, y, prev_x, prev_y);
                 prev_x = x; prev_y = y;
