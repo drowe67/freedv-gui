@@ -53,39 +53,39 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
 
     tools = new wxMenu();
     wxMenuItem* m_menuItemAudio;
-    m_menuItemAudio = new wxMenuItem(tools, wxID_ANY, wxString(_("&Audio Config")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemAudio = new wxMenuItem(tools, wxID_ANY, wxString(_("&Audio Config...")) , wxEmptyString, wxITEM_NORMAL);
     tools->Append(m_menuItemAudio);
 
     wxMenuItem* m_menuItemRigCtrlCfg;
-    m_menuItemRigCtrlCfg = new wxMenuItem(tools, wxID_ANY, wxString(_("&PTT Config")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemRigCtrlCfg = new wxMenuItem(tools, wxID_ANY, wxString(_("&PTT Config...")) , wxEmptyString, wxITEM_NORMAL);
     tools->Append(m_menuItemRigCtrlCfg);
 
     wxMenuItem* m_menuItemOptions;
-    m_menuItemOptions = new wxMenuItem(tools, wxID_ANY, wxString(_("Options")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemOptions = new wxMenuItem(tools, wxID_ANY, wxString(_("&Options...")) , wxEmptyString, wxITEM_NORMAL);
     tools->Append(m_menuItemOptions);
 
     wxMenuItem* m_menuItemFilter;
-    m_menuItemFilter = new wxMenuItem(tools, wxID_ANY, wxString(_("&Filter")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemFilter = new wxMenuItem(tools, wxID_ANY, wxString(_("&Filter...")) , wxEmptyString, wxITEM_NORMAL);
     tools->Append(m_menuItemFilter);
 
     wxMenuItem* m_menuItemPlugIn;
     if (!wxIsEmpty(plugInName)) {
-        m_menuItemPlugIn = new wxMenuItem(tools, wxID_ANY, plugInName + wxString(_(" Config")) , wxEmptyString, wxITEM_NORMAL);
+        m_menuItemPlugIn = new wxMenuItem(tools, wxID_ANY, plugInName + wxString(_(" Config...")) , wxEmptyString, wxITEM_NORMAL);
         tools->Append(m_menuItemPlugIn);
     }
 
     wxMenuItem* m_menuItemPlayFileToMicIn;
-    m_menuItemPlayFileToMicIn = new wxMenuItem(tools, wxID_ANY, wxString(_("Start/Stop Play File - Mic In")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemPlayFileToMicIn = new wxMenuItem(tools, wxID_ANY, wxString(_("Start/Stop Play File - Mic In...")) , wxEmptyString, wxITEM_NORMAL);
     g_playFileToMicInEventId = m_menuItemPlayFileToMicIn->GetId();
     tools->Append(m_menuItemPlayFileToMicIn);
 
     wxMenuItem* m_menuItemRecFileFromRadio;
-    m_menuItemRecFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start/Stop Record File - From Radio")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemRecFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start/Stop Record File - From Radio...")) , wxEmptyString, wxITEM_NORMAL);
     g_recFileFromRadioEventId = m_menuItemRecFileFromRadio->GetId();
     tools->Append(m_menuItemRecFileFromRadio);
 
     wxMenuItem* m_menuItemPlayFileFromRadio;
-    m_menuItemPlayFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start/Stop Play File - From Radio")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemPlayFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start/Stop Play File - From Radio...")) , wxEmptyString, wxITEM_NORMAL);
     g_playFileFromRadioEventId = m_menuItemPlayFileFromRadio->GetId();
     tools->Append(m_menuItemPlayFileFromRadio);
     m_menubarMain->Append(tools, _("&Tools"));
@@ -97,7 +97,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     m_menuItemHelpUpdates->Enable(false);
 
     wxMenuItem* m_menuItemAbout;
-    m_menuItemAbout = new wxMenuItem(help, ID_ABOUT, wxString(_("&About")) , _("About this program"), wxITEM_NORMAL);
+    m_menuItemAbout = new wxMenuItem(help, ID_ABOUT, wxString(_("&About...")) , _("About this program"), wxITEM_NORMAL);
     help->Append(m_menuItemAbout);
 
     m_menubarMain->Append(help, _("&Help"));
