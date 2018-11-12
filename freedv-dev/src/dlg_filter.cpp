@@ -141,7 +141,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     // Spectrum Plots -----------------------------------------------------------
 
     long nb_style = wxAUI_NB_BOTTOM | wxAUI_NB_TAB_SPLIT | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS;
-    m_auiNotebook = new wxAuiNotebook(this, wxID_ANY, wxDefaultPosition, wxSize(-1,200), nb_style);
+    m_auiNotebook = new AuiNotebookNoKbd(this, wxID_ANY, wxDefaultPosition, wxSize(-1,200), nb_style);
     m_auiNotebook->SetFont(wxFont(8, 70, 90, 90, false, wxEmptyString));
 
     bSizer30->Add(m_auiNotebook, 0, wxEXPAND|wxALL, 3);

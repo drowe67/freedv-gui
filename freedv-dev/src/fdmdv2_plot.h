@@ -107,6 +107,11 @@ class PlotPanel : public wxPanel
         wxBitmap            *m_pBmp;
         wxNativePixelData   *m_pPix;
 
+        // This function is added to ignore tabbing to the plot object.  The plot 
+        // is a control with no user input, thus blind hams have no reason to tab
+        // to it.
+        bool AcceptsFocusFromKeyboard() const { return false; }
+
         // some useful events
         void            OnMouseMove(wxMouseEvent& event);
         virtual void    OnMouseLeftDown(wxMouseEvent& event);

@@ -46,6 +46,24 @@ typedef struct {
 } EQ;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
+// Class AuiNotebookNoKbd
+//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
+class AuiNotebookNoKbd : public wxAuiNotebook
+{
+    // This class inherits from wxAuiNotebook, and the only difference between
+    // it and the wx notebook is functionality to ignore tabbing to it.  This 
+    // is a control with no user input, thus blind hams have no reason to tab
+    // to it.
+public: 
+        
+    AuiNotebookNoKbd(wxWindow *parent, wxWindowID id=wxID_ANY, const wxPoint &pos=wxDefaultPosition,
+                     const wxSize &size=wxDefaultSize, long style=wxAUI_NB_DEFAULT_STYLE) : 
+                     wxAuiNotebook(parent, id, pos, size, style) {;}
+
+    bool AcceptsFocusFromKeyboard() const { return false; }
+};
+
+//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class FilterDlg
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 class FilterDlg : public wxDialog
@@ -134,7 +152,7 @@ class FilterDlg : public wxDialog
         void          newEQControl(wxSlider** slider, wxStaticText** value, wxStaticBoxSizer *bs, wxString controlName);
         EQ            newEQ(wxSizer *bs, wxString eqName, float maxFreqHz, bool enableQ);
         void          newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxSizer *sbs, wxString controlName);
-        wxAuiNotebook *m_auiNotebook;
+        AuiNotebookNoKbd *m_auiNotebook;
         void          setFreq(EQ *eq);
         void          setGain(EQ *eq);
         void          setQ(EQ *eq);
