@@ -933,8 +933,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(int devNum, PlotScalar *plotSca
     short               in48k_stereo_short[2*TEST_BUF_SIZE];
     short               in48k_short[TEST_BUF_SIZE];
     short               in8k_short[TEST_BUF_SIZE];
-    int                 numDevices, nBufs, i, j, src_error,inputChannels;
-    float               t;
+    int                 numDevices, nBufs, j, src_error,inputChannels, sampleRate, sampleCount;
     SRC_STATE          *src;
     FIFO               *fifo;
 
@@ -969,14 +968,15 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(int devNum, PlotScalar *plotSca
     inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultHighInputLatency;
     inputParameters.hostApiSpecificStreamInfo = NULL;
 
-    nBufs = TEST_WAVEFORM_PLOT_TIME*TEST_FS/TEST_BUF_SIZE;
+    sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
+    nBufs = TEST_WAVEFORM_PLOT_TIME*sampleRate/TEST_BUF_SIZE;
     printf("inputChannels: %d nBufs %d\n", inputChannels, nBufs);
 
     err = Pa_OpenStream(
               &stream,
               &inputParameters,
               NULL,
-              TEST_FS,
+              sampleRate,
               TEST_BUF_SIZE,
               paClipOff,    
               NULL,       // no callback, use blocking API
@@ -992,7 +992,14 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(int devNum, PlotScalar *plotSca
         return;
     }
 
-    for(i=0, t=0.0; i<nBufs; i++, t+=(float)TEST_BUF_SIZE/TEST_FS) {
+    // Sometimes this buffer doesn't get completely filled.  Unset values show up as
+    // junk on the plot.
+    memset(in8k_short, 0, TEST_BUF_SIZE * sizeof(short));
+
+    sampleCount = 0;
+
+    while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS))
+    {
         Pa_ReadStream(stream, in48k_stereo_short, TEST_BUF_SIZE);
         if (inputChannels == 2) {
             for(j=0; j<TEST_BUF_SIZE; j++)
@@ -1002,23 +1009,23 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(int devNum, PlotScalar *plotSca
             for(j=0; j<TEST_BUF_SIZE; j++)
                 in48k_short[j] = in48k_stereo_short[j]; 
         }
-        int n8k = resample(src, in8k_short, in48k_short, 8000, TEST_FS, TEST_BUF_SIZE, TEST_BUF_SIZE);
+        int n8k = resample(src, in8k_short, in48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
         resample_for_plot(fifo, in8k_short, n8k, FS);
 
-        // every TEST_DT seconds update plot, unfortunately plot
-        // doesnt get updated to end as we are blocking events in this
-        // function
+        short plotSamples[TEST_WAVEFORM_PLOT_BUF];
+        if (fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
+        {
+            // come back when the fifo is refilled
+            continue;
+        }
 
-        if (t > TEST_DT) {
-            t -= TEST_DT;
-            short plotSamples[TEST_WAVEFORM_PLOT_BUF];
-            if (fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
-                memset(plotSamples, 0, TEST_WAVEFORM_PLOT_BUF*sizeof(short));
-            plotScalar->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
-            plotScalar->Refresh();
-       }
+        plotScalar->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
+        sampleCount += TEST_WAVEFORM_PLOT_BUF;
+        plotScalar->Refresh();
+        plotScalar->Update();
     }
-   
+
+
     err = Pa_StopStream(stream);
     if (err != paNoError) {
         wxMessageBox(wxT("Couldn't stop sound device."), wxT("Error"), wxOK);       
@@ -1045,8 +1052,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(int devNum, PlotScalar *plotSc
     short               out48k_stereo_short[2*TEST_BUF_SIZE];
     short               out48k_short[TEST_BUF_SIZE];
     short               out8k_short[TEST_BUF_SIZE];
-    int                 numDevices, nBufs, i, j, src_error, n, outputChannels;
-    float               t;
+    int                 numDevices, j, src_error, n, outputChannels, sampleRate, sampleCount;
     SRC_STATE          *src;
     FIFO               *fifo;
 
@@ -1080,13 +1086,13 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(int devNum, PlotScalar *plotSc
     outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultHighOutputLatency;
     outputParameters.hostApiSpecificStreamInfo = NULL;
 
-    nBufs = TEST_WAVEFORM_PLOT_TIME*TEST_FS/TEST_BUF_SIZE;
+    sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
 
     err = Pa_OpenStream(
               &stream,
               NULL,
               &outputParameters,
-              TEST_FS,
+              sampleRate,
               TEST_BUF_SIZE,
               paClipOff,    
               NULL,       // no callback, use blocking API
@@ -1102,9 +1108,16 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(int devNum, PlotScalar *plotSc
         return;
     }
 
-    for(i=0, t=0.0, n=0; i<nBufs; i++, t+=(float)TEST_BUF_SIZE/TEST_FS) {
+    // Sometimes this buffer doesn't get completely filled.  Unset values show up as
+    // junk on the plot.
+    memset(out8k_short, 0, TEST_BUF_SIZE * sizeof(short));
+
+    sampleCount = 0;
+    n = 0;
+
+    while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS)) {
         for(j=0; j<TEST_BUF_SIZE; j++,n++) {
-            out48k_short[j] = 2000.0*cos(6.2832*(n++)*400.0/TEST_FS);
+            out48k_short[j] = 2000.0*cos(6.2832*(n++)*400.0/sampleRate);
             if (outputChannels == 2) {
                 out48k_stereo_short[2*j] = out48k_short[j];   // left channel
                 out48k_stereo_short[2*j+1] = out48k_short[j]; // right channel
@@ -1116,19 +1129,21 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(int devNum, PlotScalar *plotSc
         Pa_WriteStream(stream, out48k_stereo_short, TEST_BUF_SIZE);
 
         // convert back to 8kHz just for plotting
-        int n8k = resample(src, out8k_short, out48k_short, 8000, TEST_FS, TEST_BUF_SIZE, TEST_BUF_SIZE);
+        int n8k = resample(src, out8k_short, out48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
         resample_for_plot(fifo, out8k_short, n8k, FS);
 
-        // every TEST_DT seconds update plot
+        // If enough 8 kHz samples are buffered, go ahead and plot, otherwise wait for more
+        short plotSamples[TEST_WAVEFORM_PLOT_BUF];
+        if (fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
+        {
+            // come back when the fifo is refilled
+            continue;
+        }
 
-        if (t > TEST_DT) {
-            t -= TEST_DT;
-            short plotSamples[TEST_WAVEFORM_PLOT_BUF];
-            if (fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
-                memset(plotSamples, 0, TEST_WAVEFORM_PLOT_BUF*sizeof(short));
-            plotScalar->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
-            plotScalar->Refresh();
-       }
+        plotScalar->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
+        sampleCount += TEST_WAVEFORM_PLOT_BUF;
+        plotScalar->Refresh();
+        plotScalar->Update();
     }
    
     err = Pa_StopStream(stream);
