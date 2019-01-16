@@ -421,7 +421,8 @@ endif()
 #
 # Find libdl for dlopen/dlclose
 #
-if(UNIX)
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+    message("Linux")
     message(STATUS "Looking for dl library.")
     find_library(DL_LIBRARY dl)
     if(DL_LIBRARY)
@@ -434,7 +435,7 @@ On Linux systems try installing:
     glibc-dev (DEB based systems)"
         )
     endif()
-endif(UNIX)
+endif()
 
     
 #Freedv 
