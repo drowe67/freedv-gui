@@ -945,7 +945,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(int devNum, PlotScalar *plotSca
         return;
     printf("devNum %d\n", devNum);
 
-    fifo = fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
+    fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
     src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
 
     // work out how many input channels this device supports.
@@ -1013,7 +1013,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(int devNum, PlotScalar *plotSca
         resample_for_plot(fifo, in8k_short, n8k, FS);
 
         short plotSamples[TEST_WAVEFORM_PLOT_BUF];
-        if (fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
+        if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
         {
             // come back when the fifo is refilled
             continue;
@@ -1033,7 +1033,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(int devNum, PlotScalar *plotSca
     }
     Pa_CloseStream(stream);
 
-    fifo_destroy(fifo);
+    codec2_fifo_destroy(fifo);
     src_delete(src);
 }
 
@@ -1063,7 +1063,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(int devNum, PlotScalar *plotSc
     if (devNum < 0)
         return;
 
-    fifo = fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
+    fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
     src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
 
     // work out how many output channels this device supports.
@@ -1134,7 +1134,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(int devNum, PlotScalar *plotSc
 
         // If enough 8 kHz samples are buffered, go ahead and plot, otherwise wait for more
         short plotSamples[TEST_WAVEFORM_PLOT_BUF];
-        if (fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
+        if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
         {
             // come back when the fifo is refilled
             continue;
@@ -1153,7 +1153,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(int devNum, PlotScalar *plotSc
     }
     Pa_CloseStream(stream);
 
-    fifo_destroy(fifo);
+    codec2_fifo_destroy(fifo);
     src_delete(src);
 }
 
