@@ -375,7 +375,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
         // Add Demod Input window
         m_panelDemodIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
         m_auiNbookCtrl->AddPage(m_panelDemodIn, _("Frm Radio"), true, wxNullBitmap);
-        g_plotDemodInFifo = fifo_create(2*WAVEFORM_PLOT_BUF);
+        g_plotDemodInFifo = codec2_fifo_create(2*WAVEFORM_PLOT_BUF);
     }
 
     if(wxGetApp().m_show_speech_in)
@@ -383,7 +383,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
         // Add Speech Input window
         m_panelSpeechIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
         m_auiNbookCtrl->AddPage(m_panelSpeechIn, _("Frm Mic"), true, wxNullBitmap);
-        g_plotSpeechInFifo = fifo_create(4*WAVEFORM_PLOT_BUF);
+        g_plotSpeechInFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
     }
 
     if(wxGetApp().m_show_speech_out)
@@ -391,7 +391,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
         // Add Speech Output window
         m_panelSpeechOut = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
         m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("To Spkr/Hdphns"), true, wxNullBitmap);
-        g_plotSpeechOutFifo = fifo_create(2*WAVEFORM_PLOT_BUF);
+        g_plotSpeechOutFifo = codec2_fifo_create(2*WAVEFORM_PLOT_BUF);
     }
 
     if(wxGetApp().m_show_timing)
@@ -629,8 +629,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     g_split = 0;
 
     // data states
-    g_txDataInFifo = fifo_create(MAX_CALLSIGN*VARICODE_MAX_BITS);
-    g_rxDataOutFifo = fifo_create(MAX_CALLSIGN*VARICODE_MAX_BITS);
+    g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*VARICODE_MAX_BITS);
+    g_rxDataOutFifo = codec2_fifo_create(MAX_CALLSIGN*VARICODE_MAX_BITS);
 
     sox_biquad_start();
 
@@ -944,7 +944,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     // Oscilliscope type speech plots -------------------------------------------------------
 
     short speechInPlotSamples[WAVEFORM_PLOT_BUF];
-    if (fifo_read(g_plotSpeechInFifo, speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
+    if (codec2_fifo_read(g_plotSpeechInFifo, speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
         memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
         //fprintf(stderr, "empty!\n");
     }
@@ -952,13 +952,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     m_panelSpeechIn->Refresh();
 
     short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
-    if (fifo_read(g_plotSpeechOutFifo, speechOutPlotSamples, WAVEFORM_PLOT_BUF))
+    if (codec2_fifo_read(g_plotSpeechOutFifo, speechOutPlotSamples, WAVEFORM_PLOT_BUF))
         memset(speechOutPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
     m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
     m_panelSpeechOut->Refresh();
 
     short demodInPlotSamples[WAVEFORM_PLOT_BUF];
-    if (fifo_read(g_plotDemodInFifo, demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
+    if (codec2_fifo_read(g_plotDemodInFifo, demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
         memset(demodInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
     }
     m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
@@ -1083,7 +1083,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
 
-    if ((unsigned)fifo_used(g_txDataInFifo) < strlen(callsign)) {
+    if ((unsigned)codec2_fifo_used(g_txDataInFifo) < strlen(callsign)) {
         unsigned int  i;
 
         //fprintf(g_logfile, "tx callsign: %s.\n", callsign);
@@ -1113,14 +1113,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         for(i=0; i<strlen(callsign); i++) {
             short ashort = (short)callsign[i];
-            fifo_write(g_txDataInFifo, &ashort, 1);
+            codec2_fifo_write(g_txDataInFifo, &ashort, 1);
         }
     }
 
     // See if any Callsign info received --------------------------------
 
     short ashort;
-    while (fifo_read(g_rxDataOutFifo, &ashort, 1) == 0) {
+    while (codec2_fifo_read(g_rxDataOutFifo, &ashort, 1) == 0) {
 
         if ((ashort == 13) || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1)) {
             // CR completes line
@@ -1255,7 +1255,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (sz_error_pattern) {
                 short error_pattern[sz_error_pattern];
 
-                if (fifo_read(g_error_pattern_fifo, error_pattern, sz_error_pattern) == 0) {
+                if (codec2_fifo_read(g_error_pattern_fifo, error_pattern, sz_error_pattern) == 0) {
                     int i,b;
 
                     /* both modes map IQ to alternate bits, but on same carrier */
@@ -1832,7 +1832,7 @@ void MainFrame::OnTogBtnRxID(wxCommandEvent& event)
 {
     // empty any junk in rx data FIFO
     short junk;
-    while(fifo_read(g_rxDataOutFifo,&junk,1) == 0);
+    while(codec2_fifo_read(g_rxDataOutFifo,&junk,1) == 0);
     event.Skip();
 }
 
@@ -2547,7 +2547,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             freedv_set_callback_txt(g_pfreedv, &my_put_next_rx_char, &my_get_next_tx_char, NULL);
 
             freedv_set_callback_error_pattern(g_pfreedv, my_freedv_put_error_pattern, (void*)m_panelTestFrameErrors);
-            g_error_pattern_fifo = fifo_create(2*freedv_get_sz_error_pattern(g_pfreedv)+1);
+            g_error_pattern_fifo = codec2_fifo_create(2*freedv_get_sz_error_pattern(g_pfreedv)+1);
             g_error_hist = new short[FDMDV_NC_MAX*2];
             g_error_histn = new short[FDMDV_NC_MAX*2];
             int i;
@@ -2691,7 +2691,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             // FreeDV clean up
             delete g_error_hist;
             delete g_error_histn;
-            fifo_destroy(g_error_pattern_fifo);
+            codec2_fifo_destroy(g_error_pattern_fifo);
             freedv_close(g_pfreedv);
             speex_preprocess_state_destroy(g_speex_st);
         }
@@ -2764,12 +2764,12 @@ void MainFrame::stopRxStream()
 
 void MainFrame::destroy_fifos(void)
 {
-    fifo_destroy(g_rxUserdata->infifo1);
-    fifo_destroy(g_rxUserdata->outfifo1);
-    fifo_destroy(g_rxUserdata->infifo2);
-    fifo_destroy(g_rxUserdata->outfifo2);
-    fifo_destroy(g_rxUserdata->rxinfifo);
-    fifo_destroy(g_rxUserdata->rxoutfifo);
+    codec2_fifo_destroy(g_rxUserdata->infifo1);
+    codec2_fifo_destroy(g_rxUserdata->outfifo1);
+    codec2_fifo_destroy(g_rxUserdata->infifo2);
+    codec2_fifo_destroy(g_rxUserdata->outfifo2);
+    codec2_fifo_destroy(g_rxUserdata->rxinfifo);
+    codec2_fifo_destroy(g_rxUserdata->rxoutfifo);
 }
 
 void MainFrame::destroy_src(void)
@@ -3001,10 +3001,10 @@ void MainFrame::startRxStream()
         int soundCard1FifoSizeSamples = m_fifoSize_ms*g_soundCard1SampleRate/1000;
         int soundCard2FifoSizeSamples = m_fifoSize_ms*g_soundCard2SampleRate/1000;
         
-        g_rxUserdata->infifo1 = fifo_create(soundCard1FifoSizeSamples);
-        g_rxUserdata->outfifo1 = fifo_create(soundCard1FifoSizeSamples);
-        g_rxUserdata->outfifo2 = fifo_create(soundCard2FifoSizeSamples);
-        g_rxUserdata->infifo2 = fifo_create(soundCard2FifoSizeSamples);
+        g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1FifoSizeSamples);
+        g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1FifoSizeSamples);
+        g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
+        g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
 
         fprintf(stderr, "fifoSize_ms: %d infifo1/outfilo1: %d infifo2/outfilo2: %d\n",
                 wxGetApp().m_fifoSize_ms, soundCard1FifoSizeSamples, soundCard2FifoSizeSamples);
@@ -3041,8 +3041,8 @@ void MainFrame::startRxStream()
         
         rxFifoSizeSamples += 0.04*modem_samplerate;
 
-        g_rxUserdata->rxinfifo = fifo_create(rxFifoSizeSamples);
-        g_rxUserdata->rxoutfifo = fifo_create(rxFifoSizeSamples);
+        g_rxUserdata->rxinfifo = codec2_fifo_create(rxFifoSizeSamples);
+        g_rxUserdata->rxoutfifo = codec2_fifo_create(rxFifoSizeSamples);
 
         fprintf(stderr, "rxFifoSizeSamples: %d\n",  rxFifoSizeSamples);
         
@@ -3500,7 +3500,7 @@ void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs)
         dec_samples[sample] = max;
         dec_samples[sample+1] = min;
     }
-    fifo_write(plotFifo, dec_samples, nSamples);
+    codec2_fifo_write(plotFifo, dec_samples, nSamples);
 }
 
 
@@ -3558,7 +3558,7 @@ void txRxProcessing()
 
     int nsam = g_soundCard1SampleRate * (float)N8/FS;
     assert(nsam <= N48);
-    while ((fifo_read(cbData->infifo1, insound_card, nsam) == 0) && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
+    while ((codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0) && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
 
         /* convert sound card sample rate FreeDV input sample rate */
         
@@ -3677,7 +3677,7 @@ void txRxProcessing()
         else {
             // Write 20ms chunks of input samples for modem rx processing
 
-            fifo_write(cbData->rxinfifo, infreedv, nfreedv);
+            codec2_fifo_write(cbData->rxinfifo, infreedv, nfreedv);
             per_frame_rx_processing(cbData->rxoutfifo, cbData->rxinfifo);
             
             // Read 20ms chunk of samples from modem rx processing,
@@ -3685,8 +3685,8 @@ void txRxProcessing()
             // (currently at least) fixed at a sample rate of 8 kHz
             
             memset(outfreedv, 0, sizeof(short)*N8);
-            //fprintf(stderr, "rxoutfifo free: %d used: %d\n", fifo_free(cbData->rxoutfifo), fifo_used(cbData->rxoutfifo));
-            fifo_read(cbData->rxoutfifo, outfreedv, N8);
+            //fprintf(stderr, "rxoutfifo free: %d used: %d\n", codec2_fifo_free(cbData->rxoutfifo), codec2_fifo_used(cbData->rxoutfifo));
+            codec2_fifo_read(cbData->rxoutfifo, outfreedv, N8);
         }
 
         // Optional Spk Out EQ Filtering, need mutex as filter can change at run time from another thread
@@ -3704,21 +3704,21 @@ void txRxProcessing()
         // resample to output sound card rate
         
         if (g_nSoundCards == 1) {
-            //fprintf(stderr, "nout %d, outfifo1 free: %d used: %d \n", nout, fifo_free(cbData->outfifo1), fifo_used(cbData->outfifo1));            
+            //fprintf(stderr, "nout %d, outfifo1 free: %d used: %d \n", nout, codec2_fifo_free(cbData->outfifo1), codec2_fifo_used(cbData->outfifo1));            
             if (g_mode == -1) {
                 // Horus demod is special case, just echo input samples as it's nice to hear the
                 // off-air modem signal
                 nout = resample(cbData->outsrc2, outsound_card, infreedv, g_soundCard1SampleRate, freedv_samplerate, N48, nfreedv);
-                fifo_write(cbData->outfifo1, outsound_card, nout);
+                codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
             }
             else {
                 nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, FS, N48, N8);
-                fifo_write(cbData->outfifo1, outsound_card, nout);
+                codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
             }
         }
         else {
             nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, FS, N48, N8);
-            fifo_write(cbData->outfifo2, outsound_card, nout);
+            codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
         }
     }
  
@@ -3733,7 +3733,7 @@ void txRxProcessing()
 	  // just dump outfifo1 state atm as that is causing problems with 700D
 	  // If this drops to zero we have a problem as we will run out of output samples
 	  // to send to the sound driver via PortAudio
-	  fprintf(stderr, "%6d", fifo_used(cbData->outfifo1));
+	  fprintf(stderr, "%6d", codec2_fifo_used(cbData->outfifo1));
 	}
 
         // This while loop locks the modulator to the sample rate of
@@ -3747,7 +3747,7 @@ void txRxProcessing()
 
         unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * freedv_get_n_nom_modem_samples(g_pfreedv)/freedv_samplerate;
 
-        while((unsigned)fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {
+        while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {
 
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
@@ -3766,7 +3766,7 @@ void txRxProcessing()
             // zero speech input just in case infifo2 underflows
 
             memset(insound_card, 0, nsam_in_48*sizeof(short));
-            fifo_read(cbData->infifo2, insound_card, nsam_in_48);
+            codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
 
             nout = resample(cbData->insrc2, infreedv, insound_card, FS, g_soundCard2SampleRate, 10*N8, nsam_in_48);
 
@@ -3845,7 +3845,7 @@ void txRxProcessing()
             // output one frame of modem signal
 
             nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, 10*N48, nfreedv);
-            ret = fifo_write(cbData->outfifo1, outsound_card, nout);
+            ret = codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
 
             assert(ret != -1);
         }
@@ -3885,19 +3885,19 @@ void per_frame_rx_processing(
         int   nin, nout;
 
         nin = horus_nin(g_horus);
-        while (fifo_read(input_fifo, input_buf, nin) == 0) {
+        while (codec2_fifo_read(input_fifo, input_buf, nin) == 0) {
             if (g_freedv_verbose) {
-                fprintf(stderr, "per_frame: nin = %d input_fifo free: %d used: %d\n", nin, fifo_free(input_fifo), fifo_used(input_fifo));
+                fprintf(stderr, "per_frame: nin = %d input_fifo free: %d used: %d\n", nin, codec2_fifo_free(input_fifo), codec2_fifo_used(input_fifo));
             }
             if (horus_rx(g_horus, ascii_out, input_buf)) {
                 // unfort fifo deals with shorts
                 short ch;
                 for (i=0; i<(int)strlen(ascii_out); i++) {
                     ch = (short)ascii_out[i];
-                    fifo_write(g_rxDataOutFifo, &ch, 1);
+                    codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
                 }
                 ch = 13; // CR to make it appear on txt line
-                fifo_write(g_rxDataOutFifo, &ch, 1);
+                codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
 
                 UDPSend(wxGetApp().m_udp_port, ascii_out, strlen(ascii_out));
                 horus_get_modem_extended_stats(g_horus, &g_stats);
@@ -3927,7 +3927,7 @@ void per_frame_rx_processing(
             nout = resample(g_horus_src, output_buf, input_buf, FS, horus_get_Fs(g_horus), max_nout, nin);
             assert(nout <= max_nout);
             //fprintf(stderr, "nin: %d nout_max: %d nout: %d\n", nin, nout, nout_max);
-            fifo_write(output_fifo, output_buf, nout);
+            codec2_fifo_write(output_fifo, output_buf, nout);
             #endif
         }
     }
@@ -3942,7 +3942,7 @@ void per_frame_rx_processing(
 
         nin = freedv_nin(g_pfreedv);
         //fprintf(stderr, "nin: %d max_modem_samples: %d\n", nin, freedv_get_n_max_modem_samples(g_pfreedv));
-        while (fifo_read(input_fifo, input_buf, nin) == 0) {
+        while (codec2_fifo_read(input_fifo, input_buf, nin) == 0) {
             assert(nin <= freedv_get_n_max_modem_samples(g_pfreedv));
 
             #ifdef FTEST
@@ -3970,7 +3970,7 @@ void per_frame_rx_processing(
             }
             nout = freedv_comprx(g_pfreedv, output_buf, rx_fdm_offset);
 
-            fifo_write(output_fifo, output_buf, nout);
+            codec2_fifo_write(output_fifo, output_buf, nout);
             //fprintf(stderr, "ret = %d\n", ret);
             
             nin = freedv_nin(g_pfreedv);
@@ -4048,7 +4048,7 @@ int MainFrame::rxCallback(
     if (rptr) {
         for(i = 0; i < framesPerBuffer; i++, rptr += cbData->inputChannels1)
             indata[i] = rptr[0];                       
-        if (fifo_write(cbData->infifo1, indata, framesPerBuffer)) {
+        if (codec2_fifo_write(cbData->infifo1, indata, framesPerBuffer)) {
             g_infifo1_full++;
         }
     }
@@ -4056,7 +4056,7 @@ int MainFrame::rxCallback(
     // OK now set up output samples for this callback
 
     if (wptr) {
-         if (fifo_read(cbData->outfifo1, outdata, framesPerBuffer) == 0) {
+         if (codec2_fifo_read(cbData->outfifo1, outdata, framesPerBuffer) == 0) {
 
             // write signal to both channels
 
@@ -4127,7 +4127,7 @@ int MainFrame::txCallback(
     if (rptr) {
         for(i = 0; i < framesPerBuffer; i++, rptr += cbData->inputChannels2)
             indata[i] = rptr[0];                        
-        if (fifo_write(cbData->infifo2, indata, framesPerBuffer)) {
+        if (codec2_fifo_write(cbData->infifo2, indata, framesPerBuffer)) {
             g_infifo2_full++;
         }
     }
@@ -4135,7 +4135,7 @@ int MainFrame::txCallback(
     // OK now set up output samples for this callback
 
     if (wptr) {
-        if (fifo_read(cbData->outfifo2, outdata, framesPerBuffer) == 0) {
+        if (codec2_fifo_read(cbData->outfifo2, outdata, framesPerBuffer) == 0) {
 		
             // write signal to both channels */
             for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
@@ -4345,7 +4345,7 @@ void *UDPThread::Entry() {
 char my_get_next_tx_char(void *callback_state) {
     short ch = 0;
     
-    fifo_read(g_txDataInFifo, &ch, 1);
+    codec2_fifo_read(g_txDataInFifo, &ch, 1);
     //fprintf(stderr, "get_next_tx_char: %c\n", (char)ch);
     return (char)ch;
 }
@@ -4353,15 +4353,15 @@ char my_get_next_tx_char(void *callback_state) {
 void my_put_next_rx_char(void *callback_state, char c) {
     short ch = (short)c;
     //fprintf(stderr, "put_next_rx_char: %c\n", (char)c);
-    fifo_write(g_rxDataOutFifo, &ch, 1);
+    codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
 }
 
 // Callback from FreeDv API to update error plots
 
 void my_freedv_put_error_pattern(void *state, short error_pattern[], int sz_error_pattern) {
-    fifo_write(g_error_pattern_fifo, error_pattern, sz_error_pattern);
+    codec2_fifo_write(g_error_pattern_fifo, error_pattern, sz_error_pattern);
     //fprintf(stderr, "my_freedv_put_error_pattern: sz_error_pattern: %d ret: %d used: %d\n", 
-    //        sz_error_pattern, ret, fifo_used(g_error_pattern_fifo) );
+    //        sz_error_pattern, ret, codec2_fifo_used(g_error_pattern_fifo) );
 }
 
 void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin)
