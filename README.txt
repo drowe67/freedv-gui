@@ -97,7 +97,7 @@ missing on older Linux systems.
 
 Install basic MinGW development packages:
   $ sudo dnf install mingw{32,64}-filesystem mingw{32,64}-binutils \
-    mingw{32,64}-gcc mingw{32/64}-crt mingw{32,64}-headers
+    mingw{32,64}-gcc mingw{32/64}-crt mingw{32,64}-headers mingw32-nsis
 
 Install dependencies of FreeDV/Codec2:
   $ sudo dnf install mingw{32,64}-speex
