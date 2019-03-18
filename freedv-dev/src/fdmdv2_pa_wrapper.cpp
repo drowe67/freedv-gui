@@ -338,3 +338,55 @@ PaError PortAudioWrap::setCallback(PaStreamCallback *callback)
     return paNoError;
 }
 
+//----------------------------------------------------------------
+// isSoundCardNameValid()
+//----------------------------------------------------------------
+bool PortAudioWrap::isSoundCardNameValid(const wxString & soundCardName)
+{
+    // If getDeviceIndex returns anything but paNoDevice, then the name is a
+    // valid sound card name
+    return (getDeviceIndex(soundCardName) != paNoDevice);
+}
+
+//----------------------------------------------------------------
+// getDeviceIndex()
+//----------------------------------------------------------------
+PaDeviceIndex PortAudioWrap::getDeviceIndex(const wxString & soundCardName)
+{
+    PaDeviceIndex index = paNoDevice;
+    const PaDeviceInfo * deviceInfo;
+
+    int numDevices = Pa_GetDeviceCount();
+
+    for (int devNum = 0; devNum < numDevices; devNum++) {
+        deviceInfo = Pa_GetDeviceInfo(devNum);
+        if (deviceInfo == NULL) {
+            //printf("PortAudioWrap::getDeviceIndex, call to Pa_GetDeviceInfo(%d) failed!\n", devNum);
+            continue;
+        }
+        else if (wxString::FromAscii(deviceInfo->name) == soundCardName) {
+            index = (PaDeviceIndex)devNum;
+            break;
+        }
+    }
+
+    return index;
+}
+
+//----------------------------------------------------------------
+// getDeviceNameStr()
+//----------------------------------------------------------------
+wxString PortAudioWrap::getDeviceNameStr(PaDeviceIndex devNum)
+{
+    const PaDeviceInfo * deviceInfo;
+    wxString devName = wxT("");
+
+    deviceInfo = Pa_GetDeviceInfo(devNum);
+    if (deviceInfo == NULL) {
+        wxPrintf("PortAudioWrap::getDeviceNameStr, call to Pa_GetDeviceInfo(%d) failed!\n", devNum);
+    }
+    else
+        devName = wxString::FromAscii(deviceInfo->name);
+
+    return devName;
+}

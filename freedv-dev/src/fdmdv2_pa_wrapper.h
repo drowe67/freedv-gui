@@ -66,6 +66,9 @@ class PortAudioWrap
 
         PaError             setStreamFlags(PaStreamFlags flags);
         PaError             setCallback(PaStreamCallback *m_pStreamCallback);
+        static bool         isSoundCardNameValid(const wxString & soundCardName);
+        static PaDeviceIndex getDeviceIndex(const wxString & soundCardName);
+        static wxString     getDeviceNameStr(PaDeviceIndex devNum);
         PaError             setStreamCallback(PaStream *stream, PaStreamCallback* callback) { m_pStreamCallback = callback; return 0;}
         PaError             setStreamFinishedCallback(PaStream *stream, PaStreamFinishedCallback* m_pStreamFinishedCallback);
 

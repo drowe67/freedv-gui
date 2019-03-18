@@ -58,24 +58,26 @@ class AudioOptsDialog : public wxDialog
         PaError         pa_err;
         bool            m_isPaInitialized;
 
-        int             rxInAudioDeviceNum;
-        int             rxOutAudioDeviceNum;
-        int             txInAudioDeviceNum;
-        int             txOutAudioDeviceNum;
+        std::string        rxInAudioDeviceName;
+        std::string        rxOutAudioDeviceName;
+        std::string        txInAudioDeviceName;
+        std::string        txOutAudioDeviceName;
 
         void buildTestControls(PlotScalar **plotScalar, wxButton **btnTest, 
                                wxPanel *parentPanel, wxBoxSizer *bSizer, wxString buttonLabel);
-        void plotDeviceInputForAFewSecs(int devNum, PlotScalar *plotScalar);
-        void plotDeviceOutputForAFewSecs(int devNum, PlotScalar *plotScalar);
+        void plotDeviceInputForAFewSecs(const std::string &soundCardName, PlotScalar *plotScalar);
+        void plotDeviceOutputForAFewSecs(const std::string &soundCardName, PlotScalar *plotScalar);
 
         int buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, int devNum, int in_out);
         void populateParams(AudioInfoDisplay);
         void showAPIInfo();
-        int setTextCtrlIfDevNumValid(wxTextCtrl *textCtrl, wxListCtrl *listCtrl, int devNum);
+        std::string setTextCtrlIfDevNameValid(wxTextCtrl *textCtrl, wxListCtrl *listCtrl, std::string &audioDevName);
+        std::string stripAudioDevName(std::string & devName);
+        int CountNumberOfCodecDevices(wxListCtrl *listCtrl);
         void Pa_Init(void);
         void OnDeviceSelect(wxComboBox *cbSampleRate, 
                             wxTextCtrl *textCtrl, 
-                            int        *devNum, 
+                            std::string & audioDevName,
                             wxListCtrl *listCtrlDevices, 
                             int         index,
                             int         in_out);
@@ -172,5 +174,7 @@ class AudioOptsDialog : public wxDialog
         AudioOptsDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Audio Config"), const wxPoint& pos = wxPoint(1,1), const wxSize& size = wxSize( 800, 650 ), long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
         ~AudioOptsDialog();
         int ExchangeData(int inout);
+        static int displayConfigErrorCount;
+
 };
 #endif //__AudioOptsDialog__
