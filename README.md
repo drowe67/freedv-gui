@@ -1,6 +1,4 @@
-==================================
- FreeDV GUI README.txt
-==================================
+# FreeDV GUI README.txt
 
 This document describes how to build the FreeDV GUI program for
 various operating systems.  See also:
@@ -9,9 +7,7 @@ various operating systems.  See also:
   RELEASE_NOTES.txt - changes made to each version
   USER_MANUAL.txt   - FreeDV GUI Manual
 
-==================================
- Building and installing on Linux
-==================================
+# Building and installing on Linux
 
 First the basics:
 
@@ -40,8 +36,7 @@ RHEL/CentOS and derivitves (requires Fedora EPEL repository)
     gsm-devel
 
 
-Quickstart 1
-------------
+## Quickstart 1
 
 Using a modern Linux, and the development library packages installed above:
 
@@ -52,8 +47,7 @@ Using a modern Linux, and the development library packages installed above:
   $ make
   $ ./src/freedv
 
-Quickstart 2
--------------
+## Quickstart 2
 
 Using a local build of codec2-dev that you may be developing:
 
@@ -64,8 +58,7 @@ Using a local build of codec2-dev that you may be developing:
   $ make
   $ ./src/freedv
 
-Quickstart 3
-------------
+## Quickstart 3
 
 Builds static versions of wxWidgets, portaudio, codec2-dev, which are commonly
 missing on older Linux systems.
@@ -91,9 +84,7 @@ missing on older Linux systems.
    $ make
    $ ./src/freedv
 
-=======================================================
- Building for Windows on Fedora 28 (Cross compiling)
-=======================================================
+## Building for Windows on Fedora 28 (Cross compiling)
 
 Install basic MinGW development packages:
   $ sudo dnf install mingw{32,64}-filesystem mingw{32,64}-binutils \
@@ -116,9 +107,7 @@ Building FreeDV for 64 Bit windows:
   
 WANTED: Instructions for cross compiling on Ubuntu 17 or 18
 
-====================================
- Building and installing on Windows
-====================================
+## Building and installing on Windows
 
 The windows build is similar to linux and follows the same basic workflow,
 however, while codec2 and FreeDV (freedv) build well on windows, some of the
@@ -133,9 +122,7 @@ occurs you need to pass cmake the proper generator:
 
 cmake -G"MSYS Makefiles" [other options] </path/to/source>
 
-===============================
- Bootstrapping wxWidgets build
-===============================
+## Bootstrapping wxWidgets build
 
 If wxWidgets (>= 3.0) is not available then one option is to have CMake boot-
 strap the build for FreeDV.
@@ -162,21 +149,15 @@ $ make
 (if all goes well, as root)
 $ make install
 
-====================================
- Building and installing on OSX
-====================================
+## Building and installing on OSX
 
 Pls see README.osx
 
-====================================
- Building and installing on FreeBSD
-====================================
+## Building and installing on FreeBSD
 
 As per "Quickstart 2" above but change build_linux to build_freebsd
 
-=======
-Editing
-=======
+## Editing
 
 Please make sure your text editor does not insert tabs, and
 used indents of 4 spaces.  The following .emacs code was used to
@@ -189,9 +170,7 @@ configure emacs:
                       (setq c-basic-offset 4)
                       )))
 
-===============
-    TODO
-===============
+## TODO
 
 This software needs some maintenance and refactoring.  Patches
 welcome!
