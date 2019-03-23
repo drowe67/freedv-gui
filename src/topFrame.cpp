@@ -346,6 +346,8 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     sbSizer_mode->Add(m_rb2400b, 0, wxALIGN_LEFT|wxALL, 1);
     m_rbHorusBinary = new wxRadioButton( this, wxID_ANY, wxT("HorusB"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_mode->Add(m_rbHorusBinary, 0, wxALIGN_LEFT|wxALL, 1);
+    m_rb2020 = new wxRadioButton( this, wxID_ANY, wxT("2020"), wxDefaultPosition, wxDefaultSize,  0);
+    sbSizer_mode->Add(m_rb2020, 0, wxALIGN_LEFT|wxALL, 1);
 
     m_rb1600->SetValue(true);
 
