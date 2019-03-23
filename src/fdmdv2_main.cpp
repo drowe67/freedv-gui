@@ -601,7 +601,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
         m_rb2400b->SetValue(1);
     if (mode == 7)
         m_rbHorusBinary->SetValue(1);
-        
+    if (mode == 8)
+        m_rb2020->SetValue(1);
     pConfig->SetPath(wxT("/"));
 
 //    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
@@ -852,6 +853,8 @@ MainFrame::~MainFrame()
             mode = 6;
         if (m_rbHorusBinary->GetValue())
             mode = 7;
+        if (m_rb2020->GetValue())
+            mode = 8;
        pConfig->Write(wxT("/Audio/mode"), mode);
     }
 
@@ -947,7 +950,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             /* PSK Modes - scatter plot -------------------------------------------------------*/
             for (r=0; r<g_stats.nr; r++) {
         
-                if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700D)) {
+                if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600)
+                        || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700D)
+                        || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_2020)) {
                     m_panelScatter->add_new_samples_scatter(&g_stats.rx_symbols[r][0]);
                 }
         
@@ -1111,7 +1116,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 	m_textSync->SetLabel("Modem");
      }
     g_prev_State = g_State;
-    if (g_mode == FREEDV_MODE_700D) {
+    if ((g_mode == FREEDV_MODE_700D) || (g_mode == FREEDV_MODE_2020)){
         if (g_interleaverSyncState) {
             m_textInterleaverSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
             m_textInterleaverSync->SetLabel("Intrlvr ("+wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave)+")");
@@ -2512,6 +2517,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb800xa->Disable();
         m_rb2400b->Disable();
         m_rbHorusBinary->Disable();
+        m_rb2020->Disable();
         if (m_rbPlugIn != NULL)
             m_rbPlugIn->Disable();
 
@@ -2561,6 +2567,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_textSync->Disable();
             m_textInterleaverSync->SetLabel("");
         }
+        if (m_rb2020->GetValue()) {
+            g_mode = FREEDV_MODE_2020;
+            g_Nc = 17;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
+            m_panelScatter->setNc(g_Nc);
+        }
 
         if (g_mode != -1) { 
             // init freedv states
@@ -2570,7 +2581,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_btnTogPTT->Enable();
             m_togBtnVoiceKeyer->Enable();
 
-            if (g_mode == FREEDV_MODE_700D) {
+            if ((g_mode == FREEDV_MODE_700D) || (g_mode == FREEDV_MODE_2020)) {
                 // 700D has some init time stuff so treat it special
                 struct freedv_advanced adv;
                 adv.interleave_frames = wxGetApp().m_FreeDV700Interleave;
@@ -2756,6 +2767,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb800xa->Enable();
         m_rb2400b->Enable();
         m_rbHorusBinary->Enable();
+        m_rb2020->Enable();
         if (m_rbPlugIn != NULL)
             m_rbPlugIn->Enable();
            
