@@ -10,31 +10,34 @@ various operating systems.  See also:
 # Building and installing on Linux
 
 First the basics:
-
-  $ sudo apt-get install build-essential cmake subversion
+```
+  $ sudo apt-get install build-essential cmake git
+or
+  $ sudo dnf groupinstall "Development Tools"
+```
 
 To install the required development libraries instead of building them
 statically:
 
 Debian/Ubuntu:
-
+```
   $ sudo apt-get install libwxgtk3.0-dev portaudio19-dev \
     libhamlib-dev libsamplerate-dev libasound2-dev libao-dev libgsm1-dev \
     libsndfile-dev libspeexdsp-dev
-
+```
 Fedora:
-
-  $ sudo dnf install wxGTK3-devel portaudio-devel libsamplerate-devel \ 
+```
+  $ sudo dnf install icmake wxGTK3-devel portaudio-devel libsamplerate-devel \
     libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
     gsm-devel
-
+```
 
 RHEL/CentOS and derivitves (requires Fedora EPEL repository)
-
+```
   $ sudo yum install wxGTK3-devel portaudio-devel libsamplerate-devel \ 
     libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
     gsm-devel
-
+```
 
 ## Quickstart 1
 
