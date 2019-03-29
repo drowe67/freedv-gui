@@ -28,6 +28,8 @@
 #define wxUSE_GIF       1
 #define wxUSE_PCX       1
 #define wxUSE_LIBTIFF   1
+// todo move into api when ready
+int freedv_get_speech_sample_rate          (struct freedv *f) {return 8000;} //f->modem_sample_rate;}
 
 //-------------------------------------------------------------------
 // Bunch of globals used for communication with sound card call
@@ -3423,7 +3425,7 @@ void MainFrame::processTxtEvent(char event[]) {
 #endif
 
 
-#define SBQ_MAX_ARGS 4
+#define SBQ_MAX_ARGS 5
 
 void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q)
 {
@@ -3456,6 +3458,8 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
         sprintf(arg[argc++], "%f", Q);
         sprintf(arg[argc++], "%f", gaindB+1E-6);
     }
+
+    sprintf(arg[argc++], "%d", freedv_get_speech_sample_rate(g_pfreedv));
 
     assert(argc <= SBQ_MAX_ARGS);
 

@@ -1,5 +1,5 @@
 //==========================================================================
-// Name:            sox_biquad.h
+// Name:            sox_biquad.c
 // Purpose:         Interface into Sox Biquad filters 
 // Created:         Dec 1, 2012
 // Authors:         David Rowe
@@ -63,13 +63,26 @@ void *sox_biquad_create(int argc, const char *argv[])
     int ret;
     sox_effect_t *e;
     int (*start)(sox_effect_t *); /* function pointer to effect start func */
-    
+    long sampleRate;
+
+    if (strcmp(argv[0], "equalizer") == 0) {
+        sampleRate = (argc == 4) ? atol(argv[4]) : 8000;
+    }
+    else {
+        sampleRate = (argc == 3) ? atol(argv[3]) : 8000;
+    }
+
     e = sox_create_effect(sox_find_effect(argv[0])); assert(e != NULL);
+
+    if(e == SOX_EOF)
+        std::cout << "bvs invalid options passed to sox_create_effect";
+
     ret = sox_effect_options(e, argc, (char * const*)&argv[1]);
     assert(ret == SOX_SUCCESS);
 
     start = e->handler.start;
-    e->in_signal.rate = 8000;     /* locked at FS=8000 Hz */
+
+    e->in_signal.rate = (double)sampleRate;
     ret = start(e); assert(ret == SOX_SUCCESS);
     
     return (void *)e;
