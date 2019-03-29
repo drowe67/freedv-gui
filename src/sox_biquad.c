@@ -74,9 +74,6 @@ void *sox_biquad_create(int argc, const char *argv[])
 
     e = sox_create_effect(sox_find_effect(argv[0])); assert(e != NULL);
 
-    if(e == SOX_EOF)
-        std::cout << "bvs invalid options passed to sox_create_effect";
-
     ret = sox_effect_options(e, argc, (char * const*)&argv[1]);
     assert(ret == SOX_SUCCESS);
 
