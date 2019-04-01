@@ -28,8 +28,6 @@
 #define wxUSE_GIF       1
 #define wxUSE_PCX       1
 #define wxUSE_LIBTIFF   1
-// todo move into api when ready
-int freedv_get_speech_sample_rate          (struct freedv *f) {return 8000;} //f->modem_sample_rate;}
 
 //-------------------------------------------------------------------
 // Bunch of globals used for communication with sound card call
@@ -138,6 +136,9 @@ float               g_RxFreqOffsetHz;
 COMP                g_RxFreqOffsetPhaseRect;
 float               g_TxFreqOffsetHz;
 COMP                g_TxFreqOffsetPhaseRect;
+
+// buffer sizes dependent upon sample rate
+int                 g_bufferSize;
 
 // experimental mutex to make sound card callbacks mutually exclusive
 // TODO: review code and see if we need this any more, as fifos should
@@ -2058,7 +2059,7 @@ void MainFrame::OnPlayFileToMicIn(wxCommandEvent& event)
             {
                 sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
                 sfInfo.channels   = 1;
-                sfInfo.samplerate = FS;
+                sfInfo.samplerate = freedv_get_speech_sample_rate(g_pfreedv);
             }
         }
         g_sfPlayFile = sf_open(soundFile.c_str(), SFM_READ, &sfInfo);
@@ -2525,7 +2526,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         m_textSync->Enable();
         m_textInterleaverSync->Enable();
-        
+
         // determine what mode we are using
 
         if (m_rb1600->GetValue()) {
@@ -2615,8 +2616,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
             assert(g_pfreedv != NULL);
         
-            // init Codec 2 LPC Post Filter (FreeDV 1600)
+            // Set buffer size.
+            g_bufferSize = (int)(FRAME_DURATION * freedv_get_speech_sample_rate(g_pfreedv));
 
+            // init Codec 2 LPC Post Filter (FreeDV 1600)
             codec2_set_lpc_post_filter(freedv_get_codec2(g_pfreedv),
                                        wxGetApp().m_codec2LPCPostFilterEnable,
                                        wxGetApp().m_codec2LPCPostFilterBassBoost,
@@ -2626,7 +2629,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             // Init Speex pre-processor states
             // by inspecting Speex source it seems that only denoiser is on be default
 
-            g_speex_st = speex_preprocess_state_init(freedv_get_n_speech_samples(g_pfreedv), FS); 
+            g_speex_st = speex_preprocess_state_init(freedv_get_n_speech_samples(g_pfreedv), freedv_get_speech_sample_rate(g_pfreedv));
 
             // adjust spectrum and waterfall freq scaling base on mode
 
@@ -3624,7 +3627,7 @@ void txRxProcessing()
     // rate, so we get the right number of samples for the output
     // decoded audio
 
-    int nsam = g_soundCard1SampleRate * (float)N8/FS;
+    int nsam = g_soundCard1SampleRate * (float)g_bufferSize/freedv_get_speech_sample_rate(g_pfreedv);
     assert(nsam <= N48);
     while ((codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0) && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
 
@@ -3752,22 +3755,22 @@ void txRxProcessing()
             // this will typically be decoded output speech, and is
             // (currently at least) fixed at a sample rate of 8 kHz
             
-            memset(outfreedv, 0, sizeof(short)*N8);
+            memset(outfreedv, 0, sizeof(short)*g_bufferSize);
             //fprintf(stderr, "rxoutfifo free: %d used: %d\n", codec2_fifo_free(cbData->rxoutfifo), codec2_fifo_used(cbData->rxoutfifo));
-            codec2_fifo_read(cbData->rxoutfifo, outfreedv, N8);
+            codec2_fifo_read(cbData->rxoutfifo, outfreedv, g_bufferSize);
         }
 
         // Optional Spk Out EQ Filtering, need mutex as filter can change at run time from another thread
 
         g_mutexProtectingCallbackData.Lock();
         if (cbData->spkOutEQEnable) {
-            sox_biquad_filter(cbData->sbqSpkOutBass,   outfreedv, outfreedv, N8);
-            sox_biquad_filter(cbData->sbqSpkOutTreble, outfreedv, outfreedv, N8);
-            sox_biquad_filter(cbData->sbqSpkOutMid,    outfreedv, outfreedv, N8);
+            sox_biquad_filter(cbData->sbqSpkOutBass,   outfreedv, outfreedv, g_bufferSize);
+            sox_biquad_filter(cbData->sbqSpkOutTreble, outfreedv, outfreedv, g_bufferSize);
+            sox_biquad_filter(cbData->sbqSpkOutMid,    outfreedv, outfreedv, g_bufferSize);
         }
         g_mutexProtectingCallbackData.Unlock();
 
-        resample_for_plot(g_plotSpeechOutFifo, outfreedv, N8, FS);
+        resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_bufferSize, freedv_get_speech_sample_rate(g_pfreedv));
 
         // resample to output sound card rate
         
@@ -3780,12 +3783,12 @@ void txRxProcessing()
                 codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
             }
             else {
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, FS, N48, N8);
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_get_speech_sample_rate(g_pfreedv), N48, g_bufferSize);
                 codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
             }
         }
         else {
-            nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, FS, N48, N8);
+            nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedv_get_speech_sample_rate(g_pfreedv), N48, g_bufferSize);
             codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
         }
     }
@@ -3819,10 +3822,8 @@ void txRxProcessing()
 
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
-            // The FreeDV input sample rate for speech samples is
-            // currently fixed at 8 kHz.
             
-            int nsam_in_48 = g_soundCard2SampleRate * freedv_get_n_speech_samples(g_pfreedv)/FS;
+            int nsam_in_48 = g_soundCard2SampleRate * freedv_get_n_speech_samples(g_pfreedv)/freedv_get_speech_sample_rate(g_pfreedv);
             assert(nsam_in_48 < 10*N48);
 
             // infifo2 is written to by another sound card so it may
@@ -3836,7 +3837,7 @@ void txRxProcessing()
             memset(insound_card, 0, nsam_in_48*sizeof(short));
             codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
 
-            nout = resample(cbData->insrc2, infreedv, insound_card, FS, g_soundCard2SampleRate, 10*N8, nsam_in_48);
+            nout = resample(cbData->insrc2, infreedv, insound_card, freedv_get_speech_sample_rate(g_pfreedv), g_soundCard2SampleRate, 10*g_bufferSize, nsam_in_48);
 
             // optionally use file for mic input signal
 
@@ -3870,7 +3871,7 @@ void txRxProcessing()
             }
             g_mutexProtectingCallbackData.Unlock();
 
-            resample_for_plot(g_plotSpeechInFifo, infreedv, nout, FS);
+            resample_for_plot(g_plotSpeechInFifo, infreedv, nout, freedv_get_speech_sample_rate(g_pfreedv));
 
             nfreedv = freedv_get_n_nom_modem_samples(g_pfreedv);
 
