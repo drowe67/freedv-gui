@@ -210,3 +210,4 @@ welcome!
     PTT button
     + need some way to limit size
 - [ ] Play a file when we get sync, like "alarm"
+- [ ] A user has reported audio coming out of the tx sound card when in Rx mode, that is triggering Vox
