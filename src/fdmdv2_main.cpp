@@ -3443,8 +3443,6 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
 
     for(i=0; i<SBQ_MAX_ARGS; i++) {
         arg[i] = &argstorage[i][0];
-        arg[i] = &argstorage[i][0];
-        arg[i] = &argstorage[i][0];
     }
 
     argc = 0;
@@ -3462,10 +3460,8 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
         sprintf(arg[argc++], "%f", gaindB+1E-6);
     }
 
-    sprintf(arg[argc++], "%d", freedv_get_speech_sample_rate(g_pfreedv));
-
     assert(argc <= SBQ_MAX_ARGS);
-
+    // Note - the argc count doesn't include the command!
     sbq = sox_biquad_create(argc-1, (const char **)arg);
     assert(sbq != NULL);
 
