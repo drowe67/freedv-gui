@@ -14,7 +14,8 @@ endif()
 
 include(ExternalProject)
 ExternalProject_Add(codec2
-   SVN_REPOSITORY https://svn.code.sf.net/p/freetel/code/codec2-dev
+   GIT_REPOSITORY https://github.com/drowe67/codec2.git
+   GIT_TAG origin/brad-2020
    CMAKE_ARGS ${CODEC2_CMAKE_ARGS} ${SPEEXDSP_CMAKE_ARGS} 
    CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:string=10.7
    INSTALL_COMMAND ""

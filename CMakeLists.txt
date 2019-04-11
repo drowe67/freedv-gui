@@ -197,6 +197,13 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/soxconfig.h.in"
 find_package(Threads REQUIRED)
 message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 
+
+#
+# Find freedvlpcnet
+#
+find_package(lpcnet)
+
+
 #
 # Find codec2
 #
