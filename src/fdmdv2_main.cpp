@@ -2619,13 +2619,17 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             // Set buffer size.
             g_bufferSize = (int)(FRAME_DURATION * freedv_get_speech_sample_rate(g_pfreedv));
 
-            // init Codec 2 LPC Post Filter (FreeDV 1600)
-            codec2_set_lpc_post_filter(freedv_get_codec2(g_pfreedv),
-                                       wxGetApp().m_codec2LPCPostFilterEnable,
-                                       wxGetApp().m_codec2LPCPostFilterBassBoost,
-                                       wxGetApp().m_codec2LPCPostFilterBeta,
-                                       wxGetApp().m_codec2LPCPostFilterGamma);
+            // init Codec 2 LPC Post Filter (FreedV 1600)
 
+            struct CODEC2 *c2 = freedv_get_codec2(g_pfreedv);
+            if (c2 != NULL) {
+                codec2_set_lpc_post_filter(c2,
+                                           wxGetApp().m_codec2LPCPostFilterEnable,
+                                           wxGetApp().m_codec2LPCPostFilterBassBoost,
+                                           wxGetApp().m_codec2LPCPostFilterBeta,
+                                           wxGetApp().m_codec2LPCPostFilterGamma);
+            }
+            
             // Init Speex pre-processor states
             // by inspecting Speex source it seems that only denoiser is on be default
 
@@ -4248,6 +4252,7 @@ void fdmdv2_clickTune(float freq) {
         g_TxFreqOffsetHz = freq - FDMDV_FCENTRE;
         g_RxFreqOffsetHz = FDMDV_FCENTRE - freq;
     }
+    fprintf(stderr, "g_TxFreqOffsetHz: %f g_RxFreqOffsetHz: %f\n", g_TxFreqOffsetHz, g_RxFreqOffsetHz);
 }
 
 //----------------------------------------------------------------
