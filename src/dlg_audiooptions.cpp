@@ -1193,7 +1193,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(const std::string &soundCardNa
 
     // Clear the plot
     short plotSamples[TEST_WAVEFORM_PLOT_BUF*2];
-    memset(plotSamples, 0, TEST_WAVEFORM_PLOT_BUF*2);
+    memset(plotSamples, 0, TEST_WAVEFORM_PLOT_BUF*2 * sizeof(short));
     for(int i = 0; i < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS); i += TEST_WAVEFORM_PLOT_BUF)
         plotScalar->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
 
