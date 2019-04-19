@@ -206,7 +206,9 @@ class MainApp : public wxApp
 
         wxString            m_playFileToMicInPath;
         wxString            m_recFileFromRadioPath;
+        wxString            m_recFileFromModulatorPath;
         unsigned int        m_recFileFromRadioSecs;
+        unsigned int        m_recFileFromModulatorSecs;
         wxString            m_playFileFromRadioPath;
 
         // Options dialog
@@ -553,6 +555,7 @@ class MainFrame : public TopFrame
         void OnPlayFileToMicIn( wxCommandEvent& event );
         void StopPlayFileToMicIn(void);
         void OnRecFileFromRadio( wxCommandEvent& event );
+        void OnRecFileFromModulator( wxCommandEvent& event);
         void OnPlayFileFromRadio( wxCommandEvent& event );
 
         void OnHelpCheckUpdates( wxCommandEvent& event );

@@ -129,6 +129,12 @@ bool                g_loopPlayFileFromRadio;
 int                 g_playFileFromRadioEventId;
 float               g_blink;
 
+SNDFILE            *g_sfRecFileFromModulator;
+bool                g_recFileFromModulator = false;
+int                 g_recFromModulatorSamples;
+int                 g_recFileFromModulatorEventId;
+
+
 wxWindow           *g_parent;
 
 // Click to tune rx and tx frequency offset states
@@ -491,6 +497,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_playFileToMicInPath = pConfig->Read("/File/playFileToMicInPath",   wxT(""));
     wxGetApp().m_recFileFromRadioPath = pConfig->Read("/File/recFileFromRadioPath", wxT(""));
     wxGetApp().m_recFileFromRadioSecs = pConfig->Read("/File/recFileFromRadioSecs", 30);
+    wxGetApp().m_recFileFromModulatorPath = pConfig->Read("/File/recFileFromModulatorPath", wxT(""));
+    wxGetApp().m_recFileFromModulatorSecs = pConfig->Read("/File/recFileFromModulatorSecs", 10);
     wxGetApp().m_playFileFromRadioPath = pConfig->Read("/File/playFileFromRadioPath", wxT(""));
 
     // PTT -------------------------------------------------------------------
@@ -661,6 +669,9 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     g_playFileFromRadio = false;
     g_loopPlayFileFromRadio = false;
 
+    g_sfRecFileFromModulator = NULL;
+    g_recFileFromModulator = false;
+
     // init click-tune states
 
     g_RxFreqOffsetHz = 0.0;
@@ -820,6 +831,8 @@ MainFrame::~MainFrame()
         pConfig->Write(wxT("/File/playFileToMicInPath"),    wxGetApp().m_playFileToMicInPath);
         pConfig->Write(wxT("/File/recFileFromRadioPath"),   wxGetApp().m_recFileFromRadioPath);
         pConfig->Write(wxT("/File/recFileFromRadioSecs"),   wxGetApp().m_recFileFromRadioSecs);
+        pConfig->Write(wxT("/File/recFileFromModulatorPath"),   wxGetApp().m_recFileFromModulatorPath);
+        pConfig->Write(wxT("/File/recFileFromModulatorSecs"),   wxGetApp().m_recFileFromModulatorSecs);
         pConfig->Write(wxT("/File/playFileFromRadioPath"),  wxGetApp().m_playFileFromRadioPath);
 
         pConfig->Write(wxT("/Audio/snrSlow"), wxGetApp().m_snrSlow);
@@ -884,6 +897,11 @@ MainFrame::~MainFrame()
     {
         sf_close(g_sfRecFile);
         g_sfRecFile = NULL;
+    }
+    if (g_sfRecFileFromModulator != NULL)
+    {
+        sf_close(g_sfRecFileFromModulator);
+        g_sfRecFileFromModulator = NULL;
     }
 #ifdef _USE_TIMER
     if(m_plotTimer.IsRunning())
@@ -2209,7 +2227,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         wxString    soundFile;
         SF_INFO     sfInfo;
 
-         wxFileDialog openFileDialog(
+        wxFileDialog openFileDialog(
                                     this,
                                     wxT("Record File From Radio"),
                                     wxGetApp().m_recFileFromRadioPath,
@@ -2300,6 +2318,128 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
 
         SetStatusText(wxT("Recording File: ") + fileName + wxT(" From Radio") , 0);
         g_recFileFromRadio = true;
+    }
+
+}
+
+//-------------------------------------------------------------------------
+// OnRecFileFromModulator()
+//-------------------------------------------------------------------------
+void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
+{
+    wxUnusedVar(event);
+
+    if (g_recFileFromModulator) {
+        g_mutexProtectingCallbackData.Lock();
+        g_recFileFromModulator = false;
+        sf_close(g_sfRecFileFromModulator);
+        SetStatusText(wxT(""));
+        g_mutexProtectingCallbackData.Unlock();
+        wxMessageBox(wxT("Recording modulator output to file complete")
+                     , wxT("Recording Modulation Output"), wxOK);
+    }
+    else {
+
+        wxString    soundFile;
+        SF_INFO     sfInfo;
+
+        if (g_pfreedv == NULL) {
+            wxMessageBox(wxT("You need to press the Control - Start button before you can configure recording")
+                         , wxT("Recording Modulation Output"), wxOK);
+            return;
+        }
+
+         wxFileDialog openFileDialog(
+                                    this,
+                                    wxT("Record File From Modulator"),
+                                    wxGetApp().m_recFileFromModulatorPath,
+                                    wxEmptyString,
+                                    wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
+                                    wxT("All files (*.*)|*.*"),
+                                    wxFD_SAVE
+                                    );
+
+        // add the loop check box
+        openFileDialog.SetExtraControlCreator(&createMyExtraRecFilePanel);
+
+        if(openFileDialog.ShowModal() == wxID_CANCEL)
+        {
+            return;     // the user changed their mind...
+        }
+
+        wxString fileName, extension;
+        soundFile = openFileDialog.GetPath();
+        wxFileName::SplitPath(soundFile, &wxGetApp().m_recFileFromModulatorPath, &fileName, &extension);
+        wxLogDebug("m_recFileFromModulatorPath: %s", wxGetApp().m_recFileFromModulatorPath);
+        wxLogDebug("soundFile: %s", soundFile);
+        sfInfo.format = 0;
+
+        int sample_rate;
+        if (g_mode == -1) {
+            sample_rate = horus_get_Fs(g_horus);
+        }
+        else {
+            sample_rate = freedv_get_modem_sample_rate(g_pfreedv);
+        }
+
+        if(!extension.IsEmpty())
+        {
+            extension.LowerCase();
+            if(extension == wxT("raw"))
+            {
+                sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
+                sfInfo.channels   = 1;
+                sfInfo.samplerate = sample_rate;
+            }
+            else if(extension == wxT("wav"))
+            {
+                sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+                sfInfo.channels   = 1;
+                sfInfo.samplerate = sample_rate;
+            } else {
+                wxMessageBox(wxT("Invalid file format"), wxT("Record File From Radio"), wxOK);
+                return;
+            }
+        }
+        else {
+            wxMessageBox(wxT("Invalid file format"), wxT("Record File From Radio"), wxOK);
+            return;
+        }
+
+        // Bug: on Win32 I cant read m_recFileFromModemSecs, so have hard coded it
+#ifdef __WIN32__
+        long secs = wxGetApp().m_recFileFromRadioSecs;
+        g_recFromRadioSamples = FS*(unsigned int)secs;
+#else
+        // work out number of samples to record
+
+        wxWindow * const ctrl = openFileDialog.GetExtraControl();
+        wxString secsString = static_cast<MyExtraRecFilePanel*>(ctrl)->getSecondsToRecord();
+        wxLogDebug("test: %s secsString: %s\n", wxT("testing 123"), secsString);
+
+        long secs;
+        if (secsString.ToLong(&secs)) {
+            wxGetApp().m_recFileFromModulatorSecs = (unsigned int)secs;
+            //printf(" secondsToRecord: %d\n",  (unsigned int)secs);
+            g_recFromModulatorSamples = sample_rate*(unsigned int)secs;
+            //printf("g_recFromRadioSamples: %d\n", g_recFromRadioSamples);
+        }
+        else {
+            wxMessageBox(wxT("Invalid number of Seconds"), wxT("Record File From Modulator"), wxOK);
+            return;
+        }
+#endif
+
+        g_sfRecFileFromModulator = sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo);
+        if(g_sfRecFileFromModulator == NULL)
+        {
+            wxString strErr = sf_strerror(NULL);
+            wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
+            return;
+        }
+
+        SetStatusText(wxT("Recording File: ") + fileName + wxT(" From Radio") , 0);
+        g_recFileFromModulator = true;
     }
 
 }
@@ -3112,7 +3252,8 @@ void MainFrame::startRxStream()
         // add an extra 40ms to gibve a bit of headroom for processing loop adding samples
         // which operates on 20ms buffers
         
-        rxFifoSizeSamples += 0.04*modem_samplerate;
+        wxPrintf("bvs rxFifoSizeSamples: %d, modem_samplerate: %d\n", rxFifoSizeSamples, modem_samplerate);
+        rxFifoSizeSamples += 6*modem_samplerate;  // bvs making the fifo size bigger helps a lot !!!
 
         g_rxUserdata->rxinfifo = codec2_fifo_create(rxFifoSizeSamples);
         g_rxUserdata->rxoutfifo = codec2_fifo_create(rxFifoSizeSamples);
@@ -3823,7 +3964,8 @@ void txRxProcessing()
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
             
-            int nsam_in_48 = g_soundCard2SampleRate * freedv_get_n_speech_samples(g_pfreedv)/freedv_get_speech_sample_rate(g_pfreedv);
+            // bvs by decreasing this, we're getting close to fixing the input glitch issue - 1000 fixes it!!!
+            int nsam_in_48 = g_soundCard2SampleRate * freedv_get_n_speech_samples(g_pfreedv)/freedv_get_speech_sample_rate(g_pfreedv)-1000;
             assert(nsam_in_48 < 10*N48);
 
             // infifo2 is written to by another sound card so it may
@@ -3840,7 +3982,6 @@ void txRxProcessing()
             nout = resample(cbData->insrc2, infreedv, insound_card, freedv_get_speech_sample_rate(g_pfreedv), g_soundCard2SampleRate, 10*g_bufferSize, nsam_in_48);
 
             // optionally use file for mic input signal
-
             if (g_playFileToMicIn && (g_sfPlayFile != NULL)) {
                 int n = sf_read_short(g_sfPlayFile, infreedv, nout);
                 //fprintf(stderr, "n: %d nout: %d\n", n, nout);
@@ -3908,6 +4049,24 @@ void txRxProcessing()
                     freq_shift_coh(tx_fdm_offset, tx_fdm, g_TxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_TxFreqOffsetPhaseRect, nfreedv);
                     for(i=0; i<nfreedv; i++)
                         outfreedv[i] = tx_fdm_offset[i].real;
+                }
+            }
+
+            // Save modulated output file if requested
+            if (g_recFileFromModulator && (g_sfRecFileFromModulator != NULL)) {
+                if (g_recFromModulatorSamples < nfreedv) {
+                    sf_write_short(g_sfRecFileFromModulator, outfreedv, g_recFromModulatorSamples);  // try infreedv to bypass codec and modem, was outfreedv
+                     wxCommandEvent event( wxEVT_COMMAND_MENU_SELECTED, g_recFileFromModulatorEventId );
+                    // call stop/start record menu item, should be thread safe
+                    g_parent->GetEventHandler()->AddPendingEvent( event );
+                    g_recFromModulatorSamples = 0;
+                    g_recFileFromModulator = false;
+                    sf_close(g_sfRecFileFromModulator);
+                    wxPrintf("bvs write mod output to file complete\n", g_recFromModulatorSamples);  // consider a popup
+                }
+                else {
+                    sf_write_short(g_sfRecFileFromModulator, outfreedv, nfreedv);
+                    g_recFromModulatorSamples -= nfreedv;
                 }
             }
 
