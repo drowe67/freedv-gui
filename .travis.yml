@@ -36,11 +36,10 @@ script:
     - cmake -DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux ..
     - make
     - cd src
-    - export LD_LIBRARY_PATH=$LPCNETDIR/build_linux
+    - export LD_LIBRARY_PATH=$LPCNETDIR/build_linux/src
     - ./freedv_tx 2020 $LPCNETDIR/wav/wia.wav - | ./freedv_rx 2020 - /dev/null
 
     # Finally, build freedv-gui
     - cd $FREEDVGUIDIR
-    - cmake ..
-    - make
+    - mkdir -p build_linux && cd build_linux && cmake .. && make
     
