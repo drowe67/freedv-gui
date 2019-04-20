@@ -2733,8 +2733,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         }
         else {
             // FreeDV clean up
-            delete g_error_hist;
-            delete g_error_histn;
+            delete[] g_error_hist;
+            delete[] g_error_histn;
             codec2_fifo_destroy(g_error_pattern_fifo);
             freedv_close(g_pfreedv);
             speex_preprocess_state_destroy(g_speex_st);
