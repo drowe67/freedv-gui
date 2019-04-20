@@ -24,6 +24,7 @@ script:
     - mkdir build_linux && cd build_linux && cmake .. && sudo make install && sudo ldconfig
 
     # OK, build and test LPCNet
+    - cd ~
     - git clone https://github.com/drowe67/LPCNet.git
     - cd $LPCNETDIR && git checkout dr-2020
     - mkdir -p build_linux && cd build_linux && cmake .. && make
