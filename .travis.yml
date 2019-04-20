@@ -42,6 +42,6 @@ script:
     # Finally, build freedv-gui
     - cd $FREEDVGUIDIR
     - mkdir -p build_linux && cd build_linux
-    - cmake -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux
+    - cmake -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux ..
     - make
     
