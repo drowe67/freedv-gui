@@ -15,7 +15,7 @@ addons:
 install:
     - export CODEC2DIR=${PWD}/codec2
     - export LPCNETDIR=${PWD}LPCNet
-    - export FREEDV-GUIDIR=${PWD}
+    - export FREEDVGUIDIR=${PWD}
 
 script:
     # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
@@ -38,7 +38,7 @@ script:
     - ./freedv_tx 2020 $LPCNETDIR/wav/wia.wav - | ./freedv_rx 2020 - /dev/null
 
     # Finally, build freedv-gui
-    - cd $ FREEDV-GUIDIR
+    - cd $ FREEDVGUIDIR
     - cmake ..
     - make
     
