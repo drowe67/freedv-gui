@@ -3251,12 +3251,20 @@ void MainFrame::startRxStream()
 
         // add an extra 40ms to gibve a bit of headroom for processing loop adding samples
         // which operates on 20ms buffers
-        
-        wxPrintf("bvs rxFifoSizeSamples: %d, modem_samplerate: %d\n", rxFifoSizeSamples, modem_samplerate);
-        rxFifoSizeSamples += 6*modem_samplerate;  // bvs making the fifo size bigger helps a lot !!!
+
+        // add an extra 40ms to gibve a bit of headroom for processing loop adding samples
+        // which operates on 20ms buffers
+
+        rxFifoSizeSamples += 0.04*modem_samplerate;
 
         g_rxUserdata->rxinfifo = codec2_fifo_create(rxFifoSizeSamples);
-        g_rxUserdata->rxoutfifo = codec2_fifo_create(rxFifoSizeSamples);
+
+        // bvs - temp fix for test/debug only!!!
+        // Odd, we read in 160 samples (from modulated file) at 20 mS per
+        // sample (= 8kHz), but after the decoder, we're outputting more than 16000/sec audio,
+        // which results in this buffer being continually overrun.  Weird too because the codec audio out
+        // sounds great (with the expanded rx out fifo size) until the fifo overruns.
+        g_rxUserdata->rxoutfifo = codec2_fifo_create(rxFifoSizeSamples + 50000);
 
         fprintf(stderr, "rxFifoSizeSamples: %d\n",  rxFifoSizeSamples);
         
@@ -3933,7 +3941,7 @@ void txRxProcessing()
             codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
         }
     }
- 
+
     //
     //  TX side processing --------------------------------------------
     //
@@ -3959,14 +3967,12 @@ void txRxProcessing()
 
         unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * freedv_get_n_nom_modem_samples(g_pfreedv)/freedv_samplerate;
 
-        while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {
+        int nsam_in_48 = g_soundCard2SampleRate * freedv_get_n_speech_samples(g_pfreedv)/freedv_get_speech_sample_rate(g_pfreedv);
+        assert(nsam_in_48 < 10*N48);
+        while((unsigned)codec2_fifo_used(cbData->outfifo1) < nsam_one_modem_frame) {
 
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
-            
-            // bvs by decreasing this, we're getting close to fixing the input glitch issue - 1000 fixes it!!!
-            int nsam_in_48 = g_soundCard2SampleRate * freedv_get_n_speech_samples(g_pfreedv)/freedv_get_speech_sample_rate(g_pfreedv)-1000;
-            assert(nsam_in_48 < 10*N48);
 
             // infifo2 is written to by another sound card so it may
             // over or underflow, but we don't really care.  It will
@@ -3975,7 +3981,6 @@ void txRxProcessing()
             // again in the decoded audio at the other end.
 
             // zero speech input just in case infifo2 underflows
-
             memset(insound_card, 0, nsam_in_48*sizeof(short));
             codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
 
@@ -4062,7 +4067,7 @@ void txRxProcessing()
                     g_recFromModulatorSamples = 0;
                     g_recFileFromModulator = false;
                     sf_close(g_sfRecFileFromModulator);
-                    wxPrintf("bvs write mod output to file complete\n", g_recFromModulatorSamples);  // consider a popup
+                    wxPrintf("write mod output to file complete\n", g_recFromModulatorSamples);  // consider a popup
                 }
                 else {
                     sf_write_short(g_sfRecFileFromModulator, outfreedv, nfreedv);
