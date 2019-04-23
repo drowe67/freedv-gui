@@ -80,7 +80,7 @@ PlotScalar::PlotScalar(wxFrame* parent,
 //----------------------------------------------------------------
 PlotScalar::~PlotScalar()
 {
-    delete m_mem;
+    delete[] m_mem;
 }
 
 //----------------------------------------------------------------
