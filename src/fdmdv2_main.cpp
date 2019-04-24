@@ -3213,7 +3213,7 @@ void MainFrame::startRxStream()
         int m_fifoSize_ms = wxGetApp().m_fifoSize_ms;        
         int soundCard1FifoSizeSamples = m_fifoSize_ms*g_soundCard1SampleRate/1000;
         int soundCard2FifoSizeSamples = m_fifoSize_ms*g_soundCard2SampleRate/1000;
-        
+
         g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1FifoSizeSamples);
         g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1FifoSizeSamples);
         g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
@@ -3258,13 +3258,7 @@ void MainFrame::startRxStream()
         rxFifoSizeSamples += 0.04*modem_samplerate;
 
         g_rxUserdata->rxinfifo = codec2_fifo_create(rxFifoSizeSamples);
-
-        // bvs - temp fix for test/debug only!!!
-        // Odd, we read in 160 samples (from modulated file) at 20 mS per
-        // sample (= 8kHz), but after the decoder, we're outputting more than 16000/sec audio,
-        // which results in this buffer being continually overrun.  Weird too because the codec audio out
-        // sounds great (with the expanded rx out fifo size) until the fifo overruns.
-        g_rxUserdata->rxoutfifo = codec2_fifo_create(rxFifoSizeSamples + 50000);
+        g_rxUserdata->rxoutfifo = codec2_fifo_create(rxFifoSizeSamples);
 
         fprintf(stderr, "rxFifoSizeSamples: %d\n",  rxFifoSizeSamples);
         
