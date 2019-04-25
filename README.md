@@ -95,12 +95,12 @@ missing on older Linux systems.
    $ ./src/freedv
 ```
 
-## Building for Windows on Fedora 28 (Cross compiling)
+## Building for Windows on Fedora (Cross compiling)
 
 Install basic MinGW development packages:
 ```
   $ sudo dnf install mingw{32,64}-filesystem mingw{32,64}-binutils \
-    mingw{32,64}-gcc mingw{32/64}-crt mingw{32,64}-headers mingw32-nsis
+    mingw{32,64}-gcc mingw{32,64}-crt mingw{32,64}-headers mingw32-nsis
 ```
 
 Install dependencies of FreeDV/Codec2:
@@ -110,6 +110,7 @@ Install dependencies of FreeDV/Codec2:
 
 Enable Freetel specific packages not currently in Fedora proper:
 ```
+  $ sudo dnf install dnf-plugins-core
   $ sudo dnf copr enable hobbes1069/mingw
   $ sudo dnf install mingw{32,64}-wxWidgets3 mingw{32,64}-hamlib \
     mingw{32,64}-portaudio mingw{32,64}-libsndfile
