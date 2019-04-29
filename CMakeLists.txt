@@ -26,6 +26,10 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 project(FreeDV)
 
+if(POLICY CMP0075)
+    cmake_policy(SET CMP0075 NEW)
+endif()
+
 #
 # Set FreeDV version and generate src/version.h
 #
@@ -201,7 +205,13 @@ message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 #
 # Find freedvlpcnet
 #
-find_package(lpcnet)
+if(LPCNET_BUILD_DIR)
+    find_package(lpcnet REQUIRED
+        NO_DEFAULT_PATH
+        CONFIGS ${LPCNET_BUILD_DIR})
+else()
+    find_package(lpcnet REQUIRED)
+endif()
 
 
 #
@@ -227,8 +237,7 @@ if(CODEC2_BUILD_DIR)
     list(APPEND FREEDV_LINK_LIBS ${CODEC2_LIBRARY})
     include_directories(${CODEC2_SOURCE_INCLUDE_DIR}
         ${CODEC2_BUILD_DIR})
-else(CODEC2_BUILD_DIR)
-if(NOT USE_STATIC_CODEC2)
+elseif(NOT USE_STATIC_CODEC2)
     message(STATUS "Looking for codec2...")
     # 'CONFIG' removed due to incompatibility with cmake version
     # in Ubuntu 12.04 (Precise) -- Stuart Longland
@@ -256,7 +265,7 @@ It's easiest to use the cmake option: USE_STATIC_CODEC2"
         )
         endif()
     endif()
-else(NOT USE_STATIC_CODEC2)
+else(CODEC2_BUILD_DIR)
     message(STATUS "Will attempt static build of codec2.")
     include(cmake/BuildCodec2.cmake)
 endif(NOT USE_STATIC_CODEC2)
