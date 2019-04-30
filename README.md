@@ -116,11 +116,29 @@ Enable Freetel specific packages not currently in Fedora proper:
     mingw{32,64}-portaudio mingw{32,64}-libsndfile
 ```
 
+Boostrap codec2 and LPCNet:
+This assumes all git checkouts are from your home directory.
+```
+  $ git clone https://github.com/drowe67/codec2.git
+  $ cd codec2 && mkdir build_win && cd build_win
+  $ mingw64-cmake ../
+  $ make
+  $ cd
+  $ git clone https://github.com/drowe67/LPCNet.git
+  $ cd LPCNet && mkdir build_win && cd build_win
+  $ mingw64-cmake ../ -DCODEC2_BUILD_DIR=~/codec2/build_win
+  $ make
+  $ cd ~/codec2/build_win
+  $ mingw64-cmake ../ -DLPCNET_BUILD_DIR=~/LPCNet/build_win
+  $ make
+```
+
 Building FreeDV for 64 Bit windows:
 ```
-  $ cd ~/freedv-dev
-  $ mkdir build_windows && cd build_windows
-  $ mingw64-cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_STATIC_SAMPLERATE=TRUE ..
+  $ cd
+  $ git clone https://github.com/drowe67/freedv-gui.git
+  $ cd freedv-gui && mkdir build_wins && cd build_win
+  $ mingw64-cmake ../ -DCODEC2_BUILD_DIR=~/codec2/build_win -D LPCNET_BUILD_DIR=~/LPCNet/build_win
   $ make
   $ make package
 ```
