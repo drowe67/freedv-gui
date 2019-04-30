@@ -206,9 +206,17 @@ message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 # Find freedvlpcnet
 #
 if(LPCNET_BUILD_DIR)
+    message(STATUS "Using LPCNet from build directory...")
     find_package(lpcnet REQUIRED
         NO_DEFAULT_PATH
-        CONFIGS ${LPCNET_BUILD_DIR})
+        PATHS ${LPCNET_BUILD_DIR}
+        CONFIGS lpcnetfreedv.cmake
+    )
+    get_target_property(LPCNET_LIB lpcnetfreedv IMPORTED_LOCATION_NOCONFIG)
+    get_target_property(LPCNET_INCLUDE_DIR lpcnetfreedv INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "  LPCNet library: ${LPCNET_LIB}")
+    message(STATUS "  LPCNet include dir: ${LPCNET_INCLUDE_DIR}")
+    include_directories(${LPCNET_INCLUDE_DIR})
 else()
     find_package(lpcnet REQUIRED)
 endif()
@@ -220,23 +228,16 @@ endif()
 if(CODEC2_BUILD_DIR)
     set(USE_STATIC_CODEC2 OFF CACHE BOOL "" FORCE)
     message(STATUS "Using codec2 from build directory...")
-    get_filename_component(CODEC2_BUILD_DIR ${CODEC2_BUILD_DIR} 
-        ABSOLUTE BASE_DIR ${CMAKE_BINARY_DIR})
-    message(STATUS "  Build include dir: ${CODEC2_BUILD_DIR}")
-    load_cache(${CODEC2_BUILD_DIR} codec2_SOURCE_DIR)
-    find_path(CODEC2_SOURCE_INCLUDE_DIR codec2.h
-        PATHS ${codec2_SOURCE_DIR}
-        PATH_SUFFIXES src
-        NO_DEFAULT_PATH)
-    message(STATUS "  Source include dir: ${CODEC2_SOURCE_INCLUDE_DIR}")
-    find_library(CODEC2_LIBRARY NAMES codec2
+    find_package(codec2 REQUIRED
+        NO_DEFAULT_PATH
         PATHS ${CODEC2_BUILD_DIR}
-        PATH_SUFFIXES src
-        NO_DEFAULT_PATH)
-    message(STATUS "  Library: ${CODEC2_LIBRARY}")
-    list(APPEND FREEDV_LINK_LIBS ${CODEC2_LIBRARY})
-    include_directories(${CODEC2_SOURCE_INCLUDE_DIR}
-        ${CODEC2_BUILD_DIR})
+        CONFIGS codec2.cmake
+    )
+    get_target_property(CODEC2_LIB codec2 IMPORTED_LOCATION_DEBUG)
+    get_target_property(CODEC2_INCLUDE_DIR codec2 INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "  codec2 library: ${CODEC2_LIB}")
+    message(STATUS "  codec2 include dir: ${CODEC2_INCLUDE_DIR}")
+    include_directories(${CODEC2_INCLUDE_DIR})
 elseif(NOT USE_STATIC_CODEC2)
     message(STATUS "Looking for codec2...")
     # 'CONFIG' removed due to incompatibility with cmake version
@@ -268,7 +269,6 @@ It's easiest to use the cmake option: USE_STATIC_CODEC2"
 else(CODEC2_BUILD_DIR)
     message(STATUS "Will attempt static build of codec2.")
     include(cmake/BuildCodec2.cmake)
-endif(NOT USE_STATIC_CODEC2)
 endif(CODEC2_BUILD_DIR)
 
 

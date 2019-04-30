@@ -51,16 +51,15 @@ set(FREEDV_SOURCES
 
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.
 add_executable(freedv WIN32 ${FREEDV_SOURCES} ${RES_FILES})
-target_link_libraries(freedv ${FREEDV_LINK_LIBS} ${LPCNET_LIBRARIES})
-if(WIN32)
-    target_link_libraries(freedv lpcnetfreedv codec2)
-endif()
+target_link_libraries(freedv lpcnetfreedv codec2)
+target_link_libraries(freedv ${FREEDV_LINK_LIBS})
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 if(FREEDV_STATIC_DEPS)
     add_dependencies(freedv ${FREEDV_STATIC_DEPS})
 endif(FREEDV_STATIC_DEPS)
 install(TARGETS freedv
-    RUNTIME DESTINATION bin)
+    RUNTIME DESTINATION bin
+)
 
 # Custom commands to build OSX images.
 if(APPLE)
