@@ -16,6 +16,8 @@ endif()
 # Bootstrap build for lpcnetfreedv library.
 include(ExternalProject)
 ExternalProject_Add(build_codec2_lpcnet
+   SOURCE_DIR codec2_src
+   BINARY_DIR codec2_build
    GIT_REPOSITORY https://github.com/drowe67/codec2.git
    GIT_TAG origin/brad-2020
    CMAKE_ARGS ${CODEC2_CMAKE_ARGS} ${SPEEXDSP_CMAKE_ARGS} 
@@ -25,23 +27,23 @@ ExternalProject_Add(build_codec2_lpcnet
 
 ExternalProject_Get_Property(build_codec2_lpcnet BINARY_DIR)
 ExternalProject_Get_Property(build_codec2_lpcnet SOURCE_DIR)
-add_library(codec2_lpcnet SHARED IMPORTED)
-set_target_properties(codec2_lpcnet PROPERTIES IMPORTED_LOCATION
-    ${BINARY_DIR}/src/libcodec2.so
-)
-include_directories(${SOURCE_DIR}/codec2/src ${BINARY_DIR})
+include_directories(${SOURCE_DIR}/src ${BINARY_DIR})
 
 
-# Setup lpcnet
+# Bootstrap lpcnetfreedv library
 include(cmake/BuildLPCNet.cmake)
-add_dependencies(lpcnetfreedv codec2_lpcnet)
+add_dependencies(build_lpcnetfreedv build_codec2_lpcnet)
 
 
 # Build final codec2 library with lpcnetfreedv
+set(CODEC2_CMAKE_ARGS ${CODEC2_CMAKE_ARGS} -DLPCNET_BUILD_DIR=${CMAKE_BINARY_DIR}/LPCNet_build)
 include(ExternalProject)
 ExternalProject_Add(build_codec2
-   GIT_REPOSITORY https://github.com/drowe67/codec2.git
-   GIT_TAG origin/brad-2020
+   SOURCE_DIR codec2_src
+   BINARY_DIR codec2_build
+   #GIT_REPOSITORY https://github.com/drowe67/codec2.git
+   #GIT_TAG origin/brad-2020
+   DOWNLOAD_COMMAND ""
    CMAKE_ARGS ${CODEC2_CMAKE_ARGS} ${SPEEXDSP_CMAKE_ARGS} 
    CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=10.7
    INSTALL_COMMAND ""
@@ -50,8 +52,8 @@ ExternalProject_Add(build_codec2
 ExternalProject_Get_Property(build_codec2 BINARY_DIR)
 ExternalProject_Get_Property(build_codec2 SOURCE_DIR)
 add_library(codec2 SHARED IMPORTED)
-set_target_properties(codec2 PROPERTIES IMPORTED_LOCATION
-    ${BINARY_DIR}/src/libcodec2.so
+set_target_properties(codec2 PROPERTIES
+    IMPORTED_LOCATION "${BINARY_DIR}/src/libcodec2${CMAKE_SHARED_LIBRARY_SUFFIX}"
+    IMPORTED_IMPLIB   "${BINARY_DIR}/src/libcodec2${CMAKE_IMPORT_LIBRARY_SUFFIX}"
 )
-include_directories(${SOURCE_DIR}/codec2/src ${BINARY_DIR})
-add_dependencies(codec2 lpcnetfreedv)
+add_dependencies(build_codec2 build_lpcnetfreedv)

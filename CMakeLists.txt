@@ -34,7 +34,7 @@ endif()
 # Set FreeDV version and generate src/version.h
 #
 set(FREEDV_VERSION_MAJOR 1)
-set(FREEDV_VERSION_MINOR 3)
+set(FREEDV_VERSION_MINOR 4)
 set(FREEDV_VERSION_PATCH FALSE)
 set(FREEDV_VERSION_SUFFIX "devel")
 
@@ -97,8 +97,8 @@ set(USE_STATIC_SNDFILE FALSE CACHE BOOL
     "Download and build static sndfile instead of the system library.")
 set(USE_STATIC_SAMPLERATE FALSE CACHE BOOL
     "Download and build static samplerate instead of the system library.")
-set(USE_STATIC_CODEC2 TRUE CACHE BOOL
-    "Download and build static codec2 instead of the system library.")
+set(USE_INTERNAL_CODEC2 FALSE CACHE BOOL
+    "Download and build codec2 and lpcnetfreedv instead of the system library.")
 set(USE_STATIC_SPEEXDSP FALSE CACHE BOOL
     "Download and build static speex instead of the system library.")
 set(BOOTSTRAP_WXWIDGETS FALSE CACHE BOOL
@@ -108,7 +108,6 @@ if(USE_STATIC_DEPS)
     set(USE_STATIC_PORTAUDIO TRUE FORCE)
     set(USE_STATIC_SNDFILE TRUE FORCE)
     set(USE_STATIC_SAMPLERATE TRUE FORCE)
-    set(USE_STATIC_CODEC2 TRUE FORCE)
 endif(USE_STATIC_DEPS)
 
 #
@@ -139,6 +138,7 @@ if(MINGW)
     # Default to static build of portaudio until I can figure out why the
     # shared DLL doesn't work.
     set(USE_STATIC_PORTAUDIO TRUE)
+    set(USE_INTERNAL_CODEC2 TRUE)
     # Setup HOST variable.
     include(cmake/MinGW.cmake)
     # This sets up the exe icon for windows under mingw.
@@ -203,42 +203,30 @@ message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 
 
 #
-# Find freedvlpcnet
-#
-if(LPCNET_BUILD_DIR)
-    message(STATUS "Using LPCNet from build directory...")
-    find_package(lpcnet REQUIRED
-        NO_DEFAULT_PATH
-        PATHS ${LPCNET_BUILD_DIR}
-        CONFIGS lpcnetfreedv.cmake
-    )
-    get_target_property(LPCNET_LIB lpcnetfreedv IMPORTED_LOCATION_NOCONFIG)
-    get_target_property(LPCNET_INCLUDE_DIR lpcnetfreedv INTERFACE_INCLUDE_DIRECTORIES)
-    message(STATUS "  LPCNet library: ${LPCNET_LIB}")
-    message(STATUS "  LPCNet include dir: ${LPCNET_INCLUDE_DIR}")
-    include_directories(${LPCNET_INCLUDE_DIR})
-else()
-    find_package(lpcnet REQUIRED)
-endif()
-
-
-#
-# Find codec2
+# Find codec2 and lpcnetfreedv
 #
 if(CODEC2_BUILD_DIR)
-    set(USE_STATIC_CODEC2 OFF CACHE BOOL "" FORCE)
+    set(USE_INTERNAL_CODEC2 OFF CACHE BOOL "" FORCE)
     message(STATUS "Using codec2 from build directory...")
     find_package(codec2 REQUIRED
         NO_DEFAULT_PATH
         PATHS ${CODEC2_BUILD_DIR}
         CONFIGS codec2.cmake
     )
-    get_target_property(CODEC2_LIB codec2 IMPORTED_LOCATION_DEBUG)
-    get_target_property(CODEC2_INCLUDE_DIR codec2 INTERFACE_INCLUDE_DIRECTORIES)
-    message(STATUS "  codec2 library: ${CODEC2_LIB}")
-    message(STATUS "  codec2 include dir: ${CODEC2_INCLUDE_DIR}")
-    include_directories(${CODEC2_INCLUDE_DIR})
-elseif(NOT USE_STATIC_CODEC2)
+    if(LPCNET_BUILD_DIR)
+        message(STATUS "Using LPCNet from build directory...")
+        find_package(lpcnet REQUIRED
+            NO_DEFAULT_PATH
+            PATHS ${LPCNET_BUILD_DIR}
+            CONFIGS lpcnetfreedv.cmake
+        )
+    else()
+        message(FATAL_ERROR "Must use LPCNet from build directory if using codec2 from build directory.")
+    endif()
+elseif(USE_INTERNAL_CODEC2)
+    message(STATUS "Will attempt internal build of codec2 and lpcnetfreedv.")
+    include(cmake/BuildCodec2.cmake)
+else(CODEC2_BUILD_DIR)
     message(STATUS "Looking for codec2...")
     # 'CONFIG' removed due to incompatibility with cmake version
     # in Ubuntu 12.04 (Precise) -- Stuart Longland
@@ -247,6 +235,7 @@ elseif(NOT USE_STATIC_CODEC2)
         get_target_property(CODEC2_LIBRARY codec2 LOCATION)
         message(STATUS "  codec2 library: ${CODEC2_LIBRARY}")
         message(STATUS "  codec2 headers: ${codec2_INCLUDE_DIRS}")
+        find_package(lpcnetfreedv REQUIRED)
     else()
         # Try to find manually
         find_path(CODEC2_INCLUDE_DIRS codec2.h
@@ -266,9 +255,6 @@ It's easiest to use the cmake option: USE_STATIC_CODEC2"
         )
         endif()
     endif()
-else(CODEC2_BUILD_DIR)
-    message(STATUS "Will attempt static build of codec2.")
-    include(cmake/BuildCodec2.cmake)
 endif(CODEC2_BUILD_DIR)
 
 
@@ -453,8 +439,10 @@ On Linux systems try installing:
     endif()
 endif()
 
-    
-#Freedv 
+
+#    
+# Freedv
+#
 add_subdirectory(src)
 
 # Icons and desktop file
