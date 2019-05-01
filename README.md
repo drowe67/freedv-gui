@@ -116,7 +116,7 @@ Enable Freetel specific packages not currently in Fedora proper:
     mingw{32,64}-portaudio mingw{32,64}-libsndfile
 ```
 
-Boostrap codec2 and LPCNet:
+Bootstrap codec2 and LPCNet:
 This assumes all git checkouts are from your home directory.
 ```
   $ git clone https://github.com/drowe67/codec2.git
