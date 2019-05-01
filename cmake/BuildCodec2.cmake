@@ -41,8 +41,6 @@ include(ExternalProject)
 ExternalProject_Add(build_codec2
    SOURCE_DIR codec2_src
    BINARY_DIR codec2_build
-   #GIT_REPOSITORY https://github.com/drowe67/codec2.git
-   #GIT_TAG origin/brad-2020
    DOWNLOAD_COMMAND ""
    CMAKE_ARGS ${CODEC2_CMAKE_ARGS} ${SPEEXDSP_CMAKE_ARGS} 
    CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=10.7

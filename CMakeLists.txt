@@ -26,6 +26,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 project(FreeDV)
 
+# https://cmake.org/cmake/help/git-stage/policy/CMP0075.html
 if(POLICY CMP0075)
     cmake_policy(SET CMP0075 NEW)
 endif()
@@ -57,24 +58,29 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 
 # Work around for not using a svn working copy.
-add_definitions(-D_NO_AUTOTOOLS_)
+#add_definitions(-D_NO_AUTOTOOLS_)
 
 #
-# Find the svn revision if this is a working copy.
+# Find the git hash if this is a working copy.
 #
-get_filename_component(_src_dir "${CMAKE_SOURCE_DIR}" NAME)
-if("${_src_dir}" STREQUAL "freedv-dev")
-    find_package(Subversion QUIET)
-    if(Subversion_FOUND)
-        Subversion_WC_INFO(${CMAKE_CURRENT_SOURCE_DIR} FREEDV)
-        message(STATUS "FreeDV svn revision: ${FREEDV_WC_REVISION}")
-        add_definitions(-DSVN_REVISION="${FREEDV_WC_REVISION}")
-    else(Subversion_FOUND)
-        message(WARNING "Subversion not found. Can not determine svn revision.")
-        add_definitions(-DSVN_REVISION="Unknown")
-    endif(Subversion_FOUND)
+if(EXISTS ${CMAKE_SOURCE_DIR}/.git)
+    find_package(Git QUIET)
+    if(Git_FOUND)
+        execute_process(
+            COMMAND "${GIT_EXECUTABLE}" describe --always HEAD
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+            RESULT_VARIABLE res
+            OUTPUT_VARIABLE FREEDV_HASH
+            ERROR_QUIET
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+        message(STATUS "freedv-gui current git hash: ${FREEDV_HASH}")
+        add_definitions(-DGIT_HASH="${FREEDV_HASH}")
+    else()
+        message(WARNING "Git not found. Can not determine current commit hash.")
+        add_definitions(-DGIT_HASH="Unknown")
+    endif()
 else()
-    add_definitions(-DSVN_REVISION="None")
+        add_definitions(-DGIT_HASH="None")
 endif()
 
 
@@ -89,6 +95,8 @@ endif(APPLE)
 # Setup cmake options
 #
 set(CMAKE_VERBOSE_MAKEFILE TRUE CACHE BOOL "Verbose makefile.")
+set(USE_INTERNAL_CODEC2 FALSE CACHE BOOL
+    "Download and build codec2 and lpcnetfreedv instead of using the system library.")
 set(USE_STATIC_DEPS FALSE CACHE BOOL 
     "Download and build static libraries instead of system libraries.")
 set(USE_STATIC_PORTAUDIO FALSE CACHE BOOL 
@@ -97,8 +105,6 @@ set(USE_STATIC_SNDFILE FALSE CACHE BOOL
     "Download and build static sndfile instead of the system library.")
 set(USE_STATIC_SAMPLERATE FALSE CACHE BOOL
     "Download and build static samplerate instead of the system library.")
-set(USE_INTERNAL_CODEC2 FALSE CACHE BOOL
-    "Download and build codec2 and lpcnetfreedv instead of the system library.")
 set(USE_STATIC_SPEEXDSP FALSE CACHE BOOL
     "Download and build static speex instead of the system library.")
 set(BOOTSTRAP_WXWIDGETS FALSE CACHE BOOL

@@ -2608,7 +2608,7 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
 
                 wxT("GNU Public License V2.1\n\n")
                 wxT("Copyright (c) David Witten KD0EAG and David Rowe VK5DGR\n\n")
-                wxT("svn revision: %s\n"), FREEDV_VERSION, SVN_REVISION);
+                wxT("git revision: %s\n"), FREEDV_VERSION, GIT_HASH);
 
     wxMessageBox(msg, wxT("About"), wxOK | wxICON_INFORMATION, this);
 }
