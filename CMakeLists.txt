@@ -144,7 +144,8 @@ if(MINGW)
     # Default to static build of portaudio until I can figure out why the
     # shared DLL doesn't work.
     set(USE_STATIC_PORTAUDIO TRUE)
-    set(USE_INTERNAL_CODEC2 TRUE)
+    unset(USE_INTERNAL_CODEC2 CACHE)
+    set(USE_INTERNAL_CODEC2 TRUE CACHE BOOL "Perform nternal buils of codec2 and lpcnetfreedv")
     # Setup HOST variables.
     include(cmake/MinGW.cmake)
     # This sets up the exe icon for windows under mingw.
@@ -213,7 +214,8 @@ message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 #
 if(CODEC2_BUILD_DIR)
     if(USE_INTERNAL_CODEC2)
-        message(FATAL_ERROR "Use of build directories and internal builds are mutually exclusive.")
+        set(USE_INTERNAL_CODEC2 FALSE)
+        message(WARNING "Use of build directories and internal builds are mutually exclusive. Forcing internal builds off.")
     endif()
     set(USE_INTERNAL_CODEC2 OFF CACHE BOOL "" FORCE)
     message(STATUS "Using codec2 from build directory...")
