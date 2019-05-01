@@ -51,15 +51,26 @@ set(FREEDV_SOURCES
 
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.
 add_executable(freedv WIN32 ${FREEDV_SOURCES} ${RES_FILES})
+
+# Link imported or build tree targets.
 target_link_libraries(freedv codec2 lpcnetfreedv)
+
+# Add build dependencies for interally built external libraries.
 if(USE_INTERNAL_CODEC2)
     add_dependencies(freedv build_codec2 build_lpcnetfreedv)
 endif()
-target_link_libraries(freedv ${FREEDV_LINK_LIBS})
-include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Add depenencies for other statically built libraries, if applicable.
 if(FREEDV_STATIC_DEPS)
     add_dependencies(freedv ${FREEDV_STATIC_DEPS})
 endif(FREEDV_STATIC_DEPS)
+
+# Link other dependencies
+target_link_libraries(freedv ${FREEDV_LINK_LIBS})
+
+# Insert source and generated header directories before other search directories.
+include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+
 install(TARGETS freedv
     RUNTIME DESTINATION bin
 )

@@ -145,7 +145,7 @@ if(MINGW)
     # shared DLL doesn't work.
     set(USE_STATIC_PORTAUDIO TRUE)
     set(USE_INTERNAL_CODEC2 TRUE)
-    # Setup HOST variable.
+    # Setup HOST variables.
     include(cmake/MinGW.cmake)
     # This sets up the exe icon for windows under mingw.
     set(RES_FILES "")
@@ -197,13 +197,13 @@ check_symbol_exists("_fseeki64" "stdio.h" HAVE__FSEEKI64)
 configure_file ("${PROJECT_SOURCE_DIR}/cmake/config.h.in"
                 "${PROJECT_BINARY_DIR}/config.h" )
 include_directories(${PROJECT_BINARY_DIR})
-add_definitions(-DHAVE_CONFIG_H)
 
 # Config file for bundled sox sources
 configure_file("${PROJECT_SOURCE_DIR}/cmake/soxconfig.h.in"
                "${PROJECT_BINARY_DIR}/soxconfig.h")
 
 # Pthread Library
+# Actually not needed if compiling with c++11 or higher...
 find_package(Threads REQUIRED)
 message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 
@@ -212,6 +212,9 @@ message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 # Find codec2 and lpcnetfreedv
 #
 if(CODEC2_BUILD_DIR)
+    if(USE_INTERNAL_CODEC2)
+        message(FATAL_ERROR "Use of build directories and internal builds are mutually exclusive.")
+    endif()
     set(USE_INTERNAL_CODEC2 OFF CACHE BOOL "" FORCE)
     message(STATUS "Using codec2 from build directory...")
     find_package(codec2 REQUIRED
@@ -255,9 +258,9 @@ else(CODEC2_BUILD_DIR)
         else()
             message(FATAL_ERROR "codec2 library not found.
 Linux: 
-Codec2 may not be in your distribution so build yourself or use the cmake option to build statically into FreeDV.
+Codec2 may not be in your distribution so build yourself or use the cmake option to build internally.
 Windws:
-It's easiest to use the cmake option: USE_STATIC_CODEC2"
+It's easiest to use the cmake option: USE_INTERNAL_CODEC2 or use build trees for codec2 and lpcnetfreedv."
         )
         endif()
     endif()
@@ -430,7 +433,7 @@ endif()
 # Find libdl for dlopen/dlclose
 #
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-    message("Linux")
+    message("System is Linux")
     message(STATUS "Looking for dl library.")
     find_library(DL_LIBRARY dl)
     if(DL_LIBRARY)
