@@ -23,6 +23,30 @@ set(FREEDV_EXE ${CMAKE_BINARY_DIR}/src/freedv.exe)
 
 include(GetPrerequisites)
 get_prerequisites("${FREEDV_EXE}" _deps 1 0 "" "")
+
+# Filter libraries known to be provided by Windows
+set( _windlls
+    ADVAPI32.dll
+    GDI32.dll
+    KERNEL32.dll
+    SHELL32.dll
+    USER32.dll
+    WS2_32.dll
+    WSOCK32.dll
+    WSOCK32.DLL
+    WINMM.dll
+    WINMM.DLL
+    ole32.dll
+    COMCTL32.dll
+    COMCTL32.DLL
+    OLEAUT32.dll
+    RPCRT4.dll
+    comdlg32.dll
+    COMDLG32.DLL
+)
+list(REMOVE_ITEM _deps ${_windlls})
+
+# Handle internal libraries separately.
 if(CODEC2_BUILD_DIR)
     list(FIND _deps libcodec2.dll _loc)
     list(REMOVE_AT _deps ${_loc})
@@ -38,24 +62,27 @@ if(LPCNET_BUILD_DIR)
         TYPE EXECUTABLE FILES ${LPCNET})
 endif()
 
-foreach(_runtime ${_deps})
-    message("Looking for ${_runtime}")
-    find_library(RUNTIME_${_runtime} ${_runtime})
-    if(RUNTIME_${_runtime})
-        message("Found ${RUNTIME_${_runtime}}")
-        message("Looking for dependencies of ${_runtime}")
-        get_prerequisites("${RUNTIME_${_runtime}}" _deps2 1 0 "" "")
-        foreach(_runtime2 ${_deps2})
-            find_library(RUNTIME_${_runtime2} ${_runtime2})
-            if(RUNTIME_${_runtime2})
-                message("${RUNTIME_${_runtime2}}")
-                file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
-                TYPE EXECUTABLE FILES "${RUNTIME_${_runtime2}}")
-            endif()
-        endforeach()
-    endif()
-    if(RUNTIME_${_runtime})
-        file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
-        TYPE EXECUTABLE FILES "${RUNTIME_${_runtime}}")
-    endif()
-endforeach()
+# Process remaining dependencies.
+list(LENGTH _deps _dep_len)
+message("There are ${_dep_len} dependencies to scan.")
+while(_deps)
+    foreach(_runtime ${_deps})
+        message("Looking for ${_runtime}")
+        find_library(RUNTIME_${_runtime} ${_runtime})
+        if(RUNTIME_${_runtime})
+            message("Found: ${RUNTIME_${_runtime}}")
+            file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
+                TYPE EXECUTABLE FILES "${RUNTIME_${_runtime}}")
+            get_prerequisites("${RUNTIME_${_runtime}}" _newdep 1 0 "" "")
+            list(APPEND _newdeps ${_newdep})
+            list(APPEND _good_deps ${_runtime})
+        else()
+            message("Warning: ${_runtime} not found.")
+            list(APPEND _bad_deps ${_runtime})
+        endif()
+    endforeach()
+    # Try to figure out if there are new dependencies or not.
+    list(REMOVE_DUPLICATES _newdeps)
+    list(REMOVE_ITEM _newdeps ${_deps};${_good_deps};${_bad_deps};${_windlls})
+    set(_deps ${_newdeps})
+endwhile()
