@@ -21,8 +21,7 @@ script:
     # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
     - cd $FREEDVGUIDIR
     - git clone https://github.com/drowe67/codec2.git
-    - git checkout brad-2020
-    - cd codec2
+    - cd codec2 && git checkout brad-2020
     - mkdir build_linux && cd build_linux && cmake .. && make
 
     # OK, build and test LPCNet
