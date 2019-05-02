@@ -28,7 +28,9 @@ script:
     - cd $FREEDVGUIDIR
     - git clone https://github.com/drowe67/LPCNet.git
     - cd $LPCNETDIR
-    - mkdir build_linux && cd build_linux && cmake .. && make
+    - mkdir build_linux && cd build_linux
+    - cmake -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux ..
+    - make
     - cd src && sox ../../wav/wia.wav -t raw -r 16000 - | ./lpcnet_enc -s | ./lpcnet_dec -s > /dev/null
 
     # Re-build codec2 with LPCNet and test FreeDV 2020 support
