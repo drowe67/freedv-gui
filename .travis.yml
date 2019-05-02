@@ -36,7 +36,7 @@ script:
     # Re-build codec2 with LPCNet and test FreeDV 2020 support
     - cd $CODEC2DIR/build_linux && rm -Rf *
     - cmake -DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux ..
-    - make
+    - make VERBOSE=1
     - cd src
     - export LD_LIBRARY_PATH=$LPCNETDIR/build_linux/src
     - ./freedv_tx 2020 $LPCNETDIR/wav/wia.wav - | ./freedv_rx 2020 - /dev/null
