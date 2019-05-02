@@ -22,7 +22,7 @@ script:
     - cd $FREEDVGUIDIR
     - git clone https://github.com/drowe67/codec2.git
     - cd codec2
-    - mkdir build_linux && cd build_linux && cmake .. && sudo make install && sudo ldconfig
+    - mkdir build_linux && cd build_linux && cmake .. && make
 
     # OK, build and test LPCNet
     - cd $FREEDVGUIDIR
