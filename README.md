@@ -3,97 +3,32 @@
 This document describes how to build the FreeDV GUI program for
 various operating systems.  See also:
 
-  http://freedv.org - introduction, documentation, downloads
-  RELEASE_NOTES.txt - changes made to each version
-  USER_MANUAL.txt   - FreeDV GUI Manual
+  * http://freedv.org - introduction, documentation, downloads
+  * RELEASE_NOTES.txt - changes made to each version
+  * USER_MANUAL.txt   - FreeDV GUI Manual
 
-# Building and installing on Linux
+# Building and installing on Ubuntu Linux (16-18)
+  ```
+  $ sudo apt install libc6-i386 libspeexdsp-dev libsamplerate0-dev sox git \
+  libwxgtk3.0-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev \
+  libgsm1-dev libsndfile-dev
 
-First the basics:
-```
-  $ sudo apt-get install build-essential cmake git
+  $ ./build_ubuntu.sh
+  ```
 
-or
-
+# Building and installing on Fedora Linux
+  ```
   $ sudo dnf groupinstall "Development Tools"
-```
-
-To install the required development libraries instead of building them
-statically:
-
-Debian/Ubuntu:
-```
-  $ sudo apt-get install libwxgtk3.0-dev portaudio19-dev \
-    libhamlib-dev libsamplerate-dev libasound2-dev libao-dev libgsm1-dev \
-    libsndfile-dev libspeexdsp-dev
-```
-Fedora:
-```
   $ sudo dnf install icmake wxGTK3-devel portaudio-devel libsamplerate-devel \
     libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
     gsm-devel
-```
-
-RHEL/CentOS and derivitves (requires Fedora EPEL repository)
-```
-  $ sudo yum install wxGTK3-devel portaudio-devel libsamplerate-devel \ 
-    libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
-    gsm-devel
-```
-
-## Quickstart 1
-
-Using a modern Linux, and the development library packages installed above:
-```
-  $ cd /path/to/freedv
-  $ mkdir build_linux
-  $ cd build_linux
-  $ cmake ../ 
-  $ make
-  $ ./src/freedv
-```
-
-## Quickstart 2
-
-Using a local build of codec2-dev that you may be developing:
-```
-  $ cd /path/to/freedv
-  $ mkdir build_linux
-  $ cd build_linux
-  $ cmake -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=/path/to/codec2-dev/build_linux  ..
-  $ make
-  $ ./src/freedv
-```
-
-## Quickstart 3
-
-Builds static versions of wxWidgets, portaudio, codec2-dev, which are commonly
-missing on older Linux systems.
-
-1. Assumes static build of wxWidgets and the freedv-dev source is checked out into ~/freedv-dev:
-```
-  $ cd ~/freedv-dev
-  $ mkdir build_linux
-  $ cd build_linux
-  $ cmake -DBOOTSTRAP_WXWIDGETS=TRUE ../
-  $ make
-```
-
-2. Then you can configure FreeDV using your local codec-dev, something like:
-```
-  $ cmake -DCMAKE_BUILD_TYPE=Debug -DBOOTSTRAP_WXWIDGETS=TRUE -DCODEC2_BUILD_DIR=/path/to/codec2-dev/build_linux -DUSE_STATIC_PORTAUDIO=TRUE ../
-```
-
-3. OR checkout and build a copy of codec2-dev:
-```
-  $ cmake -DBOOTSTRAP_WXWIDGETS=TRUE -DUSE_STATIC_CODEC2=TRUE -DUSE_STATIC_PORTAUDIO=TRUE  ../
-```
+  $ ./build_ubuntu.sh
+  ```
   
-4. Build and run FreeDV:
-```
-   $ make
-   $ ./src/freedv
-```
+# Run FreeDV:
+   ```
+   $ ./build_linux/src/freedv
+   ```
 
 ## Building for Windows on Fedora (Cross compiling)
 
@@ -143,8 +78,6 @@ Building FreeDV for 64 Bit windows:
   $ make package
 ```
   
-WANTED: Instructions for cross compiling on Ubuntu 17 or 18
-
 ## Building and installing on Windows
 
 The windows build is similar to linux and follows the same basic workflow,
@@ -196,21 +129,7 @@ Please see README.osx
 
 ## Building and installing on FreeBSD
 
-As per "Quickstart 2" above but change build_linux to build_freebsd
-
-## Editing
-
-Please make sure your text editor does not insert tabs, and
-used indents of 4 spaces.  The following .emacs code was used to
-configure emacs:
-```
-(setq-default indent-tabs-mode nil)
-
-(add-hook 'c-mode-common-hook
-          (function (lambda ()
-                      (setq c-basic-offset 4)
-                      )))
-```
+In ```build_ubuntu.sh``` change build_linux to build_freebsd
 
 ## TODO
 
@@ -226,6 +145,5 @@ welcome!
     adjust
 - [ ] Align license text in source file with LGPL
 - [ ] GTK warning on fedora 28 when vert size of window so small we lose
-    PTT button
-    + need some way to limit size
+      PTT button
 - [ ] Play a file when we get sync, like "alarm"
