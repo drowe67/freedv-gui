@@ -26,11 +26,16 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 project(FreeDV)
 
+# https://cmake.org/cmake/help/git-stage/policy/CMP0075.html
+if(POLICY CMP0075)
+    cmake_policy(SET CMP0075 NEW)
+endif()
+
 #
 # Set FreeDV version and generate src/version.h
 #
 set(FREEDV_VERSION_MAJOR 1)
-set(FREEDV_VERSION_MINOR 3)
+set(FREEDV_VERSION_MINOR 4)
 set(FREEDV_VERSION_PATCH FALSE)
 set(FREEDV_VERSION_SUFFIX "devel")
 
@@ -53,24 +58,29 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 
 # Work around for not using a svn working copy.
-add_definitions(-D_NO_AUTOTOOLS_)
+#add_definitions(-D_NO_AUTOTOOLS_)
 
 #
-# Find the svn revision if this is a working copy.
+# Find the git hash if this is a working copy.
 #
-get_filename_component(_src_dir "${CMAKE_SOURCE_DIR}" NAME)
-if("${_src_dir}" STREQUAL "freedv-dev")
-    find_package(Subversion QUIET)
-    if(Subversion_FOUND)
-        Subversion_WC_INFO(${CMAKE_CURRENT_SOURCE_DIR} FREEDV)
-        message(STATUS "FreeDV svn revision: ${FREEDV_WC_REVISION}")
-        add_definitions(-DSVN_REVISION="${FREEDV_WC_REVISION}")
-    else(Subversion_FOUND)
-        message(WARNING "Subversion not found. Can not determine svn revision.")
-        add_definitions(-DSVN_REVISION="Unknown")
-    endif(Subversion_FOUND)
+if(EXISTS ${CMAKE_SOURCE_DIR}/.git)
+    find_package(Git QUIET)
+    if(Git_FOUND)
+        execute_process(
+            COMMAND "${GIT_EXECUTABLE}" describe --always HEAD
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+            RESULT_VARIABLE res
+            OUTPUT_VARIABLE FREEDV_HASH
+            ERROR_QUIET
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+        message(STATUS "freedv-gui current git hash: ${FREEDV_HASH}")
+        add_definitions(-DGIT_HASH="${FREEDV_HASH}")
+    else()
+        message(WARNING "Git not found. Can not determine current commit hash.")
+        add_definitions(-DGIT_HASH="Unknown")
+    endif()
 else()
-    add_definitions(-DSVN_REVISION="None")
+        add_definitions(-DGIT_HASH="None")
 endif()
 
 
@@ -85,6 +95,8 @@ endif(APPLE)
 # Setup cmake options
 #
 set(CMAKE_VERBOSE_MAKEFILE TRUE CACHE BOOL "Verbose makefile.")
+set(USE_INTERNAL_CODEC2 FALSE CACHE BOOL
+    "Download and build codec2 and lpcnetfreedv instead of using the system library.")
 set(USE_STATIC_DEPS FALSE CACHE BOOL 
     "Download and build static libraries instead of system libraries.")
 set(USE_STATIC_PORTAUDIO FALSE CACHE BOOL 
@@ -93,8 +105,6 @@ set(USE_STATIC_SNDFILE FALSE CACHE BOOL
     "Download and build static sndfile instead of the system library.")
 set(USE_STATIC_SAMPLERATE FALSE CACHE BOOL
     "Download and build static samplerate instead of the system library.")
-set(USE_STATIC_CODEC2 TRUE CACHE BOOL
-    "Download and build static codec2 instead of the system library.")
 set(USE_STATIC_SPEEXDSP FALSE CACHE BOOL
     "Download and build static speex instead of the system library.")
 set(BOOTSTRAP_WXWIDGETS FALSE CACHE BOOL
@@ -104,7 +114,6 @@ if(USE_STATIC_DEPS)
     set(USE_STATIC_PORTAUDIO TRUE FORCE)
     set(USE_STATIC_SNDFILE TRUE FORCE)
     set(USE_STATIC_SAMPLERATE TRUE FORCE)
-    set(USE_STATIC_CODEC2 TRUE FORCE)
 endif(USE_STATIC_DEPS)
 
 #
@@ -135,7 +144,9 @@ if(MINGW)
     # Default to static build of portaudio until I can figure out why the
     # shared DLL doesn't work.
     set(USE_STATIC_PORTAUDIO TRUE)
-    # Setup HOST variable.
+    unset(USE_INTERNAL_CODEC2 CACHE)
+    set(USE_INTERNAL_CODEC2 TRUE CACHE BOOL "Perform nternal buils of codec2 and lpcnetfreedv")
+    # Setup HOST variables.
     include(cmake/MinGW.cmake)
     # This sets up the exe icon for windows under mingw.
     set(RES_FILES "")
@@ -187,48 +198,46 @@ check_symbol_exists("_fseeki64" "stdio.h" HAVE__FSEEKI64)
 configure_file ("${PROJECT_SOURCE_DIR}/cmake/config.h.in"
                 "${PROJECT_BINARY_DIR}/config.h" )
 include_directories(${PROJECT_BINARY_DIR})
-add_definitions(-DHAVE_CONFIG_H)
 
 # Config file for bundled sox sources
 configure_file("${PROJECT_SOURCE_DIR}/cmake/soxconfig.h.in"
                "${PROJECT_BINARY_DIR}/soxconfig.h")
 
 # Pthread Library
+# Actually not needed if compiling with c++11 or higher...
 find_package(Threads REQUIRED)
 message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 
 
 #
-# Find freedvlpcnet
-#
-find_package(lpcnet)
-
-
-#
-# Find codec2
+# Find codec2 and lpcnetfreedv
 #
 if(CODEC2_BUILD_DIR)
-    set(USE_STATIC_CODEC2 OFF CACHE BOOL "" FORCE)
+    if(USE_INTERNAL_CODEC2)
+        set(USE_INTERNAL_CODEC2 FALSE)
+        message(WARNING "Use of build directories and internal builds are mutually exclusive. Forcing internal builds off.")
+    endif()
+    set(USE_INTERNAL_CODEC2 OFF CACHE BOOL "" FORCE)
     message(STATUS "Using codec2 from build directory...")
-    get_filename_component(CODEC2_BUILD_DIR ${CODEC2_BUILD_DIR} 
-        ABSOLUTE BASE_DIR ${CMAKE_BINARY_DIR})
-    message(STATUS "  Build include dir: ${CODEC2_BUILD_DIR}")
-    load_cache(${CODEC2_BUILD_DIR} codec2_SOURCE_DIR)
-    find_path(CODEC2_SOURCE_INCLUDE_DIR codec2.h
-        PATHS ${codec2_SOURCE_DIR}
-        PATH_SUFFIXES src
-        NO_DEFAULT_PATH)
-    message(STATUS "  Source include dir: ${CODEC2_SOURCE_INCLUDE_DIR}")
-    find_library(CODEC2_LIBRARY NAMES codec2
+    find_package(codec2 REQUIRED
+        NO_DEFAULT_PATH
         PATHS ${CODEC2_BUILD_DIR}
-        PATH_SUFFIXES src
-        NO_DEFAULT_PATH)
-    message(STATUS "  Library: ${CODEC2_LIBRARY}")
-    list(APPEND FREEDV_LINK_LIBS ${CODEC2_LIBRARY})
-    include_directories(${CODEC2_SOURCE_INCLUDE_DIR}
-        ${CODEC2_BUILD_DIR})
+        CONFIGS codec2.cmake
+    )
+    if(LPCNET_BUILD_DIR)
+        message(STATUS "Using LPCNet from build directory...")
+        find_package(lpcnet REQUIRED
+            NO_DEFAULT_PATH
+            PATHS ${LPCNET_BUILD_DIR}
+            CONFIGS lpcnetfreedv.cmake
+        )
+    else()
+        message(FATAL_ERROR "Must use LPCNet from build directory if using codec2 from build directory.")
+    endif()
+elseif(USE_INTERNAL_CODEC2)
+    message(STATUS "Will attempt internal build of codec2 and lpcnetfreedv.")
+    include(cmake/BuildCodec2.cmake)
 else(CODEC2_BUILD_DIR)
-if(NOT USE_STATIC_CODEC2)
     message(STATUS "Looking for codec2...")
     # 'CONFIG' removed due to incompatibility with cmake version
     # in Ubuntu 12.04 (Precise) -- Stuart Longland
@@ -237,6 +246,7 @@ if(NOT USE_STATIC_CODEC2)
         get_target_property(CODEC2_LIBRARY codec2 LOCATION)
         message(STATUS "  codec2 library: ${CODEC2_LIBRARY}")
         message(STATUS "  codec2 headers: ${codec2_INCLUDE_DIRS}")
+        find_package(lpcnetfreedv REQUIRED)
     else()
         # Try to find manually
         find_path(CODEC2_INCLUDE_DIRS codec2.h
@@ -250,16 +260,12 @@ if(NOT USE_STATIC_CODEC2)
         else()
             message(FATAL_ERROR "codec2 library not found.
 Linux: 
-Codec2 may not be in your distribution so build yourself or use the cmake option to build statically into FreeDV.
+Codec2 may not be in your distribution so build yourself or use the cmake option to build internally.
 Windws:
-It's easiest to use the cmake option: USE_STATIC_CODEC2"
+It's easiest to use the cmake option: USE_INTERNAL_CODEC2 or use build trees for codec2 and lpcnetfreedv."
         )
         endif()
     endif()
-else(NOT USE_STATIC_CODEC2)
-    message(STATUS "Will attempt static build of codec2.")
-    include(cmake/BuildCodec2.cmake)
-endif(NOT USE_STATIC_CODEC2)
 endif(CODEC2_BUILD_DIR)
 
 
@@ -429,7 +435,7 @@ endif()
 # Find libdl for dlopen/dlclose
 #
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-    message("Linux")
+    message("System is Linux")
     message(STATUS "Looking for dl library.")
     find_library(DL_LIBRARY dl)
     if(DL_LIBRARY)
@@ -444,8 +450,10 @@ On Linux systems try installing:
     endif()
 endif()
 
-    
-#Freedv 
+
+#    
+# Freedv
+#
 add_subdirectory(src)
 
 # Icons and desktop file

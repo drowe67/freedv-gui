@@ -12,8 +12,7 @@ ExternalProject_Add(hamlib
 if(WIN32)
     set(HAMLIB_LIBRARIES ${CMAKE_BINARY_DIR}/external/dist/lib/portaudio.lib)
 else(WIN32)
-    set(HAMLIB_LIBRARIES
-    )
+    set(HAMLIB_LIBRARIES "")
 endif(WIN32)
 include_directories(${CMAKE_BINARY_DIR}/external/dist/include)
 list(APPEND FREEDV_LINK_LIBS ${HAMLIB_LIBRARIES})
