@@ -150,7 +150,7 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
             y = y_scale * m_mem[i].imag + m_rGrid.GetHeight()/2;
             x += PLOT_BORDER + XLEFT_OFFSET;
             y += PLOT_BORDER;
-            pen.SetColour(DARK_GREEN_COLOR);
+            pen.SetColour(sym_to_colour[i%Nsym]);
             dc.SetPen(pen);
             dc.DrawPoint(x, y);
         }
