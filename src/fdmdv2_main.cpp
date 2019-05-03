@@ -436,7 +436,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     if(wxGetApp().m_show_test_frame_errors_hist)
     {
         // Add Test Frame Historgram window.  1 column for every bit, 2 bits per carrier
-        m_panelTestFrameErrorsHist = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 1.0, 1.0/(2*FDMDV_NC_MAX), 0.001, 0.1, 1.0/FDMDV_NC_MAX, 0.1, "%0.0E", 0);
+        m_panelTestFrameErrorsHist = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 1.0, 1.0/(2*MODEM_STATS_NC_MAX), 0.001, 0.1, 1.0/MODEM_STATS_NC_MAX, 0.1, "%0.0E", 0);
         m_auiNbookCtrl->AddPage(m_panelTestFrameErrorsHist, L"Test Frame Histogram", true, wxNullBitmap);
         m_panelTestFrameErrorsHist->setBarGraph(1);
         m_panelTestFrameErrorsHist->setLogY(1);
@@ -1346,15 +1346,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
                          /* calculate BERs and send to plot */
 
-                        float ber[2*FDMDV_NC_MAX];
-                        for(b=0; b<2*FDMDV_NC_MAX; b++) {
+                        float ber[2*MODEM_STATS_NC_MAX];
+                        for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
                             ber[b] = 0.0;
                         }
                         for(b=0; b<g_Nc*2; b++) {
                             ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
                         }
-                        assert(g_Nc*2 <= 2*FDMDV_NC_MAX);
-                        m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*FDMDV_NC_MAX);
+                        assert(g_Nc*2 <= 2*MODEM_STATS_NC_MAX);
+                        m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
                     }
        
                     if (/*(freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) || */(freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
@@ -1391,15 +1391,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
                         /* calculate BERs and send to plot */
 
-                        float ber[2*FDMDV_NC_MAX];
-                        for(b=0; b<2*FDMDV_NC_MAX; b++) {
+                        float ber[2*MODEM_STATS_NC_MAX];
+                        for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
                             ber[b] = 0.0;
                         }
                         for(b=0; b<hist_Nc; b++) {
                             ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
                         }
-                        assert(hist_Nc <= 2*FDMDV_NC_MAX);
-                        m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*FDMDV_NC_MAX);
+                        assert(hist_Nc <= 2*MODEM_STATS_NC_MAX);
+                        m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
                     }
  
                     m_panelTestFrameErrors->Refresh();       
@@ -2746,10 +2746,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
             freedv_set_callback_error_pattern(g_pfreedv, my_freedv_put_error_pattern, (void*)m_panelTestFrameErrors);
             g_error_pattern_fifo = codec2_fifo_create(2*freedv_get_sz_error_pattern(g_pfreedv)+1);
-            g_error_hist = new short[FDMDV_NC_MAX*2];
-            g_error_histn = new short[FDMDV_NC_MAX*2];
+            g_error_hist = new short[MODEM_STATS_NC_MAX*2];
+            g_error_histn = new short[MODEM_STATS_NC_MAX*2];
             int i;
-            for(i=0; i<2*FDMDV_NC_MAX; i++) {
+            for(i=0; i<2*MODEM_STATS_NC_MAX; i++) {
                 g_error_hist[i] = 0;
                 g_error_histn[i] = 0;
             }
