@@ -12,13 +12,13 @@ export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/codec2.git
 cd codec2 && git checkout brad-2020
-mkdir -p build_linux && cd build_linux && cmake .. && make
+mkdir -p build_linux && cd build_linux && rm -Rf * && cmake .. && make
 
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/LPCNet.git
 cd $LPCNETDIR
-mkdir  -p build_linux && cd build_linux
+mkdir  -p build_linux && cd build_linux && rm -Rf *
 cmake -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux ..
 make
 # sanity check test
@@ -35,7 +35,8 @@ export LD_LIBRARY_PATH=$LPCNETDIR/build_linux/src
 
 # Finally, build freedv-gui
 cd $FREEDVGUIDIR
-mkdir  -p build_linux && cd build_linux
+mkdir  -p build_linux && cd build_linux && rm -Rf *
 cmake -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux -DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux ..
-make
+make VERBOSE=1
+
     
