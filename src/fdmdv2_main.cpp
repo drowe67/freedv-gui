@@ -1270,7 +1270,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     if (g_mode == -1)  {
         // Horus telemetry
-        char bits[80], clockoffset[80], freqoffset[80];
+        char bits[80], freqoffset[80];
         sprintf(bits, "Bits: %d", horus_get_total_payload_bits(g_horus)); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
         sprintf(freqoffset, "FrqOff: %4.0f", g_stats.foff);
         wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
@@ -4111,10 +4111,10 @@ void per_frame_rx_processing(
 
         int   max_nin = horus_get_max_demod_in(g_horus);
         int   max_ascii_out = horus_get_max_ascii_out_len(g_horus);
-        int   max_nout = max_nin*FS/horus_get_Fs(g_horus);
-        short input_buf[max_nin], output_buf[max_nout];
+        //int   max_nout = max_nin*FS/horus_get_Fs(g_horus);
+        short input_buf[max_nin];
         char  ascii_out[max_ascii_out];
-        int   nin, nout;
+        int   nin;
 
         nin = horus_nin(g_horus);
         while (codec2_fifo_read(input_fifo, input_buf, nin) == 0) {

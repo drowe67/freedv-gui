@@ -31,6 +31,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "sox/sox.h"
 
 #include "sox_biquad.h"
