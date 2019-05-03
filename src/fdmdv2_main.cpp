@@ -2408,8 +2408,8 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
 
         // Bug: on Win32 I cant read m_recFileFromModemSecs, so have hard coded it
 #ifdef __WIN32__
-        long secs = wxGetApp().m_recFileFromRadioSecs;
-        g_recFromRadioSamples = FS*(unsigned int)secs;
+        long secs = wxGetApp().m_recFileFromModulatorSecs;
+        g_recFromModulatorSamples = sample_rate * (unsigned int)secs;
 #else
         // work out number of samples to record
 
