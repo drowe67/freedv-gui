@@ -983,7 +983,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         m_panelScatter->setNc(g_Nc/2); /* m_FreeDV700Combine may have changed at run time */
 
                         /* 
-                           FreeDV 700 uses diversity, so optionaly combine
+                           FreeDV 700C uses diversity, so optionaly combine
                            symbols for scatter plot, as combined symbols are
                            used for demodulation.  Note we need to use a copy
                            of the symbols, as we are not sure when the stats
@@ -2712,7 +2712,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         }
         if (m_rb2020->GetValue()) {
             g_mode = FREEDV_MODE_2020;
-            g_Nc = 17;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
+            g_Nc = 31;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
             m_panelScatter->setNc(g_Nc);
         }
 
@@ -2759,7 +2759,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             // Set buffer size.
             g_bufferSize = (int)(FRAME_DURATION * freedv_get_speech_sample_rate(g_pfreedv));
 
-            // init Codec 2 LPC Post Filter (FreedV 1600)
+            // init Codec 2 LPC Post Filter (FreeDV 1600)
 
             struct CODEC2 *c2 = freedv_get_codec2(g_pfreedv);
             if (c2 != NULL) {
@@ -2771,9 +2771,13 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             }
             
             // Init Speex pre-processor states
-            // by inspecting Speex source it seems that only denoiser is on be default
+            // by inspecting Speex source it seems that only denoiser is on by default
 
-            g_speex_st = speex_preprocess_state_init(freedv_get_n_speech_samples(g_pfreedv), freedv_get_speech_sample_rate(g_pfreedv));
+            fprintf(stderr, "freedv_get_n_speech_samples(g_pfreedv): %d\n", freedv_get_n_speech_samples(g_pfreedv));
+            fprintf(stderr, "freedv_get_speech_sample_rate(g_pfreedv): %d\n", freedv_get_speech_sample_rate(g_pfreedv));
+            
+            if (wxGetApp().m_speexpp_enable)
+                g_speex_st = speex_preprocess_state_init(freedv_get_n_speech_samples(g_pfreedv), freedv_get_speech_sample_rate(g_pfreedv));
 
             // adjust spectrum and waterfall freq scaling base on mode
 
@@ -2897,7 +2901,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             delete g_error_histn;
             codec2_fifo_destroy(g_error_pattern_fifo);
             freedv_close(g_pfreedv);
-            speex_preprocess_state_destroy(g_speex_st);
+            if (wxGetApp().m_speexpp_enable)
+                speex_preprocess_state_destroy(g_speex_st);
         }
 
         m_newMicInFilter = m_newSpkOutFilter = true;
