@@ -211,8 +211,8 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 //-------------------------------------------------------------------------
 FilterDlg::~FilterDlg()
 {
-    delete m_MicInMagdB;
-    delete m_SpkOutMagdB;
+    delete[] m_MicInMagdB;
+    delete[] m_SpkOutMagdB;
 
     // Disconnect Events
 

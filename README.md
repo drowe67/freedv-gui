@@ -88,4 +88,3 @@ Please see README.osx
 ## Building and installing on FreeBSD
 
 In ```build_ubuntu.sh``` change build_linux to build_freebsd
-
