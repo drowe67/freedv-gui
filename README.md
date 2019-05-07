@@ -22,7 +22,7 @@ cross compiling support).
 # Building and installing on Fedora Linux
   ```
   $ sudo dnf groupinstall "Development Tools"
-  $ sudo dnf install icmake wxGTK3-devel portaudio-devel libsamplerate-devel \
+  $ sudo dnf install cmake wxGTK3-devel portaudio-devel libsamplerate-devel \
     libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
     gsm-devel
   $ ./build_linux.sh
@@ -54,7 +54,7 @@ Enable Freetel specific packages not currently in Fedora proper:
   $ sudo dnf install dnf-plugins-core
   $ sudo dnf copr enable hobbes1069/mingw
   $ sudo dnf install mingw{32,64}-wxWidgets3 mingw{32,64}-hamlib \
-    mingw{32,64}-portaudio mingw{32,64}-libsndfile
+    mingw{32,64}-portaudio mingw{32,64}-libsndfile mingw{32,64}-libsamplerate.noarch
 ```
 
 Bootstrap codec2 and LPCNet:
