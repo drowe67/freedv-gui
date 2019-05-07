@@ -16,7 +16,7 @@ cross compiling support).
   $ sudo apt install libc6-i386 libspeexdsp-dev libsamplerate0-dev sox git \
   libwxgtk3.0-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev \
   libgsm1-dev libsndfile-dev
-  $ ./build_ubuntu.sh
+  $ ./build_linux.sh
   ```
 
 # Building and installing on Fedora Linux
@@ -25,13 +25,16 @@ cross compiling support).
   $ sudo dnf install icmake wxGTK3-devel portaudio-devel libsamplerate-devel \
     libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
     gsm-devel
-  $ ./build_ubuntu.sh
+  $ ./build_linux.sh
   ```
   
 # Run FreeDV:
    ```
    $ ./build_linux/src/freedv
    ```
+
+The ```wav``` directory contains test files of modulated audio that
+you can use to test FreeDV (see USER_MANUAL.txt)
 
 ## Building for Windows on Fedora (Cross compiling)
 
@@ -87,4 +90,4 @@ Please see README.osx
 
 ## Building and installing on FreeBSD
 
-In ```build_ubuntu.sh``` change build_linux to build_freebsd
+In ```build_linux.sh``` change the ```build_linux``` directory to build_freebsd

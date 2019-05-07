@@ -9,6 +9,14 @@ This document describes additional features in the latest FreeDV
 releases that haven't been documented in other sources.  See also
 freedv.org
 
+Test Wav Files
+--------------
+
+In the wav directory are FreeDV audio files that can be used to test
+FreeDV.  There is one for each FreeDV mode.  Select a FreeDV mode and
+press Start.  Choose a file using "Tools - Start/Stop Play File From
+Radio".  You should hear decoded FreeDV speech.
+
 Project Horus Support June 2018
 -------------------------------
 

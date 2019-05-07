@@ -13,4 +13,4 @@ addons:
       libwxgtk3.0-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev
       
 script:
-    - ./build_ubuntu.sh
+    - ./build_linux.sh
