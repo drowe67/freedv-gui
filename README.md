@@ -15,7 +15,7 @@ cross compiling support).
   ```
   $ sudo apt install libc6-i386 libspeexdsp-dev libsamplerate0-dev sox git \
   libwxgtk3.0-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev \
-  libgsm1-dev libsndfile-dev
+  libgsm1-dev libsndfile-dev cmake
   $ ./build_linux.sh
   ```
 
