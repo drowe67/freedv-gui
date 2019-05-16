@@ -1,8 +1,8 @@
 #!/bin/bash
 # build_ubuntu.sh
 #
-# Build script for Ubuntu, git pulls codec2 and lpcnet repos so they are
-# available for parallel development.
+# Build script for Ubuntu and Fedora Linux, git pulls codec2 and
+# lpcnet repos so they are available for parallel development.
 
 export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2

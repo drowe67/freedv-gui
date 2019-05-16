@@ -15,14 +15,14 @@ cross compiling support).
   ```
   $ sudo apt install libc6-i386 libspeexdsp-dev libsamplerate0-dev sox git \
   libwxgtk3.0-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev \
-  libgsm1-dev libsndfile-dev
+  libgsm1-dev libsndfile-dev cmake
   $ ./build_linux.sh
   ```
 
 # Building and installing on Fedora Linux
   ```
   $ sudo dnf groupinstall "Development Tools"
-  $ sudo dnf install icmake wxGTK3-devel portaudio-devel libsamplerate-devel \
+  $ sudo dnf install cmake wxGTK3-devel portaudio-devel libsamplerate-devel \
     libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
     gsm-devel
   $ ./build_linux.sh
@@ -54,7 +54,7 @@ Enable Freetel specific packages not currently in Fedora proper:
   $ sudo dnf install dnf-plugins-core
   $ sudo dnf copr enable hobbes1069/mingw
   $ sudo dnf install mingw{32,64}-wxWidgets3 mingw{32,64}-hamlib \
-    mingw{32,64}-portaudio mingw{32,64}-libsndfile
+    mingw{32,64}-portaudio mingw{32,64}-libsndfile mingw{32,64}-libsamplerate.noarch
 ```
 
 Bootstrap codec2 and LPCNet:
@@ -83,7 +83,28 @@ Building FreeDV for 64 Bit windows:
   $ make
   $ make package
 ```
-  
+
+### Testing Windows Build
+
+Conveniently, it is possible to run Windows executable using Wine on Fedora:
+
+Testing LPCNet:
+```
+  $ cd ~/freedv-gui/LPCNet/build_win/src
+  $ WINEPATH=$HOME/freedv-gui/codec2/build_win/src';'$HOME/freedv-gui/build_win/_CPack_Packages/win64/NSIS/FreeDV-1.4.0-devel-win64/bin/ wine lpcnet_enc.exe --infile all.wav --outfile all.bit
+  $ WINEPATH=$HOME/freedv-gui/codec2/build_win/src';'$HOME/freedv-gui/build_win/_CPack_Packages/win64/NSIS/FreeDV-1.4.0-devel-win64/bin/ wine lpcnet_dec.exe --infile all.bin --outfile all_out.raw
+  $ cat all_out.raw | aplay -f S16_LE -r 16000
+
+```
+
+Testing FreeDV API:
+
+```
+  $ cd freedv-gui/codec2/build_win/src
+  $ WINEPATH=$HOME/freedv-gui/LPCNet/build_win/src';'$HOME/freedv-gui/build_win/_CPack_Packages/win64/NSIS/FreeDV-1.4.0-devel-win64/bin/ wine freedv_rx 2020 ~/freedv-gui/wav/all_2020.wav out.raw
+  $ play -t .s16 -r 16000 -b 16 out.raw
+```
+
 ## Building and installing on OSX
 
 Please see README.osx
