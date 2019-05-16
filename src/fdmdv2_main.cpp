@@ -2738,9 +2738,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             } else {
                 g_pfreedv = freedv_open(g_mode);
                 m_textInterleaverSync->SetLabel("");
-           }
+            }
 
-            freedv_set_verbose(g_pfreedv, g_freedv_verbose);
+            if (g_freedv_verbose)
+                freedv_set_verbose(g_pfreedv, 2);
+            else
+                freedv_set_verbose(g_pfreedv, 0);
             
             freedv_set_callback_txt(g_pfreedv, &my_put_next_rx_char, &my_get_next_tx_char, NULL);
 
