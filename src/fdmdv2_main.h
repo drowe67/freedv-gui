@@ -62,6 +62,11 @@
 #include <dlfcn.h>
 #endif
 
+#ifdef _MSC_VER
+// used for AVX checking
+#include <intrin.h>
+#endif
+
 #include "codec2.h"
 #include "codec2_fifo.h"
 #include "modem_stats.h"
@@ -627,6 +632,9 @@ class MainFrame : public TopFrame
         int        vk_rx_pause;
         int        vk_repeats, vk_repeat_counter;
         float      vk_rx_time;
+
+        void       checkAvxSupport();
+        bool       isAvxPresent;
 };
 
 void txRxProcessing();

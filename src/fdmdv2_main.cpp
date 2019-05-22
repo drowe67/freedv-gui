@@ -325,6 +325,12 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 
     wxGetApp().m_serialport = new Serialport();
 
+    // Check for AVX support in the processor.  If it's not present, 2020 won't be processed
+    // fast enough
+    checkAvxSupport();
+    if(!isAvxPresent)
+        m_rb2020->Disable();
+
     tools->AppendSeparator();
     wxMenuItem* m_menuItemToolsConfigDelete;
     m_menuItemToolsConfigDelete = new wxMenuItem(tools, wxID_ANY, wxString(_("&Restore defaults")) , wxT("Delete config file/keys and restore defaults"), wxITEM_NORMAL);
@@ -612,7 +618,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
         m_rb2400b->SetValue(1);
     if (mode == 7)
         m_rbHorusBinary->SetValue(1);
-    if (mode == 8)
+    if (mode == 8 && isAvxPresent)
         m_rb2020->SetValue(1);
     pConfig->SetPath(wxT("/"));
 
@@ -2710,7 +2716,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_textSync->Disable();
             m_textInterleaverSync->SetLabel("");
         }
-        if (m_rb2020->GetValue()) {
+        if (m_rb2020->GetValue() && isAvxPresent) {
             g_mode = FREEDV_MODE_2020;
             g_Nc = 31;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
             m_panelScatter->setNc(g_Nc);
@@ -2924,7 +2930,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb800xa->Enable();
         m_rb2400b->Enable();
         m_rbHorusBinary->Enable();
-        m_rb2020->Enable();
+        if(isAvxPresent)
+            m_rb2020->Enable();
         if (m_rbPlugIn != NULL)
             m_rbPlugIn->Enable();
            
@@ -4461,6 +4468,56 @@ void MainFrame::CloseSerialPort(void)
     }
 }
 
+//
+// checkAvxSupport
+//
+// Tests the underlying platform for AVX support.  2020 needs AVX support to run
+// in real-time, and old processors do not offer AVX support
+//
+#ifdef __GNUC__
+// These methods are defined for Windows but must be created otherwise
+void __cpuid(int* cpuinfo, int info)
+{
+    __asm__ __volatile__(
+        "xchg %%ebx, %%edi;"
+        "cpuid;"
+        "xchg %%ebx, %%edi;"
+        :"=a" (cpuinfo[0]), "=D" (cpuinfo[1]), "=c" (cpuinfo[2]), "=d" (cpuinfo[3])
+        :"0" (info)
+    );
+}
+
+unsigned long long _xgetbv(unsigned int index)
+{
+    unsigned int eax, edx;
+    __asm__ __volatile__(
+        "xgetbv;"
+        : "=a" (eax), "=d"(edx)
+        : "c" (index)
+    );
+    return ((unsigned long long)edx << 32) | eax;
+}
+#endif
+
+void MainFrame::checkAvxSupport(void)
+{
+
+    int cpuinfo[4];
+    __cpuid(cpuinfo, 1);
+
+    bool avxSupported = false;
+
+    avxSupported = cpuinfo[2] & (1 << 28) || false;
+    bool osxsaveSupported = cpuinfo[2] & (1 << 27) || false;
+    if (osxsaveSupported && avxSupported)
+    {
+        // _XCR_XFEATURE_ENABLED_MASK = 0
+        unsigned long long xcrFeatureMask = _xgetbv(0);
+        avxSupported = (xcrFeatureMask & 0x6) == 0x6;
+    }
+
+    isAvxPresent = avxSupported;
+}
 
 #ifdef __UDP_SUPPORT__
 
@@ -4669,7 +4726,6 @@ void UDPInit(void) {
         fprintf(stderr, "Server listening at %s:%u \n", (const char*)addrReal.IPAddress().c_str(), addrReal.Service());
     }
 }
-
 
 void UDPSend(int port, char *buf, unsigned int n) {
     fprintf(stderr, "UDPSend buf: %s n: %d\n", buf, n);
