@@ -3257,10 +3257,7 @@ void MainFrame::startRxStream()
             rxFifoSizeSamples = freedv_get_n_max_modem_samples(g_pfreedv);
         }
 
-        // add an extra 40ms to gibve a bit of headroom for processing loop adding samples
-        // which operates on 20ms buffers
-
-        // add an extra 40ms to gibve a bit of headroom for processing loop adding samples
+        // add an extra 40ms to give a bit of headroom for processing loop adding samples
         // which operates on 20ms buffers
 
         rxFifoSizeSamples += 0.04*modem_samplerate;
@@ -3951,27 +3948,28 @@ void txRxProcessing()
     if ((g_mode != -1) && ((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
         int ret;
 
-	if (g_dump_fifo_state) {
-	  // just dump outfifo1 state atm as that is causing problems with 700D
-	  // If this drops to zero we have a problem as we will run out of output samples
-	  // to send to the sound driver via PortAudio
-	  fprintf(stderr, "%6d", codec2_fifo_used(cbData->outfifo1));
-	}
-
         // This while loop locks the modulator to the sample rate of
         // sound card 1.  We want to make sure that modulator samples
         // are uninterrupted by differences in sample rate between
         // this sound card and sound card 2.
 
-        // Run this while loop as soon as we have enough room for one
-        // frame of modem samples.  Aim is to keep outfifo1 nice and
-        // full so we don't have any gaps ix tx signal.
+        // Run code inside this while loop as soon as we have enough
+        // room for one frame of modem samples.  Aim is to keep
+        // outfifo1 nice and full so we don't have any gaps ix tx
+        // signal.
 
         unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * freedv_get_n_nom_modem_samples(g_pfreedv)/freedv_samplerate;
+        
+ 	if (g_dump_fifo_state) {
+	  // If this drops to zero we have a problem as we will run out of output samples
+	  // to send to the sound driver via PortAudio
+	  fprintf(stderr, "outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d\n",
+                  codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
+	}
 
         int nsam_in_48 = g_soundCard2SampleRate * freedv_get_n_speech_samples(g_pfreedv)/freedv_get_speech_sample_rate(g_pfreedv);
         assert(nsam_in_48 < 10*N48);
-        while((unsigned)codec2_fifo_used(cbData->outfifo1) < nsam_one_modem_frame) {
+        while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {
 
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
@@ -4080,8 +4078,11 @@ void txRxProcessing()
             // output one frame of modem signal
 
             nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, 10*N48, nfreedv);
+            if (g_dump_fifo_state) {
+                fprintf(stderr, "  nout: %d\n", nout);
+            }
             ret = codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
-
+            // should never fire as we check there is enough room before entering while loop
             assert(ret != -1);
         }
     }
