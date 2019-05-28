@@ -11,7 +11,7 @@ export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/codec2.git
-cd codec2 && git checkout brad-2020
+cd codec2
 mkdir -p build_linux && cd build_linux && rm -Rf * && cmake .. && make
 
 # OK, build and test LPCNet
