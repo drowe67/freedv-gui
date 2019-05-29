@@ -229,6 +229,10 @@ for another program?
 4. Contact the digital voice mailing list.  Be specific about your
 hardware, what you have tried, and the exact nature of the problem.
 
+### FreeDV 2020 mode is greyed out
+
+You must have a modern CPU with AVX support to run FreeDV 2020.
+
 ## Voice Keyer 
 
 Voice Keyer Button on Front Page, and Options-PTT dialog.
@@ -341,6 +345,10 @@ or better.  It is not designed for fast fading or very low SNRs like
 channels where SSB is already an "aim-chair" copy.  On an AWGN (non
 fading channel), it will deliver reasonable speech quality down to 2dB
 SNR.
+
+If the FreeDV 2020 mode option is greyed out this means your CPU does
+not have AVX support.  You need AVX for FreeDV 2020, which has been
+available on Intel CPUs since around 2010.
 
 You may encounter the following limitations with FreeDV 2020:
 
