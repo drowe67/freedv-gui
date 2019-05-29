@@ -4475,8 +4475,6 @@ void MainFrame::CloseSerialPort(void)
 // Tests the underlying platform for AVX support.  2020 needs AVX support to run
 // in real-time, and old processors do not offer AVX support
 //
-#ifdef __GNUC__
-// These methods are defined for Windows but must be created otherwise
 void __cpuid(int* cpuinfo, int info)
 {
     __asm__ __volatile__(
@@ -4488,7 +4486,8 @@ void __cpuid(int* cpuinfo, int info)
     );
 }
 
-unsigned long long _xgetbv(unsigned int index)
+// These methods are defined for Windows but must be created otherwise
+unsigned long long __xgetbv(unsigned int index)
 {
     unsigned int eax, edx;
     __asm__ __volatile__(
@@ -4498,7 +4497,6 @@ unsigned long long _xgetbv(unsigned int index)
     );
     return ((unsigned long long)edx << 32) | eax;
 }
-#endif
 
 void MainFrame::checkAvxSupport(void)
 {
@@ -4513,7 +4511,7 @@ void MainFrame::checkAvxSupport(void)
     if (osxsaveSupported && avxSupported)
     {
         // _XCR_XFEATURE_ENABLED_MASK = 0
-        unsigned long long xcrFeatureMask = _xgetbv(0);
+        unsigned long long xcrFeatureMask = __xgetbv(0);
         avxSupported = (xcrFeatureMask & 0x6) == 0x6;
     }
 
