@@ -12,14 +12,14 @@ export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/codec2.git
-cd codec2
+cd codec2 && git checkout master && git pull
 mkdir -p build_win && cd build_win && rm -Rf *
 mingw64-cmake .. && make
 
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/LPCNet.git
-cd $LPCNETDIR
+cd $LPCNETDIR && git checkout master && git pull
 mkdir  -p build_win && cd build_win && rm -Rf *
 mingw64-cmake -DCODEC2_BUILD_DIR=$CODEC2DIR/build_win ..
 make
@@ -36,7 +36,7 @@ make VERBOSE=1
 #./freedv_tx 2020 $LPCNETDIR/wav/wia.wav - | ./freedv_rx 2020 - /dev/null
 
 # Finally, build freedv-gui
-cd $FREEDVGUIDIR
+cd $FREEDVGUIDIR && git pull
 mkdir -p build_win && cd build_win && rm -Rf *
 mingw64-cmake -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_win -DLPCNET_BUILD_DIR=$LPCNETDIR/build_win ..
 make VERBOSE=1
