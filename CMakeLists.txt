@@ -31,6 +31,14 @@ if(POLICY CMP0075)
     cmake_policy(SET CMP0075 NEW)
 endif()
 
+# Return the date (yyyy-mm-dd)
+macro(DATE RESULT)
+  execute_process(COMMAND "date" "+%Y%m%d" OUTPUT_VARIABLE ${RESULT})
+endmacro()
+DATE(DATE_RESULT)
+string(REGEX REPLACE "\n$" "" DATE_RESULT "${DATE_RESULT}")
+message(STATUS "Compilation date = XX${DATE_RESULT}XX")
+
 #
 # Set FreeDV version and generate src/version.h
 #
@@ -490,7 +498,9 @@ if(WIN32)
         set(CPACK_PACKAGE_VERSION_PATCH ${FREEDV_VERSION_PATCH})
     endif()
     if(FREEDV_VERSION_SUFFIX)
-        set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}-${FREEDV_VERSION_SUFFIX}")
+        #set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}-${FREEDV_VERSION_SUFFIX}")
+        set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}-${FREEDV_VERSION_SUFFIX}-${DATE_RESULT}")
+        message(STATUS "package name = ${CPACK_PACKAGE_VERSION_PATCH}")
     endif()
     # There is a bug in NSI that does not handle full unix paths properly. Make
     # sure there is at least one set of four (4) backlasshes.
