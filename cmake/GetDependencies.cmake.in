@@ -2,6 +2,7 @@
 # the existing cache variables. Pass them in via the configure_file command.
 set(CMAKE_BINARY_DIR @CMAKE_BINARY_DIR@)
 set(CMAKE_SOURCE_DIR @CMAKE_SOURCE_DIR@)
+set(USE_INTERNAL_CODEC2 @USE_INTERNAL_CODEC2@)
 set(UNIX @UNIX@)
 set(WIN32 @WIN32@)
 set(CMAKE_CROSSCOMPILING @CMAKE_CROSSCOMPILING@)
@@ -9,29 +10,79 @@ set(CMAKE_FIND_LIBRARY_SUFFIXES @CMAKE_FIND_LIBRARY_SUFFIXES@)
 set(CMAKE_FIND_LIBRARY_PREFIXES @CMAKE_FIND_LIBRARY_PREFIXES@)
 set(CMAKE_SYSTEM_LIBRARY_PATH @CMAKE_SYSTEM_LIBRARY_PATH@)
 set(CMAKE_FIND_ROOT_PATH @CMAKE_FIND_ROOT_PATH@)
+if(USE_INTERNAL_CODEC2)
+    set(CODEC2_BUILD_DIR ${CMAKE_BINARY_DIR}/codec2_build)
+    set(LPCNET_BUILD_DIR ${CMAKE_BINARY_DIR}/LPCNet_build)
+else()
+    set(CODEC2_BUILD_DIR @CODEC2_BUILD_DIR@)
+    set(LPCNET_BUILD_DIR @LPCNET_BUILD_DIR@)
+endif()
+
 
 set(FREEDV_EXE ${CMAKE_BINARY_DIR}/src/freedv.exe)
 
 include(GetPrerequisites)
 get_prerequisites("${FREEDV_EXE}" _deps 1 0 "" "")
-foreach(_runtime ${_deps})
-    message("Looking for ${_runtime}")
-    find_library(RUNTIME_${_runtime} ${_runtime})
-    message("${RUNTIME_${_runtime}}")
-    if(RUNTIME_${_runtime})
-        message("Looking for dependencies of ${_runtime}")
-        get_prerequisites("${RUNTIME_${_runtime}}" _deps2 1 0 "" "")
-        foreach(_runtime2 ${_deps2})
-            find_library(RUNTIME_${_runtime2} ${_runtime2})
-            message("${RUNTIME_${_runtime2}}")
-            if(RUNTIME_${_runtime2})
-                file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
-                TYPE EXECUTABLE FILES "${RUNTIME_${_runtime2}}")
-            endif()
-        endforeach()
-    endif()
-    if(RUNTIME_${_runtime})
-        file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
-        TYPE EXECUTABLE FILES "${RUNTIME_${_runtime}}")
-    endif()
-endforeach()
+
+# Filter libraries known to be provided by Windows
+set( _windlls
+    ADVAPI32.dll
+    GDI32.dll
+    KERNEL32.dll
+    SHELL32.dll
+    USER32.dll
+    WS2_32.dll
+    WSOCK32.dll
+    WSOCK32.DLL
+    WINMM.dll
+    WINMM.DLL
+    ole32.dll
+    COMCTL32.dll
+    COMCTL32.DLL
+    OLEAUT32.dll
+    RPCRT4.dll
+    comdlg32.dll
+    COMDLG32.DLL
+)
+list(REMOVE_ITEM _deps ${_windlls})
+
+# Handle internal libraries separately.
+if(CODEC2_BUILD_DIR)
+    list(FIND _deps libcodec2.dll _loc)
+    list(REMOVE_AT _deps ${_loc})
+    find_library(CODEC2 codec2 NO_DEFAULT_PATH PATHS ${CODEC2_BUILD_DIR}/src)
+    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
+        TYPE EXECUTABLE FILES ${CODEC2})
+endif()
+if(LPCNET_BUILD_DIR)
+    list(FIND _deps liblpcnetfreedv.dll _loc)
+    list(REMOVE_AT _deps ${_loc})
+    find_library(LPCNET lpcnetfreedv NO_DEFAULT_PATH PATHS ${LPCNET_BUILD_DIR}/src)
+    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
+        TYPE EXECUTABLE FILES ${LPCNET})
+endif()
+
+# Process remaining dependencies.
+list(LENGTH _deps _dep_len)
+message("There are ${_dep_len} dependencies to scan.")
+while(_deps)
+    foreach(_runtime ${_deps})
+        message("Looking for ${_runtime}")
+        find_library(RUNTIME_${_runtime} ${_runtime})
+        if(RUNTIME_${_runtime})
+            message("Found: ${RUNTIME_${_runtime}}")
+            file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
+                TYPE EXECUTABLE FILES "${RUNTIME_${_runtime}}")
+            get_prerequisites("${RUNTIME_${_runtime}}" _newdep 1 0 "" "")
+            list(APPEND _newdeps ${_newdep})
+            list(APPEND _good_deps ${_runtime})
+        else()
+            message("Warning: ${_runtime} not found.")
+            list(APPEND _bad_deps ${_runtime})
+        endif()
+    endforeach()
+    # Try to figure out if there are new dependencies or not.
+    list(REMOVE_DUPLICATES _newdeps)
+    list(REMOVE_ITEM _newdeps ${_deps};${_good_deps};${_bad_deps};${_windlls})
+    set(_deps ${_newdeps})
+endwhile()

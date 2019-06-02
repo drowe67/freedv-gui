@@ -118,6 +118,7 @@ class TopFrame : public wxFrame
         wxRadioButton *m_rb2400a;
         wxRadioButton *m_rb2400b;
         wxRadioButton *m_rbHorusBinary;
+        wxRadioButton *m_rb2020;
         wxRadioButton *m_rbPlugIn;
 
         // Virtual event handlers, overide them in your derived class
@@ -143,6 +144,7 @@ class TopFrame : public wxFrame
         virtual void OnToolsComCfgUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnPlayFileToMicIn( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnRecFileFromRadio( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnRecFileFromModulator( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnPlayFileFromRadio( wxCommandEvent& event ) { event.Skip(); }
 
         virtual void OnHelpCheckUpdates( wxCommandEvent& event ) { event.Skip(); }

@@ -1,4 +1,5 @@
-set(WXWIDGETS_TARBALL "wxWidgets-3.0.2")
+set(WXWIDGETS_VERSION "3.0.4")
+set(WXWIDGETS_TARBALL "wxWidgets-${WXWIDGETS_VERSION}")
 
 # If we're cross-compiling then we need to set the target host manually.
 if(MINGW AND CMAKE_CROSSCOMPILING)
@@ -6,30 +7,26 @@ if(MINGW AND CMAKE_CROSSCOMPILING)
 endif()
 
 # If not cross-compiling then use the built-in makefile, otherwise use standard configure.
-if(MINGW AND NOT CMAKE_CROSSCOMPILING)
+if(MINGW AND CMAKE_CROSSCOMPILING)
+    set(CONFIGURE_COMMAND ./configure --build=${HOST} --host=${HOST} --target=${HOST} --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
+else()
 #    set(CONFIGURE_COMMAND "true")
 #    set(MAKE_COMMAND $(MAKE) -C build/msw -f makefile.gcc SHARED=0 UNICODE=1 BUILD=release PREFIX=${CMAKE_BINARY_DIR}/external/dist)
     set(CONFIGURE_COMMAND ./configure --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
-	set(MAKE_COMMAND $(MAKE))
 endif()
 
-if(MINGW AND CMAKE_CROSSCOMPILING)
-    set(CONFIGURE_COMMAND ./configure --build=${HOST} --host=${HOST} --target=${HOST} --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
-	set(MAKE_COMMAND $(MAKE))
-endif()
-
-if(NOT MINGW)
-    set(CONFIGURE_COMMAND ./configure --host=${HOST} --target=${HOST} --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
-	set(MAKE_COMMAND $(MAKE))
-endif()
+# I don't see why we need this...
+#if(NOT MINGW)    
+#    set(CONFIGURE_COMMAND ./configure --host=${HOST} --target=${HOST} --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
+#endif()
 
 include(ExternalProject)
 ExternalProject_Add(wxWidgets
-    URL http://downloads.sourceforge.net/wxwindows/${WXWIDGETS_TARBALL}.tar.bz2
+    URL https://github.com/wxWidgets/wxWidgets/releases/download/v${WXWIDGETS_VERSION}/${WXWIDGETS_TARBALL}.tar.bz2
     BUILD_IN_SOURCE 1
     INSTALL_DIR external/dist
     CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
-    BUILD_COMMAND ${MAKE_COMMAND}
+    BUILD_COMMAND $(MAKE)
     INSTALL_COMMAND $(MAKE) install
 )
 

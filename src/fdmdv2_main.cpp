@@ -129,6 +129,12 @@ bool                g_loopPlayFileFromRadio;
 int                 g_playFileFromRadioEventId;
 float               g_blink;
 
+SNDFILE            *g_sfRecFileFromModulator;
+bool                g_recFileFromModulator = false;
+int                 g_recFromModulatorSamples;
+int                 g_recFileFromModulatorEventId;
+
+
 wxWindow           *g_parent;
 
 // Click to tune rx and tx frequency offset states
@@ -136,6 +142,9 @@ float               g_RxFreqOffsetHz;
 COMP                g_RxFreqOffsetPhaseRect;
 float               g_TxFreqOffsetHz;
 COMP                g_TxFreqOffsetPhaseRect;
+
+// buffer sizes dependent upon sample rate
+int                 g_bufferSize;
 
 // experimental mutex to make sound card callbacks mutually exclusive
 // TODO: review code and see if we need this any more, as fifos should
@@ -316,6 +325,12 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 
     wxGetApp().m_serialport = new Serialport();
 
+    // Check for AVX support in the processor.  If it's not present, 2020 won't be processed
+    // fast enough
+    checkAvxSupport();
+    if(!isAvxPresent)
+        m_rb2020->Disable();
+
     tools->AppendSeparator();
     wxMenuItem* m_menuItemToolsConfigDelete;
     m_menuItemToolsConfigDelete = new wxMenuItem(tools, wxID_ANY, wxString(_("&Restore defaults")) , wxT("Delete config file/keys and restore defaults"), wxITEM_NORMAL);
@@ -427,7 +442,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     if(wxGetApp().m_show_test_frame_errors_hist)
     {
         // Add Test Frame Historgram window.  1 column for every bit, 2 bits per carrier
-        m_panelTestFrameErrorsHist = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 1.0, 1.0/(2*FDMDV_NC_MAX), 0.001, 0.1, 1.0/FDMDV_NC_MAX, 0.1, "%0.0E", 0);
+        m_panelTestFrameErrorsHist = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 1.0, 1.0/(2*MODEM_STATS_NC_MAX), 0.001, 0.1, 1.0/MODEM_STATS_NC_MAX, 0.1, "%0.0E", 0);
         m_auiNbookCtrl->AddPage(m_panelTestFrameErrorsHist, L"Test Frame Histogram", true, wxNullBitmap);
         m_panelTestFrameErrorsHist->setBarGraph(1);
         m_panelTestFrameErrorsHist->setLogY(1);
@@ -488,6 +503,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_playFileToMicInPath = pConfig->Read("/File/playFileToMicInPath",   wxT(""));
     wxGetApp().m_recFileFromRadioPath = pConfig->Read("/File/recFileFromRadioPath", wxT(""));
     wxGetApp().m_recFileFromRadioSecs = pConfig->Read("/File/recFileFromRadioSecs", 30);
+    wxGetApp().m_recFileFromModulatorPath = pConfig->Read("/File/recFileFromModulatorPath", wxT(""));
+    wxGetApp().m_recFileFromModulatorSecs = pConfig->Read("/File/recFileFromModulatorSecs", 10);
     wxGetApp().m_playFileFromRadioPath = pConfig->Read("/File/playFileFromRadioPath", wxT(""));
 
     // PTT -------------------------------------------------------------------
@@ -601,7 +618,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
         m_rb2400b->SetValue(1);
     if (mode == 7)
         m_rbHorusBinary->SetValue(1);
-        
+    if (mode == 8 && isAvxPresent)
+        m_rb2020->SetValue(1);
     pConfig->SetPath(wxT("/"));
 
 //    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
@@ -656,6 +674,9 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     g_sfPlayFileFromRadio = NULL;
     g_playFileFromRadio = false;
     g_loopPlayFileFromRadio = false;
+
+    g_sfRecFileFromModulator = NULL;
+    g_recFileFromModulator = false;
 
     // init click-tune states
 
@@ -816,6 +837,8 @@ MainFrame::~MainFrame()
         pConfig->Write(wxT("/File/playFileToMicInPath"),    wxGetApp().m_playFileToMicInPath);
         pConfig->Write(wxT("/File/recFileFromRadioPath"),   wxGetApp().m_recFileFromRadioPath);
         pConfig->Write(wxT("/File/recFileFromRadioSecs"),   wxGetApp().m_recFileFromRadioSecs);
+        pConfig->Write(wxT("/File/recFileFromModulatorPath"),   wxGetApp().m_recFileFromModulatorPath);
+        pConfig->Write(wxT("/File/recFileFromModulatorSecs"),   wxGetApp().m_recFileFromModulatorSecs);
         pConfig->Write(wxT("/File/playFileFromRadioPath"),  wxGetApp().m_playFileFromRadioPath);
 
         pConfig->Write(wxT("/Audio/snrSlow"), wxGetApp().m_snrSlow);
@@ -852,6 +875,8 @@ MainFrame::~MainFrame()
             mode = 6;
         if (m_rbHorusBinary->GetValue())
             mode = 7;
+        if (m_rb2020->GetValue())
+            mode = 8;
        pConfig->Write(wxT("/Audio/mode"), mode);
     }
 
@@ -878,6 +903,11 @@ MainFrame::~MainFrame()
     {
         sf_close(g_sfRecFile);
         g_sfRecFile = NULL;
+    }
+    if (g_sfRecFileFromModulator != NULL)
+    {
+        sf_close(g_sfRecFileFromModulator);
+        g_sfRecFileFromModulator = NULL;
     }
 #ifdef _USE_TIMER
     if(m_plotTimer.IsRunning())
@@ -947,7 +977,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             /* PSK Modes - scatter plot -------------------------------------------------------*/
             for (r=0; r<g_stats.nr; r++) {
         
-                if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600) || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700D)) {
+                if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600)
+                        || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700D)
+                        || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_2020)) {
                     m_panelScatter->add_new_samples_scatter(&g_stats.rx_symbols[r][0]);
                 }
         
@@ -957,7 +989,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         m_panelScatter->setNc(g_Nc/2); /* m_FreeDV700Combine may have changed at run time */
 
                         /* 
-                           FreeDV 700 uses diversity, so optionaly combine
+                           FreeDV 700C uses diversity, so optionaly combine
                            symbols for scatter plot, as combined symbols are
                            used for demodulation.  Note we need to use a copy
                            of the symbols, as we are not sure when the stats
@@ -1111,7 +1143,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 	m_textSync->SetLabel("Modem");
      }
     g_prev_State = g_State;
-    if (g_mode == FREEDV_MODE_700D) {
+    if ((g_mode == FREEDV_MODE_700D) || (g_mode == FREEDV_MODE_2020)){
         if (g_interleaverSyncState) {
             m_textInterleaverSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
             m_textInterleaverSync->SetLabel("Intrlvr ("+wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave)+")");
@@ -1244,7 +1276,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     if (g_mode == -1)  {
         // Horus telemetry
-        char bits[80], clockoffset[80], freqoffset[80];
+        char bits[80], freqoffset[80];
         sprintf(bits, "Bits: %d", horus_get_total_payload_bits(g_horus)); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
         sprintf(freqoffset, "FrqOff: %4.0f", g_stats.foff);
         wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
@@ -1320,15 +1352,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
                          /* calculate BERs and send to plot */
 
-                        float ber[2*FDMDV_NC_MAX];
-                        for(b=0; b<2*FDMDV_NC_MAX; b++) {
+                        float ber[2*MODEM_STATS_NC_MAX];
+                        for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
                             ber[b] = 0.0;
                         }
                         for(b=0; b<g_Nc*2; b++) {
                             ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
                         }
-                        assert(g_Nc*2 <= 2*FDMDV_NC_MAX);
-                        m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*FDMDV_NC_MAX);
+                        assert(g_Nc*2 <= 2*MODEM_STATS_NC_MAX);
+                        m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
                     }
        
                     if (/*(freedv_get_mode(g_pfreedv) == FREEDV_MODE_700B) || */(freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
@@ -1365,15 +1397,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
                         /* calculate BERs and send to plot */
 
-                        float ber[2*FDMDV_NC_MAX];
-                        for(b=0; b<2*FDMDV_NC_MAX; b++) {
+                        float ber[2*MODEM_STATS_NC_MAX];
+                        for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
                             ber[b] = 0.0;
                         }
                         for(b=0; b<hist_Nc; b++) {
                             ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
                         }
-                        assert(hist_Nc <= 2*FDMDV_NC_MAX);
-                        m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*FDMDV_NC_MAX);
+                        assert(hist_Nc <= 2*MODEM_STATS_NC_MAX);
+                        m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
                     }
  
                     m_panelTestFrameErrors->Refresh();       
@@ -2051,7 +2083,7 @@ void MainFrame::OnPlayFileToMicIn(wxCommandEvent& event)
             {
                 sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
                 sfInfo.channels   = 1;
-                sfInfo.samplerate = FS;
+                sfInfo.samplerate = freedv_get_speech_sample_rate(g_pfreedv);
             }
         }
         g_sfPlayFile = sf_open(soundFile.c_str(), SFM_READ, &sfInfo);
@@ -2201,7 +2233,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         wxString    soundFile;
         SF_INFO     sfInfo;
 
-         wxFileDialog openFileDialog(
+        wxFileDialog openFileDialog(
                                     this,
                                     wxT("Record File From Radio"),
                                     wxGetApp().m_recFileFromRadioPath,
@@ -2292,6 +2324,128 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
 
         SetStatusText(wxT("Recording File: ") + fileName + wxT(" From Radio") , 0);
         g_recFileFromRadio = true;
+    }
+
+}
+
+//-------------------------------------------------------------------------
+// OnRecFileFromModulator()
+//-------------------------------------------------------------------------
+void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
+{
+    wxUnusedVar(event);
+
+    if (g_recFileFromModulator) {
+        g_mutexProtectingCallbackData.Lock();
+        g_recFileFromModulator = false;
+        sf_close(g_sfRecFileFromModulator);
+        SetStatusText(wxT(""));
+        g_mutexProtectingCallbackData.Unlock();
+        wxMessageBox(wxT("Recording modulator output to file complete")
+                     , wxT("Recording Modulation Output"), wxOK);
+    }
+    else {
+
+        wxString    soundFile;
+        SF_INFO     sfInfo;
+
+        if (g_pfreedv == NULL) {
+            wxMessageBox(wxT("You need to press the Control - Start button before you can configure recording")
+                         , wxT("Recording Modulation Output"), wxOK);
+            return;
+        }
+
+         wxFileDialog openFileDialog(
+                                    this,
+                                    wxT("Record File From Modulator"),
+                                    wxGetApp().m_recFileFromModulatorPath,
+                                    wxEmptyString,
+                                    wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
+                                    wxT("All files (*.*)|*.*"),
+                                    wxFD_SAVE
+                                    );
+
+        // add the loop check box
+        openFileDialog.SetExtraControlCreator(&createMyExtraRecFilePanel);
+
+        if(openFileDialog.ShowModal() == wxID_CANCEL)
+        {
+            return;     // the user changed their mind...
+        }
+
+        wxString fileName, extension;
+        soundFile = openFileDialog.GetPath();
+        wxFileName::SplitPath(soundFile, &wxGetApp().m_recFileFromModulatorPath, &fileName, &extension);
+        wxLogDebug("m_recFileFromModulatorPath: %s", wxGetApp().m_recFileFromModulatorPath);
+        wxLogDebug("soundFile: %s", soundFile);
+        sfInfo.format = 0;
+
+        int sample_rate;
+        if (g_mode == -1) {
+            sample_rate = horus_get_Fs(g_horus);
+        }
+        else {
+            sample_rate = freedv_get_modem_sample_rate(g_pfreedv);
+        }
+
+        if(!extension.IsEmpty())
+        {
+            extension.LowerCase();
+            if(extension == wxT("raw"))
+            {
+                sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
+                sfInfo.channels   = 1;
+                sfInfo.samplerate = sample_rate;
+            }
+            else if(extension == wxT("wav"))
+            {
+                sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+                sfInfo.channels   = 1;
+                sfInfo.samplerate = sample_rate;
+            } else {
+                wxMessageBox(wxT("Invalid file format"), wxT("Record File From Radio"), wxOK);
+                return;
+            }
+        }
+        else {
+            wxMessageBox(wxT("Invalid file format"), wxT("Record File From Radio"), wxOK);
+            return;
+        }
+
+        // Bug: on Win32 I cant read m_recFileFromModemSecs, so have hard coded it
+#ifdef __WIN32__
+        long secs = wxGetApp().m_recFileFromModulatorSecs;
+        g_recFromModulatorSamples = sample_rate * (unsigned int)secs;
+#else
+        // work out number of samples to record
+
+        wxWindow * const ctrl = openFileDialog.GetExtraControl();
+        wxString secsString = static_cast<MyExtraRecFilePanel*>(ctrl)->getSecondsToRecord();
+        wxLogDebug("test: %s secsString: %s\n", wxT("testing 123"), secsString);
+
+        long secs;
+        if (secsString.ToLong(&secs)) {
+            wxGetApp().m_recFileFromModulatorSecs = (unsigned int)secs;
+            //printf(" secondsToRecord: %d\n",  (unsigned int)secs);
+            g_recFromModulatorSamples = sample_rate*(unsigned int)secs;
+            //printf("g_recFromRadioSamples: %d\n", g_recFromRadioSamples);
+        }
+        else {
+            wxMessageBox(wxT("Invalid number of Seconds"), wxT("Record File From Modulator"), wxOK);
+            return;
+        }
+#endif
+
+        g_sfRecFileFromModulator = sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo);
+        if(g_sfRecFileFromModulator == NULL)
+        {
+            wxString strErr = sf_strerror(NULL);
+            wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
+            return;
+        }
+
+        SetStatusText(wxT("Recording File: ") + fileName + wxT(" From Radio") , 0);
+        g_recFileFromModulator = true;
     }
 
 }
@@ -2460,7 +2614,7 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
 
                 wxT("GNU Public License V2.1\n\n")
                 wxT("Copyright (c) David Witten KD0EAG and David Rowe VK5DGR\n\n")
-                wxT("svn revision: %s\n"), FREEDV_VERSION, SVN_REVISION);
+                wxT("git revision: %s\n"), FREEDV_VERSION, GIT_HASH);
 
     wxMessageBox(msg, wxT("About"), wxOK | wxICON_INFORMATION, this);
 }
@@ -2512,12 +2666,13 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb800xa->Disable();
         m_rb2400b->Disable();
         m_rbHorusBinary->Disable();
+        m_rb2020->Disable();
         if (m_rbPlugIn != NULL)
             m_rbPlugIn->Disable();
 
         m_textSync->Enable();
         m_textInterleaverSync->Enable();
-        
+
         // determine what mode we are using
 
         if (m_rb1600->GetValue()) {
@@ -2561,6 +2716,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_textSync->Disable();
             m_textInterleaverSync->SetLabel("");
         }
+        if (m_rb2020->GetValue() && isAvxPresent) {
+            g_mode = FREEDV_MODE_2020;
+            g_Nc = 31;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
+            m_panelScatter->setNc(g_Nc);
+        }
 
         if (g_mode != -1) { 
             // init freedv states
@@ -2570,7 +2730,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_btnTogPTT->Enable();
             m_togBtnVoiceKeyer->Enable();
 
-            if (g_mode == FREEDV_MODE_700D) {
+            if ((g_mode == FREEDV_MODE_700D) || (g_mode == FREEDV_MODE_2020)) {
                 // 700D has some init time stuff so treat it special
                 struct freedv_advanced adv;
                 adv.interleave_frames = wxGetApp().m_FreeDV700Interleave;
@@ -2584,36 +2744,49 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             } else {
                 g_pfreedv = freedv_open(g_mode);
                 m_textInterleaverSync->SetLabel("");
-           }
+            }
 
-            freedv_set_verbose(g_pfreedv, g_freedv_verbose);
+            if (g_freedv_verbose)
+                freedv_set_verbose(g_pfreedv, 2);
+            else
+                freedv_set_verbose(g_pfreedv, 0);
             
             freedv_set_callback_txt(g_pfreedv, &my_put_next_rx_char, &my_get_next_tx_char, NULL);
 
             freedv_set_callback_error_pattern(g_pfreedv, my_freedv_put_error_pattern, (void*)m_panelTestFrameErrors);
             g_error_pattern_fifo = codec2_fifo_create(2*freedv_get_sz_error_pattern(g_pfreedv)+1);
-            g_error_hist = new short[FDMDV_NC_MAX*2];
-            g_error_histn = new short[FDMDV_NC_MAX*2];
+            g_error_hist = new short[MODEM_STATS_NC_MAX*2];
+            g_error_histn = new short[MODEM_STATS_NC_MAX*2];
             int i;
-            for(i=0; i<2*FDMDV_NC_MAX; i++) {
+            for(i=0; i<2*MODEM_STATS_NC_MAX; i++) {
                 g_error_hist[i] = 0;
                 g_error_histn[i] = 0;
             }
 
             assert(g_pfreedv != NULL);
         
+            // Set buffer size.
+            g_bufferSize = (int)(FRAME_DURATION * freedv_get_speech_sample_rate(g_pfreedv));
+
             // init Codec 2 LPC Post Filter (FreeDV 1600)
 
-            codec2_set_lpc_post_filter(freedv_get_codec2(g_pfreedv),
-                                       wxGetApp().m_codec2LPCPostFilterEnable,
-                                       wxGetApp().m_codec2LPCPostFilterBassBoost,
-                                       wxGetApp().m_codec2LPCPostFilterBeta,
-                                       wxGetApp().m_codec2LPCPostFilterGamma);
-
+            struct CODEC2 *c2 = freedv_get_codec2(g_pfreedv);
+            if (c2 != NULL) {
+                codec2_set_lpc_post_filter(c2,
+                                           wxGetApp().m_codec2LPCPostFilterEnable,
+                                           wxGetApp().m_codec2LPCPostFilterBassBoost,
+                                           wxGetApp().m_codec2LPCPostFilterBeta,
+                                           wxGetApp().m_codec2LPCPostFilterGamma);
+            }
+            
             // Init Speex pre-processor states
-            // by inspecting Speex source it seems that only denoiser is on be default
+            // by inspecting Speex source it seems that only denoiser is on by default
 
-            g_speex_st = speex_preprocess_state_init(freedv_get_n_speech_samples(g_pfreedv), FS); 
+            fprintf(stderr, "freedv_get_n_speech_samples(g_pfreedv): %d\n", freedv_get_n_speech_samples(g_pfreedv));
+            fprintf(stderr, "freedv_get_speech_sample_rate(g_pfreedv): %d\n", freedv_get_speech_sample_rate(g_pfreedv));
+            
+            if (wxGetApp().m_speexpp_enable)
+                g_speex_st = speex_preprocess_state_init(freedv_get_n_speech_samples(g_pfreedv), freedv_get_speech_sample_rate(g_pfreedv));
 
             // adjust spectrum and waterfall freq scaling base on mode
 
@@ -2737,7 +2910,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             delete[] g_error_histn;
             codec2_fifo_destroy(g_error_pattern_fifo);
             freedv_close(g_pfreedv);
-            speex_preprocess_state_destroy(g_speex_st);
+            if (wxGetApp().m_speexpp_enable)
+                speex_preprocess_state_destroy(g_speex_st);
         }
 
         m_newMicInFilter = m_newSpkOutFilter = true;
@@ -2756,6 +2930,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb800xa->Enable();
         m_rb2400b->Enable();
         m_rbHorusBinary->Enable();
+        if(isAvxPresent)
+            m_rb2020->Enable();
         if (m_rbPlugIn != NULL)
             m_rbPlugIn->Enable();
            
@@ -3052,7 +3228,7 @@ void MainFrame::startRxStream()
         int m_fifoSize_ms = wxGetApp().m_fifoSize_ms;        
         int soundCard1FifoSizeSamples = m_fifoSize_ms*g_soundCard1SampleRate/1000;
         int soundCard2FifoSizeSamples = m_fifoSize_ms*g_soundCard2SampleRate/1000;
-        
+
         g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1FifoSizeSamples);
         g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1FifoSizeSamples);
         g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
@@ -3088,9 +3264,9 @@ void MainFrame::startRxStream()
             rxFifoSizeSamples = freedv_get_n_max_modem_samples(g_pfreedv);
         }
 
-        // add an extra 40ms to gibve a bit of headroom for processing loop adding samples
+        // add an extra 40ms to give a bit of headroom for processing loop adding samples
         // which operates on 20ms buffers
-        
+
         rxFifoSizeSamples += 0.04*modem_samplerate;
 
         g_rxUserdata->rxinfifo = codec2_fifo_create(rxFifoSizeSamples);
@@ -3411,7 +3587,7 @@ void MainFrame::processTxtEvent(char event[]) {
 #endif
 
 
-#define SBQ_MAX_ARGS 4
+#define SBQ_MAX_ARGS 5
 
 void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q)
 {
@@ -3425,8 +3601,6 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
            (strcmp(filterType, "equalizer") == 0));
 
     for(i=0; i<SBQ_MAX_ARGS; i++) {
-        arg[i] = &argstorage[i][0];
-        arg[i] = &argstorage[i][0];
         arg[i] = &argstorage[i][0];
     }
 
@@ -3446,7 +3620,7 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
     }
 
     assert(argc <= SBQ_MAX_ARGS);
-
+    // Note - the argc count doesn't include the command!
     sbq = sox_biquad_create(argc-1, (const char **)arg);
     assert(sbq != NULL);
 
@@ -3608,7 +3782,7 @@ void txRxProcessing()
     // rate, so we get the right number of samples for the output
     // decoded audio
 
-    int nsam = g_soundCard1SampleRate * (float)N8/FS;
+    int nsam = g_soundCard1SampleRate * (float)g_bufferSize/freedv_get_speech_sample_rate(g_pfreedv);
     assert(nsam <= N48);
     while ((codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0) && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
 
@@ -3736,22 +3910,22 @@ void txRxProcessing()
             // this will typically be decoded output speech, and is
             // (currently at least) fixed at a sample rate of 8 kHz
             
-            memset(outfreedv, 0, sizeof(short)*N8);
+            memset(outfreedv, 0, sizeof(short)*g_bufferSize);
             //fprintf(stderr, "rxoutfifo free: %d used: %d\n", codec2_fifo_free(cbData->rxoutfifo), codec2_fifo_used(cbData->rxoutfifo));
-            codec2_fifo_read(cbData->rxoutfifo, outfreedv, N8);
+            codec2_fifo_read(cbData->rxoutfifo, outfreedv, g_bufferSize);
         }
 
         // Optional Spk Out EQ Filtering, need mutex as filter can change at run time from another thread
 
         g_mutexProtectingCallbackData.Lock();
         if (cbData->spkOutEQEnable) {
-            sox_biquad_filter(cbData->sbqSpkOutBass,   outfreedv, outfreedv, N8);
-            sox_biquad_filter(cbData->sbqSpkOutTreble, outfreedv, outfreedv, N8);
-            sox_biquad_filter(cbData->sbqSpkOutMid,    outfreedv, outfreedv, N8);
+            sox_biquad_filter(cbData->sbqSpkOutBass,   outfreedv, outfreedv, g_bufferSize);
+            sox_biquad_filter(cbData->sbqSpkOutTreble, outfreedv, outfreedv, g_bufferSize);
+            sox_biquad_filter(cbData->sbqSpkOutMid,    outfreedv, outfreedv, g_bufferSize);
         }
         g_mutexProtectingCallbackData.Unlock();
 
-        resample_for_plot(g_plotSpeechOutFifo, outfreedv, N8, FS);
+        resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_bufferSize, freedv_get_speech_sample_rate(g_pfreedv));
 
         // resample to output sound card rate
         
@@ -3764,16 +3938,16 @@ void txRxProcessing()
                 codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
             }
             else {
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, FS, N48, N8);
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_get_speech_sample_rate(g_pfreedv), N48, g_bufferSize);
                 codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
             }
         }
         else {
-            nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, FS, N48, N8);
+            nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedv_get_speech_sample_rate(g_pfreedv), N48, g_bufferSize);
             codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
         }
     }
- 
+
     //
     //  TX side processing --------------------------------------------
     //
@@ -3781,33 +3955,31 @@ void txRxProcessing()
     if ((g_mode != -1) && ((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
         int ret;
 
-	if (g_dump_fifo_state) {
-	  // just dump outfifo1 state atm as that is causing problems with 700D
-	  // If this drops to zero we have a problem as we will run out of output samples
-	  // to send to the sound driver via PortAudio
-	  fprintf(stderr, "%6d", codec2_fifo_used(cbData->outfifo1));
-	}
-
         // This while loop locks the modulator to the sample rate of
         // sound card 1.  We want to make sure that modulator samples
         // are uninterrupted by differences in sample rate between
         // this sound card and sound card 2.
 
-        // Run this while loop as soon as we have enough room for one
-        // frame of modem samples.  Aim is to keep outfifo1 nice and
-        // full so we don't have any gaps ix tx signal.
+        // Run code inside this while loop as soon as we have enough
+        // room for one frame of modem samples.  Aim is to keep
+        // outfifo1 nice and full so we don't have any gaps ix tx
+        // signal.
 
         unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * freedv_get_n_nom_modem_samples(g_pfreedv)/freedv_samplerate;
+        
+ 	if (g_dump_fifo_state) {
+	  // If this drops to zero we have a problem as we will run out of output samples
+	  // to send to the sound driver via PortAudio
+	  fprintf(stderr, "outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d\n",
+                  codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
+	}
 
+        int nsam_in_48 = g_soundCard2SampleRate * freedv_get_n_speech_samples(g_pfreedv)/freedv_get_speech_sample_rate(g_pfreedv);
+        assert(nsam_in_48 < 10*N48);
         while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {
 
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
-            // The FreeDV input sample rate for speech samples is
-            // currently fixed at 8 kHz.
-            
-            int nsam_in_48 = g_soundCard2SampleRate * freedv_get_n_speech_samples(g_pfreedv)/FS;
-            assert(nsam_in_48 < 10*N48);
 
             // infifo2 is written to by another sound card so it may
             // over or underflow, but we don't really care.  It will
@@ -3816,14 +3988,12 @@ void txRxProcessing()
             // again in the decoded audio at the other end.
 
             // zero speech input just in case infifo2 underflows
-
             memset(insound_card, 0, nsam_in_48*sizeof(short));
             codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
 
-            nout = resample(cbData->insrc2, infreedv, insound_card, FS, g_soundCard2SampleRate, 10*N8, nsam_in_48);
+            nout = resample(cbData->insrc2, infreedv, insound_card, freedv_get_speech_sample_rate(g_pfreedv), g_soundCard2SampleRate, 10*g_bufferSize, nsam_in_48);
 
             // optionally use file for mic input signal
-
             if (g_playFileToMicIn && (g_sfPlayFile != NULL)) {
                 int n = sf_read_short(g_sfPlayFile, infreedv, nout);
                 //fprintf(stderr, "n: %d nout: %d\n", n, nout);
@@ -3854,7 +4024,7 @@ void txRxProcessing()
             }
             g_mutexProtectingCallbackData.Unlock();
 
-            resample_for_plot(g_plotSpeechInFifo, infreedv, nout, FS);
+            resample_for_plot(g_plotSpeechInFifo, infreedv, nout, freedv_get_speech_sample_rate(g_pfreedv));
 
             nfreedv = freedv_get_n_nom_modem_samples(g_pfreedv);
 
@@ -3894,11 +4064,32 @@ void txRxProcessing()
                 }
             }
 
+            // Save modulated output file if requested
+            if (g_recFileFromModulator && (g_sfRecFileFromModulator != NULL)) {
+                if (g_recFromModulatorSamples < nfreedv) {
+                    sf_write_short(g_sfRecFileFromModulator, outfreedv, g_recFromModulatorSamples);  // try infreedv to bypass codec and modem, was outfreedv
+                     wxCommandEvent event( wxEVT_COMMAND_MENU_SELECTED, g_recFileFromModulatorEventId );
+                    // call stop/start record menu item, should be thread safe
+                    g_parent->GetEventHandler()->AddPendingEvent( event );
+                    g_recFromModulatorSamples = 0;
+                    g_recFileFromModulator = false;
+                    sf_close(g_sfRecFileFromModulator);
+                    wxPrintf("write mod output to file complete\n", g_recFromModulatorSamples);  // consider a popup
+                }
+                else {
+                    sf_write_short(g_sfRecFileFromModulator, outfreedv, nfreedv);
+                    g_recFromModulatorSamples -= nfreedv;
+                }
+            }
+
             // output one frame of modem signal
 
             nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, 10*N48, nfreedv);
+            if (g_dump_fifo_state) {
+                fprintf(stderr, "  nout: %d\n", nout);
+            }
             ret = codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
-
+            // should never fire as we check there is enough room before entering while loop
             assert(ret != -1);
         }
     }
@@ -3931,10 +4122,10 @@ void per_frame_rx_processing(
 
         int   max_nin = horus_get_max_demod_in(g_horus);
         int   max_ascii_out = horus_get_max_ascii_out_len(g_horus);
-        int   max_nout = max_nin*FS/horus_get_Fs(g_horus);
-        short input_buf[max_nin], output_buf[max_nout];
+        //int   max_nout = max_nin*FS/horus_get_Fs(g_horus);
+        short input_buf[max_nin];
         char  ascii_out[max_ascii_out];
-        int   nin, nout;
+        int   nin;
 
         nin = horus_nin(g_horus);
         while (codec2_fifo_read(input_fifo, input_buf, nin) == 0) {
@@ -4235,6 +4426,7 @@ void fdmdv2_clickTune(float freq) {
         g_TxFreqOffsetHz = freq - FDMDV_FCENTRE;
         g_RxFreqOffsetHz = FDMDV_FCENTRE - freq;
     }
+    fprintf(stderr, "g_TxFreqOffsetHz: %f g_RxFreqOffsetHz: %f\n", g_TxFreqOffsetHz, g_RxFreqOffsetHz);
 }
 
 //----------------------------------------------------------------
@@ -4277,6 +4469,54 @@ void MainFrame::CloseSerialPort(void)
     }
 }
 
+//
+// checkAvxSupport
+//
+// Tests the underlying platform for AVX support.  2020 needs AVX support to run
+// in real-time, and old processors do not offer AVX support
+//
+void __cpuid(int* cpuinfo, int info)
+{
+    __asm__ __volatile__(
+        "xchg %%ebx, %%edi;"
+        "cpuid;"
+        "xchg %%ebx, %%edi;"
+        :"=a" (cpuinfo[0]), "=D" (cpuinfo[1]), "=c" (cpuinfo[2]), "=d" (cpuinfo[3])
+        :"0" (info)
+    );
+}
+
+// These methods are defined for Windows but must be created otherwise
+unsigned long long __xgetbv(unsigned int index)
+{
+    unsigned int eax, edx;
+    __asm__ __volatile__(
+        "xgetbv;"
+        : "=a" (eax), "=d"(edx)
+        : "c" (index)
+    );
+    return ((unsigned long long)edx << 32) | eax;
+}
+
+void MainFrame::checkAvxSupport(void)
+{
+
+    int cpuinfo[4];
+    __cpuid(cpuinfo, 1);
+
+    bool avxSupported = false;
+
+    avxSupported = cpuinfo[2] & (1 << 28) || false;
+    bool osxsaveSupported = cpuinfo[2] & (1 << 27) || false;
+    if (osxsaveSupported && avxSupported)
+    {
+        // _XCR_XFEATURE_ENABLED_MASK = 0
+        unsigned long long xcrFeatureMask = __xgetbv(0);
+        avxSupported = (xcrFeatureMask & 0x6) == 0x6;
+    }
+
+    isAvxPresent = avxSupported;
+}
 
 #ifdef __UDP_SUPPORT__
 
@@ -4485,7 +4725,6 @@ void UDPInit(void) {
         fprintf(stderr, "Server listening at %s:%u \n", (const char*)addrReal.IPAddress().c_str(), addrReal.Service());
     }
 }
-
 
 void UDPSend(int port, char *buf, unsigned int n) {
     fprintf(stderr, "UDPSend buf: %s n: %d\n", buf, n);

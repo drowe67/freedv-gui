@@ -23,9 +23,7 @@
 #define __FDMDV2_MAIN__
 
 #include "version.h"
-#ifndef _NO_AUTOTOOLS_
 #include "../config.h"
-#endif
 #include <wx/wx.h>
 
 #include <wx/tglbtn.h>
@@ -62,6 +60,11 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <dlfcn.h>
+#endif
+
+#ifdef _MSC_VER
+// used for AVX checking
+#include <intrin.h>
 #endif
 
 #include "codec2.h"
@@ -206,7 +209,9 @@ class MainApp : public wxApp
 
         wxString            m_playFileToMicInPath;
         wxString            m_recFileFromRadioPath;
+        wxString            m_recFileFromModulatorPath;
         unsigned int        m_recFileFromRadioSecs;
+        unsigned int        m_recFileFromModulatorSecs;
         wxString            m_playFileFromRadioPath;
 
         // Options dialog
@@ -553,6 +558,7 @@ class MainFrame : public TopFrame
         void OnPlayFileToMicIn( wxCommandEvent& event );
         void StopPlayFileToMicIn(void);
         void OnRecFileFromRadio( wxCommandEvent& event );
+        void OnRecFileFromModulator( wxCommandEvent& event);
         void OnPlayFileFromRadio( wxCommandEvent& event );
 
         void OnHelpCheckUpdates( wxCommandEvent& event );
@@ -626,6 +632,9 @@ class MainFrame : public TopFrame
         int        vk_rx_pause;
         int        vk_repeats, vk_repeat_counter;
         float      vk_rx_time;
+
+        void       checkAvxSupport();
+        bool       isAvxPresent;
 };
 
 void txRxProcessing();
