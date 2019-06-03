@@ -229,6 +229,17 @@ for another program?
 4. Contact the digital voice mailing list.  Be specific about your
 hardware, what you have tried, and the exact nature of the problem.
 
+### FreeDV 2020 mode is greyed out
+
+You must have a modern CPU with AVX support to run FreeDV 2020.  A
+Microsoft utlity called **coreinfo** can be used to determine if your
+CPU supports AVX.
+
+### I installed a new version and FreeDV stopped working
+
+You may need to clean out the previous confirguration.  Try
+Tools-Restore Defaults.
+
 ## Voice Keyer 
 
 Voice Keyer Button on Front Page, and Options-PTT dialog.
