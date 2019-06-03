@@ -57,36 +57,31 @@ Enable Freetel specific packages not currently in Fedora proper:
     mingw{32,64}-portaudio mingw{32,64}-libsndfile mingw{32,64}-libsamplerate.noarch
 ```
 
-Bootstrap codec2 and LPCNet:
-This assumes all git checkouts are from your home directory.
+Clone freedv-gui:
 ```
-  $ git clone https://github.com/drowe67/codec2.git
-  $ cd codec2 && mkdir build_win && cd build_win
-  $ mingw64-cmake ../
-  $ make
   $ cd
-  $ git clone https://github.com/drowe67/LPCNet.git
-  $ cd LPCNet && mkdir build_win && cd build_win
-  $ mingw64-cmake ../ -DCODEC2_BUILD_DIR=~/codec2/build_win
-  $ make
-  $ cd ~/codec2/build_win
-  $ mingw64-cmake ../ -DLPCNET_BUILD_DIR=~/LPCNet/build_win
-  $ make
+  $ git clone https://github.com/drowe67/freedv-gui.git
 ```
 
 Building FreeDV for 64 Bit windows:
 ```
-  $ cd
-  $ git clone https://github.com/drowe67/freedv-gui.git
-  $ cd freedv-gui && mkdir build_wins && cd build_win
-  $ mingw64-cmake ../ -DCODEC2_BUILD_DIR=~/codec2/build_win -D LPCNET_BUILD_DIR=~/LPCNet/build_win
-  $ make
+  $ cd ~/freedv-gui
+  $ ./build_windows.sh
+  $ cd build_win64
+  $ make package
+```
+
+**OR** Building FreeDV for 32 Bit windows:
+```
+  $ cd ~/freedv-gui
+  $ CMAKE=mingw32-cmake ./build_windows.sh
+  $ cd build_win32
   $ make package
 ```
 
 ### Testing Windows Build
 
-Conveniently, it is possible to run Windows executable using Wine on Fedora:
+Conveniently, it is possible to run Windows executables using Wine on Fedora:
 
 Testing LPCNet:
 ```
