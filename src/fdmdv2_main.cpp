@@ -3876,7 +3876,10 @@ void txRxProcessing()
         }
         g_mutexProtectingCallbackData.Unlock();
 
-        resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, freedv_get_speech_sample_rate(g_pfreedv));
+        if (g_mode == -1)
+            resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, freedv_samplerate);            
+        else
+            resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, freedv_get_speech_sample_rate(g_pfreedv));
 
         // resample to output sound card rate
         
