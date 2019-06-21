@@ -8,7 +8,6 @@ cross compiling support).
 # Further Reading
 
   * http://freedv.org - introduction, documentation, downloads
-  * RELEASE_NOTES.txt - changes made to each version
   * USER_MANUAL.txt   - FreeDV GUI Manual
 
 # Building and installing on Ubuntu Linux (16-18)

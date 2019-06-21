@@ -240,6 +240,7 @@ CPU supports AVX.
 You may need to clean out the previous confirguration.  Try
 Tools-Restore Defaults.
 
+
 ## Voice Keyer 
 
 Voice Keyer Button on Front Page, and Options-PTT dialog.
@@ -357,12 +358,13 @@ You may encounter the following limitations with FreeDV 2020:
 
 1. Some voices may sound very rough.  In early testing
 about 90% of speakers tested work well.
-1. Like 700D, you must tune within -/+ 20Hz for FreeDV 2020 to sync
+1. Like 700D, you must tune within -/+ 20Hz for FreeDV 2020 to sync.
 1. With significant fading, sync may take a few seconds.
 1. There is a 2 second end-end latency.  You are welcome to try tuning
    this (Tools - Options - FIFO size, also see Sound Card Debug
    section below).
-1. It requires a modern (post 2010) Intel CPU with AVX support.
+1. It requires a modern (post 2010) Intel CPU with AVX support.  If you 
+   don't have AVX the FreeDV 2020 mode button will be grayed out. 
 1. The audio in **Analog** mode is choppy.
 
 ### Horus Binary Mode
