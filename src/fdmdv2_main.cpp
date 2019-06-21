@@ -94,11 +94,6 @@ int                 g_soundCard2InDeviceNum;
 int                 g_soundCard2OutDeviceNum;
 int                 g_soundCard2SampleRate;
 
-std::string                 g_soundCard1InDeviceName;
-std::string                 g_soundCard1OutDeviceName;
-std::string                 g_soundCard2InDeviceName;
-std::string                 g_soundCard2OutDeviceName;
-
 // PortAudio over/underflow counters
 
 int                 g_infifo1_full;
@@ -144,7 +139,8 @@ float               g_TxFreqOffsetHz;
 COMP                g_TxFreqOffsetPhaseRect;
 
 // buffer sizes dependent upon sample rate
-int                 g_bufferSize;
+int                 g_modemInbufferSize;
+int                 g_speechOutbufferSize;
 
 // experimental mutex to make sound card callbacks mutually exclusive
 // TODO: review code and see if we need this any more, as fifos should
@@ -276,11 +272,6 @@ bool MainApp::OnInit()
     frame->Layout();
     frame->Show();
     g_parent =frame;
-
-    AudioOptsDialog *dlg = new AudioOptsDialog(NULL);
-    dlg->ExchangeData(EXCHANGE_DATA_IN);
-    delete dlg;
-
 
     return true;
 }
@@ -451,54 +442,20 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_framesPerBuffer = pConfig->Read(wxT("/Audio/framesPerBuffer"), (int)PA_FPB);
     wxGetApp().m_fifoSize_ms = pConfig->Read(wxT("/Audio/fifoSize_ms"), (int)FIFO_SIZE);
 
-    // Legacy FreeDV would use sound card device numbers in the config file, but these numbers
-    // are not static within the OS.  Newer FreeDV uses device names instead.
-    g_soundCard1InDeviceNum  = pConfig->Read(wxT("/Audio/soundCard1InDeviceNum"),  paNoDevice);
-    g_soundCard1OutDeviceNum = pConfig->Read(wxT("/Audio/soundCard1OutDeviceNum"), paNoDevice);
-    g_soundCard1SampleRate   = pConfig->Read(wxT("/Audio/soundCard1SampleRate"),           -1);
+    g_soundCard1InDeviceNum  = pConfig->Read(wxT("/Audio/soundCard1InDeviceNum"),         -1);
+    g_soundCard1OutDeviceNum = pConfig->Read(wxT("/Audio/soundCard1OutDeviceNum"),        -1);
+    g_soundCard1SampleRate   = pConfig->Read(wxT("/Audio/soundCard1SampleRate"),          -1);
 
-    g_soundCard2InDeviceNum  = pConfig->Read(wxT("/Audio/soundCard2InDeviceNum"),  paNoDevice);
-    g_soundCard2OutDeviceNum = pConfig->Read(wxT("/Audio/soundCard2OutDeviceNum"), paNoDevice);
-    g_soundCard2SampleRate   = pConfig->Read(wxT("/Audio/soundCard2SampleRate"),           -1);
-
-    g_soundCard1InDeviceName  = pConfig->Read(wxT("/Audio/soundCard1InDeviceName"),  wxT(""));
-    g_soundCard1OutDeviceName = pConfig->Read(wxT("/Audio/soundCard1OutDeviceName"), wxT(""));
-
-    g_soundCard2InDeviceName  = pConfig->Read(wxT("/Audio/soundCard2InDeviceName"),  wxT(""));
-    g_soundCard2OutDeviceName = pConfig->Read(wxT("/Audio/soundCard2OutDeviceName"), wxT(""));
-
-    // Temporarily initialize port audio so we can attempt to get device names based on
-    // previous device numbers.  Temp redirect stderr so ALSA lib doesn't clutter term output
-
-    freopen("/dev/null", "w", stderr);
-
-    if(Pa_Initialize())
-    {
-        wxMessageBox(wxT("Port Audio failed to initialize"), wxT("Pa_Initialize"), wxOK);
-    }
-    freopen("/dev/tty", "w", stderr);
-
-    // In the event the user's config file uses legacy device numbers and not strings, use
-    // device numbers if they, and not the strings, are available.  Save names instead later.
-    if ((g_soundCard1InDeviceNum != -1) && (g_soundCard1InDeviceName == ""))
-        g_soundCard1InDeviceName = PortAudioWrap::getDeviceNameStr(g_soundCard1InDeviceNum);
-
-    if ((g_soundCard1OutDeviceNum != -1) && (g_soundCard1OutDeviceName == ""))
-        g_soundCard1OutDeviceName = PortAudioWrap::getDeviceNameStr(g_soundCard1OutDeviceNum);
-
-    if ((g_soundCard2InDeviceNum != -1) && (g_soundCard2InDeviceName == ""))
-        g_soundCard2InDeviceName = PortAudioWrap::getDeviceNameStr(g_soundCard2InDeviceNum);
-
-    if ((g_soundCard2OutDeviceNum != -1) && (g_soundCard2OutDeviceName == ""))
-        g_soundCard2OutDeviceName = PortAudioWrap::getDeviceNameStr(g_soundCard2OutDeviceNum);
+    g_soundCard2InDeviceNum  = pConfig->Read(wxT("/Audio/soundCard2InDeviceNum"),         -1);
+    g_soundCard2OutDeviceNum = pConfig->Read(wxT("/Audio/soundCard2OutDeviceNum"),        -1);
+    g_soundCard2SampleRate   = pConfig->Read(wxT("/Audio/soundCard2SampleRate"),          -1);
 
     g_nSoundCards = 0;
-    if ((g_soundCard1InDeviceName != "") && (g_soundCard1OutDeviceName != "")) {
+    if ((g_soundCard1InDeviceNum > -1) && (g_soundCard1OutDeviceNum > -1)) {
         g_nSoundCards = 1;
-        if ((g_soundCard2InDeviceName != "") && (g_soundCard2OutDeviceName != ""))
+        if ((g_soundCard2InDeviceNum > -1) && (g_soundCard2OutDeviceNum > -1))
             g_nSoundCards = 2;
     }
-    Pa_Terminate();
 
     wxGetApp().m_playFileToMicInPath = pConfig->Read("/File/playFileToMicInPath",   wxT(""));
     wxGetApp().m_recFileFromRadioPath = pConfig->Read("/File/recFileFromRadioPath", wxT(""));
@@ -744,7 +701,6 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_txRxThreadHighPriority = true;
     g_dump_timing = g_dump_fifo_state = 0;
     
-
     UDPInit();
 }
 
@@ -813,12 +769,12 @@ MainFrame::~MainFrame()
         pConfig->Write(wxT("/Audio/framesPerBuffer"),       wxGetApp().m_framesPerBuffer);
         pConfig->Write(wxT("/Audio/fifoSize_ms"),              wxGetApp().m_fifoSize_ms);
 
-        pConfig->Write(wxT("/Audio/soundCard1InDeviceName"),   wxString(g_soundCard1InDeviceName));
-        pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"),  wxString(g_soundCard1OutDeviceName));
+        pConfig->Write(wxT("/Audio/soundCard1InDeviceNum"),   g_soundCard1InDeviceNum);
+        pConfig->Write(wxT("/Audio/soundCard1OutDeviceNum"),  g_soundCard1OutDeviceNum);
         pConfig->Write(wxT("/Audio/soundCard1SampleRate"),    g_soundCard1SampleRate );
 
-        pConfig->Write(wxT("/Audio/soundCard2InDeviceName"),   wxString(g_soundCard2InDeviceName));
-        pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"),  wxString(g_soundCard2OutDeviceName));
+        pConfig->Write(wxT("/Audio/soundCard2InDeviceNum"),   g_soundCard2InDeviceNum);
+        pConfig->Write(wxT("/Audio/soundCard2OutDeviceNum"),  g_soundCard2OutDeviceNum);
         pConfig->Write(wxT("/Audio/soundCard2SampleRate"),    g_soundCard2SampleRate );
 
         pConfig->Write(wxT("/VoiceKeyer/WaveFilePath"), wxGetApp().m_txtVoiceKeyerWaveFilePath);
@@ -2654,6 +2610,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         //
         // Start Running -------------------------------------------------
         //
+
         // modify some button states when running
 
         m_togBtnOnOff->SetLabel(wxT("Stop"));
@@ -2765,8 +2722,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
             assert(g_pfreedv != NULL);
         
-            // Set buffer size.
-            g_bufferSize = (int)(FRAME_DURATION * freedv_get_speech_sample_rate(g_pfreedv));
+            // Set processing buffer sizes, these are FRAME_DURATION (20ms) chunks of modem and speech that are a useful size for the
+            // various operations we do before and after passing to the freedv_api layer.
+            g_modemInbufferSize = (int)(FRAME_DURATION * freedv_get_modem_sample_rate(g_pfreedv));
+            g_speechOutbufferSize = (int)(FRAME_DURATION * freedv_get_speech_sample_rate(g_pfreedv));
 
             // init Codec 2 LPC Post Filter (FreeDV 1600)
 
@@ -3074,12 +3033,11 @@ void MainFrame::startRxStream()
         }
 
         m_rxInPa = new PortAudioWrap();
-
-        if(g_soundCard1InDeviceName != g_soundCard1OutDeviceName)
+        if(g_soundCard1InDeviceNum != g_soundCard1OutDeviceNum)
             two_rx=true;
-        if(g_soundCard2InDeviceName != g_soundCard2OutDeviceName)
+        if(g_soundCard2InDeviceNum != g_soundCard2OutDeviceNum)
             two_tx=true;
-
+        
         //fprintf(stderr, "two_rx: %d two_tx: %d\n", two_rx, two_tx);
         if(two_rx)
             m_rxOutPa = new PortAudioWrap();
@@ -3097,26 +3055,25 @@ void MainFrame::startRxStream()
 
         // Init Sound card 1 ----------------------------------------------
         // sanity check on sound card device numbers
-        if( !PortAudioWrap::isSoundCardNameValid(g_soundCard1InDeviceName)
-                || !PortAudioWrap::isSoundCardNameValid(g_soundCard1OutDeviceName)) {
+
+        if ((m_rxInPa->getDeviceCount() <= g_soundCard1InDeviceNum) ||
+            (m_rxOutPa->getDeviceCount() <= g_soundCard1OutDeviceNum)) {
             wxMessageBox(wxT("Sound Card 1 not present"), wxT("Error"), wxOK);
             delete m_rxInPa;
             if(two_rx)
-                delete m_rxOutPa;
+				delete m_rxOutPa;
             m_RxRunning = false;
             return;
-
         }
 
-
         // work out how many input channels this device supports.
-        PaDeviceIndex soundCard1InDeviceNum = PortAudioWrap::getDeviceIndex(g_soundCard1InDeviceName);
-        deviceInfo1 = Pa_GetDeviceInfo(soundCard1InDeviceNum);
+
+        deviceInfo1 = Pa_GetDeviceInfo(g_soundCard1InDeviceNum);
         if (deviceInfo1 == NULL) {
             wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card 1"), wxT("Error"), wxOK);
             delete m_rxInPa;
             if(two_rx)
-                delete m_rxOutPa;
+				delete m_rxOutPa;
             m_RxRunning = false;
             return;
         }
@@ -3125,17 +3082,14 @@ void MainFrame::startRxStream()
         else
             inputChannels1 = 2;
 
-        PaDeviceIndex soundCard1OutDeviceNum = PortAudioWrap::getDeviceIndex(g_soundCard1OutDeviceName);
-
         if(two_rx) {
-            initPortAudioDevice(m_rxInPa, soundCard1InDeviceNum, paNoDevice, 1,
+            initPortAudioDevice(m_rxInPa, g_soundCard1InDeviceNum, paNoDevice, 1,
                             g_soundCard1SampleRate, inputChannels1);
-
-            initPortAudioDevice(m_rxOutPa, paNoDevice, soundCard1OutDeviceNum, 1,
+            initPortAudioDevice(m_rxOutPa, paNoDevice, g_soundCard1OutDeviceNum, 1,
                             g_soundCard1SampleRate, inputChannels1);
 		}
         else
-            initPortAudioDevice(m_rxInPa, soundCard1InDeviceNum, soundCard1OutDeviceNum, 1,
+            initPortAudioDevice(m_rxInPa, g_soundCard1InDeviceNum, g_soundCard1OutDeviceNum, 1,
                             g_soundCard1SampleRate, inputChannels1);
 
         // Init Sound Card 2 ------------------------------------------------
@@ -3151,11 +3105,11 @@ void MainFrame::startRxStream()
             // sanity check on sound card device numbers
 
             //printf("m_txInPa->getDeviceCount(): %d\n", m_txInPa->getDeviceCount());
-            //wxPrintf("g_soundCard2InDeviceName: %s\n", g_soundCard2InDeviceName);
-            //wxPrintf("g_soundCard2OutDeviceName: %s\n", g_soundCard2OutDeviceName);
+            //printf("g_soundCard2InDeviceNum: %d\n", g_soundCard2InDeviceNum);
+            //printf("g_soundCard2OutDeviceNum: %d\n", g_soundCard2OutDeviceNum);
 
-            if( !PortAudioWrap::isSoundCardNameValid(g_soundCard2InDeviceName)
-                    || !PortAudioWrap::isSoundCardNameValid(g_soundCard2OutDeviceName)) {
+            if ((m_txInPa->getDeviceCount() <= g_soundCard2InDeviceNum) ||
+                (m_txOutPa->getDeviceCount() <= g_soundCard2OutDeviceNum)) {
                 wxMessageBox(wxT("Sound Card 2 not present"), wxT("Error"), wxOK);
                 delete m_rxInPa;
                 if(two_rx)
@@ -3167,16 +3121,15 @@ void MainFrame::startRxStream()
                 return;
             }
 
-            PaDeviceIndex soundCard2InDeviceNum = PortAudioWrap::getDeviceIndex(g_soundCard2InDeviceName);
-            deviceInfo2 = Pa_GetDeviceInfo(soundCard2InDeviceNum);
+            deviceInfo2 = Pa_GetDeviceInfo(g_soundCard2InDeviceNum);
             if (deviceInfo2 == NULL) {
                 wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card 1"), wxT("Error"), wxOK);
                 delete m_rxInPa;
                 if(two_rx)
-                    delete m_rxOutPa;
+					delete m_rxOutPa;
                 delete m_txInPa;
                 if(two_tx)
-                    delete m_txOutPa;
+					delete m_txOutPa;
                 m_RxRunning = false;
                 return;
             }
@@ -3185,17 +3138,15 @@ void MainFrame::startRxStream()
             else
                 inputChannels2 = 2;
 
-            PaDeviceIndex soundCard2OutDeviceNum = PortAudioWrap::getDeviceIndex(g_soundCard2OutDeviceName);
-
             if(two_tx) {
-                initPortAudioDevice(m_txInPa, soundCard2InDeviceNum, paNoDevice, 2,
-                    g_soundCard2SampleRate, inputChannels2);
-                initPortAudioDevice(m_txOutPa, paNoDevice, soundCard2OutDeviceNum, 2,
-                    g_soundCard2SampleRate, inputChannels2);
-            }
-            else
-                initPortAudioDevice(m_txInPa, soundCard2InDeviceNum, soundCard2OutDeviceNum, 2,
-                    g_soundCard2SampleRate, inputChannels2);
+				initPortAudioDevice(m_txInPa, g_soundCard2InDeviceNum, paNoDevice, 2,
+                                g_soundCard2SampleRate, inputChannels2);
+				initPortAudioDevice(m_txOutPa, paNoDevice, g_soundCard2OutDeviceNum, 2,
+                                g_soundCard2SampleRate, inputChannels2);
+			}
+			else
+				initPortAudioDevice(m_txInPa, g_soundCard2InDeviceNum, g_soundCard2OutDeviceNum, 2,
+                                g_soundCard2SampleRate, inputChannels2);
         }
 
         // Init call back data structure ----------------------------------------------
@@ -3781,9 +3732,9 @@ void txRxProcessing()
     // (20ms), number of samples is scaled for the sound card sample
     // rate, so we get the right number of samples for the output
     // decoded audio
-
-    int nsam = g_soundCard1SampleRate * (float)g_bufferSize/freedv_get_speech_sample_rate(g_pfreedv);
-    assert(nsam <= N48);
+        
+    int nsam = g_soundCard1SampleRate * (float)g_modemInbufferSize/freedv_samplerate;
+    assert(nsam <= 10*N48);
     while ((codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0) && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
 
         /* convert sound card sample rate FreeDV input sample rate */
@@ -3910,22 +3861,25 @@ void txRxProcessing()
             // this will typically be decoded output speech, and is
             // (currently at least) fixed at a sample rate of 8 kHz
             
-            memset(outfreedv, 0, sizeof(short)*g_bufferSize);
+            memset(outfreedv, 0, sizeof(short)*g_speechOutbufferSize);
             //fprintf(stderr, "rxoutfifo free: %d used: %d\n", codec2_fifo_free(cbData->rxoutfifo), codec2_fifo_used(cbData->rxoutfifo));
-            codec2_fifo_read(cbData->rxoutfifo, outfreedv, g_bufferSize);
+            codec2_fifo_read(cbData->rxoutfifo, outfreedv, g_speechOutbufferSize);
         }
 
         // Optional Spk Out EQ Filtering, need mutex as filter can change at run time from another thread
 
         g_mutexProtectingCallbackData.Lock();
         if (cbData->spkOutEQEnable) {
-            sox_biquad_filter(cbData->sbqSpkOutBass,   outfreedv, outfreedv, g_bufferSize);
-            sox_biquad_filter(cbData->sbqSpkOutTreble, outfreedv, outfreedv, g_bufferSize);
-            sox_biquad_filter(cbData->sbqSpkOutMid,    outfreedv, outfreedv, g_bufferSize);
+            sox_biquad_filter(cbData->sbqSpkOutBass,   outfreedv, outfreedv, g_speechOutbufferSize);
+            sox_biquad_filter(cbData->sbqSpkOutTreble, outfreedv, outfreedv, g_speechOutbufferSize);
+            sox_biquad_filter(cbData->sbqSpkOutMid,    outfreedv, outfreedv, g_speechOutbufferSize);
         }
         g_mutexProtectingCallbackData.Unlock();
 
-        resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_bufferSize, freedv_get_speech_sample_rate(g_pfreedv));
+        if (g_mode == -1)
+            resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, freedv_samplerate);            
+        else
+            resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, freedv_get_speech_sample_rate(g_pfreedv));
 
         // resample to output sound card rate
         
@@ -3938,12 +3892,12 @@ void txRxProcessing()
                 codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
             }
             else {
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_get_speech_sample_rate(g_pfreedv), N48, g_bufferSize);
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_get_speech_sample_rate(g_pfreedv), N48, g_speechOutbufferSize);
                 codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
             }
         }
         else {
-            nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedv_get_speech_sample_rate(g_pfreedv), N48, g_bufferSize);
+            nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedv_get_speech_sample_rate(g_pfreedv), N48, g_speechOutbufferSize);
             codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
         }
     }
@@ -3991,7 +3945,7 @@ void txRxProcessing()
             memset(insound_card, 0, nsam_in_48*sizeof(short));
             codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
 
-            nout = resample(cbData->insrc2, infreedv, insound_card, freedv_get_speech_sample_rate(g_pfreedv), g_soundCard2SampleRate, 10*g_bufferSize, nsam_in_48);
+            nout = resample(cbData->insrc2, infreedv, insound_card, freedv_get_speech_sample_rate(g_pfreedv), g_soundCard2SampleRate, 10*N48, nsam_in_48);
 
             // optionally use file for mic input signal
             if (g_playFileToMicIn && (g_sfPlayFile != NULL)) {

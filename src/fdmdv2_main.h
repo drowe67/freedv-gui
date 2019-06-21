@@ -47,7 +47,6 @@
 #include <wx/textdlg.h>
 #include <wx/regex.h>
 #include <wx/socket.h>
-#include <wx/string.h>
 
 #include <samplerate.h>
 
@@ -120,12 +119,7 @@ extern int                 g_soundCard2InDeviceNum;
 extern int                 g_soundCard2OutDeviceNum;
 extern int                 g_soundCard2SampleRate;
 
-extern std::string            g_soundCard1InDeviceName;
-extern std::string            g_soundCard1OutDeviceName;
-extern std::string            g_soundCard2InDeviceName;
-extern std::string            g_soundCard2OutDeviceName;
-
-// Voice Keyer Constants
+// Voice Keyer Constants 
 
 #define VK_SYNC_WAIT_TIME 5.0
 
