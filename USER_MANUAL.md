@@ -356,7 +356,7 @@ neural net vocoders in a real world, over the air system.
 FreeDV 2020 is designed for slow fading HF channels with a SNR of 10dB
 or better.  It is not designed for fast fading or very low SNRs like
 700D.  It is designed to be a high quality alternative to SSB in
-channels where SSB is already an "aim-chair" copy.  On an AWGN (non
+channels where SSB is already an "arm-chair" copy.  On an AWGN (non
 fading channel), it will deliver reasonable speech quality down to 2dB
 SNR.
 
