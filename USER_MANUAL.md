@@ -234,7 +234,8 @@ hardware, what you have tried, and the exact nature of the problem.
 You must have a modern CPU with AVX support to run FreeDV 2020.  If 
 you do not have AVX the FreeDV 2020 mode button will be greyed out.
 A Microsoft utlity called [coreinfo](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo) 
-can be used to determine if your CPU supports AVX.  Look for the * next to AVX:
+can be also used to determine if your CPU supports AVX.  A * means 
+you have AVX, a - means no AVX:
 ```
 AES             -       Supports AES extensions
 AVX             *       Supports AVX intruction extensions
