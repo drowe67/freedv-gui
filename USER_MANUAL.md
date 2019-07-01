@@ -244,7 +244,7 @@ FMA             -       Supports FMA extensions using YMM state``
 
 ### I installed a new version and FreeDV stopped working
 
-You may need to clean out the previous confirguration.  Try
+You may need to clean out the previous configuration.  Try
 Tools-Restore Defaults.
 
 
@@ -399,6 +399,36 @@ A Python script is required to upload the telemetry messages to the HabHub
 server, please see https://github.com/projecthorus/horusbinary#usage---via-freedv
 
 ## Advanced/Developer Features
+
+### Stats Window
+
+Located on the lower left hand side of the main screen.
+
+Term | Notes
+--- | --- |
+Bits | Number of bits demodulated
+Errs | Number of bit errors detected
+Resyncs | Number of times the demodulator has resynced
+ClkOff | Estimated sample clock offset in parts per million
+FreqOff | Estimated frequency offset in Hz
+Sync | Sync metric (OFDM modes like 700D and 2020)
+
+The sample clock offset is the estimated difference between the
+modulator (tx) and demodulator (rx) sample clocks.  For example if the
+transmit station sound card is sampling at 44000 Hz, and the receive
+station sound card 44001 Hz, the sample clock offset would be
+((44000-44001)/44000)*1E6 = 22.7 ppm.
+
+### Timing Delta Tab
+
+This indicates the symbol timing estimate of the demodulator, in the
+range of +/- 0.5 of a symbol.  With off air signals, this will have a
+saw tooth appearance, as the demod tracks the modulator sample clock.
+The steeper the slope, the greater the sample clock offset.
+
+[FreeDV 1600 Sample Clock Offset Bug](http://www.rowetel.com/?p=6041)
+
+[Testing a FDMDV Modem](http://www.rowetel.com/?p=2433)
 
 ### UDP Messages
 
