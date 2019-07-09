@@ -384,9 +384,7 @@ messages to the UDP port specified on Tools-Options "UDP Messages".
 For Project Horus work, the port 55690 is used. Check the "Enable UDP
 messages" checkbox.
 
-You can test Horus telemetry decodes by "Playing" [this](http://rowetel.com/downloads/horus/4fsk_binary_100Rb_8khzfs.wav) test file.
-
-using Tools - Start/Stop Play File - from Radio.  On Linux, you can
+You can test Horus telemetry decodes by "Playing" [this](http://rowetel.com/downloads/horus/4fsk_binary_100Rb_8khzfs.wav) test file using Tools - Start/Stop Play File - from Radio.  On Linux, you can
 monitoring the messages using netcat:
 ```
   $ nc -ul 55690 
