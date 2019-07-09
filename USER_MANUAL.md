@@ -25,7 +25,7 @@ radio can be a rig interface device like a Signalink, Rigblaster,
 your radio's internal USB sound card, or a home brew rig interface.
 
 The second sound card is often a set of USB headphones, or your
-computers internal sound card.
+computer's internal sound card.
 
 ### Receive Only (One Sound Card)
 
@@ -50,7 +50,7 @@ played.
 If you connect the microphone input on your computer to your radio
 receiver, you can decode off air signals.  If you have a rig
 interface, try configuring that as the *From Radio To Computer*
-device, with your computers sound card as the *From Computer To
+device, with your computer's sound card as the *From Computer To
 Speaker/Headphone* device.
 
 If you don't have anyone to transmit FreeDV signals to you, try the
@@ -90,7 +90,7 @@ Transmit Tab | From Computer To Radio | The FreeDV signal from your computer sen
 
 ## Sound Card Levels
 
-Sound card levels are generally adjusted in the computers Control
+Sound card levels are generally adjusted in the computer's Control
 Panel or Settings, or in some cases via controls on your rig interface
 hardware or menus on your radio.
 
@@ -98,13 +98,13 @@ When FreeDV is running, you can observe the sound card signals in the
 main window tabs (From Radio, From Mic, To Speaker).
 
 1. On receive, FreeDV is not very sensitive to the **From Radio**
-level, adjust so it is mid range and not clipping.  FreeDV uses phase
+level, adjust so it is mid-range and not clipping.  FreeDV uses phase
 shift keying (PSK) so is not sensitive to amplitude.
 
 1. The transmit level from your computer to your radio is important.
 On transmit, adjust your level so that the ALC is **just** being
-nudged.  More **is not better** with the FreeDV transmit signal.  Over
-driving your transmitter will lead to a distorted transit signal, and
+nudged.  More **is not better** with the FreeDV transmit signal.
+Overdriving your transmitter will lead to a distorted transit signal, and
 a poor SNR at the receiver.  This is a very common problem.
 
 1. Adjust the microphone audio so the peaks are not clipping, and the
@@ -278,7 +278,7 @@ SSB | 0 | 8/10 | low | 2600 | 5/10
 2020 | 4  | 5/10 | high | 8000 | 7/10
 Skype | - |- | medium | 8000 | 8/10
 
-The Min SNR is the roughly the SNR where you cannot converse without
+The Min SNR is roughly the SNR where you cannot converse without
 repeating yourself.  The numbers above are on channels without fading
 (AWGN channels like VHF radio).  For fading channels the minimum SNR
 is a few dB higher. The Fading column shows how robust the mode is to
@@ -300,7 +300,7 @@ than FreeDV 1600 on fading channels, and is competitive with SSB at
 low SNRs.  The FEC provides some protection from urban HF noise.
 
 FreeDV 700D is sensitive to tuning.  To obtain sync you must be within
-+/- 20Hz of the transmit frequency.  This is straight forward with
++/- 20Hz of the transmit frequency.  This is straightforward with
 modern radios which are generally accurate to +/-1 Hz, but requires
 skill and practice when used with older, VFO based radios.
 
@@ -558,7 +558,7 @@ On Linux, using the Alsa loopback module:
 Term | Notes
 --- | ---
 AWGN | Additive White Gaussian Noise - a channel with just noise and no fading (like VHF)
-FEC | Foward Error Correction.  Extra bits to we send to protect the speech codec bits
+FEC | Forward Error Correction.  Extra bits to we send to protect the speech codec bits
 LDPC | Low Density Parity Check Codes, a powerful family of FEC codes
 
 ## Release Notes
@@ -570,5 +570,6 @@ V1.3 | May 2018 | FreeDV 700D
 
 ## References 
 
-http://freedv.org
+* http://freedv.org
+* [Digitalvoice mailing list](https://groups.google.com/forum/#!forum/digitalvoice)
 
