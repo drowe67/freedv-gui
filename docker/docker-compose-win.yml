@@ -1,0 +1,19 @@
+version: "3"
+
+services:
+  fdv_win_fed_28_s:
+    environment:
+        - FDV_GIT_REPO
+        - FDV_GIT_REF
+    build: 
+      context: fdv_win_fedora
+      args:
+         - FED_REL=28
+
+    image:  fdv_win_fed28_i
+    container_name: 'fdv_win_fed28_c'
+    volumes:
+            - win_fed28_v:/home/build/
+
+volumes:
+  win_fed28_v:
