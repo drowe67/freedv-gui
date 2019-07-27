@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 # build_windows.sh
 #
 # Script that cross compiles freedv-gui for Windows on Fedora
@@ -8,6 +8,7 @@
 # override this at the command line for a 32 bit build
 #   $ CMAKE=mingw32-cmake ./build_windows.sh
 : ${CMAKE=mingw64-cmake}
+: ${CLEAN=1}
 
 if [ $CMAKE = "mingw64-cmake" ]; then
     BUILD_DIR=build_win64
@@ -22,21 +23,24 @@ export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/codec2.git
 cd codec2 && git checkout master && git pull
-mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf *
+mkdir -p $BUILD_DIR && cd $BUILD_DIR
+if [ $CLEAN = "1" ]; then rm -Rf *; fi
 $CMAKE .. && make
 
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/LPCNet.git
 cd $LPCNETDIR && git checkout master && git pull
-mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf *
+mkdir -p $BUILD_DIR && cd $BUILD_DIR
+if [ $CLEAN = "1" ]; then rm -Rf *; fi
 $CMAKE -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR ..
 make
 # sanity check test
 #cd src &&  ../../wav/wia.wav -t raw -r 16000 - | ./lpcnet_enc -s | ./lpcnet_dec -s > /dev/null
 
 # Re-build codec2 with LPCNet and test FreeDV 2020 support
-cd $CODEC2DIR/$BUILD_DIR && rm -Rf *
+cd $CODEC2DIR/$BUILD_DIR
+if [ $CLEAN = "1" ]; then rm -Rf *; fi
 $CMAKE -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR ..
 make VERBOSE=1
 # sanity check test

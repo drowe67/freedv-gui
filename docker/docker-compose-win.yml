@@ -4,7 +4,9 @@ services:
   fdv_win_fed_28_s:
     environment:
         - FDV_GIT_REPO
-        - FDV_GIT_REF
+        - FDV_GIT_BRANCH
+        - FDV_CLEAN
+        - FDV_CMAKE
     build: 
       context: fdv_win_fedora
       args:
