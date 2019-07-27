@@ -10,10 +10,6 @@ cd $BUILDROOT
 GIT_REPO=${FDV_GIT_REPO:-http://github.com/drowe67/freedv-gui.git}
 GIT_BRANCH=${FDV_GIT_BRANCH:-master}
 
-# if FDV_CLEAN -eq "1" rm's all previous cmake config and binaries (i.e. a complete rebuild from scratch)
-# if FDV_CLEAN -eq "0" just runs make which gives a faster build if only minor changes
-CLEAN=${FDV_CLEAN:-1}
-
 # override with "mingw32-cmake" for a 32 bit build
 CMAKE=${FDV_CMAKE:-mingw64-cmake}
 
@@ -27,7 +23,7 @@ echo "FDV_CMAKE=$CMAKE"
 if [ ! -d freedv-gui ] ; then git clone --depth=1 $GIT_REPO ; fi
 cd freedv-gui && git checkout $GIT_BRANCH && git pull
 echo "--------------------- starting build_windows.sh ---------------------"
-GIT_REPO=$GIT_REPO GIT_REF=$GIT_REF CLEAN=$CLEAN CMAKE=$CMAKE ./build_windows.sh
+GIT_REPO=$GIT_REPO GIT_REF=$GIT_REF CMAKE=$CMAKE ./build_windows.sh
 if [ $CMAKE = "mingw64-cmake" ]; then
     cd build_win64
 else
