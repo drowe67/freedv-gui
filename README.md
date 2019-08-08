@@ -1,9 +1,6 @@
  # Building FreeDV GUI
 
-This document describes how to build the FreeDV GUI program for
-various operating systems.  FreeDV GUI is developed on Ubuntu Linux,
-and then cross compiled for Windows using Fedora Linux (Fedora has great
-cross compiling support).
+This document describes how to build the FreeDV GUI program for various operating systems.  FreeDV GUI is developed on Ubuntu Linux, and then cross compiled for Windows using Fedora Linux (Fedora has great cross compiling support).
 
 # Further Reading
 
@@ -32,8 +29,7 @@ cross compiling support).
    $ ./build_linux/src/freedv
    ```
 
-The ```wav``` directory contains test files of modulated audio that
-you can use to test FreeDV (see USER_MANUAL.txt)
+The ```wav``` directory contains test files of modulated audio that you can use to test FreeDV (see USER_MANUAL.txt)
 
 ## Building for Windows on Fedora (Cross compiling)
 
@@ -98,6 +94,10 @@ Testing FreeDV API:
   $ WINEPATH=$HOME/freedv-gui/LPCNet/build_win/src';'$HOME/freedv-gui/build_win/_CPack_Packages/win64/NSIS/FreeDV-1.4.0-devel-win64/bin/ wine freedv_rx 2020 ~/freedv-gui/wav/all_2020.wav out.raw
   $ play -t .s16 -r 16000 -b 16 out.raw
 ```
+
+## Building for Windows using Docker
+
+The Windows build process above has been automated using a Docker container, see docker/README.md
 
 ## Building and installing on OSX
 

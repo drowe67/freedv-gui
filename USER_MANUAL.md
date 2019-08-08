@@ -300,7 +300,7 @@ than FreeDV 1600 on fading channels, and is competitive with SSB at
 low SNRs.  The FEC provides some protection from urban HF noise.
 
 FreeDV 700D is sensitive to tuning.  To obtain sync you must be within
-+/- 20Hz of the transmit frequency.  This is straightforward with
++/- 60Hz of the transmit frequency.  This is straightforward with
 modern radios which are generally accurate to +/-1 Hz, but requires
 skill and practice when used with older, VFO based radios.
 
@@ -365,7 +365,7 @@ You may encounter the following limitations with FreeDV 2020:
 
 1. Some voices may sound very rough.  In early testing
 about 90% of speakers tested work well.
-1. Like 700D, you must tune within -/+ 20Hz for FreeDV 2020 to sync.
+1. Like 700D, you must tune within -/+ 60Hz for FreeDV 2020 to sync.
 1. With significant fading, sync may take a few seconds.
 1. There is a 2 second end-end latency.  You are welcome to try tuning
    this (Tools - Options - FIFO size, also see Sound Card Debug
@@ -561,10 +561,16 @@ LDPC | Low Density Parity Check Codes, a powerful family of FEC codes
 
 ## Release Notes
 
-Version | Date | Notes
---- | --- | ---
-V1.4 | June 2019 | Project Horus Binary Mode, FreeDV 2020
-V1.3 | May 2018 | FreeDV 700D
+### V1.4 June-August 2019
+
+1. FreeDV 2020 Beta, Project Horus Binary Mode.
+1. [Improved OFDM Modem Acquisition](http://www.rowetel.com/?p=6824), this will improve sync time on
+   FreeDV 700D and 2020 on HF fading channels.  We can also handle +/- 60 Hz frequency offsets now.
+1. Fixed FreeDV 700C frequency offset bug fix, was losing sync at certain frequency offsets.
+
+### V1.3 May 2018
+
+* FreeDV 700D
 
 ## References 
 

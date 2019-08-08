@@ -3171,7 +3171,7 @@ void MainFrame::startRxStream()
         assert(g_rxUserdata->insrcsf != NULL);
 
         // create FIFOs used to interface between Port Audio and txRx
-        // prcoessing loop, which iterates about once every 20ms.
+        // processing loop, which iterates about once every 20ms.
         // Sample rate conversion, stats for spectral plots, and
         // transmit processng are all performed in the txRxProcessing
         // loop.
@@ -3205,25 +3205,28 @@ void MainFrame::startRxStream()
         // TODO: might be able to tune these on a per waveform basis, or refactor
         // to a neater design with less layers of FIFOs
 
-        int modem_samplerate, rxFifoSizeSamples;
+        int modem_samplerate, rxInFifoSizeSamples, rxOutFifoSizeSamples;
         if (g_mode == -1) {
             modem_samplerate = horus_get_Fs(g_horus);
-            rxFifoSizeSamples = horus_get_max_demod_in(g_horus);
+            rxInFifoSizeSamples = horus_get_max_demod_in(g_horus);
+            rxOutFifoSizeSamples = rxInFifoSizeSamples;
         }
         else {
             modem_samplerate = freedv_get_modem_sample_rate(g_pfreedv);
-            rxFifoSizeSamples = freedv_get_n_max_modem_samples(g_pfreedv);
+            rxInFifoSizeSamples = freedv_get_n_max_modem_samples(g_pfreedv);
+            rxOutFifoSizeSamples = freedv_get_n_speech_samples(g_pfreedv);
         }
 
         // add an extra 40ms to give a bit of headroom for processing loop adding samples
         // which operates on 20ms buffers
 
-        rxFifoSizeSamples += 0.04*modem_samplerate;
+        rxInFifoSizeSamples += 0.04*modem_samplerate;
+        rxOutFifoSizeSamples += 0.04*modem_samplerate;
 
-        g_rxUserdata->rxinfifo = codec2_fifo_create(rxFifoSizeSamples);
-        g_rxUserdata->rxoutfifo = codec2_fifo_create(rxFifoSizeSamples);
+        g_rxUserdata->rxinfifo = codec2_fifo_create(rxInFifoSizeSamples);
+        g_rxUserdata->rxoutfifo = codec2_fifo_create(rxOutFifoSizeSamples);
 
-        fprintf(stderr, "rxFifoSizeSamples: %d\n",  rxFifoSizeSamples);
+        fprintf(stderr, "rxInFifoSizeSamples: %d rxOutFifoSizeSamples: %d\n", rxInFifoSizeSamples, rxOutFifoSizeSamples);
         
         // Init Equaliser Filters ------------------------------------------------------
 
