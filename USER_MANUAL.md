@@ -396,6 +396,28 @@ work in Windows if Tools-Options "Windows Debug Console" is checked.
 A Python script is required to upload the telemetry messages to the HabHub
 server, please see https://github.com/projecthorus/horusbinary#usage---via-freedv
 
+## Tools - Options
+
+This section describes features on Tools-Options.  Many of these features are also described in other parts of this manual.
+
+### FreeDV 700 Options
+
+Control | Description
+ --- | --- |
+Clipping | Hard clipping of transmit waveform to increase the average power, at the expense of some distortion
+700C Diversity Combine | Combining of two sets of 700C carriers for better fading channel performance
+700D Interleaver | How many 700D frames to Interleave, larger leads to better fading channel performance but more latency
+700D Tx Band Pass Filter | Reduces 700D TX spectrum bandwidth
+700D Manual Unsync | Forces 700D to remain in sync, and not drop sync automatically
+
+### OFDM Modem Phase Estimator Options
+
+This option applies to the FreeDV 700D and 2020 modes that use the OFDM modem. When checked, the High Bandwidth option gives better performance on channels where the phase changes quickly, for example fast fading HF channels, and the Es'Hail 2 satellite.
+
+When unchecked, the phase estimator bandwidth is automatically selected.  It starts off high to enable fast sync, then switches to low bandwidth to optimise performance for low SNR HF channels.
+
+If you problems with 700D or 2020 sync even though you have a strong signal - try this option.
+
 ## Advanced/Developer Features
 
 ### Stats Window
