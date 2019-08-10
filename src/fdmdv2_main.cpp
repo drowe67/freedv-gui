@@ -501,6 +501,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     //printf("main(): m_codec2LPCPostFilterBeta: %f\n", wxGetApp().m_codec2LPCPostFilterBeta);
 
     wxGetApp().m_speexpp_enable     = pConfig->Read(wxT("/Filter/speexpp_enable"),    t);
+    wxGetApp().m_700C_EQ     = pConfig->Read(wxT("/Filter/700C_EQ"),    t);
 
     wxGetApp().m_MicInBassFreqHz = (float)pConfig->Read(wxT("/Filter/MicInBassFreqHz"),    1);
     wxGetApp().m_MicInBassGaindB = (float)pConfig->Read(wxT("/Filter/MicInBassGaindB"),    (long)0)/10.0;
@@ -2707,6 +2708,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 m_textInterleaverSync->SetLabel("");
             }
 
+            // Codec 2 VQ Equaliser
+            if ((g_mode == FREEDV_MODE_700C) || (g_mode == FREEDV_MODE_700D)) {
+                freedv_set_eq(g_pfreedv, wxGetApp().m_700C_EQ);
+            }
+                    
             if (g_freedv_verbose)
                 freedv_set_verbose(g_pfreedv, 2);
             else

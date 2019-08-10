@@ -396,6 +396,17 @@ work in Windows if Tools-Options "Windows Debug Console" is checked.
 A Python script is required to upload the telemetry messages to the HabHub
 server, please see https://github.com/projecthorus/horusbinary#usage---via-freedv
 
+## Tools - Filter
+
+This section describes features on Tools-Filter.  
+
+Control | Description
+ --- | --- |
+Noise Supression | Enable noise supression, dereverberation, AGC of mic signal using the Speex pre-processor
+700C/700D Auto EQ | Automatic equalisation for FreeDV 700C and FreeDV 700D Codec input audio
+
+[Blog Post on Auto EQ](http://www.rowetel.com/?p=6860)
+
 ## Tools - Options
 
 This section describes features on Tools-Options.  Many of these features are also described in other parts of this manual.
