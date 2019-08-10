@@ -550,6 +550,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_FreeDV700Interleave = (int)pConfig->Read(wxT("/FreeDV700/interleave"), 1);
     wxGetApp().m_FreeDV700ManualUnSync = (float)pConfig->Read(wxT("/FreeDV700/manualUnSync"), f);
 
+    wxGetApp().m_PhaseEstBW = (float)pConfig->Read(wxT("/OFDM/PhaseEstBW"), f);
+
     wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
     
     wxGetApp().m_debug_console = (float)pConfig->Read(wxT("/Debug/console"), f);
@@ -814,6 +816,7 @@ MainFrame::~MainFrame()
         pConfig->Write(wxT("/Filter/SpkOutEQEnable"), wxGetApp().m_SpkOutEQEnable);
 
         pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
+        pConfig->Write(wxT("/OFDM/PhaseEstBW"), wxGetApp().m_PhaseEstBW);
         pConfig->Write(wxT("/Noise/noise_snr"), wxGetApp().m_noise_snr);
 
         pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
@@ -1245,6 +1248,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         freedv_set_clip(g_pfreedv, (int)wxGetApp().m_FreeDV700txClip);
         freedv_set_tx_bpf(g_pfreedv, (int)wxGetApp().m_FreeDV700txBPF);
+        freedv_set_phase_est_bandwidth_mode(g_pfreedv, (int)wxGetApp().m_PhaseEstBW);
         
         // Test Frame Bit Error Updates ------------------------------------
 

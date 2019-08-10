@@ -116,6 +116,19 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     bSizer30->Add(sbSizer_freedv700, 0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 
     //------------------------------
+    // Phase Est Options
+    //------------------------------
+
+    wxStaticBoxSizer* sbSizer_freedvPhaseEst;
+    wxStaticBox *sb_freedvPhaseEst = new wxStaticBox(this, wxID_ANY, _("OFDM Modem Phase Estimator Options"));
+    sbSizer_freedvPhaseEst = new wxStaticBoxSizer(sb_freedvPhaseEst, wxHORIZONTAL);
+
+    m_ckboxPhaseEstBW = new wxCheckBox(this, wxID_ANY, _("High Bandwidth"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_freedvPhaseEst->Add(m_ckboxPhaseEstBW, 0, wxALIGN_LEFT, 0);
+
+    bSizer30->Add(sbSizer_freedvPhaseEst, 0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+
+    //------------------------------
     // Half/Full duplex selection
     //------------------------------
 
@@ -489,6 +502,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtInterleave->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave));
         m_ckboxFreeDV700ManualUnSync->SetValue(wxGetApp().m_FreeDV700ManualUnSync);
 
+        m_ckboxPhaseEstBW->SetValue(wxGetApp().m_PhaseEstBW);
+
 #ifdef __WXMSW__
         m_ckboxDebugConsole->SetValue(wxGetApp().m_debug_console);
 #endif
@@ -592,6 +607,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         }
         wxGetApp().m_FreeDV700Interleave = (int)interleave;
         wxGetApp().m_FreeDV700ManualUnSync = m_ckboxFreeDV700ManualUnSync->GetValue();
+
+        wxGetApp().m_PhaseEstBW = m_ckboxPhaseEstBW->GetValue();
 
 #ifdef __WXMSW__
         wxGetApp().m_debug_console = m_ckboxDebugConsole->GetValue();

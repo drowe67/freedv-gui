@@ -311,6 +311,8 @@ class MainApp : public wxApp
         bool       m_FreeDV700Combine;
         int        m_FreeDV700Interleave;
         bool       m_FreeDV700ManualUnSync;
+
+        bool       m_PhaseEstBW;
         
         // Noise simulation
 

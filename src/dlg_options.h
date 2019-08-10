@@ -114,6 +114,8 @@ class OptionsDlg : public wxDialog
         wxTextCtrl   *m_txtInterleave;
         wxCheckBox   *m_ckboxFreeDV700ManualUnSync;
         
+        wxCheckBox   *m_ckboxPhaseEstBW;
+
         wxRadioButton *m_rb_textEncoding1;
         wxRadioButton *m_rb_textEncoding2;
         wxCheckBox    *m_ckboxEnableChecksum;
