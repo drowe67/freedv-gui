@@ -443,6 +443,7 @@ Resyncs | Number of times the demodulator has resynced
 ClkOff | Estimated sample clock offset in parts per million
 FreqOff | Estimated frequency offset in Hz
 Sync | Sync metric (OFDM modes like 700D and 2020)
+Var | Speech encoder distortion for 700C/700D (see Auto EQ)
 
 The sample clock offset is the estimated difference between the
 modulator (tx) and demodulator (rx) sample clocks.  For example if the

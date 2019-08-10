@@ -1280,6 +1280,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
         sprintf(syncmetric, "Sync: %3.2f", g_stats.sync_metric);
         wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
+
+        // Codec 2 700C VQ "auto EQ" equaliser variance
+        if ((g_mode == FREEDV_MODE_700C) || (g_mode == FREEDV_MODE_700D)) {
+            struct CODEC2 *c2 = freedv_get_codec2(g_pfreedv);
+            assert(c2 != NULL);
+            float var = codec2_get_var(c2);
+            char var_str[80]; sprintf(var_str, "Var: %4.1f", var);
+            wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
+        }
         
         if (g_State) {
 
@@ -1954,6 +1963,8 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
                 g_error_hist[i] = 0;
                 g_error_histn[i] = 0;
             }
+            // resets variance stats every time it is called
+            freedv_set_eq(g_pfreedv, wxGetApp().m_700C_EQ);
         }
     }
 }
