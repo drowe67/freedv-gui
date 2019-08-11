@@ -86,7 +86,7 @@ if(APPLE)
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/freedv.icns FreeDV.app/Contents/Resources
         COMMAND echo ARGS -n "APPL????" > FreeDV.app/Contents/PkgInfo
         COMMAND cp ARGS freedv FreeDV.app/Contents/MacOS/FreeDV
-        COMMAND dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @executable_path/../libs/
+        COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${LPCNET_BUILD_DIR}/src:${DYLD_LIBRARY_PATH} dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @executable_path/../libs/
         COMMAND mkdir dist_tmp
         COMMAND cp -r FreeDV.app dist_tmp
         COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO ./FreeDV.dmg
