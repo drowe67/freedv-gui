@@ -405,7 +405,10 @@ Control | Description
 Noise Supression | Enable noise supression, dereverberation, AGC of mic signal using the Speex pre-processor
 700C/700D Auto EQ | Automatic equalisation for FreeDV 700C and FreeDV 700D Codec input audio
 
-[Blog Post on Auto EQ](http://www.rowetel.com/?p=6860)
+Auto EQ (Automatic Equalisation) adjusts the input speech spectrum to best fit the speech codec. It can remove annoying bass artefacts and make the codec speech easier to understand.
+
+[Blog Post on Auto EQ Part 1](http://www.rowetel.com/?p=6778)
+[Blog Post on Auto EQ Part 2](http://www.rowetel.com/?p=6860)
 
 ## Tools - Options
 

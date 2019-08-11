@@ -11,9 +11,6 @@ docker-compose -f docker-compose-win.yml build
 ```
 ## Running the image(s)
 ```bash
-export DEV_STLINK=`./get_stlink.sh`
-export GIT_REF=my-super-branch
-export GIT_REPO=http://github.com/dummy/codec2.git
 docker-compose -f docker-compose-win.yml up 
 ```
 
