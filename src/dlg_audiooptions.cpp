@@ -917,10 +917,6 @@ void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
         {
             wxString devName = deviceInfo->name;
             wxString apiName = Pa_GetHostApiInfo(deviceInfo->hostApi)->name;
-            // Don't display Windows Direct Sound devices, as it clutters up the list of
-            // available devices.
-//            if (apiName.Contains(wxT("Direct")))
-//                continue;
 
             // Don't display spdif devices or surround
             if(devName.Contains(wxT("spdif")) || devName.Contains(wxT("surround")))
