@@ -9,6 +9,8 @@ endif()
 # If not cross-compiling then use the built-in makefile, otherwise use standard configure.
 if(MINGW AND CMAKE_CROSSCOMPILING)
     set(CONFIGURE_COMMAND ./configure --build=${HOST} --host=${HOST} --target=${HOST} --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
+elseif(APPLE)
+    set(CONFIGURE_COMMAND ./configure --disable-shared --with-macosx-version-min=10.9 --prefix=${CMAKE_BINARY_DIR}/external/dist CXXFLAGS=-stdlib=libc++\ -std=c++11\ -DWX_PRECOMP\ -O2\ -fno-strict-aliasing\ -fno-common)
 else()
 #    set(CONFIGURE_COMMAND "true")
 #    set(MAKE_COMMAND $(MAKE) -C build/msw -f makefile.gcc SHARED=0 UNICODE=1 BUILD=release PREFIX=${CMAKE_BINARY_DIR}/external/dist)

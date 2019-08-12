@@ -1,7 +1,9 @@
-set(SNDFILE_TARBALL "libsndfile-1.0.25")
+set(SNDFILE_TARBALL "libsndfile-1.0.28")
 
 if(MINGW AND CMAKE_CROSSCOMPILING)
     set(CONFIGURE_COMMAND ./configure --host=${HOST} --prefix=${CMAKE_BINARY_DIR}/external/dist --disable-external-libs --disable-shared --disable-sqlite)
+elseif(APPLE)
+    set(CONFIGURE_COMMAND ./configure --prefix=${CMAKE_BINARY_DIR}/external/dist --disable-external-libs --disable-shared --disable-external-libs CFLAGS=-g\ -O2\ -mmacosx-version-min=10.9)
 else()
     set(CONFIGURE_COMMAND ./configure --prefix=${CMAKE_BINARY_DIR}/external/dist --disable-external-libs --disable-shared --disable-external-libs)
 endif()
