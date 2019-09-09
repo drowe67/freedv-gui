@@ -552,6 +552,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_FreeDV700ManualUnSync = (float)pConfig->Read(wxT("/FreeDV700/manualUnSync"), f);
 
     wxGetApp().m_PhaseEstBW = (float)pConfig->Read(wxT("/OFDM/PhaseEstBW"), f);
+    wxGetApp().m_PhaseEstDPSK = (float)pConfig->Read(wxT("/OFDM/PhaseEstDPSK"), f);
 
     wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
     
@@ -818,6 +819,7 @@ MainFrame::~MainFrame()
 
         pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
         pConfig->Write(wxT("/OFDM/PhaseEstBW"), wxGetApp().m_PhaseEstBW);
+        pConfig->Write(wxT("/OFDM/PhaseEstDPSK"), wxGetApp().m_PhaseEstDPSK);
         pConfig->Write(wxT("/Noise/noise_snr"), wxGetApp().m_noise_snr);
 
         pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
@@ -1245,12 +1247,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         //wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
     }
     else {
-        // Run time update of FreeDV 700 tx clipper and 700D BPF
+        // set some run time options (if applicable to this mode)
 
-        freedv_set_clip(g_pfreedv, (int)wxGetApp().m_FreeDV700txClip);
-        freedv_set_tx_bpf(g_pfreedv, (int)wxGetApp().m_FreeDV700txBPF);
-        freedv_set_phase_est_bandwidth_mode(g_pfreedv, (int)wxGetApp().m_PhaseEstBW);
-        
+        freedv_set_clip(g_pfreedv, (int)wxGetApp().m_FreeDV700txClip);   // 700C/700D/2020
+        freedv_set_tx_bpf(g_pfreedv, (int)wxGetApp().m_FreeDV700txBPF);  // 700D
+        freedv_set_phase_est_bandwidth_mode(g_pfreedv, (int)wxGetApp().m_PhaseEstBW); // 700D/2020
+        freedv_set_dpsk(g_pfreedv, (int)wxGetApp().m_PhaseEstDPSK);  // 700D/2020
+         
         // Test Frame Bit Error Updates ------------------------------------
 
         // Toggle test frame mode at run time
