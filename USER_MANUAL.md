@@ -426,11 +426,13 @@ Clipping | Hard clipping of transmit waveform to increase the average power, at 
 
 ### OFDM Modem Phase Estimator Options
 
-This option applies to the FreeDV 700D and 2020 modes that use the OFDM modem. When checked, the High Bandwidth option gives better performance on channels where the phase changes quickly, for example fast fading HF channels, and the Es'Hail 2 satellite.
+These options apply to the FreeDV 700D and 2020 modes that use the OFDM modem:
 
-When unchecked, the phase estimator bandwidth is automatically selected.  It starts off high to enable fast sync, then switches to low bandwidth to optimise performance for low SNR HF channels.
+1. The High Bandwidth option gives better performance on channels where the phase changes quickly, for example fast fading HF channels, and the Es'Hail 2 satellite. When unchecked, the phase estimator bandwidth is automatically selected.  It starts off high to enable fast sync, then switches to low bandwidth to optimise performance for low SNR HF channels.
 
-If you problems with 700D or 2020 sync even though you have a strong signal - try this option.
+1. The DPSK (differential PSK) checkbox has a similar effect - better performance on High SNR channels where the phase changes rapidly.  This option converts the OFDM modem to use differential PSK, rather than coherent PSK.  DPSK is used by earlier FreeDV modes such as FreeDV 1600.  It affects the Tx and Rx side, so both sides must select DPSK.
+
+If you problems with 700D or 2020 sync even though you have a strong signal - try these option.
 
 ## Advanced/Developer Features
 
