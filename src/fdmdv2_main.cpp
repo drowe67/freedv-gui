@@ -2091,7 +2091,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
     printf("OnPlayFileFromRadio:: %d\n", (int)g_playFileFromRadio);
     if (g_playFileFromRadio)
     {
-        printf("OnPlayFileFromRadio:: Stop\n");
+        fprintf(stderr, "OnPlayFileFromRadio:: Stop\n");
         g_mutexProtectingCallbackData.Lock();
         g_playFileFromRadio = false;
         sf_close(g_sfPlayFileFromRadio);
@@ -2196,7 +2196,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
     wxUnusedVar(event);
 
     if (g_recFileFromRadio) {
-        printf("Stopping Record....\n");
+        fprintf(stderr, "Stopping Record....\n");
         g_mutexProtectingCallbackData.Lock();
         g_recFileFromRadio = false;
         sf_close(g_sfRecFile);
@@ -2626,6 +2626,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
     if (startStop.IsSameAs("Start"))
     {
+        fprintf(stderr, "Start .....\n");
         //
         // Start Running -------------------------------------------------
         //
@@ -2691,6 +2692,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
             m_textSync->Disable();
             m_textInterleaverSync->SetLabel("");
+            g_modemInbufferSize = (int)(FRAME_DURATION * horus_get_Fs(g_horus));
         }
         if (m_rb2020->GetValue() && isAvxPresent) {
             g_mode = FREEDV_MODE_2020;
@@ -2843,7 +2845,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
     // Stop was pressed or start up failed
 
     if (startStop.IsSameAs("Stop") || !m_RxRunning ) {
-
+        fprintf(stderr, "Stop .....\n");
         //
         // Stop Running -------------------------------------------------
         //
@@ -3048,9 +3050,9 @@ void MainFrame::startRxStream()
     bool  two_rx=false;
     bool  two_tx=false;
 
+    fprintf(stderr, "startRxStream .....\n");
     if(!m_RxRunning) {
         m_RxRunning = true;
-
         if(Pa_Initialize())
         {
             wxMessageBox(wxT("Port Audio failed to initialize"), wxT("Pa_Initialize"), wxOK);
@@ -3062,7 +3064,7 @@ void MainFrame::startRxStream()
         if(g_soundCard2InDeviceNum != g_soundCard2OutDeviceNum)
             two_tx=true;
         
-        //fprintf(stderr, "two_rx: %d two_tx: %d\n", two_rx, two_tx);
+        fprintf(stderr, "two_rx: %d two_tx: %d\n", two_rx, two_tx);
         if(two_rx)
             m_rxOutPa = new PortAudioWrap();
         else
@@ -3085,7 +3087,7 @@ void MainFrame::startRxStream()
             wxMessageBox(wxT("Sound Card 1 not present"), wxT("Error"), wxOK);
             delete m_rxInPa;
             if(two_rx)
-				delete m_rxOutPa;
+                delete m_rxOutPa;
             m_RxRunning = false;
             return;
         }
@@ -3346,6 +3348,8 @@ void MainFrame::startRxStream()
             }
         }
 
+        fprintf(stderr, "started stream 1\n");
+        
         // Start sound card 2 ----------------------------------------------------------
 
         if (g_nSoundCards == 2) {
@@ -3461,6 +3465,8 @@ void MainFrame::startRxStream()
             }
         }
 
+        fprintf(stderr, "starting tx/rx processing thread\n");
+        
         // start tx/rx processing thread
 
         m_txRxThread = new txRxThread;
@@ -3759,9 +3765,10 @@ void txRxProcessing()
     // (20ms), number of samples is scaled for the sound card sample
     // rate, so we get the right number of samples for the output
     // decoded audio
-        
+
     int nsam = g_soundCard1SampleRate * (float)g_modemInbufferSize/freedv_samplerate;
     assert(nsam <= 10*N48);
+    assert(nsam != 0);
     while ((codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0) && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
 
         /* convert sound card sample rate FreeDV input sample rate */
@@ -3927,11 +3934,19 @@ void txRxProcessing()
             }
         }
         else {
-            if (g_analog) /* special case */
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedv_get_modem_sample_rate(g_pfreedv), N48, nfreedv);                    
-            else
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedv_get_speech_sample_rate(g_pfreedv), N48, g_speechOutbufferSize);
-            codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
+            if (g_mode == -1) {
+                // Horus demod is special case, just echo input samples as it's nice to hear the
+                // off-air modem signal
+                nout = resample(cbData->outsrc2, outsound_card, infreedv, g_soundCard1SampleRate, freedv_samplerate, N48, nfreedv);
+                codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
+            }
+            else {
+                if (g_analog) /* special case */
+                    nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedv_get_modem_sample_rate(g_pfreedv), N48, nfreedv);                    
+                else
+                    nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedv_get_speech_sample_rate(g_pfreedv), N48, g_speechOutbufferSize);
+                codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
+            }
         }
     }
 
@@ -4084,7 +4099,6 @@ void txRxProcessing()
     if (g_dump_timing) {
         fprintf(stderr, "%4ld", sw.Time());
     }
-
 }
 
 //----------------------------------------------------------------
