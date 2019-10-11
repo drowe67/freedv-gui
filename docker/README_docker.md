@@ -33,8 +33,8 @@ docker-compose -f docker-compose-win.yml up
 
 ```
 ## Accessing created output
-If you started the docker services using `docker up`, you can easily access the compiled output from the docker container.  Using the .exe file name on the last line of the Docker log:
+If you started the docker services using `docker up`, you can easily access the compiled output from the docker container.  Using the .exe file name on the last line of the Docker log, for example:
 
 ```
-docker cp fdv_win_fed28_c:/home/build/freedv-gui/build_windows/FreeDV-1.4.0-devel-20190725-7cd03db-win64.exe .
+docker cp fdv_win_fed30_c:/home/build/freedv-gui/build_win64/FreeDV-1.4.0-devel-20190725-7cd03db-win64.exe .
 ```
