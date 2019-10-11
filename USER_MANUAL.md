@@ -372,7 +372,6 @@ about 90% of speakers tested work well.
    section below).
 1. It requires a modern (post 2010) Intel CPU with AVX support.  If you 
    don't have AVX the FreeDV 2020 mode button will be grayed out. 
-1. The audio in **Analog** mode is choppy.
 
 ### Horus Binary Mode
 
@@ -600,12 +599,13 @@ LDPC | Low Density Parity Check Codes, a powerful family of FEC codes
 
 ## Release Notes
 
-### V1.4 June-August 2019
+### V1.4 June-October 2019
 
-1. FreeDV 2020 Beta, Project Horus Binary Mode.
-1. [Improved OFDM Modem Acquisition](http://www.rowetel.com/?p=6824), this will improve sync time on
-   FreeDV 700D and 2020 on HF fading channels.  We can also handle +/- 60 Hz frequency offsets now.
+1. FreeDV 2020, Project Horus Binary Modes.
+1. [Improved OFDM Modem Acquisition](http://www.rowetel.com/?p=6824), this will improve sync time on FreeDV 700D and 2020 on HF fading channels, and can also handle +/- 60 Hz frequency offsets when tuning.
 1. Fixed FreeDV 700C frequency offset bug fix, was losing sync at certain frequency offsets.
+1. Wide bandwidth phase estimation and DPSK for OFDM modes (700D/2020) for fast fading/QO-100 channels (Tools-Options)
+1. Better speech quality on FreeDV 700C/700D with Auto equaliser (Tools-Filter)
 
 ### V1.3 May 2018
 
