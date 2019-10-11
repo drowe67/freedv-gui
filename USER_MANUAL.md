@@ -372,7 +372,6 @@ about 90% of speakers tested work well.
    section below).
 1. It requires a modern (post 2010) Intel CPU with AVX support.  If you 
    don't have AVX the FreeDV 2020 mode button will be grayed out. 
-1. The audio in **Analog** mode is choppy.
 
 ### Horus Binary Mode
 
@@ -396,6 +395,44 @@ work in Windows if Tools-Options "Windows Debug Console" is checked.
 A Python script is required to upload the telemetry messages to the HabHub
 server, please see https://github.com/projecthorus/horusbinary#usage---via-freedv
 
+## Tools - Filter
+
+This section describes features on Tools-Filter.  
+
+Control | Description
+ --- | --- |
+Noise Supression | Enable noise supression, dereverberation, AGC of mic signal using the Speex pre-processor
+700C/700D Auto EQ | Automatic equalisation for FreeDV 700C and FreeDV 700D Codec input audio
+
+Auto EQ (Automatic Equalisation) adjusts the input speech spectrum to best fit the speech codec. It can remove annoying bass artefacts and make the codec speech easier to understand.
+
+[Blog Post on Auto EQ Part 1](http://www.rowetel.com/?p=6778)
+[Blog Post on Auto EQ Part 2](http://www.rowetel.com/?p=6860)
+
+## Tools - Options
+
+This section describes features on Tools-Options.  Many of these features are also described in other parts of this manual.
+
+### FreeDV 700 Options
+
+Control | Description
+ --- | --- |
+Clipping | Hard clipping of transmit waveform to increase the average power, at the expense of some distortion
+700C Diversity Combine | Combining of two sets of 700C carriers for better fading channel performance
+700D Interleaver | How many 700D frames to Interleave, larger leads to better fading channel performance but more latency
+700D Tx Band Pass Filter | Reduces 700D TX spectrum bandwidth
+700D Manual Unsync | Forces 700D to remain in sync, and not drop sync automatically
+
+### OFDM Modem Phase Estimator Options
+
+These options apply to the FreeDV 700D and 2020 modes that use the OFDM modem:
+
+1. The High Bandwidth option gives better performance on channels where the phase changes quickly, for example fast fading HF channels, and the Es'Hail 2 satellite. When unchecked, the phase estimator bandwidth is automatically selected.  It starts off high to enable fast sync, then switches to low bandwidth to optimise performance for low SNR HF channels.
+
+1. The DPSK (differential PSK) checkbox has a similar effect - better performance on High SNR channels where the phase changes rapidly.  This option converts the OFDM modem to use differential PSK, rather than coherent PSK.  DPSK is used by earlier FreeDV modes such as FreeDV 1600.  It affects the Tx and Rx side, so both sides must select DPSK.
+
+If you problems with 700D or 2020 sync even though you have a strong signal - try these option.
+
 ## Advanced/Developer Features
 
 ### Stats Window
@@ -410,6 +447,7 @@ Resyncs | Number of times the demodulator has resynced
 ClkOff | Estimated sample clock offset in parts per million
 FreqOff | Estimated frequency offset in Hz
 Sync | Sync metric (OFDM modes like 700D and 2020)
+Var | Speech encoder distortion for 700C/700D (see Auto EQ)
 
 The sample clock offset is the estimated difference between the
 modulator (tx) and demodulator (rx) sample clocks.  For example if the
@@ -561,12 +599,13 @@ LDPC | Low Density Parity Check Codes, a powerful family of FEC codes
 
 ## Release Notes
 
-### V1.4 June-August 2019
+### V1.4 June-October 2019
 
-1. FreeDV 2020 Beta, Project Horus Binary Mode.
-1. [Improved OFDM Modem Acquisition](http://www.rowetel.com/?p=6824), this will improve sync time on
-   FreeDV 700D and 2020 on HF fading channels.  We can also handle +/- 60 Hz frequency offsets now.
+1. FreeDV 2020, Project Horus Binary Modes.
+1. [Improved OFDM Modem Acquisition](http://www.rowetel.com/?p=6824), this will improve sync time on FreeDV 700D and 2020 on HF fading channels, and can also handle +/- 60 Hz frequency offsets when tuning.
 1. Fixed FreeDV 700C frequency offset bug fix, was losing sync at certain frequency offsets.
+1. Wide bandwidth phase estimation and DPSK for OFDM modes (700D/2020) for fast fading/QO-100 channels (Tools-Options)
+1. Better speech quality on FreeDV 700C/700D with Auto equaliser (Tools-Filter)
 
 ### V1.3 May 2018
 

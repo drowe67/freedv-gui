@@ -228,6 +228,8 @@ class MainApp : public wxApp
         
         // Speex Pre-Processor
         bool                m_speexpp_enable;
+        // Codec 2 700C Equaliser
+        bool                m_700C_EQ;
 
         // Mic In Equaliser
         float               m_MicInBassFreqHz;
@@ -311,6 +313,9 @@ class MainApp : public wxApp
         bool       m_FreeDV700Combine;
         int        m_FreeDV700Interleave;
         bool       m_FreeDV700ManualUnSync;
+
+        bool       m_PhaseEstBW;
+        bool       m_PhaseEstDPSK;
         
         // Noise simulation
 

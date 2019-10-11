@@ -91,6 +91,7 @@ class FilterDlg : public wxDialog
         void    OnBassBoost(wxScrollEvent& event);
 
         void    OnSpeexppEnable(wxScrollEvent& event);
+        void    On700C_EQ(wxScrollEvent& event);
 
         void    OnMicInBassFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_MicInBass, true); }
         void    OnMicInBassGainScroll(wxScrollEvent& event) { sliderToGain(&m_MicInBass, true); }
@@ -125,7 +126,8 @@ class FilterDlg : public wxDialog
         wxButton*     m_LPCPostFilterDefault;
 
         wxCheckBox*   m_ckboxSpeexpp;
-
+        wxCheckBox*   m_ckbox700C_EQ;
+        
         wxStdDialogButtonSizer* m_sdbSizer5;
         wxButton*     m_sdbSizer5OK;
         wxButton*     m_sdbSizer5Cancel;

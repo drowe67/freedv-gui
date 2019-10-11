@@ -187,6 +187,8 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     sbSizer_ber->Add(m_textFreqOffset, 0, wxALIGN_LEFT, 1);
     m_textSyncMetric = new wxStaticText(this, wxID_ANY, wxT("Sync: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_ber->Add(m_textSyncMetric, 0, wxALIGN_LEFT, 1);
+    m_textCodec2Var = new wxStaticText(this, wxID_ANY, wxT("Var: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    sbSizer_ber->Add(m_textCodec2Var, 0, wxALIGN_LEFT, 1);
 
     leftSizer->Add(sbSizer_ber,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 

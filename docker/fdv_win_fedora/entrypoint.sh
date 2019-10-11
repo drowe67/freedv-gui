@@ -21,7 +21,7 @@ echo "FDV_CMAKE=$CMAKE"
 # OK lets get started -----------------------------------------------
 
 if [ ! -d freedv-gui ] ; then git clone --depth=1 $GIT_REPO ; fi
-cd freedv-gui && git checkout $GIT_BRANCH && git pull
+cd freedv-gui && git pull && git checkout $GIT_BRANCH
 echo "--------------------- starting build_windows.sh ---------------------"
 GIT_REPO=$GIT_REPO GIT_REF=$GIT_REF CMAKE=$CMAKE ./build_windows.sh
 if [ $CMAKE = "mingw64-cmake" ]; then

@@ -44,6 +44,7 @@
 #define F_MAG_N           (int)(MAX_F_HZ/F_STEP_DFT) // number of frequency steps
 
 extern struct freedv      *g_pfreedv;
+extern int                 g_mode;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class FilterDlg
@@ -84,12 +85,16 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     // Speex pre-processor --------------------------------------------------
 
     wxStaticBoxSizer* sbSizer_speexpp;
-    wxStaticBox *sb_speexpp = new wxStaticBox(this, wxID_ANY, _("Speex Mic Audio Pre-Processor"));
-    sbSizer_speexpp = new wxStaticBoxSizer(sb_speexpp, wxVERTICAL);
+    wxStaticBox *sb_speexpp = new wxStaticBox(this, wxID_ANY, _("Mic Audio Pre-Processing"));
+    sbSizer_speexpp = new wxStaticBoxSizer(sb_speexpp, wxHORIZONTAL);
 
-    m_ckboxSpeexpp = new wxCheckBox(this, wxID_ANY, _("Enable"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sb_speexpp->SetToolTip(_("Enable noise supression, dereverberation, AGC of mic signal"));
+    m_ckboxSpeexpp = new wxCheckBox(this, wxID_ANY, _("Speex Noise Suppression"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_speexpp->Add(m_ckboxSpeexpp, wxALIGN_LEFT, 2);
+    m_ckboxSpeexpp->SetToolTip(_("Enable noise supression, dereverberation, AGC of mic signal"));
+
+    m_ckbox700C_EQ = new wxCheckBox(this, wxID_ANY, _("700C/700D Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_speexpp->Add(m_ckbox700C_EQ, wxALIGN_LEFT, 2);
+    m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700C and FreeDV 700D Codec input audio"));
 
     bSizer30->Add(sbSizer_speexpp, 0, wxALL, 0);   
 
@@ -180,6 +185,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_LPCPostFilterDefault->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnLPCPostFilterDefault), NULL, this);
 
     m_ckboxSpeexpp->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpeexppEnable), NULL, this);
+    m_ckbox700C_EQ->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::On700C_EQ), NULL, this);
 
     m_MicInBass.sliderFreq->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInBassFreqScroll), NULL, this);
     m_MicInBass.sliderGain->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInBassGainScroll), NULL, this);
@@ -223,6 +229,8 @@ FilterDlg::~FilterDlg()
     m_codec2LPCPostFilterBeta->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnBetaScroll), NULL, this);
     m_codec2LPCPostFilterGamma->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnGammaScroll), NULL, this);
     m_LPCPostFilterDefault->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnLPCPostFilterDefault), NULL, this);
+
+    m_ckboxSpeexpp->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpeexppEnable), NULL, this);
 
     m_MicInBass.sliderFreq->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInBassFreqScroll), NULL, this);
     m_MicInBass.sliderGain->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInBassGainScroll), NULL, this);
@@ -316,6 +324,9 @@ void FilterDlg::ExchangeData(int inout, bool storePersistent)
 
         m_ckboxSpeexpp->SetValue(wxGetApp().m_speexpp_enable);
 
+        // Codec 2 700C EQ
+        m_ckbox700C_EQ->SetValue(wxGetApp().m_700C_EQ);
+
         // Mic In Equaliser
 
         m_MicInBass.freqHz = wxGetApp().m_MicInBassFreqHz; 
@@ -386,8 +397,10 @@ void FilterDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_codec2LPCPostFilterGamma      = m_gamma;
 
         // Speex Pre-Processor
-
         wxGetApp().m_speexpp_enable = m_ckboxSpeexpp->GetValue();
+        
+        // Codec 2 700C EQ
+        wxGetApp().m_700C_EQ = m_ckbox700C_EQ->GetValue();
 
         // Mic In Equaliser
 
@@ -420,6 +433,8 @@ void FilterDlg::ExchangeData(int inout, bool storePersistent)
             pConfig->Write(wxT("/Filter/codec2LPCPostFilterGamma"),      (int)(m_gamma*100.0));
 
             pConfig->Write(wxT("/Filter/speexpp_enable"),                wxGetApp().m_speexpp_enable);
+
+            pConfig->Write(wxT("/Filter/700C_EQ"),                       wxGetApp().m_700C_EQ);
 
             pConfig->Write(wxT("/Filter/MicInBassFreqHz"), (int)m_MicInBass.freqHz);
             pConfig->Write(wxT("/Filter/MicInBassGaindB"), (int)(10.0*m_MicInBass.gaindB));
@@ -545,10 +560,13 @@ void FilterDlg::setBeta(void) {
 
 void FilterDlg::setCodec2(void) {
     if (m_running) {
-        codec2_set_lpc_post_filter(freedv_get_codec2(g_pfreedv), 
-                               m_codec2LPCPostFilterEnable->GetValue(), 
-                               m_codec2LPCPostFilterBassBoost->GetValue(), 
-                               m_beta, m_gamma);
+        struct CODEC2 *c2 = freedv_get_codec2(g_pfreedv);
+        if (c2 != NULL) {
+            codec2_set_lpc_post_filter(c2, 
+                                       m_codec2LPCPostFilterEnable->GetValue(), 
+                                       m_codec2LPCPostFilterBassBoost->GetValue(), 
+                                       m_beta, m_gamma);
+        }
     }
 }
 
@@ -584,6 +602,13 @@ void FilterDlg::OnGammaScroll(wxScrollEvent& event) {
 
 void FilterDlg::OnSpeexppEnable(wxScrollEvent& event) {
     wxGetApp().m_speexpp_enable = m_ckboxSpeexpp->GetValue();
+}
+
+void FilterDlg::On700C_EQ(wxScrollEvent& event) {
+    wxGetApp().m_700C_EQ = m_ckbox700C_EQ->GetValue();
+    if (m_running && ((g_mode == FREEDV_MODE_700C) || (g_mode == FREEDV_MODE_700D))) {
+        freedv_set_eq(g_pfreedv, wxGetApp().m_700C_EQ);
+    }
 }
 
 void FilterDlg::OnMicInEnable(wxScrollEvent& event) {
