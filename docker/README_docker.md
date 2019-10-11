@@ -1,16 +1,26 @@
-# Building freedv-gui for Windows using docker
+# Building freedv-gui for Windows using Docker on Ubuntu 18
 
-## Requirements
-* docker
-* docker-compose
+## Docker installation
+```
+sudo apt install docker docker-compose
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo systemctl status docker
+sudo usermod -aG docker $USER
+<log out and log in to update groups>
+groups
+<you should see docker as one of your groups>
+docker info
+docker container run hello-world
+```
 
 ## Building the docker images
 Building is only required once
-```bash
+```
 docker-compose -f docker-compose-win.yml build
 ```
 ## Running the image(s)
-```bash
+```
 docker-compose -f docker-compose-win.yml up 
 ```
 

@@ -1,12 +1,13 @@
  # Building FreeDV GUI
 
-This document describes how to build the FreeDV GUI program for various operating systems.  FreeDV GUI is developed on Ubuntu Linux, and then cross compiled for Windows using Fedora Linux (Fedora has great cross compiling support).
+This document describes how to build the FreeDV GUI program for various operating systems.  FreeDV GUI is developed on Ubuntu Linux, and then cross compiled for Windows using Fedora Linux (Fedora has great cross compiling support) and Docker.
 
 # Further Reading
 
   * http://freedv.org - introduction, documentation, downloads
   * USER_MANUAL.txt   - FreeDV GUI Manual
-
+  * docker/README.md  - Building for Windows using Docker
+  
 # Building and installing on Ubuntu Linux (16-18)
   ```
   $ sudo apt install libc6-i386 libspeexdsp-dev libsamplerate0-dev sox git \
