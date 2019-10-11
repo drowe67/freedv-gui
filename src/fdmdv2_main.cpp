@@ -4086,7 +4086,10 @@ void txRxProcessing()
 
             // output one frame of modem signal
 
-            nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, 10*N48, nfreedv);
+            if (g_analog)
+                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_get_speech_sample_rate(g_pfreedv), 10*N48, nfreedv);
+            else
+                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, 10*N48, nfreedv);
             if (g_dump_fifo_state) {
                 fprintf(stderr, "  nout: %d\n", nout);
             }
