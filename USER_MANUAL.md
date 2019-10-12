@@ -144,6 +144,8 @@ may have changed the default serial rate on your radio. Carefully
 check the serial parameters on your radio match those used by FreeDV
 in the PTT Dialog.
 
+Also see Common Problems section of this manual.
+
 ### HamLib
 
 Hamlib comes with a default serial rate for each radio.  If your radio
@@ -221,12 +223,15 @@ Many people struggle with initial PTT setup:
 
 1. Try the Tools - PTT Test function.
 
-2. Check you rig serial settings.  Did you change them from defaults
+1. Check you rig serial settings.  Did you change them from defaults
 for another program?
 
-3. Ask someone who already uses FreeDV to help.
+1. Linux version: do you have permissions for the serial port?  Are you a member
+of the ```dialout``` group?
 
-4. Contact the digital voice mailing list.  Be specific about your
+1. Ask someone who already uses FreeDV to help.
+
+1. Contact the digital voice mailing list.  Be specific about your
 hardware, what you have tried, and the exact nature of the problem.
 
 ### FreeDV 2020 mode is greyed out
@@ -344,7 +349,7 @@ interleaver.
 
 ### FreeDV 2020
 
-FreeDV 2020 was released in mid 2019.  It uses an experimental codec
+FreeDV 2020 was developed in 2019.  It uses an experimental codec
 based on the LPCNet neural net (deep learning) synthesis engine
 developed by Jean-Marc Valin.  It offers 8 kHz audio bandwidth in an
 RF bandwidth of just 1600 Hz.  FreeDV 2020 employs the same OFDM modem
@@ -431,7 +436,7 @@ These options apply to the FreeDV 700D and 2020 modes that use the OFDM modem:
 
 1. The DPSK (differential PSK) checkbox has a similar effect - better performance on High SNR channels where the phase changes rapidly.  This option converts the OFDM modem to use differential PSK, rather than coherent PSK.  DPSK is used by earlier FreeDV modes such as FreeDV 1600.  It affects the Tx and Rx side, so both sides must select DPSK.
 
-If you problems with 700D or 2020 sync even though you have a strong signal - try these option.
+If you have problems with 700D or 2020 sync even though you have a strong signal - try these option.
 
 ## Advanced/Developer Features
 
@@ -595,7 +600,7 @@ Term | Notes
 --- | ---
 AWGN | Additive White Gaussian Noise - a channel with just noise and no fading (like VHF)
 FEC | Forward Error Correction.  Extra bits to we send to protect the speech codec bits
-LDPC | Low Density Parity Check Codes, a powerful family of FEC codes
+LDPC | Low Density Parity Check Codes, a family of powerful FEC codes
 
 ## Release Notes
 
