@@ -5,7 +5,7 @@
 FreeDV GUI (or just FreeDV) is a GUI program for Linux, Windows, and
 OSX for running FreeDV on a desktop PC or laptop.
 
-This document is a work in progress.  Notes on new FreeDV features are
+This is a live document.  Notes on new FreeDV features are
 being added as they are developed.
 
 ## Getting Started
@@ -210,7 +210,7 @@ looks and sounds like.
 
 ### Trouble getting Sync with 700D
 
-You need to be within +/- 20 Hz on the transmit signal.  It helps if
+You need to be within +/- 60 Hz on the transmit signal.  It helps if
 both the tx and rx stations tune to known, exact frequencies such as
 exactly 7.177MHz.  On channels with fast fading sync may take a few
 seconds.
