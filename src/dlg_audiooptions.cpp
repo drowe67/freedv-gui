@@ -796,6 +796,18 @@ void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
         if( ((in_out == AUDIO_IN) && (deviceInfo->maxInputChannels > 0)) ||
             ((in_out == AUDIO_OUT) && (deviceInfo->maxOutputChannels > 0)))
         {
+            wxString hostApiName = Pa_GetHostApiInfo(deviceInfo->hostApi)->name;           
+
+            // Exclude DirectSound devices from the list, as they are duplicates to MME
+            // devices and sometimes do not work well for users
+            if(hostApiName.Find("DirectSound") != wxNOT_FOUND)
+                continue;
+
+            // Exclude "surround" devices as they clutter the dev list and are not used
+            wxString devName(deviceInfo->name);
+            if(devName.Find("surround") != wxNOT_FOUND)
+                continue; 
+
             col = 0;
             buf.Printf(wxT("%s"), deviceInfo->name);
             idx = ctrl->InsertItem(ctrl->GetItemCount(), buf);
