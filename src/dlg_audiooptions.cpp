@@ -618,16 +618,18 @@ int AudioOptsDialog::ExchangeData(int inout)
         printf("  g_soundCard2SampleRate: %d\n", g_soundCard2SampleRate);
 
         wxConfigBase *pConfig = wxConfigBase::Get();
-        pConfig->Write(wxT("/Audio/soundCard1InDeviceNum"),       g_soundCard1InDeviceNum);
-        pConfig->Write(wxT("/Audio/soundCard1OutDeviceNum"),      g_soundCard1OutDeviceNum);
-        pConfig->Write(wxT("/Audio/soundCard1SampleRate"),        g_soundCard1SampleRate );
+        if (pConfig != NULL) {
+            pConfig->Write(wxT("/Audio/soundCard1InDeviceNum"),       g_soundCard1InDeviceNum);
+            pConfig->Write(wxT("/Audio/soundCard1OutDeviceNum"),      g_soundCard1OutDeviceNum);
+            pConfig->Write(wxT("/Audio/soundCard1SampleRate"),        g_soundCard1SampleRate );
 
-        pConfig->Write(wxT("/Audio/soundCard2InDeviceNum"),       g_soundCard2InDeviceNum);
-        pConfig->Write(wxT("/Audio/soundCard2OutDeviceNum"),      g_soundCard2OutDeviceNum);
-        pConfig->Write(wxT("/Audio/soundCard2SampleRate"),        g_soundCard2SampleRate );
+            pConfig->Write(wxT("/Audio/soundCard2InDeviceNum"),       g_soundCard2InDeviceNum);
+            pConfig->Write(wxT("/Audio/soundCard2OutDeviceNum"),      g_soundCard2OutDeviceNum);
+            pConfig->Write(wxT("/Audio/soundCard2SampleRate"),        g_soundCard2SampleRate );
 
-        pConfig->Flush();
-        delete wxConfigBase::Set((wxConfigBase *) NULL);
+            pConfig->Flush();
+            delete wxConfigBase::Set((wxConfigBase *) NULL);
+        }
     }
 
     return 0;
