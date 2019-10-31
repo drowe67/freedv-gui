@@ -1472,7 +1472,7 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
     wxConfigBase *pConfig = wxConfigBase::Get();
     if(pConfig->DeleteAll())
     {
-        wxLogMessage(wxT("Config file/registry key successfully deleted."));
+        wxLogMessage(wxT("Config file/registry key successfully deleted.  Please restart FreeDV."));
 
         delete wxConfigBase::Set(NULL);
         wxConfigBase::DontCreateOnDemand();
