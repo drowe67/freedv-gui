@@ -266,7 +266,7 @@ The Options-PTT dialog can be used to select the wave file, set the Rx
 delay, and number of times the tx/rx cycle repeats.
 
 The wave file for the voice keyer should be in 8kHz mono 16 bit sample
-form.  Use a free application such as Audacity to convert a file you
+form (16 kHz for 2020).  Use a free application such as Audacity to convert a file you
 have recorded to this format.
 
 ## FreeDV Modes
@@ -377,6 +377,7 @@ You may encounter the following limitations with FreeDV 2020:
 1. There is a 2 second end-end latency.  You are welcome to try tuning
    this (Tools - Options - FIFO size, also see Sound Card Debug
    section below).
+1. The voice keyer file must be 16 kHz mono 16 bit sample format.
 
 ### Horus Binary Mode
 
