@@ -366,7 +366,7 @@ channels where SSB is already an "arm-chair" copy.  On an AWGN (non
 fading channel), it will deliver reasonable speech quality down to 2dB
 SNR.
 
-You may encounter the following limitations with FreeDV 2020:
+FreeDV 2020 Tips:
 
 1. It requires a modern (post 2010) Intel CPU with AVX support.  If you 
    don't have AVX the FreeDV 2020 mode button will be grayed out. 
@@ -378,6 +378,7 @@ You may encounter the following limitations with FreeDV 2020:
    this (Tools - Options - FIFO size, also see Sound Card Debug
    section below).
 1. The voice keyer file must be 16 kHz mono 16 bit sample format.
+1. FreeDV 2020 likes "flat", unfiltered audio.  Disable the mic-in equaliser (Tools-Filter).
 
 ### Horus Binary Mode
 
