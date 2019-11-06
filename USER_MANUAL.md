@@ -378,7 +378,6 @@ FreeDV 2020 Tips:
    this (Tools - Options - FIFO size, also see Sound Card Debug
    section below).
 1. The voice keyer file must be 16 kHz mono 16 bit sample format.
-1. FreeDV 2020 likes "flat", unfiltered audio.  Disable the mic-in equaliser (Tools-Filter).
 
 ### Horus Binary Mode
 
