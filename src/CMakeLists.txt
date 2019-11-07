@@ -89,7 +89,7 @@ if(APPLE)
         COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${LPCNET_BUILD_DIR}/src:${DYLD_LIBRARY_PATH} dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @executable_path/../libs/
         COMMAND mkdir dist_tmp
         COMMAND cp -r FreeDV.app dist_tmp
-        COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO ./FreeDV.dmg
+        COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO -fs HFS+ ./FreeDV.dmg
         COMMAND rm -rf dist_tmp
     )
 endif(APPLE)
