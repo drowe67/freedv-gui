@@ -6,7 +6,7 @@ This document describes how to build the FreeDV GUI program for various operatin
 
   * http://freedv.org - introduction, documentation, downloads
   * [FreeDV GUI User Manual](USER_MANUAL.md)
-  * [Building for Windows using Docker](docker/README.md)
+  * [Building for Windows using Docker](docker/README_docker.md)
   
 # Building and installing on Ubuntu Linux (16-18)
   ```
