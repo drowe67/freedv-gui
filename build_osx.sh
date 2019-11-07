@@ -10,7 +10,6 @@ export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 export HAMLIBDIR=$FREEDVGUIDIR/hamlib
 
 # Prerequisite: build hamlib
-cd $FREEDVGUIDIR
 git clone git://git.code.sf.net/p/hamlib/code hamlib-code
 cd hamlib-code && git checkout master && git pull
 ./bootstrap
@@ -20,7 +19,7 @@ make install
 
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
-git clone https://github.com/tmiw/codec2.git
+git clone https://github.com/drowe67/codec2.git
 cd codec2 && git checkout master && git pull
 mkdir -p build_osx && cd build_osx && rm -Rf * && cmake .. && make
 
