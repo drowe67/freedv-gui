@@ -9,7 +9,13 @@ export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 export HAMLIBDIR=$FREEDVGUIDIR/hamlib
 
+# Prerequisite: build dylibbundler
+git clone https://github.com/auriamg/macdylibbundler.git
+cd macdylibbundler && git checkout master && git pull
+make
+
 # Prerequisite: build hamlib
+cd $FREEDVGUIDIR
 git clone git://git.code.sf.net/p/hamlib/code hamlib-code
 cd hamlib-code && git checkout master && git pull
 ./bootstrap

@@ -6,7 +6,7 @@ For the following instructions, I'm assuming you will be placing everything in:
 1/ DEPENDENCIES
 Using Macports, most of the appropriate dependencies can be installed by:
 
-$ sudo port install subversion git libtool libsamplerate sox portaudio dylibbundler cmake
+$ sudo port install subversion git libtool libsamplerate sox portaudio cmake
 
 It should be fairly similar using HomeBrew, but you will need to replace all the /opt/ paths in the following instructions.
 
