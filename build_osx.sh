@@ -15,6 +15,7 @@ cd macdylibbundler && git checkout master && git pull
 make
 
 # Prerequisite: build hamlib
+cd $FREEDVGUIDIR
 git clone git://git.code.sf.net/p/hamlib/code hamlib-code
 cd hamlib-code && git checkout master && git pull
 ./bootstrap
