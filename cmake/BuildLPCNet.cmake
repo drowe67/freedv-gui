@@ -9,7 +9,7 @@ ExternalProject_Add(build_lpcnetfreedv
    SOURCE_DIR LPCNet_src
    BINARY_DIR LPCNet_build
    GIT_REPOSITORY https://github.com/drowe67/LPCNet.git
-   GIT_TAG origin/master
+   GIT_TAG v0.1
    CMAKE_ARGS ${LPCNET_CMAKE_ARGS}
    CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET}
    INSTALL_COMMAND ""
