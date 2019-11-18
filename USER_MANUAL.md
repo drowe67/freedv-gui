@@ -88,6 +88,14 @@ Receive Tab | From Computer To Speaker/Headphone | The decoded audio from your c
 Transmit Tab | From Microphone to Computer | Your voice from the microphone to your computer
 Transmit Tab | From Computer To Radio | The FreeDV signal from your computer sent **to** your radio rig interface for transmission
 
+### Changing Audio Devices
+
+If you change audio devices (e.g. add or remove sound cards, USB hardware), it's a good idea to check the Tools/Audio Config dialog before pressing **Start**, to verify the audio devices are as expected. This is particularly important if any audio devices e.g. Headsets, USB Sound Cards, or Virtual Cables have been disconnected since the last time FreeDV was used.
+
+Hitting **Refresh** in the lower left hand corner of the Tools/Audio Config will normally update the audio devices list. Keeping a screen shot of a known working configuration will be useful for new users. Unexpected audio configuration changes may also occur following a Windows updates.
+
+Another solution is to re-start FreeDV and check Tools/Audio Config again after changing any audio hardware.
+
 ## Sound Card Levels
 
 Sound card levels are generally adjusted in the computer's Control
