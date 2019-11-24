@@ -21,6 +21,7 @@
 //==========================================================================
 
 #include "fdmdv2_main.h"
+#include "osx_interface.h"
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
@@ -2828,8 +2829,14 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         }
 
         // attempt to start sound cards and tx/rx processing
-
-        startRxStream();
+        if (VerifyMicrophonePermissions())
+        {
+            startRxStream();
+        }
+        else
+        {
+            wxMessageBox(wxString("Microphone permissions must be granted to FreeDV for it to function properly."), wxT("Error"), wxOK | wxICON_ERROR, this);
+        }
 
         if (m_RxRunning)
         {

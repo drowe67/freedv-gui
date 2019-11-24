@@ -4,6 +4,8 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Required to transmit your voice to the other party.</string>
 	<key>CFBundleExecutable</key>
 	<string>freedv</string>
 	<key>CFBundleIconFile</key>
@@ -40,6 +42,8 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Required to transmit your voice to the other party.</string>
 	<key>CFBundleExecutable</key>
 	<string>freedv</string>
 	<key>CFBundleIconFile</key>
@@ -74,6 +78,8 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Required to transmit your voice to the other party.</string>
 	<key>CFBundleExecutable</key>
 	<string>freedv</string>
 	<key>CFBundleIconFile</key>
