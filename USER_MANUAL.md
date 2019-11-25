@@ -96,6 +96,8 @@ Hitting **Refresh** in the lower left hand corner of the Tools/Audio Config will
 
 Another solution is to re-start FreeDV and check Tools/Audio Config again after changing any audio hardware.
 
+If you change/remove USB audio devices without refreshing Tools/Audio COnfig, FreeDV may crash.
+
 ## Sound Card Levels
 
 Sound card levels are generally adjusted in the computer's Control
@@ -260,6 +262,9 @@ FMA             -       Supports FMA extensions using YMM state``
 You may need to clean out the previous configuration.  Try
 Tools-Restore Defaults.
 
+### FreeDV crashes when I press Start
+
+Have you removed/changed USB audio devices? If you remove/change USB audio devices without pressing Tools/Audio Config, FreeDV may crash.  See Changing Audio Devices above.
 
 ## Voice Keyer 
 
