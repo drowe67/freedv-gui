@@ -257,6 +257,13 @@ AVX             *       Supports AVX intruction extensions
 FMA             -       Supports FMA extensions using YMM state``
 ```
 
+On Linux, you can check for `avx` in the **flags** section of `/proc/cpuinfo`
+or the output of the `lscpu` command:
+```
+lscpu | grep -o "avx[^ ]*"
+```
+will display `avx` (or `avx2`) if your CPU supports the instructions.
+
 ### I installed a new version and FreeDV stopped working
 
 You may need to clean out the previous configuration.  Try
