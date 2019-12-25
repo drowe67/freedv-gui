@@ -4094,8 +4094,6 @@ void txRxProcessing()
                 fprintf(stderr, "  nout: %d\n", nout);
             }
             ret = codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
-            // should never fire as we check there is enough room before entering while loop
-            assert(ret != -1);
         }
     }
    

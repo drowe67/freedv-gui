@@ -7,7 +7,7 @@ cd $BUILDROOT
 # variables that can be passed in to Docker process ------------------
 
 # note this is just the freedv-gui repo, codec2 and LPCNet repos are hard coded in build_windows.sh
-GIT_REPO=${FDV_GIT_REPO:-http://github.com/drowe67/freedv-gui.git}
+GIT_REPO=${FDV_GIT_REPO:-https://github.com/drowe67/freedv-gui.git}
 GIT_BRANCH=${FDV_GIT_BRANCH:-master}
 
 # override with "mingw32-cmake" for a 32 bit build
@@ -20,8 +20,11 @@ echo "FDV_CMAKE=$CMAKE"
 
 # OK lets get started -----------------------------------------------
 
-if [ ! -d freedv-gui ] ; then git clone --depth=1 $GIT_REPO ; fi
-cd freedv-gui && git pull && git checkout $GIT_BRANCH
+if [ ! -d freedv-gui ] ; then git clone $GIT_REPO ; fi
+cd freedv-gui
+git pull -v
+git branch
+git checkout $GIT_BRANCH
 echo "--------------------- starting build_windows.sh ---------------------"
 GIT_REPO=$GIT_REPO GIT_REF=$GIT_REF CMAKE=$CMAKE ./build_windows.sh
 if [ $CMAKE = "mingw64-cmake" ]; then
