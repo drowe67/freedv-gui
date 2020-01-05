@@ -275,7 +275,7 @@ Have you removed/changed USB audio devices? If you remove/change USB audio devic
 
 ### FreeDV can't be opened on OSX because the developer cannot be verified
 
-From February 2020 Apple is enforcing notarization for all OSX applications.  The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.
+From January 2020 Apple is enforcing notarization for all OSX applications.  The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.
 
 ![notarization](contrib/osx_notarization1.png)
 
