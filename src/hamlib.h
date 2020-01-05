@@ -1,11 +1,11 @@
 #ifndef HAMLIB_H
 #define HAMLIB_H
 
+#include <wx/combobox.h>
+#include <vector>
 extern "C" {
 #include <hamlib/rig.h>
 }
-#include <wx/combobox.h>
-#include <vector>
 
 class Hamlib {
 
