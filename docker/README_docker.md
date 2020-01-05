@@ -19,17 +19,23 @@ Building is only required once
 ```
 docker-compose -f docker-compose-win.yml build
 ```
+
 ## Running the image(s)
 ```
 docker-compose -f docker-compose-win.yml up 
 ```
 
-You can optionally control via the environment variables GIT_REPO and GIT_REF which branch/commit from which repo is being built. The if these are not defined default is the `master` branch  of (https://github.com/drowe67/freedv-gui.git) and does not have to be specified explicitly.
+You can optionally control via the environment variables FDV_GIT_REPO, FDV_GIT_BRANCH, FDV_CMAKE, FDV_CLEAN, for example:
 
+Build from freedv-gui branch =my-super-branch:
 ```bash
-export GIT_REF=my-super-branch
-export GIT_REPO=http://github.com/dummy/freedv-gui.git
-docker-compose -f docker-compose-win.yml up 
+FDV_GIT_BRANCH=my-super-branch docker-compose -f docker-compose-win.yml up 
+
+```
+
+Build a 32 bit image (default is 64 bit):
+```bash
+FDV_CMAKE=mingw32-cmake docker-compose -f docker-compose-win.yml up 
 
 ```
 ## Accessing created output
