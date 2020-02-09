@@ -4141,7 +4141,7 @@ void per_frame_rx_processing(
             if (g_freedv_verbose) {
                 fprintf(stderr, "per_frame: nin = %d input_fifo free: %d used: %d\n", nin, codec2_fifo_free(input_fifo), codec2_fifo_used(input_fifo));
             }
-            if (horus_rx(g_horus, ascii_out, input_buf)) {
+            if (horus_rx(g_horus, ascii_out, input_buf, 0)) {
                 // unfort fifo deals with shorts
                 short ch;
                 for (i=0; i<(int)strlen(ascii_out); i++) {

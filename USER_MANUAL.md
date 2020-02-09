@@ -401,25 +401,13 @@ FreeDV 2020 Tips:
 
 ### Horus Binary Mode
 
-Horus Binary mode (HorusB) High Altitude Balloon (HAB) telemetry using
-the same FSK modem as 2400A/B and 800XA.
+The FreeDV GUI also supports the Horus Binary (HorusB) modulation, which is used 
+for telemetry on high-altitude balloon flights. This uses the same FSK modem as
+2400A/B and 800XA. 
 
-Connect your UHF SSB radio to FreeDV, and it will output telemetry
-messages to the UDP port specified on Tools-Options "UDP Messages".
-For Project Horus work, the port 55690 is used. Check the "Enable UDP
-messages" checkbox.
+Refer to the HorusBinary github page for information on how to decode and upload 
+HAB telemetry using this option: https://github.com/projecthorus/horusbinary/wiki
 
-You can test Horus telemetry decodes by "Playing" [this](http://rowetel.com/downloads/horus/4fsk_binary_100Rb_8khzfs.wav) test file using Tools - Start/Stop Play File - from Radio.  On Linux, you can
-monitoring the messages using netcat:
-```
-  $ nc -ul 55690 
-```
-At the bottom of Tools-Options, the "APiVerbose" check box enables
-printing of verbose API debug messages to the console, which will also
-work in Windows if Tools-Options "Windows Debug Console" is checked.
-
-A Python script is required to upload the telemetry messages to the HabHub
-server, please see https://github.com/projecthorus/horusbinary#usage---via-freedv
 
 ## Tools - Filter
 
