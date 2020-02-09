@@ -403,7 +403,7 @@ FreeDV 2020 Tips:
 
 The FreeDV GUI also supports the Horus Binary (HorusB) modulation, which is used 
 for telemetry on high-altitude balloon flights. This uses the same FSK modem as
-2400A/B and 800XA.
+2400A/B and 800XA. 
 
 Refer to the HorusBinary github page for information on how to decode and upload 
 HAB telemetry using this option: https://github.com/projecthorus/horusbinary/wiki
