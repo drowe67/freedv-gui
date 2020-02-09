@@ -176,6 +176,10 @@ please unplug and plug back in the USB device.  Windows/FreeDV won't
 recognise the device on the new COM Port until it has been
 unplugged/plugged.
 
+### USB or LSB?
+
+On bands beneath 10 MHz, LSB is used for FreeDV.  On 10MHz and above, USB is used. After much debate, the FreeDV community has adopted the same conventions as SSB, based on the reasoning that FreeDV is a voice mode.  
+
 ## Common Problems
 
 ### Overdriving Transmit Level
