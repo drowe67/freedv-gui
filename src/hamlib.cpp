@@ -174,7 +174,7 @@ bool Hamlib::is_correct_sideband(wxString &hamlibError) {
 
     rmode_t mode = RIG_MODE_NONE;
     pbwidth_t passband = 0;
-    auto result = rig_get_mode(m_rig, RIG_VFO_CURR, &mode, &passband);
+    int result = rig_get_mode(m_rig, RIG_VFO_CURR, &mode, &passband);
     if (result != RIG_OK)
     {
         fprintf(stderr, "rig_get_mode: error = %s \n", rigerror(result));
