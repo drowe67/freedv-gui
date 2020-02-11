@@ -163,6 +163,48 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
     return retcode == RIG_OK;
 }
 
+bool Hamlib::is_correct_sideband(wxString &hamlibError) {
+    bool retVal = false;
+
+    fprintf(stderr,"Hamlib::is_correct_sideband\n");
+    hamlibError = "";
+
+    if(!m_rig)
+        return false;
+
+    rmode_t mode = RIG_MODE_NONE;
+    pbwidth_t passband = 0;
+    auto result = rig_get_mode(m_rig, RIG_VFO_CURR, &mode, &passband);
+    if (result != RIG_OK)
+    {
+        fprintf(stderr, "rig_get_mode: error = %s \n", rigerror(result));
+        hamlibError = rigerror(result);
+    }
+    else
+    {
+        freq_t freq = 0;
+        result = rig_get_freq(m_rig, RIG_VFO_CURR, &freq);
+        if (result != RIG_OK)
+        {
+            fprintf(stderr, "rig_get_freq: error = %s \n", rigerror(result));
+            hamlibError = rigerror(result);
+        }
+        else
+        {
+            fprintf(stderr, "is_correct_sideband detected sideband %s, freq %f\n", rig_strrmode(mode), freq);
+            retVal = 
+                (freq >= 10000000 && (mode == RIG_MODE_USB || mode == RIG_MODE_PKTUSB)) ||
+                (freq < 10000000 && (mode == RIG_MODE_LSB || mode == RIG_MODE_PKTLSB));
+            if (!retVal)
+            {
+                hamlibError = "Your radio may be set to the incorrect sideband for FreeDV (LSB under 10MHz, USB >= 10MHz). Please confirm settings on your radio.";
+            }
+        }
+    }
+
+    return retVal;
+}
+
 void Hamlib::close(void) {
     if(m_rig) {
         rig_close(m_rig);

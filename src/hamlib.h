@@ -15,6 +15,7 @@ class Hamlib {
         void populateComboBox(wxComboBox *cb);
         bool connect(unsigned int rig_index, const char *serial_port, const int serial_rate);
         bool ptt(bool press, wxString &hamlibError);
+        bool is_correct_sideband(wxString &hamlibError);
         void close(void);
         int get_serial_rate(void);
         int get_data_bits(void);

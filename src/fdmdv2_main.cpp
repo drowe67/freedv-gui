@@ -2612,7 +2612,18 @@ bool MainFrame::OpenHamlibRig() {
     bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate);
     if (status == false)
         wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
- 
+    else
+    {
+        // Validate current sideband configuration of radio. FreeDV by convention uses the same sidebands
+        // as SSB voice.
+        wxString error;
+        status = wxGetApp().m_hamlib->is_correct_sideband(error);
+        if (!status)
+        {
+            wxMessageBox(error, wxT("Warning"), wxOK | wxICON_WARNING, this);
+        }
+    }
+
     return status;
 } 
 
