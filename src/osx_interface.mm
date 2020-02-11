@@ -32,6 +32,7 @@ static bool globalHasAccess = false;
 bool VerifyMicrophonePermissions()
 {
     bool hasAccess = true;
+#ifndef APPLE_OLD_XCODE
     if (@available(macOS 10.14, *)) {
         // OSX >= 10.14: Request permission to access the camera and microphone.
         switch ([AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio])
@@ -73,6 +74,7 @@ bool VerifyMicrophonePermissions()
             }
         }
     }
+#endif // !APPLE_OLD_XCODE
 
     return hasAccess;
 }
