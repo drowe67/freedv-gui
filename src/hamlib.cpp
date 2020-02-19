@@ -233,6 +233,8 @@ void Hamlib::update_sideband_status()
         m_sidebandBox->SetLabel(wxT("USB"));
     else if (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)
         m_sidebandBox->SetLabel(wxT("LSB"));
+    else
+        m_sidebandBox->SetLabel(rig_strrmode(m_currMode));
 
     // Update color
     bool isMatchingSideband = 
