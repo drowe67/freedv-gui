@@ -236,6 +236,13 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     wxBoxSizer* lowerSizer;
     lowerSizer = new wxBoxSizer(wxHORIZONTAL);
 
+    wxBoxSizer* ssbStatusSizer;
+    ssbStatusSizer = new wxBoxSizer(wxVERTICAL);
+    m_BtnSSBStatus = new wxStaticText(this, wxID_ANY, wxT("USB"), wxDefaultPosition, wxSize(60, -1), wxALIGN_CENTRE);
+    m_BtnSSBStatus->Enable(false); // enabled only if Hamlib is turned on
+    ssbStatusSizer->Add(m_BtnSSBStatus, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 1);
+    lowerSizer->Add(ssbStatusSizer, 0, wxALIGN_CENTER_VERTICAL, 1);
+
     m_BtnCallSignReset = new wxButton(this, wxID_ANY, _("Clear"), wxDefaultPosition, wxDefaultSize, 0);
     lowerSizer->Add(m_BtnCallSignReset, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
@@ -245,13 +252,6 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     m_txtCtrlCallSign->SetToolTip(_("Call Sign of transmitting station will appear here"));
     bSizer15->Add(m_txtCtrlCallSign, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5);
     lowerSizer->Add(bSizer15, 1, wxEXPAND, 5);
-
-    wxBoxSizer* ssbStatusSizer;
-    ssbStatusSizer = new wxBoxSizer(wxVERTICAL);
-    m_BtnSSBStatus = new wxStaticText(this, wxID_ANY, wxT("USB"), wxDefaultPosition, wxSize(60, -1), wxALIGN_CENTRE);
-    m_BtnSSBStatus->Enable(false); // enabled only if Hamlib is turned on
-    ssbStatusSizer->Add(m_BtnSSBStatus, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 1);
-    lowerSizer->Add(ssbStatusSizer, 0, wxALIGN_CENTER_VERTICAL, 1);
 
 #ifdef __EXPERIMENTAL_UDP__
     wxStaticBoxSizer* sbSizer_Checksum = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Checksums")), wxHORIZONTAL);
