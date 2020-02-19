@@ -2825,14 +2825,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         //printf("m_textEncoding = %d\n", wxGetApp().m_textEncoding);
         //printf("g_stats.snr: %f\n", g_stats.snr_est);
 
-        // attempt to start PTT ......
-        
-        if (wxGetApp().m_boolHamlibUseForPTT)
-            OpenHamlibRig();
-        if (wxGetApp().m_boolUseSerialPTT) {
-            OpenSerialPort();
-        }
-
         // attempt to start sound cards and tx/rx processing
         if (VerifyMicrophonePermissions())
         {
@@ -2841,6 +2833,14 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         else
         {
             wxMessageBox(wxString("Microphone permissions must be granted to FreeDV for it to function properly."), wxT("Error"), wxOK | wxICON_ERROR, this);
+        }
+
+        // attempt to start PTT ......
+        
+        if (wxGetApp().m_boolHamlibUseForPTT)
+            OpenHamlibRig();
+        if (wxGetApp().m_boolUseSerialPTT) {
+            OpenSerialPort();
         }
 
         if (m_RxRunning)
