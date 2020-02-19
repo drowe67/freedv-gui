@@ -163,22 +163,35 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
     return retcode == RIG_OK;
 }
 
-bool Hamlib::is_correct_sideband(wxString &hamlibError) {
-    bool retVal = false;
+int Hamlib::hamlib_freq_cb(RIG* rig, vfo_t currVFO, freq_t currFreq, void* ptr)
+{
+    Hamlib* thisPtr = (Hamlib*)ptr;
+    thisPtr->m_currFreq = currFreq;
+    thisPtr->update_sideband_status();
+    return RIG_OK;
+}
 
-    fprintf(stderr,"Hamlib::is_correct_sideband\n");
-    hamlibError = "";
+int Hamlib::hamlib_mode_cb(RIG* rig, vfo_t currVFO, rmode_t currMode, pbwidth_t passband, void* ptr)
+{
+    Hamlib* thisPtr = (Hamlib*)ptr;
+    thisPtr->m_currMode = currMode;
+    thisPtr->update_sideband_status();
+    return RIG_OK;
+}
 
-    if(!m_rig)
-        return false;
+void Hamlib::enable_sideband_detection(wxStaticText* statusBox)
+{
+    // Enable control.
+    m_sidebandBox = statusBox;
+    m_sidebandBox->Enable(true);
 
+    // Populate initial state.
     rmode_t mode = RIG_MODE_NONE;
     pbwidth_t passband = 0;
     int result = rig_get_mode(m_rig, RIG_VFO_CURR, &mode, &passband);
     if (result != RIG_OK)
     {
         fprintf(stderr, "rig_get_mode: error = %s \n", rigerror(result));
-        hamlibError = rigerror(result);
     }
     else
     {
@@ -187,22 +200,55 @@ bool Hamlib::is_correct_sideband(wxString &hamlibError) {
         if (result != RIG_OK)
         {
             fprintf(stderr, "rig_get_freq: error = %s \n", rigerror(result));
-            hamlibError = rigerror(result);
         }
         else
         {
-            fprintf(stderr, "is_correct_sideband detected sideband %s, freq %f\n", rig_strrmode(mode), freq);
-            retVal = 
-                (freq >= 10000000 && (mode == RIG_MODE_USB || mode == RIG_MODE_PKTUSB)) ||
-                (freq < 10000000 && (mode == RIG_MODE_LSB || mode == RIG_MODE_PKTLSB));
-            if (!retVal)
-            {
-                hamlibError = "Your radio may be set to the incorrect sideband for FreeDV (LSB under 10MHz, USB >= 10MHz). Please confirm settings on your radio.";
-            }
+            m_currMode = mode;
+            m_currFreq = freq;
+            update_sideband_status();
         }
     }
 
-    return retVal;
+    // Enable rig callbacks.
+    rig_set_freq_callback(m_rig, &hamlib_freq_cb, this);
+    rig_set_mode_callback(m_rig, &hamlib_mode_cb, this);
+    rig_set_trn(m_rig, RIG_TRN_POLL);
+}
+
+void Hamlib::disable_sideband_detection()
+{
+    // Disable callbacks.
+    rig_set_trn(m_rig, RIG_TRN_OFF);
+    rig_set_freq_callback(m_rig, NULL, NULL);
+    rig_set_mode_callback(m_rig, NULL, NULL);
+
+    // Disable control.
+    m_sidebandBox->Enable(false);
+}
+
+void Hamlib::update_sideband_status()
+{
+    // Update string value.
+    if (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)
+        m_sidebandBox->SetLabel(wxT("USB"));
+    else if (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)
+        m_sidebandBox->SetLabel(wxT("LSB"));
+
+    // Update color
+    bool isMatchingSideband = 
+        (m_currFreq >= 10000000 && (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)) ||
+        (m_currFreq < 10000000 && (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB));
+    if (isMatchingSideband)
+    {
+        m_sidebandBox->SetForegroundColour(wxColor(*wxBLACK));
+    }
+    else
+    {
+        m_sidebandBox->SetForegroundColour(wxColor(*wxRED));
+    }
+
+    // Refresh
+    m_sidebandBox->Refresh();
 }
 
 void Hamlib::close(void) {

@@ -734,6 +734,7 @@ MainFrame::~MainFrame()
 
     if (wxGetApp().m_hamlib)
     {
+        wxGetApp().m_hamlib->disable_sideband_detection();
         wxGetApp().m_hamlib->close();
         delete wxGetApp().m_hamlib;
     }
@@ -2614,14 +2615,7 @@ bool MainFrame::OpenHamlibRig() {
         wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
     else
     {
-        // Validate current sideband configuration of radio. FreeDV by convention uses the same sidebands
-        // as SSB voice.
-        wxString error;
-        status = wxGetApp().m_hamlib->is_correct_sideband(error);
-        if (!status)
-        {
-            wxMessageBox(error, wxT("Warning"), wxOK | wxICON_WARNING, this);
-        }
+        wxGetApp().m_hamlib->enable_sideband_detection(m_BtnSSBStatus);
     }
 
     return status;
@@ -2885,6 +2879,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 if (hamlib->ptt(false, hamlibError) == false) {
                     wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
                 }
+                hamlib->disable_sideband_detection();
                 hamlib->close();
             }
         }
