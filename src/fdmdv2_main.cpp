@@ -2616,7 +2616,7 @@ bool MainFrame::OpenHamlibRig() {
         wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
     else
     {
-        wxGetApp().m_hamlib->enable_sideband_detection(m_BtnSSBStatus);
+        wxGetApp().m_hamlib->enable_sideband_detection(m_txtSSBStatus);
     }
 
     return status;

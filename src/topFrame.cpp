@@ -238,10 +238,10 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
 
     wxBoxSizer* ssbStatusSizer;
     ssbStatusSizer = new wxBoxSizer(wxVERTICAL);
-    m_BtnSSBStatus = new wxStaticText(this, wxID_ANY, wxT("USB"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    m_BtnSSBStatus->Enable(false); // enabled only if Hamlib is turned on
-    m_BtnSSBStatus->SetMinSize(wxSize(40,-1));
-    ssbStatusSizer->Add(m_BtnSSBStatus, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 1);
+    m_txtSSBStatus = new wxStaticText(this, wxID_ANY, wxT("USB"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_txtSSBStatus->Enable(false); // enabled only if Hamlib is turned on
+    m_txtSSBStatus->SetMinSize(wxSize(40,-1));
+    ssbStatusSizer->Add(m_txtSSBStatus, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 1);
     lowerSizer->Add(ssbStatusSizer, 0, wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
     m_BtnCallSignReset = new wxButton(this, wxID_ANY, _("Clear"), wxDefaultPosition, wxDefaultSize, 0);

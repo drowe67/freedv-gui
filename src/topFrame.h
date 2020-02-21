@@ -90,7 +90,7 @@ class TopFrame : public wxFrame
 
         wxButton*     m_BtnCallSignReset;
         wxTextCtrl*   m_txtCtrlCallSign;
-        wxStaticText* m_BtnSSBStatus;
+        wxStaticText* m_txtSSBStatus;
         wxStaticText* m_txtChecksumGood;
         wxStaticText* m_txtChecksumBad;
 
