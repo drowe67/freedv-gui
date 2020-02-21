@@ -31,7 +31,11 @@ typedef std::vector<const struct rig_caps *> riglist_t;
 static bool rig_cmp(const struct rig_caps *rig1, const struct rig_caps *rig2);
 static int build_list(const struct rig_caps *rig, rig_ptr_t);
 
-Hamlib::Hamlib() : m_rig(NULL) {
+Hamlib::Hamlib() : 
+    m_rig(NULL),
+    m_sidebandBox(NULL),
+    m_currFreq(0),
+    m_currMode(0)  {
     /* Stop hamlib from spewing info to stderr. */
     rig_set_debug(RIG_DEBUG_NONE);
 
