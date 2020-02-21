@@ -282,6 +282,13 @@ bool MainApp::OnInit()
 //-------------------------------------------------------------------------
 int MainApp::OnExit()
 {
+    // Note: sideband detection needs to be disabled here instead
+    // of in the destructor due to its need to touch the UI.
+    if (wxGetApp().m_hamlib)
+    {
+        wxGetApp().m_hamlib->disable_sideband_detection();
+    }
+
     //fprintf(stderr, "MainApp::OnExit\n");
     if (m_plugIn) {
         #ifdef __WXMSW__
@@ -731,13 +738,6 @@ MainFrame::~MainFrame()
 #ifdef __EXPERIMENTAL_UDP__
     stopUDPThread();
 #endif
-
-    if (wxGetApp().m_hamlib)
-    {
-        wxGetApp().m_hamlib->disable_sideband_detection();
-        wxGetApp().m_hamlib->close();
-        delete wxGetApp().m_hamlib;
-    }
 
     if (wxGetApp().m_serialport)
     {
@@ -2457,6 +2457,7 @@ void MainFrame::OnExit(wxCommandEvent& event)
     m_togBtnAnalog->Disable();
     //m_togBtnALC->Disable();
     //m_btnTogPTT->Disable();
+
     Pa_Terminate();
     Destroy();
 }

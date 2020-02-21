@@ -223,7 +223,7 @@ void Hamlib::disable_sideband_detection()
     rig_set_mode_callback(m_rig, NULL, NULL);
 
     // Disable control.
-    m_sidebandBox->Enable(false);
+    if (m_sidebandBox != NULL) m_sidebandBox->Enable(false);
 }
 
 void Hamlib::update_sideband_status()
