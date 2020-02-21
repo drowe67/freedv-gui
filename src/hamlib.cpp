@@ -35,7 +35,7 @@ Hamlib::Hamlib() :
     m_rig(NULL),
     m_sidebandBox(NULL),
     m_currFreq(0),
-    m_currMode(0)  {
+    m_currMode(RIG_MODE_USB)  {
     /* Stop hamlib from spewing info to stderr. */
     rig_set_debug(RIG_DEBUG_NONE);
 
