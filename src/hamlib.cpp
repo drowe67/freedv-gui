@@ -229,8 +229,8 @@ void Hamlib::disable_sideband_detection()
     // Disable control.
     if (m_sidebandBox != NULL) 
     {
-        m_sidebandBox = NULL;
         m_sidebandBox->Enable(false);
+        m_sidebandBox = NULL;
     }
 }
 
