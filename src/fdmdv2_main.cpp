@@ -282,13 +282,6 @@ bool MainApp::OnInit()
 //-------------------------------------------------------------------------
 int MainApp::OnExit()
 {
-    // Note: sideband detection needs to be disabled here instead
-    // of in the destructor due to its need to touch the UI.
-    if (wxGetApp().m_hamlib)
-    {
-        wxGetApp().m_hamlib->disable_sideband_detection();
-    }
-
     //fprintf(stderr, "MainApp::OnExit\n");
     if (m_plugIn) {
         #ifdef __WXMSW__
@@ -2432,6 +2425,13 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnExit(wxCommandEvent& event)
 {
+    // Note: sideband detection needs to be disabled here instead
+    // of in the destructor due to its need to touch the UI.
+    if (wxGetApp().m_hamlib)
+    {
+        wxGetApp().m_hamlib->disable_sideband_detection();
+    }
+
     //fprintf(stderr, "MainFrame::OnExit\n");
     wxUnusedVar(event);
 #ifdef _USE_TIMER
