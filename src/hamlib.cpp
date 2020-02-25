@@ -213,32 +213,43 @@ void Hamlib::enable_sideband_detection(wxStaticText* statusBox)
         }
     }
 
-    // TBD: Due to hamlib not supporting polling on Windows, the bottom is temporarily
-    // disabled. When/if that changes, re-enabling is a simple matter of removing
-    // the #if/#endif below.
+    // If we couldn't get current mode/frequency for any reason, disable the UI for it.
+    if (result != RIG_OK)
+    {
+        m_sidebandBox->SetLabel(wxT("unk"));
+        m_sidebandBox->Enable(false);
+        m_sidebandBox = NULL;
+    }
+    else
+    {
+        // TBD: Due to hamlib not supporting polling on Windows, the bottom is temporarily
+        // disabled. When/if that changes, re-enabling is a simple matter of removing
+        // the #if/#endif below.
 #if 0
-    // Enable rig callbacks.
-    rig_set_freq_callback(m_rig, &hamlib_freq_cb, this);
-    rig_set_mode_callback(m_rig, &hamlib_mode_cb, this);
-    rig_set_trn(m_rig, RIG_TRN_POLL);
+        // Enable rig callbacks.
+        rig_set_freq_callback(m_rig, &hamlib_freq_cb, this);
+        rig_set_mode_callback(m_rig, &hamlib_mode_cb, this);
+        rig_set_trn(m_rig, RIG_TRN_POLL);
 #endif
+    }
 }
 
 void Hamlib::disable_sideband_detection()
 {
-    // TBD: Due to hamlib not supporting polling on Windows, the bottom is temporarily
-    // disabled. When/if that changes, re-enabling is a simple matter of removing
-    // the #if/#endif below.
-#if 0
-    // Disable callbacks.
-    rig_set_trn(m_rig, RIG_TRN_OFF);
-    rig_set_freq_callback(m_rig, NULL, NULL);
-    rig_set_mode_callback(m_rig, NULL, NULL);
-#endif
-
-    // Disable control.
     if (m_sidebandBox != NULL) 
     {
+        // TBD: Due to hamlib not supporting polling on Windows, the bottom is temporarily
+        // disabled. When/if that changes, re-enabling is a simple matter of removing
+        // the #if/#endif below.
+#if 0
+        // Disable callbacks.
+        rig_set_trn(m_rig, RIG_TRN_OFF);
+        rig_set_freq_callback(m_rig, NULL, NULL);
+        rig_set_mode_callback(m_rig, NULL, NULL);
+#endif
+    
+        // Disable control.
+        m_sidebandBox->SetLabel(wxT("unk"));
         m_sidebandBox->Enable(false);
         m_sidebandBox = NULL;
     }

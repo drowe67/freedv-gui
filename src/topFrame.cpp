@@ -238,7 +238,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
 
     wxBoxSizer* ssbStatusSizer;
     ssbStatusSizer = new wxBoxSizer(wxVERTICAL);
-    m_txtSSBStatus = new wxStaticText(this, wxID_ANY, wxT("USB"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_txtSSBStatus = new wxStaticText(this, wxID_ANY, wxT("unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_txtSSBStatus->Enable(false); // enabled only if Hamlib is turned on
     m_txtSSBStatus->SetMinSize(wxSize(40,-1));
     ssbStatusSizer->Add(m_txtSSBStatus, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 1);
