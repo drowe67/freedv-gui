@@ -105,6 +105,7 @@ if(APPLE)
     add_custom_command(
         TARGET freedv
         POST_BUILD
+        COMMAND rm ARGS -rf FreeDV.* dist_tmp
         COMMAND mkdir ARGS -p FreeDV.app/Contents/MacOS
         COMMAND mkdir ARGS -p FreeDV.app/Contents/Resources/English.lproj
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/info.plist FreeDV.app/Contents
