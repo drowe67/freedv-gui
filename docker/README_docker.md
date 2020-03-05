@@ -44,3 +44,11 @@ If you started the docker services using `docker up`, you can easily access the 
 ```
 docker cp fdv_win_fed30_c:/home/build/freedv-gui/build_win64/FreeDV-1.4.0-devel-20190725-7cd03db-win64.exe .
 ```
+
+## Automation
+
+Script to automate the steps above:
+```
+  ./freedv_build_windows.sh 64
+  ./freedv_build_windows.sh 32
+```
