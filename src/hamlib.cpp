@@ -31,7 +31,11 @@ typedef std::vector<const struct rig_caps *> riglist_t;
 static bool rig_cmp(const struct rig_caps *rig1, const struct rig_caps *rig2);
 static int build_list(const struct rig_caps *rig, rig_ptr_t);
 
-Hamlib::Hamlib() : m_rig(NULL) {
+Hamlib::Hamlib() : 
+    m_rig(NULL),
+    m_sidebandBox(NULL),
+    m_currFreq(0),
+    m_currMode(RIG_MODE_USB)  {
     /* Stop hamlib from spewing info to stderr. */
     rig_set_debug(RIG_DEBUG_NONE);
 
@@ -161,6 +165,121 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
     }
 
     return retcode == RIG_OK;
+}
+
+int Hamlib::hamlib_freq_cb(RIG* rig, vfo_t currVFO, freq_t currFreq, void* ptr)
+{
+    Hamlib* thisPtr = (Hamlib*)ptr;
+    thisPtr->m_currFreq = currFreq;
+    thisPtr->update_sideband_status();
+    return RIG_OK;
+}
+
+int Hamlib::hamlib_mode_cb(RIG* rig, vfo_t currVFO, rmode_t currMode, pbwidth_t passband, void* ptr)
+{
+    Hamlib* thisPtr = (Hamlib*)ptr;
+    thisPtr->m_currMode = currMode;
+    thisPtr->update_sideband_status();
+    return RIG_OK;
+}
+
+void Hamlib::enable_sideband_detection(wxStaticText* statusBox)
+{
+    // Enable control.
+    m_sidebandBox = statusBox;
+    m_sidebandBox->Enable(true);
+
+    // Populate initial state.
+    rmode_t mode = RIG_MODE_NONE;
+    pbwidth_t passband = 0;
+    int result = rig_get_mode(m_rig, RIG_VFO_CURR, &mode, &passband);
+    if (result != RIG_OK)
+    {
+        fprintf(stderr, "rig_get_mode: error = %s \n", rigerror(result));
+    }
+    else
+    {
+        freq_t freq = 0;
+        result = rig_get_freq(m_rig, RIG_VFO_CURR, &freq);
+        if (result != RIG_OK)
+        {
+            fprintf(stderr, "rig_get_freq: error = %s \n", rigerror(result));
+        }
+        else
+        {
+            m_currMode = mode;
+            m_currFreq = freq;
+            update_sideband_status();
+        }
+    }
+
+    // If we couldn't get current mode/frequency for any reason, disable the UI for it.
+    if (result != RIG_OK)
+    {
+        m_sidebandBox->SetLabel(wxT("unk"));
+        m_sidebandBox->Enable(false);
+        m_sidebandBox = NULL;
+    }
+    else
+    {
+        // TBD: Due to hamlib not supporting polling on Windows, the bottom is temporarily
+        // disabled. When/if that changes, re-enabling is a simple matter of removing
+        // the #if/#endif below.
+#if 0
+        // Enable rig callbacks.
+        rig_set_freq_callback(m_rig, &hamlib_freq_cb, this);
+        rig_set_mode_callback(m_rig, &hamlib_mode_cb, this);
+        rig_set_trn(m_rig, RIG_TRN_POLL);
+#endif
+    }
+}
+
+void Hamlib::disable_sideband_detection()
+{
+    if (m_sidebandBox != NULL) 
+    {
+        // TBD: Due to hamlib not supporting polling on Windows, the bottom is temporarily
+        // disabled. When/if that changes, re-enabling is a simple matter of removing
+        // the #if/#endif below.
+#if 0
+        // Disable callbacks.
+        rig_set_trn(m_rig, RIG_TRN_OFF);
+        rig_set_freq_callback(m_rig, NULL, NULL);
+        rig_set_mode_callback(m_rig, NULL, NULL);
+#endif
+    
+        // Disable control.
+        m_sidebandBox->SetLabel(wxT("unk"));
+        m_sidebandBox->Enable(false);
+        m_sidebandBox = NULL;
+    }
+}
+
+void Hamlib::update_sideband_status()
+{
+    // Update string value.
+    if (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)
+        m_sidebandBox->SetLabel(wxT("USB"));
+    else if (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)
+        m_sidebandBox->SetLabel(wxT("LSB"));
+    else
+        m_sidebandBox->SetLabel(rig_strrmode(m_currMode));
+
+    // Update color
+    bool isMatchingSideband = 
+        (m_currFreq >= 10000000 && (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)) ||
+        (m_currFreq < 10000000 && (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB));
+    if (isMatchingSideband)
+    {
+        m_sidebandBox->SetForegroundColour(wxColor(*wxBLACK));
+    }
+    else
+    {
+        m_sidebandBox->SetForegroundColour(wxColor(*wxRED));
+    }
+
+    // Refresh
+    m_sidebandBox->Refresh();
 }
 
 void Hamlib::close(void) {

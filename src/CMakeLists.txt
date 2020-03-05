@@ -47,10 +47,24 @@ set(FREEDV_SOURCES
     sox/xmalloc.c
     topFrame.h
     version.h
+    osx_interface.h
+)
+
+set(FREEDV_SOURCES_OSX
+    osx_interface.mm
+)
+
+set(FREEDV_LINK_LIBS_OSX
+    "-framework AVFoundation"
 )
 
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.
-add_executable(freedv WIN32 ${FREEDV_SOURCES} ${RES_FILES})
+# In addition, there are some required OSX-specific code files for platform specific handling.
+if(APPLE)
+    add_executable(freedv WIN32 ${FREEDV_SOURCES} ${RES_FILES} ${FREEDV_SOURCES_OSX})
+else()
+    add_executable(freedv WIN32 ${FREEDV_SOURCES} ${RES_FILES})
+endif(APPLE)
 
 # Link imported or build tree targets.
 target_link_libraries(freedv codec2 lpcnetfreedv)
@@ -66,7 +80,18 @@ if(FREEDV_STATIC_DEPS)
 endif(FREEDV_STATIC_DEPS)
 
 # Link other dependencies
+if(APPLE)
+target_link_libraries(freedv ${FREEDV_LINK_LIBS} ${FREEDV_LINK_LIBS_OSX})
+else()
 target_link_libraries(freedv ${FREEDV_LINK_LIBS})
+endif(APPLE)
+
+# For older Xcode (< 9.0), bypass usage of @available.
+if(APPLE)
+if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0.900037)
+add_definitions(-DAPPLE_OLD_XCODE)
+endif(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0.900037)
+endif(APPLE)
 
 # Insert source and generated header directories before other search directories.
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
@@ -80,6 +105,7 @@ if(APPLE)
     add_custom_command(
         TARGET freedv
         POST_BUILD
+        COMMAND rm ARGS -rf FreeDV.* dist_tmp
         COMMAND mkdir ARGS -p FreeDV.app/Contents/MacOS
         COMMAND mkdir ARGS -p FreeDV.app/Contents/Resources/English.lproj
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/info.plist FreeDV.app/Contents

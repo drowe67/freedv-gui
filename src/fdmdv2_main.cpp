@@ -21,6 +21,7 @@
 //==========================================================================
 
 #include "fdmdv2_main.h"
+#include "osx_interface.h"
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
@@ -730,12 +731,6 @@ MainFrame::~MainFrame()
 #ifdef __EXPERIMENTAL_UDP__
     stopUDPThread();
 #endif
-
-    if (wxGetApp().m_hamlib)
-    {
-        wxGetApp().m_hamlib->close();
-        delete wxGetApp().m_hamlib;
-    }
 
     if (wxGetApp().m_serialport)
     {
@@ -2430,6 +2425,13 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnExit(wxCommandEvent& event)
 {
+    // Note: sideband detection needs to be disabled here instead
+    // of in the destructor due to its need to touch the UI.
+    if (wxGetApp().m_hamlib)
+    {
+        wxGetApp().m_hamlib->disable_sideband_detection();
+    }
+
     //fprintf(stderr, "MainFrame::OnExit\n");
     wxUnusedVar(event);
 #ifdef _USE_TIMER
@@ -2455,6 +2457,7 @@ void MainFrame::OnExit(wxCommandEvent& event)
     m_togBtnAnalog->Disable();
     //m_togBtnALC->Disable();
     //m_btnTogPTT->Disable();
+
     Pa_Terminate();
     Destroy();
 }
@@ -2611,7 +2614,11 @@ bool MainFrame::OpenHamlibRig() {
     bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate);
     if (status == false)
         wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
- 
+    else
+    {
+        wxGetApp().m_hamlib->enable_sideband_detection(m_txtSSBStatus);
+    }
+
     return status;
 } 
 
@@ -2819,6 +2826,16 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         //printf("m_textEncoding = %d\n", wxGetApp().m_textEncoding);
         //printf("g_stats.snr: %f\n", g_stats.snr_est);
 
+        // attempt to start sound cards and tx/rx processing
+        if (VerifyMicrophonePermissions())
+        {
+            startRxStream();
+        }
+        else
+        {
+            wxMessageBox(wxString("Microphone permissions must be granted to FreeDV for it to function properly."), wxT("Error"), wxOK | wxICON_ERROR, this);
+        }
+
         // attempt to start PTT ......
         
         if (wxGetApp().m_boolHamlibUseForPTT)
@@ -2826,10 +2843,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (wxGetApp().m_boolUseSerialPTT) {
             OpenSerialPort();
         }
-
-        // attempt to start sound cards and tx/rx processing
-
-        startRxStream();
 
         if (m_RxRunning)
         {
@@ -2867,6 +2880,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 if (hamlib->ptt(false, hamlibError) == false) {
                     wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
                 }
+                hamlib->disable_sideband_detection();
                 hamlib->close();
             }
         }
@@ -4134,7 +4148,7 @@ void per_frame_rx_processing(
             if (g_freedv_verbose) {
                 fprintf(stderr, "per_frame: nin = %d input_fifo free: %d used: %d\n", nin, codec2_fifo_free(input_fifo), codec2_fifo_used(input_fifo));
             }
-            if (horus_rx(g_horus, ascii_out, input_buf)) {
+            if (horus_rx(g_horus, ascii_out, input_buf, 0)) {
                 // unfort fifo deals with shorts
                 short ch;
                 for (i=0; i<(int)strlen(ascii_out); i++) {
