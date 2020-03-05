@@ -279,6 +279,27 @@ Tools-Restore Defaults.
 
 Have you removed/changed USB audio devices? If you remove/change USB audio devices without pressing Tools/Audio Config, FreeDV may crash.  See Changing Audio Devices above.
 
+### FreeDV can't be opened on OSX because the developer cannot be verified
+
+From January 2020 Apple is enforcing notarization for all OSX applications.  The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.
+
+![notarization](contrib/osx_notarization1.png)
+
+Security & Privacy shows the Open Anyway option for FreeDV:
+
+![notarization](contrib/osx_notarization2.png)
+![notarization](contrib/osx_notarization3.png)
+
+Or you can use command line options:
+
+```
+xattr -d com.apple.quarantine FreeDV.app
+```
+or
+```
+xattr -d -r com.apple.quarantine FreeDV.app
+```
+
 ## Voice Keyer 
 
 Voice Keyer Button on Front Page, and Options-PTT dialog.

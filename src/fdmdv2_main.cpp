@@ -4491,6 +4491,8 @@ void MainFrame::CloseSerialPort(void)
 // Tests the underlying platform for AVX support.  2020 needs AVX support to run
 // in real-time, and old processors do not offer AVX support
 //
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
 void __cpuid(int* cpuinfo, int info)
 {
     __asm__ __volatile__(
@@ -4533,6 +4535,12 @@ void MainFrame::checkAvxSupport(void)
 
     isAvxPresent = avxSupported;
 }
+#else
+void MainFrame::checkAvxSupport(void)
+{
+    isAvxPresent = false;
+}
+#endif
 
 #ifdef __UDP_SUPPORT__
 
