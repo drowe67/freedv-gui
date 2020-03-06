@@ -133,6 +133,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     // Box for S/N ratio (Numeric)
     //------------------------------
     m_textSNR = new wxStaticText(this, wxID_ANY, wxT(" 0.0"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
+    m_textSNR->SetMinSize(wxSize(40,-1));
     snrSizer->Add(m_textSNR, 0, wxALIGN_CENTER_HORIZONTAL, 1);
 
     //------------------------------
