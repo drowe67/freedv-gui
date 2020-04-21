@@ -8,7 +8,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   * [FreeDV GUI User Manual](USER_MANUAL.md)
   * [Building for Windows using Docker](docker/README_docker.md)
   
-# Building and installing on Ubuntu Linux (16-18)
+# Building on Ubuntu Linux (16-19)
   ```
   $ sudo apt install libc6-i386 libspeexdsp-dev libsamplerate0-dev sox git \
   libwxgtk3.0-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev \
@@ -17,8 +17,14 @@ This document describes how to build the FreeDV GUI program for various operatin
   $ cd freedv-gui
   $ ./build_linux.sh
   ```
+  Then run with:
+  ```
+  $ ./build_linux/src/freedv
+  ```
+  
+  Note this build all libraries locally, nothing is installed on your machine.  ```make install``` is not required.
 
-# Building and installing on Fedora Linux
+# Building on Fedora Linux
   ```
   $ sudo dnf groupinstall "Development Tools"
   $ sudo dnf install cmake wxGTK3-devel portaudio-devel libsamplerate-devel \
@@ -28,13 +34,14 @@ This document describes how to build the FreeDV GUI program for various operatin
   $ cd freedv-gui
   $ ./build_linux.sh
   ```
-  
-# Run FreeDV:
-   ```
-   $ ./build_linux/src/freedv
-   ```
+  Then run with:
+  ```
+  $ ./build_linux/src/freedv
+  ```
 
-The ```wav``` directory contains test files of modulated audio that you can use to test FreeDV (see USER_MANUAL.txt)
+# Testing
+
+The ```wav``` directory contains test files of modulated audio that you can use to test FreeDV (see USER_MANUAL.md)
 
 ## Building for Windows on Fedora (Cross compiling)
 
