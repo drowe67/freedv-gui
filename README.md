@@ -2,13 +2,13 @@
 
 This document describes how to build the FreeDV GUI program for various operating systems.  FreeDV GUI is developed on Ubuntu Linux, and then cross compiled for Windows using Fedora Linux (Fedora has great cross compiling support) and Docker.
 
-# Further Reading
+## Further Reading
 
   * http://freedv.org - introduction, documentation, downloads
   * [FreeDV GUI User Manual](USER_MANUAL.md)
   * [Building for Windows using Docker](docker/README_docker.md)
   
-# Building on Ubuntu Linux (16-19)
+## Building on Ubuntu Linux (16-19)
   ```
   $ sudo apt install libc6-i386 libspeexdsp-dev libsamplerate0-dev sox git \
   libwxgtk3.0-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev \
@@ -24,7 +24,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   
   Note this build all libraries locally, nothing is installed on your machine.  ```make install``` is not required.
 
-# Building on Fedora Linux
+## Building on Fedora Linux
   ```
   $ sudo dnf groupinstall "Development Tools"
   $ sudo dnf install cmake wxGTK3-devel portaudio-devel libsamplerate-devel \
@@ -39,9 +39,13 @@ This document describes how to build the FreeDV GUI program for various operatin
   $ ./build_linux/src/freedv
   ```
 
-# Testing
+## Testing
 
-The ```wav``` directory contains test files of modulated audio that you can use to test FreeDV (see USER_MANUAL.md)
+The ```wav``` directory contains test files of modulated audio that you can use to test FreeDV (see the [USER_MANUAL](USER_MANUAL.md))
+
+## Building for Windows using Docker
+
+The Windows build process above has been automated using a Docker container, see the freedv-gui Docker [README](docker/README_docker.md)
 
 ## Building for Windows on Fedora (Cross compiling)
 
@@ -106,10 +110,6 @@ Testing FreeDV API:
   $ WINEPATH=$HOME/freedv-gui/LPCNet/build_win/src';'$HOME/freedv-gui/build_win/_CPack_Packages/win64/NSIS/FreeDV-1.4.0-devel-win64/bin/ wine freedv_rx 2020 ~/freedv-gui/wav/all_2020.wav out.raw
   $ play -t .s16 -r 16000 -b 16 out.raw
 ```
-
-## Building for Windows using Docker
-
-The Windows build process above has been automated using a Docker container, see docker/README.md
 
 ## Building and installing on OSX
 
