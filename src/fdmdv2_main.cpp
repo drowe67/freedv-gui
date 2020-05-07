@@ -4502,10 +4502,10 @@ void MainFrame::checkAvxSupport(void)
     eax = ebx = ecx = edx = 0;
     __cpuid(1, eax, ebx, ecx, edx);
 
-    if (ecx & (1<<26) && ecx & (1<<27)) {
+    if (ecx & (1<<27) && ecx & (1<<28)) {
         // CPU supports XSAVE and AVX
-        uint64_t xcr0;
-        asm("xgetbv" : "=A" (xcr0) : "c" (0));
+        uint32_t xcr0, xcr0_high;
+        asm("xgetbv" : "=a" (xcr0), "=d" (xcr0_high) : "c" (0));
         isAvxPresent = (xcr0 & 6) == 6;    // AVX state saving enabled?
     }
 }
