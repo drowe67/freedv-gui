@@ -22,6 +22,7 @@
 
 #include "fdmdv2_main.h"
 #include "osx_interface.h"
+#include <cpuid.h>
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
@@ -4493,47 +4494,20 @@ void MainFrame::CloseSerialPort(void)
 //
 
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
-void __cpuid(int* cpuinfo, int info)
-{
-    __asm__ __volatile__(
-        "xchg %%ebx, %%edi;"
-        "cpuid;"
-        "xchg %%ebx, %%edi;"
-        :"=a" (cpuinfo[0]), "=D" (cpuinfo[1]), "=c" (cpuinfo[2]), "=d" (cpuinfo[3])
-        :"0" (info)
-    );
-}
-
-// These methods are defined for Windows but must be created otherwise
-unsigned long long __xgetbv(unsigned int index)
-{
-    unsigned int eax, edx;
-    __asm__ __volatile__(
-        "xgetbv;"
-        : "=a" (eax), "=d"(edx)
-        : "c" (index)
-    );
-    return ((unsigned long long)edx << 32) | eax;
-}
-
 void MainFrame::checkAvxSupport(void)
 {
 
-    int cpuinfo[4];
-    __cpuid(cpuinfo, 1);
+    isAvxPresent = false;
+    uint32_t eax, ebx, ecx, edx;
+    eax = ebx = ecx = edx = 0;
+    __cpuid(1, eax, ebx, ecx, edx);
 
-    bool avxSupported = false;
-
-    avxSupported = cpuinfo[2] & (1 << 28) || false;
-    bool osxsaveSupported = cpuinfo[2] & (1 << 27) || false;
-    if (osxsaveSupported && avxSupported)
-    {
-        // _XCR_XFEATURE_ENABLED_MASK = 0
-        unsigned long long xcrFeatureMask = __xgetbv(0);
-        avxSupported = (xcrFeatureMask & 0x6) == 0x6;
+    if (ecx & (1<<27) && ecx & (1<<28)) {
+        // CPU supports XSAVE and AVX
+        uint32_t xcr0, xcr0_high;
+        asm("xgetbv" : "=a" (xcr0), "=d" (xcr0_high) : "c" (0));
+        isAvxPresent = (xcr0 & 6) == 6;    // AVX state saving enabled?
     }
-
-    isAvxPresent = avxSupported;
 }
 #else
 void MainFrame::checkAvxSupport(void)
