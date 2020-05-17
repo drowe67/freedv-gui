@@ -52,7 +52,9 @@
 
 #include <stdint.h>
 #include <speex/speex_preprocess.h>
-
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+#include <cpuid.h>
+#endif
 #ifdef _WIN32
 #include <windows.h>
 #else

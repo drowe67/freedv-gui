@@ -22,7 +22,6 @@
 
 #include "fdmdv2_main.h"
 #include "osx_interface.h"
-#include <cpuid.h>
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
