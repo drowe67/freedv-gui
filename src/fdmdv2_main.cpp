@@ -578,8 +578,10 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
         m_rb800xa->SetValue(1);
     if (mode == 6)
         m_rb2400b->SetValue(1);
+#ifdef __HORUS__
     if (mode == 7)
         m_rbHorusBinary->SetValue(1);
+#endif
     if (mode == 8 && isAvxPresent)
         m_rb2020->SetValue(1);
     pConfig->SetPath(wxT("/"));
@@ -830,8 +832,10 @@ MainFrame::~MainFrame()
             mode = 5;
         if (m_rb2400b->GetValue())
             mode = 6;
+#ifdef __HORUS__
         if (m_rbHorusBinary->GetValue())
             mode = 7;
+#endif
         if (m_rb2020->GetValue())
             mode = 8;
        pConfig->Write(wxT("/Audio/mode"), mode);
@@ -2649,7 +2653,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb700d->Disable();
         m_rb800xa->Disable();
         m_rb2400b->Disable();
+#ifdef __HORUS__
         m_rbHorusBinary->Disable();
+#endif
         m_rb2020->Disable();
         if (m_rbPlugIn != NULL)
             m_rbPlugIn->Disable();
@@ -2685,6 +2691,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (m_rb2400b->GetValue()) {
             g_mode = FREEDV_MODE_2400B;
         }
+#ifdef __HORUS__
         if (m_rbHorusBinary->GetValue()) {
             g_mode = -1;  /* TODO; a better way of handling (enumerating?) non-freedv modes */
 
@@ -2701,6 +2708,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_textInterleaverSync->SetLabel("");
             g_modemInbufferSize = (int)(FRAME_DURATION * horus_get_Fs(g_horus));
         }
+#endif
         if (m_rb2020->GetValue() && isAvxPresent) {
             g_mode = FREEDV_MODE_2020;
             g_Nc = 31;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
@@ -2928,7 +2936,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb700d->Enable();
         m_rb800xa->Enable();
         m_rb2400b->Enable();
+#ifdef __HORUS__
         m_rbHorusBinary->Enable();
+#endif
         if(isAvxPresent)
             m_rb2020->Enable();
         if (m_rbPlugIn != NULL)
