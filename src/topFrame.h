@@ -119,9 +119,7 @@ class TopFrame : public wxFrame
         wxRadioButton *m_rb1600;
         wxRadioButton *m_rb2400a;
         wxRadioButton *m_rb2400b;
-#ifdef __HORUS__
         wxRadioButton *m_rbHorusBinary;
-#endif
         wxRadioButton *m_rb2020;
         wxRadioButton *m_rbPlugIn;
 
