@@ -4160,16 +4160,9 @@ void per_frame_rx_processing(
                 codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
 
                 UDPSend(wxGetApp().m_udp_port, ascii_out, strlen(ascii_out));
-                horus_get_modem_extended_stats(g_horus, &g_stats);
-                if (g_freedv_verbose) {
-                    fprintf(stderr, "  fsk f_est: ");
-                    for(i=0; i<horus_get_mFSK(g_horus); i++) {
-                        fprintf(stderr, "%5.0f ", g_stats.f_est[i]);
-                    }
-                    fprintf(stderr, "\n");
-                }
             }
 
+            // Update modem stats even if we haven't got a packet, so the SNR display updates.
             horus_get_modem_extended_stats(g_horus, &g_stats);
             if (g_freedv_verbose) {
                 fprintf(stderr, "  fsk f_est: ");
