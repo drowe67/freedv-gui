@@ -2689,7 +2689,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             g_mode = -1;  /* TODO; a better way of handling (enumerating?) non-freedv modes */
 
             // Use advanced horus_open function, as we may be allowing some user-configurability here at some point.
-            g_horus = horus_open_advanced(HORUS_MODE_BINARY, HORUS_BINARY_DEFAULT_BAUD, HORUS_BINARY_DEFAULT_TONE_SPACING);
+            g_horus = horus_open_advanced(HORUS_MODE_BINARY_V1, HORUS_BINARY_V1_DEFAULT_BAUD, -1);
             horus_set_verbose(g_horus, g_freedv_verbose);
             
             /* init a sample rate converted for monitoring modem signal */
