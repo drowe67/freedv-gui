@@ -71,7 +71,9 @@
 #include "codec2.h"
 #include "codec2_fifo.h"
 #include "modem_stats.h"
+#ifdef __HORUS__
 #include "horus_api.h"
+#endif
 
 #include "topFrame.h"
 #include "dlg_ptt.h"
