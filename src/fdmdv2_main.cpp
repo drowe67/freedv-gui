@@ -163,10 +163,12 @@ FILE *g_logfile;
 
 wxDatagramSocket *g_sock;
 
+#ifdef __HORUS__
 // Horus Balloon telemetry support
 
 struct horus *g_horus;
 SRC_STATE    *g_horus_src;
+#endif
 
 // WxWidgets - initialize the application
 
@@ -1237,6 +1239,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
 
     if (g_mode == -1)  {
+#ifdef __HORUS__
         // Horus telemetry
         char bits[80], freqoffset[80];
         sprintf(bits, "Bits: %d", horus_get_total_payload_bits(g_horus)); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
@@ -1245,6 +1248,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         /* can't get sensible number for this, perhaps as it's a burst modem */
         //sprintf(clockoffset, "ClkOff: %5d", (int)round(g_stats.clock_offset*1E6));
         //wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
+#endif
     }
     else {
         // set some run time options (if applicable to this mode)
@@ -1956,7 +1960,9 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
 {
     if (m_RxRunning)  {
         if (g_mode == -1) {
+#ifdef __HORUS__
             horus_set_total_payload_bits(g_horus, 0);
+#endif
         } else {
             freedv_set_total_bits(g_pfreedv, 0);
             freedv_set_total_bit_errors(g_pfreedv, 0);
@@ -2136,8 +2142,10 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
                 sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
                 sfInfo.channels   = 1;
                 if (g_mode == -1) {
+#ifdef __HORUS__
                      sfInfo.samplerate = horus_get_Fs(g_horus);
-               }
+#endif
+                }
                 else {
                     sfInfo.samplerate = freedv_get_modem_sample_rate(g_pfreedv);
                 }
@@ -2235,8 +2243,10 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
 
         int sample_rate;
         if (g_mode == -1) {
+#ifdef __HORUS__
             sample_rate = horus_get_Fs(g_horus);
-        }
+#endif
+    }
         else {
             sample_rate = freedv_get_modem_sample_rate(g_pfreedv);
         }
@@ -2357,7 +2367,9 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
 
         int sample_rate;
         if (g_mode == -1) {
+#ifdef __HORUS__
             sample_rate = horus_get_Fs(g_horus);
+#endif
         }
         else {
             sample_rate = freedv_get_modem_sample_rate(g_pfreedv);
@@ -2908,9 +2920,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         // free up states, clean up
 
         if (g_mode == -1) {
+#ifdef __HORUS__
             // Horus clean up
             src_delete(g_horus_src);
             horus_close(g_horus);
+#endif
         }
         else {
             // FreeDV clean up
@@ -3258,9 +3272,11 @@ void MainFrame::startRxStream()
 
         int modem_samplerate, rxInFifoSizeSamples, rxOutFifoSizeSamples;
         if (g_mode == -1) {
+#ifdef __HORUS__
             modem_samplerate = horus_get_Fs(g_horus);
             rxInFifoSizeSamples = horus_get_max_demod_in(g_horus);
             rxOutFifoSizeSamples = rxInFifoSizeSamples;
+#endif
         }
         else {
             modem_samplerate = freedv_get_modem_sample_rate(g_pfreedv);
@@ -3769,7 +3785,9 @@ void txRxProcessing()
     // analog mode runs at the standard FS = 8000 Hz
 
     if (g_mode == -1) {
+#ifdef __HORUS__
         freedv_samplerate = horus_get_Fs(g_horus);
+#endif
     }
     else {
         if (g_analog) {
@@ -4145,6 +4163,7 @@ void per_frame_rx_processing(
     int i;
 
     if (g_mode == -1) {
+#ifdef __HORUS__
         // Horus processing ---------------------------------------------------
 
         int   max_nin = horus_get_max_demod_in(g_horus);
@@ -4200,6 +4219,7 @@ void per_frame_rx_processing(
             codec2_fifo_write(output_fifo, output_buf, nout);
             #endif
         }
+#endif
     }
     else {
         // FreeDV processing ----------------------------------------------------
