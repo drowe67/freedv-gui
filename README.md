@@ -39,6 +39,19 @@ This document describes how to build the FreeDV GUI program for various operatin
   $ ./build_linux/src/freedv
   ```
 
+## Installing on Linux
+
+You need to install the codec2 and lpcnetfreedv shared libraries, and freedv-gui:
+  ```
+  $ cd ~/freedv-gui/codec2/build_linux
+  $ sudo make install
+  $ cd ~/freedv-gui/LPCNet/build_linux
+  $ sudo make install
+  $ cd ~/freedv-gui/build_linux
+  $ sudo make install
+  $ sudo ldconfig
+  ```
+  
 ## Testing
 
 The ```wav``` directory contains test files of modulated audio that you can use to test FreeDV (see the [USER_MANUAL](USER_MANUAL.md))
