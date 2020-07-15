@@ -96,7 +96,7 @@ Hitting **Refresh** in the lower left hand corner of the Tools/Audio Config will
 
 Another solution is to re-start FreeDV and check Tools/Audio Config again after changing any audio hardware.
 
-If you change/remove USB audio devices without refreshing Tools/Audio COnfig, FreeDV may crash.
+If you change/remove USB audio devices without refreshing Tools/Audio Config, FreeDV may crash.
 
 ## Sound Card Levels
 
@@ -655,5 +655,6 @@ LDPC | Low Density Parity Check Codes, a family of powerful FEC codes
 ## References 
 
 * http://freedv.org
+* [FreeDV Technology Overview](https://github.com/drowe67/codec2/blob/master/README_freedv.md)
 * [Digitalvoice mailing list](https://groups.google.com/forum/#!forum/digitalvoice)
 
