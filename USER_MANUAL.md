@@ -426,16 +426,6 @@ FreeDV 2020 Tips:
    section below).
 1. The voice keyer file must be 16 kHz mono 16 bit sample format.
 
-### Horus Binary Mode
-
-The FreeDV GUI also supports the Horus Binary (HorusB) modulation, which is used 
-for telemetry on high-altitude balloon flights. This uses the same FSK modem as
-2400A/B and 800XA. 
-
-Refer to the HorusBinary github page for information on how to decode and upload 
-HAB telemetry using this option: https://github.com/projecthorus/horusbinary/wiki
-
-
 ## Tools - Filter
 
 This section describes features on Tools-Filter.  
@@ -639,6 +629,13 @@ FEC | Forward Error Correction.  Extra bits to we send to protect the speech cod
 LDPC | Low Density Parity Check Codes, a family of powerful FEC codes
 
 ## Release Notes
+
+### V1.4.2 July 2020
+
+1. Maintenance Release (no major new features)
+1. Improved squelch/audio pass through on 700D/2020/2400B
+1. Under the hood - Codec2 library has been refactored, shouldn't affect freedv-gui operation
+1. Removed Project Horus support (now being maintained outside of Codec2/FreeDV)
 
 ### V1.4 June-October 2019
 
