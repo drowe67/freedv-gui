@@ -16,15 +16,15 @@ section contains several tips to help you get started.
 
 ### Sound Card Configuration
 
-For Receive only operation you just need one sound card, this is a
+For Receive only operation you just need one sound card; this is a
 great way to get started.
 
-For Tx/Rx Operation, you need two sound cards.  One connects to your
+For Tx/Rx operation you need two sound cards.  One connects to your
 radio, and one for the operator.  The sound card connecting to the
 radio can be a rig interface device like a Signalink, Rigblaster,
 your radio's internal USB sound card, or a home brew rig interface.
 
-The second sound card is often a set of USB headphones, or your
+The second sound card is often a set of USB headphones or your
 computer's internal sound card.
 
 ### Receive Only (One Sound Card)
@@ -66,7 +66,7 @@ press Start.  Choose a file using "Tools - Start/Stop Play File From
 Radio".  You should hear decoded FreeDV speech.
 
 These files will give you a feel for what FreeDV signals sound like,
-and basic operation of the FreeDV software.
+and for the basic operation of the FreeDV software.
 
 ### Transmit/Receive (Two Sound Cards)
 
@@ -122,17 +122,17 @@ average is about half the maximum.
 
 ## Audio Processing
 
-FreeDV likes a clean path through you radio.  Turn all audio
+FreeDV likes a clean path through your radio.  Turn all audio
 processing **OFF** on transmit and receive:
 
 + On receive, DSP noise reduction should be off.
 
 + On transmit, speech compression should be off.
 
-+ Keep the receive audio path as "flat" as possible, no special filters
++ Keep the receive audio path as "flat" as possible, no special filters.
 
 + FreeDV will not work any better if you band pass filter the off air
-received signals.  It has it's own, very tight filters in the
+received signals.  It has its own, very tight filters in the
 demodulator.
 
 ## PTT Configuration
@@ -142,7 +142,7 @@ your radio:
 
 + VOX: sends a tone to the left channel of the Transmit/To Radio sound card
 + HamLib: support for many different radios via the HamLib library and a serial port
-+ Serial Port: Direct access to the Serial port pins
++ Serial Port: direct access to the serial port pins
 
 Once you have configured PTT, try the **Test** button.
 
@@ -154,7 +154,7 @@ may have changed the default serial rate on your radio. Carefully
 check the serial parameters on your radio match those used by FreeDV
 in the PTT Dialog.
 
-Also see Common Problems section of this manual.
+Also see [Common Problems](#common-problems) section of this manual.
 
 ### HamLib
 
@@ -163,7 +163,7 @@ has a different serial rate change the Serial Rate drop down box to
 match your radio.
 
 When **Test** is pressed, the "Serial Params" field is populated and
-displayed.  This will help track down any mis-matches between Hamlib
+displayed.  This will help track down any mismatches between Hamlib
 and your radio.
 
 If you are really stuck, download Hamlib and test your radio's PTT
@@ -178,9 +178,9 @@ unplugged/plugged.
 
 ### USB or LSB?
 
-On bands beneath 10 MHz, LSB is used for FreeDV.  On 10MHz and above, USB is used. After much debate, the FreeDV community has adopted the same conventions as SSB, based on the reasoning that FreeDV is a voice mode. 
+On bands below 10 MHz, LSB is used for FreeDV.  On 10MHz and above, USB is used. After much debate, the FreeDV community has adopted the same conventions as SSB, based on the reasoning that FreeDV is a voice mode. 
 
-As an aid to the above, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn't enabled or if your radio doesn't support retrieving frequency and mode over CAT, it will remain grayed out with "unk" displaying instead of the mode (for "unknown").
+As an aid to the above, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn't enabled, or if your radio doesn't support retrieving frequency and mode over CAT, it will remain grayed out with "unk" displaying instead of the mode (for "unknown").
 
 ## Common Problems
 
@@ -188,7 +188,7 @@ As an aid to the above, FreeDV will show the current mode on the bottom of the w
 
 This is a very common problem for first time FreeDV users.  Adjust
 your transmit levels so the ALC is just being nudged.  For a 100W
-PEP radio, you average power should be 20W.
+PEP radio, your average power should be 20W.
 
 More power is not better with FreeDV.  An overdriven signal will have
 poor SNR at the receiver.
@@ -239,7 +239,7 @@ Many people struggle with initial PTT setup:
 
 1. Try the Tools - PTT Test function.
 
-1. Check you rig serial settings.  Did you change them from defaults
+1. Check your rig serial settings.  Did you change them from defaults
 for another program?
 
 1. Linux version: do you have permissions for the serial port?  Are you a member
@@ -302,11 +302,10 @@ xattr -d -r com.apple.quarantine FreeDV.app
 
 ## Voice Keyer 
 
-Voice Keyer Button on Front Page, and Options-PTT dialog.
-
-Puts FreeDV and your radio into transmit, reads a wave file of your
-voice to call CQ, then switches to receive to see if anyone is
-replying.  If you press space bar the voice keyer stops.  If a signal
+The Voice Keyer Button on the front page, and the Options-PTT dialog
+puts FreeDV and your radio into transmit, reads a wave file of your
+voice to call CQ, and then switches to receive to see if anyone is
+replying.  If you press the space bar the voice keyer stops.  If a signal
 with a valid sync is received for a few seconds the voice keyer stops.
 
 The Options-PTT dialog can be used to select the wave file, set the Rx
@@ -339,7 +338,7 @@ HF Fading channels, higher is more robust.
 The more advanced 700D and 2020 modes have a high latency due to the
 use of large Forward Error Correction (FEC) codes.  They buffer many
 frames of speech, which combined with PC sound card buffering results
-in end-end latencies of 1-2 seconds.  They may take a few seconds to
+in end-to-end latencies of 1-2 seconds.  They may take a few seconds to
 sync at the start of an over, especially in fading channels.
 
 ### FreeDV 700D
@@ -356,8 +355,8 @@ FreeDV 700D is sensitive to tuning.  To obtain sync you must be within
 modern radios which are generally accurate to +/-1 Hz, but requires
 skill and practice when used with older, VFO based radios.
 
-The rest of this section describes features and options specific to
-FreeDV 700D.
+_The rest of this section describes features and options specific to
+FreeDV 700D._
 
 Main GUI Page:
 
@@ -380,7 +379,7 @@ harder.  Use with caution to avoid overloading your Power Amplifier.
 Hz.  Usually left on.
 
 1. 700D Interleaver: The interleaver averages out errors over several
-frames, which improves performance for fast fading channels, and
+frames, which improves performance for fast fading channels and
 channels with burst errors.  A 16 frame interleaver will improve
 performance by 4dB.  However interleaving adds delay, and delays sync.
 Both the tx and rx must have the same interleaver setting.  For
@@ -390,7 +389,7 @@ The interleaver is usually set to 1.
 
 1. 700D Manual Unsync: Sync must be broken manually (ReSync button)
 when this option is selected.  Disables automatic falling out of
-sync. Experimental features that may be useful for ensuring 700D stays
+sync. An experimental feature that may be useful for ensuring 700D stays
 in sync during long fades, to avoid long resync delays with the
 interleaver.
 
@@ -409,7 +408,7 @@ neural net vocoders in a real world, over the air system.
 FreeDV 2020 is designed for slow fading HF channels with a SNR of 10dB
 or better.  It is not designed for fast fading or very low SNRs like
 700D.  It is designed to be a high quality alternative to SSB in
-channels where SSB is already an "arm-chair" copy.  On an AWGN (non
+channels where SSB is already an "arm-chair" copy.  On an AWGN (non-
 fading channel), it will deliver reasonable speech quality down to 2dB
 SNR.
 
@@ -421,7 +420,7 @@ FreeDV 2020 Tips:
    about 90% of speakers tested work well.
 1. Like 700D, you must tune within -/+ 60Hz for FreeDV 2020 to sync.
 1. With significant fading, sync may take a few seconds.
-1. There is a 2 second end-end latency.  You are welcome to try tuning
+1. There is a 2 second end-to-end latency.  You are welcome to try tuning
    this (Tools - Options - FIFO size, also see Sound Card Debug
    section below).
 1. The voice keyer file must be 16 kHz mono 16 bit sample format.
@@ -437,8 +436,8 @@ Noise Supression | Enable noise supression, dereverberation, AGC of mic signal u
 
 Auto EQ (Automatic Equalisation) adjusts the input speech spectrum to best fit the speech codec. It can remove annoying bass artefacts and make the codec speech easier to understand.
 
-[Blog Post on Auto EQ Part 1](http://www.rowetel.com/?p=6778)
-[Blog Post on Auto EQ Part 2](http://www.rowetel.com/?p=6860)
+* [Blog Post on Auto EQ Part 1](http://www.rowetel.com/?p=6778)
+* [Blog Post on Auto EQ Part 2](http://www.rowetel.com/?p=6860)
 
 ## Tools - Options
 
@@ -458,9 +457,9 @@ Clipping | Hard clipping of transmit waveform to increase the average power, at 
 
 These options apply to the FreeDV 700D and 2020 modes that use the OFDM modem:
 
-1. The High Bandwidth option gives better performance on channels where the phase changes quickly, for example fast fading HF channels, and the Es'Hail 2 satellite. When unchecked, the phase estimator bandwidth is automatically selected.  It starts off high to enable fast sync, then switches to low bandwidth to optimise performance for low SNR HF channels.
+1. The High Bandwidth option gives better performance on channels where the phase changes quickly, for example fast fading HF channels and the Es'Hail 2 satellite. When unchecked, the phase estimator bandwidth is automatically selected.  It starts off high to enable fast sync, then switches to low bandwidth to optimise performance for low SNR HF channels.
 
-1. The DPSK (differential PSK) checkbox has a similar effect - better performance on High SNR channels where the phase changes rapidly.  This option converts the OFDM modem to use differential PSK, rather than coherent PSK.  DPSK is used by earlier FreeDV modes such as FreeDV 1600.  It affects the Tx and Rx side, so both sides must select DPSK.
+1. The DPSK (differential PSK) checkbox has a similar effect - better performance on High SNR channels where the phase changes rapidly.  This option converts the OFDM modem to use differential PSK rather than coherent PSK.  DPSK is used by earlier FreeDV modes such as FreeDV 1600.  It affects the Tx and Rx side, so both sides must select DPSK.
 
 If you have problems with 700D or 2020 sync even though you have a strong signal - try these option.
 
@@ -482,25 +481,24 @@ Var | Speech encoder distortion for 700C/700D (see Auto EQ)
 
 The sample clock offset is the estimated difference between the
 modulator (tx) and demodulator (rx) sample clocks.  For example if the
-transmit station sound card is sampling at 44000 Hz, and the receive
+transmit station sound card is sampling at 44000 Hz and the receive
 station sound card 44001 Hz, the sample clock offset would be
 ((44000-44001)/44000)*1E6 = 22.7 ppm.
 
 ### Timing Delta Tab
 
 This indicates the symbol timing estimate of the demodulator, in the
-range of +/- 0.5 of a symbol.  With off air signals, this will have a
+range of +/- 0.5 of a symbol.  With off air signals this will have a
 saw tooth appearance, as the demod tracks the modulator sample clock.
 The steeper the slope, the greater the sample clock offset.
 
-[FreeDV 1600 Sample Clock Offset Bug](http://www.rowetel.com/?p=6041)
-
-[Testing a FDMDV Modem](http://www.rowetel.com/?p=2433)
+* [FreeDV 1600 Sample Clock Offset Bug](http://www.rowetel.com/?p=6041)
+* [Testing a FDMDV Modem](http://www.rowetel.com/?p=2433)
 
 ### UDP Messages
 
 When FreeDV syncs on a received signal for 5 seconds, it will send a
-"rx sync" UDP message to a Port on your machine (localhost).  An
+"rx sync" UDP message to a port on your machine (localhost).  An
 external program or script listening on this port can then take some
 action, for example send "spotting" information to a web server or
 send an email your phone.
@@ -512,7 +510,7 @@ On Linux you can test reception of messages using netcat:
 ```
   $ nc -ul 3000
 ```  
-An sample script to email you on FreeDV sync: https://svn.code.sf.net/p/freetel/code/freedv-dev/src/send_email_on_sync.py
+A sample script to email you on FreeDV sync: [send_email_on_sync.py](src/send_email_on_sync.py)
 
 Usage for Gmail:
 ```
@@ -530,11 +528,11 @@ Debug FIFO and PortAudio counters: used for debugging audio
 problems on 700D.  During beta testing there were problems with break
 up in the 700D Tx and Rx audio on Windows.
 
-The PortAudio counters (PortAudio1 and PortAudio2) should not be
-incremented when running in Tx or Rx, as this indicates samples are
+The PortAudio counters (PortAudio1 and PortAudio2) should not 
+increment when running in Tx or Rx, as this indicates samples are
 being lost by the sound driver which will lead to sync problems.
 
-The Fifo counter outempty1 counter should not be incremented during
+The Fifo counter outempty1 counter should not increment during
 Tx, as this indicates FreeDV is not supplying samples fast enough to
 the PortAudio drivers.  The results will be resyncs at the receiver.
 
@@ -576,7 +574,7 @@ Displays BER of each carrier when in "test frame" mode.  As each QPSK
 carrier has 2 bits there are 2*Nc histogram points.
 
 Ideally all carriers will have about the same BER (+/- 20% after 5000
-total bit errors).  However problems can occur with filtering in the
+total bit errors), however problems can occur with filtering in the
 tx path.  If one carrier has less power, then it will have a higher
 BER.  The errors in this carrier will tend to dominate overall
 BER. For example if one carrier is attenuated due to SSB filter ripple
@@ -597,7 +595,7 @@ RF gain).
 5000 total bit errors.  You have a problem if the BER of any carrier
 is more than 20% different from the rest.
 
-1. A typical issue will be one carrier at 1.0, the others at 0.5,
+1. A typical issue will be one carrier at 1.0 and the others at 0.5,
 indicating the poorer carrier BER is twice the larger.
 
 ### Full Duplex Testing with loopback
@@ -605,7 +603,7 @@ indicating the poorer carrier BER is twice the larger.
 Tools - Options - Half Duplex check box
 
 FreeDV GUI can operate in full duplex mode which is useful for
-development of listening to your own FreeDV signal as only one PC is
+development or listening to your own FreeDV signal as only one PC is
 required.  Normal operation is half duplex.
 
 Tx and Rx signals can be looped back via an analog connection between
@@ -625,8 +623,8 @@ On Linux, using the Alsa loopback module:
 Term | Notes
 --- | ---
 AWGN | Additive White Gaussian Noise - a channel with just noise and no fading (like VHF)
-FEC | Forward Error Correction.  Extra bits to we send to protect the speech codec bits
-LDPC | Low Density Parity Check Codes, a family of powerful FEC codes
+FEC | Forward Error Correction - extra bits to we send to protect the speech codec bits
+LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 ## Release Notes
 
@@ -654,4 +652,3 @@ LDPC | Low Density Parity Check Codes, a family of powerful FEC codes
 * http://freedv.org
 * [FreeDV Technology Overview](https://github.com/drowe67/codec2/blob/master/README_freedv.md)
 * [Digitalvoice mailing list](https://groups.google.com/forum/#!forum/digitalvoice)
-
