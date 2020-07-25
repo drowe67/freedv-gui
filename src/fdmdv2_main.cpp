@@ -2607,9 +2607,11 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
 
                 wxT("GNU Public License V2.1\n\n")
                 wxT("Copyright (c) David Witten KD0EAG and David Rowe VK5DGR\n\n")
+                wxT("freedv-gui version: %s\n")
                 wxT("freedv-gui git hash: %s\n")
-                wxT("codec2     git hash: %s\n"),
-                FREEDV_VERSION, GIT_HASH, freedv_get_hash());
+                wxT("codec2 git hash: %s\n")
+                wxT("lpcnet git hash: %s\n"),
+                FREEDV_VERSION, FREEDV_VERSION, GIT_HASH, freedv_get_hash(), lpcnet_get_hash());
                 
     wxMessageBox(msg, wxT("About"), wxOK | wxICON_INFORMATION, this);
 }
