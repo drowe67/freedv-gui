@@ -1,0 +1,158 @@
+diff -ur portaudio/bindings/cpp/configure portaudio.orig/bindings/cpp/configure
+--- portaudio/bindings/cpp/configure	2016-10-29 18:23:04.000000000 -0700
++++ portaudio.orig/bindings/cpp/configure	2020-08-02 19:53:59.000000000 -0700
+@@ -2894,7 +2894,8 @@
+ 
+ # Various other variables and flags
+ DEFAULT_INCLUDES="-I$PACPP_ROOT/include -I$PACPP_ROOT/$PORTAUDIO_ROOT/include"
+-CFLAGS=${CFLAGS-"-g -O2 -Wall -ansi -pedantic"}
++CFLAGS=${CFLAGS-"-g -O2 -Wall -ansi -pedantic -arch x86_64 -arch arm64e"}
++LDFLAGS=${LDFLAGS-"-framework CoreServices -framework AudioUnit -framework CoreFoundation -framework AudioToolbox -framework CoreAudio"}
+ CXXFLAGS=${CXXFLAGS-"${CFLAGS}"}
+ 
+ LT_VERSION_INFO="0:12:0"
+diff -ur portaudio/bindings/cpp/configure.ac portaudio.orig/bindings/cpp/configure.ac
+--- portaudio/bindings/cpp/configure.ac	2016-10-29 18:23:04.000000000 -0700
++++ portaudio.orig/bindings/cpp/configure.ac	2020-08-02 19:53:22.000000000 -0700
+@@ -25,7 +25,8 @@
+ 
+ # Various other variables and flags
+ DEFAULT_INCLUDES="-I$PACPP_ROOT/include -I$PACPP_ROOT/$PORTAUDIO_ROOT/include"
+-CFLAGS=${CFLAGS-"-g -O2 -Wall -ansi -pedantic"}
++CFLAGS=${CFLAGS-"-g -O2 -Wall -ansi -pedantic -arch x86_64 -arch arm64e"}
++LDFLAGS=${LDFLAGS-"-framework CoreServices -framework AudioUnit -framework CoreFoundation -framework AudioToolbox -framework CoreAudio"}
+ CXXFLAGS=${CXXFLAGS-"${CFLAGS}"}
+ 
+ LT_VERSION_INFO="lt_current:lt_revision:lt_age"
+diff -ur portaudio/configure portaudio.orig/configure
+--- portaudio/configure	2016-10-29 18:23:04.000000000 -0700
++++ portaudio.orig/configure	2020-08-02 19:46:16.000000000 -0700
+@@ -15823,12 +15823,12 @@
+ 
+ 
+         CFLAGS="$CFLAGS -I\$(top_srcdir)/src/os/unix -Wno-deprecated -Werror"
+-        LIBS="-framework CoreAudio -framework AudioToolbox -framework AudioUnit -framework Carbon"
++        LIBS="-framework CoreServices -framework AudioUnit -framework CoreFoundation -framework AudioToolbox -framework CoreAudio"
+ 
+         if test "x$enable_mac_universal" = "xyes" ; then
+            case `xcodebuild -version | sed -n 's/Xcode \(.*\)/\1/p'` in
+ 
+-           12*|3.0|3.1)
++           12.0123456789.*|3.0|3.1)
+                                                                                                                               if [ -d /Developer/SDKs/MacOSX10.5.sdk ] ; then
+                  mac_version_min="-mmacosx-version-min=10.3"
+                  mac_sysroot="-isysroot /Developer/SDKs/MacOSX10.5.sdk"
+@@ -15855,21 +15855,33 @@
+                  mac_version_min="-mmacosx-version-min=10.4"
+                  mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.9 Path`"
+               elif xcodebuild -version -sdk macosx10.10 Path >/dev/null 2>&1 ; then
+-                 mac_version_min="-mmacosx-version-min=10.4"
++                 mac_version_min="-mmacosx-version-min=10.9"
+                  mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.10 Path`"
+               elif xcodebuild -version -sdk macosx10.11 Path >/dev/null 2>&1 ; then
+-                 mac_version_min="-mmacosx-version-min=10.4"
++                 mac_version_min="-mmacosx-version-min=10.9"
+                  mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.11 Path`"
+               elif xcodebuild -version -sdk macosx10.12 Path >/dev/null 2>&1 ; then
+-                 mac_version_min="-mmacosx-version-min=10.4"
++                 mac_version_min="-mmacosx-version-min=10.9"
+                  mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.12 Path`"
++              elif xcodebuild -version -sdk macosx10.13 Path >/dev/null 2>&1 ; then
++                 mac_version_min="-mmacosx-version-min=10.9"
++                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.13 Path`"
++              elif xcodebuild -version -sdk macosx10.14 Path >/dev/null 2>&1 ; then
++                 mac_version_min="-mmacosx-version-min=10.9"
++                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.14 Path`"
++              elif xcodebuild -version -sdk macosx10.15 Path >/dev/null 2>&1 ; then
++                 mac_version_min="-mmacosx-version-min=10.9"
++                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.15 Path`"
++              elif xcodebuild -version -sdk macosx11.0 Path >/dev/null 2>&1 ; then
++                 mac_version_min="-mmacosx-version-min=10.9"
++                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx11.0 Path`"
+               else
+-                 as_fn_error $? "Could not find 10.5 to 10.12 SDK." "$LINENO" 5
++                 as_fn_error $? "Could not find 10.5 to 11.0 SDK." "$LINENO" 5
+               fi
+            esac
+ 
+                                  mac_arches=""
+-           for arch in i386 x86_64 ppc ppc64
++           for arch in x86_64 ppc ppc64 arm64e
+            do
+               save_CFLAGS="$CFLAGS"
+               CFLAGS="$CFLAGS -arch $arch"
+@@ -15903,6 +15915,7 @@
+         fi
+         SHARED_FLAGS="$LIBS -dynamiclib $mac_arches $mac_sysroot $mac_version_min"
+         CFLAGS="-std=c99 $CFLAGS $mac_arches $mac_sysroot $mac_version_min"
++        CXXFLAGS="$CXXFLAGS $mac_arches $mac_sysroot $mac_version_min"
+         OTHER_OBJS="src/os/unix/pa_unix_hostapis.o src/os/unix/pa_unix_util.o src/hostapi/coreaudio/pa_mac_core.o src/hostapi/coreaudio/pa_mac_core_utilities.o src/hostapi/coreaudio/pa_mac_core_blocking.o src/common/pa_ringbuffer.o"
+         PADLL="libportaudio.dylib"
+         ;;
+diff -ur portaudio/configure.in portaudio.orig/configure.in
+--- portaudio/configure.in	2016-10-29 18:23:04.000000000 -0700
++++ portaudio.orig/configure.in	2020-08-02 19:46:14.000000000 -0700
+@@ -205,12 +205,12 @@
+         AC_DEFINE(PA_USE_COREAUDIO,1)
+ 
+         CFLAGS="$CFLAGS -I\$(top_srcdir)/src/os/unix -Wno-deprecated -Werror"
+-        LIBS="-framework CoreAudio -framework AudioToolbox -framework AudioUnit -framework Carbon"
++        LIBS="-framework CoreServices -framework AudioUnit -framework CoreFoundation -framework AudioToolbox -framework CoreAudio"
+ 
+         if test "x$enable_mac_universal" = "xyes" ; then
+            case `xcodebuild -version | sed -n 's/Xcode \(.*\)/\1/p'` in
+ 
+-           [12]*|3.0|3.1)
++           [12].[0123456789.]*|3.0|3.1)
+               dnl In pre-3.2 versions of Xcode, xcodebuild doesn't
+               dnl support -sdk, so we can't use that to look for
+               dnl SDKs.  However, in those versions of Xcode, the
+@@ -250,23 +250,35 @@
+                  mac_version_min="-mmacosx-version-min=10.4"
+                  mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.9 Path`"
+               elif xcodebuild -version -sdk macosx10.10 Path >/dev/null 2>&1 ; then
+-                 mac_version_min="-mmacosx-version-min=10.4"
++                 mac_version_min="-mmacosx-version-min=10.9"
+                  mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.10 Path`"
+               elif xcodebuild -version -sdk macosx10.11 Path >/dev/null 2>&1 ; then
+-                 mac_version_min="-mmacosx-version-min=10.4"
++                 mac_version_min="-mmacosx-version-min=10.9"
+                  mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.11 Path`"
+               elif xcodebuild -version -sdk macosx10.12 Path >/dev/null 2>&1 ; then
+-                 mac_version_min="-mmacosx-version-min=10.4"
++                 mac_version_min="-mmacosx-version-min=10.9"
+                  mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.12 Path`"
++              elif xcodebuild -version -sdk macosx10.13 Path >/dev/null 2>&1 ; then
++                 mac_version_min="-mmacosx-version-min=10.9"
++                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.13 Path`"
++              elif xcodebuild -version -sdk macosx10.14 Path >/dev/null 2>&1 ; then
++                 mac_version_min="-mmacosx-version-min=10.9"
++                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.14 Path`"
++              elif xcodebuild -version -sdk macosx10.15 Path >/dev/null 2>&1 ; then
++                 mac_version_min="-mmacosx-version-min=10.9"
++                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.15 Path`"
++              elif xcodebuild -version -sdk macosx11.0 Path >/dev/null 2>&1 ; then
++                 mac_version_min="-mmacosx-version-min=10.9"
++                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx11.0 Path`"
+               else
+-                 AC_MSG_ERROR([Could not find 10.5 to 10.12 SDK.])
++                 AC_MSG_ERROR([Could not find 10.5 to 11.0 SDK.])
+               fi
+            esac
+ 
+            dnl Pick which architectures to build for based on what
+            dnl the compiler supports.
+            mac_arches=""
+-           for arch in i386 x86_64 ppc ppc64
++           for arch in x86_64 ppc ppc64 arm64e
+            do
+               save_CFLAGS="$CFLAGS"
+               CFLAGS="$CFLAGS -arch $arch"
+@@ -287,6 +299,7 @@
+         fi
+         SHARED_FLAGS="$LIBS -dynamiclib $mac_arches $mac_sysroot $mac_version_min"
+         CFLAGS="-std=c99 $CFLAGS $mac_arches $mac_sysroot $mac_version_min"
++        CXXFLAGS="$CXXFLAGS $mac_arches $mac_sysroot $mac_version_min"
+         OTHER_OBJS="src/os/unix/pa_unix_hostapis.o src/os/unix/pa_unix_util.o src/hostapi/coreaudio/pa_mac_core.o src/hostapi/coreaudio/pa_mac_core_utilities.o src/hostapi/coreaudio/pa_mac_core_blocking.o src/common/pa_ringbuffer.o"
+         PADLL="libportaudio.dylib"
+         ;;
