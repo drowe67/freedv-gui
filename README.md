@@ -8,7 +8,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   * [FreeDV GUI User Manual](USER_MANUAL.md)
   * [Building for Windows using Docker](docker/README_docker.md)
   
-## Building on Ubuntu Linux (16-19)
+## Building on Ubuntu Linux (16-20)
   ```
   $ sudo apt install libc6-i386 libspeexdsp-dev libsamplerate0-dev sox git \
   libwxgtk3.0-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev \
@@ -17,12 +17,14 @@ This document describes how to build the FreeDV GUI program for various operatin
   $ cd freedv-gui
   $ ./build_linux.sh
   ```
+  (For Ubuntu 20.04 the wxWidgets package is named `libwxgtk3.0-gtk3-dev`.)
+  
   Then run with:
   ```
   $ ./build_linux/src/freedv
   ```
   
-  Note this build all libraries locally, nothing is installed on your machine.  ```make install``` is not required.
+  Note this builds all libraries locally, nothing is installed on your machine.  ```make install``` is not required.
 
 ## Building on Fedora Linux
   ```
@@ -54,11 +56,11 @@ You need to install the codec2 and lpcnetfreedv shared libraries, and freedv-gui
   
 ## Testing
 
-The ```wav``` directory contains test files of modulated audio that you can use to test FreeDV (see the [USER_MANUAL](USER_MANUAL.md))
+The ```wav``` directory contains test files of modulated audio that you can use to test FreeDV (see the [USER_MANUAL](USER_MANUAL.md)).
 
 ## Building for Windows using Docker
 
-The Windows build process above has been automated using a Docker container, see the freedv-gui Docker [README](docker/README_docker.md)
+The Windows build process above has been automated using a Docker container, see the freedv-gui Docker [README](docker/README_docker.md).
 
 ## Building for Windows on Fedora (Cross compiling)
 
@@ -126,8 +128,8 @@ Testing FreeDV API:
 
 ## Building and installing on OSX
 
-Please see README.osx
+Please see [README.osx](README.osx).
 
 ## Building and installing on FreeBSD
 
-In ```build_linux.sh``` change the ```build_linux``` directory to build_freebsd
+In ```build_linux.sh``` change the ```build_linux``` directory to build_freebsd.

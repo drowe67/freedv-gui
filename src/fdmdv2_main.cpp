@@ -2602,14 +2602,17 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
 {
     wxUnusedVar(event);
     wxString msg;
-    msg.Printf( wxT("FreeDV %s\n\n")
-                wxT("Open Source Digital Voice\n\n")
+    msg.Printf( wxT("FreeDV GUI %s\n\n")
                 wxT("For Help and Support visit: http://freedv.org\n\n")
 
                 wxT("GNU Public License V2.1\n\n")
                 wxT("Copyright (c) David Witten KD0EAG and David Rowe VK5DGR\n\n")
-                wxT("git revision: %s\n"), FREEDV_VERSION, GIT_HASH);
-
+                wxT("freedv-gui version: %s\n")
+                wxT("freedv-gui git hash: %s\n")
+                wxT("codec2 git hash: %s\n")
+                wxT("lpcnet git hash: %s\n"),
+                FREEDV_VERSION, FREEDV_VERSION, GIT_HASH, freedv_get_hash(), lpcnet_get_hash());
+                
     wxMessageBox(msg, wxT("About"), wxOK | wxICON_INFORMATION, this);
 }
 

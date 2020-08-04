@@ -71,6 +71,7 @@
 #include "codec2.h"
 #include "codec2_fifo.h"
 #include "modem_stats.h"
+#include "lpcnet_freedv.h"
 #ifdef __HORUS__
 #include "horus_api.h"
 #endif
