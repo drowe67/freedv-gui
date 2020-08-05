@@ -48,17 +48,17 @@ typedef struct {
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class AuiNotebookNoKbd
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-class AuiNotebookNoKbd : public wxAuiNotebook
+class AuiNotebookNoKbd : public wxNotebook
 {
-    // This class inherits from wxAuiNotebook, and the only difference between
+    // This class inherits from wxNotebook, and the only difference between
     // it and the wx notebook is functionality to ignore tabbing to it.  This 
     // is a control with no user input, thus blind hams have no reason to tab
     // to it.
 public: 
         
     AuiNotebookNoKbd(wxWindow *parent, wxWindowID id=wxID_ANY, const wxPoint &pos=wxDefaultPosition,
-                     const wxSize &size=wxDefaultSize, long style=wxAUI_NB_DEFAULT_STYLE) : 
-                     wxAuiNotebook(parent, id, pos, size, style) {;}
+                     const wxSize &size=wxDefaultSize, long style=0) : 
+                     wxNotebook(parent, id, pos, size, style) {;}
 
     bool AcceptsFocusFromKeyboard() const { return false; }
 };
@@ -71,7 +71,7 @@ class FilterDlg : public wxDialog
     public:
     FilterDlg( wxWindow* parent, bool running, bool *newMicInFilter, bool *newSpkOutFilter,
                wxWindowID id = wxID_ANY, const wxString& title = _("Filter"), 
-               const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 800, 630 ), 
+               const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 800, 675 ), 
                long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
         ~FilterDlg();
 
