@@ -100,12 +100,12 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     bSizer811 = new wxBoxSizer(wxHORIZONTAL);
     m_staticText51 = new wxStaticText(m_panelRx, wxID_ANY, _("Device:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText51->Wrap(-1);
-    bSizer811->Add(m_staticText51, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5);
+    bSizer811->Add(m_staticText51, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
     m_textCtrlRxIn = new wxTextCtrl(m_panelRx, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
     bSizer811->Add(m_textCtrlRxIn, 1, wxALIGN_CENTER_VERTICAL|wxALL, 1);
     m_staticText6 = new wxStaticText(m_panelRx, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText6->Wrap(-1);
-    bSizer811->Add(m_staticText6, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5);
+    bSizer811->Add(m_staticText6, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
     m_cbSampleRateRxIn = new wxComboBox(m_panelRx, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, NULL, wxCB_DROPDOWN);
     bSizer811->Add(m_cbSampleRateRxIn, 0, wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
@@ -135,7 +135,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     bSizer81->Add(m_textCtrlRxOut, 1, wxALIGN_CENTER_VERTICAL|wxALL, 1);
     m_staticText10 = new wxStaticText(m_panelRx, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText10->Wrap(-1);
-    bSizer81->Add(m_staticText10, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5);
+    bSizer81->Add(m_staticText10, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
     m_cbSampleRateRxOut = new wxComboBox(m_panelRx, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, NULL, wxCB_DROPDOWN);
     bSizer81->Add(m_cbSampleRateRxOut, 0, wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
@@ -172,12 +172,12 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     bSizer83 = new wxBoxSizer(wxHORIZONTAL);
     m_staticText12 = new wxStaticText(m_panelTx, wxID_ANY, _("Device:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText12->Wrap(-1);
-    bSizer83->Add(m_staticText12, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5);
+    bSizer83->Add(m_staticText12, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
     m_textCtrlTxIn = new wxTextCtrl(m_panelTx, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
     bSizer83->Add(m_textCtrlTxIn, 1, wxALIGN_CENTER_VERTICAL|wxALL, 1);
     m_staticText11 = new wxStaticText(m_panelTx, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText11->Wrap(-1);
-    bSizer83->Add(m_staticText11, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5);
+    bSizer83->Add(m_staticText11, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
     m_cbSampleRateTxIn = new wxComboBox(m_panelTx, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, NULL, wxCB_DROPDOWN);
     bSizer83->Add(m_cbSampleRateTxIn, 0, wxALL, 1);
 
@@ -206,7 +206,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     bSizer82->Add(m_textCtrlTxOut, 1, wxALIGN_CENTER_VERTICAL|wxALL, 1);
     m_staticText71 = new wxStaticText(m_panelTx, wxID_ANY, _("Sample Rate:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText71->Wrap(-1);
-    bSizer82->Add(m_staticText71, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5);
+    bSizer82->Add(m_staticText71, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
     m_cbSampleRateTxOut = new wxComboBox(m_panelTx, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, NULL, wxCB_DROPDOWN);
     bSizer82->Add(m_cbSampleRateTxOut, 0, wxALL, 1);
 

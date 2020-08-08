@@ -33,10 +33,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
 {
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);
     this->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-    this->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_3DLIGHT));
-    this->SetSizeHints(wxDefaultSize, wxDefaultSize);
-    this->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-    this->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_3DLIGHT));
+    this->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
     //=====================================================
     // Menubar Setup
     m_menubarMain = new wxMenuBar(wxMB_DOCKABLE);
@@ -143,7 +140,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     m_ckboxSNR->SetToolTip(_("Smooth but slow SNR estimation"));
     snrSizer->Add(m_ckboxSNR, 0, wxALIGN_CENTER_HORIZONTAL, 5);
 
-    leftSizer->Add(snrSizer, 2, wxALIGN_CENTER_HORIZONTAL|wxEXPAND|wxALL, 1);
+    leftSizer->Add(snrSizer, 2, wxEXPAND|wxALL, 1);
 
     //------------------------------
     // Sync  Indicator box
@@ -162,7 +159,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     sbSizer3_33->Add(m_BtnReSync, 0, wxALIGN_CENTRE , 1);
     m_textInterleaverSync->Disable();
 
-    leftSizer->Add(sbSizer3_33,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+    leftSizer->Add(sbSizer3_33,0, wxALL|wxEXPAND, 3);
 
     //------------------------------
     // BER Frames box
@@ -191,7 +188,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     m_textCodec2Var = new wxStaticText(this, wxID_ANY, wxT("Var: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_ber->Add(m_textCodec2Var, 0, wxALIGN_LEFT, 1);
 
-    leftSizer->Add(sbSizer_ber,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+    leftSizer->Add(sbSizer_ber,0, wxALL|wxEXPAND, 3);
 
     //------------------------------
     // Signal Level(vert. bargraph)
@@ -207,7 +204,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode.  If Red you should reduce your levels"));
     levelSizer->Add(m_gaugeLevel, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 10);
 
-    leftSizer->Add(levelSizer, 2, wxALIGN_CENTER|wxALL|wxEXPAND, 1);
+    leftSizer->Add(levelSizer, 2, wxALL|wxEXPAND, 1);
 
     bSizer1->Add(leftSizer, 0, wxALL|wxEXPAND, 5);
 
@@ -230,7 +227,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     m_auiNbookCtrl->SetFont(wxFont(8, 70, 90, 90, false, wxEmptyString));
 
     upperSizer->Add(m_auiNbookCtrl, 1, wxALIGN_TOP|wxEXPAND, 1);
-    centerSizer->Add(upperSizer, 1, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALIGN_TOP|wxEXPAND, 0);
+    centerSizer->Add(upperSizer, 1, wxALIGN_TOP|wxEXPAND, 0);
 
     // lower middle used for user ID
 
@@ -242,7 +239,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     m_txtSSBStatus = new wxStaticText(this, wxID_ANY, wxT("unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_txtSSBStatus->Enable(false); // enabled only if Hamlib is turned on
     m_txtSSBStatus->SetMinSize(wxSize(40,-1));
-    ssbStatusSizer->Add(m_txtSSBStatus, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 1);
+    ssbStatusSizer->Add(m_txtSSBStatus, 0, wxALL|wxEXPAND, 1);
     lowerSizer->Add(ssbStatusSizer, 0, wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
     m_BtnCallSignReset = new wxButton(this, wxID_ANY, _("Clear"), wxDefaultPosition, wxDefaultSize, 0);
@@ -252,7 +249,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     bSizer15 = new wxBoxSizer(wxVERTICAL);
     m_txtCtrlCallSign = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
     m_txtCtrlCallSign->SetToolTip(_("Call Sign of transmitting station will appear here"));
-    bSizer15->Add(m_txtCtrlCallSign, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5);
+    bSizer15->Add(m_txtCtrlCallSign, 0, wxALL|wxEXPAND, 5);
     lowerSizer->Add(bSizer15, 1, wxEXPAND, 5);
 
 #ifdef __EXPERIMENTAL_UDP__
@@ -296,8 +293,8 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     lowerSizer->Add(bSizer141, 0, wxALIGN_RIGHT, 5);
 #endif
 
-    centerSizer->Add(lowerSizer, 0, wxALIGN_BOTTOM|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxEXPAND, 2);
-    bSizer1->Add(centerSizer, 4, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 1);
+    centerSizer->Add(lowerSizer, 0, wxEXPAND, 2);
+    bSizer1->Add(centerSizer, 4, wxALL|wxEXPAND, 1);
 
     //=====================================================
     // Right side
@@ -329,7 +326,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     m_ckboxSQ = new wxCheckBox(this, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
 
     sbSizer3->Add(m_ckboxSQ, 0, wxALIGN_CENTER_HORIZONTAL, 0);
-    rightSizer->Add(sbSizer3, 2, wxALIGN_CENTER_HORIZONTAL|wxEXPAND, 0);
+    rightSizer->Add(sbSizer3, 2, wxEXPAND, 0);
 
     //rightSizer->Add(sbSizer3_33,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 
@@ -385,7 +382,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     sbSizer_mode->Add(m_rb2000, 0, wxALIGN_LEFT|wxALL, 1);
 #endif
 
-    rightSizer->Add(sbSizer_mode,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+    rightSizer->Add(sbSizer_mode,0, wxALL|wxEXPAND, 3);
 
     #ifdef MOVED_TO_OPTIONS_DIALOG
     /* new --- */
@@ -462,7 +459,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     m_togBtnSplit->SetToolTip(_("Toggle split frequency mode."));
 
     bSizer151->Add(m_togBtnSplit, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
-    sbSizer5->Add(bSizer151, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 1);
+    sbSizer5->Add(bSizer151, 0, wxALL|wxEXPAND, 1);
     wxBoxSizer* bSizer13;
     bSizer13 = new wxBoxSizer(wxVERTICAL);
 
@@ -506,7 +503,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     m_btnTogPTT->SetToolTip(_("Push to Talk - Switch between Receive and Transmit - you can also use the space bar "));
     bSizer11->Add(m_btnTogPTT, 1, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
     sbSizer5->Add(bSizer11, 2, wxEXPAND, 1);
-    rightSizer->Add(sbSizer5, 2, wxALIGN_CENTER|wxALL|wxEXPAND, 3);
+    rightSizer->Add(sbSizer5, 2, wxALL|wxEXPAND, 3);
     bSizer1->Add(rightSizer, 0, wxALL|wxEXPAND, 3);
     this->SetSizer(bSizer1);
     this->Layout();

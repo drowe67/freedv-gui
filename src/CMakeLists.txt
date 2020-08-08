@@ -108,7 +108,7 @@ if(APPLE)
         COMMAND rm ARGS -rf FreeDV.* dist_tmp
         COMMAND mkdir ARGS -p FreeDV.app/Contents/MacOS
         COMMAND mkdir ARGS -p FreeDV.app/Contents/Resources/English.lproj
-        COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/info.plist FreeDV.app/Contents
+        COMMAND cp ARGS ${CMAKE_CURRENT_BINARY_DIR}/info.plist FreeDV.app/Contents
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/freedv.icns FreeDV.app/Contents/Resources
         COMMAND echo ARGS -n "APPL????" > FreeDV.app/Contents/PkgInfo
         COMMAND cp ARGS freedv FreeDV.app/Contents/MacOS/FreeDV
