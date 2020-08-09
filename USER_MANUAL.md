@@ -637,7 +637,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 ### V1.4.3 August 2020
 
 1. Maintenance Release (no major new features)
-1. Changes to support wxWidgets 3.1 (but Windows versions built agains wxWidgets 3.0)
+1. Changes to support wxWidgets 3.1 (but Windows versions built against wxWidgets 3.0)
 1. Under the hood - OFDM modem has been refactored, shouldn't affect freedv-gui operation
 
 ### V1.4.2 July 2020
