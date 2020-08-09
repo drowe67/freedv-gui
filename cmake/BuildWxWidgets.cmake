@@ -1,4 +1,4 @@
-set(WXWIDGETS_VERSION "3.0.4")
+set(WXWIDGETS_VERSION "3.1.4")
 set(WXWIDGETS_TARBALL "wxWidgets-${WXWIDGETS_VERSION}")
 
 # If we're cross-compiling then we need to set the target host manually.
@@ -10,7 +10,7 @@ endif()
 if(MINGW AND CMAKE_CROSSCOMPILING)
     set(CONFIGURE_COMMAND ./configure --build=${HOST} --host=${HOST} --target=${HOST} --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
 elseif(APPLE)
-    set(CONFIGURE_COMMAND ./configure --disable-shared --with-osx_cocoa --enable-universal_binary=arm64e,x86_64 --with-macosx-version-min=10.9 --prefix=${CMAKE_BINARY_DIR}/external/dist --with-libjpeg=builtin --with-libpng=builtin --with-regex=builtin --with-libtiff=builtin CXXFLAGS=-stdlib=libc++\ -std=c++11\ -DWX_PRECOMP\ -O2\ -fno-strict-aliasing\ -fno-common)
+    set(CONFIGURE_COMMAND ./configure --disable-shared --with-osx_cocoa --enable-universal_binary=arm64e,x86_64 --with-macosx-version-min=10.10 --prefix=${CMAKE_BINARY_DIR}/external/dist --with-libjpeg=builtin --with-libpng=builtin --with-regex=builtin --with-libtiff=builtin CXXFLAGS=-stdlib=libc++\ -std=c++11\ -DWX_PRECOMP\ -O2\ -fno-strict-aliasing\ -fno-common)
 else()
 #    set(CONFIGURE_COMMAND "true")
 #    set(MAKE_COMMAND $(MAKE) -C build/msw -f makefile.gcc SHARED=0 UNICODE=1 BUILD=release PREFIX=${CMAKE_BINARY_DIR}/external/dist)

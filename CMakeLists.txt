@@ -47,7 +47,7 @@ message(STATUS "Compilation date = XX${DATE_RESULT}XX")
 #
 set(FREEDV_VERSION_MAJOR 1)
 set(FREEDV_VERSION_MINOR 4)
-set(FREEDV_VERSION_PATCH 1)
+set(FREEDV_VERSION_PATCH 3)
 set(FREEDV_VERSION_SUFFIX "devel")
 
 set(FREEDV_VERSION ${FREEDV_VERSION_MAJOR}.${FREEDV_VERSION_MINOR})
@@ -400,6 +400,7 @@ if(WXRC)
     set(wxWidgets_wxrc_EXECUTABLE ${WXRC})
 endif(WXRC)
 set(WX_VERSION_MIN 3.0.0)
+set(WX_31_VERSION_MIN 3.1.3)
 find_package(wxWidgets REQUIRED core base aui html net adv)
 execute_process(COMMAND sh "${wxWidgets_CONFIG_EXECUTABLE}" --version
     OUTPUT_VARIABLE WX_VERSION)
@@ -415,6 +416,16 @@ where wxWidgets libraries are installed (returned by
 is in LD_LIBRARY_PATH or equivalent variable and
 wxWidgets version is ${WX_VERSION_MIN} or above.")
 endif()
+
+if(APPLE)
+if(WX_VERSION VERSION_EQUAL ${WX_31_VERSION_MIN}
+   OR WX_VERSION VERSION_GREATER ${WX_31_VERSION_MIN})
+    set(DARK_MODE_DISABLE "false")
+else()
+    set(DARK_MODE_DISABLE "true")
+endif()
+endif(APPLE)
+
 if(wxWidgets_FOUND)
     include("${wxWidgets_USE_FILE}")
     list(APPEND FREEDV_LINK_LIBS ${wxWidgets_LIBRARIES})
@@ -472,6 +483,11 @@ add_subdirectory(src)
 add_subdirectory(contrib)
 
 message(STATUS "Build type will be: ${CMAKE_BUILD_TYPE}")
+
+if(APPLE)
+configure_file ("${PROJECT_SOURCE_DIR}/src/info.plist.in"
+                "${PROJECT_BINARY_DIR}/src/info.plist" )
+endif(APPLE)
 
 #
 # Cpack NSIS configuration for Windows.

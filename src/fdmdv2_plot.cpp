@@ -117,7 +117,21 @@ void PlotPanel::OnSize(wxSizeEvent& event)
     {
         if(!m_oImage.IsOk())
         {
-            m_oImage.Create(m_rCtrl.GetWidth(), m_rCtrl.GetHeight(), true);
+            int proposedWidth = m_rCtrl.GetWidth();
+            if (proposedWidth == 0)
+            {
+                // We don't have a width yet; assume 1. We will rescale
+                // to proper width next time through.
+                proposedWidth = 1;
+            }
+            int proposedHeight = m_rCtrl.GetHeight();
+            if (proposedHeight == 0)
+            {
+                // We don't have a height yet; assume 1. We will rescale
+                // to proper height next time through.
+                proposedHeight = 1;
+            }
+            m_oImage.Create(proposedWidth, proposedHeight, true);
         }
         else
         {

@@ -60,9 +60,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_txtCtrlCallSign = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
     m_txtCtrlCallSign->SetToolTip(_("Txt Msg you can send along with Voice"));
-    sbSizer_callSign->Add(m_txtCtrlCallSign, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 3);
+    sbSizer_callSign->Add(m_txtCtrlCallSign, 0, wxALL|wxEXPAND, 3);
 
-    bSizer30->Add(sbSizer_callSign,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+    bSizer30->Add(sbSizer_callSign,0, wxALL|wxEXPAND, 3);
  
     //----------------------------------------------------------------------
     // Voice Keyer 
@@ -91,7 +91,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_txtCtrlVoiceKeyerRepeats->SetToolTip(_("How long to wait in Rx mode before repeat"));
     staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerRepeats, 0, 0, 5);
 
-    bSizer30->Add(staticBoxSizer28a,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+    bSizer30->Add(staticBoxSizer28a,0, wxALL|wxEXPAND, 3);
 
     //------------------------------
     // FreeDV 700 Options
@@ -113,7 +113,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxFreeDV700ManualUnSync = new wxCheckBox(this, wxID_ANY, _("700D Manual UnSync"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700ManualUnSync, 0, wxALIGN_LEFT, 0);
 
-    bSizer30->Add(sbSizer_freedv700, 0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+    bSizer30->Add(sbSizer_freedv700, 0, wxALL|wxEXPAND, 3);
 
     //------------------------------
     // Phase Est Options
@@ -128,7 +128,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxPhaseEstDPSK = new wxCheckBox(this, wxID_ANY, _("DPSK"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedvPhaseEst->Add(m_ckboxPhaseEstDPSK, 0, wxALIGN_LEFT, 0);
 
-    bSizer30->Add(sbSizer_freedvPhaseEst, 0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+    bSizer30->Add(sbSizer_freedvPhaseEst, 0, wxALL|wxEXPAND, 3);
 
     //------------------------------
     // Half/Full duplex selection
@@ -138,7 +138,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBoxSizer* sbSizer_duplex = new wxStaticBoxSizer(sb_duplex, wxHORIZONTAL);
     m_ckHalfDuplex = new wxCheckBox(this, wxID_ANY, _("Half Duplex"), wxDefaultPosition, wxSize(-1,-1), 0);
     sbSizer_duplex->Add(m_ckHalfDuplex, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
-    bSizer30->Add(sbSizer_duplex,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+    bSizer30->Add(sbSizer_duplex,0, wxALL|wxEXPAND, 3);
 
     //------------------------------
     // Test Frames/Channel simulation check box
@@ -161,7 +161,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_txtAttnCarrier = new wxTextCtrl(this, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_testFrames->Add(m_txtAttnCarrier, 0, wxALIGN_LEFT, 0);
 
-    bSizer30->Add(sbSizer_testFrames,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+    bSizer30->Add(sbSizer_testFrames,0, wxALL|wxEXPAND, 3);
 
     //------------------------------
     // Interfering tone
@@ -180,7 +180,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_txtToneAmplitude = new wxTextCtrl(this, wxID_ANY,  "1000", wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_tone->Add(m_txtToneAmplitude, 0, wxALIGN_LEFT, 0);
 
-    bSizer30->Add(sbSizer_tone,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+    bSizer30->Add(sbSizer_tone,0, wxALL|wxEXPAND, 3);
 
 #ifdef __EXPERIMENTAL_UDP__
     //------------------------------
@@ -290,13 +290,13 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox* sb_udp = new wxStaticBox(this, wxID_ANY, _("UDP Messages"));
     sbSizer_udp = new wxStaticBoxSizer(sb_udp, wxHORIZONTAL);
     m_ckbox_udp_enable = new wxCheckBox(this, wxID_ANY, _("Enable UDP Messages   UDP Port Number:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_udp->Add(m_ckbox_udp_enable, 0,  wxALIGN_CENTER_HORIZONTAL, 5);
+    sbSizer_udp->Add(m_ckbox_udp_enable, 0,  0, 5);
     m_txt_udp_port = new wxTextCtrl(this, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    sbSizer_udp->Add(m_txt_udp_port, 0, wxALIGN_CENTER_HORIZONTAL, 5);
+    sbSizer_udp->Add(m_txt_udp_port, 0, 0, 5);
     m_btn_udp_test = new wxButton(this, wxID_ANY, _("Test"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_udp->Add(m_btn_udp_test, 0,  wxALIGN_LEFT, 5);
 
-    bSizer30->Add(sbSizer_udp,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+    bSizer30->Add(sbSizer_udp,0, wxALL|wxEXPAND, 3);
 
     //----------------------------------------------------------
     // FIFO and PortAudio under/overflow counters used for debug
@@ -345,14 +345,14 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // text lines with fifo counters
     
     m_textPA1 = new wxStaticText(this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_fifo->Add(m_textPA1, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 1);
+    sbSizer_fifo->Add(m_textPA1, 0, wxALIGN_LEFT, 1);
     m_textPA2 = new wxStaticText(this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_fifo->Add(m_textPA2, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 1);
+    sbSizer_fifo->Add(m_textPA2, 0, wxALIGN_LEFT, 1);
 
     m_textFifos = new wxStaticText(this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_fifo->Add(m_textFifos, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 1);
+    sbSizer_fifo->Add(m_textFifos, 0, wxALIGN_LEFT, 1);
 
-    bSizer30->Add(sbSizer_fifo,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+    bSizer30->Add(sbSizer_fifo,0, wxALL|wxEXPAND, 3);
 
     //------------------------------
     // OK - Cancel - Apply Buttons 
