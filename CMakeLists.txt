@@ -6,7 +6,7 @@
 # mailing list: https://lists.sourceforge.net/lists/listinfo/freetel-codec2
 #
 
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X deployment version")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
 
 cmake_minimum_required(VERSION 2.8)
 
@@ -27,7 +27,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 project(FreeDV)
 
 # Build universal ARM64 and x86_64 binaries on Mac.
-set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64e")
+set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
 
 # https://cmake.org/cmake/help/git-stage/policy/CMP0075.html
 if(POLICY CMP0075)

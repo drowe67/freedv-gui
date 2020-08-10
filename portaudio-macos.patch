@@ -6,7 +6,7 @@ diff -ur portaudio/bindings/cpp/configure portaudio.orig/bindings/cpp/configure
  # Various other variables and flags
  DEFAULT_INCLUDES="-I$PACPP_ROOT/include -I$PACPP_ROOT/$PORTAUDIO_ROOT/include"
 -CFLAGS=${CFLAGS-"-g -O2 -Wall -ansi -pedantic"}
-+CFLAGS=${CFLAGS-"-g -O2 -Wall -ansi -pedantic -arch x86_64 -arch arm64e"}
++CFLAGS=${CFLAGS-"-g -O2 -Wall -ansi -pedantic -arch x86_64 -arch arm64"}
 +LDFLAGS=${LDFLAGS-"-framework CoreServices -framework AudioUnit -framework CoreFoundation -framework AudioToolbox -framework CoreAudio"}
  CXXFLAGS=${CXXFLAGS-"${CFLAGS}"}
  
@@ -19,7 +19,7 @@ diff -ur portaudio/bindings/cpp/configure.ac portaudio.orig/bindings/cpp/configu
  # Various other variables and flags
  DEFAULT_INCLUDES="-I$PACPP_ROOT/include -I$PACPP_ROOT/$PORTAUDIO_ROOT/include"
 -CFLAGS=${CFLAGS-"-g -O2 -Wall -ansi -pedantic"}
-+CFLAGS=${CFLAGS-"-g -O2 -Wall -ansi -pedantic -arch x86_64 -arch arm64e"}
++CFLAGS=${CFLAGS-"-g -O2 -Wall -ansi -pedantic -arch x86_64 -arch arm64"}
 +LDFLAGS=${LDFLAGS-"-framework CoreServices -framework AudioUnit -framework CoreFoundation -framework AudioToolbox -framework CoreAudio"}
  CXXFLAGS=${CXXFLAGS-"${CFLAGS}"}
  
@@ -77,7 +77,7 @@ diff -ur portaudio/configure portaudio.orig/configure
  
                                   mac_arches=""
 -           for arch in i386 x86_64 ppc ppc64
-+           for arch in x86_64 ppc ppc64 arm64e
++           for arch in x86_64 ppc ppc64 arm64
             do
                save_CFLAGS="$CFLAGS"
                CFLAGS="$CFLAGS -arch $arch"
@@ -144,7 +144,7 @@ diff -ur portaudio/configure.in portaudio.orig/configure.in
             dnl the compiler supports.
             mac_arches=""
 -           for arch in i386 x86_64 ppc ppc64
-+           for arch in x86_64 ppc ppc64 arm64e
++           for arch in x86_64 ppc ppc64 arm64
             do
                save_CFLAGS="$CFLAGS"
                CFLAGS="$CFLAGS -arch $arch"
