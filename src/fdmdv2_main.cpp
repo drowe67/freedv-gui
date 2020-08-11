@@ -1998,7 +1998,7 @@ MyExtraPlayFilePanel::MyExtraPlayFilePanel(wxWindow *parent): wxPanel(parent)
 
     // bug: I can't this to align right.....
     wxBoxSizer *sizerTop = new wxBoxSizer(wxHORIZONTAL);
-    sizerTop->Add(m_cb, 0, wxALIGN_RIGHT, 0);
+    sizerTop->Add(m_cb, 0, 0, 0);
     SetSizerAndFit(sizerTop);
 }
 
@@ -2186,7 +2186,7 @@ MyExtraRecFilePanel::MyExtraRecFilePanel(wxWindow *parent): wxPanel(parent)
     m_secondsToRecord = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
     m_secondsToRecord->SetToolTip(_("Number of seconds to record for"));
     m_secondsToRecord->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_recFileFromRadioSecs));
-    sizerTop->Add(m_secondsToRecord, 0, wxALIGN_RIGHT|wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    sizerTop->Add(m_secondsToRecord, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
     SetSizerAndFit(sizerTop);
 }
 
