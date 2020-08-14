@@ -1,16 +1,21 @@
 set(WXWIDGETS_VERSION "3.1.4")
 set(WXWIDGETS_TARBALL "wxWidgets-${WXWIDGETS_VERSION}")
 
-# If we're cross-compiling then we need to set the target host manually.
 if(MINGW AND CMAKE_CROSSCOMPILING)
+	# If we're cross-compiling then we need to set the target host manually.
     include(cmake/MinGW.cmake)
-endif()
 
-# If not cross-compiling then use the built-in makefile, otherwise use standard configure.
-if(MINGW AND CMAKE_CROSSCOMPILING)
-    set(CONFIGURE_COMMAND ./configure --build=${HOST} --host=${HOST} --target=${HOST} --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
+    # Fedora MinGW defines this to the system MinGW root which will prevent
+	# finding libraries in the build tree. Add / so that it also looks in the
+	# build tree. This is specifically for bootstrapping wxWidgets.
+    list(APPEND CMAKE_FIND_ROOT_PATH "/")
+
+	# If not cross-compiling then use the built-in makefile, otherwise use standard configure.
+    set(CONFIGURE_COMMAND ./configure --build=${BUILD} --host=${HOST} --target=${HOST} --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
+
 elseif(APPLE)
     set(CONFIGURE_COMMAND ./configure --disable-shared --with-macosx-version-min=10.10 --prefix=${CMAKE_BINARY_DIR}/external/dist --with-libjpeg=builtin --with-libpng=builtin --with-regex=builtin --with-libtiff=builtin CXXFLAGS=-stdlib=libc++\ -std=c++11\ -DWX_PRECOMP\ -O2\ -fno-strict-aliasing\ -fno-common)
+
 else()
 #    set(CONFIGURE_COMMAND "true")
 #    set(MAKE_COMMAND $(MAKE) -C build/msw -f makefile.gcc SHARED=0 UNICODE=1 BUILD=release PREFIX=${CMAKE_BINARY_DIR}/external/dist)
