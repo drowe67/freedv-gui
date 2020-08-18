@@ -20,10 +20,10 @@ echo "FDV_CMAKE=$CMAKE"
 
 # OK lets get started -----------------------------------------------
 
-if [ ! -d freedv-gui ] ; then git clone $GIT_REPO ; fi
+# start with a fresh clone
+if [ -d freedv-gui ] ; then rm -Rf freedv-gui; fi
+git clone $GIT_REPO
 cd freedv-gui
-git pull -v
-git branch
 git checkout $GIT_BRANCH
 echo "--------------------- starting build_windows.sh ---------------------"
 GIT_REPO=$GIT_REPO GIT_REF=$GIT_REF CMAKE=$CMAKE ./build_windows.sh
