@@ -4097,7 +4097,7 @@ void txRxProcessing()
                 COMP tx_fdm_offset[nfreedv];
                 int  i;
 
-                if (g_mode == FREEDV_MODE_800XA) {
+                if (g_mode == FREEDV_MODE_800XA || g_mode == FREEDV_MODE_2400B) {
                     /* 800XA doesn't support complex output just yet */
                     freedv_tx(g_pfreedv, outfreedv, infreedv);
                 }
