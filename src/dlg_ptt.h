@@ -60,7 +60,6 @@ class ComPortsDlg : public wxDialog
         wxStaticText  *m_cbSerialParams;
         wxStaticText *m_stIcomCIVHex;
         wxTextCtrl *m_tcIcomCIVHex;
-        wxNumericPropertyValidator *m_pvIcomCIVHex;
         Hamlib *m_hamlib;
 
         /* Serial Settings */

@@ -31,7 +31,7 @@
 #endif
 
 #include <sstream>
-
+        
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class ComPortsDlg
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -85,8 +85,8 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     m_stIcomCIVHex = new wxStaticText(this, wxID_ANY, _("Radio Address:"), wxDefaultPosition, wxDefaultSize, 0);
     gridSizerhl->Add(m_stIcomCIVHex, 
                       0, wxALIGN_CENTER_VERTICAL |  wxALIGN_RIGHT, 20);
-    m_pvIcomCIVHex = new wxNumericPropertyValidator(wxNumericPropertyValidator::Unsigned, 16);
-    m_tcIcomCIVHex = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(35, -1), 0, *m_pvIcomCIVHex);
+    m_tcIcomCIVHex = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(35, -1), 0, wxNumericPropertyValidator(wxNumericPropertyValidator::Unsigned, 16));
+    m_tcIcomCIVHex->SetMaxLength(2);
     gridSizerhl->Add(m_tcIcomCIVHex, 0, wxALIGN_CENTER_VERTICAL, 0);
     
     /* Hamlib Serial Rate combobox. */
@@ -367,7 +367,7 @@ void ComPortsDlg::ExchangeData(int inout)
             m_cbSerialRate->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intHamlibSerialRate));
         }
 
-        m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02x"), wxGetApp().m_intHamlibIcomCIVHex));
+        m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02X"), wxGetApp().m_intHamlibIcomCIVHex));
         
         /* Serial PTT */
 
