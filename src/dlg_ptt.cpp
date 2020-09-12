@@ -55,7 +55,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     //----------------------------------------------------------------------
 
     wxStaticBoxSizer* staticBoxSizer18 = new wxStaticBoxSizer( new wxStaticBox(this, wxID_ANY, _("Hamlib Settings")), wxHORIZONTAL);
-    wxGridSizer* gridSizerhl = new wxGridSizer(5, 2, 0, 0);
+    wxGridSizer* gridSizerhl = new wxGridSizer(6, 2, 0, 0);
     staticBoxSizer18->Add(gridSizerhl, 1, wxEXPAND|wxALIGN_LEFT, 5);
 
     /* Use Hamlib for PTT checkbox. */
@@ -81,6 +81,13 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     m_cbSerialPort = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, -1), 0, NULL, wxCB_DROPDOWN);
     gridSizerhl->Add(m_cbSerialPort, 0, wxALIGN_CENTER_VERTICAL, 0);
 
+    /* Hamlib Icom CI-V address text box. */
+    gridSizerhl->Add(new wxStaticText(this, wxID_ANY, _("Radio Address:"), wxDefaultPosition, wxDefaultSize, 0), 
+                      0, wxALIGN_CENTER_VERTICAL |  wxALIGN_RIGHT, 20);
+    m_pvIcomCIVHex = new wxNumericPropertyValidator(wxNumericPropertyValidator::Unsigned, 16);
+    m_tcIcomCIVHex = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(35, -1), 0, *m_pvIcomCIVHex);
+    gridSizerhl->Add(m_tcIcomCIVHex, 0, wxALIGN_CENTER_VERTICAL, 0);
+    
     /* Hamlib Serial Rate combobox. */
 
     gridSizerhl->Add(new wxStaticText(this, wxID_ANY, _("Serial Rate:"), wxDefaultPosition, wxDefaultSize, 0), 
@@ -356,6 +363,8 @@ void ComPortsDlg::ExchangeData(int inout)
             m_cbSerialRate->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intHamlibSerialRate));
         }
 
+        m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02x"), wxGetApp().m_intHamlibIcomCIVHex));
+        
         /* Serial PTT */
 
         m_ckUseSerialPTT->SetValue(wxGetApp().m_boolUseSerialPTT);
@@ -381,8 +390,13 @@ void ComPortsDlg::ExchangeData(int inout)
         wxGetApp().m_boolHamlibUseForPTT = m_ckUseHamlibPTT->GetValue();
         wxGetApp().m_intHamlibRig = m_cbRigName->GetSelection();
         wxGetApp().m_strHamlibSerialPort = m_cbSerialPort->GetValue();
-
-        wxString s = m_cbSerialRate->GetValue();
+        
+        wxString s = m_tcIcomCIVHex->GetValue();
+        long hexAddress = 0;
+        m_tcIcomCIVHex->GetValue().ToLong(&hexAddress, 16);
+        wxGetApp().m_intHamlibIcomCIVHex = hexAddress;
+        
+        s = m_cbSerialRate->GetValue();
         if (s == "default") {
             wxGetApp().m_intHamlibSerialRate = 0;
         } else {

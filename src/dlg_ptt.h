@@ -35,6 +35,8 @@
 #include <wx/radiobut.h>
 #include <wx/button.h>
 #include <wx/spinctrl.h>
+#include <wx/propgrid/props.h>
+
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class ComPortsDlg
@@ -56,6 +58,8 @@ class ComPortsDlg : public wxDialog
         wxComboBox *m_cbSerialPort;
         wxComboBox *m_cbSerialRate;
         wxStaticText  *m_cbSerialParams;
+        wxTextCtrl *m_tcIcomCIVHex;
+        wxNumericPropertyValidator *m_pvIcomCIVHex;
         Hamlib *m_hamlib;
 
         /* Serial Settings */
