@@ -479,6 +479,10 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             serial_rate = tmp;
         }
 
+        s = m_tcIcomCIVHex->GetValue();
+        long hexAddress = 0;
+        m_tcIcomCIVHex->GetValue().ToLong(&hexAddress, 16);
+        
         // display serial params
 
         fprintf(stderr, "serial rate: %d\n", serial_rate);
@@ -486,7 +490,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
         // try to open rig
 
         Hamlib *hamlib = wxGetApp().m_hamlib; 
-        bool status = hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate);
+        bool status = hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, hexAddress);
         if (status == false) {
             wxMessageBox("Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
             wxT("Error"), wxOK | wxICON_ERROR, this);
