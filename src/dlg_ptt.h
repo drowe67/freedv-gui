@@ -35,6 +35,7 @@
 #include <wx/radiobut.h>
 #include <wx/button.h>
 #include <wx/spinctrl.h>
+#include <wx/propgrid/property.h>
 #include <wx/propgrid/props.h>
 
 
