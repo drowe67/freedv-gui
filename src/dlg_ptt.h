@@ -58,6 +58,7 @@ class ComPortsDlg : public wxDialog
         wxComboBox *m_cbSerialPort;
         wxComboBox *m_cbSerialRate;
         wxStaticText  *m_cbSerialParams;
+        wxStaticText *m_stIcomCIVHex;
         wxTextCtrl *m_tcIcomCIVHex;
         wxNumericPropertyValidator *m_pvIcomCIVHex;
         Hamlib *m_hamlib;
@@ -86,7 +87,9 @@ protected:
 
         void PTTUseHamLibClicked(wxCommandEvent& event);
         void PTTUseSerialClicked(wxCommandEvent& event);
-
+        void HamlibRigNameChanged(wxCommandEvent& event);
+        void resetIcomCIVStatus();
+        
         void OnTest(wxCommandEvent& event);
 
         void OnOK(wxCommandEvent& event);
