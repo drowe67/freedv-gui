@@ -35,7 +35,8 @@ Hamlib::Hamlib() :
     m_rig(NULL),
     m_sidebandBox(NULL),
     m_currFreq(0),
-    m_currMode(RIG_MODE_USB)  {
+    m_currMode(RIG_MODE_USB),
+    m_vhfUhfMode(false)  {
     /* Stop hamlib from spewing info to stderr. */
     rig_set_debug(RIG_DEBUG_NONE);
 
@@ -183,8 +184,11 @@ int Hamlib::hamlib_mode_cb(RIG* rig, vfo_t currVFO, rmode_t currMode, pbwidth_t 
     return RIG_OK;
 }
 
-void Hamlib::enable_sideband_detection(wxStaticText* statusBox)
+void Hamlib::enable_sideband_detection(wxStaticText* statusBox, bool vhfUhfMode)
 {
+    // Set VHF/UHF mode. This governs whether FM is an acceptable mode for the detection display.
+    m_vhfUhfMode = vhfUhfMode;
+    
     // Enable control.
     m_sidebandBox = statusBox;
     m_sidebandBox->Enable(true);
@@ -262,13 +266,16 @@ void Hamlib::update_sideband_status()
         m_sidebandBox->SetLabel(wxT("USB"));
     else if (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)
         m_sidebandBox->SetLabel(wxT("LSB"));
+    else if (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_FM)
+        m_sidebandBox->SetLabel(wxT("FM"));
     else
         m_sidebandBox->SetLabel(rig_strrmode(m_currMode));
 
     // Update color
     bool isMatchingSideband = 
         (m_currFreq >= 10000000 && (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)) ||
-        (m_currFreq < 10000000 && (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB));
+        (m_currFreq < 10000000 && (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)) ||
+        (m_vhfUhfMode && m_currFreq >= 29510000 && (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_PKTFM));
     if (isMatchingSideband)
     {
         m_sidebandBox->SetForegroundColour(wxColor(*wxBLACK));

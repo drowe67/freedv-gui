@@ -16,7 +16,7 @@ class Hamlib {
         void populateComboBox(wxComboBox *cb);
         bool connect(unsigned int rig_index, const char *serial_port, const int serial_rate);
         bool ptt(bool press, wxString &hamlibError);
-        void enable_sideband_detection(wxStaticText* statusBox);
+        void enable_sideband_detection(wxStaticText* statusBox, bool vhfUhfMode);
         void disable_sideband_detection();
         void close(void);
         int get_serial_rate(void);
@@ -39,6 +39,7 @@ class Hamlib {
         wxStaticText* m_sidebandBox;
         freq_t m_currFreq;
         rmode_t m_currMode;
+        bool m_vhfUhfMode;
 };
 
 #endif /*HAMLIB_H*/

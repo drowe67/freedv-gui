@@ -2635,7 +2635,7 @@ bool MainFrame::OpenHamlibRig() {
         wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
     else
     {
-        wxGetApp().m_hamlib->enable_sideband_detection(m_txtSSBStatus);
+        wxGetApp().m_hamlib->enable_sideband_detection(m_txtSSBStatus, g_mode == FREEDV_MODE_2400B);
     }
 
     return status;
