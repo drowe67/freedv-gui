@@ -115,10 +115,17 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
     fprintf(stderr, "rig_init() OK ....\n");
 
     /* Set CI-V address if necessary. */
-    char civ_addr[5];
-    snprintf(civ_addr, 5, "0x%0X", civ_hex);
-    fprintf(stderr, "hamlib: setting CI-V address to: %s\n", civ_addr);
-    rig_set_conf(m_rig, rig_token_lookup(m_rig, "civaddr"), civ_addr);
+    if (!strncmp(m_rigList[rig_index]->mfg_name, "Icom", 4))
+    {
+        char civ_addr[5];
+        snprintf(civ_addr, 5, "0x%0X", civ_hex);
+        fprintf(stderr, "hamlib: setting CI-V address to: %s\n", civ_addr);
+        rig_set_conf(m_rig, rig_token_lookup(m_rig, "civaddr"), civ_addr);
+    }
+    else
+    {
+        fprintf(stderr, "hamlib: ignoring CI-V configuration due to non-Icom radio\r\n");
+    }
     
     strncpy(m_rig->state.rigport.pathname, serial_port, FILPATHLEN - 1);
     if (serial_rate) {
