@@ -24,6 +24,8 @@
 #include <vector>
 #include <algorithm>
 
+#define TOK_CIVADDR TOKEN_BACKEND(1)
+
 using namespace std;
 
 typedef std::vector<const struct rig_caps *> riglist_t;
@@ -85,7 +87,7 @@ void Hamlib::populateComboBox(wxComboBox *cb) {
     }
 }
 
-bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int serial_rate) {
+bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int serial_rate, const int civ_hex) {
 
     /* Look up model from index. */
 
@@ -112,8 +114,19 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
     }
     fprintf(stderr, "rig_init() OK ....\n");
 
-    /* TODO we may also need civaddr for Icom */
-
+    /* Set CI-V address if necessary. */
+    if (!strncmp(m_rigList[rig_index]->mfg_name, "Icom", 4))
+    {
+        char civ_addr[5];
+        snprintf(civ_addr, 5, "0x%0X", civ_hex);
+        fprintf(stderr, "hamlib: setting CI-V address to: %s\n", civ_addr);
+        rig_set_conf(m_rig, rig_token_lookup(m_rig, "civaddr"), civ_addr);
+    }
+    else
+    {
+        fprintf(stderr, "hamlib: ignoring CI-V configuration due to non-Icom radio\r\n");
+    }
+    
     strncpy(m_rig->state.rigport.pathname, serial_port, FILPATHLEN - 1);
     if (serial_rate) {
         fprintf(stderr, "hamlib: setting serial rate: %d\n", serial_rate);

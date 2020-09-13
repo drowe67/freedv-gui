@@ -31,7 +31,7 @@
 #endif
 
 #include <sstream>
-
+        
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class ComPortsDlg
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -55,7 +55,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     //----------------------------------------------------------------------
 
     wxStaticBoxSizer* staticBoxSizer18 = new wxStaticBoxSizer( new wxStaticBox(this, wxID_ANY, _("Hamlib Settings")), wxHORIZONTAL);
-    wxGridSizer* gridSizerhl = new wxGridSizer(5, 2, 0, 0);
+    wxGridSizer* gridSizerhl = new wxGridSizer(6, 2, 0, 0);
     staticBoxSizer18->Add(gridSizerhl, 1, wxEXPAND|wxALIGN_LEFT, 5);
 
     /* Use Hamlib for PTT checkbox. */
@@ -81,6 +81,14 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     m_cbSerialPort = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, -1), 0, NULL, wxCB_DROPDOWN);
     gridSizerhl->Add(m_cbSerialPort, 0, wxALIGN_CENTER_VERTICAL, 0);
 
+    /* Hamlib Icom CI-V address text box. */
+    m_stIcomCIVHex = new wxStaticText(this, wxID_ANY, _("Radio Address:"), wxDefaultPosition, wxDefaultSize, 0);
+    gridSizerhl->Add(m_stIcomCIVHex, 
+                      0, wxALIGN_CENTER_VERTICAL |  wxALIGN_RIGHT, 20);
+    m_tcIcomCIVHex = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(35, -1), 0, wxNumericPropertyValidator(wxNumericPropertyValidator::Unsigned, 16));
+    m_tcIcomCIVHex->SetMaxLength(2);
+    gridSizerhl->Add(m_tcIcomCIVHex, 0, wxALIGN_CENTER_VERTICAL, 0);
+    
     /* Hamlib Serial Rate combobox. */
 
     gridSizerhl->Add(new wxStaticText(this, wxID_ANY, _("Serial Rate:"), wxDefaultPosition, wxDefaultSize, 0), 
@@ -194,6 +202,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(ComPortsDlg::OnInitDialog), NULL, this);
     m_ckUseHamlibPTT->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(ComPortsDlg::PTTUseHamLibClicked), NULL, this);
     m_ckUseSerialPTT->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(ComPortsDlg::PTTUseSerialClicked), NULL, this);
+    m_cbRigName->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(ComPortsDlg::HamlibRigNameChanged), NULL, this);
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnOK), NULL, this);
     m_buttonCancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnCancel), NULL, this);
     m_buttonApply->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnApply), NULL, this);
@@ -209,6 +218,7 @@ ComPortsDlg::~ComPortsDlg()
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(ComPortsDlg::OnInitDialog), NULL, this);
     m_ckUseHamlibPTT->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(ComPortsDlg::PTTUseHamLibClicked), NULL, this);
     m_ckUseSerialPTT->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(ComPortsDlg::PTTUseSerialClicked), NULL, this);
+    m_cbRigName->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(ComPortsDlg::HamlibRigNameChanged), NULL, this);
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnOK), NULL, this);
     m_buttonCancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnCancel), NULL, this);
     m_buttonApply->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnApply), NULL, this);
@@ -348,6 +358,7 @@ void ComPortsDlg::ExchangeData(int inout)
 
         m_ckUseHamlibPTT->SetValue(wxGetApp().m_boolHamlibUseForPTT);
         m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
+        resetIcomCIVStatus();
         m_cbSerialPort->SetValue(wxGetApp().m_strHamlibSerialPort);
 
         if (wxGetApp().m_intHamlibSerialRate == 0) {
@@ -356,6 +367,8 @@ void ComPortsDlg::ExchangeData(int inout)
             m_cbSerialRate->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intHamlibSerialRate));
         }
 
+        m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02X"), wxGetApp().m_intHamlibIcomCIVHex));
+        
         /* Serial PTT */
 
         m_ckUseSerialPTT->SetValue(wxGetApp().m_boolUseSerialPTT);
@@ -381,8 +394,13 @@ void ComPortsDlg::ExchangeData(int inout)
         wxGetApp().m_boolHamlibUseForPTT = m_ckUseHamlibPTT->GetValue();
         wxGetApp().m_intHamlibRig = m_cbRigName->GetSelection();
         wxGetApp().m_strHamlibSerialPort = m_cbSerialPort->GetValue();
-
-        wxString s = m_cbSerialRate->GetValue();
+        
+        wxString s = m_tcIcomCIVHex->GetValue();
+        long hexAddress = 0;
+        m_tcIcomCIVHex->GetValue().ToLong(&hexAddress, 16);
+        wxGetApp().m_intHamlibIcomCIVHex = hexAddress;
+        
+        s = m_cbSerialRate->GetValue();
         if (s == "default") {
             wxGetApp().m_intHamlibSerialRate = 0;
         } else {
@@ -461,6 +479,10 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             serial_rate = tmp;
         }
 
+        s = m_tcIcomCIVHex->GetValue();
+        long hexAddress = 0;
+        m_tcIcomCIVHex->GetValue().ToLong(&hexAddress, 16);
+        
         // display serial params
 
         fprintf(stderr, "serial rate: %d\n", serial_rate);
@@ -468,7 +490,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
         // try to open rig
 
         Hamlib *hamlib = wxGetApp().m_hamlib; 
-        bool status = hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate);
+        bool status = hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, hexAddress);
         if (status == false) {
             wxMessageBox("Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
             wxT("Error"), wxOK | wxICON_ERROR, this);
@@ -550,6 +572,31 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
 void ComPortsDlg::PTTUseSerialClicked(wxCommandEvent& event)
 {
     m_ckUseHamlibPTT->SetValue(false);
+}
+
+//-------------------------------------------------------------------------
+// ComPortsDlg::HamlibRigNameChanged(): hide/show Icom CI-V hex control
+// depending on the selected radio.
+//-------------------------------------------------------------------------
+void ComPortsDlg::HamlibRigNameChanged(wxCommandEvent& event)
+{
+    resetIcomCIVStatus();
+}
+
+void ComPortsDlg::resetIcomCIVStatus()
+{
+    std::string rigName = m_cbRigName->GetString(m_cbRigName->GetCurrentSelection()).ToStdString();
+    if (rigName.find("Icom") == 0)
+    {
+        m_stIcomCIVHex->Show();
+        m_tcIcomCIVHex->Show();
+    }
+    else
+    {
+        m_stIcomCIVHex->Hide();
+        m_tcIcomCIVHex->Hide();
+    }
+    Layout();
 }
 
 //-------------------------------------------------------------------------

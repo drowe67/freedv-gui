@@ -168,6 +168,12 @@ Hamlib comes with a default serial rate for each radio.  If your radio
 has a different serial rate change the Serial Rate drop down box to
 match your radio.
 
+If using an Icom radio, Hamlib will use the radio's default CI-V address
+when connecting. If this has been changed, you can specify the correct
+address in the "Radio Address" field (valid values are 00 through FF
+in hexadecimal). Note that "00" is the "wildcard" CI-V address and will 
+also work if there are no other Icom/CI-V capable devices in the chain.
+
 When **Test** is pressed, the "Serial Params" field is populated and
 displayed.  This will help track down any mismatches between Hamlib
 and your radio.

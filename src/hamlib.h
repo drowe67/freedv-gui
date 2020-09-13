@@ -14,7 +14,7 @@ class Hamlib {
         Hamlib();
         ~Hamlib();
         void populateComboBox(wxComboBox *cb);
-        bool connect(unsigned int rig_index, const char *serial_port, const int serial_rate);
+        bool connect(unsigned int rig_index, const char *serial_port, const int serial_rate, const int civ_hex = 0);
         bool ptt(bool press, wxString &hamlibError);
         void enable_sideband_detection(wxStaticText* statusBox);
         void disable_sideband_detection();

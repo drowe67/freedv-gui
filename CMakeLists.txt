@@ -397,7 +397,7 @@ if(WXRC)
 endif(WXRC)
 set(WX_VERSION_MIN 3.0.0)
 set(WX_31_VERSION_MIN 3.1.3)
-find_package(wxWidgets REQUIRED core base aui html net adv)
+find_package(wxWidgets REQUIRED core base aui html net adv propgrid)
 execute_process(COMMAND sh "${wxWidgets_CONFIG_EXECUTABLE}" --version
     OUTPUT_VARIABLE WX_VERSION)
 string(STRIP ${WX_VERSION} WX_VERSION)
