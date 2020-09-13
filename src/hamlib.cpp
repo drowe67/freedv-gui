@@ -33,7 +33,7 @@ static int build_list(const struct rig_caps *rig, rig_ptr_t);
 
 Hamlib::Hamlib() : 
     m_rig(NULL),
-    m_sidebandBox(NULL),
+    m_modeBox(NULL),
     m_currFreq(0),
     m_currMode(RIG_MODE_USB),
     m_vhfUhfMode(false)  {
@@ -172,7 +172,7 @@ int Hamlib::hamlib_freq_cb(RIG* rig, vfo_t currVFO, freq_t currFreq, void* ptr)
 {
     Hamlib* thisPtr = (Hamlib*)ptr;
     thisPtr->m_currFreq = currFreq;
-    thisPtr->update_sideband_status();
+    thisPtr->update_mode_status();
     return RIG_OK;
 }
 
@@ -180,18 +180,18 @@ int Hamlib::hamlib_mode_cb(RIG* rig, vfo_t currVFO, rmode_t currMode, pbwidth_t 
 {
     Hamlib* thisPtr = (Hamlib*)ptr;
     thisPtr->m_currMode = currMode;
-    thisPtr->update_sideband_status();
+    thisPtr->update_mode_status();
     return RIG_OK;
 }
 
-void Hamlib::enable_sideband_detection(wxStaticText* statusBox, bool vhfUhfMode)
+void Hamlib::enable_mode_detection(wxStaticText* statusBox, bool vhfUhfMode)
 {
     // Set VHF/UHF mode. This governs whether FM is an acceptable mode for the detection display.
     m_vhfUhfMode = vhfUhfMode;
     
     // Enable control.
-    m_sidebandBox = statusBox;
-    m_sidebandBox->Enable(true);
+    m_modeBox = statusBox;
+    m_modeBox->Enable(true);
 
     // Populate initial state.
     rmode_t mode = RIG_MODE_NONE;
@@ -213,16 +213,16 @@ void Hamlib::enable_sideband_detection(wxStaticText* statusBox, bool vhfUhfMode)
         {
             m_currMode = mode;
             m_currFreq = freq;
-            update_sideband_status();
+            update_mode_status();
         }
     }
 
     // If we couldn't get current mode/frequency for any reason, disable the UI for it.
     if (result != RIG_OK)
     {
-        m_sidebandBox->SetLabel(wxT("unk"));
-        m_sidebandBox->Enable(false);
-        m_sidebandBox = NULL;
+        m_modeBox->SetLabel(wxT("unk"));
+        m_modeBox->Enable(false);
+        m_modeBox = NULL;
     }
     else
     {
@@ -238,9 +238,9 @@ void Hamlib::enable_sideband_detection(wxStaticText* statusBox, bool vhfUhfMode)
     }
 }
 
-void Hamlib::disable_sideband_detection()
+void Hamlib::disable_mode_detection()
 {
-    if (m_sidebandBox != NULL) 
+    if (m_modeBox != NULL) 
     {
         // TBD: Due to hamlib not supporting polling on Windows, the bottom is temporarily
         // disabled. When/if that changes, re-enabling is a simple matter of removing
@@ -253,40 +253,40 @@ void Hamlib::disable_sideband_detection()
 #endif
     
         // Disable control.
-        m_sidebandBox->SetLabel(wxT("unk"));
-        m_sidebandBox->Enable(false);
-        m_sidebandBox = NULL;
+        m_modeBox->SetLabel(wxT("unk"));
+        m_modeBox->Enable(false);
+        m_modeBox = NULL;
     }
 }
 
-void Hamlib::update_sideband_status()
+void Hamlib::update_mode_status()
 {
     // Update string value.
     if (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)
-        m_sidebandBox->SetLabel(wxT("USB"));
+        m_modeBox->SetLabel(wxT("USB"));
     else if (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)
-        m_sidebandBox->SetLabel(wxT("LSB"));
+        m_modeBox->SetLabel(wxT("LSB"));
     else if (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_FM)
-        m_sidebandBox->SetLabel(wxT("FM"));
+        m_modeBox->SetLabel(wxT("FM"));
     else
-        m_sidebandBox->SetLabel(rig_strrmode(m_currMode));
+        m_modeBox->SetLabel(rig_strrmode(m_currMode));
 
     // Update color
-    bool isMatchingSideband = 
+    bool isMatchingMode = 
         (m_currFreq >= 10000000 && (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)) ||
         (m_currFreq < 10000000 && (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)) ||
         (m_vhfUhfMode && m_currFreq >= 29510000 && (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_PKTFM));
-    if (isMatchingSideband)
+    if (isMatchingMode)
     {
-        m_sidebandBox->SetForegroundColour(wxColor(*wxBLACK));
+        m_modeBox->SetForegroundColour(wxColor(*wxBLACK));
     }
     else
     {
-        m_sidebandBox->SetForegroundColour(wxColor(*wxRED));
+        m_modeBox->SetForegroundColour(wxColor(*wxRED));
     }
 
     // Refresh
-    m_sidebandBox->Refresh();
+    m_modeBox->Refresh();
 }
 
 void Hamlib::close(void) {

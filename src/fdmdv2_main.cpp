@@ -2445,7 +2445,7 @@ void MainFrame::OnExit(wxCommandEvent& event)
     // of in the destructor due to its need to touch the UI.
     if (wxGetApp().m_hamlib)
     {
-        wxGetApp().m_hamlib->disable_sideband_detection();
+        wxGetApp().m_hamlib->disable_mode_detection();
     }
 
     //fprintf(stderr, "MainFrame::OnExit\n");
@@ -2635,7 +2635,7 @@ bool MainFrame::OpenHamlibRig() {
         wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
     else
     {
-        wxGetApp().m_hamlib->enable_sideband_detection(m_txtSSBStatus, g_mode == FREEDV_MODE_2400B);
+        wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, g_mode == FREEDV_MODE_2400B);
     }
 
     return status;
@@ -2903,7 +2903,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 if (hamlib->ptt(false, hamlibError) == false) {
                     wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
                 }
-                hamlib->disable_sideband_detection();
+                hamlib->disable_mode_detection();
                 hamlib->close();
             }
         }
