@@ -234,13 +234,13 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     wxBoxSizer* lowerSizer;
     lowerSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    wxBoxSizer* ssbStatusSizer;
-    ssbStatusSizer = new wxBoxSizer(wxVERTICAL);
-    m_txtSSBStatus = new wxStaticText(this, wxID_ANY, wxT("unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    m_txtSSBStatus->Enable(false); // enabled only if Hamlib is turned on
-    m_txtSSBStatus->SetMinSize(wxSize(40,-1));
-    ssbStatusSizer->Add(m_txtSSBStatus, 0, wxALL|wxEXPAND, 1);
-    lowerSizer->Add(ssbStatusSizer, 0, wxALIGN_CENTER_VERTICAL|wxALL, 1);
+    wxBoxSizer* modeStatusSizer;
+    modeStatusSizer = new wxBoxSizer(wxVERTICAL);
+    m_txtModeStatus = new wxStaticText(this, wxID_ANY, wxT("unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_txtModeStatus->Enable(false); // enabled only if Hamlib is turned on
+    m_txtModeStatus->SetMinSize(wxSize(40,-1));
+    modeStatusSizer->Add(m_txtModeStatus, 0, wxALL|wxEXPAND, 1);
+    lowerSizer->Add(modeStatusSizer, 0, wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
     m_BtnCallSignReset = new wxButton(this, wxID_ANY, _("Clear"), wxDefaultPosition, wxDefaultSize, 0);
     lowerSizer->Add(m_BtnCallSignReset, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);

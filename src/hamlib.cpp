@@ -24,6 +24,8 @@
 #include <vector>
 #include <algorithm>
 
+#define TOK_CIVADDR TOKEN_BACKEND(1)
+
 using namespace std;
 
 typedef std::vector<const struct rig_caps *> riglist_t;
@@ -33,9 +35,10 @@ static int build_list(const struct rig_caps *rig, rig_ptr_t);
 
 Hamlib::Hamlib() : 
     m_rig(NULL),
-    m_sidebandBox(NULL),
+    m_modeBox(NULL),
     m_currFreq(0),
-    m_currMode(RIG_MODE_USB)  {
+    m_currMode(RIG_MODE_USB),
+    m_vhfUhfMode(false)  {
     /* Stop hamlib from spewing info to stderr. */
     rig_set_debug(RIG_DEBUG_NONE);
 
@@ -85,7 +88,7 @@ void Hamlib::populateComboBox(wxComboBox *cb) {
     }
 }
 
-bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int serial_rate) {
+bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int serial_rate, const int civ_hex) {
 
     /* Look up model from index. */
 
@@ -112,8 +115,19 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
     }
     fprintf(stderr, "rig_init() OK ....\n");
 
-    /* TODO we may also need civaddr for Icom */
-
+    /* Set CI-V address if necessary. */
+    if (!strncmp(m_rigList[rig_index]->mfg_name, "Icom", 4))
+    {
+        char civ_addr[5];
+        snprintf(civ_addr, 5, "0x%0X", civ_hex);
+        fprintf(stderr, "hamlib: setting CI-V address to: %s\n", civ_addr);
+        rig_set_conf(m_rig, rig_token_lookup(m_rig, "civaddr"), civ_addr);
+    }
+    else
+    {
+        fprintf(stderr, "hamlib: ignoring CI-V configuration due to non-Icom radio\r\n");
+    }
+    
     strncpy(m_rig->state.rigport.pathname, serial_port, FILPATHLEN - 1);
     if (serial_rate) {
         fprintf(stderr, "hamlib: setting serial rate: %d\n", serial_rate);
@@ -171,7 +185,7 @@ int Hamlib::hamlib_freq_cb(RIG* rig, vfo_t currVFO, freq_t currFreq, void* ptr)
 {
     Hamlib* thisPtr = (Hamlib*)ptr;
     thisPtr->m_currFreq = currFreq;
-    thisPtr->update_sideband_status();
+    thisPtr->update_mode_status();
     return RIG_OK;
 }
 
@@ -179,15 +193,18 @@ int Hamlib::hamlib_mode_cb(RIG* rig, vfo_t currVFO, rmode_t currMode, pbwidth_t 
 {
     Hamlib* thisPtr = (Hamlib*)ptr;
     thisPtr->m_currMode = currMode;
-    thisPtr->update_sideband_status();
+    thisPtr->update_mode_status();
     return RIG_OK;
 }
 
-void Hamlib::enable_sideband_detection(wxStaticText* statusBox)
+void Hamlib::enable_mode_detection(wxStaticText* statusBox, bool vhfUhfMode)
 {
+    // Set VHF/UHF mode. This governs whether FM is an acceptable mode for the detection display.
+    m_vhfUhfMode = vhfUhfMode;
+    
     // Enable control.
-    m_sidebandBox = statusBox;
-    m_sidebandBox->Enable(true);
+    m_modeBox = statusBox;
+    m_modeBox->Enable(true);
 
     // Populate initial state.
     rmode_t mode = RIG_MODE_NONE;
@@ -209,16 +226,16 @@ void Hamlib::enable_sideband_detection(wxStaticText* statusBox)
         {
             m_currMode = mode;
             m_currFreq = freq;
-            update_sideband_status();
+            update_mode_status();
         }
     }
 
     // If we couldn't get current mode/frequency for any reason, disable the UI for it.
     if (result != RIG_OK)
     {
-        m_sidebandBox->SetLabel(wxT("unk"));
-        m_sidebandBox->Enable(false);
-        m_sidebandBox = NULL;
+        m_modeBox->SetLabel(wxT("unk"));
+        m_modeBox->Enable(false);
+        m_modeBox = NULL;
     }
     else
     {
@@ -234,9 +251,9 @@ void Hamlib::enable_sideband_detection(wxStaticText* statusBox)
     }
 }
 
-void Hamlib::disable_sideband_detection()
+void Hamlib::disable_mode_detection()
 {
-    if (m_sidebandBox != NULL) 
+    if (m_modeBox != NULL) 
     {
         // TBD: Due to hamlib not supporting polling on Windows, the bottom is temporarily
         // disabled. When/if that changes, re-enabling is a simple matter of removing
@@ -249,37 +266,40 @@ void Hamlib::disable_sideband_detection()
 #endif
     
         // Disable control.
-        m_sidebandBox->SetLabel(wxT("unk"));
-        m_sidebandBox->Enable(false);
-        m_sidebandBox = NULL;
+        m_modeBox->SetLabel(wxT("unk"));
+        m_modeBox->Enable(false);
+        m_modeBox = NULL;
     }
 }
 
-void Hamlib::update_sideband_status()
+void Hamlib::update_mode_status()
 {
     // Update string value.
     if (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)
-        m_sidebandBox->SetLabel(wxT("USB"));
+        m_modeBox->SetLabel(wxT("USB"));
     else if (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)
-        m_sidebandBox->SetLabel(wxT("LSB"));
+        m_modeBox->SetLabel(wxT("LSB"));
+    else if (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_FM)
+        m_modeBox->SetLabel(wxT("FM"));
     else
-        m_sidebandBox->SetLabel(rig_strrmode(m_currMode));
+        m_modeBox->SetLabel(rig_strrmode(m_currMode));
 
     // Update color
-    bool isMatchingSideband = 
+    bool isMatchingMode = 
         (m_currFreq >= 10000000 && (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)) ||
-        (m_currFreq < 10000000 && (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB));
-    if (isMatchingSideband)
+        (m_currFreq < 10000000 && (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)) ||
+        (m_vhfUhfMode && m_currFreq >= 29510000 && (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_PKTFM));
+    if (isMatchingMode)
     {
-        m_sidebandBox->SetForegroundColour(wxColor(*wxBLACK));
+        m_modeBox->SetForegroundColour(wxColor(*wxBLACK));
     }
     else
     {
-        m_sidebandBox->SetForegroundColour(wxColor(*wxRED));
+        m_modeBox->SetForegroundColour(wxColor(*wxRED));
     }
 
     // Refresh
-    m_sidebandBox->Refresh();
+    m_modeBox->Refresh();
 }
 
 void Hamlib::close(void) {

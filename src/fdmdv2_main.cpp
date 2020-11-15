@@ -478,6 +478,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_intVoiceKeyerRepeats = pConfig->Read(wxT("/VoiceKeyer/Repeats"), 5);
  
     wxGetApp().m_boolHamlibUseForPTT = pConfig->ReadBool("/Hamlib/UseForPTT", false);
+    wxGetApp().m_intHamlibIcomCIVHex = pConfig->ReadLong("/Hamlib/IcomCIVHex", 0);
     wxGetApp().m_intHamlibRig = pConfig->ReadLong("/Hamlib/RigName", 0);
     wxGetApp().m_strHamlibSerialPort = pConfig->Read("/Hamlib/SerialPort", "");
     wxGetApp().m_intHamlibSerialRate = pConfig->ReadLong("/Hamlib/SerialRate", 0);
@@ -791,6 +792,7 @@ MainFrame::~MainFrame()
         pConfig->Write("/Hamlib/RigName", wxGetApp().m_intHamlibRig);
         pConfig->Write("/Hamlib/SerialPort", wxGetApp().m_strHamlibSerialPort);
         pConfig->Write("/Hamlib/SerialRate", wxGetApp().m_intHamlibSerialRate);
+        pConfig->Write("/Hamlib/IcomCIVHex", wxGetApp().m_intHamlibIcomCIVHex);
 
 
         pConfig->Write(wxT("/File/playFileToMicInPath"),    wxGetApp().m_playFileToMicInPath);
@@ -2445,7 +2447,7 @@ void MainFrame::OnExit(wxCommandEvent& event)
     // of in the destructor due to its need to touch the UI.
     if (wxGetApp().m_hamlib)
     {
-        wxGetApp().m_hamlib->disable_sideband_detection();
+        wxGetApp().m_hamlib->disable_mode_detection();
     }
 
     //fprintf(stderr, "MainFrame::OnExit\n");
@@ -2635,7 +2637,7 @@ bool MainFrame::OpenHamlibRig() {
         wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
     else
     {
-        wxGetApp().m_hamlib->enable_sideband_detection(m_txtSSBStatus);
+        wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, g_mode == FREEDV_MODE_2400B);
     }
 
     return status;
@@ -2903,7 +2905,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 if (hamlib->ptt(false, hamlibError) == false) {
                     wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
                 }
-                hamlib->disable_sideband_detection();
+                hamlib->disable_mode_detection();
                 hamlib->close();
             }
         }
@@ -4097,7 +4099,7 @@ void txRxProcessing()
                 COMP tx_fdm_offset[nfreedv];
                 int  i;
 
-                if (g_mode == FREEDV_MODE_800XA) {
+                if (g_mode == FREEDV_MODE_800XA || g_mode == FREEDV_MODE_2400B) {
                     /* 800XA doesn't support complex output just yet */
                     freedv_tx(g_pfreedv, outfreedv, infreedv);
                 }
