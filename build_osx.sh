@@ -27,21 +27,21 @@ make install
 cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/codec2.git
 cd codec2 && git checkout master && git pull
-mkdir -p build_osx && cd build_osx && rm -Rf * && cmake .. && make
+mkdir -p build_osx && cd build_osx && rm -Rf * && cmake -DBUILD_OSX_UNIVERSAL=1 .. && make
 
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/LPCNet.git
 cd $LPCNETDIR && git checkout master && git pull
 mkdir  -p build_osx && cd build_osx && rm -Rf *
-cmake -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx ..
+cmake -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx -DBUILD_OSX_UNVIERSAL=1 ..
 make
 # sanity check test
 cd src && sox ../../wav/wia.wav -t raw -r 16000 - | ./lpcnet_enc -s | ./lpcnet_dec -s > /dev/null
 
 # Re-build codec2 with LPCNet and test FreeDV 2020 support
 cd $CODEC2DIR/build_osx && rm -Rf *
-cmake -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx ..
+cmake -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx -DBUILD_OSX_UNIVERSAL=1 ..
 make VERBOSE=1
 # sanity check test
 cd src
@@ -51,10 +51,10 @@ export LD_LIBRARY_PATH=$LPCNETDIR/build_osx/src
 # Finally, build freedv-gui
 cd $FREEDVGUIDIR && git pull
 mkdir  -p build_osx && cd build_osx && rm -Rf *
-cmake -DCMAKE_BUILD_TYPE=Debug  -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_DEPS=1 -DUSE_STATIC_SPEEXDSP=1 -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.a -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx -DUSE_STATIC_PORTAUDIO=1 ..
+cmake -DBUILD_OSX_UNIVERSAL=1 -DCMAKE_BUILD_TYPE=Debug  -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_DEPS=1 -DUSE_STATIC_SPEEXDSP=1 -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.a -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx -DUSE_STATIC_PORTAUDIO=1 ..
 make VERBOSE=1
 
 # Rebuild now that wxWidgets is bootstrapped
-cmake -DCMAKE_BUILD_TYPE=Debug  -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_DEPS=1 -DUSE_STATIC_SPEEXDSP=1 -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.a -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx -DUSE_STATIC_PORTAUDIO=1 ..
+cmake -DBUILD_OSX_UNIVERSAL=1 -DCMAKE_BUILD_TYPE=Debug  -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_DEPS=1 -DUSE_STATIC_SPEEXDSP=1 -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.a -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx -DUSE_STATIC_PORTAUDIO=1 ..
 make VERBOSE=1
 
