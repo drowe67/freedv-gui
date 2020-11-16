@@ -1,4 +1,4 @@
-set(PORTAUDIO_TARBALL "pa_stable_v190600_20161030")
+set(PORTAUDIO_TARBALL "pa_snapshot")
 
 # required linking libraries on linux. Not sure about windows.
 find_library(ALSA_LIBRARIES asound)
@@ -27,7 +27,6 @@ endif()
 
 include(ExternalProject)
 if(APPLE)
-if(BUILD_OSX_UNIVERSAL)
 ExternalProject_Add(portaudio
     URL http://www.portaudio.com/archives/${PORTAUDIO_TARBALL}.tgz
     BUILD_IN_SOURCE 1
@@ -37,16 +36,6 @@ ExternalProject_Add(portaudio
     INSTALL_COMMAND $(MAKE) install
     PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/portaudio-macos.patch && autoconf && cd bindings/cpp && autoconf
 )
-else()
-ExternalProject_Add(portaudio
-    URL http://www.portaudio.com/archives/${PORTAUDIO_TARBALL}.tgz
-    BUILD_IN_SOURCE 1
-    INSTALL_DIR external/dist
-    CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
-    BUILD_COMMAND $(MAKE)
-    INSTALL_COMMAND $(MAKE) install
-)
-endif(BUILD_OSX_UNIVERSAL)
 else()
 ExternalProject_Add(portaudio
     URL http://www.portaudio.com/archives/${PORTAUDIO_TARBALL}.tgz
