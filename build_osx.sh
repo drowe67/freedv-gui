@@ -19,7 +19,7 @@ cd $FREEDVGUIDIR
 git clone git://git.code.sf.net/p/hamlib/code hamlib-code
 cd hamlib-code && git checkout master && git pull
 ./bootstrap
-CFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64e" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64e" ./configure --disable-shared --prefix $HAMLIBDIR
+CFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" ./configure --disable-shared --prefix $HAMLIBDIR
 make
 make install
 
@@ -34,7 +34,7 @@ cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/LPCNet.git
 cd $LPCNETDIR && git checkout master && git pull
 mkdir  -p build_osx && cd build_osx && rm -Rf *
-cmake -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx -DBUILD_OSX_UNVIERSAL=1 ..
+cmake -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx -DBUILD_OSX_UNIVERSAL=1 ..
 make
 # sanity check test
 cd src && sox ../../wav/wia.wav -t raw -r 16000 - | ./lpcnet_enc -s | ./lpcnet_dec -s > /dev/null

@@ -66,12 +66,12 @@ diff -ur portaudio/configure portaudio.orig/configure
 +              elif xcodebuild -version -sdk macosx10.15 Path >/dev/null 2>&1 ; then
 +                 mac_version_min="-mmacosx-version-min=10.9"
 +                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.15 Path`"
-+              elif xcodebuild -version -sdk macosx11.0 Path >/dev/null 2>&1 ; then
++              elif xcodebuild -version -sdk macosx11.1 Path >/dev/null 2>&1 ; then
 +                 mac_version_min="-mmacosx-version-min=10.9"
-+                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx11.0 Path`"
++                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx11.1 Path`"
                else
 -                 as_fn_error $? "Could not find 10.5 to 10.12 SDK." "$LINENO" 5
-+                 as_fn_error $? "Could not find 10.5 to 11.0 SDK." "$LINENO" 5
++                 as_fn_error $? "Could not find 10.5 to 11.1 SDK." "$LINENO" 5
                fi
             esac
  
@@ -131,12 +131,12 @@ diff -ur portaudio/configure.in portaudio.orig/configure.in
 +              elif xcodebuild -version -sdk macosx10.15 Path >/dev/null 2>&1 ; then
 +                 mac_version_min="-mmacosx-version-min=10.9"
 +                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.15 Path`"
-+              elif xcodebuild -version -sdk macosx11.0 Path >/dev/null 2>&1 ; then
++              elif xcodebuild -version -sdk macosx11.1 Path >/dev/null 2>&1 ; then
 +                 mac_version_min="-mmacosx-version-min=10.9"
-+                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx11.0 Path`"
++                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx11.1 Path`"
                else
 -                 AC_MSG_ERROR([Could not find 10.5 to 10.12 SDK.])
-+                 AC_MSG_ERROR([Could not find 10.5 to 11.0 SDK.])
++                 AC_MSG_ERROR([Could not find 10.5 to 11.1 SDK.])
                fi
             esac
  
