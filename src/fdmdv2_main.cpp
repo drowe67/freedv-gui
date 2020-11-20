@@ -4542,6 +4542,15 @@ void MainFrame::checkAvxSupport(void)
         isAvxPresent = (xcr0 & 6) == 6;    // AVX state saving enabled?
     }
 }
+#elif defined(__APPLE__) && defined(__aarch64__)
+void MainFrame::checkAvxSupport(void)
+{
+    // Force 2020 mode to be enabled on ARM Macs. This is experimental
+    // and may cause problems. During preliminary testing it seems to use
+    // NEON optimizations enabled in LPCNet and consumes less than 100% of a single
+    // core while decoding audio.
+    isAvxPresent = true;
+}
 #else
 void MainFrame::checkAvxSupport(void)
 {
