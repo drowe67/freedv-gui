@@ -282,6 +282,13 @@ lscpu | grep -o "avx[^ ]*"
 ```
 will display `avx` (or `avx2`) if your CPU supports the instructions.
 
+### FreeDV 2020 mode is slow on ARM Macs
+
+Preliminary testing on ARM Macs has shown that NEON optimizations in LPCNet are 
+sufficient to allow 2020 to be whitelisted on those machines. However, this is 
+definitely experimental. If you are experiencing issues with 2020 mode on these
+Macs, please let the development team know so that further investigation can be done.
+
 ### I installed a new version and FreeDV stopped working
 
 You may need to clean out the previous configuration.  Try
