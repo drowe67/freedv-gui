@@ -1,10 +1,13 @@
 diff -ur portaudio.orig/configure portaudio/configure
---- portaudio.orig/configure	2020-11-15 17:23:02.000000000 -0800
-+++ portaudio/configure	2020-11-15 22:35:08.000000000 -0800
-@@ -15884,13 +15884,16 @@
+--- portaudio.orig/configure	2020-11-19 17:23:04.000000000 -0800
++++ portaudio/configure	2020-12-01 20:56:35.000000000 -0800
+@@ -15884,13 +15884,19 @@
                elif xcodebuild -version -sdk macosx10.15 Path >/dev/null 2>&1 ; then
                   mac_version_min="-mmacosx-version-min=10.4"
                   mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.15 Path`"
++              elif xcodebuild -version -sdk macosx11.0 Path >/dev/null 2>&1 ; then
++                 mac_version_min="-mmacosx-version-min=10.9"
++                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx11.0 Path`"
 +              elif xcodebuild -version -sdk macosx11.1 Path >/dev/null 2>&1 ; then
 +                 mac_version_min="-mmacosx-version-min=10.9"
 +                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx11.1 Path`"
@@ -21,12 +24,15 @@ diff -ur portaudio.orig/configure portaudio/configure
                save_CFLAGS="$CFLAGS"
                CFLAGS="$CFLAGS -arch $arch"
 diff -ur portaudio.orig/configure.in portaudio/configure.in
---- portaudio.orig/configure.in	2020-11-15 17:23:02.000000000 -0800
-+++ portaudio/configure.in	2020-11-15 22:35:45.000000000 -0800
-@@ -267,15 +267,18 @@
+--- portaudio.orig/configure.in	2020-11-19 17:23:04.000000000 -0800
++++ portaudio/configure.in	2020-12-01 20:56:55.000000000 -0800
+@@ -267,15 +267,21 @@
                elif xcodebuild -version -sdk macosx10.15 Path >/dev/null 2>&1 ; then
                   mac_version_min="-mmacosx-version-min=10.4"
                   mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.15 Path`"
++              elif xcodebuild -version -sdk macosx11.0 Path >/dev/null 2>&1 ; then
++                 mac_version_min="-mmacosx-version-min=10.9"
++                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx11.0 Path`"
 +              elif xcodebuild -version -sdk macosx11.1 Path >/dev/null 2>&1 ; then
 +                 mac_version_min="-mmacosx-version-min=10.9"
 +                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx11.1 Path`"
