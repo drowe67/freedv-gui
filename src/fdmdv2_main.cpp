@@ -1251,16 +1251,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     // a) We have full modem sync (g_State != 0).
     // b) SNR is greater than minimum squelch.
     // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
-    // c) We don't currently have a pending report to add to the outbound list.
+    // c) We don't currently have a pending report to add to the outbound list for the active callsign.
     // When the above is true, capture the callsign and current SNR and save it in a temporary location.
     // Once sync is lost, add to the PSK Reporter object's outbound list.
     if (wxGetApp().m_pskReporter != NULL)
     {
-        if (g_State != 0 && snr_val >= g_SquelchLevel)
+        if (g_State != 0 && snr_limited >= g_SquelchLevel)
         {
             wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
             wxString wxCallsign = m_txtCtrlCallSign->GetValue();
-            if (callsignFormat.Matches(wxCallsign) && wxGetApp().m_pskPendingCallsign == "")
+            if (callsignFormat.Matches(wxCallsign) && wxGetApp().m_pskPendingCallsign != callsignFormat.GetMatch(wxCallsign, 1).ToStdString())
             {
                 wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
                 wxGetApp().m_pskPendingCallsign = rxCallsign.ToStdString();
