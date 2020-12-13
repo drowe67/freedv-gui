@@ -2,6 +2,7 @@
 #include <vector>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <errno.h>
 #include <unistd.h>
 #include <netdb.h>
