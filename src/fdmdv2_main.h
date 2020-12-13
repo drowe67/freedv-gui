@@ -96,6 +96,7 @@
 #include "dlg_plugin.h"
 #include "hamlib.h"
 #include "serialport.h" 
+#include "pskreporter.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -284,6 +285,14 @@ class MainApp : public wxApp
         int                 m_framesPerBuffer;
         int                 m_fifoSize_ms;
 
+        // PSK Reporter configuration
+        bool                m_psk_enable;
+        wxString            m_psk_callsign;
+        wxString            m_psk_grid_square;
+
+        PskReporter*            m_pskReporter;
+        wxTimer                 m_pskReporterTimer;
+        
         bool                loadConfig();
         bool                saveConfig();
 
@@ -472,7 +481,7 @@ class MainFrame : public TopFrame
         PaError                 m_txErr;
 
         txRxThread*             m_txRxThread;
-
+        
         bool                    OpenHamlibRig();
         void                    OpenSerialPort(void);
         void                    CloseSerialPort(void);

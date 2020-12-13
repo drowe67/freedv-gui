@@ -133,6 +133,10 @@ class OptionsDlg : public wxDialog
         wxTextCtrl   *m_txt_udp_port;
         wxButton*     m_btn_udp_test;
 
+        wxCheckBox    *m_ckbox_psk_enable;
+        wxTextCtrl    *m_txt_callsign;
+        wxTextCtrl    *m_txt_grid_square;
+        
         wxButton*     m_BtnFifoReset;
         wxStaticText  *m_textFifos;
         wxStaticText  *m_textPA1;

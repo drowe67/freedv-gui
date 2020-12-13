@@ -48,6 +48,8 @@ set(FREEDV_SOURCES
     topFrame.h
     version.h
     osx_interface.h
+    pskreporter.cpp
+    pskreporter.h
 )
 
 set(FREEDV_SOURCES_OSX

@@ -569,6 +569,10 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_tone = 0;
     wxGetApp().m_tone_freq_hz = 1000;
     wxGetApp().m_tone_amplitude = 500;
+    
+    wxGetApp().m_psk_enable = pConfig->ReadBool(wxT("/PSKReporter/Enable"), false);
+    wxGetApp().m_psk_callsign = pConfig->Read(wxT("/PSKReporter/Callsign"), wxT(""));
+    wxGetApp().m_psk_grid_square = pConfig->Read(wxT("/PSKReporter/GridSquare"), wxT(""));
 
     int mode  = pConfig->Read(wxT("/Audio/mode"), (long)0);
     if (mode == 0)
@@ -2450,6 +2454,12 @@ void MainFrame::OnExit(wxCommandEvent& event)
         wxGetApp().m_hamlib->disable_mode_detection();
     }
 
+    if (wxGetApp().m_pskReporter)
+    {
+        delete wxGetApp().m_pskReporter;
+        wxGetApp().m_pskReporter = nullptr;
+    }
+    
     //fprintf(stderr, "MainFrame::OnExit\n");
     wxUnusedVar(event);
 #ifdef _USE_TIMER
@@ -2634,12 +2644,60 @@ bool MainFrame::OpenHamlibRig() {
     int serial_rate = wxGetApp().m_intHamlibSerialRate;
     bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate);
     if (status == false)
-        wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
+    {
+        if (wxGetApp().m_psk_enable)
+        {
+            wxMessageBox("Couldn't connect to Radio with hamlib. PSK Reporter reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+        }
+        else
+        {
+            wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
+        }
+    }
     else
     {
         wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, g_mode == FREEDV_MODE_2400B);
     }
 
+    // Initialize PSK Reporter reporting.
+    if (status && wxGetApp().m_psk_enable)
+    {
+        std::string currentMode = "";
+        switch (g_mode)
+        {
+            case FREEDV_MODE_1600:
+                currentMode = "1600";
+                break;
+            case FREEDV_MODE_700C:
+                currentMode = "700C";
+                break;
+            case FREEDV_MODE_700D:
+                currentMode = "700D";
+                break;
+            case FREEDV_MODE_800XA:
+                currentMode = "800XA";
+                break;
+            case FREEDV_MODE_2400B:
+                currentMode = "2400B";
+                break;
+            case FREEDV_MODE_2020:
+                currentMode = "2020";
+                break;
+            default:
+                currentMode = "unknown";
+                break;
+        }
+        
+        wxGetApp().m_pskReporter = new PskReporter(
+            wxGetApp().m_psk_callsign.ToStdString(), 
+            wxGetApp().m_psk_grid_square.ToStdString(),
+            std::string(FREEDV_VERSION) + " " + currentMode);
+    }
+    else
+    {
+        wxGetApp().m_pskReporter = nullptr;
+    }
+    
     return status;
 } 
 
@@ -2907,6 +2965,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 }
                 hamlib->disable_mode_detection();
                 hamlib->close();
+            }
+            
+            if (wxGetApp().m_pskReporter)
+            {
+                delete wxGetApp().m_pskReporter;
+                wxGetApp().m_pskReporter = nullptr;
             }
         }
 
