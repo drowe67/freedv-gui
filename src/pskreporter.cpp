@@ -1,6 +1,7 @@
-#include <iostream>
 #include <string>
 #include <vector>
+#include <cstdio>
+#include <cstdlib>
 #include <errno.h>
 #include <unistd.h>
 #include <netdb.h>
@@ -167,13 +168,13 @@ bool PskReporter::send()
 
     int fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if(fd < 0){
-        perror("cannot open socket");
+        fprintf(stderr, "cannot open PSK Reporter socket (err=%d)\n", errno);
         return false;
     }
     
     if (sendto(fd, packet, dgSize, 0, res->ai_addr, res->ai_addrlen) < 0){
         delete[] packet;
-        perror("cannot send message");
+        fprintf(stderr, "cannot send message to PSK Reporter (err=%d)\n", errno);
         close(fd);
         return false;
     }
