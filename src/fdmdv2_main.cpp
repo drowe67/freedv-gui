@@ -1114,6 +1114,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     if (g_State) {
         if (g_prev_State == 0) {
             g_resyncs++;
+            
+            // Clear RX text to reduce the incidence of incorrect callsigns extracted with
+            // the PSK Reporter callsign extraction logic.
+            m_txtCtrlCallSign->SetValue(wxT(""));
+            memset(m_callsign, 0, MAX_CALLSIGN);
+            m_pcallsign = m_callsign;
         }
         m_textSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
 	m_textSync->SetLabel("Modem");
