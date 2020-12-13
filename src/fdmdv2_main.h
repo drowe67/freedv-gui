@@ -110,7 +110,8 @@ enum {
         ID_TIMER_WATERFALL,
         ID_TIMER_SPECTRUM,
         ID_TIMER_SCATTER,
-        ID_TIMER_SCALAR
+        ID_TIMER_SCALAR,
+        ID_TIMER_PSKREPORTER,
      };
 
 #define EXCHANGE_DATA_IN    0
@@ -291,7 +292,8 @@ class MainApp : public wxApp
         wxString            m_psk_grid_square;
 
         PskReporter*            m_pskReporter;
-        wxTimer                 m_pskReporterTimer;
+        std::string         m_pskPendingCallsign;
+        char                m_pskPendingSnr;
         
         bool                loadConfig();
         bool                saveConfig();
@@ -491,6 +493,9 @@ class MainFrame : public TopFrame
 
 #ifdef _USE_TIMER
         wxTimer                 m_plotTimer;
+        
+        // Not sure why we have the option to disable timers. TBD?
+        wxTimer                 m_pskReporterTimer;
 #endif
 
     void destroy_fifos(void);

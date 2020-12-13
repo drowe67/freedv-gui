@@ -108,6 +108,8 @@ bool PskReporter::send()
     // Header (2) + length (2) + time (4) + sequence # (4) + random identifier (4) +
     // RX format block + TX format block + RX data + TX data
     int dgSize = 16 + sizeof(rxFormatHeader) + sizeof(txFormatHeader) + getRxDataSize_() + getTxDataSize_();
+    if (getTxDataSize_() == 0) dgSize -= sizeof(txFormatHeader);
+    
     char* packet = new char[dgSize];
     memset(packet, 0, dgSize);
     
@@ -135,10 +137,14 @@ bool PskReporter::send()
     fieldLoc += sizeof(unsigned int);
     memcpy(fieldLoc, rxFormatHeader, sizeof(rxFormatHeader));
     fieldLoc += sizeof(rxFormatHeader);
-    memcpy(fieldLoc, txFormatHeader, sizeof(txFormatHeader));
+    
+    if (getTxDataSize_() > 0)
+    {
+        memcpy(fieldLoc, txFormatHeader, sizeof(txFormatHeader));
+        fieldLoc += sizeof(txFormatHeader);
+    }
     
     // Encode receiver and sender records.
-    fieldLoc += sizeof(txFormatHeader);
     encodeReceiverRecord_(fieldLoc);
     fieldLoc += getRxDataSize_();
     encodeSenderRecords_(fieldLoc);
@@ -191,6 +197,11 @@ int PskReporter::getRxDataSize_()
 
 int PskReporter::getTxDataSize_()
 {
+    if (recordList_.size() == 0)
+    {
+        return 0;
+    }
+    
     int size = 4;
     for (auto& item : recordList_)
     {
@@ -232,6 +243,8 @@ void PskReporter::encodeReceiverRecord_(char* buf)
 
 void PskReporter::encodeSenderRecords_(char* buf)
 {
+    if (recordList_.size() == 0) return;
+    
     // Encode TX record header.
     buf[0] = 0x99;
     buf[1] = 0x93;

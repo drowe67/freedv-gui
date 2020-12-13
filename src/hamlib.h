@@ -22,7 +22,8 @@ class Hamlib {
         int get_serial_rate(void);
         int get_data_bits(void);
         int get_stop_bits(void);
-
+        freq_t get_frequency(void) const;
+        
         typedef std::vector<const struct rig_caps *> riglist_t;
 
     private:

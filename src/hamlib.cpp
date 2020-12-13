@@ -78,6 +78,11 @@ static bool rig_cmp(const struct rig_caps *rig1, const struct rig_caps *rig2) {
     return rig1->rig_model < rig2->rig_model;
 }
 
+freq_t Hamlib::get_frequency(void) const
+{
+    return m_currFreq;
+}
+
 void Hamlib::populateComboBox(wxComboBox *cb) {
 
     riglist_t::const_iterator rig = m_rigList.begin();

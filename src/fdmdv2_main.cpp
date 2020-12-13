@@ -626,6 +626,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 #ifdef _USE_TIMER
     Bind(wxEVT_TIMER, &MainFrame::OnTimer, this);       // ID_MY_WINDOW);
     m_plotTimer.SetOwner(this, ID_TIMER_WATERFALL);
+    m_pskReporterTimer.SetOwner(this, ID_TIMER_PSKREPORTER);
     //m_panelWaterfall->Refresh();
 #endif
 
@@ -879,6 +880,10 @@ MainFrame::~MainFrame()
         g_sfRecFileFromModulator = NULL;
     }
 #ifdef _USE_TIMER
+    if(m_pskReporterTimer.IsRunning())
+    {
+        m_pskReporterTimer.Stop();
+    }
     if(m_plotTimer.IsRunning())
     {
         m_plotTimer.Stop();
@@ -915,7 +920,12 @@ void MainFrame::OnIdle(wxIdleEvent &evt) {
 //----------------------------------------------------------------
 void MainFrame::OnTimer(wxTimerEvent &evt)
 {
-
+    if (evt.GetTimer().GetId() == ID_TIMER_PSKREPORTER)
+    {
+        // PSK Reporter timer fired; send in-progress packet.
+        wxGetApp().m_pskReporter->send();
+    }
+    
     int r,c;
 
     if (m_panelWaterfall->checkDT()) {
@@ -1042,7 +1052,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     if (snr_limited < -5.0) snr_limited = -5.0;
     if (snr_limited > 20.0) snr_limited = 20.0;
     char snr[15];
-    sprintf(snr, "%d", (int)(g_snr+0.5)); // round to nearest dB
+    int snr_val = (int)(g_snr+0.5);
+    sprintf(snr, "%d", snr_val); // round to nearest dB
 
     //fprintf(stderr, "g_mode: %d snr_est: %f m_snrBeta: %f g_snr: %f snr_limited: %f\n", g_mode, g_stats.snr_est,  m_snrBeta, g_snr, snr_limited);
 
@@ -1230,7 +1241,38 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
     }
 
-
+    // We should only report to PSK Reporter when all of the following are true:
+    // a) We have full modem sync (g_State != 0).
+    // b) SNR is greater than minimum squelch.
+    // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
+    // c) We don't currently have a pending report to add to the outbound list.
+    // When the above is true, capture the callsign and current SNR and save it in a temporary location.
+    // Once sync is lost, add to the PSK Reporter object's outbound list.
+    if (wxGetApp().m_pskReporter != nullptr)
+    {
+        if (g_State != 0 && snr_val >= g_SquelchLevel)
+        {
+            wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
+            wxString wxCallsign = m_txtCtrlCallSign->GetValue();
+            if (callsignFormat.Matches(wxCallsign) && wxGetApp().m_pskPendingCallsign == "")
+            {
+                wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
+                wxGetApp().m_pskPendingCallsign = rxCallsign.ToStdString();
+                wxGetApp().m_pskPendingSnr = snr_val;
+            }
+        }
+        else if (wxGetApp().m_pskPendingCallsign != "")
+        {
+            fprintf(stderr, "Adding callsign %s @ SNR %d to PSK Reporter.\n", wxGetApp().m_pskPendingCallsign.c_str(), wxGetApp().m_pskPendingSnr);
+            wxGetApp().m_pskReporter->addReceiveRecord(
+                wxGetApp().m_pskPendingCallsign,
+                wxGetApp().m_hamlib->get_frequency(),
+                wxGetApp().m_pskPendingSnr);
+            wxGetApp().m_pskPendingCallsign = "";
+            wxGetApp().m_pskPendingSnr = 0;
+        }
+    }
+    
     // Run time update of EQ filters -----------------------------------
 
     if (m_newMicInFilter || m_newSpkOutFilter) {
@@ -2464,6 +2506,7 @@ void MainFrame::OnExit(wxCommandEvent& event)
     wxUnusedVar(event);
 #ifdef _USE_TIMER
     m_plotTimer.Stop();
+    m_pskReporterTimer.Stop();
 #endif // _USE_TIMER
     if(g_sfPlayFile != NULL)
     {
@@ -2691,7 +2734,23 @@ bool MainFrame::OpenHamlibRig() {
         wxGetApp().m_pskReporter = new PskReporter(
             wxGetApp().m_psk_callsign.ToStdString(), 
             wxGetApp().m_psk_grid_square.ToStdString(),
-            std::string(FREEDV_VERSION) + " " + currentMode);
+            std::string("FreeDV ") + FREEDV_VERSION + " " + currentMode);
+        wxGetApp().m_pskPendingCallsign = "";
+        wxGetApp().m_pskPendingSnr = 0;
+        
+        // Send empty packet to verify network connectivity.
+        bool success = wxGetApp().m_pskReporter->send();
+        if (success)
+        {
+            // Enable PSK Reporter timer (every 5 minutes).
+            m_pskReporterTimer.Start(5 * 60 * 1000);
+        }
+        else
+        {
+            wxMessageBox("Couldn't connect to PSK Reporter server. Reporting functionality will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+            delete wxGetApp().m_pskReporter;
+            wxGetApp().m_pskReporter = nullptr;
+        }
     }
     else
     {
@@ -2952,6 +3011,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
 #ifdef _USE_TIMER
         m_plotTimer.Stop();
+        m_pskReporterTimer.Stop();
 #endif // _USE_TIMER
 
         // ensure we are not transmitting and shut down audio processing
@@ -2966,12 +3026,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 hamlib->disable_mode_detection();
                 hamlib->close();
             }
-            
-            if (wxGetApp().m_pskReporter)
-            {
-                delete wxGetApp().m_pskReporter;
-                wxGetApp().m_pskReporter = nullptr;
-            }
+        }
+
+        if (wxGetApp().m_pskReporter)
+        {
+            delete wxGetApp().m_pskReporter;
+            wxGetApp().m_pskReporter = nullptr;
         }
 
         if (wxGetApp().m_boolUseSerialPTT) {
