@@ -158,7 +158,7 @@ bool PskReporter::send()
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_protocol = 0;
     hints.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED | AI_NUMERICSERV;
-    struct addrinfo* res = nullptr;
+    struct addrinfo* res = NULL;
     int err = getaddrinfo(PSK_REPORTER_HOSTNAME, PSK_REPORTER_PORT, &hints, &res);
     if (err != 0) {
         fprintf(stderr, "cannot resolve %s (err=%d)", PSK_REPORTER_HOSTNAME, err);

@@ -1254,7 +1254,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     // c) We don't currently have a pending report to add to the outbound list.
     // When the above is true, capture the callsign and current SNR and save it in a temporary location.
     // Once sync is lost, add to the PSK Reporter object's outbound list.
-    if (wxGetApp().m_pskReporter != nullptr)
+    if (wxGetApp().m_pskReporter != NULL)
     {
         if (g_State != 0 && snr_val >= g_SquelchLevel)
         {
@@ -2505,7 +2505,7 @@ void MainFrame::OnExit(wxCommandEvent& event)
     if (wxGetApp().m_pskReporter)
     {
         delete wxGetApp().m_pskReporter;
-        wxGetApp().m_pskReporter = nullptr;
+        wxGetApp().m_pskReporter = NULL;
     }
     
     //fprintf(stderr, "MainFrame::OnExit\n");
@@ -2755,12 +2755,12 @@ bool MainFrame::OpenHamlibRig() {
         {
             wxMessageBox("Couldn't connect to PSK Reporter server. Reporting functionality will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
             delete wxGetApp().m_pskReporter;
-            wxGetApp().m_pskReporter = nullptr;
+            wxGetApp().m_pskReporter = NULL;
         }
     }
     else
     {
-        wxGetApp().m_pskReporter = nullptr;
+        wxGetApp().m_pskReporter = NULL;
     }
     
     return status;
@@ -3037,7 +3037,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (wxGetApp().m_pskReporter)
         {
             delete wxGetApp().m_pskReporter;
-            wxGetApp().m_pskReporter = nullptr;
+            wxGetApp().m_pskReporter = NULL;
         }
 
         if (wxGetApp().m_boolUseSerialPTT) {
