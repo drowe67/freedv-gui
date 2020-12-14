@@ -9,6 +9,7 @@
 #include <time.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <ws2def.h>
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -165,7 +166,11 @@ bool PskReporter::send()
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_protocol = 0;
+#ifdef WIN32
+    hints.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
+#else
     hints.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED | AI_NUMERICSERV;
+#endif // WIN32
     struct addrinfo* res = NULL;
     int err = getaddrinfo(PSK_REPORTER_HOSTNAME, PSK_REPORTER_PORT, &hints, &res);
     if (err != 0) {
