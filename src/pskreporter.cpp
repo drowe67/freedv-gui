@@ -6,7 +6,9 @@
 #include <errno.h>
 #include <unistd.h>
 #ifdef WIN32
+#include <time.h>
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
