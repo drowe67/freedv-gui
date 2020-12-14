@@ -84,6 +84,8 @@ endif(FREEDV_STATIC_DEPS)
 # Link other dependencies
 if(APPLE)
 target_link_libraries(freedv ${FREEDV_LINK_LIBS} ${FREEDV_LINK_LIBS_OSX})
+elseif(WIN32)
+target_link_libraries(freedv ${FREEDV_LINK_LIBS} ws2_32)
 else()
 target_link_libraries(freedv ${FREEDV_LINK_LIBS})
 endif(APPLE)
