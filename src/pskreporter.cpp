@@ -11,7 +11,7 @@
 
 #include "pskreporter.h"
 
-#define PSK_REPORTER_TEST
+//#define PSK_REPORTER_TEST
 #if defined(PSK_REPORTER_TEST)
 // Test server
 #define PSK_REPORTER_HOSTNAME "report.pskreporter.info"
@@ -51,7 +51,7 @@ SenderRecord::SenderRecord(std::string callsign, unsigned int frequency, char sn
     , frequency(frequency)
     , snr(snr)
 {
-    mode = "DIGITALVOICE";
+    mode = "FREEDV";
     infoSource = 1;
     flowTimeSeconds = time(0);
 } 
