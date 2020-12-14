@@ -181,6 +181,21 @@ and your radio.
 If you are really stuck, download Hamlib and test your radio's PTT
 using the command line ```rigctl``` program.
 
+### PSK Reporter Reporting (Experimental)
+
+FreeDV has the ability to report signals that are heard to [PSK Reporter](https://pskreporter.info/)
+by enabling the option in Tools->Options and specifying your callsign and grid square. This allows 
+people to see how far their signal reaches and the received signal's SNR. This is extremely 
+experimental and depends on being able to adequately decode the callsign from the received text; nothing
+will be reported if the person transmitting does not transmit any text (e.g. if they're using a SM1000
+or leave the "Txt Msg" field empty) or if the user's callsign is not in the text. Note that Hamlib must 
+also be enabled if using PSK Reporter reporting as the latter requires being able to read your radio's 
+VFO frequency.
+
+Reports sent to PSK Reporter will display using the mode "FREEDV" for ease of filtering. The user's 
+current mode (e.g. 700D or 1600) will also appear in the "Using" field when hovering over or clicking 
+your mouse on a reception report.
+
 ### Changing COM Port On Windows
 
 If you change the COM port of a USB-Serial device in Device Manager,
