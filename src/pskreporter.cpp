@@ -8,10 +8,10 @@
 #ifdef WIN32
 #include <winsock2.h>
 #else
-#include <netdb.h>
-#endif // WIN32
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netdb.h>
+#endif // WIN32
 
 #include "pskreporter.h"
 
