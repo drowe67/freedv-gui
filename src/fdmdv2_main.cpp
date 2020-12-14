@@ -2737,25 +2737,32 @@ bool MainFrame::OpenHamlibRig() {
                 break;
         }
         
-        wxGetApp().m_pskReporter = new PskReporter(
-            wxGetApp().m_psk_callsign.ToStdString(), 
-            wxGetApp().m_psk_grid_square.ToStdString(),
-            std::string("FreeDV ") + FREEDV_VERSION + " " + currentMode);
-        wxGetApp().m_pskPendingCallsign = "";
-        wxGetApp().m_pskPendingSnr = 0;
-        
-        // Send empty packet to verify network connectivity.
-        bool success = wxGetApp().m_pskReporter->send();
-        if (success)
+        if (wxGetApp().m_psk_callsign.ToStdString() == "" || wxGetApp().m_psk_grid_square.ToStdString())
         {
-            // Enable PSK Reporter timer (every 5 minutes).
-            m_pskReporterTimer.Start(5 * 60 * 1000);
+            wxMessageBox("PSK Reporter reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
         }
         else
         {
-            wxMessageBox("Couldn't connect to PSK Reporter server. Reporting functionality will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-            delete wxGetApp().m_pskReporter;
-            wxGetApp().m_pskReporter = NULL;
+            wxGetApp().m_pskReporter = new PskReporter(
+                wxGetApp().m_psk_callsign.ToStdString(), 
+                wxGetApp().m_psk_grid_square.ToStdString(),
+                std::string("FreeDV ") + FREEDV_VERSION + " " + currentMode);
+            wxGetApp().m_pskPendingCallsign = "";
+            wxGetApp().m_pskPendingSnr = 0;
+        
+            // Send empty packet to verify network connectivity.
+            bool success = wxGetApp().m_pskReporter->send();
+            if (success)
+            {
+                // Enable PSK Reporter timer (every 5 minutes).
+                m_pskReporterTimer.Start(5 * 60 * 1000);
+            }
+            else
+            {
+                wxMessageBox("Couldn't connect to PSK Reporter server. Reporting functionality will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+                delete wxGetApp().m_pskReporter;
+                wxGetApp().m_pskReporter = NULL;
+            }
         }
     }
     else

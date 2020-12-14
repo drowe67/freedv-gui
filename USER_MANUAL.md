@@ -193,8 +193,8 @@ also be enabled if using PSK Reporter reporting as the latter requires being abl
 VFO frequency.
 
 Reports sent to PSK Reporter will display using the mode "FREEDV" for ease of filtering. The user's 
-current mode (e.g. 700D or 1600) will also appear in the "Using" field when hovering over or clicking 
-your mouse on a reception report.
+current mode (e.g. 700D, 1600, etc.) will also appear in the "Using" field when hovering over or 
+clicking/tapping on a reception report.
 
 ### Changing COM Port On Windows
 
