@@ -5,9 +5,9 @@
 #include <cstring>
 #include <errno.h>
 #include <unistd.h>
+#include <time.h>
 #ifdef WIN32
 #define _WIN32_WINNT 0x0600
-#include <time.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <ws2def.h>
