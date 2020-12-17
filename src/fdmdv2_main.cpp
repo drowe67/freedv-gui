@@ -1269,7 +1269,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
         else if (wxGetApp().m_pskPendingCallsign != "")
         {
-            fprintf(stderr, "Adding callsign %s @ SNR %d to PSK Reporter.\n", wxGetApp().m_pskPendingCallsign.c_str(), wxGetApp().m_pskPendingSnr);
+            wxGetApp().m_hamlib->update_frequency_and_mode();
+            fprintf(
+                stderr, 
+                "Adding callsign %s @ SNR %d, freq %d to PSK Reporter.\n", 
+                wxGetApp().m_pskPendingCallsign.c_str(), 
+                wxGetApp().m_pskPendingSnr,
+                (unsigned int)wxGetApp().m_hamlib->get_frequency());
+            
             wxGetApp().m_pskReporter->addReceiveRecord(
                 wxGetApp().m_pskPendingCallsign,
                 wxGetApp().m_hamlib->get_frequency(),
