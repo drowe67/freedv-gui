@@ -380,7 +380,7 @@ The 700E release also includes optional compression (clipping) of the 700D an 70
 
 Clipping can be enabled via Tools-Options.
 
-On good channels with high SNR clipping may actually reduce the SNR of the received signal.  This is intentional - we are adding some pre-distortion in order to increase the RMS power.  Forward error correction (FEC) will clean up any errors introduced by clipping, and on poor channels the benefits of increased signal power outwiegh the slight reduction in SNR on good channels.
+On good channels with high SNR clipping may actually reduce the SNR of the received signal.  This is intentional - we are adding some pre-distortion in order to increase the RMS power.  Forward error correction (FEC) will clean up any errors introduced by clipping, and on poor channels the benefits of increased signal power outweigh the slight reduction in SNR on good channels.
 
 ### FreeDV 2020
 

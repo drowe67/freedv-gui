@@ -9,7 +9,7 @@ export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 
 # change this when working on combined codec2/freedv-gui changes
-CODEC2_BRANCH=master
+CODEC2_BRANCH=dr-700e
 
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
