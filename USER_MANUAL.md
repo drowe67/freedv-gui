@@ -39,7 +39,7 @@ Start with just a receive only station.  You just need the basic sound
 hardware in your computer, for example a microphone/speaker on your
 computer.
 
-1. Open the *Tools - Audio Config* Dialog 
+1. Open the *Tools - Audio Config* Dialog
 1. At the bottom select *Receive* Tab
 1. In *From Radio To Computer* select your default sound input device (usually at the top)
 1. In the *From Computer To Speaker/Headphone* window select your default sound output device (usually at the top)
@@ -154,7 +154,7 @@ your radio:
 
 Once you have configured PTT, try the **Test** button.
 
-Serial PTT support is complex.  We get many reports that FreeDV 
+Serial PTT support is complex.  We get many reports that FreeDV
 PTT doesn't work on a particular radio, but may work fine with other
 programs such as Fldigi.  This is often a mis-match between the serial
 parameters Hamlib is using with FreeDV and your radio. For example you
@@ -173,7 +173,7 @@ match your radio.
 If using an Icom radio, Hamlib will use the radio's default CI-V address
 when connecting. If this has been changed, you can specify the correct
 address in the "Radio Address" field (valid values are 00 through FF
-in hexadecimal). Note that "00" is the "wildcard" CI-V address and will 
+in hexadecimal). Note that "00" is the "wildcard" CI-V address and will
 also work if there are no other Icom/CI-V capable devices in the chain.
 
 When **Test** is pressed, the "Serial Params" field is populated and
@@ -192,7 +192,7 @@ unplugged/plugged.
 
 ### USB or LSB?
 
-On bands below 10 MHz, LSB is used for FreeDV.  On 10MHz and above, USB is used. After much debate, the FreeDV community has adopted the same conventions as SSB, based on the reasoning that FreeDV is a voice mode. 
+On bands below 10 MHz, LSB is used for FreeDV.  On 10MHz and above, USB is used. After much debate, the FreeDV community has adopted the same conventions as SSB, based on the reasoning that FreeDV is a voice mode.
 
 As an aid to the above, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn't enabled, or if your radio doesn't support retrieving frequency and mode over CAT, it will remain grayed out with "unk" displaying instead of the mode (for "unknown").
 
@@ -261,10 +261,10 @@ hardware, what you have tried, and the exact nature of the problem.
 
 ### FreeDV 2020 mode is greyed out
 
-You must have a modern CPU with AVX support to run FreeDV 2020.  If 
+You must have a modern CPU with AVX support to run FreeDV 2020.  If
 you do not have AVX the FreeDV 2020 mode button will be greyed out.
-A Microsoft utlity called [coreinfo](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo) 
-can be also used to determine if your CPU supports AVX.  A * means 
+A Microsoft utlity called [coreinfo](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo)
+can be also used to determine if your CPU supports AVX.  A * means
 you have AVX, a - means no AVX:
 ```
 AES             -       Supports AES extensions
@@ -281,8 +281,8 @@ will display `avx` (or `avx2`) if your CPU supports the instructions.
 
 ### FreeDV 2020 mode is slow on ARM Macs
 
-Preliminary testing on ARM Macs has shown that NEON optimizations in LPCNet are 
-sufficient to allow 2020 to be whitelisted on those machines. However, this is 
+Preliminary testing on ARM Macs has shown that NEON optimizations in LPCNet are
+sufficient to allow 2020 to be whitelisted on those machines. However, this is
 definitely experimental. If you are experiencing issues with 2020 mode on these
 Macs, please let the development team know so that further investigation can be done.
 
@@ -316,7 +316,7 @@ or
 xattr -d -r com.apple.quarantine FreeDV.app
 ```
 
-## Voice Keyer 
+## Voice Keyer
 
 The Voice Keyer Button on the front page, and the Options-PTT dialog
 puts FreeDV and your radio into transmit, reads a wave file of your
@@ -376,7 +376,11 @@ skill and practice when used with older, VFO based radios.
 
 FreeDV 700E was developed in December 2020 using lessons learned from on air operation of 700C and 700D.  A variant of 700D, it uses a shorter frame size (80ms) to reduce latency and sync time.  It is optimised for fast fading channels channels with up to 4Hz Doppler spread and 6ms delay spread.  FreeDV 7000E uses the same 700 bit/s codec as FreeDV 700C and 700D.  It requires about 3dB more power than 700D, but can operate reliably on fast fading channels.
 
-The 700E release also includes optional compression (clipping) of the 700D an 700E transmit waveforms to reduce the Peak to Average Power Ratio to about 4dB.  For example a 100W PEP transmitter can be driven to about 40W RMS.  This is an improvement of 6dB over previous releases of FreeDV 700D. Before enabling the clipper make sure your transmitter is capable of handling sustained high average power without damage.  Clipping can be enabled via Tools-Options.
+The 700E release also includes optional compression (clipping) of the 700D an 700E transmit waveforms to reduce the Peak to Average Power Ratio to about 4dB.  For example a 100W PEP transmitter can be driven to about 40W RMS.  This is an improvement of 6dB over previous releases of FreeDV 700D. Before enabling the clipper make sure your transmitter is capable of handling sustained high average power without damage.  
+
+Clipping can be enabled via Tools-Options.
+
+On good channels with high SNR clipping may actually reduce the SNR of the received signal.  This is intentional - we are adding some pre-distortion in order to increase the RMS power.  Forward error correction (FEC) will clean up any errors introduced by clipping, and on poor channels the benefits of increased signal power outwiegh the slight reduction in SNR on good channels.
 
 ### FreeDV 2020
 
@@ -399,8 +403,8 @@ SNR.
 
 FreeDV 2020 Tips:
 
-1. It requires a modern (post 2010) Intel CPU with AVX support.  If you 
-   don't have AVX the FreeDV 2020 mode button will be grayed out. 
+1. It requires a modern (post 2010) Intel CPU with AVX support.  If you
+   don't have AVX the FreeDV 2020 mode button will be grayed out.
 1. Some voices may sound very rough.  In early testing
    about 90% of speakers tested work well.
 1. Like 700D, you must tune within -/+ 60Hz for FreeDV 2020 to sync.
@@ -490,7 +494,7 @@ send an email your phone.
 
 Enable UDP messages on Tools-Options, and test using the "Test"
 button.
-     
+
 On Linux you can test reception of messages using netcat:
 ```
   $ nc -ul 3000
@@ -513,7 +517,7 @@ Debug FIFO and PortAudio counters: used for debugging audio
 problems on 700D.  During beta testing there were problems with break
 up in the 700D Tx and Rx audio on Windows.
 
-The PortAudio counters (PortAudio1 and PortAudio2) should not 
+The PortAudio counters (PortAudio1 and PortAudio2) should not
 increment when running in Tx or Rx, as this indicates samples are
 being lost by the sound driver which will lead to sync problems.
 
@@ -523,7 +527,7 @@ the PortAudio drivers.  The results will be resyncs at the receiver.
 
 Check these counters by pressing Start, then Reset them and observe
 the counters for 30 seconds.
-     
+
 If the PortAudio counters are incrementing on receive try:
 
   1. Adjusting framesPerBuffer; try 0, 128, 256, 512, 1024.
@@ -535,7 +539,7 @@ If the PortAudio counters are incrementing on receive try:
 
   If the outempty1 counter is incrementing on transmit try increasing
   the FifoSize.
-     
+
   The txThreadPriority checkbox reduces the priority of the main txRx
   thread in FreeDV which may help the sound driver thread process
   samples.
@@ -549,7 +553,7 @@ If the PortAudio counters are incrementing on receive try:
   will break up and the rx will lose sync.  Tx audio break up will
   also occur if you see "outfifo1" being incremented on the "Fifo"
   line during tx.  Try increasing the FifoSize.
-     
+
 ### Test Frame Histogram
 
 This feature was developed for testing FreeDV 700C.  Select the Test
@@ -566,7 +570,7 @@ BER. For example if one carrier is attenuated due to SSB filter ripple
 in the tx path then the BER on that carrier will be higher.  This is
 bad news for DV.
 
-Suggested usage: 
+Suggested usage:
 
 1. Transmit FreeDV in test frame mode.  Use a 2nd rx (or
 get a friend) to monitor your rx signal with FreeDV in test frame
@@ -643,7 +647,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 * FreeDV 700D
 
-## References 
+## References
 
 * http://freedv.org
 * [FreeDV Technology Overview](https://github.com/drowe67/codec2/blob/master/README_freedv.md)
