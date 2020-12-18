@@ -1957,6 +1957,7 @@ void MainFrame::OnReSync(wxCommandEvent& event)
         fprintf(stderr,"OnReSync\n");
         if (g_mode != -1) {
             freedv_set_sync(g_pfreedv, FREEDV_SYNC_UNSYNC);
+            g_resyncs++;
         }
     }
 }
