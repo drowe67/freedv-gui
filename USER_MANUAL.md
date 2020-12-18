@@ -123,6 +123,8 @@ nudged.  More **is not better** with the FreeDV transmit signal.
 Overdriving your transmitter will lead to a distorted transit signal, and
 a poor SNR at the receiver.  This is a very common problem.
 
+1. FreeDV 700D and 700E can drive your transmitter at an average power of 40% of it's peak power rating.  For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.
+
 1. Adjust the microphone audio so the peaks are not clipping, and the
 average is about half the maximum.
 
@@ -198,12 +200,7 @@ As an aid to the above, FreeDV will show the current mode on the bottom of the w
 
 ### Overdriving Transmit Level
 
-This is a very common problem for first time FreeDV users.  Adjust
-your transmit levels so the ALC is just being nudged.  For a 100W
-PEP radio, your average power should be 20W.
-
-More power is not better with FreeDV.  An overdriven signal will have
-poor SNR at the receiver.
+This is a very common problem for first time FreeDV users.  Adjust your transmit levels so the ALC is just being nudged. More power is not better with FreeDV.  An overdriven signal will have poor SNR at the receiver.  For FreeDV 700D/700E operation with the clipper, make sure your transmitter can sustain high average power levels without damage (e.g. 40W RMS on a 100W PEP radio).
 
 ### I can't set up FreeDV, especially the Sound Cards
 
@@ -239,7 +236,7 @@ looks and sounds like.
 ### Trouble getting Sync with 700D
 
 You need to be within +/- 60 Hz on the transmit signal.  It helps if
-both the tx and rx stations tune to known, exact frequencies such as
+both the Tx and Rx stations tune to known, exact frequencies such as
 exactly 7.177MHz.  On channels with fast fading sync may take a few
 seconds.
 
@@ -344,8 +341,9 @@ Mode | Min SNR | Fading | Latency | Speech Bandwidth | Speech Quality
 SSB | 0 | 8/10 | low | 2600 | 5/10
 1600 | 4 | 3/10 | low | 4000 | 4/10
 700C | 2  | 6/10 | low |  4000 | 3/10
-700D | -2 | 7/10 | high | 4000 | 3/10
-2020 | 4  | 5/10 | high | 8000 | 7/10
+700D | -2 | 4/10 | high | 4000 | 3/10
+700E | 1 | 7/10 | medium | 4000 | 3/10
+2020 | 4  | 4/10 | high | 8000 | 7/10
 Skype | - |- | medium | 8000 | 8/10
 
 The Min SNR is roughly the SNR where you cannot converse without
@@ -374,43 +372,11 @@ FreeDV 700D is sensitive to tuning.  To obtain sync you must be within
 modern radios which are generally accurate to +/-1 Hz, but requires
 skill and practice when used with older, VFO based radios.
 
-_The rest of this section describes features and options specific to
-FreeDV 700D._
+### FreeDV 700E
 
-Main GUI Page:
+FreeDV 700E was developed in December 2020 using lessons learned from on air operation of 700C and 700D.  A variant of 700D, it uses a shorter frame size (80ms) to reduce latency and sync time.  It is optimised for fast fading channels channels with up to 4Hz Doppler spread and 6ms delay spread.  FreeDV 7000E uses the same 700 bit/s codec as FreeDV 700C and 700D.  It requires about 3dB more power than 700D, but can operate reliably on fast fading channels.
 
-1. Separate indication of Modem and (for 700D) Interleaver Sync. The
-number on the Interleaver Sync indicator is the interleaver size in
-160ms frames. This is usually set to 1.
-     
-1. ReSync button breaks 700D sync and forces it to try again.  Useful
-if 700D gets a false sync in low SNR channels.
-
-Tools - Options dialog:
-
-1. Clipping: For 700C and 700D reduces the Peak/Average Power Ratio
-(PAPR) (also known as Crest Factor) from 12dB to 8dB by clipping the
-Tx signal.  This will add a little noise to the Tx spectrum and Rx
-Scatter diagram, but MAY enable you to drive your Power Amplifier
-harder.  Use with caution to avoid overloading your Power Amplifier.
-
-1. Tx Band Pass Filter: limits the transmit bandwidth to about 1000
-Hz.  Usually left on.
-
-1. 700D Interleaver: The interleaver averages out errors over several
-frames, which improves performance for fast fading channels and
-channels with burst errors.  A 16 frame interleaver will improve
-performance by 4dB.  However interleaving adds delay, and delays sync.
-Both the tx and rx must have the same interleaver setting.  For
-example a setting of 2 means we average errors over 2 160ms frames,
-and introduces 2x160=320ms delay in both the Tx and Rx (640ms total).
-The interleaver is usually set to 1.
-
-1. 700D Manual Unsync: Sync must be broken manually (ReSync button)
-when this option is selected.  Disables automatic falling out of
-sync. An experimental feature that may be useful for ensuring 700D stays
-in sync during long fades, to avoid long resync delays with the
-interleaver.
+The 700E release also includes optional compression (clipping) of the 700D an 700E transmit waveforms to reduce the Peak to Average Power Ratio to about 4dB.  For example a 100W PEP transmitter can be driven to about 40W RMS.  This is an improvement of 6dB over previous releases of FreeDV 700D. Before enabling the clipper make sure your transmitter is capable of handling sustained high average power without damage.  Clipping can be enabled via Tools-Options.
 
 ### FreeDV 2020
 
@@ -466,7 +432,7 @@ This section describes features on Tools-Options.  Many of these features are al
 
 Control | Description
  --- | --- |
-Clipping | Hard clipping of transmit waveform to increase the average power, at the expense of some distortion
+Clipping | Increases the average power (700C/700D/700E).  Make sure you transmitter can handle high RMS powers before using!
 700C Diversity Combine | Combining of two sets of 700C carriers for better fading channel performance
 700D Interleaver | How many 700D frames to Interleave, larger leads to better fading channel performance but more latency
 700D Tx Band Pass Filter | Reduces 700D TX spectrum bandwidth
@@ -646,6 +612,11 @@ FEC | Forward Error Correction - extra bits to we send to protect the speech cod
 LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 ## Release Notes
+
+### V1.5.0 December 2020
+
+1. FreeDV 700E, better performance than 700D on fast fading channels
+1. FreeDV 700D/700E clipper to increase average transmit power by 6dB
 
 ### V1.4.3 August 2020
 

@@ -4,7 +4,7 @@
 // Purpose:         Implements simple wxWidgets application with GUI.
 // Created:         Apr. 9, 2012
 // Authors:         David Rowe, David Witten
-// 
+//
 // License:
 //
 //  This program is free software; you can redistribute it and/or modify
@@ -338,20 +338,12 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     wxStaticBoxSizer* sbSizer_mode;
     sbSizer_mode = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Mode")), wxVERTICAL);
 
-#ifdef DISABLED_FEATURE
-    m_rb1400old = new wxRadioButton( this, wxID_ANY, wxT("1400 V0.91"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    sbSizer_mode->Add(m_rb1400old, 0, wxALIGN_LEFT|wxALL, 1);
-    m_rb1400 = new wxRadioButton( this, wxID_ANY, wxT("1400"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_mode->Add(m_rb1400, 0, wxALIGN_LEFT|wxALL, 1);
-    m_rb700 = new wxRadioButton( this, wxID_ANY, wxT("700"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    sbSizer_mode->Add(m_rb700, 0, wxALIGN_LEFT|wxALL, 1);
-    m_rb700b = new wxRadioButton( this, wxID_ANY, wxT("700B"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    sbSizer_mode->Add(m_rb700b, 0, wxALIGN_LEFT|wxALL, 1);
-#endif
     m_rb700c = new wxRadioButton( this, wxID_ANY, wxT("700C"), wxDefaultPosition, wxDefaultSize,  wxRB_GROUP);
     sbSizer_mode->Add(m_rb700c, 0, wxALIGN_LEFT|wxALL, 1);
     m_rb700d = new wxRadioButton( this, wxID_ANY, wxT("700D"), wxDefaultPosition, wxDefaultSize,  0);
     sbSizer_mode->Add(m_rb700d, 0, wxALIGN_LEFT|wxALL, 1);
+    m_rb700e = new wxRadioButton( this, wxID_ANY, wxT("700E"), wxDefaultPosition, wxDefaultSize,  0);
+    sbSizer_mode->Add(m_rb700e, 0, wxALIGN_LEFT|wxALL, 1);
     m_rb800xa = new wxRadioButton( this, wxID_ANY, wxT("800XA"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_mode->Add(m_rb800xa, 0, wxALIGN_LEFT|wxALL, 1);
     m_rb1600 = new wxRadioButton( this, wxID_ANY, wxT("1600"), wxDefaultPosition, wxDefaultSize, 0);
@@ -476,7 +468,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     //------------------------------
     m_togBtnVoiceKeyer = new wxToggleButton(this, wxID_ANY, _("Voice Keyer"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer"));
-    wxBoxSizer* bSizer13a = new wxBoxSizer(wxVERTICAL);    
+    wxBoxSizer* bSizer13a = new wxBoxSizer(wxVERTICAL);
     bSizer13a->Add(m_togBtnVoiceKeyer, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
     sbSizer5->Add(bSizer13a, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
@@ -632,4 +624,3 @@ TopFrame::~TopFrame()
     m_btnTogPTT->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnPTT), NULL, this);
 
 }
-
