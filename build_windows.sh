@@ -12,7 +12,7 @@
 if [ $CMAKE = "mingw64-cmake" ]; then
     BUILD_DIR=build_win64
 else
-    BUILD_DIR=build_win32    
+    BUILD_DIR=build_win32
 fi
 export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
@@ -21,7 +21,7 @@ export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/codec2.git
-cd codec2 && git checkout master && git pull
+cd codec2 && git checkout dr-700e && git pull
 mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf *
 $CMAKE .. && make
 
@@ -49,5 +49,3 @@ cd $FREEDVGUIDIR && git pull
 mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf *
 $CMAKE -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR ..
 make VERBOSE=1
-
-    
