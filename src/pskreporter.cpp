@@ -107,7 +107,12 @@ PskReporter::PskReporter(std::string callsign, std::string gridSquare, std::stri
     srand(time(0));
     randomIdentifier_ = rand();
 }
-    
+
+PskReporter::~PskReporter()
+{
+    recordList_.clear();
+}
+
 void PskReporter::addReceiveRecord(std::string callsign, unsigned int frequency, char snr)
 {
     recordList_.push_back(SenderRecord(callsign, frequency, snr));

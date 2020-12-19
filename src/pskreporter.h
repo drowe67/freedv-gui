@@ -20,6 +20,7 @@ class PskReporter
 {
 public:
     PskReporter(std::string callsign, std::string gridSquare, std::string software);
+    virtual ~PskReporter();
     
     void addReceiveRecord(std::string callsign, unsigned int frequency, char snr);
     bool send();
