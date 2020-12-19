@@ -452,6 +452,19 @@ These options apply to the FreeDV 700D and 2020 modes that use the OFDM modem:
 
 If you have problems with 700D or 2020 sync even though you have a strong signal - try these option.
 
+## Helping Improve FreeDV
+
+If you have an interesting test case for example:
+
+1. FreeDV working poorly with a particular person or microphone.
+1. Poor over the air performance on a fast fading channel.
+1. Problems with sync on strong signals.
+1. A comparison with SSB.
+
+Please send the developers an off air recording of signal.  FreeDV can record files from your radio using Tools-Record File from Radio.  A recording of 30 to 60 seconds is most useful.
+
+With an recording we can reproduce you exact problem.  If we can reproduce it we can fix it. Recordings are much more useful than anecdotes or subjective reports like "FreeDV doesn't work", "SSB is better", or "On 23 December it didn't work well on grid location XYZ".  With subjective reports problems are impossible to reproduce, cannot be fixed, and you are unlikely to get the attention of the developers.
+
 ## Advanced/Developer Features
 
 ### Stats Window

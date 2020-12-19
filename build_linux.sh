@@ -9,7 +9,7 @@ export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 
 # change this when working on combined codec2/freedv-gui changes
-CODEC2_BRANCH=dr-700e
+CODEC2_BRANCH=master
 
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
@@ -41,5 +41,3 @@ cd $FREEDVGUIDIR && git pull
 mkdir  -p build_linux && cd build_linux && rm -Rf *
 cmake -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux -DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux ..
 make VERBOSE=1
-
-    
