@@ -2752,6 +2752,9 @@ bool MainFrame::OpenHamlibRig() {
             case FREEDV_MODE_2020:
                 currentMode = "2020";
                 break;
+            case FREEDV_MODE_700E:
+                currentMode = "700E";
+                break;
             default:
                 currentMode = "unknown";
                 break;
