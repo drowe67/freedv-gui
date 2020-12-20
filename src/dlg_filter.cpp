@@ -3,7 +3,7 @@
 // Purpose:         Dialog for controlling Codec audio filtering
 // Date:            Nov 25 2012
 // Authors:         David Rowe, David Witten
-// 
+//
 // License:
 //
 //  This program is free software; you can redistribute it and/or modify
@@ -34,7 +34,7 @@
 #define MAX_GAIN           20
 
 #define MAX_LOG10_Q         1.0
-#define MIN_LOG10_Q        -1.0 
+#define MIN_LOG10_Q        -1.0
 
 // DFT parameters
 
@@ -92,9 +92,9 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     sbSizer_speexpp->Add(m_ckboxSpeexpp, wxALIGN_LEFT, 2);
     m_ckboxSpeexpp->SetToolTip(_("Enable noise supression, dereverberation, AGC of mic signal"));
 
-    m_ckbox700C_EQ = new wxCheckBox(this, wxID_ANY, _("700C/700D Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckbox700C_EQ = new wxCheckBox(this, wxID_ANY, _("700C/700D/700E Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_speexpp->Add(m_ckbox700C_EQ, wxALIGN_LEFT, 2);
-    m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700C and FreeDV 700D Codec input audio"));
+    m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700C/700D/700E Codec input audio"));
 
     bSizer30->Add(sbSizer_speexpp, 0, wxALL, 0);   
 
@@ -129,7 +129,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_SpkOutDefault = new wxButton(this, wxID_ANY, wxT("Default"));
     eqSpkOutSizer2->Add(m_SpkOutDefault,0,wxALIGN_CENTRE_VERTICAL|wxLEFT,20);
     eqSpkOutSizer->Add(eqSpkOutSizer2);
-    
+
     bSizer30->Add(eqMicInSizer, 0, wxALL, 0);
     bSizer30->Add(eqSpkOutSizer, 0, wxALL, 0);
 
@@ -150,7 +150,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_auiNotebook->SetFont(wxFont(8, 70, 90, 90, false, wxEmptyString));
 
     bSizer30->Add(m_auiNotebook, 0, wxEXPAND|wxALL, 3);
-    
+
     m_MicInFreqRespPlot = new PlotSpectrum((wxFrame*) m_auiNotebook, m_MicInMagdB, F_MAG_N, FILTER_MIN_MAG_DB, FILTER_MAX_MAG_DB);
     m_auiNotebook->AddPage(m_MicInFreqRespPlot, _("Microphone In Equaliser"));
 
@@ -173,7 +173,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     this->Layout();
 
     this->Centre(wxBOTH);
- 
+
     // Connect Events -------------------------------------------------------
 
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(FilterDlg::OnInitDialog));
@@ -290,8 +290,8 @@ EQ FilterDlg::newEQ(wxSizer *bs, wxString eqName, float maxFreqHz, bool enableQ)
 
     wxStaticBoxSizer *bsEQ = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, eqName), wxHORIZONTAL);
 
-    newEQControl(&eq.sliderFreq, &eq.valueFreq, bsEQ, "Freq"); 
-    eq.maxFreqHz = maxFreqHz; 
+    newEQControl(&eq.sliderFreq, &eq.valueFreq, bsEQ, "Freq");
+    eq.maxFreqHz = maxFreqHz;
     eq.sliderFreqId = eq.sliderFreq->GetId();
 
     newEQControl(&eq.sliderGain, &eq.valueGain, bsEQ, "Gain");
@@ -329,7 +329,7 @@ void FilterDlg::ExchangeData(int inout, bool storePersistent)
 
         // Mic In Equaliser
 
-        m_MicInBass.freqHz = wxGetApp().m_MicInBassFreqHz; 
+        m_MicInBass.freqHz = wxGetApp().m_MicInBassFreqHz;
         m_MicInBass.freqHz = limit(m_MicInBass.freqHz, 1.0, MAX_FREQ_BASS);
         setFreq(&m_MicInBass);
         m_MicInBass.gaindB = wxGetApp().m_MicInBassGaindB;
@@ -339,14 +339,14 @@ void FilterDlg::ExchangeData(int inout, bool storePersistent)
         m_MicInTreble.freqHz = wxGetApp().m_MicInTrebleFreqHz;
         m_MicInTreble.freqHz = limit(m_MicInTreble.freqHz, 1.0, MAX_FREQ_TREBLE);
         setFreq(&m_MicInTreble);
-        m_MicInTreble.gaindB = wxGetApp().m_MicInTrebleGaindB; 
+        m_MicInTreble.gaindB = wxGetApp().m_MicInTrebleGaindB;
         m_MicInTreble.gaindB = limit(m_MicInTreble.gaindB, MIN_GAIN, MAX_GAIN);
         setGain(&m_MicInTreble);
 
-        m_MicInMid.freqHz = wxGetApp().m_MicInMidFreqHz; 
+        m_MicInMid.freqHz = wxGetApp().m_MicInMidFreqHz;
         m_MicInMid.freqHz = limit(m_MicInMid.freqHz, 1.0, MAX_FREQ_TREBLE);
         setFreq(&m_MicInMid);
-        m_MicInMid.gaindB = wxGetApp().m_MicInMidGaindB; 
+        m_MicInMid.gaindB = wxGetApp().m_MicInMidGaindB;
         m_MicInMid.gaindB = limit(m_MicInMid.gaindB, MIN_GAIN, MAX_GAIN);
         setGain(&m_MicInMid);
         m_MicInMid.Q = wxGetApp().m_MicInMidQ;
@@ -356,20 +356,20 @@ void FilterDlg::ExchangeData(int inout, bool storePersistent)
         m_MicInEnable->SetValue(wxGetApp().m_MicInEQEnable);
 
         plotMicInFilterSpectrum();
- 
+
         // Spk Out Equaliser
 
         m_SpkOutBass.freqHz = wxGetApp().m_SpkOutBassFreqHz;
         m_SpkOutBass.freqHz = limit(m_SpkOutBass.freqHz, 1.0, MAX_FREQ_BASS);
         setFreq(&m_SpkOutBass);
-        m_SpkOutBass.gaindB = wxGetApp().m_SpkOutBassGaindB; 
+        m_SpkOutBass.gaindB = wxGetApp().m_SpkOutBassGaindB;
         m_SpkOutBass.gaindB = limit(m_SpkOutBass.gaindB, MIN_GAIN, MAX_GAIN);
         setGain(&m_SpkOutBass);
 
-        m_SpkOutTreble.freqHz = wxGetApp().m_SpkOutTrebleFreqHz; 
+        m_SpkOutTreble.freqHz = wxGetApp().m_SpkOutTrebleFreqHz;
         m_SpkOutTreble.freqHz = limit(m_SpkOutTreble.freqHz, 1.0, MAX_FREQ_TREBLE);
         setFreq(&m_SpkOutTreble);
-        m_SpkOutTreble.gaindB = wxGetApp().m_SpkOutTrebleGaindB; 
+        m_SpkOutTreble.gaindB = wxGetApp().m_SpkOutTrebleGaindB;
         m_SpkOutTreble.gaindB = limit(m_SpkOutTreble.gaindB, MIN_GAIN, MAX_GAIN);
         setGain(&m_SpkOutTreble);
 
@@ -398,7 +398,7 @@ void FilterDlg::ExchangeData(int inout, bool storePersistent)
 
         // Speex Pre-Processor
         wxGetApp().m_speexpp_enable = m_ckboxSpeexpp->GetValue();
-        
+
         // Codec 2 700C EQ
         wxGetApp().m_700C_EQ = m_ckbox700C_EQ->GetValue();
 
@@ -488,18 +488,18 @@ void FilterDlg::OnMicInDefault(wxCommandEvent& event)
 {
     m_MicInBass.freqHz = 100.0;
     m_MicInBass.gaindB = 0.0;
-    setFreq(&m_MicInBass); setGain(&m_MicInBass); 
+    setFreq(&m_MicInBass); setGain(&m_MicInBass);
 
     m_MicInTreble.freqHz = 3000.0;
     m_MicInTreble.gaindB = 0.0;
-    setFreq(&m_MicInTreble); setGain(&m_MicInTreble); 
+    setFreq(&m_MicInTreble); setGain(&m_MicInTreble);
 
     m_MicInMid.freqHz = 1500.0;
     m_MicInMid.gaindB = 0.0;
     m_MicInMid.Q = 1.0;
-    setFreq(&m_MicInMid); setGain(&m_MicInMid); setQ(&m_MicInMid); 
+    setFreq(&m_MicInMid); setGain(&m_MicInMid); setQ(&m_MicInMid);
 
-    plotMicInFilterSpectrum();    
+    plotMicInFilterSpectrum();
     adjRunTimeMicInFilter();
 }
 
@@ -507,16 +507,16 @@ void FilterDlg::OnSpkOutDefault(wxCommandEvent& event)
 {
     m_SpkOutBass.freqHz = 100.0;
     m_SpkOutBass.gaindB = 0.0;
-    setFreq(&m_SpkOutBass); setGain(&m_SpkOutBass); 
+    setFreq(&m_SpkOutBass); setGain(&m_SpkOutBass);
 
     m_SpkOutTreble.freqHz = 3000.0;
     m_SpkOutTreble.gaindB = 0.0;
-    setFreq(&m_SpkOutTreble); setGain(&m_SpkOutTreble); 
+    setFreq(&m_SpkOutTreble); setGain(&m_SpkOutTreble);
 
     m_SpkOutMid.freqHz = 1500.0;
     m_SpkOutMid.gaindB = 0.0;
     m_SpkOutMid.Q = 1.0;
-    setFreq(&m_SpkOutMid); setGain(&m_SpkOutMid); setQ(&m_SpkOutMid); 
+    setFreq(&m_SpkOutMid); setGain(&m_SpkOutMid); setQ(&m_SpkOutMid);
 
     plotSpkOutFilterSpectrum();
     adjRunTimeSpkOutFilter();
@@ -562,9 +562,9 @@ void FilterDlg::setCodec2(void) {
     if (m_running) {
         struct CODEC2 *c2 = freedv_get_codec2(g_pfreedv);
         if (c2 != NULL) {
-            codec2_set_lpc_post_filter(c2, 
-                                       m_codec2LPCPostFilterEnable->GetValue(), 
-                                       m_codec2LPCPostFilterBassBoost->GetValue(), 
+            codec2_set_lpc_post_filter(c2,
+                                       m_codec2LPCPostFilterEnable->GetValue(),
+                                       m_codec2LPCPostFilterBassBoost->GetValue(),
                                        m_beta, m_gamma);
         }
     }
@@ -579,11 +579,11 @@ void FilterDlg::setGamma(void) {
 }
 
 void FilterDlg::OnEnable(wxScrollEvent& event) {
-    setCodec2();    
+    setCodec2();
 }
 
 void FilterDlg::OnBassBoost(wxScrollEvent& event) {
-    setCodec2();    
+    setCodec2();
 }
 
 void FilterDlg::OnBetaScroll(wxScrollEvent& event) {
@@ -606,7 +606,7 @@ void FilterDlg::OnSpeexppEnable(wxScrollEvent& event) {
 
 void FilterDlg::On700C_EQ(wxScrollEvent& event) {
     wxGetApp().m_700C_EQ = m_ckbox700C_EQ->GetValue();
-    if (m_running && ((g_mode == FREEDV_MODE_700C) || (g_mode == FREEDV_MODE_700D))) {
+    if (m_running && ((g_mode == FREEDV_MODE_700C) || (g_mode == FREEDV_MODE_700D) || (g_mode == FREEDV_MODE_700E))) {
         freedv_set_eq(g_pfreedv, wxGetApp().m_700C_EQ);
     }
 }
@@ -656,7 +656,7 @@ void FilterDlg::setGain(EQ *eq)
 void FilterDlg::sliderToGain(EQ *eq, bool micIn)
 {
     float range = MAX_GAIN-MIN_GAIN;
-    
+
     eq->gaindB = MIN_GAIN + range*((float)eq->sliderGain->GetValue()/SLIDER_MAX);
     //printf("gaindB: %f\n", eq->gaindB);
     setGain(eq);
@@ -668,7 +668,7 @@ void FilterDlg::sliderToGain(EQ *eq, bool micIn)
         plotSpkOutFilterSpectrum();
         adjRunTimeSpkOutFilter();
     }
-        
+
 }
 
 void FilterDlg::setQ(EQ *eq)
@@ -686,7 +686,7 @@ void FilterDlg::setQ(EQ *eq)
 void FilterDlg::sliderToQ(EQ *eq, bool micIn)
 {
     float log10_range = MAX_LOG10_Q - MIN_LOG10_Q;
-    
+
     float sliderNorm = (float)eq->sliderQ->GetValue()/SLIDER_MAX;
     float log10Q =  MIN_LOG10_Q + sliderNorm*(log10_range);
     eq->Q = pow(10.0, log10Q);
@@ -718,7 +718,7 @@ void FilterDlg::adjRunTimeMicInFilter(void) {
         *m_newMicInFilter = true;
     }
 }
-        
+
 void FilterDlg::adjRunTimeSpkOutFilter(void) {
     // signal an adjustment in running filter coeffs
 
@@ -727,7 +727,7 @@ void FilterDlg::adjRunTimeSpkOutFilter(void) {
         *m_newSpkOutFilter = true;
     }
 }
-        
+
 
 void FilterDlg::plotFilterSpectrum(EQ *eqBass, EQ *eqMid, EQ *eqTreble, PlotSpectrum* freqRespPlot, float *magdB) {
     char  *argBass[10];
@@ -744,21 +744,21 @@ void FilterDlg::plotFilterSpectrum(EQ *eqBass, EQ *eqMid, EQ *eqTreble, PlotSpec
         argTreble[i] = &argstorage[i][0];
         argMid[i] = &argstorage[i][0];
     }
-    sprintf(argBass[0], "bass");                
+    sprintf(argBass[0], "bass");
     sprintf(argBass[1], "%f", eqBass->gaindB+1E-6);
-    sprintf(argBass[2], "%f", eqBass->freqHz);      
+    sprintf(argBass[2], "%f", eqBass->freqHz);
 
     calcFilterSpectrum(magBass, 2, argBass);
 
-    sprintf(argTreble[0], "treble");                
+    sprintf(argTreble[0], "treble");
     sprintf(argTreble[1], "%f", eqTreble->gaindB+1E-6);
-    sprintf(argTreble[2], "%f", eqTreble->freqHz);      
+    sprintf(argTreble[2], "%f", eqTreble->freqHz);
 
     calcFilterSpectrum(magTreble, 2, argTreble);
 
-    sprintf(argTreble[0], "equalizer");                
-    sprintf(argTreble[1], "%f", eqMid->freqHz);      
-    sprintf(argTreble[2], "%f", eqMid->Q);      
+    sprintf(argTreble[0], "equalizer");
+    sprintf(argTreble[1], "%f", eqMid->freqHz);
+    sprintf(argTreble[2], "%f", eqMid->Q);
     sprintf(argTreble[3], "%f", eqMid->gaindB+1E-6);
 
     calcFilterSpectrum(magMid, 3, argMid);
@@ -789,7 +789,7 @@ void FilterDlg::calcFilterSpectrum(float magdB[], int argc, char *argv[]) {
     sox_biquad_filter(sbq, out, in, NIMP);
     //for(i=0; i<NIMP; i++)
     //    printf("%d\n", out[i]);
-   
+
     sox_biquad_destroy(sbq);
 
     //for(i=0; i<NIMP; i++)

@@ -41,5 +41,3 @@ cd $FREEDVGUIDIR && git pull
 mkdir  -p build_linux && cd build_linux && rm -Rf *
 cmake -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux -DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux ..
 make VERBOSE=1
-
-    
