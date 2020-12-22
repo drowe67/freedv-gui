@@ -16,7 +16,7 @@ cmake_minimum_required(VERSION 2.8)
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
-  message(FATAL_ERROR "In-source builds in ${CMAKE_BINARY_DIR} are not "   
+  message(FATAL_ERROR "In-source builds in ${CMAKE_BINARY_DIR} are not "
    "allowed, please remove ./CMakeCache.txt and ./CMakeFiles/, create a "
    "separate build directory and run cmake from there.")
 endif("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
@@ -48,8 +48,8 @@ message(STATUS "Compilation date = XX${DATE_RESULT}XX")
 # Set FreeDV version and generate src/version.h
 #
 set(FREEDV_VERSION_MAJOR 1)
-set(FREEDV_VERSION_MINOR 4)
-set(FREEDV_VERSION_PATCH 3)
+set(FREEDV_VERSION_MINOR 5)
+set(FREEDV_VERSION_PATCH 0)
 set(FREEDV_VERSION_SUFFIX "devel")
 
 set(FREEDV_VERSION ${FREEDV_VERSION_MAJOR}.${FREEDV_VERSION_MINOR})
@@ -110,9 +110,9 @@ endif(APPLE)
 set(CMAKE_VERBOSE_MAKEFILE TRUE CACHE BOOL "Verbose makefile.")
 set(USE_INTERNAL_CODEC2 FALSE CACHE BOOL
     "Download and build codec2 and lpcnetfreedv instead of using the system library.")
-set(USE_STATIC_DEPS FALSE CACHE BOOL 
+set(USE_STATIC_DEPS FALSE CACHE BOOL
     "Download and build static libraries instead of system libraries.")
-set(USE_STATIC_PORTAUDIO FALSE CACHE BOOL 
+set(USE_STATIC_PORTAUDIO FALSE CACHE BOOL
     "Download and build static portaudio instead of the system library.")
 set(USE_STATIC_SNDFILE FALSE CACHE BOOL
     "Download and build static sndfile instead of the system library.")
@@ -273,7 +273,7 @@ else(CODEC2_BUILD_DIR)
             include_directories(${CODEC2_INCLUDE_DIRS})
         else()
             message(FATAL_ERROR "codec2 library not found.
-Linux: 
+Linux:
 Codec2 may not be in your distribution so build yourself or use the cmake option to build internally.
 Windws:
 It's easiest to use the cmake option: USE_INTERNAL_CODEC2 or use build trees for codec2 and lpcnetfreedv."
@@ -356,7 +356,7 @@ else(NOT USE_STATIC_SAMPLERATE)
     include(cmake/BuildSamplerate.cmake)
 endif(NOT USE_STATIC_SAMPLERATE)
 
-#    
+#
 # sndfile Library
 #
 if(NOT USE_STATIC_SNDFILE)
@@ -386,7 +386,7 @@ endif(NOT USE_STATIC_SNDFILE)
 if(NOT BOOTSTRAP_WXWIDGETS)
     set(WXCONFIG "" CACHE FILEPATH "Location of wx-config binary.")
     set(WXRC "" CACHE FILEPATH "Location of wxrc binary.")
-else(NOT BOOTSTRAP_WXWIDGETS)    
+else(NOT BOOTSTRAP_WXWIDGETS)
 #	set(WXCONFIG "${CMAKE_BINARY_DIR}/external/dist/bin/wx-config")
 #    set(WXRC "${CMAKE_BINARY_DIR}/external/dist/bin/wxrc")
 #    list(APPEND FREEDV_STATIC_DEPS wxWidgets)
@@ -475,7 +475,7 @@ On Linux systems try installing:
 endif()
 
 
-#    
+#
 # Freedv
 #
 add_subdirectory(src)
