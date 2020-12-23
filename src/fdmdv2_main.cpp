@@ -2711,7 +2711,7 @@ bool MainFrame::OpenHamlibRig() {
     int rig = wxGetApp().m_intHamlibRig;
     wxString port = wxGetApp().m_strHamlibSerialPort;
     int serial_rate = wxGetApp().m_intHamlibSerialRate;
-    bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate);
+    bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, m_intHamlibIcomCIVHex);
     if (status == false)
     {
         if (wxGetApp().m_psk_enable)
