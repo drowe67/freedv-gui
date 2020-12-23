@@ -522,7 +522,8 @@ class MainFrame : public TopFrame
 
 
     void initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDevice, 
-                             int soundCard, int sampleRate, int inputChannels);
+                             int soundCard, int sampleRate, int inputChannels,
+                             int outputChannels);
 
     void togglePTT(void);
 

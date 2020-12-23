@@ -3197,7 +3197,8 @@ void MainFrame::destroy_src(void)
 }
 
 void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDevice,
-                                     int soundCard, int sampleRate, int inputChannels)
+                                     int soundCard, int sampleRate, int inputChannels,
+                                     int outputChannels)
 {
     // Note all of the wrapper functions below just set values in a
     // portaudio struct so can't return any errors. So no need to trap
@@ -3220,7 +3221,7 @@ void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDev
 
     pa->setOutputDevice(outDevice);
     if(outDevice != paNoDevice) {
-        pa->setOutputChannelCount(2);                      // stereo output
+        pa->setOutputChannelCount(outputChannels);                      // stereo output
         pa->setOutputSampleFormat(PA_SAMPLE_TYPE);
         pa->setOutputLatency(pa->getOutputDefaultHighLatency());
         //fprintf(stderr,"PA out; low: %f high: %f\n", pa->getOutputDefaultLowLatency(), pa->getOutputDefaultHighLatency());
@@ -3255,8 +3256,8 @@ void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDev
 void MainFrame::startRxStream()
 {
     int   src_error;
-    const PaDeviceInfo *deviceInfo1 = NULL, *deviceInfo2 = NULL;
-    int   inputChannels1, inputChannels2;
+    const PaDeviceInfo *deviceInfo1a = NULL, *deviceInfo1b = NULL, *deviceInfo2a = NULL, *deviceInfo2b = NULL;
+    int   inputChannels1, outputChannels1, inputChannels2, outputChannels2;
     bool  two_rx=false;
     bool  two_tx=false;
 
@@ -3304,30 +3305,48 @@ void MainFrame::startRxStream()
 
         // work out how many input channels this device supports.
 
-        deviceInfo1 = Pa_GetDeviceInfo(g_soundCard1InDeviceNum);
-        if (deviceInfo1 == NULL) {
-            wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card 1"), wxT("Error"), wxOK);
+        deviceInfo1a = Pa_GetDeviceInfo(g_soundCard1InDeviceNum);
+        if (deviceInfo1a == NULL) {
+            wxMessageBox(wxT("Couldn't get input device info from Port Audio for Sound Card 1"), wxT("Error"), wxOK);
             delete m_rxInPa;
             if(two_rx)
 				delete m_rxOutPa;
             m_RxRunning = false;
             return;
         }
-        if (deviceInfo1->maxInputChannels == 1)
+        if (deviceInfo1a->maxInputChannels == 1)
             inputChannels1 = 1;
         else
             inputChannels1 = 2;
 
-        if(two_rx) {
+        // Grab the info for the FreeDV->speaker device as well and ensure we're using
+        // the smallest number of common channels (1 or 2).
+        deviceInfo1b = Pa_GetDeviceInfo(g_soundCard1OutDeviceNum);
+        if (deviceInfo1b == NULL) {
+            wxMessageBox(wxT("Couldn't get output device info from Port Audio for Sound Card 1"), wxT("Error"), wxOK);
+            delete m_rxInPa;
+            if(two_rx)
+				delete m_rxOutPa;
+            m_RxRunning = false;
+            return;
+        }
+        if (deviceInfo1b->maxInputChannels == 1)
+            outputChannels1 = 1;
+        else
+            outputChannels1 = 2;
+        
+        if(two_rx) {        
             initPortAudioDevice(m_rxInPa, g_soundCard1InDeviceNum, paNoDevice, 1,
-                            g_soundCard1SampleRate, inputChannels1);
+                            g_soundCard1SampleRate, inputChannels1, inputChannels1);
             initPortAudioDevice(m_rxOutPa, paNoDevice, g_soundCard1OutDeviceNum, 1,
-                            g_soundCard1SampleRate, inputChannels1);
+                            g_soundCard1SampleRate, outputChannels1, outputChannels1);
 		}
         else
+        {                    
             initPortAudioDevice(m_rxInPa, g_soundCard1InDeviceNum, g_soundCard1OutDeviceNum, 1,
-                            g_soundCard1SampleRate, inputChannels1);
-
+                            g_soundCard1SampleRate, inputChannels1, outputChannels1);
+        }
+        
         // Init Sound Card 2 ------------------------------------------------
 
         if (g_nSoundCards == 2) {
@@ -3357,9 +3376,9 @@ void MainFrame::startRxStream()
                 return;
             }
 
-            deviceInfo2 = Pa_GetDeviceInfo(g_soundCard2InDeviceNum);
-            if (deviceInfo2 == NULL) {
-                wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card 1"), wxT("Error"), wxOK);
+            deviceInfo2a = Pa_GetDeviceInfo(g_soundCard2InDeviceNum);
+            if (deviceInfo2a == NULL) {
+                wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card 2"), wxT("Error"), wxOK);
                 delete m_rxInPa;
                 if(two_rx)
 					delete m_rxOutPa;
@@ -3369,27 +3388,45 @@ void MainFrame::startRxStream()
                 m_RxRunning = false;
                 return;
             }
-            if (deviceInfo2->maxInputChannels == 1)
+            if (deviceInfo2a->maxInputChannels == 1)
                 inputChannels2 = 1;
             else
                 inputChannels2 = 2;
+            
+            // Grab info for FreeDV->radio device.
+            deviceInfo2b = Pa_GetDeviceInfo(g_soundCard2OutDeviceNum);
+            if (deviceInfo2b == NULL) {
+                wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card 2"), wxT("Error"), wxOK);
+                delete m_rxInPa;
+                if(two_rx)
+					delete m_rxOutPa;
+                delete m_txInPa;
+                if(two_tx)
+					delete m_txOutPa;
+                m_RxRunning = false;
+                return;
+            }
+            if (deviceInfo2b->maxOutputChannels == 1)
+                outputChannels2 = 1;
+            else
+                outputChannels2 = 2;
 
             if(two_tx) {
 				initPortAudioDevice(m_txInPa, g_soundCard2InDeviceNum, paNoDevice, 2,
-                                g_soundCard2SampleRate, inputChannels2);
+                                g_soundCard2SampleRate, inputChannels2, inputChannels2);
 				initPortAudioDevice(m_txOutPa, paNoDevice, g_soundCard2OutDeviceNum, 2,
-                                g_soundCard2SampleRate, inputChannels2);
+                                g_soundCard2SampleRate, outputChannels2, outputChannels2);
 			}
 			else
 				initPortAudioDevice(m_txInPa, g_soundCard2InDeviceNum, g_soundCard2OutDeviceNum, 2,
-                                g_soundCard2SampleRate, inputChannels2);
+                                g_soundCard2SampleRate, inputChannels2, outputChannels2);
         }
 
         // Init call back data structure ----------------------------------------------
 
         g_rxUserdata = new paCallBackData;
         g_rxUserdata->inputChannels1 = inputChannels1;
-        if (deviceInfo2 != NULL)
+        if (deviceInfo2a != NULL)
             g_rxUserdata->inputChannels2 = inputChannels2;
 
         // init sample rate conversion states
@@ -3530,7 +3567,6 @@ void MainFrame::startRxStream()
                 wxMessageBox(wxT("Sound Card 1 Second Stream Open/Setup error."), wxT("Error"), wxOK);
                 delete m_rxInPa;
                 delete m_rxOutPa;
-                delete m_txOutPa;
                 if(two_tx)
                     delete m_txOutPa;
                 destroy_fifos();
@@ -3548,7 +3584,6 @@ void MainFrame::startRxStream()
                 m_rxInPa->streamClose();
                 delete m_rxInPa;
                 delete m_rxOutPa;
-                delete m_txOutPa;
                 if(two_tx)
                     delete m_txOutPa;
                 destroy_fifos();
@@ -4518,26 +4553,51 @@ int MainFrame::rxCallback(
     if (wptr) {
          if (codec2_fifo_read(cbData->outfifo1, outdata, framesPerBuffer) == 0) {
 
-            // write signal to both channels
+            // write signal to both channels if the device can support two channels.
+            // Otherwise, we assume we're only dealing with one channel and write
+            // only to that channel.
+            if (cbData->inputChannels1 == 2)
+            {
+                for(i = 0; i < framesPerBuffer; i++, wptr += 2) 
+                {
+                    if (cbData->leftChannelVoxTone)
+                    {
+                        cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/g_soundCard1SampleRate;
+                        cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+                        wptr[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+                    }
+                    else
+                        wptr[0] = outdata[i];
 
-            for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
-                if (cbData->leftChannelVoxTone) {
-                    cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/g_soundCard1SampleRate;
-                    cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-                    wptr[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+                    wptr[1] = outdata[i];
                 }
-                else
+            }
+            else
+            {
+                for(i = 0; i < framesPerBuffer; i++, wptr++) 
+                {
                     wptr[0] = outdata[i];
-
-                wptr[1] = outdata[i];
+                }
             }
         }
-        else {
+        else 
+        {
             g_outfifo1_empty++;
+            
             // zero output if no data available
-            for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
-                wptr[0] = 0;
-                wptr[1] = 0;
+            if (cbData->inputChannels1 == 2)
+            {
+                for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
+                    wptr[0] = 0;
+                    wptr[1] = 0;
+                }
+            }
+            else
+            {
+                for(i = 0; i < framesPerBuffer; i++, wptr++)
+                {
+                    wptr[0] = 0;
+                }
             }
         }
     }
