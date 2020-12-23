@@ -3330,7 +3330,7 @@ void MainFrame::startRxStream()
             m_RxRunning = false;
             return;
         }
-        if (deviceInfo1b->maxInputChannels == 1)
+        if (deviceInfo1b->maxOutputChannels == 1)
             outputChannels1 = 1;
         else
             outputChannels1 = 2;
@@ -3426,9 +3426,13 @@ void MainFrame::startRxStream()
 
         g_rxUserdata = new paCallBackData;
         g_rxUserdata->inputChannels1 = inputChannels1;
+        g_rxUserdata->outputChannels1 = outputChannels1;
         if (deviceInfo2a != NULL)
+        {
             g_rxUserdata->inputChannels2 = inputChannels2;
-
+            g_rxUserdata->outputChannels2 = outputChannels2;
+        }
+        
         // init sample rate conversion states
 
         g_rxUserdata->insrc1 = src_new(SRC_SINC_FASTEST, 1, &src_error);
@@ -4556,7 +4560,7 @@ int MainFrame::rxCallback(
             // write signal to both channels if the device can support two channels.
             // Otherwise, we assume we're only dealing with one channel and write
             // only to that channel.
-            if (cbData->inputChannels1 == 2)
+            if (cbData->outputChannels1 == 2)
             {
                 for(i = 0; i < framesPerBuffer; i++, wptr += 2) 
                 {
@@ -4585,7 +4589,7 @@ int MainFrame::rxCallback(
             g_outfifo1_empty++;
             
             // zero output if no data available
-            if (cbData->inputChannels1 == 2)
+            if (cbData->outputChannels1 == 2)
             {
                 for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
                     wptr[0] = 0;

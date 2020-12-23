@@ -390,6 +390,7 @@ typedef struct
     struct FIFO    *rxoutfifo;
 
     int             inputChannels1, inputChannels2;
+    int             outputChannels1, outputChannels2;
 
     // EQ filter states
     void           *sbqMicInBass;
