@@ -1162,6 +1162,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     
     // Add sync character to beginning to force immediate resync when the audio does.
     truncCallsign[0] = 0x7F;
+    truncCallsign[1] = 0;
     strncat(truncCallsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN/2 - 2);
     
     if (strlen(truncCallsign) < MAX_CALLSIGN/2 - 1)
@@ -3044,7 +3045,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         }
 
         // attempt to start PTT ......
-
+        wxGetApp().m_pskReporter = NULL;
         if (wxGetApp().m_boolHamlibUseForPTT)
             OpenHamlibRig();
         if (wxGetApp().m_boolUseSerialPTT) {
