@@ -50,6 +50,8 @@ set(FREEDV_SOURCES
     osx_interface.h
     pskreporter.cpp
     pskreporter.h
+    hamming_code.cpp
+    hamming_code.h
 )
 
 set(FREEDV_SOURCES_OSX

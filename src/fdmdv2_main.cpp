@@ -23,6 +23,7 @@
 #include <time.h>
 #include "fdmdv2_main.h"
 #include "osx_interface.h"
+#include "hamming_code.h"
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
@@ -924,6 +925,9 @@ void MainFrame::OnIdle(wxIdleEvent &evt) {
 // the tabs only the plot that is visible actually gets updated, this
 // keeps CPU load reasonable
 //----------------------------------------------------------------
+bool g_txtSync = false;
+unsigned char combinedChar = 0;
+bool firstBit = true;
 void MainFrame::OnTimer(wxTimerEvent &evt)
 {
     if (evt.GetTimer().GetId() == ID_TIMER_PSKREPORTER)
@@ -1121,6 +1125,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     if (g_State) {
         if (g_prev_State == 0) {
             g_resyncs++;
+            g_txtSync = false;
             
             // Clear RX text to reduce the incidence of incorrect callsigns extracted with
             // the PSK Reporter callsign extraction logic.
@@ -1151,41 +1156,47 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     // send Callsign ----------------------------------------------------
 
+    HammingCode fecEncoder(7, 4, false); // Hamming(7,4)
     char callsign[MAX_CALLSIGN];
-    strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN-1);
-
+    char truncCallsign[MAX_CALLSIGN];
+    
+    // Add sync character to beginning to force immediate resync when the audio does.
+    truncCallsign[0] = 0x7F;
+    strncat(truncCallsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN/2 - 2);
+    
+    if (strlen(truncCallsign) < MAX_CALLSIGN/2 - 1)
+    {
+        strncat(truncCallsign, "\r", 1);
+    }
+    
+    //fprintf(stderr, "trunc callsign: %s\n", truncCallsign);
+    
+    for(int index = 0; index < strlen(truncCallsign); index++)
+    {
+        // 0x7F is sync. We're going to replace every space with that character
+        // and replace that character with space once we have sync.
+        if ((unsigned char)truncCallsign[index] > 127) truncCallsign[index] = 0x7F;
+        else if (truncCallsign[index] == ' ') truncCallsign[index] = 0x7F;
+        
+        unsigned char msbChar = (int)truncCallsign[index] >> 4;
+        unsigned char lsbChar = truncCallsign[index] & 0xF;
+        
+        // Encode the character as two bytes with parity bits.
+        fecEncoder.encode(&msbChar, (unsigned char*)&callsign[index * 2]);
+        fecEncoder.encode(&lsbChar, (unsigned char*)&callsign[index * 2 + 1]);
+    }
+    
     // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
 
-    if ((unsigned)codec2_fifo_used(g_txDataInFifo) < strlen(callsign)) {
+    if ((unsigned)codec2_fifo_used(g_txDataInFifo) < (strlen(truncCallsign) * 2)) {
         unsigned int  i;
-
-        //fprintf(g_logfile, "tx callsign: %s.\n", callsign);
-
-        /* optionally append checksum */
-
-        if (wxGetApp().m_enable_checksum) {
-
-            unsigned char checksum = 0;
-            char callsign_checksum_cr[MAX_CALLSIGN+1];
-
-            for(i=0; i<strlen(callsign); i++)
-                checksum += callsign[i];
-            sprintf(callsign_checksum_cr, "%s%2x", callsign, checksum);
-            callsign_checksum_cr[strlen(callsign)+2] = 13;
-            callsign_checksum_cr[strlen(callsign)+3] = 0;
-            strcpy(callsign, callsign_checksum_cr);
-        }
-        else {
-            callsign[strlen(callsign)] = 13;
-            callsign[strlen(callsign)+1] = 0;
-        }
-
-        //fprintf(g_logfile, "tx callsign: %s.\n", callsign);
 
         // write chars to tx data fifo
 
-        for(i=0; i<strlen(callsign); i++) {
-            short ashort = (short)callsign[i];
+        for(i=0; i<strlen(truncCallsign); i++) {
+            short ashort = (unsigned char)callsign[i*2];
+            codec2_fifo_write(g_txDataInFifo, &ashort, 1);
+            ashort = (unsigned char)callsign[i*2 + 1];
             codec2_fifo_write(g_txDataInFifo, &ashort, 1);
         }
     }
@@ -1194,67 +1205,79 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     short ashort;
     while (codec2_fifo_read(g_rxDataOutFifo, &ashort, 1) == 0) {
-
-        if ((ashort == 13) || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1)) {
-            // CR completes line
-            *m_pcallsign = 0;
-
-            /* Checksums can be disabled, e.g. for compatability with
-               older vesions.  In that case we print msg but don't do
-               any event processing.  If checksums enabled, only print
-               out when checksum is good. */
-
-            if (wxGetApp().m_enable_checksum) {
-                // lets see if checksum is OK
-
-                unsigned char checksum_rx = 0;
-                if (strlen(m_callsign) > 2) {
-                    for(unsigned int i=0; i<strlen(m_callsign)-2; i++)
-                        checksum_rx += m_callsign[i];
+        // Decode incoming character
+        unsigned char incomingChar = (unsigned char)ashort;
+        unsigned char decodedChar = 0;
+        
+        fprintf(stderr, "incoming char: %x\n", (int)incomingChar);
+        fecEncoder.decode(&incomingChar, &decodedChar);
+        fprintf(stderr, "char after FEC: %x\n", decodedChar);
+        
+        // If we're not in sync, we should look for a 0x7 and a 0xD in that order to establish
+        // sync.
+        if (!g_txtSync)
+        {
+            if (decodedChar == 0x7)
+            {
+                combinedChar = decodedChar << 4;
+                continue;
+            }
+            else if (decodedChar == 0xF)
+            {
+                combinedChar |= decodedChar;
+                if (combinedChar == 0x7F)
+                {
+                    fprintf(stderr, "text is now in sync\n");
+                    g_txtSync = true;
+                    firstBit = true;
+                    combinedChar = ' ';
                 }
-                unsigned int checksum_tx;
-                int ret = sscanf(&m_callsign[strlen(m_callsign)-2], "%2x", &checksum_tx);
-                //fprintf(g_logfile, "rx callsign: %s.\n  checksum tx: %02x checksum rx: %02x\n", m_callsign, checksum_tx, checksum_rx);
-
-                wxString s;
-                if (ret && (checksum_tx == checksum_rx)) {
-                    m_callsign[strlen(m_callsign)-2] = 0;
-                    s.Printf("%s", m_callsign);
-                    m_txtCtrlCallSign->SetValue(s);
-
-#ifdef __UDP_EXPERIMENTAL__
-                    char s1[MAX_CALLSIGN];
-                    sprintf(s1,"rx_txtmsg %s", m_callsign);
-                    processTxtEvent(s1);
-
-                    m_checksumGood++;
-                    s.Printf("%d", m_checksumGood);
-                    m_txtChecksumGood->SetLabel(s);
-#endif
-                }
-                else {
-#ifdef __UDP_EXPERIMENTAL__
-                    m_checksumBad++;
-                    s.Printf("%d", m_checksumBad);
-                    m_txtChecksumBad->SetLabel(s);
-#endif
+                else
+                {
+                    combinedChar = 0;
+                    continue;
                 }
             }
-
-            //fprintf(g_logfile,"resetting callsign %s %ld\n", m_callsign, m_pcallsign-m_callsign);
-            // reset ptr to start of string
+            else
+            {
+                combinedChar = 0;
+                continue;
+            }
+        }
+        else
+        {
+            if (firstBit)
+            {
+                // First 4 bits in byte.
+                combinedChar = decodedChar << 4;
+                firstBit = false;
+                continue;
+            }
+            else
+            {
+                // Second 4 bits in byte.
+                combinedChar |= decodedChar;
+                firstBit = true;
+                
+                if (combinedChar == 0x7F)
+                {
+                    combinedChar = ' ';
+                }
+            }
+        }
+        
+        if ((combinedChar == 13) || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1)) {
+            // CR completes line
+            *m_pcallsign = 0;
             m_pcallsign = m_callsign;
         }
-        else {
-            //fprintf(g_logfile, "new char %d %c\n", ashort, (char)ashort);
-            *m_pcallsign++ = (char)ashort;
+        else
+        {
+            *m_pcallsign++ = (char)combinedChar;
+            combinedChar = 0;
         }
-
-        /* If checksums disabled, display txt chars as they arrive */
-
-        if (!wxGetApp().m_enable_checksum) {
-            m_txtCtrlCallSign->SetValue(m_callsign);
-        }
+           
+        m_txtCtrlCallSign->SetValue(m_callsign);
     }
 
     // We should only report to PSK Reporter when all of the following are true:
