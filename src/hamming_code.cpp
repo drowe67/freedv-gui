@@ -1,4 +1,4 @@
-#include <string>
+#include <cstring>
 #include <cstdlib>
 #include "hamming_code.h"
 
