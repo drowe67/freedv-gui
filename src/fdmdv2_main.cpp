@@ -1252,13 +1252,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     // send Callsign ----------------------------------------------------
 
-    char callsign[MAX_CALLSIGN/4];
+    char callsign[MAX_CALLSIGN/2];
     char translatedCallsign[MAX_CALLSIGN];
     unsigned char truncCallsign[MAX_CALLSIGN];
     
     // Convert to 6 bit character set for use with Golay encoding.
-    strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN/4 - 1);
-    if (strlen(callsign) < MAX_CALLSIGN/4 - 1)
+    memset(callsign, 0, MAX_CALLSIGN/2);
+    strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN/2 - 2);
+    if (strlen(callsign) < MAX_CALLSIGN/2 - 1)
     {
         strncat(callsign, "\r", 1);
     }    
@@ -1317,9 +1318,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 //pendingGolayBytes.pop_front();
                 //fprintf(stderr, "encoded input: %x\n", encodedInput);
                 
-                // Golay encoded bytes have an upper limit.
-                if (encodedInput > 0x7FFFFF) continue;
-                
+                encodedInput &= 0x7FFFFF;                
                 int rawOutput = golay23_decode(encodedInput) >> 11;
                 //fprintf(stderr, "raw output: %x\n", rawOutput);
                 char rawStr[3];
@@ -1355,18 +1354,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     (pendingGolayBytes[1] << 12) |
                     (pendingGolayBytes[2] << 6) |
                     pendingGolayBytes[3];
-                
+                encodedInput &= 0x7FFFFF;
                 fprintf(stderr, "encoded input: %x\n", encodedInput);
-                
-                // Golay encoded bytes have an upper limit.
-                if (encodedInput > 0x7FFFFF) 
-                {
-                    // Likely lost sync. Resynchronize using the 3 remaining bytes
-                    // to save time.
-                    g_txtSync = false;
-                    break;
-                }
-                
+                                
                 int rawOutput = golay23_decode(encodedInput) >> 11;
                 pendingGolayBytes.pop_front();
                 pendingGolayBytes.pop_front();
@@ -1384,33 +1374,28 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 convert_ota_string_to_callsign(rawStr, decodedStr);
                 fprintf(stderr, "decoded str: %s\n", decodedStr);
 
-                if (decodedStr[0] == 0x7F && decodedStr[1] == 0x7F)
-                {
-                    // Sync characters; ignore.
+                if (decodedStr[0] == '\r' || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
+                {                        
+                    // CR completes line
+                    *m_pcallsign = 0;
+                    m_pcallsign = m_callsign;
                 }
-                else
+                else if (decodedStr[0] != '\0' && decodedStr[0] != 0x7F)
                 {
-                    if (decodedStr[0] == '\r' || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
-                    {                        
-                        // CR completes line
-                        *m_pcallsign = 0;
-                        m_pcallsign = m_callsign;
-                    }
-                    else 
-                    {
-                        *m_pcallsign++ = decodedStr[0];
-                    }
-                    
-                    if (decodedStr[1] == '\r' || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
-                    {
-                        // CR completes line
-                        *m_pcallsign = 0;
-                        m_pcallsign = m_callsign;
-                    }
-                    else
-                    {
-                        *m_pcallsign++ = decodedStr[1];
-                    }
+                    // Ignore nulls and sync characters.
+                    *m_pcallsign++ = decodedStr[0];
+                }
+                
+                if (decodedStr[1] == '\r' || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
+                {
+                    // CR completes line
+                    *m_pcallsign = 0;
+                    m_pcallsign = m_callsign;
+                }
+                else if (decodedStr[1] != '\0' && decodedStr[1] != 0x7F)
+                {
+                    // Ignore nulls and sync characters.
+                    *m_pcallsign++ = decodedStr[1];
                 }
             }
         }
