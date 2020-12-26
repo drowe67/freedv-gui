@@ -3166,6 +3166,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             wxMessageBox(wxString("Microphone permissions must be granted to FreeDV for it to function properly."), wxT("Error"), wxOK | wxICON_ERROR, this);
         }
 
+        // Clear existing TX text, if any.
+        codec2_fifo_destroy(g_txDataInFifo);
+        g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*VARICODE_MAX_BITS);
+        
         // attempt to start PTT ......
         wxGetApp().m_pskReporter = NULL;
         if (wxGetApp().m_boolHamlibUseForPTT)
