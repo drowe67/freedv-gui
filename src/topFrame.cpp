@@ -72,23 +72,19 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
         tools->Append(m_menuItemPlugIn);
     }
 
-    wxMenuItem* m_menuItemPlayFileToMicIn;
-    m_menuItemPlayFileToMicIn = new wxMenuItem(tools, wxID_ANY, wxString(_("Start/Stop Play File - Mic In...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemPlayFileToMicIn = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Play File - Mic In...")) , wxEmptyString, wxITEM_NORMAL);
     g_playFileToMicInEventId = m_menuItemPlayFileToMicIn->GetId();
     tools->Append(m_menuItemPlayFileToMicIn);
 
-    wxMenuItem* m_menuItemRecFileFromRadio;
-    m_menuItemRecFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start/Stop Record File - From Radio...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemRecFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Record File - From Radio...")) , wxEmptyString, wxITEM_NORMAL);
     g_recFileFromRadioEventId = m_menuItemRecFileFromRadio->GetId();
     tools->Append(m_menuItemRecFileFromRadio);
 
-    wxMenuItem* m_menuItemRecFileFromModulator;
-    m_menuItemRecFileFromModulator = new wxMenuItem(tools, wxID_ANY, wxString(_("Start/Stop Record File - From Modulator...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemRecFileFromModulator = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Record File - From Modulator...")) , wxEmptyString, wxITEM_NORMAL);
     g_recFileFromModulatorEventId = m_menuItemRecFileFromModulator->GetId();
     tools->Append(m_menuItemRecFileFromModulator);
 
-    wxMenuItem* m_menuItemPlayFileFromRadio;
-    m_menuItemPlayFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start/Stop Play File - From Radio...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemPlayFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Play File - From Radio...")) , wxEmptyString, wxITEM_NORMAL);
     g_playFileFromRadioEventId = m_menuItemPlayFileFromRadio->GetId();
     tools->Append(m_menuItemPlayFileFromRadio);
     m_menubarMain->Append(tools, _("&Tools"));

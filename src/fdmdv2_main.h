@@ -547,6 +547,11 @@ class MainFrame : public TopFrame
     float                   ds_rx_time;
     void DetectSyncProcessEvent(void);
 
+        void StopPlayFileToMicIn(void);
+        void StopPlaybackFileFromRadio();
+        void StopRecFileFromModulator();
+        void StopRecFileFromRadio();
+        
     protected:
 
         void setsnrBeta(bool snrSlow);
@@ -577,7 +582,6 @@ class MainFrame : public TopFrame
         void OnToolsPlugInCfgUI( wxUpdateUIEvent& event );
 
         void OnPlayFileToMicIn( wxCommandEvent& event );
-        void StopPlayFileToMicIn(void);
         void OnRecFileFromRadio( wxCommandEvent& event );
         void OnRecFileFromModulator( wxCommandEvent& event);
         void OnPlayFileFromRadio( wxCommandEvent& event );

@@ -2229,11 +2229,15 @@ static wxWindow* createMyExtraPlayFilePanel(wxWindow *parent)
 
 void MainFrame::StopPlayFileToMicIn(void)
 {
-    g_mutexProtectingCallbackData.Lock();
-    g_playFileToMicIn = false;
-    sf_close(g_sfPlayFile);
-    SetStatusText(wxT(""));
-    g_mutexProtectingCallbackData.Unlock();
+    if (g_playFileToMicIn)
+    {
+        g_mutexProtectingCallbackData.Lock();
+        g_playFileToMicIn = false;
+        sf_close(g_sfPlayFile);
+        SetStatusText(wxT(""));
+        m_menuItemPlayFileToMicIn->SetItemLabel(wxString(_("Start Play File - Mic In...")));
+        g_mutexProtectingCallbackData.Unlock();
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -2301,7 +2305,20 @@ void MainFrame::OnPlayFileToMicIn(wxCommandEvent& event)
 
         SetStatusText(wxT("Playing File: ") + fileName + wxT(" to Mic Input") , 0);
         g_playFileToMicIn = true;
+        
+        m_menuItemPlayFileToMicIn->SetItemLabel(wxString(_("Stop Play File - Mic In...")));
     }
+}
+
+void MainFrame::StopPlaybackFileFromRadio()
+{
+    g_mutexProtectingCallbackData.Lock();
+    g_playFileFromRadio = false;
+    sf_close(g_sfPlayFileFromRadio);
+    SetStatusText(wxT(""),0);
+    SetStatusText(wxT(""),1);
+    m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Start Play File - From Radio...")));
+    g_mutexProtectingCallbackData.Unlock();
 }
 
 //-------------------------------------------------------------------------
@@ -2317,12 +2334,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
     if (g_playFileFromRadio)
     {
         fprintf(stderr, "OnPlayFileFromRadio:: Stop\n");
-        g_mutexProtectingCallbackData.Lock();
-        g_playFileFromRadio = false;
-        sf_close(g_sfPlayFileFromRadio);
-        SetStatusText(wxT(""),0);
-        SetStatusText(wxT(""),1);
-        g_mutexProtectingCallbackData.Unlock();
+        StopPlaybackFileFromRadio();
     }
     else
     {
@@ -2390,6 +2402,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
             SetStatusText(wxT("raw file assuming Fs=") + stringnumber, 1);
         }
         fprintf(stderr, "OnPlayFileFromRadio:: Playing File Fs = %d\n", (int)sfInfo.samplerate);
+        m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Stop Play File - From Radio...")));
         g_playFileFromRadio = true;
         g_blink = 0.0;
     }
@@ -2415,6 +2428,25 @@ static wxWindow* createMyExtraRecFilePanel(wxWindow *parent)
     return new MyExtraRecFilePanel(parent);
 }
 
+void MainFrame::StopRecFileFromRadio()
+{
+    if (g_recFileFromRadio)
+    {
+        fprintf(stderr, "Stopping Record....\n");
+        g_mutexProtectingCallbackData.Lock();
+        g_recFileFromRadio = false;
+        sf_close(g_sfRecFile);
+        SetStatusText(wxT(""));
+        
+        m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Start Record File - From Radio...")));
+        
+        wxMessageBox(wxT("Recording radio output to file complete")
+                     , wxT("Recording radio Output"), wxOK);
+        
+        g_mutexProtectingCallbackData.Unlock();
+    }
+}
+
 //-------------------------------------------------------------------------
 // OnRecFileFromRadio()
 //-------------------------------------------------------------------------
@@ -2423,12 +2455,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
     wxUnusedVar(event);
 
     if (g_recFileFromRadio) {
-        fprintf(stderr, "Stopping Record....\n");
-        g_mutexProtectingCallbackData.Lock();
-        g_recFileFromRadio = false;
-        sf_close(g_sfRecFile);
-        SetStatusText(wxT(""));
-        g_mutexProtectingCallbackData.Unlock();
+        StopRecFileFromRadio();
     }
     else {
 
@@ -2527,9 +2554,27 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         }
 
         SetStatusText(wxT("Recording File: ") + fileName + wxT(" From Radio") , 0);
+        m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Stop Record File - From Radio...")));
         g_recFileFromRadio = true;
     }
 
+}
+
+void MainFrame::StopRecFileFromModulator()
+{
+    // If the event loop takes a while to execute, we may end up being called
+    // multiple times. We don't want to repeat the following more than once.
+    if (g_recFileFromModulator) {
+        g_mutexProtectingCallbackData.Lock();
+        g_recFileFromModulator = false;
+        g_recFromModulatorSamples = 0;
+        sf_close(g_sfRecFileFromModulator);
+        SetStatusText(wxT(""));
+        m_menuItemRecFileFromModulator->SetItemLabel(wxString(_("Start Record File - From Modulator...")));
+        wxMessageBox(wxT("Recording modulator output to file complete")
+                     , wxT("Recording Modulation Output"), wxOK);
+        g_mutexProtectingCallbackData.Unlock();
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -2540,13 +2585,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
     wxUnusedVar(event);
 
     if (g_recFileFromModulator) {
-        g_mutexProtectingCallbackData.Lock();
-        g_recFileFromModulator = false;
-        sf_close(g_sfRecFileFromModulator);
-        SetStatusText(wxT(""));
-        g_mutexProtectingCallbackData.Unlock();
-        wxMessageBox(wxT("Recording modulator output to file complete")
-                     , wxT("Recording Modulation Output"), wxOK);
+        StopRecFileFromModulator();
     }
     else {
 
@@ -2650,7 +2689,8 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
             return;
         }
 
-        SetStatusText(wxT("Recording File: ") + fileName + wxT(" From Radio") , 0);
+        SetStatusText(wxT("Recording File: ") + fileName + wxT(" From Modulator") , 0);
+        m_menuItemRecFileFromModulator->SetItemLabel(wxString(_("Stop Record File - From Modulator...")));
         g_recFileFromModulator = true;
     }
 
@@ -4187,9 +4227,8 @@ void txRxProcessing()
             //printf("g_recFromRadioSamples: %d  n8k: %d \n", g_recFromRadioSamples);
             if (g_recFromRadioSamples < (unsigned)nfreedv) {
                 sf_write_short(g_sfRecFile, infreedv, g_recFromRadioSamples);
-                wxCommandEvent event( wxEVT_COMMAND_MENU_SELECTED, g_recFileFromRadioEventId );
                 // call stop/start record menu item, should be thread safe
-                g_parent->GetEventHandler()->AddPendingEvent( event );
+                g_parent->CallAfter(&MainFrame::StopRecFileFromRadio);
                 g_recFromRadioSamples = 0;
             }
             else {
@@ -4213,9 +4252,7 @@ void txRxProcessing()
                     sf_seek(g_sfPlayFileFromRadio, 0, SEEK_SET);
                 else {
                     printf("playFileFromRadio finished, issuing event!\n");
-                    wxCommandEvent event( wxEVT_COMMAND_MENU_SELECTED, g_playFileFromRadioEventId );
-                    // call stop/start play menu item, should be thread safe
-                    g_parent->GetEventHandler()->AddPendingEvent( event );
+                    g_parent->CallAfter(&MainFrame::StopPlaybackFileFromRadio);
                 }
             }
         }
@@ -4405,9 +4442,8 @@ void txRxProcessing()
                     if (g_loopPlayFileToMicIn)
                         sf_seek(g_sfPlayFile, 0, SEEK_SET);
                     else {
-                        wxCommandEvent event( wxEVT_COMMAND_MENU_SELECTED, g_playFileToMicInEventId );
                         // call stop/start play menu item, should be thread safe
-                        g_parent->GetEventHandler()->AddPendingEvent( event );
+                        g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
                     }
                 }
             }
@@ -4472,12 +4508,10 @@ void txRxProcessing()
             if (g_recFileFromModulator && (g_sfRecFileFromModulator != NULL)) {
                 if (g_recFromModulatorSamples < nfreedv) {
                     sf_write_short(g_sfRecFileFromModulator, outfreedv, g_recFromModulatorSamples);  // try infreedv to bypass codec and modem, was outfreedv
-                     wxCommandEvent event( wxEVT_COMMAND_MENU_SELECTED, g_recFileFromModulatorEventId );
-                    // call stop/start record menu item, should be thread safe
-                    g_parent->GetEventHandler()->AddPendingEvent( event );
-                    g_recFromModulatorSamples = 0;
-                    g_recFileFromModulator = false;
-                    sf_close(g_sfRecFileFromModulator);
+                    
+                    // call stop record menu item, should be thread safe
+                    g_parent->CallAfter(&MainFrame::StopRecFileFromModulator);
+                    
                     wxPrintf("write mod output to file complete\n", g_recFromModulatorSamples);  // consider a popup
                 }
                 else {
