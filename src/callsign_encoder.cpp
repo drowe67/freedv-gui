@@ -21,8 +21,14 @@ void CallsignEncoder::setCallsign(const char* callsign)
     memset(&truncCallsign_, 0, MAX_CALLSIGN);
     memset(&callsign_, 0, MAX_CALLSIGN/2);
     
-    memcpy(callsign_, callsign, strlen(callsign) + 1);
-    convert_callsign_to_ota_string_(callsign_, translatedCallsign_);
+    memcpy(&callsign_, callsign, strlen(callsign) + 1);
+    convert_callsign_to_ota_string_(callsign_, &translatedCallsign_[2]);
+    
+    unsigned char crc = calculateCRC8_((char*)&translatedCallsign_[2], strlen(&translatedCallsign_[2]));
+    unsigned char crcDigit1 = crc >> 4;
+    unsigned char crcDigit2 = crc & 0xF;
+    convertDigitToASCII_(&translatedCallsign_[0], crcDigit1);
+    convertDigitToASCII_(&translatedCallsign_[1], crcDigit2);
     
     int truncIndex = 0;
     for(int index = 0; index < strlen(translatedCallsign_); index += 2, truncIndex += 4)
@@ -54,7 +60,6 @@ void CallsignEncoder::pushReceivedByte(char incomingChar)
         if (pendingGolayBytes_.size() >= 4)
         {
             // Minimum number of characters received to begin attempting sync.
-            //fprintf(stderr, "pending bytes: 0 = %x, 1 = %x, 2 = %x, 3 = %x\n", pendingGolayBytes[0], pendingGolayBytes[1], pendingGolayBytes[2], pendingGolayBytes[3]);
             unsigned int encodedInput =
                 (pendingGolayBytes_[pendingGolayBytes_.size() - 4] << 18) |
                 (pendingGolayBytes_[pendingGolayBytes_.size() - 3] << 12) |
@@ -137,6 +142,25 @@ void CallsignEncoder::pushReceivedByte(char incomingChar)
     }
 }
 
+bool CallsignEncoder::isCallsignValid() const
+{
+    if (strlen(receivedCallsign_) <= 2)
+    {
+        return false;
+    }
+    
+    // Retrieve received CRC and calculate the CRC from the other received text.
+    unsigned char receivedCRC = convertHexStringToDigit_((char*)&receivedCallsign_[0]);
+    
+    char buf[MAX_CALLSIGN];
+    memset(&buf, 0, MAX_CALLSIGN);
+    convert_callsign_to_ota_string_(&receivedCallsign_[2], &buf[0]);
+    unsigned char calcCRC = calculateCRC8_((char*)&buf, strlen(&buf[0]));
+    
+    // Return true if both are equal.
+    return receivedCRC == calcCRC;
+}
+
 // 6 bit character set for text field use:
 // 0: ASCII null
 // 1-9: ASCII 38-47
@@ -146,7 +170,7 @@ void CallsignEncoder::pushReceivedByte(char incomingChar)
 // 48: ASCII '\r'
 // 48-62: TBD/for future use.
 // 63: sync (2x in a 2 byte block indicates sync)
-void CallsignEncoder::convert_callsign_to_ota_string_(const char* input, char* output)
+void CallsignEncoder::convert_callsign_to_ota_string_(const char* input, char* output) const
 {
     int outidx = 0;
     for (int index = 0; index < strlen(input); index++)
@@ -227,4 +251,74 @@ void CallsignEncoder::convert_ota_string_to_callsign_(const char* input, char* o
         }
     }
     output[outidx] = 0;
+}
+
+unsigned char CallsignEncoder::calculateCRC8_(char* input, int length) const
+{
+    unsigned char generator = 0x1D;
+    unsigned char crc = 0; /* start with 0 so first byte can be 'xored' in */
+
+    while (length > 0)
+    {
+        unsigned char ch = *input++;
+        length--;
+
+        // Ignore 6-bit carriage return and sync characters.
+        if (ch == 63 || ch == 48) continue;
+        
+        crc ^= ch; /* XOR-in the next input byte */
+        
+        for (int i = 0; i < 8; i++)
+        {
+            if ((crc & 0x80) != 0)
+            {
+                crc = (unsigned char)((crc << 1) ^ generator);
+            }
+            else
+            {
+                crc <<= 1;
+            }
+        }
+    }
+
+    return crc;
+}
+
+void CallsignEncoder::convertDigitToASCII_(char* dest, unsigned char digit)
+{
+    if (digit >= 0 && digit <= 9)
+    {
+        *dest = digit + 10; // using 6 bit character set defined above.
+    }
+    else if (digit >= 0xA && digit <= 0xF)
+    {
+        *dest = (digit - 0xA) + 20; // using 6 bit character set defined above.
+    }
+    else
+    {
+        // Should not reach here.
+        *dest = 10;
+    }
+}
+
+unsigned char CallsignEncoder::convertHexStringToDigit_(char* src) const
+{
+    unsigned char ret = 0;
+    for (int i = 0; i < 2; i++)
+    {
+        ret <<= 4;
+        unsigned char temp = 0;
+        if (*src >= '0' && *src <= '9')
+        {
+            temp = *src - '0';
+        }
+        else if (*src >= 'A' && *src <= 'F')
+        {
+            temp = *src - 'A' + 0xA;
+        }
+        ret |= temp;
+        src++;
+    }
+    
+    return ret;
 }

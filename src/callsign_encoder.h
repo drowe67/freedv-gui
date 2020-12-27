@@ -19,7 +19,8 @@ public:
     void clearReceivedText();
     void pushReceivedByte(char byte);
     bool isInSync() const { return textInSync_; }
-    const char* getReceivedText() const { return &receivedCallsign_[0]; }
+    bool isCallsignValid() const;
+    const char* getReceivedText() const { return &receivedCallsign_[2]; }
     
 private:
     std::deque<unsigned char> pendingGolayBytes_;
@@ -32,8 +33,12 @@ private:
     char receivedCallsign_[MAX_CALLSIGN];
     char* pReceivedCallsign_;
     
-    void convert_callsign_to_ota_string_(const char* input, char* output);
+    void convert_callsign_to_ota_string_(const char* input, char* output) const;
     void convert_ota_string_to_callsign_(const char* input, char* output);
+    
+    unsigned char calculateCRC8_(char* input, int length) const;
+    void convertDigitToASCII_(char* dest, unsigned char digit);
+    unsigned char convertHexStringToDigit_(char* src) const;
 };
 
 #endif // CALLSIGN_ENCODER_H
