@@ -89,7 +89,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     // Rx In -----------------------------------------------------------------------
 
     wxStaticBoxSizer* sbSizer2;
-    sbSizer2 = new wxStaticBoxSizer(new wxStaticBox(m_panelRx, wxID_ANY, _("From Radio To Computer")), wxHORIZONTAL);
+    sbSizer2 = new wxStaticBoxSizer(new wxStaticBox(m_panelRx, wxID_ANY, _("Input To Computer From Radio")), wxHORIZONTAL);
 
     wxBoxSizer* bSizer811a = new wxBoxSizer(wxVERTICAL);
 
@@ -119,7 +119,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     // Rx Out -----------------------------------------------------------------------
 
     wxStaticBoxSizer* sbSizer3;
-    sbSizer3 = new wxStaticBoxSizer(new wxStaticBox(m_panelRx, wxID_ANY, _("From Computer To Speaker/Headphones")), wxHORIZONTAL);
+    sbSizer3 = new wxStaticBoxSizer(new wxStaticBox(m_panelRx, wxID_ANY, _("Output From Computer To Speaker/Headphones")), wxHORIZONTAL);
 
     wxBoxSizer* bSizer81a = new wxBoxSizer(wxVERTICAL);
 
@@ -162,7 +162,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     // Tx In ----------------------------------------------------------------------------------
 
     wxStaticBoxSizer* sbSizer22;
-    sbSizer22 = new wxStaticBoxSizer(new wxStaticBox(m_panelTx, wxID_ANY, _("From Microphone To Computer")), wxHORIZONTAL);
+    sbSizer22 = new wxStaticBoxSizer(new wxStaticBox(m_panelTx, wxID_ANY, _("Input From Microphone To Computer")), wxHORIZONTAL);
 
     wxBoxSizer* bSizer83a = new wxBoxSizer(wxVERTICAL);
 
@@ -191,7 +191,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     // Tx Out ----------------------------------------------------------------------------------
 
     wxStaticBoxSizer* sbSizer21;
-    sbSizer21 = new wxStaticBoxSizer(new wxStaticBox(m_panelTx, wxID_ANY, _("From Computer To Radio")), wxHORIZONTAL);
+    sbSizer21 = new wxStaticBoxSizer(new wxStaticBox(m_panelTx, wxID_ANY, _("Output From Computer To Radio")), wxHORIZONTAL);
 
     wxBoxSizer* bSizer82a = new wxBoxSizer(wxVERTICAL);
 
