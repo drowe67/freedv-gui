@@ -183,26 +183,19 @@ and your radio.
 If you are really stuck, download Hamlib and test your radio's PTT
 using the command line ```rigctl``` program.
 
-### PSK Reporter Reporting (Experimental)
+### PSK Reporter (Experimental)
 
-FreeDV has the ability to report signals that are heard to [PSK Reporter](https://pskreporter.info/)
-by enabling the option in Tools->Options and specifying your callsign and grid square. This allows 
-people to see how far their signal reaches and the received signal's SNR. When enabled, this causes
-FreeDV to ignore any supplied content in the text field and only transmit the provided callsign using
-Golary(23, 12) encoding. 
+FreeDV has the ability to send FreeDV signal reports to [PSK Reporter](https://pskreporter.info/)
+by enabling the option in Tools->Options and specifying your callsign and grid square. When enabled, this causes
+FreeDV to disable the free form **Txt Msg** field and only transmit the **Callsign** and **Gridsquare** fields.
 
-On receipt, FreeDV also validates the CRC8 of the received callsign before submitting a position report
-to PSK Reporter. This is to ensure that FreeDV does not report invalid callsigns to the service (e.g. 
-ones that don't exist or that correspond to real non-FreeDV users). However, all received text will display
-in the main window regardless of if it can be decoded. This may result in potentially valid decodes not
-being reported. 
+FreeDV validates the received information before submitting a position report to PSK Reporter. This is to ensure that FreeDV does not report invalid callsigns to the service (e.g. ones that don't exist or that correspond to real non-FreeDV users). However, all received text will display in the main window even if it has errors.
 
 Reports sent to PSK Reporter will display using the mode "FREEDV" for ease of filtering. The user's 
 current mode (e.g. 700D, 1600, etc.) will also appear in the "Using" field when hovering over or 
-clicking/tapping on a reception report.
+clicking on a reception report.
 
-Note that Hamlib must be enabled if using PSK Reporter reporting as the latter requires being able to read
-your radio's VFO frequency. A message will appear on pushing Start if this is not the case.
+Note that Hamlib must be enabled so PSK Reporter can read your radio's frequency. A message will appear on pushing Start if this is not the case.
 
 ### Changing COM Port On Windows
 
