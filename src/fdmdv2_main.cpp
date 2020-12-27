@@ -537,7 +537,6 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 
     wxGetApp().m_callSign = pConfig->Read("/Data/CallSign", wxT(""));
     wxGetApp().m_textEncoding = pConfig->Read("/Data/TextEncoding", 1);
-    wxGetApp().m_enable_checksum = pConfig->Read("/Data/EnableChecksumOnMsgRx", f);
 
     wxGetApp().m_events = pConfig->Read("/Events/enable", f);
     wxGetApp().m_events_spam_timer = (int)pConfig->Read(wxT("/Events/spam_timer"), 10);
@@ -820,7 +819,6 @@ MainFrame::~MainFrame()
 
         pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
         pConfig->Write(wxT("/Data/TextEncoding"), wxGetApp().m_textEncoding);
-        pConfig->Write(wxT("/Data/EnableChecksumOnMsgRx"), wxGetApp().m_enable_checksum);
         pConfig->Write(wxT("/Events/enable"), wxGetApp().m_events);
         pConfig->Write(wxT("/Events/spam_timer"), wxGetApp().m_events_spam_timer);
         pConfig->Write(wxT("/Events/regexp_match"), wxGetApp().m_events_regexp_match);
@@ -1972,11 +1970,6 @@ void MainFrame::OnCallSignReset(wxCommandEvent& event)
     wxString s;
     s.Printf("%s", m_callsign);
     m_txtCtrlCallSign->SetValue(s);
-#ifdef __UDP__EXPERIMENTAL__
-    m_checksumGood = m_checksumBad = 0;
-    m_txtChecksumGood->SetLabel(_("0"));
-    m_txtChecksumBad->SetLabel(_("0"));
-#endif
 }
 
 
@@ -3015,14 +3008,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         m_pcallsign = m_callsign;
         memset(m_callsign, 0, sizeof(m_callsign));
-#ifdef __UDP_EXPERIMENTAL__
-        m_checksumGood = m_checksumBad = 0;
-        wxString s;
-        s.Printf("%d", m_checksumGood);
-        m_txtChecksumGood->SetLabel(s);
-        s.Printf("%d", m_checksumBad);
-        m_txtChecksumBad->SetLabel(s);
-#endif
 
         m_maxLevel = 0;
         m_textLevel->SetLabel(wxT(""));

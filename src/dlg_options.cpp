@@ -197,9 +197,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_encoding->Add(m_rb_textEncoding2, 0, wxALIGN_LEFT|wxALL, 1);
 #endif
 
-    m_ckboxEnableChecksum = new wxCheckBox(this, wxID_ANY, _("Use Checksum on Rx"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_encoding->Add(m_ckboxEnableChecksum, 0, wxALIGN_LEFT, 0);
-
     bSizer30->Add(sbSizer_encoding,0, wxALL|wxEXPAND, 3);
  
     //------------------------------
@@ -519,7 +516,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         if (wxGetApp().m_textEncoding == 2)
             m_rb_textEncoding2->SetValue(true);
 #endif
-        m_ckboxEnableChecksum->SetValue(wxGetApp().m_enable_checksum);
 #endif
 
         m_ckboxFreeDV700txClip->SetValue(wxGetApp().m_FreeDV700txClip);
@@ -616,7 +612,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         if (m_rb_textEncoding2->GetValue())
             wxGetApp().m_textEncoding = 2;
 #endif
-        wxGetApp().m_enable_checksum = m_ckboxEnableChecksum->GetValue();
 #endif
 
         wxGetApp().m_udp_enable     = m_ckbox_udp_enable->GetValue();
@@ -657,7 +652,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 #ifdef SHORT_VARICODE
             pConfig->Write(wxT("/Data/TextEncoding"), wxGetApp().m_textEncoding);
 #endif
-            pConfig->Write(wxT("/Data/EnableChecksumOnMsgRx"), wxGetApp().m_enable_checksum);
 
             pConfig->Write(wxT("/Events/enable"), wxGetApp().m_events);
             pConfig->Write(wxT("/Events/spam_timer"), wxGetApp().m_events_spam_timer);

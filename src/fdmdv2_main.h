@@ -223,7 +223,6 @@ class MainApp : public wxApp
         bool                m_events;
         int                 m_events_spam_timer;
         unsigned int        m_textEncoding;
-        bool                m_enable_checksum;
         wxString            m_events_regexp_match;
         wxString            m_events_regexp_replace;
 
@@ -634,8 +633,6 @@ class MainFrame : public TopFrame
         // Callsign/text messaging
         char        m_callsign[MAX_CALLSIGN];
         char       *m_pcallsign;
-        unsigned int m_checksumGood;
-        unsigned int m_checksumBad;
         
         // Events
         void        processTxtEvent(char event[]);

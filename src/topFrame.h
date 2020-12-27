@@ -91,8 +91,6 @@ class TopFrame : public wxFrame
         wxButton*     m_BtnCallSignReset;
         wxTextCtrl*   m_txtCtrlCallSign;
         wxStaticText* m_txtModeStatus;
-        wxStaticText* m_txtChecksumGood;
-        wxStaticText* m_txtChecksumBad;
 
         wxSlider* m_sliderSQ;
         wxCheckBox* m_ckboxSQ;
