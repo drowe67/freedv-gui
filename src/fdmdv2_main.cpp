@@ -316,7 +316,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     #endif
 
 
-    SetMinSize(wxSize(400,400));
+    SetMinSize(wxSize(400,695));
 
     // Init Hamlib library, but we dont start talking to any rigs yet
 

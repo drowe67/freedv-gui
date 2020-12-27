@@ -191,7 +191,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     //------------------------------
     wxStaticBoxSizer* levelSizer;
     levelSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Level")), wxVERTICAL);
-
+    
     m_textLevel = new wxStaticText(this, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(60,-1), wxALIGN_CENTRE);
     m_textLevel->SetForegroundColour(wxColour(255,0,0));
     levelSizer->Add(m_textLevel, 0, wxALIGN_LEFT, 1);
@@ -496,7 +496,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     this->SetSizer(bSizer1);
     this->Layout();
     m_statusBar1 = this->CreateStatusBar(3, wxST_SIZEGRIP, wxID_ANY);
-
+    
     //=====================================================
     // End of layout
     //=====================================================
