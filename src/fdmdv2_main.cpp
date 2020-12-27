@@ -2294,6 +2294,9 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         // add the loop check box
         openFileDialog.SetExtraControlCreator(&createMyExtraRecFilePanel);
 
+        // Default to WAV.
+        openFileDialog.SetFilterIndex(0);
+        
         if(openFileDialog.ShowModal() == wxID_CANCEL)
         {
             return;     // the user changed their mind...
@@ -2430,6 +2433,9 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
         // add the loop check box
         openFileDialog.SetExtraControlCreator(&createMyExtraRecFilePanel);
 
+        // Default to WAV.
+        openFileDialog.SetFilterIndex(0);
+        
         if(openFileDialog.ShowModal() == wxID_CANCEL)
         {
             return;     // the user changed their mind...
