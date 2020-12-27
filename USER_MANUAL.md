@@ -41,11 +41,11 @@ computer.
 
 1. Open the *Tools - Audio Config* Dialog
 1. At the bottom select *Receive* Tab
-1. In *From Radio To Computer* select your default sound input device (usually at the top)
-1. In the *From Computer To Speaker/Headphone* window select your default sound output device (usually at the top)
+1. In *Input To Computer From Radio* select your default sound input device (usually at the top)
+1. In the *Output From Computer To Speaker/Headphones* window select your default sound output device (usually at the top)
 1. At the bottom select *Transmit* Tab
-1. In *From Microphone* window select *none*
-1. In *To Radio* window select *none*
+1. In *Input From Microphone To Computer* window select *none*
+1. In *Output From Computer To Radio* window select *none*
 1. Press OK to close the dialog
 
 When you press Start FreeDV will start decoding any incoming signals
@@ -89,10 +89,10 @@ your radio for transmission over the air.
 
 Tab | Sound Device | Notes
 --- | --- | ---
-Receive Tab | From Radio To Computer | The off air FreeDV signal **from** your radio rig interface to your computer
-Receive Tab | From Computer To Speaker/Headphone | The decoded audio from your computer to your Speaker/headphones
-Transmit Tab | From Microphone to Computer | Your voice from the microphone to your computer
-Transmit Tab | From Computer To Radio | The FreeDV signal from your computer sent **to** your radio rig interface for transmission
+Receive Tab | Input To Computer From Radio | The off air FreeDV signal **from** your radio rig interface to your computer
+Receive Tab | Output From Computer To Speaker/Headphones | The decoded audio from your computer to your Speaker/headphones
+Transmit Tab | Input From Microphone To Computer | Your voice from the microphone to your computer
+Transmit Tab | Output From Computer To Radio | The FreeDV signal from your computer sent **to** your radio rig interface for transmission
 
 ### Changing Audio Devices
 
