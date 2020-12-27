@@ -187,7 +187,7 @@ using the command line ```rigctl``` program.
 
 FreeDV has the ability to send FreeDV signal reports to [PSK Reporter](https://pskreporter.info/)
 by enabling the option in Tools->Options and specifying your callsign and grid square. When enabled, this causes
-FreeDV to disable the free form **Txt Msg** field and only transmit the **Callsign** and **Gridsquare** fields.
+FreeDV to disable the free form **Txt Msg** field and only transmit the **Callsign** field.
 
 FreeDV validates the received information before submitting a position report to PSK Reporter. This is to ensure that FreeDV does not report invalid callsigns to the service (e.g. ones that don't exist or that correspond to real non-FreeDV users). However, all received text will display in the main window even if it has errors.
 
