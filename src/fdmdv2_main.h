@@ -97,6 +97,7 @@
 #include "hamlib.h"
 #include "serialport.h" 
 #include "pskreporter.h"
+#include "callsign_encoder.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -292,6 +293,7 @@ class MainApp : public wxApp
         wxString            m_psk_grid_square;
 
         PskReporter*            m_pskReporter;
+        CallsignEncoder*        m_callsignEncoder;
         std::string         m_pskPendingCallsign;
         char                m_pskPendingSnr;
         

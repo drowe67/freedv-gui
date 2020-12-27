@@ -50,8 +50,8 @@ set(FREEDV_SOURCES
     osx_interface.h
     pskreporter.cpp
     pskreporter.h
-    hamming_code.cpp
-    hamming_code.h
+    callsign_encoder.cpp
+    callsign_encoder.h
 )
 
 set(FREEDV_SOURCES_OSX

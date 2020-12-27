@@ -25,6 +25,7 @@
 #include "fdmdv2_main.h"
 #include "osx_interface.h"
 #include "golay23.h"
+#include "callsign_encoder.h"
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
@@ -921,101 +922,6 @@ void MainFrame::OnIdle(wxIdleEvent &evt) {
 
 
 #ifdef _USE_TIMER
-// 6 bit character set for text field use:
-// 0: ASCII null
-// 1-9: ASCII 38-47
-// 10-19: ASCII '0'-'9'
-// 20-46: ASCII 'A'-'Z'
-// 47: ASCII ' '
-// 48: ASCII '\r'
-// 48-62: TBD/for future use.
-// 63: sync (2x in a 2 byte block indicates sync)
-static void convert_callsign_to_ota_string(const char* input, char* output)
-{
-    int outidx = 0;
-    for (int index = 0; index < strlen(input); index++)
-    {
-        bool addSync = false;
-        if (input[index] >= 38 && input[index] <= 47)
-        {
-            output[outidx++] = input[index] - 37;
-        }
-        else if (input[index] >= '0' && input[index] <= '9')
-        {
-            output[outidx++] = input[index] - '0' + 10;
-        }
-        else if (input[index] >= 'A' && input[index] <= 'Z')
-        {
-            output[outidx++] = input[index] - 'A' + 20;
-        }
-        else if (input[index] >= 'a' && input[index] <= 'z')
-        {
-            output[outidx++] = toupper(input[index]) - 'A' + 20;
-        }
-        else if (input[index] == '\r')
-        {
-            output[outidx++] = 48;
-            addSync = true;
-        }
-        else
-        {
-            // Invalid characters become spaces. We also add up to three sync
-            // characters (63) to the end depending on the current length.
-            output[outidx++] = 47;
-            addSync = true;
-        }
-        
-        if (addSync)
-        {
-            if (outidx % 2)
-            {
-                output[outidx++] = 63;
-            }
-            output[outidx++] = 63;
-            output[outidx++] = 63;
-        }
-    }
-    output[outidx] = 0;
-}
-
-static void convert_ota_string_to_callsign(const char* input, char* output)
-{
-    int outidx = 0;
-    for (int index = 0; index < strlen(input); index++)
-    {
-        if (input[index] >= 1 && input[index] <= 9)
-        {
-            output[outidx++] = input[index] + 37;
-        }
-        else if (input[index] >= 10 && input[index] <= 19)
-        {
-            output[outidx++] = input[index] - 10 + '0';
-        }
-        else if (input[index] >= 20 && input[index] <= 46)
-        {
-            output[outidx++] = input[index] - 20 + 'A';
-        }
-        else if (input[index] == 48)
-        {
-            output[outidx++] = '\r';
-        }
-        else if (input[index] == 63)
-        {
-            // Use ASCII 0x7F to signify sync. The caller will need to strip this out.
-            output[outidx++] = 0x7F;
-        }
-        else
-        {
-            // Invalid characters become spaces. 
-            output[outidx++] = ' ';
-        }
-    }
-    output[outidx] = 0;
-}
-
-bool g_txtSync = false;
-std::deque<unsigned char> pendingGolayBytes;
-
 //----------------------------------------------------------------
 // OnTimer()
 //
@@ -1220,8 +1126,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     if (g_State) {
         if (g_prev_State == 0) {
             g_resyncs++;
-            g_txtSync = false;
-            pendingGolayBytes.clear();
+            if (wxGetApp().m_callsignEncoder) wxGetApp().m_callsignEncoder->clearReceivedText();
             
             // Clear RX text to reduce the incidence of incorrect callsigns extracted with
             // the PSK Reporter callsign extraction logic.
@@ -1252,46 +1157,38 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     // send Callsign ----------------------------------------------------
 
-    char callsign[MAX_CALLSIGN/2];
-    char translatedCallsign[MAX_CALLSIGN];
-    unsigned char truncCallsign[MAX_CALLSIGN];
+    char callsign[MAX_CALLSIGN];
     
     // Convert to 6 bit character set for use with Golay encoding.
-    memset(callsign, 0, MAX_CALLSIGN/2);
-    strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN/2 - 2);
-    if (strlen(callsign) < MAX_CALLSIGN/2 - 1)
-    {
-        strncat(callsign, "\r", 1);
-    }    
-    convert_callsign_to_ota_string(callsign, translatedCallsign);
-    //fprintf(stderr, "OTA string: %s\n", translatedCallsign);
+    memset(callsign, 0, MAX_CALLSIGN);
     
-    //fprintf(stderr, "trunc callsign: %s\n", truncCallsign);
-    
-    int truncIndex = 0;
-    for(int index = 0; index < strlen(translatedCallsign); index += 2, truncIndex += 4)
+    if (wxGetApp().m_callsignEncoder)
     {
-        // Encode the character as four bytes with parity bits.
-        int inputRaw = ((translatedCallsign[index] & 0x3F) << 6) | (translatedCallsign[index+1] & 0x3F);
-        unsigned int outputEncoding = golay23_encode(inputRaw) & 0x7FFFFF;
-        truncCallsign[truncIndex] = (unsigned int)(outputEncoding >> 18) & 0x3F;
-        truncCallsign[truncIndex + 1] = (unsigned int)(outputEncoding >> 12) & 0x3F;
-        truncCallsign[truncIndex + 2] = (unsigned int)(outputEncoding >> 6) & 0x3F;
-        truncCallsign[truncIndex + 3] = (unsigned int)outputEncoding & 0x3F;
-        
-        //fprintf(stderr, "trc: 0 = %x, 1 = %x\n", translatedCallsign[index], translatedCallsign[index+1]);
-        //fprintf(stderr, "output encoding: %x, tc1: %x, tc2: %x, tc3: %x, tc4: %x\n", outputEncoding, truncCallsign[truncIndex], truncCallsign[truncIndex + 1], truncCallsign[truncIndex + 2], truncCallsign[truncIndex + 3]);
+        strncpy(callsign, (const char*) wxGetApp().m_psk_callsign.mb_str(wxConvUTF8), MAX_CALLSIGN/2 - 2);
+        if (strlen(callsign) < MAX_CALLSIGN/2 - 1)
+        {
+            strncat(callsign, "\r", 1);
+        }    
+        wxGetApp().m_callsignEncoder->setCallsign(&callsign[0]);
     }
-    
+    else
+    {
+        strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
+        if (strlen(callsign) < MAX_CALLSIGN - 1)
+        {
+            strncat(callsign, "\r", 1);
+        }    
+    }   
+     
     // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
-
-    if ((unsigned)codec2_fifo_used(g_txDataInFifo) < truncIndex) {
+    char* sendBuffer = &callsign[0];
+    if (wxGetApp().m_callsignEncoder) sendBuffer = (char*)wxGetApp().m_callsignEncoder->getEncodedCallsign();
+    if ((unsigned)codec2_fifo_used(g_txDataInFifo) < strlen(sendBuffer)) {
         unsigned int  i;
 
         // write chars to tx data fifo
-
-        for(i = 0; i < truncIndex; i++) {
-            short ashort = (unsigned char)truncCallsign[i];
+        for(i = 0; i < strlen(sendBuffer); i++) {
+            short ashort = (unsigned char)sendBuffer[i];
             codec2_fifo_write(g_txDataInFifo, &ashort, 1);
         }
     }
@@ -1302,105 +1199,29 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     while (codec2_fifo_read(g_rxDataOutFifo, &ashort, 1) == 0) {
         unsigned char incomingChar = (unsigned char)ashort;
         
-        // If we're not in sync, we should look for a space to establish sync.
-        pendingGolayBytes.push_back(incomingChar);
-        if (!g_txtSync)
+        if (wxGetApp().m_callsignEncoder)
         {
-            if (pendingGolayBytes.size() >= 4)
+            wxGetApp().m_callsignEncoder->pushReceivedByte(incomingChar);    
+            if (wxGetApp().m_callsignEncoder->isInSync())
             {
-                // Minimum number of characters received to begin attempting sync.
-                //fprintf(stderr, "pending bytes: 0 = %x, 1 = %x, 2 = %x, 3 = %x\n", pendingGolayBytes[0], pendingGolayBytes[1], pendingGolayBytes[2], pendingGolayBytes[3]);
-                unsigned int encodedInput =
-                    (pendingGolayBytes[pendingGolayBytes.size() - 4] << 18) |
-                    (pendingGolayBytes[pendingGolayBytes.size() - 3] << 12) |
-                    (pendingGolayBytes[pendingGolayBytes.size() - 2] << 6) |
-                    pendingGolayBytes[pendingGolayBytes.size() - 1];
-                //pendingGolayBytes.pop_front();
-                //fprintf(stderr, "encoded input: %x\n", encodedInput);
-                
-                encodedInput &= 0x7FFFFF;                
-                int rawOutput = golay23_decode(encodedInput) >> 11;
-                //fprintf(stderr, "raw output: %x\n", rawOutput);
-                char rawStr[3];
-                char decodedStr[3];
-                
-                rawStr[0] = ((unsigned int)rawOutput) >> 6;
-                rawStr[1] = ((unsigned int)rawOutput) & 0x3F;
-                rawStr[2] = 0;
-                
-                //fprintf(stderr, "rawStr: 0 = %x, 1 = %x\n", rawStr[0], rawStr[1]);
-                
-                convert_ota_string_to_callsign(rawStr, decodedStr);
-                //fprintf(stderr, "decoded str: %s\n", decodedStr);
-                if (decodedStr[0] == 0x7F && decodedStr[1] == 0x7F)
-                {
-                    g_txtSync = true;
-                    fprintf(stderr, "text now in sync\n");
-                    //pendingGolayBytes.clear();
-                    while ((pendingGolayBytes.size() % 4) > 0)
-                    {
-                        pendingGolayBytes.pop_front();
-                    }
-                }
-            }
+                m_txtCtrlCallSign->SetValue(wxGetApp().m_callsignEncoder->getReceivedText());
+            }        
         }
         else
         {
-            while (pendingGolayBytes.size() >= 4)
-            {
-                // Minimum number of characters received.
-                int encodedInput =
-                    (pendingGolayBytes[0] << 18) |
-                    (pendingGolayBytes[1] << 12) |
-                    (pendingGolayBytes[2] << 6) |
-                    pendingGolayBytes[3];
-                encodedInput &= 0x7FFFFF;
-                fprintf(stderr, "encoded input: %x\n", encodedInput);
-                                
-                int rawOutput = golay23_decode(encodedInput) >> 11;
-                pendingGolayBytes.pop_front();
-                pendingGolayBytes.pop_front();
-                pendingGolayBytes.pop_front();
-                pendingGolayBytes.pop_front();
-                char rawStr[3];
-                char decodedStr[3];
-                
-                rawStr[0] = ((unsigned int)rawOutput) >> 6;
-                rawStr[1] = ((unsigned int)rawOutput) & 0x3F;
-                rawStr[2] = 0;
-                
-                fprintf(stderr, "rawStr: 0 = %x, 1 = %x\n", rawStr[0], rawStr[1]);
-                
-                convert_ota_string_to_callsign(rawStr, decodedStr);
-                fprintf(stderr, "decoded str: %s\n", decodedStr);
-
-                if (decodedStr[0] == '\r' || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
-                {                        
-                    // CR completes line
-                    *m_pcallsign = 0;
-                    m_pcallsign = m_callsign;
-                }
-                else if (decodedStr[0] != '\0' && decodedStr[0] != 0x7F)
-                {
-                    // Ignore nulls and sync characters.
-                    *m_pcallsign++ = decodedStr[0];
-                }
-                
-                if (decodedStr[1] == '\r' || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
-                {
-                    // CR completes line
-                    *m_pcallsign = 0;
-                    m_pcallsign = m_callsign;
-                }
-                else if (decodedStr[1] != '\0' && decodedStr[1] != 0x7F)
-                {
-                    // Ignore nulls and sync characters.
-                    *m_pcallsign++ = decodedStr[1];
-                }
+            // Pre-1.5.1 behavior, where text is handled as-is.
+            if (incomingChar == '\r' || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
+            {                        
+                // CR completes line
+                *m_pcallsign = 0;
+                m_pcallsign = m_callsign;
             }
+            else
+            {
+                *m_pcallsign++ = incomingChar;
+            }
+            m_txtCtrlCallSign->SetValue(m_callsign);
         }
-        
-        if (g_txtSync) m_txtCtrlCallSign->SetValue(m_callsign);
     }
 
     // We should only report to PSK Reporter when all of the following are true:
@@ -2714,6 +2535,12 @@ void MainFrame::OnExit(wxCommandEvent& event)
         wxGetApp().m_pskReporter = NULL;
     }
     
+    if (wxGetApp().m_callsignEncoder)
+    {
+        delete wxGetApp().m_callsignEncoder;
+        wxGetApp().m_callsignEncoder = NULL;
+    }
+    
     //fprintf(stderr, "MainFrame::OnExit\n");
     wxUnusedVar(event);
 #ifdef _USE_TIMER
@@ -2952,6 +2779,7 @@ bool MainFrame::OpenHamlibRig() {
         }
         else
         {
+            wxGetApp().m_callsignEncoder = new CallsignEncoder();
             wxGetApp().m_pskReporter = new PskReporter(
                 wxGetApp().m_psk_callsign.ToStdString(), 
                 wxGetApp().m_psk_grid_square.ToStdString(),
@@ -2970,13 +2798,16 @@ bool MainFrame::OpenHamlibRig() {
             {
                 wxMessageBox("Couldn't connect to PSK Reporter server. Reporting functionality will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
                 delete wxGetApp().m_pskReporter;
+                delete wxGetApp().m_callsignEncoder;
                 wxGetApp().m_pskReporter = NULL;
+                wxGetApp().m_callsignEncoder = NULL;
             }
         }
     }
     else
     {
         wxGetApp().m_pskReporter = NULL;
+        wxGetApp().m_callsignEncoder = NULL;
     }
     
     return status;
@@ -3212,6 +3043,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         
         // attempt to start PTT ......
         wxGetApp().m_pskReporter = NULL;
+        wxGetApp().m_callsignEncoder = NULL;
         if (wxGetApp().m_boolHamlibUseForPTT)
             OpenHamlibRig();
         if (wxGetApp().m_boolUseSerialPTT) {
@@ -3266,6 +3098,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             wxGetApp().m_pskReporter = NULL;
         }
 
+        if (wxGetApp().m_callsignEncoder)
+        {
+            delete wxGetApp().m_callsignEncoder;
+            wxGetApp().m_callsignEncoder = NULL;
+        }
+        
         if (wxGetApp().m_boolUseSerialPTT) {
             CloseSerialPort();
         }
