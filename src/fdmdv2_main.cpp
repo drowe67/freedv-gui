@@ -3044,6 +3044,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         wxGetApp().m_callsignEncoder = NULL;
         if (wxGetApp().m_boolHamlibUseForPTT)
             OpenHamlibRig();
+        else if (wxGetApp().m_psk_enable)
+        {
+            wxMessageBox("Hamlib support must be enabled to report to PSK Reporter. PSK Reporter reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+        }
+        
         if (wxGetApp().m_boolUseSerialPTT) {
             OpenSerialPort();
         }
