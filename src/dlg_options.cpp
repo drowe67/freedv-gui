@@ -64,6 +64,30 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     bSizer30->Add(sbSizer_callSign,0, wxALL|wxEXPAND, 3);
  
+    //----------------------------------------------------------
+    // PSK Reporter 
+    //----------------------------------------------------------
+
+    wxStaticBoxSizer* sbSizer_psk;
+    wxStaticBox* sb_psk = new wxStaticBox(this, wxID_ANY, _("PSK Reporter"));
+    sbSizer_psk = new wxStaticBoxSizer(sb_psk, wxHORIZONTAL);
+    m_ckbox_psk_enable = new wxCheckBox(this, wxID_ANY, _("Enable Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_psk->Add(m_ckbox_psk_enable, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+    
+    wxStaticText* labelPskCallsign = new wxStaticText(this, wxID_ANY, wxT("Callsign: "), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_psk->Add(labelPskCallsign, 0,  wxRIGHT | wxALIGN_CENTER_VERTICAL, 3);
+    
+    m_txt_callsign = new wxTextCtrl(this, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    sbSizer_psk->Add(m_txt_callsign, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+    
+    wxStaticText* labelPskGridSquare = new wxStaticText(this, wxID_ANY, wxT("Grid Square: "), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_psk->Add(labelPskGridSquare, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 3);
+    
+    m_txt_grid_square = new wxTextCtrl(this, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(70,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    sbSizer_psk->Add(m_txt_grid_square, 0,  wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+    
+    bSizer30->Add(sbSizer_psk,0, wxALL|wxEXPAND, 3);
+    
     //----------------------------------------------------------------------
     // Voice Keyer 
     //----------------------------------------------------------------------
@@ -294,30 +318,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_udp->Add(m_btn_udp_test, 0,  wxALIGN_LEFT, 5);
 
     bSizer30->Add(sbSizer_udp,0, wxALL|wxEXPAND, 3);
-
-    //----------------------------------------------------------
-    // PSK Reporter 
-    //----------------------------------------------------------
-
-    wxStaticBoxSizer* sbSizer_psk;
-    wxStaticBox* sb_psk = new wxStaticBox(this, wxID_ANY, _("PSK Reporter"));
-    sbSizer_psk = new wxStaticBoxSizer(sb_psk, wxHORIZONTAL);
-    m_ckbox_psk_enable = new wxCheckBox(this, wxID_ANY, _("Enable Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_psk->Add(m_ckbox_psk_enable, 0,  0, 5);
-    
-    wxStaticText* labelPskCallsign = new wxStaticText(this, wxID_ANY, wxT("Callsign: "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
-    sbSizer_psk->Add(labelPskCallsign, 0, 0, 1);
-    
-    m_txt_callsign = new wxTextCtrl(this, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
-    sbSizer_psk->Add(m_txt_callsign, 0, 0, 1);
-    
-    wxStaticText* labelPskGridSquare = new wxStaticText(this, wxID_ANY, wxT("Grid Square: "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
-    sbSizer_psk->Add(labelPskGridSquare, 0, 0, 1);
-    
-    m_txt_grid_square = new wxTextCtrl(this, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(70,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
-    sbSizer_psk->Add(m_txt_grid_square, 0, 0, 1);
-    
-    bSizer30->Add(sbSizer_psk,0, wxALL|wxEXPAND, 3);
     
     //----------------------------------------------------------
     // FIFO and PortAudio under/overflow counters used for debug
