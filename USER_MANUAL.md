@@ -187,16 +187,22 @@ using the command line ```rigctl``` program.
 
 FreeDV has the ability to report signals that are heard to [PSK Reporter](https://pskreporter.info/)
 by enabling the option in Tools->Options and specifying your callsign and grid square. This allows 
-people to see how far their signal reaches and the received signal's SNR. This is extremely 
-experimental and depends on being able to adequately decode the callsign from the received text; nothing
-will be reported if the person transmitting does not transmit any text (e.g. if they're using a SM1000
-or leave the "Txt Msg" field empty) or if the user's callsign is not in the text. Note that Hamlib must 
-also be enabled if using PSK Reporter reporting as the latter requires being able to read your radio's 
-VFO frequency.
+people to see how far their signal reaches and the received signal's SNR. When enabled, this causes
+FreeDV to ignore any supplied content in the text field and only transmit the provided callsign using
+Golary(23, 12) encoding. 
+
+On receipt, FreeDV also validates the CRC8 of the received callsign before submitting a position report
+to PSK Reporter. This is to ensure that FreeDV does not report invalid callsigns to the service (e.g. 
+ones that don't exist or that correspond to real non-FreeDV users). However, all received text will display
+in the main window regardless of if it can be decoded. This may result in potentially valid decodes not
+being reported. 
 
 Reports sent to PSK Reporter will display using the mode "FREEDV" for ease of filtering. The user's 
 current mode (e.g. 700D, 1600, etc.) will also appear in the "Using" field when hovering over or 
 clicking/tapping on a reception report.
+
+Note that Hamlib must be enabled if using PSK Reporter reporting as the latter requires being able to read
+your radio's VFO frequency. A message will appear on pushing Start if this is not the case.
 
 ### Changing COM Port On Windows
 
