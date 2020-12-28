@@ -92,6 +92,14 @@ class OptionsDlg : public wxDialog
 
         wxCheckBox* m_ckHalfDuplex;
 
+        wxNotebook  *m_notebook;
+        wxNotebookPage *m_reportingTab; // txt msg/PSK Reporter
+        wxNotebookPage *m_keyerTab; // Voice Keyer
+        wxNotebookPage *m_modemTab; // 700/OFDM/duplex
+        wxNotebookPage *m_simulationTab; // testing/interference
+        wxNotebookPage *m_interfacingTab; // UDP
+        wxNotebookPage *m_debugTab; // Debug
+        
         /* Voice Keyer */
 
         wxButton     *m_buttonChooseVoiceKeyerWaveFile;
