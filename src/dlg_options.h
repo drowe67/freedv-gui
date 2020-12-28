@@ -85,6 +85,8 @@ class OptionsDlg : public wxDialog
         void    OnFifoReset(wxCommandEvent& event);
         void    OnUDPTest(wxCommandEvent& event);
         
+        void    OnPSKReporterEnable(wxScrollEvent& event);
+        
         wxTextCtrl   *m_txtCtrlCallSign; // TODO: this should be renamed to tx_txtmsg, and rename all related incl persis strge
 
         wxCheckBox* m_ckHalfDuplex;
@@ -158,6 +160,7 @@ class OptionsDlg : public wxDialog
         void OnChooseVoiceKeyerWaveFile(wxCommandEvent& event);
 
      private:
+         void updatePSKReporterState();
 };
 
 #endif // __OPTIONS_DIALOG__

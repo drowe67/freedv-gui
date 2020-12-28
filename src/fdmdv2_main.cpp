@@ -1226,8 +1226,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     // a) The callsign encoder indicates a valid callsign has been received.
     // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
     // c) We don't currently have a pending report to add to the outbound list for the active callsign.
-    // When the above is true, capture the callsign and current SNR and save it in a temporary location.
-    // Once sync is lost, add to the PSK Reporter object's outbound list.
+    // When the above is true, capture the callsign and current SNR and add to the PSK Reporter object's outbound list.
     if (wxGetApp().m_pskReporter != NULL && wxGetApp().m_callsignEncoder != NULL)
     {
         time_t currTime = time(0);
