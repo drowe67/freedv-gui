@@ -1629,6 +1629,9 @@ void MainFrame::togglePTT(void) {
         // enable sync text
 
         m_textSync->Enable();
+        
+        // Reenable On/Off button.
+        m_togBtnOnOff->Enable(true);
     }
     else
     {
@@ -1643,6 +1646,9 @@ void MainFrame::togglePTT(void) {
 #ifdef __UDP_EXPERIMENTAL__
         char e[80]; sprintf(e,"ptt"); processTxtEvent(e);
 #endif
+        
+        // Disable On/Off button.
+        m_togBtnOnOff->Enable(false);
     }
 
     g_tx = m_btnTogPTT->GetValue();
@@ -3041,6 +3047,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
     if (startStop.IsSameAs("Stop") || !m_RxRunning ) {
         fprintf(stderr, "Stop .....\n");
+        
         //
         // Stop Running -------------------------------------------------
         //
