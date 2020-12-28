@@ -383,6 +383,8 @@ void ComPortsDlg::ExchangeData(int inout)
         m_ckRTSPos->SetValue(wxGetApp().m_boolRTSPos);
         m_rbUseDTR->SetValue(wxGetApp().m_boolUseDTR);
         m_ckDTRPos->SetValue(wxGetApp().m_boolDTRPos);
+        
+        updateControlState();
     }
 
     if (inout == EXCHANGE_DATA_OUT) {
@@ -447,6 +449,7 @@ void ComPortsDlg::ExchangeData(int inout)
 void ComPortsDlg::PTTUseHamLibClicked(wxCommandEvent& event)
 {
     m_ckUseSerialPTT->SetValue(false);
+    updateControlState();
 }
 
 
@@ -572,6 +575,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
 void ComPortsDlg::PTTUseSerialClicked(wxCommandEvent& event)
 {
     m_ckUseHamlibPTT->SetValue(false);
+    updateControlState();
 }
 
 //-------------------------------------------------------------------------
@@ -622,4 +626,20 @@ void ComPortsDlg::OnOK(wxCommandEvent& event)
 {
     ExchangeData(EXCHANGE_DATA_OUT);
     this->EndModal(wxID_OK);
+}
+
+void ComPortsDlg::updateControlState()
+{
+    m_cbRigName->Enable(m_ckUseHamlibPTT->GetValue());
+    m_cbSerialPort->Enable(m_ckUseHamlibPTT->GetValue());
+    m_cbSerialRate->Enable(m_ckUseHamlibPTT->GetValue());
+    m_tcIcomCIVHex->Enable(m_ckUseHamlibPTT->GetValue());
+    
+    m_cbCtlDevicePath->Enable(m_ckUseSerialPTT->GetValue());
+    m_rbUseDTR->Enable(m_ckUseSerialPTT->GetValue());
+    m_ckRTSPos->Enable(m_ckUseSerialPTT->GetValue());
+    m_rbUseRTS->Enable(m_ckUseSerialPTT->GetValue());
+    m_ckDTRPos->Enable(m_ckUseSerialPTT->GetValue());
+    
+    m_buttonTest->Enable(m_ckUseHamlibPTT->GetValue() || m_ckUseSerialPTT->GetValue());    
 }
