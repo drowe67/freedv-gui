@@ -170,18 +170,25 @@ Hamlib comes with a default serial rate for each radio.  If your radio
 has a different serial rate change the Serial Rate drop down box to
 match your radio.
 
-If using an Icom radio, Hamlib will use the radio's default CI-V address
-when connecting. If this has been changed, you can specify the correct
-address in the "Radio Address" field (valid values are 00 through FF
-in hexadecimal). Note that "00" is the "wildcard" CI-V address and will
-also work if there are no other Icom/CI-V capable devices in the chain.
-
 When **Test** is pressed, the "Serial Params" field is populated and
 displayed.  This will help track down any mismatches between Hamlib
 and your radio.
 
 If you are really stuck, download Hamlib and test your radio's PTT
 using the command line ```rigctl``` program.
+
+#### Icom Radio Configuration
+
+If using an Icom radio, Hamlib will use the radio's default CI-V address
+when connecting. If this has been changed, you can specify the correct
+address in the "Radio Address" field (valid values are 00 through FF
+in hexadecimal). 
+
+Note that "00" is the "wildcard" CI-V address. Your radio have the 
+"CI-V Transceive" option enabled in order for it to respond to commands
+to that address. Otherwise, FreeDV must be configured to use the same
+CI-V address as configured in the radio. For best results, ensure that
+there are no other Icom/CI-V capable devices in the chain if "00" is used.
 
 ### PSK Reporter (Experimental)
 
@@ -227,6 +234,15 @@ This can be challenging the first time around:
 1. If you don't know anyone local, ask for help on the digital voice
 mailing list.  Be specific about the hardware you have and the exact
 nature of your problem.
+
+### Hamlib does not work with my Icom radio
+
+The most common issue with Icom radios is that the CI-V address configured
+in FreeDV does not match the address configured in the radio. Ensure that
+the CI-V address in both FreeDV and on the radio are the same. If "00" is
+used on the FreeDV side, ensure that the "CI-V Transceive" option is enabled
+on the radio or else the radio will not respond to requests directed to that
+address.
 
 ### I need help with my radio or rig interface
 
