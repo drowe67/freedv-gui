@@ -71,7 +71,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBoxSizer* sbSizer_psk;
     wxStaticBox* sb_psk = new wxStaticBox(this, wxID_ANY, _("PSK Reporter"));
     sbSizer_psk = new wxStaticBoxSizer(sb_psk, wxHORIZONTAL);
-    m_ckbox_psk_enable = new wxCheckBox(this, wxID_ANY, _("Enable Reporting (Ignores Txt Msg)"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckbox_psk_enable = new wxCheckBox(this, wxID_ANY, _("Enable Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_psk->Add(m_ckbox_psk_enable, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
     
     wxStaticText* labelPskCallsign = new wxStaticText(this, wxID_ANY, wxT("Callsign: "), wxDefaultPosition, wxDefaultSize, 0);
@@ -425,6 +425,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_BtnFifoReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
     m_btn_udp_test->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnUDPTest), NULL, this);
 
+    m_ckbox_psk_enable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnPSKReporterEnable), NULL, this);
+    
     event_in_serial = 0;
     event_out_serial = 0;
 }
@@ -457,6 +459,8 @@ OptionsDlg::~OptionsDlg()
 #ifdef __WXMSW__
     m_ckboxDebugConsole->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnDebugConsole), NULL, this);
 #endif
+    
+    m_ckbox_psk_enable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnPSKReporterEnable), NULL, this);
 }
 
 
@@ -535,6 +539,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckbox_psk_enable->SetValue(wxGetApp().m_psk_enable);
         m_txt_callsign->SetValue(wxGetApp().m_psk_callsign);
         m_txt_grid_square->SetValue(wxGetApp().m_psk_grid_square);
+        
+        updatePSKReporterState();
     }
 
     if(inout == EXCHANGE_DATA_OUT)
@@ -826,6 +832,26 @@ void OptionsDlg::OnUDPTest(wxCommandEvent& event)
     UDPSend(wxGetApp().m_udp_port, s, strlen(s)+1);
 }
 
+void OptionsDlg::updatePSKReporterState()
+{
+    if (m_ckbox_psk_enable->GetValue())
+    {
+        m_txtCtrlCallSign->Enable(false);
+        m_txt_callsign->Enable(true);
+        m_txt_grid_square->Enable(true);
+    }
+    else
+    {
+        m_txtCtrlCallSign->Enable(true);
+        m_txt_callsign->Enable(false);
+        m_txt_grid_square->Enable(false);
+    }    
+}
+
+void OptionsDlg::OnPSKReporterEnable(wxScrollEvent& event)
+{
+    updatePSKReporterState();
+}
 
 void OptionsDlg::DisplayFifoPACounters() {
     char fifo_counters[256];
