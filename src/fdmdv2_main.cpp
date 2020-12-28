@@ -1736,7 +1736,7 @@ int MainFrame::VoiceKeyerStartTx(void)
 
 void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
     int next_state = vk_state;
-
+    
     switch(vk_state) {
 
     case VK_IDLE:
@@ -2045,6 +2045,7 @@ void MainFrame::StopPlayFileToMicIn(void)
         SetStatusText(wxT(""));
         m_menuItemPlayFileToMicIn->SetItemLabel(wxString(_("Start Play File - Mic In...")));
         g_mutexProtectingCallbackData.Unlock();
+        VoiceKeyerProcessEvent(VK_PLAY_FINISHED);
     }
 }
 
@@ -2057,7 +2058,6 @@ void MainFrame::OnPlayFileToMicIn(wxCommandEvent& event)
 
     if(g_playFileToMicIn) {
         StopPlayFileToMicIn();
-        VoiceKeyerProcessEvent(VK_PLAY_FINISHED);
     }
     else
     {
