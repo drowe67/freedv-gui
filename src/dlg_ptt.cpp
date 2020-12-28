@@ -634,8 +634,12 @@ void ComPortsDlg::updateControlState()
     m_cbSerialPort->Enable(m_ckUseHamlibPTT->GetValue());
     m_cbSerialRate->Enable(m_ckUseHamlibPTT->GetValue());
     m_tcIcomCIVHex->Enable(m_ckUseHamlibPTT->GetValue());
-    
+
+#if defined(__WXOSX__) || defined(__WXGTK__)
     m_cbCtlDevicePath->Enable(m_ckUseSerialPTT->GetValue());
+#elif defined(__WXMSW__)
+    m_listCtrlPorts->Enable(m_ckUseSerialPTT->GetValue());
+#endif // OSX || GTK
     m_rbUseDTR->Enable(m_ckUseSerialPTT->GetValue());
     m_ckRTSPos->Enable(m_ckUseSerialPTT->GetValue());
     m_rbUseRTS->Enable(m_ckUseSerialPTT->GetValue());
