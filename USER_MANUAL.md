@@ -184,11 +184,12 @@ when connecting. If this has been changed, you can specify the correct
 address in the "Radio Address" field (valid values are 00 through FF
 in hexadecimal). 
 
-Note that "00" is the "wildcard" CI-V address. Your radio have the 
+Note that "00" is the "wildcard" CI-V address. Your radio must have the 
 "CI-V Transceive" option enabled in order for it to respond to commands
 to that address. Otherwise, FreeDV must be configured to use the same
 CI-V address as configured in the radio. For best results, ensure that
-there are no other Icom/CI-V capable devices in the chain if "00" is used.
+there are no other Icom/CI-V capable devices in the chain if 
+"00"/"CI-V Transceive" is used.
 
 ### PSK Reporter (Experimental)
 
