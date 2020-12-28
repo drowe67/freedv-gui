@@ -2277,7 +2277,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
                                     this,
                                     wxT("Record File From Radio"),
                                     wxGetApp().m_recFileFromRadioPath,
-                                    wxEmptyString,
+                                    wxT("Untitled.wav"),
                                     wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
                                     wxT("All files (*.*)|*.*"),
                                     wxFD_SAVE
@@ -2416,7 +2416,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
                                     this,
                                     wxT("Record File From Modulator"),
                                     wxGetApp().m_recFileFromModulatorPath,
-                                    wxEmptyString,
+                                    wxT("Untitled.wav"),
                                     wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
                                     wxT("All files (*.*)|*.*"),
                                     wxFD_SAVE
