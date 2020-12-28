@@ -386,6 +386,8 @@ void FilterDlg::ExchangeData(int inout, bool storePersistent)
         m_SpkOutEnable->SetValue(wxGetApp().m_SpkOutEQEnable);
 
         plotSpkOutFilterSpectrum();
+        
+        updateControlState();
     }
     if(inout == EXCHANGE_DATA_OUT)
     {
@@ -580,10 +582,12 @@ void FilterDlg::setGamma(void) {
 
 void FilterDlg::OnEnable(wxScrollEvent& event) {
     setCodec2();
+    updateControlState();
 }
 
 void FilterDlg::OnBassBoost(wxScrollEvent& event) {
     setCodec2();
+    updateControlState();
 }
 
 void FilterDlg::OnBetaScroll(wxScrollEvent& event) {
@@ -611,13 +615,46 @@ void FilterDlg::On700C_EQ(wxScrollEvent& event) {
     }
 }
 
+void FilterDlg::updateControlState()
+{
+    m_MicInBass.sliderFreq->Enable(wxGetApp().m_MicInEQEnable);
+    m_MicInBass.sliderGain->Enable(wxGetApp().m_MicInEQEnable);
+    
+    m_MicInMid.sliderFreq->Enable(wxGetApp().m_MicInEQEnable);
+    m_MicInMid.sliderGain->Enable(wxGetApp().m_MicInEQEnable);
+    m_MicInMid.sliderQ->Enable(wxGetApp().m_MicInEQEnable);
+    
+    m_MicInTreble.sliderFreq->Enable(wxGetApp().m_MicInEQEnable);
+    m_MicInTreble.sliderGain->Enable(wxGetApp().m_MicInEQEnable);
+    
+    m_MicInDefault->Enable(wxGetApp().m_MicInEQEnable);
+    
+    m_SpkOutBass.sliderFreq->Enable(wxGetApp().m_SpkOutEQEnable);
+    m_SpkOutBass.sliderGain->Enable(wxGetApp().m_SpkOutEQEnable);
+    
+    m_SpkOutMid.sliderFreq->Enable(wxGetApp().m_SpkOutEQEnable);
+    m_SpkOutMid.sliderGain->Enable(wxGetApp().m_SpkOutEQEnable);
+    m_SpkOutMid.sliderQ->Enable(wxGetApp().m_SpkOutEQEnable);
+    
+    m_SpkOutTreble.sliderFreq->Enable(wxGetApp().m_SpkOutEQEnable);
+    m_SpkOutTreble.sliderGain->Enable(wxGetApp().m_SpkOutEQEnable);
+    
+    m_SpkOutDefault->Enable(wxGetApp().m_SpkOutEQEnable);
+    
+    m_codec2LPCPostFilterBeta->Enable(m_codec2LPCPostFilterEnable->GetValue());
+    m_codec2LPCPostFilterBassBoost->Enable(m_codec2LPCPostFilterEnable->GetValue());
+    m_codec2LPCPostFilterGamma->Enable(m_codec2LPCPostFilterEnable->GetValue());
+    m_LPCPostFilterDefault->Enable(m_codec2LPCPostFilterEnable->GetValue());
+}
+
 void FilterDlg::OnMicInEnable(wxScrollEvent& event) {
     wxGetApp().m_MicInEQEnable = m_MicInEnable->GetValue();
+    updateControlState();
 }
 
 void FilterDlg::OnSpkOutEnable(wxScrollEvent& event) {
     wxGetApp().m_SpkOutEQEnable = m_SpkOutEnable->GetValue();
-    //printf("wxGetApp().m_SpkOutEQEnable: %d\n", wxGetApp().m_SpkOutEQEnable);
+    updateControlState();
 }
 
 void FilterDlg::setFreq(EQ *eq)

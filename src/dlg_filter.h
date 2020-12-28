@@ -180,7 +180,8 @@ class FilterDlg : public wxDialog
  
         bool          *m_newMicInFilter;
         bool          *m_newSpkOutFilter;
-
+private:
+        void updateControlState();
 };
 
 #endif // __FILTER_DIALOG__
