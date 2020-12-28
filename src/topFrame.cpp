@@ -147,13 +147,10 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     m_textSync = new wxStaticText(this, wxID_ANY, wxT("Modem"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
     sbSizer3_33->Add(m_textSync, 0, wxALIGN_CENTER_HORIZONTAL, 1);
 
-    m_textInterleaverSync = new wxStaticText(this, wxID_ANY, wxT("Interleaver"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
-    sbSizer3_33->Add(m_textInterleaverSync, 0, wxALIGN_CENTER_HORIZONTAL , 1);
     m_textSync->Disable();
 
     m_BtnReSync = new wxButton(this, wxID_ANY, _("ReSync"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer3_33->Add(m_BtnReSync, 0, wxALIGN_CENTRE , 1);
-    m_textInterleaverSync->Disable();
 
     leftSizer->Add(sbSizer3_33,0, wxALL|wxEXPAND, 3);
 

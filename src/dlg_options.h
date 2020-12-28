@@ -113,7 +113,6 @@ class OptionsDlg : public wxDialog
         wxCheckBox   *m_ckboxFreeDV700txClip;
         wxCheckBox   *m_ckboxFreeDV700txBPF;
         wxCheckBox   *m_ckboxFreeDV700Combine;
-        wxTextCtrl   *m_txtInterleave;
         wxCheckBox   *m_ckboxFreeDV700ManualUnSync;
         
         wxCheckBox   *m_ckboxPhaseEstBW;

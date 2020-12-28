@@ -558,7 +558,6 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_FreeDV700txClip = (float)pConfig->Read(wxT("/FreeDV700/txClip"), t);
     wxGetApp().m_FreeDV700txBPF = (float)pConfig->Read(wxT("/FreeDV700/txBPF"), t);
     wxGetApp().m_FreeDV700Combine = 1;
-    wxGetApp().m_FreeDV700Interleave = (int)pConfig->Read(wxT("/FreeDV700/interleave"), 1);
     wxGetApp().m_FreeDV700ManualUnSync = (float)pConfig->Read(wxT("/FreeDV700/manualUnSync"), f);
 
     wxGetApp().m_PhaseEstBW = (float)pConfig->Read(wxT("/OFDM/PhaseEstBW"), f);
@@ -1143,15 +1142,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 	m_textSync->SetLabel("Modem");
      }
     g_prev_State = g_State;
-    if ((g_mode == FREEDV_MODE_700D) || (g_mode == FREEDV_MODE_700E) || (g_mode == FREEDV_MODE_2020)){
-        if (g_interleaverSyncState) {
-            m_textInterleaverSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
-            m_textInterleaverSync->SetLabel("Intrlvr ("+wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave)+")");
-        } else {
-            m_textInterleaverSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
-            m_textInterleaverSync->SetLabel("Intrlvr ("+wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave)+")");
-        }
-    }
 
     // send Callsign ----------------------------------------------------
 
@@ -1639,7 +1629,6 @@ void MainFrame::togglePTT(void) {
         // enable sync text
 
         m_textSync->Enable();
-        m_textInterleaverSync->Enable();
     }
     else
     {
@@ -1650,7 +1639,6 @@ void MainFrame::togglePTT(void) {
         // disable sync text
 
         m_textSync->Disable();
-        m_textInterleaverSync->Disable();
 
 #ifdef __UDP_EXPERIMENTAL__
         char e[80]; sprintf(e,"ptt"); processTxtEvent(e);
@@ -2845,7 +2833,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_rbPlugIn->Disable();
 
         m_textSync->Enable();
-        m_textInterleaverSync->Enable();
 
         // determine what mode we are using
 
@@ -2894,7 +2881,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             assert(g_horus_src != NULL);
 
             m_textSync->Disable();
-            m_textInterleaverSync->SetLabel("");
             g_modemInbufferSize = (int)(FRAME_DURATION * horus_get_Fs(g_horus));
         }
 #endif
@@ -2915,9 +2901,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             if ((g_mode == FREEDV_MODE_700D) || (g_mode == FREEDV_MODE_700E) || (g_mode == FREEDV_MODE_2020)) {
                 // 700D has some init time stuff so treat it special
                 struct freedv_advanced adv;
-                adv.interleave_frames = wxGetApp().m_FreeDV700Interleave;
                 g_pfreedv = freedv_open_advanced(g_mode, &adv);
-                m_textInterleaverSync->SetLabel("Intrlvr ("+wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave)+")");
                 if (wxGetApp().m_FreeDV700ManualUnSync) {
                     freedv_set_sync(g_pfreedv, FREEDV_SYNC_MANUAL);
                 } else {
@@ -2925,7 +2909,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 }
             } else {
                 g_pfreedv = freedv_open(g_mode);
-                m_textInterleaverSync->SetLabel("");
             }
 
             // Codec 2 VQ Equaliser
@@ -3130,7 +3113,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_newMicInFilter = m_newSpkOutFilter = true;
 
         m_textSync->Disable();
-        m_textInterleaverSync->Disable();
 
         m_togBtnSplit->Disable();
         m_togBtnAnalog->Disable();

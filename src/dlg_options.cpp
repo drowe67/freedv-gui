@@ -127,10 +127,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_ckboxFreeDV700txClip = new wxCheckBox(this, wxID_ANY, _("Clipping"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700txClip, 0, wxALIGN_LEFT, 0);
-    m_ckboxFreeDV700Combine = new wxCheckBox(this, wxID_ANY, _("700C Diversity Combine  700D Interleaver:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDV700Combine = new wxCheckBox(this, wxID_ANY, _("700C Diversity Combine"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700Combine, 0, wxALIGN_LEFT, 0);
-    m_txtInterleave = new wxTextCtrl(this, wxID_ANY,  wxString("1"), wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    sbSizer_freedv700->Add(m_txtInterleave, 0, wxALIGN_CENTRE_VERTICAL, 0);
     m_ckboxFreeDV700txBPF = new wxCheckBox(this, wxID_ANY, _(" 700D Tx Band Pass Filter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700txBPF, 0, wxALIGN_LEFT, 0);
 
@@ -525,7 +523,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxFreeDV700txClip->SetValue(wxGetApp().m_FreeDV700txClip);
         m_ckboxFreeDV700txBPF->SetValue(wxGetApp().m_FreeDV700txBPF);
         m_ckboxFreeDV700Combine->SetValue(wxGetApp().m_FreeDV700Combine);
-        m_txtInterleave->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave));
         m_ckboxFreeDV700ManualUnSync->SetValue(wxGetApp().m_FreeDV700ManualUnSync);
 
         m_ckboxPhaseEstBW->SetValue(wxGetApp().m_PhaseEstBW);
@@ -628,17 +625,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_FreeDV700txClip = m_ckboxFreeDV700txClip->GetValue();
         wxGetApp().m_FreeDV700txBPF = m_ckboxFreeDV700txBPF->GetValue();
         wxGetApp().m_FreeDV700Combine = m_ckboxFreeDV700Combine->GetValue();
-        long interleave;
-        m_txtInterleave->GetValue().ToLong(&interleave);
-        if (interleave < 1) {
-            interleave = 1;
-            m_txtInterleave->SetValue(wxString("1"));
-        }
-        if (interleave > 16) {
-            interleave = 16;
-            m_txtInterleave->SetValue(wxString("16"));
-        }
-        wxGetApp().m_FreeDV700Interleave = (int)interleave;
         wxGetApp().m_FreeDV700ManualUnSync = m_ckboxFreeDV700ManualUnSync->GetValue();
 
         wxGetApp().m_PhaseEstBW = m_ckboxPhaseEstBW->GetValue();
@@ -671,7 +657,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
             pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
             pConfig->Write(wxT("/FreeDV700/txBPF"), wxGetApp().m_FreeDV700txBPF);
-            pConfig->Write(wxT("/FreeDV700/interleave"), wxGetApp().m_FreeDV700Interleave);
             pConfig->Write(wxT("/FreeDV700/manualUnSync"), wxGetApp().m_FreeDV700ManualUnSync);
 
             pConfig->Write(wxT("/Noise/noise_snr"),  wxGetApp().m_noise_snr);
