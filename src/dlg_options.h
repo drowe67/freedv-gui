@@ -86,7 +86,8 @@ class OptionsDlg : public wxDialog
         void    OnUDPTest(wxCommandEvent& event);
         
         void    OnPSKReporterEnable(wxScrollEvent& event);
-        
+        void    OnToneStateEnable(wxScrollEvent& event);
+        void    OnUDPStateEnable(wxScrollEvent& event);
         wxTextCtrl   *m_txtCtrlCallSign; // TODO: this should be renamed to tx_txtmsg, and rename all related incl persis strge
 
         wxCheckBox* m_ckHalfDuplex;
@@ -160,6 +161,10 @@ class OptionsDlg : public wxDialog
 
      private:
          void updatePSKReporterState();
+         void updateChannelNoiseState();
+         void updateAttnCarrierState();
+         void updateToneState();
+         void updateUDPState();
 };
 
 #endif // __OPTIONS_DIALOG__

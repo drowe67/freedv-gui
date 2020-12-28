@@ -424,6 +424,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_btn_udp_test->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnUDPTest), NULL, this);
 
     m_ckbox_psk_enable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnPSKReporterEnable), NULL, this);
+    m_ckboxTone->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
+    m_ckbox_udp_enable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnUDPStateEnable), NULL, this);
     
     event_in_serial = 0;
     event_out_serial = 0;
@@ -459,6 +461,8 @@ OptionsDlg::~OptionsDlg()
 #endif
     
     m_ckbox_psk_enable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnPSKReporterEnable), NULL, this);
+    m_ckboxTone->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
+    m_ckbox_udp_enable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnUDPStateEnable), NULL, this);
 }
 
 
@@ -537,7 +541,12 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txt_callsign->SetValue(wxGetApp().m_psk_callsign);
         m_txt_grid_square->SetValue(wxGetApp().m_psk_grid_square);
         
+        // Update control state based on checkbox state.
         updatePSKReporterState();
+        updateChannelNoiseState();
+        updateAttnCarrierState();
+        updateToneState();
+        updateUDPState();
     }
 
     if(inout == EXCHANGE_DATA_OUT)
@@ -720,6 +729,7 @@ void OptionsDlg::OnTestFrame(wxScrollEvent& event) {
 
 void OptionsDlg::OnChannelNoise(wxScrollEvent& event) {
     wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
+    updateChannelNoiseState();
 }
 
 
@@ -745,29 +755,33 @@ void OptionsDlg::OnChooseVoiceKeyerWaveFile(wxCommandEvent& event) {
 //  Run time update of carrier amplitude attenuation
 
 void OptionsDlg::OnAttnCarrierEn(wxScrollEvent& event) {
-    long attn_carrier;
-    m_txtAttnCarrier->GetValue().ToLong(&attn_carrier);
-    wxGetApp().m_attn_carrier = (int)attn_carrier;
+    if (g_pfreedv != NULL)
+    {
+        long attn_carrier;
+        m_txtAttnCarrier->GetValue().ToLong(&attn_carrier);
+        wxGetApp().m_attn_carrier = (int)attn_carrier;
 
-    /* uncheck -> checked, attenuate selected carrier */
+        /* uncheck -> checked, attenuate selected carrier */
 
-    if (m_ckboxAttnCarrierEn->GetValue() && !wxGetApp().m_attn_carrier_en) {
-        if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C) {
-            freedv_set_carrier_ampl(g_pfreedv, wxGetApp().m_attn_carrier, 0.25);
-        } else {
-            wxMessageBox("Carrier attenuation feature only works on 700C", wxT("Warning"), wxOK | wxICON_WARNING, this);
+        if (m_ckboxAttnCarrierEn->GetValue() && !wxGetApp().m_attn_carrier_en) {
+            if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C) {
+                freedv_set_carrier_ampl(g_pfreedv, wxGetApp().m_attn_carrier, 0.25);
+            } else {
+                wxMessageBox("Carrier attenuation feature only works on 700C", wxT("Warning"), wxOK | wxICON_WARNING, this);
+            }
+        }
+
+        /* checked -> unchecked, reset selected carrier */
+
+        if (!m_ckboxAttnCarrierEn->GetValue() && wxGetApp().m_attn_carrier_en) {
+            if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C) {
+                freedv_set_carrier_ampl(g_pfreedv, wxGetApp().m_attn_carrier, 1.0);
+            }
         }
     }
-
-    /* checked -> unchecked, reset selected carrier */
-
-    if (!m_ckboxAttnCarrierEn->GetValue() && wxGetApp().m_attn_carrier_en) {
-        if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C) {
-            freedv_set_carrier_ampl(g_pfreedv, wxGetApp().m_attn_carrier, 1.0);
-        }
-    }
-        
-    wxGetApp().m_attn_carrier_en = m_ckboxAttnCarrierEn->GetValue();    
+       
+    wxGetApp().m_attn_carrier_en = m_ckboxAttnCarrierEn->GetValue();
+    updateAttnCarrierState();
 }
 
 void OptionsDlg::OnFreeDV700txClip(wxScrollEvent& event) {
@@ -833,9 +847,41 @@ void OptionsDlg::updatePSKReporterState()
     }    
 }
 
+void OptionsDlg::updateChannelNoiseState()
+{
+    m_txtNoiseSNR->Enable(m_ckboxChannelNoise->GetValue());
+}
+
+void OptionsDlg::updateAttnCarrierState()
+{
+    m_txtAttnCarrier->Enable(m_ckboxAttnCarrierEn->GetValue());
+}
+
+void OptionsDlg::updateToneState()
+{
+    m_txtToneFreqHz->Enable(m_ckboxTone->GetValue());
+    m_txtToneAmplitude->Enable(m_ckboxTone->GetValue());
+}
+
+void OptionsDlg::updateUDPState()
+{
+    m_txt_udp_port->Enable(m_ckbox_udp_enable->GetValue());
+    m_btn_udp_test->Enable(m_ckbox_udp_enable->GetValue());
+}
+
 void OptionsDlg::OnPSKReporterEnable(wxScrollEvent& event)
 {
     updatePSKReporterState();
+}
+
+void OptionsDlg::OnToneStateEnable(wxScrollEvent& event)
+{
+    updateToneState();
+}
+
+void OptionsDlg::OnUDPStateEnable(wxScrollEvent& event)
+{
+    updateUDPState();
 }
 
 void OptionsDlg::DisplayFifoPACounters() {
