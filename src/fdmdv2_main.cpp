@@ -183,6 +183,9 @@ IMPLEMENT_APP(MainApp);
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
+    m_pskReporter = NULL;
+    m_callsignEncoder = NULL;
+    
     if(!wxApp::OnInit())
     {
         return false;
