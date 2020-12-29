@@ -80,7 +80,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_LPCPostFilterDefault = new wxButton(this, wxID_ANY, wxT("Default"));
     lpcpfs->Add(m_LPCPostFilterDefault, 0, wxALL|wxALIGN_CENTRE_HORIZONTAL|wxALIGN_CENTRE_VERTICAL, 5);
 
-    bSizer30->Add(lpcpfs, 0, wxALL | wxEXPAND, 0);
+    bSizer30->Add(lpcpfs, 0, wxALL | wxEXPAND, 3);
 
     // Speex pre-processor --------------------------------------------------
 
@@ -89,14 +89,14 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     sbSizer_speexpp = new wxStaticBoxSizer(sb_speexpp, wxHORIZONTAL);
 
     m_ckboxSpeexpp = new wxCheckBox(this, wxID_ANY, _("Speex Noise Suppression"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_speexpp->Add(m_ckboxSpeexpp, wxALIGN_LEFT, 2);
+    sbSizer_speexpp->Add(m_ckboxSpeexpp, 0, wxALIGN_LEFT, 2);
     m_ckboxSpeexpp->SetToolTip(_("Enable noise supression, dereverberation, AGC of mic signal"));
 
     m_ckbox700C_EQ = new wxCheckBox(this, wxID_ANY, _("700C/700D/700E Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_speexpp->Add(m_ckbox700C_EQ, wxALIGN_LEFT, 2);
+    sbSizer_speexpp->Add(m_ckbox700C_EQ, 0, wxALIGN_LEFT, 2);
     m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700C/700D/700E Codec input audio"));
 
-    bSizer30->Add(sbSizer_speexpp, 0, wxALL | wxEXPAND, 0);   
+    bSizer30->Add(sbSizer_speexpp, 0, wxALL | wxEXPAND, 3);   
 
     // EQ Filters -----------------------------------------------------------
 
@@ -167,9 +167,9 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_sdbSizer5Cancel = new wxButton(this, wxID_CANCEL);
     bSizer31->Add(m_sdbSizer5Cancel, 0, wxALL, 2);
 
-    bSizer30->Add(bSizer31, 0, wxALL | wxALIGN_CENTER, 0);
+    bSizer30->Add(bSizer31, 0, wxALL | wxALIGN_CENTER, 3);
 
-    this->SetSizer(bSizer30);
+    this->SetSizerAndFit(bSizer30);
     this->Layout();
 
     this->Centre(wxBOTH);
