@@ -63,7 +63,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_notebook->AddPage(m_keyerTab, _("Voice Keyer"));
     m_notebook->AddPage(m_modemTab, _("Modem"));
     m_notebook->AddPage(m_simulationTab, _("Simulation"));
-    m_notebook->AddPage(m_interfacingTab, _("Interfacing"));
+    m_notebook->AddPage(m_interfacingTab, _("UDP"));
     m_notebook->AddPage(m_debugTab, _("Debugging"));
     
     bSizer30->Add(m_notebook, 0, wxALL | wxEXPAND, 3);
