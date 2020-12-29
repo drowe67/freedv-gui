@@ -29,7 +29,6 @@ BEGIN_EVENT_TABLE(PlotWaterfall, PlotPanel)
     EVT_PAINT           (PlotWaterfall::OnPaint)
     EVT_MOTION          (PlotWaterfall::OnMouseMove)
     EVT_LEFT_DCLICK     (PlotWaterfall::OnMouseLeftDoubleClick)
-    EVT_RIGHT_DOWN      (PlotWaterfall::OnMouseRightDown)
     EVT_LEFT_UP         (PlotWaterfall::OnMouseLeftUp)
     EVT_MOUSEWHEEL      (PlotWaterfall::OnMouseWheelMoved)
     EVT_SIZE            (PlotWaterfall::OnSize)
@@ -471,13 +470,4 @@ void PlotWaterfall::OnMouseLeftDoubleClick(wxMouseEvent& event)
     }
 }
 
-//-------------------------------------------------------------------------
-// OnMouseRightDown()
-//-------------------------------------------------------------------------
-void PlotWaterfall::OnMouseRightDown(wxMouseEvent& event)
-{
-    m_colour++;
-    if (m_colour == 3)
-        m_colour = 0;
-}
 

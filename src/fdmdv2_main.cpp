@@ -581,7 +581,10 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_psk_enable = pConfig->ReadBool(wxT("/PSKReporter/Enable"), false);
     wxGetApp().m_psk_callsign = pConfig->Read(wxT("/PSKReporter/Callsign"), wxT(""));
     wxGetApp().m_psk_grid_square = pConfig->Read(wxT("/PSKReporter/GridSquare"), wxT(""));
-
+    
+    // Waterfall configuration
+    wxGetApp().m_waterfallColor = (int)pConfig->Read(wxT("/Waterfall/Color"), (int)0); // 0-2
+    
     int mode  = pConfig->Read(wxT("/Audio/mode"), (long)0);
     if (mode == 0)
         m_rb1600->SetValue(1);
@@ -839,6 +842,13 @@ MainFrame::~MainFrame()
 
         pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
 
+        pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);
+        pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
+        pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
+        
+        // Waterfall configuration
+        pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
+        
         int mode;
         if (m_rb1600->GetValue())
             mode = 0;
@@ -859,6 +869,7 @@ MainFrame::~MainFrame()
         if (m_rb2020->GetValue())
             mode = 9;
        pConfig->Write(wxT("/Audio/mode"), mode);
+       pConfig->Flush();
     }
 
     //m_togRxID->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnRxIDUI), NULL, this);
@@ -942,6 +953,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     if (m_panelWaterfall->checkDT()) {
         m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
         m_panelWaterfall->m_newdata = true;
+        m_panelWaterfall->setColor(wxGetApp().m_waterfallColor);
         m_panelWaterfall->Refresh();
     }
 
@@ -1222,7 +1234,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     // When the above is true, capture the callsign and current SNR and add to the PSK Reporter object's outbound list.
     if (wxGetApp().m_pskReporter != NULL && wxGetApp().m_callsignEncoder != NULL)
     {
-        time_t currTime = time(0);
         if (wxGetApp().m_callsignEncoder->isCallsignValid())
         {
             wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");

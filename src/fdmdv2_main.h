@@ -296,6 +296,9 @@ class MainApp : public wxApp
         std::string         m_pskPendingCallsign;
         char                m_pskPendingSnr;
         
+        // Waterfall display
+        int                 m_waterfallColor;
+        
         bool                loadConfig();
         bool                saveConfig();
 

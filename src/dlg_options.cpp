@@ -53,6 +53,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // Create notebook and tabs.
     m_notebook = new wxNotebook(this, wxID_ANY);
     m_reportingTab = new wxNotebookPage(m_notebook, wxID_ANY);
+    m_displayTab = new wxNotebookPage(m_notebook, wxID_ANY);
     m_keyerTab = new wxNotebookPage(m_notebook, wxID_ANY);
     m_modemTab = new wxNotebookPage(m_notebook, wxID_ANY);
     m_simulationTab = new wxNotebookPage(m_notebook, wxID_ANY);
@@ -60,6 +61,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_debugTab = new wxNotebookPage(m_notebook, wxID_ANY);
     
     m_notebook->AddPage(m_reportingTab, _("Reporting"));
+    m_notebook->AddPage(m_displayTab, _("Display"));
     m_notebook->AddPage(m_keyerTab, _("Voice Keyer"));
     m_notebook->AddPage(m_modemTab, _("Modem"));
     m_notebook->AddPage(m_simulationTab, _("Simulation"));
@@ -110,6 +112,27 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     sizerReporting->Add(sbSizer_psk,0, wxALL|wxEXPAND, 3);
     m_reportingTab->SetSizer(sizerReporting);
+    
+    // Display tab
+    wxBoxSizer* sizerDisplay;
+    sizerDisplay = new wxBoxSizer(wxVERTICAL);
+    
+    //----------------------------------------------------------
+    // Waterfall color 
+    //----------------------------------------------------------
+    wxStaticBox* sb_waterfall = new wxStaticBox(m_displayTab, wxID_ANY, _("Waterfall Style"));
+    wxStaticBoxSizer* sbSizer_waterfallColor =  new wxStaticBoxSizer(sb_waterfall, wxHORIZONTAL);
+    
+    m_waterfallColorScheme1 = new wxRadioButton(m_displayTab, wxID_ANY, _("Multicolor"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    sbSizer_waterfallColor->Add(m_waterfallColorScheme1, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+    m_waterfallColorScheme2 = new wxRadioButton(m_displayTab, wxID_ANY, _("Black && White"), wxDefaultPosition, wxDefaultSize);
+    sbSizer_waterfallColor->Add(m_waterfallColorScheme2, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+    m_waterfallColorScheme3 = new wxRadioButton(m_displayTab, wxID_ANY, _("Blue Tint"), wxDefaultPosition, wxDefaultSize);
+    sbSizer_waterfallColor->Add(m_waterfallColorScheme3, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+    
+    sizerDisplay->Add(sbSizer_waterfallColor, 0, wxALL | wxEXPAND, 3);
+    
+    m_displayTab->SetSizer(sizerDisplay);
     
     // Voice Keyer tab
     wxBoxSizer* sizerKeyer;
@@ -578,6 +601,40 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txt_callsign->SetValue(wxGetApp().m_psk_callsign);
         m_txt_grid_square->SetValue(wxGetApp().m_psk_grid_square);
         
+        // Waterfall color
+        switch (wxGetApp().m_waterfallColor)
+        {
+            case 1:
+                m_waterfallColorScheme1->SetValue(false);
+                m_waterfallColorScheme2->SetValue(true);
+                m_waterfallColorScheme3->SetValue(false);
+                break;
+            case 2:
+                m_waterfallColorScheme1->SetValue(false);
+                m_waterfallColorScheme2->SetValue(false);
+                m_waterfallColorScheme3->SetValue(true);
+                break;
+            case 0:
+            default:
+                m_waterfallColorScheme1->SetValue(true);
+                m_waterfallColorScheme2->SetValue(false);
+                m_waterfallColorScheme3->SetValue(false);
+                break;
+        };
+        
+        if (m_waterfallColorScheme1->GetValue())
+        {
+            wxGetApp().m_waterfallColor = 0;
+        }
+        else if (m_waterfallColorScheme2->GetValue())
+        {
+            wxGetApp().m_waterfallColor = 1;
+        }
+        else if (m_waterfallColorScheme3->GetValue())
+        {
+            wxGetApp().m_waterfallColor = 2;
+        }
+        
         // Update control state based on checkbox state.
         updatePSKReporterState();
         updateChannelNoiseState();
@@ -685,6 +742,20 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_psk_callsign = m_txt_callsign->GetValue();
         wxGetApp().m_psk_grid_square = m_txt_grid_square->GetValue();
         
+        // Waterfall color
+        if (m_waterfallColorScheme1->GetValue())
+        {
+            wxGetApp().m_waterfallColor = 0;
+        }
+        else if (m_waterfallColorScheme2->GetValue())
+        {
+            wxGetApp().m_waterfallColor = 1;
+        }
+        else if (m_waterfallColorScheme3->GetValue())
+        {
+            wxGetApp().m_waterfallColor = 2;
+        }
+        
         if (storePersistent) {
             pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
 #ifdef SHORT_VARICODE
@@ -715,6 +786,10 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);
             pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
             pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
+            
+            // Waterfall configuration
+            pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
+            
             pConfig->Flush();
         }
     }
