@@ -32,15 +32,10 @@ class OptionsDlg : public wxDialog
 {
     public:
     OptionsDlg( wxWindow* parent,
-               wxWindowID id = wxID_ANY, const wxString& title = _("Options"), 
+                wxWindowID id = wxID_ANY, const wxString& title = _("Options"), 
                 const wxPoint& pos = wxDefaultPosition, 
-#ifdef __WXMSW__
-                /* we add debug console check box for windows */
-                const wxSize& size = wxSize(600,410), 
-#else
-                const wxSize& size = wxSize(600,380), 
-#endif
-               long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
+                const wxSize& size = wxDefaultSize, 
+                long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
         ~OptionsDlg();
 
         void    ExchangeData(int inout, bool storePersistent);

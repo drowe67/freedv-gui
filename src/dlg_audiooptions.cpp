@@ -70,12 +70,13 @@ void AudioOptsDialog::buildTestControls(PlotScalar **plotScalar, wxButton **btnT
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
-    //this->SetSizeHints(wxSize(850, 600), wxDefaultSize);
     fprintf(stderr, "pos %d %d\n", pos.x, pos.y);
     Pa_Init();
 
     wxBoxSizer* mainSizer;
     mainSizer = new wxBoxSizer(wxVERTICAL);
+    mainSizer->SetMinSize(wxSize( 800, 650 ));
+    
     m_panel1 = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
     wxBoxSizer* bSizer4;
     bSizer4 = new wxBoxSizer(wxVERTICAL);
@@ -296,7 +297,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
 
     bSizer6->Add(m_sdbSizer1, 1, wxALIGN_CENTER_VERTICAL, 2);
     mainSizer->Add(bSizer6, 0, wxEXPAND, 2);
-    this->SetSizer(mainSizer);
+    this->SetSizerAndFit(mainSizer);
     this->Layout();
     this->Centre(wxBOTH);
 //    this->Centre(wxBOTH);

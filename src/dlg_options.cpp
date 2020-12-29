@@ -450,12 +450,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     bSizer30->Add(bSizer31, 0, wxALL | wxALIGN_CENTER, 5);
 
-    this->SetSizer(bSizer30);
-    if ( GetSizer() ) 
-    {
-         GetSizer()->Fit(this);
-    }
-     this->Layout();
+    this->SetSizerAndFit(bSizer30);
+    this->Layout();
 
     this->Centre(wxBOTH);
  

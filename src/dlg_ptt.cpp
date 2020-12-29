@@ -38,7 +38,6 @@
 ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
     wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
-    this->SetSizer(mainSizer);
     
     //----------------------------------------------------------------------
     // Vox tone option
@@ -192,10 +191,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
 
     mainSizer->Add(boxSizer12, 0, wxLEFT|wxRIGHT|wxTOP|wxBOTTOM|wxALIGN_CENTER_HORIZONTAL, 5);
 
-    if ( GetSizer() ) 
-    {
-         GetSizer()->Fit(this);
-    }
+    this->SetSizerAndFit(mainSizer);
     Centre(wxBOTH);
 
     // Connect events
