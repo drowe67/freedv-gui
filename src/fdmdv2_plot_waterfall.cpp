@@ -365,17 +365,17 @@ void PlotWaterfall::plotPixelData()
        dy, dy_blocks, spec_index_per_px);
     */
 
-    // Shift previous bit map up one row of blocks ----------------------------
+    // Shift previous bit map down one row of blocks ----------------------------
     wxNativePixelData data(*m_pBmp);
     wxNativePixelData::Iterator bitMapStart(data);
     wxNativePixelData::Iterator p = bitMapStart;
 
-    for(b = 0; b < dy_blocks - 1; b++) 
+    for(b = dy_blocks - 1; b > 1; b--) 
     {
         wxNativePixelData::Iterator psrc = bitMapStart;
         wxNativePixelData::Iterator pdest = bitMapStart;
         pdest.OffsetY(data, dy * b);
-        psrc.OffsetY(data, dy * (b+1));
+        psrc.OffsetY(data, dy * (b - 1));
 
         // copy one line of blocks
 
@@ -393,16 +393,16 @@ void PlotWaterfall::plotPixelData()
                 psrc++;
             }
             pdest = pdestRowStart;
-            pdest.OffsetY(data, 1);
+            pdest.OffsetY(data, -1);
             psrc = psrcRowStart;
-            psrc.OffsetY(data, 1);	    
+            psrc.OffsetY(data, -1);	    
         }
     }
 
     // Draw last line of blocks using latest amplitude data ------------------
     p = bitMapStart;
-    p.OffsetY(data, dy *(dy_blocks - 1));
-    for(py = 0; py < dy; py++)
+    p.OffsetY(data, dy);
+    for(py = dy; py >= 0; py--)
     {
         wxNativePixelData::Iterator rowStart = p;
 
@@ -440,7 +440,7 @@ void PlotWaterfall::plotPixelData()
             ++p;
         }
         p = rowStart;
-        p.OffsetY(data, 1);
+        p.OffsetY(data, -1);
     }
 
 }
