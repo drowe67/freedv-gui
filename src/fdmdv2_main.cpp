@@ -345,7 +345,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     int x = pConfig->Read(wxT("/MainFrame/left"),       20);
     int y = pConfig->Read(wxT("/MainFrame/top"),        20);
     int w = pConfig->Read(wxT("/MainFrame/width"),     800);
-    int h = pConfig->Read(wxT("/MainFrame/height"),    550);
+    int h = pConfig->Read(wxT("/MainFrame/height"),    695);
 
     // sanitise frame position as a first pass at Win32 registry bug
 
@@ -353,7 +353,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     if (x < 0 || x > 2048) x = 20;
     if (y < 0 || y > 2048) y = 20;
     if (w < 0 || w > 2048) w = 800;
-    if (h < 0 || h > 2048) h = 550;
+    if (h < 0 || h > 2048) h = 695;
 
     wxGetApp().m_show_wf            = pConfig->Read(wxT("/MainFrame/show_wf"),           1);
     wxGetApp().m_show_spect         = pConfig->Read(wxT("/MainFrame/show_spect"),        1);
