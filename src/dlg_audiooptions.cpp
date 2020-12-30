@@ -620,17 +620,12 @@ int AudioOptsDialog::ExchangeData(int inout)
 
         wxConfigBase *pConfig = wxConfigBase::Get();
         if (pConfig != NULL) {
-            wxGetApp().m_soundCard1InDeviceName = m_textCtrlRxIn->GetValue().BeforeLast('(').Trim();
-            wxGetApp().m_soundCard1OutDeviceName = m_textCtrlTxOut->GetValue().BeforeLast('(').Trim();
-            wxGetApp().m_soundCard2InDeviceName = m_textCtrlTxIn->GetValue().BeforeLast('(').Trim();
-            wxGetApp().m_soundCard2OutDeviceName = m_textCtrlRxOut->GetValue().BeforeLast('(').Trim();
-            
-            pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
-            pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
-            pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);
-            pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
-            
+            pConfig->Write(wxT("/Audio/soundCard1InDeviceNum"),       g_soundCard1InDeviceNum);
+            pConfig->Write(wxT("/Audio/soundCard1OutDeviceNum"),      g_soundCard1OutDeviceNum);
             pConfig->Write(wxT("/Audio/soundCard1SampleRate"),        g_soundCard1SampleRate );
+
+            pConfig->Write(wxT("/Audio/soundCard2InDeviceNum"),       g_soundCard2InDeviceNum);
+            pConfig->Write(wxT("/Audio/soundCard2OutDeviceNum"),      g_soundCard2OutDeviceNum);
             pConfig->Write(wxT("/Audio/soundCard2SampleRate"),        g_soundCard2SampleRate );
 
             pConfig->Flush();
