@@ -1766,9 +1766,9 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
         if (vk_event == VK_SPACE_BAR) {
             m_btnTogPTT->SetValue(false); togglePTT();
-            StopPlayFileToMicIn();
             m_togBtnVoiceKeyer->SetValue(false);
             next_state = VK_IDLE;
+            CallAfter([&]() { StopPlayFileToMicIn(); });
         }
 
         if (vk_event == VK_PLAY_FINISHED) {
