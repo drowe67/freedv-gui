@@ -658,6 +658,7 @@ class MainFrame : public TopFrame
         int        vk_rx_pause;
         int        vk_repeats, vk_repeat_counter;
         float      vk_rx_time;
+        float      vk_rx_sync_time;
 
         void       checkAvxSupport();
         bool       isAvxPresent;

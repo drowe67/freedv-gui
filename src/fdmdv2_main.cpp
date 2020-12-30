@@ -1793,12 +1793,9 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
         if (vk_event == VK_DT) {
             if (freedv_get_sync(g_pfreedv) == 1) {
-                // if we detect sync simulate a smooth transition to SYNC_WAIT State - TODO: review
-                if (vk_rx_time >= DT) {
-                    vk_rx_time -= DT;
-                } else {
-                    next_state = VK_SYNC_WAIT;
-                }
+                // if we detect sync transition to SYNC_WAIT state
+                next_state = VK_SYNC_WAIT;
+                vk_rx_sync_time = 0.0;
             } else {
                 vk_rx_time += DT;
                 if (vk_rx_time >= vk_rx_pause) {
@@ -1826,19 +1823,16 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
         if (vk_event == VK_DT) {
             if (freedv_get_sync(g_pfreedv) == 0) {
-                // if we lose sync simulate a smooth transition to return in RX State - TODO: review
-                if (vk_rx_time >= DT) {
-                    vk_rx_time -= DT;
-                } else {
-                    next_state = VK_RX;
-                }
+                // if we lose sync transition to RX State
+                next_state = VK_RX;
             } else {
                 vk_rx_time += DT;
+                vk_rx_sync_time += DT;
             }
 
             // drop out of voice keyer if we get a few seconds of valid sync
 
-            if (vk_rx_time >= VK_SYNC_WAIT_TIME) {
+            if (vk_rx_sync_time >= VK_SYNC_WAIT_TIME) {
                 m_togBtnVoiceKeyer->SetValue(false);
                 next_state = VK_IDLE;
             }
