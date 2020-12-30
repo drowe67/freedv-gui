@@ -4,7 +4,7 @@
 // Purpose:         Declares simple wxWidgets application with GUI.
 // Created:         Apr. 9, 2012
 // Authors:         David Rowe, David Witten
-// 
+//
 // License:
 //
 //  This program is free software; you can redistribute it and/or modify
@@ -90,12 +90,11 @@
 #include "dlg_audiooptions.h"
 #include "dlg_filter.h"
 #include "dlg_options.h"
-#include "varicode.h"
 #include "sox_biquad.h"
 #include "comp_prim.h"
 #include "dlg_plugin.h"
 #include "hamlib.h"
-#include "serialport.h" 
+#include "serialport.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -124,7 +123,7 @@ extern int                 g_soundCard2InDeviceNum;
 extern int                 g_soundCard2OutDeviceNum;
 extern int                 g_soundCard2SampleRate;
 
-// Voice Keyer Constants 
+// Voice Keyer Constants
 
 #define VK_SYNC_WAIT_TIME 5.0
 
@@ -231,7 +230,7 @@ class MainApp : public wxApp
         bool                m_codec2LPCPostFilterBassBoost;
         float               m_codec2LPCPostFilterGamma;
         float               m_codec2LPCPostFilterBeta;
-        
+
         // Speex Pre-Processor
         bool                m_speexpp_enable;
         // Codec 2 700C Equaliser
@@ -322,7 +321,7 @@ class MainApp : public wxApp
 
         bool       m_PhaseEstBW;
         bool       m_PhaseEstDPSK;
-        
+
         // Noise simulation
 
         int        m_noise_snr;
@@ -341,11 +340,11 @@ class MainApp : public wxApp
         // Windows debug console
 
         bool       m_debug_console;
-        
+
         // debugging 700D audio break up
-        
+
         bool       m_txRxThreadHighPriority;
-        
+
     protected:
 };
 
@@ -417,15 +416,15 @@ class MyExtraRecFilePanel : public wxPanel
 {
 public:
     MyExtraRecFilePanel(wxWindow *parent);
-    ~MyExtraRecFilePanel() 
+    ~MyExtraRecFilePanel()
     {
         wxLogDebug("Destructor\n");
     }
     void setSecondsToRecord(wxString value) { m_secondsToRecord->SetValue(value); }
-    wxString getSecondsToRecord(void) 
-    { 
+    wxString getSecondsToRecord(void)
+    {
         wxLogDebug("getSecondsToRecord: %s\n",m_secondsToRecord->GetValue());
-        return m_secondsToRecord->GetValue(); 
+        return m_secondsToRecord->GetValue();
     }
 private:
     wxTextCtrl *m_secondsToRecord;
@@ -496,7 +495,7 @@ class MainFrame : public TopFrame
                                 PaStreamCallbackFlags statusFlags,
                                 void *userData
                              );
- 
+
         static int txCallback(
                                 const void *inBuffer,
                                 void *outBuffer,
@@ -507,7 +506,7 @@ class MainFrame : public TopFrame
                              );
 
 
-    void initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDevice, 
+    void initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDevice,
                              int soundCard, int sampleRate, int inputChannels);
 
     void togglePTT(void);
@@ -521,12 +520,12 @@ class MainFrame : public TopFrame
     bool                    m_schedule_restore;
 
     // Voice Keyer state machine
-    
+
     int                     vk_state;
     void VoiceKeyerProcessEvent(int vk_event);
 
     // Detect Sync state machine
-    
+
     int                     ds_state;
     float                   ds_rx_time;
     void DetectSyncProcessEvent(void);
@@ -545,7 +544,7 @@ class MainFrame : public TopFrame
         void stopRxStream();
         void abortTxStream();
         void abortRxStream();
-        
+
         void OnTop(wxCommandEvent& event);
         void OnExit( wxCommandEvent& event );
 
@@ -588,7 +587,7 @@ class MainFrame : public TopFrame
         void OnCallSignReset( wxCommandEvent& event );
         void OnBerReset( wxCommandEvent& event );
         void OnReSync( wxCommandEvent& event );
- 
+
         //System Events
         void OnPaint(wxPaintEvent& event);
         void OnSize( wxSizeEvent& event );
@@ -608,13 +607,13 @@ class MainFrame : public TopFrame
         wxTextCtrl* m_tc;
         int         m_zoom;
         float       m_snrBeta;
-        
+
         // Callsign/text messaging
         char        m_callsign[MAX_CALLSIGN];
         char       *m_pcallsign;
         unsigned int m_checksumGood;
         unsigned int m_checksumBad;
-        
+
         // Events
         void        processTxtEvent(char event[]);
         class OptionsDlg *optionsDlg;
@@ -622,7 +621,7 @@ class MainFrame : public TopFrame
 
         // level Gauge
         float       m_maxLevel;
- 
+
         // flags to indicate when new EQ filters need to be designed
 
         bool        m_newMicInFilter;
@@ -653,11 +652,11 @@ public:
     txRxThread(void) : wxThread(wxTHREAD_JOINABLE) { m_run = 1; }
 
     // thread execution starts here
-    void *Entry() 
+    void *Entry()
     {
-        while (m_run) 
+        while (m_run)
         {
-            txRxProcessing();        
+            txRxProcessing();
             wxThread::Sleep(20);
         }
         return NULL;
@@ -711,7 +710,7 @@ void per_frame_rx_processing(
 
 void my_freedv_put_error_pattern(void *state, short error_pattern[], int sz_error_pattern);
 
-// FreeDv API calls these puppies when it needs/receives a text char 
+// FreeDv API calls these puppies when it needs/receives a text char
 
 char my_get_next_tx_char(void *callback_state);
 void my_put_next_rx_char(void *callback_state, char c);

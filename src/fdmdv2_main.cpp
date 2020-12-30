@@ -663,8 +663,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     g_split = 0;
 
     // data states
-    g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*VARICODE_MAX_BITS);
-    g_rxDataOutFifo = codec2_fifo_create(MAX_CALLSIGN*VARICODE_MAX_BITS);
+    g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
+    g_rxDataOutFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
 
     sox_biquad_start();
 
