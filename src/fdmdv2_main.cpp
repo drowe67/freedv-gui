@@ -452,20 +452,16 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_framesPerBuffer = pConfig->Read(wxT("/Audio/framesPerBuffer"), (int)PA_FPB);
     wxGetApp().m_fifoSize_ms = pConfig->Read(wxT("/Audio/fifoSize_ms"), (int)FIFO_SIZE);
 
-    g_soundCard1InDeviceNum  = pConfig->Read(wxT("/Audio/soundCard1InDeviceNum"),         -1);
-    g_soundCard1OutDeviceNum = pConfig->Read(wxT("/Audio/soundCard1OutDeviceNum"),        -1);
+    wxGetApp().m_soundCard1InDeviceName = pConfig->Read(wxT("/Audio/soundCard1InDeviceName"), _("none"));
+    wxGetApp().m_soundCard1OutDeviceName = pConfig->Read(wxT("/Audio/soundCard1OutDeviceName"), _("none"));
+    wxGetApp().m_soundCard2InDeviceName = pConfig->Read(wxT("/Audio/soundCard2InDeviceName"), _("none"));
+    wxGetApp().m_soundCard2OutDeviceName = pConfig->Read(wxT("/Audio/soundCard2OutDeviceName"), _("none"));
+    
+    // Get sound card sample rates
     g_soundCard1SampleRate   = pConfig->Read(wxT("/Audio/soundCard1SampleRate"),          -1);
-
-    g_soundCard2InDeviceNum  = pConfig->Read(wxT("/Audio/soundCard2InDeviceNum"),         -1);
-    g_soundCard2OutDeviceNum = pConfig->Read(wxT("/Audio/soundCard2OutDeviceNum"),        -1);
     g_soundCard2SampleRate   = pConfig->Read(wxT("/Audio/soundCard2SampleRate"),          -1);
-
-    g_nSoundCards = 0;
-    if ((g_soundCard1InDeviceNum > -1) && (g_soundCard1OutDeviceNum > -1)) {
-        g_nSoundCards = 1;
-        if ((g_soundCard2InDeviceNum > -1) && (g_soundCard2OutDeviceNum > -1))
-            g_nSoundCards = 2;
-    }
+    
+    validateSoundCardSetup();
 
     wxGetApp().m_playFileToMicInPath = pConfig->Read("/File/playFileToMicInPath",   wxT(""));
     wxGetApp().m_recFileFromRadioPath = pConfig->Read("/File/recFileFromRadioPath", wxT(""));
@@ -788,12 +784,12 @@ MainFrame::~MainFrame()
         pConfig->Write(wxT("/Audio/framesPerBuffer"),       wxGetApp().m_framesPerBuffer);
         pConfig->Write(wxT("/Audio/fifoSize_ms"),              wxGetApp().m_fifoSize_ms);
 
-        pConfig->Write(wxT("/Audio/soundCard1InDeviceNum"),   g_soundCard1InDeviceNum);
-        pConfig->Write(wxT("/Audio/soundCard1OutDeviceNum"),  g_soundCard1OutDeviceNum);
+        pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
+        pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
+        pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);
+        pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
+        
         pConfig->Write(wxT("/Audio/soundCard1SampleRate"),    g_soundCard1SampleRate );
-
-        pConfig->Write(wxT("/Audio/soundCard2InDeviceNum"),   g_soundCard2InDeviceNum);
-        pConfig->Write(wxT("/Audio/soundCard2OutDeviceNum"),  g_soundCard2OutDeviceNum);
         pConfig->Write(wxT("/Audio/soundCard2SampleRate"),    g_soundCard2SampleRate );
 
         pConfig->Write(wxT("/VoiceKeyer/WaveFilePath"), wxGetApp().m_txtVoiceKeyerWaveFilePath);
@@ -3012,7 +3008,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         // attempt to start sound cards and tx/rx processing
         if (VerifyMicrophonePermissions())
         {
-            startRxStream();
+            if (validateSoundCardSetup())
+            {
+                startRxStream();
+            }
         }
         else
         {
@@ -4757,6 +4756,92 @@ void MainFrame::CloseSerialPort(void)
         serialport->ptt(false);
         serialport->closeport();
     }
+}
+
+int MainFrame::getSoundCardIDFromName(wxString& name)
+{
+    int result = -1;
+    
+    if (name != "none")
+    {
+        PaError paResult = Pa_Initialize();
+        if (paResult == paNoError)
+        {
+            for (PaDeviceIndex index = 0; index < Pa_GetDeviceCount(); index++)
+            {
+                const PaDeviceInfo* device = Pa_GetDeviceInfo(index);
+                wxString deviceName = device->name;
+                deviceName = deviceName.Trim();
+                if (name == deviceName)
+                {
+                    result = index;
+                    break;
+                }
+            }
+            Pa_Terminate();
+        }
+        else
+        {
+            fprintf(stderr, "WARNING: could not initialize PortAudio (err=%d, txt=%s)\n", paResult, Pa_GetErrorText(paResult));
+        }
+    }
+    return result;
+}
+
+bool MainFrame::validateSoundCardSetup()
+{
+    bool canRun = true;
+    
+    // Translate device names to IDs
+    g_soundCard1InDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard1InDeviceName);
+    g_soundCard1OutDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard1OutDeviceName);
+    g_soundCard2InDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard2InDeviceName);
+    g_soundCard2OutDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard2OutDeviceName);
+
+    if (wxGetApp().m_soundCard1InDeviceName != "none" && g_soundCard1InDeviceNum == -1)
+    {
+        wxMessageBox(wxString::Format(
+            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
+            wxGetApp().m_soundCard1InDeviceName), wxT("Sound Device Removed"), wxOK, this);
+        canRun = false;
+    }
+    else if (canRun && wxGetApp().m_soundCard1OutDeviceName != "none" && g_soundCard1OutDeviceNum == -1)
+    {
+        wxMessageBox(wxString::Format(
+            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
+            wxGetApp().m_soundCard1OutDeviceName), wxT("Sound Device Removed"), wxOK, this);
+        canRun = false;
+    }
+    else if (canRun && wxGetApp().m_soundCard2InDeviceName != "none" && g_soundCard2InDeviceNum == -1)
+    {
+        wxMessageBox(wxString::Format(
+            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
+            wxGetApp().m_soundCard2InDeviceName), wxT("Sound Device Removed"), wxOK, this);
+        canRun = false;
+    }
+    else if (canRun && wxGetApp().m_soundCard2OutDeviceName != "none" && g_soundCard2OutDeviceNum == -1)
+    {
+        wxMessageBox(wxString::Format(
+            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
+            wxGetApp().m_soundCard2OutDeviceName), wxT("Sound Device Removed"), wxOK, this);
+        canRun = false;
+    }
+    
+    g_nSoundCards = 0;
+    if ((g_soundCard1InDeviceNum > -1) && (g_soundCard1OutDeviceNum > -1)) {
+        g_nSoundCards = 1;
+        if ((g_soundCard2InDeviceNum > -1) && (g_soundCard2OutDeviceNum > -1))
+            g_nSoundCards = 2;
+    }
+    
+    if (canRun && g_nSoundCards == 0)
+    {
+        // Initial setup. Remind user to configure sound cards first.
+        wxMessageBox(wxString("It looks like this is your first time running FreeDV. Please go to Tools->Audio Config... to choose your sound card(s) before using."), wxT("First Time Setup"), wxOK, this);
+        canRun = false;
+    }
+
+    return canRun;
 }
 
 //
