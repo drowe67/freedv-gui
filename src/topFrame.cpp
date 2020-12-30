@@ -474,7 +474,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     sbSizer5->Add(bSizer11, 2, wxEXPAND, 1);
     rightSizer->Add(sbSizer5, 2, wxALL|wxEXPAND, 3);
     bSizer1->Add(rightSizer, 0, wxALL|wxEXPAND, 3);
-    this->SetSizer(bSizer1);
+    this->SetSizerAndFit(bSizer1);
     this->Layout();
     m_statusBar1 = this->CreateStatusBar(3, wxST_SIZEGRIP, wxID_ANY);
     

@@ -318,9 +318,6 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     g_logfile = stderr;
     #endif
 
-
-    SetMinSize(wxSize(400,695));
-
     // Init Hamlib library, but we dont start talking to any rigs yet
 
     wxGetApp().m_hamlib = new Hamlib();
