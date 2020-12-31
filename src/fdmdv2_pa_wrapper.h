@@ -18,6 +18,9 @@
 //  along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //==========================================================================
+#ifndef FDMDV2_PA_WRAPPER_H
+#define FDMDV2_PA_WRAPPER_H
+
 #include <stdio.h>
 #include <math.h>
 #include "fdmdv2_defines.h"
@@ -114,4 +117,17 @@ class PortAudioWrap
         bool                isStopped() const;
         bool                isActive() const;
 //        void                loadData();
+        
+        static constexpr double standardSampleRates[] =
+        {
+            8000.0,     9600.0,
+            11025.0,    12000.0,
+            16000.0,    22050.0,
+            24000.0,    32000.0,
+            44100.0,    48000.0,
+            88200.0,    96000.0,
+            192000.0,   -1          // negative terminated  list
+        };
 };
+
+#endif // FDMDV2_PA_WRAPPER_H

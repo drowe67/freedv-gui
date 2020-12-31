@@ -21,6 +21,7 @@
 //=========================================================================
 #include "fdmdv2_main.h"
 #include "dlg_audiooptions.h"
+#include "fdmdv2_pa_wrapper.h"
 
 // constants for test waveform plots
 
@@ -648,22 +649,10 @@ int AudioOptsDialog::ExchangeData(int inout)
 //-------------------------------------------------------------------------
 // buildListOfSupportedSampleRates()
 //-------------------------------------------------------------------------
-int AudioOptsDialog:: buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, int devNum, int in_out)
+int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, int devNum, int in_out)
 {
     // every sound device has a different list of supported sample rates, so
     // we work out which ones are supported and populate the list ctrl
-
-    static double standardSampleRates[] =
-    {
-        8000.0,     9600.0,
-        11025.0,    12000.0,
-        16000.0,    22050.0,
-        24000.0,    32000.0,
-        44100.0,    48000.0,
-        88200.0,    96000.0,
-        192000.0,   -1          // negative terminated  list
-    };
-
     const PaDeviceInfo  *deviceInfo;
     PaStreamParameters   inputParameters, outputParameters;
     PaError              err;
@@ -692,17 +681,17 @@ int AudioOptsDialog:: buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, 
     cbSampleRate->Clear();
     //printf("devNum %d supports: ", devNum);
     numSampleRates = 0;
-    for(i = 0; standardSampleRates[i] > 0; i++)
+    for(i = 0; PortAudioWrap::standardSampleRates[i] > 0; i++)
     {      
         if (in_out == AUDIO_IN)
-            err = Pa_IsFormatSupported(&inputParameters, NULL, standardSampleRates[i]);
+            err = Pa_IsFormatSupported(&inputParameters, NULL, PortAudioWrap::standardSampleRates[i]);
         else
-            err = Pa_IsFormatSupported(NULL, &outputParameters, standardSampleRates[i]);
+            err = Pa_IsFormatSupported(NULL, &outputParameters, PortAudioWrap::standardSampleRates[i]);
 
         if( err == paFormatIsSupported ) {
-            str.Printf("%i", (int)standardSampleRates[i]);
+            str.Printf("%i", (int)PortAudioWrap::standardSampleRates[i]);
             cbSampleRate->AppendString(str);
-            printf("%i ", (int)standardSampleRates[i]);
+            printf("%i ", (int)PortAudioWrap::standardSampleRates[i]);
             numSampleRates++;
         }
     }
