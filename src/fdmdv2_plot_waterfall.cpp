@@ -283,7 +283,7 @@ void PlotWaterfall::drawGraticule(wxAutoBufferedPaintDC& dc)
     // Horizontal gridlines
     dc.SetPen(m_penDotDash);
     for(time=0; time<=WATERFALL_SECS_Y; time+=WATERFALL_SECS_STEP) {
-       y = m_rGrid.GetHeight() - time*time_s_to_py;
+       y = m_rGrid.GetHeight() - (WATERFALL_SECS_Y - time)*time_s_to_py;
        y += PLOT_BORDER;
 
         if (m_graticule)
