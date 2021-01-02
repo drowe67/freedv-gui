@@ -672,8 +672,8 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     g_split = 0;
 
     // data states
-    g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*VARICODE_MAX_BITS);
-    g_rxDataOutFifo = codec2_fifo_create(MAX_CALLSIGN*VARICODE_MAX_BITS);
+    g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
+    g_rxDataOutFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
 
     sox_biquad_start();
 
@@ -2691,7 +2691,8 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
                 wxT("For Help and Support visit: http://freedv.org\n\n")
 
                 wxT("GNU Public License V2.1\n\n")
-                wxT("Copyright (c) David Witten KD0EAG and David Rowe VK5DGR\n\n")
+                wxT("Created by David Witten KD0EAG and David Rowe VK5DGR in 2012.  ")
+                wxT("Currently (2020) maintaned by Mooneer Salem K6AQ and David Rowe VK5DGR.\n\n")
                 wxT("freedv-gui version: %s\n")
                 wxT("freedv-gui git hash: %s\n")
                 wxT("codec2 git hash: %s\n")
