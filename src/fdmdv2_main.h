@@ -188,7 +188,7 @@ class MainApp : public wxApp
         wxString m_soundCard2InDeviceName;
         wxString m_soundCard1OutDeviceName;
         wxString m_soundCard2OutDeviceName;
-        
+
         // PTT -----------------------------------
 
         bool                m_boolHalfDuplex;
