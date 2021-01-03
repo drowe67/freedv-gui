@@ -3022,7 +3022,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         // Clear existing TX text, if any.
         codec2_fifo_destroy(g_txDataInFifo);
-        g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*VARICODE_MAX_BITS);
+        g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
         
         // attempt to start PTT ......
         wxGetApp().m_pskReporter = NULL;
