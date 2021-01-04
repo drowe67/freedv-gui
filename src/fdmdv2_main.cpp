@@ -1624,7 +1624,15 @@ int MainApp::FilterEvent(wxEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
 {
-    togglePTT();
+    if (vk_state == VK_TX)
+    {
+        // Disable TX via VK code to prevent state inconsistencies.
+        VoiceKeyerProcessEvent(VK_SPACE_BAR);
+    }
+    else
+    {
+        togglePTT();
+    }
     event.Skip();
 }
 
