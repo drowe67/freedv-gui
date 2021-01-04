@@ -59,7 +59,13 @@ class OptionsDlg : public wxDialog
             }
         }
 
-
+        void setSessionActive(bool active) 
+        {
+            sessionActive_ = active; 
+        
+            updatePSKReporterState();
+        }
+        
     protected:
 
         // Handlers for events.
@@ -174,6 +180,8 @@ class OptionsDlg : public wxDialog
          void updateAttnCarrierState();
          void updateToneState();
          void updateUDPState();
+         
+         bool sessionActive_;
 };
 
 #endif // __OPTIONS_DIALOG__

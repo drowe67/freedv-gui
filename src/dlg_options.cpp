@@ -44,7 +44,8 @@ extern int                 g_freedv_verbose;
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
-
+    sessionActive_ = false;
+    
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);
 
     wxBoxSizer* bSizer30;
@@ -941,18 +942,30 @@ void OptionsDlg::OnUDPTest(wxCommandEvent& event)
 
 void OptionsDlg::updatePSKReporterState()
 {
-    if (m_ckbox_psk_enable->GetValue())
+    if (!sessionActive_)
     {
-        m_txtCtrlCallSign->Enable(false);
-        m_txt_callsign->Enable(true);
-        m_txt_grid_square->Enable(true);
+        m_ckbox_psk_enable->Enable(true);
+        if (m_ckbox_psk_enable->GetValue())
+        {
+            m_txtCtrlCallSign->Enable(false);
+            m_txt_callsign->Enable(true);
+            m_txt_grid_square->Enable(true);
+        }
+        else
+        {
+            m_txtCtrlCallSign->Enable(true);
+            m_txt_callsign->Enable(false);
+            m_txt_grid_square->Enable(false);
+        }    
     }
     else
     {
-        m_txtCtrlCallSign->Enable(true);
+        // Txt Msg/PSK Reporter options cannot be modified during a session.
+        m_ckbox_psk_enable->Enable(false);
+        m_txtCtrlCallSign->Enable(false);
         m_txt_callsign->Enable(false);
         m_txt_grid_square->Enable(false);
-    }    
+    }
 }
 
 void OptionsDlg::updateChannelNoiseState()
