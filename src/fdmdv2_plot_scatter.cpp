@@ -118,15 +118,14 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
         // automatically scale, first measure the maximum value
 
         float max_xy = 1E-12;
-        float real,imag,mag;
+        float real,imag;
         for(i=0; i< scatterMemSyms; i++) {
             real = fabs(m_mem[i].real);
             imag = fabs(m_mem[i].imag);
-            mag = sqrt(pow(real,2) + pow(imag, 2));
-            if (mag > max_xy)
-            {
-                max_xy = mag;
-            } 
+            if (real > max_xy)
+                max_xy = real;
+            if (imag > max_xy)
+                max_xy = imag; 
         }
 
         // smooth it out and set a lower limit to prevent divide by 0 issues
