@@ -29,7 +29,6 @@ BEGIN_EVENT_TABLE(PlotWaterfall, PlotPanel)
     EVT_PAINT           (PlotWaterfall::OnPaint)
     EVT_MOTION          (PlotWaterfall::OnMouseMove)
     EVT_LEFT_DCLICK     (PlotWaterfall::OnMouseLeftDoubleClick)
-    EVT_RIGHT_DOWN      (PlotWaterfall::OnMouseRightDown)
     EVT_LEFT_UP         (PlotWaterfall::OnMouseLeftUp)
     EVT_MOUSEWHEEL      (PlotWaterfall::OnMouseWheelMoved)
     EVT_SIZE            (PlotWaterfall::OnSize)
@@ -284,7 +283,7 @@ void PlotWaterfall::drawGraticule(wxAutoBufferedPaintDC& dc)
     // Horizontal gridlines
     dc.SetPen(m_penDotDash);
     for(time=0; time<=WATERFALL_SECS_Y; time+=WATERFALL_SECS_STEP) {
-       y = m_rGrid.GetHeight() - time*time_s_to_py;
+       y = m_rGrid.GetHeight() - (WATERFALL_SECS_Y - time)*time_s_to_py;
        y += PLOT_BORDER;
 
         if (m_graticule)
@@ -366,17 +365,17 @@ void PlotWaterfall::plotPixelData()
        dy, dy_blocks, spec_index_per_px);
     */
 
-    // Shift previous bit map up one row of blocks ----------------------------
+    // Shift previous bit map down one row of blocks ----------------------------
     wxNativePixelData data(*m_pBmp);
     wxNativePixelData::Iterator bitMapStart(data);
     wxNativePixelData::Iterator p = bitMapStart;
 
-    for(b = 0; b < dy_blocks - 1; b++) 
+    for(b = dy_blocks - 1; b > 1; b--) 
     {
         wxNativePixelData::Iterator psrc = bitMapStart;
         wxNativePixelData::Iterator pdest = bitMapStart;
         pdest.OffsetY(data, dy * b);
-        psrc.OffsetY(data, dy * (b+1));
+        psrc.OffsetY(data, dy * (b - 1));
 
         // copy one line of blocks
 
@@ -394,16 +393,16 @@ void PlotWaterfall::plotPixelData()
                 psrc++;
             }
             pdest = pdestRowStart;
-            pdest.OffsetY(data, 1);
+            pdest.OffsetY(data, -1);
             psrc = psrcRowStart;
-            psrc.OffsetY(data, 1);	    
+            psrc.OffsetY(data, -1);	    
         }
     }
 
     // Draw last line of blocks using latest amplitude data ------------------
     p = bitMapStart;
-    p.OffsetY(data, dy *(dy_blocks - 1));
-    for(py = 0; py < dy; py++)
+    p.OffsetY(data, dy);
+    for(py = dy; py >= 0; py--)
     {
         wxNativePixelData::Iterator rowStart = p;
 
@@ -441,7 +440,7 @@ void PlotWaterfall::plotPixelData()
             ++p;
         }
         p = rowStart;
-        p.OffsetY(data, 1);
+        p.OffsetY(data, -1);
     }
 
 }
@@ -471,13 +470,4 @@ void PlotWaterfall::OnMouseLeftDoubleClick(wxMouseEvent& event)
     }
 }
 
-//-------------------------------------------------------------------------
-// OnMouseRightDown()
-//-------------------------------------------------------------------------
-void PlotWaterfall::OnMouseRightDown(wxMouseEvent& event)
-{
-    m_colour++;
-    if (m_colour == 3)
-        m_colour = 0;
-}
 

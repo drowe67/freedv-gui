@@ -43,7 +43,8 @@ class PlotWaterfall : public PlotPanel
         void setGreyscale(bool greyscale) { m_greyscale = greyscale; }
         void setRxFreq(float rxFreq) { m_rxFreq = rxFreq; }
         void setFs(int fs) { m_modem_stats_max_f_hz = fs/2; }
-
+        void setColor(int color) { m_colour = color; }
+        
     protected:
         unsigned    m_heatmap_lut[256];
 
@@ -56,7 +57,6 @@ class PlotWaterfall : public PlotPanel
         void        draw(wxAutoBufferedPaintDC& dc);
         void        plotPixelData();
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
-        void        OnMouseRightDown(wxMouseEvent& event);
 
     private:
         float       m_dT;

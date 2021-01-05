@@ -1,6 +1,6 @@
 sudo: required
 language: generic
-dist: xenial 
+dist: bionic 
 
 addons:
   apt:

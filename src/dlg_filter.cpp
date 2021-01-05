@@ -80,7 +80,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_LPCPostFilterDefault = new wxButton(this, wxID_ANY, wxT("Default"));
     lpcpfs->Add(m_LPCPostFilterDefault, 0, wxALL|wxALIGN_CENTRE_HORIZONTAL|wxALIGN_CENTRE_VERTICAL, 5);
 
-    bSizer30->Add(lpcpfs, 0, wxALL, 0);
+    bSizer30->Add(lpcpfs, 0, wxALL | wxEXPAND, 3);
 
     // Speex pre-processor --------------------------------------------------
 
@@ -89,14 +89,14 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     sbSizer_speexpp = new wxStaticBoxSizer(sb_speexpp, wxHORIZONTAL);
 
     m_ckboxSpeexpp = new wxCheckBox(this, wxID_ANY, _("Speex Noise Suppression"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_speexpp->Add(m_ckboxSpeexpp, wxALIGN_LEFT, 2);
+    sbSizer_speexpp->Add(m_ckboxSpeexpp, 0, wxALIGN_LEFT, 2);
     m_ckboxSpeexpp->SetToolTip(_("Enable noise supression, dereverberation, AGC of mic signal"));
 
     m_ckbox700C_EQ = new wxCheckBox(this, wxID_ANY, _("700C/700D/700E Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_speexpp->Add(m_ckbox700C_EQ, wxALIGN_LEFT, 2);
+    sbSizer_speexpp->Add(m_ckbox700C_EQ, 0, wxALIGN_LEFT, 2);
     m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700C/700D/700E Codec input audio"));
 
-    bSizer30->Add(sbSizer_speexpp, 0, wxALL, 0);   
+    bSizer30->Add(sbSizer_speexpp, 0, wxALL | wxEXPAND, 3);   
 
     // EQ Filters -----------------------------------------------------------
 
@@ -130,8 +130,8 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     eqSpkOutSizer2->Add(m_SpkOutDefault,0,wxALIGN_CENTRE_VERTICAL|wxLEFT,20);
     eqSpkOutSizer->Add(eqSpkOutSizer2);
 
-    bSizer30->Add(eqMicInSizer, 0, wxALL, 0);
-    bSizer30->Add(eqSpkOutSizer, 0, wxALL, 0);
+    bSizer30->Add(eqMicInSizer, 0, wxALL | wxEXPAND, 0);
+    bSizer30->Add(eqSpkOutSizer, 0, wxALL | wxEXPAND, 0);
 
     // Storgage for spectrum magnitude plots ------------------------------------
 
@@ -167,9 +167,9 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_sdbSizer5Cancel = new wxButton(this, wxID_CANCEL);
     bSizer31->Add(m_sdbSizer5Cancel, 0, wxALL, 2);
 
-    bSizer30->Add(bSizer31, 0, wxALIGN_RIGHT|wxALL, 0);
+    bSizer30->Add(bSizer31, 0, wxALL | wxALIGN_CENTER, 3);
 
-    this->SetSizer(bSizer30);
+    this->SetSizerAndFit(bSizer30);
     this->Layout();
 
     this->Centre(wxBOTH);
@@ -386,6 +386,8 @@ void FilterDlg::ExchangeData(int inout, bool storePersistent)
         m_SpkOutEnable->SetValue(wxGetApp().m_SpkOutEQEnable);
 
         plotSpkOutFilterSpectrum();
+        
+        updateControlState();
     }
     if(inout == EXCHANGE_DATA_OUT)
     {
@@ -580,10 +582,12 @@ void FilterDlg::setGamma(void) {
 
 void FilterDlg::OnEnable(wxScrollEvent& event) {
     setCodec2();
+    updateControlState();
 }
 
 void FilterDlg::OnBassBoost(wxScrollEvent& event) {
     setCodec2();
+    updateControlState();
 }
 
 void FilterDlg::OnBetaScroll(wxScrollEvent& event) {
@@ -611,13 +615,46 @@ void FilterDlg::On700C_EQ(wxScrollEvent& event) {
     }
 }
 
+void FilterDlg::updateControlState()
+{
+    m_MicInBass.sliderFreq->Enable(wxGetApp().m_MicInEQEnable);
+    m_MicInBass.sliderGain->Enable(wxGetApp().m_MicInEQEnable);
+    
+    m_MicInMid.sliderFreq->Enable(wxGetApp().m_MicInEQEnable);
+    m_MicInMid.sliderGain->Enable(wxGetApp().m_MicInEQEnable);
+    m_MicInMid.sliderQ->Enable(wxGetApp().m_MicInEQEnable);
+    
+    m_MicInTreble.sliderFreq->Enable(wxGetApp().m_MicInEQEnable);
+    m_MicInTreble.sliderGain->Enable(wxGetApp().m_MicInEQEnable);
+    
+    m_MicInDefault->Enable(wxGetApp().m_MicInEQEnable);
+    
+    m_SpkOutBass.sliderFreq->Enable(wxGetApp().m_SpkOutEQEnable);
+    m_SpkOutBass.sliderGain->Enable(wxGetApp().m_SpkOutEQEnable);
+    
+    m_SpkOutMid.sliderFreq->Enable(wxGetApp().m_SpkOutEQEnable);
+    m_SpkOutMid.sliderGain->Enable(wxGetApp().m_SpkOutEQEnable);
+    m_SpkOutMid.sliderQ->Enable(wxGetApp().m_SpkOutEQEnable);
+    
+    m_SpkOutTreble.sliderFreq->Enable(wxGetApp().m_SpkOutEQEnable);
+    m_SpkOutTreble.sliderGain->Enable(wxGetApp().m_SpkOutEQEnable);
+    
+    m_SpkOutDefault->Enable(wxGetApp().m_SpkOutEQEnable);
+    
+    m_codec2LPCPostFilterBeta->Enable(m_codec2LPCPostFilterEnable->GetValue());
+    m_codec2LPCPostFilterBassBoost->Enable(m_codec2LPCPostFilterEnable->GetValue());
+    m_codec2LPCPostFilterGamma->Enable(m_codec2LPCPostFilterEnable->GetValue());
+    m_LPCPostFilterDefault->Enable(m_codec2LPCPostFilterEnable->GetValue());
+}
+
 void FilterDlg::OnMicInEnable(wxScrollEvent& event) {
     wxGetApp().m_MicInEQEnable = m_MicInEnable->GetValue();
+    updateControlState();
 }
 
 void FilterDlg::OnSpkOutEnable(wxScrollEvent& event) {
     wxGetApp().m_SpkOutEQEnable = m_SpkOutEnable->GetValue();
-    //printf("wxGetApp().m_SpkOutEQEnable: %d\n", wxGetApp().m_SpkOutEQEnable);
+    updateControlState();
 }
 
 void FilterDlg::setFreq(EQ *eq)

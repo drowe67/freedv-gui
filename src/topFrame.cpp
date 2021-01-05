@@ -72,23 +72,19 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
         tools->Append(m_menuItemPlugIn);
     }
 
-    wxMenuItem* m_menuItemPlayFileToMicIn;
-    m_menuItemPlayFileToMicIn = new wxMenuItem(tools, wxID_ANY, wxString(_("Start/Stop Play File - Mic In...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemPlayFileToMicIn = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Play File - Mic In...")) , wxEmptyString, wxITEM_NORMAL);
     g_playFileToMicInEventId = m_menuItemPlayFileToMicIn->GetId();
     tools->Append(m_menuItemPlayFileToMicIn);
 
-    wxMenuItem* m_menuItemRecFileFromRadio;
-    m_menuItemRecFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start/Stop Record File - From Radio...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemRecFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Record File - From Radio...")) , wxEmptyString, wxITEM_NORMAL);
     g_recFileFromRadioEventId = m_menuItemRecFileFromRadio->GetId();
     tools->Append(m_menuItemRecFileFromRadio);
 
-    wxMenuItem* m_menuItemRecFileFromModulator;
-    m_menuItemRecFileFromModulator = new wxMenuItem(tools, wxID_ANY, wxString(_("Start/Stop Record File - From Modulator...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemRecFileFromModulator = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Record File - From Modulator...")) , wxEmptyString, wxITEM_NORMAL);
     g_recFileFromModulatorEventId = m_menuItemRecFileFromModulator->GetId();
     tools->Append(m_menuItemRecFileFromModulator);
 
-    wxMenuItem* m_menuItemPlayFileFromRadio;
-    m_menuItemPlayFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start/Stop Play File - From Radio...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemPlayFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Play File - From Radio...")) , wxEmptyString, wxITEM_NORMAL);
     g_playFileFromRadioEventId = m_menuItemPlayFileFromRadio->GetId();
     tools->Append(m_menuItemPlayFileFromRadio);
     m_menubarMain->Append(tools, _("&Tools"));
@@ -151,13 +147,10 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     m_textSync = new wxStaticText(this, wxID_ANY, wxT("Modem"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
     sbSizer3_33->Add(m_textSync, 0, wxALIGN_CENTER_HORIZONTAL, 1);
 
-    m_textInterleaverSync = new wxStaticText(this, wxID_ANY, wxT("Interleaver"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
-    sbSizer3_33->Add(m_textInterleaverSync, 0, wxALIGN_CENTER_HORIZONTAL , 1);
     m_textSync->Disable();
 
     m_BtnReSync = new wxButton(this, wxID_ANY, _("ReSync"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer3_33->Add(m_BtnReSync, 0, wxALIGN_CENTRE , 1);
-    m_textInterleaverSync->Disable();
 
     leftSizer->Add(sbSizer3_33,0, wxALL|wxEXPAND, 3);
 
@@ -195,7 +188,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     //------------------------------
     wxStaticBoxSizer* levelSizer;
     levelSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Level")), wxVERTICAL);
-
+    
     m_textLevel = new wxStaticText(this, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(60,-1), wxALIGN_CENTRE);
     m_textLevel->SetForegroundColour(wxColour(255,0,0));
     levelSizer->Add(m_textLevel, 0, wxALIGN_LEFT, 1);
@@ -251,22 +244,6 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     m_txtCtrlCallSign->SetToolTip(_("Call Sign of transmitting station will appear here"));
     bSizer15->Add(m_txtCtrlCallSign, 0, wxALL|wxEXPAND, 5);
     lowerSizer->Add(bSizer15, 1, wxEXPAND, 5);
-
-#ifdef __EXPERIMENTAL_UDP__
-    wxStaticBoxSizer* sbSizer_Checksum = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Checksums")), wxHORIZONTAL);
-
-    wxStaticText *goodLabel = new wxStaticText(this, wxID_ANY, wxT("Good: "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
-    sbSizer_Checksum->Add(goodLabel, 0, 0, 2);
-    m_txtChecksumGood = new wxStaticText(this, wxID_ANY, wxT("0"), wxDefaultPosition, wxSize(30,-1), wxALIGN_CENTRE);
-    sbSizer_Checksum->Add(m_txtChecksumGood, 0, 0, 2);
-
-    wxStaticText *badLabel = new wxStaticText(this, wxID_ANY, wxT("Bad: "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
-    sbSizer_Checksum->Add(badLabel, 0, 0, 1);
-    m_txtChecksumBad = new wxStaticText(this, wxID_ANY, wxT("0"), wxDefaultPosition, wxSize(30,-1), wxALIGN_CENTRE);
-    sbSizer_Checksum->Add(m_txtChecksumBad, 0, 0, 1);
-
-    lowerSizer->Add(sbSizer_Checksum, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
-#endif
 
     //=====================================================
     // These are the buttons that autosend the userid (?)
@@ -497,10 +474,10 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     sbSizer5->Add(bSizer11, 2, wxEXPAND, 1);
     rightSizer->Add(sbSizer5, 2, wxALL|wxEXPAND, 3);
     bSizer1->Add(rightSizer, 0, wxALL|wxEXPAND, 3);
-    this->SetSizer(bSizer1);
+    this->SetSizerAndFit(bSizer1);
     this->Layout();
     m_statusBar1 = this->CreateStatusBar(3, wxST_SIZEGRIP, wxID_ANY);
-
+    
     //=====================================================
     // End of layout
     //=====================================================

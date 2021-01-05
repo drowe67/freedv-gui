@@ -32,15 +32,10 @@ class OptionsDlg : public wxDialog
 {
     public:
     OptionsDlg( wxWindow* parent,
-               wxWindowID id = wxID_ANY, const wxString& title = _("Options"), 
+                wxWindowID id = wxID_ANY, const wxString& title = _("Options"), 
                 const wxPoint& pos = wxDefaultPosition, 
-#ifdef __WXMSW__
-                /* we add debug console check box for windows */
-                const wxSize& size = wxSize(600,410), 
-#else
-                const wxSize& size = wxSize(600,380), 
-#endif
-               long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
+                const wxSize& size = wxDefaultSize, 
+                long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
         ~OptionsDlg();
 
         void    ExchangeData(int inout, bool storePersistent);
@@ -64,7 +59,13 @@ class OptionsDlg : public wxDialog
             }
         }
 
-
+        void setSessionActive(bool active) 
+        {
+            sessionActive_ = active; 
+        
+            updatePSKReporterState();
+        }
+        
     protected:
 
         // Handlers for events.
@@ -85,10 +86,27 @@ class OptionsDlg : public wxDialog
         void    OnFifoReset(wxCommandEvent& event);
         void    OnUDPTest(wxCommandEvent& event);
         
+        void    OnPSKReporterEnable(wxScrollEvent& event);
+        void    OnToneStateEnable(wxScrollEvent& event);
+        void    OnUDPStateEnable(wxScrollEvent& event);
         wxTextCtrl   *m_txtCtrlCallSign; // TODO: this should be renamed to tx_txtmsg, and rename all related incl persis strge
 
         wxCheckBox* m_ckHalfDuplex;
 
+        wxNotebook  *m_notebook;
+        wxNotebookPage *m_reportingTab; // txt msg/PSK Reporter
+        wxNotebookPage *m_displayTab; // Waterfall color, other display config
+        wxNotebookPage *m_keyerTab; // Voice Keyer
+        wxNotebookPage *m_modemTab; // 700/OFDM/duplex
+        wxNotebookPage *m_simulationTab; // testing/interference
+        wxNotebookPage *m_interfacingTab; // UDP
+        wxNotebookPage *m_debugTab; // Debug
+        
+        /* Waterfall color */
+        wxRadioButton *m_waterfallColorScheme1; // Multicolored
+        wxRadioButton *m_waterfallColorScheme2; // Black & white
+        wxRadioButton *m_waterfallColorScheme3; // Blue tint?
+        
         /* Voice Keyer */
 
         wxButton     *m_buttonChooseVoiceKeyerWaveFile;
@@ -111,7 +129,6 @@ class OptionsDlg : public wxDialog
         wxCheckBox   *m_ckboxFreeDV700txClip;
         wxCheckBox   *m_ckboxFreeDV700txBPF;
         wxCheckBox   *m_ckboxFreeDV700Combine;
-        wxTextCtrl   *m_txtInterleave;
         wxCheckBox   *m_ckboxFreeDV700ManualUnSync;
         
         wxCheckBox   *m_ckboxPhaseEstBW;
@@ -119,7 +136,6 @@ class OptionsDlg : public wxDialog
 
         wxRadioButton *m_rb_textEncoding1;
         wxRadioButton *m_rb_textEncoding2;
-        wxCheckBox    *m_ckboxEnableChecksum;
 
         wxCheckBox   *m_ckbox_events;
         wxTextCtrl   *m_txt_events_regexp_match;
@@ -133,6 +149,10 @@ class OptionsDlg : public wxDialog
         wxTextCtrl   *m_txt_udp_port;
         wxButton*     m_btn_udp_test;
 
+        wxCheckBox    *m_ckbox_psk_enable;
+        wxTextCtrl    *m_txt_callsign;
+        wxTextCtrl    *m_txt_grid_square;
+        
         wxButton*     m_BtnFifoReset;
         wxStaticText  *m_textFifos;
         wxStaticText  *m_textPA1;
@@ -155,6 +175,13 @@ class OptionsDlg : public wxDialog
         void OnChooseVoiceKeyerWaveFile(wxCommandEvent& event);
 
      private:
+         void updatePSKReporterState();
+         void updateChannelNoiseState();
+         void updateAttnCarrierState();
+         void updateToneState();
+         void updateUDPState();
+         
+         bool sessionActive_;
 };
 
 #endif // __OPTIONS_DIALOG__

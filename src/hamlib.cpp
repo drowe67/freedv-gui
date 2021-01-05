@@ -78,6 +78,11 @@ static bool rig_cmp(const struct rig_caps *rig1, const struct rig_caps *rig2) {
     return rig1->rig_model < rig2->rig_model;
 }
 
+freq_t Hamlib::get_frequency(void) const
+{
+    return m_currFreq;
+}
+
 void Hamlib::populateComboBox(wxComboBox *cb) {
 
     riglist_t::const_iterator rig = m_rigList.begin();
@@ -197,16 +202,8 @@ int Hamlib::hamlib_mode_cb(RIG* rig, vfo_t currVFO, rmode_t currMode, pbwidth_t 
     return RIG_OK;
 }
 
-void Hamlib::enable_mode_detection(wxStaticText* statusBox, bool vhfUhfMode)
+int Hamlib::update_frequency_and_mode(void)
 {
-    // Set VHF/UHF mode. This governs whether FM is an acceptable mode for the detection display.
-    m_vhfUhfMode = vhfUhfMode;
-    
-    // Enable control.
-    m_modeBox = statusBox;
-    m_modeBox->Enable(true);
-
-    // Populate initial state.
     rmode_t mode = RIG_MODE_NONE;
     pbwidth_t passband = 0;
     int result = rig_get_mode(m_rig, RIG_VFO_CURR, &mode, &passband);
@@ -229,6 +226,21 @@ void Hamlib::enable_mode_detection(wxStaticText* statusBox, bool vhfUhfMode)
             update_mode_status();
         }
     }
+    
+    return result;
+}
+
+void Hamlib::enable_mode_detection(wxStaticText* statusBox, bool vhfUhfMode)
+{
+    // Set VHF/UHF mode. This governs whether FM is an acceptable mode for the detection display.
+    m_vhfUhfMode = vhfUhfMode;
+    
+    // Enable control.
+    m_modeBox = statusBox;
+    m_modeBox->Enable(true);
+
+    // Populate initial state.
+    int result = update_frequency_and_mode();
 
     // If we couldn't get current mode/frequency for any reason, disable the UI for it.
     if (result != RIG_OK)

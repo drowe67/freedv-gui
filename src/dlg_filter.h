@@ -71,7 +71,7 @@ class FilterDlg : public wxDialog
     public:
     FilterDlg( wxWindow* parent, bool running, bool *newMicInFilter, bool *newSpkOutFilter,
                wxWindowID id = wxID_ANY, const wxString& title = _("Filter"), 
-               const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 800, 675 ), 
+               const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize,
                long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
         ~FilterDlg();
 
@@ -180,7 +180,8 @@ class FilterDlg : public wxDialog
  
         bool          *m_newMicInFilter;
         bool          *m_newSpkOutFilter;
-
+private:
+        void updateControlState();
 };
 
 #endif // __FILTER_DIALOG__

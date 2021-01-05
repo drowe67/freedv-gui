@@ -169,7 +169,7 @@ class AudioOptsDialog : public wxDialog
 
     public:
 
-        AudioOptsDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Audio Config"), const wxPoint& pos = wxPoint(1,1), const wxSize& size = wxSize( 800, 650 ), long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
+        AudioOptsDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Audio Config"), const wxPoint& pos = wxPoint(1,1), const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
         ~AudioOptsDialog();
         int ExchangeData(int inout);
 };

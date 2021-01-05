@@ -94,7 +94,9 @@
 #include "comp_prim.h"
 #include "dlg_plugin.h"
 #include "hamlib.h"
-#include "serialport.h"
+#include "serialport.h" 
+#include "pskreporter.h"
+#include "callsign_encoder.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -108,7 +110,8 @@ enum {
         ID_TIMER_WATERFALL,
         ID_TIMER_SPECTRUM,
         ID_TIMER_SCATTER,
-        ID_TIMER_SCALAR
+        ID_TIMER_SCALAR,
+        ID_TIMER_PSKREPORTER,
      };
 
 #define EXCHANGE_DATA_IN    0
@@ -219,7 +222,6 @@ class MainApp : public wxApp
         bool                m_events;
         int                 m_events_spam_timer;
         unsigned int        m_textEncoding;
-        bool                m_enable_checksum;
         wxString            m_events_regexp_match;
         wxString            m_events_regexp_replace;
 
@@ -283,6 +285,19 @@ class MainApp : public wxApp
         int                 m_framesPerBuffer;
         int                 m_fifoSize_ms;
 
+        // PSK Reporter configuration
+        bool                m_psk_enable;
+        wxString            m_psk_callsign;
+        wxString            m_psk_grid_square;
+
+        PskReporter*            m_pskReporter;
+        CallsignEncoder*        m_callsignEncoder;
+        std::string         m_pskPendingCallsign;
+        char                m_pskPendingSnr;
+        
+        // Waterfall display
+        int                 m_waterfallColor;
+        
         bool                loadConfig();
         bool                saveConfig();
 
@@ -316,7 +331,6 @@ class MainApp : public wxApp
         bool       m_FreeDV700txClip;
         bool       m_FreeDV700txBPF;
         bool       m_FreeDV700Combine;
-        int        m_FreeDV700Interleave;
         bool       m_FreeDV700ManualUnSync;
 
         bool       m_PhaseEstBW;
@@ -378,6 +392,7 @@ typedef struct
     struct FIFO    *rxoutfifo;
 
     int             inputChannels1, inputChannels2;
+    int             outputChannels1, outputChannels2;
 
     // EQ filter states
     void           *sbqMicInBass;
@@ -471,7 +486,7 @@ class MainFrame : public TopFrame
         PaError                 m_txErr;
 
         txRxThread*             m_txRxThread;
-
+        
         bool                    OpenHamlibRig();
         void                    OpenSerialPort(void);
         void                    CloseSerialPort(void);
@@ -481,6 +496,9 @@ class MainFrame : public TopFrame
 
 #ifdef _USE_TIMER
         wxTimer                 m_plotTimer;
+        
+        // Not sure why we have the option to disable timers. TBD?
+        wxTimer                 m_pskReporterTimer;
 #endif
 
     void destroy_fifos(void);
@@ -506,8 +524,9 @@ class MainFrame : public TopFrame
                              );
 
 
-    void initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDevice,
-                             int soundCard, int sampleRate, int inputChannels);
+    void initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDevice, 
+                             int soundCard, int sampleRate, int inputChannels,
+                             int outputChannels);
 
     void togglePTT(void);
 
@@ -530,6 +549,11 @@ class MainFrame : public TopFrame
     float                   ds_rx_time;
     void DetectSyncProcessEvent(void);
 
+        void StopPlayFileToMicIn(void);
+        void StopPlaybackFileFromRadio();
+        void StopRecFileFromModulator();
+        void StopRecFileFromRadio();
+        
     protected:
 
         void setsnrBeta(bool snrSlow);
@@ -560,7 +584,6 @@ class MainFrame : public TopFrame
         void OnToolsPlugInCfgUI( wxUpdateUIEvent& event );
 
         void OnPlayFileToMicIn( wxCommandEvent& event );
-        void StopPlayFileToMicIn(void);
         void OnRecFileFromRadio( wxCommandEvent& event );
         void OnRecFileFromModulator( wxCommandEvent& event);
         void OnPlayFileFromRadio( wxCommandEvent& event );
@@ -611,8 +634,6 @@ class MainFrame : public TopFrame
         // Callsign/text messaging
         char        m_callsign[MAX_CALLSIGN];
         char       *m_pcallsign;
-        unsigned int m_checksumGood;
-        unsigned int m_checksumBad;
 
         // Events
         void        processTxtEvent(char event[]);
@@ -636,6 +657,7 @@ class MainFrame : public TopFrame
         int        vk_rx_pause;
         int        vk_repeats, vk_repeat_counter;
         float      vk_rx_time;
+        float      vk_rx_sync_time;
 
         void       checkAvxSupport();
         bool       isAvxPresent;

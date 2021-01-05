@@ -91,8 +91,6 @@ class TopFrame : public wxFrame
         wxButton*     m_BtnCallSignReset;
         wxTextCtrl*   m_txtCtrlCallSign;
         wxStaticText* m_txtModeStatus;
-        wxStaticText* m_txtChecksumGood;
-        wxStaticText* m_txtChecksumBad;
 
         wxSlider* m_sliderSQ;
         wxCheckBox* m_ckboxSQ;
@@ -110,7 +108,6 @@ class TopFrame : public wxFrame
         wxStaticText  *m_textCodec2Var;
 
         wxStaticText  *m_textSync;
-        wxStaticText  *m_textInterleaverSync;
         wxButton      *m_BtnReSync;
 
         wxRadioButton *m_rb700c;
@@ -126,6 +123,11 @@ class TopFrame : public wxFrame
         wxRadioButton *m_rb2020;
         wxRadioButton *m_rbPlugIn;
 
+        wxMenuItem* m_menuItemPlayFileToMicIn;
+        wxMenuItem* m_menuItemRecFileFromRadio;
+        wxMenuItem* m_menuItemRecFileFromModulator;
+        wxMenuItem* m_menuItemPlayFileFromRadio;
+    
         // Virtual event handlers, overide them in your derived class
         virtual void topFrame_OnClose( wxCloseEvent& event ) { event.Skip(); }
         virtual void topFrame_OnPaint( wxPaintEvent& event ) { event.Skip(); }

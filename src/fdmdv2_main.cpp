@@ -20,8 +20,12 @@
 //
 //==========================================================================
 
+#include <time.h>
+#include <deque>
 #include "fdmdv2_main.h"
 #include "osx_interface.h"
+#include "golay23.h"
+#include "callsign_encoder.h"
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
@@ -80,6 +84,7 @@ int                 g_State, g_prev_State, g_interleaverSyncState;
 paCallBackData     *g_rxUserdata;
 int                 g_dump_timing;
 int                 g_dump_fifo_state;
+time_t              g_sync_time;
 
 // FIFOs used for plotting waveforms
 struct FIFO        *g_plotDemodInFifo;
@@ -178,6 +183,9 @@ IMPLEMENT_APP(MainApp);
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
+    m_pskReporter = NULL;
+    m_callsignEncoder = NULL;
+    
     if(!wxApp::OnInit())
     {
         return false;
@@ -196,6 +204,8 @@ bool MainApp::OnInit()
     pConfig->SetRecordDefaults();
 #endif
 
+    golay23_init();
+    
     m_rTopWindow = wxRect(0, 0, 0, 0);
     m_strRxInAudio.Empty();
     m_strRxOutAudio.Empty();
@@ -308,9 +318,6 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     g_logfile = stderr;
     #endif
 
-
-    SetMinSize(wxSize(400,400));
-
     // Init Hamlib library, but we dont start talking to any rigs yet
 
     wxGetApp().m_hamlib = new Hamlib();
@@ -338,7 +345,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     int x = pConfig->Read(wxT("/MainFrame/left"),       20);
     int y = pConfig->Read(wxT("/MainFrame/top"),        20);
     int w = pConfig->Read(wxT("/MainFrame/width"),     800);
-    int h = pConfig->Read(wxT("/MainFrame/height"),    550);
+    int h = pConfig->Read(wxT("/MainFrame/height"),    695);
 
     // sanitise frame position as a first pass at Win32 registry bug
 
@@ -346,7 +353,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     if (x < 0 || x > 2048) x = 20;
     if (y < 0 || y > 2048) y = 20;
     if (w < 0 || w > 2048) w = 800;
-    if (h < 0 || h > 2048) h = 550;
+    if (h < 0 || h > 2048) h = 695;
 
     wxGetApp().m_show_wf            = pConfig->Read(wxT("/MainFrame/show_wf"),           1);
     wxGetApp().m_show_spect         = pConfig->Read(wxT("/MainFrame/show_spect"),        1);
@@ -530,7 +537,6 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 
     wxGetApp().m_callSign = pConfig->Read("/Data/CallSign", wxT(""));
     wxGetApp().m_textEncoding = pConfig->Read("/Data/TextEncoding", 1);
-    wxGetApp().m_enable_checksum = pConfig->Read("/Data/EnableChecksumOnMsgRx", f);
 
     wxGetApp().m_events = pConfig->Read("/Events/enable", f);
     wxGetApp().m_events_spam_timer = (int)pConfig->Read(wxT("/Events/spam_timer"), 10);
@@ -552,7 +558,6 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_FreeDV700txClip = (float)pConfig->Read(wxT("/FreeDV700/txClip"), t);
     wxGetApp().m_FreeDV700txBPF = (float)pConfig->Read(wxT("/FreeDV700/txBPF"), t);
     wxGetApp().m_FreeDV700Combine = 1;
-    wxGetApp().m_FreeDV700Interleave = (int)pConfig->Read(wxT("/FreeDV700/interleave"), 1);
     wxGetApp().m_FreeDV700ManualUnSync = (float)pConfig->Read(wxT("/FreeDV700/manualUnSync"), f);
 
     wxGetApp().m_PhaseEstBW = (float)pConfig->Read(wxT("/OFDM/PhaseEstBW"), f);
@@ -569,7 +574,14 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_tone = 0;
     wxGetApp().m_tone_freq_hz = 1000;
     wxGetApp().m_tone_amplitude = 500;
-
+    
+    wxGetApp().m_psk_enable = pConfig->ReadBool(wxT("/PSKReporter/Enable"), false);
+    wxGetApp().m_psk_callsign = pConfig->Read(wxT("/PSKReporter/Callsign"), wxT(""));
+    wxGetApp().m_psk_grid_square = pConfig->Read(wxT("/PSKReporter/GridSquare"), wxT(""));
+    
+    // Waterfall configuration
+    wxGetApp().m_waterfallColor = (int)pConfig->Read(wxT("/Waterfall/Color"), (int)0); // 0-2
+    
     int mode  = pConfig->Read(wxT("/Audio/mode"), (long)0);
     if (mode == 0)
         m_rb1600->SetValue(1);
@@ -624,6 +636,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 #ifdef _USE_TIMER
     Bind(wxEVT_TIMER, &MainFrame::OnTimer, this);       // ID_MY_WINDOW);
     m_plotTimer.SetOwner(this, ID_TIMER_WATERFALL);
+    m_pskReporterTimer.SetOwner(this, ID_TIMER_PSKREPORTER);
     //m_panelWaterfall->Refresh();
 #endif
 
@@ -808,7 +821,6 @@ MainFrame::~MainFrame()
 
         pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
         pConfig->Write(wxT("/Data/TextEncoding"), wxGetApp().m_textEncoding);
-        pConfig->Write(wxT("/Data/EnableChecksumOnMsgRx"), wxGetApp().m_enable_checksum);
         pConfig->Write(wxT("/Events/enable"), wxGetApp().m_events);
         pConfig->Write(wxT("/Events/spam_timer"), wxGetApp().m_events_spam_timer);
         pConfig->Write(wxT("/Events/regexp_match"), wxGetApp().m_events_regexp_match);
@@ -827,6 +839,13 @@ MainFrame::~MainFrame()
 
         pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
 
+        pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);
+        pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
+        pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
+        
+        // Waterfall configuration
+        pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
+        
         int mode;
         if (m_rb1600->GetValue())
             mode = 0;
@@ -847,6 +866,7 @@ MainFrame::~MainFrame()
         if (m_rb2020->GetValue())
             mode = 9;
        pConfig->Write(wxT("/Audio/mode"), mode);
+       pConfig->Flush();
     }
 
     //m_togRxID->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnRxIDUI), NULL, this);
@@ -879,6 +899,10 @@ MainFrame::~MainFrame()
         g_sfRecFileFromModulator = NULL;
     }
 #ifdef _USE_TIMER
+    if(m_pskReporterTimer.IsRunning())
+    {
+        m_pskReporterTimer.Stop();
+    }
     if(m_plotTimer.IsRunning())
     {
         m_plotTimer.Stop();
@@ -915,12 +939,18 @@ void MainFrame::OnIdle(wxIdleEvent &evt) {
 //----------------------------------------------------------------
 void MainFrame::OnTimer(wxTimerEvent &evt)
 {
-
+    if (evt.GetTimer().GetId() == ID_TIMER_PSKREPORTER)
+    {
+        // PSK Reporter timer fired; send in-progress packet.
+        wxGetApp().m_pskReporter->send();
+    }
+    
     int r,c;
 
     if (m_panelWaterfall->checkDT()) {
         m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
         m_panelWaterfall->m_newdata = true;
+        m_panelWaterfall->setColor(wxGetApp().m_waterfallColor);
         m_panelWaterfall->Refresh();
     }
 
@@ -1043,7 +1073,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     if (snr_limited < -5.0) snr_limited = -5.0;
     if (snr_limited > 20.0) snr_limited = 20.0;
     char snr[15];
-    sprintf(snr, "%d", (int)(g_snr+0.5)); // round to nearest dB
+    int snr_val = (int)(g_snr+0.5);
+    sprintf(snr, "%d", snr_val); // round to nearest dB
 
     //fprintf(stderr, "g_mode: %d snr_est: %f m_snrBeta: %f g_snr: %f snr_limited: %f\n", g_mode, g_stats.snr_est,  m_snrBeta, g_snr, snr_limited);
 
@@ -1104,6 +1135,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     if (g_State) {
         if (g_prev_State == 0) {
             g_resyncs++;
+            if (wxGetApp().m_callsignEncoder) wxGetApp().m_callsignEncoder->clearReceivedText();
+            
+            // Clear RX text to reduce the incidence of incorrect callsigns extracted with
+            // the PSK Reporter callsign extraction logic.
+            m_txtCtrlCallSign->SetValue(wxT(""));
+            memset(m_callsign, 0, MAX_CALLSIGN);
+            m_pcallsign = m_callsign;
+            
+            // Get current time to enforce minimum sync time requirement for PSK Reporter.
+            g_sync_time = time(0);
         }
         m_textSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
 	m_textSync->SetLabel("Modem");
@@ -1113,53 +1154,41 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 	m_textSync->SetLabel("Modem");
      }
     g_prev_State = g_State;
-    if ((g_mode == FREEDV_MODE_700D) || (g_mode == FREEDV_MODE_700E) || (g_mode == FREEDV_MODE_2020)){
-        if (g_interleaverSyncState) {
-            m_textInterleaverSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
-            m_textInterleaverSync->SetLabel("Intrlvr ("+wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave)+")");
-        } else {
-            m_textInterleaverSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
-            m_textInterleaverSync->SetLabel("Intrlvr ("+wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave)+")");
-        }
-    }
 
     // send Callsign ----------------------------------------------------
 
     char callsign[MAX_CALLSIGN];
-    strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN-1);
-
+    
+    // Convert to 6 bit character set for use with Golay encoding.
+    memset(callsign, 0, MAX_CALLSIGN);
+    
+    if (wxGetApp().m_callsignEncoder)
+    {
+        strncpy(callsign, (const char*) wxGetApp().m_psk_callsign.mb_str(wxConvUTF8), MAX_CALLSIGN/2 - 2);
+        if (strlen(callsign) < MAX_CALLSIGN/2 - 1)
+        {
+            strncat(callsign, "\r", 1);
+        }    
+        wxGetApp().m_callsignEncoder->setCallsign(&callsign[0]);
+    }
+    else
+    {
+        strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
+        if (strlen(callsign) < MAX_CALLSIGN - 1)
+        {
+            strncat(callsign, "\r", 1);
+        }    
+    }   
+     
     // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
-
-    if ((unsigned)codec2_fifo_used(g_txDataInFifo) < strlen(callsign)) {
+    char* sendBuffer = &callsign[0];
+    if (wxGetApp().m_callsignEncoder) sendBuffer = (char*)wxGetApp().m_callsignEncoder->getEncodedCallsign();
+    if ((unsigned)codec2_fifo_used(g_txDataInFifo) < strlen(sendBuffer)) {
         unsigned int  i;
 
-        //fprintf(g_logfile, "tx callsign: %s.\n", callsign);
-
-        /* optionally append checksum */
-
-        if (wxGetApp().m_enable_checksum) {
-
-            unsigned char checksum = 0;
-            char callsign_checksum_cr[MAX_CALLSIGN+1];
-
-            for(i=0; i<strlen(callsign); i++)
-                checksum += callsign[i];
-            sprintf(callsign_checksum_cr, "%s%2x", callsign, checksum);
-            callsign_checksum_cr[strlen(callsign)+2] = 13;
-            callsign_checksum_cr[strlen(callsign)+3] = 0;
-            strcpy(callsign, callsign_checksum_cr);
-        }
-        else {
-            callsign[strlen(callsign)] = 13;
-            callsign[strlen(callsign)+1] = 0;
-        }
-
-        //fprintf(g_logfile, "tx callsign: %s.\n", callsign);
-
         // write chars to tx data fifo
-
-        for(i=0; i<strlen(callsign); i++) {
-            short ashort = (short)callsign[i];
+        for(i = 0; i < strlen(sendBuffer); i++) {
+            short ashort = (unsigned char)sendBuffer[i];
             codec2_fifo_write(g_txDataInFifo, &ashort, 1);
         }
     }
@@ -1168,70 +1197,70 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     short ashort;
     while (codec2_fifo_read(g_rxDataOutFifo, &ashort, 1) == 0) {
-
-        if ((ashort == 13) || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1)) {
-            // CR completes line
-            *m_pcallsign = 0;
-
-            /* Checksums can be disabled, e.g. for compatability with
-               older vesions.  In that case we print msg but don't do
-               any event processing.  If checksums enabled, only print
-               out when checksum is good. */
-
-            if (wxGetApp().m_enable_checksum) {
-                // lets see if checksum is OK
-
-                unsigned char checksum_rx = 0;
-                if (strlen(m_callsign) > 2) {
-                    for(unsigned int i=0; i<strlen(m_callsign)-2; i++)
-                        checksum_rx += m_callsign[i];
-                }
-                unsigned int checksum_tx;
-                int ret = sscanf(&m_callsign[strlen(m_callsign)-2], "%2x", &checksum_tx);
-                //fprintf(g_logfile, "rx callsign: %s.\n  checksum tx: %02x checksum rx: %02x\n", m_callsign, checksum_tx, checksum_rx);
-
-                wxString s;
-                if (ret && (checksum_tx == checksum_rx)) {
-                    m_callsign[strlen(m_callsign)-2] = 0;
-                    s.Printf("%s", m_callsign);
-                    m_txtCtrlCallSign->SetValue(s);
-
-#ifdef __UDP_EXPERIMENTAL__
-                    char s1[MAX_CALLSIGN];
-                    sprintf(s1,"rx_txtmsg %s", m_callsign);
-                    processTxtEvent(s1);
-
-                    m_checksumGood++;
-                    s.Printf("%d", m_checksumGood);
-                    m_txtChecksumGood->SetLabel(s);
-#endif
-                }
-                else {
-#ifdef __UDP_EXPERIMENTAL__
-                    m_checksumBad++;
-                    s.Printf("%d", m_checksumBad);
-                    m_txtChecksumBad->SetLabel(s);
-#endif
-                }
+        unsigned char incomingChar = (unsigned char)ashort;
+        
+        if (wxGetApp().m_callsignEncoder)
+        {
+            wxGetApp().m_callsignEncoder->pushReceivedByte(incomingChar);    
+            if (wxGetApp().m_callsignEncoder->isInSync())
+            {
+                m_txtCtrlCallSign->SetValue(wxGetApp().m_callsignEncoder->getReceivedText());
+            }        
+        }
+        else
+        {
+            // Pre-1.5.1 behavior, where text is handled as-is.
+            if (incomingChar == '\r' || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
+            {                        
+                // CR completes line
+                *m_pcallsign = 0;
+                m_pcallsign = m_callsign;
             }
-
-            //fprintf(g_logfile,"resetting callsign %s %ld\n", m_callsign, m_pcallsign-m_callsign);
-            // reset ptr to start of string
-            m_pcallsign = m_callsign;
-        }
-        else {
-            //fprintf(g_logfile, "new char %d %c\n", ashort, (char)ashort);
-            *m_pcallsign++ = (char)ashort;
-        }
-
-        /* If checksums disabled, display txt chars as they arrive */
-
-        if (!wxGetApp().m_enable_checksum) {
+            else
+            {
+                *m_pcallsign++ = incomingChar;
+            }
             m_txtCtrlCallSign->SetValue(m_callsign);
         }
     }
 
-
+    // We should only report to PSK Reporter when all of the following are true:
+    // a) The callsign encoder indicates a valid callsign has been received.
+    // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
+    // c) We don't currently have a pending report to add to the outbound list for the active callsign.
+    // When the above is true, capture the callsign and current SNR and add to the PSK Reporter object's outbound list.
+    if (wxGetApp().m_pskReporter != NULL && wxGetApp().m_callsignEncoder != NULL)
+    {
+        if (wxGetApp().m_callsignEncoder->isCallsignValid())
+        {
+            wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
+            wxString wxCallsign = m_txtCtrlCallSign->GetValue();
+            if (callsignFormat.Matches(wxCallsign) && wxGetApp().m_pskPendingCallsign != callsignFormat.GetMatch(wxCallsign, 1).ToStdString())
+            {
+                wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
+                wxGetApp().m_pskPendingCallsign = rxCallsign.ToStdString();
+                wxGetApp().m_pskPendingSnr = snr_val;
+            }
+        }
+        else if (wxGetApp().m_pskPendingCallsign != "")
+        {
+            wxGetApp().m_hamlib->update_frequency_and_mode();
+            fprintf(
+                stderr, 
+                "Adding callsign %s @ SNR %d, freq %d to PSK Reporter.\n", 
+                wxGetApp().m_pskPendingCallsign.c_str(), 
+                wxGetApp().m_pskPendingSnr,
+                (unsigned int)wxGetApp().m_hamlib->get_frequency());
+            
+            wxGetApp().m_pskReporter->addReceiveRecord(
+                wxGetApp().m_pskPendingCallsign,
+                wxGetApp().m_hamlib->get_frequency(),
+                wxGetApp().m_pskPendingSnr);
+            wxGetApp().m_pskPendingCallsign = "";
+            wxGetApp().m_pskPendingSnr = 0;
+        }
+    }
+    
     // Run time update of EQ filters -----------------------------------
 
     if (m_newMicInFilter || m_newSpkOutFilter) {
@@ -1595,7 +1624,15 @@ int MainApp::FilterEvent(wxEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
 {
-    togglePTT();
+    if (vk_state == VK_TX)
+    {
+        // Disable TX via VK code to prevent state inconsistencies.
+        VoiceKeyerProcessEvent(VK_SPACE_BAR);
+    }
+    else
+    {
+        togglePTT();
+    }
     event.Skip();
 }
 
@@ -1611,7 +1648,9 @@ void MainFrame::togglePTT(void) {
         // enable sync text
 
         m_textSync->Enable();
-        m_textInterleaverSync->Enable();
+        
+        // Reenable On/Off button.
+        m_togBtnOnOff->Enable(true);
     }
     else
     {
@@ -1622,11 +1661,13 @@ void MainFrame::togglePTT(void) {
         // disable sync text
 
         m_textSync->Disable();
-        m_textInterleaverSync->Disable();
 
 #ifdef __UDP_EXPERIMENTAL__
         char e[80]; sprintf(e,"ptt"); processTxtEvent(e);
 #endif
+        
+        // Disable On/Off button.
+        m_togBtnOnOff->Enable(false);
     }
 
     g_tx = m_btnTogPTT->GetValue();
@@ -1711,7 +1752,7 @@ int MainFrame::VoiceKeyerStartTx(void)
 
 void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
     int next_state = vk_state;
-
+    
     switch(vk_state) {
 
     case VK_IDLE:
@@ -1733,9 +1774,9 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
         if (vk_event == VK_SPACE_BAR) {
             m_btnTogPTT->SetValue(false); togglePTT();
-            StopPlayFileToMicIn();
             m_togBtnVoiceKeyer->SetValue(false);
             next_state = VK_IDLE;
+            CallAfter([&]() { StopPlayFileToMicIn(); });
         }
 
         if (vk_event == VK_PLAY_FINISHED) {
@@ -1760,12 +1801,9 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
         if (vk_event == VK_DT) {
             if (freedv_get_sync(g_pfreedv) == 1) {
-                // if we detect sync simulate a smooth transition to SYNC_WAIT State - TODO: review
-                if (vk_rx_time >= DT) {
-                    vk_rx_time -= DT;
-                } else {
-                    next_state = VK_SYNC_WAIT;
-                }
+                // if we detect sync transition to SYNC_WAIT state
+                next_state = VK_SYNC_WAIT;
+                vk_rx_sync_time = 0.0;
             } else {
                 vk_rx_time += DT;
                 if (vk_rx_time >= vk_rx_pause) {
@@ -1793,19 +1831,16 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
         if (vk_event == VK_DT) {
             if (freedv_get_sync(g_pfreedv) == 0) {
-                // if we lose sync simulate a smooth transition to return in RX State - TODO: review
-                if (vk_rx_time >= DT) {
-                    vk_rx_time -= DT;
-                } else {
-                    next_state = VK_RX;
-                }
+                // if we lose sync transition to RX State
+                next_state = VK_RX;
             } else {
                 vk_rx_time += DT;
+                vk_rx_sync_time += DT;
             }
 
             // drop out of voice keyer if we get a few seconds of valid sync
 
-            if (vk_rx_time >= VK_SYNC_WAIT_TIME) {
+            if (vk_rx_sync_time >= VK_SYNC_WAIT_TIME) {
                 m_togBtnVoiceKeyer->SetValue(false);
                 next_state = VK_IDLE;
             }
@@ -1941,11 +1976,6 @@ void MainFrame::OnCallSignReset(wxCommandEvent& event)
     wxString s;
     s.Printf("%s", m_callsign);
     m_txtCtrlCallSign->SetValue(s);
-#ifdef __UDP__EXPERIMENTAL__
-    m_checksumGood = m_checksumBad = 0;
-    m_txtChecksumGood->SetLabel(_("0"));
-    m_txtChecksumBad->SetLabel(_("0"));
-#endif
 }
 
 
@@ -2017,11 +2047,16 @@ static wxWindow* createMyExtraPlayFilePanel(wxWindow *parent)
 
 void MainFrame::StopPlayFileToMicIn(void)
 {
-    g_mutexProtectingCallbackData.Lock();
-    g_playFileToMicIn = false;
-    sf_close(g_sfPlayFile);
-    SetStatusText(wxT(""));
-    g_mutexProtectingCallbackData.Unlock();
+    if (g_playFileToMicIn)
+    {
+        g_mutexProtectingCallbackData.Lock();
+        g_playFileToMicIn = false;
+        sf_close(g_sfPlayFile);
+        SetStatusText(wxT(""));
+        m_menuItemPlayFileToMicIn->SetItemLabel(wxString(_("Start Play File - Mic In...")));
+        g_mutexProtectingCallbackData.Unlock();
+        VoiceKeyerProcessEvent(VK_PLAY_FINISHED);
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -2033,7 +2068,6 @@ void MainFrame::OnPlayFileToMicIn(wxCommandEvent& event)
 
     if(g_playFileToMicIn) {
         StopPlayFileToMicIn();
-        VoiceKeyerProcessEvent(VK_PLAY_FINISHED);
     }
     else
     {
@@ -2089,7 +2123,20 @@ void MainFrame::OnPlayFileToMicIn(wxCommandEvent& event)
 
         SetStatusText(wxT("Playing File: ") + fileName + wxT(" to Mic Input") , 0);
         g_playFileToMicIn = true;
+        
+        m_menuItemPlayFileToMicIn->SetItemLabel(wxString(_("Stop Play File - Mic In...")));
     }
+}
+
+void MainFrame::StopPlaybackFileFromRadio()
+{
+    g_mutexProtectingCallbackData.Lock();
+    g_playFileFromRadio = false;
+    sf_close(g_sfPlayFileFromRadio);
+    SetStatusText(wxT(""),0);
+    SetStatusText(wxT(""),1);
+    m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Start Play File - From Radio...")));
+    g_mutexProtectingCallbackData.Unlock();
 }
 
 //-------------------------------------------------------------------------
@@ -2105,12 +2152,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
     if (g_playFileFromRadio)
     {
         fprintf(stderr, "OnPlayFileFromRadio:: Stop\n");
-        g_mutexProtectingCallbackData.Lock();
-        g_playFileFromRadio = false;
-        sf_close(g_sfPlayFileFromRadio);
-        SetStatusText(wxT(""),0);
-        SetStatusText(wxT(""),1);
-        g_mutexProtectingCallbackData.Unlock();
+        StopPlaybackFileFromRadio();
     }
     else
     {
@@ -2178,6 +2220,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
             SetStatusText(wxT("raw file assuming Fs=") + stringnumber, 1);
         }
         fprintf(stderr, "OnPlayFileFromRadio:: Playing File Fs = %d\n", (int)sfInfo.samplerate);
+        m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Stop Play File - From Radio...")));
         g_playFileFromRadio = true;
         g_blink = 0.0;
     }
@@ -2203,6 +2246,25 @@ static wxWindow* createMyExtraRecFilePanel(wxWindow *parent)
     return new MyExtraRecFilePanel(parent);
 }
 
+void MainFrame::StopRecFileFromRadio()
+{
+    if (g_recFileFromRadio)
+    {
+        fprintf(stderr, "Stopping Record....\n");
+        g_mutexProtectingCallbackData.Lock();
+        g_recFileFromRadio = false;
+        sf_close(g_sfRecFile);
+        SetStatusText(wxT(""));
+        
+        m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Start Record File - From Radio...")));
+        
+        wxMessageBox(wxT("Recording radio output to file complete")
+                     , wxT("Recording radio Output"), wxOK);
+        
+        g_mutexProtectingCallbackData.Unlock();
+    }
+}
+
 //-------------------------------------------------------------------------
 // OnRecFileFromRadio()
 //-------------------------------------------------------------------------
@@ -2211,12 +2273,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
     wxUnusedVar(event);
 
     if (g_recFileFromRadio) {
-        fprintf(stderr, "Stopping Record....\n");
-        g_mutexProtectingCallbackData.Lock();
-        g_recFileFromRadio = false;
-        sf_close(g_sfRecFile);
-        SetStatusText(wxT(""));
-        g_mutexProtectingCallbackData.Unlock();
+        StopRecFileFromRadio();
     }
     else {
 
@@ -2227,7 +2284,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
                                     this,
                                     wxT("Record File From Radio"),
                                     wxGetApp().m_recFileFromRadioPath,
-                                    wxEmptyString,
+                                    wxT("Untitled.wav"),
                                     wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
                                     wxT("All files (*.*)|*.*"),
                                     wxFD_SAVE
@@ -2236,6 +2293,9 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         // add the loop check box
         openFileDialog.SetExtraControlCreator(&createMyExtraRecFilePanel);
 
+        // Default to WAV.
+        openFileDialog.SetFilterIndex(0);
+        
         if(openFileDialog.ShowModal() == wxID_CANCEL)
         {
             return;     // the user changed their mind...
@@ -2315,9 +2375,27 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         }
 
         SetStatusText(wxT("Recording File: ") + fileName + wxT(" From Radio") , 0);
+        m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Stop Record File - From Radio...")));
         g_recFileFromRadio = true;
     }
 
+}
+
+void MainFrame::StopRecFileFromModulator()
+{
+    // If the event loop takes a while to execute, we may end up being called
+    // multiple times. We don't want to repeat the following more than once.
+    if (g_recFileFromModulator) {
+        g_mutexProtectingCallbackData.Lock();
+        g_recFileFromModulator = false;
+        g_recFromModulatorSamples = 0;
+        sf_close(g_sfRecFileFromModulator);
+        SetStatusText(wxT(""));
+        m_menuItemRecFileFromModulator->SetItemLabel(wxString(_("Start Record File - From Modulator...")));
+        wxMessageBox(wxT("Recording modulator output to file complete")
+                     , wxT("Recording Modulation Output"), wxOK);
+        g_mutexProtectingCallbackData.Unlock();
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -2328,13 +2406,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
     wxUnusedVar(event);
 
     if (g_recFileFromModulator) {
-        g_mutexProtectingCallbackData.Lock();
-        g_recFileFromModulator = false;
-        sf_close(g_sfRecFileFromModulator);
-        SetStatusText(wxT(""));
-        g_mutexProtectingCallbackData.Unlock();
-        wxMessageBox(wxT("Recording modulator output to file complete")
-                     , wxT("Recording Modulation Output"), wxOK);
+        StopRecFileFromModulator();
     }
     else {
 
@@ -2351,7 +2423,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
                                     this,
                                     wxT("Record File From Modulator"),
                                     wxGetApp().m_recFileFromModulatorPath,
-                                    wxEmptyString,
+                                    wxT("Untitled.wav"),
                                     wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
                                     wxT("All files (*.*)|*.*"),
                                     wxFD_SAVE
@@ -2360,6 +2432,9 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
         // add the loop check box
         openFileDialog.SetExtraControlCreator(&createMyExtraRecFilePanel);
 
+        // Default to WAV.
+        openFileDialog.SetFilterIndex(0);
+        
         if(openFileDialog.ShowModal() == wxID_CANCEL)
         {
             return;     // the user changed their mind...
@@ -2438,7 +2513,8 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
             return;
         }
 
-        SetStatusText(wxT("Recording File: ") + fileName + wxT(" From Radio") , 0);
+        SetStatusText(wxT("Recording File: ") + fileName + wxT(" From Modulator") , 0);
+        m_menuItemRecFileFromModulator->SetItemLabel(wxString(_("Stop Record File - From Modulator...")));
         g_recFileFromModulator = true;
     }
 
@@ -2456,10 +2532,23 @@ void MainFrame::OnExit(wxCommandEvent& event)
         wxGetApp().m_hamlib->disable_mode_detection();
     }
 
+    if (wxGetApp().m_pskReporter)
+    {
+        delete wxGetApp().m_pskReporter;
+        wxGetApp().m_pskReporter = NULL;
+    }
+    
+    if (wxGetApp().m_callsignEncoder)
+    {
+        delete wxGetApp().m_callsignEncoder;
+        wxGetApp().m_callsignEncoder = NULL;
+    }
+    
     //fprintf(stderr, "MainFrame::OnExit\n");
     wxUnusedVar(event);
 #ifdef _USE_TIMER
     m_plotTimer.Stop();
+    m_pskReporterTimer.Stop();
 #endif // _USE_TIMER
     if(g_sfPlayFile != NULL)
     {
@@ -2639,14 +2728,92 @@ bool MainFrame::OpenHamlibRig() {
     int rig = wxGetApp().m_intHamlibRig;
     wxString port = wxGetApp().m_strHamlibSerialPort;
     int serial_rate = wxGetApp().m_intHamlibSerialRate;
-    bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate);
+    bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, wxGetApp().m_intHamlibIcomCIVHex);
     if (status == false)
-        wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
+    {
+        if (wxGetApp().m_psk_enable)
+        {
+            wxMessageBox("Couldn't connect to Radio with hamlib. PSK Reporter reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+        }
+        else
+        {
+            wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
+        }
+    }
     else
     {
         wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, g_mode == FREEDV_MODE_2400B);
     }
 
+    // Initialize PSK Reporter reporting.
+    if (status && wxGetApp().m_psk_enable)
+    {
+        std::string currentMode = "";
+        switch (g_mode)
+        {
+            case FREEDV_MODE_1600:
+                currentMode = "1600";
+                break;
+            case FREEDV_MODE_700C:
+                currentMode = "700C";
+                break;
+            case FREEDV_MODE_700D:
+                currentMode = "700D";
+                break;
+            case FREEDV_MODE_800XA:
+                currentMode = "800XA";
+                break;
+            case FREEDV_MODE_2400B:
+                currentMode = "2400B";
+                break;
+            case FREEDV_MODE_2020:
+                currentMode = "2020";
+                break;
+            case FREEDV_MODE_700E:
+                currentMode = "700E";
+                break;
+            default:
+                currentMode = "unknown";
+                break;
+        }
+        
+        if (wxGetApp().m_psk_callsign.ToStdString() == "" || wxGetApp().m_psk_grid_square.ToStdString() == "")
+        {
+            wxMessageBox("PSK Reporter reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+        }
+        else
+        {
+            wxGetApp().m_callsignEncoder = new CallsignEncoder();
+            wxGetApp().m_pskReporter = new PskReporter(
+                wxGetApp().m_psk_callsign.ToStdString(), 
+                wxGetApp().m_psk_grid_square.ToStdString(),
+                std::string("FreeDV ") + FREEDV_VERSION + " " + currentMode);
+            wxGetApp().m_pskPendingCallsign = "";
+            wxGetApp().m_pskPendingSnr = 0;
+        
+            // Send empty packet to verify network connectivity.
+            bool success = wxGetApp().m_pskReporter->send();
+            if (success)
+            {
+                // Enable PSK Reporter timer (every 5 minutes).
+                m_pskReporterTimer.Start(5 * 60 * 1000);
+            }
+            else
+            {
+                wxMessageBox("Couldn't connect to PSK Reporter server. Reporting functionality will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+                delete wxGetApp().m_pskReporter;
+                delete wxGetApp().m_callsignEncoder;
+                wxGetApp().m_pskReporter = NULL;
+                wxGetApp().m_callsignEncoder = NULL;
+            }
+        }
+    }
+    else
+    {
+        wxGetApp().m_pskReporter = NULL;
+        wxGetApp().m_callsignEncoder = NULL;
+    }
+    
     return status;
 }
 
@@ -2686,7 +2853,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_rbPlugIn->Disable();
 
         m_textSync->Enable();
-        m_textInterleaverSync->Enable();
 
         // determine what mode we are using
 
@@ -2735,7 +2901,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             assert(g_horus_src != NULL);
 
             m_textSync->Disable();
-            m_textInterleaverSync->SetLabel("");
             g_modemInbufferSize = (int)(FRAME_DURATION * horus_get_Fs(g_horus));
         }
 #endif
@@ -2756,9 +2921,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             if ((g_mode == FREEDV_MODE_700D) || (g_mode == FREEDV_MODE_700E) || (g_mode == FREEDV_MODE_2020)) {
                 // 700D has some init time stuff so treat it special
                 struct freedv_advanced adv;
-                adv.interleave_frames = wxGetApp().m_FreeDV700Interleave;
                 g_pfreedv = freedv_open_advanced(g_mode, &adv);
-                m_textInterleaverSync->SetLabel("Intrlvr ("+wxString::Format(wxT("%i"),wxGetApp().m_FreeDV700Interleave)+")");
                 if (wxGetApp().m_FreeDV700ManualUnSync) {
                     freedv_set_sync(g_pfreedv, FREEDV_SYNC_MANUAL);
                 } else {
@@ -2766,7 +2929,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 }
             } else {
                 g_pfreedv = freedv_open(g_mode);
-                m_textInterleaverSync->SetLabel("");
             }
 
             // Codec 2 VQ Equaliser
@@ -2848,14 +3010,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         m_pcallsign = m_callsign;
         memset(m_callsign, 0, sizeof(m_callsign));
-#ifdef __UDP_EXPERIMENTAL__
-        m_checksumGood = m_checksumBad = 0;
-        wxString s;
-        s.Printf("%d", m_checksumGood);
-        m_txtChecksumGood->SetLabel(s);
-        s.Printf("%d", m_checksumBad);
-        m_txtChecksumBad->SetLabel(s);
-#endif
 
         m_maxLevel = 0;
         m_textLevel->SetLabel(wxT(""));
@@ -2874,10 +3028,20 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             wxMessageBox(wxString("Microphone permissions must be granted to FreeDV for it to function properly."), wxT("Error"), wxOK | wxICON_ERROR, this);
         }
 
+        // Clear existing TX text, if any.
+        codec2_fifo_destroy(g_txDataInFifo);
+        g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
+        
         // attempt to start PTT ......
-
+        wxGetApp().m_pskReporter = NULL;
+        wxGetApp().m_callsignEncoder = NULL;
         if (wxGetApp().m_boolHamlibUseForPTT)
             OpenHamlibRig();
+        else if (wxGetApp().m_psk_enable)
+        {
+            wxMessageBox("Hamlib support must be enabled to report to PSK Reporter. PSK Reporter reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+        }
+        
         if (wxGetApp().m_boolUseSerialPTT) {
             OpenSerialPort();
         }
@@ -2888,6 +3052,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
 #endif // _USE_TIMER
         }
+        
 #ifdef __UDP_EXPERIMENTAL__
         char e[80]; sprintf(e,"start"); processTxtEvent(e);
 #endif
@@ -2897,6 +3062,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
     if (startStop.IsSameAs("Stop") || !m_RxRunning ) {
         fprintf(stderr, "Stop .....\n");
+        
         //
         // Stop Running -------------------------------------------------
         //
@@ -2907,6 +3073,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
 #ifdef _USE_TIMER
         m_plotTimer.Stop();
+        m_pskReporterTimer.Stop();
 #endif // _USE_TIMER
 
         // ensure we are not transmitting and shut down audio processing
@@ -2923,6 +3090,18 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             }
         }
 
+        if (wxGetApp().m_pskReporter)
+        {
+            delete wxGetApp().m_pskReporter;
+            wxGetApp().m_pskReporter = NULL;
+        }
+
+        if (wxGetApp().m_callsignEncoder)
+        {
+            delete wxGetApp().m_callsignEncoder;
+            wxGetApp().m_callsignEncoder = NULL;
+        }
+        
         if (wxGetApp().m_boolUseSerialPTT) {
             CloseSerialPort();
         }
@@ -2956,7 +3135,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_newMicInFilter = m_newSpkOutFilter = true;
 
         m_textSync->Disable();
-        m_textInterleaverSync->Disable();
 
         m_togBtnSplit->Disable();
         m_togBtnAnalog->Disable();
@@ -2981,6 +3159,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         char e[80]; sprintf(e,"stop"); processTxtEvent(e);
 #endif
     }
+    
+    optionsDlg->setSessionActive(m_RxRunning);
 }
 
 //-------------------------------------------------------------------------
@@ -3044,7 +3224,8 @@ void MainFrame::destroy_src(void)
 }
 
 void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDevice,
-                                     int soundCard, int sampleRate, int inputChannels)
+                                     int soundCard, int sampleRate, int inputChannels,
+                                     int outputChannels)
 {
     // Note all of the wrapper functions below just set values in a
     // portaudio struct so can't return any errors. So no need to trap
@@ -3067,7 +3248,7 @@ void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDev
 
     pa->setOutputDevice(outDevice);
     if(outDevice != paNoDevice) {
-        pa->setOutputChannelCount(2);                      // stereo output
+        pa->setOutputChannelCount(outputChannels);                      // stereo output
         pa->setOutputSampleFormat(PA_SAMPLE_TYPE);
         pa->setOutputLatency(pa->getOutputDefaultHighLatency());
         //fprintf(stderr,"PA out; low: %f high: %f\n", pa->getOutputDefaultLowLatency(), pa->getOutputDefaultHighLatency());
@@ -3102,8 +3283,8 @@ void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDev
 void MainFrame::startRxStream()
 {
     int   src_error;
-    const PaDeviceInfo *deviceInfo1 = NULL, *deviceInfo2 = NULL;
-    int   inputChannels1, inputChannels2;
+    const PaDeviceInfo *deviceInfo1a = NULL, *deviceInfo1b = NULL, *deviceInfo2a = NULL, *deviceInfo2b = NULL;
+    int   inputChannels1, outputChannels1, inputChannels2, outputChannels2;
     bool  two_rx=false;
     bool  two_tx=false;
 
@@ -3151,30 +3332,48 @@ void MainFrame::startRxStream()
 
         // work out how many input channels this device supports.
 
-        deviceInfo1 = Pa_GetDeviceInfo(g_soundCard1InDeviceNum);
-        if (deviceInfo1 == NULL) {
-            wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card 1"), wxT("Error"), wxOK);
+        deviceInfo1a = Pa_GetDeviceInfo(g_soundCard1InDeviceNum);
+        if (deviceInfo1a == NULL) {
+            wxMessageBox(wxT("Couldn't get input device info from Port Audio for Sound Card 1"), wxT("Error"), wxOK);
             delete m_rxInPa;
             if(two_rx)
 				delete m_rxOutPa;
             m_RxRunning = false;
             return;
         }
-        if (deviceInfo1->maxInputChannels == 1)
+        if (deviceInfo1a->maxInputChannels == 1)
             inputChannels1 = 1;
         else
             inputChannels1 = 2;
 
-        if(two_rx) {
+        // Grab the info for the FreeDV->speaker device as well and ensure we're using
+        // the smallest number of common channels (1 or 2).
+        deviceInfo1b = Pa_GetDeviceInfo(g_soundCard1OutDeviceNum);
+        if (deviceInfo1b == NULL) {
+            wxMessageBox(wxT("Couldn't get output device info from Port Audio for Sound Card 1"), wxT("Error"), wxOK);
+            delete m_rxInPa;
+            if(two_rx)
+				delete m_rxOutPa;
+            m_RxRunning = false;
+            return;
+        }
+        if (deviceInfo1b->maxOutputChannels == 1)
+            outputChannels1 = 1;
+        else
+            outputChannels1 = 2;
+        
+        if(two_rx) {        
             initPortAudioDevice(m_rxInPa, g_soundCard1InDeviceNum, paNoDevice, 1,
-                            g_soundCard1SampleRate, inputChannels1);
+                            g_soundCard1SampleRate, inputChannels1, inputChannels1);
             initPortAudioDevice(m_rxOutPa, paNoDevice, g_soundCard1OutDeviceNum, 1,
-                            g_soundCard1SampleRate, inputChannels1);
+                            g_soundCard1SampleRate, outputChannels1, outputChannels1);
 		}
         else
+        {                    
             initPortAudioDevice(m_rxInPa, g_soundCard1InDeviceNum, g_soundCard1OutDeviceNum, 1,
-                            g_soundCard1SampleRate, inputChannels1);
-
+                            g_soundCard1SampleRate, inputChannels1, outputChannels1);
+        }
+        
         // Init Sound Card 2 ------------------------------------------------
 
         if (g_nSoundCards == 2) {
@@ -3204,9 +3403,9 @@ void MainFrame::startRxStream()
                 return;
             }
 
-            deviceInfo2 = Pa_GetDeviceInfo(g_soundCard2InDeviceNum);
-            if (deviceInfo2 == NULL) {
-                wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card 1"), wxT("Error"), wxOK);
+            deviceInfo2a = Pa_GetDeviceInfo(g_soundCard2InDeviceNum);
+            if (deviceInfo2a == NULL) {
+                wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card 2"), wxT("Error"), wxOK);
                 delete m_rxInPa;
                 if(two_rx)
 					delete m_rxOutPa;
@@ -3216,29 +3415,51 @@ void MainFrame::startRxStream()
                 m_RxRunning = false;
                 return;
             }
-            if (deviceInfo2->maxInputChannels == 1)
+            if (deviceInfo2a->maxInputChannels == 1)
                 inputChannels2 = 1;
             else
                 inputChannels2 = 2;
+            
+            // Grab info for FreeDV->radio device.
+            deviceInfo2b = Pa_GetDeviceInfo(g_soundCard2OutDeviceNum);
+            if (deviceInfo2b == NULL) {
+                wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card 2"), wxT("Error"), wxOK);
+                delete m_rxInPa;
+                if(two_rx)
+					delete m_rxOutPa;
+                delete m_txInPa;
+                if(two_tx)
+					delete m_txOutPa;
+                m_RxRunning = false;
+                return;
+            }
+            if (deviceInfo2b->maxOutputChannels == 1)
+                outputChannels2 = 1;
+            else
+                outputChannels2 = 2;
 
             if(two_tx) {
 				initPortAudioDevice(m_txInPa, g_soundCard2InDeviceNum, paNoDevice, 2,
-                                g_soundCard2SampleRate, inputChannels2);
+                                g_soundCard2SampleRate, inputChannels2, inputChannels2);
 				initPortAudioDevice(m_txOutPa, paNoDevice, g_soundCard2OutDeviceNum, 2,
-                                g_soundCard2SampleRate, inputChannels2);
+                                g_soundCard2SampleRate, outputChannels2, outputChannels2);
 			}
 			else
 				initPortAudioDevice(m_txInPa, g_soundCard2InDeviceNum, g_soundCard2OutDeviceNum, 2,
-                                g_soundCard2SampleRate, inputChannels2);
+                                g_soundCard2SampleRate, inputChannels2, outputChannels2);
         }
 
         // Init call back data structure ----------------------------------------------
 
         g_rxUserdata = new paCallBackData;
         g_rxUserdata->inputChannels1 = inputChannels1;
-        if (deviceInfo2 != NULL)
+        g_rxUserdata->outputChannels1 = outputChannels1;
+        if (deviceInfo2a != NULL)
+        {
             g_rxUserdata->inputChannels2 = inputChannels2;
-
+            g_rxUserdata->outputChannels2 = outputChannels2;
+        }
+        
         // init sample rate conversion states
 
         g_rxUserdata->insrc1 = src_new(SRC_SINC_FASTEST, 1, &src_error);
@@ -3377,7 +3598,6 @@ void MainFrame::startRxStream()
                 wxMessageBox(wxT("Sound Card 1 Second Stream Open/Setup error."), wxT("Error"), wxOK);
                 delete m_rxInPa;
                 delete m_rxOutPa;
-                delete m_txOutPa;
                 if(two_tx)
                     delete m_txOutPa;
                 destroy_fifos();
@@ -3395,7 +3615,6 @@ void MainFrame::startRxStream()
                 m_rxInPa->streamClose();
                 delete m_rxInPa;
                 delete m_rxOutPa;
-                delete m_txOutPa;
                 if(two_tx)
                     delete m_txOutPa;
                 destroy_fifos();
@@ -3845,9 +4064,8 @@ void txRxProcessing()
             //printf("g_recFromRadioSamples: %d  n8k: %d \n", g_recFromRadioSamples);
             if (g_recFromRadioSamples < (unsigned)nfreedv) {
                 sf_write_short(g_sfRecFile, infreedv, g_recFromRadioSamples);
-                wxCommandEvent event( wxEVT_COMMAND_MENU_SELECTED, g_recFileFromRadioEventId );
                 // call stop/start record menu item, should be thread safe
-                g_parent->GetEventHandler()->AddPendingEvent( event );
+                g_parent->CallAfter(&MainFrame::StopRecFileFromRadio);
                 g_recFromRadioSamples = 0;
             }
             else {
@@ -3871,9 +4089,7 @@ void txRxProcessing()
                     sf_seek(g_sfPlayFileFromRadio, 0, SEEK_SET);
                 else {
                     printf("playFileFromRadio finished, issuing event!\n");
-                    wxCommandEvent event( wxEVT_COMMAND_MENU_SELECTED, g_playFileFromRadioEventId );
-                    // call stop/start play menu item, should be thread safe
-                    g_parent->GetEventHandler()->AddPendingEvent( event );
+                    g_parent->CallAfter(&MainFrame::StopPlaybackFileFromRadio);
                 }
             }
         }
@@ -4063,9 +4279,8 @@ void txRxProcessing()
                     if (g_loopPlayFileToMicIn)
                         sf_seek(g_sfPlayFile, 0, SEEK_SET);
                     else {
-                        wxCommandEvent event( wxEVT_COMMAND_MENU_SELECTED, g_playFileToMicInEventId );
                         // call stop/start play menu item, should be thread safe
-                        g_parent->GetEventHandler()->AddPendingEvent( event );
+                        g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
                     }
                 }
             }
@@ -4130,12 +4345,10 @@ void txRxProcessing()
             if (g_recFileFromModulator && (g_sfRecFileFromModulator != NULL)) {
                 if (g_recFromModulatorSamples < nfreedv) {
                     sf_write_short(g_sfRecFileFromModulator, outfreedv, g_recFromModulatorSamples);  // try infreedv to bypass codec and modem, was outfreedv
-                     wxCommandEvent event( wxEVT_COMMAND_MENU_SELECTED, g_recFileFromModulatorEventId );
-                    // call stop/start record menu item, should be thread safe
-                    g_parent->GetEventHandler()->AddPendingEvent( event );
-                    g_recFromModulatorSamples = 0;
-                    g_recFileFromModulator = false;
-                    sf_close(g_sfRecFileFromModulator);
+                    
+                    // call stop record menu item, should be thread safe
+                    g_parent->CallAfter(&MainFrame::StopRecFileFromModulator);
+                    
                     wxPrintf("write mod output to file complete\n", g_recFromModulatorSamples);  // consider a popup
                 }
                 else {
@@ -4365,26 +4578,51 @@ int MainFrame::rxCallback(
     if (wptr) {
          if (codec2_fifo_read(cbData->outfifo1, outdata, framesPerBuffer) == 0) {
 
-            // write signal to both channels
+            // write signal to both channels if the device can support two channels.
+            // Otherwise, we assume we're only dealing with one channel and write
+            // only to that channel.
+            if (cbData->outputChannels1 == 2)
+            {
+                for(i = 0; i < framesPerBuffer; i++, wptr += 2) 
+                {
+                    if (cbData->leftChannelVoxTone)
+                    {
+                        cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/g_soundCard1SampleRate;
+                        cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+                        wptr[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+                    }
+                    else
+                        wptr[0] = outdata[i];
 
-            for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
-                if (cbData->leftChannelVoxTone) {
-                    cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/g_soundCard1SampleRate;
-                    cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-                    wptr[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+                    wptr[1] = outdata[i];
                 }
-                else
+            }
+            else
+            {
+                for(i = 0; i < framesPerBuffer; i++, wptr++) 
+                {
                     wptr[0] = outdata[i];
-
-                wptr[1] = outdata[i];
+                }
             }
         }
-        else {
+        else 
+        {
             g_outfifo1_empty++;
+            
             // zero output if no data available
-            for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
-                wptr[0] = 0;
-                wptr[1] = 0;
+            if (cbData->outputChannels1 == 2)
+            {
+                for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
+                    wptr[0] = 0;
+                    wptr[1] = 0;
+                }
+            }
+            else
+            {
+                for(i = 0; i < framesPerBuffer; i++, wptr++)
+                {
+                    wptr[0] = 0;
+                }
             }
         }
     }
@@ -4697,7 +4935,7 @@ char my_get_next_tx_char(void *callback_state) {
 }
 
 void my_put_next_rx_char(void *callback_state, char c) {
-    short ch = (short)c;
+    short ch = (short)((unsigned char)c);
     //fprintf(stderr, "put_next_rx_char: %c\n", (char)c);
     codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
 }

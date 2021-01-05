@@ -96,6 +96,9 @@ protected:
         void OnCancel(wxCommandEvent& event);
         void OnApply(wxCommandEvent& event);
         virtual void OnInitDialog(wxInitDialogEvent& event);
+        
+private:
+        void updateControlState();
     
 };
 

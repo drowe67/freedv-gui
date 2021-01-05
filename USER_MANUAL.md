@@ -41,11 +41,11 @@ computer.
 
 1. Open the *Tools - Audio Config* Dialog
 1. At the bottom select *Receive* Tab
-1. In *From Radio To Computer* select your default sound input device (usually at the top)
-1. In the *From Computer To Speaker/Headphone* window select your default sound output device (usually at the top)
+1. In *Input To Computer From Radio* select your default sound input device (usually at the top)
+1. In the *Output From Computer To Speaker/Headphones* window select your default sound output device (usually at the top)
 1. At the bottom select *Transmit* Tab
-1. In *From Microphone* window select *none*
-1. In *To Radio* window select *none*
+1. In *Input From Microphone To Computer* window select *none*
+1. In *Output From Computer To Radio* window select *none*
 1. Press OK to close the dialog
 
 When you press Start FreeDV will start decoding any incoming signals
@@ -89,10 +89,10 @@ your radio for transmission over the air.
 
 Tab | Sound Device | Notes
 --- | --- | ---
-Receive Tab | From Radio To Computer | The off air FreeDV signal **from** your radio rig interface to your computer
-Receive Tab | From Computer To Speaker/Headphone | The decoded audio from your computer to your Speaker/headphones
-Transmit Tab | From Microphone to Computer | Your voice from the microphone to your computer
-Transmit Tab | From Computer To Radio | The FreeDV signal from your computer sent **to** your radio rig interface for transmission
+Receive Tab | Input To Computer From Radio | The off air FreeDV signal **from** your radio rig interface to your computer
+Receive Tab | Output From Computer To Speaker/Headphones | The decoded audio from your computer to your Speaker/headphones
+Transmit Tab | Input From Microphone To Computer | Your voice from the microphone to your computer
+Transmit Tab | Output From Computer To Radio | The FreeDV signal from your computer sent **to** your radio rig interface for transmission
 
 ### Changing Audio Devices
 
@@ -170,18 +170,40 @@ Hamlib comes with a default serial rate for each radio.  If your radio
 has a different serial rate change the Serial Rate drop down box to
 match your radio.
 
-If using an Icom radio, Hamlib will use the radio's default CI-V address
-when connecting. If this has been changed, you can specify the correct
-address in the "Radio Address" field (valid values are 00 through FF
-in hexadecimal). Note that "00" is the "wildcard" CI-V address and will
-also work if there are no other Icom/CI-V capable devices in the chain.
-
 When **Test** is pressed, the "Serial Params" field is populated and
 displayed.  This will help track down any mismatches between Hamlib
 and your radio.
 
 If you are really stuck, download Hamlib and test your radio's PTT
 using the command line ```rigctl``` program.
+
+#### Icom Radio Configuration
+
+If using an Icom radio, Hamlib will use the radio's default CI-V address
+when connecting. If this has been changed, you can specify the correct
+address in the "Radio Address" field (valid values are 00 through FF
+in hexadecimal). 
+
+Note that "00" is the "wildcard" CI-V address. Your radio must have the 
+"CI-V Transceive" option enabled in order for it to respond to commands
+to that address. Otherwise, FreeDV must be configured to use the same
+CI-V address as configured in the radio. For best results, ensure that
+there are no other Icom/CI-V capable devices in the chain if 
+"00"/"CI-V Transceive" is used.
+
+### PSK Reporter (Experimental)
+
+FreeDV has the ability to send FreeDV signal reports to [PSK Reporter](https://pskreporter.info/)
+by enabling the option in Tools->Options and specifying your callsign and grid square. When enabled, this causes
+FreeDV to disable the free form **Txt Msg** field and only transmit the **Callsign** field.
+
+FreeDV validates the received information before submitting a position report to PSK Reporter. This is to ensure that FreeDV does not report invalid callsigns to the service (e.g. ones that don't exist or that correspond to real non-FreeDV users). However, all received text will display in the main window even if it has errors.
+
+Reports sent to PSK Reporter will display using the mode "FREEDV" for ease of filtering. The user's 
+current mode (e.g. 700D, 1600, etc.) will also appear in the "Using" field when hovering over or 
+clicking on a reception report.
+
+Note that Hamlib must be enabled so PSK Reporter can read your radio's frequency. A message will appear on pushing Start if this is not the case.
 
 ### Changing COM Port On Windows
 
@@ -213,6 +235,15 @@ This can be challenging the first time around:
 1. If you don't know anyone local, ask for help on the digital voice
 mailing list.  Be specific about the hardware you have and the exact
 nature of your problem.
+
+### Hamlib does not work with my Icom radio
+
+The most common issue with Icom radios is that the CI-V address configured
+in FreeDV does not match the address configured in the radio. Ensure that
+the CI-V address in both FreeDV and on the radio are the same. If "00" is
+used on the FreeDV side, ensure that the "CI-V Transceive" option is enabled
+on the radio or else the radio will not respond to requests directed to that
+address.
 
 ### I need help with my radio or rig interface
 
