@@ -3051,6 +3051,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
 #endif // _USE_TIMER
         }
+        
 #ifdef __UDP_EXPERIMENTAL__
         char e[80]; sprintf(e,"start"); processTxtEvent(e);
 #endif
@@ -3157,6 +3158,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         char e[80]; sprintf(e,"stop"); processTxtEvent(e);
 #endif
     }
+    
+    optionsDlg->setSessionActive(m_RxRunning);
 }
 
 //-------------------------------------------------------------------------
