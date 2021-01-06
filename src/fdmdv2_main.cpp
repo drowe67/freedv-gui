@@ -49,6 +49,7 @@ struct MODEM_STATS  g_stats;
 float               g_pwr_scale;
 int                 g_clip;
 int                 g_freedv_verbose;
+bool                g_queueResync;
 
 // test Frames
 int                 g_testFrames;
@@ -1986,8 +1987,9 @@ void MainFrame::OnReSync(wxCommandEvent& event)
     if (m_RxRunning)  {
         fprintf(stderr,"OnReSync\n");
         if (g_mode != -1) {
-            freedv_set_sync(g_pfreedv, FREEDV_SYNC_UNSYNC);
-            g_resyncs++;
+            // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
+            // the next execution of the TX/RX loop.
+            g_queueResync = true;
         }
     }
 }
@@ -2829,6 +2831,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
     if (startStop.IsSameAs("Start"))
     {
         fprintf(stderr, "Start .....\n");
+        g_queueResync = false;
+        
         //
         // Start Running -------------------------------------------------
         //
@@ -4038,7 +4042,15 @@ void txRxProcessing()
     //
     //  RX side processing --------------------------------------------
     //
-
+    
+    if (g_queueResync)
+    {
+        fprintf(stderr, "Unsyncing per user request.\n");
+        g_queueResync = false;
+        freedv_set_sync(g_pfreedv, FREEDV_SYNC_UNSYNC);
+        g_resyncs++;
+    }
+    
     // while we have enough input samples available ...
 
     // attempt to read one processing buffer of receive samples
