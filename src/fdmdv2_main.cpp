@@ -1335,7 +1335,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         if (g_State) {
 
-            sprintf(clockoffset, "ClkOff: %5d", (int)round(g_stats.clock_offset*1E6));
+            sprintf(clockoffset, "ClkOff: %+-d", (int)round(g_stats.clock_offset*1E6) % 10000);
             wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
 
             // update error pattern plots if supported
