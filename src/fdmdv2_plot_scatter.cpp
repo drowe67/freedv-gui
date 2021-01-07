@@ -151,6 +151,9 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
             y = y_scale * m_mem[i].imag + m_rGrid.GetHeight()/2;
             x += PLOT_BORDER + XLEFT_OFFSET;
             y += PLOT_BORDER;
+            
+            boundXYPoints_(&x, &y);
+
             pen.SetColour(DARK_GREEN_COLOR);
             dc.SetPen(pen);
             dc.DrawPoint(x, y);
@@ -207,6 +210,9 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
                //printf("%4d,%4d  ", x, y);
                 x += PLOT_BORDER + XLEFT_OFFSET;
                 y += PLOT_BORDER;
+                
+                boundXYPoints_(&x, &y);
+                
                 if (j)
                     dc.DrawLine(x, y, prev_x, prev_y);
                 prev_x = x; prev_y = y;
@@ -286,4 +292,27 @@ void PlotScatter::OnSize(wxSizeEvent& event)
 //----------------------------------------------------------------
 void PlotScatter::OnShow(wxShowEvent& event)
 {
+}
+
+//----------------------------------------------------------------
+// Ensures that points stay within the bounding box.
+//----------------------------------------------------------------
+void PlotScatter::boundXYPoints_(int* x, int* y)
+{
+    if (*x <= (PLOT_BORDER + XLEFT_OFFSET))
+    {
+        *x = PLOT_BORDER + XLEFT_OFFSET;
+    }
+    else if (*x >= m_rGrid.GetWidth())
+    {
+        *x = m_rGrid.GetWidth();
+    }
+    if (*y <= PLOT_BORDER)
+    {
+        *y = PLOT_BORDER;
+    }
+    else if (*y >= m_rGrid.GetHeight())
+    {
+        *y = m_rGrid.GetHeight();
+    }
 }
