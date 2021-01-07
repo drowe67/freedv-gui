@@ -380,7 +380,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     {
         // Add Waterfall Plot window
         m_panelWaterfall = new PlotWaterfall((wxFrame*) m_auiNbookCtrl, false, 0);
-        m_panelWaterfall->SetToolTip(_("Left click to tune, Right click to toggle mono/colour"));
+        m_panelWaterfall->SetToolTip(_("Left click to tune"));
         m_auiNbookCtrl->AddPage(m_panelWaterfall, _("Waterfall"), true, wxNullBitmap);
     }
     if(wxGetApp().m_show_spect)
