@@ -23,7 +23,7 @@ jobs:
       - name: Install pandoc package
         run: |
              sudo apt-get update
-             sudo apt-get install pandoc texlive-latex-base texlive-fonts-recommended
+             sudo apt-get install pandoc texlive-latex-base texlive-fonts-recommended texlive-fonts-extra texlive-latex-extra
            
       - name: Render User Manual to PDF
         run: pandoc USER_MANUAL.md -o USER_MANUAL.pdf "-fmarkdown-implicit_figures -o" --from=markdown --columns=1000 -V geometry:margin=.4in --toc --highlight-style=espresso
