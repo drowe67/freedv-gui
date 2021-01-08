@@ -152,11 +152,12 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
             x += PLOT_BORDER + XLEFT_OFFSET;
             y += PLOT_BORDER;
             
-            boundXYPoints_(&x, &y);
-
-            pen.SetColour(DARK_GREEN_COLOR);
-            dc.SetPen(pen);
-            dc.DrawPoint(x, y);
+            if (pointsInBounds_(x, y))
+            {
+                pen.SetColour(DARK_GREEN_COLOR);
+                dc.SetPen(pen);
+                dc.DrawPoint(x, y);
+            }
         }
     }
 
@@ -211,10 +212,11 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
                 x += PLOT_BORDER + XLEFT_OFFSET;
                 y += PLOT_BORDER;
                 
-                boundXYPoints_(&x, &y);
-                
-                if (j)
-                    dc.DrawLine(x, y, prev_x, prev_y);
+                if (pointsInBounds_(x,y) && pointsInBounds_(prev_x, prev_y))
+                {
+                    if (j)
+                        dc.DrawLine(x, y, prev_x, prev_y);
+                }
                 prev_x = x; prev_y = y;
             }
             //printf("\n");
@@ -297,22 +299,13 @@ void PlotScatter::OnShow(wxShowEvent& event)
 //----------------------------------------------------------------
 // Ensures that points stay within the bounding box.
 //----------------------------------------------------------------
-void PlotScatter::boundXYPoints_(int* x, int* y)
+bool PlotScatter::pointsInBounds_(int x, int y)
 {
-    if (*x <= (PLOT_BORDER + XLEFT_OFFSET))
-    {
-        *x = PLOT_BORDER + XLEFT_OFFSET;
-    }
-    else if (*x >= m_rGrid.GetWidth())
-    {
-        *x = m_rGrid.GetWidth();
-    }
-    if (*y <= PLOT_BORDER)
-    {
-        *y = PLOT_BORDER;
-    }
-    else if (*y >= m_rGrid.GetHeight())
-    {
-        *y = m_rGrid.GetHeight();
-    }
+    bool inBounds = true;
+    inBounds = !(x <= (PLOT_BORDER + XLEFT_OFFSET));
+    inBounds = inBounds && !(x >= m_rGrid.GetWidth());
+    inBounds = inBounds && !(y <= PLOT_BORDER);
+    inBounds = inBounds && !(y >= m_rGrid.GetHeight());
+    
+    return inBounds;
 }

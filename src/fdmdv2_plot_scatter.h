@@ -61,7 +61,7 @@ class PlotScatter : public PlotPanel
         int   scatterMemSyms;
         float m_filter_max_xy, m_filter_max_y;
 
-        void boundXYPoints_(int* x, int* y);
+        bool pointsInBounds_(int x, int y);
 };
 
 #endif //__FDMDV2_PLOT_SCATTER__
