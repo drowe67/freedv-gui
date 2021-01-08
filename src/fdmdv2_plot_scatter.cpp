@@ -118,14 +118,15 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
         // automatically scale, first measure the maximum value
 
         float max_xy = 1E-12;
-        float real,imag;
+        float real,imag,mag;
         for(i=0; i< scatterMemSyms; i++) {
             real = fabs(m_mem[i].real);
             imag = fabs(m_mem[i].imag);
-            if (real > max_xy)
-                max_xy = real;
-            if (imag > max_xy)
-                max_xy = imag; 
+            mag = sqrt(pow(real,2) + pow(imag, 2));
+            if (mag > max_xy)
+            {
+                max_xy = mag;
+            }
         }
 
         // smooth it out and set a lower limit to prevent divide by 0 issues
@@ -150,9 +151,13 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
             y = y_scale * m_mem[i].imag + m_rGrid.GetHeight()/2;
             x += PLOT_BORDER + XLEFT_OFFSET;
             y += PLOT_BORDER;
-            pen.SetColour(DARK_GREEN_COLOR);
-            dc.SetPen(pen);
-            dc.DrawPoint(x, y);
+            
+            if (pointsInBounds_(x, y))
+            {
+                pen.SetColour(DARK_GREEN_COLOR);
+                dc.SetPen(pen);
+                dc.DrawPoint(x, y);
+            }
         }
     }
 
@@ -206,8 +211,12 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
                //printf("%4d,%4d  ", x, y);
                 x += PLOT_BORDER + XLEFT_OFFSET;
                 y += PLOT_BORDER;
-                if (j)
-                    dc.DrawLine(x, y, prev_x, prev_y);
+                
+                if (pointsInBounds_(x,y) && pointsInBounds_(prev_x, prev_y))
+                {
+                    if (j)
+                        dc.DrawLine(x, y, prev_x, prev_y);
+                }
                 prev_x = x; prev_y = y;
             }
             //printf("\n");
@@ -285,4 +294,18 @@ void PlotScatter::OnSize(wxSizeEvent& event)
 //----------------------------------------------------------------
 void PlotScatter::OnShow(wxShowEvent& event)
 {
+}
+
+//----------------------------------------------------------------
+// Ensures that points stay within the bounding box.
+//----------------------------------------------------------------
+bool PlotScatter::pointsInBounds_(int x, int y)
+{
+    bool inBounds = true;
+    inBounds = !(x <= (PLOT_BORDER + XLEFT_OFFSET));
+    inBounds = inBounds && !(x >= m_rGrid.GetWidth());
+    inBounds = inBounds && !(y <= PLOT_BORDER);
+    inBounds = inBounds && !(y >= m_rGrid.GetHeight());
+    
+    return inBounds;
 }

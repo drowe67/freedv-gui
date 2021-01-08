@@ -651,6 +651,11 @@ On Linux, using the Alsa loopback module:
                           - Transmit Tab - To Radio select   -> Loopback: Loopback PCM (hw:1,1)
 ```
 
+## Tips
+
+1. The space-bar can be used to toggle PTT.
+1. You can left click on the main window to adjust tuning, the vertical red line on the frequency scale will show the current centre frequency.  FreeDV will automatically track any drift once it syncs.
+
 ## Glossary
 
 Term | Notes

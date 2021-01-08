@@ -49,6 +49,7 @@ struct MODEM_STATS  g_stats;
 float               g_pwr_scale;
 int                 g_clip;
 int                 g_freedv_verbose;
+bool                g_queueResync;
 
 // test Frames
 int                 g_testFrames;
@@ -379,7 +380,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     {
         // Add Waterfall Plot window
         m_panelWaterfall = new PlotWaterfall((wxFrame*) m_auiNbookCtrl, false, 0);
-        m_panelWaterfall->SetToolTip(_("Left click to tune, Right click to toggle mono/colour"));
+        m_panelWaterfall->SetToolTip(_("Left click to tune"));
         m_auiNbookCtrl->AddPage(m_panelWaterfall, _("Waterfall"), true, wxNullBitmap);
     }
     if(wxGetApp().m_show_spect)
@@ -1334,7 +1335,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         if (g_State) {
 
-            sprintf(clockoffset, "ClkOff: %5d", (int)round(g_stats.clock_offset*1E6));
+            sprintf(clockoffset, "ClkOff: %+-d", (int)round(g_stats.clock_offset*1E6) % 10000);
             wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
 
             // update error pattern plots if supported
@@ -1986,8 +1987,9 @@ void MainFrame::OnReSync(wxCommandEvent& event)
     if (m_RxRunning)  {
         fprintf(stderr,"OnReSync\n");
         if (g_mode != -1) {
-            freedv_set_sync(g_pfreedv, FREEDV_SYNC_UNSYNC);
-            g_resyncs++;
+            // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
+            // the next execution of the TX/RX loop.
+            g_queueResync = true;
         }
     }
 }
@@ -2829,6 +2831,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
     if (startStop.IsSameAs("Start"))
     {
         fprintf(stderr, "Start .....\n");
+        g_queueResync = false;
+        
         //
         // Start Running -------------------------------------------------
         //
@@ -4038,7 +4042,15 @@ void txRxProcessing()
     //
     //  RX side processing --------------------------------------------
     //
-
+    
+    if (g_queueResync)
+    {
+        fprintf(stderr, "Unsyncing per user request.\n");
+        g_queueResync = false;
+        freedv_set_sync(g_pfreedv, FREEDV_SYNC_UNSYNC);
+        g_resyncs++;
+    }
+    
     // while we have enough input samples available ...
 
     // attempt to read one processing buffer of receive samples

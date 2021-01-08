@@ -173,6 +173,7 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     m_textResyncs = new wxStaticText(this, wxID_ANY, wxT("Resyncs: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_ber->Add(m_textResyncs, 0, wxALIGN_LEFT, 1);
     m_textClockOffset = new wxStaticText(this, wxID_ANY, wxT("ClkOff: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textClockOffset->SetMinSize(wxSize(125,-1));
     sbSizer_ber->Add(m_textClockOffset, 0, wxALIGN_LEFT, 1);
     m_textFreqOffset = new wxStaticText(this, wxID_ANY, wxT("FreqOff: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_ber->Add(m_textFreqOffset, 0, wxALIGN_LEFT, 1);
