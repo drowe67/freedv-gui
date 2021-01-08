@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI
+name: Render User Manual
 
 # Controls when the action will run. 
 on:
@@ -30,5 +30,7 @@ jobs:
         
       - name: Update PDF version in repo
         run: |
+             git config --local user.email "$(git log --format='%ae' HEAD^!)"
+             git config --local user.name "$(git log --format='%an' HEAD^!)"
              git commit -m "lastest user manual PDF" USER_MANUAL.pdf
              git push
