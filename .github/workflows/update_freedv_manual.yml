@@ -5,6 +5,9 @@ name: Render User Manual
 on:
   # Only run when User Manual markdown source changes
   push:
+   # stop chewing CPU while working on this branch, remember to rm before merge!
+    branches-ignore:
+     - 'dr-render-manual' 
     paths: 
       - 'USER_MANUAL.md'
       
