@@ -24,7 +24,7 @@
 #define CALLSIGN_ENCODER_H
 
 #include <deque>
-#include "fdmdv2_defines.h"
+#include "defines.h"
 #include "golay23.h"
 
 class CallsignEncoder

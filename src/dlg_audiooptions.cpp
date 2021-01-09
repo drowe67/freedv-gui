@@ -19,7 +19,7 @@
 //  along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //=========================================================================
-#include "fdmdv2_main.h"
+#include "main.h"
 #include "dlg_audiooptions.h"
 
 // constants for test waveform plots

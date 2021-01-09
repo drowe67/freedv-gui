@@ -4,13 +4,13 @@ set(FREEDV_SOURCES
     dlg_options.cpp
     dlg_ptt.cpp
     dlg_plugin.cpp
-    fdmdv2_main.cpp
-    fdmdv2_pa_wrapper.cpp
-    fdmdv2_plot.cpp
-    fdmdv2_plot_scalar.cpp
-    fdmdv2_plot_scatter.cpp
-    fdmdv2_plot_spectrum.cpp
-    fdmdv2_plot_waterfall.cpp
+    main.cpp
+    pa_wrapper.cpp
+    plot.cpp
+    plot_scalar.cpp
+    plot_scatter.cpp
+    plot_spectrum.cpp
+    plot_waterfall.cpp
     hamlib.cpp
     serialport.cpp
     topFrame.cpp
@@ -20,14 +20,14 @@ set(FREEDV_SOURCES
     dlg_filter.h
     dlg_options.h
     dlg_ptt.h
-    fdmdv2_defines.h
-    fdmdv2_main.h
-    fdmdv2_pa_wrapper.h
-    fdmdv2_plot.h
-    fdmdv2_plot_scalar.h
-    fdmdv2_plot_scatter.h
-    fdmdv2_plot_spectrum.h
-    fdmdv2_plot_waterfall.h
+    defines.h
+    main.h
+    pa_wrapper.h
+    plot.h
+    plot_scalar.h
+    plot_scatter.h
+    plot_spectrum.h
+    plot_waterfall.h
     hamlib.h
     sox_biquad.h
     sox/band.h

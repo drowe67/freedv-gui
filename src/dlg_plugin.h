@@ -22,7 +22,7 @@
 #ifndef __PLUGIN_DIALOG__
 #define __PLUGIN_DIALOG__
 
-#include "fdmdv2_main.h"
+#include "main.h"
 #include <wx/settings.h>
 #include <wx/xrc/xmlres.h>
 #include <wx/xrc/xh_bmp.h>

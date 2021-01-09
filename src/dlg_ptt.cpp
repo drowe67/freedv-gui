@@ -20,7 +20,7 @@
 //
 //==========================================================================
 #include "dlg_ptt.h"
-#include "fdmdv2_main.h"
+#include "main.h"
 
 #ifdef __WIN32__
 #include <wx/msw/registry.h>

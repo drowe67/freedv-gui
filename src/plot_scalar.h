@@ -1,6 +1,6 @@
 //==========================================================================
-// Name:            fdmdv2_plot_scalar.h
-// Purpose:         Defines a scalar plot derivative of fdmdv2_plot.
+// Name:            plot_scalar.h
+// Purpose:         Defines a scalar plot derivative of plot.
 // Created:         June 22, 2012
 // Authors:         David Rowe, David Witten
 // 
@@ -21,8 +21,8 @@
 #ifndef __FDMDV2_PLOT_SCALAR__
 #define __FDMDV2_PLOT_SCALAR__
 
-#include "fdmdv2_plot.h"
-#include "fdmdv2_defines.h"
+#include "plot.h"
+#include "defines.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class PlotScalar
