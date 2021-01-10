@@ -40,4 +40,3 @@ jobs:
              git config --local user.name "$(git log --format='%an' HEAD^!)"
              git commit -m "lastest user manual PDF" USER_MANUAL.pdf USER_MANUAL.html
              git push
-git_hash=$(git describe --always HEAD); date=$(date "+%b %d %Y"); pandoc USER_MANUAL.md -o USER_MANUAL.pdf -fmarkdown-implicit_figures --from=markdown --columns=1000 -V geometry:margin=.4in --toc --highlight-style=espresso --number-sections -V title:"FreeDV User Manual\linebreak ${date} ${git_hash}"
