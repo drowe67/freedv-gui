@@ -28,12 +28,14 @@ jobs:
              sudo apt-get update
              sudo apt-get install pandoc texlive-latex-base texlive-fonts-recommended texlive-fonts-extra
            
-      - name: Render User Manual to PDF
-        run: pandoc USER_MANUAL.md -o USER_MANUAL.pdf "-fmarkdown-implicit_figures -o" --from=markdown --columns=1000 -V geometry:margin=.4in --toc --highlight-style=espresso
+      - name: Render User Manual to PDF and HTML
+        run: |
+	pandoc USER_MANUAL.md -o USER_MANUAL.pdf -fmarkdown-implicit_figures --from=markdown --columns=1000 -V geometry:margin=.4in --toc --highlight-style=espresso --number-sections
+	pandoc -o USER_MANUAL.html -fmarkdown-implicit_figures --from=markdown --number-sections USER_MANUAL.md --columns=1000
         
       - name: Update PDF version in repo
         run: |
              git config --local user.email "$(git log --format='%ae' HEAD^!)"
              git config --local user.name "$(git log --format='%an' HEAD^!)"
-             git commit -m "lastest user manual PDF" USER_MANUAL.pdf
+             git commit -m "lastest user manual PDF" USER_MANUAL.pdf USER_MANUAL.html
              git push
