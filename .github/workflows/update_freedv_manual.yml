@@ -32,7 +32,7 @@ jobs:
         run: |
              git_hash=$(git describe --always HEAD); date=$(date "+%b %d %Y"); pandoc USER_MANUAL.md -o USER_MANUAL.pdf -fmarkdown-implicit_figures --from=markdown --columns=1000 -V geometry:margin=.4in --toc --highlight-style=espresso --number-sections -V title:"FreeDV User Manual\linebreak ${date} ${git_hash}"
              pandoc -o USER_MANUAL.html -fmarkdown-implicit_figures --from=markdown --number-sections USER_MANUAL.md --columns=1000
-	     ls -l USER_MANUAL.*
+             ls -l USER_MANUAL.*
         
       - name: Update PDF version in repo
         run: |
