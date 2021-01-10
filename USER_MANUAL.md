@@ -700,6 +700,6 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 ## References
 
-* http://freedv.org
+* [FreeDV Web site](http://freedv.org)
 * [FreeDV Technology Overview](https://github.com/drowe67/codec2/blob/master/README_freedv.md)
 * [Digitalvoice mailing list](https://groups.google.com/forum/#!forum/digitalvoice)
