@@ -30,9 +30,9 @@ jobs:
            
       - name: Render User Manual to PDF and HTML
         run: |
-	pandoc USER_MANUAL.md -o USER_MANUAL.pdf -fmarkdown-implicit_figures --from=markdown --columns=1000 -V geometry:margin=.4in --toc --highlight-style=espresso --number-sections
-	pandoc -o USER_MANUAL.html -fmarkdown-implicit_figures --from=markdown --number-sections USER_MANUAL.md --columns=1000
-        
+             pandoc USER_MANUAL.md -o USER_MANUAL.pdf -fmarkdown-implicit_figures --from=markdown --columns=1000 -V geometry:margin=.4in --toc --highlight-style=espresso --number-sections
+             pandoc -o USER_MANUAL.html -fmarkdown-implicit_figures --from=markdown --number-sections USER_MANUAL.md --columns=1000
+
       - name: Update PDF version in repo
         run: |
              git config --local user.email "$(git log --format='%ae' HEAD^!)"
