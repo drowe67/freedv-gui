@@ -648,7 +648,7 @@ On Linux, using the Alsa loopback module:
 ## Tips
 
 1. The space-bar can be used to toggle PTT.
-1. You can left click on the main window to adjust tuning, the vertical red line on the frequency scale will show the current centre frequency.  FreeDV will automatically track any drift once it syncs.
+1. You can left click on the main window to adjust tuning, the vertical red line on the frequency scale will show the current centre frequency.  Please note FreeDV will automatically track any drift once it syncs.
 
 ## Converting this document to PDF
 
