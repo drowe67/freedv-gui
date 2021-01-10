@@ -5,7 +5,7 @@
 FreeDV GUI (or just FreeDV) is a GUI program for Linux, Windows, and
 OSX for running FreeDV on a desktop PC or laptop.
 
-This is a live document.  Notes on new FreeDV features are being added as they are developed.
+This is a live document.  Notes on new FreeDV features are being added as they are developed. 
 
 ## Getting Started
 
