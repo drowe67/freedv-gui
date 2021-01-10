@@ -451,7 +451,7 @@ This section describes features on Tools-Filter.
 
 Control | Description
  --- | --- |
-Noise Supression | Enable noise supression, dereverberation, AGC of mic signal using the Speex pre-processor
+Noise Suppression | Enable noise suppression, dereverberation, AGC of mic signal using the Speex pre-processor
 700C/700D Auto EQ | Automatic equalisation for FreeDV 700C and FreeDV 700D Codec input audio
 
 Auto EQ (Automatic Equalisation) adjusts the input speech spectrum to best fit the speech codec. It can remove annoying bass artefacts and make the codec speech easier to understand.

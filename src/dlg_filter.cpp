@@ -90,7 +90,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 
     m_ckboxSpeexpp = new wxCheckBox(this, wxID_ANY, _("Speex Noise Suppression"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_speexpp->Add(m_ckboxSpeexpp, 0, wxALIGN_LEFT, 2);
-    m_ckboxSpeexpp->SetToolTip(_("Enable noise supression, dereverberation, AGC of mic signal"));
+    m_ckboxSpeexpp->SetToolTip(_("Enable noise suppression, dereverberation, AGC of mic signal"));
 
     m_ckbox700C_EQ = new wxCheckBox(this, wxID_ANY, _("700C/700D/700E Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_speexpp->Add(m_ckbox700C_EQ, 0, wxALIGN_LEFT, 2);
