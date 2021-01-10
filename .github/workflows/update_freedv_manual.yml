@@ -5,8 +5,8 @@ name: Render User Manual
 on:
   # Only run when User Manual markdown source changes
   push:
-    paths: 
-      - 'USER_MANUAL.md'
+    #paths: 
+    #  - 'USER_MANUAL.md'
       
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -29,14 +29,14 @@ jobs:
              sudo apt-get install pandoc texlive-latex-base texlive-fonts-recommended texlive-fonts-extra
            
       - name: Render User Manual to PDF and HTML
-        shell: bash
         run: |
              git_hash=$(git describe --always HEAD); date=$(date "+%b %d %Y"); pandoc USER_MANUAL.md -o USER_MANUAL.pdf -fmarkdown-implicit_figures --from=markdown --columns=1000 -V geometry:margin=.4in --toc --highlight-style=espresso --number-sections -V title:"FreeDV User Manual\linebreak ${date} ${git_hash}"
              pandoc -o USER_MANUAL.html -fmarkdown-implicit_figures --from=markdown --number-sections USER_MANUAL.md --columns=1000
+	     ls -l USER_MANUAL.*
         
       - name: Update PDF version in repo
         run: |
              git config --local user.email "$(git log --format='%ae' HEAD^!)"
              git config --local user.name "$(git log --format='%an' HEAD^!)"
-             git commit -m "lastest user manual PDF" USER_MANUAL.pdf USER_MANUAL.html
+             git commit -m "latest user manual PDF" USER_MANUAL.pdf USER_MANUAL.html
              git push
