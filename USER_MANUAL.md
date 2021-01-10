@@ -7,13 +7,6 @@ OSX for running FreeDV on a desktop PC or laptop.
 
 This is a live document.  Notes on new FreeDV features are being added as they are developed.
 
-## Converting this document to PDF
-
-For the Linux inclined:
-```
-$ pandoc USER_MANUAL.md -o USER_MANUAL.pdf "-fmarkdown-implicit_figures -o" --from=markdown -V geometry:margin=.4in --toc --highlight-style=espresso
-```
-
 ## Getting Started
 
 FreeDV GUI can be challenging to set up.  The easiest way is to find a
@@ -90,9 +83,9 @@ your radio for transmission over the air.
 Tab | Sound Device | Notes
 --- | --- | ---
 Receive Tab | Input To Computer From Radio | The off air FreeDV signal **from** your radio rig interface to your computer
-Receive Tab | Output From Computer To Speaker/Headphones | The decoded audio from your computer to your Speaker/headphones
+Receive Tab | Output From Computer To Speaker | The decoded audio from your computer to your Speaker
 Transmit Tab | Input From Microphone To Computer | Your voice from the microphone to your computer
-Transmit Tab | Output From Computer To Radio | The FreeDV signal from your computer sent **to** your radio rig interface for transmission
+Transmit Tab | Output From Computer To Radio | The FreeDV signal from your computer sent **to** your rig interface for Tx
 
 ### Changing Audio Devices
 
@@ -300,7 +293,7 @@ you have AVX, a - means no AVX:
 ```
 AES             -       Supports AES extensions
 AVX             *       Supports AVX intruction extensions
-FMA             -       Supports FMA extensions using YMM state``
+FMA             -       Supports FMA extensions using YMM state
 ```
 
 On Linux, you can check for `avx` in the **flags** section of `/proc/cpuinfo`
@@ -335,6 +328,7 @@ From January 2020 Apple is enforcing notarization for all OSX applications.  The
 Security & Privacy shows the Open Anyway option for FreeDV:
 
 ![notarization](contrib/osx_notarization2.png)
+
 ![notarization](contrib/osx_notarization3.png)
 
 Or you can use command line options:
@@ -463,13 +457,12 @@ Auto EQ (Automatic Equalisation) adjusts the input speech spectrum to best fit t
 
 This section describes features on Tools-Options.  Many of these features are also described in other parts of this manual.
 
-### FreeDV 700 Options
+### FreeDV 700 C/D/E Options
 
 Control | Description
  --- | --- |
-Clipping | Increases the average power (700C/700D/700E).  Make sure you transmitter can handle high RMS powers before using!
+Clipping | Increases the average power. Ensure your transmitter can handle high RMS powers before using!
 700C Diversity Combine | Combining of two sets of 700C carriers for better fading channel performance
-700D Interleaver | How many 700D frames to Interleave, larger leads to better fading channel performance but more latency
 700D Tx Band Pass Filter | Reduces 700D TX spectrum bandwidth
 700D Manual Unsync | Forces 700D to remain in sync, and not drop sync automatically
 
@@ -547,7 +540,8 @@ A sample script to email you on FreeDV sync: [send_email_on_sync.py](src/send_em
 
 Usage for Gmail:
 ```
-  $ python send_email_on_sync.py --listen_port 3000 --smtp_server smtp.gmail.com --smtp_port 587 your@gmail.com your_pass
+python send_email_on_sync.py --listen_port 3000 --smtp_server smtp.gmail.com \
+--smtp_port 587 your@gmail.com your_pass
 ```
 
 ### Sound Card Debug
@@ -655,6 +649,14 @@ On Linux, using the Alsa loopback module:
 
 1. The space-bar can be used to toggle PTT.
 1. You can left click on the main window to adjust tuning, the vertical red line on the frequency scale will show the current centre frequency.  FreeDV will automatically track any drift once it syncs.
+
+## Converting this document to PDF
+
+For the Linux inclined:
+```
+$ pandoc USER_MANUAL.md -o USER_MANUAL.pdf "-fmarkdown-implicit_figures -o" \
+--from=markdown -V geometry:margin=.4in --toc --highlight-style=espresso
+```
 
 ## Glossary
 
