@@ -1,19 +1,15 @@
-# FREEDV GUI USER MANUAL
-
-## Introduction
+# Introduction
 
 FreeDV GUI (or just FreeDV) is a GUI program for Linux, Windows, and
 OSX for running FreeDV on a desktop PC or laptop.
 
 This is a live document.  Notes on new FreeDV features are being added as they are developed.
 
-## Getting Started
+# Getting Started
 
-FreeDV GUI can be challenging to set up.  The easiest way is to find a
-friend who has set up FreeDV and get them to help. Alternatively, this
-section contains several tips to help you get started.
+FreeDV GUI can be challenging to set up.  The easiest way is to find a friend who has set up FreeDV and get them to help. This section contains instructions to help you get started.
 
-### Sound Card Configuration
+## Sound Card Configuration
 
 For Receive only operation you just need one sound card; this is a
 great way to get started.
@@ -26,7 +22,7 @@ your radio's internal USB sound card, or a home brew rig interface.
 The second sound card is often a set of USB headphones or your
 computer's internal sound card.
 
-### Receive Only (One Sound Card)
+## Receive Only (One Sound Card)
 
 Start with just a receive only station.  You just need the basic sound
 hardware in your computer, for example a microphone/speaker on your
@@ -55,7 +51,7 @@ Speaker/Headphone* device.
 If you don't have anyone to transmit FreeDV signals to you, try the
 test wave files in the next section.
 
-### Test Wave Files
+## Test Wave Files
 
 In the
 [wav](https://github.com/drowe67/freedv-gui/tree/master/wav)
@@ -67,7 +63,7 @@ Radio".  You should hear decoded FreeDV speech.
 These files will give you a feel for what FreeDV signals sound like,
 and for the basic operation of the FreeDV software.
 
-### Transmit/Receive (Two Sound Cards)
+## Transmit/Receive (Two Sound Cards)
 
 For Tx/Rx operation you need to configure two sound cards, by setting
 up Tools - Audio Config *Transmit* and *Receive* Tabs.
@@ -81,13 +77,13 @@ and encodes it to a FreeDV signal in you computer which is sent **to**
 your radio for transmission over the air.
 
 Tab | Sound Device | Notes
---- | --- | ---
+--------------- | ---------------------------------------------- | ----------------------------------------------
 Receive Tab | Input To Computer From Radio | The off air FreeDV signal **from** your radio rig interface to your computer
-Receive Tab | Output From Computer To Speaker | The decoded audio from your computer to your Speaker
+Receive Tab | Output From Computer To Speaker/Headphones | The decoded audio from your computer to your Speaker/Headphones
 Transmit Tab | Input From Microphone To Computer | Your voice from the microphone to your computer
 Transmit Tab | Output From Computer To Radio | The FreeDV signal from your computer sent **to** your rig interface for Tx
 
-### Changing Audio Devices
+## Changing Audio Devices
 
 If you change audio devices (e.g. add or remove sound cards, USB hardware), it's a good idea to check the Tools/Audio Config dialog before pressing **Start**, to verify the audio devices are as expected. This is particularly important if any audio devices e.g. Headsets, USB Sound Cards, or Virtual Cables have been disconnected since the last time FreeDV was used.
 
@@ -157,7 +153,7 @@ in the PTT Dialog.
 
 Also see [Common Problems](#common-problems) section of this manual.
 
-### HamLib
+## HamLib
 
 Hamlib comes with a default serial rate for each radio.  If your radio
 has a different serial rate change the Serial Rate drop down box to
@@ -170,7 +166,7 @@ and your radio.
 If you are really stuck, download Hamlib and test your radio's PTT
 using the command line ```rigctl``` program.
 
-#### Icom Radio Configuration
+## Icom Radio Configuration
 
 If using an Icom radio, Hamlib will use the radio's default CI-V address
 when connecting. If this has been changed, you can specify the correct
@@ -184,40 +180,26 @@ CI-V address as configured in the radio. For best results, ensure that
 there are no other Icom/CI-V capable devices in the chain if 
 "00"/"CI-V Transceive" is used.
 
-### PSK Reporter (Experimental)
-
-FreeDV has the ability to send FreeDV signal reports to [PSK Reporter](https://pskreporter.info/)
-by enabling the option in Tools->Options and specifying your callsign and grid square. When enabled, this causes
-FreeDV to disable the free form **Txt Msg** field and only transmit the **Callsign** field.
-
-FreeDV validates the received information before submitting a position report to PSK Reporter. This is to ensure that FreeDV does not report invalid callsigns to the service (e.g. ones that don't exist or that correspond to real non-FreeDV users). However, all received text will display in the main window even if it has errors.
-
-Reports sent to PSK Reporter will display using the mode "FREEDV" for ease of filtering. The user's 
-current mode (e.g. 700D, 1600, etc.) will also appear in the "Using" field when hovering over or 
-clicking on a reception report.
-
-Note that Hamlib must be enabled so PSK Reporter can read your radio's frequency. A message will appear on pushing Start if this is not the case.
-
-### Changing COM Port On Windows
+## Changing COM Port On Windows
 
 If you change the COM port of a USB-Serial device in Device Manager,
 please unplug and plug back in the USB device.  Windows/FreeDV won't
 recognise the device on the new COM Port until it has been
 unplugged/plugged.
 
-### USB or LSB?
+## USB or LSB?
 
 On bands below 10 MHz, LSB is used for FreeDV.  On 10MHz and above, USB is used. After much debate, the FreeDV community has adopted the same conventions as SSB, based on the reasoning that FreeDV is a voice mode.
 
 As an aid to the above, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn't enabled, or if your radio doesn't support retrieving frequency and mode over CAT, it will remain grayed out with "unk" displaying instead of the mode (for "unknown").
 
-## Common Problems
+# Common Problems
 
-### Overdriving Transmit Level
+## Overdriving Transmit Level
 
 This is a very common problem for first time FreeDV users.  Adjust your transmit levels so the ALC is just being nudged. More power is not better with FreeDV.  An overdriven signal will have poor SNR at the receiver.  For FreeDV 700D/700E operation with the clipper, make sure your transmitter can sustain high average power levels without damage (e.g. 40W RMS on a 100W PEP radio).
 
-### I can't set up FreeDV, especially the Sound Cards
+## I can't set up FreeDV, especially the Sound Cards
 
 This can be challenging the first time around:
 
@@ -229,7 +211,7 @@ This can be challenging the first time around:
 mailing list.  Be specific about the hardware you have and the exact
 nature of your problem.
 
-### Hamlib does not work with my Icom radio
+## Hamlib does not work with my Icom radio
 
 The most common issue with Icom radios is that the CI-V address configured
 in FreeDV does not match the address configured in the radio. Ensure that
@@ -238,7 +220,7 @@ used on the FreeDV side, ensure that the "CI-V Transceive" option is enabled
 on the radio or else the radio will not respond to requests directed to that
 address.
 
-### I need help with my radio or rig interface
+## I need help with my radio or rig interface
 
 There are many radios, many computers, and many sound cards.  It is
 impossible to test them all. Many radios have intricate menus with
@@ -248,7 +230,7 @@ have special knowledge of your exact hardware.
 However someone may have worked through the same problem as you.  Ask
 on the digital voice mailing list.
 
-### Can't hear anything on receive
+## Can't hear anything on receive
 
 Many FreeDV modes will not play any audio if there is no valid signal.
 You may also have squelch set too high.  In some modes the **Analog**
@@ -257,14 +239,14 @@ button will let you hear the received signal from the SSB radio.
 Try the Test Wave Files above to get a feel for what a FreeDV signal
 looks and sounds like.
 
-### Trouble getting Sync with 700D
+## Trouble getting Sync with 700D
 
 You need to be within +/- 60 Hz on the transmit signal.  It helps if
 both the Tx and Rx stations tune to known, exact frequencies such as
 exactly 7.177MHz.  On channels with fast fading sync may take a few
 seconds.
 
-### PTT doesn't work.  It works with Fldigi and other Hamlib applications.
+## PTT doesn't work.  It works with Fldigi and other Hamlib applications.
 
 Many people struggle with initial PTT setup:
 
@@ -283,7 +265,7 @@ of the ```dialout``` group?
 1. Contact the digital voice mailing list.  Be specific about your
 hardware, what you have tried, and the exact nature of the problem.
 
-### FreeDV 2020 mode is greyed out
+## FreeDV 2020 mode is greyed out
 
 You must have a modern CPU with AVX support to run FreeDV 2020.  If
 you do not have AVX the FreeDV 2020 mode button will be greyed out.
@@ -303,23 +285,23 @@ lscpu | grep -o "avx[^ ]*"
 ```
 will display `avx` (or `avx2`) if your CPU supports the instructions.
 
-### FreeDV 2020 mode is slow on ARM Macs
+## FreeDV 2020 mode is slow on ARM Macs
 
 Preliminary testing on ARM Macs has shown that NEON optimizations in LPCNet are
 sufficient to allow 2020 to be whitelisted on those machines. However, this is
 definitely experimental. If you are experiencing issues with 2020 mode on these
 Macs, please let the development team know so that further investigation can be done.
 
-### I installed a new version and FreeDV stopped working
+## I installed a new version and FreeDV stopped working
 
 You may need to clean out the previous configuration.  Try
 Tools-Restore Defaults.
 
-### FreeDV crashes when I press Start
+## FreeDV crashes when I press Start
 
 Have you removed/changed USB audio devices? If you remove/change USB audio devices without pressing Tools/Audio Config, FreeDV may crash.  See Changing Audio Devices above.
 
-### FreeDV can't be opened on OSX because the developer cannot be verified
+## FreeDV can't be opened on OSX because the developer cannot be verified
 
 From January 2020 Apple is enforcing notarization for all OSX applications.  The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.
 
@@ -341,7 +323,7 @@ or
 xattr -d -r com.apple.quarantine FreeDV.app
 ```
 
-## Voice Keyer
+# Voice Keyer
 
 The Voice Keyer Button on the front page, and the Options-PTT dialog
 puts FreeDV and your radio into transmit, reads a wave file of your
@@ -356,7 +338,21 @@ The wave file for the voice keyer should be in 8kHz mono 16 bit sample
 form (16 kHz for 2020).  Use a free application such as Audacity to convert a file you
 have recorded to this format.
 
-## FreeDV Modes
+# PSK Reporter (Experimental)
+
+FreeDV has the ability to send FreeDV signal reports to [PSK Reporter](https://pskreporter.info/)
+by enabling the option in Tools-Options and specifying your callsign and grid square. When enabled, this causes
+FreeDV to disable the free form **Txt Msg** field and only transmit the **Callsign** field.
+
+FreeDV validates the received information before submitting a position report to PSK Reporter. This is to ensure that FreeDV does not report invalid callsigns to the service (e.g. ones that don't exist or that correspond to real non-FreeDV users). However, all received text will display in the main window even if it has errors.
+
+Reports sent to PSK Reporter will display using the mode "FREEDV" for ease of filtering. The user's 
+current mode (e.g. 700D, 1600, etc.) will also appear in the "Using" field when hovering over or 
+clicking on a reception report.
+
+Note that Hamlib must be enabled so PSK Reporter can read your radio's frequency. A message will appear on pushing Start if this is not the case.
+
+# FreeDV Modes
 
 The following table is a guide to the different modes, using
 analog SSB and Skype as anchors for a rough guide to audio quality:
@@ -383,7 +379,7 @@ frames of speech, which combined with PC sound card buffering results
 in end-to-end latencies of 1-2 seconds.  They may take a few seconds to
 sync at the start of an over, especially in fading channels.
 
-### FreeDV 700D
+## FreeDV 700D
 
 In mid 2018 FreeDV 700D was released, with a new OFDM modem, powerful
 Forward Error Correction (FEC) and optional interleaving.  It uses the
@@ -397,7 +393,7 @@ FreeDV 700D is sensitive to tuning.  To obtain sync you must be within
 modern radios which are generally accurate to +/-1 Hz, but requires
 skill and practice when used with older, VFO based radios.
 
-### FreeDV 700E
+## FreeDV 700E
 
 FreeDV 700E was developed in December 2020 using lessons learned from on air operation of 700C and 700D.  A variant of 700D, it uses a shorter frame size (80ms) to reduce latency and sync time.  It is optimised for fast fading channels channels with up to 4Hz Doppler spread and 6ms delay spread.  FreeDV 7000E uses the same 700 bit/s codec as FreeDV 700C and 700D.  It requires about 3dB more power than 700D, but can operate reliably on fast fading channels.
 
@@ -407,7 +403,7 @@ Clipping can be enabled via Tools-Options.
 
 On good channels with high SNR clipping may actually reduce the SNR of the received signal.  This is intentional - we are adding some pre-distortion in order to increase the RMS power.  Forward error correction (FEC) will clean up any errors introduced by clipping, and on poor channels the benefits of increased signal power outweigh the slight reduction in SNR on good channels.
 
-### FreeDV 2020
+## FreeDV 2020
 
 FreeDV 2020 was developed in 2019.  It uses an experimental codec
 based on the LPCNet neural net (deep learning) synthesis engine
@@ -439,12 +435,14 @@ FreeDV 2020 Tips:
    section below).
 1. The voice keyer file must be 16 kHz mono 16 bit sample format.
 
+# Tools Menu
+
 ## Tools - Filter
 
 This section describes features on Tools-Filter.  
 
 Control | Description
- --- | --- |
+ -------------------------- | ------------------------------------------------------------------------ |
 Noise Supression | Enable noise supression, dereverberation, AGC of mic signal using the Speex pre-processor
 700C/700D Auto EQ | Automatic equalisation for FreeDV 700C and FreeDV 700D Codec input audio
 
@@ -455,18 +453,16 @@ Auto EQ (Automatic Equalisation) adjusts the input speech spectrum to best fit t
 
 ## Tools - Options
 
-This section describes features on Tools-Options.  Many of these features are also described in other parts of this manual.
-
 ### FreeDV 700 C/D/E Options
 
 Control | Description
- --- | --- |
+ ------------------------------ | ----------------------------------------------------------------------------- |
 Clipping | Increases the average power. Ensure your transmitter can handle high RMS powers before using!
 700C Diversity Combine | Combining of two sets of 700C carriers for better fading channel performance
-700D Tx Band Pass Filter | Reduces 700D TX spectrum bandwidth
-700D Manual Unsync | Forces 700D to remain in sync, and not drop sync automatically
+Tx Band Pass Filter | Reduces Tx spectrum bandwidth
+Manual Unsync | Forces modem to remain in sync, and not drop sync automatically
 
-### OFDM Modem Phase Estimator Options
+### OFDM Modem Phase Estimator Options (Experimental)
 
 These options apply to the FreeDV 700D and 2020 modes that use the OFDM modem:
 
@@ -476,7 +472,7 @@ These options apply to the FreeDV 700D and 2020 modes that use the OFDM modem:
 
 If you have problems with 700D or 2020 sync even though you have a strong signal - try these option.
 
-## Helping Improve FreeDV
+# Helping Improve FreeDV
 
 If you have an interesting test case, for example:
 
@@ -489,9 +485,9 @@ Please send the developers an off air recording of the signal.  FreeDV can recor
 
 With a recording we can reproduce your exact problem.  If we can reproduce it we can fix it. Recordings are much more useful than anecdotes or subjective reports like "FreeDV doesn't work", "SSB is better", or "On 23 December it didn't work well on grid location XYZ".  With subjective reports problems are impossible to reproduce, cannot be fixed, and you are unlikely to get the attention of the developers.
 
-## Advanced/Developer Features
+# Advanced/Developer Features
 
-### Stats Window
+## Stats Window
 
 Located on the lower left hand side of the main screen.
 
@@ -511,7 +507,7 @@ transmit station sound card is sampling at 44000 Hz and the receive
 station sound card 44001 Hz, the sample clock offset would be
 ((44000-44001)/44000)*1E6 = 22.7 ppm.
 
-### Timing Delta Tab
+## Timing Delta Tab
 
 This indicates the symbol timing estimate of the demodulator, in the
 range of +/- 0.5 of a symbol.  With off air signals this will have a
@@ -521,7 +517,7 @@ The steeper the slope, the greater the sample clock offset.
 * [FreeDV 1600 Sample Clock Offset Bug](http://www.rowetel.com/?p=6041)
 * [Testing a FDMDV Modem](http://www.rowetel.com/?p=2433)
 
-### UDP Messages
+## UDP Messages
 
 When FreeDV syncs on a received signal for 5 seconds, it will send a
 "rx sync" UDP message to a port on your machine (localhost).  An
@@ -544,7 +540,7 @@ python send_email_on_sync.py --listen_port 3000 --smtp_server smtp.gmail.com \
 --smtp_port 587 your@gmail.com your_pass
 ```
 
-### Sound Card Debug
+## Sound Card Debug
 
 These features were added for FreeDV 700D, to help diagnose sound card
 issues during development.
@@ -592,7 +588,7 @@ If the PortAudio counters are incrementing on receive try:
   also occur if you see "outfifo1" being incremented on the "Fifo"
   line during tx.  Try increasing the FifoSize.
 
-### Test Frame Histogram
+## Test Frame Histogram
 
 This feature was developed for testing FreeDV 700C.  Select the Test
 Frame Histogram tab on Front Page
@@ -625,7 +621,7 @@ is more than 20% different from the rest.
 1. A typical issue will be one carrier at 1.0 and the others at 0.5,
 indicating the poorer carrier BER is twice the larger.
 
-### Full Duplex Testing with loopback
+## Full Duplex Testing with loopback
 
 Tools - Options - Half Duplex check box
 
@@ -645,12 +641,12 @@ On Linux, using the Alsa loopback module:
                           - Transmit Tab - To Radio select   -> Loopback: Loopback PCM (hw:1,1)
 ```
 
-## Tips
+# Tips
 
 1. The space-bar can be used to toggle PTT.
 1. You can left click on the main window to adjust tuning, the vertical red line on the frequency scale will show the current centre frequency.  FreeDV will automatically track any drift once it syncs.
 
-## Converting this document to PDF
+# Converting this document to PDF
 
 For the Linux inclined:
 ```
@@ -658,35 +654,35 @@ $ pandoc USER_MANUAL.md -o USER_MANUAL.pdf "-fmarkdown-implicit_figures -o" \
 --from=markdown -V geometry:margin=.4in --toc --highlight-style=espresso
 ```
 
-## Glossary
+# Glossary
 
 Term | Notes
---- | ---
+------- | ---------------------------------------------------------------------------------------------
 AWGN | Additive White Gaussian Noise - a channel with just noise and no fading (like VHF)
 FEC | Forward Error Correction - extra bits to we send to protect the speech codec bits
 LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
-## Release Notes
+# Release Notes
 
-### V1.5.0 December 2020
+## V1.5.0 December 2020
 
 1. FreeDV 700E, better performance than 700D on fast fading channels
 1. FreeDV 700D/700E clipper to increase average transmit power by 6dB
 
-### V1.4.3 August 2020
+## V1.4.3 August 2020
 
 1. Maintenance Release (no major new features)
 1. Changes to support wxWidgets 3.1 (but Windows versions built against wxWidgets 3.0)
 1. Under the hood - OFDM modem has been refactored, shouldn't affect freedv-gui operation
 
-### V1.4.2 July 2020
+## V1.4.2 July 2020
 
 1. Maintenance Release (no major new features)
 1. Improved squelch/audio pass through on 700D/2020/2400B
 1. Under the hood - Codec2 library has been refactored, shouldn't affect freedv-gui operation
 1. Removed Project Horus support (now being maintained outside of Codec2/FreeDV)
 
-### V1.4 June-October 2019
+## V1.4 June-October 2019
 
 1. FreeDV 2020, Project Horus Binary Modes.
 1. [Improved OFDM Modem Acquisition](http://www.rowetel.com/?p=6824), this will improve sync time on FreeDV 700D and 2020 on HF fading channels, and can also handle +/- 60 Hz frequency offsets when tuning.
@@ -694,11 +690,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Wide bandwidth phase estimation and DPSK for OFDM modes (700D/2020) for fast fading/QO-100 channels (Tools-Options)
 1. Better speech quality on FreeDV 700C/700D with Auto equaliser (Tools-Filter)
 
-### V1.3 May 2018
+## V1.3 May 2018
 
 * FreeDV 700D
 
-## References
+# References
 
 * [FreeDV Web site](http://freedv.org)
 * [FreeDV Technology Overview](https://github.com/drowe67/codec2/blob/master/README_freedv.md)
