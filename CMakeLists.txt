@@ -490,10 +490,30 @@ configure_file ("${PROJECT_SOURCE_DIR}/src/info.plist.in"
                 "${PROJECT_BINARY_DIR}/src/info.plist" )
 endif(APPLE)
 
-#
-# Cpack NSIS configuration for Windows.
-#
+# CPack configuration for Windows and Linux.
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "HF Digital Voice for Radio Amateurs")
+set(CPACK_PACKAGE_VENDOR "CMake")
+#set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
+set(CPACK_PACKAGE_VERSION_MAJOR ${FREEDV_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${FREEDV_VERSION_MINOR})
+# CPack expects a patch level version so set it here and override if we
+# are actually setting one.
+set(CPACK_PACKAGE_VERSION_PATCH 0)
+if(FREEDV_VERSION_PATCH)
+    set(CPACK_PACKAGE_VERSION_PATCH ${FREEDV_VERSION_PATCH})
+endif()
+if(FREEDV_VERSION_SUFFIX)
+    #set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}-${FREEDV_VERSION_SUFFIX}")
+    set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}-${FREEDV_VERSION_SUFFIX}-${DATE_RESULT}-${FREEDV_HASH}")
+    message(STATUS "package name = ${CPACK_PACKAGE_VERSION_PATCH}")
+endif()
+
 if(WIN32)
+    #
+    # Cpack NSIS configuration for Windows.
+    #
+
     # Detect if we're doing a 32-bit or 64-bit windows build.
     if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
         set(CMAKE_CL_64 TRUE)
@@ -506,23 +526,6 @@ if(WIN32)
         @ONLY
     )
     install(SCRIPT ${CMAKE_BINARY_DIR}/cmake/GetDependencies.cmake)
-    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "HF Digital Voice for Radio Amateurs")
-    set(CPACK_PACKAGE_VENDOR "CMake")
-    #set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README")
-    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
-    set(CPACK_PACKAGE_VERSION_MAJOR ${FREEDV_VERSION_MAJOR})
-    set(CPACK_PACKAGE_VERSION_MINOR ${FREEDV_VERSION_MINOR})
-    # CPack expects a patch level version so set it here and override if we
-    # are actually setting one.
-    set(CPACK_PACKAGE_VERSION_PATCH 0)
-    if(FREEDV_VERSION_PATCH)
-        set(CPACK_PACKAGE_VERSION_PATCH ${FREEDV_VERSION_PATCH})
-    endif()
-    if(FREEDV_VERSION_SUFFIX)
-        #set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}-${FREEDV_VERSION_SUFFIX}")
-        set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}-${FREEDV_VERSION_SUFFIX}-${DATE_RESULT}-${FREEDV_HASH}")
-        message(STATUS "package name = ${CPACK_PACKAGE_VERSION_PATCH}")
-    endif()
     # There is a bug in NSI that does not handle full unix paths properly. Make
     # sure there is at least one set of four (4) backlasshes.
     #set(CPACK_PACKAGE_ICON "${CMake_SOURCE_DIR}/Utilities/Release\\\\InstallIcon.bmp")
@@ -535,6 +538,14 @@ if(WIN32)
     set(CPACK_NSIS_MENU_LINKS
         "http://freedv.org" "FreeDV Homepage")
     include(CPack)
+elseif(UNIX AND NOT APPLE)
+    # Linux packaging
+    SET(CPACK_GENERATOR "DEB")
+    SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Mooneer Salem <mooneer@gmail.com>") #required
+    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 0.9.2), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-0v5 (>= 3.0.4+dfsg-3), libportaudio2 (>= 19.6.0-1build1), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
+    SET(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+    include(CPack)
+
 endif(WIN32)
 
 endif(BOOTSTRAP_WXWIDGETS AND NOT EXISTS ${WXCONFIG})
