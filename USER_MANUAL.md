@@ -3,7 +3,7 @@
 FreeDV GUI (or just FreeDV) is a GUI program for Linux, Windows, and
 OSX for running FreeDV on a desktop PC or laptop.
 
-This is a live document.  Notes on new FreeDV features are being added as they are developed.
+This is a live document.  Notes on new FreeDV features are being added as they are developed. 
 
 # Getting Started
 
@@ -16,7 +16,7 @@ great way to get started.
 
 For Tx/Rx operation you need two sound cards.  One connects to your
 radio, and one for the operator.  The sound card connecting to the
-radio can be a rig interface device like a Signalink, Rigblaster,
+radio can be a rig interface device like a Signalink, RIGblaster,
 your radio's internal USB sound card, or a home brew rig interface.
 
 The second sound card is often a set of USB headphones or your
@@ -138,7 +138,7 @@ The Tools - PTT dialog supports three different ways to control PTT on
 your radio:
 
 + VOX: sends a tone to the left channel of the Transmit/To Radio sound card
-+ HamLib: support for many different radios via the HamLib library and a serial port
++ Hamlib: support for many different radios via the Hamlib library and a serial port
 + Serial Port: direct access to the serial port pins
 
 Once you have configured PTT, try the **Test** button.
@@ -397,7 +397,7 @@ skill and practice when used with older, VFO based radios.
 
 FreeDV 700E was developed in December 2020 using lessons learned from on air operation of 700C and 700D.  A variant of 700D, it uses a shorter frame size (80ms) to reduce latency and sync time.  It is optimised for fast fading channels channels with up to 4Hz Doppler spread and 6ms delay spread.  FreeDV 7000E uses the same 700 bit/s codec as FreeDV 700C and 700D.  It requires about 3dB more power than 700D, but can operate reliably on fast fading channels.
 
-The 700E release also includes optional compression (clipping) of the 700D an 700E transmit waveforms to reduce the Peak to Average Power Ratio to about 4dB.  For example a 100W PEP transmitter can be driven to about 40W RMS.  This is an improvement of 6dB over previous releases of FreeDV 700D. Before enabling the clipper make sure your transmitter is capable of handling sustained high average power without damage.  
+The 700E release also includes optional compression (clipping) of the 700D and 700E transmit waveforms to reduce the Peak to Average Power Ratio to about 4dB.  For example a 100W PEP transmitter can be driven to about 40W RMS.  This is an improvement of 6dB over previous releases of FreeDV 700D. Before enabling the clipper make sure your transmitter is capable of handling sustained high average power without damage.  
 
 Clipping can be enabled via Tools-Options.
 
@@ -470,7 +470,7 @@ These options apply to the FreeDV 700D and 2020 modes that use the OFDM modem:
 
 1. The DPSK (differential PSK) checkbox has a similar effect - better performance on High SNR channels where the phase changes rapidly.  This option converts the OFDM modem to use differential PSK rather than coherent PSK.  DPSK is used by earlier FreeDV modes such as FreeDV 1600.  It affects the Tx and Rx side, so both sides must select DPSK.
 
-If you have problems with 700D or 2020 sync even though you have a strong signal - try these option.
+If you have problems with 700D or 2020 sync even though you have a strong signal - try these options.
 
 # Helping Improve FreeDV
 
@@ -511,7 +511,7 @@ station sound card 44001 Hz, the sample clock offset would be
 
 This indicates the symbol timing estimate of the demodulator, in the
 range of +/- 0.5 of a symbol.  With off air signals this will have a
-saw tooth appearance, as the demod tracks the modulator sample clock.
+sawtooth appearance, as the demod tracks the modulator sample clock.
 The steeper the slope, the greater the sample clock offset.
 
 * [FreeDV 1600 Sample Clock Offset Bug](http://www.rowetel.com/?p=6041)
@@ -545,7 +545,7 @@ python send_email_on_sync.py --listen_port 3000 --smtp_server smtp.gmail.com \
 These features were added for FreeDV 700D, to help diagnose sound card
 issues during development.
 
-Tools - Options dialog:
+### Tools - Options dialog:
 
 Debug FIFO and PortAudio counters: used for debugging audio
 problems on 700D.  During beta testing there were problems with break
@@ -643,7 +643,7 @@ On Linux, using the Alsa loopback module:
 
 # Tips
 
-1. The space-bar can be used to toggle PTT.
+1. The space bar can be used to toggle PTT.
 1. You can left click on the main window to adjust tuning, the vertical red line on the frequency scale will show the current centre frequency.  FreeDV will automatically track any drift once it syncs.
 
 # Converting this document to PDF
