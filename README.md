@@ -53,7 +53,11 @@ You need to install the codec2 and lpcnetfreedv shared libraries, and freedv-gui
   $ sudo make install
   $ sudo ldconfig
   ```
-  
+ 
+## Generating Debian packages
+
+To generate a Debian/Ubuntu package, simply run the "cpack" command after running "make". The resulting .deb file can then be installed by running "dpkg -i" (once Codec2 and LPCNet packages are also installed).
+ 
 ## Testing
 
 The ```wav``` directory contains test files of modulated audio that you can use to test FreeDV (see the [USER_MANUAL](USER_MANUAL.md)).
