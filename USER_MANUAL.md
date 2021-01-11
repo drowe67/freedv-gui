@@ -664,14 +664,14 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-### V1.5.1 January 2021
+## V1.5.1 January 2021
 
 1. Experimental support for reporting to [PSK Reporter](https://pskreporter.info) added.
 2. Bug fixes with audio configuration to allow mono devices to be used along with stereo ones.
 3. Tweaks to user interface and record/playback functionality to improve usability.
 4. Bug fixes and tweaks to improve voice keyer support.
 
-### V1.5.0 December 2020
+## V1.5.0 December 2020
 
 1. FreeDV 700E, better performance than 700D on fast fading channels
 1. FreeDV 700D/700E clipper to increase average transmit power by 6dB
