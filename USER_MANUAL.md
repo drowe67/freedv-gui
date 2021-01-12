@@ -166,7 +166,7 @@ and your radio.
 If you are really stuck, download Hamlib and test your radio's PTT
 using the command line ```rigctl``` program.
 
-## Icom Radio Configuration
+## Icom Radio Configuration 
 
 If using an Icom radio, Hamlib will use the radio's default CI-V address
 when connecting. If this has been changed, you can specify the correct
