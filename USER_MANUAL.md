@@ -485,6 +485,20 @@ Please send the developers an off air recording of the signal.  FreeDV can recor
 
 With a recording we can reproduce your exact problem.  If we can reproduce it we can fix it. Recordings are much more useful than anecdotes or subjective reports like "FreeDV doesn't work", "SSB is better", or "On 23 December it didn't work well on grid location XYZ".  With subjective reports problems are impossible to reproduce, cannot be fixed, and you are unlikely to get the attention of the developers.
 
+# Multiple Panes in GUI window
+
+It is possible to have multiple panes opened within the GUI window for example, to observe both the Waterfall and Spectrum Tabs. New panes may be added above, below, left or right of existing panes.
+
+A new visible pane is created by hovering the cursor over the required Tab, click and hold the left mouse button and drag the Tab to the required position and releasing the mouse button. If currently two panes are stacked vertically a third pane may be added either beside either pane or to the left/right of both panes.  If the Tab is required adjacent to both panes then it must be dragged to the left/right of the junction of the existing Tabs.
+
+As the Tab is dragged into position a faint blue/grey image will show the position to be occupied by the pane. Panes may be relocated back to the menu bar by a similar process.
+
+Tabs can be resized as required by hovering the cursor over the border and clicking and holding the left mouse button and dragging to required size.
+
+The layout is not saved when the program is exited and must be recreated next time the program is started
+
+![multiple panes](contrib/multiple_panes.png)
+
 # Advanced/Developer Features
 
 ## Stats Window
