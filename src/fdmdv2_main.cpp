@@ -24,7 +24,6 @@
 #include <deque>
 #include "fdmdv2_main.h"
 #include "osx_interface.h"
-#include "golay23.h"
 #include "callsign_encoder.h"
 
 #define wxUSE_FILEDLG   1
@@ -33,6 +32,10 @@
 #define wxUSE_GIF       1
 #define wxUSE_PCX       1
 #define wxUSE_LIBTIFF   1
+
+extern "C" {
+    extern void golay23_init(void);
+}
 
 //-------------------------------------------------------------------
 // Bunch of globals used for communication with sound card call
