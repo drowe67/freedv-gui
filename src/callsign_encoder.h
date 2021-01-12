@@ -25,7 +25,6 @@
 
 #include <deque>
 #include "fdmdv2_defines.h"
-#include "golay23.h"
 
 class CallsignEncoder
 {
