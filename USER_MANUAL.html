@@ -355,8 +355,18 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </ol>
 <p>Please send the developers an off air recording of the signal. FreeDV can record files from your radio using Tools-Record File from Radio. A recording of 30 to 60 seconds is most useful.</p>
 <p>With a recording we can reproduce your exact problem. If we can reproduce it we can fix it. Recordings are much more useful than anecdotes or subjective reports like &quot;FreeDV doesn't work&quot;, &quot;SSB is better&quot;, or &quot;On 23 December it didn't work well on grid location XYZ&quot;. With subjective reports problems are impossible to reproduce, cannot be fixed, and you are unlikely to get the attention of the developers.</p>
-<h1 id="advanceddeveloper-features"><span class="header-section-number">9</span> Advanced/Developer Features</h1>
-<h2 id="stats-window"><span class="header-section-number">9.1</span> Stats Window</h2>
+<h1 id="multiple-panes-in-gui-window"><span class="header-section-number">9</span> Multiple Panes in GUI window</h1>
+<p>It is possible to have multiple panes opened within the GUI window for example, to observe both the Waterfall and Spectrum Tabs. New panes may be added above, below, left or right of existing panes.</p>
+<p>A new visible pane is created by hovering the cursor over the required Tab, click and hold the left mouse button and drag the Tab to the required position and releasing the mouse button. If currently two panes are stacked vertically a third pane may be added either beside either pane or to the left/right of both panes. If the Tab is required adjacent to both panes then it must be dragged to the left/right of the junction of the existing Tabs.</p>
+<p>As the Tab is dragged into position a faint blue/grey image will show the position to be occupied by the pane. Panes may be relocated back to the menu bar by a similar process.</p>
+<p>Tabs can be resized as required by hovering the cursor over the border and clicking and holding the left mouse button and dragging to required size.</p>
+<p>The layout is not saved when the program is exited and must be recreated next time the program is started</p>
+<div class="figure">
+<img src="contrib/multiple_panes.png" alt="multiple panes" />
+<p class="caption">multiple panes</p>
+</div>
+<h1 id="advanceddeveloper-features"><span class="header-section-number">10</span> Advanced/Developer Features</h1>
+<h2 id="stats-window"><span class="header-section-number">10.1</span> Stats Window</h2>
 <p>Located on the lower left hand side of the main screen.</p>
 <table>
 <thead>
@@ -397,13 +407,13 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </tbody>
 </table>
 <p>The sample clock offset is the estimated difference between the modulator (tx) and demodulator (rx) sample clocks. For example if the transmit station sound card is sampling at 44000 Hz and the receive station sound card 44001 Hz, the sample clock offset would be ((44000-44001)/44000)*1E6 = 22.7 ppm.</p>
-<h2 id="timing-delta-tab"><span class="header-section-number">9.2</span> Timing Delta Tab</h2>
+<h2 id="timing-delta-tab"><span class="header-section-number">10.2</span> Timing Delta Tab</h2>
 <p>This indicates the symbol timing estimate of the demodulator, in the range of +/- 0.5 of a symbol. With off air signals this will have a sawtooth appearance, as the demod tracks the modulator sample clock. The steeper the slope, the greater the sample clock offset.</p>
 <ul>
 <li><a href="http://www.rowetel.com/?p=6041">FreeDV 1600 Sample Clock Offset Bug</a></li>
 <li><a href="http://www.rowetel.com/?p=2433">Testing a FDMDV Modem</a></li>
 </ul>
-<h2 id="udp-messages"><span class="header-section-number">9.3</span> UDP Messages</h2>
+<h2 id="udp-messages"><span class="header-section-number">10.3</span> UDP Messages</h2>
 <p>When FreeDV syncs on a received signal for 5 seconds, it will send a &quot;rx sync&quot; UDP message to a port on your machine (localhost). An external program or script listening on this port can then take some action, for example send &quot;spotting&quot; information to a web server or send an email your phone.</p>
 <p>Enable UDP messages on Tools-Options, and test using the &quot;Test&quot; button.</p>
 <p>On Linux you can test reception of messages using netcat:</p>
@@ -412,9 +422,9 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <p>Usage for Gmail:</p>
 <pre><code>python send_email_on_sync.py --listen_port 3000 --smtp_server smtp.gmail.com \
 --smtp_port 587 your@gmail.com your_pass</code></pre>
-<h2 id="sound-card-debug"><span class="header-section-number">9.4</span> Sound Card Debug</h2>
+<h2 id="sound-card-debug"><span class="header-section-number">10.4</span> Sound Card Debug</h2>
 <p>These features were added for FreeDV 700D, to help diagnose sound card issues during development.</p>
-<h3 id="tools---options-dialog"><span class="header-section-number">9.4.1</span> Tools - Options dialog:</h3>
+<h3 id="tools---options-dialog"><span class="header-section-number">10.4.1</span> Tools - Options dialog:</h3>
 <p>Debug FIFO and PortAudio counters: used for debugging audio problems on 700D. During beta testing there were problems with break up in the 700D Tx and Rx audio on Windows.</p>
 <p>The PortAudio counters (PortAudio1 and PortAudio2) should not increment when running in Tx or Rx, as this indicates samples are being lost by the sound driver which will lead to sync problems.</p>
 <p>The Fifo counter outempty1 counter should not increment during Tx, as this indicates FreeDV is not supplying samples fast enough to the PortAudio drivers. The results will be resyncs at the receiver.</p>
@@ -429,7 +439,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <p>The txThreadPriority checkbox reduces the priority of the main txRx thread in FreeDV which may help the sound driver thread process samples.</p>
 <p>The txRxDumpTiming check box dumps timing information to a console that is used for debugging the rx break up problem on 700D. Each number is how many ms the txRxThread took to run.</p>
 <p>The txRxDumpTiming check box dumps the number of samples free in the tx FIFO sending samples to the Tx. If this hits zero, your tx audio will break up and the rx will lose sync. Tx audio break up will also occur if you see &quot;outfifo1&quot; being incremented on the &quot;Fifo&quot; line during tx. Try increasing the FifoSize.</p>
-<h2 id="test-frame-histogram"><span class="header-section-number">9.5</span> Test Frame Histogram</h2>
+<h2 id="test-frame-histogram"><span class="header-section-number">10.5</span> Test Frame Histogram</h2>
 <p>This feature was developed for testing FreeDV 700C. Select the Test Frame Histogram tab on Front Page</p>
 <p>Displays BER of each carrier when in &quot;test frame&quot; mode. As each QPSK carrier has 2 bits there are 2*Nc histogram points.</p>
 <p>Ideally all carriers will have about the same BER (+/- 20% after 5000 total bit errors), however problems can occur with filtering in the tx path. If one carrier has less power, then it will have a higher BER. The errors in this carrier will tend to dominate overall BER. For example if one carrier is attenuated due to SSB filter ripple in the tx path then the BER on that carrier will be higher. This is bad news for DV.</p>
@@ -440,7 +450,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li><p>Monitor the error histogram for a few minutes, until you have say 5000 total bit errors. You have a problem if the BER of any carrier is more than 20% different from the rest.</p></li>
 <li><p>A typical issue will be one carrier at 1.0 and the others at 0.5, indicating the poorer carrier BER is twice the larger.</p></li>
 </ol>
-<h2 id="full-duplex-testing-with-loopback"><span class="header-section-number">9.6</span> Full Duplex Testing with loopback</h2>
+<h2 id="full-duplex-testing-with-loopback"><span class="header-section-number">10.6</span> Full Duplex Testing with loopback</h2>
 <p>Tools - Options - Half Duplex check box</p>
 <p>FreeDV GUI can operate in full duplex mode which is useful for development or listening to your own FreeDV signal as only one PC is required. Normal operation is half duplex.</p>
 <p>Tx and Rx signals can be looped back via an analog connection between the sound cards.</p>
@@ -450,16 +460,16 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 
   In Tools - Audio Config - Receive Tab  - From Radio select -&gt; Loopback: Loopback PCM (hw:1,0)
                           - Transmit Tab - To Radio select   -&gt; Loopback: Loopback PCM (hw:1,1)</code></pre>
-<h1 id="tips"><span class="header-section-number">10</span> Tips</h1>
+<h1 id="tips"><span class="header-section-number">11</span> Tips</h1>
 <ol style="list-style-type: decimal">
 <li>The space bar can be used to toggle PTT.</li>
 <li>You can left click on the main window to adjust tuning, the vertical red line on the frequency scale will show the current centre frequency. FreeDV will automatically track any drift once it syncs.</li>
 </ol>
-<h1 id="converting-this-document-to-pdf"><span class="header-section-number">11</span> Converting this document to PDF</h1>
+<h1 id="converting-this-document-to-pdf"><span class="header-section-number">12</span> Converting this document to PDF</h1>
 <p>For the Linux inclined:</p>
 <pre><code>$ pandoc USER_MANUAL.md -o USER_MANUAL.pdf &quot;-fmarkdown-implicit_figures -o&quot; \
 --from=markdown -V geometry:margin=.4in --toc --highlight-style=espresso</code></pre>
-<h1 id="glossary"><span class="header-section-number">12</span> Glossary</h1>
+<h1 id="glossary"><span class="header-section-number">13</span> Glossary</h1>
 <table style="width:100%;">
 <colgroup>
 <col width="7%" />
@@ -486,33 +496,33 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </tr>
 </tbody>
 </table>
-<h1 id="release-notes"><span class="header-section-number">13</span> Release Notes</h1>
-<h2 id="v1.5.1-january-2021"><span class="header-section-number">13.1</span> V1.5.1 January 2021</h2>
+<h1 id="release-notes"><span class="header-section-number">14</span> Release Notes</h1>
+<h2 id="v1.5.1-january-2021"><span class="header-section-number">14.1</span> V1.5.1 January 2021</h2>
 <ol style="list-style-type: decimal">
 <li>Experimental support for reporting to <a href="https://pskreporter.info">PSK Reporter</a> added.</li>
 <li>Bug fixes with audio configuration to allow mono devices to be used along with stereo ones.</li>
 <li>Tweaks to user interface and record/playback functionality to improve usability.</li>
 <li>Bug fixes and tweaks to improve voice keyer support.</li>
 </ol>
-<h2 id="v1.5.0-december-2020"><span class="header-section-number">13.2</span> V1.5.0 December 2020</h2>
+<h2 id="v1.5.0-december-2020"><span class="header-section-number">14.2</span> V1.5.0 December 2020</h2>
 <ol style="list-style-type: decimal">
 <li>FreeDV 700E, better performance than 700D on fast fading channels</li>
 <li>FreeDV 700D/700E clipper to increase average transmit power by 6dB</li>
 </ol>
-<h2 id="v1.4.3-august-2020"><span class="header-section-number">13.3</span> V1.4.3 August 2020</h2>
+<h2 id="v1.4.3-august-2020"><span class="header-section-number">14.3</span> V1.4.3 August 2020</h2>
 <ol style="list-style-type: decimal">
 <li>Maintenance Release (no major new features)</li>
 <li>Changes to support wxWidgets 3.1 (but Windows versions built against wxWidgets 3.0)</li>
 <li>Under the hood - OFDM modem has been refactored, shouldn't affect freedv-gui operation</li>
 </ol>
-<h2 id="v1.4.2-july-2020"><span class="header-section-number">13.4</span> V1.4.2 July 2020</h2>
+<h2 id="v1.4.2-july-2020"><span class="header-section-number">14.4</span> V1.4.2 July 2020</h2>
 <ol style="list-style-type: decimal">
 <li>Maintenance Release (no major new features)</li>
 <li>Improved squelch/audio pass through on 700D/2020/2400B</li>
 <li>Under the hood - Codec2 library has been refactored, shouldn't affect freedv-gui operation</li>
 <li>Removed Project Horus support (now being maintained outside of Codec2/FreeDV)</li>
 </ol>
-<h2 id="v1.4-june-october-2019"><span class="header-section-number">13.5</span> V1.4 June-October 2019</h2>
+<h2 id="v1.4-june-october-2019"><span class="header-section-number">14.5</span> V1.4 June-October 2019</h2>
 <ol style="list-style-type: decimal">
 <li>FreeDV 2020, Project Horus Binary Modes.</li>
 <li><a href="http://www.rowetel.com/?p=6824">Improved OFDM Modem Acquisition</a>, this will improve sync time on FreeDV 700D and 2020 on HF fading channels, and can also handle +/- 60 Hz frequency offsets when tuning.</li>
@@ -520,11 +530,11 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Wide bandwidth phase estimation and DPSK for OFDM modes (700D/2020) for fast fading/QO-100 channels (Tools-Options)</li>
 <li>Better speech quality on FreeDV 700C/700D with Auto equaliser (Tools-Filter)</li>
 </ol>
-<h2 id="v1.3-may-2018"><span class="header-section-number">13.6</span> V1.3 May 2018</h2>
+<h2 id="v1.3-may-2018"><span class="header-section-number">14.6</span> V1.3 May 2018</h2>
 <ul>
 <li>FreeDV 700D</li>
 </ul>
-<h1 id="references"><span class="header-section-number">14</span> References</h1>
+<h1 id="references"><span class="header-section-number">15</span> References</h1>
 <ul>
 <li><a href="http://freedv.org">FreeDV Web site</a></li>
 <li><a href="https://github.com/drowe67/codec2/blob/master/README_freedv.md">FreeDV Technology Overview</a></li>
