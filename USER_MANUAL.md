@@ -305,13 +305,13 @@ Have you removed/changed USB audio devices? If you remove/change USB audio devic
 
 From January 2020 Apple is enforcing notarization for all OSX applications.  The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.
 
-![notarization](contrib/osx_notarization1.png)
+![Notarization Error](contrib/osx_notarization1.png)
 
 Security & Privacy shows the Open Anyway option for FreeDV:
 
-![notarization](contrib/osx_notarization2.png)
+![Security and Privacy](contrib/osx_notarization2.png)
 
-![notarization](contrib/osx_notarization3.png)
+![Open FreeDV](contrib/osx_notarization3.png)
 
 Or you can use command line options:
 
@@ -497,7 +497,7 @@ Tabs can be resized as required by hovering the cursor over the border and click
 
 The layout is not saved when the program is exited and must be recreated next time the program is started
 
-![multiple panes](contrib/multiple_panes.png)
+![Multiple Panes](contrib/multiple_panes.png)
 
 # Advanced/Developer Features
 
