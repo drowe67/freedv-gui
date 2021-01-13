@@ -7,7 +7,7 @@ This is a live document.  Notes on new FreeDV features are being added as they a
 
 # Getting Started
 
-FreeDV GUI can be challenging to set up.  The easiest way is to find a friend who has set up FreeDV and get them to help. This section contains instructions to help you get started.
+This section contains instructions to help you get started.
 
 ## Sound Card Configuration
 
