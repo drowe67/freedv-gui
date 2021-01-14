@@ -1,7 +1,10 @@
-name: CMake
+name: Build FreeDV
 
-on: [push]
-
+on:
+  push:
+    branches-ignore:
+    - 'dr-render-manual'
+    
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Debug

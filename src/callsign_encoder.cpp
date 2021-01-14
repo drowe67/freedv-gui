@@ -24,6 +24,11 @@
 #include <cstring>
 #include "callsign_encoder.h"
 
+extern "C" {
+    extern int  golay23_encode(int data);
+    extern int  golay23_decode(int received_codeword);
+}
+
 CallsignEncoder::CallsignEncoder()
 {
     memset(&translatedCallsign_, 0, MAX_CALLSIGN);
