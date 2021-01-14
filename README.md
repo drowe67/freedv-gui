@@ -64,7 +64,7 @@ The ```wav``` directory contains test files of modulated audio that you can use 
 
 ## Building for Windows using Docker
 
-The Windows build process above has been automated using a Docker container, see the freedv-gui Docker [README](docker/README_docker.md).
+The Windows build process has been automated using a Docker container, see the freedv-gui Docker [README](docker/README_docker.md).
 
 ## Building for Windows on Fedora (Cross compiling)
 
