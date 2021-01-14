@@ -22,8 +22,8 @@
 #ifndef __OPTIONS_DIALOG__
 #define __OPTIONS_DIALOG__
 
-#include "fdmdv2_main.h"
-#include "fdmdv2_defines.h"
+#include "main.h"
+#include "defines.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class OptionsDlg

@@ -1,5 +1,5 @@
 //==========================================================================
-// Name:            fdmdv2_main.h
+// Name:            main.h
 //
 // Purpose:         Declares simple wxWidgets application with GUI.
 // Created:         Apr. 9, 2012
@@ -79,12 +79,12 @@
 #include "topFrame.h"
 #include "dlg_ptt.h"
 #include "dlg_options.h"
-#include "fdmdv2_plot.h"
-#include "fdmdv2_plot_scalar.h"
-#include "fdmdv2_plot_scatter.h"
-#include "fdmdv2_plot_waterfall.h"
-#include "fdmdv2_plot_spectrum.h"
-#include "fdmdv2_pa_wrapper.h"
+#include "plot.h"
+#include "plot_scalar.h"
+#include "plot_scatter.h"
+#include "plot_waterfall.h"
+#include "plot_spectrum.h"
+#include "pa_wrapper.h"
 #include "sndfile.h"
 #include "portaudio.h"
 #include "dlg_audiooptions.h"

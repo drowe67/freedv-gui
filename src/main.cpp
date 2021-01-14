@@ -1,5 +1,5 @@
 //==========================================================================
-// Name:            fdmdv2_main.cpp
+// Name:            main.cpp
 //
 // Purpose:         FreeDV main()
 // Created:         Apr. 9, 2012
@@ -22,7 +22,7 @@
 
 #include <time.h>
 #include <deque>
-#include "fdmdv2_main.h"
+#include "main.h"
 #include "osx_interface.h"
 #include "callsign_encoder.h"
 
@@ -4719,7 +4719,7 @@ int MainFrame::txCallback(
 // Callback from plot_spectrum & plot_waterfall.  would be nice to
 // work out a way to do this without globals.
 
-void fdmdv2_clickTune(float freq) {
+void clickTune(float freq) {
 
     // The demod is hard-wired to expect a centre frequency of
     // FDMDV_FCENTRE.  So we want to take the signal centered on the
