@@ -1071,10 +1071,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     if (wxGetApp().m_callsignEncoder)
     {
         strncpy(callsign, (const char*) wxGetApp().m_psk_callsign.mb_str(wxConvUTF8), MAX_CALLSIGN/2 - 2);
-        if (strlen(callsign) < MAX_CALLSIGN/2 - 1)
-        {
-            strncat(callsign, "\r", 1);
-        }    
         wxGetApp().m_callsignEncoder->setCallsign(&callsign[0]);
     }
     else
