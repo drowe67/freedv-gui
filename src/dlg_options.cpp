@@ -337,13 +337,15 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox* sb_fifo2 = new wxStaticBox(m_debugTab, wxID_ANY, _(""));
     wxStaticBoxSizer* sbSizer_fifo2 = new wxStaticBoxSizer(sb_fifo2, wxHORIZONTAL);
 
-    m_ckboxTxRxThreadPriority = new wxCheckBox(m_debugTab, wxID_ANY, _("  txRxThreadPriority"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxVerbose = new wxCheckBox(m_debugTab, wxID_ANY, _("Verbose  "), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_fifo2->Add(m_ckboxVerbose, 0, wxALIGN_LEFT, 0);   
+    m_ckboxTxRxThreadPriority = new wxCheckBox(m_debugTab, wxID_ANY, _("txRxThreadPriority  "), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_fifo2->Add(m_ckboxTxRxThreadPriority, 0, wxALIGN_LEFT, 0);
-    m_ckboxTxRxDumpTiming = new wxCheckBox(m_debugTab, wxID_ANY, _("  txRxDumpTiming"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxTxRxDumpTiming = new wxCheckBox(m_debugTab, wxID_ANY, _("txRxDumpTiming  "), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_fifo2->Add(m_ckboxTxRxDumpTiming, 0, wxALIGN_LEFT, 0);
-    m_ckboxTxRxDumpFifoState = new wxCheckBox(m_debugTab, wxID_ANY, _("  txRxDumpFifoState"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxTxRxDumpFifoState = new wxCheckBox(m_debugTab, wxID_ANY, _("txRxDumpFifoState  "), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_fifo2->Add(m_ckboxTxRxDumpFifoState, 0, wxALIGN_LEFT, 0);   
-    m_ckboxFreeDVAPIVerbose = new wxCheckBox(m_debugTab, wxID_ANY, _("  APiVerbose"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDVAPIVerbose = new wxCheckBox(m_debugTab, wxID_ANY, _("APiVerbose  "), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_fifo2->Add(m_ckboxFreeDVAPIVerbose, 0, wxALIGN_LEFT, 0);   
 
     sbSizer_fifo->Add(sbSizer_fifo2, 0,  wxALIGN_LEFT, 5);
@@ -496,6 +498,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxTxRxThreadPriority->SetValue(wxGetApp().m_txRxThreadHighPriority);
         m_ckboxTxRxDumpTiming->SetValue(g_dump_timing);
         m_ckboxTxRxDumpFifoState->SetValue(g_dump_fifo_state);
+        m_ckboxVerbose->SetValue(g_verbose);
         m_ckboxFreeDVAPIVerbose->SetValue(g_freedv_verbose);
        
         m_ckboxFreeDV700txClip->SetValue(wxGetApp().m_FreeDV700txClip);
@@ -607,6 +610,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_txRxThreadHighPriority = m_ckboxTxRxThreadPriority->GetValue();
         g_dump_timing = m_ckboxTxRxDumpTiming->GetValue();
         g_dump_fifo_state = m_ckboxTxRxDumpFifoState->GetValue();
+        g_verbose = m_ckboxVerbose->GetValue();
         g_freedv_verbose = m_ckboxFreeDVAPIVerbose->GetValue();
 
         wxGetApp().m_udp_enable     = m_ckbox_udp_enable->GetValue();
@@ -670,6 +674,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 #ifdef __WXMSW__
             pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
 #endif
+            pConfig->Write(wxT("/Debug/verbose"), g_verbose);
             pConfig->Write(wxT("/Debug/APIverbose"), g_freedv_verbose);
 
             pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);

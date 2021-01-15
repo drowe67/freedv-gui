@@ -42,9 +42,8 @@ extern "C" {
 // back functions
 // ------------------------------------------------------------------
 
-int g_in, g_out;
-
 // freedv states
+int                 g_verbose;
 int                 g_Nc;
 int                 g_mode;
 struct freedv      *g_pfreedv;
