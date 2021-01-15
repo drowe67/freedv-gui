@@ -55,6 +55,7 @@ set(FREEDV_SOURCES
     udp.cpp
     util.cpp
     eq.cpp
+    voicekeyer.cpp
 )
 
 set(FREEDV_SOURCES_OSX
