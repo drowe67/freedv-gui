@@ -172,12 +172,10 @@ class TopFrame : public wxFrame
         virtual void OnTogBtnSplitClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnAnalogClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnVoiceKeyerClick( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnTogBtnALCClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnPTT( wxCommandEvent& event ) { event.Skip(); }
 
         virtual void OnTogBtnSplitClickUI(wxUpdateUIEvent& event) { event.Skip(); }
         virtual void OnTogBtnAnalogClickUI(wxUpdateUIEvent& event) { event.Skip(); }
-        virtual void OnTogBtnALCClickUI(wxUpdateUIEvent& event) { event.Skip(); }
         virtual void OnTogBtnRxIDUI(wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnTogBtnTxIDUI(wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnTogBtnPTT_UI(wxUpdateUIEvent& event ) { event.Skip(); }
@@ -194,7 +192,6 @@ class TopFrame : public wxFrame
         wxToggleButton* m_togBtnSplit;
         wxToggleButton* m_togBtnAnalog;
         wxToggleButton* m_togBtnVoiceKeyer;
-        wxToggleButton* m_togBtnALC;
         wxToggleButton* m_btnTogPTT;
         wxToggleButton* m_togBtnLoopRx;
         wxToggleButton* m_togBtnLoopTx;

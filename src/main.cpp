@@ -554,7 +554,6 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnSplit->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnSplitClickUI), NULL, this);
     m_togBtnAnalog->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
-    //m_togBtnALC->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnALCClickUI), NULL, this);
    // m_btnTogPTT->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnPTT_UI), NULL, this);
 
     m_togBtnSplit->Disable();
@@ -563,7 +562,6 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     m_togBtnAnalog->Disable();
     m_btnTogPTT->Disable();
     m_togBtnVoiceKeyer->Disable();
-    //m_togBtnALC->Disable();
 
     // squelch settings
     char sqsnr[15];
@@ -808,8 +806,7 @@ MainFrame::~MainFrame()
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnSplit->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnSplitClickUI), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
-    //m_togBtnALC->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnALCClickUI), NULL, this);
-    //m_btnTogPTT->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnPTT_UI), NULL, this);
+     //m_btnTogPTT->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnPTT_UI), NULL, this);
 
     sox_biquad_finish();
 
@@ -1774,18 +1771,6 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
     }
 }
 
-#ifdef ALC
-//-------------------------------------------------------------------------
-// OnTogBtnALCClick()
-//-------------------------------------------------------------------------
-void MainFrame::OnTogBtnALCClick(wxCommandEvent& event)
-{
-    wxMessageBox(wxT("Got Click!"), wxT("OnTogBtnALCClick"), wxOK);
-
-    event.Skip();
-}
-#endif
-
 // extra panel added to file open dialog to add loop checkbox
 MyExtraPlayFilePanel::MyExtraPlayFilePanel(wxWindow *parent): wxPanel(parent)
 {
@@ -2327,7 +2312,6 @@ void MainFrame::OnExit(wxCommandEvent& event)
     //m_togRxID->Disable();
     //m_togTxID->Disable();
     m_togBtnAnalog->Disable();
-    //m_togBtnALC->Disable();
     //m_btnTogPTT->Disable();
 
     Pa_Terminate();
