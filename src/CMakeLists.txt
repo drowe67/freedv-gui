@@ -55,6 +55,7 @@ set(FREEDV_SOURCES
     util.cpp
     eq.cpp
     voicekeyer.cpp
+    playrec.cpp
 )
 
 set(FREEDV_SOURCES_OSX
