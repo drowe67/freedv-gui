@@ -1445,7 +1445,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
     if (startStop.IsSameAs("Start"))
     {
-        fprintf(stderr, "Start .....\n");
+        if (g_verbose) fprintf(stderr, "Start .....\n");
         g_queueResync = false;
         
         //
@@ -1591,8 +1591,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             // Init Speex pre-processor states
             // by inspecting Speex source it seems that only denoiser is on by default
 
-            fprintf(stderr, "freedv_get_n_speech_samples(g_pfreedv): %d\n", freedv_get_n_speech_samples(g_pfreedv));
-            fprintf(stderr, "freedv_get_speech_sample_rate(g_pfreedv): %d\n", freedv_get_speech_sample_rate(g_pfreedv));
+            if (g_verbose) fprintf(stderr, "freedv_get_n_speech_samples(g_pfreedv): %d\n", freedv_get_n_speech_samples(g_pfreedv));
+            if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(g_pfreedv): %d\n", freedv_get_speech_sample_rate(g_pfreedv));
 
             if (wxGetApp().m_speexpp_enable)
                 g_speex_st = speex_preprocess_state_init(freedv_get_n_speech_samples(g_pfreedv), freedv_get_speech_sample_rate(g_pfreedv));
@@ -1675,7 +1675,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
     // Stop was pressed or start up failed
 
     if (startStop.IsSameAs("Stop") || !m_RxRunning ) {
-        fprintf(stderr, "Stop .....\n");
+        if (g_verbose) fprintf(stderr, "Stop .....\n");
         
         //
         // Stop Running -------------------------------------------------
@@ -1892,7 +1892,7 @@ void MainFrame::startRxStream()
     bool  two_rx=false;
     bool  two_tx=false;
 
-    fprintf(stderr, "startRxStream .....\n");
+    if (g_verbose) fprintf(stderr, "startRxStream .....\n");
     if(!m_RxRunning) {
         m_RxRunning = true;
         if(Pa_Initialize())
@@ -1906,7 +1906,7 @@ void MainFrame::startRxStream()
         if(g_soundCard2InDeviceNum != g_soundCard2OutDeviceNum)
             two_tx=true;
 
-        fprintf(stderr, "two_rx: %d two_tx: %d\n", two_rx, two_tx);
+        if (g_verbose) fprintf(stderr, "two_rx: %d two_tx: %d\n", two_rx, two_tx);
         if(two_rx)
             m_rxOutPa = new PortAudioWrap();
         else
@@ -2093,7 +2093,7 @@ void MainFrame::startRxStream()
         g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
         g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
 
-        fprintf(stderr, "fifoSize_ms: %d infifo1/outfilo1: %d infifo2/outfilo2: %d\n",
+        if (g_verbose) fprintf(stderr, "fifoSize_ms: %d infifo1/outfilo1: %d infifo2/outfilo2: %d\n",
                 wxGetApp().m_fifoSize_ms, soundCard1FifoSizeSamples, soundCard2FifoSizeSamples);
 
         // reset debug stats for FIFOs
@@ -2136,7 +2136,7 @@ void MainFrame::startRxStream()
         g_rxUserdata->rxinfifo = codec2_fifo_create(rxInFifoSizeSamples);
         g_rxUserdata->rxoutfifo = codec2_fifo_create(rxOutFifoSizeSamples);
 
-        fprintf(stderr, "rxInFifoSizeSamples: %d rxOutFifoSizeSamples: %d\n", rxInFifoSizeSamples, rxOutFifoSizeSamples);
+        if (g_verbose) fprintf(stderr, "rxInFifoSizeSamples: %d rxOutFifoSizeSamples: %d\n", rxInFifoSizeSamples, rxOutFifoSizeSamples);
 
         // Init Equaliser Filters ------------------------------------------------------
 
@@ -2230,7 +2230,7 @@ void MainFrame::startRxStream()
             }
         }
 
-        fprintf(stderr, "started stream 1\n");
+        if (g_verbose) fprintf(stderr, "started stream 1\n");
 
         // Start sound card 2 ----------------------------------------------------------
 
@@ -2246,7 +2246,7 @@ void MainFrame::startRxStream()
             m_txErr = m_txInPa->streamOpen();
 
             if(m_txErr != paNoError) {
-                fprintf(stderr, "Err: %d\n", m_txErr);
+                if (g_verbose) fprintf(stderr, "Err: %d\n", m_txErr);
                 wxMessageBox(wxT("Sound Card 2 Open/Setup error."), wxT("Error"), wxOK);
                 m_rxInPa->stop();
                 m_rxInPa->streamClose();
@@ -2347,7 +2347,7 @@ void MainFrame::startRxStream()
             }
         }
 
-        fprintf(stderr, "starting tx/rx processing thread\n");
+        if (g_verbose) fprintf(stderr, "starting tx/rx processing thread\n");
 
         // start tx/rx processing thread
 
@@ -2420,7 +2420,7 @@ void txRxProcessing()
     
     if (g_queueResync)
     {
-        fprintf(stderr, "Unsyncing per user request.\n");
+        if (g_verbose) fprintf(stderr, "Unsyncing per user request.\n");
         g_queueResync = false;
         freedv_set_sync(g_pfreedv, FREEDV_SYNC_UNSYNC);
         g_resyncs++;
@@ -2635,7 +2635,7 @@ void txRxProcessing()
  	if (g_dump_fifo_state) {
 	  // If this drops to zero we have a problem as we will run out of output samples
 	  // to send to the sound driver via PortAudio
-	  fprintf(stderr, "outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d\n",
+	  if (g_verbose) fprintf(stderr, "outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d\n",
                   codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
 	}
 

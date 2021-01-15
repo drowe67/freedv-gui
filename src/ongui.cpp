@@ -512,7 +512,7 @@ void MainFrame::OnCallSignReset(wxCommandEvent& event)
 void MainFrame::OnReSync(wxCommandEvent& event)
 {
     if (m_RxRunning)  {
-        fprintf(stderr,"OnReSync\n");
+        if (g_verbose) fprintf(stderr,"OnReSync\n");
         if (g_mode != -1) {
             // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
             // the next execution of the TX/RX loop.

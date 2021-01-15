@@ -154,10 +154,10 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
 {
     wxUnusedVar(event);
 
-    fprintf(stderr,"OnPlayFileFromRadio:: %d\n", (int)g_playFileFromRadio);
+    if (g_verbose) fprintf(stderr,"OnPlayFileFromRadio:: %d\n", (int)g_playFileFromRadio);
     if (g_playFileFromRadio)
     {
-        fprintf(stderr, "OnPlayFileFromRadio:: Stop\n");
+        if (g_verbose) fprintf(stderr, "OnPlayFileFromRadio:: Stop\n");
         StopPlaybackFileFromRadio();
     }
     else
@@ -225,7 +225,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
             wxString stringnumber = wxString::Format(wxT("%d"), (int)sfInfo.samplerate);
             SetStatusText(wxT("raw file assuming Fs=") + stringnumber, 1);
         }
-        fprintf(stderr, "OnPlayFileFromRadio:: Playing File Fs = %d\n", (int)sfInfo.samplerate);
+        if (g_verbose) fprintf(stderr, "OnPlayFileFromRadio:: Playing File Fs = %d\n", (int)sfInfo.samplerate);
         m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Stop Play File - From Radio...")));
         g_playFileFromRadio = true;
         g_blink = 0.0;
@@ -256,7 +256,7 @@ void MainFrame::StopRecFileFromRadio()
 {
     if (g_recFileFromRadio)
     {
-        fprintf(stderr, "Stopping Record....\n");
+        if (g_verbose) fprintf(stderr, "Stopping Record....\n");
         g_mutexProtectingCallbackData.Lock();
         g_recFileFromRadio = false;
         sf_close(g_sfRecFile);
