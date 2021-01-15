@@ -220,7 +220,7 @@ bool MainApp::OnInit()
 
      // Create the main application window
 
-    frame = new MainFrame(m_plugInName, NULL);
+    frame = new MainFrame(NULL);
     SetTopWindow(frame);
 
     // Should guarantee that the first plot tab defined is the one
@@ -239,21 +239,13 @@ bool MainApp::OnInit()
 //-------------------------------------------------------------------------
 int MainApp::OnExit()
 {
-    //fprintf(stderr, "MainApp::OnExit\n");
-    if (m_plugIn) {
-        #ifdef __WXMSW__
-        FreeLibrary((HMODULE)m_plugInHandle);
-        #else
-        dlclose(m_plugInHandle);
-        #endif
-    }
     return 0;
 }
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainFrame(wxFrame* pa->ent) : TopFrame(parent)
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInName, parent)
+MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
 {
     m_zoom              = 1.;
 
@@ -549,16 +541,12 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     pConfig->SetPath(wxT("/"));
 
 //    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
-    //m_togRxID->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnRxIDUI), NULL, this);
-    //m_togTxID->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnTxIDUI), NULL, this);
-    m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
+     m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnSplit->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnSplitClickUI), NULL, this);
     m_togBtnAnalog->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
    // m_btnTogPTT->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnPTT_UI), NULL, this);
 
     m_togBtnSplit->Disable();
-    //m_togRxID->Disable();
-    //m_togTxID->Disable();
     m_togBtnAnalog->Disable();
     m_btnTogPTT->Disable();
     m_togBtnVoiceKeyer->Disable();
@@ -801,8 +789,6 @@ MainFrame::~MainFrame()
        pConfig->Flush();
     }
 
-    //m_togRxID->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnRxIDUI), NULL, this);
-    //m_togTxID->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnTxIDUI), NULL, this);
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnSplit->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnSplitClickUI), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
@@ -1674,26 +1660,6 @@ void MainFrame::DetectSyncProcessEvent(void) {
     ds_state = next_state;
 }
 
-
-//-------------------------------------------------------------------------
-// OnTogBtnRxID()
-//-------------------------------------------------------------------------
-void MainFrame::OnTogBtnRxID(wxCommandEvent& event)
-{
-    // empty any junk in rx data FIFO
-    short junk;
-    while(codec2_fifo_read(g_rxDataOutFifo,&junk,1) == 0);
-    event.Skip();
-}
-
-//-------------------------------------------------------------------------
-// OnTogBtnTxID()
-//-------------------------------------------------------------------------
-void MainFrame::OnTogBtnTxID(wxCommandEvent& event)
-{
-    event.Skip();
-}
-
 void MainFrame::OnTogBtnSplitClick(wxCommandEvent& event) {
     if (g_split)
         g_split = 0;
@@ -2309,8 +2275,6 @@ void MainFrame::OnExit(wxCommandEvent& event)
         stopRxStream();
     }
     m_togBtnSplit->Disable();
-    //m_togRxID->Disable();
-    //m_togTxID->Disable();
     m_togBtnAnalog->Disable();
     //m_btnTogPTT->Disable();
 
@@ -2400,23 +2364,6 @@ void MainFrame::OnToolsComCfgUI(wxUpdateUIEvent& event)
 {
     event.Enable(!m_RxRunning);
 }
-
-//-------------------------------------------------------------------------
-// OnToolsPlugInCfg()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsPlugInCfg(wxCommandEvent& event)
-{
-    wxUnusedVar(event);
-    PlugInDlg *dlg = new PlugInDlg(wxGetApp().m_plugInName, wxGetApp().m_numPlugInParam, wxGetApp().m_plugInParamName);
-    dlg->ShowModal();
-    delete dlg;
-}
-
-void MainFrame::OnToolsPlugInCfgUI(wxUpdateUIEvent& event)
-{
-    event.Enable(!m_RxRunning && wxGetApp().m_plugIn);
-}
-
 
 //-------------------------------------------------------------------------
 // OnHelpCheckUpdates()
@@ -2594,8 +2541,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rbHorusBinary->Disable();
 #endif
         m_rb2020->Disable();
-        if (m_rbPlugIn != NULL)
-            m_rbPlugIn->Disable();
 
         m_textSync->Enable();
 
@@ -2890,9 +2835,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 #endif
         if(isAvxPresent)
             m_rb2020->Enable();
-        if (m_rbPlugIn != NULL)
-            m_rbPlugIn->Enable();
-    }
+   }
     
     optionsDlg->setSessionActive(m_RxRunning);
 }

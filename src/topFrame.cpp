@@ -29,7 +29,7 @@ extern int g_recFileFromModulatorEventId;
 //=========================================================================
 // Code that lays out the main application window
 //=========================================================================
-TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(parent, id, title, pos, size, style)
+TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(parent, id, title, pos, size, style)
 {
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);
     this->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
@@ -65,12 +65,6 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     wxMenuItem* m_menuItemFilter;
     m_menuItemFilter = new wxMenuItem(tools, wxID_ANY, wxString(_("&Filter...")) , wxEmptyString, wxITEM_NORMAL);
     tools->Append(m_menuItemFilter);
-
-    wxMenuItem* m_menuItemPlugIn;
-    if (!wxIsEmpty(plugInName)) {
-        m_menuItemPlugIn = new wxMenuItem(tools, wxID_ANY, plugInName + wxString(_(" Config...")) , wxEmptyString, wxITEM_NORMAL);
-        tools->Append(m_menuItemPlugIn);
-    }
 
     m_menuItemPlayFileToMicIn = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Play File - Mic In...")) , wxEmptyString, wxITEM_NORMAL);
     g_playFileToMicInEventId = m_menuItemPlayFileToMicIn->GetId();
@@ -246,31 +240,6 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     bSizer15->Add(m_txtCtrlCallSign, 0, wxALL|wxEXPAND, 5);
     lowerSizer->Add(bSizer15, 1, wxEXPAND, 5);
 
-    //=====================================================
-    // These are the buttons that autosend the userid (?)
-    //=====================================================
-
-    // DR 4 Dec - taken off for screen for Beta release to avoid questions on their use until
-    // we implement this feature
- #ifdef UNIMPLEMENTED
-    wxBoxSizer* bSizer141;
-    bSizer141 = new wxBoxSizer(wxHORIZONTAL);
-
-    // TxID
-    //---------
-    m_togTxID = new wxToggleButton(this, wxID_ANY, _("TxID"), wxDefaultPosition, wxDefaultSize, 0);
-    m_togTxID->SetToolTip(_("Send Tx ID information"));
-    bSizer141->Add(m_togTxID, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
-
-    // RxID
-    //---------
-    m_togRxID = new wxToggleButton(this, wxID_ANY, _("RxID"), wxDefaultPosition, wxDefaultSize, 0);
-    m_togRxID->SetToolTip(_("Enable reception of ID information"));
-    bSizer141->Add(m_togRxID, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_LEFT|wxALL|wxFIXED_MINSIZE, 5);
-
-    lowerSizer->Add(bSizer141, 0, wxALIGN_RIGHT, 5);
-#endif
-
     centerSizer->Add(lowerSizer, 0, wxEXPAND, 2);
     bSizer1->Add(centerSizer, 4, wxALL|wxEXPAND, 1);
 
@@ -336,21 +305,6 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     sbSizer_mode->Add(m_rb2020, 0, wxALIGN_LEFT|wxALL, 1);
 
     m_rb1600->SetValue(true);
-
-    m_rbPlugIn = NULL;
-    if (!wxIsEmpty(plugInName)) {
-        // Optional plug in
-
-        m_rbPlugIn = new wxRadioButton( this, wxID_ANY, plugInName, wxDefaultPosition, wxDefaultSize, 0);
-        sbSizer_mode->Add(m_rbPlugIn, 0, wxALIGN_LEFT|wxALL, 1);
-    }
-
-#ifdef DISABLED_FEATURE
-    m_rb1600Wide = new wxRadioButton( this, wxID_ANY, wxT("1600 Wide"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_mode->Add(m_rb1600Wide, 0, wxALIGN_LEFT|wxALL, 1);
-    m_rb2000 = new wxRadioButton( this, wxID_ANY, wxT("2000"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_mode->Add(m_rb2000, 0, wxALIGN_LEFT|wxALL, 1);
-#endif
 
     rightSizer->Add(sbSizer_mode,0, wxALL|wxEXPAND, 3);
 
@@ -489,11 +443,6 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     this->Connect(m_menuItemOptions->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsOptions));
     this->Connect(m_menuItemOptions->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsOptionsUI));
 
-    if (!wxIsEmpty(plugInName)) {
-        this->Connect(m_menuItemPlugIn->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsPlugInCfg));
-        this->Connect(m_menuItemPlugIn->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsPlugInCfgUI));
-    }
-
     this->Connect(m_menuItemPlayFileToMicIn->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnPlayFileToMicIn));
     this->Connect(m_menuItemRecFileFromRadio->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnRecFileFromRadio));
     this->Connect(m_menuItemRecFileFromModulator->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnRecFileFromModulator));
@@ -502,8 +451,6 @@ TopFrame::TopFrame(wxString plugInName, wxWindow* parent, wxWindowID id, const w
     this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnHelpCheckUpdates));
     this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
     this->Connect(m_menuItemAbout->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnHelpAbout));
-    //m_togRxID->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnRxID), NULL, this);
-    //m_togTxID->Connect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnTxID), NULL, this);
     m_sliderSQ->Connect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnCmdSliderScroll), NULL, this);
     m_sliderSQ->Connect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnCmdSliderScroll), NULL, this);
     m_sliderSQ->Connect(wxEVT_SCROLL_LINEUP, wxScrollEventHandler(TopFrame::OnCmdSliderScroll), NULL, this);
@@ -550,8 +497,6 @@ TopFrame::~TopFrame()
     this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsOptions));
     this->Disconnect(wxID_ANY, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsOptionsUI));
 
-    this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsPlugInCfg));
-
     this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnPlayFileToMicIn));
     this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnRecFileFromRadio));
     this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnPlayFileFromRadio));
@@ -559,8 +504,6 @@ TopFrame::~TopFrame()
     this->Disconnect(wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnHelpCheckUpdates));
     this->Disconnect(wxID_ANY, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
     this->Disconnect(ID_ABOUT, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnHelpAbout));
-    //m_togRxID->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnRxID), NULL, this);
-    //m_togTxID->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnTxID), NULL, this);
     m_sliderSQ->Disconnect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnCmdSliderScroll), NULL, this);
     m_sliderSQ->Disconnect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnCmdSliderScroll), NULL, this);
     m_sliderSQ->Disconnect(wxEVT_SCROLL_LINEUP, wxScrollEventHandler(TopFrame::OnCmdSliderScroll), NULL, this);
