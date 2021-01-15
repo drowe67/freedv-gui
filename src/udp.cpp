@@ -20,28 +20,28 @@ void UDPInit(void) {
     // We use IsOk() here to see if the server is really listening
 
     if (!g_sock->IsOk()) {
-        fprintf(stderr, "UDPInit: Could not listen at the specified port !\n");
+        if (g_verbose) fprintf(stderr, "UDPInit: Could not listen at the specified port !\n");
         return;
     }
 
     wxIPV4address addrReal;
     if (!g_sock->GetLocal(addrReal)){
-        fprintf(stderr, "UDPInit: Couldn't get the address we bound to\n");
+        if (g_verbose) fprintf(stderr, "UDPInit: Couldn't get the address we bound to\n");
     }
     else {
-        fprintf(stderr, "Server listening at %s:%u \n", (const char*)addrReal.IPAddress().c_str(), addrReal.Service());
+        if (g_verbose) fprintf(stderr, "Server listening at %s:%u \n", (const char*)addrReal.IPAddress().c_str(), addrReal.Service());
     }
 }
 
 void UDPSend(int port, char *buf, unsigned int n) {
-    fprintf(stderr, "UDPSend buf: %s n: %d\n", buf, n);
+    if (g_verbose) fprintf(stderr, "UDPSend buf: %s n: %d\n", buf, n);
 
     wxIPV4address addr_tx;
     addr_tx.Hostname("localhost");
     addr_tx.Service(port);
 
     if ( g_sock->SendTo(addr_tx, (const void*)buf, n).LastCount() != n ) {
-        fprintf(stderr, "UDPSend: failed to send data");
+        if (g_verbose) fprintf(stderr, "UDPSend: failed to send data");
         return;
     }
 }

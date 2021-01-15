@@ -59,7 +59,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
             // sample these puppies at start just in case they are changed while VK running
             vk_rx_pause = wxGetApp().m_intVoiceKeyerRxPause;
             vk_repeats = wxGetApp().m_intVoiceKeyerRepeats;
-            fprintf(stderr, "vk_rx_pause: %d vk_repeats: %d\n", vk_rx_pause, vk_repeats);
+            if (g_verbose) fprintf(stderr, "vk_rx_pause: %d vk_repeats: %d\n", vk_rx_pause, vk_repeats);
 
             vk_repeat_counter = 0;
             next_state = VoiceKeyerStartTx();

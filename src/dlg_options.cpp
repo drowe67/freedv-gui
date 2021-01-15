@@ -816,7 +816,7 @@ void OptionsDlg::OnDebugConsole(wxScrollEvent& event) {
         int ret = AllocConsole();
         freopen("CONOUT$", "w", stdout); 
         freopen("CONOUT$", "w", stderr); 
-        fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().m_debug_console);
+        if (g_verbose) fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().m_debug_console);
     } 
 #endif
 }
