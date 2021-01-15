@@ -54,6 +54,7 @@ set(FREEDV_SOURCES
     callsign_encoder.h
     udp.cpp
     util.cpp
+    eq.cpp
 )
 
 set(FREEDV_SOURCES_OSX
