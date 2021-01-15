@@ -154,7 +154,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
 {
     wxUnusedVar(event);
 
-    printf("OnPlayFileFromRadio:: %d\n", (int)g_playFileFromRadio);
+    fprintf(stderr,"OnPlayFileFromRadio:: %d\n", (int)g_playFileFromRadio);
     if (g_playFileFromRadio)
     {
         fprintf(stderr, "OnPlayFileFromRadio:: Stop\n");

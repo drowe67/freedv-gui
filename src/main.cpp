@@ -501,6 +501,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
 
     wxGetApp().m_debug_console = (float)pConfig->Read(wxT("/Debug/console"), f);
+    g_verbose = pConfig->Read(wxT("/Debug/verbose"), (long)0);
     g_freedv_verbose = pConfig->Read(wxT("/Debug/APIverbose"), (long)0);
 
     wxGetApp().m_attn_carrier_en = 0;
