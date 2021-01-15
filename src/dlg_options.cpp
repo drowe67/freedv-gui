@@ -272,73 +272,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxBoxSizer* sizerInterfacing;
     sizerInterfacing = new wxBoxSizer(wxVERTICAL);
     
-#ifdef __EXPERIMENTAL_UDP__
-    //------------------------------
-    // Txt Encoding 
-    //------------------------------
-
-    wxStaticBoxSizer* sbSizer_encoding = new wxStaticBoxSizer(new wxStaticBox(m_interfacingTab, wxID_ANY, _("Text Encoding")), wxHORIZONTAL);
-
-#ifdef SHORT_VARICODE
-    m_rb_textEncoding1 = new wxRadioButton( m_interfacingTab, wxID_ANY, wxT("Long varicode"), wxDefaultPosition, wxDefaultSize, 0);
-    m_rb_textEncoding1->SetValue(true);
-    sbSizer_encoding->Add(m_rb_textEncoding1, 0, wxALIGN_LEFT|wxALL, 1);
-    m_rb_textEncoding2 = new wxRadioButton( m_interfacingTab, wxID_ANY, wxT("Short Varicode"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_encoding->Add(m_rb_textEncoding2, 0, wxALIGN_LEFT|wxALL, 1);
-#endif
-
-    sizerInterfacing->Add(sbSizer_encoding,0, wxALL|wxEXPAND, 3);
- 
-    //------------------------------
-    // Event processing
-    //------------------------------
-
-    wxStaticBoxSizer* sbSizer_events;
-    wxStaticBox *sb_events = new wxStaticBox(m_interfacingTab, wxID_ANY, _("Event Processing"));
-    sbSizer_events = new wxStaticBoxSizer(sb_events, wxVERTICAL);
-
-    // event processing enable and spam timer
-
-    wxStaticBoxSizer* sbSizer_events_top;
-    wxStaticBox* sb_events1 = new wxStaticBox(m_interfacingTab, wxID_ANY, _(""));    
-    sbSizer_events_top = new wxStaticBoxSizer(sb_events1, wxHORIZONTAL);
-
-    m_ckbox_events = new wxCheckBox(m_interfacingTab, wxID_ANY, _("Enable System Calls    Syscall Spam Timer"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sb_events->SetToolTip(_("Enable processing of events and generation of system calls"));
-    sbSizer_events_top->Add(m_ckbox_events, 0, 0, 5);
-    m_txt_spam_timer = new wxTextCtrl(m_interfacingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    m_txt_spam_timer->SetToolTip(_("Many matching events can cause a flood of syscalls. Set minimum time (seconds) between syscalls for each event here"));
-    sbSizer_events_top->Add(m_txt_spam_timer, 0, 0, 5);
-    m_rb_spam_timer = new wxRadioButton( m_interfacingTab, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    m_rb_spam_timer->SetForegroundColour( wxColour(0, 255, 0 ) );
-    sbSizer_events_top->Add(m_rb_spam_timer, 0, 0, 10);
-    sbSizer_events->Add(sbSizer_events_top, 0, 0, 5);
-
-    // list of regexps
-
-    wxStaticBoxSizer* sbSizer_regexp = new wxStaticBoxSizer(new wxStaticBox(m_interfacingTab, wxID_ANY, _("Regular Expressions to Process Events")), wxHORIZONTAL);
-    m_txt_events_regexp_match = new wxTextCtrl(m_interfacingTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(200,100), wxTE_MULTILINE);
-    m_txt_events_regexp_match->SetToolTip(_("Enter regular expressions to match events"));
-    sbSizer_regexp->Add(m_txt_events_regexp_match, 1, wxEXPAND, 5);
-    m_txt_events_regexp_replace = new wxTextCtrl(m_interfacingTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(200,100), wxTE_MULTILINE);
-    m_txt_events_regexp_replace->SetToolTip(_("Enter regular expressions to replace events"));
-    sbSizer_regexp->Add(m_txt_events_regexp_replace, 1, wxEXPAND, 5);
-    sbSizer_events->Add(sbSizer_regexp, 1, wxEXPAND, 5);
-
-    // log of events and responses
-
-    wxStaticBoxSizer* sbSizer_event_log = new wxStaticBoxSizer(new wxStaticBox(m_interfacingTab, wxID_ANY, _("Log of Events and Responses")), wxVERTICAL);
-    wxBoxSizer* bSizer33 = new wxBoxSizer(wxHORIZONTAL);
-    m_txt_events_in = new wxTextCtrl(m_interfacingTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(200,50), wxTE_MULTILINE | wxTE_READONLY);
-    bSizer33->Add(m_txt_events_in, 1, wxEXPAND, 5);
-    m_txt_events_out = new wxTextCtrl(m_interfacingTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(200,50), wxTE_MULTILINE | wxTE_READONLY);
-    bSizer33->Add(m_txt_events_out, 1, wxEXPAND, 5);
-    sbSizer_event_log->Add(bSizer33, 1, wxEXPAND, 5);
-    sbSizer_events->Add(sbSizer_event_log, 1, wxEXPAND, 5);
-
-    sizerInterfacing->Add(sbSizer_events,0, wxALL|wxEXPAND, 3);
-#endif
-    
     //----------------------------------------------------------
     // UDP Send Messages on Events
     //----------------------------------------------------------
@@ -565,22 +498,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxTxRxDumpFifoState->SetValue(g_dump_fifo_state);
         m_ckboxFreeDVAPIVerbose->SetValue(g_freedv_verbose);
        
-#ifdef __EXPERIMENTAL_UDP__
-        m_ckbox_events->SetValue(wxGetApp().m_events);
-        m_txt_spam_timer->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_events_spam_timer));
-
-        m_txt_events_regexp_match->SetValue(wxGetApp().m_events_regexp_match);
-        m_txt_events_regexp_replace->SetValue(wxGetApp().m_events_regexp_replace);
-        
-
-#ifdef SHORT_VARICODE
-        if (wxGetApp().m_textEncoding == 1)
-            m_rb_textEncoding1->SetValue(true);
-        if (wxGetApp().m_textEncoding == 2)
-            m_rb_textEncoding2->SetValue(true);
-#endif
-#endif
-
         m_ckboxFreeDV700txClip->SetValue(wxGetApp().m_FreeDV700txClip);
         m_ckboxFreeDV700txBPF->SetValue(wxGetApp().m_FreeDV700txBPF);
         m_ckboxFreeDV700Combine->SetValue(wxGetApp().m_FreeDV700Combine);
@@ -691,31 +608,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         g_dump_timing = m_ckboxTxRxDumpTiming->GetValue();
         g_dump_fifo_state = m_ckboxTxRxDumpFifoState->GetValue();
         g_freedv_verbose = m_ckboxFreeDVAPIVerbose->GetValue();
-
-#ifdef __EXPERIMENTAL_UDP__
-        wxGetApp().m_events        = m_ckbox_events->GetValue();
-        long spam_timer;
-        m_txt_spam_timer->GetValue().ToLong(&spam_timer);
-        wxGetApp().m_events_spam_timer = (int)spam_timer;
-
-        // make sure regexp lists are terminated by a \n
-
-        if (m_txt_events_regexp_match->GetValue().Last() != '\n') {
-            m_txt_events_regexp_match->SetValue(m_txt_events_regexp_match->GetValue()+'\n');
-        }
-        if (m_txt_events_regexp_replace->GetValue().Last() != '\n') {
-            m_txt_events_regexp_replace->SetValue(m_txt_events_regexp_replace->GetValue()+'\n');
-        }
-        wxGetApp().m_events_regexp_match = m_txt_events_regexp_match->GetValue();
-        wxGetApp().m_events_regexp_replace = m_txt_events_regexp_replace->GetValue();
- 
-#ifdef SHORT_VARICODE
-        if (m_rb_textEncoding1->GetValue())
-            wxGetApp().m_textEncoding = 1;
-        if (m_rb_textEncoding2->GetValue())
-            wxGetApp().m_textEncoding = 2;
-#endif
-#endif
 
         wxGetApp().m_udp_enable     = m_ckbox_udp_enable->GetValue();
         long port;

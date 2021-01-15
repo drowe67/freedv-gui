@@ -635,13 +635,6 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 
     g_modal = false;
 
-#ifdef __EXPERIMENTAL_UDP__
-    // Start UDP listener thread
-
-    m_UDPThread = NULL;
-    startUDPThread();
-#endif
-
     optionsDlg = new OptionsDlg(NULL);
     m_schedule_restore = false;
 
@@ -692,10 +685,6 @@ MainFrame::~MainFrame()
     #ifdef __WXMSW__
     fclose(g_logfile);
     #endif
-
-#ifdef __EXPERIMENTAL_UDP__
-    stopUDPThread();
-#endif
 
     if (wxGetApp().m_serialport)
     {
@@ -1384,16 +1373,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         m_schedule_restore = false;
     }
 
-#ifdef __UDP_EXPERIMENTAL__
-    // Light Spam Timer LED if at least one timer is running
-
-    int i;
-    optionsDlg->SetSpamTimerLight(false);
-    for(i=0; i<MAX_EVENT_RULES; i++)
-        if (spamTimer[i].IsRunning())
-            optionsDlg->SetSpamTimerLight(true);
-#endif
-
     // Blink file playback status line
 
     if (g_playFileFromRadio) {
@@ -1607,10 +1586,6 @@ void MainFrame::togglePTT(void) {
 
         m_textSync->Disable();
 
-#ifdef __UDP_EXPERIMENTAL__
-        char e[80]; sprintf(e,"ptt"); processTxtEvent(e);
-#endif
-        
         // Disable On/Off button.
         m_togBtnOnOff->Enable(false);
     }
@@ -3001,9 +2976,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 #endif // _USE_TIMER
         }
         
-#ifdef __UDP_EXPERIMENTAL__
-        char e[80]; sprintf(e,"start"); processTxtEvent(e);
-#endif
     }
 
     // Stop was pressed or start up failed
@@ -3014,10 +2986,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         //
         // Stop Running -------------------------------------------------
         //
-
-#ifdef __UDP_EXPERIMENTAL__
-        optionsDlg->SetSpamTimerLight(false);
-#endif
 
 #ifdef _USE_TIMER
         m_plotTimer.Stop();
@@ -3102,10 +3070,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_rb2020->Enable();
         if (m_rbPlugIn != NULL)
             m_rbPlugIn->Enable();
-
-#ifdef __UDP_EXPERIMENTAL__
-        char e[80]; sprintf(e,"stop"); processTxtEvent(e);
-#endif
     }
     
     optionsDlg->setSessionActive(m_RxRunning);
@@ -3713,88 +3677,6 @@ void MainFrame::startRxStream()
 
     }
 }
-
-#ifdef __UDP_EPERIMENTAL__
-
-void MainFrame::processTxtEvent(char event[]) {
-    int rule = 0;
-
-    //printf("processTxtEvent:\n");
-    //printf("  event: %s\n", event);
-
-    // process with regexp and issue system command
-
-    // Each regexp in our list is separated by a newline.  We want to try all of them.
-
-    wxString event_str(event);
-    int match_end, replace_end;
-    match_end = replace_end = 0;
-    wxString regexp_match_list = wxGetApp().m_events_regexp_match;
-    wxString regexp_replace_list = wxGetApp().m_events_regexp_replace;
-
-    bool found_match = false;
-
-    while (((match_end = regexp_match_list.Find('\n')) != wxNOT_FOUND) && (rule < MAX_EVENT_RULES)) {
-        //printf("match_end: %d\n", match_end);
-        if ((replace_end = regexp_replace_list.Find('\n')) != wxNOT_FOUND) {
-            //printf("replace_end = %d\n", replace_end);
-
-            // candidate match and replace regexps strings exist, so lets try them
-
-            wxString regexp_match = regexp_match_list.SubString(0, match_end-1);
-            wxString regexp_replace = regexp_replace_list.SubString(0, replace_end-1);
-            //printf("match: %s replace: %s\n", (const char *)regexp_match.c_str(), (const char *)regexp_replace.c_str());
-            wxRegEx re(regexp_match);
-            //printf("  checking for match against: %s\n", (const char *)regexp_match.c_str());
-
-            // if we found a match, lets run the replace regexp and issue the system command
-
-            wxString event_str_rep = event_str;
-
-            if (re.Replace(&event_str_rep, regexp_replace) != 0) {
-                fprintf(stderr, "  found match! event_str: %s\n", (const char *)event_str.c_str());
-                found_match = true;
-
-                bool enableSystem = false;
-                if (wxGetApp().m_events)
-                    enableSystem = true;
-
-                // no syscall if spam timer still running
-
-                if (spamTimer[rule].IsRunning()) {
-                    enableSystem = false;
-                    fprintf(stderr, "  spam timer running\n");
-                }
-
-                const char *event_out = event_str_rep.ToUTF8();
-                wxString event_out_with_return_code;
-
-                if (enableSystem) {
-                    int ret = wxExecute(event_str_rep);
-                    event_out_with_return_code.Printf(_T("%s -> returned %d"), event_out, ret);
-                    spamTimer[rule].Start((wxGetApp().m_events_spam_timer)*1000, wxTIMER_ONE_SHOT);
-                }
-                else
-                    event_out_with_return_code.Printf(_T("%s T: %d"), event_out, spamTimer[rule].IsRunning());
-
-                // update event log GUI if currently displayed
-
-                if (optionsDlg != NULL) {
-                    optionsDlg->updateEventLog(wxString(event), event_out_with_return_code);
-                }
-            }
-        }
-        regexp_match_list = regexp_match_list.SubString(match_end+1, regexp_match_list.length());
-        regexp_replace_list = regexp_replace_list.SubString(replace_end+1, regexp_replace_list.length());
-
-        rule++;
-    }
-
-    if ((optionsDlg != NULL) && !found_match) {
-        optionsDlg->updateEventLog(wxString(event), _("<no match>"));
-    }
-}
-#endif
 
 
 #define SBQ_MAX_ARGS 5
@@ -4764,122 +4646,6 @@ void MainFrame::checkAvxSupport(void)
 {
     isAvxPresent = false;
 }
-#endif
-
-#ifdef __UDP_SUPPORT__
-
-//----------------------------------------------------------------
-// PollUDP() - see if any commands on UDP port
-//----------------------------------------------------------------
-
-// test this puppy with netcat:
-//   $ echo "hello" | nc -u -q1 localhost 3000
-
-int MainFrame::PollUDP(void)
-{
-    // this will block until message received, so we put it in it's own thread
-
-    char buf[1024];
-    char reply[80];
-    size_t n = m_udp_sock->RecvFrom(m_udp_addr, buf, sizeof(buf)).LastCount();
-
-    if (n) {
-        wxString bufstr = wxString::From8BitData(buf, n);
-        bufstr.Trim();
-        wxString ipaddr = m_udp_addr.IPAddress();
-        printf("Received: \"%s\" from %s:%u\n",
-               (const char *)bufstr.c_str(),
-               (const char *)ipaddr.c_str(), m_udp_addr.Service());
-
-        // for security only accept commands from local host
-
-        sprintf(reply,"nope\n");
-        if (ipaddr.Cmp(_("127.0.0.1")) == 0) {
-
-            // process commands
-
-            if (bufstr.Cmp(_("restore")) == 0) {
-                m_schedule_restore = true;  // Make Restore happen in main thread to avoid crashing
-                sprintf(reply,"ok\n");
-            }
-
-            wxString itemToSet, val;
-            if (bufstr.StartsWith(_("set "), &itemToSet)) {
-                if (itemToSet.StartsWith("txtmsg ", &val)) {
-                    // note: if options dialog is open this will get overwritten
-                    wxGetApp().m_callSign = val;
-                }
-                sprintf(reply,"ok\n");
-            }
-            if (bufstr.StartsWith(_("ptton"), &itemToSet)) {
-                // note: if options dialog is open this will get overwritten
-                m_btnTogPTT->SetValue(true);
-                togglePTT();
-                sprintf(reply,"ok\n");
-            }
-            if (bufstr.StartsWith(_("pttoff"), &itemToSet)) {
-                // note: if options dialog is open this will get overwritten
-                m_btnTogPTT->SetValue(false);
-                togglePTT();
-                sprintf(reply,"ok\n");
-            }
-
-        }
-        else {
-            printf("We only accept messages from locahost!\n");
-        }
-
-       if ( m_udp_sock->SendTo(m_udp_addr, reply, strlen(reply)).LastCount() != strlen(reply)) {
-           printf("ERROR: failed to send data\n");
-        }
-    }
-
-    return n;
-}
-
-void MainFrame::startUDPThread(void) {
-    fprintf(stderr, "starting UDP thread!\n");
-    m_UDPThread = new UDPThread;
-    m_UDPThread->mf = this;
-    if (m_UDPThread->Create() != wxTHREAD_NO_ERROR ) {
-        wxLogError(wxT("Can't create thread!"));
-    }
-    if (m_UDPThread->Run() != wxTHREAD_NO_ERROR ) {
-        wxLogError(wxT("Can't start thread!"));
-        delete m_UDPThread;
-    }
-}
-
-void MainFrame::stopUDPThread(void) {
-    printf("stopping UDP thread!\n");
-    if ((m_UDPThread != NULL) && m_UDPThread->m_run) {
-        m_UDPThread->m_run = 0;
-        m_UDPThread->Wait();
-        m_UDPThread = NULL;
-    }
-}
-
-void *UDPThread::Entry() {
-    //fprintf(stderr, "UDP thread started!\n");
-    while (m_run) {
-        if (wxGetApp().m_udp_enable) {
-            printf("m_udp_enable\n");
-            mf->m_udp_addr.Service(wxGetApp().m_udp_port);
-            mf->m_udp_sock = new wxDatagramSocket(mf->m_udp_addr, wxSOCKET_NOWAIT);
-
-            while (m_run && wxGetApp().m_udp_enable) {
-                if (mf->PollUDP() == 0) {
-                    wxThread::Sleep(20);
-                }
-            }
-
-            delete mf->m_udp_sock;
-        }
-        wxThread::Sleep(20);
-    }
-    return NULL;
-}
-
 #endif
 
 char my_get_next_tx_char(void *callback_state) {
