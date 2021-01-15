@@ -218,66 +218,7 @@ bool MainApp::OnInit()
     m_strSampleRate.Empty();
     m_strBitrate.Empty();
 
-    // Look for Plug In
-
-    m_plugIn = false;
-    #ifdef __WXMSW__
-    wchar_t dll_path[] = L"afreedvplugin.dll";
-    m_plugInHandle = LoadLibrary(dll_path);
-    #else
-    m_plugInHandle = dlopen("afreedvplugin.so", RTLD_LAZY);
-    #endif
-
-    if (m_plugInHandle) {
-        printf("plugin: .so found\n");
-
-        // lets get some information abt the plugIn
-
-        void (*plugin_namefp)(char s[]);
-        void *(*plugin_openfp)(char *param_names[], int *nparams, int (*aplugin_get_persistant)(char *, char *));
-
-        #ifdef __WXMSW__
-        plugin_namefp = (void (*)(char*))GetProcAddress((HMODULE)m_plugInHandle, "plugin_name");
-        plugin_openfp = (void* (*)(char**,int *, int (*)(char *, char *)))GetProcAddress((HMODULE)m_plugInHandle, "plugin_open");
-        m_plugin_startfp = (void (*)(void *))GetProcAddress((HMODULE)m_plugInHandle, "plugin_start");
-        m_plugin_stopfp = (void (*)(void *))GetProcAddress((HMODULE)m_plugInHandle, "plugin_stop");
-        m_plugin_rx_samplesfp = (void (*)(void *, short *, int))GetProcAddress((HMODULE)m_plugInHandle, "plugin_rx_samples");
-        #else
-        plugin_namefp = (void (*)(char*))dlsym(m_plugInHandle, "plugin_name");
-        plugin_openfp = (void* (*)(char**,int *, int (*)(char *, char *)))dlsym(m_plugInHandle, "plugin_open");
-        m_plugin_startfp = (void (*)(void *))dlsym(m_plugInHandle, "plugin_start");
-        m_plugin_stopfp = (void (*)(void *))dlsym(m_plugInHandle, "plugin_stop");
-        m_plugin_rx_samplesfp = (void (*)(void *, short *, int))dlsym(m_plugInHandle, "plugin_rx_samples");
-        #endif
-
-        if ((plugin_namefp != NULL) && (plugin_openfp != NULL)) {
-
-            char s[256];
-            m_plugIn = true;
-            (plugin_namefp)(s);
-            fprintf(stderr, "plugin name: %s\n", s);
-            m_plugInName = s;
-
-            char param_name1[80], param_name2[80];
-            char *param_names[2] = {param_name1, param_name2};
-            int  nparams, i;
-            m_plugInStates = (plugin_openfp)(param_names, &nparams, plugin_get_persistant);
-            m_numPlugInParam = nparams;
-            for(i=0; i<nparams; i++) {
-                m_plugInParamName[i] = param_names[i];
-                wxString configStr = "/" + m_plugInName + "/" + m_plugInParamName[i];
-                m_txtPlugInParam[i] = pConfig->Read(configStr, wxT(""));
-                //fprintf(stderr, "  plugin param name[%d]: %s\n", i, param_names[i]);
-                fprintf(stderr, "  plugin param name[%d]: %s values: %s\n", i, m_plugInParamName[i].mb_str().data(), m_txtPlugInParam[i].mb_str().data());
-            }
-        }
-
-        else {
-            fprintf(stderr, "plugin: fps not found...\n");
-        }
-    }
-
-    // Create the main application window
+     // Create the main application window
 
     frame = new MainFrame(m_plugInName, NULL);
     SetTopWindow(frame);
@@ -4982,25 +4923,6 @@ void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, CO
     foff_phase_rect->real /= mag;
     foff_phase_rect->imag /= mag;
 }
-
-int plugin_get_persistant(char name[], char value[]) {
-    wxString n,v;
-    int i;
-
-    for(i=0; i<wxGetApp().m_numPlugInParam; i++) {
-
-        n = wxGetApp().m_plugInParamName[i];
-
-        if (strcmp(n.mb_str().data(), name) == 0) {
-            v = wxGetApp().m_txtPlugInParam[i];
-            strcpy(value, v.mb_str().data());
-            fprintf(stderr, "plugin_get_persistant called name: %s value: %s\n", name, v.mb_str().data());
-        }
-    }
-
-    return 0;
-}
-
 
 /*
   Sending simple message via UDP
