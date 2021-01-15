@@ -8,9 +8,11 @@
 
 // Callback from plot_spectrum & plot_waterfall.  would be nice to
 // work out a way to do this without globals.
-extern float  g_RxFreqOffsetHz;
-extern float  g_TxFreqOffsetHz;
-extern int *g_split;
+extern float           g_RxFreqOffsetHz;
+extern float           g_TxFreqOffsetHz;
+extern int            *g_split;
+extern int             g_mode;
+extern struct freedv  *g_pfreedv;
 
 void clickTune(float freq) {
 
@@ -227,6 +229,64 @@ void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs)
         dec_samples[sample+1] = min;
     }
     codec2_fifo_write(plotFifo, dec_samples, nSamples);
+}
+
+// State machine to detect sync and send a UDP message
+
+void MainFrame::DetectSyncProcessEvent(void) {
+    int next_state = ds_state;
+
+    switch(ds_state) {
+
+    case DS_IDLE:
+        if (freedv_get_sync(g_pfreedv) == 1) {
+            next_state = DS_SYNC_WAIT;
+            ds_rx_time = 0;
+        }
+        break;
+
+    case DS_SYNC_WAIT:
+
+        // In this state we wait fo a few seconds of valid sync, then
+        // send UDP message
+
+        if (freedv_get_sync(g_pfreedv) == 0) {
+            next_state = DS_IDLE;
+        } else {
+            ds_rx_time += DT;
+        }
+
+        if (ds_rx_time >= DS_SYNC_WAIT_TIME) {
+            char s[100]; sprintf(s, "rx sync");
+            if (wxGetApp().m_udp_enable) {
+                UDPSend(wxGetApp().m_udp_port, s, strlen(s)+1);
+            }
+            ds_rx_time = 0;
+            next_state = DS_UNSYNC_WAIT;
+        }
+        break;
+
+    case DS_UNSYNC_WAIT:
+
+        // In this state we wait for sync to end
+
+        if (freedv_get_sync(g_pfreedv) == 0) {
+            ds_rx_time += DT;
+            if (ds_rx_time >= DS_SYNC_WAIT_TIME) {
+                next_state = DS_IDLE;
+            }
+        } else {
+            ds_rx_time = 0;
+        }
+        break;
+
+    default:
+        // catch anything we missed
+
+        next_state = DS_IDLE;
+    }
+
+    ds_state = next_state;
 }
 
 
