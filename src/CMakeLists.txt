@@ -52,6 +52,7 @@ set(FREEDV_SOURCES
     pskreporter.h
     callsign_encoder.cpp
     callsign_encoder.h
+    udp.cpp
 )
 
 set(FREEDV_SOURCES_OSX
