@@ -70,7 +70,7 @@ void AudioOptsDialog::buildTestControls(PlotScalar **plotScalar, wxButton **btnT
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
-    fprintf(stderr, "pos %d %d\n", pos.x, pos.y);
+    if (g_verbose) fprintf(stderr, "pos %d %d\n", pos.x, pos.y);
     Pa_Init();
 
     wxBoxSizer* mainSizer;
@@ -413,7 +413,7 @@ int AudioOptsDialog::setTextCtrlIfDevNumValid(wxTextCtrl *textCtrl, wxListCtrl *
         if (aDevNum == devNum) {
             found_devNum = 1;
             textCtrl->SetValue(listCtrl->GetItemText(i, 0) + " (" + wxString::Format(wxT("%i"),devNum) + ")");
-            printf("setting focus of %d\n", i);
+            if (g_verbose) fprintf(stderr,"setting focus of %d\n", i);
             listCtrl->SetItemState(i, wxLIST_STATE_FOCUSED, wxLIST_STATE_FOCUSED);
         }
     }
@@ -436,14 +436,14 @@ int AudioOptsDialog::ExchangeData(int inout)
         // Map sound card device numbers to tx/rx device numbers depending
         // on number of sound cards in use
 
-        printf("EXCHANGE_DATA_IN:\n");
-        printf("  g_nSoundCards: %d\n", g_nSoundCards);
-        printf("  g_soundCard1InDeviceNum: %d\n", g_soundCard1InDeviceNum);
-        printf("  g_soundCard1OutDeviceNum: %d\n", g_soundCard1OutDeviceNum);
-        printf("  g_soundCard1SampleRate: %d\n", g_soundCard1SampleRate);
-        printf("  g_soundCard2InDeviceNum: %d\n", g_soundCard2InDeviceNum);
-        printf("  g_soundCard2OutDeviceNum: %d\n", g_soundCard2OutDeviceNum);
-        printf("  g_soundCard2SampleRate: %d\n", g_soundCard2SampleRate);
+        if (g_verbose) fprintf(stderr,"EXCHANGE_DATA_IN:\n");
+        if (g_verbose) fprintf(stderr,"  g_nSoundCards: %d\n", g_nSoundCards);
+        if (g_verbose) fprintf(stderr,"  g_soundCard1InDeviceNum: %d\n", g_soundCard1InDeviceNum);
+        if (g_verbose) fprintf(stderr,"  g_soundCard1OutDeviceNum: %d\n", g_soundCard1OutDeviceNum);
+        if (g_verbose) fprintf(stderr,"  g_soundCard1SampleRate: %d\n", g_soundCard1SampleRate);
+        if (g_verbose) fprintf(stderr,"  g_soundCard2InDeviceNum: %d\n", g_soundCard2InDeviceNum);
+        if (g_verbose) fprintf(stderr,"  g_soundCard2OutDeviceNum: %d\n", g_soundCard2OutDeviceNum);
+        if (g_verbose) fprintf(stderr,"  g_soundCard2SampleRate: %d\n", g_soundCard2SampleRate);
 
         if (g_nSoundCards == 0) {
             m_textCtrlRxIn ->SetValue("none"); rxInAudioDeviceNum  = -1;
@@ -498,7 +498,7 @@ int AudioOptsDialog::ExchangeData(int inout)
                 m_cbSampleRateRxOut->SetValue(wxString::Format(wxT("%i"),g_soundCard2SampleRate));
             }
         }
-        printf("  rxInAudioDeviceNum: %d\n  rxOutAudioDeviceNum: %d\n  txInAudioDeviceNum: %d\n  txOutAudioDeviceNum: %d\n",
+        if (g_verbose) fprintf(stderr,"  rxInAudioDeviceNum: %d\n  rxOutAudioDeviceNum: %d\n  txInAudioDeviceNum: %d\n  txOutAudioDeviceNum: %d\n",
                rxInAudioDeviceNum, rxOutAudioDeviceNum, txInAudioDeviceNum, txOutAudioDeviceNum);
     }
 
@@ -508,8 +508,8 @@ int AudioOptsDialog::ExchangeData(int inout)
         int valid_two_card_config = 0;
         wxString sampleRate1, sampleRate2;
 
-        printf("EXCHANGE_DATA_OUT:\n");
-        printf("  rxInAudioDeviceNum: %d\n  rxOutAudioDeviceNum: %d\n  txInAudioDeviceNum: %d\n  txOutAudioDeviceNum: %d\n",
+        if (g_verbose) fprintf(stderr,"EXCHANGE_DATA_OUT:\n");
+        if (g_verbose) fprintf(stderr,"  rxInAudioDeviceNum: %d\n  rxOutAudioDeviceNum: %d\n  txInAudioDeviceNum: %d\n  txOutAudioDeviceNum: %d\n",
                rxInAudioDeviceNum, rxOutAudioDeviceNum, txInAudioDeviceNum, txOutAudioDeviceNum);
 
         // ---------------------------------------------------------------
@@ -574,7 +574,7 @@ int AudioOptsDialog::ExchangeData(int inout)
  
         }
 
-        printf("  valid_one_card_config: %d  valid_two_card_config: %d\n", valid_one_card_config, valid_two_card_config);
+        if (g_verbose) fprintf(stderr,"  valid_one_card_config: %d  valid_two_card_config: %d\n", valid_one_card_config, valid_two_card_config);
 
         if (!valid_one_card_config && !valid_two_card_config) {
             wxMessageBox(wxT("Invalid one or two sound card configuration"), wxT(""), wxOK);
@@ -610,13 +610,13 @@ int AudioOptsDialog::ExchangeData(int inout)
             g_soundCard2SampleRate   = wxAtoi(sampleRate2);
         }
 
-        printf("  g_nSoundCards: %d\n", g_nSoundCards);
-        printf("  g_soundCard1InDeviceNum: %d\n", g_soundCard1InDeviceNum);
-        printf("  g_soundCard1OutDeviceNum: %d\n", g_soundCard1OutDeviceNum);
-        printf("  g_soundCard1SampleRate: %d\n", g_soundCard1SampleRate);
-        printf("  g_soundCard2InDeviceNum: %d\n", g_soundCard2InDeviceNum);
-        printf("  g_soundCard2OutDeviceNum: %d\n", g_soundCard2OutDeviceNum);
-        printf("  g_soundCard2SampleRate: %d\n", g_soundCard2SampleRate);
+        if (g_verbose) fprintf(stderr,"  g_nSoundCards: %d\n", g_nSoundCards);
+        if (g_verbose) fprintf(stderr,"  g_soundCard1InDeviceNum: %d\n", g_soundCard1InDeviceNum);
+        if (g_verbose) fprintf(stderr,"  g_soundCard1OutDeviceNum: %d\n", g_soundCard1OutDeviceNum);
+        if (g_verbose) fprintf(stderr,"  g_soundCard1SampleRate: %d\n", g_soundCard1SampleRate);
+        if (g_verbose) fprintf(stderr,"  g_soundCard2InDeviceNum: %d\n", g_soundCard2InDeviceNum);
+        if (g_verbose) fprintf(stderr,"  g_soundCard2OutDeviceNum: %d\n", g_soundCard2OutDeviceNum);
+        if (g_verbose) fprintf(stderr,"  g_soundCard2SampleRate: %d\n", g_soundCard2SampleRate);
 
         wxConfigBase *pConfig = wxConfigBase::Get();
         if (pConfig != NULL) {
@@ -663,7 +663,7 @@ int AudioOptsDialog:: buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, 
 
     deviceInfo = Pa_GetDeviceInfo(devNum);
     if (deviceInfo == NULL) {
-        printf("Pa_GetDeviceInfo(%d) failed!\n", devNum);
+        if (g_verbose) fprintf(stderr,"Pa_GetDeviceInfo(%d) failed!\n", devNum);
         cbSampleRate->Clear();
         return 0;
     }
@@ -693,11 +693,11 @@ int AudioOptsDialog:: buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, 
         if( err == paFormatIsSupported ) {
             str.Printf("%i", (int)standardSampleRates[i]);
             cbSampleRate->AppendString(str);
-            printf("%i ", (int)standardSampleRates[i]);
+            if (g_verbose) fprintf(stderr,"%i ", (int)standardSampleRates[i]);
             numSampleRates++;
         }
     }
-    printf("\n");
+    if (g_verbose) fprintf(stderr,"\n");
 
     return numSampleRates;
 }
@@ -958,7 +958,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(int devNum, PlotScalar *plotSca
         return;
     if (devNum < 0)
         return;
-    printf("devNum %d\n", devNum);
+    if (g_verbose) fprintf(stderr,"devNum %d\n", devNum);
 
     fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
     src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
@@ -985,7 +985,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(int devNum, PlotScalar *plotSca
 
     sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
     nBufs = TEST_WAVEFORM_PLOT_TIME*sampleRate/TEST_BUF_SIZE;
-    printf("inputChannels: %d nBufs %d\n", inputChannels, nBufs);
+    if (g_verbose) fprintf(stderr,"inputChannels: %d nBufs %d\n", inputChannels, nBufs);
 
     err = Pa_OpenStream(
               &stream,
@@ -1093,7 +1093,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(int devNum, PlotScalar *plotSc
     else
         outputChannels = 2;
 
-    printf("outputChannels: %d\n", outputChannels);
+    if (g_verbose) fprintf(stderr,"outputChannels: %d\n", outputChannels);
 
     outputParameters.device = devNum;
     outputParameters.channelCount = outputChannels;
@@ -1274,13 +1274,13 @@ void AudioOptsDialog::OnOkAudioParameters(wxCommandEvent& event)
 
     // We only accept OK if config sucessful
 
-    printf("status: %d m_isPaInitialized: %d\n", status, m_isPaInitialized);
+    if (g_verbose) fprintf(stderr,"status: %d m_isPaInitialized: %d\n", status, m_isPaInitialized);
     if (status == 0) {
         if(m_isPaInitialized)
         {
             if((pa_err = Pa_Terminate()) == paNoError)
             {
-                printf("terminated OK\n");
+                if (g_verbose) fprintf(stderr, "terminated OK\n");
                 m_isPaInitialized = false;
             }
             else

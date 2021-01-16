@@ -3,7 +3,6 @@ set(FREEDV_SOURCES
     dlg_filter.cpp
     dlg_options.cpp
     dlg_ptt.cpp
-    dlg_plugin.cpp
     main.cpp
     pa_wrapper.cpp
     plot.cpp
@@ -52,6 +51,12 @@ set(FREEDV_SOURCES
     pskreporter.h
     callsign_encoder.cpp
     callsign_encoder.h
+    udp.cpp
+    util.cpp
+    eq.cpp
+    voicekeyer.cpp
+    playrec.cpp
+    ongui.cpp
 )
 
 set(FREEDV_SOURCES_OSX
