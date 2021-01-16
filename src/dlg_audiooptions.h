@@ -21,7 +21,7 @@
 #ifndef __AudioOptsDialog__
 #define __AudioOptsDialog__
 
-#include "fdmdv2_main.h"
+#include "main.h"
 
 #define ID_AUDIO_OPTIONS    1000
 #define AUDIO_IN            0

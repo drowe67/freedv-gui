@@ -22,7 +22,7 @@
 #ifndef __FILTER_DIALOG__
 #define __FILTER_DIALOG__
 
-#include "fdmdv2_main.h"
+#include "main.h"
 
 enum {disableQ = false, enableQ = true};
 

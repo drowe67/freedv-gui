@@ -121,7 +121,6 @@ class TopFrame : public wxFrame
         wxRadioButton *m_rbHorusBinary;
 #endif
         wxRadioButton *m_rb2020;
-        wxRadioButton *m_rbPlugIn;
 
         wxMenuItem* m_menuItemPlayFileToMicIn;
         wxMenuItem* m_menuItemRecFileFromRadio;
@@ -142,9 +141,6 @@ class TopFrame : public wxFrame
         virtual void OnToolsFilterUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsOptions( wxCommandEvent& event ) { event.Skip(); }
 
-        virtual void OnToolsPlugInCfg( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnToolsPlugInCfgUI( wxUpdateUIEvent& event ) { event.Skip(); }
-
         virtual void OnToolsUDP( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsOptionsUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsComCfg( wxCommandEvent& event ) { event.Skip(); }
@@ -157,8 +153,6 @@ class TopFrame : public wxFrame
         virtual void OnHelpCheckUpdates( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnHelpAbout( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnTogBtnRxID( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnTogBtnTxID( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnCmdSliderScroll( wxScrollEvent& event ) { event.Skip(); }
         virtual void OnSliderScrollBottom( wxScrollEvent& event ) { event.Skip(); }
         virtual void OnCmdSliderScrollChanged( wxScrollEvent& event ) { event.Skip(); }
@@ -172,12 +166,10 @@ class TopFrame : public wxFrame
         virtual void OnTogBtnSplitClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnAnalogClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnVoiceKeyerClick( wxCommandEvent& event ) { event.Skip(); }
-        virtual void OnTogBtnALCClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnPTT( wxCommandEvent& event ) { event.Skip(); }
 
         virtual void OnTogBtnSplitClickUI(wxUpdateUIEvent& event) { event.Skip(); }
         virtual void OnTogBtnAnalogClickUI(wxUpdateUIEvent& event) { event.Skip(); }
-        virtual void OnTogBtnALCClickUI(wxUpdateUIEvent& event) { event.Skip(); }
         virtual void OnTogBtnRxIDUI(wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnTogBtnTxIDUI(wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnTogBtnPTT_UI(wxUpdateUIEvent& event ) { event.Skip(); }
@@ -188,19 +180,16 @@ class TopFrame : public wxFrame
         virtual void OnReSync( wxCommandEvent& event ) { event.Skip(); }
 
     public:
-        wxToggleButton* m_togRxID;
-        wxToggleButton* m_togTxID;
         wxToggleButton* m_togBtnOnOff;
         wxToggleButton* m_togBtnSplit;
         wxToggleButton* m_togBtnAnalog;
         wxToggleButton* m_togBtnVoiceKeyer;
-        wxToggleButton* m_togBtnALC;
         wxToggleButton* m_btnTogPTT;
         wxToggleButton* m_togBtnLoopRx;
         wxToggleButton* m_togBtnLoopTx;
         wxAuiNotebook* m_auiNbookCtrl;
 
-        TopFrame( wxString plugInName, wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("FreeDV ") + _(FREEDV_VERSION), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(561,300 ), long style = wxDEFAULT_FRAME_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL );
+        TopFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("FreeDV ") + _(FREEDV_VERSION), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(561,300 ), long style = wxDEFAULT_FRAME_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL );
 
         ~TopFrame();
 };

@@ -206,7 +206,7 @@ check_function_exists(vsnprintf HAVE_VSNPRINTF)
 include(CheckSymbolExists)
 check_symbol_exists("_fseeki64" "stdio.h" HAVE__FSEEKI64)
 
-# fdmdv2_main.h requires patching to find config.h as it current looks in the
+# main.h requires patching to find config.h as it current looks in the
 # source directory and the generated file goes in the binary directory.
 configure_file ("${PROJECT_SOURCE_DIR}/cmake/config.h.in"
                 "${PROJECT_BINARY_DIR}/config.h" )

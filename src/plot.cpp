@@ -1,5 +1,5 @@
 //==========================================================================
-// Name:            fdmdv2_plot.cpp
+// Name:            plot.cpp
 // Purpose:         Implements simple wxWidgets application with GUI.
 // Created:         Apr. 9, 2012
 // Authors:         David Rowe, David Witten
@@ -19,7 +19,7 @@
 //
 //==========================================================================
 #include <string.h>
-#include "fdmdv2_plot.h"
+#include "plot.h"
 
 BEGIN_EVENT_TABLE(PlotPanel, wxPanel)
     EVT_PAINT           (PlotPanel::OnPaint)

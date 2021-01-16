@@ -1,5 +1,5 @@
 //==========================================================================
-// Name:            fdmdv2_plot_scalar.cpp
+// Name:            plot_scalar.cpp
 // Purpose:         Plots scalar amplitude against time
 // Created:         June 22, 2012
 // Authors:         David Rowe, David Witten
@@ -20,8 +20,8 @@
 //==========================================================================
 #include <string.h>
 #include "wx/wx.h"
-#include "fdmdv2_main.h"
-#include "fdmdv2_plot_scalar.h"
+#include "main.h"
+#include "plot_scalar.h"
 
 BEGIN_EVENT_TABLE(PlotScalar, PlotPanel)
     EVT_PAINT           (PlotScalar::OnPaint)
