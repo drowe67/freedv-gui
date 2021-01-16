@@ -21,7 +21,7 @@
 //=========================================================================
 #include "main.h"
 #include "dlg_audiooptions.h"
-#include "fdmdv2_pa_wrapper.h"
+#include "pa_wrapper.h"
 
 // constants for test waveform plots
 
@@ -691,7 +691,7 @@ int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, i
         if( err == paFormatIsSupported ) {
             str.Printf("%i", (int)PortAudioWrap::standardSampleRates[i]);
             cbSampleRate->AppendString(str);
-            if (g_verbose) fprintf(stderr,"%i ", (int)standardSampleRates[i]);
+            if (g_verbose) fprintf(stderr,"%i ", (int)PortAudioWrap::standardSampleRates[i]);
             numSampleRates++;
         }
     }
