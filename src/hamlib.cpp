@@ -26,6 +26,8 @@
 
 #define TOK_CIVADDR TOKEN_BACKEND(1)
 
+extern int g_verbose;
+
 using namespace std;
 
 typedef std::vector<const struct rig_caps *> riglist_t;
@@ -98,15 +100,15 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
     /* Look up model from index. */
 
     if (rig_index >= m_rigList.size()) {
-        fprintf(stderr, "rig_index invalid, returning\n");
+        if (g_verbose) fprintf(stderr, "rig_index invalid, returning\n");
         return false;
     }
 
-    fprintf(stderr, "rig: %s %s (%d)\n", m_rigList[rig_index]->mfg_name,
+    if (g_verbose) fprintf(stderr, "rig: %s %s (%d)\n", m_rigList[rig_index]->mfg_name,
             m_rigList[rig_index]->model_name, m_rigList[rig_index]->rig_model);
 
     if(m_rig) {
-        fprintf(stderr, "Closing old hamlib instance!\n");
+        if (g_verbose) fprintf(stderr, "Closing old hamlib instance!\n");
         close();
     }
 
@@ -115,38 +117,38 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
     m_rig = rig_init(m_rigList[rig_index]->rig_model);
 
     if (!m_rig) {
-        fprintf(stderr, "rig_init() failed, returning\n");
+        if (g_verbose) fprintf(stderr, "rig_init() failed, returning\n");
         return false;
     }
-    fprintf(stderr, "rig_init() OK ....\n");
+    if (g_verbose) fprintf(stderr, "rig_init() OK ....\n");
 
     /* Set CI-V address if necessary. */
     if (!strncmp(m_rigList[rig_index]->mfg_name, "Icom", 4))
     {
         char civ_addr[5];
         snprintf(civ_addr, 5, "0x%0X", civ_hex);
-        fprintf(stderr, "hamlib: setting CI-V address to: %s\n", civ_addr);
+        if (g_verbose) fprintf(stderr, "hamlib: setting CI-V address to: %s\n", civ_addr);
         rig_set_conf(m_rig, rig_token_lookup(m_rig, "civaddr"), civ_addr);
     }
     else
     {
-        fprintf(stderr, "hamlib: ignoring CI-V configuration due to non-Icom radio\r\n");
+        if (g_verbose) fprintf(stderr, "hamlib: ignoring CI-V configuration due to non-Icom radio\r\n");
     }
     
     strncpy(m_rig->state.rigport.pathname, serial_port, FILPATHLEN - 1);
     if (serial_rate) {
-        fprintf(stderr, "hamlib: setting serial rate: %d\n", serial_rate);
+        if (g_verbose) fprintf(stderr, "hamlib: setting serial rate: %d\n", serial_rate);
         m_rig->state.rigport.parm.serial.rate = serial_rate;
     }
-    fprintf(stderr, "hamlib: serial rate: %d\n", m_rig->state.rigport.parm.serial.rate);
-    fprintf(stderr, "hamlib: data_bits..: %d\n", m_rig->state.rigport.parm.serial.data_bits);
-    fprintf(stderr, "hamlib: stop_bits..: %d\n", m_rig->state.rigport.parm.serial.stop_bits);
+    if (g_verbose) fprintf(stderr, "hamlib: serial rate: %d\n", m_rig->state.rigport.parm.serial.rate);
+    if (g_verbose) fprintf(stderr, "hamlib: data_bits..: %d\n", m_rig->state.rigport.parm.serial.data_bits);
+    if (g_verbose) fprintf(stderr, "hamlib: stop_bits..: %d\n", m_rig->state.rigport.parm.serial.stop_bits);
 
     if (rig_open(m_rig) == RIG_OK) {
-        fprintf(stderr, "hamlib: rig_open() OK\n");
+        if (g_verbose) fprintf(stderr, "hamlib: rig_open() OK\n");
         return true;
     }
-    fprintf(stderr, "hamlib: rig_open() failed ...\n");
+    if (g_verbose) fprintf(stderr, "hamlib: rig_open() failed ...\n");
 
     return false;
 }
@@ -164,7 +166,7 @@ int Hamlib::get_stop_bits(void) {
 }
 
 bool Hamlib::ptt(bool press, wxString &hamlibError) {
-    fprintf(stderr,"Hamlib::ptt: %d\n", press);
+    if (g_verbose) fprintf(stderr,"Hamlib::ptt: %d\n", press);
     hamlibError = "";
 
     if(!m_rig)
@@ -177,9 +179,9 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
     /* TODO(Joel): what should the VFO option be? */
 
     int retcode = rig_set_ptt(m_rig, RIG_VFO_CURR, on);
-    fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", retcode);
+    if (g_verbose) fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", retcode);
     if (retcode != RIG_OK ) {
-        fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(retcode));
+        if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(retcode));
         hamlibError = rigerror(retcode);
     }
 
@@ -209,7 +211,7 @@ int Hamlib::update_frequency_and_mode(void)
     int result = rig_get_mode(m_rig, RIG_VFO_CURR, &mode, &passband);
     if (result != RIG_OK)
     {
-        fprintf(stderr, "rig_get_mode: error = %s \n", rigerror(result));
+        if (g_verbose) fprintf(stderr, "rig_get_mode: error = %s \n", rigerror(result));
     }
     else
     {
@@ -217,7 +219,7 @@ int Hamlib::update_frequency_and_mode(void)
         result = rig_get_freq(m_rig, RIG_VFO_CURR, &freq);
         if (result != RIG_OK)
         {
-            fprintf(stderr, "rig_get_freq: error = %s \n", rigerror(result));
+            if (g_verbose) fprintf(stderr, "rig_get_freq: error = %s \n", rigerror(result));
         }
         else
         {

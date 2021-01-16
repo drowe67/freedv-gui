@@ -1,5 +1,5 @@
 //==========================================================================
-// Name:            fdmdv2_plot.h
+// Name:            plot.h
 // Purpose:         Declares simple wxWidgets application with GUI
 // Created:         Apr. 10, 2012
 // Authors:         David Rowe, David Witten
@@ -18,7 +18,7 @@
 //  along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //==========================================================================
-//#include "fdmdv2_main.h"
+//#include "main.h"
 #ifndef __FDMDV2_PLOT__
 #define __FDMDV2_PLOT__
 #include <wx/wx.h>

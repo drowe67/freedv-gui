@@ -1,6 +1,6 @@
 //==========================================================================
-// Name:            fdmdv2_plot_waterfall.cpp
-// Purpose:         Implements a waterfall plot derivative of fdmdv2_plot.
+// Name:            plot_waterfall.cpp
+// Purpose:         Implements a waterfall plot derivative of plot.
 // Created:         June 22, 2012
 // Authors:         David Rowe, David Witten
 // 
@@ -20,10 +20,10 @@
 //==========================================================================
 #include <string.h>
 #include "wx/wx.h"
-#include "fdmdv2_main.h"
+#include "main.h"
 
 extern float g_avmag[];                 // av mag spec passed in to draw() 
-void fdmdv2_clickTune(float frequency); // callback to pass new click freq
+void clickTune(float frequency); // callback to pass new click freq
 
 BEGIN_EVENT_TABLE(PlotWaterfall, PlotPanel)
     EVT_PAINT           (PlotWaterfall::OnPaint)
@@ -466,7 +466,7 @@ void PlotWaterfall::OnMouseLeftDoubleClick(wxMouseEvent& event)
         float clickFreq = (float)pt.x/freq_hz_to_px;
 
         // communicate back to other threads
-        fdmdv2_clickTune(clickFreq);
+        clickTune(clickFreq);
     }
 }
 

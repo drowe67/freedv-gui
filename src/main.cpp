@@ -1,5 +1,5 @@
 //==========================================================================
-// Name:            fdmdv2_main.cpp
+// Name:            main.cpp
 //
 // Purpose:         FreeDV main()
 // Created:         Apr. 9, 2012
@@ -22,7 +22,7 @@
 
 #include <time.h>
 #include <deque>
-#include "fdmdv2_main.h"
+#include "main.h"
 #include "osx_interface.h"
 #include "callsign_encoder.h"
 
@@ -42,9 +42,8 @@ extern "C" {
 // back functions
 // ------------------------------------------------------------------
 
-int g_in, g_out;
-
 // freedv states
+int                 g_verbose;
 int                 g_Nc;
 int                 g_mode;
 struct freedv      *g_pfreedv;
@@ -84,7 +83,7 @@ struct FIFO         *g_txDataInFifo;
 struct FIFO         *g_rxDataOutFifo;
 
 // tx/rx processing states
-int                 g_State, g_prev_State, g_interleaverSyncState;
+int                 g_State, g_prev_State;
 paCallBackData     *g_rxUserdata;
 int                 g_dump_timing;
 int                 g_dump_fifo_state;
@@ -117,28 +116,27 @@ int                 g_PAframesPerBuffer2;
 
 // playing and recording from sound files
 
-SNDFILE            *g_sfPlayFile;
-bool                g_playFileToMicIn;
-bool                g_loopPlayFileToMicIn;
-int                 g_playFileToMicInEventId;
+extern SNDFILE            *g_sfPlayFile;
+extern bool                g_playFileToMicIn;
+extern bool                g_loopPlayFileToMicIn;
+extern int                 g_playFileToMicInEventId;
 
-SNDFILE            *g_sfRecFile;
-bool                g_recFileFromRadio;
-unsigned int        g_recFromRadioSamples;
-int                 g_recFileFromRadioEventId;
+extern SNDFILE            *g_sfRecFile;
+extern bool                g_recFileFromRadio;
+extern unsigned int        g_recFromRadioSamples;
+extern int                 g_recFileFromRadioEventId;
 
-SNDFILE            *g_sfPlayFileFromRadio;
-bool                g_playFileFromRadio;
-int                 g_sfFs;
-bool                g_loopPlayFileFromRadio;
-int                 g_playFileFromRadioEventId;
-float               g_blink;
+extern SNDFILE            *g_sfPlayFileFromRadio;
+extern bool                g_playFileFromRadio;
+extern int                 g_sfFs;
+extern bool                g_loopPlayFileFromRadio;
+extern int                 g_playFileFromRadioEventId;
+extern float               g_blink;
 
-SNDFILE            *g_sfRecFileFromModulator;
-bool                g_recFileFromModulator = false;
-int                 g_recFromModulatorSamples;
-int                 g_recFileFromModulatorEventId;
-
+extern SNDFILE            *g_sfRecFileFromModulator;
+extern bool                g_recFileFromModulator;
+extern int                 g_recFromModulatorSamples;
+extern int                 g_recFileFromModulatorEventId;
 
 wxWindow           *g_parent;
 
@@ -169,7 +167,7 @@ FILE *g_logfile;
 
 // UDP socket available to send messages
 
-wxDatagramSocket *g_sock;
+extern wxDatagramSocket *g_sock;
 
 #ifdef __HORUS__
 // Horus Balloon telemetry support
@@ -218,68 +216,9 @@ bool MainApp::OnInit()
     m_strSampleRate.Empty();
     m_strBitrate.Empty();
 
-    // Look for Plug In
+     // Create the main application window
 
-    m_plugIn = false;
-    #ifdef __WXMSW__
-    wchar_t dll_path[] = L"afreedvplugin.dll";
-    m_plugInHandle = LoadLibrary(dll_path);
-    #else
-    m_plugInHandle = dlopen("afreedvplugin.so", RTLD_LAZY);
-    #endif
-
-    if (m_plugInHandle) {
-        printf("plugin: .so found\n");
-
-        // lets get some information abt the plugIn
-
-        void (*plugin_namefp)(char s[]);
-        void *(*plugin_openfp)(char *param_names[], int *nparams, int (*aplugin_get_persistant)(char *, char *));
-
-        #ifdef __WXMSW__
-        plugin_namefp = (void (*)(char*))GetProcAddress((HMODULE)m_plugInHandle, "plugin_name");
-        plugin_openfp = (void* (*)(char**,int *, int (*)(char *, char *)))GetProcAddress((HMODULE)m_plugInHandle, "plugin_open");
-        m_plugin_startfp = (void (*)(void *))GetProcAddress((HMODULE)m_plugInHandle, "plugin_start");
-        m_plugin_stopfp = (void (*)(void *))GetProcAddress((HMODULE)m_plugInHandle, "plugin_stop");
-        m_plugin_rx_samplesfp = (void (*)(void *, short *, int))GetProcAddress((HMODULE)m_plugInHandle, "plugin_rx_samples");
-        #else
-        plugin_namefp = (void (*)(char*))dlsym(m_plugInHandle, "plugin_name");
-        plugin_openfp = (void* (*)(char**,int *, int (*)(char *, char *)))dlsym(m_plugInHandle, "plugin_open");
-        m_plugin_startfp = (void (*)(void *))dlsym(m_plugInHandle, "plugin_start");
-        m_plugin_stopfp = (void (*)(void *))dlsym(m_plugInHandle, "plugin_stop");
-        m_plugin_rx_samplesfp = (void (*)(void *, short *, int))dlsym(m_plugInHandle, "plugin_rx_samples");
-        #endif
-
-        if ((plugin_namefp != NULL) && (plugin_openfp != NULL)) {
-
-            char s[256];
-            m_plugIn = true;
-            (plugin_namefp)(s);
-            fprintf(stderr, "plugin name: %s\n", s);
-            m_plugInName = s;
-
-            char param_name1[80], param_name2[80];
-            char *param_names[2] = {param_name1, param_name2};
-            int  nparams, i;
-            m_plugInStates = (plugin_openfp)(param_names, &nparams, plugin_get_persistant);
-            m_numPlugInParam = nparams;
-            for(i=0; i<nparams; i++) {
-                m_plugInParamName[i] = param_names[i];
-                wxString configStr = "/" + m_plugInName + "/" + m_plugInParamName[i];
-                m_txtPlugInParam[i] = pConfig->Read(configStr, wxT(""));
-                //fprintf(stderr, "  plugin param name[%d]: %s\n", i, param_names[i]);
-                fprintf(stderr, "  plugin param name[%d]: %s values: %s\n", i, m_plugInParamName[i].mb_str().data(), m_txtPlugInParam[i].mb_str().data());
-            }
-        }
-
-        else {
-            fprintf(stderr, "plugin: fps not found...\n");
-        }
-    }
-
-    // Create the main application window
-
-    frame = new MainFrame(m_plugInName, NULL);
+    frame = new MainFrame(NULL);
     SetTopWindow(frame);
 
     // Should guarantee that the first plot tab defined is the one
@@ -298,21 +237,13 @@ bool MainApp::OnInit()
 //-------------------------------------------------------------------------
 int MainApp::OnExit()
 {
-    //fprintf(stderr, "MainApp::OnExit\n");
-    if (m_plugIn) {
-        #ifdef __WXMSW__
-        FreeLibrary((HMODULE)m_plugInHandle);
-        #else
-        dlclose(m_plugInHandle);
-        #endif
-    }
     return 0;
 }
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainFrame(wxFrame* pa->ent) : TopFrame(parent)
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInName, parent)
+MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
 {
     m_zoom              = 1.;
 
@@ -570,6 +501,7 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
 
     wxGetApp().m_debug_console = (float)pConfig->Read(wxT("/Debug/console"), f);
+    g_verbose = pConfig->Read(wxT("/Debug/verbose"), (long)0);
     g_freedv_verbose = pConfig->Read(wxT("/Debug/APIverbose"), (long)0);
 
     wxGetApp().m_attn_carrier_en = 0;
@@ -608,21 +540,15 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
     pConfig->SetPath(wxT("/"));
 
 //    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
-    //m_togRxID->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnRxIDUI), NULL, this);
-    //m_togTxID->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnTxIDUI), NULL, this);
-    m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
+     m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnSplit->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnSplitClickUI), NULL, this);
     m_togBtnAnalog->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
-    //m_togBtnALC->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnALCClickUI), NULL, this);
    // m_btnTogPTT->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnPTT_UI), NULL, this);
 
     m_togBtnSplit->Disable();
-    //m_togRxID->Disable();
-    //m_togTxID->Disable();
     m_togBtnAnalog->Disable();
     m_btnTogPTT->Disable();
     m_togBtnVoiceKeyer->Disable();
-    //m_togBtnALC->Disable();
 
     // squelch settings
     char sqsnr[15];
@@ -694,13 +620,6 @@ MainFrame::MainFrame(wxString plugInName, wxWindow *parent) : TopFrame(plugInNam
 
     g_modal = false;
 
-#ifdef __EXPERIMENTAL_UDP__
-    // Start UDP listener thread
-
-    m_UDPThread = NULL;
-    startUDPThread();
-#endif
-
     optionsDlg = new OptionsDlg(NULL);
     m_schedule_restore = false;
 
@@ -751,10 +670,6 @@ MainFrame::~MainFrame()
     #ifdef __WXMSW__
     fclose(g_logfile);
     #endif
-
-#ifdef __EXPERIMENTAL_UDP__
-    stopUDPThread();
-#endif
 
     if (wxGetApp().m_serialport)
     {
@@ -873,14 +788,10 @@ MainFrame::~MainFrame()
        pConfig->Flush();
     }
 
-    //m_togRxID->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnRxIDUI), NULL, this);
-    //m_togTxID->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnTxIDUI), NULL, this);
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnSplit->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnSplitClickUI), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
-    //m_togBtnALC->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnALCClickUI), NULL, this);
-    //m_btnTogPTT->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnPTT_UI), NULL, this);
-
+ 
     sox_biquad_finish();
 
     if (m_RxRunning)
@@ -1443,16 +1354,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         m_schedule_restore = false;
     }
 
-#ifdef __UDP_EXPERIMENTAL__
-    // Light Spam Timer LED if at least one timer is running
-
-    int i;
-    optionsDlg->SetSpamTimerLight(false);
-    for(i=0; i<MAX_EVENT_RULES; i++)
-        if (spamTimer[i].IsRunning())
-            optionsDlg->SetSpamTimerLight(true);
-#endif
-
     // Blink file playback status line
 
     if (g_playFileFromRadio) {
@@ -1478,1052 +1379,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 }
 #endif
 
-
-//-------------------------------------------------------------------------
-// OnCloseFrame()
-//-------------------------------------------------------------------------
-void MainFrame::OnCloseFrame(wxCloseEvent& event)
-{
-    //fprintf(stderr, "MainFrame::OnCloseFrame()\n");
-    Pa_Terminate();
-    Destroy();
-}
-
-//-------------------------------------------------------------------------
-// OnTop()
-//-------------------------------------------------------------------------
-void MainFrame::OnTop(wxCommandEvent& event)
-{
-    int style = GetWindowStyle();
-
-    if (style & wxSTAY_ON_TOP)
-    {
-        style &= ~wxSTAY_ON_TOP;
-    }
-    else
-    {
-        style |= wxSTAY_ON_TOP;
-    }
-    SetWindowStyle(style);
-}
-
-//-------------------------------------------------------------------------
-// OnDeleteConfig()
-//-------------------------------------------------------------------------
-void MainFrame::OnDeleteConfig(wxCommandEvent&)
-{
-    wxConfigBase *pConfig = wxConfigBase::Get();
-    if(pConfig->DeleteAll())
-    {
-        wxLogMessage(wxT("Config file/registry key successfully deleted.  Please restart FreeDV."));
-
-        delete wxConfigBase::Set(NULL);
-        wxConfigBase::DontCreateOnDemand();
-    }
-    else
-    {
-        wxLogError(wxT("Deleting config file/registry key failed."));
-    }
-}
-
-//-------------------------------------------------------------------------
-// Paint()
-//-------------------------------------------------------------------------
-void MainFrame::OnPaint(wxPaintEvent& WXUNUSED(event))
-{
-    wxPaintDC dc(this);
-
-    if(GetMenuBar()->IsChecked(ID_PAINT_BG))
-    {
-        dc.Clear();
-    }
-    dc.SetUserScale(m_zoom, m_zoom);
-}
-
-//-------------------------------------------------------------------------
-// OnCmdSliderScroll()
-//-------------------------------------------------------------------------
-void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
-{
-    char sqsnr[15];
-    g_SquelchLevel = (float)m_sliderSQ->GetValue()/2.0 - 5.0;
-    sprintf(sqsnr, "%4.1f", g_SquelchLevel); // 0.5 dB steps
-    wxString sqsnr_string(sqsnr);
-    m_textSQ->SetLabel(sqsnr_string);
-
-    event.Skip();
-}
-
-//-------------------------------------------------------------------------
-// OnCheckSQClick()
-//-------------------------------------------------------------------------
-void MainFrame::OnCheckSQClick(wxCommandEvent& event)
-{
-    if(!g_SquelchActive)
-    {
-        g_SquelchActive = true;
-    }
-    else
-    {
-        g_SquelchActive = false;
-    }
-}
-
-void MainFrame::setsnrBeta(bool snrSlow)
-{
-    if(snrSlow)
-    {
-        m_snrBeta = 0.95; // make this closer to 1.0 to smooth SNR est further
-    }
-    else
-    {
-        m_snrBeta = 0.0; // no smoothing of SNR estimate from demodulator
-    }
-}
-
-//-------------------------------------------------------------------------
-// OnCheckSQClick()
-//-------------------------------------------------------------------------
-void MainFrame::OnCheckSNRClick(wxCommandEvent& event)
-{
-    wxGetApp().m_snrSlow = m_ckboxSNR->GetValue();
-    setsnrBeta(wxGetApp().m_snrSlow);
-    //printf("m_snrSlow: %d\n", (int)wxGetApp().m_snrSlow);
-}
-
-// check for space bar press (only when running)
-
-int MainApp::FilterEvent(wxEvent& event)
-{
-    if ((event.GetEventType() == wxEVT_KEY_DOWN) &&
-        (((wxKeyEvent&)event).GetKeyCode() == WXK_SPACE))
-        {
-            // only use space to toggle PTT if we are running and no modal dialogs (like options) up
-            //fprintf(stderr,"frame->m_RxRunning: %d g_modal: %d\n",
-            //        frame->m_RxRunning, g_modal);
-            if (frame->m_RxRunning && !g_modal) {
-
-                // space bar controls rx/rx if keyer not running
-                if (frame->vk_state == VK_IDLE) {
-                    if (frame->m_btnTogPTT->GetValue())
-                        frame->m_btnTogPTT->SetValue(false);
-                    else
-                        frame->m_btnTogPTT->SetValue(true);
-
-                    frame->togglePTT();
-                }
-                else // spavce bar stops keyer
-                    frame->VoiceKeyerProcessEvent(VK_SPACE_BAR);
-
-                return true; // absorb space so we don't toggle control with focus (e.g. Start)
-
-            }
-        }
-
-    return -1;
-}
-
-//-------------------------------------------------------------------------
-// OnTogBtnPTT ()
-//-------------------------------------------------------------------------
-void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
-{
-    if (vk_state == VK_TX)
-    {
-        // Disable TX via VK code to prevent state inconsistencies.
-        VoiceKeyerProcessEvent(VK_SPACE_BAR);
-    }
-    else
-    {
-        togglePTT();
-    }
-    event.Skip();
-}
-
-void MainFrame::togglePTT(void) {
-
-    // Change tabbed page in centre panel depending on PTT state
-
-    if (g_tx)
-    {
-        // tx-> rx transition, swap to the page we were on for last rx
-        m_auiNbookCtrl->ChangeSelection(wxGetApp().m_rxNbookCtrl);
-
-        // enable sync text
-
-        m_textSync->Enable();
-        
-        // Reenable On/Off button.
-        m_togBtnOnOff->Enable(true);
-    }
-    else
-    {
-        // rx-> tx transition, swap to Mic In page to monitor speech
-        wxGetApp().m_rxNbookCtrl = m_auiNbookCtrl->GetSelection();
-        m_auiNbookCtrl->ChangeSelection(m_auiNbookCtrl->GetPageIndex((wxWindow *)m_panelSpeechIn));
-
-        // disable sync text
-
-        m_textSync->Disable();
-
-#ifdef __UDP_EXPERIMENTAL__
-        char e[80]; sprintf(e,"ptt"); processTxtEvent(e);
-#endif
-        
-        // Disable On/Off button.
-        m_togBtnOnOff->Enable(false);
-    }
-
-    g_tx = m_btnTogPTT->GetValue();
-
-    // Hamlib PTT
-
-    if (wxGetApp().m_boolHamlibUseForPTT) {
-        Hamlib *hamlib = wxGetApp().m_hamlib;
-        wxString hamlibError;
-        if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
-            if (hamlib->ptt(g_tx, hamlibError) == false) {
-                wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
-            }
-        }
-    }
-
-    // Serial PTT
-
-    if (wxGetApp().m_boolUseSerialPTT && (wxGetApp().m_serialport->isopen())) {
-        wxGetApp().m_serialport->ptt(g_tx);
-    }
-
-    // reset level gauge
-
-    m_maxLevel = 0;
-    m_textLevel->SetLabel(wxT(""));
-    m_gaugeLevel->SetValue(0);
-
-}
-
-/*
-   Voice Keyer:
-
-   + space bar turns keyer off
-   + 5 secs of valid sync turns it off
-
-   [X] complete state machine and builds OK
-   [ ] file select dialog
-   [ ] test all states
-   [ ] restore size
-*/
-
-void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
-{
-    if (vk_state == VK_IDLE)
-        VoiceKeyerProcessEvent(VK_START);
-    else
-        VoiceKeyerProcessEvent(VK_SPACE_BAR);
-
-    event.Skip();
-}
-
-
-int MainFrame::VoiceKeyerStartTx(void)
-{
-    int next_state;
-
-    // start playing wave file or die trying
-
-    SF_INFO sfInfo;
-    sfInfo.format = 0;
-
-    g_sfPlayFile = sf_open(wxGetApp().m_txtVoiceKeyerWaveFile.mb_str(), SFM_READ, &sfInfo);
-    if(g_sfPlayFile == NULL) {
-        wxString strErr = sf_strerror(NULL);
-        wxMessageBox(strErr, wxT("Couldn't open:") + wxGetApp().m_txtVoiceKeyerWaveFile, wxOK);
-        m_togBtnVoiceKeyer->SetValue(false);
-        next_state = VK_IDLE;
-    }
-    else {
-        SetStatusText(wxT("Voice Keyer: Playing File") + wxGetApp().m_txtVoiceKeyerWaveFile + wxT(" to Mic Input") , 0);
-        g_loopPlayFileToMicIn = false;
-        g_playFileToMicIn = true;
-
-        m_btnTogPTT->SetValue(true); togglePTT();
-        next_state = VK_TX;
-    }
-
-    return next_state;
-}
-
-
-void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
-    int next_state = vk_state;
-    
-    switch(vk_state) {
-
-    case VK_IDLE:
-        if (vk_event == VK_START) {
-            // sample these puppies at start just in case they are changed while VK running
-            vk_rx_pause = wxGetApp().m_intVoiceKeyerRxPause;
-            vk_repeats = wxGetApp().m_intVoiceKeyerRepeats;
-            fprintf(stderr, "vk_rx_pause: %d vk_repeats: %d\n", vk_rx_pause, vk_repeats);
-
-            vk_repeat_counter = 0;
-            next_state = VoiceKeyerStartTx();
-        }
-        break;
-
-     case VK_TX:
-
-        // In this state we are transmitting and playing a wave file
-        // to Mic In
-
-        if (vk_event == VK_SPACE_BAR) {
-            m_btnTogPTT->SetValue(false); togglePTT();
-            m_togBtnVoiceKeyer->SetValue(false);
-            next_state = VK_IDLE;
-            CallAfter([&]() { StopPlayFileToMicIn(); });
-        }
-
-        if (vk_event == VK_PLAY_FINISHED) {
-            m_btnTogPTT->SetValue(false); togglePTT();
-            vk_repeat_counter++;
-            if (vk_repeat_counter > vk_repeats) {
-                m_togBtnVoiceKeyer->SetValue(false);
-                next_state = VK_IDLE;
-            }
-            else {
-                vk_rx_time = 0.0;
-                next_state = VK_RX;
-            }
-        }
-
-        break;
-
-     case VK_RX:
-
-        // in this state we are receiving and waiting for
-        // delay timer or valid sync
-
-        if (vk_event == VK_DT) {
-            if (freedv_get_sync(g_pfreedv) == 1) {
-                // if we detect sync transition to SYNC_WAIT state
-                next_state = VK_SYNC_WAIT;
-                vk_rx_sync_time = 0.0;
-            } else {
-                vk_rx_time += DT;
-                if (vk_rx_time >= vk_rx_pause) {
-                    next_state = VoiceKeyerStartTx();
-                }
-            }
-        }
-
-        if (vk_event == VK_SPACE_BAR) {
-            m_togBtnVoiceKeyer->SetValue(false);
-            next_state = VK_IDLE;
-        }
-
-        break;
-
-     case VK_SYNC_WAIT:
-
-        // In this state we wait for valid sync to last
-        // VK_SYNC_WAIT_TIME seconds
-
-        if (vk_event == VK_SPACE_BAR) {
-            m_togBtnVoiceKeyer->SetValue(false);
-            next_state = VK_IDLE;
-        }
-
-        if (vk_event == VK_DT) {
-            if (freedv_get_sync(g_pfreedv) == 0) {
-                // if we lose sync transition to RX State
-                next_state = VK_RX;
-            } else {
-                vk_rx_time += DT;
-                vk_rx_sync_time += DT;
-            }
-
-            // drop out of voice keyer if we get a few seconds of valid sync
-
-            if (vk_rx_sync_time >= VK_SYNC_WAIT_TIME) {
-                m_togBtnVoiceKeyer->SetValue(false);
-                next_state = VK_IDLE;
-            }
-        }
-        break;
-
-    default:
-        // catch anything we missed
-
-        m_btnTogPTT->SetValue(false); togglePTT();
-        m_togBtnVoiceKeyer->SetValue(false);
-        next_state = VK_IDLE;
-    }
-
-    //if ((vk_event != VK_DT) || (vk_state != next_state))
-    //    fprintf(stderr, "VoiceKeyerProcessEvent: vk_state: %d vk_event: %d next_state: %d  vk_repeat_counter: %d\n", vk_state, vk_event, next_state, vk_repeat_counter);
-    vk_state = next_state;
-}
-
-
-// State machine to detect sync and send a UDP message
-
-void MainFrame::DetectSyncProcessEvent(void) {
-    int next_state = ds_state;
-
-    switch(ds_state) {
-
-    case DS_IDLE:
-        if (freedv_get_sync(g_pfreedv) == 1) {
-            next_state = DS_SYNC_WAIT;
-            ds_rx_time = 0;
-        }
-        break;
-
-    case DS_SYNC_WAIT:
-
-        // In this state we wait fo a few seconds of valid sync, then
-        // send UDP message
-
-        if (freedv_get_sync(g_pfreedv) == 0) {
-            next_state = DS_IDLE;
-        } else {
-            ds_rx_time += DT;
-        }
-
-        if (ds_rx_time >= DS_SYNC_WAIT_TIME) {
-            char s[100]; sprintf(s, "rx sync");
-            if (wxGetApp().m_udp_enable) {
-                UDPSend(wxGetApp().m_udp_port, s, strlen(s)+1);
-            }
-            ds_rx_time = 0;
-            next_state = DS_UNSYNC_WAIT;
-        }
-        break;
-
-    case DS_UNSYNC_WAIT:
-
-        // In this state we wait for sync to end
-
-        if (freedv_get_sync(g_pfreedv) == 0) {
-            ds_rx_time += DT;
-            if (ds_rx_time >= DS_SYNC_WAIT_TIME) {
-                next_state = DS_IDLE;
-            }
-        } else {
-            ds_rx_time = 0;
-        }
-        break;
-
-    default:
-        // catch anything we missed
-
-        next_state = DS_IDLE;
-    }
-
-    ds_state = next_state;
-}
-
-
-//-------------------------------------------------------------------------
-// OnTogBtnRxID()
-//-------------------------------------------------------------------------
-void MainFrame::OnTogBtnRxID(wxCommandEvent& event)
-{
-    // empty any junk in rx data FIFO
-    short junk;
-    while(codec2_fifo_read(g_rxDataOutFifo,&junk,1) == 0);
-    event.Skip();
-}
-
-//-------------------------------------------------------------------------
-// OnTogBtnTxID()
-//-------------------------------------------------------------------------
-void MainFrame::OnTogBtnTxID(wxCommandEvent& event)
-{
-    event.Skip();
-}
-
-void MainFrame::OnTogBtnSplitClick(wxCommandEvent& event) {
-    if (g_split)
-        g_split = 0;
-    else
-        g_split = 1;
-    event.Skip();
-}
-
-//-------------------------------------------------------------------------
-// OnTogBtnAnalogClick()
-//-------------------------------------------------------------------------
-void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
-{
-    if (g_analog == 0) {
-        g_analog = 1;
-        m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(FS/2)));
-        m_panelWaterfall->setFs(FS);
-    }
-    else {
-        g_analog = 0;
-        m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedv_get_modem_sample_rate(g_pfreedv)/2)));
-        m_panelWaterfall->setFs(freedv_get_modem_sample_rate(g_pfreedv));
-    }
-
-    g_State = g_prev_State = g_interleaverSyncState = 0;
-    g_stats.snr_est = 0;
-
-    event.Skip();
-}
-
-void MainFrame::OnCallSignReset(wxCommandEvent& event)
-{
-    m_pcallsign = m_callsign;
-    memset(m_callsign, 0, MAX_CALLSIGN);
-    wxString s;
-    s.Printf("%s", m_callsign);
-    m_txtCtrlCallSign->SetValue(s);
-}
-
-
-// Force manual resync, just in case demod gets stuck on false sync
-
-void MainFrame::OnReSync(wxCommandEvent& event)
-{
-    if (m_RxRunning)  {
-        fprintf(stderr,"OnReSync\n");
-        if (g_mode != -1) {
-            // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
-            // the next execution of the TX/RX loop.
-            g_queueResync = true;
-        }
-    }
-}
-
-
-void MainFrame::OnBerReset(wxCommandEvent& event)
-{
-    if (m_RxRunning)  {
-        if (g_mode == -1) {
-#ifdef __HORUS__
-            horus_set_total_payload_bits(g_horus, 0);
-#endif
-        } else {
-            freedv_set_total_bits(g_pfreedv, 0);
-            freedv_set_total_bit_errors(g_pfreedv, 0);
-            g_resyncs = 0;
-            int i;
-            for(i=0; i<2*g_Nc; i++) {
-                g_error_hist[i] = 0;
-                g_error_histn[i] = 0;
-            }
-            // resets variance stats every time it is called
-            freedv_set_eq(g_pfreedv, wxGetApp().m_700C_EQ);
-        }
-    }
-}
-
-#ifdef ALC
-//-------------------------------------------------------------------------
-// OnTogBtnALCClick()
-//-------------------------------------------------------------------------
-void MainFrame::OnTogBtnALCClick(wxCommandEvent& event)
-{
-    wxMessageBox(wxT("Got Click!"), wxT("OnTogBtnALCClick"), wxOK);
-
-    event.Skip();
-}
-#endif
-
-// extra panel added to file open dialog to add loop checkbox
-MyExtraPlayFilePanel::MyExtraPlayFilePanel(wxWindow *parent): wxPanel(parent)
-{
-    m_cb = new wxCheckBox(this, -1, wxT("Loop"));
-    m_cb->SetToolTip(_("When checked file will repeat forever"));
-    m_cb->SetValue(g_loopPlayFileToMicIn);
-
-    // bug: I can't this to align right.....
-    wxBoxSizer *sizerTop = new wxBoxSizer(wxHORIZONTAL);
-    sizerTop->Add(m_cb, 0, 0, 0);
-    SetSizerAndFit(sizerTop);
-}
-
-static wxWindow* createMyExtraPlayFilePanel(wxWindow *parent)
-{
-    return new MyExtraPlayFilePanel(parent);
-}
-
-void MainFrame::StopPlayFileToMicIn(void)
-{
-    if (g_playFileToMicIn)
-    {
-        g_mutexProtectingCallbackData.Lock();
-        g_playFileToMicIn = false;
-        sf_close(g_sfPlayFile);
-        SetStatusText(wxT(""));
-        m_menuItemPlayFileToMicIn->SetItemLabel(wxString(_("Start Play File - Mic In...")));
-        g_mutexProtectingCallbackData.Unlock();
-        VoiceKeyerProcessEvent(VK_PLAY_FINISHED);
-    }
-}
-
-//-------------------------------------------------------------------------
-// OnPlayFileToMicIn()
-//-------------------------------------------------------------------------
-void MainFrame::OnPlayFileToMicIn(wxCommandEvent& event)
-{
-    wxUnusedVar(event);
-
-    if(g_playFileToMicIn) {
-        StopPlayFileToMicIn();
-    }
-    else
-    {
-        wxString    soundFile;
-        SF_INFO     sfInfo;
-
-        wxFileDialog openFileDialog(
-                                    this,
-                                    wxT("Play File to Mic In"),
-                                    wxGetApp().m_playFileToMicInPath,
-                                    wxEmptyString,
-                                    wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
-                                    wxT("All files (*.*)|*.*"),
-                                    wxFD_OPEN | wxFD_FILE_MUST_EXIST
-                                    );
-
-        // add the loop check box
-        openFileDialog.SetExtraControlCreator(&createMyExtraPlayFilePanel);
-
-        if(openFileDialog.ShowModal() == wxID_CANCEL)
-        {
-            return;     // the user changed their mind...
-        }
-
-        wxString fileName, extension;
-        soundFile = openFileDialog.GetPath();
-        wxFileName::SplitPath(soundFile, &wxGetApp().m_playFileToMicInPath, &fileName, &extension);
-        //wxLogDebug("m_playFileToMicInPath: %s", wxGetApp().m_playFileToMicInPath);
-        sfInfo.format = 0;
-
-        if(!extension.IsEmpty())
-        {
-            extension.LowerCase();
-            if(extension == wxT("raw"))
-            {
-                sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
-                sfInfo.channels   = 1;
-                sfInfo.samplerate = freedv_get_speech_sample_rate(g_pfreedv);
-            }
-        }
-        g_sfPlayFile = sf_open(soundFile.c_str(), SFM_READ, &sfInfo);
-        if(g_sfPlayFile == NULL)
-        {
-            wxString strErr = sf_strerror(NULL);
-            wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
-            return;
-        }
-
-        wxWindow * const ctrl = openFileDialog.GetExtraControl();
-
-        // Huh?! I just copied wxWidgets-2.9.4/samples/dialogs ....
-        g_loopPlayFileToMicIn = static_cast<MyExtraPlayFilePanel*>(ctrl)->getLoopPlayFileToMicIn();
-
-        SetStatusText(wxT("Playing File: ") + fileName + wxT(" to Mic Input") , 0);
-        g_playFileToMicIn = true;
-        
-        m_menuItemPlayFileToMicIn->SetItemLabel(wxString(_("Stop Play File - Mic In...")));
-    }
-}
-
-void MainFrame::StopPlaybackFileFromRadio()
-{
-    g_mutexProtectingCallbackData.Lock();
-    g_playFileFromRadio = false;
-    sf_close(g_sfPlayFileFromRadio);
-    SetStatusText(wxT(""),0);
-    SetStatusText(wxT(""),1);
-    m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Start Play File - From Radio...")));
-    g_mutexProtectingCallbackData.Unlock();
-}
-
-//-------------------------------------------------------------------------
-// OnPlayFileFromRadio()
-// This puppy "plays" a recorded file into the demodulator input, allowing us
-// to replay off air signals.
-//-------------------------------------------------------------------------
-void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
-{
-    wxUnusedVar(event);
-
-    printf("OnPlayFileFromRadio:: %d\n", (int)g_playFileFromRadio);
-    if (g_playFileFromRadio)
-    {
-        fprintf(stderr, "OnPlayFileFromRadio:: Stop\n");
-        StopPlaybackFileFromRadio();
-    }
-    else
-    {
-        wxString    soundFile;
-        SF_INFO     sfInfo;
-
-        wxFileDialog openFileDialog(
-                                    this,
-                                    wxT("Play File - From Radio"),
-                                    wxGetApp().m_playFileFromRadioPath,
-                                    wxEmptyString,
-                                    wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
-                                    wxT("All files (*.*)|*.*"),
-                                    wxFD_OPEN | wxFD_FILE_MUST_EXIST
-                                    );
-
-        // add the loop check box
-        openFileDialog.SetExtraControlCreator(&createMyExtraPlayFilePanel);
-
-        if(openFileDialog.ShowModal() == wxID_CANCEL)
-        {
-            return;     // the user changed their mind...
-        }
-
-        wxString fileName, extension;
-        soundFile = openFileDialog.GetPath();
-        wxFileName::SplitPath(soundFile, &wxGetApp().m_playFileFromRadioPath, &fileName, &extension);
-        //wxLogDebug("m_playFileToFromRadioPath: %s", wxGetApp().m_playFileFromRadioPath);
-        sfInfo.format = 0;
-
-        if(!extension.IsEmpty())
-        {
-            extension.LowerCase();
-            if(extension == wxT("raw"))
-            {
-                sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
-                sfInfo.channels   = 1;
-                if (g_mode == -1) {
-#ifdef __HORUS__
-                     sfInfo.samplerate = horus_get_Fs(g_horus);
-#endif
-                }
-                else {
-                    sfInfo.samplerate = freedv_get_modem_sample_rate(g_pfreedv);
-                }
-            }
-        }
-        g_sfPlayFileFromRadio = sf_open(soundFile.c_str(), SFM_READ, &sfInfo);
-        g_sfFs = sfInfo.samplerate;
-        if(g_sfPlayFileFromRadio == NULL)
-        {
-            wxString strErr = sf_strerror(NULL);
-            wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
-            return;
-        }
-
-        wxWindow * const ctrl = openFileDialog.GetExtraControl();
-
-        // Huh?! I just copied wxWidgets-2.9.4/samples/dialogs ....
-        g_loopPlayFileFromRadio = static_cast<MyExtraPlayFilePanel*>(ctrl)->getLoopPlayFileToMicIn();
-
-        SetStatusText(wxT("Playing into from radio"), 0);
-        if(extension == wxT("raw")) {
-            wxString stringnumber = wxString::Format(wxT("%d"), (int)sfInfo.samplerate);
-            SetStatusText(wxT("raw file assuming Fs=") + stringnumber, 1);
-        }
-        fprintf(stderr, "OnPlayFileFromRadio:: Playing File Fs = %d\n", (int)sfInfo.samplerate);
-        m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Stop Play File - From Radio...")));
-        g_playFileFromRadio = true;
-        g_blink = 0.0;
-    }
-}
-
-// extra panel added to file save dialog to set number of seconds to record for
-
-MyExtraRecFilePanel::MyExtraRecFilePanel(wxWindow *parent): wxPanel(parent)
-{
-    wxBoxSizer *sizerTop = new wxBoxSizer(wxHORIZONTAL);
-
-    wxStaticText* staticText = new wxStaticText(this, wxID_ANY, _("Seconds:"), wxDefaultPosition, wxDefaultSize, 0);
-    sizerTop->Add(staticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-    m_secondsToRecord = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-    m_secondsToRecord->SetToolTip(_("Number of seconds to record for"));
-    m_secondsToRecord->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_recFileFromRadioSecs));
-    sizerTop->Add(m_secondsToRecord, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-    SetSizerAndFit(sizerTop);
-}
-
-static wxWindow* createMyExtraRecFilePanel(wxWindow *parent)
-{
-    return new MyExtraRecFilePanel(parent);
-}
-
-void MainFrame::StopRecFileFromRadio()
-{
-    if (g_recFileFromRadio)
-    {
-        fprintf(stderr, "Stopping Record....\n");
-        g_mutexProtectingCallbackData.Lock();
-        g_recFileFromRadio = false;
-        sf_close(g_sfRecFile);
-        SetStatusText(wxT(""));
-        
-        m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Start Record File - From Radio...")));
-        
-        wxMessageBox(wxT("Recording radio output to file complete")
-                     , wxT("Recording radio Output"), wxOK);
-        
-        g_mutexProtectingCallbackData.Unlock();
-    }
-}
-
-//-------------------------------------------------------------------------
-// OnRecFileFromRadio()
-//-------------------------------------------------------------------------
-void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
-{
-    wxUnusedVar(event);
-
-    if (g_recFileFromRadio) {
-        StopRecFileFromRadio();
-    }
-    else {
-
-        wxString    soundFile;
-        SF_INFO     sfInfo;
-
-        wxFileDialog openFileDialog(
-                                    this,
-                                    wxT("Record File From Radio"),
-                                    wxGetApp().m_recFileFromRadioPath,
-                                    wxT("Untitled.wav"),
-                                    wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
-                                    wxT("All files (*.*)|*.*"),
-                                    wxFD_SAVE
-                                    );
-
-        // add the loop check box
-        openFileDialog.SetExtraControlCreator(&createMyExtraRecFilePanel);
-
-        // Default to WAV.
-        openFileDialog.SetFilterIndex(0);
-        
-        if(openFileDialog.ShowModal() == wxID_CANCEL)
-        {
-            return;     // the user changed their mind...
-        }
-
-        wxString fileName, extension;
-        soundFile = openFileDialog.GetPath();
-        wxFileName::SplitPath(soundFile, &wxGetApp().m_recFileFromRadioPath, &fileName, &extension);
-        wxLogDebug("m_recFileFromRadioPath: %s", wxGetApp().m_recFileFromRadioPath);
-        wxLogDebug("soundFile: %s", soundFile);
-        sfInfo.format = 0;
-
-        int sample_rate;
-        if (g_mode == -1) {
-#ifdef __HORUS__
-            sample_rate = horus_get_Fs(g_horus);
-#endif
-    }
-        else {
-            sample_rate = freedv_get_modem_sample_rate(g_pfreedv);
-        }
-
-        if(!extension.IsEmpty())
-        {
-            extension.LowerCase();
-            if(extension == wxT("raw"))
-            {
-                sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
-                sfInfo.channels   = 1;
-                sfInfo.samplerate = sample_rate;
-            }
-            else if(extension == wxT("wav"))
-            {
-                sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
-                sfInfo.channels   = 1;
-                sfInfo.samplerate = sample_rate;
-            } else {
-                wxMessageBox(wxT("Invalid file format"), wxT("Record File From Radio"), wxOK);
-                return;
-            }
-        }
-        else {
-            wxMessageBox(wxT("Invalid file format"), wxT("Record File From Radio"), wxOK);
-            return;
-        }
-
-        // Bug: on Win32 I cant read m_recFileFromRadioSecs, so have hard coded it
-#ifdef __WIN32__
-        long secs = wxGetApp().m_recFileFromRadioSecs;
-        g_recFromRadioSamples = FS*(unsigned int)secs;
-#else
-        // work out number of samples to record
-
-        wxWindow * const ctrl = openFileDialog.GetExtraControl();
-        wxString secsString = static_cast<MyExtraRecFilePanel*>(ctrl)->getSecondsToRecord();
-        wxLogDebug("test: %s secsString: %s\n", wxT("testing 123"), secsString);
-
-        long secs;
-        if (secsString.ToLong(&secs)) {
-            wxGetApp().m_recFileFromRadioSecs = (unsigned int)secs;
-            //printf(" secondsToRecord: %d\n",  (unsigned int)secs);
-            g_recFromRadioSamples = FS*(unsigned int)secs;
-            //printf("g_recFromRadioSamples: %d\n", g_recFromRadioSamples);
-        }
-        else {
-            wxMessageBox(wxT("Invalid number of Seconds"), wxT("Record File From Radio"), wxOK);
-            return;
-        }
-#endif
-
-        g_sfRecFile = sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo);
-        if(g_sfRecFile == NULL)
-        {
-            wxString strErr = sf_strerror(NULL);
-            wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
-            return;
-        }
-
-        SetStatusText(wxT("Recording File: ") + fileName + wxT(" From Radio") , 0);
-        m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Stop Record File - From Radio...")));
-        g_recFileFromRadio = true;
-    }
-
-}
-
-void MainFrame::StopRecFileFromModulator()
-{
-    // If the event loop takes a while to execute, we may end up being called
-    // multiple times. We don't want to repeat the following more than once.
-    if (g_recFileFromModulator) {
-        g_mutexProtectingCallbackData.Lock();
-        g_recFileFromModulator = false;
-        g_recFromModulatorSamples = 0;
-        sf_close(g_sfRecFileFromModulator);
-        SetStatusText(wxT(""));
-        m_menuItemRecFileFromModulator->SetItemLabel(wxString(_("Start Record File - From Modulator...")));
-        wxMessageBox(wxT("Recording modulator output to file complete")
-                     , wxT("Recording Modulation Output"), wxOK);
-        g_mutexProtectingCallbackData.Unlock();
-    }
-}
-
-//-------------------------------------------------------------------------
-// OnRecFileFromModulator()
-//-------------------------------------------------------------------------
-void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
-{
-    wxUnusedVar(event);
-
-    if (g_recFileFromModulator) {
-        StopRecFileFromModulator();
-    }
-    else {
-
-        wxString    soundFile;
-        SF_INFO     sfInfo;
-
-        if (g_pfreedv == NULL) {
-            wxMessageBox(wxT("You need to press the Control - Start button before you can configure recording")
-                         , wxT("Recording Modulation Output"), wxOK);
-            return;
-        }
-
-         wxFileDialog openFileDialog(
-                                    this,
-                                    wxT("Record File From Modulator"),
-                                    wxGetApp().m_recFileFromModulatorPath,
-                                    wxT("Untitled.wav"),
-                                    wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
-                                    wxT("All files (*.*)|*.*"),
-                                    wxFD_SAVE
-                                    );
-
-        // add the loop check box
-        openFileDialog.SetExtraControlCreator(&createMyExtraRecFilePanel);
-
-        // Default to WAV.
-        openFileDialog.SetFilterIndex(0);
-        
-        if(openFileDialog.ShowModal() == wxID_CANCEL)
-        {
-            return;     // the user changed their mind...
-        }
-
-        wxString fileName, extension;
-        soundFile = openFileDialog.GetPath();
-        wxFileName::SplitPath(soundFile, &wxGetApp().m_recFileFromModulatorPath, &fileName, &extension);
-        wxLogDebug("m_recFileFromModulatorPath: %s", wxGetApp().m_recFileFromModulatorPath);
-        wxLogDebug("soundFile: %s", soundFile);
-        sfInfo.format = 0;
-
-        int sample_rate;
-        if (g_mode == -1) {
-#ifdef __HORUS__
-            sample_rate = horus_get_Fs(g_horus);
-#endif
-        }
-        else {
-            sample_rate = freedv_get_modem_sample_rate(g_pfreedv);
-        }
-
-        if(!extension.IsEmpty())
-        {
-            extension.LowerCase();
-            if(extension == wxT("raw"))
-            {
-                sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
-                sfInfo.channels   = 1;
-                sfInfo.samplerate = sample_rate;
-            }
-            else if(extension == wxT("wav"))
-            {
-                sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
-                sfInfo.channels   = 1;
-                sfInfo.samplerate = sample_rate;
-            } else {
-                wxMessageBox(wxT("Invalid file format"), wxT("Record File From Radio"), wxOK);
-                return;
-            }
-        }
-        else {
-            wxMessageBox(wxT("Invalid file format"), wxT("Record File From Radio"), wxOK);
-            return;
-        }
-
-        // Bug: on Win32 I cant read m_recFileFromModemSecs, so have hard coded it
-#ifdef __WIN32__
-        long secs = wxGetApp().m_recFileFromModulatorSecs;
-        g_recFromModulatorSamples = sample_rate * (unsigned int)secs;
-#else
-        // work out number of samples to record
-
-        wxWindow * const ctrl = openFileDialog.GetExtraControl();
-        wxString secsString = static_cast<MyExtraRecFilePanel*>(ctrl)->getSecondsToRecord();
-        wxLogDebug("test: %s secsString: %s\n", wxT("testing 123"), secsString);
-
-        long secs;
-        if (secsString.ToLong(&secs)) {
-            wxGetApp().m_recFileFromModulatorSecs = (unsigned int)secs;
-            //printf(" secondsToRecord: %d\n",  (unsigned int)secs);
-            g_recFromModulatorSamples = sample_rate*(unsigned int)secs;
-            //printf("g_recFromRadioSamples: %d\n", g_recFromRadioSamples);
-        }
-        else {
-            wxMessageBox(wxT("Invalid number of Seconds"), wxT("Record File From Modulator"), wxOK);
-            return;
-        }
-#endif
-
-        g_sfRecFileFromModulator = sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo);
-        if(g_sfRecFileFromModulator == NULL)
-        {
-            wxString strErr = sf_strerror(NULL);
-            wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
-            return;
-        }
-
-        SetStatusText(wxT("Recording File: ") + fileName + wxT(" From Modulator") , 0);
-        m_menuItemRecFileFromModulator->SetItemLabel(wxString(_("Stop Record File - From Modulator...")));
-        g_recFileFromModulator = true;
-    }
-
-}
 
 //-------------------------------------------------------------------------
 // OnExit()
@@ -2570,257 +1425,13 @@ void MainFrame::OnExit(wxCommandEvent& event)
         stopRxStream();
     }
     m_togBtnSplit->Disable();
-    //m_togRxID->Disable();
-    //m_togTxID->Disable();
     m_togBtnAnalog->Disable();
-    //m_togBtnALC->Disable();
     //m_btnTogPTT->Disable();
 
     Pa_Terminate();
     Destroy();
 }
 
-//-------------------------------------------------------------------------
-// OnExitClick()
-//-------------------------------------------------------------------------
-void MainFrame::OnExitClick(wxCommandEvent& event)
-{
-    OnExit(event);
-}
-
-//-------------------------------------------------------------------------
-// OnToolsAudio()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsAudio(wxCommandEvent& event)
-{
-    wxUnusedVar(event);
-    int rv = 0;
-    AudioOptsDialog *dlg = new AudioOptsDialog(NULL);
-    rv = dlg->ShowModal();
-    if(rv == wxID_OK)
-    {
-        dlg->ExchangeData(EXCHANGE_DATA_OUT);
-    }
-    delete dlg;
-}
-
-//-------------------------------------------------------------------------
-// OnToolsAudioUI()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsAudioUI(wxUpdateUIEvent& event)
-{
-    event.Enable(!m_RxRunning);
-}
-
-//-------------------------------------------------------------------------
-// OnToolsFilter()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsFilter(wxCommandEvent& event)
-{
-    wxUnusedVar(event);
-    FilterDlg *dlg = new FilterDlg(NULL, m_RxRunning, &m_newMicInFilter, &m_newSpkOutFilter);
-    dlg->ShowModal();
-    delete dlg;
-}
-
-//-------------------------------------------------------------------------
-// OnToolsOptions()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsOptions(wxCommandEvent& event)
-{
-    wxUnusedVar(event);
-    g_modal = true;
-    //fprintf(stderr,"g_modal: %d\n", g_modal);
-    optionsDlg->Show();
-}
-
-//-------------------------------------------------------------------------
-// OnToolsOptionsUI()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsOptionsUI(wxUpdateUIEvent& event)
-{
-}
-
-//-------------------------------------------------------------------------
-// OnToolsComCfg()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsComCfg(wxCommandEvent& event)
-{
-    wxUnusedVar(event);
-
-    ComPortsDlg *dlg = new ComPortsDlg(NULL);
-
-    dlg->ShowModal();
-
-    delete dlg;
-}
-
-//-------------------------------------------------------------------------
-// OnToolsComCfgUI()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsComCfgUI(wxUpdateUIEvent& event)
-{
-    event.Enable(!m_RxRunning);
-}
-
-//-------------------------------------------------------------------------
-// OnToolsPlugInCfg()
-//-------------------------------------------------------------------------
-void MainFrame::OnToolsPlugInCfg(wxCommandEvent& event)
-{
-    wxUnusedVar(event);
-    PlugInDlg *dlg = new PlugInDlg(wxGetApp().m_plugInName, wxGetApp().m_numPlugInParam, wxGetApp().m_plugInParamName);
-    dlg->ShowModal();
-    delete dlg;
-}
-
-void MainFrame::OnToolsPlugInCfgUI(wxUpdateUIEvent& event)
-{
-    event.Enable(!m_RxRunning && wxGetApp().m_plugIn);
-}
-
-
-//-------------------------------------------------------------------------
-// OnHelpCheckUpdates()
-//-------------------------------------------------------------------------
-void MainFrame::OnHelpCheckUpdates(wxCommandEvent& event)
-{
-    wxMessageBox("Got Click!", "OnHelpCheckUpdates", wxOK);
-    event.Skip();
-}
-
-//-------------------------------------------------------------------------
-// OnHelpCheckUpdatesUI()
-//-------------------------------------------------------------------------
-void MainFrame::OnHelpCheckUpdatesUI(wxUpdateUIEvent& event)
-{
-    event.Enable(false);
-}
-
-//-------------------------------------------------------------------------
-//OnHelpAbout()
-//-------------------------------------------------------------------------
-void MainFrame::OnHelpAbout(wxCommandEvent& event)
-{
-    wxUnusedVar(event);
-    wxString msg;
-    msg.Printf( wxT("FreeDV GUI %s\n\n")
-                wxT("For Help and Support visit: http://freedv.org\n\n")
-
-                wxT("GNU Public License V2.1\n\n")
-                wxT("Created by David Witten KD0EAG and David Rowe VK5DGR in 2012.  ")
-                wxT("Currently (2020) maintaned by Mooneer Salem K6AQ and David Rowe VK5DGR.\n\n")
-                wxT("freedv-gui version: %s\n")
-                wxT("freedv-gui git hash: %s\n")
-                wxT("codec2 git hash: %s\n")
-                wxT("lpcnet git hash: %s\n"),
-                FREEDV_VERSION, FREEDV_VERSION, GIT_HASH, freedv_get_hash(), lpcnet_get_hash());
-
-    wxMessageBox(msg, wxT("About"), wxOK | wxICON_INFORMATION, this);
-}
-
-
-// Attempt to talk to rig using Hamlib
-
-bool MainFrame::OpenHamlibRig() {
-    if (wxGetApp().m_boolHamlibUseForPTT != true)
-       return false;
-    if (wxGetApp().m_intHamlibRig == 0)
-        return false;
-    if (wxGetApp().m_hamlib == NULL)
-        return false;
-
-    int rig = wxGetApp().m_intHamlibRig;
-    wxString port = wxGetApp().m_strHamlibSerialPort;
-    int serial_rate = wxGetApp().m_intHamlibSerialRate;
-    bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, wxGetApp().m_intHamlibIcomCIVHex);
-    if (status == false)
-    {
-        if (wxGetApp().m_psk_enable)
-        {
-            wxMessageBox("Couldn't connect to Radio with hamlib. PSK Reporter reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-        }
-        else
-        {
-            wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
-        }
-    }
-    else
-    {
-        wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, g_mode == FREEDV_MODE_2400B);
-    }
-
-    // Initialize PSK Reporter reporting.
-    if (status && wxGetApp().m_psk_enable)
-    {
-        std::string currentMode = "";
-        switch (g_mode)
-        {
-            case FREEDV_MODE_1600:
-                currentMode = "1600";
-                break;
-            case FREEDV_MODE_700C:
-                currentMode = "700C";
-                break;
-            case FREEDV_MODE_700D:
-                currentMode = "700D";
-                break;
-            case FREEDV_MODE_800XA:
-                currentMode = "800XA";
-                break;
-            case FREEDV_MODE_2400B:
-                currentMode = "2400B";
-                break;
-            case FREEDV_MODE_2020:
-                currentMode = "2020";
-                break;
-            case FREEDV_MODE_700E:
-                currentMode = "700E";
-                break;
-            default:
-                currentMode = "unknown";
-                break;
-        }
-        
-        if (wxGetApp().m_psk_callsign.ToStdString() == "" || wxGetApp().m_psk_grid_square.ToStdString() == "")
-        {
-            wxMessageBox("PSK Reporter reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-        }
-        else
-        {
-            wxGetApp().m_callsignEncoder = new CallsignEncoder();
-            wxGetApp().m_pskReporter = new PskReporter(
-                wxGetApp().m_psk_callsign.ToStdString(), 
-                wxGetApp().m_psk_grid_square.ToStdString(),
-                std::string("FreeDV ") + FREEDV_VERSION + " " + currentMode);
-            wxGetApp().m_pskPendingCallsign = "";
-            wxGetApp().m_pskPendingSnr = 0;
-        
-            // Send empty packet to verify network connectivity.
-            bool success = wxGetApp().m_pskReporter->send();
-            if (success)
-            {
-                // Enable PSK Reporter timer (every 5 minutes).
-                m_pskReporterTimer.Start(5 * 60 * 1000);
-            }
-            else
-            {
-                wxMessageBox("Couldn't connect to PSK Reporter server. Reporting functionality will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-                delete wxGetApp().m_pskReporter;
-                delete wxGetApp().m_callsignEncoder;
-                wxGetApp().m_pskReporter = NULL;
-                wxGetApp().m_callsignEncoder = NULL;
-            }
-        }
-    }
-    else
-    {
-        wxGetApp().m_pskReporter = NULL;
-        wxGetApp().m_callsignEncoder = NULL;
-    }
-    
-    return status;
-}
 
 //-------------------------------------------------------------------------
 // OnTogBtnOnOff()
@@ -2833,7 +1444,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
     if (startStop.IsSameAs("Start"))
     {
-        fprintf(stderr, "Start .....\n");
+        if (g_verbose) fprintf(stderr, "Start .....\n");
         g_queueResync = false;
         
         //
@@ -2856,8 +1467,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rbHorusBinary->Disable();
 #endif
         m_rb2020->Disable();
-        if (m_rbPlugIn != NULL)
-            m_rbPlugIn->Disable();
 
         m_textSync->Enable();
 
@@ -2981,8 +1590,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             // Init Speex pre-processor states
             // by inspecting Speex source it seems that only denoiser is on by default
 
-            fprintf(stderr, "freedv_get_n_speech_samples(g_pfreedv): %d\n", freedv_get_n_speech_samples(g_pfreedv));
-            fprintf(stderr, "freedv_get_speech_sample_rate(g_pfreedv): %d\n", freedv_get_speech_sample_rate(g_pfreedv));
+            if (g_verbose) fprintf(stderr, "freedv_get_n_speech_samples(g_pfreedv): %d\n", freedv_get_n_speech_samples(g_pfreedv));
+            if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(g_pfreedv): %d\n", freedv_get_speech_sample_rate(g_pfreedv));
 
             if (wxGetApp().m_speexpp_enable)
                 g_speex_st = speex_preprocess_state_init(freedv_get_n_speech_samples(g_pfreedv), freedv_get_speech_sample_rate(g_pfreedv));
@@ -3011,7 +1620,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         int src_error;
         g_spec_src = src_new(SRC_SINC_FASTEST, 1, &src_error);
         assert(g_spec_src != NULL);
-        g_State = g_prev_State = g_interleaverSyncState = 0;
+        g_State = g_prev_State = 0;
         g_snr = 0.0;
         g_half_duplex = wxGetApp().m_boolHalfDuplex;
 
@@ -3060,23 +1669,16 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 #endif // _USE_TIMER
         }
         
-#ifdef __UDP_EXPERIMENTAL__
-        char e[80]; sprintf(e,"start"); processTxtEvent(e);
-#endif
     }
 
     // Stop was pressed or start up failed
 
     if (startStop.IsSameAs("Stop") || !m_RxRunning ) {
-        fprintf(stderr, "Stop .....\n");
+        if (g_verbose) fprintf(stderr, "Stop .....\n");
         
         //
         // Stop Running -------------------------------------------------
         //
-
-#ifdef __UDP_EXPERIMENTAL__
-        optionsDlg->SetSpamTimerLight(false);
-#endif
 
 #ifdef _USE_TIMER
         m_plotTimer.Stop();
@@ -3159,13 +1761,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 #endif
         if(isAvxPresent)
             m_rb2020->Enable();
-        if (m_rbPlugIn != NULL)
-            m_rbPlugIn->Enable();
-
-#ifdef __UDP_EXPERIMENTAL__
-        char e[80]; sprintf(e,"stop"); processTxtEvent(e);
-#endif
-    }
+   }
     
     optionsDlg->setSessionActive(m_RxRunning);
 }
@@ -3295,7 +1891,7 @@ void MainFrame::startRxStream()
     bool  two_rx=false;
     bool  two_tx=false;
 
-    fprintf(stderr, "startRxStream .....\n");
+    if (g_verbose) fprintf(stderr, "startRxStream .....\n");
     if(!m_RxRunning) {
         m_RxRunning = true;
         if(Pa_Initialize())
@@ -3309,7 +1905,7 @@ void MainFrame::startRxStream()
         if(g_soundCard2InDeviceNum != g_soundCard2OutDeviceNum)
             two_tx=true;
 
-        fprintf(stderr, "two_rx: %d two_tx: %d\n", two_rx, two_tx);
+        if (g_verbose) fprintf(stderr, "two_rx: %d two_tx: %d\n", two_rx, two_tx);
         if(two_rx)
             m_rxOutPa = new PortAudioWrap();
         else
@@ -3496,7 +2092,7 @@ void MainFrame::startRxStream()
         g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
         g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
 
-        fprintf(stderr, "fifoSize_ms: %d infifo1/outfilo1: %d infifo2/outfilo2: %d\n",
+        if (g_verbose) fprintf(stderr, "fifoSize_ms: %d infifo1/outfilo1: %d infifo2/outfilo2: %d\n",
                 wxGetApp().m_fifoSize_ms, soundCard1FifoSizeSamples, soundCard2FifoSizeSamples);
 
         // reset debug stats for FIFOs
@@ -3539,7 +2135,7 @@ void MainFrame::startRxStream()
         g_rxUserdata->rxinfifo = codec2_fifo_create(rxInFifoSizeSamples);
         g_rxUserdata->rxoutfifo = codec2_fifo_create(rxOutFifoSizeSamples);
 
-        fprintf(stderr, "rxInFifoSizeSamples: %d rxOutFifoSizeSamples: %d\n", rxInFifoSizeSamples, rxOutFifoSizeSamples);
+        if (g_verbose) fprintf(stderr, "rxInFifoSizeSamples: %d rxOutFifoSizeSamples: %d\n", rxInFifoSizeSamples, rxOutFifoSizeSamples);
 
         // Init Equaliser Filters ------------------------------------------------------
 
@@ -3633,7 +2229,7 @@ void MainFrame::startRxStream()
             }
         }
 
-        fprintf(stderr, "started stream 1\n");
+        if (g_verbose) fprintf(stderr, "started stream 1\n");
 
         // Start sound card 2 ----------------------------------------------------------
 
@@ -3649,7 +2245,7 @@ void MainFrame::startRxStream()
             m_txErr = m_txInPa->streamOpen();
 
             if(m_txErr != paNoError) {
-                fprintf(stderr, "Err: %d\n", m_txErr);
+                if (g_verbose) fprintf(stderr, "Err: %d\n", m_txErr);
                 wxMessageBox(wxT("Sound Card 2 Open/Setup error."), wxT("Error"), wxOK);
                 m_rxInPa->stop();
                 m_rxInPa->streamClose();
@@ -3750,7 +2346,7 @@ void MainFrame::startRxStream()
             }
         }
 
-        fprintf(stderr, "starting tx/rx processing thread\n");
+        if (g_verbose) fprintf(stderr, "starting tx/rx processing thread\n");
 
         // start tx/rx processing thread
 
@@ -3771,231 +2367,6 @@ void MainFrame::startRxStream()
         }
 
     }
-}
-
-#ifdef __UDP_EPERIMENTAL__
-
-void MainFrame::processTxtEvent(char event[]) {
-    int rule = 0;
-
-    //printf("processTxtEvent:\n");
-    //printf("  event: %s\n", event);
-
-    // process with regexp and issue system command
-
-    // Each regexp in our list is separated by a newline.  We want to try all of them.
-
-    wxString event_str(event);
-    int match_end, replace_end;
-    match_end = replace_end = 0;
-    wxString regexp_match_list = wxGetApp().m_events_regexp_match;
-    wxString regexp_replace_list = wxGetApp().m_events_regexp_replace;
-
-    bool found_match = false;
-
-    while (((match_end = regexp_match_list.Find('\n')) != wxNOT_FOUND) && (rule < MAX_EVENT_RULES)) {
-        //printf("match_end: %d\n", match_end);
-        if ((replace_end = regexp_replace_list.Find('\n')) != wxNOT_FOUND) {
-            //printf("replace_end = %d\n", replace_end);
-
-            // candidate match and replace regexps strings exist, so lets try them
-
-            wxString regexp_match = regexp_match_list.SubString(0, match_end-1);
-            wxString regexp_replace = regexp_replace_list.SubString(0, replace_end-1);
-            //printf("match: %s replace: %s\n", (const char *)regexp_match.c_str(), (const char *)regexp_replace.c_str());
-            wxRegEx re(regexp_match);
-            //printf("  checking for match against: %s\n", (const char *)regexp_match.c_str());
-
-            // if we found a match, lets run the replace regexp and issue the system command
-
-            wxString event_str_rep = event_str;
-
-            if (re.Replace(&event_str_rep, regexp_replace) != 0) {
-                fprintf(stderr, "  found match! event_str: %s\n", (const char *)event_str.c_str());
-                found_match = true;
-
-                bool enableSystem = false;
-                if (wxGetApp().m_events)
-                    enableSystem = true;
-
-                // no syscall if spam timer still running
-
-                if (spamTimer[rule].IsRunning()) {
-                    enableSystem = false;
-                    fprintf(stderr, "  spam timer running\n");
-                }
-
-                const char *event_out = event_str_rep.ToUTF8();
-                wxString event_out_with_return_code;
-
-                if (enableSystem) {
-                    int ret = wxExecute(event_str_rep);
-                    event_out_with_return_code.Printf(_T("%s -> returned %d"), event_out, ret);
-                    spamTimer[rule].Start((wxGetApp().m_events_spam_timer)*1000, wxTIMER_ONE_SHOT);
-                }
-                else
-                    event_out_with_return_code.Printf(_T("%s T: %d"), event_out, spamTimer[rule].IsRunning());
-
-                // update event log GUI if currently displayed
-
-                if (optionsDlg != NULL) {
-                    optionsDlg->updateEventLog(wxString(event), event_out_with_return_code);
-                }
-            }
-        }
-        regexp_match_list = regexp_match_list.SubString(match_end+1, regexp_match_list.length());
-        regexp_replace_list = regexp_replace_list.SubString(replace_end+1, regexp_replace_list.length());
-
-        rule++;
-    }
-
-    if ((optionsDlg != NULL) && !found_match) {
-        optionsDlg->updateEventLog(wxString(event), _("<no match>"));
-    }
-}
-#endif
-
-
-#define SBQ_MAX_ARGS 5
-
-void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q)
-{
-    char  *arg[SBQ_MAX_ARGS];
-    char   argstorage[SBQ_MAX_ARGS][80];
-    void  *sbq;
-    int    i, argc;
-
-    assert((strcmp(filterType, "bass") == 0)   ||
-           (strcmp(filterType, "treble") == 0) ||
-           (strcmp(filterType, "equalizer") == 0));
-
-    for(i=0; i<SBQ_MAX_ARGS; i++) {
-        arg[i] = &argstorage[i][0];
-    }
-
-    argc = 0;
-
-    if ((strcmp(filterType, "bass") == 0) || (strcmp(filterType, "treble") == 0)) {
-        sprintf(arg[argc++], "%s", filterType);
-        sprintf(arg[argc++], "%f", gaindB+1E-6);
-        sprintf(arg[argc++], "%f", freqHz);
-    }
-
-    if (strcmp(filterType, "equalizer") == 0) {
-        sprintf(arg[argc++], "%s", filterType);
-        sprintf(arg[argc++], "%f", freqHz);
-        sprintf(arg[argc++], "%f", Q);
-        sprintf(arg[argc++], "%f", gaindB+1E-6);
-    }
-
-    assert(argc <= SBQ_MAX_ARGS);
-    // Note - the argc count doesn't include the command!
-    sbq = sox_biquad_create(argc-1, (const char **)arg);
-    assert(sbq != NULL);
-
-    return sbq;
-}
-
-void  MainFrame::designEQFilters(paCallBackData *cb)
-{
-    // init Mic In Equaliser Filters
-
-    if (m_newMicInFilter) {
-        //printf("designing new Min In filters\n");
-        cb->sbqMicInBass   = designAnEQFilter("bass", wxGetApp().m_MicInBassFreqHz, wxGetApp().m_MicInBassGaindB);
-        cb->sbqMicInTreble = designAnEQFilter("treble", wxGetApp().m_MicInTrebleFreqHz, wxGetApp().m_MicInTrebleGaindB);
-        cb->sbqMicInMid    = designAnEQFilter("equalizer", wxGetApp().m_MicInMidFreqHz, wxGetApp().m_MicInMidGaindB, wxGetApp().m_MicInMidQ);
-    }
-
-    // init Spk Out Equaliser Filters
-
-    if (m_newSpkOutFilter) {
-        //printf("designing new Spk Out filters\n");
-        //printf("designEQFilters: wxGetApp().m_SpkOutBassFreqHz: %f\n",wxGetApp().m_SpkOutBassFreqHz);
-        cb->sbqSpkOutBass   = designAnEQFilter("bass", wxGetApp().m_SpkOutBassFreqHz, wxGetApp().m_SpkOutBassGaindB);
-        cb->sbqSpkOutTreble = designAnEQFilter("treble", wxGetApp().m_SpkOutTrebleFreqHz, wxGetApp().m_SpkOutTrebleGaindB);
-        cb->sbqSpkOutMid    = designAnEQFilter("equalizer", wxGetApp().m_SpkOutMidFreqHz, wxGetApp().m_SpkOutMidGaindB, wxGetApp().m_SpkOutMidQ);
-    }
-}
-
-void  MainFrame::deleteEQFilters(paCallBackData *cb)
-{
-    if (m_newMicInFilter) {
-        sox_biquad_destroy(cb->sbqMicInBass);
-        sox_biquad_destroy(cb->sbqMicInTreble);
-        sox_biquad_destroy(cb->sbqMicInMid);
-    }
-    if (m_newSpkOutFilter) {
-        sox_biquad_destroy(cb->sbqSpkOutBass);
-        sox_biquad_destroy(cb->sbqSpkOutTreble);
-        sox_biquad_destroy(cb->sbqSpkOutMid);
-    }
-}
-
-// returns number of output samples generated by resampling
-int resample(SRC_STATE *src,
-            short      output_short[],
-            short      input_short[],
-            int        output_sample_rate,
-            int        input_sample_rate,
-            int        length_output_short, // maximum output array length in samples
-            int        length_input_short
-            )
-{
-    SRC_DATA src_data;
-    float    input[length_input_short];
-    float    output[length_output_short];
-    int      ret;
-
-    assert(src != NULL);
-
-    src_short_to_float_array(input_short, input, length_input_short);
-
-    src_data.data_in = input;
-    src_data.data_out = output;
-    src_data.input_frames = length_input_short;
-    src_data.output_frames = length_output_short;
-    src_data.end_of_input = 0;
-    src_data.src_ratio = (float)output_sample_rate/input_sample_rate;
-
-    ret = src_process(src, &src_data);
-    assert(ret == 0);
-
-    assert(src_data.output_frames_gen <= length_output_short);
-    src_float_to_short_array(output, output_short, src_data.output_frames_gen);
-
-    return src_data.output_frames_gen;
-}
-
-
-// Decimates samples using an algorithm that produces nice plots of
-// speech signals at a low sample rate.  We want a low sample rate so
-// we don't hammer the graphics system too hard.  Saves decimated data
-// to a fifo for plotting on screen.
-
-void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs)
-{
-    int decimation = fs/WAVEFORM_PLOT_FS;
-    int nSamples, sample;
-    int i, st, en, max, min;
-    short dec_samples[length];
-
-    nSamples = length/decimation;
-
-    for(sample = 0; sample < nSamples; sample += 2)
-    {
-        st = decimation*sample;
-        en = decimation*(sample+2);
-        max = min = 0;
-        for(i=st; i<en; i++ )
-        {
-            if (max < buf[i]) max = buf[i];
-            if (min > buf[i]) min = buf[i];
-        }
-        dec_samples[sample] = max;
-        dec_samples[sample+1] = min;
-    }
-    codec2_fifo_write(plotFifo, dec_samples, nSamples);
 }
 
 
@@ -4048,7 +2419,7 @@ void txRxProcessing()
     
     if (g_queueResync)
     {
-        fprintf(stderr, "Unsyncing per user request.\n");
+        if (g_verbose) fprintf(stderr, "Unsyncing per user request.\n");
         g_queueResync = false;
         freedv_set_sync(g_pfreedv, FREEDV_SYNC_UNSYNC);
         g_resyncs++;
@@ -4263,7 +2634,7 @@ void txRxProcessing()
  	if (g_dump_fifo_state) {
 	  // If this drops to zero we have a problem as we will run out of output samples
 	  // to send to the sound driver via PortAudio
-	  fprintf(stderr, "outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d\n",
+	  if (g_verbose) fprintf(stderr, "outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d\n",
                   codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
 	}
 
@@ -4510,7 +2881,6 @@ void per_frame_rx_processing(
 
             nin = freedv_nin(g_pfreedv);
             g_State = freedv_get_sync(g_pfreedv);
-            g_interleaverSyncState = freedv_get_sync_interleaver(g_pfreedv);
 
             //fprintf(g_logfile, "g_State: %d g_stats.sync: %d snr: %f \n", g_State, g_stats.sync, f->snr);
 
@@ -4716,332 +3086,3 @@ int MainFrame::txCallback(
     return paContinue;
 }
 
-// Callback from plot_spectrum & plot_waterfall.  would be nice to
-// work out a way to do this without globals.
-
-void fdmdv2_clickTune(float freq) {
-
-    // The demod is hard-wired to expect a centre frequency of
-    // FDMDV_FCENTRE.  So we want to take the signal centered on the
-    // click tune freq and re-centre it on FDMDV_FCENTRE.  For example
-    // if the click tune freq is 1500Hz, and FDMDV_CENTRE is 1200 Hz,
-    // we need to shift the input signal centred on 1500Hz down to
-    // 1200Hz, an offset of -300Hz.
-
-    // Bit of an "indent" as we are often trying to get it back
-    // exactly in the centre
-
-    if (fabs(FDMDV_FCENTRE - freq) < 10.0) {
-        freq = FDMDV_FCENTRE;
-        fprintf(stderr, "indent!\n");
-    }
-
-    if (g_split) {
-        g_RxFreqOffsetHz = FDMDV_FCENTRE - freq;
-    }
-    else {
-        g_TxFreqOffsetHz = freq - FDMDV_FCENTRE;
-        g_RxFreqOffsetHz = FDMDV_FCENTRE - freq;
-    }
-    fprintf(stderr, "g_TxFreqOffsetHz: %f g_RxFreqOffsetHz: %f\n", g_TxFreqOffsetHz, g_RxFreqOffsetHz);
-}
-
-//----------------------------------------------------------------
-// OpenSerialPort()
-//----------------------------------------------------------------
-
-void MainFrame::OpenSerialPort(void)
-{
-    Serialport *serialport = wxGetApp().m_serialport;
-
-    if(!wxGetApp().m_strRigCtrlPort.IsEmpty()) {
-       serialport->openport(wxGetApp().m_strRigCtrlPort.c_str(),
-                            wxGetApp().m_boolUseRTS,
-                            wxGetApp().m_boolRTSPos,
-                            wxGetApp().m_boolUseDTR,
-                            wxGetApp().m_boolDTRPos);
-       if (serialport->isopen()) {
-            // always start PTT in Rx state
-           serialport->ptt(false);
-       }
-       else {
-           wxMessageBox("Couldn't open Serial Port", wxT("About"), wxOK | wxICON_ERROR, this);
-       }
-    }
-}
-
-
-//----------------------------------------------------------------
-// CloseSerialPort()
-//----------------------------------------------------------------
-
-void MainFrame::CloseSerialPort(void)
-{
-    Serialport *serialport = wxGetApp().m_serialport;
-    if (serialport->isopen()) {
-        // always end with PTT in rx state
-
-        serialport->ptt(false);
-        serialport->closeport();
-    }
-}
-
-//
-// checkAvxSupport
-//
-// Tests the underlying platform for AVX support.  2020 needs AVX support to run
-// in real-time, and old processors do not offer AVX support
-//
-
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
-void MainFrame::checkAvxSupport(void)
-{
-
-    isAvxPresent = false;
-    uint32_t eax, ebx, ecx, edx;
-    eax = ebx = ecx = edx = 0;
-    __cpuid(1, eax, ebx, ecx, edx);
-
-    if (ecx & (1<<27) && ecx & (1<<28)) {
-        // CPU supports XSAVE and AVX
-        uint32_t xcr0, xcr0_high;
-        asm("xgetbv" : "=a" (xcr0), "=d" (xcr0_high) : "c" (0));
-        isAvxPresent = (xcr0 & 6) == 6;    // AVX state saving enabled?
-    }
-}
-#elif defined(__APPLE__) && defined(__aarch64__)
-void MainFrame::checkAvxSupport(void)
-{
-    // Force 2020 mode to be enabled on ARM Macs. This is experimental
-    // and may cause problems. During preliminary testing it seems to use
-    // NEON optimizations enabled in LPCNet and consumes less than 100% of a single
-    // core while decoding audio.
-    isAvxPresent = true;
-}
-#else
-void MainFrame::checkAvxSupport(void)
-{
-    isAvxPresent = false;
-}
-#endif
-
-#ifdef __UDP_SUPPORT__
-
-//----------------------------------------------------------------
-// PollUDP() - see if any commands on UDP port
-//----------------------------------------------------------------
-
-// test this puppy with netcat:
-//   $ echo "hello" | nc -u -q1 localhost 3000
-
-int MainFrame::PollUDP(void)
-{
-    // this will block until message received, so we put it in it's own thread
-
-    char buf[1024];
-    char reply[80];
-    size_t n = m_udp_sock->RecvFrom(m_udp_addr, buf, sizeof(buf)).LastCount();
-
-    if (n) {
-        wxString bufstr = wxString::From8BitData(buf, n);
-        bufstr.Trim();
-        wxString ipaddr = m_udp_addr.IPAddress();
-        printf("Received: \"%s\" from %s:%u\n",
-               (const char *)bufstr.c_str(),
-               (const char *)ipaddr.c_str(), m_udp_addr.Service());
-
-        // for security only accept commands from local host
-
-        sprintf(reply,"nope\n");
-        if (ipaddr.Cmp(_("127.0.0.1")) == 0) {
-
-            // process commands
-
-            if (bufstr.Cmp(_("restore")) == 0) {
-                m_schedule_restore = true;  // Make Restore happen in main thread to avoid crashing
-                sprintf(reply,"ok\n");
-            }
-
-            wxString itemToSet, val;
-            if (bufstr.StartsWith(_("set "), &itemToSet)) {
-                if (itemToSet.StartsWith("txtmsg ", &val)) {
-                    // note: if options dialog is open this will get overwritten
-                    wxGetApp().m_callSign = val;
-                }
-                sprintf(reply,"ok\n");
-            }
-            if (bufstr.StartsWith(_("ptton"), &itemToSet)) {
-                // note: if options dialog is open this will get overwritten
-                m_btnTogPTT->SetValue(true);
-                togglePTT();
-                sprintf(reply,"ok\n");
-            }
-            if (bufstr.StartsWith(_("pttoff"), &itemToSet)) {
-                // note: if options dialog is open this will get overwritten
-                m_btnTogPTT->SetValue(false);
-                togglePTT();
-                sprintf(reply,"ok\n");
-            }
-
-        }
-        else {
-            printf("We only accept messages from locahost!\n");
-        }
-
-       if ( m_udp_sock->SendTo(m_udp_addr, reply, strlen(reply)).LastCount() != strlen(reply)) {
-           printf("ERROR: failed to send data\n");
-        }
-    }
-
-    return n;
-}
-
-void MainFrame::startUDPThread(void) {
-    fprintf(stderr, "starting UDP thread!\n");
-    m_UDPThread = new UDPThread;
-    m_UDPThread->mf = this;
-    if (m_UDPThread->Create() != wxTHREAD_NO_ERROR ) {
-        wxLogError(wxT("Can't create thread!"));
-    }
-    if (m_UDPThread->Run() != wxTHREAD_NO_ERROR ) {
-        wxLogError(wxT("Can't start thread!"));
-        delete m_UDPThread;
-    }
-}
-
-void MainFrame::stopUDPThread(void) {
-    printf("stopping UDP thread!\n");
-    if ((m_UDPThread != NULL) && m_UDPThread->m_run) {
-        m_UDPThread->m_run = 0;
-        m_UDPThread->Wait();
-        m_UDPThread = NULL;
-    }
-}
-
-void *UDPThread::Entry() {
-    //fprintf(stderr, "UDP thread started!\n");
-    while (m_run) {
-        if (wxGetApp().m_udp_enable) {
-            printf("m_udp_enable\n");
-            mf->m_udp_addr.Service(wxGetApp().m_udp_port);
-            mf->m_udp_sock = new wxDatagramSocket(mf->m_udp_addr, wxSOCKET_NOWAIT);
-
-            while (m_run && wxGetApp().m_udp_enable) {
-                if (mf->PollUDP() == 0) {
-                    wxThread::Sleep(20);
-                }
-            }
-
-            delete mf->m_udp_sock;
-        }
-        wxThread::Sleep(20);
-    }
-    return NULL;
-}
-
-#endif
-
-char my_get_next_tx_char(void *callback_state) {
-    short ch = 0;
-
-    codec2_fifo_read(g_txDataInFifo, &ch, 1);
-    //fprintf(stderr, "get_next_tx_char: %c\n", (char)ch);
-    return (char)ch;
-}
-
-void my_put_next_rx_char(void *callback_state, char c) {
-    short ch = (short)((unsigned char)c);
-    //fprintf(stderr, "put_next_rx_char: %c\n", (char)c);
-    codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
-}
-
-// Callback from FreeDv API to update error plots
-
-void my_freedv_put_error_pattern(void *state, short error_pattern[], int sz_error_pattern) {
-    codec2_fifo_write(g_error_pattern_fifo, error_pattern, sz_error_pattern);
-    //fprintf(stderr, "my_freedv_put_error_pattern: sz_error_pattern: %d ret: %d used: %d\n",
-    //        sz_error_pattern, ret, codec2_fifo_used(g_error_pattern_fifo) );
-}
-
-void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin)
-{
-    COMP  foff_rect;
-    float mag;
-    int   i;
-
-    foff_rect.real = cosf(2.0*M_PI*foff/Fs);
-    foff_rect.imag = sinf(2.0*M_PI*foff/Fs);
-    for(i=0; i<nin; i++) {
-	*foff_phase_rect = cmult(*foff_phase_rect, foff_rect);
-	rx_fdm_fcorr[i] = cmult(rx_fdm[i], *foff_phase_rect);
-    }
-
-    /* normalise digital oscilator as the magnitude can drift over time */
-
-    mag = cabsolute(*foff_phase_rect);
-    foff_phase_rect->real /= mag;
-    foff_phase_rect->imag /= mag;
-}
-
-int plugin_get_persistant(char name[], char value[]) {
-    wxString n,v;
-    int i;
-
-    for(i=0; i<wxGetApp().m_numPlugInParam; i++) {
-
-        n = wxGetApp().m_plugInParamName[i];
-
-        if (strcmp(n.mb_str().data(), name) == 0) {
-            v = wxGetApp().m_txtPlugInParam[i];
-            strcpy(value, v.mb_str().data());
-            fprintf(stderr, "plugin_get_persistant called name: %s value: %s\n", name, v.mb_str().data());
-        }
-    }
-
-    return 0;
-}
-
-
-/*
-  Sending simple message via UDP
-
-  http://cool-emerald.blogspot.com.au/2018/01/udptcp-socket-programming-with-wxwidgets.html#udp
-*/
-
-
-void UDPInit(void) {
-    // Create the socket
-
-    wxIPV4address addr_rx;
-    addr_rx.AnyAddress();
-    //addr_rx.Service(3000);
-    g_sock = new wxDatagramSocket(addr_rx);
-
-    // We use IsOk() here to see if the server is really listening
-
-    if (!g_sock->IsOk()) {
-        fprintf(stderr, "UDPInit: Could not listen at the specified port !\n");
-        return;
-    }
-
-    wxIPV4address addrReal;
-    if (!g_sock->GetLocal(addrReal)){
-        fprintf(stderr, "UDPInit: Couldn't get the address we bound to\n");
-    }
-    else {
-        fprintf(stderr, "Server listening at %s:%u \n", (const char*)addrReal.IPAddress().c_str(), addrReal.Service());
-    }
-}
-
-void UDPSend(int port, char *buf, unsigned int n) {
-    fprintf(stderr, "UDPSend buf: %s n: %d\n", buf, n);
-
-    wxIPV4address addr_tx;
-    addr_tx.Hostname("localhost");
-    addr_tx.Service(port);
-
-    if ( g_sock->SendTo(addr_tx, (const void*)buf, n).LastCount() != n ) {
-        fprintf(stderr, "UDPSend: failed to send data");
-        return;
-    }
-}

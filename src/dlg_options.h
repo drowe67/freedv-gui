@@ -22,8 +22,8 @@
 #ifndef __OPTIONS_DIALOG__
 #define __OPTIONS_DIALOG__
 
-#include "fdmdv2_main.h"
-#include "fdmdv2_defines.h"
+#include "main.h"
+#include "defines.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class OptionsDlg
@@ -162,6 +162,7 @@ class OptionsDlg : public wxDialog
         wxCheckBox    *m_ckboxTxRxThreadPriority;
         wxCheckBox    *m_ckboxTxRxDumpTiming;
         wxCheckBox    *m_ckboxTxRxDumpFifoState;
+        wxCheckBox    *m_ckboxVerbose;
         wxCheckBox    *m_ckboxFreeDVAPIVerbose;
         
         wxButton*     m_sdbSizer5OK;

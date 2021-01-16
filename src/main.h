@@ -1,5 +1,5 @@
 //==========================================================================
-// Name:            fdmdv2_main.h
+// Name:            main.h
 //
 // Purpose:         Declares simple wxWidgets application with GUI.
 // Created:         Apr. 9, 2012
@@ -79,12 +79,12 @@
 #include "topFrame.h"
 #include "dlg_ptt.h"
 #include "dlg_options.h"
-#include "fdmdv2_plot.h"
-#include "fdmdv2_plot_scalar.h"
-#include "fdmdv2_plot_scatter.h"
-#include "fdmdv2_plot_waterfall.h"
-#include "fdmdv2_plot_spectrum.h"
-#include "fdmdv2_pa_wrapper.h"
+#include "plot.h"
+#include "plot_scalar.h"
+#include "plot_scatter.h"
+#include "plot_waterfall.h"
+#include "plot_spectrum.h"
+#include "pa_wrapper.h"
 #include "sndfile.h"
 #include "portaudio.h"
 #include "dlg_audiooptions.h"
@@ -92,7 +92,6 @@
 #include "dlg_options.h"
 #include "sox_biquad.h"
 #include "comp_prim.h"
-#include "dlg_plugin.h"
 #include "hamlib.h"
 #include "serialport.h" 
 #include "pskreporter.h"
@@ -117,7 +116,7 @@ enum {
 #define EXCHANGE_DATA_IN    0
 #define EXCHANGE_DATA_OUT   1
 
-
+extern int                 g_verbose;
 extern int                 g_nSoundCards;
 extern int                 g_soundCard1InDeviceNum;
 extern int                 g_soundCard1OutDeviceNum;
@@ -301,22 +300,6 @@ class MainApp : public wxApp
         bool                loadConfig();
         bool                saveConfig();
 
-        // Plugins -----------------------------------
-
-        wxString            m_txtPlugInParam[PLUGIN_MAX_PARAMS];
-
-        // plugin details
-
-        void      *m_plugInHandle;
-        bool       m_plugIn;
-        wxString   m_plugInName;
-        int        m_numPlugInParam;
-        wxString   m_plugInParamName[PLUGIN_MAX_PARAMS];
-        void      *m_plugInStates;
-        void     (*m_plugin_startfp)(void *);
-        void     (*m_plugin_stopfp)(void *);
-        void     (*m_plugin_rx_samplesfp)(void *, short *, int);
-
         // misc
 
         bool       m_testFrames;
@@ -461,7 +444,7 @@ class UDPThread;
 class MainFrame : public TopFrame
 {
     public:
-        MainFrame(wxString plugInName, wxWindow *parent);
+        MainFrame(wxWindow *parent);
         virtual ~MainFrame();
 
         PlotSpectrum*           m_panelSpectrum;
@@ -580,9 +563,6 @@ class MainFrame : public TopFrame
         void OnToolsOptions(wxCommandEvent& event);
         void OnToolsOptionsUI(wxUpdateUIEvent& event);
 
-        void OnToolsPlugInCfg( wxCommandEvent& event );
-        void OnToolsPlugInCfgUI( wxUpdateUIEvent& event );
-
         void OnPlayFileToMicIn( wxCommandEvent& event );
         void OnRecFileFromRadio( wxCommandEvent& event );
         void OnRecFileFromModulator( wxCommandEvent& event);
@@ -601,8 +581,6 @@ class MainFrame : public TopFrame
         // Toggle Buttons
         void OnTogBtnSplitClick(wxCommandEvent& event);
         void OnTogBtnAnalogClick(wxCommandEvent& event);
-        void OnTogBtnRxID( wxCommandEvent& event );
-        void OnTogBtnTxID( wxCommandEvent& event );
         void OnTogBtnPTT( wxCommandEvent& event );
         void OnTogBtnVoiceKeyerClick (wxCommandEvent& event);
         void OnTogBtnOnOff( wxCommandEvent& event );
@@ -740,10 +718,6 @@ void my_put_next_rx_char(void *callback_state, char c);
 // helper complex freq shift function
 
 void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin);
-
-// Helper function called by plugin
-
-int plugin_get_persistant(char name[], char value[]);
 
 void UDPSend(int port, char *buf, unsigned int n);
 void UDPInit(void);

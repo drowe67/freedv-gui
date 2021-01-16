@@ -8,6 +8,8 @@
 #include <strsafe.h>
 #endif
 
+extern int g_verbose;
+
 Serialport::Serialport() {
     com_handle = COM_HANDLE_INVALID;
 }
@@ -22,12 +24,12 @@ Serialport::~Serialport() {
 
 bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useDTR, bool DTRPos)
 {
-    fprintf(stderr, "starting openport(), name: %s strlen(name): %d useRTS: %d RTSPos: %d useDTR: %d DTRPos: %d\n",
+    if (g_verbose) fprintf(stderr, "starting openport(), name: %s strlen(name): %d useRTS: %d RTSPos: %d useDTR: %d DTRPos: %d\n",
             name, (int)strlen(name), useRTS, RTSPos, useDTR, DTRPos);
 
     if (com_handle != COM_HANDLE_INVALID) {
         closeport();
-        fprintf(stderr, "comm_handle invalid, closing\n");
+        if (g_verbose) fprintf(stderr, "comm_handle invalid, closing\n");
     }
 
     m_useRTS = useRTS;
@@ -60,7 +62,7 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
         StringCchPrintf(nameWithStrangePrefix, 100, "\\\\.\\%s", name);
         fputs("nameWithStrangePrefix: ", stderr);
 	fputs(nameWithStrangePrefix, stderr);
-	fprintf(stderr,"\n");
+	if (g_verbose) fprintf(stderr,"\n");
 
 #ifdef NOT_USED
 
@@ -75,7 +77,7 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
            needed as I can't see anything similar in Hamlib */
 	
         if(GetDefaultCommConfigA(nameWithStrangePrefix, &CC, &CCsize)) {
-	    fprintf(stderr, "GetDefaultCommConfigA OK\n");         
+	    if (g_verbose) fprintf(stderr, "GetDefaultCommConfigA OK\n");         
             CC.dcb.fOutxCtsFlow		= FALSE;
             CC.dcb.fOutxDsrFlow		= FALSE;
             CC.dcb.fDtrControl		= DTR_CONTROL_DISABLE;
@@ -85,7 +87,7 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 		StringCchPrintf(lpszFunction, 100, "%s", "SetDefaultCommConfigA");
                 goto error;
             }
-            fprintf(stderr, "SetDefaultCommConfigA OK\n");
+            if (g_verbose) fprintf(stderr, "SetDefaultCommConfigA OK\n");
         } else {
 	     StringCchPrintf(lpszFunction, 100, "%s", "GetDefaultCommConfigA");
              goto error;
@@ -103,10 +105,10 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 	    StringCchPrintf(lpszFunction, 100, "%s", "CreateFileA");
 	    goto error;
 	}
-        fprintf(stderr, "CreateFileA OK\n");
+        if (g_verbose) fprintf(stderr, "CreateFileA OK\n");
 	
         if(GetCommTimeouts(com_handle, &timeouts)) {
- 	    fprintf(stderr, "GetCommTimeouts OK\n");
+ 	    if (g_verbose) fprintf(stderr, "GetCommTimeouts OK\n");
             timeouts.ReadIntervalTimeout=MAXDWORD;
             timeouts.ReadTotalTimeoutMultiplier=0;
             timeouts.ReadTotalTimeoutConstant=0;		// No-wait read timeout
@@ -116,7 +118,7 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 	      StringCchPrintf(lpszFunction, 100, "%s", "SetCommTimeouts");
               goto error;	      
 	    }
-	    fprintf(stderr, "SetCommTimeouts OK\n");
+	    if (g_verbose) fprintf(stderr, "SetCommTimeouts OK\n");
         } else {
 	    StringCchPrintf(lpszFunction, 100, "%s", "GetCommTimeouts");
             goto error;
@@ -124,7 +126,7 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 
         /* Force N-8-1 mode: */
         if(GetCommState(com_handle, &dcb)==TRUE) {
-	    fprintf(stderr, "GetCommState OK\n");
+	    if (g_verbose) fprintf(stderr, "GetCommState OK\n");
 	    
             dcb.ByteSize		= 8;
             dcb.Parity			= NOPARITY;
@@ -144,7 +146,7 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
   	        StringCchPrintf(lpszFunction, 100, "%s", "SetCommState");
                 goto error;           
             }
-	    fprintf(stderr, "SetCommState OK\n");
+	    if (g_verbose) fprintf(stderr, "SetCommState OK\n");
         } else {
   	    StringCchPrintf(lpszFunction, 100, "%s", "GetCommState");
             goto error;           
@@ -153,7 +155,7 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 	return true;
 	
     error:
-	fprintf(stderr, "%s failed\n", lpszFunction);
+	if (g_verbose) fprintf(stderr, "%s failed\n", lpszFunction);
 	
         // Retrieve the system error message for the last-error code
 
