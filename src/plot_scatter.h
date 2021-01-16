@@ -1,6 +1,6 @@
 //==========================================================================
-// Name:            fdmdv2_plot_scatter.h
-// Purpose:         A scatter plot derivative of fdmdv2_plot.
+// Name:            plot_scatter.h
+// Purpose:         A scatter plot derivative of plot.
 // Created:         June 24, 2012
 // Authors:         David Rowe, David Witten
 // 
@@ -22,8 +22,8 @@
 #define __FDMDV2_PLOT_SCATTER__
 
 #include "comp.h"
-#include "fdmdv2_plot.h"
-#include "fdmdv2_defines.h"
+#include "plot.h"
+#include "defines.h"
 
 #define PLOT_SCATTER_MODE_SCATTER            0
 #define PLOT_SCATTER_MODE_EYE                1
@@ -60,6 +60,8 @@ class PlotScatter : public PlotPanel
         int   Ncol;
         int   scatterMemSyms;
         float m_filter_max_xy, m_filter_max_y;
+
+        bool pointsInBounds_(int x, int y);
 };
 
 #endif //__FDMDV2_PLOT_SCATTER__

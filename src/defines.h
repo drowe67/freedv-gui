@@ -1,6 +1,6 @@
 //==========================================================================
-// Name:            fdmdv2_defines.h
-// Purpose:         Definitions used by plots derived from fdmdv2_plot class.
+// Name:            defines.h
+// Purpose:         Definitions used by plots derived from plot class.
 // Created:         August 27, 2012
 // Authors:         David Rowe, David Witten
 // 
