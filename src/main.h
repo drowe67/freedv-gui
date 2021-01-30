@@ -182,6 +182,12 @@ class MainApp : public wxApp
         wxString            m_strSampleRate;
         wxString            m_strBitrate;
 
+        // Sound card
+        wxString m_soundCard1InDeviceName;
+        wxString m_soundCard2InDeviceName;
+        wxString m_soundCard1OutDeviceName;
+        wxString m_soundCard2OutDeviceName;
+
         // PTT -----------------------------------
 
         bool                m_boolHalfDuplex;
@@ -639,6 +645,9 @@ class MainFrame : public TopFrame
 
         void       checkAvxSupport();
         bool       isAvxPresent;
+        
+        int         getSoundCardIDFromName(wxString& name, bool input);
+        bool        validateSoundCardSetup();
 };
 
 void txRxProcessing();
