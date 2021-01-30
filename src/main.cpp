@@ -387,20 +387,16 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxGetApp().m_framesPerBuffer = pConfig->Read(wxT("/Audio/framesPerBuffer"), (int)PA_FPB);
     wxGetApp().m_fifoSize_ms = pConfig->Read(wxT("/Audio/fifoSize_ms"), (int)FIFO_SIZE);
 
-    g_soundCard1InDeviceNum  = pConfig->Read(wxT("/Audio/soundCard1InDeviceNum"),         -1);
-    g_soundCard1OutDeviceNum = pConfig->Read(wxT("/Audio/soundCard1OutDeviceNum"),        -1);
-    g_soundCard1SampleRate   = pConfig->Read(wxT("/Audio/soundCard1SampleRate"),          -1);
+    wxGetApp().m_soundCard1InDeviceName = pConfig->Read(wxT("/Audio/soundCard1InDeviceName"), _("none"));
+    wxGetApp().m_soundCard1OutDeviceName = pConfig->Read(wxT("/Audio/soundCard1OutDeviceName"), _("none"));
+    wxGetApp().m_soundCard2InDeviceName = pConfig->Read(wxT("/Audio/soundCard2InDeviceName"), _("none"));	
+    wxGetApp().m_soundCard2OutDeviceName = pConfig->Read(wxT("/Audio/soundCard2OutDeviceName"), _("none"));	
 
-    g_soundCard2InDeviceNum  = pConfig->Read(wxT("/Audio/soundCard2InDeviceNum"),         -1);
-    g_soundCard2OutDeviceNum = pConfig->Read(wxT("/Audio/soundCard2OutDeviceNum"),        -1);
+    // Get sound card sample rates
+    g_soundCard1SampleRate   = pConfig->Read(wxT("/Audio/soundCard1SampleRate"),          -1);
     g_soundCard2SampleRate   = pConfig->Read(wxT("/Audio/soundCard2SampleRate"),          -1);
 
-    g_nSoundCards = 0;
-    if ((g_soundCard1InDeviceNum > -1) && (g_soundCard1OutDeviceNum > -1)) {
-        g_nSoundCards = 1;
-        if ((g_soundCard2InDeviceNum > -1) && (g_soundCard2OutDeviceNum > -1))
-            g_nSoundCards = 2;
-    }
+    validateSoundCardSetup();
 
     wxGetApp().m_playFileToMicInPath = pConfig->Read("/File/playFileToMicInPath",   wxT(""));
     wxGetApp().m_recFileFromRadioPath = pConfig->Read("/File/recFileFromRadioPath", wxT(""));
@@ -707,12 +703,12 @@ MainFrame::~MainFrame()
         pConfig->Write(wxT("/Audio/framesPerBuffer"),       wxGetApp().m_framesPerBuffer);
         pConfig->Write(wxT("/Audio/fifoSize_ms"),              wxGetApp().m_fifoSize_ms);
 
-        pConfig->Write(wxT("/Audio/soundCard1InDeviceNum"),   g_soundCard1InDeviceNum);
-        pConfig->Write(wxT("/Audio/soundCard1OutDeviceNum"),  g_soundCard1OutDeviceNum);
-        pConfig->Write(wxT("/Audio/soundCard1SampleRate"),    g_soundCard1SampleRate );
+        pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
+        pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
+        pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);	
+        pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);	
 
-        pConfig->Write(wxT("/Audio/soundCard2InDeviceNum"),   g_soundCard2InDeviceNum);
-        pConfig->Write(wxT("/Audio/soundCard2OutDeviceNum"),  g_soundCard2OutDeviceNum);
+        pConfig->Write(wxT("/Audio/soundCard1SampleRate"),    g_soundCard1SampleRate );
         pConfig->Write(wxT("/Audio/soundCard2SampleRate"),    g_soundCard2SampleRate );
 
         pConfig->Write(wxT("/VoiceKeyer/WaveFilePath"), wxGetApp().m_txtVoiceKeyerWaveFilePath);
@@ -1633,7 +1629,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         // attempt to start sound cards and tx/rx processing
         if (VerifyMicrophonePermissions())
         {
-            startRxStream();
+            if (validateSoundCardSetup())
+            {
+                startRxStream();
+            }
         }
         else
         {
@@ -3082,3 +3081,228 @@ int MainFrame::txCallback(
     return paContinue;
 }
 
+int MainFrame::getSoundCardIDFromName(wxString& name, bool input)
+{
+    int result = -1;
+    
+    if (name != "none")
+    {
+        PaError paResult = Pa_Initialize();
+        if (paResult == paNoError)
+        {
+            for (PaDeviceIndex index = 0; index < Pa_GetDeviceCount(); index++)
+            {
+                const PaDeviceInfo* device = Pa_GetDeviceInfo(index);
+                wxString deviceName = device->name;
+                deviceName = deviceName.Trim();
+                if (name == deviceName)
+                {
+                    PaStreamParameters baseParams;
+                    baseParams.device = index;
+                    baseParams.channelCount = input ? device->maxInputChannels : device->maxOutputChannels;
+                    baseParams.sampleFormat = paInt16;
+                    baseParams.suggestedLatency = 0;
+                    baseParams.hostApiSpecificStreamInfo = NULL;
+                    
+                    if (baseParams.channelCount == 0) continue;
+                    
+                    bool supported = false;
+                    for(int sampleIndex = 0; PortAudioWrap::standardSampleRates[sampleIndex] > 0; sampleIndex++)
+                    {
+                        paResult = Pa_IsFormatSupported(input ? &baseParams : NULL, !input ? &baseParams : NULL, PortAudioWrap::standardSampleRates[sampleIndex]);
+                        if (paResult == paFormatIsSupported)
+                        {
+                            supported = true;
+                            break;
+                        }
+                    }
+                    
+                    if (supported)
+                    {
+                        result = index;
+                        break;
+                    }
+                }
+            }
+            Pa_Terminate();
+        }
+        else
+        {
+            fprintf(stderr, "WARNING: could not initialize PortAudio (err=%d, txt=%s)\n", paResult, Pa_GetErrorText(paResult));
+        }
+    }
+    return result;
+}
+
+bool MainFrame::validateSoundCardSetup()
+{
+    bool canRun = true;
+    
+    // Translate device names to IDs
+    g_soundCard1InDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard1InDeviceName, true);
+    g_soundCard1OutDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard1OutDeviceName, false);
+    g_soundCard2InDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard2InDeviceName, true);
+    g_soundCard2OutDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard2OutDeviceName, false);
+
+    if (wxGetApp().m_soundCard1InDeviceName != "none" && g_soundCard1InDeviceNum == -1)
+    {
+        wxMessageBox(wxString::Format(
+            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
+            wxGetApp().m_soundCard1InDeviceName), wxT("Sound Device Removed"), wxOK, this);
+        canRun = false;
+    }
+    else if (canRun && wxGetApp().m_soundCard1OutDeviceName != "none" && g_soundCard1OutDeviceNum == -1)
+    {
+        wxMessageBox(wxString::Format(
+            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
+            wxGetApp().m_soundCard1OutDeviceName), wxT("Sound Device Removed"), wxOK, this);
+        canRun = false;
+    }
+    else if (canRun && wxGetApp().m_soundCard2InDeviceName != "none" && g_soundCard2InDeviceNum == -1)
+    {
+        wxMessageBox(wxString::Format(
+            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
+            wxGetApp().m_soundCard2InDeviceName), wxT("Sound Device Removed"), wxOK, this);
+        canRun = false;
+    }
+    else if (canRun && wxGetApp().m_soundCard2OutDeviceName != "none" && g_soundCard2OutDeviceNum == -1)
+    {
+        wxMessageBox(wxString::Format(
+            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
+            wxGetApp().m_soundCard2OutDeviceName), wxT("Sound Device Removed"), wxOK, this);
+        canRun = false;
+    }
+    
+    g_nSoundCards = 0;
+    if ((g_soundCard1InDeviceNum > -1) && (g_soundCard1OutDeviceNum > -1)) {
+        g_nSoundCards = 1;
+        if ((g_soundCard2InDeviceNum > -1) && (g_soundCard2OutDeviceNum > -1))
+            g_nSoundCards = 2;
+    }
+    
+    if (canRun && g_nSoundCards == 0)
+    {
+        // Initial setup. Remind user to configure sound cards first.
+        wxMessageBox(wxString("It looks like this is your first time running FreeDV. Please go to Tools->Audio Config... to choose your sound card(s) before using."), wxT("First Time Setup"), wxOK, this);
+        canRun = false;
+    }
+
+    return canRun;
+}
+
+
+#ifdef __UDP_SUPPORT__
+
+//----------------------------------------------------------------
+// PollUDP() - see if any commands on UDP port
+//----------------------------------------------------------------
+
+// test this puppy with netcat:
+//   $ echo "hello" | nc -u -q1 localhost 3000
+
+int MainFrame::PollUDP(void)
+{
+    // this will block until message received, so we put it in it's own thread
+
+    char buf[1024];
+    char reply[80];
+    size_t n = m_udp_sock->RecvFrom(m_udp_addr, buf, sizeof(buf)).LastCount();
+
+    if (n) {
+        wxString bufstr = wxString::From8BitData(buf, n);
+        bufstr.Trim();
+        wxString ipaddr = m_udp_addr.IPAddress();
+        printf("Received: \"%s\" from %s:%u\n",
+               (const char *)bufstr.c_str(),
+               (const char *)ipaddr.c_str(), m_udp_addr.Service());
+
+        // for security only accept commands from local host
+
+        sprintf(reply,"nope\n");
+        if (ipaddr.Cmp(_("127.0.0.1")) == 0) {
+
+            // process commands
+
+            if (bufstr.Cmp(_("restore")) == 0) {
+                m_schedule_restore = true;  // Make Restore happen in main thread to avoid crashing
+                sprintf(reply,"ok\n");
+            }
+
+            wxString itemToSet, val;
+            if (bufstr.StartsWith(_("set "), &itemToSet)) {
+                if (itemToSet.StartsWith("txtmsg ", &val)) {
+                    // note: if options dialog is open this will get overwritten
+                    wxGetApp().m_callSign = val;
+                }
+                sprintf(reply,"ok\n");
+            }
+            if (bufstr.StartsWith(_("ptton"), &itemToSet)) {
+                // note: if options dialog is open this will get overwritten
+                m_btnTogPTT->SetValue(true);
+                togglePTT();
+                sprintf(reply,"ok\n");
+            }
+            if (bufstr.StartsWith(_("pttoff"), &itemToSet)) {
+                // note: if options dialog is open this will get overwritten
+                m_btnTogPTT->SetValue(false);
+                togglePTT();
+                sprintf(reply,"ok\n");
+            }
+
+        }
+        else {
+            printf("We only accept messages from locahost!\n");
+        }
+
+       if ( m_udp_sock->SendTo(m_udp_addr, reply, strlen(reply)).LastCount() != strlen(reply)) {
+           printf("ERROR: failed to send data\n");
+        }
+    }
+
+    return n;
+}
+
+void MainFrame::startUDPThread(void) {
+    fprintf(stderr, "starting UDP thread!\n");
+    m_UDPThread = new UDPThread;
+    m_UDPThread->mf = this;
+    if (m_UDPThread->Create() != wxTHREAD_NO_ERROR ) {
+        wxLogError(wxT("Can't create thread!"));
+    }
+    if (m_UDPThread->Run() != wxTHREAD_NO_ERROR ) {
+        wxLogError(wxT("Can't start thread!"));
+        delete m_UDPThread;
+    }
+}
+
+void MainFrame::stopUDPThread(void) {
+    printf("stopping UDP thread!\n");
+    if ((m_UDPThread != NULL) && m_UDPThread->m_run) {
+        m_UDPThread->m_run = 0;
+        m_UDPThread->Wait();
+        m_UDPThread = NULL;
+    }
+}
+
+void *UDPThread::Entry() {
+    //fprintf(stderr, "UDP thread started!\n");
+    while (m_run) {
+        if (wxGetApp().m_udp_enable) {
+            printf("m_udp_enable\n");
+            mf->m_udp_addr.Service(wxGetApp().m_udp_port);
+            mf->m_udp_sock = new wxDatagramSocket(mf->m_udp_addr, wxSOCKET_NOWAIT);
+
+            while (m_run && wxGetApp().m_udp_enable) {
+                if (mf->PollUDP() == 0) {
+                    wxThread::Sleep(20);
+                }
+            }
+
+            delete mf->m_udp_sock;
+        }
+        wxThread::Sleep(20);
+    }
+    return NULL;
+}
+
+#endif
