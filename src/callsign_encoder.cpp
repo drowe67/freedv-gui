@@ -82,6 +82,12 @@ void CallsignEncoder::clearReceivedText()
 
 void CallsignEncoder::pushReceivedByte(char incomingChar)
 {
+    // If we have a valid callsign, we're done until we lose sync.
+    if (isCallsignValid())
+    {
+        return;
+    }
+    
     // If we're not in sync, we should look for a space to establish sync.
     pendingGolayBytes_.push_back(incomingChar);
     if (!textInSync_)
