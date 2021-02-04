@@ -1135,11 +1135,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     {
         if (wxGetApp().m_callsignEncoder->isCallsignValid())
         {
-            wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
-            wxString wxCallsign = m_txtCtrlCallSign->GetValue();
-            if (callsignFormat.Matches(wxCallsign) && wxGetApp().m_pskPendingCallsign != callsignFormat.GetMatch(wxCallsign, 1).ToStdString())
+            wxString rxCallsign = m_txtCtrlCallSign->GetValue();
+            if (wxGetApp().m_pskPendingCallsign != rxCallsign)
             {
-                wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
                 wxGetApp().m_pskPendingCallsign = rxCallsign.ToStdString();
                 wxGetApp().m_pskPendingSnr = snr_val;
             }
