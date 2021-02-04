@@ -22,6 +22,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <wx/regex.h>
 #include "callsign_encoder.h"
 
 extern "C" {
@@ -191,6 +192,21 @@ void CallsignEncoder::pushReceivedByte(char incomingChar)
     }
 }
 
+char* CallsignEncoder::getReceivedText() 
+{ 
+    wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
+    wxString wxCallsign = &receivedCallsign_[2];
+    if (callsignFormat.Matches(wxCallsign) && isCallsignValid())
+    {
+        // Truncate receivedCallsign_ to the portion that only consists of
+        // the callsign.
+        wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
+        receivedCallsign_[2 + rxCallsign.length()] = 0;
+    }
+    
+    return &receivedCallsign_[2]; 
+}
+
 bool CallsignEncoder::isCallsignValid() const
 {
     if (strlen(receivedCallsign_) <= 2)
@@ -201,13 +217,24 @@ bool CallsignEncoder::isCallsignValid() const
     // Retrieve received CRC and calculate the CRC from the other received text.
     unsigned char receivedCRC = convertHexStringToDigit_((char*)&receivedCallsign_[0]);
     
-    char buf[MAX_CALLSIGN];
-    memset(&buf, 0, MAX_CALLSIGN);
-    convert_callsign_to_ota_string_(&receivedCallsign_[2], &buf[0]);
-    unsigned char calcCRC = calculateCRC8_((char*)&buf, strlen(&buf[0]));
+    wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
+    wxString wxCallsign = &receivedCallsign_[2];
+    if (callsignFormat.Matches(wxCallsign))
+    {
+        wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
+        
+        char buf[MAX_CALLSIGN];
+        memset(&buf, 0, MAX_CALLSIGN);
+        convert_callsign_to_ota_string_(&receivedCallsign_[2], &buf[0]);
+        unsigned char calcCRC = calculateCRC8_((char*)&buf, rxCallsign.length());
     
-    // Return true if both are equal.
-    return receivedCRC == calcCRC;
+        // Return true if both are equal.
+        return receivedCRC == calcCRC;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 // 6 bit character set for text field use:
@@ -225,7 +252,6 @@ void CallsignEncoder::convert_callsign_to_ota_string_(const char* input, char* o
 
     for (size_t index = 0; index < strlen(input); index++)
     {
-        bool addSync = false;
         if (input[index] >= 38 && input[index] <= 47)
         {
             output[outidx++] = input[index] - 37;
