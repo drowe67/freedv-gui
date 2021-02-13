@@ -23,7 +23,7 @@
 <p>If you connect the microphone input on your computer to your radio receiver, you can decode off air signals. If you have a rig interface, try configuring that as the <em>From Radio To Computer</em> device, with your computer's sound card as the <em>From Computer To Speaker/Headphone</em> device.</p>
 <p>If you don't have anyone to transmit FreeDV signals to you, try the test wave files in the next section.</p>
 <h2 id="test-wave-files"><span class="header-section-number">2.3</span> Test Wave Files</h2>
-<p>In the <a href="https://github.com/drowe67/freedv-gui/tree/master/wav">wav</a> directory are audio files containing off-air FreeDV modem signals. There is one for each FreeDV mode. Select a FreeDV mode and press Start. Choose a file using &quot;Tools - Start/Stop Play File From Radio&quot;. You should hear decoded FreeDV speech.</p>
+<p>In https://github.com/drowe67/freedv-gui/tree/master/wav are audio files containing off-air FreeDV modem signals. There is one for each FreeDV mode. Select a FreeDV mode and press Start. Choose a file using &quot;Tools - Start/Stop Play File From Radio&quot;. You should hear decoded FreeDV speech.</p>
 <p>These files will give you a feel for what FreeDV signals sound like, and for the basic operation of the FreeDV software.</p>
 <h2 id="transmitreceive-two-sound-cards"><span class="header-section-number">2.4</span> Transmit/Receive (Two Sound Cards)</h2>
 <p>For Tx/Rx operation you need to configure two sound cards, by setting up Tools - Audio Config <em>Transmit</em> and <em>Receive</em> Tabs.</p>
@@ -127,9 +127,12 @@
 <h2 id="cant-hear-anything-on-receive"><span class="header-section-number">3.5</span> Can't hear anything on receive</h2>
 <p>Many FreeDV modes will not play any audio if there is no valid signal. You may also have squelch set too high. In some modes the <strong>Analog</strong> button will let you hear the received signal from the SSB radio.</p>
 <p>Try the Test Wave Files above to get a feel for what a FreeDV signal looks and sounds like.</p>
-<h2 id="trouble-getting-sync-with-700d"><span class="header-section-number">3.6</span> Trouble getting Sync with 700D</h2>
+<h2 id="the-signal-is-strong-but-freedv-wont-get-sync-and-decode"><span class="header-section-number">3.6</span> The signal is strong but FreeDV won't get sync and decode</h2>
+<p>Do you have the correct sideband? See USB or LSB section.</p>
+<p>Is it a FreeDV signal? SSTV uses similar frequencies. To understand what FreeDV sounds like, see the Test Wave Files section.</p>
+<h2 id="trouble-getting-sync-with-700d"><span class="header-section-number">3.7</span> Trouble getting Sync with 700D</h2>
 <p>You need to be within +/- 60 Hz on the transmit signal. It helps if both the Tx and Rx stations tune to known, exact frequencies such as exactly 7.177MHz. On channels with fast fading sync may take a few seconds.</p>
-<h2 id="ptt-doesnt-work.-it-works-with-fldigi-and-other-hamlib-applications."><span class="header-section-number">3.7</span> PTT doesn't work. It works with Fldigi and other Hamlib applications.</h2>
+<h2 id="ptt-doesnt-work.-it-works-with-fldigi-and-other-hamlib-applications."><span class="header-section-number">3.8</span> PTT doesn't work. It works with Fldigi and other Hamlib applications.</h2>
 <p>Many people struggle with initial PTT setup:</p>
 <ol style="list-style-type: decimal">
 <li><p>Read the PTT Configuration section above.</p></li>
@@ -139,7 +142,7 @@
 <li><p>Ask someone who already uses FreeDV to help.</p></li>
 <li><p>Contact the digital voice mailing list. Be specific about your hardware, what you have tried, and the exact nature of the problem.</p></li>
 </ol>
-<h2 id="freedv-2020-mode-is-greyed-out"><span class="header-section-number">3.8</span> FreeDV 2020 mode is greyed out</h2>
+<h2 id="freedv-2020-mode-is-greyed-out"><span class="header-section-number">3.9</span> FreeDV 2020 mode is greyed out</h2>
 <p>You must have a modern CPU with AVX support to run FreeDV 2020. If you do not have AVX the FreeDV 2020 mode button will be greyed out. A Microsoft utlity called <a href="https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo">coreinfo</a> can be also used to determine if your CPU supports AVX. A * means you have AVX, a - means no AVX:</p>
 <pre><code>AES             -       Supports AES extensions
 AVX             *       Supports AVX intruction extensions
@@ -147,13 +150,13 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <p>On Linux, you can check for <code>avx</code> in the <strong>flags</strong> section of <code>/proc/cpuinfo</code> or the output of the <code>lscpu</code> command:</p>
 <pre><code>lscpu | grep -o &quot;avx[^ ]*&quot;</code></pre>
 <p>will display <code>avx</code> (or <code>avx2</code>) if your CPU supports the instructions.</p>
-<h2 id="freedv-2020-mode-is-slow-on-arm-macs"><span class="header-section-number">3.9</span> FreeDV 2020 mode is slow on ARM Macs</h2>
+<h2 id="freedv-2020-mode-is-slow-on-arm-macs"><span class="header-section-number">3.10</span> FreeDV 2020 mode is slow on ARM Macs</h2>
 <p>Preliminary testing on ARM Macs has shown that NEON optimizations in LPCNet are sufficient to allow 2020 to be whitelisted on those machines. However, this is definitely experimental. If you are experiencing issues with 2020 mode on these Macs, please let the development team know so that further investigation can be done.</p>
-<h2 id="i-installed-a-new-version-and-freedv-stopped-working"><span class="header-section-number">3.10</span> I installed a new version and FreeDV stopped working</h2>
-<p>You may need to clean out the previous configuration. Try Tools-Restore Defaults.</p>
-<h2 id="freedv-crashes-when-i-press-start"><span class="header-section-number">3.11</span> FreeDV crashes when I press Start</h2>
-<p>Have you removed/changed USB audio devices? If you remove/change USB audio devices without pressing Tools/Audio Config, FreeDV may crash. See Changing Audio Devices above.</p>
-<h2 id="freedv-cant-be-opened-on-osx-because-the-developer-cannot-be-verified"><span class="header-section-number">3.12</span> FreeDV can't be opened on OSX because the developer cannot be verified</h2>
+<h2 id="i-installed-a-new-version-and-freedv-stopped-working"><span class="header-section-number">3.11</span> I installed a new version and FreeDV stopped working</h2>
+<p>You may need to clean out the previous configuration. Try Tools - Restore Defaults. Set up your sound cards again with Tools - Audio Config.</p>
+<h2 id="freedv-crashes-when-i-press-start"><span class="header-section-number">3.12</span> FreeDV crashes when I press Start</h2>
+<p>Have you removed/changed USB audio devices? If you remove/change USB audio devices without pressing Tools - Audio Config, FreeDV may crash. See Changing Audio Devices above.</p>
+<h2 id="freedv-cant-be-opened-on-osx-because-the-developer-cannot-be-verified"><span class="header-section-number">3.13</span> FreeDV can't be opened on OSX because the developer cannot be verified</h2>
 <p>From January 2020 Apple is enforcing notarization for all OSX applications. The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.</p>
 <div class="figure">
 <img src="contrib/osx_notarization1.png" alt="Notarization Error" />
