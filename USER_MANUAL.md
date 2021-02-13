@@ -53,12 +53,7 @@ test wave files in the next section.
 
 ## Test Wave Files
 
-In the
-[wav](https://github.com/drowe67/freedv-gui/tree/master/wav)
-directory are audio files containing off-air FreeDV modem
-signals. There is one for each FreeDV mode.  Select a FreeDV mode and
-press Start.  Choose a file using "Tools - Start/Stop Play File From
-Radio".  You should hear decoded FreeDV speech.
+In https://github.com/drowe67/freedv-gui/tree/master/wav are audio files containing off-air FreeDV modem signals. There is one for each FreeDV mode.  Select a FreeDV mode and press Start.  Choose a file using "Tools - Start/Stop Play File From Radio".  You should hear decoded FreeDV speech.
 
 These files will give you a feel for what FreeDV signals sound like,
 and for the basic operation of the FreeDV software.
@@ -239,6 +234,12 @@ button will let you hear the received signal from the SSB radio.
 Try the Test Wave Files above to get a feel for what a FreeDV signal
 looks and sounds like.
 
+## The signal is strong but FreeDV won't get sync and decode
+
+Do you have the correct sideband? See USB or LSB section.
+
+Is it a FreeDV signal?  SSTV uses similar frequencies. To understand what FreeDV sounds like, see the Test Wave Files section.
+
 ## Trouble getting Sync with 700D
 
 You need to be within +/- 60 Hz on the transmit signal.  It helps if
@@ -294,12 +295,11 @@ Macs, please let the development team know so that further investigation can be 
 
 ## I installed a new version and FreeDV stopped working
 
-You may need to clean out the previous configuration.  Try
-Tools-Restore Defaults.
+You may need to clean out the previous configuration.  Try Tools - Restore Defaults.  Set up your sound cards again with Tools - Audio Config.
 
 ## FreeDV crashes when I press Start
 
-Have you removed/changed USB audio devices? If you remove/change USB audio devices without pressing Tools/Audio Config, FreeDV may crash.  See Changing Audio Devices above.
+Have you removed/changed USB audio devices? If you remove/change USB audio devices without pressing Tools - Audio Config, FreeDV may crash.  See Changing Audio Devices above.
 
 ## FreeDV can't be opened on OSX because the developer cannot be verified
 
