@@ -6,23 +6,25 @@ For the following instructions, I'm assuming you will be placing everything in:
 1/ DEPENDENCIES
 Using MacPorts, most of the appropriate dependencies can be installed by:
 
-$ sudo port install subversion git libtool libsamplerate sox cmake
+$ sudo port install subversion git libtool libsamplerate +universal sox +universal cmake
 
 It should be fairly similar using HomeBrew, but you will need to replace all the /opt/ paths in the following instructions.
+
+Note: If using an ARM Mac, you may need to build and install the Git version of MacPorts first. See https://guide.macports.org/#installing.macports.git for more details on how to do this.
 
 2/ BUILDING FREEDV 
 Get the FreeDV source by either:
 
-Getting the current 'stable' release (1.5.1):
-$ wget http://files.freedv.org/freedv/freedv-1.5.1.tar.gz
-$ tar -xzf freedv-1.5.1.tar.gz
+Getting the current 'stable' release (1.5.2):
+$ wget http://files.freedv.org/freedv/freedv-1.5.2.tar.gz
+$ tar -xzf freedv-1.5.2.tar.gz
 
 or
 
 Checking the latest revision out from Github:
 $ git clone https://github.com/drowe67/freedv-gui.git
 
-$ cd freedv-1.5.1
+$ cd freedv-1.5.2
 or 
 $ cd freedv-master
 

@@ -678,6 +678,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.5.2 January 2021
+
+1. Updates storage for sound card configuration to use device names instead of IDs.
+2. Detects changes to computer sound card configuration and notifies user when devices go away.
+
 ## V1.5.1 January 2021
 
 1. Experimental support for reporting to [PSK Reporter](https://pskreporter.info) added.
