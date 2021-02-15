@@ -24,6 +24,8 @@
 #include <vector>
 #include <algorithm>
 
+#include <wx/settings.h>
+
 #define TOK_CIVADDR TOKEN_BACKEND(1)
 
 extern int g_verbose;
@@ -305,7 +307,7 @@ void Hamlib::update_mode_status()
         (m_vhfUhfMode && m_currFreq >= 29510000 && (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_PKTFM));
     if (isMatchingMode)
     {
-        m_modeBox->SetForegroundColour(wxColor(*wxBLACK));
+        m_modeBox->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
     }
     else
     {
