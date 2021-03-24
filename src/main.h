@@ -96,6 +96,7 @@
 #include "serialport.h" 
 #include "pskreporter.h"
 #include "callsign_encoder.h"
+#include "codec2_interface.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -710,10 +711,6 @@ int resample(SRC_STATE *src,
              int        length_input_short
              );
 void txRxProcessing();
-void per_frame_rx_processing(
-                                        FIFO    *output_fifo,   // decoded speech samples
-                                        FIFO    *input_fifo     // modem samples input to demod
-                                    );
 
 // FreeDv API calls this when there is a test frame that needs a-plottin'
 

@@ -19,7 +19,8 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 extern SNDFILE *g_sfPlayFile;
 extern bool g_playFileToMicIn;
 extern bool g_loopPlayFileToMicIn;
-extern struct freedv *g_pfreedv;
+extern Codec2Interface codec2Interface;
+
 int MainFrame::VoiceKeyerStartTx(void)
 {
     int next_state;
@@ -99,7 +100,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         // delay timer or valid sync
 
         if (vk_event == VK_DT) {
-            if (freedv_get_sync(g_pfreedv) == 1) {
+            if (codec2Interface.getSync() == 1) {
                 // if we detect sync transition to SYNC_WAIT state
                 next_state = VK_SYNC_WAIT;
                 vk_rx_sync_time = 0.0;
@@ -129,7 +130,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         }
 
         if (vk_event == VK_DT) {
-            if (freedv_get_sync(g_pfreedv) == 0) {
+            if (codec2Interface.getSync() == 0) {
                 // if we lose sync transition to RX State
                 next_state = VK_RX;
             } else {

@@ -12,7 +12,7 @@ extern float           g_RxFreqOffsetHz;
 extern float           g_TxFreqOffsetHz;
 extern int            *g_split;
 extern int             g_mode;
-extern struct freedv  *g_pfreedv;
+extern Codec2Interface codec2Interface;
 
 void clickTune(float freq) {
 
@@ -137,14 +137,6 @@ void my_put_next_rx_char(void *callback_state, char c) {
     codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
 }
 
-// Callback from FreeDv API to update error plots
-struct FIFO extern *g_error_pattern_fifo;
-void my_freedv_put_error_pattern(void *state, short error_pattern[], int sz_error_pattern) {
-    codec2_fifo_write(g_error_pattern_fifo, error_pattern, sz_error_pattern);
-    //fprintf(stderr, "my_freedv_put_error_pattern: sz_error_pattern: %d ret: %d used: %d\n",
-    //        sz_error_pattern, ret, codec2_fifo_used(g_error_pattern_fifo) );
-}
-
 void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin)
 {
     COMP  foff_rect;
@@ -239,7 +231,7 @@ void MainFrame::DetectSyncProcessEvent(void) {
     switch(ds_state) {
 
     case DS_IDLE:
-        if (freedv_get_sync(g_pfreedv) == 1) {
+        if (codec2Interface.getSync() == 1) {
             next_state = DS_SYNC_WAIT;
             ds_rx_time = 0;
         }
@@ -250,7 +242,7 @@ void MainFrame::DetectSyncProcessEvent(void) {
         // In this state we wait fo a few seconds of valid sync, then
         // send UDP message
 
-        if (freedv_get_sync(g_pfreedv) == 0) {
+        if (codec2Interface.getSync() == 0) {
             next_state = DS_IDLE;
         } else {
             ds_rx_time += DT;
@@ -270,7 +262,7 @@ void MainFrame::DetectSyncProcessEvent(void) {
 
         // In this state we wait for sync to end
 
-        if (freedv_get_sync(g_pfreedv) == 0) {
+        if (codec2Interface.getSync() == 0) {
             ds_rx_time += DT;
             if (ds_rx_time >= DS_SYNC_WAIT_TIME) {
                 next_state = DS_IDLE;

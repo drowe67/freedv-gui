@@ -25,6 +25,7 @@
 #include "main.h"
 #include "osx_interface.h"
 #include "callsign_encoder.h"
+#include "codec2_interface.h"
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
@@ -46,7 +47,8 @@ extern "C" {
 int                 g_verbose;
 int                 g_Nc;
 int                 g_mode;
-struct freedv      *g_pfreedv;
+
+Codec2Interface     codec2Interface;
 struct MODEM_STATS  g_stats;
 float               g_pwr_scale;
 int                 g_clip;
@@ -60,7 +62,6 @@ int                 g_test_frame_count;
 int                 g_channel_noise;
 int                 g_resyncs;
 float               g_sig_pwr_av = 0.0;
-struct FIFO        *g_error_pattern_fifo;
 short              *g_error_hist, *g_error_histn;
 float               g_tone_phase;
 
@@ -168,13 +169,6 @@ FILE *g_logfile;
 // UDP socket available to send messages
 
 extern wxDatagramSocket *g_sock;
-
-#ifdef __HORUS__
-// Horus Balloon telemetry support
-
-struct horus *g_horus;
-SRC_STATE    *g_horus_src;
-#endif
 
 // WxWidgets - initialize the application
 
@@ -527,10 +521,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
         m_rb800xa->SetValue(1);
     if (mode == 7)
         m_rb2400b->SetValue(1);
-#ifdef __HORUS__
-    if (mode == 8)
-        m_rbHorusBinary->SetValue(1);
-#endif
     if ((mode == 9) && isAvxPresent)
         m_rb2020->SetValue(1);
     pConfig->SetPath(wxT("/"));
@@ -774,10 +764,6 @@ MainFrame::~MainFrame()
             mode = 6;
         if (m_rb2400b->GetValue())
             mode = 7;
-#ifdef __HORUS__
-        if (m_rbHorusBinary->GetValue())
-            mode = 8;
-#endif
         if (m_rb2020->GetValue())
             mode = 9;
        pConfig->Write(wxT("/Audio/mode"), mode);
@@ -871,8 +857,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     /* update scatter/eye plot ------------------------------------------------------------*/
 
-    if (g_mode != -1 ) {
-        if ((g_mode == FREEDV_MODE_800XA) || (g_mode == FREEDV_MODE_2400B) ) {
+    if (codec2Interface.isRunning()) {
+        int currentMode = codec2Interface.getCurrentMode();
+        if ((currentMode == FREEDV_MODE_800XA) || (currentMode == FREEDV_MODE_2400B) ) {
 
             /* FSK Mode - eye diagram ---------------------------------------------------------*/
 
@@ -887,14 +874,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             /* PSK Modes - scatter plot -------------------------------------------------------*/
             for (r=0; r<g_stats.nr; r++) {
 
-                if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600)
-                        || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700D)
-                        || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700E)
-                        || (freedv_get_mode(g_pfreedv) == FREEDV_MODE_2020)) {
+                if ((currentMode == FREEDV_MODE_1600) ||
+                    (currentMode == FREEDV_MODE_700D) ||
+                    (currentMode == FREEDV_MODE_700E) ||
+                    (currentMode == FREEDV_MODE_2020)) {
                     m_panelScatter->add_new_samples_scatter(&g_stats.rx_symbols[r][0]);
                 }
 
-                if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
+                if (currentMode == FREEDV_MODE_700C) {
 
                     if (wxGetApp().m_FreeDV700Combine) {
                         m_panelScatter->setNc(g_Nc/2); /* m_FreeDV700Combine may have changed at run time */
@@ -1184,48 +1171,31 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
     g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
 
-    if (g_mode == -1)  {
-#ifdef __HORUS__
-        // Horus telemetry
-        char bits[80], freqoffset[80];
-        sprintf(bits, "Bits: %d", horus_get_total_payload_bits(g_horus)); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
-        sprintf(freqoffset, "FrqOff: %4.0f", g_stats.foff);
-        wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
-        /* can't get sensible number for this, perhaps as it's a burst modem */
-        //sprintf(clockoffset, "ClkOff: %5d", (int)round(g_stats.clock_offset*1E6));
-        //wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
-#endif
-    }
-    else {
-        // set some run time options (if applicable to this mode)
-
-        freedv_set_clip(g_pfreedv, (int)wxGetApp().m_FreeDV700txClip);   // 700C/700D/700E/2020
-        freedv_set_tx_bpf(g_pfreedv, (int)wxGetApp().m_FreeDV700txBPF);  // 700D/700E
-        freedv_set_phase_est_bandwidth_mode(g_pfreedv, (int)wxGetApp().m_PhaseEstBW); // 700D/2020
-        freedv_set_dpsk(g_pfreedv, (int)wxGetApp().m_PhaseEstDPSK);  // 700D/2020
+    if (g_mode != -1)  {
+        // set some run time options (if applicable)
+        codec2Interface.setRunTimeOptions(
+            (int)wxGetApp().m_FreeDV700txClip,
+            (int)wxGetApp().m_FreeDV700txBPF,
+            (int)wxGetApp().m_PhaseEstBW,
+            (int)wxGetApp().m_PhaseEstDPSK);
 
         // Test Frame Bit Error Updates ------------------------------------
 
         // Toggle test frame mode at run time
 
-        if (!freedv_get_test_frames(g_pfreedv) && wxGetApp().m_testFrames) {
-
+        if (!codec2Interface.usingTestFrames() && wxGetApp().m_testFrames) {
             // reset stats on check box off to on transition
-
-            freedv_set_test_frames(g_pfreedv, 1);
-            freedv_set_total_bits(g_pfreedv, 0);
-            freedv_set_total_bit_errors(g_pfreedv, 0);
+            codec2Interface.resetTestFrameStats();
         }
-        freedv_set_test_frames(g_pfreedv, wxGetApp().m_testFrames);
-        freedv_set_test_frames_diversity(g_pfreedv, wxGetApp().m_FreeDV700Combine);
+        codec2Interface.setTestFrames(wxGetApp().m_testFrames, wxGetApp().m_FreeDV700Combine);
         g_channel_noise = wxGetApp().m_channel_noise;
 
         // update stats on main page
 
         char bits[80], errors[80], ber[80], resyncs[80], clockoffset[80], freqoffset[80], syncmetric[80];
-        sprintf(bits, "Bits: %d", freedv_get_total_bits(g_pfreedv)); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
-        sprintf(errors, "Errs: %d", freedv_get_total_bit_errors(g_pfreedv)); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
-        float b = (float)freedv_get_total_bit_errors(g_pfreedv)/(1E-6+freedv_get_total_bits(g_pfreedv));
+        sprintf(bits, "Bits: %d", codec2Interface.getTotalBits()); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
+        sprintf(errors, "Errs: %d", codec2Interface.getTotalBitErrors()); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
+        float b = (float)codec2Interface.getTotalBitErrors()/(1E-6+codec2Interface.getTotalBits());
         sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
         sprintf(resyncs, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
 
@@ -1235,10 +1205,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
 
         // Codec 2 700C VQ "auto EQ" equaliser variance
-        if ((g_mode == FREEDV_MODE_700C) || (g_mode == FREEDV_MODE_700D) || (g_mode == FREEDV_MODE_700E)) {
-            struct CODEC2 *c2 = freedv_get_codec2(g_pfreedv);
-            assert(c2 != NULL);
-            float var = codec2_get_var(c2);
+        int currentMode = codec2Interface.getCurrentMode();
+        if ((currentMode == FREEDV_MODE_700C) || (currentMode == FREEDV_MODE_700D) || (currentMode == FREEDV_MODE_700E)) {
+            auto var = codec2Interface.getVariance();
             char var_str[80]; sprintf(var_str, "Var: %4.1f", var);
             wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
         }
@@ -1249,91 +1218,86 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
 
             // update error pattern plots if supported
-
-            int sz_error_pattern = freedv_get_sz_error_pattern(g_pfreedv);
-            //fprintf(stderr, "sz_error_pattern: %d\n", sz_error_pattern);
+            short* error_pattern = nullptr;
+            int sz_error_pattern = codec2Interface.getErrorPattern(&error_pattern);
             if (sz_error_pattern) {
-                short error_pattern[sz_error_pattern];
+                int i,b;
 
-                if (codec2_fifo_read(g_error_pattern_fifo, error_pattern, sz_error_pattern) == 0) {
-                    int i,b;
+                /* both modes map IQ to alternate bits, but on same carrier */
 
-                    /* both modes map IQ to alternate bits, but on same carrier */
+                if (codec2Interface.getCurrentMode() == FREEDV_MODE_1600) {
+                    /* FreeDV 1600 mapping from error pattern to two bits on each carrier */
 
-                    if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_1600) {
-                        /* FreeDV 1600 mapping from error pattern to two bits on each carrier */
-
-                        for(b=0; b<g_Nc*2; b++) {
-                            for(i=b; i<sz_error_pattern; i+= 2*g_Nc) {
-                                m_panelTestFrameErrors->add_new_sample(b, b + 0.8*error_pattern[i]);
-                                g_error_hist[b] += error_pattern[i];
-                                g_error_histn[b]++;
-                            }
-                            //if (b%2)
-                            //    printf("g_error_hist[%d]: %d\n", b/2, g_error_hist[b/2]);
+                    for(b=0; b<g_Nc*2; b++) {
+                        for(i=b; i<sz_error_pattern; i+= 2*g_Nc) {
+                            m_panelTestFrameErrors->add_new_sample(b, b + 0.8*error_pattern[i]);
+                            g_error_hist[b] += error_pattern[i];
+                            g_error_histn[b]++;
                         }
-
-                         /* calculate BERs and send to plot */
-
-                        float ber[2*MODEM_STATS_NC_MAX];
-                        for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
-                            ber[b] = 0.0;
-                        }
-                        for(b=0; b<g_Nc*2; b++) {
-                            ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
-                        }
-                        assert(g_Nc*2 <= 2*MODEM_STATS_NC_MAX);
-                        m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
+                        //if (b%2)
+                        //    printf("g_error_hist[%d]: %d\n", b/2, g_error_hist[b/2]);
                     }
 
-                    if ((freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C)) {
-                        int c;
-                        //fprintf(stderr, "after g_error_pattern_fifo read 2\n");
+                     /* calculate BERs and send to plot */
 
-                        /*
-                           FreeDV 700 mapping from error pattern to bit on each carrier, see
-                           data bit to carrier mapping in:
-
-                              codec2-dev/octave/cohpsk_frame_design.ods
-
-                           We can plot a histogram of the errors/carrier before or after diversity
-                           recombination.  Actually one bar for each IQ bit in carrier order.
-                        */
-
-                        int hist_Nc = sz_error_pattern/4;
-                        //fprintf(stderr, "hist_Nc: %d\n", hist_Nc);
-
-                        for(i=0; i<sz_error_pattern; i++) {
-                            /* maps to IQ bits from each symbol to a "carrier" (actually one line for each IQ bit in carrier order) */
-                            c = floor(i/4);
-                            /* this will clock in 4 bits/carrier to plot */
-                            m_panelTestFrameErrors->add_new_sample(c, c + 0.8*error_pattern[i]);
-                            g_error_hist[c] += error_pattern[i];
-                            g_error_histn[c]++;
-                            //printf("i: %d c: %d\n", i, c);
-                        }
-                        for(; i<2*MODEM_STATS_NC_MAX*4; i++) {
-                            c = floor(i/4);
-                            m_panelTestFrameErrors->add_new_sample(c, c);
-                            //printf("i: %d c: %d\n", i, c);
-                        }
-
-                        /* calculate BERs and send to plot */
-
-                        float ber[2*MODEM_STATS_NC_MAX];
-                        for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
-                            ber[b] = 0.0;
-                        }
-                        for(b=0; b<hist_Nc; b++) {
-                            ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
-                        }
-                        assert(hist_Nc <= 2*MODEM_STATS_NC_MAX);
-                        m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
+                    float ber[2*MODEM_STATS_NC_MAX];
+                    for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
+                        ber[b] = 0.0;
                     }
-
-                    m_panelTestFrameErrors->Refresh();
-                    m_panelTestFrameErrorsHist->Refresh();
+                    for(b=0; b<g_Nc*2; b++) {
+                        ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
+                    }
+                    assert(g_Nc*2 <= 2*MODEM_STATS_NC_MAX);
+                    m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
                 }
+
+                if ((codec2Interface.getCurrentMode() == FREEDV_MODE_700C)) {
+                    int c;
+                    //fprintf(stderr, "after g_error_pattern_fifo read 2\n");
+
+                    /*
+                       FreeDV 700 mapping from error pattern to bit on each carrier, see
+                       data bit to carrier mapping in:
+
+                          codec2-dev/octave/cohpsk_frame_design.ods
+
+                       We can plot a histogram of the errors/carrier before or after diversity
+                       recombination.  Actually one bar for each IQ bit in carrier order.
+                    */
+
+                    int hist_Nc = sz_error_pattern/4;
+                    //fprintf(stderr, "hist_Nc: %d\n", hist_Nc);
+
+                    for(i=0; i<sz_error_pattern; i++) {
+                        /* maps to IQ bits from each symbol to a "carrier" (actually one line for each IQ bit in carrier order) */
+                        c = floor(i/4);
+                        /* this will clock in 4 bits/carrier to plot */
+                        m_panelTestFrameErrors->add_new_sample(c, c + 0.8*error_pattern[i]);
+                        g_error_hist[c] += error_pattern[i];
+                        g_error_histn[c]++;
+                        //printf("i: %d c: %d\n", i, c);
+                    }
+                    for(; i<2*MODEM_STATS_NC_MAX*4; i++) {
+                        c = floor(i/4);
+                        m_panelTestFrameErrors->add_new_sample(c, c);
+                        //printf("i: %d c: %d\n", i, c);
+                    }
+
+                    /* calculate BERs and send to plot */
+
+                    float ber[2*MODEM_STATS_NC_MAX];
+                    for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
+                        ber[b] = 0.0;
+                    }
+                    for(b=0; b<hist_Nc; b++) {
+                        ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
+                    }
+                    assert(hist_Nc <= 2*MODEM_STATS_NC_MAX);
+                    m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
+                }
+
+                m_panelTestFrameErrors->Refresh();
+                m_panelTestFrameErrorsHist->Refresh();
             }
         }
 
@@ -1459,9 +1423,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb700e->Disable();
         m_rb800xa->Disable();
         m_rb2400b->Disable();
-#ifdef __HORUS__
-        m_rbHorusBinary->Disable();
-#endif
         m_rb2020->Disable();
 
         m_textSync->Enable();
@@ -1499,23 +1460,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (m_rb2400b->GetValue()) {
             g_mode = FREEDV_MODE_2400B;
         }
-#ifdef __HORUS__
-        if (m_rbHorusBinary->GetValue()) {
-            g_mode = -1;  /* TODO; a better way of handling (enumerating?) non-freedv modes */
-
-            g_horus = horus_open(HORUS_MODE_BINARY);
-            horus_set_verbose(g_horus, g_freedv_verbose);
-
-            /* init a sample rate converted for monitoring modem signal */
-
-            int src_error;
-            g_horus_src = src_new(SRC_SINC_FASTEST, 1, &src_error);
-            assert(g_horus_src != NULL);
-
-            m_textSync->Disable();
-            g_modemInbufferSize = (int)(FRAME_DURATION * horus_get_Fs(g_horus));
-        }
-#endif
         if (m_rb2020->GetValue() && isAvxPresent) {
             g_mode = FREEDV_MODE_2020;
             g_Nc = 31;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
@@ -1530,33 +1474,38 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_btnTogPTT->Enable();
             m_togBtnVoiceKeyer->Enable();
 
-            if ((g_mode == FREEDV_MODE_700D) || (g_mode == FREEDV_MODE_700E) || (g_mode == FREEDV_MODE_2020)) {
-                // 700D has some init time stuff so treat it special
-                struct freedv_advanced adv;
-                g_pfreedv = freedv_open_advanced(g_mode, &adv);
-                if (wxGetApp().m_FreeDV700ManualUnSync) {
-                    freedv_set_sync(g_pfreedv, FREEDV_SYNC_MANUAL);
-                } else {
-                    freedv_set_sync(g_pfreedv, FREEDV_SYNC_AUTO);
-                }
+            // TBD: config option
+            int rxModes[] = {
+                FREEDV_MODE_1600,
+                //FREEDV_MODE_2400B,
+                //FREEDV_MODE_800XA,
+                FREEDV_MODE_700C,
+                FREEDV_MODE_700D,
+                FREEDV_MODE_2020,
+                FREEDV_MODE_700E  
+            };
+            for (auto& mode : rxModes)
+            {
+                codec2Interface.addRxMode(mode);
+            }
+            
+            //codec2Interface.addRxMode(g_mode);
+            codec2Interface.start(g_mode, wxGetApp().m_fifoSize_ms);
+            if (wxGetApp().m_FreeDV700ManualUnSync) {
+                codec2Interface.setSync(FREEDV_SYNC_MANUAL);
             } else {
-                g_pfreedv = freedv_open(g_mode);
+                codec2Interface.setSync(FREEDV_SYNC_AUTO);
             }
 
             // Codec 2 VQ Equaliser
-            if ((g_mode == FREEDV_MODE_700C) || (g_mode == FREEDV_MODE_700D) || (g_mode == FREEDV_MODE_700E)) {
-                freedv_set_eq(g_pfreedv, wxGetApp().m_700C_EQ);
-            }
+            codec2Interface.setEq(wxGetApp().m_700C_EQ);
 
-            if (g_freedv_verbose)
-                freedv_set_verbose(g_pfreedv, 2);
-            else
-                freedv_set_verbose(g_pfreedv, 0);
+            // Codec2 verbosity setting
+            codec2Interface.setVerbose(g_freedv_verbose);
 
-            freedv_set_callback_txt(g_pfreedv, &my_put_next_rx_char, &my_get_next_tx_char, NULL);
+            // Text field/callsign callbacks.
+            codec2Interface.setTextCallbackFn(&my_put_next_rx_char, &my_get_next_tx_char);
 
-            freedv_set_callback_error_pattern(g_pfreedv, my_freedv_put_error_pattern, (void*)m_panelTestFrameErrors);
-            g_error_pattern_fifo = codec2_fifo_create(2*freedv_get_sz_error_pattern(g_pfreedv)+1);
             g_error_hist = new short[MODEM_STATS_NC_MAX*2];
             g_error_histn = new short[MODEM_STATS_NC_MAX*2];
             int i;
@@ -1565,41 +1514,34 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 g_error_histn[i] = 0;
             }
 
-            assert(g_pfreedv != NULL);
-
             // Set processing buffer sizes, these are FRAME_DURATION (20ms) chunks of modem and speech that are a useful size for the
             // various operations we do before and after passing to the freedv_api layer.
-            g_modemInbufferSize = (int)(FRAME_DURATION * freedv_get_modem_sample_rate(g_pfreedv));
-            g_speechOutbufferSize = (int)(FRAME_DURATION * freedv_get_speech_sample_rate(g_pfreedv));
+            g_modemInbufferSize = (int)(FRAME_DURATION * codec2Interface.getRxModemSampleRate());
+            g_speechOutbufferSize = (int)(FRAME_DURATION * codec2Interface.getRxSpeechSampleRate());
 
             // init Codec 2 LPC Post Filter (FreeDV 1600)
-
-            struct CODEC2 *c2 = freedv_get_codec2(g_pfreedv);
-            if (c2 != NULL) {
-                codec2_set_lpc_post_filter(c2,
+            codec2Interface.setLpcPostFilter(
                                            wxGetApp().m_codec2LPCPostFilterEnable,
                                            wxGetApp().m_codec2LPCPostFilterBassBoost,
                                            wxGetApp().m_codec2LPCPostFilterBeta,
                                            wxGetApp().m_codec2LPCPostFilterGamma);
-            }
 
             // Init Speex pre-processor states
             // by inspecting Speex source it seems that only denoiser is on by default
 
-            if (g_verbose) fprintf(stderr, "freedv_get_n_speech_samples(g_pfreedv): %d\n", freedv_get_n_speech_samples(g_pfreedv));
-            if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(g_pfreedv): %d\n", freedv_get_speech_sample_rate(g_pfreedv));
+            if (g_verbose) fprintf(stderr, "freedv_get_n_speech_samples(tx): %d\n", codec2Interface.getTxNumSpeechSamples());
+            if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(tx): %d\n", codec2Interface.getTxSpeechSampleRate());
 
             if (wxGetApp().m_speexpp_enable)
-                g_speex_st = speex_preprocess_state_init(freedv_get_n_speech_samples(g_pfreedv), freedv_get_speech_sample_rate(g_pfreedv));
+                g_speex_st = speex_preprocess_state_init(codec2Interface.getTxNumSpeechSamples(), codec2Interface.getTxSpeechSampleRate());
 
             // adjust spectrum and waterfall freq scaling base on mode
 
-            m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedv_get_modem_sample_rate(g_pfreedv)/2)));
-            m_panelWaterfall->setFs(freedv_get_modem_sample_rate(g_pfreedv));
+            m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(codec2Interface.getTxModemSampleRate()/2)));
+            m_panelWaterfall->setFs(codec2Interface.getTxModemSampleRate());
 
             // Init text msg decoding
-
-            freedv_set_varicode_code_num(g_pfreedv, wxGetApp().m_textEncoding);
+            codec2Interface.setTextVaricodeNum(wxGetApp().m_textEncoding);
 
             // scatter plot (PSK) or Eye (FSK) mode
 
@@ -1723,19 +1665,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         // free up states, clean up
 
-        if (g_mode == -1) {
-#ifdef __HORUS__
-            // Horus clean up
-            src_delete(g_horus_src);
-            horus_close(g_horus);
-#endif
-        }
-        else {
+        if (g_mode != -1) {
             // FreeDV clean up
             delete[] g_error_hist;
             delete[] g_error_histn;
-            codec2_fifo_destroy(g_error_pattern_fifo);
-            freedv_close(g_pfreedv);
+            codec2Interface.stop();
             if (wxGetApp().m_speexpp_enable)
                 speex_preprocess_state_destroy(g_speex_st);
         }
@@ -1755,9 +1689,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb700e->Enable();
         m_rb800xa->Enable();
         m_rb2400b->Enable();
-#ifdef __HORUS__
-        m_rbHorusBinary->Enable();
-#endif
         if(isAvxPresent)
             m_rb2020->Enable();
    }
@@ -2112,18 +2043,9 @@ void MainFrame::startRxStream()
         // to a neater design with less layers of FIFOs
 
         int modem_samplerate, rxInFifoSizeSamples, rxOutFifoSizeSamples;
-        if (g_mode == -1) {
-#ifdef __HORUS__
-            modem_samplerate = horus_get_Fs(g_horus);
-            rxInFifoSizeSamples = horus_get_max_demod_in(g_horus);
-            rxOutFifoSizeSamples = rxInFifoSizeSamples;
-#endif
-        }
-        else {
-            modem_samplerate = freedv_get_modem_sample_rate(g_pfreedv);
-            rxInFifoSizeSamples = freedv_get_n_max_modem_samples(g_pfreedv);
-            rxOutFifoSizeSamples = freedv_get_n_speech_samples(g_pfreedv);
-        }
+        modem_samplerate = codec2Interface.getRxModemSampleRate();
+        rxInFifoSizeSamples = codec2Interface.getRxNumModemSamples();
+        rxOutFifoSizeSamples = codec2Interface.getRxNumSpeechSamples();
 
         // add an extra 40ms to give a bit of headroom for processing loop adding samples
         // which operates on 20ms buffers
@@ -2398,18 +2320,14 @@ void txRxProcessing()
 
     // analog mode runs at the standard FS = 8000 Hz
 
-    if (g_mode == -1) {
-#ifdef __HORUS__
-        freedv_samplerate = horus_get_Fs(g_horus);
-#endif
+    if (g_analog) {
+        freedv_samplerate = FS;
     }
     else {
-        if (g_analog) {
-            freedv_samplerate = FS;
-        }
-        else {
-            freedv_samplerate = freedv_get_modem_sample_rate(g_pfreedv);
-        }
+        // Use the maximum modem sample rate. Any needed downconversion
+        // just prior to sending to Codec2 will happen in Codec2Interface.
+        freedv_samplerate = codec2Interface.getRxModemSampleRate();
+        //fprintf(stderr, "sample rate: %d\n", freedv_samplerate);
     }
 
     //
@@ -2420,7 +2338,7 @@ void txRxProcessing()
     {
         if (g_verbose) fprintf(stderr, "Unsyncing per user request.\n");
         g_queueResync = false;
-        freedv_set_sync(g_pfreedv, FREEDV_SYNC_UNSYNC);
+        codec2Interface.setSync(FREEDV_SYNC_UNSYNC);
         g_resyncs++;
     }
     
@@ -2483,9 +2401,7 @@ void txRxProcessing()
 
         if (g_mode != -1) {
             // send latest squelch level to FreeDV API, as it handles squelch internally
-
-            freedv_set_squelch_en(g_pfreedv, g_SquelchActive);
-            freedv_set_snr_squelch_thresh(g_pfreedv, g_SquelchLevel);
+            codec2Interface.setSquelch(g_SquelchActive, g_SquelchLevel);
         }
 
         // Optional tone interferer -----------------------------------------------------
@@ -2549,16 +2465,15 @@ void txRxProcessing()
         }
         else {
             // Write 20ms chunks of input samples for modem rx processing
-
-            codec2_fifo_write(cbData->rxinfifo, infreedv, nfreedv);
-            per_frame_rx_processing(cbData->rxoutfifo, cbData->rxinfifo);
-
+            g_State = codec2Interface.processRxAudio(
+                infreedv, nfreedv, cbData->rxoutfifo, g_channel_noise, wxGetApp().m_noise_snr, 
+                g_RxFreqOffsetHz, &g_RxFreqOffsetPhaseRect, &g_stats, &g_sig_pwr_av);
+  
             // Read 20ms chunk of samples from modem rx processing,
             // this will typically be decoded output speech, and is
             // (currently at least) fixed at a sample rate of 8 kHz
 
             memset(outfreedv, 0, sizeof(short)*g_speechOutbufferSize);
-            //fprintf(stderr, "rxoutfifo free: %d used: %d\n", codec2_fifo_free(cbData->rxoutfifo), codec2_fifo_used(cbData->rxoutfifo));
             codec2_fifo_read(cbData->rxoutfifo, outfreedv, g_speechOutbufferSize);
         }
 
@@ -2575,40 +2490,23 @@ void txRxProcessing()
         if (g_mode == -1)
             resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, freedv_samplerate);
         else
-            resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, freedv_get_speech_sample_rate(g_pfreedv));
+            resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, codec2Interface.getRxSpeechSampleRate());
 
         // resample to output sound card rate
 
         if (g_nSoundCards == 1) {
-            //fprintf(stderr, "nout %d, outfifo1 free: %d used: %d \n", nout, codec2_fifo_free(cbData->outfifo1), codec2_fifo_used(cbData->outfifo1));
-            if (g_mode == -1) {
-                // Horus demod is special case, just echo input samples as it's nice to hear the
-                // off-air modem signal
-                nout = resample(cbData->outsrc2, outsound_card, infreedv, g_soundCard1SampleRate, freedv_samplerate, N48, nfreedv);
-                codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
-            }
-            else {
-                if (g_analog) /* special case */
-                    nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_get_modem_sample_rate(g_pfreedv), N48, nfreedv);
-                else
-                    nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_get_speech_sample_rate(g_pfreedv), N48, g_speechOutbufferSize);
-                codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
-            }
+            if (g_analog) /* special case */
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, codec2Interface.getRxModemSampleRate(), N48, nfreedv);
+            else
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, codec2Interface.getRxSpeechSampleRate(), N48, g_speechOutbufferSize);
+            codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
         }
         else {
-            if (g_mode == -1) {
-                // Horus demod is special case, just echo input samples as it's nice to hear the
-                // off-air modem signal
-                nout = resample(cbData->outsrc2, outsound_card, infreedv, g_soundCard1SampleRate, freedv_samplerate, N48, nfreedv);
-                codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
-            }
-            else {
-                if (g_analog) /* special case */
-                    nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedv_get_modem_sample_rate(g_pfreedv), N48, nfreedv);
-                else
-                    nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedv_get_speech_sample_rate(g_pfreedv), N48, g_speechOutbufferSize);
-                codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
-            }
+            if (g_analog) /* special case */
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, codec2Interface.getRxModemSampleRate(), N48, nfreedv);
+            else
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, codec2Interface.getRxSpeechSampleRate(), N48, g_speechOutbufferSize);
+            codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
         }
     }
 
@@ -2628,7 +2526,7 @@ void txRxProcessing()
         // outfifo1 nice and full so we don't have any gaps ix tx
         // signal.
 
-        unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * freedv_get_n_nom_modem_samples(g_pfreedv)/freedv_samplerate;
+        unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * codec2Interface.getTxNNomModemSamples()/freedv_samplerate;
 
  	if (g_dump_fifo_state) {
 	  // If this drops to zero we have a problem as we will run out of output samples
@@ -2637,7 +2535,7 @@ void txRxProcessing()
                   codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
 	}
 
-        int nsam_in_48 = g_soundCard2SampleRate * freedv_get_n_speech_samples(g_pfreedv)/freedv_get_speech_sample_rate(g_pfreedv);
+        int nsam_in_48 = g_soundCard2SampleRate * codec2Interface.getTxNumSpeechSamples()/codec2Interface.getTxSpeechSampleRate();
         assert(nsam_in_48 < 10*N48);
         while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {
 
@@ -2654,7 +2552,7 @@ void txRxProcessing()
             memset(insound_card, 0, nsam_in_48*sizeof(short));
             codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
 
-            nout = resample(cbData->insrc2, infreedv, insound_card, freedv_get_speech_sample_rate(g_pfreedv), g_soundCard2SampleRate, 10*N48, nsam_in_48);
+            nout = resample(cbData->insrc2, infreedv, insound_card, codec2Interface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
 
             // optionally use file for mic input signal
             if (g_playFileToMicIn && (g_sfPlayFile != NULL)) {
@@ -2686,12 +2584,12 @@ void txRxProcessing()
             }
             g_mutexProtectingCallbackData.Unlock();
 
-            resample_for_plot(g_plotSpeechInFifo, infreedv, nout, freedv_get_speech_sample_rate(g_pfreedv));
+            resample_for_plot(g_plotSpeechInFifo, infreedv, nout, codec2Interface.getTxSpeechSampleRate());
 
-            nfreedv = freedv_get_n_nom_modem_samples(g_pfreedv);
+            nfreedv = codec2Interface.getTxNNomModemSamples();
 
             if (g_analog) {
-                nfreedv = freedv_get_n_speech_samples(g_pfreedv);
+                nfreedv = codec2Interface.getTxNumSpeechSamples();
 
                 // Boost the "from mic" -> "to radio" audio in analog
                 // mode.  The need for the gain was found by
@@ -2715,12 +2613,12 @@ void txRxProcessing()
 
                 if (g_mode == FREEDV_MODE_800XA || g_mode == FREEDV_MODE_2400B) {
                     /* 800XA doesn't support complex output just yet */
-                    freedv_tx(g_pfreedv, outfreedv, infreedv);
+                    codec2Interface.transmit(outfreedv, infreedv);
                 }
                 else {
-                    freedv_comptx(g_pfreedv, tx_fdm, infreedv);
+                    codec2Interface.complexTransmit(tx_fdm, infreedv);
 
-                    freq_shift_coh(tx_fdm_offset, tx_fdm, g_TxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_TxFreqOffsetPhaseRect, nfreedv);
+                    freq_shift_coh(tx_fdm_offset, tx_fdm, g_TxFreqOffsetHz, codec2Interface.getTxModemSampleRate(), &g_TxFreqOffsetPhaseRect, nfreedv);
                     for(i=0; i<nfreedv; i++)
                         outfreedv[i] = tx_fdm_offset[i].real;
                 }
@@ -2745,7 +2643,7 @@ void txRxProcessing()
             // output one frame of modem signal
 
             if (g_analog)
-                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_get_speech_sample_rate(g_pfreedv), 10*N48, nfreedv);
+                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, codec2Interface.getTxSpeechSampleRate(), 10*N48, nfreedv);
             else
                 nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, 10*N48, nfreedv);
             if (g_dump_fifo_state) {
@@ -2759,139 +2657,6 @@ void txRxProcessing()
         fprintf(stderr, "%4ld", sw.Time());
     }
 }
-
-//----------------------------------------------------------------
-// per_frame_rx_processing()
-//----------------------------------------------------------------
-
-// We need the extra layer of fifos to decouple 20ms processing loop
-// used for common processing across modes from variable size demod
-// processing.  For example demod nin is time varying to account for
-// sample clock and timing offsets and the demod processing frame
-// varies betwwen modes, e.g. 20ms (1600) or 160ms (700D)
-
-void per_frame_rx_processing(
-                             FIFO    *output_fifo,   // decoded speech samples
-                             FIFO    *input_fifo
-                             )
-{
-    int i;
-
-    if (g_mode == -1) {
-#ifdef __HORUS__
-        // Horus processing ---------------------------------------------------
-
-        int   max_nin = horus_get_max_demod_in(g_horus);
-        int   max_ascii_out = horus_get_max_ascii_out_len(g_horus);
-        //int   max_nout = max_nin*FS/horus_get_Fs(g_horus);
-        short input_buf[max_nin];
-        char  ascii_out[max_ascii_out];
-        int   nin;
-
-        nin = horus_nin(g_horus);
-        while (codec2_fifo_read(input_fifo, input_buf, nin) == 0) {
-            if (g_freedv_verbose) {
-                fprintf(stderr, "per_frame: nin = %d input_fifo free: %d used: %d\n", nin, codec2_fifo_free(input_fifo), codec2_fifo_used(input_fifo));
-            }
-            if (horus_rx(g_horus, ascii_out, input_buf, 0)) {
-                // unfort fifo deals with shorts
-                short ch;
-                for (i=0; i<(int)strlen(ascii_out); i++) {
-                    ch = (short)ascii_out[i];
-                    codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
-                }
-                ch = 13; // CR to make it appear on txt line
-                codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
-
-                UDPSend(wxGetApp().m_udp_port, ascii_out, strlen(ascii_out));
-                horus_get_modem_extended_stats(g_horus, &g_stats);
-                if (g_freedv_verbose) {
-                    fprintf(stderr, "  fsk f_est: ");
-                    for(i=0; i<horus_get_mFSK(g_horus); i++) {
-                        fprintf(stderr, "%5.0f ", g_stats.f_est[i]);
-                    }
-                    fprintf(stderr, "\n");
-                }
-            }
-
-            /* need to know how many samples demod wants next time */
-
-            nin = horus_nin(g_horus);
-            assert(nin <= max_nin);
-
-            #ifdef TT
-            // Just echo modem audio as it's useful to listen to the modem signal
-
-            // resample to 8kHz.  This is a bit annoying as it will
-            // then get resampled back to the sound card rate in
-            // txRxProcessing().  TODO: we need to add support to the
-            // freedv_api for sample rate at the speech side, not just
-            // the modem side
-
-            nout = resample(g_horus_src, output_buf, input_buf, FS, horus_get_Fs(g_horus), max_nout, nin);
-            assert(nout <= max_nout);
-            //fprintf(stderr, "nin: %d nout_max: %d nout: %d\n", nin, nout, nout_max);
-            codec2_fifo_write(output_fifo, output_buf, nout);
-            #endif
-        }
-#endif
-    }
-    else {
-        // FreeDV processing ----------------------------------------------------
-
-        short               input_buf[freedv_get_n_max_modem_samples(g_pfreedv)];
-        short               output_buf[freedv_get_n_speech_samples(g_pfreedv)];
-        COMP                rx_fdm[freedv_get_n_max_modem_samples(g_pfreedv)];
-        COMP                rx_fdm_offset[freedv_get_n_max_modem_samples(g_pfreedv)];
-        int                 nin, nout;
-
-        nin = freedv_nin(g_pfreedv);
-        //fprintf(stderr, "nin: %d max_modem_samples: %d\n", nin, freedv_get_n_max_modem_samples(g_pfreedv));
-        while (codec2_fifo_read(input_fifo, input_buf, nin) == 0) {
-            assert(nin <= freedv_get_n_max_modem_samples(g_pfreedv));
-
-            #ifdef FTEST
-            fwrite(input_buf, sizeof(short), nin, ftest);
-            #endif
-
-            // demod per frame processing
-
-            for(i=0; i<nin; i++) {
-                rx_fdm[i].real = (float)input_buf[i];
-                rx_fdm[i].imag = 0.0;
-            }
-
-            // Optional channel noise
-
-            if (g_channel_noise) {
-                fdmdv_simulate_channel(&g_sig_pwr_av, rx_fdm, nin, wxGetApp().m_noise_snr);
-            }
-
-            // Optional frequency shifting
-
-            freq_shift_coh(rx_fdm_offset, rx_fdm, g_RxFreqOffsetHz, freedv_get_modem_sample_rate(g_pfreedv), &g_RxFreqOffsetPhaseRect, nin);
-            if (g_dump_timing) {
-                fprintf(stderr,"  rx");
-            }
-            nout = freedv_comprx(g_pfreedv, output_buf, rx_fdm_offset);
-
-            codec2_fifo_write(output_fifo, output_buf, nout);
-            //fprintf(stderr, "ret = %d\n", ret);
-
-            nin = freedv_nin(g_pfreedv);
-            g_State = freedv_get_sync(g_pfreedv);
-
-            //fprintf(g_logfile, "g_State: %d g_stats.sync: %d snr: %f \n", g_State, g_stats.sync, f->snr);
-
-            // grab extended stats so we can plot spectrum, scatter diagram etc
-
-            freedv_get_modem_extended_stats(g_pfreedv, &g_stats);
-        }
-    }
-
-
-}
-
 
 //-------------------------------------------------------------------------
 // rxCallback()

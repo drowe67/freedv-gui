@@ -57,6 +57,8 @@ set(FREEDV_SOURCES
     voicekeyer.cpp
     playrec.cpp
     ongui.cpp
+    codec2_interface.cpp
+    codec2_interface.h        
 )
 
 set(FREEDV_SOURCES_OSX
