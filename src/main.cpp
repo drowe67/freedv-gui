@@ -68,6 +68,9 @@ float               g_tone_phase;
 // time averaged magnitude spectrum used for waterfall and spectrum display
 float               g_avmag[MODEM_STATS_NSPEC];
 
+// TX level for attenuation
+int g_txLevel = 100;
+
 // GUI controls that affect rx and tx processes
 int   g_SquelchActive;
 float g_SquelchLevel;
@@ -386,6 +389,13 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxGetApp().m_soundCard2InDeviceName = pConfig->Read(wxT("/Audio/soundCard2InDeviceName"), _("none"));	
     wxGetApp().m_soundCard2OutDeviceName = pConfig->Read(wxT("/Audio/soundCard2OutDeviceName"), _("none"));	
 
+    g_txLevel = pConfig->Read(wxT("/Audio/transmitLevel"), 100);
+    char fmt[5];
+    m_sliderTxLevel->SetValue(g_txLevel);
+    sprintf(fmt, "%d%%", g_txLevel);
+    wxString fmtString(fmt);
+    m_txtTxLevelNum->SetLabel(fmtString);
+    
     // Get sound card sample rates
     g_soundCard1SampleRate   = pConfig->Read(wxT("/Audio/soundCard1SampleRate"),          -1);
     g_soundCard2SampleRate   = pConfig->Read(wxT("/Audio/soundCard2SampleRate"),          -1);
@@ -702,6 +712,8 @@ MainFrame::~MainFrame()
         pConfig->Write(wxT("/Audio/soundCard1SampleRate"),    g_soundCard1SampleRate );
         pConfig->Write(wxT("/Audio/soundCard2SampleRate"),    g_soundCard2SampleRate );
 
+        pConfig->Write(wxT("/Audio/transmitLevel"), g_txLevel);
+        
         pConfig->Write(wxT("/VoiceKeyer/WaveFilePath"), wxGetApp().m_txtVoiceKeyerWaveFilePath);
         pConfig->Write(wxT("/VoiceKeyer/WaveFile"), wxGetApp().m_txtVoiceKeyerWaveFile);
         pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_intVoiceKeyerRxPause);
@@ -2650,6 +2662,12 @@ void txRxProcessing()
                 }
             }
 
+            // Attenuate signal prior to output
+            for (int i = 0; i < nfreedv; i++)
+            {
+                outfreedv[i] = outfreedv[i] * ((double)g_txLevel/100);
+            }
+            
             // output one frame of modem signal
 
             if (g_analog)

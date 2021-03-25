@@ -92,7 +92,10 @@ class TopFrame : public wxFrame
         wxTextCtrl*   m_txtCtrlCallSign;
         wxStaticText* m_txtModeStatus;
 
-        wxSlider* m_sliderSQ;
+        wxStaticText* m_txtTxLevelNum;
+        wxSlider* m_sliderTxLevel;
+        
+        wxSlider* m_sliderSQ;        
         wxCheckBox* m_ckboxSQ;
         wxStaticText* m_textSQ;
         wxStatusBar* m_statusBar1;
@@ -176,6 +179,8 @@ class TopFrame : public wxFrame
         virtual void OnReSync( wxCommandEvent& event ) { event.Skip(); }
         
         virtual void OnChangeTxMode( wxCommandEvent& event ) { event.Skip(); }
+        
+        virtual void OnChangeTxLevel( wxScrollEvent& event ) { event.Skip(); }
         
     public:
         wxToggleButton* m_togBtnOnOff;

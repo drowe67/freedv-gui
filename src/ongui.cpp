@@ -21,6 +21,7 @@ extern bool g_queueResync;
 extern short *g_error_hist, *g_error_histn;
 extern int g_resyncs;
 extern int g_Nc;
+extern int g_txLevel;
 
 //-------------------------------------------------------------------------
 // OnExitClick()
@@ -319,6 +320,23 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
     wxString sqsnr_string(sqsnr);
     m_textSQ->SetLabel(sqsnr_string);
 
+    event.Skip();
+}
+
+//-------------------------------------------------------------------------
+// OnChangeTxLevel()
+//-------------------------------------------------------------------------
+void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
+{
+    char fmt[5];
+    g_txLevel = m_sliderTxLevel->GetValue();
+    sprintf(fmt, "%d%%", g_txLevel);
+    wxString fmtString(fmt);
+    m_txtTxLevelNum->SetLabel(fmtString);
+    
+    wxConfigBase *pConfig = wxConfigBase::Get();
+    pConfig->Write(wxT("/Audio/transmitLevel"), g_txLevel);
+    
     event.Skip();
 }
 

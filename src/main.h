@@ -185,7 +185,7 @@ class MainApp : public wxApp
         wxString m_soundCard2InDeviceName;
         wxString m_soundCard1OutDeviceName;
         wxString m_soundCard2OutDeviceName;
-
+        
         // PTT -----------------------------------
 
         bool                m_boolHalfDuplex;
@@ -609,6 +609,8 @@ class MainFrame : public TopFrame
         int VoiceKeyerStartTx(void);
 
         void OnChangeTxMode( wxCommandEvent& event );
+        
+        void OnChangeTxLevel( wxScrollEvent& event );
     private:
         bool        m_useMemory;
         wxTextCtrl* m_tc;
