@@ -196,14 +196,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
             {
                 sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
                 sfInfo.channels   = 1;
-                if (g_mode == -1) {
-#ifdef __HORUS__
-                     sfInfo.samplerate = horus_get_Fs(g_horus);
-#endif
-                }
-                else {
-                    sfInfo.samplerate = freedvInterface.getRxModemSampleRate();
-                }
+                sfInfo.samplerate = freedvInterface.getRxModemSampleRate();
             }
         }
         g_sfPlayFileFromRadio = sf_open(soundFile.c_str(), SFM_READ, &sfInfo);
@@ -314,15 +307,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         wxLogDebug("soundFile: %s", soundFile);
         sfInfo.format = 0;
 
-        int sample_rate;
-        if (g_mode == -1) {
-#ifdef __HORUS__
-            sample_rate = horus_get_Fs(g_horus);
-#endif
-    }
-        else {
-            sample_rate = freedvInterface.getRxModemSampleRate();
-        }
+        int sample_rate = freedvInterface.getRxModemSampleRate();
 
         if(!extension.IsEmpty())
         {
@@ -453,15 +438,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
         wxLogDebug("soundFile: %s", soundFile);
         sfInfo.format = 0;
 
-        int sample_rate;
-        if (g_mode == -1) {
-#ifdef __HORUS__
-            sample_rate = horus_get_Fs(g_horus);
-#endif
-        }
-        else {
-            sample_rate = freedvInterface.getRxModemSampleRate();
-        }
+        int sample_rate = freedvInterface.getRxModemSampleRate();
 
         if(!extension.IsEmpty())
         {

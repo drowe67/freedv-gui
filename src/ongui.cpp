@@ -525,21 +525,15 @@ void MainFrame::OnReSync(wxCommandEvent& event)
 void MainFrame::OnBerReset(wxCommandEvent& event)
 {
     if (m_RxRunning)  {
-        if (g_mode == -1) {
-#ifdef __HORUS__
-            horus_set_total_payload_bits(g_horus, 0);
-#endif
-        } else {
-            freedvInterface.resetBitStats();
-            g_resyncs = 0;
-            int i;
-            for(i=0; i<2*g_Nc; i++) {
-                g_error_hist[i] = 0;
-                g_error_histn[i] = 0;
-            }
-            // resets variance stats every time it is called
-            freedvInterface.setEq(wxGetApp().m_700C_EQ);
+        freedvInterface.resetBitStats();
+        g_resyncs = 0;
+        int i;
+        for(i=0; i<2*g_Nc; i++) {
+            g_error_hist[i] = 0;
+            g_error_histn[i] = 0;
         }
+        // resets variance stats every time it is called
+        freedvInterface.setEq(wxGetApp().m_700C_EQ);
     }
 }
 
