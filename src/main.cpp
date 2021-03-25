@@ -402,6 +402,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     // PTT -------------------------------------------------------------------
 
     wxGetApp().m_boolHalfDuplex     = pConfig->ReadBool(wxT("/Rig/HalfDuplex"),     true);
+    wxGetApp().m_boolMultipleRx     = pConfig->ReadBool(wxT("/Rig/MultipleRx"),     false);
     wxGetApp().m_leftChannelVoxTone = pConfig->ReadBool("/Rig/leftChannelVoxTone",  false);
 
     wxGetApp().m_txtVoiceKeyerWaveFilePath = pConfig->Read(wxT("/VoiceKeyer/WaveFilePath"), wxT(""));
@@ -707,6 +708,7 @@ MainFrame::~MainFrame()
         pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_intVoiceKeyerRepeats);
 
         pConfig->Write(wxT("/Rig/HalfDuplex"),              wxGetApp().m_boolHalfDuplex);
+        pConfig->Write(wxT("/Rig/MultipleRx"), wxGetApp().m_boolMultipleRx);
         pConfig->Write(wxT("/Rig/leftChannelVoxTone"),      wxGetApp().m_leftChannelVoxTone);
         pConfig->Write("/Hamlib/UseForPTT", wxGetApp().m_boolHamlibUseForPTT);
         pConfig->Write("/Hamlib/RigName", wxGetApp().m_intHamlibRig);
@@ -1469,22 +1471,41 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_btnTogPTT->Enable();
         m_togBtnVoiceKeyer->Enable();
 
-        // TBD: config option
-        int rxModes[] = {
-            FREEDV_MODE_2020,
-            FREEDV_MODE_1600,
-            FREEDV_MODE_700E,
-            FREEDV_MODE_700C,
-            FREEDV_MODE_700D,
-            //FREEDV_MODE_2400B,
-            //FREEDV_MODE_800XA
-        };
-        for (auto& mode : rxModes)
+        if (g_mode == FREEDV_MODE_2400B || g_mode == FREEDV_MODE_800XA || !wxGetApp().m_boolMultipleRx)
         {
-            freedvInterface.addRxMode(mode);
+            m_rb1600->Disable();
+            m_rb700c->Disable();
+            m_rb700d->Disable();
+            m_rb700e->Disable();
+            m_rb800xa->Disable();
+            m_rb2400b->Disable();
+            m_rb2020->Disable();
+            freedvInterface.addRxMode(g_mode);
+        }
+        else
+        {
+            int rxModes[] = {
+                FREEDV_MODE_2020,
+                FREEDV_MODE_1600,
+                FREEDV_MODE_700E,
+                FREEDV_MODE_700C,
+                FREEDV_MODE_700D,
+                
+                // These modes require more CPU than typical (and will drive at least one core to 100% if
+                // used with the other five above), so we're excluding them from multi-RX. They also aren't
+                // selectable during a session when multi-RX is enabled.
+                //FREEDV_MODE_2400B,
+                //FREEDV_MODE_800XA
+            };
+            for (auto& mode : rxModes)
+            {
+                freedvInterface.addRxMode(mode);
+            }
+            
+            m_rb800xa->Disable();
+            m_rb2400b->Disable();
         }
         
-        //freedvInterface.addRxMode(g_mode);
         freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms);
         if (wxGetApp().m_FreeDV700ManualUnSync) {
             freedvInterface.setSync(FREEDV_SYNC_MANUAL);
@@ -1672,6 +1693,15 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_btnTogPTT->Disable();
         m_togBtnVoiceKeyer->Disable();
         m_togBtnOnOff->SetLabel(wxT("Start"));
+        
+        m_rb1600->Enable();
+        m_rb700c->Enable();
+        m_rb700d->Enable();
+        m_rb700e->Enable();
+        m_rb800xa->Enable();
+        m_rb2400b->Enable();
+        if(isAvxPresent)
+            m_rb2020->Enable();
    }
     
     optionsDlg->setSessionActive(m_RxRunning);

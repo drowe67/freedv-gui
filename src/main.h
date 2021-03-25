@@ -189,7 +189,8 @@ class MainApp : public wxApp
         // PTT -----------------------------------
 
         bool                m_boolHalfDuplex;
-
+        bool                m_boolMultipleRx;
+        
         wxString            m_txtVoiceKeyerWaveFilePath;
         wxString            m_txtVoiceKeyerWaveFile;
         int                 m_intVoiceKeyerRxPause;

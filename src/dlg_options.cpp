@@ -218,6 +218,15 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_duplex->Add(m_ckHalfDuplex, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
     sizerModem->Add(sbSizer_duplex,0, wxALL|wxEXPAND, 3);
 
+    //------------------------------
+    // Multiple RX selection
+    //------------------------------
+    wxStaticBox *sb_multirx = new wxStaticBox(m_modemTab, wxID_ANY, _("Multiple RX Operation"));
+    wxStaticBoxSizer* sbSizer_multirx = new wxStaticBoxSizer(sb_multirx, wxHORIZONTAL);
+    m_ckboxMultipleRx = new wxCheckBox(m_modemTab, wxID_ANY, _("Simultaneously Decode All HF Modes"), wxDefaultPosition, wxSize(-1,-1), 0);
+    sbSizer_multirx->Add(m_ckboxMultipleRx, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
+    sizerModem->Add(sbSizer_multirx,0, wxALL|wxEXPAND, 3);
+    
     m_modemTab->SetSizer(sizerModem);
     
     // Simulation tab
@@ -477,6 +486,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         m_ckHalfDuplex->SetValue(wxGetApp().m_boolHalfDuplex);
 
+        m_ckboxMultipleRx->SetValue(wxGetApp().m_boolMultipleRx);
+        
         m_ckboxTestFrame->SetValue(wxGetApp().m_testFrames);
 
         m_ckboxChannelNoise->SetValue(wxGetApp().m_channel_noise);
@@ -567,6 +578,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_boolHalfDuplex = m_ckHalfDuplex->GetValue();
         pConfig->Write(wxT("/Rig/HalfDuplex"), wxGetApp().m_boolHalfDuplex);
 
+        wxGetApp().m_boolMultipleRx = m_ckboxMultipleRx->GetValue();
+        pConfig->Write(wxT("/Rig/MultipleRx"), wxGetApp().m_boolMultipleRx);
+        
         /* Voice Keyer */
 
         wxGetApp().m_txtVoiceKeyerWaveFile = m_txtCtrlVoiceKeyerWaveFile->GetValue();
