@@ -1471,13 +1471,13 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         // TBD: config option
         int rxModes[] = {
+            FREEDV_MODE_2020,
             FREEDV_MODE_1600,
-            //FREEDV_MODE_2400B,
-            //FREEDV_MODE_800XA,
+            FREEDV_MODE_700E,
             FREEDV_MODE_700C,
             FREEDV_MODE_700D,
-            FREEDV_MODE_2020,
-            FREEDV_MODE_700E  
+            //FREEDV_MODE_2400B,
+            //FREEDV_MODE_800XA
         };
         for (auto& mode : rxModes)
         {
