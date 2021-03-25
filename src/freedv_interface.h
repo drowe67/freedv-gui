@@ -2,6 +2,7 @@
 #define CODEC2_INTERFACE_H
 
 #include <deque>
+#include <algorithm>
 #include "codec2.h"
 
 class FreeDVInterface
