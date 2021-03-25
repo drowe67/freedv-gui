@@ -92,7 +92,9 @@ If you change/remove USB audio devices without refreshing Tools/Audio Config, Fr
 
 Sound card levels are generally adjusted in the computer's Control
 Panel or Settings, or in some cases via controls on your rig interface
-hardware or menus on your radio.
+hardware or menus on your radio. In-app adjustments can also be done
+by using the 'TX Level' slider at the bottom of the main screen; anything
+below 100% attenuates the transmit signal.
 
 When FreeDV is running, you can observe the sound card signals in the
 main window tabs (From Radio, From Mic, To Speaker).
@@ -351,6 +353,20 @@ current mode (e.g. 700D, 1600, etc.) will also appear in the "Using" field when 
 clicking on a reception report.
 
 Note that Hamlib must be enabled so PSK Reporter can read your radio's frequency. A message will appear on pushing Start if this is not the case.
+
+# Multiple Mode Support (Experimental)
+
+FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
+
+* 2020
+* 700C/D/E
+* 1600
+
+In addition, FreeDV can allow the user to switch between the above modes for transmit without having to push "Stop" first. 
+These features can be enabled by going to Tools->Options->Modem and checking the "Simultaneously Decode All HF Modes" option. Note that
+this may consume significant additional CPU resources, which can cause decode problems. In addition, these features are automatically
+disabled if 800XA or 2400B are selected before pushing "Start" due to the significant additional CPU resources required to decode these
+modes.
 
 # FreeDV Modes
 
