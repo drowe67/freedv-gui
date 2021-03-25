@@ -1379,6 +1379,60 @@ void MainFrame::OnExit(wxCommandEvent& event)
     Destroy();
 }
 
+void MainFrame::OnChangeTxMode( wxCommandEvent& event )
+{
+    if (m_rb1600->GetValue()) 
+    {
+        g_mode = FREEDV_MODE_1600;
+        g_Nc = 16;
+        m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
+    }
+    else if (m_rb700c->GetValue()) 
+    {
+        g_mode = FREEDV_MODE_700C;
+        g_Nc = 14;
+        if (wxGetApp().m_FreeDV700Combine) {
+            m_panelScatter->setNc(g_Nc/2);  /* diversity combnation */
+        }
+        else {
+            m_panelScatter->setNc(g_Nc);
+        }
+    }
+    else if (m_rb700d->GetValue()) 
+    {
+        g_mode = FREEDV_MODE_700D;
+        g_Nc = 17;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
+        m_panelScatter->setNc(g_Nc);
+    }
+    else if (m_rb700e->GetValue()) 
+    {
+        g_mode = FREEDV_MODE_700E;
+        g_Nc = 17;
+        m_panelScatter->setNc(g_Nc);
+    }
+    else if (m_rb800xa->GetValue()) 
+    {
+        g_mode = FREEDV_MODE_800XA;
+    }
+    else if (m_rb2400b->GetValue()) 
+    {
+        g_mode = FREEDV_MODE_2400B;
+    }
+    else if (m_rb2020->GetValue()) 
+    {
+        assert(isAvxPresent);
+        
+        g_mode = FREEDV_MODE_2020;
+        g_Nc = 31;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
+        m_panelScatter->setNc(g_Nc);
+    }
+    
+    if (freedvInterface.isRunning())
+    {
+        // Need to change the TX interface live.
+        freedvInterface.changeTxMode(g_mode);
+    }
+}
 
 //-------------------------------------------------------------------------
 // OnTogBtnOnOff()
@@ -1404,54 +1458,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         vk_state = VK_IDLE;
 
-        m_rb1600->Disable();
-        m_rb700c->Disable();
-        m_rb700d->Disable();
-        m_rb700e->Disable();
-        m_rb800xa->Disable();
-        m_rb2400b->Disable();
-        m_rb2020->Disable();
-
         m_textSync->Enable();
 
         // determine what mode we are using
-
-        if (m_rb1600->GetValue()) {
-            g_mode = FREEDV_MODE_1600;
-            g_Nc = 16;
-            m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
-        }
-        if (m_rb700c->GetValue()) {
-            g_mode = FREEDV_MODE_700C;
-            g_Nc = 14;
-            if (wxGetApp().m_FreeDV700Combine) {
-                m_panelScatter->setNc(g_Nc/2);  /* diversity combnation */
-            }
-            else {
-                m_panelScatter->setNc(g_Nc);
-            }
-        }
-        if (m_rb700d->GetValue()) {
-            g_mode = FREEDV_MODE_700D;
-            g_Nc = 17;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
-            m_panelScatter->setNc(g_Nc);
-        }
-        if (m_rb700e->GetValue()) {
-            g_mode = FREEDV_MODE_700E;
-            g_Nc = 17;
-            m_panelScatter->setNc(g_Nc);
-        }
-        if (m_rb800xa->GetValue()) {
-            g_mode = FREEDV_MODE_800XA;
-        }
-        if (m_rb2400b->GetValue()) {
-            g_mode = FREEDV_MODE_2400B;
-        }
-        if (m_rb2020->GetValue() && isAvxPresent) {
-            g_mode = FREEDV_MODE_2020;
-            g_Nc = 31;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
-            m_panelScatter->setNc(g_Nc);
-        }
+        OnChangeTxMode(event);
 
         // init freedv states
         m_togBtnSplit->Enable();
@@ -1662,14 +1672,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_btnTogPTT->Disable();
         m_togBtnVoiceKeyer->Disable();
         m_togBtnOnOff->SetLabel(wxT("Start"));
-        m_rb1600->Enable();
-        m_rb700c->Enable();
-        m_rb700d->Enable();
-        m_rb700e->Enable();
-        m_rb800xa->Enable();
-        m_rb2400b->Enable();
-        if(isAvxPresent)
-            m_rb2020->Enable();
    }
     
     optionsDlg->setSessionActive(m_RxRunning);

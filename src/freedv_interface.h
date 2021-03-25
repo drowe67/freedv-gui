@@ -12,6 +12,7 @@ public:
     
     void start(int txMode, int fifoSizeMs);
     void stop();
+    void changeTxMode(int txMode);
     bool isRunning() const { return dvObjects_.size() > 0; }
     bool isModeActive(int mode) const { return std::find(enabledModes_.begin(), enabledModes_.end(), mode) != enabledModes_.end(); }
     void setRunTimeOptions(int clip, int bpf, int phaseEstBW, int phaseEstDPSK);

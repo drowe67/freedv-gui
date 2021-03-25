@@ -607,6 +607,7 @@ class MainFrame : public TopFrame
 
         int VoiceKeyerStartTx(void);
 
+        void OnChangeTxMode( wxCommandEvent& event );
     private:
         bool        m_useMemory;
         wxTextCtrl* m_tc;

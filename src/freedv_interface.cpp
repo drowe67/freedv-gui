@@ -155,6 +155,24 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs)
     assert(soundOutRateConv_ != nullptr);
 }
 
+void FreeDVInterface::changeTxMode(int txMode)
+{
+    int index = 0;
+    for (auto& mode : enabledModes_)
+    {
+        if (mode == txMode)
+        {
+            currentTxMode_ = dvObjects_[index];
+            txMode_ = mode;
+            return;
+        }
+        index++;
+    }
+    
+    // Cannot change to mode we're not already listening for.
+    assert(false);
+}
+
 void FreeDVInterface::stop()
 {
     for (auto& dv : dvObjects_)

@@ -115,7 +115,6 @@ class TopFrame : public wxFrame
         wxRadioButton *m_rb700e;
         wxRadioButton *m_rb800xa;
         wxRadioButton *m_rb1600;
-        wxRadioButton *m_rb2400a;
         wxRadioButton *m_rb2400b;
         wxRadioButton *m_rb2020;
 
@@ -175,7 +174,9 @@ class TopFrame : public wxFrame
         virtual void OnCallSignReset( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnBerReset( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnReSync( wxCommandEvent& event ) { event.Skip(); }
-
+        
+        virtual void OnChangeTxMode( wxCommandEvent& event ) { event.Skip(); }
+        
     public:
         wxToggleButton* m_togBtnOnOff;
         wxToggleButton* m_togBtnSplit;
