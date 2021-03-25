@@ -1484,8 +1484,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         }
         else
         {
+            if(isAvxPresent)
+            {
+                freedvInterface.addRxMode(FREEDV_MODE_2020);
+            }
+            
             int rxModes[] = {
-                FREEDV_MODE_2020,
                 FREEDV_MODE_1600,
                 FREEDV_MODE_700E,
                 FREEDV_MODE_700C,
