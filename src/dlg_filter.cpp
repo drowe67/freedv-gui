@@ -43,7 +43,7 @@
 #define F_STEP_DFT        10.0                       // frequency steps to sample spectrum
 #define F_MAG_N           (int)(MAX_F_HZ/F_STEP_DFT) // number of frequency steps
 
-extern Codec2Interface codec2Interface;
+extern FreeDVInterface freedvInterface;
 extern int                 g_mode;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -562,7 +562,7 @@ void FilterDlg::setBeta(void) {
 
 void FilterDlg::setCodec2(void) {
     if (m_running) {
-        codec2Interface.setLpcPostFilter(
+        freedvInterface.setLpcPostFilter(
                                        m_codec2LPCPostFilterEnable->GetValue(),
                                        m_codec2LPCPostFilterBassBoost->GetValue(),
                                        m_beta, m_gamma);
@@ -608,7 +608,7 @@ void FilterDlg::OnSpeexppEnable(wxScrollEvent& event) {
 void FilterDlg::On700C_EQ(wxScrollEvent& event) {
     wxGetApp().m_700C_EQ = m_ckbox700C_EQ->GetValue();
     if (m_running) {
-        codec2Interface.setEq(wxGetApp().m_700C_EQ);
+        freedvInterface.setEq(wxGetApp().m_700C_EQ);
     }
 }
 

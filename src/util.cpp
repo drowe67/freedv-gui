@@ -12,7 +12,7 @@ extern float           g_RxFreqOffsetHz;
 extern float           g_TxFreqOffsetHz;
 extern int            *g_split;
 extern int             g_mode;
-extern Codec2Interface codec2Interface;
+extern FreeDVInterface freedvInterface;
 
 void clickTune(float freq) {
 
@@ -231,7 +231,7 @@ void MainFrame::DetectSyncProcessEvent(void) {
     switch(ds_state) {
 
     case DS_IDLE:
-        if (codec2Interface.getSync() == 1) {
+        if (freedvInterface.getSync() == 1) {
             next_state = DS_SYNC_WAIT;
             ds_rx_time = 0;
         }
@@ -242,7 +242,7 @@ void MainFrame::DetectSyncProcessEvent(void) {
         // In this state we wait fo a few seconds of valid sync, then
         // send UDP message
 
-        if (codec2Interface.getSync() == 0) {
+        if (freedvInterface.getSync() == 0) {
             next_state = DS_IDLE;
         } else {
             ds_rx_time += DT;
@@ -262,7 +262,7 @@ void MainFrame::DetectSyncProcessEvent(void) {
 
         // In this state we wait for sync to end
 
-        if (codec2Interface.getSync() == 0) {
+        if (freedvInterface.getSync() == 0) {
             ds_rx_time += DT;
             if (ds_rx_time >= DS_SYNC_WAIT_TIME) {
                 next_state = DS_IDLE;

@@ -4,11 +4,11 @@
 #include <deque>
 #include "codec2.h"
 
-class Codec2Interface
+class FreeDVInterface
 {
 public:
-    Codec2Interface();
-    virtual ~Codec2Interface();
+    FreeDVInterface();
+    virtual ~FreeDVInterface();
     
     void start(int txMode, int fifoSizeMs);
     void stop();

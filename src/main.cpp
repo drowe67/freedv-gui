@@ -48,7 +48,7 @@ int                 g_verbose;
 int                 g_Nc;
 int                 g_mode;
 
-Codec2Interface     codec2Interface;
+FreeDVInterface     freedvInterface;
 struct MODEM_STATS  g_stats;
 float               g_pwr_scale;
 int                 g_clip;
@@ -857,8 +857,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     /* update scatter/eye plot ------------------------------------------------------------*/
 
-    if (codec2Interface.isRunning()) {
-        int currentMode = codec2Interface.getCurrentMode();
+    if (freedvInterface.isRunning()) {
+        int currentMode = freedvInterface.getCurrentMode();
         if ((currentMode == FREEDV_MODE_800XA) || (currentMode == FREEDV_MODE_2400B) ) {
 
             /* FSK Mode - eye diagram ---------------------------------------------------------*/
@@ -1173,7 +1173,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     if (g_mode != -1)  {
         // set some run time options (if applicable)
-        codec2Interface.setRunTimeOptions(
+        freedvInterface.setRunTimeOptions(
             (int)wxGetApp().m_FreeDV700txClip,
             (int)wxGetApp().m_FreeDV700txBPF,
             (int)wxGetApp().m_PhaseEstBW,
@@ -1183,19 +1183,19 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         // Toggle test frame mode at run time
 
-        if (!codec2Interface.usingTestFrames() && wxGetApp().m_testFrames) {
+        if (!freedvInterface.usingTestFrames() && wxGetApp().m_testFrames) {
             // reset stats on check box off to on transition
-            codec2Interface.resetTestFrameStats();
+            freedvInterface.resetTestFrameStats();
         }
-        codec2Interface.setTestFrames(wxGetApp().m_testFrames, wxGetApp().m_FreeDV700Combine);
+        freedvInterface.setTestFrames(wxGetApp().m_testFrames, wxGetApp().m_FreeDV700Combine);
         g_channel_noise = wxGetApp().m_channel_noise;
 
         // update stats on main page
 
         char bits[80], errors[80], ber[80], resyncs[80], clockoffset[80], freqoffset[80], syncmetric[80];
-        sprintf(bits, "Bits: %d", codec2Interface.getTotalBits()); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
-        sprintf(errors, "Errs: %d", codec2Interface.getTotalBitErrors()); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
-        float b = (float)codec2Interface.getTotalBitErrors()/(1E-6+codec2Interface.getTotalBits());
+        sprintf(bits, "Bits: %d", freedvInterface.getTotalBits()); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
+        sprintf(errors, "Errs: %d", freedvInterface.getTotalBitErrors()); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
+        float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
         sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
         sprintf(resyncs, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
 
@@ -1205,9 +1205,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
 
         // Codec 2 700C VQ "auto EQ" equaliser variance
-        int currentMode = codec2Interface.getCurrentMode();
+        int currentMode = freedvInterface.getCurrentMode();
         if ((currentMode == FREEDV_MODE_700C) || (currentMode == FREEDV_MODE_700D) || (currentMode == FREEDV_MODE_700E)) {
-            auto var = codec2Interface.getVariance();
+            auto var = freedvInterface.getVariance();
             char var_str[80]; sprintf(var_str, "Var: %4.1f", var);
             wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
         }
@@ -1219,13 +1219,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
             // update error pattern plots if supported
             short* error_pattern = nullptr;
-            int sz_error_pattern = codec2Interface.getErrorPattern(&error_pattern);
+            int sz_error_pattern = freedvInterface.getErrorPattern(&error_pattern);
             if (sz_error_pattern) {
                 int i,b;
 
                 /* both modes map IQ to alternate bits, but on same carrier */
 
-                if (codec2Interface.getCurrentMode() == FREEDV_MODE_1600) {
+                if (freedvInterface.getCurrentMode() == FREEDV_MODE_1600) {
                     /* FreeDV 1600 mapping from error pattern to two bits on each carrier */
 
                     for(b=0; b<g_Nc*2; b++) {
@@ -1251,7 +1251,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
                 }
 
-                if ((codec2Interface.getCurrentMode() == FREEDV_MODE_700C)) {
+                if ((freedvInterface.getCurrentMode() == FREEDV_MODE_700C)) {
                     int c;
                     //fprintf(stderr, "after g_error_pattern_fifo read 2\n");
 
@@ -1486,25 +1486,25 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             };
             for (auto& mode : rxModes)
             {
-                codec2Interface.addRxMode(mode);
+                freedvInterface.addRxMode(mode);
             }
             
-            //codec2Interface.addRxMode(g_mode);
-            codec2Interface.start(g_mode, wxGetApp().m_fifoSize_ms);
+            //freedvInterface.addRxMode(g_mode);
+            freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms);
             if (wxGetApp().m_FreeDV700ManualUnSync) {
-                codec2Interface.setSync(FREEDV_SYNC_MANUAL);
+                freedvInterface.setSync(FREEDV_SYNC_MANUAL);
             } else {
-                codec2Interface.setSync(FREEDV_SYNC_AUTO);
+                freedvInterface.setSync(FREEDV_SYNC_AUTO);
             }
 
             // Codec 2 VQ Equaliser
-            codec2Interface.setEq(wxGetApp().m_700C_EQ);
+            freedvInterface.setEq(wxGetApp().m_700C_EQ);
 
             // Codec2 verbosity setting
-            codec2Interface.setVerbose(g_freedv_verbose);
+            freedvInterface.setVerbose(g_freedv_verbose);
 
             // Text field/callsign callbacks.
-            codec2Interface.setTextCallbackFn(&my_put_next_rx_char, &my_get_next_tx_char);
+            freedvInterface.setTextCallbackFn(&my_put_next_rx_char, &my_get_next_tx_char);
 
             g_error_hist = new short[MODEM_STATS_NC_MAX*2];
             g_error_histn = new short[MODEM_STATS_NC_MAX*2];
@@ -1516,11 +1516,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
             // Set processing buffer sizes, these are FRAME_DURATION (20ms) chunks of modem and speech that are a useful size for the
             // various operations we do before and after passing to the freedv_api layer.
-            g_modemInbufferSize = (int)(FRAME_DURATION * codec2Interface.getRxModemSampleRate());
-            g_speechOutbufferSize = (int)(FRAME_DURATION * codec2Interface.getRxSpeechSampleRate());
+            g_modemInbufferSize = (int)(FRAME_DURATION * freedvInterface.getRxModemSampleRate());
+            g_speechOutbufferSize = (int)(FRAME_DURATION * freedvInterface.getRxSpeechSampleRate());
 
             // init Codec 2 LPC Post Filter (FreeDV 1600)
-            codec2Interface.setLpcPostFilter(
+            freedvInterface.setLpcPostFilter(
                                            wxGetApp().m_codec2LPCPostFilterEnable,
                                            wxGetApp().m_codec2LPCPostFilterBassBoost,
                                            wxGetApp().m_codec2LPCPostFilterBeta,
@@ -1529,19 +1529,19 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             // Init Speex pre-processor states
             // by inspecting Speex source it seems that only denoiser is on by default
 
-            if (g_verbose) fprintf(stderr, "freedv_get_n_speech_samples(tx): %d\n", codec2Interface.getTxNumSpeechSamples());
-            if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(tx): %d\n", codec2Interface.getTxSpeechSampleRate());
+            if (g_verbose) fprintf(stderr, "freedv_get_n_speech_samples(tx): %d\n", freedvInterface.getTxNumSpeechSamples());
+            if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(tx): %d\n", freedvInterface.getTxSpeechSampleRate());
 
             if (wxGetApp().m_speexpp_enable)
-                g_speex_st = speex_preprocess_state_init(codec2Interface.getTxNumSpeechSamples(), codec2Interface.getTxSpeechSampleRate());
+                g_speex_st = speex_preprocess_state_init(freedvInterface.getTxNumSpeechSamples(), freedvInterface.getTxSpeechSampleRate());
 
             // adjust spectrum and waterfall freq scaling base on mode
 
-            m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(codec2Interface.getTxModemSampleRate()/2)));
-            m_panelWaterfall->setFs(codec2Interface.getTxModemSampleRate());
+            m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getTxModemSampleRate()/2)));
+            m_panelWaterfall->setFs(freedvInterface.getTxModemSampleRate());
 
             // Init text msg decoding
-            codec2Interface.setTextVaricodeNum(wxGetApp().m_textEncoding);
+            freedvInterface.setTextVaricodeNum(wxGetApp().m_textEncoding);
 
             // scatter plot (PSK) or Eye (FSK) mode
 
@@ -1669,7 +1669,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             // FreeDV clean up
             delete[] g_error_hist;
             delete[] g_error_histn;
-            codec2Interface.stop();
+            freedvInterface.stop();
             if (wxGetApp().m_speexpp_enable)
                 speex_preprocess_state_destroy(g_speex_st);
         }
@@ -2043,9 +2043,9 @@ void MainFrame::startRxStream()
         // to a neater design with less layers of FIFOs
 
         int modem_samplerate, rxInFifoSizeSamples, rxOutFifoSizeSamples;
-        modem_samplerate = codec2Interface.getRxModemSampleRate();
-        rxInFifoSizeSamples = codec2Interface.getRxNumModemSamples();
-        rxOutFifoSizeSamples = codec2Interface.getRxNumSpeechSamples();
+        modem_samplerate = freedvInterface.getRxModemSampleRate();
+        rxInFifoSizeSamples = freedvInterface.getRxNumModemSamples();
+        rxOutFifoSizeSamples = freedvInterface.getRxNumSpeechSamples();
 
         // add an extra 40ms to give a bit of headroom for processing loop adding samples
         // which operates on 20ms buffers
@@ -2325,8 +2325,8 @@ void txRxProcessing()
     }
     else {
         // Use the maximum modem sample rate. Any needed downconversion
-        // just prior to sending to Codec2 will happen in Codec2Interface.
-        freedv_samplerate = codec2Interface.getRxModemSampleRate();
+        // just prior to sending to Codec2 will happen in FreeDVInterface.
+        freedv_samplerate = freedvInterface.getRxModemSampleRate();
         //fprintf(stderr, "sample rate: %d\n", freedv_samplerate);
     }
 
@@ -2338,7 +2338,7 @@ void txRxProcessing()
     {
         if (g_verbose) fprintf(stderr, "Unsyncing per user request.\n");
         g_queueResync = false;
-        codec2Interface.setSync(FREEDV_SYNC_UNSYNC);
+        freedvInterface.setSync(FREEDV_SYNC_UNSYNC);
         g_resyncs++;
     }
     
@@ -2401,7 +2401,7 @@ void txRxProcessing()
 
         if (g_mode != -1) {
             // send latest squelch level to FreeDV API, as it handles squelch internally
-            codec2Interface.setSquelch(g_SquelchActive, g_SquelchLevel);
+            freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
         }
 
         // Optional tone interferer -----------------------------------------------------
@@ -2465,7 +2465,7 @@ void txRxProcessing()
         }
         else {
             // Write 20ms chunks of input samples for modem rx processing
-            g_State = codec2Interface.processRxAudio(
+            g_State = freedvInterface.processRxAudio(
                 infreedv, nfreedv, cbData->rxoutfifo, g_channel_noise, wxGetApp().m_noise_snr, 
                 g_RxFreqOffsetHz, &g_RxFreqOffsetPhaseRect, &g_stats, &g_sig_pwr_av);
   
@@ -2490,22 +2490,22 @@ void txRxProcessing()
         if (g_mode == -1)
             resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, freedv_samplerate);
         else
-            resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, codec2Interface.getRxSpeechSampleRate());
+            resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, freedvInterface.getRxSpeechSampleRate());
 
         // resample to output sound card rate
 
         if (g_nSoundCards == 1) {
             if (g_analog) /* special case */
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, codec2Interface.getRxModemSampleRate(), N48, nfreedv);
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getRxModemSampleRate(), N48, nfreedv);
             else
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, codec2Interface.getRxSpeechSampleRate(), N48, g_speechOutbufferSize);
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, g_speechOutbufferSize);
             codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
         }
         else {
             if (g_analog) /* special case */
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, codec2Interface.getRxModemSampleRate(), N48, nfreedv);
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedvInterface.getRxModemSampleRate(), N48, nfreedv);
             else
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, codec2Interface.getRxSpeechSampleRate(), N48, g_speechOutbufferSize);
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, g_speechOutbufferSize);
             codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
         }
     }
@@ -2526,7 +2526,7 @@ void txRxProcessing()
         // outfifo1 nice and full so we don't have any gaps ix tx
         // signal.
 
-        unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * codec2Interface.getTxNNomModemSamples()/freedv_samplerate;
+        unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
 
  	if (g_dump_fifo_state) {
 	  // If this drops to zero we have a problem as we will run out of output samples
@@ -2535,7 +2535,7 @@ void txRxProcessing()
                   codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
 	}
 
-        int nsam_in_48 = g_soundCard2SampleRate * codec2Interface.getTxNumSpeechSamples()/codec2Interface.getTxSpeechSampleRate();
+        int nsam_in_48 = g_soundCard2SampleRate * freedvInterface.getTxNumSpeechSamples()/freedvInterface.getTxSpeechSampleRate();
         assert(nsam_in_48 < 10*N48);
         while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {
 
@@ -2552,7 +2552,7 @@ void txRxProcessing()
             memset(insound_card, 0, nsam_in_48*sizeof(short));
             codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
 
-            nout = resample(cbData->insrc2, infreedv, insound_card, codec2Interface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
+            nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
 
             // optionally use file for mic input signal
             if (g_playFileToMicIn && (g_sfPlayFile != NULL)) {
@@ -2584,12 +2584,12 @@ void txRxProcessing()
             }
             g_mutexProtectingCallbackData.Unlock();
 
-            resample_for_plot(g_plotSpeechInFifo, infreedv, nout, codec2Interface.getTxSpeechSampleRate());
+            resample_for_plot(g_plotSpeechInFifo, infreedv, nout, freedvInterface.getTxSpeechSampleRate());
 
-            nfreedv = codec2Interface.getTxNNomModemSamples();
+            nfreedv = freedvInterface.getTxNNomModemSamples();
 
             if (g_analog) {
-                nfreedv = codec2Interface.getTxNumSpeechSamples();
+                nfreedv = freedvInterface.getTxNumSpeechSamples();
 
                 // Boost the "from mic" -> "to radio" audio in analog
                 // mode.  The need for the gain was found by
@@ -2613,12 +2613,12 @@ void txRxProcessing()
 
                 if (g_mode == FREEDV_MODE_800XA || g_mode == FREEDV_MODE_2400B) {
                     /* 800XA doesn't support complex output just yet */
-                    codec2Interface.transmit(outfreedv, infreedv);
+                    freedvInterface.transmit(outfreedv, infreedv);
                 }
                 else {
-                    codec2Interface.complexTransmit(tx_fdm, infreedv);
+                    freedvInterface.complexTransmit(tx_fdm, infreedv);
 
-                    freq_shift_coh(tx_fdm_offset, tx_fdm, g_TxFreqOffsetHz, codec2Interface.getTxModemSampleRate(), &g_TxFreqOffsetPhaseRect, nfreedv);
+                    freq_shift_coh(tx_fdm_offset, tx_fdm, g_TxFreqOffsetHz, freedvInterface.getTxModemSampleRate(), &g_TxFreqOffsetPhaseRect, nfreedv);
                     for(i=0; i<nfreedv; i++)
                         outfreedv[i] = tx_fdm_offset[i].real;
                 }
@@ -2643,7 +2643,7 @@ void txRxProcessing()
             // output one frame of modem signal
 
             if (g_analog)
-                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, codec2Interface.getTxSpeechSampleRate(), 10*N48, nfreedv);
+                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getTxSpeechSampleRate(), 10*N48, nfreedv);
             else
                 nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, 10*N48, nfreedv);
             if (g_dump_fifo_state) {

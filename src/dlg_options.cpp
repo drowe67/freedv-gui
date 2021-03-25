@@ -22,7 +22,7 @@
 #include "dlg_options.h"
 
 extern bool                g_modal;
-extern Codec2Interface codec2Interface;
+extern FreeDVInterface freedvInterface;
 
 // PortAudio over/underflow counters
 
@@ -761,7 +761,7 @@ void OptionsDlg::OnChooseVoiceKeyerWaveFile(wxCommandEvent& event) {
 //  Run time update of carrier amplitude attenuation
 
 void OptionsDlg::OnAttnCarrierEn(wxScrollEvent& event) {
-    if (codec2Interface.isRunning())
+    if (freedvInterface.isRunning())
     {
         long attn_carrier;
         m_txtAttnCarrier->GetValue().ToLong(&attn_carrier);
@@ -770,8 +770,8 @@ void OptionsDlg::OnAttnCarrierEn(wxScrollEvent& event) {
         /* uncheck -> checked, attenuate selected carrier */
 
         if (m_ckboxAttnCarrierEn->GetValue() && !wxGetApp().m_attn_carrier_en) {
-            if (codec2Interface.isModeActive(FREEDV_MODE_700C)) {
-                codec2Interface.setCarrierAmplitude(wxGetApp().m_attn_carrier, 0.25);
+            if (freedvInterface.isModeActive(FREEDV_MODE_700C)) {
+                freedvInterface.setCarrierAmplitude(wxGetApp().m_attn_carrier, 0.25);
             } else {
                 wxMessageBox("Carrier attenuation feature only works on 700C", wxT("Warning"), wxOK | wxICON_WARNING, this);
             }
@@ -780,8 +780,8 @@ void OptionsDlg::OnAttnCarrierEn(wxScrollEvent& event) {
         /* checked -> unchecked, reset selected carrier */
 
         if (!m_ckboxAttnCarrierEn->GetValue() && wxGetApp().m_attn_carrier_en) {
-            if (codec2Interface.isModeActive(FREEDV_MODE_700C)) {
-                codec2Interface.setCarrierAmplitude(wxGetApp().m_attn_carrier, 1.0);
+            if (freedvInterface.isModeActive(FREEDV_MODE_700C)) {
+                freedvInterface.setCarrierAmplitude(wxGetApp().m_attn_carrier, 1.0);
             }
         }
     }

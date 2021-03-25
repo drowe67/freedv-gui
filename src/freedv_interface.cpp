@@ -1,6 +1,6 @@
 #include "main.h"
 
-Codec2Interface::Codec2Interface() :
+FreeDVInterface::FreeDVInterface() :
     txMode_(0),
     rxMode_(0),
     currentTxMode_(nullptr),
@@ -10,12 +10,12 @@ Codec2Interface::Codec2Interface() :
     // empty
 }
 
-Codec2Interface::~Codec2Interface()
+FreeDVInterface::~FreeDVInterface()
 {
     if (isRunning()) stop();
 }
 
-void Codec2Interface::setRunTimeOptions(int clip, int bpf, int phaseEstBW, int phaseEstDPSK)
+void FreeDVInterface::setRunTimeOptions(int clip, int bpf, int phaseEstBW, int phaseEstDPSK)
 {
     for (auto& dv : dvObjects_)
     {
@@ -26,7 +26,7 @@ void Codec2Interface::setRunTimeOptions(int clip, int bpf, int phaseEstBW, int p
     }
 }
 
-bool Codec2Interface::usingTestFrames() const
+bool FreeDVInterface::usingTestFrames() const
 {
     bool result = false;
     for (auto& dv : dvObjects_)
@@ -36,7 +36,7 @@ bool Codec2Interface::usingTestFrames() const
     return result;
 }
 
-void Codec2Interface::resetTestFrameStats()
+void FreeDVInterface::resetTestFrameStats()
 {
     for (auto& dv : dvObjects_)
     {
@@ -45,7 +45,7 @@ void Codec2Interface::resetTestFrameStats()
     resetBitStats();
 }
 
-void Codec2Interface::resetBitStats()
+void FreeDVInterface::resetBitStats()
 {
     for (auto& dv : dvObjects_)
     {
@@ -54,7 +54,7 @@ void Codec2Interface::resetBitStats()
     }
 }
 
-void Codec2Interface::setTestFrames(bool testFrames, bool combine)
+void FreeDVInterface::setTestFrames(bool testFrames, bool combine)
 {
     for (auto& dv : dvObjects_)
     {
@@ -63,24 +63,24 @@ void Codec2Interface::setTestFrames(bool testFrames, bool combine)
     }
 }
 
-int Codec2Interface::getTotalBits()
+int FreeDVInterface::getTotalBits()
 {
     return freedv_get_total_bits(currentRxMode_);
 }
 
-int Codec2Interface::getTotalBitErrors()
+int FreeDVInterface::getTotalBitErrors()
 {
     return freedv_get_total_bit_errors(currentRxMode_);
 }
 
-float Codec2Interface::getVariance() const
+float FreeDVInterface::getVariance() const
 {
     struct CODEC2 *c2 = freedv_get_codec2(currentRxMode_);
     assert(c2 != NULL);
     return codec2_get_var(c2);
 }
 
-int Codec2Interface::getErrorPattern(short** outputPattern)
+int FreeDVInterface::getErrorPattern(short** outputPattern)
 {
     int size = freedv_get_sz_error_pattern(currentRxMode_);
     if (size > 0)
@@ -109,7 +109,7 @@ static void callback_err_fn(void *fifo, short error_pattern[], int sz_error_patt
     codec2_fifo_write((struct FIFO*)fifo, error_pattern, sz_error_pattern);
 }
 
-void Codec2Interface::start(int txMode, int fifoSizeMs)
+void FreeDVInterface::start(int txMode, int fifoSizeMs)
 {
     int src_error = 0;
     for (auto& mode : enabledModes_)
@@ -155,7 +155,7 @@ void Codec2Interface::start(int txMode, int fifoSizeMs)
     assert(soundOutRateConv_ != nullptr);
 }
 
-void Codec2Interface::stop()
+void FreeDVInterface::stop()
 {
     for (auto& dv : dvObjects_)
     {
@@ -183,7 +183,7 @@ void Codec2Interface::stop()
     currentRxMode_ = nullptr;
 }
 
-void Codec2Interface::setSync(int val)
+void FreeDVInterface::setSync(int val)
 {
     for (auto& dv : dvObjects_)
     {
@@ -192,7 +192,7 @@ void Codec2Interface::setSync(int val)
     }
 }
 
-int Codec2Interface::getSync() const
+int FreeDVInterface::getSync() const
 {
     for (auto& dv : dvObjects_)
     {
@@ -202,7 +202,7 @@ int Codec2Interface::getSync() const
     return 0;    
 }
 
-void Codec2Interface::setEq(int val)
+void FreeDVInterface::setEq(int val)
 {
     int index = 0;
     for (auto& dv : dvObjects_)
@@ -216,7 +216,7 @@ void Codec2Interface::setEq(int val)
     }
 }
 
-void Codec2Interface::setCarrierAmplitude(int c, float amp)
+void FreeDVInterface::setCarrierAmplitude(int c, float amp)
 {
     int index = 0;
     for (auto& dv : dvObjects_)
@@ -230,7 +230,7 @@ void Codec2Interface::setCarrierAmplitude(int c, float amp)
     }
 }
 
-void Codec2Interface::setVerbose(bool val)
+void FreeDVInterface::setVerbose(bool val)
 {
     for (auto& dv : dvObjects_)
     {
@@ -238,7 +238,7 @@ void Codec2Interface::setVerbose(bool val)
     }
 }
 
-void Codec2Interface::setTextCallbackFn(void (*rxFunc)(void *, char), char (*txFunc)(void *))
+void FreeDVInterface::setTextCallbackFn(void (*rxFunc)(void *, char), char (*txFunc)(void *))
 {
     // TBD: we may only want to call these funcs for the active TX/RX mode.
     for (auto& dv : dvObjects_)
@@ -247,31 +247,31 @@ void Codec2Interface::setTextCallbackFn(void (*rxFunc)(void *, char), char (*txF
     }
 }
 
-int Codec2Interface::getTxModemSampleRate() const
+int FreeDVInterface::getTxModemSampleRate() const
 {
     assert(currentTxMode_ != nullptr);
     return freedv_get_modem_sample_rate(currentTxMode_);
 }
 
-int Codec2Interface::getTxSpeechSampleRate() const
+int FreeDVInterface::getTxSpeechSampleRate() const
 {
     assert(currentTxMode_ != nullptr);
     return freedv_get_speech_sample_rate(currentTxMode_);
 }
 
-int Codec2Interface::getTxNumSpeechSamples() const
+int FreeDVInterface::getTxNumSpeechSamples() const
 {
     assert(currentTxMode_ != nullptr);
     return freedv_get_n_speech_samples(currentTxMode_);   
 }
 
-int Codec2Interface::getTxNNomModemSamples() const
+int FreeDVInterface::getTxNNomModemSamples() const
 {
     assert(currentTxMode_ != nullptr);
     return freedv_get_n_nom_modem_samples(currentTxMode_);   
 }
 
-void Codec2Interface::setLpcPostFilter(int enable, int bassBoost, float beta, float gamma)
+void FreeDVInterface::setLpcPostFilter(int enable, int bassBoost, float beta, float gamma)
 {
     for (auto& dv : dvObjects_)
     {
@@ -283,7 +283,7 @@ void Codec2Interface::setLpcPostFilter(int enable, int bassBoost, float beta, fl
     }
 }
 
-void Codec2Interface::setTextVaricodeNum(int num)
+void FreeDVInterface::setTextVaricodeNum(int num)
 {
     for (auto& dv : dvObjects_)
     {
@@ -291,7 +291,7 @@ void Codec2Interface::setTextVaricodeNum(int num)
     }
 }
 
-int Codec2Interface::getRxModemSampleRate() const
+int FreeDVInterface::getRxModemSampleRate() const
 {
     int result = 0;
     for (auto& dv : dvObjects_)
@@ -302,7 +302,7 @@ int Codec2Interface::getRxModemSampleRate() const
     return result;
 }
 
-int Codec2Interface::getRxNumModemSamples() const
+int FreeDVInterface::getRxNumModemSamples() const
 {
     int result = 0;
     for (auto& dv : dvObjects_)
@@ -313,7 +313,7 @@ int Codec2Interface::getRxNumModemSamples() const
     return result;
 }
 
-int Codec2Interface::getRxNumSpeechSamples() const
+int FreeDVInterface::getRxNumSpeechSamples() const
 {
     int result = 0;
     for (auto& dv : dvObjects_)
@@ -324,7 +324,7 @@ int Codec2Interface::getRxNumSpeechSamples() const
     return result;
 }
 
-int Codec2Interface::getRxSpeechSampleRate() const
+int FreeDVInterface::getRxSpeechSampleRate() const
 {
     int result = 0;
     for (auto& dv : dvObjects_)
@@ -335,7 +335,7 @@ int Codec2Interface::getRxSpeechSampleRate() const
     return result;
 }
 
-void Codec2Interface::setSquelch(int enable, float level)
+void FreeDVInterface::setSquelch(int enable, float level)
 {
     for (auto& dv : dvObjects_)
     {
@@ -344,7 +344,7 @@ void Codec2Interface::setSquelch(int enable, float level)
     }
 }
 
-int Codec2Interface::processRxAudio(
+int FreeDVInterface::processRxAudio(
     short input[], int numFrames, struct FIFO* outputFifo, bool channelNoise, int noiseSnr, 
     float rxFreqOffsetHz, COMP* rxFreqOffsetPhaseRect, struct MODEM_STATS* stats, float* sig_pwr_av)
 {
@@ -426,12 +426,12 @@ int Codec2Interface::processRxAudio(
     return done;
 }
 
-void Codec2Interface::transmit(short mod_out[], short speech_in[])
+void FreeDVInterface::transmit(short mod_out[], short speech_in[])
 {
     freedv_tx(currentTxMode_, mod_out, speech_in);
 }
 
-void Codec2Interface::complexTransmit(COMP mod_out[], short speech_in[])
+void FreeDVInterface::complexTransmit(COMP mod_out[], short speech_in[])
 {
     freedv_comptx(currentTxMode_, mod_out, speech_in);
 }

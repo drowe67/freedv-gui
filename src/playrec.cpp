@@ -31,7 +31,7 @@ int                 g_recFromModulatorSamples;
 int                 g_recFileFromModulatorEventId;
 
 extern int                 g_mode;
-extern Codec2Interface codec2Interface;
+extern FreeDVInterface freedvInterface;
 
 // extra panel added to file open dialog to add loop checkbox
 MyExtraPlayFilePanel::MyExtraPlayFilePanel(wxWindow *parent): wxPanel(parent)
@@ -111,7 +111,7 @@ void MainFrame::OnPlayFileToMicIn(wxCommandEvent& event)
             {
                 sfInfo.format     = SF_FORMAT_RAW | SF_FORMAT_PCM_16;
                 sfInfo.channels   = 1;
-                sfInfo.samplerate = codec2Interface.getTxSpeechSampleRate();
+                sfInfo.samplerate = freedvInterface.getTxSpeechSampleRate();
             }
         }
         g_sfPlayFile = sf_open(soundFile.c_str(), SFM_READ, &sfInfo);
@@ -202,7 +202,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
 #endif
                 }
                 else {
-                    sfInfo.samplerate = codec2Interface.getRxModemSampleRate();
+                    sfInfo.samplerate = freedvInterface.getRxModemSampleRate();
                 }
             }
         }
@@ -321,7 +321,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
 #endif
     }
         else {
-            sample_rate = codec2Interface.getRxModemSampleRate();
+            sample_rate = freedvInterface.getRxModemSampleRate();
         }
 
         if(!extension.IsEmpty())
@@ -419,7 +419,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
         wxString    soundFile;
         SF_INFO     sfInfo;
 
-        if (!codec2Interface.isRunning()) {
+        if (!freedvInterface.isRunning()) {
             wxMessageBox(wxT("You need to press the Control - Start button before you can configure recording")
                          , wxT("Recording Modulation Output"), wxOK);
             return;
@@ -460,7 +460,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
 #endif
         }
         else {
-            sample_rate = codec2Interface.getRxModemSampleRate();
+            sample_rate = freedvInterface.getRxModemSampleRate();
         }
 
         if(!extension.IsEmpty())

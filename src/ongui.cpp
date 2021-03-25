@@ -15,7 +15,7 @@ extern int   g_analog;
 extern int   g_split;
 extern int   g_tx;
 extern int   g_State, g_prev_State;
-extern Codec2Interface codec2Interface;
+extern FreeDVInterface freedvInterface;
 extern struct MODEM_STATS  g_stats;
 extern bool g_queueResync;
 extern short *g_error_hist, *g_error_histn;
@@ -487,8 +487,8 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     }
     else {
         g_analog = 0;
-        m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(codec2Interface.getRxModemSampleRate()/2)));
-        m_panelWaterfall->setFs(codec2Interface.getRxModemSampleRate());
+        m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getRxModemSampleRate()/2)));
+        m_panelWaterfall->setFs(freedvInterface.getRxModemSampleRate());
     }
 
     g_State = g_prev_State = 0;
@@ -530,7 +530,7 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
             horus_set_total_payload_bits(g_horus, 0);
 #endif
         } else {
-            codec2Interface.resetBitStats();
+            freedvInterface.resetBitStats();
             g_resyncs = 0;
             int i;
             for(i=0; i<2*g_Nc; i++) {
@@ -538,7 +538,7 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
                 g_error_histn[i] = 0;
             }
             // resets variance stats every time it is called
-            codec2Interface.setEq(wxGetApp().m_700C_EQ);
+            freedvInterface.setEq(wxGetApp().m_700C_EQ);
         }
     }
 }
