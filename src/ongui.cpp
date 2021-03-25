@@ -513,11 +513,10 @@ void MainFrame::OnReSync(wxCommandEvent& event)
 {
     if (m_RxRunning)  {
         if (g_verbose) fprintf(stderr,"OnReSync\n");
-        if (g_mode != -1) {
-            // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
-            // the next execution of the TX/RX loop.
-            g_queueResync = true;
-        }
+        
+        // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
+        // the next execution of the TX/RX loop.
+        g_queueResync = true;
     }
 }
 

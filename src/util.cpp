@@ -11,7 +11,6 @@
 extern float           g_RxFreqOffsetHz;
 extern float           g_TxFreqOffsetHz;
 extern int            *g_split;
-extern int             g_mode;
 extern FreeDVInterface freedvInterface;
 
 void clickTune(float freq) {

@@ -959,13 +959,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     float snr_limited;
     // some APIs pass us invalid values, so lets trap it rather than bombing
     if (!(isnan(g_stats.snr_est) || isinf(g_stats.snr_est))) {
-        if (g_mode == -1) {
-            // no averaging of SNR for horus telemetry, just report latest and greatest
-            g_snr = g_stats.snr_est;
-        }
-        else {
-            g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*g_stats.snr_est;
-        }
+        g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*g_stats.snr_est;
     }
     snr_limited = g_snr;
     if (snr_limited < -5.0) snr_limited = -5.0;
@@ -1171,140 +1165,137 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
     g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
 
-    if (g_mode != -1)  {
-        // set some run time options (if applicable)
-        freedvInterface.setRunTimeOptions(
-            (int)wxGetApp().m_FreeDV700txClip,
-            (int)wxGetApp().m_FreeDV700txBPF,
-            (int)wxGetApp().m_PhaseEstBW,
-            (int)wxGetApp().m_PhaseEstDPSK);
+    // set some run time options (if applicable)
+    freedvInterface.setRunTimeOptions(
+        (int)wxGetApp().m_FreeDV700txClip,
+        (int)wxGetApp().m_FreeDV700txBPF,
+        (int)wxGetApp().m_PhaseEstBW,
+        (int)wxGetApp().m_PhaseEstDPSK);
 
-        // Test Frame Bit Error Updates ------------------------------------
+    // Test Frame Bit Error Updates ------------------------------------
 
-        // Toggle test frame mode at run time
+    // Toggle test frame mode at run time
 
-        if (!freedvInterface.usingTestFrames() && wxGetApp().m_testFrames) {
-            // reset stats on check box off to on transition
-            freedvInterface.resetTestFrameStats();
-        }
-        freedvInterface.setTestFrames(wxGetApp().m_testFrames, wxGetApp().m_FreeDV700Combine);
-        g_channel_noise = wxGetApp().m_channel_noise;
-
-        // update stats on main page
-
-        char bits[80], errors[80], ber[80], resyncs[80], clockoffset[80], freqoffset[80], syncmetric[80];
-        sprintf(bits, "Bits: %d", freedvInterface.getTotalBits()); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
-        sprintf(errors, "Errs: %d", freedvInterface.getTotalBitErrors()); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
-        float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
-        sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
-        sprintf(resyncs, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
-
-        sprintf(freqoffset, "FrqOff: %3.1f", g_stats.foff);
-        wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
-        sprintf(syncmetric, "Sync: %3.2f", g_stats.sync_metric);
-        wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
-
-        // Codec 2 700C VQ "auto EQ" equaliser variance
-        int currentMode = freedvInterface.getCurrentMode();
-        if ((currentMode == FREEDV_MODE_700C) || (currentMode == FREEDV_MODE_700D) || (currentMode == FREEDV_MODE_700E)) {
-            auto var = freedvInterface.getVariance();
-            char var_str[80]; sprintf(var_str, "Var: %4.1f", var);
-            wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
-        }
-
-        if (g_State) {
-
-            sprintf(clockoffset, "ClkOff: %+-d", (int)round(g_stats.clock_offset*1E6) % 10000);
-            wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
-
-            // update error pattern plots if supported
-            short* error_pattern = nullptr;
-            int sz_error_pattern = freedvInterface.getErrorPattern(&error_pattern);
-            if (sz_error_pattern) {
-                int i,b;
-
-                /* both modes map IQ to alternate bits, but on same carrier */
-
-                if (freedvInterface.getCurrentMode() == FREEDV_MODE_1600) {
-                    /* FreeDV 1600 mapping from error pattern to two bits on each carrier */
-
-                    for(b=0; b<g_Nc*2; b++) {
-                        for(i=b; i<sz_error_pattern; i+= 2*g_Nc) {
-                            m_panelTestFrameErrors->add_new_sample(b, b + 0.8*error_pattern[i]);
-                            g_error_hist[b] += error_pattern[i];
-                            g_error_histn[b]++;
-                        }
-                        //if (b%2)
-                        //    printf("g_error_hist[%d]: %d\n", b/2, g_error_hist[b/2]);
-                    }
-
-                     /* calculate BERs and send to plot */
-
-                    float ber[2*MODEM_STATS_NC_MAX];
-                    for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
-                        ber[b] = 0.0;
-                    }
-                    for(b=0; b<g_Nc*2; b++) {
-                        ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
-                    }
-                    assert(g_Nc*2 <= 2*MODEM_STATS_NC_MAX);
-                    m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
-                }
-
-                if ((freedvInterface.getCurrentMode() == FREEDV_MODE_700C)) {
-                    int c;
-                    //fprintf(stderr, "after g_error_pattern_fifo read 2\n");
-
-                    /*
-                       FreeDV 700 mapping from error pattern to bit on each carrier, see
-                       data bit to carrier mapping in:
-
-                          codec2-dev/octave/cohpsk_frame_design.ods
-
-                       We can plot a histogram of the errors/carrier before or after diversity
-                       recombination.  Actually one bar for each IQ bit in carrier order.
-                    */
-
-                    int hist_Nc = sz_error_pattern/4;
-                    //fprintf(stderr, "hist_Nc: %d\n", hist_Nc);
-
-                    for(i=0; i<sz_error_pattern; i++) {
-                        /* maps to IQ bits from each symbol to a "carrier" (actually one line for each IQ bit in carrier order) */
-                        c = floor(i/4);
-                        /* this will clock in 4 bits/carrier to plot */
-                        m_panelTestFrameErrors->add_new_sample(c, c + 0.8*error_pattern[i]);
-                        g_error_hist[c] += error_pattern[i];
-                        g_error_histn[c]++;
-                        //printf("i: %d c: %d\n", i, c);
-                    }
-                    for(; i<2*MODEM_STATS_NC_MAX*4; i++) {
-                        c = floor(i/4);
-                        m_panelTestFrameErrors->add_new_sample(c, c);
-                        //printf("i: %d c: %d\n", i, c);
-                    }
-
-                    /* calculate BERs and send to plot */
-
-                    float ber[2*MODEM_STATS_NC_MAX];
-                    for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
-                        ber[b] = 0.0;
-                    }
-                    for(b=0; b<hist_Nc; b++) {
-                        ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
-                    }
-                    assert(hist_Nc <= 2*MODEM_STATS_NC_MAX);
-                    m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
-                }
-
-                m_panelTestFrameErrors->Refresh();
-                m_panelTestFrameErrorsHist->Refresh();
-            }
-        }
-
-        /* FIFO and PortAudio under/overflow debug counters */
-
-        optionsDlg->DisplayFifoPACounters();
+    if (!freedvInterface.usingTestFrames() && wxGetApp().m_testFrames) {
+        // reset stats on check box off to on transition
+        freedvInterface.resetTestFrameStats();
     }
+    freedvInterface.setTestFrames(wxGetApp().m_testFrames, wxGetApp().m_FreeDV700Combine);
+    g_channel_noise = wxGetApp().m_channel_noise;
+
+    // update stats on main page
+
+    char bits[80], errors[80], ber[80], resyncs[80], clockoffset[80], freqoffset[80], syncmetric[80];
+    sprintf(bits, "Bits: %d", freedvInterface.getTotalBits()); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
+    sprintf(errors, "Errs: %d", freedvInterface.getTotalBitErrors()); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
+    float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
+    sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
+    sprintf(resyncs, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
+
+    sprintf(freqoffset, "FrqOff: %3.1f", g_stats.foff);
+    wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
+    sprintf(syncmetric, "Sync: %3.2f", g_stats.sync_metric);
+    wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
+
+    // Codec 2 700C VQ "auto EQ" equaliser variance
+    int currentMode = freedvInterface.getCurrentMode();
+    if ((currentMode == FREEDV_MODE_700C) || (currentMode == FREEDV_MODE_700D) || (currentMode == FREEDV_MODE_700E)) {
+        auto var = freedvInterface.getVariance();
+        char var_str[80]; sprintf(var_str, "Var: %4.1f", var);
+        wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
+    }
+
+    if (g_State) {
+
+        sprintf(clockoffset, "ClkOff: %+-d", (int)round(g_stats.clock_offset*1E6) % 10000);
+        wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
+
+        // update error pattern plots if supported
+        short* error_pattern = nullptr;
+        int sz_error_pattern = freedvInterface.getErrorPattern(&error_pattern);
+        if (sz_error_pattern) {
+            int i,b;
+
+            /* both modes map IQ to alternate bits, but on same carrier */
+
+            if (freedvInterface.getCurrentMode() == FREEDV_MODE_1600) {
+                /* FreeDV 1600 mapping from error pattern to two bits on each carrier */
+
+                for(b=0; b<g_Nc*2; b++) {
+                    for(i=b; i<sz_error_pattern; i+= 2*g_Nc) {
+                        m_panelTestFrameErrors->add_new_sample(b, b + 0.8*error_pattern[i]);
+                        g_error_hist[b] += error_pattern[i];
+                        g_error_histn[b]++;
+                    }
+                    //if (b%2)
+                    //    printf("g_error_hist[%d]: %d\n", b/2, g_error_hist[b/2]);
+                }
+
+                 /* calculate BERs and send to plot */
+
+                float ber[2*MODEM_STATS_NC_MAX];
+                for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
+                    ber[b] = 0.0;
+                }
+                for(b=0; b<g_Nc*2; b++) {
+                    ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
+                }
+                assert(g_Nc*2 <= 2*MODEM_STATS_NC_MAX);
+                m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
+            }
+
+            if ((freedvInterface.getCurrentMode() == FREEDV_MODE_700C)) {
+                int c;
+                //fprintf(stderr, "after g_error_pattern_fifo read 2\n");
+
+                /*
+                   FreeDV 700 mapping from error pattern to bit on each carrier, see
+                   data bit to carrier mapping in:
+
+                      codec2-dev/octave/cohpsk_frame_design.ods
+
+                   We can plot a histogram of the errors/carrier before or after diversity
+                   recombination.  Actually one bar for each IQ bit in carrier order.
+                */
+
+                int hist_Nc = sz_error_pattern/4;
+                //fprintf(stderr, "hist_Nc: %d\n", hist_Nc);
+
+                for(i=0; i<sz_error_pattern; i++) {
+                    /* maps to IQ bits from each symbol to a "carrier" (actually one line for each IQ bit in carrier order) */
+                    c = floor(i/4);
+                    /* this will clock in 4 bits/carrier to plot */
+                    m_panelTestFrameErrors->add_new_sample(c, c + 0.8*error_pattern[i]);
+                    g_error_hist[c] += error_pattern[i];
+                    g_error_histn[c]++;
+                    //printf("i: %d c: %d\n", i, c);
+                }
+                for(; i<2*MODEM_STATS_NC_MAX*4; i++) {
+                    c = floor(i/4);
+                    m_panelTestFrameErrors->add_new_sample(c, c);
+                    //printf("i: %d c: %d\n", i, c);
+                }
+
+                /* calculate BERs and send to plot */
+
+                float ber[2*MODEM_STATS_NC_MAX];
+                for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
+                    ber[b] = 0.0;
+                }
+                for(b=0; b<hist_Nc; b++) {
+                    ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
+                }
+                assert(hist_Nc <= 2*MODEM_STATS_NC_MAX);
+                m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
+            }
+
+            m_panelTestFrameErrors->Refresh();
+            m_panelTestFrameErrorsHist->Refresh();
+        }
+    }
+
+    /* FIFO and PortAudio under/overflow debug counters */
+    optionsDlg->DisplayFifoPACounters();
 
     // command from UDP thread that is best processed in main thread to avoid seg faults
 
@@ -1326,16 +1317,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             g_blink = 0.0;
         }
     }
+    
+    // Voice Keyer state machine
+    VoiceKeyerProcessEvent(VK_DT);
 
-    if (g_mode != -1) {
-        // Voice Keyer state machine
-
-        VoiceKeyerProcessEvent(VK_DT);
-
-        // Detect Sync state machine
-
-        DetectSyncProcessEvent();
-    }
+    // Detect Sync state machine
+    DetectSyncProcessEvent();
 }
 #endif
 
@@ -1466,92 +1453,88 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_panelScatter->setNc(g_Nc);
         }
 
-        if (g_mode != -1) {
-            // init freedv states
+        // init freedv states
+        m_togBtnSplit->Enable();
+        m_togBtnAnalog->Enable();
+        m_btnTogPTT->Enable();
+        m_togBtnVoiceKeyer->Enable();
 
-            m_togBtnSplit->Enable();
-            m_togBtnAnalog->Enable();
-            m_btnTogPTT->Enable();
-            m_togBtnVoiceKeyer->Enable();
+        // TBD: config option
+        int rxModes[] = {
+            FREEDV_MODE_1600,
+            //FREEDV_MODE_2400B,
+            //FREEDV_MODE_800XA,
+            FREEDV_MODE_700C,
+            FREEDV_MODE_700D,
+            FREEDV_MODE_2020,
+            FREEDV_MODE_700E  
+        };
+        for (auto& mode : rxModes)
+        {
+            freedvInterface.addRxMode(mode);
+        }
+        
+        //freedvInterface.addRxMode(g_mode);
+        freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms);
+        if (wxGetApp().m_FreeDV700ManualUnSync) {
+            freedvInterface.setSync(FREEDV_SYNC_MANUAL);
+        } else {
+            freedvInterface.setSync(FREEDV_SYNC_AUTO);
+        }
 
-            // TBD: config option
-            int rxModes[] = {
-                FREEDV_MODE_1600,
-                //FREEDV_MODE_2400B,
-                //FREEDV_MODE_800XA,
-                FREEDV_MODE_700C,
-                FREEDV_MODE_700D,
-                FREEDV_MODE_2020,
-                FREEDV_MODE_700E  
-            };
-            for (auto& mode : rxModes)
-            {
-                freedvInterface.addRxMode(mode);
-            }
-            
-            //freedvInterface.addRxMode(g_mode);
-            freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms);
-            if (wxGetApp().m_FreeDV700ManualUnSync) {
-                freedvInterface.setSync(FREEDV_SYNC_MANUAL);
-            } else {
-                freedvInterface.setSync(FREEDV_SYNC_AUTO);
-            }
+        // Codec 2 VQ Equaliser
+        freedvInterface.setEq(wxGetApp().m_700C_EQ);
 
-            // Codec 2 VQ Equaliser
-            freedvInterface.setEq(wxGetApp().m_700C_EQ);
+        // Codec2 verbosity setting
+        freedvInterface.setVerbose(g_freedv_verbose);
 
-            // Codec2 verbosity setting
-            freedvInterface.setVerbose(g_freedv_verbose);
+        // Text field/callsign callbacks.
+        freedvInterface.setTextCallbackFn(&my_put_next_rx_char, &my_get_next_tx_char);
 
-            // Text field/callsign callbacks.
-            freedvInterface.setTextCallbackFn(&my_put_next_rx_char, &my_get_next_tx_char);
+        g_error_hist = new short[MODEM_STATS_NC_MAX*2];
+        g_error_histn = new short[MODEM_STATS_NC_MAX*2];
+        int i;
+        for(i=0; i<2*MODEM_STATS_NC_MAX; i++) {
+            g_error_hist[i] = 0;
+            g_error_histn[i] = 0;
+        }
 
-            g_error_hist = new short[MODEM_STATS_NC_MAX*2];
-            g_error_histn = new short[MODEM_STATS_NC_MAX*2];
-            int i;
-            for(i=0; i<2*MODEM_STATS_NC_MAX; i++) {
-                g_error_hist[i] = 0;
-                g_error_histn[i] = 0;
-            }
+        // Set processing buffer sizes, these are FRAME_DURATION (20ms) chunks of modem and speech that are a useful size for the
+        // various operations we do before and after passing to the freedv_api layer.
+        g_modemInbufferSize = (int)(FRAME_DURATION * freedvInterface.getRxModemSampleRate());
+        g_speechOutbufferSize = (int)(FRAME_DURATION * freedvInterface.getRxSpeechSampleRate());
 
-            // Set processing buffer sizes, these are FRAME_DURATION (20ms) chunks of modem and speech that are a useful size for the
-            // various operations we do before and after passing to the freedv_api layer.
-            g_modemInbufferSize = (int)(FRAME_DURATION * freedvInterface.getRxModemSampleRate());
-            g_speechOutbufferSize = (int)(FRAME_DURATION * freedvInterface.getRxSpeechSampleRate());
+        // init Codec 2 LPC Post Filter (FreeDV 1600)
+        freedvInterface.setLpcPostFilter(
+                                       wxGetApp().m_codec2LPCPostFilterEnable,
+                                       wxGetApp().m_codec2LPCPostFilterBassBoost,
+                                       wxGetApp().m_codec2LPCPostFilterBeta,
+                                       wxGetApp().m_codec2LPCPostFilterGamma);
 
-            // init Codec 2 LPC Post Filter (FreeDV 1600)
-            freedvInterface.setLpcPostFilter(
-                                           wxGetApp().m_codec2LPCPostFilterEnable,
-                                           wxGetApp().m_codec2LPCPostFilterBassBoost,
-                                           wxGetApp().m_codec2LPCPostFilterBeta,
-                                           wxGetApp().m_codec2LPCPostFilterGamma);
+        // Init Speex pre-processor states
+        // by inspecting Speex source it seems that only denoiser is on by default
 
-            // Init Speex pre-processor states
-            // by inspecting Speex source it seems that only denoiser is on by default
+        if (g_verbose) fprintf(stderr, "freedv_get_n_speech_samples(tx): %d\n", freedvInterface.getTxNumSpeechSamples());
+        if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(tx): %d\n", freedvInterface.getTxSpeechSampleRate());
 
-            if (g_verbose) fprintf(stderr, "freedv_get_n_speech_samples(tx): %d\n", freedvInterface.getTxNumSpeechSamples());
-            if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(tx): %d\n", freedvInterface.getTxSpeechSampleRate());
+        if (wxGetApp().m_speexpp_enable)
+            g_speex_st = speex_preprocess_state_init(freedvInterface.getTxNumSpeechSamples(), freedvInterface.getTxSpeechSampleRate());
 
-            if (wxGetApp().m_speexpp_enable)
-                g_speex_st = speex_preprocess_state_init(freedvInterface.getTxNumSpeechSamples(), freedvInterface.getTxSpeechSampleRate());
+        // adjust spectrum and waterfall freq scaling base on mode
 
-            // adjust spectrum and waterfall freq scaling base on mode
+        m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getTxModemSampleRate()/2)));
+        m_panelWaterfall->setFs(freedvInterface.getTxModemSampleRate());
 
-            m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getTxModemSampleRate()/2)));
-            m_panelWaterfall->setFs(freedvInterface.getTxModemSampleRate());
+        // Init text msg decoding
+        freedvInterface.setTextVaricodeNum(wxGetApp().m_textEncoding);
 
-            // Init text msg decoding
-            freedvInterface.setTextVaricodeNum(wxGetApp().m_textEncoding);
+        // scatter plot (PSK) or Eye (FSK) mode
 
-            // scatter plot (PSK) or Eye (FSK) mode
-
-            if ((g_mode == FREEDV_MODE_800XA) || (g_mode == FREEDV_MODE_2400A) || (g_mode == FREEDV_MODE_2400B)) {
-                m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_EYE);
-            }
-            else {
-                m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
-            }
-
+        if ((g_mode == FREEDV_MODE_800XA) || (g_mode == FREEDV_MODE_2400A) || (g_mode == FREEDV_MODE_2400B)) {
+            m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_EYE);
+        }
+        else {
+            m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
         }
 
         modem_stats_open(&g_stats);
@@ -1663,16 +1646,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         src_delete(g_spec_src);
         modem_stats_close(&g_stats);
 
-        // free up states, clean up
-
-        if (g_mode != -1) {
-            // FreeDV clean up
-            delete[] g_error_hist;
-            delete[] g_error_histn;
-            freedvInterface.stop();
-            if (wxGetApp().m_speexpp_enable)
-                speex_preprocess_state_destroy(g_speex_st);
-        }
+        // FreeDV clean up
+        delete[] g_error_hist;
+        delete[] g_error_histn;
+        freedvInterface.stop();
+        if (wxGetApp().m_speexpp_enable)
+            speex_preprocess_state_destroy(g_speex_st);
 
         m_newMicInFilter = m_newSpkOutFilter = true;
 
@@ -2399,10 +2378,8 @@ void txRxProcessing()
 
         resample_for_plot(g_plotDemodInFifo, infreedv, nfreedv, freedv_samplerate);
 
-        if (g_mode != -1) {
-            // send latest squelch level to FreeDV API, as it handles squelch internally
-            freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
-        }
+        // send latest squelch level to FreeDV API, as it handles squelch internally
+        freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
 
         // Optional tone interferer -----------------------------------------------------
 
@@ -2487,10 +2464,7 @@ void txRxProcessing()
         }
         g_mutexProtectingCallbackData.Unlock();
 
-        if (g_mode == -1)
-            resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, freedv_samplerate);
-        else
-            resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, freedvInterface.getRxSpeechSampleRate());
+        resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, freedvInterface.getRxSpeechSampleRate());
 
         // resample to output sound card rate
 
@@ -2514,7 +2488,7 @@ void txRxProcessing()
     //  TX side processing --------------------------------------------
     //
 
-    if ((g_mode != -1) && ((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
+    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
 
         // This while loop locks the modulator to the sample rate of
         // sound card 1.  We want to make sure that modulator samples
@@ -2528,12 +2502,12 @@ void txRxProcessing()
 
         unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
 
- 	if (g_dump_fifo_state) {
-	  // If this drops to zero we have a problem as we will run out of output samples
-	  // to send to the sound driver via PortAudio
-	  if (g_verbose) fprintf(stderr, "outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d\n",
-                  codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
-	}
+     	if (g_dump_fifo_state) {
+    	  // If this drops to zero we have a problem as we will run out of output samples
+    	  // to send to the sound driver via PortAudio
+    	  if (g_verbose) fprintf(stderr, "outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d\n",
+                      codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
+    	}
 
         int nsam_in_48 = g_soundCard2SampleRate * freedvInterface.getTxNumSpeechSamples()/freedvInterface.getTxSpeechSampleRate();
         assert(nsam_in_48 < 10*N48);

@@ -30,7 +30,6 @@ bool                g_recFileFromModulator = false;
 int                 g_recFromModulatorSamples;
 int                 g_recFileFromModulatorEventId;
 
-extern int                 g_mode;
 extern FreeDVInterface freedvInterface;
 
 // extra panel added to file open dialog to add loop checkbox
