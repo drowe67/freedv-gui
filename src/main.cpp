@@ -25,7 +25,7 @@
 #include "main.h"
 #include "osx_interface.h"
 #include "callsign_encoder.h"
-#include "codec2_interface.h"
+#include "freedv_interface.h"
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1

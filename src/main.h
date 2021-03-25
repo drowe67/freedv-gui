@@ -96,7 +96,7 @@
 #include "serialport.h" 
 #include "pskreporter.h"
 #include "callsign_encoder.h"
-#include "codec2_interface.h"
+#include "freedv_interface.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
