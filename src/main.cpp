@@ -392,7 +392,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     g_txLevel = pConfig->Read(wxT("/Audio/transmitLevel"), (int)0);
     char fmt[5];
     m_sliderTxLevel->SetValue(g_txLevel);
-    sprintf(fmt, "%d dB", g_txLevel);
+    sprintf(fmt, "%0.1f dB", (double)g_txLevel / 10.0);
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
     
