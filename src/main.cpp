@@ -2670,7 +2670,7 @@ void txRxProcessing()
                 nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, 10*N48, nfreedv);
             
             // Attenuate signal prior to output
-            double dbLoss = g_txLevel / 10; // (-10) + (0 - (-10)) * ((double)g_txLevel)/100.0;
+            double dbLoss = g_txLevel / 10;
             double scaleFactor = exp(dbLoss/20.0 * log(10.0));
             
             for (int i = 0; i < nout; i++)
