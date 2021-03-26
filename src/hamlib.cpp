@@ -136,8 +136,13 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
     {
         if (g_verbose) fprintf(stderr, "hamlib: ignoring CI-V configuration due to non-Icom radio\r\n");
     }
-    
+
+#if defined(HAMLIB_FILPATHLEN)
+    strncpy(m_rig->state.rigport.pathname, serial_port, HAMLIB_FILPATHLEN - 1);
+#else 
     strncpy(m_rig->state.rigport.pathname, serial_port, FILPATHLEN - 1);
+#endif // HAMLIB_FILPATHLEN
+
     if (serial_rate) {
         if (g_verbose) fprintf(stderr, "hamlib: setting serial rate: %d\n", serial_rate);
         m_rig->state.rigport.parm.serial.rate = serial_rate;
