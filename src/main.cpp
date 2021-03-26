@@ -69,7 +69,7 @@ float               g_tone_phase;
 float               g_avmag[MODEM_STATS_NSPEC];
 
 // TX level for attenuation
-int g_txLevel = 100;
+int g_txLevel = 0;
 
 // GUI controls that affect rx and tx processes
 int   g_SquelchActive;
@@ -389,10 +389,10 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxGetApp().m_soundCard2InDeviceName = pConfig->Read(wxT("/Audio/soundCard2InDeviceName"), _("none"));	
     wxGetApp().m_soundCard2OutDeviceName = pConfig->Read(wxT("/Audio/soundCard2OutDeviceName"), _("none"));	
 
-    g_txLevel = pConfig->Read(wxT("/Audio/transmitLevel"), 100);
+    g_txLevel = pConfig->Read(wxT("/Audio/transmitLevel"), (int)0);
     char fmt[5];
     m_sliderTxLevel->SetValue(g_txLevel);
-    sprintf(fmt, "%d%%", g_txLevel);
+    sprintf(fmt, "%d dB", g_txLevel);
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
     
@@ -2661,12 +2661,6 @@ void txRxProcessing()
                     g_recFromModulatorSamples -= nfreedv;
                 }
             }
-
-            // Attenuate signal prior to output
-            for (int i = 0; i < nfreedv; i++)
-            {
-                outfreedv[i] = outfreedv[i] * ((double)g_txLevel/100);
-            }
             
             // output one frame of modem signal
 
@@ -2674,6 +2668,16 @@ void txRxProcessing()
                 nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getTxSpeechSampleRate(), 10*N48, nfreedv);
             else
                 nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, 10*N48, nfreedv);
+            
+            // Attenuate signal prior to output
+            double dbLoss = g_txLevel / 10; // (-10) + (0 - (-10)) * ((double)g_txLevel)/100.0;
+            double scaleFactor = exp(dbLoss/20.0 * log(10.0));
+            
+            for (int i = 0; i < nout; i++)
+            {
+                outsound_card[i] *= scaleFactor;
+            }
+            
             if (g_dump_fifo_state) {
                 fprintf(stderr, "  nout: %d\n", nout);
             }

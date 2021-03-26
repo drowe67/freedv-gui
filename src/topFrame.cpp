@@ -246,15 +246,16 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Transmit Level slider
     wxBoxSizer* txLevelSizer = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer* txLevelLabelSizer = new wxBoxSizer(wxVERTICAL);
-    m_txtModeStatus = new wxStaticText(this, wxID_ANY, wxT("TX Level:"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    txLevelLabelSizer->Add(m_txtModeStatus, 0, wxALL|wxEXPAND, 1);
+    wxStaticText *txtLabelAttn = new wxStaticText(this, wxID_ANY, wxT("TX Attn:"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    txLevelLabelSizer->Add(txtLabelAttn, 0, wxALL|wxEXPAND, 1);
     txLevelSizer->Add(txLevelLabelSizer);
     
-    m_sliderTxLevel = new wxSlider(this, wxID_ANY, g_txLevel, 0, 100, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS|wxSL_HORIZONTAL);
-    m_sliderTxLevel->SetToolTip(_("Sets TX level to sound card (0-100%)."));
+    // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
+    m_sliderTxLevel = new wxSlider(this, wxID_ANY, g_txLevel, -200, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS|wxSL_HORIZONTAL);
+    m_sliderTxLevel->SetToolTip(_("Sets TX attenuation (0-20dB))."));
     txLevelSizer->Add(m_sliderTxLevel, wxEXPAND);
     
-    m_txtTxLevelNum = new wxStaticText(this, wxID_ANY, wxT("100%"), wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
+    m_txtTxLevelNum = new wxStaticText(this, wxID_ANY, wxT("0 dB"), wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
     m_txtTxLevelNum->SetMinSize(wxSize(50,-1));
     txLevelSizer->Add(m_txtTxLevelNum);
     

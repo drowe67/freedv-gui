@@ -330,14 +330,12 @@ void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
 {
     char fmt[5];
     g_txLevel = m_sliderTxLevel->GetValue();
-    sprintf(fmt, "%d%%", g_txLevel);
+    sprintf(fmt, "%0.1f dB", (double)(g_txLevel)/10.0);
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
     
     wxConfigBase *pConfig = wxConfigBase::Get();
     pConfig->Write(wxT("/Audio/transmitLevel"), g_txLevel);
-    
-    event.Skip();
 }
 
 //-------------------------------------------------------------------------

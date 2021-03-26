@@ -94,7 +94,7 @@ Sound card levels are generally adjusted in the computer's Control
 Panel or Settings, or in some cases via controls on your rig interface
 hardware or menus on your radio. In-app adjustments can also be done
 by using the 'TX Level' slider at the bottom of the main screen; anything
-below 100% attenuates the transmit signal.
+below 0 dB attenuates the transmit signal.
 
 When FreeDV is running, you can observe the sound card signals in the
 main window tabs (From Radio, From Mic, To Speaker).
