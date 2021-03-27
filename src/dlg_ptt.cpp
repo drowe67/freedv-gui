@@ -20,7 +20,7 @@
 //
 //==========================================================================
 #include "dlg_ptt.h"
-#include "fdmdv2_main.h"
+#include "main.h"
 
 #ifdef __WIN32__
 #include <wx/msw/registry.h>
@@ -406,7 +406,7 @@ void ComPortsDlg::ExchangeData(int inout)
             m_cbSerialRate->GetValue().ToLong(&tmp); 
             wxGetApp().m_intHamlibSerialRate = tmp;
         }
-        fprintf(stderr, "serial rate: %d\n", wxGetApp().m_intHamlibSerialRate);
+        if (g_verbose) fprintf(stderr, "serial rate: %d\n", wxGetApp().m_intHamlibSerialRate);
 
         pConfig->Write(wxT("/Hamlib/UseForPTT"), wxGetApp().m_boolHamlibUseForPTT);
         pConfig->Write(wxT("/Hamlib/RigName"), wxGetApp().m_intHamlibRig);
@@ -484,7 +484,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
         
         // display serial params
 
-        fprintf(stderr, "serial rate: %d\n", serial_rate);
+        if (g_verbose) fprintf(stderr, "serial rate: %d\n", serial_rate);
 
         // try to open rig
 
@@ -535,9 +535,9 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
 #if defined(__WXGTK__) || defined(__WXOSX__)
         ctrlport = m_cbCtlDevicePath->GetValue();
 #endif
-        fprintf(stderr, "opening serial port: ");
+        if (g_verbose) fprintf(stderr, "opening serial port: ");
 	fputs(ctrlport.c_str(), stderr);            // don't escape crazy Microsoft bakslash-ified comm port names
-	fprintf(stderr,"\n");
+	if (g_verbose) fprintf(stderr,"\n");
 
         bool success = serialport->openport(ctrlport.c_str(),
                                             m_rbUseRTS->GetValue(),
@@ -545,7 +545,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                                             m_rbUseDTR->GetValue(),
                                             m_ckDTRPos->IsChecked());
 
-        fprintf(stderr, "serial port open\n");
+        if (g_verbose) fprintf(stderr, "serial port open\n");
 
         if (!success) {
             wxMessageBox("Couldn't open serial port", wxT("Error"), wxOK | wxICON_ERROR, this);
@@ -557,9 +557,9 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
         wxSleep(1);
         serialport->ptt(false);
 
-        fprintf(stderr, "closing serial port\n");
+        if (g_verbose) fprintf(stderr, "closing serial port\n");
         serialport->closeport();
-        fprintf(stderr, "serial port closed\n");
+        if (g_verbose) fprintf(stderr, "serial port closed\n");
     }
     
 }

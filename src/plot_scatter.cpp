@@ -1,6 +1,6 @@
 //==========================================================================
-// Name:            fdmdv2_plot_scatter.cpp
-// Purpose:         A scatter plot derivative of fdmdv2_plot.
+// Name:            plot_scatter.cpp
+// Purpose:         A scatter plot derivative of plot.
 // Created:         June 24, 2012
 // Authors:         David Rowe, David Witten
 // 
@@ -20,7 +20,7 @@
 //==========================================================================
 #include <string.h>
 #include "wx/wx.h"
-#include "fdmdv2_plot_scatter.h"
+#include "plot_scatter.h"
 
 BEGIN_EVENT_TABLE(PlotScatter, PlotPanel)
     EVT_PAINT           (PlotScatter::OnPaint)

@@ -1,5 +1,5 @@
 //==========================================================================
-// Name:            fdmdv2_pa_wrapper.cpp
+// Name:            pa_wrapper.cpp
 // Purpose:         Implements a wrapper class around the PortAudio library.
 // Created:         August 12, 2012
 // Authors:         David Rowe, David Witten
@@ -18,7 +18,18 @@
 //  along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //==========================================================================
-#include "fdmdv2_pa_wrapper.h"
+#include "pa_wrapper.h"
+
+double PortAudioWrap::standardSampleRates[] =
+{
+    8000.0,     9600.0,
+    11025.0,    12000.0,
+    16000.0,    22050.0,
+    24000.0,    32000.0,
+    44100.0,    48000.0,
+    88200.0,    96000.0,
+    192000.0,   -1          // negative terminated  list
+};
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // PortAudioWrap()

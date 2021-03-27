@@ -24,6 +24,11 @@
 #include <cstring>
 #include "callsign_encoder.h"
 
+extern "C" {
+    extern int  golay23_encode(int data);
+    extern int  golay23_decode(int received_codeword);
+}
+
 CallsignEncoder::CallsignEncoder()
 {
     memset(&translatedCallsign_, 0, MAX_CALLSIGN);
@@ -53,7 +58,7 @@ void CallsignEncoder::setCallsign(const char* callsign)
     convertDigitToASCII_(&translatedCallsign_[1], crcDigit2);
     
     int truncIndex = 0;
-    for(int index = 0; index < strlen(translatedCallsign_); index += 2, truncIndex += 4)
+    for(size_t index = 0; index < strlen(translatedCallsign_); index += 2, truncIndex += 4)
     {
         // Encode the character as four bytes with parity bits.
         int inputRaw = ((translatedCallsign_[index] & 0x3F) << 6) | (translatedCallsign_[index+1] & 0x3F);
@@ -195,7 +200,7 @@ bool CallsignEncoder::isCallsignValid() const
 void CallsignEncoder::convert_callsign_to_ota_string_(const char* input, char* output) const
 {
     int outidx = 0;
-    for (int index = 0; index < strlen(input); index++)
+    for (size_t index = 0; index < strlen(input); index++)
     {
         bool addSync = false;
         if (input[index] >= 38 && input[index] <= 47)
@@ -243,7 +248,7 @@ void CallsignEncoder::convert_callsign_to_ota_string_(const char* input, char* o
 void CallsignEncoder::convert_ota_string_to_callsign_(const char* input, char* output)
 {
     int outidx = 0;
-    for (int index = 0; index < strlen(input); index++)
+    for (size_t index = 0; index < strlen(input); index++)
     {
         if (input[index] >= 1 && input[index] <= 9)
         {

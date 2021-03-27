@@ -22,7 +22,7 @@
 #ifndef __COMPORTS_DIALOG__
 #define __COMPORTS_DIALOG__
 
-#include "fdmdv2_main.h"
+#include "main.h"
 #include "hamlib.h"
 #include <wx/settings.h>
 #include <wx/xrc/xmlres.h>

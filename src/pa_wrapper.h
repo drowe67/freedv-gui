@@ -1,5 +1,5 @@
 //==========================================================================
-// Name:            fdmdv2_pa_wrapper.h
+// Name:            pa_wrapper.h
 // Purpose:         Defines a wrapper class around PortAudio
 // Created:         August 12, 2012
 // Authors:         David Rowe, David Witten
@@ -18,9 +18,12 @@
 //  along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //==========================================================================
+#ifndef FDMDV2_PA_WRAPPER_H
+#define FDMDV2_PA_WRAPPER_H
+
 #include <stdio.h>
 #include <math.h>
-#include "fdmdv2_defines.h"
+#include "defines.h"
 #include "codec2_fdmdv.h"
 #include "codec2.h"
 #include "portaudio.h"
@@ -114,4 +117,8 @@ class PortAudioWrap
         bool                isStopped() const;
         bool                isActive() const;
 //        void                loadData();
+        
+        static double standardSampleRates[];
 };
+
+#endif // FDMDV2_PA_WRAPPER_H

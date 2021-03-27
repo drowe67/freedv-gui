@@ -54,10 +54,9 @@ if(WIN32)
     list(APPEND PORTAUDIO_LIBRARIES ${WINMM} ${DSOUND}
 )
 elseif(NOT APPLE)
-#else(WIN32)
     find_library(RT rt)
     find_library(ASOUND asound)
-    set(PORTAUDIO_LIBRARIES ${RT} ${ASOUND}
+    list(APPEND PORTAUDIO_LIBRARIES ${RT} ${ASOUND}
     )
 endif(WIN32)
 include_directories(${CMAKE_BINARY_DIR}/external/dist/include)
