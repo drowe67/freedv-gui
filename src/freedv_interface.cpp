@@ -398,7 +398,7 @@ int FreeDVInterface::processRxAudio(
     int   nfreedv;
     int   state = getSync();
     bool  done = false;
-    for (auto index = 0; index < dvObjects_.size(); index++)
+    for (auto index = 0; (size_t)index < dvObjects_.size(); index++)
     {
         if (state != 0 && dvObjects_[index] != currentRxMode_) 
         {
@@ -451,7 +451,7 @@ int FreeDVInterface::processRxAudio(
             //   a) We're on the last mode to check (meaning that we didn't get sync on any other mode)
             //.  b) We got sync on the current mode at some point
             int tmpState = freedv_get_sync(dv);
-            if (tmpState != 0 || done || index == (dvObjects_.size() - 1))
+            if (tmpState != 0 || done || (size_t)index == (dvObjects_.size() - 1))
             {
                 state = tmpState;
                 done = true;
