@@ -104,6 +104,32 @@ int FreeDVInterface::getErrorPattern(short** outputPattern)
     return 0;
 }
 
+char* FreeDVInterface::getCurrentModeStr() const
+{
+    if (currentRxMode_ == nullptr)
+    {
+        return "unk";
+    }
+    else
+    {
+        switch(rxMode_)
+        {
+            case FREEDV_MODE_700C:
+                return "700C";
+            case FREEDV_MODE_700D:
+                return "700D";
+            case FREEDV_MODE_700E:
+                return "700E";
+            case FREEDV_MODE_1600:
+                return "1600";
+            case FREEDV_MODE_2020:
+                return "2020";
+            default:
+                return "unk";
+        }
+    }
+}
+
 static void callback_err_fn(void *fifo, short error_pattern[], int sz_error_pattern)
 {
     codec2_fifo_write((struct FIFO*)fifo, error_pattern, sz_error_pattern);

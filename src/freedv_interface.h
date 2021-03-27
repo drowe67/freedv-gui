@@ -17,7 +17,8 @@ public:
     bool isRunning() const { return dvObjects_.size() > 0; }
     bool isModeActive(int mode) const { return std::find(enabledModes_.begin(), enabledModes_.end(), mode) != enabledModes_.end(); }
     void setRunTimeOptions(int clip, int bpf, int phaseEstBW, int phaseEstDPSK);
-
+    
+    char* getCurrentModeStr() const;
     bool usingTestFrames() const;
     void resetTestFrameStats();
     void resetBitStats();
