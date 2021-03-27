@@ -104,7 +104,7 @@ int FreeDVInterface::getErrorPattern(short** outputPattern)
     return 0;
 }
 
-char* FreeDVInterface::getCurrentModeStr() const
+const char* FreeDVInterface::getCurrentModeStr() const
 {
     if (currentRxMode_ == nullptr)
     {
