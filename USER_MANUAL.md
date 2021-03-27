@@ -217,6 +217,9 @@ used on the FreeDV side, ensure that the "CI-V Transceive" option is enabled
 on the radio or else the radio will not respond to requests directed to that
 address.
 
+On newer radios (e.g. 7300, 7610), you may also need to set "CI-V USB Echo Back" 
+to ON as this may be set to OFF by default.
+
 ## I need help with my radio or rig interface
 
 There are many radios, many computers, and many sound cards.  It is
