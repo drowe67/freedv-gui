@@ -225,6 +225,8 @@ void FreeDVInterface::stop()
     
     currentTxMode_ = nullptr;
     currentRxMode_ = nullptr;
+    txMode_ = 0;
+    rxMode_ = 0;
 }
 
 void FreeDVInterface::setSync(int val)
