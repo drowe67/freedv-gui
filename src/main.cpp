@@ -390,7 +390,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxGetApp().m_soundCard2OutDeviceName = pConfig->Read(wxT("/Audio/soundCard2OutDeviceName"), _("none"));	
 
     g_txLevel = pConfig->Read(wxT("/Audio/transmitLevel"), (int)0);
-    char fmt[5];
+    char fmt[15];
     m_sliderTxLevel->SetValue(g_txLevel);
     sprintf(fmt, "%0.1f dB", (double)g_txLevel / 10.0);
     wxString fmtString(fmt);

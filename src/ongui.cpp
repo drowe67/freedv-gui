@@ -328,7 +328,7 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
 {
-    char fmt[5];
+    char fmt[15];
     g_txLevel = m_sliderTxLevel->GetValue();
     sprintf(fmt, "%0.1f dB", (double)(g_txLevel)/10.0);
     wxString fmtString(fmt);
