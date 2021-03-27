@@ -121,6 +121,7 @@
 </ol>
 <h2 id="hamlib-does-not-work-with-my-icom-radio"><span class="header-section-number">3.3</span> Hamlib does not work with my Icom radio</h2>
 <p>The most common issue with Icom radios is that the CI-V address configured in FreeDV does not match the address configured in the radio. Ensure that the CI-V address in both FreeDV and on the radio are the same. If “00” is used on the FreeDV side, ensure that the “CI-V Transceive” option is enabled on the radio or else the radio will not respond to requests directed to that address.</p>
+<p>On newer radios (e.g. 7300, 7610), you may also need to set “CI-V USB Echo Back” to ON as this may be set to OFF by default.</p>
 <h2 id="i-need-help-with-my-radio-or-rig-interface"><span class="header-section-number">3.4</span> I need help with my radio or rig interface</h2>
 <p>There are many radios, many computers, and many sound cards. It is impossible to test them all. Many radios have intricate menus with custom settings. It is unreasonable to expect the authors of FreeDV to have special knowledge of your exact hardware.</p>
 <p>However someone may have worked through the same problem as you. Ask on the digital voice mailing list.</p>
