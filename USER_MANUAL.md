@@ -697,6 +697,12 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.5.3 April 2021
+
+1. Simultaneous decode of 2020, 1600 and 700C/D/E (without needing to push Stop first, change the mode and push Start again).
+2. Dynamic switching of the current Tx mode between the aforementioned modes, again without needing to restart the session.
+3. A Tx level slider on the bottom of the main screen to fine-tune transmit output (to more easily avoid clipping ALC and conflicting with other soundcard ham radio applications).
+
 ## V1.5.2 January 2021
 
 1. Updates storage for sound card configuration to use device names instead of IDs.
