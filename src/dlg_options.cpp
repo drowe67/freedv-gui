@@ -22,7 +22,7 @@
 #include "dlg_options.h"
 
 extern bool                g_modal;
-extern struct freedv      *g_pfreedv;
+extern FreeDVInterface freedvInterface;
 
 // PortAudio over/underflow counters
 
@@ -218,6 +218,15 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_duplex->Add(m_ckHalfDuplex, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
     sizerModem->Add(sbSizer_duplex,0, wxALL|wxEXPAND, 3);
 
+    //------------------------------
+    // Multiple RX selection
+    //------------------------------
+    wxStaticBox *sb_multirx = new wxStaticBox(m_modemTab, wxID_ANY, _("Multiple RX Operation"));
+    wxStaticBoxSizer* sbSizer_multirx = new wxStaticBoxSizer(sb_multirx, wxHORIZONTAL);
+    m_ckboxMultipleRx = new wxCheckBox(m_modemTab, wxID_ANY, _("Simultaneously Decode All HF Modes"), wxDefaultPosition, wxSize(-1,-1), 0);
+    sbSizer_multirx->Add(m_ckboxMultipleRx, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
+    sizerModem->Add(sbSizer_multirx,0, wxALL|wxEXPAND, 3);
+    
     m_modemTab->SetSizer(sizerModem);
     
     // Simulation tab
@@ -477,6 +486,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         m_ckHalfDuplex->SetValue(wxGetApp().m_boolHalfDuplex);
 
+        m_ckboxMultipleRx->SetValue(wxGetApp().m_boolMultipleRx);
+        
         m_ckboxTestFrame->SetValue(wxGetApp().m_testFrames);
 
         m_ckboxChannelNoise->SetValue(wxGetApp().m_channel_noise);
@@ -567,6 +578,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_boolHalfDuplex = m_ckHalfDuplex->GetValue();
         pConfig->Write(wxT("/Rig/HalfDuplex"), wxGetApp().m_boolHalfDuplex);
 
+        wxGetApp().m_boolMultipleRx = m_ckboxMultipleRx->GetValue();
+        pConfig->Write(wxT("/Rig/MultipleRx"), wxGetApp().m_boolMultipleRx);
+        
         /* Voice Keyer */
 
         wxGetApp().m_txtVoiceKeyerWaveFile = m_txtCtrlVoiceKeyerWaveFile->GetValue();
@@ -761,7 +775,7 @@ void OptionsDlg::OnChooseVoiceKeyerWaveFile(wxCommandEvent& event) {
 //  Run time update of carrier amplitude attenuation
 
 void OptionsDlg::OnAttnCarrierEn(wxScrollEvent& event) {
-    if (g_pfreedv != NULL)
+    if (freedvInterface.isRunning())
     {
         long attn_carrier;
         m_txtAttnCarrier->GetValue().ToLong(&attn_carrier);
@@ -770,8 +784,8 @@ void OptionsDlg::OnAttnCarrierEn(wxScrollEvent& event) {
         /* uncheck -> checked, attenuate selected carrier */
 
         if (m_ckboxAttnCarrierEn->GetValue() && !wxGetApp().m_attn_carrier_en) {
-            if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C) {
-                freedv_set_carrier_ampl(g_pfreedv, wxGetApp().m_attn_carrier, 0.25);
+            if (freedvInterface.isModeActive(FREEDV_MODE_700C)) {
+                freedvInterface.setCarrierAmplitude(wxGetApp().m_attn_carrier, 0.25);
             } else {
                 wxMessageBox("Carrier attenuation feature only works on 700C", wxT("Warning"), wxOK | wxICON_WARNING, this);
             }
@@ -780,8 +794,8 @@ void OptionsDlg::OnAttnCarrierEn(wxScrollEvent& event) {
         /* checked -> unchecked, reset selected carrier */
 
         if (!m_ckboxAttnCarrierEn->GetValue() && wxGetApp().m_attn_carrier_en) {
-            if (freedv_get_mode(g_pfreedv) == FREEDV_MODE_700C) {
-                freedv_set_carrier_ampl(g_pfreedv, wxGetApp().m_attn_carrier, 1.0);
+            if (freedvInterface.isModeActive(FREEDV_MODE_700C)) {
+                freedvInterface.setCarrierAmplitude(wxGetApp().m_attn_carrier, 1.0);
             }
         }
     }

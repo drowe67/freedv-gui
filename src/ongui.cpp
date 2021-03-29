@@ -15,12 +15,13 @@ extern int   g_analog;
 extern int   g_split;
 extern int   g_tx;
 extern int   g_State, g_prev_State;
-extern struct freedv      *g_pfreedv;
+extern FreeDVInterface freedvInterface;
 extern struct MODEM_STATS  g_stats;
 extern bool g_queueResync;
 extern short *g_error_hist, *g_error_histn;
 extern int g_resyncs;
 extern int g_Nc;
+extern int g_txLevel;
 
 //-------------------------------------------------------------------------
 // OnExitClick()
@@ -133,8 +134,8 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
                 wxT("For Help and Support visit: http://freedv.org\n\n")
 
                 wxT("GNU Public License V2.1\n\n")
-                wxT("Created by David Witten KD0EAG and David Rowe VK5DGR in 2012.  ")
-                wxT("Currently (2020) maintaned by Mooneer Salem K6AQ and David Rowe VK5DGR.\n\n")
+                wxT("Created by David Witten KD0EAG and David Rowe VK5DGR (2012).  ")
+                wxT("Currently maintained by Mooneer Salem K6AQ and David Rowe VK5DGR.\n\n")
                 wxT("freedv-gui version: %s\n")
                 wxT("freedv-gui git hash: %s\n")
                 wxT("codec2 git hash: %s\n")
@@ -323,6 +324,21 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 }
 
 //-------------------------------------------------------------------------
+// OnChangeTxLevel()
+//-------------------------------------------------------------------------
+void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
+{
+    char fmt[15];
+    g_txLevel = m_sliderTxLevel->GetValue();
+    sprintf(fmt, "%0.1f dB", (double)(g_txLevel)/10.0);
+    wxString fmtString(fmt);
+    m_txtTxLevelNum->SetLabel(fmtString);
+    
+    wxConfigBase *pConfig = wxConfigBase::Get();
+    pConfig->Write(wxT("/Audio/transmitLevel"), g_txLevel);
+}
+
+//-------------------------------------------------------------------------
 // OnCheckSQClick()
 //-------------------------------------------------------------------------
 void MainFrame::OnCheckSQClick(wxCommandEvent& event)
@@ -487,8 +503,8 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     }
     else {
         g_analog = 0;
-        m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedv_get_modem_sample_rate(g_pfreedv)/2)));
-        m_panelWaterfall->setFs(freedv_get_modem_sample_rate(g_pfreedv));
+        m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getRxModemSampleRate()/2)));
+        m_panelWaterfall->setFs(freedvInterface.getRxModemSampleRate());
     }
 
     g_State = g_prev_State = 0;
@@ -513,11 +529,10 @@ void MainFrame::OnReSync(wxCommandEvent& event)
 {
     if (m_RxRunning)  {
         if (g_verbose) fprintf(stderr,"OnReSync\n");
-        if (g_mode != -1) {
-            // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
-            // the next execution of the TX/RX loop.
-            g_queueResync = true;
-        }
+        
+        // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
+        // the next execution of the TX/RX loop.
+        g_queueResync = true;
     }
 }
 
@@ -525,22 +540,15 @@ void MainFrame::OnReSync(wxCommandEvent& event)
 void MainFrame::OnBerReset(wxCommandEvent& event)
 {
     if (m_RxRunning)  {
-        if (g_mode == -1) {
-#ifdef __HORUS__
-            horus_set_total_payload_bits(g_horus, 0);
-#endif
-        } else {
-            freedv_set_total_bits(g_pfreedv, 0);
-            freedv_set_total_bit_errors(g_pfreedv, 0);
-            g_resyncs = 0;
-            int i;
-            for(i=0; i<2*g_Nc; i++) {
-                g_error_hist[i] = 0;
-                g_error_histn[i] = 0;
-            }
-            // resets variance stats every time it is called
-            freedv_set_eq(g_pfreedv, wxGetApp().m_700C_EQ);
+        freedvInterface.resetBitStats();
+        g_resyncs = 0;
+        int i;
+        for(i=0; i<2*g_Nc; i++) {
+            g_error_hist[i] = 0;
+            g_error_histn[i] = 0;
         }
+        // resets variance stats every time it is called
+        freedvInterface.setEq(wxGetApp().m_700C_EQ);
     }
 }
 

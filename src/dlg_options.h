@@ -171,6 +171,8 @@ class OptionsDlg : public wxDialog
 
         wxCheckBox   *m_ckboxDebugConsole;
 
+        wxCheckBox*  m_ckboxMultipleRx;
+        
         unsigned int  event_in_serial, event_out_serial;
 
         void OnChooseVoiceKeyerWaveFile(wxCommandEvent& event);

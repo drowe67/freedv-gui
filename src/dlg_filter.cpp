@@ -43,8 +43,7 @@
 #define F_STEP_DFT        10.0                       // frequency steps to sample spectrum
 #define F_MAG_N           (int)(MAX_F_HZ/F_STEP_DFT) // number of frequency steps
 
-extern struct freedv      *g_pfreedv;
-extern int                 g_mode;
+extern FreeDVInterface freedvInterface;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class FilterDlg
@@ -562,13 +561,10 @@ void FilterDlg::setBeta(void) {
 
 void FilterDlg::setCodec2(void) {
     if (m_running) {
-        struct CODEC2 *c2 = freedv_get_codec2(g_pfreedv);
-        if (c2 != NULL) {
-            codec2_set_lpc_post_filter(c2,
+        freedvInterface.setLpcPostFilter(
                                        m_codec2LPCPostFilterEnable->GetValue(),
                                        m_codec2LPCPostFilterBassBoost->GetValue(),
                                        m_beta, m_gamma);
-        }
     }
 }
 
@@ -610,8 +606,8 @@ void FilterDlg::OnSpeexppEnable(wxScrollEvent& event) {
 
 void FilterDlg::On700C_EQ(wxScrollEvent& event) {
     wxGetApp().m_700C_EQ = m_ckbox700C_EQ->GetValue();
-    if (m_running && ((g_mode == FREEDV_MODE_700C) || (g_mode == FREEDV_MODE_700D) || (g_mode == FREEDV_MODE_700E))) {
-        freedv_set_eq(g_pfreedv, wxGetApp().m_700C_EQ);
+    if (m_running) {
+        freedvInterface.setEq(wxGetApp().m_700C_EQ);
     }
 }
 

@@ -72,9 +72,6 @@
 #include "codec2_fifo.h"
 #include "modem_stats.h"
 #include "lpcnet_freedv.h"
-#ifdef __HORUS__
-#include "horus_api.h"
-#endif
 
 #include "topFrame.h"
 #include "dlg_ptt.h"
@@ -96,6 +93,7 @@
 #include "serialport.h" 
 #include "pskreporter.h"
 #include "callsign_encoder.h"
+#include "freedv_interface.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -187,11 +185,12 @@ class MainApp : public wxApp
         wxString m_soundCard2InDeviceName;
         wxString m_soundCard1OutDeviceName;
         wxString m_soundCard2OutDeviceName;
-
+        
         // PTT -----------------------------------
 
         bool                m_boolHalfDuplex;
-
+        bool                m_boolMultipleRx;
+        
         wxString            m_txtVoiceKeyerWaveFilePath;
         wxString            m_txtVoiceKeyerWaveFile;
         int                 m_intVoiceKeyerRxPause;
@@ -609,6 +608,9 @@ class MainFrame : public TopFrame
 
         int VoiceKeyerStartTx(void);
 
+        void OnChangeTxMode( wxCommandEvent& event );
+        
+        void OnChangeTxLevel( wxScrollEvent& event );
     private:
         bool        m_useMemory;
         wxTextCtrl* m_tc;
@@ -710,10 +712,6 @@ int resample(SRC_STATE *src,
              int        length_input_short
              );
 void txRxProcessing();
-void per_frame_rx_processing(
-                                        FIFO    *output_fifo,   // decoded speech samples
-                                        FIFO    *input_fifo     // modem samples input to demod
-                                    );
 
 // FreeDv API calls this when there is a test frame that needs a-plottin'
 

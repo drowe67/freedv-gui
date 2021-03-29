@@ -92,12 +92,16 @@ class TopFrame : public wxFrame
         wxTextCtrl*   m_txtCtrlCallSign;
         wxStaticText* m_txtModeStatus;
 
-        wxSlider* m_sliderSQ;
+        wxStaticText* m_txtTxLevelNum;
+        wxSlider* m_sliderTxLevel;
+        
+        wxSlider* m_sliderSQ;        
         wxCheckBox* m_ckboxSQ;
         wxStaticText* m_textSQ;
         wxStatusBar* m_statusBar1;
 
         wxButton*     m_BtnBerReset;
+        wxStaticText  *m_textCurrentDecodeMode;
         wxStaticText  *m_textBits;
         wxStaticText  *m_textErrors;
         wxStaticText  *m_textBER;
@@ -115,11 +119,7 @@ class TopFrame : public wxFrame
         wxRadioButton *m_rb700e;
         wxRadioButton *m_rb800xa;
         wxRadioButton *m_rb1600;
-        wxRadioButton *m_rb2400a;
         wxRadioButton *m_rb2400b;
-#ifdef __HORUS__
-        wxRadioButton *m_rbHorusBinary;
-#endif
         wxRadioButton *m_rb2020;
 
         wxMenuItem* m_menuItemPlayFileToMicIn;
@@ -178,7 +178,11 @@ class TopFrame : public wxFrame
         virtual void OnCallSignReset( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnBerReset( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnReSync( wxCommandEvent& event ) { event.Skip(); }
-
+        
+        virtual void OnChangeTxMode( wxCommandEvent& event ) { event.Skip(); }
+        
+        virtual void OnChangeTxLevel( wxScrollEvent& event ) { event.Skip(); }
+        
     public:
         wxToggleButton* m_togBtnOnOff;
         wxToggleButton* m_togBtnSplit;
