@@ -244,24 +244,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     lowerSizer->Add(bSizer15, 1, wxEXPAND, 5);
 
     centerSizer->Add(lowerSizer, 0, wxEXPAND, 2);
-    
-    // Transmit Level slider
-    wxBoxSizer* txLevelSizer = new wxBoxSizer(wxHORIZONTAL);
-    wxBoxSizer* txLevelLabelSizer = new wxBoxSizer(wxVERTICAL);
-    wxStaticText *txtLabelAttn = new wxStaticText(this, wxID_ANY, wxT("TX Attn:"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    txLevelLabelSizer->Add(txtLabelAttn, 0, wxALL|wxEXPAND, 1);
-    txLevelSizer->Add(txLevelLabelSizer);
-    
-    // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
-    m_sliderTxLevel = new wxSlider(this, wxID_ANY, g_txLevel, -200, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS|wxSL_HORIZONTAL);
-    m_sliderTxLevel->SetToolTip(_("Sets TX attenuation (0-20dB))."));
-    txLevelSizer->Add(m_sliderTxLevel, wxEXPAND);
-    
-    m_txtTxLevelNum = new wxStaticText(this, wxID_ANY, wxT("0 dB"), wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
-    m_txtTxLevelNum->SetMinSize(wxSize(50,-1));
-    txLevelSizer->Add(m_txtTxLevelNum);
-    
-    centerSizer->Add(txLevelSizer, 0, wxEXPAND, 2);
+
     
     bSizer1->Add(centerSizer, 4, wxALL|wxEXPAND, 1);
     
@@ -297,6 +280,20 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     sbSizer3->Add(m_ckboxSQ, 0, wxALIGN_CENTER_HORIZONTAL, 0);
     rightSizer->Add(sbSizer3, 2, wxEXPAND, 0);
 
+    // Transmit Level slider
+    wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("TX Attenuation")), wxVERTICAL);
+    
+    // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
+    m_sliderTxLevel = new wxSlider(this, wxID_ANY, g_txLevel, -300, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS|wxSL_INVERSE|wxSL_VERTICAL);
+    m_sliderTxLevel->SetToolTip(_("Sets TX attenuation (0-30dB))."));
+    txLevelSizer->Add(m_sliderTxLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
+    
+    m_txtTxLevelNum = new wxStaticText(this, wxID_ANY, wxT("0 dB"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    m_txtTxLevelNum->SetMinSize(wxSize(50,-1));
+    txLevelSizer->Add(m_txtTxLevelNum, 0, wxALIGN_CENTER_HORIZONTAL, 0);
+    
+    rightSizer->Add(txLevelSizer, 2, wxEXPAND, 0);
+    
     //rightSizer->Add(sbSizer3_33,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
 
     /* new --- */
