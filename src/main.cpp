@@ -1474,6 +1474,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         vk_state = VK_IDLE;
 
         m_textSync->Enable();
+        m_textCurrentDecodeMode->Enable();
 
         // determine what mode we are using
         OnChangeTxMode(event);
@@ -1704,6 +1705,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_newMicInFilter = m_newSpkOutFilter = true;
 
         m_textSync->Disable();
+        m_textCurrentDecodeMode->Disable();
 
         m_togBtnSplit->Disable();
         m_togBtnAnalog->Disable();
