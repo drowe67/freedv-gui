@@ -462,7 +462,11 @@ int AudioOptsDialog::ExchangeData(int inout)
                                                            m_listCtrlRxOutDevices, 
                                                            g_soundCard1OutDeviceNum);
 
-            if ((rxInAudioDeviceNum != -1) && (rxInAudioDeviceNum != -1)) {
+            if ((rxInAudioDeviceNum != -1) && (rxOutAudioDeviceNum != -1)) {
+                // Build sample rate dropdown lists
+                buildListOfSupportedSampleRates(m_cbSampleRateRxIn, rxInAudioDeviceNum, AUDIO_IN);
+                buildListOfSupportedSampleRates(m_cbSampleRateRxOut, rxOutAudioDeviceNum, AUDIO_OUT);
+                
                 m_cbSampleRateRxIn->SetValue(wxString::Format(wxT("%i"),g_soundCard1SampleRate));
                 m_cbSampleRateRxOut->SetValue(wxString::Format(wxT("%i"),g_soundCard1SampleRate));
             }
@@ -490,11 +494,19 @@ int AudioOptsDialog::ExchangeData(int inout)
                                                            g_soundCard1OutDeviceNum);
 
             if ((rxInAudioDeviceNum != -1) && (txOutAudioDeviceNum != -1)) {
+                // Build sample rate dropdown lists
+                buildListOfSupportedSampleRates(m_cbSampleRateRxIn, rxInAudioDeviceNum, AUDIO_IN);
+                buildListOfSupportedSampleRates(m_cbSampleRateTxOut, txOutAudioDeviceNum, AUDIO_OUT);
+                
                 m_cbSampleRateRxIn->SetValue(wxString::Format(wxT("%i"),g_soundCard1SampleRate));
                 m_cbSampleRateTxOut->SetValue(wxString::Format(wxT("%i"),g_soundCard1SampleRate));
             }
 
             if ((txInAudioDeviceNum != -1) && (rxOutAudioDeviceNum != -1)) {
+                // Build sample rate dropdown lists
+                buildListOfSupportedSampleRates(m_cbSampleRateTxIn, txInAudioDeviceNum, AUDIO_IN);
+                buildListOfSupportedSampleRates(m_cbSampleRateRxOut, rxOutAudioDeviceNum, AUDIO_OUT);
+                
                 m_cbSampleRateTxIn->SetValue(wxString::Format(wxT("%i"),g_soundCard2SampleRate));
                 m_cbSampleRateRxOut->SetValue(wxString::Format(wxT("%i"),g_soundCard2SampleRate));
             }
@@ -712,6 +724,8 @@ int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, i
             cbSampleRate->AppendString(str);
             if (g_verbose) fprintf(stderr,"%i ", (int)PortAudioWrap::standardSampleRates[i]);
             numSampleRates++;
+        } else {
+            fprintf(stderr, "PA error while testing sample rate for dev ID %d: %s\n", devNum, Pa_GetErrorText(err));
         }
     }
     if (g_verbose) fprintf(stderr,"\n");
