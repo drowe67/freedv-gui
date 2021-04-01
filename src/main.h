@@ -670,6 +670,7 @@ public:
             txRxProcessing();
             wxThread::Sleep(20);
         }
+        Pa_Terminate();
         return NULL;
     }
 

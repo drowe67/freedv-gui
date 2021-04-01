@@ -1664,11 +1664,14 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             Hamlib *hamlib = wxGetApp().m_hamlib;
             wxString hamlibError;
             if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
-                if (hamlib->ptt(false, hamlibError) == false) {
-                    wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
+                if (hamlib->isActive())
+                {
+                    if (hamlib->ptt(false, hamlibError) == false) {
+                        wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
+                    }
+                    hamlib->disable_mode_detection();
+                    hamlib->close();
                 }
-                hamlib->disable_mode_detection();
-                hamlib->close();
             }
         }
 
@@ -1877,6 +1880,7 @@ void MainFrame::startRxStream()
             if(two_rx)
                 delete m_rxOutPa;
             m_RxRunning = false;
+            Pa_Terminate();
             return;
         }
 
@@ -1890,6 +1894,7 @@ void MainFrame::startRxStream()
             if(two_rx)
                 delete m_rxOutPa;
             m_RxRunning = false;
+            Pa_Terminate();
             return;
         }
 
@@ -1902,6 +1907,7 @@ void MainFrame::startRxStream()
             if(two_rx)
 				delete m_rxOutPa;
             m_RxRunning = false;
+            Pa_Terminate();
             return;
         }
         if (deviceInfo1a->maxInputChannels == 1)
@@ -1918,6 +1924,7 @@ void MainFrame::startRxStream()
             if(two_rx)
 				delete m_rxOutPa;
             m_RxRunning = false;
+            Pa_Terminate();
             return;
         }
         if (deviceInfo1b->maxOutputChannels == 1)
@@ -1963,6 +1970,7 @@ void MainFrame::startRxStream()
                 if(two_tx)
                     delete m_txOutPa;
                 m_RxRunning = false;
+                Pa_Terminate();
                 return;
             }
 
@@ -1976,6 +1984,7 @@ void MainFrame::startRxStream()
                 if(two_tx)
 					delete m_txOutPa;
                 m_RxRunning = false;
+                Pa_Terminate();
                 return;
             }
             if (deviceInfo2a->maxInputChannels == 1)
@@ -1994,6 +2003,7 @@ void MainFrame::startRxStream()
                 if(two_tx)
 					delete m_txOutPa;
                 m_RxRunning = false;
+                Pa_Terminate();
                 return;
             }
             if (deviceInfo2b->maxOutputChannels == 1)
@@ -2120,6 +2130,7 @@ void MainFrame::startRxStream()
             deleteEQFilters(g_rxUserdata);
             delete g_rxUserdata;
             m_RxRunning = false;
+            Pa_Terminate();
             return;
         }
 
@@ -2137,6 +2148,7 @@ void MainFrame::startRxStream()
             deleteEQFilters(g_rxUserdata);
             delete g_rxUserdata;
             m_RxRunning = false;
+            Pa_Terminate();
             return;
         }
 
@@ -2159,6 +2171,7 @@ void MainFrame::startRxStream()
                 deleteEQFilters(g_rxUserdata);
                 delete g_rxUserdata;
                 m_RxRunning = false;
+                Pa_Terminate();
                 return;
             }
 
@@ -2176,6 +2189,7 @@ void MainFrame::startRxStream()
                 deleteEQFilters(g_rxUserdata);
                 delete g_rxUserdata;
                 m_RxRunning = false;
+                Pa_Terminate();
                 return;
             }
         }
@@ -2214,6 +2228,7 @@ void MainFrame::startRxStream()
                 deleteEQFilters(g_rxUserdata);
                 delete g_rxUserdata;
                 m_RxRunning = false;
+                Pa_Terminate();
                 return;
             }
             m_txErr = m_txInPa->streamStart();
@@ -2235,6 +2250,7 @@ void MainFrame::startRxStream()
                 deleteEQFilters(g_rxUserdata);
                 delete g_rxUserdata;
                 m_RxRunning = false;
+                Pa_Terminate();
                 return;
             }
 
@@ -2270,6 +2286,7 @@ void MainFrame::startRxStream()
                     deleteEQFilters(g_rxUserdata);
                     delete g_rxUserdata;
                     m_RxRunning = false;
+                    Pa_Terminate();
                     return;
                 }
                 m_txErr = m_txOutPa->streamStart();
@@ -2292,6 +2309,7 @@ void MainFrame::startRxStream()
                     deleteEQFilters(g_rxUserdata);
                     delete g_rxUserdata;
                     m_RxRunning = false;
+                    Pa_Terminate();
                     return;
                 }
             }
@@ -2934,6 +2952,7 @@ int MainFrame::getSoundCardIDFromName(wxString& name, bool input)
         {
             fprintf(stderr, "WARNING: could not initialize PortAudio (err=%d, txt=%s)\n", paResult, Pa_GetErrorText(paResult));
         }
+        Pa_Terminate();
     }
     return result;
 }
