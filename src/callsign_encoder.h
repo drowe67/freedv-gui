@@ -41,7 +41,7 @@ public:
     void pushReceivedByte(char byte);
     bool isInSync() const { return textInSync_; }
     bool isCallsignValid() const;
-    const char* getReceivedText() const { return &receivedCallsign_[2]; }
+    char* getReceivedText();
     
 private:
     std::deque<unsigned char> pendingGolayBytes_;

@@ -91,7 +91,6 @@ int                 g_State, g_prev_State;
 paCallBackData     *g_rxUserdata;
 int                 g_dump_timing;
 int                 g_dump_fifo_state;
-time_t              g_sync_time;
 
 // FIFOs used for plotting waveforms
 struct FIFO        *g_plotDemodInFifo;
@@ -1048,9 +1047,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_txtCtrlCallSign->SetValue(wxT(""));
             memset(m_callsign, 0, MAX_CALLSIGN);
             m_pcallsign = m_callsign;
-            
-            // Get current time to enforce minimum sync time requirement for PSK Reporter.
-            g_sync_time = time(0);
         }
         m_textSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
 	m_textSync->SetLabel("Modem");
@@ -1058,6 +1054,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     else {
         m_textSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
 	m_textSync->SetLabel("Modem");
+        if (g_prev_State != 0) {
+            // Force clear of received text to trigger report of any received callsigns.
+            if (wxGetApp().m_callsignEncoder) wxGetApp().m_callsignEncoder->clearReceivedText();
+        }
      }
     g_prev_State = g_State;
 
@@ -1071,10 +1071,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     if (wxGetApp().m_callsignEncoder)
     {
         strncpy(callsign, (const char*) wxGetApp().m_psk_callsign.mb_str(wxConvUTF8), MAX_CALLSIGN/2 - 2);
-        if (strlen(callsign) < MAX_CALLSIGN/2 - 1)
-        {
-            strncat(callsign, "\r", 1);
-        }    
         wxGetApp().m_callsignEncoder->setCallsign(&callsign[0]);
     }
     else
@@ -1139,11 +1135,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     {
         if (wxGetApp().m_callsignEncoder->isCallsignValid())
         {
-            wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
-            wxString wxCallsign = m_txtCtrlCallSign->GetValue();
-            if (callsignFormat.Matches(wxCallsign) && wxGetApp().m_pskPendingCallsign != callsignFormat.GetMatch(wxCallsign, 1).ToStdString())
+            wxString rxCallsign = m_txtCtrlCallSign->GetValue();
+            if (wxGetApp().m_pskPendingCallsign != rxCallsign)
             {
-                wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
                 wxGetApp().m_pskPendingCallsign = rxCallsign.ToStdString();
                 wxGetApp().m_pskPendingSnr = snr_val;
             }
@@ -1456,6 +1450,13 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 {
     wxString startStop = m_togBtnOnOff->GetLabel();
 
+    if (wxGetApp().m_callsignEncoder) wxGetApp().m_callsignEncoder->clearReceivedText();
+    
+    // Clear RX text so we start from a clean slate.
+    m_txtCtrlCallSign->SetValue(wxT(""));
+    memset(m_callsign, 0, MAX_CALLSIGN);
+    m_pcallsign = m_callsign;
+    
     // we are attempting to start
 
     if (startStop.IsSameAs("Start"))

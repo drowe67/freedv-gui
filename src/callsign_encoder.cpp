@@ -22,6 +22,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <wx/regex.h>
 #include "callsign_encoder.h"
 
 extern "C" {
@@ -49,13 +50,15 @@ void CallsignEncoder::setCallsign(const char* callsign)
     memset(&callsign_, 0, MAX_CALLSIGN/2);
     
     memcpy(&callsign_, callsign, strlen(callsign) + 1);
-    convert_callsign_to_ota_string_(callsign_, &translatedCallsign_[2]);
+    convert_callsign_to_ota_string_(callsign_, &translatedCallsign_[4]);
     
-    unsigned char crc = calculateCRC8_((char*)&translatedCallsign_[2], strlen(&translatedCallsign_[2]));
+    unsigned char crc = calculateCRC8_((char*)&translatedCallsign_[4], strlen(&translatedCallsign_[4]));
+    translatedCallsign_[0] = 63;
+    translatedCallsign_[1] = 63;
     unsigned char crcDigit1 = crc >> 4;
     unsigned char crcDigit2 = crc & 0xF;
-    convertDigitToASCII_(&translatedCallsign_[0], crcDigit1);
-    convertDigitToASCII_(&translatedCallsign_[1], crcDigit2);
+    convertDigitToASCII_(&translatedCallsign_[2], crcDigit1);
+    convertDigitToASCII_(&translatedCallsign_[3], crcDigit2);
     
     int truncIndex = 0;
     for(size_t index = 0; index < strlen(translatedCallsign_); index += 2, truncIndex += 4)
@@ -80,6 +83,12 @@ void CallsignEncoder::clearReceivedText()
 
 void CallsignEncoder::pushReceivedByte(char incomingChar)
 {
+    // If we have a valid callsign, we're done until we lose sync.
+    if (isCallsignValid())
+    {
+        return;
+    }
+    
     // If we're not in sync, we should look for a space to establish sync.
     pendingGolayBytes_.push_back(incomingChar);
     if (!textInSync_)
@@ -109,10 +118,7 @@ void CallsignEncoder::pushReceivedByte(char incomingChar)
                 // (if any) and give us the chance to decode the remaining ones.
                 textInSync_ = true;
                 fprintf(stderr, "text now in sync\n");
-                while ((pendingGolayBytes_.size() % 4) > 0)
-                {
-                    pendingGolayBytes_.pop_front();
-                }
+                pendingGolayBytes_.clear();
             }
         }
     }
@@ -140,33 +146,65 @@ void CallsignEncoder::pushReceivedByte(char incomingChar)
             rawStr[1] = ((unsigned int)rawOutput) & 0x3F;
             rawStr[2] = 0;
                         
+            fprintf(stderr, "rx: 1=%x, 2=%x\n", rawStr[0], rawStr[1]);
             convert_ota_string_to_callsign_(rawStr, decodedStr);
 
-            if (decodedStr[0] == '\r' || ((pReceivedCallsign_ - &receivedCallsign_[0]) > MAX_CALLSIGN-1))
+            if ((decodedStr[0] == '\r' || decodedStr[0] == 0x7F) || ((pReceivedCallsign_ - &receivedCallsign_[0]) > MAX_CALLSIGN-1))
             {                        
-                // CR completes line
-                *pReceivedCallsign_ = 0;
-                pReceivedCallsign_ = &receivedCallsign_[0];
+                // CR or sync completes line
+                if (pReceivedCallsign_ != &receivedCallsign_[0])
+                {
+                    *pReceivedCallsign_ = 0;
+                    pReceivedCallsign_ = &receivedCallsign_[0];
+                }
             }
-            else if (decodedStr[0] != '\0' && decodedStr[0] != 0x7F)
+            else if (decodedStr[0] != '\0')
             {
-                // Ignore nulls and sync characters.
+                // Ignore incoming nulls but wipe anything to the right of the current pointer
+                // if we're overwriting one.
+                if (*pReceivedCallsign_ == 0)
+                {
+                    memset(pReceivedCallsign_, 0, MAX_CALLSIGN - (pReceivedCallsign_ - &receivedCallsign_[0]));
+                }
                 *pReceivedCallsign_++ = decodedStr[0];
             }
             
-            if (decodedStr[1] == '\r' || ((pReceivedCallsign_ - &receivedCallsign_[0]) > MAX_CALLSIGN-1))
+            if ((decodedStr[1] == '\r' || decodedStr[1] == 0x7F) || ((pReceivedCallsign_ - &receivedCallsign_[0]) > MAX_CALLSIGN-1))
             {
-                // CR completes line
-                *pReceivedCallsign_ = 0;
-                pReceivedCallsign_ = &receivedCallsign_[0];
+                // CR/sync completes line
+                if (pReceivedCallsign_ != &receivedCallsign_[0])
+                {
+                    *pReceivedCallsign_ = 0;
+                    pReceivedCallsign_ = &receivedCallsign_[0];
+                }
             }
-            else if (decodedStr[1] != '\0' && decodedStr[1] != 0x7F)
+            else if (decodedStr[1] != '\0')
             {
-                // Ignore nulls and sync characters.
+                // Ignore incoming nulls but wipe anything to the right of the current pointer
+                // if we're overwriting one.
+                if (*pReceivedCallsign_ == 0)
+                {
+                    memset(pReceivedCallsign_, 0, MAX_CALLSIGN - (pReceivedCallsign_ - &receivedCallsign_[0]));
+                }
                 *pReceivedCallsign_++ = decodedStr[1];
             }
         }
     }
+}
+
+char* CallsignEncoder::getReceivedText() 
+{ 
+    wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
+    wxString wxCallsign = &receivedCallsign_[2];
+    if (callsignFormat.Matches(wxCallsign) && isCallsignValid())
+    {
+        // Truncate receivedCallsign_ to the portion that only consists of
+        // the callsign.
+        wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
+        receivedCallsign_[2 + rxCallsign.length()] = 0;
+    }
+    
+    return &receivedCallsign_[2]; 
 }
 
 bool CallsignEncoder::isCallsignValid() const
@@ -179,13 +217,24 @@ bool CallsignEncoder::isCallsignValid() const
     // Retrieve received CRC and calculate the CRC from the other received text.
     unsigned char receivedCRC = convertHexStringToDigit_((char*)&receivedCallsign_[0]);
     
-    char buf[MAX_CALLSIGN];
-    memset(&buf, 0, MAX_CALLSIGN);
-    convert_callsign_to_ota_string_(&receivedCallsign_[2], &buf[0]);
-    unsigned char calcCRC = calculateCRC8_((char*)&buf, strlen(&buf[0]));
+    wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
+    wxString wxCallsign = &receivedCallsign_[2];
+    if (callsignFormat.Matches(wxCallsign))
+    {
+        wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
+        
+        char buf[MAX_CALLSIGN];
+        memset(&buf, 0, MAX_CALLSIGN);
+        convert_callsign_to_ota_string_(&receivedCallsign_[2], &buf[0]);
+        unsigned char calcCRC = calculateCRC8_((char*)&buf, rxCallsign.length());
     
-    // Return true if both are equal.
-    return receivedCRC == calcCRC;
+        // Return true if both are equal.
+        return receivedCRC == calcCRC;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 // 6 bit character set for text field use:
@@ -200,9 +249,9 @@ bool CallsignEncoder::isCallsignValid() const
 void CallsignEncoder::convert_callsign_to_ota_string_(const char* input, char* output) const
 {
     int outidx = 0;
+
     for (size_t index = 0; index < strlen(input); index++)
     {
-        bool addSync = false;
         if (input[index] >= 38 && input[index] <= 47)
         {
             output[outidx++] = input[index] - 37;
@@ -222,26 +271,22 @@ void CallsignEncoder::convert_callsign_to_ota_string_(const char* input, char* o
         else if (input[index] == '\r')
         {
             output[outidx++] = 48;
-            addSync = true;
         }
         else
         {
-            // Invalid characters become spaces. We also add up to three sync
-            // characters (63) to the end depending on the current length.
+            // Invalid characters become spaces.
             output[outidx++] = 47;
-            addSync = true;
-        }
-        
-        if (addSync)
-        {
-            if (outidx % 2)
-            {
-                output[outidx++] = 63;
-            }
-            output[outidx++] = 63;
-            output[outidx++] = 63;
         }
     }
+    
+    // We also add up to three sync characters (63) to the end depending
+    // on the current length.
+    if (outidx % 2)
+    {
+        output[outidx++] = 63;
+    }
+    output[outidx++] = 63;
+    output[outidx++] = 63;
     output[outidx] = 0;
 }
 
