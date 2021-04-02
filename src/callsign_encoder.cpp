@@ -149,7 +149,7 @@ void CallsignEncoder::pushReceivedByte(char incomingChar)
             fprintf(stderr, "rx: 1=%x, 2=%x\n", rawStr[0], rawStr[1]);
             convert_ota_string_to_callsign_(rawStr, decodedStr);
 
-            if ((decodedStr[0] == '\r' || decodedStr[1] == 0x7F) || ((pReceivedCallsign_ - &receivedCallsign_[0]) > MAX_CALLSIGN-1))
+            if ((decodedStr[0] == '\r' || decodedStr[0] == 0x7F) || ((pReceivedCallsign_ - &receivedCallsign_[0]) > MAX_CALLSIGN-1))
             {                        
                 // CR or sync completes line
                 if (pReceivedCallsign_ != &receivedCallsign_[0])
