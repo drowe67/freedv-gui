@@ -249,6 +249,7 @@ bool CallsignEncoder::isCallsignValid() const
 void CallsignEncoder::convert_callsign_to_ota_string_(const char* input, char* output) const
 {
     int outidx = 0;
+
     for (size_t index = 0; index < strlen(input); index++)
     {
         if (input[index] >= 38 && input[index] <= 47)
