@@ -144,29 +144,10 @@ void FreeDVInterface::setRunTimeOptions(int clip, int bpf, int phaseEstBW, int p
 {
     for (auto& dv : dvObjects_)
     {
-        switch(freedv_get_mode(dv))
-        {
-            case FREEDV_MODE_700C:
-                freedv_set_clip(dv, clip);
-                break;
-            case FREEDV_MODE_700D:
-                freedv_set_clip(dv, clip);
-                freedv_set_tx_bpf(dv, bpf);
-                freedv_set_phase_est_bandwidth_mode(dv, phaseEstBW);
-                freedv_set_dpsk(dv, phaseEstDPSK);
-                break;
-            case FREEDV_MODE_700E:
-                freedv_set_clip(dv, clip);
-                freedv_set_tx_bpf(dv, bpf);
-                break;
-            case FREEDV_MODE_2020:
-                freedv_set_clip(dv, clip);
-                freedv_set_phase_est_bandwidth_mode(dv, phaseEstBW);
-                freedv_set_dpsk(dv, phaseEstDPSK);
-                break;
-            default:
-                break;
-        }
+        freedv_set_clip(dv, clip);   // 700D/700E
+        freedv_set_tx_bpf(dv, bpf);  // 700D/700E
+        freedv_set_phase_est_bandwidth_mode(dv, phaseEstBW); // 700D/2020
+        freedv_set_dpsk(dv, phaseEstDPSK);  // 700D/2020
     }
 }
 
