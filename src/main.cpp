@@ -1767,6 +1767,8 @@ void MainFrame::stopRxStream()
         destroy_src();
         deleteEQFilters(g_rxUserdata);
         delete g_rxUserdata;
+        
+        Pa_Terminate();
     }
 }
 
@@ -2946,7 +2948,6 @@ int MainFrame::getSoundCardIDFromName(wxString& name, bool input)
                     }
                 }
             }
-            Pa_Terminate();
         }
         else
         {
