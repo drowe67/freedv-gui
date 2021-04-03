@@ -157,10 +157,10 @@ int                 g_speechOutbufferSize;
 // now be thread safe
 
 wxMutex g_mutexProtectingCallbackData;
-
+ 
 // Speex pre-processor states
-
 SpeexPreprocessState *g_speex_st;
+wxMutex speexMtx;
 
 // Option test file to log samples
 
@@ -1441,6 +1441,18 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         // Need to change the TX interface live.
         freedvInterface.changeTxMode(g_mode);
     }
+    
+    // Re-initialize Speex since the sample rate's changing
+    speexMtx.Lock();
+    if (wxGetApp().m_speexpp_enable && freedvInterface.isRunning())
+    {
+        if (g_speex_st)
+        {
+            speex_preprocess_state_destroy(g_speex_st);
+        }
+        g_speex_st = speex_preprocess_state_init(freedvInterface.getTxNumSpeechSamples(), freedvInterface.getTxSpeechSampleRate());
+    }
+    speexMtx.Unlock();
 }
 
 //-------------------------------------------------------------------------
@@ -1560,9 +1572,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (g_verbose) fprintf(stderr, "freedv_get_n_speech_samples(tx): %d\n", freedvInterface.getTxNumSpeechSamples());
         if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(tx): %d\n", freedvInterface.getTxSpeechSampleRate());
 
+        speexMtx.Lock();
         if (wxGetApp().m_speexpp_enable)
             g_speex_st = speex_preprocess_state_init(freedvInterface.getTxNumSpeechSamples(), freedvInterface.getTxSpeechSampleRate());
-
+        speexMtx.Unlock();
+        
         // adjust spectrum and waterfall freq scaling base on mode
 
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getTxModemSampleRate()/2)));
@@ -1696,9 +1710,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         delete[] g_error_hist;
         delete[] g_error_histn;
         freedvInterface.stop();
+        
+        speexMtx.Lock();
         if (wxGetApp().m_speexpp_enable)
             speex_preprocess_state_destroy(g_speex_st);
-
+        speexMtx.Unlock();
+        
         m_newMicInFilter = m_newSpkOutFilter = true;
 
         m_textSync->Disable();
@@ -2608,10 +2625,11 @@ void txRxProcessing()
             }
 
             // Optional Speex pre-processor for acoustic noise reduction
-
+            speexMtx.Lock();
             if (wxGetApp().m_speexpp_enable) {
                 speex_preprocess_run(g_speex_st, infreedv);
             }
+            speexMtx.Unlock();
 
             // Optional Mic In EQ Filtering, need mutex as filter can change at run time
 
