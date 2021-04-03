@@ -146,9 +146,7 @@ wxWindow           *g_parent;
 
 // Click to tune rx and tx frequency offset states
 float               g_RxFreqOffsetHz;
-COMP                g_RxFreqOffsetPhaseRect;
 float               g_TxFreqOffsetHz;
-COMP                g_TxFreqOffsetPhaseRect;
 
 // buffer sizes dependent upon sample rate
 int                 g_modemInbufferSize;
@@ -590,14 +588,10 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     // init click-tune states
 
     g_RxFreqOffsetHz = 0.0;
-    g_RxFreqOffsetPhaseRect.real = cos(0.0);
-    g_RxFreqOffsetPhaseRect.imag = sin(0.0);
     m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
     m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
 
     g_TxFreqOffsetHz = 0.0;
-    g_TxFreqOffsetPhaseRect.real = cos(0.0);
-    g_TxFreqOffsetPhaseRect.imag = sin(0.0);
 
     g_tx = 0;
     g_split = 0;
@@ -2515,7 +2509,7 @@ void txRxProcessing()
             // Write 20ms chunks of input samples for modem rx processing
             g_State = freedvInterface.processRxAudio(
                 infreedv, nfreedv, cbData->rxoutfifo, g_channel_noise, wxGetApp().m_noise_snr, 
-                g_RxFreqOffsetHz, &g_RxFreqOffsetPhaseRect, &g_stats, &g_sig_pwr_av);
+                g_RxFreqOffsetHz, &g_stats, &g_sig_pwr_av);
   
             // Read 20ms chunk of samples from modem rx processing,
             // this will typically be decoded output speech, and is
@@ -2652,20 +2646,12 @@ void txRxProcessing()
                 }
             }
             else {
-                COMP tx_fdm[nfreedv];
-                COMP tx_fdm_offset[nfreedv];
-                int  i;
-
                 if (g_mode == FREEDV_MODE_800XA || g_mode == FREEDV_MODE_2400B) {
                     /* 800XA doesn't support complex output just yet */
                     freedvInterface.transmit(outfreedv, infreedv);
                 }
                 else {
-                    freedvInterface.complexTransmit(tx_fdm, infreedv);
-
-                    freq_shift_coh(tx_fdm_offset, tx_fdm, g_TxFreqOffsetHz, freedvInterface.getTxModemSampleRate(), &g_TxFreqOffsetPhaseRect, nfreedv);
-                    for(i=0; i<nfreedv; i++)
-                        outfreedv[i] = tx_fdm_offset[i].real;
+                    freedvInterface.complexTransmit(outfreedv, infreedv, g_TxFreqOffsetHz, nfreedv);
                 }
             }
 

@@ -64,6 +64,16 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs)
         
         errorFifos_.push_back(errFifo);
         
+        auto tmpPtr = new COMP();
+        tmpPtr->real = cos(0.0);
+        tmpPtr->imag = sin(0.0);
+        txFreqOffsetPhaseRectObjs_.push_back(tmpPtr);
+        
+        tmpPtr = new COMP();
+        tmpPtr->real = cos(0.0);
+        tmpPtr->imag = sin(0.0);
+        rxFreqOffsetPhaseRectObjs_.push_back(tmpPtr);
+                
         // Assume 48K for input FIFO just to be sure. We can readjust later.
         struct FIFO* inFifo = codec2_fifo_create(fifoSizeMs * 48000/1000);  
         assert(inFifo != nullptr);      
@@ -108,6 +118,18 @@ void FreeDVInterface::stop()
     }
     rateConvObjs_.clear();
     
+    for (auto& tmp : txFreqOffsetPhaseRectObjs_)
+    {
+        delete tmp;
+    }
+    txFreqOffsetPhaseRectObjs_.clear();
+    
+    for (auto& tmp : rxFreqOffsetPhaseRectObjs_)
+    {
+        delete tmp;
+    }
+    rxFreqOffsetPhaseRectObjs_.clear();
+    
     src_delete(soundOutRateConv_);
     
     enabledModes_.clear();
@@ -122,10 +144,29 @@ void FreeDVInterface::setRunTimeOptions(int clip, int bpf, int phaseEstBW, int p
 {
     for (auto& dv : dvObjects_)
     {
-        freedv_set_clip(dv, clip);   // 700C/700D/700E/2020
-        freedv_set_tx_bpf(dv, bpf);  // 700D/700E
-        freedv_set_phase_est_bandwidth_mode(dv, phaseEstBW); // 700D/2020
-        freedv_set_dpsk(dv, phaseEstDPSK);  // 700D/2020
+        switch(freedv_get_mode(dv))
+        {
+            case FREEDV_MODE_700C:
+                freedv_set_clip(dv, clip);
+                break;
+            case FREEDV_MODE_700D:
+                freedv_set_clip(dv, clip);
+                freedv_set_tx_bpf(dv, bpf);
+                freedv_set_phase_est_bandwidth_mode(dv, phaseEstBW);
+                freedv_set_dpsk(dv, phaseEstDPSK);
+                break;
+            case FREEDV_MODE_700E:
+                freedv_set_clip(dv, clip);
+                freedv_set_tx_bpf(dv, bpf);
+                break;
+            case FREEDV_MODE_2020:
+                freedv_set_clip(dv, clip);
+                freedv_set_phase_est_bandwidth_mode(dv, phaseEstBW);
+                freedv_set_dpsk(dv, phaseEstDPSK);
+                break;
+            default:
+                break;
+        }
     }
 }
 
@@ -415,7 +456,7 @@ void FreeDVInterface::setSquelch(int enable, float level)
 
 int FreeDVInterface::processRxAudio(
     short input[], int numFrames, struct FIFO* outputFifo, bool channelNoise, int noiseSnr, 
-    float rxFreqOffsetHz, COMP* rxFreqOffsetPhaseRect, struct MODEM_STATS* stats, float* sig_pwr_av)
+    float rxFreqOffsetHz, struct MODEM_STATS* stats, float* sig_pwr_av)
 {
     short infreedv[10*N48];
     int   nfreedv;
@@ -464,7 +505,7 @@ int FreeDVInterface::processRxAudio(
             }
 
             // Optional frequency shifting
-            freq_shift_coh(rx_fdm_offset, rx_fdm, rxFreqOffsetHz, freedv_get_modem_sample_rate(dv), rxFreqOffsetPhaseRect, nin);
+            freq_shift_coh(rx_fdm_offset, rx_fdm, rxFreqOffsetHz, freedv_get_modem_sample_rate(dv), rxFreqOffsetPhaseRectObjs_[index], nin);
             nout = freedv_comprx(dv, output_buf, rx_fdm_offset);
             
             // Resample output to the current mode's rate if needed.
@@ -505,7 +546,25 @@ void FreeDVInterface::transmit(short mod_out[], short speech_in[])
     freedv_tx(currentTxMode_, mod_out, speech_in);
 }
 
-void FreeDVInterface::complexTransmit(COMP mod_out[], short speech_in[])
+void FreeDVInterface::complexTransmit(short mod_out[], short speech_in[], float txOffset, int nfreedv)
 {
-    freedv_comptx(currentTxMode_, mod_out, speech_in);
+    COMP tx_fdm[nfreedv];
+    COMP tx_fdm_offset[nfreedv];
+    int  i;
+
+    int index = 0;
+    for (auto& dv : dvObjects_)
+    {
+        if (freedv_get_mode(dv) == txMode_)
+        {
+            freedv_comptx(currentTxMode_, tx_fdm, speech_in);
+    
+            freq_shift_coh(tx_fdm_offset, tx_fdm, txOffset, getTxModemSampleRate(), txFreqOffsetPhaseRectObjs_[index], nfreedv);
+            for(i=0; i<nfreedv; i++)
+                mod_out[i] = tx_fdm_offset[i].real;
+            return;
+        }
+        index++;
+    }
+    assert(false);    
 }

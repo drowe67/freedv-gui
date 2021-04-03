@@ -82,10 +82,10 @@ public:
     
     int processRxAudio(
         short input[], int numFrames, struct FIFO* outputFifo, bool channelNoise, int noiseSnr, 
-        float rxFreqOffsetHz, COMP* rxFreqOffsetPhaseRect, struct MODEM_STATS* stats, float* sig_pwr_av);
+        float rxFreqOffsetHz, struct MODEM_STATS* stats, float* sig_pwr_av);
     
     void transmit(short mod_out[], short speech_in[]);
-    void complexTransmit(COMP mod_out[], short speech_in[]);
+    void complexTransmit(short mod_out[], short speech_in[], float txOffset, int nfreedv);
 private:
     int txMode_;
     int rxMode_;
@@ -94,6 +94,9 @@ private:
     std::deque<struct FIFO*> errorFifos_;
     std::deque<struct FIFO*> inputFifos_;
     std::deque<SRC_STATE*> rateConvObjs_;
+    std::deque<COMP*> txFreqOffsetPhaseRectObjs_;
+    std::deque<COMP*> rxFreqOffsetPhaseRectObjs_;
+    
     struct freedv* currentTxMode_;
     struct freedv* currentRxMode_; 
     SRC_STATE* soundOutRateConv_;
