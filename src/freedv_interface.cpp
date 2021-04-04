@@ -539,21 +539,10 @@ void FreeDVInterface::complexTransmit(short mod_out[], short speech_in[], float 
 {
     COMP tx_fdm[nfreedv];
     COMP tx_fdm_offset[nfreedv];
-    int  i;
 
-    int index = 0;
-    for (auto& dv : dvObjects_)
-    {
-        if (freedv_get_mode(dv) == txMode_)
-        {
-            freedv_comptx(currentTxMode_, tx_fdm, speech_in);
-    
-            freq_shift_coh(tx_fdm_offset, tx_fdm, txOffset, getTxModemSampleRate(), &txFreqOffsetPhaseRectObj_, nfreedv);
-            for(i=0; i<nfreedv; i++)
-                mod_out[i] = tx_fdm_offset[i].real;
-            return;
-        }
-        index++;
-    }
-    assert(false);    
+    freedv_comptx(currentTxMode_, tx_fdm, speech_in);
+
+    freq_shift_coh(tx_fdm_offset, tx_fdm, txOffset, getTxModemSampleRate(), &txFreqOffsetPhaseRectObj_, nfreedv);
+    for(int i = 0; i<nfreedv; i++)
+        mod_out[i] = tx_fdm_offset[i].real;
 }
