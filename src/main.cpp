@@ -160,7 +160,9 @@ wxMutex g_mutexProtectingCallbackData;
  
 // Speex pre-processor states
 SpeexPreprocessState *g_speex_st;
-wxMutex speexMtx;
+
+// TX mode change mutex
+wxMutex txModeChangeMutex;
 
 // Option test file to log samples
 
@@ -1390,6 +1392,8 @@ void MainFrame::OnExit(wxCommandEvent& event)
 
 void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 {
+    txModeChangeMutex.Lock();
+    
     if (m_rb1600->GetValue()) 
     {
         g_mode = FREEDV_MODE_1600;
@@ -1443,7 +1447,6 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     }
     
     // Re-initialize Speex since the sample rate's changing
-    speexMtx.Lock();
     if (wxGetApp().m_speexpp_enable && freedvInterface.isRunning())
     {
         if (g_speex_st)
@@ -1452,7 +1455,8 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         }
         g_speex_st = speex_preprocess_state_init(freedvInterface.getTxNumSpeechSamples(), freedvInterface.getTxSpeechSampleRate());
     }
-    speexMtx.Unlock();
+    
+    txModeChangeMutex.Unlock();
 }
 
 //-------------------------------------------------------------------------
@@ -1572,10 +1576,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (g_verbose) fprintf(stderr, "freedv_get_n_speech_samples(tx): %d\n", freedvInterface.getTxNumSpeechSamples());
         if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(tx): %d\n", freedvInterface.getTxSpeechSampleRate());
 
-        speexMtx.Lock();
         if (wxGetApp().m_speexpp_enable)
             g_speex_st = speex_preprocess_state_init(freedvInterface.getTxNumSpeechSamples(), freedvInterface.getTxSpeechSampleRate());
-        speexMtx.Unlock();
         
         // adjust spectrum and waterfall freq scaling base on mode
 
@@ -1711,10 +1713,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         delete[] g_error_histn;
         freedvInterface.stop();
         
-        speexMtx.Lock();
         if (wxGetApp().m_speexpp_enable)
             speex_preprocess_state_destroy(g_speex_st);
-        speexMtx.Unlock();
         
         m_newMicInFilter = m_newSpkOutFilter = true;
 
@@ -2571,7 +2571,9 @@ void txRxProcessing()
     //
 
     if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
-
+        // Lock the mode mutex so that TX state doesn't change on us during processing.
+        txModeChangeMutex.Lock();
+        
         // This while loop locks the modulator to the sample rate of
         // sound card 1.  We want to make sure that modulator samples
         // are uninterrupted by differences in sample rate between
@@ -2625,11 +2627,9 @@ void txRxProcessing()
             }
 
             // Optional Speex pre-processor for acoustic noise reduction
-            speexMtx.Lock();
             if (wxGetApp().m_speexpp_enable) {
                 speex_preprocess_run(g_speex_st, infreedv);
             }
-            speexMtx.Unlock();
 
             // Optional Mic In EQ Filtering, need mutex as filter can change at run time
 
@@ -2710,6 +2710,8 @@ void txRxProcessing()
             }
             codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
         }
+        
+        txModeChangeMutex.Unlock();
     }
 
     if (g_dump_timing) {
