@@ -2694,7 +2694,7 @@ void txRxProcessing()
             if (g_analog)
                 nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getTxSpeechSampleRate(), 10*N48, nfreedv);
             else
-                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, 10*N48, nfreedv);
+                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getTxModemSampleRate(), 10*N48, nfreedv);
             
             // Attenuate signal prior to output
             double dbLoss = g_txLevel / 10.0;

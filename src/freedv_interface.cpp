@@ -64,12 +64,10 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs)
         
         errorFifos_.push_back(errFifo);
         
-        auto tmpPtr = new COMP();
-        tmpPtr->real = cos(0.0);
-        tmpPtr->imag = sin(0.0);
-        txFreqOffsetPhaseRectObjs_.push_back(tmpPtr);
+        txFreqOffsetPhaseRectObj_.real = cos(0.0);
+        txFreqOffsetPhaseRectObj_.imag = sin(0.0);
         
-        tmpPtr = new COMP();
+        auto tmpPtr = new COMP();
         tmpPtr->real = cos(0.0);
         tmpPtr->imag = sin(0.0);
         rxFreqOffsetPhaseRectObjs_.push_back(tmpPtr);
@@ -117,12 +115,6 @@ void FreeDVInterface::stop()
         src_delete(conv);
     }
     rateConvObjs_.clear();
-    
-    for (auto& tmp : txFreqOffsetPhaseRectObjs_)
-    {
-        delete tmp;
-    }
-    txFreqOffsetPhaseRectObjs_.clear();
     
     for (auto& tmp : rxFreqOffsetPhaseRectObjs_)
     {
@@ -265,6 +257,22 @@ void FreeDVInterface::changeTxMode(int txMode)
         {
             currentTxMode_ = dvObjects_[index];
             txMode_ = mode;
+            
+            // Reset RX and TX offsets to help FreeDV stay on target during mode changes.
+            auto tmpPtr = &txFreqOffsetPhaseRectObj_;
+            tmpPtr->real = cos(0.0);
+            tmpPtr->imag = sin(0.0);
+        
+            tmpPtr = rxFreqOffsetPhaseRectObjs_[index];
+            tmpPtr->real = cos(0.0);
+            tmpPtr->imag = sin(0.0);
+            
+            // Recreate output rate converter in order to clear state.
+            int src_error = 0;
+            src_delete(soundOutRateConv_);
+            soundOutRateConv_ = src_new(SRC_SINC_FASTEST, 1, &src_error);
+            assert(soundOutRateConv_ != nullptr);
+            
             return;
         }
         index++;
@@ -540,7 +548,7 @@ void FreeDVInterface::complexTransmit(short mod_out[], short speech_in[], float 
         {
             freedv_comptx(currentTxMode_, tx_fdm, speech_in);
     
-            freq_shift_coh(tx_fdm_offset, tx_fdm, txOffset, getTxModemSampleRate(), txFreqOffsetPhaseRectObjs_[index], nfreedv);
+            freq_shift_coh(tx_fdm_offset, tx_fdm, txOffset, getTxModemSampleRate(), &txFreqOffsetPhaseRectObj_, nfreedv);
             for(i=0; i<nfreedv; i++)
                 mod_out[i] = tx_fdm_offset[i].real;
             return;

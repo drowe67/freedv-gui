@@ -94,7 +94,7 @@ private:
     std::deque<struct FIFO*> errorFifos_;
     std::deque<struct FIFO*> inputFifos_;
     std::deque<SRC_STATE*> rateConvObjs_;
-    std::deque<COMP*> txFreqOffsetPhaseRectObjs_;
+    COMP txFreqOffsetPhaseRectObj_;
     std::deque<COMP*> rxFreqOffsetPhaseRectObjs_;
     
     struct freedv* currentTxMode_;
