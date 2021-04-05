@@ -290,7 +290,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     txLevelSizer->Add(m_sliderTxLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
     
     m_txtTxLevelNum = new wxStaticText(this, wxID_ANY, wxT("0 dB"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
-    m_txtTxLevelNum->SetMinSize(wxSize(50,-1));
+    m_txtTxLevelNum->SetMinSize(wxSize(100,-1));
     txLevelSizer->Add(m_txtTxLevelNum, 0, wxALIGN_CENTER_HORIZONTAL, 0);
     
     rightSizer->Add(txLevelSizer, 2, wxEXPAND, 0);
