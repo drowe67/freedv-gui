@@ -47,15 +47,15 @@ private:
     std::deque<unsigned char> pendingGolayBytes_;
     bool textInSync_;
     
-    char callsign_[MAX_CALLSIGN/2];
+    char callsign_[MAX_CALLSIGN];
     char translatedCallsign_[MAX_CALLSIGN];
     char truncCallsign_[MAX_CALLSIGN];
     
     char receivedCallsign_[MAX_CALLSIGN];
     char* pReceivedCallsign_;
     
-    void convert_callsign_to_ota_string_(const char* input, char* output) const;
-    void convert_ota_string_to_callsign_(const char* input, char* output);
+    void convert_callsign_to_ota_string_(const char* input, char* output, int maxLength) const;
+    void convert_ota_string_to_callsign_(const char* input, char* output, int maxLength);
     
     unsigned char calculateCRC8_(char* input, int length) const;
     void convertDigitToASCII_(char* dest, unsigned char digit);
