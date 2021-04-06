@@ -1348,6 +1348,7 @@ void MainFrame::OnExit(wxCommandEvent& event)
     if (wxGetApp().m_hamlib)
     {
         wxGetApp().m_hamlib->disable_mode_detection();
+        wxGetApp().m_hamlib->close();
     }
 
     if (wxGetApp().m_pskReporter)
