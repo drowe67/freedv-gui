@@ -1112,10 +1112,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         else
         {
             // Pre-1.5.1 behavior, where text is handled as-is.
-            if (incomingChar == '\r' || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
+            if (incomingChar == '\r' || incomingChar == '\n' || incomingChar == 0 || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
             {                        
-                // CR completes line
-                *m_pcallsign = 0;
+                // CR completes line. Fill in remaining positions with zeroes.
+                if ((m_pcallsign - m_callsign) <= MAX_CALLSIGN-1)
+                {
+                    memset(m_pcallsign, 0, MAX_CALLSIGN - (m_pcallsign - m_callsign));
+                }
+                
+                // Reset to the beginning.
                 m_pcallsign = m_callsign;
             }
             else
