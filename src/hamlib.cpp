@@ -157,6 +157,9 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
     }
     if (g_verbose) fprintf(stderr, "hamlib: rig_open() failed ...\n");
 
+    rig_cleanup(m_rig);
+    m_rig = nullptr;
+    
     return false;
 }
 

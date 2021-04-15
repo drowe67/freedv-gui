@@ -1,3 +1,24 @@
+//==========================================================================
+// Name:            freedv_interface.cpp
+// Purpose:         Implements a wrapper around the Codec2 FreeDV interface.
+// Created:         March 31, 2021
+// Authors:         Mooneer Salem
+// 
+// License:
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License version 2.1,
+//  as published by the Free Software Foundation.  This program is
+//  distributed in the hope that it will be useful, but WITHOUT ANY
+//  WARRANTY; without even the implied warranty of MERCHANTABILITY or
+//  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+//  License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program; if not, see <http://www.gnu.org/licenses/>.
+//
+//==========================================================================
+
 #include "main.h"
 
 FreeDVInterface::FreeDVInterface() :
@@ -15,11 +36,107 @@ FreeDVInterface::~FreeDVInterface()
     if (isRunning()) stop();
 }
 
+
+static void callback_err_fn(void *fifo, short error_pattern[], int sz_error_pattern)
+{
+    codec2_fifo_write((struct FIFO*)fifo, error_pattern, sz_error_pattern);
+}
+
+void FreeDVInterface::start(int txMode, int fifoSizeMs)
+{
+    int src_error = 0;
+    for (auto& mode : enabledModes_)
+    {
+        struct freedv* dv = nullptr;
+        if ((mode == FREEDV_MODE_700D) || (mode == FREEDV_MODE_700E) || (mode == FREEDV_MODE_2020)) {
+            // 700 has some init time stuff so treat it special
+            struct freedv_advanced adv;
+            dv = freedv_open_advanced(mode, &adv);
+        } else {
+            dv = freedv_open(mode);
+        }
+        assert(dv != nullptr);
+        
+        dvObjects_.push_back(dv);
+        
+        struct FIFO* errFifo = codec2_fifo_create(2*freedv_get_sz_error_pattern(dv) + 1);
+        assert(errFifo != nullptr);
+        
+        errorFifos_.push_back(errFifo);
+        
+        txFreqOffsetPhaseRectObj_.real = cos(0.0);
+        txFreqOffsetPhaseRectObj_.imag = sin(0.0);
+        
+        auto tmpPtr = new COMP();
+        tmpPtr->real = cos(0.0);
+        tmpPtr->imag = sin(0.0);
+        rxFreqOffsetPhaseRectObjs_.push_back(tmpPtr);
+                
+        // Assume 48K for input FIFO just to be sure. We can readjust later.
+        struct FIFO* inFifo = codec2_fifo_create(fifoSizeMs * 48000/1000);  
+        assert(inFifo != nullptr);      
+        inputFifos_.push_back(inFifo);
+        
+        freedv_set_callback_error_pattern(dv, &callback_err_fn, errFifo);
+        
+        if (mode == txMode)
+        {
+            currentTxMode_ = dv;
+            currentRxMode_ = dv;
+            rxMode_ = mode;
+            txMode_ = mode;
+        }
+        
+        auto convertObj = src_new(SRC_SINC_FASTEST, 1, &src_error);
+        assert(convertObj != nullptr);
+        rateConvObjs_.push_back(convertObj);
+    }
+    
+    soundOutRateConv_ = src_new(SRC_SINC_FASTEST, 1, &src_error);
+    assert(soundOutRateConv_ != nullptr);
+}
+
+void FreeDVInterface::stop()
+{
+    for (auto& dv : dvObjects_)
+    {
+        freedv_close(dv);
+    }
+    dvObjects_.clear();
+    
+    for (auto& fifo : errorFifos_)
+    {
+        codec2_fifo_destroy(fifo);
+    }
+    errorFifos_.clear();
+    
+    for (auto& conv : rateConvObjs_)
+    {
+        src_delete(conv);
+    }
+    rateConvObjs_.clear();
+    
+    for (auto& tmp : rxFreqOffsetPhaseRectObjs_)
+    {
+        delete tmp;
+    }
+    rxFreqOffsetPhaseRectObjs_.clear();
+    
+    src_delete(soundOutRateConv_);
+    
+    enabledModes_.clear();
+    
+    currentTxMode_ = nullptr;
+    currentRxMode_ = nullptr;
+    txMode_ = 0;
+    rxMode_ = 0;
+}
+
 void FreeDVInterface::setRunTimeOptions(int clip, int bpf, int phaseEstBW, int phaseEstDPSK)
 {
     for (auto& dv : dvObjects_)
     {
-        freedv_set_clip(dv, clip);   // 700C/700D/700E/2020
+        freedv_set_clip(dv, clip);   // 700D/700E
         freedv_set_tx_bpf(dv, bpf);  // 700D/700E
         freedv_set_phase_est_bandwidth_mode(dv, phaseEstBW); // 700D/2020
         freedv_set_dpsk(dv, phaseEstDPSK);  // 700D/2020
@@ -130,56 +247,6 @@ const char* FreeDVInterface::getCurrentModeStr() const
     }
 }
 
-static void callback_err_fn(void *fifo, short error_pattern[], int sz_error_pattern)
-{
-    codec2_fifo_write((struct FIFO*)fifo, error_pattern, sz_error_pattern);
-}
-
-void FreeDVInterface::start(int txMode, int fifoSizeMs)
-{
-    int src_error = 0;
-    for (auto& mode : enabledModes_)
-    {
-        struct freedv* dv = nullptr;
-        if ((mode == FREEDV_MODE_700D) || (mode == FREEDV_MODE_700E) || (mode == FREEDV_MODE_2020)) {
-            // 700 has some init time stuff so treat it special
-            struct freedv_advanced adv;
-            dv = freedv_open_advanced(mode, &adv);
-        } else {
-            dv = freedv_open(mode);
-        }
-        assert(dv != nullptr);
-        
-        dvObjects_.push_back(dv);
-        
-        struct FIFO* errFifo = codec2_fifo_create(2*freedv_get_sz_error_pattern(dv) + 1);
-        assert(errFifo != nullptr);
-        
-        errorFifos_.push_back(errFifo);
-        
-        // Assume 48K for input FIFO just to be sure. We can readjust later.
-        struct FIFO* inFifo = codec2_fifo_create(fifoSizeMs * 48000/1000);  
-        assert(inFifo != nullptr);      
-        inputFifos_.push_back(inFifo);
-        
-        freedv_set_callback_error_pattern(dv, &callback_err_fn, errFifo);
-        
-        if (mode == txMode)
-        {
-            currentTxMode_ = dv;
-            currentRxMode_ = dv;
-            rxMode_ = mode;
-            txMode_ = mode;
-        }
-        
-        auto convertObj = src_new(SRC_SINC_FASTEST, 1, &src_error);
-        assert(convertObj != nullptr);
-        rateConvObjs_.push_back(convertObj);
-    }
-    
-    soundOutRateConv_ = src_new(SRC_SINC_FASTEST, 1, &src_error);
-    assert(soundOutRateConv_ != nullptr);
-}
 
 void FreeDVInterface::changeTxMode(int txMode)
 {
@@ -190,6 +257,22 @@ void FreeDVInterface::changeTxMode(int txMode)
         {
             currentTxMode_ = dvObjects_[index];
             txMode_ = mode;
+            
+            // Reset RX and TX offsets to help FreeDV stay on target during mode changes.
+            auto tmpPtr = &txFreqOffsetPhaseRectObj_;
+            tmpPtr->real = cos(0.0);
+            tmpPtr->imag = sin(0.0);
+        
+            tmpPtr = rxFreqOffsetPhaseRectObjs_[index];
+            tmpPtr->real = cos(0.0);
+            tmpPtr->imag = sin(0.0);
+            
+            // Recreate output rate converter in order to clear state.
+            int src_error = 0;
+            src_delete(soundOutRateConv_);
+            soundOutRateConv_ = src_new(SRC_SINC_FASTEST, 1, &src_error);
+            assert(soundOutRateConv_ != nullptr);
+            
             return;
         }
         index++;
@@ -197,36 +280,6 @@ void FreeDVInterface::changeTxMode(int txMode)
     
     // Cannot change to mode we're not already listening for.
     assert(false);
-}
-
-void FreeDVInterface::stop()
-{
-    for (auto& dv : dvObjects_)
-    {
-        freedv_close(dv);
-    }
-    dvObjects_.clear();
-    
-    for (auto& fifo : errorFifos_)
-    {
-        codec2_fifo_destroy(fifo);
-    }
-    errorFifos_.clear();
-    
-    for (auto& conv : rateConvObjs_)
-    {
-        src_delete(conv);
-    }
-    rateConvObjs_.clear();
-    
-    src_delete(soundOutRateConv_);
-    
-    enabledModes_.clear();
-    
-    currentTxMode_ = nullptr;
-    currentRxMode_ = nullptr;
-    txMode_ = 0;
-    rxMode_ = 0;
 }
 
 void FreeDVInterface::setSync(int val)
@@ -243,7 +296,7 @@ int FreeDVInterface::getSync() const
     for (auto& dv : dvObjects_)
     {
         int val = freedv_get_sync(dv);
-        if (val > 0) return val;
+        if (val != 0) return val;
     }
     return 0;    
 }
@@ -392,7 +445,7 @@ void FreeDVInterface::setSquelch(int enable, float level)
 
 int FreeDVInterface::processRxAudio(
     short input[], int numFrames, struct FIFO* outputFifo, bool channelNoise, int noiseSnr, 
-    float rxFreqOffsetHz, COMP* rxFreqOffsetPhaseRect, struct MODEM_STATS* stats, float* sig_pwr_av)
+    float rxFreqOffsetHz, struct MODEM_STATS* stats, float* sig_pwr_av)
 {
     short infreedv[10*N48];
     int   nfreedv;
@@ -441,7 +494,7 @@ int FreeDVInterface::processRxAudio(
             }
 
             // Optional frequency shifting
-            freq_shift_coh(rx_fdm_offset, rx_fdm, rxFreqOffsetHz, freedv_get_modem_sample_rate(dv), rxFreqOffsetPhaseRect, nin);
+            freq_shift_coh(rx_fdm_offset, rx_fdm, rxFreqOffsetHz, freedv_get_modem_sample_rate(dv), rxFreqOffsetPhaseRectObjs_[index], nin);
             nout = freedv_comprx(dv, output_buf, rx_fdm_offset);
             
             // Resample output to the current mode's rate if needed.
@@ -458,18 +511,23 @@ int FreeDVInterface::processRxAudio(
                 currentRxMode_ = dv;
                 rxMode_ = enabledModes_[index];
                 codec2_fifo_write(outputFifo, output_resample_buf, nout);
-                
-                // grab extended stats so we can plot spectrum, scatter diagram etc
-                freedv_get_modem_extended_stats(dv, stats);
             }
             
             nin = freedv_nin(dv);
         }
         
-        if (done) break;
+        if (done)
+        {
+            // grab extended stats so we can plot spectrum, scatter diagram etc
+            freedv_get_modem_extended_stats(dv, stats);
+        
+            // Update sync as it may have gone stale during decode
+            state = stats->sync != 0;
+            break;
+        }
     }
     
-    return done;
+    return state;
 }
 
 void FreeDVInterface::transmit(short mod_out[], short speech_in[])
@@ -477,7 +535,14 @@ void FreeDVInterface::transmit(short mod_out[], short speech_in[])
     freedv_tx(currentTxMode_, mod_out, speech_in);
 }
 
-void FreeDVInterface::complexTransmit(COMP mod_out[], short speech_in[])
+void FreeDVInterface::complexTransmit(short mod_out[], short speech_in[], float txOffset, int nfreedv)
 {
-    freedv_comptx(currentTxMode_, mod_out, speech_in);
+    COMP tx_fdm[nfreedv];
+    COMP tx_fdm_offset[nfreedv];
+
+    freedv_comptx(currentTxMode_, tx_fdm, speech_in);
+
+    freq_shift_coh(tx_fdm_offset, tx_fdm, txOffset, getTxModemSampleRate(), &txFreqOffsetPhaseRectObj_, nfreedv);
+    for(int i = 0; i<nfreedv; i++)
+        mod_out[i] = tx_fdm_offset[i].real;
 }

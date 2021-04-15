@@ -146,9 +146,7 @@ wxWindow           *g_parent;
 
 // Click to tune rx and tx frequency offset states
 float               g_RxFreqOffsetHz;
-COMP                g_RxFreqOffsetPhaseRect;
 float               g_TxFreqOffsetHz;
-COMP                g_TxFreqOffsetPhaseRect;
 
 // buffer sizes dependent upon sample rate
 int                 g_modemInbufferSize;
@@ -159,10 +157,12 @@ int                 g_speechOutbufferSize;
 // now be thread safe
 
 wxMutex g_mutexProtectingCallbackData;
-
+ 
 // Speex pre-processor states
-
 SpeexPreprocessState *g_speex_st;
+
+// TX mode change mutex
+wxMutex txModeChangeMutex;
 
 // Option test file to log samples
 
@@ -590,14 +590,10 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     // init click-tune states
 
     g_RxFreqOffsetHz = 0.0;
-    g_RxFreqOffsetPhaseRect.real = cos(0.0);
-    g_RxFreqOffsetPhaseRect.imag = sin(0.0);
     m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
     m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
 
     g_TxFreqOffsetHz = 0.0;
-    g_TxFreqOffsetPhaseRect.real = cos(0.0);
-    g_TxFreqOffsetPhaseRect.imag = sin(0.0);
 
     g_tx = 0;
     g_split = 0;
@@ -1116,10 +1112,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         else
         {
             // Pre-1.5.1 behavior, where text is handled as-is.
-            if (incomingChar == '\r' || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
+            if (incomingChar == '\r' || incomingChar == '\n' || incomingChar == 0 || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
             {                        
-                // CR completes line
-                *m_pcallsign = 0;
+                // CR completes line. Fill in remaining positions with zeroes.
+                if ((m_pcallsign - m_callsign) <= MAX_CALLSIGN-1)
+                {
+                    memset(m_pcallsign, 0, MAX_CALLSIGN - (m_pcallsign - m_callsign));
+                }
+                
+                // Reset to the beginning.
                 m_pcallsign = m_callsign;
             }
             else
@@ -1352,6 +1353,7 @@ void MainFrame::OnExit(wxCommandEvent& event)
     if (wxGetApp().m_hamlib)
     {
         wxGetApp().m_hamlib->disable_mode_detection();
+        wxGetApp().m_hamlib->close();
     }
 
     if (wxGetApp().m_pskReporter)
@@ -1396,6 +1398,8 @@ void MainFrame::OnExit(wxCommandEvent& event)
 
 void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 {
+    txModeChangeMutex.Lock();
+    
     if (m_rb1600->GetValue()) 
     {
         g_mode = FREEDV_MODE_1600;
@@ -1447,6 +1451,18 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         // Need to change the TX interface live.
         freedvInterface.changeTxMode(g_mode);
     }
+    
+    // Re-initialize Speex since the sample rate's changing
+    if (wxGetApp().m_speexpp_enable && freedvInterface.isRunning())
+    {
+        if (g_speex_st)
+        {
+            speex_preprocess_state_destroy(g_speex_st);
+        }
+        g_speex_st = speex_preprocess_state_init(freedvInterface.getTxNumSpeechSamples(), freedvInterface.getTxSpeechSampleRate());
+    }
+    
+    txModeChangeMutex.Unlock();
 }
 
 //-------------------------------------------------------------------------
@@ -1474,6 +1490,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         vk_state = VK_IDLE;
 
         m_textSync->Enable();
+        m_textCurrentDecodeMode->Enable();
 
         // determine what mode we are using
         OnChangeTxMode(event);
@@ -1567,7 +1584,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         if (wxGetApp().m_speexpp_enable)
             g_speex_st = speex_preprocess_state_init(freedvInterface.getTxNumSpeechSamples(), freedvInterface.getTxSpeechSampleRate());
-
+        
         // adjust spectrum and waterfall freq scaling base on mode
 
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getTxModemSampleRate()/2)));
@@ -1663,11 +1680,14 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             Hamlib *hamlib = wxGetApp().m_hamlib;
             wxString hamlibError;
             if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
-                if (hamlib->ptt(false, hamlibError) == false) {
-                    wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
+                if (hamlib->isActive())
+                {
+                    if (hamlib->ptt(false, hamlibError) == false) {
+                        wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
+                    }
+                    hamlib->disable_mode_detection();
+                    hamlib->close();
                 }
-                hamlib->disable_mode_detection();
-                hamlib->close();
             }
         }
 
@@ -1698,12 +1718,14 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         delete[] g_error_hist;
         delete[] g_error_histn;
         freedvInterface.stop();
+        
         if (wxGetApp().m_speexpp_enable)
             speex_preprocess_state_destroy(g_speex_st);
-
+        
         m_newMicInFilter = m_newSpkOutFilter = true;
 
         m_textSync->Disable();
+        m_textCurrentDecodeMode->Disable();
 
         m_togBtnSplit->Disable();
         m_togBtnAnalog->Disable();
@@ -1762,6 +1784,8 @@ void MainFrame::stopRxStream()
         destroy_src();
         deleteEQFilters(g_rxUserdata);
         delete g_rxUserdata;
+        
+        Pa_Terminate();
     }
 }
 
@@ -1875,6 +1899,7 @@ void MainFrame::startRxStream()
             if(two_rx)
                 delete m_rxOutPa;
             m_RxRunning = false;
+            Pa_Terminate();
             return;
         }
 
@@ -1888,6 +1913,7 @@ void MainFrame::startRxStream()
             if(two_rx)
                 delete m_rxOutPa;
             m_RxRunning = false;
+            Pa_Terminate();
             return;
         }
 
@@ -1900,6 +1926,7 @@ void MainFrame::startRxStream()
             if(two_rx)
 				delete m_rxOutPa;
             m_RxRunning = false;
+            Pa_Terminate();
             return;
         }
         if (deviceInfo1a->maxInputChannels == 1)
@@ -1916,6 +1943,7 @@ void MainFrame::startRxStream()
             if(two_rx)
 				delete m_rxOutPa;
             m_RxRunning = false;
+            Pa_Terminate();
             return;
         }
         if (deviceInfo1b->maxOutputChannels == 1)
@@ -1961,6 +1989,7 @@ void MainFrame::startRxStream()
                 if(two_tx)
                     delete m_txOutPa;
                 m_RxRunning = false;
+                Pa_Terminate();
                 return;
             }
 
@@ -1974,6 +2003,7 @@ void MainFrame::startRxStream()
                 if(two_tx)
 					delete m_txOutPa;
                 m_RxRunning = false;
+                Pa_Terminate();
                 return;
             }
             if (deviceInfo2a->maxInputChannels == 1)
@@ -1992,6 +2022,7 @@ void MainFrame::startRxStream()
                 if(two_tx)
 					delete m_txOutPa;
                 m_RxRunning = false;
+                Pa_Terminate();
                 return;
             }
             if (deviceInfo2b->maxOutputChannels == 1)
@@ -2118,6 +2149,7 @@ void MainFrame::startRxStream()
             deleteEQFilters(g_rxUserdata);
             delete g_rxUserdata;
             m_RxRunning = false;
+            Pa_Terminate();
             return;
         }
 
@@ -2135,6 +2167,7 @@ void MainFrame::startRxStream()
             deleteEQFilters(g_rxUserdata);
             delete g_rxUserdata;
             m_RxRunning = false;
+            Pa_Terminate();
             return;
         }
 
@@ -2157,6 +2190,7 @@ void MainFrame::startRxStream()
                 deleteEQFilters(g_rxUserdata);
                 delete g_rxUserdata;
                 m_RxRunning = false;
+                Pa_Terminate();
                 return;
             }
 
@@ -2174,6 +2208,7 @@ void MainFrame::startRxStream()
                 deleteEQFilters(g_rxUserdata);
                 delete g_rxUserdata;
                 m_RxRunning = false;
+                Pa_Terminate();
                 return;
             }
         }
@@ -2212,6 +2247,7 @@ void MainFrame::startRxStream()
                 deleteEQFilters(g_rxUserdata);
                 delete g_rxUserdata;
                 m_RxRunning = false;
+                Pa_Terminate();
                 return;
             }
             m_txErr = m_txInPa->streamStart();
@@ -2233,6 +2269,7 @@ void MainFrame::startRxStream()
                 deleteEQFilters(g_rxUserdata);
                 delete g_rxUserdata;
                 m_RxRunning = false;
+                Pa_Terminate();
                 return;
             }
 
@@ -2268,6 +2305,7 @@ void MainFrame::startRxStream()
                     deleteEQFilters(g_rxUserdata);
                     delete g_rxUserdata;
                     m_RxRunning = false;
+                    Pa_Terminate();
                     return;
                 }
                 m_txErr = m_txOutPa->streamStart();
@@ -2290,6 +2328,7 @@ void MainFrame::startRxStream()
                     deleteEQFilters(g_rxUserdata);
                     delete g_rxUserdata;
                     m_RxRunning = false;
+                    Pa_Terminate();
                     return;
                 }
             }
@@ -2493,7 +2532,7 @@ void txRxProcessing()
             // Write 20ms chunks of input samples for modem rx processing
             g_State = freedvInterface.processRxAudio(
                 infreedv, nfreedv, cbData->rxoutfifo, g_channel_noise, wxGetApp().m_noise_snr, 
-                g_RxFreqOffsetHz, &g_RxFreqOffsetPhaseRect, &g_stats, &g_sig_pwr_av);
+                g_RxFreqOffsetHz, &g_stats, &g_sig_pwr_av);
   
             // Read 20ms chunk of samples from modem rx processing,
             // this will typically be decoded output speech, and is
@@ -2538,7 +2577,9 @@ void txRxProcessing()
     //
 
     if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
-
+        // Lock the mode mutex so that TX state doesn't change on us during processing.
+        txModeChangeMutex.Lock();
+        
         // This while loop locks the modulator to the sample rate of
         // sound card 1.  We want to make sure that modulator samples
         // are uninterrupted by differences in sample rate between
@@ -2592,7 +2633,6 @@ void txRxProcessing()
             }
 
             // Optional Speex pre-processor for acoustic noise reduction
-
             if (wxGetApp().m_speexpp_enable) {
                 speex_preprocess_run(g_speex_st, infreedv);
             }
@@ -2630,20 +2670,12 @@ void txRxProcessing()
                 }
             }
             else {
-                COMP tx_fdm[nfreedv];
-                COMP tx_fdm_offset[nfreedv];
-                int  i;
-
                 if (g_mode == FREEDV_MODE_800XA || g_mode == FREEDV_MODE_2400B) {
                     /* 800XA doesn't support complex output just yet */
                     freedvInterface.transmit(outfreedv, infreedv);
                 }
                 else {
-                    freedvInterface.complexTransmit(tx_fdm, infreedv);
-
-                    freq_shift_coh(tx_fdm_offset, tx_fdm, g_TxFreqOffsetHz, freedvInterface.getTxModemSampleRate(), &g_TxFreqOffsetPhaseRect, nfreedv);
-                    for(i=0; i<nfreedv; i++)
-                        outfreedv[i] = tx_fdm_offset[i].real;
+                    freedvInterface.complexTransmit(outfreedv, infreedv, g_TxFreqOffsetHz, nfreedv);
                 }
             }
 
@@ -2668,7 +2700,7 @@ void txRxProcessing()
             if (g_analog)
                 nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getTxSpeechSampleRate(), 10*N48, nfreedv);
             else
-                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, 10*N48, nfreedv);
+                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getTxModemSampleRate(), 10*N48, nfreedv);
             
             // Attenuate signal prior to output
             double dbLoss = g_txLevel / 10.0;
@@ -2684,6 +2716,8 @@ void txRxProcessing()
             }
             codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
         }
+        
+        txModeChangeMutex.Unlock();
     }
 
     if (g_dump_timing) {
@@ -2926,12 +2960,12 @@ int MainFrame::getSoundCardIDFromName(wxString& name, bool input)
                     }
                 }
             }
-            Pa_Terminate();
         }
         else
         {
             fprintf(stderr, "WARNING: could not initialize PortAudio (err=%d, txt=%s)\n", paResult, Pa_GetErrorText(paResult));
         }
+        Pa_Terminate();
     }
     return result;
 }

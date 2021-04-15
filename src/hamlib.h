@@ -24,6 +24,7 @@ class Hamlib {
         int get_stop_bits(void);
         freq_t get_frequency(void) const;
         int update_frequency_and_mode(void);
+        bool isActive() const { return m_rig != nullptr; }
         
         typedef std::vector<const struct rig_caps *> riglist_t;
 
