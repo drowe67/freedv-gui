@@ -46,10 +46,10 @@ void CallsignEncoder::setCallsign(const char* callsign)
 {
     memset(&translatedCallsign_, 0, MAX_CALLSIGN);
     memset(&truncCallsign_, 0, MAX_CALLSIGN);
-    memset(&callsign_, 0, MAX_CALLSIGN/2);
+    memset(&callsign_, 0, MAX_CALLSIGN);
     
-    memcpy(&callsign_, callsign, strlen(callsign) + 1);
-    convert_callsign_to_ota_string_(callsign_, &translatedCallsign_[2]);
+    strncpy((char*)&callsign_, callsign, MAX_CALLSIGN - 1);
+    convert_callsign_to_ota_string_(callsign_, &translatedCallsign_[2], MAX_CALLSIGN - 1);
     
     unsigned char crc = calculateCRC8_((char*)&translatedCallsign_[2], strlen(&translatedCallsign_[2]));
     unsigned char crcDigit1 = crc >> 4;
@@ -102,7 +102,7 @@ void CallsignEncoder::pushReceivedByte(char incomingChar)
             rawStr[1] = ((unsigned int)rawOutput) & 0x3F;
             rawStr[2] = 0;
             
-            convert_ota_string_to_callsign_(rawStr, decodedStr);
+            convert_ota_string_to_callsign_(rawStr, decodedStr, 2);
             if (decodedStr[0] == 0x7F && decodedStr[1] == 0x7F)
             {
                 // We're now in sync. Pop off the non-aligned bytes we received at the beginning
@@ -140,30 +140,55 @@ void CallsignEncoder::pushReceivedByte(char incomingChar)
             rawStr[1] = ((unsigned int)rawOutput) & 0x3F;
             rawStr[2] = 0;
                         
-            convert_ota_string_to_callsign_(rawStr, decodedStr);
+            convert_ota_string_to_callsign_(rawStr, decodedStr, 2);
 
-            if (decodedStr[0] == '\r' || ((pReceivedCallsign_ - &receivedCallsign_[0]) > MAX_CALLSIGN-1))
+            if ((decodedStr[0] == '\r' || decodedStr[0] == 0x7F) || ((pReceivedCallsign_ - &receivedCallsign_[0]) > MAX_CALLSIGN-1))
             {                        
                 // CR completes line
-                *pReceivedCallsign_ = 0;
-                pReceivedCallsign_ = &receivedCallsign_[0];
+                if (pReceivedCallsign_ != &receivedCallsign_[0])
+                {
+                    *pReceivedCallsign_ = 0;
+                    pReceivedCallsign_ = &receivedCallsign_[0];
+                }
             }
-            else if (decodedStr[0] != '\0' && decodedStr[0] != 0x7F)
+            else if (decodedStr[0] != '\0')
             {
-                // Ignore nulls and sync characters.
+                // Ignore incoming nulls but wipe anything to the right of the current pointer
+                // if we're overwriting one.
+                if (*pReceivedCallsign_ == 0)
+                {
+                    memset(pReceivedCallsign_, 0, MAX_CALLSIGN - (pReceivedCallsign_ - &receivedCallsign_[0]));
+                }
                 *pReceivedCallsign_++ = decodedStr[0];
+                
+                if ((pReceivedCallsign_ - &receivedCallsign_[0]) > MAX_CALLSIGN-1)
+                {
+                    *pReceivedCallsign_ = 0;
+                    pReceivedCallsign_ = &receivedCallsign_[0];
+                }
             }
             
-            if (decodedStr[1] == '\r' || ((pReceivedCallsign_ - &receivedCallsign_[0]) > MAX_CALLSIGN-1))
+            if ((decodedStr[1] == '\r' || decodedStr[1] == 0x7F) || ((pReceivedCallsign_ - &receivedCallsign_[0]) > MAX_CALLSIGN-1))
             {
                 // CR completes line
                 *pReceivedCallsign_ = 0;
                 pReceivedCallsign_ = &receivedCallsign_[0];
             }
-            else if (decodedStr[1] != '\0' && decodedStr[1] != 0x7F)
+            else if (decodedStr[1] != '\0')
             {
-                // Ignore nulls and sync characters.
+                // Ignore incoming nulls but wipe anything to the right of the current pointer
+                // if we're overwriting one.
+                if (*pReceivedCallsign_ == 0)
+                {
+                    memset(pReceivedCallsign_, 0, MAX_CALLSIGN - (pReceivedCallsign_ - &receivedCallsign_[0]));
+                }
                 *pReceivedCallsign_++ = decodedStr[1];
+                
+                if ((pReceivedCallsign_ - &receivedCallsign_[0]) > MAX_CALLSIGN-1)
+                {
+                    *pReceivedCallsign_ = 0;
+                    pReceivedCallsign_ = &receivedCallsign_[0];
+                }
             }
         }
     }
@@ -171,17 +196,23 @@ void CallsignEncoder::pushReceivedByte(char incomingChar)
 
 bool CallsignEncoder::isCallsignValid() const
 {
-    if (strlen(receivedCallsign_) <= 2)
-    {
-        return false;
-    }
+    // Don't bother performing the rest of these steps if we haven't at least gotten more
+    // than the CRC. This is to prevent inadvertently overrunning the buffer.
+    if (receivedCallsign_[0] == 0 || receivedCallsign_[1] == 0 || receivedCallsign_[2] == 0) return false;
     
     // Retrieve received CRC and calculate the CRC from the other received text.
     unsigned char receivedCRC = convertHexStringToDigit_((char*)&receivedCallsign_[0]);
     
     char buf[MAX_CALLSIGN];
     memset(&buf, 0, MAX_CALLSIGN);
-    convert_callsign_to_ota_string_(&receivedCallsign_[2], &buf[0]);
+    
+    // Copy up to MAX_CALLSIGN - 3 (2 CRC + remaining string) characters to a 
+    // temporary location. This is in case there are no null characters in the stored string.
+    char tmp[MAX_CALLSIGN];
+    memset(&tmp, 0, MAX_CALLSIGN);
+    strncpy(tmp, &receivedCallsign_[2], MAX_CALLSIGN/2);
+    
+    convert_callsign_to_ota_string_((const char*)&tmp, &buf[0], MAX_CALLSIGN/2);
     unsigned char calcCRC = calculateCRC8_((char*)&buf, strlen(&buf[0]));
     
     // Return true if both are equal.
@@ -197,11 +228,13 @@ bool CallsignEncoder::isCallsignValid() const
 // 48: ASCII '\r'
 // 48-62: TBD/for future use.
 // 63: sync (2x in a 2 byte block indicates sync)
-void CallsignEncoder::convert_callsign_to_ota_string_(const char* input, char* output) const
+void CallsignEncoder::convert_callsign_to_ota_string_(const char* input, char* output, int maxLength) const
 {
     int outidx = 0;
-    for (size_t index = 0; index < strlen(input); index++)
+    for (size_t index = 0; index < maxLength; index++)
     {
+        if (input[index] == 0) break;
+        
         bool addSync = false;
         if (input[index] >= 38 && input[index] <= 47)
         {
@@ -232,24 +265,27 @@ void CallsignEncoder::convert_callsign_to_ota_string_(const char* input, char* o
             addSync = true;
         }
         
-        if (addSync)
+        if (addSync && outidx < maxLength)
         {
             if (outidx % 2)
             {
                 output[outidx++] = 63;
             }
-            output[outidx++] = 63;
-            output[outidx++] = 63;
+            
+            if (outidx < maxLength) output[outidx++] = 63;
+            if (outidx < maxLength) output[outidx++] = 63;
         }
     }
     output[outidx] = 0;
 }
 
-void CallsignEncoder::convert_ota_string_to_callsign_(const char* input, char* output)
+void CallsignEncoder::convert_ota_string_to_callsign_(const char* input, char* output, int maxLength)
 {
     int outidx = 0;
-    for (size_t index = 0; index < strlen(input); index++)
+    for (size_t index = 0; index < maxLength; index++)
     {
+        if (input[index] == 0) break;
+        
         if (input[index] >= 1 && input[index] <= 9)
         {
             output[outidx++] = input[index] + 37;

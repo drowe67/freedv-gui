@@ -1,3 +1,24 @@
+//==========================================================================
+// Name:            freedv_interface.h
+// Purpose:         Implements a wrapper around the Codec2 FreeDV interface.
+// Created:         March 31, 2021
+// Authors:         Mooneer Salem
+// 
+// License:
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License version 2.1,
+//  as published by the Free Software Foundation.  This program is
+//  distributed in the hope that it will be useful, but WITHOUT ANY
+//  WARRANTY; without even the implied warranty of MERCHANTABILITY or
+//  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+//  License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program; if not, see <http://www.gnu.org/licenses/>.
+//
+//==========================================================================
+
 #ifndef CODEC2_INTERFACE_H
 #define CODEC2_INTERFACE_H
 
@@ -61,10 +82,10 @@ public:
     
     int processRxAudio(
         short input[], int numFrames, struct FIFO* outputFifo, bool channelNoise, int noiseSnr, 
-        float rxFreqOffsetHz, COMP* rxFreqOffsetPhaseRect, struct MODEM_STATS* stats, float* sig_pwr_av);
+        float rxFreqOffsetHz, struct MODEM_STATS* stats, float* sig_pwr_av);
     
     void transmit(short mod_out[], short speech_in[]);
-    void complexTransmit(COMP mod_out[], short speech_in[]);
+    void complexTransmit(short mod_out[], short speech_in[], float txOffset, int nfreedv);
 private:
     int txMode_;
     int rxMode_;
@@ -73,6 +94,9 @@ private:
     std::deque<struct FIFO*> errorFifos_;
     std::deque<struct FIFO*> inputFifos_;
     std::deque<SRC_STATE*> rateConvObjs_;
+    COMP txFreqOffsetPhaseRectObj_;
+    std::deque<COMP*> rxFreqOffsetPhaseRectObjs_;
+    
     struct freedv* currentTxMode_;
     struct freedv* currentRxMode_; 
     SRC_STATE* soundOutRateConv_;
