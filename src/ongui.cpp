@@ -23,6 +23,8 @@ extern int g_resyncs;
 extern int g_Nc;
 extern int g_txLevel;
 
+extern wxMutex txModeChangeMutex;
+
 //-------------------------------------------------------------------------
 // OnExitClick()
 //-------------------------------------------------------------------------
@@ -425,6 +427,7 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
 }
 
 void MainFrame::togglePTT(void) {
+    txModeChangeMutex.Lock();
 
     // Change tabbed page in centre panel depending on PTT state
 
@@ -482,6 +485,7 @@ void MainFrame::togglePTT(void) {
     m_textLevel->SetLabel(wxT(""));
     m_gaugeLevel->SetValue(0);
 
+    txModeChangeMutex.Unlock();
 }
 
 

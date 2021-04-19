@@ -2368,6 +2368,9 @@ void txRxProcessing()
 
     paCallBackData  *cbData = g_rxUserdata;
 
+    // Lock the mode mutex so that TX state doesn't change on us during processing.
+    txModeChangeMutex.Lock();
+    
     // Buffers re-used by tx and rx processing.  We take samples from
     // the sound card, and resample them for the freedv modem input
     // sample rate.  Typically the sound card is running at 48 or 44.1
@@ -2575,11 +2578,8 @@ void txRxProcessing()
     //
     //  TX side processing --------------------------------------------
     //
-
-    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
-        // Lock the mode mutex so that TX state doesn't change on us during processing.
-        txModeChangeMutex.Lock();
-        
+    
+    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {    
         // This while loop locks the modulator to the sample rate of
         // sound card 1.  We want to make sure that modulator samples
         // are uninterrupted by differences in sample rate between
@@ -2648,7 +2648,7 @@ void txRxProcessing()
             g_mutexProtectingCallbackData.Unlock();
 
             resample_for_plot(g_plotSpeechInFifo, infreedv, nout, freedvInterface.getTxSpeechSampleRate());
-
+            
             nfreedv = freedvInterface.getTxNNomModemSamples();
 
             if (g_analog) {
@@ -2716,9 +2716,9 @@ void txRxProcessing()
             }
             codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
         }
-        
-        txModeChangeMutex.Unlock();
     }
+
+    txModeChangeMutex.Unlock();
 
     if (g_dump_timing) {
         fprintf(stderr, "%4ld", sw.Time());
