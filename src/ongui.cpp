@@ -23,12 +23,6 @@ extern int g_resyncs;
 extern int g_Nc;
 extern int g_txLevel;
 
-extern wxMutex txModeChangeMutex;
-extern wxCondition txModeChangeCondition;
-extern bool  g_hamlibState;
-extern wxString hamlibError;
-extern int g_txPending;
-
 //-------------------------------------------------------------------------
 // OnExitClick()
 //-------------------------------------------------------------------------
@@ -431,17 +425,10 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
 }
 
 void MainFrame::togglePTT(void) {
-    txModeChangeMutex.Lock();
 
-    int currentTxState = g_tx;
-    g_txPending = m_btnTogPTT->GetValue();
-    
-    txModeChangeCondition.Wait();
-    txModeChangeMutex.Unlock();
-    
     // Change tabbed page in centre panel depending on PTT state
 
-    if (currentTxState)
+    if (g_tx)
     {
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().m_rxNbookCtrl);
@@ -469,16 +456,32 @@ void MainFrame::togglePTT(void) {
         m_togBtnOnOff->Enable(false);
     }
 
+    g_tx = m_btnTogPTT->GetValue();
+
+    // Hamlib PTT
+
+    if (wxGetApp().m_boolHamlibUseForPTT) {
+        Hamlib *hamlib = wxGetApp().m_hamlib;
+        wxString hamlibError;
+        if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
+            if (hamlib->ptt(g_tx, hamlibError) == false) {
+                wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
+            }
+        }
+    }
+
+    // Serial PTT
+
+    if (wxGetApp().m_boolUseSerialPTT && (wxGetApp().m_serialport->isopen())) {
+        wxGetApp().m_serialport->ptt(g_tx);
+    }
+
     // reset level gauge
 
     m_maxLevel = 0;
     m_textLevel->SetLabel(wxT(""));
     m_gaugeLevel->SetValue(0);
-    
-    if (wxGetApp().m_boolHamlibUseForPTT && g_hamlibState == false)
-    {
-        wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
-    }
+
 }
 
 
