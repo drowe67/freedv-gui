@@ -77,9 +77,12 @@ float g_SquelchLevel;
 int   g_analog;
 int   g_split;
 int   g_tx;
+int   g_txPending;
 float g_snr;
 bool  g_half_duplex;
 bool  g_modal;
+bool  g_hamlibState;
+wxString hamlibError;
 SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
 
 // sending and receiving Call Sign data
@@ -163,6 +166,7 @@ SpeexPreprocessState *g_speex_st;
 
 // TX mode change mutex
 wxMutex txModeChangeMutex;
+wxCondition txModeChangeCondition(txModeChangeMutex);
 
 // Option test file to log samples
 
@@ -596,6 +600,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     g_TxFreqOffsetHz = 0.0;
 
     g_tx = 0;
+    g_txPending = 0;
     g_split = 0;
 
     // data states
@@ -2368,6 +2373,9 @@ void txRxProcessing()
 
     paCallBackData  *cbData = g_rxUserdata;
 
+    // Lock the mode mutex so that TX state doesn't change on us during processing.
+    txModeChangeMutex.Lock();
+    
     // Buffers re-used by tx and rx processing.  We take samples from
     // the sound card, and resample them for the freedv modem input
     // sample rate.  Typically the sound card is running at 48 or 44.1
@@ -2575,11 +2583,30 @@ void txRxProcessing()
     //
     //  TX side processing --------------------------------------------
     //
+    
+    // Enable TX here if Hamlib is enabled and we're going from RX->TX.
+    // Disabling TX happens after TX processing is done.
+    if (g_tx != g_txPending && g_txPending != 0)
+    {
+        g_tx = g_txPending;
 
-    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
-        // Lock the mode mutex so that TX state doesn't change on us during processing.
-        txModeChangeMutex.Lock();
-        
+        // Hamlib PTT
+
+        if (wxGetApp().m_boolHamlibUseForPTT) {
+            Hamlib *hamlib = wxGetApp().m_hamlib;
+            if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
+                g_hamlibState = hamlib->ptt(g_tx, hamlibError);
+            }
+        }
+
+        // Serial PTT
+
+        if (wxGetApp().m_boolUseSerialPTT && (wxGetApp().m_serialport->isopen())) {
+            wxGetApp().m_serialport->ptt(g_tx);
+        }
+    }
+    
+    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {    
         // This while loop locks the modulator to the sample rate of
         // sound card 1.  We want to make sure that modulator samples
         // are uninterrupted by differences in sample rate between
@@ -2648,7 +2675,7 @@ void txRxProcessing()
             g_mutexProtectingCallbackData.Unlock();
 
             resample_for_plot(g_plotSpeechInFifo, infreedv, nout, freedvInterface.getTxSpeechSampleRate());
-
+            
             nfreedv = freedvInterface.getTxNNomModemSamples();
 
             if (g_analog) {
@@ -2716,10 +2743,33 @@ void txRxProcessing()
             }
             codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
         }
-        
-        txModeChangeMutex.Unlock();
     }
 
+    // Disable TX here if Hamlib is enabled and we're going from TX->RX.
+    // Enabling TX happens before TX processing is done.
+    if (g_tx != g_txPending && g_txPending == 0)
+    {
+        g_tx = g_txPending;
+
+        // Hamlib PTT
+
+        if (wxGetApp().m_boolHamlibUseForPTT) {
+            Hamlib *hamlib = wxGetApp().m_hamlib;
+            if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
+                g_hamlibState = hamlib->ptt(g_tx, hamlibError);
+            }
+        }
+
+        // Serial PTT
+
+        if (wxGetApp().m_boolUseSerialPTT && (wxGetApp().m_serialport->isopen())) {
+            wxGetApp().m_serialport->ptt(g_tx);
+        }
+    }
+    
+    txModeChangeMutex.Unlock();
+    txModeChangeCondition.Signal();
+    
     if (g_dump_timing) {
         fprintf(stderr, "%4ld", sw.Time());
     }
