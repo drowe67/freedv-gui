@@ -203,7 +203,7 @@ void PlotWaterfall::draw(wxAutoBufferedPaintDC& dc)
     {
         m_newdata = false;
         plotPixelData();
-        dc.DrawBitmap(*m_pBmp, PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER);
+        dc.DrawBitmap(*m_pBmp, PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET);
         m_dT = DT;
     }
     else 
@@ -215,7 +215,7 @@ void PlotWaterfall::draw(wxAutoBufferedPaintDC& dc)
         // Bug on Linux: When Stop is pressed this code doesn't erase
         // the lower 25% of the Waterfall Window
 
-        m_rPlot = wxRect(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER, m_rGrid.GetWidth(), m_rGrid.GetHeight());
+        m_rPlot = wxRect(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_rGrid.GetWidth(), m_rGrid.GetHeight());
         wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
         dc.SetBrush(ltGraphBkgBrush);
         dc.SetPen(wxPen(BLACK_COLOR, 0));
@@ -265,26 +265,26 @@ void PlotWaterfall::drawGraticule(wxAutoBufferedPaintDC& dc)
         if (m_graticule)
             dc.DrawLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
         else
-            dc.DrawLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+            dc.DrawLine(x, PLOT_BORDER, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
             
         sprintf(buf, "%4.0fHz", f);
         GetTextExtent(buf, &text_w, &text_h);
         if (!overlappedText)
-            dc.DrawText(buf, x - text_w/2, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+            dc.DrawText(buf, x - text_w/2, (YBOTTOM_TEXT_OFFSET/2));
     }
 
     for(f=STEP_MINOR_F_HZ; f<MAX_F_HZ; f+=STEP_MINOR_F_HZ) 
     {
         x = f*freq_hz_to_px;
         x += PLOT_BORDER + XLEFT_OFFSET;
-        dc.DrawLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET-5);
+        dc.DrawLine(x, PLOT_BORDER + 5, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
     }
     
     // Horizontal gridlines
     dc.SetPen(m_penDotDash);
     for(time=0; time<=WATERFALL_SECS_Y; time+=WATERFALL_SECS_STEP) {
        y = m_rGrid.GetHeight() - (WATERFALL_SECS_Y - time)*time_s_to_py;
-       y += PLOT_BORDER;
+       y += PLOT_BORDER + YBOTTOM_TEXT_OFFSET;
 
         if (m_graticule)
             dc.DrawLine(PLOT_BORDER + XLEFT_OFFSET, y, 
@@ -300,7 +300,7 @@ void PlotWaterfall::drawGraticule(wxAutoBufferedPaintDC& dc)
     x = m_rxFreq*freq_hz_to_px;
     x += PLOT_BORDER + XLEFT_OFFSET;
     //printf("m_rxFreq %f x %d\n", m_rxFreq, x);
-    dc.DrawLine(x, m_rGrid.GetHeight()+ PLOT_BORDER, x, m_rCtrl.GetHeight());
+    dc.DrawLine(x, 0, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
     
 }
 
