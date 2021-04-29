@@ -164,6 +164,11 @@ SpeexPreprocessState *g_speex_st;
 // TX mode change mutex
 wxMutex txModeChangeMutex;
 
+// End of TX state control
+bool endingTx;
+wxMutex endingTxMutex;
+wxCondition endingTxCondition(endingTxMutex);
+
 // Option test file to log samples
 
 FILE *ftest;
@@ -1478,6 +1483,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
     {
         if (g_verbose) fprintf(stderr, "Start .....\n");
         g_queueResync = false;
+        endingTx = false;
         
         //
         // Start Running -------------------------------------------------
@@ -2576,7 +2582,7 @@ void txRxProcessing()
     //  TX side processing --------------------------------------------
     //
 
-    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
+    if (((g_nSoundCards == 2) && !endingTx && ((g_half_duplex && g_tx) || !g_half_duplex))) {
         // Lock the mode mutex so that TX state doesn't change on us during processing.
         txModeChangeMutex.Lock();
         
@@ -2823,6 +2829,13 @@ int MainFrame::rxCallback(
         }
         else 
         {
+            if (endingTx)
+            {
+                wxMutexLocker lock(endingTxMutex);
+                endingTx = false;
+                endingTxCondition.Signal();
+            }
+            
             g_outfifo1_empty++;
             
             // zero output if no data available

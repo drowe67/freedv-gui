@@ -23,6 +23,10 @@ extern int g_resyncs;
 extern int g_Nc;
 extern int g_txLevel;
 
+extern bool endingTx;
+extern wxMutex endingTxMutex;
+extern wxCondition endingTxCondition;
+
 //-------------------------------------------------------------------------
 // OnExitClick()
 //-------------------------------------------------------------------------
@@ -440,6 +444,13 @@ void MainFrame::togglePTT(void) {
         
         // Reenable On/Off button.
         m_togBtnOnOff->Enable(true);
+        
+        // Trigger end of TX processing. This causes us to wait for the remaining bytes
+        // in the output FIFO to be transmitted before calling out to Hamlib.
+        endingTxMutex.Lock();
+        endingTx = true;
+        endingTxCondition.Wait();
+        endingTxMutex.Unlock();
     }
     else
     {
