@@ -2831,27 +2831,73 @@ int MainFrame::rxCallback(
         {
             if (endingTx)
             {
-                wxMutexLocker lock(endingTxMutex);
-                endingTx = false;
-                endingTxCondition.Signal();
-            }
-            
-            g_outfifo1_empty++;
-            
-            // zero output if no data available
-            if (cbData->outputChannels1 == 2)
-            {
-                for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
-                    wptr[0] = 0;
-                    wptr[1] = 0;
+                int i = 0;
+                
+                // Clear out remaining non-full FIFO.
+                while (codec2_fifo_read(cbData->outfifo1, outdata, 1) == 0)
+                {
+                    if (cbData->outputChannels1 == 2)
+                    {
+                        if (cbData->leftChannelVoxTone)
+                        {
+                            cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/g_soundCard1SampleRate;
+                            cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+                            wptr[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+                        }
+                        else
+                            wptr[0] = outdata[0];
+
+                        wptr[1] = outdata[0];
+                        wptr += 2;
+                    }
+                    else
+                    {
+                        wptr[0] = outdata[0];
+                        wptr++;
+                    }
+                    i++;
                 }
+                
+                // Populate remaining buffer with zeros.
+                for (; i < framesPerBuffer; i++)
+                {
+                    if (cbData->outputChannels1 == 2)
+                    {
+                        wptr[0] = 0;
+                        wptr[1] = 0;
+                        wptr += 2;
+                    }
+                    else
+                    {
+                        wptr[0] = 0;
+                        wptr++;
+                    }
+                }
+                
+                endingTx = false;
             }
             else
-            {
-                for(i = 0; i < framesPerBuffer; i++, wptr++)
+            {                
+                g_outfifo1_empty++;
+            
+                // zero output if no data available
+                if (cbData->outputChannels1 == 2)
                 {
-                    wptr[0] = 0;
+                    for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
+                        wptr[0] = 0;
+                        wptr[1] = 0;
+                    }
                 }
+                else
+                {
+                    for(i = 0; i < framesPerBuffer; i++, wptr++)
+                    {
+                        wptr[0] = 0;
+                    }
+                }
+                
+                wxMutexLocker lock(endingTxMutex);
+                endingTxCondition.Signal();
             }
         }
     }
