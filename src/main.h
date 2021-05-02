@@ -165,6 +165,8 @@ class MainApp : public wxApp
 {
     public:
         virtual bool        OnInit();
+        virtual void        OnInitCmdLine(wxCmdLineParser& parser);
+        virtual bool        OnCmdLineParsed(wxCmdLineParser& parser);
         virtual int         OnExit();
 
         wxString            m_strVendName;
