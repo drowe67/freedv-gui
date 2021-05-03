@@ -52,41 +52,41 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     tools = new wxMenu();
     wxMenuItem* m_menuItemAudio;
-    m_menuItemAudio = new wxMenuItem(tools, wxID_ANY, wxString(_("&Audio Config...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemAudio = new wxMenuItem(tools, wxID_ANY, wxString(_("&Audio Config...")) , _("Configures sound cards for FreeDV"), wxITEM_NORMAL);
     tools->Append(m_menuItemAudio);
 
     wxMenuItem* m_menuItemRigCtrlCfg;
-    m_menuItemRigCtrlCfg = new wxMenuItem(tools, wxID_ANY, wxString(_("&PTT Config...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemRigCtrlCfg = new wxMenuItem(tools, wxID_ANY, wxString(_("&PTT Config...")) , _("Configures FreeDV integration with radio"), wxITEM_NORMAL);
     tools->Append(m_menuItemRigCtrlCfg);
 
     wxMenuItem* m_menuItemOptions;
-    m_menuItemOptions = new wxMenuItem(tools, wxID_ANY, wxString(_("&Options...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemOptions = new wxMenuItem(tools, wxID_ANY, wxString(_("&Options...")) , _("Miscallenous FreeDV configuration options"), wxITEM_NORMAL);
     tools->Append(m_menuItemOptions);
 
     wxMenuItem* m_menuItemFilter;
-    m_menuItemFilter = new wxMenuItem(tools, wxID_ANY, wxString(_("&Filter...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemFilter = new wxMenuItem(tools, wxID_ANY, wxString(_("&Filter...")) , _("Configures audio filtering"), wxITEM_NORMAL);
     tools->Append(m_menuItemFilter);
 
-    m_menuItemPlayFileToMicIn = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Play File - Mic In...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemPlayFileToMicIn = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Play File - Mic In...")) , _("Pipes microphone sound input from file"), wxITEM_NORMAL);
     g_playFileToMicInEventId = m_menuItemPlayFileToMicIn->GetId();
     tools->Append(m_menuItemPlayFileToMicIn);
 
-    m_menuItemRecFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Record File - From Radio...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemRecFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Record File - From Radio...")) , _("Records incoming audio from the attached radio"), wxITEM_NORMAL);
     g_recFileFromRadioEventId = m_menuItemRecFileFromRadio->GetId();
     tools->Append(m_menuItemRecFileFromRadio);
 
-    m_menuItemRecFileFromModulator = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Record File - From Modulator...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemRecFileFromModulator = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Record File - From Modulator...")) , _("Records encoded audio from FreeDV"), wxITEM_NORMAL);
     g_recFileFromModulatorEventId = m_menuItemRecFileFromModulator->GetId();
     tools->Append(m_menuItemRecFileFromModulator);
 
-    m_menuItemPlayFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Play File - From Radio...")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemPlayFileFromRadio = new wxMenuItem(tools, wxID_ANY, wxString(_("Start Play File - From Radio...")) , _("Pipes radio sound input from file"), wxITEM_NORMAL);
     g_playFileFromRadioEventId = m_menuItemPlayFileFromRadio->GetId();
     tools->Append(m_menuItemPlayFileFromRadio);
     m_menubarMain->Append(tools, _("&Tools"));
 
     help = new wxMenu();
     wxMenuItem* m_menuItemHelpUpdates;
-    m_menuItemHelpUpdates = new wxMenuItem(help, wxID_ANY, wxString(_("Check for Updates")) , wxEmptyString, wxITEM_NORMAL);
+    m_menuItemHelpUpdates = new wxMenuItem(help, wxID_ANY, wxString(_("Check for Updates")) , _("Checks for updates to FreeDV"), wxITEM_NORMAL);
     help->Append(m_menuItemHelpUpdates);
     m_menuItemHelpUpdates->Enable(false);
 
