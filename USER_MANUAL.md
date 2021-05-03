@@ -343,23 +343,6 @@ The wave file for the voice keyer should be in 8kHz mono 16 bit sample
 form (16 kHz for 2020).  Use a free application such as Audacity to convert a file you
 have recorded to this format.
 
-# Multiple Configurations
-
-By default, FreeDV uses the following locations to store configuration:
-
-* Linux: ~/.FreeDV 
-* macOS: ~/Library/Preferences/FreeDV\ Preferences
-* Windows: Registry (HKEY\_CURRENT\_USER\\SOFTWARE\\CODEC2-Project\\FreeDV)
-
-If you'd like to store the configuration in another location (or store multiple configurations),
-FreeDV accepts the -f (or --config) command line arguments to provide an alternate location. An
-absolute path is recommended here; however, if only a relative path is provided, it will be relative
-to the following locations:
-
-* Linux: ~/
-* macOS: ~/Library/Preferences/
-* Windows: C:\\Users\\[username]\\AppData\\Roaming
-
 # PSK Reporter (Experimental)
 
 FreeDV has the ability to send FreeDV signal reports to [PSK Reporter](https://pskreporter.info/)
