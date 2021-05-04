@@ -2582,7 +2582,7 @@ void txRxProcessing()
     //  TX side processing --------------------------------------------
     //
 
-    if (((g_nSoundCards == 2) && !endingTx && ((g_half_duplex && g_tx) || !g_half_duplex))) {
+    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
         // Lock the mode mutex so that TX state doesn't change on us during processing.
         txModeChangeMutex.Lock();
         
@@ -2620,7 +2620,19 @@ void txRxProcessing()
 
             // zero speech input just in case infifo2 underflows
             memset(insound_card, 0, nsam_in_48*sizeof(short));
-            codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
+            if (codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48) != 0 && endingTx)
+            {
+                // If we're ending TX and there's still available microphone input, we should process
+                // that data during that time.
+                if (codec2_fifo_used(cbData->infifo2) > 0)
+                {
+                    assert(codec2_fifo_read(cbData->infifo2, insound_card, codec2_fifo_used(cbData->infifo2)) == 0);
+                }
+                else
+                {
+                    break;
+                }
+            }
 
             nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
 
@@ -2944,7 +2956,7 @@ int MainFrame::txCallback(
 
     assert(framesPerBuffer < MAX_FPB);
 
-    if (rptr) {
+    if (rptr && !endingTx) {
         for(i = 0; i < framesPerBuffer; i++, rptr += cbData->inputChannels2)
             indata[i] = rptr[0];
         if (codec2_fifo_write(cbData->infifo2, indata, framesPerBuffer)) {
