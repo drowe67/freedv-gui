@@ -164,6 +164,9 @@ SpeexPreprocessState *g_speex_st;
 // TX mode change mutex
 wxMutex txModeChangeMutex;
 
+// End of TX state control
+bool endingTx;
+
 // Option test file to log samples
 
 FILE *ftest;
@@ -1478,6 +1481,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
     {
         if (g_verbose) fprintf(stderr, "Start .....\n");
         g_queueResync = false;
+        endingTx = false;
         
         //
         // Start Running -------------------------------------------------
@@ -2587,7 +2591,7 @@ void txRxProcessing()
 
         // Run code inside this while loop as soon as we have enough
         // room for one frame of modem samples.  Aim is to keep
-        // outfifo1 nice and full so we don't have any gaps ix tx
+        // outfifo1 nice and full so we don't have any gaps in tx
         // signal.
 
         unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
@@ -2614,7 +2618,10 @@ void txRxProcessing()
 
             // zero speech input just in case infifo2 underflows
             memset(insound_card, 0, nsam_in_48*sizeof(short));
-            codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
+            int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
+
+            // special case - if we are ending Tx then only process if we have samples available from mic
+            if (endingTx && (nread != nsam_in_48)) break;
 
             nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
 
@@ -2885,7 +2892,7 @@ int MainFrame::txCallback(
 
     assert(framesPerBuffer < MAX_FPB);
 
-    if (rptr) {
+    if (rptr && !endingTx) {
         for(i = 0; i < framesPerBuffer; i++, rptr += cbData->inputChannels2)
             indata[i] = rptr[0];
         if (codec2_fifo_write(cbData->infifo2, indata, framesPerBuffer)) {

@@ -22,6 +22,8 @@ extern short *g_error_hist, *g_error_histn;
 extern int g_resyncs;
 extern int g_Nc;
 extern int g_txLevel;
+extern bool endingTx;
+extern int g_outfifo1_empty;
 
 //-------------------------------------------------------------------------
 // OnExitClick()
@@ -430,6 +432,19 @@ void MainFrame::togglePTT(void) {
 
     if (g_tx)
     {
+        // Trigger end of TX processing. This causes us to wait for the remaining samples
+        // to flow through the system before toggling PTT
+        int sample = g_outfifo1_empty;
+        endingTx = true;
+        //while (g_outfifo1_empty == sample) wxThread::Sleep(20);
+        int i = 0;
+        while ((i < 10) && (g_outfifo1_empty == sample)) {
+            fprintf(stderr, "sample: %d g_outfifo1_empty: %d\n", sample, g_outfifo1_empty);
+            wxThread::Sleep(50);
+        }
+        fprintf(stderr, "sample: %d g_outfifo1_empty: %d\n", sample, g_outfifo1_empty);
+        endingTx = false;
+        
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().m_rxNbookCtrl);
 
