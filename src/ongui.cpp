@@ -438,12 +438,11 @@ void MainFrame::togglePTT(void) {
         endingTx = true;
         //while (g_outfifo1_empty == sample) wxThread::Sleep(20);
         int i = 0;
-        while ((i < 10) && (g_outfifo1_empty == sample)) {
+        while ((i < 20) && (g_outfifo1_empty == sample)) {
             fprintf(stderr, "sample: %d g_outfifo1_empty: %d\n", sample, g_outfifo1_empty);
             wxThread::Sleep(50);
         }
         fprintf(stderr, "sample: %d g_outfifo1_empty: %d\n", sample, g_outfifo1_empty);
-        endingTx = false;
         
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().m_rxNbookCtrl);
@@ -496,7 +495,7 @@ void MainFrame::togglePTT(void) {
     m_maxLevel = 0;
     m_textLevel->SetLabel(wxT(""));
     m_gaugeLevel->SetValue(0);
-
+    endingTx = false;
 }
 
 

@@ -2621,7 +2621,16 @@ void txRxProcessing()
             int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
 
             // special case - if we are ending Tx then only process if we have samples available from mic
-            if (endingTx && (nread != nsam_in_48)) break;
+            if (endingTx && nread != 0)
+            {
+                if (codec2_fifo_used(cbData->infifo2) == 0) break;
+                
+                short* tmp = (short*)&insound_card;
+                while (codec2_fifo_used(cbData->infifo2) > 0)
+                {
+                    codec2_fifo_read(cbData->infifo2, tmp++, 1);
+                }
+            }
 
             nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
 
