@@ -2619,8 +2619,13 @@ void txRxProcessing()
             // zero speech input just in case infifo2 underflows
             memset(insound_card, 0, nsam_in_48*sizeof(short));
             
-            // We try to read nsam_in_48 samples here. If we're stopping TX, we're okay
-            // with fewer so we can finish with whatever's already in the FIFO.
+            // There may be recorded audio left to encode while ending TX. To handle this,
+            // first we grab how many bytes are currently used by the FIFO. Then we determine
+            // the amount to read from the FIFO as follows:
+            //     * If transmit is not in the process of ending, we attempt to read nsam_in_48 from the FIFO.
+            //     * If transmit is ending and more than framesPerBuffer remain in the FIFO, we attempt to read nsam_in_48 from the FIFO.
+            //     * If transmit is ending and less than framesPerBuffer remain in the FIFO, we read the number currently in the FIFO.
+            //     * If nothing is remaining in the FIFO and we're ending TX, we exit this processing loop.
             int available = codec2_fifo_used(cbData->infifo2);
             int toRead = ( !endingTx || available >= nsam_in_48 ) ? nsam_in_48 : available;
             int nread = 0;
@@ -2804,6 +2809,12 @@ int MainFrame::rxCallback(
     // OK now set up output samples for this callback
 
     if (wptr) {
+        // There may be encoded audio left to transmit while ending TX. To handle this,
+        // first we grab the amount that is currently used by the FIFO. Then we determine
+        // the number of bytes to read from the FIFO as follows:
+        //     * If transmit is not in the process of ending, we attempt to read framesPerBuffer from the FIFO.
+        //     * If transmit is ending and more than framesPerBuffer remain in the FIFO, we attempt to read framesPerBuffer from the FIFO.
+        //     * If transmit is ending and less than framesPerBuffer remain in the FIFO, we read the number currently in the FIFO.
         int bytesUsed = codec2_fifo_used(cbData->outfifo1);
         int bytesToRead = ( !endingTx || bytesUsed >= framesPerBuffer ) ? framesPerBuffer : bytesUsed;
         memset(outdata, 0, MAX_FPB);
