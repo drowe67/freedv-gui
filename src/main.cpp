@@ -2618,17 +2618,15 @@ void txRxProcessing()
 
             // zero speech input just in case infifo2 underflows
             memset(insound_card, 0, nsam_in_48*sizeof(short));
-            int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
+            
+            // We try to read nsam_in_48 samples here. If we're stopping TX, we're okay
+            // with fewer so we can finish with whatever's already in the FIFO.
+            int available = codec2_fifo_used(cbData->infifo2);
+            int toRead = ( !endingTx || available >= nsam_in_48 ) ? nsam_in_48 : available;
+            int nread = 0;
 
-            // special case - if we are ending Tx then only process if we have samples available from mic
-            if (endingTx && nread != 0)
-            {
-                int nused = codec2_fifo_used(cbData->infifo2);
-                fprintf(stderr, "mic nusued: %d\n", nused);
-                if (nused == 0) break;
-                // final read to empty fifo and consume last few mic samples
-                codec2_fifo_read(cbData->infifo2, insound_card, nused);
-            }
+            if (toRead == 0 && endingTx) break;
+            nread = codec2_fifo_read(cbData->infifo2, insound_card, toRead);
 
             nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
 
@@ -2806,7 +2804,10 @@ int MainFrame::rxCallback(
     // OK now set up output samples for this callback
 
     if (wptr) {
-         if (codec2_fifo_read(cbData->outfifo1, outdata, framesPerBuffer) == 0) {
+        int bytesUsed = codec2_fifo_used(cbData->outfifo1);
+        int bytesToRead = ( !endingTx || bytesUsed >= framesPerBuffer ) ? framesPerBuffer : bytesUsed;
+        memset(outdata, 0, MAX_FPB);
+        if (bytesToRead > 0 && codec2_fifo_read(cbData->outfifo1, outdata, bytesToRead) == 0) {
 
             // write signal to both channels if the device can support two channels.
             // Otherwise, we assume we're only dealing with one channel and write

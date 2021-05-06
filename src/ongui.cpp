@@ -440,6 +440,7 @@ void MainFrame::togglePTT(void) {
         int i = 0;
         while ((i < 20) && (g_outfifo1_empty == sample)) {
             fprintf(stderr, "sample: %d g_outfifo1_empty: %d\n", sample, g_outfifo1_empty);
+            i++;
             wxThread::Sleep(50);
         }
         fprintf(stderr, "sample: %d g_outfifo1_empty: %d\n", sample, g_outfifo1_empty);
