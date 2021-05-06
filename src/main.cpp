@@ -2632,7 +2632,8 @@ void txRxProcessing()
 
             if (toRead == 0 && endingTx) break;
             nread = codec2_fifo_read(cbData->infifo2, insound_card, toRead);
-
+            assert(nread == 0);
+            
             nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
 
             // optionally use file for mic input signal
