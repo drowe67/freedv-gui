@@ -2628,11 +2628,9 @@ void txRxProcessing()
             //     * If nothing is remaining in the FIFO and we're ending TX, we exit this processing loop.
             int available = codec2_fifo_used(cbData->infifo2);
             int toRead = ( !endingTx || available >= nsam_in_48 ) ? nsam_in_48 : available;
-            int nread = 0;
 
             if (toRead == 0 && endingTx) break;
-            nread = codec2_fifo_read(cbData->infifo2, insound_card, toRead);
-            assert(nread == 0);
+            codec2_fifo_read(cbData->infifo2, insound_card, toRead);
             
             nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
 
