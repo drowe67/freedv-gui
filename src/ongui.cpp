@@ -439,11 +439,9 @@ void MainFrame::togglePTT(void) {
         //while (g_outfifo1_empty == sample) wxThread::Sleep(20);
         int i = 0;
         while ((i < 20) && (g_outfifo1_empty == sample)) {
-            fprintf(stderr, "sample: %d g_outfifo1_empty: %d\n", sample, g_outfifo1_empty);
             i++;
             wxThread::Sleep(50);
         }
-        fprintf(stderr, "sample: %d g_outfifo1_empty: %d\n", sample, g_outfifo1_empty);
         
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().m_rxNbookCtrl);
