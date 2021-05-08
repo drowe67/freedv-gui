@@ -2800,7 +2800,7 @@ int MainFrame::rxCallback(
     // OK now set up output samples for this callback
 
     if (wptr) {
-        memset(outdata, 0, MAX_FPB);
+        memset(outdata, 0, sizeof(short)*MAX_FPB);
         if (codec2_fifo_read(cbData->outfifo1, outdata, framesPerBuffer) == 0) {
 
             // write signal to both channels if the device can support two channels.
