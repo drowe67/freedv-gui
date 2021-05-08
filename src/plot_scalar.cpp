@@ -44,8 +44,9 @@ PlotScalar::PlotScalar(wxFrame* parent,
 		       float  graticule_t_step,   // time step of x (time) axis graticule in seconds
 		       float  graticule_a_step,   // step of amplitude axis graticule
 		       const char a_fmt[],        // printf format string for amplitude axis labels
-                       int    mini                // true for mini-plot - don't draw graticule
-		       ): PlotPanel(parent)
+                       int    mini,                // true for mini-plot - don't draw graticule
+                       const char* plotName
+		       ): PlotPanel(parent, plotName)
 {
     int i;
 

@@ -40,7 +40,8 @@ class PlotScalar: public PlotPanel
 	       float graticule_t_step,   
 	       float graticule_a_step,
 	       const char  a_fmt[],
-               int   mini
+               int   mini,
+               const char* plotName = ""
 	       );
         ~PlotScalar();
          void add_new_sample(int channel, float sample);

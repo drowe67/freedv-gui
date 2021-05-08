@@ -42,7 +42,7 @@ END_EVENT_TABLE()
 // @brief
 //
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-PlotPanel::PlotPanel(wxFrame* parent) : wxPanel(parent)
+PlotPanel::PlotPanel(wxFrame* parent, const char* plotName) : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, plotName)
 {
     m_pNoteBook         = (wxAuiNotebook *) parent;
     m_pTopFrame         = (MainFrame *)m_pNoteBook->GetParent();
