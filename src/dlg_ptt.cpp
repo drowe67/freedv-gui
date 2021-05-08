@@ -157,7 +157,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
 
     wxGridSizer* gridSizer17 = new wxGridSizer(2, 2, 0, 0);
     
-    m_rbUseDTR = new wxRadioButton(boxPolarity, wxID_ANY, _("Use DTR"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_rbUseDTR = new wxRadioButton(boxPolarity, wxID_ANY, _("Use DTR"), wxDefaultPosition, wxSize(-1,-1), wxRB_GROUP);
     m_rbUseDTR->SetToolTip(_("Toggle DTR line for PTT"));
     m_rbUseDTR->SetValue(1);
     gridSizer17->Add(m_rbUseDTR, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL, 5);
