@@ -162,15 +162,15 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     m_rbUseDTR->SetValue(1);
     gridSizer17->Add(m_rbUseDTR, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL, 5);
 
-    m_ckDTRPos = new wxCheckBox(boxPolarity, wxID_ANY, _("DTR = +V"), wxDefaultPosition, wxSize(-1,-1), 0);
-    m_ckDTRPos->SetToolTip(_("Set Polarity of the DTR line"));
-    m_ckDTRPos->SetValue(false);
-    gridSizer17->Add(m_ckDTRPos, 0, wxALIGN_CENTER, 5);
-
     m_rbUseRTS = new wxRadioButton(boxPolarity, wxID_ANY, _("Use RTS"), wxDefaultPosition, wxSize(-1,-1), 0);
     m_rbUseRTS->SetToolTip(_("Toggle the RTS pin for PTT"));
     m_rbUseRTS->SetValue(1);
     gridSizer17->Add(m_rbUseRTS, 0, wxALIGN_CENTER, 5);
+    
+    m_ckDTRPos = new wxCheckBox(boxPolarity, wxID_ANY, _("DTR = +V"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckDTRPos->SetToolTip(_("Set Polarity of the DTR line"));
+    m_ckDTRPos->SetValue(false);
+    gridSizer17->Add(m_ckDTRPos, 0, wxALIGN_CENTER, 5);
 
     m_ckRTSPos = new wxCheckBox(boxPolarity, wxID_ANY, _("RTS = +V"), wxDefaultPosition, wxSize(-1,-1), 0);
     m_ckRTSPos->SetValue(false);
