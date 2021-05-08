@@ -447,7 +447,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //-------------------
     m_ckboxSNR->MoveBeforeInTabOrder(m_BtnReSync);
     m_BtnReSync->MoveBeforeInTabOrder(m_BtnBerReset);
-    m_BtnBerReset->MoveBeforeInTabOrder(m_BtnCallSignReset);
+    m_BtnBerReset->MoveBeforeInTabOrder(m_auiNbookCtrl);
+    m_auiNbookCtrl->MoveBeforeInTabOrder(m_BtnCallSignReset);
     m_BtnCallSignReset->MoveBeforeInTabOrder(m_sliderSQ);
     m_sliderSQ->MoveBeforeInTabOrder(m_ckboxSQ);
     m_ckboxSQ->MoveBeforeInTabOrder(m_sliderTxLevel);
