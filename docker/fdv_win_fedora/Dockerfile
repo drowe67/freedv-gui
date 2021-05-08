@@ -19,8 +19,7 @@ RUN dnf install -y mingw{32,64}-speex mingw{32,64}-wxWidgets3 mingw{32,64}-hamli
 
 # finally, this is the build script.
 COPY entrypoint.sh /
-COPY entrypoint_norebuild.sh /
 
 USER build
 
-ENTRYPOINT ["/entrypoint_norebuild.sh"]
+ENTRYPOINT ["/entrypoint.sh"]

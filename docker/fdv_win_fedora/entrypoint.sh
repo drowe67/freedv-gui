@@ -26,6 +26,7 @@ echo "FDV_CMAKE=$CMAKE"
 if [ -d freedv-gui ] && [ ! -z $CLEAN ]; then 
     rm -Rf freedv-gui; 
     git clone $GIT_REPO
+    cd freedv-gui
 else
     cd freedv-gui
     git pull
