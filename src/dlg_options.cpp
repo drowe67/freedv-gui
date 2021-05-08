@@ -414,9 +414,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_buttonChooseVoiceKeyerWaveFile->MoveBeforeInTabOrder(m_txtCtrlVoiceKeyerRxPause);
     m_txtCtrlVoiceKeyerRxPause->MoveBeforeInTabOrder(m_txtCtrlVoiceKeyerRepeats);
     
-    m_ckboxFreeDV700txClip->MoveBeforeInTabOrder(m_ckboxFreeDV700txBPF);
-    m_ckboxFreeDV700txBPF->MoveBeforeInTabOrder(m_ckboxFreeDV700Combine);
-    m_ckboxFreeDV700Combine->MoveBeforeInTabOrder(m_ckboxFreeDV700ManualUnSync);
+    m_ckboxFreeDV700txClip->MoveBeforeInTabOrder(m_ckboxFreeDV700Combine);
+    m_ckboxFreeDV700Combine->MoveBeforeInTabOrder(m_ckboxFreeDV700txBPF);
+    m_ckboxFreeDV700txBPF->MoveBeforeInTabOrder(m_ckboxFreeDV700ManualUnSync);
     m_ckboxFreeDV700ManualUnSync->MoveBeforeInTabOrder(m_ckboxPhaseEstBW);
     m_ckboxPhaseEstBW->MoveBeforeInTabOrder(m_ckboxPhaseEstDPSK);
     m_ckboxPhaseEstDPSK->MoveBeforeInTabOrder(m_ckHalfDuplex);
