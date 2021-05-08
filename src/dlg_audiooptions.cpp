@@ -57,6 +57,7 @@ void AudioOptsDialog::buildTestControls(PlotScalar **plotScalar, wxButton **btnT
 
     wxPanel *panel = new wxPanel(parentPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
     *plotScalar = new PlotScalar((wxFrame*) panel, 1, TEST_WAVEFORM_PLOT_TIME, 1.0/TEST_WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "", 1);
+    (*plotScalar)->SetToolTip("Shows test audio waveform");
     (*plotScalar)->SetClientSize(wxSize(TEST_WAVEFORM_X,TEST_WAVEFORM_Y));
     bSizer1->Add(panel, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 8);
 
