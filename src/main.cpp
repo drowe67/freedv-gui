@@ -2620,17 +2620,9 @@ void txRxProcessing()
             memset(insound_card, 0, nsam_in_48*sizeof(short));
             
             // There may be recorded audio left to encode while ending TX. To handle this,
-            // first we grab how many bytes are currently used by the FIFO. Then we determine
-            // the amount to read from the FIFO as follows:
-            //     * If transmit is not in the process of ending, we attempt to read nsam_in_48 from the FIFO.
-            //     * If transmit is ending and more than framesPerBuffer remain in the FIFO, we attempt to read nsam_in_48 from the FIFO.
-            //     * If transmit is ending and less than framesPerBuffer remain in the FIFO, we read the number currently in the FIFO.
-            //     * If nothing is remaining in the FIFO and we're ending TX, we exit this processing loop.
-            int available = codec2_fifo_used(cbData->infifo2);
-            int toRead = ( !endingTx || available >= nsam_in_48 ) ? nsam_in_48 : available;
-
-            if (toRead == 0 && endingTx) break;
-            codec2_fifo_read(cbData->infifo2, insound_card, toRead);
+            // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
+            int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
+            if (nread != 0 && endingTx) break;
             
             nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
 
@@ -2808,16 +2800,8 @@ int MainFrame::rxCallback(
     // OK now set up output samples for this callback
 
     if (wptr) {
-        // There may be encoded audio left to transmit while ending TX. To handle this,
-        // first we grab the amount that is currently used by the FIFO. Then we determine
-        // the number of bytes to read from the FIFO as follows:
-        //     * If transmit is not in the process of ending, we attempt to read framesPerBuffer from the FIFO.
-        //     * If transmit is ending and more than framesPerBuffer remain in the FIFO, we attempt to read framesPerBuffer from the FIFO.
-        //     * If transmit is ending and less than framesPerBuffer remain in the FIFO, we read the number currently in the FIFO.
-        int bytesUsed = codec2_fifo_used(cbData->outfifo1);
-        int bytesToRead = ( !endingTx || bytesUsed >= framesPerBuffer ) ? framesPerBuffer : bytesUsed;
         memset(outdata, 0, MAX_FPB);
-        if (bytesToRead > 0 && codec2_fifo_read(cbData->outfifo1, outdata, bytesToRead) == 0) {
+        if (codec2_fifo_read(cbData->outfifo1, outdata, framesPerBuffer) == 0) {
 
             // write signal to both channels if the device can support two channels.
             // Otherwise, we assume we're only dealing with one channel and write
