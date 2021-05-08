@@ -24,6 +24,15 @@ extern int g_Nc;
 extern int g_txLevel;
 
 //-------------------------------------------------------------------------
+// Forces redraw of main panels on window resize.
+//-------------------------------------------------------------------------
+void MainFrame::topFrame_OnSize( wxSizeEvent& event )
+{
+    m_auiNbookCtrl->Refresh();
+    TopFrame::topFrame_OnSize(event);
+}
+
+//-------------------------------------------------------------------------
 // OnExitClick()
 //-------------------------------------------------------------------------
 void MainFrame::OnExitClick(wxCommandEvent& event)

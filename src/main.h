@@ -549,6 +549,7 @@ class MainFrame : public TopFrame
         void setsnrBeta(bool snrSlow);
 
         // protected event handlers
+        virtual void topFrame_OnSize( wxSizeEvent& event );
         virtual void OnCloseFrame(wxCloseEvent& event);
         void OnExitClick(wxCommandEvent& event);
 
