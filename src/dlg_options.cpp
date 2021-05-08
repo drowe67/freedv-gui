@@ -311,7 +311,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxDebugConsole = new wxCheckBox(m_debugTab, wxID_ANY, _("Show Console"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_console->Add(m_ckboxDebugConsole, 0, wxALIGN_LEFT, 0);
 
-    sizerDebug->Add(sbSizer_console,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+    sizerDebug->Add(sbSizer_console,0, wxALL|wxEXPAND, 3);
 #endif // __WXMSW__
     
     //----------------------------------------------------------
@@ -406,16 +406,13 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_txtCtrlCallSign->MoveBeforeInTabOrder(m_ckbox_psk_enable);
     m_ckbox_psk_enable->MoveBeforeInTabOrder(m_txt_callsign);
     m_txt_callsign->MoveBeforeInTabOrder(m_txt_grid_square);
-    m_txt_grid_square->MoveBeforeInTabOrder(m_txtCtrlCallSign);
     
     m_waterfallColorScheme1->MoveBeforeInTabOrder(m_waterfallColorScheme2);
     m_waterfallColorScheme2->MoveBeforeInTabOrder(m_waterfallColorScheme3);
-    m_waterfallColorScheme3->MoveBeforeInTabOrder(m_waterfallColorScheme1);
     
     m_txtCtrlVoiceKeyerWaveFile->MoveBeforeInTabOrder(m_buttonChooseVoiceKeyerWaveFile);
     m_buttonChooseVoiceKeyerWaveFile->MoveBeforeInTabOrder(m_txtCtrlVoiceKeyerRxPause);
     m_txtCtrlVoiceKeyerRxPause->MoveBeforeInTabOrder(m_txtCtrlVoiceKeyerRepeats);
-    m_txtCtrlVoiceKeyerRepeats->MoveBeforeInTabOrder(m_txtCtrlVoiceKeyerWaveFile);
     
     m_ckboxFreeDV700txClip->MoveBeforeInTabOrder(m_ckboxFreeDV700txBPF);
     m_ckboxFreeDV700txBPF->MoveBeforeInTabOrder(m_ckboxFreeDV700Combine);
@@ -424,7 +421,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxPhaseEstBW->MoveBeforeInTabOrder(m_ckboxPhaseEstDPSK);
     m_ckboxPhaseEstDPSK->MoveBeforeInTabOrder(m_ckHalfDuplex);
     m_ckHalfDuplex->MoveBeforeInTabOrder(m_ckboxMultipleRx);
-    m_ckboxMultipleRx->MoveBeforeInTabOrder(m_ckboxFreeDV700txClip);
     
     m_ckboxTestFrame->MoveBeforeInTabOrder(m_ckboxChannelNoise);
     m_ckboxChannelNoise->MoveBeforeInTabOrder(m_txtNoiseSNR);
@@ -433,11 +429,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_txtAttnCarrier->MoveBeforeInTabOrder(m_ckboxTone);
     m_ckboxTone->MoveBeforeInTabOrder(m_txtToneFreqHz);
     m_txtToneFreqHz->MoveBeforeInTabOrder(m_txtToneAmplitude);
-    m_txtToneAmplitude->MoveBeforeInTabOrder(m_ckboxTestFrame);
     
     m_ckbox_udp_enable->MoveBeforeInTabOrder(m_txt_udp_port);
     m_txt_udp_port->MoveBeforeInTabOrder(m_btn_udp_test);
-    m_btn_udp_test->MoveBeforeInTabOrder(m_ckbox_udp_enable);
     
     m_txtCtrlframesPerBuffer->MoveBeforeInTabOrder(m_txtCtrlFifoSize);
     m_txtCtrlFifoSize->MoveBeforeInTabOrder(m_ckboxVerbose);
@@ -446,7 +440,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxTxRxDumpTiming->MoveBeforeInTabOrder(m_ckboxTxRxDumpFifoState);
     m_ckboxTxRxDumpFifoState->MoveBeforeInTabOrder(m_ckboxFreeDVAPIVerbose);
     m_ckboxFreeDVAPIVerbose->MoveBeforeInTabOrder(m_BtnFifoReset);
-    m_BtnFifoReset->MoveBeforeInTabOrder(m_txtCtrlframesPerBuffer);
     
     m_reportingTab->MoveBeforeInTabOrder(m_displayTab);    
     m_displayTab->MoveBeforeInTabOrder(m_keyerTab);
@@ -454,12 +447,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_modemTab->MoveBeforeInTabOrder(m_simulationTab);
     m_simulationTab->MoveBeforeInTabOrder(m_interfacingTab);
     m_interfacingTab->MoveBeforeInTabOrder(m_debugTab);
-    m_debugTab->MoveBeforeInTabOrder(m_reportingTab);
     
     m_notebook->MoveBeforeInTabOrder(m_sdbSizer5OK);
     m_sdbSizer5OK->MoveBeforeInTabOrder(m_sdbSizer5Cancel);
     m_sdbSizer5Cancel->MoveBeforeInTabOrder(m_sdbSizer5Apply);
-    m_sdbSizer5Apply->MoveBeforeInTabOrder(m_notebook);
     
     // Connect Events -------------------------------------------------------
 
