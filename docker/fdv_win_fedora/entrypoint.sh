@@ -20,16 +20,27 @@ echo "FDV_CMAKE=$CMAKE"
 
 # OK lets get started -----------------------------------------------
 
-# start with a fresh clone
-if [ -d freedv-gui ] ; then rm -Rf freedv-gui; fi
-git clone $GIT_REPO
-cd freedv-gui
+# start with a fresh clone if requested
+if [ -d freedv-gui ] && [ ! -z "$CLEAN" ]; then 
+    rm -Rf freedv-gui; 
+    git clone $GIT_REPO
+    cd freedv-gui
+
+    echo "--------------------- starting build_windows.sh ---------------------"
+    GIT_REPO=$GIT_REPO GIT_REF=$GIT_REF CMAKE=$CMAKE ./build_windows.sh
+else
+    cd freedv-gui
+    git pull
+fi
 git checkout $GIT_BRANCH
-echo "--------------------- starting build_windows.sh ---------------------"
-GIT_REPO=$GIT_REPO GIT_REF=$GIT_REF CMAKE=$CMAKE ./build_windows.sh
 if [ $CMAKE = "mingw64-cmake" ]; then
     cd build_win64
 else
     cd build_win32
 fi
+
+# Make only freedv-gui if we're not starting from a clean repo
+if [ -z "$CLEAN" ]; then make; fi
+
+# Package the build
 make package
