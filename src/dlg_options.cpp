@@ -492,6 +492,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_interfacingTab->MoveBeforeInTabOrder(m_debugTab);
     m_debugTab->MoveBeforeInTabOrder(m_reportingTab);
     
+    m_notebook->MoveBeforeInTabOrder(m_sdbSizer5OK);
     m_sdbSizer5OK->MoveBeforeInTabOrder(m_sdbSizer5Cancel);
     m_sdbSizer5Cancel->MoveBeforeInTabOrder(m_sdbSizer5Apply);
     m_sdbSizer5Apply->MoveBeforeInTabOrder(m_notebook);
