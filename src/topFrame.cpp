@@ -440,6 +440,29 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //=====================================================
 
     //-------------------
+    // Tab ordering for accessibility
+    //-------------------
+    m_ckboxSNR->MoveBeforeInTabOrder(m_BtnReSync);
+    m_BtnReSync->MoveBeforeInTabOrder(m_BtnBerReset);
+    m_BtnBerReset->MoveBeforeInTabOrder(m_BtnCallSignReset);
+    m_BtnCallSignReset->MoveBeforeInTabOrder(m_sliderSQ);
+    m_sliderSQ->MoveBeforeInTabOrder(m_ckboxSQ);
+    m_ckboxSQ->MoveBeforeInTabOrder(m_sliderTxLevel);
+    m_sliderTxLevel->MoveBeforeInTabOrder(m_rb700c);
+    m_rb700c->MoveBeforeInTabOrder(m_rb700d);
+    m_rb700d->MoveBeforeInTabOrder(m_rb700e);
+    m_rb700e->MoveBeforeInTabOrder(m_rb800xa);
+    m_rb800xa->MoveBeforeInTabOrder(m_rb1600);
+    m_rb1600->MoveBeforeInTabOrder(m_rb2400b);
+    m_rb2400b->MoveBeforeInTabOrder(m_rb2020);
+    m_rb2020->MoveBeforeInTabOrder(m_togBtnOnOff);
+    m_togBtnOnOff->MoveBeforeInTabOrder(m_togBtnSplit);
+    m_togBtnSplit->MoveBeforeInTabOrder(m_togBtnAnalog);
+    m_togBtnAnalog->MoveBeforeInTabOrder(m_togBtnVoiceKeyer);
+    m_togBtnVoiceKeyer->MoveBeforeInTabOrder(m_btnTogPTT);
+    m_btnTogPTT->MoveBeforeInTabOrder(m_ckboxSNR);
+        
+    //-------------------
     // Connect Events
     //-------------------
     this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(TopFrame::topFrame_OnClose));
