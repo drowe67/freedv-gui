@@ -48,11 +48,13 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);
     
+    wxPanel* panel = new wxPanel(this);
+    
     wxBoxSizer* bSizer30;
     bSizer30 = new wxBoxSizer(wxVERTICAL);
     
     // Create notebook and tabs.
-    m_notebook = new wxNotebook(this, wxID_ANY);
+    m_notebook = new wxNotebook(panel, wxID_ANY);
     m_reportingTab = new wxNotebookPage(m_notebook, wxID_ANY);
     m_displayTab = new wxNotebookPage(m_notebook, wxID_ANY);
     m_keyerTab = new wxNotebookPage(m_notebook, wxID_ANY);
@@ -384,20 +386,24 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     wxBoxSizer* bSizer31 = new wxBoxSizer(wxHORIZONTAL);
 
-    m_sdbSizer5OK = new wxButton(this, wxID_OK);
+    m_sdbSizer5OK = new wxButton(panel, wxID_OK);
     bSizer31->Add(m_sdbSizer5OK, 0, wxALL, 2);
 
-    m_sdbSizer5Cancel = new wxButton(this, wxID_CANCEL);
+    m_sdbSizer5Cancel = new wxButton(panel, wxID_CANCEL);
     bSizer31->Add(m_sdbSizer5Cancel, 0, wxALL, 2);
 
-    m_sdbSizer5Apply = new wxButton(this, wxID_APPLY);
+    m_sdbSizer5Apply = new wxButton(panel, wxID_APPLY);
     bSizer31->Add(m_sdbSizer5Apply, 0, wxALL, 2);
 
     bSizer30->Add(bSizer31, 0, wxALL | wxALIGN_CENTER, 5);
 
-    this->SetSizerAndFit(bSizer30);
+    panel->SetSizer(bSizer30);
+    
+    wxBoxSizer* winSizer = new wxBoxSizer(wxVERTICAL);
+    winSizer->Add(panel, 0, wxEXPAND);
+    
+    this->SetSizerAndFit(winSizer);
     this->Layout();
-
     this->Centre(wxBOTH);
  
     //-------------------
