@@ -22,6 +22,7 @@
 
 #include <time.h>
 #include <deque>
+#include <wx/cmdline.h>
 #include "main.h"
 #include "osx_interface.h"
 #include "callsign_encoder.h"
@@ -177,6 +178,37 @@ extern wxDatagramSocket *g_sock;
 
 IMPLEMENT_APP(MainApp);
 
+
+void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
+{
+    wxApp::OnInitCmdLine(parser);
+    parser.AddOption("f", "config", "Use different configuration file instead of the default.");
+}
+
+bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
+{
+    if (!wxApp::OnCmdLineParsed(parser))
+    {
+        return false;
+    }
+    
+    wxString configPath;
+    wxConfigBase *pConfig;
+    if (parser.Found("f", &configPath))
+    {
+        pConfig = new wxConfig();
+        wxFileConfig *pFConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), configPath, configPath, wxCONFIG_USE_LOCAL_FILE);
+        pConfig->Set(pFConfig);
+    }
+    else
+    {
+        pConfig = wxConfigBase::Get();
+    }
+    pConfig->SetRecordDefaults();
+    
+    return true;
+}
+
 //-------------------------------------------------------------------------
 // OnInit()
 //-------------------------------------------------------------------------
@@ -191,18 +223,7 @@ bool MainApp::OnInit()
     }
     SetVendorName(wxT("CODEC2-Project"));
     SetAppName(wxT("FreeDV"));      // not needed, it's the default value
-
-#ifdef FILE_RATHER_THAN_REGISTRY
-    // Force use of file-based configuration persistance on Windows platforma
-    wxConfig *pConfig = new wxConfig();
-    wxFileConfig *pFConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), wxT("FreeDV.conf"), wxT("FreeDV.conf"),  wxCONFIG_USE_LOCAL_FILE | wxCONFIG_USE_RELATIVE_PATH);
-    pConfig->Set(pFConfig);
-    pConfig->SetRecordDefaults();
-#else
-    wxConfigBase *pConfig = wxConfigBase::Get();
-    pConfig->SetRecordDefaults();
-#endif
-
+    
     golay23_init();
     
     m_rTopWindow = wxRect(0, 0, 0, 0);
