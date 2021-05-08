@@ -74,7 +74,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     bSizer30->Add(m_notebook, 0, wxALL | wxEXPAND, 3);
     
     // Reporting tab
-    wxPanel* panelReporting = new wxPanel(m_reportingTab);
+    //wxPanel* panelReporting = new wxPanel(m_reportingTab);
     wxBoxSizer* sizerReporting = new wxBoxSizer(wxVERTICAL);
     
     //------------------------------
@@ -82,10 +82,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     //------------------------------
 
     wxStaticBoxSizer* sbSizer_callSign;
-    wxStaticBox *sb_textMsg = new wxStaticBox(panelReporting, wxID_ANY, _("Txt Msg"));
+    wxStaticBox *sb_textMsg = new wxStaticBox(m_reportingTab, wxID_ANY, _("Txt Msg"));
     sbSizer_callSign = new wxStaticBoxSizer(sb_textMsg, wxVERTICAL);
 
-    m_txtCtrlCallSign = new wxTextCtrl(panelReporting, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+    m_txtCtrlCallSign = new wxTextCtrl(m_reportingTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
     m_txtCtrlCallSign->SetToolTip(_("Txt Msg you can send along with Voice"));
     sbSizer_callSign->Add(m_txtCtrlCallSign, 0, wxALL|wxEXPAND, 3);
 
@@ -96,29 +96,29 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     //----------------------------------------------------------
 
     wxStaticBoxSizer* sbSizer_psk;
-    wxStaticBox* sb_psk = new wxStaticBox(panelReporting, wxID_ANY, _("PSK Reporter"));
+    wxStaticBox* sb_psk = new wxStaticBox(m_reportingTab, wxID_ANY, _("PSK Reporter"));
     sbSizer_psk = new wxStaticBoxSizer(sb_psk, wxHORIZONTAL);
-    m_ckbox_psk_enable = new wxCheckBox(panelReporting, wxID_ANY, _("Enable Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckbox_psk_enable = new wxCheckBox(m_reportingTab, wxID_ANY, _("Enable Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_psk->Add(m_ckbox_psk_enable, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
     
-    wxStaticText* labelPskCallsign = new wxStaticText(panelReporting, wxID_ANY, wxT("Callsign: "), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelPskCallsign = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Callsign: "), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_psk->Add(labelPskCallsign, 0,  wxRIGHT | wxALIGN_CENTER_VERTICAL, 3);
     
-    m_txt_callsign = new wxTextCtrl(panelReporting, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    m_txt_callsign = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
     sbSizer_psk->Add(m_txt_callsign, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
     
-    wxStaticText* labelPskGridSquare = new wxStaticText(panelReporting, wxID_ANY, wxT("Grid Square: "), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelPskGridSquare = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Grid Square: "), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_psk->Add(labelPskGridSquare, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 3);
     
-    m_txt_grid_square = new wxTextCtrl(panelReporting, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(70,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    m_txt_grid_square = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(70,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
     sbSizer_psk->Add(m_txt_grid_square, 0,  wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
     
     sizerReporting->Add(sbSizer_psk,0, wxALL|wxEXPAND, 3);
-    panelReporting->SetSizer(sizerReporting);
+    //panelReporting->SetSizer(sizerReporting);
     
-    wxBoxSizer* sizerPanelReporting = new wxBoxSizer(wxVERTICAL);
-    sizerPanelReporting->Add(panelReporting, 0, wxEXPAND);
-    m_reportingTab->SetSizer(sizerPanelReporting);
+    //wxBoxSizer* sizerPanelReporting = new wxBoxSizer(wxVERTICAL);
+    //sizerPanelReporting->Add(panelReporting, 0, wxEXPAND);
+    m_reportingTab->SetSizer(sizerReporting);
     
     // Display tab
     wxPanel* panelDisplay = new wxPanel(m_displayTab);
