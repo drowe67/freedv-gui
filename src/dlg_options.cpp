@@ -74,18 +74,18 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     bSizer30->Add(m_notebook, 0, wxALL | wxEXPAND, 3);
     
     // Reporting tab
-    wxBoxSizer* sizerReporting;
-    sizerReporting = new wxBoxSizer(wxVERTICAL);
+    wxPanel* panelReporting = new wxPanel(m_reportingTab);
+    wxBoxSizer* sizerReporting = new wxBoxSizer(wxVERTICAL);
     
     //------------------------------
     // Txt Msg Text Box
     //------------------------------
 
     wxStaticBoxSizer* sbSizer_callSign;
-    wxStaticBox *sb_textMsg = new wxStaticBox(m_reportingTab, wxID_ANY, _("Txt Msg"));
+    wxStaticBox *sb_textMsg = new wxStaticBox(panelReporting, wxID_ANY, _("Txt Msg"));
     sbSizer_callSign = new wxStaticBoxSizer(sb_textMsg, wxVERTICAL);
 
-    m_txtCtrlCallSign = new wxTextCtrl(m_reportingTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+    m_txtCtrlCallSign = new wxTextCtrl(panelReporting, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
     m_txtCtrlCallSign->SetToolTip(_("Txt Msg you can send along with Voice"));
     sbSizer_callSign->Add(m_txtCtrlCallSign, 0, wxALL|wxEXPAND, 3);
 
@@ -96,101 +96,115 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     //----------------------------------------------------------
 
     wxStaticBoxSizer* sbSizer_psk;
-    wxStaticBox* sb_psk = new wxStaticBox(m_reportingTab, wxID_ANY, _("PSK Reporter"));
+    wxStaticBox* sb_psk = new wxStaticBox(panelReporting, wxID_ANY, _("PSK Reporter"));
     sbSizer_psk = new wxStaticBoxSizer(sb_psk, wxHORIZONTAL);
-    m_ckbox_psk_enable = new wxCheckBox(m_reportingTab, wxID_ANY, _("Enable Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckbox_psk_enable = new wxCheckBox(panelReporting, wxID_ANY, _("Enable Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_psk->Add(m_ckbox_psk_enable, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
     
-    wxStaticText* labelPskCallsign = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Callsign: "), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelPskCallsign = new wxStaticText(panelReporting, wxID_ANY, wxT("Callsign: "), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_psk->Add(labelPskCallsign, 0,  wxRIGHT | wxALIGN_CENTER_VERTICAL, 3);
     
-    m_txt_callsign = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    m_txt_callsign = new wxTextCtrl(panelReporting, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
     sbSizer_psk->Add(m_txt_callsign, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
     
-    wxStaticText* labelPskGridSquare = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Grid Square: "), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelPskGridSquare = new wxStaticText(panelReporting, wxID_ANY, wxT("Grid Square: "), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_psk->Add(labelPskGridSquare, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 3);
     
-    m_txt_grid_square = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(70,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    m_txt_grid_square = new wxTextCtrl(panelReporting, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(70,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
     sbSizer_psk->Add(m_txt_grid_square, 0,  wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
     
     sizerReporting->Add(sbSizer_psk,0, wxALL|wxEXPAND, 3);
-    m_reportingTab->SetSizer(sizerReporting);
+    panelReporting->SetSizer(sizerReporting);
+    
+    wxBoxSizer* sizerPanelReporting = new wxBoxSizer(wxVERTICAL);
+    sizerPanelReporting->Add(panelReporting, 0, wxEXPAND);
+    m_reportingTab->SetSizer(sizerPanelReporting);
     
     // Display tab
-    wxBoxSizer* sizerDisplay;
-    sizerDisplay = new wxBoxSizer(wxVERTICAL);
+    wxPanel* panelDisplay = new wxPanel(m_displayTab);
+    wxBoxSizer* sizerDisplay = new wxBoxSizer(wxVERTICAL);
     
     //----------------------------------------------------------
     // Waterfall color 
     //----------------------------------------------------------
-    wxStaticBox* sb_waterfall = new wxStaticBox(m_displayTab, wxID_ANY, _("Waterfall Style"));
+    wxStaticBox* sb_waterfall = new wxStaticBox(panelDisplay, wxID_ANY, _("Waterfall Style"));
     wxStaticBoxSizer* sbSizer_waterfallColor =  new wxStaticBoxSizer(sb_waterfall, wxHORIZONTAL);
     
-    m_waterfallColorScheme1 = new wxRadioButton(m_displayTab, wxID_ANY, _("Multicolor"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    m_waterfallColorScheme1 = new wxRadioButton(panelDisplay, wxID_ANY, _("Multicolor"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
     sbSizer_waterfallColor->Add(m_waterfallColorScheme1, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
-    m_waterfallColorScheme2 = new wxRadioButton(m_displayTab, wxID_ANY, _("Black && White"), wxDefaultPosition, wxDefaultSize);
+    m_waterfallColorScheme2 = new wxRadioButton(panelDisplay, wxID_ANY, _("Black && White"), wxDefaultPosition, wxDefaultSize);
     sbSizer_waterfallColor->Add(m_waterfallColorScheme2, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
-    m_waterfallColorScheme3 = new wxRadioButton(m_displayTab, wxID_ANY, _("Blue Tint"), wxDefaultPosition, wxDefaultSize);
+    m_waterfallColorScheme3 = new wxRadioButton(panelDisplay, wxID_ANY, _("Blue Tint"), wxDefaultPosition, wxDefaultSize);
     sbSizer_waterfallColor->Add(m_waterfallColorScheme3, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
     
     sizerDisplay->Add(sbSizer_waterfallColor, 0, wxALL | wxEXPAND, 3);
     
-    m_displayTab->SetSizer(sizerDisplay);
+    panelDisplay->SetSizer(sizerDisplay);
+    
+    wxBoxSizer* sizerPanelDisplay = new wxBoxSizer(wxVERTICAL);
+    sizerPanelDisplay->Add(panelDisplay, 0, wxEXPAND);
+    m_displayTab->SetSizer(sizerPanelDisplay);
     
     // Voice Keyer tab
-    wxBoxSizer* sizerKeyer;
-    sizerKeyer = new wxBoxSizer(wxVERTICAL);
+    wxPanel* panelKeyer = new wxPanel(m_keyerTab);
+    wxBoxSizer* sizerKeyer = new wxBoxSizer(wxVERTICAL);
     
     //----------------------------------------------------------------------
     // Voice Keyer 
     //----------------------------------------------------------------------
 
-    wxStaticBoxSizer* staticBoxSizer28a = new wxStaticBoxSizer( new wxStaticBox(m_keyerTab, wxID_ANY, _("Voice Keyer")), wxHORIZONTAL);
+    wxStaticBoxSizer* staticBoxSizer28a = new wxStaticBoxSizer( new wxStaticBox(panelKeyer, wxID_ANY, _("Voice Keyer")), wxHORIZONTAL);
 
-    wxStaticText *m_staticText28b = new wxStaticText(m_keyerTab, wxID_ANY, _("Wave File: "), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticText28b = new wxStaticText(panelKeyer, wxID_ANY, _("Wave File: "), wxDefaultPosition, wxDefaultSize, 0);
     staticBoxSizer28a->Add(m_staticText28b, 0, wxALIGN_CENTER_VERTICAL, 5);    
-    m_txtCtrlVoiceKeyerWaveFile = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
+    m_txtCtrlVoiceKeyerWaveFile = new wxTextCtrl(panelKeyer, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
     m_txtCtrlVoiceKeyerWaveFile->SetToolTip(_("Wave file to play for Voice Keyer"));
     staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerWaveFile, 0, 0, 5);
 
-    m_buttonChooseVoiceKeyerWaveFile = new wxButton(m_keyerTab, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_buttonChooseVoiceKeyerWaveFile = new wxButton(panelKeyer, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
     staticBoxSizer28a->Add(m_buttonChooseVoiceKeyerWaveFile, 0, wxALIGN_CENTER_VERTICAL, 5);
 
-    wxStaticText *m_staticText28c = new wxStaticText(m_keyerTab, wxID_ANY, _("   Rx Pause: "), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticText28c = new wxStaticText(panelKeyer, wxID_ANY, _("   Rx Pause: "), wxDefaultPosition, wxDefaultSize, 0);
     staticBoxSizer28a->Add(m_staticText28c, 0, wxALIGN_CENTER_VERTICAL , 5);
-    m_txtCtrlVoiceKeyerRxPause = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
+    m_txtCtrlVoiceKeyerRxPause = new wxTextCtrl(panelKeyer, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
     m_txtCtrlVoiceKeyerRxPause->SetToolTip(_("How long to wait in Rx mode before repeat"));
     staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerRxPause, 0, 0, 5);
 
-    wxStaticText *m_staticText28d = new wxStaticText(m_keyerTab, wxID_ANY, _("   Repeats: "), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticText28d = new wxStaticText(panelKeyer, wxID_ANY, _("   Repeats: "), wxDefaultPosition, wxDefaultSize, 0);
     staticBoxSizer28a->Add(m_staticText28d, 0, wxALIGN_CENTER_VERTICAL, 5);
-    m_txtCtrlVoiceKeyerRepeats = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
+    m_txtCtrlVoiceKeyerRepeats = new wxTextCtrl(panelKeyer, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
     m_txtCtrlVoiceKeyerRepeats->SetToolTip(_("How long to wait in Rx mode before repeat"));
     staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerRepeats, 0, 0, 5);
 
     sizerKeyer->Add(staticBoxSizer28a,0, wxALL|wxEXPAND, 3);
-    m_keyerTab->SetSizer(sizerKeyer);
+    
+    panelKeyer->SetSizer(sizerKeyer);
+    
+    wxBoxSizer* sizerPanelKeyer = new wxBoxSizer(wxVERTICAL);
+    sizerPanelKeyer->Add(panelKeyer, 0, wxEXPAND);
+    m_keyerTab->SetSizer(sizerPanelKeyer);
+    
     
     // Modem tab
-    wxBoxSizer* sizerModem;
-    sizerModem = new wxBoxSizer(wxVERTICAL);
+    wxPanel* panelModem = new wxPanel(m_modemTab);
+    wxBoxSizer* sizerModem = new wxBoxSizer(wxVERTICAL);
     
     //------------------------------
     // FreeDV 700 Options
     //------------------------------
 
     wxStaticBoxSizer* sbSizer_freedv700;
-    wxStaticBox *sb_freedv700 = new wxStaticBox(m_modemTab, wxID_ANY, _("FreeDV 700 Options"));
+    wxStaticBox *sb_freedv700 = new wxStaticBox(panelModem, wxID_ANY, _("FreeDV 700 Options"));
     sbSizer_freedv700 = new wxStaticBoxSizer(sb_freedv700, wxHORIZONTAL);
 
-    m_ckboxFreeDV700txClip = new wxCheckBox(m_modemTab, wxID_ANY, _("Clipping"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDV700txClip = new wxCheckBox(panelModem, wxID_ANY, _("Clipping"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700txClip, 0, wxALIGN_LEFT, 0);
-    m_ckboxFreeDV700Combine = new wxCheckBox(m_modemTab, wxID_ANY, _("700C Diversity Combine"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDV700Combine = new wxCheckBox(panelModem, wxID_ANY, _("700C Diversity Combine"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700Combine, 0, wxALIGN_LEFT, 0);
-    m_ckboxFreeDV700txBPF = new wxCheckBox(m_modemTab, wxID_ANY, _(" 700D Tx Band Pass Filter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDV700txBPF = new wxCheckBox(panelModem, wxID_ANY, _(" 700D Tx Band Pass Filter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700txBPF, 0, wxALIGN_LEFT, 0);
 
-    m_ckboxFreeDV700ManualUnSync = new wxCheckBox(m_modemTab, wxID_ANY, _("700D Manual UnSync"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDV700ManualUnSync = new wxCheckBox(panelModem, wxID_ANY, _("700D Manual UnSync"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700ManualUnSync, 0, wxALIGN_LEFT, 0);
 
     sizerModem->Add(sbSizer_freedv700, 0, wxALL|wxEXPAND, 3);
@@ -200,12 +214,12 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     //------------------------------
 
     wxStaticBoxSizer* sbSizer_freedvPhaseEst;
-    wxStaticBox *sb_freedvPhaseEst = new wxStaticBox(m_modemTab, wxID_ANY, _("OFDM Modem Phase Estimator Options"));
+    wxStaticBox *sb_freedvPhaseEst = new wxStaticBox(panelModem, wxID_ANY, _("OFDM Modem Phase Estimator Options"));
     sbSizer_freedvPhaseEst = new wxStaticBoxSizer(sb_freedvPhaseEst, wxHORIZONTAL);
 
-    m_ckboxPhaseEstBW = new wxCheckBox(m_modemTab, wxID_ANY, _("High Bandwidth"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxPhaseEstBW = new wxCheckBox(panelModem, wxID_ANY, _("High Bandwidth"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedvPhaseEst->Add(m_ckboxPhaseEstBW, 0, wxALIGN_LEFT, 0);
-    m_ckboxPhaseEstDPSK = new wxCheckBox(m_modemTab, wxID_ANY, _("DPSK"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxPhaseEstDPSK = new wxCheckBox(panelModem, wxID_ANY, _("DPSK"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedvPhaseEst->Add(m_ckboxPhaseEstDPSK, 0, wxALIGN_LEFT, 0);
 
     sizerModem->Add(sbSizer_freedvPhaseEst, 0, wxALL|wxEXPAND, 3);
@@ -214,46 +228,50 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // Half/Full duplex selection
     //------------------------------
 
-    wxStaticBox *sb_duplex = new wxStaticBox(m_modemTab, wxID_ANY, _("Half/Full Duplex Operation"));
+    wxStaticBox *sb_duplex = new wxStaticBox(panelModem, wxID_ANY, _("Half/Full Duplex Operation"));
     wxStaticBoxSizer* sbSizer_duplex = new wxStaticBoxSizer(sb_duplex, wxHORIZONTAL);
-    m_ckHalfDuplex = new wxCheckBox(m_modemTab, wxID_ANY, _("Half Duplex"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckHalfDuplex = new wxCheckBox(panelModem, wxID_ANY, _("Half Duplex"), wxDefaultPosition, wxSize(-1,-1), 0);
     sbSizer_duplex->Add(m_ckHalfDuplex, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
     sizerModem->Add(sbSizer_duplex,0, wxALL|wxEXPAND, 3);
 
     //------------------------------
     // Multiple RX selection
     //------------------------------
-    wxStaticBox *sb_multirx = new wxStaticBox(m_modemTab, wxID_ANY, _("Multiple RX Operation"));
+    wxStaticBox *sb_multirx = new wxStaticBox(panelModem, wxID_ANY, _("Multiple RX Operation"));
     wxStaticBoxSizer* sbSizer_multirx = new wxStaticBoxSizer(sb_multirx, wxHORIZONTAL);
-    m_ckboxMultipleRx = new wxCheckBox(m_modemTab, wxID_ANY, _("Simultaneously Decode All HF Modes"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckboxMultipleRx = new wxCheckBox(panelModem, wxID_ANY, _("Simultaneously Decode All HF Modes"), wxDefaultPosition, wxSize(-1,-1), 0);
     sbSizer_multirx->Add(m_ckboxMultipleRx, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
     sizerModem->Add(sbSizer_multirx,0, wxALL|wxEXPAND, 3);
     
-    m_modemTab->SetSizer(sizerModem);
+    panelModem->SetSizer(sizerModem);
+    
+    wxBoxSizer* sizerPanelModem = new wxBoxSizer(wxVERTICAL);
+    sizerPanelModem->Add(panelModem, 0, wxEXPAND);
+    m_modemTab->SetSizer(sizerPanelModem);
     
     // Simulation tab
-    wxBoxSizer* sizerSimulation;
-    sizerSimulation = new wxBoxSizer(wxVERTICAL);
+    wxPanel* panelSimulation = new wxPanel(m_simulationTab);
+    wxBoxSizer* sizerSimulation = new wxBoxSizer(wxVERTICAL);
     
     //------------------------------
     // Test Frames/Channel simulation check box
     //------------------------------
 
     wxStaticBoxSizer* sbSizer_testFrames;
-    wxStaticBox *sb_testFrames = new wxStaticBox(m_simulationTab, wxID_ANY, _("Testing and Channel Simulation"));
+    wxStaticBox *sb_testFrames = new wxStaticBox(panelSimulation, wxID_ANY, _("Testing and Channel Simulation"));
     sbSizer_testFrames = new wxStaticBoxSizer(sb_testFrames, wxHORIZONTAL);
 
-    m_ckboxTestFrame = new wxCheckBox(m_simulationTab, wxID_ANY, _("Test Frames"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxTestFrame = new wxCheckBox(panelSimulation, wxID_ANY, _("Test Frames"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_testFrames->Add(m_ckboxTestFrame, 0, wxALIGN_LEFT, 0);
 
-    m_ckboxChannelNoise = new wxCheckBox(m_simulationTab, wxID_ANY, _("Channel Noise   SNR (dB):"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxChannelNoise = new wxCheckBox(panelSimulation, wxID_ANY, _("Channel Noise   SNR (dB):"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_testFrames->Add(m_ckboxChannelNoise, 0, wxALIGN_LEFT, 0);
-    m_txtNoiseSNR = new wxTextCtrl(m_simulationTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_NUMERIC));
+    m_txtNoiseSNR = new wxTextCtrl(panelSimulation, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_NUMERIC));
     sbSizer_testFrames->Add(m_txtNoiseSNR, 0, wxALIGN_LEFT, 0);
 
-    m_ckboxAttnCarrierEn = new wxCheckBox(m_simulationTab, wxID_ANY, _("Attn Carrier  Carrier:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxAttnCarrierEn = new wxCheckBox(panelSimulation, wxID_ANY, _("Attn Carrier  Carrier:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_testFrames->Add(m_ckboxAttnCarrierEn, 0, wxALIGN_LEFT, 0);
-    m_txtAttnCarrier = new wxTextCtrl(m_simulationTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtAttnCarrier = new wxTextCtrl(panelSimulation, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_testFrames->Add(m_txtAttnCarrier, 0, wxALIGN_LEFT, 0);
 
     sizerSimulation->Add(sbSizer_testFrames,0, wxALL|wxEXPAND, 3);
@@ -263,47 +281,55 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     //------------------------------
 
     wxStaticBoxSizer* sbSizer_tone;
-    wxStaticBox *sb_tone = new wxStaticBox(m_simulationTab, wxID_ANY, _("Simulated Interference Tone"));
+    wxStaticBox *sb_tone = new wxStaticBox(panelSimulation, wxID_ANY, _("Simulated Interference Tone"));
     sbSizer_tone = new wxStaticBoxSizer(sb_tone, wxHORIZONTAL);
 
-    m_ckboxTone = new wxCheckBox(m_simulationTab, wxID_ANY, _("Tone   Freq (Hz):"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxTone = new wxCheckBox(panelSimulation, wxID_ANY, _("Tone   Freq (Hz):"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_tone->Add(m_ckboxTone, 0, wxALIGN_LEFT, 0);
-    m_txtToneFreqHz = new wxTextCtrl(m_simulationTab, wxID_ANY,  "1000", wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtToneFreqHz = new wxTextCtrl(panelSimulation, wxID_ANY,  "1000", wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_tone->Add(m_txtToneFreqHz, 0, wxALIGN_LEFT, 0);
-    wxStaticText *m_staticTextta = new wxStaticText(m_simulationTab, wxID_ANY, _(" Amplitude (pk): "), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticTextta = new wxStaticText(panelSimulation, wxID_ANY, _(" Amplitude (pk): "), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_tone->Add(m_staticTextta, 0, wxALIGN_CENTER_VERTICAL, 5);    
-    m_txtToneAmplitude = new wxTextCtrl(m_simulationTab, wxID_ANY,  "1000", wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtToneAmplitude = new wxTextCtrl(panelSimulation, wxID_ANY,  "1000", wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_tone->Add(m_txtToneAmplitude, 0, wxALIGN_LEFT, 0);
 
     sizerSimulation->Add(sbSizer_tone,0, wxALL|wxEXPAND, 3);
 
-    m_simulationTab->SetSizer(sizerSimulation);
+    panelSimulation->SetSizer(sizerSimulation);
+    
+    wxBoxSizer* sizerPanelSimulation = new wxBoxSizer(wxVERTICAL);
+    sizerPanelSimulation->Add(panelSimulation, 0, wxEXPAND);
+    m_simulationTab->SetSizer(sizerPanelSimulation);
     
     // Interfacing tab
-    wxBoxSizer* sizerInterfacing;
-    sizerInterfacing = new wxBoxSizer(wxVERTICAL);
+    wxPanel* panelInterfacing = new wxPanel(m_interfacingTab);
+    wxBoxSizer* sizerInterfacing = new wxBoxSizer(wxVERTICAL);
     
     //----------------------------------------------------------
     // UDP Send Messages on Events
     //----------------------------------------------------------
 
     wxStaticBoxSizer* sbSizer_udp;
-    wxStaticBox* sb_udp = new wxStaticBox(m_interfacingTab, wxID_ANY, _("UDP Messages"));
+    wxStaticBox* sb_udp = new wxStaticBox(panelInterfacing, wxID_ANY, _("UDP Messages"));
     sbSizer_udp = new wxStaticBoxSizer(sb_udp, wxHORIZONTAL);
-    m_ckbox_udp_enable = new wxCheckBox(m_interfacingTab, wxID_ANY, _("Enable UDP Messages   UDP Port Number:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckbox_udp_enable = new wxCheckBox(panelInterfacing, wxID_ANY, _("Enable UDP Messages   UDP Port Number:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_udp->Add(m_ckbox_udp_enable, 0,  0, 5);
-    m_txt_udp_port = new wxTextCtrl(m_interfacingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txt_udp_port = new wxTextCtrl(panelInterfacing, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_udp->Add(m_txt_udp_port, 0, 0, 5);
-    m_btn_udp_test = new wxButton(m_interfacingTab, wxID_ANY, _("Test"), wxDefaultPosition, wxDefaultSize, 0);
+    m_btn_udp_test = new wxButton(panelInterfacing, wxID_ANY, _("Test"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_udp->Add(m_btn_udp_test, 0,  wxALIGN_LEFT, 5);
 
     sizerInterfacing->Add(sbSizer_udp,0, wxALL|wxEXPAND, 3);
 
-    m_interfacingTab->SetSizer(sizerInterfacing);
+    panelInterfacing->SetSizer(sizerInterfacing);
+    
+    wxBoxSizer* sizerPanelInterfacing = new wxBoxSizer(wxVERTICAL);
+    sizerPanelInterfacing->Add(panelInterfacing, 0, wxEXPAND);
+    m_interfacingTab->SetSizer(sizerPanelInterfacing);
         
     // Debug tab
-    wxBoxSizer* sizerDebug;
-    sizerDebug = new wxBoxSizer(wxVERTICAL);
+    wxPanel* panelDebug = new wxPanel(m_debugTab);
+    wxBoxSizer* sizerDebug = new wxBoxSizer(wxVERTICAL);
     
 #ifdef __WXMSW__
     //------------------------------
@@ -311,10 +337,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     //------------------------------
 
     wxStaticBoxSizer* sbSizer_console;
-    wxStaticBox *sb_console = new wxStaticBox(m_debugTab, wxID_ANY, _("Debug: Windows"));
+    wxStaticBox *sb_console = new wxStaticBox(panelDebug, wxID_ANY, _("Debug: Windows"));
     sbSizer_console = new wxStaticBoxSizer(sb_console, wxHORIZONTAL);
 
-    m_ckboxDebugConsole = new wxCheckBox(m_debugTab, wxID_ANY, _("Show Console"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxDebugConsole = new wxCheckBox(panelDebug, wxID_ANY, _("Show Console"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_console->Add(m_ckboxDebugConsole, 0, wxALIGN_LEFT, 0);
 
     sizerDebug->Add(sbSizer_console,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
@@ -324,61 +350,65 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // FIFO and PortAudio under/overflow counters used for debug
     //----------------------------------------------------------
 
-    wxStaticBox* sb_fifo = new wxStaticBox(m_debugTab, wxID_ANY, _("Debug: FIFO and PortAudio Under/Over Flow Counters"));
+    wxStaticBox* sb_fifo = new wxStaticBox(panelDebug, wxID_ANY, _("Debug: FIFO and PortAudio Under/Over Flow Counters"));
     wxStaticBoxSizer* sbSizer_fifo = new wxStaticBoxSizer(sb_fifo, wxVERTICAL);
 
-    wxStaticBox* sb_fifo1 = new wxStaticBox(m_debugTab, wxID_ANY, _(""));
+    wxStaticBox* sb_fifo1 = new wxStaticBox(panelDebug, wxID_ANY, _(""));
     wxStaticBoxSizer* sbSizer_fifo1 = new wxStaticBoxSizer(sb_fifo1, wxHORIZONTAL);
 
     // first line
     
-    wxStaticText *m_staticTextPA1 = new wxStaticText(m_debugTab, wxID_ANY, _("   PortAudio framesPerBuffer:"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticTextPA1 = new wxStaticText(panelDebug, wxID_ANY, _("   PortAudio framesPerBuffer:"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_fifo1->Add(m_staticTextPA1, 0, wxALIGN_CENTER_VERTICAL , 5);
-    m_txtCtrlframesPerBuffer = new wxTextCtrl(m_debugTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
+    m_txtCtrlframesPerBuffer = new wxTextCtrl(panelDebug, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
     sbSizer_fifo1->Add(m_txtCtrlframesPerBuffer, 0, 0, 5);
-    wxStaticText *m_staticTextFifo1 = new wxStaticText(m_debugTab, wxID_ANY, _("   Fifo Size (ms):"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticTextFifo1 = new wxStaticText(panelDebug, wxID_ANY, _("   Fifo Size (ms):"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_fifo1->Add(m_staticTextFifo1, 0, wxALIGN_CENTER_VERTICAL , 5);
-    m_txtCtrlFifoSize = new wxTextCtrl(m_debugTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
+    m_txtCtrlFifoSize = new wxTextCtrl(panelDebug, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
     sbSizer_fifo1->Add(m_txtCtrlFifoSize, 0, 0, 5);
 
     sbSizer_fifo->Add(sbSizer_fifo1, 0,  wxALIGN_LEFT, 5);
 
     // 2nd line
     
-    wxStaticBox* sb_fifo2 = new wxStaticBox(m_debugTab, wxID_ANY, _(""));
+    wxStaticBox* sb_fifo2 = new wxStaticBox(panelDebug, wxID_ANY, _(""));
     wxStaticBoxSizer* sbSizer_fifo2 = new wxStaticBoxSizer(sb_fifo2, wxHORIZONTAL);
 
-    m_ckboxVerbose = new wxCheckBox(m_debugTab, wxID_ANY, _("Verbose  "), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxVerbose = new wxCheckBox(panelDebug, wxID_ANY, _("Verbose  "), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_fifo2->Add(m_ckboxVerbose, 0, wxALIGN_LEFT, 0);   
-    m_ckboxTxRxThreadPriority = new wxCheckBox(m_debugTab, wxID_ANY, _("txRxThreadPriority  "), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxTxRxThreadPriority = new wxCheckBox(panelDebug, wxID_ANY, _("txRxThreadPriority  "), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_fifo2->Add(m_ckboxTxRxThreadPriority, 0, wxALIGN_LEFT, 0);
-    m_ckboxTxRxDumpTiming = new wxCheckBox(m_debugTab, wxID_ANY, _("txRxDumpTiming  "), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxTxRxDumpTiming = new wxCheckBox(panelDebug, wxID_ANY, _("txRxDumpTiming  "), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_fifo2->Add(m_ckboxTxRxDumpTiming, 0, wxALIGN_LEFT, 0);
-    m_ckboxTxRxDumpFifoState = new wxCheckBox(m_debugTab, wxID_ANY, _("txRxDumpFifoState  "), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxTxRxDumpFifoState = new wxCheckBox(panelDebug, wxID_ANY, _("txRxDumpFifoState  "), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_fifo2->Add(m_ckboxTxRxDumpFifoState, 0, wxALIGN_LEFT, 0);   
-    m_ckboxFreeDVAPIVerbose = new wxCheckBox(m_debugTab, wxID_ANY, _("APiVerbose  "), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDVAPIVerbose = new wxCheckBox(panelDebug, wxID_ANY, _("APiVerbose  "), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_fifo2->Add(m_ckboxFreeDVAPIVerbose, 0, wxALIGN_LEFT, 0);   
 
     sbSizer_fifo->Add(sbSizer_fifo2, 0,  wxALIGN_LEFT, 5);
     
     // Reset stats button
     
-    m_BtnFifoReset = new wxButton(m_debugTab, wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
+    m_BtnFifoReset = new wxButton(panelDebug, wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_fifo->Add(m_BtnFifoReset, 0,  wxALIGN_LEFT, 5);
 
     // text lines with fifo counters
     
-    m_textPA1 = new wxStaticText(m_debugTab, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textPA1 = new wxStaticText(panelDebug, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_fifo->Add(m_textPA1, 0, wxALIGN_LEFT, 1);
-    m_textPA2 = new wxStaticText(m_debugTab, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textPA2 = new wxStaticText(panelDebug, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_fifo->Add(m_textPA2, 0, wxALIGN_LEFT, 1);
 
-    m_textFifos = new wxStaticText(m_debugTab, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textFifos = new wxStaticText(panelDebug, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_fifo->Add(m_textFifos, 0, wxALIGN_LEFT, 1);
 
     sizerDebug->Add(sbSizer_fifo,0, wxALL|wxEXPAND, 3);
 
-    m_debugTab->SetSizer(sizerDebug);
+    panelDebug->SetSizer(sizerDebug);
+    
+    wxBoxSizer* sizerPanelDebug = new wxBoxSizer(wxVERTICAL);
+    sizerPanelDebug->Add(panelDebug, 0, wxEXPAND);
+    m_debugTab->SetSizer(sizerPanelDebug);
     
     //------------------------------
     // OK - Cancel - Apply Buttons 
