@@ -13,6 +13,8 @@ GIT_BRANCH=${FDV_GIT_BRANCH:-master}
 # override with "mingw32-cmake" for a 32 bit build
 CMAKE=${FDV_CMAKE:-mingw64-cmake}
 
+CLEAN=${FDV_CLEAN}
+
 echo "FDV_GIT_REPO=$GIT_REPO"
 echo "FDV_GIT_BRANCH=$GIT_BRANCH"
 echo "FDV_CLEAN=$CLEAN"
@@ -21,15 +23,24 @@ echo "FDV_CMAKE=$CMAKE"
 # OK lets get started -----------------------------------------------
 
 # start with a fresh clone
-if [ -d freedv-gui ] ; then rm -Rf freedv-gui; fi
-git clone $GIT_REPO
-cd freedv-gui
+if [ -d freedv-gui ] && [ ! -z $CLEAN ]; then 
+    rm -Rf freedv-gui; 
+    git clone $GIT_REPO
+else
+    cd freedv-gui
+    git pull
+fi
 git checkout $GIT_BRANCH
-echo "--------------------- starting build_windows.sh ---------------------"
-GIT_REPO=$GIT_REPO GIT_REF=$GIT_REF CMAKE=$CMAKE ./build_windows.sh
+
+if [ ! -z $CLEAN ]; then
+    echo "--------------------- starting build_windows.sh ---------------------"
+    GIT_REPO=$GIT_REPO GIT_REF=$GIT_REF CMAKE=$CMAKE ./build_windows.sh
+fi
+
 if [ $CMAKE = "mingw64-cmake" ]; then
     cd build_win64
 else
     cd build_win32
 fi
+if [ -z $CLEAN ]; then make; fi
 make package

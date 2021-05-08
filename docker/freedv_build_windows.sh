@@ -16,7 +16,7 @@ if [ $# -eq 1 ]; then
 fi
 
 log=build_log.txt
-FDV_CMAKE=$FDV_CMAKE FDV_GIT_REPO=$FDV_GIT_REPO FDV_GIT_BRANCH=$FDV_GIT_BRANCH docker-compose -f docker-compose-win.yml up > $log
+FDV_CLEAN=$FDV_CLEAN FDV_CMAKE=$FDV_CMAKE FDV_GIT_REPO=$FDV_GIT_REPO FDV_GIT_BRANCH=$FDV_GIT_BRANCH docker-compose -f docker-compose-win.yml up > $log
 package_docker_path=$(cat $log | sed  -n "s/.*package: \(.*exe\) .*/\1/p")
 echo $package_docker_path
 docker cp fdv_win_fed34_c:$package_docker_path .
