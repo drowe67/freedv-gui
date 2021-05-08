@@ -50,11 +50,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     wxBoxSizer* bSizer30;
     bSizer30 = new wxBoxSizer(wxVERTICAL);
-
-    wxPanel* panel = new wxPanel(this);
     
     // Create notebook and tabs.
-    m_notebook = new wxNotebook(panel, wxID_ANY);
+    m_notebook = new wxNotebook(this, wxID_ANY);
     m_reportingTab = new wxNotebookPage(m_notebook, wxID_ANY);
     m_displayTab = new wxNotebookPage(m_notebook, wxID_ANY);
     m_keyerTab = new wxNotebookPage(m_notebook, wxID_ANY);
@@ -386,22 +384,82 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     wxBoxSizer* bSizer31 = new wxBoxSizer(wxHORIZONTAL);
 
-    m_sdbSizer5OK = new wxButton(panel, wxID_OK);
+    m_sdbSizer5OK = new wxButton(this, wxID_OK);
     bSizer31->Add(m_sdbSizer5OK, 0, wxALL, 2);
 
-    m_sdbSizer5Cancel = new wxButton(panel, wxID_CANCEL);
+    m_sdbSizer5Cancel = new wxButton(this, wxID_CANCEL);
     bSizer31->Add(m_sdbSizer5Cancel, 0, wxALL, 2);
 
-    m_sdbSizer5Apply = new wxButton(panel, wxID_APPLY);
+    m_sdbSizer5Apply = new wxButton(this, wxID_APPLY);
     bSizer31->Add(m_sdbSizer5Apply, 0, wxALL, 2);
 
     bSizer30->Add(bSizer31, 0, wxALL | wxALIGN_CENTER, 5);
 
-    panel->SetSizerAndFit(bSizer30);
+    this->SetSizerAndFit(bSizer30);
     this->Layout();
 
     this->Centre(wxBOTH);
  
+    //-------------------
+    // Tab ordering for accessibility
+    //-------------------
+    m_txtCtrlCallSign->MoveBeforeInTabOrder(m_ckbox_psk_enable);
+    m_ckbox_psk_enable->MoveBeforeInTabOrder(m_txt_callsign);
+    m_txt_callsign->MoveBeforeInTabOrder(m_txt_grid_square);
+    m_txt_grid_square->MoveBeforeInTabOrder(m_txtCtrlCallSign);
+    
+    m_waterfallColorScheme1->MoveBeforeInTabOrder(m_waterfallColorScheme2);
+    m_waterfallColorScheme2->MoveBeforeInTabOrder(m_waterfallColorScheme3);
+    m_waterfallColorScheme3->MoveBeforeInTabOrder(m_waterfallColorScheme1);
+    
+    m_txtCtrlVoiceKeyerWaveFile->MoveBeforeInTabOrder(m_buttonChooseVoiceKeyerWaveFile);
+    m_buttonChooseVoiceKeyerWaveFile->MoveBeforeInTabOrder(m_txtCtrlVoiceKeyerRxPause);
+    m_txtCtrlVoiceKeyerRxPause->MoveBeforeInTabOrder(m_txtCtrlVoiceKeyerRepeats);
+    m_txtCtrlVoiceKeyerRepeats->MoveBeforeInTabOrder(m_txtCtrlVoiceKeyerWaveFile);
+    
+    m_ckboxFreeDV700txClip->MoveBeforeInTabOrder(m_ckboxFreeDV700txBPF);
+    m_ckboxFreeDV700txBPF->MoveBeforeInTabOrder(m_ckboxFreeDV700Combine);
+    m_ckboxFreeDV700Combine->MoveBeforeInTabOrder(m_ckboxFreeDV700ManualUnSync);
+    m_ckboxFreeDV700ManualUnSync->MoveBeforeInTabOrder(m_ckboxPhaseEstBW);
+    m_ckboxPhaseEstBW->MoveBeforeInTabOrder(m_ckboxPhaseEstDPSK);
+    m_ckboxPhaseEstDPSK->MoveBeforeInTabOrder(m_ckHalfDuplex);
+    m_ckHalfDuplex->MoveBeforeInTabOrder(m_ckboxMultipleRx);
+    m_ckboxMultipleRx->MoveBeforeInTabOrder(m_ckboxFreeDV700txClip);
+    
+    m_ckboxTestFrame->MoveBeforeInTabOrder(m_ckboxChannelNoise);
+    m_ckboxChannelNoise->MoveBeforeInTabOrder(m_txtNoiseSNR);
+    m_txtNoiseSNR->MoveBeforeInTabOrder(m_ckboxAttnCarrierEn);
+    m_ckboxAttnCarrierEn->MoveBeforeInTabOrder(m_txtAttnCarrier);
+    m_txtAttnCarrier->MoveBeforeInTabOrder(m_ckboxTone);
+    m_ckboxTone->MoveBeforeInTabOrder(m_txtToneFreqHz);
+    m_txtToneFreqHz->MoveBeforeInTabOrder(m_txtToneAmplitude);
+    m_txtToneAmplitude->MoveBeforeInTabOrder(m_ckboxTestFrame);
+    
+    m_ckbox_udp_enable->MoveBeforeInTabOrder(m_txt_udp_port);
+    m_txt_udp_port->MoveBeforeInTabOrder(m_btn_udp_test);
+    m_btn_udp_test->MoveBeforeInTabOrder(m_ckbox_udp_enable);
+    
+    m_txtCtrlframesPerBuffer->MoveBeforeInTabOrder(m_txtCtrlFifoSize);
+    m_txtCtrlFifoSize->MoveBeforeInTabOrder(m_ckboxVerbose);
+    m_ckboxVerbose->MoveBeforeInTabOrder(m_ckboxTxRxThreadPriority);
+    m_ckboxTxRxThreadPriority->MoveBeforeInTabOrder(m_ckboxTxRxDumpTiming);
+    m_ckboxTxRxDumpTiming->MoveBeforeInTabOrder(m_ckboxTxRxDumpFifoState);
+    m_ckboxTxRxDumpFifoState->MoveBeforeInTabOrder(m_ckboxFreeDVAPIVerbose);
+    m_ckboxFreeDVAPIVerbose->MoveBeforeInTabOrder(m_BtnFifoReset);
+    m_BtnFifoReset->MoveBeforeInTabOrder(m_txtCtrlframesPerBuffer);
+    
+    m_reportingTab->MoveBeforeInTabOrder(m_displayTab);    
+    m_displayTab->MoveBeforeInTabOrder(m_keyerTab);
+    m_keyerTab->MoveBeforeInTabOrder(m_modemTab);
+    m_modemTab->MoveBeforeInTabOrder(m_simulationTab);
+    m_simulationTab->MoveBeforeInTabOrder(m_interfacingTab);
+    m_interfacingTab->MoveBeforeInTabOrder(m_debugTab);
+    m_debugTab->MoveBeforeInTabOrder(m_reportingTab);
+    
+    m_sdbSizer5OK->MoveBeforeInTabOrder(m_sdbSizer5Cancel);
+    m_sdbSizer5Cancel->MoveBeforeInTabOrder(m_sdbSizer5Apply);
+    m_sdbSizer5Apply->MoveBeforeInTabOrder(m_notebook);
+    
     // Connect Events -------------------------------------------------------
 
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(OptionsDlg::OnInitDialog));

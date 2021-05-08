@@ -35,7 +35,7 @@ class OptionsDlg : public wxDialog
                 wxWindowID id = wxID_ANY, const wxString& title = _("Options"), 
                 const wxPoint& pos = wxDefaultPosition, 
                 const wxSize& size = wxDefaultSize, 
-                long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
+                long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL );
         ~OptionsDlg();
 
         void    ExchangeData(int inout, bool storePersistent);
