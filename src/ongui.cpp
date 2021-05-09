@@ -434,11 +434,11 @@ void MainFrame::togglePTT(void) {
     {
         // Sleep for long enough that we get the remaining [blocksize] ms of audio.
         int msSleep = (1000 * freedvInterface.getTxNumSpeechSamples()) / freedvInterface.getTxSpeechSampleRate();
-        fprintf(stderr, "Sleeping for %d ms prior to ending TX\n", msSleep);
+        if (g_verbose) fprintf(stderr, "Sleeping for %d ms prior to ending TX\n", msSleep);
         wxThread::Sleep(msSleep);
         
         // Trigger end of TX processing. This causes us to wait for the remaining samples
-        // to flow through the system before toggling PTT
+        // to flow through the system before toggling PTT.  Note 1000ms timeout as backup
         int sample = g_outfifo1_empty;
         endingTx = true;
 
