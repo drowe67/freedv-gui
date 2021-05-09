@@ -165,6 +165,9 @@ SpeexPreprocessState *g_speex_st;
 // TX mode change mutex
 wxMutex txModeChangeMutex;
 
+// End of TX state control
+bool endingTx;
+
 // Option test file to log samples
 
 FILE *ftest;
@@ -1499,6 +1502,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
     {
         if (g_verbose) fprintf(stderr, "Start .....\n");
         g_queueResync = false;
+        endingTx = false;
         
         //
         // Start Running -------------------------------------------------
@@ -2608,7 +2612,7 @@ void txRxProcessing()
 
         // Run code inside this while loop as soon as we have enough
         // room for one frame of modem samples.  Aim is to keep
-        // outfifo1 nice and full so we don't have any gaps ix tx
+        // outfifo1 nice and full so we don't have any gaps in tx
         // signal.
 
         unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
@@ -2635,8 +2639,12 @@ void txRxProcessing()
 
             // zero speech input just in case infifo2 underflows
             memset(insound_card, 0, nsam_in_48*sizeof(short));
-            codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
-
+            
+            // There may be recorded audio left to encode while ending TX. To handle this,
+            // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
+            int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
+            if (nread != 0 && endingTx) break;
+            
             nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
 
             // optionally use file for mic input signal
@@ -2813,7 +2821,8 @@ int MainFrame::rxCallback(
     // OK now set up output samples for this callback
 
     if (wptr) {
-         if (codec2_fifo_read(cbData->outfifo1, outdata, framesPerBuffer) == 0) {
+        memset(outdata, 0, sizeof(short)*MAX_FPB);
+        if (codec2_fifo_read(cbData->outfifo1, outdata, framesPerBuffer) == 0) {
 
             // write signal to both channels if the device can support two channels.
             // Otherwise, we assume we're only dealing with one channel and write
@@ -2906,7 +2915,7 @@ int MainFrame::txCallback(
 
     assert(framesPerBuffer < MAX_FPB);
 
-    if (rptr) {
+    if (rptr && !endingTx) {
         for(i = 0; i < framesPerBuffer; i++, rptr += cbData->inputChannels2)
             indata[i] = rptr[0];
         if (codec2_fifo_write(cbData->infifo2, indata, framesPerBuffer)) {
