@@ -23,6 +23,8 @@ extern int g_resyncs;
 extern int g_Nc;
 extern int g_txLevel;
 extern wxConfigBase *pConfig;
+extern bool endingTx;
+extern int g_outfifo1_empty;
 
 //-------------------------------------------------------------------------
 // OnExitClick()
@@ -427,6 +429,22 @@ void MainFrame::togglePTT(void) {
 
     if (g_tx)
     {
+        // Sleep for long enough that we get the remaining [blocksize] ms of audio.
+        int msSleep = (1000 * freedvInterface.getTxNumSpeechSamples()) / freedvInterface.getTxSpeechSampleRate();
+        if (g_verbose) fprintf(stderr, "Sleeping for %d ms prior to ending TX\n", msSleep);
+        wxThread::Sleep(msSleep);
+        
+        // Trigger end of TX processing. This causes us to wait for the remaining samples
+        // to flow through the system before toggling PTT.  Note 1000ms timeout as backup
+        int sample = g_outfifo1_empty;
+        endingTx = true;
+
+        int i = 0;
+        while ((i < 20) && (g_outfifo1_empty == sample)) {
+            i++;
+            wxThread::Sleep(50);
+        }
+        
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().m_rxNbookCtrl);
 
@@ -478,7 +496,7 @@ void MainFrame::togglePTT(void) {
     m_maxLevel = 0;
     m_textLevel->SetLabel(wxT(""));
     m_gaugeLevel->SetValue(0);
-
+    endingTx = false;
 }
 
 
