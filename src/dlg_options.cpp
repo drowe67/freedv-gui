@@ -38,6 +38,7 @@ extern wxDatagramSocket    *g_sock;
 extern int                 g_dump_timing;
 extern int                 g_dump_fifo_state;
 extern int                 g_freedv_verbose;
+extern wxConfigBase *pConfig;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class OptionsDlg
@@ -472,8 +473,6 @@ OptionsDlg::~OptionsDlg()
 //-------------------------------------------------------------------------
 void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 {
-    wxConfigBase *pConfig = wxConfigBase::Get();
-
     if(inout == EXCHANGE_DATA_IN)
     {
         m_txtCtrlCallSign->SetValue(wxGetApp().m_callSign);
@@ -701,7 +700,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             pConfig->Flush();
         }
     }
-    delete wxConfigBase::Set((wxConfigBase *) NULL);
 }
 
 //-------------------------------------------------------------------------

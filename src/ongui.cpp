@@ -22,6 +22,7 @@ extern short *g_error_hist, *g_error_histn;
 extern int g_resyncs;
 extern int g_Nc;
 extern int g_txLevel;
+extern wxConfigBase *pConfig;
 
 //-------------------------------------------------------------------------
 // OnExitClick()
@@ -281,12 +282,9 @@ void MainFrame::OnTop(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnDeleteConfig(wxCommandEvent&)
 {
-    wxConfigBase *pConfig = wxConfigBase::Get();
     if(pConfig->DeleteAll())
     {
         wxLogMessage(wxT("Config file/registry key successfully deleted.  Please restart FreeDV."));
-
-        delete wxConfigBase::Set(NULL);
         wxConfigBase::DontCreateOnDemand();
     }
     else
@@ -334,7 +332,6 @@ void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
     
-    wxConfigBase *pConfig = wxConfigBase::Get();
     pConfig->Write(wxT("/Audio/transmitLevel"), g_txLevel);
 }
 

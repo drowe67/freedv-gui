@@ -32,6 +32,8 @@
 
 #include <sstream>
         
+extern wxConfigBase *pConfig;
+
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class ComPortsDlg
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -344,7 +346,6 @@ void ComPortsDlg::populatePortList()
 //-------------------------------------------------------------------------
 void ComPortsDlg::ExchangeData(int inout)
 {
-    wxConfigBase *pConfig = wxConfigBase::Get();
     wxString str;
     
     if(inout == EXCHANGE_DATA_IN) {
@@ -436,7 +437,6 @@ void ComPortsDlg::ExchangeData(int inout)
 
         pConfig->Flush();
     }
-    delete wxConfigBase::Set((wxConfigBase *) NULL);
 }
 
 //-------------------------------------------------------------------------

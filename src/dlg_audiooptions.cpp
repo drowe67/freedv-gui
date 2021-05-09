@@ -34,6 +34,8 @@
 #define TEST_DT                 0.1      // time between plot updates in seconds
 #define TEST_WAVEFORM_PLOT_BUF  ((int)(DT*400))
 
+extern wxConfigBase *pConfig;
+
 void AudioOptsDialog::Pa_Init(void)
 {
     m_isPaInitialized = false;
@@ -631,47 +633,46 @@ int AudioOptsDialog::ExchangeData(int inout)
         if (g_verbose) fprintf(stderr,"  g_soundCard2OutDeviceNum: %d\n", g_soundCard2OutDeviceNum);
         if (g_verbose) fprintf(stderr,"  g_soundCard2SampleRate: %d\n", g_soundCard2SampleRate);
 
-        wxConfigBase *pConfig = wxConfigBase::Get();
-        if (pConfig != NULL) {
-            if (valid_one_card_config)
-            {
-                int lastIndex = m_textCtrlRxIn->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard1InDeviceNum));
-                wxGetApp().m_soundCard1InDeviceName = m_textCtrlRxIn->GetValue().Mid(0, lastIndex).Trim();
-                lastIndex = m_textCtrlRxOut->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard1OutDeviceNum));
-                wxGetApp().m_soundCard1OutDeviceName = m_textCtrlRxOut->GetValue().Mid(0, lastIndex).Trim();
-                wxGetApp().m_soundCard2InDeviceName = "none";
-                wxGetApp().m_soundCard2OutDeviceName = "none";
-            }
-            else if (valid_two_card_config)
-            {
-                int lastIndex = m_textCtrlRxIn->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard1InDeviceNum));
-                wxGetApp().m_soundCard1InDeviceName = m_textCtrlRxIn->GetValue().Mid(0, lastIndex).Trim();
-                lastIndex = m_textCtrlTxOut->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard1OutDeviceNum));
-                wxGetApp().m_soundCard1OutDeviceName = m_textCtrlTxOut->GetValue().Mid(0, lastIndex).Trim();
-                lastIndex = m_textCtrlTxIn->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard2InDeviceNum));
-                wxGetApp().m_soundCard2InDeviceName = m_textCtrlTxIn->GetValue().Mid(0, lastIndex).Trim();
-                lastIndex = m_textCtrlRxOut->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard2OutDeviceNum));
-                wxGetApp().m_soundCard2OutDeviceName = m_textCtrlRxOut->GetValue().Mid(0, lastIndex).Trim();
-            }
-            else
-            {
-                wxGetApp().m_soundCard1InDeviceName = "none";
-                wxGetApp().m_soundCard1OutDeviceName = "none";
-                wxGetApp().m_soundCard2InDeviceName = "none";
-                wxGetApp().m_soundCard2OutDeviceName = "none";
-            }
-            
-            pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);	
-            pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);	
-            pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);	
-            pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
-            
-            pConfig->Write(wxT("/Audio/soundCard1SampleRate"),        g_soundCard1SampleRate );
-            pConfig->Write(wxT("/Audio/soundCard2SampleRate"),        g_soundCard2SampleRate );
-
-            pConfig->Flush();
-            delete wxConfigBase::Set((wxConfigBase *) NULL);
+        assert (pConfig != NULL);
+        
+        if (valid_one_card_config)
+        {
+            int lastIndex = m_textCtrlRxIn->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard1InDeviceNum));
+            wxGetApp().m_soundCard1InDeviceName = m_textCtrlRxIn->GetValue().Mid(0, lastIndex).Trim();
+            lastIndex = m_textCtrlRxOut->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard1OutDeviceNum));
+            wxGetApp().m_soundCard1OutDeviceName = m_textCtrlRxOut->GetValue().Mid(0, lastIndex).Trim();
+            wxGetApp().m_soundCard2InDeviceName = "none";
+            wxGetApp().m_soundCard2OutDeviceName = "none";
         }
+        else if (valid_two_card_config)
+        {
+            int lastIndex = m_textCtrlRxIn->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard1InDeviceNum));
+            wxGetApp().m_soundCard1InDeviceName = m_textCtrlRxIn->GetValue().Mid(0, lastIndex).Trim();
+            lastIndex = m_textCtrlTxOut->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard1OutDeviceNum));
+            wxGetApp().m_soundCard1OutDeviceName = m_textCtrlTxOut->GetValue().Mid(0, lastIndex).Trim();
+            lastIndex = m_textCtrlTxIn->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard2InDeviceNum));
+            wxGetApp().m_soundCard2InDeviceName = m_textCtrlTxIn->GetValue().Mid(0, lastIndex).Trim();
+            lastIndex = m_textCtrlRxOut->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard2OutDeviceNum));
+            wxGetApp().m_soundCard2OutDeviceName = m_textCtrlRxOut->GetValue().Mid(0, lastIndex).Trim();
+        }
+        else
+        {
+            wxGetApp().m_soundCard1InDeviceName = "none";
+            wxGetApp().m_soundCard1OutDeviceName = "none";
+            wxGetApp().m_soundCard2InDeviceName = "none";
+            wxGetApp().m_soundCard2OutDeviceName = "none";
+        }
+        
+        pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);	
+        pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);	
+        pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);	
+        pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
+        
+        pConfig->Write(wxT("/Audio/soundCard1SampleRate"),        g_soundCard1SampleRate );
+        pConfig->Write(wxT("/Audio/soundCard2SampleRate"),        g_soundCard2SampleRate );
+
+        pConfig->Flush();
+        
     }
 
     return 0;
