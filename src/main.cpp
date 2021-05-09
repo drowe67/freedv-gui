@@ -165,11 +165,17 @@ SpeexPreprocessState *g_speex_st;
 // TX mode change mutex
 wxMutex txModeChangeMutex;
 
+// End of TX state control
+bool endingTx;
+
 // Option test file to log samples
 
 FILE *ftest;
 FILE *g_logfile;
 
+// Config file management 
+wxConfigBase *pConfig = NULL;
+    
 // UDP socket available to send messages
 
 extern wxDatagramSocket *g_sock;
@@ -193,16 +199,12 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
     }
     
     wxString configPath;
-    wxConfigBase *pConfig;
+    pConfig = wxConfigBase::Get();
     if (parser.Found("f", &configPath))
     {
-        pConfig = new wxConfig();
-        wxFileConfig *pFConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), configPath, configPath, wxCONFIG_USE_LOCAL_FILE);
-        pConfig->Set(pFConfig);
-    }
-    else
-    {
-        pConfig = wxConfigBase::Get();
+        fprintf(stderr, "Loading configuration from %s\n", (const char*)configPath.ToUTF8());
+        pConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), configPath, configPath, wxCONFIG_USE_LOCAL_FILE);
+        wxConfigBase::Set(pConfig);
     }
     pConfig->SetRecordDefaults();
     
@@ -291,8 +293,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     this->Connect(m_menuItemToolsConfigDelete->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OnDeleteConfig));
 
     tools->Append(m_menuItemToolsConfigDelete);
-
-    wxConfigBase *pConfig = wxConfigBase::Get();
 
     // restore frame position and size
     int x = pConfig->Read(wxT("/MainFrame/left"),       20);
@@ -690,116 +690,112 @@ MainFrame::~MainFrame()
         delete wxGetApp().m_serialport;
     }
 
-    wxConfigBase *pConfig = wxConfigBase::Get();
-    if(pConfig)
-    {
-        if (!IsIconized()) {
-            GetClientSize(&w, &h);
-            GetPosition(&x, &y);
-            //fprintf(stderr, "x = %d y = %d w = %d h = %d\n", x,y,w,h);
-            pConfig->Write(wxT("/MainFrame/left"),               (long) x);
-            pConfig->Write(wxT("/MainFrame/top"),                (long) y);
-            pConfig->Write(wxT("/MainFrame/width"),              (long) w);
-            pConfig->Write(wxT("/MainFrame/height"),             (long) h);
-        }
-        pConfig->Write(wxT("/MainFrame/show_wf"),           wxGetApp().m_show_wf);
-        pConfig->Write(wxT("/MainFrame/show_spect"),        wxGetApp().m_show_spect);
-        pConfig->Write(wxT("/MainFrame/show_scatter"),      wxGetApp().m_show_scatter);
-        pConfig->Write(wxT("/MainFrame/show_timing"),       wxGetApp().m_show_timing);
-        pConfig->Write(wxT("/MainFrame/show_freq"),         wxGetApp().m_show_freq);
-        pConfig->Write(wxT("/MainFrame/show_speech_in"),    wxGetApp().m_show_speech_in);
-        pConfig->Write(wxT("/MainFrame/show_speech_out"),   wxGetApp().m_show_speech_out);
-        pConfig->Write(wxT("/MainFrame/show_demod_in"),     wxGetApp().m_show_demod_in);
-        pConfig->Write(wxT("/MainFrame/show_test_frame_errors"), wxGetApp().m_show_test_frame_errors);
-        pConfig->Write(wxT("/MainFrame/show_test_frame_errors_hist"), wxGetApp().m_show_test_frame_errors_hist);
-
-        pConfig->Write(wxT("/MainFrame/rxNbookCtrl"), wxGetApp().m_rxNbookCtrl);
-
-        pConfig->Write(wxT("/Audio/SquelchActive"),         g_SquelchActive);
-        pConfig->Write(wxT("/Audio/SquelchLevel"),          (int)(g_SquelchLevel*2.0));
-
-        pConfig->Write(wxT("/Audio/framesPerBuffer"),       wxGetApp().m_framesPerBuffer);
-        pConfig->Write(wxT("/Audio/fifoSize_ms"),              wxGetApp().m_fifoSize_ms);
-
-        pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
-        pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
-        pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);	
-        pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);	
-
-        pConfig->Write(wxT("/Audio/soundCard1SampleRate"),    g_soundCard1SampleRate );
-        pConfig->Write(wxT("/Audio/soundCard2SampleRate"),    g_soundCard2SampleRate );
-
-        pConfig->Write(wxT("/Audio/transmitLevel"), g_txLevel);
-        
-        pConfig->Write(wxT("/VoiceKeyer/WaveFilePath"), wxGetApp().m_txtVoiceKeyerWaveFilePath);
-        pConfig->Write(wxT("/VoiceKeyer/WaveFile"), wxGetApp().m_txtVoiceKeyerWaveFile);
-        pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_intVoiceKeyerRxPause);
-        pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_intVoiceKeyerRepeats);
-
-        pConfig->Write(wxT("/Rig/HalfDuplex"),              wxGetApp().m_boolHalfDuplex);
-        pConfig->Write(wxT("/Rig/MultipleRx"), wxGetApp().m_boolMultipleRx);
-        pConfig->Write(wxT("/Rig/leftChannelVoxTone"),      wxGetApp().m_leftChannelVoxTone);
-        pConfig->Write("/Hamlib/UseForPTT", wxGetApp().m_boolHamlibUseForPTT);
-        pConfig->Write("/Hamlib/RigName", wxGetApp().m_intHamlibRig);
-        pConfig->Write("/Hamlib/SerialPort", wxGetApp().m_strHamlibSerialPort);
-        pConfig->Write("/Hamlib/SerialRate", wxGetApp().m_intHamlibSerialRate);
-        pConfig->Write("/Hamlib/IcomCIVHex", wxGetApp().m_intHamlibIcomCIVHex);
-
-
-        pConfig->Write(wxT("/File/playFileToMicInPath"),    wxGetApp().m_playFileToMicInPath);
-        pConfig->Write(wxT("/File/recFileFromRadioPath"),   wxGetApp().m_recFileFromRadioPath);
-        pConfig->Write(wxT("/File/recFileFromRadioSecs"),   wxGetApp().m_recFileFromRadioSecs);
-        pConfig->Write(wxT("/File/recFileFromModulatorPath"),   wxGetApp().m_recFileFromModulatorPath);
-        pConfig->Write(wxT("/File/recFileFromModulatorSecs"),   wxGetApp().m_recFileFromModulatorSecs);
-        pConfig->Write(wxT("/File/playFileFromRadioPath"),  wxGetApp().m_playFileFromRadioPath);
-
-        pConfig->Write(wxT("/Audio/snrSlow"), wxGetApp().m_snrSlow);
-
-        pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
-        pConfig->Write(wxT("/Data/TextEncoding"), wxGetApp().m_textEncoding);
-        pConfig->Write(wxT("/Events/enable"), wxGetApp().m_events);
-        pConfig->Write(wxT("/Events/spam_timer"), wxGetApp().m_events_spam_timer);
-        pConfig->Write(wxT("/Events/regexp_match"), wxGetApp().m_events_regexp_match);
-        pConfig->Write(wxT("/Events/regexp_replace"), wxGetApp().m_events_regexp_replace);
-
-        pConfig->Write(wxT("/UDP/enable"), wxGetApp().m_udp_enable);
-        pConfig->Write(wxT("/UDP/port"),  wxGetApp().m_udp_port);
-
-        pConfig->Write(wxT("/Filter/MicInEQEnable"), wxGetApp().m_MicInEQEnable);
-        pConfig->Write(wxT("/Filter/SpkOutEQEnable"), wxGetApp().m_SpkOutEQEnable);
-
-        pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
-        pConfig->Write(wxT("/OFDM/PhaseEstBW"), wxGetApp().m_PhaseEstBW);
-        pConfig->Write(wxT("/OFDM/PhaseEstDPSK"), wxGetApp().m_PhaseEstDPSK);
-        pConfig->Write(wxT("/Noise/noise_snr"), wxGetApp().m_noise_snr);
-
-        pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
-
-        pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);
-        pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
-        pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
-        
-        // Waterfall configuration
-        pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
-        
-        int mode;
-        if (m_rb1600->GetValue())
-            mode = 0;
-        if (m_rb700c->GetValue())
-            mode = 3;
-        if (m_rb700d->GetValue())
-            mode = 4;
-        if (m_rb700e->GetValue())
-            mode = 5;
-        if (m_rb800xa->GetValue())
-            mode = 6;
-        if (m_rb2400b->GetValue())
-            mode = 7;
-        if (m_rb2020->GetValue())
-            mode = 9;
-       pConfig->Write(wxT("/Audio/mode"), mode);
-       pConfig->Flush();
+    if (!IsIconized()) {
+        GetClientSize(&w, &h);
+        GetPosition(&x, &y);
+        //fprintf(stderr, "x = %d y = %d w = %d h = %d\n", x,y,w,h);
+        pConfig->Write(wxT("/MainFrame/left"),               (long) x);
+        pConfig->Write(wxT("/MainFrame/top"),                (long) y);
+        pConfig->Write(wxT("/MainFrame/width"),              (long) w);
+        pConfig->Write(wxT("/MainFrame/height"),             (long) h);
     }
+    pConfig->Write(wxT("/MainFrame/show_wf"),           wxGetApp().m_show_wf);
+    pConfig->Write(wxT("/MainFrame/show_spect"),        wxGetApp().m_show_spect);
+    pConfig->Write(wxT("/MainFrame/show_scatter"),      wxGetApp().m_show_scatter);
+    pConfig->Write(wxT("/MainFrame/show_timing"),       wxGetApp().m_show_timing);
+    pConfig->Write(wxT("/MainFrame/show_freq"),         wxGetApp().m_show_freq);
+    pConfig->Write(wxT("/MainFrame/show_speech_in"),    wxGetApp().m_show_speech_in);
+    pConfig->Write(wxT("/MainFrame/show_speech_out"),   wxGetApp().m_show_speech_out);
+    pConfig->Write(wxT("/MainFrame/show_demod_in"),     wxGetApp().m_show_demod_in);
+    pConfig->Write(wxT("/MainFrame/show_test_frame_errors"), wxGetApp().m_show_test_frame_errors);
+    pConfig->Write(wxT("/MainFrame/show_test_frame_errors_hist"), wxGetApp().m_show_test_frame_errors_hist);
+
+    pConfig->Write(wxT("/MainFrame/rxNbookCtrl"), wxGetApp().m_rxNbookCtrl);
+
+    pConfig->Write(wxT("/Audio/SquelchActive"),         g_SquelchActive);
+    pConfig->Write(wxT("/Audio/SquelchLevel"),          (int)(g_SquelchLevel*2.0));
+
+    pConfig->Write(wxT("/Audio/framesPerBuffer"),       wxGetApp().m_framesPerBuffer);
+    pConfig->Write(wxT("/Audio/fifoSize_ms"),              wxGetApp().m_fifoSize_ms);
+
+    pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
+    pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
+    pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);	
+    pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);	
+
+    pConfig->Write(wxT("/Audio/soundCard1SampleRate"),    g_soundCard1SampleRate );
+    pConfig->Write(wxT("/Audio/soundCard2SampleRate"),    g_soundCard2SampleRate );
+
+    pConfig->Write(wxT("/Audio/transmitLevel"), g_txLevel);
+    
+    pConfig->Write(wxT("/VoiceKeyer/WaveFilePath"), wxGetApp().m_txtVoiceKeyerWaveFilePath);
+    pConfig->Write(wxT("/VoiceKeyer/WaveFile"), wxGetApp().m_txtVoiceKeyerWaveFile);
+    pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_intVoiceKeyerRxPause);
+    pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_intVoiceKeyerRepeats);
+
+    pConfig->Write(wxT("/Rig/HalfDuplex"),              wxGetApp().m_boolHalfDuplex);
+    pConfig->Write(wxT("/Rig/MultipleRx"), wxGetApp().m_boolMultipleRx);
+    pConfig->Write(wxT("/Rig/leftChannelVoxTone"),      wxGetApp().m_leftChannelVoxTone);
+    pConfig->Write("/Hamlib/UseForPTT", wxGetApp().m_boolHamlibUseForPTT);
+    pConfig->Write("/Hamlib/RigName", wxGetApp().m_intHamlibRig);
+    pConfig->Write("/Hamlib/SerialPort", wxGetApp().m_strHamlibSerialPort);
+    pConfig->Write("/Hamlib/SerialRate", wxGetApp().m_intHamlibSerialRate);
+    pConfig->Write("/Hamlib/IcomCIVHex", wxGetApp().m_intHamlibIcomCIVHex);
+
+
+    pConfig->Write(wxT("/File/playFileToMicInPath"),    wxGetApp().m_playFileToMicInPath);
+    pConfig->Write(wxT("/File/recFileFromRadioPath"),   wxGetApp().m_recFileFromRadioPath);
+    pConfig->Write(wxT("/File/recFileFromRadioSecs"),   wxGetApp().m_recFileFromRadioSecs);
+    pConfig->Write(wxT("/File/recFileFromModulatorPath"),   wxGetApp().m_recFileFromModulatorPath);
+    pConfig->Write(wxT("/File/recFileFromModulatorSecs"),   wxGetApp().m_recFileFromModulatorSecs);
+    pConfig->Write(wxT("/File/playFileFromRadioPath"),  wxGetApp().m_playFileFromRadioPath);
+
+    pConfig->Write(wxT("/Audio/snrSlow"), wxGetApp().m_snrSlow);
+
+    pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
+    pConfig->Write(wxT("/Data/TextEncoding"), wxGetApp().m_textEncoding);
+    pConfig->Write(wxT("/Events/enable"), wxGetApp().m_events);
+    pConfig->Write(wxT("/Events/spam_timer"), wxGetApp().m_events_spam_timer);
+    pConfig->Write(wxT("/Events/regexp_match"), wxGetApp().m_events_regexp_match);
+    pConfig->Write(wxT("/Events/regexp_replace"), wxGetApp().m_events_regexp_replace);
+
+    pConfig->Write(wxT("/UDP/enable"), wxGetApp().m_udp_enable);
+    pConfig->Write(wxT("/UDP/port"),  wxGetApp().m_udp_port);
+
+    pConfig->Write(wxT("/Filter/MicInEQEnable"), wxGetApp().m_MicInEQEnable);
+    pConfig->Write(wxT("/Filter/SpkOutEQEnable"), wxGetApp().m_SpkOutEQEnable);
+
+    pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
+    pConfig->Write(wxT("/OFDM/PhaseEstBW"), wxGetApp().m_PhaseEstBW);
+    pConfig->Write(wxT("/OFDM/PhaseEstDPSK"), wxGetApp().m_PhaseEstDPSK);
+    pConfig->Write(wxT("/Noise/noise_snr"), wxGetApp().m_noise_snr);
+
+    pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
+
+    pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);
+    pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
+    pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
+    
+    // Waterfall configuration
+    pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
+    
+    int mode;
+    if (m_rb1600->GetValue())
+        mode = 0;
+    if (m_rb700c->GetValue())
+        mode = 3;
+    if (m_rb700d->GetValue())
+        mode = 4;
+    if (m_rb700e->GetValue())
+        mode = 5;
+    if (m_rb800xa->GetValue())
+        mode = 6;
+    if (m_rb2400b->GetValue())
+        mode = 7;
+    if (m_rb2020->GetValue())
+        mode = 9;
+   pConfig->Write(wxT("/Audio/mode"), mode);
+   pConfig->Flush();
 
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnSplit->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnSplitClickUI), NULL, this);
@@ -841,8 +837,6 @@ MainFrame::~MainFrame()
 #ifdef _USE_ONIDLE
     Disconnect(wxEVT_IDLE, wxIdleEventHandler(MainFrame::OnIdle), NULL, this);
 #endif // _USE_ONIDLE
-
-    delete wxConfigBase::Set((wxConfigBase *) NULL);
 
     if (optionsDlg != NULL) {
         delete optionsDlg;
@@ -1499,6 +1493,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
     {
         if (g_verbose) fprintf(stderr, "Start .....\n");
         g_queueResync = false;
+        endingTx = false;
         
         //
         // Start Running -------------------------------------------------
@@ -2608,7 +2603,7 @@ void txRxProcessing()
 
         // Run code inside this while loop as soon as we have enough
         // room for one frame of modem samples.  Aim is to keep
-        // outfifo1 nice and full so we don't have any gaps ix tx
+        // outfifo1 nice and full so we don't have any gaps in tx
         // signal.
 
         unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
@@ -2635,8 +2630,12 @@ void txRxProcessing()
 
             // zero speech input just in case infifo2 underflows
             memset(insound_card, 0, nsam_in_48*sizeof(short));
-            codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
-
+            
+            // There may be recorded audio left to encode while ending TX. To handle this,
+            // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
+            int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
+            if (nread != 0 && endingTx) break;
+            
             nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
 
             // optionally use file for mic input signal
@@ -2813,7 +2812,8 @@ int MainFrame::rxCallback(
     // OK now set up output samples for this callback
 
     if (wptr) {
-         if (codec2_fifo_read(cbData->outfifo1, outdata, framesPerBuffer) == 0) {
+        memset(outdata, 0, sizeof(short)*MAX_FPB);
+        if (codec2_fifo_read(cbData->outfifo1, outdata, framesPerBuffer) == 0) {
 
             // write signal to both channels if the device can support two channels.
             // Otherwise, we assume we're only dealing with one channel and write
@@ -2906,7 +2906,7 @@ int MainFrame::txCallback(
 
     assert(framesPerBuffer < MAX_FPB);
 
-    if (rptr) {
+    if (rptr && !endingTx) {
         for(i = 0; i < framesPerBuffer; i++, rptr += cbData->inputChannels2)
             indata[i] = rptr[0];
         if (codec2_fifo_write(cbData->infifo2, indata, framesPerBuffer)) {

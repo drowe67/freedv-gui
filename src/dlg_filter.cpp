@@ -44,6 +44,7 @@
 #define F_MAG_N           (int)(MAX_F_HZ/F_STEP_DFT) // number of frequency steps
 
 extern FreeDVInterface freedvInterface;
+extern wxConfigBase *pConfig;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class FilterDlg
@@ -309,7 +310,6 @@ EQ FilterDlg::newEQ(wxSizer *bs, wxString eqName, float maxFreqHz, bool enableQ)
 //-------------------------------------------------------------------------
 void FilterDlg::ExchangeData(int inout, bool storePersistent)
 {
-    wxConfigBase *pConfig = wxConfigBase::Get();
     if(inout == EXCHANGE_DATA_IN)
     {
         // LPC Post filter
@@ -456,7 +456,6 @@ void FilterDlg::ExchangeData(int inout, bool storePersistent)
             pConfig->Flush();
         }
     }
-    delete wxConfigBase::Set((wxConfigBase *) NULL);
 }
 
 float FilterDlg::limit(float value, float min, float max) {
