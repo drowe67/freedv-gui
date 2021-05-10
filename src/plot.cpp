@@ -19,6 +19,7 @@
 //
 //==========================================================================
 #include <string.h>
+#include <algorithm>
 #include "plot.h"
 
 BEGIN_EVENT_TABLE(PlotPanel, wxPanel)
@@ -136,7 +137,7 @@ void PlotPanel::OnSize(wxSizeEvent& event)
         }
         else
         {
-            m_oImage.Rescale(m_rCtrl.GetWidth(), m_rCtrl.GetHeight());
+            m_oImage.Rescale(std::max(1, m_rCtrl.GetWidth()), std::max(1, m_rCtrl.GetHeight()));
         }
         m_pBmp = new wxBitmap(m_oImage, wxBITMAP_SCREEN_DEPTH);
         m_firstPass = true;

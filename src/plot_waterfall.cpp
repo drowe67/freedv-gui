@@ -19,6 +19,7 @@
 //
 //==========================================================================
 #include <string.h>
+#include <algorithm>
 #include "wx/wx.h"
 #include "main.h"
 
@@ -85,9 +86,11 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
 
     // we want a bit map the size of m_rGrid
 
-    m_pBmp = new wxBitmap(m_rGrid.GetWidth(), m_rGrid.GetHeight(), 24);
+    m_pBmp = new wxBitmap(std::max(1,m_rGrid.GetWidth()), std::max(1,m_rGrid.GetHeight()), 24);
 
     m_dT = DT;
+    
+    event.Skip();
 }
 
 //----------------------------------------------------------------
