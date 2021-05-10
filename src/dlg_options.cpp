@@ -668,15 +668,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             pConfig->Write(wxT("/Data/TextEncoding"), wxGetApp().m_textEncoding);
 #endif
 
-            pConfig->Write(wxT("/Events/enable"), wxGetApp().m_events);
-            pConfig->Write(wxT("/Events/spam_timer"), wxGetApp().m_events_spam_timer);
-            pConfig->Write(wxT("/Events/regexp_match"), wxGetApp().m_events_regexp_match);
-            pConfig->Write(wxT("/Events/regexp_replace"), wxGetApp().m_events_regexp_replace);
-            
             pConfig->Write(wxT("/UDP/enable"), wxGetApp().m_udp_enable);
             pConfig->Write(wxT("/UDP/port"),  wxGetApp().m_udp_port);
-
-            pConfig->Write(wxT("/Events/spam_timer"), wxGetApp().m_events_spam_timer);
 
             pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
             pConfig->Write(wxT("/FreeDV700/txBPF"), wxGetApp().m_FreeDV700txBPF);

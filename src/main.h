@@ -225,12 +225,7 @@ class MainApp : public wxApp
         // Options dialog
 
         wxString            m_callSign;
-        bool                m_events;
-        int                 m_events_spam_timer;
         unsigned int        m_textEncoding;
-        wxString            m_events_regexp_match;
-        wxString            m_events_regexp_replace;
-
         bool                m_snrSlow;
 
         // LPC Post Filter

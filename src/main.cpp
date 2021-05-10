@@ -495,20 +495,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxGetApp().m_callSign = pConfig->Read("/Data/CallSign", wxT(""));
     wxGetApp().m_textEncoding = pConfig->Read("/Data/TextEncoding", 1);
 
-    wxGetApp().m_events = pConfig->Read("/Events/enable", f);
-    wxGetApp().m_events_spam_timer = (int)pConfig->Read(wxT("/Events/spam_timer"), 10);
-    wxGetApp().m_events_regexp_match = pConfig->Read("/Events/regexp_match", wxT("s=(.*)"));
-    wxGetApp().m_events_regexp_replace = pConfig->Read("/Events/regexp_replace",
-                                                       wxT("curl http://qso.freedv.org/cgi-bin/onspot.cgi?s=\\1"));
-    // make sure regexp lists are terminated by a \n
-
-    if (wxGetApp().m_events_regexp_match.Last() != '\n') {
-        wxGetApp().m_events_regexp_match = wxGetApp().m_events_regexp_match+'\n';
-    }
-    if (wxGetApp().m_events_regexp_replace.Last() != '\n') {
-        wxGetApp().m_events_regexp_replace = wxGetApp().m_events_regexp_replace+'\n';
-    }
-
     wxGetApp().m_udp_enable = (float)pConfig->Read(wxT("/UDP/enable"), f);
     wxGetApp().m_udp_port = (int)pConfig->Read(wxT("/UDP/port"), 3000);
 
@@ -754,10 +740,6 @@ MainFrame::~MainFrame()
 
     pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
     pConfig->Write(wxT("/Data/TextEncoding"), wxGetApp().m_textEncoding);
-    pConfig->Write(wxT("/Events/enable"), wxGetApp().m_events);
-    pConfig->Write(wxT("/Events/spam_timer"), wxGetApp().m_events_spam_timer);
-    pConfig->Write(wxT("/Events/regexp_match"), wxGetApp().m_events_regexp_match);
-    pConfig->Write(wxT("/Events/regexp_replace"), wxGetApp().m_events_regexp_replace);
 
     pConfig->Write(wxT("/UDP/enable"), wxGetApp().m_udp_enable);
     pConfig->Write(wxT("/UDP/port"),  wxGetApp().m_udp_port);
