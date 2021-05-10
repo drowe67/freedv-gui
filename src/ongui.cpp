@@ -325,7 +325,7 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 {
     char sqsnr[15];
     g_SquelchLevel = (float)m_sliderSQ->GetValue()/2.0 - 5.0;
-    sprintf(sqsnr, "%4.1f", g_SquelchLevel); // 0.5 dB steps
+    sprintf(sqsnr, "%4.1f dB", g_SquelchLevel); // 0.5 dB steps
     wxString sqsnr_string(sqsnr);
     m_textSQ->SetLabel(sqsnr_string);
 

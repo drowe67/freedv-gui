@@ -19,6 +19,7 @@
 //  along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //==========================================================================
+#include <wx/wrapsizer.h>
 #include "topFrame.h"
 
 extern int g_playFileToMicInEventId;
@@ -106,8 +107,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //=====================================================
     // Left side
     //=====================================================
-    wxBoxSizer* leftSizer;
-    leftSizer = new wxBoxSizer(wxVERTICAL);
+    wxSizer* leftSizer = new wxWrapSizer(wxVERTICAL);
 
     wxStaticBoxSizer* snrSizer;
     snrSizer = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("SNR")), wxVERTICAL);
@@ -115,7 +115,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // S/N ratio Guage (vert. bargraph)
     //------------------------------
-    m_gaugeSNR = new wxGauge(panel, wxID_ANY, 25, wxDefaultPosition, wxSize(15,135), wxGA_SMOOTH|wxGA_VERTICAL);
+    m_gaugeSNR = new wxGauge(panel, wxID_ANY, 25, wxDefaultPosition, wxSize(15,150), wxGA_SMOOTH|wxGA_VERTICAL);
     m_gaugeSNR->SetToolTip(_("Displays signal to noise ratio in dB."));
     snrSizer->Add(m_gaugeSNR, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 10);
 
@@ -254,8 +254,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //=====================================================
     // Right side
     //=====================================================
-    wxBoxSizer* rightSizer;
-    rightSizer = new wxBoxSizer(wxVERTICAL);
+    wxSizer* rightSizer = new wxWrapSizer(wxVERTICAL);
 
     //=====================================================
     // Squelch Slider Control
@@ -263,7 +262,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBoxSizer* sbSizer3;
     sbSizer3 = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("Squelch")), wxVERTICAL);
 
-    m_sliderSQ = new wxSlider(panel, wxID_ANY, 0, 0, 40, wxDefaultPosition, wxSize(-1,60), wxSL_AUTOTICKS|wxSL_INVERSE|wxSL_VERTICAL);
+    m_sliderSQ = new wxSlider(panel, wxID_ANY, 0, 0, 40, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS|wxSL_INVERSE|wxSL_VERTICAL);
     m_sliderSQ->SetToolTip(_("Set Squelch level in dB."));
 
     sbSizer3->Add(m_sliderSQ, 1, wxALIGN_CENTER_HORIZONTAL, 0);
@@ -272,7 +271,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Squelch Level static text box
     //------------------------------
     m_textSQ = new wxStaticText(panel, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
-
+    m_textSQ->SetMinSize(wxSize(100,-1));
     sbSizer3->Add(m_textSQ, 0, wxALIGN_CENTER_HORIZONTAL, 0);
 
     //------------------------------
@@ -297,8 +296,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     
     rightSizer->Add(txLevelSizer, 2, wxEXPAND, 0);
     
-    //rightSizer->Add(sbSizer3_33,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
-
     /* new --- */
 
     //------------------------------
@@ -325,22 +322,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_rb1600->SetValue(true);
 
     rightSizer->Add(sbSizer_mode,0, wxALL|wxEXPAND, 3);
-
-    #ifdef MOVED_TO_OPTIONS_DIALOG
-    /* new --- */
-
-    //------------------------------
-    // Test Frames box
-    //------------------------------
-
-    wxStaticBoxSizer* sbSizer_testFrames;
-    sbSizer_testFrames = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("Test Frames")), wxVERTICAL);
-
-    m_ckboxTestFrame = new wxCheckBox(panel, wxID_ANY, _("Enable"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_testFrames->Add(m_ckboxTestFrame, 0, wxALIGN_LEFT, 0);
-
-    rightSizer->Add(sbSizer_testFrames,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
-    #endif
 
     //=====================================================
     // Control Toggles box
