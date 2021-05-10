@@ -32,24 +32,18 @@ cd $LPCNETDIR && git checkout master && git pull
 mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf *
 $CMAKE -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR ..
 make
-# sanity check test
-#cd src &&  ../../wav/wia.wav -t raw -r 16000 - | ./lpcnet_enc -s | ./lpcnet_dec -s > /dev/null
 
 # Re-build codec2 with LPCNet and test FreeDV 2020 support
 cd $CODEC2DIR/$BUILD_DIR && rm -Rf *
 $CMAKE -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR ..
 make VERBOSE=1
-# sanity check test
-#cd src
-#export LD_LIBRARY_PATH=$LPCNETDIR/$BUILD_DIR/src
-#./freedv_tx 2020 $LPCNETDIR/wav/wia.wav - | ./freedv_rx 2020 - /dev/null
 
-# Finally, build freedv-gui
+# build wxWidgets
 cd $FREEDVGUIDIR && git pull
 mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf *
 $CMAKE -DBOOTSTRAP_WXWIDGETS=1 -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR ..
 make VERBOSE=1
 
-# And again once wxWidgets is built
+# build freedv-gui
 $CMAKE -DBOOTSTRAP_WXWIDGETS=1 -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR ..
 make VERBOSE=1
