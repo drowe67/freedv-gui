@@ -38,10 +38,12 @@ cd $CODEC2DIR/$BUILD_DIR && rm -Rf *
 $CMAKE -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR ..
 make VERBOSE=1
 
+cd $FREEDVGUIDIR && git pull
+mkdir -p $BUILD_DIR && cd $BUILD_DIR 
+if [ $CLEAN -eq 1 ]; then rm -Rf *; fi
+
 if [ $BOOTSTRAP_WX -eq 1 ]; then
     # build wxWidgets
-    cd $FREEDVGUIDIR && git pull
-    mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf *
     $CMAKE -DBOOTSTRAP_WXWIDGETS=1 -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR ..
     make VERBOSE=1
 
