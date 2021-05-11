@@ -7,6 +7,7 @@ services:
         - FDV_GIT_BRANCH
         - FDV_CLEAN
         - FDV_CMAKE
+        - FDV_BOOTSTRAP_WX
     build: 
       context: fdv_win_fedora
       args:
