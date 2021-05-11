@@ -30,7 +30,7 @@
 class PlotSpectrum : public PlotPanel
 {
     public:
-    PlotSpectrum(wxFrame* parent, float *magdB, int n_magdB, 
+    PlotSpectrum(wxWindow* parent, float *magdB, int n_magdB, 
                  float min_mag_db=MIN_MAG_DB, float max_mag_db=MAX_MAG_DB, bool clickTune=true);
         ~PlotSpectrum();
         void setRxFreq(float rxFreq) { m_rxFreq = rxFreq; }

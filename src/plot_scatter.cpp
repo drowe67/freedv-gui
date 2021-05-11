@@ -34,7 +34,7 @@ END_EVENT_TABLE()
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // PlotScatter
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-PlotScatter::PlotScatter(wxFrame* parent) : PlotPanel(parent)
+PlotScatter::PlotScatter(wxWindow* parent) : PlotPanel(parent)
 {
     int i;
 

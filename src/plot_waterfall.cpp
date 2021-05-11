@@ -46,7 +46,7 @@ END_EVENT_TABLE()
 // @brief
 //
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-PlotWaterfall::PlotWaterfall(wxFrame* parent, bool graticule, int colour): PlotPanel(parent)
+PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): PlotPanel(parent)
 {
 
     for(int i = 0; i < 255; i++)
