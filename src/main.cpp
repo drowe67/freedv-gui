@@ -1747,7 +1747,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_togBtnAnalog->Disable();
         m_btnTogPTT->Disable();
         m_togBtnVoiceKeyer->Disable();
-        m_togBtnOnOff->SetLabel(wxT("Start"));
+        m_togBtnOnOff->SetLabel(wxT("&Start"));
         
         m_rb1600->Enable();
         m_rb700c->Enable();
