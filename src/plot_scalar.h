@@ -31,7 +31,7 @@ class PlotScalar: public PlotPanel
 {
     public:
 
-    PlotScalar(wxFrame* parent,
+    PlotScalar(wxWindow* parent,
                int   channels,
 	       float t_secs, 
 	       float sample_period_secs,

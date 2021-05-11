@@ -89,7 +89,7 @@ class MainFrame;
 class PlotPanel : public wxPanel
 {
     public:
-        PlotPanel(wxFrame* parent, const char* plotName = "");
+        PlotPanel(wxWindow* parent, const char* plotName = "");
         ~PlotPanel();
         wxPen               m_penShortDash;
         wxPen               m_penDotDash;

@@ -43,7 +43,7 @@ END_EVENT_TABLE()
 // @brief
 //
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-PlotPanel::PlotPanel(wxFrame* parent, const char* plotName) : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
+PlotPanel::PlotPanel(wxWindow* parent, const char* plotName) : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, plotName)
 {
     m_pNoteBook         = (wxAuiNotebook *) parent;
     m_pTopFrame         = (MainFrame *)m_pNoteBook->GetParent();
@@ -62,7 +62,6 @@ PlotPanel::PlotPanel(wxFrame* parent, const char* plotName) : wxPanel(parent, wx
     m_penSolid          = wxPen(wxColor(0x00, 0x00, 0x00), 1, wxPENSTYLE_SOLID);
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     SetLabelSize(10.0);
-    SetLabel(plotName);
 }
 
 //-------------------------------------------------------------------------

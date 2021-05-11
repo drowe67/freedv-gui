@@ -35,7 +35,7 @@ END_EVENT_TABLE()
 //----------------------------------------------------------------
 // PlotScalar()
 //----------------------------------------------------------------
-PlotScalar::PlotScalar(wxFrame* parent, 
+PlotScalar::PlotScalar(wxWindow* parent, 
                        int    channels,           // number on channels to plot
 		       float  t_secs,             // time covered by entire x axis in seconds
 		       float  sample_period_secs, // time between each sample in seconds
