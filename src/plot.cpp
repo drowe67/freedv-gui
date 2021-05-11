@@ -32,7 +32,7 @@ BEGIN_EVENT_TABLE(PlotPanel, wxPanel)
     EVT_SIZE            (PlotPanel::OnSize)
     EVT_SHOW            (PlotPanel::OnShow)
 END_EVENT_TABLE()
-
+        
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class PlotPanel(wxFrame* parent) : wxPanel(parent)
 //
