@@ -1489,7 +1489,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
     // we are attempting to start
 
-    if (startStop.IsSameAs("Start"))
+    if (startStop.IsSameAs("&Start"))
     {
         if (g_verbose) fprintf(stderr, "Start .....\n");
         g_queueResync = false;
@@ -1678,7 +1678,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
     // Stop was pressed or start up failed
 
-    if (startStop.IsSameAs("Stop") || !m_RxRunning ) {
+    if (startStop.IsSameAs("&Stop") || !m_RxRunning ) {
         if (g_verbose) fprintf(stderr, "Stop .....\n");
         
         //

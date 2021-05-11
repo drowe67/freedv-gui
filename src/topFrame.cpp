@@ -149,7 +149,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     sbSizer3_33->Add(m_textCurrentDecodeMode, 0, wxALIGN_CENTER_HORIZONTAL, 1);
     m_textCurrentDecodeMode->Disable();
 
-    m_BtnReSync = new wxButton(panel, wxID_ANY, _("ReSync"), wxDefaultPosition, wxDefaultSize, 0);
+    m_BtnReSync = new wxButton(panel, wxID_ANY, _("ReS&ync"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer3_33->Add(m_BtnReSync, 0, wxALIGN_CENTRE , 1);
 
     leftSizer->Add(sbSizer3_33,0, wxALL|wxEXPAND, 3);
@@ -161,7 +161,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBoxSizer* sbSizer_ber;
     sbSizer_ber = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("Stats")), wxVERTICAL);
 
-    m_BtnBerReset = new wxButton(panel, wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
+    m_BtnBerReset = new wxButton(panel, wxID_ANY, _("&Reset"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_ber->Add(m_BtnBerReset, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
     m_textBits = new wxStaticText(panel, wxID_ANY, wxT("Bits: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
@@ -236,7 +236,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     modeStatusSizer->Add(m_txtModeStatus, 0, wxALL|wxEXPAND, 1);
     lowerSizer->Add(modeStatusSizer, 0, wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
-    m_BtnCallSignReset = new wxButton(panel, wxID_ANY, _("Clear"), wxDefaultPosition, wxDefaultSize, 0);
+    m_BtnCallSignReset = new wxButton(panel, wxID_ANY, _("&Clear"), wxDefaultPosition, wxDefaultSize, 0);
     lowerSizer->Add(m_BtnCallSignReset, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
     wxBoxSizer* bSizer15;
@@ -260,7 +260,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Squelch Slider Control
     //=====================================================
     wxStaticBoxSizer* sbSizer3;
-    sbSizer3 = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("Squelch")), wxVERTICAL);
+    sbSizer3 = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("S&quelch")), wxVERTICAL);
 
     m_sliderSQ = new wxSlider(panel, wxID_ANY, 0, 0, 40, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS|wxSL_INVERSE|wxSL_VERTICAL);
     m_sliderSQ->SetToolTip(_("Set Squelch level in dB."));
@@ -283,7 +283,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     rightSizer->Add(sbSizer3, 2, wxEXPAND, 0);
 
     // Transmit Level slider
-    wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("TX Attenuation")), wxVERTICAL);
+    wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("TX &Attenuation")), wxVERTICAL);
     
     // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
     m_sliderTxLevel = new wxSlider(panel, wxID_ANY, g_txLevel, -300, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS|wxSL_INVERSE|wxSL_VERTICAL);
@@ -302,7 +302,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Mode box
     //------------------------------
     wxStaticBoxSizer* sbSizer_mode;
-    sbSizer_mode = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("Mode")), wxVERTICAL);
+    sbSizer_mode = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("&Mode")), wxVERTICAL);
 
     m_rb700c = new wxRadioButton( panel, wxID_ANY, wxT("700C"), wxDefaultPosition, wxDefaultSize,  wxRB_GROUP);
     sbSizer_mode->Add(m_rb700c, 0, wxALIGN_LEFT|wxALL, 1);
@@ -334,7 +334,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //-------------------------------
     // Stop/Stop signal processing (rx and tx)
     //-------------------------------
-    m_togBtnOnOff = new wxToggleButton(panel, wxID_ANY, _("Start"), wxDefaultPosition, wxDefaultSize, 0);
+    m_togBtnOnOff = new wxToggleButton(panel, wxID_ANY, _("&Start"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnOnOff->SetToolTip(_("Begin/End receiving data."));
     bSizer1511->Add(m_togBtnOnOff, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
     sbSizer5->Add(bSizer1511, 0, wxEXPAND, 1);
@@ -378,7 +378,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxBoxSizer* bSizer151;
     bSizer151 = new wxBoxSizer(wxVERTICAL);
 
-    m_togBtnSplit = new wxToggleButton(panel, wxID_ANY, _("Split"), wxDefaultPosition, wxDefaultSize, 0);
+    m_togBtnSplit = new wxToggleButton(panel, wxID_ANY, _("Sp&lit"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnSplit->SetToolTip(_("Toggle split frequency mode."));
 
     bSizer151->Add(m_togBtnSplit, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
@@ -389,7 +389,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Analog Passthrough Toggle
     //------------------------------
-    m_togBtnAnalog = new wxToggleButton(panel, wxID_ANY, _("Analog"), wxDefaultPosition, wxDefaultSize, 0);
+    m_togBtnAnalog = new wxToggleButton(panel, wxID_ANY, _("A&nalog"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnAnalog->SetToolTip(_("Toggle analog/digital operation."));
     bSizer13->Add(m_togBtnAnalog, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
     sbSizer5->Add(bSizer13, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
@@ -397,7 +397,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Voice Keyer Toggle
     //------------------------------
-    m_togBtnVoiceKeyer = new wxToggleButton(panel, wxID_ANY, _("Voice Keyer"), wxDefaultPosition, wxDefaultSize, 0);
+    m_togBtnVoiceKeyer = new wxToggleButton(panel, wxID_ANY, _("Voice &Keyer"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer"));
     wxBoxSizer* bSizer13a = new wxBoxSizer(wxVERTICAL);
     bSizer13a->Add(m_togBtnVoiceKeyer, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
@@ -408,7 +408,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     wxBoxSizer* bSizer11;
     bSizer11 = new wxBoxSizer(wxVERTICAL);
-    m_btnTogPTT = new wxToggleButton(panel, wxID_ANY, _("PTT"), wxDefaultPosition, wxDefaultSize, 0);
+    m_btnTogPTT = new wxToggleButton(panel, wxID_ANY, _("&PTT"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnTogPTT->SetToolTip(_("Push to Talk - Switch between Receive and Transmit - you can also use the space bar "));
     bSizer11->Add(m_btnTogPTT, 1, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
     sbSizer5->Add(bSizer11, 2, wxEXPAND, 1);
