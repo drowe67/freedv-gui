@@ -14,6 +14,7 @@ GIT_BRANCH=${FDV_GIT_BRANCH:-master}
 CMAKE=${FDV_CMAKE:-mingw64-cmake}
 
 CLEAN=${FDV_CLEAN:-1}
+BOOTSTRAP_WX=${FDV_BOOTSTRAP_WX:-0}
 
 echo "FDV_GIT_REPO=$GIT_REPO"
 echo "FDV_GIT_BRANCH=$GIT_BRANCH"
@@ -32,7 +33,7 @@ fi
 git checkout $GIT_BRANCH
 
 echo "--------------------- starting build_windows.sh ---------------------"
-CMAKE=$CMAKE ./build_windows.sh
+CMAKE=$CMAKE BOOTSTRAP_WX=$BOOTSTRAP_WX ./build_windows.sh
 
 if [ $CMAKE = "mingw64-cmake" ]; then
     cd build_win64
