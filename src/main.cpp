@@ -1501,7 +1501,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         // modify some button states when running
 
-        m_togBtnOnOff->SetLabel(wxT("Stop"));
+        m_togBtnOnOff->SetLabel(wxT("&Stop"));
 
         vk_state = VK_IDLE;
 
