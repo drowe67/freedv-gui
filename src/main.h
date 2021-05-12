@@ -621,7 +621,6 @@ class MainFrame : public TopFrame
         // Events
         void        processTxtEvent(char event[]);
         class OptionsDlg *optionsDlg;
-        wxTimer     spamTimer[MAX_EVENT_RULES];
 
         // level Gauge
         float       m_maxLevel;

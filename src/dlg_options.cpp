@@ -803,16 +803,6 @@ void OptionsDlg::OnFreeDV700Combine(wxScrollEvent& event) {
     wxGetApp().m_FreeDV700Combine = m_ckboxFreeDV700Combine->GetValue();
 }
 
-void OptionsDlg::updateEventLog(wxString event_in, wxString event_out) {
-    wxString event_in_with_serial, event_out_with_serial; 
-    event_in_with_serial.Printf(_T("[%d] %s"), event_in_serial++, event_in);
-    event_out_with_serial.Printf(_T("[%d] %s"), event_out_serial++, event_out);
-
-    m_txt_events_in->AppendText(event_in_with_serial+"\n");
-    m_txt_events_out->AppendText(event_out_with_serial+"\n");
-}
-
-
 void OptionsDlg::OnDebugConsole(wxScrollEvent& event) {
     wxGetApp().m_debug_console = m_ckboxDebugConsole->GetValue();
 #ifdef __WXMSW__
