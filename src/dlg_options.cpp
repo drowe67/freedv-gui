@@ -720,15 +720,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             pConfig->Write(wxT("/Data/TextEncoding"), wxGetApp().m_textEncoding);
 #endif
 
-            pConfig->Write(wxT("/Events/enable"), wxGetApp().m_events);
-            pConfig->Write(wxT("/Events/spam_timer"), wxGetApp().m_events_spam_timer);
-            pConfig->Write(wxT("/Events/regexp_match"), wxGetApp().m_events_regexp_match);
-            pConfig->Write(wxT("/Events/regexp_replace"), wxGetApp().m_events_regexp_replace);
-            
             pConfig->Write(wxT("/UDP/enable"), wxGetApp().m_udp_enable);
             pConfig->Write(wxT("/UDP/port"),  wxGetApp().m_udp_port);
-
-            pConfig->Write(wxT("/Events/spam_timer"), wxGetApp().m_events_spam_timer);
 
             pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
             pConfig->Write(wxT("/FreeDV700/txBPF"), wxGetApp().m_FreeDV700txBPF);
@@ -861,16 +854,6 @@ void OptionsDlg::OnFreeDV700txClip(wxScrollEvent& event) {
 void OptionsDlg::OnFreeDV700Combine(wxScrollEvent& event) {
     wxGetApp().m_FreeDV700Combine = m_ckboxFreeDV700Combine->GetValue();
 }
-
-void OptionsDlg::updateEventLog(wxString event_in, wxString event_out) {
-    wxString event_in_with_serial, event_out_with_serial; 
-    event_in_with_serial.Printf(_T("[%d] %s"), event_in_serial++, event_in);
-    event_out_with_serial.Printf(_T("[%d] %s"), event_out_serial++, event_out);
-
-    m_txt_events_in->AppendText(event_in_with_serial+"\n");
-    m_txt_events_out->AppendText(event_out_with_serial+"\n");
-}
-
 
 void OptionsDlg::OnDebugConsole(wxScrollEvent& event) {
     wxGetApp().m_debug_console = m_ckboxDebugConsole->GetValue();
