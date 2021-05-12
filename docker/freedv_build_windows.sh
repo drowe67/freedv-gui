@@ -19,7 +19,7 @@ function print_help {
 
 # defaults - these variables are passed to the docker container
 FDV_CLEAN=1
-FDV_BUILD=""
+FDV_REBUILD=0
 FDV_GIT_REPO=https://github.com/drowe67/freedv-gui.git
 FDV_GIT_BRANCH=master
 FDV_BOOTSTRAP_WX=0
@@ -37,7 +37,7 @@ case $key in
         shift
     ;;
     --build)
-        FDV_BUILD="--build --force-recreate"	
+        FDV_REBUILD=1
         shift
     ;;
     --repo)
@@ -76,7 +76,14 @@ fi
 
 log=build_log.txt
 
-FDV_CLEAN=$FDV_CLEAN FDV_BOOTSTRAP_WX=$FDV_BOOTSTRAP_WX FDV_CMAKE=$FDV_CMAKE FDV_GIT_REPO=$FDV_GIT_REPO FDV_GIT_BRANCH=$FDV_GIT_BRANCH docker-compose -f docker-compose-win.yml up --remove-orphans $FDV_BUILD > $log
+if [ $FDV_REBUILD -eq 1 ]; then
+    docker-compose -f docker-compose-win.yml rm -f > $log
+    docker-compose -f docker-compose-win.yml build --no-cache >> $log
+else
+    echo > $log
+fi
+
+FDV_CLEAN=$FDV_CLEAN FDV_BOOTSTRAP_WX=$FDV_BOOTSTRAP_WX FDV_CMAKE=$FDV_CMAKE FDV_GIT_REPO=$FDV_GIT_REPO FDV_GIT_BRANCH=$FDV_GIT_BRANCH docker-compose -f docker-compose-win.yml up --remove-orphans $FDV_BUILD >> $log
 package_docker_path=$(cat $log | sed  -n "s/.*package: \(.*exe\) .*/\1/p")
 echo $package_docker_path
 docker cp fdv_win_fed34_c:$package_docker_path .
