@@ -177,6 +177,8 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
     ctx->SetPen(wxPen(BLACK_COLOR, 0));
     ctx->DrawRectangle(plotX, plotY, plotWidth, plotHeight);
 
+    drawGraticule(ctx);
+    
     index_to_px = (float)plotWidth/m_samples;
     a_to_py = (float)plotHeight/(m_a_max - m_a_min);
 
@@ -185,6 +187,30 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
     pen.SetWidth(1);
     ctx->SetPen(pen);
 
+    // Compress the samples as we don't need to draw thousands of lines for
+    // a e.g. 500 pixel wide display.
+    int samplesPerPixel = m_samples / plotWidth;
+    float compressedSamples[m_channels*plotWidth];
+    std::deque<float> runningSamples;
+    int compressedIndex = 0;
+    for (int cIndex = 0; cIndex < m_channels; cIndex++)
+    {
+        float runningTotal = 0;
+        for (int sIndex = 0; sIndex < m_samples && compressedIndex < m_channels*plotWidth; sIndex++)
+        {
+            float a = m_mem[cIndex * m_samples + sIndex];
+            if (a < m_a_min) a = m_a_min;
+            if (a > m_a_max) a = m_a_max;
+            
+            runningTotal += a;
+            if (sIndex > 0 && sIndex % samplesPerPixel == 0)
+            {
+                compressedSamples[compressedIndex++] = runningTotal; // / samplesPerPixel;
+                runningTotal = 0;
+            }
+        }
+    }
+    
     // draw all samples
 
     prev_x = prev_y = 0; // stop warning
@@ -192,10 +218,26 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
     // plot each channel 
 
     int offset, x, y;
-    for(offset=0; offset<m_channels*m_samples; offset+=m_samples) {
+    
+    int maxOffset = m_channels * m_samples;
+    int maxSample = m_samples;
+    if (!m_bar_graph)
+    {
+        maxOffset = m_channels*plotWidth;
+        maxSample = plotWidth;
+    }
+    
+    for(offset=0; offset<m_channels*plotWidth; offset+=plotWidth) {
 
-        for(i = 0; i < m_samples; i++) {
-            a = m_mem[offset+i];
+        for(i = 0; i < plotWidth; i++) {
+            if (m_bar_graph)
+            {
+                a = m_mem[offset + i];
+            }
+            else
+            {
+                a = compressedSamples[offset+i];
+            }
             if (a < m_a_min) a = m_a_min;
             if (a > m_a_max) a = m_a_max;
 
@@ -205,7 +247,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
 
             // regular point-point line graph
 
-            x = index_to_px * i;
+            x = i;
 
             // put inside plot window
 
@@ -239,6 +281,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
                 y1 = plotHeight;
                 x1 += PLOT_BORDER + XLEFT_OFFSET; x2 += PLOT_BORDER + XLEFT_OFFSET;
                 y1 += PLOT_BORDER;
+
                 path.MoveToPoint(x1, y1);
                 path.AddLineToPoint(x1, y);
                 path.AddLineToPoint(x2, y);
@@ -248,15 +291,18 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
                 if (i)
                 {
                     path.MoveToPoint(x, y);
-                    path.AddLineToPoint(prev_x, prev_y);
+                    
+                    int destY = plotHeight + m_a_min*a_to_py;
+                    if (!m_mini) {
+                        destY += PLOT_BORDER;
+                    }
+                    path.AddLineToPoint(x, destY);
                 }
                 prev_x = x; prev_y = y;
             }
             ctx->StrokePath(path);
         }
     }
-
-    drawGraticule(ctx);
 }
 
 //-------------------------------------------------------------------------
