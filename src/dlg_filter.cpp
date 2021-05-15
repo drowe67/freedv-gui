@@ -147,7 +147,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 
     long nb_style = wxNB_BOTTOM;
     m_auiNotebook = new AuiNotebookNoKbd(this, wxID_ANY, wxDefaultPosition, wxSize(-1,200), nb_style);
-    m_auiNotebook->SetFont(wxFontInfo(8).Family(wxFONTFAMILY_DEFAULT).Style(wxFONTSTYLE_NORMAL).Weight(90));
+    m_auiNotebook->SetFont(wxFont(8, 70, 90, 90, false, wxEmptyString));
 
     bSizer30->Add(m_auiNotebook, 0, wxEXPAND|wxALL, 3);
 

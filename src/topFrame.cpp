@@ -216,7 +216,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     long nb_style = wxAUI_NB_BOTTOM | wxAUI_NB_TAB_SPLIT | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS;
     m_auiNbookCtrl = new wxAuiNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, nb_style);
     // This line sets the fontsize for the tabs on the notebook control
-    m_auiNbookCtrl->SetFont(wxFontInfo(8).Family(wxFONTFAMILY_DEFAULT).Style(wxFONTSTYLE_NORMAL).Weight(90));
+    m_auiNbookCtrl->SetFont(wxFont(8, 70, 90, 90, false, wxEmptyString));
 
     upperSizer->Add(m_auiNbookCtrl, 1, wxALIGN_TOP|wxEXPAND, 1);
     centerSizer->Add(upperSizer, 1, wxALIGN_TOP|wxEXPAND, 0);
