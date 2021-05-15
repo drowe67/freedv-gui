@@ -1,4 +1,4 @@
-ARG FED_REL=32
+ARG FED_REL=34
 
 FROM fedora:${FED_REL}
 
