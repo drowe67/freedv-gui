@@ -21,6 +21,7 @@
 #include <string.h>
 #include "wx/wx.h"
 #include "plot_scatter.h"
+#include <wx/graphics.h>
 
 BEGIN_EVENT_TABLE(PlotScatter, PlotPanel)
     EVT_PAINT           (PlotScatter::OnPaint)

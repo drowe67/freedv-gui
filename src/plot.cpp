@@ -20,6 +20,7 @@
 //==========================================================================
 #include <string.h>
 #include "plot.h"
+#include <wx/graphics.h>
 
 BEGIN_EVENT_TABLE(PlotPanel, wxPanel)
     EVT_PAINT           (PlotPanel::OnPaint)

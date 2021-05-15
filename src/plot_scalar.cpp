@@ -178,8 +178,8 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
     ctx->SetPen(wxPen(BLACK_COLOR, 0));
     ctx->DrawRectangle(plotX, plotY, plotWidth, plotHeight);
 
-    index_to_px = (float)m_rGrid.GetWidth()/m_samples;
-    a_to_py = (float)m_rGrid.GetHeight()/(m_a_max - m_a_min);
+    index_to_px = (float)plotWidth/m_samples;
+    a_to_py = (float)plotHeight/(m_a_max - m_a_min);
 
     wxPen pen;
     pen.SetColour(DARK_GREEN_COLOR);
@@ -202,7 +202,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
 
             // invert y axis and offset by minimum
 
-            y = m_rGrid.GetHeight() - a_to_py * a + m_a_min*a_to_py;
+            y = plotHeight - a_to_py * a + m_a_min*a_to_py;
 
             // regular point-point line graph
 
@@ -226,9 +226,9 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
                     assert(m_a_max > 0.0);
 
                     float norm = (log10(a) - log10(m_a_min))/(log10(m_a_max) - log10(m_a_min));
-                    y = m_rGrid.GetHeight()*(1.0 - norm);
+                    y = plotHeight*(1.0 - norm);
                 } else {
-                    y = m_rGrid.GetHeight() - a_to_py * a + m_a_min*a_to_py;
+                    y = plotHeight - a_to_py * a + m_a_min*a_to_py;
                 }
 
                 // use points to make a bar graph
@@ -237,7 +237,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
 
                 x1 = index_to_px * ((float)i - 0.5);
                 x2 = index_to_px * ((float)i + 0.5);
-                y1 = m_rGrid.GetHeight();
+                y1 = plotHeight;
                 x1 += PLOT_BORDER + XLEFT_OFFSET; x2 += PLOT_BORDER + XLEFT_OFFSET;
                 y1 += PLOT_BORDER;
                 path.MoveToPoint(x1, y1);
@@ -272,6 +272,9 @@ void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
     float    sec_to_px;
     float    a_to_py;
 
+    int plotWidth = m_rGrid.GetWidth();
+    int plotHeight = m_rGrid.GetHeight();
+
     wxBrush ltGraphBkgBrush;
     ltGraphBkgBrush.SetStyle(wxBRUSHSTYLE_TRANSPARENT);
     ltGraphBkgBrush.SetColour(*wxBLACK);
@@ -281,12 +284,12 @@ void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
     wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
     ctx->SetFont(tmpFont);
     
-    sec_to_px = (float)m_rGrid.GetWidth()/m_t_secs;
-    a_to_py = (float)m_rGrid.GetHeight()/(m_a_max - m_a_min);
+    sec_to_px = (float)plotWidth/m_t_secs;
+    a_to_py = (float)plotHeight/(m_a_max - m_a_min);
 
     // upper LH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER)
-    // lower RH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET + m_rGrid.GetWidth(), 
-    //                                   PLOT_BORDER + m_rGrid.GetHeight())
+    // lower RH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET + plotWidth, 
+    //                                   PLOT_BORDER + plotHeight)
 
     // Vertical gridlines
 
@@ -294,16 +297,16 @@ void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
     for(t=0; t<=m_t_secs; t+=m_graticule_t_step) {
 	x = t*sec_to_px;
 	if (m_mini) {
-            ctx->StrokeLine(x, m_rGrid.GetHeight(), x, 0);
+            ctx->StrokeLine(x, plotHeight, x, 0);
         }
         else {
             x += PLOT_BORDER + XLEFT_OFFSET;
-            ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
+            ctx->StrokeLine(x, plotHeight + PLOT_BORDER, x, PLOT_BORDER);
         }
         if (!m_mini) {
             sprintf(buf, "%2.1fs", t);
             GetTextExtent(buf, &text_w, &text_h);
-            ctx->DrawText(buf, x - text_w/2, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+            ctx->DrawText(buf, x - text_w/2, plotHeight + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
         }
     }
 
@@ -313,18 +316,18 @@ void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
     for(a=m_a_min; a<m_a_max; ) {
         if (m_logy) {
             float norm = (log10(a) - log10(m_a_min))/(log10(m_a_max) - log10(m_a_min));
-            y = m_rGrid.GetHeight()*(1.0 - norm);
+            y = plotHeight*(1.0 - norm);
         }
 	else {
-            y = m_rGrid.GetHeight() - a*a_to_py + m_a_min*a_to_py;
+            y = plotHeight - a*a_to_py + m_a_min*a_to_py;
         }
 	if (m_mini) {
-            ctx->StrokeLine(0, y, m_rGrid.GetWidth(), y);
+            ctx->StrokeLine(0, y, plotWidth, y);
         }
         else {
             y += PLOT_BORDER;
             ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
-                        (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), y);
+                        (plotWidth + PLOT_BORDER + XLEFT_OFFSET), y);
         }
         if (!m_mini) {
             sprintf(buf, m_a_fmt, a);
