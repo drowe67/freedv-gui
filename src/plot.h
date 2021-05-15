@@ -121,12 +121,12 @@ class PlotPanel : public wxPanel
         void            OnClose(wxCloseEvent& event ){ event.Skip(); }
         void            OnSize( wxSizeEvent& event );
         void            OnErase(wxEraseEvent& event);
-        void            OnPaint(wxPaintEvent& event);
+        virtual void            OnPaint(wxPaintEvent& event);
         //void OnUpdateUI( wxUpdateUIEvent& event ){ event.Skip(); }
 
         void            paintEvent(wxPaintEvent & evt);
-        virtual void    draw(wxAutoBufferedPaintDC&  pdc);
-        virtual void    drawGraticule(wxAutoBufferedPaintDC&  pdc);
+        virtual void    draw(wxGraphicsContext* ctx) = 0;
+        virtual void    drawGraticule(wxGraphicsContext* ctx);
         virtual double  SetZoomFactor(double zf);
         virtual double  GetZoomFactor(double zf);
         virtual void    OnShow(wxShowEvent& event);

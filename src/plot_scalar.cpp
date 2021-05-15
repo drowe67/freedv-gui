@@ -135,7 +135,7 @@ void  PlotScalar::add_new_short_samples(int channel, short samples[], int length
 //----------------------------------------------------------------
 // draw()
 //----------------------------------------------------------------
-void PlotScalar::draw(wxAutoBufferedPaintDC&  dc)
+void PlotScalar::draw(wxGraphicsContext* ctx)
 {
     float index_to_px;
     float a_to_py;
@@ -149,17 +149,25 @@ void PlotScalar::draw(wxAutoBufferedPaintDC&  dc)
         m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
     // black background
-
-    dc.Clear();
+    int plotX = 0, plotY = 0, plotWidth = 0, plotHeight = 0;
     if (m_mini)
-        m_rPlot = wxRect(0, 0, m_rGrid.GetWidth(), m_rGrid.GetHeight());        
+    {
+        plotX = 0;
+        plotY = 0;
+    }
     else
-        m_rPlot = wxRect(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER, m_rGrid.GetWidth(), m_rGrid.GetHeight());
-   
+    {
+        plotX = PLOT_BORDER + XLEFT_OFFSET;
+        plotY = PLOT_BORDER;
+    }
+
+    plotWidth = m_rGrid.GetWidth();
+    plotHeight = m_rGrid.GetHeight();
+    
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-    dc.SetBrush(ltGraphBkgBrush);
-    dc.SetPen(wxPen(BLACK_COLOR, 0));
-    dc.DrawRectangle(m_rPlot);
+    ctx->SetBrush(ltGraphBkgBrush);
+    ctx->SetPen(wxPen(BLACK_COLOR, 0));
+    ctx->DrawRectangle(plotX, plotY, plotWidth, plotHeight);
 
     index_to_px = (float)m_rGrid.GetWidth()/m_samples;
     a_to_py = (float)m_rGrid.GetHeight()/(m_a_max - m_a_min);
@@ -167,7 +175,7 @@ void PlotScalar::draw(wxAutoBufferedPaintDC&  dc)
     wxPen pen;
     pen.SetColour(DARK_GREEN_COLOR);
     pen.SetWidth(1);
-    dc.SetPen(pen);
+    ctx->SetPen(pen);
 
     // draw all samples
 
@@ -222,23 +230,23 @@ void PlotScalar::draw(wxAutoBufferedPaintDC&  dc)
                 y1 = m_rGrid.GetHeight();
                 x1 += PLOT_BORDER + XLEFT_OFFSET; x2 += PLOT_BORDER + XLEFT_OFFSET;
                 y1 += PLOT_BORDER;
-                dc.DrawLine(x1, y1, x1, y); dc.DrawLine(x1, y, x2, y); dc.DrawLine(x2, y, x2, y1);
+                ctx->StrokeLine(x1, y1, x1, y); ctx->StrokeLine(x1, y, x2, y); ctx->StrokeLine(x2, y, x2, y1);
             }
             else {
                 if (i)
-                    dc.DrawLine(x, y, prev_x, prev_y);
+                    ctx->StrokeLine(x, y, prev_x, prev_y);
                 prev_x = x; prev_y = y;
             }
         }
     }
 
-    drawGraticule(dc);
+    drawGraticule(ctx);
 }
 
 //-------------------------------------------------------------------------
 // drawGraticule()
 //-------------------------------------------------------------------------
-void PlotScalar::drawGraticule(wxAutoBufferedPaintDC&  dc)
+void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
 {
     float    t, a;
     int      x, y, text_w, text_h;
@@ -250,9 +258,12 @@ void PlotScalar::drawGraticule(wxAutoBufferedPaintDC&  dc)
     wxBrush ltGraphBkgBrush;
     ltGraphBkgBrush.SetStyle(wxBRUSHSTYLE_TRANSPARENT);
     ltGraphBkgBrush.SetColour(*wxBLACK);
-    dc.SetBrush(ltGraphBkgBrush);
-    dc.SetPen(wxPen(BLACK_COLOR, 1));
+    ctx->SetBrush(ltGraphBkgBrush);
+    ctx->SetPen(wxPen(BLACK_COLOR, 1));
 
+    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
+    ctx->SetFont(tmpFont);
+    
     sec_to_px = (float)m_rGrid.GetWidth()/m_t_secs;
     a_to_py = (float)m_rGrid.GetHeight()/(m_a_max - m_a_min);
 
@@ -262,26 +273,26 @@ void PlotScalar::drawGraticule(wxAutoBufferedPaintDC&  dc)
 
     // Vertical gridlines
 
-    dc.SetPen(m_penShortDash);
+    ctx->SetPen(m_penShortDash);
     for(t=0; t<=m_t_secs; t+=m_graticule_t_step) {
 	x = t*sec_to_px;
 	if (m_mini) {
-            dc.DrawLine(x, m_rGrid.GetHeight(), x, 0);
+            ctx->StrokeLine(x, m_rGrid.GetHeight(), x, 0);
         }
         else {
             x += PLOT_BORDER + XLEFT_OFFSET;
-            dc.DrawLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
+            ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
         }
         if (!m_mini) {
             sprintf(buf, "%2.1fs", t);
             GetTextExtent(buf, &text_w, &text_h);
-            dc.DrawText(buf, x - text_w/2, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+            ctx->DrawText(buf, x - text_w/2, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
         }
     }
 
     // Horizontal gridlines
 
-    dc.SetPen(m_penDotDash);
+    ctx->SetPen(m_penDotDash);
     for(a=m_a_min; a<m_a_max; ) {
         if (m_logy) {
             float norm = (log10(a) - log10(m_a_min))/(log10(m_a_max) - log10(m_a_min));
@@ -291,17 +302,17 @@ void PlotScalar::drawGraticule(wxAutoBufferedPaintDC&  dc)
             y = m_rGrid.GetHeight() - a*a_to_py + m_a_min*a_to_py;
         }
 	if (m_mini) {
-            dc.DrawLine(0, y, m_rGrid.GetWidth(), y);
+            ctx->StrokeLine(0, y, m_rGrid.GetWidth(), y);
         }
         else {
             y += PLOT_BORDER;
-            dc.DrawLine(PLOT_BORDER + XLEFT_OFFSET, y, 
+            ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
                         (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), y);
         }
         if (!m_mini) {
             sprintf(buf, m_a_fmt, a);
             GetTextExtent(buf, &text_w, &text_h);
-            dc.DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
+            ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
         }
 
         if (m_logy) {
@@ -315,15 +326,6 @@ void PlotScalar::drawGraticule(wxAutoBufferedPaintDC&  dc)
    }
 
 
-}
-
-//----------------------------------------------------------------
-// OnPaint()
-//----------------------------------------------------------------
-void PlotScalar::OnPaint(wxPaintEvent& event)
-{
-    wxAutoBufferedPaintDC dc(this);
-    draw(dc);
 }
 
 //----------------------------------------------------------------

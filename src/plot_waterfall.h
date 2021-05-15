@@ -50,11 +50,10 @@ class PlotWaterfall : public PlotPanel
 
         unsigned    heatmap(float val, float min, float max);
 
-        void        OnPaint(wxPaintEvent & evt);
         void        OnSize(wxSizeEvent& event);
         void        OnShow(wxShowEvent& event);
-        void        drawGraticule(wxAutoBufferedPaintDC&  dc);
-        void        draw(wxAutoBufferedPaintDC& dc);
+        void        drawGraticule(wxGraphicsContext* ctx);
+        void        draw(wxGraphicsContext* gc);
         void        plotPixelData();
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
 

@@ -68,7 +68,7 @@ void PlotScatter::setNc(int Nc) {
 //----------------------------------------------------------------
 // draw()
 //----------------------------------------------------------------
-void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
+void PlotScatter::draw(wxGraphicsContext* ctx)
 {
     float x_scale;
     float y_scale;
@@ -102,12 +102,10 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
 
     // black background
 
-    dc.Clear();
-    m_rPlot = wxRect(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER, m_rGrid.GetWidth(), m_rGrid.GetHeight());
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-    dc.SetBrush(ltGraphBkgBrush);
-    dc.SetPen(wxPen(BLACK_COLOR, 0));
-    dc.DrawRectangle(m_rPlot);
+    ctx->SetBrush(ltGraphBkgBrush);
+    ctx->SetPen(wxPen(BLACK_COLOR, 0));
+    ctx->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER, m_rGrid.GetWidth(), m_rGrid.GetHeight());
  
     wxPen pen;
     pen.SetWidth(1); // note this is ignored by DrawPoint
@@ -154,8 +152,8 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
             if (pointsInBounds_(x, y))
             {
                 pen.SetColour(DARK_GREEN_COLOR);
-                dc.SetPen(pen);
-                dc.DrawPoint(x, y);
+                ctx->SetPen(pen);
+                ctx->StrokeLine(x, y, x, y);
             }
         }
     }
@@ -165,7 +163,7 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
         // The same color will be used for all eye traces
         pen.SetColour(DARK_GREEN_COLOR);
         pen.SetWidth(1);
-        dc.SetPen(pen);
+        ctx->SetPen(pen);
 
         // automatically scale, first measure the maximum Y value
 
@@ -214,7 +212,7 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
                 if (pointsInBounds_(x,y) && pointsInBounds_(prev_x, prev_y))
                 {
                     if (j)
-                        dc.DrawLine(x, y, prev_x, prev_y);
+                        ctx->StrokeLine(x, y, prev_x, prev_y);
                 }
                 prev_x = x; prev_y = y;
             }
@@ -263,15 +261,6 @@ void PlotScatter::add_new_samples_eye(float samples[], int n)
     for(j=0; j<Ncol; j++) {
         eye_mem[SCATTER_EYE_MEM_ROWS-1][j] = samples[j];
     }
-}
-
-//----------------------------------------------------------------
-// OnPaint()
-//----------------------------------------------------------------
-void PlotScatter::OnPaint(wxPaintEvent& event)
-{
-    wxAutoBufferedPaintDC dc(this);
-    draw(dc);
 }
 
 //----------------------------------------------------------------

@@ -48,8 +48,7 @@ class PlotScatter : public PlotPanel
         COMP m_new_samples[MODEM_STATS_NC_MAX+1];
         float eye_mem[SCATTER_EYE_MEM_ROWS][PLOT_SCATTER_EYE_MAX_SAMPLES_ROW];
 
-        void draw(wxAutoBufferedPaintDC&  dc);
-        void OnPaint(wxPaintEvent& event);
+        void draw(wxGraphicsContext* ctx);
         void OnSize(wxSizeEvent& event);
         void OnShow(wxShowEvent& event);
 

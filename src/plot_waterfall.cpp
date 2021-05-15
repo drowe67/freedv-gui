@@ -101,25 +101,6 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
 }
 
 //----------------------------------------------------------------
-// paintEvent()
-//
-// @class $(Name)
-// @author $(User)
-// @date $(Date)
-// @file $(CurrentFileName).$(CurrentFileExt)
-// @brief
-//
-// Called by the system of by wxWidgets when the panel needs
-// to be redrawn. You can also trigger this call by calling
-// Refresh()/Update().
-//----------------------------------------------------------------
-void PlotWaterfall::OnPaint(wxPaintEvent & evt)
-{
-    wxAutoBufferedPaintDC dc(this);
-    draw(dc);
-}
-
-//----------------------------------------------------------------
 // OnShow()
 //----------------------------------------------------------------
 void PlotWaterfall::OnShow(wxShowEvent& event)
@@ -190,9 +171,8 @@ bool PlotWaterfall::checkDT(void)
 //----------------------------------------------------------------
 // draw()
 //----------------------------------------------------------------
-void PlotWaterfall::draw(wxAutoBufferedPaintDC& dc)
+void PlotWaterfall::draw(wxGraphicsContext* gc)
 {
-
     m_rCtrl  = GetClientRect();
 
     // m_rGrid is coords of inner window we actually plot to.  We deflate it a bit
@@ -211,42 +191,36 @@ void PlotWaterfall::draw(wxAutoBufferedPaintDC& dc)
         m_rgbData = (unsigned char*)calloc(1, m_imgHeight * (m_imgWidth * 3));
         m_rgbData2 = (unsigned char*)calloc(1, m_imgHeight * (m_imgWidth * 3));
     }
-
-    dc.Clear();
-
+    
     if(m_newdata)
     {
         m_newdata = false;
         plotPixelData();
                 
-        wxGraphicsContext *gc = wxGraphicsContext::Create( dc );
         wxGraphicsBitmap tmpBmp = gc->CreateBitmapFromImage(*m_image);
         gc->DrawBitmap(tmpBmp, PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
-        delete gc;
         m_dT = DT;
     }
     else 
     {
-
         // no data to plot so just erase to black.  Blue looks nicer
         // but is same colour as low amplitude signal
 
         // Bug on Linux: When Stop is pressed this code doesn't erase
         // the lower 25% of the Waterfall Window
-
-        m_rPlot = wxRect(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_rGrid.GetWidth(), m_rGrid.GetHeight());
+        
         wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-        dc.SetBrush(ltGraphBkgBrush);
-        dc.SetPen(wxPen(BLACK_COLOR, 0));
-        dc.DrawRectangle(m_rPlot);
+        gc->SetBrush(ltGraphBkgBrush);
+        gc->SetPen(wxPen(BLACK_COLOR, 0));
+        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_rGrid.GetWidth(), m_rGrid.GetHeight());
     }
-    drawGraticule(dc);
+    drawGraticule(gc);
 }
 
 //-------------------------------------------------------------------------
 // drawGraticule()
 //-------------------------------------------------------------------------
-void PlotWaterfall::drawGraticule(wxAutoBufferedPaintDC& dc)
+void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
 {
     int      x, y, text_w, text_h;
     char     buf[15];
@@ -256,9 +230,12 @@ void PlotWaterfall::drawGraticule(wxAutoBufferedPaintDC& dc)
     wxBrush ltGraphBkgBrush;
     ltGraphBkgBrush.SetStyle(wxBRUSHSTYLE_TRANSPARENT);
     ltGraphBkgBrush.SetColour(*wxBLACK);
-    dc.SetBrush(ltGraphBkgBrush);
-    dc.SetPen(wxPen(BLACK_COLOR, 1));
-
+    ctx->SetBrush(ltGraphBkgBrush);
+    ctx->SetPen(wxPen(BLACK_COLOR, 1));
+    
+    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
+    ctx->SetFont(tmpFont);
+    
     freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
     time_s_to_py = (float)m_rGrid.GetHeight()/WATERFALL_SECS_Y;
 
@@ -282,44 +259,43 @@ void PlotWaterfall::drawGraticule(wxAutoBufferedPaintDC& dc)
         x += PLOT_BORDER + XLEFT_OFFSET;
 
         if (m_graticule)
-            dc.DrawLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
+            ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
         else
-            dc.DrawLine(x, PLOT_BORDER, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
+            ctx->StrokeLine(x, PLOT_BORDER, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
             
         sprintf(buf, "%4.0fHz", f);
         GetTextExtent(buf, &text_w, &text_h);
         if (!overlappedText)
-            dc.DrawText(buf, x - text_w/2, (YBOTTOM_TEXT_OFFSET/2));
+            ctx->DrawText(buf, x - text_w/2, (YBOTTOM_TEXT_OFFSET/2));
     }
 
     for(f=STEP_MINOR_F_HZ; f<MAX_F_HZ; f+=STEP_MINOR_F_HZ) 
     {
         x = f*freq_hz_to_px;
         x += PLOT_BORDER + XLEFT_OFFSET;
-        dc.DrawLine(x, PLOT_BORDER + 5, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
+        ctx->StrokeLine(x, PLOT_BORDER + 5, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
     }
     
     // Horizontal gridlines
-    dc.SetPen(m_penDotDash);
+    ctx->SetPen(m_penDotDash);
     for(time=0; time<=WATERFALL_SECS_Y; time+=WATERFALL_SECS_STEP) {
        y = m_rGrid.GetHeight() - (WATERFALL_SECS_Y - time)*time_s_to_py;
        y += PLOT_BORDER + YBOTTOM_TEXT_OFFSET;
 
         if (m_graticule)
-            dc.DrawLine(PLOT_BORDER + XLEFT_OFFSET, y, 
+            ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
                         (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), y);
         sprintf(buf, "%3.0fs", time);
-	GetTextExtent(buf, &text_w, &text_h);
+	    GetTextExtent(buf, &text_w, &text_h);
         if (!overlappedText)
-            dc.DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
+            ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
    }
 
     // red rx tuning line
-    dc.SetPen(wxPen(RED_COLOR, 2));
+    ctx->SetPen(wxPen(RED_COLOR, 2));
     x = m_rxFreq*freq_hz_to_px;
     x += PLOT_BORDER + XLEFT_OFFSET;
-    dc.DrawLine(x, 0, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
-    
+    ctx->StrokeLine(x, 0, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
 }
 
 //-------------------------------------------------------------------------
@@ -333,7 +309,6 @@ void PlotWaterfall::plotPixelData()
     int         index;
     int       dy;
     int         dy_blocks;
-    int         b;
     int         px;
     int         py;
     int         intensity;

@@ -65,9 +65,8 @@ class PlotScalar: public PlotPanel
          int      m_bar_graph;                 // non zero to plot bar graphs 
          int      m_logy;                      // plot graph on log scale
 
-         void draw(wxAutoBufferedPaintDC&  dc);
-         void drawGraticule(wxAutoBufferedPaintDC&  dc);
-         void OnPaint(wxPaintEvent& event);
+         void draw(wxGraphicsContext* ctx);
+         void drawGraticule(wxGraphicsContext* ctx);
          void OnSize(wxSizeEvent& event);
          void OnShow(wxShowEvent& event);
 
