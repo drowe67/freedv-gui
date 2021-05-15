@@ -204,7 +204,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
             runningTotal += a;
             if (sIndex > 0 && sIndex % samplesPerPixel == 0)
             {
-                compressedSamples[compressedIndex++] = runningTotal; // / samplesPerPixel;
+                compressedSamples[compressedIndex++] = runningTotal;
                 runningTotal = 0;
             }
         }
