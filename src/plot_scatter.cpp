@@ -28,8 +28,7 @@ BEGIN_EVENT_TABLE(PlotScatter, PlotPanel)
     EVT_MOUSEWHEEL      (PlotScatter::OnMouseWheelMoved)
     EVT_SIZE            (PlotScatter::OnSize)
     EVT_SHOW            (PlotScatter::OnShow)
-//    EVT_ERASE_BACKGROUND(PlotScatter::OnErase)
-END_EVENT_TABLE()
+        END_EVENT_TABLE()
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // PlotScatter
@@ -230,18 +229,12 @@ void PlotScatter::draw(wxAutoBufferedPaintDC& dc)
 //----------------------------------------------------------------
 void PlotScatter::add_new_samples_scatter(COMP samples[])
 {
-    int i,j;
 
-    // shift memory
-
-    for(i = 0; i < scatterMemSyms - Nsym; i++)
-    {
-        m_mem[i] = m_mem[i+Nsym];
-    }
-
+    memmove(&m_mem, &m_mem[Nsym], (scatterMemSyms - Nsym) * sizeof(float));
+    
     // new samples
-
-    for(j=0; i < scatterMemSyms; i++,j++)
+    int i = scatterMemSyms - Nsym;
+    for(int j=0; i < scatterMemSyms; i++,j++)
     {
         m_mem[i] = samples[j];
     }

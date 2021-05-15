@@ -29,7 +29,6 @@ BEGIN_EVENT_TABLE(PlotScalar, PlotPanel)
     EVT_MOUSEWHEEL      (PlotScalar::OnMouseWheelMoved)
     EVT_SIZE            (PlotScalar::OnSize)
     EVT_SHOW            (PlotScalar::OnShow)
-//    EVT_ERASE_BACKGROUND(PlotScalar::OnErase)
 END_EVENT_TABLE()
 
 //----------------------------------------------------------------
@@ -37,15 +36,16 @@ END_EVENT_TABLE()
 //----------------------------------------------------------------
 PlotScalar::PlotScalar(wxFrame* parent, 
                        int    channels,           // number on channels to plot
-		       float  t_secs,             // time covered by entire x axis in seconds
-		       float  sample_period_secs, // time between each sample in seconds
-		       float  a_min,              // min ampltude of samples being plotted
-		       float  a_max,              // max ampltude of samples being plotted
-		       float  graticule_t_step,   // time step of x (time) axis graticule in seconds
-		       float  graticule_a_step,   // step of amplitude axis graticule
-		       const char a_fmt[],        // printf format string for amplitude axis labels
+        		       float  t_secs,             // time covered by entire x axis in seconds
+        		       float  sample_period_secs, // time between each sample in seconds
+        		       float  a_min,              // min ampltude of samples being plotted
+        		       float  a_max,              // max ampltude of samples being plotted
+        		       float  graticule_t_step,   // time step of x (time) axis graticule in seconds
+        		       float  graticule_a_step,   // step of amplitude axis graticule
+        		       const char a_fmt[],        // printf format string for amplitude axis labels
                        int    mini                // true for mini-plot - don't draw graticule
-		       ): PlotPanel(parent)
+		              )
+    : PlotPanel(parent)
 {
     int i;
 
@@ -110,10 +110,10 @@ void  PlotScalar::add_new_samples(int channel, float samples[], int length)
 
     assert(channel < m_channels);
 
-   for(i = 0; i < m_samples-length; i++)
-        m_mem[offset+i] = m_mem[offset+i+length];
-    for(; i < m_samples; i++)
-	m_mem[offset+i] = *samples++;
+    memmove(&m_mem[offset], &m_mem[offset+length], (m_samples-length)*sizeof(float));
+
+    for(i = m_samples-length; i < m_samples; i++)
+	    m_mem[offset+i] = *samples++;
 }
 
 //----------------------------------------------------------------
@@ -126,9 +126,9 @@ void  PlotScalar::add_new_short_samples(int channel, short samples[], int length
 
     assert(channel < m_channels);
 
-    for(i = 0; i < m_samples-length; i++)
-        m_mem[offset+i] = m_mem[offset+i+length];
-    for(; i < m_samples; i++)
+    memmove(&m_mem[offset], &m_mem[offset+length], (m_samples-length)*sizeof(float));
+
+    for(i = m_samples-length; i < m_samples; i++)
 	m_mem[offset+i] = (float)*samples++/scale_factor;
 }
 
@@ -147,9 +147,6 @@ void PlotScalar::draw(wxAutoBufferedPaintDC&  dc)
     m_rGrid = m_rCtrl;
     if (!m_mini)
         m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
-
-    //printf("h %d w %d\n", m_rCtrl.GetWidth(), m_rCtrl.GetHeight());
-    //printf("h %d w %d\n", m_rGrid.GetWidth(), m_rGrid.GetHeight());
 
     // black background
 
