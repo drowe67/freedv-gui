@@ -65,6 +65,9 @@ PlotWaterfall::PlotWaterfall(wxFrame* parent, bool graticule, int colour): PlotP
     m_pBmp = NULL;
     m_max_mag = MAX_MAG_DB;
     m_min_mag = MIN_MAG_DB;
+    m_rgbData = NULL;
+    m_rgbData2 = NULL;
+    m_image = NULL;
 }
 
 // When the window size gets set we can work outthe size of the window
@@ -73,7 +76,9 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
 {
     // resize bit map
 
-    delete m_pBmp;
+    delete m_image;
+    free(m_rgbData);
+    free(m_rgbData2);
     
     m_rCtrl  = GetClientRect();
 
@@ -84,8 +89,13 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
     m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
     // we want a bit map the size of m_rGrid
-
-    m_pBmp = new wxBitmap(m_rGrid.GetWidth(), m_rGrid.GetHeight(), 24);
+    m_pBmp = new wxBitmap(std::max(1,m_rGrid.GetWidth()), std::max(1,m_rGrid.GetHeight()), 24);
+    m_image = new wxImage(std::max(1,m_rGrid.GetWidth()), std::max(1,m_rGrid.GetHeight()));
+    wxSize imgSize = m_image->GetSize();
+    m_imgHeight = imgSize.GetHeight();
+    m_imgWidth = imgSize.GetWidth();
+    m_rgbData = (unsigned char*)calloc(1, m_imgHeight * (m_imgWidth * 3));
+    m_rgbData2 = (unsigned char*)calloc(1, m_imgHeight * (m_imgWidth * 3));
 
     m_dT = DT;
 }
@@ -191,10 +201,15 @@ void PlotWaterfall::draw(wxAutoBufferedPaintDC& dc)
     m_rGrid = m_rCtrl;
     m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
-    if (m_pBmp == NULL) 
+    if (m_image == NULL) 
     {
         // we want a bit map the size of m_rGrid
-        m_pBmp = new wxBitmap(m_rGrid.GetWidth(), m_rGrid.GetHeight(), 24);
+        m_image = new wxImage(std::max(1,m_rGrid.GetWidth()), std::max(1,m_rGrid.GetHeight()));
+        wxSize imgSize = m_image->GetSize();
+        m_imgHeight = imgSize.GetHeight();
+        m_imgWidth = imgSize.GetWidth();
+        m_rgbData = (unsigned char*)calloc(1, m_imgHeight * (m_imgWidth * 3));
+        m_rgbData2 = (unsigned char*)calloc(1, m_imgHeight * (m_imgWidth * 3));
     }
 
     dc.Clear();
@@ -203,7 +218,11 @@ void PlotWaterfall::draw(wxAutoBufferedPaintDC& dc)
     {
         m_newdata = false;
         plotPixelData();
-        dc.DrawBitmap(*m_pBmp, PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET);
+                
+        wxGraphicsContext *gc = wxGraphicsContext::Create( dc );
+        wxGraphicsBitmap tmpBmp = gc->CreateBitmapFromImage(*m_image);
+        gc->DrawBitmap(tmpBmp, PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+        delete gc;
         m_dT = DT;
     }
     else 
@@ -299,7 +318,6 @@ void PlotWaterfall::drawGraticule(wxAutoBufferedPaintDC& dc)
     dc.SetPen(wxPen(RED_COLOR, 2));
     x = m_rxFreq*freq_hz_to_px;
     x += PLOT_BORDER + XLEFT_OFFSET;
-    //printf("m_rxFreq %f x %d\n", m_rxFreq, x);
     dc.DrawLine(x, 0, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
     
 }
@@ -313,7 +331,7 @@ void PlotWaterfall::plotPixelData()
     float       intensity_per_dB;
     float       px_per_sec;
     int         index;
-    float       dy;
+    int       dy;
     int         dy_blocks;
     int         b;
     int         px;
@@ -354,59 +372,19 @@ void PlotWaterfall::plotPixelData()
 
     m_max_mag = BETA*m_max_mag + (1 - BETA)*max_mag;
     m_min_mag = max_mag - 20.0;
-    //printf("max_mag: %f m_max_mag: %f\n", max_mag, m_max_mag);
-    //intensity_per_dB  = (float)256 /(MAX_MAG_DB - MIN_MAG_DB);
     intensity_per_dB  = (float)256 /(m_max_mag - m_min_mag);
     spec_index_per_px = ((float)(MAX_F_HZ)/(float)m_modem_stats_max_f_hz)*(float)MODEM_STATS_NSPEC / (float) m_rGrid.GetWidth();
 
-    /*
-    printf("h %d w %d px_per_sec %d dy %d dy_blocks %d spec_index_per_px: %f\n", 
-       m_rGrid.GetHeight(), m_rGrid.GetWidth(), px_per_sec, 
-       dy, dy_blocks, spec_index_per_px);
-    */
-
     // Shift previous bit map down one row of blocks ----------------------------
-    wxNativePixelData data(*m_pBmp);
-    wxNativePixelData::Iterator bitMapStart(data);
-    wxNativePixelData::Iterator p = bitMapStart;
-
-    for(b = dy_blocks - 1; b > 1; b--) 
-    {
-        wxNativePixelData::Iterator psrc = bitMapStart;
-        wxNativePixelData::Iterator pdest = bitMapStart;
-        pdest.OffsetY(data, dy * b);
-        psrc.OffsetY(data, dy * (b - 1));
-
-        // copy one line of blocks
-
-        for(py = 0; py < dy; py++) 
-        {
-            wxNativePixelData::Iterator pdestRowStart = pdest;
-            wxNativePixelData::Iterator psrcRowStart = psrc;
-
-            for(px = 0; px < m_rGrid.GetWidth(); px++) 
-            {
-                pdest.Red() = psrc.Red();
-                pdest.Green() = psrc.Green();
-                pdest.Blue() = psrc.Blue();
-                pdest++;
-                psrc++;
-            }
-            pdest = pdestRowStart;
-            pdest.OffsetY(data, -1);
-            psrc = psrcRowStart;
-            psrc.OffsetY(data, -1);	    
-        }
-    }
+    memcpy(m_rgbData2 + dy * (m_imgWidth * 3), m_rgbData, dy * (dy_blocks - 1) * (m_imgWidth * 3));
+    unsigned char* tmp = m_rgbData;
+    m_rgbData = m_rgbData2;
+    m_rgbData2 = tmp;
 
     // Draw last line of blocks using latest amplitude data ------------------
-    p = bitMapStart;
-    p.OffsetY(data, dy);
     for(py = dy; py >= 0; py--)
     {
-        wxNativePixelData::Iterator rowStart = p;
-
-        for(px = 0; px < m_rGrid.GetWidth(); px++)
+        for(px = 0; px < m_imgWidth; px++)
         {
             index = px * spec_index_per_px;
             assert(index < MODEM_STATS_NSPEC);
@@ -414,34 +392,33 @@ void PlotWaterfall::plotPixelData()
             intensity = intensity_per_dB * (g_avmag[index] - m_min_mag);
             if(intensity > 255) intensity = 255;
             if (intensity < 0) intensity = 0;
-            //printf("%d %f %d \n", index, g_avmag[index], intensity);
 
+            int pixelPos = (py * m_rGrid.GetWidth() * 3) + (px * 3);
             switch (m_colour) {
             case 0:
-                p.Red() = m_heatmap_lut[intensity] & 0xff;
-                p.Green() = (m_heatmap_lut[intensity] >> 8) & 0xff;
-                p.Blue() = (m_heatmap_lut[intensity] >> 16) & 0xff;
+                m_rgbData[pixelPos] = m_heatmap_lut[intensity] & 0xff;
+                m_rgbData[pixelPos + 1] = (m_heatmap_lut[intensity] >> 8) & 0xff;
+                m_rgbData[pixelPos + 2] = (m_heatmap_lut[intensity] >> 16) & 0xff;
                 break;
             case 1:
-                p.Red() = intensity;
-                p.Green() = intensity;
-                p.Blue() = intensity;       
+                m_rgbData[pixelPos] = intensity;
+                m_rgbData[pixelPos + 1] = intensity;
+                m_rgbData[pixelPos + 2] = intensity;       
                 break;
             case 2:
-                p.Red() = intensity;
-                p.Green() = intensity;
+                m_rgbData[pixelPos] = intensity;
+                m_rgbData[pixelPos + 1] = intensity;
                 if (intensity < 127)
-                    p.Blue() = intensity*2;
+                    m_rgbData[pixelPos + 2] = intensity*2;
                 else
-                    p.Blue() = 255;
+                    m_rgbData[pixelPos + 2] = 255;
                         
                 break;
             }
-            ++p;
         }
-        p = rowStart;
-        p.OffsetY(data, -1);
     }
+    
+    m_image->SetData(m_rgbData, true);
 
 }
 

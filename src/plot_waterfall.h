@@ -66,6 +66,12 @@ class PlotWaterfall : public PlotPanel
         float       m_max_mag;
         int         m_colour;
         int         m_modem_stats_max_f_hz;
+        
+        unsigned char* m_rgbData;
+        unsigned char* m_rgbData2;
+        wxImage* m_image;
+        int m_imgHeight;
+        int m_imgWidth;
 
         DECLARE_EVENT_TABLE()
 };
