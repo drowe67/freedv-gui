@@ -68,10 +68,11 @@ PlotScalar::PlotScalar(wxFrame* parent,
 
     m_samples = m_t_secs/m_sample_period_secs;
     m_mem = new float[m_samples*m_channels];
-
+    m_mem2 = new float[m_samples*m_channels];
     for(i = 0; i < m_samples*m_channels; i++)
     {
         m_mem[i] = 0.0;
+        m_mem2[i] = 0.0;
     }
 }
 
@@ -81,6 +82,7 @@ PlotScalar::PlotScalar(wxFrame* parent,
 PlotScalar::~PlotScalar()
 {
     delete[] m_mem;
+    delete[] m_mem2;
 }
 
 //----------------------------------------------------------------
@@ -93,10 +95,11 @@ void PlotScalar::add_new_sample(int channel, float sample)
 
     assert(channel < m_channels);
 
-    for(i = 0; i < m_samples-1; i++)
-    {
-        m_mem[offset+i] = m_mem[offset+i+1];
-    }
+    memcpy(&m_mem2[offset], &m_mem[offset+1], (m_samples-1)*sizeof(float));
+    float* tmp = m_mem;
+    m_mem = m_mem2;
+    m_mem2 = tmp;
+    
     m_mem[offset+m_samples-1] = sample;
 }
 
@@ -110,8 +113,11 @@ void  PlotScalar::add_new_samples(int channel, float samples[], int length)
 
     assert(channel < m_channels);
 
-    memmove(&m_mem[offset], &m_mem[offset+length], (m_samples-length)*sizeof(float));
-
+    memcpy(&m_mem2[offset], &m_mem[offset+length], (m_samples-length)*sizeof(float));
+    float* tmp = m_mem;
+    m_mem = m_mem2;
+    m_mem2 = tmp;
+    
     for(i = m_samples-length; i < m_samples; i++)
 	    m_mem[offset+i] = *samples++;
 }
@@ -126,8 +132,11 @@ void  PlotScalar::add_new_short_samples(int channel, short samples[], int length
 
     assert(channel < m_channels);
 
-    memmove(&m_mem[offset], &m_mem[offset+length], (m_samples-length)*sizeof(float));
-
+    memcpy(&m_mem2[offset], &m_mem[offset+length], (m_samples-length)*sizeof(float));
+    float* tmp = m_mem;
+    m_mem = m_mem2;
+    m_mem2 = tmp;
+    
     for(i = m_samples-length; i < m_samples; i++)
 	m_mem[offset+i] = (float)*samples++/scale_factor;
 }
@@ -230,7 +239,12 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
                 y1 = m_rGrid.GetHeight();
                 x1 += PLOT_BORDER + XLEFT_OFFSET; x2 += PLOT_BORDER + XLEFT_OFFSET;
                 y1 += PLOT_BORDER;
-                ctx->StrokeLine(x1, y1, x1, y); ctx->StrokeLine(x1, y, x2, y); ctx->StrokeLine(x2, y, x2, y1);
+                wxGraphicsPath path = ctx->CreatePath();
+                path.MoveToPoint(x1, y1);
+                path.AddLineToPoint(x1, y);
+                path.AddLineToPoint(x2, y);
+                path.AddLineToPoint(x2, y1);
+                ctx->StrokePath(path);
             }
             else {
                 if (i)
