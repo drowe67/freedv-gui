@@ -90,7 +90,6 @@ PlotScalar::~PlotScalar()
 //----------------------------------------------------------------
 void PlotScalar::add_new_sample(int channel, float sample)
 {
-    int i;
     int offset = channel*m_samples;
 
     assert(channel < m_channels);

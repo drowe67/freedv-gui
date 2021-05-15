@@ -89,14 +89,13 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
     m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
     // we want a bit map the size of m_rGrid
-    m_pBmp = new wxBitmap(std::max(1,m_rGrid.GetWidth()), std::max(1,m_rGrid.GetHeight()), 24);
     m_image = new wxImage(std::max(1,m_rGrid.GetWidth()), std::max(1,m_rGrid.GetHeight()));
     wxSize imgSize = m_image->GetSize();
     m_imgHeight = imgSize.GetHeight();
     m_imgWidth = imgSize.GetWidth();
     m_rgbData = (unsigned char*)calloc(1, m_imgHeight * (m_imgWidth * 3));
     m_rgbData2 = (unsigned char*)calloc(1, m_imgHeight * (m_imgWidth * 3));
-
+    
     m_dT = DT;
 }
 
