@@ -9,7 +9,8 @@ function print_help {
     echo "    -d                  debug mode; trace script execution"
     echo "    --noclean           start from a previous build (git pull && make), which is faster for small changes."
     echo "                        The default is a clean build from a fresh git clone (slow but safer)"
-    echo "    --build             Rebuild docker image first (run if you have modifed the docker scripts)"
+    echo "    --build             Update docker image first (run if you have modifed the docker scripts in fdv_win_fedora)"
+    echo "    --rebuild           Completely recreate docker image first (e.g. run if you have new rpm packages)"
     echo "    --repo GitRepo      (default https://github.com/drowe67/freedv-gui.git)"
     echo "    --branch GitBranch  (default master)"
     echo "    --bootstrap-wx      Builds wxWidgets from source (may take significantly longer to complete)"
@@ -19,6 +20,7 @@ function print_help {
 
 # defaults - these variables are passed to the docker container
 FDV_CLEAN=1
+FDV_BUILD=0
 FDV_REBUILD=0
 FDV_GIT_REPO=https://github.com/drowe67/freedv-gui.git
 FDV_GIT_BRANCH=master
@@ -36,7 +38,11 @@ case $key in
         FDV_CLEAN=0	
         shift
     ;;
-    --build)
+     --build)
+        FDV_BUILD=1
+        shift
+    ;;
+    --rebuild)
         FDV_REBUILD=1
         shift
     ;;
@@ -74,16 +80,21 @@ else
     print_help
 fi
 
+# create log file
 log=build_log.txt
+echo > $log
 
-if [ $FDV_REBUILD -eq 1 ]; then
-    docker-compose -f docker-compose-win.yml rm -f > $log
-    docker-compose -f docker-compose-win.yml build --no-cache >> $log
-else
-    echo > $log
+if [ $FDV_BUILD -eq 1 ]; then
+    docker-compose -f docker-compose-win.yml build >> $log
 fi
 
-FDV_CLEAN=$FDV_CLEAN FDV_BOOTSTRAP_WX=$FDV_BOOTSTRAP_WX FDV_CMAKE=$FDV_CMAKE FDV_GIT_REPO=$FDV_GIT_REPO FDV_GIT_BRANCH=$FDV_GIT_BRANCH docker-compose -f docker-compose-win.yml up --remove-orphans $FDV_BUILD >> $log
+if [ $FDV_REBUILD -eq 1 ]; then
+    docker-compose -f docker-compose-win.yml rm -f >> $log
+    docker-compose -f docker-compose-win.yml build --no-cache >> $log
+fi
+
+FDV_CLEAN=$FDV_CLEAN FDV_BOOTSTRAP_WX=$FDV_BOOTSTRAP_WX FDV_CMAKE=$FDV_CMAKE FDV_GIT_REPO=$FDV_GIT_REPO FDV_GIT_BRANCH=$FDV_GIT_BRANCH \
+docker-compose -f docker-compose-win.yml up --remove-orphans >> $log
 package_docker_path=$(cat $log | sed  -n "s/.*package: \(.*exe\) .*/\1/p")
 echo $package_docker_path
 docker cp fdv_win_fed34_c:$package_docker_path .
