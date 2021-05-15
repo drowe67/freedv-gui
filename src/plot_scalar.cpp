@@ -191,7 +191,6 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
     // a e.g. 500 pixel wide display.
     int samplesPerPixel = m_samples / plotWidth;
     float compressedSamples[m_channels*plotWidth];
-    std::deque<float> runningSamples;
     int compressedIndex = 0;
     for (int cIndex = 0; cIndex < m_channels; cIndex++)
     {
