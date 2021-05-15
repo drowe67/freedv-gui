@@ -135,7 +135,7 @@ The Tools - PTT dialog supports three different ways to control PTT on
 your radio:
 
 + VOX: sends a tone to the left channel of the Transmit/To Radio sound card
-+ Hamlib: support for many different radios via the Hamlib library and a serial port
++ Hamlib: support for many different radios via the Hamlib library and a serial port (or via TCP/IP for some devices, e.g. SDRs or FLrig/rigctld).
 + Serial Port: direct access to the serial port pins
 
 Once you have configured PTT, try the **Test** button.
