@@ -214,7 +214,8 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
                 x += PLOT_BORDER + XLEFT_OFFSET;
                 y += PLOT_BORDER;
             }
-
+            
+            wxGraphicsPath path = ctx->CreatePath();
             if (m_bar_graph) {
 
                 if (m_logy) {
@@ -239,18 +240,20 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
                 y1 = m_rGrid.GetHeight();
                 x1 += PLOT_BORDER + XLEFT_OFFSET; x2 += PLOT_BORDER + XLEFT_OFFSET;
                 y1 += PLOT_BORDER;
-                wxGraphicsPath path = ctx->CreatePath();
                 path.MoveToPoint(x1, y1);
                 path.AddLineToPoint(x1, y);
                 path.AddLineToPoint(x2, y);
                 path.AddLineToPoint(x2, y1);
-                ctx->StrokePath(path);
             }
             else {
                 if (i)
-                    ctx->StrokeLine(x, y, prev_x, prev_y);
+                {
+                    path.MoveToPoint(x, y);
+                    path.AddLineToPoint(prev_x, prev_y);
+                }
                 prev_x = x; prev_y = y;
             }
+            ctx->StrokePath(path);
         }
     }
 
