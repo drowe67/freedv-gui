@@ -33,14 +33,15 @@ class PlotScalar: public PlotPanel
 
     PlotScalar(wxFrame* parent,
                int   channels,
-	       float t_secs, 
-	       float sample_period_secs,
-	       float a_min,
-	       float a_max,
-	       float graticule_t_step,   
-	       float graticule_a_step,
-	       const char  a_fmt[],
-               int   mini
+    	       float t_secs, 
+    	       float sample_period_secs,
+    	       float a_min,
+    	       float a_max,
+    	       float graticule_t_step,   
+    	       float graticule_a_step,
+    	       const char  a_fmt[],
+               int   mini,
+               bool cachePoints = FALSE
 	       );
         ~PlotScalar();
          void add_new_sample(int channel, float sample);
@@ -64,7 +65,8 @@ class PlotScalar: public PlotPanel
     	 float   *m_mem;   
          int      m_bar_graph;                 // non zero to plot bar graphs 
          int      m_logy;                      // plot graph on log scale
-
+         bool     m_cachePoints;
+         
          void draw(wxGraphicsContext* ctx);
          void drawGraticule(wxGraphicsContext* ctx);
          void OnSize(wxSizeEvent& event);

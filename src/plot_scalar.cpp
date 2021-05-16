@@ -43,7 +43,8 @@ PlotScalar::PlotScalar(wxFrame* parent,
         		       float  graticule_t_step,   // time step of x (time) axis graticule in seconds
         		       float  graticule_a_step,   // step of amplitude axis graticule
         		       const char a_fmt[],        // printf format string for amplitude axis labels
-                       int    mini                // true for mini-plot - don't draw graticule
+                       int    mini,               // true for mini-plot - don't draw graticule
+                       bool cachePoints
 		              )
     : PlotPanel(parent)
 {
@@ -63,7 +64,8 @@ PlotScalar::PlotScalar(wxFrame* parent,
     m_mini = mini;
     m_bar_graph = 0;
     m_logy = 0;
-
+    m_cachePoints = cachePoints;
+    
     // work out number of samples we will store and allocate storage
 
     m_samples = m_t_secs/m_sample_period_secs;
@@ -252,17 +254,25 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
             else {
                 if (i)
                 {
-                    //path.MoveToPoint(x, y);
-                    //path.AddLineToPoint(prev_x, prev_y);
-                    mins[x] = y < mins[x] ? y : mins[x];
-                    maxes[x] = y > maxes[x] ? y : maxes[x];
+                    if (m_cachePoints)
+                    {
+                        mins[x] = y < mins[x] ? y : mins[x];
+                        maxes[x] = y > maxes[x] ? y : maxes[x];
+                    }
+                    else
+                    {
+                        wxGraphicsPath path = ctx->CreatePath();
+                        path.MoveToPoint(x, y);
+                        path.AddLineToPoint(prev_x, prev_y);
+                        ctx->StrokePath(path);
+                    }
                 }
                 prev_x = x; prev_y = y;
             }
         }
     }
     
-    if (!m_bar_graph)
+    if (!m_bar_graph && m_cachePoints)
     {
         ctx->BeginLayer(1);
         for (int index = 0; index < plotWidth + PLOT_BORDER + XLEFT_OFFSET; index++)
