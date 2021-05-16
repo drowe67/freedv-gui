@@ -68,11 +68,9 @@ PlotScalar::PlotScalar(wxFrame* parent,
 
     m_samples = m_t_secs/m_sample_period_secs;
     m_mem = new float[m_samples*m_channels];
-    m_mem2 = new float[m_samples*m_channels];
     for(i = 0; i < m_samples*m_channels; i++)
     {
         m_mem[i] = 0.0;
-        m_mem2[i] = 0.0;
     }
 }
 
@@ -82,7 +80,6 @@ PlotScalar::PlotScalar(wxFrame* parent,
 PlotScalar::~PlotScalar()
 {
     delete[] m_mem;
-    delete[] m_mem2;
 }
 
 //----------------------------------------------------------------
@@ -94,10 +91,10 @@ void PlotScalar::add_new_sample(int channel, float sample)
 
     assert(channel < m_channels);
 
-    memcpy(&m_mem2[offset], &m_mem[offset+1], (m_samples-1)*sizeof(float));
-    float* tmp = m_mem;
-    m_mem = m_mem2;
-    m_mem2 = tmp;
+    for(int i = 0; i < m_samples-1; i++)
+    {
+        m_mem[offset+i] = m_mem[offset+i+1];
+    }
     
     m_mem[offset+m_samples-1] = sample;
 }
@@ -112,10 +109,8 @@ void  PlotScalar::add_new_samples(int channel, float samples[], int length)
 
     assert(channel < m_channels);
 
-    memcpy(&m_mem2[offset], &m_mem[offset+length], (m_samples-length)*sizeof(float));
-    float* tmp = m_mem;
-    m_mem = m_mem2;
-    m_mem2 = tmp;
+    for(i = 0; i < m_samples-length; i++)
+        m_mem[offset+i] = m_mem[offset+i+length];
     
     for(i = m_samples-length; i < m_samples; i++)
 	    m_mem[offset+i] = *samples++;
@@ -131,13 +126,11 @@ void  PlotScalar::add_new_short_samples(int channel, short samples[], int length
 
     assert(channel < m_channels);
 
-    memcpy(&m_mem2[offset], &m_mem[offset+length], (m_samples-length)*sizeof(float));
-    float* tmp = m_mem;
-    m_mem = m_mem2;
-    m_mem2 = tmp;
+    for(i = 0; i < m_samples-length; i++)
+            m_mem[offset+i] = m_mem[offset+i+length];
     
     for(i = m_samples-length; i < m_samples; i++)
-	m_mem[offset+i] = (float)*samples++/scale_factor;
+	    m_mem[offset+i] = (float)*samples++/scale_factor;
 }
 
 //----------------------------------------------------------------
@@ -171,13 +164,17 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
 
     plotWidth = m_rGrid.GetWidth();
     plotHeight = m_rGrid.GetHeight();
-    
+
+    ctx->BeginLayer(1);
+        
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
     ctx->SetBrush(ltGraphBkgBrush);
     ctx->SetPen(wxPen(BLACK_COLOR, 0));
     ctx->DrawRectangle(plotX, plotY, plotWidth, plotHeight);
 
     drawGraticule(ctx);
+    
+    ctx->EndLayer();
     
     index_to_px = (float)plotWidth/m_samples;
     a_to_py = (float)plotHeight/(m_a_max - m_a_min);
@@ -186,57 +183,22 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
     pen.SetColour(DARK_GREEN_COLOR);
     pen.SetWidth(1);
     ctx->SetPen(pen);
-
-    // Compress the samples as we don't need to draw thousands of lines for
-    // a e.g. 500 pixel wide display.
-    int samplesPerPixel = m_samples / plotWidth;
-    float compressedSamples[m_channels*plotWidth];
-    int compressedIndex = 0;
-    for (int cIndex = 0; cIndex < m_channels; cIndex++)
-    {
-        float runningTotal = 0;
-        for (int sIndex = 0; sIndex < m_samples && compressedIndex < m_channels*plotWidth; sIndex++)
-        {
-            float a = m_mem[cIndex * m_samples + sIndex];
-            if (a < m_a_min) a = m_a_min;
-            if (a > m_a_max) a = m_a_max;
-            
-            runningTotal += a;
-            if (sIndex > 0 && sIndex % samplesPerPixel == 0)
-            {
-                compressedSamples[compressedIndex++] = runningTotal;
-                runningTotal = 0;
-            }
-        }
-    }
     
     // draw all samples
 
     prev_x = prev_y = 0; // stop warning
 
     // plot each channel 
-
+    unsigned int mins[plotWidth + PLOT_BORDER + XLEFT_OFFSET];
+    unsigned int maxes[plotWidth + PLOT_BORDER + XLEFT_OFFSET];
+    memset(&mins, 0xFF, (plotWidth + PLOT_BORDER + XLEFT_OFFSET) * sizeof(int));
+    memset(&maxes, 0x00, (plotWidth + PLOT_BORDER + XLEFT_OFFSET) * sizeof(int));
+    
     int offset, x, y;
-    
-    int maxOffset = m_channels * m_samples;
-    int maxSample = m_samples;
-    if (!m_bar_graph)
-    {
-        maxOffset = m_channels*plotWidth;
-        maxSample = plotWidth;
-    }
-    
-    for(offset=0; offset<m_channels*plotWidth; offset+=plotWidth) {
+    for(offset=0; offset<m_channels*m_samples; offset+=m_samples) {
 
-        for(i = 0; i < plotWidth; i++) {
-            if (m_bar_graph)
-            {
-                a = m_mem[offset + i];
-            }
-            else
-            {
-                a = compressedSamples[offset+i];
-            }
+        for(i = 0; i < m_samples; i++) {
+            a = m_mem[offset + i];
             if (a < m_a_min) a = m_a_min;
             if (a > m_a_max) a = m_a_max;
 
@@ -246,7 +208,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
 
             // regular point-point line graph
 
-            x = i;
+            x = index_to_px * i;
 
             // put inside plot window
 
@@ -255,7 +217,6 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
                 y += PLOT_BORDER;
             }
             
-            wxGraphicsPath path = ctx->CreatePath();
             if (m_bar_graph) {
 
                 if (m_logy) {
@@ -281,26 +242,36 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
                 x1 += PLOT_BORDER + XLEFT_OFFSET; x2 += PLOT_BORDER + XLEFT_OFFSET;
                 y1 += PLOT_BORDER;
 
+                wxGraphicsPath path = ctx->CreatePath();
                 path.MoveToPoint(x1, y1);
                 path.AddLineToPoint(x1, y);
                 path.AddLineToPoint(x2, y);
                 path.AddLineToPoint(x2, y1);
+                ctx->StrokePath(path);
             }
             else {
                 if (i)
                 {
-                    path.MoveToPoint(x, y);
-                    
-                    int destY = plotHeight + m_a_min*a_to_py;
-                    if (!m_mini) {
-                        destY += PLOT_BORDER;
-                    }
-                    path.AddLineToPoint(x, destY);
+                    //path.MoveToPoint(x, y);
+                    //path.AddLineToPoint(prev_x, prev_y);
+                    mins[x] = y < mins[x] ? y : mins[x];
+                    maxes[x] = y > maxes[x] ? y : maxes[x];
                 }
                 prev_x = x; prev_y = y;
             }
-            ctx->StrokePath(path);
         }
+    }
+    
+    if (!m_bar_graph)
+    {
+        ctx->BeginLayer(1);
+        for (int index = 0; index < plotWidth + PLOT_BORDER + XLEFT_OFFSET; index++)
+        {
+            // Skip if no lines are to be drawn here.
+            if (mins[index] == 0xFFFFFFFF && maxes[index] == 0x00) continue;            
+            ctx->StrokeLine(index, mins[index], index, maxes[index]);
+        }
+        ctx->EndLayer();
     }
 }
 

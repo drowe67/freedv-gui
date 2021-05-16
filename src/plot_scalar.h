@@ -62,7 +62,6 @@ class PlotScalar: public PlotPanel
          int      m_mini;
     	 int      m_samples;
     	 float   *m_mem;   
-         float   *m_mem2;           
          int      m_bar_graph;                 // non zero to plot bar graphs 
          int      m_logy;                      // plot graph on log scale
 

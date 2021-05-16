@@ -259,12 +259,10 @@ void PlotPanel::OnPaint(wxPaintEvent & evt)
     dc.Clear();
     
     wxGraphicsContext *gc = wxGraphicsContext::Create( dc );
-    gc->BeginLayer(1);
     gc->SetInterpolationQuality(wxINTERPOLATION_NONE);
     
     draw(gc);
     
-    gc->EndLayer();
     delete gc;
 }
 
