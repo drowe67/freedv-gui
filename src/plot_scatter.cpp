@@ -228,12 +228,17 @@ void PlotScatter::draw(wxGraphicsContext* ctx)
 //----------------------------------------------------------------
 void PlotScatter::add_new_samples_scatter(COMP samples[])
 {
+    int i,j;
 
-    memmove(&m_mem, &m_mem[Nsym], (scatterMemSyms - Nsym) * sizeof(float));
+    // shift memory
+
+    for(i = 0; i < scatterMemSyms - Nsym; i++)
+    {
+        m_mem[i] = m_mem[i+Nsym];
+    }
     
     // new samples
-    int i = scatterMemSyms - Nsym;
-    for(int j=0; i < scatterMemSyms; i++,j++)
+    for(j=0; i < scatterMemSyms; i++,j++)
     {
         m_mem[i] = samples[j];
     }
