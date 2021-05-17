@@ -46,7 +46,6 @@ END_EVENT_TABLE()
 PlotPanel::PlotPanel(wxFrame* parent) : wxPanel(parent)
 {
     m_zoomFactor        = 1.0;
-    m_pPix              = NULL;
     m_firstPass         = true;
     m_line_color        = 0;
     m_newdata           = false;
@@ -101,50 +100,11 @@ void PlotPanel::OnErase(wxEraseEvent& event)
 }
 
 //-------------------------------------------------------------------------
-// OnSize()
-//-------------------------------------------------------------------------
-void PlotPanel::OnSize(wxSizeEvent& event)
-{
-    m_rCtrlPrev = m_rCtrl;
-    m_rCtrl     = GetClientRect();
-    if(m_use_bitmap)
-    {
-        if(!m_oImage.IsOk())
-        {
-            int proposedWidth = m_rCtrl.GetWidth();
-            if (proposedWidth == 0)
-            {
-                // We don't have a width yet; assume 1. We will rescale
-                // to proper width next time through.
-                proposedWidth = 1;
-            }
-            int proposedHeight = m_rCtrl.GetHeight();
-            if (proposedHeight == 0)
-            {
-                // We don't have a height yet; assume 1. We will rescale
-                // to proper height next time through.
-                proposedHeight = 1;
-            }
-            m_oImage.Create(proposedWidth, proposedHeight, true);
-        }
-        else
-        {
-            m_oImage.Rescale(m_rCtrl.GetWidth(), m_rCtrl.GetHeight());
-        }
-        m_firstPass = true;
-    }
-    this->Refresh();
-}
-
-//-------------------------------------------------------------------------
 // OnMouseMove()
 //-------------------------------------------------------------------------
 void PlotPanel::OnMouseMove(wxMouseEvent& event)
 {
-//    if(m_mouseDown)
-//    {
-//        paintNow();
-//    }
+    // Default implementation is empty.
 }
 
 //-------------------------------------------------------------------------
@@ -152,6 +112,7 @@ void PlotPanel::OnMouseMove(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 void PlotPanel::OnMouseLeftDown(wxMouseEvent& event)
 {
+    // Default implementation is empty.
 }
 
 //-------------------------------------------------------------------------
@@ -159,6 +120,7 @@ void PlotPanel::OnMouseLeftDown(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 void PlotPanel::OnMouseRightDown(wxMouseEvent& event)
 {
+    // Default implementation is empty.
 }
 
 //-------------------------------------------------------------------------
@@ -166,6 +128,7 @@ void PlotPanel::OnMouseRightDown(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 void PlotPanel::OnMouseWheelMoved(wxMouseEvent& event)
 {
+    // Default implementation is empty.
 }
 
 //-------------------------------------------------------------------------

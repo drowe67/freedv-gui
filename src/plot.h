@@ -93,15 +93,12 @@ class PlotPanel : public wxPanel
         wxPen               m_penShortDash;
         wxPen               m_penDotDash;
         wxPen               m_penSolid;
-        wxRect              m_rCtrlPrev;
         wxRect              m_rCtrl;
         wxRect              m_rGrid;
         wxRect              m_rPlot;
         double              m_label_size;
         wxSize              m_Bufsz;
         bool                m_newdata;
-        wxImage             m_oImage;
-        wxNativePixelData   *m_pPix;
 
         // This function is added to ignore tabbing to the plot object.  The plot 
         // is a control with no user input, thus blind hams have no reason to tab
@@ -115,9 +112,9 @@ class PlotPanel : public wxPanel
         virtual void    OnMouseRightDown(wxMouseEvent& event);
         void            OnMouseWheelMoved(wxMouseEvent& event);
         void            OnClose(wxCloseEvent& event ){ event.Skip(); }
-        void            OnSize( wxSizeEvent& event );
+        virtual void    OnSize( wxSizeEvent& event ) = 0;
         void            OnErase(wxEraseEvent& event);
-        virtual void            OnPaint(wxPaintEvent& event);
+        virtual void    OnPaint(wxPaintEvent& event);
         //void OnUpdateUI( wxUpdateUIEvent& event ){ event.Skip(); }
 
         void            paintEvent(wxPaintEvent & evt);
