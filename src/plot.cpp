@@ -45,8 +45,6 @@ END_EVENT_TABLE()
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 PlotPanel::PlotPanel(wxFrame* parent) : wxPanel(parent)
 {
-    m_pNoteBook         = (wxAuiNotebook *) parent;
-    m_pTopFrame         = (MainFrame *)m_pNoteBook->GetParent();
     m_zoomFactor        = 1.0;
     m_pPix              = NULL;
     m_firstPass         = true;

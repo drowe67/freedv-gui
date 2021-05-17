@@ -18,7 +18,6 @@
 //  along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //==========================================================================
-//#include "main.h"
 #ifndef __FDMDV2_PLOT__
 #define __FDMDV2_PLOT__
 #include <wx/wx.h>
@@ -98,8 +97,6 @@ class PlotPanel : public wxPanel
         wxRect              m_rCtrl;
         wxRect              m_rGrid;
         wxRect              m_rPlot;
-        MainFrame           *m_pTopFrame;
-        wxAuiNotebook       *m_pNoteBook;
         double              m_label_size;
         wxSize              m_Bufsz;
         bool                m_newdata;
