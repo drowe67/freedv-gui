@@ -184,8 +184,8 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
     // Vertical gridlines
 
     for(f=STEP_F_HZ; f<MAX_F_HZ; f+=STEP_F_HZ) {
-	x = f*freq_hz_to_px;
-	x += PLOT_BORDER + XLEFT_OFFSET;
+    x = f*freq_hz_to_px;
+    x += PLOT_BORDER + XLEFT_OFFSET;
 
         ctx->SetPen(m_penShortDash);
         ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
@@ -193,7 +193,7 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
         ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
 
         sprintf(buf, "%4.0fHz", f);
-	    GetTextExtent(buf, &text_w, &text_h);
+        GetTextExtent(buf, &text_w, &text_h);
         if (!overlappedText)
             ctx->DrawText(buf, x - text_w/2, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
     }
@@ -210,12 +210,12 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
 
     ctx->SetPen(m_penDotDash);
     for(mag=m_min_mag_db; mag<=m_max_mag_db; mag+=STEP_MAG_DB) {
-    	y = -(mag - m_max_mag_db) * mag_dB_to_py;
-    	y += PLOT_BORDER;
-    	ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
-    		    (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), y);
+        y = -(mag - m_max_mag_db) * mag_dB_to_py;
+        y += PLOT_BORDER;
+        ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
+                (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), y);
         sprintf(buf, "%3.0fdB", mag);
-	    GetTextExtent(buf, &text_w, &text_h);
+        GetTextExtent(buf, &text_w, &text_h);
         if (!overlappedText)
             ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
     }
