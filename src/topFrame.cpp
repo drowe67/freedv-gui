@@ -28,6 +28,19 @@ extern int g_playFileFromRadioEventId;
 extern int g_recFileFromModulatorEventId;
 extern int g_txLevel;
 
+// Override for wxAuiNotebook to prevent tabbing to it.
+class TabFreeAuiNotebook : public wxAuiNotebook
+{
+public:
+    TabFreeAuiNotebook() : wxAuiNotebook() { }
+    TabFreeAuiNotebook(wxWindow *parent, wxWindowID id=wxID_ANY, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxAUI_NB_DEFAULT_STYLE)
+        : wxAuiNotebook(parent, id, pos, size, style) { }
+    
+    bool AcceptsFocus() const { return false; }
+    bool AcceptsFocusFromKeyboard() const { return false; }
+    bool AcceptsFocusRecursively() const { return false; }
+};
+
 //=========================================================================
 // Code that lays out the main application window
 //=========================================================================
@@ -213,10 +226,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //=====================================================
     // Tabbed Notebook control containing display graphs
     //=====================================================
-    //m_auiNbookCtrl = new wxAuiNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxAUI_NB_BOTTOM|wxAUI_NB_DEFAULT_STYLE);
-    //long style = wxAUI_NB_TAB_SPLIT | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS | wxAUI_NB_CLOSE_ON_ACTIVE_TAB | wxAUI_NB_MIDDLE_CLICK_CLOSE;
     long nb_style = wxAUI_NB_BOTTOM | wxAUI_NB_TAB_SPLIT | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS;
-    m_auiNbookCtrl = new wxAuiNotebook(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, nb_style);
+    m_auiNbookCtrl = new TabFreeAuiNotebook(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, nb_style);
     // This line sets the fontsize for the tabs on the notebook control
     m_auiNbookCtrl->SetFont(wxFont(8, 70, 90, 90, false, wxEmptyString));
 
