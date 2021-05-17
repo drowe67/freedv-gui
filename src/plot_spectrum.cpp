@@ -23,7 +23,6 @@
 
 #include "main.h"
 
-extern float g_avmag[];                 // average mag data passed to draw() 
 void clickTune(float frequency); // callback to pass new click freq
 
 BEGIN_EVENT_TABLE(PlotSpectrum, PlotPanel)
