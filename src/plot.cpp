@@ -48,7 +48,6 @@ PlotPanel::PlotPanel(wxFrame* parent) : wxPanel(parent)
     m_pNoteBook         = (wxAuiNotebook *) parent;
     m_pTopFrame         = (MainFrame *)m_pNoteBook->GetParent();
     m_zoomFactor        = 1.0;
-    m_pBmp              = NULL;
     m_pPix              = NULL;
     m_firstPass         = true;
     m_line_color        = 0;
@@ -69,10 +68,6 @@ PlotPanel::PlotPanel(wxFrame* parent) : wxPanel(parent)
 //-------------------------------------------------------------------------
 PlotPanel::~PlotPanel()
 {
-    if(m_pBmp != NULL)
-    {
-        delete m_pBmp;
-    }
 }
 
 //-------------------------------------------------------------------------
@@ -138,7 +133,6 @@ void PlotPanel::OnSize(wxSizeEvent& event)
         {
             m_oImage.Rescale(m_rCtrl.GetWidth(), m_rCtrl.GetHeight());
         }
-        m_pBmp = new wxBitmap(m_oImage, wxBITMAP_SCREEN_DEPTH);
         m_firstPass = true;
     }
     this->Refresh();

@@ -104,7 +104,6 @@ class PlotPanel : public wxPanel
         wxSize              m_Bufsz;
         bool                m_newdata;
         wxImage             m_oImage;
-        wxBitmap            *m_pBmp;
         wxNativePixelData   *m_pPix;
 
         // This function is added to ignore tabbing to the plot object.  The plot 

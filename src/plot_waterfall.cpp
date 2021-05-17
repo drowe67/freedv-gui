@@ -62,7 +62,6 @@ PlotWaterfall::PlotWaterfall(wxFrame* parent, bool graticule, int colour): PlotP
 
     SetLabelSize(10.0);
 
-    m_pBmp = NULL;
     m_max_mag = MAX_MAG_DB;
     m_min_mag = MIN_MAG_DB;
     m_rgbData = NULL;
