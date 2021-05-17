@@ -36,16 +36,15 @@ END_EVENT_TABLE()
 //----------------------------------------------------------------
 PlotScalar::PlotScalar(wxFrame* parent, 
                        int    channels,           // number on channels to plot
-        		       float  t_secs,             // time covered by entire x axis in seconds
-        		       float  sample_period_secs, // time between each sample in seconds
-        		       float  a_min,              // min ampltude of samples being plotted
-        		       float  a_max,              // max ampltude of samples being plotted
-        		       float  graticule_t_step,   // time step of x (time) axis graticule in seconds
-        		       float  graticule_a_step,   // step of amplitude axis graticule
-        		       const char a_fmt[],        // printf format string for amplitude axis labels
-                       int    mini,               // true for mini-plot - don't draw graticule
-                       bool cachePoints
-		              )
+                       float  t_secs,             // time covered by entire x axis in seconds
+                       float  sample_period_secs, // time between each sample in seconds
+                       float  a_min,              // min ampltude of samples being plotted
+                       float  a_max,              // max ampltude of samples being plotted
+                       float  graticule_t_step,   // time step of x (time) axis graticule in seconds
+                       float  graticule_a_step,   // step of amplitude axis graticule
+                       const char a_fmt[],        // printf format string for amplitude axis labels
+                       int    mini                // true for mini-plot - don't draw graticule
+                       )
     : PlotPanel(parent)
 {
     int i;
@@ -64,7 +63,6 @@ PlotScalar::PlotScalar(wxFrame* parent,
     m_mini = mini;
     m_bar_graph = 0;
     m_logy = 0;
-    m_cachePoints = cachePoints;
     
     // work out number of samples we will store and allocate storage
 
@@ -115,7 +113,7 @@ void  PlotScalar::add_new_samples(int channel, float samples[], int length)
         m_mem[offset+i] = m_mem[offset+i+length];
     
     for(i = m_samples-length; i < m_samples; i++)
-	    m_mem[offset+i] = *samples++;
+        m_mem[offset+i] = *samples++;
 }
 
 //----------------------------------------------------------------
@@ -132,7 +130,7 @@ void  PlotScalar::add_new_short_samples(int channel, short samples[], int length
             m_mem[offset+i] = m_mem[offset+i+length];
     
     for(i = m_samples-length; i < m_samples; i++)
-	    m_mem[offset+i] = (float)*samples++/scale_factor;
+        m_mem[offset+i] = (float)*samples++/scale_factor;
 }
 
 //----------------------------------------------------------------
@@ -153,12 +151,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
 
     // black background
     int plotX = 0, plotY = 0, plotWidth = 0, plotHeight = 0;
-    if (m_mini)
-    {
-        plotX = 0;
-        plotY = 0;
-    }
-    else
+    if (!m_mini)
     {
         plotX = PLOT_BORDER + XLEFT_OFFSET;
         plotY = PLOT_BORDER;
@@ -166,17 +159,11 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
 
     plotWidth = m_rGrid.GetWidth();
     plotHeight = m_rGrid.GetHeight();
-
-    ctx->BeginLayer(1);
         
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
     ctx->SetBrush(ltGraphBkgBrush);
     ctx->SetPen(wxPen(BLACK_COLOR, 0));
     ctx->DrawRectangle(plotX, plotY, plotWidth, plotHeight);
-
-    drawGraticule(ctx);
-    
-    ctx->EndLayer();
     
     index_to_px = (float)plotWidth/m_samples;
     a_to_py = (float)plotHeight/(m_a_max - m_a_min);
@@ -190,12 +177,7 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
 
     prev_x = prev_y = 0; // stop warning
 
-    // plot each channel 
-    unsigned int mins[plotWidth + PLOT_BORDER + XLEFT_OFFSET];
-    unsigned int maxes[plotWidth + PLOT_BORDER + XLEFT_OFFSET];
-    memset(&mins, 0xFF, (plotWidth + PLOT_BORDER + XLEFT_OFFSET) * sizeof(int));
-    memset(&maxes, 0x00, (plotWidth + PLOT_BORDER + XLEFT_OFFSET) * sizeof(int));
-    
+    // plot each channel     
     int offset, x, y;
     for(offset=0; offset<m_channels*m_samples; offset+=m_samples) {
 
@@ -254,35 +236,17 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
             else {
                 if (i)
                 {
-                    if (m_cachePoints)
-                    {
-                        mins[x] = y < mins[x] ? y : mins[x];
-                        maxes[x] = y > maxes[x] ? y : maxes[x];
-                    }
-                    else
-                    {
-                        wxGraphicsPath path = ctx->CreatePath();
-                        path.MoveToPoint(x, y);
-                        path.AddLineToPoint(prev_x, prev_y);
-                        ctx->StrokePath(path);
-                    }
+                    wxGraphicsPath path = ctx->CreatePath();
+                    path.MoveToPoint(x, y);
+                    path.AddLineToPoint(prev_x, prev_y);
+                    ctx->StrokePath(path);
                 }
                 prev_x = x; prev_y = y;
             }
         }
     }
     
-    if (!m_bar_graph && m_cachePoints)
-    {
-        ctx->BeginLayer(1);
-        for (int index = 0; index < plotWidth + PLOT_BORDER + XLEFT_OFFSET; index++)
-        {
-            // Skip if no lines are to be drawn here.
-            if (mins[index] == 0xFFFFFFFF && maxes[index] == 0x00) continue;            
-            ctx->StrokeLine(index, mins[index], index, maxes[index]);
-        }
-        ctx->EndLayer();
-    }
+    drawGraticule(ctx);
 }
 
 //-------------------------------------------------------------------------
@@ -320,8 +284,8 @@ void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
 
     ctx->SetPen(m_penShortDash);
     for(t=0; t<=m_t_secs; t+=m_graticule_t_step) {
-	x = t*sec_to_px;
-	if (m_mini) {
+    x = t*sec_to_px;
+    if (m_mini) {
             ctx->StrokeLine(x, plotHeight, x, 0);
         }
         else {
@@ -343,10 +307,10 @@ void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
             float norm = (log10(a) - log10(m_a_min))/(log10(m_a_max) - log10(m_a_min));
             y = plotHeight*(1.0 - norm);
         }
-	else {
+    else {
             y = plotHeight - a*a_to_py + m_a_min*a_to_py;
         }
-	if (m_mini) {
+    if (m_mini) {
             ctx->StrokeLine(0, y, plotWidth, y);
         }
         else {

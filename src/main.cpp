@@ -352,7 +352,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     if(wxGetApp().m_show_demod_in)
     {
         // Add Demod Input window
-        m_panelDemodIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0, true);
+        m_panelDemodIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
         m_auiNbookCtrl->AddPage(m_panelDemodIn, _("Frm Radio"), true, wxNullBitmap);
         g_plotDemodInFifo = codec2_fifo_create(2*WAVEFORM_PLOT_BUF);
     }
@@ -360,7 +360,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     if(wxGetApp().m_show_speech_in)
     {
         // Add Speech Input window
-        m_panelSpeechIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0, true);
+        m_panelSpeechIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
         m_auiNbookCtrl->AddPage(m_panelSpeechIn, _("Frm Mic"), true, wxNullBitmap);
         g_plotSpeechInFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
     }
@@ -368,7 +368,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     if(wxGetApp().m_show_speech_out)
     {
         // Add Speech Output window
-        m_panelSpeechOut = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0, true);
+        m_panelSpeechOut = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
         m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("To Spkr/Hdphns"), true, wxNullBitmap);
         g_plotSpeechOutFifo = codec2_fifo_create(2*WAVEFORM_PLOT_BUF);
     }
