@@ -64,9 +64,7 @@ PlotWaterfall::PlotWaterfall(wxFrame* parent, bool graticule, int colour): PlotP
 
     m_max_mag = MAX_MAG_DB;
     m_min_mag = MIN_MAG_DB;
-    m_rgbData = NULL;
-    m_rgbData2 = NULL;
-    m_image = NULL;
+    m_fullBmp = NULL;
 }
 
 // When the window size gets set we can work outthe size of the window
@@ -75,10 +73,6 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
 {
     // resize bit map
 
-    delete m_image;
-    free(m_rgbData);
-    free(m_rgbData2);
-    
     m_rCtrl  = GetClientRect();
 
     // m_rGrid is coords of inner window we actually plot to.  We deflate it a bit
@@ -88,12 +82,9 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
     m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
     // we want a bit map the size of m_rGrid
-    m_image = new wxImage(std::max(1,m_rGrid.GetWidth()), std::max(1,m_rGrid.GetHeight()));
-    wxSize imgSize = m_image->GetSize();
-    m_imgHeight = imgSize.GetHeight();
-    m_imgWidth = imgSize.GetWidth();
-    m_rgbData = (unsigned char*)calloc(1, m_imgHeight * (m_imgWidth * 3));
-    m_rgbData2 = (unsigned char*)calloc(1, m_imgHeight * (m_imgWidth * 3));
+    m_imgHeight = m_rGrid.GetHeight();
+    m_imgWidth = m_rGrid.GetWidth();    
+    m_fullBmp = new wxBitmap(std::max(1,m_imgWidth), std::max(1,m_imgHeight));
     
     m_dT = DT;
 }
@@ -179,15 +170,12 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
     m_rGrid = m_rCtrl;
     m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
-    if (m_image == NULL) 
+    if (m_fullBmp == NULL) 
     {
         // we want a bit map the size of m_rGrid
-        m_image = new wxImage(std::max(1,m_rGrid.GetWidth()), std::max(1,m_rGrid.GetHeight()));
-        wxSize imgSize = m_image->GetSize();
-        m_imgHeight = imgSize.GetHeight();
-        m_imgWidth = imgSize.GetWidth();
-        m_rgbData = (unsigned char*)calloc(1, m_imgHeight * (m_imgWidth * 3));
-        m_rgbData2 = (unsigned char*)calloc(1, m_imgHeight * (m_imgWidth * 3));
+        m_imgHeight = m_rGrid.GetHeight();
+        m_imgWidth = m_rGrid.GetWidth();
+        m_fullBmp = new wxBitmap(std::max(1,m_imgWidth), std::max(1,m_imgHeight));
     }
     
     if(m_newdata)
@@ -195,7 +183,7 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
         m_newdata = false;
         plotPixelData();
                 
-        wxGraphicsBitmap tmpBmp = gc->CreateBitmapFromImage(*m_image);
+        wxGraphicsBitmap tmpBmp = gc->CreateBitmap(*m_fullBmp);
         gc->DrawBitmap(tmpBmp, PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
         m_dT = DT;
     }
@@ -210,7 +198,7 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
         wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
         gc->SetBrush(ltGraphBkgBrush);
         gc->SetPen(wxPen(BLACK_COLOR, 0));
-        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_rGrid.GetWidth(), m_rGrid.GetHeight());
+        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
     }
     drawGraticule(gc);
 }
@@ -234,8 +222,8 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
     ctx->SetFont(tmpFont);
     
-    freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
-    time_s_to_py = (float)m_rGrid.GetHeight()/WATERFALL_SECS_Y;
+    freq_hz_to_px = (float)m_imgWidth/(MAX_F_HZ-MIN_F_HZ);
+    time_s_to_py = (float)m_imgHeight/WATERFALL_SECS_Y;
 
     // upper LH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER)
     // lower RH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET + m_rGrid.GetWidth(), 
@@ -257,7 +245,7 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
         x += PLOT_BORDER + XLEFT_OFFSET;
 
         if (m_graticule)
-            ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
+            ctx->StrokeLine(x, m_imgHeight + PLOT_BORDER, x, PLOT_BORDER);
         else
             ctx->StrokeLine(x, PLOT_BORDER, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
             
@@ -305,7 +293,7 @@ void PlotWaterfall::plotPixelData()
     float       intensity_per_dB;
     float       px_per_sec;
     int         index;
-    int       dy;
+    int         dy;
     int         dy_blocks;
     int         px;
     int         py;
@@ -323,11 +311,11 @@ void PlotWaterfall::plotPixelData()
     */
 
     // determine dy, the height of one "block"
-    px_per_sec = (float)m_rGrid.GetHeight() / WATERFALL_SECS_Y;
+    px_per_sec = (float)m_imgHeight / WATERFALL_SECS_Y;
     dy = m_dT * px_per_sec;
 
     // number of dy high blocks in spectrogram
-    dy_blocks = m_rGrid.GetHeight()/ dy;
+    dy_blocks = m_imgHeight / dy;
 
     // update min and max amplitude estimates
     float max_mag = MIN_MAG_DB;
@@ -346,15 +334,10 @@ void PlotWaterfall::plotPixelData()
     m_max_mag = BETA*m_max_mag + (1 - BETA)*max_mag;
     m_min_mag = max_mag - 20.0;
     intensity_per_dB  = (float)256 /(m_max_mag - m_min_mag);
-    spec_index_per_px = ((float)(MAX_F_HZ)/(float)m_modem_stats_max_f_hz)*(float)MODEM_STATS_NSPEC / (float) m_rGrid.GetWidth();
-
-    // Shift previous bit map down one row of blocks ----------------------------
-    memcpy(m_rgbData2 + dy * (m_imgWidth * 3), m_rgbData, dy * (dy_blocks - 1) * (m_imgWidth * 3));
-    unsigned char* tmp = m_rgbData;
-    m_rgbData = m_rgbData2;
-    m_rgbData2 = tmp;
+    spec_index_per_px = ((float)(MAX_F_HZ)/(float)m_modem_stats_max_f_hz)*(float)MODEM_STATS_NSPEC / (float)m_imgWidth;
 
     // Draw last line of blocks using latest amplitude data ------------------
+    unsigned char dyImageData[3 * dy * m_imgWidth];
     for(py = dy; py >= 0; py--)
     {
         for(px = 0; px < m_imgWidth; px++)
@@ -366,33 +349,43 @@ void PlotWaterfall::plotPixelData()
             if(intensity > 255) intensity = 255;
             if (intensity < 0) intensity = 0;
 
-            int pixelPos = (py * m_rGrid.GetWidth() * 3) + (px * 3);
+            int pixelPos = (py * m_imgWidth * 3) + (px * 3);
             switch (m_colour) {
             case 0:
-                m_rgbData[pixelPos] = m_heatmap_lut[intensity] & 0xff;
-                m_rgbData[pixelPos + 1] = (m_heatmap_lut[intensity] >> 8) & 0xff;
-                m_rgbData[pixelPos + 2] = (m_heatmap_lut[intensity] >> 16) & 0xff;
+                dyImageData[pixelPos] = m_heatmap_lut[intensity] & 0xff;
+                dyImageData[pixelPos + 1] = (m_heatmap_lut[intensity] >> 8) & 0xff;
+                dyImageData[pixelPos + 2] = (m_heatmap_lut[intensity] >> 16) & 0xff;
                 break;
             case 1:
-                m_rgbData[pixelPos] = intensity;
-                m_rgbData[pixelPos + 1] = intensity;
-                m_rgbData[pixelPos + 2] = intensity;       
+                dyImageData[pixelPos] = intensity;
+                dyImageData[pixelPos + 1] = intensity;
+                dyImageData[pixelPos + 2] = intensity;       
                 break;
             case 2:
-                m_rgbData[pixelPos] = intensity;
-                m_rgbData[pixelPos + 1] = intensity;
+                dyImageData[pixelPos] = intensity;
+                dyImageData[pixelPos + 1] = intensity;
                 if (intensity < 127)
-                    m_rgbData[pixelPos + 2] = intensity*2;
+                    dyImageData[pixelPos + 2] = intensity*2;
                 else
-                    m_rgbData[pixelPos + 2] = 255;
+                    dyImageData[pixelPos + 2] = 255;
                         
                 break;
             }
         }
     }
     
-    m_image->SetData(m_rgbData, true);
-
+    wxImage* tmpImage = new wxImage(m_imgWidth, dy, (unsigned char*)&dyImageData, true);
+    wxBitmap* tmpBmp = new wxBitmap(*tmpImage);
+    {
+        wxMemoryDC fullBmpSourceDC(*m_fullBmp);
+        wxMemoryDC fullBmpDestDC(*m_fullBmp);
+        wxMemoryDC tmpBmpSourceDC(*tmpBmp);
+        
+        fullBmpDestDC.Blit(0, dy, m_imgWidth, m_imgHeight - dy, &fullBmpSourceDC, 0, 0);
+        fullBmpDestDC.Blit(0, 0, m_imgWidth, dy, &tmpBmpSourceDC, 0, 0);
+    }
+    delete tmpBmp;
+    delete tmpImage;
 }
 
 //-------------------------------------------------------------------------
@@ -410,9 +403,9 @@ void PlotWaterfall::OnMouseLeftDoubleClick(wxMouseEvent& event)
     pt.y -= PLOT_BORDER;
 
     // valid click if inside of plot
-    if ((pt.x >= 0) && (pt.x <= m_rGrid.GetWidth()) && (pt.y >=0)) 
+    if ((pt.x >= 0) && (pt.x <= m_imgWidth) && (pt.y >=0)) 
     {
-        float freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
+        float freq_hz_to_px = (float)m_imgWidth/(MAX_F_HZ-MIN_F_HZ);
         float clickFreq = (float)pt.x/freq_hz_to_px;
 
         // communicate back to other threads
