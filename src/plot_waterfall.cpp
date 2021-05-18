@@ -337,7 +337,7 @@ void PlotWaterfall::plotPixelData()
     spec_index_per_px = ((float)(MAX_F_HZ)/(float)m_modem_stats_max_f_hz)*(float)MODEM_STATS_NSPEC / (float)m_imgWidth;
 
     // Draw last line of blocks using latest amplitude data ------------------
-    unsigned char dyImageData[3 * dy * m_imgWidth];
+    unsigned char dyImageData[3 * (dy + 1) * m_imgWidth];
     for(py = dy; py >= 0; py--)
     {
         for(px = 0; px < m_imgWidth; px++)
@@ -374,15 +374,15 @@ void PlotWaterfall::plotPixelData()
         }
     }
     
-    wxImage* tmpImage = new wxImage(m_imgWidth, dy, (unsigned char*)&dyImageData, true);
+    wxImage* tmpImage = new wxImage(m_imgWidth, dy + 1, (unsigned char*)&dyImageData, true);
     wxBitmap* tmpBmp = new wxBitmap(*tmpImage);
     {
         wxMemoryDC fullBmpSourceDC(*m_fullBmp);
         wxMemoryDC fullBmpDestDC(*m_fullBmp);
         wxMemoryDC tmpBmpSourceDC(*tmpBmp);
         
-        fullBmpDestDC.Blit(0, dy, m_imgWidth, m_imgHeight - dy, &fullBmpSourceDC, 0, 0);
-        fullBmpDestDC.Blit(0, 0, m_imgWidth, dy, &tmpBmpSourceDC, 0, 0);
+        fullBmpDestDC.Blit(0, dy, m_imgWidth, m_imgHeight - dy - 1, &fullBmpSourceDC, 0, 0);
+        fullBmpDestDC.Blit(0, 0, m_imgWidth, dy + 1, &tmpBmpSourceDC, 0, 0);
     }
     delete tmpBmp;
     delete tmpImage;
