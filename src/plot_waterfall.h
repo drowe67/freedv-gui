@@ -37,7 +37,7 @@
 class PlotWaterfall : public PlotPanel
 {
     public:
-    PlotWaterfall(wxFrame* parent, bool graticule, int colour);
+        PlotWaterfall(wxFrame* parent, bool graticule, int colour);
         ~PlotWaterfall();
         bool checkDT(void);
         void setGreyscale(bool greyscale) { m_greyscale = greyscale; }
@@ -50,11 +50,10 @@ class PlotWaterfall : public PlotPanel
 
         unsigned    heatmap(float val, float min, float max);
 
-        void        OnPaint(wxPaintEvent & evt);
         void        OnSize(wxSizeEvent& event);
         void        OnShow(wxShowEvent& event);
-        void        drawGraticule(wxAutoBufferedPaintDC&  dc);
-        void        draw(wxAutoBufferedPaintDC& dc);
+        void        drawGraticule(wxGraphicsContext* ctx);
+        void        draw(wxGraphicsContext* gc);
         void        plotPixelData();
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
 
@@ -66,6 +65,10 @@ class PlotWaterfall : public PlotPanel
         float       m_max_mag;
         int         m_colour;
         int         m_modem_stats_max_f_hz;
+        
+        wxBitmap* m_fullBmp;
+        int m_imgHeight;
+        int m_imgWidth;
 
         DECLARE_EVENT_TABLE()
 };

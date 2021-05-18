@@ -33,15 +33,15 @@ class PlotScalar: public PlotPanel
 
     PlotScalar(wxFrame* parent,
                int   channels,
-	       float t_secs, 
-	       float sample_period_secs,
-	       float a_min,
-	       float a_max,
-	       float graticule_t_step,   
-	       float graticule_a_step,
-	       const char  a_fmt[],
+               float t_secs, 
+               float sample_period_secs,
+               float a_min,
+               float a_max,
+               float graticule_t_step,   
+               float graticule_a_step,
+               const char  a_fmt[],
                int   mini
-	       );
+               );
         ~PlotScalar();
          void add_new_sample(int channel, float sample);
          void add_new_samples(int channel, float samples[], int length);
@@ -52,22 +52,21 @@ class PlotScalar: public PlotPanel
     protected:
 
          int      m_channels;
-	 float    m_t_secs;
-	 float    m_sample_period_secs;
-	 float    m_a_min;
-	 float    m_a_max;
-	 float    m_graticule_t_step;   
-	 float    m_graticule_a_step;
-	 char     m_a_fmt[15];
+         float    m_t_secs;
+         float    m_sample_period_secs;
+         float    m_a_min;
+         float    m_a_max;
+         float    m_graticule_t_step;   
+         float    m_graticule_a_step;
+         char     m_a_fmt[15];
          int      m_mini;
-	 int      m_samples;
-	 float   *m_mem;              
+         int      m_samples;
+         float   *m_mem;   
          int      m_bar_graph;                 // non zero to plot bar graphs 
          int      m_logy;                      // plot graph on log scale
-
-         void draw(wxAutoBufferedPaintDC&  dc);
-         void drawGraticule(wxAutoBufferedPaintDC&  dc);
-         void OnPaint(wxPaintEvent& event);
+         
+         void draw(wxGraphicsContext* ctx);
+         void drawGraticule(wxGraphicsContext* ctx);
          void OnSize(wxSizeEvent& event);
          void OnShow(wxShowEvent& event);
 

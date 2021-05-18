@@ -23,7 +23,6 @@
 
 #include "main.h"
 
-extern float g_avmag[];                 // average mag data passed to draw() 
 void clickTune(float frequency); // callback to pass new click freq
 
 BEGIN_EVENT_TABLE(PlotSpectrum, PlotPanel)
@@ -78,15 +77,6 @@ void PlotSpectrum::OnSize(wxSizeEvent& event) {
 }
 
 //----------------------------------------------------------------
-// OnPaint()
-//----------------------------------------------------------------
-void PlotSpectrum::OnPaint(wxPaintEvent& event)
-{
-    wxAutoBufferedPaintDC dc(this);
-    draw(dc);
-}
-
-//----------------------------------------------------------------
 // OnShow()
 //----------------------------------------------------------------
 void PlotSpectrum::OnShow(wxShowEvent& event)
@@ -96,7 +86,7 @@ void PlotSpectrum::OnShow(wxShowEvent& event)
 //----------------------------------------------------------------
 // draw()
 //----------------------------------------------------------------
-void PlotSpectrum::draw(wxAutoBufferedPaintDC& dc)
+void PlotSpectrum::draw(wxGraphicsContext* ctx)
 {
     m_rCtrl  = GetClientRect();
 
@@ -108,15 +98,12 @@ void PlotSpectrum::draw(wxAutoBufferedPaintDC& dc)
     m_rGrid  = m_rCtrl;
     m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
-    dc.Clear();
-
     // black background
 
-    m_rPlot = wxRect(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER, m_rGrid.GetWidth(), m_rGrid.GetHeight());
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-    dc.SetBrush(ltGraphBkgBrush);
-    dc.SetPen(wxPen(BLACK_COLOR, 0));
-    dc.DrawRectangle(m_rPlot);
+    ctx->SetBrush(ltGraphBkgBrush);
+    ctx->SetPen(wxPen(BLACK_COLOR, 0));
+    ctx->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER, m_rGrid.GetWidth(), m_rGrid.GetHeight());
 
     // draw spectrum
 
@@ -128,7 +115,7 @@ void PlotSpectrum::draw(wxAutoBufferedPaintDC& dc)
     wxPen pen;
     pen.SetColour(DARK_GREEN_COLOR);
     pen.SetWidth(1);
-    dc.SetPen(pen);
+    ctx->SetPen(pen);
 
     index_to_px = (float)m_rGrid.GetWidth()/m_n_magdB;
     mag_dB_to_py = (float)m_rGrid.GetHeight()/(m_max_mag_db - m_min_mag_db);
@@ -147,20 +134,20 @@ void PlotSpectrum::draw(wxAutoBufferedPaintDC& dc)
         y += PLOT_BORDER;
 
         if (index)
-            dc.DrawLine(x, y, prev_x, prev_y);
+            ctx->StrokeLine(x, y, prev_x, prev_y);
         prev_x = x; prev_y = y;
     }
 
     // and finally draw Graticule
 
-    drawGraticule(dc);
+    drawGraticule(ctx);
 
 }
 
 //-------------------------------------------------------------------------
 // drawGraticule()
 //-------------------------------------------------------------------------
-void PlotSpectrum::drawGraticule(wxAutoBufferedPaintDC&  dc)
+void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
 {
     int      x, y, text_w, text_h;
     char     buf[15];
@@ -170,8 +157,11 @@ void PlotSpectrum::drawGraticule(wxAutoBufferedPaintDC&  dc)
     wxBrush ltGraphBkgBrush;
     ltGraphBkgBrush.SetStyle(wxBRUSHSTYLE_TRANSPARENT);
     ltGraphBkgBrush.SetColour(*wxBLACK);
-    dc.SetBrush(ltGraphBkgBrush);
-    dc.SetPen(wxPen(BLACK_COLOR, 1));
+    ctx->SetBrush(ltGraphBkgBrush);
+    ctx->SetPen(wxPen(BLACK_COLOR, 1));
+    
+    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
+    ctx->SetFont(tmpFont);
 
     freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
     mag_dB_to_py = (float)m_rGrid.GetHeight()/(m_max_mag_db - m_min_mag_db);
@@ -193,50 +183,50 @@ void PlotSpectrum::drawGraticule(wxAutoBufferedPaintDC&  dc)
     // Vertical gridlines
 
     for(f=STEP_F_HZ; f<MAX_F_HZ; f+=STEP_F_HZ) {
-	x = f*freq_hz_to_px;
-	x += PLOT_BORDER + XLEFT_OFFSET;
+    x = f*freq_hz_to_px;
+    x += PLOT_BORDER + XLEFT_OFFSET;
 
-        dc.SetPen(m_penShortDash);
-        dc.DrawLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
-        dc.SetPen(wxPen(BLACK_COLOR, 1));
-        dc.DrawLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+        ctx->SetPen(m_penShortDash);
+        ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
+        ctx->SetPen(wxPen(BLACK_COLOR, 1));
+        ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
 
         sprintf(buf, "%4.0fHz", f);
-	GetTextExtent(buf, &text_w, &text_h);
+        GetTextExtent(buf, &text_w, &text_h);
         if (!overlappedText)
-            dc.DrawText(buf, x - text_w/2, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+            ctx->DrawText(buf, x - text_w/2, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
     }
 
-    dc.SetPen(wxPen(BLACK_COLOR, 1));
+    ctx->SetPen(wxPen(BLACK_COLOR, 1));
     for(f=STEP_MINOR_F_HZ; f<MAX_F_HZ; f+=STEP_MINOR_F_HZ) 
     {
         x = f*freq_hz_to_px;
         x += PLOT_BORDER + XLEFT_OFFSET;
-        dc.DrawLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET-5);
+        ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET-5);
     }
     
     // Horizontal gridlines
 
-    dc.SetPen(m_penDotDash);
+    ctx->SetPen(m_penDotDash);
     for(mag=m_min_mag_db; mag<=m_max_mag_db; mag+=STEP_MAG_DB) {
-	y = -(mag - m_max_mag_db) * mag_dB_to_py;
-	y += PLOT_BORDER;
-	dc.DrawLine(PLOT_BORDER + XLEFT_OFFSET, y, 
-		    (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), y);
+        y = -(mag - m_max_mag_db) * mag_dB_to_py;
+        y += PLOT_BORDER;
+        ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
+                (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), y);
         sprintf(buf, "%3.0fdB", mag);
-	GetTextExtent(buf, &text_w, &text_h);
+        GetTextExtent(buf, &text_w, &text_h);
         if (!overlappedText)
-            dc.DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
+            ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
     }
 
     // red rx tuning line
     
     if (m_rxFreq != 0.0) {
-        dc.SetPen(wxPen(RED_COLOR, 2));
+        ctx->SetPen(wxPen(RED_COLOR, 2));
         x = m_rxFreq*freq_hz_to_px;
         x += PLOT_BORDER + XLEFT_OFFSET;
         //printf("m_rxFreq %f x %d\n", m_rxFreq, x);
-        dc.DrawLine(x, m_rGrid.GetHeight()+ PLOT_BORDER, x, m_rCtrl.GetHeight());
+        ctx->StrokeLine(x, m_rGrid.GetHeight()+ PLOT_BORDER, x, m_rCtrl.GetHeight());
     }
 
 }
