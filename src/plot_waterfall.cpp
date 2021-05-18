@@ -63,9 +63,9 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): Plot
 
     SetLabelSize(10.0);
 
-    m_pBmp = NULL;
     m_max_mag = MAX_MAG_DB;
     m_min_mag = MIN_MAG_DB;
+    m_fullBmp = NULL;
 }
 
 // When the window size gets set we can work outthe size of the window
@@ -74,8 +74,6 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
 {
     // resize bit map
 
-    delete m_pBmp;
-    
     m_rCtrl  = GetClientRect();
 
     // m_rGrid is coords of inner window we actually plot to.  We deflate it a bit
@@ -86,30 +84,13 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
 
     // we want a bit map the size of m_rGrid
 
-    m_pBmp = new wxBitmap(std::max(1,m_rGrid.GetWidth()), std::max(1,m_rGrid.GetHeight()), 24);
-
+    m_imgHeight = m_rGrid.GetHeight();
+    m_imgWidth = m_rGrid.GetWidth();    
+    m_fullBmp = new wxBitmap(std::max(1,m_imgWidth), std::max(1,m_imgHeight));
+    
     m_dT = DT;
     
     event.Skip();
-}
-
-//----------------------------------------------------------------
-// paintEvent()
-//
-// @class $(Name)
-// @author $(User)
-// @date $(Date)
-// @file $(CurrentFileName).$(CurrentFileExt)
-// @brief
-//
-// Called by the system of by wxWidgets when the panel needs
-// to be redrawn. You can also trigger this call by calling
-// Refresh()/Update().
-//----------------------------------------------------------------
-void PlotWaterfall::OnPaint(wxPaintEvent & evt)
-{
-    wxAutoBufferedPaintDC dc(this);
-    draw(dc);
 }
 
 //----------------------------------------------------------------
@@ -183,9 +164,8 @@ bool PlotWaterfall::checkDT(void)
 //----------------------------------------------------------------
 // draw()
 //----------------------------------------------------------------
-void PlotWaterfall::draw(wxAutoBufferedPaintDC& dc)
+void PlotWaterfall::draw(wxGraphicsContext* gc)
 {
-
     m_rCtrl  = GetClientRect();
 
     // m_rGrid is coords of inner window we actually plot to.  We deflate it a bit
@@ -194,43 +174,43 @@ void PlotWaterfall::draw(wxAutoBufferedPaintDC& dc)
     m_rGrid = m_rCtrl;
     m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
-    if (m_pBmp == NULL) 
+    if (m_fullBmp == NULL) 
     {
         // we want a bit map the size of m_rGrid
-        m_pBmp = new wxBitmap(m_rGrid.GetWidth(), m_rGrid.GetHeight(), 24);
+        m_imgHeight = m_rGrid.GetHeight();
+        m_imgWidth = m_rGrid.GetWidth();
+        m_fullBmp = new wxBitmap(std::max(1,m_imgWidth), std::max(1,m_imgHeight));
     }
-
-    dc.Clear();
-
+    
     if(m_newdata)
     {
         m_newdata = false;
         plotPixelData();
-        dc.DrawBitmap(*m_pBmp, PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET);
+                
+        wxGraphicsBitmap tmpBmp = gc->CreateBitmap(*m_fullBmp);
+        gc->DrawBitmap(tmpBmp, PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
         m_dT = DT;
     }
     else 
     {
-
         // no data to plot so just erase to black.  Blue looks nicer
         // but is same colour as low amplitude signal
 
         // Bug on Linux: When Stop is pressed this code doesn't erase
         // the lower 25% of the Waterfall Window
-
-        m_rPlot = wxRect(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_rGrid.GetWidth(), m_rGrid.GetHeight());
+        
         wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-        dc.SetBrush(ltGraphBkgBrush);
-        dc.SetPen(wxPen(BLACK_COLOR, 0));
-        dc.DrawRectangle(m_rPlot);
+        gc->SetBrush(ltGraphBkgBrush);
+        gc->SetPen(wxPen(BLACK_COLOR, 0));
+        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
     }
-    drawGraticule(dc);
+    drawGraticule(gc);
 }
 
 //-------------------------------------------------------------------------
 // drawGraticule()
 //-------------------------------------------------------------------------
-void PlotWaterfall::drawGraticule(wxAutoBufferedPaintDC& dc)
+void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
 {
     int      x, y, text_w, text_h;
     char     buf[15];
@@ -240,11 +220,14 @@ void PlotWaterfall::drawGraticule(wxAutoBufferedPaintDC& dc)
     wxBrush ltGraphBkgBrush;
     ltGraphBkgBrush.SetStyle(wxBRUSHSTYLE_TRANSPARENT);
     ltGraphBkgBrush.SetColour(*wxBLACK);
-    dc.SetBrush(ltGraphBkgBrush);
-    dc.SetPen(wxPen(BLACK_COLOR, 1));
-
-    freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
-    time_s_to_py = (float)m_rGrid.GetHeight()/WATERFALL_SECS_Y;
+    ctx->SetBrush(ltGraphBkgBrush);
+    ctx->SetPen(wxPen(BLACK_COLOR, 1));
+    
+    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
+    ctx->SetFont(tmpFont);
+    
+    freq_hz_to_px = (float)m_imgWidth/(MAX_F_HZ-MIN_F_HZ);
+    time_s_to_py = (float)m_imgHeight/WATERFALL_SECS_Y;
 
     // upper LH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER)
     // lower RH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET + m_rGrid.GetWidth(), 
@@ -266,45 +249,43 @@ void PlotWaterfall::drawGraticule(wxAutoBufferedPaintDC& dc)
         x += PLOT_BORDER + XLEFT_OFFSET;
 
         if (m_graticule)
-            dc.DrawLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
+            ctx->StrokeLine(x, m_imgHeight + PLOT_BORDER, x, PLOT_BORDER);
         else
-            dc.DrawLine(x, PLOT_BORDER, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
+            ctx->StrokeLine(x, PLOT_BORDER, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
             
         sprintf(buf, "%4.0fHz", f);
         GetTextExtent(buf, &text_w, &text_h);
         if (!overlappedText)
-            dc.DrawText(buf, x - text_w/2, (YBOTTOM_TEXT_OFFSET/2));
+            ctx->DrawText(buf, x - text_w/2, (YBOTTOM_TEXT_OFFSET/2));
     }
 
     for(f=STEP_MINOR_F_HZ; f<MAX_F_HZ; f+=STEP_MINOR_F_HZ) 
     {
         x = f*freq_hz_to_px;
         x += PLOT_BORDER + XLEFT_OFFSET;
-        dc.DrawLine(x, PLOT_BORDER + 5, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
+        ctx->StrokeLine(x, PLOT_BORDER + 5, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
     }
     
     // Horizontal gridlines
-    dc.SetPen(m_penDotDash);
+    ctx->SetPen(m_penDotDash);
     for(time=0; time<=WATERFALL_SECS_Y; time+=WATERFALL_SECS_STEP) {
        y = m_rGrid.GetHeight() - (WATERFALL_SECS_Y - time)*time_s_to_py;
        y += PLOT_BORDER + YBOTTOM_TEXT_OFFSET;
 
         if (m_graticule)
-            dc.DrawLine(PLOT_BORDER + XLEFT_OFFSET, y, 
+            ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
                         (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), y);
         sprintf(buf, "%3.0fs", time);
-	GetTextExtent(buf, &text_w, &text_h);
+	    GetTextExtent(buf, &text_w, &text_h);
         if (!overlappedText)
-            dc.DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
+            ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
    }
 
     // red rx tuning line
-    dc.SetPen(wxPen(RED_COLOR, 2));
+    ctx->SetPen(wxPen(RED_COLOR, 2));
     x = m_rxFreq*freq_hz_to_px;
     x += PLOT_BORDER + XLEFT_OFFSET;
-    //printf("m_rxFreq %f x %d\n", m_rxFreq, x);
-    dc.DrawLine(x, 0, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
-    
+    ctx->StrokeLine(x, 0, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
 }
 
 //-------------------------------------------------------------------------
@@ -316,9 +297,8 @@ void PlotWaterfall::plotPixelData()
     float       intensity_per_dB;
     float       px_per_sec;
     int         index;
-    float       dy;
+    int         dy;
     int         dy_blocks;
-    int         b;
     int         px;
     int         py;
     int         intensity;
@@ -335,11 +315,11 @@ void PlotWaterfall::plotPixelData()
     */
 
     // determine dy, the height of one "block"
-    px_per_sec = (float)m_rGrid.GetHeight() / WATERFALL_SECS_Y;
+    px_per_sec = (float)m_imgHeight / WATERFALL_SECS_Y;
     dy = m_dT * px_per_sec;
 
     // number of dy high blocks in spectrogram
-    dy_blocks = m_rGrid.GetHeight()/ dy;
+    dy_blocks = m_imgHeight / dy;
 
     // update min and max amplitude estimates
     float max_mag = MIN_MAG_DB;
@@ -357,59 +337,14 @@ void PlotWaterfall::plotPixelData()
 
     m_max_mag = BETA*m_max_mag + (1 - BETA)*max_mag;
     m_min_mag = max_mag - 20.0;
-    //printf("max_mag: %f m_max_mag: %f\n", max_mag, m_max_mag);
-    //intensity_per_dB  = (float)256 /(MAX_MAG_DB - MIN_MAG_DB);
     intensity_per_dB  = (float)256 /(m_max_mag - m_min_mag);
-    spec_index_per_px = ((float)(MAX_F_HZ)/(float)m_modem_stats_max_f_hz)*(float)MODEM_STATS_NSPEC / (float) m_rGrid.GetWidth();
-
-    /*
-    printf("h %d w %d px_per_sec %d dy %d dy_blocks %d spec_index_per_px: %f\n", 
-       m_rGrid.GetHeight(), m_rGrid.GetWidth(), px_per_sec, 
-       dy, dy_blocks, spec_index_per_px);
-    */
-
-    // Shift previous bit map down one row of blocks ----------------------------
-    wxNativePixelData data(*m_pBmp);
-    wxNativePixelData::Iterator bitMapStart(data);
-    wxNativePixelData::Iterator p = bitMapStart;
-
-    for(b = dy_blocks - 1; b > 1; b--) 
-    {
-        wxNativePixelData::Iterator psrc = bitMapStart;
-        wxNativePixelData::Iterator pdest = bitMapStart;
-        pdest.OffsetY(data, dy * b);
-        psrc.OffsetY(data, dy * (b - 1));
-
-        // copy one line of blocks
-
-        for(py = 0; py < dy; py++) 
-        {
-            wxNativePixelData::Iterator pdestRowStart = pdest;
-            wxNativePixelData::Iterator psrcRowStart = psrc;
-
-            for(px = 0; px < m_rGrid.GetWidth(); px++) 
-            {
-                pdest.Red() = psrc.Red();
-                pdest.Green() = psrc.Green();
-                pdest.Blue() = psrc.Blue();
-                pdest++;
-                psrc++;
-            }
-            pdest = pdestRowStart;
-            pdest.OffsetY(data, -1);
-            psrc = psrcRowStart;
-            psrc.OffsetY(data, -1);	    
-        }
-    }
+    spec_index_per_px = ((float)(MAX_F_HZ)/(float)m_modem_stats_max_f_hz)*(float)MODEM_STATS_NSPEC / (float)m_imgWidth;
 
     // Draw last line of blocks using latest amplitude data ------------------
-    p = bitMapStart;
-    p.OffsetY(data, dy);
+    unsigned char dyImageData[3 * (dy + 1) * m_imgWidth];
     for(py = dy; py >= 0; py--)
     {
-        wxNativePixelData::Iterator rowStart = p;
-
-        for(px = 0; px < m_rGrid.GetWidth(); px++)
+        for(px = 0; px < m_imgWidth; px++)
         {
             index = px * spec_index_per_px;
             assert(index < MODEM_STATS_NSPEC);
@@ -417,35 +352,44 @@ void PlotWaterfall::plotPixelData()
             intensity = intensity_per_dB * (g_avmag[index] - m_min_mag);
             if(intensity > 255) intensity = 255;
             if (intensity < 0) intensity = 0;
-            //printf("%d %f %d \n", index, g_avmag[index], intensity);
 
+            int pixelPos = (py * m_imgWidth * 3) + (px * 3);
             switch (m_colour) {
             case 0:
-                p.Red() = m_heatmap_lut[intensity] & 0xff;
-                p.Green() = (m_heatmap_lut[intensity] >> 8) & 0xff;
-                p.Blue() = (m_heatmap_lut[intensity] >> 16) & 0xff;
+                dyImageData[pixelPos] = m_heatmap_lut[intensity] & 0xff;
+                dyImageData[pixelPos + 1] = (m_heatmap_lut[intensity] >> 8) & 0xff;
+                dyImageData[pixelPos + 2] = (m_heatmap_lut[intensity] >> 16) & 0xff;
                 break;
             case 1:
-                p.Red() = intensity;
-                p.Green() = intensity;
-                p.Blue() = intensity;       
+                dyImageData[pixelPos] = intensity;
+                dyImageData[pixelPos + 1] = intensity;
+                dyImageData[pixelPos + 2] = intensity;       
                 break;
             case 2:
-                p.Red() = intensity;
-                p.Green() = intensity;
+                dyImageData[pixelPos] = intensity;
+                dyImageData[pixelPos + 1] = intensity;
                 if (intensity < 127)
-                    p.Blue() = intensity*2;
+                    dyImageData[pixelPos + 2] = intensity*2;
                 else
-                    p.Blue() = 255;
+                    dyImageData[pixelPos + 2] = 255;
                         
                 break;
             }
-            ++p;
         }
-        p = rowStart;
-        p.OffsetY(data, -1);
     }
-
+    
+    wxImage* tmpImage = new wxImage(m_imgWidth, dy + 1, (unsigned char*)&dyImageData, true);
+    wxBitmap* tmpBmp = new wxBitmap(*tmpImage);
+    {
+        wxMemoryDC fullBmpSourceDC(*m_fullBmp);
+        wxMemoryDC fullBmpDestDC(*m_fullBmp);
+        wxMemoryDC tmpBmpSourceDC(*tmpBmp);
+        
+        fullBmpDestDC.Blit(0, dy, m_imgWidth, m_imgHeight - dy - 1, &fullBmpSourceDC, 0, 0);
+        fullBmpDestDC.Blit(0, 0, m_imgWidth, dy + 1, &tmpBmpSourceDC, 0, 0);
+    }
+    delete tmpBmp;
+    delete tmpImage;
 }
 
 //-------------------------------------------------------------------------
@@ -463,9 +407,9 @@ void PlotWaterfall::OnMouseLeftDoubleClick(wxMouseEvent& event)
     pt.y -= PLOT_BORDER;
 
     // valid click if inside of plot
-    if ((pt.x >= 0) && (pt.x <= m_rGrid.GetWidth()) && (pt.y >=0)) 
+    if ((pt.x >= 0) && (pt.x <= m_imgWidth) && (pt.y >=0)) 
     {
-        float freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
+        float freq_hz_to_px = (float)m_imgWidth/(MAX_F_HZ-MIN_F_HZ);
         float clickFreq = (float)pt.x/freq_hz_to_px;
 
         // communicate back to other threads

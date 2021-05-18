@@ -21,6 +21,7 @@
 #include <string.h>
 #include <algorithm>
 #include "plot.h"
+#include <wx/graphics.h>
 
 BEGIN_EVENT_TABLE(PlotPanel, wxPanel)
     EVT_PAINT           (PlotPanel::OnPaint)
@@ -46,8 +47,6 @@ END_EVENT_TABLE()
 PlotPanel::PlotPanel(wxWindow* parent, const char* plotName) : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, plotName)
 {
     m_zoomFactor        = 1.0;
-    m_pBmp              = NULL;
-    m_pPix              = NULL;
     m_firstPass         = true;
     m_line_color        = 0;
     m_newdata           = false;
@@ -67,10 +66,6 @@ PlotPanel::PlotPanel(wxWindow* parent, const char* plotName) : wxPanel(parent, w
 //-------------------------------------------------------------------------
 PlotPanel::~PlotPanel()
 {
-    if(m_pBmp != NULL)
-    {
-        delete m_pBmp;
-    }
 }
 
 //-------------------------------------------------------------------------
@@ -106,51 +101,11 @@ void PlotPanel::OnErase(wxEraseEvent& event)
 }
 
 //-------------------------------------------------------------------------
-// OnSize()
-//-------------------------------------------------------------------------
-void PlotPanel::OnSize(wxSizeEvent& event)
-{
-    m_rCtrlPrev = m_rCtrl;
-    m_rCtrl     = GetClientRect();
-    if(m_use_bitmap)
-    {
-        if(!m_oImage.IsOk())
-        {
-            int proposedWidth = m_rCtrl.GetWidth();
-            if (proposedWidth == 0)
-            {
-                // We don't have a width yet; assume 1. We will rescale
-                // to proper width next time through.
-                proposedWidth = 1;
-            }
-            int proposedHeight = m_rCtrl.GetHeight();
-            if (proposedHeight == 0)
-            {
-                // We don't have a height yet; assume 1. We will rescale
-                // to proper height next time through.
-                proposedHeight = 1;
-            }
-            m_oImage.Create(proposedWidth, proposedHeight, true);
-        }
-        else
-        {
-            m_oImage.Rescale(std::max(1, m_rCtrl.GetWidth()), std::max(1, m_rCtrl.GetHeight()));
-        }
-        m_pBmp = new wxBitmap(m_oImage, wxBITMAP_SCREEN_DEPTH);
-        m_firstPass = true;
-    }
-    this->Refresh();
-}
-
-//-------------------------------------------------------------------------
 // OnMouseMove()
 //-------------------------------------------------------------------------
 void PlotPanel::OnMouseMove(wxMouseEvent& event)
 {
-//    if(m_mouseDown)
-//    {
-//        paintNow();
-//    }
+    // Default implementation is empty.
 }
 
 //-------------------------------------------------------------------------
@@ -158,6 +113,7 @@ void PlotPanel::OnMouseMove(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 void PlotPanel::OnMouseLeftDown(wxMouseEvent& event)
 {
+    // Default implementation is empty.
 }
 
 //-------------------------------------------------------------------------
@@ -165,6 +121,7 @@ void PlotPanel::OnMouseLeftDown(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 void PlotPanel::OnMouseRightDown(wxMouseEvent& event)
 {
+    // Default implementation is empty.
 }
 
 //-------------------------------------------------------------------------
@@ -172,6 +129,7 @@ void PlotPanel::OnMouseRightDown(wxMouseEvent& event)
 //-------------------------------------------------------------------------
 void PlotPanel::OnMouseWheelMoved(wxMouseEvent& event)
 {
+    // Default implementation is empty.
 }
 
 //-------------------------------------------------------------------------
@@ -203,81 +161,42 @@ double PlotPanel::GetZoomFactor(double zf)
 }
 
 //-------------------------------------------------------------------------
-// draw()
-//-------------------------------------------------------------------------
-void PlotPanel::draw(wxAutoBufferedPaintDC& pDC)
-{
-    printf("PlotPanel::draw()");
-    wxMemoryDC m_mDC;
-    m_mDC.SelectObject(*m_pBmp);
-    m_rCtrl  = GetClientRect();
-    m_rGrid  = m_rCtrl;
-
-    m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
-    m_rGrid.Offset(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER);
-
-    pDC.Clear();
-    m_rPlot = wxRect(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER, m_rGrid.GetWidth(), m_rGrid.GetHeight());
-    if(m_firstPass)
-    {
-        m_firstPass = false;
-        m_mDC.FloodFill(0, 0, VERY_LTGREY_COLOR);
-
-        // Draw a filled rectangle with aborder
-        wxBrush ltGraphBkgBrush = wxBrush(DARK_BLUE_COLOR);
-        m_mDC.SetBrush(ltGraphBkgBrush);
-        m_mDC.SetPen(wxPen(BLACK_COLOR, 0));
-        m_mDC.DrawRectangle(m_rPlot);
-    }
-    if(m_newdata)
-    {
-        m_newdata = false;
-        int t = m_rPlot.GetTop();
-        int l = m_rPlot.GetLeft();
-//        int r = m_rPlot.GetRight();
-        int h = m_rPlot.GetHeight();
-        int w = m_rPlot.GetWidth();
-        pDC.Blit(l, t, w, h, &m_mDC, l, t);
-    }
-    drawGraticule(pDC);
-    m_mDC.SetBrush(wxNullBrush);
-    m_mDC.SelectObject(wxNullBitmap);
-}
-
-//-------------------------------------------------------------------------
 // drawGraticule()
 //-------------------------------------------------------------------------
-void PlotPanel::drawGraticule(wxAutoBufferedPaintDC& pDC)
+void PlotPanel::drawGraticule(wxGraphicsContext* ctx)
 {
     int p;
     char buf[15];
     wxString s;
 
+    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
+    ctx->SetFont(tmpFont);
+    
     // Vertical gridlines
-    pDC.SetPen(m_penShortDash);
+    ctx->SetPen(m_penShortDash);
     for(p = (PLOT_BORDER + XLEFT_OFFSET + GRID_INCREMENT); p < ((m_rGrid.GetWidth() - XLEFT_OFFSET) + GRID_INCREMENT); p += GRID_INCREMENT)
     {
-        pDC.DrawLine(p, (m_rGrid.GetHeight() + PLOT_BORDER), p, PLOT_BORDER);
+        ctx->StrokeLine(p, (m_rGrid.GetHeight() + PLOT_BORDER), p, PLOT_BORDER);
     }
     // Horizontal gridlines
-    pDC.SetPen(m_penDotDash);
+    ctx->SetPen(m_penDotDash);
     for(p = (m_rGrid.GetHeight() - GRID_INCREMENT); p > PLOT_BORDER; p -= GRID_INCREMENT)
     {
-        pDC.DrawLine(PLOT_BORDER + XLEFT_OFFSET, (p + PLOT_BORDER), (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), (p + PLOT_BORDER));
+        ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, (p + PLOT_BORDER), (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), (p + PLOT_BORDER));
     }
     // Label the X-Axis
-    pDC.SetPen(wxPen(GREY_COLOR, 1));
+    ctx->SetPen(wxPen(GREY_COLOR, 1));
     for(p = GRID_INCREMENT; p < (m_rGrid.GetWidth() - YBOTTOM_OFFSET); p += GRID_INCREMENT)
     {
         sprintf(buf, "%1.1f Hz",(double)(p / 10));
-        pDC.DrawText(buf, p - PLOT_BORDER + XLEFT_OFFSET, m_rGrid.GetHeight() + YBOTTOM_OFFSET/2);
+        ctx->DrawText(buf, p - PLOT_BORDER + XLEFT_OFFSET, m_rGrid.GetHeight() + YBOTTOM_OFFSET/2);
     }
     // Label the Y-Axis
     //for(p = GRID_INCREMENT; p < (h - YBOTTOM_OFFSET); p += GRID_INCREMENT)
     for(p = (m_rGrid.GetHeight() - GRID_INCREMENT); p > PLOT_BORDER; p -= GRID_INCREMENT)
     {
         sprintf(buf, "%1.0f", (double)((m_rGrid.GetHeight() - p) * -10));
-        pDC.DrawText(buf, XLEFT_TEXT_OFFSET, p);
+        ctx->DrawText(buf, XLEFT_TEXT_OFFSET, p);
     }
 }
 
@@ -290,7 +209,16 @@ void PlotPanel::drawGraticule(wxAutoBufferedPaintDC& pDC)
 //-------------------------------------------------------------------------
 void PlotPanel::OnPaint(wxPaintEvent & evt)
 {
-    wxAutoBufferedPaintDC pdc(this);
-    draw(pdc);
+    wxAutoBufferedPaintDC dc(this);
+
+    // TBD -- move to wxGraphicsContext?
+    dc.Clear();
+    
+    wxGraphicsContext *gc = wxGraphicsContext::Create( dc );
+    gc->SetInterpolationQuality(wxINTERPOLATION_NONE);
+    
+    draw(gc);
+    
+    delete gc;
 }
 

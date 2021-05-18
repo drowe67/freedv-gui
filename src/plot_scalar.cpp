@@ -29,7 +29,6 @@ BEGIN_EVENT_TABLE(PlotScalar, PlotPanel)
     EVT_MOUSEWHEEL      (PlotScalar::OnMouseWheelMoved)
     EVT_SIZE            (PlotScalar::OnSize)
     EVT_SHOW            (PlotScalar::OnShow)
-//    EVT_ERASE_BACKGROUND(PlotScalar::OnErase)
 END_EVENT_TABLE()
 
 //----------------------------------------------------------------
@@ -37,16 +36,16 @@ END_EVENT_TABLE()
 //----------------------------------------------------------------
 PlotScalar::PlotScalar(wxWindow* parent, 
                        int    channels,           // number on channels to plot
-		       float  t_secs,             // time covered by entire x axis in seconds
-		       float  sample_period_secs, // time between each sample in seconds
-		       float  a_min,              // min ampltude of samples being plotted
-		       float  a_max,              // max ampltude of samples being plotted
-		       float  graticule_t_step,   // time step of x (time) axis graticule in seconds
-		       float  graticule_a_step,   // step of amplitude axis graticule
-		       const char a_fmt[],        // printf format string for amplitude axis labels
-                       int    mini,                // true for mini-plot - don't draw graticule
-                       const char* plotName
-		       ): PlotPanel(parent, plotName)
+                       float  t_secs,             // time covered by entire x axis in seconds
+                       float  sample_period_secs, // time between each sample in seconds
+                       float  a_min,              // min ampltude of samples being plotted
+                       float  a_max,              // max ampltude of samples being plotted
+                       float  graticule_t_step,   // time step of x (time) axis graticule in seconds
+                       float  graticule_a_step,   // step of amplitude axis graticule
+                       const char a_fmt[],        // printf format string for amplitude axis labels
+                       int    mini,               // true for mini-plot - don't draw graticule
+                       const char* plotName)
+    : PlotPanel(parent, plotName)
 {
     int i;
 
@@ -64,12 +63,11 @@ PlotScalar::PlotScalar(wxWindow* parent,
     m_mini = mini;
     m_bar_graph = 0;
     m_logy = 0;
-
+    
     // work out number of samples we will store and allocate storage
 
     m_samples = m_t_secs/m_sample_period_secs;
     m_mem = new float[m_samples*m_channels];
-
     for(i = 0; i < m_samples*m_channels; i++)
     {
         m_mem[i] = 0.0;
@@ -89,15 +87,15 @@ PlotScalar::~PlotScalar()
 //----------------------------------------------------------------
 void PlotScalar::add_new_sample(int channel, float sample)
 {
-    int i;
     int offset = channel*m_samples;
 
     assert(channel < m_channels);
 
-    for(i = 0; i < m_samples-1; i++)
+    for(int i = 0; i < m_samples-1; i++)
     {
         m_mem[offset+i] = m_mem[offset+i+1];
     }
+    
     m_mem[offset+m_samples-1] = sample;
 }
 
@@ -111,10 +109,11 @@ void  PlotScalar::add_new_samples(int channel, float samples[], int length)
 
     assert(channel < m_channels);
 
-   for(i = 0; i < m_samples-length; i++)
+    for(i = 0; i < m_samples-length; i++)
         m_mem[offset+i] = m_mem[offset+i+length];
-    for(; i < m_samples; i++)
-	m_mem[offset+i] = *samples++;
+    
+    for(i = m_samples-length; i < m_samples; i++)
+        m_mem[offset+i] = *samples++;
 }
 
 //----------------------------------------------------------------
@@ -128,15 +127,16 @@ void  PlotScalar::add_new_short_samples(int channel, short samples[], int length
     assert(channel < m_channels);
 
     for(i = 0; i < m_samples-length; i++)
-        m_mem[offset+i] = m_mem[offset+i+length];
-    for(; i < m_samples; i++)
-	m_mem[offset+i] = (float)*samples++/scale_factor;
+            m_mem[offset+i] = m_mem[offset+i+length];
+    
+    for(i = m_samples-length; i < m_samples; i++)
+        m_mem[offset+i] = (float)*samples++/scale_factor;
 }
 
 //----------------------------------------------------------------
 // draw()
 //----------------------------------------------------------------
-void PlotScalar::draw(wxAutoBufferedPaintDC&  dc)
+void PlotScalar::draw(wxGraphicsContext* ctx)
 {
     float index_to_px;
     float a_to_py;
@@ -149,47 +149,46 @@ void PlotScalar::draw(wxAutoBufferedPaintDC&  dc)
     if (!m_mini)
         m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
-    //printf("h %d w %d\n", m_rCtrl.GetWidth(), m_rCtrl.GetHeight());
-    //printf("h %d w %d\n", m_rGrid.GetWidth(), m_rGrid.GetHeight());
-
     // black background
+    int plotX = 0, plotY = 0, plotWidth = 0, plotHeight = 0;
+    if (!m_mini)
+    {
+        plotX = PLOT_BORDER + XLEFT_OFFSET;
+        plotY = PLOT_BORDER;
+    }
 
-    dc.Clear();
-    if (m_mini)
-        m_rPlot = wxRect(0, 0, m_rGrid.GetWidth(), m_rGrid.GetHeight());        
-    else
-        m_rPlot = wxRect(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER, m_rGrid.GetWidth(), m_rGrid.GetHeight());
-   
+    plotWidth = m_rGrid.GetWidth();
+    plotHeight = m_rGrid.GetHeight();
+        
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-    dc.SetBrush(ltGraphBkgBrush);
-    dc.SetPen(wxPen(BLACK_COLOR, 0));
-    dc.DrawRectangle(m_rPlot);
-
-    index_to_px = (float)m_rGrid.GetWidth()/m_samples;
-    a_to_py = (float)m_rGrid.GetHeight()/(m_a_max - m_a_min);
+    ctx->SetBrush(ltGraphBkgBrush);
+    ctx->SetPen(wxPen(BLACK_COLOR, 0));
+    ctx->DrawRectangle(plotX, plotY, plotWidth, plotHeight);
+    
+    index_to_px = (float)plotWidth/m_samples;
+    a_to_py = (float)plotHeight/(m_a_max - m_a_min);
 
     wxPen pen;
     pen.SetColour(DARK_GREEN_COLOR);
     pen.SetWidth(1);
-    dc.SetPen(pen);
-
+    ctx->SetPen(pen);
+    
     // draw all samples
 
     prev_x = prev_y = 0; // stop warning
 
-    // plot each channel 
-
+    // plot each channel     
     int offset, x, y;
     for(offset=0; offset<m_channels*m_samples; offset+=m_samples) {
 
         for(i = 0; i < m_samples; i++) {
-            a = m_mem[offset+i];
+            a = m_mem[offset + i];
             if (a < m_a_min) a = m_a_min;
             if (a > m_a_max) a = m_a_max;
 
             // invert y axis and offset by minimum
 
-            y = m_rGrid.GetHeight() - a_to_py * a + m_a_min*a_to_py;
+            y = plotHeight - a_to_py * a + m_a_min*a_to_py;
 
             // regular point-point line graph
 
@@ -201,7 +200,7 @@ void PlotScalar::draw(wxAutoBufferedPaintDC&  dc)
                 x += PLOT_BORDER + XLEFT_OFFSET;
                 y += PLOT_BORDER;
             }
-
+            
             if (m_bar_graph) {
 
                 if (m_logy) {
@@ -212,9 +211,9 @@ void PlotScalar::draw(wxAutoBufferedPaintDC&  dc)
                     assert(m_a_max > 0.0);
 
                     float norm = (log10(a) - log10(m_a_min))/(log10(m_a_max) - log10(m_a_min));
-                    y = m_rGrid.GetHeight()*(1.0 - norm);
+                    y = plotHeight*(1.0 - norm);
                 } else {
-                    y = m_rGrid.GetHeight() - a_to_py * a + m_a_min*a_to_py;
+                    y = plotHeight - a_to_py * a + m_a_min*a_to_py;
                 }
 
                 // use points to make a bar graph
@@ -223,26 +222,37 @@ void PlotScalar::draw(wxAutoBufferedPaintDC&  dc)
 
                 x1 = index_to_px * ((float)i - 0.5);
                 x2 = index_to_px * ((float)i + 0.5);
-                y1 = m_rGrid.GetHeight();
+                y1 = plotHeight;
                 x1 += PLOT_BORDER + XLEFT_OFFSET; x2 += PLOT_BORDER + XLEFT_OFFSET;
                 y1 += PLOT_BORDER;
-                dc.DrawLine(x1, y1, x1, y); dc.DrawLine(x1, y, x2, y); dc.DrawLine(x2, y, x2, y1);
+
+                wxGraphicsPath path = ctx->CreatePath();
+                path.MoveToPoint(x1, y1);
+                path.AddLineToPoint(x1, y);
+                path.AddLineToPoint(x2, y);
+                path.AddLineToPoint(x2, y1);
+                ctx->StrokePath(path);
             }
             else {
                 if (i)
-                    dc.DrawLine(x, y, prev_x, prev_y);
+                {
+                    wxGraphicsPath path = ctx->CreatePath();
+                    path.MoveToPoint(x, y);
+                    path.AddLineToPoint(prev_x, prev_y);
+                    ctx->StrokePath(path);
+                }
                 prev_x = x; prev_y = y;
             }
         }
     }
-
-    drawGraticule(dc);
+    
+    drawGraticule(ctx);
 }
 
 //-------------------------------------------------------------------------
 // drawGraticule()
 //-------------------------------------------------------------------------
-void PlotScalar::drawGraticule(wxAutoBufferedPaintDC&  dc)
+void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
 {
     float    t, a;
     int      x, y, text_w, text_h;
@@ -251,61 +261,67 @@ void PlotScalar::drawGraticule(wxAutoBufferedPaintDC&  dc)
     float    sec_to_px;
     float    a_to_py;
 
+    int plotWidth = m_rGrid.GetWidth();
+    int plotHeight = m_rGrid.GetHeight();
+
     wxBrush ltGraphBkgBrush;
     ltGraphBkgBrush.SetStyle(wxBRUSHSTYLE_TRANSPARENT);
     ltGraphBkgBrush.SetColour(*wxBLACK);
-    dc.SetBrush(ltGraphBkgBrush);
-    dc.SetPen(wxPen(BLACK_COLOR, 1));
+    ctx->SetBrush(ltGraphBkgBrush);
+    ctx->SetPen(wxPen(BLACK_COLOR, 1));
 
-    sec_to_px = (float)m_rGrid.GetWidth()/m_t_secs;
-    a_to_py = (float)m_rGrid.GetHeight()/(m_a_max - m_a_min);
+    wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
+    ctx->SetFont(tmpFont);
+    
+    sec_to_px = (float)plotWidth/m_t_secs;
+    a_to_py = (float)plotHeight/(m_a_max - m_a_min);
 
     // upper LH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER)
-    // lower RH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET + m_rGrid.GetWidth(), 
-    //                                   PLOT_BORDER + m_rGrid.GetHeight())
+    // lower RH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET + plotWidth, 
+    //                                   PLOT_BORDER + plotHeight)
 
     // Vertical gridlines
 
-    dc.SetPen(m_penShortDash);
+    ctx->SetPen(m_penShortDash);
     for(t=0; t<=m_t_secs; t+=m_graticule_t_step) {
-	x = t*sec_to_px;
-	if (m_mini) {
-            dc.DrawLine(x, m_rGrid.GetHeight(), x, 0);
+    x = t*sec_to_px;
+    if (m_mini) {
+            ctx->StrokeLine(x, plotHeight, x, 0);
         }
         else {
             x += PLOT_BORDER + XLEFT_OFFSET;
-            dc.DrawLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
+            ctx->StrokeLine(x, plotHeight + PLOT_BORDER, x, PLOT_BORDER);
         }
         if (!m_mini) {
             sprintf(buf, "%2.1fs", t);
             GetTextExtent(buf, &text_w, &text_h);
-            dc.DrawText(buf, x - text_w/2, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
+            ctx->DrawText(buf, x - text_w/2, plotHeight + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
         }
     }
 
     // Horizontal gridlines
 
-    dc.SetPen(m_penDotDash);
+    ctx->SetPen(m_penDotDash);
     for(a=m_a_min; a<m_a_max; ) {
         if (m_logy) {
             float norm = (log10(a) - log10(m_a_min))/(log10(m_a_max) - log10(m_a_min));
-            y = m_rGrid.GetHeight()*(1.0 - norm);
+            y = plotHeight*(1.0 - norm);
         }
-	else {
-            y = m_rGrid.GetHeight() - a*a_to_py + m_a_min*a_to_py;
+    else {
+            y = plotHeight - a*a_to_py + m_a_min*a_to_py;
         }
-	if (m_mini) {
-            dc.DrawLine(0, y, m_rGrid.GetWidth(), y);
+    if (m_mini) {
+            ctx->StrokeLine(0, y, plotWidth, y);
         }
         else {
             y += PLOT_BORDER;
-            dc.DrawLine(PLOT_BORDER + XLEFT_OFFSET, y, 
-                        (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), y);
+            ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
+                        (plotWidth + PLOT_BORDER + XLEFT_OFFSET), y);
         }
         if (!m_mini) {
             sprintf(buf, m_a_fmt, a);
             GetTextExtent(buf, &text_w, &text_h);
-            dc.DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
+            ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
         }
 
         if (m_logy) {
@@ -319,15 +335,6 @@ void PlotScalar::drawGraticule(wxAutoBufferedPaintDC&  dc)
    }
 
 
-}
-
-//----------------------------------------------------------------
-// OnPaint()
-//----------------------------------------------------------------
-void PlotScalar::OnPaint(wxPaintEvent& event)
-{
-    wxAutoBufferedPaintDC dc(this);
-    draw(dc);
 }
 
 //----------------------------------------------------------------

@@ -37,9 +37,9 @@ class PlotScatter : public PlotPanel
     public:
         PlotScatter(wxWindow* parent);
         ~PlotScatter(){};
-	void add_new_samples_scatter(COMP samples[]);
-	void add_new_samples_eye(float samples[], int n);
-	void setNc(int Nc);
+    void add_new_samples_scatter(COMP samples[]);
+    void add_new_samples_eye(float samples[], int n);
+    void setNc(int Nc);
         void setEyeScatter(int eye_mode) {mode = eye_mode;}
 
     protected:
@@ -48,8 +48,7 @@ class PlotScatter : public PlotPanel
         COMP m_new_samples[MODEM_STATS_NC_MAX+1];
         float eye_mem[SCATTER_EYE_MEM_ROWS][PLOT_SCATTER_EYE_MAX_SAMPLES_ROW];
 
-        void draw(wxAutoBufferedPaintDC&  dc);
-        void OnPaint(wxPaintEvent& event);
+        void draw(wxGraphicsContext* ctx);
         void OnSize(wxSizeEvent& event);
         void OnShow(wxShowEvent& event);
 

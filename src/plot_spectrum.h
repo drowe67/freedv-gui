@@ -37,11 +37,10 @@ class PlotSpectrum : public PlotPanel
         void setFreqScale(int n_magdB) { m_n_magdB = n_magdB; }
 
     protected:
-        void        OnPaint(wxPaintEvent& event);
         void        OnSize(wxSizeEvent& event);
         void        OnShow(wxShowEvent& event);
-        void        drawGraticule(wxAutoBufferedPaintDC& dc);
-        void        draw(wxAutoBufferedPaintDC& dc);
+        void        drawGraticule(wxGraphicsContext* ctx);
+        void        draw(wxGraphicsContext* ctx);
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
 
    private:
