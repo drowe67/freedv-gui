@@ -106,7 +106,11 @@ private:
         bool channelNoise;
         int noiseSnr;
         float rxFreqOffsetHz;
-    
+        int rxModemSampleRate;
+        int rxNumSpeechSamples;
+        int rxSpeechSampleRate;
+        SRC_STATE* soundOutRateConv;
+        
         // Outputs
         struct FIFO* ownOutput;
         int syncFoundTimes;

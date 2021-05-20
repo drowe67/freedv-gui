@@ -25,9 +25,9 @@
 FreeDVInterface::FreeDVInterface() :
     txMode_(0),
     rxMode_(0),
+    squelchEnabled_(false),
     currentTxMode_(nullptr),
     currentRxMode_(nullptr),
-    squelchEnabled_(false),
     soundOutRateConv_(nullptr)
 {
     // empty
@@ -477,6 +477,10 @@ int FreeDVInterface::processRxAudio(
         inpState->channelNoise = channelNoise;
         inpState->noiseSnr = noiseSnr;
         inpState->rxFreqOffsetHz = rxFreqOffsetHz;
+        inpState->rxModemSampleRate = getRxModemSampleRate();
+        inpState->rxNumSpeechSamples = getRxNumSpeechSamples();
+        inpState->rxSpeechSampleRate = getRxSpeechSampleRate();
+        inpState->soundOutRateConv = soundOutRateConv_;
         
         // 1s of audio at 48kbps; we shouldn't get anywhere close due to how often 
         // this function is called.
@@ -485,14 +489,14 @@ int FreeDVInterface::processRxAudio(
         inpState->sig_pwr_av = *sig_pwr_av;
         
         // Wrap the below in an async task.
-        rxFutures.push_back(threads_[index]->enqueue([this](RxAudioThreadState* st) {
+        rxFutures.push_back(threads_[index]->enqueue([](RxAudioThreadState* st) {
             short infreedv[10*N48];
             int   nfreedv;
                 
             // Resample from maximum sample rate to the one the current codec expects.
             auto& convertObj = st->rateConvObj;
             auto& dv = st->dvObj;
-            nfreedv = resample(convertObj, infreedv, st->inputBlock, freedv_get_modem_sample_rate(dv), getRxModemSampleRate(), 10*N48, st->numFrames);
+            nfreedv = resample(convertObj, infreedv, st->inputBlock, freedv_get_modem_sample_rate(dv), st->rxModemSampleRate, 10*N48, st->numFrames);
             assert(nfreedv <= 10*N48);
             delete[] st->inputBlock;
             
@@ -503,7 +507,7 @@ int FreeDVInterface::processRxAudio(
             // Begin processing using the current codec.
             short input_buf[freedv_get_n_max_modem_samples(dv)];
             short output_buf[freedv_get_n_speech_samples(dv)];
-            short output_resample_buf[getRxNumSpeechSamples()];
+            short output_resample_buf[st->rxNumSpeechSamples * 2];
             COMP  rx_fdm[freedv_get_n_max_modem_samples(dv)];
             COMP  rx_fdm_offset[freedv_get_n_max_modem_samples(dv)];
             int   nin = freedv_nin(dv);
@@ -528,7 +532,7 @@ int FreeDVInterface::processRxAudio(
                 nout = freedv_comprx(dv, output_buf, rx_fdm_offset);
             
                 // Resample output to the current mode's rate if needed.
-                nout = resample(soundOutRateConv_, output_resample_buf, output_buf, getRxSpeechSampleRate(), freedv_get_speech_sample_rate(dv), getRxNumSpeechSamples(), nout);
+                nout = resample(st->soundOutRateConv, output_resample_buf, output_buf, st->rxSpeechSampleRate, freedv_get_speech_sample_rate(dv), st->rxNumSpeechSamples * 2, nout);
 
                 // Write to output FIFO if we have sync.
                 int tmpState = freedv_get_sync(dv);
