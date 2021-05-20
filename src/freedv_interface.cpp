@@ -19,6 +19,7 @@
 //
 //==========================================================================
 
+#include <future>
 #include "main.h"
 
 FreeDVInterface::FreeDVInterface() :
@@ -26,7 +27,8 @@ FreeDVInterface::FreeDVInterface() :
     rxMode_(0),
     currentTxMode_(nullptr),
     currentRxMode_(nullptr),
-    soundOutRateConv_(nullptr)
+    soundOutRateConv_(nullptr),
+    squelchEnabled_(false)
 {
     // empty
 }
@@ -293,12 +295,7 @@ void FreeDVInterface::setSync(int val)
 
 int FreeDVInterface::getSync() const
 {
-    for (auto& dv : dvObjects_)
-    {
-        int val = freedv_get_sync(dv);
-        if (val != 0) return val;
-    }
-    return 0;    
+    return freedv_get_sync(currentRxMode_);
 }
 
 void FreeDVInterface::setEq(int val)
@@ -436,6 +433,8 @@ int FreeDVInterface::getRxSpeechSampleRate() const
 
 void FreeDVInterface::setSquelch(int enable, float level)
 {
+    squelchEnabled_ = enable;
+    
     for (auto& dv : dvObjects_)
     {
         freedv_set_squelch_en(dv, enable);
@@ -443,88 +442,189 @@ void FreeDVInterface::setSquelch(int enable, float level)
     }
 }
 
+struct RxAudioThreadState
+{
+    // Inputs
+    struct freedv* dvObj;
+    SRC_STATE* rateConvObj;
+    struct FIFO* ownInput;
+    COMP* rxFreqOffsetPhaseRectObj;
+    int modeIndex;
+    short* inputBlock;
+    int numFrames;
+    bool channelNoise;
+    int noiseSnr;
+    float rxFreqOffsetHz;
+    
+    // Outputs
+    struct FIFO* ownOutput;
+    int syncFoundTimes;
+    float sig_pwr_av;
+};
+
 int FreeDVInterface::processRxAudio(
     short input[], int numFrames, struct FIFO* outputFifo, bool channelNoise, int noiseSnr, 
     float rxFreqOffsetHz, struct MODEM_STATS* stats, float* sig_pwr_av)
 {
-    short infreedv[10*N48];
-    int   nfreedv;
     int   state = getSync();
-    bool  done = false;
+    std::deque<std::future<RxAudioThreadState*>> rxFutures;
     for (auto index = 0; (size_t)index < dvObjects_.size(); index++)
     {
-        if (state != 0 && dvObjects_[index] != currentRxMode_) 
+        if (state != 0 && currentRxMode_ != dvObjects_[index])
         {
-            // Skip processing of all except for the current receiving mdoe if in sync.
-            done = true;
+            // Skip everything but the current RX mode while we have sync.
             continue;
         }
         
-        // Resample from maximum sample rate to the one the current codec expects.
-        auto& convertObj = rateConvObjs_[index];
-        auto& dv = dvObjects_[index];
-        nfreedv = resample(convertObj, infreedv, input, freedv_get_modem_sample_rate(dv), getRxModemSampleRate(), 10*N48, numFrames);
-        assert(nfreedv <= 10*N48);
+        // Initialize task inputs and outputs
+        RxAudioThreadState* inpState = new RxAudioThreadState();
+        inpState->dvObj = dvObjects_[index];
+        inpState->rateConvObj = rateConvObjs_[index];
+        inpState->ownInput = inputFifos_[index];
+        inpState->rxFreqOffsetPhaseRectObj = rxFreqOffsetPhaseRectObjs_[index];
+        inpState->modeIndex = index;
+        inpState->inputBlock = new short[numFrames];
+        memcpy(inpState->inputBlock, input, sizeof(short)*numFrames);
+        inpState->numFrames = numFrames;
+        inpState->channelNoise = channelNoise;
+        inpState->noiseSnr = noiseSnr;
+        inpState->rxFreqOffsetHz = rxFreqOffsetHz;
         
-        // Push resampled data into appropriate fifo.
-        auto& inFifo = inputFifos_[index];
-        codec2_fifo_write(inFifo, infreedv, nfreedv);
+        // 1s of audio at 48kbps; we shouldn't get anywhere close due to how often 
+        // this function is called.
+        inpState->ownOutput = codec2_fifo_create(48000); 
+        inpState->syncFoundTimes = 0;
+        inpState->sig_pwr_av = *sig_pwr_av;
         
-        // Begin processing using the current codec.
-        short input_buf[freedv_get_n_max_modem_samples(dv)];
-        short output_buf[freedv_get_n_speech_samples(dv)];
-        short output_resample_buf[getRxNumSpeechSamples()];
-        COMP  rx_fdm[freedv_get_n_max_modem_samples(dv)];
-        COMP  rx_fdm_offset[freedv_get_n_max_modem_samples(dv)];
-        int   nin = freedv_nin(dv);
-        int   nout = 0;
-        while (codec2_fifo_read(inFifo, input_buf, nin) == 0) 
-        {
-            assert(nin <= freedv_get_n_max_modem_samples(dv));
-
-            // demod per frame processing
-            for(int i=0; i<nin; i++) {
-                rx_fdm[i].real = (float)input_buf[i];
-                rx_fdm[i].imag = 0.0;
-            }
-
-            // Optional channel noise
-            if (channelNoise) {
-                fdmdv_simulate_channel(sig_pwr_av, rx_fdm, nin, noiseSnr);
-            }
-
-            // Optional frequency shifting
-            freq_shift_coh(rx_fdm_offset, rx_fdm, rxFreqOffsetHz, freedv_get_modem_sample_rate(dv), rxFreqOffsetPhaseRectObjs_[index], nin);
-            nout = freedv_comprx(dv, output_buf, rx_fdm_offset);
+        // Wrap the below in an async task.
+        rxFutures.push_back(std::async(std::launch::async, [this](RxAudioThreadState* st) {
+            short infreedv[10*N48];
+            int   nfreedv;
+                
+            // Resample from maximum sample rate to the one the current codec expects.
+            auto& convertObj = st->rateConvObj;
+            auto& dv = st->dvObj;
+            nfreedv = resample(convertObj, infreedv, st->inputBlock, freedv_get_modem_sample_rate(dv), getRxModemSampleRate(), 10*N48, st->numFrames);
+            assert(nfreedv <= 10*N48);
+            delete[] st->inputBlock;
             
-            // Resample output to the current mode's rate if needed.
-            nout = resample(soundOutRateConv_, output_resample_buf, output_buf, getRxSpeechSampleRate(), freedv_get_speech_sample_rate(dv), getRxNumSpeechSamples(), nout);
-
-            // Write to output FIFO on one of the following conditions:
-            //   a) We're on the last mode to check (meaning that we didn't get sync on any other mode)
-            //.  b) We got sync on the current mode at some point
-            int tmpState = freedv_get_sync(dv);
-            if (tmpState != 0 || done || (size_t)index == (dvObjects_.size() - 1))
+            // Push resampled data into appropriate fifo.
+            auto& inFifo = st->ownInput;
+            codec2_fifo_write(inFifo, infreedv, nfreedv);
+        
+            // Begin processing using the current codec.
+            short input_buf[freedv_get_n_max_modem_samples(dv)];
+            short output_buf[freedv_get_n_speech_samples(dv)];
+            short output_resample_buf[getRxNumSpeechSamples()];
+            COMP  rx_fdm[freedv_get_n_max_modem_samples(dv)];
+            COMP  rx_fdm_offset[freedv_get_n_max_modem_samples(dv)];
+            int   nin = freedv_nin(dv);
+            int   nout = 0;
+            while (codec2_fifo_read(inFifo, input_buf, nin) == 0) 
             {
-                state = tmpState;
-                done = true;
-                currentRxMode_ = dv;
-                rxMode_ = enabledModes_[index];
-                codec2_fifo_write(outputFifo, output_resample_buf, nout);
-            }
+                assert(nin <= freedv_get_n_max_modem_samples(dv));
+
+                // demod per frame processing
+                for(int i=0; i<nin; i++) {
+                    rx_fdm[i].real = (float)input_buf[i];
+                    rx_fdm[i].imag = 0.0;
+                }
+
+                // Optional channel noise
+                if (st->channelNoise) {
+                    fdmdv_simulate_channel(&st->sig_pwr_av, rx_fdm, nin, st->noiseSnr);
+                }
+
+                // Optional frequency shifting
+                freq_shift_coh(rx_fdm_offset, rx_fdm, st->rxFreqOffsetHz, freedv_get_modem_sample_rate(dv), st->rxFreqOffsetPhaseRectObj, nin);
+                nout = freedv_comprx(dv, output_buf, rx_fdm_offset);
             
-            nin = freedv_nin(dv);
+                // Resample output to the current mode's rate if needed.
+                nout = resample(soundOutRateConv_, output_resample_buf, output_buf, getRxSpeechSampleRate(), freedv_get_speech_sample_rate(dv), getRxNumSpeechSamples(), nout);
+
+                // Write to output FIFO if we have sync.
+                int tmpState = freedv_get_sync(dv);
+                if (tmpState != 0 || st->syncFoundTimes > 0)
+                {
+                    st->syncFoundTimes++;
+                    codec2_fifo_write(st->ownOutput, output_resample_buf, nout);
+                }
+            
+                nin = freedv_nin(dv);
+            }
+                    
+            return st;
+        }, inpState));
+    }
+    
+    // Loop through each future and wait for the result, then determine
+    // which mode is most likely to have sync. Default to the last mode
+    // in the list if we don't find any.
+    int futIndexWithSync = rxFutures.size() - 1;
+    int futIndex = 0;
+    int maxSyncFound = 0;
+    std::deque<RxAudioThreadState*> results;
+    for(auto& fut : rxFutures)
+    {
+        fut.wait();
+        RxAudioThreadState* res = fut.get();
+        results.push_back(res);
+        
+        if (res->syncFoundTimes > maxSyncFound)
+        {
+            maxSyncFound = res->syncFoundTimes;
+            futIndexWithSync = futIndex;
         }
         
-        if (done)
+        futIndex++;
+    }
+    
+    futIndex = 0;
+    for(auto& res : results)
+    {
+        // Write to output FIFO on one of the following conditions:
+        //   a) We're on the last mode to check (meaning that we didn't get sync on any other mode)
+        //   b) We got sync on the current mode at some point.
+        if (futIndex == futIndexWithSync)
         {
             // grab extended stats so we can plot spectrum, scatter diagram etc
-            freedv_get_modem_extended_stats(dv, stats);
+            freedv_get_modem_extended_stats(res->dvObj, stats);
         
             // Update sync as it may have gone stale during decode
             state = stats->sync != 0;
-            break;
+                        
+            if (state)
+            {
+                rxMode_ = enabledModes_[res->modeIndex];  
+                currentRxMode_ = res->dvObj;
+            } 
+            
+            if (res->channelNoise) 
+            {
+                *sig_pwr_av = res->sig_pwr_av;
+            }
+            
+            int usedFifo = codec2_fifo_used(res->ownOutput);
+            if (usedFifo > 0 && (!squelchEnabled_ || state)) /* suppresses random pops */
+            {
+                short input_buf[48000];
+                while(codec2_fifo_read(res->ownOutput, input_buf, usedFifo) == 0)
+                {
+                    codec2_fifo_write(outputFifo, input_buf, usedFifo);
+                }
+            }
         }
+     
+        codec2_fifo_free(res->ownOutput);
+        delete res;
+        
+        futIndex++;
+    }
+    
+    if (!state) 
+    {
+        currentRxMode_ = currentTxMode_;
+        rxMode_ = txMode_;
     }
     
     return state;

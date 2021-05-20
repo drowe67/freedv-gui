@@ -89,6 +89,7 @@ public:
 private:
     int txMode_;
     int rxMode_;
+    bool squelchEnabled_;
     std::deque<int> enabledModes_;
     std::deque<struct freedv*> dvObjects_;
     std::deque<struct FIFO*> errorFifos_;

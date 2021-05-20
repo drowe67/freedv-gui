@@ -2417,6 +2417,7 @@ void txRxProcessing()
     int nsam = g_soundCard1SampleRate * (float)g_modemInbufferSize/freedv_samplerate;
     assert(nsam <= 10*N48);
     assert(nsam != 0);
+    
     while ((codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0) && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
 
         /* convert sound card sample rate FreeDV input sample rate */
