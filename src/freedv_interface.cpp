@@ -27,8 +27,8 @@ FreeDVInterface::FreeDVInterface() :
     rxMode_(0),
     currentTxMode_(nullptr),
     currentRxMode_(nullptr),
-    soundOutRateConv_(nullptr),
-    squelchEnabled_(false)
+    squelchEnabled_(false),
+    soundOutRateConv_(nullptr)
 {
     // empty
 }
@@ -92,6 +92,8 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs)
         auto convertObj = src_new(SRC_SINC_FASTEST, 1, &src_error);
         assert(convertObj != nullptr);
         rateConvObjs_.push_back(convertObj);
+        
+        threads_.push_back(new EventHandlerThread<RxAudioThreadState*, RxAudioThreadState*>());
     }
     
     soundOutRateConv_ = src_new(SRC_SINC_FASTEST, 1, &src_error);
@@ -100,6 +102,12 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs)
 
 void FreeDVInterface::stop()
 {
+    for (auto& thd : threads_)
+    {
+        delete thd;
+    }
+    threads_.clear();
+    
     for (auto& dv : dvObjects_)
     {
         freedv_close(dv);
@@ -442,26 +450,6 @@ void FreeDVInterface::setSquelch(int enable, float level)
     }
 }
 
-struct RxAudioThreadState
-{
-    // Inputs
-    struct freedv* dvObj;
-    SRC_STATE* rateConvObj;
-    struct FIFO* ownInput;
-    COMP* rxFreqOffsetPhaseRectObj;
-    int modeIndex;
-    short* inputBlock;
-    int numFrames;
-    bool channelNoise;
-    int noiseSnr;
-    float rxFreqOffsetHz;
-    
-    // Outputs
-    struct FIFO* ownOutput;
-    int syncFoundTimes;
-    float sig_pwr_av;
-};
-
 int FreeDVInterface::processRxAudio(
     short input[], int numFrames, struct FIFO* outputFifo, bool channelNoise, int noiseSnr, 
     float rxFreqOffsetHz, struct MODEM_STATS* stats, float* sig_pwr_av)
@@ -497,7 +485,7 @@ int FreeDVInterface::processRxAudio(
         inpState->sig_pwr_av = *sig_pwr_av;
         
         // Wrap the below in an async task.
-        rxFutures.push_back(std::async(std::launch::async, [this](RxAudioThreadState* st) {
+        rxFutures.push_back(threads_[index]->enqueue([this](RxAudioThreadState* st) {
             short infreedv[10*N48];
             int   nfreedv;
                 
