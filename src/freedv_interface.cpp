@@ -251,6 +251,10 @@ const char* FreeDVInterface::getCurrentModeStr() const
                 return "1600";
             case FREEDV_MODE_2020:
                 return "2020";
+            case FREEDV_MODE_800XA:
+                return "800XA";
+            case FREEDV_MODE_2400B:
+                return "2400B";
             default:
                 return "unk";
         }
