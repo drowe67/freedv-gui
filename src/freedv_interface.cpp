@@ -28,7 +28,8 @@ FreeDVInterface::FreeDVInterface() :
     squelchEnabled_(false),
     currentTxMode_(nullptr),
     currentRxMode_(nullptr),
-    soundOutRateConv_(nullptr)
+    soundOutRateConv_(nullptr),
+    lastSyncRxMode_(nullptr)
 {
     // empty
 }
@@ -462,12 +463,6 @@ int FreeDVInterface::processRxAudio(
     std::deque<std::future<RxAudioThreadState*>> rxFutures;
     for (auto index = 0; (size_t)index < dvObjects_.size(); index++)
     {
-        if (state != 0 && currentRxMode_ != dvObjects_[index])
-        {
-            // Skip everything but the current RX mode while we have sync.
-            continue;
-        }
-        
         // Initialize task inputs and outputs
         RxAudioThreadState* inpState = new RxAudioThreadState();
         inpState->dvObj = dvObjects_[index];
@@ -482,18 +477,16 @@ int FreeDVInterface::processRxAudio(
         inpState->noiseSnr = noiseSnr;
         inpState->rxFreqOffsetHz = rxFreqOffsetHz;
         inpState->rxModemSampleRate = getRxModemSampleRate();
-        inpState->rxNumSpeechSamples = getRxNumSpeechSamples();
         inpState->rxSpeechSampleRate = getRxSpeechSampleRate();
         inpState->soundOutRateConv = soundOutRateConv_;
         
         // 1s of audio at 48kbps; we shouldn't get anywhere close due to how often 
         // this function is called.
         inpState->ownOutput = codec2_fifo_create(48000); 
-        inpState->syncFoundTimes = 0;
         inpState->sig_pwr_av = *sig_pwr_av;
         
         // Wrap the below in an async task.
-        rxFutures.push_back(threads_[index]->enqueue([](RxAudioThreadState* st) {
+        rxFutures.push_back(threads_[index]->enqueue([this](RxAudioThreadState* st) {
             short infreedv[10*N48];
             int   nfreedv;
                 
@@ -509,9 +502,10 @@ int FreeDVInterface::processRxAudio(
             codec2_fifo_write(inFifo, infreedv, nfreedv);
         
             // Begin processing using the current codec.
+            int numSpeechSamples = getRxNumSpeechSamples();
             short input_buf[freedv_get_n_max_modem_samples(dv)];
             short output_buf[freedv_get_n_speech_samples(dv)];
-            short output_resample_buf[st->rxNumSpeechSamples * 2];
+            short output_resample_buf[numSpeechSamples];
             COMP  rx_fdm[freedv_get_n_max_modem_samples(dv)];
             COMP  rx_fdm_offset[freedv_get_n_max_modem_samples(dv)];
             int   nin = freedv_nin(dv);
@@ -536,13 +530,15 @@ int FreeDVInterface::processRxAudio(
                 nout = freedv_comprx(dv, output_buf, rx_fdm_offset);
             
                 // Resample output to the current mode's rate if needed.
-                nout = resample(st->soundOutRateConv, output_resample_buf, output_buf, st->rxSpeechSampleRate, freedv_get_speech_sample_rate(dv), st->rxNumSpeechSamples * 2, nout);
-
+                {
+                    std::lock_guard<std::mutex> lock(resampleMtx_);
+                    nout = resample(st->soundOutRateConv, output_resample_buf, output_buf, st->rxSpeechSampleRate, freedv_get_speech_sample_rate(dv), numSpeechSamples, nout);
+                }
+                
                 // Write to output FIFO if we have sync.
                 int tmpState = freedv_get_sync(dv);
-                if (tmpState != 0 || st->syncFoundTimes > 0)
+                if (tmpState != 0)
                 {
-                    st->syncFoundTimes++;
                     codec2_fifo_write(st->ownOutput, output_resample_buf, nout);
                 }
             
@@ -566,9 +562,27 @@ int FreeDVInterface::processRxAudio(
         RxAudioThreadState* res = fut.get();
         results.push_back(res);
         
-        if (res->syncFoundTimes > maxSyncFound)
+        struct MODEM_STATS tmpStats;
+        freedv_get_modem_extended_stats(res->dvObj, &tmpStats);
+        
+        int snr = -10;
+        if (!isnan(tmpStats.snr_est) && !isinf(tmpStats.snr_est))
+            snr = tmpStats.snr_est + 0.5;
+        
+        if (lastSyncRxMode_ == res->dvObj)
         {
-            maxSyncFound = res->syncFoundTimes;
+            if (stats->sync != 0)
+            {
+                futIndexWithSync = futIndex;
+                break;
+            }
+            
+            lastSyncRxMode_ = nullptr;
+        }
+        
+        if (snr > maxSyncFound && tmpStats.sync != 0)
+        {
+            maxSyncFound = snr;
             futIndexWithSync = futIndex;
         }
         
@@ -593,6 +607,7 @@ int FreeDVInterface::processRxAudio(
             {
                 rxMode_ = enabledModes_[res->modeIndex];  
                 currentRxMode_ = res->dvObj;
+                lastSyncRxMode_ = currentRxMode_;
             } 
             
             if (res->channelNoise) 
@@ -621,6 +636,7 @@ int FreeDVInterface::processRxAudio(
     {
         currentRxMode_ = currentTxMode_;
         rxMode_ = txMode_;
+        lastSyncRxMode_ = nullptr;
     }
     
     return state;

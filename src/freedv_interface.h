@@ -107,13 +107,11 @@ private:
         int noiseSnr;
         float rxFreqOffsetHz;
         int rxModemSampleRate;
-        int rxNumSpeechSamples;
         int rxSpeechSampleRate;
         SRC_STATE* soundOutRateConv;
         
         // Outputs
         struct FIFO* ownOutput;
-        int syncFoundTimes;
         float sig_pwr_av;
     };
     
@@ -163,6 +161,9 @@ private:
     struct freedv* currentTxMode_;
     struct freedv* currentRxMode_; 
     SRC_STATE* soundOutRateConv_;
+    struct freedv* lastSyncRxMode_;
+    
+    std::mutex resampleMtx_;
 };
 
 template<typename R, typename T>
