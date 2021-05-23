@@ -182,18 +182,24 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
     
     drawGraticule(gc);
     
-    wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-    gc->SetBrush(ltGraphBkgBrush);
-    gc->SetPen(wxPen(BLACK_COLOR, 0));
-    gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+    float px_per_sec = (float)m_imgHeight / WATERFALL_SECS_Y;
+    int dy = m_dT * px_per_sec;
+    int remainingBlackBoxHeight = m_imgHeight - dy * m_waterfallBlocks.size();
+    int remainingBlackBoxY = PLOT_BORDER + YBOTTOM_OFFSET + dy * m_waterfallBlocks.size();
+    
+    if (remainingBlackBoxHeight > 0)
+    {
+        wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
+        gc->SetBrush(ltGraphBkgBrush);
+        gc->SetPen(wxPen(BLACK_COLOR, 0));
+        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, remainingBlackBoxY, m_imgWidth, remainingBlackBoxHeight);
+    }
     
     if(m_newdata)
     {
         m_newdata = false;
         plotPixelData(gc);
         
-        float px_per_sec = (float)m_imgHeight / WATERFALL_SECS_Y;
-        int dy = m_dT * px_per_sec;
         int y = 0;
         
         for (auto& bmp : m_waterfallBlocks)
