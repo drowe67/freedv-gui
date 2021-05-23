@@ -45,7 +45,7 @@ END_EVENT_TABLE()
 // @brief
 //
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-PlotSpectrum::PlotSpectrum(wxFrame* parent, float *magdB, int n_magdB, 
+PlotSpectrum::PlotSpectrum(wxWindow* parent, float *magdB, int n_magdB, 
                            float min_mag_db, float max_mag_db, bool clickTune): PlotPanel(parent)
 {
     m_greyscale     = 0;

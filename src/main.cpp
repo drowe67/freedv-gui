@@ -298,7 +298,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     int x = pConfig->Read(wxT("/MainFrame/left"),       20);
     int y = pConfig->Read(wxT("/MainFrame/top"),        20);
     int w = pConfig->Read(wxT("/MainFrame/width"),     800);
-    int h = pConfig->Read(wxT("/MainFrame/height"),    695);
+    int h = pConfig->Read(wxT("/MainFrame/height"),    780);
 
     // sanitise frame position as a first pass at Win32 registry bug
 
@@ -306,7 +306,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     if (x < 0 || x > 2048) x = 20;
     if (y < 0 || y > 2048) y = 20;
     if (w < 0 || w > 2048) w = 800;
-    if (h < 0 || h > 2048) h = 695;
+    if (h < 0 || h > 2048) h = 780;
 
     wxGetApp().m_show_wf            = pConfig->Read(wxT("/MainFrame/show_wf"),           1);
     wxGetApp().m_show_spect         = pConfig->Read(wxT("/MainFrame/show_spect"),        1);
@@ -557,7 +557,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     // squelch settings
     char sqsnr[15];
     m_sliderSQ->SetValue((int)((g_SquelchLevel+5.0)*2.0));
-    sprintf(sqsnr, "%4.1f", g_SquelchLevel);
+    sprintf(sqsnr, "%4.1f dB", g_SquelchLevel);
     wxString sqsnr_string(sqsnr);
     m_textSQ->SetLabel(sqsnr_string);
     m_ckboxSQ->SetValue(g_SquelchActive);
@@ -1471,7 +1471,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
     // we are attempting to start
 
-    if (startStop.IsSameAs("Start"))
+    if (startStop.IsSameAs("&Start"))
     {
         if (g_verbose) fprintf(stderr, "Start .....\n");
         g_queueResync = false;
@@ -1483,7 +1483,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         // modify some button states when running
 
-        m_togBtnOnOff->SetLabel(wxT("Stop"));
+        m_togBtnOnOff->SetLabel(wxT("&Stop"));
 
         vk_state = VK_IDLE;
 
@@ -1660,7 +1660,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
     // Stop was pressed or start up failed
 
-    if (startStop.IsSameAs("Stop") || !m_RxRunning ) {
+    if (startStop.IsSameAs("&Stop") || !m_RxRunning ) {
         if (g_verbose) fprintf(stderr, "Stop .....\n");
         
         //
@@ -1729,7 +1729,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_togBtnAnalog->Disable();
         m_btnTogPTT->Disable();
         m_togBtnVoiceKeyer->Disable();
-        m_togBtnOnOff->SetLabel(wxT("Start"));
+        m_togBtnOnOff->SetLabel(wxT("&Start"));
         
         m_rb1600->Enable();
         m_rb700c->Enable();

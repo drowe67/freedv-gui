@@ -19,6 +19,7 @@
 //
 //==========================================================================
 #include <string.h>
+#include <algorithm>
 #include "plot.h"
 #include <wx/graphics.h>
 
@@ -32,7 +33,7 @@ BEGIN_EVENT_TABLE(PlotPanel, wxPanel)
     EVT_SIZE            (PlotPanel::OnSize)
     EVT_SHOW            (PlotPanel::OnShow)
 END_EVENT_TABLE()
-
+        
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class PlotPanel(wxFrame* parent) : wxPanel(parent)
 //
@@ -43,7 +44,7 @@ END_EVENT_TABLE()
 // @brief
 //
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-PlotPanel::PlotPanel(wxFrame* parent) : wxPanel(parent)
+PlotPanel::PlotPanel(wxWindow* parent, const char* plotName) : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL, plotName)
 {
     m_zoomFactor        = 1.0;
     m_firstPass         = true;

@@ -37,7 +37,7 @@
 class PlotWaterfall : public PlotPanel
 {
     public:
-        PlotWaterfall(wxFrame* parent, bool graticule, int colour);
+        PlotWaterfall(wxWindow* parent, bool graticule, int colour);
         ~PlotWaterfall();
         bool checkDT(void);
         void setGreyscale(bool greyscale) { m_greyscale = greyscale; }

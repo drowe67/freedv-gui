@@ -27,6 +27,15 @@ extern bool endingTx;
 extern int g_outfifo1_empty;
 
 //-------------------------------------------------------------------------
+// Forces redraw of main panels on window resize.
+//-------------------------------------------------------------------------
+void MainFrame::topFrame_OnSize( wxSizeEvent& event )
+{
+    m_auiNbookCtrl->Refresh();
+    TopFrame::topFrame_OnSize(event);
+}
+
+//-------------------------------------------------------------------------
 // OnExitClick()
 //-------------------------------------------------------------------------
 void MainFrame::OnExitClick(wxCommandEvent& event)
@@ -316,7 +325,7 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 {
     char sqsnr[15];
     g_SquelchLevel = (float)m_sliderSQ->GetValue()/2.0 - 5.0;
-    sprintf(sqsnr, "%4.1f", g_SquelchLevel); // 0.5 dB steps
+    sprintf(sqsnr, "%4.1f dB", g_SquelchLevel); // 0.5 dB steps
     wxString sqsnr_string(sqsnr);
     m_textSQ->SetLabel(sqsnr_string);
 

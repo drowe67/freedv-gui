@@ -19,6 +19,7 @@
 //
 //==========================================================================
 #include <string.h>
+#include <algorithm>
 #include "wx/wx.h"
 #include "main.h"
 
@@ -45,7 +46,7 @@ END_EVENT_TABLE()
 // @brief
 //
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-PlotWaterfall::PlotWaterfall(wxFrame* parent, bool graticule, int colour): PlotPanel(parent)
+PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): PlotPanel(parent)
 {
 
     for(int i = 0; i < 255; i++)
@@ -71,6 +72,8 @@ PlotWaterfall::PlotWaterfall(wxFrame* parent, bool graticule, int colour): PlotP
 // we plot in and allocate a bit map of the correct size
 void PlotWaterfall::OnSize(wxSizeEvent& event) 
 {
+    delete m_fullBmp;
+
     // resize bit map
 
     m_rCtrl  = GetClientRect();
@@ -82,11 +85,14 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
     m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
     // we want a bit map the size of m_rGrid
+
     m_imgHeight = m_rGrid.GetHeight();
     m_imgWidth = m_rGrid.GetWidth();    
     m_fullBmp = new wxBitmap(std::max(1,m_imgWidth), std::max(1,m_imgHeight));
     
     m_dT = DT;
+    
+    event.Skip();
 }
 
 //----------------------------------------------------------------

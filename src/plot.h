@@ -88,7 +88,7 @@ class MainFrame;
 class PlotPanel : public wxPanel
 {
     public:
-        PlotPanel(wxFrame* parent);
+        PlotPanel(wxWindow* parent, const char* plotName = "");
         ~PlotPanel();
         wxPen               m_penShortDash;
         wxPen               m_penDotDash;
@@ -103,8 +103,9 @@ class PlotPanel : public wxPanel
         // This function is added to ignore tabbing to the plot object.  The plot 
         // is a control with no user input, thus blind hams have no reason to tab
         // to it.
-        bool AcceptsFocusFromKeyboard() const { return false; }
-
+        virtual bool AcceptsFocusFromKeyboard() const { return false; }
+        virtual bool AcceptsFocusRecursively() const { return false; }
+        
         // some useful events
         void            OnMouseMove(wxMouseEvent& event);
         virtual void    OnMouseLeftDown(wxMouseEvent& event);
