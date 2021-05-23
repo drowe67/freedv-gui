@@ -46,8 +46,6 @@ class PlotWaterfall : public PlotPanel
         void setFs(int fs) { m_modem_stats_max_f_hz = fs/2; }
         void setColor(int color) { m_colour = color; }
         
-        void RefreshWaterfallOnly();
-        
     protected:
         unsigned    m_heatmap_lut[256];
 
@@ -59,7 +57,6 @@ class PlotWaterfall : public PlotPanel
         void        draw(wxGraphicsContext* gc);
         void        plotPixelData(wxGraphicsContext* gc);
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
-        void        OnPaint(wxPaintEvent& event);
 
     private:
         float       m_dT;
@@ -69,7 +66,6 @@ class PlotWaterfall : public PlotPanel
         float       m_max_mag;
         int         m_colour;
         int         m_modem_stats_max_f_hz;
-        bool        m_updateOnlyWaterfall;
 
         std::deque<wxGraphicsBitmap> m_waterfallBlocks;
         
