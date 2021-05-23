@@ -32,4 +32,18 @@ extern "C" bool VerifyMicrophonePermissions();
 extern "C" bool VerifyMicrophonePermissions() { return true; }
 #endif // __APPLE__
 
+#ifdef __APPLE__
+// macOS does color space conversions in the background when rendering PlotWaterfall.
+// This causes FreeDV to use ~30-50% more CPU that it otherwise would (despite wxWidgets
+// using sRGB internally). Because of this, we reset the main window's color space to 
+// sRGB ourselves on every frame render.
+//
+// See https://github.com/OpenTTD/OpenTTD/issues/7644 and https://trac.wxwidgets.org/ticket/18516
+// for more details.
+extern "C" void ResetMainWindowColorSpace();
+#else
+// Stub for non-Apple platforms
+extern "C" void ResetMainWindowColorSpace() { }
+#endif // __APPLE__
+
 #endif // __OSX_INTERFACE__

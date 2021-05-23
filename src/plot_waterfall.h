@@ -21,6 +21,7 @@
 #ifndef __FDMDV2_PLOT_WATERFALL__
 #define __FDMDV2_PLOT_WATERFALL__
 
+#include <deque>
 #include "plot.h"
 #include "defines.h"
 
@@ -54,7 +55,7 @@ class PlotWaterfall : public PlotPanel
         void        OnShow(wxShowEvent& event);
         void        drawGraticule(wxGraphicsContext* ctx);
         void        draw(wxGraphicsContext* gc);
-        void        plotPixelData();
+        void        plotPixelData(wxGraphicsContext* gc);
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
 
     private:
@@ -65,8 +66,9 @@ class PlotWaterfall : public PlotPanel
         float       m_max_mag;
         int         m_colour;
         int         m_modem_stats_max_f_hz;
+
+        std::deque<wxGraphicsBitmap> m_waterfallBlocks;
         
-        wxBitmap* m_fullBmp;
         int m_imgHeight;
         int m_imgWidth;
 
