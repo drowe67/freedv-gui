@@ -60,6 +60,7 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): Plot
     m_newdata       = false;
     m_firstPass     = true;
     m_line_color    = 0;
+    m_updateOnlyWaterfall = false;
     m_modem_stats_max_f_hz = MODEM_STATS_MAX_F_HZ;
 
     SetLabelSize(10.0);
@@ -107,6 +108,40 @@ void PlotWaterfall::OnShow(wxShowEvent& event)
 PlotWaterfall::~PlotWaterfall()
 {
     m_waterfallBlocks.clear();
+}
+
+void PlotWaterfall::OnPaint(wxPaintEvent& event)
+{
+    // Determine whether we're only updating the waterfall area or the whole
+    // control.
+    m_updateOnlyWaterfall = false;
+    wxRegionIterator upd(GetUpdateRegion()); // get the update rect list
+    while (upd)
+    {
+        wxRect rect(upd.GetRect());
+        
+        fprintf(stderr, "rect(%d,%d,%d,%d) grid(%d,%d,%d,%d)\n", rect.x, rect.y, rect.width, rect.height, m_rGrid.x, m_rGrid.y, m_rGrid.width, m_rGrid.height);
+        if (rect.x < m_rGrid.x || rect.x > m_rGrid.x ||
+            rect.y < m_rGrid.y || rect.y > m_rGrid.y)
+        {
+            fprintf(stderr, "Invalidating the entire PlotWaterfall.\n");
+            //m_updateOnlyWaterfall = false;
+            //break;
+        }
+        upd++;
+    }
+    
+    PlotPanel::OnPaint(event);
+}
+
+//----------------------------------------------------------------
+// RefreshWaterfall(): only requests redraw of the waterfall area
+// (not graticules).
+//----------------------------------------------------------------
+void PlotWaterfall::RefreshWaterfallOnly()
+{
+    wxRect tmpRect(m_rGrid);
+    RefreshRect(tmpRect, false);
 }
 
 //----------------------------------------------------------------
@@ -180,12 +215,21 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
     m_imgHeight = m_rGrid.GetHeight();
     m_imgWidth = m_rGrid.GetWidth();
     
-    drawGraticule(gc);
+    if (!m_updateOnlyWaterfall)
+    {
+        drawGraticule(gc);
+    } 
     
     float px_per_sec = (float)m_imgHeight / WATERFALL_SECS_Y;
     int dy = m_dT * px_per_sec;
     int remainingBlackBoxHeight = m_imgHeight - dy * m_waterfallBlocks.size();
     int remainingBlackBoxY = PLOT_BORDER + YBOTTOM_OFFSET + dy * m_waterfallBlocks.size();
+    
+    if (!m_newdata)
+    {
+        remainingBlackBoxHeight = m_imgHeight;
+        remainingBlackBoxY = PLOT_BORDER + YBOTTOM_OFFSET;
+    }
     
     if (remainingBlackBoxHeight > 0)
     {

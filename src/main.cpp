@@ -855,7 +855,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
         m_panelWaterfall->m_newdata = true;
         m_panelWaterfall->setColor(wxGetApp().m_waterfallColor);
-        m_panelWaterfall->Refresh();
+        m_panelWaterfall->RefreshWaterfallOnly();
     }
 
     m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
