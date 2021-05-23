@@ -29,7 +29,7 @@
 extern "C" bool VerifyMicrophonePermissions();
 #else
 // Stub for non-Apple platforms
-extern "C" bool VerifyMicrophonePermissions() { return true; }
+#define VerifyMicrophonePermissions() (true)
 #endif // __APPLE__
 
 #ifdef __APPLE__
@@ -43,7 +43,7 @@ extern "C" bool VerifyMicrophonePermissions() { return true; }
 extern "C" void ResetMainWindowColorSpace();
 #else
 // Stub for non-Apple platforms
-extern "C" void ResetMainWindowColorSpace() { }
+#define ResetMainWindowColorSpace() 
 #endif // __APPLE__
 
 #endif // __OSX_INTERFACE__

@@ -347,7 +347,7 @@ void PlotWaterfall::plotPixelData(wxGraphicsContext* gc)
     float       px_per_sec;
     int         index;
     int         dy;
-    int         dy_blocks;
+    unsigned int         dy_blocks;
     int         px;
     int         py;
     int         intensity;
