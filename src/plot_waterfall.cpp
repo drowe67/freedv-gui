@@ -346,8 +346,8 @@ void PlotWaterfall::plotPixelData(wxGraphicsContext* gc)
     spec_index_per_px = ((float)(MAX_F_HZ)/(float)m_modem_stats_max_f_hz)*(float)MODEM_STATS_NSPEC / (float)m_imgWidth;
 
     // Draw last line of blocks using latest amplitude data ------------------
-    unsigned char dyImageData[3 * (dy + 1) * m_imgWidth];
-    for(py = dy; py >= 0; py--)
+    unsigned char dyImageData[3 * dy * m_imgWidth];
+    for(py = dy - 1; py >= 0; py--)
     {
         for(px = 0; px < m_imgWidth; px++)
         {
@@ -388,7 +388,7 @@ void PlotWaterfall::plotPixelData(wxGraphicsContext* gc)
     // on macOS due to how it handles color spaces.
     ResetMainWindowColorSpace();
 
-    wxImage* tmpImage = new wxImage(m_imgWidth, dy + 1, (unsigned char*)&dyImageData, true);
+    wxImage* tmpImage = new wxImage(m_imgWidth, dy, (unsigned char*)&dyImageData, true);
     m_waterfallBlocks.push_front(gc->CreateBitmapFromImage(*tmpImage));
     
     if (m_waterfallBlocks.size() > dy_blocks)
