@@ -72,6 +72,8 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): Plot
 // we plot in and allocate a bit map of the correct size
 void PlotWaterfall::OnSize(wxSizeEvent& event) 
 {
+    delete m_fullBmp;
+
     // resize bit map
 
     m_rCtrl  = GetClientRect();
