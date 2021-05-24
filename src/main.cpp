@@ -149,10 +149,6 @@ wxWindow           *g_parent;
 float               g_RxFreqOffsetHz;
 float               g_TxFreqOffsetHz;
 
-// buffer sizes dependent upon sample rate
-int                 g_modemInbufferSize;
-int                 g_speechOutbufferSize;
-
 // experimental mutex to make sound card callbacks mutually exclusive
 // TODO: review code and see if we need this any more, as fifos should
 // now be thread safe
@@ -1562,11 +1558,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             g_error_histn[i] = 0;
         }
 
-        // Set processing buffer sizes, these are FRAME_DURATION (20ms) chunks of modem and speech that are a useful size for the
-        // various operations we do before and after passing to the freedv_api layer.
-        g_modemInbufferSize = (int)(FRAME_DURATION * freedvInterface.getRxModemSampleRate());
-        g_speechOutbufferSize = (int)(FRAME_DURATION * freedvInterface.getRxSpeechSampleRate());
-
         // init Codec 2 LPC Post Filter (FreeDV 1600)
         freedvInterface.setLpcPostFilter(
                                        wxGetApp().m_codec2LPCPostFilterEnable,
@@ -2370,7 +2361,7 @@ void txRxProcessing()
     // the sound card, and resample them for the freedv modem input
     // sample rate.  Typically the sound card is running at 48 or 44.1
     // kHz, and the modem at 8kHz, however some modems such as FreeDV
-    // 2400A/B and the horus baloon telemetry run at 48 kHz.
+    // 2400A/B run at 48 kHz.
 
     // allocate enough room for 20ms processing buffers at maximum
     // sample rate of 48 kHz.  Note these buffer are used by rx and tx
@@ -2384,7 +2375,6 @@ void txRxProcessing()
     int             nfreedv;
 
     // analog mode runs at the standard FS = 8000 Hz
-
     if (g_analog) {
         freedv_samplerate = FS;
     }
@@ -2392,8 +2382,8 @@ void txRxProcessing()
         // Use the maximum modem sample rate. Any needed downconversion
         // just prior to sending to Codec2 will happen in FreeDVInterface.
         freedv_samplerate = freedvInterface.getRxModemSampleRate();
-        //fprintf(stderr, "sample rate: %d\n", freedv_samplerate);
     }
+    //fprintf(stderr, "sample rate: %d\n", freedv_samplerate);
 
     //
     //  RX side processing --------------------------------------------
@@ -2407,23 +2397,19 @@ void txRxProcessing()
         g_resyncs++;
     }
     
-    // while we have enough input samples available ...
-
-    // attempt to read one processing buffer of receive samples
-    // (20ms), number of samples is scaled for the sound card sample
-    // rate, so we get the right number of samples for the output
-    // decoded audio
-
-    int nsam = g_soundCard1SampleRate * (float)g_modemInbufferSize/freedv_samplerate;
+    // Attempt to read one processing frame (about 20ms) of receive samples,  we 
+    // keep this frame duration constant across modes and sound card sample rates
+    int nsam = (int)(g_soundCard1SampleRate * FRAME_DURATION);
     assert(nsam <= 10*N48);
     assert(nsam != 0);
+    
+    // while we have enough input samples available ... 
     while ((codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0) && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
 
         /* convert sound card sample rate FreeDV input sample rate */
-
         nfreedv = resample(cbData->insrc1, infreedv, insound_card, freedv_samplerate, g_soundCard1SampleRate, N48, nsam);
         assert(nfreedv <= N48);
-
+        
         // optionally save "from radio" signal (write demod input to file) ----------------------------
         // Really useful for testing and development as it allows us
         // to repeat tests using off air signals
@@ -2522,6 +2508,8 @@ void txRxProcessing()
         // Get some audio to send to headphones/speaker.  If in analog
         // mode we pass thru the "from radio" audio to the
         // headphones/speaker.
+        
+        int speechOutbufferSize = (int)(FRAME_DURATION * freedvInterface.getRxSpeechSampleRate());
 
         if (g_analog) {
             memcpy(outfreedv, infreedv, sizeof(short)*nfreedv);
@@ -2536,36 +2524,36 @@ void txRxProcessing()
             // this will typically be decoded output speech, and is
             // (currently at least) fixed at a sample rate of 8 kHz
 
-            memset(outfreedv, 0, sizeof(short)*g_speechOutbufferSize);
-            codec2_fifo_read(cbData->rxoutfifo, outfreedv, g_speechOutbufferSize);
+            memset(outfreedv, 0, sizeof(short)*speechOutbufferSize);
+            codec2_fifo_read(cbData->rxoutfifo, outfreedv, speechOutbufferSize);
         }
 
         // Optional Spk Out EQ Filtering, need mutex as filter can change at run time from another thread
 
         g_mutexProtectingCallbackData.Lock();
         if (cbData->spkOutEQEnable) {
-            sox_biquad_filter(cbData->sbqSpkOutBass,   outfreedv, outfreedv, g_speechOutbufferSize);
-            sox_biquad_filter(cbData->sbqSpkOutTreble, outfreedv, outfreedv, g_speechOutbufferSize);
-            sox_biquad_filter(cbData->sbqSpkOutMid,    outfreedv, outfreedv, g_speechOutbufferSize);
+            sox_biquad_filter(cbData->sbqSpkOutBass,   outfreedv, outfreedv, speechOutbufferSize);
+            sox_biquad_filter(cbData->sbqSpkOutTreble, outfreedv, outfreedv, speechOutbufferSize);
+            sox_biquad_filter(cbData->sbqSpkOutMid,    outfreedv, outfreedv, speechOutbufferSize);
         }
         g_mutexProtectingCallbackData.Unlock();
 
-        resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, freedvInterface.getRxSpeechSampleRate());
+        resample_for_plot(g_plotSpeechOutFifo, outfreedv, speechOutbufferSize, freedvInterface.getRxSpeechSampleRate());
 
         // resample to output sound card rate
 
         if (g_nSoundCards == 1) {
             if (g_analog) /* special case */
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getRxModemSampleRate(), N48, nfreedv);
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, N48, nfreedv);
             else
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, g_speechOutbufferSize);
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, speechOutbufferSize);
             codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
         }
         else {
             if (g_analog) /* special case */
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedvInterface.getRxModemSampleRate(), N48, nfreedv);
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedv_samplerate, N48, nfreedv);
             else
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, g_speechOutbufferSize);
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, speechOutbufferSize);
             codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
         }
     }
