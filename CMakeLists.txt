@@ -8,7 +8,7 @@
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
 # Prevent in-source builds to protect automake/autoconf config.
 # If an in-source build is attempted, you will still need to clean up a few
