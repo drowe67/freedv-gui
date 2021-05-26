@@ -288,7 +288,7 @@ endif(CODEC2_BUILD_DIR)
 #
 if(NOT USE_STATIC_PORTAUDIO)
     message(STATUS "Looking for portaudio...")
-    find_package(Portaudio REQUIRED)
+    find_package(portaudio REQUIRED)
     if(PORTAUDIO_FOUND)
         message(STATUS "  portaudio library: ${PORTAUDIO_LIBRARIES}")
         message(STATUS "  portaudio headers: ${PORTAUDIO_INCLUDE_DIRS}")
