@@ -66,13 +66,14 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): Plot
 
     m_max_mag = MAX_MAG_DB;
     m_min_mag = MIN_MAG_DB;
+    m_fullBmp = NULL;
 }
 
 // When the window size gets set we can work outthe size of the window
 // we plot in and allocate a bit map of the correct size
 void PlotWaterfall::OnSize(wxSizeEvent& event) 
 {
-    m_waterfallBlocks.clear();
+    delete m_fullBmp;
     
     // resize bit map
 
@@ -106,7 +107,7 @@ void PlotWaterfall::OnShow(wxShowEvent& event)
 //----------------------------------------------------------------
 PlotWaterfall::~PlotWaterfall()
 {
-    m_waterfallBlocks.clear();
+    delete m_fullBmp;
 }
 
 //----------------------------------------------------------------
@@ -177,45 +178,37 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
     m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
     // we want a bit map the size of m_rGrid
-    m_imgHeight = m_rGrid.GetHeight();
-    m_imgWidth = m_rGrid.GetWidth();
-    
-    drawGraticule(gc);
-    
-    float px_per_sec = (float)m_imgHeight / WATERFALL_SECS_Y;
-    int dy = m_dT * px_per_sec;
-    int remainingBlackBoxHeight = m_imgHeight - dy * m_waterfallBlocks.size();
-    int remainingBlackBoxY = PLOT_BORDER + YBOTTOM_OFFSET + dy * m_waterfallBlocks.size();
-    
-    if (!m_newdata)
+    if (m_fullBmp == NULL) 
     {
-        remainingBlackBoxHeight = m_imgHeight;
-        remainingBlackBoxY = PLOT_BORDER + YBOTTOM_OFFSET;
+        // we want a bit map the size of m_rGrid
+        m_imgHeight = m_rGrid.GetHeight();
+        m_imgWidth = m_rGrid.GetWidth();
+        m_fullBmp = new wxBitmap(std::max(1,m_imgWidth), std::max(1,m_imgHeight));
     }
-    
-    if (remainingBlackBoxHeight > 0)
-    {
-        wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-        gc->SetBrush(ltGraphBkgBrush);
-        gc->SetPen(wxPen(BLACK_COLOR, 0));
-        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, remainingBlackBoxY, m_imgWidth, remainingBlackBoxHeight);
-    }
-    
+
     if(m_newdata)
     {
         m_newdata = false;
-        plotPixelData(gc);
-        
-        int y = 0;
-        
-        for (auto& bmp : m_waterfallBlocks)
-        {
-            gc->DrawBitmap(bmp, PLOT_BORDER + XLEFT_OFFSET, y + PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, dy);
-            y += dy;
-        }
-        
+        plotPixelData();
+
+        wxGraphicsBitmap tmpBmp = gc->CreateBitmap(*m_fullBmp);
+        gc->DrawBitmap(tmpBmp, PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
         m_dT = DT;
     }
+    else 
+    {
+        // no data to plot so just erase to black.  Blue looks nicer
+        // but is same colour as low amplitude signal
+
+        // Bug on Linux: When Stop is pressed this code doesn't erase
+        // the lower 25% of the Waterfall Window
+
+        wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
+        gc->SetBrush(ltGraphBkgBrush);
+        gc->SetPen(wxPen(BLACK_COLOR, 0));
+        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+    }
+    drawGraticule(gc); 
 }
 
 //-------------------------------------------------------------------------
@@ -302,14 +295,14 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
 //-------------------------------------------------------------------------
 // plotPixelData()
 //-------------------------------------------------------------------------
-void PlotWaterfall::plotPixelData(wxGraphicsContext* gc)
+void PlotWaterfall::plotPixelData()
 {
     float       spec_index_per_px;
     float       intensity_per_dB;
     float       px_per_sec;
     int         index;
     int         dy;
-    unsigned int         dy_blocks;
+    int         dy_blocks;
     int         px;
     int         py;
     int         intensity;
@@ -395,13 +388,16 @@ void PlotWaterfall::plotPixelData(wxGraphicsContext* gc)
     ResetMainWindowColorSpace();
 
     wxImage* tmpImage = new wxImage(m_imgWidth, dy, (unsigned char*)&dyImageData, true);
-    m_waterfallBlocks.push_front(gc->CreateBitmapFromImage(*tmpImage));
-    
-    if (m_waterfallBlocks.size() > dy_blocks)
+    wxBitmap* tmpBmp = new wxBitmap(*tmpImage);
     {
-        m_waterfallBlocks.pop_back();
+        wxMemoryDC fullBmpSourceDC(*m_fullBmp);
+        wxMemoryDC fullBmpDestDC(*m_fullBmp);
+        wxMemoryDC tmpBmpSourceDC(*tmpBmp);
+
+        fullBmpDestDC.Blit(0, dy, m_imgWidth, m_imgHeight - dy, &fullBmpSourceDC, 0, 0);
+        fullBmpDestDC.Blit(0, 0, m_imgWidth, dy, &tmpBmpSourceDC, 0, 0);
     }
-    
+    delete tmpBmp; 
     delete tmpImage;
 }
 
