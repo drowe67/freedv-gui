@@ -92,6 +92,17 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
     
     m_dT = DT;
     
+    m_fullBmp = new wxBitmap(std::max(1,m_imgWidth), std::max(1,m_imgHeight));
+    
+    // Paint to black to avoid random garbage appearing.
+    wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
+    wxMemoryDC fullBmpDestDC(*m_fullBmp);
+    wxGraphicsContext* tmpGc = wxGraphicsContext::Create(fullBmpDestDC);
+    tmpGc->SetBrush(ltGraphBkgBrush);
+    tmpGc->SetPen(wxPen(BLACK_COLOR, 0));
+    tmpGc->DrawRectangle(0, 0, m_imgWidth, m_imgHeight);
+    delete tmpGc;
+    
     event.Skip();
 }
 
@@ -178,12 +189,21 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
     m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
     // we want a bit map the size of m_rGrid
+    wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
     if (m_fullBmp == NULL) 
     {
         // we want a bit map the size of m_rGrid
         m_imgHeight = m_rGrid.GetHeight();
         m_imgWidth = m_rGrid.GetWidth();
         m_fullBmp = new wxBitmap(std::max(1,m_imgWidth), std::max(1,m_imgHeight));
+        
+        // Paint to black to avoid random garbage appearing.
+        wxMemoryDC fullBmpDestDC(*m_fullBmp);
+        wxGraphicsContext* tmpGc = wxGraphicsContext::Create(fullBmpDestDC);
+        tmpGc->SetBrush(ltGraphBkgBrush);
+        tmpGc->SetPen(wxPen(BLACK_COLOR, 0));
+        tmpGc->DrawRectangle(0, 0, m_imgWidth, m_imgHeight);
+        delete tmpGc;
     }
 
     if(m_newdata)
@@ -203,7 +223,6 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
         // Bug on Linux: When Stop is pressed this code doesn't erase
         // the lower 25% of the Waterfall Window
 
-        wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
         gc->SetBrush(ltGraphBkgBrush);
         gc->SetPen(wxPen(BLACK_COLOR, 0));
         gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
