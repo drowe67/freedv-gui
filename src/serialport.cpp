@@ -340,3 +340,25 @@ void Serialport::ptt(bool tx) {
  
     }
 }
+
+bool Serialport::getPtt(bool ctsPos)
+{
+    return getCTS() == ctsPos;
+}
+
+bool Serialport::getCTS() 
+{
+	if(com_handle == COM_HANDLE_INVALID)
+		return false;
+#ifdef _WIN32
+    DWORD modemFlags = 0;
+	GetCommModemStatus(com_handle, &modemFlags);
+    return (modemFlags & MS_CTS_ON);
+#else
+	{	// For C89 happiness
+		int flags = 0;
+		ioctl(com_handle, TIOCMGET, &flags);
+        return flags & TIOCM_CTS;
+	}
+#endif    
+}

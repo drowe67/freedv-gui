@@ -27,8 +27,10 @@ class Serialport {
         bool openport(const char port[], bool useRTS, bool RTSPos, bool useDTR, bool DTRPos);
         bool isopen() {return (com_handle != COM_HANDLE_INVALID);}
         void closeport();
-        void ptt(bool tx);
-
+        void ptt(bool tx); 
+        
+        bool getPtt(bool ctsPos);
+        
     private:
         com_handle_t  com_handle;
         bool          m_useRTS, m_RTSPos, m_useDTR, m_DTRPos;
@@ -37,6 +39,8 @@ class Serialport {
         void lowerDTR(void);
         void raiseRTS(void);
         void lowerRTS(void);
+        
+        bool getCTS(void);
 };
 
 #endif /* SERIALPORT_H */
