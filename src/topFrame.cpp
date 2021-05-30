@@ -181,22 +181,22 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     sbSizer_ber->Add(m_BtnBerReset, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
     m_textBits = new wxStaticText(statsBox, wxID_ANY, wxT("Bits: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    sbSizer_ber->Add(m_textBits, 0, wxALIGN_CENTER, 1);
-    m_textErrors = new wxStaticText(statsBox, wxID_ANY, wxT("Errs: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
-    sbSizer_ber->Add(m_textErrors, 0, wxALIGN_CENTER, 1);
-    m_textBER = new wxStaticText(statsBox, wxID_ANY, wxT("BER: 0.0"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
-    sbSizer_ber->Add(m_textBER, 0, wxALIGN_CENTER, 1);
-    m_textResyncs = new wxStaticText(statsBox, wxID_ANY, wxT("Resyncs: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
-    sbSizer_ber->Add(m_textResyncs, 0, wxALIGN_CENTER, 1);
-    m_textClockOffset = new wxStaticText(statsBox, wxID_ANY, wxT("ClkOff: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+    sbSizer_ber->Add(m_textBits, 0, wxALIGN_LEFT, 1);
+    m_textErrors = new wxStaticText(statsBox, wxID_ANY, wxT("Errs: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    sbSizer_ber->Add(m_textErrors, 0, wxALIGN_LEFT, 1);
+    m_textBER = new wxStaticText(statsBox, wxID_ANY, wxT("BER: 0.0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    sbSizer_ber->Add(m_textBER, 0, wxALIGN_LEFT, 1);
+    m_textResyncs = new wxStaticText(statsBox, wxID_ANY, wxT("Resyncs: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    sbSizer_ber->Add(m_textResyncs, 0, wxALIGN_LEFT, 1);
+    m_textClockOffset = new wxStaticText(statsBox, wxID_ANY, wxT("ClkOff: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_textClockOffset->SetMinSize(wxSize(125,-1));
-    sbSizer_ber->Add(m_textClockOffset, 0, wxALIGN_CENTER, 1);
-    m_textFreqOffset = new wxStaticText(statsBox, wxID_ANY, wxT("FreqOff: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
-    sbSizer_ber->Add(m_textFreqOffset, 0, wxALIGN_CENTER, 1);
-    m_textSyncMetric = new wxStaticText(statsBox, wxID_ANY, wxT("Sync: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
-    sbSizer_ber->Add(m_textSyncMetric, 0, wxALIGN_CENTER, 1);
-    m_textCodec2Var = new wxStaticText(statsBox, wxID_ANY, wxT("Var: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
-    sbSizer_ber->Add(m_textCodec2Var, 0, wxALIGN_CENTER, 1);
+    sbSizer_ber->Add(m_textClockOffset, 0, wxALIGN_LEFT, 1);
+    m_textFreqOffset = new wxStaticText(statsBox, wxID_ANY, wxT("FreqOff: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    sbSizer_ber->Add(m_textFreqOffset, 0, wxALIGN_LEFT, 1);
+    m_textSyncMetric = new wxStaticText(statsBox, wxID_ANY, wxT("Sync: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    sbSizer_ber->Add(m_textSyncMetric, 0, wxALIGN_LEFT, 1);
+    m_textCodec2Var = new wxStaticText(statsBox, wxID_ANY, wxT("Var: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    sbSizer_ber->Add(m_textCodec2Var, 0, wxALIGN_LEFT, 1);
 
     leftSizer->Add(sbSizer_ber,0, wxALL|wxEXPAND, 3);
 
