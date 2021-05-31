@@ -116,7 +116,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     wxStaticBoxSizer* staticBoxSizer17 = new wxStaticBoxSizer( serialSettingsBox, wxVERTICAL);
     mainSizer->Add(staticBoxSizer17, 1, wxEXPAND, 5);
     
-    wxStaticBox* pttBox = new wxStaticBox(serialSettingsBox, wxID_ANY, _("PTT Out"));
+    wxStaticBox* pttBox = new wxStaticBox(serialSettingsBox, wxID_ANY, _("PTT Port"));
     wxStaticBoxSizer* staticBoxSizer31 = new wxStaticBoxSizer( pttBox, wxVERTICAL);
     staticBoxSizer17->Add(staticBoxSizer31, 1, wxEXPAND, 5);
 
