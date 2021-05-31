@@ -102,10 +102,8 @@ void MainFrame::OpenPTTInPort(void)
            // Set up PTT monitoring. When PTT state changes, we should also change 
            // the PTT state in th app.
            serialport->enablePttInputMonitoring(wxGetApp().m_boolCTSPos, [&](bool pttState) {
-               if (pttState != g_tx)
-               {
-                   CallAfter([&]() { togglePTT(); });
-               }
+               fprintf(stderr, "PTT input state is now %d\n", pttState);
+               GetEventHandler()->CallAfter([&]() { m_btnTogPTT->SetValue(pttState); togglePTT(); });
            });
        }
     }

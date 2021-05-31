@@ -13,6 +13,7 @@ extern int g_verbose;
 Serialport::Serialport() {
     m_currentPttInputState = false;
     m_pttMonitorThreadEnding = false;
+    m_pttMonitoringThread = nullptr;
     com_handle = COM_HANDLE_INVALID;
 }
 
@@ -241,9 +242,11 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 void Serialport::closeport()
 {
     m_pttMonitorThreadEnding = true;
-    if (m_pttMonitoringThread.joinable())
+    if (m_pttMonitoringThread != nullptr && m_pttMonitoringThread->IsAlive())
     {
-        m_pttMonitoringThread.join();
+        m_pttMonitoringThread->Delete(NULL, wxTHREAD_WAIT_BLOCK);
+        delete m_pttMonitoringThread;
+        m_pttMonitoringThread = nullptr;
     }
     
 #ifdef _WIN32
@@ -349,20 +352,34 @@ void Serialport::ptt(bool tx) {
     }
 }
 
+wxThread::ExitCode Serialport::PttMonitorThread::Entry()
+{
+    while (!TestDestroy())
+    {
+        bool pttState = m_port->getCTS();
+        if (pttState != m_port->m_currentPttInputState)
+        {
+            m_port->m_currentPttInputState = pttState;
+            m_port->m_pttChangeFn(m_port->m_currentPttInputState == m_ctsPos);
+        }
+        
+        wxThread::This()->Sleep(PTT_INPUT_MONITORING_TIME_MS);
+    }
+    
+    return nullptr;
+}
+
+
 void Serialport::enablePttInputMonitoring(bool ctsPos, std::function<void(bool)> pttChangeFn)
 {
-    m_pttMonitoringThread = std::thread([&]() {
-        while (!m_pttMonitorThreadEnding)
-        {
-            bool pttState = getCTS() == ctsPos;
-            if (pttState != m_currentPttInputState)
-            {
-                m_currentPttInputState = pttState;
-                pttChangeFn(m_currentPttInputState);
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(PTT_INPUT_MONITORING_TIME_MS));
-        }
-    });
+    m_pttChangeFn = pttChangeFn;
+    m_currentPttInputState = false;
+    m_pttMonitoringThread = new PttMonitorThread(this, ctsPos);
+    if (m_pttMonitoringThread->Run() != wxTHREAD_NO_ERROR)
+    {
+        delete m_pttMonitoringThread;
+        m_pttMonitoringThread = nullptr;
+    }
 }
 
 bool Serialport::getCTS() 

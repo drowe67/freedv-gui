@@ -10,7 +10,7 @@
 #endif
 
 #include <functional>
-#include <thread>
+#include <wx/thread.h>
 
 // Serial ports called com port for historic reasons, especially on Windows machines 
 
@@ -37,18 +37,36 @@ class Serialport {
         void enablePttInputMonitoring(bool ctsPos, std::function<void(bool)> pttChangeFn);
         
     private:
+        class PttMonitorThread : public wxThread
+        {
+        public:
+            PttMonitorThread(Serialport* port, bool ctsPos)
+                : wxThread()
+                , m_port(port)
+                , m_ctsPos(ctsPos) { }
+            virtual ~PttMonitorThread() { }
+            
+        protected:
+            virtual ExitCode Entry();
+            
+        private:
+            Serialport* m_port;
+            bool m_ctsPos;
+        };       
+        
         com_handle_t  com_handle;
         bool          m_useRTS, m_RTSPos, m_useDTR, m_DTRPos;
-        std::thread m_pttMonitoringThread;
+        Serialport::PttMonitorThread* m_pttMonitoringThread;
         bool m_currentPttInputState;
         bool m_pttMonitorThreadEnding;
+        std::function<void(bool)> m_pttChangeFn;
         
         void raiseDTR(void);
         void lowerDTR(void);
         void raiseRTS(void);
         void lowerRTS(void);
         
-        bool getCTS(void);
+        bool getCTS(void); 
 };
 
 #endif /* SERIALPORT_H */
