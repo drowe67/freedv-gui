@@ -65,7 +65,6 @@ class ComPortsDlg : public wxDialog
 
         /* Serial Settings */
 
-        wxListBox     *m_listCtrlPorts;
         wxCheckBox    *m_ckUseSerialPTT;
         wxStaticText  *m_staticText12;
         wxComboBox    *m_cbCtlDevicePath;

@@ -120,17 +120,6 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     wxStaticBoxSizer* staticBoxSizer31 = new wxStaticBoxSizer( pttBox, wxVERTICAL);
     staticBoxSizer17->Add(staticBoxSizer31, 1, wxEXPAND, 5);
 
-#ifdef __WXMSW__
-    m_ckUseSerialPTT = new wxCheckBox(pttBox, wxID_ANY, _("Use Serial Port PTT"), wxDefaultPosition, wxSize(-1,-1), 0);
-    m_ckUseSerialPTT->SetValue(false);
-    staticBoxSizer31->Add(m_ckUseSerialPTT, 0, wxALIGN_LEFT, 20);
-
-    wxArrayString m_listCtrlPortsArr;
-    m_listCtrlPorts = new wxListBox(pttBox, wxID_ANY, wxDefaultPosition, wxSize(-1,45), m_listCtrlPortsArr, wxLB_SINGLE | wxLB_SORT);
-    staticBoxSizer31->Add(m_listCtrlPorts, 1, wxALIGN_CENTER, 0);
-#endif
-
-#if defined(__WXOSX__) || defined(__WXGTK__)
     wxBoxSizer* bSizer83;
     bSizer83 = new wxBoxSizer(wxHORIZONTAL);
 
@@ -149,7 +138,6 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     
     bSizer83->Add(gridSizer200, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_LEFT | wxALL, 2);
     staticBoxSizer31->Add(bSizer83, 1, wxALL, 1);
-#endif
 
     wxBoxSizer* boxSizer19 = new wxBoxSizer(wxVERTICAL);
     staticBoxSizer17->Add(boxSizer19, 1, wxEXPAND, 5);
@@ -265,9 +253,10 @@ void ComPortsDlg::populatePortList()
         m_cbSerialRate->Append(serialRates[i]);
     }
 
-#ifdef __WXMSW__
-    m_listCtrlPorts->Clear();
     m_cbSerialPort->Clear();
+    m_cbCtlDevicePath->Clear();
+    
+#ifdef __WXMSW__
     wxArrayString aStr;
     wxRegKey key(wxRegKey::HKLM, _T("HARDWARE\\DEVICEMAP\\SERIALCOMM"));
     if(!key.Exists())
@@ -304,12 +293,11 @@ void ComPortsDlg::populatePortList()
             key.GetNextValue(key_name, el);
         }
     }
-    m_listCtrlPorts->Append(aStr);
+    m_cbCtlDevicePath->Append(aStr);
     m_cbSerialPort->Append(aStr);
 #endif
 #if defined(__WXGTK__) || defined(__WXOSX__)
-    m_cbSerialPort->Clear();
-    m_cbCtlDevicePath->Clear();
+
 #if defined(__FreeBSD__) || defined(__WXOSX__)
 	glob_t	gl;
 #ifdef __FreeBSD__
@@ -389,12 +377,7 @@ void ComPortsDlg::ExchangeData(int inout)
 
         m_ckUseSerialPTT->SetValue(wxGetApp().m_boolUseSerialPTT);
         str = wxGetApp().m_strRigCtrlPort;
-#ifdef __WXMSW__
-        m_listCtrlPorts->SetStringSelection(str);
-#endif
-#if defined(__WXOSX__) || defined(__WXGTK__)
         m_cbCtlDevicePath->SetValue(str);
-#endif
         m_rbUseRTS->SetValue(wxGetApp().m_boolUseRTS);
         m_ckRTSPos->SetValue(wxGetApp().m_boolRTSPos);
         m_rbUseDTR->SetValue(wxGetApp().m_boolUseDTR);
@@ -436,12 +419,7 @@ void ComPortsDlg::ExchangeData(int inout)
         /* Serial settings */
 
         wxGetApp().m_boolUseSerialPTT           = m_ckUseSerialPTT->IsChecked();
-#ifdef __WXMSW__
-        wxGetApp().m_strRigCtrlPort             = m_listCtrlPorts->GetStringSelection();
-#endif
-#if defined(__WXGTK__) || defined(__WXOSX__)
         wxGetApp().m_strRigCtrlPort             = m_cbCtlDevicePath->GetValue();
-#endif
         wxGetApp().m_boolUseRTS                 = m_rbUseRTS->GetValue();
         wxGetApp().m_boolRTSPos                 = m_ckRTSPos->IsChecked();
         wxGetApp().m_boolUseDTR                 = m_rbUseDTR->GetValue();
@@ -548,15 +526,10 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
         Serialport *serialport = wxGetApp().m_serialport; 
         
         wxString ctrlport;
-#ifdef __WXMSW__
-        ctrlport = m_listCtrlPorts->GetStringSelection();
-#endif
-#if defined(__WXGTK__) || defined(__WXOSX__)
         ctrlport = m_cbCtlDevicePath->GetValue();
-#endif
         if (g_verbose) fprintf(stderr, "opening serial port: ");
-	fputs(ctrlport.c_str(), stderr);            // don't escape crazy Microsoft bakslash-ified comm port names
-	if (g_verbose) fprintf(stderr,"\n");
+        fputs(ctrlport.c_str(), stderr);            // don't escape crazy Microsoft bakslash-ified comm port names
+        if (g_verbose) fprintf(stderr,"\n");
 
         bool success = serialport->openport(ctrlport.c_str(),
                                             m_rbUseRTS->GetValue(),
@@ -650,11 +623,7 @@ void ComPortsDlg::updateControlState()
     m_cbSerialRate->Enable(m_ckUseHamlibPTT->GetValue());
     m_tcIcomCIVHex->Enable(m_ckUseHamlibPTT->GetValue());
 
-#if defined(__WXOSX__) || defined(__WXGTK__)
     m_cbCtlDevicePath->Enable(m_ckUseSerialPTT->GetValue());
-#elif defined(__WXMSW__)
-    m_listCtrlPorts->Enable(m_ckUseSerialPTT->GetValue());
-#endif // OSX || GTK
     m_rbUseDTR->Enable(m_ckUseSerialPTT->GetValue());
     m_ckRTSPos->Enable(m_ckUseSerialPTT->GetValue());
     m_rbUseRTS->Enable(m_ckUseSerialPTT->GetValue());
