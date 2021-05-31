@@ -123,26 +123,27 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxSizer* leftSizer = new wxWrapSizer(wxVERTICAL);
 
     wxStaticBoxSizer* snrSizer;
-    snrSizer = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("SNR")), wxVERTICAL);
+    wxStaticBox* snrBox = new wxStaticBox(panel, wxID_ANY, _("SNR"));
+    snrSizer = new wxStaticBoxSizer(snrBox, wxVERTICAL);
 
     //------------------------------
     // S/N ratio Guage (vert. bargraph)
     //------------------------------
-    m_gaugeSNR = new wxGauge(panel, wxID_ANY, 25, wxDefaultPosition, wxSize(15,150), wxGA_SMOOTH|wxGA_VERTICAL);
+    m_gaugeSNR = new wxGauge(snrBox, wxID_ANY, 25, wxDefaultPosition, wxSize(15,150), wxGA_SMOOTH|wxGA_VERTICAL);
     m_gaugeSNR->SetToolTip(_("Displays signal to noise ratio in dB."));
     snrSizer->Add(m_gaugeSNR, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 10);
 
     //------------------------------
     // Box for S/N ratio (Numeric)
     //------------------------------
-    m_textSNR = new wxStaticText(panel, wxID_ANY, wxT(" 0.0"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
+    m_textSNR = new wxStaticText(snrBox, wxID_ANY, wxT(" 0.0"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
     m_textSNR->SetMinSize(wxSize(40,-1));
     snrSizer->Add(m_textSNR, 0, wxALIGN_CENTER_HORIZONTAL, 1);
 
     //------------------------------
     // S/N ratio slow Checkbox
     //------------------------------
-    m_ckboxSNR = new wxCheckBox(panel, wxID_ANY, _("Slow"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxSNR = new wxCheckBox(snrBox, wxID_ANY, _("Slow"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     m_ckboxSNR->SetToolTip(_("Smooth but slow SNR estimation"));
     snrSizer->Add(m_ckboxSNR, 0, wxALIGN_CENTER_HORIZONTAL, 5);
 
@@ -152,17 +153,18 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Sync  Indicator box
     //------------------------------
     wxStaticBoxSizer* sbSizer3_33;
-    sbSizer3_33 = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("Sync")), wxVERTICAL);
+    wxStaticBox* syncBox = new wxStaticBox(panel, wxID_ANY, _("Sync"));
+    sbSizer3_33 = new wxStaticBoxSizer(syncBox, wxVERTICAL);
 
-    m_textSync = new wxStaticText(panel, wxID_ANY, wxT("Modem"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
+    m_textSync = new wxStaticText(syncBox, wxID_ANY, wxT("Modem"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
     sbSizer3_33->Add(m_textSync, 0, wxALIGN_CENTER_HORIZONTAL, 1);
     m_textSync->Disable();
 
-    m_textCurrentDecodeMode = new wxStaticText(panel, wxID_ANY, wxT("Mode: unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textCurrentDecodeMode = new wxStaticText(syncBox, wxID_ANY, wxT("Mode: unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer3_33->Add(m_textCurrentDecodeMode, 0, wxALIGN_CENTER_HORIZONTAL, 1);
     m_textCurrentDecodeMode->Disable();
 
-    m_BtnReSync = new wxButton(panel, wxID_ANY, _("ReS&ync"), wxDefaultPosition, wxDefaultSize, 0);
+    m_BtnReSync = new wxButton(syncBox, wxID_ANY, _("ReS&ync"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer3_33->Add(m_BtnReSync, 0, wxALIGN_CENTRE , 1);
 
     leftSizer->Add(sbSizer3_33,0, wxALL|wxEXPAND, 3);
@@ -172,27 +174,28 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
 
     wxStaticBoxSizer* sbSizer_ber;
-    sbSizer_ber = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("Stats")), wxVERTICAL);
+    wxStaticBox* statsBox = new wxStaticBox(panel, wxID_ANY, _("Stats"));
+    sbSizer_ber = new wxStaticBoxSizer(statsBox, wxVERTICAL);
 
-    m_BtnBerReset = new wxButton(panel, wxID_ANY, _("&Reset"), wxDefaultPosition, wxDefaultSize, 0);
+    m_BtnBerReset = new wxButton(statsBox, wxID_ANY, _("&Reset"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_ber->Add(m_BtnBerReset, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
-    m_textBits = new wxStaticText(panel, wxID_ANY, wxT("Bits: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textBits = new wxStaticText(statsBox, wxID_ANY, wxT("Bits: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_ber->Add(m_textBits, 0, wxALIGN_LEFT, 1);
-    m_textErrors = new wxStaticText(panel, wxID_ANY, wxT("Errs: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textErrors = new wxStaticText(statsBox, wxID_ANY, wxT("Errs: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_ber->Add(m_textErrors, 0, wxALIGN_LEFT, 1);
-    m_textBER = new wxStaticText(panel, wxID_ANY, wxT("BER: 0.0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textBER = new wxStaticText(statsBox, wxID_ANY, wxT("BER: 0.0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_ber->Add(m_textBER, 0, wxALIGN_LEFT, 1);
-    m_textResyncs = new wxStaticText(panel, wxID_ANY, wxT("Resyncs: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textResyncs = new wxStaticText(statsBox, wxID_ANY, wxT("Resyncs: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_ber->Add(m_textResyncs, 0, wxALIGN_LEFT, 1);
-    m_textClockOffset = new wxStaticText(panel, wxID_ANY, wxT("ClkOff: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textClockOffset = new wxStaticText(statsBox, wxID_ANY, wxT("ClkOff: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_textClockOffset->SetMinSize(wxSize(125,-1));
     sbSizer_ber->Add(m_textClockOffset, 0, wxALIGN_LEFT, 1);
-    m_textFreqOffset = new wxStaticText(panel, wxID_ANY, wxT("FreqOff: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textFreqOffset = new wxStaticText(statsBox, wxID_ANY, wxT("FreqOff: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_ber->Add(m_textFreqOffset, 0, wxALIGN_LEFT, 1);
-    m_textSyncMetric = new wxStaticText(panel, wxID_ANY, wxT("Sync: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textSyncMetric = new wxStaticText(statsBox, wxID_ANY, wxT("Sync: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_ber->Add(m_textSyncMetric, 0, wxALIGN_LEFT, 1);
-    m_textCodec2Var = new wxStaticText(panel, wxID_ANY, wxT("Var: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textCodec2Var = new wxStaticText(statsBox, wxID_ANY, wxT("Var: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_ber->Add(m_textCodec2Var, 0, wxALIGN_LEFT, 1);
 
     leftSizer->Add(sbSizer_ber,0, wxALL|wxEXPAND, 3);
@@ -201,13 +204,14 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Signal Level(vert. bargraph)
     //------------------------------
     wxStaticBoxSizer* levelSizer;
-    levelSizer = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("Level")), wxVERTICAL);
+    wxStaticBox* levelBox = new wxStaticBox(panel, wxID_ANY, _("Level"));
+    levelSizer = new wxStaticBoxSizer(levelBox, wxVERTICAL);
     
-    m_textLevel = new wxStaticText(panel, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(60,-1), wxALIGN_CENTRE);
+    m_textLevel = new wxStaticText(levelBox, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(60,-1), wxALIGN_CENTRE);
     m_textLevel->SetForegroundColour(wxColour(255,0,0));
     levelSizer->Add(m_textLevel, 0, wxALIGN_LEFT, 1);
 
-    m_gaugeLevel = new wxGauge(panel, wxID_ANY, 100, wxDefaultPosition, wxSize(15,135), wxGA_SMOOTH|wxGA_VERTICAL);
+    m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(15,135), wxGA_SMOOTH|wxGA_VERTICAL);
     m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode.  If Red you should reduce your levels"));
     levelSizer->Add(m_gaugeLevel, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 10);
 
@@ -218,18 +222,18 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //=====================================================
     // Center Section
     //=====================================================
-    wxBoxSizer* centerSizer;
-    centerSizer = new wxBoxSizer(wxVERTICAL);
-    wxBoxSizer* upperSizer;
-    upperSizer = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* centerSizer = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* upperSizer = new wxBoxSizer(wxVERTICAL);
 
     //=====================================================
     // Tabbed Notebook control containing display graphs
     //=====================================================
+
     long nb_style = wxAUI_NB_BOTTOM | wxAUI_NB_TAB_SPLIT | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS;
     m_auiNbookCtrl = new TabFreeAuiNotebook(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, nb_style);
     // This line sets the fontsize for the tabs on the notebook control
     m_auiNbookCtrl->SetFont(wxFont(8, 70, 90, 90, false, wxEmptyString));
+    m_auiNbookCtrl->SetSizeHints(wxSize(375,375));
 
     upperSizer->Add(m_auiNbookCtrl, 1, wxALIGN_TOP|wxEXPAND, 1);
     centerSizer->Add(upperSizer, 1, wxALIGN_TOP|wxEXPAND, 0);
@@ -254,12 +258,12 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     bSizer15 = new wxBoxSizer(wxVERTICAL);
     m_txtCtrlCallSign = new wxTextCtrl(panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
     m_txtCtrlCallSign->SetToolTip(_("Call Sign of transmitting station will appear here"));
+    m_txtCtrlCallSign->SetSizeHints(wxSize(100,-1));
     bSizer15->Add(m_txtCtrlCallSign, 0, wxALL|wxEXPAND, 5);
     lowerSizer->Add(bSizer15, 1, wxEXPAND, 5);
-
+    lowerSizer->SetMinSize(wxSize(375,-1));
     centerSizer->Add(lowerSizer, 0, wxEXPAND, 2);
-
-    
+    centerSizer->SetMinSize(wxSize(375,375));
     bSizer1->Add(centerSizer, 4, wxALL|wxEXPAND, 1);
     
     //=====================================================
@@ -271,9 +275,10 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Squelch Slider Control
     //=====================================================
     wxStaticBoxSizer* sbSizer3;
-    sbSizer3 = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("S&quelch")), wxVERTICAL);
+    wxStaticBox* squelchBox = new wxStaticBox(panel, wxID_ANY, _("S&quelch"));
+    sbSizer3 = new wxStaticBoxSizer(squelchBox, wxVERTICAL);
 
-    m_sliderSQ = new wxSlider(panel, wxID_ANY, 0, 0, 40, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS|wxSL_INVERSE|wxSL_VERTICAL);
+    m_sliderSQ = new wxSlider(squelchBox, wxID_ANY, 0, 0, 40, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS|wxSL_INVERSE|wxSL_VERTICAL);
     m_sliderSQ->SetToolTip(_("Set Squelch level in dB."));
     m_sliderSQ->SetMinSize(wxSize(-1,150));
 
@@ -282,14 +287,14 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Squelch Level static text box
     //------------------------------
-    m_textSQ = new wxStaticText(panel, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
+    m_textSQ = new wxStaticText(squelchBox, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
     m_textSQ->SetMinSize(wxSize(100,-1));
     sbSizer3->Add(m_textSQ, 0, wxALIGN_CENTER_HORIZONTAL, 0);
 
     //------------------------------
     // Squelch Toggle Checkbox
     //------------------------------
-    m_ckboxSQ = new wxCheckBox(panel, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxSQ = new wxCheckBox(squelchBox, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
 
     sbSizer3->Add(m_ckboxSQ, 0, wxALIGN_CENTER_HORIZONTAL, 0);
     rightSizer->Add(sbSizer3, 2, wxEXPAND, 0);
@@ -315,23 +320,24 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Mode box
     //------------------------------
     wxStaticBoxSizer* sbSizer_mode;
-    sbSizer_mode = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("&Mode")), wxVERTICAL);
+    wxStaticBox* modeBox = new wxStaticBox(panel, wxID_ANY, _("&Mode"));
+    sbSizer_mode = new wxStaticBoxSizer(modeBox, wxVERTICAL);
 
-    m_rb700c = new wxRadioButton( panel, wxID_ANY, wxT("700C"), wxDefaultPosition, wxDefaultSize,  wxRB_GROUP);
+    m_rb700c = new wxRadioButton( modeBox, wxID_ANY, wxT("700C"), wxDefaultPosition, wxDefaultSize,  wxRB_GROUP);
     sbSizer_mode->Add(m_rb700c, 0, wxALIGN_LEFT|wxALL, 1);
-    m_rb700d = new wxRadioButton( panel, wxID_ANY, wxT("700D"), wxDefaultPosition, wxDefaultSize,  0);
+    m_rb700d = new wxRadioButton( modeBox, wxID_ANY, wxT("700D"), wxDefaultPosition, wxDefaultSize,  0);
     sbSizer_mode->Add(m_rb700d, 0, wxALIGN_LEFT|wxALL, 1);
-    m_rb700e = new wxRadioButton( panel, wxID_ANY, wxT("700E"), wxDefaultPosition, wxDefaultSize,  0);
+    m_rb700e = new wxRadioButton( modeBox, wxID_ANY, wxT("700E"), wxDefaultPosition, wxDefaultSize,  0);
     sbSizer_mode->Add(m_rb700e, 0, wxALIGN_LEFT|wxALL, 1);
-    m_rb800xa = new wxRadioButton( panel, wxID_ANY, wxT("800XA"), wxDefaultPosition, wxDefaultSize, 0);
+    m_rb800xa = new wxRadioButton( modeBox, wxID_ANY, wxT("800XA"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_mode->Add(m_rb800xa, 0, wxALIGN_LEFT|wxALL, 1);
-    m_rb1600 = new wxRadioButton( panel, wxID_ANY, wxT("1600"), wxDefaultPosition, wxDefaultSize, 0);
+    m_rb1600 = new wxRadioButton( modeBox, wxID_ANY, wxT("1600"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_mode->Add(m_rb1600, 0, wxALIGN_LEFT|wxALL, 1);
-    m_rb2400b = new wxRadioButton( panel, wxID_ANY, wxT("2400B"), wxDefaultPosition, wxDefaultSize, 0);
+    m_rb2400b = new wxRadioButton( modeBox, wxID_ANY, wxT("2400B"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_mode->Add(m_rb2400b, 0, wxALIGN_LEFT|wxALL, 1);
-    m_rb2020 = new wxRadioButton( panel, wxID_ANY, wxT("2020"), wxDefaultPosition, wxDefaultSize,  0);
+    m_rb2020 = new wxRadioButton( modeBox, wxID_ANY, wxT("2020"), wxDefaultPosition, wxDefaultSize,  0);
     sbSizer_mode->Add(m_rb2020, 0, wxALIGN_LEFT|wxALL, 1);
-
+    sbSizer_mode->SetMinSize(wxSize(100,-1));
     m_rb1600->SetValue(true);
 
     rightSizer->Add(sbSizer_mode,0, wxALL|wxEXPAND, 3);
@@ -340,14 +346,15 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Control Toggles box
     //=====================================================
     wxStaticBoxSizer* sbSizer5;
-    sbSizer5 = new wxStaticBoxSizer(new wxStaticBox(panel, wxID_ANY, _("Control")), wxVERTICAL);
+    wxStaticBox* controlBox = new wxStaticBox(panel, wxID_ANY, _("Control"));
+    sbSizer5 = new wxStaticBoxSizer(controlBox, wxVERTICAL);
     wxBoxSizer* bSizer1511;
     bSizer1511 = new wxBoxSizer(wxVERTICAL);
 
     //-------------------------------
     // Stop/Stop signal processing (rx and tx)
     //-------------------------------
-    m_togBtnOnOff = new wxToggleButton(panel, wxID_ANY, _("&Start"), wxDefaultPosition, wxDefaultSize, 0);
+    m_togBtnOnOff = new wxToggleButton(controlBox, wxID_ANY, _("&Start"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnOnOff->SetToolTip(_("Begin/End receiving data."));
     bSizer1511->Add(m_togBtnOnOff, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
     sbSizer5->Add(bSizer1511, 0, wxEXPAND, 1);
@@ -391,7 +398,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxBoxSizer* bSizer151;
     bSizer151 = new wxBoxSizer(wxVERTICAL);
 
-    m_togBtnSplit = new wxToggleButton(panel, wxID_ANY, _("Sp&lit"), wxDefaultPosition, wxDefaultSize, 0);
+    m_togBtnSplit = new wxToggleButton(controlBox, wxID_ANY, _("Sp&lit"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnSplit->SetToolTip(_("Toggle split frequency mode."));
 
     bSizer151->Add(m_togBtnSplit, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
@@ -402,7 +409,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Analog Passthrough Toggle
     //------------------------------
-    m_togBtnAnalog = new wxToggleButton(panel, wxID_ANY, _("A&nalog"), wxDefaultPosition, wxDefaultSize, 0);
+    m_togBtnAnalog = new wxToggleButton(controlBox, wxID_ANY, _("A&nalog"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnAnalog->SetToolTip(_("Toggle analog/digital operation."));
     bSizer13->Add(m_togBtnAnalog, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
     sbSizer5->Add(bSizer13, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
@@ -410,7 +417,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Voice Keyer Toggle
     //------------------------------
-    m_togBtnVoiceKeyer = new wxToggleButton(panel, wxID_ANY, _("Voice &Keyer"), wxDefaultPosition, wxDefaultSize, 0);
+    m_togBtnVoiceKeyer = new wxToggleButton(controlBox, wxID_ANY, _("Voice &Keyer"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer"));
     wxBoxSizer* bSizer13a = new wxBoxSizer(wxVERTICAL);
     bSizer13a->Add(m_togBtnVoiceKeyer, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
@@ -421,7 +428,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     wxBoxSizer* bSizer11;
     bSizer11 = new wxBoxSizer(wxVERTICAL);
-    m_btnTogPTT = new wxToggleButton(panel, wxID_ANY, _("&PTT"), wxDefaultPosition, wxDefaultSize, 0);
+    m_btnTogPTT = new wxToggleButton(controlBox, wxID_ANY, _("&PTT"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnTogPTT->SetToolTip(_("Push to Talk - Switch between Receive and Transmit - you can also use the space bar "));
     bSizer11->Add(m_btnTogPTT, 1, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
     sbSizer5->Add(bSizer11, 2, wxEXPAND, 1);
@@ -430,6 +437,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
         
     panel->SetSizerAndFit(bSizer1);
     this->Layout();
+
     m_statusBar1 = this->CreateStatusBar(3, wxST_SIZEGRIP, wxID_ANY);
     
     //=====================================================
@@ -439,26 +447,18 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //-------------------
     // Tab ordering for accessibility
     //-------------------
-    m_ckboxSNR->MoveBeforeInTabOrder(m_BtnReSync);
-    m_BtnReSync->MoveBeforeInTabOrder(m_BtnBerReset);
-    m_BtnBerReset->MoveBeforeInTabOrder(m_auiNbookCtrl);
     m_auiNbookCtrl->MoveBeforeInTabOrder(m_BtnCallSignReset);
-    m_BtnCallSignReset->MoveBeforeInTabOrder(m_sliderSQ);
     m_sliderSQ->MoveBeforeInTabOrder(m_ckboxSQ);
-    m_ckboxSQ->MoveBeforeInTabOrder(m_sliderTxLevel);
-    m_sliderTxLevel->MoveBeforeInTabOrder(m_rb700c);
     m_rb700c->MoveBeforeInTabOrder(m_rb700d);
     m_rb700d->MoveBeforeInTabOrder(m_rb700e);
     m_rb700e->MoveBeforeInTabOrder(m_rb800xa);
     m_rb800xa->MoveBeforeInTabOrder(m_rb1600);
     m_rb1600->MoveBeforeInTabOrder(m_rb2400b);
     m_rb2400b->MoveBeforeInTabOrder(m_rb2020);
-    m_rb2020->MoveBeforeInTabOrder(m_togBtnOnOff);
     m_togBtnOnOff->MoveBeforeInTabOrder(m_togBtnSplit);
     m_togBtnSplit->MoveBeforeInTabOrder(m_togBtnAnalog);
     m_togBtnAnalog->MoveBeforeInTabOrder(m_togBtnVoiceKeyer);
     m_togBtnVoiceKeyer->MoveBeforeInTabOrder(m_btnTogPTT);
-    m_btnTogPTT->MoveBeforeInTabOrder(m_ckboxSNR);
         
     //-------------------
     // Connect Events

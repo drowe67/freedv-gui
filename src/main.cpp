@@ -321,9 +321,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     g_SquelchLevel = pConfig->Read(wxT("/Audio/SquelchLevel"), (int)(SQ_DEFAULT_SNR*2));
     g_SquelchLevel /= 2.0;
 
-    Move(x, y);
-    SetClientSize(w, h);
-
     if(wxGetApp().m_show_wf)
     {
         // Add Waterfall Plot window
@@ -397,6 +394,21 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
         m_panelTestFrameErrorsHist->setBarGraph(1);
         m_panelTestFrameErrorsHist->setLogY(1);
     }
+   
+    Move(x, y);
+    Fit();
+    wxSize size = GetBestSize();
+
+    // Add to the "best" width and height to prevent hiding of the waterfall
+    // and the controls just below it. The values here were determined by 
+    // experimentation.
+    size.SetWidth(size.GetWidth() + 375);
+    size.SetHeight(size.GetHeight() + 100);
+
+    if (w < size.GetWidth()) w = size.GetWidth();
+    if (h < size.GetHeight()) h = size.GetHeight();
+    SetClientSize(w, h);
+    SetSizeHints(size);
 
     wxGetApp().m_framesPerBuffer = pConfig->Read(wxT("/Audio/framesPerBuffer"), (int)PA_FPB);
     wxGetApp().m_fifoSize_ms = pConfig->Read(wxT("/Audio/fifoSize_ms"), (int)FIFO_SIZE);
