@@ -24,8 +24,7 @@
 
 #ifdef __WIN32__
 #include <wx/msw/registry.h>
-#endif
-#if defined(__FreeBSD__) || defined(__WXOSX__)
+#else
 #include <glob.h>
 #include <string.h>
 #endif
@@ -299,49 +298,59 @@ void ComPortsDlg::populatePortList()
 #if defined(__WXGTK__) || defined(__WXOSX__)
 
 #if defined(__FreeBSD__) || defined(__WXOSX__)
-	glob_t	gl;
+    glob_t    gl;
 #ifdef __FreeBSD__
-	if(glob("/dev/tty*", GLOB_MARK, NULL, &gl)==0) {
+    if(glob("/dev/tty*", GLOB_MARK, NULL, &gl)==0) {
 #else
-	if(glob("/dev/tty.*", GLOB_MARK, NULL, &gl)==0) {
+    if(glob("/dev/tty.*", GLOB_MARK, NULL, &gl)==0) {
 #endif
-		for(unsigned int i=0; i<gl.gl_pathc; i++) {
-			if(gl.gl_pathv[i][strlen(gl.gl_pathv[i])-1]=='/')
-				continue;
-				
-			/* Exclude pseudo TTYs */
-			if(gl.gl_pathv[i][8] >= 'l' && gl.gl_pathv[i][8] <= 's')
-				continue;
-			if(gl.gl_pathv[i][8] >= 'L' && gl.gl_pathv[i][8] <= 'S')
-				continue;
+        for(unsigned int i=0; i<gl.gl_pathc; i++) {
+            if(gl.gl_pathv[i][strlen(gl.gl_pathv[i])-1]=='/')
+                continue;
+                
+            /* Exclude pseudo TTYs */
+            if(gl.gl_pathv[i][8] >= 'l' && gl.gl_pathv[i][8] <= 's')
+                continue;
+            if(gl.gl_pathv[i][8] >= 'L' && gl.gl_pathv[i][8] <= 'S')
+                continue;
 
-			/* Exclude virtual TTYs */
-			if(gl.gl_pathv[i][8] == 'v')
-				continue;
+            /* Exclude virtual TTYs */
+            if(gl.gl_pathv[i][8] == 'v')
+                continue;
 
-			/* Exclude initial-state and lock-state devices */
+            /* Exclude initial-state and lock-state devices */
 #ifndef __WXOSX__
-			if(strchr(gl.gl_pathv[i], '.') != NULL)
-				continue;
+            if(strchr(gl.gl_pathv[i], '.') != NULL)
+                continue;
 #endif
 
-			m_cbSerialPort->Append(gl.gl_pathv[i]);
-			m_cbCtlDevicePath->Append(gl.gl_pathv[i]);
-		}
-		globfree(&gl);
-	}
+            m_cbSerialPort->Append(gl.gl_pathv[i]);
+            m_cbCtlDevicePath->Append(gl.gl_pathv[i]);
+        }
+        globfree(&gl);
+    }
 #else
-    /* TODO(Joel): http://stackoverflow.com/questions/2530096/how-to-find-all-serial-devices-ttys-ttyusb-on-linux-without-opening-them */
-    m_cbSerialPort->Append("/dev/ttyUSB0");
-    m_cbSerialPort->Append("/dev/ttyUSB1");
-    m_cbSerialPort->Append("/dev/ttyS0");
-    m_cbSerialPort->Append("/dev/ttyS1");
+    glob_t    gl;
+    if(glob("/sys/class/tty/*/device/driver", GLOB_MARK, NULL, &gl)==0) 
+    {
+        wxRegEx pathRegex("/sys/class/tty/([^/]+)");
+        for(unsigned int i=0; i<gl.gl_pathc; i++) 
+        {
+            wxString path = gl.gl_pathv[i];
+            if (pathRegex.Matches(path))
+            {
+                wxString name = "/dev/" + pathRegex.GetMatch(path, 1);
 
-    m_cbCtlDevicePath->Clear();
-    m_cbCtlDevicePath->Append("/dev/ttyUSB0");
-    m_cbCtlDevicePath->Append("/dev/ttyUSB1");
-    m_cbCtlDevicePath->Append("/dev/ttyS0");
-    m_cbCtlDevicePath->Append("/dev/ttyS1");
+                struct stat tmp;
+                if (stat(name.c_str(), &tmp) == 0)
+                {
+                    m_cbSerialPort->Append(name.c_str());
+                    m_cbCtlDevicePath->Append(name.c_str());
+                }
+            }
+        }
+        globfree(&gl);
+    }
 #endif
 #endif
 
