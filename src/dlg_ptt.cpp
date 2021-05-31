@@ -279,7 +279,6 @@ void ComPortsDlg::populatePortList()
     std::vector<wxString> portList;
     
 #ifdef __WXMSW__
-    wxArrayString aStr;
     wxRegKey key(wxRegKey::HKLM, _T("HARDWARE\\DEVICEMAP\\SERIALCOMM"));
     if(!key.Exists())
     {
@@ -311,11 +310,10 @@ void ComPortsDlg::populatePortList()
         {
             key.QueryValue(key_name, key_data);
             //wxPrintf("Value:  %s Data: %s\n", key_name, key_data);
-            aStr.Add(key_data, 1);
+            portList.push_back(key_data);
             key.GetNextValue(key_name, el);
         }
     }
-    portList.push_back(aStr);
 #endif
 #if defined(__WXGTK__) || defined(__WXOSX__)
 
