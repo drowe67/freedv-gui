@@ -245,7 +245,9 @@ void Serialport::closeport()
     if (m_pttMonitoringThread != nullptr && m_pttMonitoringThread->IsAlive())
     {
         m_pttMonitoringThread->Delete(NULL, wxTHREAD_WAIT_BLOCK);
-        delete m_pttMonitoringThread;
+        
+        // Since the thread is detachable, we cannot delete it here.
+        // wxWidgets takes care of cleanup for us.
         m_pttMonitoringThread = nullptr;
     }
     
