@@ -255,6 +255,8 @@ void ComPortsDlg::populatePortList()
     m_cbSerialPort->Clear();
     m_cbCtlDevicePath->Clear();
     
+    std::vector<wxString> portList;
+    
 #ifdef __WXMSW__
     wxArrayString aStr;
     wxRegKey key(wxRegKey::HKLM, _T("HARDWARE\\DEVICEMAP\\SERIALCOMM"));
@@ -292,8 +294,7 @@ void ComPortsDlg::populatePortList()
             key.GetNextValue(key_name, el);
         }
     }
-    m_cbCtlDevicePath->Append(aStr);
-    m_cbSerialPort->Append(aStr);
+    portList.push_back(aStr);
 #endif
 #if defined(__WXGTK__) || defined(__WXOSX__)
 
@@ -324,8 +325,7 @@ void ComPortsDlg::populatePortList()
                 continue;
 #endif
 
-            m_cbSerialPort->Append(gl.gl_pathv[i]);
-            m_cbCtlDevicePath->Append(gl.gl_pathv[i]);
+            portList.push_back(gl.gl_pathv[i]);
         }
         globfree(&gl);
     }
@@ -344,8 +344,7 @@ void ComPortsDlg::populatePortList()
                 struct stat tmp;
                 if (stat(name.c_str(), &tmp) == 0)
                 {
-                    m_cbSerialPort->Append(name.c_str());
-                    m_cbCtlDevicePath->Append(name.c_str());
+                    portList.push_back(name);
                 }
             }
         }
@@ -354,7 +353,48 @@ void ComPortsDlg::populatePortList()
 #endif
 #endif
 
-
+    // Sort the list such that the port number is in numeric (not text) order.
+    std::sort(portList.begin(), portList.end(), [](const wxString& first, const wxString& second) {
+        wxRegEx portRegex("^([^0-9]+)([0-9]+)$");
+        wxString firstName = "";
+        wxString firstNumber = "";
+        wxString secondName = "";
+        wxString secondNumber = "";
+        int firstNumAsInt = 0;
+        int secondNumAsInt = 0;
+        
+        if (portRegex.Matches(first))
+        {
+            firstName = portRegex.GetMatch(first, 1);
+            firstNumber = portRegex.GetMatch(first, 2);
+            firstNumAsInt = atoi(firstNumber.c_str());
+        }
+        else
+        {
+            firstName = first;
+        }
+        
+        if (portRegex.Matches(second))
+        {
+            secondName = portRegex.GetMatch(second, 1);
+            secondNumber = portRegex.GetMatch(second, 2);
+            secondNumAsInt = atoi(secondNumber.c_str());
+        }
+        else
+        {
+            secondName = second;
+        }
+        
+        return 
+            (firstName < secondName) || 
+            (firstName == secondName && firstNumAsInt < secondNumAsInt);
+    });
+    
+    for (wxString& port : portList)
+    {
+        m_cbCtlDevicePath->Append(port);
+        m_cbSerialPort->Append(port);
+    }
 }
 
 //-------------------------------------------------------------------------
