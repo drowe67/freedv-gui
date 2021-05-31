@@ -21,6 +21,7 @@
 //==========================================================================
 
 #import <AVFoundation/AVFoundation.h>
+#import <AppKit/AppKit.h>
 #include <mutex>
 #include <condition_variable>
 #include "osx_interface.h"
@@ -79,3 +80,12 @@ bool VerifyMicrophonePermissions()
     return hasAccess;
 }
 
+void ResetMainWindowColorSpace()
+{
+    NSWindow* win = [NSApp mainWindow];
+    CGColorSpaceRef cs = CGColorSpaceCreateWithName( kCGColorSpaceSRGB );
+    [win setColorSpace:[[[NSColorSpace alloc]initWithCGColorSpace:cs] autorelease]];
+    
+    assert(cs != nullptr);
+    CGColorSpaceRelease(cs);
+}
