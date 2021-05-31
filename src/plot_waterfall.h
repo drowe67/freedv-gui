@@ -65,7 +65,7 @@ class PlotWaterfall : public PlotPanel
         float       m_max_mag;
         int         m_colour;
         int         m_modem_stats_max_f_hz;
-        
+
         wxBitmap* m_fullBmp;
         int m_imgHeight;
         int m_imgWidth;

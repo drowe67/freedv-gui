@@ -22,6 +22,7 @@
 #include <algorithm>
 #include "wx/wx.h"
 #include "main.h"
+#include "osx_interface.h"
 
 extern float g_avmag[];                 // av mag spec passed in to draw() 
 void clickTune(float frequency); // callback to pass new click freq
@@ -73,7 +74,7 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): Plot
 void PlotWaterfall::OnSize(wxSizeEvent& event) 
 {
     delete m_fullBmp;
-
+    
     // resize bit map
 
     m_rCtrl  = GetClientRect();
@@ -88,9 +89,19 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
 
     m_imgHeight = m_rGrid.GetHeight();
     m_imgWidth = m_rGrid.GetWidth();    
-    m_fullBmp = new wxBitmap(std::max(1,m_imgWidth), std::max(1,m_imgHeight));
     
     m_dT = DT;
+    
+    m_fullBmp = new wxBitmap(std::max(1,m_imgWidth), std::max(1,m_imgHeight));
+    
+    // Paint to black to avoid random garbage appearing.
+    wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
+    wxMemoryDC fullBmpDestDC(*m_fullBmp);
+    wxGraphicsContext* tmpGc = wxGraphicsContext::Create(fullBmpDestDC);
+    tmpGc->SetBrush(ltGraphBkgBrush);
+    tmpGc->SetPen(wxPen(BLACK_COLOR, 0));
+    tmpGc->DrawRectangle(0, 0, m_imgWidth, m_imgHeight);
+    delete tmpGc;
     
     event.Skip();
 }
@@ -107,6 +118,7 @@ void PlotWaterfall::OnShow(wxShowEvent& event)
 //----------------------------------------------------------------
 PlotWaterfall::~PlotWaterfall()
 {
+    delete m_fullBmp;
 }
 
 //----------------------------------------------------------------
@@ -176,19 +188,29 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
     m_rGrid = m_rCtrl;
     m_rGrid = m_rGrid.Deflate(PLOT_BORDER + (XLEFT_OFFSET/2), (PLOT_BORDER + (YBOTTOM_OFFSET/2)));
 
+    // we want a bit map the size of m_rGrid
+    wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
     if (m_fullBmp == NULL) 
     {
         // we want a bit map the size of m_rGrid
         m_imgHeight = m_rGrid.GetHeight();
         m_imgWidth = m_rGrid.GetWidth();
         m_fullBmp = new wxBitmap(std::max(1,m_imgWidth), std::max(1,m_imgHeight));
+        
+        // Paint to black to avoid random garbage appearing.
+        wxMemoryDC fullBmpDestDC(*m_fullBmp);
+        wxGraphicsContext* tmpGc = wxGraphicsContext::Create(fullBmpDestDC);
+        tmpGc->SetBrush(ltGraphBkgBrush);
+        tmpGc->SetPen(wxPen(BLACK_COLOR, 0));
+        tmpGc->DrawRectangle(0, 0, m_imgWidth, m_imgHeight);
+        delete tmpGc;
     }
-    
+
     if(m_newdata)
     {
         m_newdata = false;
         plotPixelData();
-                
+
         wxGraphicsBitmap tmpBmp = gc->CreateBitmap(*m_fullBmp);
         gc->DrawBitmap(tmpBmp, PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
         m_dT = DT;
@@ -200,13 +222,12 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
 
         // Bug on Linux: When Stop is pressed this code doesn't erase
         // the lower 25% of the Waterfall Window
-        
-        wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
+
         gc->SetBrush(ltGraphBkgBrush);
         gc->SetPen(wxPen(BLACK_COLOR, 0));
         gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
     }
-    drawGraticule(gc);
+    drawGraticule(gc); 
 }
 
 //-------------------------------------------------------------------------
@@ -343,8 +364,8 @@ void PlotWaterfall::plotPixelData()
     spec_index_per_px = ((float)(MAX_F_HZ)/(float)m_modem_stats_max_f_hz)*(float)MODEM_STATS_NSPEC / (float)m_imgWidth;
 
     // Draw last line of blocks using latest amplitude data ------------------
-    unsigned char dyImageData[3 * (dy + 1) * m_imgWidth];
-    for(py = dy; py >= 0; py--)
+    unsigned char dyImageData[3 * dy * m_imgWidth];
+    for(py = dy - 1; py >= 0; py--)
     {
         for(px = 0; px < m_imgWidth; px++)
         {
@@ -356,6 +377,7 @@ void PlotWaterfall::plotPixelData()
             if (intensity < 0) intensity = 0;
 
             int pixelPos = (py * m_imgWidth * 3) + (px * 3);
+            
             switch (m_colour) {
             case 0:
                 dyImageData[pixelPos] = m_heatmap_lut[intensity] & 0xff;
@@ -380,17 +402,21 @@ void PlotWaterfall::plotPixelData()
         }
     }
     
-    wxImage* tmpImage = new wxImage(m_imgWidth, dy + 1, (unsigned char*)&dyImageData, true);
+    // Force main window's color space to be the same as what wxWidgets uses. This only has an effect
+    // on macOS due to how it handles color spaces.
+    ResetMainWindowColorSpace();
+
+    wxImage* tmpImage = new wxImage(m_imgWidth, dy, (unsigned char*)&dyImageData, true);
     wxBitmap* tmpBmp = new wxBitmap(*tmpImage);
     {
         wxMemoryDC fullBmpSourceDC(*m_fullBmp);
         wxMemoryDC fullBmpDestDC(*m_fullBmp);
         wxMemoryDC tmpBmpSourceDC(*tmpBmp);
-        
-        fullBmpDestDC.Blit(0, dy, m_imgWidth, m_imgHeight - dy - 1, &fullBmpSourceDC, 0, 0);
-        fullBmpDestDC.Blit(0, 0, m_imgWidth, dy + 1, &tmpBmpSourceDC, 0, 0);
+
+        fullBmpDestDC.Blit(0, dy, m_imgWidth, m_imgHeight - dy, &fullBmpSourceDC, 0, 0);
+        fullBmpDestDC.Blit(0, 0, m_imgWidth, dy, &tmpBmpSourceDC, 0, 0);
     }
-    delete tmpBmp;
+    delete tmpBmp; 
     delete tmpImage;
 }
 
