@@ -288,10 +288,11 @@ endif(CODEC2_BUILD_DIR)
 #
 if(NOT USE_STATIC_PORTAUDIO)
     message(STATUS "Looking for portaudio...")
-    find_package(Portaudio REQUIRED)
+    find_package(portaudio-2.0 REQUIRED)
     if(PORTAUDIO_FOUND)
         message(STATUS "  portaudio library: ${PORTAUDIO_LIBRARIES}")
         message(STATUS "  portaudio headers: ${PORTAUDIO_INCLUDE_DIRS}")
+        link_directories(${PORTAUDIO_LIBRARY_DIR})
         list(APPEND FREEDV_LINK_LIBS ${PORTAUDIO_LIBRARIES})
         include_directories(${PORTAUDIO_INCLUDE_DIRS})
     else()
@@ -307,7 +308,7 @@ On Windows it's easiest to use the cmake option: USE_STATIC_PORTAUDIO"
     endif()
 else(NOT USE_STATIC_PORTAUDIO)
     message(STATUS "Will attempt static build of portaudio.")
-    include(cmake/Buildportaudio.cmake)
+    include(cmake/BuildPortAudio.cmake)
 endif(NOT USE_STATIC_PORTAUDIO)
 
 #

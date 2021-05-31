@@ -20,27 +20,15 @@ if (PORTAUDIO_LIBRARIES AND PORTAUDIO_INCLUDE_DIRS)
 else (PORTAUDIO_LIBRARIES AND PORTAUDIO_INCLUDE_DIRS)
   if (NOT WIN32)
    include(FindPkgConfig)
-   pkg_check_modules(PORTAUDIO2 portaudio-2.0)
+   pkg_check_modules(PORTAUDIO portaudio-2.0)
   endif (NOT WIN32)
 
-  if (PORTAUDIO2_FOUND)
-    set(PORTAUDIO_INCLUDE_DIRS
-      ${PORTAUDIO2_INCLUDE_DIRS}
-    )
-    #if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    #  set(PORTAUDIO_LIBRARIES "${PORTAUDIO2_LIBRARY_DIRS}/lib${PORTAUDIO2_LIBRARIES}.dylib")
-    #else (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-      set(PORTAUDIO_LIBRARIES
-        ${PORTAUDIO2_LIBRARIES}
-      )
-      set(PORTAUDIO_LIBRARY_DIRS ${PORTAUDIO2_LIBRARY_DIRS})
-      set(PORTAUDIO_LDFLAGS ${PORTAUDIO2_LDFLAGS})
-    #endif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  if (PORTAUDIO_FOUND)
+    set(PORTAUDIO_LIBRARY_DIR ${PORTAUDIO_LIBRARY_DIRS})
     set(PORTAUDIO_VERSION
       19
     )
-    set(PORTAUDIO_FOUND TRUE)
-  else (PORTAUDIO2_FOUND)
+  else (PORTAUDIO_FOUND)
     find_path(PORTAUDIO_INCLUDE_DIR
       NAMES
         portaudio.h
@@ -91,15 +79,15 @@ else (PORTAUDIO_LIBRARIES AND PORTAUDIO_INCLUDE_DIRS)
     endif (PORTAUDIO_INCLUDE_DIRS AND PORTAUDIO_LIBRARIES)
    
     if (PORTAUDIO_FOUND)
-      if (NOT Portaudio_FIND_QUIETLY)
-        message(STATUS "Found Portaudio: ${PORTAUDIO_LIBRARIES}")
-      endif (NOT Portaudio_FIND_QUIETLY)
+      if (NOT PORTAUDIO_FIND_QUIETLY)
+        message(STATUS "Found portaudio: ${PORTAUDIO_LIBRARIES}")
+      endif (NOT PORTAUDIO_FIND_QUIETLY)
     else (PORTAUDIO_FOUND)
-      if (Portaudio_FIND_REQUIRED)
-        message(FATAL_ERROR "Could not find Portaudio")
-      endif (Portaudio_FIND_REQUIRED)
+      if (PORTAUDIO_FIND_REQUIRED)
+        message(FATAL_ERROR "Could not find portaudio")
+      endif (PORTAUDIO_FIND_REQUIRED)
     endif (PORTAUDIO_FOUND)
-  endif (PORTAUDIO2_FOUND)
+  endif (PORTAUDIO_FOUND)
 
 
   # show the PORTAUDIO_INCLUDE_DIRS and PORTAUDIO_LIBRARIES variables only in the advanced view
