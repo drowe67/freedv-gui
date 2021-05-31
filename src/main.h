@@ -213,6 +213,12 @@ class MainApp : public wxApp
         bool                m_boolDTRPos;
         Serialport         *m_serialport;
 
+        // PTT Input
+        bool                m_boolUseSerialPTTInput;
+        wxString            m_strPTTInputPort;
+        bool                m_boolCTSPos;
+        Serialport         *m_pttInSerialPort;
+        
         // Play/Rec files
 
         wxString            m_playFileToMicInPath;

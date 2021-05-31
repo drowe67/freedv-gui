@@ -76,14 +76,15 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     m_cbRigName = new wxComboBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
     wxGetApp().m_hamlib->populateComboBox(m_cbRigName);
     m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
-    gridSizerhl->Add(m_cbRigName, 0, wxALIGN_CENTER_VERTICAL, 0);
+    gridSizerhl->Add(m_cbRigName, 0, wxEXPAND, 0);
 
     /* Hamlib Serial Port combobox. */
 
     gridSizerhl->Add(new wxStaticText(hamlibBox, wxID_ANY, _("Serial Device (or hostname:port):"), wxDefaultPosition, wxDefaultSize, 0), 
                       0, wxALIGN_CENTER_VERTICAL |  wxALIGN_RIGHT, 20);
-    m_cbSerialPort = new wxComboBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, -1), 0, NULL, wxCB_DROPDOWN);
-    gridSizerhl->Add(m_cbSerialPort, 0, wxALIGN_CENTER_VERTICAL, 0);
+    m_cbSerialPort = new wxComboBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN);
+    m_cbSerialPort->SetMinSize(wxSize(140, -1));
+    gridSizerhl->Add(m_cbSerialPort, 0, wxEXPAND, 0);
 
     /* Hamlib Icom CI-V address text box. */
     m_stIcomCIVHex = new wxStaticText(hamlibBox, wxID_ANY, _("Radio Address:"), wxDefaultPosition, wxDefaultSize, 0);
@@ -115,12 +116,9 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     wxStaticBoxSizer* staticBoxSizer17 = new wxStaticBoxSizer( serialSettingsBox, wxVERTICAL);
     mainSizer->Add(staticBoxSizer17, 1, wxEXPAND, 5);
     
-    wxStaticBox* pttBox = new wxStaticBox(serialSettingsBox, wxID_ANY, _("PTT Port"));
+    wxStaticBox* pttBox = new wxStaticBox(serialSettingsBox, wxID_ANY, _("PTT Out"));
     wxStaticBoxSizer* staticBoxSizer31 = new wxStaticBoxSizer( pttBox, wxVERTICAL);
     staticBoxSizer17->Add(staticBoxSizer31, 1, wxEXPAND, 5);
-
-    wxBoxSizer* bSizer83;
-    bSizer83 = new wxBoxSizer(wxHORIZONTAL);
 
     wxGridSizer* gridSizer200 = new wxGridSizer(1, 3, 0, 0);
     
@@ -132,46 +130,67 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     m_staticText12->Wrap(-1);
     gridSizer200->Add(m_staticText12, 1,wxALIGN_RIGHT|wxALIGN_CENTER_VERTICAL, 2);
 
-    m_cbCtlDevicePath = new wxComboBox(pttBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, -1), 0, NULL, wxCB_DROPDOWN);
+    m_cbCtlDevicePath = new wxComboBox(pttBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN);
+    m_cbCtlDevicePath->SetMinSize(wxSize(140, -1));
     gridSizer200->Add(m_cbCtlDevicePath, 1, wxEXPAND, 2);
     
-    bSizer83->Add(gridSizer200, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_LEFT | wxALL, 2);
-    staticBoxSizer31->Add(bSizer83, 1, wxALL, 1);
-
-    wxBoxSizer* boxSizer19 = new wxBoxSizer(wxVERTICAL);
-    staticBoxSizer17->Add(boxSizer19, 1, wxEXPAND, 5);
-    wxStaticBox* boxPolarity = new wxStaticBox(serialSettingsBox, wxID_ANY, _("Signal polarity"));
-    wxStaticBoxSizer* staticBoxSizer16 = new wxStaticBoxSizer( boxPolarity, wxHORIZONTAL);
-    boxSizer19->Add(staticBoxSizer16, 1, wxEXPAND, 5);
+    staticBoxSizer31->Add(gridSizer200, 1, wxEXPAND, 1);
 
     wxGridSizer* gridSizer17 = new wxGridSizer(2, 2, 0, 0);
     
-    m_rbUseDTR = new wxRadioButton(boxPolarity, wxID_ANY, _("Use DTR"), wxDefaultPosition, wxSize(-1,-1), wxRB_GROUP);
+    m_rbUseDTR = new wxRadioButton(pttBox, wxID_ANY, _("Use DTR"), wxDefaultPosition, wxSize(-1,-1), wxRB_GROUP);
     m_rbUseDTR->SetToolTip(_("Toggle DTR line for PTT"));
     m_rbUseDTR->SetValue(1);
-    gridSizer17->Add(m_rbUseDTR, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL, 5);
+    gridSizer17->Add(m_rbUseDTR, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL, 2);
 
-    m_rbUseRTS = new wxRadioButton(boxPolarity, wxID_ANY, _("Use RTS"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_rbUseRTS = new wxRadioButton(pttBox, wxID_ANY, _("Use RTS"), wxDefaultPosition, wxSize(-1,-1), 0);
     m_rbUseRTS->SetToolTip(_("Toggle the RTS pin for PTT"));
     m_rbUseRTS->SetValue(1);
-    gridSizer17->Add(m_rbUseRTS, 0, wxALIGN_CENTER, 5);
+    gridSizer17->Add(m_rbUseRTS, 0, wxALIGN_CENTER, 2);
     
-    m_ckDTRPos = new wxCheckBox(boxPolarity, wxID_ANY, _("DTR = +V"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckDTRPos = new wxCheckBox(pttBox, wxID_ANY, _("DTR = +V"), wxDefaultPosition, wxSize(-1,-1), 0);
     m_ckDTRPos->SetToolTip(_("Set Polarity of the DTR line"));
     m_ckDTRPos->SetValue(false);
-    gridSizer17->Add(m_ckDTRPos, 0, wxALIGN_CENTER, 5);
+    gridSizer17->Add(m_ckDTRPos, 0, wxALIGN_CENTER, 2);
 
-    m_ckRTSPos = new wxCheckBox(boxPolarity, wxID_ANY, _("RTS = +V"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckRTSPos = new wxCheckBox(pttBox, wxID_ANY, _("RTS = +V"), wxDefaultPosition, wxSize(-1,-1), 0);
     m_ckRTSPos->SetValue(false);
     m_ckRTSPos->SetToolTip(_("Set Polarity of the RTS line"));
-    gridSizer17->Add(m_ckRTSPos, 0, wxALIGN_CENTER, 5);
+    gridSizer17->Add(m_ckRTSPos, 0, wxALIGN_CENTER, 2);
 
-    staticBoxSizer16->Add(gridSizer17, 1, wxEXPAND, 5);
+    staticBoxSizer31->Add(gridSizer17, 1, wxEXPAND, 2);
 
     // Override tab ordering for Polarity area
     m_rbUseDTR->MoveBeforeInTabOrder(m_rbUseRTS);
     m_rbUseRTS->MoveBeforeInTabOrder(m_ckDTRPos);
     m_ckDTRPos->MoveBeforeInTabOrder(m_ckRTSPos);
+    
+    wxStaticBox* pttInBox = new wxStaticBox(serialSettingsBox, wxID_ANY, _("PTT In"));
+    wxStaticBoxSizer* pttInBoxSizer = new wxStaticBoxSizer( pttInBox, wxVERTICAL);
+    staticBoxSizer17->Add(pttInBoxSizer, 1, wxEXPAND, 5);
+    
+    wxGridSizer* gridSizerPttIn = new wxGridSizer(2, 3, 0, 0);
+    
+    m_ckUsePTTInput = new wxCheckBox(pttInBox, wxID_ANY, _("Enable PTT Input"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckUsePTTInput->SetValue(false);
+    gridSizerPttIn->Add(m_ckUsePTTInput, 1, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL, 2);
+
+    m_pttInSerialDeviceLabel = new wxStaticText(pttInBox, wxID_ANY, _("Serial Device:  "), wxDefaultPosition, wxDefaultSize, 0);
+    m_pttInSerialDeviceLabel->Wrap(-1);
+    gridSizerPttIn->Add(m_pttInSerialDeviceLabel, 1,wxALIGN_RIGHT|wxALIGN_CENTER_VERTICAL, 2);
+
+    m_cbCtlDevicePathPttIn = new wxComboBox(pttInBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN);
+    m_cbCtlDevicePathPttIn->SetMinSize(wxSize(140, -1));
+    gridSizerPttIn->Add(m_cbCtlDevicePathPttIn, 1, wxEXPAND, 2);
+    
+    gridSizerPttIn->AddSpacer(1);
+    
+    m_ckCTSPos = new wxCheckBox(pttInBox, wxID_ANY, _("CTS = +V"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckCTSPos->SetValue(false);
+    m_ckCTSPos->SetToolTip(_("Set Polarity of the CTS line"));
+    gridSizerPttIn->Add(m_ckCTSPos, 1, wxALIGN_CENTER, 5);
+    
+    pttInBoxSizer->Add(gridSizerPttIn, 1, wxEXPAND, 5);
     
     //----------------------------------------------------------------------
     // OK - Cancel - Apply
@@ -206,6 +225,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(ComPortsDlg::OnInitDialog), NULL, this);
     m_ckUseHamlibPTT->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(ComPortsDlg::PTTUseHamLibClicked), NULL, this);
     m_ckUseSerialPTT->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(ComPortsDlg::PTTUseSerialClicked), NULL, this);
+    m_ckUsePTTInput->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(ComPortsDlg::PTTUseSerialInputClicked), NULL, this);
     m_cbRigName->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(ComPortsDlg::HamlibRigNameChanged), NULL, this);
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnOK), NULL, this);
     m_buttonCancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnCancel), NULL, this);
@@ -222,6 +242,7 @@ ComPortsDlg::~ComPortsDlg()
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(ComPortsDlg::OnInitDialog), NULL, this);
     m_ckUseHamlibPTT->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(ComPortsDlg::PTTUseHamLibClicked), NULL, this);
     m_ckUseSerialPTT->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(ComPortsDlg::PTTUseSerialClicked), NULL, this);
+    m_ckUsePTTInput->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(ComPortsDlg::PTTUseSerialInputClicked), NULL, this);
     m_cbRigName->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(ComPortsDlg::HamlibRigNameChanged), NULL, this);
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnOK), NULL, this);
     m_buttonCancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnCancel), NULL, this);
@@ -394,6 +415,7 @@ void ComPortsDlg::populatePortList()
     {
         m_cbCtlDevicePath->Append(port);
         m_cbSerialPort->Append(port);
+        m_cbCtlDevicePathPttIn->Append(port);
     }
 }
 
@@ -432,6 +454,11 @@ void ComPortsDlg::ExchangeData(int inout)
         m_rbUseDTR->SetValue(wxGetApp().m_boolUseDTR);
         m_ckDTRPos->SetValue(wxGetApp().m_boolDTRPos);
         
+        m_ckUsePTTInput->SetValue(wxGetApp().m_boolUseSerialPTTInput);
+        str = wxGetApp().m_strPTTInputPort;
+        m_cbCtlDevicePathPttIn->SetValue(str);
+        m_ckCTSPos->SetValue(wxGetApp().m_boolCTSPos);
+
         updateControlState();
     }
 
@@ -480,6 +507,14 @@ void ComPortsDlg::ExchangeData(int inout)
         pConfig->Write(wxT("/Rig/RTSPolarity"),     wxGetApp().m_boolRTSPos);
         pConfig->Write(wxT("/Rig/UseDTR"),          wxGetApp().m_boolUseDTR);
         pConfig->Write(wxT("/Rig/DTRPolarity"),     wxGetApp().m_boolDTRPos);
+
+        wxGetApp().m_boolUseSerialPTTInput = m_ckUsePTTInput->IsChecked();
+        wxGetApp().m_strPTTInputPort = m_cbCtlDevicePathPttIn->GetValue();
+        wxGetApp().m_boolCTSPos = m_ckCTSPos->IsChecked();
+        
+        pConfig->Write(wxT("/Rig/UseSerialPTTInput"), wxGetApp().m_boolUseSerialPTTInput);
+        pConfig->Write(wxT("/Rig/PttInPort"), wxGetApp().m_strPTTInputPort);
+        pConfig->Write(wxT("/Rig/CTSPolarity"), wxGetApp().m_boolCTSPos); 
 
         pConfig->Flush();
     }
@@ -616,6 +651,14 @@ void ComPortsDlg::PTTUseSerialClicked(wxCommandEvent& event)
 }
 
 //-------------------------------------------------------------------------
+// PTTUseSerialClicked()
+//-------------------------------------------------------------------------
+void ComPortsDlg::PTTUseSerialInputClicked(wxCommandEvent& event)
+{
+    updateControlState();
+}
+
+//-------------------------------------------------------------------------
 // ComPortsDlg::HamlibRigNameChanged(): hide/show Icom CI-V hex control
 // depending on the selected radio.
 //-------------------------------------------------------------------------
@@ -677,6 +720,9 @@ void ComPortsDlg::updateControlState()
     m_ckRTSPos->Enable(m_ckUseSerialPTT->GetValue());
     m_rbUseRTS->Enable(m_ckUseSerialPTT->GetValue());
     m_ckDTRPos->Enable(m_ckUseSerialPTT->GetValue());
+    
+    m_cbCtlDevicePathPttIn->Enable(m_ckUsePTTInput->GetValue());
+    m_ckCTSPos->Enable(m_ckUsePTTInput->GetValue());
     
     m_buttonTest->Enable(m_ckUseHamlibPTT->GetValue() || m_ckUseSerialPTT->GetValue());    
 }
