@@ -276,7 +276,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     // Init Serialport library, but as for Hamlib we dont start talking to any rigs yet
 
     wxGetApp().m_serialport = new Serialport();
-
+    wxGetApp().m_pttInSerialPort = new Serialport();
+    
     // Check for AVX support in the processor.  If it's not present, 2020 won't be processed
     // fast enough
     checkAvxSupport();
@@ -467,7 +468,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxGetApp().m_boolCTSPos         = pConfig->ReadBool(wxT("/Rig/CTSPolarity"),    false);
 
     assert(wxGetApp().m_serialport != NULL);
-
+    assert(wxGetApp().m_pttInSerialPort != NULL);
+    
     // -----------------------------------------------------------------------
 
     bool slow = false; // prevents compile error when using default bool
@@ -688,6 +690,11 @@ MainFrame::~MainFrame()
         delete wxGetApp().m_serialport;
     }
 
+    if (wxGetApp().m_pttInSerialPort)
+    {
+        delete wxGetApp().m_pttInSerialPort;
+    }
+    
     if (!IsIconized()) {
         GetClientSize(&w, &h);
         GetPosition(&x, &y);
@@ -1655,6 +1662,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (wxGetApp().m_boolUseSerialPTT) {
             OpenSerialPort();
         }
+        
+        if (wxGetApp().m_boolUseSerialPTTInput)
+        {
+            OpenPTTInPort();
+        }
 
         if (m_RxRunning)
         {
@@ -1712,6 +1724,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             CloseSerialPort();
         }
 
+        if (wxGetApp().m_boolUseSerialPTTInput)
+        {
+            ClosePTTInPort();
+        }
+        
         m_btnTogPTT->SetValue(false);
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
 

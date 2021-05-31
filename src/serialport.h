@@ -9,6 +9,9 @@
 #include <dlfcn.h>
 #endif
 
+#include <functional>
+#include <thread>
+
 // Serial ports called com port for historic reasons, especially on Windows machines 
 
 #ifdef _WIN32
@@ -18,6 +21,8 @@ typedef HANDLE      com_handle_t;
 #define COM_HANDLE_INVALID			-1
 typedef int         com_handle_t;
 #endif
+
+#define PTT_INPUT_MONITORING_TIME_MS 10
 
 class Serialport {
 
@@ -29,12 +34,15 @@ class Serialport {
         void closeport();
         void ptt(bool tx); 
         
-        bool getPtt(bool ctsPos);
+        void enablePttInputMonitoring(bool ctsPos, std::function<void(bool)> pttChangeFn);
         
     private:
         com_handle_t  com_handle;
         bool          m_useRTS, m_RTSPos, m_useDTR, m_DTRPos;
-
+        std::thread m_pttMonitoringThread;
+        bool m_currentPttInputState;
+        bool m_pttMonitorThreadEnding;
+        
         void raiseDTR(void);
         void lowerDTR(void);
         void raiseRTS(void);

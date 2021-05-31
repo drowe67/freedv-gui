@@ -11,6 +11,8 @@
 extern int g_verbose;
 
 Serialport::Serialport() {
+    m_currentPttInputState = false;
+    m_pttMonitorThreadEnding = false;
     com_handle = COM_HANDLE_INVALID;
 }
 
@@ -238,12 +240,18 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 
 void Serialport::closeport()
 {
+    m_pttMonitorThreadEnding = true;
+    if (m_pttMonitoringThread.joinable())
+    {
+        m_pttMonitoringThread.join();
+    }
+    
 #ifdef _WIN32
 	CloseHandle(com_handle);
 #else
 	close(com_handle);
 #endif
-        com_handle = COM_HANDLE_INVALID;
+    com_handle = COM_HANDLE_INVALID;
 }
 
 //----------------------------------------------------------------
@@ -341,9 +349,20 @@ void Serialport::ptt(bool tx) {
     }
 }
 
-bool Serialport::getPtt(bool ctsPos)
+void Serialport::enablePttInputMonitoring(bool ctsPos, std::function<void(bool)> pttChangeFn)
 {
-    return getCTS() == ctsPos;
+    m_pttMonitoringThread = std::thread([&]() {
+        while (!m_pttMonitorThreadEnding)
+        {
+            bool pttState = getCTS() == ctsPos;
+            if (pttState != m_currentPttInputState)
+            {
+                m_currentPttInputState = pttState;
+                pttChangeFn(m_currentPttInputState);
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(PTT_INPUT_MONITORING_TIME_MS));
+        }
+    });
 }
 
 bool Serialport::getCTS() 

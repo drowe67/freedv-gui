@@ -481,7 +481,8 @@ class MainFrame : public TopFrame
         bool                    OpenHamlibRig();
         void                    OpenSerialPort(void);
         void                    CloseSerialPort(void);
-        void                    SerialPTTRx(void);
+        void                    OpenPTTInPort(void);
+        void                    ClosePTTInPort(void);
 
         bool                    m_modal;
 
