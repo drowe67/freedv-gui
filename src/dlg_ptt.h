@@ -95,6 +95,7 @@ protected:
         void PTTUseSerialInputClicked(wxCommandEvent& event);
         void HamlibRigNameChanged(wxCommandEvent& event);
         void resetIcomCIVStatus();
+        bool savePttSettings();
         
         void OnTest(wxCommandEvent& event);
 
