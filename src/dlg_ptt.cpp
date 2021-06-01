@@ -359,12 +359,7 @@ void ComPortsDlg::populatePortList()
             if (pathRegex.Matches(path))
             {
                 wxString name = "/dev/" + pathRegex.GetMatch(path, 1);
-
-                struct stat tmp;
-                if (stat(name.c_str(), &tmp) == 0)
-                {
-                    portList.push_back(name);
-                }
+                portList.push_back(name);
             }
         }
         globfree(&gl);
