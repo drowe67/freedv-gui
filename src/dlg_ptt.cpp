@@ -699,69 +699,7 @@ void ComPortsDlg::OnCancel(wxCommandEvent& event)
 bool ComPortsDlg::savePttSettings()
 {
     ExchangeData(EXCHANGE_DATA_OUT);
-    
-    // Validate serial port access.
-    bool working = true;
-    if (m_ckUseSerialPTT->IsChecked()) {
-        Serialport *serialport = wxGetApp().m_serialport; 
-        
-        wxString ctrlport;
-        ctrlport = m_cbCtlDevicePath->GetValue();
-        if (g_verbose) fprintf(stderr, "opening serial port: ");
-        fputs(ctrlport.c_str(), stderr);            // don't escape crazy Microsoft bakslash-ified comm port names
-        if (g_verbose) fprintf(stderr,"\n");
-
-        bool success = serialport->openport(ctrlport.c_str(),
-                                            m_rbUseRTS->GetValue(),
-                                            m_ckRTSPos->IsChecked(),
-                                            m_rbUseDTR->GetValue(),
-                                            m_ckDTRPos->IsChecked());
-
-        if (g_verbose) fprintf(stderr, "serial port open\n");
-
-        if (!success) {
-            wxString errorMessage = "Couldn't open serial port " + ctrlport + ". This is likely due to not having permission to access the chosen port.";
-            wxMessageBox(errorMessage, wxT("Error"), wxOK | wxICON_ERROR, this);
-        }
-        
-        if (g_verbose) fprintf(stderr, "closing serial port\n");
-        serialport->closeport();
-        if (g_verbose) fprintf(stderr, "serial port closed\n");
-        
-        working &= success;
-    }
-    
-    if (working && m_ckUsePTTInput->IsChecked())
-    {
-        Serialport *serialport = wxGetApp().m_pttInSerialPort; 
-        
-        wxString ctrlport;
-        ctrlport = m_cbCtlDevicePathPttIn->GetValue();
-        if (g_verbose) fprintf(stderr, "opening serial port: ");
-        fputs(ctrlport.c_str(), stderr);            // don't escape crazy Microsoft bakslash-ified comm port names
-        if (g_verbose) fprintf(stderr,"\n");
-
-        bool success = serialport->openport(ctrlport.c_str(),
-                                            m_rbUseRTS->GetValue(),
-                                            m_ckRTSPos->IsChecked(),
-                                            m_rbUseDTR->GetValue(),
-                                            m_ckDTRPos->IsChecked());
-
-        if (g_verbose) fprintf(stderr, "serial port open\n");
-
-        if (!success) {
-            wxString errorMessage = "Couldn't open serial port " + ctrlport + ". This is likely due to not having permission to access the chosen port.";
-            wxMessageBox(errorMessage, wxT("Error"), wxOK | wxICON_ERROR, this);
-        }
-
-        if (g_verbose) fprintf(stderr, "closing serial port\n");
-        serialport->closeport();
-        if (g_verbose) fprintf(stderr, "serial port closed\n");
-
-        working &= success;
-    }
-    
-    return working;
+    return true;
 }
 
 //-------------------------------------------------------------------------
