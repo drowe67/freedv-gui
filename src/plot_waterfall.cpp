@@ -89,19 +89,21 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
 
     m_imgHeight = m_rGrid.GetHeight();
     m_imgWidth = m_rGrid.GetWidth();    
-    
-    m_dT = DT;
-    
     m_fullBmp = new wxBitmap(std::max(1,m_imgWidth), std::max(1,m_imgHeight));
-    
-    // Paint to black to avoid random garbage appearing.
-    wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
-    wxMemoryDC fullBmpDestDC(*m_fullBmp);
-    wxGraphicsContext* tmpGc = wxGraphicsContext::Create(fullBmpDestDC);
-    tmpGc->SetBrush(ltGraphBkgBrush);
-    tmpGc->SetPen(wxPen(BLACK_COLOR, 0));
-    tmpGc->DrawRectangle(0, 0, m_imgWidth, m_imgHeight);
-    delete tmpGc;
+
+    // Reset bitmap to black.   
+    {
+        wxMemoryDC dc(*m_fullBmp);
+        wxGraphicsContext *gc = wxGraphicsContext::Create( dc );
+        
+        wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
+        gc->SetBrush(ltGraphBkgBrush);
+        gc->SetPen(wxPen(BLACK_COLOR, 0));
+        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+        delete gc;
+    }
+
+    m_dT = DT;
     
     event.Skip();
 }
@@ -197,37 +199,30 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
         m_imgWidth = m_rGrid.GetWidth();
         m_fullBmp = new wxBitmap(std::max(1,m_imgWidth), std::max(1,m_imgHeight));
         
-        // Paint to black to avoid random garbage appearing.
-        wxMemoryDC fullBmpDestDC(*m_fullBmp);
-        wxGraphicsContext* tmpGc = wxGraphicsContext::Create(fullBmpDestDC);
-        tmpGc->SetBrush(ltGraphBkgBrush);
-        tmpGc->SetPen(wxPen(BLACK_COLOR, 0));
-        tmpGc->DrawRectangle(0, 0, m_imgWidth, m_imgHeight);
-        delete tmpGc;
+        // Reset bitmap to black.   
+        {
+            wxMemoryDC dc(*m_fullBmp);
+            wxGraphicsContext *mGc = wxGraphicsContext::Create( dc );
+        
+            wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
+            mGc->SetBrush(ltGraphBkgBrush);
+            mGc->SetPen(wxPen(BLACK_COLOR, 0));
+            mGc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+            delete mGc;
+        }
     }
 
     if(m_newdata)
     {
         m_newdata = false;
         plotPixelData();
+    } 
+           
+    wxGraphicsBitmap tmpBmp = gc->CreateBitmap(*m_fullBmp);
+    gc->DrawBitmap(tmpBmp, PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+    m_dT = DT;
 
-        wxGraphicsBitmap tmpBmp = gc->CreateBitmap(*m_fullBmp);
-        gc->DrawBitmap(tmpBmp, PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
-        m_dT = DT;
-    }
-    else 
-    {
-        // no data to plot so just erase to black.  Blue looks nicer
-        // but is same colour as low amplitude signal
-
-        // Bug on Linux: When Stop is pressed this code doesn't erase
-        // the lower 25% of the Waterfall Window
-
-        gc->SetBrush(ltGraphBkgBrush);
-        gc->SetPen(wxPen(BLACK_COLOR, 0));
-        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
-    }
-    drawGraticule(gc); 
+    drawGraticule(gc);
 }
 
 //-------------------------------------------------------------------------
@@ -321,7 +316,6 @@ void PlotWaterfall::plotPixelData()
     float       px_per_sec;
     int         index;
     int         dy;
-    int         dy_blocks;
     int         px;
     int         py;
     int         intensity;
@@ -340,9 +334,6 @@ void PlotWaterfall::plotPixelData()
     // determine dy, the height of one "block"
     px_per_sec = (float)m_imgHeight / WATERFALL_SECS_Y;
     dy = m_dT * px_per_sec;
-
-    // number of dy high blocks in spectrogram
-    dy_blocks = m_imgHeight / dy;
 
     // update min and max amplitude estimates
     float max_mag = MIN_MAG_DB;
