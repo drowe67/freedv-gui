@@ -575,9 +575,6 @@ class MainFrame : public TopFrame
         void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event );
         void OnHelpAbout( wxCommandEvent& event );
         void OnCmdSliderScroll( wxScrollEvent& event );
-//        void OnSliderScrollBottom( wxScrollEvent& event );
-//        void OnCmdSliderScrollChanged( wxScrollEvent& event );
-//        void OnSliderScrollTop( wxScrollEvent& event );
         void OnCheckSQClick( wxCommandEvent& event );
         void OnCheckSNRClick( wxCommandEvent& event );
 
