@@ -307,15 +307,9 @@ int FreeDVInterface::getSync() const
 
 void FreeDVInterface::setEq(int val)
 {
-    int index = 0;
     for (auto& dv : dvObjects_)
     {
-        int mode = enabledModes_[index];
-        if ((mode == FREEDV_MODE_700C) || (mode == FREEDV_MODE_700D) || (mode == FREEDV_MODE_700E))
-        {
-            freedv_set_eq(dv, val);
-        }
-        index++;
+        freedv_set_eq(dv, val);
     }
 }
 
