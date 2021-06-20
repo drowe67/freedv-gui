@@ -138,6 +138,12 @@ your radio:
 + Hamlib: support for many different radios via the Hamlib library and a serial port (or via TCP/IP for some devices, e.g. SDRs or FLrig/rigctld).
 + Serial Port: direct access to the serial port pins
 
+You may also optionally configure a second serial port for PTT input.
+This can be useful for interfacing devices like foot switches to 
+FreeDV. If configured, FreeDV will switch into transmit mode (including
+sending the needed Hamlib or serial commands to initiate PTT) when it
+detects the configured signal.
+
 Once you have configured PTT, try the **Test** button.
 
 Serial PTT support is complex.  We get many reports that FreeDV

@@ -12,6 +12,7 @@ extern float           g_RxFreqOffsetHz;
 extern float           g_TxFreqOffsetHz;
 extern int            *g_split;
 extern FreeDVInterface freedvInterface;
+extern int   g_tx;
 
 void clickTune(float freq) {
 
@@ -59,7 +60,7 @@ void MainFrame::OpenSerialPort(void)
            serialport->ptt(false);
        }
        else {
-           wxMessageBox("Couldn't open Serial Port", wxT("About"), wxOK | wxICON_ERROR, this);
+           wxMessageBox("Couldn't open serial port for PTT output", wxT("Error"), wxOK | wxICON_ERROR, this);
        }
     }
 }
@@ -76,6 +77,47 @@ void MainFrame::CloseSerialPort(void)
         // always end with PTT in rx state
 
         serialport->ptt(false);
+        serialport->closeport();
+    }
+}
+
+
+//----------------------------------------------------------------
+// OpenPTTInPort()
+//----------------------------------------------------------------
+
+void MainFrame::OpenPTTInPort(void)
+{
+    Serialport *serialport = wxGetApp().m_pttInSerialPort;
+
+    if(!wxGetApp().m_strPTTInputPort.IsEmpty()) {
+       serialport->openport(wxGetApp().m_strPTTInputPort.c_str(),
+                            false,
+                            false,
+                            false,
+                            false);
+       if (!serialport->isopen()) {
+           wxMessageBox("Couldn't open PTT input port", wxT("Error"), wxOK | wxICON_ERROR, this);
+       } else {
+           // Set up PTT monitoring. When PTT state changes, we should also change 
+           // the PTT state in th app.
+           serialport->enablePttInputMonitoring(wxGetApp().m_boolCTSPos, [&](bool pttState) {
+               fprintf(stderr, "PTT input state is now %d\n", pttState);
+               GetEventHandler()->CallAfter([&]() { m_btnTogPTT->SetValue(pttState); togglePTT(); });
+           });
+       }
+    }
+}
+
+
+//----------------------------------------------------------------
+// ClosePTTInPort()
+//----------------------------------------------------------------
+
+void MainFrame::ClosePTTInPort(void)
+{
+    Serialport *serialport = wxGetApp().m_pttInSerialPort;
+    if (serialport->isopen()) {
         serialport->closeport();
     }
 }
