@@ -315,15 +315,9 @@ void FreeDVInterface::setEq(int val)
 
 void FreeDVInterface::setCarrierAmplitude(int c, float amp)
 {
-    int index = 0;
     for (auto& dv : dvObjects_)
     {
-        int mode = enabledModes_[index];
-        if (mode == FREEDV_MODE_700C)
-        {
-            freedv_set_carrier_ampl(dv, c, amp);
-        }
-        index++;
+        freedv_set_carrier_ampl(dv, c, amp);
     }
 }
 
