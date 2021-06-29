@@ -193,8 +193,10 @@ int FreeDVInterface::getTotalBitErrors()
 float FreeDVInterface::getVariance() const
 {
     struct CODEC2 *c2 = freedv_get_codec2(currentRxMode_);
-    assert(c2 != NULL);
-    return codec2_get_var(c2);
+    if (c2 != NULL)
+        return codec2_get_var(c2);
+    else
+        return 0.0;
 }
 
 int FreeDVInterface::getErrorPattern(short** outputPattern)
