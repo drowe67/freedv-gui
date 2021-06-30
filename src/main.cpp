@@ -1229,13 +1229,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     sprintf(syncmetric, "Sync: %3.2f", g_stats.sync_metric);
     wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
 
-    // Codec 2 700C VQ "auto EQ" equaliser variance
-    int currentMode = freedvInterface.getCurrentMode();
-    if ((currentMode == FREEDV_MODE_700C) || (currentMode == FREEDV_MODE_700D) || (currentMode == FREEDV_MODE_700E)) {
-        auto var = freedvInterface.getVariance();
-        char var_str[80]; sprintf(var_str, "Var: %4.1f", var);
-        wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
-    }
+    // Codec 2 700C/D/E & 800XA VQ "auto EQ" equaliser variance
+    auto var = freedvInterface.getVariance();
+    char var_str[80]; sprintf(var_str, "Var: %4.1f", var);
+    wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
 
     if (g_State) {
 
