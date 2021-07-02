@@ -48,19 +48,21 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sessionActive_ = false;
     
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);
-
+    
+    wxPanel* panel = new wxPanel(this);
+    
     wxBoxSizer* bSizer30;
     bSizer30 = new wxBoxSizer(wxVERTICAL);
-
+    
     // Create notebook and tabs.
-    m_notebook = new wxNotebook(this, wxID_ANY);
-    m_reportingTab = new wxNotebookPage(m_notebook, wxID_ANY);
-    m_displayTab = new wxNotebookPage(m_notebook, wxID_ANY);
-    m_keyerTab = new wxNotebookPage(m_notebook, wxID_ANY);
-    m_modemTab = new wxNotebookPage(m_notebook, wxID_ANY);
-    m_simulationTab = new wxNotebookPage(m_notebook, wxID_ANY);
-    m_interfacingTab = new wxNotebookPage(m_notebook, wxID_ANY);
-    m_debugTab = new wxNotebookPage(m_notebook, wxID_ANY);
+    m_notebook = new wxNotebook(panel, wxID_ANY);
+    m_reportingTab = new wxPanel(m_notebook, wxID_ANY);
+    m_displayTab = new wxPanel(m_notebook, wxID_ANY);
+    m_keyerTab = new wxPanel(m_notebook, wxID_ANY);
+    m_modemTab = new wxPanel(m_notebook, wxID_ANY);
+    m_simulationTab = new wxPanel(m_notebook, wxID_ANY);
+    m_interfacingTab = new wxPanel(m_notebook, wxID_ANY);
+    m_debugTab = new wxPanel(m_notebook, wxID_ANY);
     
     m_notebook->AddPage(m_reportingTab, _("Reporting"));
     m_notebook->AddPage(m_displayTab, _("Display"));
@@ -73,8 +75,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     bSizer30->Add(m_notebook, 0, wxALL | wxEXPAND, 3);
     
     // Reporting tab
-    wxBoxSizer* sizerReporting;
-    sizerReporting = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* sizerReporting = new wxBoxSizer(wxVERTICAL);
     
     //------------------------------
     // Txt Msg Text Box
@@ -114,10 +115,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     sizerReporting->Add(sbSizer_psk,0, wxALL|wxEXPAND, 3);
     m_reportingTab->SetSizer(sizerReporting);
-    
+        
     // Display tab
-    wxBoxSizer* sizerDisplay;
-    sizerDisplay = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* sizerDisplay = new wxBoxSizer(wxVERTICAL);
     
     //----------------------------------------------------------
     // Waterfall color 
@@ -137,8 +137,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_displayTab->SetSizer(sizerDisplay);
     
     // Voice Keyer tab
-    wxBoxSizer* sizerKeyer;
-    sizerKeyer = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* sizerKeyer = new wxBoxSizer(wxVERTICAL);
     
     //----------------------------------------------------------------------
     // Voice Keyer 
@@ -168,11 +167,11 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerRepeats, 0, 0, 5);
 
     sizerKeyer->Add(staticBoxSizer28a,0, wxALL|wxEXPAND, 3);
+    
     m_keyerTab->SetSizer(sizerKeyer);
     
     // Modem tab
-    wxBoxSizer* sizerModem;
-    sizerModem = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* sizerModem = new wxBoxSizer(wxVERTICAL);
     
     //------------------------------
     // FreeDV 700 Options
@@ -231,8 +230,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_modemTab->SetSizer(sizerModem);
     
     // Simulation tab
-    wxBoxSizer* sizerSimulation;
-    sizerSimulation = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* sizerSimulation = new wxBoxSizer(wxVERTICAL);
     
     //------------------------------
     // Test Frames/Channel simulation check box
@@ -279,8 +277,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_simulationTab->SetSizer(sizerSimulation);
     
     // Interfacing tab
-    wxBoxSizer* sizerInterfacing;
-    sizerInterfacing = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* sizerInterfacing = new wxBoxSizer(wxVERTICAL);
     
     //----------------------------------------------------------
     // UDP Send Messages on Events
@@ -301,8 +298,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_interfacingTab->SetSizer(sizerInterfacing);
         
     // Debug tab
-    wxBoxSizer* sizerDebug;
-    sizerDebug = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* sizerDebug = new wxBoxSizer(wxVERTICAL);
     
 #ifdef __WXMSW__
     //------------------------------
@@ -316,7 +312,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxDebugConsole = new wxCheckBox(m_debugTab, wxID_ANY, _("Show Console"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_console->Add(m_ckboxDebugConsole, 0, wxALIGN_LEFT, 0);
 
-    sizerDebug->Add(sbSizer_console,0, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 3);
+    sizerDebug->Add(sbSizer_console,0, wxALL|wxEXPAND, 3);
 #endif // __WXMSW__
     
     //----------------------------------------------------------
@@ -385,22 +381,78 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     wxBoxSizer* bSizer31 = new wxBoxSizer(wxHORIZONTAL);
 
-    m_sdbSizer5OK = new wxButton(this, wxID_OK);
+    m_sdbSizer5OK = new wxButton(panel, wxID_OK);
     bSizer31->Add(m_sdbSizer5OK, 0, wxALL, 2);
 
-    m_sdbSizer5Cancel = new wxButton(this, wxID_CANCEL);
+    m_sdbSizer5Cancel = new wxButton(panel, wxID_CANCEL);
     bSizer31->Add(m_sdbSizer5Cancel, 0, wxALL, 2);
 
-    m_sdbSizer5Apply = new wxButton(this, wxID_APPLY);
+    m_sdbSizer5Apply = new wxButton(panel, wxID_APPLY);
     bSizer31->Add(m_sdbSizer5Apply, 0, wxALL, 2);
 
     bSizer30->Add(bSizer31, 0, wxALL | wxALIGN_CENTER, 5);
 
-    this->SetSizerAndFit(bSizer30);
+    panel->SetSizer(bSizer30);
+    
+    wxBoxSizer* winSizer = new wxBoxSizer(wxVERTICAL);
+    winSizer->Add(panel, 0, wxEXPAND);
+    
+    this->SetSizerAndFit(winSizer);
     this->Layout();
-
     this->Centre(wxBOTH);
  
+    //-------------------
+    // Tab ordering for accessibility
+    //-------------------
+    m_txtCtrlCallSign->MoveBeforeInTabOrder(m_ckbox_psk_enable);
+    m_ckbox_psk_enable->MoveBeforeInTabOrder(m_txt_callsign);
+    m_txt_callsign->MoveBeforeInTabOrder(m_txt_grid_square);
+    
+    m_waterfallColorScheme1->MoveBeforeInTabOrder(m_waterfallColorScheme2);
+    m_waterfallColorScheme2->MoveBeforeInTabOrder(m_waterfallColorScheme3);
+    
+    m_txtCtrlVoiceKeyerWaveFile->MoveBeforeInTabOrder(m_buttonChooseVoiceKeyerWaveFile);
+    m_buttonChooseVoiceKeyerWaveFile->MoveBeforeInTabOrder(m_txtCtrlVoiceKeyerRxPause);
+    m_txtCtrlVoiceKeyerRxPause->MoveBeforeInTabOrder(m_txtCtrlVoiceKeyerRepeats);
+    
+    m_ckboxFreeDV700txClip->MoveBeforeInTabOrder(m_ckboxFreeDV700Combine);
+    m_ckboxFreeDV700Combine->MoveBeforeInTabOrder(m_ckboxFreeDV700txBPF);
+    m_ckboxFreeDV700txBPF->MoveBeforeInTabOrder(m_ckboxFreeDV700ManualUnSync);
+    m_ckboxFreeDV700ManualUnSync->MoveBeforeInTabOrder(m_ckboxPhaseEstBW);
+    m_ckboxPhaseEstBW->MoveBeforeInTabOrder(m_ckboxPhaseEstDPSK);
+    m_ckboxPhaseEstDPSK->MoveBeforeInTabOrder(m_ckHalfDuplex);
+    m_ckHalfDuplex->MoveBeforeInTabOrder(m_ckboxMultipleRx);
+    
+    m_ckboxTestFrame->MoveBeforeInTabOrder(m_ckboxChannelNoise);
+    m_ckboxChannelNoise->MoveBeforeInTabOrder(m_txtNoiseSNR);
+    m_txtNoiseSNR->MoveBeforeInTabOrder(m_ckboxAttnCarrierEn);
+    m_ckboxAttnCarrierEn->MoveBeforeInTabOrder(m_txtAttnCarrier);
+    m_txtAttnCarrier->MoveBeforeInTabOrder(m_ckboxTone);
+    m_ckboxTone->MoveBeforeInTabOrder(m_txtToneFreqHz);
+    m_txtToneFreqHz->MoveBeforeInTabOrder(m_txtToneAmplitude);
+    
+    m_ckbox_udp_enable->MoveBeforeInTabOrder(m_txt_udp_port);
+    m_txt_udp_port->MoveBeforeInTabOrder(m_btn_udp_test);
+    
+    m_txtCtrlframesPerBuffer->MoveBeforeInTabOrder(m_txtCtrlFifoSize);
+    m_txtCtrlFifoSize->MoveBeforeInTabOrder(m_ckboxVerbose);
+    m_ckboxVerbose->MoveBeforeInTabOrder(m_ckboxTxRxThreadPriority);
+    m_ckboxTxRxThreadPriority->MoveBeforeInTabOrder(m_ckboxTxRxDumpTiming);
+    m_ckboxTxRxDumpTiming->MoveBeforeInTabOrder(m_ckboxTxRxDumpFifoState);
+    m_ckboxTxRxDumpFifoState->MoveBeforeInTabOrder(m_ckboxFreeDVAPIVerbose);
+    m_ckboxFreeDVAPIVerbose->MoveBeforeInTabOrder(m_BtnFifoReset);
+    
+    m_reportingTab->MoveBeforeInTabOrder(m_displayTab);    
+    m_displayTab->MoveBeforeInTabOrder(m_keyerTab);
+    m_keyerTab->MoveBeforeInTabOrder(m_modemTab);
+    m_modemTab->MoveBeforeInTabOrder(m_simulationTab);
+    m_simulationTab->MoveBeforeInTabOrder(m_interfacingTab);
+    m_interfacingTab->MoveBeforeInTabOrder(m_debugTab);
+    
+    m_notebook->MoveBeforeInTabOrder(m_sdbSizer5OK);
+    m_sdbSizer5OK->MoveBeforeInTabOrder(m_sdbSizer5Cancel);
+    m_sdbSizer5Cancel->MoveBeforeInTabOrder(m_sdbSizer5Apply);
+    
     // Connect Events -------------------------------------------------------
 
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(OptionsDlg::OnInitDialog));

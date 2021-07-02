@@ -149,10 +149,6 @@ wxWindow           *g_parent;
 float               g_RxFreqOffsetHz;
 float               g_TxFreqOffsetHz;
 
-// buffer sizes dependent upon sample rate
-int                 g_modemInbufferSize;
-int                 g_speechOutbufferSize;
-
 // experimental mutex to make sound card callbacks mutually exclusive
 // TODO: review code and see if we need this any more, as fifos should
 // now be thread safe
@@ -280,7 +276,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     // Init Serialport library, but as for Hamlib we dont start talking to any rigs yet
 
     wxGetApp().m_serialport = new Serialport();
-
+    wxGetApp().m_pttInSerialPort = new Serialport();
+    
     // Check for AVX support in the processor.  If it's not present, 2020 won't be processed
     // fast enough
     checkAvxSupport();
@@ -298,7 +295,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     int x = pConfig->Read(wxT("/MainFrame/left"),       20);
     int y = pConfig->Read(wxT("/MainFrame/top"),        20);
     int w = pConfig->Read(wxT("/MainFrame/width"),     800);
-    int h = pConfig->Read(wxT("/MainFrame/height"),    695);
+    int h = pConfig->Read(wxT("/MainFrame/height"),    780);
 
     // sanitise frame position as a first pass at Win32 registry bug
 
@@ -306,7 +303,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     if (x < 0 || x > 2048) x = 20;
     if (y < 0 || y > 2048) y = 20;
     if (w < 0 || w > 2048) w = 800;
-    if (h < 0 || h > 2048) h = 695;
+    if (h < 0 || h > 2048) h = 780;
 
     wxGetApp().m_show_wf            = pConfig->Read(wxT("/MainFrame/show_wf"),           1);
     wxGetApp().m_show_spect         = pConfig->Read(wxT("/MainFrame/show_spect"),        1);
@@ -324,9 +321,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     g_SquelchActive = pConfig->Read(wxT("/Audio/SquelchActive"), (long)0);
     g_SquelchLevel = pConfig->Read(wxT("/Audio/SquelchLevel"), (int)(SQ_DEFAULT_SNR*2));
     g_SquelchLevel /= 2.0;
-
-    Move(x, y);
-    SetClientSize(w, h);
 
     if(wxGetApp().m_show_wf)
     {
@@ -401,6 +395,21 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
         m_panelTestFrameErrorsHist->setBarGraph(1);
         m_panelTestFrameErrorsHist->setLogY(1);
     }
+   
+    Move(x, y);
+    Fit();
+    wxSize size = GetBestSize();
+
+    // Add to the "best" width and height to prevent hiding of the waterfall
+    // and the controls just below it. The values here were determined by 
+    // experimentation.
+    size.SetWidth(size.GetWidth() + 375);
+    size.SetHeight(size.GetHeight() + 100);
+
+    if (w < size.GetWidth()) w = size.GetWidth();
+    if (h < size.GetHeight()) h = size.GetHeight();
+    SetClientSize(w, h);
+    SetSizeHints(size);
 
     wxGetApp().m_framesPerBuffer = pConfig->Read(wxT("/Audio/framesPerBuffer"), (int)PA_FPB);
     wxGetApp().m_fifoSize_ms = pConfig->Read(wxT("/Audio/fifoSize_ms"), (int)FIFO_SIZE);
@@ -454,8 +463,13 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxGetApp().m_boolUseDTR         = pConfig->ReadBool(wxT("/Rig/UseDTR"),         false);
     wxGetApp().m_boolDTRPos         = pConfig->ReadBool(wxT("/Rig/DTRPolarity"),    false);
 
-    assert(wxGetApp().m_serialport != NULL);
+    wxGetApp().m_boolUseSerialPTTInput = pConfig->ReadBool(wxT("/Rig/UseSerialPTTInput"),   false);
+    wxGetApp().m_strPTTInputPort     = pConfig->Read(wxT("/Rig/PttInPort"),               wxT(""));
+    wxGetApp().m_boolCTSPos         = pConfig->ReadBool(wxT("/Rig/CTSPolarity"),    false);
 
+    assert(wxGetApp().m_serialport != NULL);
+    assert(wxGetApp().m_pttInSerialPort != NULL);
+    
     // -----------------------------------------------------------------------
 
     bool slow = false; // prevents compile error when using default bool
@@ -557,7 +571,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     // squelch settings
     char sqsnr[15];
     m_sliderSQ->SetValue((int)((g_SquelchLevel+5.0)*2.0));
-    sprintf(sqsnr, "%4.1f", g_SquelchLevel);
+    sprintf(sqsnr, "%4.1f dB", g_SquelchLevel);
     wxString sqsnr_string(sqsnr);
     m_textSQ->SetLabel(sqsnr_string);
     m_ckboxSQ->SetValue(g_SquelchActive);
@@ -676,6 +690,11 @@ MainFrame::~MainFrame()
         delete wxGetApp().m_serialport;
     }
 
+    if (wxGetApp().m_pttInSerialPort)
+    {
+        delete wxGetApp().m_pttInSerialPort;
+    }
+    
     if (!IsIconized()) {
         GetClientSize(&w, &h);
         GetPosition(&x, &y);
@@ -1210,13 +1229,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     sprintf(syncmetric, "Sync: %3.2f", g_stats.sync_metric);
     wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
 
-    // Codec 2 700C VQ "auto EQ" equaliser variance
-    int currentMode = freedvInterface.getCurrentMode();
-    if ((currentMode == FREEDV_MODE_700C) || (currentMode == FREEDV_MODE_700D) || (currentMode == FREEDV_MODE_700E)) {
-        auto var = freedvInterface.getVariance();
-        char var_str[80]; sprintf(var_str, "Var: %4.1f", var);
-        wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
-    }
+    // Codec 2 700C/D/E & 800XA VQ "auto EQ" equaliser variance
+    auto var = freedvInterface.getVariance();
+    char var_str[80]; sprintf(var_str, "Var: %4.1f", var);
+    wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
 
     if (g_State) {
 
@@ -1471,7 +1487,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
     // we are attempting to start
 
-    if (startStop.IsSameAs("Start"))
+    if (startStop.IsSameAs("&Start"))
     {
         if (g_verbose) fprintf(stderr, "Start .....\n");
         g_queueResync = false;
@@ -1483,7 +1499,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         // modify some button states when running
 
-        m_togBtnOnOff->SetLabel(wxT("Stop"));
+        m_togBtnOnOff->SetLabel(wxT("&Stop"));
 
         vk_state = VK_IDLE;
 
@@ -1561,11 +1577,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             g_error_hist[i] = 0;
             g_error_histn[i] = 0;
         }
-
-        // Set processing buffer sizes, these are FRAME_DURATION (20ms) chunks of modem and speech that are a useful size for the
-        // various operations we do before and after passing to the freedv_api layer.
-        g_modemInbufferSize = (int)(FRAME_DURATION * freedvInterface.getRxModemSampleRate());
-        g_speechOutbufferSize = (int)(FRAME_DURATION * freedvInterface.getRxSpeechSampleRate());
 
         // init Codec 2 LPC Post Filter (FreeDV 1600)
         freedvInterface.setLpcPostFilter(
@@ -1648,6 +1659,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (wxGetApp().m_boolUseSerialPTT) {
             OpenSerialPort();
         }
+        
+        if (wxGetApp().m_boolUseSerialPTTInput)
+        {
+            OpenPTTInPort();
+        }
 
         if (m_RxRunning)
         {
@@ -1660,7 +1676,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
     // Stop was pressed or start up failed
 
-    if (startStop.IsSameAs("Stop") || !m_RxRunning ) {
+    if (startStop.IsSameAs("&Stop") || !m_RxRunning ) {
         if (g_verbose) fprintf(stderr, "Stop .....\n");
         
         //
@@ -1705,6 +1721,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             CloseSerialPort();
         }
 
+        if (wxGetApp().m_boolUseSerialPTTInput)
+        {
+            ClosePTTInPort();
+        }
+        
         m_btnTogPTT->SetValue(false);
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
 
@@ -1729,7 +1750,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_togBtnAnalog->Disable();
         m_btnTogPTT->Disable();
         m_togBtnVoiceKeyer->Disable();
-        m_togBtnOnOff->SetLabel(wxT("Start"));
+        m_togBtnOnOff->SetLabel(wxT("&Start"));
         
         m_rb1600->Enable();
         m_rb700c->Enable();
@@ -2370,7 +2391,7 @@ void txRxProcessing()
     // the sound card, and resample them for the freedv modem input
     // sample rate.  Typically the sound card is running at 48 or 44.1
     // kHz, and the modem at 8kHz, however some modems such as FreeDV
-    // 2400A/B and the horus baloon telemetry run at 48 kHz.
+    // 2400A/B run at 48 kHz.
 
     // allocate enough room for 20ms processing buffers at maximum
     // sample rate of 48 kHz.  Note these buffer are used by rx and tx
@@ -2384,7 +2405,6 @@ void txRxProcessing()
     int             nfreedv;
 
     // analog mode runs at the standard FS = 8000 Hz
-
     if (g_analog) {
         freedv_samplerate = FS;
     }
@@ -2392,8 +2412,8 @@ void txRxProcessing()
         // Use the maximum modem sample rate. Any needed downconversion
         // just prior to sending to Codec2 will happen in FreeDVInterface.
         freedv_samplerate = freedvInterface.getRxModemSampleRate();
-        //fprintf(stderr, "sample rate: %d\n", freedv_samplerate);
     }
+    //fprintf(stderr, "sample rate: %d\n", freedv_samplerate);
 
     //
     //  RX side processing --------------------------------------------
@@ -2407,24 +2427,19 @@ void txRxProcessing()
         g_resyncs++;
     }
     
-    // while we have enough input samples available ...
-
-    // attempt to read one processing buffer of receive samples
-    // (20ms), number of samples is scaled for the sound card sample
-    // rate, so we get the right number of samples for the output
-    // decoded audio
-
-    int nsam = g_soundCard1SampleRate * (float)g_modemInbufferSize/freedv_samplerate;
+    // Attempt to read one processing frame (about 20ms) of receive samples,  we 
+    // keep this frame duration constant across modes and sound card sample rates
+    int nsam = (int)(g_soundCard1SampleRate * FRAME_DURATION);
     assert(nsam <= 10*N48);
     assert(nsam != 0);
     
+    // while we have enough input samples available ... 
     while ((codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0) && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
 
         /* convert sound card sample rate FreeDV input sample rate */
-
         nfreedv = resample(cbData->insrc1, infreedv, insound_card, freedv_samplerate, g_soundCard1SampleRate, N48, nsam);
         assert(nfreedv <= N48);
-
+        
         // optionally save "from radio" signal (write demod input to file) ----------------------------
         // Really useful for testing and development as it allows us
         // to repeat tests using off air signals
@@ -2523,6 +2538,8 @@ void txRxProcessing()
         // Get some audio to send to headphones/speaker.  If in analog
         // mode we pass thru the "from radio" audio to the
         // headphones/speaker.
+        
+        int speechOutbufferSize = (int)(FRAME_DURATION * freedvInterface.getRxSpeechSampleRate());
 
         if (g_analog) {
             memcpy(outfreedv, infreedv, sizeof(short)*nfreedv);
@@ -2537,36 +2554,36 @@ void txRxProcessing()
             // this will typically be decoded output speech, and is
             // (currently at least) fixed at a sample rate of 8 kHz
 
-            memset(outfreedv, 0, sizeof(short)*g_speechOutbufferSize);
-            codec2_fifo_read(cbData->rxoutfifo, outfreedv, g_speechOutbufferSize);
+            memset(outfreedv, 0, sizeof(short)*speechOutbufferSize);
+            codec2_fifo_read(cbData->rxoutfifo, outfreedv, speechOutbufferSize);
         }
 
         // Optional Spk Out EQ Filtering, need mutex as filter can change at run time from another thread
 
         g_mutexProtectingCallbackData.Lock();
         if (cbData->spkOutEQEnable) {
-            sox_biquad_filter(cbData->sbqSpkOutBass,   outfreedv, outfreedv, g_speechOutbufferSize);
-            sox_biquad_filter(cbData->sbqSpkOutTreble, outfreedv, outfreedv, g_speechOutbufferSize);
-            sox_biquad_filter(cbData->sbqSpkOutMid,    outfreedv, outfreedv, g_speechOutbufferSize);
+            sox_biquad_filter(cbData->sbqSpkOutBass,   outfreedv, outfreedv, speechOutbufferSize);
+            sox_biquad_filter(cbData->sbqSpkOutTreble, outfreedv, outfreedv, speechOutbufferSize);
+            sox_biquad_filter(cbData->sbqSpkOutMid,    outfreedv, outfreedv, speechOutbufferSize);
         }
         g_mutexProtectingCallbackData.Unlock();
 
-        resample_for_plot(g_plotSpeechOutFifo, outfreedv, g_speechOutbufferSize, freedvInterface.getRxSpeechSampleRate());
+        resample_for_plot(g_plotSpeechOutFifo, outfreedv, speechOutbufferSize, freedvInterface.getRxSpeechSampleRate());
 
         // resample to output sound card rate
 
         if (g_nSoundCards == 1) {
             if (g_analog) /* special case */
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getRxModemSampleRate(), N48, nfreedv);
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, N48, nfreedv);
             else
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, g_speechOutbufferSize);
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, speechOutbufferSize);
             codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
         }
         else {
             if (g_analog) /* special case */
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedvInterface.getRxModemSampleRate(), N48, nfreedv);
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedv_samplerate, N48, nfreedv);
             else
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, g_speechOutbufferSize);
+                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, speechOutbufferSize);
             codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
         }
     }

@@ -11,6 +11,9 @@
 extern int g_verbose;
 
 Serialport::Serialport() {
+    m_currentPttInputState = false;
+    m_pttMonitorThreadEnding = false;
+    m_pttMonitoringThread = nullptr;
     com_handle = COM_HANDLE_INVALID;
 }
 
@@ -238,12 +241,22 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 
 void Serialport::closeport()
 {
+    m_pttMonitorThreadEnding = true;
+    if (m_pttMonitoringThread != nullptr && m_pttMonitoringThread->IsAlive())
+    {
+        m_pttMonitoringThread->Delete(NULL, wxTHREAD_WAIT_BLOCK);
+        
+        // Since the thread is detachable, we cannot delete it here.
+        // wxWidgets takes care of cleanup for us.
+        m_pttMonitoringThread = nullptr;
+    }
+    
 #ifdef _WIN32
 	CloseHandle(com_handle);
 #else
 	close(com_handle);
 #endif
-        com_handle = COM_HANDLE_INVALID;
+    com_handle = COM_HANDLE_INVALID;
 }
 
 //----------------------------------------------------------------
@@ -339,4 +352,51 @@ void Serialport::ptt(bool tx) {
         }
  
     }
+}
+
+wxThread::ExitCode Serialport::PttMonitorThread::Entry()
+{
+    while (!TestDestroy())
+    {
+        bool pttState = m_port->getCTS();
+        if (pttState != m_port->m_currentPttInputState)
+        {
+            m_port->m_currentPttInputState = pttState;
+            m_port->m_pttChangeFn(m_port->m_currentPttInputState == m_ctsPos);
+        }
+        
+        wxThread::This()->Sleep(PTT_INPUT_MONITORING_TIME_MS);
+    }
+    
+    return nullptr;
+}
+
+
+void Serialport::enablePttInputMonitoring(bool ctsPos, std::function<void(bool)> pttChangeFn)
+{
+    m_pttChangeFn = pttChangeFn;
+    m_currentPttInputState = false;
+    m_pttMonitoringThread = new PttMonitorThread(this, ctsPos);
+    if (m_pttMonitoringThread->Run() != wxTHREAD_NO_ERROR)
+    {
+        delete m_pttMonitoringThread;
+        m_pttMonitoringThread = nullptr;
+    }
+}
+
+bool Serialport::getCTS() 
+{
+	if(com_handle == COM_HANDLE_INVALID)
+		return false;
+#ifdef _WIN32
+    DWORD modemFlags = 0;
+	GetCommModemStatus(com_handle, &modemFlags);
+    return (modemFlags & MS_CTS_ON);
+#else
+	{	// For C89 happiness
+		int flags = 0;
+		ioctl(com_handle, TIOCMGET, &flags);
+        return flags & TIOCM_CTS;
+	}
+#endif    
 }

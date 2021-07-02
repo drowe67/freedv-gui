@@ -30,8 +30,8 @@
 #define MAX_FREQ_TREBLE   3900.00
 #define MAX_FREQ_DEF      3000.00
 
-#define MIN_GAIN          -20
-#define MAX_GAIN           20
+#define MIN_GAIN          -20.0
+#define MAX_GAIN           20.0
 
 #define MAX_LOG10_Q         1.0
 #define MIN_LOG10_Q        -1.0
@@ -45,7 +45,7 @@
 
 extern FreeDVInterface freedvInterface;
 extern wxConfigBase *pConfig;
-
+    
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class FilterDlg
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -92,7 +92,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     sbSizer_speexpp->Add(m_ckboxSpeexpp, 0, wxALIGN_LEFT, 2);
     m_ckboxSpeexpp->SetToolTip(_("Enable noise suppression, dereverberation, AGC of mic signal"));
 
-    m_ckbox700C_EQ = new wxCheckBox(this, wxID_ANY, _("700C/700D/700E Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckbox700C_EQ = new wxCheckBox(this, wxID_ANY, _("700C/700D/700E/800XA Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_speexpp->Add(m_ckbox700C_EQ, 0, wxALIGN_LEFT, 2);
     m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700C/700D/700E Codec input audio"));
 
@@ -180,30 +180,41 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 
     m_codec2LPCPostFilterEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnEnable), NULL, this);
     m_codec2LPCPostFilterBassBoost->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnBassBoost), NULL, this);
-    m_codec2LPCPostFilterBeta->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnBetaScroll), NULL, this);
-    m_codec2LPCPostFilterGamma->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnGammaScroll), NULL, this);
     m_LPCPostFilterDefault->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnLPCPostFilterDefault), NULL, this);
 
     m_ckboxSpeexpp->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpeexppEnable), NULL, this);
     m_ckbox700C_EQ->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::On700C_EQ), NULL, this);
 
-    m_MicInBass.sliderFreq->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInBassFreqScroll), NULL, this);
-    m_MicInBass.sliderGain->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInBassGainScroll), NULL, this);
-    m_MicInTreble.sliderFreq->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInTrebleFreqScroll), NULL, this);
-    m_MicInTreble.sliderGain->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInTrebleGainScroll), NULL, this);
-    m_MicInMid.sliderFreq->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInMidFreqScroll), NULL, this);
-    m_MicInMid.sliderGain->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInMidGainScroll), NULL, this);
-    m_MicInMid.sliderQ->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInMidQScroll), NULL, this);
+    int events[] = {
+        wxEVT_SCROLL_TOP, wxEVT_SCROLL_BOTTOM, wxEVT_SCROLL_LINEUP, wxEVT_SCROLL_LINEDOWN, wxEVT_SCROLL_PAGEUP, 
+        wxEVT_SCROLL_PAGEDOWN, wxEVT_SCROLL_THUMBTRACK, wxEVT_SCROLL_THUMBRELEASE, wxEVT_SCROLL_CHANGED
+    };
+    
+    for (auto event : events)
+    {
+        m_MicInBass.sliderFreq->Connect(event, wxScrollEventHandler(FilterDlg::OnMicInBassFreqScroll), NULL, this);
+        m_MicInBass.sliderGain->Connect(event, wxScrollEventHandler(FilterDlg::OnMicInBassGainScroll), NULL, this);
+        m_MicInTreble.sliderFreq->Connect(event, wxScrollEventHandler(FilterDlg::OnMicInTrebleFreqScroll), NULL, this);
+        m_MicInTreble.sliderGain->Connect(event, wxScrollEventHandler(FilterDlg::OnMicInTrebleGainScroll), NULL, this);
+        m_MicInMid.sliderFreq->Connect(event, wxScrollEventHandler(FilterDlg::OnMicInMidFreqScroll), NULL, this);
+        m_MicInMid.sliderGain->Connect(event, wxScrollEventHandler(FilterDlg::OnMicInMidGainScroll), NULL, this);
+        m_MicInMid.sliderQ->Connect(event, wxScrollEventHandler(FilterDlg::OnMicInMidQScroll), NULL, this);
+        
+        m_SpkOutBass.sliderFreq->Connect(event, wxScrollEventHandler(FilterDlg::OnSpkOutBassFreqScroll), NULL, this);
+        m_SpkOutBass.sliderGain->Connect(event, wxScrollEventHandler(FilterDlg::OnSpkOutBassGainScroll), NULL, this);
+        m_SpkOutTreble.sliderFreq->Connect(event, wxScrollEventHandler(FilterDlg::OnSpkOutTrebleFreqScroll), NULL, this);
+        m_SpkOutTreble.sliderGain->Connect(event, wxScrollEventHandler(FilterDlg::OnSpkOutTrebleGainScroll), NULL, this);
+        m_SpkOutMid.sliderFreq->Connect(event, wxScrollEventHandler(FilterDlg::OnSpkOutMidFreqScroll), NULL, this);
+        m_SpkOutMid.sliderGain->Connect(event, wxScrollEventHandler(FilterDlg::OnSpkOutMidGainScroll), NULL, this);
+        m_SpkOutMid.sliderQ->Connect(event, wxScrollEventHandler(FilterDlg::OnSpkOutMidQScroll), NULL, this);
+        
+        m_codec2LPCPostFilterBeta->Connect(event, wxScrollEventHandler(FilterDlg::OnBetaScroll), NULL, this);
+        m_codec2LPCPostFilterGamma->Connect(event, wxScrollEventHandler(FilterDlg::OnGammaScroll), NULL, this);
+    }
+    
     m_MicInEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnMicInEnable), NULL, this);
     m_MicInDefault->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnMicInDefault), NULL, this);
 
-    m_SpkOutBass.sliderFreq->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnSpkOutBassFreqScroll), NULL, this);
-    m_SpkOutBass.sliderGain->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnSpkOutBassGainScroll), NULL, this);
-    m_SpkOutTreble.sliderFreq->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnSpkOutTrebleFreqScroll), NULL, this);
-    m_SpkOutTreble.sliderGain->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnSpkOutTrebleGainScroll), NULL, this);
-    m_SpkOutMid.sliderFreq->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnSpkOutMidFreqScroll), NULL, this);
-    m_SpkOutMid.sliderGain->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnSpkOutMidGainScroll), NULL, this);
-    m_SpkOutMid.sliderQ->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnSpkOutMidQScroll), NULL, this);
     m_SpkOutEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpkOutEnable), NULL, this);
     m_SpkOutDefault->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnSpkOutDefault), NULL, this);
 
@@ -226,29 +237,40 @@ FilterDlg::~FilterDlg()
 
     m_codec2LPCPostFilterEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnEnable), NULL, this);
     m_codec2LPCPostFilterBassBoost->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnBassBoost), NULL, this);
-    m_codec2LPCPostFilterBeta->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnBetaScroll), NULL, this);
-    m_codec2LPCPostFilterGamma->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnGammaScroll), NULL, this);
     m_LPCPostFilterDefault->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnLPCPostFilterDefault), NULL, this);
 
     m_ckboxSpeexpp->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpeexppEnable), NULL, this);
-
-    m_MicInBass.sliderFreq->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInBassFreqScroll), NULL, this);
-    m_MicInBass.sliderGain->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInBassGainScroll), NULL, this);
-    m_MicInTreble.sliderFreq->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInTrebleFreqScroll), NULL, this);
-    m_MicInTreble.sliderGain->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInTrebleGainScroll), NULL, this);
-    m_MicInMid.sliderFreq->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInMidFreqScroll), NULL, this);
-    m_MicInMid.sliderGain->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInMidGainScroll), NULL, this);
-    m_MicInMid.sliderQ->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnMicInMidQScroll), NULL, this);
+    
+    int events[] = {
+        wxEVT_SCROLL_TOP, wxEVT_SCROLL_BOTTOM, wxEVT_SCROLL_LINEUP, wxEVT_SCROLL_LINEDOWN, wxEVT_SCROLL_PAGEUP, 
+        wxEVT_SCROLL_PAGEDOWN, wxEVT_SCROLL_THUMBTRACK, wxEVT_SCROLL_THUMBRELEASE, wxEVT_SCROLL_CHANGED
+    };
+    
+    for (auto event : events)
+    {
+        m_MicInBass.sliderFreq->Disconnect(event, wxScrollEventHandler(FilterDlg::OnMicInBassFreqScroll), NULL, this);
+        m_MicInBass.sliderGain->Disconnect(event, wxScrollEventHandler(FilterDlg::OnMicInBassGainScroll), NULL, this);
+        m_MicInTreble.sliderFreq->Disconnect(event, wxScrollEventHandler(FilterDlg::OnMicInTrebleFreqScroll), NULL, this);
+        m_MicInTreble.sliderGain->Disconnect(event, wxScrollEventHandler(FilterDlg::OnMicInTrebleGainScroll), NULL, this);
+        m_MicInMid.sliderFreq->Disconnect(event, wxScrollEventHandler(FilterDlg::OnMicInMidFreqScroll), NULL, this);
+        m_MicInMid.sliderGain->Disconnect(event, wxScrollEventHandler(FilterDlg::OnMicInMidGainScroll), NULL, this);
+        m_MicInMid.sliderQ->Disconnect(event, wxScrollEventHandler(FilterDlg::OnMicInMidQScroll), NULL, this);
+        
+        m_SpkOutBass.sliderFreq->Disconnect(event, wxScrollEventHandler(FilterDlg::OnSpkOutBassFreqScroll), NULL, this);
+        m_SpkOutBass.sliderGain->Disconnect(event, wxScrollEventHandler(FilterDlg::OnSpkOutBassGainScroll), NULL, this);
+        m_SpkOutTreble.sliderFreq->Disconnect(event, wxScrollEventHandler(FilterDlg::OnSpkOutTrebleFreqScroll), NULL, this);
+        m_SpkOutTreble.sliderGain->Disconnect(event, wxScrollEventHandler(FilterDlg::OnSpkOutTrebleGainScroll), NULL, this);
+        m_SpkOutMid.sliderFreq->Disconnect(event, wxScrollEventHandler(FilterDlg::OnSpkOutMidFreqScroll), NULL, this);
+        m_SpkOutMid.sliderGain->Disconnect(event, wxScrollEventHandler(FilterDlg::OnSpkOutMidGainScroll), NULL, this);
+        m_SpkOutMid.sliderQ->Disconnect(event, wxScrollEventHandler(FilterDlg::OnSpkOutMidQScroll), NULL, this);
+        
+        m_codec2LPCPostFilterBeta->Disconnect(event, wxScrollEventHandler(FilterDlg::OnBetaScroll), NULL, this);
+        m_codec2LPCPostFilterGamma->Disconnect(event, wxScrollEventHandler(FilterDlg::OnGammaScroll), NULL, this);
+    }
+    
     m_MicInEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnMicInEnable), NULL, this);
     m_MicInDefault->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnMicInDefault), NULL, this);
 
-    m_SpkOutBass.sliderFreq->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnSpkOutBassFreqScroll), NULL, this);
-    m_SpkOutBass.sliderGain->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnSpkOutBassGainScroll), NULL, this);
-    m_SpkOutTreble.sliderFreq->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnSpkOutTrebleFreqScroll), NULL, this);
-    m_SpkOutTreble.sliderGain->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnSpkOutTrebleGainScroll), NULL, this);
-    m_SpkOutMid.sliderFreq->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnSpkOutMidFreqScroll), NULL, this);
-    m_SpkOutMid.sliderGain->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnSpkOutMidGainScroll), NULL, this);
-    m_SpkOutMid.sliderQ->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(FilterDlg::OnSpkOutMidQScroll), NULL, this);
     m_SpkOutEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpkOutEnable), NULL, this);
     m_SpkOutDefault->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnSpkOutDefault), NULL, this);
 

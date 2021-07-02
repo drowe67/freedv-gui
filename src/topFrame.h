@@ -154,9 +154,6 @@ class TopFrame : public wxFrame
         virtual void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnHelpAbout( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnCmdSliderScroll( wxScrollEvent& event ) { event.Skip(); }
-        virtual void OnSliderScrollBottom( wxScrollEvent& event ) { event.Skip(); }
-        virtual void OnCmdSliderScrollChanged( wxScrollEvent& event ) { event.Skip(); }
-        virtual void OnSliderScrollTop( wxScrollEvent& event ) { event.Skip(); }
         virtual void OnCheckSQClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnCheckSNRClick( wxCommandEvent& event ) { event.Skip(); }
 
@@ -193,7 +190,7 @@ class TopFrame : public wxFrame
         wxToggleButton* m_togBtnLoopTx;
         wxAuiNotebook* m_auiNbookCtrl;
 
-        TopFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("FreeDV ") + _(FREEDV_VERSION), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(561,300 ), long style = wxDEFAULT_FRAME_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL );
+        TopFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("FreeDV ") + _(FREEDV_VERSION), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(561,300 ), long style = wxDEFAULT_FRAME_STYLE|wxRESIZE_BORDER );
 
         ~TopFrame();
 };

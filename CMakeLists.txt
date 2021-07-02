@@ -8,7 +8,7 @@
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
 # Prevent in-source builds to protect automake/autoconf config.
 # If an in-source build is attempted, you will still need to clean up a few
@@ -288,11 +288,15 @@ endif(CODEC2_BUILD_DIR)
 #
 if(NOT USE_STATIC_PORTAUDIO)
     message(STATUS "Looking for portaudio...")
-    find_package(Portaudio REQUIRED)
+    find_package(portaudio-2.0 REQUIRED)
     if(PORTAUDIO_FOUND)
         message(STATUS "  portaudio library: ${PORTAUDIO_LIBRARIES}")
         message(STATUS "  portaudio headers: ${PORTAUDIO_INCLUDE_DIRS}")
+        if(pkgcfg_lib_PORTAUDIO_portaudio)
+        list(APPEND FREEDV_LINK_LIBS ${pkgcfg_lib_PORTAUDIO_portaudio})
+        else(pkgcfg_lib_PORTAUDIO_portaudio)
         list(APPEND FREEDV_LINK_LIBS ${PORTAUDIO_LIBRARIES})
+        endif(pkgcfg_lib_PORTAUDIO_portaudio)
         include_directories(${PORTAUDIO_INCLUDE_DIRS})
     else()
         message(FATAL_ERROR "portaudio library not found.
@@ -307,7 +311,7 @@ On Windows it's easiest to use the cmake option: USE_STATIC_PORTAUDIO"
     endif()
 else(NOT USE_STATIC_PORTAUDIO)
     message(STATUS "Will attempt static build of portaudio.")
-    include(cmake/BuildPortaudio.cmake)
+    include(cmake/BuildPortAudio.cmake)
 endif(NOT USE_STATIC_PORTAUDIO)
 
 #

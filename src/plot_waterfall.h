@@ -37,7 +37,7 @@
 class PlotWaterfall : public PlotPanel
 {
     public:
-        PlotWaterfall(wxFrame* parent, bool graticule, int colour);
+        PlotWaterfall(wxWindow* parent, bool graticule, int colour);
         ~PlotWaterfall();
         bool checkDT(void);
         void setGreyscale(bool greyscale) { m_greyscale = greyscale; }
@@ -65,7 +65,7 @@ class PlotWaterfall : public PlotPanel
         float       m_max_mag;
         int         m_colour;
         int         m_modem_stats_max_f_hz;
-        
+
         wxBitmap* m_fullBmp;
         int m_imgHeight;
         int m_imgWidth;

@@ -65,7 +65,6 @@ class ComPortsDlg : public wxDialog
 
         /* Serial Settings */
 
-        wxListBox     *m_listCtrlPorts;
         wxCheckBox    *m_ckUseSerialPTT;
         wxStaticText  *m_staticText12;
         wxComboBox    *m_cbCtlDevicePath;
@@ -73,6 +72,12 @@ class ComPortsDlg : public wxDialog
         wxCheckBox    *m_ckRTSPos;
         wxRadioButton *m_rbUseRTS;
         wxCheckBox    *m_ckDTRPos;
+        
+        /* PTT In Settings */
+        wxCheckBox    *m_ckUsePTTInput;
+        wxStaticText  *m_pttInSerialDeviceLabel;
+        wxCheckBox    *m_ckCTSPos;
+        wxComboBox    *m_cbCtlDevicePathPttIn;
 
         /* Test - Ok - Cancel - Apply */
 
@@ -87,8 +92,10 @@ protected:
 
         void PTTUseHamLibClicked(wxCommandEvent& event);
         void PTTUseSerialClicked(wxCommandEvent& event);
+        void PTTUseSerialInputClicked(wxCommandEvent& event);
         void HamlibRigNameChanged(wxCommandEvent& event);
         void resetIcomCIVStatus();
+        bool savePttSettings();
         
         void OnTest(wxCommandEvent& event);
 

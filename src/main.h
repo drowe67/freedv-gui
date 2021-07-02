@@ -213,6 +213,12 @@ class MainApp : public wxApp
         bool                m_boolDTRPos;
         Serialport         *m_serialport;
 
+        // PTT Input
+        bool                m_boolUseSerialPTTInput;
+        wxString            m_strPTTInputPort;
+        bool                m_boolCTSPos;
+        Serialport         *m_pttInSerialPort;
+        
         // Play/Rec files
 
         wxString            m_playFileToMicInPath;
@@ -475,7 +481,8 @@ class MainFrame : public TopFrame
         bool                    OpenHamlibRig();
         void                    OpenSerialPort(void);
         void                    CloseSerialPort(void);
-        void                    SerialPTTRx(void);
+        void                    OpenPTTInPort(void);
+        void                    ClosePTTInPort(void);
 
         bool                    m_modal;
 
@@ -544,6 +551,7 @@ class MainFrame : public TopFrame
         void setsnrBeta(bool snrSlow);
 
         // protected event handlers
+        virtual void topFrame_OnSize( wxSizeEvent& event );
         virtual void OnCloseFrame(wxCloseEvent& event);
         void OnExitClick(wxCommandEvent& event);
 
@@ -574,9 +582,6 @@ class MainFrame : public TopFrame
         void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event );
         void OnHelpAbout( wxCommandEvent& event );
         void OnCmdSliderScroll( wxScrollEvent& event );
-//        void OnSliderScrollBottom( wxScrollEvent& event );
-//        void OnCmdSliderScrollChanged( wxScrollEvent& event );
-//        void OnSliderScrollTop( wxScrollEvent& event );
         void OnCheckSQClick( wxCommandEvent& event );
         void OnCheckSNRClick( wxCommandEvent& event );
 

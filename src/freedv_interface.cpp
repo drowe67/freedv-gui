@@ -204,8 +204,10 @@ int FreeDVInterface::getTotalBitErrors()
 float FreeDVInterface::getVariance() const
 {
     struct CODEC2 *c2 = freedv_get_codec2(currentRxMode_);
-    assert(c2 != NULL);
-    return codec2_get_var(c2);
+    if (c2 != NULL)
+        return codec2_get_var(c2);
+    else
+        return 0.0;
 }
 
 int FreeDVInterface::getErrorPattern(short** outputPattern)
@@ -313,29 +315,17 @@ int FreeDVInterface::getSync() const
 
 void FreeDVInterface::setEq(int val)
 {
-    int index = 0;
     for (auto& dv : dvObjects_)
     {
-        int mode = enabledModes_[index];
-        if ((mode == FREEDV_MODE_700C) || (mode == FREEDV_MODE_700D) || (mode == FREEDV_MODE_700E))
-        {
-            freedv_set_eq(dv, val);
-        }
-        index++;
+        freedv_set_eq(dv, val);
     }
 }
 
 void FreeDVInterface::setCarrierAmplitude(int c, float amp)
 {
-    int index = 0;
     for (auto& dv : dvObjects_)
     {
-        int mode = enabledModes_[index];
-        if (mode == FREEDV_MODE_700C)
-        {
-            freedv_set_carrier_ampl(dv, c, amp);
-        }
-        index++;
+        freedv_set_carrier_ampl(dv, c, amp);
     }
 }
 
