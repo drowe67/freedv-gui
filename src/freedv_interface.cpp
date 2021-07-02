@@ -23,6 +23,7 @@
 #include "main.h"
 
 FreeDVInterface::FreeDVInterface() :
+    singleRxThread_(false),
     txMode_(0),
     rxMode_(0),
     squelchEnabled_(false),
@@ -45,8 +46,10 @@ static void callback_err_fn(void *fifo, short error_pattern[], int sz_error_patt
     codec2_fifo_write((struct FIFO*)fifo, error_pattern, sz_error_pattern);
 }
 
-void FreeDVInterface::start(int txMode, int fifoSizeMs)
+void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread)
 {
+    singleRxThread_ = singleRxThread;
+    
     int src_error = 0;
     for (auto& mode : enabledModes_)
     {
@@ -450,9 +453,17 @@ int FreeDVInterface::processRxAudio(
     float rxFreqOffsetHz, struct MODEM_STATS* stats, float* sig_pwr_av)
 {
     int   state = getSync();
-    std::deque<std::future<RxAudioThreadState*>> rxFutures;
+    bool  done = false;
+    std::deque<std::shared_future<RxAudioThreadState*>> rxFutures;
     for (auto index = 0; (size_t)index < dvObjects_.size(); index++)
     {
+        if (singleRxThread_ && state != 0 && dvObjects_[index] != currentRxMode_) 
+        {
+            // Skip processing of all except for the current receiving mdoe if in sync.
+            done = true;
+            continue;
+        }
+        
         // Initialize task inputs and outputs
         RxAudioThreadState* inpState = new RxAudioThreadState();
         inpState->dvObj = dvObjects_[index];
@@ -476,7 +487,7 @@ int FreeDVInterface::processRxAudio(
         inpState->sig_pwr_av = *sig_pwr_av;
         
         // Wrap the below in an async task.
-        rxFutures.push_back(threads_[index]->enqueue([this](RxAudioThreadState* st) {
+        auto fut = threads_[index]->enqueue([this](RxAudioThreadState* st) {
             short infreedv[10*N48];
             int   nfreedv;
                 
@@ -536,7 +547,16 @@ int FreeDVInterface::processRxAudio(
             }
                     
             return st;
-        }, inpState));
+        }, inpState);
+        
+        if (singleRxThread_)
+        {
+            fut.wait();
+        }
+        
+        rxFutures.push_back(fut);
+        
+        if (singleRxThread_ && done) break;
     }
     
     // Loop through each future and wait for the result, then determine
@@ -548,7 +568,11 @@ int FreeDVInterface::processRxAudio(
     std::deque<RxAudioThreadState*> results;
     for(auto& fut : rxFutures)
     {
-        fut.wait();
+        if (!singleRxThread_)
+        {
+            fut.wait();
+        }
+        
         RxAudioThreadState* res = fut.get();
         results.push_back(res);
         
@@ -586,7 +610,7 @@ int FreeDVInterface::processRxAudio(
         //   a) We're on the last mode to check (meaning that we didn't get sync on any other mode)
         //   b) We got sync on the current mode at some point.
         if (futIndex == futIndexWithSync)
-        {
+        {            
             // grab extended stats so we can plot spectrum, scatter diagram etc
             freedv_get_modem_extended_stats(res->dvObj, stats);
         

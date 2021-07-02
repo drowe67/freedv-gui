@@ -38,7 +38,7 @@ public:
     FreeDVInterface();
     virtual ~FreeDVInterface();
     
-    void start(int txMode, int fifoSizeMs);
+    void start(int txMode, int fifoSizeMs, bool singleRxThread);
     void stop();
     void changeTxMode(int txMode);
     bool isRunning() const { return dvObjects_.size() > 0; }
@@ -122,7 +122,7 @@ private:
         EventHandlerThread();
         ~EventHandlerThread();
         
-        std::future<R> enqueue(std::function<R(T)> fn, T arg);
+        std::shared_future<R> enqueue(std::function<R(T)> fn, T arg);
         
     private:
         struct Args 
@@ -146,6 +146,7 @@ private:
         static void ThreadEntry_(EventHandlerThread<R,T>* ptr);
     };
     
+    bool singleRxThread_;
     int txMode_;
     int rxMode_;
     bool squelchEnabled_;
@@ -183,7 +184,7 @@ FreeDVInterface::EventHandlerThread<R, T>::~EventHandlerThread()
 }
 
 template<typename R, typename T>
-std::future<R> FreeDVInterface::EventHandlerThread<R, T>::enqueue(std::function<R(T)> fn, T arg)
+std::shared_future<R> FreeDVInterface::EventHandlerThread<R, T>::enqueue(std::function<R(T)> fn, T arg)
 {    
     std::packaged_task<R(T)> task(fn);
     std::future<R> fut = task.get_future();
