@@ -557,12 +557,7 @@ int FreeDVInterface::processRxAudio(
                     nout = resample(st->outRateConvObj, output_resample_buf, output_buf, st->rxSpeechSampleRate, freedv_get_speech_sample_rate(dv), numSpeechSamples, nout);
                 }
                 
-                // Write to output FIFO if we have sync.
-                int tmpState = freedv_get_sync(dv);
-                if (tmpState != 0)
-                {
-                    codec2_fifo_write(st->ownOutput, output_resample_buf, nout);
-                }
+                codec2_fifo_write(st->ownOutput, output_resample_buf, nout);
             
                 nin = freedv_nin(dv);
             }
