@@ -8,7 +8,7 @@
 
 #define SBQ_MAX_ARGS 5
 
-void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q)
+void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q, int sampleRate)
 {
     char  *arg[SBQ_MAX_ARGS];
     char   argstorage[SBQ_MAX_ARGS][80];
@@ -29,6 +29,7 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
         sprintf(arg[argc++], "%s", filterType);
         sprintf(arg[argc++], "%f", gaindB+1E-6);
         sprintf(arg[argc++], "%f", freqHz);
+        sprintf(arg[argc++], "%d", sampleRate);
     }
 
     if (strcmp(filterType, "equalizer") == 0) {
@@ -36,6 +37,7 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
         sprintf(arg[argc++], "%f", freqHz);
         sprintf(arg[argc++], "%f", Q);
         sprintf(arg[argc++], "%f", gaindB+1E-6);
+        sprintf(arg[argc++], "%d", sampleRate);
     }
 
     assert(argc <= SBQ_MAX_ARGS);
@@ -46,15 +48,15 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
     return sbq;
 }
 
-void  MainFrame::designEQFilters(paCallBackData *cb)
+void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSampleRate)
 {
     // init Mic In Equaliser Filters
 
     if (m_newMicInFilter) {
         //printf("designing new Min In filters\n");
-        cb->sbqMicInBass   = designAnEQFilter("bass", wxGetApp().m_MicInBassFreqHz, wxGetApp().m_MicInBassGaindB);
-        cb->sbqMicInTreble = designAnEQFilter("treble", wxGetApp().m_MicInTrebleFreqHz, wxGetApp().m_MicInTrebleGaindB);
-        cb->sbqMicInMid    = designAnEQFilter("equalizer", wxGetApp().m_MicInMidFreqHz, wxGetApp().m_MicInMidGaindB, wxGetApp().m_MicInMidQ);
+        cb->sbqMicInBass   = designAnEQFilter("bass", wxGetApp().m_MicInBassFreqHz, wxGetApp().m_MicInBassGaindB, txSampleRate);
+        cb->sbqMicInTreble = designAnEQFilter("treble", wxGetApp().m_MicInTrebleFreqHz, wxGetApp().m_MicInTrebleGaindB, txSampleRate);
+        cb->sbqMicInMid    = designAnEQFilter("equalizer", wxGetApp().m_MicInMidFreqHz, wxGetApp().m_MicInMidGaindB, wxGetApp().m_MicInMidQ, txSampleRate);
     }
 
     // init Spk Out Equaliser Filters
@@ -62,9 +64,9 @@ void  MainFrame::designEQFilters(paCallBackData *cb)
     if (m_newSpkOutFilter) {
         //printf("designing new Spk Out filters\n");
         //printf("designEQFilters: wxGetApp().m_SpkOutBassFreqHz: %f\n",wxGetApp().m_SpkOutBassFreqHz);
-        cb->sbqSpkOutBass   = designAnEQFilter("bass", wxGetApp().m_SpkOutBassFreqHz, wxGetApp().m_SpkOutBassGaindB);
-        cb->sbqSpkOutTreble = designAnEQFilter("treble", wxGetApp().m_SpkOutTrebleFreqHz, wxGetApp().m_SpkOutTrebleGaindB);
-        cb->sbqSpkOutMid    = designAnEQFilter("equalizer", wxGetApp().m_SpkOutMidFreqHz, wxGetApp().m_SpkOutMidGaindB, wxGetApp().m_SpkOutMidQ);
+        cb->sbqSpkOutBass   = designAnEQFilter("bass", wxGetApp().m_SpkOutBassFreqHz, wxGetApp().m_SpkOutBassGaindB, rxSampleRate);
+        cb->sbqSpkOutTreble = designAnEQFilter("treble", wxGetApp().m_SpkOutTrebleFreqHz, wxGetApp().m_SpkOutTrebleGaindB, rxSampleRate);
+        cb->sbqSpkOutMid    = designAnEQFilter("equalizer", wxGetApp().m_SpkOutMidFreqHz, wxGetApp().m_SpkOutMidGaindB, wxGetApp().m_SpkOutMidQ, rxSampleRate);
     }
 }
 
