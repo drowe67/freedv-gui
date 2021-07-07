@@ -30,7 +30,6 @@ FreeDVInterface::FreeDVInterface() :
     squelchEnabled_(false),
     currentTxMode_(nullptr),
     currentRxMode_(nullptr),
-    soundOutRateConv_(nullptr),
     lastSyncRxMode_(nullptr)
 {
     // empty
@@ -99,15 +98,16 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread)
             txMode_ = mode;
         }
         
-        auto convertObj = src_new(SRC_SINC_FASTEST, 1, &src_error);
-        assert(convertObj != nullptr);
-        rateConvObjs_.push_back(convertObj);
+        auto inConvertObj = src_new(SRC_SINC_FASTEST, 1, &src_error);
+        assert(inConvertObj != nullptr);
+        inRateConvObjs_.push_back(inConvertObj);
+        
+        auto outConvertObj = src_new(SRC_SINC_FASTEST, 1, &src_error);
+        assert(outConvertObj != nullptr);
+        outRateConvObjs_.push_back(outConvertObj);
         
         threads_.push_back(new EventHandlerThread<RxAudioThreadState*, RxAudioThreadState*>());
     }
-    
-    soundOutRateConv_ = src_new(SRC_SINC_FASTEST, 1, &src_error);
-    assert(soundOutRateConv_ != nullptr);
 }
 
 void FreeDVInterface::stop()
@@ -136,20 +136,24 @@ void FreeDVInterface::stop()
     }
     errorFifos_.clear();
     
-    for (auto& conv : rateConvObjs_)
+    for (auto& conv : inRateConvObjs_)
     {
         src_delete(conv);
     }
-    rateConvObjs_.clear();
+    inRateConvObjs_.clear();
+    
+    for (auto& conv : outRateConvObjs_)
+    {
+        src_delete(conv);
+    }
+    outRateConvObjs_.clear();
     
     for (auto& tmp : rxFreqOffsetPhaseRectObjs_)
     {
         delete tmp;
     }
     rxFreqOffsetPhaseRectObjs_.clear();
-    
-    src_delete(soundOutRateConv_);
-    
+        
     enabledModes_.clear();
     
     currentTxMode_ = nullptr;
@@ -298,12 +302,6 @@ void FreeDVInterface::changeTxMode(int txMode)
             tmpPtr = rxFreqOffsetPhaseRectObjs_[index];
             tmpPtr->real = cos(0.0);
             tmpPtr->imag = sin(0.0);
-            
-            // Recreate output rate converter in order to clear state.
-            int src_error = 0;
-            src_delete(soundOutRateConv_);
-            soundOutRateConv_ = src_new(SRC_SINC_FASTEST, 1, &src_error);
-            assert(soundOutRateConv_ != nullptr);
             
             return;
         }
@@ -491,7 +489,7 @@ int FreeDVInterface::processRxAudio(
         // Initialize task inputs and outputs
         RxAudioThreadState* inpState = new RxAudioThreadState();
         inpState->dvObj = dvObjects_[index];
-        inpState->rateConvObj = rateConvObjs_[index];
+        inpState->inRateConvObj = inRateConvObjs_[index];
         inpState->ownInput = inputFifos_[index];
         inpState->rxFreqOffsetPhaseRectObj = rxFreqOffsetPhaseRectObjs_[index];
         inpState->modeIndex = index;
@@ -503,7 +501,7 @@ int FreeDVInterface::processRxAudio(
         inpState->rxFreqOffsetHz = rxFreqOffsetHz;
         inpState->rxModemSampleRate = getRxModemSampleRate();
         inpState->rxSpeechSampleRate = getRxSpeechSampleRate();
-        inpState->soundOutRateConv = soundOutRateConv_;
+        inpState->outRateConvObj = outRateConvObjs_[index];
         
         // 1s of audio at 48kbps; we shouldn't get anywhere close due to how often 
         // this function is called.
@@ -516,7 +514,7 @@ int FreeDVInterface::processRxAudio(
             int   nfreedv;
                 
             // Resample from maximum sample rate to the one the current codec expects.
-            auto& convertObj = st->rateConvObj;
+            auto& convertObj = st->inRateConvObj;
             auto& dv = st->dvObj;
             nfreedv = resample(convertObj, infreedv, st->inputBlock, freedv_get_modem_sample_rate(dv), st->rxModemSampleRate, 10*N48, st->numFrames);
             assert(nfreedv <= 10*N48);
@@ -556,8 +554,7 @@ int FreeDVInterface::processRxAudio(
             
                 // Resample output to the current mode's rate if needed.
                 {
-                    std::lock_guard<std::mutex> lock(resampleMtx_);
-                    nout = resample(st->soundOutRateConv, output_resample_buf, output_buf, st->rxSpeechSampleRate, freedv_get_speech_sample_rate(dv), numSpeechSamples, nout);
+                    nout = resample(st->outRateConvObj, output_resample_buf, output_buf, st->rxSpeechSampleRate, freedv_get_speech_sample_rate(dv), numSpeechSamples, nout);
                 }
                 
                 // Write to output FIFO if we have sync.
@@ -588,7 +585,7 @@ int FreeDVInterface::processRxAudio(
     // in the list if we don't find any.
     int futIndexWithSync = rxFutures.size() - 1;
     int futIndex = 0;
-    int maxSyncFound = 0;
+    int maxSyncFound = -25;
     std::deque<RxAudioThreadState*> results;
     for(auto& fut : rxFutures)
     {

@@ -103,7 +103,7 @@ private:
     {
         // Inputs
         struct freedv* dvObj;
-        SRC_STATE* rateConvObj;
+        SRC_STATE* inRateConvObj;
         struct FIFO* ownInput;
         COMP* rxFreqOffsetPhaseRectObj;
         int modeIndex;
@@ -114,7 +114,7 @@ private:
         float rxFreqOffsetHz;
         int rxModemSampleRate;
         int rxSpeechSampleRate;
-        SRC_STATE* soundOutRateConv;
+        SRC_STATE* outRateConvObj;
         
         // Outputs
         struct FIFO* ownOutput;
@@ -164,17 +164,15 @@ private:
     std::deque<FreeDVTextFnState*> textFnObjs_;
     std::deque<struct FIFO*> errorFifos_;
     std::deque<struct FIFO*> inputFifos_;
-    std::deque<SRC_STATE*> rateConvObjs_;
+    std::deque<SRC_STATE*> inRateConvObjs_;
+    std::deque<SRC_STATE*> outRateConvObjs_;
     std::deque<EventHandlerThread<RxAudioThreadState*, RxAudioThreadState*> *> threads_;
     COMP txFreqOffsetPhaseRectObj_;
     std::deque<COMP*> rxFreqOffsetPhaseRectObjs_;
     
     struct freedv* currentTxMode_;
     struct freedv* currentRxMode_; 
-    SRC_STATE* soundOutRateConv_;
     struct freedv* lastSyncRxMode_;
-    
-    std::mutex resampleMtx_;
 };
 
 template<typename R, typename T>
