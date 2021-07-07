@@ -457,7 +457,7 @@ int FreeDVInterface::processRxAudio(
     std::deque<std::shared_future<RxAudioThreadState*>> rxFutures;
     for (auto index = 0; (size_t)index < dvObjects_.size(); index++)
     {
-        if (state != 0 && dvObjects_[index] != currentRxMode_) 
+        if (singleRxThread_ && state != 0 && dvObjects_[index] != currentRxMode_) 
         {
             // Skip processing of all except for the current receiving mdoe if in sync.
             done = true;
@@ -556,7 +556,7 @@ int FreeDVInterface::processRxAudio(
         
         rxFutures.push_back(fut);
         
-        if (done) break;
+        if (singleRxThread_ && done) break;
     }
     
     // Loop through each future and wait for the result, then determine
