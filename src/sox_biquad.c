@@ -64,13 +64,21 @@ void *sox_biquad_create(int argc, const char *argv[])
     int ret;
     sox_effect_t *e;
     int (*start)(sox_effect_t *); /* function pointer to effect start func */
-    long sampleRate;
+    long sampleRate = 8000;
 
     if (strcmp(argv[0], "equalizer") == 0) {
-        sampleRate = (argc == 4) ? atol(argv[4]) : 8000;
+        if (argc == 4)
+        {
+            sampleRate = atol(argv[4]);
+            argc--;
+        }
     }
     else {
-        sampleRate = (argc == 3) ? atol(argv[3]) : 8000;
+        if (argc == 3)
+        {
+            sampleRate = atol(argv[3]);
+            argc--;
+        }
     }
 
     e = sox_create_effect(sox_find_effect(argv[0])); assert(e != NULL);
