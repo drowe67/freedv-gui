@@ -23,6 +23,7 @@
 #include "main.h"
 
 FreeDVInterface::FreeDVInterface() :
+    textRxFunc_(nullptr),
     singleRxThread_(false),
     txMode_(0),
     rxMode_(0),
@@ -65,6 +66,11 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread)
         
         dvObjects_.push_back(dv);
         
+        FreeDVTextFnState* fnStateObj = new FreeDVTextFnState;
+        fnStateObj->interfaceObj = this;
+        fnStateObj->modeObj = dv;
+        textFnObjs_.push_back(fnStateObj);
+            
         struct FIFO* errFifo = codec2_fifo_create(2*freedv_get_sz_error_pattern(dv) + 1);
         assert(errFifo != nullptr);
         
@@ -106,6 +112,12 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread)
 
 void FreeDVInterface::stop()
 {
+    for (auto& fnState : textFnObjs_)
+    {
+        delete fnState;
+    }
+    textFnObjs_.clear();
+    
     for (auto& thd : threads_)
     {
         delete thd;
@@ -340,12 +352,24 @@ void FreeDVInterface::setVerbose(bool val)
     }
 }
 
+void FreeDVInterface::FreeDVTextRxFn_(void *callback_state, char c)
+{
+    FreeDVTextFnState* fnState = (FreeDVTextFnState*)callback_state;
+    if (fnState->modeObj == fnState->interfaceObj->currentRxMode_)
+    {
+        // Only forward text onto RX function if this is the currently sync'd mode.
+        fnState->interfaceObj->textRxFunc_(callback_state, c);
+    }
+}
+
 void FreeDVInterface::setTextCallbackFn(void (*rxFunc)(void *, char), char (*txFunc)(void *))
 {
-    // TBD: we may only want to call these funcs for the active TX/RX mode.
+    textRxFunc_ = rxFunc;
+    
+    int index = 0;
     for (auto& dv : dvObjects_)
     {
-        freedv_set_callback_txt(dv, rxFunc, txFunc, NULL);
+        freedv_set_callback_txt(dv, &FreeDVTextRxFn_, txFunc, textFnObjs_[index++]);
     }
 }
 

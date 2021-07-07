@@ -93,6 +93,12 @@ public:
     void transmit(short mod_out[], short speech_in[]);
     void complexTransmit(short mod_out[], short speech_in[], float txOffset, int nfreedv);
 private:
+    struct FreeDVTextFnState
+    {
+        FreeDVInterface* interfaceObj;
+        struct freedv* modeObj;
+    };
+    
     struct RxAudioThreadState
     {
         // Inputs
@@ -146,12 +152,16 @@ private:
         static void ThreadEntry_(EventHandlerThread<R,T>* ptr);
     };
     
+    static void FreeDVTextRxFn_(void *callback_state, char c);
+    
+    void (*textRxFunc_)(void *, char);
     bool singleRxThread_;
     int txMode_;
     int rxMode_;
     bool squelchEnabled_;
     std::deque<int> enabledModes_;
     std::deque<struct freedv*> dvObjects_;
+    std::deque<FreeDVTextFnState*> textFnObjs_;
     std::deque<struct FIFO*> errorFifos_;
     std::deque<struct FIFO*> inputFifos_;
     std::deque<SRC_STATE*> rateConvObjs_;
