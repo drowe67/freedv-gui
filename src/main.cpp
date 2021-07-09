@@ -1067,12 +1067,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             g_sync_time = time(0);
         }
         m_textSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
-	m_textSync->SetLabel("Modem");
-     }
+	    m_textSync->SetLabel("Modem");
+    }
     else {
         m_textSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
-	m_textSync->SetLabel("Modem");
-     }
+	    m_textSync->SetLabel("Modem");
+    }
+    m_textSync->Refresh();
     g_prev_State = g_State;
 
     // send Callsign ----------------------------------------------------
