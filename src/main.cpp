@@ -1052,7 +1052,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     // sync LED (Colours don't work on Windows) ------------------------
 
     //fprintf(stderr, "g_State: %d  m_rbSync->GetValue(): %d\n", g_State, m_rbSync->GetValue());
-    g_State = freedvInterface.getSync();
     if (g_State) {
         if (g_prev_State == 0) {
             g_resyncs++;
@@ -1068,12 +1067,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             g_sync_time = time(0);
         }
         m_textSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
-	    m_textSync->SetLabel("Modem");
-    }
+	m_textSync->SetLabel("Modem");
+     }
     else {
         m_textSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
-	    m_textSync->SetLabel("Modem");
-    }
+	m_textSync->SetLabel("Modem");
+     }
     g_prev_State = g_State;
 
     // send Callsign ----------------------------------------------------
