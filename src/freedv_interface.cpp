@@ -656,7 +656,7 @@ int FreeDVInterface::processRxAudio(
             }
         }
      
-        codec2_fifo_free(res->ownOutput);
+        codec2_fifo_destroy(res->ownOutput);
         delete res;
         
         futIndex++;
