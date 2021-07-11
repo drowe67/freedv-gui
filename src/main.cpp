@@ -134,6 +134,7 @@ extern int                 g_recFileFromRadioEventId;
 extern SNDFILE            *g_sfPlayFileFromRadio;
 extern bool                g_playFileFromRadio;
 extern int                 g_sfFs;
+extern int                 g_sfTxFs;
 extern bool                g_loopPlayFileFromRadio;
 extern int                 g_playFileFromRadioEventId;
 extern float               g_blink;
@@ -1554,6 +1555,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_rb2400b->Disable();
         }
         
+        // Default voice keyer sample rate t0 8K.
+        g_sfTxFs = FS;
+        
         freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms);
         if (wxGetApp().m_FreeDV700ManualUnSync) {
             freedvInterface.setSync(FREEDV_SYNC_MANUAL);
@@ -1825,6 +1829,7 @@ void MainFrame::destroy_src(void)
     src_delete(g_rxUserdata->insrc2);
     src_delete(g_rxUserdata->outsrc2);
     src_delete(g_rxUserdata->insrcsf);
+    src_delete(g_rxUserdata->insrctxsf);
 }
 
 void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDevice,
@@ -2085,6 +2090,9 @@ void MainFrame::startRxStream()
         g_rxUserdata->insrcsf = src_new(SRC_SINC_FASTEST, 1, &src_error);
         assert(g_rxUserdata->insrcsf != NULL);
 
+        g_rxUserdata->insrctxsf = src_new(SRC_SINC_FASTEST, 1, &src_error);
+        assert(g_rxUserdata->insrctxsf != NULL);
+        
         // create FIFOs used to interface between Port Audio and txRx
         // processing loop, which iterates about once every 20ms.
         // Sample rate conversion, stats for spectral plots, and
@@ -2617,7 +2625,9 @@ void txRxProcessing()
 
         int nsam_in_48 = g_soundCard2SampleRate * freedvInterface.getTxNumSpeechSamples()/freedvInterface.getTxSpeechSampleRate();
         assert(nsam_in_48 < 10*N48);
-        while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {
+        
+        int bytesNeededForWrite = nsam_in_48 * (g_soundCard1SampleRate/freedvInterface.getTxModemSampleRate());
+        while((unsigned)codec2_fifo_free(cbData->outfifo1) >= bytesNeededForWrite) {
 
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
@@ -2631,27 +2641,33 @@ void txRxProcessing()
             // zero speech input just in case infifo2 underflows
             memset(insound_card, 0, nsam_in_48*sizeof(short));
             
+            // optionally use file for mic input signal
+            if (g_playFileToMicIn && (g_sfPlayFile != NULL) && codec2_fifo_free(cbData->infifo2) >= nsam_in_48 && !endingTx) {
+                unsigned int nsf = nsam_in_48*g_sfTxFs/g_soundCard2SampleRate;
+                short        insf[nsf];
+                                
+                int n = sf_read_short(g_sfPlayFile, insf, nsf);
+                nout = resample(cbData->insrctxsf, insound_card, insf, g_soundCard2SampleRate, g_sfTxFs, nsam_in_48, n);
+                
+                if (nout == 0) {
+                    if (g_loopPlayFileToMicIn)
+                        sf_seek(g_sfPlayFile, 0, SEEK_SET);
+                    else {
+                        printf("playFileFromRadio finished, issuing event!\n");
+                        g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
+                    }
+                }
+                
+                codec2_fifo_write(cbData->infifo2, insound_card, nout);
+            }
+            
             // There may be recorded audio left to encode while ending TX. To handle this,
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
             int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
             if (nread != 0 && endingTx) break;
             
             nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
-
-            // optionally use file for mic input signal
-            if (g_playFileToMicIn && (g_sfPlayFile != NULL)) {
-                int n = sf_read_short(g_sfPlayFile, infreedv, nout);
-                //fprintf(stderr, "n: %d nout: %d\n", n, nout);
-                if (n != nout) {
-                    if (g_loopPlayFileToMicIn)
-                        sf_seek(g_sfPlayFile, 0, SEEK_SET);
-                    else {
-                        // call stop/start play menu item, should be thread safe
-                        g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
-                    }
-                }
-            }
-
+                 
             // Optional Speex pre-processor for acoustic noise reduction
             if (wxGetApp().m_speexpp_enable) {
                 speex_preprocess_run(g_speex_st, infreedv);
@@ -2906,7 +2922,7 @@ int MainFrame::txCallback(
 
     assert(framesPerBuffer < MAX_FPB);
 
-    if (rptr && !endingTx) {
+    if (rptr && !endingTx && !(g_playFileToMicIn && (g_sfPlayFile != NULL))) {
         for(i = 0; i < framesPerBuffer; i++, rptr += cbData->inputChannels2)
             indata[i] = rptr[0];
         if (codec2_fifo_write(cbData->infifo2, indata, framesPerBuffer)) {
