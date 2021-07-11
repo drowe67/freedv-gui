@@ -1328,6 +1328,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
             m_panelTestFrameErrors->Refresh();
             m_panelTestFrameErrorsHist->Refresh();
+            
+            delete[] error_pattern;
         }
     }
 
