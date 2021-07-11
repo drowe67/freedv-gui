@@ -21,6 +21,7 @@ int                 g_recFileFromRadioEventId;
 SNDFILE            *g_sfPlayFileFromRadio;
 bool                g_playFileFromRadio;
 int                 g_sfFs;
+int                 g_sfTxFs;
 bool                g_loopPlayFileFromRadio;
 int                 g_playFileFromRadioEventId;
 float               g_blink;
@@ -121,6 +122,7 @@ void MainFrame::OnPlayFileToMicIn(wxCommandEvent& event)
             return;
         }
 
+        g_sfTxFs = sfInfo.samplerate;
         wxWindow * const ctrl = openFileDialog.GetExtraControl();
 
         // Huh?! I just copied wxWidgets-2.9.4/samples/dialogs ....

@@ -225,6 +225,10 @@ int resample(SRC_STATE *src,
     src_data.src_ratio = (float)output_sample_rate/input_sample_rate;
 
     ret = src_process(src, &src_data);
+    if (ret != 0)
+    {
+        fprintf(stderr, "WARNING: resampling failed: %s\n", src_strerror(ret));
+    }
     assert(ret == 0);
 
     assert(src_data.output_frames_gen <= length_output_short);
