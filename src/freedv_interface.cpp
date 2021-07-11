@@ -248,6 +248,9 @@ int FreeDVInterface::getErrorPattern(short** outputPattern)
             }
             index++;
         }
+        
+        delete[] *outputPattern;
+        *outputPattern = nullptr;
     }
     
     return 0;
