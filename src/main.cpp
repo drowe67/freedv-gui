@@ -2642,7 +2642,7 @@ void txRxProcessing()
         int nsam_in_48 = g_soundCard2SampleRate * freedvInterface.getTxNumSpeechSamples()/freedvInterface.getTxSpeechSampleRate();
         assert(nsam_in_48 < 10*N48);
         
-        int bytesNeededForWrite = nsam_in_48 * (g_soundCard1SampleRate/freedvInterface.getTxModemSampleRate());
+        int bytesNeededForWrite = nsam_one_modem_frame * (g_soundCard1SampleRate/g_soundCard2SampleRate);
         while((unsigned)codec2_fifo_free(cbData->outfifo1) >= bytesNeededForWrite) {
 
             // OK to generate a frame of modem output samples we need
