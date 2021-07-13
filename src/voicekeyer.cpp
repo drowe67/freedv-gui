@@ -20,6 +20,7 @@ extern SNDFILE *g_sfPlayFile;
 extern bool g_playFileToMicIn;
 extern bool g_loopPlayFileToMicIn;
 extern FreeDVInterface freedvInterface;
+extern int g_sfTxFs;
 
 int MainFrame::VoiceKeyerStartTx(void)
 {
@@ -30,14 +31,17 @@ int MainFrame::VoiceKeyerStartTx(void)
     SF_INFO sfInfo;
     sfInfo.format = 0;
 
-    g_sfPlayFile = sf_open(wxGetApp().m_txtVoiceKeyerWaveFile.mb_str(), SFM_READ, &sfInfo);
-    if(g_sfPlayFile == NULL) {
+    SNDFILE* tmpPlayFile = sf_open(wxGetApp().m_txtVoiceKeyerWaveFile.mb_str(), SFM_READ, &sfInfo);
+    if(tmpPlayFile == NULL) {
         wxString strErr = sf_strerror(NULL);
         wxMessageBox(strErr, wxT("Couldn't open:") + wxGetApp().m_txtVoiceKeyerWaveFile, wxOK);
         m_togBtnVoiceKeyer->SetValue(false);
         next_state = VK_IDLE;
     }
     else {
+        g_sfTxFs = sfInfo.samplerate;
+        g_sfPlayFile = tmpPlayFile;
+        
         SetStatusText(wxT("Voice Keyer: Playing File") + wxGetApp().m_txtVoiceKeyerWaveFile + wxT(" to Mic Input") , 0);
         g_loopPlayFileToMicIn = false;
         g_playFileToMicIn = true;
