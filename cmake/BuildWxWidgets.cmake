@@ -16,9 +16,9 @@ if(MINGW AND CMAKE_CROSSCOMPILING)
 elseif(APPLE)
 
 if(BUILD_OSX_UNIVERSAL)
-    set(CONFIGURE_COMMAND ./configure --disable-shared --with-osx_cocoa --enable-universal_binary=x86_64,arm64 --with-macosx-version-min=10.11 --prefix=${CMAKE_BINARY_DIR}/external/dist --with-libjpeg=builtin --with-libpng=builtin --with-regex=builtin --with-libtiff=builtin CXXFLAGS=-stdlib=libc++\ -std=c++11\ -DWX_PRECOMP\ -O2\ -fno-strict-aliasing\ -fno-common)
+    set(CONFIGURE_COMMAND ./configure --disable-shared --with-osx_cocoa --enable-universal_binary=x86_64,arm64 --with-macosx-version-min=10.11 --prefix=${CMAKE_BINARY_DIR}/external/dist --with-libjpeg=builtin --with-libpng=builtin --with-regex=builtin --with-libtiff=builtin --with-expat=builtin CXXFLAGS=-stdlib=libc++\ -std=c++11\ -DWX_PRECOMP\ -O2\ -fno-strict-aliasing\ -fno-common)
 else()
-    set(CONFIGURE_COMMAND ./configure --disable-shared --with-macosx-version-min=10.10 --prefix=${CMAKE_BINARY_DIR}/external/dist --with-libjpeg=builtin --with-libpng=builtin --with-regex=builtin --with-libtiff=builtin CXXFLAGS=-stdlib=libc++\ -std=c++11\ -DWX_PRECOMP\ -O2\ -fno-strict-aliasing\ -fno-common)
+    set(CONFIGURE_COMMAND ./configure --disable-shared --with-macosx-version-min=10.10 --prefix=${CMAKE_BINARY_DIR}/external/dist --with-libjpeg=builtin --with-libpng=builtin --with-regex=builtin --with-libtiff=builtin --with-expat=builtin CXXFLAGS=-stdlib=libc++\ -std=c++11\ -DWX_PRECOMP\ -O2\ -fno-strict-aliasing\ -fno-common)
 endif(BUILD_OSX_UNIVERSAL)
 
 else()
