@@ -135,6 +135,12 @@ void FreeDVInterface::stop()
         codec2_fifo_destroy(fifo);
     }
     errorFifos_.clear();
+
+    for (auto& fifo : inputFifos_)
+    {
+        codec2_fifo_destroy(fifo);
+    }
+    inputFifos_.clear();
     
     for (auto& conv : inRateConvObjs_)
     {
