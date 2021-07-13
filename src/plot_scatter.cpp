@@ -36,15 +36,7 @@ BEGIN_EVENT_TABLE(PlotScatter, PlotPanel)
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 PlotScatter::PlotScatter(wxWindow* parent) : PlotPanel(parent)
 {
-    int i;
-
-    for(i=0; i < SCATTER_MEM_SYMS_MAX; i++)
-    {
-        m_mem[i].real = 0.0;
-        m_mem[i].imag = 0.0;
-    }
-
-    m_filter_max_xy = m_filter_max_y = 0.1;
+    clearCurrentSamples();
 
     // defaults so we start off with something sensible
 
@@ -64,6 +56,15 @@ void PlotScatter::setNc(int Nc) {
     assert(Nsym <= (MODEM_STATS_NC_MAX+1));
     scatterMemSyms = ((int)(SCATTER_MEM_SECS*(Nsym/DT)));
     assert(scatterMemSyms <= SCATTER_MEM_SYMS_MAX);
+}
+
+void PlotScatter::clearCurrentSamples() {
+    m_filter_max_xy = m_filter_max_y = 0.1;
+    for(int i=0; i < SCATTER_MEM_SYMS_MAX; i++)
+    {
+        m_mem[i].real = 0.0;
+        m_mem[i].imag = 0.0;
+    }
 }
 
 //----------------------------------------------------------------
