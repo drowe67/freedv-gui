@@ -155,7 +155,9 @@ void PlotScatter::draw(wxGraphicsContext* ctx)
             {
                 pen.SetColour(DARK_GREEN_COLOR);
                 ctx->SetPen(pen);
-                ctx->StrokeLine(x, y, x, y);
+                wxGraphicsPath path = ctx->CreatePath();
+                path.AddCircle(x, y, 1);
+                ctx->DrawPath(path);
             }
         }
     }
