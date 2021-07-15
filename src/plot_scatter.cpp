@@ -77,26 +77,6 @@ void PlotScatter::draw(wxGraphicsContext* ctx)
     int   i,j;
     int   x;
     int   y;
-    wxColour sym_to_colour[] = {wxColor(0,0,255), 
-                                wxColor(0,255,0),
-                                wxColor(0,255,255),
-                                wxColor(255,0,0),
-                                wxColor(255,0,255), 
-                                wxColor(255,255,0),
-                                wxColor(255,255,255),
-                                wxColor(0,0,255), 
-                                wxColor(0,255,0),
-                                wxColor(0,255,255),
-                                wxColor(255,0,0),
-                                wxColor(255,0,255), 
-                                wxColor(255,255,0),
-                                wxColor(255,255,255),
-                                wxColor(0,0,255), 
-                                wxColor(0,255,0),
-                                wxColor(0,255,255),
-                                wxColor(255,0,0),
-                                wxColor(255,0,255)
-    };
 
     m_rCtrl = GetClientRect();
     m_rGrid = m_rCtrl;
