@@ -885,6 +885,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     if (freedvInterface.isRunning()) {
         int currentMode = freedvInterface.getCurrentMode();
+        if (currentMode != wxGetApp().m_prevMode)
+        {
+            // Force recreation of EQ filters.
+            m_newMicInFilter = true;
+            m_newSpkOutFilter = true;
+        }
+        wxGetApp().m_prevMode = currentMode;
+        
         if ((currentMode == FREEDV_MODE_800XA) || (currentMode == FREEDV_MODE_2400B) ) {
 
             /* FSK Mode - eye diagram ---------------------------------------------------------*/
@@ -1559,7 +1567,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_rb2400b->Disable();
         }
         
+        wxGetApp().m_prevMode = g_mode;
         freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms);
+        
         if (wxGetApp().m_FreeDV700ManualUnSync) {
             freedvInterface.setSync(FREEDV_SYNC_MANUAL);
         } else {
