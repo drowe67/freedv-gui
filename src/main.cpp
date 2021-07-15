@@ -1488,6 +1488,10 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         g_speex_st = speex_preprocess_state_init(freedvInterface.getTxNumSpeechSamples(), freedvInterface.getTxSpeechSampleRate());
     }
     
+    // Force recreation of EQ filters.
+    m_newMicInFilter = true;
+    m_newSpkOutFilter = true;
+    
     txModeChangeMutex.Unlock();
 }
 
