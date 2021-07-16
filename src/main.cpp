@@ -888,6 +888,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     if (freedvInterface.isRunning()) {
         int currentMode = freedvInterface.getCurrentMode();
+        if (currentMode != wxGetApp().m_prevMode)
+        {
+            // Force recreation of EQ filters.
+            m_newMicInFilter = true;
+            m_newSpkOutFilter = true;
+        }
+        wxGetApp().m_prevMode = currentMode;
+        
         if ((currentMode == FREEDV_MODE_800XA) || (currentMode == FREEDV_MODE_2400B) ) {
 
             /* FSK Mode - eye diagram ---------------------------------------------------------*/
@@ -1486,6 +1494,10 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         g_speex_st = speex_preprocess_state_init(freedvInterface.getTxNumSpeechSamples(), freedvInterface.getTxSpeechSampleRate());
     }
     
+    // Force recreation of EQ filters.
+    m_newMicInFilter = true;
+    m_newSpkOutFilter = true;
+    
     txModeChangeMutex.Unlock();
 }
 
@@ -1568,7 +1580,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         // Default voice keyer sample rate t0 8K.
         g_sfTxFs = FS;
         
+        wxGetApp().m_prevMode = g_mode;
         freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread);
+        
         if (wxGetApp().m_FreeDV700ManualUnSync) {
             freedvInterface.setSync(FREEDV_SYNC_MANUAL);
         } else {
