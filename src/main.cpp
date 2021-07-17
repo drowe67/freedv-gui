@@ -2661,8 +2661,6 @@ void txRxProcessing()
                         g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
                     }
                 }
-                
-                codec2_fifo_write(cbData->infifo2, insound_card, nout);
             }
             
             nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
