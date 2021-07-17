@@ -681,7 +681,7 @@ int FreeDVInterface::processRxAudio(
                 }
             }
 
-            modemStatsIndex_ = index;
+            modemStatsIndex_ = res->modeIndex;
         }
      
         codec2_fifo_destroy(res->ownOutput);
