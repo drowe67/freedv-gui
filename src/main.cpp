@@ -2614,7 +2614,7 @@ void txRxProcessing()
         // outfifo1 nice and full so we don't have any gaps in tx
         // signal.
 
-        unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
+        unsigned int nsam_one_modem_frame = g_soundCard1SampleRate * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
 
      	if (g_dump_fifo_state) {
     	  // If this drops to zero we have a problem as we will run out of output samples
@@ -2626,8 +2626,7 @@ void txRxProcessing()
         int nsam_in_48 = g_soundCard2SampleRate * freedvInterface.getTxNumSpeechSamples()/freedvInterface.getTxSpeechSampleRate();
         assert(nsam_in_48 < 10*N48);
         
-        int bytesNeededForWrite = nsam_one_modem_frame * (g_soundCard1SampleRate/g_soundCard2SampleRate);
-        while((unsigned)codec2_fifo_free(cbData->outfifo1) >= bytesNeededForWrite) {
+        while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {
 
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
@@ -2641,8 +2640,13 @@ void txRxProcessing()
             // zero speech input just in case infifo2 underflows
             memset(insound_card, 0, nsam_in_48*sizeof(short));
             
+            // There may be recorded audio left to encode while ending TX. To handle this,
+            // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
+            int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
+            if (nread != 0 && endingTx) break;
+            
             // optionally use file for mic input signal
-            if (g_playFileToMicIn && (g_sfPlayFile != NULL) && codec2_fifo_free(cbData->infifo2) >= nsam_in_48 && !endingTx) {
+            if (g_playFileToMicIn && (g_sfPlayFile != NULL)) {
                 unsigned int nsf = nsam_in_48*g_sfTxFs/g_soundCard2SampleRate;
                 short        insf[nsf];
                                 
@@ -2660,11 +2664,6 @@ void txRxProcessing()
                 
                 codec2_fifo_write(cbData->infifo2, insound_card, nout);
             }
-            
-            // There may be recorded audio left to encode while ending TX. To handle this,
-            // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
-            int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
-            if (nread != 0 && endingTx) break;
             
             nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
                  
@@ -2922,7 +2921,7 @@ int MainFrame::txCallback(
 
     assert(framesPerBuffer < MAX_FPB);
 
-    if (rptr && !endingTx && !(g_playFileToMicIn && (g_sfPlayFile != NULL))) {
+    if (rptr && !endingTx) {
         for(i = 0; i < framesPerBuffer; i++, rptr += cbData->inputChannels2)
             indata[i] = rptr[0];
         if (codec2_fifo_write(cbData->infifo2, indata, framesPerBuffer)) {
