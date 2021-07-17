@@ -716,7 +716,7 @@ int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, i
     //printf("devNum %d supports: ", devNum);
     numSampleRates = 0;
     for(i = 0; PortAudioWrap::standardSampleRates[i] > 0; i++)
-    {      
+    {
         if (in_out == AUDIO_IN)
             err = Pa_IsFormatSupported(&inputParameters, NULL, PortAudioWrap::standardSampleRates[i]);
         else

@@ -394,6 +394,10 @@ this may consume significant additional CPU resources, which can cause decode pr
 disabled if 800XA or 2400B are selected before pushing "Start" due to the significant additional CPU resources required to decode these
 modes.
 
+By default, FreeDV will use as many threads/cores in parallel as required to decode all supported HF modes. On some slower systems, it may be
+necessary to enable the "Use single thread for multiple RX operation" option as well. This results in FreeDV decoding each mode in series
+and additionally short circuits the list of modes to be checked when in sync.
+
 # FreeDV Modes
 
 The following table is a guide to the different modes, using
