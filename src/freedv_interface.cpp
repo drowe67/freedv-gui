@@ -28,6 +28,8 @@ FreeDVInterface::FreeDVInterface() :
     txMode_(0),
     rxMode_(0),
     squelchEnabled_(false),
+    modemStatsList_(nullptr),
+    modemStatsIndex_(0),
     currentTxMode_(nullptr),
     currentRxMode_(nullptr),
     lastSyncRxMode_(nullptr)
@@ -48,7 +50,14 @@ static void callback_err_fn(void *fifo, short error_pattern[], int sz_error_patt
 
 void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread)
 {
+
     singleRxThread_ = singleRxThread;
+
+    modemStatsList_ = new MODEM_STATS[enabledModes_.size()];
+    for (int index = 0; index < enabledModes_.size(); index++)
+    {
+        modem_stats_open(&modemStatsList_[index]);
+    }
     
     int src_error = 0;
     for (auto& mode : enabledModes_)
@@ -162,8 +171,16 @@ void FreeDVInterface::stop()
         
     enabledModes_.clear();
     
+    for (int index = 0; index < enabledModes_.size(); index++)
+    {
+        modem_stats_close(&modemStatsList_[index]);
+    }
+    delete[] modemStatsList_;
+    
+    modemStatsList_ = nullptr;
     currentTxMode_ = nullptr;
     currentRxMode_ = nullptr;
+    modemStatsIndex_ = 0;
     txMode_ = 0;
     rxMode_ = 0;
 }
@@ -663,6 +680,8 @@ int FreeDVInterface::processRxAudio(
                     codec2_fifo_write(outputFifo, input_buf, usedFifo);
                 }
             }
+
+            modemStatsIndex_ = index;
         }
      
         codec2_fifo_destroy(res->ownOutput);

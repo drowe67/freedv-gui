@@ -36,15 +36,7 @@ BEGIN_EVENT_TABLE(PlotScatter, PlotPanel)
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 PlotScatter::PlotScatter(wxWindow* parent) : PlotPanel(parent)
 {
-    int i;
-
-    for(i=0; i < SCATTER_MEM_SYMS_MAX; i++)
-    {
-        m_mem[i].real = 0.0;
-        m_mem[i].imag = 0.0;
-    }
-
-    m_filter_max_xy = m_filter_max_y = 0.1;
+    clearCurrentSamples();
 
     // defaults so we start off with something sensible
 
@@ -66,6 +58,15 @@ void PlotScatter::setNc(int Nc) {
     assert(scatterMemSyms <= SCATTER_MEM_SYMS_MAX);
 }
 
+void PlotScatter::clearCurrentSamples() {
+    m_filter_max_xy = m_filter_max_y = 0.1;
+    for(int i=0; i < SCATTER_MEM_SYMS_MAX; i++)
+    {
+        m_mem[i].real = 0.0;
+        m_mem[i].imag = 0.0;
+    }
+}
+
 //----------------------------------------------------------------
 // draw()
 //----------------------------------------------------------------
@@ -76,26 +77,6 @@ void PlotScatter::draw(wxGraphicsContext* ctx)
     int   i,j;
     int   x;
     int   y;
-    wxColour sym_to_colour[] = {wxColor(0,0,255), 
-                                wxColor(0,255,0),
-                                wxColor(0,255,255),
-                                wxColor(255,0,0),
-                                wxColor(255,0,255), 
-                                wxColor(255,255,0),
-                                wxColor(255,255,255),
-                                wxColor(0,0,255), 
-                                wxColor(0,255,0),
-                                wxColor(0,255,255),
-                                wxColor(255,0,0),
-                                wxColor(255,0,255), 
-                                wxColor(255,255,0),
-                                wxColor(255,255,255),
-                                wxColor(0,0,255), 
-                                wxColor(0,255,0),
-                                wxColor(0,255,255),
-                                wxColor(255,0,0),
-                                wxColor(255,0,255)
-    };
 
     m_rCtrl = GetClientRect();
     m_rGrid = m_rCtrl;
@@ -113,31 +94,36 @@ void PlotScatter::draw(wxGraphicsContext* ctx)
 
     if (mode == PLOT_SCATTER_MODE_SCATTER) {
 
-        // automatically scale, first measure the maximum value
+        // automatically scale, first measure the maximum magnitude, in other words
+        // the max distance from the origin
 
-        float max_xy = 1E-12;
+        float max_mag = 1E-12;
         float real,imag,mag;
         for(i=0; i< scatterMemSyms; i++) {
             real = fabs(m_mem[i].real);
             imag = fabs(m_mem[i].imag);
             mag = sqrt(pow(real,2) + pow(imag, 2));
-            if (mag > max_xy)
+            if (mag > max_mag)
             {
-                max_xy = mag;
+                max_mag = mag;
             }
         }
 
-        // smooth it out and set a lower limit to prevent divide by 0 issues
+        // the maximum side to side distance needs to be at least twice the maximum distance 
+        // from the centre, add a little extra so the scatter blobs are just inside the outer edges 
 
-        m_filter_max_xy = BETA*m_filter_max_xy + (1 - BETA)*2.5*max_xy;
+        float max_xy = 2.5*max_mag;
+        
+        // smooth the estimate so we don't get rapid changes in the scaling due to short term 
+        // noise fluctuations. Set a lower limit to prevent divide by 0 issues
+
+        m_filter_max_xy = BETA*m_filter_max_xy + (1 - BETA)*max_xy;
         if (m_filter_max_xy < 0.001)
             m_filter_max_xy = 0.001;
 
-        // quantise to log steps to prevent scatter scaling bobbing about too
-        // much as scaling varies
+        // quantise to log steps to prevent scatter scaling bobbing about too much 
 
         float quant_m_filter_max_xy = exp(floor(0.5+log(m_filter_max_xy)));
-        //printf("max_xy: %f m_filter_max_xy: %f quant_m_filter_max_xy: %f\n", max_xy, m_filter_max_xy, quant_m_filter_max_xy);
 
         x_scale = (float)m_rGrid.GetWidth()/quant_m_filter_max_xy;
         y_scale = (float)m_rGrid.GetHeight()/quant_m_filter_max_xy;
@@ -155,7 +141,10 @@ void PlotScatter::draw(wxGraphicsContext* ctx)
                 pen.SetColour(DARK_GREEN_COLOR);
                 ctx->SetPen(pen);
                 wxGraphicsPath path = ctx->CreatePath();
-                path.AddCircle(x, y, 0.5);
+                path.AddCircle(x, y, 1);
+                // Uncomment to show boundaries of plot:
+                // path.AddCircle(PLOT_BORDER+XLEFT_OFFSET, PLOT_BORDER, 2); 
+                // path.AddCircle(m_rGrid.GetWidth()+PLOT_BORDER+XLEFT_OFFSET, m_rGrid.GetHeight()+PLOT_BORDER, 2);
                 ctx->DrawPath(path);
             }
         }
@@ -286,16 +275,18 @@ void PlotScatter::OnShow(wxShowEvent& event)
 {
 }
 
-//----------------------------------------------------------------
-// Ensures that points stay within the bounding box.
-//----------------------------------------------------------------
+/*----------------------------------------------------------------
+  Ensure that points stay within the bounding box:
+    upper LH bounding point (PLOT_BORDER+XLEFT_OFFSET, PLOT_BORDER)
+    lower RH bounding point (PLOT_BORDER+XLEFT_OFFSET + GetWidth(), PLOT_BORDER + GetHeight())
+----------------------------------------------------------------*/
 bool PlotScatter::pointsInBounds_(int x, int y)
 {
-    bool inBounds = true;
-    inBounds = !(x <= (PLOT_BORDER + XLEFT_OFFSET));
-    inBounds = inBounds && !(x >= m_rGrid.GetWidth());
-    inBounds = inBounds && !(y <= PLOT_BORDER);
-    inBounds = inBounds && !(y >= m_rGrid.GetHeight());
+    bool inBounds;
+    inBounds = x >= PLOT_BORDER + XLEFT_OFFSET;
+    inBounds = inBounds && x <= PLOT_BORDER + XLEFT_OFFSET + m_rGrid.GetWidth();
+    inBounds = inBounds && y >= PLOT_BORDER;
+    inBounds = inBounds && y <= PLOT_BORDER + m_rGrid.GetHeight();
     
     return inBounds;
 }

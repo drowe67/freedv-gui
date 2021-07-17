@@ -16,7 +16,6 @@ extern int   g_split;
 extern int   g_tx;
 extern int   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
-extern struct MODEM_STATS  g_stats;
 extern bool g_queueResync;
 extern short *g_error_hist, *g_error_histn;
 extern int g_resyncs;
@@ -534,7 +533,7 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     }
 
     g_State = g_prev_State = 0;
-    g_stats.snr_est = 0;
+    freedvInterface.getCurrentRxModemStats()->snr_est = 0;
 
     event.Skip();
 }

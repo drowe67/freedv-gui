@@ -352,7 +352,7 @@ class MainApp : public wxApp
         bool       m_txRxThreadHighPriority;
 
         int        m_prevMode;
-        
+
     protected:
 };
 

@@ -92,6 +92,9 @@ public:
     
     void transmit(short mod_out[], short speech_in[]);
     void complexTransmit(short mod_out[], short speech_in[], float txOffset, int nfreedv);
+    
+    struct MODEM_STATS* getCurrentRxModemStats() { return &modemStatsList_[modemStatsIndex_]; }
+    
 private:
     struct FreeDVTextFnState
     {
@@ -169,6 +172,8 @@ private:
     std::deque<EventHandlerThread<RxAudioThreadState*, RxAudioThreadState*> *> threads_;
     COMP txFreqOffsetPhaseRectObj_;
     std::deque<COMP*> rxFreqOffsetPhaseRectObjs_;
+    struct MODEM_STATS* modemStatsList_;
+    int modemStatsIndex_;
     
     struct freedv* currentTxMode_;
     struct freedv* currentRxMode_; 
