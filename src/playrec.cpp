@@ -21,6 +21,7 @@ int                 g_recFileFromRadioEventId;
 SNDFILE            *g_sfPlayFileFromRadio;
 bool                g_playFileFromRadio;
 int                 g_sfFs;
+int                 g_sfTxFs;
 bool                g_loopPlayFileFromRadio;
 int                 g_playFileFromRadioEventId;
 float               g_blink;
@@ -113,14 +114,18 @@ void MainFrame::OnPlayFileToMicIn(wxCommandEvent& event)
                 sfInfo.samplerate = freedvInterface.getTxSpeechSampleRate();
             }
         }
-        g_sfPlayFile = sf_open(soundFile.c_str(), SFM_READ, &sfInfo);
-        if(g_sfPlayFile == NULL)
+        
+        g_sfPlayFile = NULL;
+        SNDFILE* tmpPlayFile = sf_open(soundFile.c_str(), SFM_READ, &sfInfo);
+        if(tmpPlayFile == NULL)
         {
             wxString strErr = sf_strerror(NULL);
             wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
             return;
         }
 
+        g_sfTxFs = sfInfo.samplerate;
+        g_sfPlayFile = tmpPlayFile;
         wxWindow * const ctrl = openFileDialog.GetExtraControl();
 
         // Huh?! I just copied wxWidgets-2.9.4/samples/dialogs ....

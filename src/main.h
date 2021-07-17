@@ -368,6 +368,7 @@ typedef struct
     SRC_STATE      *insrc2;
     SRC_STATE      *outsrc2;
     SRC_STATE      *insrcsf;
+    SRC_STATE      *insrctxsf;
 
     // FIFOs attached to first sound card
 
