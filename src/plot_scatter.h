@@ -37,10 +37,11 @@ class PlotScatter : public PlotPanel
     public:
         PlotScatter(wxWindow* parent);
         ~PlotScatter(){};
-    void add_new_samples_scatter(COMP samples[]);
-    void add_new_samples_eye(float samples[], int n);
-    void setNc(int Nc);
+        void add_new_samples_scatter(COMP samples[]);
+        void add_new_samples_eye(float samples[], int n);
+        void setNc(int Nc);
         void setEyeScatter(int eye_mode) {mode = eye_mode;}
+        void clearCurrentSamples();
 
     protected:
         int  mode;
