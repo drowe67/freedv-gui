@@ -133,6 +133,7 @@ extern int                 g_recFileFromRadioEventId;
 extern SNDFILE            *g_sfPlayFileFromRadio;
 extern bool                g_playFileFromRadio;
 extern int                 g_sfFs;
+extern int                 g_sfTxFs;
 extern bool                g_loopPlayFileFromRadio;
 extern int                 g_playFileFromRadioEventId;
 extern float               g_blink;
@@ -1584,6 +1585,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_rb2400b->Disable();
         }
         
+        // Default voice keyer sample rate to 8K. The exact voice keyer
+        // sample rate will be determined when the .wav file is loaded.
+        g_sfTxFs = FS;
+        
         wxGetApp().m_prevMode = g_mode;
         freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms);
 
@@ -1855,6 +1860,7 @@ void MainFrame::destroy_src(void)
     src_delete(g_rxUserdata->insrc2);
     src_delete(g_rxUserdata->outsrc2);
     src_delete(g_rxUserdata->insrcsf);
+    src_delete(g_rxUserdata->insrctxsf);
 }
 
 void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDevice,
@@ -2115,6 +2121,9 @@ void MainFrame::startRxStream()
         g_rxUserdata->insrcsf = src_new(SRC_SINC_FASTEST, 1, &src_error);
         assert(g_rxUserdata->insrcsf != NULL);
 
+        g_rxUserdata->insrctxsf = src_new(SRC_SINC_FASTEST, 1, &src_error);
+        assert(g_rxUserdata->insrctxsf != NULL);
+        
         // create FIFOs used to interface between Port Audio and txRx
         // processing loop, which iterates about once every 20ms.
         // Sample rate conversion, stats for spectral plots, and
@@ -2636,7 +2645,7 @@ void txRxProcessing()
         // outfifo1 nice and full so we don't have any gaps in tx
         // signal.
 
-        unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
+        unsigned int nsam_one_modem_frame = g_soundCard1SampleRate * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
 
      	if (g_dump_fifo_state) {
     	  // If this drops to zero we have a problem as we will run out of output samples
@@ -2647,6 +2656,7 @@ void txRxProcessing()
 
         int nsam_in_48 = g_soundCard2SampleRate * freedvInterface.getTxNumSpeechSamples()/freedvInterface.getTxSpeechSampleRate();
         assert(nsam_in_48 < 10*N48);
+        
         while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {
 
             // OK to generate a frame of modem output samples we need
@@ -2666,22 +2676,26 @@ void txRxProcessing()
             int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
             if (nread != 0 && endingTx) break;
             
-            nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
-
             // optionally use file for mic input signal
             if (g_playFileToMicIn && (g_sfPlayFile != NULL)) {
-                int n = sf_read_short(g_sfPlayFile, infreedv, nout);
-                //fprintf(stderr, "n: %d nout: %d\n", n, nout);
-                if (n != nout) {
+                unsigned int nsf = nsam_in_48*g_sfTxFs/g_soundCard2SampleRate;
+                short        insf[nsf];
+                                
+                int n = sf_read_short(g_sfPlayFile, insf, nsf);
+                nout = resample(cbData->insrctxsf, insound_card, insf, g_soundCard2SampleRate, g_sfTxFs, nsam_in_48, n);
+                
+                if (nout == 0) {
                     if (g_loopPlayFileToMicIn)
                         sf_seek(g_sfPlayFile, 0, SEEK_SET);
                     else {
-                        // call stop/start play menu item, should be thread safe
+                        printf("playFileFromRadio finished, issuing event!\n");
                         g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
                     }
                 }
             }
-
+            
+            nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
+                 
             // Optional Speex pre-processor for acoustic noise reduction
             if (wxGetApp().m_speexpp_enable) {
                 speex_preprocess_run(g_speex_st, infreedv);
