@@ -1603,7 +1603,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_rb2400b->Disable();
         }
         
-        // Default voice keyer sample rate t0 8K.
+        // Default voice keyer sample rate to 8K. The exact voice keyer
+        // sample rate will be determined when the .wav file is loaded.
         g_sfTxFs = FS;
         
         wxGetApp().m_prevMode = g_mode;

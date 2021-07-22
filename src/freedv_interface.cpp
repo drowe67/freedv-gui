@@ -50,7 +50,6 @@ static void callback_err_fn(void *fifo, short error_pattern[], int sz_error_patt
 
 void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread)
 {
-
     singleRxThread_ = singleRxThread;
 
     modemStatsList_ = new MODEM_STATS[enabledModes_.size()];
@@ -682,6 +681,7 @@ int FreeDVInterface::processRxAudio(
             }
 
             modemStatsIndex_ = res->modeIndex;
+            break;
         }
      
         codec2_fifo_destroy(res->ownOutput);
