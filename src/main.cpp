@@ -50,7 +50,6 @@ int                 g_Nc;
 int                 g_mode;
 
 FreeDVInterface     freedvInterface;
-struct MODEM_STATS  g_stats;
 float               g_pwr_scale;
 int                 g_clip;
 int                 g_freedv_verbose;
@@ -134,6 +133,7 @@ extern int                 g_recFileFromRadioEventId;
 extern SNDFILE            *g_sfPlayFileFromRadio;
 extern bool                g_playFileFromRadio;
 extern int                 g_sfFs;
+extern int                 g_sfTxFs;
 extern bool                g_loopPlayFileFromRadio;
 extern int                 g_playFileFromRadioEventId;
 extern float               g_blink;
@@ -861,7 +861,7 @@ void MainFrame::OnIdle(wxIdleEvent &evt) {
 // keeps CPU load reasonable
 //----------------------------------------------------------------
 void MainFrame::OnTimer(wxTimerEvent &evt)
-{
+{    
     if (evt.GetTimer().GetId() == ID_TIMER_PSKREPORTER)
     {
         // PSK Reporter timer fired; send in-progress packet.
@@ -890,6 +890,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             // Force recreation of EQ filters.
             m_newMicInFilter = true;
             m_newSpkOutFilter = true;
+
+            // The receive mode changed, so the previous samples are no longer valid.
+            m_panelScatter->clearCurrentSamples();
         }
         wxGetApp().m_prevMode = currentMode;
         
@@ -900,26 +903,51 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             /* add samples row by row */
 
             int i;
-            for (i=0; i<g_stats.neyetr; i++) {
-                m_panelScatter->add_new_samples_eye(&g_stats.rx_eye[i][0], g_stats.neyesamp);
+            for (i=0; i<freedvInterface.getCurrentRxModemStats()->neyetr; i++) {
+                m_panelScatter->add_new_samples_eye(&freedvInterface.getCurrentRxModemStats()->rx_eye[i][0], freedvInterface.getCurrentRxModemStats()->neyesamp);
             }
         }
         else {
+            // Reset g_Nc accordingly.
+            switch(currentMode)
+            {
+                case FREEDV_MODE_1600:
+                    g_Nc = 16;
+                    m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
+                    break;
+                case FREEDV_MODE_700C:
+                    /* m_FreeDV700Combine may have changed at run time */
+                    g_Nc = 14;
+                    if (wxGetApp().m_FreeDV700Combine) {
+                        m_panelScatter->setNc(g_Nc/2);  /* diversity combnation */
+                    }
+                    else {
+                        m_panelScatter->setNc(g_Nc);
+                    }
+                    break;
+                case FREEDV_MODE_700D:
+                case FREEDV_MODE_700E:
+                    g_Nc = 17; 
+                    m_panelScatter->setNc(g_Nc);
+                    break;
+                case FREEDV_MODE_2020:
+                    g_Nc = 31;
+                    m_panelScatter->setNc(g_Nc);
+                    break;
+            }
+            
             /* PSK Modes - scatter plot -------------------------------------------------------*/
-            for (r=0; r<g_stats.nr; r++) {
+            for (r=0; r<freedvInterface.getCurrentRxModemStats()->nr; r++) {
 
                 if ((currentMode == FREEDV_MODE_1600) ||
                     (currentMode == FREEDV_MODE_700D) ||
                     (currentMode == FREEDV_MODE_700E) ||
                     (currentMode == FREEDV_MODE_2020)) {
-                    m_panelScatter->add_new_samples_scatter(&g_stats.rx_symbols[r][0]);
+                    m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
                 }
-
-                if (currentMode == FREEDV_MODE_700C) {
+                else if (currentMode == FREEDV_MODE_700C) {
 
                     if (wxGetApp().m_FreeDV700Combine) {
-                        m_panelScatter->setNc(g_Nc/2); /* m_FreeDV700Combine may have changed at run time */
-
                         /*
                            FreeDV 700C uses diversity, so optionaly combine
                            symbols for scatter plot, as combined symbols are
@@ -931,16 +959,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         COMP rx_symbols_copy[g_Nc/2];
 
                         for(c=0; c<g_Nc/2; c++)
-                            rx_symbols_copy[c] = fcmult(0.5, cadd(g_stats.rx_symbols[r][c], g_stats.rx_symbols[r][c+g_Nc/2]));
+                            rx_symbols_copy[c] = fcmult(0.5, cadd(freedvInterface.getCurrentRxModemStats()->rx_symbols[r][c], freedvInterface.getCurrentRxModemStats()->rx_symbols[r][c+g_Nc/2]));
                         m_panelScatter->add_new_samples_scatter(rx_symbols_copy);
                     }
                     else {
-                        m_panelScatter->setNc(g_Nc); /* m_FreeDV700Combine may have changed at run time */
                         /*
                           Sometimes useful to plot carriers separately, e.g. to determine if tx carrier power is constant
                           across carriers.
                         */
-                        m_panelScatter->add_new_samples_scatter(&g_stats.rx_symbols[r][0]);
+                        m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
                     }
                 }
 
@@ -975,16 +1002,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     // Demod states -----------------------------------------------------------------------
 
-    m_panelTimeOffset->add_new_sample(0, (float)g_stats.rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME);
+    m_panelTimeOffset->add_new_sample(0, (float)freedvInterface.getCurrentRxModemStats()->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME);
     m_panelTimeOffset->Refresh();
 
-    m_panelFreqOffset->add_new_sample(0, g_stats.foff);
+    m_panelFreqOffset->add_new_sample(0, freedvInterface.getCurrentRxModemStats()->foff);
     m_panelFreqOffset->Refresh();
 
     // SNR text box and gauge ------------------------------------------------------------
 
-    // LP filter g_stats.snr_est some more to stabilise the
-    // display. g_stats.snr_est already has some low pass filtering
+    // LP filter freedvInterface.getCurrentRxModemStats()->snr_est some more to stabilise the
+    // display. freedvInterface.getCurrentRxModemStats()->snr_est already has some low pass filtering
     // but we need it fairly fast to activate squelch.  So we
     // optionally perform some further filtering for the display
     // version of SNR.  The "Slow" checkbox controls the amount of
@@ -992,8 +1019,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     float snr_limited;
     // some APIs pass us invalid values, so lets trap it rather than bombing
-    if (!(isnan(g_stats.snr_est) || isinf(g_stats.snr_est))) {
-        g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*g_stats.snr_est;
+    if (!(isnan(freedvInterface.getCurrentRxModemStats()->snr_est) || isinf(freedvInterface.getCurrentRxModemStats()->snr_est))) {
+        g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*freedvInterface.getCurrentRxModemStats()->snr_est;
     }
     snr_limited = g_snr;
     if (snr_limited < -5.0) snr_limited = -5.0;
@@ -1237,9 +1264,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
     sprintf(resyncs, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
 
-    sprintf(freqoffset, "FrqOff: %3.1f", g_stats.foff);
+    sprintf(freqoffset, "FrqOff: %3.1f", freedvInterface.getCurrentRxModemStats()->foff);
     wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
-    sprintf(syncmetric, "Sync: %3.2f", g_stats.sync_metric);
+    sprintf(syncmetric, "Sync: %3.2f", freedvInterface.getCurrentRxModemStats()->sync_metric);
     wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
 
     // Codec 2 700C/D/E & 800XA VQ "auto EQ" equaliser variance
@@ -1249,7 +1276,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
     if (g_State) {
 
-        sprintf(clockoffset, "ClkOff: %+-d", (int)round(g_stats.clock_offset*1E6) % 10000);
+        sprintf(clockoffset, "ClkOff: %+-d", (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
         wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
 
         // update error pattern plots if supported
@@ -1571,9 +1598,13 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_rb2400b->Disable();
         }
         
+        // Default voice keyer sample rate to 8K. The exact voice keyer
+        // sample rate will be determined when the .wav file is loaded.
+        g_sfTxFs = FS;
+        
         wxGetApp().m_prevMode = g_mode;
         freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms);
-        
+
         if (wxGetApp().m_FreeDV700ManualUnSync) {
             freedvInterface.setSync(FREEDV_SYNC_MANUAL);
         } else {
@@ -1630,7 +1661,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
         }
 
-        modem_stats_open(&g_stats);
         int src_error;
         g_spec_src = src_new(SRC_SINC_FASTEST, 1, &src_error);
         assert(g_spec_src != NULL);
@@ -1750,7 +1780,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         stopRxStream();
         src_delete(g_spec_src);
-        modem_stats_close(&g_stats);
 
         // FreeDV clean up
         delete[] g_error_hist;
@@ -1844,6 +1873,7 @@ void MainFrame::destroy_src(void)
     src_delete(g_rxUserdata->insrc2);
     src_delete(g_rxUserdata->outsrc2);
     src_delete(g_rxUserdata->insrcsf);
+    src_delete(g_rxUserdata->insrctxsf);
 }
 
 void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDevice,
@@ -2104,6 +2134,9 @@ void MainFrame::startRxStream()
         g_rxUserdata->insrcsf = src_new(SRC_SINC_FASTEST, 1, &src_error);
         assert(g_rxUserdata->insrcsf != NULL);
 
+        g_rxUserdata->insrctxsf = src_new(SRC_SINC_FASTEST, 1, &src_error);
+        assert(g_rxUserdata->insrctxsf != NULL);
+        
         // create FIFOs used to interface between Port Audio and txRx
         // processing loop, which iterates about once every 20ms.
         // Sample rate conversion, stats for spectral plots, and
@@ -2552,7 +2585,7 @@ void txRxProcessing()
             nspec = nout;
         }
 
-        modem_stats_get_rx_spectrum(&g_stats, rx_spec, rx_fdm, nspec);
+        modem_stats_get_rx_spectrum(freedvInterface.getCurrentRxModemStats(), rx_spec, rx_fdm, nspec);
 
         // Average rx spectrum data using a simple IIR low pass filter
 
@@ -2573,7 +2606,7 @@ void txRxProcessing()
             // Write 20ms chunks of input samples for modem rx processing
             g_State = freedvInterface.processRxAudio(
                 infreedv, nfreedv, cbData->rxoutfifo, g_channel_noise, wxGetApp().m_noise_snr, 
-                g_RxFreqOffsetHz, &g_stats, &g_sig_pwr_av);
+                g_RxFreqOffsetHz, freedvInterface.getCurrentRxModemStats(), &g_sig_pwr_av);
   
             // Read 20ms chunk of samples from modem rx processing,
             // this will typically be decoded output speech, and is
@@ -2631,7 +2664,7 @@ void txRxProcessing()
         // outfifo1 nice and full so we don't have any gaps in tx
         // signal.
 
-        unsigned int nsam_one_modem_frame = g_soundCard2SampleRate * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
+        unsigned int nsam_one_modem_frame = g_soundCard1SampleRate * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
 
      	if (g_dump_fifo_state) {
     	  // If this drops to zero we have a problem as we will run out of output samples
@@ -2642,6 +2675,7 @@ void txRxProcessing()
 
         int nsam_in_48 = g_soundCard2SampleRate * freedvInterface.getTxNumSpeechSamples()/freedvInterface.getTxSpeechSampleRate();
         assert(nsam_in_48 < 10*N48);
+        
         while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {
 
             // OK to generate a frame of modem output samples we need
@@ -2661,22 +2695,26 @@ void txRxProcessing()
             int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
             if (nread != 0 && endingTx) break;
             
-            nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
-
             // optionally use file for mic input signal
             if (g_playFileToMicIn && (g_sfPlayFile != NULL)) {
-                int n = sf_read_short(g_sfPlayFile, infreedv, nout);
-                //fprintf(stderr, "n: %d nout: %d\n", n, nout);
-                if (n != nout) {
+                unsigned int nsf = nsam_in_48*g_sfTxFs/g_soundCard2SampleRate;
+                short        insf[nsf];
+                                
+                int n = sf_read_short(g_sfPlayFile, insf, nsf);
+                nout = resample(cbData->insrctxsf, insound_card, insf, g_soundCard2SampleRate, g_sfTxFs, nsam_in_48, n);
+                
+                if (nout == 0) {
                     if (g_loopPlayFileToMicIn)
                         sf_seek(g_sfPlayFile, 0, SEEK_SET);
                     else {
-                        // call stop/start play menu item, should be thread safe
+                        printf("playFileFromRadio finished, issuing event!\n");
                         g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
                     }
                 }
             }
-
+            
+            nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
+                 
             // Optional Speex pre-processor for acoustic noise reduction
             if (wxGetApp().m_speexpp_enable) {
                 speex_preprocess_run(g_speex_st, infreedv);
