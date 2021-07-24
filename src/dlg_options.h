@@ -69,9 +69,10 @@ class OptionsDlg : public wxDialog
         void    OnFifoReset(wxCommandEvent& event);
         void    OnUDPTest(wxCommandEvent& event);
         
-        void    OnPSKReporterEnable(wxScrollEvent& event);
-        void    OnToneStateEnable(wxScrollEvent& event);
-        void    OnUDPStateEnable(wxScrollEvent& event);
+        void    OnPSKReporterEnable(wxCommandEvent& event);
+        void    OnToneStateEnable(wxCommandEvent& event);
+        void    OnUDPStateEnable(wxCommandEvent& event);
+        void    OnMultipleRxEnable(wxCommandEvent& event);
         wxTextCtrl   *m_txtCtrlCallSign; // TODO: this should be renamed to tx_txtmsg, and rename all related incl persis strge
 
         wxCheckBox* m_ckHalfDuplex;
@@ -147,6 +148,7 @@ class OptionsDlg : public wxDialog
         wxCheckBox   *m_ckboxDebugConsole;
 
         wxCheckBox*  m_ckboxMultipleRx;
+        wxCheckBox*  m_ckboxSingleRxThread;
         
         unsigned int  event_in_serial, event_out_serial;
 
@@ -158,6 +160,7 @@ class OptionsDlg : public wxDialog
          void updateAttnCarrierState();
          void updateToneState();
          void updateUDPState();
+         void updateMultipleRxState();
          
          bool sessionActive_;
 };

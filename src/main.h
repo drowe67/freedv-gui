@@ -192,6 +192,7 @@ class MainApp : public wxApp
 
         bool                m_boolHalfDuplex;
         bool                m_boolMultipleRx;
+        bool                m_boolSingleRxThread;
         
         wxString            m_txtVoiceKeyerWaveFilePath;
         wxString            m_txtVoiceKeyerWaveFile;

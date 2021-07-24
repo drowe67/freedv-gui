@@ -311,7 +311,7 @@ On Windows it's easiest to use the cmake option: USE_STATIC_PORTAUDIO"
     endif()
 else(NOT USE_STATIC_PORTAUDIO)
     message(STATUS "Will attempt static build of portaudio.")
-    include(cmake/BuildPortAudio.cmake)
+    include(cmake/Buildportaudio-2.0.cmake)
 endif(NOT USE_STATIC_PORTAUDIO)
 
 #

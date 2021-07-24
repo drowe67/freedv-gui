@@ -222,9 +222,17 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // Multiple RX selection
     //------------------------------
     wxStaticBox *sb_multirx = new wxStaticBox(m_modemTab, wxID_ANY, _("Multiple RX Operation"));
-    wxStaticBoxSizer* sbSizer_multirx = new wxStaticBoxSizer(sb_multirx, wxHORIZONTAL);
+    wxStaticBoxSizer* sbSizer_multirx = new wxStaticBoxSizer(sb_multirx, wxVERTICAL);
+    wxBoxSizer* sbSizer_simultaneousDecode = new wxBoxSizer(wxHORIZONTAL);
     m_ckboxMultipleRx = new wxCheckBox(m_modemTab, wxID_ANY, _("Simultaneously Decode All HF Modes"), wxDefaultPosition, wxSize(-1,-1), 0);
-    sbSizer_multirx->Add(m_ckboxMultipleRx, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_simultaneousDecode->Add(m_ckboxMultipleRx, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_multirx->Add(sbSizer_simultaneousDecode, 0, wxALIGN_LEFT, 0);
+    
+    wxBoxSizer* sbSizer_singleThread = new wxBoxSizer(wxHORIZONTAL);
+    m_ckboxSingleRxThread = new wxCheckBox(m_modemTab, wxID_ANY, _("Use single thread for multiple RX operation"), wxDefaultPosition, wxSize(-1,-1), 0);
+    sbSizer_singleThread->Add(m_ckboxSingleRxThread, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_multirx->Add(sbSizer_singleThread, 0, wxALIGN_LEFT, 0);
+    
     sizerModem->Add(sbSizer_multirx,0, wxALL|wxEXPAND, 3);
     
     m_modemTab->SetSizer(sizerModem);
@@ -422,6 +430,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxPhaseEstBW->MoveBeforeInTabOrder(m_ckboxPhaseEstDPSK);
     m_ckboxPhaseEstDPSK->MoveBeforeInTabOrder(m_ckHalfDuplex);
     m_ckHalfDuplex->MoveBeforeInTabOrder(m_ckboxMultipleRx);
+    m_ckboxMultipleRx->MoveBeforeInTabOrder(m_ckboxSingleRxThread);
     
     m_ckboxTestFrame->MoveBeforeInTabOrder(m_ckboxChannelNoise);
     m_ckboxChannelNoise->MoveBeforeInTabOrder(m_txtNoiseSNR);
@@ -477,9 +486,11 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_BtnFifoReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
     m_btn_udp_test->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnUDPTest), NULL, this);
 
-    m_ckbox_psk_enable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnPSKReporterEnable), NULL, this);
-    m_ckboxTone->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
-    m_ckbox_udp_enable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnUDPStateEnable), NULL, this);
+    m_ckbox_psk_enable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnPSKReporterEnable), NULL, this);
+    m_ckboxTone->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
+    m_ckbox_udp_enable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnUDPStateEnable), NULL, this);
+    
+    m_ckboxMultipleRx->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
     
     event_in_serial = 0;
     event_out_serial = 0;
@@ -514,9 +525,11 @@ OptionsDlg::~OptionsDlg()
     m_ckboxDebugConsole->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnDebugConsole), NULL, this);
 #endif
     
-    m_ckbox_psk_enable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnPSKReporterEnable), NULL, this);
-    m_ckboxTone->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
-    m_ckbox_udp_enable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnUDPStateEnable), NULL, this);
+    m_ckbox_psk_enable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnPSKReporterEnable), NULL, this);
+    m_ckboxTone->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
+    m_ckbox_udp_enable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnUDPStateEnable), NULL, this);
+    
+    m_ckboxMultipleRx->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
 }
 
 
@@ -538,6 +551,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckHalfDuplex->SetValue(wxGetApp().m_boolHalfDuplex);
 
         m_ckboxMultipleRx->SetValue(wxGetApp().m_boolMultipleRx);
+        m_ckboxSingleRxThread->SetValue(wxGetApp().m_boolSingleRxThread);
         
         m_ckboxTestFrame->SetValue(wxGetApp().m_testFrames);
 
@@ -620,6 +634,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         updateAttnCarrierState();
         updateToneState();
         updateUDPState();
+        updateMultipleRxState();
     }
 
     if(inout == EXCHANGE_DATA_OUT)
@@ -631,6 +646,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         wxGetApp().m_boolMultipleRx = m_ckboxMultipleRx->GetValue();
         pConfig->Write(wxT("/Rig/MultipleRx"), wxGetApp().m_boolMultipleRx);
+        
+        wxGetApp().m_boolSingleRxThread = m_ckboxSingleRxThread->GetValue();
+        pConfig->Write(wxT("/Rig/SingleRxThread"), wxGetApp().m_boolSingleRxThread);
         
         /* Voice Keyer */
 
@@ -934,19 +952,29 @@ void OptionsDlg::updateUDPState()
     m_btn_udp_test->Enable(m_ckbox_udp_enable->GetValue());
 }
 
-void OptionsDlg::OnPSKReporterEnable(wxScrollEvent& event)
+void OptionsDlg::updateMultipleRxState()
+{
+    m_ckboxSingleRxThread->Enable(m_ckboxMultipleRx->GetValue());
+}
+
+void OptionsDlg::OnPSKReporterEnable(wxCommandEvent& event)
 {
     updatePSKReporterState();
 }
 
-void OptionsDlg::OnToneStateEnable(wxScrollEvent& event)
+void OptionsDlg::OnToneStateEnable(wxCommandEvent& event)
 {
     updateToneState();
 }
 
-void OptionsDlg::OnUDPStateEnable(wxScrollEvent& event)
+void OptionsDlg::OnUDPStateEnable(wxCommandEvent& event)
 {
     updateUDPState();
+}
+
+void OptionsDlg::OnMultipleRxEnable(wxCommandEvent& event)
+{
+    updateMultipleRxState();
 }
 
 void OptionsDlg::DisplayFifoPACounters() {

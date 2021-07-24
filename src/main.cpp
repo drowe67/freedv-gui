@@ -443,6 +443,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
 
     wxGetApp().m_boolHalfDuplex     = pConfig->ReadBool(wxT("/Rig/HalfDuplex"),     true);
     wxGetApp().m_boolMultipleRx     = pConfig->ReadBool(wxT("/Rig/MultipleRx"),     false);
+    wxGetApp().m_boolSingleRxThread = pConfig->ReadBool(wxT("/Rig/SingleRxThread"), false);
     wxGetApp().m_leftChannelVoxTone = pConfig->ReadBool("/Rig/leftChannelVoxTone",  false);
 
     wxGetApp().m_txtVoiceKeyerWaveFilePath = pConfig->Read(wxT("/VoiceKeyer/WaveFilePath"), wxT(""));
@@ -740,6 +741,7 @@ MainFrame::~MainFrame()
 
     pConfig->Write(wxT("/Rig/HalfDuplex"),              wxGetApp().m_boolHalfDuplex);
     pConfig->Write(wxT("/Rig/MultipleRx"), wxGetApp().m_boolMultipleRx);
+    pConfig->Write(wxT("/Rig/SingleRxThread"), wxGetApp().m_boolSingleRxThread);
     pConfig->Write(wxT("/Rig/leftChannelVoxTone"),      wxGetApp().m_leftChannelVoxTone);
     pConfig->Write("/Hamlib/UseForPTT", wxGetApp().m_boolHamlibUseForPTT);
     pConfig->Write("/Hamlib/RigName", wxGetApp().m_intHamlibRig);
@@ -1100,12 +1102,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             g_sync_time = time(0);
         }
         m_textSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
-	m_textSync->SetLabel("Modem");
-     }
+	    m_textSync->SetLabel("Modem");
+    }
     else {
         m_textSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
-	m_textSync->SetLabel("Modem");
-     }
+	    m_textSync->SetLabel("Modem");
+    }
+    m_textSync->Refresh();
     g_prev_State = g_State;
 
     // send Callsign ----------------------------------------------------
@@ -1360,6 +1363,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
             m_panelTestFrameErrors->Refresh();
             m_panelTestFrameErrorsHist->Refresh();
+            
+            delete[] error_pattern;
         }
     }
 
@@ -1603,8 +1608,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         g_sfTxFs = FS;
         
         wxGetApp().m_prevMode = g_mode;
-        freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms);
-
+        freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread);
+        
         if (wxGetApp().m_FreeDV700ManualUnSync) {
             freedvInterface.setSync(FREEDV_SYNC_MANUAL);
         } else {
