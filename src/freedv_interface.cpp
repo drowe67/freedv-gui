@@ -71,6 +71,8 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread)
         }
         assert(dv != nullptr);
         
+        snrVals_.push_back(-20);
+        
         dvObjects_.push_back(dv);
         
         FreeDVTextFnState* fnStateObj = new FreeDVTextFnState;
@@ -120,6 +122,8 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread)
 
 void FreeDVInterface::stop()
 {
+    snrVals_.clear();
+    
     for (auto& fnState : textFnObjs_)
     {
         delete fnState;
@@ -600,7 +604,17 @@ int FreeDVInterface::processRxAudio(
         if (singleRxThread_ && done) break;
     }
     
-    // Loop through each future and wait for the result, then determine
+    // If not in single threaded mode, wait for all futures to finish 
+    // before proceeding.
+    if (!singleRxThread_)
+    {
+        for(auto& fut : rxFutures)
+        {
+            fut.wait();
+        }
+    }
+    
+    // Loop through each future and then determine
     // which mode is most likely to have sync. Default to the last mode
     // in the list if we don't find any.
     int futIndexWithSync = rxFutures.size() - 1;
@@ -609,33 +623,18 @@ int FreeDVInterface::processRxAudio(
     std::deque<RxAudioThreadState*> results;
     for(auto& fut : rxFutures)
     {
-        if (!singleRxThread_)
-        {
-            fut.wait();
-        }
-        
         RxAudioThreadState* res = fut.get();
         results.push_back(res);
         
-        struct MODEM_STATS tmpStats;
-        freedv_get_modem_extended_stats(res->dvObj, &tmpStats);
+        struct MODEM_STATS *tmpStats = &modemStatsList_[futIndex];
+        freedv_get_modem_extended_stats(res->dvObj, tmpStats);
         
-        int snr = -10;
-        if (!isnan(tmpStats.snr_est) && !isinf(tmpStats.snr_est))
-            snr = tmpStats.snr_est + 0.5;
-        
-        if (lastSyncRxMode_ == res->dvObj)
-        {
-            if (stats->sync != 0)
-            {
-                futIndexWithSync = futIndex;
-                break;
-            }
-            
-            lastSyncRxMode_ = nullptr;
+        if (!(isnan(tmpStats->snr_est) || isinf(tmpStats->snr_est))) {
+            snrVals_[futIndex] = 0.95*snrVals_[futIndex] + (1.0 - 0.95)*tmpStats->snr_est;
         }
-        
-        if (snr > maxSyncFound && tmpStats.sync != 0)
+        int snr = (int)(snrVals_[futIndex]+0.5);
+                
+        if (snr > maxSyncFound && tmpStats->sync != 0)
         {
             maxSyncFound = snr;
             futIndexWithSync = futIndex;
