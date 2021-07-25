@@ -1461,31 +1461,18 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     if (m_rb1600->GetValue()) 
     {
         g_mode = FREEDV_MODE_1600;
-        g_Nc = 16;
-        m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
     }
     else if (m_rb700c->GetValue()) 
     {
         g_mode = FREEDV_MODE_700C;
-        g_Nc = 14;
-        if (wxGetApp().m_FreeDV700Combine) {
-            m_panelScatter->setNc(g_Nc/2);  /* diversity combnation */
-        }
-        else {
-            m_panelScatter->setNc(g_Nc);
-        }
     }
     else if (m_rb700d->GetValue()) 
     {
         g_mode = FREEDV_MODE_700D;
-        g_Nc = 17;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
-        m_panelScatter->setNc(g_Nc);
     }
     else if (m_rb700e->GetValue()) 
     {
         g_mode = FREEDV_MODE_700E;
-        g_Nc = 17;
-        m_panelScatter->setNc(g_Nc);
     }
     else if (m_rb800xa->GetValue()) 
     {
@@ -1500,8 +1487,6 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         assert(isAvxPresent);
         
         g_mode = FREEDV_MODE_2020;
-        g_Nc = 31;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
-        m_panelScatter->setNc(g_Nc);
     }
     
     if (freedvInterface.isRunning())
