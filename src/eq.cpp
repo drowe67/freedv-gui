@@ -50,9 +50,25 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
 
 void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSampleRate)
 {
+    bool deleteFilters = false;
+    
+    if (m_newMicInFilter && (cb->sbqMicInBass || cb->sbqMicInTreble || cb->sbqMicInMid))
+    {
+        deleteFilters = true;
+    }
+    if (m_newSpkOutFilter && (cb->sbqSpkOutBass || cb->sbqSpkOutTreble || cb->sbqSpkOutMid))
+    {
+        deleteFilters = true;
+    }
+    
+    if (deleteFilters)
+    {
+        deleteEQFilters(cb);
+    }
+    
     // init Mic In Equaliser Filters
-
     if (m_newMicInFilter) {
+        assert(cb->sbqMicInBass == nullptr && cb->sbqMicInTreble == nullptr && cb->sbqMicInMid == nullptr);
         //printf("designing new Min In filters\n");
         cb->sbqMicInBass   = designAnEQFilter("bass", wxGetApp().m_MicInBassFreqHz, wxGetApp().m_MicInBassGaindB, txSampleRate);
         cb->sbqMicInTreble = designAnEQFilter("treble", wxGetApp().m_MicInTrebleFreqHz, wxGetApp().m_MicInTrebleGaindB, txSampleRate);
@@ -62,25 +78,60 @@ void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSam
     // init Spk Out Equaliser Filters
 
     if (m_newSpkOutFilter) {
+        assert(cb->sbqSpkOutBass == nullptr && cb->sbqSpkOutTreble == nullptr && cb->sbqSpkOutMid == nullptr);
         //printf("designing new Spk Out filters\n");
         //printf("designEQFilters: wxGetApp().m_SpkOutBassFreqHz: %f\n",wxGetApp().m_SpkOutBassFreqHz);
         cb->sbqSpkOutBass   = designAnEQFilter("bass", wxGetApp().m_SpkOutBassFreqHz, wxGetApp().m_SpkOutBassGaindB, rxSampleRate);
         cb->sbqSpkOutTreble = designAnEQFilter("treble", wxGetApp().m_SpkOutTrebleFreqHz, wxGetApp().m_SpkOutTrebleGaindB, rxSampleRate);
         cb->sbqSpkOutMid    = designAnEQFilter("equalizer", wxGetApp().m_SpkOutMidFreqHz, wxGetApp().m_SpkOutMidGaindB, wxGetApp().m_SpkOutMidQ, rxSampleRate);
     }
+    
+    m_newMicInFilter = false;
+    m_newSpkOutFilter = false;
 }
 
 void  MainFrame::deleteEQFilters(paCallBackData *cb)
 {
-    if (m_newMicInFilter) {
-        sox_biquad_destroy(cb->sbqMicInBass);
-        sox_biquad_destroy(cb->sbqMicInTreble);
-        sox_biquad_destroy(cb->sbqMicInMid);
+    if (m_newMicInFilter) 
+    {
+        if (cb->sbqMicInBass) 
+        {
+            sox_biquad_destroy(cb->sbqMicInBass);
+            cb->sbqMicInBass = nullptr;
+        }
+        
+        if (cb->sbqMicInTreble)
+        {
+            sox_biquad_destroy(cb->sbqMicInTreble);
+            cb->sbqMicInTreble = nullptr;
+        }
+        
+        if (cb->sbqMicInMid)
+        {
+            sox_biquad_destroy(cb->sbqMicInMid);
+            cb->sbqMicInMid = nullptr;
+        }
     }
-    if (m_newSpkOutFilter) {
-        sox_biquad_destroy(cb->sbqSpkOutBass);
-        sox_biquad_destroy(cb->sbqSpkOutTreble);
-        sox_biquad_destroy(cb->sbqSpkOutMid);
+    
+    if (m_newSpkOutFilter) 
+    {
+        if (cb->sbqSpkOutBass) 
+        {
+            sox_biquad_destroy(cb->sbqSpkOutBass);
+            cb->sbqSpkOutBass = nullptr;
+        }
+        
+        if (cb->sbqSpkOutTreble)
+        {
+            sox_biquad_destroy(cb->sbqSpkOutTreble);
+            cb->sbqSpkOutTreble = nullptr;
+        }
+        
+        if (cb->sbqSpkOutMid) 
+        {
+            sox_biquad_destroy(cb->sbqSpkOutMid);
+            cb->sbqSpkOutMid = nullptr;
+        }
     }
 }
 

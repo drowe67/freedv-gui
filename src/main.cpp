@@ -803,13 +803,13 @@ MainFrame::~MainFrame()
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnSplit->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnSplitClickUI), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
- 
-    sox_biquad_finish();
 
     if (m_RxRunning)
     {
         stopRxStream();
-    }
+    } 
+    sox_biquad_finish();
+
     if (g_sfPlayFile != NULL)
     {
         sf_close(g_sfPlayFile);
@@ -2196,6 +2196,7 @@ void MainFrame::startRxStream()
         designEQFilters(g_rxUserdata, rxSampleRate, freedvInterface.getTxSpeechSampleRate());
         g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
         g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
+        g_mutexProtectingCallbackData.Unlock();
 
         // optional tone in left channel to reliably trigger vox
 
