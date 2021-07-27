@@ -53,7 +53,7 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread)
     singleRxThread_ = singleRxThread;
 
     modemStatsList_ = new MODEM_STATS[enabledModes_.size()];
-    for (int index = 0; index < enabledModes_.size(); index++)
+    for (int index = 0; index < (int)enabledModes_.size(); index++)
     {
         modem_stats_open(&modemStatsList_[index]);
     }
@@ -136,6 +136,13 @@ void FreeDVInterface::stop()
     }
     threads_.clear();
     
+    for (int index = 0; index < (int)enabledModes_.size(); index++)
+    {
+        modem_stats_close(&modemStatsList_[index]);
+    }
+    delete[] modemStatsList_;
+    modemStatsList_ = nullptr;
+    
     for (auto& dv : dvObjects_)
     {
         freedv_close(dv);
@@ -173,12 +180,6 @@ void FreeDVInterface::stop()
     rxFreqOffsetPhaseRectObjs_.clear();
         
     enabledModes_.clear();
-    
-    for (int index = 0; index < enabledModes_.size(); index++)
-    {
-        modem_stats_close(&modemStatsList_[index]);
-    }
-    delete[] modemStatsList_;
     
     modemStatsList_ = nullptr;
     currentTxMode_ = nullptr;
@@ -683,12 +684,16 @@ int FreeDVInterface::processRxAudio(
             break;
         }
      
-        codec2_fifo_destroy(res->ownOutput);
-        delete res;
-        
         futIndex++;
     }
     
+    for(auto& res : results)
+    {
+        codec2_fifo_destroy(res->ownOutput);
+        delete res;
+    }
+    results.clear();        
+
     if (!state) 
     {
         currentRxMode_ = currentTxMode_;

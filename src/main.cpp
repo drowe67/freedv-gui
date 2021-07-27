@@ -845,6 +845,11 @@ MainFrame::~MainFrame()
         delete optionsDlg;
         optionsDlg = NULL;
     }
+
+    if (wxGetApp().m_hamlib)
+    {
+        delete wxGetApp().m_hamlib;
+    }
 }
 
 
@@ -1816,6 +1821,7 @@ void MainFrame::stopRxStream()
         m_txRxThread->m_run = 0;
         m_txRxThread->Wait();
         //fprintf(stderr, "thread stopped\n");
+        delete m_txRxThread;
 
         m_rxInPa->stop();
         m_rxInPa->streamClose();
