@@ -2196,6 +2196,7 @@ void MainFrame::startRxStream()
         designEQFilters(g_rxUserdata, rxSampleRate, freedvInterface.getTxSpeechSampleRate());
         g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
         g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
+        m_newMicInFilter = m_newSpkOutFilter = false;
         g_mutexProtectingCallbackData.Unlock();
 
         // optional tone in left channel to reliably trigger vox
