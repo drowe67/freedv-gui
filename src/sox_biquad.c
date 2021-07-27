@@ -96,7 +96,7 @@ void *sox_biquad_create(int argc, const char *argv[])
 
 void sox_biquad_destroy(void *sbq) {
     sox_effect_t *e = (sox_effect_t *)sbq;
-    free(e);
+    sox_delete_effect(e);
 }
 
 void sox_biquad_filter(void *sbq, short out[], short in[], int n)
