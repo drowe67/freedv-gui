@@ -1845,6 +1845,10 @@ void MainFrame::stopRxStream()
 
         destroy_fifos();
         destroy_src();
+        
+        // Free memory allocated for filters.
+        m_newMicInFilter = true;
+        m_newSpkOutFilter = true;
         deleteEQFilters(g_rxUserdata);
         delete g_rxUserdata;
         
