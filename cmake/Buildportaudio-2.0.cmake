@@ -28,7 +28,7 @@ endif()
 include(ExternalProject)
 if(APPLE)
 ExternalProject_Add(portaudio
-    URL http://www.portaudio.com/archives/${PORTAUDIO_TARBALL}.tgz
+    URL http://files.portaudio.com/archives/${PORTAUDIO_TARBALL}.tgz
     BUILD_IN_SOURCE 1
     INSTALL_DIR external/dist
     CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
@@ -38,7 +38,7 @@ ExternalProject_Add(portaudio
 )
 else()
 ExternalProject_Add(portaudio
-    URL http://www.portaudio.com/archives/${PORTAUDIO_TARBALL}.tgz
+    URL http://files.portaudio.com/archives/${PORTAUDIO_TARBALL}.tgz
     BUILD_IN_SOURCE 1
     INSTALL_DIR external/dist
     CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
