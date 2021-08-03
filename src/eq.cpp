@@ -50,29 +50,6 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
 
 void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSampleRate)
 {
-    bool deleteFilters = false;
-    
-    if (m_newMicInFilter && cb->sbqMicInBass != nullptr)
-    {
-        // All three should be valid if one is, so we assert that here.
-        assert(cb->sbqMicInBass != nullptr && cb->sbqMicInTreble != nullptr && cb->sbqMicInMid != nullptr);
-        
-        deleteFilters = true;
-    }
-    
-    if (m_newSpkOutFilter && cb->sbqSpkOutBass != nullptr)
-    {
-        // All three should be valid if one is, so we assert that here.
-        assert(cb->sbqSpkOutBass != nullptr && cb->sbqSpkOutTreble != nullptr && cb->sbqSpkOutMid != nullptr);
-        
-        deleteFilters = true;
-    }
-    
-    if (deleteFilters)
-    {
-        deleteEQFilters(cb);
-    }
-    
     // init Mic In Equaliser Filters
     if (m_newMicInFilter) {
         assert(cb->sbqMicInBass == nullptr && cb->sbqMicInTreble == nullptr && cb->sbqMicInMid == nullptr);
