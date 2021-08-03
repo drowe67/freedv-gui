@@ -169,6 +169,7 @@ private:
     std::deque<struct FIFO*> inputFifos_;
     std::deque<SRC_STATE*> inRateConvObjs_;
     std::deque<SRC_STATE*> outRateConvObjs_;
+    std::deque<float> snrVals_;
     std::deque<EventHandlerThread<RxAudioThreadState*, RxAudioThreadState*> *> threads_;
     COMP txFreqOffsetPhaseRectObj_;
     std::deque<COMP*> rxFreqOffsetPhaseRectObjs_;

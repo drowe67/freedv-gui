@@ -803,13 +803,13 @@ MainFrame::~MainFrame()
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnSplit->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnSplitClickUI), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
- 
-    sox_biquad_finish();
 
     if (m_RxRunning)
     {
         stopRxStream();
-    }
+    } 
+    sox_biquad_finish();
+
     if (g_sfPlayFile != NULL)
     {
         sf_close(g_sfPlayFile);
@@ -844,6 +844,11 @@ MainFrame::~MainFrame()
     if (optionsDlg != NULL) {
         delete optionsDlg;
         optionsDlg = NULL;
+    }
+
+    if (wxGetApp().m_hamlib)
+    {
+        delete wxGetApp().m_hamlib;
     }
 }
 
@@ -1461,31 +1466,18 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     if (m_rb1600->GetValue()) 
     {
         g_mode = FREEDV_MODE_1600;
-        g_Nc = 16;
-        m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
     }
     else if (m_rb700c->GetValue()) 
     {
         g_mode = FREEDV_MODE_700C;
-        g_Nc = 14;
-        if (wxGetApp().m_FreeDV700Combine) {
-            m_panelScatter->setNc(g_Nc/2);  /* diversity combnation */
-        }
-        else {
-            m_panelScatter->setNc(g_Nc);
-        }
     }
     else if (m_rb700d->GetValue()) 
     {
         g_mode = FREEDV_MODE_700D;
-        g_Nc = 17;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
-        m_panelScatter->setNc(g_Nc);
     }
     else if (m_rb700e->GetValue()) 
     {
         g_mode = FREEDV_MODE_700E;
-        g_Nc = 17;
-        m_panelScatter->setNc(g_Nc);
     }
     else if (m_rb800xa->GetValue()) 
     {
@@ -1500,8 +1492,6 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         assert(isAvxPresent);
         
         g_mode = FREEDV_MODE_2020;
-        g_Nc = 31;                         /* TODO: be nice if we didn't have to hard code this, maybe API call? */
-        m_panelScatter->setNc(g_Nc);
     }
     
     if (freedvInterface.isRunning())
@@ -1831,6 +1821,7 @@ void MainFrame::stopRxStream()
         m_txRxThread->m_run = 0;
         m_txRxThread->Wait();
         //fprintf(stderr, "thread stopped\n");
+        delete m_txRxThread;
 
         m_rxInPa->stop();
         m_rxInPa->streamClose();
@@ -1854,6 +1845,10 @@ void MainFrame::stopRxStream()
 
         destroy_fifos();
         destroy_src();
+        
+        // Free memory allocated for filters.
+        m_newMicInFilter = true;
+        m_newSpkOutFilter = true;
         deleteEQFilters(g_rxUserdata);
         delete g_rxUserdata;
         
@@ -2205,6 +2200,8 @@ void MainFrame::startRxStream()
         designEQFilters(g_rxUserdata, rxSampleRate, freedvInterface.getTxSpeechSampleRate());
         g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
         g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
+        m_newMicInFilter = m_newSpkOutFilter = false;
+        g_mutexProtectingCallbackData.Unlock();
 
         // optional tone in left channel to reliably trigger vox
 

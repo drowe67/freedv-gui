@@ -89,6 +89,11 @@ void *sox_biquad_create(int argc, const char *argv[])
     start = e->handler.start;
 
     e->in_signal.rate = (double)sampleRate;
+    
+    // Force flows to 1. This is needed to ensure that sox_delete_effect() deallocates
+    // all memory used by the effect.
+    e->flows = 1;
+    
     ret = start(e); assert(ret == SOX_SUCCESS);
     
     return (void *)e;
@@ -96,7 +101,7 @@ void *sox_biquad_create(int argc, const char *argv[])
 
 void sox_biquad_destroy(void *sbq) {
     sox_effect_t *e = (sox_effect_t *)sbq;
-    free(e);
+    sox_delete_effect(e);
 }
 
 void sox_biquad_filter(void *sbq, short out[], short in[], int n)
