@@ -727,28 +727,28 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 ## V1.6.0 August 2021
 
 1. Bugfixes: 
-    a. Suppressed clipping of TX speech when PTT is released. (PR #123)
-    b. Added missing mode labels for 800XA and 2400B as a result of implementing multi-RX in 1.5.3. (PR #128)
-    c. Fixed analog passthrough when using 2400B. (PR #130)
-    d. Fixed non-responsible scroll controls on macOS. (PR #139)
-    e. Auto EQ now working for 800XA. (PR #141)
-    f. Reset scatter plot state when multi-RX switches modes. (PR #146)
-    g. Use selected sound device sample rates for the equalizer controls. (PR #142)
+    * Suppressed clipping of TX speech when PTT is released. (PR #123)
+    * Added missing mode labels for 800XA and 2400B as a result of implementing multi-RX in 1.5.3. (PR #128)
+    * Fixed analog passthrough when using 2400B. (PR #130)
+    * Fixed non-responsible scroll controls on macOS. (PR #139)
+    * Auto EQ now working for 800XA. (PR #141)
+    * Reset scatter plot state when multi-RX switches modes. (PR #146)
+    * Use selected sound device sample rates for the equalizer controls. (PR #142)
 2. Enhancements:
-    a. Frequency ticks moved to the top of the waterfall. (PR #115)
-    b. Optimized rendering code for the waterfall display to improve responsiveness on slower machines. (PR #127, PR #137)
-    c. Fixed navigation issues encountered while using screen readers. (PR #121)
-    d. Allow main window to expand horizontally for shorter displays. (PR #135, #121)
-    e. Allow autoconversion of voice keyer file to selected TX mode's sample rate. (PR #145)
-    f. Multi-RX: decode each supported mode on its own thread. (PR #129)
+    * Frequency ticks moved to the top of the waterfall. (PR #115)
+    * Optimized rendering code for the waterfall display to improve responsiveness on slower machines. (PR #127, PR #137)
+    * Fixed navigation issues encountered while using screen readers. (PR #121)
+    * Allow main window to expand horizontally for shorter displays. (PR #135, #121)
+    * Allow autoconversion of voice keyer file to selected TX mode's sample rate. (PR #145)
+    * Multi-RX: decode each supported mode on its own thread. (PR #129)
 3. New features:
-    a. Added support for alternative configuration files by specifying -f/--config options. (PR #119, #125)
-    b. Added support for PTT input, e.g. for foot switches. (PR #136)
+    * Added support for alternative configuration files by specifying -f/--config options. (PR #119, #125)
+    * Added support for PTT input, e.g. for foot switches. (PR #136)
 4. Build system:
-    a. Use MacPorts/Homebrew PortAudio for macOS builds. (PR #134, #138)
-    b. Bootstrapped wxWidgets now uses version 3.1.5. (PR #147)
-    c. Added support for bootstrapped wxWidgets on Windows builds. (PR #124)
-    d. Updated Docker container for Windows builds to Fedora 34. (PR #124)
+    * Use MacPorts/Homebrew PortAudio for macOS builds. (PR #134, #138)
+    * Bootstrapped wxWidgets now uses version 3.1.5. (PR #147)
+    * Added support for bootstrapped wxWidgets on Windows builds. (PR #124)
+    * Updated Docker container for Windows builds to Fedora 34. (PR #124)
 
 ## V1.5.3 April 2021
 
