@@ -736,7 +736,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Use selected sound device sample rates for the equalizer controls. (PR #142)
 2. Enhancements:
     * Frequency ticks moved to the top of the waterfall. (PR #115)
-    * Optimized rendering code for the waterfall display to improve responsiveness on slower machines. (PR #127, PR #137)
+    * Optimized rendering code for the waterfall display to improve responsiveness on slower machines. (PR #127, #137)
     * Fixed navigation issues encountered while using screen readers. (PR #121)
     * Allow main window to expand horizontally for shorter displays. (PR #135, #121)
     * Allow autoconversion of voice keyer file to selected TX mode's sample rate. (PR #145)
