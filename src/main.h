@@ -362,8 +362,39 @@ DECLARE_APP(MainApp)
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // paCallBackData
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-typedef struct
+typedef struct paCallBackData
 {
+    paCallBackData()
+        : insrc1(nullptr)
+        , outsrc1(nullptr)
+        , insrc2(nullptr)
+        , outsrc2(nullptr)
+        , insrcsf(nullptr)
+        , insrctxsf(nullptr)
+        , infifo1(nullptr)
+        , outfifo1(nullptr)
+        , infifo2(nullptr)
+        , outfifo2(nullptr)
+        , rxinfifo(nullptr)
+        , rxoutfifo(nullptr)
+        , inputChannels1(0)
+        , inputChannels2(0)
+        , outputChannels1(0)
+        , outputChannels2(0)
+        , sbqMicInBass(nullptr)
+        , sbqMicInTreble(nullptr)
+        , sbqMicInMid(nullptr)
+        , sbqSpkOutBass(nullptr)
+        , sbqSpkOutTreble(nullptr)
+        , sbqSpkOutMid(nullptr)
+        , micInEQEnable(false)
+        , spkOutEQEnable(false)
+        , leftChannelVoxTone(false)
+        , voxTonePhase(0.0)
+    {
+        // empty
+    }
+    
     // libresample states for 48 to 8 kHz conversions
 
     SRC_STATE      *insrc1;
