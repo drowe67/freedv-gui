@@ -749,6 +749,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Bootstrapped wxWidgets now uses version 3.1.5. (PR #147)
     * Added support for bootstrapped wxWidgets on Windows builds. (PR #124)
     * Updated Docker container for Windows builds to Fedora 34. (PR #124)
+    * Created "make dist" target for easy tarball generation. (PR #152)
 
 ## V1.5.3 April 2021
 
