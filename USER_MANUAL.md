@@ -724,6 +724,33 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.6.0 August 2021
+
+1. Bugfixes: 
+    * Suppressed clipping of TX speech when PTT is released. (PR #123)
+    * Added missing mode labels for 800XA and 2400B as a result of implementing multi-RX in 1.5.3. (PR #128)
+    * Fixed analog passthrough when using 2400B. (PR #130)
+    * Fixed non-responsive scroll controls on macOS. (PR #139)
+    * Auto EQ now working for 800XA. (PR #141)
+    * Reset scatter plot state when multi-RX switches modes. (PR #146)
+    * Use selected sound device sample rates for the equalizer controls. (PR #142)
+2. Enhancements:
+    * Frequency ticks moved to the top of the waterfall. (PR #115)
+    * Optimized rendering code for the waterfall display to improve responsiveness on slower machines. (PR #127, #137)
+    * Fixed navigation issues encountered while using screen readers. (PR #121)
+    * Allow main window to expand horizontally for shorter displays. (PR #135, #121)
+    * Allow autoconversion of voice keyer file to selected TX mode's sample rate. (PR #145)
+    * Multi-RX: decode each supported mode on its own thread. (PR #129)
+3. New features:
+    * Added support for alternative configuration files by specifying -f/--config options. (PR #119, #125)
+    * Added support for PTT input, e.g. for foot switches. (PR #136)
+4. Build system:
+    * Use MacPorts/Homebrew PortAudio for macOS builds. (PR #134, #138)
+    * Bootstrapped wxWidgets now uses version 3.1.5. (PR #147)
+    * Added support for bootstrapped wxWidgets on Windows builds. (PR #124)
+    * Updated Docker container for Windows builds to Fedora 34. (PR #124)
+    * Created "make dist" target for easy tarball generation. (PR #152)
+
 ## V1.5.3 April 2021
 
 1. Simultaneous decode of 2020, 1600 and 700C/D/E (without needing to push Stop first, change the mode and push Start again).

@@ -48,9 +48,9 @@ message(STATUS "Compilation date = XX${DATE_RESULT}XX")
 # Set FreeDV version and generate src/version.h
 #
 set(FREEDV_VERSION_MAJOR 1)
-set(FREEDV_VERSION_MINOR 5)
-set(FREEDV_VERSION_PATCH 3)
-set(FREEDV_VERSION_SUFFIX "devel")
+set(FREEDV_VERSION_MINOR 6)
+set(FREEDV_VERSION_PATCH 0)
+set(FREEDV_VERSION_SUFFIX "")
 
 set(FREEDV_VERSION ${FREEDV_VERSION_MAJOR}.${FREEDV_VERSION_MINOR})
 if(FREEDV_VERSION_PATCH)
@@ -493,6 +493,13 @@ if(APPLE)
 configure_file ("${PROJECT_SOURCE_DIR}/src/info.plist.in"
                 "${PROJECT_BINARY_DIR}/src/info.plist" )
 endif(APPLE)
+
+# Adds support for "make dist" target.
+set(ARCHIVE_NAME "freedv-${FREEDV_VERSION_MAJOR}.${FREEDV_VERSION_MINOR}.${FREEDV_VERSION_PATCH}")
+add_custom_target(dist
+    COMMAND git archive --prefix=${ARCHIVE_NAME}/ HEAD
+        | bzip2 > ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 # CPack configuration for Windows and Linux.
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "HF Digital Voice for Radio Amateurs")
