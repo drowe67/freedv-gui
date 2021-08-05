@@ -730,7 +730,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Suppressed clipping of TX speech when PTT is released. (PR #123)
     * Added missing mode labels for 800XA and 2400B as a result of implementing multi-RX in 1.5.3. (PR #128)
     * Fixed analog passthrough when using 2400B. (PR #130)
-    * Fixed non-responsible scroll controls on macOS. (PR #139)
+    * Fixed non-responsive scroll controls on macOS. (PR #139)
     * Auto EQ now working for 800XA. (PR #141)
     * Reset scatter plot state when multi-RX switches modes. (PR #146)
     * Use selected sound device sample rates for the equalizer controls. (PR #142)
