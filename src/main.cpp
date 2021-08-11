@@ -1679,6 +1679,32 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             if (validateSoundCardSetup())
             {
                 startRxStream();
+
+                // attempt to start PTT ......
+                wxGetApp().m_pskReporter = NULL;
+                wxGetApp().m_callsignEncoder = NULL;
+                if (wxGetApp().m_boolHamlibUseForPTT)
+                    OpenHamlibRig();
+                else if (wxGetApp().m_psk_enable)
+                {
+                    wxMessageBox("Hamlib support must be enabled to report to PSK Reporter. PSK Reporter reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+                }
+
+                if (wxGetApp().m_boolUseSerialPTT) {
+                    OpenSerialPort();
+                }
+
+                if (wxGetApp().m_boolUseSerialPTTInput)
+                {
+                    OpenPTTInPort();
+                }
+
+                if (m_RxRunning)
+                {
+        #ifdef _USE_TIMER
+                    m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
+        #endif // _USE_TIMER
+                }
             }
         }
         else
@@ -1689,33 +1715,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         // Clear existing TX text, if any.
         codec2_fifo_destroy(g_txDataInFifo);
         g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
-        
-        // attempt to start PTT ......
-        wxGetApp().m_pskReporter = NULL;
-        wxGetApp().m_callsignEncoder = NULL;
-        if (wxGetApp().m_boolHamlibUseForPTT)
-            OpenHamlibRig();
-        else if (wxGetApp().m_psk_enable)
-        {
-            wxMessageBox("Hamlib support must be enabled to report to PSK Reporter. PSK Reporter reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-        }
-        
-        if (wxGetApp().m_boolUseSerialPTT) {
-            OpenSerialPort();
-        }
-        
-        if (wxGetApp().m_boolUseSerialPTTInput)
-        {
-            OpenPTTInPort();
-        }
-
-        if (m_RxRunning)
-        {
-#ifdef _USE_TIMER
-            m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
-#endif // _USE_TIMER
-        }
-        
     }
 
     // Stop was pressed or start up failed
