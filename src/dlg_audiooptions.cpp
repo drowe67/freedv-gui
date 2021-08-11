@@ -833,7 +833,7 @@ void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
         if( ((in_out == AUDIO_IN) && (deviceInfo->maxInputChannels > 0)) ||
             ((in_out == AUDIO_OUT) && (deviceInfo->maxOutputChannels > 0)))
         {
-            wxString hostApiName = Pa_GetHostApiInfo(deviceInfo->hostApi)->name;           
+            wxString hostApiName(wxString::FromUTF8(Pa_GetHostApiInfo(deviceInfo->hostApi)->name));           
 
             // Exclude DirectSound devices from the list, as they are duplicates to MME
             // devices and sometimes do not work well for users
@@ -841,19 +841,19 @@ void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
                 continue;
 
             // Exclude "surround" devices as they clutter the dev list and are not used
-            wxString devName(deviceInfo->name);
+            wxString devName(wxString::FromUTF8(deviceInfo->name));
             if(devName.Find("surround") != wxNOT_FOUND)
                 continue; 
 
             col = 0;
-            buf.Printf(wxT("%s"), deviceInfo->name);
+            buf.Printf(wxT("%s"), devName);
             idx = ctrl->InsertItem(ctrl->GetItemCount(), buf);
             col++;
                 
             buf.Printf(wxT("%d"), devn);
             ctrl->SetItem(idx, col++, buf);
 
-            buf.Printf(wxT("%s"), Pa_GetHostApiInfo(deviceInfo->hostApi)->name);
+            buf.Printf(wxT("%s"), hostApiName);
             ctrl->SetItem(idx, col++, buf);
 
             buf.Printf(wxT("%i"), (int)deviceInfo->defaultSampleRate);
