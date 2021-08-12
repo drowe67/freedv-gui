@@ -170,6 +170,7 @@ class AudioOptsDialog : public wxDialog
         void OnIconize( wxIconizeEvent& event ) { event.Skip(); }
         void OnInitDialog( wxInitDialogEvent& event );
 
+        void UpdatePlot(PlotScalar *plotScalar);
     public:
 
         AudioOptsDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Audio Config"), const wxPoint& pos = wxPoint(1,1), const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );

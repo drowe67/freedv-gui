@@ -967,6 +967,12 @@ void AudioOptsDialog::OnTxOutDeviceSelect(wxListEvent& evt)
                    AUDIO_OUT);
 }
 
+void AudioOptsDialog::UpdatePlot(PlotScalar *plotScalar)
+{
+    plotScalar->Refresh();
+    plotScalar->Update();
+}
+
 //-------------------------------------------------------------------------
 // plotDeviceInputForAFewSecs()
 //
@@ -1082,12 +1088,8 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(int dn, PlotScalar *ps) {
 
             plotScalar->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
             sampleCount += TEST_WAVEFORM_PLOT_BUF;
-            CallAfter([&] {
-                plotScalar->Refresh();
-                plotScalar->Update();
-            });
+            CallAfter(&AudioOptsDialog::UpdatePlot, plotScalar);
         }
-
 
         err = Pa_StopStream(stream);
         if (err != paNoError) {
@@ -1233,10 +1235,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(int dn, PlotScalar *ps) {
 
             plotScalar->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
             sampleCount += TEST_WAVEFORM_PLOT_BUF;
-            CallAfter([&]() { 
-                plotScalar->Refresh(); 
-                plotScalar->Update(); 
-            });
+            CallAfter(&AudioOptsDialog::UpdatePlot, plotScalar);
         }
    
         err = Pa_StopStream(stream);
