@@ -974,13 +974,13 @@ void AudioOptsDialog::OnTxOutDeviceSelect(wxListEvent& evt)
 // synchronous portaudio functions, so the GUI will not respond until after test sample has been
 // taken
 //-------------------------------------------------------------------------
-void AudioOptsDialog::plotDeviceInputForAFewSecs(int devNum, PlotScalar *ps) {
+void AudioOptsDialog::plotDeviceInputForAFewSecs(int dn, PlotScalar *ps) {
     m_btnRxInTest->Enable(false);
     m_btnRxOutTest->Enable(false);
     m_btnTxInTest->Enable(false);
     m_btnTxOutTest->Enable(false);
     
-    m_audioTestThread = new std::thread([&](PlotScalar *plotScalar) {
+    m_audioTestThread = new std::thread([this](PlotScalar *plotScalar, int devNum) {
         PaStreamParameters  inputParameters;
         const PaDeviceInfo *deviceInfo = NULL;
         PaStream           *stream = NULL;
@@ -1113,7 +1113,7 @@ plot_in_reenable_ui:
             m_audioTestThread->join();
             delete m_audioTestThread;
         });
-    }, ps);
+    }, ps, dn);
 }
 
 //-------------------------------------------------------------------------
@@ -1123,13 +1123,13 @@ plot_in_reenable_ui:
 // synchronous portaudio functions, so the GUI will not respond until after test sample has been
 // taken.  Also plots a pretty picture like the record versions
 //-------------------------------------------------------------------------
-void AudioOptsDialog::plotDeviceOutputForAFewSecs(int devNum, PlotScalar *ps) {
+void AudioOptsDialog::plotDeviceOutputForAFewSecs(int dn, PlotScalar *ps) {
     m_btnRxInTest->Enable(false);
     m_btnRxOutTest->Enable(false);
     m_btnTxInTest->Enable(false);
     m_btnTxOutTest->Enable(false);
     
-    m_audioTestThread = new std::thread([&](PlotScalar *plotScalar) {
+    m_audioTestThread = new std::thread([this](PlotScalar *plotScalar, int devNum) {
         PaStreamParameters  outputParameters;
         const PaDeviceInfo *deviceInfo = NULL;
         PaStream           *stream = NULL;
@@ -1262,7 +1262,7 @@ plot_out_reenable_ui:
             m_audioTestThread->join();
             delete m_audioTestThread;
         });
-    }, ps);
+    }, ps, dn);
 }
 
 //-------------------------------------------------------------------------
