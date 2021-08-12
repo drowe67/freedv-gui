@@ -21,6 +21,7 @@
 #ifndef __AudioOptsDialog__
 #define __AudioOptsDialog__
 
+#include <thread>
 #include "main.h"
 
 #define ID_AUDIO_OPTIONS    1000
@@ -143,6 +144,8 @@ class AudioOptsDialog : public wxDialog
         wxButton* m_sdbSizer1Apply;
         wxButton* m_sdbSizer1Cancel;
 
+        std::thread* m_audioTestThread;
+        
         // Virtual event handlers, overide them in your derived class
         //virtual void OnActivateApp( wxActivateEvent& event ) { event.Skip(); }
 //        virtual void OnCloseFrame( wxCloseEvent& event ) { event.Skip(); }
