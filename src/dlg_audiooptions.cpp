@@ -367,6 +367,12 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 AudioOptsDialog::~AudioOptsDialog()
 {
+    if (m_audioTestThread != nullptr && m_audioTestThread->joinable())
+    {
+        // Wait for the audio thread to stop. No need to delete as thread stop will trigger delete.
+        m_audioTestThread->join();
+    }
+    
     Pa_Terminate();
 
     // Disconnect Events
@@ -1114,6 +1120,7 @@ plot_in_reenable_ui:
             // Clean up after thread.
             m_audioTestThread->join();
             delete m_audioTestThread;
+            m_audioTestThread = nullptr;
         });
     }, ps, dn);
 }
@@ -1260,6 +1267,7 @@ plot_out_reenable_ui:
             // Clean up after thread.
             m_audioTestThread->join();
             delete m_audioTestThread;
+            m_audioTestThread = nullptr;
         });
     }, ps, dn);
 }
@@ -1345,6 +1353,12 @@ void AudioOptsDialog::OnCancelAudioParameters(wxCommandEvent& event)
 {
     if(m_isPaInitialized)
     {
+        if (m_audioTestThread != nullptr && m_audioTestThread->joinable())
+        {
+            // Wait for the audio thread to stop. No need to delete as thread stop will trigger delete.
+            m_audioTestThread->join();
+        }
+        
         if((pa_err = Pa_Terminate()) == paNoError)
         {
             m_isPaInitialized = false;
