@@ -44,7 +44,7 @@ public:
     
 private:
     static const int NUM_CALLSIGN_BUFFERS_ = 4;
-    static const int MAX_CALLSIGN_LENGTH_ = 6;
+    static const int MAX_CALLSIGN_LENGTH_ = 8;
     static const int ENCODED_CRC_LENGTH_ = 2;
     static const int BYTES_NEEDED_FOR_ENCODING_ = 4;
     static const int BYTES_PER_ENCODING_ = 2;
