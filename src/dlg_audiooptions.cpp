@@ -1048,7 +1048,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(int dn, PlotScalar *ps) {
                   &inputParameters,
                   NULL,
                   sampleRate,
-                  TEST_BUF_SIZE,
+                  0,
                   paClipOff,    
                   NULL,       // no callback, use blocking API
                   NULL ); 
@@ -1191,7 +1191,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(int dn, PlotScalar *ps) {
                   NULL,
                   &outputParameters,
                   sampleRate,
-                  TEST_BUF_SIZE,
+                  0,
                   paClipOff,    
                   NULL,       // no callback, use blocking API
                   NULL ); 
