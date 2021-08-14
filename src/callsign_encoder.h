@@ -39,20 +39,25 @@ public:
     // RX methods
     void clearReceivedText();
     void pushReceivedByte(char byte);
-    bool isInSync() const { return textInSync_; }
     bool isCallsignValid() const;
-    const char* getReceivedText() const { return &receivedCallsign_[2]; }
+    const char* getReceivedText() const;
     
 private:
+    static const int NUM_CALLSIGN_BUFFERS_ = 4;
+    static const int MAX_CALLSIGN_LENGTH_ = 6;
+    static const int ENCODED_CRC_LENGTH_ = 2;
+    static const int BYTES_NEEDED_FOR_ENCODING_ = 4;
+    static const int BYTES_PER_ENCODING_ = 2;
+    static const int MAX_PENDING_BYTES_ = ((MAX_CALLSIGN_LENGTH_ + ENCODED_CRC_LENGTH_) / BYTES_PER_ENCODING_) * BYTES_NEEDED_FOR_ENCODING_ + NUM_CALLSIGN_BUFFERS_;
+    
     std::deque<unsigned char> pendingGolayBytes_;
-    bool textInSync_;
     
     char callsign_[MAX_CALLSIGN];
     char translatedCallsign_[MAX_CALLSIGN];
     char truncCallsign_[MAX_CALLSIGN];
     
-    char receivedCallsign_[MAX_CALLSIGN];
-    char* pReceivedCallsign_;
+    char receivedCallsigns_[NUM_CALLSIGN_BUFFERS_][MAX_CALLSIGN];
+    char* pReceivedCallsign_[NUM_CALLSIGN_BUFFERS_];
     
     void convert_callsign_to_ota_string_(const char* input, char* output, int maxLength) const;
     void convert_ota_string_to_callsign_(const char* input, char* output, int maxLength);

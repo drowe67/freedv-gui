@@ -1163,10 +1163,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (wxGetApp().m_callsignEncoder)
         {
             wxGetApp().m_callsignEncoder->pushReceivedByte(incomingChar);    
-            if (wxGetApp().m_callsignEncoder->isInSync())
-            {
-                m_txtCtrlCallSign->SetValue(wxGetApp().m_callsignEncoder->getReceivedText());
-            }        
+            m_txtCtrlCallSign->SetValue(wxGetApp().m_callsignEncoder->getReceivedText());        
         }
         else
         {
