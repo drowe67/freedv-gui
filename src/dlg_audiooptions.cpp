@@ -75,6 +75,8 @@ void AudioOptsDialog::buildTestControls(PlotScalar **plotScalar, wxButton **btnT
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
+    m_audioTestThread = nullptr;
+    
     if (g_verbose) fprintf(stderr, "pos %d %d\n", pos.x, pos.y);
     Pa_Init();
 
