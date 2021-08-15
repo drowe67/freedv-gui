@@ -56,6 +56,7 @@ class PlotWaterfall : public PlotPanel
         void        draw(wxGraphicsContext* gc);
         void        plotPixelData();
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
+        void        OnMouseRightDoubleClick(wxMouseEvent& event);
 
     private:
         float       m_dT;
@@ -69,6 +70,8 @@ class PlotWaterfall : public PlotPanel
         wxBitmap* m_fullBmp;
         int m_imgHeight;
         int m_imgWidth;
+        
+        void        OnDoubleClickCommon(wxMouseEvent& event);
 
         DECLARE_EVENT_TABLE()
 };

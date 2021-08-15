@@ -32,6 +32,7 @@ BEGIN_EVENT_TABLE(PlotWaterfall, PlotPanel)
     EVT_MOTION          (PlotWaterfall::OnMouseMove)
     EVT_LEFT_DCLICK     (PlotWaterfall::OnMouseLeftDoubleClick)
     EVT_LEFT_UP         (PlotWaterfall::OnMouseLeftUp)
+    EVT_RIGHT_DCLICK    (PlotWaterfall::OnMouseRightDoubleClick)
     EVT_MOUSEWHEEL      (PlotWaterfall::OnMouseWheelMoved)
     EVT_SIZE            (PlotWaterfall::OnSize)
     EVT_SHOW            (PlotWaterfall::OnShow)
@@ -412,9 +413,9 @@ void PlotWaterfall::plotPixelData()
 }
 
 //-------------------------------------------------------------------------
-// OnMouseLeftDown()
+// OnDoubleClickCommon()
 //-------------------------------------------------------------------------
-void PlotWaterfall::OnMouseLeftDoubleClick(wxMouseEvent& event)
+void PlotWaterfall::OnDoubleClickCommon(wxMouseEvent& event)
 {
     m_mouseDown = true;
     wxClientDC dc(this);
@@ -436,4 +437,19 @@ void PlotWaterfall::OnMouseLeftDoubleClick(wxMouseEvent& event)
     }
 }
 
+//-------------------------------------------------------------------------
+// OnMouseLeftDown()
+//-------------------------------------------------------------------------
+void PlotWaterfall::OnMouseLeftDoubleClick(wxMouseEvent& event)
+{
+    OnDoubleClickCommon(event);
+}
+
+//-------------------------------------------------------------------------
+// OnMouseRightDown()
+//-------------------------------------------------------------------------
+void PlotWaterfall::OnMouseRightDoubleClick(wxMouseEvent& event)
+{
+    OnDoubleClickCommon(event);
+}
 
