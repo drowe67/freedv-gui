@@ -75,6 +75,8 @@ void AudioOptsDialog::buildTestControls(PlotScalar **plotScalar, wxButton **btnT
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
+    m_audioTestThread = nullptr;
+    
     if (g_verbose) fprintf(stderr, "pos %d %d\n", pos.x, pos.y);
     Pa_Init();
 
@@ -367,6 +369,12 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 AudioOptsDialog::~AudioOptsDialog()
 {
+    if (m_audioTestThread != nullptr && m_audioTestThread->joinable())
+    {
+        // Wait for the audio thread to stop. No need to delete as thread stop will trigger delete.
+        m_audioTestThread->join();
+    }
+    
     Pa_Terminate();
 
     // Disconnect Events
@@ -967,6 +975,12 @@ void AudioOptsDialog::OnTxOutDeviceSelect(wxListEvent& evt)
                    AUDIO_OUT);
 }
 
+void AudioOptsDialog::UpdatePlot(PlotScalar *plotScalar)
+{
+    plotScalar->Refresh();
+    plotScalar->Update();
+}
+
 //-------------------------------------------------------------------------
 // plotDeviceInputForAFewSecs()
 //
@@ -974,116 +988,143 @@ void AudioOptsDialog::OnTxOutDeviceSelect(wxListEvent& evt)
 // synchronous portaudio functions, so the GUI will not respond until after test sample has been
 // taken
 //-------------------------------------------------------------------------
-void AudioOptsDialog::plotDeviceInputForAFewSecs(int devNum, PlotScalar *plotScalar) {
-    PaStreamParameters  inputParameters;
-    const PaDeviceInfo *deviceInfo = NULL;
-    PaStream           *stream = NULL;
-    PaError             err;
-    short               in48k_stereo_short[2*TEST_BUF_SIZE];
-    short               in48k_short[TEST_BUF_SIZE];
-    short               in8k_short[TEST_BUF_SIZE];
-    int                 numDevices, nBufs, j, src_error,inputChannels, sampleRate, sampleCount;
-    SRC_STATE          *src;
-    FIFO               *fifo;
+void AudioOptsDialog::plotDeviceInputForAFewSecs(int dn, PlotScalar *ps) {
+    m_btnRxInTest->Enable(false);
+    m_btnRxOutTest->Enable(false);
+    m_btnTxInTest->Enable(false);
+    m_btnTxOutTest->Enable(false);
+    
+    m_audioTestThread = new std::thread([this](PlotScalar *plotScalar, int devNum) {
+        PaStreamParameters  inputParameters;
+        const PaDeviceInfo *deviceInfo = NULL;
+        PaStream           *stream = NULL;
+        PaError             err;
+        short               in48k_stereo_short[2*TEST_BUF_SIZE];
+        short               in48k_short[TEST_BUF_SIZE];
+        short               in8k_short[TEST_BUF_SIZE];
+        int                 numDevices, nBufs, j, src_error,inputChannels, sampleRate, sampleCount;
+        SRC_STATE          *src;
+        FIFO               *fifo;
 
-    // a basic sanity check
-    numDevices = Pa_GetDeviceCount();
-    if (devNum >= numDevices)
-        return;
-    if (devNum < 0)
-        return;
-    if (g_verbose) fprintf(stderr,"devNum %d\n", devNum);
-
-    fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
-    src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
-
-    // work out how many input channels this device supports.
-
-    deviceInfo = Pa_GetDeviceInfo(devNum);
-    if (deviceInfo == NULL) {
-        wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card "), wxT("Error"), wxOK);
-        return;
-    }
-    if (deviceInfo->maxInputChannels == 1)
-        inputChannels = 1;
-    else
-        inputChannels = 2;
-
-    // open device
-
-    inputParameters.device = devNum;
-    inputParameters.channelCount = inputChannels;
-    inputParameters.sampleFormat = paInt16;
-    inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultHighInputLatency;
-    inputParameters.hostApiSpecificStreamInfo = NULL;
-
-    sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
-    nBufs = TEST_WAVEFORM_PLOT_TIME*sampleRate/TEST_BUF_SIZE;
-    if (g_verbose) fprintf(stderr,"inputChannels: %d nBufs %d\n", inputChannels, nBufs);
-
-    err = Pa_OpenStream(
-              &stream,
-              &inputParameters,
-              NULL,
-              sampleRate,
-              TEST_BUF_SIZE,
-              paClipOff,    
-              NULL,       // no callback, use blocking API
-              NULL ); 
-    if (err != paNoError) {
-        wxMessageBox(wxT("Couldn't initialise sound device."), wxT("Error"), wxOK);       
-        return;
-    }
-
-    err = Pa_StartStream(stream);
-    if (err != paNoError) {
-        wxMessageBox(wxT("Couldn't start sound device."), wxT("Error"), wxOK);       
-        return;
-    }
-
-    // Sometimes this buffer doesn't get completely filled.  Unset values show up as
-    // junk on the plot.
-    memset(in8k_short, 0, TEST_BUF_SIZE * sizeof(short));
-
-    sampleCount = 0;
-
-    while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS))
-    {
-        Pa_ReadStream(stream, in48k_stereo_short, TEST_BUF_SIZE);
-        if (inputChannels == 2) {
-            for(j=0; j<TEST_BUF_SIZE; j++)
-                in48k_short[j] = in48k_stereo_short[2*j]; // left channel only
-        }
-        else {
-            for(j=0; j<TEST_BUF_SIZE; j++)
-                in48k_short[j] = in48k_stereo_short[j]; 
-        }
-        int n8k = resample(src, in8k_short, in48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
-        resample_for_plot(fifo, in8k_short, n8k, FS);
-
-        short plotSamples[TEST_WAVEFORM_PLOT_BUF];
-        if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
+        // a basic sanity check
+        numDevices = Pa_GetDeviceCount();
+        if (devNum >= numDevices || devNum < 0)
         {
-            // come back when the fifo is refilled
-            continue;
+            goto plot_in_reenable_ui;
+        }
+        if (g_verbose) fprintf(stderr,"devNum %d\n", devNum);
+
+        fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
+        src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
+
+        // work out how many input channels this device supports.
+
+        deviceInfo = Pa_GetDeviceInfo(devNum);
+        if (deviceInfo == NULL) {
+            CallAfter([&]() {
+                wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card "), wxT("Error"), wxOK);
+            });
+            goto plot_in_cleanup;
+        }
+        if (deviceInfo->maxInputChannels == 1)
+            inputChannels = 1;
+        else
+            inputChannels = 2;
+
+        // open device
+
+        inputParameters.device = devNum;
+        inputParameters.channelCount = inputChannels;
+        inputParameters.sampleFormat = paInt16;
+        inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultHighInputLatency;
+        inputParameters.hostApiSpecificStreamInfo = NULL;
+
+        sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
+        nBufs = TEST_WAVEFORM_PLOT_TIME*sampleRate/TEST_BUF_SIZE;
+        if (g_verbose) fprintf(stderr,"inputChannels: %d nBufs %d\n", inputChannels, nBufs);
+
+        err = Pa_OpenStream(
+                  &stream,
+                  &inputParameters,
+                  NULL,
+                  sampleRate,
+                  0,
+                  paClipOff,    
+                  NULL,       // no callback, use blocking API
+                  NULL ); 
+        if (err != paNoError) {
+            CallAfter([&] {
+                wxMessageBox(wxT("Couldn't initialise sound device."), wxT("Error"), wxOK);       
+            });
+            goto plot_in_cleanup;
         }
 
-        plotScalar->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
-        sampleCount += TEST_WAVEFORM_PLOT_BUF;
-        plotScalar->Refresh();
-        plotScalar->Update();
-    }
+        err = Pa_StartStream(stream);
+        if (err != paNoError) {
+            CallAfter([&] {
+                wxMessageBox(wxT("Couldn't start sound device."), wxT("Error"), wxOK);      
+            }); 
+            goto plot_in_cleanup;
+        }
 
+        // Sometimes this buffer doesn't get completely filled.  Unset values show up as
+        // junk on the plot.
+        memset(in8k_short, 0, TEST_BUF_SIZE * sizeof(short));
 
-    err = Pa_StopStream(stream);
-    if (err != paNoError) {
-        wxMessageBox(wxT("Couldn't stop sound device."), wxT("Error"), wxOK);       
-        return;
-    }
-    Pa_CloseStream(stream);
+        sampleCount = 0;
 
-    codec2_fifo_destroy(fifo);
-    src_delete(src);
+        while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS))
+        {
+            Pa_ReadStream(stream, in48k_stereo_short, TEST_BUF_SIZE);
+            if (inputChannels == 2) {
+                for(j=0; j<TEST_BUF_SIZE; j++)
+                    in48k_short[j] = in48k_stereo_short[2*j]; // left channel only
+            }
+            else {
+                for(j=0; j<TEST_BUF_SIZE; j++)
+                    in48k_short[j] = in48k_stereo_short[j]; 
+            }
+            int n8k = resample(src, in8k_short, in48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
+            resample_for_plot(fifo, in8k_short, n8k, FS);
+
+            short plotSamples[TEST_WAVEFORM_PLOT_BUF];
+            if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
+            {
+                // come back when the fifo is refilled
+                continue;
+            }
+
+            plotScalar->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
+            sampleCount += TEST_WAVEFORM_PLOT_BUF;
+            CallAfter(&AudioOptsDialog::UpdatePlot, plotScalar);
+        }
+
+        err = Pa_StopStream(stream);
+        if (err != paNoError) {
+            CallAfter([&] {
+                wxMessageBox(wxT("Couldn't stop sound device."), wxT("Error"), wxOK);       
+            });
+        }
+        
+        Pa_CloseStream(stream);
+
+plot_in_cleanup:
+        codec2_fifo_destroy(fifo);
+        src_delete(src);
+        
+plot_in_reenable_ui:
+        CallAfter([&]() {
+            m_btnRxInTest->Enable(true);
+            m_btnRxOutTest->Enable(true);
+            m_btnTxInTest->Enable(true);
+            m_btnTxOutTest->Enable(true);
+    
+            // Clean up after thread.
+            m_audioTestThread->join();
+            delete m_audioTestThread;
+            m_audioTestThread = nullptr;
+        });
+    }, ps, dn);
 }
 
 //-------------------------------------------------------------------------
@@ -1093,117 +1134,144 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(int devNum, PlotScalar *plotSca
 // synchronous portaudio functions, so the GUI will not respond until after test sample has been
 // taken.  Also plots a pretty picture like the record versions
 //-------------------------------------------------------------------------
-void AudioOptsDialog::plotDeviceOutputForAFewSecs(int devNum, PlotScalar *plotScalar) {
-    PaStreamParameters  outputParameters;
-    const PaDeviceInfo *deviceInfo = NULL;
-    PaStream           *stream = NULL;
-    PaError             err;
-    short               out48k_stereo_short[2*TEST_BUF_SIZE];
-    short               out48k_short[TEST_BUF_SIZE];
-    short               out8k_short[TEST_BUF_SIZE];
-    int                 numDevices, j, src_error, n, outputChannels, sampleRate, sampleCount;
-    SRC_STATE          *src;
-    FIFO               *fifo;
+void AudioOptsDialog::plotDeviceOutputForAFewSecs(int dn, PlotScalar *ps) {
+    m_btnRxInTest->Enable(false);
+    m_btnRxOutTest->Enable(false);
+    m_btnTxInTest->Enable(false);
+    m_btnTxOutTest->Enable(false);
+    
+    m_audioTestThread = new std::thread([this](PlotScalar *plotScalar, int devNum) {
+        PaStreamParameters  outputParameters;
+        const PaDeviceInfo *deviceInfo = NULL;
+        PaStream           *stream = NULL;
+        PaError             err;
+        short               out48k_stereo_short[2*TEST_BUF_SIZE];
+        short               out48k_short[TEST_BUF_SIZE];
+        short               out8k_short[TEST_BUF_SIZE];
+        int                 numDevices, j, src_error, n, outputChannels, sampleRate, sampleCount;
+        SRC_STATE          *src;
+        FIFO               *fifo;
 
-    // a basic sanity check
-    numDevices = Pa_GetDeviceCount();
-    if (devNum >= numDevices)
-        return;
-    if (devNum < 0)
-        return;
-
-    fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
-    src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
-
-    // work out how many output channels this device supports.
-
-    deviceInfo = Pa_GetDeviceInfo(devNum);
-    if (deviceInfo == NULL) {
-        wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card "), wxT("Error"), wxOK);
-        return;
-    }
-    if (deviceInfo->maxOutputChannels == 1)
-        outputChannels = 1;
-    else
-        outputChannels = 2;
-
-    if (g_verbose) fprintf(stderr,"outputChannels: %d\n", outputChannels);
-
-    outputParameters.device = devNum;
-    outputParameters.channelCount = outputChannels;
-    outputParameters.sampleFormat = paInt16;
-    outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultHighOutputLatency;
-    outputParameters.hostApiSpecificStreamInfo = NULL;
-
-    sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
-
-    err = Pa_OpenStream(
-              &stream,
-              NULL,
-              &outputParameters,
-              sampleRate,
-              TEST_BUF_SIZE,
-              paClipOff,    
-              NULL,       // no callback, use blocking API
-              NULL ); 
-    if (err != paNoError) {
-        wxMessageBox(wxT("Couldn't initialise sound device."), wxT("Error"), wxOK);       
-        return;
-    }
-
-    err = Pa_StartStream(stream);
-    if (err != paNoError) {
-        wxMessageBox(wxT("Couldn't start sound device."), wxT("Error"), wxOK);       
-        return;
-    }
-
-    // Sometimes this buffer doesn't get completely filled.  Unset values show up as
-    // junk on the plot.
-    memset(out8k_short, 0, TEST_BUF_SIZE * sizeof(short));
-
-    sampleCount = 0;
-    n = 0;
-
-    while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS)) {
-        for(j=0; j<TEST_BUF_SIZE; j++,n++) {
-            out48k_short[j] = 2000.0*cos(6.2832*(n++)*400.0/sampleRate);
-            if (outputChannels == 2) {
-                out48k_stereo_short[2*j] = out48k_short[j];   // left channel
-                out48k_stereo_short[2*j+1] = out48k_short[j]; // right channel
-            }
-            else {
-                out48k_stereo_short[j] = out48k_short[j];     // mono
-            }
-        }
-        Pa_WriteStream(stream, out48k_stereo_short, TEST_BUF_SIZE);
-
-        // convert back to 8kHz just for plotting
-        int n8k = resample(src, out8k_short, out48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
-        resample_for_plot(fifo, out8k_short, n8k, FS);
-
-        // If enough 8 kHz samples are buffered, go ahead and plot, otherwise wait for more
-        short plotSamples[TEST_WAVEFORM_PLOT_BUF];
-        if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
+        // a basic sanity check
+        numDevices = Pa_GetDeviceCount();
+        if (devNum >= numDevices || devNum < 0)
         {
-            // come back when the fifo is refilled
-            continue;
+            goto plot_out_reenable_ui;
         }
 
-        plotScalar->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
-        sampleCount += TEST_WAVEFORM_PLOT_BUF;
-        plotScalar->Refresh();
-        plotScalar->Update();
-    }
-   
-    err = Pa_StopStream(stream);
-    if (err != paNoError) {
-        wxMessageBox(wxT("Couldn't stop sound device."), wxT("Error"), wxOK);       
-        return;
-    }
-    Pa_CloseStream(stream);
+        fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
+        src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
 
-    codec2_fifo_destroy(fifo);
-    src_delete(src);
+        // work out how many output channels this device supports.
+
+        deviceInfo = Pa_GetDeviceInfo(devNum);
+        if (deviceInfo == NULL) {
+            CallAfter([&] {
+                wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card "), wxT("Error"), wxOK);
+            });
+            goto plot_out_cleanup;
+        }
+        if (deviceInfo->maxOutputChannels == 1)
+            outputChannels = 1;
+        else
+            outputChannels = 2;
+
+        if (g_verbose) fprintf(stderr,"outputChannels: %d\n", outputChannels);
+
+        outputParameters.device = devNum;
+        outputParameters.channelCount = outputChannels;
+        outputParameters.sampleFormat = paInt16;
+        outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultHighOutputLatency;
+        outputParameters.hostApiSpecificStreamInfo = NULL;
+
+        sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
+
+        err = Pa_OpenStream(
+                  &stream,
+                  NULL,
+                  &outputParameters,
+                  sampleRate,
+                  0,
+                  paClipOff,    
+                  NULL,       // no callback, use blocking API
+                  NULL ); 
+        if (err != paNoError) {
+            CallAfter([&] {
+                wxMessageBox(wxT("Couldn't initialise sound device."), wxT("Error"), wxOK);
+            });
+            goto plot_out_cleanup;
+        }
+
+        err = Pa_StartStream(stream);
+        if (err != paNoError) {
+            CallAfter([&] {
+                wxMessageBox(wxT("Couldn't start sound device."), wxT("Error"), wxOK);    
+            });  
+            goto plot_out_cleanup;
+        }
+
+        // Sometimes this buffer doesn't get completely filled.  Unset values show up as
+        // junk on the plot.
+        memset(out8k_short, 0, TEST_BUF_SIZE * sizeof(short));
+
+        sampleCount = 0;
+        n = 0;
+
+        while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS)) {
+            for(j=0; j<TEST_BUF_SIZE; j++,n++) {
+                out48k_short[j] = 2000.0*cos(6.2832*(n++)*400.0/sampleRate);
+                if (outputChannels == 2) {
+                    out48k_stereo_short[2*j] = out48k_short[j];   // left channel
+                    out48k_stereo_short[2*j+1] = out48k_short[j]; // right channel
+                }
+                else {
+                    out48k_stereo_short[j] = out48k_short[j];     // mono
+                }
+            }
+            Pa_WriteStream(stream, out48k_stereo_short, TEST_BUF_SIZE);
+
+            // convert back to 8kHz just for plotting
+            int n8k = resample(src, out8k_short, out48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
+            resample_for_plot(fifo, out8k_short, n8k, FS);
+
+            // If enough 8 kHz samples are buffered, go ahead and plot, otherwise wait for more
+            short plotSamples[TEST_WAVEFORM_PLOT_BUF];
+            if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
+            {
+                // come back when the fifo is refilled
+                continue;
+            }
+
+            plotScalar->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
+            sampleCount += TEST_WAVEFORM_PLOT_BUF;
+            CallAfter(&AudioOptsDialog::UpdatePlot, plotScalar);
+        }
+   
+        err = Pa_StopStream(stream);
+        if (err != paNoError) {
+            CallAfter([&]() {
+                wxMessageBox(wxT("Couldn't stop sound device."), wxT("Error"), wxOK);  
+            });     
+        }
+        Pa_CloseStream(stream);
+
+plot_out_cleanup:
+        codec2_fifo_destroy(fifo);
+        src_delete(src);
+
+plot_out_reenable_ui:
+        CallAfter([&]() {
+            m_btnRxInTest->Enable(true);
+            m_btnRxOutTest->Enable(true);
+            m_btnTxInTest->Enable(true);
+            m_btnTxOutTest->Enable(true);
+            
+            // Clean up after thread.
+            m_audioTestThread->join();
+            delete m_audioTestThread;
+            m_audioTestThread = nullptr;
+        });
+    }, ps, dn);
 }
 
 //-------------------------------------------------------------------------
@@ -1287,6 +1355,12 @@ void AudioOptsDialog::OnCancelAudioParameters(wxCommandEvent& event)
 {
     if(m_isPaInitialized)
     {
+        if (m_audioTestThread != nullptr && m_audioTestThread->joinable())
+        {
+            // Wait for the audio thread to stop. No need to delete as thread stop will trigger delete.
+            m_audioTestThread->join();
+        }
+        
         if((pa_err = Pa_Terminate()) == paNoError)
         {
             m_isPaInitialized = false;

@@ -954,7 +954,17 @@ void OptionsDlg::updateUDPState()
 
 void OptionsDlg::updateMultipleRxState()
 {
-    m_ckboxSingleRxThread->Enable(m_ckboxMultipleRx->GetValue());
+    if (!sessionActive_)
+    {
+        m_ckboxMultipleRx->Enable(true);
+        m_ckboxSingleRxThread->Enable(m_ckboxMultipleRx->GetValue());
+    }
+    else
+    {
+        // Multi-RX settings cannot be updated during a session.
+        m_ckboxMultipleRx->Enable(false);
+        m_ckboxSingleRxThread->Enable(false);
+    }
 }
 
 void OptionsDlg::OnPSKReporterEnable(wxCommandEvent& event)
