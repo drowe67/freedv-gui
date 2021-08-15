@@ -42,6 +42,7 @@ class PlotSpectrum : public PlotPanel
         void        drawGraticule(wxGraphicsContext* ctx);
         void        draw(wxGraphicsContext* ctx);
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
+        void        OnMouseRightDoubleClick(wxMouseEvent& event);
 
    private:
         float       m_rxFreq;
@@ -51,6 +52,8 @@ class PlotSpectrum : public PlotPanel
         int         m_n_magdB;  
         bool        m_clickTune;
 
+        void        OnDoubleClickCommon(wxMouseEvent& event);
+        
         DECLARE_EVENT_TABLE()
 };
 

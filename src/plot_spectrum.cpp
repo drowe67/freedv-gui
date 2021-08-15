@@ -30,6 +30,7 @@ BEGIN_EVENT_TABLE(PlotSpectrum, PlotPanel)
     EVT_LEFT_DOWN       (PlotSpectrum::OnMouseLeftDown)
     EVT_LEFT_DCLICK     (PlotSpectrum::OnMouseLeftDoubleClick)
     EVT_LEFT_UP         (PlotSpectrum::OnMouseLeftUp)
+    EVT_RIGHT_DCLICK    (PlotSpectrum::OnMouseRightDoubleClick)
     EVT_MOUSEWHEEL      (PlotSpectrum::OnMouseWheelMoved)
     EVT_PAINT           (PlotSpectrum::OnPaint)
     EVT_SHOW            (PlotSpectrum::OnShow)
@@ -232,9 +233,9 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
 }
 
 //-------------------------------------------------------------------------
-// OnMouseDown()
+// OnDoubleClickCommon()
 //-------------------------------------------------------------------------
-void PlotSpectrum::OnMouseLeftDoubleClick(wxMouseEvent& event)
+void PlotSpectrum::OnDoubleClickCommon(wxMouseEvent& event)
 {
     m_mouseDown = true;
     wxClientDC dc(this);
@@ -254,4 +255,20 @@ void PlotSpectrum::OnMouseLeftDoubleClick(wxMouseEvent& event)
 
         clickTune(clickFreq);
     }
+}
+
+//-------------------------------------------------------------------------
+// OnLeftMouseDown()
+//-------------------------------------------------------------------------
+void PlotSpectrum::OnMouseLeftDoubleClick(wxMouseEvent& event)
+{
+    OnDoubleClickCommon(event);
+}
+
+//-------------------------------------------------------------------------
+// OnRightMouseDown()
+//-------------------------------------------------------------------------
+void PlotSpectrum::OnMouseRightDoubleClick(wxMouseEvent& event)
+{
+    OnDoubleClickCommon(event);
 }

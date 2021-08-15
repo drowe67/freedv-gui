@@ -10,9 +10,9 @@
 // work out a way to do this without globals.
 extern float           g_RxFreqOffsetHz;
 extern float           g_TxFreqOffsetHz;
-extern int            *g_split;
+extern int             g_split;
 extern FreeDVInterface freedvInterface;
-extern int   g_tx;
+extern int             g_tx;
 
 void clickTune(float freq) {
 
