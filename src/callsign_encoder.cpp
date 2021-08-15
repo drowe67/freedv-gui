@@ -102,7 +102,7 @@ void CallsignEncoder::pushReceivedByte(char incomingChar)
     
     for (int bufferIndex = 0; bufferIndex < NUM_CALLSIGN_BUFFERS_; bufferIndex++)
     {
-        for (int charIndex = bufferIndex; charIndex < pendingGolayBytes_.size(); charIndex += sizeof(int32_t))
+        for (int charIndex = bufferIndex; (charIndex + 3) < pendingGolayBytes_.size(); charIndex += sizeof(int32_t))
         {
             int encodedInput =
                 ((pendingGolayBytes_[charIndex] & 0x3F) << 18) |
