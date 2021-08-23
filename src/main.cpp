@@ -1102,6 +1102,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             
             // Get current time to enforce minimum sync time requirement for PSK Reporter.
             g_sync_time = time(0);
+            
+            freedvInterface.resetReliableText();
         }
         m_textSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
 	    m_textSync->SetLabel("Modem");
@@ -1109,8 +1111,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     else {
         m_textSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
 	    m_textSync->SetLabel("Modem");
-        
-        freedvInterface.resetReliableText();
     }
     m_textSync->Refresh();
     g_prev_State = g_State;
@@ -1596,6 +1596,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         {
             char temp[1024];
             strncpy(temp, wxGetApp().m_psk_callsign.ToUTF8(), wxGetApp().m_psk_callsign.Length());
+            fprintf(stderr, "Setting callsign to %s\n", temp);
             freedvInterface.setReliableText(temp);
         }
         
@@ -1629,7 +1630,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_panelWaterfall->setFs(freedvInterface.getTxModemSampleRate());
 
         // Init text msg decoding
-        freedvInterface.setTextVaricodeNum(wxGetApp().m_textEncoding);
+        if (!wxGetApp().m_psk_enable)
+            freedvInterface.setTextVaricodeNum(wxGetApp().m_textEncoding);
 
         // scatter plot (PSK) or Eye (FSK) mode
 
