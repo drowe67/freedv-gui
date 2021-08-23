@@ -31,6 +31,7 @@
 #include <queue>
 #include <future>
 #include "codec2.h"
+#include "reliable_text.h"
 
 class FreeDVInterface
 {
@@ -38,7 +39,7 @@ public:
     FreeDVInterface();
     virtual ~FreeDVInterface();
     
-    void start(int txMode, int fifoSizeMs, bool singleRxThread);
+    void start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText);
     void stop();
     void changeTxMode(int txMode);
     bool isRunning() const { return dvObjects_.size() > 0; }
@@ -94,6 +95,9 @@ public:
     void complexTransmit(short mod_out[], short speech_in[], float txOffset, int nfreedv);
     
     struct MODEM_STATS* getCurrentRxModemStats() { return &modemStatsList_[modemStatsIndex_]; }
+    
+    void resetReliableText();
+    const char* getReliableText();
     
 private:
     struct FreeDVTextFnState
@@ -156,6 +160,7 @@ private:
     };
     
     static void FreeDVTextRxFn_(void *callback_state, char c);
+    static void OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr, int length, void* state);
     
     void (*textRxFunc_)(void *, char);
     bool singleRxThread_;
@@ -171,8 +176,10 @@ private:
     std::deque<SRC_STATE*> outRateConvObjs_;
     std::deque<float> snrVals_;
     std::deque<EventHandlerThread<RxAudioThreadState*, RxAudioThreadState*> *> threads_;
+    std::deque<reliable_text_t> reliableText_;
     COMP txFreqOffsetPhaseRectObj_;
     std::deque<COMP*> rxFreqOffsetPhaseRectObjs_;
+    std::string receivedReliableText_;
     struct MODEM_STATS* modemStatsList_;
     int modemStatsIndex_;
     

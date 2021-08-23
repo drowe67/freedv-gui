@@ -225,7 +225,6 @@ bool MainFrame::OpenHamlibRig() {
         }
         else
         {
-            wxGetApp().m_callsignEncoder = new CallsignEncoder();
             wxGetApp().m_pskReporter = new PskReporter(
                 wxGetApp().m_psk_callsign.ToStdString(), 
                 wxGetApp().m_psk_grid_square.ToStdString(),
@@ -244,16 +243,13 @@ bool MainFrame::OpenHamlibRig() {
             {
                 wxMessageBox("Couldn't connect to PSK Reporter server. Reporting functionality will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
                 delete wxGetApp().m_pskReporter;
-                delete wxGetApp().m_callsignEncoder;
                 wxGetApp().m_pskReporter = NULL;
-                wxGetApp().m_callsignEncoder = NULL;
             }
         }
     }
     else
     {
         wxGetApp().m_pskReporter = NULL;
-        wxGetApp().m_callsignEncoder = NULL;
     }
     
     return status;

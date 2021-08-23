@@ -48,7 +48,16 @@ static void callback_err_fn(void *fifo, short error_pattern[], int sz_error_patt
     codec2_fifo_write((struct FIFO*)fifo, error_pattern, sz_error_pattern);
 }
 
-void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread)
+void FreeDVInterface::OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr, int length, void* state) 
+{
+    FreeDVInterface* obj = (FreeDVInterface*)state;
+    assert(obj != nullptr);
+    
+    obj->receivedReliableText_ = txt_ptr;
+    reliable_text_reset(rt);
+}
+
+void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText)
 {
     singleRxThread_ = singleRxThread;
 
@@ -117,6 +126,15 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread)
         outRateConvObjs_.push_back(outConvertObj);
         
         threads_.push_back(new EventHandlerThread<RxAudioThreadState*, RxAudioThreadState*>());
+        
+        if (usingReliableText)
+        {
+            reliable_text_t rt = reliable_text_create();
+            assert(rt != nullptr);
+            
+            reliableText_.push_back(rt);
+            reliable_text_use_with_freedv(rt, dv, &FreeDVInterface::OnReliableTextRx_, this);
+        }
     }
 }
 
@@ -142,6 +160,12 @@ void FreeDVInterface::stop()
     }
     delete[] modemStatsList_;
     modemStatsList_ = nullptr;
+    
+    for (auto& reliableTextObj : reliableText_)
+    {
+        reliable_text_destroy(reliableTextObj);
+    }
+    reliableText_.clear();
     
     for (auto& dv : dvObjects_)
     {
@@ -719,4 +743,21 @@ void FreeDVInterface::complexTransmit(short mod_out[], short speech_in[], float 
     freq_shift_coh(tx_fdm_offset, tx_fdm, txOffset, getTxModemSampleRate(), &txFreqOffsetPhaseRectObj_, nfreedv);
     for(int i = 0; i<nfreedv; i++)
         mod_out[i] = tx_fdm_offset[i].real;
+}
+
+void FreeDVInterface::resetReliableText()
+{
+    for (auto& rt : reliableText_)
+    {
+        reliable_text_reset(rt);
+    }
+}
+
+const char* FreeDVInterface::getReliableText()
+{
+    char* ret = new char[receivedReliableText_.size() + 1];
+    assert(ret != nullptr);
+    
+    strncpy(ret, receivedReliableText_.c_str(), receivedReliableText_.size());
+    return ret;
 }

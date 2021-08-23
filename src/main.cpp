@@ -25,7 +25,6 @@
 #include <wx/cmdline.h>
 #include "main.h"
 #include "osx_interface.h"
-#include "callsign_encoder.h"
 #include "freedv_interface.h"
 
 #define wxUSE_FILEDLG   1
@@ -213,7 +212,6 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 bool MainApp::OnInit()
 {
     m_pskReporter = NULL;
-    m_callsignEncoder = NULL;
     
     if(!wxApp::OnInit())
     {
@@ -1095,7 +1093,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     if (g_State) {
         if (g_prev_State == 0) {
             g_resyncs++;
-            if (wxGetApp().m_callsignEncoder) wxGetApp().m_callsignEncoder->clearReceivedText();
             
             // Clear RX text to reduce the incidence of incorrect callsigns extracted with
             // the PSK Reporter callsign extraction logic.
@@ -1112,6 +1109,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     else {
         m_textSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
 	    m_textSync->SetLabel("Modem");
+        
+        freedvInterface.resetReliableText();
     }
     m_textSync->Refresh();
     g_prev_State = g_State;
@@ -1119,54 +1118,34 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     // send Callsign ----------------------------------------------------
 
     char callsign[MAX_CALLSIGN];
-    
-    // Convert to 6 bit character set for use with Golay encoding.
     memset(callsign, 0, MAX_CALLSIGN);
     
-    if (wxGetApp().m_callsignEncoder)
-    {
-        strncpy(callsign, (const char*) wxGetApp().m_psk_callsign.mb_str(wxConvUTF8), MAX_CALLSIGN/2 - 2);
-        if (strlen(callsign) < MAX_CALLSIGN/2 - 1)
-        {
-            strncat(callsign, "\r", 1);
-        }    
-        wxGetApp().m_callsignEncoder->setCallsign(&callsign[0]);
-    }
-    else
+    if (!wxGetApp().m_psk_enable)
     {
         strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
         if (strlen(callsign) < MAX_CALLSIGN - 1)
         {
             strncat(callsign, "\r", 1);
-        }    
-    }   
+        }     
      
-    // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
-    char* sendBuffer = &callsign[0];
-    if (wxGetApp().m_callsignEncoder) sendBuffer = (char*)wxGetApp().m_callsignEncoder->getEncodedCallsign();
-    if ((unsigned)codec2_fifo_used(g_txDataInFifo) < strlen(sendBuffer)) {
-        unsigned int  i;
+        // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
+        char* sendBuffer = &callsign[0];
+        if ((unsigned)codec2_fifo_used(g_txDataInFifo) < strlen(sendBuffer)) {
+            unsigned int  i;
 
-        // write chars to tx data fifo
-        for(i = 0; i < strlen(sendBuffer); i++) {
-            short ashort = (unsigned char)sendBuffer[i];
-            codec2_fifo_write(g_txDataInFifo, &ashort, 1);
+            // write chars to tx data fifo
+            for(i = 0; i < strlen(sendBuffer); i++) {
+                short ashort = (unsigned char)sendBuffer[i];
+                codec2_fifo_write(g_txDataInFifo, &ashort, 1);
+            }
         }
-    }
 
-    // See if any Callsign info received --------------------------------
+        // See if any Callsign info received --------------------------------
 
-    short ashort;
-    while (codec2_fifo_read(g_rxDataOutFifo, &ashort, 1) == 0) {
-        unsigned char incomingChar = (unsigned char)ashort;
+        short ashort;
+        while (codec2_fifo_read(g_rxDataOutFifo, &ashort, 1) == 0) {
+            unsigned char incomingChar = (unsigned char)ashort;
         
-        if (wxGetApp().m_callsignEncoder)
-        {
-            wxGetApp().m_callsignEncoder->pushReceivedByte(incomingChar);    
-            m_txtCtrlCallSign->SetValue(wxGetApp().m_callsignEncoder->getReceivedText());        
-        }
-        else
-        {
             // Pre-1.5.1 behavior, where text is handled as-is.
             if (incomingChar == '\r' || incomingChar == '\n' || incomingChar == 0 || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
             {                        
@@ -1175,7 +1154,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 {
                     memset(m_pcallsign, 0, MAX_CALLSIGN - (m_pcallsign - m_callsign));
                 }
-                
+            
                 // Reset to the beginning.
                 m_pcallsign = m_callsign;
             }
@@ -1192,12 +1171,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
     // c) We don't currently have a pending report to add to the outbound list for the active callsign.
     // When the above is true, capture the callsign and current SNR and add to the PSK Reporter object's outbound list.
-    if (wxGetApp().m_pskReporter != NULL && wxGetApp().m_callsignEncoder != NULL)
+    if (wxGetApp().m_pskReporter != NULL && wxGetApp().m_psk_enable)
     {
-        if (wxGetApp().m_callsignEncoder->isCallsignValid())
+        const char* text = freedvInterface.getReliableText();
+        assert(text != nullptr);
+        wxString wxCallsign = text;
+        delete[] text;
+        
+        if (wxCallsign.Length() > 0)
         {
             wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
-            wxString wxCallsign = m_txtCtrlCallSign->GetValue();
             if (callsignFormat.Matches(wxCallsign) && wxGetApp().m_pskPendingCallsign != callsignFormat.GetMatch(wxCallsign, 1).ToStdString())
             {
                 wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
@@ -1422,12 +1405,6 @@ void MainFrame::OnExit(wxCommandEvent& event)
         wxGetApp().m_pskReporter = NULL;
     }
     
-    if (wxGetApp().m_callsignEncoder)
-    {
-        delete wxGetApp().m_callsignEncoder;
-        wxGetApp().m_callsignEncoder = NULL;
-    }
-    
     //fprintf(stderr, "MainFrame::OnExit\n");
     wxUnusedVar(event);
 #ifdef _USE_TIMER
@@ -1595,7 +1572,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         g_sfTxFs = FS;
         
         wxGetApp().m_prevMode = g_mode;
-        freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread);
+        freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread, wxGetApp().m_psk_enable);
         
         if (wxGetApp().m_FreeDV700ManualUnSync) {
             freedvInterface.setSync(FREEDV_SYNC_MANUAL);
@@ -1679,7 +1656,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
                 // attempt to start PTT ......
                 wxGetApp().m_pskReporter = NULL;
-                wxGetApp().m_callsignEncoder = NULL;
                 if (wxGetApp().m_boolHamlibUseForPTT)
                     OpenHamlibRig();
                 else if (wxGetApp().m_psk_enable)
@@ -1749,12 +1725,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         {
             delete wxGetApp().m_pskReporter;
             wxGetApp().m_pskReporter = NULL;
-        }
-
-        if (wxGetApp().m_callsignEncoder)
-        {
-            delete wxGetApp().m_callsignEncoder;
-            wxGetApp().m_callsignEncoder = NULL;
         }
         
         if (wxGetApp().m_boolUseSerialPTT) {
