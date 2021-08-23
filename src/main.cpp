@@ -1592,6 +1592,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         {
             freedvInterface.setTextCallbackFn(&my_put_next_rx_char, &my_get_next_tx_char);
         }
+        else
+        {
+            char temp[1024];
+            strncpy(temp, wxGetApp().m_psk_callsign.ToUTF8(), wxGetApp().m_psk_callsign.Length());
+            freedvInterface.setReliableText(temp);
+        }
         
         g_error_hist = new short[MODEM_STATS_NC_MAX*2];
         g_error_histn = new short[MODEM_STATS_NC_MAX*2];

@@ -98,6 +98,7 @@ public:
     
     void resetReliableText();
     const char* getReliableText();
+    void setReliableText(const char* callsign);
     
 private:
     struct FreeDVTextFnState

@@ -766,3 +766,11 @@ const char* FreeDVInterface::getReliableText()
     ret[receivedReliableText_.size()] = 0;
     return ret;
 }
+
+void FreeDVInterface::setReliableText(const char* callsign)
+{
+    for (auto& rt : reliableText_)
+    {
+        reliable_text_set_string(rt, callsign, strlen(callsign));
+    }
+}
