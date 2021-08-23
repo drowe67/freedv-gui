@@ -176,16 +176,17 @@ private:
     std::deque<SRC_STATE*> outRateConvObjs_;
     std::deque<float> snrVals_;
     std::deque<EventHandlerThread<RxAudioThreadState*, RxAudioThreadState*> *> threads_;
-    std::deque<reliable_text_t> reliableText_;
     COMP txFreqOffsetPhaseRectObj_;
     std::deque<COMP*> rxFreqOffsetPhaseRectObjs_;
-    std::string receivedReliableText_;
     struct MODEM_STATS* modemStatsList_;
     int modemStatsIndex_;
     
     struct freedv* currentTxMode_;
     struct freedv* currentRxMode_; 
     struct freedv* lastSyncRxMode_;
+    
+    std::deque<reliable_text_t> reliableText_;
+    std::string receivedReliableText_;
 };
 
 template<typename R, typename T>

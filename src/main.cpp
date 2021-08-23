@@ -1176,6 +1176,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         const char* text = freedvInterface.getReliableText();
         assert(text != nullptr);
         wxString wxCallsign = text;
+        m_txtCtrlCallSign->SetValue(wxCallsign);
         delete[] text;
         
         if (wxCallsign.Length() > 0)
@@ -1587,8 +1588,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         freedvInterface.setVerbose(g_freedv_verbose);
 
         // Text field/callsign callbacks.
-        freedvInterface.setTextCallbackFn(&my_put_next_rx_char, &my_get_next_tx_char);
-
+        if (!wxGetApp().m_psk_enable)
+        {
+            freedvInterface.setTextCallbackFn(&my_put_next_rx_char, &my_get_next_tx_char);
+        }
+        
         g_error_hist = new short[MODEM_STATS_NC_MAX*2];
         g_error_histn = new short[MODEM_STATS_NC_MAX*2];
         int i;

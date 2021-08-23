@@ -132,8 +132,8 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
             reliable_text_t rt = reliable_text_create();
             assert(rt != nullptr);
             
-            reliableText_.push_back(rt);
             reliable_text_use_with_freedv(rt, dv, &FreeDVInterface::OnReliableTextRx_, this);
+            reliableText_.push_back(rt);
         }
     }
 }
@@ -751,6 +751,7 @@ void FreeDVInterface::resetReliableText()
     {
         reliable_text_reset(rt);
     }
+    receivedReliableText_ = "";
 }
 
 const char* FreeDVInterface::getReliableText()
@@ -758,6 +759,10 @@ const char* FreeDVInterface::getReliableText()
     char* ret = new char[receivedReliableText_.size() + 1];
     assert(ret != nullptr);
     
-    strncpy(ret, receivedReliableText_.c_str(), receivedReliableText_.size());
+    if (receivedReliableText_.size() > 0)
+    {
+        strncpy(ret, receivedReliableText_.c_str(), receivedReliableText_.size());
+    }
+    ret[receivedReliableText_.size()] = 0;
     return ret;
 }
