@@ -1,4 +1,4 @@
-set(PORTAUDIO_TARBALL "pa_snapshot")
+set(PORTAUDIO_GIT "https://github.com/PortAudio/portaudio.git")
 
 # required linking libraries on linux. Not sure about windows.
 find_library(ALSA_LIBRARIES asound)
@@ -28,6 +28,8 @@ endif()
 include(ExternalProject)
 if(APPLE)
 ExternalProject_Add(portaudio
+    GIT_REPOSITORY ${PORTAUDIO_GIT}
+    GIT_TAG origin/master
     URL http://files.portaudio.com/archives/${PORTAUDIO_TARBALL}.tgz
     BUILD_IN_SOURCE 1
     INSTALL_DIR external/dist
@@ -38,7 +40,8 @@ ExternalProject_Add(portaudio
 )
 else()
 ExternalProject_Add(portaudio
-    URL http://files.portaudio.com/archives/${PORTAUDIO_TARBALL}.tgz
+    GIT_REPOSITORY ${PORTAUDIO_GIT}
+    GIT_TAG origin/master
     BUILD_IN_SOURCE 1
     INSTALL_DIR external/dist
     CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
