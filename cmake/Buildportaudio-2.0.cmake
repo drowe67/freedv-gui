@@ -30,7 +30,6 @@ if(APPLE)
 ExternalProject_Add(portaudio
     GIT_REPOSITORY ${PORTAUDIO_GIT}
     GIT_TAG origin/master
-    URL http://files.portaudio.com/archives/${PORTAUDIO_TARBALL}.tgz
     BUILD_IN_SOURCE 1
     INSTALL_DIR external/dist
     CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
