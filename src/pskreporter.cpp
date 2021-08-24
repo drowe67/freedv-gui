@@ -19,7 +19,7 @@
 
 #include "pskreporter.h"
 
-#define PSK_REPORTER_TEST
+//#define PSK_REPORTER_TEST
 #if defined(PSK_REPORTER_TEST)
 // Test server
 #define PSK_REPORTER_HOSTNAME "report.pskreporter.info"
