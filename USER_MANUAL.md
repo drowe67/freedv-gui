@@ -378,6 +378,10 @@ Reports sent to PSK Reporter will display using the mode "FREEDV" for ease of fi
 current mode (e.g. 700D, 1600, etc.) will also appear in the "Using" field when hovering over or 
 clicking on a reception report.
 
+The frequency that FreeDV reports to PSK Reporter is set by changing the "Report Frequency" text box in the
+main window. This is in kilohertz (KHz). If Hamlib support is also enabled, this frequency will automatically 
+update on start/stop as well as when switching between transmit and receive.
+
 # Multiple Mode Support (Experimental)
 
 FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
