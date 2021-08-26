@@ -1197,7 +1197,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             }
             
             wxString freqStr = m_txtCtrlReportFrequency->GetValue();
-            if (freqStr.Size() > 0)
+            if (freqStr.Length() > 0)
             {
                 unsigned int freq = atoi(freqStr.ToUTF8()) * 1000;
                 if (freq > 0)
