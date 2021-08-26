@@ -296,6 +296,7 @@ class MainApp : public wxApp
         bool                m_psk_enable;
         wxString            m_psk_callsign;
         wxString            m_psk_grid_square;
+        int                 m_psk_freq;
 
         PskReporter*            m_pskReporter;
         std::string         m_pskPendingCallsign;
@@ -646,6 +647,8 @@ class MainFrame : public TopFrame
         void OnChangeTxMode( wxCommandEvent& event );
         
         void OnChangeTxLevel( wxScrollEvent& event );
+        
+        void OnChangeReportFrequency( wxCommandEvent& event );
     private:
         bool        m_useMemory;
         wxTextCtrl* m_tc;

@@ -535,6 +535,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxGetApp().m_psk_enable = pConfig->ReadBool(wxT("/PSKReporter/Enable"), false);
     wxGetApp().m_psk_callsign = pConfig->Read(wxT("/PSKReporter/Callsign"), wxT(""));
     wxGetApp().m_psk_grid_square = pConfig->Read(wxT("/PSKReporter/GridSquare"), wxT(""));
+    wxGetApp().m_psk_freq = (int)pConfig->Read(wxT("/PSKReporter/Frequency"), (int)0);
+    m_txtCtrlReportFrequency->SetValue(wxString::Format("%d", wxGetApp().m_psk_freq));
     
     // Waterfall configuration
     wxGetApp().m_waterfallColor = (int)pConfig->Read(wxT("/Waterfall/Color"), (int)0); // 0-2
@@ -776,6 +778,7 @@ MainFrame::~MainFrame()
     pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);
     pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
     pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
+    pConfig->Write(wxT("/PSKReporter/Frequency"), wxGetApp().m_psk_freq);
     
     // Waterfall configuration
     pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
@@ -1196,24 +1199,20 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 wxGetApp().m_hamlib->update_frequency_and_mode();
             }
             
-            wxString freqStr = m_txtCtrlReportFrequency->GetValue();
-            if (freqStr.Length() > 0)
+            unsigned int freq = wxGetApp().m_psk_freq * 1000;
+            if (freq > 0)
             {
-                unsigned int freq = atoi(freqStr.ToUTF8()) * 1000;
-                if (freq > 0)
-                {
-                    fprintf(
-                        stderr, 
-                        "Adding callsign %s @ SNR %d, freq %d to PSK Reporter.\n", 
-                        wxGetApp().m_pskPendingCallsign.c_str(), 
-                        wxGetApp().m_pskPendingSnr,
-                        freq);
-            
-                    wxGetApp().m_pskReporter->addReceiveRecord(
-                        wxGetApp().m_pskPendingCallsign,
-                        freq,
-                        wxGetApp().m_pskPendingSnr);
-                }
+                fprintf(
+                    stderr, 
+                    "Adding callsign %s @ SNR %d, freq %d to PSK Reporter.\n", 
+                    wxGetApp().m_pskPendingCallsign.c_str(), 
+                    wxGetApp().m_pskPendingSnr,
+                    freq);
+        
+                wxGetApp().m_pskReporter->addReceiveRecord(
+                    wxGetApp().m_pskPendingCallsign,
+                    freq,
+                    wxGetApp().m_pskPendingSnr);
             }
             
             wxGetApp().m_pskPendingCallsign = "";

@@ -180,6 +180,8 @@ class TopFrame : public wxFrame
         
         virtual void OnChangeTxLevel( wxScrollEvent& event ) { event.Skip(); }
         
+        virtual void OnChangeReportFrequency( wxCommandEvent& event ) { event.Skip(); }
+        
     public:
         wxToggleButton* m_togBtnOnOff;
         wxToggleButton* m_togBtnSplit;
