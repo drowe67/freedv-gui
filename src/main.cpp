@@ -1191,18 +1191,31 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
         else if (wxGetApp().m_pskPendingCallsign != "")
         {
-            wxGetApp().m_hamlib->update_frequency_and_mode();
-            fprintf(
-                stderr, 
-                "Adding callsign %s @ SNR %d, freq %d to PSK Reporter.\n", 
-                wxGetApp().m_pskPendingCallsign.c_str(), 
-                wxGetApp().m_pskPendingSnr,
-                (unsigned int)wxGetApp().m_hamlib->get_frequency());
+            if (wxGetApp().m_boolHamlibUseForPTT)
+            {
+                wxGetApp().m_hamlib->update_frequency_and_mode();
+            }
             
-            wxGetApp().m_pskReporter->addReceiveRecord(
-                wxGetApp().m_pskPendingCallsign,
-                wxGetApp().m_hamlib->get_frequency(),
-                wxGetApp().m_pskPendingSnr);
+            wxString freqStr = m_txtCtrlReportFrequency->GetValue();
+            if (freqStr.Size() > 0)
+            {
+                unsigned int freq = atoi(freqStr.ToUTF8()) * 1000;
+                if (freq > 0)
+                {
+                    fprintf(
+                        stderr, 
+                        "Adding callsign %s @ SNR %d, freq %d to PSK Reporter.\n", 
+                        wxGetApp().m_pskPendingCallsign.c_str(), 
+                        wxGetApp().m_pskPendingSnr,
+                        freq);
+            
+                    wxGetApp().m_pskReporter->addReceiveRecord(
+                        wxGetApp().m_pskPendingCallsign,
+                        freq,
+                        wxGetApp().m_pskPendingSnr);
+                }
+            }
+            
             wxGetApp().m_pskPendingCallsign = "";
             wxGetApp().m_pskPendingSnr = 0;
         }
@@ -1670,13 +1683,74 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 wxGetApp().m_pskReporter = NULL;
                 if (wxGetApp().m_boolHamlibUseForPTT)
                     OpenHamlibRig();
-                else if (wxGetApp().m_psk_enable)
-                {
-                    wxMessageBox("Hamlib support must be enabled to report to PSK Reporter. PSK Reporter reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-                }
 
                 if (wxGetApp().m_boolUseSerialPTT) {
                     OpenSerialPort();
+                }
+                
+                // Initialize PSK Reporter reporting.
+                if (wxGetApp().m_psk_enable)
+                {
+                    std::string currentMode = "";
+                    switch (g_mode)
+                    {
+                        case FREEDV_MODE_1600:
+                            currentMode = "1600";
+                            break;
+                        case FREEDV_MODE_700C:
+                            currentMode = "700C";
+                            break;
+                        case FREEDV_MODE_700D:
+                            currentMode = "700D";
+                            break;
+                        case FREEDV_MODE_800XA:
+                            currentMode = "800XA";
+                            break;
+                        case FREEDV_MODE_2400B:
+                            currentMode = "2400B";
+                            break;
+                        case FREEDV_MODE_2020:
+                            currentMode = "2020";
+                            break;
+                        case FREEDV_MODE_700E:
+                            currentMode = "700E";
+                            break;
+                        default:
+                            currentMode = "unknown";
+                            break;
+                    }
+        
+                    if (wxGetApp().m_psk_callsign.ToStdString() == "" || wxGetApp().m_psk_grid_square.ToStdString() == "")
+                    {
+                        wxMessageBox("PSK Reporter reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+                    }
+                    else
+                    {
+                        wxGetApp().m_pskReporter = new PskReporter(
+                            wxGetApp().m_psk_callsign.ToStdString(), 
+                            wxGetApp().m_psk_grid_square.ToStdString(),
+                            std::string("FreeDV ") + FREEDV_VERSION + " " + currentMode);
+                        wxGetApp().m_pskPendingCallsign = "";
+                        wxGetApp().m_pskPendingSnr = 0;
+        
+                        // Send empty packet to verify network connectivity.
+                        bool success = wxGetApp().m_pskReporter->send();
+                        if (success)
+                        {
+                            // Enable PSK Reporter timer (every 5 minutes).
+                            m_pskReporterTimer.Start(5 * 60 * 1000);
+                        }
+                        else
+                        {
+                            wxMessageBox("Couldn't connect to PSK Reporter server. Reporting functionality will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+                            delete wxGetApp().m_pskReporter;
+                            wxGetApp().m_pskReporter = NULL;
+                        }
+                    }
+                }
+                else
+                {
+                    wxGetApp().m_pskReporter = NULL;
                 }
 
                 if (wxGetApp().m_boolUseSerialPTTInput)

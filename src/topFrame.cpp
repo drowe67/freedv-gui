@@ -432,9 +432,24 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnTogPTT->SetToolTip(_("Push to Talk - Switch between Receive and Transmit - you can also use the space bar "));
     bSizer11->Add(m_btnTogPTT, 1, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
     sbSizer5->Add(bSizer11, 2, wxEXPAND, 1);
-    rightSizer->Add(sbSizer5, 2, wxALL|wxEXPAND, 3);
+    rightSizer->Add(sbSizer5, 2, wxALL|wxEXPAND, 1);
+    
+    // Frequency text field (PSK Reporter)
+    wxStaticBox* freqBox = new wxStaticBox(panel, wxID_ANY, _("Report Frequency"));
+    wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(freqBox, wxHORIZONTAL);
+    
+    wxStaticText* reportFrequencyUnits = new wxStaticText(freqBox, wxID_ANY, wxT(" KHz"), wxDefaultPosition, wxDefaultSize, 0);
+    wxBoxSizer* txtReportFreqSizer = new wxBoxSizer(wxVERTICAL);
+    m_txtCtrlReportFrequency = new wxTextCtrl(freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+    m_txtCtrlReportFrequency->SetMaxSize(wxSize(60,-1));
+    txtReportFreqSizer->Add(m_txtCtrlReportFrequency, 0, 0, 1);
+    reportFrequencySizer->Add(txtReportFreqSizer, 0, 0, 1);
+    reportFrequencySizer->Add(reportFrequencyUnits, 0, wxEXPAND, 1);
+    
+    rightSizer->Add(reportFrequencySizer, 0, wxALL, 1);
+    
     bSizer1->Add(rightSizer, 0, wxALL|wxEXPAND, 3);
-        
+    
     panel->SetSizerAndFit(bSizer1);
     this->Layout();
 

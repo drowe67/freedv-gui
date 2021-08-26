@@ -40,6 +40,7 @@ static int build_list(const struct rig_caps *rig, rig_ptr_t);
 Hamlib::Hamlib() : 
     m_rig(NULL),
     m_modeBox(NULL),
+    m_freqBox(NULL),
     m_currFreq(0),
     m_currMode(RIG_MODE_USB),
     m_vhfUhfMode(false)  {
@@ -242,10 +243,12 @@ int Hamlib::update_frequency_and_mode(void)
     return result;
 }
 
-void Hamlib::enable_mode_detection(wxStaticText* statusBox, bool vhfUhfMode)
+void Hamlib::enable_mode_detection(wxStaticText* statusBox, wxTextCtrl* freqBox, bool vhfUhfMode)
 {
     // Set VHF/UHF mode. This governs whether FM is an acceptable mode for the detection display.
     m_vhfUhfMode = vhfUhfMode;
+    
+    m_freqBox = freqBox;
     
     // Enable control.
     m_modeBox = statusBox;
@@ -322,6 +325,9 @@ void Hamlib::update_mode_status()
         m_modeBox->SetForegroundColour(wxColor(*wxRED));
     }
 
+    // Update frequency box
+    m_freqBox->SetValue(wxString::Format("%d", (unsigned int)m_currFreq/1000));
+    
     // Refresh
     m_modeBox->Refresh();
 }

@@ -184,72 +184,7 @@ bool MainFrame::OpenHamlibRig() {
     }
     else
     {
-        wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, g_mode == FREEDV_MODE_2400B);
-    }
-
-    // Initialize PSK Reporter reporting.
-    if (status && wxGetApp().m_psk_enable)
-    {
-        std::string currentMode = "";
-        switch (g_mode)
-        {
-            case FREEDV_MODE_1600:
-                currentMode = "1600";
-                break;
-            case FREEDV_MODE_700C:
-                currentMode = "700C";
-                break;
-            case FREEDV_MODE_700D:
-                currentMode = "700D";
-                break;
-            case FREEDV_MODE_800XA:
-                currentMode = "800XA";
-                break;
-            case FREEDV_MODE_2400B:
-                currentMode = "2400B";
-                break;
-            case FREEDV_MODE_2020:
-                currentMode = "2020";
-                break;
-            case FREEDV_MODE_700E:
-                currentMode = "700E";
-                break;
-            default:
-                currentMode = "unknown";
-                break;
-        }
-        
-        if (wxGetApp().m_psk_callsign.ToStdString() == "" || wxGetApp().m_psk_grid_square.ToStdString() == "")
-        {
-            wxMessageBox("PSK Reporter reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-        }
-        else
-        {
-            wxGetApp().m_pskReporter = new PskReporter(
-                wxGetApp().m_psk_callsign.ToStdString(), 
-                wxGetApp().m_psk_grid_square.ToStdString(),
-                std::string("FreeDV ") + FREEDV_VERSION + " " + currentMode);
-            wxGetApp().m_pskPendingCallsign = "";
-            wxGetApp().m_pskPendingSnr = 0;
-        
-            // Send empty packet to verify network connectivity.
-            bool success = wxGetApp().m_pskReporter->send();
-            if (success)
-            {
-                // Enable PSK Reporter timer (every 5 minutes).
-                m_pskReporterTimer.Start(5 * 60 * 1000);
-            }
-            else
-            {
-                wxMessageBox("Couldn't connect to PSK Reporter server. Reporting functionality will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-                delete wxGetApp().m_pskReporter;
-                wxGetApp().m_pskReporter = NULL;
-            }
-        }
-    }
-    else
-    {
-        wxGetApp().m_pskReporter = NULL;
+        wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, m_txtCtrlReportFrequency, g_mode == FREEDV_MODE_2400B);
     }
     
     return status;
