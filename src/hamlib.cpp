@@ -262,6 +262,7 @@ void Hamlib::enable_mode_detection(wxStaticText* statusBox, wxTextCtrl* freqBox,
     {
         m_modeBox->SetLabel(wxT("unk"));
         m_modeBox->Enable(false);
+        m_modeBox->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
         m_modeBox = NULL;
     }
     else
@@ -295,6 +296,7 @@ void Hamlib::disable_mode_detection()
         // Disable control.
         m_modeBox->SetLabel(wxT("unk"));
         m_modeBox->Enable(false);
+        m_modeBox->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
         m_modeBox = NULL;
     }
 }
