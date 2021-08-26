@@ -378,8 +378,6 @@ Reports sent to PSK Reporter will display using the mode "FREEDV" for ease of fi
 current mode (e.g. 700D, 1600, etc.) will also appear in the "Using" field when hovering over or 
 clicking on a reception report.
 
-Note that Hamlib must be enabled so PSK Reporter can read your radio's frequency. A message will appear on pushing Start if this is not the case.
-
 # Multiple Mode Support (Experimental)
 
 FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
