@@ -379,7 +379,7 @@ current mode (e.g. 700D, 1600, etc.) will also appear in the "Using" field when 
 clicking on a reception report.
 
 The frequency that FreeDV reports to PSK Reporter is set by changing the "Report Frequency" text box in the
-main window. This is in kilohertz (KHz) and will turn red if the entered value is invalid. If Hamlib support 
+main window. This is in kilohertz (kHz) and will turn red if the entered value is invalid. If Hamlib support 
 is also enabled, this frequency will automatically update on start/stop as well as when switching between 
 transmit and receive.
 

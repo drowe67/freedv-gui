@@ -438,7 +438,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBox* freqBox = new wxStaticBox(panel, wxID_ANY, _("Report Frequency"));
     wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(freqBox, wxHORIZONTAL);
     
-    wxStaticText* reportFrequencyUnits = new wxStaticText(freqBox, wxID_ANY, wxT(" KHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    wxStaticText* reportFrequencyUnits = new wxStaticText(freqBox, wxID_ANY, wxT(" kHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     wxBoxSizer* txtReportFreqSizer = new wxBoxSizer(wxVERTICAL);
     m_txtCtrlReportFrequency = new wxTextCtrl(freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_RIGHT);
     m_txtCtrlReportFrequency->SetMinSize(wxSize(100,-1));
