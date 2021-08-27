@@ -535,8 +535,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxGetApp().m_psk_enable = pConfig->ReadBool(wxT("/PSKReporter/Enable"), false);
     wxGetApp().m_psk_callsign = pConfig->Read(wxT("/PSKReporter/Callsign"), wxT(""));
     wxGetApp().m_psk_grid_square = pConfig->Read(wxT("/PSKReporter/GridSquare"), wxT(""));
-    wxGetApp().m_psk_freq = (int)pConfig->Read(wxT("/PSKReporter/Frequency"), (int)0);
-    m_txtCtrlReportFrequency->SetValue(wxString::Format("%d", wxGetApp().m_psk_freq));
+    wxGetApp().m_psk_freq = (float)pConfig->Read(wxT("/PSKReporter/Frequency"), (float)0);
+    m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", wxGetApp().m_psk_freq));
     
     // Waterfall configuration
     wxGetApp().m_waterfallColor = (int)pConfig->Read(wxT("/Waterfall/Color"), (int)0); // 0-2

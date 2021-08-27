@@ -328,7 +328,7 @@ void Hamlib::update_mode_status()
     }
 
     // Update frequency box
-    m_freqBox->SetValue(wxString::Format("%d", (unsigned int)m_currFreq/1000));
+    m_freqBox->SetValue(wxString::Format("%.1f", m_currFreq/1000));
     
     // Refresh
     m_modeBox->Refresh();

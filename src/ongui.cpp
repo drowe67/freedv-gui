@@ -514,7 +514,7 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     wxString freqStr = m_txtCtrlReportFrequency->GetValue();
     if (freqStr.Length() > 0)
     {
-        wxGetApp().m_psk_freq = atoi(freqStr.ToUTF8());
+        wxGetApp().m_psk_freq = atof(freqStr.ToUTF8());
     }
     else
     {
