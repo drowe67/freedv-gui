@@ -515,10 +515,19 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     if (freqStr.Length() > 0)
     {
         wxGetApp().m_psk_freq = atof(freqStr.ToUTF8());
+        if (wxGetApp().m_psk_freq > 0)
+        {
+            m_txtCtrlReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+        }
+        else
+        {
+            m_txtCtrlReportFrequency->SetForegroundColour(wxColor(*wxRED));
+        }
     }
     else
     {
         wxGetApp().m_psk_freq = 0;
+        m_txtCtrlReportFrequency->SetForegroundColour(wxColor(*wxRED));
     }
 }
 
