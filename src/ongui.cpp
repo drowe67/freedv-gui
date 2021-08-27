@@ -514,7 +514,7 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     wxString freqStr = m_txtCtrlReportFrequency->GetValue();
     if (freqStr.Length() > 0)
     {
-        wxGetApp().m_psk_freq = atof(freqStr.ToUTF8());
+        wxGetApp().m_psk_freq = atof(freqStr.ToUTF8()) * 1000;
         if (wxGetApp().m_psk_freq > 0)
         {
             m_txtCtrlReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));

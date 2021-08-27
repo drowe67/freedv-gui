@@ -296,7 +296,7 @@ class MainApp : public wxApp
         bool                m_psk_enable;
         wxString            m_psk_callsign;
         wxString            m_psk_grid_square;
-        float               m_psk_freq;
+        int                 m_psk_freq;
 
         PskReporter*            m_pskReporter;
         std::string         m_pskPendingCallsign;
