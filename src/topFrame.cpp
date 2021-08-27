@@ -438,13 +438,13 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBox* freqBox = new wxStaticBox(panel, wxID_ANY, _("Report Frequency"));
     wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(freqBox, wxHORIZONTAL);
     
-    wxStaticText* reportFrequencyUnits = new wxStaticText(freqBox, wxID_ANY, wxT(" KHz"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* reportFrequencyUnits = new wxStaticText(freqBox, wxID_ANY, wxT(" KHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     wxBoxSizer* txtReportFreqSizer = new wxBoxSizer(wxVERTICAL);
-    m_txtCtrlReportFrequency = new wxTextCtrl(freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-    m_txtCtrlReportFrequency->SetMaxSize(wxSize(60,-1));
+    m_txtCtrlReportFrequency = new wxTextCtrl(freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_RIGHT);
+    m_txtCtrlReportFrequency->SetMinSize(wxSize(80,-1));
     txtReportFreqSizer->Add(m_txtCtrlReportFrequency, 0, 0, 1);
-    reportFrequencySizer->Add(txtReportFreqSizer, 0, 0, 1);
-    reportFrequencySizer->Add(reportFrequencyUnits, 0, wxEXPAND, 1);
+    reportFrequencySizer->Add(txtReportFreqSizer, 0, wxEXPAND, 1);
+    reportFrequencySizer->Add(reportFrequencyUnits, 0, wxALIGN_CENTER_VERTICAL, 1);
     
     rightSizer->Add(reportFrequencySizer, 0, wxALL, 1);
     
@@ -474,7 +474,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_togBtnSplit->MoveBeforeInTabOrder(m_togBtnAnalog);
     m_togBtnAnalog->MoveBeforeInTabOrder(m_togBtnVoiceKeyer);
     m_togBtnVoiceKeyer->MoveBeforeInTabOrder(m_btnTogPTT);
-        
+    
     //-------------------
     // Connect Events
     //-------------------
