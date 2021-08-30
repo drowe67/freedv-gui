@@ -1728,7 +1728,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                         wxGetApp().m_pskReporter = new PskReporter(
                             wxGetApp().m_psk_callsign.ToStdString(), 
                             wxGetApp().m_psk_grid_square.ToStdString(),
-                            std::string("FreeDV ") + FREEDV_VERSION + " " + currentMode);
+                            std::string("FreeDV ") + FREEDV_VERSION);
                         wxGetApp().m_pskPendingCallsign = "";
                         wxGetApp().m_pskPendingSnr = 0;
         
