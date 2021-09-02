@@ -25,7 +25,6 @@
 #include <wx/cmdline.h>
 #include "main.h"
 #include "osx_interface.h"
-#include "callsign_encoder.h"
 #include "freedv_interface.h"
 
 #define wxUSE_FILEDLG   1
@@ -213,7 +212,6 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 bool MainApp::OnInit()
 {
     m_pskReporter = NULL;
-    m_callsignEncoder = NULL;
     
     if(!wxApp::OnInit())
     {
@@ -537,6 +535,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxGetApp().m_psk_enable = pConfig->ReadBool(wxT("/PSKReporter/Enable"), false);
     wxGetApp().m_psk_callsign = pConfig->Read(wxT("/PSKReporter/Callsign"), wxT(""));
     wxGetApp().m_psk_grid_square = pConfig->Read(wxT("/PSKReporter/GridSquare"), wxT(""));
+    wxGetApp().m_psk_freq = (int)pConfig->Read(wxT("/PSKReporter/FrequencyHz"), (int)0);
+    m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((float)wxGetApp().m_psk_freq)/1000.0));
     
     // Waterfall configuration
     wxGetApp().m_waterfallColor = (int)pConfig->Read(wxT("/Waterfall/Color"), (int)0); // 0-2
@@ -778,6 +778,7 @@ MainFrame::~MainFrame()
     pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);
     pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
     pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
+    pConfig->Write(wxT("/PSKReporter/FrequencyHz"), wxGetApp().m_psk_freq);
     
     // Waterfall configuration
     pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
@@ -1095,7 +1096,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     if (g_State) {
         if (g_prev_State == 0) {
             g_resyncs++;
-            if (wxGetApp().m_callsignEncoder) wxGetApp().m_callsignEncoder->clearReceivedText();
             
             // Clear RX text to reduce the incidence of incorrect callsigns extracted with
             // the PSK Reporter callsign extraction logic.
@@ -1105,6 +1105,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             
             // Get current time to enforce minimum sync time requirement for PSK Reporter.
             g_sync_time = time(0);
+            
+            freedvInterface.resetReliableText();
         }
         m_textSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
 	    m_textSync->SetLabel("Modem");
@@ -1119,57 +1121,34 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     // send Callsign ----------------------------------------------------
 
     char callsign[MAX_CALLSIGN];
-    
-    // Convert to 6 bit character set for use with Golay encoding.
     memset(callsign, 0, MAX_CALLSIGN);
     
-    if (wxGetApp().m_callsignEncoder)
-    {
-        strncpy(callsign, (const char*) wxGetApp().m_psk_callsign.mb_str(wxConvUTF8), MAX_CALLSIGN/2 - 2);
-        if (strlen(callsign) < MAX_CALLSIGN/2 - 1)
-        {
-            strncat(callsign, "\r", 1);
-        }    
-        wxGetApp().m_callsignEncoder->setCallsign(&callsign[0]);
-    }
-    else
+    if (!wxGetApp().m_psk_enable)
     {
         strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
         if (strlen(callsign) < MAX_CALLSIGN - 1)
         {
             strncat(callsign, "\r", 1);
-        }    
-    }   
+        }     
      
-    // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
-    char* sendBuffer = &callsign[0];
-    if (wxGetApp().m_callsignEncoder) sendBuffer = (char*)wxGetApp().m_callsignEncoder->getEncodedCallsign();
-    if ((unsigned)codec2_fifo_used(g_txDataInFifo) < strlen(sendBuffer)) {
-        unsigned int  i;
+        // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
+        char* sendBuffer = &callsign[0];
+        if ((unsigned)codec2_fifo_used(g_txDataInFifo) < strlen(sendBuffer)) {
+            unsigned int  i;
 
-        // write chars to tx data fifo
-        for(i = 0; i < strlen(sendBuffer); i++) {
-            short ashort = (unsigned char)sendBuffer[i];
-            codec2_fifo_write(g_txDataInFifo, &ashort, 1);
+            // write chars to tx data fifo
+            for(i = 0; i < strlen(sendBuffer); i++) {
+                short ashort = (unsigned char)sendBuffer[i];
+                codec2_fifo_write(g_txDataInFifo, &ashort, 1);
+            }
         }
-    }
 
-    // See if any Callsign info received --------------------------------
+        // See if any Callsign info received --------------------------------
 
-    short ashort;
-    while (codec2_fifo_read(g_rxDataOutFifo, &ashort, 1) == 0) {
-        unsigned char incomingChar = (unsigned char)ashort;
+        short ashort;
+        while (codec2_fifo_read(g_rxDataOutFifo, &ashort, 1) == 0) {
+            unsigned char incomingChar = (unsigned char)ashort;
         
-        if (wxGetApp().m_callsignEncoder)
-        {
-            wxGetApp().m_callsignEncoder->pushReceivedByte(incomingChar);    
-            if (wxGetApp().m_callsignEncoder->isInSync())
-            {
-                m_txtCtrlCallSign->SetValue(wxGetApp().m_callsignEncoder->getReceivedText());
-            }        
-        }
-        else
-        {
             // Pre-1.5.1 behavior, where text is handled as-is.
             if (incomingChar == '\r' || incomingChar == '\n' || incomingChar == 0 || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
             {                        
@@ -1178,7 +1157,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 {
                     memset(m_pcallsign, 0, MAX_CALLSIGN - (m_pcallsign - m_callsign));
                 }
-                
+            
                 // Reset to the beginning.
                 m_pcallsign = m_callsign;
             }
@@ -1195,12 +1174,17 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
     // c) We don't currently have a pending report to add to the outbound list for the active callsign.
     // When the above is true, capture the callsign and current SNR and add to the PSK Reporter object's outbound list.
-    if (wxGetApp().m_pskReporter != NULL && wxGetApp().m_callsignEncoder != NULL)
+    if (wxGetApp().m_pskReporter != NULL && wxGetApp().m_psk_enable)
     {
-        if (wxGetApp().m_callsignEncoder->isCallsignValid())
+        const char* text = freedvInterface.getReliableText();
+        assert(text != nullptr);
+        wxString wxCallsign = text;
+        m_txtCtrlCallSign->SetValue(wxCallsign);
+        delete[] text;
+        
+        if (wxCallsign.Length() > 0)
         {
             wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
-            wxString wxCallsign = m_txtCtrlCallSign->GetValue();
             if (callsignFormat.Matches(wxCallsign) && wxGetApp().m_pskPendingCallsign != callsignFormat.GetMatch(wxCallsign, 1).ToStdString())
             {
                 wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
@@ -1210,18 +1194,27 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
         else if (wxGetApp().m_pskPendingCallsign != "")
         {
-            wxGetApp().m_hamlib->update_frequency_and_mode();
-            fprintf(
-                stderr, 
-                "Adding callsign %s @ SNR %d, freq %d to PSK Reporter.\n", 
-                wxGetApp().m_pskPendingCallsign.c_str(), 
-                wxGetApp().m_pskPendingSnr,
-                (unsigned int)wxGetApp().m_hamlib->get_frequency());
+            if (wxGetApp().m_boolHamlibUseForPTT)
+            {
+                wxGetApp().m_hamlib->update_frequency_and_mode();
+            }
             
-            wxGetApp().m_pskReporter->addReceiveRecord(
-                wxGetApp().m_pskPendingCallsign,
-                wxGetApp().m_hamlib->get_frequency(),
-                wxGetApp().m_pskPendingSnr);
+            unsigned int freq = wxGetApp().m_psk_freq;
+            if (freq > 0)
+            {
+                fprintf(
+                    stderr, 
+                    "Adding callsign %s @ SNR %d, freq %d to PSK Reporter.\n", 
+                    wxGetApp().m_pskPendingCallsign.c_str(), 
+                    wxGetApp().m_pskPendingSnr,
+                    freq);
+        
+                wxGetApp().m_pskReporter->addReceiveRecord(
+                    wxGetApp().m_pskPendingCallsign,
+                    freq,
+                    wxGetApp().m_pskPendingSnr);
+            }
+            
             wxGetApp().m_pskPendingCallsign = "";
             wxGetApp().m_pskPendingSnr = 0;
         }
@@ -1425,12 +1418,6 @@ void MainFrame::OnExit(wxCommandEvent& event)
         wxGetApp().m_pskReporter = NULL;
     }
     
-    if (wxGetApp().m_callsignEncoder)
-    {
-        delete wxGetApp().m_callsignEncoder;
-        wxGetApp().m_callsignEncoder = NULL;
-    }
-    
     //fprintf(stderr, "MainFrame::OnExit\n");
     wxUnusedVar(event);
 #ifdef _USE_TIMER
@@ -1598,7 +1585,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         g_sfTxFs = FS;
         
         wxGetApp().m_prevMode = g_mode;
-        freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread);
+        freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread, wxGetApp().m_psk_enable);
         
         if (wxGetApp().m_FreeDV700ManualUnSync) {
             freedvInterface.setSync(FREEDV_SYNC_MANUAL);
@@ -1613,8 +1600,18 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         freedvInterface.setVerbose(g_freedv_verbose);
 
         // Text field/callsign callbacks.
-        freedvInterface.setTextCallbackFn(&my_put_next_rx_char, &my_get_next_tx_char);
-
+        if (!wxGetApp().m_psk_enable)
+        {
+            freedvInterface.setTextCallbackFn(&my_put_next_rx_char, &my_get_next_tx_char);
+        }
+        else
+        {
+            char temp[1024];
+            strncpy(temp, wxGetApp().m_psk_callsign.ToUTF8(), wxGetApp().m_psk_callsign.Length());
+            fprintf(stderr, "Setting callsign to %s\n", temp);
+            freedvInterface.setReliableText(temp);
+        }
+        
         g_error_hist = new short[MODEM_STATS_NC_MAX*2];
         g_error_histn = new short[MODEM_STATS_NC_MAX*2];
         int i;
@@ -1645,7 +1642,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_panelWaterfall->setFs(freedvInterface.getTxModemSampleRate());
 
         // Init text msg decoding
-        freedvInterface.setTextVaricodeNum(wxGetApp().m_textEncoding);
+        if (!wxGetApp().m_psk_enable)
+            freedvInterface.setTextVaricodeNum(wxGetApp().m_textEncoding);
 
         // scatter plot (PSK) or Eye (FSK) mode
 
@@ -1682,16 +1680,76 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
                 // attempt to start PTT ......
                 wxGetApp().m_pskReporter = NULL;
-                wxGetApp().m_callsignEncoder = NULL;
                 if (wxGetApp().m_boolHamlibUseForPTT)
                     OpenHamlibRig();
-                else if (wxGetApp().m_psk_enable)
-                {
-                    wxMessageBox("Hamlib support must be enabled to report to PSK Reporter. PSK Reporter reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-                }
 
                 if (wxGetApp().m_boolUseSerialPTT) {
                     OpenSerialPort();
+                }
+                
+                // Initialize PSK Reporter reporting.
+                if (wxGetApp().m_psk_enable)
+                {
+                    std::string currentMode = "";
+                    switch (g_mode)
+                    {
+                        case FREEDV_MODE_1600:
+                            currentMode = "1600";
+                            break;
+                        case FREEDV_MODE_700C:
+                            currentMode = "700C";
+                            break;
+                        case FREEDV_MODE_700D:
+                            currentMode = "700D";
+                            break;
+                        case FREEDV_MODE_800XA:
+                            currentMode = "800XA";
+                            break;
+                        case FREEDV_MODE_2400B:
+                            currentMode = "2400B";
+                            break;
+                        case FREEDV_MODE_2020:
+                            currentMode = "2020";
+                            break;
+                        case FREEDV_MODE_700E:
+                            currentMode = "700E";
+                            break;
+                        default:
+                            currentMode = "unknown";
+                            break;
+                    }
+        
+                    if (wxGetApp().m_psk_callsign.ToStdString() == "" || wxGetApp().m_psk_grid_square.ToStdString() == "")
+                    {
+                        wxMessageBox("PSK Reporter reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+                    }
+                    else
+                    {
+                        wxGetApp().m_pskReporter = new PskReporter(
+                            wxGetApp().m_psk_callsign.ToStdString(), 
+                            wxGetApp().m_psk_grid_square.ToStdString(),
+                            std::string("FreeDV ") + FREEDV_VERSION);
+                        wxGetApp().m_pskPendingCallsign = "";
+                        wxGetApp().m_pskPendingSnr = 0;
+        
+                        // Send empty packet to verify network connectivity.
+                        bool success = wxGetApp().m_pskReporter->send();
+                        if (success)
+                        {
+                            // Enable PSK Reporter timer (every 5 minutes).
+                            m_pskReporterTimer.Start(5 * 60 * 1000);
+                        }
+                        else
+                        {
+                            wxMessageBox("Couldn't connect to PSK Reporter server. Reporting functionality will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+                            delete wxGetApp().m_pskReporter;
+                            wxGetApp().m_pskReporter = NULL;
+                        }
+                    }
+                }
+                else
+                {
+                    wxGetApp().m_pskReporter = NULL;
                 }
 
                 if (wxGetApp().m_boolUseSerialPTTInput)
@@ -1752,12 +1810,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         {
             delete wxGetApp().m_pskReporter;
             wxGetApp().m_pskReporter = NULL;
-        }
-
-        if (wxGetApp().m_callsignEncoder)
-        {
-            delete wxGetApp().m_callsignEncoder;
-            wxGetApp().m_callsignEncoder = NULL;
         }
         
         if (wxGetApp().m_boolUseSerialPTT) {

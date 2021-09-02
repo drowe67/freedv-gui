@@ -374,11 +374,10 @@ FreeDV to disable the free form **Txt Msg** field and only transmit the **Callsi
 
 FreeDV validates the received information before submitting a position report to PSK Reporter. This is to ensure that FreeDV does not report invalid callsigns to the service (e.g. ones that don't exist or that correspond to real non-FreeDV users). However, all received text will display in the main window even if it has errors.
 
-Reports sent to PSK Reporter will display using the mode "FREEDV" for ease of filtering. The user's 
-current mode (e.g. 700D, 1600, etc.) will also appear in the "Using" field when hovering over or 
-clicking on a reception report.
-
-Note that Hamlib must be enabled so PSK Reporter can read your radio's frequency. A message will appear on pushing Start if this is not the case.
+Reports sent to PSK Reporter will display using the mode "FREEDV" for ease of filtering. The frequency that 
+FreeDV reports to PSK Reporter is set by changing the "Report Frequency" text box in the main window. This 
+is in kilohertz (kHz) and will turn red if the entered value is invalid. If Hamlib support is also enabled, 
+this frequency will automatically update on start/stop as well as when switching between transmit and receive.
 
 # Multiple Mode Support (Experimental)
 

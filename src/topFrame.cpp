@@ -432,9 +432,24 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnTogPTT->SetToolTip(_("Push to Talk - Switch between Receive and Transmit - you can also use the space bar "));
     bSizer11->Add(m_btnTogPTT, 1, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
     sbSizer5->Add(bSizer11, 2, wxEXPAND, 1);
-    rightSizer->Add(sbSizer5, 2, wxALL|wxEXPAND, 3);
+    rightSizer->Add(sbSizer5, 2, wxALL|wxEXPAND, 1);
+    
+    // Frequency text field (PSK Reporter)
+    wxStaticBox* freqBox = new wxStaticBox(panel, wxID_ANY, _("Report Frequency"));
+    wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(freqBox, wxHORIZONTAL);
+    
+    wxStaticText* reportFrequencyUnits = new wxStaticText(freqBox, wxID_ANY, wxT(" kHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    wxBoxSizer* txtReportFreqSizer = new wxBoxSizer(wxVERTICAL);
+    m_txtCtrlReportFrequency = new wxTextCtrl(freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_RIGHT);
+    m_txtCtrlReportFrequency->SetMinSize(wxSize(100,-1));
+    txtReportFreqSizer->Add(m_txtCtrlReportFrequency, 1, 0, 1);
+    reportFrequencySizer->Add(txtReportFreqSizer, 1, wxEXPAND, 1);
+    reportFrequencySizer->Add(reportFrequencyUnits, 0, wxALIGN_CENTER_VERTICAL, 1);
+    
+    rightSizer->Add(reportFrequencySizer, 0, wxALL, 1);
+    
     bSizer1->Add(rightSizer, 0, wxALL|wxEXPAND, 3);
-        
+    
     panel->SetSizerAndFit(bSizer1);
     this->Layout();
 
@@ -459,7 +474,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_togBtnSplit->MoveBeforeInTabOrder(m_togBtnAnalog);
     m_togBtnAnalog->MoveBeforeInTabOrder(m_togBtnVoiceKeyer);
     m_togBtnVoiceKeyer->MoveBeforeInTabOrder(m_btnTogPTT);
-        
+    
     //-------------------
     // Connect Events
     //-------------------
@@ -530,6 +545,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderTxLevel->Connect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Connect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
+    
+    m_txtCtrlReportFrequency->Connect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
 }
 
 TopFrame::~TopFrame()
@@ -592,4 +609,6 @@ TopFrame::~TopFrame()
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_THUMBTRACK, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_THUMBRELEASE, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
+    
+    m_txtCtrlReportFrequency->Disconnect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
 }

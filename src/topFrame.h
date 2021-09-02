@@ -180,6 +180,8 @@ class TopFrame : public wxFrame
         
         virtual void OnChangeTxLevel( wxScrollEvent& event ) { event.Skip(); }
         
+        virtual void OnChangeReportFrequency( wxCommandEvent& event ) { event.Skip(); }
+        
     public:
         wxToggleButton* m_togBtnOnOff;
         wxToggleButton* m_togBtnSplit;
@@ -189,6 +191,7 @@ class TopFrame : public wxFrame
         wxToggleButton* m_togBtnLoopRx;
         wxToggleButton* m_togBtnLoopTx;
         wxAuiNotebook* m_auiNbookCtrl;
+        wxTextCtrl*   m_txtCtrlReportFrequency;
 
         TopFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("FreeDV ") + _(FREEDV_VERSION), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(561,300 ), long style = wxDEFAULT_FRAME_STYLE|wxRESIZE_BORDER );
 

@@ -49,8 +49,6 @@ set(FREEDV_SOURCES
     osx_interface.h
     pskreporter.cpp
     pskreporter.h
-    callsign_encoder.cpp
-    callsign_encoder.h
     udp.cpp
     util.cpp
     eq.cpp

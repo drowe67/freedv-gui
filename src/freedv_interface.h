@@ -31,6 +31,7 @@
 #include <queue>
 #include <future>
 #include "codec2.h"
+#include "reliable_text.h"
 
 class FreeDVInterface
 {
@@ -38,7 +39,7 @@ public:
     FreeDVInterface();
     virtual ~FreeDVInterface();
     
-    void start(int txMode, int fifoSizeMs, bool singleRxThread);
+    void start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText);
     void stop();
     void changeTxMode(int txMode);
     bool isRunning() const { return dvObjects_.size() > 0; }
@@ -94,6 +95,10 @@ public:
     void complexTransmit(short mod_out[], short speech_in[], float txOffset, int nfreedv);
     
     struct MODEM_STATS* getCurrentRxModemStats() { return &modemStatsList_[modemStatsIndex_]; }
+    
+    void resetReliableText();
+    const char* getReliableText();
+    void setReliableText(const char* callsign);
     
 private:
     struct FreeDVTextFnState
@@ -156,6 +161,7 @@ private:
     };
     
     static void FreeDVTextRxFn_(void *callback_state, char c);
+    static void OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr, int length, void* state);
     
     void (*textRxFunc_)(void *, char);
     bool singleRxThread_;
@@ -179,6 +185,9 @@ private:
     struct freedv* currentTxMode_;
     struct freedv* currentRxMode_; 
     struct freedv* lastSyncRxMode_;
+    
+    std::deque<reliable_text_t> reliableText_;
+    std::string receivedReliableText_;
 };
 
 template<typename R, typename T>
