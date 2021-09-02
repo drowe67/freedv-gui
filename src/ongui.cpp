@@ -487,7 +487,8 @@ void MainFrame::togglePTT(void) {
         Hamlib *hamlib = wxGetApp().m_hamlib;
         wxString hamlibError;
         if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
-            if (hamlib->ptt(g_tx, hamlibError) == false) {
+            // Update mode display on the bottom of the main UI.
+            if (hamlib->update_frequency_and_mode() != 0 || hamlib->ptt(g_tx, hamlibError) == false) {
                 wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
             }
         }
