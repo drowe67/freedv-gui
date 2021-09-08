@@ -1607,7 +1607,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         else
         {
             char temp[1024];
-            strncpy(temp, wxGetApp().m_psk_callsign.ToUTF8(), wxGetApp().m_psk_callsign.Length());
+            strncpy(temp, wxGetApp().m_psk_callsign.ToUTF8(), wxGetApp().m_psk_callsign.Length() + 1);
             fprintf(stderr, "Setting callsign to %s\n", temp);
             freedvInterface.setReliableText(temp);
         }
