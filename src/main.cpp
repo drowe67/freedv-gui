@@ -1606,8 +1606,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         }
         else
         {
-            char temp[1024];
-            strncpy(temp, wxGetApp().m_psk_callsign.ToUTF8(), wxGetApp().m_psk_callsign.Length());
+            char temp[9];
+            memset(temp, 0, 9);
+            strncpy(temp, wxGetApp().m_psk_callsign.ToUTF8(), 8); // One less than the size of temp to ensure we don't overwrite the null.
             fprintf(stderr, "Setting callsign to %s\n", temp);
             freedvInterface.setReliableText(temp);
         }
