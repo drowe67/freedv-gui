@@ -723,6 +723,19 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.6.1 September 2021
+
+1. Bugfixes:
+    * Uses UTF-8 for device names from PortAudio to resolve display problems on non-English systems. (PR #153)
+    * Resolves crash when using click to tune feature on main window. (PR #157)
+    * Resolves issue where test plots inside Audio Options dialog hang during test. (PR #154)
+    * Disable multi-RX options in Tools->Options when a session is active. (PR #154)
+2. Enhancements:
+    * Updates mode indicator on transition between TX and RX instead of only on start. (PR #158)
+    * Updates PSK Reporter feature to use new Codec2 reliable\_text API. (PR #156, #162, #166, #168)
+
+_Note: The PSK Reporter feature beginning in this release is incompatible with versions older than 1.6.1 due to a change in how callsigns are encoded._
+
 ## V1.6.0 August 2021
 
 1. Bugfixes: 
