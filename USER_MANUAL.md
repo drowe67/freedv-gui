@@ -730,6 +730,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Resolves crash when using click to tune feature on main window. (PR #157)
     * Resolves issue where test plots inside Audio Options dialog hang during test. (PR #154)
     * Disable multi-RX options in Tools->Options when a session is active. (PR #154)
+    * Resolves buffer overflow when using mono-only TX sound devices. (PR #169)
 2. Enhancements:
     * Updates mode indicator on transition between TX and RX instead of only on start. (PR #158)
     * Updates PSK Reporter feature to use new Codec2 reliable\_text API. (PR #156, #162, #166, #168)
