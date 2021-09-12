@@ -3041,19 +3041,36 @@ int MainFrame::txCallback(
 
     if (wptr) {
         if (codec2_fifo_read(cbData->outfifo2, outdata, framesPerBuffer) == 0) {
-
-            // write signal to both channels */
-            for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
-                wptr[0] = outdata[i];
-                wptr[1] = outdata[i];
+            if (cbData->outputChannels2 == 2)
+            {
+                // write signal to both channels */
+                for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
+                    wptr[0] = outdata[i];
+                    wptr[1] = outdata[i];
+                }
+            }
+            else
+            {
+                for(i = 0; i < framesPerBuffer; i++, wptr++) {
+                    wptr[0] = outdata[i];
+                }
             }
         }
         else {
             g_outfifo2_empty++;
             // zero output if no data available
-            for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
-                wptr[0] = 0;
-                wptr[1] = 0;
+            if (cbData->outputChannels2 == 2)
+            {
+                for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
+                    wptr[0] = 0;
+                    wptr[1] = 0;
+                }
+            }
+            else
+            {
+                for(i = 0; i < framesPerBuffer; i++, wptr++) {
+                    wptr[0] = 0;
+                }
             }
         }
     }
