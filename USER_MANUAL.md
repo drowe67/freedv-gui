@@ -734,6 +734,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Enhancements:
     * Updates mode indicator on transition between TX and RX instead of only on start. (PR #158)
     * Updates PSK Reporter feature to use new Codec2 reliable\_text API. (PR #156, #162, #166, #168)
+    * Suppress unnecessary rig_init() calls to prevent FreeDV from changing the current VFO. (PR #173)
 
 _Note: The PSK Reporter feature beginning in this release is incompatible with versions older than 1.6.1 due to a change in how callsigns are encoded._
 
