@@ -39,6 +39,7 @@ static int build_list(const struct rig_caps *rig, rig_ptr_t);
 
 Hamlib::Hamlib() : 
     m_rig(NULL),
+    m_rig_model(0),
     m_modeBox(NULL),
     m_freqBox(NULL),
     m_currFreq(0),
@@ -117,8 +118,12 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
 
     /* Initialise, configure and open. */
 
-    m_rig = rig_init(m_rigList[rig_index]->rig_model);
-
+    if (m_rig == nullptr || m_rigList[rig_index]->rig_model != m_rig_model)
+    {
+        m_rig = rig_init(m_rigList[rig_index]->rig_model);
+    }
+    m_rig_model = m_rigList[rig_index]->rig_model;
+    
     if (!m_rig) {
         if (g_verbose) fprintf(stderr, "rig_init() failed, returning\n");
         return false;
