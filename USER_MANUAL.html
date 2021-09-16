@@ -533,6 +533,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <ul>
 <li>Updates mode indicator on transition between TX and RX instead of only on start. (PR #158)</li>
 <li>Updates PSK Reporter feature to use new Codec2 reliable_text API. (PR #156, #162, #166, #168)</li>
+<li>Suppress unnecessary rig_init() calls to prevent FreeDV from changing the current VFO. (PR #173)</li>
 </ul></li>
 </ol>
 <p><em>Note: The PSK Reporter feature beginning in this release is incompatible with versions older than 1.6.1 due to a change in how callsigns are encoded.</em></p>
