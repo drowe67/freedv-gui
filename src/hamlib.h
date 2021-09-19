@@ -34,6 +34,7 @@ class Hamlib {
 
         void update_mode_status();
 
+        rig_model_t m_rig_model;
         RIG *m_rig;
         /* Sorted list of rigs. */
         riglist_t m_rigList;
