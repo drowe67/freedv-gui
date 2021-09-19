@@ -16,7 +16,7 @@ make
 
 # Prerequisite: build hamlib
 cd $FREEDVGUIDIR
-git clone git://git.code.sf.net/p/hamlib/code hamlib-code
+git clone https://github.com/Hamlib/Hamlib.git hamlib-code
 cd hamlib-code && git checkout master && git pull
 ./bootstrap
 CFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" ./configure --disable-shared --prefix $HAMLIBDIR

@@ -851,6 +851,12 @@ MainFrame::~MainFrame()
     {
         delete wxGetApp().m_hamlib;
     }
+    
+    if (wxGetApp().m_pskReporter)
+    {
+        delete wxGetApp().m_pskReporter;
+        wxGetApp().m_pskReporter = nullptr;
+    }
 }
 
 
