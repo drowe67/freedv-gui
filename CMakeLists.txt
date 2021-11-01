@@ -523,7 +523,7 @@ endif()
 # Ensures that sample wav files are installed along with the application
 install(
     DIRECTORY wav
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/freedv-gui
+    TYPE DATA
     FILES_MATCHING PATTERN "*.wav")
 
 if(WIN32)
