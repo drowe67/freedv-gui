@@ -554,6 +554,8 @@ if(WIN32)
     set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_NSIS_MENU_LINKS
         "http://freedv.org" "FreeDV Homepage")
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "reg delete HKEY_CURRENT_USER\SOFTWARE\CODEC2-Project\FreeDV /f")
+
     include(CPack)
 elseif(UNIX AND NOT APPLE)
     # Linux packaging
