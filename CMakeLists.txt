@@ -520,6 +520,12 @@ if(FREEDV_VERSION_SUFFIX)
     message(STATUS "package name = ${CPACK_PACKAGE_VERSION_PATCH}")
 endif()
 
+# Ensures that sample wav files are installed along with the application
+install(
+    DIRECTORY wav
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/freedv-gui
+    FILES_MATCHING PATTERN "*.wav")
+
 if(WIN32)
     #
     # Cpack NSIS configuration for Windows.
