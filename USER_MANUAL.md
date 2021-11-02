@@ -53,7 +53,19 @@ test wave files in the next section.
 
 ## Test Wave Files
 
-In https://github.com/drowe67/freedv-gui/tree/master/wav are audio files containing off-air FreeDV modem signals. There is one for each FreeDV mode.  Select a FreeDV mode and press Start.  Choose a file using "Tools - Start/Stop Play File From Radio".  You should hear decoded FreeDV speech.
+In the installation are audio files containing off-air FreeDV modem signals. 
+There is one file per FreeDV mode and are in the following locations depending 
+on platform:
+
+| Platform | Typical Location                                             |
+|----------|--------------------------------------------------------------|
+| Windows  | C:\Program Files\FreeDV [version]\share\freedv-gui\wav       |
+| Linux    | /usr/share/freedv-gui/wav or /usr/local/share/freedv-gui/wav |
+| macOS    | See https://github.com/drowe67/freedv-gui/tree/master/wav    |
+
+To play these files, first select a FreeDV mode and press Start.  Then 
+choose a file using "Tools - Start/Stop Play File From Radio".  You should 
+then hear decoded FreeDV speech.
 
 These files will give you a feel for what FreeDV signals sound like,
 and for the basic operation of the FreeDV software.

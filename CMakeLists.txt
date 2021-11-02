@@ -523,7 +523,7 @@ endif()
 # Ensures that sample wav files are installed along with the application
 install(
     DIRECTORY wav
-    TYPE DATA
+    DESTINATION share/freedv-gui
     FILES_MATCHING PATTERN "*.wav")
 
 if(WIN32)
