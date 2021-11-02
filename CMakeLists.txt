@@ -520,6 +520,12 @@ if(FREEDV_VERSION_SUFFIX)
     message(STATUS "package name = ${CPACK_PACKAGE_VERSION_PATCH}")
 endif()
 
+# Ensures that sample wav files are installed along with the application
+install(
+    DIRECTORY wav
+    DESTINATION share/freedv-gui
+    FILES_MATCHING PATTERN "*.wav")
+
 if(WIN32)
     #
     # Cpack NSIS configuration for Windows.
@@ -548,6 +554,8 @@ if(WIN32)
     set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_NSIS_MENU_LINKS
         "http://freedv.org" "FreeDV Homepage")
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "reg delete HKEY_CURRENT_USER\SOFTWARE\CODEC2-Project\FreeDV /f")
+
     include(CPack)
 elseif(UNIX AND NOT APPLE)
     # Linux packaging
