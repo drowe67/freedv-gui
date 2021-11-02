@@ -59,7 +59,7 @@ on platform:
 
 | Platform | Typical Location                                             |
 |----------|--------------------------------------------------------------|
-| Windows  | C:\Program Files\FreeDV [version]\share\freedv-gui\wav       |
+| Windows  | C:\\Program Files\\FreeDV [version]\\share\\freedv-gui\\wav  |
 | Linux    | /usr/share/freedv-gui/wav or /usr/local/share/freedv-gui/wav |
 | macOS    | See https://github.com/drowe67/freedv-gui/tree/master/wav    |
 
