@@ -11,7 +11,7 @@ export HAMLIBDIR=$FREEDVGUIDIR/hamlib
 
 # Prerequisite: build dylibbundler
 git clone https://github.com/tmiw/macdylibbundler.git
-cd macdylibbundler && git checkout master && git pull
+cd macdylibbundler && git checkout main && git pull
 make -j4
 
 # Prerequisite: build hamlib
