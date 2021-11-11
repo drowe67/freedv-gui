@@ -1,0 +1,13 @@
+/build_linux/
+/build_osx/
+/codec2/
+/hamlib/
+/hamlib-code/
+/LPCNet/
+/macdylibbundler/
+
+a.out
+*.o
+*.make
+*.log
+*.marks
