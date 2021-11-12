@@ -526,6 +526,12 @@ install(
     DESTINATION share/freedv-gui
     FILES_MATCHING PATTERN "*.wav")
 
+# Install documentation for the current version.
+install(
+    FILES USER_MANUAL.pdf USER_MANUAL.html USER_MANUAL.md
+    DESTINATION share/freedv-gui
+)    
+
 if(WIN32)
     #
     # Cpack NSIS configuration for Windows.
