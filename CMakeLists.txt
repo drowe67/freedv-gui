@@ -560,11 +560,11 @@ if(WIN32)
     set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_NSIS_MENU_LINKS
         "http://freedv.org" "FreeDV Homepage")
-    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "reg delete HKEY_CURRENT_USER\\SOFTWARE\\CODEC2-Project\\FreeDV /f")
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "reg delete HKEY_CURRENT_USER\\\\SOFTWARE\\\\CODEC2-Project\\\\FreeDV /f")
 
     # Create link to user manual in Start menu.
     set(CPACK_NSIS_CREATE_ICONS_EXTRA
-        "CreateShortCut '$SMPROGRAMS\\\\$STARTMENU_FOLDER\\\\FreeDV User Manual.lnk' '$INSTDIR\\\\share\\freedv-gui\\USER_MANUAL.pdf'"
+        "CreateShortCut '$SMPROGRAMS\\\\$STARTMENU_FOLDER\\\\FreeDV User Manual.lnk' '$INSTDIR\\\\share\\\\freedv-gui\\\\USER_MANUAL.pdf'"
     )
     set(CPACK_NSIS_DELETE_ICONS_EXTRA
         "Delete '$SMPROGRAMS\\\\$START_MENU\\\\FreeDV User Manual.lnk'"
