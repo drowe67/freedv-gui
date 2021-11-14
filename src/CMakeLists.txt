@@ -1,5 +1,6 @@
 set(FREEDV_SOURCES
     dlg_audiooptions.cpp
+    dlg_easy_setup.cpp
     dlg_filter.cpp
     dlg_options.cpp
     dlg_ptt.cpp
