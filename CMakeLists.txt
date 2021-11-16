@@ -489,11 +489,6 @@ add_subdirectory(contrib)
 
 message(STATUS "Build type will be: ${CMAKE_BUILD_TYPE}")
 
-if(APPLE)
-configure_file ("${PROJECT_SOURCE_DIR}/src/info.plist.in"
-                "${PROJECT_BINARY_DIR}/src/info.plist" )
-endif(APPLE)
-
 # Adds support for "make dist" target.
 set(ARCHIVE_NAME "freedv-${FREEDV_VERSION_MAJOR}.${FREEDV_VERSION_MINOR}.${FREEDV_VERSION_PATCH}")
 add_custom_target(dist
