@@ -521,6 +521,12 @@ install(
     DESTINATION share/freedv-gui
     FILES_MATCHING PATTERN "*.wav")
 
+# Install documentation for the current version.
+install(
+    FILES USER_MANUAL.pdf USER_MANUAL.html USER_MANUAL.md
+    DESTINATION share/freedv-gui
+)    
+
 if(WIN32)
     #
     # Cpack NSIS configuration for Windows.
@@ -549,8 +555,9 @@ if(WIN32)
     set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_NSIS_MENU_LINKS
         "http://freedv.org" "FreeDV Homepage")
-    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "reg delete HKEY_CURRENT_USER\SOFTWARE\CODEC2-Project\FreeDV /f")
-
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "DeleteRegKey HKLM 'SOFTWARE\\\\CODEC2-Project\\\\FreeDV'")
+    set(CPACK_NSIS_MENU_LINKS "share/freedv-gui/USER_MANUAL.pdf" "FreeDV User Manual")
+    
     include(CPack)
 elseif(UNIX AND NOT APPLE)
     # Linux packaging
