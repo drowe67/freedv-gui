@@ -24,6 +24,8 @@
 
 #include "main.h"
 #include "defines.h"
+#include "portaudio.h"
+#include "hamlib.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class EasySetupDlg
@@ -52,6 +54,7 @@ class EasySetupDialog : public wxDialog
         void    OnAdvancedSoundSetup(wxCommandEvent& event);
         void    OnAdvancedPTTSetup(wxCommandEvent& event);
         void    HamlibRigNameChanged(wxCommandEvent& event);
+        void    PTTUseHamLibClicked(wxCommandEvent& event);
         
         // Internal section-specific ExchangeData methods.
         void    ExchangeSoundDeviceData(int inout);
@@ -92,12 +95,17 @@ class EasySetupDialog : public wxDialog
              int deviceIndex;
          };
          
+         static int OnPortAudioCallback_(const void *input, void *output, unsigned long frameCount, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData);
+
          void updateAudioDevices_();
          void updateHamlibDevices_();
          void resetIcomCIVStatus();
          
          int analogDevicePlaybackDeviceId_;
          int analogDeviceRecordDeviceId_;
+         Hamlib* hamlibTestObject_;
+         PaStream* radioOutputStream_;
+         int sineWaveSampleNumber_;
 };
 
 #endif // __EASY_SETUP_DIALOG__

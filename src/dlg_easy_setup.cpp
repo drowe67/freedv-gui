@@ -26,6 +26,11 @@
 #include <string.h>
 #endif
 
+#include <climits>
+#include <cmath>
+
+#define PI 3.14159
+
 #include "dlg_easy_setup.h"
 #include "pa_wrapper.h"
 
@@ -37,6 +42,9 @@ extern wxConfigBase *pConfig;
 EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxDialog(parent, id, title, pos, size, style)
 {
+    hamlibTestObject_ = new Hamlib();
+    assert(hamlibTestObject_ != nullptr);
+    
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);
     
     // Create top-level of control hierarchy.
@@ -187,10 +195,13 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(EasySetupDialog::OnInitDialog));
     this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(EasySetupDialog::OnClose));
     
+    m_ckUseHamlibPTT->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(EasySetupDialog::PTTUseHamLibClicked), NULL, this);
+    
     m_cbRigName->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(EasySetupDialog::HamlibRigNameChanged), NULL, this);
     
     m_advancedSoundSetup->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnAdvancedSoundSetup), NULL, this);
     m_advancedPTTSetup->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnAdvancedPTTSetup), NULL, this);
+    m_buttonTest->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnTest), NULL, this);
     
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnOK), NULL, this);
     m_buttonCancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnCancel), NULL, this);
@@ -199,13 +210,18 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
 
 EasySetupDialog::~EasySetupDialog()
 {
+    delete hamlibTestObject_;
+    
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(EasySetupDialog::OnInitDialog));
     this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(EasySetupDialog::OnClose));
+    
+    m_ckUseHamlibPTT->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(EasySetupDialog::PTTUseHamLibClicked), NULL, this);
     
     m_cbRigName->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(EasySetupDialog::HamlibRigNameChanged), NULL, this);
     
     m_advancedSoundSetup->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnAdvancedSoundSetup), NULL, this);
     m_advancedPTTSetup->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnAdvancedPTTSetup), NULL, this);
+    m_buttonTest->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnTest), NULL, this);
     
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnOK), NULL, this);
     m_buttonCancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnCancel), NULL, this);
@@ -459,6 +475,139 @@ void EasySetupDialog::OnAdvancedPTTSetup(wxCommandEvent& event)
         ExchangePttDeviceData(EXCHANGE_DATA_IN);
     }
     delete dlg;
+}
+
+void EasySetupDialog::OnTest(wxCommandEvent& event)
+{
+    if (m_buttonTest->GetLabel() == "Stop Test")
+    {
+        // Stop the currently running test
+        if (radioOutputStream_ != nullptr)
+        {
+            Pa_StopStream(radioOutputStream_);
+            Pa_CloseStream(radioOutputStream_);
+            radioOutputStream_ = nullptr;
+            
+            Pa_Terminate();
+        }
+        
+        if (hamlibTestObject_->isActive())
+        {
+            wxString error;
+            hamlibTestObject_->ptt(false, error);
+            hamlibTestObject_->close();
+        }
+        
+        m_buttonTest->SetLabel("Test");
+    }
+    else
+    {
+        int index = m_radioDevice->GetSelection();
+        wxString selectedString = m_radioDevice->GetString(index);
+        PaDeviceIndex radioOutDeviceId = -1;
+        
+        // Use the global settings if we're using multiple sound devices on the radio side.
+        if (m_analogDeviceRecord->GetLabel() != RX_ONLY_STRING)
+        {
+            if (selectedString == MULTIPLE_DEVICES_STRING)
+            {
+                radioOutDeviceId = g_soundCard1OutDeviceNum;
+            }
+            else
+            {
+                SoundDeviceData* deviceData = (SoundDeviceData*)m_radioDevice->GetClientObject(index);
+                radioOutDeviceId = deviceData->deviceIndex;
+            }
+        }
+        
+        // Turn on transmit if Hamlib is enabled.
+        if (m_ckUseHamlibPTT->GetValue())
+        {
+            int rig = m_cbRigName->GetSelection();
+            wxString serialPort = m_cbSerialPort->GetValue();
+            
+            wxString s = m_tcIcomCIVHex->GetValue();
+            long civHexAddress = 0;
+            m_tcIcomCIVHex->GetValue().ToLong(&civHexAddress, 16);
+            
+            long rate = 0;
+            s = m_cbSerialRate->GetValue();
+            if (s != "default") {
+                m_cbSerialRate->GetValue().ToLong(&rate);
+            } 
+            
+            if (!hamlibTestObject_->connect(rig, serialPort, rate, civHexAddress))
+            {
+                wxMessageBox(
+                    "Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
+                    wxT("Error"), wxOK | wxICON_ERROR, this);
+                return;
+            }
+            
+            wxString error;
+            hamlibTestObject_->ptt(true, error);
+        }
+        
+        // Start playing a sine wave through the radio's device
+        if (radioOutDeviceId != -1)
+        {
+            Pa_Initialize();
+            
+            PaStreamParameters outputParameters;
+            
+            outputParameters.device = radioOutDeviceId;
+            outputParameters.channelCount = 1;
+            outputParameters.sampleFormat = paInt16;
+            outputParameters.suggestedLatency = 0;
+            outputParameters.hostApiSpecificStreamInfo = NULL;
+            
+            PaError error = Pa_OpenStream(
+                &radioOutputStream_, NULL, &outputParameters, 48000, 0, 0,
+                &EasySetupDialog::OnPortAudioCallback_, this);
+            if (error != paNoError) 
+            {
+                wxMessageBox(
+                    "Error opening radio sound device. Please double-check configuration and try again.", 
+                    wxT("Error"), wxOK | wxICON_ERROR, this);
+                    
+                wxString error;
+                hamlibTestObject_->ptt(false, error);
+                hamlibTestObject_->close();
+                
+                Pa_Terminate();
+                
+                radioOutputStream_ = nullptr;
+                return;
+            }
+            
+            sineWaveSampleNumber_ = 0;
+            Pa_StartStream(radioOutputStream_);
+        }
+        
+        m_buttonTest->SetLabel("Stop Test");
+    }
+}
+
+void EasySetupDialog::PTTUseHamLibClicked(wxCommandEvent& event)
+{
+    m_cbRigName->Enable(m_ckUseHamlibPTT->GetValue());
+    m_cbSerialPort->Enable(m_ckUseHamlibPTT->GetValue());
+    m_cbSerialRate->Enable(m_ckUseHamlibPTT->GetValue());
+    m_tcIcomCIVHex->Enable(m_ckUseHamlibPTT->GetValue());
+}
+
+int EasySetupDialog::OnPortAudioCallback_(const void *input, void *output, unsigned long frameCount, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
+{
+    EasySetupDialog* dlg = (EasySetupDialog*)userData;
+    short *wptr = (short*)output;
+    
+    for (int index = 0; index < frameCount; index++)
+    {
+        wptr[index] = (SHRT_MAX) * sin(2 * PI * (1500) * dlg->sineWaveSampleNumber_ / 48000);
+        dlg->sineWaveSampleNumber_ = (dlg->sineWaveSampleNumber_ + 1) % 48000;
+    }
+    
+    return paContinue;
 }
 
 void EasySetupDialog::updateHamlibDevices_()
