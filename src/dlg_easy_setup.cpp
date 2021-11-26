@@ -187,6 +187,8 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(EasySetupDialog::OnInitDialog));
     this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(EasySetupDialog::OnClose));
     
+    m_cbRigName->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(EasySetupDialog::HamlibRigNameChanged), NULL, this);
+    
     m_advancedSoundSetup->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnAdvancedSoundSetup), NULL, this);
     m_advancedPTTSetup->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnAdvancedPTTSetup), NULL, this);
     
@@ -199,6 +201,8 @@ EasySetupDialog::~EasySetupDialog()
 {
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(EasySetupDialog::OnInitDialog));
     this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(EasySetupDialog::OnClose));
+    
+    m_cbRigName->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(EasySetupDialog::HamlibRigNameChanged), NULL, this);
     
     m_advancedSoundSetup->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnAdvancedSoundSetup), NULL, this);
     m_advancedPTTSetup->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnAdvancedPTTSetup), NULL, this);
@@ -319,11 +323,44 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
 {
     if (inout == EXCHANGE_DATA_IN)
     {
-        
+        m_ckUseHamlibPTT->SetValue(wxGetApp().m_boolHamlibUseForPTT);
+        m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
+        resetIcomCIVStatus();
+        m_cbSerialPort->SetValue(wxGetApp().m_strHamlibSerialPort);
+
+        if (wxGetApp().m_intHamlibSerialRate == 0) {
+            m_cbSerialRate->SetSelection(0);
+        } else {
+            m_cbSerialRate->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intHamlibSerialRate));
+        }
+
+        m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02X"), wxGetApp().m_intHamlibIcomCIVHex));
     }
     else if (inout == EXCHANGE_DATA_OUT)
     {
+        wxGetApp().m_boolHamlibUseForPTT = m_ckUseHamlibPTT->GetValue();
+        wxGetApp().m_intHamlibRig = m_cbRigName->GetSelection();
+        wxGetApp().m_strHamlibSerialPort = m_cbSerialPort->GetValue();
         
+        wxString s = m_tcIcomCIVHex->GetValue();
+        long hexAddress = 0;
+        m_tcIcomCIVHex->GetValue().ToLong(&hexAddress, 16);
+        wxGetApp().m_intHamlibIcomCIVHex = hexAddress;
+        
+        s = m_cbSerialRate->GetValue();
+        if (s == "default") {
+            wxGetApp().m_intHamlibSerialRate = 0;
+        } else {
+            long tmp;
+            m_cbSerialRate->GetValue().ToLong(&tmp); 
+            wxGetApp().m_intHamlibSerialRate = tmp;
+        }
+        if (g_verbose) fprintf(stderr, "serial rate: %d\n", wxGetApp().m_intHamlibSerialRate);
+
+        pConfig->Write(wxT("/Hamlib/UseForPTT"), wxGetApp().m_boolHamlibUseForPTT);
+        pConfig->Write(wxT("/Hamlib/RigName"), wxGetApp().m_intHamlibRig);
+        pConfig->Write(wxT("/Hamlib/SerialPort"), wxGetApp().m_strHamlibSerialPort);
+        pConfig->Write(wxT("/Hamlib/SerialRate"), wxGetApp().m_intHamlibSerialRate);
     }
 }
 
@@ -331,12 +368,42 @@ void EasySetupDialog::ExchangeReportingData(int inout)
 {
     if (inout == EXCHANGE_DATA_IN)
     {
-        
+        m_ckbox_psk_enable->SetValue(wxGetApp().m_psk_enable);
+        m_txt_callsign->SetValue(wxGetApp().m_psk_callsign);
+        m_txt_grid_square->SetValue(wxGetApp().m_psk_grid_square);
     }
     else if (inout == EXCHANGE_DATA_OUT)
     {
+        wxGetApp().m_psk_enable = m_ckbox_psk_enable->GetValue();
+        wxGetApp().m_psk_callsign = m_txt_callsign->GetValue();
+        wxGetApp().m_psk_grid_square = m_txt_grid_square->GetValue();
         
+        pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);
+        pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
+        pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
+        pConfig->Flush();
     }
+}
+
+void EasySetupDialog::HamlibRigNameChanged(wxCommandEvent& event)
+{
+    resetIcomCIVStatus();
+}
+
+void EasySetupDialog::resetIcomCIVStatus()
+{
+    std::string rigName = m_cbRigName->GetString(m_cbRigName->GetCurrentSelection()).ToStdString();
+    if (rigName.find("Icom") == 0)
+    {
+        m_stIcomCIVHex->Show();
+        m_tcIcomCIVHex->Show();
+    }
+    else
+    {
+        m_stIcomCIVHex->Hide();
+        m_tcIcomCIVHex->Hide();
+    }
+    Layout();
 }
 
 void EasySetupDialog::OnInitDialog(wxInitDialogEvent& event)
@@ -348,7 +415,7 @@ void EasySetupDialog::OnInitDialog(wxInitDialogEvent& event)
 
 void EasySetupDialog::OnOK(wxCommandEvent& event)
 {
-    ExchangeData(EXCHANGE_DATA_OUT);
+    OnApply(event);
     this->EndModal(wxID_OK);
 }
 

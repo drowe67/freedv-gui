@@ -51,6 +51,7 @@ class EasySetupDialog : public wxDialog
         void    OnInitDialog(wxInitDialogEvent& event);
         void    OnAdvancedSoundSetup(wxCommandEvent& event);
         void    OnAdvancedPTTSetup(wxCommandEvent& event);
+        void    HamlibRigNameChanged(wxCommandEvent& event);
         
         // Internal section-specific ExchangeData methods.
         void    ExchangeSoundDeviceData(int inout);
@@ -93,6 +94,7 @@ class EasySetupDialog : public wxDialog
          
          void updateAudioDevices_();
          void updateHamlibDevices_();
+         void resetIcomCIVStatus();
          
          int analogDevicePlaybackDeviceId_;
          int analogDeviceRecordDeviceId_;
