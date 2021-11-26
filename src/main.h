@@ -689,7 +689,7 @@ class MainFrame : public TopFrame
         bool       isAvxPresent;
         
         int         getSoundCardIDFromName(wxString& name, bool input);
-        bool        validateSoundCardSetup();
+        bool        validateSoundCardSetup(bool startup = false);
 };
 
 void txRxProcessing();
