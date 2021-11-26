@@ -498,6 +498,21 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
             hamlibTestObject_->close();
         }
         
+        m_radioDevice->Enable(true);
+        m_advancedSoundSetup->Enable(true);
+        m_ckUseHamlibPTT->Enable(true);
+        m_cbRigName->Enable(true);
+        m_cbSerialPort->Enable(true);
+        m_cbSerialRate->Enable(true);
+        m_tcIcomCIVHex->Enable(true);
+        m_advancedPTTSetup->Enable(true);
+        m_ckbox_psk_enable->Enable(true);
+        m_txt_callsign->Enable(true);
+        m_txt_grid_square->Enable(true);
+        m_buttonOK->Enable(true);
+        m_buttonCancel->Enable(true);
+        m_buttonApply->Enable(true);
+        
         m_buttonTest->SetLabel("Test");
     }
     else
@@ -583,6 +598,22 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
             sineWaveSampleNumber_ = 0;
             Pa_StartStream(radioOutputStream_);
         }
+        
+        // Disable all UI except the Stop button.
+        m_radioDevice->Enable(false);
+        m_advancedSoundSetup->Enable(false);
+        m_ckUseHamlibPTT->Enable(false);
+        m_cbRigName->Enable(false);
+        m_cbSerialPort->Enable(false);
+        m_cbSerialRate->Enable(false);
+        m_tcIcomCIVHex->Enable(false);
+        m_advancedPTTSetup->Enable(false);
+        m_ckbox_psk_enable->Enable(false);
+        m_txt_callsign->Enable(false);
+        m_txt_grid_square->Enable(false);
+        m_buttonOK->Enable(false);
+        m_buttonCancel->Enable(false);
+        m_buttonApply->Enable(false);
         
         m_buttonTest->SetLabel("Stop Test");
     }
