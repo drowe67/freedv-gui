@@ -29,6 +29,11 @@
 #include "dlg_easy_setup.h"
 #include "pa_wrapper.h"
 
+#define RX_ONLY_STRING "None (receive only)"
+#define MULTIPLE_DEVICES_STRING "(multiple)"
+
+extern wxConfigBase *pConfig;
+
 EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxDialog(parent, id, title, pos, size, style)
 {
@@ -181,6 +186,10 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     // Hook in events
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(EasySetupDialog::OnInitDialog));
     this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(EasySetupDialog::OnClose));
+    
+    m_advancedSoundSetup->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnAdvancedSoundSetup), NULL, this);
+    m_advancedPTTSetup->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnAdvancedPTTSetup), NULL, this);
+    
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnOK), NULL, this);
     m_buttonCancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnCancel), NULL, this);
     m_buttonApply->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnApply), NULL, this);
@@ -190,12 +199,135 @@ EasySetupDialog::~EasySetupDialog()
 {
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(EasySetupDialog::OnInitDialog));
     this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(EasySetupDialog::OnClose));
+    
+    m_advancedSoundSetup->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnAdvancedSoundSetup), NULL, this);
+    m_advancedPTTSetup->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnAdvancedPTTSetup), NULL, this);
+    
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnOK), NULL, this);
     m_buttonCancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnCancel), NULL, this);
     m_buttonApply->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnApply), NULL, this);
 }
 
 void EasySetupDialog::ExchangeData(int inout)
+{
+    ExchangeSoundDeviceData(inout);
+    ExchangePttDeviceData(inout);
+    ExchangeReportingData(inout);
+}
+
+void EasySetupDialog::ExchangeSoundDeviceData(int inout)
+{
+    if (inout == EXCHANGE_DATA_IN)
+    {
+        wxString soundCard1InDeviceName = wxGetApp().m_soundCard1InDeviceName;
+        wxString soundCard1OutDeviceName = wxGetApp().m_soundCard1OutDeviceName;
+        wxString soundCard2InDeviceName = wxGetApp().m_soundCard2InDeviceName;
+        wxString soundCard2OutDeviceName = wxGetApp().m_soundCard2OutDeviceName;
+        wxString radioSoundDevice;
+        
+        if (soundCard1InDeviceName != "none" && soundCard1OutDeviceName != "none")
+        {
+            // Previous existing setup, determine what it is
+            if (soundCard2InDeviceName == "none" && soundCard2OutDeviceName == "none")
+            {
+                // RX-only setup
+                m_analogDeviceRecord->SetLabel(RX_ONLY_STRING);
+                m_analogDevicePlayback->SetLabel(soundCard1OutDeviceName);
+                radioSoundDevice = soundCard1InDeviceName;
+            }
+            else 
+            {
+                // RX and TX setup
+                m_analogDeviceRecord->SetLabel(soundCard2InDeviceName);
+                m_analogDevicePlayback->SetLabel(soundCard2OutDeviceName);
+                
+                if (soundCard1OutDeviceName == soundCard1InDeviceName)
+                {
+                    // We're not on a setup with different sound devices on the radio side (e.g. SDRs)
+                    radioSoundDevice = soundCard1InDeviceName;
+                }
+                else
+                {
+                    radioSoundDevice = MULTIPLE_DEVICES_STRING;
+                }
+            }
+        }
+        
+        if (radioSoundDevice != "")
+        {
+            int index = m_radioDevice->FindString(radioSoundDevice);
+            if (index != wxNOT_FOUND)
+            {
+                m_radioDevice->SetSelection(index);
+            }
+            else
+            {
+                m_radioDevice->Insert(radioSoundDevice, 0, (wxClientData*)nullptr);
+                index = 0;
+            }
+            m_radioDevice->SetSelection(index);
+        }
+    }
+    else if (inout == EXCHANGE_DATA_OUT)
+    {
+        int index = m_radioDevice->GetSelection();
+        wxString selectedString = m_radioDevice->GetString(index);
+        
+        // DO NOT update the radio devices if the user used advanced settings to set them.
+        if (selectedString != MULTIPLE_DEVICES_STRING)
+        {
+            SoundDeviceData* deviceData = (SoundDeviceData*)m_radioDevice->GetClientObject(index);
+            
+            g_soundCard1SampleRate = 48000;
+            if (m_analogDeviceRecord->GetLabel() == RX_ONLY_STRING)
+            {
+                wxGetApp().m_soundCard2InDeviceName = "none";
+                wxGetApp().m_soundCard2OutDeviceName = "none";
+                wxGetApp().m_soundCard1InDeviceName = selectedString;
+                g_soundCard1InDeviceNum = deviceData->deviceIndex;
+                wxGetApp().m_soundCard1OutDeviceName = m_analogDevicePlayback->GetLabel();
+                g_soundCard1OutDeviceNum = analogDevicePlaybackDeviceId_;
+            }
+            else
+            {
+                wxGetApp().m_soundCard2InDeviceName = m_analogDeviceRecord->GetLabel();
+                g_soundCard2InDeviceNum = analogDeviceRecordDeviceId_;
+                wxGetApp().m_soundCard2OutDeviceName = m_analogDevicePlayback->GetLabel();
+                g_soundCard2OutDeviceNum = analogDevicePlaybackDeviceId_;
+                wxGetApp().m_soundCard1InDeviceName = selectedString;
+                g_soundCard1InDeviceNum = deviceData->deviceIndex;
+                wxGetApp().m_soundCard1OutDeviceName = selectedString;
+                g_soundCard1OutDeviceNum = deviceData->deviceIndex;
+                
+                g_soundCard2SampleRate = 48000;
+            }
+            
+            pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);	
+            pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);	
+            pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);	
+            pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
+        
+            pConfig->Write(wxT("/Audio/soundCard1SampleRate"),        g_soundCard1SampleRate );
+            pConfig->Write(wxT("/Audio/soundCard2SampleRate"),        g_soundCard2SampleRate );
+
+            pConfig->Flush();
+        }
+    }
+}
+
+void EasySetupDialog::ExchangePttDeviceData(int inout)
+{
+    if (inout == EXCHANGE_DATA_IN)
+    {
+        
+    }
+    else if (inout == EXCHANGE_DATA_OUT)
+    {
+        
+    }
+}
+
+void EasySetupDialog::ExchangeReportingData(int inout)
 {
     if (inout == EXCHANGE_DATA_IN)
     {
@@ -233,6 +365,33 @@ void EasySetupDialog::OnClose(wxCloseEvent& event)
 void EasySetupDialog::OnApply(wxCommandEvent& event)
 {
     ExchangeData(EXCHANGE_DATA_OUT);
+}
+
+void EasySetupDialog::OnAdvancedSoundSetup(wxCommandEvent& event)
+{
+    wxUnusedVar(event);
+    
+    AudioOptsDialog *dlg = new AudioOptsDialog(this);
+    int rv = dlg->ShowModal();
+    if(rv == wxOK)
+    {
+        dlg->ExchangeData(EXCHANGE_DATA_OUT);
+        ExchangeSoundDeviceData(EXCHANGE_DATA_IN);
+    }
+    delete dlg;
+}
+
+void EasySetupDialog::OnAdvancedPTTSetup(wxCommandEvent& event)
+{
+    wxUnusedVar(event);
+    
+    ComPortsDlg *dlg = new ComPortsDlg(this);
+    int rv = dlg->ShowModal();
+    if(rv == wxID_OK)
+    {
+        ExchangePttDeviceData(EXCHANGE_DATA_IN);
+    }
+    delete dlg;
 }
 
 void EasySetupDialog::updateHamlibDevices_()
@@ -434,10 +593,23 @@ void EasySetupDialog::updateAudioDevices_()
             PaError err = Pa_IsFormatSupported(&inputParameters, &outputParameters, 48000);
             if (err == paFormatIsSupported)
             {
-                m_radioDevice->Append(devName);
-                m_radioDevice->SetSelection(0);
+                SoundDeviceData* soundData = new SoundDeviceData();
+                assert(soundData != nullptr);
+                
+                soundData->deviceName = devName;
+                soundData->deviceIndex = index;
+                
+                // Note: m_radioDevice owns soundData after this call and is responsible
+                // for deleting it when the window is closed by the user.
+                m_radioDevice->Append(devName, soundData);
             }
         }
+    }
+    
+    if (m_radioDevice->GetCount() > 0)
+    {
+        // Default to the first found device.
+        m_radioDevice->SetSelection(0);
     }
     
     PaDeviceIndex defaultInIndex = Pa_GetDefaultInputDevice();
@@ -446,10 +618,12 @@ void EasySetupDialog::updateAudioDevices_()
         const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(defaultInIndex);
         wxString devName(wxString::FromUTF8(deviceInfo->name));
         m_analogDeviceRecord->SetLabel(devName);
+        analogDeviceRecordDeviceId_ = defaultInIndex;
     }
     else
     {
-        m_analogDevicePlayback->SetLabel("None (receive only)");
+        m_analogDeviceRecord->SetLabel(RX_ONLY_STRING);
+        analogDeviceRecordDeviceId_ = -1;
     }
     
     PaDeviceIndex defaultOutIndex = Pa_GetDefaultOutputDevice();
@@ -458,6 +632,7 @@ void EasySetupDialog::updateAudioDevices_()
         const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(defaultOutIndex);
         wxString devName(wxString::FromUTF8(deviceInfo->name));
         m_analogDevicePlayback->SetLabel(devName);
+        analogDevicePlaybackDeviceId_ = defaultOutIndex;
     }
     
     Pa_Terminate();

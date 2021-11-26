@@ -49,7 +49,14 @@ class EasySetupDialog : public wxDialog
         void    OnTest(wxCommandEvent& event);
         void    OnClose(wxCloseEvent& event);
         void    OnInitDialog(wxInitDialogEvent& event);
-
+        void    OnAdvancedSoundSetup(wxCommandEvent& event);
+        void    OnAdvancedPTTSetup(wxCommandEvent& event);
+        
+        // Internal section-specific ExchangeData methods.
+        void    ExchangeSoundDeviceData(int inout);
+        void    ExchangePttDeviceData(int inout);
+        void    ExchangeReportingData(int inout);
+        
         // Step 1: sound device selection
         wxComboBox* m_radioDevice;
         wxButton* m_advancedSoundSetup;
@@ -78,8 +85,17 @@ class EasySetupDialog : public wxDialog
         wxButton* m_buttonApply;
 
      private:
+         struct SoundDeviceData : public wxClientData
+         {
+             wxString deviceName;
+             int deviceIndex;
+         };
+         
          void updateAudioDevices_();
          void updateHamlibDevices_();
+         
+         int analogDevicePlaybackDeviceId_;
+         int analogDeviceRecordDeviceId_;
 };
 
 #endif // __EASY_SETUP_DIALOG__
