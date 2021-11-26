@@ -66,16 +66,16 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     gridSizerSoundDevice->Add(m_radioDevice, 0, wxEXPAND, 0);
     
     wxStaticText* labelAnalogPlayDevice = new wxStaticText(selectSoundDeviceBox, wxID_ANY, wxT("Decoded audio plays back through: "), wxDefaultPosition, wxDefaultSize, 0);
-    gridSizerSoundDevice->Add(labelAnalogPlayDevice, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
+    gridSizerSoundDevice->Add(labelAnalogPlayDevice, 0, wxALIGN_RIGHT, 0);
     
-    m_analogDevicePlayback = new wxStaticText(selectSoundDeviceBox, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0);
-    gridSizerSoundDevice->Add(m_analogDevicePlayback, 0, wxALIGN_CENTER_VERTICAL | wxEXPAND, 0);
+    m_analogDevicePlayback = new wxStaticText(selectSoundDeviceBox, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxST_ELLIPSIZE_END);
+    gridSizerSoundDevice->Add(m_analogDevicePlayback, 0, wxEXPAND, 0);
     
     wxStaticText* labelAnalogRecordDevice = new wxStaticText(selectSoundDeviceBox, wxID_ANY, wxT("Transmitted audio records through: "), wxDefaultPosition, wxDefaultSize, 0);
-    gridSizerSoundDevice->Add(labelAnalogRecordDevice, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
+    gridSizerSoundDevice->Add(labelAnalogRecordDevice, 0, wxALIGN_RIGHT, 0);
     
-    m_analogDeviceRecord = new wxStaticText(selectSoundDeviceBox, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0);
-    gridSizerSoundDevice->Add(m_analogDeviceRecord, 0, wxALIGN_CENTER_VERTICAL | wxEXPAND, 0);
+    m_analogDeviceRecord = new wxStaticText(selectSoundDeviceBox, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxST_ELLIPSIZE_END);
+    gridSizerSoundDevice->Add(m_analogDeviceRecord, 0, wxEXPAND, 0);
         
     wxBoxSizer* advancedSoundSetupSizer = new wxBoxSizer(wxHORIZONTAL);
     m_advancedSoundSetup = new wxButton(selectSoundDeviceBox, wxID_ANY, wxT("Advanced Sound Settings"),  wxDefaultPosition, wxDefaultSize, 0);
@@ -632,7 +632,7 @@ int EasySetupDialog::OnPortAudioCallback_(const void *input, void *output, unsig
     EasySetupDialog* dlg = (EasySetupDialog*)userData;
     short *wptr = (short*)output;
     
-    for (int index = 0; index < frameCount; index++)
+    for (unsigned long index = 0; index < frameCount; index++)
     {
         wptr[index] = (SHRT_MAX) * sin(2 * PI * (1500) * dlg->sineWaveSampleNumber_ / 48000);
         dlg->sineWaveSampleNumber_ = (dlg->sineWaveSampleNumber_ + 1) % 48000;
