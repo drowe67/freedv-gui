@@ -79,7 +79,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     gridSizerSoundDevice->Add(m_analogDeviceRecord, 0, wxEXPAND, 0);
         
     wxBoxSizer* advancedSoundSetupSizer = new wxBoxSizer(wxHORIZONTAL);
-    m_advancedSoundSetup = new wxButton(selectSoundDeviceBox, wxID_ANY, wxT("Advanced Sound Settings"),  wxDefaultPosition, wxDefaultSize, 0);
+    m_advancedSoundSetup = new wxButton(selectSoundDeviceBox, wxID_ANY, wxT("Advanced"),  wxDefaultPosition, wxDefaultSize, 0);
     advancedSoundSetupSizer->Add(m_advancedSoundSetup, 0, wxEXPAND, 0);
     
     setupSoundDeviceBoxSizer->Add(gridSizerSoundDevice, 1, wxEXPAND | wxALIGN_LEFT, 5);
@@ -133,7 +133,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     
     wxBoxSizer* pttButtonSizer = new wxBoxSizer(wxHORIZONTAL);
     
-    m_advancedPTTSetup = new wxButton(setupCatControlBox, wxID_ANY, wxT("Advanced PTT Settings"),  wxDefaultPosition, wxDefaultSize, 0);
+    m_advancedPTTSetup = new wxButton(setupCatControlBox, wxID_ANY, wxT("Advanced"),  wxDefaultPosition, wxDefaultSize, 0);
     pttButtonSizer->Add(m_advancedPTTSetup, 0, wxEXPAND, 3);
 
     m_buttonTest = new wxButton(setupCatControlBox, wxID_ANY, wxT("Test"),  wxDefaultPosition, wxDefaultSize, 0);
