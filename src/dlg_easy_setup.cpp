@@ -306,8 +306,8 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
             {
                 wxGetApp().m_soundCard2InDeviceName = "none";
                 wxGetApp().m_soundCard2OutDeviceName = "none";
-                wxGetApp().m_soundCard1InDeviceName = selectedString;
-                g_soundCard1InDeviceNum = deviceData->deviceIndex;
+                wxGetApp().m_soundCard1InDeviceName = deviceData->rxDeviceName;
+                g_soundCard1InDeviceNum = deviceData->rxDeviceIndex;
                 wxGetApp().m_soundCard1OutDeviceName = m_analogDevicePlayback->GetLabel();
                 g_soundCard1OutDeviceNum = analogDevicePlaybackDeviceId_;
             }
@@ -317,10 +317,10 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
                 g_soundCard2InDeviceNum = analogDeviceRecordDeviceId_;
                 wxGetApp().m_soundCard2OutDeviceName = m_analogDevicePlayback->GetLabel();
                 g_soundCard2OutDeviceNum = analogDevicePlaybackDeviceId_;
-                wxGetApp().m_soundCard1InDeviceName = selectedString;
-                g_soundCard1InDeviceNum = deviceData->deviceIndex;
-                wxGetApp().m_soundCard1OutDeviceName = selectedString;
-                g_soundCard1OutDeviceNum = deviceData->deviceIndex;
+                wxGetApp().m_soundCard1InDeviceName = deviceData->rxDeviceName;
+                g_soundCard1InDeviceNum = deviceData->rxDeviceIndex;
+                wxGetApp().m_soundCard1OutDeviceName = deviceData->txDeviceName;
+                g_soundCard1OutDeviceNum = deviceData->txDeviceIndex;
                 
                 g_soundCard2SampleRate = 48000;
             }
@@ -540,7 +540,7 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
             else
             {
                 SoundDeviceData* deviceData = (SoundDeviceData*)m_radioDevice->GetClientObject(index);
-                radioOutDeviceId = deviceData->deviceIndex;
+                radioOutDeviceId = deviceData->txDeviceIndex;
             }
         }
         
@@ -852,8 +852,10 @@ void EasySetupDialog::updateAudioDevices_()
                 SoundDeviceData* soundData = new SoundDeviceData();
                 assert(soundData != nullptr);
                 
-                soundData->deviceName = devName;
-                soundData->deviceIndex = index;
+                soundData->rxDeviceName = devName;
+                soundData->rxDeviceIndex = index;
+                soundData->txDeviceName = devName;
+                soundData->txDeviceIndex = index;
                 
                 // Note: m_radioDevice owns soundData after this call and is responsible
                 // for deleting it when the window is closed by the user.

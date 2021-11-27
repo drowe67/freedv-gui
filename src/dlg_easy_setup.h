@@ -92,8 +92,10 @@ class EasySetupDialog : public wxDialog
      private:
          struct SoundDeviceData : public wxClientData
          {
-             wxString deviceName;
-             int deviceIndex;
+             wxString rxDeviceName;
+             wxString txDeviceName;
+             int rxDeviceIndex;
+             int txDeviceIndex;
          };
          
          static int OnPortAudioCallback_(const void *input, void *output, unsigned long frameCount, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData);
