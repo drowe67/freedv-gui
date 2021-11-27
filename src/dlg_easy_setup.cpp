@@ -56,7 +56,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     wxStaticBox *selectSoundDeviceBox = new wxStaticBox(panel, wxID_ANY, _("Step 1: Select Sound Device"));
     wxStaticBoxSizer* setupSoundDeviceBoxSizer = new wxStaticBoxSizer( selectSoundDeviceBox, wxVERTICAL);
     
-    wxGridSizer* gridSizerSoundDevice = new wxGridSizer(3, 2, 0, 0);
+    wxFlexGridSizer* gridSizerSoundDevice = new wxFlexGridSizer(3, 2, 5, 0);
     
     wxStaticText* labelRadioDevice = new wxStaticText(selectSoundDeviceBox, wxID_ANY, wxT("Radio Device: "), wxDefaultPosition, wxDefaultSize, 0);
     gridSizerSoundDevice->Add(labelRadioDevice, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
@@ -79,11 +79,11 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
         
     wxBoxSizer* advancedSoundSetupSizer = new wxBoxSizer(wxHORIZONTAL);
     m_advancedSoundSetup = new wxButton(selectSoundDeviceBox, wxID_ANY, wxT("Advanced Sound Settings"),  wxDefaultPosition, wxDefaultSize, 0);
-    advancedSoundSetupSizer->Add(m_advancedSoundSetup, 0, 0, 3);
+    advancedSoundSetupSizer->Add(m_advancedSoundSetup, 0, 0, 0);
     
     setupSoundDeviceBoxSizer->Add(gridSizerSoundDevice, 1, wxEXPAND | wxALIGN_LEFT, 5);
-    setupSoundDeviceBoxSizer->Add(advancedSoundSetupSizer, 0, wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL, 3);
-    sectionSizer->Add(setupSoundDeviceBoxSizer, 0, wxALL | wxEXPAND, 3);
+    setupSoundDeviceBoxSizer->Add(advancedSoundSetupSizer, 0, wxALL | wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL, 10);
+    sectionSizer->Add(setupSoundDeviceBoxSizer, 0, wxALL | wxEXPAND, 10);
     
     // Step 2: setup CAT control
     // =========================
@@ -97,7 +97,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
 
     m_ckUseHamlibPTT = new wxCheckBox(setupCatControlBox, wxID_ANY, _("Use Hamlib PTT"), wxDefaultPosition, wxSize(-1, -1), 0);
     m_ckUseHamlibPTT->SetValue(false);
-    gridSizerhl->Add(m_ckUseHamlibPTT, 0, wxALIGN_CENTER_VERTICAL, 0);
+    gridSizerhl->Add(m_ckUseHamlibPTT, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     gridSizerhl->Add(new wxStaticText(setupCatControlBox, -1, wxT("")), 0, wxEXPAND);
 
     /* Hamlib Rig Type combobox. */
@@ -136,11 +136,11 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     pttButtonSizer->Add(m_advancedPTTSetup, 0, wxALIGN_CENTER_VERTICAL, 3);
 
     m_buttonTest = new wxButton(setupCatControlBox, wxID_ANY, wxT("Test"),  wxDefaultPosition, wxDefaultSize, 0);
-    pttButtonSizer->Add(m_buttonTest, 0, wxALIGN_CENTER_VERTICAL, 3);
+    pttButtonSizer->Add(m_buttonTest, 0, wxALL | wxALIGN_CENTER_VERTICAL, 10);
     
     setupCatControlBoxSizer->Add(pttButtonSizer, 0, wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL, 3);
     
-    sectionSizer->Add(setupCatControlBoxSizer, 0, wxALL|wxEXPAND, 3);
+    sectionSizer->Add(setupCatControlBoxSizer, 0, wxALL|wxEXPAND, 10);
     
     // Step 3: setup PSK Reporter
     // ==========================
@@ -149,21 +149,21 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     wxStaticBoxSizer* sbSizer_psk;
     sbSizer_psk = new wxStaticBoxSizer(setupPskReporterBox, wxHORIZONTAL);
     m_ckbox_psk_enable = new wxCheckBox(setupPskReporterBox, wxID_ANY, _("Enable Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_psk->Add(m_ckbox_psk_enable, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_psk->Add(m_ckbox_psk_enable, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     wxStaticText* labelPskCallsign = new wxStaticText(setupPskReporterBox, wxID_ANY, wxT("Callsign: "), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_psk->Add(labelPskCallsign, 0,  wxRIGHT | wxALIGN_CENTER_VERTICAL, 3);
+    sbSizer_psk->Add(labelPskCallsign, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     m_txt_callsign = new wxTextCtrl(setupPskReporterBox, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
-    sbSizer_psk->Add(m_txt_callsign, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_psk->Add(m_txt_callsign, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     wxStaticText* labelPskGridSquare = new wxStaticText(setupPskReporterBox, wxID_ANY, wxT("Grid Square: "), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_psk->Add(labelPskGridSquare, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 3);
+    sbSizer_psk->Add(labelPskGridSquare, 0, wxALL | wxALIGN_CENTER_VERTICAL, 3);
     
-    m_txt_grid_square = new wxTextCtrl(setupPskReporterBox, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(70,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
-    sbSizer_psk->Add(m_txt_grid_square, 0,  wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+    m_txt_grid_square = new wxTextCtrl(setupPskReporterBox, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(80,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    sbSizer_psk->Add(m_txt_grid_square, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    sectionSizer->Add(sbSizer_psk, 0, wxALL|wxEXPAND, 3);
+    sectionSizer->Add(sbSizer_psk, 0, wxALL|wxEXPAND, 10);
     
     // Step 4: save or cancel changes
     // =============================
