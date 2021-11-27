@@ -152,6 +152,14 @@ void MainFrame::OnHelpCheckUpdatesUI(wxUpdateUIEvent& event)
 }
 
 //-------------------------------------------------------------------------
+// OnHelpManual()
+//-------------------------------------------------------------------------
+void MainFrame::OnHelpManual( wxCommandEvent& event )
+{
+    wxLaunchDefaultBrowser("https://github.com/drowe67/freedv-gui/blob/master/USER_MANUAL.pdf");
+}
+
+//-------------------------------------------------------------------------
 //OnHelpAbout()
 //-------------------------------------------------------------------------
 void MainFrame::OnHelpAbout(wxCommandEvent& event)

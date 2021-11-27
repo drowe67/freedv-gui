@@ -489,11 +489,6 @@ add_subdirectory(contrib)
 
 message(STATUS "Build type will be: ${CMAKE_BUILD_TYPE}")
 
-if(APPLE)
-configure_file ("${PROJECT_SOURCE_DIR}/src/info.plist.in"
-                "${PROJECT_BINARY_DIR}/src/info.plist" )
-endif(APPLE)
-
 # Adds support for "make dist" target.
 set(ARCHIVE_NAME "freedv-${FREEDV_VERSION_MAJOR}.${FREEDV_VERSION_MINOR}.${FREEDV_VERSION_PATCH}")
 add_custom_target(dist
@@ -526,6 +521,12 @@ install(
     DESTINATION share/freedv-gui
     FILES_MATCHING PATTERN "*.wav")
 
+# Install documentation for the current version.
+install(
+    FILES USER_MANUAL.pdf USER_MANUAL.html USER_MANUAL.md
+    DESTINATION share/freedv-gui
+)    
+
 if(WIN32)
     #
     # Cpack NSIS configuration for Windows.
@@ -554,8 +555,9 @@ if(WIN32)
     set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_NSIS_MENU_LINKS
         "http://freedv.org" "FreeDV Homepage")
-    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "reg delete HKEY_CURRENT_USER\SOFTWARE\CODEC2-Project\FreeDV /f")
-
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "DeleteRegKey HKLM 'SOFTWARE\\\\CODEC2-Project\\\\FreeDV'")
+    set(CPACK_NSIS_MENU_LINKS "share/freedv-gui/USER_MANUAL.pdf" "FreeDV User Manual")
+    
     include(CPack)
 elseif(UNIX AND NOT APPLE)
     # Linux packaging

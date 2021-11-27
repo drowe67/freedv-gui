@@ -155,6 +155,7 @@ class TopFrame : public wxFrame
         virtual void OnHelpCheckUpdates( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnHelpAbout( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnHelpManual( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnCmdSliderScroll( wxScrollEvent& event ) { event.Skip(); }
         virtual void OnCheckSQClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnCheckSNRClick( wxCommandEvent& event ) { event.Skip(); }
