@@ -55,7 +55,8 @@ class EasySetupDialog : public wxDialog
         void    OnAdvancedPTTSetup(wxCommandEvent& event);
         void    HamlibRigNameChanged(wxCommandEvent& event);
         void    PTTUseHamLibClicked(wxCommandEvent& event);
-        
+        void    OnPSKReporterChecked(wxCommandEvent& event);
+
         // Internal section-specific ExchangeData methods.
         void    ExchangeSoundDeviceData(int inout);
         void    ExchangePttDeviceData(int inout);
