@@ -19,6 +19,10 @@
 //
 //==========================================================================
 
+#include "main.h"
+#include "dlg_easy_setup.h"
+#include "pa_wrapper.h"
+
 #ifdef __WIN32__
 #include <wx/msw/registry.h>
 #else
@@ -30,9 +34,6 @@
 #include <cmath>
 
 #define PI 3.14159
-
-#include "dlg_easy_setup.h"
-#include "pa_wrapper.h"
 
 #define RX_ONLY_STRING "None (receive only)"
 #define MULTIPLE_DEVICES_STRING "(multiple)"
