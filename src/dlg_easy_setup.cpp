@@ -19,6 +19,11 @@
 //
 //==========================================================================
 
+
+#include <map>
+#include <climits>
+#include <cmath>
+
 #include "main.h"
 #include "dlg_easy_setup.h"
 #include "pa_wrapper.h"
@@ -29,9 +34,6 @@
 #include <glob.h>
 #include <string.h>
 #endif
-
-#include <climits>
-#include <cmath>
 
 #define PI 3.14159
 
@@ -811,6 +813,7 @@ void EasySetupDialog::updateAudioDevices_()
         return;
     }
     
+    std::map<wxString, SoundDeviceData*> finalDeviceList;
     int numDevices = Pa_GetDeviceCount();
     for (int index = 0; index < numDevices; index++)
     {
@@ -818,7 +821,7 @@ void EasySetupDialog::updateAudioDevices_()
         
         // Only devices that have both input and output channels should be considered for radio devices.
         // These are typically ones such as "USB Audio CODEC" as built into SignaLink et al.
-        if (deviceInfo->maxInputChannels > 0 && deviceInfo->maxOutputChannels > 0)
+        if (deviceInfo->maxInputChannels > 0 || deviceInfo->maxOutputChannels > 0)
         {
             wxString hostApiName(wxString::FromUTF8(Pa_GetHostApiInfo(deviceInfo->hostApi)->name));           
 
@@ -857,12 +860,62 @@ void EasySetupDialog::updateAudioDevices_()
                 soundData->txDeviceName = devName;
                 soundData->txDeviceIndex = index;
                 
-                // Note: m_radioDevice owns soundData after this call and is responsible
-                // for deleting it when the window is closed by the user.
-                m_radioDevice->Append(devName, soundData);
+                finalDeviceList[devName] = soundData;
+            }
+            else
+            {
+                // Windows uses separate sound devices for input and output. Additionally, they
+                // tend to be named differently (e.g. "Microphone (USB Audio CODEC)" and "Speakers (USB Audio CODEC)")
+                // so we need to match/combine the two for display purposes.
+                //
+                // XXX: this cleanup won't handle non-English names but shouldn't screw them up.
+                wxRegEx soundDeviceCleanup("^(Microphone|Speakers)\\s+\\((.*)\\)$");
+                wxString cleanedDeviceName = devName;
+                soundDeviceCleanup.Replace(&cleanedDeviceName, "\\1");
+                
+                // Get any entry we previously created or create a fresh one.
+                SoundDeviceData* soundData = finalDeviceList[cleanedDeviceName];
+                if (soundData == nullptr)
+                {
+                    soundData = new SoundDeviceData();
+                    assert(soundData != nullptr);
+                    
+                    finalDeviceList[cleanedDeviceName] = soundData;                    
+                }
+                
+                // Can we open for input?
+                err = Pa_IsFormatSupported(&inputParameters, NULL, 48000);
+                if (err == paFormatIsSupported)
+                {
+                    soundData->rxDeviceName = devName;
+                    soundData->rxDeviceIndex = index;
+                }
+                
+                // If not, can we open for output?
+                err = Pa_IsFormatSupported(NULL, &outputParameters, 48000);
+                if (err == paFormatIsSupported)
+                {
+                    soundData->txDeviceName = devName;
+                    soundData->txDeviceIndex = index;
+                }
             }
         }
     }
+    
+    // Add the ones we found to the device list.
+    for (auto& kvp : finalDeviceList)
+    {
+        // Only include devices that we have both RX and TX IDs for.
+        if (kvp.second->rxDeviceIndex == kvp.second->txDeviceIndex == -1)
+        {
+            delete kvp.second;
+            continue;
+        }
+        
+        // Note: m_radioDevice owns kvp.second after this call and is responsible
+        // for deleting it when the window is closed by the user.
+        m_radioDevice->Append(kvp.first, kvp.second);
+    }    
     
     if (m_radioDevice->GetCount() > 0)
     {

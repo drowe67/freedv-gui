@@ -92,6 +92,15 @@ class EasySetupDialog : public wxDialog
      private:
          struct SoundDeviceData : public wxClientData
          {
+             SoundDeviceData() 
+                 : rxDeviceName("none")
+                 , txDeviceName("none")
+                 , rxDeviceIndex(-1)
+                 , txDeviceIndex(-1)
+             {
+                 // empty
+             } 
+             
              wxString rxDeviceName;
              wxString txDeviceName;
              int rxDeviceIndex;
