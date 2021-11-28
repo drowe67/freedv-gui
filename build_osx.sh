@@ -26,7 +26,7 @@ make install
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/codec2.git
-cd codec2 && git checkout ms-reliable-text && git pull
+cd codec2 && git checkout master && git pull
 mkdir -p build_osx && cd build_osx && rm -Rf * && cmake -DBUILD_OSX_UNIVERSAL=1 .. && make -j4
 
 # OK, build and test LPCNet
