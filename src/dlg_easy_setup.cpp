@@ -317,7 +317,7 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
         
         if (radioSoundDevice == MULTIPLE_DEVICES_STRING)
         {
-            for (int index = 0; index < m_radioDevice.GetCount(); index++)
+            for (int index = 0; index < m_radioDevice->GetCount(); index++)
             {
                 SoundDeviceData* data = (SoundDeviceData*)m_radioDevice->GetClientObject(index);
                 if (data != nullptr)
@@ -342,7 +342,7 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
         }
         else
         {
-            m_radioDevice->Insert(cleanedDeviceName, 0, (wxClientData*)nullptr);
+            m_radioDevice->Insert(radioSoundDevice, 0, (wxClientData*)nullptr);
             index = 0;
         }
         m_radioDevice->SetSelection(index);
