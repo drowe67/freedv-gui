@@ -923,9 +923,13 @@ void EasySetupDialog::updateAudioDevices_()
                 // so we need to match/combine the two for display purposes.
                 //
                 // XXX: this cleanup won't handle non-English names but shouldn't screw them up.
-                wxRegEx soundDeviceCleanup("^(Microphone|Speakers) \\((.*)\\)?$");
+                wxRegEx soundDeviceCleanup("^(Microphone|Speakers) \\(");
                 wxString cleanedDeviceName = devName;
-                soundDeviceCleanup.Replace(&cleanedDeviceName, "\\1");
+                if (soundDeviceCleanup.Replace(&cleanedDeviceName, "") > 0)
+                {
+                    wxRegEx rightParenRgx("\\)$");
+                    rightParenRgx.Replace(&cleanedDeviceName, "");
+                }
                 
                 // Get any entry we previously created or create a fresh one.
                 SoundDeviceData* soundData = finalDeviceList[cleanedDeviceName];
