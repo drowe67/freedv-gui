@@ -259,12 +259,15 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
                 m_analogDeviceRecord->SetLabel(RX_ONLY_STRING);
                 m_analogDevicePlayback->SetLabel(soundCard1OutDeviceName);
                 radioSoundDevice = soundCard1InDeviceName;
+                analogDevicePlaybackDeviceId_ = g_soundCard1OutDeviceNum;
             }
             else 
             {
                 // RX and TX setup
                 m_analogDeviceRecord->SetLabel(soundCard2InDeviceName);
+                analogDevicePlaybackDeviceId_ = g_soundCard2OutDeviceNum;
                 m_analogDevicePlayback->SetLabel(soundCard2OutDeviceName);
+                analogDeviceRecordDeviceId_ = g_soundCard2InDeviceNum;
                 
                 if (soundCard1OutDeviceName == soundCard1InDeviceName)
                 {
@@ -277,6 +280,40 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
                 }
             }
         }
+        
+        // Use defaults for analog devices if the current analog device IDs don't exist.
+        Pa_Initialize();
+        
+        if (analogDeviceRecordDeviceId_ == -1)
+        {
+            PaDeviceIndex defaultInIndex = Pa_GetDefaultInputDevice();
+            if (defaultInIndex != paNoDevice)
+            {
+                const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(defaultInIndex);
+                wxString devName(wxString::FromUTF8(deviceInfo->name));
+                m_analogDeviceRecord->SetLabel(devName);
+                analogDeviceRecordDeviceId_ = defaultInIndex;
+            }
+            else
+            {
+                m_analogDeviceRecord->SetLabel(RX_ONLY_STRING);
+                analogDeviceRecordDeviceId_ = -1;
+            }
+        }
+    
+        if (analogDevicePlaybackDeviceId_ == -1)
+        {
+            PaDeviceIndex defaultOutIndex = Pa_GetDefaultOutputDevice();
+            if (defaultOutIndex != paNoDevice)
+            {
+                const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(defaultOutIndex);
+                wxString devName(wxString::FromUTF8(deviceInfo->name));
+                m_analogDevicePlayback->SetLabel(devName);
+                analogDevicePlaybackDeviceId_ = defaultOutIndex;
+            }
+        }
+        
+        Pa_Terminate();
         
         if (radioSoundDevice != "")
         {
@@ -869,11 +906,9 @@ void EasySetupDialog::updateAudioDevices_()
                 // so we need to match/combine the two for display purposes.
                 //
                 // XXX: this cleanup won't handle non-English names but shouldn't screw them up.
-                wxRegEx soundDeviceCleanup("^(Microphone|Speakers) ");
-                wxRegEx endParenthesis(")$");
+                wxRegEx soundDeviceCleanup("^(Microphone|Speakers) \\((.*)\\)$");
                 wxString cleanedDeviceName = devName;
                 soundDeviceCleanup.Replace(&cleanedDeviceName, "");
-                endParenthesis.Replace(&cleanedDeviceName, "");
                 
                 // Get any entry we previously created or create a fresh one.
                 SoundDeviceData* soundData = finalDeviceList[cleanedDeviceName];
