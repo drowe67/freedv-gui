@@ -315,20 +315,37 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
         
         Pa_Terminate();
         
-        if (radioSoundDevice != "")
+        if (radioSoundDevice == MULTIPLE_DEVICES_STRING)
         {
-            int index = m_radioDevice->FindString(radioSoundDevice);
-            if (index != wxNOT_FOUND)
+            for (int index = 0; index < m_radioDevice.GetCount(); index++)
             {
-                m_radioDevice->SetSelection(index);
+                SoundDeviceData* data = (SoundDeviceData*)m_radioDevice->GetClientObject(index);
+                if (data != nullptr)
+                {
+                    bool rxDeviceNameMatches = data->rxDeviceName == soundCard1InDeviceName;
+                    bool isRxOnly = m_analogDeviceRecord->GetLabel() == RX_ONLY_STRING;
+                    bool txDeviceNameMatches = data->txDeviceName == soundCard1OutDeviceName;
+                    
+                    if (rxDeviceNameMatches && (isRxOnly || txDeviceNameMatches))
+                    {
+                        m_radioDevice->SetSelection(index);
+                        return;
+                    }
+                }
             }
-            else
-            {
-                m_radioDevice->Insert(radioSoundDevice, 0, (wxClientData*)nullptr);
-                index = 0;
-            }
+        }
+          
+        int index = m_radioDevice->FindString(radioSoundDevice);
+        if (index != wxNOT_FOUND)
+        {
             m_radioDevice->SetSelection(index);
         }
+        else
+        {
+            m_radioDevice->Insert(cleanedDeviceName, 0, (wxClientData*)nullptr);
+            index = 0;
+        }
+        m_radioDevice->SetSelection(index);
     }
     else if (inout == EXCHANGE_DATA_OUT)
     {
@@ -908,7 +925,7 @@ void EasySetupDialog::updateAudioDevices_()
                 // XXX: this cleanup won't handle non-English names but shouldn't screw them up.
                 wxRegEx soundDeviceCleanup("^(Microphone|Speakers) \\((.*)\\)$");
                 wxString cleanedDeviceName = devName;
-                soundDeviceCleanup.Replace(&cleanedDeviceName, "");
+                soundDeviceCleanup.Replace(&cleanedDeviceName, "\\1");
                 
                 // Get any entry we previously created or create a fresh one.
                 SoundDeviceData* soundData = finalDeviceList[cleanedDeviceName];
