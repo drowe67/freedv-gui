@@ -74,6 +74,7 @@
 #include "lpcnet_freedv.h"
 
 #include "topFrame.h"
+#include "dlg_easy_setup.h"
 #include "dlg_ptt.h"
 #include "dlg_options.h"
 #include "plot.h"
@@ -599,6 +600,8 @@ class MainFrame : public TopFrame
         void OnTop(wxCommandEvent& event);
         void OnExit( wxCommandEvent& event );
 
+        void OnToolsEasySetup( wxCommandEvent& event );
+        void OnToolsEasySetupUI( wxUpdateUIEvent& event );
         void OnToolsAudio( wxCommandEvent& event );
         void OnToolsAudioUI( wxUpdateUIEvent& event );
         void OnToolsComCfg( wxCommandEvent& event );
@@ -687,7 +690,7 @@ class MainFrame : public TopFrame
         bool       isAvxPresent;
         
         int         getSoundCardIDFromName(wxString& name, bool input);
-        bool        validateSoundCardSetup();
+        bool        validateSoundCardSetup(bool startup = false);
 };
 
 void txRxProcessing();

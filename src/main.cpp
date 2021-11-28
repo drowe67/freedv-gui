@@ -428,7 +428,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     g_soundCard1SampleRate   = pConfig->Read(wxT("/Audio/soundCard1SampleRate"),          -1);
     g_soundCard2SampleRate   = pConfig->Read(wxT("/Audio/soundCard2SampleRate"),          -1);
 
-    validateSoundCardSetup();
+    validateSoundCardSetup(true);
 
     wxGetApp().m_playFileToMicInPath = pConfig->Read("/File/playFileToMicInPath",   wxT(""));
     wxGetApp().m_recFileFromRadioPath = pConfig->Read("/File/recFileFromRadioPath", wxT(""));
@@ -3131,7 +3131,7 @@ int MainFrame::getSoundCardIDFromName(wxString& name, bool input)
     return result;
 }
 
-bool MainFrame::validateSoundCardSetup()
+bool MainFrame::validateSoundCardSetup(bool startup)
 {
     bool canRun = true;
     
@@ -3141,6 +3141,15 @@ bool MainFrame::validateSoundCardSetup()
     g_soundCard2InDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard2InDeviceName, true);
     g_soundCard2OutDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard2OutDeviceName, false);
 
+    if (startup && g_soundCard1InDeviceNum == -1 && g_soundCard1OutDeviceNum == -1 && g_soundCard2InDeviceNum == -1 && g_soundCard2OutDeviceNum == -1)
+    {
+        CallAfter([&] {
+            EasySetupDialog* dlg = new EasySetupDialog(this);
+            dlg->ShowModal();
+        });  
+        return false;
+    }
+    
     if (wxGetApp().m_soundCard1InDeviceName != "none" && g_soundCard1InDeviceNum == -1)
     {
         wxMessageBox(wxString::Format(
