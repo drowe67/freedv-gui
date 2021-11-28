@@ -317,7 +317,7 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
         
         if (radioSoundDevice == MULTIPLE_DEVICES_STRING)
         {
-            for (int index = 0; index < m_radioDevice->GetCount(); index++)
+            for (unsigned int index = 0; index < m_radioDevice->GetCount(); index++)
             {
                 SoundDeviceData* data = (SoundDeviceData*)m_radioDevice->GetClientObject(index);
                 if (data != nullptr)
@@ -923,7 +923,7 @@ void EasySetupDialog::updateAudioDevices_()
                 // so we need to match/combine the two for display purposes.
                 //
                 // XXX: this cleanup won't handle non-English names but shouldn't screw them up.
-                wxRegEx soundDeviceCleanup("^(Microphone|Speakers) \\((.*)\\)$");
+                wxRegEx soundDeviceCleanup("^(Microphone|Speakers) \\((.*)\\)?$");
                 wxString cleanedDeviceName = devName;
                 soundDeviceCleanup.Replace(&cleanedDeviceName, "\\1");
                 
@@ -952,6 +952,41 @@ void EasySetupDialog::updateAudioDevices_()
                     soundData->txDeviceName = devName;
                     soundData->txDeviceIndex = index;
                 }
+            }
+        }
+    }
+    
+    // FlexRadio shortcut: all devices starting with "DAX Audio RX" should be linked
+    // to the "DAX Audio TX" device. There's only one TX device for all digital mode
+    // applications intended to be used on a Flex radio.
+    wxString fullTxDeviceName;
+    int flexTxDeviceIndex = -1;
+    for (auto& kvp : finalDeviceList)
+    {
+        if (kvp.first.StartsWith("DAX Audio TX"))
+        {
+            fullTxDeviceName = kvp.second->txDeviceName;
+            flexTxDeviceIndex = kvp.second->txDeviceIndex;
+            
+            // Suppress the TX device from appearing in the list.
+            kvp.second->txDeviceIndex = -1;
+        }
+        else if (kvp.first.StartsWith("DAX RESERVED") || kvp.first.StartsWith("DAX IQ") || kvp.first.StartsWith("DAX MIC"))
+        {
+            // Suppress all reserved and IQ devices from the list.
+            kvp.second->txDeviceIndex = -1;
+            kvp.second->rxDeviceIndex = -1;
+        }
+    }
+    
+    if (fullTxDeviceName != "")
+    {
+        for (auto& kvp : finalDeviceList)
+        {
+            if (kvp.first.StartsWith("DAX Audio RX"))
+            {
+                kvp.second->txDeviceName = fullTxDeviceName;
+                kvp.second->txDeviceIndex = flexTxDeviceIndex;
             }
         }
     }
