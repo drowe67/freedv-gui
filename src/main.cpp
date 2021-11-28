@@ -1040,8 +1040,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     if (snr_limited < -5.0) snr_limited = -5.0;
     if (snr_limited > 20.0) snr_limited = 20.0;
     char snr[15];
-    int snr_val = (int)(g_snr+0.5);
-    sprintf(snr, "%d", snr_val); // round to nearest dB
+    sprintf(snr, "%4.1f", g_snr);
 
     //fprintf(stderr, "g_mode: %d snr_est: %f m_snrBeta: %f g_snr: %f snr_limited: %f\n", g_mode, g_stats.snr_est,  m_snrBeta, g_snr, snr_limited);
 
@@ -1195,7 +1194,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             {
                 wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
                 wxGetApp().m_pskPendingCallsign = rxCallsign.ToStdString();
-                wxGetApp().m_pskPendingSnr = snr_val;
+                wxGetApp().m_pskPendingSnr = (int)(g_snr + 0.5);
             }
         }
         else if (wxGetApp().m_pskPendingCallsign != "")

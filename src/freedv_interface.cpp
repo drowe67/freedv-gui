@@ -59,6 +59,24 @@ void FreeDVInterface::OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr,
     reliable_text_reset(rt);
 }
 
+float FreeDVInterface::GetMinimumSNR_(int mode)
+{
+    switch(mode)
+    {
+        case FREEDV_MODE_700C:
+            return 2.0;
+        case FREEDV_MODE_700D:
+            return -2.0f;
+        case FREEDV_MODE_700E:
+            return 1.0f;
+        case FREEDV_MODE_1600:
+            return 4.0f;
+        case FREEDV_MODE_2020:
+            return 2.0f;
+        default:
+            return 0.0f;
+    }
+}
 void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText)
 {
     singleRxThread_ = singleRxThread;
@@ -70,6 +88,7 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
     }
     
     int src_error = 0;
+    float minimumSnr = 999.0f;
     for (auto& mode : enabledModes_)
     {
         struct freedv* dv = nullptr;
@@ -85,6 +104,13 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
         snrVals_.push_back(-20);
         
         dvObjects_.push_back(dv);
+        
+        float tempSnr = GetMinimumSNR_(mode);
+        if (tempSnr < minimumSnr)
+        {
+            minimumSnr = tempSnr;
+        }
+        snrAdjust_.push_back(tempSnr);
         
         FreeDVTextFnState* fnStateObj = new FreeDVTextFnState;
         fnStateObj->interfaceObj = this;
@@ -138,10 +164,17 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
             reliableText_.push_back(rt);
         }
     }
+    
+    // Loop back through SNR adjust list and subtract minimum from each entry.
+    for (int index = 0; index < snrAdjust_.size(); index++)
+    {
+        snrAdjust_[index] -= minimumSnr;
+    }
 }
 
 void FreeDVInterface::stop()
 {
+    snrAdjust_.clear();
     snrVals_.clear();
     
     for (auto& fnState : textFnObjs_)
@@ -517,12 +550,14 @@ int FreeDVInterface::getRxSpeechSampleRate() const
 
 void FreeDVInterface::setSquelch(int enable, float level)
 {
+    int index = 0;
+    
     squelchEnabled_ = enable;
     
     for (auto& dv : dvObjects_)
     {
         freedv_set_squelch_en(dv, enable);
-        freedv_set_snr_squelch_thresh(dv, level);
+        freedv_set_snr_squelch_thresh(dv, level + snrAdjust_[index++]);
     }
 }
 
