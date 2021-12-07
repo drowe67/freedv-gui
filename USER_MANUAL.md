@@ -409,6 +409,11 @@ By default, FreeDV will use as many threads/cores in parallel as required to dec
 necessary to enable the "Use single thread for multiple RX operation" option as well. This results in FreeDV decoding each mode in series
 and additionally short circuits the list of modes to be checked when in sync.
 
+Additionally, the squelch setting with simultaneous decode enabled is relative to the mode that supports the weakest signals 
+(currently 700D).  The squelch for other modes will be set to a value higher than the slider (which is calculated by adding the 
+difference between the "Min SNR" of 700D and the mode in question; see "FreeDV Modes" below). For example, the squelch for 700E
+when the squelch slider is set to -2.0 becomes 1.0dB. This is designed to reduce undesired pops and clicks due to false decodes.
+
 # FreeDV Modes
 
 The following table is a guide to the different modes, using
