@@ -163,6 +163,8 @@ private:
     static void FreeDVTextRxFn_(void *callback_state, char c);
     static void OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr, int length, void* state);
     
+    static float GetMinimumSNR_(int mode);
+    
     void (*textRxFunc_)(void *, char);
     bool singleRxThread_;
     int txMode_;
@@ -177,6 +179,14 @@ private:
     std::deque<SRC_STATE*> outRateConvObjs_;
     std::deque<float> snrVals_;
     std::deque<EventHandlerThread<RxAudioThreadState*, RxAudioThreadState*> *> threads_;
+    
+    // Amount to add to squelch SNR to take into account different mode characteristics.
+    // For example, if multi-RX is on, 700E's squelch would be the user's selection + 3.0dB
+    // since 700E's minimum is 1.0dB and 700D's is -2.0dB.
+    //
+    // More info on minimum SNRs is at https://github.com/drowe67/codec2/blob/master/README_freedv.md.
+    std::deque<float> snrAdjust_; 
+    
     COMP txFreqOffsetPhaseRectObj_;
     std::deque<COMP*> rxFreqOffsetPhaseRectObjs_;
     struct MODEM_STATS* modemStatsList_;
