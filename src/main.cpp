@@ -3089,7 +3089,7 @@ int MainFrame::getSoundCardIDFromName(wxString& name, bool input, int sampleRate
             for (PaDeviceIndex index = 0; index < Pa_GetDeviceCount(); index++)
             {
                 const PaDeviceInfo* device = Pa_GetDeviceInfo(index);
-                wxString deviceName = wxString::FromUTF8(device->name);
+                wxString deviceName = wxString::FromUTF8(device->name).Trim();
                 deviceName = deviceName.Trim();
                 if (name == deviceName)
                 {
