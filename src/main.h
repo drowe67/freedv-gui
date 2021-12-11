@@ -686,7 +686,7 @@ class MainFrame : public TopFrame
         void       checkAvxSupport();
         bool       isAvxPresent;
         
-        int         getSoundCardIDFromName(wxString& name, bool input);
+        int         getSoundCardIDFromName(wxString& name, bool input, int sampleRate);
         bool        validateSoundCardSetup();
 };
 
