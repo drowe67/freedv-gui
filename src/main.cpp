@@ -3093,6 +3093,7 @@ int MainFrame::getSoundCardIDFromName(wxString& name, bool input, int sampleRate
                 deviceName = deviceName.Trim();
                 if (name == deviceName)
                 {
+#if 0
                     PaStreamParameters baseParams;
                     baseParams.device = index;
                     baseParams.channelCount = input ? device->maxInputChannels : device->maxOutputChannels;
@@ -3104,6 +3105,7 @@ int MainFrame::getSoundCardIDFromName(wxString& name, bool input, int sampleRate
                     
                     paResult = Pa_IsFormatSupported(input ? &baseParams : NULL, !input ? &baseParams : NULL, sampleRate);
                     if (paResult == paFormatIsSupported)
+#endif
                     {
                         result = index;
                         break;
