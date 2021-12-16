@@ -3093,23 +3093,8 @@ int MainFrame::getSoundCardIDFromName(wxString& name, bool input, int sampleRate
                 deviceName = deviceName.Trim();
                 if (name == deviceName)
                 {
-#if 0
-                    PaStreamParameters baseParams;
-                    baseParams.device = index;
-                    baseParams.channelCount = input ? device->maxInputChannels : device->maxOutputChannels;
-                    baseParams.sampleFormat = paInt16;
-                    baseParams.suggestedLatency = 0;
-                    baseParams.hostApiSpecificStreamInfo = NULL;
-                    
-                    if (baseParams.channelCount == 0) continue;
-                    
-                    paResult = Pa_IsFormatSupported(input ? &baseParams : NULL, !input ? &baseParams : NULL, sampleRate);
-                    if (paResult == paFormatIsSupported)
-#endif
-                    {
-                        result = index;
-                        break;
-                    }
+                    result = index;
+                    break;
                 }
             }
         }
