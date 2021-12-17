@@ -3077,7 +3077,7 @@ int MainFrame::txCallback(
     return paContinue;
 }
 
-int MainFrame::getSoundCardIDFromName(wxString& name, bool input, int sampleRate)
+int MainFrame::getSoundCardIDFromName(wxString& name, bool input)
 {
     int result = -1;
     
@@ -3112,10 +3112,10 @@ bool MainFrame::validateSoundCardSetup()
     bool canRun = true;
     
     // Translate device names to IDs
-    g_soundCard1InDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard1InDeviceName, true, g_soundCard1SampleRate);
-    g_soundCard1OutDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard1OutDeviceName, false, g_soundCard1SampleRate);
-    g_soundCard2InDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard2InDeviceName, true, g_soundCard2SampleRate);
-    g_soundCard2OutDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard2OutDeviceName, false, g_soundCard2SampleRate);
+    g_soundCard1InDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard1InDeviceName, true);
+    g_soundCard1OutDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard1OutDeviceName, false);
+    g_soundCard2InDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard2InDeviceName, true);
+    g_soundCard2OutDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard2OutDeviceName, false);
 
     if (wxGetApp().m_soundCard1InDeviceName != "none" && g_soundCard1InDeviceNum == -1)
     {
