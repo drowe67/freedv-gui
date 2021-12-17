@@ -3089,35 +3089,12 @@ int MainFrame::getSoundCardIDFromName(wxString& name, bool input)
             for (PaDeviceIndex index = 0; index < Pa_GetDeviceCount(); index++)
             {
                 const PaDeviceInfo* device = Pa_GetDeviceInfo(index);
-                wxString deviceName = wxString::FromUTF8(device->name);
+                wxString deviceName = wxString::FromUTF8(device->name).Trim();
                 deviceName = deviceName.Trim();
                 if (name == deviceName)
                 {
-                    PaStreamParameters baseParams;
-                    baseParams.device = index;
-                    baseParams.channelCount = input ? device->maxInputChannels : device->maxOutputChannels;
-                    baseParams.sampleFormat = paInt16;
-                    baseParams.suggestedLatency = 0;
-                    baseParams.hostApiSpecificStreamInfo = NULL;
-                    
-                    if (baseParams.channelCount == 0) continue;
-                    
-                    bool supported = false;
-                    for(int sampleIndex = 0; PortAudioWrap::standardSampleRates[sampleIndex] > 0; sampleIndex++)
-                    {
-                        paResult = Pa_IsFormatSupported(input ? &baseParams : NULL, !input ? &baseParams : NULL, PortAudioWrap::standardSampleRates[sampleIndex]);
-                        if (paResult == paFormatIsSupported)
-                        {
-                            supported = true;
-                            break;
-                        }
-                    }
-                    
-                    if (supported)
-                    {
-                        result = index;
-                        break;
-                    }
+                    result = index;
+                    break;
                 }
             }
         }
