@@ -67,12 +67,21 @@ void PortAudioDevice::start()
         error = Pa_StartStream(deviceStream_);
         if (error != paNoError)
         {
+            if (onAudioErrorFunction)
+            {
+                onAudioErrorFunction(*this, Pa_GetErrorText(error), onAudioErrorState);
+            }
+            
             Pa_CloseStream(deviceStream_);
             deviceStream_ = nullptr;
         }
     }
     else
     {
+        if (onAudioErrorFunction)
+        {
+            onAudioErrorFunction(*this, Pa_GetErrorText(error), onAudioErrorState);
+        }
         deviceStream_ = nullptr;
     }
 }
@@ -91,28 +100,40 @@ int PortAudioDevice::OnPortAudioStreamCallback_(const void *input, void *output,
 {
     PortAudioDevice* thisObj = static_cast<PortAudioDevice*>(userData);
     
-    if (thisObj->onAudioUnderflowFunction && statusFlags & 0x1) 
+    unsigned int overflowFlag = 0;
+    unsigned int underflowFlag = 0;
+    
+    if (thisObj->direction_ == IAudioEngine::IN)
+    {
+        underflowFlag = 0x1;
+        overflowFlag = 0x2;
+    }
+    else
+    {
+        underflowFlag = 0x4;
+        overflowFlag = 0x8;
+    }
+    
+    if (thisObj->onAudioUnderflowFunction && statusFlags & underflowFlag) 
     {
         // underflow
         thisObj->onAudioUnderflowFunction(*thisObj, thisObj->onAudioUnderflowState);
     }
     
-    if (thisObj->onAudioOverflowFunction && statusFlags & 0x2) 
+    if (thisObj->onAudioOverflowFunction && statusFlags & overflowFlag) 
     {
         // overflow
         thisObj->onAudioOverflowFunction(*thisObj, thisObj->onAudioOverflowState);
     }
     
+    void* dataPtr = 
+        thisObj->direction_ == IAudioEngine::IN ? 
+        const_cast<void*>(input) :
+        const_cast<void*>(output);
+    
     if (thisObj->onAudioDataFunction)
     {
-        if (thisObj->direction_ == IAudioEngine::IN)
-        {
-            thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(input), frameCount, thisObj->onAudioDataState);
-        }
-        else
-        {
-            thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(output), frameCount, thisObj->onAudioDataState);
-        }
+        thisObj->onAudioDataFunction(*thisObj, dataPtr, frameCount, thisObj->onAudioDataState);
     }
     
     return paContinue;

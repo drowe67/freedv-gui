@@ -39,3 +39,9 @@ void IAudioDevice::setOnAudioUnderflow(AudioOverflowCallbackFn fn, void* state)
     onAudioUnderflowFunction = fn;
     onAudioUnderflowState = state;
 }
+
+void IAudioDevice::setOnAudioError(AudioErrorCallbackFn fn, void* state)
+{
+    onAudioErrorFunction = fn;
+    onAudioErrorState = state;
+}

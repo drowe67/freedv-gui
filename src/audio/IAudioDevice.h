@@ -34,6 +34,7 @@ public:
     typedef std::function<void(IAudioDevice&, void*, size_t, void*)> AudioDataCallbackFn;
     typedef std::function<void(IAudioDevice&, void*)> AudioUnderflowCallbackFn;
     typedef std::function<void(IAudioDevice&, void*)> AudioOverflowCallbackFn;
+    typedef std::function<void(IAudioDevice&, std::string, void*)> AudioErrorCallbackFn;
     
     virtual void start() = 0;
     virtual void stop() = 0;
@@ -58,6 +59,13 @@ public:
     //    2. Pointer to user-provided state object (typically onAudioUnderflowState, defined below).
     void setOnAudioUnderflow(AudioOverflowCallbackFn fn, void* state);
     
+    // Set error callback.
+    // Callback must take the following parameters:
+    //    1. Audio device.
+    //    2. String representing the error encountered.
+    //    3. Pointer to user-provided state object (typically onAudioUnderflowState, defined below).
+    void setOnAudioError(AudioErrorCallbackFn fn, void* state);
+    
 protected:
     AudioDataCallbackFn onAudioDataFunction;
     void* onAudioDataState;
@@ -67,6 +75,9 @@ protected:
     
     AudioUnderflowCallbackFn onAudioUnderflowFunction;
     void* onAudioUnderflowState;
+    
+    AudioErrorCallbackFn onAudioErrorFunction;
+    void* onAudioErrorState;
 };
 
 #endif // I_AUDIO_DEVICE_H
