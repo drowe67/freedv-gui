@@ -67,6 +67,9 @@ set(FREEDV_LINK_LIBS_OSX
     "-framework AVFoundation"
 )
 
+# Compile FreeDV components
+add_subdirectory(audio)
+
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.
 # In addition, there are some required OSX-specific code files for platform specific handling.
 if(APPLE)
@@ -90,9 +93,9 @@ endif(APPLE)
 
 # Link imported or build tree targets.
 if(APPLE)
-target_link_libraries(FreeDV codec2 lpcnetfreedv)
+target_link_libraries(FreeDV codec2 lpcnetfreedv fdv_audio)
 else(APPLE)
-target_link_libraries(freedv codec2 lpcnetfreedv)
+target_link_libraries(freedv codec2 lpcnetfreedv fdv_audio)
 endif(APPLE)
 
 # Add build dependencies for interally built external libraries.
