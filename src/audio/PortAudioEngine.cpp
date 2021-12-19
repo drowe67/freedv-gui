@@ -21,6 +21,7 @@
 //=========================================================================
 
 #include "portaudio.h"
+#include "PortAudioDevice.h"
 #include "PortAudioEngine.h"
 
 PortAudioEngine::PortAudioEngine()
@@ -132,6 +133,16 @@ AudioDeviceSpecification PortAudioEngine::getDefaultAudioDevice(AudioDirection d
 
 std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(std::string deviceName, AudioDirection direction, int sampleRate, int numChannels)
 {
-    // TBD
+    auto deviceList = getAudioDeviceList(direction);
+    
+    for (auto& dev : deviceList)
+    {
+        if (dev.name == deviceName)
+        {
+            auto devObj = new PortAudioDevice(dev.deviceId, direction, sampleRate, numChannels);
+            return std::shared_ptr<IAudioDevice>(devObj);
+        }
+    }
+
     return nullptr;
 }

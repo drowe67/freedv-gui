@@ -25,6 +25,7 @@
 
 #include <string>
 #include <vector>
+#include <functional>
 #include "AudioDeviceSpecification.h"
 
 class IAudioDevice
