@@ -21,7 +21,8 @@
 //=========================================================================
 #include "main.h"
 #include "dlg_audiooptions.h"
-#include "pa_wrapper.h"
+#include "audio/AudioEngineFactory.h"
+#include "audio/IAudioDevice.h"
 
 // constants for test waveform plots
 
@@ -36,19 +37,21 @@
 
 extern wxConfigBase *pConfig;
 
-void AudioOptsDialog::Pa_Init(void)
+void AudioOptsDialog::audioEngineInit(void)
 {
-    m_isPaInitialized = false;
+    m_isPaInitialized = true;
 
-    if((pa_err = Pa_Initialize()) == paNoError)
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->setOnEngineError([this](IAudioEngine&, std::string error, void*)
     {
-        m_isPaInitialized = true;
-    }
-    else
-    {
-        wxMessageBox(wxT("Port Audio failed to initialize"), wxT("Pa_Initialize"), wxOK);
-        return;
-    }
+        CallAfter([&]() {
+            wxMessageBox(wxT("Sound engine failed to initialize"), wxT("Error"), wxOK);
+        });
+        
+        m_isPaInitialized = false;
+    }, nullptr);
+    
+    engine->start();
 }
 
 
@@ -75,10 +78,8 @@ void AudioOptsDialog::buildTestControls(PlotScalar **plotScalar, wxButton **btnT
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
-    m_audioTestThread = nullptr;
-    
     if (g_verbose) fprintf(stderr, "pos %d %d\n", pos.x, pos.y);
-    Pa_Init();
+    audioEngineInit();
 
     wxBoxSizer* mainSizer;
     mainSizer = new wxBoxSizer(wxVERTICAL);
@@ -230,54 +231,6 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     bSizer18->Fit(m_panelTx);
     m_notebook1->AddPage(m_panelTx, _("Transmit"), false);
 
-    // API Tab -------------------------------------------------------------------
-
-    m_panelAPI = new wxPanel(m_notebook1, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-    wxBoxSizer* bSizer12;
-    bSizer12 = new wxBoxSizer(wxHORIZONTAL);
-    wxGridSizer* gSizer31;
-    gSizer31 = new wxGridSizer(2, 1, 0, 0);
-    wxStaticBoxSizer* sbSizer1;
-    sbSizer1 = new wxStaticBoxSizer(new wxStaticBox(m_panelAPI, wxID_ANY, _("PortAudio")), wxVERTICAL);
-
-    wxGridSizer* gSizer3;
-    gSizer3 = new wxGridSizer(4, 2, 0, 0);
-
-    m_staticText7 = new wxStaticText(m_panelAPI, wxID_ANY, _("PortAudio Version String:"), wxDefaultPosition, wxDefaultSize, 0);
-    m_staticText7->Wrap(-1);
-    gSizer3->Add(m_staticText7, 1, wxALIGN_RIGHT|wxALL|wxALIGN_CENTER_VERTICAL, 10);
-    m_textStringVer = new wxStaticText(m_panelAPI, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-    gSizer3->Add(m_textStringVer, 1, wxALIGN_LEFT|wxALL|wxALIGN_CENTER_VERTICAL, 10);
-
-    m_staticText8 = new wxStaticText(m_panelAPI, wxID_ANY, _("PortAudio Int Version:"), wxDefaultPosition, wxDefaultSize, 0);
-    m_staticText8->Wrap(-1);
-    gSizer3->Add(m_staticText8, 1, wxALIGN_RIGHT|wxALL|wxALIGN_CENTER_VERTICAL, 10);
-    m_textIntVer = new wxStaticText(m_panelAPI, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(45,-1), 0);
-    gSizer3->Add(m_textIntVer, 1, wxALIGN_LEFT|wxALL|wxALIGN_CENTER_VERTICAL, 10);
-
-    m_staticText5 = new wxStaticText(m_panelAPI, wxID_ANY, _("Device Count:"), wxDefaultPosition, wxDefaultSize, 0);
-    m_staticText5->Wrap(-1);
-    gSizer3->Add(m_staticText5, 1, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 10);
-    m_textCDevCount = new wxStaticText(m_panelAPI, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(45,-1), 0);
-    gSizer3->Add(m_textCDevCount, 1, wxALIGN_LEFT|wxALL|wxALIGN_CENTER_VERTICAL, 10);
-
-    m_staticText4 = new wxStaticText(m_panelAPI, wxID_ANY, _("API Count:"), wxDefaultPosition, wxDefaultSize, 0);
-    m_staticText4->Wrap(-1);
-    gSizer3->Add(m_staticText4, 1, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 10);
-    m_textAPICount = new wxStaticText(m_panelAPI, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(45,-1), 0);
-    m_textAPICount->SetMaxSize(wxSize(45,-1));
-    gSizer3->Add(m_textAPICount, 1, wxALIGN_LEFT|wxALL|wxALIGN_CENTER_VERTICAL, 10);
-
-    sbSizer1->Add(gSizer3, 1, wxEXPAND, 2);
-    gSizer31->Add(sbSizer1, 1, wxEXPAND, 2);
-    wxStaticBoxSizer* sbSizer6;
-    sbSizer6 = new wxStaticBoxSizer(new wxStaticBox(m_panelAPI, wxID_ANY, _("Other")), wxVERTICAL);
-    gSizer31->Add(sbSizer6, 1, wxEXPAND, 5);
-    bSizer12->Add(gSizer31, 1, wxEXPAND, 5);
-    m_panelAPI->SetSizer(bSizer12);
-    m_panelAPI->Layout();
-    bSizer12->Fit(m_panelAPI);
-    m_notebook1->AddPage(m_panelAPI, _("API Info"), false);
     bSizer4->Add(m_notebook1, 1, wxEXPAND | wxALL, 0);
     m_panel1->SetSizer(bSizer4);
     m_panel1->Layout();
@@ -311,7 +264,6 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
 
     m_notebook1->SetSelection(0);
 
-    showAPIInfo();
     m_RxInDevices.m_listDevices   = m_listCtrlRxInDevices;
     m_RxInDevices.direction       = AUDIO_IN;
     m_RxInDevices.m_textDevice    = m_textCtrlRxIn;
@@ -369,13 +321,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 AudioOptsDialog::~AudioOptsDialog()
 {
-    if (m_audioTestThread != nullptr && m_audioTestThread->joinable())
-    {
-        // Wait for the audio thread to stop. No need to delete as thread stop will trigger delete.
-        m_audioTestThread->join();
-    }
-    
-    Pa_Terminate();
+    AudioEngineFactory::GetAudioEngine()->stop();
 
     // Disconnect Events
     this->Disconnect(wxEVT_HIBERNATE, wxActivateEventHandler(AudioOptsDialog::OnHibernate));
@@ -693,81 +639,26 @@ int AudioOptsDialog::ExchangeData(int inout)
 //-------------------------------------------------------------------------
 int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, int devNum, int in_out)
 {
-    // every sound device has a different list of supported sample rates, so
-    // we work out which ones are supported and populate the list ctrl
-    const PaDeviceInfo  *deviceInfo;
-    PaStreamParameters   inputParameters, outputParameters;
-    PaError              err;
-    wxString             str;
-    int                  i, numSampleRates;
-
-    deviceInfo = Pa_GetDeviceInfo(devNum);
-    if (deviceInfo == NULL) {
-        if (g_verbose) fprintf(stderr,"Pa_GetDeviceInfo(%d) failed!\n", devNum);
-        cbSampleRate->Clear();
-        return 0;
-    }
-
-    inputParameters.device = devNum;
-    inputParameters.channelCount = deviceInfo->maxInputChannels;
-    inputParameters.sampleFormat = paInt16;
-    inputParameters.suggestedLatency = 0;
-    inputParameters.hostApiSpecificStreamInfo = NULL;
-        
-    outputParameters.device = devNum;
-    outputParameters.channelCount = deviceInfo->maxOutputChannels;
-    outputParameters.sampleFormat = paInt16;
-    outputParameters.suggestedLatency = 0;
-    outputParameters.hostApiSpecificStreamInfo = NULL;
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    auto deviceList = engine->getAudioDeviceList(in_out == AUDIO_IN ? IAudioEngine::IN : IAudioEngine::OUT);
+    wxString str;
+    int numSampleRates = 0;
     
     cbSampleRate->Clear();
-    //printf("devNum %d supports: ", devNum);
-    numSampleRates = 0;
-    for(i = 0; PortAudioWrap::standardSampleRates[i] > 0; i++)
+    for (auto& dev : deviceList)
     {
-        if (in_out == AUDIO_IN)
-            err = Pa_IsFormatSupported(&inputParameters, NULL, PortAudioWrap::standardSampleRates[i]);
-        else
-            err = Pa_IsFormatSupported(NULL, &outputParameters, PortAudioWrap::standardSampleRates[i]);
-
-        if( err == paFormatIsSupported ) {
-            str.Printf("%i", (int)PortAudioWrap::standardSampleRates[i]);
-            cbSampleRate->AppendString(str);
-            if (g_verbose) fprintf(stderr,"%i ", (int)PortAudioWrap::standardSampleRates[i]);
-            numSampleRates++;
-        } else {
-            fprintf(stderr, "PA error while testing sample rate for dev ID %d: %s\n", devNum, Pa_GetErrorText(err));
+        if (dev.deviceId == devNum)
+        {
+            for (auto& rate : dev.supportedSampleRates)
+            {
+                str.Printf("%i", rate);
+                cbSampleRate->AppendString(str);
+            }
+            numSampleRates = dev.supportedSampleRates.size();
         }
     }
-    if (g_verbose) fprintf(stderr,"\n");
 
     return numSampleRates;
-}
-
-//-------------------------------------------------------------------------
-// showAPIInfo()
-//-------------------------------------------------------------------------
-void AudioOptsDialog::showAPIInfo()
-{
-    wxString    strval;
-    int         apiVersion;
-    int         apiCount        = 0;
-    int         numDevices      = 0;
-
-    strval = Pa_GetVersionText();
-    m_textStringVer->SetLabel(strval);
-
-    apiVersion = Pa_GetVersion();
-    strval.Printf(wxT("%d"), apiVersion);
-    m_textIntVer->SetLabel(strval);
-
-    apiCount = Pa_GetHostApiCount();
-    strval.Printf(wxT("%d"), apiCount);
-    m_textAPICount->SetLabel(strval);
-
-    numDevices = Pa_GetDeviceCount();
-    strval.Printf(wxT("%d"), numDevices);
-    m_textCDevCount->SetLabel(strval);
 }
 
 //-------------------------------------------------------------------------
@@ -775,18 +666,15 @@ void AudioOptsDialog::showAPIInfo()
 //-------------------------------------------------------------------------
 void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
 {
-    const       PaDeviceInfo *deviceInfo = NULL;
     wxListCtrl* ctrl    = ai.m_listDevices;
     int         in_out  = ai.direction;
-    long        idx;
-    int         numDevices;
     wxListItem  listItem;
     wxString    buf;
-    int         devn;
-    int         col = 0;
+    int         col = 0, idx;
 
-    numDevices = Pa_GetDeviceCount();
-
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    auto devList = engine->getAudioDeviceList(in_out == AUDIO_IN ? IAudioEngine::IN : IAudioEngine::OUT);
+    
     if(ctrl->GetColumnCount() > 0)
     {
         ctrl->ClearAll();
@@ -822,65 +710,21 @@ void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
         ctrl->SetColumnWidth(col++, 160);
     }
 
-    #ifdef LATENCY
-    listItem.SetAlign(wxLIST_FORMAT_CENTRE);
-    listItem.SetText(wxT("Min Latency"));
-    ctrl->InsertColumn(col, listItem);
-    ctrl->SetColumnWidth(col++, 100);
-
-    listItem.SetAlign(wxLIST_FORMAT_CENTRE);
-    listItem.SetText(wxT("Max Latency"));
-    ctrl->InsertColumn(col, listItem);
-    ctrl->SetColumnWidth(col++, 100);
-    #endif
-
-    for(devn = 0; devn < numDevices; devn++)
+    for(auto& dev : devList)
     {
-        buf.Printf(wxT(""));
-        deviceInfo = Pa_GetDeviceInfo(devn);
-        if( ((in_out == AUDIO_IN) && (deviceInfo->maxInputChannels > 0)) ||
-            ((in_out == AUDIO_OUT) && (deviceInfo->maxOutputChannels > 0)))
-        {
-            wxString hostApiName(wxString::FromUTF8(Pa_GetHostApiInfo(deviceInfo->hostApi)->name));           
+        col = 0;
+        buf.Printf(wxT("%s"), dev.name);
+        idx = ctrl->InsertItem(ctrl->GetItemCount(), buf);
+        col++;
+            
+        buf.Printf(wxT("%d"), dev.deviceId);
+        ctrl->SetItem(idx, col++, buf);
 
-            // Exclude DirectSound devices from the list, as they are duplicates to MME
-            // devices and sometimes do not work well for users
-            if(hostApiName.Find("DirectSound") != wxNOT_FOUND)
-                continue;
+        buf.Printf(wxT("%s"), dev.apiName);
+        ctrl->SetItem(idx, col++, buf);
 
-            // Exclude "surround" devices as they clutter the dev list and are not used
-            wxString devName(wxString::FromUTF8(deviceInfo->name));
-            if(devName.Find("surround") != wxNOT_FOUND)
-                continue; 
-
-            col = 0;
-            buf.Printf(wxT("%s"), devName);
-            idx = ctrl->InsertItem(ctrl->GetItemCount(), buf);
-            col++;
-                
-            buf.Printf(wxT("%d"), devn);
-            ctrl->SetItem(idx, col++, buf);
-
-            buf.Printf(wxT("%s"), hostApiName);
-            ctrl->SetItem(idx, col++, buf);
-
-            buf.Printf(wxT("%i"), (int)deviceInfo->defaultSampleRate);
-            ctrl->SetItem(idx, col++, buf);
-
-            #ifdef LATENCY
-            if (in_out == AUDIO_IN)
-                buf.Printf(wxT("%8.4f"), deviceInfo->defaultLowInputLatency);
-            else
-                buf.Printf(wxT("%8.4f"), deviceInfo->defaultLowOutputLatency);               
-            ctrl->SetItem(idx, col++, buf);
-
-            if (in_out == AUDIO_IN)
-                buf.Printf(wxT("%8.4f"), deviceInfo->defaultHighInputLatency);
-            else
-                 buf.Printf(wxT("%8.4f"), deviceInfo->defaultHighOutputLatency);             
-            ctrl->SetItem(idx, col++, buf);
-            #endif
-        }        
+        buf.Printf(wxT("%i"), dev.defaultSampleRate);
+        ctrl->SetItem(idx, col++, buf);
     }
 
     // add "none" option at end
@@ -994,137 +838,105 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(int dn, PlotScalar *ps) {
     m_btnTxInTest->Enable(false);
     m_btnTxOutTest->Enable(false);
     
-    m_audioTestThread = new std::thread([this](PlotScalar *plotScalar, int devNum) {
-        PaStreamParameters  inputParameters;
-        const PaDeviceInfo *deviceInfo = NULL;
-        PaStream           *stream = NULL;
-        PaError             err;
-        short               in48k_stereo_short[2*TEST_BUF_SIZE];
-        short               in48k_short[TEST_BUF_SIZE];
-        short               in8k_short[TEST_BUF_SIZE];
-        int                 numDevices, nBufs, j, src_error,inputChannels, sampleRate, sampleCount;
-        SRC_STATE          *src;
-        FIFO               *fifo;
-
-        // a basic sanity check
-        numDevices = Pa_GetDeviceCount();
-        if (devNum >= numDevices || devNum < 0)
-        {
-            goto plot_in_reenable_ui;
-        }
-        if (g_verbose) fprintf(stderr,"devNum %d\n", devNum);
-
-        fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
-        src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
-
-        // work out how many input channels this device supports.
-
-        deviceInfo = Pa_GetDeviceInfo(devNum);
-        if (deviceInfo == NULL) {
-            CallAfter([&]() {
-                wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card "), wxT("Error"), wxOK);
-            });
-            goto plot_in_cleanup;
-        }
-        if (deviceInfo->maxInputChannels == 1)
-            inputChannels = 1;
-        else
-            inputChannels = 2;
-
-        // open device
-
-        inputParameters.device = devNum;
-        inputParameters.channelCount = inputChannels;
-        inputParameters.sampleFormat = paInt16;
-        inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultHighInputLatency;
-        inputParameters.hostApiSpecificStreamInfo = NULL;
-
-        sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
-        nBufs = TEST_WAVEFORM_PLOT_TIME*sampleRate/TEST_BUF_SIZE;
-        if (g_verbose) fprintf(stderr,"inputChannels: %d nBufs %d\n", inputChannels, nBufs);
-
-        err = Pa_OpenStream(
-                  &stream,
-                  &inputParameters,
-                  NULL,
-                  sampleRate,
-                  0,
-                  paClipOff,    
-                  NULL,       // no callback, use blocking API
-                  NULL ); 
-        if (err != paNoError) {
-            CallAfter([&] {
-                wxMessageBox(wxT("Couldn't initialise sound device."), wxT("Error"), wxOK);       
-            });
-            goto plot_in_cleanup;
-        }
-
-        err = Pa_StartStream(stream);
-        if (err != paNoError) {
-            CallAfter([&] {
-                wxMessageBox(wxT("Couldn't start sound device."), wxT("Error"), wxOK);      
-            }); 
-            goto plot_in_cleanup;
-        }
-
-        // Sometimes this buffer doesn't get completely filled.  Unset values show up as
-        // junk on the plot.
-        memset(in8k_short, 0, TEST_BUF_SIZE * sizeof(short));
-
-        sampleCount = 0;
-
-        while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS))
-        {
-            Pa_ReadStream(stream, in48k_stereo_short, TEST_BUF_SIZE);
-            if (inputChannels == 2) {
-                for(j=0; j<TEST_BUF_SIZE; j++)
-                    in48k_short[j] = in48k_stereo_short[2*j]; // left channel only
-            }
-            else {
-                for(j=0; j<TEST_BUF_SIZE; j++)
-                    in48k_short[j] = in48k_stereo_short[j]; 
-            }
-            int n8k = resample(src, in8k_short, in48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
-            resample_for_plot(fifo, in8k_short, n8k, FS);
-
-            short plotSamples[TEST_WAVEFORM_PLOT_BUF];
-            if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
-            {
-                // come back when the fifo is refilled
-                continue;
-            }
-
-            plotScalar->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
-            sampleCount += TEST_WAVEFORM_PLOT_BUF;
-            CallAfter(&AudioOptsDialog::UpdatePlot, plotScalar);
-        }
-
-        err = Pa_StopStream(stream);
-        if (err != paNoError) {
-            CallAfter([&] {
-                wxMessageBox(wxT("Couldn't stop sound device."), wxT("Error"), wxOK);       
-            });
-        }
-        
-        Pa_CloseStream(stream);
-
-plot_in_cleanup:
-        codec2_fifo_destroy(fifo);
-        src_delete(src);
-        
-plot_in_reenable_ui:
-        CallAfter([&]() {
-            m_btnRxInTest->Enable(true);
-            m_btnRxOutTest->Enable(true);
-            m_btnTxInTest->Enable(true);
-            m_btnTxOutTest->Enable(true);
+    SRC_STATE          *src;
+    FIFO               *fifo, *callbackFifo;
+    int src_error;
     
-            // Clean up after thread.
-            m_audioTestThread->join();
-            delete m_audioTestThread;
-            m_audioTestThread = nullptr;
-        });
-    }, ps, dn);
+    fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
+    src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
+    
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    auto devList = engine->getAudioDeviceList(IAudioEngine::IN);
+    for (auto& devInfo : devList)
+    {
+        if (devInfo.deviceId == dn)
+        {
+            int sampleCount = 0;
+            int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
+            auto device = engine->getAudioDevice(
+                devInfo.name, 
+                IAudioEngine::IN, 
+                sampleRate,
+                devInfo.maxChannels >= 2 ? 2 : 1);
+            
+            if (device)
+            {
+                std::mutex callbackFifoMutex;
+                std::condition_variable callbackFifoCV;
+            
+                callbackFifo = codec2_fifo_create(sampleRate);
+                assert(callbackFifo != nullptr);
+                
+                device->setOnAudioData([&](IAudioDevice&, void* data, size_t numSamples, void* state) {
+                    short* in48k_stereo_short = static_cast<short*>(data);
+                    short               in48k_short[numSamples];
+                
+                    if (devInfo.maxChannels >= 2) {
+                        for(int j = 0; j < numSamples; j++)
+                            in48k_short[j] = in48k_stereo_short[2*j]; // left channel only
+                    }
+                    else {
+                        for(int j = 0; j < numSamples; j++)
+                            in48k_short[j] = in48k_stereo_short[j]; 
+                    }
+                
+                    {
+                        std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
+                        codec2_fifo_write(callbackFifo, in48k_short, numSamples);
+                    }
+                    callbackFifoCV.notify_one();
+                }, nullptr);
+            
+                device->start();
+                while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS))
+                {
+                    short               in8k_short[TEST_BUF_SIZE];
+                    short               in48k_short[TEST_BUF_SIZE];
+                
+                    {
+                        std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
+                        callbackFifoCV.wait_for(callbackFifoLock, std::chrono::milliseconds(1));
+                        if (!codec2_fifo_read(callbackFifo, in48k_short, TEST_BUF_SIZE))
+                        {
+                            continue;
+                        }
+                    }
+                
+                    // Process any pending UI events.
+                    wxSafeYield();
+                
+                    int n8k = resample(src, in8k_short, in48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
+                    resample_for_plot(fifo, in8k_short, n8k, FS);
+
+                    short plotSamples[TEST_WAVEFORM_PLOT_BUF];
+                    if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
+                    {
+                        // come back when the fifo is refilled
+                        continue;
+                    }
+
+                    ps->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
+                    sampleCount += TEST_WAVEFORM_PLOT_BUF;
+                    CallAfter(&AudioOptsDialog::UpdatePlot, ps);
+                }
+
+                device->stop();
+            
+                codec2_fifo_destroy(callbackFifo);
+            }
+            break;
+        }
+    }
+    
+    codec2_fifo_destroy(fifo);
+    src_delete(src);
+    
+    CallAfter([&]() {
+        m_btnRxInTest->Enable(true);
+        m_btnRxOutTest->Enable(true);
+        m_btnTxInTest->Enable(true);
+        m_btnTxOutTest->Enable(true);
+    });
 }
 
 //-------------------------------------------------------------------------
@@ -1140,138 +952,110 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(int dn, PlotScalar *ps) {
     m_btnTxInTest->Enable(false);
     m_btnTxOutTest->Enable(false);
     
-    m_audioTestThread = new std::thread([this](PlotScalar *plotScalar, int devNum) {
-        PaStreamParameters  outputParameters;
-        const PaDeviceInfo *deviceInfo = NULL;
-        PaStream           *stream = NULL;
-        PaError             err;
-        short               out48k_stereo_short[2*TEST_BUF_SIZE];
-        short               out48k_short[TEST_BUF_SIZE];
-        short               out8k_short[TEST_BUF_SIZE];
-        int                 numDevices, j, src_error, n, outputChannels, sampleRate, sampleCount;
-        SRC_STATE          *src;
-        FIFO               *fifo;
-
-        // a basic sanity check
-        numDevices = Pa_GetDeviceCount();
-        if (devNum >= numDevices || devNum < 0)
+    SRC_STATE          *src;
+    FIFO               *fifo, *callbackFifo;
+    int src_error, n = 0;
+    
+    fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
+    src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
+    
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    auto devList = engine->getAudioDeviceList(IAudioEngine::OUT);
+    for (auto& devInfo : devList)
+    {
+        if (devInfo.deviceId == dn)
         {
-            goto plot_out_reenable_ui;
-        }
-
-        fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
-        src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
-
-        // work out how many output channels this device supports.
-
-        deviceInfo = Pa_GetDeviceInfo(devNum);
-        if (deviceInfo == NULL) {
-            CallAfter([&] {
-                wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card "), wxT("Error"), wxOK);
-            });
-            goto plot_out_cleanup;
-        }
-        if (deviceInfo->maxOutputChannels == 1)
-            outputChannels = 1;
-        else
-            outputChannels = 2;
-
-        if (g_verbose) fprintf(stderr,"outputChannels: %d\n", outputChannels);
-
-        outputParameters.device = devNum;
-        outputParameters.channelCount = outputChannels;
-        outputParameters.sampleFormat = paInt16;
-        outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultHighOutputLatency;
-        outputParameters.hostApiSpecificStreamInfo = NULL;
-
-        sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
-
-        err = Pa_OpenStream(
-                  &stream,
-                  NULL,
-                  &outputParameters,
-                  sampleRate,
-                  0,
-                  paClipOff,    
-                  NULL,       // no callback, use blocking API
-                  NULL ); 
-        if (err != paNoError) {
-            CallAfter([&] {
-                wxMessageBox(wxT("Couldn't initialise sound device."), wxT("Error"), wxOK);
-            });
-            goto plot_out_cleanup;
-        }
-
-        err = Pa_StartStream(stream);
-        if (err != paNoError) {
-            CallAfter([&] {
-                wxMessageBox(wxT("Couldn't start sound device."), wxT("Error"), wxOK);    
-            });  
-            goto plot_out_cleanup;
-        }
-
-        // Sometimes this buffer doesn't get completely filled.  Unset values show up as
-        // junk on the plot.
-        memset(out8k_short, 0, TEST_BUF_SIZE * sizeof(short));
-
-        sampleCount = 0;
-        n = 0;
-
-        while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS)) {
-            for(j=0; j<TEST_BUF_SIZE; j++,n++) {
-                out48k_short[j] = 2000.0*cos(6.2832*(n++)*400.0/sampleRate);
-                if (outputChannels == 2) {
-                    out48k_stereo_short[2*j] = out48k_short[j];   // left channel
-                    out48k_stereo_short[2*j+1] = out48k_short[j]; // right channel
-                }
-                else {
-                    out48k_stereo_short[j] = out48k_short[j];     // mono
-                }
-            }
-            Pa_WriteStream(stream, out48k_stereo_short, TEST_BUF_SIZE);
-
-            // convert back to 8kHz just for plotting
-            int n8k = resample(src, out8k_short, out48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
-            resample_for_plot(fifo, out8k_short, n8k, FS);
-
-            // If enough 8 kHz samples are buffered, go ahead and plot, otherwise wait for more
-            short plotSamples[TEST_WAVEFORM_PLOT_BUF];
-            if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
-            {
-                // come back when the fifo is refilled
-                continue;
-            }
-
-            plotScalar->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
-            sampleCount += TEST_WAVEFORM_PLOT_BUF;
-            CallAfter(&AudioOptsDialog::UpdatePlot, plotScalar);
-        }
-   
-        err = Pa_StopStream(stream);
-        if (err != paNoError) {
-            CallAfter([&]() {
-                wxMessageBox(wxT("Couldn't stop sound device."), wxT("Error"), wxOK);  
-            });     
-        }
-        Pa_CloseStream(stream);
-
-plot_out_cleanup:
-        codec2_fifo_destroy(fifo);
-        src_delete(src);
-
-plot_out_reenable_ui:
-        CallAfter([&]() {
-            m_btnRxInTest->Enable(true);
-            m_btnRxOutTest->Enable(true);
-            m_btnTxInTest->Enable(true);
-            m_btnTxOutTest->Enable(true);
+            int sampleCount = 0;
+            int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
+            auto device = engine->getAudioDevice(
+                devInfo.name, 
+                IAudioEngine::OUT, 
+                sampleRate,
+                devInfo.maxChannels >= 2 ? 2 : 1);
             
-            // Clean up after thread.
-            m_audioTestThread->join();
-            delete m_audioTestThread;
-            m_audioTestThread = nullptr;
-        });
-    }, ps, dn);
+            if (device)
+            {
+                std::mutex callbackFifoMutex;
+                std::condition_variable callbackFifoCV;
+            
+                callbackFifo = codec2_fifo_create(sampleRate);
+                assert(callbackFifo != nullptr);
+                
+                device->setOnAudioData([&](IAudioDevice&, void* data, size_t numSamples, void* state) {
+                    short out48k_short[numSamples];
+                    short out48k_stereo_short[sampleRate];
+                
+                    for(int j = 0; j < numSamples; j++, n++) 
+                    {
+                        out48k_short[j] = 2000.0*cos(6.2832*(n)*400.0/sampleRate);
+                        if (devInfo.maxChannels >= 2) {
+                            out48k_stereo_short[2*j] = out48k_short[j];   // left channel
+                            out48k_stereo_short[2*j+1] = out48k_short[j]; // right channel
+                        }
+                        else {
+                            out48k_stereo_short[j] = out48k_short[j];     // mono
+                        }
+                    }
+                
+                    memcpy(data, &out48k_stereo_short[0], numSamples);
+                
+                    {
+                        std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
+                        codec2_fifo_write(callbackFifo, out48k_short, numSamples);
+                    }
+                    callbackFifoCV.notify_one();
+                }, nullptr);
+            
+                device->start();
+                while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS))
+                {
+                    short               out8k_short[TEST_BUF_SIZE];
+                    short               out48k_short[TEST_BUF_SIZE];
+                
+                    {
+                        std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
+                        callbackFifoCV.wait_for(callbackFifoLock, std::chrono::milliseconds(1));
+                        if (!codec2_fifo_read(callbackFifo, out48k_short, TEST_BUF_SIZE))
+                        {
+                            continue;
+                        }
+                    }
+                
+                    // Process any pending UI events.
+                    wxSafeYield();
+                
+                    int n8k = resample(src, out8k_short, out48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
+                    resample_for_plot(fifo, out8k_short, n8k, FS);
+
+                    short plotSamples[TEST_WAVEFORM_PLOT_BUF];
+                    if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
+                    {
+                        // come back when the fifo is refilled
+                        continue;
+                    }
+
+                    ps->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
+                    sampleCount += TEST_WAVEFORM_PLOT_BUF;
+                    CallAfter(&AudioOptsDialog::UpdatePlot, ps);
+                }
+
+                device->stop();
+            
+                codec2_fifo_destroy(callbackFifo);
+            }
+            break;
+        }
+    }
+    
+    codec2_fifo_destroy(fifo);
+    src_delete(src);
+    
+    CallAfter([&]() {
+        m_btnRxInTest->Enable(true);
+        m_btnRxOutTest->Enable(true);
+        m_btnTxInTest->Enable(true);
+        m_btnTxOutTest->Enable(true);
+    });
 }
 
 //-------------------------------------------------------------------------
@@ -1311,13 +1095,12 @@ void AudioOptsDialog::OnTxOutTest(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void AudioOptsDialog::OnRefreshClick(wxCommandEvent& event)
 {
-    // restart portaudio, to re-sample available devices
-
-    Pa_Terminate();
-    Pa_Init();
+    // restart audio engine, to re-sample available devices
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->stop();
+    engine->start();
 
     m_notebook1->SetSelection(0);
-    showAPIInfo();
     populateParams(m_RxInDevices);
     populateParams(m_RxOutDevices);
     populateParams(m_TxInDevices);
@@ -1337,14 +1120,10 @@ void AudioOptsDialog::OnApplyAudioParameters(wxCommandEvent& event)
     ExchangeData(EXCHANGE_DATA_OUT);
     if(m_isPaInitialized)
     {
-        if((pa_err = Pa_Terminate()) == paNoError)
-        {
-            m_isPaInitialized = false;
-        }
-        else
-        {
-            wxMessageBox(wxT("Port Audio failed to Terminate"), wxT("Pa_Terminate"), wxOK);
-        }
+        auto engine = AudioEngineFactory::GetAudioEngine();
+        engine->stop();
+        engine->setOnEngineError(nullptr, nullptr);
+        m_isPaInitialized = false;
     }
 }
 
@@ -1355,20 +1134,10 @@ void AudioOptsDialog::OnCancelAudioParameters(wxCommandEvent& event)
 {
     if(m_isPaInitialized)
     {
-        if (m_audioTestThread != nullptr && m_audioTestThread->joinable())
-        {
-            // Wait for the audio thread to stop. No need to delete as thread stop will trigger delete.
-            m_audioTestThread->join();
-        }
-        
-        if((pa_err = Pa_Terminate()) == paNoError)
-        {
-            m_isPaInitialized = false;
-        }
-        else
-        {
-            wxMessageBox(wxT("Port Audio failed to Terminate"), wxT("Pa_Terminate"), wxOK);
-        }
+        auto engine = AudioEngineFactory::GetAudioEngine();
+        engine->stop();
+        engine->setOnEngineError(nullptr, nullptr);
+        m_isPaInitialized = false;
     }
     EndModal(wxCANCEL);
 }
@@ -1386,15 +1155,10 @@ void AudioOptsDialog::OnOkAudioParameters(wxCommandEvent& event)
     if (status == 0) {
         if(m_isPaInitialized)
         {
-            if((pa_err = Pa_Terminate()) == paNoError)
-            {
-                if (g_verbose) fprintf(stderr, "terminated OK\n");
-                m_isPaInitialized = false;
-            }
-            else
-            {
-                wxMessageBox(wxT("Port Audio failed to Terminate"), wxT("Pa_Terminate"), wxOK);
-            }
+            auto engine = AudioEngineFactory::GetAudioEngine();
+            engine->stop();
+            engine->setOnEngineError(nullptr, nullptr);
+            m_isPaInitialized = false;
         }
         EndModal(wxOK);
     }
