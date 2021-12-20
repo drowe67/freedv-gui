@@ -33,7 +33,6 @@ struct AudioDeviceSpecification
     std::string apiName;
     int defaultSampleRate;
     int maxChannels;
-    std::vector<int> supportedSampleRates;
     
     bool isValid() const;
     static AudioDeviceSpecification GetInvalidDevice();

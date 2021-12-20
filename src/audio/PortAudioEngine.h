@@ -36,6 +36,7 @@ public:
     virtual std::vector<AudioDeviceSpecification> getAudioDeviceList(AudioDirection direction);
     virtual AudioDeviceSpecification getDefaultAudioDevice(AudioDirection direction);
     virtual std::shared_ptr<IAudioDevice> getAudioDevice(std::string deviceName, AudioDirection direction, int sampleRate, int numChannels);
+    virtual std::vector<int> getSupportedSampleRates(std::string deviceName, AudioDirection direction);
     
 private:
     bool initialized_;

@@ -649,12 +649,17 @@ int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, i
     {
         if (dev.deviceId == devNum)
         {
-            for (auto& rate : dev.supportedSampleRates)
+            auto supportedSampleRates =
+                engine->getSupportedSampleRates(
+                    dev.name, 
+                    in_out == AUDIO_IN ? IAudioEngine::IN : IAudioEngine::OUT);
+                    
+            for (auto& rate : supportedSampleRates)
             {
                 str.Printf("%i", rate);
                 cbSampleRate->AppendString(str);
             }
-            numSampleRates = dev.supportedSampleRates.size();
+            numSampleRates = supportedSampleRates.size();
         }
     }
 

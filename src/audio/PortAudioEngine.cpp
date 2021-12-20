@@ -80,14 +80,6 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
         if ((direction == IN && deviceInfo->maxInputChannels > 0) || 
             (direction == OUT && deviceInfo->maxOutputChannels > 0))
         {
-            PaStreamParameters streamParameters;
-            
-            streamParameters.device = index;
-            streamParameters.channelCount = 1;
-            streamParameters.sampleFormat = paInt16;
-            streamParameters.suggestedLatency = 0;
-            streamParameters.hostApiSpecificStreamInfo = NULL;
-            
             AudioDeviceSpecification device;
             device.deviceId = index;
             device.name = deviceInfo->name;
@@ -95,6 +87,30 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
             device.maxChannels = 
                 direction == IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
             device.defaultSampleRate = deviceInfo->defaultSampleRate;
+            
+            result.push_back(device);
+        }
+    }
+    
+    return result;
+}
+
+std::vector<int> PortAudioEngine::getSupportedSampleRates(std::string deviceName, AudioDirection direction)
+{
+    std::vector<int> result;
+    auto devInfo = getAudioDeviceList(direction);
+    
+    for (auto& device : devInfo)
+    {
+        if (deviceName == device.name)
+        {
+            PaStreamParameters streamParameters;
+            
+            streamParameters.device = device.deviceId;
+            streamParameters.channelCount = 1;
+            streamParameters.sampleFormat = paInt16;
+            streamParameters.suggestedLatency = 0;
+            streamParameters.hostApiSpecificStreamInfo = NULL;
             
             int rateIndex = 0;
             while (IAudioEngine::StandardSampleRates[rateIndex] != -1)
@@ -106,16 +122,11 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
                 
                 if (err == paFormatIsSupported)
                 {
-                    device.supportedSampleRates.push_back(IAudioEngine::StandardSampleRates[rateIndex]);
+                    result.push_back(IAudioEngine::StandardSampleRates[rateIndex]);
                 }
                 
                 rateIndex++;
-            }
-            
-            if (device.supportedSampleRates.size() > 0)
-            {
-                result.push_back(device);
-            }
+            }            
         }
     }
     
