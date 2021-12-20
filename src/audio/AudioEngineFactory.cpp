@@ -1,6 +1,6 @@
 //=========================================================================
-// Name:            IAudioEngine.cpp
-// Purpose:         Defines the main interface to the selected audio engine.
+// Name:            AudioEngineFactory.cpp
+// Purpose:         Creates AudioEngines for the current platform.
 //
 // Authors:         Mooneer Salem
 // License:
@@ -20,21 +20,18 @@
 //
 //=========================================================================
 
-#include "IAudioEngine.h"
+#include "AudioEngineFactory.h"
+#include "PortAudioEngine.h"
 
-int IAudioEngine::StandardSampleRates[] =
-{
-    8000,     9600,
-    11025,    12000,
-    16000,    22050,
-    24000,    32000,
-    44100,    48000,
-    88200,    96000,
-    192000,   -1          // negative terminated  list
-};
+std::shared_ptr<IAudioEngine> AudioEngineFactory::SystemEngine_;
 
-void IAudioEngine::setOnEngineError(AudioErrorCallbackFn fn, void* state)
+std::shared_ptr<IAudioEngine> AudioEngineFactory::GetAudioEngine()
 {
-    onAudioErrorFunction = fn;
-    onAudioErrorState = state;
+    if (!SystemEngine_)
+    {
+        // TBD: support PulseAudio as well.
+        SystemEngine_ = std::shared_ptr<IAudioEngine>(new PortAudioEngine());
+    }
+    
+    return SystemEngine_;
 }

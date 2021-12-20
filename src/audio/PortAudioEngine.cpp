@@ -40,8 +40,18 @@ PortAudioEngine::~PortAudioEngine()
 
 void PortAudioEngine::start()
 {
-    Pa_Initialize();
-    initialized_ = true;
+    auto error = Pa_Initialize();
+    if (error != paNoError)
+    {
+        if (onAudioErrorFunction)
+        {
+            onAudioErrorFunction(*this, Pa_GetErrorText(error), onAudioErrorState);
+        }
+    }
+    else
+    {
+        initialized_ = true;
+    }
 }
 
 void PortAudioEngine::stop()

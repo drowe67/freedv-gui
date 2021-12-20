@@ -23,6 +23,7 @@
 #ifndef I_AUDIO_ENGINE_H
 #define I_AUDIO_ENGINE_H
 
+#include <memory>
 #include <string>
 #include <vector>
 #include "AudioDeviceSpecification.h"
@@ -32,6 +33,8 @@ class IAudioDevice;
 class IAudioEngine
 {
 public:
+    typedef std::function<void(IAudioEngine&, std::string, void*)> AudioErrorCallbackFn;
+    
     enum AudioDirection { IN, OUT };
     
     virtual void start() = 0;
@@ -40,8 +43,18 @@ public:
     virtual AudioDeviceSpecification getDefaultAudioDevice(AudioDirection direction) = 0;
     virtual std::shared_ptr<IAudioDevice> getAudioDevice(std::string deviceName, AudioDirection direction, int sampleRate, int numChannels) = 0;
     
+    // Set error callback.
+    // Callback must take the following parameters:
+    //    1. Audio engine.
+    //    2. String representing the error encountered.
+    //    3. Pointer to user-provided state object (typically onAudioUnderflowState, defined below).
+    void setOnEngineError(AudioErrorCallbackFn fn, void* state);
+    
 protected:
     static int StandardSampleRates[];
+    
+    AudioErrorCallbackFn onAudioErrorFunction;
+    void* onAudioErrorState;
 };
 
 #endif // AUDIO_ENGINE_H
