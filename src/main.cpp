@@ -2183,9 +2183,13 @@ void MainFrame::startRxStream()
             {
                 indata[i] = audioData[0];
             }
-            if (codec2_fifo_write(cbData->infifo1, indata, size)) 
+            
             {
-                g_infifo1_full++;
+                std::unique_lock<std::mutex> lk(cbData->infifo1Mutex);
+                if (codec2_fifo_write(cbData->infifo1, indata, size)) 
+                {
+                    g_infifo1_full++;
+                }
             }
         }, g_rxUserdata);
         
@@ -2208,7 +2212,12 @@ void MainFrame::startRxStream()
                 short* audioData = static_cast<short*>(data);
                 short  outdata[size];
                 
-                if (codec2_fifo_read(cbData->outfifo2, outdata, size) == 0) 
+                int result = 0;
+                {
+                    std::unique_lock<std::mutex> lk(cbData->outfifo2Mutex);
+                    result = codec2_fifo_read(cbData->outfifo2, outdata, size);
+                }
+                if (result == 0) 
                 {
                     if (dev.getNumChannels() == 2)
                     {
@@ -2271,9 +2280,13 @@ void MainFrame::startRxStream()
                     {
                         indata[i] = audioData[0];
                     }
-                    if (codec2_fifo_write(cbData->infifo2, indata, size)) 
+                    
                     {
-                        g_infifo2_full++;
+                        std::unique_lock<std::mutex> lk(cbData->infifo2Mutex);
+                        if (codec2_fifo_write(cbData->infifo2, indata, size)) 
+                        {
+                            g_infifo2_full++;
+                        }
                     }
                 }
             }, g_rxUserdata);
@@ -2293,7 +2306,12 @@ void MainFrame::startRxStream()
                 short* audioData = static_cast<short*>(data);
                 short  outdata[size];
                 
-                if (codec2_fifo_read(cbData->outfifo1, outdata, size) == 0) {
+                int result = 0;
+                {
+                    std::unique_lock<std::mutex> lk(cbData->outfifo1Mutex);
+                    result = codec2_fifo_read(cbData->outfifo1, outdata, size);
+                }
+                if (result == 0) {
 
                     // write signal to both channels if the device can support two channels.
                     // Otherwise, we assume we're only dealing with one channel and write
@@ -2365,7 +2383,12 @@ void MainFrame::startRxStream()
                 short* audioData = static_cast<short*>(data);
                 short  outdata[size];
                 
-                if (codec2_fifo_read(cbData->outfifo1, outdata, size) == 0) 
+                int result = 0;
+                {
+                    std::unique_lock<std::mutex> lk(cbData->outfifo1Mutex);
+                    result = codec2_fifo_read(cbData->outfifo1, outdata, size);
+                }
+                if (result == 0) 
                 {
                     if (dev.getNumChannels() == 2)
                     {
@@ -2508,8 +2531,14 @@ void txRxProcessing()
     assert(nsam != 0);
     
     // while we have enough input samples available ... 
-    while ((codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0) && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
-
+    while ((g_half_duplex && !g_tx) || !g_half_duplex) {
+        int fifoResult = 0;
+        {
+            std::unique_lock<std::mutex> lk(cbData->infifo1Mutex);
+            fifoResult = codec2_fifo_read(cbData->infifo1, insound_card, nsam);
+        }
+        if (fifoResult != 0) break;
+        
         /* convert sound card sample rate FreeDV input sample rate */
         nfreedv = resample(cbData->insrc1, infreedv, insound_card, freedv_samplerate, g_soundCard1SampleRate, N48, nsam);
         assert(nfreedv <= N48);
@@ -2651,14 +2680,21 @@ void txRxProcessing()
                 nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, N48, nfreedv);
             else
                 nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, speechOutbufferSize);
-            codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
+            
+            {
+                std::unique_lock<std::mutex> lk(cbData->outfifo1Mutex);
+                codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
+            }
         }
         else {
             if (g_analog) /* special case */
                 nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedv_samplerate, N48, nfreedv);
             else
                 nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, speechOutbufferSize);
-            codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
+            {
+                std::unique_lock<std::mutex> lk(cbData->outfifo2Mutex);
+                codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
+            }
         }
     }
 
@@ -2692,8 +2728,15 @@ void txRxProcessing()
         int nsam_in_48 = g_soundCard2SampleRate * freedvInterface.getTxNumSpeechSamples()/freedvInterface.getTxSpeechSampleRate();
         assert(nsam_in_48 < 10*N48);
         
-        while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {
-
+        while(true) {
+            unsigned int fifoResult = 0;
+            {
+                std::unique_lock<std::mutex> lk(cbData->outfifo1Mutex);
+                fifoResult = (unsigned)codec2_fifo_free(cbData->outfifo1);
+            }
+            
+            if (fifoResult < nsam_one_modem_frame) break;
+            
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
 
@@ -2708,7 +2751,12 @@ void txRxProcessing()
             
             // There may be recorded audio left to encode while ending TX. To handle this,
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
-            int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
+            int nread = 0;
+            {
+                std::unique_lock<std::mutex> lk(cbData->infifo2Mutex);
+                nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
+            }
+            
             if (nread != 0 && endingTx) break;
             
             // optionally use file for mic input signal
@@ -2813,7 +2861,11 @@ void txRxProcessing()
             if (g_dump_fifo_state) {
                 fprintf(stderr, "  nout: %d\n", nout);
             }
-            codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
+            
+            {
+                std::unique_lock<std::mutex> lk(cbData->outfifo1Mutex);
+                codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
+            }
         }
         
         txModeChangeMutex.Unlock();

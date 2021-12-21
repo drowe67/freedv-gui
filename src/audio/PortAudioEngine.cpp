@@ -109,7 +109,7 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates(std::string deviceName
             streamParameters.device = device.deviceId;
             streamParameters.channelCount = 1;
             streamParameters.sampleFormat = paInt16;
-            streamParameters.suggestedLatency = 0;
+            streamParameters.suggestedLatency = Pa_GetDeviceInfo(device.deviceId)->defaultHighInputLatency;
             streamParameters.hostApiSpecificStreamInfo = NULL;
             
             int rateIndex = 0;

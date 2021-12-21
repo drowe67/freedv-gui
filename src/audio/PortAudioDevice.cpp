@@ -48,7 +48,7 @@ void PortAudioDevice::start()
     streamParameters.device = deviceId_;
     streamParameters.channelCount = numChannels_;
     streamParameters.sampleFormat = paInt16;
-    streamParameters.suggestedLatency = 0;
+    streamParameters.suggestedLatency = Pa_GetDeviceInfo(deviceId_)->defaultHighInputLatency;
     streamParameters.hostApiSpecificStreamInfo = NULL;
     
     auto error = Pa_OpenStream(
