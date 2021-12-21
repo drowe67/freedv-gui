@@ -161,7 +161,7 @@ std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(std::string device
     {
         if (dev.name == deviceName)
         {
-            auto devObj = new PortAudioDevice(dev.deviceId, direction, sampleRate, numChannels);
+            auto devObj = new PortAudioDevice(dev.deviceId, direction, sampleRate, dev.maxChannels >= numChannels ? numChannels : dev.maxChannels);
             return std::shared_ptr<IAudioDevice>(devObj);
         }
     }

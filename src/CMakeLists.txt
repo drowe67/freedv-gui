@@ -4,7 +4,6 @@ set(FREEDV_SOURCES
     dlg_options.cpp
     dlg_ptt.cpp
     main.cpp
-    pa_wrapper.cpp
     plot.cpp
     plot_scalar.cpp
     plot_scatter.cpp
@@ -21,7 +20,6 @@ set(FREEDV_SOURCES
     dlg_ptt.h
     defines.h
     main.h
-    pa_wrapper.h
     plot.h
     plot_scalar.h
     plot_scatter.h

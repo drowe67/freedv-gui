@@ -36,6 +36,8 @@ public:
     typedef std::function<void(IAudioDevice&, void*)> AudioOverflowCallbackFn;
     typedef std::function<void(IAudioDevice&, std::string, void*)> AudioErrorCallbackFn;
     
+    virtual int getNumChannels() = 0;
+    
     virtual void start() = 0;
     virtual void stop() = 0;
     

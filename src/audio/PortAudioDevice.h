@@ -32,6 +32,8 @@ class PortAudioDevice : public IAudioDevice
 public:
     virtual ~PortAudioDevice();
     
+    virtual int getNumChannels() { return numChannels_; }
+    
     virtual void start();
     virtual void stop();
     

@@ -81,9 +81,7 @@
 #include "plot_scatter.h"
 #include "plot_waterfall.h"
 #include "plot_spectrum.h"
-#include "pa_wrapper.h"
 #include "sndfile.h"
-#include "portaudio.h"
 #include "dlg_audiooptions.h"
 #include "dlg_filter.h"
 #include "dlg_options.h"
@@ -93,6 +91,8 @@
 #include "serialport.h" 
 #include "pskreporter.h"
 #include "freedv_interface.h"
+#include "audio/AudioEngineFactory.h"
+#include "audio/IAudioDevice.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -115,11 +115,7 @@ enum {
 
 extern int                 g_verbose;
 extern int                 g_nSoundCards;
-extern int                 g_soundCard1InDeviceNum;
-extern int                 g_soundCard1OutDeviceNum;
 extern int                 g_soundCard1SampleRate;
-extern int                 g_soundCard2InDeviceNum;
-extern int                 g_soundCard2OutDeviceNum;
 extern int                 g_soundCard2SampleRate;
 
 // Voice Keyer Constants
@@ -376,10 +372,6 @@ typedef struct paCallBackData
         , outfifo2(nullptr)
         , rxinfifo(nullptr)
         , rxoutfifo(nullptr)
-        , inputChannels1(0)
-        , inputChannels2(0)
-        , outputChannels1(0)
-        , outputChannels2(0)
         , sbqMicInBass(nullptr)
         , sbqMicInTreble(nullptr)
         , sbqMicInMid(nullptr)
@@ -415,9 +407,6 @@ typedef struct paCallBackData
     // FIFOs for rx process
     struct FIFO    *rxinfifo;
     struct FIFO    *rxoutfifo;
-
-    int             inputChannels1, inputChannels2;
-    int             outputChannels1, outputChannels2;
 
     // EQ filter states
     void           *sbqMicInBass;
@@ -502,14 +491,6 @@ class MainFrame : public TopFrame
 
         bool                    m_RxRunning;
 
-        PortAudioWrap           *m_rxInPa;
-        PortAudioWrap           *m_rxOutPa;
-        PortAudioWrap           *m_txInPa;
-        PortAudioWrap           *m_txOutPa;
-
-        PaError                 m_rxErr;
-        PaError                 m_txErr;
-
         txRxThread*             m_txRxThread;
         
         bool                    OpenHamlibRig();
@@ -529,30 +510,6 @@ class MainFrame : public TopFrame
 
     void destroy_fifos(void);
     void destroy_src(void);
-    void autoDetectSoundCards(PortAudioWrap *pa);
-
-        static int rxCallback(
-                                const void *inBuffer,
-                                void *outBuffer,
-                                unsigned long framesPerBuffer,
-                                const PaStreamCallbackTimeInfo *outTime,
-                                PaStreamCallbackFlags statusFlags,
-                                void *userData
-                             );
-
-        static int txCallback(
-                                const void *inBuffer,
-                                void *outBuffer,
-                                unsigned long framesPerBuffer,
-                                const PaStreamCallbackTimeInfo *outTime,
-                                PaStreamCallbackFlags statusFlags,
-                                void *userData
-                             );
-
-
-    void initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDevice, 
-                             int soundCard, int sampleRate, int inputChannels,
-                             int outputChannels);
 
     void togglePTT(void);
 
@@ -651,6 +608,11 @@ class MainFrame : public TopFrame
         
         void OnChangeReportFrequency( wxCommandEvent& event );
     private:
+        std::shared_ptr<IAudioDevice> rxInSoundDevice;
+        std::shared_ptr<IAudioDevice> rxOutSoundDevice;
+        std::shared_ptr<IAudioDevice> txInSoundDevice;
+        std::shared_ptr<IAudioDevice> txOutSoundDevice;
+        
         bool        m_useMemory;
         wxTextCtrl* m_tc;
         int         m_zoom;
@@ -708,7 +670,11 @@ public:
             txRxProcessing();
             wxThread::Sleep(20);
         }
-        Pa_Terminate();
+        
+        auto engine = AudioEngineFactory::GetAudioEngine();
+        engine->stop();
+        engine->setOnEngineError(nullptr, nullptr);
+
         return NULL;
     }
 

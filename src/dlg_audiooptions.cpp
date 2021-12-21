@@ -354,35 +354,26 @@ void AudioOptsDialog::OnInitDialog( wxInitDialogEvent& event )
 }
 
 //-------------------------------------------------------------------------
-// OnInitDialog()
+// setTextCtrlIfDevNameValid()
 //
-// helper function to look up name of devNum, and if it exists write
+// helper function to look up name of devName, and if it exists write
 // name to textCtrl.  Used to trap dissapearing devices.
 //-------------------------------------------------------------------------
-int AudioOptsDialog::setTextCtrlIfDevNumValid(wxTextCtrl *textCtrl, wxListCtrl *listCtrl, int devNum)
+bool AudioOptsDialog::setTextCtrlIfDevNameValid(wxTextCtrl *textCtrl, wxListCtrl *listCtrl, wxString devName)
 {
-    int i, aDevNum, found_devNum;
-
     // ignore last list entry as it is the "none" entry
-
-    found_devNum = 0;
-    for(i=0; i<listCtrl->GetItemCount()-1; i++) {
-        aDevNum = wxAtoi(listCtrl->GetItemText(i, 1));
-        //printf("aDevNum: %d devNum: %d\n", aDevNum, devNum);
-        if (aDevNum == devNum) {
-            found_devNum = 1;
-            textCtrl->SetValue(listCtrl->GetItemText(i, 0) + " (" + wxString::Format(wxT("%i"),devNum) + ")");
+    for(int i = 0; i < listCtrl->GetItemCount() - 1; i++) 
+    {
+        if (devName.Trim() == listCtrl->GetItemText(i, 0).Trim())
+        {
+            textCtrl->SetValue(listCtrl->GetItemText(i, 0));
             if (g_verbose) fprintf(stderr,"setting focus of %d\n", i);
             listCtrl->SetItemState(i, wxLIST_STATE_FOCUSED, wxLIST_STATE_FOCUSED);
+            return true;
         }
     }
 
-    if (found_devNum) 
-        return devNum;
-    else {
-        textCtrl->SetValue("none");
-        return -1;
-    }
+    return false;
 }
 
 //-------------------------------------------------------------------------
@@ -397,80 +388,74 @@ int AudioOptsDialog::ExchangeData(int inout)
 
         if (g_verbose) fprintf(stderr,"EXCHANGE_DATA_IN:\n");
         if (g_verbose) fprintf(stderr,"  g_nSoundCards: %d\n", g_nSoundCards);
-        if (g_verbose) fprintf(stderr,"  g_soundCard1InDeviceNum: %d\n", g_soundCard1InDeviceNum);
-        if (g_verbose) fprintf(stderr,"  g_soundCard1OutDeviceNum: %d\n", g_soundCard1OutDeviceNum);
         if (g_verbose) fprintf(stderr,"  g_soundCard1SampleRate: %d\n", g_soundCard1SampleRate);
-        if (g_verbose) fprintf(stderr,"  g_soundCard2InDeviceNum: %d\n", g_soundCard2InDeviceNum);
-        if (g_verbose) fprintf(stderr,"  g_soundCard2OutDeviceNum: %d\n", g_soundCard2OutDeviceNum);
         if (g_verbose) fprintf(stderr,"  g_soundCard2SampleRate: %d\n", g_soundCard2SampleRate);
 
         if (g_nSoundCards == 0) {
-            m_textCtrlRxIn ->SetValue("none"); rxInAudioDeviceNum  = -1;
-            m_textCtrlRxOut->SetValue("none"); rxOutAudioDeviceNum = -1;
-            m_textCtrlTxIn ->SetValue("none"); txInAudioDeviceNum  = -1;
-            m_textCtrlTxOut->SetValue("none"); txOutAudioDeviceNum = -1;           
+            m_textCtrlRxIn ->SetValue("none");
+            m_textCtrlRxOut->SetValue("none");
+            m_textCtrlTxIn ->SetValue("none");
+            m_textCtrlTxOut->SetValue("none");           
         }
 
         if (g_nSoundCards == 1) {
-            rxInAudioDeviceNum  = setTextCtrlIfDevNumValid(m_textCtrlRxIn, 
-                                                           m_listCtrlRxInDevices, 
-                                                           g_soundCard1InDeviceNum);
+            setTextCtrlIfDevNameValid(m_textCtrlRxIn, 
+                                      m_listCtrlRxInDevices, 
+                                      wxGetApp().m_soundCard1InDeviceName);
 
-            rxOutAudioDeviceNum = setTextCtrlIfDevNumValid(m_textCtrlRxOut, 
-                                                           m_listCtrlRxOutDevices, 
-                                                           g_soundCard1OutDeviceNum);
+            setTextCtrlIfDevNameValid(m_textCtrlRxOut, 
+                                      m_listCtrlRxOutDevices, 
+                                      wxGetApp().m_soundCard1OutDeviceName);
 
-            if ((rxInAudioDeviceNum != -1) && (rxOutAudioDeviceNum != -1)) {
+            if ((m_textCtrlRxIn->GetValue() != "none") && (m_textCtrlRxOut->GetValue() != "none")) {
                 // Build sample rate dropdown lists
-                buildListOfSupportedSampleRates(m_cbSampleRateRxIn, rxInAudioDeviceNum, AUDIO_IN);
-                buildListOfSupportedSampleRates(m_cbSampleRateRxOut, rxOutAudioDeviceNum, AUDIO_OUT);
+                buildListOfSupportedSampleRates(m_cbSampleRateRxIn, wxGetApp().m_soundCard1InDeviceName, AUDIO_IN);
+                buildListOfSupportedSampleRates(m_cbSampleRateRxOut, wxGetApp().m_soundCard1OutDeviceName, AUDIO_OUT);
                 
                 m_cbSampleRateRxIn->SetValue(wxString::Format(wxT("%i"),g_soundCard1SampleRate));
                 m_cbSampleRateRxOut->SetValue(wxString::Format(wxT("%i"),g_soundCard1SampleRate));
             }
 
-            m_textCtrlTxIn ->SetValue("none"); txInAudioDeviceNum  = -1;
-            m_textCtrlTxOut->SetValue("none"); txOutAudioDeviceNum = -1;           
+            m_textCtrlTxIn->SetValue("none");
+            m_textCtrlTxOut->SetValue("none");           
         }
 
         if (g_nSoundCards == 2) {
  
-            rxInAudioDeviceNum  = setTextCtrlIfDevNumValid(m_textCtrlRxIn, 
-                                                           m_listCtrlRxInDevices, 
-                                                           g_soundCard1InDeviceNum);
+            setTextCtrlIfDevNameValid(m_textCtrlRxIn, 
+                                      m_listCtrlRxInDevices, 
+                                      wxGetApp().m_soundCard1InDeviceName);
 
-            rxOutAudioDeviceNum = setTextCtrlIfDevNumValid(m_textCtrlRxOut, 
-                                                           m_listCtrlRxOutDevices, 
-                                                           g_soundCard2OutDeviceNum);
+            setTextCtrlIfDevNameValid(m_textCtrlRxOut, 
+                                      m_listCtrlRxOutDevices, 
+                                      wxGetApp().m_soundCard2OutDeviceName);
 
-            txInAudioDeviceNum  = setTextCtrlIfDevNumValid(m_textCtrlTxIn, 
-                                                           m_listCtrlTxInDevices, 
-                                                           g_soundCard2InDeviceNum);
+            setTextCtrlIfDevNameValid(m_textCtrlTxIn, 
+                                      m_listCtrlTxInDevices, 
+                                      wxGetApp().m_soundCard2InDeviceName);
 
-            txOutAudioDeviceNum = setTextCtrlIfDevNumValid(m_textCtrlTxOut, 
-                                                           m_listCtrlTxOutDevices, 
-                                                           g_soundCard1OutDeviceNum);
+            setTextCtrlIfDevNameValid(m_textCtrlTxOut, 
+                                      m_listCtrlTxOutDevices, 
+                                      wxGetApp().m_soundCard1OutDeviceName);
 
-            if ((rxInAudioDeviceNum != -1) && (txOutAudioDeviceNum != -1)) {
+            if ((m_textCtrlRxIn->GetValue() != "none") && (m_textCtrlTxOut->GetValue() != "none")) {
                 // Build sample rate dropdown lists
-                buildListOfSupportedSampleRates(m_cbSampleRateRxIn, rxInAudioDeviceNum, AUDIO_IN);
-                buildListOfSupportedSampleRates(m_cbSampleRateTxOut, txOutAudioDeviceNum, AUDIO_OUT);
+                buildListOfSupportedSampleRates(m_cbSampleRateRxIn, wxGetApp().m_soundCard1InDeviceName, AUDIO_IN);
+                buildListOfSupportedSampleRates(m_cbSampleRateTxOut, wxGetApp().m_soundCard1OutDeviceName, AUDIO_OUT);
                 
                 m_cbSampleRateRxIn->SetValue(wxString::Format(wxT("%i"),g_soundCard1SampleRate));
                 m_cbSampleRateTxOut->SetValue(wxString::Format(wxT("%i"),g_soundCard1SampleRate));
             }
 
-            if ((txInAudioDeviceNum != -1) && (rxOutAudioDeviceNum != -1)) {
+            if ((m_textCtrlTxIn->GetValue() != "none") && (m_textCtrlRxOut->GetValue() != "none")) {
                 // Build sample rate dropdown lists
-                buildListOfSupportedSampleRates(m_cbSampleRateTxIn, txInAudioDeviceNum, AUDIO_IN);
-                buildListOfSupportedSampleRates(m_cbSampleRateRxOut, rxOutAudioDeviceNum, AUDIO_OUT);
+                buildListOfSupportedSampleRates(m_cbSampleRateTxIn, wxGetApp().m_soundCard2InDeviceName, AUDIO_IN);
+                buildListOfSupportedSampleRates(m_cbSampleRateRxOut, wxGetApp().m_soundCard2OutDeviceName, AUDIO_OUT);
                 
                 m_cbSampleRateTxIn->SetValue(wxString::Format(wxT("%i"),g_soundCard2SampleRate));
                 m_cbSampleRateRxOut->SetValue(wxString::Format(wxT("%i"),g_soundCard2SampleRate));
             }
         }
-        if (g_verbose) fprintf(stderr,"  rxInAudioDeviceNum: %d\n  rxOutAudioDeviceNum: %d\n  txInAudioDeviceNum: %d\n  txOutAudioDeviceNum: %d\n",
-               rxInAudioDeviceNum, rxOutAudioDeviceNum, txInAudioDeviceNum, txOutAudioDeviceNum);
     }
 
     if(inout == EXCHANGE_DATA_OUT)
@@ -479,18 +464,18 @@ int AudioOptsDialog::ExchangeData(int inout)
         int valid_two_card_config = 0;
         wxString sampleRate1, sampleRate2;
 
-        if (g_verbose) fprintf(stderr,"EXCHANGE_DATA_OUT:\n");
-        if (g_verbose) fprintf(stderr,"  rxInAudioDeviceNum: %d\n  rxOutAudioDeviceNum: %d\n  txInAudioDeviceNum: %d\n  txOutAudioDeviceNum: %d\n",
-               rxInAudioDeviceNum, rxOutAudioDeviceNum, txInAudioDeviceNum, txOutAudioDeviceNum);
-
         // ---------------------------------------------------------------
         // check we have a valid 1 or 2 sound card configuration
         // ---------------------------------------------------------------
 
-        // one sound card config, tx device numbers should be set to -1 
-
-        if ((rxInAudioDeviceNum != -1) && (rxOutAudioDeviceNum != -1) &&
-            (txInAudioDeviceNum == -1) && (txOutAudioDeviceNum == -1)) {
+        // one sound card config, tx device names should be set to "none"
+        wxString rxInAudioDeviceName = m_textCtrlRxIn->GetValue();
+        wxString rxOutAudioDeviceName = m_textCtrlRxOut->GetValue();
+        wxString txInAudioDeviceName = m_textCtrlTxIn->GetValue();
+        wxString txOutAudioDeviceName = m_textCtrlTxOut->GetValue();
+        
+        if ((rxInAudioDeviceName != "none") && (rxOutAudioDeviceName != "none") &&
+            (txInAudioDeviceName == "none") && (txOutAudioDeviceName == "none")) {
  
             valid_one_card_config = 1; 
 
@@ -506,19 +491,19 @@ int AudioOptsDialog::ExchangeData(int inout)
 
         // two card configuration
 
-        if ((rxInAudioDeviceNum != -1) && (rxOutAudioDeviceNum != -1) &&
-            (txInAudioDeviceNum != -1) && (txOutAudioDeviceNum != -1)) {
+        if ((rxInAudioDeviceName != "none") && (rxOutAudioDeviceName != "none") &&
+            (txInAudioDeviceName != "none") && (txOutAudioDeviceName != "none")) {
 
             valid_two_card_config = 1; 
 
             // Check we haven't doubled up on sound devices
 
-            if (rxInAudioDeviceNum == txInAudioDeviceNum) {
+            if (rxInAudioDeviceName == txInAudioDeviceName) {
                 wxMessageBox(wxT("You must use different devices for From Radio and From Microphone"), wxT(""), wxOK);
                 return -1;
             }
 
-            if (rxOutAudioDeviceNum == txOutAudioDeviceNum) {
+            if (rxOutAudioDeviceName == txOutAudioDeviceName) {
                 wxMessageBox(wxT("You must use different devices for To Radio and To Speaker/Headphones"), wxT(""), wxOK);
                 return -1;
             }
@@ -548,7 +533,7 @@ int AudioOptsDialog::ExchangeData(int inout)
         if (g_verbose) fprintf(stderr,"  valid_one_card_config: %d  valid_two_card_config: %d\n", valid_one_card_config, valid_two_card_config);
 
         if (!valid_one_card_config && !valid_two_card_config) {
-            wxMessageBox(wxT("Invalid one or two sound card configuration"), wxT(""), wxOK);
+            wxMessageBox(wxT("Invalid one or two sound card configuration. For RX only, both devices in 'Receive' tab must be selected. Otherwise, all devices in both 'Receive' and 'Transmit' tabs must be selected."), wxT(""), wxOK);
             return -1;
         }
 
@@ -559,57 +544,40 @@ int AudioOptsDialog::ExchangeData(int inout)
         // Tx/Rx oriented as in this dialog.
         // ---------------------------------------------------------------
         g_nSoundCards = 0;
-        g_soundCard1InDeviceNum = g_soundCard1OutDeviceNum = g_soundCard2InDeviceNum = g_soundCard2OutDeviceNum = -1;
 
         if (valid_one_card_config) {
 
             // Only callback 1 used
 
             g_nSoundCards = 1;
-            g_soundCard1InDeviceNum  = rxInAudioDeviceNum;
-            g_soundCard1OutDeviceNum = rxOutAudioDeviceNum;
             g_soundCard1SampleRate = wxAtoi(sampleRate1);
         }
 
         if (valid_two_card_config) {
             g_nSoundCards = 2;
-            g_soundCard1InDeviceNum  = rxInAudioDeviceNum;
-            g_soundCard1OutDeviceNum = txOutAudioDeviceNum;
             g_soundCard1SampleRate   = wxAtoi(sampleRate1);
-            g_soundCard2InDeviceNum  = txInAudioDeviceNum;
-            g_soundCard2OutDeviceNum = rxOutAudioDeviceNum;
             g_soundCard2SampleRate   = wxAtoi(sampleRate2);
         }
 
         if (g_verbose) fprintf(stderr,"  g_nSoundCards: %d\n", g_nSoundCards);
-        if (g_verbose) fprintf(stderr,"  g_soundCard1InDeviceNum: %d\n", g_soundCard1InDeviceNum);
-        if (g_verbose) fprintf(stderr,"  g_soundCard1OutDeviceNum: %d\n", g_soundCard1OutDeviceNum);
         if (g_verbose) fprintf(stderr,"  g_soundCard1SampleRate: %d\n", g_soundCard1SampleRate);
-        if (g_verbose) fprintf(stderr,"  g_soundCard2InDeviceNum: %d\n", g_soundCard2InDeviceNum);
-        if (g_verbose) fprintf(stderr,"  g_soundCard2OutDeviceNum: %d\n", g_soundCard2OutDeviceNum);
         if (g_verbose) fprintf(stderr,"  g_soundCard2SampleRate: %d\n", g_soundCard2SampleRate);
 
         assert (pConfig != NULL);
         
         if (valid_one_card_config)
         {
-            int lastIndex = m_textCtrlRxIn->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard1InDeviceNum));
-            wxGetApp().m_soundCard1InDeviceName = m_textCtrlRxIn->GetValue().Mid(0, lastIndex).Trim();
-            lastIndex = m_textCtrlRxOut->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard1OutDeviceNum));
-            wxGetApp().m_soundCard1OutDeviceName = m_textCtrlRxOut->GetValue().Mid(0, lastIndex).Trim();
+            wxGetApp().m_soundCard1InDeviceName = m_textCtrlRxIn->GetValue().Trim();
+            wxGetApp().m_soundCard1OutDeviceName = m_textCtrlRxOut->GetValue().Trim();
             wxGetApp().m_soundCard2InDeviceName = "none";
             wxGetApp().m_soundCard2OutDeviceName = "none";
         }
         else if (valid_two_card_config)
         {
-            int lastIndex = m_textCtrlRxIn->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard1InDeviceNum));
-            wxGetApp().m_soundCard1InDeviceName = m_textCtrlRxIn->GetValue().Mid(0, lastIndex).Trim();
-            lastIndex = m_textCtrlTxOut->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard1OutDeviceNum));
-            wxGetApp().m_soundCard1OutDeviceName = m_textCtrlTxOut->GetValue().Mid(0, lastIndex).Trim();
-            lastIndex = m_textCtrlTxIn->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard2InDeviceNum));
-            wxGetApp().m_soundCard2InDeviceName = m_textCtrlTxIn->GetValue().Mid(0, lastIndex).Trim();
-            lastIndex = m_textCtrlRxOut->GetValue().Find(wxString::Format(wxT("(%i)"), g_soundCard2OutDeviceNum));
-            wxGetApp().m_soundCard2OutDeviceName = m_textCtrlRxOut->GetValue().Mid(0, lastIndex).Trim();
+            wxGetApp().m_soundCard1InDeviceName = m_textCtrlRxIn->GetValue().Trim();
+            wxGetApp().m_soundCard1OutDeviceName = m_textCtrlTxOut->GetValue().Trim();
+            wxGetApp().m_soundCard2InDeviceName = m_textCtrlTxIn->GetValue().Trim();
+            wxGetApp().m_soundCard2OutDeviceName = m_textCtrlRxOut->GetValue().Trim();
         }
         else
         {
@@ -637,7 +605,7 @@ int AudioOptsDialog::ExchangeData(int inout)
 //-------------------------------------------------------------------------
 // buildListOfSupportedSampleRates()
 //-------------------------------------------------------------------------
-int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, int devNum, int in_out)
+int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, wxString devName, int in_out)
 {
     auto engine = AudioEngineFactory::GetAudioEngine();
     auto deviceList = engine->getAudioDeviceList(in_out == AUDIO_IN ? IAudioEngine::IN : IAudioEngine::OUT);
@@ -647,7 +615,7 @@ int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, i
     cbSampleRate->Clear();
     for (auto& dev : deviceList)
     {
-        if (dev.deviceId == devNum)
+        if (wxString(dev.name).Trim() == devName.Trim())
         {
             auto supportedSampleRates =
                 engine->getSupportedSampleRates(
@@ -746,7 +714,6 @@ void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
 //-------------------------------------------------------------------------
 void AudioOptsDialog::OnDeviceSelect(wxComboBox *cbSampleRate, 
                                      wxTextCtrl *textCtrl, 
-                                     int        *devNum, 
                                      wxListCtrl *listCtrlDevices, 
                                      int         index,
                                      int         in_out)
@@ -754,14 +721,12 @@ void AudioOptsDialog::OnDeviceSelect(wxComboBox *cbSampleRate,
 
     wxString devName = listCtrlDevices->GetItemText(index, 0);
      if (devName.IsSameAs("none")) {
-        *devNum = -1;
         textCtrl->SetValue("none");
     }
     else {
-        *devNum = wxAtoi(listCtrlDevices->GetItemText(index, 1));
-        textCtrl->SetValue(devName + " (" + wxString::Format(wxT("%i"),*devNum) + ")");
+        textCtrl->SetValue(devName);
 
-        int numSampleRates = buildListOfSupportedSampleRates(cbSampleRate, *devNum, in_out);
+        int numSampleRates = buildListOfSupportedSampleRates(cbSampleRate, devName, in_out);
         if (numSampleRates) {
             wxString defSampleRate = listCtrlDevices->GetItemText(index, 3);        
             cbSampleRate->SetValue(defSampleRate);
@@ -779,7 +744,6 @@ void AudioOptsDialog::OnRxInDeviceSelect(wxListEvent& evt)
 {
     OnDeviceSelect(m_cbSampleRateRxIn, 
                    m_textCtrlRxIn, 
-                   &rxInAudioDeviceNum, 
                    m_listCtrlRxInDevices, 
                    evt.GetIndex(),
                    AUDIO_IN);
@@ -792,7 +756,6 @@ void AudioOptsDialog::OnRxOutDeviceSelect(wxListEvent& evt)
 {
     OnDeviceSelect(m_cbSampleRateRxOut, 
                    m_textCtrlRxOut, 
-                   &rxOutAudioDeviceNum, 
                    m_listCtrlRxOutDevices, 
                    evt.GetIndex(),
                    AUDIO_OUT);
@@ -805,7 +768,6 @@ void AudioOptsDialog::OnTxInDeviceSelect(wxListEvent& evt)
 {
     OnDeviceSelect(m_cbSampleRateTxIn, 
                    m_textCtrlTxIn, 
-                   &txInAudioDeviceNum, 
                    m_listCtrlTxInDevices, 
                    evt.GetIndex(),
                    AUDIO_IN);
@@ -818,7 +780,6 @@ void AudioOptsDialog::OnTxOutDeviceSelect(wxListEvent& evt)
 {
     OnDeviceSelect(m_cbSampleRateTxOut, 
                    m_textCtrlTxOut, 
-                   &txOutAudioDeviceNum, 
                    m_listCtrlTxOutDevices, 
                    evt.GetIndex(),
                    AUDIO_OUT);
@@ -837,7 +798,7 @@ void AudioOptsDialog::UpdatePlot(PlotScalar *plotScalar)
 // synchronous portaudio functions, so the GUI will not respond until after test sample has been
 // taken
 //-------------------------------------------------------------------------
-void AudioOptsDialog::plotDeviceInputForAFewSecs(int dn, PlotScalar *ps) {
+void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *ps) {
     m_btnRxInTest->Enable(false);
     m_btnRxOutTest->Enable(false);
     m_btnTxInTest->Enable(false);
@@ -854,7 +815,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(int dn, PlotScalar *ps) {
     auto devList = engine->getAudioDeviceList(IAudioEngine::IN);
     for (auto& devInfo : devList)
     {
-        if (devInfo.deviceId == dn)
+        if (wxString(devInfo.name).Trim() == devName.Trim())
         {
             int sampleCount = 0;
             int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
@@ -951,7 +912,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(int dn, PlotScalar *ps) {
 // synchronous portaudio functions, so the GUI will not respond until after test sample has been
 // taken.  Also plots a pretty picture like the record versions
 //-------------------------------------------------------------------------
-void AudioOptsDialog::plotDeviceOutputForAFewSecs(int dn, PlotScalar *ps) {
+void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *ps) {
     m_btnRxInTest->Enable(false);
     m_btnRxOutTest->Enable(false);
     m_btnTxInTest->Enable(false);
@@ -968,7 +929,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(int dn, PlotScalar *ps) {
     auto devList = engine->getAudioDeviceList(IAudioEngine::OUT);
     for (auto& devInfo : devList)
     {
-        if (devInfo.deviceId == dn)
+        if (wxString(devInfo.name).Trim() == devName.Trim())
         {
             int sampleCount = 0;
             int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
@@ -1068,7 +1029,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(int dn, PlotScalar *ps) {
 //-------------------------------------------------------------------------
 void AudioOptsDialog::OnRxInTest(wxCommandEvent& event)
 {
-    plotDeviceInputForAFewSecs(rxInAudioDeviceNum, m_plotScalarRxIn);
+    plotDeviceInputForAFewSecs(m_textCtrlRxIn->GetValue(), m_plotScalarRxIn);
 }
 
 //-------------------------------------------------------------------------
@@ -1076,7 +1037,7 @@ void AudioOptsDialog::OnRxInTest(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void AudioOptsDialog::OnRxOutTest(wxCommandEvent& event)
 {
-    plotDeviceOutputForAFewSecs(rxOutAudioDeviceNum, m_plotScalarRxOut);
+    plotDeviceOutputForAFewSecs(m_textCtrlRxOut->GetValue(), m_plotScalarRxOut);
 }
 
 //-------------------------------------------------------------------------
@@ -1084,7 +1045,7 @@ void AudioOptsDialog::OnRxOutTest(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void AudioOptsDialog::OnTxInTest(wxCommandEvent& event)
 {
-    plotDeviceInputForAFewSecs(txInAudioDeviceNum, m_plotScalarTxIn);
+    plotDeviceInputForAFewSecs(m_textCtrlTxIn->GetValue(), m_plotScalarTxIn);
 }
 
 //-------------------------------------------------------------------------
@@ -1092,7 +1053,7 @@ void AudioOptsDialog::OnTxInTest(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void AudioOptsDialog::OnTxOutTest(wxCommandEvent& event)
 {
-    plotDeviceOutputForAFewSecs(txOutAudioDeviceNum, m_plotScalarTxOut);
+    plotDeviceOutputForAFewSecs(m_textCtrlTxOut->GetValue(), m_plotScalarTxOut);
 }
 
 //-------------------------------------------------------------------------

@@ -50,26 +50,19 @@ class AudioOptsDialog : public wxDialog
     private:
 
     protected:
-        PaError         pa_err;
         bool            m_isPaInitialized;
-
-        int             rxInAudioDeviceNum;
-        int             rxOutAudioDeviceNum;
-        int             txInAudioDeviceNum;
-        int             txOutAudioDeviceNum;
 
         void buildTestControls(PlotScalar **plotScalar, wxButton **btnTest, 
                                wxPanel *parentPanel, wxBoxSizer *bSizer, wxString buttonLabel);
-        void plotDeviceInputForAFewSecs(int devNum, PlotScalar *plotScalar);
-        void plotDeviceOutputForAFewSecs(int devNum, PlotScalar *plotScalar);
+        void plotDeviceInputForAFewSecs(wxString devName, PlotScalar *plotScalar);
+        void plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *plotScalar);
 
-        int buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, int devNum, int in_out);
+        int buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, wxString devName, int in_out);
         void populateParams(AudioInfoDisplay);
-        int setTextCtrlIfDevNumValid(wxTextCtrl *textCtrl, wxListCtrl *listCtrl, int devNum);
+        bool setTextCtrlIfDevNameValid(wxTextCtrl *textCtrl, wxListCtrl *listCtrl, wxString devName);
         void audioEngineInit(void);
         void OnDeviceSelect(wxComboBox *cbSampleRate, 
                             wxTextCtrl *textCtrl, 
-                            int        *devNum, 
                             wxListCtrl *listCtrlDevices, 
                             int         index,
                             int         in_out);
