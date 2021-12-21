@@ -421,12 +421,6 @@ typedef struct paCallBackData
     // optional loud tone on left channel to reliably trigger vox
     bool            leftChannelVoxTone;
     float           voxTonePhase;
-
-    // Mutexes for the fifos
-    std::mutex      infifo1Mutex;
-    std::mutex      infifo2Mutex;
-    std::mutex      outfifo1Mutex;
-    std::mutex      outfifo2Mutex;
 } paCallBackData;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
