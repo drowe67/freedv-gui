@@ -110,8 +110,8 @@ int                 g_infifo1_full;
 int                 g_outfifo1_empty;
 int                 g_infifo2_full;
 int                 g_outfifo2_empty;
-int                 g_PAstatus1[4];
-int                 g_PAstatus2[4];
+int                 g_AEstatus1[4];
+int                 g_AEstatus2[4];
 
 // playing and recording from sound files
 
@@ -2115,7 +2115,7 @@ void MainFrame::startRxStream()
         g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
         g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
         for (int i=0; i<4; i++) {
-            g_PAstatus1[i] = g_PAstatus2[i] = 0;
+            g_AEstatus1[i] = g_AEstatus2[i] = 0;
         }
 
         // These FIFOs interface between the 20ms txRxProcessing()
@@ -2191,12 +2191,12 @@ void MainFrame::startRxStream()
         
         rxInSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
         {
-            g_PAstatus1[1]++;
+            g_AEstatus1[1]++;
         }, nullptr);
         
         rxInSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
         {
-            g_PAstatus1[0]++;
+            g_AEstatus1[0]++;
         }, nullptr);
         
         rxInSoundDevice->setOnAudioError(errorCallback, nullptr);
@@ -2257,12 +2257,12 @@ void MainFrame::startRxStream()
             
             rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
             {
-                g_PAstatus2[3]++;
+                g_AEstatus2[3]++;
             }, nullptr);
         
             rxOutSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
             {
-                g_PAstatus2[2]++;
+                g_AEstatus2[2]++;
             }, nullptr);
             
             txInSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
@@ -2289,12 +2289,12 @@ void MainFrame::startRxStream()
         
             txInSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
             {
-                g_PAstatus2[1]++;
+                g_AEstatus2[1]++;
             }, nullptr);
         
             txInSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
             {
-                g_PAstatus2[0]++;
+                g_AEstatus2[0]++;
             }, nullptr);
             
             txOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
@@ -2361,12 +2361,12 @@ void MainFrame::startRxStream()
         
             txOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
             {
-                g_PAstatus1[3]++;
+                g_AEstatus1[3]++;
             }, nullptr);
         
             txOutSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
             {
-                g_PAstatus1[2]++;
+                g_AEstatus1[2]++;
             }, nullptr);
             
             txInSoundDevice->setOnAudioError(errorCallback, nullptr);
@@ -2428,12 +2428,12 @@ void MainFrame::startRxStream()
             
             rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
             {
-                g_PAstatus1[3]++;
+                g_AEstatus1[3]++;
             }, nullptr);
         
             rxOutSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
             {
-                g_PAstatus1[2]++;
+                g_AEstatus1[2]++;
             }, nullptr);
         }
         

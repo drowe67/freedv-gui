@@ -30,8 +30,8 @@ extern int                 g_infifo1_full;
 extern int                 g_outfifo1_empty;
 extern int                 g_infifo2_full;
 extern int                 g_outfifo2_empty;
-extern int                 g_PAstatus1[4];
-extern int                 g_PAstatus2[4];
+extern int                 g_AEstatus1[4];
+extern int                 g_AEstatus2[4];
 extern wxDatagramSocket    *g_sock;
 extern int                 g_dump_timing;
 extern int                 g_dump_fifo_state;
@@ -879,7 +879,7 @@ void OptionsDlg::OnFifoReset(wxCommandEvent& event)
 {
     g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
     for (int i=0; i<4; i++) {
-        g_PAstatus1[i] = g_PAstatus2[i] = 0;
+        g_AEstatus1[i] = g_AEstatus2[i] = 0;
     }
 }
 
@@ -985,13 +985,13 @@ void OptionsDlg::DisplayFifoPACounters() {
     char pa_counters1[256];
 
     // input: underflow overflow output: underflow overflow
-    sprintf(pa_counters1, "Audio1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_PAstatus1[0], g_PAstatus1[1], g_PAstatus1[2], g_PAstatus1[3]);
+    sprintf(pa_counters1, "Audio1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3]);
     wxString pa_counters1_string(pa_counters1); m_textPA1->SetLabel(pa_counters1_string);
 
     char pa_counters2[256];
 
     // input: underflow overflow output: underflow overflow
-    sprintf(pa_counters2, "Audio2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_PAstatus2[0], g_PAstatus2[1], g_PAstatus2[2], g_PAstatus2[3]);
+    sprintf(pa_counters2, "Audio2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
     wxString pa_counters2_string(pa_counters2);
     m_textPA2->SetLabel(pa_counters2_string);
 }
