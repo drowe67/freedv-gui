@@ -2509,7 +2509,7 @@ void txRxProcessing()
     assert(nsam != 0);
     
     // while we have enough input samples available ... 
-    while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) != 0 && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
+    while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
 
         /* convert sound card sample rate FreeDV input sample rate */
         nfreedv = resample(cbData->insrc1, infreedv, insound_card, freedv_samplerate, g_soundCard1SampleRate, N48, nsam);
