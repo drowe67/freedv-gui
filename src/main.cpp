@@ -112,8 +112,6 @@ int                 g_infifo2_full;
 int                 g_outfifo2_empty;
 int                 g_PAstatus1[4];
 int                 g_PAstatus2[4];
-int                 g_PAframesPerBuffer1;
-int                 g_PAframesPerBuffer2;
 
 // playing and recording from sound files
 
@@ -407,7 +405,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     SetClientSize(w, h);
     SetSizeHints(size);
 
-    wxGetApp().m_framesPerBuffer = pConfig->Read(wxT("/Audio/framesPerBuffer"), (int)PA_FPB);
     wxGetApp().m_fifoSize_ms = pConfig->Read(wxT("/Audio/fifoSize_ms"), (int)FIFO_SIZE);
 
     wxGetApp().m_soundCard1InDeviceName = pConfig->Read(wxT("/Audio/soundCard1InDeviceName"), _("none"));
@@ -719,7 +716,6 @@ MainFrame::~MainFrame()
     pConfig->Write(wxT("/Audio/SquelchActive"),         g_SquelchActive);
     pConfig->Write(wxT("/Audio/SquelchLevel"),          (int)(g_SquelchLevel*2.0));
 
-    pConfig->Write(wxT("/Audio/framesPerBuffer"),       wxGetApp().m_framesPerBuffer);
     pConfig->Write(wxT("/Audio/fifoSize_ms"),              wxGetApp().m_fifoSize_ms);
 
     pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);

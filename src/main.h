@@ -285,7 +285,6 @@ class MainApp : public wxApp
 
         wxRect              m_rTopWindow;
 
-        int                 m_framesPerBuffer;
         int                 m_fifoSize_ms;
 
         // PSK Reporter configuration
