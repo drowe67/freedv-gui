@@ -20,6 +20,7 @@
 //
 //=========================================================================
 
+#include <cstring>
 #include "PortAudioDevice.h"
 #include "portaudio.h"
 
