@@ -1,5 +1,7 @@
 if(USE_PULSEAUDIO)
 set(AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES
+    PulseAudioDevice.cpp
+    PulseAudioEngine.cpp
     )
 
 else(USE_PULSEAUDIO)

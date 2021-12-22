@@ -21,7 +21,11 @@
 //=========================================================================
 
 #include "AudioEngineFactory.h"
+#if defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
+#include "PulseAudioEngine.h"
+#else
 #include "PortAudioEngine.h"
+#endif // defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
 
 std::shared_ptr<IAudioEngine> AudioEngineFactory::SystemEngine_;
 
@@ -30,7 +34,7 @@ std::shared_ptr<IAudioEngine> AudioEngineFactory::GetAudioEngine()
     if (!SystemEngine_)
     {
 #if defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
-        // TBD: support PulseAudio as well.
+        SystemEngine_ = std::shared_ptr<IAudioEngine>(new PulseAudioEngine());
 #else
         SystemEngine_ = std::shared_ptr<IAudioEngine>(new PortAudioEngine());
 #endif // defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
