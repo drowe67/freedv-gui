@@ -22,6 +22,11 @@
 
 #include "IAudioDevice.h"
 
+void IAudioDevice::setDescription(std::string desc)
+{
+    description = desc;
+}
+
 void IAudioDevice::setOnAudioData(AudioDataCallbackFn fn, void* state)
 {
     onAudioDataFunction = fn;

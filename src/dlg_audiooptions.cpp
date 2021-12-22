@@ -852,7 +852,8 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
                     }
                     callbackFifoCV.notify_one();
                 }, nullptr);
-            
+                device->setDescription("Device Input Test");
+
                 device->start();
                 while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS))
                 {
@@ -975,6 +976,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
                     return numSamples;
                 }, nullptr);
             
+                device->setDescription("Device Output Test");
                 device->start();
                 while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS))
                 {

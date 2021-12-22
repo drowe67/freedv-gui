@@ -40,6 +40,9 @@ public:
     
     virtual void start() = 0;
     virtual void stop() = 0;
+
+    // Sets user friendly description of device. Not used by all engines.
+    void setDescription(std::string desc);
     
     // Set RX/TX ready callback.
     // Callback must take the following parameters:
@@ -69,6 +72,8 @@ public:
     void setOnAudioError(AudioErrorCallbackFn fn, void* state);
     
 protected:
+    std::string description;
+
     AudioDataCallbackFn onAudioDataFunction;
     void* onAudioDataState;
     

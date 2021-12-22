@@ -32,7 +32,8 @@ PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* c
     , sampleRate_(sampleRate)
     , numChannels_(1 /*numChannels*/)
 {
-    // empty
+    // Set default description
+    setDescription("PulseAudio Device");
 }
 
 PulseAudioDevice::~PulseAudioDevice()
@@ -51,7 +52,7 @@ void PulseAudioDevice::start()
     sample_specification.channels = numChannels_;
     
     pa_threaded_mainloop_lock(mainloop_);
-    stream_ = pa_stream_new(context_, "PulseAudioDevice", &sample_specification, nullptr);
+    stream_ = pa_stream_new(context_, description.c_str(), &sample_specification, nullptr);
     if (stream_ == nullptr)
     {
         if (onAudioErrorFunction)
