@@ -122,6 +122,8 @@ set(USE_STATIC_SPEEXDSP FALSE CACHE BOOL
     "Download and build static speex instead of the system library.")
 set(BOOTSTRAP_WXWIDGETS FALSE CACHE BOOL
     "Download and build static wxWidgets instead of the system library.")
+set(USE_PULSEAUDIO FALSE CACHE BOOL
+    "Use PulseAudio instead of PortAudio for audio I/O.")
 
 if(USE_STATIC_DEPS)
     set(USE_STATIC_PORTAUDIO TRUE FORCE)
@@ -284,9 +286,9 @@ endif(CODEC2_BUILD_DIR)
 
 
 #
-# Find or build portaudio Library
+# Find or build portaudio/PulseAudio Library
 #
-if(NOT USE_STATIC_PORTAUDIO)
+if(NOT USE_STATIC_PORTAUDIO AND NOT USE_PULSEAUDIO)
     message(STATUS "Looking for portaudio...")
     find_package(portaudio-2.0 REQUIRED)
     if(PORTAUDIO_FOUND)
@@ -309,10 +311,26 @@ On Windows it's easiest to use the cmake option: USE_STATIC_PORTAUDIO"
     if(NOT ${PORTAUDIO_VERSION} EQUAL 19 AND NOT MINGW)
         message(WARNING "Portaudio versions other than 19 are known to have issues. You have been warned!")
     endif()
-else(NOT USE_STATIC_PORTAUDIO)
+elseif(USE_PULSEAUDIO)
+    message(STATUS "Finding PulseAudio...")
+    find_package(PulseAudio REQUIRED)
+    if(PULSEAUDIO_FOUND)
+        message(STATUS "  PulseAudio library: ${PULSEAUDIO_LIBRARY}")
+        message(STATUS "  PulseAudio headers: ${PULSEAUDIO_INCLUDE_DIR}")
+        list(APPEND FREEDV_LINK_LIBS ${PULSEAUDIO_LIBRARY})
+        include_directories(${PULSEAUDIO_INCLUDE_DIR})
+        add_definitions(-DAUDIO_ENGINE_PULSEAUDIO_ENABLE)
+    else()
+        message(FATAL_ERROR "PulseAudio library not found.
+On Linux systems try installing:
+    pulseaudio-libs-devel  (RPM based systems)
+    libpulse-dev           (DEB based systems)
+")
+     endif()
+else()
     message(STATUS "Will attempt static build of portaudio.")
     include(cmake/Buildportaudio-2.0.cmake)
-endif(NOT USE_STATIC_PORTAUDIO)
+endif()
 
 #
 # Hamlib library
