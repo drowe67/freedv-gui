@@ -30,7 +30,7 @@ PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* c
     , devName_(devName)
     , direction_(direction)
     , sampleRate_(sampleRate)
-    , numChannels_(1 /*numChannels*/)
+    , numChannels_(numChannels)
 {
     // Set default description
     setDescription("PulseAudio Device");
@@ -127,7 +127,7 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
     {
         if (thisObj->onAudioDataFunction)
         {
-            thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(data), length / sizeof(short), thisObj->onAudioDataState);
+            thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(data), length / (sizeof(short) * thisObj->getNumChannels()), thisObj->onAudioDataState);
         }
         
         if (length > 0) 
@@ -148,7 +148,7 @@ void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *u
     
         if (thisObj->onAudioDataFunction)
         {
-            thisObj->onAudioDataFunction(*thisObj, data, length / sizeof(short), thisObj->onAudioDataState);
+            thisObj->onAudioDataFunction(*thisObj, data, length / (sizeof(short) * thisObj->getNumChannels()), thisObj->onAudioDataState);
         }
     
         pa_stream_write(s, &data[0], length, NULL, 0LL, PA_SEEK_RELATIVE);
