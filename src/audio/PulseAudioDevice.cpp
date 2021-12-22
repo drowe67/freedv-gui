@@ -20,6 +20,7 @@
 //
 //=========================================================================
 
+#include <cstring>
 #include "PulseAudioDevice.h"
 
 PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, std::string devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
@@ -29,7 +30,7 @@ PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* c
     , devName_(devName)
     , direction_(direction)
     , sampleRate_(sampleRate)
-    , numChannels_(numChannels)
+    , numChannels_(1 /*numChannels*/)
 {
     // empty
 }
@@ -66,7 +67,7 @@ void PulseAudioDevice::start()
     
     // recommended settings, i.e. server uses sensible values
     pa_buffer_attr buffer_attr; 
-    buffer_attr.maxlength = pa_usec_to_bytes(20000, &sample_specification); // 20ms of data at a time at most
+    buffer_attr.maxlength = pa_usec_to_bytes(100000, &sample_specification); // 100ms of data at a time at most
     buffer_attr.tlength = (uint32_t) -1;
     buffer_attr.prebuf = 0; // Ensure that we can recover during an underrun
     buffer_attr.minreq = (uint32_t) -1;
@@ -98,7 +99,6 @@ void PulseAudioDevice::start()
         {
             onAudioErrorFunction(*this, std::string("Could not connect PulseAudio stream to ") + devName_, onAudioErrorState);
         }
-        
     }
     
     pa_threaded_mainloop_unlock(mainloop_);
@@ -126,7 +126,7 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
     {
         if (thisObj->onAudioDataFunction)
         {
-            thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(data), length, thisObj->onAudioDataState);
+            thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(data), length / sizeof(short), thisObj->onAudioDataState);
         }
         
         if (length > 0) 
@@ -138,15 +138,20 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
 
 void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *userdata)
 {
-    short data[length];
-    PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
-    
-    if (thisObj->onAudioDataFunction)
+    if (length > 0)
     {
-        thisObj->onAudioDataFunction(*thisObj, data, length, thisObj->onAudioDataState);
-    }
+        short data[length];
+        memset(data, 0, sizeof(short) * length);
+
+        PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
     
-    pa_stream_write(s, &data[0], length, NULL, 0LL, PA_SEEK_RELATIVE);
+        if (thisObj->onAudioDataFunction)
+        {
+            thisObj->onAudioDataFunction(*thisObj, data, length / sizeof(short), thisObj->onAudioDataState);
+        }
+    
+        pa_stream_write(s, &data[0], length, NULL, 0LL, PA_SEEK_RELATIVE);
+    }
 }
 
 void PulseAudioDevice::StreamUnderflowCallback_(pa_stream *p, void *userdata)
