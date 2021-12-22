@@ -131,6 +131,12 @@ int PortAudioDevice::OnPortAudioStreamCallback_(const void *input, void *output,
         const_cast<void*>(input) :
         const_cast<void*>(output);
     
+    if (thisObj->direction_ == IAudioEngine::OUT)
+    {
+        // Zero out samples by default in case we don't have any data available.
+        memset(dataPtr, 0, sizeof(short) * frameCount);
+    }
+
     if (thisObj->onAudioDataFunction)
     {
         thisObj->onAudioDataFunction(*thisObj, dataPtr, frameCount, thisObj->onAudioDataState);

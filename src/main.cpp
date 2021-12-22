@@ -2204,14 +2204,16 @@ void MainFrame::startRxStream()
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
                 short  outdata[size];
-                
-                int result = codec2_fifo_read(cbData->outfifo2, outdata, size);
+                size_t toRead = codec2_fifo_used(cbData->outfifo2);
+                toRead = toRead >= size ? size : toRead;
+ 
+                int result = codec2_fifo_read(cbData->outfifo2, outdata, toRead);
                 if (result == 0) 
                 {
                     if (dev.getNumChannels() == 2)
                     {
                         // write signal to both channels */
-                        for(int i = 0; i < size; i++, audioData += 2)
+                        for(int i = 0; i < toRead; i++, audioData += 2)
                         {
                             audioData[0] = outdata[i];
                             audioData[1] = outdata[i];
@@ -2219,7 +2221,7 @@ void MainFrame::startRxStream()
                     }
                     else
                     {
-                        for(int i = 0; i < size; i++, audioData++) 
+                        for(int i = 0; i < toRead; i++, audioData++) 
                         {
                             audioData[0] = outdata[i];
                         }
@@ -2228,23 +2230,6 @@ void MainFrame::startRxStream()
                 else 
                 {
                     g_outfifo2_empty++;
-                    
-                    // zero output if no data available
-                    if (dev.getNumChannels() == 2)
-                    {
-                        for(int i = 0; i < size; i++, audioData += 2) 
-                        {
-                            audioData[0] = 0;
-                            audioData[1] = 0;
-                        }
-                    }
-                    else
-                    {
-                        for(int i = 0; i < size; i++, audioData++) 
-                        {
-                            audioData[0] = 0;
-                        }
-                    }
                 }
             }, g_rxUserdata);
             
@@ -2291,8 +2276,10 @@ void MainFrame::startRxStream()
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
                 short  outdata[size];
-                
-                int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
+                size_t toRead = codec2_fifo_used(cbData->outfifo1);
+                toRead = toRead >= size ? size : toRead;
+
+                int result = codec2_fifo_read(cbData->outfifo1, outdata, toRead);
                 if (result == 0) {
 
                     // write signal to both channels if the device can support two channels.
@@ -2300,7 +2287,7 @@ void MainFrame::startRxStream()
                     // only to that channel.
                     if (dev.getNumChannels() == 2)
                     {
-                        for(int i = 0; i < size; i++, audioData += 2) 
+                        for(int i = 0; i < toRead; i++, audioData += 2) 
                         {
                             if (cbData->leftChannelVoxTone)
                             {
@@ -2316,7 +2303,7 @@ void MainFrame::startRxStream()
                     }
                     else
                     {
-                        for(int i = 0; i < size; i++, audioData++) 
+                        for(int i = 0; i < toRead; i++, audioData++) 
                         {
                             audioData[0] = outdata[i];
                         }
@@ -2325,23 +2312,6 @@ void MainFrame::startRxStream()
                 else 
                 {
                     g_outfifo1_empty++;
-            
-                    // zero output if no data available
-                    if (dev.getNumChannels() == 2)
-                    {
-                        for(int i = 0; i < size; i++, audioData += 2)
-                        {
-                            audioData[0] = 0;
-                            audioData[1] = 0;
-                        }
-                    }
-                    else
-                    {
-                        for(int i = 0; i < size; i++, audioData++)
-                        {
-                            audioData[0] = 0;
-                        }
-                    }
                 }
             }, g_rxUserdata);
         
@@ -2364,14 +2334,16 @@ void MainFrame::startRxStream()
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
                 short  outdata[size];
-                
-                int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
+                size_t toRead = codec2_fifo_used(cbData->outfifo1);
+                toRead = toRead >= size ? size : toRead;
+
+                int result = codec2_fifo_read(cbData->outfifo1, outdata, toRead);
                 if (result == 0) 
                 {
                     if (dev.getNumChannels() == 2)
                     {
                         // write signal to both channels */
-                        for(int i = 0; i < size; i++, audioData += 2)
+                        for(int i = 0; i < toRead; i++, audioData += 2)
                         {
                             audioData[0] = outdata[i];
                             audioData[1] = outdata[i];
@@ -2379,7 +2351,7 @@ void MainFrame::startRxStream()
                     }
                     else
                     {
-                        for(int i = 0; i < size; i++, audioData++) 
+                        for(int i = 0; i < toRead; i++, audioData++) 
                         {
                             audioData[0] = outdata[i];
                         }
@@ -2388,23 +2360,6 @@ void MainFrame::startRxStream()
                 else 
                 {
                     g_outfifo2_empty++;
-                    
-                    // zero output if no data available
-                    if (dev.getNumChannels() == 2)
-                    {
-                        for(int i = 0; i < size; i++, audioData += 2) 
-                        {
-                            audioData[0] = 0;
-                            audioData[1] = 0;
-                        }
-                    }
-                    else
-                    {
-                        for(int i = 0; i < size; i++, audioData++) 
-                        {
-                            audioData[0] = 0;
-                        }
-                    }
                 }
             }, g_rxUserdata);
             

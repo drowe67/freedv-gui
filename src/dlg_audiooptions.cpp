@@ -949,12 +949,13 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
                 
                 device->setOnAudioData([&](IAudioDevice&, void* data, size_t numSamples, void* state) {
                     short out48k_short[numSamples];
-                    short out48k_stereo_short[sampleRate];
-                
+                    short out48k_stereo_short[2*numSamples];
+                    int numChannels = devInfo.maxChannels >= 2 ? 2 : 1;
+ 
                     for(int j = 0; j < numSamples; j++, n++) 
                     {
                         out48k_short[j] = 2000.0*cos(6.2832*(n)*400.0/sampleRate);
-                        if (devInfo.maxChannels >= 2) {
+                        if (numChannels == 2) {
                             out48k_stereo_short[2*j] = out48k_short[j];   // left channel
                             out48k_stereo_short[2*j+1] = out48k_short[j]; // right channel
                         }
@@ -963,13 +964,15 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
                         }
                     }
                 
-                    memcpy(data, &out48k_stereo_short[0], numSamples);
+                    memcpy(data, &out48k_stereo_short[0], sizeof(out48k_stereo_short));
                 
                     {
                         std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
                         codec2_fifo_write(callbackFifo, out48k_short, numSamples);
                     }
                     callbackFifoCV.notify_one();
+
+                    return numSamples;
                 }, nullptr);
             
                 device->start();

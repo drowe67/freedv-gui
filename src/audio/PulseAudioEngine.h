@@ -1,5 +1,5 @@
 //=========================================================================
-// Name:            PortAudioEngine.h
+// Name:            PulseAudioEngine.h
 // Purpose:         Defines the interface to the PortAudio audio engine.
 //
 // Authors:         Mooneer Salem

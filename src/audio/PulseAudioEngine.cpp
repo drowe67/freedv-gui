@@ -157,6 +157,12 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
         op = pa_context_get_sink_info_list(context_, [](pa_context *c, const pa_sink_info *i, int eol, void *userdata) {
             PulseAudioDeviceListTemp* tempObj = static_cast<PulseAudioDeviceListTemp*>(userdata);
             
+            if (eol)
+            {
+                pa_threaded_mainloop_signal(tempObj->thisPtr->mainloop_, 0);
+                return;
+            }
+
             AudioDeviceSpecification device;
             device.deviceId = i->index;
             device.name = i->name;
@@ -166,10 +172,6 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
             
             tempObj->result.push_back(device);
             
-            if (eol)
-            {
-                pa_threaded_mainloop_signal(tempObj->thisPtr->mainloop_, 0);
-            }
         }, &tempObj);
     }
     else
@@ -177,6 +179,12 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
         op = pa_context_get_source_info_list(context_, [](pa_context *c, const pa_source_info *i, int eol, void *userdata) {
             PulseAudioDeviceListTemp* tempObj = static_cast<PulseAudioDeviceListTemp*>(userdata);
             
+            if (eol)
+            {
+                pa_threaded_mainloop_signal(tempObj->thisPtr->mainloop_, 0);
+                return;
+            }
+
             AudioDeviceSpecification device;
             device.deviceId = i->index;
             device.name = i->name;
@@ -185,11 +193,6 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
             device.defaultSampleRate = i->sample_spec.rate;
             
             tempObj->result.push_back(device);
-            
-            if (eol)
-            {
-                pa_threaded_mainloop_signal(tempObj->thisPtr->mainloop_, 0);
-            }
         }, &tempObj);
     }
     

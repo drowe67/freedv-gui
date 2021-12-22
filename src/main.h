@@ -669,10 +669,6 @@ public:
             wxThread::Sleep(20);
         }
         
-        auto engine = AudioEngineFactory::GetAudioEngine();
-        engine->stop();
-        engine->setOnEngineError(nullptr, nullptr);
-
         return NULL;
     }
 
