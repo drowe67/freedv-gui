@@ -838,11 +838,11 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
                     short               in48k_short[numSamples];
                 
                     if (devInfo.maxChannels >= 2) {
-                        for(int j = 0; j < numSamples; j++)
+                        for(size_t j = 0; j < numSamples; j++)
                             in48k_short[j] = in48k_stereo_short[2*j]; // left channel only
                     }
                     else {
-                        for(int j = 0; j < numSamples; j++)
+                        for(size_t j = 0; j < numSamples; j++)
                             in48k_short[j] = in48k_stereo_short[j]; 
                     }
                 
@@ -953,7 +953,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
                     short out48k_stereo_short[2*numSamples];
                     int numChannels = devInfo.maxChannels >= 2 ? 2 : 1;
  
-                    for(int j = 0; j < numSamples; j++, n++) 
+                    for(size_t j = 0; j < numSamples; j++, n++) 
                     {
                         out48k_short[j] = 2000.0*cos(6.2832*(n)*400.0/sampleRate);
                         if (numChannels == 2) {

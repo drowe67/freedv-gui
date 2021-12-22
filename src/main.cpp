@@ -1127,7 +1127,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
         if (strlen(callsign) < MAX_CALLSIGN - 1)
         {
-            strncat(callsign, "\r", 1);
+            strncat(callsign, "\r", 2);
         }     
      
         // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
@@ -2184,7 +2184,7 @@ void MainFrame::startRxStream()
             paCallBackData* cbData = static_cast<paCallBackData*>(state);
             short* audioData = static_cast<short*>(data);
             short  indata[size];
-            for (int i = 0; i < size; i++, audioData += dev.getNumChannels())
+            for (size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
             {
                 indata[i] = audioData[0];
             }
@@ -2222,7 +2222,7 @@ void MainFrame::startRxStream()
                     if (dev.getNumChannels() == 2)
                     {
                         // write signal to both channels */
-                        for(int i = 0; i < toRead; i++, audioData += 2)
+                        for(size_t i = 0; i < toRead; i++, audioData += 2)
                         {
                             audioData[0] = outdata[i];
                             audioData[1] = outdata[i];
@@ -2230,7 +2230,7 @@ void MainFrame::startRxStream()
                     }
                     else
                     {
-                        for(int i = 0; i < toRead; i++, audioData++) 
+                        for(size_t i = 0; i < toRead; i++, audioData++) 
                         {
                             audioData[0] = outdata[i];
                         }
@@ -2259,7 +2259,7 @@ void MainFrame::startRxStream()
                 
                 if (!endingTx) 
                 {
-                    for(int i = 0; i < size; i++, audioData += dev.getNumChannels())
+                    for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
                     {
                         indata[i] = audioData[0];
                     }
@@ -2296,7 +2296,7 @@ void MainFrame::startRxStream()
                     // only to that channel.
                     if (dev.getNumChannels() == 2)
                     {
-                        for(int i = 0; i < toRead; i++, audioData += 2) 
+                        for(size_t i = 0; i < toRead; i++, audioData += 2) 
                         {
                             if (cbData->leftChannelVoxTone)
                             {
@@ -2312,7 +2312,7 @@ void MainFrame::startRxStream()
                     }
                     else
                     {
-                        for(int i = 0; i < toRead; i++, audioData++) 
+                        for(size_t i = 0; i < toRead; i++, audioData++) 
                         {
                             audioData[0] = outdata[i];
                         }
@@ -2352,7 +2352,7 @@ void MainFrame::startRxStream()
                     if (dev.getNumChannels() == 2)
                     {
                         // write signal to both channels */
-                        for(int i = 0; i < toRead; i++, audioData += 2)
+                        for(size_t i = 0; i < toRead; i++, audioData += 2)
                         {
                             audioData[0] = outdata[i];
                             audioData[1] = outdata[i];
@@ -2360,7 +2360,7 @@ void MainFrame::startRxStream()
                     }
                     else
                     {
-                        for(int i = 0; i < toRead; i++, audioData++) 
+                        for(size_t i = 0; i < toRead; i++, audioData++) 
                         {
                             audioData[0] = outdata[i];
                         }
