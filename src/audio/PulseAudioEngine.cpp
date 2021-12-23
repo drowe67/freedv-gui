@@ -202,7 +202,8 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
         if (pa_operation_get_state(op) != PA_OPERATION_RUNNING) break;
         pa_threaded_mainloop_wait(mainloop_);
     }
-    
+
+    pa_operation_unref(op);    
     pa_threaded_mainloop_unlock(mainloop_);
     
     return tempObj.result;
@@ -250,6 +251,7 @@ AudioDeviceSpecification PulseAudioEngine::getDefaultAudioDevice(AudioDirection 
         pa_threaded_mainloop_wait(mainloop_);
     }
     
+    pa_operation_unref(op);    
     pa_threaded_mainloop_unlock(mainloop_);
     
     auto devices = getAudioDeviceList(direction);

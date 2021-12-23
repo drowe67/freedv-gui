@@ -112,6 +112,7 @@ void PulseAudioDevice::stop()
         pa_threaded_mainloop_lock(mainloop_);
         pa_stream_disconnect(stream_);
         pa_threaded_mainloop_unlock(mainloop_);
+        pa_stream_unref(stream_);
         
         stream_ = nullptr;
     }
