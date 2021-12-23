@@ -826,7 +826,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
                     devInfo.name, 
                     IAudioEngine::IN, 
                     sampleRate,
-                    devInfo.maxChannels >= 2 ? 2 : 1);
+                    2);
                 
                 if (device)
                 {
@@ -837,7 +837,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
                         short* in48k_stereo_short = static_cast<short*>(data);
                         short               in48k_short[numSamples];
                     
-                        if (devInfo.maxChannels >= 2) {
+                        if (device->getNumChannels() == 2) {
                             for(size_t j = 0; j < numSamples; j++)
                                 in48k_short[j] = in48k_stereo_short[2*j]; // left channel only
                         }
@@ -852,8 +852,8 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
                         }
                         callbackFifoCV.notify_all();
                     }, nullptr);
+                    
                     device->setDescription("Device Input Test");
-    
                     device->start();
 
                     while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS))
@@ -862,10 +862,10 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
                         short               in48k_short[TEST_BUF_SIZE];
                     
                         {
-                            std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
-                            callbackFifoCV.wait(callbackFifoLock);
                             if (codec2_fifo_read(callbackFifo, in48k_short, TEST_BUF_SIZE))
                             {
+                                std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
+                                callbackFifoCV.wait(callbackFifoLock);
                                 continue;
                             }
                         }
@@ -942,7 +942,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
                     devInfo.name, 
                     IAudioEngine::OUT, 
                     sampleRate,
-                    devInfo.maxChannels >= 2 ? 2 : 1);
+                    2);
                 
                 if (device)
                 {
@@ -954,8 +954,8 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
                     
                     device->setOnAudioData([&](IAudioDevice&, void* data, size_t numSamples, void* state) {
                         short out48k_short[numSamples];
-                        short out48k_stereo_short[2*numSamples];
-                        int numChannels = devInfo.maxChannels >= 2 ? 2 : 1;
+                        int numChannels = device->getNumChannels();
+                        short out48k_stereo_short[numChannels*numSamples];
      
                         for(size_t j = 0; j < numSamples; j++, n++) 
                         {
@@ -976,22 +976,21 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
                             codec2_fifo_write(callbackFifo, out48k_short, numSamples);
                         }
                         callbackFifoCV.notify_one();
-    
-                        return numSamples;
                     }, nullptr);
                 
                     device->setDescription("Device Output Test");
                     device->start();
+                    
                     while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS))
                     {
                         short               out8k_short[TEST_BUF_SIZE];
                         short               out48k_short[TEST_BUF_SIZE];
                     
                         {
-                            std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
-                            callbackFifoCV.wait(callbackFifoLock);
                             if (codec2_fifo_read(callbackFifo, out48k_short, TEST_BUF_SIZE))
                             {
+                                std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
+                                callbackFifoCV.wait(callbackFifoLock);
                                 continue;
                             }
                         }
