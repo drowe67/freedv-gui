@@ -48,7 +48,7 @@ class AudioInfoDisplay
 class AudioOptsDialog : public wxDialog
 {
     private:
-
+        std::thread*    m_audioPlotThread;
     protected:
         bool            m_isPaInitialized;
 

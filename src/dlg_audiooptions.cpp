@@ -804,106 +804,109 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
     m_btnTxInTest->Enable(false);
     m_btnTxOutTest->Enable(false);
     
-    SRC_STATE          *src;
-    FIFO               *fifo, *callbackFifo;
-    int src_error;
-    
-    fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
-    src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
-    
-    auto engine = AudioEngineFactory::GetAudioEngine();
-    auto devList = engine->getAudioDeviceList(IAudioEngine::IN);
-    for (auto& devInfo : devList)
-    {
-        if (wxString(devInfo.name).Trim() == devName.Trim())
+    m_audioPlotThread = new std::thread([&](std::string devNameAsCString, PlotScalar* ps) {
+        std::mutex callbackFifoMutex;
+        std::condition_variable callbackFifoCV;
+        SRC_STATE          *src;
+        FIFO               *fifo, *callbackFifo;
+        int src_error;
+        
+        fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
+        src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
+        
+        auto engine = AudioEngineFactory::GetAudioEngine();
+        auto devList = engine->getAudioDeviceList(IAudioEngine::IN);
+        for (auto& devInfo : devList)
         {
-            int sampleCount = 0;
-            int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
-            auto device = engine->getAudioDevice(
-                devInfo.name, 
-                IAudioEngine::IN, 
-                sampleRate,
-                devInfo.maxChannels >= 2 ? 2 : 1);
-            
-            if (device)
+            if (devInfo.name == devNameAsCString)
             {
-                std::mutex callbackFifoMutex;
-                std::condition_variable callbackFifoCV;
-            
-                callbackFifo = codec2_fifo_create(sampleRate);
-                assert(callbackFifo != nullptr);
+                int sampleCount = 0;
+                int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
+                auto device = engine->getAudioDevice(
+                    devInfo.name, 
+                    IAudioEngine::IN, 
+                    sampleRate,
+                    devInfo.maxChannels >= 2 ? 2 : 1);
                 
-                device->setOnAudioData([&](IAudioDevice&, void* data, size_t numSamples, void* state) {
-                    short* in48k_stereo_short = static_cast<short*>(data);
-                    short               in48k_short[numSamples];
-                
-                    if (devInfo.maxChannels >= 2) {
-                        for(size_t j = 0; j < numSamples; j++)
-                            in48k_short[j] = in48k_stereo_short[2*j]; // left channel only
-                    }
-                    else {
-                        for(size_t j = 0; j < numSamples; j++)
-                            in48k_short[j] = in48k_stereo_short[j]; 
-                    }
-                
-                    {
-                        std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
-                        codec2_fifo_write(callbackFifo, in48k_short, numSamples);
-                    }
-                    callbackFifoCV.notify_one();
-                }, nullptr);
-                device->setDescription("Device Input Test");
-
-                device->start();
-                while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS))
+                if (device)
                 {
-                    short               in8k_short[TEST_BUF_SIZE];
-                    short               in48k_short[TEST_BUF_SIZE];
-                
-                    {
-                        std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
-                        callbackFifoCV.wait_for(callbackFifoLock, std::chrono::milliseconds(1));
-                        if (!codec2_fifo_read(callbackFifo, in48k_short, TEST_BUF_SIZE))
+                    callbackFifo = codec2_fifo_create(sampleRate);
+                    assert(callbackFifo != nullptr);
+                    
+                    device->setOnAudioData([&](IAudioDevice&, void* data, size_t numSamples, void* state) {
+                        short* in48k_stereo_short = static_cast<short*>(data);
+                        short               in48k_short[numSamples];
+                    
+                        if (devInfo.maxChannels >= 2) {
+                            for(size_t j = 0; j < numSamples; j++)
+                                in48k_short[j] = in48k_stereo_short[2*j]; // left channel only
+                        }
+                        else {
+                            for(size_t j = 0; j < numSamples; j++)
+                                in48k_short[j] = in48k_stereo_short[j]; 
+                        }
+                    
                         {
+                            std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
+                            codec2_fifo_write(callbackFifo, in48k_short, numSamples);
+                        }
+                        callbackFifoCV.notify_all();
+                    }, nullptr);
+                    device->setDescription("Device Input Test");
+    
+                    device->start();
+
+                    while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS))
+                    {
+                        short               in8k_short[TEST_BUF_SIZE];
+                        short               in48k_short[TEST_BUF_SIZE];
+                    
+                        {
+                            std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
+                            callbackFifoCV.wait(callbackFifoLock);
+                            if (codec2_fifo_read(callbackFifo, in48k_short, TEST_BUF_SIZE))
+                            {
+                                continue;
+                            }
+                        }
+                    
+                        int n8k = resample(src, in8k_short, in48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
+                        resample_for_plot(fifo, in8k_short, n8k, FS);
+    
+                        short plotSamples[TEST_WAVEFORM_PLOT_BUF];
+                        if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
+                        {
+                            // come back when the fifo is refilled
                             continue;
                         }
+    
+                        ps->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
+                        sampleCount += TEST_WAVEFORM_PLOT_BUF;
+                        CallAfter(&AudioOptsDialog::UpdatePlot, ps);
                     }
-                
-                    // Process any pending UI events.
-                    wxSafeYield();
-                
-                    int n8k = resample(src, in8k_short, in48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
-                    resample_for_plot(fifo, in8k_short, n8k, FS);
-
-                    short plotSamples[TEST_WAVEFORM_PLOT_BUF];
-                    if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
-                    {
-                        // come back when the fifo is refilled
-                        continue;
-                    }
-
-                    ps->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
-                    sampleCount += TEST_WAVEFORM_PLOT_BUF;
-                    CallAfter(&AudioOptsDialog::UpdatePlot, ps);
+    
+                    device->stop();
+                    codec2_fifo_destroy(callbackFifo);
                 }
-
-                device->stop();
-            
-                codec2_fifo_destroy(callbackFifo);
+                break;
             }
-            break;
         }
-    }
+
+        codec2_fifo_destroy(fifo);
+        src_delete(src);
+
+        CallAfter([&]() {
+            m_audioPlotThread->join();
+            delete m_audioPlotThread;
+            m_audioPlotThread = nullptr;
+
+            m_btnRxInTest->Enable(true);
+            m_btnRxOutTest->Enable(true);
+            m_btnTxInTest->Enable(true);
+            m_btnTxOutTest->Enable(true);
+        });
+    }, std::string(devName.ToUTF8()), ps);
     
-    codec2_fifo_destroy(fifo);
-    src_delete(src);
-    
-    CallAfter([&]() {
-        m_btnRxInTest->Enable(true);
-        m_btnRxOutTest->Enable(true);
-        m_btnTxInTest->Enable(true);
-        m_btnTxOutTest->Enable(true);
-    });
 }
 
 //-------------------------------------------------------------------------
@@ -919,114 +922,117 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
     m_btnTxInTest->Enable(false);
     m_btnTxOutTest->Enable(false);
     
-    SRC_STATE          *src;
-    FIFO               *fifo, *callbackFifo;
-    int src_error, n = 0;
-    
-    fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
-    src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
-    
-    auto engine = AudioEngineFactory::GetAudioEngine();
-    auto devList = engine->getAudioDeviceList(IAudioEngine::OUT);
-    for (auto& devInfo : devList)
-    {
-        if (wxString(devInfo.name).Trim() == devName.Trim())
+    m_audioPlotThread = new std::thread([&](std::string devNameAsCString, PlotScalar* ps) {
+        SRC_STATE          *src;
+        FIFO               *fifo, *callbackFifo;
+        int src_error, n = 0;
+        
+        fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
+        src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
+        
+        auto engine = AudioEngineFactory::GetAudioEngine();
+        auto devList = engine->getAudioDeviceList(IAudioEngine::OUT);
+        for (auto& devInfo : devList)
         {
-            int sampleCount = 0;
-            int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
-            auto device = engine->getAudioDevice(
-                devInfo.name, 
-                IAudioEngine::OUT, 
-                sampleRate,
-                devInfo.maxChannels >= 2 ? 2 : 1);
-            
-            if (device)
+            if (devInfo.name == devNameAsCString)
             {
-                std::mutex callbackFifoMutex;
-                std::condition_variable callbackFifoCV;
-            
-                callbackFifo = codec2_fifo_create(sampleRate);
-                assert(callbackFifo != nullptr);
+                int sampleCount = 0;
+                int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
+                auto device = engine->getAudioDevice(
+                    devInfo.name, 
+                    IAudioEngine::OUT, 
+                    sampleRate,
+                    devInfo.maxChannels >= 2 ? 2 : 1);
                 
-                device->setOnAudioData([&](IAudioDevice&, void* data, size_t numSamples, void* state) {
-                    short out48k_short[numSamples];
-                    short out48k_stereo_short[2*numSamples];
-                    int numChannels = devInfo.maxChannels >= 2 ? 2 : 1;
- 
-                    for(size_t j = 0; j < numSamples; j++, n++) 
-                    {
-                        out48k_short[j] = 2000.0*cos(6.2832*(n)*400.0/sampleRate);
-                        if (numChannels == 2) {
-                            out48k_stereo_short[2*j] = out48k_short[j];   // left channel
-                            out48k_stereo_short[2*j+1] = out48k_short[j]; // right channel
-                        }
-                        else {
-                            out48k_stereo_short[j] = out48k_short[j];     // mono
-                        }
-                    }
-                
-                    memcpy(data, &out48k_stereo_short[0], sizeof(out48k_stereo_short));
-                
-                    {
-                        std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
-                        codec2_fifo_write(callbackFifo, out48k_short, numSamples);
-                    }
-                    callbackFifoCV.notify_one();
-
-                    return numSamples;
-                }, nullptr);
-            
-                device->setDescription("Device Output Test");
-                device->start();
-                while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS))
+                if (device)
                 {
-                    short               out8k_short[TEST_BUF_SIZE];
-                    short               out48k_short[TEST_BUF_SIZE];
+                    std::mutex callbackFifoMutex;
+                    std::condition_variable callbackFifoCV;
                 
-                    {
-                        std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
-                        callbackFifoCV.wait_for(callbackFifoLock, std::chrono::milliseconds(1));
-                        if (!codec2_fifo_read(callbackFifo, out48k_short, TEST_BUF_SIZE))
+                    callbackFifo = codec2_fifo_create(sampleRate);
+                    assert(callbackFifo != nullptr);
+                    
+                    device->setOnAudioData([&](IAudioDevice&, void* data, size_t numSamples, void* state) {
+                        short out48k_short[numSamples];
+                        short out48k_stereo_short[2*numSamples];
+                        int numChannels = devInfo.maxChannels >= 2 ? 2 : 1;
+     
+                        for(size_t j = 0; j < numSamples; j++, n++) 
                         {
+                            out48k_short[j] = 2000.0*cos(6.2832*(n)*400.0/sampleRate);
+                            if (numChannels == 2) {
+                                out48k_stereo_short[2*j] = out48k_short[j];   // left channel
+                                out48k_stereo_short[2*j+1] = out48k_short[j]; // right channel
+                            }
+                            else {
+                                out48k_stereo_short[j] = out48k_short[j];     // mono
+                            }
+                        }
+                    
+                        memcpy(data, &out48k_stereo_short[0], sizeof(out48k_stereo_short));
+                    
+                        {
+                            std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
+                            codec2_fifo_write(callbackFifo, out48k_short, numSamples);
+                        }
+                        callbackFifoCV.notify_one();
+    
+                        return numSamples;
+                    }, nullptr);
+                
+                    device->setDescription("Device Output Test");
+                    device->start();
+                    while(sampleCount < (TEST_WAVEFORM_PLOT_TIME * TEST_WAVEFORM_PLOT_FS))
+                    {
+                        short               out8k_short[TEST_BUF_SIZE];
+                        short               out48k_short[TEST_BUF_SIZE];
+                    
+                        {
+                            std::unique_lock<std::mutex> callbackFifoLock(callbackFifoMutex);
+                            callbackFifoCV.wait(callbackFifoLock);
+                            if (codec2_fifo_read(callbackFifo, out48k_short, TEST_BUF_SIZE))
+                            {
+                                continue;
+                            }
+                        }
+                    
+                        int n8k = resample(src, out8k_short, out48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
+                        resample_for_plot(fifo, out8k_short, n8k, FS);
+    
+                        short plotSamples[TEST_WAVEFORM_PLOT_BUF];
+                        if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
+                        {
+                            // come back when the fifo is refilled
                             continue;
                         }
+    
+                        ps->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
+                        sampleCount += TEST_WAVEFORM_PLOT_BUF;
+                        CallAfter(&AudioOptsDialog::UpdatePlot, ps);
                     }
+    
+                    device->stop();
                 
-                    // Process any pending UI events.
-                    wxSafeYield();
-                
-                    int n8k = resample(src, out8k_short, out48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
-                    resample_for_plot(fifo, out8k_short, n8k, FS);
-
-                    short plotSamples[TEST_WAVEFORM_PLOT_BUF];
-                    if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
-                    {
-                        // come back when the fifo is refilled
-                        continue;
-                    }
-
-                    ps->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
-                    sampleCount += TEST_WAVEFORM_PLOT_BUF;
-                    CallAfter(&AudioOptsDialog::UpdatePlot, ps);
+                    codec2_fifo_destroy(callbackFifo);
                 }
-
-                device->stop();
-            
-                codec2_fifo_destroy(callbackFifo);
+                break;
             }
-            break;
         }
-    }
-    
-    codec2_fifo_destroy(fifo);
-    src_delete(src);
-    
-    CallAfter([&]() {
-        m_btnRxInTest->Enable(true);
-        m_btnRxOutTest->Enable(true);
-        m_btnTxInTest->Enable(true);
-        m_btnTxOutTest->Enable(true);
-    });
+        
+        codec2_fifo_destroy(fifo);
+        src_delete(src);
+        
+        CallAfter([&]() {
+            m_audioPlotThread->join();
+            delete m_audioPlotThread;
+            m_audioPlotThread = nullptr;
+
+            m_btnRxInTest->Enable(true);
+            m_btnRxOutTest->Enable(true);
+            m_btnTxInTest->Enable(true);
+            m_btnTxOutTest->Enable(true);
+        });
+    }, std::string(devName.ToUTF8()), ps);
 }
 
 //-------------------------------------------------------------------------
