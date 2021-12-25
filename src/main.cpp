@@ -1973,21 +1973,17 @@ void MainFrame::startRxStream()
             rxInSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1InDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_IN, g_soundCard1SampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
             rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                CallAfter([&]() {
-                    wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
-                    pConfig->Flush();
-                });
+                wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
+                pConfig->Flush();
             }, nullptr);
             
             rxOutSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1OutDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard1SampleRate, 2);
             rxOutSoundDevice->setDescription("FreeDV to Speaker");
             rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                CallAfter([&]() {
-                    wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
-                    pConfig->Flush();
-                });
+                wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
+                pConfig->Flush();
             }, nullptr);
             
             bool failed = false;
@@ -2030,41 +2026,33 @@ void MainFrame::startRxStream()
             rxInSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1InDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_IN, g_soundCard1SampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
             rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                CallAfter([&]() {
-                    wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
-                    pConfig->Flush();
-                });
+                wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
+                pConfig->Flush();
             }, nullptr);
 
             rxOutSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard2OutDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard2SampleRate, 2);
             rxOutSoundDevice->setDescription("FreeDV to Speaker");
             rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                CallAfter([&]() {
-                    wxGetApp().m_soundCard2OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
-                    pConfig->Flush();
-                });
+                wxGetApp().m_soundCard2OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
+                pConfig->Flush();
             }, nullptr);
 
             txInSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard2InDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_IN, g_soundCard2SampleRate, 2);
             txInSoundDevice->setDescription("Mic to FreeDV");
             rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                CallAfter([&]() {
-                    wxGetApp().m_soundCard2InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);
-                    pConfig->Flush();
-                });
+                wxGetApp().m_soundCard2InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);
+                pConfig->Flush();
             }, nullptr);
 
             txOutSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1OutDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard1SampleRate, 2);
             txOutSoundDevice->setDescription("FreeDV to Radio");
             txOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                CallAfter([&]() {
-                    wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
-                    pConfig->Flush();
-                });
+                wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
+                pConfig->Flush();
             }, nullptr);
             
             bool failed = false;

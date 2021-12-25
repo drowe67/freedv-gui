@@ -21,6 +21,8 @@
 //=========================================================================
 
 #include <cstring>
+#include <cstdio>
+
 #include "PulseAudioDevice.h"
 
 PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, std::string devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
@@ -182,11 +184,12 @@ void PulseAudioDevice::StreamMovedCallback_(pa_stream *p, void *userdata)
 {
     auto newDevName = pa_stream_get_device_name(p);
     PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
-    
-    devName_ = newDevName;
+
+    fprintf(stderr, "%s is being renamed to %s\n", thisObj->devName_.c_str(), newDevName);
+    thisObj->devName_ = newDevName;
     
     if (thisObj->onAudioDeviceChangedFunction) 
     {
-        thisObj->onAudioDeviceChangedFunction(*thisObj, devName_, thisObj->onAudioOverflowState);
+        thisObj->onAudioDeviceChangedFunction(*thisObj, thisObj->devName_, thisObj->onAudioOverflowState);
     }
 }
