@@ -152,7 +152,7 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
     pa_operation* op = nullptr;
     
     pa_threaded_mainloop_lock(mainloop_);
-    if (direction == OUT)
+    if (direction == AUDIO_ENGINE_OUT)
     {
         op = pa_context_get_sink_info_list(context_, [](pa_context *c, const pa_sink_info *i, int eol, void *userdata) {
             PulseAudioDeviceListTemp* tempObj = static_cast<PulseAudioDeviceListTemp*>(userdata);
@@ -255,7 +255,7 @@ AudioDeviceSpecification PulseAudioEngine::getDefaultAudioDevice(AudioDirection 
     pa_threaded_mainloop_unlock(mainloop_);
     
     auto devices = getAudioDeviceList(direction);
-    std::string defaultDeviceName = direction == IN ? tempData.defaultSource : tempData.defaultSink;
+    std::string defaultDeviceName = direction == AUDIO_ENGINE_IN ? tempData.defaultSource : tempData.defaultSink;
     for (auto& device : devices)
     {
         if (device.name == defaultDeviceName)

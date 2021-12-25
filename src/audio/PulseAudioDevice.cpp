@@ -83,7 +83,7 @@ void PulseAudioDevice::start()
          PA_STREAM_ADJUST_LATENCY);
     
     int result = 0;
-    if (direction_ == IAudioEngine::OUT)
+    if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
     {
         pa_stream_set_write_callback(stream_, &PulseAudioDevice::StreamWriteCallback_, this);
         result = pa_stream_connect_playback(
