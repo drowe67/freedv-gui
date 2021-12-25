@@ -879,10 +879,22 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
                             // come back when the fifo is refilled
                             continue;
                         }
-    
-                        ps->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
+
+                        std::mutex plotUpdateMtx;
+                        std::condition_variable plotUpdateCV;
+                        CallAfter([&]() {
+                            {
+                                std::unique_lock<std::mutex> plotUpdateLock(plotUpdateMtx);
+                                ps->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
+                                UpdatePlot(ps);
+                            }
+                            plotUpdateCV.notify_one();
+                        });
+                        {
+                            std::unique_lock<std::mutex> plotUpdateLock(plotUpdateMtx);
+                            plotUpdateCV.wait(plotUpdateLock);
+                        } 
                         sampleCount += TEST_WAVEFORM_PLOT_BUF;
-                        CallAfter(&AudioOptsDialog::UpdatePlot, ps);
                     }
     
                     device->stop();
@@ -1005,9 +1017,21 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
                             continue;
                         }
     
-                        ps->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
+                        std::mutex plotUpdateMtx;
+                        std::condition_variable plotUpdateCV;
+                        CallAfter([&]() {
+                            {
+                                std::unique_lock<std::mutex> plotUpdateLock(plotUpdateMtx);
+                                ps->add_new_short_samples(0, plotSamples, TEST_WAVEFORM_PLOT_BUF, 32767);
+                                UpdatePlot(ps);
+                            }
+                            plotUpdateCV.notify_one();
+                        });
+                        {
+                            std::unique_lock<std::mutex> plotUpdateLock(plotUpdateMtx);
+                            plotUpdateCV.wait(plotUpdateLock);
+                        } 
                         sampleCount += TEST_WAVEFORM_PLOT_BUF;
-                        CallAfter(&AudioOptsDialog::UpdatePlot, ps);
                     }
     
                     device->stop();
