@@ -11,8 +11,10 @@
 
 if [ $CMAKE = "mingw64-cmake" ]; then
     BUILD_DIR=build_win64
+    CXX=mingw64-g++
 else
     BUILD_DIR=build_win32
+    CXX=mingw32-g++
 fi
 export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
