@@ -1118,13 +1118,6 @@ void AudioOptsDialog::OnRefreshClick(wxCommandEvent& event)
 void AudioOptsDialog::OnApplyAudioParameters(wxCommandEvent& event)
 {
     ExchangeData(EXCHANGE_DATA_OUT);
-    if(m_isPaInitialized)
-    {
-        auto engine = AudioEngineFactory::GetAudioEngine();
-        engine->stop();
-        engine->setOnEngineError(nullptr, nullptr);
-        m_isPaInitialized = false;
-    }
 }
 
 //-------------------------------------------------------------------------
