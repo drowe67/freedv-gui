@@ -12,7 +12,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   ```
   $ sudo apt install libspeexdsp-dev libsamplerate0-dev sox git \
   libwxgtk3.0-gtk3-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev \
-  libgsm1-dev libsndfile-dev cmake module-assistant build-essential
+  libgsm1-dev libsndfile-dev cmake module-assistant build-essential libpulse-dev
   $ git clone https://github.com/drowe67/freedv-gui.git
   $ cd freedv-gui
   $ ./build_linux.sh
@@ -31,7 +31,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   $ sudo dnf groupinstall "Development Tools"
   $ sudo dnf install cmake wxGTK3-devel portaudio-devel libsamplerate-devel \
     libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
-    gsm-devel
+    gsm-devel pulseaudio-libs-devel
   $ git clone https://github.com/drowe67/freedv-gui.git
   $ cd freedv-gui
   $ ./build_linux.sh

@@ -36,7 +36,7 @@ class IAudioEngine
 public:
     typedef std::function<void(IAudioEngine&, std::string, void*)> AudioErrorCallbackFn;
     
-    enum AudioDirection { IN, OUT };
+    enum AudioDirection { AUDIO_ENGINE_IN, AUDIO_ENGINE_OUT };
     
     virtual void start() = 0;
     virtual void stop() = 0;

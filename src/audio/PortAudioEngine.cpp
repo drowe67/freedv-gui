@@ -77,15 +77,15 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
             continue;
         }
         
-        if ((direction == IN && deviceInfo->maxInputChannels > 0) || 
-            (direction == OUT && deviceInfo->maxOutputChannels > 0))
+        if ((direction == AUDIO_ENGINE_IN && deviceInfo->maxInputChannels > 0) || 
+            (direction == AUDIO_ENGINE_OUT && deviceInfo->maxOutputChannels > 0))
         {
             AudioDeviceSpecification device;
             device.deviceId = index;
             device.name = deviceInfo->name;
             device.apiName = hostApiName;
             device.maxChannels = 
-                direction == IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
+                direction == AUDIO_ENGINE_IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
             device.defaultSampleRate = deviceInfo->defaultSampleRate;
             
             result.push_back(device);
@@ -116,8 +116,8 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates(std::string deviceName
             while (IAudioEngine::StandardSampleRates[rateIndex] != -1)
             {
                 PaError err = Pa_IsFormatSupported(
-                    direction == IN ? &streamParameters : NULL, 
-                    direction == OUT ? &streamParameters : NULL, 
+                    direction == AUDIO_ENGINE_IN ? &streamParameters : NULL, 
+                    direction == AUDIO_ENGINE_OUT ? &streamParameters : NULL, 
                     IAudioEngine::StandardSampleRates[rateIndex]);
                 
                 if (err == paFormatIsSupported)
@@ -137,7 +137,7 @@ AudioDeviceSpecification PortAudioEngine::getDefaultAudioDevice(AudioDirection d
 {
     auto devices = getAudioDeviceList(direction);
     PaDeviceIndex defaultDeviceIndex = 
-        direction == IN ? Pa_GetDefaultInputDevice() : Pa_GetDefaultOutputDevice();
+        direction == AUDIO_ENGINE_IN ? Pa_GetDefaultInputDevice() : Pa_GetDefaultOutputDevice();
     
     if (defaultDeviceIndex != paNoDevice)
     {

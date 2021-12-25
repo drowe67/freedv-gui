@@ -54,8 +54,8 @@ void PortAudioDevice::start()
     
     auto error = Pa_OpenStream(
         &deviceStream_,
-        direction_ == IAudioEngine::IN ? &streamParameters : nullptr,
-        direction_ == IAudioEngine::OUT ? &streamParameters : nullptr,
+        direction_ == IAudioEngine::AUDIO_ENGINE_IN ? &streamParameters : nullptr,
+        direction_ == IAudioEngine::AUDIO_ENGINE_OUT ? &streamParameters : nullptr,
         sampleRate_,
         0,
         paClipOff,
@@ -104,7 +104,7 @@ int PortAudioDevice::OnPortAudioStreamCallback_(const void *input, void *output,
     unsigned int overflowFlag = 0;
     unsigned int underflowFlag = 0;
     
-    if (thisObj->direction_ == IAudioEngine::IN)
+    if (thisObj->direction_ == IAudioEngine::AUDIO_ENGINE_IN)
     {
         underflowFlag = 0x1;
         overflowFlag = 0x2;
@@ -128,11 +128,11 @@ int PortAudioDevice::OnPortAudioStreamCallback_(const void *input, void *output,
     }
     
     void* dataPtr = 
-        thisObj->direction_ == IAudioEngine::IN ? 
+        thisObj->direction_ == IAudioEngine::AUDIO_ENGINE_IN ? 
         const_cast<void*>(input) :
         const_cast<void*>(output);
     
-    if (thisObj->direction_ == IAudioEngine::OUT)
+    if (thisObj->direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
     {
         // Zero out samples by default in case we don't have any data available.
         memset(dataPtr, 0, sizeof(short) * frameCount);

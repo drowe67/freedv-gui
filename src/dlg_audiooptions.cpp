@@ -608,7 +608,7 @@ int AudioOptsDialog::ExchangeData(int inout)
 int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, wxString devName, int in_out)
 {
     auto engine = AudioEngineFactory::GetAudioEngine();
-    auto deviceList = engine->getAudioDeviceList(in_out == AUDIO_IN ? IAudioEngine::IN : IAudioEngine::OUT);
+    auto deviceList = engine->getAudioDeviceList(in_out == AUDIO_IN ? IAudioEngine::AUDIO_ENGINE_IN : IAudioEngine::AUDIO_ENGINE_OUT);
     wxString str;
     int numSampleRates = 0;
     
@@ -620,7 +620,7 @@ int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, w
             auto supportedSampleRates =
                 engine->getSupportedSampleRates(
                     dev.name, 
-                    in_out == AUDIO_IN ? IAudioEngine::IN : IAudioEngine::OUT);
+                    in_out == AUDIO_IN ? IAudioEngine::AUDIO_ENGINE_IN : IAudioEngine::AUDIO_ENGINE_OUT);
                     
             for (auto& rate : supportedSampleRates)
             {
@@ -646,7 +646,7 @@ void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
     int         col = 0, idx;
 
     auto engine = AudioEngineFactory::GetAudioEngine();
-    auto devList = engine->getAudioDeviceList(in_out == AUDIO_IN ? IAudioEngine::IN : IAudioEngine::OUT);
+    auto devList = engine->getAudioDeviceList(in_out == AUDIO_IN ? IAudioEngine::AUDIO_ENGINE_IN : IAudioEngine::AUDIO_ENGINE_OUT);
     
     if(ctrl->GetColumnCount() > 0)
     {
@@ -815,7 +815,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
         src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
         
         auto engine = AudioEngineFactory::GetAudioEngine();
-        auto devList = engine->getAudioDeviceList(IAudioEngine::IN);
+        auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
         for (auto& devInfo : devList)
         {
             if (devInfo.name == devNameAsCString)
@@ -824,7 +824,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
                 int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
                 auto device = engine->getAudioDevice(
                     devInfo.name, 
-                    IAudioEngine::IN, 
+                    IAudioEngine::AUDIO_ENGINE_IN, 
                     sampleRate,
                     2);
                 
@@ -931,7 +931,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
         src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
         
         auto engine = AudioEngineFactory::GetAudioEngine();
-        auto devList = engine->getAudioDeviceList(IAudioEngine::OUT);
+        auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
         for (auto& devInfo : devList)
         {
             if (devInfo.name == devNameAsCString)
@@ -940,7 +940,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
                 int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
                 auto device = engine->getAudioDevice(
                     devInfo.name, 
-                    IAudioEngine::OUT, 
+                    IAudioEngine::AUDIO_ENGINE_OUT, 
                     sampleRate,
                     2);
                 

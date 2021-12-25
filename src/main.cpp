@@ -1970,9 +1970,9 @@ void MainFrame::startRxStream()
         {
             // RX-only setup.
             // Note: we assume 2 channels, but IAudioEngine will automatically downgrade to 1 channel if needed.
-            rxInSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1InDeviceName.ToUTF8()), IAudioEngine::IN, g_soundCard1SampleRate, 2);
+            rxInSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1InDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_IN, g_soundCard1SampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
-            rxOutSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1OutDeviceName.ToUTF8()), IAudioEngine::OUT, g_soundCard1SampleRate, 2);
+            rxOutSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1OutDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard1SampleRate, 2);
             rxOutSoundDevice->setDescription("FreeDV to Speaker");
             
             bool failed = false;
@@ -2012,16 +2012,16 @@ void MainFrame::startRxStream()
         {
             // RX + TX setup
             // Same note as above re: number of channels.
-            rxInSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1InDeviceName.ToUTF8()), IAudioEngine::IN, g_soundCard1SampleRate, 2);
+            rxInSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1InDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_IN, g_soundCard1SampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
 
-            rxOutSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard2OutDeviceName.ToUTF8()), IAudioEngine::OUT, g_soundCard2SampleRate, 2);
+            rxOutSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard2OutDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard2SampleRate, 2);
             rxOutSoundDevice->setDescription("FreeDV to Speaker");
 
-            txInSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard2InDeviceName.ToUTF8()), IAudioEngine::IN, g_soundCard2SampleRate, 2);
+            txInSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard2InDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_IN, g_soundCard2SampleRate, 2);
             txInSoundDevice->setDescription("Mic to FreeDV");
 
-            txOutSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1OutDeviceName.ToUTF8()), IAudioEngine::OUT, g_soundCard1SampleRate, 2);
+            txOutSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1OutDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard1SampleRate, 2);
             txOutSoundDevice->setDescription("FreeDV to Radio");
             
             bool failed = false;
@@ -2807,10 +2807,10 @@ bool MainFrame::validateSoundCardSetup()
     engine->start();
     
     // For the purposes of validation, number of channels isn't necessary.
-    auto soundCard1InDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1InDeviceName.ToUTF8()), IAudioEngine::IN, g_soundCard1SampleRate, 1);
-    auto soundCard1OutDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1OutDeviceName.ToUTF8()), IAudioEngine::OUT, g_soundCard1SampleRate, 1);
-    auto soundCard2InDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard2InDeviceName.ToUTF8()), IAudioEngine::IN, g_soundCard2SampleRate, 1);
-    auto soundCard2OutDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard2OutDeviceName.ToUTF8()), IAudioEngine::OUT, g_soundCard2SampleRate, 1);
+    auto soundCard1InDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1InDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_IN, g_soundCard1SampleRate, 1);
+    auto soundCard1OutDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1OutDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard1SampleRate, 1);
+    auto soundCard2InDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard2InDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_IN, g_soundCard2SampleRate, 1);
+    auto soundCard2OutDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard2OutDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard2SampleRate, 1);
 
     if (wxGetApp().m_soundCard1InDeviceName != "none" && !soundCard1InDevice)
     {

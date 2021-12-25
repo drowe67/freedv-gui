@@ -72,15 +72,18 @@ void PulseAudioDevice::start()
     buffer_attr.tlength = (uint32_t) -1;
     buffer_attr.prebuf = 0; // Ensure that we can recover during an underrun
     buffer_attr.minreq = (uint32_t) -1;
+    buffer_attr.fragsize = (uint32_t) -1;
     
     // Stream flags
     pa_stream_flags_t flags = pa_stream_flags_t(
          PA_STREAM_INTERPOLATE_TIMING |
          PA_STREAM_AUTO_TIMING_UPDATE | 
+         PA_STREAM_DONT_MOVE | 
+         PA_STREAM_FAIL_ON_SUSPEND |
          PA_STREAM_ADJUST_LATENCY);
     
     int result = 0;
-    if (direction_ == IAudioEngine::OUT)
+    if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
     {
         pa_stream_set_write_callback(stream_, &PulseAudioDevice::StreamWriteCallback_, this);
         result = pa_stream_connect_playback(
@@ -112,6 +115,7 @@ void PulseAudioDevice::stop()
         pa_threaded_mainloop_lock(mainloop_);
         pa_stream_disconnect(stream_);
         pa_threaded_mainloop_unlock(mainloop_);
+        pa_stream_unref(stream_);
         
         stream_ = nullptr;
     }
@@ -122,19 +126,18 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
     const void* data = nullptr;
     PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
     
-    // Ignore errors here as they're not critical.
-    if (pa_stream_peek(s, &data, &length) >= 0)
+    do
     {
+        pa_stream_peek(s, &data, &length);
+        if (!data || length == 0) break;
+
         if (thisObj->onAudioDataFunction)
         {
             thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(data), length / (sizeof(short) * thisObj->getNumChannels()), thisObj->onAudioDataState);
         }
         
-        if (length > 0) 
-        {
-            pa_stream_drop(s);
-        }
-    }
+        pa_stream_drop(s);
+    } while (pa_stream_readable_size(s) > 0);
 }
 
 void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *userdata)
