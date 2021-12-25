@@ -167,7 +167,7 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
     }
     
     // Loop back through SNR adjust list and subtract minimum from each entry.
-    for (int index = 0; index < snrAdjust_.size(); index++)
+    for (size_t index = 0; index < snrAdjust_.size(); index++)
     {
         snrAdjust_[index] -= minimumSnr;
     }

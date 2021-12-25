@@ -38,8 +38,8 @@ static bool rig_cmp(const struct rig_caps *rig1, const struct rig_caps *rig2);
 static int build_list(const struct rig_caps *rig, rig_ptr_t);
 
 Hamlib::Hamlib() : 
-    m_rig(NULL),
     m_rig_model(0),
+    m_rig(NULL),
     m_modeBox(NULL),
     m_freqBox(NULL),
     m_currFreq(0),
