@@ -65,6 +65,7 @@ void PulseAudioDevice::start()
     
     pa_stream_set_underflow_callback(stream_, &PulseAudioDevice::StreamUnderflowCallback_, this);
     pa_stream_set_overflow_callback(stream_, &PulseAudioDevice::StreamOverflowCallback_, this);
+    pa_stream_set_moved_callback(stream_, &PulseAudioDevice::StreamMovedCallback_, this);
     
     // recommended settings, i.e. server uses sensible values
     pa_buffer_attr buffer_attr; 
@@ -78,7 +79,6 @@ void PulseAudioDevice::start()
     pa_stream_flags_t flags = pa_stream_flags_t(
          PA_STREAM_INTERPOLATE_TIMING |
          PA_STREAM_AUTO_TIMING_UPDATE | 
-         PA_STREAM_DONT_MOVE | 
          PA_STREAM_FAIL_ON_SUSPEND |
          PA_STREAM_ADJUST_LATENCY);
     
@@ -175,5 +175,18 @@ void PulseAudioDevice::StreamOverflowCallback_(pa_stream *p, void *userdata)
     if (thisObj->onAudioOverflowFunction) 
     {
         thisObj->onAudioOverflowFunction(*thisObj, thisObj->onAudioOverflowState);
+    }
+}
+
+void PulseAudioDevice::StreamMovedCallback_(pa_stream *p, void *userdata)
+{
+    auto newDevName = pa_stream_get_device_name(p);
+    PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
+    
+    devName_ = newDevName;
+    
+    if (thisObj->onAudioDeviceChangedFunction) 
+    {
+        thisObj->onAudioDeviceChangedFunction(*thisObj, devName_, thisObj->onAudioOverflowState);
     }
 }

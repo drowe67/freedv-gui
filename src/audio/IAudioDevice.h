@@ -35,6 +35,7 @@ public:
     typedef std::function<void(IAudioDevice&, void*)> AudioUnderflowCallbackFn;
     typedef std::function<void(IAudioDevice&, void*)> AudioOverflowCallbackFn;
     typedef std::function<void(IAudioDevice&, std::string, void*)> AudioErrorCallbackFn;
+    typedef std::function<void(IAudioDevice&, std::string, void*)> AudioDeviceChangedCallbackFn;
     
     virtual int getNumChannels() = 0;
     
@@ -68,8 +69,15 @@ public:
     // Callback must take the following parameters:
     //    1. Audio device.
     //    2. String representing the error encountered.
-    //    3. Pointer to user-provided state object (typically onAudioUnderflowState, defined below).
+    //    3. Pointer to user-provided state object (typically onAudioErrorState, defined below).
     void setOnAudioError(AudioErrorCallbackFn fn, void* state);
+    
+    // Set device changed callback.
+    // Callback must take the following parameters:
+    //    1. Audio device.
+    //    2. String representing the new name of the device.
+    //    3. Pointer to user-provided state object (typically onAudioDeviceChangedState, defined below).
+    void setOnAudioDeviceChanged(AudioDeviceChangedCallbackFn fn, void* state);
     
 protected:
     std::string description;
@@ -85,6 +93,9 @@ protected:
     
     AudioErrorCallbackFn onAudioErrorFunction;
     void* onAudioErrorState;
+    
+    AudioDeviceChangedCallbackFn onAudioDeviceChangedFunction;
+    void* onAudioDeviceChangedState;
 };
 
 #endif // I_AUDIO_DEVICE_H

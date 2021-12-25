@@ -58,6 +58,7 @@ private:
     static void StreamWriteCallback_(pa_stream *s, size_t length, void *userdata);
     static void StreamUnderflowCallback_(pa_stream *p, void *userdata);
     static void StreamOverflowCallback_(pa_stream *p, void *userdata);
+    static void StreamMovedCallback_(pa_stream *p, void *userdata);
 };
 
 #endif // PULSE_AUDIO_DEVICE_H

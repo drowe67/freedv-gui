@@ -50,3 +50,9 @@ void IAudioDevice::setOnAudioError(AudioErrorCallbackFn fn, void* state)
     onAudioErrorFunction = fn;
     onAudioErrorState = state;
 }
+
+void IAudioDevice::setOnAudioDeviceChanged(AudioDeviceChangedCallbackFn fn, void* state)
+{
+    onAudioDeviceChangedFunction = fn;
+    onAudioDeviceChangedState = state;
+}
