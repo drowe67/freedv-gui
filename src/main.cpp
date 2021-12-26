@@ -2041,7 +2041,7 @@ void MainFrame::startRxStream()
 
             txInSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard2InDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_IN, g_soundCard2SampleRate, 2);
             txInSoundDevice->setDescription("Mic to FreeDV");
-            rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+            txInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 wxGetApp().m_soundCard2InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
                 pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);
                 pConfig->Flush();
