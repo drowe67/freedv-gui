@@ -72,7 +72,7 @@ void PulseAudioDevice::start()
     // recommended settings, i.e. server uses sensible values
     pa_buffer_attr buffer_attr; 
     buffer_attr.maxlength = (uint32_t)-1;
-    buffer_attr.tlength = (uint32_t) -1;
+    buffer_attr.tlength = pa_usec_to_bytes(20000, &sample_specification);
     buffer_attr.prebuf = 0; // Ensure that we can recover during an underrun
     buffer_attr.minreq = (uint32_t) -1;
     buffer_attr.fragsize = (uint32_t) -1;
@@ -131,7 +131,10 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
     do
     {
         pa_stream_peek(s, &data, &length);
-        if (!data || length == 0) break;
+        if (!data || length == 0) 
+        {
+            break;
+        }
 
         if (thisObj->onAudioDataFunction)
         {

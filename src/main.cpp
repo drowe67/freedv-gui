@@ -2250,20 +2250,11 @@ void MainFrame::startRxStream()
                 int result = codec2_fifo_read(cbData->outfifo2, outdata, toRead);
                 if (result == 0) 
                 {
-                    if (dev.getNumChannels() == 2)
+                    for (size_t i = 0; i < toRead; i++)
                     {
-                        // write signal to both channels */
-                        for(size_t i = 0; i < toRead; i++, audioData += 2)
+                        for (int j = 0; j < dev.getNumChannels(); j++)
                         {
-                            audioData[0] = outdata[i];
-                            audioData[1] = outdata[i];
-                        }
-                    }
-                    else
-                    {
-                        for(size_t i = 0; i < toRead; i++, audioData++) 
-                        {
-                            audioData[0] = outdata[i];
+                            *audioData++ = outdata[i];
                         }
                     }
                 }
@@ -2380,20 +2371,11 @@ void MainFrame::startRxStream()
                 int result = codec2_fifo_read(cbData->outfifo1, outdata, toRead);
                 if (result == 0) 
                 {
-                    if (dev.getNumChannels() == 2)
+                    for (size_t i = 0; i < toRead; i++)
                     {
-                        // write signal to both channels */
-                        for(size_t i = 0; i < toRead; i++, audioData += 2)
+                        for (int j = 0; j < dev.getNumChannels(); j++)
                         {
-                            audioData[0] = outdata[i];
-                            audioData[1] = outdata[i];
-                        }
-                    }
-                    else
-                    {
-                        for(size_t i = 0; i < toRead; i++, audioData++) 
-                        {
-                            audioData[0] = outdata[i];
+                            *audioData++ = outdata[i];
                         }
                     }
                 }
