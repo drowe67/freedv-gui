@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # build_windows_old.sh
 #
 # Script that cross compiles freedv-gui for Windows on Fedora

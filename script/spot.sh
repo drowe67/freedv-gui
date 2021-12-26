@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # spot.sh
 # David Rowe Sep 2015

@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 # build_ubuntu.sh
 #
 # Build script for Ubuntu and Fedora Linux, git pulls codec2 and

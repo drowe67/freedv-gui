@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # build_ubuntu.sh
 #
 # Build script for OSX using MacPorts, git pulls codec2 and
