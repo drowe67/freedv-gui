@@ -2025,7 +2025,7 @@ void MainFrame::startRxStream()
             // Same note as above re: number of channels.
             rxInSoundDevice = engine->getAudioDevice(std::string(wxGetApp().m_soundCard1InDeviceName.ToUTF8()), IAudioEngine::AUDIO_ENGINE_IN, g_soundCard1SampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
-            rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+            rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
                 pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
                 pConfig->Flush();
