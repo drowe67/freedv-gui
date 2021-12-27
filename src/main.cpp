@@ -1872,13 +1872,19 @@ void MainFrame::stopRxStream()
         m_RxRunning = false;
 
         //fprintf(stderr, "waiting for thread to stop\n");
-        m_txThread->terminateThread();
-        m_txThread->Wait();
+        if (m_txThread)
+        {
+            m_txThread->terminateThread();
+            m_txThread->Wait();
+            delete m_txThread;
+            m_txThread = nullptr;
+        }
+
         m_rxThread->terminateThread();
         m_rxThread->Wait();
         //fprintf(stderr, "thread stopped\n");
-        delete m_txThread;
         delete m_rxThread;
+        m_rxThread = nullptr;
 
         if (rxInSoundDevice)
         {
@@ -2416,22 +2422,35 @@ void MainFrame::startRxStream()
 
         // start tx/rx processing thread
 
-        m_txThread = new txRxThread(true);
-        m_rxThread = new txRxThread(false);
-
-        if ( m_txThread->Create() != wxTHREAD_NO_ERROR || m_rxThread->Create() != wxTHREAD_NO_ERROR )
+        if (txInSoundDevice && txOutSoundDevice)
         {
-            wxLogError(wxT("Can't create thread!"));
+            m_txThread = new txRxThread(true);
+            if ( m_txThread->Create() != wxTHREAD_NO_ERROR )
+            {
+                wxLogError(wxT("Can't create TX thread!"));
+            }
+            if (wxGetApp().m_txRxThreadHighPriority) {
+                m_txThread->SetPriority(WXTHREAD_MAX_PRIORITY);
+            }
+            if ( m_txThread->Run() != wxTHREAD_NO_ERROR )
+            {
+                wxLogError(wxT("Can't start TX thread!"));
+            }
+        }
+
+        m_rxThread = new txRxThread(false);
+        if ( m_rxThread->Create() != wxTHREAD_NO_ERROR )
+        {
+            wxLogError(wxT("Can't create RX thread!"));
         }
 
         if (wxGetApp().m_txRxThreadHighPriority) {
-            m_txThread->SetPriority(WXTHREAD_MAX_PRIORITY);
             m_rxThread->SetPriority(WXTHREAD_MAX_PRIORITY);
         }
 
-        if ( m_txThread->Run() != wxTHREAD_NO_ERROR || m_rxThread->Run() != wxTHREAD_NO_ERROR )
+        if ( m_rxThread->Run() != wxTHREAD_NO_ERROR )
         {
-            wxLogError(wxT("Can't start thread!"));
+            wxLogError(wxT("Can't start RX thread!"));
         }
 
     }

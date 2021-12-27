@@ -668,11 +668,23 @@ public:
     // thread execution starts here
     void *Entry()
     {
+        bool suppress_time_out = false;
         while (true)
         {
             {
                 std::unique_lock<std::mutex> lk(m_processingMutex);
-                m_processingCondVar.wait_for(lk, std::chrono::milliseconds(100));
+                if (m_processingCondVar.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout)
+                {
+                    if (!suppress_time_out)
+                    {
+                        fprintf(stderr, "txRxThread: timeout while waiting for CV, tx = %d\n", m_tx);
+                    }
+                    suppress_time_out = true;
+                }
+                else 
+                {
+                    suppress_time_out = false;
+                }
                 if (!m_run) break;
             }
             if (m_tx) txProcessing();
