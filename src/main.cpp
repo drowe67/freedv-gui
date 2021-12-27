@@ -1871,21 +1871,6 @@ void MainFrame::stopRxStream()
     {
         m_RxRunning = false;
 
-        //fprintf(stderr, "waiting for thread to stop\n");
-        if (m_txThread)
-        {
-            m_txThread->terminateThread();
-            m_txThread->Wait();
-            delete m_txThread;
-            m_txThread = nullptr;
-        }
-
-        m_rxThread->terminateThread();
-        m_rxThread->Wait();
-        //fprintf(stderr, "thread stopped\n");
-        delete m_rxThread;
-        m_rxThread = nullptr;
-
         if (rxInSoundDevice)
         {
             rxInSoundDevice->stop();
@@ -1909,6 +1894,21 @@ void MainFrame::stopRxStream()
             txOutSoundDevice->stop();
             txOutSoundDevice.reset();
         }
+
+        //fprintf(stderr, "waiting for thread to stop\n");
+        if (m_txThread)
+        {
+            m_txThread->terminateThread();
+            m_txThread->Wait();
+            delete m_txThread;
+            m_txThread = nullptr;
+        }
+
+        m_rxThread->terminateThread();
+        m_rxThread->Wait();
+        //fprintf(stderr, "thread stopped\n");
+        delete m_rxThread;
+        m_rxThread = nullptr;
 
         destroy_fifos();
         destroy_src();
@@ -2409,19 +2409,7 @@ void MainFrame::startRxStream()
             }, nullptr);
         }
         
-        // Start sound devices
-        rxInSoundDevice->start();
-        rxOutSoundDevice->start();
-        if (txInSoundDevice && txOutSoundDevice)
-        {
-            txInSoundDevice->start();
-            txOutSoundDevice->start();
-        }
-
-        if (g_verbose) fprintf(stderr, "starting tx/rx processing thread\n");
-
         // start tx/rx processing thread
-
         if (txInSoundDevice && txOutSoundDevice)
         {
             m_txThread = new txRxThread(true);
@@ -2453,6 +2441,16 @@ void MainFrame::startRxStream()
             wxLogError(wxT("Can't start RX thread!"));
         }
 
+        // Start sound devices
+        rxInSoundDevice->start();
+        rxOutSoundDevice->start();
+        if (txInSoundDevice && txOutSoundDevice)
+        {
+            txInSoundDevice->start();
+            txOutSoundDevice->start();
+        }
+
+        if (g_verbose) fprintf(stderr, "starting tx/rx processing thread\n");
     }
 }
 
