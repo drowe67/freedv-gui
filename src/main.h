@@ -489,7 +489,8 @@ class MainFrame : public TopFrame
 
         bool                    m_RxRunning;
 
-        txRxThread*             m_txRxThread;
+        txRxThread*             m_txThread;
+        txRxThread*             m_rxThread;
         
         bool                    OpenHamlibRig();
         void                    OpenSerialPort(void);
@@ -650,7 +651,8 @@ class MainFrame : public TopFrame
         bool        validateSoundCardSetup();
 };
 
-void txRxProcessing();
+void txProcessing();
+void rxProcessing();
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // class txRxThread - experimental tx/rx processing thread
@@ -658,15 +660,23 @@ void txRxProcessing();
 class txRxThread : public wxThread
 {
 public:
-    txRxThread(void) : wxThread(wxTHREAD_JOINABLE) { m_run = 1; }
+    txRxThread(bool tx) 
+        : wxThread(wxTHREAD_JOINABLE)
+        , m_tx(tx)
+        , m_run(1) { /* empty */ }
 
     // thread execution starts here
     void *Entry()
     {
-        while (m_run)
+        while (true)
         {
-            txRxProcessing();
-            wxThread::Sleep(20);
+            {
+                std::unique_lock<std::mutex> lk(m_processingMutex);
+                m_processingCondVar.wait_for(lk, std::chrono::milliseconds(100));
+                if (!m_run) break;
+            }
+            if (m_tx) txProcessing();
+            else rxProcessing();
         }
         
         return NULL;
@@ -676,7 +686,25 @@ public:
     // stopped with Delete() (but not when it is Kill()ed!)
     void OnExit() { }
 
-public:
+    void terminateThread()
+    {
+        m_run = 0;
+        notify();
+    }
+
+    void notify()
+    {
+        {
+            std::unique_lock<std::mutex> lk(m_processingMutex);
+            m_processingCondVar.notify_all();
+        }
+    }
+
+    std::mutex m_processingMutex;
+    std::condition_variable m_processingCondVar;
+
+private:
+    bool  m_tx;
     bool  m_run;
 };
 
