@@ -20,6 +20,7 @@
 //
 //=========================================================================
 
+#include <wx/string.h>
 #include "portaudio.h"
 #include "PortAudioDevice.h"
 #include "PortAudioEngine.h"
@@ -99,10 +100,11 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates(std::string deviceName
 {
     std::vector<int> result;
     auto devInfo = getAudioDeviceList(direction);
+    wxString wxDeviceName = wxString::FromUTF8(deviceName).Trim();
     
     for (auto& device : devInfo)
     {
-        if (deviceName == device.name)
+        if (wxDeviceName == wxString::FromUTF8(device.name).Trim())
         {
             PaStreamParameters streamParameters;
             
@@ -156,10 +158,11 @@ AudioDeviceSpecification PortAudioEngine::getDefaultAudioDevice(AudioDirection d
 std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(std::string deviceName, AudioDirection direction, int sampleRate, int numChannels)
 {
     auto deviceList = getAudioDeviceList(direction);
+    wxString wxDeviceName = wxString::FromUTF8(deviceName).Trim();
     
     for (auto& dev : deviceList)
     {
-        if (dev.name == deviceName)
+        if (wxString::FromUTF8(dev.name).Trim() == wxDeviceName)
         {
             auto devObj = new PortAudioDevice(dev.deviceId, direction, sampleRate, dev.maxChannels >= numChannels ? numChannels : dev.maxChannels);
             return std::shared_ptr<IAudioDevice>(devObj);
