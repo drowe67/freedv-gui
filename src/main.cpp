@@ -1862,11 +1862,15 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
     optionsDlg->setSessionActive(m_RxRunning);
 }
 
+static std::mutex stoppingMutex;
+
 //-------------------------------------------------------------------------
 // stopRxStream()
 //-------------------------------------------------------------------------
 void MainFrame::stopRxStream()
 {
+    std::unique_lock<std::mutex> lk(stoppingMutex);
+
     if(m_RxRunning)
     {
         m_RxRunning = false;
