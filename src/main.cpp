@@ -1929,8 +1929,8 @@ void MainFrame::destroy_fifos(void)
 {
     codec2_fifo_destroy(g_rxUserdata->infifo1);
     codec2_fifo_destroy(g_rxUserdata->outfifo1);
-    codec2_fifo_destroy(g_rxUserdata->infifo2);
-    codec2_fifo_destroy(g_rxUserdata->outfifo2);
+    if (g_rxUserdata->infifo2) codec2_fifo_destroy(g_rxUserdata->infifo2);
+    if (g_rxUserdata->outfifo2) codec2_fifo_destroy(g_rxUserdata->outfifo2);
     codec2_fifo_destroy(g_rxUserdata->rxinfifo);
     codec2_fifo_destroy(g_rxUserdata->rxoutfifo);
 }
@@ -2149,15 +2149,21 @@ void MainFrame::startRxStream()
 
         int m_fifoSize_ms = wxGetApp().m_fifoSize_ms;
         int soundCard1FifoSizeSamples = m_fifoSize_ms*g_soundCard1SampleRate/1000;
-        int soundCard2FifoSizeSamples = m_fifoSize_ms*g_soundCard2SampleRate/1000;
-
         g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1FifoSizeSamples);
         g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1FifoSizeSamples);
-        g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
-        g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
 
-        if (g_verbose) fprintf(stderr, "fifoSize_ms: %d infifo1/outfilo1: %d infifo2/outfilo2: %d\n",
-                wxGetApp().m_fifoSize_ms, soundCard1FifoSizeSamples, soundCard2FifoSizeSamples);
+        if (txInSoundDevice && txOutSoundDevice)
+        {
+            int soundCard2FifoSizeSamples = m_fifoSize_ms*g_soundCard2SampleRate/1000;
+            g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
+            g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
+        
+            if (g_verbose) fprintf(stderr, "fifoSize_ms:  %d infifo2/outfilo2: %d\n",
+                wxGetApp().m_fifoSize_ms, soundCard2FifoSizeSamples);
+        }
+
+        if (g_verbose) fprintf(stderr, "fifoSize_ms: %d infifo1/outfilo1 %d\n",
+                wxGetApp().m_fifoSize_ms, soundCard1FifoSizeSamples);
 
         // reset debug stats for FIFOs
 
