@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 # build_ubuntu.sh
 #
 # Build script for Ubuntu and Fedora Linux, git pulls codec2 and
@@ -16,13 +16,17 @@ CODEC2_BRANCH=master
 
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
-git clone https://github.com/drowe67/codec2.git
+if [ ! -d codec2 ]; then
+    git clone https://github.com/drowe67/codec2.git
+fi
 cd codec2 && git checkout $CODEC2_BRANCH && git pull
 mkdir -p build_linux && cd build_linux && rm -Rf * && cmake .. && make
 
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
-git clone https://github.com/drowe67/LPCNet.git
+if [ ! -d LPCNet ]; then
+    git clone https://github.com/drowe67/LPCNet.git
+fi
 cd $LPCNETDIR && git checkout master && git pull
 mkdir  -p build_linux && cd build_linux && rm -Rf *
 cmake -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux ..
