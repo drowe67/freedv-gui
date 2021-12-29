@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # build_ubuntu.sh
 #
 # Build script for OSX using MacPorts, git pulls codec2 and
@@ -10,13 +10,17 @@ export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 export HAMLIBDIR=$FREEDVGUIDIR/hamlib
 
 # Prerequisite: build dylibbundler
-git clone https://github.com/tmiw/macdylibbundler.git
+if [ ! -d macdylibbundler ]; then
+    git clone https://github.com/tmiw/macdylibbundler.git
+fi
 cd macdylibbundler && git checkout main && git pull
 make -j4
 
 # Prerequisite: build hamlib
 cd $FREEDVGUIDIR
-git clone https://github.com/Hamlib/Hamlib.git hamlib-code
+if [ ! -d hamlib-code ]; then
+    git clone https://github.com/Hamlib/Hamlib.git hamlib-code
+fi
 cd hamlib-code && git checkout master && git pull
 ./bootstrap
 CFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" ./configure --disable-shared --prefix $HAMLIBDIR
@@ -25,17 +29,22 @@ make install
 
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
-git clone https://github.com/drowe67/codec2.git
+if [ ! -d codec2 ]; then
+    git clone https://github.com/drowe67/codec2.git
+fi
 cd codec2 && git checkout ms-reliable-text && git pull
 mkdir -p build_osx && cd build_osx && rm -Rf * && cmake -DBUILD_OSX_UNIVERSAL=1 .. && make -j4
 
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
-git clone https://github.com/drowe67/LPCNet.git
+if [ ! -d LPCNet ]; then
+    git clone https://github.com/drowe67/LPCNet.git
+fi
 cd $LPCNETDIR && git checkout master && git pull
 mkdir  -p build_osx && cd build_osx && rm -Rf *
 cmake -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx -DBUILD_OSX_UNIVERSAL=1 ..
 make -j4
+
 # sanity check test
 cd src && sox ../../wav/wia.wav -t raw -r 16000 - | ./lpcnet_enc -s | ./lpcnet_dec -s > /dev/null
 
