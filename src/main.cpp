@@ -585,6 +585,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
 #endif
 
     m_RxRunning = false;
+    m_txThread = nullptr;
+    m_rxThread = nullptr;
 
 #ifdef _USE_ONIDLE
     Connect(wxEVT_IDLE, wxIdleEventHandler(MainFrame::OnIdle), NULL, this);
@@ -1906,6 +1908,14 @@ void MainFrame::stopRxStream()
             m_txThread->Wait();
             delete m_txThread;
             m_txThread = nullptr;
+        }
+
+        if (m_rxThread)
+        {
+            m_rxThread->terminateThread();
+            m_rxThread->Wait();
+            delete m_txThread;
+            m_rxThread = nullptr;
         }
 
         destroy_fifos();
