@@ -133,8 +133,6 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
 {
     const void* data = nullptr;
     PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
-    void* fullBlock = nullptr;
-    size_t fullSize = 0;
 
     do
     {
@@ -144,21 +142,13 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
             break;
         }
 
-        fullSize += length;
-        fullBlock = realloc(fullBlock, fullSize);
-        assert(fullBlock != nullptr);
+        if (thisObj->onAudioDataFunction)
+        {
+            thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(data), length / (sizeof(short) * thisObj->getNumChannels()), thisObj->onAudioDataState);
+        }
 
-        memcpy(fullBlock + fullSize - length, data, length);
-        
         pa_stream_drop(s);
     } while (pa_stream_readable_size(s) > 0);
-
-    if (thisObj->onAudioDataFunction)
-    {
-        thisObj->onAudioDataFunction(*thisObj, fullBlock, fullSize / (sizeof(short) * thisObj->getNumChannels()), thisObj->onAudioDataState);
-    }
-
-    free(fullBlock);
 }
 
 void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *userdata)
