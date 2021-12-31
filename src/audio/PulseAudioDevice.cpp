@@ -68,7 +68,8 @@ void PulseAudioDevice::start()
     pa_stream_set_underflow_callback(stream_, &PulseAudioDevice::StreamUnderflowCallback_, this);
     pa_stream_set_overflow_callback(stream_, &PulseAudioDevice::StreamOverflowCallback_, this);
     pa_stream_set_moved_callback(stream_, &PulseAudioDevice::StreamMovedCallback_, this);
-    
+    pa_stream_set_state_callback(stream_, &PulseAudioDevice::StreamStateCallback_, this);
+
     // recommended settings, i.e. server uses sensible values
     pa_buffer_attr buffer_attr; 
     buffer_attr.maxlength = (uint32_t)-1;
@@ -114,11 +115,16 @@ void PulseAudioDevice::stop()
 {
     if (stream_ != nullptr)
     {
+        std::unique_lock<std::mutex> lk(streamStateMutex_);
+
         pa_threaded_mainloop_lock(mainloop_);
         pa_stream_disconnect(stream_);
         pa_threaded_mainloop_unlock(mainloop_);
+
+        streamStateCondVar_.wait(lk);
+
         pa_stream_unref(stream_);
-        
+
         stream_ = nullptr;
     }
 }
@@ -171,6 +177,19 @@ void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *u
     
         pa_stream_write(s, &data[0], length, NULL, 0LL, PA_SEEK_RELATIVE);
     }
+}
+
+void PulseAudioDevice::StreamStateCallback_(pa_stream *p, void *userdata)
+{
+    PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
+
+    // This method is only used for termination to ensure that it's synchronous and 
+    // does not accidentally refer to already freed memory.
+    if (pa_stream_get_state(p) == PA_STREAM_TERMINATED)
+    {
+        std::unique_lock<std::mutex> lk(thisObj->streamStateMutex_);
+        thisObj->streamStateCondVar_.notify_all();
+    }    
 }
 
 void PulseAudioDevice::StreamUnderflowCallback_(pa_stream *p, void *userdata)

@@ -1908,12 +1908,6 @@ void MainFrame::stopRxStream()
             m_txThread = nullptr;
         }
 
-        m_rxThread->terminateThread();
-        m_rxThread->Wait();
-        //fprintf(stderr, "thread stopped\n");
-        delete m_rxThread;
-        m_rxThread = nullptr;
-
         destroy_fifos();
         destroy_src();
         

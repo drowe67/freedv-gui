@@ -23,6 +23,8 @@
 #ifndef PULSE_AUDIO_DEVICE_H
 #define PULSE_AUDIO_DEVICE_H
 
+#include <mutex>
+#include <condition_variable>
 #include <string>
 #include <pulse/pulseaudio.h>
 #include "IAudioEngine.h"
@@ -53,12 +55,15 @@ private:
     IAudioEngine::AudioDirection direction_;
     int sampleRate_;
     int numChannels_;
-    
+    std::mutex streamStateMutex_;
+    std::condition_variable streamStateCondVar_;
+
     static void StreamReadCallback_(pa_stream *s, size_t length, void *userdata);
     static void StreamWriteCallback_(pa_stream *s, size_t length, void *userdata);
     static void StreamUnderflowCallback_(pa_stream *p, void *userdata);
     static void StreamOverflowCallback_(pa_stream *p, void *userdata);
     static void StreamMovedCallback_(pa_stream *p, void *userdata);
+    static void StreamStateCallback_(pa_stream *p, void *userdata);
 };
 
 #endif // PULSE_AUDIO_DEVICE_H
