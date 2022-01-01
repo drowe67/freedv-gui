@@ -25,7 +25,7 @@
 
 #include "PulseAudioDevice.h"
 
-PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, std::string devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
+PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : context_(context)
     , mainloop_(mainloop)
     , stream_(nullptr)
@@ -59,7 +59,7 @@ void PulseAudioDevice::start()
     {
         if (onAudioErrorFunction)
         {
-            onAudioErrorFunction(*this, std::string("Could not create PulseAudio stream for ") + devName_, onAudioErrorState);
+            onAudioErrorFunction(*this, std::string("Could not create PulseAudio stream for ") + (const char*)devName_.ToUTF8(), onAudioErrorState);
         }
         pa_threaded_mainloop_unlock(mainloop_);
         return;
@@ -104,7 +104,7 @@ void PulseAudioDevice::start()
     {
         if (onAudioErrorFunction)
         {
-            onAudioErrorFunction(*this, std::string("Could not connect PulseAudio stream to ") + devName_, onAudioErrorState);
+            onAudioErrorFunction(*this, std::string("Could not connect PulseAudio stream to ") + (const char*)devName_.ToUTF8(), onAudioErrorState);
         }
     }
     
@@ -207,11 +207,10 @@ void PulseAudioDevice::StreamMovedCallback_(pa_stream *p, void *userdata)
     auto newDevName = pa_stream_get_device_name(p);
     PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
 
-    fprintf(stderr, "%s is being renamed to %s\n", thisObj->devName_.c_str(), newDevName);
     thisObj->devName_ = newDevName;
     
     if (thisObj->onAudioDeviceChangedFunction) 
     {
-        thisObj->onAudioDeviceChangedFunction(*thisObj, thisObj->devName_, thisObj->onAudioOverflowState);
+        thisObj->onAudioDeviceChangedFunction(*thisObj, (const char*)thisObj->devName_.ToUTF8(), thisObj->onAudioOverflowState);
     }
 }

@@ -25,7 +25,7 @@
 
 #include <mutex>
 #include <condition_variable>
-#include <string>
+#include <wx/string.h>
 #include <pulse/pulseaudio.h>
 #include "IAudioEngine.h"
 #include "IAudioDevice.h"
@@ -44,14 +44,14 @@ protected:
     // PulseAudioDevice cannot be created directly, only via PulseAudioEngine.
     friend class PulseAudioEngine;
     
-    PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, std::string devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
+    PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
     
 private:
     pa_context* context_;
     pa_threaded_mainloop* mainloop_;
     pa_stream* stream_;
     
-    std::string devName_;
+    wxString devName_;
     IAudioEngine::AudioDirection direction_;
     int sampleRate_;
     int numChannels_;
