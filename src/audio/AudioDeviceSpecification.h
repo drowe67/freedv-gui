@@ -23,14 +23,14 @@
 #ifndef AUDIO_DEVICE_SPECIFICATION_H
 #define AUDIO_DEVICE_SPECIFICATION_H
 
-#include <string>
+#include <wx/string.h>
 #include <vector>
 
 struct AudioDeviceSpecification
 {
     int deviceId;
-    std::string name;
-    std::string apiName;
+    wxString name;
+    wxString apiName;
     int defaultSampleRate;
     int maxChannels;
     

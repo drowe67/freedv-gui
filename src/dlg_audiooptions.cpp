@@ -615,7 +615,7 @@ int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, w
     cbSampleRate->Clear();
     for (auto& dev : deviceList)
     {
-        if (wxString(dev.name).Trim() == devName.Trim())
+        if (dev.name.Trim() == devName.Trim())
         {
             auto supportedSampleRates =
                 engine->getSupportedSampleRates(

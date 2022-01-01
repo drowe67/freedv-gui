@@ -209,7 +209,7 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
     return tempObj.result;
 }
 
-std::vector<int> PulseAudioEngine::getSupportedSampleRates(std::string deviceName, AudioDirection direction)
+std::vector<int> PulseAudioEngine::getSupportedSampleRates(wxString deviceName, AudioDirection direction)
 {
     std::vector<int> result;
     
@@ -267,13 +267,13 @@ AudioDeviceSpecification PulseAudioEngine::getDefaultAudioDevice(AudioDirection 
     return AudioDeviceSpecification::GetInvalidDevice();
 }
 
-std::shared_ptr<IAudioDevice> PulseAudioEngine::getAudioDevice(std::string deviceName, AudioDirection direction, int sampleRate, int numChannels)
+std::shared_ptr<IAudioDevice> PulseAudioEngine::getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels)
 {
     auto deviceList = getAudioDeviceList(direction);
     
     for (auto& dev : deviceList)
     {
-        if (dev.name == deviceName)
+        if (dev.name.Trim() == deviceName.Trim())
         {
             auto devObj = 
                 new PulseAudioDevice(
