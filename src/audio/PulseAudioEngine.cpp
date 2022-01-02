@@ -273,7 +273,7 @@ std::shared_ptr<IAudioDevice> PulseAudioEngine::getAudioDevice(wxString deviceNa
     
     for (auto& dev : deviceList)
     {
-        if (dev.name.Trim() == deviceName.Trim())
+        if (dev.name == deviceName)
         {
             auto devObj = 
                 new PulseAudioDevice(

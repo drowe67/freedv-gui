@@ -364,7 +364,7 @@ bool AudioOptsDialog::setTextCtrlIfDevNameValid(wxTextCtrl *textCtrl, wxListCtrl
     // ignore last list entry as it is the "none" entry
     for(int i = 0; i < listCtrl->GetItemCount() - 1; i++) 
     {
-        if (devName.Trim() == listCtrl->GetItemText(i, 0).Trim())
+        if (devName == listCtrl->GetItemText(i, 0))
         {
             textCtrl->SetValue(listCtrl->GetItemText(i, 0));
             if (g_verbose) fprintf(stderr,"setting focus of %d\n", i);
@@ -567,17 +567,17 @@ int AudioOptsDialog::ExchangeData(int inout)
         
         if (valid_one_card_config)
         {
-            wxGetApp().m_soundCard1InDeviceName = m_textCtrlRxIn->GetValue().Trim();
-            wxGetApp().m_soundCard1OutDeviceName = m_textCtrlRxOut->GetValue().Trim();
+            wxGetApp().m_soundCard1InDeviceName = m_textCtrlRxIn->GetValue();
+            wxGetApp().m_soundCard1OutDeviceName = m_textCtrlRxOut->GetValue();
             wxGetApp().m_soundCard2InDeviceName = "none";
             wxGetApp().m_soundCard2OutDeviceName = "none";
         }
         else if (valid_two_card_config)
         {
-            wxGetApp().m_soundCard1InDeviceName = m_textCtrlRxIn->GetValue().Trim();
-            wxGetApp().m_soundCard1OutDeviceName = m_textCtrlTxOut->GetValue().Trim();
-            wxGetApp().m_soundCard2InDeviceName = m_textCtrlTxIn->GetValue().Trim();
-            wxGetApp().m_soundCard2OutDeviceName = m_textCtrlRxOut->GetValue().Trim();
+            wxGetApp().m_soundCard1InDeviceName = m_textCtrlRxIn->GetValue();
+            wxGetApp().m_soundCard1OutDeviceName = m_textCtrlTxOut->GetValue();
+            wxGetApp().m_soundCard2InDeviceName = m_textCtrlTxIn->GetValue();
+            wxGetApp().m_soundCard2OutDeviceName = m_textCtrlRxOut->GetValue();
         }
         else
         {
@@ -615,7 +615,7 @@ int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, w
     cbSampleRate->Clear();
     for (auto& dev : deviceList)
     {
-        if (dev.name.Trim() == devName.Trim())
+        if (dev.name == devName)
         {
             auto supportedSampleRates =
                 engine->getSupportedSampleRates(
