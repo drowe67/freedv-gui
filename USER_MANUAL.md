@@ -384,8 +384,8 @@ On Windows, you can create shortcuts to FreeDV with different file names for the
 option as described above. To create a shortcut, right-click on the Desktop or in File Explorer and 
 choose New->Shortcut. Click on Browse and navigate to one of the following paths:
 
-* C:\\Program Files\\FreeDV [version]\\bin\freedv.exe
-* C:\\Program Files (x86)\\FreeDV [version]\\bin\freedv.exe (if the 32 bit version is installed on a 64 bit machine)
+* C:\\Program Files\\FreeDV [version]\\bin\\freedv.exe
+* C:\\Program Files (x86)\\FreeDV [version]\\bin\\freedv.exe (if the 32 bit version is installed on a 64 bit machine)
 
 Click Next and give the shortcut a unique description (e.g. "FreeDV IC-7300"). Then push Finish to create the shortcut.
 
