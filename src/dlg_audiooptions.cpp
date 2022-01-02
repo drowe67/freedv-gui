@@ -804,7 +804,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
     m_btnTxInTest->Enable(false);
     m_btnTxOutTest->Enable(false);
     
-    m_audioPlotThread = new std::thread([&](std::string devNameAsCString, PlotScalar* ps) {
+    m_audioPlotThread = new std::thread([&](wxString devName, PlotScalar* ps) {
         std::mutex callbackFifoMutex;
         std::condition_variable callbackFifoCV;
         SRC_STATE          *src;
@@ -818,7 +818,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
         for (auto& devInfo : devList)
         {
-            if (devInfo.name == devNameAsCString)
+            if (devInfo.name == devName)
             {
                 int sampleCount = 0;
                 int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
@@ -917,7 +917,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
             m_btnTxInTest->Enable(true);
             m_btnTxOutTest->Enable(true);
         });
-    }, std::string(devName.ToUTF8()), ps);
+    }, devName, ps);
     
 }
 
@@ -934,7 +934,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
     m_btnTxInTest->Enable(false);
     m_btnTxOutTest->Enable(false);
     
-    m_audioPlotThread = new std::thread([&](std::string devNameAsCString, PlotScalar* ps) {
+    m_audioPlotThread = new std::thread([&](wxString devName, PlotScalar* ps) {
         SRC_STATE          *src;
         FIFO               *fifo, *callbackFifo;
         int src_error, n = 0;
@@ -946,7 +946,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
         for (auto& devInfo : devList)
         {
-            if (devInfo.name == devNameAsCString)
+            if (devInfo.name == devName)
             {
                 int sampleCount = 0;
                 int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
@@ -1055,7 +1055,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
             m_btnTxInTest->Enable(true);
             m_btnTxOutTest->Enable(true);
         });
-    }, std::string(devName.ToUTF8()), ps);
+    }, devName, ps);
 }
 
 //-------------------------------------------------------------------------
