@@ -396,7 +396,7 @@ quote marks.
 For example, to use a file called IC7300.conf stored in the Hamradio directory on the C drive the Target field should 
 appear as follows:
 
-"C:\Program Files\FreeDV [version]\bin\freedv.exe" -f C:\\Hamradio\\IC7300.conf
+"C:\\Program Files\\FreeDV [version]\\bin\\freedv.exe" -f C:\\Hamradio\\IC7300.conf
 
 # PSK Reporter (Experimental)
 
