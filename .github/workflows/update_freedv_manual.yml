@@ -30,7 +30,7 @@ jobs:
            
       - name: Render User Manual to PDF and HTML
         run: |
-             git_hash=$(git describe --always HEAD); date=$(date "+%b %d %Y"); pandoc USER_MANUAL.md -o USER_MANUAL.pdf -fmarkdown-implicit_figures --from=markdown -V geometry:margin=1in --toc --highlight-style=espresso --number-sections -V title:"FreeDV User Manual\linebreak ${date} ${git_hash}"
+             git_hash=$(git describe --always HEAD); date=$(date "+%b %d %Y"); pandoc USER_MANUAL.md -o USER_MANUAL.pdf -fmarkdown-implicit_figures --from=markdown -V geometry:margin=1in --toc --highlight-style=espresso --number-sections -V title:"FreeDV User Manual\linebreak ${date} ${git_hash}" -H disable_float.tex
              pandoc -o USER_MANUAL.html -fmarkdown-implicit_figures --from=markdown --number-sections USER_MANUAL.md
              ls -l USER_MANUAL.*
         
