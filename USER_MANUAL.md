@@ -378,6 +378,26 @@ to the following locations:
 * macOS: ~/Library/Preferences/
 * Windows: C:\\Users\\[username]\\AppData\\Roaming
 
+## Executing FreeDV With a Different Configuration (Windows)
+
+On Windows, you can create shortcuts to FreeDV with different file names for the "-f" command line
+option as described above. To create a shortcut, right-click on the Desktop or in File Explorer and 
+choose New->Shortcut. Click on Browse and navigate to one of the following paths:
+
+* C:\\Program Files\\FreeDV [version]\\bin\freedv.exe
+* C:\\Program Files (x86)\\FreeDV [version]\\bin\freedv.exe (if the 32 bit version is installed on a 64 bit machine)
+
+Click Next and give the shortcut a unique description (e.g. "FreeDV IC-7300"). Then push Finish to create the shortcut.
+
+Once the shortcut has been created, right-click it and choose Properties. Find the Shortcut tab in the resulting dialog
+box and add "-f" followed by the desired filename to the end of the text in the Target field. Do not add any other
+quote marks.
+
+For example, to use a file called IC7300.conf stored in the Hamradio directory on the C drive the Target field should 
+appear as follows:
+
+"C:\Program Files\FreeDV [version]\bin\freedv.exe" -f C:\\Hamradio\\IC7300.conf
+
 # PSK Reporter (Experimental)
 
 FreeDV has the ability to send FreeDV signal reports to [PSK Reporter](https://pskreporter.info/)
