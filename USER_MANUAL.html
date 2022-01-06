@@ -214,6 +214,16 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>macOS: ~/Library/Preferences/</li>
 <li>Windows: C:\Users\[username]\AppData\Roaming</li>
 </ul>
+<h2 id="executing-freedv-with-a-different-configuration-windows"><span class="header-section-number">5.1</span> Executing FreeDV With a Different Configuration (Windows)</h2>
+<p>On Windows, you can create shortcuts to FreeDV with different file names for the “-f” command line option as described above. To create a shortcut, right-click on the Desktop or in File Explorer and choose New-&gt;Shortcut. Click on Browse and navigate to one of the following paths:</p>
+<ul>
+<li>C:\Program Files\FreeDV [version]\bin\freedv.exe</li>
+<li>C:\Program Files (x86)\FreeDV [version]\bin\freedv.exe (if the 32 bit version is installed on a 64 bit machine)</li>
+</ul>
+<p>Click Next and give the shortcut a unique description (e.g. “FreeDV IC-7300”). Then push Finish to create the shortcut.</p>
+<p>Once the shortcut has been created, right-click it and choose Properties. Find the Shortcut tab in the resulting dialog box and add “-f” followed by the desired filename to the end of the text in the Target field. Do not add any other quote marks.</p>
+<p>For example, to use a file called IC7300.conf stored in the Hamradio directory on the C drive the Target field should appear as follows:</p>
+<p>“C:\Program Files\FreeDV [version]\bin\freedv.exe” -f C:\Hamradio\IC7300.conf</p>
 <h1 id="psk-reporter-experimental"><span class="header-section-number">6</span> PSK Reporter (Experimental)</h1>
 <p>FreeDV has the ability to send FreeDV signal reports to <a href="https://pskreporter.info/">PSK Reporter</a> by enabling the option in Tools-Options and specifying your callsign and grid square. When enabled, this causes FreeDV to disable the free form <strong>Txt Msg</strong> field and only transmit the <strong>Callsign</strong> field.</p>
 <p>FreeDV validates the received information before submitting a position report to PSK Reporter. This is to ensure that FreeDV does not report invalid callsigns to the service (e.g. ones that don’t exist or that correspond to real non-FreeDV users). However, all received text will display in the main window even if it has errors.</p>
