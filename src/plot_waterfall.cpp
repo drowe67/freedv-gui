@@ -100,7 +100,7 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
         wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
         gc->SetBrush(ltGraphBkgBrush);
         gc->SetPen(wxPen(BLACK_COLOR, 0));
-        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+        gc->DrawRectangle(0, 0, m_imgWidth, m_imgHeight);  // DC waterfall bitmap starts at origin and spans full width
         delete gc;
     }
 
@@ -208,7 +208,7 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
             wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
             mGc->SetBrush(ltGraphBkgBrush);
             mGc->SetPen(wxPen(BLACK_COLOR, 0));
-            mGc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+            mGc->DrawRectangle(0, 0, m_imgWidth, m_imgHeight); // DC waterfall bitmap starts at origin and spans full width
             delete mGc;
         }
     }
