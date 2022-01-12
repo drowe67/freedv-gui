@@ -24,6 +24,10 @@
 #include "PortAudioDevice.h"
 #include "portaudio.h"
 
+// Brought over from previous implementation. "Optimal" value of 0 (per PA
+// documentation) causes occasional audio pops/cracks on start for macOS.
+#define PA_FPB 256
+
 PortAudioDevice::PortAudioDevice(int deviceId, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : deviceId_(deviceId)
     , direction_(direction)
@@ -57,7 +61,7 @@ void PortAudioDevice::start()
         direction_ == IAudioEngine::AUDIO_ENGINE_IN ? &streamParameters : nullptr,
         direction_ == IAudioEngine::AUDIO_ENGINE_OUT ? &streamParameters : nullptr,
         sampleRate_,
-        0,
+        PA_FPB,
         paClipOff,
         &OnPortAudioStreamCallback_,
         this
