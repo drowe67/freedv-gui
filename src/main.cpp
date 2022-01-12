@@ -1877,35 +1877,24 @@ void MainFrame::stopRxStream()
     {
         m_RxRunning = false;
 
-        if (rxInSoundDevice)
-        {
-            rxInSoundDevice->stop();
-            rxInSoundDevice.reset();
-        }
-        
-        if (rxOutSoundDevice)
-        {
-            rxOutSoundDevice->stop();
-            rxOutSoundDevice.reset();
-        }
-        
-        if (txInSoundDevice)
-        {
-            txInSoundDevice->stop();
-            txInSoundDevice.reset();
-        }
-        
-        if (txOutSoundDevice)
-        {
-            txOutSoundDevice->stop();
-            txOutSoundDevice.reset();
-        }
-
         //fprintf(stderr, "waiting for thread to stop\n");
         if (m_txThread)
         {
             m_txThread->terminateThread();
             m_txThread->Wait();
+            
+            if (txInSoundDevice)
+            {
+                txInSoundDevice->stop();
+                txInSoundDevice.reset();
+            }
+            
+            if (txOutSoundDevice)
+            {
+                txOutSoundDevice->stop();
+                txOutSoundDevice.reset();
+            }
+            
             delete m_txThread;
             m_txThread = nullptr;
         }
@@ -1914,6 +1903,19 @@ void MainFrame::stopRxStream()
         {
             m_rxThread->terminateThread();
             m_rxThread->Wait();
+            
+            if (rxInSoundDevice)
+            {
+                rxInSoundDevice->stop();
+                rxInSoundDevice.reset();
+            }
+        
+            if (rxOutSoundDevice)
+            {
+                rxOutSoundDevice->stop();
+                rxOutSoundDevice.reset();
+            }
+            
             delete m_txThread;
             m_rxThread = nullptr;
         }
@@ -2269,13 +2271,11 @@ void MainFrame::startRxStream()
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
                 short  outdata[size];
-                size_t toRead = codec2_fifo_used(cbData->outfifo2);
-                toRead = toRead >= size ? size : toRead;
  
-                int result = codec2_fifo_read(cbData->outfifo2, outdata, toRead);
+                int result = codec2_fifo_read(cbData->outfifo2, outdata, size);
                 if (result == 0) 
                 {
-                    for (size_t i = 0; i < toRead; i++)
+                    for (size_t i = 0; i < size; i++)
                     {
                         for (int j = 0; j < dev.getNumChannels(); j++)
                         {
@@ -2334,10 +2334,8 @@ void MainFrame::startRxStream()
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
                 short  outdata[size];
-                size_t toRead = codec2_fifo_used(cbData->outfifo1);
-                toRead = toRead >= size ? size : toRead;
 
-                int result = codec2_fifo_read(cbData->outfifo1, outdata, toRead);
+                int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
                 if (result == 0) {
 
                     // write signal to both channels if the device can support two channels.
@@ -2345,7 +2343,7 @@ void MainFrame::startRxStream()
                     // only to that channel.
                     if (dev.getNumChannels() == 2)
                     {
-                        for(size_t i = 0; i < toRead; i++, audioData += 2) 
+                        for(size_t i = 0; i < size; i++, audioData += 2) 
                         {
                             if (cbData->leftChannelVoxTone)
                             {
@@ -2361,7 +2359,7 @@ void MainFrame::startRxStream()
                     }
                     else
                     {
-                        for(size_t i = 0; i < toRead; i++, audioData++) 
+                        for(size_t i = 0; i < size; i++, audioData++) 
                         {
                             audioData[0] = outdata[i];
                         }
@@ -2392,13 +2390,11 @@ void MainFrame::startRxStream()
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
                 short  outdata[size];
-                size_t toRead = codec2_fifo_used(cbData->outfifo1);
-                toRead = toRead >= size ? size : toRead;
 
-                int result = codec2_fifo_read(cbData->outfifo1, outdata, toRead);
+                int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
                 if (result == 0) 
                 {
-                    for (size_t i = 0; i < toRead; i++)
+                    for (size_t i = 0; i < size; i++)
                     {
                         for (int j = 0; j < dev.getNumChannels(); j++)
                         {
@@ -2434,6 +2430,10 @@ void MainFrame::startRxStream()
             if (wxGetApp().m_txRxThreadHighPriority) {
                 m_txThread->SetPriority(WXTHREAD_MAX_PRIORITY);
             }
+            
+            txInSoundDevice->start();
+            txOutSoundDevice->start();
+            
             if ( m_txThread->Run() != wxTHREAD_NO_ERROR )
             {
                 wxLogError(wxT("Can't start TX thread!"));
@@ -2450,18 +2450,12 @@ void MainFrame::startRxStream()
             m_rxThread->SetPriority(WXTHREAD_MAX_PRIORITY);
         }
 
+        rxInSoundDevice->start();
+        rxOutSoundDevice->start();
+
         if ( m_rxThread->Run() != wxTHREAD_NO_ERROR )
         {
             wxLogError(wxT("Can't start RX thread!"));
-        }
-
-        // Start sound devices
-        rxInSoundDevice->start();
-        rxOutSoundDevice->start();
-        if (txInSoundDevice && txOutSoundDevice)
-        {
-            txInSoundDevice->start();
-            txOutSoundDevice->start();
         }
 
         if (g_verbose) fprintf(stderr, "starting tx/rx processing thread\n");
