@@ -24,6 +24,7 @@
 #define PULSE_AUDIO_DEVICE_H
 
 #include <mutex>
+#include <thread>
 #include <condition_variable>
 #include <wx/string.h>
 #include <pulse/pulseaudio.h>
@@ -50,7 +51,12 @@ private:
     pa_context* context_;
     pa_threaded_mainloop* mainloop_;
     pa_stream* stream_;
-    
+    short* outputPending_;
+    int outputPendingLength_;
+    bool outputPendingThreadActive_;
+    std::mutex outputPendingMutex_;
+    std::thread* outputPendingThread_;
+
     wxString devName_;
     IAudioEngine::AudioDirection direction_;
     int sampleRate_;

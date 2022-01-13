@@ -2404,7 +2404,7 @@ void MainFrame::startRxStream()
                 }
                 else 
                 {
-                    g_outfifo2_empty++;
+                    g_outfifo1_empty++;
                 }
             }, g_rxUserdata);
             
