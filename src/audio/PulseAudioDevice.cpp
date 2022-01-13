@@ -27,7 +27,7 @@
 
 // Optimal settings based on ones used for PortAudio.
 #define PULSE_FPB 256
-#define PULSE_TARGET_LATENCY_US 20000
+#define PULSE_TARGET_LATENCY_US 130000
 
 PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : context_(context)
