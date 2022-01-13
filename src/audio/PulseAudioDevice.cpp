@@ -152,6 +152,20 @@ void PulseAudioDevice::start()
 
                         outputPending_ = temp;
                         outputPendingLength_ += PULSE_FPB * getNumChannels();
+            
+                        // Trim any extra so our latency doesn't get crazy.
+                        int targetLength = getNumChannels() * ((double)PULSE_TARGET_LATENCY_US / (double)1000000) * sampleRate_;
+                        if (outputPendingLength_ >= targetLength)
+                        {
+                            temp = new short[targetLength];
+                            assert(temp != nullptr);
+
+                            memcpy(temp, outputPending_ + (outputPendingLength_ - targetLength), targetLength * sizeof(short));
+
+                            delete[] outputPending_;
+                            outputPending_ = temp;
+                            outputPendingLength_ = targetLength;
+                        }
                     }
 
                     // Sleep the required amount of time to ensure we call onAudioDataFunction
@@ -264,6 +278,20 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
 
             thisObj->outputPending_ = temp;
             thisObj->outputPendingLength_ += length / sizeof(short);
+
+            // Trim any extra so our latency doesn't get crazy.
+            int targetLength = thisObj->getNumChannels() * ((double)PULSE_TARGET_LATENCY_US / (double)1000000) * thisObj->sampleRate_;
+            if (thisObj->outputPendingLength_ >= targetLength)
+            {
+                temp = new short[targetLength];
+                assert(temp != nullptr);
+
+                memcpy(temp, thisObj->outputPending_ + (thisObj->outputPendingLength_ - targetLength), targetLength * sizeof(short));
+
+                delete[] thisObj->outputPending_;
+                thisObj->outputPending_ = temp;
+                thisObj->outputPendingLength_ = targetLength;
+            }
         }
 
         pa_stream_drop(s);
