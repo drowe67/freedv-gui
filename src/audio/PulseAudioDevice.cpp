@@ -131,6 +131,8 @@ void PulseAudioDevice::start()
             outputPendingThread_ = new std::thread([&]() {
                 while(outputPendingThreadActive_)
                 {
+                    auto currentTime = std::chrono::steady_clock::now();
+
                     short data[PULSE_FPB * getNumChannels()];
                     memset(data, 0, sizeof(data));
                     
@@ -174,7 +176,7 @@ void PulseAudioDevice::start()
                     // Sleep the required amount of time to ensure we call onAudioDataFunction
                     // every PULSE_FPB samples.
                     int sleepTimeMilliseconds = ((double)PULSE_FPB)/((double)sampleRate_) * 1000.0;
-                    std::this_thread::sleep_for(
+                    std::this_thread::sleep_until(currentTime + 
                         std::chrono::milliseconds(sleepTimeMilliseconds));
                 }
             });
@@ -184,6 +186,8 @@ void PulseAudioDevice::start()
             outputPendingThread_ = new std::thread([&]() {
                 while(outputPendingThreadActive_)
                 {
+                    auto currentTime = std::chrono::steady_clock::now();
+                    bool dataAvailable = false;
                     short data[PULSE_FPB * getNumChannels()];
                     memset(data, 0, sizeof(data));
                     
@@ -201,10 +205,11 @@ void PulseAudioDevice::start()
                             delete[] outputPending_;
                             outputPending_ = temp;
                             outputPendingLength_ = newLength;
+                            dataAvailable = true;
                         }
                     }
 
-                    if (onAudioDataFunction)
+                    if (dataAvailable && onAudioDataFunction)
                     {
                         onAudioDataFunction(*this, data, PULSE_FPB, onAudioDataState);
                     }
@@ -212,7 +217,7 @@ void PulseAudioDevice::start()
                     // Sleep the required amount of time to ensure we call onAudioDataFunction
                     // every PULSE_FPB samples.
                     int sleepTimeMilliseconds = ((double)PULSE_FPB)/((double)sampleRate_) * 1000.0;
-                    std::this_thread::sleep_for(
+                    std::this_thread::sleep_until(currentTime + 
                         std::chrono::milliseconds(sleepTimeMilliseconds));
                 }
             });
