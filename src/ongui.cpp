@@ -414,7 +414,7 @@ void MainFrame::togglePTT(void) {
         m_togBtnOnOff->Enable(false);
     }
 
-    g_tx = m_btnTogPTT->GetValue();
+    bool newTxValue = m_btnTogPTT->GetValue();
 
     // Hamlib PTT
 
@@ -423,7 +423,7 @@ void MainFrame::togglePTT(void) {
         wxString hamlibError;
         if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
             // Update mode display on the bottom of the main UI.
-            if (hamlib->update_frequency_and_mode() != 0 || hamlib->ptt(g_tx, hamlibError) == false) {
+            if (hamlib->update_frequency_and_mode() != 0 || hamlib->ptt(newTxValue, hamlibError) == false) {
                 wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
             }
         }
@@ -432,8 +432,11 @@ void MainFrame::togglePTT(void) {
     // Serial PTT
 
     if (wxGetApp().m_boolUseSerialPTT && (wxGetApp().m_serialport->isopen())) {
-        wxGetApp().m_serialport->ptt(g_tx);
+        wxGetApp().m_serialport->ptt(newTxValue);
     }
+
+    // Start routing TX audio out to the radio
+    g_tx = newTxValue;
 
     // reset level gauge
 
