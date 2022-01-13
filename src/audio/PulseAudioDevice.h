@@ -56,6 +56,7 @@ private:
     bool outputPendingThreadActive_;
     std::mutex outputPendingMutex_;
     std::thread* outputPendingThread_;
+    int streamLatency_;
 
     wxString devName_;
     IAudioEngine::AudioDirection direction_;
@@ -70,6 +71,7 @@ private:
     static void StreamOverflowCallback_(pa_stream *p, void *userdata);
     static void StreamMovedCallback_(pa_stream *p, void *userdata);
     static void StreamStateCallback_(pa_stream *p, void *userdata);
+    static void StreamLatencyCallback_(pa_stream *p, void *userdata);
 };
 
 #endif // PULSE_AUDIO_DEVICE_H
