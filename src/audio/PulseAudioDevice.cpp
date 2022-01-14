@@ -132,44 +132,40 @@ void PulseAudioDevice::start()
                 while(outputPendingThreadActive_)
                 {
                     auto currentTime = std::chrono::steady_clock::now();
-
-                    short data[PULSE_FPB * getNumChannels()];
-                    memset(data, 0, sizeof(data));
-                    
-                    if (onAudioDataFunction)
-                    {
-                        onAudioDataFunction(*this, data, PULSE_FPB, onAudioDataState);
-                    }
+                    int targetLength = getNumChannels() * ((double)streamLatency_ / (double)1000000) * sampleRate_;
+                    int currentLength = 0;
 
                     {
                         std::unique_lock<std::mutex> lk(outputPendingMutex_);
-                        short* temp = new short[outputPendingLength_ + PULSE_FPB * getNumChannels()];
-                        assert(temp != nullptr);
+                        currentLength = outputPendingLength_;
+                    }
 
-                        if (outputPendingLength_ > 0)
+                    if (currentLength < targetLength)
+                    {                        
+                        short data[PULSE_FPB * getNumChannels()];
+                        memset(data, 0, sizeof(data));
+                        
+                        if (onAudioDataFunction)
                         {
-                            memcpy(temp, outputPending_, outputPendingLength_ * sizeof(short));
-
-                            delete[] outputPending_;
-                            outputPending_ = nullptr;
+                            onAudioDataFunction(*this, data, PULSE_FPB, onAudioDataState);
                         }
-                        memcpy(temp + outputPendingLength_, data, sizeof(data));
-
-                        outputPending_ = temp;
-                        outputPendingLength_ += PULSE_FPB * getNumChannels();
-            
-                        // Trim any extra so our latency doesn't get crazy.
-                        int targetLength = 2 * getNumChannels() * ((double)streamLatency_ / (double)1000000) * sampleRate_;
-                        if (outputPendingLength_ >= targetLength)
+    
                         {
-                            temp = new short[targetLength];
+                            std::unique_lock<std::mutex> lk(outputPendingMutex_);
+                            short* temp = new short[outputPendingLength_ + PULSE_FPB * getNumChannels()];
                             assert(temp != nullptr);
-
-                            memcpy(temp, outputPending_ + (outputPendingLength_ - targetLength), targetLength * sizeof(short));
-
-                            delete[] outputPending_;
+    
+                            if (outputPendingLength_ > 0)
+                            {
+                                memcpy(temp, outputPending_, outputPendingLength_ * sizeof(short));
+    
+                                delete[] outputPending_;
+                                outputPending_ = nullptr;
+                            }
+                            memcpy(temp + outputPendingLength_, data, sizeof(data));
+    
                             outputPending_ = temp;
-                            outputPendingLength_ = targetLength;
+                            outputPendingLength_ += PULSE_FPB * getNumChannels();
                         }
                     }
 
@@ -288,7 +284,7 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
             thisObj->outputPendingLength_ += length / sizeof(short);
 
             // Trim any extra so our latency doesn't get crazy.
-            int targetLength = 2 * thisObj->getNumChannels() * ((double)thisObj->streamLatency_ / (double)1000000) * thisObj->sampleRate_;
+            int targetLength = thisObj->getNumChannels() * ((double)thisObj->streamLatency_ / (double)1000000) * thisObj->sampleRate_;
             if (thisObj->outputPendingLength_ >= targetLength)
             {
                 temp = new short[targetLength];
