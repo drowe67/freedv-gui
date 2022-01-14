@@ -139,7 +139,7 @@ int PortAudioDevice::OnPortAudioStreamCallback_(const void *input, void *output,
     if (thisObj->direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
     {
         // Zero out samples by default in case we don't have any data available.
-        memset(dataPtr, 0, sizeof(short) * getNumChannels() * frameCount);
+        memset(dataPtr, 0, sizeof(short) * thisObj->getNumChannels() * frameCount);
     }
 
     if (thisObj->onAudioDataFunction)
