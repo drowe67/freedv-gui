@@ -238,6 +238,14 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
 }
 
 //-------------------------------------------------------------------------
+// OnDeleteConfigUI()
+//-------------------------------------------------------------------------
+void MainFrame::OnDeleteConfigUI( wxUpdateUIEvent& event )
+{
+    event.Enable(!m_RxRunning);
+}
+
+//-------------------------------------------------------------------------
 // Paint()
 //-------------------------------------------------------------------------
 void MainFrame::OnPaint(wxPaintEvent& WXUNUSED(event))

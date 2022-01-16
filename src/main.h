@@ -636,6 +636,7 @@ class MainFrame : public TopFrame
         void OnSize( wxSizeEvent& event );
         void OnUpdateUI( wxUpdateUIEvent& event );
         void OnDeleteConfig(wxCommandEvent&);
+        void OnDeleteConfigUI( wxUpdateUIEvent& event );
 #ifdef _USE_TIMER
         void OnTimer(wxTimerEvent &evt);
 #endif

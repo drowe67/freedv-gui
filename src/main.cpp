@@ -508,6 +508,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxMenuItem* m_menuItemToolsConfigDelete;
     m_menuItemToolsConfigDelete = new wxMenuItem(tools, wxID_ANY, wxString(_("&Restore defaults")) , wxT("Delete config file/keys and restore defaults"), wxITEM_NORMAL);
     this->Connect(m_menuItemToolsConfigDelete->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::OnDeleteConfig));
+    this->Connect(m_menuItemToolsConfigDelete->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnDeleteConfigUI));
 
     tools->Append(m_menuItemToolsConfigDelete);
 
