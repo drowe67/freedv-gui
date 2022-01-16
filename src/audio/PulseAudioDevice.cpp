@@ -27,7 +27,7 @@
 
 // Optimal settings based on ones used for PortAudio.
 #define PULSE_FPB 256
-#define PULSE_TARGET_LATENCY_US 130000
+#define PULSE_TARGET_LATENCY_US 20000
 
 PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : context_(context)
@@ -387,6 +387,7 @@ void PulseAudioDevice::StreamLatencyCallback_(pa_stream *p, void *userdata)
 
     pa_stream_get_latency(p, &latency, &isNeg);
 
-    thisObj->streamLatency_ = std::max((pa_usec_t)thisObj->streamLatency_, (pa_usec_t)PULSE_TARGET_LATENCY_US);
+    thisObj->streamLatency_ = (0.9 * ((double)thisObj->streamLatency_)) + (0.1 * (double)latency);
+    fprintf(stderr, "%s latency: %d\n", (const char*)thisObj->devName_.ToUTF8(), thisObj->streamLatency_);
 }
 
