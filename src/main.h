@@ -688,6 +688,9 @@ class MainFrame : public TopFrame
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
+        
+    private:
+        void loadConfiguration_();
 };
 
 void txRxProcessing();

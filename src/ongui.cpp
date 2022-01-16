@@ -226,8 +226,10 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
 {
     if(pConfig->DeleteAll())
     {
-        wxLogMessage(wxT("Config file/registry key successfully deleted.  Please restart FreeDV."));
-        wxConfigBase::DontCreateOnDemand();
+        wxLogMessage(wxT("Config file/registry key successfully deleted."));
+        
+        // Resets all configuration to defaults.
+        loadConfiguration_();
     }
     else
     {
