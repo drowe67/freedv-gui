@@ -273,18 +273,6 @@ void MainFrame::loadConfiguration_()
     if (w < 0 || w > 2048) w = 800;
     if (h < 0 || h > 2048) h = 780;
 
-    // TBD -- these aren't set anywhere in the code.
-    wxGetApp().m_show_wf            = pConfig->Read(wxT("/MainFrame/show_wf"),           1);
-    wxGetApp().m_show_spect         = pConfig->Read(wxT("/MainFrame/show_spect"),        1);
-    wxGetApp().m_show_scatter       = pConfig->Read(wxT("/MainFrame/show_scatter"),      1);
-    wxGetApp().m_show_timing        = pConfig->Read(wxT("/MainFrame/show_timing"),       1);
-    wxGetApp().m_show_freq          = pConfig->Read(wxT("/MainFrame/show_freq"),         1);
-    wxGetApp().m_show_speech_in     = pConfig->Read(wxT("/MainFrame/show_speech_in"),    1);
-    wxGetApp().m_show_speech_out    = pConfig->Read(wxT("/MainFrame/show_speech_out"),   1);
-    wxGetApp().m_show_demod_in      = pConfig->Read(wxT("/MainFrame/show_demod_in"),     1);
-    wxGetApp().m_show_test_frame_errors = pConfig->Read(wxT("/MainFrame/show_test_frame_errors"),     1);
-    wxGetApp().m_show_test_frame_errors_hist = pConfig->Read(wxT("/MainFrame/show_test_frame_errors_hist"),     1);
-
     wxGetApp().m_rxNbookCtrl        = pConfig->Read(wxT("/MainFrame/rxNbookCtrl"),    (long)0);
 
     g_SquelchActive = pConfig->Read(wxT("/Audio/SquelchActive"), (long)0);
@@ -514,79 +502,53 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
 
     loadConfiguration_();
     
-    if(wxGetApp().m_show_wf)
-    {
-        // Add Waterfall Plot window
-        m_panelWaterfall = new PlotWaterfall((wxFrame*) m_auiNbookCtrl, false, 0);
-        m_panelWaterfall->SetToolTip(_("Double-click to tune"));
-        m_auiNbookCtrl->AddPage(m_panelWaterfall, _("Waterfall"), true, wxNullBitmap);
-    }
-    if(wxGetApp().m_show_spect)
-    {
-        // Add Spectrum Plot window
-        m_panelSpectrum = new PlotSpectrum((wxFrame*) m_auiNbookCtrl, g_avmag,
-                                           MODEM_STATS_NSPEC*((float)MAX_F_HZ/MODEM_STATS_MAX_F_HZ));
-        m_panelSpectrum->SetToolTip(_("Double-click to tune"));
-        m_auiNbookCtrl->AddPage(m_panelSpectrum, _("Spectrum"), true, wxNullBitmap);
-    }
-    if(wxGetApp().m_show_scatter)
-    {
-        // Add Scatter Plot window
-        m_panelScatter = new PlotScatter((wxFrame*) m_auiNbookCtrl);
-        m_auiNbookCtrl->AddPage(m_panelScatter, _("Scatter"), true, wxNullBitmap);
-    }
-    if(wxGetApp().m_show_demod_in)
-    {
-        // Add Demod Input window
-        m_panelDemodIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
-        m_auiNbookCtrl->AddPage(m_panelDemodIn, _("Frm Radio"), true, wxNullBitmap);
-        g_plotDemodInFifo = codec2_fifo_create(2*WAVEFORM_PLOT_BUF);
-    }
+    // Add Waterfall Plot window
+    m_panelWaterfall = new PlotWaterfall((wxFrame*) m_auiNbookCtrl, false, 0);
+    m_panelWaterfall->SetToolTip(_("Double-click to tune"));
+    m_auiNbookCtrl->AddPage(m_panelWaterfall, _("Waterfall"), true, wxNullBitmap);
 
-    if(wxGetApp().m_show_speech_in)
-    {
-        // Add Speech Input window
-        m_panelSpeechIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
-        m_auiNbookCtrl->AddPage(m_panelSpeechIn, _("Frm Mic"), true, wxNullBitmap);
-        g_plotSpeechInFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
-    }
+    // Add Spectrum Plot window
+    m_panelSpectrum = new PlotSpectrum((wxFrame*) m_auiNbookCtrl, g_avmag,
+                                       MODEM_STATS_NSPEC*((float)MAX_F_HZ/MODEM_STATS_MAX_F_HZ));
+    m_panelSpectrum->SetToolTip(_("Double-click to tune"));
+    m_auiNbookCtrl->AddPage(m_panelSpectrum, _("Spectrum"), true, wxNullBitmap);
 
-    if(wxGetApp().m_show_speech_out)
-    {
-        // Add Speech Output window
-        m_panelSpeechOut = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
-        m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("To Spkr/Hdphns"), true, wxNullBitmap);
-        g_plotSpeechOutFifo = codec2_fifo_create(2*WAVEFORM_PLOT_BUF);
-    }
+    // Add Scatter Plot window
+    m_panelScatter = new PlotScatter((wxFrame*) m_auiNbookCtrl);
+    m_auiNbookCtrl->AddPage(m_panelScatter, _("Scatter"), true, wxNullBitmap);
 
-    if(wxGetApp().m_show_timing)
-    {
-        // Add Timing Offset window
-        m_panelTimeOffset = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 5.0, DT, -0.5, 0.5, 1, 0.1, "%2.1f", 0);
-        m_auiNbookCtrl->AddPage(m_panelTimeOffset, L"Timing \u0394", true, wxNullBitmap);
-    }
-    if(wxGetApp().m_show_freq)
-    {
-        // Add Frequency Offset window
-        m_panelFreqOffset = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 5.0, DT, -200, 200, 1, 50, "%3.0fHz", 0);
-        m_auiNbookCtrl->AddPage(m_panelFreqOffset, L"Frequency \u0394", true, wxNullBitmap);
-    }
+    // Add Demod Input window
+    m_panelDemodIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
+    m_auiNbookCtrl->AddPage(m_panelDemodIn, _("Frm Radio"), true, wxNullBitmap);
+    g_plotDemodInFifo = codec2_fifo_create(2*WAVEFORM_PLOT_BUF);
 
-    if(wxGetApp().m_show_test_frame_errors)
-    {
-        // Add Test Frame Errors window
-        m_panelTestFrameErrors = new PlotScalar((wxFrame*) m_auiNbookCtrl, 2*MODEM_STATS_NC_MAX, 30.0, DT, 0, 2*MODEM_STATS_NC_MAX+2, 1, 1, "", 1);
-        m_auiNbookCtrl->AddPage(m_panelTestFrameErrors, L"Test Frame Errors", true, wxNullBitmap);
-    }
+    // Add Speech Input window
+    m_panelSpeechIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
+    m_auiNbookCtrl->AddPage(m_panelSpeechIn, _("Frm Mic"), true, wxNullBitmap);
+    g_plotSpeechInFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
 
-    if(wxGetApp().m_show_test_frame_errors_hist)
-    {
-        // Add Test Frame Historgram window.  1 column for every bit, 2 bits per carrier
-        m_panelTestFrameErrorsHist = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 1.0, 1.0/(2*MODEM_STATS_NC_MAX), 0.001, 0.1, 1.0/MODEM_STATS_NC_MAX, 0.1, "%0.0E", 0);
-        m_auiNbookCtrl->AddPage(m_panelTestFrameErrorsHist, L"Test Frame Histogram", true, wxNullBitmap);
-        m_panelTestFrameErrorsHist->setBarGraph(1);
-        m_panelTestFrameErrorsHist->setLogY(1);
-    }
+    // Add Speech Output window
+    m_panelSpeechOut = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
+    m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("To Spkr/Hdphns"), true, wxNullBitmap);
+    g_plotSpeechOutFifo = codec2_fifo_create(2*WAVEFORM_PLOT_BUF);
+
+    // Add Timing Offset window
+    m_panelTimeOffset = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 5.0, DT, -0.5, 0.5, 1, 0.1, "%2.1f", 0);
+    m_auiNbookCtrl->AddPage(m_panelTimeOffset, L"Timing \u0394", true, wxNullBitmap);
+
+    // Add Frequency Offset window
+    m_panelFreqOffset = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 5.0, DT, -200, 200, 1, 50, "%3.0fHz", 0);
+    m_auiNbookCtrl->AddPage(m_panelFreqOffset, L"Frequency \u0394", true, wxNullBitmap);
+
+    // Add Test Frame Errors window
+    m_panelTestFrameErrors = new PlotScalar((wxFrame*) m_auiNbookCtrl, 2*MODEM_STATS_NC_MAX, 30.0, DT, 0, 2*MODEM_STATS_NC_MAX+2, 1, 1, "", 1);
+    m_auiNbookCtrl->AddPage(m_panelTestFrameErrors, L"Test Frame Errors", true, wxNullBitmap);
+
+    // Add Test Frame Historgram window.  1 column for every bit, 2 bits per carrier
+    m_panelTestFrameErrorsHist = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 1.0, 1.0/(2*MODEM_STATS_NC_MAX), 0.001, 0.1, 1.0/MODEM_STATS_NC_MAX, 0.1, "%0.0E", 0);
+    m_auiNbookCtrl->AddPage(m_panelTestFrameErrorsHist, L"Test Frame Histogram", true, wxNullBitmap);
+    m_panelTestFrameErrorsHist->setBarGraph(1);
+    m_panelTestFrameErrorsHist->setLogY(1);
 
     validateSoundCardSetup();
 
@@ -719,16 +681,6 @@ MainFrame::~MainFrame()
         pConfig->Write(wxT("/MainFrame/width"),              (long) w);
         pConfig->Write(wxT("/MainFrame/height"),             (long) h);
     }
-    pConfig->Write(wxT("/MainFrame/show_wf"),           wxGetApp().m_show_wf);
-    pConfig->Write(wxT("/MainFrame/show_spect"),        wxGetApp().m_show_spect);
-    pConfig->Write(wxT("/MainFrame/show_scatter"),      wxGetApp().m_show_scatter);
-    pConfig->Write(wxT("/MainFrame/show_timing"),       wxGetApp().m_show_timing);
-    pConfig->Write(wxT("/MainFrame/show_freq"),         wxGetApp().m_show_freq);
-    pConfig->Write(wxT("/MainFrame/show_speech_in"),    wxGetApp().m_show_speech_in);
-    pConfig->Write(wxT("/MainFrame/show_speech_out"),   wxGetApp().m_show_speech_out);
-    pConfig->Write(wxT("/MainFrame/show_demod_in"),     wxGetApp().m_show_demod_in);
-    pConfig->Write(wxT("/MainFrame/show_test_frame_errors"), wxGetApp().m_show_test_frame_errors);
-    pConfig->Write(wxT("/MainFrame/show_test_frame_errors_hist"), wxGetApp().m_show_test_frame_errors_hist);
 
     pConfig->Write(wxT("/MainFrame/rxNbookCtrl"), wxGetApp().m_rxNbookCtrl);
 
