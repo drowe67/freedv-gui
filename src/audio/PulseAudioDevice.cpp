@@ -182,13 +182,12 @@ void PulseAudioDevice::start()
             outputPendingThread_ = new std::thread([&]() {
                 while(outputPendingThreadActive_)
                 {
-                    auto currentTime = std::chrono::steady_clock::now();
-                    bool dataAvailable = false;
                     short data[PULSE_FPB * getNumChannels()];
                     memset(data, 0, sizeof(data));
                     
                     {
                         std::unique_lock<std::mutex> lk(outputPendingMutex_);
+
                         int newLength = outputPendingLength_ - PULSE_FPB * getNumChannels();
 
                         if (newLength >= 0)
@@ -201,20 +200,22 @@ void PulseAudioDevice::start()
                             delete[] outputPending_;
                             outputPending_ = temp;
                             outputPendingLength_ = newLength;
-                            dataAvailable = true;
                         }
                     }
 
-                    if (dataAvailable && onAudioDataFunction)
+                    if (onAudioDataFunction)
                     {
                         onAudioDataFunction(*this, data, PULSE_FPB, onAudioDataState);
                     }
 
-                    // Sleep the required amount of time to ensure we call onAudioDataFunction
-                    // every PULSE_FPB samples.
-                    int sleepTimeMilliseconds = ((double)PULSE_FPB)/((double)sampleRate_) * 1000.0;
-                    std::this_thread::sleep_until(currentTime + 
-                        std::chrono::milliseconds(sleepTimeMilliseconds));
+                    {
+                        std::unique_lock<std::mutex> lk(outputPendingMutex_);
+
+                        // Sleep the required amount of time to ensure we call onAudioDataFunction
+                        // every PULSE_FPB samples.
+                        int sleepTimeMilliseconds = ((double)PULSE_FPB)/((double)sampleRate_) * 1000.0;
+                        outputPendingCV_.wait_for(lk, std::chrono::milliseconds(sleepTimeMilliseconds));
+                    }
                 }
             });
         }
@@ -296,6 +297,8 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
                 thisObj->outputPending_ = temp;
                 thisObj->outputPendingLength_ = targetLength;
             }
+
+            thisObj->outputPendingCV_.notify_all();
         }
 
         pa_stream_drop(s);

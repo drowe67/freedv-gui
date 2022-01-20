@@ -56,6 +56,7 @@ private:
     bool outputPendingThreadActive_;
     std::mutex outputPendingMutex_;
     std::thread* outputPendingThread_;
+    std::condition_variable outputPendingCV_;
     int streamLatency_;
 
     wxString devName_;
