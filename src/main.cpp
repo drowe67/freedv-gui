@@ -491,6 +491,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxGetApp().m_MicInMidFreqHz = (float)pConfig->Read(wxT("/Filter/MicInMidFreqHz"),    1);
     wxGetApp().m_MicInMidGaindB = (float)pConfig->Read(wxT("/Filter/MicInMidGaindB"),    (long)0)/10.0;
     wxGetApp().m_MicInMidQ = (float)pConfig->Read(wxT("/Filter/MicInMidQ"),              (long)100)/100.0;
+    wxGetApp().m_MicInBassGaindB = (float)pConfig->Read(wxT("/Filter/MicInVolInDB"),    (long)0)/10.0;
 
     bool f = false;
     wxGetApp().m_MicInEQEnable = (float)pConfig->Read(wxT("/Filter/MicInEQEnable"), f);
@@ -502,6 +503,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     wxGetApp().m_SpkOutMidFreqHz = (float)pConfig->Read(wxT("/Filter/SpkOutMidFreqHz"),    1);
     wxGetApp().m_SpkOutMidGaindB = (float)pConfig->Read(wxT("/Filter/SpkOutMidGaindB"),    (long)0)/10.0;
     wxGetApp().m_SpkOutMidQ = (float)pConfig->Read(wxT("/Filter/SpkOutMidQ"),                (long)100)/100.0;
+    wxGetApp().m_SpkOutBassGaindB = (float)pConfig->Read(wxT("/Filter/SpkOutVolInDB"),    (long)0)/10.0;
 
     wxGetApp().m_SpkOutEQEnable = (float)pConfig->Read(wxT("/Filter/SpkOutEQEnable"), f);
 
@@ -2682,6 +2684,7 @@ void txRxProcessing()
             sox_biquad_filter(cbData->sbqSpkOutBass,   outfreedv, outfreedv, speechOutbufferSize);
             sox_biquad_filter(cbData->sbqSpkOutTreble, outfreedv, outfreedv, speechOutbufferSize);
             sox_biquad_filter(cbData->sbqSpkOutMid,    outfreedv, outfreedv, speechOutbufferSize);
+            sox_biquad_filter(cbData->sbqSpkOutVol,    outfreedv, outfreedv, speechOutbufferSize);
         }
         g_mutexProtectingCallbackData.Unlock();
 
@@ -2786,6 +2789,7 @@ void txRxProcessing()
                 sox_biquad_filter(cbData->sbqMicInBass, infreedv, infreedv, nout);
                 sox_biquad_filter(cbData->sbqMicInTreble, infreedv, infreedv, nout);
                 sox_biquad_filter(cbData->sbqMicInMid, infreedv, infreedv, nout);
+                sox_biquad_filter(cbData->sbqMicInVol, infreedv, infreedv, nout);
             }
             g_mutexProtectingCallbackData.Unlock();
 

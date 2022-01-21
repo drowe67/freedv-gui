@@ -254,6 +254,7 @@ class MainApp : public wxApp
         float               m_MicInMidGaindB;
         float               m_MicInMidQ;
         bool                m_MicInEQEnable;
+        float               m_MicInVolInDB;
 
         // Spk Out Equaliser
         float               m_SpkOutBassFreqHz;
@@ -264,6 +265,7 @@ class MainApp : public wxApp
         float               m_SpkOutMidGaindB;
         float               m_SpkOutMidQ;
         bool                m_SpkOutEQEnable;
+        float               m_SpkOutVolInDB;
 
         // Flags for displaying windows
         int                 m_show_wf;
@@ -383,9 +385,11 @@ typedef struct paCallBackData
         , sbqMicInBass(nullptr)
         , sbqMicInTreble(nullptr)
         , sbqMicInMid(nullptr)
+        , sbqMicInVol(nullptr)
         , sbqSpkOutBass(nullptr)
         , sbqSpkOutTreble(nullptr)
         , sbqSpkOutMid(nullptr)
+        , sbqSpkOutVol(nullptr)
         , micInEQEnable(false)
         , spkOutEQEnable(false)
         , leftChannelVoxTone(false)
@@ -423,9 +427,11 @@ typedef struct paCallBackData
     void           *sbqMicInBass;
     void           *sbqMicInTreble;
     void           *sbqMicInMid;
+    void           *sbqMicInVol;
     void           *sbqSpkOutBass;
     void           *sbqSpkOutTreble;
     void           *sbqSpkOutMid;
+    void           *sbqSpkOutVol;
 
     bool            micInEQEnable;
     bool            spkOutEQEnable;
