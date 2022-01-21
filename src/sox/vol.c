@@ -72,7 +72,7 @@ static int getopts(sox_effect_t * effp, int argc, char **argv)
   }
 
   if (argc) {
-    if (fabs(vol->gain) < 1 || sscanf(*argv, "%lf %c", &vol->limitergain, &dummy) != 1 || vol->limitergain <= 0 || vol->limitergain >= 1)
+    if (sscanf(*argv, "%lf %c", &vol->limitergain, &dummy) != 1 || vol->limitergain <= 0 || vol->limitergain >= 1)
       return lsx_usage(effp);
 
     vol->uselimiter = sox_true;
