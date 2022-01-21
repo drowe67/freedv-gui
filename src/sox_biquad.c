@@ -129,7 +129,7 @@ void sox_biquad_filter(void *sbq, short out[], short in[], int n)
     for(i=0; i<n; i++)
         ibuf[i] = SOX_SIGNED_16BIT_TO_SAMPLE(in[i], clips);
     isamp = osamp = (unsigned int)n;
-    lsx_biquad_flow(e, ibuf, obuf, &isamp, &osamp);
+    e->handler.flow(e, ibuf, obuf, &isamp, &osamp);
     for(i=0; i<n; i++)
         out[i] = SOX_SAMPLE_TO_SIGNED_16BIT(obuf[i], clips); 
 }
