@@ -19,4 +19,4 @@
   EFFECT(highpass)
   EFFECT(treble)
   EFFECT(equalizer)
-
+  EFFECT(vol)

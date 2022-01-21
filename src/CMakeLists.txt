@@ -41,7 +41,9 @@ set(FREEDV_SOURCES
     sox/sox.h
     sox/sox_i.h
     sox/soxomp.h
+    sox/util.c
     sox/util.h
+    sox/vol.c
     sox/xmalloc.h
     sox/xmalloc.c
     topFrame.h
