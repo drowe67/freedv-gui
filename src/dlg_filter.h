@@ -24,7 +24,7 @@
 
 #include "main.h"
 
-enum {disableQ = false, enableQ = true};
+enum {disableQ = false, enableQ = true, disableFreq = false, enableFreq = true};
 
 typedef struct { 
     wxSlider     *sliderFreq;
@@ -100,6 +100,8 @@ class FilterDlg : public wxDialog
         void    OnMicInMidFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_MicInMid, true); }
         void    OnMicInMidGainScroll(wxScrollEvent& event) { sliderToGain(&m_MicInMid, true); }
         void    OnMicInMidQScroll(wxScrollEvent& event) { sliderToQ(&m_MicInMid, true); }
+        void    OnMicInVolGainScroll(wxScrollEvent& event) { sliderToGain(&m_MicInVol, true); }
+        
         void    OnMicInEnable(wxScrollEvent& event);
         void    OnMicInDefault(wxCommandEvent& event);
 
@@ -110,6 +112,8 @@ class FilterDlg : public wxDialog
         void    OnSpkOutMidFreqScroll(wxScrollEvent& event) { sliderToFreq(&m_SpkOutMid, false); }
         void    OnSpkOutMidGainScroll(wxScrollEvent& event) { sliderToGain(&m_SpkOutMid, false); }
         void    OnSpkOutMidQScroll(wxScrollEvent& event) { sliderToQ(&m_SpkOutMid, false); }
+        void    OnSpkOutVolGainScroll(wxScrollEvent& event) { sliderToGain(&m_SpkOutVol, false); }
+        
         void    OnSpkOutEnable(wxScrollEvent& event);
         void    OnSpkOutDefault(wxCommandEvent& event);
 
@@ -152,7 +156,7 @@ class FilterDlg : public wxDialog
         void          setCodec2(void);
  
         void          newEQControl(wxSlider** slider, wxStaticText** value, wxStaticBoxSizer *bs, wxString controlName);
-        EQ            newEQ(wxSizer *bs, wxString eqName, float maxFreqHz, bool enableQ);
+        EQ            newEQ(wxSizer *bs, wxString eqName, float maxFreqHz, bool enableQ, bool enableFreq);
         void          newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxSizer *sbs, wxString controlName);
         AuiNotebookNoKbd *m_auiNotebook;
         void          setFreq(EQ *eq);
@@ -161,7 +165,7 @@ class FilterDlg : public wxDialog
         void          sliderToFreq(EQ *eq, bool micIn);
         void          sliderToGain(EQ *eq, bool micIn);
         void          sliderToQ(EQ *eq, bool micIn);
-        void          plotFilterSpectrum(EQ *eqBass, EQ *eqMid, EQ* eqTreble, PlotSpectrum* freqRespPlot, float *magdB);
+        void          plotFilterSpectrum(EQ *eqBass, EQ *eqMid, EQ* eqTreble, EQ* eqVol, PlotSpectrum* freqRespPlot, float *magdB);
         void          calcFilterSpectrum(float magdB[], int arc, char *argv[]);
         void          plotMicInFilterSpectrum(void);
         void          plotSpkOutFilterSpectrum(void);
@@ -171,10 +175,12 @@ class FilterDlg : public wxDialog
         EQ            m_MicInBass;
         EQ            m_MicInMid;
         EQ            m_MicInTreble;
+        EQ            m_MicInVol;
 
         EQ            m_SpkOutBass;
         EQ            m_SpkOutMid;
         EQ            m_SpkOutTreble;
+        EQ            m_SpkOutVol;
 
         float         limit(float value, float min, float max);
  
