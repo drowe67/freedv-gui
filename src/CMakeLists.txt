@@ -36,6 +36,9 @@ set(FREEDV_SOURCES
     sox/effects.c
     sox/effects.h
     sox/effects_i.c
+    sox/effects_i_dsp.c
+    sox/fft4g.c
+    sox/formats.c
     sox/formats_i.c
     sox/libsox.c
     sox/sox.h
