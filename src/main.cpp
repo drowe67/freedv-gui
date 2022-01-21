@@ -2684,7 +2684,7 @@ void txRxProcessing()
             sox_biquad_filter(cbData->sbqSpkOutBass,   outfreedv, outfreedv, speechOutbufferSize);
             sox_biquad_filter(cbData->sbqSpkOutTreble, outfreedv, outfreedv, speechOutbufferSize);
             sox_biquad_filter(cbData->sbqSpkOutMid,    outfreedv, outfreedv, speechOutbufferSize);
-            sox_biquad_filter(cbData->sbqSpkOutVol,    outfreedv, outfreedv, speechOutbufferSize);
+            if (cbData->sbqSpkOutVol) sox_biquad_filter(cbData->sbqSpkOutVol,    outfreedv, outfreedv, speechOutbufferSize);
         }
         g_mutexProtectingCallbackData.Unlock();
 
@@ -2789,7 +2789,7 @@ void txRxProcessing()
                 sox_biquad_filter(cbData->sbqMicInBass, infreedv, infreedv, nout);
                 sox_biquad_filter(cbData->sbqMicInTreble, infreedv, infreedv, nout);
                 sox_biquad_filter(cbData->sbqMicInMid, infreedv, infreedv, nout);
-                sox_biquad_filter(cbData->sbqMicInVol, infreedv, infreedv, nout);
+                if (cbData->sbqMicInVol) sox_biquad_filter(cbData->sbqMicInVol, infreedv, infreedv, nout);
             }
             g_mutexProtectingCallbackData.Unlock();
 

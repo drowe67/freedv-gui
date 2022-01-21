@@ -66,7 +66,7 @@ void *sox_biquad_create(int argc, const char *argv[])
     int (*start)(sox_effect_t *); /* function pointer to effect start func */
     long sampleRate = 8000;
 
-    if (strcmp(argv[0], "equalizer") == 0) {
+    if (strcmp(argv[0], "equalizer") == 0 || strcmp(argv[0], "vol") == 0) {
         if (argc == 4)
         {
             sampleRate = atol(argv[4]);
@@ -94,7 +94,18 @@ void *sox_biquad_create(int argc, const char *argv[])
     // all memory used by the effect.
     e->flows = 1;
     
-    ret = start(e); assert(ret == SOX_SUCCESS);
+    ret = start(e);
+    if (ret != SOX_SUCCESS && ret != SOX_EFF_NULL)
+    {
+        fprintf(stderr, "sox_biquad ret = %d (%s)\n", ret, sox_strerror(ret)); 
+        assert(0);
+    }
+    else if (ret == SOX_EFF_NULL)
+    {
+        // no-op effect, no need to have it
+        sox_biquad_destroy(e);
+        e = NULL;
+    }
     
     return (void *)e;
 }
