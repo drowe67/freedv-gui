@@ -864,15 +864,15 @@ void FilterDlg::plotFilterSpectrum(EQ *eqBass, EQ *eqMid, EQ *eqTreble, EQ* eqVo
 
     calcFilterSpectrum(magMid, 3, argMid);
 
-    /*sprintf(argVol[0], "vol");
+    sprintf(argVol[0], "vol");
     sprintf(argVol[1], "%f", eqVol->gaindB);
     sprintf(argVol[2], "%s", "dB");
     sprintf(argVol[3], "%f", 0.05);
     
-    calcFilterSpectrum(magVol, 3, argVol);*/
+    calcFilterSpectrum(magVol, 3, argVol);
     
     for(i=0; i<F_MAG_N; i++)
-        magdB[i] = magBass[i] + magMid[i] + magTreble[i]; // + magVol[i];
+        magdB[i] = magBass[i] + magMid[i] + magTreble[i] + magVol[i];
     freqRespPlot->m_newdata = true;
     freqRespPlot->Refresh();
 }
