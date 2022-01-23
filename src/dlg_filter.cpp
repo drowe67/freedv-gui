@@ -178,7 +178,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_auiNotebook->SetFont(wxFont(8, 70, 90, 90, false, wxEmptyString));
 
     m_MicInFreqRespPlot = new PlotSpectrum(panelMicInEqualizer, m_MicInMagdB, F_MAG_N, FILTER_MIN_MAG_DB, FILTER_MAX_MAG_DB);
-    m_MicInFreqRespPlot->SetMinSize(wxSize(400, 200));
+    m_MicInFreqRespPlot->SetMinSize(wxSize(500, 200));
     wxSizer* micInPlotSizer = new wxBoxSizer(wxHORIZONTAL);
     micInPlotSizer->Add(m_MicInFreqRespPlot, 0, wxEXPAND, 0);
     eqMicInSizer->Add(micInPlotSizer, 0, wxALIGN_CENTRE_HORIZONTAL, 0);
@@ -186,7 +186,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_auiNotebook->AddPage(panelMicInEqualizer, _("Microphone In Equaliser"));
 
     m_SpkOutFreqRespPlot = new PlotSpectrum(panelSpkOutEqualizer, m_SpkOutMagdB, F_MAG_N, FILTER_MIN_MAG_DB, FILTER_MAX_MAG_DB);
-    m_SpkOutFreqRespPlot->SetMinSize(wxSize(400, 200));
+    m_SpkOutFreqRespPlot->SetMinSize(wxSize(500, 200));
     wxSizer* spkOutPlotSizer = new wxBoxSizer(wxHORIZONTAL);
     spkOutPlotSizer->Add(m_SpkOutFreqRespPlot, 0, wxEXPAND, 0);
     eqSpkOutSizer->Add(spkOutPlotSizer, 0, wxALIGN_CENTRE_HORIZONTAL, 0);
@@ -342,7 +342,7 @@ void FilterDlg::newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText**
     wxStaticText* label = new wxStaticText(parent, wxID_ANY, controlName, wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
     sizer->Add(label, 0, wxALIGN_CENTER|wxALL, 0);
 
-    *slider = new wxSlider(parent, wxID_ANY, 0, 0, SLIDER_MAX, wxDefaultPosition, wxSize(wxDefaultCoord,SLIDER_LENGTH), wxSL_VERTICAL);
+    *slider = new wxSlider(parent, wxID_ANY, 0, 0, SLIDER_MAX, wxDefaultPosition, wxSize(wxDefaultCoord,SLIDER_LENGTH), wxSL_VERTICAL|wxSL_INVERSE);
     sizer->Add(*slider, 1, wxALIGN_CENTER|wxALL, 0);
 
     *value = new wxStaticText(parent, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(40,-1), wxALIGN_LEFT);
