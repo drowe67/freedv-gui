@@ -74,9 +74,11 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     left->Add(m_codec2LPCPostFilterBassBoost);
     lpcpfs->Add(left, 0, wxALL, 5);
 
-    newLPCPFControl(&m_codec2LPCPostFilterBeta, &m_staticTextBeta, lpcpfs, "Beta");
-    newLPCPFControl(&m_codec2LPCPostFilterGamma, &m_staticTextGamma, lpcpfs, "Gamma");
-
+    wxBoxSizer* sizerBetaGamma = new wxBoxSizer(wxVERTICAL);
+    newLPCPFControl(&m_codec2LPCPostFilterBeta, &m_staticTextBeta, sizerBetaGamma, "Beta");
+    newLPCPFControl(&m_codec2LPCPostFilterGamma, &m_staticTextGamma, sizerBetaGamma, "Gamma");
+    lpcpfs->Add(sizerBetaGamma);
+    
     m_LPCPostFilterDefault = new wxButton(this, wxID_ANY, wxT("Default"));
     lpcpfs->Add(m_LPCPostFilterDefault, 0, wxALL|wxALIGN_CENTRE_HORIZONTAL|wxALIGN_CENTRE_VERTICAL, 5);
 
