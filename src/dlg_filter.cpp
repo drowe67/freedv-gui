@@ -339,13 +339,13 @@ void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxSiz
 
 void FilterDlg::newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString controlName)
 {
-    wxStaticText* label = new wxStaticText(parent, wxID_ANY, controlName, wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
+    wxStaticText* label = new wxStaticText(parent, wxID_ANY, controlName, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     sizer->Add(label, 0, wxALIGN_CENTER|wxALL, 0);
 
-    *slider = new wxSlider(parent, wxID_ANY, 0, 0, SLIDER_MAX, wxDefaultPosition, wxSize(wxDefaultCoord,SLIDER_LENGTH), wxSL_VERTICAL|wxSL_INVERSE);
+    *slider = new wxSlider(parent, wxID_ANY, 0, 0, SLIDER_MAX, wxDefaultPosition, wxSize(wxDefaultCoord,SLIDER_LENGTH), wxSL_VERTICAL|wxSL_INVERSE|wxALIGN_CENTER);
     sizer->Add(*slider, 1, wxALIGN_CENTER|wxALL, 0);
 
-    *value = new wxStaticText(parent, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(40,-1), wxALIGN_LEFT);
+    *value = new wxStaticText(parent, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(40,-1), wxALIGN_CENTER);
     sizer->Add(*value, 0, wxALIGN_CENTER, 5);
 }
 
