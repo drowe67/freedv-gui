@@ -155,7 +155,7 @@ class FilterDlg : public wxDialog
         void          setGamma(void); // sets slider and static text from m_gamma
         void          setCodec2(void);
  
-        void          newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxStaticBoxSizer *bs, wxString controlName);
+        void          newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString controlName);
         EQ            newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFreqHz, bool enableQ, bool enableFreq);
         void          newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxSizer *sbs, wxString controlName);
         AuiNotebookNoKbd *m_auiNotebook;
