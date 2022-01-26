@@ -625,6 +625,8 @@ void FilterDlg::OnOK(wxCommandEvent& event)
 void FilterDlg::OnClose(wxCloseEvent& event)
 {
     ExchangeData(EXCHANGE_DATA_OUT);
+    
+    ((MainFrame*)wxGetApp().GetTopWindow())->m_filterDialog = nullptr;
     Destroy();
 }
 

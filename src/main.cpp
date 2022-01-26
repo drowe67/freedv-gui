@@ -260,7 +260,8 @@ int MainApp::OnExit()
 MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
 {
     m_zoom              = 1.;
-
+    m_filterDialog      = nullptr;
+    
     #ifdef __WXMSW__
     g_logfile = stderr;
     #else
@@ -679,6 +680,11 @@ MainFrame::~MainFrame()
     int w;
     int h;
 
+    if (m_filterDialog != nullptr)
+    {
+        m_filterDialog->Close();
+    }
+    
     //fprintf(stderr, "MainFrame::~MainFrame()\n");
     #ifdef FTEST
     fclose(ftest);

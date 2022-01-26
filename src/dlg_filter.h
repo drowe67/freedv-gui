@@ -55,7 +55,7 @@ class FilterDlg : public wxDialog
     FilterDlg( wxWindow* parent, bool running, bool *newMicInFilter, bool *newSpkOutFilter,
                wxWindowID id = wxID_ANY, const wxString& title = _("Filter"), 
                const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize,
-               long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
+               long style = wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER );
         ~FilterDlg();
 
         void    ExchangeData(int inout);

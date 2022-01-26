@@ -72,8 +72,19 @@ void MainFrame::OnToolsAudioUI(wxUpdateUIEvent& event)
 void MainFrame::OnToolsFilter(wxCommandEvent& event)
 {
     wxUnusedVar(event);
-    FilterDlg *dlg = new FilterDlg(NULL, m_RxRunning, &m_newMicInFilter, &m_newSpkOutFilter);
-    dlg->Show();
+    
+    if (m_filterDialog == nullptr)
+    {
+         m_filterDialog = new FilterDlg(NULL, m_RxRunning, &m_newMicInFilter, &m_newSpkOutFilter);
+    }
+    else
+    {
+        m_filterDialog->Iconize(false);
+        m_filterDialog->SetFocus();
+        m_filterDialog->Raise();
+    }
+    
+    m_filterDialog->Show();
 }
 
 //-------------------------------------------------------------------------

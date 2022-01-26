@@ -149,6 +149,7 @@ extern int                 g_soundCard2SampleRate;
 #define DS_SYNC_WAIT_TIME 5.0
 
 class MainFrame;
+class FilterDlg;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainApp
@@ -495,6 +496,7 @@ class MainFrame : public TopFrame
         MainFrame(wxWindow *parent);
         virtual ~MainFrame();
 
+        FilterDlg*              m_filterDialog;
         PlotSpectrum*           m_panelSpectrum;
         PlotWaterfall*          m_panelWaterfall;
         PlotScatter*            m_panelScatter;
