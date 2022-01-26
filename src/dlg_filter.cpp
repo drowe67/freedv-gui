@@ -62,24 +62,24 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     bSizer30 = new wxBoxSizer(wxVERTICAL);
 
     // LPC Post Filter --------------------------------------------------------
-
-    wxStaticBoxSizer* lpcpfs = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("FreeDV 1600 LPC Post Filter")), wxHORIZONTAL);
+    wxStaticBox* lpcPostFilterBox = new wxStaticBox(this, wxID_ANY, _("FreeDV 1600 LPC Post Filter"));
+    wxStaticBoxSizer* lpcpfs = new wxStaticBoxSizer(lpcPostFilterBox, wxHORIZONTAL);
 
     wxBoxSizer* left = new wxBoxSizer(wxVERTICAL);
 
-    m_codec2LPCPostFilterEnable = new wxCheckBox(this, wxID_ANY, _("Enable"), wxDefaultPosition,wxDefaultSize, wxCHK_2STATE);
+    m_codec2LPCPostFilterEnable = new wxCheckBox(lpcPostFilterBox, wxID_ANY, _("Enable"), wxDefaultPosition,wxDefaultSize, wxCHK_2STATE);
     left->Add(m_codec2LPCPostFilterEnable);
 
-    m_codec2LPCPostFilterBassBoost = new wxCheckBox(this, wxID_ANY, _("0-1 kHz 3dB Boost"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_codec2LPCPostFilterBassBoost = new wxCheckBox(lpcPostFilterBox, wxID_ANY, _("0-1 kHz 3dB Boost"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     left->Add(m_codec2LPCPostFilterBassBoost);
     lpcpfs->Add(left, 0, wxALL, 5);
 
     wxBoxSizer* sizerBetaGamma = new wxBoxSizer(wxVERTICAL);
-    newLPCPFControl(&m_codec2LPCPostFilterBeta, &m_staticTextBeta, sizerBetaGamma, "Beta");
-    newLPCPFControl(&m_codec2LPCPostFilterGamma, &m_staticTextGamma, sizerBetaGamma, "Gamma");
+    newLPCPFControl(&m_codec2LPCPostFilterBeta, &m_staticTextBeta, lpcPostFilterBox, sizerBetaGamma, "Beta");
+    newLPCPFControl(&m_codec2LPCPostFilterGamma, &m_staticTextGamma, lpcPostFilterBox, sizerBetaGamma, "Gamma");
     lpcpfs->Add(sizerBetaGamma);
     
-    m_LPCPostFilterDefault = new wxButton(this, wxID_ANY, wxT("Default"));
+    m_LPCPostFilterDefault = new wxButton(lpcPostFilterBox, wxID_ANY, wxT("Default"));
     lpcpfs->Add(m_LPCPostFilterDefault, 0, wxALL|wxALIGN_CENTRE_HORIZONTAL|wxALIGN_CENTRE_VERTICAL, 5);
 
     bSizer30->Add(lpcpfs, 0, wxALL | wxEXPAND, 3);
@@ -90,11 +90,11 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     wxStaticBox *sb_speexpp = new wxStaticBox(this, wxID_ANY, _("Mic Audio Pre-Processing"));
     sbSizer_speexpp = new wxStaticBoxSizer(sb_speexpp, wxHORIZONTAL);
 
-    m_ckboxSpeexpp = new wxCheckBox(this, wxID_ANY, _("Speex Noise Suppression"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxSpeexpp = new wxCheckBox(sb_speexpp, wxID_ANY, _("Speex Noise Suppression"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_speexpp->Add(m_ckboxSpeexpp, 0, wxALIGN_LEFT, 2);
     m_ckboxSpeexpp->SetToolTip(_("Enable noise suppression, dereverberation, AGC of mic signal"));
 
-    m_ckbox700C_EQ = new wxCheckBox(this, wxID_ANY, _("700C/700D/700E/800XA Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckbox700C_EQ = new wxCheckBox(sb_speexpp, wxID_ANY, _("700C/700D/700E/800XA Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_speexpp->Add(m_ckbox700C_EQ, 0, wxALIGN_LEFT, 2);
     m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700C/700D/700E Codec input audio"));
 
@@ -103,7 +103,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     // EQ Filters -----------------------------------------------------------
 
     long nb_style = wxNB_BOTTOM;
-    m_auiNotebook = new AuiNotebookNoKbd(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, nb_style);
+    m_auiNotebook = new wxNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, nb_style);
     wxPanel* panelMicInEqualizer = new wxPanel(m_auiNotebook, wxID_ANY);
     wxPanel* panelSpkOutEqualizer = new wxPanel(m_auiNotebook, wxID_ANY);
    
@@ -181,18 +181,14 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_auiNotebook->SetFont(wxFont(8, 70, 90, 90, false, wxEmptyString));
 
     m_MicInFreqRespPlot = new PlotSpectrum(panelMicInEqualizer, m_MicInMagdB, F_MAG_N, FILTER_MIN_MAG_DB, FILTER_MAX_MAG_DB);
-    m_MicInFreqRespPlot->SetMinSize(wxSize(500, 200));
-    wxSizer* micInPlotSizer = new wxBoxSizer(wxHORIZONTAL);
-    micInPlotSizer->Add(m_MicInFreqRespPlot, 0, wxEXPAND, 0);
-    eqMicInSizer->Add(micInPlotSizer, 0, wxALIGN_CENTRE_HORIZONTAL, 0);
+    m_MicInFreqRespPlot->SetMinSize(wxSize(600, 200));
+    eqMicInSizer->Add(m_MicInFreqRespPlot, 0, wxEXPAND | wxALIGN_CENTRE_HORIZONTAL, 0);
     panelMicInEqualizer->SetSizer(eqMicInSizer);
     m_auiNotebook->AddPage(panelMicInEqualizer, _("Microphone In Equaliser"));
 
     m_SpkOutFreqRespPlot = new PlotSpectrum(panelSpkOutEqualizer, m_SpkOutMagdB, F_MAG_N, FILTER_MIN_MAG_DB, FILTER_MAX_MAG_DB);
-    m_SpkOutFreqRespPlot->SetMinSize(wxSize(500, 200));
-    wxSizer* spkOutPlotSizer = new wxBoxSizer(wxHORIZONTAL);
-    spkOutPlotSizer->Add(m_SpkOutFreqRespPlot, 0, wxEXPAND, 0);
-    eqSpkOutSizer->Add(spkOutPlotSizer, 0, wxALIGN_CENTRE_HORIZONTAL, 0);
+    m_SpkOutFreqRespPlot->SetMinSize(wxSize(600, 200));
+    eqSpkOutSizer->Add(m_SpkOutFreqRespPlot, 0, wxALIGN_CENTRE_HORIZONTAL, 0);
     panelSpkOutEqualizer->SetSizer(eqSpkOutSizer);
     m_auiNotebook->AddPage(panelSpkOutEqualizer, _("Speaker Out Equaliser"));
     
@@ -324,17 +320,17 @@ FilterDlg::~FilterDlg()
     m_sdbSizer5OK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnOK), NULL, this);
 }
 
-void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxSizer *s, wxString controlName)
+void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWindow* parent, wxSizer *s, wxString controlName)
 {
     wxBoxSizer *bs = new wxBoxSizer(wxHORIZONTAL);
 
-    wxStaticText* st = new wxStaticText(this, wxID_ANY, controlName, wxDefaultPosition, wxSize(70,-1), wxALIGN_RIGHT);
+    wxStaticText* st = new wxStaticText(parent, wxID_ANY, controlName, wxDefaultPosition, wxSize(70,-1), wxALIGN_RIGHT);
     bs->Add(st, 0, wxALIGN_CENTER_VERTICAL|wxALL, 2);
 
-    *slider = new wxSlider(this, wxID_ANY, 0, 0, SLIDER_MAX, wxDefaultPosition, wxSize(SLIDER_LENGTH,wxDefaultCoord));
+    *slider = new wxSlider(parent, wxID_ANY, 0, 0, SLIDER_MAX, wxDefaultPosition, wxSize(SLIDER_LENGTH,wxDefaultCoord));
     bs->Add(*slider, 1, wxALIGN_CENTER_VERTICAL|wxALL, 2);
 
-    *stValue = new wxStaticText(this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    *stValue = new wxStaticText(parent, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     bs->Add(*stValue, 1, wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT|wxALL, 2);
 
     s->Add(bs, 0);
