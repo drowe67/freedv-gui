@@ -136,7 +136,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_MicInTreble = newEQ(panelMicInEqualizer, eqMicInSizerTreble, "Treble", MAX_FREQ_TREBLE, disableQ, enableFreq);
     eqMicInSizerSliders->Add(eqMicInSizerTreble, 1, wxALL, 7);
 
-    eqMicInSizer->Add(eqMicInSizerSliders, 0, wxALIGN_CENTRE_HORIZONTAL);
+    eqMicInSizer->Add(eqMicInSizerSliders, 0, wxEXPAND, 0);
     
     wxBoxSizer* eqSpkOutSizer = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer* eqSpkOutSizerEnable = new wxBoxSizer(wxHORIZONTAL);
@@ -164,7 +164,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_SpkOutTreble = newEQ(panelSpkOutEqualizer, eqSpkOutSizerTreble, "Treble", MAX_FREQ_TREBLE, disableQ, enableFreq);
     eqSpkOutSizerSliders->Add(eqSpkOutSizerTreble, 1, wxALL, 7);
 
-    eqSpkOutSizer->Add(eqSpkOutSizerSliders, 0, wxALIGN_CENTRE_HORIZONTAL);
+    eqSpkOutSizer->Add(eqSpkOutSizerSliders, 0, wxEXPAND, 0);
 
     // Storgage for spectrum magnitude plots ------------------------------------
 
