@@ -256,6 +256,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_SpkOutDefault->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnSpkOutDefault), NULL, this);
 
     m_sdbSizer5OK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnOK), NULL, this);
+    this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(FilterDlg::OnClose), NULL, this);
 
 }
 
@@ -268,7 +269,7 @@ FilterDlg::~FilterDlg()
     delete[] m_SpkOutMagdB;
 
     // Disconnect Events
-
+    this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(FilterDlg::OnClose), NULL, this);
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(FilterDlg::OnInitDialog));
 
     m_codec2LPCPostFilterEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnEnable), NULL, this);
@@ -615,8 +616,7 @@ void FilterDlg::OnSpkOutDefault(wxCommandEvent& event)
 void FilterDlg::OnOK(wxCommandEvent& event)
 {
     //printf("FilterDlg::OnOK\n");
-    ExchangeData(EXCHANGE_DATA_OUT);
-    this->EndModal(wxID_OK);
+    Close();
 }
 
 //-------------------------------------------------------------------------
@@ -625,7 +625,7 @@ void FilterDlg::OnOK(wxCommandEvent& event)
 void FilterDlg::OnClose(wxCloseEvent& event)
 {
     ExchangeData(EXCHANGE_DATA_OUT);
-    this->EndModal(wxID_OK);
+    Destroy();
 }
 
 //-------------------------------------------------------------------------

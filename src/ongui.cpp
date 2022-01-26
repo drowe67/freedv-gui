@@ -73,8 +73,7 @@ void MainFrame::OnToolsFilter(wxCommandEvent& event)
 {
     wxUnusedVar(event);
     FilterDlg *dlg = new FilterDlg(NULL, m_RxRunning, &m_newMicInFilter, &m_newSpkOutFilter);
-    dlg->ShowModal();
-    delete dlg;
+    dlg->Show();
 }
 
 //-------------------------------------------------------------------------
