@@ -27,6 +27,7 @@
 enum {disableQ = false, enableQ = true, disableFreq = false, enableFreq = true};
 
 typedef struct { 
+    wxStaticBox  *eqBox;
     wxSlider     *sliderFreq;
     wxStaticText *valueFreq;
     wxSlider     *sliderGain;

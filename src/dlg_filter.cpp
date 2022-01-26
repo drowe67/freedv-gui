@@ -125,18 +125,18 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     eqMicInSizer->Add(eqMicInSizerEnable,0,wxALIGN_CENTRE_HORIZONTAL);
     
     m_MicInVol    = newEQ(panelMicInEqualizer, eqMicInSizerVol, "Vol", MAX_FREQ_TREBLE, disableQ, disableFreq);
-    eqMicInSizerSliders->Add(eqMicInSizerVol, 0, wxALL, 7);
+    eqMicInSizerSliders->Add(eqMicInSizerVol, 1, wxALL | wxEXPAND | wxALIGN_CENTRE_HORIZONTAL, 7);
     
     m_MicInBass   = newEQ(panelMicInEqualizer, eqMicInSizerBass, "Bass", MAX_FREQ_BASS, disableQ, enableFreq);
-    eqMicInSizerSliders->Add(eqMicInSizerBass, 0, wxALL, 7);
+    eqMicInSizerSliders->Add(eqMicInSizerBass, 1, wxALL | wxEXPAND | wxALIGN_CENTRE_HORIZONTAL, 7);
     
     m_MicInMid    = newEQ(panelMicInEqualizer, eqMicInSizerMid, "Mid", MAX_FREQ_DEF, enableQ, enableFreq);
-    eqMicInSizerSliders->Add(eqMicInSizerMid, 0, wxALL, 7);
+    eqMicInSizerSliders->Add(eqMicInSizerMid, 1, wxALL | wxEXPAND | wxALIGN_CENTRE_HORIZONTAL, 7);
         
     m_MicInTreble = newEQ(panelMicInEqualizer, eqMicInSizerTreble, "Treble", MAX_FREQ_TREBLE, disableQ, enableFreq);
-    eqMicInSizerSliders->Add(eqMicInSizerTreble, wxALL, 7);
+    eqMicInSizerSliders->Add(eqMicInSizerTreble, 1, wxALL | wxEXPAND | wxALIGN_CENTRE_HORIZONTAL, 7);
 
-    eqMicInSizer->Add(eqMicInSizerSliders, 0, wxALIGN_CENTRE_HORIZONTAL);
+    eqMicInSizer->Add(eqMicInSizerSliders, 0, wxEXPAND | wxALIGN_CENTRE_HORIZONTAL);
     
     wxBoxSizer* eqSpkOutSizer = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer* eqSpkOutSizerEnable = new wxBoxSizer(wxHORIZONTAL);
@@ -153,18 +153,18 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     eqSpkOutSizer->Add(eqSpkOutSizerEnable,0,wxALIGN_CENTRE_HORIZONTAL);
     
     m_SpkOutVol    = newEQ(panelSpkOutEqualizer, eqSpkOutSizerVol, "Vol", MAX_FREQ_TREBLE, disableQ, disableFreq);
-    eqSpkOutSizerSliders->Add(eqSpkOutSizerVol, 0, wxALL, 7);
+    eqSpkOutSizerSliders->Add(eqSpkOutSizerVol, 1, wxALL, 7);
     
     m_SpkOutBass   = newEQ(panelSpkOutEqualizer, eqSpkOutSizerBass, "Bass"  , MAX_FREQ_BASS, disableQ, enableFreq);
-    eqSpkOutSizerSliders->Add(eqSpkOutSizerBass, 0, wxALL, 7);
+    eqSpkOutSizerSliders->Add(eqSpkOutSizerBass, 1, wxALL, 7);
     
     m_SpkOutMid    = newEQ(panelSpkOutEqualizer, eqSpkOutSizerMid, "Mid"   , MAX_FREQ_DEF, enableQ, enableFreq);
-    eqSpkOutSizerSliders->Add(eqSpkOutSizerMid, 0, wxALL, 7);
+    eqSpkOutSizerSliders->Add(eqSpkOutSizerMid, 1, wxALL, 7);
         
     m_SpkOutTreble = newEQ(panelSpkOutEqualizer, eqSpkOutSizerTreble, "Treble", MAX_FREQ_TREBLE, disableQ, enableFreq);
-    eqSpkOutSizerSliders->Add(eqSpkOutSizerTreble, 0, wxALL, 7);
+    eqSpkOutSizerSliders->Add(eqSpkOutSizerTreble, 1, wxALL, 7);
 
-    eqSpkOutSizer->Add(eqSpkOutSizerSliders, 0, wxALIGN_CENTRE_HORIZONTAL);
+    eqSpkOutSizer->Add(eqSpkOutSizerSliders, 0, wxEXPAND | wxALIGN_CENTRE_HORIZONTAL);
 
     // Storgage for spectrum magnitude plots ------------------------------------
 
@@ -188,7 +188,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 
     m_SpkOutFreqRespPlot = new PlotSpectrum(panelSpkOutEqualizer, m_SpkOutMagdB, F_MAG_N, FILTER_MIN_MAG_DB, FILTER_MAX_MAG_DB);
     m_SpkOutFreqRespPlot->SetMinSize(wxSize(600, 200));
-    eqSpkOutSizer->Add(m_SpkOutFreqRespPlot, 0, wxALIGN_CENTRE_HORIZONTAL, 0);
+    eqSpkOutSizer->Add(m_SpkOutFreqRespPlot, 0, wxEXPAND | wxALIGN_CENTRE_HORIZONTAL, 0);
     panelSpkOutEqualizer->SetSizer(eqSpkOutSizer);
     m_auiNotebook->AddPage(panelSpkOutEqualizer, _("Speaker Out Equaliser"));
     
@@ -339,26 +339,27 @@ void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWin
 void FilterDlg::newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString controlName)
 {
     wxStaticText* label = new wxStaticText(parent, wxID_ANY, controlName, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
-    sizer->Add(label, 0, wxALIGN_CENTER|wxALL, 0);
+    sizer->Add(label, 0, wxEXPAND|wxALIGN_CENTER|wxALL, 0);
 
     *slider = new wxSlider(parent, wxID_ANY, 0, 0, SLIDER_MAX, wxDefaultPosition, wxSize(wxDefaultCoord,SLIDER_LENGTH), wxSL_VERTICAL|wxSL_INVERSE|wxALIGN_CENTER);
-    sizer->Add(*slider, 1, wxALIGN_CENTER|wxALL, 0);
+    sizer->Add(*slider, 1, wxEXPAND|wxALIGN_CENTER|wxALL, 0);
 
     *value = new wxStaticText(parent, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(40,-1), wxALIGN_CENTER);
-    sizer->Add(*value, 0, wxALIGN_CENTER, 5);
+    sizer->Add(*value, 0, wxEXPAND|wxALIGN_CENTER, 5);
 }
 
 EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFreqHz, bool enableQ, bool enableFreq)
 {
     EQ eq;
 
-    wxStaticBoxSizer *bsEQ = new wxStaticBoxSizer(new wxStaticBox(parent, wxID_ANY, eqName), wxHORIZONTAL);
+    eq.eqBox = new wxStaticBox(parent, wxID_ANY, eqName);
+    wxStaticBoxSizer *bsEQ = new wxStaticBoxSizer(eq.eqBox, wxHORIZONTAL);
 
     if (enableFreq)
     {
         wxSizer* sizerFreq = new wxBoxSizer(wxVERTICAL);
         newEQControl(parent, &eq.sliderFreq, &eq.valueFreq, sizerFreq, "Freq");
-        bsEQ->Add(sizerFreq);
+        bsEQ->Add(sizerFreq, 1, wxEXPAND);
         eq.maxFreqHz = maxFreqHz;
         eq.sliderFreqId = eq.sliderFreq->GetId();
     }
@@ -369,18 +370,18 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
     
     wxSizer* sizerGain = new wxBoxSizer(wxVERTICAL);
     newEQControl(parent, &eq.sliderGain, &eq.valueGain, sizerGain, "Gain");
-    bsEQ->Add(sizerGain);
+    bsEQ->Add(sizerGain, 1, wxEXPAND);
     
     if (enableQ)
     {
         wxSizer* sizerQ = new wxBoxSizer(wxVERTICAL);
         newEQControl(parent, &eq.sliderQ, &eq.valueQ, sizerQ, "Q");
-        bsEQ->Add(sizerQ);
+        bsEQ->Add(sizerQ, 1, wxEXPAND);
     }
     else
         eq.sliderQ = NULL;
 
-    bs->Add(bsEQ);
+    bs->Add(bsEQ, 0, wxEXPAND);
 
     return eq;
 }
