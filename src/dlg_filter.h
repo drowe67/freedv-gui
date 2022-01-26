@@ -58,11 +58,10 @@ class FilterDlg : public wxDialog
                long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER );
         ~FilterDlg();
 
-        void    ExchangeData(int inout, bool storePersistent);
+        void    ExchangeData(int inout);
 
     protected:
         // Handlers for events.
-        void    OnCancel(wxCommandEvent& event);
         void    OnOK(wxCommandEvent& event);
         void    OnClose(wxCloseEvent& event);
         void    OnInitDialog(wxInitDialogEvent& event);
@@ -117,7 +116,6 @@ class FilterDlg : public wxDialog
         
         wxStdDialogButtonSizer* m_sdbSizer5;
         wxButton*     m_sdbSizer5OK;
-        wxButton*     m_sdbSizer5Cancel;
         PlotSpectrum* m_MicInFreqRespPlot;
         PlotSpectrum* m_SpkOutFreqRespPlot;
         

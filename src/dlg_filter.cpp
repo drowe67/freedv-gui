@@ -199,11 +199,8 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 
     wxBoxSizer* bSizer31 = new wxBoxSizer(wxHORIZONTAL);
 
-    m_sdbSizer5OK = new wxButton(this, wxID_OK);
+    m_sdbSizer5OK = new wxButton(this, wxID_CLOSE);
     bSizer31->Add(m_sdbSizer5OK, 0, wxALL, 2);
-
-    m_sdbSizer5Cancel = new wxButton(this, wxID_CANCEL);
-    bSizer31->Add(m_sdbSizer5Cancel, 0, wxALL, 2);
 
     bSizer30->Add(bSizer31, 0, wxALL | wxALIGN_CENTER, 3);
 
@@ -258,7 +255,6 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_SpkOutEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpkOutEnable), NULL, this);
     m_SpkOutDefault->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnSpkOutDefault), NULL, this);
 
-    m_sdbSizer5Cancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnCancel), NULL, this);
     m_sdbSizer5OK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnOK), NULL, this);
 
 }
@@ -316,7 +312,6 @@ FilterDlg::~FilterDlg()
     m_SpkOutEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpkOutEnable), NULL, this);
     m_SpkOutDefault->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnSpkOutDefault), NULL, this);
 
-    m_sdbSizer5Cancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnCancel), NULL, this);
     m_sdbSizer5OK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnOK), NULL, this);
 }
 
@@ -389,7 +384,7 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
 //-------------------------------------------------------------------------
 // ExchangeData()
 //-------------------------------------------------------------------------
-void FilterDlg::ExchangeData(int inout, bool storePersistent)
+void FilterDlg::ExchangeData(int inout)
 {
     if(inout == EXCHANGE_DATA_IN)
     {
@@ -520,36 +515,34 @@ void FilterDlg::ExchangeData(int inout, bool storePersistent)
 
         wxGetApp().m_SpkOutVolInDB = m_SpkOutVol.gaindB;
 
-        if (storePersistent) {
-            pConfig->Write(wxT("/Filter/codec2LPCPostFilterEnable"),     wxGetApp().m_codec2LPCPostFilterEnable);
-            pConfig->Write(wxT("/Filter/codec2LPCPostFilterBassBoost"),  wxGetApp().m_codec2LPCPostFilterBassBoost);
-            pConfig->Write(wxT("/Filter/codec2LPCPostFilterBeta"),       (int)(m_beta*100.0));
-            pConfig->Write(wxT("/Filter/codec2LPCPostFilterGamma"),      (int)(m_gamma*100.0));
+        pConfig->Write(wxT("/Filter/codec2LPCPostFilterEnable"),     wxGetApp().m_codec2LPCPostFilterEnable);
+        pConfig->Write(wxT("/Filter/codec2LPCPostFilterBassBoost"),  wxGetApp().m_codec2LPCPostFilterBassBoost);
+        pConfig->Write(wxT("/Filter/codec2LPCPostFilterBeta"),       (int)(m_beta*100.0));
+        pConfig->Write(wxT("/Filter/codec2LPCPostFilterGamma"),      (int)(m_gamma*100.0));
 
-            pConfig->Write(wxT("/Filter/speexpp_enable"),                wxGetApp().m_speexpp_enable);
+        pConfig->Write(wxT("/Filter/speexpp_enable"),                wxGetApp().m_speexpp_enable);
 
-            pConfig->Write(wxT("/Filter/700C_EQ"),                       wxGetApp().m_700C_EQ);
+        pConfig->Write(wxT("/Filter/700C_EQ"),                       wxGetApp().m_700C_EQ);
 
-            pConfig->Write(wxT("/Filter/MicInBassFreqHz"), (int)m_MicInBass.freqHz);
-            pConfig->Write(wxT("/Filter/MicInBassGaindB"), (int)(10.0*m_MicInBass.gaindB));
-            pConfig->Write(wxT("/Filter/MicInTrebleFreqHz"), (int)m_MicInTreble.freqHz);
-            pConfig->Write(wxT("/Filter/MicInTrebleGaindB"), (int)(10.0*m_MicInTreble.gaindB));
-            pConfig->Write(wxT("/Filter/MicInMidFreqHz"), (int)m_MicInMid.freqHz);
-            pConfig->Write(wxT("/Filter/MicInMidGaindB"), (int)(10.0*m_MicInMid.gaindB));
-            pConfig->Write(wxT("/Filter/MicInMidQ"), (int)(100.0*m_MicInMid.Q));
-            pConfig->Write(wxT("/Filter/MicInVolInDB"), (int)(10.0*m_MicInVol.gaindB));
+        pConfig->Write(wxT("/Filter/MicInBassFreqHz"), (int)m_MicInBass.freqHz);
+        pConfig->Write(wxT("/Filter/MicInBassGaindB"), (int)(10.0*m_MicInBass.gaindB));
+        pConfig->Write(wxT("/Filter/MicInTrebleFreqHz"), (int)m_MicInTreble.freqHz);
+        pConfig->Write(wxT("/Filter/MicInTrebleGaindB"), (int)(10.0*m_MicInTreble.gaindB));
+        pConfig->Write(wxT("/Filter/MicInMidFreqHz"), (int)m_MicInMid.freqHz);
+        pConfig->Write(wxT("/Filter/MicInMidGaindB"), (int)(10.0*m_MicInMid.gaindB));
+        pConfig->Write(wxT("/Filter/MicInMidQ"), (int)(100.0*m_MicInMid.Q));
+        pConfig->Write(wxT("/Filter/MicInVolInDB"), (int)(10.0*m_MicInVol.gaindB));
 
-            pConfig->Write(wxT("/Filter/SpkOutBassFreqHz"), (int)m_SpkOutBass.freqHz);
-            pConfig->Write(wxT("/Filter/SpkOutBassGaindB"), (int)(10.0*m_SpkOutBass.gaindB));
-            pConfig->Write(wxT("/Filter/SpkOutTrebleFreqHz"), (int)m_SpkOutTreble.freqHz);
-            pConfig->Write(wxT("/Filter/SpkOutTrebleGaindB"), (int)(10.0*m_SpkOutTreble.gaindB));
-            pConfig->Write(wxT("/Filter/SpkOutMidQ"), (int)(100.0*m_SpkOutMid.Q));
-            pConfig->Write(wxT("/Filter/SpkOutMidFreqHz"), (int)m_SpkOutMid.freqHz);
-            pConfig->Write(wxT("/Filter/SpkOutMidGaindB"), (int)(10.0*m_SpkOutMid.gaindB));
-            pConfig->Write(wxT("/Filter/SpkOutVolInDB"), (int)(10.0*m_SpkOutVol.gaindB));
+        pConfig->Write(wxT("/Filter/SpkOutBassFreqHz"), (int)m_SpkOutBass.freqHz);
+        pConfig->Write(wxT("/Filter/SpkOutBassGaindB"), (int)(10.0*m_SpkOutBass.gaindB));
+        pConfig->Write(wxT("/Filter/SpkOutTrebleFreqHz"), (int)m_SpkOutTreble.freqHz);
+        pConfig->Write(wxT("/Filter/SpkOutTrebleGaindB"), (int)(10.0*m_SpkOutTreble.gaindB));
+        pConfig->Write(wxT("/Filter/SpkOutMidQ"), (int)(100.0*m_SpkOutMid.Q));
+        pConfig->Write(wxT("/Filter/SpkOutMidFreqHz"), (int)m_SpkOutMid.freqHz);
+        pConfig->Write(wxT("/Filter/SpkOutMidGaindB"), (int)(10.0*m_SpkOutMid.gaindB));
+        pConfig->Write(wxT("/Filter/SpkOutVolInDB"), (int)(10.0*m_SpkOutVol.gaindB));
 
-            pConfig->Flush();
-        }
+        pConfig->Flush();
     }
 }
 
@@ -557,14 +550,6 @@ float FilterDlg::limit(float value, float min, float max) {
     if (value < min) return min;
     if (value > max) return max;
     return value;
-}
-
-//-------------------------------------------------------------------------
-// OnCancel()
-//-------------------------------------------------------------------------
-void FilterDlg::OnCancel(wxCommandEvent& event)
-{
-    this->EndModal(wxID_CANCEL);
 }
 
 //-------------------------------------------------------------------------
@@ -577,6 +562,7 @@ void FilterDlg::OnLPCPostFilterDefault(wxCommandEvent& event)
     m_gamma = CODEC2_LPC_PF_GAMMA; setGamma();
     m_codec2LPCPostFilterEnable->SetValue(true);
     m_codec2LPCPostFilterBassBoost->SetValue(true);
+    ExchangeData(EXCHANGE_DATA_OUT);
 }
 
 void FilterDlg::OnMicInDefault(wxCommandEvent& event)
@@ -629,7 +615,7 @@ void FilterDlg::OnSpkOutDefault(wxCommandEvent& event)
 void FilterDlg::OnOK(wxCommandEvent& event)
 {
     //printf("FilterDlg::OnOK\n");
-    ExchangeData(EXCHANGE_DATA_OUT, true);
+    ExchangeData(EXCHANGE_DATA_OUT);
     this->EndModal(wxID_OK);
 }
 
@@ -638,6 +624,7 @@ void FilterDlg::OnOK(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void FilterDlg::OnClose(wxCloseEvent& event)
 {
+    ExchangeData(EXCHANGE_DATA_OUT);
     this->EndModal(wxID_OK);
 }
 
@@ -647,7 +634,7 @@ void FilterDlg::OnClose(wxCloseEvent& event)
 void FilterDlg::OnInitDialog(wxInitDialogEvent& event)
 {
     //printf("FilterDlg::OnInitDialog\n");
-    ExchangeData(EXCHANGE_DATA_IN, false);
+    ExchangeData(EXCHANGE_DATA_IN);
     //printf("m_beta: %f\n", m_beta);
 }
 
@@ -666,6 +653,7 @@ void FilterDlg::setCodec2(void) {
                                        m_codec2LPCPostFilterBassBoost->GetValue(),
                                        m_beta, m_gamma);
     }
+    ExchangeData(EXCHANGE_DATA_OUT);
 }
 
 void FilterDlg::setGamma(void) {
@@ -698,10 +686,9 @@ void FilterDlg::OnGammaScroll(wxScrollEvent& event) {
     setCodec2();
 }
 
-// immediately change enable flags rather using ExchangeData() so we can switch on and off at run time
-
 void FilterDlg::OnSpeexppEnable(wxScrollEvent& event) {
     wxGetApp().m_speexpp_enable = m_ckboxSpeexpp->GetValue();
+    ExchangeData(EXCHANGE_DATA_OUT);
 }
 
 void FilterDlg::On700C_EQ(wxScrollEvent& event) {
@@ -709,6 +696,7 @@ void FilterDlg::On700C_EQ(wxScrollEvent& event) {
     if (m_running) {
         freedvInterface.setEq(wxGetApp().m_700C_EQ);
     }
+    ExchangeData(EXCHANGE_DATA_OUT);
 }
 
 void FilterDlg::updateControlState()
@@ -750,11 +738,13 @@ void FilterDlg::updateControlState()
 void FilterDlg::OnMicInEnable(wxScrollEvent& event) {
     wxGetApp().m_MicInEQEnable = m_MicInEnable->GetValue();
     updateControlState();
+    adjRunTimeMicInFilter();
 }
 
 void FilterDlg::OnSpkOutEnable(wxScrollEvent& event) {
     wxGetApp().m_SpkOutEQEnable = m_SpkOutEnable->GetValue();
     updateControlState();
+    adjRunTimeSpkOutFilter();
 }
 
 void FilterDlg::setFreq(EQ *eq)
@@ -850,8 +840,8 @@ void FilterDlg::plotSpkOutFilterSpectrum(void) {
 void FilterDlg::adjRunTimeMicInFilter(void) {
     // signal an adjustment in running filter coeffs
 
+    ExchangeData(EXCHANGE_DATA_OUT);
     if (m_running) {
-        ExchangeData(EXCHANGE_DATA_OUT, false);
         *m_newMicInFilter = true;
     }
 }
@@ -859,8 +849,8 @@ void FilterDlg::adjRunTimeMicInFilter(void) {
 void FilterDlg::adjRunTimeSpkOutFilter(void) {
     // signal an adjustment in running filter coeffs
 
+    ExchangeData(EXCHANGE_DATA_OUT);
     if (m_running) {
-        ExchangeData(EXCHANGE_DATA_OUT, false);
         *m_newSpkOutFilter = true;
     }
 }
