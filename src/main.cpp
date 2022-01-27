@@ -283,12 +283,6 @@ void MainFrame::loadConfiguration_()
     Fit();
     wxSize size = GetBestSize();
 
-    // Add to the "best" width and height to prevent hiding of the waterfall
-    // and the controls just below it. The values here were determined by 
-    // experimentation.
-    size.SetWidth(size.GetWidth() + 375);
-    size.SetHeight(size.GetHeight() + 100);
-
     if (w < size.GetWidth()) w = size.GetWidth();
     if (h < size.GetHeight()) h = size.GetHeight();
     SetClientSize(w, h);
