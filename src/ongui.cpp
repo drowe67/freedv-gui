@@ -228,18 +228,8 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
     {
         wxLogMessage(wxT("Config file/registry key successfully deleted."));
         
-        // Save current window position and size. While loadConfiguration_()
-        // will reset those, we don't actually want to update the window size
-        // or position.
-        wxSize currentSize = GetSize();
-        wxPoint currentPosition = GetPosition();
-        
         // Resets all configuration to defaults.
         loadConfiguration_();
-        
-        // Restore size and position.
-        SetSize(currentSize);
-        SetPosition(currentPosition);
     }
     else
     {
