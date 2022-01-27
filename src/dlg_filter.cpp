@@ -178,8 +178,6 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
 
     // Spectrum Plots -----------------------------------------------------------
 
-    m_auiNotebook->SetFont(wxFont(8, 70, 90, 90, false, wxEmptyString));
-
     m_MicInFreqRespPlot = new PlotSpectrum(panelMicInEqualizer, m_MicInMagdB, F_MAG_N, FILTER_MIN_MAG_DB, FILTER_MAX_MAG_DB);
     m_MicInFreqRespPlot->SetMinSize(wxSize(600, 200));
     eqMicInSizer->Add(m_MicInFreqRespPlot, 0, wxEXPAND, 0);
