@@ -1093,7 +1093,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
         if (strlen(callsign) < MAX_CALLSIGN - 1)
         {
-            strncat(callsign, "\r", 1);
+            strcat(callsign, "\r");
         }     
      
         // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
