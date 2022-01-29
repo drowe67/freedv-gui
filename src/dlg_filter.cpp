@@ -122,7 +122,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     eqMicInSizerEnable->Add(m_MicInEnable,0,wxALIGN_CENTRE_VERTICAL|wxRIGHT,10);
     m_MicInDefault = new wxButton(panelMicInEqualizer, wxID_ANY, wxT("Default"));
     eqMicInSizerEnable->Add(m_MicInDefault,0,wxALIGN_CENTRE_VERTICAL,20);
-    eqMicInSizer->Add(eqMicInSizerEnable,0,wxALIGN_CENTRE_HORIZONTAL);
+    eqMicInSizer->Add(eqMicInSizerEnable,0,wxEXPAND);
     
     m_MicInVol    = newEQ(panelMicInEqualizer, eqMicInSizerVol, "Vol", MAX_FREQ_TREBLE, disableQ, disableFreq);
     eqMicInSizerSliders->Add(eqMicInSizerVol, 1, wxALL, 7);
@@ -150,7 +150,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     eqSpkOutSizerEnable->Add(m_SpkOutEnable,0,wxALIGN_CENTRE_VERTICAL|wxRIGHT,10);
     m_SpkOutDefault = new wxButton(panelSpkOutEqualizer, wxID_ANY, wxT("Default"));
     eqSpkOutSizerEnable->Add(m_SpkOutDefault,0,wxALIGN_CENTRE_VERTICAL,20);
-    eqSpkOutSizer->Add(eqSpkOutSizerEnable,0,wxALIGN_CENTRE_HORIZONTAL);
+    eqSpkOutSizer->Add(eqSpkOutSizerEnable,0,wxEXPAND);
     
     m_SpkOutVol    = newEQ(panelSpkOutEqualizer, eqSpkOutSizerVol, "Vol", MAX_FREQ_TREBLE, disableQ, disableFreq);
     eqSpkOutSizerSliders->Add(eqSpkOutSizerVol, 1, wxALL, 7);
