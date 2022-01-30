@@ -85,7 +85,10 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     wxUnusedVar(event);
     g_modal = true;
     //fprintf(stderr,"g_modal: %d\n", g_modal);
-    optionsDlg->Show();
+    optionsDlg->ShowModal();
+    
+    // Show/hide frequency box based on PSK Reporter status.
+    m_freqBox->Show(wxGetApp().m_psk_enable);
 }
 
 //-------------------------------------------------------------------------

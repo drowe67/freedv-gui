@@ -456,6 +456,9 @@ void MainFrame::loadConfiguration_()
 
     m_ckboxSNR->SetValue(wxGetApp().m_snrSlow);
     setsnrBeta(wxGetApp().m_snrSlow);
+    
+    // Show/hide frequency box based on PSK Reporter enablement
+    m_freqBox->Show(wxGetApp().m_psk_enable);
 }
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
