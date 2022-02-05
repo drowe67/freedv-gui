@@ -439,12 +439,12 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     rightSizer->Add(sbSizer5, 2, wxALL|wxEXPAND, 1);
     
     // Frequency text field (PSK Reporter)
-    wxStaticBox* freqBox = new wxStaticBox(panel, wxID_ANY, _("Report Frequency"));
-    wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(freqBox, wxHORIZONTAL);
+    m_freqBox = new wxStaticBox(panel, wxID_ANY, _("Report Frequency"));
+    wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(m_freqBox, wxHORIZONTAL);
     
-    wxStaticText* reportFrequencyUnits = new wxStaticText(freqBox, wxID_ANY, wxT(" kHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    wxStaticText* reportFrequencyUnits = new wxStaticText(m_freqBox, wxID_ANY, wxT(" kHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     wxBoxSizer* txtReportFreqSizer = new wxBoxSizer(wxVERTICAL);
-    m_txtCtrlReportFrequency = new wxTextCtrl(freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_RIGHT);
+    m_txtCtrlReportFrequency = new wxTextCtrl(m_freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_RIGHT);
     m_txtCtrlReportFrequency->SetMinSize(wxSize(100,-1));
     txtReportFreqSizer->Add(m_txtCtrlReportFrequency, 1, 0, 1);
     reportFrequencySizer->Add(txtReportFreqSizer, 1, wxEXPAND, 1);
