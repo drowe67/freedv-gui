@@ -71,7 +71,7 @@ private:
     static void StreamOverflowCallback_(pa_stream *p, void *userdata);
     static void StreamMovedCallback_(pa_stream *p, void *userdata);
     static void StreamStateCallback_(pa_stream *p, void *userdata);
-#if 1
+#if 0
     static void StreamLatencyCallback_(pa_stream *p, void *userdata);
 #endif // 0
 };

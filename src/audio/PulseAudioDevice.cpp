@@ -78,7 +78,7 @@ void PulseAudioDevice::start()
     pa_stream_set_overflow_callback(stream_, &PulseAudioDevice::StreamOverflowCallback_, this);
     pa_stream_set_moved_callback(stream_, &PulseAudioDevice::StreamMovedCallback_, this);
     pa_stream_set_state_callback(stream_, &PulseAudioDevice::StreamStateCallback_, this);
-#if 1
+#if 0
     pa_stream_set_latency_update_callback(stream_, &PulseAudioDevice::StreamLatencyCallback_, this);
 #endif // 0
 
@@ -317,7 +317,7 @@ void PulseAudioDevice::StreamMovedCallback_(pa_stream *p, void *userdata)
     }
 }
 
-#if 1
+#if 0
 void PulseAudioDevice::StreamLatencyCallback_(pa_stream *p, void *userdata)
 {
     PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
