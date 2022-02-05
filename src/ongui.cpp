@@ -72,9 +72,19 @@ void MainFrame::OnToolsAudioUI(wxUpdateUIEvent& event)
 void MainFrame::OnToolsFilter(wxCommandEvent& event)
 {
     wxUnusedVar(event);
-    FilterDlg *dlg = new FilterDlg(NULL, m_RxRunning, &m_newMicInFilter, &m_newSpkOutFilter);
-    dlg->ShowModal();
-    delete dlg;
+    
+    if (m_filterDialog == nullptr)
+    {
+         m_filterDialog = new FilterDlg(NULL, m_RxRunning, &m_newMicInFilter, &m_newSpkOutFilter);
+    }
+    else
+    {
+        m_filterDialog->Iconize(false);
+        m_filterDialog->SetFocus();
+        m_filterDialog->Raise();
+    }
+    
+    m_filterDialog->Show();
 }
 
 //-------------------------------------------------------------------------
@@ -85,7 +95,10 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     wxUnusedVar(event);
     g_modal = true;
     //fprintf(stderr,"g_modal: %d\n", g_modal);
-    optionsDlg->Show();
+    optionsDlg->ShowModal();
+    
+    // Show/hide frequency box based on PSK Reporter status.
+    m_freqBox->Show(wxGetApp().m_psk_enable);
 }
 
 //-------------------------------------------------------------------------
@@ -229,13 +242,23 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
 {
     if(pConfig->DeleteAll())
     {
-        wxLogMessage(wxT("Config file/registry key successfully deleted.  Please restart FreeDV."));
-        wxConfigBase::DontCreateOnDemand();
+        wxLogMessage(wxT("Config file/registry key successfully deleted."));
+        
+        // Resets all configuration to defaults.
+        loadConfiguration_();
     }
     else
     {
         wxLogError(wxT("Deleting config file/registry key failed."));
     }
+}
+
+//-------------------------------------------------------------------------
+// OnDeleteConfigUI()
+//-------------------------------------------------------------------------
+void MainFrame::OnDeleteConfigUI( wxUpdateUIEvent& event )
+{
+    event.Enable(!m_RxRunning);
 }
 
 //-------------------------------------------------------------------------

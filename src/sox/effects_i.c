@@ -1,7 +1,7 @@
 /* Implements a libSoX internal interface for implementing effects.
  * All public functions & data are prefixed with lsx_ .
  *
- * Copyright (c) 2005-8 Chris Bagwell and SoX contributors
+ * Copyright (c) 2005-2012 Chris Bagwell and SoX contributors
  *
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by
@@ -137,69 +137,107 @@ void lsx_generate_wave_table(
 /*
  * lsx_parsesamples
  *
- * Parse a string for # of samples.  If string ends with a 's'
- * then the string is interpreted as a user calculated # of samples.
- * If string contains ':' or '.' or if it ends with a 't' then its
- * treated as an amount of time.  This is converted into seconds and
- * fraction of seconds and then use the sample rate to calculate
- * # of samples.
+ * Parse a string for # of samples.  The input consists of one or more
+ * parts, with '+' or '-' between them indicating if the sample count
+ * should be added to or subtracted from the previous value.
+ * If a part ends with a 's' then it is interpreted as a
+ * user-calculated # of samples.
+ * If a part contains ':' or '.' but no 'e' or if it ends with a 't'
+ * then it is treated as an amount of time.  This is converted into
+ * seconds and fraction of seconds, then the sample rate is used to
+ * calculate # of samples.
+ * Parameter def specifies which interpretation should be the default
+ * for a bare number like "123".  It can either be 't' or 's'.
  * Returns NULL on error, pointer to next char to parse otherwise.
  */
+static char const * parsesamples(sox_rate_t rate, const char *str0, uint64_t *samples, int def, int combine);
+
 char const * lsx_parsesamples(sox_rate_t rate, const char *str0, uint64_t *samples, int def)
 {
-  int i, found_samples = 0, found_time = 0;
-  char const * end;
-  char const * pos;
-  sox_bool found_colon, found_dot;
+  *samples = 0;
+  return parsesamples(rate, str0, samples, def, '+');
+}
+
+static char const * parsesamples(sox_rate_t rate, const char *str0, uint64_t *samples, int def, int combine)
+{
   char * str = (char *)str0;
 
-  for (;*str == ' '; ++str);
-  for (end = str; *end && strchr("0123456789:.ets", *end); ++end);
-  if (end == str)
-    return NULL;
+  do {
+    uint64_t samples_part;
+    sox_bool found_samples = sox_false, found_time = sox_false;
+    char const * end;
+    char const * pos;
+    sox_bool found_colon, found_dot, found_e;
 
-  pos = strchr(str, ':');
-  found_colon = pos && pos < end;
+    for (;*str == ' '; ++str);
+    for (end = str; *end && strchr("0123456789:.ets", *end); ++end);
+    if (end == str)
+      return NULL; /* error: empty input */
 
-  pos = strchr(str, '.');
-  found_dot = pos && pos < end;
+    pos = strchr(str, ':');
+    found_colon = pos && pos < end;
 
-  if (found_colon || found_dot || *(end-1) == 't')
-    found_time = 1;
-  else if (*(end-1) == 's')
-    found_samples = 1;
+    pos = strchr(str, '.');
+    found_dot = pos && pos < end;
 
-  if (found_time || (def == 't' && !found_samples)) {
-    for (*samples = 0, i = 0; *str != '.' && i < 3; ++i) {
-      char * last_str = str;
-      long part = strtol(str, &str, 10);
-      if (!i && str == last_str)
-        return NULL;
-      *samples += rate * part;
-      if (i < 2) {
-        if (*str != ':')
-          break;
-        ++str;
-        *samples *= 60;
+    pos = strchr(str, 'e');
+    found_e = pos && pos < end;
+
+    if (found_colon || (found_dot && !found_e) || *(end-1) == 't')
+      found_time = sox_true;
+    else if (*(end-1) == 's')
+      found_samples = sox_true;
+
+    if (found_time || (def == 't' && !found_samples)) {
+      int i;
+      if (found_e)
+        return NULL; /* error: e notation in time */
+
+      for (samples_part = 0, i = 0; *str != '.' && i < 3; ++i) {
+        char * last_str = str;
+        long part = strtol(str, &str, 10);
+        if (!i && str == last_str)
+          return NULL; /* error: empty first component */
+        samples_part += rate * part;
+        if (i < 2) {
+          if (*str != ':')
+            break;
+          ++str;
+          samples_part *= 60;
+        }
       }
-    }
-    if (*str == '.') {
+      if (*str == '.') {
+        char * last_str = str;
+        double part = strtod(str, &str);
+        if (str == last_str)
+          return NULL; /* error: empty fractional part */
+        samples_part += rate * part + .5;
+      }
+      if (*str == 't')
+        str++;
+    } else {
       char * last_str = str;
       double part = strtod(str, &str);
       if (str == last_str)
-        return NULL;
-      *samples += rate * part + .5;
+        return NULL; /* error: no sample count */
+      samples_part = part + .5;
+      if (*str == 's')
+        str++;
     }
-    return *str == 't'? str + 1 : str;
-  }
-  {
-    char * last_str = str;
-    double part = strtod(str, &str);
-    if (str == last_str)
-      return NULL;
-    *samples = part + .5;
-    return *str == 's'? str + 1 : str;
-  }
+    if (str != end)
+      return NULL; /* error: trailing characters */
+
+    switch (combine) {
+      case '+': *samples += samples_part; break;
+      case '-': *samples = samples_part <= *samples ?
+                           *samples - samples_part : 0;
+        break;
+    }
+    combine = '\0';
+    if (*str && strchr("+-", *str))
+      combine = *str++;
+  } while (combine);
+  return str;
 }
 
 #if 0
@@ -244,7 +282,7 @@ int main(int argc, char * * argv)
   TEST("1.1t,", 11000, 4)
   TEST("1.1t/", 11000, 4)
   TEST("1.1t@", 11000, 4)
-  TEST("1e6t" , 10000, 1)
+  assert(!lsx_parsesamples(10000, "1e6t", &samples, 't'));
 
   TEST(".0", 0, 2)
   TEST("0.0", 0, 3)
@@ -267,9 +305,79 @@ int main(int argc, char * * argv)
   TEST("0.555555", 5556, 8)
 
   assert(!lsx_parsesamples(10000, "x", &samples, 't'));
+
+  TEST("1:23+37", 1200000, 7)
+  TEST("12t+12s",  120012, 7)
+  TEST("1e6s-10",  900000, 7)
+  TEST("10-2:00",       0, 7)
+  TEST("123-45+12s+2:00-3e3s@foo", 1977012, 20)
+
+  TEST("1\0" "2", 10000, 1)
+
   return 0;
 }
-#endif 
+#endif
+
+/*
+ * lsx_parseposition
+ *
+ * Parse a string for an audio position.  Similar to lsx_parsesamples
+ * above, but an initial '=', '+' or '-' indicates that the specified time
+ * is relative to the start of audio, last used position or end of audio,
+ * respectively.  Parameter def states which of these is the default.
+ * Parameters latest and end are the positions to which '+' and '-' relate;
+ * end may be SOX_UNKNOWN_LEN, in which case "-0" is the only valid
+ * end-relative input and will result in a position of SOX_UNKNOWN_LEN.
+ * Other parameters and return value are the same as for lsx_parsesamples.
+ *
+ * A test parse that only checks for valid syntax can be done by
+ * specifying samples = NULL.  If this passes, a later reparse of the same
+ * input will only fail if it is relative to the end ("-"), not "-0", and
+ * the end position is unknown.
+ */
+char const * lsx_parseposition(sox_rate_t rate, const char *str0, uint64_t *samples, uint64_t latest, uint64_t end, int def)
+{
+  char *str = (char *)str0;
+  char anchor, combine;
+
+  if (!strchr("+-=", def))
+    return NULL; /* error: invalid default anchor */
+  anchor = def;
+  if (*str && strchr("+-=", *str))
+    anchor = *str++;
+
+  combine = '+';
+  if (strchr("+-", anchor)) {
+    combine = anchor;
+    if (*str && strchr("+-", *str))
+      combine = *str++;
+  }
+
+  if (!samples) {
+    /* dummy parse, syntax checking only */
+    uint64_t dummy = 0;
+    return parsesamples(0., str, &dummy, 't', '+');
+  }
+
+  switch (anchor) {
+    case '=': *samples = 0; break;
+    case '+': *samples = latest; break;
+    case '-': *samples = end; break;
+  }
+
+  if (anchor == '-' && end == SOX_UNKNOWN_LEN) {
+    /* "-0" only valid input here */
+    char const *l;
+    for (l = str; *l && strchr("0123456789:.ets+-", *l); ++l);
+    if (l == str+1 && *str == '0') {
+      /* *samples already set to SOX_UNKNOWN_LEN */
+      return l;
+    }
+    return NULL; /* error: end-relative position, but end unknown */
+  }
+
+  return parsesamples(rate, str, samples, 't', combine);
+}
 
 /* a note is given as an int,
  * 0   => 440 Hz = A
@@ -343,7 +451,7 @@ double lsx_parse_frequency_k(char const * text, char * * end_ptr, int key)
   return result < 0 ? -1 : result;
 }
 
-FILE * lsx_open_input_file(sox_effect_t * effp, char const * filename)
+FILE * lsx_open_input_file(sox_effect_t * effp, char const * filename, sox_bool text_mode)
 {
   FILE * file;
 
@@ -355,7 +463,7 @@ FILE * lsx_open_input_file(sox_effect_t * effp, char const * filename)
     effp->global_info->global_info->stdin_in_use_by = effp->handler.name;
     file = stdin;
   }
-  else if (!(file = fopen(filename, "r"))) {
+  else if (!(file = fopen(filename, text_mode ? "r" : "rb"))) {
     lsx_fail("couldn't open file %s: %s", filename, strerror(errno));
     return NULL;
   }
@@ -364,16 +472,12 @@ FILE * lsx_open_input_file(sox_effect_t * effp, char const * filename)
 
 int lsx_effects_init(void)
 {
-  #ifndef __FREEDV__
   init_fft_cache();
-  #endif
   return SOX_SUCCESS;
 }
 
 int lsx_effects_quit(void)
 {
-  #ifndef __FREEDV__
   clear_fft_cache();
-  #endif
   return SOX_SUCCESS;
 }

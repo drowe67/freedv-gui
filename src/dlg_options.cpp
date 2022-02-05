@@ -761,7 +761,7 @@ void OptionsDlg::OnOK(wxCommandEvent& event)
     ExchangeData(EXCHANGE_DATA_OUT, true);
     //this->EndModal(wxID_OK);
     g_modal = false;
-    this->Show(false);
+    EndModal(wxOK);
 }
 
 //-------------------------------------------------------------------------
@@ -771,7 +771,7 @@ void OptionsDlg::OnCancel(wxCommandEvent& event)
 {
     //this->EndModal(wxID_CANCEL);
     g_modal = false;
-    this->Show(false);
+    EndModal(wxCANCEL);
 }
 
 //-------------------------------------------------------------------------

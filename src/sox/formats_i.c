@@ -51,7 +51,6 @@ void lsx_set_signal_defaults(sox_format_t * ft)
     ft->encoding.encoding = SOX_ENCODING_SIGN2;
 }
 
-#ifndef __FREEDV__
 int lsx_check_read_params(sox_format_t * ft, unsigned channels,
     sox_rate_t rate, sox_encoding_t encoding, unsigned bits_per_sample,
     uint64_t num_samples, sox_bool check_length)
@@ -90,7 +89,6 @@ int lsx_check_read_params(sox_format_t * ft, unsigned channels,
   lsx_fail_errno(ft, EINVAL, "invalid format for this file type");
   return SOX_EOF;
 }
-#endif
 
 /* Read in a buffer of data of length len bytes.
  * Returns number of bytes read.
@@ -140,10 +138,10 @@ size_t lsx_writebuf(sox_format_t * ft, void const * buf, size_t len)
   return ret;
 }
 
-uint64_t lsx_filelength(sox_format_t * ft)
+sox_uint64_t lsx_filelength(sox_format_t * ft)
 {
   struct stat st;
-  int ret = fstat(fileno((FILE*)ft->fp), &st);
+  int ret = ft->fp ? fstat(fileno((FILE*)ft->fp), &st) : 0;
 
   return (!ret && (st.st_mode & S_IFREG))? (uint64_t)st.st_size : 0;
 }
@@ -409,6 +407,66 @@ int lsx_readchars(sox_format_t * ft, char * chars, size_t len)
   if (!lsx_error(ft))
     lsx_fail_errno(ft, errno, premature_eof);
   return SOX_EOF;
+}
+
+int lsx_read_fields(sox_format_t *ft, uint32_t *len,  const char *spec, ...)
+{
+    int err = SOX_SUCCESS;
+    va_list ap;
+
+#define do_read(type, f, n) do {                                \
+        size_t nr;                                              \
+        if (*len < n * sizeof(type)) {                          \
+            err = SOX_EOF;                                      \
+            goto end;                                           \
+        }                                                       \
+        nr = lsx_read_##f##_buf(ft, va_arg(ap, type *), r);     \
+        if (nr != n)                                            \
+            err = SOX_EOF;                                      \
+        *len -= nr * sizeof(type);                              \
+    } while (0)
+
+    va_start(ap, spec);
+
+    while (*spec) {
+        unsigned long r = 1;
+        char c = *spec;
+
+        if (c >= '0' && c <= '9') {
+            char *next;
+            r = strtoul(spec, &next, 10);
+            spec = next;
+            c = *spec;
+        } else if (c == '*') {
+            r = va_arg(ap, int);
+            c = *++spec;
+        }
+
+        switch (c) {
+        case 'b': do_read(uint8_t, b, r);       break;
+        case 'h': do_read(uint16_t, w, r);      break;
+        case 'i': do_read(uint32_t, dw, r);     break;
+        case 'q': do_read(uint64_t, qw, r);     break;
+        case 'x': err = lsx_skipbytes(ft, r);   break;
+
+        default:
+            lsx_fail("lsx_read_fields: invalid format character '%c'", c);
+            err = SOX_EOF;
+            break;
+        }
+
+        if (err)
+            break;
+
+        spec++;
+    }
+
+end:
+    va_end(ap);
+
+#undef do_read
+
+    return err;
 }
 
 /* N.B. This macro doesn't work for unaligned types (e.g. 3-byte

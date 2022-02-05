@@ -145,6 +145,7 @@ extern int                 g_soundCard2SampleRate;
 #define DS_SYNC_WAIT_TIME 5.0
 
 class MainFrame;
+class FilterDlg;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainApp
@@ -250,6 +251,7 @@ class MainApp : public wxApp
         float               m_MicInMidGaindB;
         float               m_MicInMidQ;
         bool                m_MicInEQEnable;
+        float               m_MicInVolInDB;
 
         // Spk Out Equaliser
         float               m_SpkOutBassFreqHz;
@@ -260,18 +262,7 @@ class MainApp : public wxApp
         float               m_SpkOutMidGaindB;
         float               m_SpkOutMidQ;
         bool                m_SpkOutEQEnable;
-
-        // Flags for displaying windows
-        int                 m_show_wf;
-        int                 m_show_spect;
-        int                 m_show_scatter;
-        int                 m_show_timing;
-        int                 m_show_freq;
-        int                 m_show_speech_in;
-        int                 m_show_speech_out;
-        int                 m_show_demod_in;
-        int                 m_show_test_frame_errors;
-        int                 m_show_test_frame_errors_hist;
+        float               m_SpkOutVolInDB;
 
         // optional vox trigger tone
         bool                m_leftChannelVoxTone;
@@ -374,9 +365,11 @@ typedef struct paCallBackData
         , sbqMicInBass(nullptr)
         , sbqMicInTreble(nullptr)
         , sbqMicInMid(nullptr)
+        , sbqMicInVol(nullptr)
         , sbqSpkOutBass(nullptr)
         , sbqSpkOutTreble(nullptr)
         , sbqSpkOutMid(nullptr)
+        , sbqSpkOutVol(nullptr)
         , micInEQEnable(false)
         , spkOutEQEnable(false)
         , leftChannelVoxTone(false)
@@ -411,9 +404,11 @@ typedef struct paCallBackData
     void           *sbqMicInBass;
     void           *sbqMicInTreble;
     void           *sbqMicInMid;
+    void           *sbqMicInVol;
     void           *sbqSpkOutBass;
     void           *sbqSpkOutTreble;
     void           *sbqSpkOutMid;
+    void           *sbqSpkOutVol;
 
     bool            micInEQEnable;
     bool            spkOutEQEnable;
@@ -476,6 +471,7 @@ class MainFrame : public TopFrame
         MainFrame(wxWindow *parent);
         virtual ~MainFrame();
 
+        FilterDlg*              m_filterDialog;
         PlotSpectrum*           m_panelSpectrum;
         PlotWaterfall*          m_panelWaterfall;
         PlotScatter*            m_panelScatter;
@@ -592,6 +588,7 @@ class MainFrame : public TopFrame
         void OnSize( wxSizeEvent& event );
         void OnUpdateUI( wxUpdateUIEvent& event );
         void OnDeleteConfig(wxCommandEvent&);
+        void OnDeleteConfigUI( wxUpdateUIEvent& event );
 #ifdef _USE_TIMER
         void OnTimer(wxTimerEvent &evt);
 #endif
@@ -649,6 +646,9 @@ class MainFrame : public TopFrame
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
+        
+    private:
+        void loadConfiguration_();
 };
 
 void txProcessing();
