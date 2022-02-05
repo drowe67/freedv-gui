@@ -268,18 +268,6 @@ class MainApp : public wxApp
         bool                m_SpkOutEQEnable;
         float               m_SpkOutVolInDB;
 
-        // Flags for displaying windows
-        int                 m_show_wf;
-        int                 m_show_spect;
-        int                 m_show_scatter;
-        int                 m_show_timing;
-        int                 m_show_freq;
-        int                 m_show_speech_in;
-        int                 m_show_speech_out;
-        int                 m_show_demod_in;
-        int                 m_show_test_frame_errors;
-        int                 m_show_test_frame_errors_hist;
-
         // optional vox trigger tone
         bool                m_leftChannelVoxTone;
 
@@ -644,6 +632,7 @@ class MainFrame : public TopFrame
         void OnSize( wxSizeEvent& event );
         void OnUpdateUI( wxUpdateUIEvent& event );
         void OnDeleteConfig(wxCommandEvent&);
+        void OnDeleteConfigUI( wxUpdateUIEvent& event );
 #ifdef _USE_TIMER
         void OnTimer(wxTimerEvent &evt);
 #endif
@@ -696,6 +685,9 @@ class MainFrame : public TopFrame
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
+        
+    private:
+        void loadConfiguration_();
 };
 
 void txRxProcessing();
