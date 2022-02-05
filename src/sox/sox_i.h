@@ -2,7 +2,7 @@
  *
  *   This file is meant for libSoX internal use only
  *
- * Copyright 2001-2008 Chris Bagwell and SoX Contributors
+ * Copyright 2001-2012 Chris Bagwell and SoX Contributors
  *
  * This source code is freely redistributable and may be used for
  * any purpose.  This copyright notice must be maintained.
@@ -15,8 +15,6 @@
 
 #include "soxomp.h"  /* Note: soxomp.h includes soxconfig.h */
 #include "sox.h"
-
-#define __FREEDV__
 
 #if defined HAVE_FMEMOPEN
 #define _GNU_SOURCE
@@ -76,10 +74,11 @@ void lsx_generate_wave_table(
     double max,         /* Maximum value on the y-axis. (e.g. +1) */
     double phase);      /* Phase at 1st point; 0..2pi. (e.g. pi/2 for cosine) */
 char const * lsx_parsesamples(sox_rate_t rate, const char *str, uint64_t *samples, int def);
+char const * lsx_parseposition(sox_rate_t rate, const char *str, uint64_t *samples, uint64_t latest, uint64_t end, int def);
 int lsx_parse_note(char const * text, char * * end_ptr);
 double lsx_parse_frequency_k(char const * text, char * * end_ptr, int key);
 #define lsx_parse_frequency(a, b) lsx_parse_frequency_k(a, b, INT_MAX)
-FILE * lsx_open_input_file(sox_effect_t * effp, char const * filename);
+FILE * lsx_open_input_file(sox_effect_t * effp, char const * filename, sox_bool text_mode);
 
 void lsx_prepare_spline3(double const * x, double const * y, int n,
     double start_1d, double end_1d, double * y_2d);
@@ -90,6 +89,7 @@ double lsx_bessel_I_0(double x);
 int lsx_set_dft_length(int num_taps);
 void init_fft_cache(void);
 void clear_fft_cache(void);
+#define lsx_is_power_of_2(x) !(x < 2 || (x & (x - 1)))
 void lsx_safe_rdft(int len, int type, double * d);
 void lsx_safe_cdft(int len, int type, double * d);
 void lsx_power_spectrum(int n, double const * in, double * out);
@@ -100,27 +100,27 @@ void lsx_apply_hamming(double h[], const int num_points);
 void lsx_apply_bartlett(double h[], const int num_points);
 void lsx_apply_blackman(double h[], const int num_points, double alpha);
 void lsx_apply_blackman_nutall(double h[], const int num_points);
-double lsx_kaiser_beta(double att);
+double lsx_kaiser_beta(double att, double tr_bw);
 void lsx_apply_kaiser(double h[], const int num_points, double beta);
-double * lsx_make_lpf(int num_taps, double Fc, double beta, double scale, sox_bool dc_norm);
-int lsx_lpf_num_taps(double att, double tr_bw, int k);
+void lsx_apply_dolph(double h[], const int num_points, double att);
+double * lsx_make_lpf(int num_taps, double Fc, double beta, double rho,
+    double scale, sox_bool dc_norm);
+void lsx_kaiser_params(double att, double Fc, double tr_bw, double * beta, int * num_taps);
 double * lsx_design_lpf(
-    double Fp,      /* End of pass-band; ~= 0.01dB point */
-    double Fc,      /* Start of stop-band */
-    double Fn,      /* Nyquist freq; e.g. 0.5, 1, PI */
-    sox_bool allow_aliasing,
+    double Fp,      /* End of pass-band */
+    double Fs,      /* Start of stop-band */
+    double Fn,      /* Nyquist freq; e.g. 0.5, 1, PI; < 0: dummy run */
     double att,     /* Stop-band attenuation in dB */
-    int * num_taps, /* (Single phase.)  0: value will be estimated */
-    int k);         /* Number of phases; 0 for single-phase */
+    int * num_taps, /* 0: value will be estimated */
+    int k,          /* >0: number of phases; <0: num_taps ≡ 1 (mod -k) */
+    double beta);   /* <0: value will be estimated */
 void lsx_fir_to_phase(double * * h, int * len,
     int * post_len, double phase0);
-#define LSX_TO_6dB .5869
-#define LSX_TO_3dB ((2/3.) * (.5 + LSX_TO_6dB))
-#define LSX_MAX_TBW0 36.
-#define LSX_MAX_TBW0A (LSX_MAX_TBW0 / (1 + LSX_TO_3dB))
-#define LSX_MAX_TBW3 floor(LSX_MAX_TBW0 * LSX_TO_3dB)
-#define LSX_MAX_TBW3A floor(LSX_MAX_TBW0A * LSX_TO_3dB)
 void lsx_plot_fir(double * h, int num_points, sox_rate_t rate, sox_plot_t type, char const * title, double y1, double y2);
+void lsx_save_samples(sox_sample_t * const dest, double const * const src,
+    size_t const n, sox_uint64_t * const clips);
+void lsx_load_samples(double * const dest, sox_sample_t const * const src,
+    size_t const n);
 
 #ifdef HAVE_BYTESWAP_H
 #include <byteswap.h>
@@ -183,6 +183,8 @@ UNUSED static int lsx_readsw(sox_format_t * ft, int16_t * sw)
 #define lsx_readsw(ft, sw) lsx_readb(ft, (uint16_t *)sw)
 #endif
 
+int lsx_read_fields(sox_format_t *ft, uint32_t *len,  const char *spec, ...);
+
 int lsx_write3(sox_format_t * ft, unsigned u3);
 int lsx_writeb(sox_format_t * ft, unsigned ub);
 int lsx_writedf(sox_format_t * ft, double d);
@@ -199,7 +201,7 @@ int lsx_error(sox_format_t * ft);
 int lsx_flush(sox_format_t * ft);
 int lsx_seeki(sox_format_t * ft, off_t offset, int whence);
 int lsx_unreadb(sox_format_t * ft, unsigned ub);
-uint64_t lsx_filelength(sox_format_t * ft);
+/* uint64_t lsx_filelength(sox_format_t * ft); Temporarily Moved to sox.h. */
 off_t lsx_tell(sox_format_t * ft);
 void lsx_clearerr(sox_format_t * ft);
 void lsx_rewind(sox_format_t * ft);
@@ -281,16 +283,17 @@ char * lsx_usage_lines(char * * usage, char const * const * lines, size_t n);
   } \
 }
 
-#define GETOPT_NUMERIC(state, ch, name, min, max) case ch:{ \
+#define GETOPT_LOCAL_NUMERIC(state, ch, name, min, max) case ch:{ \
   char * end_ptr; \
   double d = strtod(state.arg, &end_ptr); \
   if (end_ptr == state.arg || d < min || d > max || *end_ptr != '\0') {\
     lsx_fail("parameter `%s' must be between %g and %g", #name, (double)min, (double)max); \
     return lsx_usage(effp); \
   } \
-  p->name = d; \
+  name = d; \
   break; \
 }
+#define GETOPT_NUMERIC(state, ch, name, min, max) GETOPT_LOCAL_NUMERIC(state, ch, p->name, min, max)
 
 int lsx_effect_set_imin(sox_effect_t * effp, size_t imin);
 
@@ -299,11 +302,7 @@ int lsx_effects_quit(void);
 
 /*--------------------------------- Dynamic Library ----------------------------------*/
 
-#if defined(HAVE_WIN32_LTDL_H)
-    #include "win32-ltdl.h"
-    #define HAVE_LIBLTDL 1
-    typedef lt_dlhandle lsx_dlhandle;
-#elif defined(HAVE_LIBLTDL)
+#if defined(HAVE_LIBLTDL)
     #include <ltdl.h>
     typedef lt_dlhandle lsx_dlhandle;
 #else

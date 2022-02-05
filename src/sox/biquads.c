@@ -16,7 +16,7 @@
  *
  *
  * 2-pole filters designed by Robert Bristow-Johnson <rbj@audioimagination.com>
- *   see http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt
+ *   see https://webaudio.github.io/Audio-EQ-Cookbook/audio-eq-cookbook.html
  *
  * 1-pole filters based on code (c) 2000 Chris Bagwell <cbagwell@sprynet.com>
  *   Algorithms: Recursive single pole low/high pass filter
@@ -131,10 +131,6 @@ static int band_getopts(sox_effect_t * effp, int argc, char **argv) {
 
 
 static int deemph_getopts(sox_effect_t * effp, int argc, char **argv) {
-  priv_t * p = (priv_t *)effp->priv;
-  p->fc    = 5283;
-  p->width = 0.4845;
-  p->gain  = -9.477;
   return lsx_biquad_getopts(effp, argc, argv, 0, 0, 0, 1, 2, "s", filter_deemph);
 }
 
@@ -162,9 +158,28 @@ static void make_poly_from_roots(
 static int start(sox_effect_t * effp)
 {
   priv_t * p = (priv_t *)effp->priv;
-  double w0 = 2 * M_PI * p->fc / effp->in_signal.rate;
-  double A  = exp(p->gain / 40 * log(10.));
-  double alpha = 0, mult = dB_to_linear(max(p->gain, 0));
+  double w0, A, alpha, mult;
+
+  if (p->filter_type == filter_deemph) { /* See deemph.plt for documentation */
+    if (effp->in_signal.rate == 44100) {
+      p->fc    = 5283;
+      p->width = 0.4845;
+      p->gain  = -9.477;
+    }
+    else if (effp->in_signal.rate == 48000) {
+      p->fc    = 5356;
+      p->width = 0.479;
+      p->gain  = -9.62;
+    }
+    else {
+      lsx_fail("sample rate must be 44100 (audio-CD) or 48000 (DAT)");
+      return SOX_EOF;
+    }
+  }
+
+  w0 = 2 * M_PI * p->fc / effp->in_signal.rate;
+  A  = exp(p->gain / 40 * log(10.));
+  alpha = 0, mult = dB_to_linear(max(p->gain, 0));
 
   if (w0 > M_PI) {
     lsx_fail("frequency must be less than half the sample-rate (Nyquist rate)");
@@ -275,12 +290,7 @@ static int start(sox_effect_t * effp)
       p->a2 =        (A+1) + (A-1)*cos(w0) - 2*sqrt(A)*alpha;
       break;
 
-    case filter_deemph:  /* See deemph.plt for documentation */
-      if (effp->in_signal.rate != 44100) {
-        lsx_fail("Sample rate must be 44100 (audio-CD)");
-        return SOX_EOF;
-      }
-      /* Falls through... */
+    case filter_deemph: /* Falls through to high-shelf... */
 
     case filter_highShelf: /* H(s) = A * (A*s^2 + (sqrt(A)/Q)*s + 1)/(s^2 + (sqrt(A)/Q)*s + A) */
       if (!A)
@@ -355,8 +365,14 @@ static int start(sox_effect_t * effp)
         make_poly_from_roots(zeros, (size_t)2, &p->b0);
         make_poly_from_roots(poles, (size_t)2, &p->a0);
       }
+      else if (effp->in_signal.rate == 192000) {
+        static const double zeros[] = {-0.1040610965, 0.9837523263};
+        static const double poles[] = {0.9328992971, 0.9983633125};
+        make_poly_from_roots(zeros, (size_t)2, &p->b0);
+        make_poly_from_roots(poles, (size_t)2, &p->a0);
+      }
       else {
-        lsx_fail("Sample rate must be 44.1k, 48k, 88.2k, or 96k");
+        lsx_fail("Sample rate must be 44.1k, 48k, 88.2k, 96k, or 192k");
         return SOX_EOF;
       }
       { /* Normalise to 0dB at 1kHz (Thanks to Glenn Davis) */

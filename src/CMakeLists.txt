@@ -36,12 +36,17 @@ set(FREEDV_SOURCES
     sox/effects.c
     sox/effects.h
     sox/effects_i.c
+    sox/effects_i_dsp.c
+    sox/fft4g.c
+    sox/formats.c
     sox/formats_i.c
     sox/libsox.c
     sox/sox.h
     sox/sox_i.h
     sox/soxomp.h
+    sox/util.c
     sox/util.h
+    sox/vol.c
     sox/xmalloc.h
     sox/xmalloc.c
     topFrame.h

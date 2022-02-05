@@ -372,6 +372,7 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_MicInMidFreqHz = (float)pConfig->Read(wxT("/Filter/MicInMidFreqHz"),    1);
     wxGetApp().m_MicInMidGaindB = (float)pConfig->Read(wxT("/Filter/MicInMidGaindB"),    (long)0)/10.0;
     wxGetApp().m_MicInMidQ = (float)pConfig->Read(wxT("/Filter/MicInMidQ"),              (long)100)/100.0;
+    wxGetApp().m_MicInVolInDB = (float)pConfig->Read(wxT("/Filter/MicInVolInDB"),    (long)0)/10.0;
 
     bool f = false;
     wxGetApp().m_MicInEQEnable = (float)pConfig->Read(wxT("/Filter/MicInEQEnable"), f);
@@ -383,6 +384,7 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_SpkOutMidFreqHz = (float)pConfig->Read(wxT("/Filter/SpkOutMidFreqHz"),    1);
     wxGetApp().m_SpkOutMidGaindB = (float)pConfig->Read(wxT("/Filter/SpkOutMidGaindB"),    (long)0)/10.0;
     wxGetApp().m_SpkOutMidQ = (float)pConfig->Read(wxT("/Filter/SpkOutMidQ"),                (long)100)/100.0;
+    wxGetApp().m_SpkOutVolInDB = (float)pConfig->Read(wxT("/Filter/SpkOutVolInDB"),    (long)0)/10.0;
 
     wxGetApp().m_SpkOutEQEnable = (float)pConfig->Read(wxT("/Filter/SpkOutEQEnable"), f);
 
@@ -650,6 +652,11 @@ MainFrame::~MainFrame()
     int w;
     int h;
 
+    if (m_filterDialog != nullptr)
+    {
+        m_filterDialog->Close();
+    }
+    
     //fprintf(stderr, "MainFrame::~MainFrame()\n");
     #ifdef FTEST
     fclose(ftest);
@@ -2645,6 +2652,7 @@ void txRxProcessing()
             sox_biquad_filter(cbData->sbqSpkOutBass,   outfreedv, outfreedv, speechOutbufferSize);
             sox_biquad_filter(cbData->sbqSpkOutTreble, outfreedv, outfreedv, speechOutbufferSize);
             sox_biquad_filter(cbData->sbqSpkOutMid,    outfreedv, outfreedv, speechOutbufferSize);
+            if (cbData->sbqSpkOutVol) sox_biquad_filter(cbData->sbqSpkOutVol,    outfreedv, outfreedv, speechOutbufferSize);
         }
         g_mutexProtectingCallbackData.Unlock();
 
@@ -2749,6 +2757,7 @@ void txRxProcessing()
                 sox_biquad_filter(cbData->sbqMicInBass, infreedv, infreedv, nout);
                 sox_biquad_filter(cbData->sbqMicInTreble, infreedv, infreedv, nout);
                 sox_biquad_filter(cbData->sbqMicInMid, infreedv, infreedv, nout);
+                if (cbData->sbqMicInVol) sox_biquad_filter(cbData->sbqMicInVol, infreedv, infreedv, nout);
             }
             g_mutexProtectingCallbackData.Unlock();
 
