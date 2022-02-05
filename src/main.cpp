@@ -459,6 +459,8 @@ void MainFrame::loadConfiguration_()
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
 {
+    m_filterDialog = nullptr;
+
     m_zoom              = 1.;
 
     #ifdef __WXMSW__
