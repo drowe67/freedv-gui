@@ -133,7 +133,6 @@ class OptionsDlg : public wxDialog
         wxStaticText  *m_textFifos;
         wxStaticText  *m_textPA1;
         wxStaticText  *m_textPA2;
-        wxTextCtrl    *m_txtCtrlframesPerBuffer;
         wxTextCtrl    *m_txtCtrlFifoSize;
         wxCheckBox    *m_ckboxTxRxThreadPriority;
         wxCheckBox    *m_ckboxTxRxDumpTiming;

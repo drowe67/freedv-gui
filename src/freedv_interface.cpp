@@ -21,6 +21,7 @@
 
 #include <future>
 #include "main.h"
+#include "codec2_fdmdv.h"
 
 FreeDVInterface::FreeDVInterface() :
     textRxFunc_(nullptr),

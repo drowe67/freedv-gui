@@ -4,7 +4,6 @@ set(FREEDV_SOURCES
     dlg_options.cpp
     dlg_ptt.cpp
     main.cpp
-    pa_wrapper.cpp
     plot.cpp
     plot_scalar.cpp
     plot_scatter.cpp
@@ -21,7 +20,6 @@ set(FREEDV_SOURCES
     dlg_ptt.h
     defines.h
     main.h
-    pa_wrapper.h
     plot.h
     plot_scalar.h
     plot_scatter.h
@@ -72,6 +70,9 @@ set(FREEDV_LINK_LIBS_OSX
     "-framework AVFoundation"
 )
 
+# Compile FreeDV components
+add_subdirectory(audio)
+
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.
 # In addition, there are some required OSX-specific code files for platform specific handling.
 if(APPLE)
@@ -95,9 +96,9 @@ endif(APPLE)
 
 # Link imported or build tree targets.
 if(APPLE)
-target_link_libraries(FreeDV codec2 lpcnetfreedv)
+target_link_libraries(FreeDV codec2 lpcnetfreedv fdv_audio)
 else(APPLE)
-target_link_libraries(freedv codec2 lpcnetfreedv)
+target_link_libraries(freedv codec2 lpcnetfreedv fdv_audio)
 endif(APPLE)
 
 # Add build dependencies for interally built external libraries.
@@ -148,7 +149,7 @@ if(APPLE)
     add_custom_command(
         TARGET FreeDV
         POST_BUILD
-        COMMAND rm -rf dist_tmp || true
+        COMMAND rm -rf dist_tmp FreeDV.dmg || true
         COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${LPCNET_BUILD_DIR}/src:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib -s ${LPCNET_BUILD_DIR}/src -s ${CODEC2_BUILD_DIR}/src 
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/freedv.icns FreeDV.app/Contents/Resources
         COMMAND mkdir dist_tmp

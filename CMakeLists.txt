@@ -48,14 +48,11 @@ message(STATUS "Compilation date = XX${DATE_RESULT}XX")
 # Set FreeDV version and generate src/version.h
 #
 set(FREEDV_VERSION_MAJOR 1)
-set(FREEDV_VERSION_MINOR 6)
-set(FREEDV_VERSION_PATCH 1)
+set(FREEDV_VERSION_MINOR 7)
+set(FREEDV_VERSION_PATCH 0)
 set(FREEDV_VERSION_SUFFIX "")
 
-set(FREEDV_VERSION ${FREEDV_VERSION_MAJOR}.${FREEDV_VERSION_MINOR})
-if(FREEDV_VERSION_PATCH)
-    set(FREEDV_VERSION ${FREEDV_VERSION}.${FREEDV_VERSION_PATCH})
-endif()
+set(FREEDV_VERSION ${FREEDV_VERSION_MAJOR}.${FREEDV_VERSION_MINOR}.${FREEDV_VERSION_PATCH})
 if(FREEDV_VERSION_SUFFIX)
     set(FREEDV_VERSION_STRING "${FREEDV_VERSION} ${FREEDV_VERSION_SUFFIX}")
 else()
@@ -122,6 +119,8 @@ set(USE_STATIC_SPEEXDSP FALSE CACHE BOOL
     "Download and build static speex instead of the system library.")
 set(BOOTSTRAP_WXWIDGETS FALSE CACHE BOOL
     "Download and build static wxWidgets instead of the system library.")
+set(USE_PULSEAUDIO FALSE CACHE BOOL
+    "Use PulseAudio instead of PortAudio for audio I/O.")
 
 if(USE_STATIC_DEPS)
     set(USE_STATIC_PORTAUDIO TRUE FORCE)
@@ -284,9 +283,9 @@ endif(CODEC2_BUILD_DIR)
 
 
 #
-# Find or build portaudio Library
+# Find or build portaudio/PulseAudio Library
 #
-if(NOT USE_STATIC_PORTAUDIO)
+if(NOT USE_STATIC_PORTAUDIO AND NOT USE_PULSEAUDIO)
     message(STATUS "Looking for portaudio...")
     find_package(portaudio-2.0 REQUIRED)
     if(PORTAUDIO_FOUND)
@@ -309,10 +308,26 @@ On Windows it's easiest to use the cmake option: USE_STATIC_PORTAUDIO"
     if(NOT ${PORTAUDIO_VERSION} EQUAL 19 AND NOT MINGW)
         message(WARNING "Portaudio versions other than 19 are known to have issues. You have been warned!")
     endif()
-else(NOT USE_STATIC_PORTAUDIO)
+elseif(USE_PULSEAUDIO)
+    message(STATUS "Finding PulseAudio...")
+    find_package(PulseAudio REQUIRED)
+    if(PULSEAUDIO_FOUND)
+        message(STATUS "  PulseAudio library: ${PULSEAUDIO_LIBRARY}")
+        message(STATUS "  PulseAudio headers: ${PULSEAUDIO_INCLUDE_DIR}")
+        list(APPEND FREEDV_LINK_LIBS ${PULSEAUDIO_LIBRARY})
+        include_directories(${PULSEAUDIO_INCLUDE_DIR})
+        add_definitions(-DAUDIO_ENGINE_PULSEAUDIO_ENABLE)
+    else()
+        message(FATAL_ERROR "PulseAudio library not found.
+On Linux systems try installing:
+    pulseaudio-libs-devel  (RPM based systems)
+    libpulse-dev           (DEB based systems)
+")
+     endif()
+else()
     message(STATUS "Will attempt static build of portaudio.")
     include(cmake/Buildportaudio-2.0.cmake)
-endif(NOT USE_STATIC_PORTAUDIO)
+endif()
 
 #
 # Hamlib library
@@ -563,7 +578,12 @@ elseif(UNIX AND NOT APPLE)
     # Linux packaging
     SET(CPACK_GENERATOR "DEB")
     SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Mooneer Salem <mooneer@gmail.com>") #required
-    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 0.9.2), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libportaudio2 (>= 19.6.0-1build1), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
+    if(USE_PULSEAUDIO)
+    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.0.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libpulse0 (>= 14.2-2), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
+    else(USE_PULSEAUDIO)
+    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.0.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libportaudio2 (>= 19.6.0-1build1), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
+    endif(USE_PULSEAUDIO)
+
     SET(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
     include(CPack)
 

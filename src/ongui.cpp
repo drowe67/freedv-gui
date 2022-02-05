@@ -210,7 +210,10 @@ bool MainFrame::OpenHamlibRig() {
 void MainFrame::OnCloseFrame(wxCloseEvent& event)
 {
     //fprintf(stderr, "MainFrame::OnCloseFrame()\n");
-    Pa_Terminate();
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->stop();
+    engine->setOnEngineError(nullptr, nullptr);
+    
     Destroy();
 }
 

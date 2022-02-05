@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
-# build_ubuntu.sh
+# build_linux.sh
 #
 # Build script for Ubuntu and Fedora Linux, git pulls codec2 and
 # lpcnet repos so they are available for parallel development.
 
 # Echo what you are doing, and fail if any of the steps fail:
 set -x -e
+
+# Allow building of either PulseAudio or PortAudio variants
+FREEDV_VARIANT=${1:-portaudio}
+if [[ "$FREEDV_VARIANT" != "portaudio" && "$FREEDV_VARIANT" != "pulseaudio" ]]; then
+    echo "Usage: build_linux.sh [portaudio|pulseaudio]"
+    exit -1
+fi
 
 export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
@@ -46,5 +53,8 @@ export LD_LIBRARY_PATH=$LPCNETDIR/build_linux/src
 # Finally, build freedv-gui
 cd $FREEDVGUIDIR && git pull
 mkdir  -p build_linux && cd build_linux && rm -Rf *
-cmake -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux -DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux ..
+if [[ "$FREEDV_VARIANT" == "pulseaudio" ]]; then
+    PULSEAUDIO_PARAM="-DUSE_PULSEAUDIO=1"
+fi
+cmake $PULSEAUDIO_PARAM -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux -DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux ..
 make VERBOSE=1

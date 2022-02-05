@@ -26,6 +26,8 @@
 #include "main.h"
 #include "osx_interface.h"
 #include "freedv_interface.h"
+#include "audio/AudioEngineFactory.h"
+#include "codec2_fdmdv.h"
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
@@ -99,11 +101,7 @@ struct FIFO        *g_plotSpeechInFifo;
 
 // Soundcard config
 int                 g_nSoundCards;
-int                 g_soundCard1InDeviceNum;
-int                 g_soundCard1OutDeviceNum;
 int                 g_soundCard1SampleRate;
-int                 g_soundCard2InDeviceNum;
-int                 g_soundCard2OutDeviceNum;
 int                 g_soundCard2SampleRate;
 
 // PortAudio over/underflow counters
@@ -112,10 +110,8 @@ int                 g_infifo1_full;
 int                 g_outfifo1_empty;
 int                 g_infifo2_full;
 int                 g_outfifo2_empty;
-int                 g_PAstatus1[4];
-int                 g_PAstatus2[4];
-int                 g_PAframesPerBuffer1;
-int                 g_PAframesPerBuffer2;
+int                 g_AEstatus1[4];
+int                 g_AEstatus2[4];
 
 // playing and recording from sound files
 
@@ -288,17 +284,12 @@ void MainFrame::loadConfiguration_()
     SetClientSize(w, h);
     SetSizeHints(size);
 
-    wxGetApp().m_framesPerBuffer = pConfig->Read(wxT("/Audio/framesPerBuffer"), (int)PA_FPB);
     wxGetApp().m_fifoSize_ms = pConfig->Read(wxT("/Audio/fifoSize_ms"), (int)FIFO_SIZE);
 
     wxGetApp().m_soundCard1InDeviceName = pConfig->Read(wxT("/Audio/soundCard1InDeviceName"), _("none"));
     wxGetApp().m_soundCard1OutDeviceName = pConfig->Read(wxT("/Audio/soundCard1OutDeviceName"), _("none"));
     wxGetApp().m_soundCard2InDeviceName = pConfig->Read(wxT("/Audio/soundCard2InDeviceName"), _("none"));	
     wxGetApp().m_soundCard2OutDeviceName = pConfig->Read(wxT("/Audio/soundCard2OutDeviceName"), _("none"));	
-    g_soundCard1InDeviceNum = -1;
-    g_soundCard1OutDeviceNum = -1;
-    g_soundCard2InDeviceNum = -1;
-    g_soundCard2OutDeviceNum = -1;
         
     g_txLevel = pConfig->Read(wxT("/Audio/transmitLevel"), (int)0);
     char fmt[15];
@@ -468,6 +459,8 @@ void MainFrame::loadConfiguration_()
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
 {
+    m_filterDialog = nullptr;
+
     m_zoom              = 1.;
 
     #ifdef __WXMSW__
@@ -565,6 +558,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
 #endif
 
     m_RxRunning = false;
+    m_txThread = nullptr;
+    m_rxThread = nullptr;
 
 #ifdef _USE_ONIDLE
     Connect(wxEVT_IDLE, wxIdleEventHandler(MainFrame::OnIdle), NULL, this);
@@ -691,7 +686,6 @@ MainFrame::~MainFrame()
     pConfig->Write(wxT("/Audio/SquelchActive"),         g_SquelchActive);
     pConfig->Write(wxT("/Audio/SquelchLevel"),          (int)(g_SquelchLevel*2.0));
 
-    pConfig->Write(wxT("/Audio/framesPerBuffer"),       wxGetApp().m_framesPerBuffer);
     pConfig->Write(wxT("/Audio/fifoSize_ms"),              wxGetApp().m_fifoSize_ms);
 
     pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
@@ -1103,7 +1097,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
         if (strlen(callsign) < MAX_CALLSIGN - 1)
         {
-            strcat(callsign, "\r");
+            strncat(callsign, "\r", 2);
         }     
      
         // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
@@ -1417,7 +1411,10 @@ void MainFrame::OnExit(wxCommandEvent& event)
     m_togBtnAnalog->Disable();
     //m_btnTogPTT->Disable();
 
-    Pa_Terminate();
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->stop();
+    engine->setOnEngineError(nullptr, nullptr);
+    
     Destroy();
 }
 
@@ -1835,39 +1832,60 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
     optionsDlg->setSessionActive(m_RxRunning);
 }
 
+static std::mutex stoppingMutex;
+
 //-------------------------------------------------------------------------
 // stopRxStream()
 //-------------------------------------------------------------------------
 void MainFrame::stopRxStream()
 {
+    std::unique_lock<std::mutex> lk(stoppingMutex);
+
     if(m_RxRunning)
     {
         m_RxRunning = false;
 
         //fprintf(stderr, "waiting for thread to stop\n");
-        m_txRxThread->m_run = 0;
-        m_txRxThread->Wait();
-        //fprintf(stderr, "thread stopped\n");
-        delete m_txRxThread;
+        if (m_txThread)
+        {
+            m_txThread->terminateThread();
+            m_txThread->Wait();
+            
+            if (txInSoundDevice)
+            {
+                txInSoundDevice->stop();
+                txInSoundDevice.reset();
+            }
+            
+            if (txOutSoundDevice)
+            {
+                txOutSoundDevice->stop();
+                txOutSoundDevice.reset();
+            }
+            
+            delete m_txThread;
+            m_txThread = nullptr;
+        }
 
-        m_rxInPa->stop();
-        m_rxInPa->streamClose();
-        delete m_rxInPa;
-        if(m_rxOutPa != m_rxInPa) {
-			m_rxOutPa->stop();
-			m_rxOutPa->streamClose();
-			delete m_rxOutPa;
-		}
-
-        if (g_nSoundCards == 2) {
-            m_txInPa->stop();
-            m_txInPa->streamClose();
-            delete m_txInPa;
-            if(m_txInPa != m_txOutPa) {
-				m_txOutPa->stop();
-				m_txOutPa->streamClose();
-				delete m_txOutPa;
-			}
+        if (m_rxThread)
+        {
+            m_rxThread->terminateThread();
+            m_rxThread->Wait();
+            
+            if (rxInSoundDevice)
+            {
+                rxInSoundDevice->stop();
+                rxInSoundDevice.reset();
+            }
+        
+            if (rxOutSoundDevice)
+            {
+                rxOutSoundDevice->stop();
+                rxOutSoundDevice.reset();
+            }
+            
+            delete m_txThread;
+            m_rxThread = nullptr;
         }
 
         destroy_fifos();
@@ -1879,7 +1897,9 @@ void MainFrame::stopRxStream()
         deleteEQFilters(g_rxUserdata);
         delete g_rxUserdata;
         
-        Pa_Terminate();
+        auto engine = AudioEngineFactory::GetAudioEngine();
+        engine->stop();
+        engine->setOnEngineError(nullptr, nullptr);
     }
 }
 
@@ -1887,8 +1907,8 @@ void MainFrame::destroy_fifos(void)
 {
     codec2_fifo_destroy(g_rxUserdata->infifo1);
     codec2_fifo_destroy(g_rxUserdata->outfifo1);
-    codec2_fifo_destroy(g_rxUserdata->infifo2);
-    codec2_fifo_destroy(g_rxUserdata->outfifo2);
+    if (g_rxUserdata->infifo2) codec2_fifo_destroy(g_rxUserdata->infifo2);
+    if (g_rxUserdata->outfifo2) codec2_fifo_destroy(g_rxUserdata->outfifo2);
     codec2_fifo_destroy(g_rxUserdata->rxinfifo);
     codec2_fifo_destroy(g_rxUserdata->rxoutfifo);
 }
@@ -1903,249 +1923,184 @@ void MainFrame::destroy_src(void)
     src_delete(g_rxUserdata->insrctxsf);
 }
 
-void  MainFrame::initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDevice,
-                                     int soundCard, int sampleRate, int inputChannels,
-                                     int outputChannels)
-{
-    // Note all of the wrapper functions below just set values in a
-    // portaudio struct so can't return any errors. So no need to trap
-    // any errors in this function.
-
-    // init input params
-
-    pa->setInputDevice(inDevice);
-    if(inDevice != paNoDevice) {
-        pa->setInputChannelCount(inputChannels);           // stereo input
-        pa->setInputSampleFormat(PA_SAMPLE_TYPE);
-        pa->setInputLatency(pa->getInputDefaultHighLatency());
-        //fprintf(stderr,"PA in; low: %f high: %f\n", pa->getInputDefaultLowLatency(), pa->getInputDefaultHighLatency());
-        pa->setInputHostApiStreamInfo(NULL);
-    }
-
-    pa->setOutputDevice(paNoDevice);
-
-    // init output params
-
-    pa->setOutputDevice(outDevice);
-    if(outDevice != paNoDevice) {
-        pa->setOutputChannelCount(outputChannels);                      // stereo output
-        pa->setOutputSampleFormat(PA_SAMPLE_TYPE);
-        pa->setOutputLatency(pa->getOutputDefaultHighLatency());
-        //fprintf(stderr,"PA out; low: %f high: %f\n", pa->getOutputDefaultLowLatency(), pa->getOutputDefaultHighLatency());
-        pa->setOutputHostApiStreamInfo(NULL);
-    }
-
-    // init params that affect input and output
-
-    /*
-      DR 2013:
-
-      On Linux, setting this to wxGetApp().m_framesPerBuffer caused
-      intermittant break up on the audio from my IC7200 on Ubuntu 14.
-      After a day of bug hunting I found that 0, as recommended by the
-      PortAudio documentation, fixed the problem.
-
-      DR 2018:
-
-      During 700D testing some break up in from radio audio, so made
-      this adjustable again.
-    */
-
-    pa->setFramesPerBuffer(wxGetApp().m_framesPerBuffer);
-
-    pa->setSampleRate(sampleRate);
-    pa->setStreamFlags(paClipOff);
-}
-
 //-------------------------------------------------------------------------
 // startRxStream()
 //-------------------------------------------------------------------------
 void MainFrame::startRxStream()
 {
     int   src_error;
-    const PaDeviceInfo *deviceInfo1a = NULL, *deviceInfo1b = NULL, *deviceInfo2a = NULL, *deviceInfo2b = NULL;
-    int   inputChannels1, outputChannels1, inputChannels2, outputChannels2;
-    bool  two_rx=false;
-    bool  two_tx=false;
 
     if (g_verbose) fprintf(stderr, "startRxStream .....\n");
     if(!m_RxRunning) {
         m_RxRunning = true;
-        if(Pa_Initialize())
+        
+        auto engine = AudioEngineFactory::GetAudioEngine();
+        engine->setOnEngineError([&](IAudioEngine&, std::string error, void* state) {
+            wxMessageBox(wxString::Format(
+                         "Error encountered while initializing the audio engine: %s.", 
+                         error), wxT("Error"), wxOK, this); 
+        }, nullptr);
+        engine->start();
+
+        if (g_nSoundCards == 0) 
         {
-            wxMessageBox(wxT("Port Audio failed to initialize"), wxT("Pa_Initialize"), wxOK);
-        }
-
-        m_rxInPa = new PortAudioWrap();
-        if(g_soundCard1InDeviceNum != g_soundCard1OutDeviceNum)
-            two_rx=true;
-        if(g_soundCard2InDeviceNum != g_soundCard2OutDeviceNum)
-            two_tx=true;
-
-        if (g_verbose) fprintf(stderr, "two_rx: %d two_tx: %d\n", two_rx, two_tx);
-        if(two_rx)
-            m_rxOutPa = new PortAudioWrap();
-        else
-            m_rxOutPa = m_rxInPa;
-
-        if (g_nSoundCards == 0) {
             wxMessageBox(wxT("No Sound Cards configured, use Tools - Audio Config to configure"), wxT("Error"), wxOK);
-            delete m_rxInPa;
-            if(two_rx)
-                delete m_rxOutPa;
+
             m_RxRunning = false;
-            Pa_Terminate();
-            return;
-        }
-
-        // Init Sound card 1 ----------------------------------------------
-        // sanity check on sound card device numbers
-
-        if ((m_rxInPa->getDeviceCount() <= g_soundCard1InDeviceNum) ||
-            (m_rxOutPa->getDeviceCount() <= g_soundCard1OutDeviceNum)) {
-            wxMessageBox(wxT("Sound Card 1 not present"), wxT("Error"), wxOK);
-            delete m_rxInPa;
-            if(two_rx)
-                delete m_rxOutPa;
-            m_RxRunning = false;
-            Pa_Terminate();
-            return;
-        }
-
-        // work out how many input channels this device supports.
-
-        deviceInfo1a = Pa_GetDeviceInfo(g_soundCard1InDeviceNum);
-        if (deviceInfo1a == NULL) {
-            wxMessageBox(wxT("Couldn't get input device info from Port Audio for Sound Card 1"), wxT("Error"), wxOK);
-            delete m_rxInPa;
-            if(two_rx)
-				delete m_rxOutPa;
-            m_RxRunning = false;
-            Pa_Terminate();
-            return;
-        }
-        if (deviceInfo1a->maxInputChannels == 1)
-            inputChannels1 = 1;
-        else
-            inputChannels1 = 2;
-
-        // Grab the info for the FreeDV->speaker device as well and ensure we're using
-        // the smallest number of common channels (1 or 2).
-        deviceInfo1b = Pa_GetDeviceInfo(g_soundCard1OutDeviceNum);
-        if (deviceInfo1b == NULL) {
-            wxMessageBox(wxT("Couldn't get output device info from Port Audio for Sound Card 1"), wxT("Error"), wxOK);
-            delete m_rxInPa;
-            if(two_rx)
-				delete m_rxOutPa;
-            m_RxRunning = false;
-            Pa_Terminate();
-            return;
-        }
-        if (deviceInfo1b->maxOutputChannels == 1)
-            outputChannels1 = 1;
-        else
-            outputChannels1 = 2;
-        
-        if(two_rx) {        
-            initPortAudioDevice(m_rxInPa, g_soundCard1InDeviceNum, paNoDevice, 1,
-                            g_soundCard1SampleRate, inputChannels1, inputChannels1);
-            initPortAudioDevice(m_rxOutPa, paNoDevice, g_soundCard1OutDeviceNum, 1,
-                            g_soundCard1SampleRate, outputChannels1, outputChannels1);
-		}
-        else
-        {                    
-            initPortAudioDevice(m_rxInPa, g_soundCard1InDeviceNum, g_soundCard1OutDeviceNum, 1,
-                            g_soundCard1SampleRate, inputChannels1, outputChannels1);
-        }
-        
-        // Init Sound Card 2 ------------------------------------------------
-
-        if (g_nSoundCards == 2) {
-
-            m_txInPa = new PortAudioWrap();
-            if(two_tx)
-                m_txOutPa = new PortAudioWrap();
-            else
-                m_txOutPa = m_txInPa;
-
-            // sanity check on sound card device numbers
-
-            //printf("m_txInPa->getDeviceCount(): %d\n", m_txInPa->getDeviceCount());
-            //printf("g_soundCard2InDeviceNum: %d\n", g_soundCard2InDeviceNum);
-            //printf("g_soundCard2OutDeviceNum: %d\n", g_soundCard2OutDeviceNum);
-
-            if ((m_txInPa->getDeviceCount() <= g_soundCard2InDeviceNum) ||
-                (m_txOutPa->getDeviceCount() <= g_soundCard2OutDeviceNum)) {
-                wxMessageBox(wxT("Sound Card 2 not present"), wxT("Error"), wxOK);
-                delete m_rxInPa;
-                if(two_rx)
-                    delete m_rxOutPa;
-                delete m_txInPa;
-                if(two_tx)
-                    delete m_txOutPa;
-                m_RxRunning = false;
-                Pa_Terminate();
-                return;
-            }
-
-            deviceInfo2a = Pa_GetDeviceInfo(g_soundCard2InDeviceNum);
-            if (deviceInfo2a == NULL) {
-                wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card 2"), wxT("Error"), wxOK);
-                delete m_rxInPa;
-                if(two_rx)
-					delete m_rxOutPa;
-                delete m_txInPa;
-                if(two_tx)
-					delete m_txOutPa;
-                m_RxRunning = false;
-                Pa_Terminate();
-                return;
-            }
-            if (deviceInfo2a->maxInputChannels == 1)
-                inputChannels2 = 1;
-            else
-                inputChannels2 = 2;
             
-            // Grab info for FreeDV->radio device.
-            deviceInfo2b = Pa_GetDeviceInfo(g_soundCard2OutDeviceNum);
-            if (deviceInfo2b == NULL) {
-                wxMessageBox(wxT("Couldn't get device info from Port Audio for Sound Card 2"), wxT("Error"), wxOK);
-                delete m_rxInPa;
-                if(two_rx)
-					delete m_rxOutPa;
-                delete m_txInPa;
-                if(two_tx)
-					delete m_txOutPa;
+            engine->stop();
+            engine->setOnEngineError(nullptr, nullptr);
+            
+            return;
+        }
+        else if (g_nSoundCards == 1)
+        {
+            // RX-only setup.
+            // Note: we assume 2 channels, but IAudioEngine will automatically downgrade to 1 channel if needed.
+            rxInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, g_soundCard1SampleRate, 2);
+            rxInSoundDevice->setDescription("Radio to FreeDV");
+            rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
+                pConfig->Flush();
+            }, nullptr);
+            
+            rxOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard1SampleRate, 2);
+            rxOutSoundDevice->setDescription("FreeDV to Speaker");
+            rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
+                pConfig->Flush();
+            }, nullptr);
+            
+            bool failed = false;
+            if (!rxInSoundDevice)
+            {
+                wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1InDeviceName), wxT("Error"), wxOK);
+                failed = true;
+            }
+            
+            if (!rxOutSoundDevice)
+            {
+                wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1OutDeviceName), wxT("Error"), wxOK);
+                failed = true;
+            }
+            
+            if (failed)
+            {
+                if (rxInSoundDevice)
+                {
+                    rxInSoundDevice.reset();
+                }
+                
+                if (rxOutSoundDevice)
+                {
+                    rxOutSoundDevice.reset();
+                }
+                
                 m_RxRunning = false;
-                Pa_Terminate();
+            
+                engine->stop();
+                engine->setOnEngineError(nullptr, nullptr);
+            
                 return;
             }
-            if (deviceInfo2b->maxOutputChannels == 1)
-                outputChannels2 = 1;
-            else
-                outputChannels2 = 2;
+        }
+        else
+        {
+            // RX + TX setup
+            // Same note as above re: number of channels.
+            rxInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, g_soundCard1SampleRate, 2);
+            rxInSoundDevice->setDescription("Radio to FreeDV");
+            rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
+                pConfig->Flush();
+            }, nullptr);
 
-            if(two_tx) {
-				initPortAudioDevice(m_txInPa, g_soundCard2InDeviceNum, paNoDevice, 2,
-                                g_soundCard2SampleRate, inputChannels2, inputChannels2);
-				initPortAudioDevice(m_txOutPa, paNoDevice, g_soundCard2OutDeviceNum, 2,
-                                g_soundCard2SampleRate, outputChannels2, outputChannels2);
-			}
-			else
-				initPortAudioDevice(m_txInPa, g_soundCard2InDeviceNum, g_soundCard2OutDeviceNum, 2,
-                                g_soundCard2SampleRate, inputChannels2, outputChannels2);
+            rxOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard2OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard2SampleRate, 2);
+            rxOutSoundDevice->setDescription("FreeDV to Speaker");
+            rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                wxGetApp().m_soundCard2OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
+                pConfig->Flush();
+            }, nullptr);
+
+            txInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard2InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, g_soundCard2SampleRate, 2);
+            txInSoundDevice->setDescription("Mic to FreeDV");
+            txInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                wxGetApp().m_soundCard2InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);
+                pConfig->Flush();
+            }, nullptr);
+
+            txOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard1SampleRate, 2);
+            txOutSoundDevice->setDescription("FreeDV to Radio");
+            txOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
+                pConfig->Flush();
+            }, nullptr);
+            
+            bool failed = false;
+            if (!rxInSoundDevice)
+            {
+                wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1InDeviceName), wxT("Error"), wxOK);
+                failed = true;
+            }
+            
+            if (!rxOutSoundDevice)
+            {
+                wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard2OutDeviceName), wxT("Error"), wxOK);
+                failed = true;
+            }
+            
+            if (!txInSoundDevice)
+            {
+                wxMessageBox(wxString::Format("Could not find TX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard2InDeviceName), wxT("Error"), wxOK);
+                failed = true;
+            }
+            
+            if (!txOutSoundDevice)
+            {
+                wxMessageBox(wxString::Format("Could not find TX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1OutDeviceName), wxT("Error"), wxOK);
+                failed = true;
+            }
+            
+            if (failed)
+            {
+                if (rxInSoundDevice)
+                {
+                    rxInSoundDevice.reset();
+                }
+                
+                if (rxOutSoundDevice)
+                {
+                    rxOutSoundDevice.reset();
+                }
+                
+                if (txInSoundDevice)
+                {
+                    txInSoundDevice.reset();
+                }
+                
+                if (txOutSoundDevice)
+                {
+                    txOutSoundDevice.reset();
+                }
+                
+                m_RxRunning = false;
+            
+                engine->stop();
+                engine->setOnEngineError(nullptr, nullptr);
+            
+                return;
+            }
         }
 
         // Init call back data structure ----------------------------------------------
 
         g_rxUserdata = new paCallBackData;
-        g_rxUserdata->inputChannels1 = inputChannels1;
-        g_rxUserdata->outputChannels1 = outputChannels1;
-        if (deviceInfo2a != NULL)
-        {
-            g_rxUserdata->inputChannels2 = inputChannels2;
-            g_rxUserdata->outputChannels2 = outputChannels2;
-        }
         
         // init sample rate conversion states
 
@@ -2164,33 +2119,39 @@ void MainFrame::startRxStream()
         g_rxUserdata->insrctxsf = src_new(SRC_SINC_FASTEST, 1, &src_error);
         assert(g_rxUserdata->insrctxsf != NULL);
         
-        // create FIFOs used to interface between Port Audio and txRx
+        // create FIFOs used to interface between IAudioEngine and txRx
         // processing loop, which iterates about once every 20ms.
         // Sample rate conversion, stats for spectral plots, and
-        // transmit processng are all performed in the txRxProcessing
+        // transmit processng are all performed in the tx/rxProcessing
         // loop.
 
         int m_fifoSize_ms = wxGetApp().m_fifoSize_ms;
         int soundCard1FifoSizeSamples = m_fifoSize_ms*g_soundCard1SampleRate/1000;
-        int soundCard2FifoSizeSamples = m_fifoSize_ms*g_soundCard2SampleRate/1000;
-
         g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1FifoSizeSamples);
         g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1FifoSizeSamples);
-        g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
-        g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
 
-        if (g_verbose) fprintf(stderr, "fifoSize_ms: %d infifo1/outfilo1: %d infifo2/outfilo2: %d\n",
-                wxGetApp().m_fifoSize_ms, soundCard1FifoSizeSamples, soundCard2FifoSizeSamples);
+        if (txInSoundDevice && txOutSoundDevice)
+        {
+            int soundCard2FifoSizeSamples = m_fifoSize_ms*g_soundCard2SampleRate/1000;
+            g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
+            g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
+        
+            if (g_verbose) fprintf(stderr, "fifoSize_ms:  %d infifo2/outfilo2: %d\n",
+                wxGetApp().m_fifoSize_ms, soundCard2FifoSizeSamples);
+        }
+
+        if (g_verbose) fprintf(stderr, "fifoSize_ms: %d infifo1/outfilo1 %d\n",
+                wxGetApp().m_fifoSize_ms, soundCard1FifoSizeSamples);
 
         // reset debug stats for FIFOs
 
         g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
         g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
         for (int i=0; i<4; i++) {
-            g_PAstatus1[i] = g_PAstatus2[i] = 0;
+            g_AEstatus1[i] = g_AEstatus2[i] = 0;
         }
 
-        // These FIFOs interface between the 20ms txRxProcessing()
+        // These FIFOs interface between the 20ms tx/rxProcessing()
         // loop and the demodulator, which requires a variable number
         // of input samples to adjust for timing clock differences
         // between remote tx and rx.  These FIFOs also help with the
@@ -2235,240 +2196,442 @@ void MainFrame::startRxStream()
         g_rxUserdata->leftChannelVoxTone = wxGetApp().m_leftChannelVoxTone;
         g_rxUserdata->voxTonePhase = 0;
 
-        // Start sound card 1 ----------------------------------------------------------
-
-        m_rxInPa->setUserData(g_rxUserdata);
-        m_rxErr = m_rxInPa->setCallback(rxCallback);
-
-        m_rxErr = m_rxInPa->streamOpen();
-
-        if(m_rxErr != paNoError) {
-            wxMessageBox(wxT("Sound Card 1 Open/Setup error."), wxT("Error"), wxOK);
-			delete m_rxInPa;
-			if(two_rx)
-				delete m_rxOutPa;
-			delete m_txInPa;
-			if(two_tx)
-				delete m_txOutPa;
-            destroy_fifos();
-            destroy_src();
-            deleteEQFilters(g_rxUserdata);
-            delete g_rxUserdata;
-            m_RxRunning = false;
-            Pa_Terminate();
-            return;
-        }
-
-        m_rxErr = m_rxInPa->streamStart();
-        if(m_rxErr != paNoError) {
-            wxMessageBox(wxT("Sound Card 1 Stream Start Error."), wxT("Error"), wxOK);
-			delete m_rxInPa;
-			if(two_rx)
-				delete m_rxOutPa;
-			delete m_txInPa;
-			if(two_tx)
-				delete m_txOutPa;
-            destroy_fifos();
-            destroy_src();
-            deleteEQFilters(g_rxUserdata);
-            delete g_rxUserdata;
-            m_RxRunning = false;
-            Pa_Terminate();
-            return;
-        }
-
-        // Start separate output stream if needed
-
-        if(two_rx) {
-            m_rxOutPa->setUserData(g_rxUserdata);
-            m_rxErr = m_rxOutPa->setCallback(rxCallback);
-
-            m_rxErr = m_rxOutPa->streamOpen();
-
-            if(m_rxErr != paNoError) {
-                wxMessageBox(wxT("Sound Card 1 Second Stream Open/Setup error."), wxT("Error"), wxOK);
-                delete m_rxInPa;
-                delete m_rxOutPa;
-                if(two_tx)
-                    delete m_txOutPa;
-                destroy_fifos();
-                destroy_src();
-                deleteEQFilters(g_rxUserdata);
-                delete g_rxUserdata;
-                m_RxRunning = false;
-                Pa_Terminate();
-                return;
-            }
-
-            m_rxErr = m_rxOutPa->streamStart();
-            if(m_rxErr != paNoError) {
-                wxMessageBox(wxT("Sound Card 1 Second Stream Start Error."), wxT("Error"), wxOK);
-                m_rxInPa->stop();
-                m_rxInPa->streamClose();
-                delete m_rxInPa;
-                delete m_rxOutPa;
-                if(two_tx)
-                    delete m_txOutPa;
-                destroy_fifos();
-                destroy_src();
-                deleteEQFilters(g_rxUserdata);
-                delete g_rxUserdata;
-                m_RxRunning = false;
-                Pa_Terminate();
-                return;
-            }
-        }
-
-        if (g_verbose) fprintf(stderr, "started stream 1\n");
-
-        // Start sound card 2 ----------------------------------------------------------
-
-        if (g_nSoundCards == 2) {
-
-            // question: can we use same callback data
-            // (g_rxUserdata)or both sound card callbacks?  Is there a
-            // chance of them both being called at the same time?  We
-            // could need a mutex ...
-
-            m_txInPa->setUserData(g_rxUserdata);
-            m_txErr = m_txInPa->setCallback(txCallback);
-            m_txErr = m_txInPa->streamOpen();
-
-            if(m_txErr != paNoError) {
-                if (g_verbose) fprintf(stderr, "Err: %d\n", m_txErr);
-                wxMessageBox(wxT("Sound Card 2 Open/Setup error."), wxT("Error"), wxOK);
-                m_rxInPa->stop();
-                m_rxInPa->streamClose();
-                delete m_rxInPa;
-                if(two_rx) {
-                    m_rxOutPa->stop();
-                    m_rxOutPa->streamClose();
-                    delete m_rxOutPa;
-                }
-                delete m_txInPa;
-                if(two_tx)
-                    delete m_txOutPa;
-                destroy_fifos();
-                destroy_src();
-                deleteEQFilters(g_rxUserdata);
-                delete g_rxUserdata;
-                m_RxRunning = false;
-                Pa_Terminate();
-                return;
-            }
-            m_txErr = m_txInPa->streamStart();
-            if(m_txErr != paNoError) {
-                wxMessageBox(wxT("Sound Card 2 Start Error."), wxT("Error"), wxOK);
-                m_rxInPa->stop();
-                m_rxInPa->streamClose();
-                delete m_rxInPa;
-                if(two_rx) {
-                    m_rxOutPa->stop();
-                    m_rxOutPa->streamClose();
-                    delete m_rxOutPa;
-                }
-                delete m_txInPa;
-                if(two_tx)
-                    delete m_txOutPa;
-                destroy_fifos();
-                destroy_src();
-                deleteEQFilters(g_rxUserdata);
-                delete g_rxUserdata;
-                m_RxRunning = false;
-                Pa_Terminate();
-                return;
-            }
-
-            // Start separate output stream if needed
-
-            if (two_tx) {
-
-                // question: can we use same callback data
-                // (g_rxUserdata)or both sound card callbacks?  Is there a
-                // chance of them both being called at the same time?  We
-                // could need a mutex ...
-
-                m_txOutPa->setUserData(g_rxUserdata);
-                m_txErr = m_txOutPa->setCallback(txCallback);
-                m_txErr = m_txOutPa->streamOpen();
-
-                if(m_txErr != paNoError) {
-                    wxMessageBox(wxT("Sound Card 2 Second Stream Open/Setup error."), wxT("Error"), wxOK);
-                    m_rxInPa->stop();
-                    m_rxInPa->streamClose();
-                    delete m_rxInPa;
-                    if(two_rx) {
-                        m_rxOutPa->stop();
-                        m_rxOutPa->streamClose();
-                        delete m_rxOutPa;
-                    }
-                    m_txInPa->stop();
-                    m_txInPa->streamClose();
-                    delete m_txInPa;
-                    delete m_txOutPa;
-                    destroy_fifos();
-                    destroy_src();
-                    deleteEQFilters(g_rxUserdata);
-                    delete g_rxUserdata;
-                    m_RxRunning = false;
-                    Pa_Terminate();
-                    return;
-                }
-                m_txErr = m_txOutPa->streamStart();
-                if(m_txErr != paNoError) {
-                    wxMessageBox(wxT("Sound Card 2 Second Stream Start Error."), wxT("Error"), wxOK);
-                    m_rxInPa->stop();
-                    m_rxInPa->streamClose();
-                    m_txInPa->stop();
-                    m_txInPa->streamClose();
-                    delete m_txInPa;
-                    if(two_rx) {
-                        m_rxOutPa->stop();
-                        m_rxOutPa->streamClose();
-                        delete m_rxOutPa;
-                    }
-                    delete m_txInPa;
-                    delete m_txOutPa;
-                    destroy_fifos();
-                    destroy_src();
-                    deleteEQFilters(g_rxUserdata);
-                    delete g_rxUserdata;
-                    m_RxRunning = false;
-                    Pa_Terminate();
-                    return;
-                }
-            }
-        }
-
-        if (g_verbose) fprintf(stderr, "starting tx/rx processing thread\n");
-
-        // start tx/rx processing thread
-
-        m_txRxThread = new txRxThread;
-
-        if ( m_txRxThread->Create() != wxTHREAD_NO_ERROR )
+        // Set sound card callbacks
+        auto errorCallback = [&](IAudioDevice&, std::string error, void*)
         {
-            wxLogError(wxT("Can't create thread!"));
+            CallAfter([&]() {
+                wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
+            });
+        };
+
+        rxInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
+            paCallBackData* cbData = static_cast<paCallBackData*>(state);
+            short* audioData = static_cast<short*>(data);
+            short  indata[size];
+            for (size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
+            {
+                indata[i] = audioData[0];
+            }
+            
+            if (codec2_fifo_write(cbData->infifo1, indata, size)) 
+            {
+                g_infifo1_full++;
+            }
+
+            m_rxThread->notify();
+        }, g_rxUserdata);
+        
+        rxInSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
+        {
+            g_AEstatus1[1]++;
+        }, nullptr);
+        
+        rxInSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
+        {
+            g_AEstatus1[0]++;
+        }, nullptr);
+        
+        rxInSoundDevice->setOnAudioError(errorCallback, nullptr);
+        
+        if (txInSoundDevice && txOutSoundDevice)
+        {
+            rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
+                paCallBackData* cbData = static_cast<paCallBackData*>(state);
+                short* audioData = static_cast<short*>(data);
+                short  outdata[size];
+ 
+                int result = codec2_fifo_read(cbData->outfifo2, outdata, size);
+                if (result == 0) 
+                {
+                    for (size_t i = 0; i < size; i++)
+                    {
+                        for (int j = 0; j < dev.getNumChannels(); j++)
+                        {
+                            *audioData++ = outdata[i];
+                        }
+                    }
+                }
+                else 
+                {
+                    g_outfifo2_empty++;
+                }
+            }, g_rxUserdata);
+            
+            rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
+            {
+                g_AEstatus2[3]++;
+            }, nullptr);
+        
+            rxOutSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
+            {
+                g_AEstatus2[2]++;
+            }, nullptr);
+            
+            txInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
+                paCallBackData* cbData = static_cast<paCallBackData*>(state);
+                short* audioData = static_cast<short*>(data);
+                short  indata[size];
+                
+                if (!endingTx) 
+                {
+                    for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
+                    {
+                        indata[i] = audioData[0];
+                    }
+                    
+                    if (codec2_fifo_write(cbData->infifo2, indata, size)) 
+                    {
+                        g_infifo2_full++;
+                    }
+                }
+
+                m_txThread->notify();
+            }, g_rxUserdata);
+        
+            txInSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
+            {
+                g_AEstatus2[1]++;
+            }, nullptr);
+        
+            txInSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
+            {
+                g_AEstatus2[0]++;
+            }, nullptr);
+            
+            txOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
+                paCallBackData* cbData = static_cast<paCallBackData*>(state);
+                short* audioData = static_cast<short*>(data);
+                short  outdata[size];
+
+                int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
+                if (result == 0) {
+
+                    // write signal to both channels if the device can support two channels.
+                    // Otherwise, we assume we're only dealing with one channel and write
+                    // only to that channel.
+                    if (dev.getNumChannels() == 2)
+                    {
+                        for(size_t i = 0; i < size; i++, audioData += 2) 
+                        {
+                            if (cbData->leftChannelVoxTone)
+                            {
+                                cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/g_soundCard1SampleRate;
+                                cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+                                audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+                            }
+                            else
+                                audioData[0] = outdata[i];
+
+                            audioData[1] = outdata[i];
+                        }
+                    }
+                    else
+                    {
+                        for(size_t i = 0; i < size; i++, audioData++) 
+                        {
+                            audioData[0] = outdata[i];
+                        }
+                    }
+                }
+                else 
+                {
+                    g_outfifo1_empty++;
+                }
+            }, g_rxUserdata);
+        
+            txOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
+            {
+                g_AEstatus1[3]++;
+            }, nullptr);
+        
+            txOutSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
+            {
+                g_AEstatus1[2]++;
+            }, nullptr);
+            
+            txInSoundDevice->setOnAudioError(errorCallback, nullptr);
+            txOutSoundDevice->setOnAudioError(errorCallback, nullptr);
+        }
+        else
+        {
+            rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
+                paCallBackData* cbData = static_cast<paCallBackData*>(state);
+                short* audioData = static_cast<short*>(data);
+                short  outdata[size];
+
+                int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
+                if (result == 0) 
+                {
+                    for (size_t i = 0; i < size; i++)
+                    {
+                        for (int j = 0; j < dev.getNumChannels(); j++)
+                        {
+                            *audioData++ = outdata[i];
+                        }
+                    }
+                }
+                else 
+                {
+                    g_outfifo1_empty++;
+                }
+            }, g_rxUserdata);
+            
+            rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
+            {
+                g_AEstatus1[3]++;
+            }, nullptr);
+        
+            rxOutSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
+            {
+                g_AEstatus1[2]++;
+            }, nullptr);
+        }
+        
+        // start tx/rx processing thread
+        if (txInSoundDevice && txOutSoundDevice)
+        {
+            m_txThread = new txRxThread(true);
+            if ( m_txThread->Create() != wxTHREAD_NO_ERROR )
+            {
+                wxLogError(wxT("Can't create TX thread!"));
+            }
+            if (wxGetApp().m_txRxThreadHighPriority) {
+                m_txThread->SetPriority(WXTHREAD_MAX_PRIORITY);
+            }
+            
+            txInSoundDevice->start();
+            txOutSoundDevice->start();
+            
+            if ( m_txThread->Run() != wxTHREAD_NO_ERROR )
+            {
+                wxLogError(wxT("Can't start TX thread!"));
+            }
+        }
+
+        m_rxThread = new txRxThread(false);
+        if ( m_rxThread->Create() != wxTHREAD_NO_ERROR )
+        {
+            wxLogError(wxT("Can't create RX thread!"));
         }
 
         if (wxGetApp().m_txRxThreadHighPriority) {
-            m_txRxThread->SetPriority(WXTHREAD_MAX_PRIORITY);
+            m_rxThread->SetPriority(WXTHREAD_MAX_PRIORITY);
         }
 
-        if ( m_txRxThread->Run() != wxTHREAD_NO_ERROR )
+        rxInSoundDevice->start();
+        rxOutSoundDevice->start();
+
+        if ( m_rxThread->Run() != wxTHREAD_NO_ERROR )
         {
-            wxLogError(wxT("Can't start thread!"));
+            wxLogError(wxT("Can't start RX thread!"));
         }
 
+        if (g_verbose) fprintf(stderr, "starting tx/rx processing thread\n");
     }
 }
 
 
 //---------------------------------------------------------------------------------------------
-// Main real time procesing for tx and rx of FreeDV signals, run in its own thread
+// Main real time procesing for tx and rx of FreeDV signals, run in its own threads
 //---------------------------------------------------------------------------------------------
 
-void txRxProcessing()
+void txProcessing()
+{
+    wxStopWatch sw;
+
+    paCallBackData  *cbData = g_rxUserdata;
+
+    // Buffers re-used by tx and rx processing.  We take samples from
+    // the sound card, and resample them for the freedv modem input
+    // sample rate.  Typically the sound card is running at 48 or 44.1
+    // kHz, and the modem at 8kHz, however some modems such as FreeDV
+    // 2400A/B run at 48 kHz.
+
+    // allocate enough room for 20ms processing buffers at maximum
+    // sample rate of 48 kHz.  Note these buffer are used by rx and tx
+    // side processing
+
+    short           infreedv[10*N48];
+    short           insound_card[10*N48];
+    short           outfreedv[10*N48];
+    short           outsound_card[10*N48];
+    int             nout, freedv_samplerate;
+    int             nfreedv;
+
+    // analog mode runs at the standard FS = 8000 Hz
+    if (g_analog) {
+        freedv_samplerate = FS;
+    }
+    else {
+        // Use the maximum modem sample rate. Any needed downconversion
+        // just prior to sending to Codec2 will happen in FreeDVInterface.
+        freedv_samplerate = freedvInterface.getRxModemSampleRate();
+    }
+    //fprintf(stderr, "sample rate: %d\n", freedv_samplerate);
+
+    //
+    //  TX side processing --------------------------------------------
+    //
+
+    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
+        // Lock the mode mutex so that TX state doesn't change on us during processing.
+        txModeChangeMutex.Lock();
+        
+        // This while loop locks the modulator to the sample rate of
+        // sound card 1.  We want to make sure that modulator samples
+        // are uninterrupted by differences in sample rate between
+        // this sound card and sound card 2.
+
+        // Run code inside this while loop as soon as we have enough
+        // room for one frame of modem samples.  Aim is to keep
+        // outfifo1 nice and full so we don't have any gaps in tx
+        // signal.
+
+        unsigned int nsam_one_modem_frame = g_soundCard1SampleRate * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
+
+     	if (g_dump_fifo_state) {
+    	  // If this drops to zero we have a problem as we will run out of output samples
+    	  // to send to the sound driver via PortAudio
+    	  if (g_verbose) fprintf(stderr, "outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d\n",
+                      codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
+    	}
+
+        int nsam_in_48 = g_soundCard2SampleRate * freedvInterface.getTxNumSpeechSamples()/freedvInterface.getTxSpeechSampleRate();
+        assert(nsam_in_48 < 10*N48);
+        
+        while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {        
+            // OK to generate a frame of modem output samples we need
+            // an input frame of speech samples from the microphone.
+
+            // infifo2 is written to by another sound card so it may
+            // over or underflow, but we don't really care.  It will
+            // just result in a short interruption in audio being fed
+            // to codec2_enc, possibly making a click every now and
+            // again in the decoded audio at the other end.
+
+            // zero speech input just in case infifo2 underflows
+            memset(insound_card, 0, nsam_in_48*sizeof(short));
+            
+            // There may be recorded audio left to encode while ending TX. To handle this,
+            // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
+            int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);            
+            if (nread != 0 && endingTx) break;
+            
+            // optionally use file for mic input signal
+            if (g_playFileToMicIn && (g_sfPlayFile != NULL)) {
+                unsigned int nsf = nsam_in_48*g_sfTxFs/g_soundCard2SampleRate;
+                short        insf[nsf];
+                                
+                int n = sf_read_short(g_sfPlayFile, insf, nsf);
+                nout = resample(cbData->insrctxsf, insound_card, insf, g_soundCard2SampleRate, g_sfTxFs, nsam_in_48, n);
+                
+                if (nout == 0) {
+                    if (g_loopPlayFileToMicIn)
+                        sf_seek(g_sfPlayFile, 0, SEEK_SET);
+                    else {
+                        printf("playFileFromRadio finished, issuing event!\n");
+                        g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
+                    }
+                }
+            }
+            
+            nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
+                 
+            // Optional Speex pre-processor for acoustic noise reduction
+            if (wxGetApp().m_speexpp_enable) {
+                speex_preprocess_run(g_speex_st, infreedv);
+            }
+
+            // Optional Mic In EQ Filtering, need mutex as filter can change at run time
+
+            g_mutexProtectingCallbackData.Lock();
+            if (cbData->micInEQEnable) {
+                sox_biquad_filter(cbData->sbqMicInBass, infreedv, infreedv, nout);
+                sox_biquad_filter(cbData->sbqMicInTreble, infreedv, infreedv, nout);
+                sox_biquad_filter(cbData->sbqMicInMid, infreedv, infreedv, nout);
+            }
+            g_mutexProtectingCallbackData.Unlock();
+
+            resample_for_plot(g_plotSpeechInFifo, infreedv, nout, freedvInterface.getTxSpeechSampleRate());
+
+            nfreedv = freedvInterface.getTxNNomModemSamples();
+
+            if (g_analog) {
+                nfreedv = freedvInterface.getTxNumSpeechSamples();
+
+                // Boost the "from mic" -> "to radio" audio in analog
+                // mode.  The need for the gain was found by
+                // experiment - analog SSB sounded too quiet compared
+                // to digital. With digital voice we generally drive
+                // the "to radio" (SSB radio mic input) at about 25%
+                // of the peak level for normal SSB voice. So we
+                // introduce 6dB gain to make analog SSB sound the
+                // same level as the digital.  Watch out for clipping.
+                for(int i=0; i<nfreedv; i++) {
+                    float out = (float)infreedv[i]*2.0;
+                    if (out > 32767) out = 32767.0;
+                    if (out < -32767) out = -32767.0;
+                    outfreedv[i] = out;
+                }
+            }
+            else {
+                if (g_mode == FREEDV_MODE_800XA || g_mode == FREEDV_MODE_2400B) {
+                    /* 800XA doesn't support complex output just yet */
+                    freedvInterface.transmit(outfreedv, infreedv);
+                }
+                else {
+                    freedvInterface.complexTransmit(outfreedv, infreedv, g_TxFreqOffsetHz, nfreedv);
+                }
+            }
+
+            // Save modulated output file if requested
+            if (g_recFileFromModulator && (g_sfRecFileFromModulator != NULL)) {
+                if (g_recFromModulatorSamples < nfreedv) {
+                    sf_write_short(g_sfRecFileFromModulator, outfreedv, g_recFromModulatorSamples);  // try infreedv to bypass codec and modem, was outfreedv
+                    
+                    // call stop record menu item, should be thread safe
+                    g_parent->CallAfter(&MainFrame::StopRecFileFromModulator);
+                    
+                    wxPrintf("write mod output to file complete\n", g_recFromModulatorSamples);  // consider a popup
+                }
+                else {
+                    sf_write_short(g_sfRecFileFromModulator, outfreedv, nfreedv);
+                    g_recFromModulatorSamples -= nfreedv;
+                }
+            }
+            
+            // output one frame of modem signal
+
+            if (g_analog)
+                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getTxSpeechSampleRate(), 10*N48, nfreedv);
+            else
+                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getTxModemSampleRate(), 10*N48, nfreedv);
+            
+            // Attenuate signal prior to output
+            double dbLoss = g_txLevel / 10.0;
+            double scaleFactor = exp(dbLoss/20.0 * log(10.0));
+            
+            for (int i = 0; i < nout; i++)
+            {
+                outsound_card[i] *= scaleFactor;
+            }
+            
+            if (g_dump_fifo_state) {
+                fprintf(stderr, "  nout: %d\n", nout);
+            }
+            
+            codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
+        }
+        
+        txModeChangeMutex.Unlock();
+    }
+
+    if (g_dump_timing) {
+        fprintf(stderr, "%4ld", sw.Time());
+    }
+}
+
+void rxProcessing()
 {
     wxStopWatch sw;
 
@@ -2519,10 +2682,9 @@ void txRxProcessing()
     int nsam = (int)(g_soundCard1SampleRate * FRAME_DURATION);
     assert(nsam <= 10*N48);
     assert(nsam != 0);
-    
-    // while we have enough input samples available ... 
-    while ((codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0) && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
 
+    // while we have enough input samples available ... 
+    while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
         /* convert sound card sample rate FreeDV input sample rate */
         nfreedv = resample(cbData->insrc1, infreedv, insound_card, freedv_samplerate, g_soundCard1SampleRate, N48, nsam);
         assert(nfreedv <= N48);
@@ -2665,6 +2827,7 @@ void txRxProcessing()
                 nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, N48, nfreedv);
             else
                 nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, speechOutbufferSize);
+            
             codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
         }
         else {
@@ -2672,411 +2835,10 @@ void txRxProcessing()
                 nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedv_samplerate, N48, nfreedv);
             else
                 nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, speechOutbufferSize);
+
             codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
         }
     }
-
-    //
-    //  TX side processing --------------------------------------------
-    //
-
-    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
-        // Lock the mode mutex so that TX state doesn't change on us during processing.
-        txModeChangeMutex.Lock();
-        
-        // This while loop locks the modulator to the sample rate of
-        // sound card 1.  We want to make sure that modulator samples
-        // are uninterrupted by differences in sample rate between
-        // this sound card and sound card 2.
-
-        // Run code inside this while loop as soon as we have enough
-        // room for one frame of modem samples.  Aim is to keep
-        // outfifo1 nice and full so we don't have any gaps in tx
-        // signal.
-
-        unsigned int nsam_one_modem_frame = g_soundCard1SampleRate * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
-
-     	if (g_dump_fifo_state) {
-    	  // If this drops to zero we have a problem as we will run out of output samples
-    	  // to send to the sound driver via PortAudio
-    	  if (g_verbose) fprintf(stderr, "outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d\n",
-                      codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
-    	}
-
-        int nsam_in_48 = g_soundCard2SampleRate * freedvInterface.getTxNumSpeechSamples()/freedvInterface.getTxSpeechSampleRate();
-        assert(nsam_in_48 < 10*N48);
-        
-        while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {
-
-            // OK to generate a frame of modem output samples we need
-            // an input frame of speech samples from the microphone.
-
-            // infifo2 is written to by another sound card so it may
-            // over or underflow, but we don't really care.  It will
-            // just result in a short interruption in audio being fed
-            // to codec2_enc, possibly making a click every now and
-            // again in the decoded audio at the other end.
-
-            // zero speech input just in case infifo2 underflows
-            memset(insound_card, 0, nsam_in_48*sizeof(short));
-            
-            // There may be recorded audio left to encode while ending TX. To handle this,
-            // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
-            int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);
-            if (nread != 0 && endingTx) break;
-            
-            // optionally use file for mic input signal
-            if (g_playFileToMicIn && (g_sfPlayFile != NULL)) {
-                unsigned int nsf = nsam_in_48*g_sfTxFs/g_soundCard2SampleRate;
-                short        insf[nsf];
-                                
-                int n = sf_read_short(g_sfPlayFile, insf, nsf);
-                nout = resample(cbData->insrctxsf, insound_card, insf, g_soundCard2SampleRate, g_sfTxFs, nsam_in_48, n);
-                
-                if (nout == 0) {
-                    if (g_loopPlayFileToMicIn)
-                        sf_seek(g_sfPlayFile, 0, SEEK_SET);
-                    else {
-                        printf("playFileFromRadio finished, issuing event!\n");
-                        g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
-                    }
-                }
-            }
-            
-            nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
-                 
-            // Optional Speex pre-processor for acoustic noise reduction
-            if (wxGetApp().m_speexpp_enable) {
-                speex_preprocess_run(g_speex_st, infreedv);
-            }
-
-            // Optional Mic In EQ Filtering, need mutex as filter can change at run time
-
-            g_mutexProtectingCallbackData.Lock();
-            if (cbData->micInEQEnable) {
-                sox_biquad_filter(cbData->sbqMicInBass, infreedv, infreedv, nout);
-                sox_biquad_filter(cbData->sbqMicInTreble, infreedv, infreedv, nout);
-                sox_biquad_filter(cbData->sbqMicInMid, infreedv, infreedv, nout);
-                if (cbData->sbqMicInVol) sox_biquad_filter(cbData->sbqMicInVol, infreedv, infreedv, nout);
-            }
-            g_mutexProtectingCallbackData.Unlock();
-
-            resample_for_plot(g_plotSpeechInFifo, infreedv, nout, freedvInterface.getTxSpeechSampleRate());
-
-            nfreedv = freedvInterface.getTxNNomModemSamples();
-
-            if (g_analog) {
-                nfreedv = freedvInterface.getTxNumSpeechSamples();
-
-                // Boost the "from mic" -> "to radio" audio in analog
-                // mode.  The need for the gain was found by
-                // experiment - analog SSB sounded too quiet compared
-                // to digital. With digital voice we generally drive
-                // the "to radio" (SSB radio mic input) at about 25%
-                // of the peak level for normal SSB voice. So we
-                // introduce 6dB gain to make analog SSB sound the
-                // same level as the digital.  Watch out for clipping.
-                for(int i=0; i<nfreedv; i++) {
-                    float out = (float)infreedv[i]*2.0;
-                    if (out > 32767) out = 32767.0;
-                    if (out < -32767) out = -32767.0;
-                    outfreedv[i] = out;
-                }
-            }
-            else {
-                if (g_mode == FREEDV_MODE_800XA || g_mode == FREEDV_MODE_2400B) {
-                    /* 800XA doesn't support complex output just yet */
-                    freedvInterface.transmit(outfreedv, infreedv);
-                }
-                else {
-                    freedvInterface.complexTransmit(outfreedv, infreedv, g_TxFreqOffsetHz, nfreedv);
-                }
-            }
-
-            // Save modulated output file if requested
-            if (g_recFileFromModulator && (g_sfRecFileFromModulator != NULL)) {
-                if (g_recFromModulatorSamples < nfreedv) {
-                    sf_write_short(g_sfRecFileFromModulator, outfreedv, g_recFromModulatorSamples);  // try infreedv to bypass codec and modem, was outfreedv
-                    
-                    // call stop record menu item, should be thread safe
-                    g_parent->CallAfter(&MainFrame::StopRecFileFromModulator);
-                    
-                    wxPrintf("write mod output to file complete\n", g_recFromModulatorSamples);  // consider a popup
-                }
-                else {
-                    sf_write_short(g_sfRecFileFromModulator, outfreedv, nfreedv);
-                    g_recFromModulatorSamples -= nfreedv;
-                }
-            }
-            
-            // output one frame of modem signal
-
-            if (g_analog)
-                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getTxSpeechSampleRate(), 10*N48, nfreedv);
-            else
-                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getTxModemSampleRate(), 10*N48, nfreedv);
-            
-            // Attenuate signal prior to output
-            double dbLoss = g_txLevel / 10.0;
-            double scaleFactor = exp(dbLoss/20.0 * log(10.0));
-            
-            for (int i = 0; i < nout; i++)
-            {
-                outsound_card[i] *= scaleFactor;
-            }
-            
-            if (g_dump_fifo_state) {
-                fprintf(stderr, "  nout: %d\n", nout);
-            }
-            codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
-        }
-        
-        txModeChangeMutex.Unlock();
-    }
-
-    if (g_dump_timing) {
-        fprintf(stderr, "%4ld", sw.Time());
-    }
-}
-
-//-------------------------------------------------------------------------
-// rxCallback()
-//
-// Sound card 1 callback from PortAudio, that is used for processing rx
-// side:
-//
-// + infifo1 is the "from radio" off air modem signal from the SSB rx that we send to the demod.
-// + In single sound card mode outfifo1 is the "to speaker/headphones" decoded speech output.
-// + In dual sound card mode outfifo1 is the "to radio" modulator signal to the SSB tx.
-//
-//-------------------------------------------------------------------------
-
-int MainFrame::rxCallback(
-                            const void      *inputBuffer,
-                            void            *outputBuffer,
-                            unsigned long   framesPerBuffer,
-                            const PaStreamCallbackTimeInfo* timeInfo,
-                            PaStreamCallbackFlags statusFlags,
-                            void            *userData
-                         )
-{
-    paCallBackData  *cbData = (paCallBackData*)userData;
-    short           *rptr    = (short*)inputBuffer;
-    short           *wptr    = (short*)outputBuffer;
-
-    short           indata[MAX_FPB];
-    short           outdata[MAX_FPB];
-
-    unsigned int    i;
-
-    (void) timeInfo;
-    (void) statusFlags;
-
-    if (statusFlags & 0x1) {  // input underflow
-        g_PAstatus1[0]++;
-    }
-    if (statusFlags & 0x2) {  // input overflow
-        g_PAstatus1[1]++;
-    }
-    if (statusFlags & 0x4) {  // output underflow
-        g_PAstatus1[2]++;
-    }
-    if (statusFlags & 0x8) {  // output overflow
-        g_PAstatus1[3]++;
-    }
-
-    g_PAframesPerBuffer1 = framesPerBuffer;
-
-    //
-    //  RX side processing --------------------------------------------
-    //
-
-    // assemble a mono buffer and write to FIFO
-
-    assert(framesPerBuffer < MAX_FPB);
-
-    if (rptr) {
-        for(i = 0; i < framesPerBuffer; i++, rptr += cbData->inputChannels1)
-            indata[i] = rptr[0];
-        if (codec2_fifo_write(cbData->infifo1, indata, framesPerBuffer)) {
-            g_infifo1_full++;
-        }
-    }
-
-    // OK now set up output samples for this callback
-
-    if (wptr) {
-        memset(outdata, 0, sizeof(short)*MAX_FPB);
-        if (codec2_fifo_read(cbData->outfifo1, outdata, framesPerBuffer) == 0) {
-
-            // write signal to both channels if the device can support two channels.
-            // Otherwise, we assume we're only dealing with one channel and write
-            // only to that channel.
-            if (cbData->outputChannels1 == 2)
-            {
-                for(i = 0; i < framesPerBuffer; i++, wptr += 2) 
-                {
-                    if (cbData->leftChannelVoxTone)
-                    {
-                        cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/g_soundCard1SampleRate;
-                        cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-                        wptr[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
-                    }
-                    else
-                        wptr[0] = outdata[i];
-
-                    wptr[1] = outdata[i];
-                }
-            }
-            else
-            {
-                for(i = 0; i < framesPerBuffer; i++, wptr++) 
-                {
-                    wptr[0] = outdata[i];
-                }
-            }
-        }
-        else 
-        {
-            g_outfifo1_empty++;
-            
-            // zero output if no data available
-            if (cbData->outputChannels1 == 2)
-            {
-                for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
-                    wptr[0] = 0;
-                    wptr[1] = 0;
-                }
-            }
-            else
-            {
-                for(i = 0; i < framesPerBuffer; i++, wptr++)
-                {
-                    wptr[0] = 0;
-                }
-            }
-        }
-    }
-
-    return paContinue;
-}
-
-
-//-------------------------------------------------------------------------
-// txCallback()
-//-------------------------------------------------------------------------
-int MainFrame::txCallback(
-                            const void *inputBuffer,
-                            void *outputBuffer,
-                            unsigned long framesPerBuffer,
-                            const PaStreamCallbackTimeInfo *outTime,
-                            PaStreamCallbackFlags statusFlags,
-                            void *userData
-                        )
-{
-    paCallBackData  *cbData = (paCallBackData*)userData;
-    unsigned int    i;
-    short           *rptr    = (short*)inputBuffer;
-    short           *wptr    = (short*)outputBuffer;
-    short           indata[MAX_FPB];
-    short           outdata[MAX_FPB];
-
-    if (statusFlags & 0x1) { // input underflow
-        g_PAstatus2[0]++;
-    }
-    if (statusFlags & 0x2) { // input overflow
-        g_PAstatus2[1]++;
-    }
-    if (statusFlags & 0x4) { // output underflow
-        g_PAstatus2[2]++;
-    }
-    if (statusFlags & 0x8) { // output overflow
-        g_PAstatus2[3]++;
-    }
-
-    g_PAframesPerBuffer2 = framesPerBuffer;
-
-    // assemble a mono buffer and write to FIFO
-
-    assert(framesPerBuffer < MAX_FPB);
-
-    if (rptr && !endingTx) {
-        for(i = 0; i < framesPerBuffer; i++, rptr += cbData->inputChannels2)
-            indata[i] = rptr[0];
-        if (codec2_fifo_write(cbData->infifo2, indata, framesPerBuffer)) {
-            g_infifo2_full++;
-        }
-    }
-
-    // OK now set up output samples for this callback
-
-    if (wptr) {
-        if (codec2_fifo_read(cbData->outfifo2, outdata, framesPerBuffer) == 0) {
-            if (cbData->outputChannels2 == 2)
-            {
-                // write signal to both channels */
-                for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
-                    wptr[0] = outdata[i];
-                    wptr[1] = outdata[i];
-                }
-            }
-            else
-            {
-                for(i = 0; i < framesPerBuffer; i++, wptr++) {
-                    wptr[0] = outdata[i];
-                }
-            }
-        }
-        else {
-            g_outfifo2_empty++;
-            // zero output if no data available
-            if (cbData->outputChannels2 == 2)
-            {
-                for(i = 0; i < framesPerBuffer; i++, wptr += 2) {
-                    wptr[0] = 0;
-                    wptr[1] = 0;
-                }
-            }
-            else
-            {
-                for(i = 0; i < framesPerBuffer; i++, wptr++) {
-                    wptr[0] = 0;
-                }
-            }
-        }
-    }
-
-    return paContinue;
-}
-
-int MainFrame::getSoundCardIDFromName(wxString& name, bool input)
-{
-    int result = -1;
-    
-    if (name != "none")
-    {
-        PaError paResult = Pa_Initialize();
-        if (paResult == paNoError)
-        {
-            for (PaDeviceIndex index = 0; index < Pa_GetDeviceCount(); index++)
-            {
-                const PaDeviceInfo* device = Pa_GetDeviceInfo(index);
-                wxString deviceName = wxString::FromUTF8(device->name).Trim();
-                deviceName = deviceName.Trim();
-                if (name == deviceName)
-                {
-                    result = index;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            fprintf(stderr, "WARNING: could not initialize PortAudio (err=%d, txt=%s)\n", paResult, Pa_GetErrorText(paResult));
-        }
-        Pa_Terminate();
-    }
-    return result;
 }
 
 bool MainFrame::validateSoundCardSetup()
@@ -3084,33 +2846,44 @@ bool MainFrame::validateSoundCardSetup()
     bool canRun = true;
     
     // Translate device names to IDs
-    g_soundCard1InDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard1InDeviceName, true);
-    g_soundCard1OutDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard1OutDeviceName, false);
-    g_soundCard2InDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard2InDeviceName, true);
-    g_soundCard2OutDeviceNum = getSoundCardIDFromName(wxGetApp().m_soundCard2OutDeviceName, false);
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->setOnEngineError([&](IAudioEngine&, std::string error, void* state) {
+        CallAfter([&]() {
+            wxMessageBox(wxString::Format(
+                "Error encountered while initializing the audio engine: %s.", 
+                error), wxT("Error"), wxOK, this); 
+        });
+    }, nullptr);
+    engine->start();
+    
+    // For the purposes of validation, number of channels isn't necessary.
+    auto soundCard1InDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, g_soundCard1SampleRate, 1);
+    auto soundCard1OutDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard1SampleRate, 1);
+    auto soundCard2InDevice = engine->getAudioDevice(wxGetApp().m_soundCard2InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, g_soundCard2SampleRate, 1);
+    auto soundCard2OutDevice = engine->getAudioDevice(wxGetApp().m_soundCard2OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard2SampleRate, 1);
 
-    if (wxGetApp().m_soundCard1InDeviceName != "none" && g_soundCard1InDeviceNum == -1)
+    if (wxGetApp().m_soundCard1InDeviceName != "none" && !soundCard1InDevice)
     {
         wxMessageBox(wxString::Format(
             "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
             wxGetApp().m_soundCard1InDeviceName), wxT("Sound Device Removed"), wxOK, this);
         canRun = false;
     }
-    else if (canRun && wxGetApp().m_soundCard1OutDeviceName != "none" && g_soundCard1OutDeviceNum == -1)
+    else if (canRun && wxGetApp().m_soundCard1OutDeviceName != "none" && !soundCard1OutDevice)
     {
         wxMessageBox(wxString::Format(
             "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
             wxGetApp().m_soundCard1OutDeviceName), wxT("Sound Device Removed"), wxOK, this);
         canRun = false;
     }
-    else if (canRun && wxGetApp().m_soundCard2InDeviceName != "none" && g_soundCard2InDeviceNum == -1)
+    else if (canRun && wxGetApp().m_soundCard2InDeviceName != "none" && !soundCard2InDevice)
     {
         wxMessageBox(wxString::Format(
             "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
             wxGetApp().m_soundCard2InDeviceName), wxT("Sound Device Removed"), wxOK, this);
         canRun = false;
     }
-    else if (canRun && wxGetApp().m_soundCard2OutDeviceName != "none" && g_soundCard2OutDeviceNum == -1)
+    else if (canRun && wxGetApp().m_soundCard2OutDeviceName != "none" && !soundCard2OutDevice)
     {
         wxMessageBox(wxString::Format(
             "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
@@ -3119,9 +2892,9 @@ bool MainFrame::validateSoundCardSetup()
     }
     
     g_nSoundCards = 0;
-    if ((g_soundCard1InDeviceNum > -1) && (g_soundCard1OutDeviceNum > -1)) {
+    if (soundCard1InDevice && soundCard1OutDevice) {
         g_nSoundCards = 1;
-        if ((g_soundCard2InDeviceNum > -1) && (g_soundCard2OutDeviceNum > -1))
+        if (soundCard2InDevice && soundCard2OutDevice)
             g_nSoundCards = 2;
     }
     
@@ -3131,7 +2904,10 @@ bool MainFrame::validateSoundCardSetup()
         wxMessageBox(wxString("It looks like this is your first time running FreeDV. Please go to Tools->Audio Config... to choose your sound card(s) before using."), wxT("First Time Setup"), wxOK, this);
         canRun = false;
     }
-
+    
+    engine->stop();
+    engine->setOnEngineError(nullptr, nullptr);
+    
     return canRun;
 }
 

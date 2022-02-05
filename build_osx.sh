@@ -32,7 +32,7 @@ cd $FREEDVGUIDIR
 if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2.git
 fi
-cd codec2 && git checkout ms-reliable-text && git pull
+cd codec2 && git checkout master && git pull
 mkdir -p build_osx && cd build_osx && rm -Rf * && cmake -DBUILD_OSX_UNIVERSAL=1 .. && make -j4
 
 # OK, build and test LPCNet

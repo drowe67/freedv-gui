@@ -30,10 +30,8 @@ extern int                 g_infifo1_full;
 extern int                 g_outfifo1_empty;
 extern int                 g_infifo2_full;
 extern int                 g_outfifo2_empty;
-extern int                 g_PAstatus1[4];
-extern int                 g_PAstatus2[4];
-extern int                 g_PAframesPerBuffer1;
-extern int                 g_PAframesPerBuffer2;
+extern int                 g_AEstatus1[4];
+extern int                 g_AEstatus2[4];
 extern wxDatagramSocket    *g_sock;
 extern int                 g_dump_timing;
 extern int                 g_dump_fifo_state;
@@ -324,10 +322,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 #endif // __WXMSW__
     
     //----------------------------------------------------------
-    // FIFO and PortAudio under/overflow counters used for debug
+    // FIFO and under/overflow counters used for debug
     //----------------------------------------------------------
 
-    wxStaticBox* sb_fifo = new wxStaticBox(m_debugTab, wxID_ANY, _("Debug: FIFO and PortAudio Under/Over Flow Counters"));
+    wxStaticBox* sb_fifo = new wxStaticBox(m_debugTab, wxID_ANY, _("Debug: FIFO and Under/Over Flow Counters"));
     wxStaticBoxSizer* sbSizer_fifo = new wxStaticBoxSizer(sb_fifo, wxVERTICAL);
 
     wxStaticBox* sb_fifo1 = new wxStaticBox(m_debugTab, wxID_ANY, _(""));
@@ -335,11 +333,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     // first line
     
-    wxStaticText *m_staticTextPA1 = new wxStaticText(m_debugTab, wxID_ANY, _("   PortAudio framesPerBuffer:"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_fifo1->Add(m_staticTextPA1, 0, wxALIGN_CENTER_VERTICAL , 5);
-    m_txtCtrlframesPerBuffer = new wxTextCtrl(m_debugTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
-    sbSizer_fifo1->Add(m_txtCtrlframesPerBuffer, 0, 0, 5);
-    wxStaticText *m_staticTextFifo1 = new wxStaticText(m_debugTab, wxID_ANY, _("   Fifo Size (ms):"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticTextFifo1 = new wxStaticText(m_debugTab, wxID_ANY, _("Fifo Size (ms):"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_fifo1->Add(m_staticTextFifo1, 0, wxALIGN_CENTER_VERTICAL , 5);
     m_txtCtrlFifoSize = new wxTextCtrl(m_debugTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
     sbSizer_fifo1->Add(m_txtCtrlFifoSize, 0, 0, 5);
@@ -443,7 +437,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckbox_udp_enable->MoveBeforeInTabOrder(m_txt_udp_port);
     m_txt_udp_port->MoveBeforeInTabOrder(m_btn_udp_test);
     
-    m_txtCtrlframesPerBuffer->MoveBeforeInTabOrder(m_txtCtrlFifoSize);
     m_txtCtrlFifoSize->MoveBeforeInTabOrder(m_ckboxVerbose);
     m_ckboxVerbose->MoveBeforeInTabOrder(m_ckboxTxRxThreadPriority);
     m_ckboxTxRxThreadPriority->MoveBeforeInTabOrder(m_ckboxTxRxDumpTiming);
@@ -568,7 +561,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckbox_udp_enable->SetValue(wxGetApp().m_udp_enable);
         m_txt_udp_port->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_udp_port));
 
-        m_txtCtrlframesPerBuffer->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_framesPerBuffer));
         m_txtCtrlFifoSize->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_fifoSize_ms));
 
         m_ckboxTxRxThreadPriority->SetValue(wxGetApp().m_txRxThreadHighPriority);
@@ -681,10 +673,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         long attn_carrier;
         m_txtAttnCarrier->GetValue().ToLong(&attn_carrier);
         wxGetApp().m_attn_carrier = (int)attn_carrier;
-
-        long framesPerBuffer;
-        m_txtCtrlframesPerBuffer->GetValue().ToLong(&framesPerBuffer);
-        wxGetApp().m_framesPerBuffer = (int)framesPerBuffer;
 
         long FifoSize_ms;
         m_txtCtrlFifoSize->GetValue().ToLong(&FifoSize_ms);
@@ -891,7 +879,7 @@ void OptionsDlg::OnFifoReset(wxCommandEvent& event)
 {
     g_infifo1_full = g_outfifo1_empty = g_infifo2_full = g_outfifo2_empty = 0;
     for (int i=0; i<4; i++) {
-        g_PAstatus1[i] = g_PAstatus2[i] = 0;
+        g_AEstatus1[i] = g_AEstatus2[i] = 0;
     }
 }
 
@@ -997,13 +985,13 @@ void OptionsDlg::DisplayFifoPACounters() {
     char pa_counters1[256];
 
     // input: underflow overflow output: underflow overflow
-    sprintf(pa_counters1, "PortAudio1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d framesPerBuf: %d", g_PAstatus1[0], g_PAstatus1[1], g_PAstatus1[2], g_PAstatus1[3], g_PAframesPerBuffer1);
+    sprintf(pa_counters1, "Audio1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3]);
     wxString pa_counters1_string(pa_counters1); m_textPA1->SetLabel(pa_counters1_string);
 
     char pa_counters2[256];
 
     // input: underflow overflow output: underflow overflow
-    sprintf(pa_counters2, "PortAudio2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d framesPerBuf: %d", g_PAstatus2[0], g_PAstatus2[1], g_PAstatus2[2], g_PAstatus2[3], g_PAframesPerBuffer2);
+    sprintf(pa_counters2, "Audio2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
     wxString pa_counters2_string(pa_counters2);
     m_textPA2->SetLabel(pa_counters2_string);
 }

@@ -5,6 +5,7 @@
 */
 
 #include "main.h"
+#include "codec2_fdmdv.h"
 
 // Callback from plot_spectrum & plot_waterfall.  would be nice to
 // work out a way to do this without globals.

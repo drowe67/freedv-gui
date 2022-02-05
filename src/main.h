@@ -81,9 +81,7 @@
 #include "plot_scatter.h"
 #include "plot_waterfall.h"
 #include "plot_spectrum.h"
-#include "pa_wrapper.h"
 #include "sndfile.h"
-#include "portaudio.h"
 #include "dlg_audiooptions.h"
 #include "dlg_filter.h"
 #include "dlg_options.h"
@@ -93,6 +91,8 @@
 #include "serialport.h" 
 #include "pskreporter.h"
 #include "freedv_interface.h"
+#include "audio/AudioEngineFactory.h"
+#include "audio/IAudioDevice.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -115,11 +115,7 @@ enum {
 
 extern int                 g_verbose;
 extern int                 g_nSoundCards;
-extern int                 g_soundCard1InDeviceNum;
-extern int                 g_soundCard1OutDeviceNum;
 extern int                 g_soundCard1SampleRate;
-extern int                 g_soundCard2InDeviceNum;
-extern int                 g_soundCard2OutDeviceNum;
 extern int                 g_soundCard2SampleRate;
 
 // Voice Keyer Constants
@@ -280,7 +276,6 @@ class MainApp : public wxApp
 
         wxRect              m_rTopWindow;
 
-        int                 m_framesPerBuffer;
         int                 m_fifoSize_ms;
 
         // PSK Reporter configuration
@@ -367,10 +362,6 @@ typedef struct paCallBackData
         , outfifo2(nullptr)
         , rxinfifo(nullptr)
         , rxoutfifo(nullptr)
-        , inputChannels1(0)
-        , inputChannels2(0)
-        , outputChannels1(0)
-        , outputChannels2(0)
         , sbqMicInBass(nullptr)
         , sbqMicInTreble(nullptr)
         , sbqMicInMid(nullptr)
@@ -409,9 +400,6 @@ typedef struct paCallBackData
     struct FIFO    *rxinfifo;
     struct FIFO    *rxoutfifo;
 
-    int             inputChannels1, inputChannels2;
-    int             outputChannels1, outputChannels2;
-
     // EQ filter states
     void           *sbqMicInBass;
     void           *sbqMicInTreble;
@@ -428,7 +416,6 @@ typedef struct paCallBackData
     // optional loud tone on left channel to reliably trigger vox
     bool            leftChannelVoxTone;
     float           voxTonePhase;
-
 } paCallBackData;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -498,15 +485,8 @@ class MainFrame : public TopFrame
 
         bool                    m_RxRunning;
 
-        PortAudioWrap           *m_rxInPa;
-        PortAudioWrap           *m_rxOutPa;
-        PortAudioWrap           *m_txInPa;
-        PortAudioWrap           *m_txOutPa;
-
-        PaError                 m_rxErr;
-        PaError                 m_txErr;
-
-        txRxThread*             m_txRxThread;
+        txRxThread*             m_txThread;
+        txRxThread*             m_rxThread;
         
         bool                    OpenHamlibRig();
         void                    OpenSerialPort(void);
@@ -525,30 +505,6 @@ class MainFrame : public TopFrame
 
     void destroy_fifos(void);
     void destroy_src(void);
-    void autoDetectSoundCards(PortAudioWrap *pa);
-
-        static int rxCallback(
-                                const void *inBuffer,
-                                void *outBuffer,
-                                unsigned long framesPerBuffer,
-                                const PaStreamCallbackTimeInfo *outTime,
-                                PaStreamCallbackFlags statusFlags,
-                                void *userData
-                             );
-
-        static int txCallback(
-                                const void *inBuffer,
-                                void *outBuffer,
-                                unsigned long framesPerBuffer,
-                                const PaStreamCallbackTimeInfo *outTime,
-                                PaStreamCallbackFlags statusFlags,
-                                void *userData
-                             );
-
-
-    void initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDevice, 
-                             int soundCard, int sampleRate, int inputChannels,
-                             int outputChannels);
 
     void togglePTT(void);
 
@@ -648,6 +604,11 @@ class MainFrame : public TopFrame
         
         void OnChangeReportFrequency( wxCommandEvent& event );
     private:
+        std::shared_ptr<IAudioDevice> rxInSoundDevice;
+        std::shared_ptr<IAudioDevice> rxOutSoundDevice;
+        std::shared_ptr<IAudioDevice> txInSoundDevice;
+        std::shared_ptr<IAudioDevice> txOutSoundDevice;
+        
         bool        m_useMemory;
         wxTextCtrl* m_tc;
         int         m_zoom;
@@ -690,7 +651,8 @@ class MainFrame : public TopFrame
         void loadConfiguration_();
 };
 
-void txRxProcessing();
+void txProcessing();
+void rxProcessing();
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // class txRxThread - experimental tx/rx processing thread
@@ -698,17 +660,27 @@ void txRxProcessing();
 class txRxThread : public wxThread
 {
 public:
-    txRxThread(void) : wxThread(wxTHREAD_JOINABLE) { m_run = 1; }
+    txRxThread(bool tx) 
+        : wxThread(wxTHREAD_JOINABLE)
+        , m_tx(tx)
+        , m_run(1) { /* empty */ }
 
     // thread execution starts here
     void *Entry()
     {
         while (m_run)
         {
-            txRxProcessing();
-            wxThread::Sleep(20);
+            {
+                std::unique_lock<std::mutex> lk(m_processingMutex);
+                if (m_processingCondVar.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout)
+                {
+                    fprintf(stderr, "txRxThread: timeout while waiting for CV, tx = %d\n", m_tx);
+                }
+            }
+            if (m_tx) txProcessing();
+            else rxProcessing();
         }
-        Pa_Terminate();
+        
         return NULL;
     }
 
@@ -716,7 +688,25 @@ public:
     // stopped with Delete() (but not when it is Kill()ed!)
     void OnExit() { }
 
-public:
+    void terminateThread()
+    {
+        m_run = 0;
+        notify();
+    }
+
+    void notify()
+    {
+        {
+            std::unique_lock<std::mutex> lk(m_processingMutex);
+            m_processingCondVar.notify_all();
+        }
+    }
+
+    std::mutex m_processingMutex;
+    std::condition_variable m_processingCondVar;
+
+private:
+    bool  m_tx;
     bool  m_run;
 };
 
