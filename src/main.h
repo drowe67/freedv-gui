@@ -670,6 +670,13 @@ public:
     {
         while (m_run)
         {
+#if defined(__linux__)
+            const char* threadName = nullptr;
+            if (m_tx) threadName = "FreeDV txThread";
+            else threadName = "FreeDV rxThread";
+            pthread_setname_np(pthread_self(), threadName);
+#endif // defined(__linux__)
+
             {
                 std::unique_lock<std::mutex> lk(m_processingMutex);
                 if (m_processingCondVar.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout)

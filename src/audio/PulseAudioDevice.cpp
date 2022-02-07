@@ -132,6 +132,10 @@ void PulseAudioDevice::start()
         if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
         {
             outputPendingThread_ = new std::thread([&]() {
+#if defined(__linux__)
+                pthread_setname_np(pthread_self(), "FreeDV PulseAudio Output");
+#endif // defined(__linux__)
+
                 while(outputPendingThreadActive_)
                 {
                     auto currentTime = std::chrono::steady_clock::now();

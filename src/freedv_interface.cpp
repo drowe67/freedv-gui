@@ -23,6 +23,29 @@
 #include "main.h"
 #include "codec2_fdmdv.h"
 
+static const char* GetCurrentModeStrImpl_(int mode)
+{
+    switch(mode)
+    {
+        case FREEDV_MODE_700C:
+            return "700C";
+        case FREEDV_MODE_700D:
+            return "700D";
+        case FREEDV_MODE_700E:
+            return "700E";
+        case FREEDV_MODE_1600:
+            return "1600";
+        case FREEDV_MODE_2020:
+            return "2020";
+        case FREEDV_MODE_800XA:
+            return "800XA";
+        case FREEDV_MODE_2400B:
+            return "2400B";
+        default:
+            return "unk";
+    }
+}
+
 FreeDVInterface::FreeDVInterface() :
     textRxFunc_(nullptr),
     singleRxThread_(false),
@@ -153,8 +176,9 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
         auto outConvertObj = src_new(SRC_SINC_FASTEST, 1, &src_error);
         assert(outConvertObj != nullptr);
         outRateConvObjs_.push_back(outConvertObj);
-        
-        threads_.push_back(new EventHandlerThread<RxAudioThreadState*, RxAudioThreadState*>());
+       
+        std::string desc = std::string("FreeDV RX ") + GetCurrentModeStrImpl_(mode);
+        threads_.push_back(new EventHandlerThread<RxAudioThreadState*, RxAudioThreadState*>(desc));
         
         if (usingReliableText)
         {
@@ -351,25 +375,7 @@ const char* FreeDVInterface::getCurrentModeStr() const
     }
     else
     {
-        switch(rxMode_)
-        {
-            case FREEDV_MODE_700C:
-                return "700C";
-            case FREEDV_MODE_700D:
-                return "700D";
-            case FREEDV_MODE_700E:
-                return "700E";
-            case FREEDV_MODE_1600:
-                return "1600";
-            case FREEDV_MODE_2020:
-                return "2020";
-            case FREEDV_MODE_800XA:
-                return "800XA";
-            case FREEDV_MODE_2400B:
-                return "2400B";
-            default:
-                return "unk";
-        }
+        return GetCurrentModeStrImpl_(rxMode_);
     }
 }
 

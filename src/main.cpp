@@ -459,6 +459,10 @@ void MainFrame::loadConfiguration_()
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
 {
+#if defined(__linux__)
+    pthread_setname_np(pthread_self(), "FreeDV GUI");
+#endif // defined(__linux__)
+
     m_filterDialog = nullptr;
 
     m_zoom              = 1.;

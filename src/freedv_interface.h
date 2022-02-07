@@ -22,6 +22,8 @@
 #ifndef CODEC2_INTERFACE_H
 #define CODEC2_INTERFACE_H
 
+#include <pthread.h>
+
 #include <deque>
 #include <algorithm>
 #include <thread>
@@ -133,7 +135,7 @@ private:
     class EventHandlerThread
     {
     public:
-        EventHandlerThread();
+        EventHandlerThread(std::string desc);
         ~EventHandlerThread();
         
         std::shared_future<R> enqueue(std::function<R(T)> fn, T arg);
@@ -152,11 +154,12 @@ private:
         };
     
         bool isEnding_;
+        std::string desc_;
         std::queue<Args> execQueue_;
         std::mutex execQueueMtx_;
         std::condition_variable_any execQueueCond_;
         std::thread execThread_;
-                
+ 
         static void ThreadEntry_(EventHandlerThread<R,T>* ptr);
     };
     
@@ -201,8 +204,9 @@ private:
 };
 
 template<typename R, typename T>
-FreeDVInterface::EventHandlerThread<R, T>::EventHandlerThread()
+FreeDVInterface::EventHandlerThread<R, T>::EventHandlerThread(std::string desc)
     : isEnding_(false)
+    , desc_(desc)
     , execThread_(ThreadEntry_, this)
 {
     // empty
@@ -236,6 +240,10 @@ std::shared_future<R> FreeDVInterface::EventHandlerThread<R, T>::enqueue(std::fu
 template<typename R, typename T>
 void FreeDVInterface::EventHandlerThread<R, T>::ThreadEntry_(EventHandlerThread<R,T>* ptr)
 {
+#if defined(__linux__)
+    pthread_setname_np(pthread_self(), ptr->desc_.c_str());
+#endif // defined(__linux__)
+
     while(!ptr->isEnding_)
     {
         std::unique_lock<std::mutex> lock(ptr->execQueueMtx_);
