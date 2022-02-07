@@ -913,6 +913,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     m_panelScatter->setNc(g_Nc);
                     break;
                 case FREEDV_MODE_2020:
+                case FREEDV_MODE_2020A:
+                case FREEDV_MODE_2020B:
                     g_Nc = 31;
                     m_panelScatter->setNc(g_Nc);
                     break;
@@ -924,7 +926,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 if ((currentMode == FREEDV_MODE_1600) ||
                     (currentMode == FREEDV_MODE_700D) ||
                     (currentMode == FREEDV_MODE_700E) ||
-                    (currentMode == FREEDV_MODE_2020)) {
+                    (currentMode == FREEDV_MODE_2020) || 
+                    (currentMode == FREEDV_MODE_2020A) || 
+                    (currentMode == FREEDV_MODE_2020B)) {
                     m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
                 }
                 else if (currentMode == FREEDV_MODE_700C) {
@@ -1456,6 +1460,18 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         
         g_mode = FREEDV_MODE_2020;
     }
+    else if (m_rb2020a->GetValue()) 
+    {
+        assert(isAvxPresent);
+        
+        g_mode = FREEDV_MODE_2020A;
+    }
+    else if (m_rb2020b->GetValue()) 
+    {
+        assert(isAvxPresent);
+        
+        g_mode = FREEDV_MODE_2020B;
+    }
     
     if (freedvInterface.isRunning())
     {
@@ -1517,7 +1533,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_btnTogPTT->Enable();
         m_togBtnVoiceKeyer->Enable();
 
-        if (g_mode == FREEDV_MODE_2400B || g_mode == FREEDV_MODE_800XA || !wxGetApp().m_boolMultipleRx)
+        if (g_mode == FREEDV_MODE_2400B || g_mode == FREEDV_MODE_800XA || 
+            g_mode == FREEDV_MODE_2020A || g_mode == FREEDV_MODE_2020B || /* note: 2020A/B don't play well with multi-RX atm */
+            !wxGetApp().m_boolMultipleRx)
         {
             m_rb1600->Disable();
             m_rb700c->Disable();
@@ -1529,7 +1547,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             freedvInterface.addRxMode(g_mode);
         }
         else
-        {
+        {        
             if(isAvxPresent)
             {
                 freedvInterface.addRxMode(FREEDV_MODE_2020);
@@ -1554,6 +1572,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             
             m_rb800xa->Disable();
             m_rb2400b->Disable();
+            m_rb2020a->Disable();
+            m_rb2020b->Disable();
         }
         
         // Default voice keyer sample rate to 8K. The exact voice keyer
@@ -1666,36 +1686,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 
                 // Initialize PSK Reporter reporting.
                 if (wxGetApp().m_psk_enable)
-                {
-                    std::string currentMode = "";
-                    switch (g_mode)
-                    {
-                        case FREEDV_MODE_1600:
-                            currentMode = "1600";
-                            break;
-                        case FREEDV_MODE_700C:
-                            currentMode = "700C";
-                            break;
-                        case FREEDV_MODE_700D:
-                            currentMode = "700D";
-                            break;
-                        case FREEDV_MODE_800XA:
-                            currentMode = "800XA";
-                            break;
-                        case FREEDV_MODE_2400B:
-                            currentMode = "2400B";
-                            break;
-                        case FREEDV_MODE_2020:
-                            currentMode = "2020";
-                            break;
-                        case FREEDV_MODE_700E:
-                            currentMode = "700E";
-                            break;
-                        default:
-                            currentMode = "unknown";
-                            break;
-                    }
-        
+                {        
                     if (wxGetApp().m_psk_callsign.ToStdString() == "" || wxGetApp().m_psk_grid_square.ToStdString() == "")
                     {
                         wxMessageBox("PSK Reporter reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);

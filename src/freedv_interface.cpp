@@ -37,6 +37,10 @@ static const char* GetCurrentModeStrImpl_(int mode)
             return "1600";
         case FREEDV_MODE_2020:
             return "2020";
+        case FREEDV_MODE_2020A:
+            return "2020A";
+        case FREEDV_MODE_2020B:
+            return "2020B";
         case FREEDV_MODE_800XA:
             return "800XA";
         case FREEDV_MODE_2400B:
@@ -101,6 +105,7 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
             return 0.0f;
     }
 }
+
 void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText)
 {
     singleRxThread_ = singleRxThread;
@@ -116,7 +121,8 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
     for (auto& mode : enabledModes_)
     {
         struct freedv* dv = nullptr;
-        if ((mode == FREEDV_MODE_700D) || (mode == FREEDV_MODE_700E) || (mode == FREEDV_MODE_2020)) {
+        if ((mode == FREEDV_MODE_700D) || (mode == FREEDV_MODE_700E) || (mode == FREEDV_MODE_2020) ||
+            (mode == FREEDV_MODE_2020A) || (mode == FREEDV_MODE_2020B)) {
             // 700 has some init time stuff so treat it special
             struct freedv_advanced adv;
             dv = freedv_open_advanced(mode, &adv);
