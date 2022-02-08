@@ -1544,6 +1544,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_rb800xa->Disable();
             m_rb2400b->Disable();
             m_rb2020->Disable();
+            m_rb2020a->Disable();
+            m_rb2020b->Disable();
             freedvInterface.addRxMode(g_mode);
         }
         else
@@ -1821,7 +1823,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb800xa->Enable();
         m_rb2400b->Enable();
         if(isAvxPresent)
+        {
             m_rb2020->Enable();
+            m_rb2020a->Enable();
+            m_rb2020b->Enable();
+        }
    }
     
     optionsDlg->setSessionActive(m_RxRunning);
