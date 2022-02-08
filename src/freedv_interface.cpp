@@ -120,26 +120,7 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
     float minimumSnr = 999.0f;
     for (auto& mode : enabledModes_)
     {
-        struct freedv* dv = nullptr;
-        if ((mode == FREEDV_MODE_700D) || (mode == FREEDV_MODE_700E) || (mode == FREEDV_MODE_2020) ||
-            (mode == FREEDV_MODE_2020A) || (mode == FREEDV_MODE_2020B)) {
-            // 700 has some init time stuff so treat it special
-            struct freedv_advanced adv;
-            
-            if (mode == FREEDV_MODE_2020A || mode == FREEDV_MODE_2020B)
-            {
-                // Set index optimized VQ to 1 (required for 2020A/B).
-                adv.lpcnet_vq_type = 1;
-            }
-            else if (mode == FREEDV_MODE_2020)
-            {
-                adv.lpcnet_vq_type = 0;
-            }
-            
-            dv = freedv_open_advanced(mode, &adv);
-        } else {
-            dv = freedv_open(mode);
-        }
+        struct freedv* dv = freedv_open(mode);
         assert(dv != nullptr);
         
         snrVals_.push_back(-20);
