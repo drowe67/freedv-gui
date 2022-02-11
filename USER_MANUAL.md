@@ -774,6 +774,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.8.0 February 2022
+
+1. Modem compression (Tools-Options-Modem Clipping checkbox) added to FreeDV 2020 for increased RMS power.
+1. Experimental 2020A and 2020B modes.
+
 ## V1.7.0 February 2022
 
 1. Bugfixes:
