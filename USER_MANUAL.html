@@ -333,6 +333,16 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>There is a 2 second end-to-end latency. You are welcome to try tuning this (Tools - Options - FIFO size, also see Sound Card Debug section below).</li>
 <li>The voice keyer file must be 16 kHz mono 16 bit sample format.</li>
 </ol>
+<h2 id="freedv-2020a-and-freedv-2020b"><span class="header-section-number">8.4</span> FreeDV 2020A and FreeDV 2020B</h2>
+<p>Experimental modes developed in February 2022. The goal of these modes is to improve the performance of FreeDV 2020 over HF channels.</p>
+<p>Here are the three main innovations, and the theoretical improvements:</p>
+<ol type="1">
+<li>Compression (clipping) of the 2020x modem waveforms has been added, which is worth about 4dB. This should also improve the original FreeDV 2020 mode. The Clipping checkbox is located on Tools-Options-Modem. As per the other warnings in this manual please make sure you transmitter can handle the higher RMS power.</li>
+<li>2020A uses the same waveform as 2020, but an unequal error protection scheme. The most important 11 bits of the 52 bit LPCNet codec payload are heavily protected, the other bits not protected at all. This changes the “slope” of the speech quality against SNR curve. Compared to 2020, it may work (with poor speech quality) at lower SNRs, but still have a few audible errors even at higher SNRs.</li>
+<li>2020B is like 700E to 700D - it works with fast fading but requires a few more dB of SNR. This will make it usable in European Winter (or over the South Pole Argentina to Australia) type channels - if you have enough SNR. The challenge with this mode is squeezing all the information we need (enough pilots symbols for fast fading, LPCNet, FEC bits) into a 2100 Hz channel - we are pushing up again the edges of many SSB filters. It also uses unequal FEC, just the most important 11 bits are protected, but not as well as 2020A.</li>
+</ol>
+<p>These modes are under development and may change at any time. If you experience comparability issues with another operator - check your Git Hash values on the Help-about menu to ensure you are running the same versions of LPCNet and codec2.</p>
+<p>It is recommended that multi-rx be disabled when using thes modes. These modes are not supported by multi-rx, you will need to manually coordinate the mode with other stations.</p>
 <h1 id="tools-menu"><span class="header-section-number">9</span> Tools Menu</h1>
 <h2 id="tools---filter"><span class="header-section-number">9.1</span> Tools - Filter</h2>
 <p>This section describes features on Tools-Filter.</p>
