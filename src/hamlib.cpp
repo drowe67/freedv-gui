@@ -222,6 +222,11 @@ int Hamlib::hamlib_mode_cb(RIG* rig, vfo_t currVFO, rmode_t currMode, pbwidth_t 
 
 int Hamlib::update_frequency_and_mode(void)
 {
+    if (m_rig == nullptr)
+    {
+        return RIG_EARG; // "NULL RIG handle or any invalid pointer parameter in get arg"
+    }
+    
     rmode_t mode = RIG_MODE_NONE;
     pbwidth_t passband = 0;
     int result = rig_get_mode(m_rig, RIG_VFO_CURR, &mode, &passband);
