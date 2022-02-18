@@ -48,7 +48,7 @@ message(STATUS "Compilation date = XX${DATE_RESULT}XX")
 # Set FreeDV version and generate src/version.h
 #
 set(FREEDV_VERSION_MAJOR 1)
-set(FREEDV_VERSION_MINOR 7)
+set(FREEDV_VERSION_MINOR 8)
 set(FREEDV_VERSION_PATCH 0)
 set(FREEDV_VERSION_SUFFIX "")
 

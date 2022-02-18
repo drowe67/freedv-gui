@@ -517,6 +517,20 @@ FreeDV 2020 Tips:
    section below).
 1. The voice keyer file must be 16 kHz mono 16 bit sample format.
 
+## FreeDV 2020A and FreeDV 2020B
+
+Experimental modes developed in February 2022.  The goal of these modes is to improve the performance of FreeDV 2020 over HF channels.
+
+Here are the three main innovations, and the theoretical improvements:
+
+1. Compression (clipping) of the 2020x modem waveforms has been added, which is worth about 4dB. This should also improve the original FreeDV 2020 mode.  The Clipping checkbox is located on Tools-Options-Modem.  As per the other warnings in this manual please make sure you transmitter can handle the higher RMS power.
+1. 2020A uses the same waveform as 2020, but an unequal error protection scheme. The most important 11 bits of the 52 bit LPCNet codec payload are heavily protected, the other bits not protected at all. This changes the "slope" of the speech quality against SNR curve. Compared to 2020, it may work (with poor speech quality) at lower SNRs, but still have a few audible errors even at higher SNRs.
+1. 2020B is like 700E to 700D - it works with fast fading but requires a few more dB of SNR. This will make it usable in European Winter (or over the South Pole Argentina to Australia) type channels - if you have enough SNR. The challenge with this mode is squeezing all the information we need (enough pilots symbols for fast fading, LPCNet, FEC bits) into a 2100 Hz channel - we are pushing up again the edges of many SSB filters. It also uses unequal FEC, just the most important 11 bits are protected, but not as well as 2020A.
+
+These modes are under development and may change at any time.  If you experience comparability issues with another operator - check your Git Hash values on the Help-about menu to ensure you are running the same versions of LPCNet and codec2.
+
+It is recommended that multi-rx be disabled when using thes modes. These modes are not supported by multi-rx, you will need to manually coordinate the mode with other stations.
+
 # Tools Menu
 
 ## Tools - Filter
@@ -759,6 +773,11 @@ FEC | Forward Error Correction - extra bits to we send to protect the speech cod
 LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
+
+## V1.8.0 February 2022
+
+1. Modem compression (Tools-Options-Modem Clipping checkbox) added to FreeDV 2020 for increased RMS power.
+1. Experimental 2020A and 2020B modes.
 
 ## V1.7.0 February 2022
 

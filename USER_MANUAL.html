@@ -333,6 +333,16 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>There is a 2 second end-to-end latency. You are welcome to try tuning this (Tools - Options - FIFO size, also see Sound Card Debug section below).</li>
 <li>The voice keyer file must be 16 kHz mono 16 bit sample format.</li>
 </ol>
+<h2 id="freedv-2020a-and-freedv-2020b"><span class="header-section-number">8.4</span> FreeDV 2020A and FreeDV 2020B</h2>
+<p>Experimental modes developed in February 2022. The goal of these modes is to improve the performance of FreeDV 2020 over HF channels.</p>
+<p>Here are the three main innovations, and the theoretical improvements:</p>
+<ol type="1">
+<li>Compression (clipping) of the 2020x modem waveforms has been added, which is worth about 4dB. This should also improve the original FreeDV 2020 mode. The Clipping checkbox is located on Tools-Options-Modem. As per the other warnings in this manual please make sure you transmitter can handle the higher RMS power.</li>
+<li>2020A uses the same waveform as 2020, but an unequal error protection scheme. The most important 11 bits of the 52 bit LPCNet codec payload are heavily protected, the other bits not protected at all. This changes the “slope” of the speech quality against SNR curve. Compared to 2020, it may work (with poor speech quality) at lower SNRs, but still have a few audible errors even at higher SNRs.</li>
+<li>2020B is like 700E to 700D - it works with fast fading but requires a few more dB of SNR. This will make it usable in European Winter (or over the South Pole Argentina to Australia) type channels - if you have enough SNR. The challenge with this mode is squeezing all the information we need (enough pilots symbols for fast fading, LPCNet, FEC bits) into a 2100 Hz channel - we are pushing up again the edges of many SSB filters. It also uses unequal FEC, just the most important 11 bits are protected, but not as well as 2020A.</li>
+</ol>
+<p>These modes are under development and may change at any time. If you experience comparability issues with another operator - check your Git Hash values on the Help-about menu to ensure you are running the same versions of LPCNet and codec2.</p>
+<p>It is recommended that multi-rx be disabled when using thes modes. These modes are not supported by multi-rx, you will need to manually coordinate the mode with other stations.</p>
 <h1 id="tools-menu"><span class="header-section-number">9</span> Tools Menu</h1>
 <h2 id="tools---filter"><span class="header-section-number">9.1</span> Tools - Filter</h2>
 <p>This section describes features on Tools-Filter.</p>
@@ -553,7 +563,12 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </tbody>
 </table>
 <h1 id="release-notes"><span class="header-section-number">16</span> Release Notes</h1>
-<h2 id="v1.7.0-february-2022"><span class="header-section-number">16.1</span> V1.7.0 February 2022</h2>
+<h2 id="v1.8.0-february-2022"><span class="header-section-number">16.1</span> V1.8.0 February 2022</h2>
+<ol type="1">
+<li>Modem compression (Tools-Options-Modem Clipping checkbox) added to FreeDV 2020 for increased RMS power.</li>
+<li>Experimental 2020A and 2020B modes.</li>
+</ol>
+<h2 id="v1.7.0-february-2022"><span class="header-section-number">16.2</span> V1.7.0 February 2022</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -587,7 +602,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Windows installer now installs sample .wav files. (PR #182)</li>
 </ul></li>
 </ol>
-<h2 id="v1.6.1-september-2021"><span class="header-section-number">16.2</span> V1.6.1 September 2021</h2>
+<h2 id="v1.6.1-september-2021"><span class="header-section-number">16.3</span> V1.6.1 September 2021</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -605,7 +620,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </ul></li>
 </ol>
 <p><em>Note: The PSK Reporter feature beginning in this release is incompatible with versions older than 1.6.1 due to a change in how callsigns are encoded.</em></p>
-<h2 id="v1.6.0-august-2021"><span class="header-section-number">16.3</span> V1.6.0 August 2021</h2>
+<h2 id="v1.6.0-august-2021"><span class="header-section-number">16.4</span> V1.6.0 August 2021</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -640,43 +655,43 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Created “make dist” target for easy tarball generation. (PR #152)</li>
 </ul></li>
 </ol>
-<h2 id="v1.5.3-april-2021"><span class="header-section-number">16.4</span> V1.5.3 April 2021</h2>
+<h2 id="v1.5.3-april-2021"><span class="header-section-number">16.5</span> V1.5.3 April 2021</h2>
 <ol type="1">
 <li>Simultaneous decode of 2020, 1600 and 700C/D/E (without needing to push Stop first, change the mode and push Start again).</li>
 <li>Dynamic switching of the current Tx mode between the aforementioned modes, again without needing to restart the session.</li>
 <li>A Tx level slider on the right hand side of the main screen to fine-tune transmit output (to more easily avoid clipping ALC and conflicting with other soundcard ham radio applications).</li>
 </ol>
-<h2 id="v1.5.2-january-2021"><span class="header-section-number">16.5</span> V1.5.2 January 2021</h2>
+<h2 id="v1.5.2-january-2021"><span class="header-section-number">16.6</span> V1.5.2 January 2021</h2>
 <ol type="1">
 <li>Updates storage for sound card configuration to use device names instead of IDs.</li>
 <li>Detects changes to computer sound card configuration and notifies user when devices go away.</li>
 </ol>
-<h2 id="v1.5.1-january-2021"><span class="header-section-number">16.6</span> V1.5.1 January 2021</h2>
+<h2 id="v1.5.1-january-2021"><span class="header-section-number">16.7</span> V1.5.1 January 2021</h2>
 <ol type="1">
 <li>Experimental support for reporting to <a href="https://pskreporter.info">PSK Reporter</a> added.</li>
 <li>Bug fixes with audio configuration to allow mono devices to be used along with stereo ones.</li>
 <li>Tweaks to user interface and record/playback functionality to improve usability.</li>
 <li>Bug fixes and tweaks to improve voice keyer support.</li>
 </ol>
-<h2 id="v1.5.0-december-2020"><span class="header-section-number">16.7</span> V1.5.0 December 2020</h2>
+<h2 id="v1.5.0-december-2020"><span class="header-section-number">16.8</span> V1.5.0 December 2020</h2>
 <ol type="1">
 <li>FreeDV 700E, better performance than 700D on fast fading channels</li>
 <li>FreeDV 700D/700E clipper to increase average transmit power by 6dB</li>
 </ol>
-<h2 id="v1.4.3-august-2020"><span class="header-section-number">16.8</span> V1.4.3 August 2020</h2>
+<h2 id="v1.4.3-august-2020"><span class="header-section-number">16.9</span> V1.4.3 August 2020</h2>
 <ol type="1">
 <li>Maintenance Release (no major new features)</li>
 <li>Changes to support wxWidgets 3.1 (but Windows versions built against wxWidgets 3.0)</li>
 <li>Under the hood - OFDM modem has been refactored, shouldn’t affect freedv-gui operation</li>
 </ol>
-<h2 id="v1.4.2-july-2020"><span class="header-section-number">16.9</span> V1.4.2 July 2020</h2>
+<h2 id="v1.4.2-july-2020"><span class="header-section-number">16.10</span> V1.4.2 July 2020</h2>
 <ol type="1">
 <li>Maintenance Release (no major new features)</li>
 <li>Improved squelch/audio pass through on 700D/2020/2400B</li>
 <li>Under the hood - Codec2 library has been refactored, shouldn’t affect freedv-gui operation</li>
 <li>Removed Project Horus support (now being maintained outside of Codec2/FreeDV)</li>
 </ol>
-<h2 id="v1.4-june-october-2019"><span class="header-section-number">16.10</span> V1.4 June-October 2019</h2>
+<h2 id="v1.4-june-october-2019"><span class="header-section-number">16.11</span> V1.4 June-October 2019</h2>
 <ol type="1">
 <li>FreeDV 2020, Project Horus Binary Modes.</li>
 <li><a href="http://www.rowetel.com/?p=6824">Improved OFDM Modem Acquisition</a>, this will improve sync time on FreeDV 700D and 2020 on HF fading channels, and can also handle +/- 60 Hz frequency offsets when tuning.</li>
@@ -684,7 +699,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Wide bandwidth phase estimation and DPSK for OFDM modes (700D/2020) for fast fading/QO-100 channels (Tools-Options)</li>
 <li>Better speech quality on FreeDV 700C/700D with Auto equaliser (Tools-Filter)</li>
 </ol>
-<h2 id="v1.3-may-2018"><span class="header-section-number">16.11</span> V1.3 May 2018</h2>
+<h2 id="v1.3-may-2018"><span class="header-section-number">16.12</span> V1.3 May 2018</h2>
 <ul>
 <li>FreeDV 700D</li>
 </ul>
