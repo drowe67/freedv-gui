@@ -23,7 +23,7 @@ public:
     virtual ~PskReporter();
     
     void addReceiveRecord(std::string callsign, unsigned int frequency, char snr);
-    bool send();
+    void send();
 
 private:
     unsigned int currentSequenceNumber_;
@@ -38,6 +38,8 @@ private:
     int getTxDataSize_();    
     void encodeReceiverRecord_(char* buf);    
     void encodeSenderRecords_(char* buf);
+    
+    bool reportCommon_();
 };
 
 

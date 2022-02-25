@@ -1169,7 +1169,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             }
             
             unsigned int freq = wxGetApp().m_psk_freq;
-            if (freq > 0)
+
+            // Only report if there's a valid reporting frequency and if we're not playing 
+            // a recording through ourselves (to avoid false reports).
+            if (freq > 0 && !g_playFileFromRadio)
             {
                 fprintf(
                     stderr, 
@@ -1702,22 +1705,13 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                             wxGetApp().m_psk_callsign.ToStdString(), 
                             wxGetApp().m_psk_grid_square.ToStdString(),
                             std::string("FreeDV ") + FREEDV_VERSION);
+                        assert(wxGetApp().m_pskReporter != nullptr);
+                        
                         wxGetApp().m_pskPendingCallsign = "";
                         wxGetApp().m_pskPendingSnr = 0;
         
-                        // Send empty packet to verify network connectivity.
-                        bool success = wxGetApp().m_pskReporter->send();
-                        if (success)
-                        {
-                            // Enable PSK Reporter timer (every 5 minutes).
-                            m_pskReporterTimer.Start(5 * 60 * 1000);
-                        }
-                        else
-                        {
-                            wxMessageBox("Couldn't connect to PSK Reporter server. Reporting functionality will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-                            delete wxGetApp().m_pskReporter;
-                            wxGetApp().m_pskReporter = NULL;
-                        }
+                        // Enable PSK Reporter timer (every 5 minutes).
+                        m_pskReporterTimer.Start(5 * 60 * 1000);
                     }
                 }
                 else
