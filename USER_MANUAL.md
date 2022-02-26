@@ -121,7 +121,7 @@ nudged.  More **is not better** with the FreeDV transmit signal.
 Overdriving your transmitter will lead to a distorted transit signal, and
 a poor SNR at the receiver.  This is a very common problem.
 
-1. FreeDV 700D and 700E can drive your transmitter at an average power of 40% of it's peak power rating.  For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.
+1. FreeDV 700D and 700E can drive your transmitter at an average power of 40% of its peak power rating.  For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.
 
 1. Adjust the microphone audio so the peaks are not clipping, and the
 average is about half the maximum.
