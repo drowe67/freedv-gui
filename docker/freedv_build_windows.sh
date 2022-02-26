@@ -9,7 +9,7 @@ function print_help {
     echo "    -d                  debug mode; trace script execution"
     echo "    --noclean           start from a previous build (git pull && make), which is faster for small changes."
     echo "                        The default is a clean build from a fresh git clone (slow but safer)"
-    echo "    --build             Update docker image first (run if you have modifed the docker scripts in fdv_win_fedora)"
+    echo "    --build             Update docker image first (run if you have modified the docker scripts in fdv_win_fedora)"
     echo "    --rebuild           Completely recreate docker image first (e.g. run if you have new rpm packages)"
     echo "    --repo GitRepo      (default https://github.com/drowe67/freedv-gui.git)"
     echo "    --branch GitBranch  (default master)"

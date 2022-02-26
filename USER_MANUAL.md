@@ -160,7 +160,7 @@ Once you have configured PTT, try the **Test** button.
 
 Serial PTT support is complex.  We get many reports that FreeDV
 PTT doesn't work on a particular radio, but may work fine with other
-programs such as Fldigi.  This is often a mis-match between the serial
+programs such as Fldigi.  This is often a mismatch between the serial
 parameters Hamlib is using with FreeDV and your radio. For example you
 may have changed the default serial rate on your radio. Carefully
 check the serial parameters on your radio match those used by FreeDV
@@ -293,12 +293,12 @@ hardware, what you have tried, and the exact nature of the problem.
 
 You must have a modern CPU with AVX support to run FreeDV 2020.  If
 you do not have AVX the FreeDV 2020 mode button will be greyed out.
-A Microsoft utlity called [coreinfo](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo)
+A Microsoft utility called [coreinfo](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo)
 can be also used to determine if your CPU supports AVX.  A * means
 you have AVX, a - means no AVX:
 ```
 AES             -       Supports AES extensions
-AVX             *       Supports AVX intruction extensions
+AVX             *       Supports AVX instruction extensions
 FMA             -       Supports FMA extensions using YMM state
 ```
 
@@ -525,7 +525,7 @@ This section describes features on Tools-Filter.
 
 Control | Description
  -------------------------- | ------------------------------------------------------------------------ |
-Noise Supression | Enable noise supression, dereverberation, AGC of mic signal using the Speex pre-processor
+Noise Suppression | Enable noise suppression, dereverberation, AGC of mic signal using the Speex pre-processor
 700C/700D Auto EQ | Automatic equalisation for FreeDV 700C and FreeDV 700D Codec input audio
 
 Auto EQ (Automatic Equalisation) adjusts the input speech spectrum to best fit the speech codec. It can remove annoying bass artefacts and make the codec speech easier to understand.

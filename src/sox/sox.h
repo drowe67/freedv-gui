@@ -712,7 +712,7 @@ Min value for sox_sample_t = 0x80000000.
  * Rounding: halves toward +inf, all others to nearest integer.
  *
  * Clips? shows whether on not there is the possibility of a conversion
- * clipping to the minimum or maximum value when inputing from or outputing
+ * clipping to the minimum or maximum value when inputing from or outputting
  * to a given type.
  *
  * Unsigned integers are converted to and from signed integers by flipping

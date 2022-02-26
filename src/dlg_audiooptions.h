@@ -120,7 +120,7 @@ class AudioOptsDialog : public wxDialog
         wxButton* m_sdbSizer1Apply;
         wxButton* m_sdbSizer1Cancel;
         
-        // Virtual event handlers, overide them in your derived class
+        // Virtual event handlers, override them in your derived class
         //virtual void OnActivateApp( wxActivateEvent& event ) { event.Skip(); }
 //        virtual void OnCloseFrame( wxCloseEvent& event ) { event.Skip(); }
 
@@ -138,7 +138,7 @@ class AudioOptsDialog : public wxDialog
         void OnApplyAudioParameters( wxCommandEvent& event );
         void OnCancelAudioParameters( wxCommandEvent& event );
         void OnOkAudioParameters( wxCommandEvent& event );
-        // Virtual event handlers, overide them in your derived class
+        // Virtual event handlers, override them in your derived class
         void OnClose( wxCloseEvent& event ) { event.Skip(); }
         void OnHibernate( wxActivateEvent& event ) { event.Skip(); }
         void OnIconize( wxIconizeEvent& event ) { event.Skip(); }
