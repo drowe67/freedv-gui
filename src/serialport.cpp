@@ -56,7 +56,7 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 
             1/ Run->devmgmnt.msc
             2/ Change COM port Ports (COM & LPT) -> Serial Device -> Properties Tab -> Advanced
-            3/ Unplug USB serial devce and plug in again.  This is really important.  FreeDV won't recognise
+            3/ Unplug USB serial device and plug in again.  This is really important.  FreeDV won't recognise
                new COM port number until this is done.
             4/ Test PTT on FreeDV Tools->PTT
 	*/

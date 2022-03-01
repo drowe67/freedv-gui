@@ -357,7 +357,7 @@ void AudioOptsDialog::OnInitDialog( wxInitDialogEvent& event )
 // setTextCtrlIfDevNameValid()
 //
 // helper function to look up name of devName, and if it exists write
-// name to textCtrl.  Used to trap dissapearing devices.
+// name to textCtrl.  Used to trap disappearing devices.
 //-------------------------------------------------------------------------
 bool AudioOptsDialog::setTextCtrlIfDevNameValid(wxTextCtrl *textCtrl, wxListCtrl *listCtrl, wxString devName)
 {
@@ -1106,7 +1106,7 @@ void AudioOptsDialog::OnRefreshClick(wxCommandEvent& event)
     populateParams(m_TxInDevices);
     populateParams(m_TxOutDevices);
 
-    // some devices may have dissapeared, so possibily change sound
+    // some devices may have disappeared, so possibly change sound
     // card config
 
     ExchangeData(EXCHANGE_DATA_IN);
@@ -1142,7 +1142,7 @@ void AudioOptsDialog::OnOkAudioParameters(wxCommandEvent& event)
 {
     int status = ExchangeData(EXCHANGE_DATA_OUT);
 
-    // We only accept OK if config sucessful
+    // We only accept OK if config successful
 
     if (g_verbose) fprintf(stderr,"status: %d m_isPaInitialized: %d\n", status, m_isPaInitialized);
     if (status == 0) {

@@ -101,12 +101,12 @@ else(APPLE)
 target_link_libraries(freedv codec2 lpcnetfreedv fdv_audio)
 endif(APPLE)
 
-# Add build dependencies for interally built external libraries.
+# Add build dependencies for internally built external libraries.
 if(USE_INTERNAL_CODEC2)
     add_dependencies(freedv build_codec2 build_lpcnetfreedv)
 endif()
 
-# Add depenencies for other statically built libraries, if applicable.
+# Add dependencies for other statically built libraries, if applicable.
 if(FREEDV_STATIC_DEPS)
     if(APPLE)
     add_dependencies(FreeDV ${FREEDV_STATIC_DEPS})

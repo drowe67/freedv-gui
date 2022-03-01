@@ -337,7 +337,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
             return;
         }
 
-        // Bug: on Win32 I cant read m_recFileFromRadioSecs, so have hard coded it
+        // Bug: on Win32 I can't read m_recFileFromRadioSecs, so have hard coded it
 #ifdef __WIN32__
         long secs = wxGetApp().m_recFileFromRadioSecs;
         g_recFromRadioSamples = FS*(unsigned int)secs;
@@ -468,7 +468,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
             return;
         }
 
-        // Bug: on Win32 I cant read m_recFileFromModemSecs, so have hard coded it
+        // Bug: on Win32 I can't read m_recFileFromModemSecs, so have hard coded it
 #ifdef __WIN32__
         long secs = wxGetApp().m_recFileFromModulatorSecs;
         g_recFromModulatorSamples = sample_rate * (unsigned int)secs;
