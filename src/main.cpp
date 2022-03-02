@@ -469,11 +469,11 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     g_logfile = stderr;
     #endif
 
-    // Init Hamlib library, but we dont start talking to any rigs yet
+    // Init Hamlib library, but we don't start talking to any rigs yet
 
     wxGetApp().m_hamlib = new Hamlib();
 
-    // Init Serialport library, but as for Hamlib we dont start talking to any rigs yet
+    // Init Serialport library, but as with Hamlib we don't start talking to any rigs yet
 
     wxGetApp().m_serialport = new Serialport();
     wxGetApp().m_pttInSerialPort = new Serialport();
@@ -2785,7 +2785,7 @@ void rxProcessing()
         }
 
         // Get some audio to send to headphones/speaker.  If in analog
-        // mode we pass thru the "from radio" audio to the
+        // mode we pass through the "from radio" audio to the
         // headphones/speaker.
         
         int speechOutbufferSize = (int)(FRAME_DURATION * freedvInterface.getRxSpeechSampleRate());
