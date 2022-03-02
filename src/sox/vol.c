@@ -140,7 +140,7 @@ static int flow(sox_effect_t * effp, const sox_sample_t *ibuf, sox_sample_t *obu
                         /* FIXME: MIN is (-MAX)-1 so need to make sure we
                          * don't go over that.  Probably could do this
                          * check inside the above equation but I didn't
-                         * think it thru.
+                         * think it through.
                          */
                         if (sample < SOX_SAMPLE_MIN)
                             sample = SOX_SAMPLE_MIN;
