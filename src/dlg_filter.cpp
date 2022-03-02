@@ -942,7 +942,7 @@ void FilterDlg::calcFilterSpectrum(float magdB[], int argc, char *argv[]) {
     //    out[i] = 0.0;
     //out[0] = IMP_AMP;
 
-    // calculate discrete time continous frequency Fourer transform
+    // calculate discrete time continuous frequency Fourer transform
     // doing this from first principles rather than FFT for no good reason
 
     for(f=0,i=0; f<MAX_F_HZ; f+=F_STEP_DFT,i++) {

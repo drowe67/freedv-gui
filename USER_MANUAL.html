@@ -99,7 +99,7 @@
 <ol type="1">
 <li><p>On receive, FreeDV is not very sensitive to the <strong>From Radio</strong> level, adjust so it is mid-range and not clipping. FreeDV uses phase shift keying (PSK) so is not sensitive to amplitude.</p></li>
 <li><p>The transmit level from your computer to your radio is important. On transmit, adjust your level so that the ALC is <strong>just</strong> being nudged. More <strong>is not better</strong> with the FreeDV transmit signal. Overdriving your transmitter will lead to a distorted transit signal, and a poor SNR at the receiver. This is a very common problem.</p></li>
-<li><p>FreeDV 700D and 700E can drive your transmitter at an average power of 40% of it’s peak power rating. For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.</p></li>
+<li><p>FreeDV 700D and 700E can drive your transmitter at an average power of 40% of its peak power rating. For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.</p></li>
 <li><p>Adjust the microphone audio so the peaks are not clipping, and the average is about half the maximum.</p></li>
 </ol>
 <h2 id="audio-processing"><span class="header-section-number">2.7</span> Audio Processing</h2>
@@ -119,7 +119,7 @@
 </ul>
 <p>You may also optionally configure a second serial port for PTT input. This can be useful for interfacing devices like foot switches to FreeDV. If configured, FreeDV will switch into transmit mode (including sending the needed Hamlib or serial commands to initiate PTT) when it detects the configured signal.</p>
 <p>Once you have configured PTT, try the <strong>Test</strong> button.</p>
-<p>Serial PTT support is complex. We get many reports that FreeDV PTT doesn’t work on a particular radio, but may work fine with other programs such as Fldigi. This is often a mis-match between the serial parameters Hamlib is using with FreeDV and your radio. For example you may have changed the default serial rate on your radio. Carefully check the serial parameters on your radio match those used by FreeDV in the PTT Dialog.</p>
+<p>Serial PTT support is complex. We get many reports that FreeDV PTT doesn’t work on a particular radio, but may work fine with other programs such as Fldigi. This is often a mismatch between the serial parameters Hamlib is using with FreeDV and your radio. For example you may have changed the default serial rate on your radio. Carefully check the serial parameters on your radio match those used by FreeDV in the PTT Dialog.</p>
 <p>Also see <a href="#common-problems">Common Problems</a> section of this manual.</p>
 <h2 id="hamlib"><span class="header-section-number">2.9</span> HamLib</h2>
 <p>Hamlib comes with a default serial rate for each radio. If your radio has a different serial rate change the Serial Rate drop down box to match your radio.</p>
@@ -168,13 +168,20 @@
 <li><p>Contact the digital voice mailing list. Be specific about your hardware, what you have tried, and the exact nature of the problem.</p></li>
 </ol>
 <h2 id="freedv-2020-mode-is-greyed-out"><span class="header-section-number">3.9</span> FreeDV 2020 mode is greyed out</h2>
-<p>You must have a modern CPU with AVX support to run FreeDV 2020. If you do not have AVX the FreeDV 2020 mode button will be greyed out. A Microsoft utlity called <a href="https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo">coreinfo</a> can be also used to determine if your CPU supports AVX. A * means you have AVX, a - means no AVX:</p>
+<p>In order to use FreeDV 2020 mode, you must have one of the following:</p>
+<ol type="1">
+<li>An Intel based CPU with AVX support. A Microsoft utility called <a href="https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo">coreinfo</a> can be used to determine if your CPU supports AVX. A * means you have AVX, a - means no AVX:</li>
+</ol>
 <pre><code>AES             -       Supports AES extensions
-AVX             *       Supports AVX intruction extensions
+AVX             *       Supports AVX instruction extensions
 FMA             -       Supports FMA extensions using YMM state</code></pre>
 <p>On Linux, you can check for <code>avx</code> in the <strong>flags</strong> section of <code>/proc/cpuinfo</code> or the output of the <code>lscpu</code> command:</p>
 <pre><code>lscpu | grep -o &quot;avx[^ ]*&quot;</code></pre>
 <p>will display <code>avx</code> (or <code>avx2</code>) if your CPU supports the instructions.</p>
+<ol start="2" type="1">
+<li>A Mac with an ARM processor (e.g. 2020 Mac Mini or later).</li>
+</ol>
+<p>If your system does not meet either (1) or (2), the 2020 option will be grayed out.</p>
 <h2 id="freedv-2020-mode-is-slow-on-arm-macs"><span class="header-section-number">3.10</span> FreeDV 2020 mode is slow on ARM Macs</h2>
 <p>Preliminary testing on ARM Macs has shown that NEON optimizations in LPCNet are sufficient to allow 2020 to be whitelisted on those machines. However, this is definitely experimental. If you are experiencing issues with 2020 mode on these Macs, please let the development team know so that further investigation can be done.</p>
 <h2 id="i-installed-a-new-version-and-freedv-stopped-working"><span class="header-section-number">3.11</span> I installed a new version and FreeDV stopped working</h2>
@@ -349,8 +356,8 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Noise Supression</td>
-<td>Enable noise supression, dereverberation, AGC of mic signal using the Speex pre-processor</td>
+<td>Noise Suppression</td>
+<td>Enable noise suppression, dereverberation, AGC of mic signal using the Speex pre-processor</td>
 </tr>
 <tr class="even">
 <td>700C/700D Auto EQ</td>
