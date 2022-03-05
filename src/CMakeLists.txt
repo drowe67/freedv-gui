@@ -13,6 +13,7 @@ set(FREEDV_SOURCES
     serialport.cpp
     topFrame.cpp
     sox_biquad.c
+    sox_biquad.h
     comp.h
     dlg_audiooptions.h
     dlg_filter.h
@@ -26,27 +27,6 @@ set(FREEDV_SOURCES
     plot_spectrum.h
     plot_waterfall.h
     hamlib.h
-    sox_biquad.h
-    sox/band.h
-    sox/biquad.c
-    sox/biquads.c
-    sox/biquad.h
-    sox/effects.c
-    sox/effects.h
-    sox/effects_i.c
-    sox/effects_i_dsp.c
-    sox/fft4g.c
-    sox/formats.c
-    sox/formats_i.c
-    sox/libsox.c
-    sox/sox.h
-    sox/sox_i.h
-    sox/soxomp.h
-    sox/util.c
-    sox/util.h
-    sox/vol.c
-    sox/xmalloc.h
-    sox/xmalloc.c
     topFrame.h
     version.h
     osx_interface.h
@@ -72,6 +52,7 @@ set(FREEDV_LINK_LIBS_OSX
 
 # Compile FreeDV components
 add_subdirectory(audio)
+add_subdirectory(sox)
 
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.
 # In addition, there are some required OSX-specific code files for platform specific handling.
@@ -96,9 +77,9 @@ endif(APPLE)
 
 # Link imported or build tree targets.
 if(APPLE)
-target_link_libraries(FreeDV codec2 lpcnetfreedv fdv_audio)
+target_link_libraries(FreeDV codec2 lpcnetfreedv fdv_audio fdv_sox)
 else(APPLE)
-target_link_libraries(freedv codec2 lpcnetfreedv fdv_audio)
+target_link_libraries(freedv codec2 lpcnetfreedv fdv_audio fdv_sox)
 endif(APPLE)
 
 # Add build dependencies for internally built external libraries.
