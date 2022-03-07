@@ -20,6 +20,7 @@
 //
 //=========================================================================
 
+#include <assert.h>
 #include "EitherOrStep.h"
 
 EitherOrStep::EitherOrStep(std::function<bool()> conditionalFn, std::shared_ptr<IPipelineStep> trueStep, std::shared_ptr<IPipelineStep> falseStep)

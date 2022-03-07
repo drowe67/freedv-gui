@@ -23,6 +23,7 @@
 #include "ResampleStep.h"
 
 #include <algorithm>
+#include <assert.h>
 
 // Copied from util.cpp
 // TBD -- move logic into this class?
