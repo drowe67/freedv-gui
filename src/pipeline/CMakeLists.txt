@@ -3,6 +3,18 @@ add_library(fdv_audio_pipeline STATIC
     AudioPipeline.cpp
     EitherOrStep.h
     EitherOrStep.cpp
+    EqualizerStep.h
+    EqualizerStep.cpp
+    IPipelineStep.h
+    IPipelineStep.cpp
+    LevelAdjustStep.h
+    LevelAdjustStep.cpp
+    PlaybackStep.h
+    PlaybackStep.cpp
+    RecordStep.h
+    RecordStep.cpp
     ResampleStep.h
     ResampleStep.cpp
+    TapStep.h
+    TapStep.cpp
 )
