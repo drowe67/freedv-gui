@@ -1,6 +1,6 @@
 //=========================================================================
-// Name:            EqualizerStep.h
-// Purpose:         Describes an equalizer step in the audio pipeline.
+// Name:            ResamplePlotStep.h
+// Purpose:         Describes a resample for plot step in the audio pipeline.
 //
 // Authors:         Mooneer Salem
 // License:
@@ -20,30 +20,28 @@
 //
 //=========================================================================
 
-#ifndef AUDIO_PIPELINE__EQUALIZER_STEP_H
-#define AUDIO_PIPELINE__EQUALIZER_STEP_H
+#ifndef AUDIO_PIPELINE__RESAMPLE_PLOT_STEP_H
+#define AUDIO_PIPELINE__RESAMPLE_PLOT_STEP_H
 
 #include "IPipelineStep.h"
-#include <memory>
 
-class EqualizerStep : public IPipelineStep
+// Forward declaration
+struct FIFO;
+
+class ResampleForPlotStep : public IPipelineStep
 {
 public:
-    EqualizerStep(int sampleRate, void** bassFilter, void** midFilter, void** trebleFilter, void** volFilter);
-    virtual ~EqualizerStep();
+    ResampleForPlotStep(
+        int inputSampleRate, struct FIFO* fifo);
+    virtual ~ResampleForPlotStep();
     
     virtual int getInputSampleRate() const;
     virtual int getOutputSampleRate() const;
-    
     virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
     
 private:
-    int sampleRate_;
-    void** bassFilter_;
-    void** midFilter_;
-    void** trebleFilter_;
-    void** volFilter_;
+    int inputSampleRate_;
+    struct FIFO* fifo_;
 };
 
-
-#endif // AUDIO_PIPELINE__EQUALIZER_STEP_H
+#endif // AUDIO_PIPELINE__RESAMPLE_PLOT_STEP_H

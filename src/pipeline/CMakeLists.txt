@@ -15,6 +15,10 @@ add_library(fdv_audio_pipeline STATIC
     RecordStep.cpp
     ResampleStep.h
     ResampleStep.cpp
+    ResamplePlotStep.h
+    ResamplePlotStep.cpp
+    SpeexStep.h
+    SpeexStep.cpp
     TapStep.h
     TapStep.cpp
 )

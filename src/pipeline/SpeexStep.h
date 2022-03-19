@@ -1,6 +1,6 @@
 //=========================================================================
-// Name:            EqualizerStep.h
-// Purpose:         Describes an equalizer step in the audio pipeline.
+// Name:            SpeexStep.h
+// Purpose:         Describes a noise reduction step in the audio pipeline.
 //
 // Authors:         Mooneer Salem
 // License:
@@ -20,17 +20,19 @@
 //
 //=========================================================================
 
-#ifndef AUDIO_PIPELINE__EQUALIZER_STEP_H
-#define AUDIO_PIPELINE__EQUALIZER_STEP_H
+#ifndef AUDIO_PIPELINE__SPEEX_STEP_H
+#define AUDIO_PIPELINE__SPEEX_STEP_H
 
 #include "IPipelineStep.h"
-#include <memory>
 
-class EqualizerStep : public IPipelineStep
+#include <memory>
+#include <speex/speex_preprocess.h>
+
+class SpeexStep : public IPipelineStep
 {
 public:
-    EqualizerStep(int sampleRate, void** bassFilter, void** midFilter, void** trebleFilter, void** volFilter);
-    virtual ~EqualizerStep();
+    SpeexStep(int sampleRate, SpeexPreprocessState** speexStateObj);
+    virtual ~SpeexStep();
     
     virtual int getInputSampleRate() const;
     virtual int getOutputSampleRate() const;
@@ -39,11 +41,8 @@ public:
     
 private:
     int sampleRate_;
-    void** bassFilter_;
-    void** midFilter_;
-    void** trebleFilter_;
-    void** volFilter_;
+    SpeexPreprocessState** speexStateObj_;
 };
 
 
-#endif // AUDIO_PIPELINE__EQUALIZER_STEP_H
+#endif // AUDIO_PIPELINE__SPEEX_STEP_H
