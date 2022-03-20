@@ -1205,6 +1205,19 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         g_mutexProtectingCallbackData.Unlock();
         m_newMicInFilter = m_newSpkOutFilter = false;
     }
+    
+    g_mutexProtectingCallbackData.Lock();
+    if (wxGetApp().m_speexpp_enable && !g_speex_st)
+    {
+        g_speex_st = speex_preprocess_state_init(FRAME_DURATION * g_soundCard2SampleRate, g_soundCard2SampleRate);
+    }
+    else if (!wxGetApp().m_speexpp_enable && g_speex_st)
+    {
+        speex_preprocess_state_destroy(g_speex_st);
+        g_speex_st = nullptr;
+    }
+    g_mutexProtectingCallbackData.Unlock();
+    
     g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
     g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
 
@@ -1599,7 +1612,13 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(tx): %d\n", freedvInterface.getTxSpeechSampleRate());
 
         if (wxGetApp().m_speexpp_enable)
+        {
             g_speex_st = speex_preprocess_state_init(FRAME_DURATION * g_soundCard2SampleRate, g_soundCard2SampleRate);
+        }
+        else
+        {
+            g_speex_st = nullptr;
+        }
         
         // adjust spectrum and waterfall freq scaling base on mode
 
@@ -1798,7 +1817,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         freedvInterface.stop();
         
         if (wxGetApp().m_speexpp_enable)
+        {
             speex_preprocess_state_destroy(g_speex_st);
+            g_speex_st = nullptr;
+        }
         
         m_newMicInFilter = m_newSpkOutFilter = true;
 
