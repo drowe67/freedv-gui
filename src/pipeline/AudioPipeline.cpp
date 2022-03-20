@@ -51,7 +51,7 @@ std::shared_ptr<short> AudioPipeline::execute(std::shared_ptr<short> inputSample
     int tempInputSamples = numInputSamples;
     int tempOutputSamples = tempInputSamples;
     
-    for (int index = 0; index < pipelineSteps_.size(); index++)
+    for (size_t index = 0; index < pipelineSteps_.size(); index++)
     {
         if (resamplers_[index])
         {

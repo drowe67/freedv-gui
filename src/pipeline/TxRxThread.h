@@ -25,6 +25,7 @@
 
 #include <wx/thread.h>
 #include <mutex>
+#include <condition_variable>
 
 #include "AudioPipeline.h"
 
