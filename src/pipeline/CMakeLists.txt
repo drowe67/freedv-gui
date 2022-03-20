@@ -5,6 +5,8 @@ add_library(fdv_audio_pipeline STATIC
     EitherOrStep.cpp
     EqualizerStep.h
     EqualizerStep.cpp
+    FreeDVTransmitStep.h
+    FreeDVTransmitStep.cpp
     IPipelineStep.h
     IPipelineStep.cpp
     LevelAdjustStep.h
@@ -21,4 +23,8 @@ add_library(fdv_audio_pipeline STATIC
     SpeexStep.cpp
     TapStep.h
     TapStep.cpp
+    TxRxThread.h
+    TxRxThread.cpp
 )
+
+target_include_directories(fdv_audio_pipeline AFTER PRIVATE ${CODEC2_INCLUDE_DIRS} ${LPCNET_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)

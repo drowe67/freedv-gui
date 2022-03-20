@@ -22,8 +22,7 @@
 #ifndef __FDMDV2_MAIN__
 #define __FDMDV2_MAIN__
 
-#include "version.h"
-#include "../config.h"
+#include "config.h"
 #include <wx/wx.h>
 
 #include <wx/tglbtn.h>
@@ -93,6 +92,7 @@
 #include "freedv_interface.h"
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
+#include "pipeline/paCallbackData.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -345,80 +345,6 @@ class MainApp : public wxApp
 DECLARE_APP(MainApp)
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-// paCallBackData
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-typedef struct paCallBackData
-{
-    paCallBackData()
-        : insrc1(nullptr)
-        , outsrc1(nullptr)
-        , insrc2(nullptr)
-        , outsrc2(nullptr)
-        , insrcsf(nullptr)
-        , insrctxsf(nullptr)
-        , infifo1(nullptr)
-        , outfifo1(nullptr)
-        , infifo2(nullptr)
-        , outfifo2(nullptr)
-        , rxinfifo(nullptr)
-        , rxoutfifo(nullptr)
-        , sbqMicInBass(nullptr)
-        , sbqMicInTreble(nullptr)
-        , sbqMicInMid(nullptr)
-        , sbqMicInVol(nullptr)
-        , sbqSpkOutBass(nullptr)
-        , sbqSpkOutTreble(nullptr)
-        , sbqSpkOutMid(nullptr)
-        , sbqSpkOutVol(nullptr)
-        , micInEQEnable(false)
-        , spkOutEQEnable(false)
-        , leftChannelVoxTone(false)
-        , voxTonePhase(0.0)
-    {
-        // empty
-    }
-    
-    // libresample states for 48 to 8 kHz conversions
-
-    SRC_STATE      *insrc1;
-    SRC_STATE      *outsrc1;
-    SRC_STATE      *insrc2;
-    SRC_STATE      *outsrc2;
-    SRC_STATE      *insrcsf;
-    SRC_STATE      *insrctxsf;
-
-    // FIFOs attached to first sound card
-
-    struct FIFO    *infifo1;
-    struct FIFO    *outfifo1;
-
-    // FIFOs attached to second sound card
-    struct FIFO    *infifo2;
-    struct FIFO    *outfifo2;
-
-    // FIFOs for rx process
-    struct FIFO    *rxinfifo;
-    struct FIFO    *rxoutfifo;
-
-    // EQ filter states
-    void           *sbqMicInBass;
-    void           *sbqMicInTreble;
-    void           *sbqMicInMid;
-    void           *sbqMicInVol;
-    void           *sbqSpkOutBass;
-    void           *sbqSpkOutTreble;
-    void           *sbqSpkOutMid;
-    void           *sbqSpkOutVol;
-
-    bool            micInEQEnable;
-    bool            spkOutEQEnable;
-
-    // optional loud tone on left channel to reliably trigger vox
-    bool            leftChannelVoxTone;
-    float           voxTonePhase;
-} paCallBackData;
-
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // panel with custom loop checkbox for play file dialog
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 class MyExtraPlayFilePanel : public wxPanel
@@ -452,7 +378,7 @@ private:
     wxTextCtrl *m_secondsToRecord;
 };
 
-class txRxThread;
+class TxRxThread;
 class UDPThread;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -485,8 +411,8 @@ class MainFrame : public TopFrame
 
         bool                    m_RxRunning;
 
-        txRxThread*             m_txThread;
-        txRxThread*             m_rxThread;
+        TxRxThread*             m_txThread;
+        TxRxThread*             m_rxThread;
         
         bool                    OpenHamlibRig();
         void                    OpenSerialPort(void);
@@ -649,65 +575,6 @@ class MainFrame : public TopFrame
         
     private:
         void loadConfiguration_();
-};
-
-void txProcessing();
-void rxProcessing();
-
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-// class txRxThread - experimental tx/rx processing thread
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-class txRxThread : public wxThread
-{
-public:
-    txRxThread(bool tx) 
-        : wxThread(wxTHREAD_JOINABLE)
-        , m_tx(tx)
-        , m_run(1) { /* empty */ }
-
-    // thread execution starts here
-    void *Entry()
-    {
-        while (m_run)
-        {
-            {
-                std::unique_lock<std::mutex> lk(m_processingMutex);
-                if (m_processingCondVar.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout)
-                {
-                    fprintf(stderr, "txRxThread: timeout while waiting for CV, tx = %d\n", m_tx);
-                }
-            }
-            if (m_tx) txProcessing();
-            else rxProcessing();
-        }
-        
-        return NULL;
-    }
-
-    // called when the thread exits - whether it terminates normally or is
-    // stopped with Delete() (but not when it is Kill()ed!)
-    void OnExit() { }
-
-    void terminateThread()
-    {
-        m_run = 0;
-        notify();
-    }
-
-    void notify()
-    {
-        {
-            std::unique_lock<std::mutex> lk(m_processingMutex);
-            m_processingCondVar.notify_all();
-        }
-    }
-
-    std::mutex m_processingMutex;
-    std::condition_variable m_processingCondVar;
-
-private:
-    bool  m_tx;
-    bool  m_run;
 };
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=

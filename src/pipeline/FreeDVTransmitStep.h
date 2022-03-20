@@ -1,6 +1,6 @@
 //=========================================================================
-// Name:            AudioPipeline.h
-// Purpose:         Describes an audio pipeline.
+// Name:            FreeDVTransmitStep.h
+// Purpose:         Describes a modulation step in the audio pipeline.
 //
 // Authors:         Mooneer Salem
 // License:
@@ -20,35 +20,27 @@
 //
 //=========================================================================
 
-#ifndef AUDIO_PIPELINE__AUDIO_PIPELINE_H
-#define AUDIO_PIPELINE__AUDIO_PIPELINE_H
+#ifndef AUDIO_PIPELINE__FREEDV_TRANSMIT_STEP_H
+#define AUDIO_PIPELINE__FREEDV_TRANSMIT_STEP_H
 
-#include <vector>
+#include <functional>
+
 #include "IPipelineStep.h"
-#include "ResampleStep.h"
+#include "../freedv_interface.h"
 
-class AudioPipeline : public IPipelineStep
+class FreeDVTransmitStep : public IPipelineStep
 {
 public:
-    AudioPipeline(int inputSampleRate, int outputSampleRate);
-    virtual ~AudioPipeline();
+    FreeDVTransmitStep(FreeDVInterface& interface, std::function<float()> getFreqOffsetFn);
+    virtual ~FreeDVTransmitStep();
     
     virtual int getInputSampleRate() const;
     virtual int getOutputSampleRate() const;
     virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
     
-    void appendPipelineStep(std::shared_ptr<IPipelineStep> pipelineStep);
-    
 private:
-    int inputSampleRate_;
-    int outputSampleRate_;
-    
-    std::vector<std::shared_ptr<IPipelineStep>> pipelineSteps_;
-    std::vector<std::shared_ptr<ResampleStep>> resamplers_;
-    std::shared_ptr<ResampleStep> resultSampler_;
-    
-    void reloadResampler_(int pipelineStepIndex);
-    void reloadResultResampler_();
+    FreeDVInterface& interface_;
+    std::function<float()> getFreqOffsetFn_;
 };
 
-#endif // AUDIO_PIPELINE__AUDIO_PIPELINE_H
+#endif // AUDIO_PIPELINE__FREEDV_TRANSMIT_STEP_H
