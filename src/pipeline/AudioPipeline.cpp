@@ -47,9 +47,9 @@ int AudioPipeline::getOutputSampleRate() const
 std::shared_ptr<short> AudioPipeline::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
     std::shared_ptr<short> tempInput = inputSamples;
-    std::shared_ptr<short> tempResult;
+    std::shared_ptr<short> tempResult = inputSamples;
     int tempInputSamples = numInputSamples;
-    int tempOutputSamples = 0;
+    int tempOutputSamples = tempInputSamples;
     
     for (int index = 0; index < pipelineSteps_.size(); index++)
     {
@@ -88,7 +88,7 @@ void AudioPipeline::reloadResampler_(int index)
     bool createResampler = 
         resampleStep == nullptr || resampleStep->getOutputSampleRate() == pipelineSteps_[index]->getInputSampleRate();
     
-    if (index != 0)
+    if (index != 0 && !createResampler)
     {
         // note: input sample rate for the pipeline as a whole is fixed.
         createResampler |= resampleStep->getInputSampleRate() != pipelineSteps_[index - 1]->getOutputSampleRate();
@@ -130,11 +130,15 @@ void AudioPipeline::reloadResultResampler_()
 {
     bool createResampler = 
         resultSampler_ == nullptr || 
+        (pipelineSteps_.size() == 0 && getInputSampleRate() != getOutputSampleRate()) ||
         resultSampler_->getInputSampleRate() != pipelineSteps_[pipelineSteps_.size() - 1]->getOutputSampleRate();
     
     if (createResampler)
     {
-        int lastOutputSampleRate = pipelineSteps_[pipelineSteps_.size() - 1]->getOutputSampleRate();
+        int lastOutputSampleRate = 
+            (pipelineSteps_.size() > 0) ? 
+            (pipelineSteps_[pipelineSteps_.size() - 1]->getOutputSampleRate()) :
+            getInputSampleRate();
         if (lastOutputSampleRate != getOutputSampleRate())
         {
             resultSampler_ = std::shared_ptr<ResampleStep>(

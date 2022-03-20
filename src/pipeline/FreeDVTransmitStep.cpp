@@ -20,6 +20,7 @@
 //
 //=========================================================================
 
+#include <cassert>
 #include "FreeDVTransmitStep.h"
 #include "freedv_api.h"
 
@@ -60,7 +61,7 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
     }
     else 
     {
-        interface_.complexTransmit(outputSamples, inputSamples.get(), getFreqOffsetFn_(), numInputSamples);
+        interface_.complexTransmit(outputSamples, inputSamples.get(), getFreqOffsetFn_(), std::min(interface_.getTxNNomModemSamples(), numInputSamples));
     }
 
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());

@@ -26,6 +26,8 @@
 #include <wx/thread.h>
 #include <mutex>
 
+#include "AudioPipeline.h"
+
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // class txRxThread - experimental tx/rx processing thread
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -35,11 +37,14 @@ public:
     TxRxThread(bool tx) 
         : wxThread(wxTHREAD_JOINABLE)
         , m_tx(tx)
-        , m_run(1) { /* empty */ }
+        , m_run(1)
+        , pipeline_(nullptr) { /* empty */ }
 
     // thread execution starts here
     void *Entry()
     {
+        initializePipeline_();
+        
         while (m_run)
         {
             {
@@ -80,7 +85,9 @@ public:
 private:
     bool  m_tx;
     bool  m_run;
+    std::shared_ptr<AudioPipeline> pipeline_;
     
+    void initializePipeline_();
     void txProcessing();
     void rxProcessing();
 };
