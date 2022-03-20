@@ -442,7 +442,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
         wxLogDebug("soundFile: %s", soundFile);
         sfInfo.format = 0;
 
-        int sample_rate = freedvInterface.getRxModemSampleRate();
+        int sample_rate = g_soundCard1SampleRate;
 
         if(!extension.IsEmpty())
         {

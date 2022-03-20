@@ -1461,16 +1461,6 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         freedvInterface.changeTxMode(g_mode);
     }
     
-    // Re-initialize Speex since the sample rate's changing
-    if (wxGetApp().m_speexpp_enable && freedvInterface.isRunning())
-    {
-        if (g_speex_st)
-        {
-            speex_preprocess_state_destroy(g_speex_st);
-        }
-        g_speex_st = speex_preprocess_state_init(freedvInterface.getTxNumSpeechSamples(), freedvInterface.getTxSpeechSampleRate());
-    }
-    
     // Force recreation of EQ filters.
     m_newMicInFilter = true;
     m_newSpkOutFilter = true;
@@ -1609,7 +1599,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(tx): %d\n", freedvInterface.getTxSpeechSampleRate());
 
         if (wxGetApp().m_speexpp_enable)
-            g_speex_st = speex_preprocess_state_init(freedvInterface.getTxNumSpeechSamples(), freedvInterface.getTxSpeechSampleRate());
+            g_speex_st = speex_preprocess_state_init(FRAME_DURATION * g_soundCard2SampleRate, g_soundCard2SampleRate);
         
         // adjust spectrum and waterfall freq scaling base on mode
 
