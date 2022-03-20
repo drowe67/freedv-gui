@@ -232,12 +232,8 @@ void TxRxThread::txProcessing()
     // sample rate of 48 kHz.  Note these buffer are used by rx and tx
     // side processing
 
-    short           infreedv[10*N48];
     short           insound_card[10*N48];
-    short           outfreedv[10*N48];
-    short           outsound_card[10*N48];
     int             nout, freedv_samplerate;
-    int             nfreedv;
 
     // analog mode runs at the standard FS = 8000 Hz
     if (g_analog) {
@@ -297,107 +293,6 @@ void TxRxThread::txProcessing()
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
             int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);            
             if (nread != 0 && endingTx) break;
-            
-#if 0
-            // optionally use file for mic input signal
-            if (g_playFileToMicIn && (g_sfPlayFile != NULL)) {
-                unsigned int nsf = nsam_in_48*g_sfTxFs/g_soundCard2SampleRate;
-                short        insf[nsf];
-                                
-                int n = sf_read_short(g_sfPlayFile, insf, nsf);
-                nout = resample(cbData->insrctxsf, insound_card, insf, g_soundCard2SampleRate, g_sfTxFs, nsam_in_48, n);
-                
-                if (nout == 0) {
-                    if (g_loopPlayFileToMicIn)
-                        sf_seek(g_sfPlayFile, 0, SEEK_SET);
-                    else {
-                        printf("playFileFromRadio finished, issuing event!\n");
-                        g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
-                    }
-                }
-            }
-            
-            nout = resample(cbData->insrc2, infreedv, insound_card, freedvInterface.getTxSpeechSampleRate(), g_soundCard2SampleRate, 10*N48, nsam_in_48);
-                 
-            // Optional Speex pre-processor for acoustic noise reduction
-            if (wxGetApp().m_speexpp_enable) {
-                speex_preprocess_run(g_speex_st, infreedv);
-            }
-
-            // Optional Mic In EQ Filtering, need mutex as filter can change at run time
-
-            g_mutexProtectingCallbackData.Lock();
-            if (cbData->micInEQEnable) {
-                sox_biquad_filter(cbData->sbqMicInBass, infreedv, infreedv, nout);
-                sox_biquad_filter(cbData->sbqMicInTreble, infreedv, infreedv, nout);
-                sox_biquad_filter(cbData->sbqMicInMid, infreedv, infreedv, nout);
-            }
-            g_mutexProtectingCallbackData.Unlock();
-
-            resample_for_plot(g_plotSpeechInFifo, infreedv, nout, freedvInterface.getTxSpeechSampleRate());
-            
-            nfreedv = freedvInterface.getTxNNomModemSamples();
-
-            if (g_analog) {
-                nfreedv = freedvInterface.getTxNumSpeechSamples();
-
-                // Boost the "from mic" -> "to radio" audio in analog
-                // mode.  The need for the gain was found by
-                // experiment - analog SSB sounded too quiet compared
-                // to digital. With digital voice we generally drive
-                // the "to radio" (SSB radio mic input) at about 25%
-                // of the peak level for normal SSB voice. So we
-                // introduce 6dB gain to make analog SSB sound the
-                // same level as the digital.  Watch out for clipping.
-                for(int i=0; i<nfreedv; i++) {
-                    float out = (float)infreedv[i]*2.0;
-                    if (out > 32767) out = 32767.0;
-                    if (out < -32767) out = -32767.0;
-                    outfreedv[i] = out;
-                }
-            }
-            else {
-                if (g_mode == FREEDV_MODE_800XA || g_mode == FREEDV_MODE_2400B) {
-                    /* 800XA doesn't support complex output just yet */
-                    freedvInterface.transmit(outfreedv, infreedv);
-                }
-                else {
-                    freedvInterface.complexTransmit(outfreedv, infreedv, g_TxFreqOffsetHz, nfreedv);
-                }
-            }
-            
-            // Save modulated output file if requested
-            if (g_recFileFromModulator && (g_sfRecFileFromModulator != NULL)) {
-                if (g_recFromModulatorSamples < nfreedv) {
-                    sf_write_short(g_sfRecFileFromModulator, outfreedv, g_recFromModulatorSamples);  // try infreedv to bypass codec and modem, was outfreedv
-                    
-                    // call stop record menu item, should be thread safe
-                    g_parent->CallAfter(&MainFrame::StopRecFileFromModulator);
-                    
-                    wxPrintf("write mod output to file complete\n", g_recFromModulatorSamples);  // consider a popup
-                }
-                else {
-                    sf_write_short(g_sfRecFileFromModulator, outfreedv, nfreedv);
-                    g_recFromModulatorSamples -= nfreedv;
-                }
-            }
-            
-            // output one frame of modem signal
-
-            if (g_analog)
-                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getTxSpeechSampleRate(), 10*N48, nfreedv);
-            else
-                nout = resample(cbData->outsrc1, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getTxModemSampleRate(), 10*N48, nfreedv);
-            
-            // Attenuate signal prior to output
-            double dbLoss = g_txLevel / 10.0;
-            double scaleFactor = exp(dbLoss/20.0 * log(10.0));
-            
-            for (int i = 0; i < nout; i++)
-            {
-                outsound_card[i] *= scaleFactor;
-            }
-#endif
             
             short* inputSamples = new short[nsam_in_48];
             memcpy(inputSamples, insound_card, nsam_in_48 * sizeof(short));
