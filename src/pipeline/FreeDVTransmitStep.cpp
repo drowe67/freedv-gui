@@ -24,8 +24,8 @@
 #include "FreeDVTransmitStep.h"
 #include "freedv_api.h"
 
-FreeDVTransmitStep::FreeDVTransmitStep(FreeDVInterface& interface, std::function<float()> getFreqOffsetFn)
-    : interface_(interface)
+FreeDVTransmitStep::FreeDVTransmitStep(FreeDVInterface& if, std::function<float()> getFreqOffsetFn)
+    : interface_(if)
     , getFreqOffsetFn_(getFreqOffsetFn)
 {
     // empty

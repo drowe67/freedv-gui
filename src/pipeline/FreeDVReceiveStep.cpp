@@ -27,14 +27,14 @@
 #include "../defines.h"
 
 FreeDVReceiveStep::FreeDVReceiveStep(
-    FreeDVInterface& interface,
+    FreeDVInterface& if,
     std::function<int*()> getRxStateFn,
     std::function<struct FIFO*()> getRxFifoFn, // may not be needed, TBD
     std::function<int()> getChannelNoiseFn,
     std::function<int()> getChannelNoiseSnrFn,
     std::function<float()> getFreqOffsetFn,
     std::function<float*()> getSigPwrAvgFn)
-    : interface_(interface)
+    : interface_(if)
     , getRxStateFn_(getRxStateFn)
     , getRxFifoFn_(getRxFifoFn)
     , getChannelNoiseFn_(getChannelNoiseFn)
