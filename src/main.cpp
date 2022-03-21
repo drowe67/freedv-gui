@@ -1194,14 +1194,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     // Run time update of EQ filters -----------------------------------
 
     if (m_newMicInFilter || m_newSpkOutFilter) {
-        int rxSampleRate = FS;
-        if (!g_analog)
-        {
-            rxSampleRate = freedvInterface.getRxSpeechSampleRate();
-        }
         g_mutexProtectingCallbackData.Lock();
         deleteEQFilters(g_rxUserdata);
-        designEQFilters(g_rxUserdata, rxSampleRate, freedvInterface.getTxSpeechSampleRate());
+        designEQFilters(g_rxUserdata, g_soundCard2SampleRate, g_soundCard2SampleRate);
         g_mutexProtectingCallbackData.Unlock();
         m_newMicInFilter = m_newSpkOutFilter = false;
     }
@@ -2193,13 +2188,8 @@ void MainFrame::startRxStream()
         // Init Equaliser Filters ------------------------------------------------------
 
         m_newMicInFilter = m_newSpkOutFilter = true;
-        int rxSampleRate = FS;
-        if (!g_analog)
-        {
-            rxSampleRate = freedvInterface.getRxSpeechSampleRate();
-        }
         g_mutexProtectingCallbackData.Lock();
-        designEQFilters(g_rxUserdata, rxSampleRate, freedvInterface.getTxSpeechSampleRate());
+        designEQFilters(g_rxUserdata, g_soundCard2SampleRate, g_soundCard2SampleRate);
         g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
         g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
         m_newMicInFilter = m_newSpkOutFilter = false;

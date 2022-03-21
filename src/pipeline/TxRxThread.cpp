@@ -37,6 +37,9 @@
 #include "LevelAdjustStep.h"
 #include "FreeDVTransmitStep.h"
 #include "RecordStep.h"
+#include "ToneInterfererStep.h"
+#include "ComputeRfSpectrumStep.h"
+#include "FreeDVReceiveStep.h"
 
 #include <wx/stopwatch.h>
 
@@ -202,13 +205,127 @@ void TxRxThread::initializePipeline_()
         auto txAttenuationStep = new LevelAdjustStep(g_soundCard1SampleRate, []() {
             double dbLoss = g_txLevel / 10.0;
             double scaleFactor = exp(dbLoss/20.0 * log(10.0));
-            return scaleFactor; }
-        );
+            return scaleFactor; 
+        });
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(txAttenuationStep));
     }
     else
     {
-        // TBD
+        pipeline_ = std::shared_ptr<AudioPipeline>(new AudioPipeline(g_soundCard1SampleRate, g_soundCard2SampleRate));
+        
+        // Record from radio step (optional)
+        auto recordRadioStep = new RecordStep(
+            g_soundCard1SampleRate, 
+            []() { return g_sfRecFile; }, 
+            [](int numSamples) {
+                g_recFromRadioSamples -= numSamples;
+                if (g_recFromRadioSamples <= 0)
+                {
+                    // call stop record menu item, should be thread safe
+                    g_parent->CallAfter(&MainFrame::StopRecFileFromRadio);
+                }
+            }
+        );
+        auto bypassRecordRadio = new AudioPipeline(g_soundCard1SampleRate, g_soundCard1SampleRate);
+        auto eitherOrRecordRadio = new EitherOrStep(
+            []() { return g_recFileFromRadio && (g_sfRecFile != NULL); },
+            std::shared_ptr<IPipelineStep>(recordRadioStep),
+            std::shared_ptr<IPipelineStep>(bypassRecordRadio)
+        );
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRecordRadio));
+        
+        // Play from radio step (optional)
+        auto eitherOrBypassPlayRadio = new AudioPipeline(g_soundCard1SampleRate, g_soundCard1SampleRate);
+        auto eitherOrPlayRadio = new AudioPipeline(g_soundCard1SampleRate, g_soundCard1SampleRate);
+        auto playRadio = new PlaybackStep(
+            g_soundCard1SampleRate, 
+            []() { return g_sfFs; },
+            []() { return g_sfPlayFileFromRadio; },
+            []() {
+                if (g_loopPlayFileFromRadio)
+                    sf_seek(g_sfPlayFileFromRadio, 0, SEEK_SET);
+                else {
+                    printf("playFileFromRadio finished, issuing event!\n");
+                    g_parent->CallAfter(&MainFrame::StopPlaybackFileFromRadio);
+                }
+            }
+        );
+        eitherOrPlayRadio->appendPipelineStep(std::shared_ptr<IPipelineStep>(playRadio));
+        
+        auto eitherOrPlayRadioStep = new EitherOrStep(
+            []() { return g_playFileFromRadio && (g_sfPlayFileFromRadio != NULL); },
+            std::shared_ptr<IPipelineStep>(eitherOrPlayRadio),
+            std::shared_ptr<IPipelineStep>(eitherOrBypassPlayRadio));
+            
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrPlayRadioStep));
+        
+        // Resample for plot step (demod in)
+        auto resampleForPlotStep = new ResampleForPlotStep(g_soundCard1SampleRate, g_plotDemodInFifo);
+        auto resampleForPlotTap = new TapStep(g_soundCard1SampleRate, resampleForPlotStep);
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotTap));
+        
+        // Tone interferer step (optional)
+        auto bypassToneInterferer = new AudioPipeline(g_soundCard1SampleRate, g_soundCard1SampleRate);
+        auto toneInterfererStep = new ToneInterfererStep(
+            g_soundCard1SampleRate,
+            []() { return wxGetApp().m_tone_freq_hz; },
+            []() { return wxGetApp().m_tone_amplitude; },
+            []() { return &g_tone_phase; }
+        );
+        auto eitherOrToneInterferer = new EitherOrStep(
+            []() { return wxGetApp().m_tone; },
+            std::shared_ptr<IPipelineStep>(toneInterfererStep),
+            std::shared_ptr<IPipelineStep>(bypassToneInterferer)
+        );
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrToneInterferer));
+        
+        // RF spectrum computation step
+        auto computeRfSpectrumStep = new ComputeRfSpectrumStep(
+            []() { return freedvInterface.getCurrentRxModemStats(); },
+            []() { return &g_avmag[0]; }
+        );
+        auto computeRfSpectrumPipeline = new AudioPipeline(
+            g_soundCard1SampleRate, g_soundCard1SampleRate);
+        computeRfSpectrumPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(computeRfSpectrumStep));
+        
+        auto computeRfSpectrumTap = new TapStep(g_soundCard1SampleRate, computeRfSpectrumPipeline);
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(computeRfSpectrumTap));
+        
+        // RX demodulation step
+        auto bypassRfDemodulationPipeline = new AudioPipeline(g_soundCard1SampleRate, g_soundCard2SampleRate);
+        auto rfDemodulationPipeline = new AudioPipeline(g_soundCard1SampleRate, g_soundCard2SampleRate);
+        auto rfDemodulationStep = new FreeDVReceiveStep(
+            freedvInterface,
+            []() { return &g_State; },
+            []() { return g_rxUserdata->rxoutfifo; },
+            []() { return g_channel_noise; },
+            []() { return wxGetApp().m_noise_snr; },
+            []() { return g_RxFreqOffsetHz; },
+            []() { return &g_sig_pwr_av; }
+        );
+        rfDemodulationPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(rfDemodulationStep));
+        
+        auto eitherOrRfDemodulationStep = new EitherOrStep(
+            []() { return g_analog; },
+            std::shared_ptr<IPipelineStep>(bypassRfDemodulationPipeline),
+            std::shared_ptr<IPipelineStep>(rfDemodulationPipeline)
+        );
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRfDemodulationStep));
+        
+        // Equalizer step (optional based on filter state)
+        auto equalizerStep = new EqualizerStep(
+            g_soundCard2SampleRate, 
+            &g_rxUserdata->sbqSpkOutBass,
+            &g_rxUserdata->sbqSpkOutMid,
+            &g_rxUserdata->sbqSpkOutTreble,
+            &g_rxUserdata->sbqSpkOutVol);
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerStep));
+        
+        // Resample for plot step (speech out)
+        auto resampleForPlotOutStep = new ResampleForPlotStep(g_soundCard2SampleRate, g_plotSpeechOutFifo);
+        auto resampleForPlotOutTap = new TapStep(g_soundCard2SampleRate, resampleForPlotOutStep);
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutTap));
+        
     }
 }
 
@@ -331,23 +448,8 @@ void TxRxThread::rxProcessing()
     // sample rate of 48 kHz.  Note these buffer are used by rx and tx
     // side processing
 
-    short           infreedv[10*N48];
     short           insound_card[10*N48];
-    short           outfreedv[10*N48];
-    short           outsound_card[10*N48];
-    int             nout, freedv_samplerate;
-    int             nfreedv;
-
-    // analog mode runs at the standard FS = 8000 Hz
-    if (g_analog) {
-        freedv_samplerate = FS;
-    }
-    else {
-        // Use the maximum modem sample rate. Any needed downconversion
-        // just prior to sending to Codec2 will happen in FreeDVInterface.
-        freedv_samplerate = freedvInterface.getRxModemSampleRate();
-    }
-    //fprintf(stderr, "sample rate: %d\n", freedv_samplerate);
+    int             nout;
 
     //
     //  RX side processing --------------------------------------------
@@ -369,158 +471,16 @@ void TxRxThread::rxProcessing()
 
     // while we have enough input samples available ... 
     while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
-        /* convert sound card sample rate FreeDV input sample rate */
-        nfreedv = resample(cbData->insrc1, infreedv, insound_card, freedv_samplerate, g_soundCard1SampleRate, N48, nsam);
-        assert(nfreedv <= N48);
-        
-        // optionally save "from radio" signal (write demod input to file) ----------------------------
-        // Really useful for testing and development as it allows us
-        // to repeat tests using off air signals
-
-        if (g_recFileFromRadio && (g_sfRecFile != NULL)) {
-            //printf("g_recFromRadioSamples: %d  n8k: %d \n", g_recFromRadioSamples);
-            if (g_recFromRadioSamples < (unsigned)nfreedv) {
-                sf_write_short(g_sfRecFile, infreedv, g_recFromRadioSamples);
-                // call stop/start record menu item, should be thread safe
-                g_parent->CallAfter(&MainFrame::StopRecFileFromRadio);
-                g_recFromRadioSamples = 0;
-            }
-            else {
-                sf_write_short(g_sfRecFile, infreedv, nfreedv);
-                g_recFromRadioSamples -= nfreedv;
-            }
-        }
-
-        // optionally read "from radio" signal from file (read demod input from file) -----------------
-
-        if (g_playFileFromRadio && (g_sfPlayFileFromRadio != NULL)) {
-            unsigned int nsf = nfreedv*g_sfFs/freedv_samplerate;
-            short        insf[nsf];
-            unsigned int n = sf_read_short(g_sfPlayFileFromRadio, insf, nsf);
-            //fprintf(stderr, "resample %d to %d\n", g_sfFs, freedv_samplerate);
-            nfreedv = resample(cbData->insrcsf, infreedv, insf, freedv_samplerate, g_sfFs, N48, nsf);
-            assert(nfreedv <= N48);
-
-            if (n == 0) {
-                if (g_loopPlayFileFromRadio)
-                    sf_seek(g_sfPlayFileFromRadio, 0, SEEK_SET);
-                else {
-                    printf("playFileFromRadio finished, issuing event!\n");
-                    g_parent->CallAfter(&MainFrame::StopPlaybackFileFromRadio);
-                }
-            }
-        }
-
-        resample_for_plot(g_plotDemodInFifo, infreedv, nfreedv, freedv_samplerate);
 
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
 
-        // Optional tone interferer -----------------------------------------------------
-
-        if (wxGetApp().m_tone) {
-            float w = 2.0*M_PI*wxGetApp().m_tone_freq_hz/freedv_samplerate;
-            float s;
-            int i;
-            for(i=0; i<nfreedv; i++) {
-                s = (float)wxGetApp().m_tone_amplitude*cos(g_tone_phase);
-                infreedv[i] += (int)s;
-                g_tone_phase += w;
-                //fprintf(stderr, "%f\n", s);
-            }
-            g_tone_phase -= 2.0*M_PI*floor(g_tone_phase/(2.0*M_PI));
-        }
-
-        // compute rx spectrum - do here so update rate is constant across modes -------
-
-        // if necc, resample to Fs = 8kHz for spectrum and waterfall
-        // TODO: for some future modes (like 2400A), it might be
-        // useful to have different Fs spectrum
-
-        COMP  rx_fdm[nfreedv];
-        float rx_spec[MODEM_STATS_NSPEC];
-        int i, nspec;
-        for(i=0; i<nfreedv; i++) {
-            rx_fdm[i].real = infreedv[i];
-        }
-        if (freedv_samplerate == FS) {
-            for(i=0; i<nfreedv; i++) {
-                rx_fdm[i].real = infreedv[i];
-            }
-            nspec = nfreedv;
-        } else {
-            int   nfreedv_8kHz = nfreedv*FS/freedv_samplerate;
-            short infreedv_8kHz[nfreedv_8kHz];
-            nout = resample(g_spec_src, infreedv_8kHz, infreedv, FS, freedv_samplerate, nfreedv_8kHz, nfreedv);
-            //fprintf(stderr, "resampling, nfreedv: %d nout: %d nfreedv_8kHz: %d \n", nfreedv, nout, nfreedv_8kHz);
-            assert(nout <= nfreedv_8kHz);
-            for(i=0; i<nout; i++) {
-                rx_fdm[i].real = infreedv_8kHz[i];
-            }
-            nspec = nout;
-        }
-
-        modem_stats_get_rx_spectrum(freedvInterface.getCurrentRxModemStats(), rx_spec, rx_fdm, nspec);
-
-        // Average rx spectrum data using a simple IIR low pass filter
-
-        for(i = 0; i<MODEM_STATS_NSPEC; i++) {
-            g_avmag[i] = BETA * g_avmag[i] + (1.0 - BETA) * rx_spec[i];
-        }
-
-        // Get some audio to send to headphones/speaker.  If in analog
-        // mode we pass through the "from radio" audio to the
-        // headphones/speaker.
+        short* inputSamples = new short[nsam];
+        memcpy(inputSamples, insound_card, nsam * sizeof(short));
         
-        int speechOutbufferSize = (int)(FRAME_DURATION * freedvInterface.getRxSpeechSampleRate());
-
-        if (g_analog) {
-            memcpy(outfreedv, infreedv, sizeof(short)*nfreedv);
-        }
-        else {
-            // Write 20ms chunks of input samples for modem rx processing
-            g_State = freedvInterface.processRxAudio(
-                infreedv, nfreedv, cbData->rxoutfifo, g_channel_noise, wxGetApp().m_noise_snr, 
-                g_RxFreqOffsetHz, freedvInterface.getCurrentRxModemStats(), &g_sig_pwr_av);
-  
-            // Read 20ms chunk of samples from modem rx processing,
-            // this will typically be decoded output speech, and is
-            // (currently at least) fixed at a sample rate of 8 kHz
-
-            memset(outfreedv, 0, sizeof(short)*speechOutbufferSize);
-            codec2_fifo_read(cbData->rxoutfifo, outfreedv, speechOutbufferSize);
-        }
-
-        // Optional Spk Out EQ Filtering, need mutex as filter can change at run time from another thread
-
-        g_mutexProtectingCallbackData.Lock();
-        if (cbData->spkOutEQEnable) {
-            sox_biquad_filter(cbData->sbqSpkOutBass,   outfreedv, outfreedv, speechOutbufferSize);
-            sox_biquad_filter(cbData->sbqSpkOutTreble, outfreedv, outfreedv, speechOutbufferSize);
-            sox_biquad_filter(cbData->sbqSpkOutMid,    outfreedv, outfreedv, speechOutbufferSize);
-            if (cbData->sbqSpkOutVol) sox_biquad_filter(cbData->sbqSpkOutVol,    outfreedv, outfreedv, speechOutbufferSize);
-        }
-        g_mutexProtectingCallbackData.Unlock();
-
-        resample_for_plot(g_plotSpeechOutFifo, outfreedv, speechOutbufferSize, freedvInterface.getRxSpeechSampleRate());
-
-        // resample to output sound card rate
-
-        if (g_nSoundCards == 1) {
-            if (g_analog) /* special case */
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedv_samplerate, N48, nfreedv);
-            else
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard1SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, speechOutbufferSize);
-            
-            codec2_fifo_write(cbData->outfifo1, outsound_card, nout);
-        }
-        else {
-            if (g_analog) /* special case */
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedv_samplerate, N48, nfreedv);
-            else
-                nout = resample(cbData->outsrc2, outsound_card, outfreedv, g_soundCard2SampleRate, freedvInterface.getRxSpeechSampleRate(), N48, speechOutbufferSize);
-
-            codec2_fifo_write(cbData->outfifo2, outsound_card, nout);
-        }
+        auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
+        auto outputSamples = pipeline_->execute(inputSamplesPtr, nsam, &nout);
+        auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
+        codec2_fifo_write(outFifo, outputSamples.get(), nout);
     }
 }

@@ -1,10 +1,14 @@
 add_library(fdv_audio_pipeline STATIC
     AudioPipeline.h
     AudioPipeline.cpp
+    ComputeRfSpectrumStep.h
+    ComputeRfSpectrumStep.cpp
     EitherOrStep.h
     EitherOrStep.cpp
     EqualizerStep.h
     EqualizerStep.cpp
+    FreeDVReceiveStep.h
+    FreeDVReceiveStep.cpp
     FreeDVTransmitStep.h
     FreeDVTransmitStep.cpp
     IPipelineStep.h
@@ -23,6 +27,8 @@ add_library(fdv_audio_pipeline STATIC
     SpeexStep.cpp
     TapStep.h
     TapStep.cpp
+    ToneInterfererStep.h
+    ToneInterfererStep.cpp
     TxRxThread.h
     TxRxThread.cpp
 )
