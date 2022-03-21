@@ -31,7 +31,7 @@
 class FreeDVTransmitStep : public IPipelineStep
 {
 public:
-    FreeDVTransmitStep(FreeDVInterface& interface, std::function<float()> getFreqOffsetFn);
+    FreeDVTransmitStep(FreeDVInterface& iface, std::function<float()> getFreqOffsetFn);
     virtual ~FreeDVTransmitStep();
     
     virtual int getInputSampleRate() const;
