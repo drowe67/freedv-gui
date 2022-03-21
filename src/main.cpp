@@ -473,11 +473,11 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
     g_logfile = stderr;
     #endif
 
-    // Init Hamlib library, but we dont start talking to any rigs yet
+    // Init Hamlib library, but we don't start talking to any rigs yet
 
     wxGetApp().m_hamlib = new Hamlib();
 
-    // Init Serialport library, but as for Hamlib we dont start talking to any rigs yet
+    // Init Serialport library, but as with Hamlib we don't start talking to any rigs yet
 
     wxGetApp().m_serialport = new Serialport();
     wxGetApp().m_pttInSerialPort = new Serialport();
@@ -935,7 +935,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
                     if (wxGetApp().m_FreeDV700Combine) {
                         /*
-                           FreeDV 700C uses diversity, so optionaly combine
+                           FreeDV 700C uses diversity, so optionally combine
                            symbols for scatter plot, as combined symbols are
                            used for demodulation.  Note we need to use a copy
                            of the symbols, as we are not sure when the stats
@@ -2427,7 +2427,7 @@ void MainFrame::startRxStream()
 
 
 //---------------------------------------------------------------------------------------------
-// Main real time procesing for tx and rx of FreeDV signals, run in its own threads
+// Main real time processing for tx and rx of FreeDV signals, run in its own threads
 //---------------------------------------------------------------------------------------------
 
 void txProcessing()
@@ -2780,7 +2780,7 @@ void rxProcessing()
         }
 
         // Get some audio to send to headphones/speaker.  If in analog
-        // mode we pass thru the "from radio" audio to the
+        // mode we pass through the "from radio" audio to the
         // headphones/speaker.
         
         int speechOutbufferSize = (int)(FRAME_DURATION * freedvInterface.getRxSpeechSampleRate());
@@ -2967,7 +2967,7 @@ int MainFrame::PollUDP(void)
 
         }
         else {
-            printf("We only accept messages from locahost!\n");
+            printf("We only accept messages from localhost!\n");
         }
 
        if ( m_udp_sock->SendTo(m_udp_addr, reply, strlen(reply)).LastCount() != strlen(reply)) {

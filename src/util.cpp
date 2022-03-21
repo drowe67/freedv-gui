@@ -192,7 +192,7 @@ void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, CO
 	rx_fdm_fcorr[i] = cmult(rx_fdm[i], *foff_phase_rect);
     }
 
-    /* normalise digital oscilator as the magnitude can drift over time */
+    /* normalise digital oscillator as the magnitude can drift over time */
 
     mag = cabsolute(*foff_phase_rect);
     foff_phase_rect->real /= mag;
@@ -285,7 +285,7 @@ void MainFrame::DetectSyncProcessEvent(void) {
 
     case DS_SYNC_WAIT:
 
-        // In this state we wait fo a few seconds of valid sync, then
+        // In this state we wait for a few seconds of valid sync, then
         // send UDP message
 
         if (freedvInterface.getSync() == 0) {
