@@ -236,6 +236,7 @@ if(CODEC2_BUILD_DIR)
         PATHS ${CODEC2_BUILD_DIR}
         CONFIGS codec2.cmake
     )
+    get_target_property(CODEC2_INCLUDE_DIRS codec2 INTERFACE_INCLUDE_DIRECTORIES)
     if(LPCNET_BUILD_DIR)
         message(STATUS "Using LPCNet from build directory...")
         find_package(lpcnet REQUIRED
@@ -243,6 +244,7 @@ if(CODEC2_BUILD_DIR)
             PATHS ${LPCNET_BUILD_DIR}
             CONFIGS lpcnetfreedv.cmake
         )
+        get_target_property(LPCNET_INCLUDE_DIRS lpcnetfreedv INTERFACE_INCLUDE_DIRECTORIES)
     else()
         message(FATAL_ERROR "Must use LPCNet from build directory if using codec2 from build directory.")
     endif()
