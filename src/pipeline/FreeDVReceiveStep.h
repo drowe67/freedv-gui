@@ -32,7 +32,7 @@ class FreeDVReceiveStep : public IPipelineStep
 {
 public:
     FreeDVReceiveStep(
-        FreeDVInterface& if,
+        FreeDVInterface& iface,
         std::function<int*()> getRxStateFn,
         std::function<struct FIFO*()> getRxFifoFn, // may not be needed, TBD
         std::function<int()> getChannelNoiseFn,
