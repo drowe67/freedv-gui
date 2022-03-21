@@ -21,6 +21,7 @@
 //=========================================================================
 
 #include <cassert>
+#include <cstring>
 #include <cmath>
 
 #include "ToneInterfererStep.h"
