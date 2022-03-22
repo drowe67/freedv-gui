@@ -7,6 +7,8 @@ add_library(fdv_audio_pipeline STATIC
     EitherOrStep.cpp
     EqualizerStep.h
     EqualizerStep.cpp
+    ExclusiveAccessStep.h
+    ExclusiveAccessStep.cpp
     FreeDVReceiveStep.h
     FreeDVReceiveStep.cpp
     FreeDVTransmitStep.h

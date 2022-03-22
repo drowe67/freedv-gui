@@ -40,6 +40,7 @@
 #include "ToneInterfererStep.h"
 #include "ComputeRfSpectrumStep.h"
 #include "FreeDVReceiveStep.h"
+#include "ExclusiveAccessStep.h"
 
 #include <wx/stopwatch.h>
 
@@ -117,6 +118,15 @@ extern int resample(SRC_STATE *src,
 
 void TxRxThread::initializePipeline_()
 {
+    // Function definitions shared across both pipelines.
+    auto callbackLockFn = []() {
+        g_mutexProtectingCallbackData.Lock();
+    };
+    
+    auto callbackUnlockFn = []() {
+        g_mutexProtectingCallbackData.Unlock();
+    };
+    
     if (m_tx)
     {
         pipeline_ = std::shared_ptr<AudioPipeline>(new AudioPipeline(g_soundCard2SampleRate, g_soundCard1SampleRate));
@@ -143,8 +153,8 @@ void TxRxThread::initializePipeline_()
             []() { return g_playFileToMicIn && (g_sfPlayFile != NULL); },
             std::shared_ptr<IPipelineStep>(eitherOrPlayMicIn),
             std::shared_ptr<IPipelineStep>(eitherOrBypassPlay));
-            
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrPlayStep));
+        auto playMicLockStep = new ExclusiveAccessStep(eitherOrPlayStep, callbackLockFn, callbackUnlockFn);
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(playMicLockStep));
         
         // Speex step (optional based on g_speex_st)
         auto speexStep = new SpeexStep(g_soundCard2SampleRate, &g_speex_st);
@@ -198,11 +208,13 @@ void TxRxThread::initializePipeline_()
             });
         auto recordModulatedTap = new TapStep(g_soundCard1SampleRate, recordModulatedStep);
         auto bypassRecordModulated = new AudioPipeline(g_soundCard1SampleRate, g_soundCard2SampleRate);
+        
         auto eitherOrRecordModulated = new EitherOrStep(
             []() { return g_recFileFromModulator && (g_sfRecFileFromModulator != NULL); },
             std::shared_ptr<IPipelineStep>(recordModulatedTap),
             std::shared_ptr<IPipelineStep>(bypassRecordModulated));
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRecordModulated));
+        auto recordModulatedLockStep = new ExclusiveAccessStep(eitherOrRecordModulated, callbackLockFn, callbackUnlockFn);
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedLockStep));
         
         // TX attenuation step
         auto txAttenuationStep = new LevelAdjustStep(g_soundCard1SampleRate, []() {
@@ -230,12 +242,14 @@ void TxRxThread::initializePipeline_()
             }
         );
         auto bypassRecordRadio = new AudioPipeline(g_soundCard1SampleRate, g_soundCard1SampleRate);
+        
         auto eitherOrRecordRadio = new EitherOrStep(
             []() { return g_recFileFromRadio && (g_sfRecFile != NULL); },
             std::shared_ptr<IPipelineStep>(recordRadioStep),
             std::shared_ptr<IPipelineStep>(bypassRecordRadio)
         );
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRecordRadio));
+        auto recordRadioLockStep = new ExclusiveAccessStep(eitherOrRecordRadio, callbackLockFn, callbackUnlockFn);
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordRadioLockStep));
         
         // Play from radio step (optional)
         auto eitherOrBypassPlayRadio = new AudioPipeline(g_soundCard1SampleRate, g_soundCard1SampleRate);
@@ -264,8 +278,8 @@ void TxRxThread::initializePipeline_()
             },
             std::shared_ptr<IPipelineStep>(eitherOrPlayRadio),
             std::shared_ptr<IPipelineStep>(eitherOrBypassPlayRadio));
-            
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrPlayRadioStep));
+        auto playRadioLockStep = new ExclusiveAccessStep(eitherOrPlayRadioStep, callbackLockFn, callbackUnlockFn);
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(playRadioLockStep));
         
         // Resample for plot step (demod in)
         auto resampleForPlotStep = new ResampleForPlotStep(g_plotDemodInFifo);
