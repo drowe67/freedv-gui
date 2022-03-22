@@ -53,17 +53,17 @@ static wxWindow* createMyExtraPlayFilePanel(wxWindow *parent)
 
 void MainFrame::StopPlayFileToMicIn(void)
 {
+    g_mutexProtectingCallbackData.Lock();
     if (g_playFileToMicIn)
     {
-        g_mutexProtectingCallbackData.Lock();
         g_playFileToMicIn = false;
         sf_close(g_sfPlayFile);
         g_sfPlayFile = nullptr;
         SetStatusText(wxT(""));
         m_menuItemPlayFileToMicIn->SetItemLabel(wxString(_("Start Play File - Mic In...")));
-        g_mutexProtectingCallbackData.Unlock();
         VoiceKeyerProcessEvent(VK_PLAY_FINISHED);
     }
+    g_mutexProtectingCallbackData.Unlock();
 }
 
 //-------------------------------------------------------------------------

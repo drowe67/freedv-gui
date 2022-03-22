@@ -53,18 +53,22 @@ int SpeexStep::getOutputSampleRate() const
 
 std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    short* outputSamples = new short[numInputSamples];
-    assert(outputSamples != nullptr);
-    
-    memcpy(outputSamples, inputSamples.get(), sizeof(short)*numInputSamples);
-    
-    g_mutexProtectingCallbackData.Lock();
-    if (*speexStateObj_)
+    short* outputSamples = nullptr;
+    if (numInputSamples > 0)
     {
-        speex_preprocess_run(*speexStateObj_, outputSamples);
-    }
-    g_mutexProtectingCallbackData.Unlock();
+        outputSamples = new short[numInputSamples];
+        assert(outputSamples != nullptr);
     
+        memcpy(outputSamples, inputSamples.get(), sizeof(short)*numInputSamples);
+    
+        g_mutexProtectingCallbackData.Lock();
+        if (*speexStateObj_)
+        {
+            speex_preprocess_run(*speexStateObj_, outputSamples);
+        }
+        g_mutexProtectingCallbackData.Unlock();
+    }
+
     *numOutputSamples = numInputSamples;
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
 }
