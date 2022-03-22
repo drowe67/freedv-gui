@@ -5,6 +5,7 @@
 */
 
 #include "main.h"
+#include "lpcnet_freedv.h"
 
 extern int g_mode;
 extern bool  g_modal;

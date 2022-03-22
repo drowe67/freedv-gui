@@ -70,7 +70,6 @@
 #include "codec2.h"
 #include "codec2_fifo.h"
 #include "modem_stats.h"
-#include "lpcnet_freedv.h"
 
 #include "topFrame.h"
 #include "dlg_ptt.h"
