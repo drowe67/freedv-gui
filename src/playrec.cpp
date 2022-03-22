@@ -58,6 +58,7 @@ void MainFrame::StopPlayFileToMicIn(void)
         g_mutexProtectingCallbackData.Lock();
         g_playFileToMicIn = false;
         sf_close(g_sfPlayFile);
+        g_sfPlayFile = nullptr;
         SetStatusText(wxT(""));
         m_menuItemPlayFileToMicIn->SetItemLabel(wxString(_("Start Play File - Mic In...")));
         g_mutexProtectingCallbackData.Unlock();
@@ -143,6 +144,7 @@ void MainFrame::StopPlaybackFileFromRadio()
     g_mutexProtectingCallbackData.Lock();
     g_playFileFromRadio = false;
     sf_close(g_sfPlayFileFromRadio);
+    g_sfPlayFileFromRadio = nullptr;
     SetStatusText(wxT(""),0);
     SetStatusText(wxT(""),1);
     m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Start Play File - From Radio...")));
@@ -257,6 +259,7 @@ void MainFrame::StopRecFileFromRadio()
         g_mutexProtectingCallbackData.Lock();
         g_recFileFromRadio = false;
         sf_close(g_sfRecFile);
+        g_sfRecFile = nullptr;
         SetStatusText(wxT(""));
         
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Start Record File - From Radio...")));
@@ -385,6 +388,7 @@ void MainFrame::StopRecFileFromModulator()
         g_recFileFromModulator = false;
         g_recFromModulatorSamples = 0;
         sf_close(g_sfRecFileFromModulator);
+        g_sfRecFileFromModulator = nullptr;
         SetStatusText(wxT(""));
         m_menuItemRecFileFromModulator->SetItemLabel(wxString(_("Start Record File - From Modulator...")));
         wxMessageBox(wxT("Recording modulator output to file complete")

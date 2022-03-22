@@ -1,6 +1,7 @@
 //=========================================================================
-// Name:            ResamplePlotStep.h
-// Purpose:         Describes a resample for plot step in the audio pipeline.
+// Name:            ExclusiveAccessStep.h
+// Purpose:         Describes a step that wraps a mutex lock/unlock around
+//                  another step in the audio pipeline.
 //
 // Authors:         Mooneer Salem
 // License:
@@ -20,27 +21,29 @@
 //
 //=========================================================================
 
-#ifndef AUDIO_PIPELINE__RESAMPLE_PLOT_STEP_H
-#define AUDIO_PIPELINE__RESAMPLE_PLOT_STEP_H
+#ifndef AUDIO_PIPELINE__EXCLUSIVE_ACCESS_STEP_H
+#define AUDIO_PIPELINE__EXCLUSIVE_ACCESS_STEP_H
 
 #include "IPipelineStep.h"
+#include <memory>
+#include <functional>
 
-// Forward declaration
-struct FIFO;
-
-class ResampleForPlotStep : public IPipelineStep
+class ExclusiveAccessStep : public IPipelineStep
 {
 public:
-    // Locked to 8Khz. Wrap around AudioPipeline as needed.
-    ResampleForPlotStep(struct FIFO* fifo);
-    virtual ~ResampleForPlotStep();
+    ExclusiveAccessStep(IPipelineStep* step, std::function<void()> lockFn, std::function<void()> unlockFn);
+    virtual ~ExclusiveAccessStep();
     
     virtual int getInputSampleRate() const;
     virtual int getOutputSampleRate() const;
+    
     virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
     
 private:
-    struct FIFO* fifo_;
+    std::shared_ptr<IPipelineStep> step_;
+    std::function<void()> lockFn_;
+    std::function<void()> unlockFn_;
 };
 
-#endif // AUDIO_PIPELINE__RESAMPLE_PLOT_STEP_H
+
+#endif // AUDIO_PIPELINE__EXCLUSIVE_ACCESS_STEP_H
