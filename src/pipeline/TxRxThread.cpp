@@ -160,8 +160,11 @@ void TxRxThread::initializePipeline_()
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerStep));
         
         // Resample for plot step
-        auto resampleForPlotStep = new ResampleForPlotStep(g_soundCard2SampleRate, g_plotSpeechInFifo);
-        auto resampleForPlotTap = new TapStep(g_soundCard2SampleRate, resampleForPlotStep);
+        auto resampleForPlotStep = new ResampleForPlotStep(g_plotSpeechInFifo);
+        auto resampleForPlotPipeline = new AudioPipeline(g_soundCard2SampleRate, resampleForPlotStep->getOutputSampleRate());
+        resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotStep));
+
+        auto resampleForPlotTap = new TapStep(g_soundCard2SampleRate, resampleForPlotPipeline);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotTap));
         
         // FreeDV TX step (analog leg)
@@ -253,15 +256,23 @@ void TxRxThread::initializePipeline_()
         eitherOrPlayRadio->appendPipelineStep(std::shared_ptr<IPipelineStep>(playRadio));
         
         auto eitherOrPlayRadioStep = new EitherOrStep(
-            []() { return g_playFileFromRadio && (g_sfPlayFileFromRadio != NULL); },
+            []() { 
+                g_mutexProtectingCallbackData.Lock();
+                auto result = g_playFileFromRadio && (g_sfPlayFileFromRadio != NULL);
+                g_mutexProtectingCallbackData.Unlock();
+                return result;
+            },
             std::shared_ptr<IPipelineStep>(eitherOrPlayRadio),
             std::shared_ptr<IPipelineStep>(eitherOrBypassPlayRadio));
             
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrPlayRadioStep));
         
         // Resample for plot step (demod in)
-        auto resampleForPlotStep = new ResampleForPlotStep(g_soundCard1SampleRate, g_plotDemodInFifo);
-        auto resampleForPlotTap = new TapStep(g_soundCard1SampleRate, resampleForPlotStep);
+        auto resampleForPlotStep = new ResampleForPlotStep(g_plotDemodInFifo);
+        auto resampleForPlotPipeline = new AudioPipeline(g_soundCard1SampleRate, resampleForPlotStep->getOutputSampleRate());
+        resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotStep));
+
+        auto resampleForPlotTap = new TapStep(g_soundCard1SampleRate, resampleForPlotPipeline);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotTap));
         
         // Tone interferer step (optional)
@@ -322,10 +333,12 @@ void TxRxThread::initializePipeline_()
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerStep));
         
         // Resample for plot step (speech out)
-        auto resampleForPlotOutStep = new ResampleForPlotStep(g_soundCard2SampleRate, g_plotSpeechOutFifo);
-        auto resampleForPlotOutTap = new TapStep(g_soundCard2SampleRate, resampleForPlotOutStep);
+        auto resampleForPlotOutStep = new ResampleForPlotStep(g_plotSpeechOutFifo);
+        auto resampleForPlotOutPipeline = new AudioPipeline(g_soundCard2SampleRate, resampleForPlotOutStep->getOutputSampleRate());
+        resampleForPlotOutPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutStep));
+
+        auto resampleForPlotOutTap = new TapStep(g_soundCard2SampleRate, resampleForPlotOutPipeline);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutTap));
-        
     }
 }
 

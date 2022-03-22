@@ -31,8 +31,8 @@ struct FIFO;
 class ResampleForPlotStep : public IPipelineStep
 {
 public:
-    ResampleForPlotStep(
-        int inputSampleRate, struct FIFO* fifo);
+    // Locked to 8Khz. Wrap around AudioPipeline as needed.
+    ResampleForPlotStep(struct FIFO* fifo);
     virtual ~ResampleForPlotStep();
     
     virtual int getInputSampleRate() const;
@@ -40,7 +40,6 @@ public:
     virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
     
 private:
-    int inputSampleRate_;
     struct FIFO* fifo_;
 };
 
