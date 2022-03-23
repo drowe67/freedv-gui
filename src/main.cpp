@@ -459,7 +459,7 @@ void MainFrame::loadConfiguration_()
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainFrame(wxFrame* pa->ent) : TopFrame(parent)
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent)
+MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ") + _(FREEDV_VERSION))
 {
 #if defined(__linux__)
     pthread_setname_np(pthread_self(), "FreeDV GUI");

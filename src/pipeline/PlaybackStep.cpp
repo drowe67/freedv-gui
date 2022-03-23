@@ -21,6 +21,9 @@
 //=========================================================================
 
 #include "PlaybackStep.h"
+#include <cassert>
+
+#include <cassert>
 
 PlaybackStep::PlaybackStep(
     int inputSampleRate, std::function<int()> fileSampleRateFn, 
@@ -51,14 +54,20 @@ int PlaybackStep::getOutputSampleRate() const
 std::shared_ptr<short> PlaybackStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
     auto playFile = getSndFileFn_();
+    assert(playFile != nullptr);
+
     unsigned int nsf = numInputSamples * getOutputSampleRate()/getInputSampleRate();
+    assert(nsf > 0);
+
     short* outputSamples = new short[nsf];
+    assert(outputSamples != nullptr);
     
     *numOutputSamples = sf_read_short(playFile, outputSamples, nsf);
-    if (*numOutputSamples == 0)
+    if ((unsigned)*numOutputSamples < nsf)
     {
         fileCompleteFn_();
     }
-    
+    *numOutputSamples = nsf;
+
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
 }
