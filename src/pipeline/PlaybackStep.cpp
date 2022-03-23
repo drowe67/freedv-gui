@@ -23,6 +23,8 @@
 #include "PlaybackStep.h"
 #include <cassert>
 
+#include <cassert>
+
 PlaybackStep::PlaybackStep(
     int inputSampleRate, std::function<int()> fileSampleRateFn, 
     std::function<SNDFILE*()> getSndFileFn, std::function<void()> fileCompleteFn)
@@ -65,6 +67,7 @@ std::shared_ptr<short> PlaybackStep::execute(std::shared_ptr<short> inputSamples
     {
         fileCompleteFn_();
     }
-    
+    *numOutputSamples = nsf;
+
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
 }
