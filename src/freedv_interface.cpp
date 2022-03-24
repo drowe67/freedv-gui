@@ -93,13 +93,7 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
     for (auto& mode : enabledModes_)
     {
         struct freedv* dv = nullptr;
-        if ((mode == FREEDV_MODE_700D) || (mode == FREEDV_MODE_700E) || (mode == FREEDV_MODE_2020)) {
-            // 700 has some init time stuff so treat it special
-            struct freedv_advanced adv;
-            dv = freedv_open_advanced(mode, &adv);
-        } else {
-            dv = freedv_open(mode);
-        }
+        dv = freedv_open(mode);
         assert(dv != nullptr);
         
         snrVals_.push_back(-20);
