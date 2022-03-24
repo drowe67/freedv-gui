@@ -35,11 +35,13 @@
 class TxRxThread : public wxThread
 {
 public:
-    TxRxThread(bool tx) 
+    TxRxThread(bool tx, int inputSampleRate, int outputSampleRate) 
         : wxThread(wxTHREAD_JOINABLE)
         , m_tx(tx)
         , m_run(1)
-        , pipeline_(nullptr) { /* empty */ }
+        , pipeline_(nullptr)
+        , inputSampleRate_(inputSampleRate)
+        , outputSampleRate_(outputSampleRate) { /* empty */ }
 
     // thread execution starts here
     void *Entry()
@@ -87,6 +89,8 @@ private:
     bool  m_tx;
     bool  m_run;
     std::shared_ptr<AudioPipeline> pipeline_;
+    int inputSampleRate_;
+    int outputSampleRate_;
     
     void initializePipeline_();
     void txProcessing();

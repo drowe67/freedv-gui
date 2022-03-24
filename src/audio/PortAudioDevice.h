@@ -33,6 +33,7 @@ public:
     virtual ~PortAudioDevice();
     
     virtual int getNumChannels() { return numChannels_; }
+    virtual int getSampleRate() const { return sampleRate_; }
     
     virtual void start();
     virtual void stop();
