@@ -415,7 +415,7 @@ void TxRxThread::txProcessing()
         // outfifo1 nice and full so we don't have any gaps in tx
         // signal.
 
-        unsigned int nsam_one_modem_frame = g_soundCard1SampleRate * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
+        unsigned int nsam_one_modem_frame = inputSampleRate_ * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
 
      	if (g_dump_fifo_state) {
     	  // If this drops to zero we have a problem as we will run out of output samples
@@ -424,7 +424,7 @@ void TxRxThread::txProcessing()
                       codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
     	}
 
-        int nsam_in_48 = g_soundCard2SampleRate * freedvInterface.getTxNumSpeechSamples()/freedvInterface.getTxSpeechSampleRate();
+        int nsam_in_48 = outputSampleRate_ * freedvInterface.getTxNumSpeechSamples()/freedvInterface.getTxSpeechSampleRate();
         assert(nsam_in_48 < 10*N48);
         
         while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {        
@@ -499,7 +499,7 @@ void TxRxThread::rxProcessing()
     
     // Attempt to read one processing frame (about 20ms) of receive samples,  we 
     // keep this frame duration constant across modes and sound card sample rates
-    int nsam = (int)(g_soundCard1SampleRate * FRAME_DURATION);
+    int nsam = (int)(inputSampleRate_ * FRAME_DURATION);
     assert(nsam <= 10*N48);
     assert(nsam != 0);
 
