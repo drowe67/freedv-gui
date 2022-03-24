@@ -62,13 +62,24 @@ int ResampleStep::getOutputSampleRate() const
 
 std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    double scaleFactor = ((double)outputSampleRate_)/((double)inputSampleRate_);
-    int outputArraySize = std::max(numInputSamples, (int)(scaleFactor*numInputSamples));
-    short* outputSamples = new short[outputArraySize];
-    
-    *numOutputSamples = resample(
-        resampleState_, outputSamples, inputSamples.get(), outputSampleRate_, 
-        inputSampleRate_, outputArraySize, numInputSamples);
-    
+    short* outputSamples = nullptr;
+    if (numInputSamples > 0)
+    {
+        double scaleFactor = ((double)outputSampleRate_)/((double)inputSampleRate_);
+        int outputArraySize = std::max(numInputSamples, (int)(scaleFactor*numInputSamples));
+        assert(outputArraySize > 0);
+
+        outputSamples = new short[outputArraySize];
+        assert(outputSamples != nullptr);
+ 
+        *numOutputSamples = resample(
+            resampleState_, outputSamples, inputSamples.get(), outputSampleRate_, 
+            inputSampleRate_, outputArraySize, numInputSamples);
+    }
+    else
+    {
+        *numOutputSamples = 0;
+    }
+ 
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
 }

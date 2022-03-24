@@ -48,20 +48,29 @@ int FreeDVTransmitStep::getOutputSampleRate() const
 
 std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    auto mode = interface_.getTxMode();
-    
-    *numOutputSamples = interface_.getTxNNomModemSamples();
-    short* outputSamples = new short[*numOutputSamples];
-    assert(outputSamples != nullptr);
-    
-    if (mode == FREEDV_MODE_800XA || mode == FREEDV_MODE_2400B) 
+    short* outputSamples = nullptr;
+
+    if (numInputSamples > 0)
     {
-        /* 800XA doesn't support complex output just yet */
-        interface_.transmit(outputSamples, inputSamples.get());
+        auto mode = interface_.getTxMode();
+    
+        *numOutputSamples = interface_.getTxNNomModemSamples();
+        outputSamples = new short[*numOutputSamples];
+        assert(outputSamples != nullptr);
+    
+        if (mode == FREEDV_MODE_800XA || mode == FREEDV_MODE_2400B) 
+        {
+            /* 800XA doesn't support complex output just yet */
+            interface_.transmit(outputSamples, inputSamples.get());
+        }
+        else 
+        {
+            interface_.complexTransmit(outputSamples, inputSamples.get(), getFreqOffsetFn_(), *numOutputSamples);
+        }
     }
-    else 
+    else
     {
-        interface_.complexTransmit(outputSamples, inputSamples.get(), getFreqOffsetFn_(), *numOutputSamples);
+        *numOutputSamples = 0;
     }
 
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
