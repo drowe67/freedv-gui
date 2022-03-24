@@ -206,18 +206,24 @@ void TxRxThread::initializePipeline_()
                     wxPrintf("write mod output to file complete\n", g_recFromModulatorSamples);  // consider a popup
                 }
             });
-        auto recordModulatedTap = new TapStep(g_soundCard1SampleRate, recordModulatedStep);
+        auto recordModulatedPipeline = new AudioPipeline(g_soundCard1SampleRate, g_soundCard2SampleRate);
+        recordModulatedPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedStep));
+        
+        auto recordModulatedTap = new TapStep(g_soundCard1SampleRate, recordModulatedPipeline);
+        auto recordModulatedTapPipeline = new AudioPipeline(g_soundCard1SampleRate, g_soundCard2SampleRate);
+        recordModulatedTapPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedTap));
+        
         auto bypassRecordModulated = new AudioPipeline(g_soundCard1SampleRate, g_soundCard2SampleRate);
         
         auto eitherOrRecordModulated = new EitherOrStep(
             []() { return g_recFileFromModulator && (g_sfRecFileFromModulator != NULL); },
-            std::shared_ptr<IPipelineStep>(recordModulatedTap),
+            std::shared_ptr<IPipelineStep>(recordModulatedTapPipeline),
             std::shared_ptr<IPipelineStep>(bypassRecordModulated));
         auto recordModulatedLockStep = new ExclusiveAccessStep(eitherOrRecordModulated, callbackLockFn, callbackUnlockFn);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedLockStep));
         
         // TX attenuation step
-        auto txAttenuationStep = new LevelAdjustStep(g_soundCard1SampleRate, []() {
+        auto txAttenuationStep = new LevelAdjustStep(g_soundCard2SampleRate, []() {
             double dbLoss = g_txLevel / 10.0;
             double scaleFactor = exp(dbLoss/20.0 * log(10.0));
             return scaleFactor; 
@@ -241,11 +247,14 @@ void TxRxThread::initializePipeline_()
                 }
             }
         );
+        auto recordRadioPipeline = new AudioPipeline(g_soundCard1SampleRate, g_soundCard1SampleRate);
+        recordRadioPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordRadioStep));
+        
         auto bypassRecordRadio = new AudioPipeline(g_soundCard1SampleRate, g_soundCard1SampleRate);
         
         auto eitherOrRecordRadio = new EitherOrStep(
             []() { return g_recFileFromRadio && (g_sfRecFile != NULL); },
-            std::shared_ptr<IPipelineStep>(recordRadioStep),
+            std::shared_ptr<IPipelineStep>(recordRadioPipeline),
             std::shared_ptr<IPipelineStep>(bypassRecordRadio)
         );
         auto recordRadioLockStep = new ExclusiveAccessStep(eitherOrRecordRadio, callbackLockFn, callbackUnlockFn);
