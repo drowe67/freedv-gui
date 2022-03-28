@@ -1,4 +1,4 @@
-name: Build FreeDV
+name: Build FreeDV (Linux)
 
 on:
   push:
