@@ -103,8 +103,6 @@ struct FIFO        *g_plotSpeechInFifo;
 
 // Soundcard config
 int                 g_nSoundCards;
-int                 g_soundCard1SampleRate;
-int                 g_soundCard2SampleRate;
 
 // PortAudio over/underflow counters
 
@@ -300,9 +298,14 @@ void MainFrame::loadConfiguration_()
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
     
-    // Get sound card sample rates
-    g_soundCard1SampleRate   = pConfig->Read(wxT("/Audio/soundCard1SampleRate"),          -1);
-    g_soundCard2SampleRate   = pConfig->Read(wxT("/Audio/soundCard2SampleRate"),          -1);
+    // The below is the old way of storing the sample rates. Since we don't want to lose these if upgrading,
+    // we feed these in as defaults for the new sample rate keys.
+    int oldSoundCard1SampleRate = pConfig->Read(wxT("/Audio/soundCard1SampleRate"),          -1);
+    int oldSoundCard2SampleRate = pConfig->Read(wxT("/Audio/soundCard2SampleRate"),          -1);
+    wxGetApp().m_soundCard1InSampleRate = pConfig->Read(wxT("/Audio/soundCard1InSampleRate"), oldSoundCard1SampleRate);
+    wxGetApp().m_soundCard1OutSampleRate = pConfig->Read(wxT("/Audio/soundCard1OutSampleRate"), oldSoundCard1SampleRate);
+    wxGetApp().m_soundCard2InSampleRate = pConfig->Read(wxT("/Audio/soundCard2InSampleRate"), oldSoundCard2SampleRate);
+    wxGetApp().m_soundCard2OutSampleRate = pConfig->Read(wxT("/Audio/soundCard2OutSampleRate"), oldSoundCard2SampleRate);
     
     wxGetApp().m_playFileToMicInPath = pConfig->Read("/File/playFileToMicInPath",   wxT(""));
     wxGetApp().m_recFileFromRadioPath = pConfig->Read("/File/recFileFromRadioPath", wxT(""));
@@ -690,13 +693,17 @@ MainFrame::~MainFrame()
 
     pConfig->Write(wxT("/Audio/fifoSize_ms"),              wxGetApp().m_fifoSize_ms);
 
-    pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
+    pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);	
+    pConfig->Write(wxT("/Audio/soundCard1InSampleRate"), wxGetApp().m_soundCard1InSampleRate);	
+    
     pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
-    pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);	
-    pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);	
-
-    pConfig->Write(wxT("/Audio/soundCard1SampleRate"),    g_soundCard1SampleRate );
-    pConfig->Write(wxT("/Audio/soundCard2SampleRate"),    g_soundCard2SampleRate );
+    pConfig->Write(wxT("/Audio/soundCard1InSampleRate"), wxGetApp().m_soundCard1OutSampleRate);
+    
+    pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);
+    pConfig->Write(wxT("/Audio/soundCard2InSampleRate"), wxGetApp().m_soundCard2InSampleRate);
+    
+    pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
+    pConfig->Write(wxT("/Audio/soundCard2OutSampleRate"), wxGetApp().m_soundCard2OutSampleRate);
 
     pConfig->Write(wxT("/Audio/transmitLevel"), g_txLevel);
     
@@ -1196,7 +1203,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     if (m_newMicInFilter || m_newSpkOutFilter) {
         g_mutexProtectingCallbackData.Lock();
         deleteEQFilters(g_rxUserdata);
-        designEQFilters(g_rxUserdata, g_soundCard2SampleRate, g_soundCard2SampleRate);
+        
+        if (g_nSoundCards == 1)
+        {
+            // RX In isn't used here but we need to provide it anyway.
+            designEQFilters(g_rxUserdata, wxGetApp().m_soundCard1OutSampleRate, wxGetApp().m_soundCard1InSampleRate);
+        }
+        else
+        {   
+            designEQFilters(g_rxUserdata, wxGetApp().m_soundCard2OutSampleRate, wxGetApp().m_soundCard2InSampleRate);
+        }
         g_mutexProtectingCallbackData.Unlock();
         m_newMicInFilter = m_newSpkOutFilter = false;
     }
@@ -1204,7 +1220,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     g_mutexProtectingCallbackData.Lock();
     if (wxGetApp().m_speexpp_enable && !g_speex_st)
     {
-        g_speex_st = speex_preprocess_state_init(FRAME_DURATION * g_soundCard2SampleRate, g_soundCard2SampleRate);
+        g_speex_st = speex_preprocess_state_init(
+            FRAME_DURATION * wxGetApp().m_soundCard2InSampleRate,
+            wxGetApp().m_soundCard2InSampleRate);
     }
     else if (!wxGetApp().m_speexpp_enable && g_speex_st)
     {
@@ -1608,7 +1626,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         if (wxGetApp().m_speexpp_enable)
         {
-            g_speex_st = speex_preprocess_state_init(FRAME_DURATION * g_soundCard2SampleRate, g_soundCard2SampleRate);
+            g_speex_st = speex_preprocess_state_init(
+                FRAME_DURATION * wxGetApp().m_soundCard2InSampleRate, 
+                wxGetApp().m_soundCard2InSampleRate);
         }
         else
         {
@@ -1966,7 +1986,7 @@ void MainFrame::startRxStream()
         {
             // RX-only setup.
             // Note: we assume 2 channels, but IAudioEngine will automatically downgrade to 1 channel if needed.
-            rxInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, g_soundCard1SampleRate, 2);
+            rxInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard1InSampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
             rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
@@ -1974,7 +1994,7 @@ void MainFrame::startRxStream()
                 pConfig->Flush();
             }, nullptr);
             
-            rxOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard1SampleRate, 2);
+            rxOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard1OutSampleRate, 2);
             rxOutSoundDevice->setDescription("FreeDV to Speaker");
             rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
@@ -2019,7 +2039,7 @@ void MainFrame::startRxStream()
         {
             // RX + TX setup
             // Same note as above re: number of channels.
-            rxInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, g_soundCard1SampleRate, 2);
+            rxInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard1InSampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
             rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
@@ -2027,7 +2047,7 @@ void MainFrame::startRxStream()
                 pConfig->Flush();
             }, nullptr);
 
-            rxOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard2OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard2SampleRate, 2);
+            rxOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard2OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard2OutSampleRate, 2);
             rxOutSoundDevice->setDescription("FreeDV to Speaker");
             rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 wxGetApp().m_soundCard2OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
@@ -2035,7 +2055,7 @@ void MainFrame::startRxStream()
                 pConfig->Flush();
             }, nullptr);
 
-            txInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard2InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, g_soundCard2SampleRate, 2);
+            txInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard2InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard2InSampleRate, 2);
             txInSoundDevice->setDescription("Mic to FreeDV");
             txInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 wxGetApp().m_soundCard2InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
@@ -2043,7 +2063,7 @@ void MainFrame::startRxStream()
                 pConfig->Flush();
             }, nullptr);
 
-            txOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard1SampleRate, 2);
+            txOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard1OutSampleRate, 2);
             txOutSoundDevice->setDescription("FreeDV to Radio");
             txOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
@@ -2135,22 +2155,24 @@ void MainFrame::startRxStream()
         // loop.
 
         int m_fifoSize_ms = wxGetApp().m_fifoSize_ms;
-        int soundCard1FifoSizeSamples = m_fifoSize_ms*g_soundCard1SampleRate/1000;
-        g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1FifoSizeSamples);
-        g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1FifoSizeSamples);
+        int soundCard1InFifoSizeSamples = m_fifoSize_ms*wxGetApp().m_soundCard1InSampleRate/1000;
+        int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().m_soundCard1OutSampleRate/1000;
+        g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
+        g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
 
         if (txInSoundDevice && txOutSoundDevice)
         {
-            int soundCard2FifoSizeSamples = m_fifoSize_ms*g_soundCard2SampleRate/1000;
-            g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
-            g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2FifoSizeSamples);
+            int soundCard2InFifoSizeSamples = m_fifoSize_ms*wxGetApp().m_soundCard2InSampleRate/1000;
+            int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().m_soundCard2OutSampleRate/1000;
+            g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
+            g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
         
-            if (g_verbose) fprintf(stderr, "fifoSize_ms:  %d infifo2/outfilo2: %d\n",
-                wxGetApp().m_fifoSize_ms, soundCard2FifoSizeSamples);
+            if (g_verbose) fprintf(stderr, "fifoSize_ms:  %d infifo2: %d/outfilo2: %d\n",
+                wxGetApp().m_fifoSize_ms, soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
         }
 
-        if (g_verbose) fprintf(stderr, "fifoSize_ms: %d infifo1/outfilo1 %d\n",
-                wxGetApp().m_fifoSize_ms, soundCard1FifoSizeSamples);
+        if (g_verbose) fprintf(stderr, "fifoSize_ms: %d infifo1: %d/outfilo1 %d\n",
+                wxGetApp().m_fifoSize_ms, soundCard1InFifoSizeSamples, soundCard1OutFifoSizeSamples);
 
         // reset debug stats for FIFOs
 
@@ -2189,7 +2211,7 @@ void MainFrame::startRxStream()
 
         m_newMicInFilter = m_newSpkOutFilter = true;
         g_mutexProtectingCallbackData.Lock();
-        designEQFilters(g_rxUserdata, g_soundCard2SampleRate, g_soundCard2SampleRate);
+        designEQFilters(g_rxUserdata, wxGetApp().m_soundCard2OutSampleRate, wxGetApp().m_soundCard2InSampleRate);
         g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
         g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
         m_newMicInFilter = m_newSpkOutFilter = false;
@@ -2319,7 +2341,7 @@ void MainFrame::startRxStream()
                         {
                             if (cbData->leftChannelVoxTone)
                             {
-                                cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/g_soundCard1SampleRate;
+                                cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().m_soundCard1OutSampleRate;
                                 cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
                                 audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
                             }
@@ -2450,10 +2472,10 @@ bool MainFrame::validateSoundCardSetup()
     engine->start();
     
     // For the purposes of validation, number of channels isn't necessary.
-    auto soundCard1InDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, g_soundCard1SampleRate, 1);
-    auto soundCard1OutDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard1SampleRate, 1);
-    auto soundCard2InDevice = engine->getAudioDevice(wxGetApp().m_soundCard2InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, g_soundCard2SampleRate, 1);
-    auto soundCard2OutDevice = engine->getAudioDevice(wxGetApp().m_soundCard2OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, g_soundCard2SampleRate, 1);
+    auto soundCard1InDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard1InSampleRate, 1);
+    auto soundCard1OutDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard1OutSampleRate, 1);
+    auto soundCard2InDevice = engine->getAudioDevice(wxGetApp().m_soundCard2InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard2InSampleRate, 1);
+    auto soundCard2OutDevice = engine->getAudioDevice(wxGetApp().m_soundCard2OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard2OutSampleRate, 1);
 
     if (wxGetApp().m_soundCard1InDeviceName != "none" && !soundCard1InDevice)
     {
