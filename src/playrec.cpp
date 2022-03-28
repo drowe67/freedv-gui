@@ -446,7 +446,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
         wxLogDebug("soundFile: %s", soundFile);
         sfInfo.format = 0;
 
-        int sample_rate = g_soundCard1SampleRate;
+        int sample_rate = wxGetApp().m_soundCard1OutSampleRate;
 
         if(!extension.IsEmpty())
         {
