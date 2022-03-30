@@ -22,23 +22,30 @@
 
 
 #include "SpeexStep.h"
+#include "../defines.h"
 
 #include <assert.h>
+#include "codec2_fifo.h"
 
-// TBD -- use std::mutex instead of wxMutex to remove wxWidgets dependency.
-#include <wx/wx.h>
-extern wxMutex g_mutexProtectingCallbackData;
-
-SpeexStep::SpeexStep(int sampleRate, SpeexPreprocessState** speexStateObj)
+SpeexStep::SpeexStep(int sampleRate)
     : sampleRate_(sampleRate)
-    , speexStateObj_(speexStateObj)
 {
+    numSamplesPerSpeexRun_ = FRAME_DURATION * sampleRate_;
+    assert(numSamplesPerSpeexRun_ > 0);
+    
+    speexStateObj_ = speex_preprocess_state_init(
+                numSamplesPerSpeexRun_,
+                sampleRate_);
     assert(speexStateObj_ != nullptr);
+    
+    // Set FIFO to be 2x the number of samples per run so we don't lose anything.
+    inputSampleFifo_ = codec2_fifo_create(numSamplesPerSpeexRun_ * 2);
+    assert(inputSampleFifo_ != nullptr);
 }
 
 SpeexStep::~SpeexStep()
 {
-    // empty
+    speex_preprocess_state_destroy(speexStateObj_);
 }
 
 int SpeexStep::getInputSampleRate() const
@@ -54,21 +61,34 @@ int SpeexStep::getOutputSampleRate() const
 std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
     short* outputSamples = nullptr;
-    if (numInputSamples > 0)
+    
+    int numSpeexRuns = (codec2_fifo_used(inputSampleFifo_) + numInputSamples) / numSamplesPerSpeexRun_;
+    if (numSpeexRuns > 0)
     {
-        outputSamples = new short[numInputSamples];
+        *numOutputSamples = numSpeexRuns * numSamplesPerSpeexRun_;
+        outputSamples = new short[*numOutputSamples];
         assert(outputSamples != nullptr);
-    
-        memcpy(outputSamples, inputSamples.get(), sizeof(short)*numInputSamples);
-    
-        g_mutexProtectingCallbackData.Lock();
-        if (*speexStateObj_)
+        
+        short* tmpOutput = outputSamples;
+        short* tmpInput = inputSamples.get();
+        
+        while (numInputSamples > 0)
         {
-            speex_preprocess_run(*speexStateObj_, outputSamples);
+            codec2_fifo_write(inputSampleFifo_, tmpInput++, 1);
+            numInputSamples--;
+            
+            if (codec2_fifo_used(inputSampleFifo_) >= numSamplesPerSpeexRun_)
+            {
+                codec2_fifo_read(inputSampleFifo_, tmpOutput, numSamplesPerSpeexRun_);
+                speex_preprocess_run(speexStateObj_, tmpOutput);
+                tmpOutput += numSamplesPerSpeexRun_;
+            }
         }
-        g_mutexProtectingCallbackData.Unlock();
     }
-
-    *numOutputSamples = numInputSamples;
+    else
+    {
+        *numOutputSamples = 0;
+    }
+    
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
 }

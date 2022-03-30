@@ -149,9 +149,6 @@ float               g_TxFreqOffsetHz;
 // now be thread safe
 
 wxMutex g_mutexProtectingCallbackData;
- 
-// Speex pre-processor states
-SpeexPreprocessState *g_speex_st;
 
 // TX mode change mutex
 wxMutex txModeChangeMutex;
@@ -1217,20 +1214,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         m_newMicInFilter = m_newSpkOutFilter = false;
     }
     
-    g_mutexProtectingCallbackData.Lock();
-    if (wxGetApp().m_speexpp_enable && !g_speex_st)
-    {
-        g_speex_st = speex_preprocess_state_init(
-            FRAME_DURATION * wxGetApp().m_soundCard2InSampleRate,
-            wxGetApp().m_soundCard2InSampleRate);
-    }
-    else if (!wxGetApp().m_speexpp_enable && g_speex_st)
-    {
-        speex_preprocess_state_destroy(g_speex_st);
-        g_speex_st = nullptr;
-    }
-    g_mutexProtectingCallbackData.Unlock();
-    
     g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
     g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
 
@@ -1623,17 +1606,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         if (g_verbose) fprintf(stderr, "freedv_get_n_speech_samples(tx): %d\n", freedvInterface.getTxNumSpeechSamples());
         if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(tx): %d\n", freedvInterface.getTxSpeechSampleRate());
-
-        if (wxGetApp().m_speexpp_enable)
-        {
-            g_speex_st = speex_preprocess_state_init(
-                FRAME_DURATION * wxGetApp().m_soundCard2InSampleRate, 
-                wxGetApp().m_soundCard2InSampleRate);
-        }
-        else
-        {
-            g_speex_st = nullptr;
-        }
         
         // adjust spectrum and waterfall freq scaling base on mode
 
@@ -1830,12 +1802,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         delete[] g_error_hist;
         delete[] g_error_histn;
         freedvInterface.stop();
-        
-        if (wxGetApp().m_speexpp_enable)
-        {
-            speex_preprocess_state_destroy(g_speex_st);
-            g_speex_st = nullptr;
-        }
         
         m_newMicInFilter = m_newSpkOutFilter = true;
 
