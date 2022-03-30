@@ -213,7 +213,7 @@ void TxRxThread::initializePipeline_()
                     wxPrintf("write mod output to file complete\n", g_recFromModulatorSamples);  // consider a popup
                 }
             });
-        auto recordModulatedPipeline = new AudioPipeline(outputSampleRate_, inputSampleRate_);
+        auto recordModulatedPipeline = new AudioPipeline(outputSampleRate_, recordModulatedStep->getOutputSampleRate());
         recordModulatedPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedStep));
         
         auto recordModulatedTap = new TapStep(outputSampleRate_, recordModulatedPipeline);
@@ -326,7 +326,7 @@ void TxRxThread::initializePipeline_()
             []() { return &g_avmag[0]; }
         );
         auto computeRfSpectrumPipeline = new AudioPipeline(
-            inputSampleRate_, inputSampleRate_);
+            inputSampleRate_, computeRfSpectrumStep->getOutputSampleRate());
         computeRfSpectrumPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(computeRfSpectrumStep));
         
         auto computeRfSpectrumTap = new TapStep(inputSampleRate_, computeRfSpectrumPipeline);
