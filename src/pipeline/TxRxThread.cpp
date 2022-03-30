@@ -83,7 +83,6 @@ extern float g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
 
 #include <speex/speex_preprocess.h>
-extern SpeexPreprocessState* g_speex_st;
 
 #include "../freedv_interface.h"
 extern FreeDVInterface freedvInterface;
@@ -154,9 +153,19 @@ void TxRxThread::initializePipeline_()
         auto playMicLockStep = new ExclusiveAccessStep(eitherOrPlayStep, callbackLockFn, callbackUnlockFn);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(playMicLockStep));
         
-        // Speex step (optional based on g_speex_st)
-        auto speexStep = new SpeexStep(inputSampleRate_, &g_speex_st);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(speexStep));
+        // Speex step (optional)
+        auto eitherOrProcessSpeex = new AudioPipeline(inputSampleRate_, inputSampleRate_);
+        auto eitherOrBypassSpeex = new AudioPipeline(inputSampleRate_, inputSampleRate_);
+        
+        auto speexStep = new SpeexStep(inputSampleRate_);
+        eitherOrProcessSpeex->appendPipelineStep(std::shared_ptr<IPipelineStep>(speexStep));
+        
+        auto eitherOrSpeexStep = new EitherOrStep(
+            []() { return wxGetApp().m_speexpp_enable; },
+            std::shared_ptr<IPipelineStep>(eitherOrProcessSpeex),
+            std::shared_ptr<IPipelineStep>(eitherOrBypassSpeex));
+        auto speexLockStep = new ExclusiveAccessStep(eitherOrSpeexStep, callbackLockFn, callbackUnlockFn);
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(speexLockStep));
         
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
@@ -405,6 +414,11 @@ void TxRxThread::txProcessing()
         // Lock the mode mutex so that TX state doesn't change on us during processing.
         txModeChangeMutex.Lock();
         
+        if (pipeline_ == nullptr)
+        {
+            initializePipeline_();
+        }
+        
         // This while loop locks the modulator to the sample rate of
         // sound card 1.  We want to make sure that modulator samples
         // are uninterrupted by differences in sample rate between
@@ -459,6 +473,12 @@ void TxRxThread::txProcessing()
         }
         
         txModeChangeMutex.Unlock();
+    }
+    else
+    {
+        // Deallocates TX pipeline when not in use. This is needed to reset the state of
+        // certain TX pipeline steps (such as Speex).
+        pipeline_ = nullptr;
     }
 
     if (g_dump_timing) {

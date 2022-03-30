@@ -28,10 +28,16 @@
 #include <memory>
 #include <speex/speex_preprocess.h>
 
+// Forward definition of struct FIFO from Codec2.
+extern "C"
+{
+    struct FIFO;
+}
+
 class SpeexStep : public IPipelineStep
 {
 public:
-    SpeexStep(int sampleRate, SpeexPreprocessState** speexStateObj);
+    SpeexStep(int sampleRate);
     virtual ~SpeexStep();
     
     virtual int getInputSampleRate() const;
@@ -41,7 +47,9 @@ public:
     
 private:
     int sampleRate_;
-    SpeexPreprocessState** speexStateObj_;
+    SpeexPreprocessState* speexStateObj_;
+    int numSamplesPerSpeexRun_;
+    struct FIFO* inputSampleFifo_;
 };
 
 
