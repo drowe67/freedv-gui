@@ -1884,7 +1884,6 @@ void MainFrame::stopRxStream()
         }
 
         destroy_fifos();
-        destroy_src();
         
         // Free memory allocated for filters.
         m_newMicInFilter = true;
@@ -1908,23 +1907,11 @@ void MainFrame::destroy_fifos(void)
     codec2_fifo_destroy(g_rxUserdata->rxoutfifo);
 }
 
-void MainFrame::destroy_src(void)
-{
-    src_delete(g_rxUserdata->insrc1);
-    src_delete(g_rxUserdata->outsrc1);
-    src_delete(g_rxUserdata->insrc2);
-    src_delete(g_rxUserdata->outsrc2);
-    src_delete(g_rxUserdata->insrcsf);
-    src_delete(g_rxUserdata->insrctxsf);
-}
-
 //-------------------------------------------------------------------------
 // startRxStream()
 //-------------------------------------------------------------------------
 void MainFrame::startRxStream()
 {
-    int   src_error;
-
     if (g_verbose) fprintf(stderr, "startRxStream .....\n");
     if(!m_RxRunning) {
         m_RxRunning = true;
@@ -2096,24 +2083,7 @@ void MainFrame::startRxStream()
         // Init call back data structure ----------------------------------------------
 
         g_rxUserdata = new paCallBackData;
-        
-        // init sample rate conversion states
-
-        g_rxUserdata->insrc1 = src_new(SRC_SINC_FASTEST, 1, &src_error);
-        assert(g_rxUserdata->insrc1 != NULL);
-        g_rxUserdata->outsrc1 = src_new(SRC_SINC_FASTEST, 1, &src_error);
-        assert(g_rxUserdata->outsrc1 != NULL);
-        g_rxUserdata->insrc2 = src_new(SRC_SINC_FASTEST, 1, &src_error);
-        assert(g_rxUserdata->insrc2 != NULL);
-        g_rxUserdata->outsrc2 = src_new(SRC_SINC_FASTEST, 1, &src_error);
-        assert(g_rxUserdata->outsrc2 != NULL);
-
-        g_rxUserdata->insrcsf = src_new(SRC_SINC_FASTEST, 1, &src_error);
-        assert(g_rxUserdata->insrcsf != NULL);
-
-        g_rxUserdata->insrctxsf = src_new(SRC_SINC_FASTEST, 1, &src_error);
-        assert(g_rxUserdata->insrctxsf != NULL);
-        
+                
         // create FIFOs used to interface between IAudioEngine and txRx
         // processing loop, which iterates about once every 20ms.
         // Sample rate conversion, stats for spectral plots, and

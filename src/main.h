@@ -431,7 +431,6 @@ class MainFrame : public TopFrame
 #endif
 
     void destroy_fifos(void);
-    void destroy_src(void);
 
     void togglePTT(void);
 

@@ -230,7 +230,7 @@ void TxRxThread::initializePipeline_()
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedLockStep));
         
         // TX attenuation step
-        auto txAttenuationStep = new LevelAdjustStep(inputSampleRate_, []() {
+        auto txAttenuationStep = new LevelAdjustStep(outputSampleRate_, []() {
             double dbLoss = g_txLevel / 10.0;
             double scaleFactor = exp(dbLoss/20.0 * log(10.0));
             return scaleFactor; 

@@ -10,13 +10,7 @@
 typedef struct paCallBackData
 {
     paCallBackData()
-        : insrc1(nullptr)
-        , outsrc1(nullptr)
-        , insrc2(nullptr)
-        , outsrc2(nullptr)
-        , insrcsf(nullptr)
-        , insrctxsf(nullptr)
-        , infifo1(nullptr)
+        : infifo1(nullptr)
         , outfifo1(nullptr)
         , infifo2(nullptr)
         , outfifo2(nullptr)
@@ -37,18 +31,8 @@ typedef struct paCallBackData
     {
         // empty
     }
-    
-    // libresample states for 48 to 8 kHz conversions
-
-    SRC_STATE      *insrc1;
-    SRC_STATE      *outsrc1;
-    SRC_STATE      *insrc2;
-    SRC_STATE      *outsrc2;
-    SRC_STATE      *insrcsf;
-    SRC_STATE      *insrctxsf;
 
     // FIFOs attached to first sound card
-
     struct FIFO    *infifo1;
     struct FIFO    *outfifo1;
 
