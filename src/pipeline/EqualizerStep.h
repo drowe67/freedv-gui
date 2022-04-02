@@ -29,7 +29,7 @@
 class EqualizerStep : public IPipelineStep
 {
 public:
-    EqualizerStep(int sampleRate, void** bassFilter, void** midFilter, void** trebleFilter, void** volFilter);
+    EqualizerStep(int sampleRate, bool* enableFilter, void** bassFilter, void** midFilter, void** trebleFilter, void** volFilter);
     virtual ~EqualizerStep();
     
     virtual int getInputSampleRate() const;
@@ -39,6 +39,7 @@ public:
     
 private:
     int sampleRate_;
+    bool* enableFilter_;
     void** bassFilter_;
     void** midFilter_;
     void** trebleFilter_;

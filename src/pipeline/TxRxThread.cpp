@@ -170,6 +170,7 @@ void TxRxThread::initializePipeline_()
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
             inputSampleRate_, 
+            &g_rxUserdata->micInEQEnable,
             &g_rxUserdata->sbqMicInBass,
             &g_rxUserdata->sbqMicInMid,
             &g_rxUserdata->sbqMicInTreble,
@@ -356,6 +357,7 @@ void TxRxThread::initializePipeline_()
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
             outputSampleRate_, 
+            &g_rxUserdata->spkOutEQEnable,
             &g_rxUserdata->sbqSpkOutBass,
             &g_rxUserdata->sbqSpkOutMid,
             &g_rxUserdata->sbqSpkOutTreble,
