@@ -314,7 +314,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         wxLogDebug("soundFile: %s", soundFile);
         sfInfo.format = 0;
 
-        int sample_rate = freedvInterface.getRxModemSampleRate();
+        int sample_rate = wxGetApp().m_soundCard1InSampleRate;
 
         if(!extension.IsEmpty())
         {
@@ -343,7 +343,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         // Bug: on Win32 I can't read m_recFileFromRadioSecs, so have hard coded it
 #ifdef __WIN32__
         long secs = wxGetApp().m_recFileFromRadioSecs;
-        g_recFromRadioSamples = FS*(unsigned int)secs;
+        g_recFromRadioSamples = sample_rate*(unsigned int)secs;
 #else
         // work out number of samples to record
 
@@ -355,7 +355,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         if (secsString.ToLong(&secs)) {
             wxGetApp().m_recFileFromRadioSecs = (unsigned int)secs;
             //printf(" secondsToRecord: %d\n",  (unsigned int)secs);
-            g_recFromRadioSamples = FS*(unsigned int)secs;
+            g_recFromRadioSamples = sample_rate*(unsigned int)secs;
             //printf("g_recFromRadioSamples: %d\n", g_recFromRadioSamples);
         }
         else {
