@@ -185,6 +185,7 @@ private:
     std::deque<SRC_STATE*> inRateConvObjs_;
     std::deque<SRC_STATE*> outRateConvObjs_;
     std::deque<float> snrVals_;
+    std::deque<float> squelchVals_;
     std::deque<EventHandlerThread<RxAudioThreadState*, RxAudioThreadState*> *> threads_;
     
     // Amount to add to squelch SNR to take into account different mode characteristics.

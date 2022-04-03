@@ -106,6 +106,7 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
             minimumSnr = tempSnr;
         }
         snrAdjust_.push_back(tempSnr);
+        squelchVals_.push_back(0.0f);
         
         FreeDVTextFnState* fnStateObj = new FreeDVTextFnState;
         fnStateObj->interfaceObj = this;
@@ -170,6 +171,7 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
 void FreeDVInterface::stop()
 {
     snrAdjust_.clear();
+    squelchVals_.clear();
     snrVals_.clear();
     
     for (auto& fnState : textFnObjs_)
@@ -552,7 +554,8 @@ void FreeDVInterface::setSquelch(int enable, float level)
     for (auto& dv : dvObjects_)
     {
         freedv_set_squelch_en(dv, enable);
-        freedv_set_snr_squelch_thresh(dv, level + snrAdjust_[index++]);
+        squelchVals_[index] = level + snrAdjust_[index];
+        freedv_set_snr_squelch_thresh(dv, squelchVals_[index++]);
     }
 }
 
@@ -727,8 +730,9 @@ int FreeDVInterface::processRxAudio(
             }
             
             int usedFifo = codec2_fifo_used(res->ownOutput);
-            if (usedFifo > 0 && (!squelchEnabled_ || state)) /* suppresses random pops */
+            if (usedFifo > 0 && (!squelchEnabled_ || (state && snrVals_[futIndex] >= squelchVals_[futIndex]))) /* suppresses random pops */
             {
+                //fprintf(stderr, "freedv_interface.cpp: audio available on mode %d, SNR %d, rawSNR: %f\n", (int)rxMode_, maxSyncFound, snrVals_[futIndex]);
                 short input_buf[48000];
                 while(codec2_fifo_read(res->ownOutput, input_buf, usedFifo) == 0)
                 {
