@@ -258,11 +258,12 @@ void TxRxThread::initializePipeline_()
         auto recordRadioPipeline = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         recordRadioPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordRadioStep));
         
+        auto recordRadioTap = new TapStep(inputSampleRate_, recordRadioPipeline);
         auto bypassRecordRadio = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         
         auto eitherOrRecordRadio = new EitherOrStep(
             []() { return g_recFileFromRadio && (g_sfRecFile != NULL); },
-            std::shared_ptr<IPipelineStep>(recordRadioPipeline),
+            std::shared_ptr<IPipelineStep>(recordRadioTap),
             std::shared_ptr<IPipelineStep>(bypassRecordRadio)
         );
         auto recordRadioLockStep = new ExclusiveAccessStep(eitherOrRecordRadio, callbackLockFn, callbackUnlockFn);
