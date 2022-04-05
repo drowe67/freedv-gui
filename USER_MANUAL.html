@@ -560,7 +560,17 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </tbody>
 </table>
 <h1 id="release-notes"><span class="header-section-number">16</span> Release Notes</h1>
-<h2 id="v1.7.0-february-2022"><span class="header-section-number">16.1</span> V1.7.0 February 2022</h2>
+<h2 id="tbd-april-2022"><span class="header-section-number">16.1</span> TBD April 2022</h2>
+<ol type="1">
+<li>Enhancements:
+<ul>
+<li>PSK Reporter: Encodes callsign regardless of whether the internet is working. (PR #214)</li>
+<li>PSK Reporter: Sends report upon pushing Stop (vs. simply clearing the report list). (PR #214)</li>
+<li>PSK Reporter: Performs reporting in background instead of hanging the caller of the PskReporter class. (PR #214)</li>
+<li>PSK Reporter: Suppress reporting if we’re playing back a radio file (to avoid false reports). (PR #214)</li>
+</ul></li>
+</ol>
+<h2 id="v1.7.0-february-2022"><span class="header-section-number">16.2</span> V1.7.0 February 2022</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -594,7 +604,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Windows installer now installs sample .wav files. (PR #182)</li>
 </ul></li>
 </ol>
-<h2 id="v1.6.1-september-2021"><span class="header-section-number">16.2</span> V1.6.1 September 2021</h2>
+<h2 id="v1.6.1-september-2021"><span class="header-section-number">16.3</span> V1.6.1 September 2021</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -612,7 +622,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </ul></li>
 </ol>
 <p><em>Note: The PSK Reporter feature beginning in this release is incompatible with versions older than 1.6.1 due to a change in how callsigns are encoded.</em></p>
-<h2 id="v1.6.0-august-2021"><span class="header-section-number">16.3</span> V1.6.0 August 2021</h2>
+<h2 id="v1.6.0-august-2021"><span class="header-section-number">16.4</span> V1.6.0 August 2021</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -647,43 +657,43 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Created “make dist” target for easy tarball generation. (PR #152)</li>
 </ul></li>
 </ol>
-<h2 id="v1.5.3-april-2021"><span class="header-section-number">16.4</span> V1.5.3 April 2021</h2>
+<h2 id="v1.5.3-april-2021"><span class="header-section-number">16.5</span> V1.5.3 April 2021</h2>
 <ol type="1">
 <li>Simultaneous decode of 2020, 1600 and 700C/D/E (without needing to push Stop first, change the mode and push Start again).</li>
 <li>Dynamic switching of the current Tx mode between the aforementioned modes, again without needing to restart the session.</li>
 <li>A Tx level slider on the right hand side of the main screen to fine-tune transmit output (to more easily avoid clipping ALC and conflicting with other soundcard ham radio applications).</li>
 </ol>
-<h2 id="v1.5.2-january-2021"><span class="header-section-number">16.5</span> V1.5.2 January 2021</h2>
+<h2 id="v1.5.2-january-2021"><span class="header-section-number">16.6</span> V1.5.2 January 2021</h2>
 <ol type="1">
 <li>Updates storage for sound card configuration to use device names instead of IDs.</li>
 <li>Detects changes to computer sound card configuration and notifies user when devices go away.</li>
 </ol>
-<h2 id="v1.5.1-january-2021"><span class="header-section-number">16.6</span> V1.5.1 January 2021</h2>
+<h2 id="v1.5.1-january-2021"><span class="header-section-number">16.7</span> V1.5.1 January 2021</h2>
 <ol type="1">
 <li>Experimental support for reporting to <a href="https://pskreporter.info">PSK Reporter</a> added.</li>
 <li>Bug fixes with audio configuration to allow mono devices to be used along with stereo ones.</li>
 <li>Tweaks to user interface and record/playback functionality to improve usability.</li>
 <li>Bug fixes and tweaks to improve voice keyer support.</li>
 </ol>
-<h2 id="v1.5.0-december-2020"><span class="header-section-number">16.7</span> V1.5.0 December 2020</h2>
+<h2 id="v1.5.0-december-2020"><span class="header-section-number">16.8</span> V1.5.0 December 2020</h2>
 <ol type="1">
 <li>FreeDV 700E, better performance than 700D on fast fading channels</li>
 <li>FreeDV 700D/700E clipper to increase average transmit power by 6dB</li>
 </ol>
-<h2 id="v1.4.3-august-2020"><span class="header-section-number">16.8</span> V1.4.3 August 2020</h2>
+<h2 id="v1.4.3-august-2020"><span class="header-section-number">16.9</span> V1.4.3 August 2020</h2>
 <ol type="1">
 <li>Maintenance Release (no major new features)</li>
 <li>Changes to support wxWidgets 3.1 (but Windows versions built against wxWidgets 3.0)</li>
 <li>Under the hood - OFDM modem has been refactored, shouldn’t affect freedv-gui operation</li>
 </ol>
-<h2 id="v1.4.2-july-2020"><span class="header-section-number">16.9</span> V1.4.2 July 2020</h2>
+<h2 id="v1.4.2-july-2020"><span class="header-section-number">16.10</span> V1.4.2 July 2020</h2>
 <ol type="1">
 <li>Maintenance Release (no major new features)</li>
 <li>Improved squelch/audio pass through on 700D/2020/2400B</li>
 <li>Under the hood - Codec2 library has been refactored, shouldn’t affect freedv-gui operation</li>
 <li>Removed Project Horus support (now being maintained outside of Codec2/FreeDV)</li>
 </ol>
-<h2 id="v1.4-june-october-2019"><span class="header-section-number">16.10</span> V1.4 June-October 2019</h2>
+<h2 id="v1.4-june-october-2019"><span class="header-section-number">16.11</span> V1.4 June-October 2019</h2>
 <ol type="1">
 <li>FreeDV 2020, Project Horus Binary Modes.</li>
 <li><a href="http://www.rowetel.com/?p=6824">Improved OFDM Modem Acquisition</a>, this will improve sync time on FreeDV 700D and 2020 on HF fading channels, and can also handle +/- 60 Hz frequency offsets when tuning.</li>
@@ -691,7 +701,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Wide bandwidth phase estimation and DPSK for OFDM modes (700D/2020) for fast fading/QO-100 channels (Tools-Options)</li>
 <li>Better speech quality on FreeDV 700C/700D with Auto equaliser (Tools-Filter)</li>
 </ol>
-<h2 id="v1.3-may-2018"><span class="header-section-number">16.11</span> V1.3 May 2018</h2>
+<h2 id="v1.3-may-2018"><span class="header-section-number">16.12</span> V1.3 May 2018</h2>
 <ul>
 <li>FreeDV 700D</li>
 </ul>
