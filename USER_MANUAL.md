@@ -779,10 +779,19 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V1.8.0 February 2022
+## V1.8.0 April 2022
 
-1. Modem compression (Tools-Options-Modem Clipping checkbox) added to FreeDV 2020 for increased RMS power.
-1. Experimental 2020A and 2020B modes.
+1. Enhancements:
+    * PSK Reporter: Encodes callsign regardless of whether the internet is working. (PR #214)
+    * PSK Reporter: Sends report upon pushing Stop (vs. simply clearing the report list). (PR #214)
+    * PSK Reporter: Performs reporting in background instead of hanging the caller of the PskReporter class. (PR #214)
+    * PSK Reporter: Suppress reporting if we're playing back a radio file (to avoid false reports). (PR #214)
+    * Filter dialog: Increase length of vertical sliders to simplify fine-tuning. (PR #224)
+    * Modem compression (Tools-Options-Modem Clipping checkbox) added to FreeDV 2020 for increased RMS power. (PR #211)
+    * Added experimental 2020A and 2020B modes. (PR #211)
+2. Build system:
+    * Add spell checking of codebase on every Git push. (PR #216)
+    * Build Windows build on every Git push. (PR #220)
 
 ## V1.7.0 February 2022
 
