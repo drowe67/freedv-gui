@@ -765,6 +765,14 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## TBD April 2022
+
+1. Enhancements:
+    * PSK Reporter: Encodes callsign regardless of whether the internet is working. (PR #214)
+    * PSK Reporter: Sends report upon pushing Stop (vs. simply clearing the report list). (PR #214)
+    * PSK Reporter: Performs reporting in background instead of hanging the caller of the PskReporter class. (PR #214)
+    * PSK Reporter: Suppress reporting if we're playing back a radio file (to avoid false reports). (PR #214)
+
 ## V1.7.0 February 2022
 
 1. Bugfixes:
