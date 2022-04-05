@@ -362,10 +362,6 @@ with a valid sync is received for a few seconds the voice keyer stops.
 The Options-PTT dialog can be used to select the wave file, set the Rx
 delay, and number of times the tx/rx cycle repeats.
 
-The wave file for the voice keyer should be in 8kHz mono 16 bit sample
-form (16 kHz for 2020).  Use a free application such as Audacity to convert a file you
-have recorded to this format.
-
 # Multiple Configurations
 
 By default, FreeDV uses the following locations to store configuration:
@@ -520,7 +516,6 @@ FreeDV 2020 Tips:
 1. There is a 2 second end-to-end latency.  You are welcome to try tuning
    this (Tools - Options - FIFO size, also see Sound Card Debug
    section below).
-1. The voice keyer file must be 16 kHz mono 16 bit sample format.
 
 # Tools Menu
 
@@ -778,6 +773,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Build system:
     * Add spell checking of codebase on every Git push. (PR #216)
     * Build Windows build on every Git push. (PR #220)
+3. Documentation:
+    * Removed obsolete references to required sample rates for voice keyer files. (PR #219)
 
 ## V1.7.0 February 2022
 
