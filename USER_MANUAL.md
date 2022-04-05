@@ -772,6 +772,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * PSK Reporter: Sends report upon pushing Stop (vs. simply clearing the report list). (PR #214)
     * PSK Reporter: Performs reporting in background instead of hanging the caller of the PskReporter class. (PR #214)
     * PSK Reporter: Suppress reporting if we're playing back a radio file (to avoid false reports). (PR #214)
+    * Filter dialog: Increase length of vertical sliders to simplify fine-tuning. (PR #224)
+2. Build system:
+    * Add spell checking of codebase on every Git push. (PR #216)
+    * Build Windows build on every Git push. (PR #220)
 
 ## V1.7.0 February 2022
 
