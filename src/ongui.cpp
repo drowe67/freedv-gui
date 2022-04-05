@@ -419,7 +419,7 @@ void MainFrame::togglePTT(void) {
         m_textSync->Enable();
         m_textCurrentDecodeMode->Enable();
         
-        // Reenable On/Off button.
+        // Re-enable On/Off button.
         m_togBtnOnOff->Enable(true);
     }
     else

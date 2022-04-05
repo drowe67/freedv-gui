@@ -1,4 +1,4 @@
-name: Build FreeDV
+name: Build FreeDV (Windows)
 
 on:
   push:
@@ -20,18 +20,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install packages
+    - name: Build freedv-gui
       shell: bash
-      run: |
-           sudo apt-get update
-           sudo apt-get install libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.0-gtk3-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev
-            
-    - name: Build freedv-gui using PortAudio
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: ./build_linux.sh portaudio
-
-    - name: Build freedv-gui using PulseAudio
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: ./build_linux.sh pulseaudio
+      working-directory: ${{github.workspace}}/docker
+      run: ./freedv_build_windows.sh --branch ${{github.ref}} 64
