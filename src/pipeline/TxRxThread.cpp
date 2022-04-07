@@ -396,18 +396,7 @@ void TxRxThread::txProcessing()
     // side processing
 
     short           insound_card[10*N48];
-    int             nout, freedv_samplerate;
-
-    // analog mode runs at the standard FS = 8000 Hz
-    if (g_analog) {
-        freedv_samplerate = FS;
-    }
-    else {
-        // Use the maximum modem sample rate. Any needed downconversion
-        // just prior to sending to Codec2 will happen in FreeDVInterface.
-        freedv_samplerate = freedvInterface.getRxModemSampleRate();
-    }
-    //fprintf(stderr, "sample rate: %d\n", freedv_samplerate);
+    int             nout;
 
     //
     //  TX side processing --------------------------------------------
@@ -423,26 +412,26 @@ void TxRxThread::txProcessing()
         }
         
         // This while loop locks the modulator to the sample rate of
-        // sound card 1.  We want to make sure that modulator samples
+        // the input sound card.  We want to make sure that modulator samples
         // are uninterrupted by differences in sample rate between
-        // this sound card and sound card 2.
+        // this sound card and the output sound card.
 
         // Run code inside this while loop as soon as we have enough
         // room for one frame of modem samples.  Aim is to keep
         // outfifo1 nice and full so we don't have any gaps in tx
         // signal.
 
-        unsigned int nsam_one_modem_frame = inputSampleRate_ * freedvInterface.getTxNNomModemSamples()/freedv_samplerate;
+        unsigned int nsam_one_modem_frame = outputSampleRate_ * freedvInterface.getTxNNomModemSamples()/freedvInterface.getTxModemSampleRate();
 
      	if (g_dump_fifo_state) {
     	  // If this drops to zero we have a problem as we will run out of output samples
-    	  // to send to the sound driver via PortAudio
+    	  // to send to the sound driver
     	  if (g_verbose) fprintf(stderr, "outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d\n",
                       codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
     	}
 
-        int nsam_in_48 = outputSampleRate_ * freedvInterface.getTxNumSpeechSamples()/freedvInterface.getTxSpeechSampleRate();
-        assert(nsam_in_48 < 10*N48);
+        int nsam_in_48 = inputSampleRate_ * freedvInterface.getTxNumSpeechSamples()/freedvInterface.getTxSpeechSampleRate();
+        assert(nsam_in_48 > 0 && nsam_in_48 < 10*N48);
         
         while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {        
             // OK to generate a frame of modem output samples we need
