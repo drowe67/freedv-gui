@@ -21,19 +21,26 @@
 //=========================================================================
 
 #include <cassert>
+#include "codec2_fifo.h"
 #include "FreeDVTransmitStep.h"
 #include "freedv_api.h"
 
 FreeDVTransmitStep::FreeDVTransmitStep(FreeDVInterface& iface, std::function<float()> getFreqOffsetFn)
     : interface_(iface)
     , getFreqOffsetFn_(getFreqOffsetFn)
+    , inputSampleFifo_(nullptr)
+    , samplesUsedForFifo_(0)
+    , sampleRateUsedForFifo_(0)
 {
     // empty
 }
 
 FreeDVTransmitStep::~FreeDVTransmitStep()
 {
-    // empty
+    if (inputSampleFifo_ != nullptr)
+    {
+        codec2_fifo_free(inputSampleFifo_);
+    }
 }
 
 int FreeDVTransmitStep::getInputSampleRate() const
@@ -50,26 +57,62 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
 {
     short* outputSamples = nullptr;
 
-    if (numInputSamples > 0)
+    // Recreate FIFO if we switch modes or sample rates.
+    if (samplesUsedForFifo_ != interface_.getTxNumSpeechSamples() ||
+        sampleRateUsedForFifo_ != getInputSampleRate())
+    {
+        if (inputSampleFifo_ != nullptr)
+        {
+            codec2_fifo_free(inputSampleFifo_);
+        }
+        
+        samplesUsedForFifo_ = interface_.getTxNumSpeechSamples();
+        sampleRateUsedForFifo_ = getInputSampleRate();
+        
+        // Set FIFO to be 2x the number of samples per run so we don't lose anything.
+        inputSampleFifo_ = codec2_fifo_create(samplesUsedForFifo_ * 2);
+        assert(inputSampleFifo_ != nullptr);
+    }
+    
+    int numTransmitRuns = (codec2_fifo_used(inputSampleFifo_) + numInputSamples) / samplesUsedForFifo_;
+    if (numTransmitRuns)
     {
         auto mode = interface_.getTxMode();
     
-        *numOutputSamples = interface_.getTxNNomModemSamples();
+        *numOutputSamples = interface_.getTxNNomModemSamples() * numTransmitRuns;
         outputSamples = new short[*numOutputSamples];
         assert(outputSamples != nullptr);
-    
-        if (mode == FREEDV_MODE_800XA || mode == FREEDV_MODE_2400B) 
+        
+        short codecInput[samplesUsedForFifo_];
+        short* tmpOutput = outputSamples;
+        short* tmpInput = inputSamples.get();
+        
+        while (numInputSamples > 0)
         {
-            /* 800XA doesn't support complex output just yet */
-            interface_.transmit(outputSamples, inputSamples.get());
-        }
-        else 
-        {
-            interface_.complexTransmit(outputSamples, inputSamples.get(), getFreqOffsetFn_(), *numOutputSamples);
+            codec2_fifo_write(inputSampleFifo_, tmpInput++, 1);
+            numInputSamples--;
+            
+            if (codec2_fifo_used(inputSampleFifo_) >= samplesUsedForFifo_)
+            {
+                codec2_fifo_read(inputSampleFifo_, codecInput, samplesUsedForFifo_);
+                
+                if (mode == FREEDV_MODE_800XA || mode == FREEDV_MODE_2400B) 
+                {
+                    /* 800XA doesn't support complex output just yet */
+                    interface_.transmit(tmpOutput, codecInput);
+                }
+                else 
+                {
+                    interface_.complexTransmit(tmpOutput, codecInput, getFreqOffsetFn_(), interface_.getTxNNomModemSamples());
+                }
+                
+                tmpOutput += samplesUsedForFifo_;
+            }
         }
     }
     else
     {
+        codec2_fifo_write(inputSampleFifo_, inputSamples.get(), numInputSamples);
         *numOutputSamples = 0;
     }
 

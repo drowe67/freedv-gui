@@ -28,6 +28,12 @@
 #include "IPipelineStep.h"
 #include "../freedv_interface.h"
 
+// Forward definition of struct FIFO from Codec2.
+extern "C"
+{
+    struct FIFO;
+}
+
 class FreeDVTransmitStep : public IPipelineStep
 {
 public:
@@ -41,6 +47,9 @@ public:
 private:
     FreeDVInterface& interface_;
     std::function<float()> getFreqOffsetFn_;
+    struct FIFO* inputSampleFifo_;
+    int samplesUsedForFifo_;
+    int sampleRateUsedForFifo_;
 };
 
 #endif // AUDIO_PIPELINE__FREEDV_TRANSMIT_STEP_H

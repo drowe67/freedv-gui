@@ -46,6 +46,7 @@ SpeexStep::SpeexStep(int sampleRate)
 SpeexStep::~SpeexStep()
 {
     speex_preprocess_state_destroy(speexStateObj_);
+    codec2_fifo_free(inputSampleFifo_);
 }
 
 int SpeexStep::getInputSampleRate() const
@@ -87,6 +88,7 @@ std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, i
     }
     else
     {
+        codec2_fifo_write(inputSampleFifo_, inputSamples.get(), numInputSamples);
         *numOutputSamples = 0;
     }
     
