@@ -207,7 +207,6 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <h1 id="voice-keyer"><span class="header-section-number">4</span> Voice Keyer</h1>
 <p>The Voice Keyer Button on the front page, and the Options-PTT dialog puts FreeDV and your radio into transmit, reads a wave file of your voice to call CQ, and then switches to receive to see if anyone is replying. If you press the space bar the voice keyer stops. If a signal with a valid sync is received for a few seconds the voice keyer stops.</p>
 <p>The Options-PTT dialog can be used to select the wave file, set the Rx delay, and number of times the tx/rx cycle repeats.</p>
-<p>The wave file for the voice keyer should be in 8kHz mono 16 bit sample form (16 kHz for 2020). Use a free application such as Audacity to convert a file you have recorded to this format.</p>
 <h1 id="multiple-configurations"><span class="header-section-number">5</span> Multiple Configurations</h1>
 <p>By default, FreeDV uses the following locations to store configuration:</p>
 <ul>
@@ -338,7 +337,6 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Like 700D, you must tune within -/+ 60Hz for FreeDV 2020 to sync.</li>
 <li>With significant fading, sync may take a few seconds.</li>
 <li>There is a 2 second end-to-end latency. You are welcome to try tuning this (Tools - Options - FIFO size, also see Sound Card Debug section below).</li>
-<li>The voice keyer file must be 16 kHz mono 16 bit sample format.</li>
 </ol>
 <h2 id="freedv-2020a-and-freedv-2020b"><span class="header-section-number">8.4</span> FreeDV 2020A and FreeDV 2020B</h2>
 <p>Experimental modes developed in February 2022. The goal of these modes is to improve the performance of FreeDV 2020 over HF channels.</p>
@@ -581,11 +579,17 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Filter dialog: Increase length of vertical sliders to simplify fine-tuning. (PR #224)</li>
 <li>Modem compression (Tools-Options-Modem Clipping checkbox) added to FreeDV 2020 for increased RMS power. (PR #211)</li>
 <li>Added experimental 2020A and 2020B modes. (PR #211)</li>
+<li>Refactored audio handling to use pipeline design pattern. (PR #219)</li>
+<li>Eliminated requirement to use the same audio sample rate for both mic and speaker devices. (PR #219)</li>
 </ul></li>
 <li>Build system:
 <ul>
 <li>Add spell checking of codebase on every Git push. (PR #216)</li>
 <li>Build Windows build on every Git push. (PR #220)</li>
+</ul></li>
+<li>Documentation:
+<ul>
+<li>Removed obsolete references to required sample rates for voice keyer files. (PR #219)</li>
 </ul></li>
 </ol>
 <h2 id="v1.7.0-february-2022"><span class="header-section-number">16.2</span> V1.7.0 February 2022</h2>
