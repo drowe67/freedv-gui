@@ -794,6 +794,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Build system:
     * Add spell checking of codebase on every Git push. (PR #216)
     * Build Windows build on every Git push. (PR #220)
+3. Documentation:
+    * Add troubleshooting instructions for serial port PTT on Windows. (PR #226)
 
 ## V1.7.0 February 2022
 
