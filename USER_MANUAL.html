@@ -167,7 +167,16 @@
 <li><p>Ask someone who already uses FreeDV to help.</p></li>
 <li><p>Contact the digital voice mailing list. Be specific about your hardware, what you have tried, and the exact nature of the problem.</p></li>
 </ol>
-<h2 id="freedv-2020-mode-is-greyed-out"><span class="header-section-number">3.9</span> FreeDV 2020 mode is greyed out</h2>
+<h2 id="im-on-windows-and-serial-port-ptt-doesnt-work-with-my-usb-to-serial-adapter."><span class="header-section-number">3.9</span> I’m on Windows and serial port PTT doesn’t work with my USB to serial adapter.</h2>
+<p>Please verify that you are running the correct drivers for the USB to serial adapter that you’re using. Information and download links for the drivers used by the most common devices can be found <a href="https://www.miklor.com/COM/UV_Drivers.php">here</a>.</p>
+<p>While it is preferred to use devices that use authorized/original versions of the various USB to serial chipsets, it is possible to use some cloned devices with older drivers. When doing this, you may also need to force Windows to use an older version of a driver instead of automatically updating the driver on reboot. See <a href="https://wethegeek.com/how-to-disable-automatic-driver-updates-in-windows-10/">here</a> for instructions on doing so in Windows 10. For Windows 8:</p>
+<ol type="1">
+<li>Search for “Change device” in the Windows 8 Start menu.</li>
+<li>Click on where it says “Change device installation settings”.</li>
+<li>Select the “No, let me choose what to do” option.</li>
+<li>Check the “automatically get the device app” option, then click Save changes to save the settings you just chose.</li>
+</ol>
+<h2 id="freedv-2020-mode-is-greyed-out"><span class="header-section-number">3.10</span> FreeDV 2020 mode is greyed out</h2>
 <p>In order to use FreeDV 2020 mode, you must have one of the following:</p>
 <ol type="1">
 <li>An Intel based CPU with AVX support. A Microsoft utility called <a href="https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo">coreinfo</a> can be used to determine if your CPU supports AVX. A * means you have AVX, a - means no AVX:</li>
@@ -182,13 +191,13 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>A Mac with an ARM processor (e.g. 2020 Mac Mini or later).</li>
 </ol>
 <p>If your system does not meet either (1) or (2), the 2020 option will be grayed out.</p>
-<h2 id="freedv-2020-mode-is-slow-on-arm-macs"><span class="header-section-number">3.10</span> FreeDV 2020 mode is slow on ARM Macs</h2>
+<h2 id="freedv-2020-mode-is-slow-on-arm-macs"><span class="header-section-number">3.11</span> FreeDV 2020 mode is slow on ARM Macs</h2>
 <p>Preliminary testing on ARM Macs has shown that NEON optimizations in LPCNet are sufficient to allow 2020 to be whitelisted on those machines. However, this is definitely experimental. If you are experiencing issues with 2020 mode on these Macs, please let the development team know so that further investigation can be done.</p>
-<h2 id="i-installed-a-new-version-and-freedv-stopped-working"><span class="header-section-number">3.11</span> I installed a new version and FreeDV stopped working</h2>
+<h2 id="i-installed-a-new-version-and-freedv-stopped-working"><span class="header-section-number">3.12</span> I installed a new version and FreeDV stopped working</h2>
 <p>You may need to clean out the previous configuration. Try Tools - Restore Defaults. Set up your sound cards again with Tools - Audio Config.</p>
-<h2 id="freedv-crashes-when-i-press-start"><span class="header-section-number">3.12</span> FreeDV crashes when I press Start</h2>
+<h2 id="freedv-crashes-when-i-press-start"><span class="header-section-number">3.13</span> FreeDV crashes when I press Start</h2>
 <p>Have you removed/changed USB audio devices? If you remove/change USB audio devices without pressing Tools - Audio Config, FreeDV may crash. See Changing Audio Devices above.</p>
-<h2 id="freedv-cant-be-opened-on-osx-because-the-developer-cannot-be-verified"><span class="header-section-number">3.13</span> FreeDV can’t be opened on OSX because the developer cannot be verified</h2>
+<h2 id="freedv-cant-be-opened-on-osx-because-the-developer-cannot-be-verified"><span class="header-section-number">3.14</span> FreeDV can’t be opened on OSX because the developer cannot be verified</h2>
 <p>From January 2020 Apple is enforcing notarization for all OSX applications. The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.</p>
 <figure>
 <img src="contrib/osx_notarization1.png" alt="Notarization Error" /><figcaption>Notarization Error</figcaption>
@@ -574,6 +583,10 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <ul>
 <li>Add spell checking of codebase on every Git push. (PR #216)</li>
 <li>Build Windows build on every Git push. (PR #220)</li>
+</ul></li>
+<li>Documentation:
+<ul>
+<li>Add troubleshooting instructions for serial port PTT on Windows. (PR #226)</li>
 </ul></li>
 </ol>
 <h2 id="v1.7.0-february-2022"><span class="header-section-number">16.2</span> V1.7.0 February 2022</h2>
