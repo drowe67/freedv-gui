@@ -919,7 +919,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     m_panelScatter->setNc(g_Nc);
                     break;
                 case FREEDV_MODE_2020:
-                case FREEDV_MODE_2020A:
                 case FREEDV_MODE_2020B:
                     g_Nc = 31;
                     m_panelScatter->setNc(g_Nc);
@@ -933,7 +932,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     (currentMode == FREEDV_MODE_700D) ||
                     (currentMode == FREEDV_MODE_700E) ||
                     (currentMode == FREEDV_MODE_2020) || 
-                    (currentMode == FREEDV_MODE_2020A) || 
                     (currentMode == FREEDV_MODE_2020B)) {
                     m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
                 }
@@ -1474,12 +1472,6 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         
         g_mode = FREEDV_MODE_2020;
     }
-    else if (m_rb2020a->GetValue()) 
-    {
-        assert(isAvxPresent);
-        
-        g_mode = FREEDV_MODE_2020A;
-    }
     else if (m_rb2020b->GetValue()) 
     {
         assert(isAvxPresent);
@@ -1538,7 +1530,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_togBtnVoiceKeyer->Enable();
 
         if (g_mode == FREEDV_MODE_2400B || g_mode == FREEDV_MODE_800XA || 
-            g_mode == FREEDV_MODE_2020A || g_mode == FREEDV_MODE_2020B || /* note: 2020A/B don't play well with multi-RX atm */
+            g_mode == FREEDV_MODE_2020B || /* note: 2020B don't play well with multi-RX atm */
             !wxGetApp().m_boolMultipleRx)
         {
             m_rb1600->Disable();
@@ -1548,7 +1540,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_rb800xa->Disable();
             m_rb2400b->Disable();
             m_rb2020->Disable();
-            m_rb2020a->Disable();
             m_rb2020b->Disable();
             freedvInterface.addRxMode(g_mode);
         }
@@ -1578,7 +1569,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             
             m_rb800xa->Disable();
             m_rb2400b->Disable();
-            m_rb2020a->Disable();
             m_rb2020b->Disable();
         }
         
@@ -1814,7 +1804,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if(isAvxPresent)
         {
             m_rb2020->Enable();
-            m_rb2020a->Enable();
             m_rb2020b->Enable();
         }
    }
