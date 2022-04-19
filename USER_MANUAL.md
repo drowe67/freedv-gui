@@ -289,6 +289,24 @@ of the ```dialout``` group?
 1. Contact the digital voice mailing list.  Be specific about your
 hardware, what you have tried, and the exact nature of the problem.
 
+## I'm on Windows and serial port PTT doesn't work with my USB to serial adapter.
+
+Please verify that you are running the correct drivers for the USB to serial adapter
+that you're using. Information and download links for the drivers used by the most
+common devices can be found [here](https://www.miklor.com/COM/UV_Drivers.php). 
+
+While it is preferred to use devices that use authorized/original versions of the
+various USB to serial chipsets, it is possible to use some cloned devices with 
+older drivers. When doing this, you may also need to force Windows to use an older 
+version of a driver instead of automatically updating the driver on reboot. See
+[here](https://wethegeek.com/how-to-disable-automatic-driver-updates-in-windows-10/)
+for instructions on doing so in Windows 10. For Windows 8:
+
+1. Search for "Change device" in the Windows 8 Start menu.
+1. Click on where it says "Change device installation settings".
+1. Select the "No, let me choose what to do" option.
+1. Check the "automatically get the device app" option, then click Save changes to save the settings you just chose.
+
 ## FreeDV 2020 mode is greyed out
 
 In order to use FreeDV 2020 mode, you must have one of the following:
@@ -790,6 +808,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Build Windows build on every Git push. (PR #220)
 3. Documentation:
     * Removed obsolete references to required sample rates for voice keyer files. (PR #219)
+    * Add troubleshooting instructions for serial port PTT on Windows. (PR #226)
 
 ## V1.7.0 February 2022
 

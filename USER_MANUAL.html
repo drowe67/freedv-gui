@@ -167,7 +167,16 @@
 <li><p>Ask someone who already uses FreeDV to help.</p></li>
 <li><p>Contact the digital voice mailing list. Be specific about your hardware, what you have tried, and the exact nature of the problem.</p></li>
 </ol>
-<h2 id="freedv-2020-mode-is-greyed-out"><span class="header-section-number">3.9</span> FreeDV 2020 mode is greyed out</h2>
+<h2 id="im-on-windows-and-serial-port-ptt-doesnt-work-with-my-usb-to-serial-adapter."><span class="header-section-number">3.9</span> I’m on Windows and serial port PTT doesn’t work with my USB to serial adapter.</h2>
+<p>Please verify that you are running the correct drivers for the USB to serial adapter that you’re using. Information and download links for the drivers used by the most common devices can be found <a href="https://www.miklor.com/COM/UV_Drivers.php">here</a>.</p>
+<p>While it is preferred to use devices that use authorized/original versions of the various USB to serial chipsets, it is possible to use some cloned devices with older drivers. When doing this, you may also need to force Windows to use an older version of a driver instead of automatically updating the driver on reboot. See <a href="https://wethegeek.com/how-to-disable-automatic-driver-updates-in-windows-10/">here</a> for instructions on doing so in Windows 10. For Windows 8:</p>
+<ol type="1">
+<li>Search for “Change device” in the Windows 8 Start menu.</li>
+<li>Click on where it says “Change device installation settings”.</li>
+<li>Select the “No, let me choose what to do” option.</li>
+<li>Check the “automatically get the device app” option, then click Save changes to save the settings you just chose.</li>
+</ol>
+<h2 id="freedv-2020-mode-is-greyed-out"><span class="header-section-number">3.10</span> FreeDV 2020 mode is greyed out</h2>
 <p>In order to use FreeDV 2020 mode, you must have one of the following:</p>
 <ol type="1">
 <li>An Intel based CPU with AVX support. A Microsoft utility called <a href="https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo">coreinfo</a> can be used to determine if your CPU supports AVX. A * means you have AVX, a - means no AVX:</li>
@@ -182,13 +191,13 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>A Mac with an ARM processor (e.g. 2020 Mac Mini or later).</li>
 </ol>
 <p>If your system does not meet either (1) or (2), the 2020 option will be grayed out.</p>
-<h2 id="freedv-2020-mode-is-slow-on-arm-macs"><span class="header-section-number">3.10</span> FreeDV 2020 mode is slow on ARM Macs</h2>
+<h2 id="freedv-2020-mode-is-slow-on-arm-macs"><span class="header-section-number">3.11</span> FreeDV 2020 mode is slow on ARM Macs</h2>
 <p>Preliminary testing on ARM Macs has shown that NEON optimizations in LPCNet are sufficient to allow 2020 to be whitelisted on those machines. However, this is definitely experimental. If you are experiencing issues with 2020 mode on these Macs, please let the development team know so that further investigation can be done.</p>
-<h2 id="i-installed-a-new-version-and-freedv-stopped-working"><span class="header-section-number">3.11</span> I installed a new version and FreeDV stopped working</h2>
+<h2 id="i-installed-a-new-version-and-freedv-stopped-working"><span class="header-section-number">3.12</span> I installed a new version and FreeDV stopped working</h2>
 <p>You may need to clean out the previous configuration. Try Tools - Restore Defaults. Set up your sound cards again with Tools - Audio Config.</p>
-<h2 id="freedv-crashes-when-i-press-start"><span class="header-section-number">3.12</span> FreeDV crashes when I press Start</h2>
+<h2 id="freedv-crashes-when-i-press-start"><span class="header-section-number">3.13</span> FreeDV crashes when I press Start</h2>
 <p>Have you removed/changed USB audio devices? If you remove/change USB audio devices without pressing Tools - Audio Config, FreeDV may crash. See Changing Audio Devices above.</p>
-<h2 id="freedv-cant-be-opened-on-osx-because-the-developer-cannot-be-verified"><span class="header-section-number">3.13</span> FreeDV can’t be opened on OSX because the developer cannot be verified</h2>
+<h2 id="freedv-cant-be-opened-on-osx-because-the-developer-cannot-be-verified"><span class="header-section-number">3.14</span> FreeDV can’t be opened on OSX because the developer cannot be verified</h2>
 <p>From January 2020 Apple is enforcing notarization for all OSX applications. The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.</p>
 <figure>
 <img src="contrib/osx_notarization1.png" alt="Notarization Error" /><figcaption>Notarization Error</figcaption>
@@ -207,6 +216,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <h1 id="voice-keyer"><span class="header-section-number">4</span> Voice Keyer</h1>
 <p>The Voice Keyer Button on the front page, and the Options-PTT dialog puts FreeDV and your radio into transmit, reads a wave file of your voice to call CQ, and then switches to receive to see if anyone is replying. If you press the space bar the voice keyer stops. If a signal with a valid sync is received for a few seconds the voice keyer stops.</p>
 <p>The Options-PTT dialog can be used to select the wave file, set the Rx delay, and number of times the tx/rx cycle repeats.</p>
+<p>The wave file for the voice keyer should be in 8kHz mono 16 bit sample form (16 kHz for 2020). Use a free application such as Audacity to convert a file you have recorded to this format.</p>
 <h1 id="multiple-configurations"><span class="header-section-number">5</span> Multiple Configurations</h1>
 <p>By default, FreeDV uses the following locations to store configuration:</p>
 <ul>
@@ -337,17 +347,8 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Like 700D, you must tune within -/+ 60Hz for FreeDV 2020 to sync.</li>
 <li>With significant fading, sync may take a few seconds.</li>
 <li>There is a 2 second end-to-end latency. You are welcome to try tuning this (Tools - Options - FIFO size, also see Sound Card Debug section below).</li>
+<li>The voice keyer file must be 16 kHz mono 16 bit sample format.</li>
 </ol>
-<h2 id="freedv-2020a-and-freedv-2020b"><span class="header-section-number">8.4</span> FreeDV 2020A and FreeDV 2020B</h2>
-<p>Experimental modes developed in February 2022. The goal of these modes is to improve the performance of FreeDV 2020 over HF channels.</p>
-<p>Here are the three main innovations, and the theoretical improvements:</p>
-<ol type="1">
-<li>Compression (clipping) of the 2020x modem waveforms has been added, which is worth about 4dB. This should also improve the original FreeDV 2020 mode. The Clipping checkbox is located on Tools-Options-Modem. As per the other warnings in this manual please make sure you transmitter can handle the higher RMS power.</li>
-<li>2020A uses the same waveform as 2020, but an unequal error protection scheme. The most important 11 bits of the 52 bit LPCNet codec payload are heavily protected, the other bits not protected at all. This changes the “slope” of the speech quality against SNR curve. Compared to 2020, it may work (with poor speech quality) at lower SNRs, but still have a few audible errors even at higher SNRs.</li>
-<li>2020B is like 700E to 700D - it works with fast fading but requires a few more dB of SNR. This will make it usable in European Winter (or over the South Pole Argentina to Australia) type channels - if you have enough SNR. The challenge with this mode is squeezing all the information we need (enough pilots symbols for fast fading, LPCNet, FEC bits) into a 2100 Hz channel - we are pushing up again the edges of many SSB filters. It also uses unequal FEC, just the most important 11 bits are protected, but not as well as 2020A.</li>
-</ol>
-<p>These modes are under development and may change at any time. If you experience comparability issues with another operator - check your Git Hash values on the Help-about menu to ensure you are running the same versions of LPCNet and codec2.</p>
-<p>It is recommended that multi-rx be disabled when using thes modes. These modes are not supported by multi-rx, you will need to manually coordinate the mode with other stations.</p>
 <h1 id="tools-menu"><span class="header-section-number">9</span> Tools Menu</h1>
 <h2 id="tools---filter"><span class="header-section-number">9.1</span> Tools - Filter</h2>
 <p>This section describes features on Tools-Filter.</p>
@@ -568,7 +569,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </tbody>
 </table>
 <h1 id="release-notes"><span class="header-section-number">16</span> Release Notes</h1>
-<h2 id="v1.8.0-april-2022"><span class="header-section-number">16.1</span> V1.8.0 April 2022</h2>
+<h2 id="tbd-april-2022"><span class="header-section-number">16.1</span> TBD April 2022</h2>
 <ol type="1">
 <li>Enhancements:
 <ul>
@@ -577,10 +578,6 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>PSK Reporter: Performs reporting in background instead of hanging the caller of the PskReporter class. (PR #214)</li>
 <li>PSK Reporter: Suppress reporting if we’re playing back a radio file (to avoid false reports). (PR #214)</li>
 <li>Filter dialog: Increase length of vertical sliders to simplify fine-tuning. (PR #224)</li>
-<li>Modem compression (Tools-Options-Modem Clipping checkbox) added to FreeDV 2020 for increased RMS power. (PR #211)</li>
-<li>Added experimental 2020A and 2020B modes. (PR #211)</li>
-<li>Refactored audio handling to use pipeline design pattern. (PR #219)</li>
-<li>Eliminated requirement to use the same audio sample rate for both mic and speaker devices. (PR #219)</li>
 </ul></li>
 <li>Build system:
 <ul>
@@ -589,7 +586,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </ul></li>
 <li>Documentation:
 <ul>
-<li>Removed obsolete references to required sample rates for voice keyer files. (PR #219)</li>
+<li>Add troubleshooting instructions for serial port PTT on Windows. (PR #226)</li>
 </ul></li>
 </ol>
 <h2 id="v1.7.0-february-2022"><span class="header-section-number">16.2</span> V1.7.0 February 2022</h2>
