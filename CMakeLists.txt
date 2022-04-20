@@ -494,6 +494,8 @@ On Linux systems try installing:
     endif()
 endif()
 
+# Enable CTest tests for freedv-gui
+enable_testing()
 
 #
 # Freedv

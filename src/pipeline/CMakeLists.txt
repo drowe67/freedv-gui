@@ -36,3 +36,13 @@ add_library(fdv_audio_pipeline STATIC
 )
 
 target_include_directories(fdv_audio_pipeline PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
+
+macro(DefineUnitTest utName utSourceFile)
+    add_executable(${utName} ${utSourceFile})
+    target_link_libraries(${utName} PRIVATE fdv_audio_pipeline)
+    target_include_directories(${utName} PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
+    
+    add_test(NAME pipeline_${utName} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${utName})
+endmacro()
+
+DefineUnitTest(EitherOrTest test/EitherOrTest.cpp)
