@@ -495,7 +495,10 @@ On Linux systems try installing:
 endif()
 
 # Enable CTest tests for freedv-gui
+option(UNITTEST "Build unittest binaries." OFF)
+if(UNITTEST)
 enable_testing()
+endif(UNITTEST)
 
 #
 # Freedv
