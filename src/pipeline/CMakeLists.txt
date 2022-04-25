@@ -46,6 +46,8 @@ macro(DefineUnitTest utName)
     add_test(NAME pipeline_${utName} COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${utName})
 endmacro()
 
+DefineUnitTest(AudioPipelineTest)
+target_link_libraries(AudioPipelineTest PRIVATE ${FREEDV_LINK_LIBS})
 DefineUnitTest(EitherOrTest)
 DefineUnitTest(ExclusiveAccessTest)
 DefineUnitTest(LevelAdjustTest)

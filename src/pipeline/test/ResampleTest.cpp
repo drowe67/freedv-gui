@@ -15,7 +15,7 @@ bool resampleTestCaseCommon(int inputSampleRate, int outputSampleRate)
     int maxOutputSamples = outputSampleRate * 1.1;    
     if (numOutputSamples < minOutputSamples || numOutputSamples > maxOutputSamples)
     {
-        std::cerr << "[numOutputSamples(" << numOutputSamples << ") != " << outputSampleRate << "]";
+        std::cerr << "[numOutputSamples(" << numOutputSamples << ") != " << outputSampleRate << "]...";
         return false;
     }
 
