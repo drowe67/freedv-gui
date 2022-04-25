@@ -1062,29 +1062,35 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     // sync LED (Colours don't work on Windows) ------------------------
 
     //fprintf(stderr, "g_State: %d  m_rbSync->GetValue(): %d\n", g_State, m_rbSync->GetValue());
-    if (g_State) {
-        if (g_prev_State == 0) {
-            g_resyncs++;
+    if (m_textSync->IsEnabled())
+    {
+        auto oldColor = m_textSync->GetForegroundColour();
+        wxColour newColor = g_State ? wxColour( 0, 255, 0 ) : wxColour( 255, 0, 0 ); // green if sync, red otherwise
+        
+        if (g_State) {
+            if (g_prev_State == 0) {
+                g_resyncs++;
             
-            // Clear RX text to reduce the incidence of incorrect callsigns extracted with
-            // the PSK Reporter callsign extraction logic.
-            m_txtCtrlCallSign->SetValue(wxT(""));
-            memset(m_callsign, 0, MAX_CALLSIGN);
-            m_pcallsign = m_callsign;
+                // Clear RX text to reduce the incidence of incorrect callsigns extracted with
+                // the PSK Reporter callsign extraction logic.
+                m_txtCtrlCallSign->SetValue(wxT(""));
+                memset(m_callsign, 0, MAX_CALLSIGN);
+                m_pcallsign = m_callsign;
             
-            // Get current time to enforce minimum sync time requirement for PSK Reporter.
-            g_sync_time = time(0);
+                // Get current time to enforce minimum sync time requirement for PSK Reporter.
+                g_sync_time = time(0);
             
-            freedvInterface.resetReliableText();
+                freedvInterface.resetReliableText();
+            }
         }
-        m_textSync->SetForegroundColour( wxColour( 0, 255, 0 ) ); // green
-	    m_textSync->SetLabel("Modem");
+        
+        if (oldColor != newColor)
+        {
+            m_textSync->SetForegroundColour(newColor);
+    	    m_textSync->SetLabel("Modem");
+            m_textSync->Refresh();
+        }
     }
-    else {
-        m_textSync->SetForegroundColour( wxColour( 255, 0, 0 ) ); // red
-	    m_textSync->SetLabel("Modem");
-    }
-    m_textSync->Refresh();
     g_prev_State = g_State;
 
     // send Callsign ----------------------------------------------------
