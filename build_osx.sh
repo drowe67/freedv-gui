@@ -8,7 +8,7 @@ export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 export HAMLIBDIR=$FREEDVGUIDIR/hamlib
-export UT_ENABLE=1
+export UT_ENABLE=${UT_ENABLE:-0}
 
 # Prerequisite: build dylibbundler
 if [ ! -d macdylibbundler ]; then
