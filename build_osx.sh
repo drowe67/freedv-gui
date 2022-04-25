@@ -10,7 +10,7 @@ export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 export HAMLIBDIR=$FREEDVGUIDIR/hamlib
 export CODEC2_BRANCH=master
 export LPCNET_BRANCH=master
-export UT_ENABLE=1
+export UT_ENABLE=${UT_ENABLE:-0}
 
 # Prerequisite: build dylibbundler
 if [ ! -d macdylibbundler ]; then
