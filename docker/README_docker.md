@@ -18,14 +18,14 @@ docker container run hello-world
 Building is only required once, or if you modify the docker scripts
 
 ```
-cd $FREEDV_GUI_FOLDER/docker
+cd $FREEDV_GUI/docker
 docker-compose -f docker-compose-win.yml build
 ```
 
 ## Running the docker image to build Windows installers
 
 ```
-cd $FREEDV_GUI_FOLDER/docker
+cd $FREEDV_GUI/docker
 ./freedv_build_windows.sh 64
 ./freedv_build_windows.sh 32
 ```
