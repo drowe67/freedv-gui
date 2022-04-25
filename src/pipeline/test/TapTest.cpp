@@ -1,4 +1,5 @@
 #include "TapStep.h"
+#include "PipelineTestCommon.h"
 
 class PassThroughStep : public IPipelineStep
 {
@@ -15,11 +16,10 @@ public:
     std::shared_ptr<short> lastInputSamples;
 };
 
-int main()
+bool tapDataEqual()
 {
     PassThroughStep* step = new PassThroughStep;
     TapStep tapStep(8000, step);
-    bool testPassed = true;
     
     int outputSamples = 0;
     short* pData = new short[1];
@@ -27,7 +27,28 @@ int main()
     
     std::shared_ptr<short> input(pData);
     auto result = tapStep.execute(input, 1, &outputSamples);
-    testPassed &= outputSamples == 1 && result == input && result == step->lastInputSamples;
+    if (outputSamples != 1)
+    {
+        std::cerr << "[outputSamples[" << outputSamples << "] != 1]...";
+        return false;
+    } 
     
-    return testPassed ? 0 : -1;
+    if (result != input)
+    {
+        std::cerr << "[result != input]...";
+        return false;
+    }
+    
+    if (result != step->lastInputSamples)
+    {
+        std::cerr << "[result != step->lastInputSamples]...";
+    }
+    
+    return true;
+}
+
+int main()
+{
+    TEST_CASE(tapDataEqual);
+    return 0;
 }

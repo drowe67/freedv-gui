@@ -1,4 +1,5 @@
 #include "EitherOrStep.h"
+#include "PipelineTestCommon.h"
 
 class FalseStep : public IPipelineStep
 {
@@ -30,23 +31,43 @@ public:
     }
 };
 
-int main()
+bool eitherOrCommon(bool val)
 {
-    bool testPassed = true;
-    
-    bool isStepTrue = false;
     EitherOrStep eitherOrStep([&]() {
-        return isStepTrue;
+        return val;
     }, std::shared_ptr<IPipelineStep>(new TrueStep()),
     std::shared_ptr<IPipelineStep>(new FalseStep()));
     
     int outputSamples = 0;
     auto result = eitherOrStep.execute(std::shared_ptr<short>(nullptr), 0, &outputSamples);
-    testPassed &= outputSamples == 1 && result.get()[0] == 0;
+    if (outputSamples != 1)
+    {
+        std::cerr << "[outputSamples[" << outputSamples << "] != 1]...";
+        return false;
+    }
     
-    isStepTrue = true;
-    result = eitherOrStep.execute(std::shared_ptr<short>(nullptr), 0, &outputSamples);
-    testPassed &= outputSamples == 1 && result.get()[0] == 1;
+    if (result.get()[0] != (val ? 1 : 0))
+    {
+        std::cerr << "[result != " << (val ? 1 : 0) << "]...";
+        return false;
+    }
     
-    return testPassed ? 0 : -1;
+    return true;
+}
+
+bool trueStep()
+{
+    return eitherOrCommon(true);
+}
+
+bool falseStep()
+{
+    return eitherOrCommon(false);
+}
+
+int main()
+{
+    TEST_CASE(trueStep);
+    TEST_CASE(falseStep);
+    return 0;
 }

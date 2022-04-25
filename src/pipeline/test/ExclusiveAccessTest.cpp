@@ -1,4 +1,5 @@
 #include "ExclusiveAccessStep.h"
+#include "PipelineTestCommon.h"
 
 static bool lockCalled = false;
 static bool stepCalled = false;
@@ -17,10 +18,8 @@ public:
     }
 };
 
-int main()
+bool exclusiveAccessMethodsCalled()
 {
-    bool testPassed = true;
-    
     PassThroughStep* step = new PassThroughStep;
     ExclusiveAccessStep exclusiveAccessStep(step, []() { lockCalled = true; }, []() { unlockCalled = true; });
     short* pVal = new short[1];
@@ -29,7 +28,42 @@ int main()
     int outputSamples = 0;
     std::shared_ptr<short> input(pVal);
     auto result = exclusiveAccessStep.execute(input, 1, &outputSamples);
-    testPassed &= outputSamples == 1 && result == input && lockCalled && stepCalled && unlockCalled;
     
-    return testPassed ? 0 : -1;
+    if (outputSamples != 1)
+    {
+        std::cerr << "[outputSamples[" << outputSamples << "] != 1]...";
+        return false;
+    }
+    
+    if (result != input)
+    {
+        std::cerr << "[result != input]...";
+        return false;
+    }
+    
+    if (!lockCalled)
+    {
+        std::cerr << "[lock not called]...";
+        return false;
+    }
+     
+    if (!stepCalled)
+    {
+        std::cerr << "[step not called]...";
+        return false;
+    }
+    
+    if (!unlockCalled)
+    {
+        std::cerr << "[unlock not called]...";
+        return false;
+    }
+    
+    return true;
+}
+
+int main()
+{
+    TEST_CASE(exclusiveAccessMethodsCalled);
+    return 0;
 }

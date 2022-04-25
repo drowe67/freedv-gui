@@ -1,22 +1,44 @@
 #include "LevelAdjustStep.h"
+#include "PipelineTestCommon.h"
 
-int main()
+bool levelAdjustCommon(float val)
 {
-    LevelAdjustStep levelAdjustStep(8000, []() { return 2.0; });
-    bool testPassed = true;
+    LevelAdjustStep levelAdjustStep(8000, [val]() { return val; });
     
     int outputSamples = 0;
     short* pData = new short[1];
     pData[0] = 10000;
     
     auto result = levelAdjustStep.execute(std::shared_ptr<short>(pData), 1, &outputSamples);
-    testPassed &= outputSamples == 1 && result.get()[0] == 20000;
+    if (outputSamples != 1)
+    {
+        std::cerr << "[outputSamples[" << outputSamples << "] != 1]...";
+        return false;
+    }
     
-    LevelAdjustStep levelAdjustStep2(8000, []() { return 0.5; });
-    pData = new short[1];
-    pData[0] = 10000;
-    result = levelAdjustStep2.execute(std::shared_ptr<short>(pData), 1, &outputSamples);
-    testPassed &= outputSamples == 1 && result.get()[0] == 5000;
+    auto expectedVal = 10000 * val;
+    if (result.get()[0] != expectedVal)
+    {
+        std::cerr << "[result[" << result.get()[0] << "] != " << expectedVal << "]...";
+        return false;
+    }
     
-    return testPassed ? 0 : -1;
+    return true;
+}
+
+bool levelAdjustUp()
+{
+    return levelAdjustCommon(2.0);
+}
+
+bool levelAdjustDown()
+{
+    return levelAdjustCommon(0.5);
+}
+
+int main()
+{
+    TEST_CASE(levelAdjustUp);
+    TEST_CASE(levelAdjustDown);
+    return 0;
 }
