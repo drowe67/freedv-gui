@@ -372,6 +372,100 @@ void TxRxThread::initializePipeline_()
 
         auto resampleForPlotOutTap = new TapStep(outputSampleRate_, resampleForPlotOutPipeline);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutTap));
+        
+        // Clear anything in the FIFO before resuming decode.
+        clearFifos_();
+    }
+}
+
+void* TxRxThread::Entry()
+{
+    initializePipeline_();
+    
+    while (m_run)
+    {
+#if defined(__linux__)
+        const char* threadName = nullptr;
+        if (m_tx) threadName = "FreeDV txThread";
+        else threadName = "FreeDV rxThread";
+        pthread_setname_np(pthread_self(), threadName);
+#endif // defined(__linux__)
+
+        {
+            std::unique_lock<std::mutex> lk(m_processingMutex);
+            if (m_processingCondVar.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout)
+            {
+                fprintf(stderr, "txRxThread: timeout while waiting for CV, tx = %d\n", m_tx);
+            }
+        }
+        if (m_tx) txProcessing_();
+        else rxProcessing_();
+    }
+    
+    return NULL;
+}
+
+void TxRxThread::OnExit() 
+{ 
+    // No actions required for exit.
+}
+
+void TxRxThread::terminateThread()
+{
+    m_run = 0;
+    notify();
+}
+
+void TxRxThread::notify()
+{
+    std::unique_lock<std::mutex> lk(m_processingMutex);
+    m_processingCondVar.notify_all();
+}
+
+void TxRxThread::clearFifos_()
+{
+    paCallBackData  *cbData = g_rxUserdata;
+    
+    if (m_tx)
+    {
+        auto used = codec2_fifo_used(cbData->outfifo1);
+        if (used > 0)
+        {
+            short* temp = new short[used];
+            assert(temp != nullptr);
+            codec2_fifo_read(cbData->outfifo1, temp, used);
+            delete[] temp;
+        }
+        
+        used = codec2_fifo_used(cbData->infifo2);
+        if (used > 0)
+        {
+            short* temp = new short[used];
+            assert(temp != nullptr);
+            codec2_fifo_read(cbData->infifo2, temp, used);
+            delete[] temp;
+        }
+    }
+    else
+    {
+        auto used = codec2_fifo_used(cbData->infifo1);
+        if (used > 0)
+        {
+            short* temp = new short[used];
+            assert(temp != nullptr);
+            codec2_fifo_read(cbData->infifo1, temp, used);
+            delete[] temp;
+        }
+        
+        auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
+        used = codec2_fifo_used(outFifo);
+        if (used > 0)
+        {
+            short* temp = new short[used];
+            assert(temp != nullptr);
+            codec2_fifo_read(outFifo, temp, used);
+            delete[] temp;
+        }
     }
 }
 
@@ -379,10 +473,9 @@ void TxRxThread::initializePipeline_()
 // Main real time processing for tx and rx of FreeDV signals, run in its own threads
 //---------------------------------------------------------------------------------------------
 
-void TxRxThread::txProcessing()
+void TxRxThread::txProcessing_()
 {
     wxStopWatch sw;
-
     paCallBackData  *cbData = g_rxUserdata;
 
     // Buffers re-used by tx and rx processing.  We take samples from
@@ -471,6 +564,9 @@ void TxRxThread::txProcessing()
         // Deallocates TX pipeline when not in use. This is needed to reset the state of
         // certain TX pipeline steps (such as Speex).
         pipeline_ = nullptr;
+        
+        // Wipe anything added in the FIFO to prevent pops on next TX.
+        clearFifos_();
     }
 
     if (g_dump_timing) {
@@ -478,10 +574,9 @@ void TxRxThread::txProcessing()
     }
 }
 
-void TxRxThread::rxProcessing()
+void TxRxThread::rxProcessing_()
 {
     wxStopWatch sw;
-
     paCallBackData  *cbData = g_rxUserdata;
 
     // Buffers re-used by tx and rx processing.  We take samples from
