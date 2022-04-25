@@ -44,43 +44,14 @@ public:
         , outputSampleRate_(outputSampleRate) { /* empty */ }
 
     // thread execution starts here
-    void *Entry()
-    {
-        initializePipeline_();
-        
-        while (m_run)
-        {
-            {
-                std::unique_lock<std::mutex> lk(m_processingMutex);
-                if (m_processingCondVar.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout)
-                {
-                    fprintf(stderr, "txRxThread: timeout while waiting for CV, tx = %d\n", m_tx);
-                }
-            }
-            if (m_tx) txProcessing();
-            else rxProcessing();
-        }
-        
-        return NULL;
-    }
+    void *Entry();
 
     // called when the thread exits - whether it terminates normally or is
     // stopped with Delete() (but not when it is Kill()ed!)
-    void OnExit() { }
+    void OnExit();
 
-    void terminateThread()
-    {
-        m_run = 0;
-        notify();
-    }
-
-    void notify()
-    {
-        {
-            std::unique_lock<std::mutex> lk(m_processingMutex);
-            m_processingCondVar.notify_all();
-        }
-    }
+    void terminateThread();
+    void notify();
 
     std::mutex m_processingMutex;
     std::condition_variable m_processingCondVar;
@@ -93,8 +64,9 @@ private:
     int outputSampleRate_;
     
     void initializePipeline_();
-    void txProcessing();
-    void rxProcessing();
+    void txProcessing_();
+    void rxProcessing_();
+    void clearFifos_();
 };
 
 #endif // AUDIO_PIPELINE__TX_RX_THREAD_H
