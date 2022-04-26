@@ -796,6 +796,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Build Windows build on every Git push. (PR #220)
 3. Documentation:
     * Add troubleshooting instructions for serial port PTT on Windows. (PR #226)
+    * Clarify location from where to run Docker build script. (PR #231)
 
 ## V1.7.0 February 2022
 
