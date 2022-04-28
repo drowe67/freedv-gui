@@ -38,6 +38,7 @@ public:
     typedef std::function<void(IAudioDevice&, std::string, void*)> AudioDeviceChangedCallbackFn;
     
     virtual int getNumChannels() = 0;
+    virtual int getSampleRate() const = 0;
     
     virtual void start() = 0;
     virtual void stop() = 0;

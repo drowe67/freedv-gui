@@ -53,16 +53,17 @@ static wxWindow* createMyExtraPlayFilePanel(wxWindow *parent)
 
 void MainFrame::StopPlayFileToMicIn(void)
 {
+    g_mutexProtectingCallbackData.Lock();
     if (g_playFileToMicIn)
     {
-        g_mutexProtectingCallbackData.Lock();
         g_playFileToMicIn = false;
         sf_close(g_sfPlayFile);
+        g_sfPlayFile = nullptr;
         SetStatusText(wxT(""));
         m_menuItemPlayFileToMicIn->SetItemLabel(wxString(_("Start Play File - Mic In...")));
-        g_mutexProtectingCallbackData.Unlock();
         VoiceKeyerProcessEvent(VK_PLAY_FINISHED);
     }
+    g_mutexProtectingCallbackData.Unlock();
 }
 
 //-------------------------------------------------------------------------
@@ -143,6 +144,7 @@ void MainFrame::StopPlaybackFileFromRadio()
     g_mutexProtectingCallbackData.Lock();
     g_playFileFromRadio = false;
     sf_close(g_sfPlayFileFromRadio);
+    g_sfPlayFileFromRadio = nullptr;
     SetStatusText(wxT(""),0);
     SetStatusText(wxT(""),1);
     m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Start Play File - From Radio...")));
@@ -257,6 +259,7 @@ void MainFrame::StopRecFileFromRadio()
         g_mutexProtectingCallbackData.Lock();
         g_recFileFromRadio = false;
         sf_close(g_sfRecFile);
+        g_sfRecFile = nullptr;
         SetStatusText(wxT(""));
         
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Start Record File - From Radio...")));
@@ -311,7 +314,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         wxLogDebug("soundFile: %s", soundFile);
         sfInfo.format = 0;
 
-        int sample_rate = freedvInterface.getRxModemSampleRate();
+        int sample_rate = wxGetApp().m_soundCard1InSampleRate;
 
         if(!extension.IsEmpty())
         {
@@ -340,7 +343,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         // Bug: on Win32 I can't read m_recFileFromRadioSecs, so have hard coded it
 #ifdef __WIN32__
         long secs = wxGetApp().m_recFileFromRadioSecs;
-        g_recFromRadioSamples = FS*(unsigned int)secs;
+        g_recFromRadioSamples = sample_rate*(unsigned int)secs;
 #else
         // work out number of samples to record
 
@@ -352,7 +355,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         if (secsString.ToLong(&secs)) {
             wxGetApp().m_recFileFromRadioSecs = (unsigned int)secs;
             //printf(" secondsToRecord: %d\n",  (unsigned int)secs);
-            g_recFromRadioSamples = FS*(unsigned int)secs;
+            g_recFromRadioSamples = sample_rate*(unsigned int)secs;
             //printf("g_recFromRadioSamples: %d\n", g_recFromRadioSamples);
         }
         else {
@@ -385,6 +388,7 @@ void MainFrame::StopRecFileFromModulator()
         g_recFileFromModulator = false;
         g_recFromModulatorSamples = 0;
         sf_close(g_sfRecFileFromModulator);
+        g_sfRecFileFromModulator = nullptr;
         SetStatusText(wxT(""));
         m_menuItemRecFileFromModulator->SetItemLabel(wxString(_("Start Record File - From Modulator...")));
         wxMessageBox(wxT("Recording modulator output to file complete")
@@ -442,7 +446,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
         wxLogDebug("soundFile: %s", soundFile);
         sfInfo.format = 0;
 
-        int sample_rate = freedvInterface.getRxModemSampleRate();
+        int sample_rate = wxGetApp().m_soundCard1OutSampleRate;
 
         if(!extension.IsEmpty())
         {

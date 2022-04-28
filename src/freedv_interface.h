@@ -30,8 +30,14 @@
 #include <chrono>
 #include <queue>
 #include <future>
+
+// Codec2 required include files.
 #include "codec2.h"
+#include "comp.h"
+#include "modem_stats.h"
 #include "reliable_text.h"
+
+#include <samplerate.h>
 
 class FreeDVInterface
 {
@@ -42,6 +48,7 @@ public:
     void start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText);
     void stop();
     void changeTxMode(int txMode);
+    int getTxMode() const { return txMode_; }
     bool isRunning() const { return dvObjects_.size() > 0; }
     bool isModeActive(int mode) const { return std::find(enabledModes_.begin(), enabledModes_.end(), mode) != enabledModes_.end(); }
     void setRunTimeOptions(int clip, int bpf, int phaseEstBW, int phaseEstDPSK);
@@ -178,6 +185,7 @@ private:
     std::deque<SRC_STATE*> inRateConvObjs_;
     std::deque<SRC_STATE*> outRateConvObjs_;
     std::deque<float> snrVals_;
+    std::deque<float> squelchVals_;
     std::deque<EventHandlerThread<RxAudioThreadState*, RxAudioThreadState*> *> threads_;
     
     // Amount to add to squelch SNR to take into account different mode characteristics.

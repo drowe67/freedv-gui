@@ -33,9 +33,15 @@ jobs:
     - name: Build freedv-gui using PortAudio
       shell: bash
       working-directory: ${{github.workspace}}
-      run: ./build_linux.sh portaudio
+      run: UT_ENABLE=1 ./build_linux.sh portaudio
 
     - name: Build freedv-gui using PulseAudio
       shell: bash
       working-directory: ${{github.workspace}}
-      run: ./build_linux.sh pulseaudio
+      run: UT_ENABLE=1 ./build_linux.sh pulseaudio
+
+    - name: Execute unit tests
+      shell: bash
+      working-directory: ${{github.workspace}}/build_linux
+      run: make test
+      
