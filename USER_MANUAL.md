@@ -809,6 +809,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 3. Documentation:
     * Removed obsolete references to required sample rates for voice keyer files. (PR #219)
     * Add troubleshooting instructions for serial port PTT on Windows. (PR #226)
+4. Bugfixes:
+    * Suppress refresh of the sync indicator if disabled/no change in sync. (PR #230)
     * Clarify location from where to run Docker build script. (PR #231)
 
 ## V1.7.0 February 2022
