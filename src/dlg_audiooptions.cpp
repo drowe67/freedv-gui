@@ -388,8 +388,6 @@ int AudioOptsDialog::ExchangeData(int inout)
 
         if (g_verbose) fprintf(stderr,"EXCHANGE_DATA_IN:\n");
         if (g_verbose) fprintf(stderr,"  g_nSoundCards: %d\n", g_nSoundCards);
-        if (g_verbose) fprintf(stderr,"  g_soundCard1SampleRate: %d\n", g_soundCard1SampleRate);
-        if (g_verbose) fprintf(stderr,"  g_soundCard2SampleRate: %d\n", g_soundCard2SampleRate);
 
         if (g_nSoundCards == 0) {
             m_textCtrlRxIn ->SetValue("none");
@@ -399,10 +397,14 @@ int AudioOptsDialog::ExchangeData(int inout)
         }
 
         if (g_nSoundCards == 1) {
+            if (g_verbose) fprintf(stderr,"  m_soundCard1InSampleRate: %d\n", wxGetApp().m_soundCard1InSampleRate);
+            
             setTextCtrlIfDevNameValid(m_textCtrlRxIn, 
                                       m_listCtrlRxInDevices, 
                                       wxGetApp().m_soundCard1InDeviceName);
 
+            if (g_verbose) fprintf(stderr,"  m_soundCard1OutSampleRate: %d\n", wxGetApp().m_soundCard1OutSampleRate);
+            
             setTextCtrlIfDevNameValid(m_textCtrlRxOut, 
                                       m_listCtrlRxOutDevices, 
                                       wxGetApp().m_soundCard1OutDeviceName);
@@ -412,8 +414,8 @@ int AudioOptsDialog::ExchangeData(int inout)
                 buildListOfSupportedSampleRates(m_cbSampleRateRxIn, wxGetApp().m_soundCard1InDeviceName, AUDIO_IN);
                 buildListOfSupportedSampleRates(m_cbSampleRateRxOut, wxGetApp().m_soundCard1OutDeviceName, AUDIO_OUT);
                 
-                m_cbSampleRateRxIn->SetValue(wxString::Format(wxT("%i"),g_soundCard1SampleRate));
-                m_cbSampleRateRxOut->SetValue(wxString::Format(wxT("%i"),g_soundCard1SampleRate));
+                m_cbSampleRateRxIn->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_soundCard1InSampleRate));
+                m_cbSampleRateRxOut->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_soundCard1OutSampleRate));
             }
 
             m_textCtrlTxIn->SetValue("none");
@@ -421,19 +423,26 @@ int AudioOptsDialog::ExchangeData(int inout)
         }
 
         if (g_nSoundCards == 2) {
- 
+            if (g_verbose) fprintf(stderr,"  m_soundCard1InSampleRate: %d\n", wxGetApp().m_soundCard1InSampleRate);
+            
             setTextCtrlIfDevNameValid(m_textCtrlRxIn, 
                                       m_listCtrlRxInDevices, 
                                       wxGetApp().m_soundCard1InDeviceName);
-
+            
+            if (g_verbose) fprintf(stderr,"  m_soundCard2OutSampleRate: %d\n", wxGetApp().m_soundCard2OutSampleRate);
+            
             setTextCtrlIfDevNameValid(m_textCtrlRxOut, 
                                       m_listCtrlRxOutDevices, 
                                       wxGetApp().m_soundCard2OutDeviceName);
-
+            
+            if (g_verbose) fprintf(stderr,"  m_soundCard2InDeviceName: %d\n", wxGetApp().m_soundCard2InSampleRate);
+            
             setTextCtrlIfDevNameValid(m_textCtrlTxIn, 
                                       m_listCtrlTxInDevices, 
                                       wxGetApp().m_soundCard2InDeviceName);
-
+            
+            if (g_verbose) fprintf(stderr,"  m_soundCard1OutSampleRate: %d\n", wxGetApp().m_soundCard1OutSampleRate);
+            
             setTextCtrlIfDevNameValid(m_textCtrlTxOut, 
                                       m_listCtrlTxOutDevices, 
                                       wxGetApp().m_soundCard1OutDeviceName);
@@ -443,8 +452,8 @@ int AudioOptsDialog::ExchangeData(int inout)
                 buildListOfSupportedSampleRates(m_cbSampleRateRxIn, wxGetApp().m_soundCard1InDeviceName, AUDIO_IN);
                 buildListOfSupportedSampleRates(m_cbSampleRateTxOut, wxGetApp().m_soundCard1OutDeviceName, AUDIO_OUT);
                 
-                m_cbSampleRateRxIn->SetValue(wxString::Format(wxT("%i"),g_soundCard1SampleRate));
-                m_cbSampleRateTxOut->SetValue(wxString::Format(wxT("%i"),g_soundCard1SampleRate));
+                m_cbSampleRateRxIn->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_soundCard1InSampleRate));
+                m_cbSampleRateTxOut->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_soundCard1OutSampleRate));
             }
 
             if ((m_textCtrlTxIn->GetValue() != "none") && (m_textCtrlRxOut->GetValue() != "none")) {
@@ -452,8 +461,8 @@ int AudioOptsDialog::ExchangeData(int inout)
                 buildListOfSupportedSampleRates(m_cbSampleRateTxIn, wxGetApp().m_soundCard2InDeviceName, AUDIO_IN);
                 buildListOfSupportedSampleRates(m_cbSampleRateRxOut, wxGetApp().m_soundCard2OutDeviceName, AUDIO_OUT);
                 
-                m_cbSampleRateTxIn->SetValue(wxString::Format(wxT("%i"),g_soundCard2SampleRate));
-                m_cbSampleRateRxOut->SetValue(wxString::Format(wxT("%i"),g_soundCard2SampleRate));
+                m_cbSampleRateTxIn->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_soundCard2InSampleRate));
+                m_cbSampleRateRxOut->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_soundCard2OutSampleRate));
             }
         }
     }
@@ -462,7 +471,7 @@ int AudioOptsDialog::ExchangeData(int inout)
     {
         int valid_one_card_config = 0;
         int valid_two_card_config = 0;
-        wxString sampleRate1, sampleRate2;
+        wxString sampleRate1, sampleRate2, sampleRate3, sampleRate4;
 
         // ---------------------------------------------------------------
         // check we have a valid 1 or 2 sound card configuration
@@ -478,15 +487,9 @@ int AudioOptsDialog::ExchangeData(int inout)
             (txInAudioDeviceName == "none") && (txOutAudioDeviceName == "none")) {
  
             valid_one_card_config = 1; 
-
-            // in and out sample rate must be the same, as there is one callback
             
             sampleRate1 = m_cbSampleRateRxIn->GetValue();
-            if (!sampleRate1.IsSameAs(m_cbSampleRateRxOut->GetValue())) {
-                wxMessageBox(wxT("With a single sound card the Sample Rate of "
-                                 "From Radio and To Speaker/Headphones must be the same."), wxT(""), wxOK);
-                return -1;
-            }
+            sampleRate2 = m_cbSampleRateRxOut->GetValue();
         }
 
         // two card configuration
@@ -508,26 +511,10 @@ int AudioOptsDialog::ExchangeData(int inout)
                 return -1;
             }
 
-            // Check sample rates for callback 1 devices are the same,
-            // as input and output are handled synchronously by one
-            // portaudio callback
-            
             sampleRate1 = m_cbSampleRateRxIn->GetValue();
-            if (!sampleRate1.IsSameAs(m_cbSampleRateTxOut->GetValue())) {
-                wxMessageBox(wxT("With two sound cards the Sample Rate "
-                                 "of From Radio and To Radio must be the same."), wxT(""), wxOK);
-                return -1;
-            }
- 
-            // check sample rate for callback 2 devices is the same
-
-            sampleRate2 = m_cbSampleRateTxIn->GetValue();
-            if (!sampleRate2.IsSameAs(m_cbSampleRateRxOut->GetValue())) {
-                wxMessageBox(wxT("With two sound cards the Sample Rate of "
-                                 "From Microphone and To Speaker/Headphones must be the same."), wxT(""), wxOK);
-                return -1;
-            }
- 
+            sampleRate2 = m_cbSampleRateRxOut->GetValue();
+            sampleRate3 = m_cbSampleRateTxIn->GetValue();
+            sampleRate4 = m_cbSampleRateTxOut->GetValue();
         }
 
         if (g_verbose) fprintf(stderr,"  valid_one_card_config: %d  valid_two_card_config: %d\n", valid_one_card_config, valid_two_card_config);
@@ -538,31 +525,41 @@ int AudioOptsDialog::ExchangeData(int inout)
         }
 
         // ---------------------------------------------------------------
-        // Map Rx/TX device numbers to sound card device numbers used
-        // in callbacks. Portaudio uses one callback per sound card so
-        // we have to be soundcard oriented at run time rather than
-        // Tx/Rx oriented as in this dialog.
+        // Map Rx/TX device numbers to sound card device names used
+        // in callbacks.
         // ---------------------------------------------------------------
         g_nSoundCards = 0;
 
         if (valid_one_card_config) {
-
-            // Only callback 1 used
-
             g_nSoundCards = 1;
-            g_soundCard1SampleRate = wxAtoi(sampleRate1);
+            wxGetApp().m_soundCard1InSampleRate = wxAtoi(sampleRate1);
+            wxGetApp().m_soundCard1OutSampleRate = wxAtoi(sampleRate2);
+            
+            if (g_verbose)
+            {
+                fprintf(stderr,"  m_soundCard1InSampleRate: %d\n", wxGetApp().m_soundCard1InSampleRate);
+                fprintf(stderr,"  m_soundCard1OutSampleRate: %d\n", wxGetApp().m_soundCard1OutSampleRate);
+            }
         }
 
         if (valid_two_card_config) {
             g_nSoundCards = 2;
-            g_soundCard1SampleRate   = wxAtoi(sampleRate1);
-            g_soundCard2SampleRate   = wxAtoi(sampleRate2);
+            wxGetApp().m_soundCard1InSampleRate = wxAtoi(sampleRate1);
+            wxGetApp().m_soundCard2OutSampleRate = wxAtoi(sampleRate2);
+            wxGetApp().m_soundCard2InSampleRate = wxAtoi(sampleRate3);
+            wxGetApp().m_soundCard1OutSampleRate = wxAtoi(sampleRate4);
+            
+            if (g_verbose)
+            {
+                fprintf(stderr,"  m_soundCard1InSampleRate: %d\n", wxGetApp().m_soundCard1InSampleRate);
+                fprintf(stderr,"  m_soundCard2OutSampleRate: %d\n", wxGetApp().m_soundCard2OutSampleRate);
+                fprintf(stderr,"  m_soundCard2InSampleRate: %d\n", wxGetApp().m_soundCard2InSampleRate);
+                fprintf(stderr,"  m_soundCard1OutSampleRate: %d\n", wxGetApp().m_soundCard1OutSampleRate);
+            }
         }
 
         if (g_verbose) fprintf(stderr,"  g_nSoundCards: %d\n", g_nSoundCards);
-        if (g_verbose) fprintf(stderr,"  g_soundCard1SampleRate: %d\n", g_soundCard1SampleRate);
-        if (g_verbose) fprintf(stderr,"  g_soundCard2SampleRate: %d\n", g_soundCard2SampleRate);
-
+        
         assert (pConfig != NULL);
         
         if (valid_one_card_config)
@@ -588,12 +585,16 @@ int AudioOptsDialog::ExchangeData(int inout)
         }
         
         pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);	
-        pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);	
-        pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);	
-        pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
+        pConfig->Write(wxT("/Audio/soundCard1InSampleRate"), wxGetApp().m_soundCard1InSampleRate);	
         
-        pConfig->Write(wxT("/Audio/soundCard1SampleRate"),        g_soundCard1SampleRate );
-        pConfig->Write(wxT("/Audio/soundCard2SampleRate"),        g_soundCard2SampleRate );
+        pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
+        pConfig->Write(wxT("/Audio/soundCard1InSampleRate"), wxGetApp().m_soundCard1OutSampleRate);
+        
+        pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);
+        pConfig->Write(wxT("/Audio/soundCard2InSampleRate"), wxGetApp().m_soundCard2InSampleRate);
+        
+        pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
+        pConfig->Write(wxT("/Audio/soundCard2OutSampleRate"), wxGetApp().m_soundCard2OutSampleRate);
 
         pConfig->Flush();
         

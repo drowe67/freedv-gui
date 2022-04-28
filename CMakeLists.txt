@@ -236,6 +236,7 @@ if(CODEC2_BUILD_DIR)
         PATHS ${CODEC2_BUILD_DIR}
         CONFIGS codec2.cmake
     )
+    get_target_property(CODEC2_INCLUDE_DIRS codec2 INTERFACE_INCLUDE_DIRECTORIES)
     if(LPCNET_BUILD_DIR)
         message(STATUS "Using LPCNet from build directory...")
         find_package(lpcnet REQUIRED
@@ -493,6 +494,11 @@ On Linux systems try installing:
     endif()
 endif()
 
+# Enable CTest tests for freedv-gui
+option(UNITTEST "Build unittest binaries." OFF)
+if(UNITTEST)
+enable_testing()
+endif(UNITTEST)
 
 #
 # Freedv

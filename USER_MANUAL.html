@@ -216,7 +216,6 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <h1 id="voice-keyer"><span class="header-section-number">4</span> Voice Keyer</h1>
 <p>The Voice Keyer Button on the front page, and the Options-PTT dialog puts FreeDV and your radio into transmit, reads a wave file of your voice to call CQ, and then switches to receive to see if anyone is replying. If you press the space bar the voice keyer stops. If a signal with a valid sync is received for a few seconds the voice keyer stops.</p>
 <p>The Options-PTT dialog can be used to select the wave file, set the Rx delay, and number of times the tx/rx cycle repeats.</p>
-<p>The wave file for the voice keyer should be in 8kHz mono 16 bit sample form (16 kHz for 2020). Use a free application such as Audacity to convert a file you have recorded to this format.</p>
 <h1 id="multiple-configurations"><span class="header-section-number">5</span> Multiple Configurations</h1>
 <p>By default, FreeDV uses the following locations to store configuration:</p>
 <ul>
@@ -347,7 +346,6 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Like 700D, you must tune within -/+ 60Hz for FreeDV 2020 to sync.</li>
 <li>With significant fading, sync may take a few seconds.</li>
 <li>There is a 2 second end-to-end latency. You are welcome to try tuning this (Tools - Options - FIFO size, also see Sound Card Debug section below).</li>
-<li>The voice keyer file must be 16 kHz mono 16 bit sample format.</li>
 </ol>
 <h1 id="tools-menu"><span class="header-section-number">9</span> Tools Menu</h1>
 <h2 id="tools---filter"><span class="header-section-number">9.1</span> Tools - Filter</h2>
@@ -578,6 +576,8 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>PSK Reporter: Performs reporting in background instead of hanging the caller of the PskReporter class. (PR #214)</li>
 <li>PSK Reporter: Suppress reporting if we’re playing back a radio file (to avoid false reports). (PR #214)</li>
 <li>Filter dialog: Increase length of vertical sliders to simplify fine-tuning. (PR #224)</li>
+<li>Refactored audio handling to use pipeline design pattern. (PR #219)</li>
+<li>Eliminated requirement to use the same audio sample rate for both mic and speaker devices. (PR #219)</li>
 </ul></li>
 <li>Build system:
 <ul>
@@ -586,6 +586,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </ul></li>
 <li>Documentation:
 <ul>
+<li>Removed obsolete references to required sample rates for voice keyer files. (PR #219)</li>
 <li>Add troubleshooting instructions for serial port PTT on Windows. (PR #226)</li>
 <li>Clarify location from where to run Docker build script. (PR #231)</li>
 </ul></li>
