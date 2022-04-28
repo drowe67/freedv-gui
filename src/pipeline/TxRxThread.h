@@ -23,6 +23,7 @@
 #ifndef AUDIO_PIPELINE__TX_RX_THREAD_H
 #define AUDIO_PIPELINE__TX_RX_THREAD_H
 
+#include <assert.h>
 #include <wx/thread.h>
 #include <mutex>
 #include <condition_variable>
@@ -41,7 +42,11 @@ public:
         , m_run(1)
         , pipeline_(nullptr)
         , inputSampleRate_(inputSampleRate)
-        , outputSampleRate_(outputSampleRate) { /* empty */ }
+        , outputSampleRate_(outputSampleRate) 
+    { 
+        assert(inputSampleRate_ > 0);
+        assert(outputSampleRate_ > 0);
+    }
 
     // thread execution starts here
     void *Entry();
