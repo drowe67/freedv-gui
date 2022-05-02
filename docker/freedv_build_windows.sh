@@ -1,5 +1,10 @@
 #!/bin/bash
 
+FDV_CURRENT_BRANCH=`git rev-parse --abbrev-ref HEAD 2>/dev/null`
+FDV_CURRENT_BRANCH=${FDV_CURRENT_BRANCH:=master}
+FDV_CURRENT_REPO=`git remote get-url origin`
+FDV_CURRENT_REPO=${FDV_CURRENT_REPO:=https://github.com/drowe67/freedv-gui.git}
+
 function print_help {
     echo
     echo "Build freedv-gui for Windows using Docker"
@@ -11,8 +16,8 @@ function print_help {
     echo "                        The default is a clean build from a fresh git clone (slow but safer)"
     echo "    --build             Update docker image first (run if you have modified the docker scripts in fdv_win_fedora)"
     echo "    --rebuild           Completely recreate docker image first (e.g. run if you have new rpm packages)"
-    echo "    --repo GitRepo      (default https://github.com/drowe67/freedv-gui.git)"
-    echo "    --branch GitBranch  (default master)"
+    echo "    --repo GitRepo      (default $FDV_CURRENT_REPO)"
+    echo "    --branch GitBranch  (default $FDV_CURRENT_BRANCH)"
     echo "    --bootstrap-wx      Builds wxWidgets from source (may take significantly longer to complete)"
     echo
     exit
@@ -22,8 +27,8 @@ function print_help {
 FDV_CLEAN=1
 FDV_BUILD=0
 FDV_REBUILD=0
-FDV_GIT_REPO=https://github.com/drowe67/freedv-gui.git
-FDV_GIT_BRANCH=master
+FDV_GIT_REPO=$FDV_CURRENT_REPO
+FDV_GIT_BRANCH=$FDV_CURRENT_BRANCH
 FDV_BOOTSTRAP_WX=0
 
 POSITIONAL=()
