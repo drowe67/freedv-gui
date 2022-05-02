@@ -2,7 +2,7 @@
 
 FDV_CURRENT_BRANCH=`git rev-parse --abbrev-ref HEAD 2>/dev/null`
 FDV_CURRENT_BRANCH=${FDV_CURRENT_BRANCH:=master}
-FDV_CURRENT_REPO=`git remote get-url origin`
+FDV_CURRENT_REPO=`git remote get-url origin 2>/dev/null`
 FDV_CURRENT_REPO=${FDV_CURRENT_REPO:=https://github.com/drowe67/freedv-gui.git}
 
 function print_help {
