@@ -787,10 +787,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * PSK Reporter: Suppress reporting if we're playing back a radio file (to avoid false reports). (PR #214)
     * Filter dialog: Increase length of vertical sliders to simplify fine-tuning. (PR #224)
     * Refactored audio handling to use pipeline design pattern. (PR #219)
-    * Eliminated requirement to use the same audio sample rate for both mic and speaker devices. (PR #219)
+    * Eliminated requirement to use the same audio sample rate for both mic and speaker devices. (PR #219, #234)
 2. Build system:
     * Add spell checking of codebase on every Git push. (PR #216)
     * Build Windows build on every Git push. (PR #220)
+    * Default branch and repo to the current branch and repo for Docker (or else reasonable defaults). (PR #233)
 3. Documentation:
     * Removed obsolete references to required sample rates for voice keyer files. (PR #219)
     * Add troubleshooting instructions for serial port PTT on Windows. (PR #226)
