@@ -588,17 +588,19 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Modem compression (Tools-Options-Modem Clipping checkbox) added to FreeDV 2020 for increased RMS power. (PR #211)</li>
 <li>Added experimental 2020B mode. (PR #211)</li>
 <li>Refactored audio handling to use pipeline design pattern. (PR #219)</li>
-<li>Eliminated requirement to use the same audio sample rate for both mic and speaker devices. (PR #219)</li>
+<li>Eliminated requirement to use the same audio sample rate for both mic and speaker devices. (PR #219, #234)</li>
 </ul></li>
 <li>Build system:
 <ul>
 <li>Add spell checking of codebase on every Git push. (PR #216)</li>
 <li>Build Windows build on every Git push. (PR #220)</li>
+<li>Default branch and repo to the current branch and repo for Docker (or else reasonable defaults). (PR #233)</li>
 </ul></li>
 <li>Documentation:
 <ul>
 <li>Removed obsolete references to required sample rates for voice keyer files. (PR #219)</li>
 <li>Add troubleshooting instructions for serial port PTT on Windows. (PR #226)</li>
+<li>Add missing gcc-g++ package to Fedora build instructions. (PR #235)</li>
 </ul></li>
 <li>Bugfixes:
 <ul>
