@@ -1843,9 +1843,6 @@ void MainFrame::stopRxStream()
         //fprintf(stderr, "waiting for thread to stop\n");
         if (m_txThread)
         {
-            m_txThread->terminateThread();
-            m_txThread->Wait();
-            
             if (txInSoundDevice)
             {
                 txInSoundDevice->stop();
@@ -1858,15 +1855,15 @@ void MainFrame::stopRxStream()
                 txOutSoundDevice.reset();
             }
             
+            m_txThread->terminateThread();
+            m_txThread->Wait();
+            
             delete m_txThread;
             m_txThread = nullptr;
         }
 
         if (m_rxThread)
         {
-            m_rxThread->terminateThread();
-            m_rxThread->Wait();
-            
             if (rxInSoundDevice)
             {
                 rxInSoundDevice->stop();
@@ -1878,6 +1875,9 @@ void MainFrame::stopRxStream()
                 rxOutSoundDevice->stop();
                 rxOutSoundDevice.reset();
             }
+            
+            m_rxThread->terminateThread();
+            m_rxThread->Wait();
             
             delete m_txThread;
             m_rxThread = nullptr;
