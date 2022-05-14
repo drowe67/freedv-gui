@@ -398,6 +398,7 @@ void* TxRxThread::Entry()
                 fprintf(stderr, "txRxThread: timeout while waiting for CV, tx = %d\n", m_tx);
             }
         }
+        if (!m_run) break;
         if (m_tx) txProcessing_();
         else rxProcessing_();
     }
