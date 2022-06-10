@@ -313,7 +313,7 @@ void PulseAudioDevice::StreamMovedCallback_(pa_stream *p, void *userdata)
     
     if (thisObj->onAudioDeviceChangedFunction) 
     {
-        thisObj->onAudioDeviceChangedFunction(*thisObj, (const char*)thisObj->devName_.ToUTF8(), thisObj->onAudioOverflowState);
+        thisObj->onAudioDeviceChangedFunction(*thisObj, (const char*)thisObj->devName_.ToUTF8(), thisObj->onAudioDeviceChangedState);
     }
 }
 
