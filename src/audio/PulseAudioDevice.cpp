@@ -94,7 +94,6 @@ void PulseAudioDevice::start()
     pa_stream_flags_t flags = pa_stream_flags_t(
          PA_STREAM_INTERPOLATE_TIMING |
          PA_STREAM_AUTO_TIMING_UPDATE | 
-         PA_STREAM_FAIL_ON_SUSPEND |
          PA_STREAM_ADJUST_LATENCY);
     
     int result = 0;
