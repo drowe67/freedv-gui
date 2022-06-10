@@ -99,6 +99,8 @@ void PulseAudioDevice::start()
     int result = 0;
     if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
     {
+        fprintf(stderr, "PulseAudioDevice: connecting to playback device %s\n", (const char*)devName_.ToUTF8());
+        
         pa_stream_set_write_callback(stream_, &PulseAudioDevice::StreamWriteCallback_, this);
         result = pa_stream_connect_playback(
             stream_, devName_.c_str(), &buffer_attr, 
@@ -106,6 +108,8 @@ void PulseAudioDevice::start()
     }
     else
     {
+        fprintf(stderr, "PulseAudioDevice: connecting to record device %s\n", (const char*)devName_.ToUTF8());
+        
         pa_stream_set_read_callback(stream_, &PulseAudioDevice::StreamReadCallback_, this);
         result = pa_stream_connect_record(
             stream_, devName_.c_str(), &buffer_attr, flags);
@@ -308,6 +312,8 @@ void PulseAudioDevice::StreamMovedCallback_(pa_stream *p, void *userdata)
     auto newDevName = pa_stream_get_device_name(p);
     PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
 
+    fprintf(stderr, "PulseAudioDevice: stream named %s has been moved to %s\n", (const char*)thisObj->devName_.ToUTF8(), newDevName);
+    
     thisObj->devName_ = newDevName;
     
     if (thisObj->onAudioDeviceChangedFunction) 
