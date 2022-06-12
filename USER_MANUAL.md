@@ -778,7 +778,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## TBD April 2022
+## TBD June 2022
 
 1. Enhancements:
     * PSK Reporter: Encodes callsign regardless of whether the internet is working. (PR #214)
@@ -796,6 +796,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Removed obsolete references to required sample rates for voice keyer files. (PR #219)
     * Add troubleshooting instructions for serial port PTT on Windows. (PR #226)
     * Add missing gcc-g++ package to Fedora build instructions. (PR #235)
+    * Add missing sox package to Fedora build instructions. (PR #241)
 4. Bugfixes:
     * Suppress refresh of the sync indicator if disabled/no change in sync. (PR #230)
     * Clarify location from where to run Docker build script. (PR #231)
