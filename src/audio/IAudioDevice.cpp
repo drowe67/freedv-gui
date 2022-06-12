@@ -39,7 +39,7 @@ void IAudioDevice::setOnAudioOverflow(AudioOverflowCallbackFn fn, void* state)
     onAudioOverflowState = state;
 }
 
-void IAudioDevice::setOnAudioUnderflow(AudioOverflowCallbackFn fn, void* state)
+void IAudioDevice::setOnAudioUnderflow(AudioUnderflowCallbackFn fn, void* state)
 {
     onAudioUnderflowFunction = fn;
     onAudioUnderflowState = state;
