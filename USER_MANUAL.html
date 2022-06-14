@@ -347,6 +347,15 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>With significant fading, sync may take a few seconds.</li>
 <li>There is a 2 second end-to-end latency. You are welcome to try tuning this (Tools - Options - FIFO size, also see Sound Card Debug section below).</li>
 </ol>
+<h2 id="freedv-2020b"><span class="header-section-number">8.4</span> FreeDV 2020B</h2>
+<p>Experimental mode developed in February 2022. The goal of this mode is to improve the performance of FreeDV 2020 over HF channels.</p>
+<p>Here are the three main innovations, and the theoretical improvements:</p>
+<ol type="1">
+<li>Compression (clipping) of the 2020x modem waveforms has been added, which is worth about 4dB. This should also improve the original FreeDV 2020 mode. The Clipping checkbox is located on Tools-Options-Modem. As per the other warnings in this manual please make sure you transmitter can handle the higher RMS power.</li>
+<li>2020B is like 700E to 700D - it works with fast fading but requires a few more dB of SNR. This will make it usable in European Winter (or over the South Pole Argentina to Australia) type channels - if you have enough SNR. The challenge with this mode is squeezing all the information we need (enough pilots symbols for fast fading, LPCNet, FEC bits) into a 2100 Hz channel - we are pushing up again the edges of many SSB filters. It also uses unequal FEC, just the most important 11 bits are protected.</li>
+</ol>
+<p>This modes is under development and may change at any time. If you experience comparability issues with another operator - check your Git Hash values on the Help-about menu to ensure you are running the same versions of LPCNet and codec2.</p>
+<p>It is recommended that multi-rx be disabled when using 2020B. This mode is not supported by multi-rx, you will need to manually coordinate the mode with other stations.</p>
 <h1 id="tools-menu"><span class="header-section-number">9</span> Tools Menu</h1>
 <h2 id="tools---filter"><span class="header-section-number">9.1</span> Tools - Filter</h2>
 <p>This section describes features on Tools-Filter.</p>
@@ -567,7 +576,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </tbody>
 </table>
 <h1 id="release-notes"><span class="header-section-number">16</span> Release Notes</h1>
-<h2 id="tbd-june-2022"><span class="header-section-number">16.1</span> TBD June 2022</h2>
+<h2 id="v1.8.0-june-2022"><span class="header-section-number">16.1</span> V1.8.0 June 2022</h2>
 <ol type="1">
 <li>Enhancements:
 <ul>
@@ -576,6 +585,8 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>PSK Reporter: Performs reporting in background instead of hanging the caller of the PskReporter class. (PR #214)</li>
 <li>PSK Reporter: Suppress reporting if we’re playing back a radio file (to avoid false reports). (PR #214)</li>
 <li>Filter dialog: Increase length of vertical sliders to simplify fine-tuning. (PR #224)</li>
+<li>Modem compression (Tools-Options-Modem Clipping checkbox) added to FreeDV 2020 for increased RMS power. (PR #211)</li>
+<li>Added experimental 2020B mode. (PR #211)</li>
 <li>Refactored audio handling to use pipeline design pattern. (PR #219)</li>
 <li>Eliminated requirement to use the same audio sample rate for both mic and speaker devices. (PR #219, #234)</li>
 <li>60 meters shows as USB and not LSB for countries where FreeDV usage is legal on that band. (PR #243)</li>
