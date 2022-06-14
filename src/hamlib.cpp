@@ -323,11 +323,19 @@ void Hamlib::update_mode_status()
     else
         m_modeBox->SetLabel(rig_strrmode(m_currMode));
 
-    // Update color
+    // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
+    bool is60MeterBand = m_currFreq >= 5250000 && m_currFreq <= 5450000;
+    
+    // Update color based on the mode and current frequency.
+    bool isUsbFreq = m_currFreq >= 10000000 || is60MeterBand;
+    bool isLsbFreq = m_currFreq < 10000000 && !is60MeterBand;
+    bool isFmFreq = m_currFreq >= 29510000;
+    
     bool isMatchingMode = 
-        (m_currFreq >= 10000000 && (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)) ||
-        (m_currFreq < 10000000 && (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)) ||
-        (m_vhfUhfMode && m_currFreq >= 29510000 && (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_PKTFM));
+        (isUsbFreq && (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)) ||
+        (isLsbFreq && (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)) ||
+        (m_vhfUhfMode && isFmFreq && (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_PKTFM));
+    
     if (isMatchingMode)
     {
         m_modeBox->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
