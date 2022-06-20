@@ -1,0 +1,205 @@
+//=========================================================================
+// Name:            ParallelStep.h
+// Purpose:         Describes a parallel step in the audio pipeline.
+//
+// Authors:         Mooneer Salem
+// License:
+//
+//  All rights reserved.
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License version 2.1,
+//  as published by the Free Software Foundation.  This program is
+//  distributed in the hope that it will be useful, but WITHOUT ANY
+//  WARRANTY; without even the implied warranty of MERCHANTABILITY or
+//  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+//  License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program; if not, see <http://www.gnu.org/licenses/>.
+//
+//=========================================================================
+
+#include <chrono>
+#include "ParallelStep.h"
+
+using namespace std::chrono_literals;
+
+ParallelStep::ParallelStep(
+    int inputSampleRate, int outputSampleRate,
+    bool runMultiThreaded,
+    std::function<int()> inputRouteFn,
+    std::function<int()> outputRouteFn,
+    std::vector<IPipelineStep*> parallelSteps)
+    : inputSampleRate_(inputSampleRate)
+    , outputSampleRate_(outputSampleRate)
+    , runMultiThreaded_(runMultiThreaded)
+    , inputRouteFn_(inputRouteFn)
+    , outputRouteFn_(outputRouteFn)
+{
+    for (auto& step : parallelSteps)
+    {
+        parallelSteps_.push_back(std::shared_ptr<IPipelineStep>(step));
+        if (runMultiThreaded)
+        {
+            auto state = new ThreadInfo();
+            assert(state != nullptr);
+            
+            state->exitingThread = false;
+            state->thread = std::thread([this](ThreadInfo* threadState) 
+            {
+                executeRunnerThread_(threadState);
+            }, state);
+            
+            threads_.push_back(state);
+        }
+    }
+}
+    
+ParallelStep::~ParallelStep()
+{
+    // Exit all spawned threads, if any.
+    for (auto& taskThread : threads_)
+    {
+        taskThread->exitingThread = true;
+        taskThread->queueCV.notify_one();
+        taskThread->thread.join();
+        
+        delete taskThread;
+    }
+}
+
+int ParallelStep::getInputSampleRate() const
+{
+    return inputSampleRate_;
+}
+
+int ParallelStep::getOutputSampleRate() const
+{
+    return outputSampleRate_;
+}
+
+std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+{
+    // Step 0: determine what steps to execute.
+    auto stepToExecute = inputRouteFn_();
+    assert(stepToExecute == -1 || (stepToExecute >= 0 && stepToExecute < parallelSteps_.size()));
+    
+    // Step 1: resample inputs as needed
+    std::map<int, std::future<TaskResult>> resampledInputFutures;
+    std::map<int, TaskResult> resampledInputs;
+    for (int index = 0; index < parallelSteps_.size(); index++)
+    {
+        if (index == stepToExecute || stepToExecute == -1)
+        {
+            int destinationSampleRate = parallelSteps_[index]->getInputSampleRate();
+            if (destinationSampleRate != inputSampleRate_)
+            {
+                ThreadInfo* threadInfo = nullptr;
+                if (runMultiThreaded_)
+                {
+                    threadInfo = threads_[index];
+                }
+                
+                if (resampledInputFutures.find(destinationSampleRate) == resampledInputFutures.end())
+                {
+                    resampledInputFutures[destinationSampleRate] = enqueueTask_(threadInfo, parallelSteps_[index].get(), inputSamples, numInputSamples);
+                }
+            }
+            else
+            {
+                resampledInputs[inputSampleRate_] = TaskResult(inputSamples, numInputSamples);
+            }
+        }
+    }
+    
+    for (auto& fut : resampledInputFutures)
+    {
+        resampledInputs[fut.first] = fut.second.get();
+    }
+    
+    // Step 2: execute steps
+    std::vector<std::future<TaskResult>> executedResultFutures;
+    std::vector<TaskResult> executedResults;
+    for (int index = 0; index < parallelSteps_.size(); index++)
+    {
+        if (index == stepToExecute || stepToExecute == -1)
+        {
+            ThreadInfo* threadInfo = nullptr;
+            if (runMultiThreaded_)
+            {
+                threadInfo = threads_[index];
+            }
+            
+            int destinationSampleRate = parallelSteps_[index]->getInputSampleRate();
+            auto resampledInput = resampledInputs[destinationSampleRate];
+            executedResultFutures.push_back(enqueueTask_(threadInfo, parallelSteps_[index].get(), resampledInput.first, resampledInput.second));
+        }
+    }
+    
+    for (auto& fut : executedResultFutures)
+    {
+        executedResults.push_back(fut.get());
+    }
+    
+    // Step 3: determine which output to return
+    auto stepToOutput = outputRouteFn_();
+    assert(
+        stepToOutput == stepToExecute || 
+        (stepToExecute == -1 && (stepToOutput >= 0 && stepToOutput < executedResults.size())));
+    
+    if (stepToExecute != -1)
+    {
+        assert(executedResults.size() == 1);
+        *numOutputSamples = executedResults[0].second;
+        return executedResults[0].first;
+    }
+    else
+    {
+        *numOutputSamples = executedResults[stepToOutput].second;
+        return executedResults[stepToOutput].first;
+    }
+}
+
+void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
+{
+    while(!threadState->exitingThread)
+    {
+        std::unique_lock<std::mutex> lock(threadState->queueMutex);
+        if (threadState->queueCV.wait_for(lock, 1s) == std::cv_status::no_timeout && !threadState->exitingThread)
+        {
+            auto& taskEntry = threadState->tasks.front();
+            taskEntry.task(taskEntry.inputSamples, taskEntry.numInputSamples);
+            threadState->tasks.pop();
+        }
+    }
+}
+
+std::future<ParallelStep::TaskResult> ParallelStep::enqueueTask_(ThreadInfo* taskQueueThread, IPipelineStep* step, std::shared_ptr<short> inputSamples, int numInputSamples)
+{
+    TaskEntry taskEntry;
+    taskEntry.task = ThreadTask([step](std::shared_ptr<short> inSamples, int numSamples)
+    {
+        int numOutputSamples = 0;
+        auto result = step->execute(inSamples, numSamples, &numOutputSamples);
+        return TaskResult(result, numOutputSamples);
+    });
+    
+    taskEntry.inputSamples = inputSamples;
+    taskEntry.numInputSamples = numInputSamples;
+    
+    auto theFuture = taskEntry.task.get_future();
+    if (taskQueueThread != nullptr)
+    {
+        std::unique_lock<std::mutex> lock(taskQueueThread->queueMutex);
+        taskQueueThread->tasks.push(std::move(taskEntry));
+        taskQueueThread->queueCV.notify_one();
+    }
+    else
+    {
+        // Execute the task immediately as there's no thread to post it to.
+        taskEntry.task(inputSamples, numInputSamples);
+    }
+    
+    return theFuture;
+}
