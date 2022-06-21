@@ -21,6 +21,7 @@
 //=========================================================================
 
 #include <chrono>
+#include <cassert>
 #include "ParallelStep.h"
 
 using namespace std::chrono_literals;
