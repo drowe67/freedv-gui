@@ -103,7 +103,13 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
                 
                 if (resampledInputFutures.find(destinationSampleRate) == resampledInputFutures.end())
                 {
-                    resampledInputFutures[destinationSampleRate] = enqueueTask_(threadInfo, parallelSteps_[index].get(), inputSamples, numInputSamples);
+                    if (resamplers_.find(std::pair<int, int>(inputSampleRate_, destinationSampleRate)) == resamplers_.end())
+                    {
+                        auto tmpStep = std::make_shared<ResampleStep>(inputSampleRate_, destinationSampleRate);
+                        resamplers_[std::pair<int, int>(inputSampleRate_, destinationSampleRate)] = tmpStep;
+                    }
+                    
+                    resampledInputFutures[destinationSampleRate] = enqueueTask_(threadInfo, resamplers_[std::pair<int, int>(inputSampleRate_, destinationSampleRate)].get(), inputSamples, numInputSamples);
                 }
             }
             else
@@ -148,16 +154,33 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
         stepToOutput == stepToExecute || 
         (stepToExecute == -1 && (stepToOutput >= 0 && stepToOutput < executedResults.size())));
     
+    TaskResult output;
     if (stepToExecute != -1)
     {
         assert(executedResults.size() == 1);
-        *numOutputSamples = executedResults[0].second;
-        return executedResults[0].first;
+        output = executedResults[0];
     }
     else
     {
-        *numOutputSamples = executedResults[stepToOutput].second;
-        return executedResults[stepToOutput].first;
+        output = executedResults[stepToOutput];
+    }
+    
+    // Step 4: resample to destination rate
+    int sourceRate = parallelSteps_[stepToOutput]->getOutputSampleRate();
+    if (sourceRate == outputSampleRate_)
+    {
+        *numOutputSamples = output.second;
+        return output.first;
+    }
+    else
+    {
+        if (resamplers_.find(std::pair<int, int>(sourceRate, outputSampleRate_)) == resamplers_.end())
+        {
+            auto tmpStep = std::make_shared<ResampleStep>(sourceRate, outputSampleRate_);
+            resamplers_[std::pair<int, int>(sourceRate, outputSampleRate_)] = tmpStep;
+        }
+    
+        return resamplers_[std::pair<int, int>(sourceRate, outputSampleRate_)]->execute(output.first, output.second, numOutputSamples);
     }
 }
 

@@ -190,7 +190,7 @@ void TxRxThread::initializePipeline_()
         auto analogTxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
         analogTxPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(doubleLevelStep));
         
-        auto digitalTxStep = new FreeDVTransmitStep(freedvInterface, []() { return g_TxFreqOffsetHz; });
+        auto digitalTxStep = freedvInterface.createTransmitPipeline(inputSampleRate_, outputSampleRate_, []() { return g_TxFreqOffsetHz; });
         auto digitalTxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_); 
         digitalTxPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(digitalTxStep));
         

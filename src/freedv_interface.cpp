@@ -22,6 +22,8 @@
 #include <future>
 #include "main.h"
 #include "codec2_fdmdv.h"
+#include "pipeline/ParallelStep.h"
+#include "pipeline/FreeDVTransmitStep.h"
 
 FreeDVInterface::FreeDVInterface() :
     textRxFunc_(nullptr),
@@ -764,23 +766,6 @@ int FreeDVInterface::processRxAudio(
     return state;
 }
 
-void FreeDVInterface::transmit(short mod_out[], short speech_in[])
-{
-    freedv_tx(currentTxMode_, mod_out, speech_in);
-}
-
-void FreeDVInterface::complexTransmit(short mod_out[], short speech_in[], float txOffset, int nfreedv)
-{
-    COMP tx_fdm[nfreedv];
-    COMP tx_fdm_offset[nfreedv];
-
-    freedv_comptx(currentTxMode_, tx_fdm, speech_in);
-
-    freq_shift_coh(tx_fdm_offset, tx_fdm, txOffset, getTxModemSampleRate(), &txFreqOffsetPhaseRectObj_, nfreedv);
-    for(int i = 0; i<nfreedv; i++)
-        mod_out[i] = tx_fdm_offset[i].real;
-}
-
 void FreeDVInterface::resetReliableText()
 {
     for (auto& rt : reliableText_)
@@ -809,4 +794,36 @@ void FreeDVInterface::setReliableText(const char* callsign)
     {
         reliable_text_set_string(rt, callsign, strlen(callsign));
     }
+}
+
+IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int outputSampleRate, std::function<float()> getFreqOffsetFn)
+{
+    std::vector<IPipelineStep*> parallelSteps;
+    
+    for (auto& dv : dvObjects_)
+    {
+        parallelSteps.push_back(new FreeDVTransmitStep(dv, getFreqOffsetFn));
+    }
+    
+    std::function<int()> modeFn = 
+        [&]() {
+            int index = 0;
+            for (auto& dv : dvObjects_)
+            {
+                if (dv == currentTxMode_) return index;
+                index++;
+            }
+            return -1;
+        };
+        
+    auto parallelStep = new ParallelStep(
+        inputSampleRate,
+        outputSampleRate,
+        false,
+        modeFn,
+        modeFn,
+        parallelSteps
+    );
+    
+    return parallelStep;
 }

@@ -39,6 +39,8 @@
 
 #include <samplerate.h>
 
+class IPipelineStep;
+
 class FreeDVInterface
 {
 public:
@@ -98,15 +100,13 @@ public:
         short input[], int numFrames, struct FIFO* outputFifo, bool channelNoise, int noiseSnr, 
         float rxFreqOffsetHz, struct MODEM_STATS* stats, float* sig_pwr_av);
     
-    void transmit(short mod_out[], short speech_in[]);
-    void complexTransmit(short mod_out[], short speech_in[], float txOffset, int nfreedv);
-    
     struct MODEM_STATS* getCurrentRxModemStats() { return &modemStatsList_[modemStatsIndex_]; }
     
     void resetReliableText();
     const char* getReliableText();
     void setReliableText(const char* callsign);
     
+    IPipelineStep* createTransmitPipeline(int inputSampleRate, int outputSampleRate, std::function<float()> getFreqOffsetFn);
 private:
     struct FreeDVTextFnState
     {
