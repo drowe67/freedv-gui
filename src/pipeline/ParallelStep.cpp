@@ -31,12 +31,14 @@ ParallelStep::ParallelStep(
     bool runMultiThreaded,
     std::function<int(ParallelStep*)> inputRouteFn,
     std::function<int(ParallelStep*)> outputRouteFn,
-    std::vector<IPipelineStep*> parallelSteps)
+    std::vector<IPipelineStep*> parallelSteps,
+    std::shared_ptr<void> state)
     : inputSampleRate_(inputSampleRate)
     , outputSampleRate_(outputSampleRate)
     , runMultiThreaded_(runMultiThreaded)
     , inputRouteFn_(inputRouteFn)
     , outputRouteFn_(outputRouteFn)
+    , state_(state)
 {
     for (auto& step : parallelSteps)
     {
@@ -84,14 +86,14 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
 {
     // Step 0: determine what steps to execute.
     auto stepToExecute = inputRouteFn_(this);
-    assert(stepToExecute == -1 || (stepToExecute >= 0 && stepToExecute < parallelSteps_.size()));
+    assert(stepToExecute == -1 || (stepToExecute >= 0 && (size_t)stepToExecute < parallelSteps_.size()));
     
     // Step 1: resample inputs as needed
     std::map<int, std::future<TaskResult>> resampledInputFutures;
     std::map<int, TaskResult> resampledInputs;
-    for (int index = 0; index < parallelSteps_.size(); index++)
+    for (size_t index = 0; index < parallelSteps_.size(); index++)
     {
-        if (index == stepToExecute || stepToExecute == -1)
+        if (index == (size_t)stepToExecute || stepToExecute == -1)
         {
             int destinationSampleRate = parallelSteps_[index]->getInputSampleRate();
             if (destinationSampleRate != inputSampleRate_)
@@ -128,9 +130,9 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
     // Step 2: execute steps
     std::vector<std::future<TaskResult>> executedResultFutures;
     std::vector<TaskResult> executedResults;
-    for (int index = 0; index < parallelSteps_.size(); index++)
+    for (size_t index = 0; index < parallelSteps_.size(); index++)
     {
-        if (index == stepToExecute || stepToExecute == -1)
+        if (index == (size_t)stepToExecute || stepToExecute == -1)
         {
             ThreadInfo* threadInfo = nullptr;
             if (runMultiThreaded_)
@@ -160,7 +162,7 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
     // Step 3: determine which output to return
     auto stepToOutput = outputRouteFn_(this);
     
-    assert(stepToOutput >= 0 && stepToOutput < executedResults.size());
+    assert(stepToOutput >= 0 && (size_t)stepToOutput < executedResults.size());
     
     TaskResult output = executedResults[stepToOutput];
     

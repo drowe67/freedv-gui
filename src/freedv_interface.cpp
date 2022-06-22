@@ -554,7 +554,8 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
         false,
         modeFn,
         modeFn,
-        parallelSteps
+        parallelSteps,
+        nullptr
     );
     
     return parallelStep;
@@ -569,6 +570,15 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     std::function<float*()> getSigPwrAvgFn)
 {
     std::vector<IPipelineStep*> parallelSteps;
+
+    std::shared_ptr<ReceivePipelineState> state = std::make_shared<ReceivePipelineState>();
+    assert(state != nullptr);
+
+    state->getRxStateFn = getRxStateFn;
+    state->getChannelNoiseFn = getChannelNoiseFn;
+    state->getChannelNoiseSnrFn = getChannelNoiseSnrFn;
+    state->getFreqOffsetFn = getFreqOffsetFn;
+    state->getSigPwrAvgFn = getSigPwrAvgFn;
     
     for (auto& dv : dvObjects_)
     {
@@ -580,16 +590,17 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     
     auto preProcessFn = [&](ParallelStep* stepObj) {
         int rxIndex = 0;
-        
+        std::shared_ptr<ReceivePipelineState> state = std::static_pointer_cast<ReceivePipelineState>(stepObj->getState());
+
         // Set initial state for each step prior to execution.
         for (auto& step : stepObj->getParallelSteps())
         {
             assert(step != nullptr);
             
             FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)step.get();
-            castedStep->setSigPwrAvg(*getSigPwrAvgFn());
-            castedStep->setChannelNoiseEnable(getChannelNoiseFn(), getChannelNoiseSnrFn());
-            castedStep->setFreqOffset(getFreqOffsetFn());
+            castedStep->setSigPwrAvg(*state->getSigPwrAvgFn());
+            castedStep->setChannelNoiseEnable(state->getChannelNoiseFn(), state->getChannelNoiseSnrFn());
+            castedStep->setFreqOffset(state->getFreqOffsetFn());
         }
         
         // If the current RX mode is still sync'd, only process through that one.
@@ -606,6 +617,8 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     };
     
     auto postProcessFn = [&](ParallelStep* stepObj) {
+        std::shared_ptr<ReceivePipelineState> state = std::static_pointer_cast<ReceivePipelineState>(stepObj->getState());
+
         // If the current RX mode is still sync'd, only let that one out.
         int rxIndex = 0;
         int indexWithSync = 0;
@@ -659,16 +672,16 @@ skipSyncCheck:
         freedv_get_modem_extended_stats(dvWithSync, stats);
 
         // Update sync as it may have gone stale during decode
-        *getRxStateFn() = stats->sync != 0;
+        *state->getRxStateFn() = stats->sync != 0;
                 
-        if (*getRxStateFn())
+        if (*state->getRxStateFn())
         {
             rxMode_ = enabledModes_[indexWithSync];  
             currentRxMode_ = dvWithSync;
             lastSyncRxMode_ = currentRxMode_;
         } 
     
-        *getSigPwrAvgFn() = ((FreeDVReceiveStep*)stepObj->getParallelSteps()[indexWithSync].get())->getSigPwrAvg();
+        *state->getSigPwrAvgFn() = ((FreeDVReceiveStep*)stepObj->getParallelSteps()[indexWithSync].get())->getSigPwrAvg();
         
         return indexWithSync;
     };
@@ -679,7 +692,8 @@ skipSyncCheck:
         !singleRxThread_,
         preProcessFn,
         postProcessFn,
-        parallelSteps
+        parallelSteps,
+        state
     );
     
     return parallelStep;
