@@ -23,7 +23,7 @@
 #include <cassert>
 #include <cstring>
 #include <cmath>
-#include "util.h"
+#include "../util.h"
 #include "ToneInterfererStep.h"
 
 ToneInterfererStep::ToneInterfererStep(
