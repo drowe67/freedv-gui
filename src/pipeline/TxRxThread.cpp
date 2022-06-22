@@ -337,10 +337,9 @@ void TxRxThread::initializePipeline_()
         // RX demodulation step
         auto bypassRfDemodulationPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
         auto rfDemodulationPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
-        auto rfDemodulationStep = new FreeDVReceiveStep(
-            freedvInterface,
+        auto rfDemodulationStep = freedvInterface.createReceivePipeline(
+            inputSampleRate_, outputSampleRate_,
             []() { return &g_State; },
-            []() { return g_rxUserdata->rxoutfifo; },
             []() { return g_channel_noise; },
             []() { return wxGetApp().m_noise_snr; },
             []() { return g_RxFreqOffsetHz; },

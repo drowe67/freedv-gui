@@ -29,8 +29,8 @@ using namespace std::chrono_literals;
 ParallelStep::ParallelStep(
     int inputSampleRate, int outputSampleRate,
     bool runMultiThreaded,
-    std::function<int()> inputRouteFn,
-    std::function<int()> outputRouteFn,
+    std::function<int(ParallelStep*)> inputRouteFn,
+    std::function<int(ParallelStep*)> outputRouteFn,
     std::vector<IPipelineStep*> parallelSteps)
     : inputSampleRate_(inputSampleRate)
     , outputSampleRate_(outputSampleRate)
@@ -83,7 +83,7 @@ int ParallelStep::getOutputSampleRate() const
 std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
     // Step 0: determine what steps to execute.
-    auto stepToExecute = inputRouteFn_();
+    auto stepToExecute = inputRouteFn_(this);
     assert(stepToExecute == -1 || (stepToExecute >= 0 && stepToExecute < parallelSteps_.size()));
     
     // Step 1: resample inputs as needed
@@ -142,6 +142,14 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
             auto resampledInput = resampledInputs[destinationSampleRate];
             executedResultFutures.push_back(enqueueTask_(threadInfo, parallelSteps_[index].get(), resampledInput.first, resampledInput.second));
         }
+        else
+        {
+            std::promise<TaskResult> tempPromise;
+            tempPromise.set_value(TaskResult(nullptr, 0));
+            
+            std::future<TaskResult> tempFuture = tempPromise.get_future();
+            executedResultFutures.push_back(std::move(tempFuture));
+        }
     }
     
     for (auto& fut : executedResultFutures)
@@ -150,21 +158,11 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
     }
     
     // Step 3: determine which output to return
-    auto stepToOutput = outputRouteFn_();
-    assert(
-        stepToOutput == stepToExecute || 
-        (stepToExecute == -1 && (stepToOutput >= 0 && stepToOutput < executedResults.size())));
+    auto stepToOutput = outputRouteFn_(this);
     
-    TaskResult output;
-    if (stepToExecute != -1)
-    {
-        assert(executedResults.size() == 1);
-        output = executedResults[0];
-    }
-    else
-    {
-        output = executedResults[stepToOutput];
-    }
+    assert(stepToOutput >= 0 && stepToOutput < executedResults.size());
+    
+    TaskResult output = executedResults[stepToOutput];
     
     // Step 4: resample to destination rate
     int sourceRate = parallelSteps_[stepToOutput]->getOutputSampleRate();
@@ -190,10 +188,13 @@ void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
     while(!threadState->exitingThread)
     {
         std::unique_lock<std::mutex> lock(threadState->queueMutex);
-        if (threadState->queueCV.wait_for(lock, 1s) == std::cv_status::no_timeout && !threadState->exitingThread)
+        threadState->queueCV.wait_for(lock, 20ms);
+        if (!threadState->exitingThread && threadState->tasks.size() > 0)
         {
             auto& taskEntry = threadState->tasks.front();
+            lock.unlock();
             taskEntry.task(taskEntry.inputSamples, taskEntry.numInputSamples);
+            lock.lock();
             threadState->tasks.pop();
         }
     }

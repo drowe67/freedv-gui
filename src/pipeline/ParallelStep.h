@@ -38,14 +38,16 @@ public:
     ParallelStep(
         int inputSampleRate, int outputSampleRate,
         bool runMultiThreaded,
-        std::function<int()> inputRouteFn,
-        std::function<int()> outputRouteFn,
+        std::function<int(ParallelStep*)> inputRouteFn,
+        std::function<int(ParallelStep*)> outputRouteFn,
         std::vector<IPipelineStep*> parallelSteps);
     virtual ~ParallelStep();
     
     virtual int getInputSampleRate() const;
     virtual int getOutputSampleRate() const;
     virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
+    
+    const std::vector<std::shared_ptr<IPipelineStep>> getParallelSteps() const { return parallelSteps_; }
     
 private:
     typedef std::pair<std::shared_ptr<short>, int> TaskResult;
@@ -70,8 +72,8 @@ private:
     int inputSampleRate_;
     int outputSampleRate_;
     bool runMultiThreaded_;
-    std::function<int()> inputRouteFn_;
-    std::function<int()> outputRouteFn_;
+    std::function<int(ParallelStep*)> inputRouteFn_;
+    std::function<int(ParallelStep*)> outputRouteFn_;
     std::vector<std::shared_ptr<IPipelineStep>> parallelSteps_;
     std::map<std::pair<int, int>, std::shared_ptr<ResampleStep>> resamplers_;
     std::vector<ThreadInfo*> threads_;

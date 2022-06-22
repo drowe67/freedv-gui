@@ -24,6 +24,7 @@
 #include "codec2_fdmdv.h"
 #include "pipeline/ParallelStep.h"
 #include "pipeline/FreeDVTransmitStep.h"
+#include "pipeline/FreeDVReceiveStep.h"
 
 FreeDVInterface::FreeDVInterface() :
     textRxFunc_(nullptr),
@@ -805,8 +806,8 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
         parallelSteps.push_back(new FreeDVTransmitStep(dv, getFreqOffsetFn));
     }
     
-    std::function<int()> modeFn = 
-        [&]() {
+    std::function<int(ParallelStep*)> modeFn = 
+        [&](ParallelStep*) {
             int index = 0;
             for (auto& dv : dvObjects_)
             {
@@ -822,6 +823,131 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
         false,
         modeFn,
         modeFn,
+        parallelSteps
+    );
+    
+    return parallelStep;
+}
+
+IPipelineStep* FreeDVInterface::createReceivePipeline(
+    int inputSampleRate, int outputSampleRate,
+    std::function<int*()> getRxStateFn,
+    std::function<int()> getChannelNoiseFn,
+    std::function<int()> getChannelNoiseSnrFn,
+    std::function<float()> getFreqOffsetFn,
+    std::function<float*()> getSigPwrAvgFn)
+{
+    std::vector<IPipelineStep*> parallelSteps;
+    
+    for (auto& dv : dvObjects_)
+    {
+        auto recvStep = new FreeDVReceiveStep(dv);
+        assert(recvStep != nullptr);
+        
+        parallelSteps.push_back(recvStep);
+    }
+    
+    auto preProcessFn = [&](ParallelStep* stepObj) {
+        int rxIndex = 0;
+        
+        // Set initial state for each step prior to execution.
+        for (auto& step : stepObj->getParallelSteps())
+        {
+            assert(step != nullptr);
+            
+            FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)step.get();
+            castedStep->setSigPwrAvg(*getSigPwrAvgFn());
+            castedStep->setChannelNoiseEnable(getChannelNoiseFn(), getChannelNoiseSnrFn());
+            castedStep->setFreqOffset(getFreqOffsetFn());
+        }
+        
+        // If the current RX mode is still sync'd, only process through that one.
+        for (auto& dv : dvObjects_)
+        {
+            if (dv == currentRxMode_ && freedv_get_sync(currentRxMode_))
+            {
+                return rxIndex;
+            }
+            rxIndex++;
+        }
+        
+        return -1;
+    };
+    
+    auto postProcessFn = [&](ParallelStep* stepObj) {
+        // If the current RX mode is still sync'd, only let that one out.
+        int rxIndex = 0;
+        int indexWithSync = 0;
+        int maxSyncFound = -25;
+        struct freedv* dvWithSync = nullptr;
+
+        for (auto& dv : dvObjects_)
+        {
+            if (dv == currentRxMode_ && freedv_get_sync(currentRxMode_))
+            {
+                dvWithSync = dv;
+                indexWithSync = rxIndex;
+                goto skipSyncCheck;
+            }
+            rxIndex++;
+        }
+        
+        // Otherwise, find the mode that's sync'd and has the highest SNR.
+        rxIndex = 0;
+        for (auto& dv : dvObjects_)
+        {
+            struct MODEM_STATS *tmpStats = &modemStatsList_[rxIndex];
+            freedv_get_modem_extended_stats(dv, tmpStats);
+        
+            if (!(isnan(tmpStats->snr_est) || isinf(tmpStats->snr_est))) {
+                snrVals_[rxIndex] = 0.95*snrVals_[rxIndex] + (1.0 - 0.95)*tmpStats->snr_est;
+            }
+            int snr = (int)(snrVals_[rxIndex]+0.5);
+                
+            if (snr > maxSyncFound && tmpStats->sync != 0)
+            {
+                maxSyncFound = snr;
+                indexWithSync = rxIndex;
+                dvWithSync = dv;
+            }
+            
+            rxIndex++;
+        }
+        
+        if (dvWithSync == nullptr)
+        {
+            // Default to the first DV object if there's no sync.
+            indexWithSync = 0;
+            dvWithSync = dvObjects_[0];
+        }
+
+skipSyncCheck:        
+        struct MODEM_STATS* stats = getCurrentRxModemStats();
+        
+        // grab extended stats so we can plot spectrum, scatter diagram etc
+        freedv_get_modem_extended_stats(dvWithSync, stats);
+
+        // Update sync as it may have gone stale during decode
+        *getRxStateFn() = stats->sync != 0;
+                
+        if (*getRxStateFn())
+        {
+            rxMode_ = enabledModes_[indexWithSync];  
+            currentRxMode_ = dvWithSync;
+            lastSyncRxMode_ = currentRxMode_;
+        } 
+    
+        *getSigPwrAvgFn() = ((FreeDVReceiveStep*)stepObj->getParallelSteps()[indexWithSync].get())->getSigPwrAvg();
+        
+        return indexWithSync;
+    };
+    
+    auto parallelStep = new ParallelStep(
+        inputSampleRate,
+        outputSampleRate,
+        !singleRxThread_,
+        preProcessFn,
+        postProcessFn,
         parallelSteps
     );
     

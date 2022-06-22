@@ -107,6 +107,15 @@ public:
     void setReliableText(const char* callsign);
     
     IPipelineStep* createTransmitPipeline(int inputSampleRate, int outputSampleRate, std::function<float()> getFreqOffsetFn);
+    IPipelineStep* createReceivePipeline(
+        int inputSampleRate, int outputSampleRate,
+        std::function<int*()> getRxStateFn,
+        std::function<int()> getChannelNoiseFn,
+        std::function<int()> getChannelNoiseSnrFn,
+        std::function<float()> getFreqOffsetFn,
+        std::function<float*()> getSigPwrAvgFn
+    );
+        
 private:
     struct FreeDVTextFnState
     {
