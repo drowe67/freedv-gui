@@ -41,6 +41,8 @@
 
 #include <samplerate.h>
 
+class IPipelineStep;
+
 class FreeDVInterface
 {
 public:
@@ -96,78 +98,27 @@ public:
     
     void setCarrierAmplitude(int c, float amp);
     
-    int processRxAudio(
-        short input[], int numFrames, struct FIFO* outputFifo, bool channelNoise, int noiseSnr, 
-        float rxFreqOffsetHz, struct MODEM_STATS* stats, float* sig_pwr_av);
-    
-    void transmit(short mod_out[], short speech_in[]);
-    void complexTransmit(short mod_out[], short speech_in[], float txOffset, int nfreedv);
-    
     struct MODEM_STATS* getCurrentRxModemStats() { return &modemStatsList_[modemStatsIndex_]; }
     
     void resetReliableText();
     const char* getReliableText();
     void setReliableText(const char* callsign);
     
+    IPipelineStep* createTransmitPipeline(int inputSampleRate, int outputSampleRate, std::function<float()> getFreqOffsetFn);
+    IPipelineStep* createReceivePipeline(
+        int inputSampleRate, int outputSampleRate,
+        std::function<int*()> getRxStateFn,
+        std::function<int()> getChannelNoiseFn,
+        std::function<int()> getChannelNoiseSnrFn,
+        std::function<float()> getFreqOffsetFn,
+        std::function<float*()> getSigPwrAvgFn
+    );
+        
 private:
     struct FreeDVTextFnState
     {
         FreeDVInterface* interfaceObj;
         struct freedv* modeObj;
-    };
-    
-    struct RxAudioThreadState
-    {
-        // Inputs
-        struct freedv* dvObj;
-        SRC_STATE* inRateConvObj;
-        struct FIFO* ownInput;
-        COMP* rxFreqOffsetPhaseRectObj;
-        int modeIndex;
-        short* inputBlock;
-        int numFrames;
-        bool channelNoise;
-        int noiseSnr;
-        float rxFreqOffsetHz;
-        int rxModemSampleRate;
-        int rxSpeechSampleRate;
-        SRC_STATE* outRateConvObj;
-        
-        // Outputs
-        struct FIFO* ownOutput;
-        float sig_pwr_av;
-    };
-    
-    template<typename R, typename T>
-    class EventHandlerThread
-    {
-    public:
-        EventHandlerThread(std::string desc);
-        ~EventHandlerThread();
-        
-        std::shared_future<R> enqueue(std::function<R(T)> fn, T arg);
-        
-    private:
-        struct Args 
-        {
-            Args(std::packaged_task<R(T)>&& t, T a)
-                : task(std::move(t)), arg(a) { }
-
-            Args(Args&& old)
-                : task(std::move(old.task)), arg(old.arg) { }
-            
-            std::packaged_task<R(T)> task;
-            T arg;
-        };
-    
-        bool isEnding_;
-        std::string desc_;
-        std::queue<Args> execQueue_;
-        std::mutex execQueueMtx_;
-        std::condition_variable_any execQueueCond_;
-        std::thread execThread_;
- 
-        static void ThreadEntry_(EventHandlerThread<R,T>* ptr);
     };
     
     static void FreeDVTextRxFn_(void *callback_state, char c);
@@ -184,12 +135,8 @@ private:
     std::deque<struct freedv*> dvObjects_;
     std::deque<FreeDVTextFnState*> textFnObjs_;
     std::deque<struct FIFO*> errorFifos_;
-    std::deque<struct FIFO*> inputFifos_;
-    std::deque<SRC_STATE*> inRateConvObjs_;
-    std::deque<SRC_STATE*> outRateConvObjs_;
     std::deque<float> snrVals_;
     std::deque<float> squelchVals_;
-    std::deque<EventHandlerThread<RxAudioThreadState*, RxAudioThreadState*> *> threads_;
     
     // Amount to add to squelch SNR to take into account different mode characteristics.
     // For example, if multi-RX is on, 700E's squelch would be the user's selection + 3.0dB
@@ -198,8 +145,6 @@ private:
     // More info on minimum SNRs is at https://github.com/drowe67/codec2/blob/master/README_freedv.md.
     std::deque<float> snrAdjust_; 
     
-    COMP txFreqOffsetPhaseRectObj_;
-    std::deque<COMP*> rxFreqOffsetPhaseRectObjs_;
     struct MODEM_STATS* modemStatsList_;
     int modemStatsIndex_;
     
@@ -210,61 +155,5 @@ private:
     std::deque<reliable_text_t> reliableText_;
     std::string receivedReliableText_;
 };
-
-template<typename R, typename T>
-FreeDVInterface::EventHandlerThread<R, T>::EventHandlerThread(std::string desc)
-    : isEnding_(false)
-    , desc_(desc)
-    , execThread_(ThreadEntry_, this)
-{
-    // empty
-}
-
-template<typename R, typename T>
-FreeDVInterface::EventHandlerThread<R, T>::~EventHandlerThread()
-{
-    isEnding_ = true;
-    execQueueCond_.notify_one();
-    execThread_.join();
-}
-
-template<typename R, typename T>
-std::shared_future<R> FreeDVInterface::EventHandlerThread<R, T>::enqueue(std::function<R(T)> fn, T arg)
-{    
-    std::packaged_task<R(T)> task(fn);
-    std::future<R> fut = task.get_future();
-    
-    {
-        const std::lock_guard<std::mutex> lock(execQueueMtx_);
-        
-        Args x(std::move(task), arg);
-        execQueue_.push(std::move(x));
-    }
-    
-    execQueueCond_.notify_one();
-    return fut;
-}
-
-template<typename R, typename T>
-void FreeDVInterface::EventHandlerThread<R, T>::ThreadEntry_(EventHandlerThread<R,T>* ptr)
-{
-#if defined(__linux__)
-    pthread_setname_np(pthread_self(), ptr->desc_.c_str());
-#endif // defined(__linux__)
-
-    while(!ptr->isEnding_)
-    {
-        std::unique_lock<std::mutex> lock(ptr->execQueueMtx_);
-        ptr->execQueueCond_.wait_for(lock, std::chrono::milliseconds(100));
-
-        // No timeout; received request.
-        while (!ptr->isEnding_ && ptr->execQueue_.size() > 0)
-        {
-            auto& fn = ptr->execQueue_.front();
-            fn.task(fn.arg);
-            ptr->execQueue_.pop();
-        }
-    }
-}
 
 #endif // CODEC2_INTERFACE_H
