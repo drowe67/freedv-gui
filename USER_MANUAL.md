@@ -789,6 +789,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Refactored audio handling to use pipeline design pattern. (PR #219)
     * Eliminated requirement to use the same audio sample rate for both mic and speaker devices. (PR #219, #234)
     * 60 meters shows as USB and not LSB for countries where FreeDV usage is legal on that band. (PR #243)
+    * Improved audio quality and reduced CPU usage for multi-RX. (PR #246)
 2. Build system:
     * Add spell checking of codebase on every Git push. (PR #216)
     * Build Windows build on every Git push. (PR #220)
