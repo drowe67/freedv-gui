@@ -322,8 +322,8 @@ void PulseAudioDevice::StreamMovedCallback_(pa_stream *p, void *userdata)
 
     time_t result = time(NULL);
     char buf[256];
-    struct tm *p = localtime(&result);
-    strftime(buf, 256, "%c", p);
+    struct tm *lt = localtime(&result);
+    strftime(buf, 256, "%c", lt);
     fprintf(stderr, "PulseAudioDevice[%s]: stream named %s has been moved to %s\n", buf, (const char*)thisObj->devName_.ToUTF8(), newDevName);
     
     thisObj->devName_ = newDevName;
