@@ -40,6 +40,7 @@
 #include <samplerate.h>
 
 class IPipelineStep;
+class ParallelStep;
 
 class FreeDVInterface
 {
@@ -120,6 +121,8 @@ private:
         std::function<int()> getChannelNoiseSnrFn;
         std::function<float()> getFreqOffsetFn;
         std::function<float*()> getSigPwrAvgFn;
+        std::function<int(ParallelStep*)> preProcessFn;
+        std::function<int(ParallelStep*)> postProcessFn;
     };
 
     struct FreeDVTextFnState
@@ -161,6 +164,9 @@ private:
     
     std::deque<reliable_text_t> reliableText_;
     std::string receivedReliableText_;
+    
+    int preProcessRxFn_(ParallelStep* ps);
+    int postProcessRxFn_(ParallelStep* ps);
 };
 
 #endif // CODEC2_INTERFACE_H
