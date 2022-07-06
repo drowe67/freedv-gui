@@ -24,35 +24,45 @@
 #define AUDIO_PIPELINE__FREEDV_RECEIVE_STEP_H
 
 #include <functional>
-
 #include "IPipelineStep.h"
 #include "../freedv_interface.h"
+#include "freedv_api.h"
+
+// Forward declarations of structs implemented by Codec2 
+extern "C"
+{
+    struct FIFO;
+    struct freedv;
+}
 
 class FreeDVReceiveStep : public IPipelineStep
 {
 public:
-    FreeDVReceiveStep(
-        FreeDVInterface& iface,
-        std::function<int*()> getRxStateFn,
-        std::function<struct FIFO*()> getRxFifoFn, // may not be needed, TBD
-        std::function<int()> getChannelNoiseFn,
-        std::function<int()> getChannelNoiseSnrFn,
-        std::function<float()> getFreqOffsetFn,
-        std::function<float*()> getSigPwrAvgFn);
+    FreeDVReceiveStep(struct freedv* dv);
     virtual ~FreeDVReceiveStep();
     
     virtual int getInputSampleRate() const;
     virtual int getOutputSampleRate() const;
     virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
     
+    void setSigPwrAvg(float newVal) { sigPwrAvg_ = newVal; }
+    float getSigPwrAvg() const { return sigPwrAvg_; }
+    int getSync() const { return freedv_get_sync(dv_); }
+    void setChannelNoiseEnable(bool enabled, int snr) 
+    { 
+        channelNoiseEnabled_ = enabled; 
+        channelNoiseSnr_ = snr;
+    }
+    void setFreqOffset(float freq) { freqOffsetHz_ = freq; }
+    
 private:
-    FreeDVInterface& interface_;
-    std::function<int*()> getRxStateFn_;
-    std::function<struct FIFO*()> getRxFifoFn_;
-    std::function<int()> getChannelNoiseFn_;
-    std::function<int()> getChannelNoiseSnrFn_;
-    std::function<float()> getFreqOffsetFn_;
-    std::function<float*()> getSigPwrAvgFn_;
+    struct freedv* dv_;
+    struct FIFO* inputSampleFifo_;
+    COMP rxFreqOffsetPhaseRectObjs_;
+    float sigPwrAvg_;
+    bool channelNoiseEnabled_;
+    int channelNoiseSnr_;
+    float freqOffsetHz_;
 };
 
 #endif // AUDIO_PIPELINE__FREEDV_RECEIVE_STEP_H
