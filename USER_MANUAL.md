@@ -791,7 +791,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V1.8.0 June 2022
+## V1.8.0 July 2022
 
 1. Enhancements:
     * PSK Reporter: Encodes callsign regardless of whether the internet is working. (PR #214)
