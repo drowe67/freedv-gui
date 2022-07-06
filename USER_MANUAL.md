@@ -818,6 +818,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Suppress refresh of the sync indicator if disabled/no change in sync. (PR #230)
     * Clarify location from where to run Docker build script. (PR #231)
     * Change shutdown ordering to prevent hangs on slower systems. (PR #236)
+    * Disable PulseAudio suspend failure due to interactions with pipewire. (PR #239)
 
 ## V1.7.0 February 2022
 

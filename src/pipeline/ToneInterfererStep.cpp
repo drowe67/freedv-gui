@@ -25,8 +25,9 @@
 #include <cmath>
 #include "ToneInterfererStep.h"
 
+// M_PI is not available on some compilers, so define it here just in case.
 #ifndef M_PI
-#define M_PI    3.14159265358979323846
+    #define M_PI 3.1415926535897932384626433832795
 #endif
 
 ToneInterfererStep::ToneInterfererStep(
