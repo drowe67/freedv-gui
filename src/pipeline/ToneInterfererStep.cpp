@@ -26,6 +26,11 @@
 
 #include "ToneInterfererStep.h"
 
+// M_PI is not available on some compilers, so define it here just in case.
+#ifndef M_PI
+    #define M_PI 3.1415926535897932384626433832795
+#endif
+
 ToneInterfererStep::ToneInterfererStep(
         int sampleRate, std::function<float()> toneFrequencyFn, 
         std::function<float()> toneAmplitudeFn, std::function<float*()> tonePhaseFn)

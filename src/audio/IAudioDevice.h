@@ -64,7 +64,7 @@ public:
     // Callback must take the following parameters:
     //    1. Audio device.
     //    2. Pointer to user-provided state object (typically onAudioUnderflowState, defined below).
-    void setOnAudioUnderflow(AudioOverflowCallbackFn fn, void* state);
+    void setOnAudioUnderflow(AudioUnderflowCallbackFn fn, void* state);
     
     // Set error callback.
     // Callback must take the following parameters:
