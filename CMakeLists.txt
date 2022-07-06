@@ -157,7 +157,6 @@ else(BOOTSTRAP_WXWIDGETS AND NOT EXISTS ${WXCONFIG})
 #
 if(MINGW)
     message(STATUS "System is MinGW.")
-    add_definitions(-DWIN32=1)
     # Default to static build of portaudio until I can figure out why the
     # shared DLL doesn't work.
     set(USE_STATIC_PORTAUDIO TRUE)
