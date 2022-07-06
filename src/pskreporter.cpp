@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
-#if defined(WIN32) || defined(MINGW)
+#if defined(WIN32) || defined(__MINGW32__)
 #define _WIN32_WINNT 0x0600
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -16,7 +16,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#endif // defined(WIN32) || defined(MINGW)
+#endif // defined(WIN32) || defined(__MINGW32__)
 
 #include "pskreporter.h"
 
