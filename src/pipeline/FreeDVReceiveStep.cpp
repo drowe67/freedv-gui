@@ -24,60 +24,97 @@
 #include "FreeDVReceiveStep.h"
 #include "freedv_api.h"
 #include "codec2_fifo.h"
+#include "codec2_fdmdv.h"
 #include "../defines.h"
 
-FreeDVReceiveStep::FreeDVReceiveStep(
-    FreeDVInterface& iface,
-    std::function<int*()> getRxStateFn,
-    std::function<struct FIFO*()> getRxFifoFn, // may not be needed, TBD
-    std::function<int()> getChannelNoiseFn,
-    std::function<int()> getChannelNoiseSnrFn,
-    std::function<float()> getFreqOffsetFn,
-    std::function<float*()> getSigPwrAvgFn)
-    : interface_(iface)
-    , getRxStateFn_(getRxStateFn)
-    , getRxFifoFn_(getRxFifoFn)
-    , getChannelNoiseFn_(getChannelNoiseFn)
-    , getChannelNoiseSnrFn_(getChannelNoiseSnrFn)
-    , getFreqOffsetFn_(getFreqOffsetFn)
-    , getSigPwrAvgFn_(getSigPwrAvgFn)
+extern void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin);
+
+FreeDVReceiveStep::FreeDVReceiveStep(struct freedv* dv)
+    : dv_(dv)
+    , inputSampleFifo_(nullptr)
+    , channelNoiseEnabled_(false)
+    , channelNoiseSnr_(0)
+    , freqOffsetHz_(0)
 {
-    // empty
+    // Set FIFO to be 2x the number of samples per run so we don't lose anything.
+    inputSampleFifo_ = codec2_fifo_create(freedv_get_n_max_modem_samples(dv_) * 2);
+    assert(inputSampleFifo_ != nullptr);
+    
+    rxFreqOffsetPhaseRectObjs_.real = cos(0.0);
+    rxFreqOffsetPhaseRectObjs_.imag = sin(0.0);
 }
 
 FreeDVReceiveStep::~FreeDVReceiveStep()
 {
-    // empty
+    if (inputSampleFifo_ != nullptr)
+    {
+        codec2_fifo_free(inputSampleFifo_);
+    }
 }
 
 int FreeDVReceiveStep::getInputSampleRate() const
 {
-    return interface_.getRxModemSampleRate();
+    return freedv_get_modem_sample_rate(dv_);
 }
 
 int FreeDVReceiveStep::getOutputSampleRate() const
 {
-    return interface_.getRxSpeechSampleRate();
+    return freedv_get_speech_sample_rate(dv_);
 }
 
 std::shared_ptr<short> FreeDVReceiveStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    *numOutputSamples = (int)(FRAME_DURATION * getOutputSampleRate());
-    short* outputSamples = new short[*numOutputSamples];
-    assert(outputSamples != nullptr);
+    *numOutputSamples = 0;
+    short* outputSamples = nullptr;
     
-    // Write 20ms chunks of input samples for modem rx processing
-    auto state = getRxStateFn_();
-    auto rxFifo = getRxFifoFn_();
+    short input_buf[freedv_get_n_max_modem_samples(dv_)];
+    short output_buf[freedv_get_n_speech_samples(dv_)];
+    COMP  rx_fdm[freedv_get_n_max_modem_samples(dv_)];
+    COMP  rx_fdm_offset[freedv_get_n_max_modem_samples(dv_)];
     
-    *state = interface_.processRxAudio(
-        inputSamples.get(), numInputSamples, rxFifo, getChannelNoiseFn_(), getChannelNoiseSnrFn_(), 
-        getChannelNoiseSnrFn_(), interface_.getCurrentRxModemStats(), getSigPwrAvgFn_());
+    short* inputPtr = inputSamples.get();
+    while (numInputSamples > 0)
+    {
+        codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
+        numInputSamples--;
+        
+        int   nin = freedv_nin(dv_);
+        int   nout = 0;
+        while (codec2_fifo_read(inputSampleFifo_, input_buf, nin) == 0) 
+        {
+            assert(nin <= freedv_get_n_max_modem_samples(dv_));
 
-    // Read 20ms chunk of samples from modem rx processing,
-    // this will typically be decoded output speech.
-    memset(outputSamples, 0, sizeof(short) * *numOutputSamples);
-    codec2_fifo_read(rxFifo, outputSamples, *numOutputSamples);
+            // demod per frame processing
+            for(int i=0; i<nin; i++) {
+                rx_fdm[i].real = (float)input_buf[i];
+                rx_fdm[i].imag = 0.0;
+            }
+
+            // Optional channel noise
+            if (channelNoiseEnabled_) {
+                fdmdv_simulate_channel(&sigPwrAvg_, rx_fdm, nin, channelNoiseSnr_);
+            }
+
+            // Optional frequency shifting
+            freq_shift_coh(rx_fdm_offset, rx_fdm, freqOffsetHz_, freedv_get_modem_sample_rate(dv_), &rxFreqOffsetPhaseRectObjs_, nin);
+            nout = freedv_comprx(dv_, output_buf, rx_fdm_offset);
+    
+            short* newOutputSamples = new short[*numOutputSamples + nout];
+            assert(newOutputSamples != nullptr);
+        
+            if (outputSamples != nullptr)
+            {
+                memcpy(newOutputSamples, outputSamples, *numOutputSamples * sizeof(short));
+                delete[] outputSamples;
+            }
+        
+            memcpy(newOutputSamples + *numOutputSamples, output_buf, nout * sizeof(short));
+            *numOutputSamples += nout;
+            outputSamples = newOutputSamples;
+            
+            nin = freedv_nin(dv_);
+        }
+    }
     
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
 }

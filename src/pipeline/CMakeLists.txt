@@ -17,6 +17,8 @@ add_library(fdv_audio_pipeline STATIC
     IPipelineStep.cpp
     LevelAdjustStep.h
     LevelAdjustStep.cpp
+    ParallelStep.h
+    ParallelStep.cpp
     PlaybackStep.h
     PlaybackStep.cpp
     RecordStep.h
