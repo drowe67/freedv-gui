@@ -20,7 +20,7 @@ export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 
-CODEC2_BRANCH=dr-2020B
+CODEC2_BRANCH=master
 LPCNET_BRANCH=master
 
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
