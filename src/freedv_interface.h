@@ -22,6 +22,8 @@
 #ifndef CODEC2_INTERFACE_H
 #define CODEC2_INTERFACE_H
 
+#include <pthread.h>
+
 #include <deque>
 #include <algorithm>
 #include <thread>

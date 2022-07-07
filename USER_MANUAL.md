@@ -535,6 +535,19 @@ FreeDV 2020 Tips:
    this (Tools - Options - FIFO size, also see Sound Card Debug
    section below).
 
+## FreeDV 2020B
+
+Experimental mode developed in February 2022.  The goal of this mode is to improve the performance of FreeDV 2020 over HF channels.
+
+Here are the three main innovations, and the theoretical improvements:
+
+1. Compression (clipping) of the 2020x modem waveforms has been added, which is worth about 4dB. This should also improve the original FreeDV 2020 mode.  The Clipping checkbox is located on Tools-Options-Modem.  As per the other warnings in this manual please make sure you transmitter can handle the higher RMS power.
+1. 2020B is like 700E to 700D - it works with fast fading but requires a few more dB of SNR. This will make it usable in European Winter (or over the South Pole Argentina to Australia) type channels - if you have enough SNR. The challenge with this mode is squeezing all the information we need (enough pilots symbols for fast fading, LPCNet, FEC bits) into a 2100 Hz channel - we are pushing up again the edges of many SSB filters. It also uses unequal FEC, just the most important 11 bits are protected.
+
+This modes is under development and may change at any time.  If you experience comparability issues with another operator - check your Git Hash values on the Help-about menu to ensure you are running the same versions of LPCNet and codec2.
+
+It is recommended that multi-rx be disabled when using 2020B. This mode is not supported by multi-rx, you will need to manually coordinate the mode with other stations.
+
 # Tools Menu
 
 ## Tools - Filter
@@ -778,7 +791,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## TBD June 2022
+## V1.8.0 July 2022
 
 1. Enhancements:
     * PSK Reporter: Encodes callsign regardless of whether the internet is working. (PR #214)
@@ -786,6 +799,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * PSK Reporter: Performs reporting in background instead of hanging the caller of the PskReporter class. (PR #214)
     * PSK Reporter: Suppress reporting if we're playing back a radio file (to avoid false reports). (PR #214)
     * Filter dialog: Increase length of vertical sliders to simplify fine-tuning. (PR #224)
+    * Modem compression (Tools-Options-Modem Clipping checkbox) added to FreeDV 2020 for increased RMS power. (PR #211)
+    * Added experimental 2020B mode. (PR #211)
     * Refactored audio handling to use pipeline design pattern. (PR #219)
     * Eliminated requirement to use the same audio sample rate for both mic and speaker devices. (PR #219, #234)
     * 60 meters shows as USB and not LSB for countries where FreeDV usage is legal on that band. (PR #243)

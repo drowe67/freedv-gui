@@ -23,7 +23,6 @@
 #include <cassert>
 #include <cstring>
 #include <cmath>
-
 #include "ToneInterfererStep.h"
 
 // M_PI is not available on some compilers, so define it here just in case.

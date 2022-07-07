@@ -108,6 +108,7 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
             return 0.0f;
     }
 }
+
 void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText)
 {
     singleRxThread_ = singleRxThread;
@@ -121,8 +122,7 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
     float minimumSnr = 999.0f;
     for (auto& mode : enabledModes_)
     {
-        struct freedv* dv = nullptr;
-        dv = freedv_open(mode);
+        struct freedv* dv = freedv_open(mode);
         assert(dv != nullptr);
         
         snrVals_.push_back(-20);
@@ -323,25 +323,7 @@ const char* FreeDVInterface::getCurrentModeStr() const
     }
     else
     {
-        switch(rxMode_)
-        {
-            case FREEDV_MODE_700C:
-                return "700C";
-            case FREEDV_MODE_700D:
-                return "700D";
-            case FREEDV_MODE_700E:
-                return "700E";
-            case FREEDV_MODE_1600:
-                return "1600";
-            case FREEDV_MODE_2020:
-                return "2020";
-            case FREEDV_MODE_800XA:
-                return "800XA";
-            case FREEDV_MODE_2400B:
-                return "2400B";
-            default:
-                return "unk";
-        }
+        return GetCurrentModeStrImpl_(rxMode_);
     }
 }
 
