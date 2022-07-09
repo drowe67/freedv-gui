@@ -791,6 +791,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.8.1 TBD 2022
+
+1. Enhancements:
+    * Save rig names instead of IDs to prevent Hamlib off by one issues. (PR #256)
 ## V1.8.0 July 2022
 
 1. Enhancements:
