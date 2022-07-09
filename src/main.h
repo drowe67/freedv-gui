@@ -198,6 +198,7 @@ class MainApp : public wxApp
 
         bool                m_boolHamlibUseForPTT;
         unsigned int        m_intHamlibRig;
+        wxString            m_strHamlibRigName;
         wxString            m_strHamlibSerialPort;
         unsigned int        m_intHamlibSerialRate;
         unsigned int        m_intHamlibIcomCIVHex;

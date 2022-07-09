@@ -84,6 +84,32 @@ static bool rig_cmp(const struct rig_caps *rig1, const struct rig_caps *rig2) {
     return rig1->rig_model < rig2->rig_model;
 }
 
+unsigned int Hamlib::rigNameToIndex(std::string rigName)
+{
+    unsigned int index = 0;
+    for (auto& entry : m_rigList)
+    {
+        char name[128];
+        snprintf(name, 128, "%s %s", entry->mfg_name, entry->model_name); 
+        
+        if (rigName == std::string(name))
+        {
+            return index;
+        }
+        
+        index++;
+    }
+    
+    return -1;
+}
+
+std::string Hamlib::rigIndexToName(unsigned int rigIndex)
+{
+    char name[128];
+    snprintf(name, 128, "%s %s", m_rigList[rigIndex]->mfg_name, m_rigList[rigIndex]->model_name); 
+    return name;
+}
+
 freq_t Hamlib::get_frequency(void) const
 {
     return m_currFreq;
