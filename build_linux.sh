@@ -29,7 +29,7 @@ cd $FREEDVGUIDIR
 if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2.git
 fi
-cd codec2 && git checkout $CODEC2_BRANCH && git pull
+cd codec2 && git switch - && git pull && git checkout $CODEC2_BRANCH
 mkdir -p build_linux && cd build_linux && rm -Rf * && cmake .. && make
 
 # OK, build and test LPCNet
@@ -37,7 +37,7 @@ cd $FREEDVGUIDIR
 if [ ! -d LPCNet ]; then
     git clone https://github.com/drowe67/LPCNet.git
 fi
-cd $LPCNETDIR && git checkout $LPCNET_BRANCH && git pull
+cd $LPCNETDIR && git switch - && git pull && git checkout $LPCNET_BRANCH
 mkdir  -p build_linux && cd build_linux && rm -Rf *
 cmake -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux ..
 make
