@@ -20,8 +20,8 @@ export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 
-CODEC2_BRANCH=master
-LPCNET_BRANCH=master
+CODEC2_BRANCH=v1.0.3
+LPCNET_BRANCH=v0.2
 
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR

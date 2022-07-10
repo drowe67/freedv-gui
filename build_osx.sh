@@ -8,8 +8,8 @@ export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 export HAMLIBDIR=$FREEDVGUIDIR/hamlib
-export CODEC2_BRANCH=master
-export LPCNET_BRANCH=master
+export CODEC2_BRANCH=v1.0.3
+export LPCNET_BRANCH=v0.2
 export UT_ENABLE=${UT_ENABLE:-0}
 
 # Prerequisite: build dylibbundler
