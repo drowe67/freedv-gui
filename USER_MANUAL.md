@@ -791,6 +791,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## TBD TBD 2022
+
+1. Bugfixes:
+    * Increase plot buffer size to resolve issues with "To Spkr/Headphones" tab (PR #258)
+
 ## V1.8.0 July 2022
 
 1. Enhancements:
