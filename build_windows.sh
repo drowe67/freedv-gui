@@ -20,20 +20,20 @@ export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 
-CODEC2_BRANCH=master
-LPCNET_BRANCH=master
+CODEC2_BRANCH=v1.0.4_rc2
+LPCNET_BRANCH=v0.3
 
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/codec2.git
-cd codec2 && git checkout $CODEC2_BRANCH && git pull
+cd codec2 && git switch master && git pull && git checkout $CODEC2_BRANCH
 mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf *
 $CMAKE .. && make
 
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/LPCNet.git
-cd $LPCNETDIR && git checkout $LPCNET_BRANCH && git pull
+cd $LPCNETDIR && git switch master && git pull && git checkout $LPCNET_BRANCH
 mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf *
 $CMAKE -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR ..
 make

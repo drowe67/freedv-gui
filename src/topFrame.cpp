@@ -341,9 +341,10 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     sbSizer_mode->Add(m_rb2400b, 0, wxALIGN_LEFT|wxALL, 1);
     m_rb2020 = new wxRadioButton( modeBox, wxID_ANY, wxT("2020"), wxDefaultPosition, wxDefaultSize,  0);
     sbSizer_mode->Add(m_rb2020, 0, wxALIGN_LEFT|wxALL, 1);
-    sbSizer_mode->SetMinSize(wxSize(100,-1));
+#if defined(FREEDV_MODE_2020B)
     m_rb2020b = new wxRadioButton( modeBox, wxID_ANY, wxT("2020B"), wxDefaultPosition, wxDefaultSize,  0);
     sbSizer_mode->Add(m_rb2020b, 0, wxALIGN_LEFT|wxALL, 1);
+#endif // FREEDV_MODE_2020B
     sbSizer_mode->SetMinSize(wxSize(100,-1));
     m_rb1600->SetValue(true);
 
@@ -477,7 +478,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_rb800xa->MoveBeforeInTabOrder(m_rb1600);
     m_rb1600->MoveBeforeInTabOrder(m_rb2400b);
     m_rb2400b->MoveBeforeInTabOrder(m_rb2020);
+#if defined(FREEDV_MODE_2020B)
     m_rb2020->MoveBeforeInTabOrder(m_rb2020b);
+#endif // FREEDV_MODE_2020B
     m_togBtnOnOff->MoveBeforeInTabOrder(m_togBtnSplit);
     m_togBtnSplit->MoveBeforeInTabOrder(m_togBtnAnalog);
     m_togBtnAnalog->MoveBeforeInTabOrder(m_togBtnVoiceKeyer);
@@ -542,7 +545,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_rb1600->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb2400b->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb2020->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
+#if defined(FREEDV_MODE_2020B)
     m_rb2020b->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
+#endif // FREEDV_MODE_2020B
     
     m_sliderTxLevel->Connect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Connect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
@@ -611,7 +616,9 @@ TopFrame::~TopFrame()
     m_rb1600->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb2400b->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb2020->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
+#if defined(FREEDV_MODE_2020B)
     m_rb2020b->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
+#endif // FREEDV_MODE_2020B
     
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
