@@ -8,8 +8,8 @@ export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 export HAMLIBDIR=$FREEDVGUIDIR/hamlib
-export CODEC2_BRANCH=master
-export LPCNET_BRANCH=master
+export CODEC2_BRANCH=v1.0.4_rc2
+export LPCNET_BRANCH=v0.3
 export UT_ENABLE=${UT_ENABLE:-0}
 
 # Prerequisite: build dylibbundler
@@ -35,7 +35,7 @@ cd $FREEDVGUIDIR
 if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2.git
 fi
-cd codec2 && git checkout $CODEC2_BRANCH && git pull
+cd codec2 && git switch master && git pull && git checkout $CODEC2_BRANCH
 mkdir -p build_osx && cd build_osx && rm -Rf * && cmake -DBUILD_OSX_UNIVERSAL=1 .. && make -j4
 
 # OK, build and test LPCNet
@@ -43,7 +43,7 @@ cd $FREEDVGUIDIR
 if [ ! -d LPCNet ]; then
     git clone https://github.com/drowe67/LPCNet.git
 fi
-cd $LPCNETDIR && git checkout $LPCNET_BRANCH && git pull
+cd $LPCNETDIR && git switch master && git pull && git checkout $LPCNET_BRANCH
 mkdir  -p build_osx && cd build_osx && rm -Rf *
 cmake -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx -DBUILD_OSX_UNIVERSAL=1 ..
 make -j4
@@ -64,9 +64,9 @@ export LD_LIBRARY_PATH=$LPCNETDIR/build_osx/src
 cd $FREEDVGUIDIR && git pull
 mkdir  -p build_osx && cd build_osx && rm -Rf *
 cmake -DBUILD_OSX_UNIVERSAL=1 -DCMAKE_BUILD_TYPE=Debug  -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_SPEEXDSP=1 -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.a -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx ..
-make VERBOSE=1 -j4
+make VERBOSE=1
 
 # Rebuild now that wxWidgets is bootstrapped
 cmake -DBUILD_OSX_UNIVERSAL=1 -DCMAKE_BUILD_TYPE=Debug  -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_SPEEXDSP=1 -DUSE_STATIC_SAMPLERATE=1 -DUSE_STATIC_SNDFILE=1 -DUNITTEST=$UT_ENABLE -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.a -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx ..
-make VERBOSE=1 -j4
+make VERBOSE=1 
 

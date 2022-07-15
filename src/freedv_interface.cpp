@@ -42,8 +42,10 @@ static const char* GetCurrentModeStrImpl_(int mode)
             return "1600";
         case FREEDV_MODE_2020:
             return "2020";
+#if defined(FREEDV_MODE_2020B)
         case FREEDV_MODE_2020B:
             return "2020B";
+#endif // FREEDV_MODE_2020B
         case FREEDV_MODE_800XA:
             return "800XA";
         case FREEDV_MODE_2400B:
