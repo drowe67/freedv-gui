@@ -803,7 +803,6 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Build system:
     * Update build scripts to use specific Codec2 and LPCNet versions. (PR #257)
     
->>>>>>> master
 ## V1.8.0 July 2022
 
 1. Enhancements:
