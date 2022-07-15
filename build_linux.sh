@@ -21,15 +21,15 @@ export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 
 # change this when working on combined codec2/freedv-gui changes
-CODEC2_BRANCH=master
-LPCNET_BRANCH=master
+CODEC2_BRANCH=v1.0.4_rc2
+LPCNET_BRANCH=v0.3
 
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
 if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2.git
 fi
-cd codec2 && git checkout $CODEC2_BRANCH && git pull
+cd codec2 && git switch master && git pull && git checkout $CODEC2_BRANCH
 mkdir -p build_linux && cd build_linux && rm -Rf * && cmake .. && make
 
 # OK, build and test LPCNet
@@ -37,7 +37,7 @@ cd $FREEDVGUIDIR
 if [ ! -d LPCNet ]; then
     git clone https://github.com/drowe67/LPCNet.git
 fi
-cd $LPCNETDIR && git checkout $LPCNET_BRANCH && git pull
+cd $LPCNETDIR && git switch master && git pull && git checkout $LPCNET_BRANCH
 mkdir  -p build_linux && cd build_linux && rm -Rf *
 cmake -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux ..
 make
