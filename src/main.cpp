@@ -325,7 +325,21 @@ void MainFrame::loadConfiguration_()
 
     wxGetApp().m_boolHamlibUseForPTT = pConfig->ReadBool("/Hamlib/UseForPTT", false);
     wxGetApp().m_intHamlibIcomCIVHex = pConfig->ReadLong("/Hamlib/IcomCIVHex", 0);
-    wxGetApp().m_intHamlibRig = pConfig->ReadLong("/Hamlib/RigName", 0);
+    
+    // Note: we're no longer using RigName but we need to bring over the old data
+    // for backwards compatibility.
+    wxGetApp().m_strHamlibRigName = pConfig->Read(wxT("/Hamlib/RigNameStr"), wxT(""));
+    
+    if (wxGetApp().m_strHamlibRigName == wxT(""))
+    {
+        wxGetApp().m_intHamlibRig = pConfig->ReadLong("/Hamlib/RigName", 0);
+        wxGetApp().m_strHamlibRigName = wxGetApp().m_hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
+    }
+    else
+    {
+        wxGetApp().m_intHamlibRig = wxGetApp().m_hamlib->rigNameToIndex(std::string(wxGetApp().m_strHamlibRigName.ToUTF8()));
+    }
+    
     wxGetApp().m_strHamlibSerialPort = pConfig->Read("/Hamlib/SerialPort", "");
     wxGetApp().m_intHamlibSerialRate = pConfig->ReadLong("/Hamlib/SerialRate", 0);
 
@@ -718,7 +732,7 @@ MainFrame::~MainFrame()
     pConfig->Write(wxT("/Rig/SingleRxThread"), wxGetApp().m_boolSingleRxThread);
     pConfig->Write(wxT("/Rig/leftChannelVoxTone"),      wxGetApp().m_leftChannelVoxTone);
     pConfig->Write("/Hamlib/UseForPTT", wxGetApp().m_boolHamlibUseForPTT);
-    pConfig->Write("/Hamlib/RigName", wxGetApp().m_intHamlibRig);
+    pConfig->Write("/Hamlib/RigNameStr", wxGetApp().m_strHamlibRigName);
     pConfig->Write("/Hamlib/SerialPort", wxGetApp().m_strHamlibSerialPort);
     pConfig->Write("/Hamlib/SerialRate", wxGetApp().m_intHamlibSerialRate);
     pConfig->Write("/Hamlib/IcomCIVHex", wxGetApp().m_intHamlibIcomCIVHex);

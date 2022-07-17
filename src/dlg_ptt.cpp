@@ -463,6 +463,10 @@ void ComPortsDlg::ExchangeData(int inout)
 
         wxGetApp().m_boolHamlibUseForPTT = m_ckUseHamlibPTT->GetValue();
         wxGetApp().m_intHamlibRig = m_cbRigName->GetSelection();
+        
+        Hamlib *hamlib = wxGetApp().m_hamlib;
+        wxGetApp().m_strHamlibRigName = hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
+        
         wxGetApp().m_strHamlibSerialPort = m_cbSerialPort->GetValue();
         
         wxString s = m_tcIcomCIVHex->GetValue();
@@ -481,7 +485,7 @@ void ComPortsDlg::ExchangeData(int inout)
         if (g_verbose) fprintf(stderr, "serial rate: %d\n", wxGetApp().m_intHamlibSerialRate);
 
         pConfig->Write(wxT("/Hamlib/UseForPTT"), wxGetApp().m_boolHamlibUseForPTT);
-        pConfig->Write(wxT("/Hamlib/RigName"), wxGetApp().m_intHamlibRig);
+        pConfig->Write(wxT("/Hamlib/RigNameStr"), wxGetApp().m_strHamlibRigName);
         pConfig->Write(wxT("/Hamlib/SerialPort"), wxGetApp().m_strHamlibSerialPort);
         pConfig->Write(wxT("/Hamlib/SerialRate"), wxGetApp().m_intHamlibSerialRate);
 

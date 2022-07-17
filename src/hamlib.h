@@ -13,6 +13,11 @@ class Hamlib {
     public:
         Hamlib();
         ~Hamlib();
+        
+        // Name to index lookup and vice versa.
+        unsigned int rigNameToIndex(std::string rigName);
+        std::string rigIndexToName(unsigned int rigIndex);
+        
         void populateComboBox(wxComboBox *cb);
         bool connect(unsigned int rig_index, const char *serial_port, const int serial_rate, const int civ_hex = 0);
         bool ptt(bool press, wxString &hamlibError);
