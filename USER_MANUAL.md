@@ -791,10 +791,12 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V1.8.2 TBD 2022
+## V1.8.2 July 2022
 
 1. Enhancements:
     * Save rig names instead of IDs to prevent Hamlib off by one issues. (PR #256)
+2. Bugfixes:
+    * Increase plot buffer size to resolve issues with "To Spkr/Headphones" tab (PR #258)
 
 ## V1.8.1 July 2022
 
