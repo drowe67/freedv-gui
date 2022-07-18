@@ -33,7 +33,7 @@ if [ ! -d hamlib-code ]; then
 fi
 cd hamlib-code && git checkout master && git pull
 ./bootstrap
-./configure --host=$MINGW_TRIPLE --target=$MINGW_TRIPLE --prefix $HAMLIBDIR
+EXTRA_CFLAGS=-fstack-protector EXTRA_LDFLAGS=-fstack-protector ./configure --host=$MINGW_TRIPLE --target=$MINGW_TRIPLE --prefix $HAMLIBDIR
 make -j4
 make install
 
