@@ -13,8 +13,10 @@ UT_ENABLE=${UT_ENABLE:-0}
 
 if [ $CMAKE = "mingw64-cmake" ]; then
     BUILD_DIR=build_win64
+    MINGW_TRIPLE=x86_64-w64-mingw32
 else
     BUILD_DIR=build_win32
+    MINGW_TRIPLE=i686-w64-mingw32
 fi
 export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
@@ -31,13 +33,9 @@ if [ ! -d hamlib-code ]; then
 fi
 cd hamlib-code && git checkout master && git pull
 ./bootstrap
-if [ $CMAKE = "mingw64-cmake" ]; then
-    mingw64-configure --prefix $HAMLIBDIR --exec-prefix $HAMLIBDIR
-else
-    mingw32-configure --prefix $HAMLIBDIR --exec-prefix $HAMLIBDIR
-fi
+./configure --host=$MINGW_TRIPLE --target=$MINGW_TRIPLE --prefix $HAMLIBDIR
 make -j4
-make install prefix=$HAMLIBDIR
+make install
 
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
