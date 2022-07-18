@@ -32,12 +32,12 @@ fi
 cd hamlib-code && git checkout master && git pull
 ./bootstrap
 if [ $CMAKE = "mingw64-cmake" ]; then
-    mingw64-configure --prefix $HAMLIBDIR
+    mingw64-configure --prefix $HAMLIBDIR --exec-prefix $HAMLIBDIR
 else
-    mingw32-configure --prefix $HAMLIBDIR
+    mingw32-configure --prefix $HAMLIBDIR --exec-prefix $HAMLIBDIR
 fi
 make -j4
-make install
+make install prefix=$HAMLIBDIR
 
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
