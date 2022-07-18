@@ -8,7 +8,7 @@ FROM fedora:${FED_REL}
 # tar: bzip2
 # arm-none-eabi-gdb: ncurses-compat-libs
 
-RUN dnf -y install --setopt=install_weak_deps=False @development-tools cmake git speexdsp-devel libsamplerate-devel octave octave-signal gnuplot sox python3-numpy automake libtool libusb1-devel wget bc glibc.i686 which bzip2 ncurses-compat-libs gcc gcc-c++ && useradd -m build 
+RUN dnf -y install --setopt=install_weak_deps=False @development-tools cmake git speexdsp-devel libsamplerate-devel octave octave-signal gnuplot sox python3-numpy automake libtool libusb1-devel wget bc glibc.i686 which bzip2 ncurses-compat-libs gcc gcc-c++ diff && useradd -m build 
 
 # specific for windows mingw build
 RUN dnf install -y dnf-plugins-core
