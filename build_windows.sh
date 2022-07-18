@@ -19,9 +19,25 @@ fi
 export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
+export HAMLIBDIR=$FREEDVGUIDIR/hamlib
 
 CODEC2_BRANCH=v1.0.4_rc2
 LPCNET_BRANCH=v0.3
+
+# Prerequisite: build hamlib
+cd $FREEDVGUIDIR
+if [ ! -d hamlib-code ]; then
+    git clone https://github.com/Hamlib/Hamlib.git hamlib-code
+fi
+cd hamlib-code && git checkout master && git pull
+./bootstrap
+if [ $CMAKE = "mingw64-cmake" ]; then
+    mingw64-configure --prefix $HAMLIBDIR
+else
+    mingw32-configure --prefix $HAMLIBDIR
+fi
+make -j4
+make install
 
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
@@ -49,14 +65,14 @@ if [ $CLEAN -eq 1 ]; then rm -Rf *; fi
 
 if [ $BOOTSTRAP_WX -eq 1 ]; then
     # build wxWidgets
-    $CMAKE -DBOOTSTRAP_WXWIDGETS=1 -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR ..
+    $CMAKE -DBOOTSTRAP_WXWIDGETS=1 -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.dll ..
     make VERBOSE=1
 
     # build freedv-gui
-    $CMAKE -DBOOTSTRAP_WXWIDGETS=1 -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR ..
+    $CMAKE -DBOOTSTRAP_WXWIDGETS=1 -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.dll ..
     make VERBOSE=1
 else
     # build freedv-gui
-    $CMAKE -DCMAKE_BUILD_TYPE=Debug -DUNITTEST=$UT_ENABLE -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR ..
+    $CMAKE -DCMAKE_BUILD_TYPE=Debug -DUNITTEST=$UT_ENABLE -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.dll ..
     make VERBOSE=1
 fi
