@@ -14,7 +14,7 @@ RUN dnf -y install --setopt=install_weak_deps=False @development-tools cmake git
 RUN dnf install -y dnf-plugins-core
 RUN dnf -y copr enable hobbes1069/mingw
 RUN dnf install -y mingw{32,64}-filesystem mingw{32,64}-binutils mingw{32,64}-gcc mingw{32,64}-crt mingw{32,64}-headers mingw32-nsis mingw{32,64}-libusbx-static
-RUN dnf install -y mingw{32,64}-speex mingw{32,64}-wxWidgets3 mingw{32,64}-hamlib mingw{32,64}-portaudio mingw{32,64}-libsndfile mingw{32,64}-libsamplerate.noarch svn
+RUN dnf install -y mingw{32,64}-speex mingw{32,64}-wxWidgets3 mingw{32,64}-portaudio mingw{32,64}-libsndfile mingw{32,64}-libsamplerate.noarch svn
 
 
 # finally, this is the build script.
