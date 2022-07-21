@@ -802,7 +802,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Save rig names instead of IDs to prevent Hamlib off by one issues. (PR #256)
 2. Bugfixes:
     * Increase plot buffer size to resolve issues with "To Spkr/Headphones" tab (PR #258)
-
+3. Build system:
+    * Depend on Codec2 1.0.5. (PR #259)
+    
 ## V1.8.1 July 2022
 
 1. Bugfixes:
