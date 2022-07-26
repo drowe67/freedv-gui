@@ -630,6 +630,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     vk_state = VK_IDLE;
 
+    m_timeSinceSyncLoss = 0;
+
     // Init optional Windows debug console so we can see all those printfs
 
 #ifdef __WXMSW__
@@ -1112,7 +1114,20 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 g_sync_time = time(0);
             
                 freedvInterface.resetReliableText();
+                
+                // Auto-reset stats if we've gone long enough since losing sync.
+                if (m_timeSinceSyncLoss >= MAX_SYNC_LOSS_TIME_BEFORE_RESET_MS)
+                {
+                    resetStats_();
+                }
+                m_timeSinceSyncLoss = 0;
             }
+        }
+        else
+        {
+            // Counts the amount of time since losing sync. Once we exceed
+            // MAX_SYNC_LOSS_TIME_BEFORE_RESET_MS, we will reset the stats. 
+            m_timeSinceSyncLoss += _REFRESH_TIMER_PERIOD;
         }
         
         if (oldColor != newColor)
@@ -1533,6 +1548,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if (g_verbose) fprintf(stderr, "Start .....\n");
         g_queueResync = false;
         endingTx = false;
+        
+        m_timeSinceSyncLoss = 0;
         
         //
         // Start Running -------------------------------------------------

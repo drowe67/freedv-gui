@@ -98,6 +98,8 @@
 #define _DUMMY_DATA             1
 //#define _AUDIO_PASSTHROUGH    1
 #define _REFRESH_TIMER_PERIOD   (DT*1000)
+#define MAX_SYNC_LOSS_TIME_BEFORE_RESET_MS (10000) /* TBD -- should be user config option */
+
 //#define _USE_ABOUT_DIALOG       1
 
 enum {
@@ -536,6 +538,7 @@ class MainFrame : public TopFrame
         std::shared_ptr<IAudioDevice> txInSoundDevice;
         std::shared_ptr<IAudioDevice> txOutSoundDevice;
         
+        int         m_timeSinceSyncLoss;
         bool        m_useMemory;
         wxTextCtrl* m_tc;
         int         m_zoom;
@@ -574,8 +577,8 @@ class MainFrame : public TopFrame
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
         
-    private:
         void loadConfiguration_();
+        void resetStats_();
 };
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=

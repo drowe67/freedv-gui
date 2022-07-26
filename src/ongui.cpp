@@ -521,8 +521,7 @@ void MainFrame::OnReSync(wxCommandEvent& event)
     }
 }
 
-
-void MainFrame::OnBerReset(wxCommandEvent& event)
+void MainFrame::resetStats_()
 {
     if (m_RxRunning)  {
         freedvInterface.resetBitStats();
@@ -535,6 +534,11 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
         // resets variance stats every time it is called
         freedvInterface.setEq(wxGetApp().m_700C_EQ);
     }
+}
+
+void MainFrame::OnBerReset(wxCommandEvent& event)
+{
+    resetStats_();
 }
 
 void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
