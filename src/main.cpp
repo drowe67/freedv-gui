@@ -574,6 +574,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     Bind(wxEVT_TIMER, &MainFrame::OnTimer, this);       // ID_MY_WINDOW);
     m_plotTimer.SetOwner(this, ID_TIMER_WATERFALL);
     m_pskReporterTimer.SetOwner(this, ID_TIMER_PSKREPORTER);
+    m_updFreqStatusTimer.SetOwner(this,ID_TIMER_UPD_FREQ);  //[UP]
     //m_panelWaterfall->Refresh();
 #endif
 
@@ -869,7 +870,15 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // PSK Reporter timer fired; send in-progress packet.
         wxGetApp().m_pskReporter->send();
     }
-    
+    if (evt.GetTimer().GetId() == ID_TIMER_UPD_FREQ)
+    {
+        // show freq. and mode [UP]
+        if (wxGetApp().m_hamlib->isActive()) {
+            if (g_verbose) fprintf(stderr, "update freq and mode ....\n"); 
+            wxGetApp().m_hamlib->update_frequency_and_mode();
+            } 
+     }
+  
     int r,c;
 
     if (m_panelWaterfall->checkDT()) {
@@ -1746,6 +1755,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 {
         #ifdef _USE_TIMER
                     m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
+                    m_updFreqStatusTimer.Start(15*1000); // every 15 seconds[UP]
         #endif // _USE_TIMER
                 }
             }
@@ -1772,6 +1782,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 #ifdef _USE_TIMER
         m_plotTimer.Stop();
         m_pskReporterTimer.Stop();
+        m_updFreqStatusTimer.Stop(); // [UP]
 #endif // _USE_TIMER
 
         // ensure we are not transmitting and shut down audio processing

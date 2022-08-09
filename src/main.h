@@ -107,6 +107,7 @@ enum {
         ID_TIMER_SCATTER,
         ID_TIMER_SCALAR,
         ID_TIMER_PSKREPORTER,
+        ID_TIMER_UPD_FREQ,
      };
 
 #define EXCHANGE_DATA_IN    0
@@ -429,6 +430,7 @@ class MainFrame : public TopFrame
         
         // Not sure why we have the option to disable timers. TBD?
         wxTimer                 m_pskReporterTimer;
+        wxTimer                 m_updFreqStatusTimer; //[UP]
 #endif
 
     void destroy_fifos(void);
