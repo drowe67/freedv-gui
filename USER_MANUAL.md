@@ -791,6 +791,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## August 2022
+1. Enhancements:
+    * Update frequency and mode display every 15 sec.  (PR #266)
+
 ## TBD TBD 2022
 
 1. Build system:
