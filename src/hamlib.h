@@ -34,9 +34,6 @@ class Hamlib {
         typedef std::vector<const struct rig_caps *> riglist_t;
 
     private:
-        static int hamlib_freq_cb(RIG* rig, vfo_t currVFO, freq_t currFreq, void* ptr);
-        static int hamlib_mode_cb(RIG* rig, vfo_t currVFO, rmode_t currMode, pbwidth_t passband, void* ptr);
-
         void update_mode_status();
 
         RIG *m_rig;

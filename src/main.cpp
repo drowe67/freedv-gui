@@ -1755,7 +1755,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 {
         #ifdef _USE_TIMER
                     m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
-                    m_updFreqStatusTimer.Start(15*1000); // every 15 seconds[UP]
+                    m_updFreqStatusTimer.Start(5*1000); // every 15 seconds[UP]
         #endif // _USE_TIMER
                 }
             }

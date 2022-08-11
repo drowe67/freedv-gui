@@ -230,22 +230,6 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
     return retcode == RIG_OK;
 }
 
-int Hamlib::hamlib_freq_cb(RIG* rig, vfo_t currVFO, freq_t currFreq, void* ptr)
-{
-    Hamlib* thisPtr = (Hamlib*)ptr;
-    thisPtr->m_currFreq = currFreq;
-    thisPtr->update_mode_status();
-    return RIG_OK;
-}
-
-int Hamlib::hamlib_mode_cb(RIG* rig, vfo_t currVFO, rmode_t currMode, pbwidth_t passband, void* ptr)
-{
-    Hamlib* thisPtr = (Hamlib*)ptr;
-    thisPtr->m_currMode = currMode;
-    thisPtr->update_mode_status();
-    return RIG_OK;
-}
-
 int Hamlib::update_frequency_and_mode(void)
 {
     if (m_rig == nullptr)
@@ -301,34 +285,12 @@ void Hamlib::enable_mode_detection(wxStaticText* statusBox, wxTextCtrl* freqBox,
         m_modeBox->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
         m_modeBox = NULL;
     }
-    else
-    {
-        // TBD: Due to hamlib not supporting polling on Windows, the bottom is temporarily
-        // disabled. When/if that changes, re-enabling is a simple matter of removing
-        // the #if/#endif below.
-#if 0
-        // Enable rig callbacks.
-        rig_set_freq_callback(m_rig, &hamlib_freq_cb, this);
-        rig_set_mode_callback(m_rig, &hamlib_mode_cb, this);
-        rig_set_trn(m_rig, RIG_TRN_POLL);
-#endif
-    }
 }
 
 void Hamlib::disable_mode_detection()
 {
     if (m_modeBox != NULL) 
     {
-        // TBD: Due to hamlib not supporting polling on Windows, the bottom is temporarily
-        // disabled. When/if that changes, re-enabling is a simple matter of removing
-        // the #if/#endif below.
-#if 0
-        // Disable callbacks.
-        rig_set_trn(m_rig, RIG_TRN_OFF);
-        rig_set_freq_callback(m_rig, NULL, NULL);
-        rig_set_mode_callback(m_rig, NULL, NULL);
-#endif
-    
         // Disable control.
         m_modeBox->SetLabel(wxT("unk"));
         m_modeBox->Enable(false);
