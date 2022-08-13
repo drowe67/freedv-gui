@@ -4,6 +4,8 @@
 #include <wx/stattext.h>
 #include <wx/combobox.h>
 #include <vector>
+#include <thread>
+
 extern "C" {
 #include <hamlib/rig.h>
 }
@@ -35,7 +37,9 @@ class Hamlib {
 
     private:
         void update_mode_status();
-
+        void statusUpdateThreadEntryFn_();
+        void update_from_hamlib_();
+        
         RIG *m_rig;
         rig_model_t m_rig_model;
         /* Sorted list of rigs. */
@@ -47,6 +51,13 @@ class Hamlib {
         freq_t m_currFreq;
         rmode_t m_currMode;
         bool m_vhfUhfMode;
+        
+        // Data elements to support running Hamlib operations in a separate thread.
+        bool threadRunning_;
+        std::thread statusUpdateThread_;
+        std::condition_variable statusUpdateCV_;
+        std::mutex statusUpdateMutex_;
+        bool pttEnabled_;
 };
 
 #endif /*HAMLIB_H*/
