@@ -59,7 +59,6 @@ class Hamlib {
         std::thread statusUpdateThread_;
         std::condition_variable statusUpdateCV_;
         std::mutex statusUpdateMutex_;
-        bool pttEnabled_;
 };
 
 #endif /*HAMLIB_H*/

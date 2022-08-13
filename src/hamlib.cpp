@@ -232,10 +232,6 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
         if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(retcode));
         hamlibError = rigerror(retcode);
     }
-    else
-    {
-        pttEnabled_ = press;
-    }
 
     return retcode == RIG_OK;
 }
@@ -312,7 +308,7 @@ void Hamlib::statusUpdateThreadEntryFn_()
         statusUpdateCV_.wait_for(lock, 10s);
         if (!threadRunning_) break;
         
-        if (!pttEnabled_) update_from_hamlib_();
+        update_from_hamlib_();
     }
     
     if (m_modeBox != NULL) 
