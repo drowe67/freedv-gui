@@ -5,6 +5,8 @@
 #include <wx/combobox.h>
 #include <vector>
 #include <thread>
+#include <condition_variable>
+#include <mutex>
 
 extern "C" {
 #include <hamlib/rig.h>
