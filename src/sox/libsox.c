@@ -66,7 +66,7 @@ sox_version_info_t const * sox_version_info(void)
         NULL,
 #endif
         /* sox_time */
-        __DATE__ " " __TIME__,
+        NULL,
         /* sox_distro */
 #ifdef DISTRO
         DISTRO,
