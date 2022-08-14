@@ -113,6 +113,11 @@ add_definitions(-DAPPLE_OLD_XCODE)
 endif(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0.900037)
 endif(APPLE)
 
+# If a release tag's set, pass it to the compiler.
+if(FREEDV_VERSION_TAG)
+add_definitions(-DFREEDV_VERSION_TAG="${FREEDV_VERSION_TAG}")
+endif(FREEDV_VERSION_TAG)
+
 # Insert source and generated header directories before other search directories.
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
