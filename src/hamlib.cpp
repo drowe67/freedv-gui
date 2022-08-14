@@ -329,7 +329,7 @@ void Hamlib::update_from_hamlib_()
     pbwidth_t passband = 0;
     vfo_t currVfo = RIG_VFO_A;
     int result = rig_get_vfo(m_rig, &currVfo);
-    if (result != RIG_OK)
+    if (result != RIG_OK && result != RIG_ENAVAIL)
     {
         if (g_verbose) fprintf(stderr, "rig_get_vfo: error = %s \n", rigerror(result));
     }
