@@ -7,7 +7,7 @@
 #
 cmake_minimum_required(VERSION 3.13)
 project(FreeDV
-  VERSION 1.8.2
+  VERSION 1.8.3
   DESCRIPTION "HF Digital Voice for Radio Amateurs"
   HOMEPAGE_URL "https://freedv.org"
   LANGUAGES C CXX
@@ -15,7 +15,7 @@ project(FreeDV
 
 # Adds a tag to the end of the version string. Leave empty
 # for official release builds.
-set(FREEDV_VERSION_TAG "devel")
+set(FREEDV_VERSION_TAG "")
 
 # Prevent in-source builds to protect automake/autoconf config.
 # If an in-source build is attempted, you will still need to clean up a few
