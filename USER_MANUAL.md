@@ -791,7 +791,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## TBD TBD 2022
+## V1.8.3 August 2022
 
 1. Build system:
     * Build Git version of Hamlib for Windows builds. (PR #261)
