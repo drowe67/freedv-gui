@@ -791,6 +791,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.8.3.1 August 2022
+
+1. Build system:
+    * Fix issue preventing patch version from being passed to Windows installer. (PR #271)
+    
 ## V1.8.3 August 2022
 
 1. Build system:
@@ -798,7 +803,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Remove build date and time from libsox. (PR #267)
     * Refactor CMakeList.txt using newer project format. (PR #268)
 1. Enhancements:
-    * Update frequency and mode display every 15 sec. (PR #266)
+    * Update frequency and mode display every 5 sec. (PR #266)
     
 ## V1.8.2 July 2022
 
