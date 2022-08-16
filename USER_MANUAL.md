@@ -797,6 +797,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Build Git version of Hamlib for Windows builds. (PR #261)
     * Remove build date and time from libsox. (PR #267)
     * Refactor CMakeList.txt using newer project format. (PR #268)
+1. Enhancements:
+    * Update frequency and mode display every 15 sec. (PR #266)
     
 ## V1.8.2 July 2022
 
