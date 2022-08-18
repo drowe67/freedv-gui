@@ -125,7 +125,10 @@ class TopFrame : public wxFrame
 #if defined(FREEDV_MODE_2020B)
         wxRadioButton *m_rb2020b;
 #endif // FREEDV_MODE_2020B
-        
+#if defined(FREEDV_MODE_2020C)
+        wxRadioButton *m_rb2020c;
+#endif // FREEDV_MODE_2020C
+                
         wxMenuItem* m_menuItemPlayFileToMicIn;
         wxMenuItem* m_menuItemRecFileFromRadio;
         wxMenuItem* m_menuItemRecFileFromModulator;

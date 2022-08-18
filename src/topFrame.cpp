@@ -345,6 +345,10 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_rb2020b = new wxRadioButton( modeBox, wxID_ANY, wxT("2020B"), wxDefaultPosition, wxDefaultSize,  0);
     sbSizer_mode->Add(m_rb2020b, 0, wxALIGN_LEFT|wxALL, 1);
 #endif // FREEDV_MODE_2020B
+#if defined(FREEDV_MODE_2020C)
+    m_rb2020c = new wxRadioButton( modeBox, wxID_ANY, wxT("2020C"), wxDefaultPosition, wxDefaultSize,  0);
+    sbSizer_mode->Add(m_rb2020c, 0, wxALIGN_LEFT|wxALL, 1);
+#endif // FREEDV_MODE_2020C
     sbSizer_mode->SetMinSize(wxSize(100,-1));
     m_rb1600->SetValue(true);
 
@@ -481,6 +485,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 #if defined(FREEDV_MODE_2020B)
     m_rb2020->MoveBeforeInTabOrder(m_rb2020b);
 #endif // FREEDV_MODE_2020B
+#if defined(FREEDV_MODE_2020C)
+    m_rb2020b->MoveBeforeInTabOrder(m_rb2020c);
+#endif // FREEDV_MODE_2020C
     m_togBtnOnOff->MoveBeforeInTabOrder(m_togBtnSplit);
     m_togBtnSplit->MoveBeforeInTabOrder(m_togBtnAnalog);
     m_togBtnAnalog->MoveBeforeInTabOrder(m_togBtnVoiceKeyer);
@@ -548,6 +555,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 #if defined(FREEDV_MODE_2020B)
     m_rb2020b->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
 #endif // FREEDV_MODE_2020B
+#if defined(FREEDV_MODE_2020C)
+    m_rb2020c->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
+#endif // FREEDV_MODE_2020C
     
     m_sliderTxLevel->Connect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Connect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
@@ -619,6 +629,9 @@ TopFrame::~TopFrame()
 #if defined(FREEDV_MODE_2020B)
     m_rb2020b->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
 #endif // FREEDV_MODE_2020B
+#if defined(FREEDV_MODE_2020C)
+    m_rb2020c->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
+#endif // FREEDV_MODE_2020C
     
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);

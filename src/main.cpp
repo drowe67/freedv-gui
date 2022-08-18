@@ -943,9 +943,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         m_panelScatter->setNc(g_Nc);
                         break;
                     case FREEDV_MODE_2020:
-    #if defined(FREEDV_MODE_2020B)
+#if defined(FREEDV_MODE_2020B)
                     case FREEDV_MODE_2020B:
-    #endif // FREEDV_MODE_2020B
+#endif // FREEDV_MODE_2020B
+#if defined(FREEDV_MODE_2020C)
+                    case FREEDV_MODE_2020C:
+#endif // FREEDV_MODE_2020C
                         g_Nc = 31;
                         m_panelScatter->setNc(g_Nc);
                         break;
@@ -958,9 +961,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         (currentMode == FREEDV_MODE_700D) ||
                         (currentMode == FREEDV_MODE_700E) ||
                         (currentMode == FREEDV_MODE_2020) 
-    #if defined(FREEDV_MODE_2020B)
+#if defined(FREEDV_MODE_2020B)
                     ||  (currentMode == FREEDV_MODE_2020B)
-    #endif // FREEDV_MODE_2020B
+#endif // FREEDV_MODE_2020B
+#if defined(FREEDV_MODE_2020C)
+                    ||  (currentMode == FREEDV_MODE_2020C)
+#endif // FREEDV_MODE_2020C
                     ) {
                         m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
                     }
@@ -1516,6 +1522,14 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         g_mode = FREEDV_MODE_2020B;
     }
 #endif // FREEDV_MODE_2020B
+#if defined(FREEDV_MODE_2020C)
+    else if (m_rb2020c->GetValue()) 
+    {
+        assert(isAvxPresent);
+        
+        g_mode = FREEDV_MODE_2020C;
+    }
+#endif // FREEDV_MODE_2020C
     
     if (freedvInterface.isRunning())
     {
@@ -1571,6 +1585,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 #if defined(FREEDV_MODE_2020B)
             g_mode == FREEDV_MODE_2020B || /* note: 2020B don't play well with multi-RX atm */
 #endif // FREEDV_MODE_2020B
+#if defined(FREEDV_MODE_2020C)
+            g_mode == FREEDV_MODE_2020C || /* note: 2020C don't play well with multi-RX atm */
+#endif // FREEDV_MODE_2020C
             !wxGetApp().m_boolMultipleRx)
         {
             m_rb1600->Disable();
@@ -1583,6 +1600,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 #if defined(FREEDV_MODE_2020B)
             m_rb2020b->Disable();
 #endif // FREEDV_MODE_2020B
+#if defined(FREEDV_MODE_2020C)
+            m_rb2020c->Disable();
+#endif // FREEDV_MODE_2020C
             freedvInterface.addRxMode(g_mode);
         }
         else
@@ -1614,6 +1634,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 #if defined(FREEDV_MODE_2020B)
             m_rb2020b->Disable();
 #endif // FREEDV_MODE_2020B
+#if defined(FREEDV_MODE_2020C)
+            m_rb2020c->Disable();
+#endif // FREEDV_MODE_2020C
         }
         
         // Default voice keyer sample rate to 8K. The exact voice keyer
@@ -1853,6 +1876,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 #if defined(FREEDV_MODE_2020B)
             m_rb2020b->Enable();
 #endif // FREEDV_MODE_2020B
+#if defined(FREEDV_MODE_2020C)
+            m_rb2020c->Enable();
+#endif // FREEDV_MODE_2020C
         }
    }
     
