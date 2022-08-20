@@ -9,7 +9,7 @@ export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 export HAMLIBDIR=$FREEDVGUIDIR/hamlib
 export CODEC2_BRANCH=v1.0.5
-export LPCNET_BRANCH=v0.4
+export LPCNET_BRANCH=master
 export UT_ENABLE=${UT_ENABLE:-0}
 
 # Prerequisite: build dylibbundler
