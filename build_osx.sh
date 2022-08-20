@@ -44,9 +44,13 @@ make -j4
 cd src && sox ../../wav/wia.wav -t raw -r 16000 - | ./lpcnet_enc -s | ./lpcnet_dec -s > /dev/null
 
 # Re-build codec2 with LPCNet and test FreeDV 2020 support
-cd $CODEC2DIR/build_osx && rm -Rf *
-cmake -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx -DBUILD_OSX_UNIVERSAL=1 ..
-make VERBOSE=1 -j4
+cd $FREEDVGUIDIR
+if [ ! -d codec2 ]; then
+    git clone https://github.com/drowe67/codec2.git
+fi
+cd codec2 && git switch master && git pull && git checkout $CODEC2_BRANCH
+mkdir -p build_linux && cd build_linux && rm -Rf * && cmake -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx -DBUILD_OSX_UNIVERSAL=1 .. && make VERBOSE=1 -j4
+
 # sanity check test
 cd src
 export LD_LIBRARY_PATH=$LPCNETDIR/build_osx/src

@@ -36,10 +36,13 @@ make
 # sanity check test
 cd src && sox ../../wav/wia.wav -t raw -r 16000 - | ./lpcnet_enc -s | ./lpcnet_dec -s > /dev/null
 
-# Re-build codec2 with LPCNet and test FreeDV 2020 support
-cd $CODEC2DIR/build_linux && rm -Rf *
-cmake -DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux ..
-make VERBOSE=1
+# First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
+cd $FREEDVGUIDIR
+if [ ! -d codec2 ]; then
+    git clone https://github.com/drowe67/codec2.git
+fi
+cd codec2 && git switch master && git pull && git checkout $CODEC2_BRANCH
+mkdir -p build_linux && cd build_linux && rm -Rf * && cmake -DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux .. && make VERBOSE=1
 # sanity check test
 cd src
 export LD_LIBRARY_PATH=$LPCNETDIR/build_linux/src
