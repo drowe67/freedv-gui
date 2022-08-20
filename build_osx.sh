@@ -9,7 +9,7 @@ export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 export HAMLIBDIR=$FREEDVGUIDIR/hamlib
 export CODEC2_BRANCH=v1.0.5
-export LPCNET_BRANCH=v0.3
+export LPCNET_BRANCH=v0.4
 export UT_ENABLE=${UT_ENABLE:-0}
 
 # Prerequisite: build dylibbundler
@@ -30,14 +30,6 @@ CFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" CXXFLAGS="-g 
 make -j4
 make install
 
-# First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
-cd $FREEDVGUIDIR
-if [ ! -d codec2 ]; then
-    git clone https://github.com/drowe67/codec2.git
-fi
-cd codec2 && git switch master && git pull && git checkout $CODEC2_BRANCH
-mkdir -p build_osx && cd build_osx && rm -Rf * && cmake -DBUILD_OSX_UNIVERSAL=1 .. && make -j4
-
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
 if [ ! -d LPCNet ]; then
@@ -45,7 +37,7 @@ if [ ! -d LPCNet ]; then
 fi
 cd $LPCNETDIR && git switch master && git pull && git checkout $LPCNET_BRANCH
 mkdir  -p build_osx && cd build_osx && rm -Rf *
-cmake -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx -DBUILD_OSX_UNIVERSAL=1 ..
+cmake -DBUILD_OSX_UNIVERSAL=1 ..
 make -j4
 
 # sanity check test

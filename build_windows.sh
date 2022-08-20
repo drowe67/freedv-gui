@@ -24,7 +24,7 @@ export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 export HAMLIBDIR=$FREEDVGUIDIR/hamlib
 
 CODEC2_BRANCH=v1.0.5
-LPCNET_BRANCH=v0.3
+LPCNET_BRANCH=v0.4
 
 # Prerequisite: build hamlib
 cd $FREEDVGUIDIR
@@ -37,19 +37,12 @@ CFLAGS="-g -O2 -fstack-protector" ./configure --host=$MINGW_TRIPLE --target=$MIN
 make
 make install
 
-# First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
-cd $FREEDVGUIDIR
-git clone https://github.com/drowe67/codec2.git
-cd codec2 && git switch master && git pull && git checkout $CODEC2_BRANCH
-mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf *
-$CMAKE .. && make
-
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/LPCNet.git
 cd $LPCNETDIR && git switch master && git pull && git checkout $LPCNET_BRANCH
 mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf *
-$CMAKE -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR ..
+$CMAKE ..
 make
 
 # Re-build codec2 with LPCNet and test FreeDV 2020 support
