@@ -110,6 +110,14 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
             return 4.0f;
         case FREEDV_MODE_2020:
             return 2.0f;
+#if defined(FREEDV_MODE_2020B)
+        case FREEDV_MODE_2020B:
+            return 3.0f;
+#endif // defined(FREEDV_MODE_2020B)
+#if defined(FREEDV_MODE_2020C)
+        case FREEDV_MODE_2020C:
+            return 5.0f;
+#endif // defined(FREEDV_MODE_2020C)
         default:
             return 0.0f;
     }
