@@ -78,9 +78,9 @@ endif(APPLE)
 
 # Link imported or build tree targets.
 if(APPLE)
-target_link_libraries(FreeDV codec2 lpcnetfreedv fdv_audio fdv_audio_pipeline fdv_sox)
+target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_sox lpcnetfreedv codec2)
 else(APPLE)
-target_link_libraries(freedv codec2 lpcnetfreedv fdv_audio fdv_audio_pipeline fdv_sox)
+target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_sox lpcnetfreedv codec2)
 endif(APPLE)
 
 # Add build dependencies for internally built external libraries.
