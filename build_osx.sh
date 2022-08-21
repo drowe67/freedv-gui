@@ -49,7 +49,7 @@ if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2.git
 fi
 cd codec2 && git switch master && git pull && git checkout $CODEC2_BRANCH
-mkdir -p build_linux && cd build_linux && rm -Rf * && cmake -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx -DBUILD_OSX_UNIVERSAL=1 .. && make VERBOSE=1 -j4
+mkdir -p build_osx && cd build_osx && rm -Rf * && cmake -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx -DBUILD_OSX_UNIVERSAL=1 .. && make VERBOSE=1 -j4
 
 # sanity check test
 cd src
