@@ -66,9 +66,9 @@ if(APPLE)
         MACOSX_BUNDLE_GUI_IDENTIFIER org.freedv.freedv
         MACOSX_BUNDLE_BUNDLE_NAME FreeDV
         MACOSX_BNUDLE_COPYRIGHT "Copyright (c) 2021 FreeDV"
-        MACOSX_BUNDLE_BUNDLE_VERSION "${FREEDV_VERSION}"
-        MACOSX_BUNDLE_BUNDLE_SHORT_VERSION_STRING "${FREEDV_VERSION}"
-        MACOSX_BUNDLE_BUNDLE_LONG_VERSION_STRING "${FREEDV_VERSION}"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${FreeDV_VERSION}"
+        MACOSX_BUNDLE_BUNDLE_SHORT_VERSION_STRING "${FreeDV_VERSION}"
+        MACOSX_BUNDLE_BUNDLE_LONG_VERSION_STRING "${FreeDV_VERSION}"
         MACOSX_BUNDLE_ICON_FILE "freedv"
         MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/src/info.plist.in
     )
@@ -78,9 +78,9 @@ endif(APPLE)
 
 # Link imported or build tree targets.
 if(APPLE)
-target_link_libraries(FreeDV codec2 lpcnetfreedv fdv_audio fdv_audio_pipeline fdv_sox)
+target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_sox lpcnetfreedv codec2)
 else(APPLE)
-target_link_libraries(freedv codec2 lpcnetfreedv fdv_audio fdv_audio_pipeline fdv_sox)
+target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_sox lpcnetfreedv codec2)
 endif(APPLE)
 
 # Add build dependencies for internally built external libraries.
@@ -112,6 +112,11 @@ if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0.900037)
 add_definitions(-DAPPLE_OLD_XCODE)
 endif(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0.900037)
 endif(APPLE)
+
+# If a release tag's set, pass it to the compiler.
+if(FREEDV_VERSION_TAG)
+add_definitions(-DFREEDV_VERSION_TAG="${FREEDV_VERSION_TAG}")
+endif(FREEDV_VERSION_TAG)
 
 # Insert source and generated header directories before other search directories.
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})

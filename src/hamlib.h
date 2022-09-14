@@ -4,6 +4,10 @@
 #include <wx/stattext.h>
 #include <wx/combobox.h>
 #include <vector>
+#include <thread>
+#include <condition_variable>
+#include <mutex>
+
 extern "C" {
 #include <hamlib/rig.h>
 }
@@ -34,11 +38,10 @@ class Hamlib {
         typedef std::vector<const struct rig_caps *> riglist_t;
 
     private:
-        static int hamlib_freq_cb(RIG* rig, vfo_t currVFO, freq_t currFreq, void* ptr);
-        static int hamlib_mode_cb(RIG* rig, vfo_t currVFO, rmode_t currMode, pbwidth_t passband, void* ptr);
-
         void update_mode_status();
-
+        void statusUpdateThreadEntryFn_();
+        void update_from_hamlib_();
+        
         RIG *m_rig;
         rig_model_t m_rig_model;
         /* Sorted list of rigs. */
@@ -50,6 +53,12 @@ class Hamlib {
         freq_t m_currFreq;
         rmode_t m_currMode;
         bool m_vhfUhfMode;
+        
+        // Data elements to support running Hamlib operations in a separate thread.
+        bool threadRunning_;
+        std::thread statusUpdateThread_;
+        std::condition_variable statusUpdateCV_;
+        std::mutex statusUpdateMutex_;
 };
 
 #endif /*HAMLIB_H*/

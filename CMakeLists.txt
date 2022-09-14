@@ -5,10 +5,17 @@
 # Please report questions, comments, problems, or patches to the freetel
 # mailing list: https://lists.sourceforge.net/lists/listinfo/freetel-codec2
 #
+cmake_minimum_required(VERSION 3.13)
+project(FreeDV
+  VERSION 1.8.3.1
+  DESCRIPTION "HF Digital Voice for Radio Amateurs"
+  HOMEPAGE_URL "https://freedv.org"
+  LANGUAGES C CXX
+)
 
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
-
-cmake_minimum_required(VERSION 3.0)
+# Adds a tag to the end of the version string. Leave empty
+# for official release builds.
+set(FREEDV_VERSION_TAG "")
 
 # Prevent in-source builds to protect automake/autoconf config.
 # If an in-source build is attempted, you will still need to clean up a few
@@ -24,41 +31,19 @@ endif("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
 # Set local module path.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-project(FreeDV)
-
 # Build universal ARM64 and x86_64 binaries on Mac.
 if(BUILD_OSX_UNIVERSAL)
 set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
 endif(BUILD_OSX_UNIVERSAL)
-
-# https://cmake.org/cmake/help/git-stage/policy/CMP0075.html
-if(POLICY CMP0075)
-    cmake_policy(SET CMP0075 NEW)
-endif()
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
 
 # Return the date (yyyy-mm-dd)
-macro(DATE RESULT)
-  execute_process(COMMAND "date" "+%Y%m%d" OUTPUT_VARIABLE ${RESULT})
-endmacro()
-DATE(DATE_RESULT)
-string(REGEX REPLACE "\n$" "" DATE_RESULT "${DATE_RESULT}")
+string(TIMESTAMP DATE_RESULT "%Y-%m-%d" UTC)
 message(STATUS "Compilation date = XX${DATE_RESULT}XX")
 
 #
-# Set FreeDV version and generate src/version.h
+# generate src/version.h
 #
-set(FREEDV_VERSION_MAJOR 1)
-set(FREEDV_VERSION_MINOR 8)
-set(FREEDV_VERSION_PATCH 2)
-set(FREEDV_VERSION_SUFFIX "")
-
-set(FREEDV_VERSION ${FREEDV_VERSION_MAJOR}.${FREEDV_VERSION_MINOR}.${FREEDV_VERSION_PATCH})
-if(FREEDV_VERSION_SUFFIX)
-    set(FREEDV_VERSION_STRING "${FREEDV_VERSION} ${FREEDV_VERSION_SUFFIX}")
-else()
-    set(FREEDV_VERSION_STRING "${FREEDV_VERSION}")
-endif()
-message(STATUS "FreeDV version: ${FREEDV_VERSION_STRING}")
 configure_file(cmake/version.h.in src/version.h @ONLY)
 
 # Set default build type
@@ -93,7 +78,6 @@ else()
         add_definitions(-DGIT_HASH="None")
 endif()
 
-
 # Set default build flags.
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
@@ -109,6 +93,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Setup cmake options
 #
 set(CMAKE_VERBOSE_MAKEFILE TRUE CACHE BOOL "Verbose makefile.")
+set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE CACHE BOOL "Enable IDE features.")
 set(USE_INTERNAL_CODEC2 FALSE CACHE BOOL
     "Download and build codec2 and lpcnetfreedv instead of using the system library.")
 set(USE_STATIC_DEPS FALSE CACHE BOOL
@@ -526,13 +511,16 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "HF Digital Voice for Radio Amateurs")
 set(CPACK_PACKAGE_VENDOR "CMake")
 #set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
-set(CPACK_PACKAGE_VERSION_MAJOR ${FREEDV_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${FREEDV_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_MAJOR ${FreeDV_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${FreeDV_VERSION_MINOR})
 # CPack expects a patch level version so set it here and override if we
 # are actually setting one.
 set(CPACK_PACKAGE_VERSION_PATCH 0)
-if(FREEDV_VERSION_PATCH)
-    set(CPACK_PACKAGE_VERSION_PATCH ${FREEDV_VERSION_PATCH})
+if(FreeDV_VERSION_PATCH)
+    set(CPACK_PACKAGE_VERSION_PATCH ${FreeDV_VERSION_PATCH})
+endif()
+if(FreeDV_VERSION_TWEAK)
+    set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}.${FreeDV_VERSION_TWEAK}")
 endif()
 if(FREEDV_VERSION_SUFFIX)
     #set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}-${FREEDV_VERSION_SUFFIX}")
@@ -589,9 +577,9 @@ elseif(UNIX AND NOT APPLE)
     SET(CPACK_GENERATOR "DEB")
     SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Mooneer Salem <mooneer@gmail.com>") #required
     if(USE_PULSEAUDIO)
-    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.0.5), lpcnet (>= 0.3.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libpulse0 (>= 14.2-2), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
+    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.0.6), lpcnet (>= 0.4.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libpulse0 (>= 14.2-2), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
     else(USE_PULSEAUDIO)
-    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.0.5), lpcnet (>= 0.3.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libportaudio2 (>= 19.6.0-1build1), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
+    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.0.6), lpcnet (>= 0.4.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libportaudio2 (>= 19.6.0-1build1), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
     endif(USE_PULSEAUDIO)
 
     SET(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)

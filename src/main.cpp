@@ -574,6 +574,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     Bind(wxEVT_TIMER, &MainFrame::OnTimer, this);       // ID_MY_WINDOW);
     m_plotTimer.SetOwner(this, ID_TIMER_WATERFALL);
     m_pskReporterTimer.SetOwner(this, ID_TIMER_PSKREPORTER);
+    m_updFreqStatusTimer.SetOwner(this,ID_TIMER_UPD_FREQ);  //[UP]
     //m_panelWaterfall->Refresh();
 #endif
 
@@ -871,559 +872,569 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // PSK Reporter timer fired; send in-progress packet.
         wxGetApp().m_pskReporter->send();
     }
-    
-    int r,c;
+    else if (evt.GetTimer().GetId() == ID_TIMER_UPD_FREQ)
+    {
+        // show freq. and mode [UP]
+        if (wxGetApp().m_hamlib->isActive()) {
+            if (g_verbose) fprintf(stderr, "update freq and mode ....\n"); 
+            wxGetApp().m_hamlib->update_frequency_and_mode();
+        } 
+     }
+     else
+     {  
+        int r,c;
 
-    if (m_panelWaterfall->checkDT()) {
-        m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
-        m_panelWaterfall->m_newdata = true;
-        m_panelWaterfall->setColor(wxGetApp().m_waterfallColor);
-        m_panelWaterfall->Refresh();
-    }
-
-    m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
-    m_panelSpectrum->m_newdata = true;
-    m_panelSpectrum->Refresh();
-
-    /* update scatter/eye plot ------------------------------------------------------------*/
-
-    if (freedvInterface.isRunning()) {
-        int currentMode = freedvInterface.getCurrentMode();
-        if (currentMode != wxGetApp().m_prevMode)
-        {
-            // Force recreation of EQ filters.
-            m_newMicInFilter = true;
-            m_newSpkOutFilter = true;
-
-            // The receive mode changed, so the previous samples are no longer valid.
-            m_panelScatter->clearCurrentSamples();
+        if (m_panelWaterfall->checkDT()) {
+            m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+            m_panelWaterfall->m_newdata = true;
+            m_panelWaterfall->setColor(wxGetApp().m_waterfallColor);
+            m_panelWaterfall->Refresh();
         }
-        wxGetApp().m_prevMode = currentMode;
-        
-        if ((currentMode == FREEDV_MODE_800XA) || (currentMode == FREEDV_MODE_2400B) ) {
 
-            /* FSK Mode - eye diagram ---------------------------------------------------------*/
+        m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+        m_panelSpectrum->m_newdata = true;
+        m_panelSpectrum->Refresh();
 
-            /* add samples row by row */
+        /* update scatter/eye plot ------------------------------------------------------------*/
 
-            int i;
-            for (i=0; i<freedvInterface.getCurrentRxModemStats()->neyetr; i++) {
-                m_panelScatter->add_new_samples_eye(&freedvInterface.getCurrentRxModemStats()->rx_eye[i][0], freedvInterface.getCurrentRxModemStats()->neyesamp);
-            }
-        }
-        else {
-            // Reset g_Nc accordingly.
-            switch(currentMode)
+        if (freedvInterface.isRunning()) {
+            int currentMode = freedvInterface.getCurrentMode();
+            if (currentMode != wxGetApp().m_prevMode)
             {
-                case FREEDV_MODE_1600:
-                    g_Nc = 16;
-                    m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
-                    break;
-                case FREEDV_MODE_700C:
-                    /* m_FreeDV700Combine may have changed at run time */
-                    g_Nc = 14;
-                    if (wxGetApp().m_FreeDV700Combine) {
-                        m_panelScatter->setNc(g_Nc/2);  /* diversity combnation */
-                    }
-                    else {
-                        m_panelScatter->setNc(g_Nc);
-                    }
-                    break;
-                case FREEDV_MODE_700D:
-                case FREEDV_MODE_700E:
-                    g_Nc = 17; 
-                    m_panelScatter->setNc(g_Nc);
-                    break;
-                case FREEDV_MODE_2020:
-#if defined(FREEDV_MODE_2020B)
-                case FREEDV_MODE_2020B:
-#endif // FREEDV_MODE_2020B
-                    g_Nc = 31;
-                    m_panelScatter->setNc(g_Nc);
-                    break;
+                // Force recreation of EQ filters.
+                m_newMicInFilter = true;
+                m_newSpkOutFilter = true;
+
+                // The receive mode changed, so the previous samples are no longer valid.
+                m_panelScatter->clearCurrentSamples();
             }
-            
-            /* PSK Modes - scatter plot -------------------------------------------------------*/
-            for (r=0; r<freedvInterface.getCurrentRxModemStats()->nr; r++) {
+            wxGetApp().m_prevMode = currentMode;
+        
+            if ((currentMode == FREEDV_MODE_800XA) || (currentMode == FREEDV_MODE_2400B) ) {
 
-                if ((currentMode == FREEDV_MODE_1600) ||
-                    (currentMode == FREEDV_MODE_700D) ||
-                    (currentMode == FREEDV_MODE_700E) ||
-                    (currentMode == FREEDV_MODE_2020) 
-#if defined(FREEDV_MODE_2020B)
-                ||  (currentMode == FREEDV_MODE_2020B)
-#endif // FREEDV_MODE_2020B
-                ) {
-                    m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
+                /* FSK Mode - eye diagram ---------------------------------------------------------*/
+
+                /* add samples row by row */
+
+                int i;
+                for (i=0; i<freedvInterface.getCurrentRxModemStats()->neyetr; i++) {
+                    m_panelScatter->add_new_samples_eye(&freedvInterface.getCurrentRxModemStats()->rx_eye[i][0], freedvInterface.getCurrentRxModemStats()->neyesamp);
                 }
-                else if (currentMode == FREEDV_MODE_700C) {
+            }
+            else {
+                // Reset g_Nc accordingly.
+                switch(currentMode)
+                {
+                    case FREEDV_MODE_1600:
+                        g_Nc = 16;
+                        m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
+                        break;
+                    case FREEDV_MODE_700C:
+                        /* m_FreeDV700Combine may have changed at run time */
+                        g_Nc = 14;
+                        if (wxGetApp().m_FreeDV700Combine) {
+                            m_panelScatter->setNc(g_Nc/2);  /* diversity combnation */
+                        }
+                        else {
+                            m_panelScatter->setNc(g_Nc);
+                        }
+                        break;
+                    case FREEDV_MODE_700D:
+                    case FREEDV_MODE_700E:
+                        g_Nc = 17; 
+                        m_panelScatter->setNc(g_Nc);
+                        break;
+                    case FREEDV_MODE_2020:
+    #if defined(FREEDV_MODE_2020B)
+                    case FREEDV_MODE_2020B:
+    #endif // FREEDV_MODE_2020B
+                        g_Nc = 31;
+                        m_panelScatter->setNc(g_Nc);
+                        break;
+                }
+            
+                /* PSK Modes - scatter plot -------------------------------------------------------*/
+                for (r=0; r<freedvInterface.getCurrentRxModemStats()->nr; r++) {
 
-                    if (wxGetApp().m_FreeDV700Combine) {
-                        /*
-                           FreeDV 700C uses diversity, so optionally combine
-                           symbols for scatter plot, as combined symbols are
-                           used for demodulation.  Note we need to use a copy
-                           of the symbols, as we are not sure when the stats
-                           will be updated.
-                        */
-
-                        COMP rx_symbols_copy[g_Nc/2];
-
-                        for(c=0; c<g_Nc/2; c++)
-                            rx_symbols_copy[c] = fcmult(0.5, cadd(freedvInterface.getCurrentRxModemStats()->rx_symbols[r][c], freedvInterface.getCurrentRxModemStats()->rx_symbols[r][c+g_Nc/2]));
-                        m_panelScatter->add_new_samples_scatter(rx_symbols_copy);
-                    }
-                    else {
-                        /*
-                          Sometimes useful to plot carriers separately, e.g. to determine if tx carrier power is constant
-                          across carriers.
-                        */
+                    if ((currentMode == FREEDV_MODE_1600) ||
+                        (currentMode == FREEDV_MODE_700D) ||
+                        (currentMode == FREEDV_MODE_700E) ||
+                        (currentMode == FREEDV_MODE_2020) 
+    #if defined(FREEDV_MODE_2020B)
+                    ||  (currentMode == FREEDV_MODE_2020B)
+    #endif // FREEDV_MODE_2020B
+                    ) {
                         m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
                     }
-                }
+                    else if (currentMode == FREEDV_MODE_700C) {
 
+                        if (wxGetApp().m_FreeDV700Combine) {
+                            /*
+                               FreeDV 700C uses diversity, so optionally combine
+                               symbols for scatter plot, as combined symbols are
+                               used for demodulation.  Note we need to use a copy
+                               of the symbols, as we are not sure when the stats
+                               will be updated.
+                            */
+
+                            COMP rx_symbols_copy[g_Nc/2];
+
+                            for(c=0; c<g_Nc/2; c++)
+                                rx_symbols_copy[c] = fcmult(0.5, cadd(freedvInterface.getCurrentRxModemStats()->rx_symbols[r][c], freedvInterface.getCurrentRxModemStats()->rx_symbols[r][c+g_Nc/2]));
+                            m_panelScatter->add_new_samples_scatter(rx_symbols_copy);
+                        }
+                        else {
+                            /*
+                              Sometimes useful to plot carriers separately, e.g. to determine if tx carrier power is constant
+                              across carriers.
+                            */
+                            m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
+                        }
+                    }
+
+                }
             }
         }
-    }
 
-    m_panelScatter->Refresh();
+        m_panelScatter->Refresh();
 
-    // Oscilliscope type speech plots -------------------------------------------------------
+        // Oscilliscope type speech plots -------------------------------------------------------
 
-    short speechInPlotSamples[WAVEFORM_PLOT_BUF];
-    if (codec2_fifo_read(g_plotSpeechInFifo, speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
-        memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
-        //fprintf(stderr, "empty!\n");
-    }
-    m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-    m_panelSpeechIn->Refresh();
+        short speechInPlotSamples[WAVEFORM_PLOT_BUF];
+        if (codec2_fifo_read(g_plotSpeechInFifo, speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
+            memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
+            //fprintf(stderr, "empty!\n");
+        }
+        m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+        m_panelSpeechIn->Refresh();
 
-    short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
-    if (codec2_fifo_read(g_plotSpeechOutFifo, speechOutPlotSamples, WAVEFORM_PLOT_BUF))
-        memset(speechOutPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
-    m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-    m_panelSpeechOut->Refresh();
+        short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
+        if (codec2_fifo_read(g_plotSpeechOutFifo, speechOutPlotSamples, WAVEFORM_PLOT_BUF))
+            memset(speechOutPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
+        m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+        m_panelSpeechOut->Refresh();
 
-    short demodInPlotSamples[WAVEFORM_PLOT_BUF];
-    if (codec2_fifo_read(g_plotDemodInFifo, demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
-        memset(demodInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
-    }
-    m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-    m_panelDemodIn->Refresh();
+        short demodInPlotSamples[WAVEFORM_PLOT_BUF];
+        if (codec2_fifo_read(g_plotDemodInFifo, demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
+            memset(demodInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
+        }
+        m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+        m_panelDemodIn->Refresh();
 
-    // Demod states -----------------------------------------------------------------------
+        // Demod states -----------------------------------------------------------------------
 
-    m_panelTimeOffset->add_new_sample(0, (float)freedvInterface.getCurrentRxModemStats()->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME);
-    m_panelTimeOffset->Refresh();
+        m_panelTimeOffset->add_new_sample(0, (float)freedvInterface.getCurrentRxModemStats()->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME);
+        m_panelTimeOffset->Refresh();
 
-    m_panelFreqOffset->add_new_sample(0, freedvInterface.getCurrentRxModemStats()->foff);
-    m_panelFreqOffset->Refresh();
+        m_panelFreqOffset->add_new_sample(0, freedvInterface.getCurrentRxModemStats()->foff);
+        m_panelFreqOffset->Refresh();
 
-    // SNR text box and gauge ------------------------------------------------------------
+        // SNR text box and gauge ------------------------------------------------------------
 
-    // LP filter freedvInterface.getCurrentRxModemStats()->snr_est some more to stabilise the
-    // display. freedvInterface.getCurrentRxModemStats()->snr_est already has some low pass filtering
-    // but we need it fairly fast to activate squelch.  So we
-    // optionally perform some further filtering for the display
-    // version of SNR.  The "Slow" checkbox controls the amount of
-    // filtering.  The filtered snr also controls the squelch
+        // LP filter freedvInterface.getCurrentRxModemStats()->snr_est some more to stabilise the
+        // display. freedvInterface.getCurrentRxModemStats()->snr_est already has some low pass filtering
+        // but we need it fairly fast to activate squelch.  So we
+        // optionally perform some further filtering for the display
+        // version of SNR.  The "Slow" checkbox controls the amount of
+        // filtering.  The filtered snr also controls the squelch
 
-    float snr_limited;
-    // some APIs pass us invalid values, so lets trap it rather than bombing
-    if (!(isnan(freedvInterface.getCurrentRxModemStats()->snr_est) || isinf(freedvInterface.getCurrentRxModemStats()->snr_est))) {
-        g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*freedvInterface.getCurrentRxModemStats()->snr_est;
-    }
-    snr_limited = g_snr;
-    if (snr_limited < -5.0) snr_limited = -5.0;
-    if (snr_limited > 20.0) snr_limited = 20.0;
-    char snr[15];
-    sprintf(snr, "%4.1f", g_snr);
+        float snr_limited;
+        // some APIs pass us invalid values, so lets trap it rather than bombing
+        if (!(isnan(freedvInterface.getCurrentRxModemStats()->snr_est) || isinf(freedvInterface.getCurrentRxModemStats()->snr_est))) {
+            g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*freedvInterface.getCurrentRxModemStats()->snr_est;
+        }
+        snr_limited = g_snr;
+        if (snr_limited < -5.0) snr_limited = -5.0;
+        if (snr_limited > 20.0) snr_limited = 20.0;
+        char snr[15];
+        sprintf(snr, "%4.1f", g_snr);
 
-    //fprintf(stderr, "g_mode: %d snr_est: %f m_snrBeta: %f g_snr: %f snr_limited: %f\n", g_mode, g_stats.snr_est,  m_snrBeta, g_snr, snr_limited);
+        //fprintf(stderr, "g_mode: %d snr_est: %f m_snrBeta: %f g_snr: %f snr_limited: %f\n", g_mode, g_stats.snr_est,  m_snrBeta, g_snr, snr_limited);
 
-    wxString snr_string(snr);
-    m_textSNR->SetLabel(snr_string);
-    m_gaugeSNR->SetValue((int)(snr_limited+5));
+        wxString snr_string(snr);
+        m_textSNR->SetLabel(snr_string);
+        m_gaugeSNR->SetValue((int)(snr_limited+5));
 
 
-    // Level Gauge -----------------------------------------------------------------------
+        // Level Gauge -----------------------------------------------------------------------
 
-    float tooHighThresh;
-    if (!g_tx && m_RxRunning)
-    {
-        // receive mode - display From Radio peaks
-        // peak from this DT sampling period
-        int maxDemodIn = 0;
-        for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
-            if (maxDemodIn < abs(demodInPlotSamples[i]))
-                maxDemodIn = abs(demodInPlotSamples[i]);
+        float tooHighThresh;
+        if (!g_tx && m_RxRunning)
+        {
+            // receive mode - display From Radio peaks
+            // peak from this DT sampling period
+            int maxDemodIn = 0;
+            for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
+                if (maxDemodIn < abs(demodInPlotSamples[i]))
+                    maxDemodIn = abs(demodInPlotSamples[i]);
 
-        // peak from last second
-        if (maxDemodIn > m_maxLevel)
-            m_maxLevel = maxDemodIn;
+            // peak from last second
+            if (maxDemodIn > m_maxLevel)
+                m_maxLevel = maxDemodIn;
 
-        tooHighThresh = FROM_RADIO_MAX;
-    }
-    else
-    {
-        // transmit mode - display From Mic peaks
-
-        // peak from this DT sampling period
-        int maxSpeechIn = 0;
-        for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
-            if (maxSpeechIn < abs(speechInPlotSamples[i]))
-                maxSpeechIn = abs(speechInPlotSamples[i]);
-
-        // peak from last second
-        if (maxSpeechIn > m_maxLevel)
-            m_maxLevel = maxSpeechIn;
-
-       tooHighThresh = FROM_MIC_MAX;
-    }
-
-    // Peak Reading meter: updates peaks immediately, then slowly decays
-    int maxScaled = (int)(100.0 * ((float)m_maxLevel/32767.0));
-    m_gaugeLevel->SetValue(maxScaled);
-    //printf("maxScaled: %d\n", maxScaled);
-    if (((float)maxScaled/100) > tooHighThresh)
-        m_textLevel->SetLabel("Too High");
-    else
-        m_textLevel->SetLabel("");
-
-    m_maxLevel *= LEVEL_BETA;
-
-    // sync LED (Colours don't work on Windows) ------------------------
-
-    //fprintf(stderr, "g_State: %d  m_rbSync->GetValue(): %d\n", g_State, m_rbSync->GetValue());
-    if (m_textSync->IsEnabled())
-    {
-        auto oldColor = m_textSync->GetForegroundColour();
-        wxColour newColor = g_State ? wxColour( 0, 255, 0 ) : wxColour( 255, 0, 0 ); // green if sync, red otherwise
-        
-        if (g_State) {
-            if (g_prev_State == 0) {
-                g_resyncs++;
-            
-                // Clear RX text to reduce the incidence of incorrect callsigns extracted with
-                // the PSK Reporter callsign extraction logic.
-                m_txtCtrlCallSign->SetValue(wxT(""));
-                memset(m_callsign, 0, MAX_CALLSIGN);
-                m_pcallsign = m_callsign;
-            
-                // Get current time to enforce minimum sync time requirement for PSK Reporter.
-                g_sync_time = time(0);
-            
-                freedvInterface.resetReliableText();
-                
-                // Auto-reset stats if we've gone long enough since losing sync.
-                if (m_timeSinceSyncLoss >= MAX_SYNC_LOSS_TIME_BEFORE_RESET_MS)
-                {
-                    resetStats_();
-                }
-                m_timeSinceSyncLoss = 0;
-            }
+            tooHighThresh = FROM_RADIO_MAX;
         }
         else
         {
-            // Counts the amount of time since losing sync. Once we exceed
-            // MAX_SYNC_LOSS_TIME_BEFORE_RESET_MS, we will reset the stats. 
-            m_timeSinceSyncLoss += _REFRESH_TIMER_PERIOD;
+            // transmit mode - display From Mic peaks
+
+            // peak from this DT sampling period
+            int maxSpeechIn = 0;
+            for(int i=0; i<WAVEFORM_PLOT_BUF; i++)
+                if (maxSpeechIn < abs(speechInPlotSamples[i]))
+                    maxSpeechIn = abs(speechInPlotSamples[i]);
+
+            // peak from last second
+            if (maxSpeechIn > m_maxLevel)
+                m_maxLevel = maxSpeechIn;
+
+           tooHighThresh = FROM_MIC_MAX;
         }
-        
-        if (oldColor != newColor)
+
+        // Peak Reading meter: updates peaks immediately, then slowly decays
+        int maxScaled = (int)(100.0 * ((float)m_maxLevel/32767.0));
+        m_gaugeLevel->SetValue(maxScaled);
+        //printf("maxScaled: %d\n", maxScaled);
+        if (((float)maxScaled/100) > tooHighThresh)
+            m_textLevel->SetLabel("Too High");
+        else
+            m_textLevel->SetLabel("");
+
+        m_maxLevel *= LEVEL_BETA;
+
+        // sync LED (Colours don't work on Windows) ------------------------
+
+        //fprintf(stderr, "g_State: %d  m_rbSync->GetValue(): %d\n", g_State, m_rbSync->GetValue());
+        if (m_textSync->IsEnabled())
         {
-            m_textSync->SetForegroundColour(newColor);
-    	    m_textSync->SetLabel("Modem");
-            m_textSync->Refresh();
-        }
-    }
-    g_prev_State = g_State;
-
-    // send Callsign ----------------------------------------------------
-
-    char callsign[MAX_CALLSIGN];
-    memset(callsign, 0, MAX_CALLSIGN);
-    
-    if (!wxGetApp().m_psk_enable)
-    {
-        strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
-        if (strlen(callsign) < MAX_CALLSIGN - 1)
-        {
-            strncat(callsign, "\r", 2);
-        }     
-     
-        // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
-        char* sendBuffer = &callsign[0];
-        if ((unsigned)codec2_fifo_used(g_txDataInFifo) < strlen(sendBuffer)) {
-            unsigned int  i;
-
-            // write chars to tx data fifo
-            for(i = 0; i < strlen(sendBuffer); i++) {
-                short ashort = (unsigned char)sendBuffer[i];
-                codec2_fifo_write(g_txDataInFifo, &ashort, 1);
-            }
-        }
-
-        // See if any Callsign info received --------------------------------
-
-        short ashort;
-        while (codec2_fifo_read(g_rxDataOutFifo, &ashort, 1) == 0) {
-            unsigned char incomingChar = (unsigned char)ashort;
+            auto oldColor = m_textSync->GetForegroundColour();
+            wxColour newColor = g_State ? wxColour( 0, 255, 0 ) : wxColour( 255, 0, 0 ); // green if sync, red otherwise
         
-            // Pre-1.5.1 behavior, where text is handled as-is.
-            if (incomingChar == '\r' || incomingChar == '\n' || incomingChar == 0 || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
-            {                        
-                // CR completes line. Fill in remaining positions with zeroes.
-                if ((m_pcallsign - m_callsign) <= MAX_CALLSIGN-1)
-                {
-                    memset(m_pcallsign, 0, MAX_CALLSIGN - (m_pcallsign - m_callsign));
-                }
+            if (g_State) {
+                if (g_prev_State == 0) {
+                    g_resyncs++;
             
-                // Reset to the beginning.
-                m_pcallsign = m_callsign;
+                    // Clear RX text to reduce the incidence of incorrect callsigns extracted with
+                    // the PSK Reporter callsign extraction logic.
+                    m_txtCtrlCallSign->SetValue(wxT(""));
+                    memset(m_callsign, 0, MAX_CALLSIGN);
+                    m_pcallsign = m_callsign;
+            
+                    // Get current time to enforce minimum sync time requirement for PSK Reporter.
+                    g_sync_time = time(0);
+            
+                    freedvInterface.resetReliableText();
+                
+                    // Auto-reset stats if we've gone long enough since losing sync.
+                    if (m_timeSinceSyncLoss >= MAX_SYNC_LOSS_TIME_BEFORE_RESET_MS)
+                    {
+                        resetStats_();
+                    }
+                    m_timeSinceSyncLoss = 0;
+                }
             }
             else
             {
-                *m_pcallsign++ = incomingChar;
+                // Counts the amount of time since losing sync. Once we exceed
+                // MAX_SYNC_LOSS_TIME_BEFORE_RESET_MS, we will reset the stats. 
+                m_timeSinceSyncLoss += _REFRESH_TIMER_PERIOD;
             }
-            m_txtCtrlCallSign->SetValue(m_callsign);
-        }
-    }
-
-    // We should only report to PSK Reporter when all of the following are true:
-    // a) The callsign encoder indicates a valid callsign has been received.
-    // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
-    // c) We don't currently have a pending report to add to the outbound list for the active callsign.
-    // When the above is true, capture the callsign and current SNR and add to the PSK Reporter object's outbound list.
-    if (wxGetApp().m_pskReporter != NULL && wxGetApp().m_psk_enable)
-    {
-        const char* text = freedvInterface.getReliableText();
-        assert(text != nullptr);
-        wxString wxCallsign = text;
-        m_txtCtrlCallSign->SetValue(wxCallsign);
-        delete[] text;
         
-        if (wxCallsign.Length() > 0)
-        {
-            wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
-            if (callsignFormat.Matches(wxCallsign) && wxGetApp().m_pskPendingCallsign != callsignFormat.GetMatch(wxCallsign, 1).ToStdString())
+            if (oldColor != newColor)
             {
-                wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
-                wxGetApp().m_pskPendingCallsign = rxCallsign.ToStdString();
-                wxGetApp().m_pskPendingSnr = (int)(g_snr + 0.5);
+                m_textSync->SetForegroundColour(newColor);
+        	    m_textSync->SetLabel("Modem");
+                m_textSync->Refresh();
             }
         }
-        else if (wxGetApp().m_pskPendingCallsign != "")
-        {
-            if (wxGetApp().m_boolHamlibUseForPTT)
-            {
-                wxGetApp().m_hamlib->update_frequency_and_mode();
-            }
-            
-            unsigned int freq = wxGetApp().m_psk_freq;
+        g_prev_State = g_State;
 
-            // Only report if there's a valid reporting frequency and if we're not playing 
-            // a recording through ourselves (to avoid false reports).
-            if (freq > 0 && !g_playFileFromRadio)
-            {
-                fprintf(
-                    stderr, 
-                    "Adding callsign %s @ SNR %d, freq %d to PSK Reporter.\n", 
-                    wxGetApp().m_pskPendingCallsign.c_str(), 
-                    wxGetApp().m_pskPendingSnr,
-                    freq);
-        
-                wxGetApp().m_pskReporter->addReceiveRecord(
-                    wxGetApp().m_pskPendingCallsign,
-                    freq,
-                    wxGetApp().m_pskPendingSnr);
-            }
-            
-            wxGetApp().m_pskPendingCallsign = "";
-            wxGetApp().m_pskPendingSnr = 0;
-        }
-    }
+        // send Callsign ----------------------------------------------------
+
+        char callsign[MAX_CALLSIGN];
+        memset(callsign, 0, MAX_CALLSIGN);
     
-    // Run time update of EQ filters -----------------------------------
-
-    if (m_newMicInFilter || m_newSpkOutFilter) {
-        g_mutexProtectingCallbackData.Lock();
-        deleteEQFilters(g_rxUserdata);
-        
-        if (g_nSoundCards == 1)
+        if (!wxGetApp().m_psk_enable)
         {
-            // RX In isn't used here but we need to provide it anyway.
-            designEQFilters(g_rxUserdata, wxGetApp().m_soundCard1OutSampleRate, wxGetApp().m_soundCard1InSampleRate);
-        }
-        else
-        {   
-            designEQFilters(g_rxUserdata, wxGetApp().m_soundCard2OutSampleRate, wxGetApp().m_soundCard2InSampleRate);
-        }
-        g_mutexProtectingCallbackData.Unlock();
-        m_newMicInFilter = m_newSpkOutFilter = false;
-    }
-    
-    g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
-    g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
+            strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
+            if (strlen(callsign) < MAX_CALLSIGN - 1)
+            {
+                strncat(callsign, "\r", 2);
+            }     
+     
+            // buffer 1 txt message to ensure tx data fifo doesn't "run dry"
+            char* sendBuffer = &callsign[0];
+            if ((unsigned)codec2_fifo_used(g_txDataInFifo) < strlen(sendBuffer)) {
+                unsigned int  i;
 
-    // set some run time options (if applicable)
-    freedvInterface.setRunTimeOptions(
-        (int)wxGetApp().m_FreeDV700txClip,
-        (int)wxGetApp().m_FreeDV700txBPF,
-        (int)wxGetApp().m_PhaseEstBW,
-        (int)wxGetApp().m_PhaseEstDPSK);
+                // write chars to tx data fifo
+                for(i = 0; i < strlen(sendBuffer); i++) {
+                    short ashort = (unsigned char)sendBuffer[i];
+                    codec2_fifo_write(g_txDataInFifo, &ashort, 1);
+                }
+            }
 
-    // Test Frame Bit Error Updates ------------------------------------
+            // See if any Callsign info received --------------------------------
 
-    // Toggle test frame mode at run time
-
-    if (!freedvInterface.usingTestFrames() && wxGetApp().m_testFrames) {
-        // reset stats on check box off to on transition
-        freedvInterface.resetTestFrameStats();
-    }
-    freedvInterface.setTestFrames(wxGetApp().m_testFrames, wxGetApp().m_FreeDV700Combine);
-    g_channel_noise = wxGetApp().m_channel_noise;
-
-    // update stats on main page
-
-    char mode[80], bits[80], errors[80], ber[80], resyncs[80], clockoffset[80], freqoffset[80], syncmetric[80];
-    sprintf(mode, "Mode: %s", freedvInterface.getCurrentModeStr()); wxString modeString(mode); m_textCurrentDecodeMode->SetLabel(modeString);
-    sprintf(bits, "Bits: %d", freedvInterface.getTotalBits()); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
-    sprintf(errors, "Errs: %d", freedvInterface.getTotalBitErrors()); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
-    float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
-    sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
-    sprintf(resyncs, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
-
-    sprintf(freqoffset, "FrqOff: %3.1f", freedvInterface.getCurrentRxModemStats()->foff);
-    wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
-    sprintf(syncmetric, "Sync: %3.2f", freedvInterface.getCurrentRxModemStats()->sync_metric);
-    wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
-
-    // Codec 2 700C/D/E & 800XA VQ "auto EQ" equaliser variance
-    auto var = freedvInterface.getVariance();
-    char var_str[80]; sprintf(var_str, "Var: %4.1f", var);
-    wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
-
-    if (g_State) {
-
-        sprintf(clockoffset, "ClkOff: %+-d", (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
-        wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
-
-        // update error pattern plots if supported
-        short* error_pattern = nullptr;
-        int sz_error_pattern = freedvInterface.getErrorPattern(&error_pattern);
-        if (sz_error_pattern) {
-            int i,b;
-
-            /* both modes map IQ to alternate bits, but on same carrier */
-
-            if (freedvInterface.getCurrentMode() == FREEDV_MODE_1600) {
-                /* FreeDV 1600 mapping from error pattern to two bits on each carrier */
-
-                for(b=0; b<g_Nc*2; b++) {
-                    for(i=b; i<sz_error_pattern; i+= 2*g_Nc) {
-                        m_panelTestFrameErrors->add_new_sample(b, b + 0.8*error_pattern[i]);
-                        g_error_hist[b] += error_pattern[i];
-                        g_error_histn[b]++;
+            short ashort;
+            while (codec2_fifo_read(g_rxDataOutFifo, &ashort, 1) == 0) {
+                unsigned char incomingChar = (unsigned char)ashort;
+        
+                // Pre-1.5.1 behavior, where text is handled as-is.
+                if (incomingChar == '\r' || incomingChar == '\n' || incomingChar == 0 || ((m_pcallsign - m_callsign) > MAX_CALLSIGN-1))
+                {                        
+                    // CR completes line. Fill in remaining positions with zeroes.
+                    if ((m_pcallsign - m_callsign) <= MAX_CALLSIGN-1)
+                    {
+                        memset(m_pcallsign, 0, MAX_CALLSIGN - (m_pcallsign - m_callsign));
                     }
-                    //if (b%2)
-                    //    printf("g_error_hist[%d]: %d\n", b/2, g_error_hist[b/2]);
-                }
-
-                 /* calculate BERs and send to plot */
-
-                float ber[2*MODEM_STATS_NC_MAX];
-                for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
-                    ber[b] = 0.0;
-                }
-                for(b=0; b<g_Nc*2; b++) {
-                    ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
-                }
-                assert(g_Nc*2 <= 2*MODEM_STATS_NC_MAX);
-                m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
-            }
-
-            if ((freedvInterface.getCurrentMode() == FREEDV_MODE_700C)) {
-                int c;
-                //fprintf(stderr, "after g_error_pattern_fifo read 2\n");
-
-                /*
-                   FreeDV 700 mapping from error pattern to bit on each carrier, see
-                   data bit to carrier mapping in:
-
-                      codec2-dev/octave/cohpsk_frame_design.ods
-
-                   We can plot a histogram of the errors/carrier before or after diversity
-                   recombination.  Actually one bar for each IQ bit in carrier order.
-                */
-
-                int hist_Nc = sz_error_pattern/4;
-                //fprintf(stderr, "hist_Nc: %d\n", hist_Nc);
-
-                for(i=0; i<sz_error_pattern; i++) {
-                    /* maps to IQ bits from each symbol to a "carrier" (actually one line for each IQ bit in carrier order) */
-                    c = floor(i/4);
-                    /* this will clock in 4 bits/carrier to plot */
-                    m_panelTestFrameErrors->add_new_sample(c, c + 0.8*error_pattern[i]);
-                    g_error_hist[c] += error_pattern[i];
-                    g_error_histn[c]++;
-                    //printf("i: %d c: %d\n", i, c);
-                }
-                for(; i<2*MODEM_STATS_NC_MAX*4; i++) {
-                    c = floor(i/4);
-                    m_panelTestFrameErrors->add_new_sample(c, c);
-                    //printf("i: %d c: %d\n", i, c);
-                }
-
-                /* calculate BERs and send to plot */
-
-                float ber[2*MODEM_STATS_NC_MAX];
-                for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
-                    ber[b] = 0.0;
-                }
-                for(b=0; b<hist_Nc; b++) {
-                    ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
-                }
-                assert(hist_Nc <= 2*MODEM_STATS_NC_MAX);
-                m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
-            }
-
-            m_panelTestFrameErrors->Refresh();
-            m_panelTestFrameErrorsHist->Refresh();
             
-            delete[] error_pattern;
+                    // Reset to the beginning.
+                    m_pcallsign = m_callsign;
+                }
+                else
+                {
+                    *m_pcallsign++ = incomingChar;
+                }
+                m_txtCtrlCallSign->SetValue(m_callsign);
+            }
         }
-    }
 
-    /* FIFO and PortAudio under/overflow debug counters */
-    optionsDlg->DisplayFifoPACounters();
+        // We should only report to PSK Reporter when all of the following are true:
+        // a) The callsign encoder indicates a valid callsign has been received.
+        // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
+        // c) We don't currently have a pending report to add to the outbound list for the active callsign.
+        // When the above is true, capture the callsign and current SNR and add to the PSK Reporter object's outbound list.
+        if (wxGetApp().m_pskReporter != NULL && wxGetApp().m_psk_enable)
+        {
+            const char* text = freedvInterface.getReliableText();
+            assert(text != nullptr);
+            wxString wxCallsign = text;
+            m_txtCtrlCallSign->SetValue(wxCallsign);
+            delete[] text;
+        
+            if (wxCallsign.Length() > 0)
+            {
+                wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
+                if (callsignFormat.Matches(wxCallsign) && wxGetApp().m_pskPendingCallsign != callsignFormat.GetMatch(wxCallsign, 1).ToStdString())
+                {
+                    wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
+                    wxGetApp().m_pskPendingCallsign = rxCallsign.ToStdString();
+                    wxGetApp().m_pskPendingSnr = (int)(g_snr + 0.5);
+                }
+            }
+            else if (wxGetApp().m_pskPendingCallsign != "")
+            {
+                if (wxGetApp().m_boolHamlibUseForPTT)
+                {
+                    wxGetApp().m_hamlib->update_frequency_and_mode();
+                }
+            
+                unsigned int freq = wxGetApp().m_psk_freq;
 
-    // command from UDP thread that is best processed in main thread to avoid seg faults
-
-    if (m_schedule_restore) {
-        if (IsIconized())
-            Restore();
-        m_schedule_restore = false;
-    }
-
-    // Blink file playback status line
-
-    if (g_playFileFromRadio) {
-        g_blink += DT;
-        //fprintf(g_logfile, "g_blink: %f\n", g_blink);
-        if ((g_blink >= 1.0) && (g_blink < 2.0))
-            SetStatusText(wxT("Playing into from radio"), 0);
-        if (g_blink >= 2.0) {
-            SetStatusText(wxT(""), 0);
-            g_blink = 0.0;
+                // Only report if there's a valid reporting frequency and if we're not playing 
+                // a recording through ourselves (to avoid false reports).
+                if (freq > 0 && !g_playFileFromRadio)
+                {
+                    fprintf(
+                        stderr, 
+                        "Adding callsign %s @ SNR %d, freq %d to PSK Reporter.\n", 
+                        wxGetApp().m_pskPendingCallsign.c_str(), 
+                        wxGetApp().m_pskPendingSnr,
+                        freq);
+        
+                    wxGetApp().m_pskReporter->addReceiveRecord(
+                        wxGetApp().m_pskPendingCallsign,
+                        freq,
+                        wxGetApp().m_pskPendingSnr);
+                }
+            
+                wxGetApp().m_pskPendingCallsign = "";
+                wxGetApp().m_pskPendingSnr = 0;
+            }
         }
-    }
     
-    // Voice Keyer state machine
-    VoiceKeyerProcessEvent(VK_DT);
+        // Run time update of EQ filters -----------------------------------
 
-    // Detect Sync state machine
-    DetectSyncProcessEvent();
+        if (m_newMicInFilter || m_newSpkOutFilter) {
+            g_mutexProtectingCallbackData.Lock();
+            deleteEQFilters(g_rxUserdata);
+        
+            if (g_nSoundCards == 1)
+            {
+                // RX In isn't used here but we need to provide it anyway.
+                designEQFilters(g_rxUserdata, wxGetApp().m_soundCard1OutSampleRate, wxGetApp().m_soundCard1InSampleRate);
+            }
+            else
+            {   
+                designEQFilters(g_rxUserdata, wxGetApp().m_soundCard2OutSampleRate, wxGetApp().m_soundCard2InSampleRate);
+            }
+            g_mutexProtectingCallbackData.Unlock();
+            m_newMicInFilter = m_newSpkOutFilter = false;
+        }
+    
+        g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
+        g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
+
+        // set some run time options (if applicable)
+        freedvInterface.setRunTimeOptions(
+            (int)wxGetApp().m_FreeDV700txClip,
+            (int)wxGetApp().m_FreeDV700txBPF,
+            (int)wxGetApp().m_PhaseEstBW,
+            (int)wxGetApp().m_PhaseEstDPSK);
+
+        // Test Frame Bit Error Updates ------------------------------------
+
+        // Toggle test frame mode at run time
+
+        if (!freedvInterface.usingTestFrames() && wxGetApp().m_testFrames) {
+            // reset stats on check box off to on transition
+            freedvInterface.resetTestFrameStats();
+        }
+        freedvInterface.setTestFrames(wxGetApp().m_testFrames, wxGetApp().m_FreeDV700Combine);
+        g_channel_noise = wxGetApp().m_channel_noise;
+
+        // update stats on main page
+
+        char mode[80], bits[80], errors[80], ber[80], resyncs[80], clockoffset[80], freqoffset[80], syncmetric[80];
+        sprintf(mode, "Mode: %s", freedvInterface.getCurrentModeStr()); wxString modeString(mode); m_textCurrentDecodeMode->SetLabel(modeString);
+        sprintf(bits, "Bits: %d", freedvInterface.getTotalBits()); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
+        sprintf(errors, "Errs: %d", freedvInterface.getTotalBitErrors()); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
+        float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
+        sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
+        sprintf(resyncs, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
+
+        sprintf(freqoffset, "FrqOff: %3.1f", freedvInterface.getCurrentRxModemStats()->foff);
+        wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
+        sprintf(syncmetric, "Sync: %3.2f", freedvInterface.getCurrentRxModemStats()->sync_metric);
+        wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
+
+        // Codec 2 700C/D/E & 800XA VQ "auto EQ" equaliser variance
+        auto var = freedvInterface.getVariance();
+        char var_str[80]; sprintf(var_str, "Var: %4.1f", var);
+        wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
+
+        if (g_State) {
+
+            sprintf(clockoffset, "ClkOff: %+-d", (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
+            wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
+
+            // update error pattern plots if supported
+            short* error_pattern = nullptr;
+            int sz_error_pattern = freedvInterface.getErrorPattern(&error_pattern);
+            if (sz_error_pattern) {
+                int i,b;
+
+                /* both modes map IQ to alternate bits, but on same carrier */
+
+                if (freedvInterface.getCurrentMode() == FREEDV_MODE_1600) {
+                    /* FreeDV 1600 mapping from error pattern to two bits on each carrier */
+
+                    for(b=0; b<g_Nc*2; b++) {
+                        for(i=b; i<sz_error_pattern; i+= 2*g_Nc) {
+                            m_panelTestFrameErrors->add_new_sample(b, b + 0.8*error_pattern[i]);
+                            g_error_hist[b] += error_pattern[i];
+                            g_error_histn[b]++;
+                        }
+                        //if (b%2)
+                        //    printf("g_error_hist[%d]: %d\n", b/2, g_error_hist[b/2]);
+                    }
+
+                     /* calculate BERs and send to plot */
+
+                    float ber[2*MODEM_STATS_NC_MAX];
+                    for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
+                        ber[b] = 0.0;
+                    }
+                    for(b=0; b<g_Nc*2; b++) {
+                        ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
+                    }
+                    assert(g_Nc*2 <= 2*MODEM_STATS_NC_MAX);
+                    m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
+                }
+
+                if ((freedvInterface.getCurrentMode() == FREEDV_MODE_700C)) {
+                    int c;
+                    //fprintf(stderr, "after g_error_pattern_fifo read 2\n");
+
+                    /*
+                       FreeDV 700 mapping from error pattern to bit on each carrier, see
+                       data bit to carrier mapping in:
+
+                          codec2-dev/octave/cohpsk_frame_design.ods
+
+                       We can plot a histogram of the errors/carrier before or after diversity
+                       recombination.  Actually one bar for each IQ bit in carrier order.
+                    */
+
+                    int hist_Nc = sz_error_pattern/4;
+                    //fprintf(stderr, "hist_Nc: %d\n", hist_Nc);
+
+                    for(i=0; i<sz_error_pattern; i++) {
+                        /* maps to IQ bits from each symbol to a "carrier" (actually one line for each IQ bit in carrier order) */
+                        c = floor(i/4);
+                        /* this will clock in 4 bits/carrier to plot */
+                        m_panelTestFrameErrors->add_new_sample(c, c + 0.8*error_pattern[i]);
+                        g_error_hist[c] += error_pattern[i];
+                        g_error_histn[c]++;
+                        //printf("i: %d c: %d\n", i, c);
+                    }
+                    for(; i<2*MODEM_STATS_NC_MAX*4; i++) {
+                        c = floor(i/4);
+                        m_panelTestFrameErrors->add_new_sample(c, c);
+                        //printf("i: %d c: %d\n", i, c);
+                    }
+
+                    /* calculate BERs and send to plot */
+
+                    float ber[2*MODEM_STATS_NC_MAX];
+                    for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
+                        ber[b] = 0.0;
+                    }
+                    for(b=0; b<hist_Nc; b++) {
+                        ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
+                    }
+                    assert(hist_Nc <= 2*MODEM_STATS_NC_MAX);
+                    m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
+                }
+
+                m_panelTestFrameErrors->Refresh();
+                m_panelTestFrameErrorsHist->Refresh();
+            
+                delete[] error_pattern;
+            }
+        }
+
+        /* FIFO and PortAudio under/overflow debug counters */
+        optionsDlg->DisplayFifoPACounters();
+
+        // command from UDP thread that is best processed in main thread to avoid seg faults
+
+        if (m_schedule_restore) {
+            if (IsIconized())
+                Restore();
+            m_schedule_restore = false;
+        }
+
+        // Blink file playback status line
+
+        if (g_playFileFromRadio) {
+            g_blink += DT;
+            //fprintf(g_logfile, "g_blink: %f\n", g_blink);
+            if ((g_blink >= 1.0) && (g_blink < 2.0))
+                SetStatusText(wxT("Playing into from radio"), 0);
+            if (g_blink >= 2.0) {
+                SetStatusText(wxT(""), 0);
+                g_blink = 0.0;
+            }
+        }
+    
+        // Voice Keyer state machine
+        VoiceKeyerProcessEvent(VK_DT);
+
+        // Detect Sync state machine
+        DetectSyncProcessEvent();
+    }
 }
 #endif
 
@@ -1763,6 +1774,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 {
         #ifdef _USE_TIMER
                     m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
+                    m_updFreqStatusTimer.Start(5*1000); // every 15 seconds[UP]
         #endif // _USE_TIMER
                 }
             }
@@ -1789,6 +1801,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 #ifdef _USE_TIMER
         m_plotTimer.Stop();
         m_pskReporterTimer.Stop();
+        m_updFreqStatusTimer.Stop(); // [UP]
 #endif // _USE_TIMER
 
         // ensure we are not transmitting and shut down audio processing
