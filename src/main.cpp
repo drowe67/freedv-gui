@@ -431,6 +431,9 @@ void MainFrame::loadConfiguration_()
     // Waterfall configuration
     wxGetApp().m_waterfallColor = (int)pConfig->Read(wxT("/Waterfall/Color"), (int)0); // 0-2
     
+    // Time in seconds after losing sync before we reset the stats area
+    wxGetApp().m_statsResetTimeSec = (int)pConfig->Read(wxT("/Stats/ResetTime"), (int)10);
+    
     int mode  = pConfig->Read(wxT("/Audio/mode"), (long)0);
     if (mode == 0)
         m_rb1600->SetValue(1);
@@ -778,6 +781,9 @@ MainFrame::~MainFrame()
     
     // Waterfall configuration
     pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
+    
+    // Time in seconds after losing sync before we reset the stats area
+    pConfig->Write(wxT("/Stats/ResetTime"), wxGetApp().m_statsResetTimeSec);
     
     int mode;
     if (m_rb1600->GetValue())
@@ -1131,7 +1137,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     freedvInterface.resetReliableText();
                 
                     // Auto-reset stats if we've gone long enough since losing sync.
-                    if (m_timeSinceSyncLoss >= MAX_SYNC_LOSS_TIME_BEFORE_RESET_MS)
+                    if (m_timeSinceSyncLoss >= wxGetApp().m_statsResetTimeSec)
                     {
                         resetStats_();
                     }
@@ -1141,7 +1147,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             else
             {
                 // Counts the amount of time since losing sync. Once we exceed
-                // MAX_SYNC_LOSS_TIME_BEFORE_RESET_MS, we will reset the stats. 
+                // wxGetApp().m_statsResetTimeSec, we will reset the stats. 
                 m_timeSinceSyncLoss += _REFRESH_TIMER_PERIOD;
             }
         

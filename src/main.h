@@ -98,7 +98,6 @@
 #define _DUMMY_DATA             1
 //#define _AUDIO_PASSTHROUGH    1
 #define _REFRESH_TIMER_PERIOD   (DT*1000)
-#define MAX_SYNC_LOSS_TIME_BEFORE_RESET_MS (10000) /* TBD -- should be user config option */
 
 //#define _USE_ABOUT_DIALOG       1
 
@@ -235,6 +234,7 @@ class MainApp : public wxApp
         wxString            m_callSign;
         unsigned int        m_textEncoding;
         bool                m_snrSlow;
+        unsigned int        m_statsResetTimeSec;
 
         // LPC Post Filter
         bool                m_codec2LPCPostFilterEnable;
