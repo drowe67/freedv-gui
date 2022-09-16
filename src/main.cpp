@@ -502,8 +502,13 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // fast enough
     checkAvxSupport();
     if(!isAvxPresent)
+    {
         m_rb2020->Disable();
-
+#if defined(FREEDV_MODE_2020B)
+        m_rb2020b->Disable();
+#endif // FREEDV_MODE_2020B
+    }
+    
     tools->AppendSeparator();
     wxMenuItem* m_menuItemToolsConfigDelete;
     m_menuItemToolsConfigDelete = new wxMenuItem(tools, wxID_ANY, wxString(_("&Restore defaults")) , wxT("Delete config file/keys and restore defaults"), wxITEM_NORMAL);
