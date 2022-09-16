@@ -791,6 +791,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## TBD TBD 2022
+
+1. Build system:
+    * Updates to reflect LPCNet decoupling from Codec2 (PR #274)
+2. Bugfixes:
+    * Add missed UI disable on startup for 2020B mode. (PR #279)
+    
 ## V1.8.3.1 August 2022
 
 1. Build system:

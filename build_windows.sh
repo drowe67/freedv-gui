@@ -37,25 +37,22 @@ CFLAGS="-g -O2 -fstack-protector" ./configure --host=$MINGW_TRIPLE --target=$MIN
 make
 make install
 
-# First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
-cd $FREEDVGUIDIR
-git clone https://github.com/drowe67/codec2.git
-cd codec2 && git switch master && git pull && git checkout $CODEC2_BRANCH
-mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf *
-$CMAKE .. && make
-
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
 git clone https://github.com/drowe67/LPCNet.git
 cd $LPCNETDIR && git switch master && git pull && git checkout $LPCNET_BRANCH
 mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf *
-$CMAKE -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR ..
+$CMAKE ..
 make
 
-# Re-build codec2 with LPCNet and test FreeDV 2020 support
-cd $CODEC2DIR/$BUILD_DIR && rm -Rf *
-$CMAKE -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR ..
-make VERBOSE=1
+# Build codec2 with LPCNet and test FreeDV 2020 support
+# First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
+cd $FREEDVGUIDIR
+if [ ! -d codec2 ]; then
+    git clone https://github.com/drowe67/codec2.git
+fi
+cd codec2 && git switch master && git pull && git checkout $CODEC2_BRANCH
+mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf * && $CMAKE -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR .. && make VERBOSE=1
 
 cd $FREEDVGUIDIR && git pull
 mkdir -p $BUILD_DIR && cd $BUILD_DIR 
