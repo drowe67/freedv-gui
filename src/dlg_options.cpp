@@ -238,7 +238,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxBoxSizer* sbSizer_statsResetTime = new wxBoxSizer(wxHORIZONTAL);
     wxStaticText *m_staticTextResetTime = new wxStaticText(m_modemTab, wxID_ANY, _("Time before resetting stats (sec):"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_statsResetTime->Add(m_staticTextResetTime, 0, wxALIGN_CENTER_VERTICAL , 5);
-    m_statsResetTime = new wxTextCtrl(m_modemTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_statsResetTime = new wxTextCtrl(m_modemTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_statsResetTime->Add(m_statsResetTime, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
     sbSizer_modemstats->Add(sbSizer_statsResetTime, 0, wxALIGN_LEFT, 0);
     
