@@ -797,6 +797,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Updates to reflect LPCNet decoupling from Codec2 (PR #274)
 2. Bugfixes:
     * Add missed UI disable on startup for 2020B mode. (PR #279)
+3. Enhancements:
+    * Add alternate method of determining 2020 support for non-x86 machines. (PR #280)
     
 ## V1.8.3.1 August 2022
 
