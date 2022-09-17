@@ -273,6 +273,8 @@ void MainFrame::test2020Mode_()
         uint32_t xcr0, xcr0_high;
         asm("xgetbv" : "=a" (xcr0), "=d" (xcr0_high) : "c" (0));
         allowed = (xcr0 & 6) == 6;    // AVX state saving enabled?
+    } else {
+        allowed = false;
     }
     
     if (!allowed)
@@ -341,9 +343,9 @@ void MainFrame::test2020Mode_()
         }
         auto endTime = systemClock.now();
         auto timeTaken = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-        if (timeTaken <= std::chrono::milliseconds(500))
+        if (timeTaken > std::chrono::milliseconds(500))
         {
-            allowed = true;
+            allowed = false;
         }
     
         std::cout << "One second of 2020 decoded in " << timeTaken.count() << " ms" << std::endl;
