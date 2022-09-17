@@ -123,45 +123,6 @@ void MainFrame::ClosePTTInPort(void)
     }
 }
 
-//
-// checkAvxSupport
-//
-// Tests the underlying platform for AVX support.  2020 needs AVX support to run
-// in real-time, and old processors do not offer AVX support
-//
-
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
-void MainFrame::checkAvxSupport(void)
-{
-
-    isAvxPresent = false;
-    uint32_t eax, ebx, ecx, edx;
-    eax = ebx = ecx = edx = 0;
-    __cpuid(1, eax, ebx, ecx, edx);
-
-    if (ecx & (1<<27) && ecx & (1<<28)) {
-        // CPU supports XSAVE and AVX
-        uint32_t xcr0, xcr0_high;
-        asm("xgetbv" : "=a" (xcr0), "=d" (xcr0_high) : "c" (0));
-        isAvxPresent = (xcr0 & 6) == 6;    // AVX state saving enabled?
-    }
-}
-#elif defined(__APPLE__) && defined(__aarch64__)
-void MainFrame::checkAvxSupport(void)
-{
-    // Force 2020 mode to be enabled on ARM Macs. This is experimental
-    // and may cause problems. During preliminary testing it seems to use
-    // NEON optimizations enabled in LPCNet and consumes less than 100% of a single
-    // core while decoding audio.
-    isAvxPresent = true;
-}
-#else
-void MainFrame::checkAvxSupport(void)
-{
-    isAvxPresent = false;
-}
-#endif
-
 struct FIFO extern  *g_txDataInFifo;
 struct FIFO extern *g_rxDataOutFifo;
 
