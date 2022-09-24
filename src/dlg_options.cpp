@@ -233,6 +233,17 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     sizerModem->Add(sbSizer_multirx,0, wxALL|wxEXPAND, 3);
     
+    wxStaticBox *sb_modemstats = new wxStaticBox(m_modemTab, wxID_ANY, _("Modem Statistics"));
+    wxStaticBoxSizer* sbSizer_modemstats = new wxStaticBoxSizer(sb_modemstats, wxVERTICAL);
+    wxBoxSizer* sbSizer_statsResetTime = new wxBoxSizer(wxHORIZONTAL);
+    wxStaticText *m_staticTextResetTime = new wxStaticText(m_modemTab, wxID_ANY, _("Time before resetting stats (sec):"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_statsResetTime->Add(m_staticTextResetTime, 0, wxALIGN_CENTER_VERTICAL , 5);
+    m_statsResetTime = new wxTextCtrl(m_modemTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    sbSizer_statsResetTime->Add(m_statsResetTime, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_modemstats->Add(sbSizer_statsResetTime, 0, wxALIGN_LEFT, 0);
+    
+    sizerModem->Add(sbSizer_modemstats,0, wxALL|wxEXPAND, 3);
+        
     m_modemTab->SetSizer(sizerModem);
     
     // Simulation tab
@@ -294,7 +305,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_udp = new wxStaticBoxSizer(sb_udp, wxHORIZONTAL);
     m_ckbox_udp_enable = new wxCheckBox(m_interfacingTab, wxID_ANY, _("Enable UDP Messages   UDP Port Number:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_udp->Add(m_ckbox_udp_enable, 0,  0, 5);
-    m_txt_udp_port = new wxTextCtrl(m_interfacingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txt_udp_port = new wxTextCtrl(m_interfacingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(70,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_udp->Add(m_txt_udp_port, 0, 0, 5);
     m_btn_udp_test = new wxButton(m_interfacingTab, wxID_ANY, _("Test"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_udp->Add(m_btn_udp_test, 0,  wxALIGN_LEFT, 5);
@@ -335,7 +346,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     wxStaticText *m_staticTextFifo1 = new wxStaticText(m_debugTab, wxID_ANY, _("Fifo Size (ms):"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_fifo1->Add(m_staticTextFifo1, 0, wxALIGN_CENTER_VERTICAL , 5);
-    m_txtCtrlFifoSize = new wxTextCtrl(m_debugTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
+    m_txtCtrlFifoSize = new wxTextCtrl(m_debugTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0);
     sbSizer_fifo1->Add(m_txtCtrlFifoSize, 0, 0, 5);
 
     sbSizer_fifo->Add(sbSizer_fifo1, 0,  wxALIGN_LEFT, 5);
@@ -425,6 +436,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxPhaseEstDPSK->MoveBeforeInTabOrder(m_ckHalfDuplex);
     m_ckHalfDuplex->MoveBeforeInTabOrder(m_ckboxMultipleRx);
     m_ckboxMultipleRx->MoveBeforeInTabOrder(m_ckboxSingleRxThread);
+    m_ckboxSingleRxThread->MoveBeforeInTabOrder(m_statsResetTime);
     
     m_ckboxTestFrame->MoveBeforeInTabOrder(m_ckboxChannelNoise);
     m_ckboxChannelNoise->MoveBeforeInTabOrder(m_txtNoiseSNR);
@@ -586,6 +598,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txt_callsign->SetValue(wxGetApp().m_psk_callsign);
         m_txt_grid_square->SetValue(wxGetApp().m_psk_grid_square);
         
+        // Stats reset time
+        m_statsResetTime->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_statsResetTimeSec));
+        
         // Waterfall color
         switch (wxGetApp().m_waterfallColor)
         {
@@ -720,6 +735,11 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             wxGetApp().m_waterfallColor = 2;
         }
         
+        // Stats reset time
+        long resetTime;
+        m_statsResetTime->GetValue().ToLong(&resetTime);
+        wxGetApp().m_statsResetTimeSec = resetTime;
+        
         if (storePersistent) {
             pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
 #ifdef SHORT_VARICODE
@@ -744,6 +764,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);
             pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
             pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
+            
+            pConfig->Write(wxT("/Stats/ResetTime"), wxGetApp().m_statsResetTimeSec);
             
             // Waterfall configuration
             pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);

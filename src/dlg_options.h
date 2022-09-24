@@ -148,6 +148,7 @@ class OptionsDlg : public wxDialog
 
         wxCheckBox*  m_ckboxMultipleRx;
         wxCheckBox*  m_ckboxSingleRxThread;
+        wxTextCtrl*  m_statsResetTime;
         
         unsigned int  event_in_serial, event_out_serial;
 
