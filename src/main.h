@@ -98,6 +98,7 @@
 #define _DUMMY_DATA             1
 //#define _AUDIO_PASSTHROUGH    1
 #define _REFRESH_TIMER_PERIOD   (DT*1000)
+
 //#define _USE_ABOUT_DIALOG       1
 
 enum {
@@ -233,6 +234,7 @@ class MainApp : public wxApp
         wxString            m_callSign;
         unsigned int        m_textEncoding;
         bool                m_snrSlow;
+        unsigned int        m_statsResetTimeSec;
 
         // LPC Post Filter
         bool                m_codec2LPCPostFilterEnable;
@@ -541,6 +543,7 @@ class MainFrame : public TopFrame
         std::shared_ptr<IAudioDevice> txInSoundDevice;
         std::shared_ptr<IAudioDevice> txOutSoundDevice;
         
+        int         m_timeSinceSyncLoss;
         bool        m_useMemory;
         wxTextCtrl* m_tc;
         int         m_zoom;
@@ -576,8 +579,9 @@ class MainFrame : public TopFrame
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
         
-    private:
         void loadConfiguration_();
+        void resetStats_();
+
 #if defined(FREEDV_MODE_2020)
         void test2020Mode_();
 #endif // defined(FREEDV_MODE_2020)
