@@ -22,6 +22,9 @@
 
 #include <time.h>
 #include <deque>
+#include <random>
+#include <chrono>
+#include <climits>
 #include <wx/cmdline.h>
 #include "version.h"
 #include "main.h"
@@ -247,11 +250,123 @@ int MainApp::OnExit()
     return 0;
 }
 
+#if defined(FREEDV_MODE_2020)
+//-------------------------------------------------------------------------
+// test2020Mode_(): Makes sure that 2020 mode will work 
+//-------------------------------------------------------------------------
+void MainFrame::test2020Mode_()
+{
+    bool allowed = true;
+    
+    printf("Making sure your machine can handle 2020 mode:\n");
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+    // AVX checking code on x86 is here due to LPCNet in binary builds being
+    // compiled to use it. Running the sanity check below could potentially 
+    // cause crashes.
+    uint32_t eax, ebx, ecx, edx;
+    eax = ebx = ecx = edx = 0;
+    __cpuid(1, eax, ebx, ecx, edx);
+    
+    if (ecx & (1<<27) && ecx & (1<<28)) {
+        // CPU supports XSAVE and AVX
+        uint32_t xcr0, xcr0_high;
+        asm("xgetbv" : "=a" (xcr0), "=d" (xcr0_high) : "c" (0));
+        allowed = (xcr0 & 6) == 6;    // AVX state saving enabled?
+    } else {
+        allowed = false;
+    }
+    
+    if (!allowed)
+    {
+        std::cout << "Warning: AVX support not found!" << std::endl;
+    }
+    else
+#endif // defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+    {
+        // Sanity check: encode 1 second of 16 KHz white noise and then try to
+        // decode it. If it takes longer than 0.5 seconds, it's unlikely that 
+        // 2020/2020B will work properly on this machine.
+        printf("Generating test audio...\n");
+        struct FIFO* inFifo = codec2_fifo_create(24000);
+        assert(inFifo != nullptr);
+    
+        struct freedv* fdv = freedv_open(FREEDV_MODE_2020);
+        assert(fdv != nullptr);
+    
+        int numInSamples = 0;
+        int samplesToGenerate = freedv_get_n_speech_samples(fdv);
+        int samplesGenerated = freedv_get_n_nom_modem_samples(fdv);
+    
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> distrib(SHRT_MIN, SHRT_MAX);
+    
+        while (numInSamples < 16000)
+        {
+            short inSamples[samplesToGenerate];
+            COMP outSamples[samplesGenerated];
+            for (int index = 0; index < samplesToGenerate; index++)
+            {
+                inSamples[index] = distrib(gen);
+            }
+        
+            freedv_comptx(fdv, outSamples, inSamples);
+        
+            for (int index = 0; index < samplesGenerated; index++)
+            {
+                short realVal = outSamples[index].real;
+                codec2_fifo_write(inFifo, &realVal, 1);
+            }
+        
+            numInSamples += samplesToGenerate;        
+        }
+    
+        printf("Decoding modulated audio...\n");
+    
+        std::chrono::high_resolution_clock systemClock;
+        auto startTime = systemClock.now();
+    
+        int nin = freedv_nin(fdv);
+        short inputBuf[freedv_get_n_max_modem_samples(fdv)];
+        short outputBuf[freedv_get_n_speech_samples(fdv)];
+        COMP  rx_fdm[freedv_get_n_max_modem_samples(fdv)];
+        while(codec2_fifo_read(inFifo, inputBuf, nin) == 0)
+        {
+            for(int i=0; i<nin; i++) 
+            {
+                rx_fdm[i].real = (float)inputBuf[i];
+                rx_fdm[i].imag = 0.0;
+            }
+        
+            freedv_comprx(fdv, outputBuf, rx_fdm);
+        }
+        auto endTime = systemClock.now();
+        auto timeTaken = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+        if (timeTaken > std::chrono::milliseconds(500))
+        {
+            allowed = false;
+        }
+    
+        std::cout << "One second of 2020 decoded in " << timeTaken.count() << " ms" << std::endl;
+    }
+    
+    std::cout << "2020 allowed: " << allowed << std::endl;
+    
+    // Save results to configuration.
+    wxGetApp().m_2020Allowed = allowed;
+    pConfig->Write(wxT("/FreeDV2020/Allowed"), wxGetApp().m_2020Allowed);
+}
+#endif // defined(FREEDV_MODE_2020)
+
 //-------------------------------------------------------------------------
 // loadConfiguration_(): Loads or sets default configuration options.
 //-------------------------------------------------------------------------
 void MainFrame::loadConfiguration_()
 {
+    wxGetApp().m_firstTimeUse = pConfig->Read(wxT("/FirstTimeUse"), true);
+    wxGetApp().m_2020Allowed = pConfig->Read(wxT("/FreeDV2020/Allowed"), false);
+    
     // restore frame position and size
     int x = pConfig->Read(wxT("/MainFrame/left"),       20);
     int y = pConfig->Read(wxT("/MainFrame/top"),        20);
@@ -447,7 +562,7 @@ void MainFrame::loadConfiguration_()
         m_rb800xa->SetValue(1);
     if (mode == 7)
         m_rb2400b->SetValue(1);
-    if ((mode == 9) && isAvxPresent)
+    if ((mode == 9) && wxGetApp().m_2020Allowed)
         m_rb2020->SetValue(1);
     pConfig->SetPath(wxT("/"));
     
@@ -500,17 +615,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     wxGetApp().m_serialport = new Serialport();
     wxGetApp().m_pttInSerialPort = new Serialport();
-    
-    // Check for AVX support in the processor.  If it's not present, 2020 won't be processed
-    // fast enough
-    checkAvxSupport();
-    if(!isAvxPresent)
-    {
-        m_rb2020->Disable();
-#if defined(FREEDV_MODE_2020B)
-        m_rb2020b->Disable();
-#endif // FREEDV_MODE_2020B
-    }
     
     tools->AppendSeparator();
     wxMenuItem* m_menuItemToolsConfigDelete;
@@ -644,7 +748,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Init optional Windows debug console so we can see all those printfs
 
 #ifdef __WXMSW__
-    if (wxGetApp().m_debug_console) {
+    if (wxGetApp().m_debug_console || wxGetApp().m_firstTimeUse) {
         // somewhere to send printfs while developing
         int ret = AllocConsole();
         freopen("CONOUT$", "w", stdout);
@@ -652,6 +756,24 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().m_debug_console);
     }
 #endif
+    
+#if defined(FREEDV_MODE_2020)
+    // First time use: make sure 2020 mode will actually work on this machine.
+    if (wxGetApp().m_firstTimeUse)
+    {
+        test2020Mode_();
+    }
+#endif // defined(FREEDV_MODE_2020)
+    
+    if(!wxGetApp().m_2020Allowed)
+    {
+        m_rb2020->Disable();
+#if defined(FREEDV_MODE_2020B)
+        m_rb2020b->Disable();
+#endif // FREEDV_MODE_2020B
+    }
+        
+    pConfig->Write(wxT("/FirstTimeUse"), false);
 
     //#define FTEST
     #ifdef FTEST
@@ -1530,14 +1652,14 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     }
     else if (m_rb2020->GetValue()) 
     {
-        assert(isAvxPresent);
+        assert(wxGetApp().m_2020Allowed);
         
         g_mode = FREEDV_MODE_2020;
     }
 #if defined(FREEDV_MODE_2020B)
     else if (m_rb2020b->GetValue()) 
     {
-        assert(isAvxPresent);
+        assert(wxGetApp().m_2020Allowed);
         
         g_mode = FREEDV_MODE_2020B;
     }
@@ -1615,7 +1737,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         }
         else
         {        
-            if(isAvxPresent)
+            if(wxGetApp().m_2020Allowed)
             {
                 freedvInterface.addRxMode(FREEDV_MODE_2020);
             }
@@ -1875,7 +1997,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_rb700e->Enable();
         m_rb800xa->Enable();
         m_rb2400b->Enable();
-        if(isAvxPresent)
+        if(wxGetApp().m_2020Allowed)
         {
             m_rb2020->Enable();
 #if defined(FREEDV_MODE_2020B)

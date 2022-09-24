@@ -342,6 +342,9 @@ class MainApp : public wxApp
         bool       m_txRxThreadHighPriority;
 
         int        m_prevMode;
+        
+        bool       m_firstTimeUse;
+        bool       m_2020Allowed;
 
     protected:
 };
@@ -572,15 +575,16 @@ class MainFrame : public TopFrame
         int        vk_repeats, vk_repeat_counter;
         float      vk_rx_time;
         float      vk_rx_sync_time;
-
-        void       checkAvxSupport();
-        bool       isAvxPresent;
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
         
         void loadConfiguration_();
         void resetStats_();
+
+#if defined(FREEDV_MODE_2020)
+        void test2020Mode_();
+#endif // defined(FREEDV_MODE_2020)
 };
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
