@@ -1673,8 +1673,6 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 #if defined(FREEDV_MODE_2020C)
     else if (m_rb2020c->GetValue()) 
     {
-        assert(isAvxPresent);
-        
         g_mode = FREEDV_MODE_2020C;
     }
 #endif // FREEDV_MODE_2020C
