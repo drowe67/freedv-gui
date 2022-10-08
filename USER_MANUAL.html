@@ -418,13 +418,6 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </tr>
 </tbody>
 </table>
-<h3 id="ofdm-modem-phase-estimator-options-experimental"><span class="header-section-number">9.2.2</span> OFDM Modem Phase Estimator Options (Experimental)</h3>
-<p>These options apply to the FreeDV 700D and 2020 modes that use the OFDM modem:</p>
-<ol type="1">
-<li><p>The High Bandwidth option gives better performance on channels where the phase changes quickly, for example fast fading HF channels and the Es’Hail 2 satellite. When unchecked, the phase estimator bandwidth is automatically selected. It starts off high to enable fast sync, then switches to low bandwidth to optimise performance for low SNR HF channels.</p></li>
-<li><p>The DPSK (differential PSK) checkbox has a similar effect - better performance on High SNR channels where the phase changes rapidly. This option converts the OFDM modem to use differential PSK rather than coherent PSK. DPSK is used by earlier FreeDV modes such as FreeDV 1600. It affects the Tx and Rx side, so both sides must select DPSK.</p></li>
-</ol>
-<p>If you have problems with 700D or 2020 sync even though you have a strong signal - try these options.</p>
 <h1 id="helping-improve-freedv"><span class="header-section-number">10</span> Helping Improve FreeDV</h1>
 <p>If you have an interesting test case, for example:</p>
 <ol type="1">
@@ -589,6 +582,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Enhancements:
 <ul>
 <li>Add alternate method of determining 2020 support for non-x86 machines. (PR #280)</li>
+<li>Remove unnecessary BW and DPSK options from UI. (PR #283)</li>
 <li>Stats on left hand side of main window now auto-reset after user-configurable time period (default 10s). (PR #262, #286)</li>
 </ul></li>
 </ol>
