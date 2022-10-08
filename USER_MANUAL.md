@@ -799,7 +799,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add missed UI disable on startup for 2020B mode. (PR #279)
 3. Enhancements:
     * Add alternate method of determining 2020 support for non-x86 machines. (PR #280)
-    * Stats on left hand side of main window now auto-reset after user-configurable time period (default 10s). (PR #262, TBD)
+    * Stats on left hand side of main window now auto-reset after user-configurable time period (default 10s). (PR #262, #286)
     
 ## V1.8.3.1 August 2022
 
