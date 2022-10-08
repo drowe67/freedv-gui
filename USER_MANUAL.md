@@ -575,16 +575,6 @@ Clipping | Increases the average power. Ensure your transmitter can handle high 
 Tx Band Pass Filter | Reduces Tx spectrum bandwidth
 Manual Unsync | Forces modem to remain in sync, and not drop sync automatically
 
-### OFDM Modem Phase Estimator Options (Experimental)
-
-These options apply to the FreeDV 700D and 2020 modes that use the OFDM modem:
-
-1. The High Bandwidth option gives better performance on channels where the phase changes quickly, for example fast fading HF channels and the Es'Hail 2 satellite. When unchecked, the phase estimator bandwidth is automatically selected.  It starts off high to enable fast sync, then switches to low bandwidth to optimise performance for low SNR HF channels.
-
-1. The DPSK (differential PSK) checkbox has a similar effect - better performance on High SNR channels where the phase changes rapidly.  This option converts the OFDM modem to use differential PSK rather than coherent PSK.  DPSK is used by earlier FreeDV modes such as FreeDV 1600.  It affects the Tx and Rx side, so both sides must select DPSK.
-
-If you have problems with 700D or 2020 sync even though you have a strong signal - try these options.
-
 # Helping Improve FreeDV
 
 If you have an interesting test case, for example:
@@ -799,6 +789,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add missed UI disable on startup for 2020B mode. (PR #279)
 3. Enhancements:
     * Add alternate method of determining 2020 support for non-x86 machines. (PR #280)
+    * Remove unnecessary BW and DPSK options from UI. (PR #283)
     
 ## V1.8.3.1 August 2022
 

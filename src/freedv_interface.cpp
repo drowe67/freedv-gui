@@ -235,14 +235,12 @@ void FreeDVInterface::stop()
     rxMode_ = 0;
 }
 
-void FreeDVInterface::setRunTimeOptions(int clip, int bpf, int phaseEstBW, int phaseEstDPSK)
+void FreeDVInterface::setRunTimeOptions(int clip, int bpf)
 {
     for (auto& dv : dvObjects_)
     {
         freedv_set_clip(dv, clip);   // 700D/700E
         freedv_set_tx_bpf(dv, bpf);  // 700D/700E
-        freedv_set_phase_est_bandwidth_mode(dv, phaseEstBW); // 700D/2020
-        freedv_set_dpsk(dv, phaseEstDPSK);  // 700D/2020
     }
 }
 

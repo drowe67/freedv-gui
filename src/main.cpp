@@ -521,9 +521,6 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_FreeDV700Combine = 1;
     wxGetApp().m_FreeDV700ManualUnSync = (float)pConfig->Read(wxT("/FreeDV700/manualUnSync"), f);
 
-    wxGetApp().m_PhaseEstBW = (float)pConfig->Read(wxT("/OFDM/PhaseEstBW"), f);
-    wxGetApp().m_PhaseEstDPSK = (float)pConfig->Read(wxT("/OFDM/PhaseEstDPSK"), f);
-
     wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
 
     wxGetApp().m_debug_console = (float)pConfig->Read(wxT("/Debug/console"), f);
@@ -890,8 +887,6 @@ MainFrame::~MainFrame()
     pConfig->Write(wxT("/Filter/SpkOutEQEnable"), wxGetApp().m_SpkOutEQEnable);
 
     pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
-    pConfig->Write(wxT("/OFDM/PhaseEstBW"), wxGetApp().m_PhaseEstBW);
-    pConfig->Write(wxT("/OFDM/PhaseEstDPSK"), wxGetApp().m_PhaseEstDPSK);
     pConfig->Write(wxT("/Noise/noise_snr"), wxGetApp().m_noise_snr);
 
     pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
@@ -1418,9 +1413,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // set some run time options (if applicable)
         freedvInterface.setRunTimeOptions(
             (int)wxGetApp().m_FreeDV700txClip,
-            (int)wxGetApp().m_FreeDV700txBPF,
-            (int)wxGetApp().m_PhaseEstBW,
-            (int)wxGetApp().m_PhaseEstDPSK);
+            (int)wxGetApp().m_FreeDV700txBPF);
 
         // Test Frame Bit Error Updates ------------------------------------
 
