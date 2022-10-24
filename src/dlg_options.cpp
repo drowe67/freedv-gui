@@ -192,21 +192,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sizerModem->Add(sbSizer_freedv700, 0, wxALL|wxEXPAND, 3);
 
     //------------------------------
-    // Phase Est Options
-    //------------------------------
-
-    wxStaticBoxSizer* sbSizer_freedvPhaseEst;
-    wxStaticBox *sb_freedvPhaseEst = new wxStaticBox(m_modemTab, wxID_ANY, _("OFDM Modem Phase Estimator Options"));
-    sbSizer_freedvPhaseEst = new wxStaticBoxSizer(sb_freedvPhaseEst, wxHORIZONTAL);
-
-    m_ckboxPhaseEstBW = new wxCheckBox(m_modemTab, wxID_ANY, _("High Bandwidth"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_freedvPhaseEst->Add(m_ckboxPhaseEstBW, 0, wxALIGN_LEFT, 0);
-    m_ckboxPhaseEstDPSK = new wxCheckBox(m_modemTab, wxID_ANY, _("DPSK"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_freedvPhaseEst->Add(m_ckboxPhaseEstDPSK, 0, wxALIGN_LEFT, 0);
-
-    sizerModem->Add(sbSizer_freedvPhaseEst, 0, wxALL|wxEXPAND, 3);
-
-    //------------------------------
     // Half/Full duplex selection
     //------------------------------
 
@@ -431,9 +416,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxFreeDV700txClip->MoveBeforeInTabOrder(m_ckboxFreeDV700Combine);
     m_ckboxFreeDV700Combine->MoveBeforeInTabOrder(m_ckboxFreeDV700txBPF);
     m_ckboxFreeDV700txBPF->MoveBeforeInTabOrder(m_ckboxFreeDV700ManualUnSync);
-    m_ckboxFreeDV700ManualUnSync->MoveBeforeInTabOrder(m_ckboxPhaseEstBW);
-    m_ckboxPhaseEstBW->MoveBeforeInTabOrder(m_ckboxPhaseEstDPSK);
-    m_ckboxPhaseEstDPSK->MoveBeforeInTabOrder(m_ckHalfDuplex);
+    m_ckboxFreeDV700ManualUnSync->MoveBeforeInTabOrder(m_ckHalfDuplex);
     m_ckHalfDuplex->MoveBeforeInTabOrder(m_ckboxMultipleRx);
     m_ckboxMultipleRx->MoveBeforeInTabOrder(m_ckboxSingleRxThread);
     m_ckboxSingleRxThread->MoveBeforeInTabOrder(m_statsResetTime);
@@ -586,9 +569,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxFreeDV700Combine->SetValue(wxGetApp().m_FreeDV700Combine);
         m_ckboxFreeDV700ManualUnSync->SetValue(wxGetApp().m_FreeDV700ManualUnSync);
 
-        m_ckboxPhaseEstBW->SetValue(wxGetApp().m_PhaseEstBW);
-        m_ckboxPhaseEstDPSK->SetValue(wxGetApp().m_PhaseEstDPSK);
-
 #ifdef __WXMSW__
         m_ckboxDebugConsole->SetValue(wxGetApp().m_debug_console);
 #endif
@@ -708,9 +688,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_FreeDV700txBPF = m_ckboxFreeDV700txBPF->GetValue();
         wxGetApp().m_FreeDV700Combine = m_ckboxFreeDV700Combine->GetValue();
         wxGetApp().m_FreeDV700ManualUnSync = m_ckboxFreeDV700ManualUnSync->GetValue();
-
-        wxGetApp().m_PhaseEstBW = m_ckboxPhaseEstBW->GetValue();
-        wxGetApp().m_PhaseEstDPSK = m_ckboxPhaseEstDPSK->GetValue();
 
 #ifdef __WXMSW__
         wxGetApp().m_debug_console = m_ckboxDebugConsole->GetValue();
