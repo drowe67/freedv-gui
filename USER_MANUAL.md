@@ -790,7 +790,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 3. Enhancements:
     * Add alternate method of determining 2020 support for non-x86 machines. (PR #280)
     * Remove unnecessary BW and DPSK options from UI. (PR #283)
-    
+    * Stats on left hand side of main window now auto-reset after user-configurable time period (default 10s). (PR #262, #286)
+
 ## V1.8.3.1 August 2022
 
 1. Build system:
