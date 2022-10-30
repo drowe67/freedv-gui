@@ -7,7 +7,7 @@
 #
 cmake_minimum_required(VERSION 3.13)
 project(FreeDV
-  VERSION 1.8.3.1
+  VERSION 1.8.4
   DESCRIPTION "HF Digital Voice for Radio Amateurs"
   HOMEPAGE_URL "https://freedv.org"
   LANGUAGES C CXX
