@@ -788,6 +788,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Bugfixes:
     * Add missed UI disable on startup for 2020B mode. (PR #279)
     * Fixed TX audio dropouts when using different sample rates. (PR #287)
+    * Remove sample rates above 48K from audio configuration. (PR #288)
 3. Enhancements:
     * Add alternate method of determining 2020 support for non-x86 machines. (PR #280)
     * Remove unnecessary BW and DPSK options from UI. (PR #283)
