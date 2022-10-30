@@ -20,6 +20,7 @@
 //
 //=========================================================================
 
+#include <cstring>
 #include <cassert>
 #include <cmath>
 #include "codec2_fifo.h"
