@@ -218,10 +218,10 @@ void TxRxThread::initializePipeline_()
         recordModulatedPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedStep));
         
         auto recordModulatedTap = new TapStep(outputSampleRate_, recordModulatedPipeline);
-        auto recordModulatedTapPipeline = new AudioPipeline(outputSampleRate_, inputSampleRate_);
+        auto recordModulatedTapPipeline = new AudioPipeline(outputSampleRate_, outputSampleRate_);
         recordModulatedTapPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedTap));
         
-        auto bypassRecordModulated = new AudioPipeline(outputSampleRate_, inputSampleRate_);
+        auto bypassRecordModulated = new AudioPipeline(outputSampleRate_, outputSampleRate_);
         
         auto eitherOrRecordModulated = new EitherOrStep(
             []() { return g_recFileFromModulator && (g_sfRecFileFromModulator != NULL); },
