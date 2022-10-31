@@ -781,12 +781,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## TBD TBD 2022
+## V1.8.4 October 2022
 
 1. Build system:
     * Updates to reflect LPCNet decoupling from Codec2 (PR #274)
 2. Bugfixes:
     * Add missed UI disable on startup for 2020B mode. (PR #279)
+    * Fixed TX audio dropouts when using different sample rates. (PR #287)
     * Remove sample rates above 48K from audio configuration. (PR #288)
 3. Enhancements:
     * Add alternate method of determining 2020 support for non-x86 machines. (PR #280)
