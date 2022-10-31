@@ -29,8 +29,7 @@ int IAudioEngine::StandardSampleRates[] =
     16000,    22050,
     24000,    32000,
     44100,    48000,
-    88200,    96000,
-    192000,   -1          // negative terminated  list
+    -1          // negative terminated  list
 };
 
 void IAudioEngine::setOnEngineError(AudioErrorCallbackFn fn, void* state)

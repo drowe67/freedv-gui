@@ -218,10 +218,10 @@ void TxRxThread::initializePipeline_()
         recordModulatedPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedStep));
         
         auto recordModulatedTap = new TapStep(outputSampleRate_, recordModulatedPipeline);
-        auto recordModulatedTapPipeline = new AudioPipeline(outputSampleRate_, inputSampleRate_);
+        auto recordModulatedTapPipeline = new AudioPipeline(outputSampleRate_, outputSampleRate_);
         recordModulatedTapPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedTap));
         
-        auto bypassRecordModulated = new AudioPipeline(outputSampleRate_, inputSampleRate_);
+        auto bypassRecordModulated = new AudioPipeline(outputSampleRate_, outputSampleRate_);
         
         auto eitherOrRecordModulated = new EitherOrStep(
             []() { return g_recFileFromModulator && (g_sfRecFileFromModulator != NULL); },
@@ -514,7 +514,7 @@ void TxRxThread::txProcessing_()
         // outfifo1 nice and full so we don't have any gaps in tx
         // signal.
 
-        unsigned int nsam_one_modem_frame = outputSampleRate_ * freedvInterface.getTxNNomModemSamples()/freedvInterface.getTxModemSampleRate();
+        unsigned int nsam_one_modem_frame = freedvInterface.getTxNNomModemSamples() * ((float)outputSampleRate_ / (float)freedvInterface.getTxModemSampleRate());
 
      	if (g_dump_fifo_state) {
     	  // If this drops to zero we have a problem as we will run out of output samples
@@ -523,7 +523,7 @@ void TxRxThread::txProcessing_()
                       codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
     	}
 
-        int nsam_in_48 = inputSampleRate_ * freedvInterface.getTxNumSpeechSamples()/freedvInterface.getTxSpeechSampleRate();
+        int nsam_in_48 = freedvInterface.getTxNumSpeechSamples() * ((float)inputSampleRate_ / (float)freedvInterface.getTxSpeechSampleRate());
         assert(nsam_in_48 > 0 && nsam_in_48 < 10*N48);
         
         while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {        
