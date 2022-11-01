@@ -781,6 +781,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## TBD TBD
+
+1. Enhancements:
+    * Update FreeDV configuration defaults to improve first-time usability. (PR #293)
+
 ## V1.8.4 October 2022
 
 1. Build system:
