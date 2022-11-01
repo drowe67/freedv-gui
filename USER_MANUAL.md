@@ -781,6 +781,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## TBD TBD
+
+1. Build system:
+    * Add checks for .git folder to prevent errors when building from official release tarballs. (PR #294)
+
 ## V1.8.4 October 2022
 
 1. Build system:
