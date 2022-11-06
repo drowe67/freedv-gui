@@ -54,7 +54,10 @@ fi
 cd codec2 && git switch master && git pull && git checkout $CODEC2_BRANCH
 mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf * && $CMAKE -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR .. && make VERBOSE=1
 
-cd $FREEDVGUIDIR && git pull
+cd $FREEDVGUIDIR
+if [ -d .git ]; then
+    git pull
+fi
 mkdir -p $BUILD_DIR && cd $BUILD_DIR 
 if [ $CLEAN -eq 1 ]; then rm -Rf *; fi
 
