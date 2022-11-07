@@ -49,7 +49,10 @@ export LD_LIBRARY_PATH=$LPCNETDIR/build_linux/src
 ./freedv_tx 2020 $LPCNETDIR/wav/wia.wav - | ./freedv_rx 2020 - /dev/null
 
 # Finally, build freedv-gui
-cd $FREEDVGUIDIR && git pull
+cd $FREEDVGUIDIR
+if [ -d .git ]; then
+     git pull
+fi
 mkdir  -p build_linux && cd build_linux && rm -Rf *
 if [[ "$FREEDV_VARIANT" == "pulseaudio" ]]; then
     PULSEAUDIO_PARAM="-DUSE_PULSEAUDIO=1"

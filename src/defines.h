@@ -71,7 +71,7 @@
 #define MAX_BITS_PER_FDMDV_FRAME 40                            // 2000 bit/s mode
 
 // Squelch
-#define SQ_DEFAULT_SNR       2.0
+#define SQ_DEFAULT_SNR       -2.0
 
 // Level Gauge
 #define FROM_RADIO_MAX       0.8

@@ -383,7 +383,7 @@ void MainFrame::loadConfiguration_()
 
     wxGetApp().m_rxNbookCtrl        = pConfig->Read(wxT("/MainFrame/rxNbookCtrl"),    (long)0);
 
-    g_SquelchActive = pConfig->Read(wxT("/Audio/SquelchActive"), (long)0);
+    g_SquelchActive = pConfig->Read(wxT("/Audio/SquelchActive"), (long)1);
     g_SquelchLevel = pConfig->Read(wxT("/Audio/SquelchLevel"), (int)(SQ_DEFAULT_SNR*2));
     g_SquelchLevel /= 2.0;
     
@@ -546,7 +546,7 @@ void MainFrame::loadConfiguration_()
     // Time in seconds after losing sync before we reset the stats area
     wxGetApp().m_statsResetTimeSec = (int)pConfig->Read(wxT("/Stats/ResetTime"), (int)10);
     
-    int mode  = pConfig->Read(wxT("/Audio/mode"), (long)0);
+    int mode  = pConfig->Read(wxT("/Audio/mode"), (long)4);
     if (mode == 0)
         m_rb1600->SetValue(1);
     if (mode == 3)

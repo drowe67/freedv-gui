@@ -57,7 +57,10 @@ export LD_LIBRARY_PATH=$LPCNETDIR/build_osx/src
 ./freedv_tx 2020 $LPCNETDIR/wav/wia.wav - | ./freedv_rx 2020 - /dev/null
 
 # Finally, build freedv-gui
-cd $FREEDVGUIDIR && git pull
+cd $FREEDVGUIDIR
+if [ -d .git ]; then
+    git pull
+fi
 mkdir  -p build_osx && cd build_osx && rm -Rf *
 cmake -DBUILD_OSX_UNIVERSAL=1 -DCMAKE_BUILD_TYPE=Debug  -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_SPEEXDSP=1 -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.a -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx ..
 make VERBOSE=1
