@@ -588,7 +588,7 @@ setDefaultMode:
         mode = defaultMode;
         goto setDefaultMode;
     }
-#endif // defined(FREEDV_MODE_2020B)
+#endif // defined(FREEDV_MODE_2020C)
     pConfig->SetPath(wxT("/"));
     
     m_togBtnSplit->Disable();
@@ -796,6 +796,9 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 #if defined(FREEDV_MODE_2020B)
         m_rb2020b->Disable();
 #endif // FREEDV_MODE_2020B
+#if defined(FREEDV_MODE_2020C)
+        m_rb2020c->Disable();
+#endif // FREEDV_MODE_2020C
     }
         
     pConfig->Write(wxT("/FirstTimeUse"), false);
