@@ -579,16 +579,6 @@ setDefaultMode:
         goto setDefaultMode;
     }
 #endif // defined(FREEDV_MODE_2020B)
-#if defined(FREEDV_MODE_2020C)
-    if ((mode == 11) && wxGetApp().m_2020Allowed)
-        m_rb2020c->SetValue(1);
-    else if (mode == 11)
-    {
-        // Default to 700D otherwise
-        mode = defaultMode;
-        goto setDefaultMode;
-    }
-#endif // defined(FREEDV_MODE_2020B)
     pConfig->SetPath(wxT("/"));
     
     m_togBtnSplit->Disable();
@@ -949,10 +939,6 @@ MainFrame::~MainFrame()
     if (m_rb2020b->GetValue())
         mode = 10;
 #endif // defined(FREEDV_MODE_2020B)
-#if defined(FREEDV_MODE_2020C)
-    if (m_rb2020c->GetValue())
-        mode = 11;
-#endif // defined(FREEDV_MODE_2020C)
    pConfig->Write(wxT("/Audio/mode"), mode);
    pConfig->Flush();
 
