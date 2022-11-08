@@ -787,7 +787,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add checks for .git folder to prevent errors when building from official release tarballs. (PR #294)
 2. Enhancements:
     * Update FreeDV configuration defaults to improve first-time usability. (PR #293)
-
+3. Bugfixes:
+    * Fix issue with 2020B not being selected as default on next start (PR #299)
+    
 ## V1.8.4 October 2022
 
 1. Build system:
