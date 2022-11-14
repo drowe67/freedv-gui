@@ -546,7 +546,9 @@ void MainFrame::loadConfiguration_()
     // Time in seconds after losing sync before we reset the stats area
     wxGetApp().m_statsResetTimeSec = (int)pConfig->Read(wxT("/Stats/ResetTime"), (int)10);
     
-    int mode  = pConfig->Read(wxT("/Audio/mode"), (long)4);
+    int defaultMode = 4;
+    int mode  = pConfig->Read(wxT("/Audio/mode"), (long)defaultMode);
+setDefaultMode:
     if (mode == 0)
         m_rb1600->SetValue(1);
     if (mode == 3)
@@ -561,6 +563,22 @@ void MainFrame::loadConfiguration_()
         m_rb2400b->SetValue(1);
     if ((mode == 9) && wxGetApp().m_2020Allowed)
         m_rb2020->SetValue(1);
+    else if (mode == 9)
+    {
+        // Default to 700D otherwise
+        mode = defaultMode;
+        goto setDefaultMode;
+    }
+#if defined(FREEDV_MODE_2020B)
+    if ((mode == 10) && wxGetApp().m_2020Allowed)
+        m_rb2020b->SetValue(1);
+    else if (mode == 10)
+    {
+        // Default to 700D otherwise
+        mode = defaultMode;
+        goto setDefaultMode;
+    }
+#endif // defined(FREEDV_MODE_2020B)
     pConfig->SetPath(wxT("/"));
     
     m_togBtnSplit->Disable();
@@ -917,6 +935,10 @@ MainFrame::~MainFrame()
         mode = 7;
     if (m_rb2020->GetValue())
         mode = 9;
+#if defined(FREEDV_MODE_2020B)
+    if (m_rb2020b->GetValue())
+        mode = 10;
+#endif // defined(FREEDV_MODE_2020B)
    pConfig->Write(wxT("/Audio/mode"), mode);
    pConfig->Flush();
 
