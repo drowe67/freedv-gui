@@ -789,7 +789,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Update FreeDV configuration defaults to improve first-time usability. (PR #293)
 3. Bugfixes:
     * Fix issue with 2020B not being selected as default on next start (PR #299)
-    
+4. Documentation:
+    * Update manual to reflect Ubuntu renaming libsndfile-dev to libsnd1file-dev. (PR #297)
+
 ## V1.8.4 October 2022
 
 1. Build system:
