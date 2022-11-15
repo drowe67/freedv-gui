@@ -167,7 +167,7 @@ Testing FreeDV API:
 
 Using MacPorts, most of the appropriate dependencies can be installed by:
 
-$ sudo port install subversion git libtool libsamplerate +universal sox +universal cmake portaudio +universal
+$ sudo port install subversion git libtool sox +universal cmake
 
 It should be fairly similar using HomeBrew, but you will need to replace all the /opt/ paths in the following instructions.
 
