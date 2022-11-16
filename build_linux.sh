@@ -22,7 +22,7 @@ export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 
 # change this when working on combined codec2/freedv-gui changes
 CODEC2_BRANCH=master
-LPCNET_BRANCH=master
+LPCNET_BRANCH=ms-uncouple-codec2
 
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
