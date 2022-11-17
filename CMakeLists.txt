@@ -10,7 +10,7 @@ project(FreeDV
   VERSION 1.8.4
   DESCRIPTION "HF Digital Voice for Radio Amateurs"
   HOMEPAGE_URL "https://freedv.org"
-  LANGUAGES C CXX
+  LANGUAGES C CXX OBJCXX
 )
 
 # Adds a tag to the end of the version string. Leave empty
@@ -128,13 +128,13 @@ endif(BOOTSTRAP_WXWIDGETS)
 #
 # Perform bootstrap build of wxWidgets
 #
-if(BOOTSTRAP_WXWIDGETS AND NOT EXISTS ${WXCONFIG})
-    message(STATUS "Will perform bootstrap build of wxWidgets.
-   After make step completes, re-run cmake and make again to perform FreeDV build.")
+#if(BOOTSTRAP_WXWIDGETS AND NOT EXISTS ${WXCONFIG})
+#    message(STATUS "Will perform bootstrap build of wxWidgets.
+#   After make step completes, re-run cmake and make again to perform FreeDV build.")
 #
 # Continue normal build if not bootstrapping wxWidgets or is already built.
 #
-else(BOOTSTRAP_WXWIDGETS AND NOT EXISTS ${WXCONFIG})
+#else(BOOTSTRAP_WXWIDGETS AND NOT EXISTS ${WXCONFIG})
 
 
 #
@@ -393,13 +393,6 @@ endif(NOT USE_STATIC_SNDFILE)
 # Find wxWidgets
 #
 if(NOT BOOTSTRAP_WXWIDGETS)
-    set(WXCONFIG "" CACHE FILEPATH "Location of wx-config binary.")
-    set(WXRC "" CACHE FILEPATH "Location of wxrc binary.")
-else(NOT BOOTSTRAP_WXWIDGETS)
-#	set(WXCONFIG "${CMAKE_BINARY_DIR}/external/dist/bin/wx-config")
-#    set(WXRC "${CMAKE_BINARY_DIR}/external/dist/bin/wxrc")
-#    list(APPEND FREEDV_STATIC_DEPS wxWidgets)
-endif(NOT BOOTSTRAP_WXWIDGETS)
 message(STATUS "Looking for wxWidgets...")
 if(WXCONFIG)
     message(STATUS "wx-config: ${WXCONFIG}")
@@ -440,6 +433,9 @@ if(wxWidgets_FOUND)
     include("${wxWidgets_USE_FILE}")
     list(APPEND FREEDV_LINK_LIBS ${wxWidgets_LIBRARIES})
 endif(wxWidgets_FOUND)
+else(NOT BOOTSTRAP_WXWIDGETS)
+    set(DARK_MODE_DISABLE "false")
+endif(NOT BOOTSTRAP_WXWIDGETS)
 
 #
 # Find speex library
@@ -587,4 +583,4 @@ elseif(UNIX AND NOT APPLE)
 
 endif(WIN32)
 
-endif(BOOTSTRAP_WXWIDGETS AND NOT EXISTS ${WXCONFIG})
+#endif(BOOTSTRAP_WXWIDGETS AND NOT EXISTS ${WXCONFIG})
