@@ -6,12 +6,29 @@
 # mailing list: https://lists.sourceforge.net/lists/listinfo/freetel-codec2
 #
 cmake_minimum_required(VERSION 3.13)
-project(FreeDV
-  VERSION 1.8.4
-  DESCRIPTION "HF Digital Voice for Radio Amateurs"
-  HOMEPAGE_URL "https://freedv.org"
-  LANGUAGES C CXX OBJCXX
-)
+
+set(PROJECT_NAME FreeDV)
+set(PROJECT_VERSION 1.8.4)
+set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
+set(PROJECT_HOMEPAGE_URL "https://freedv.org")
+
+if(APPLE)
+    project(
+        ${PROJECT_NAME}
+        VERSION ${PROJECT_VERSION}
+        DESCRIPTION ${PROJECT_DESCRIPTION}
+        HOMEPAGE_URL ${PROJECT_HOMEPAGE_URL}
+        LANGUAGES C CXX OBJCXX
+    )
+else(APPLE)
+    project(
+        ${PROJECT_NAME}
+        VERSION ${PROJECT_VERSION}
+        DESCRIPTION ${PROJECT_DESCRIPTION}
+        HOMEPAGE_URL ${PROJECT_HOMEPAGE_URL}
+        LANGUAGES C CXX
+    )
+endif(APPLE)    
 
 # Adds a tag to the end of the version string. Leave empty
 # for official release builds.
@@ -124,18 +141,6 @@ if(BOOTSTRAP_WXWIDGETS)
     message(STATUS "Adding wxWidgets build target...")
     include(cmake/BuildWxWidgets.cmake)
 endif(BOOTSTRAP_WXWIDGETS)
-
-#
-# Perform bootstrap build of wxWidgets
-#
-#if(BOOTSTRAP_WXWIDGETS AND NOT EXISTS ${WXCONFIG})
-#    message(STATUS "Will perform bootstrap build of wxWidgets.
-#   After make step completes, re-run cmake and make again to perform FreeDV build.")
-#
-# Continue normal build if not bootstrapping wxWidgets or is already built.
-#
-#else(BOOTSTRAP_WXWIDGETS AND NOT EXISTS ${WXCONFIG})
-
 
 #
 # Various hacks and work arounds for building under MinGW.
