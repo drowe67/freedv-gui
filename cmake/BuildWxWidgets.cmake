@@ -13,7 +13,7 @@ set(wxUSE_EXPAT "builtin" CACHE STRING "Use built-in expat")
 set(wxUSE_LIBJPEG "builtin" CACHE STRING "use libjpeg (JPEG file format)")
 set(wxUSE_LIBPNG "builtin" CACHE STRING "use libpng (PNG image format)")
 set(wxUSE_LIBTIFF "builtin" CACHE STRING "use libtiff (TIFF file format)")
-set(wxUSE_NANOSVG "builtin" CACHE STRING "use NanoSVG for rasterizing SVG")
+set(wxUSE_NANOSVG OFF CACHE STRING "use NanoSVG for rasterizing SVG")
 set(wxUSE_LIBLZMA OFF CACHE STRING "use liblzma for LZMA compression")
 set(wxUSE_LIBSDL OFF CACHE STRING "use SDL for audio on Unix")
 set(wxUSE_LIBMSPACK OFF CACHE STRING "use libmspack (CHM help files loading)")
@@ -31,7 +31,9 @@ FetchContent_GetProperties(wxWidgets)
 FetchContent_MakeAvailable(wxWidgets)
 
 # Override some CXX flags to prevent wxWidgets build failures
+if(APPLE)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++14")
+endif(APPLE)
 
 # Get required wxWidgets include paths and build definitions. 
 # target_link_libraries() will actually do the linking.
