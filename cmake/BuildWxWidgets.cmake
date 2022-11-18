@@ -17,6 +17,7 @@ set(wxUSE_NANOSVG OFF CACHE STRING "use NanoSVG for rasterizing SVG")
 set(wxUSE_LIBLZMA OFF CACHE STRING "use liblzma for LZMA compression")
 set(wxUSE_LIBSDL OFF CACHE STRING "use SDL for audio on Unix")
 set(wxUSE_LIBMSPACK OFF CACHE STRING "use libmspack (CHM help files loading)")
+set(wxUSE_LIBICONV OFF CACHE STRING "disable use of libiconv")
 
 include(FetchContent)
 FetchContent_Declare(
