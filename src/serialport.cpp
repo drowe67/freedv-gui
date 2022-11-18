@@ -63,9 +63,7 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 
         TCHAR  nameWithStrangePrefix[100];
         StringCchPrintf(nameWithStrangePrefix, 100, TEXT("\\\\.\\%hs"), name);
-        _fputts(TEXT("nameWithStrangePrefix: "), stderr);
-	    _fputts(nameWithStrangePrefix, stderr);
-	    if (g_verbose) fprintf(stderr,"\n");
+        if (g_verbose) _tprintf(TEXT("nameWithStrangePrefix: %s\r\n"), nameWithStrangePrefix);
 	
         if((com_handle=CreateFile(nameWithStrangePrefix
                                    ,GENERIC_READ | GENERIC_WRITE/* Access */
