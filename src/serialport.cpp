@@ -63,7 +63,7 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 
         TCHAR  nameWithStrangePrefix[100];
         StringCchPrintf(nameWithStrangePrefix, 100, TEXT("\\\\.\\%hs"), name);
-        if (g_verbose) _tprintf(TEXT("nameWithStrangePrefix: %s\r\n"), nameWithStrangePrefix);
+        if (g_verbose) _tprintf(_T("nameWithStrangePrefix: %s\r\n"), nameWithStrangePrefix);
 	
         if((com_handle=CreateFile(nameWithStrangePrefix
                                    ,GENERIC_READ | GENERIC_WRITE/* Access */
@@ -73,7 +73,7 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
                                    ,0                           /* File attributes */
                                    ,NULL		        /* Template */
                                    ))==INVALID_HANDLE_VALUE) {
-    	    StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("CreateFileA"));
+    	    StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("CreateFile"));
     	    goto error;
     	}
         if (g_verbose) fprintf(stderr, "CreateFileA OK\n");
