@@ -587,5 +587,3 @@ elseif(UNIX AND NOT APPLE)
     include(CPack)
 
 endif(WIN32)
-
-#endif(BOOTSTRAP_WXWIDGETS AND NOT EXISTS ${WXCONFIG})
