@@ -7,6 +7,8 @@
 #
 cmake_minimum_required(VERSION 3.13)
 
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
+
 set(PROJECT_NAME FreeDV)
 set(PROJECT_VERSION 1.8.4)
 set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
@@ -52,7 +54,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 if(BUILD_OSX_UNIVERSAL)
 set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
 endif(BUILD_OSX_UNIVERSAL)
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
 
 # Return the date (yyyy-mm-dd)
 string(TIMESTAMP DATE_RESULT "%Y-%m-%d" UTC)

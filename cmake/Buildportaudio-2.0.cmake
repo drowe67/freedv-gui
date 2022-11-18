@@ -35,7 +35,6 @@ ExternalProject_Add(portaudio
     CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
     BUILD_COMMAND $(MAKE)
     INSTALL_COMMAND $(MAKE) install
-    PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/portaudio-macos.patch && autoconf && cd bindings/cpp && autoconf
 )
 else()
 ExternalProject_Add(portaudio
