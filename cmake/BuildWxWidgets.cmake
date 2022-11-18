@@ -1,52 +1,42 @@
-set(WXWIDGETS_VERSION "3.1.5")
-set(WXWIDGETS_TARBALL "wxWidgets-${WXWIDGETS_VERSION}")
+set(WXWIDGETS_VERSION "3.2.1")
 
-if(MINGW AND CMAKE_CROSSCOMPILING)
-	# If we're cross-compiling then we need to set the target host manually.
-    include(cmake/MinGW.cmake)
+# Ensure that the wxWidgets library is staticly built.
+set(wxBUILD_SHARED OFF CACHE BOOL "Build wx libraries as shared libs")
+set(wxBUILD_PRECOMP OFF CACHE BOOL "Use precompiled headers")
+set(wxBUILD_MONOLITHIC OFF CACHE BOOL "Build a single library")
 
-    # Fedora MinGW defines this to the system MinGW root which will prevent
-	# finding libraries in the build tree. Add / so that it also looks in the
-	# build tree. This is specifically for bootstrapping wxWidgets.
-    list(APPEND CMAKE_FIND_ROOT_PATH "/")
+# wxWidgets features to enable/disable.
+set(wxUSE_STL OFF CACHE STRING "use C++ STL classes")
+set(wxUSE_REGEX "builtin" CACHE STRING "enable support for wxRegEx class")
+set(wxUSE_ZLIB "builtin" CACHE STRING "Use built-in zlib")
+set(wxUSE_EXPAT "builtin" CACHE STRING "Use built-in expat")
+set(wxUSE_LIBJPEG "builtin" CACHE STRING "use libjpeg (JPEG file format)")
+set(wxUSE_LIBPNG "builtin" CACHE STRING "use libpng (PNG image format)")
+set(wxUSE_LIBTIFF "builtin" CACHE STRING "use libtiff (TIFF file format)")
+set(wxUSE_NANOSVG OFF CACHE STRING "use NanoSVG for rasterizing SVG")
+set(wxUSE_LIBLZMA OFF CACHE STRING "use liblzma for LZMA compression")
+set(wxUSE_LIBSDL OFF CACHE STRING "use SDL for audio on Unix")
+set(wxUSE_LIBMSPACK OFF CACHE STRING "use libmspack (CHM help files loading)")
 
-	# If not cross-compiling then use the built-in makefile, otherwise use standard configure.
-    set(CONFIGURE_COMMAND ./configure --build=${BUILD} --host=${HOST} --target=${HOST} --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
-
-elseif(APPLE)
-
-if(BUILD_OSX_UNIVERSAL)
-    set(CONFIGURE_COMMAND ./configure --disable-shared --with-osx_cocoa --enable-universal_binary=x86_64,arm64 --with-macosx-version-min=10.11 --prefix=${CMAKE_BINARY_DIR}/external/dist --with-libjpeg=builtin --with-libpng=builtin --with-regex=builtin --with-libtiff=builtin --with-expat=builtin --with-libcurl=builtin --with-zlib=builtin CXXFLAGS=-stdlib=libc++\ -std=c++11\ -DWX_PRECOMP\ -O2\ -fno-strict-aliasing\ -fno-common)
-else()
-    set(CONFIGURE_COMMAND ./configure --disable-shared --with-macosx-version-min=10.10 --prefix=${CMAKE_BINARY_DIR}/external/dist --with-libjpeg=builtin --with-libpng=builtin --with-regex=builtin --with-libtiff=builtin --with-libcurl=builtin --with-zlib=builtin --with-expat=builtin CXXFLAGS=-stdlib=libc++\ -std=c++11\ -DWX_PRECOMP\ -O2\ -fno-strict-aliasing\ -fno-common)
-endif(BUILD_OSX_UNIVERSAL)
-
-else()
-#    set(CONFIGURE_COMMAND "true")
-#    set(MAKE_COMMAND $(MAKE) -C build/msw -f makefile.gcc SHARED=0 UNICODE=1 BUILD=release PREFIX=${CMAKE_BINARY_DIR}/external/dist)
-    set(CONFIGURE_COMMAND ./configure --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
-endif()
-
-# I don't see why we need this...
-#if(NOT MINGW)    
-#    set(CONFIGURE_COMMAND ./configure --host=${HOST} --target=${HOST} --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
-#endif()
-
-include(ExternalProject)
-ExternalProject_Add(wxWidgets
-    URL https://github.com/wxWidgets/wxWidgets/releases/download/v${WXWIDGETS_VERSION}/${WXWIDGETS_TARBALL}.tar.bz2
-    BUILD_IN_SOURCE 1
-    INSTALL_DIR external/dist
-    CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
-    BUILD_COMMAND $(MAKE)
-    INSTALL_COMMAND $(MAKE) install
+include(FetchContent)
+FetchContent_Declare(
+    wxWidgets
+    GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
+    GIT_SHALLOW    TRUE
+    GIT_PROGRESS   TRUE
+    GIT_TAG        v${WXWIDGETS_VERSION}
 )
 
-ExternalProject_Get_Property(wxWidgets install_dir)
-message(STATUS "wxWidgets install dir: ${install_dir}")
-if(NOT WXCONFIG)
-    set(WXCONFIG "${install_dir}/bin/wx-config")
-endif()
-if(EXISTS ${WXCONFIG})
-    set(BS_WX_DONE TRUE)
-endif()
+FetchContent_GetProperties(wxWidgets)
+FetchContent_MakeAvailable(wxWidgets)
+
+# Override some CXX flags to prevent wxWidgets build failures
+if(APPLE)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++14")
+endif(APPLE)
+
+# Get required wxWidgets include paths and build definitions. 
+# target_link_libraries() will actually do the linking.
+get_target_property(WXBUILD_BUILD_DEFS wx::core COMPILE_DEFINITIONS)
+get_target_property(WXBUILD_INCLUDES wx::core INTERFACE_INCLUDE_DIRECTORIES)
+list(REMOVE_ITEM WXBUILD_BUILD_DEFS "WXBUILDING")
