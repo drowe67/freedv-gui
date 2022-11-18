@@ -51,53 +51,23 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
         //   [1] https://support.microsoft.com/en-us/help/115831/howto-specify-serial-ports-larger-than-com9
         //   [2] Hamlib lib/termios.c, win32_serial_open()
 
-	/*  
-            To test change of COM port for USB serial device on Windows
+    	/*  
+                To test change of COM port for USB serial device on Windows
 
-            1/ Run->devmgmnt.msc
-            2/ Change COM port Ports (COM & LPT) -> Serial Device -> Properties Tab -> Advanced
-            3/ Unplug USB serial device and plug in again.  This is really important.  FreeDV won't recognise
-               new COM port number until this is done.
-            4/ Test PTT on FreeDV Tools->PTT
-	*/
+                1/ Run->devmgmnt.msc
+                2/ Change COM port Ports (COM & LPT) -> Serial Device -> Properties Tab -> Advanced
+                3/ Unplug USB serial device and plug in again.  This is really important.  FreeDV won't recognise
+                   new COM port number until this is done.
+                4/ Test PTT on FreeDV Tools->PTT
+    	*/
 
         TCHAR  nameWithStrangePrefix[100];
-        StringCchPrintf(nameWithStrangePrefix, 100, "\\\\.\\%s", name);
-        fputs("nameWithStrangePrefix: ", stderr);
-	fputs(nameWithStrangePrefix, stderr);
-	if (g_verbose) fprintf(stderr,"\n");
-
-#ifdef NOT_USED
-
-        COMMCONFIG CC;
-        DWORD CCsize=sizeof(CC);
-	memset(&CC, 0, CCsize);
-	CC.dwSize = CCsize;
-
-	/* Commented out by David May 13 2018, as it was failing after
-           "name" changed to "nameWithStrangePrefix" that is reqd for
-           support of COM ports above 9.  I am not sure if this is
-           needed as I can't see anything similar in Hamlib */
+        StringCchPrintf(nameWithStrangePrefix, 100, TEXT("\\\\.\\%hs"), name);
+        _fputts(TEXT("nameWithStrangePrefix: "), stderr);
+	    _fputts(nameWithStrangePrefix, stderr);
+	    if (g_verbose) fprintf(stderr,"\n");
 	
-        if(GetDefaultCommConfigA(nameWithStrangePrefix, &CC, &CCsize)) {
-	    if (g_verbose) fprintf(stderr, "GetDefaultCommConfigA OK\n");         
-            CC.dcb.fOutxCtsFlow		= FALSE;
-            CC.dcb.fOutxDsrFlow		= FALSE;
-            CC.dcb.fDtrControl		= DTR_CONTROL_DISABLE;
-            CC.dcb.fDsrSensitivity	= FALSE;
-            CC.dcb.fRtsControl		= RTS_CONTROL_DISABLE;
-            if (!SetDefaultCommConfigA(nameWithStrangePrefix, &CC, CCsize)) {
-		StringCchPrintf(lpszFunction, 100, "%s", "SetDefaultCommConfigA");
-                goto error;
-            }
-            if (g_verbose) fprintf(stderr, "SetDefaultCommConfigA OK\n");
-        } else {
-	     StringCchPrintf(lpszFunction, 100, "%s", "GetDefaultCommConfigA");
-             goto error;
-        }
-#endif
-	
-        if((com_handle=CreateFileA(nameWithStrangePrefix
+        if((com_handle=CreateFile(nameWithStrangePrefix
                                    ,GENERIC_READ | GENERIC_WRITE/* Access */
                                    ,0				/* Share mode */
                                    ,NULL		 	/* Security attributes */
@@ -105,25 +75,26 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
                                    ,0                           /* File attributes */
                                    ,NULL		        /* Template */
                                    ))==INVALID_HANDLE_VALUE) {
-	    StringCchPrintf(lpszFunction, 100, "%s", "CreateFileA");
-	    goto error;
-	}
+    	    StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("CreateFileA"));
+    	    goto error;
+    	}
         if (g_verbose) fprintf(stderr, "CreateFileA OK\n");
 	
         if(GetCommTimeouts(com_handle, &timeouts)) {
- 	    if (g_verbose) fprintf(stderr, "GetCommTimeouts OK\n");
+            if (g_verbose) fprintf(stderr, "GetCommTimeouts OK\n");
+        
             timeouts.ReadIntervalTimeout=MAXDWORD;
             timeouts.ReadTotalTimeoutMultiplier=0;
             timeouts.ReadTotalTimeoutConstant=0;		// No-wait read timeout
             timeouts.WriteTotalTimeoutMultiplier=0;
             timeouts.WriteTotalTimeoutConstant=5000;	// 5 seconds
-	    if (!SetCommTimeouts(com_handle,&timeouts)) {
-	      StringCchPrintf(lpszFunction, 100, "%s", "SetCommTimeouts");
-              goto error;	      
-	    }
-	    if (g_verbose) fprintf(stderr, "SetCommTimeouts OK\n");
+    	    if (!SetCommTimeouts(com_handle,&timeouts)) {
+    	        StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("SetCommTimeouts"));
+                goto error;	      
+    	    }
+    	    if (g_verbose) fprintf(stderr, "SetCommTimeouts OK\n");
         } else {
-	    StringCchPrintf(lpszFunction, 100, "%s", "GetCommTimeouts");
+    	    StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("GetCommTimeouts"));
             goto error;
         }
 
@@ -146,19 +117,19 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
             dcb.fRtsControl		= RTS_CONTROL_DISABLE;
             dcb.fAbortOnError	= FALSE;
             if (!SetCommState(com_handle, &dcb)) {
-  	        StringCchPrintf(lpszFunction, 100, "%s", "SetCommState");
+  	            StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("SetCommState"));
                 goto error;           
             }
 	    if (g_verbose) fprintf(stderr, "SetCommState OK\n");
         } else {
-  	    StringCchPrintf(lpszFunction, 100, "%s", "GetCommState");
+  	        StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("GetCommState"));
             goto error;           
         }
 	
-	return true;
+	    return true;
 	
-    error:
-	if (g_verbose) fprintf(stderr, "%s failed\n", lpszFunction);
+error:
+	    if (g_verbose) fprintf(stderr, "%s failed\n", lpszFunction);
 	
         // Retrieve the system error message for the last-error code
 
@@ -189,7 +160,7 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
         LocalFree(lpMsgBuf);
         LocalFree(lpDisplayBuf);
 
-	return false;
+	    return false;
     }
 #else
 	{
