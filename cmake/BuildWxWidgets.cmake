@@ -29,9 +29,9 @@ FetchContent_Declare(
 )
 
 FetchContent_GetProperties(wxWidgets)
-if(NOT wxWidgets_POPULATED)
+if(NOT wxwidgets_POPULATED)
   FetchContent_Populate(wxWidgets)
-  add_subdirectory(${wxWidgets_SOURCE_DIR} ${wxWidgets_BINARY_DIR} EXCLUDE_FROM_ALL)
+  add_subdirectory(${wxwidgets_SOURCE_DIR} ${wxwidgets_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
 # Override some CXX flags to prevent wxWidgets build failures
