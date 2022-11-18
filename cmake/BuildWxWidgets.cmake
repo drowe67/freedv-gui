@@ -1,4 +1,4 @@
-set(WXWIDGETS_VERSION "3.2.1")
+set(WXWIDGETS_VERSION "3.1.7")
 
 # Ensure that the wxWidgets library is staticly built.
 set(wxBUILD_SHARED OFF CACHE BOOL "Build wx libraries as shared libs")
@@ -40,7 +40,5 @@ endif(APPLE)
 get_target_property(WXBUILD_BUILD_DEFS wx::core COMPILE_DEFINITIONS)
 get_target_property(WXBUILD_INCLUDES wx::core INTERFACE_INCLUDE_DIRECTORIES)
 list(REMOVE_ITEM WXBUILD_BUILD_DEFS "WXBUILDING")
-list(REMOVE_ITEM WXBUILD_BUILD_DEFS "UNICODE")
-list(REMOVE_ITEM WXBUILD_BUILD_DEFS "_UNICODE")
 
 message("XXX wxWidgets BUILD_DEFS = ${WXBUILD_BUILD_DEFS}")
