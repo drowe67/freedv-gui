@@ -10,8 +10,10 @@
 
 void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q, int sampleRate)
 {
+    const int STR_LENGTH = 80;
+    
     char  *arg[SBQ_MAX_ARGS];
-    char   argstorage[SBQ_MAX_ARGS][80];
+    char   argstorage[SBQ_MAX_ARGS][STR_LENGTH];
     int    i, argc;
 
     assert((strcmp(filterType, "bass") == 0)   ||
@@ -26,27 +28,27 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
     argc = 0;
 
     if ((strcmp(filterType, "bass") == 0) || (strcmp(filterType, "treble") == 0)) {
-        sprintf(arg[argc++], "%s", filterType);
-        sprintf(arg[argc++], "%f", gaindB+1E-6);
-        sprintf(arg[argc++], "%f", freqHz);
-        sprintf(arg[argc++], "%d", sampleRate);
+        snprintf(arg[argc++], STR_LENGTH, "%s", filterType);
+        snprintf(arg[argc++], STR_LENGTH, "%f", gaindB+1E-6);
+        snprintf(arg[argc++], STR_LENGTH, "%f", freqHz);
+        snprintf(arg[argc++], STR_LENGTH, "%d", sampleRate);
     }
 
     if (strcmp(filterType, "equalizer") == 0) {
-        sprintf(arg[argc++], "%s", filterType);
-        sprintf(arg[argc++], "%f", freqHz);
-        sprintf(arg[argc++], "%f", Q);
-        sprintf(arg[argc++], "%f", gaindB+1E-6);
-        sprintf(arg[argc++], "%d", sampleRate);
+        snprintf(arg[argc++], STR_LENGTH, "%s", filterType);
+        snprintf(arg[argc++], STR_LENGTH, "%f", freqHz);
+        snprintf(arg[argc++], STR_LENGTH, "%f", Q);
+        snprintf(arg[argc++], STR_LENGTH, "%f", gaindB+1E-6);
+        snprintf(arg[argc++], STR_LENGTH, "%d", sampleRate);
     }
     
     if (strcmp(filterType, "vol") == 0)
     {
-        sprintf(arg[argc++], "%s", filterType);
-        sprintf(arg[argc++], "%f", gaindB);
-        sprintf(arg[argc++], "%s", "dB");
-        sprintf(arg[argc++], "%f", 0.05); // to prevent clipping
-        sprintf(arg[argc++], "%d", sampleRate);
+        snprintf(arg[argc++], STR_LENGTH, "%s", filterType);
+        snprintf(arg[argc++], STR_LENGTH, "%f", gaindB);
+        snprintf(arg[argc++], STR_LENGTH, "%s", "dB");
+        snprintf(arg[argc++], STR_LENGTH, "%f", 0.05); // to prevent clipping
+        snprintf(arg[argc++], STR_LENGTH, "%d", sampleRate);
     }
 
     assert(argc <= SBQ_MAX_ARGS);
