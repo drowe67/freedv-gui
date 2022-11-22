@@ -85,7 +85,11 @@ endif(APPLE)
 
 # Add build dependencies for internally built external libraries.
 if(USE_INTERNAL_CODEC2)
-    add_dependencies(freedv build_codec2 build_lpcnetfreedv)
+    if(APPLE)
+        add_dependencies(FreeDV build_codec2 build_lpcnetfreedv)
+    else(APPLE)
+        add_dependencies(freedv build_codec2 build_lpcnetfreedv)
+    endif(APPLE)
 endif()
 
 # Add dependencies for other statically built libraries, if applicable.
@@ -137,7 +141,7 @@ if(APPLE)
         TARGET FreeDV
         POST_BUILD
         COMMAND rm -rf dist_tmp FreeDV.dmg || true
-        COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${LPCNET_BUILD_DIR}/src:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib -s ${LPCNET_BUILD_DIR}/src -s ${CODEC2_BUILD_DIR}/src 
+        COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${LPCNET_BUILD_DIR}/src:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib -s ${LPCNET_BUILD_DIR}/src -s ${CODEC2_BUILD_DIR}/src -s ${CMAKE_BINARY_DIR}/LPCNet_build/src -s ${CMAKE_BINARY_DIR}/codec2_build/src
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/freedv.icns FreeDV.app/Contents/Resources
         COMMAND mkdir dist_tmp
         COMMAND cp -r FreeDV.app dist_tmp

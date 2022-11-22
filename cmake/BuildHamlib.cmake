@@ -1,19 +1,24 @@
-set(HAMLIB_TARBALL "hamlib-1.2.15.3")
+if(APPLE)
+if(BUILD_OSX_UNIVERSAL)
+    set(CONFIGURE_COMMAND ./configure --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist CFLAGS=-g\ -O2\ -mmacosx-version-min=10.9\ -arch\ x86_64\ -arch\ arm64 CXXFLAGS=-g\ -O2\ -mmacosx-version-min=10.9\ -arch\ x86_64\ -arch\ arm64)
+else()
+    set(CONFIGURE_COMMAND ./configure --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist CFLAGS=-g\ -O2\ -mmacosx-version-min=10.9 CXXFLAGS=-g\ -O2\ -mmacosx-version-min=10.9)
+endif(BUILD_OSX_UNIVERSAL)
+else()
+    set(CONFIGURE_COMMAND ./configure --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
+endif()
 
 include(ExternalProject)
 ExternalProject_Add(hamlib
-    URL http://downloads.sourceforge.net/hamlib/${HAMLIB_TARBALL}.tar.gz
+    GIT_REPOSITORY https://github.com/Hamlib/Hamlib.git
+    GIT_TAG origin/master
     BUILD_IN_SOURCE 1
     INSTALL_DIR external/dist
-    CONFIGURE_COMMAND ./configure --prefix=${CMAKE_BINARY_DIR}/external/dist
+    CONFIGURE_COMMAND ./bootstrap && ${CONFIGURE_COMMAND}
     BUILD_COMMAND $(MAKE)
     INSTALL_COMMAND $(MAKE) install
 )
-if(WIN32)
-    set(HAMLIB_LIBRARIES ${CMAKE_BINARY_DIR}/external/dist/lib/portaudio.lib)
-else(WIN32)
-    set(HAMLIB_LIBRARIES "")
-endif(WIN32)
+
 include_directories(${CMAKE_BINARY_DIR}/external/dist/include)
-list(APPEND FREEDV_LINK_LIBS ${HAMLIB_LIBRARIES})
+list(APPEND FREEDV_LINK_LIBS ${CMAKE_BINARY_DIR}/external/dist/lib/libhamlib.a)
 list(APPEND FREEDV_STATIC_DEPS hamlib)

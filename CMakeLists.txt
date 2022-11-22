@@ -115,6 +115,7 @@ if(USE_STATIC_DEPS)
     set(USE_STATIC_PORTAUDIO TRUE FORCE)
     set(USE_STATIC_SNDFILE TRUE FORCE)
     set(USE_STATIC_SAMPLERATE TRUE FORCE)
+    set(USE_STATIC_SPEEXDSP TRUE FORCE)
 endif(USE_STATIC_DEPS)
 
 #
@@ -332,11 +333,13 @@ if(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
     include_directories(${HAMLIB_INCLUDE_DIR})
     list(APPEND FREEDV_LINK_LIBS ${HAMLIB_LIBRARY})
 else(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
-    message(FATAL_ERROR "hamlib not found.
-On Linux systems try installing:
-    hamlib-devel  (RPM based systems)
-    libhamlib-dev (DEB based systems)"
-    )
+    #message(FATAL_ERROR "hamlib not found.
+#On Linux systems try installing:
+    #hamlib-devel  (RPM based systems)
+    #libhamlib-dev (DEB based systems)"
+    #)
+    message(STATUS "Using static Hamlib build")
+    include(cmake/BuildHamlib.cmake)
 endif(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
 
 
