@@ -165,8 +165,10 @@ double PlotPanel::GetZoomFactor(double zf)
 //-------------------------------------------------------------------------
 void PlotPanel::drawGraticule(wxGraphicsContext* ctx)
 {
+    const int STR_LENGTH = 15;
+    
     int p;
-    char buf[15];
+    char buf[STR_LENGTH];
     wxString s;
 
     wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
@@ -188,14 +190,14 @@ void PlotPanel::drawGraticule(wxGraphicsContext* ctx)
     ctx->SetPen(wxPen(GREY_COLOR, 1));
     for(p = GRID_INCREMENT; p < (m_rGrid.GetWidth() - YBOTTOM_OFFSET); p += GRID_INCREMENT)
     {
-        sprintf(buf, "%1.1f Hz",(double)(p / 10));
+        snprintf(buf, STR_LENGTH, "%1.1f Hz",(double)(p / 10));
         ctx->DrawText(buf, p - PLOT_BORDER + XLEFT_OFFSET, m_rGrid.GetHeight() + YBOTTOM_OFFSET/2);
     }
     // Label the Y-Axis
     //for(p = GRID_INCREMENT; p < (h - YBOTTOM_OFFSET); p += GRID_INCREMENT)
     for(p = (m_rGrid.GetHeight() - GRID_INCREMENT); p > PLOT_BORDER; p -= GRID_INCREMENT)
     {
-        sprintf(buf, "%1.0f", (double)((m_rGrid.GetHeight() - p) * -10));
+        snprintf(buf, STR_LENGTH, "%1.0f", (double)((m_rGrid.GetHeight() - p) * -10));
         ctx->DrawText(buf, XLEFT_TEXT_OFFSET, p);
     }
 }

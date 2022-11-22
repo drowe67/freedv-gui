@@ -110,6 +110,22 @@ else()
 target_link_libraries(freedv ${FREEDV_LINK_LIBS})
 endif(APPLE)
 
+if(BOOTSTRAP_WXWIDGETS)
+    if(APPLE)
+        target_compile_definitions(FreeDV PRIVATE ${WXBUILD_BUILD_DEFS})
+        target_include_directories(FreeDV PRIVATE ${WXBUILD_INCLUDES})
+        
+        add_dependencies(FreeDV wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
+        target_link_libraries(FreeDV wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid)
+    else(APPLE)
+        target_compile_definitions(freedv PRIVATE ${WXBUILD_BUILD_DEFS})
+        target_include_directories(freedv PRIVATE ${WXBUILD_INCLUDES})
+        
+        add_dependencies(freedv wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
+        target_link_libraries(freedv wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid)
+    endif(APPLE)
+endif(BOOTSTRAP_WXWIDGETS)
+
 # For older Xcode (< 9.0), bypass usage of @available.
 if(APPLE)
 if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0.900037)

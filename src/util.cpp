@@ -256,7 +256,7 @@ void MainFrame::DetectSyncProcessEvent(void) {
         }
 
         if (ds_rx_time >= DS_SYNC_WAIT_TIME) {
-            char s[100]; sprintf(s, "rx sync");
+            char s[100]; snprintf(s, 100, "rx sync");
             if (wxGetApp().m_udp_enable) {
                 UDPSend(wxGetApp().m_udp_port, s, strlen(s)+1);
             }
