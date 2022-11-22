@@ -785,6 +785,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Build system:
     * Add checks for .git folder to prevent errors when building from official release tarballs. (PR #294)
+    * Upgrade bootstrapped wxWidgets to v3.2.1. (PR #302)
 2. Enhancements:
     * Update FreeDV configuration defaults to improve first-time usability. (PR #293)
 3. Bugfixes:
