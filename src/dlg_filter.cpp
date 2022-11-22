@@ -857,11 +857,13 @@ void FilterDlg::adjRunTimeSpkOutFilter(void) {
 
 
 void FilterDlg::plotFilterSpectrum(EQ *eqBass, EQ *eqMid, EQ *eqTreble, EQ* eqVol, PlotSpectrum* freqRespPlot, float *magdB) {
+    const int MAX_ARG_STORAGE_LEN = 80;
+    
     char  *argBass[10];
     char  *argTreble[10];
     char  *argMid[10];
     char  *argVol[10];
-    char   argstorage[10][80];
+    char   argstorage[10][MAX_ARG_STORAGE_LEN];
     float magBass[F_MAG_N];
     float magTreble[F_MAG_N];
     float magMid[F_MAG_N];
@@ -874,29 +876,29 @@ void FilterDlg::plotFilterSpectrum(EQ *eqBass, EQ *eqMid, EQ *eqTreble, EQ* eqVo
         argMid[i] = &argstorage[i][0];
         argVol[i] = &argstorage[i][0];
     }
-    sprintf(argBass[0], "bass");
-    sprintf(argBass[1], "%f", eqBass->gaindB+1E-6);
-    sprintf(argBass[2], "%f", eqBass->freqHz);
+    snprintf(argBass[0], MAX_ARG_STORAGE_LEN, "bass");
+    snprintf(argBass[1], MAX_ARG_STORAGE_LEN, "%f", eqBass->gaindB+1E-6);
+    snprintf(argBass[2], MAX_ARG_STORAGE_LEN, "%f", eqBass->freqHz);
 
     calcFilterSpectrum(magBass, 2, argBass);
 
-    sprintf(argTreble[0], "treble");
-    sprintf(argTreble[1], "%f", eqTreble->gaindB+1E-6);
-    sprintf(argTreble[2], "%f", eqTreble->freqHz);
+    snprintf(argTreble[0], MAX_ARG_STORAGE_LEN, "treble");
+    snprintf(argTreble[1], MAX_ARG_STORAGE_LEN, "%f", eqTreble->gaindB+1E-6);
+    snprintf(argTreble[2], MAX_ARG_STORAGE_LEN, "%f", eqTreble->freqHz);
 
     calcFilterSpectrum(magTreble, 2, argTreble);
 
-    sprintf(argMid[0], "equalizer");
-    sprintf(argMid[1], "%f", eqMid->freqHz);
-    sprintf(argMid[2], "%f", eqMid->Q);
-    sprintf(argMid[3], "%f", eqMid->gaindB+1E-6);
+    snprintf(argMid[0], MAX_ARG_STORAGE_LEN, "equalizer");
+    snprintf(argMid[1], MAX_ARG_STORAGE_LEN, "%f", eqMid->freqHz);
+    snprintf(argMid[2], MAX_ARG_STORAGE_LEN, "%f", eqMid->Q);
+    snprintf(argMid[3], MAX_ARG_STORAGE_LEN, "%f", eqMid->gaindB+1E-6);
 
     calcFilterSpectrum(magMid, 3, argMid);
 
-    sprintf(argVol[0], "vol");
-    sprintf(argVol[1], "%f", eqVol->gaindB);
-    sprintf(argVol[2], "%s", "dB");
-    sprintf(argVol[3], "%f", 0.05);
+    snprintf(argVol[0], MAX_ARG_STORAGE_LEN, "vol");
+    snprintf(argVol[1], MAX_ARG_STORAGE_LEN, "%f", eqVol->gaindB);
+    snprintf(argVol[2], MAX_ARG_STORAGE_LEN, "%s", "dB");
+    snprintf(argVol[3], MAX_ARG_STORAGE_LEN, "%f", 0.05);
     
     calcFilterSpectrum(magVol, 3, argVol);
     
