@@ -885,7 +885,7 @@ void OptionsDlg::OnFifoReset(wxCommandEvent& event)
 void OptionsDlg::OnUDPTest(wxCommandEvent& event)
 {
     char s[80];
-    sprintf(s, "hello from FreeDV!");
+    snprintf(s, 80, "hello from FreeDV!");
     UDPSend(wxGetApp().m_udp_port, s, strlen(s)+1);
 }
 
@@ -975,22 +975,24 @@ void OptionsDlg::OnMultipleRxEnable(wxCommandEvent& event)
 }
 
 void OptionsDlg::DisplayFifoPACounters() {
-    char fifo_counters[256];
+    const int STR_LENGTH = 256;
+    
+    char fifo_counters[STR_LENGTH];
 
-    sprintf(fifo_counters, "Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d", g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
+    snprintf(fifo_counters, STR_LENGTH, "Fifos: infull1: %d outempty1: %d infull2: %d outempty2: %d", g_infifo1_full, g_outfifo1_empty, g_infifo2_full, g_outfifo2_empty);
     wxString fifo_counters_string(fifo_counters);
     m_textFifos->SetLabel(fifo_counters_string);
 
-    char pa_counters1[256];
+    char pa_counters1[STR_LENGTH];
 
     // input: underflow overflow output: underflow overflow
-    sprintf(pa_counters1, "Audio1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3]);
+    snprintf(pa_counters1, STR_LENGTH, "Audio1: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_AEstatus1[0], g_AEstatus1[1], g_AEstatus1[2], g_AEstatus1[3]);
     wxString pa_counters1_string(pa_counters1); m_textPA1->SetLabel(pa_counters1_string);
 
-    char pa_counters2[256];
+    char pa_counters2[STR_LENGTH];
 
     // input: underflow overflow output: underflow overflow
-    sprintf(pa_counters2, "Audio2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
+    snprintf(pa_counters2, STR_LENGTH, "Audio2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
     wxString pa_counters2_string(pa_counters2);
     m_textPA2->SetLabel(pa_counters2_string);
 }

@@ -406,7 +406,7 @@ void MainFrame::loadConfiguration_()
     g_txLevel = pConfig->Read(wxT("/Audio/transmitLevel"), (int)0);
     char fmt[15];
     m_sliderTxLevel->SetValue(g_txLevel);
-    sprintf(fmt, "%0.1f dB", (double)g_txLevel / 10.0);
+    snprintf(fmt, 15, "%0.1f dB", (double)g_txLevel / 10.0);
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
     
@@ -589,7 +589,7 @@ setDefaultMode:
     // squelch settings
     char sqsnr[15];
     m_sliderSQ->SetValue((int)((g_SquelchLevel+5.0)*2.0));
-    sprintf(sqsnr, "%4.1f dB", g_SquelchLevel);
+    snprintf(sqsnr, 15, "%4.1f dB", g_SquelchLevel);
     wxString sqsnr_string(sqsnr);
     m_textSQ->SetLabel(sqsnr_string);
     m_ckboxSQ->SetValue(g_SquelchActive);
@@ -1197,7 +1197,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (snr_limited < -5.0) snr_limited = -5.0;
         if (snr_limited > 20.0) snr_limited = 20.0;
         char snr[15];
-        sprintf(snr, "%4.1f", g_snr);
+        snprintf(snr, 15, "%4.1f", g_snr);
 
         //fprintf(stderr, "g_mode: %d snr_est: %f m_snrBeta: %f g_snr: %f snr_limited: %f\n", g_mode, g_stats.snr_est,  m_snrBeta, g_snr, snr_limited);
 
@@ -1444,27 +1444,30 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         // update stats on main page
 
-        char mode[80], bits[80], errors[80], ber[80], resyncs[80], clockoffset[80], freqoffset[80], syncmetric[80];
-        sprintf(mode, "Mode: %s", freedvInterface.getCurrentModeStr()); wxString modeString(mode); m_textCurrentDecodeMode->SetLabel(modeString);
-        sprintf(bits, "Bits: %d", freedvInterface.getTotalBits()); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
-        sprintf(errors, "Errs: %d", freedvInterface.getTotalBitErrors()); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
+        const int STR_LENGTH = 80;
+        char 
+            mode[STR_LENGTH], bits[STR_LENGTH], errors[STR_LENGTH], ber[STR_LENGTH], 
+            resyncs[STR_LENGTH], clockoffset[STR_LENGTH], freqoffset[STR_LENGTH], syncmetric[STR_LENGTH];
+        snprintf(mode, STR_LENGTH, "Mode: %s", freedvInterface.getCurrentModeStr()); wxString modeString(mode); m_textCurrentDecodeMode->SetLabel(modeString);
+        snprintf(bits, STR_LENGTH, "Bits: %d", freedvInterface.getTotalBits()); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
+        snprintf(errors, STR_LENGTH, "Errs: %d", freedvInterface.getTotalBitErrors()); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
         float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
-        sprintf(ber, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
-        sprintf(resyncs, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
+        snprintf(ber, STR_LENGTH, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
+        snprintf(resyncs, STR_LENGTH, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
 
-        sprintf(freqoffset, "FrqOff: %3.1f", freedvInterface.getCurrentRxModemStats()->foff);
+        snprintf(freqoffset, STR_LENGTH, "FrqOff: %3.1f", freedvInterface.getCurrentRxModemStats()->foff);
         wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
-        sprintf(syncmetric, "Sync: %3.2f", freedvInterface.getCurrentRxModemStats()->sync_metric);
+        snprintf(syncmetric, STR_LENGTH, "Sync: %3.2f", freedvInterface.getCurrentRxModemStats()->sync_metric);
         wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
 
         // Codec 2 700C/D/E & 800XA VQ "auto EQ" equaliser variance
         auto var = freedvInterface.getVariance();
-        char var_str[80]; sprintf(var_str, "Var: %4.1f", var);
+        char var_str[STR_LENGTH]; snprintf(var_str, STR_LENGTH, "Var: %4.1f", var);
         wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
 
         if (g_State) {
 
-            sprintf(clockoffset, "ClkOff: %+-d", (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
+            snprintf(clockoffset, STR_LENGTH, "ClkOff: %+-d", (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
             wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
 
             // update error pattern plots if supported
@@ -2672,9 +2675,9 @@ bool MainFrame::validateSoundCardSetup()
 int MainFrame::PollUDP(void)
 {
     // this will block until message received, so we put it in it's own thread
-
+    const int STR_LENGTH = 80;
     char buf[1024];
-    char reply[80];
+    char reply[STR_LENGTH];
     size_t n = m_udp_sock->RecvFrom(m_udp_addr, buf, sizeof(buf)).LastCount();
 
     if (n) {
@@ -2687,14 +2690,14 @@ int MainFrame::PollUDP(void)
 
         // for security only accept commands from local host
 
-        sprintf(reply,"nope\n");
+        snprintf(reply, STR_LENGTH, "nope\n");
         if (ipaddr.Cmp(_("127.0.0.1")) == 0) {
 
             // process commands
 
             if (bufstr.Cmp(_("restore")) == 0) {
                 m_schedule_restore = true;  // Make Restore happen in main thread to avoid crashing
-                sprintf(reply,"ok\n");
+                snprintf(reply, STR_LENGTH, "ok\n");
             }
 
             wxString itemToSet, val;
@@ -2703,19 +2706,19 @@ int MainFrame::PollUDP(void)
                     // note: if options dialog is open this will get overwritten
                     wxGetApp().m_callSign = val;
                 }
-                sprintf(reply,"ok\n");
+                snprintf(reply, STR_LENGTH, "ok\n");
             }
             if (bufstr.StartsWith(_("ptton"), &itemToSet)) {
                 // note: if options dialog is open this will get overwritten
                 m_btnTogPTT->SetValue(true);
                 togglePTT();
-                sprintf(reply,"ok\n");
+                snprintf(reply, STR_LENGTH, "ok\n");
             }
             if (bufstr.StartsWith(_("pttoff"), &itemToSet)) {
                 // note: if options dialog is open this will get overwritten
                 m_btnTogPTT->SetValue(false);
                 togglePTT();
-                sprintf(reply,"ok\n");
+                snprintf(reply, STR_LENGTH, "ok\n");
             }
 
         }
