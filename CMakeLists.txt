@@ -239,6 +239,7 @@ if(CODEC2_BUILD_DIR)
     get_target_property(CODEC2_INCLUDE_DIRS codec2 INTERFACE_INCLUDE_DIRECTORIES)
     if(LPCNET_BUILD_DIR)
         message(STATUS "Using LPCNet from build directory...")
+        set(lpcnet_DIR ${LPCNET_BUILD_DIR})
         find_package(lpcnet REQUIRED
             NO_DEFAULT_PATH
             PATHS ${LPCNET_BUILD_DIR}
