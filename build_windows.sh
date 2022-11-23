@@ -23,7 +23,7 @@ export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 export HAMLIBDIR=$FREEDVGUIDIR/hamlib
 
-CODEC2_BRANCH=master
+CODEC2_BRANCH=ms-test-cmake
 LPCNET_BRANCH=ms-uncouple-codec2
 
 # Prerequisite: build hamlib
