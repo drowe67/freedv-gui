@@ -226,6 +226,11 @@ if(CODEC2_BUILD_DIR)
     endif()
     set(USE_INTERNAL_CODEC2 OFF CACHE BOOL "" FORCE)
     message(STATUS "Using codec2 from build directory...")
+
+    # Theoretically this isn't needed due to the PATHS argument below, but 
+    # Fedora 37 (inside the Docker container) can't find Codec2 without it.
+    set(codec2_DIR ${CODEC2_BUILD_DIR})
+
     find_package(codec2 REQUIRED
         NO_DEFAULT_PATH
         PATHS ${CODEC2_BUILD_DIR}

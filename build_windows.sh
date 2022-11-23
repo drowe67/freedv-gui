@@ -52,7 +52,7 @@ if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2.git
 fi
 cd codec2 && git switch master && git pull && git checkout $CODEC2_BRANCH
-mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf * && $CMAKE --debug-find -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR .. && make VERBOSE=1
+mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf * && $CMAKE -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR .. && make VERBOSE=1
 
 cd $FREEDVGUIDIR
 if [ -d .git ]; then
