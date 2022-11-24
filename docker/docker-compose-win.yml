@@ -1,7 +1,7 @@
 version: "3"
 
 services:
-  fdv_win_fed_34_s:
+  fdv_win_fed_37_s:
     environment:
         - FDV_GIT_REPO
         - FDV_GIT_BRANCH
@@ -11,12 +11,12 @@ services:
     build: 
       context: fdv_win_fedora
       args:
-         - FED_REL=34
+         - FED_REL=37
 
-    image:  fdv_win_fed34_i
-    container_name: 'fdv_win_fed34_c'
+    image:  fdv_win_fed37_i
+    container_name: 'fdv_win_fed37_c'
     volumes:
-            - win_fed34_v:/home/build/
+            - win_fed37_v:/home/build/
 
 volumes:
-  win_fed34_v:
+  win_fed37_v:
