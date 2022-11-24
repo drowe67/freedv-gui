@@ -102,4 +102,4 @@ FDV_CLEAN=$FDV_CLEAN FDV_BOOTSTRAP_WX=$FDV_BOOTSTRAP_WX FDV_CMAKE=$FDV_CMAKE FDV
 docker-compose -f docker-compose-win.yml up --remove-orphans >> $log
 package_docker_path=$(cat $log | sed  -n "s/.*package: \(.*exe\) .*/\1/p")
 echo $package_docker_path
-docker cp fdv_win_fed34_c:$package_docker_path .
+docker cp fdv_win_fed37_c:$package_docker_path .
