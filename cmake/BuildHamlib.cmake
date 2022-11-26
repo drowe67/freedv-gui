@@ -1,3 +1,6 @@
+if(MINGW AND CMAKE_CROSSCOMPILING)
+    set(CONFIGURE_COMMAND ./configure --host=${HOST} --target=${HOST} --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
+else(MINGW AND CMAKE_CROSSCOMPILING)
 if(APPLE)
 if(BUILD_OSX_UNIVERSAL)
     set(CONFIGURE_COMMAND ./configure --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist CFLAGS=-g\ -O2\ -mmacosx-version-min=10.9\ -arch\ x86_64\ -arch\ arm64 CXXFLAGS=-g\ -O2\ -mmacosx-version-min=10.9\ -arch\ x86_64\ -arch\ arm64)
@@ -5,8 +8,9 @@ else()
     set(CONFIGURE_COMMAND ./configure --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist CFLAGS=-g\ -O2\ -mmacosx-version-min=10.9 CXXFLAGS=-g\ -O2\ -mmacosx-version-min=10.9)
 endif(BUILD_OSX_UNIVERSAL)
 else()
-    set(CONFIGURE_COMMAND ./configure --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist)
+    set(CONFIGURE_COMMAND ./configure --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER})
 endif()
+endif(MINGW AND CMAKE_CROSSCOMPILING)
 
 include(ExternalProject)
 ExternalProject_Add(hamlib

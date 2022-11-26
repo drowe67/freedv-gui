@@ -11,7 +11,7 @@ endif(BUILD_OSX_UNIVERSAL)
 # Bootstrap lpcnetfreedv library
 include(cmake/BuildLPCNet.cmake)
 
-# Build final codec2 library with lpcnetfreedv
+# Build codec2 library with lpcnetfreedv
 set(CODEC2_CMAKE_ARGS ${CODEC2_CMAKE_ARGS} -DLPCNET_BUILD_DIR=${CMAKE_BINARY_DIR}/LPCNet_build)
 include(ExternalProject)
 ExternalProject_Add(build_codec2
@@ -19,7 +19,7 @@ ExternalProject_Add(build_codec2
    BINARY_DIR codec2_build
    GIT_REPOSITORY https://github.com/drowe67/codec2.git
    GIT_TAG origin/master
-   CMAKE_ARGS ${CODEC2_CMAKE_ARGS} ${SPEEXDSP_CMAKE_ARGS} 
+   CMAKE_ARGS ${CODEC2_CMAKE_ARGS}
    CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET}
    INSTALL_COMMAND ""
 )

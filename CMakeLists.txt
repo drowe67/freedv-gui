@@ -14,6 +14,9 @@ set(PROJECT_VERSION 1.8.4)
 set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
 set(PROJECT_HOMEPAGE_URL "https://freedv.org")
 
+# Makes FreeDV overridden CMake platform available for ARM MinGW builds.
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+
 if(APPLE)
     project(
         ${PROJECT_NAME}
@@ -368,12 +371,8 @@ if(NOT USE_STATIC_SAMPLERATE)
         list(APPEND FREEDV_LINK_LIBS ${LIBSAMPLERATE})
         include_directories(${LIBSAMPLERATE_INCLUDE_DIR})
     else(LIBSTAMPLERATE AND LIBSAMPLERATE_INCLUDE_DIR)
-        message(FATAL_ERROR "samplerate library not found.
-On Linux systems try installing:
-    samplerate-devel  (RPM based systems)
-    libsamplerate-dev (DEB based systems)
-On Windows it's easiest to use the cmake option: USE_STATIC_SAMPLERATE"
-        )
+        message(STATUS "Will attempt static build of samplerate.")
+        include(cmake/BuildSamplerate.cmake)
     endif(LIBSAMPLERATE AND LIBSAMPLERATE_INCLUDE_DIR)
 else(NOT USE_STATIC_SAMPLERATE)
     message(STATUS "Will attempt static build of samplerate.")
@@ -392,12 +391,8 @@ if(NOT USE_STATIC_SNDFILE)
     if(LIBSNDFILE AND LIBSNDFILE_INCLUDE_DIR)
         list(APPEND FREEDV_LINK_LIBS ${LIBSNDFILE})
     else(LIBSNDFILE AND LIBSNDFILE_INCLUDE_DIR)
-        message(FATAL_ERROR "sndfile library not found.
-On Linux systems try installing:
-    libsndfile-devel (RPM based systems)
-    libsndfile-dev   (DEB based systems)
-On Windows it's easiest to use the cmake option: USE_STATIC_SNDFILE"
-        )
+        message(STATUS "Will attempt static build of sndfile.")
+        include(cmake/BuildSndfile.cmake)
     endif(LIBSNDFILE AND LIBSNDFILE_INCLUDE_DIR)
 else(NOT USE_STATIC_SNDFILE)
     message(STATUS "Will attempt static build of sndfile.")
@@ -509,13 +504,6 @@ add_subdirectory(src)
 add_subdirectory(contrib)
 
 message(STATUS "Build type will be: ${CMAKE_BUILD_TYPE}")
-
-# Adds support for "make dist" target.
-set(ARCHIVE_NAME "freedv-${FREEDV_VERSION_MAJOR}.${FREEDV_VERSION_MINOR}.${FREEDV_VERSION_PATCH}")
-add_custom_target(dist
-    COMMAND git archive --prefix=${ARCHIVE_NAME}/ HEAD
-        | bzip2 > ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 # CPack configuration for Windows and Linux.
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "HF Digital Voice for Radio Amateurs")
