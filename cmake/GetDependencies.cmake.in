@@ -24,6 +24,8 @@ set(FREEDV_EXE ${CMAKE_BINARY_DIR}/src/freedv.exe)
 include(GetPrerequisites)
 get_prerequisites("${FREEDV_EXE}" _deps 1 0 "" "")
 
+message("Found Win32 dependencies: ${_deps}")
+
 # Filter libraries known to be provided by Windows
 set( _windlls
     ADVAPI32.dll
