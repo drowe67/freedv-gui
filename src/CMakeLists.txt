@@ -95,6 +95,9 @@ if(FREEDV_STATIC_DEPS)
     else(APPLE)
     add_dependencies(freedv ${FREEDV_STATIC_DEPS})
     endif(APPLE)
+    add_dependencies(fdv_audio ${FREEDV_STATIC_DEPS})
+    add_dependencies(fdv_audio_pipeline ${FREEDV_STATIC_DEPS})
+    add_dependencies(fdv_sox ${FREEDV_STATIC_DEPS})
 endif(FREEDV_STATIC_DEPS)
 
 # Link other dependencies
