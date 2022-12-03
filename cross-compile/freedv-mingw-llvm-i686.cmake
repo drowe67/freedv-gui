@@ -8,6 +8,8 @@ set(CMAKE_C_COMPILER_TARGET ${triple})
 set(CMAKE_CXX_COMPILER ${triple}-clang++)
 set(CMAKE_CXX_COMPILER_TARGET ${triple})
 
+set(CMAKE_AR ${triple}-ar)
+set(CMAKE_RANLIB ${triple}-ranlib)
 set(CMAKE_RC_COMPILER ${triple}-windres)
 
 # For make package use.
