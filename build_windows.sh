@@ -21,21 +21,9 @@ fi
 export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
-export HAMLIBDIR=$FREEDVGUIDIR/hamlib
 
 CODEC2_BRANCH=master
 LPCNET_BRANCH=master
-
-# Prerequisite: build hamlib
-cd $FREEDVGUIDIR
-if [ ! -d hamlib-code ]; then
-    git clone https://github.com/Hamlib/Hamlib.git hamlib-code
-fi
-cd hamlib-code && git checkout master && git pull
-./bootstrap
-CFLAGS="-g -O2 -fstack-protector" ./configure --host=$MINGW_TRIPLE --target=$MINGW_TRIPLE --prefix $HAMLIBDIR --disable-shared
-make
-make install
 
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
@@ -63,10 +51,10 @@ if [ $CLEAN -eq 1 ]; then rm -Rf *; fi
 
 if [ $BOOTSTRAP_WX -eq 1 ]; then
     # build freedv-gui
-    $CMAKE -DBOOTSTRAP_WXWIDGETS=1 -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.a ..
+    $CMAKE -DBOOTSTRAP_WXWIDGETS=1 -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR ..
     make VERBOSE=1 -j4
 else
     # build freedv-gui
-    $CMAKE -DCMAKE_BUILD_TYPE=Debug -DUNITTEST=$UT_ENABLE -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.a ..
+    $CMAKE -DCMAKE_BUILD_TYPE=Debug -DUNITTEST=$UT_ENABLE -DCODEC2_BUILD_DIR=$CODEC2DIR/$BUILD_DIR -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR ..
     make VERBOSE=1 -j4
 fi
