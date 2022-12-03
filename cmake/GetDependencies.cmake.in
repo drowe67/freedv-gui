@@ -18,11 +18,29 @@ else()
     set(LPCNET_BUILD_DIR @LPCNET_BUILD_DIR@)
 endif()
 
+set(FREEDV_USING_LLVM_MINGW @FREEDV_USING_LLVM_MINGW@)
+
+set(CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM windows+pe)
+set(CMAKE_GET_RUNTIME_DEPENDENCIES_TOOL objdump)
+set(CMAKE_GET_RUNTIME_DEPENDENCIES_COMMAND ${CMAKE_OBJDUMP})
+
+#message("dependency platform: ${CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM}")
+#message("dependency tool: ${CMAKE_GET_RUNTIME_DEPENDENCIES_TOOL}")
+#message("dependency command: ${CMAKE_GET_RUNTIME_DEPENDENCIES_COMMAND}")
 
 set(FREEDV_EXE ${CMAKE_BINARY_DIR}/src/freedv.exe)
 
-include(GetPrerequisites)
-get_prerequisites("${FREEDV_EXE}" _deps 1 0 "" "")
+# Implement our own GetDependencies because the CMake one
+# isn't working for some reason when using LLVM.
+macro(freedv_get_dependencies OUTPUT_VAR FILENAME)
+    execute_process(
+        COMMAND ${CMAKE_OBJDUMP} -p ${FILENAME}
+        COMMAND grep "DLL Name:" 
+        COMMAND awk "{ printf \"%s;\", \$3; }"
+        OUTPUT_VARIABLE ${OUTPUT_VAR})
+endmacro()
+
+freedv_get_dependencies(_deps ${FREEDV_EXE})
 
 message("Found Win32 dependencies: ${_deps}")
 
@@ -45,24 +63,59 @@ set( _windlls
     RPCRT4.dll
     comdlg32.dll
     COMDLG32.DLL
+
+    # The below are additional DLLs required when compiled
+    # using the LLVM version of MinGW.
+
+    SETUPAPI.dll
+    WINSPOOL.DRV
+    VERSION.dll
+    api-ms-win-crt-locale-l1-1-0.dll
+    api-ms-win-crt-filesystem-l1-1-0.dll
+    SHLWAPI.dll
+    UxTheme.dll
+    OLEACC.dll
+    api-ms-win-crt-environment-l1-1-0.dll
+    api-ms-win-crt-utility-l1-1-0.dll
+    api-ms-win-crt-time-l1-1-0.dll
+    api-ms-win-crt-string-l1-1-0.dll
+    api-ms-win-crt-stdio-l1-1-0.dll
+    api-ms-win-crt-runtime-l1-1-0.dll
+    api-ms-win-crt-private-l1-1-0.dll
+    api-ms-win-crt-math-l1-1-0.dll
+    api-ms-win-crt-heap-l1-1-0.dll
+    api-ms-win-crt-convert-l1-1-0.dll
+    api-ms-win-crt-multibyte-l1-1-0.dll
 )
 list(REMOVE_ITEM _deps ${_windlls})
 
 # Handle internal libraries separately.
 if(CODEC2_BUILD_DIR)
-    list(FIND _deps libcodec2.dll _loc)
-    list(REMOVE_AT _deps ${_loc})
+    list(REMOVE_ITEM _deps libcodec2.dll)
     find_library(CODEC2 codec2 NO_DEFAULT_PATH PATHS ${CODEC2_BUILD_DIR}/src)
+    string(REPLACE ".a" "" CODEC2_FINAL ${CODEC2})
     file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
-        TYPE EXECUTABLE FILES ${CODEC2})
+        TYPE EXECUTABLE FILES ${CODEC2_FINAL})
 endif()
 if(LPCNET_BUILD_DIR)
-    list(FIND _deps liblpcnetfreedv.dll _loc)
-    list(REMOVE_AT _deps ${_loc})
+    list(REMOVE_ITEM _deps liblpcnetfreedv.dll)
     find_library(LPCNET lpcnetfreedv NO_DEFAULT_PATH PATHS ${LPCNET_BUILD_DIR}/src)
+    string(REPLACE ".a" "" LPCNET_FINAL ${LPCNET})
     file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
-        TYPE EXECUTABLE FILES ${LPCNET})
+        TYPE EXECUTABLE FILES ${LPCNET_FINAL})
 endif()
+
+if(FREEDV_USING_LLVM_MINGW)
+    # Use the bin/ folder for the platform as an additional
+    # search path for find_library.
+    find_program(OBJDUMP_PATH ${CMAKE_OBJDUMP})
+    string(REPLACE "-objdump" "" LLVM_ARCH_TRIPLE ${CMAKE_OBJDUMP})
+
+    string(REPLACE ${CMAKE_OBJDUMP} "" OBJDUMP_PATH ${OBJDUMP_PATH})
+    string(APPEND LLVM_ADDITIONAL_LIB_PATH ${OBJDUMP_PATH} "../" ${LLVM_ARCH_TRIPLE} "/bin")
+    cmake_path(NORMAL_PATH LLVM_ADDITIONAL_LIB_PATH)
+    message("Using ${LLVM_ADDITIONAL_LIB_PATH} for dependency searches.")
+endif(FREEDV_USING_LLVM_MINGW)
 
 # Process remaining dependencies.
 list(LENGTH _deps _dep_len)
@@ -70,12 +123,16 @@ message("There are ${_dep_len} dependencies to scan.")
 while(_deps)
     foreach(_runtime ${_deps})
         message("Looking for ${_runtime}")
-        find_library(RUNTIME_${_runtime} ${_runtime})
+        if(FREEDV_USING_LLVM_MINGW)
+            find_file(RUNTIME_${_runtime} NAMES ${_runtime} PATHS ${LLVM_ADDITIONAL_LIB_PATH})
+        else(FREEDV_USING_LLVM_MINGW)
+            find_library(RUNTIME_${_runtime} ${_runtime})
+        endif(FREEDV_USING_LLVM_MINGW)
         if(RUNTIME_${_runtime})
             message("Found: ${RUNTIME_${_runtime}}")
             file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
                 TYPE EXECUTABLE FILES "${RUNTIME_${_runtime}}")
-            get_prerequisites("${RUNTIME_${_runtime}}" _newdep 1 0 "" "")
+            freedv_get_dependencies(_newdep "${RUNTIME_${_runtime}}")
             list(APPEND _newdeps ${_newdep})
             list(APPEND _good_deps ${_runtime})
         else()
