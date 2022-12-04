@@ -20,8 +20,10 @@ ExternalProject_Add(build_lpcnetfreedv
 ExternalProject_Get_Property(build_lpcnetfreedv BINARY_DIR)
 ExternalProject_Get_Property(build_lpcnetfreedv SOURCE_DIR)
 add_library(lpcnetfreedv SHARED IMPORTED)
+
 set_target_properties(lpcnetfreedv PROPERTIES 
     IMPORTED_LOCATION "${BINARY_DIR}/src/liblpcnetfreedv${CMAKE_SHARED_LIBRARY_SUFFIX}"
     IMPORTED_IMPLIB   "${BINARY_DIR}/src/liblpcnetfreedv${CMAKE_IMPORT_LIBRARY_SUFFIX}"
 )
+
 include_directories(${SOURCE_DIR}/src)

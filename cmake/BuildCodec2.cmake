@@ -27,10 +27,12 @@ ExternalProject_Add(build_codec2
 ExternalProject_Get_Property(build_codec2 BINARY_DIR)
 ExternalProject_Get_Property(build_codec2 SOURCE_DIR)
 add_library(codec2 SHARED IMPORTED)
+
 set_target_properties(codec2 PROPERTIES
     IMPORTED_LOCATION "${BINARY_DIR}/src/libcodec2${CMAKE_SHARED_LIBRARY_SUFFIX}"
     IMPORTED_IMPLIB   "${BINARY_DIR}/src/libcodec2${CMAKE_IMPORT_LIBRARY_SUFFIX}"
 )
+
 add_dependencies(build_codec2 build_lpcnetfreedv)
 
 include_directories(${CMAKE_BINARY_DIR}/codec2_src/src ${CMAKE_BINARY_DIR}/codec2_build)
