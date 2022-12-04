@@ -26,3 +26,7 @@ ExternalProject_Add(hamlib
 include_directories(${CMAKE_BINARY_DIR}/external/dist/include)
 list(APPEND FREEDV_LINK_LIBS ${CMAKE_BINARY_DIR}/external/dist/lib/libhamlib.a)
 list(APPEND FREEDV_STATIC_DEPS hamlib)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector")
+
