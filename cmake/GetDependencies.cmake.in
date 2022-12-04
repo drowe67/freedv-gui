@@ -43,6 +43,12 @@ set( _windlls
     RPCRT4.dll
     comdlg32.dll
     COMDLG32.DLL
+    SETUPAPI.dll
+    WINSPOOL.DRV
+    VERSION.dll
+    SHLWAPI.dll
+    UxTheme.dll
+    OLEACC.dll
 )
 list(REMOVE_ITEM _deps ${_windlls})
 
