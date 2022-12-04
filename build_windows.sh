@@ -24,7 +24,7 @@ export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 export HAMLIBDIR=$FREEDVGUIDIR/hamlib
 
 CODEC2_BRANCH=master
-LPCNET_BRANCH=ms-uncouple-codec2
+LPCNET_BRANCH=master
 
 # Prerequisite: build hamlib
 cd $FREEDVGUIDIR
