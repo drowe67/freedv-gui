@@ -38,6 +38,7 @@ macro(freedv_get_dependencies OUTPUT_VAR FILENAME)
         COMMAND ${CMAKE_OBJDUMP} -p ${FILENAME}
         COMMAND grep "DLL Name:" 
         COMMAND awk "{ printf \"%s;\", \$3; }"
+        COMMAND sed "s/;$//"
         OUTPUT_VARIABLE ${OUTPUT_VAR})
 endmacro()
 
