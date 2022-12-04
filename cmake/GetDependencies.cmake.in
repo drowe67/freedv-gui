@@ -17,7 +17,7 @@ else()
     set(CODEC2_BUILD_DIR @CODEC2_BUILD_DIR@)
     set(LPCNET_BUILD_DIR @LPCNET_BUILD_DIR@)
 endif()
-
+set(FREEDV_PACKAGE_SEARCH_PATHS @FREEDV_PACKAGE_SEARCH_PATHS@)
 
 set(FREEDV_EXE ${CMAKE_BINARY_DIR}/src/freedv.exe)
 
@@ -43,6 +43,12 @@ set( _windlls
     RPCRT4.dll
     comdlg32.dll
     COMDLG32.DLL
+    SETUPAPI.dll
+    WINSPOOL.DRV
+    VERSION.dll
+    SHLWAPI.dll
+    UxTheme.dll
+    OLEACC.dll
 )
 list(REMOVE_ITEM _deps ${_windlls})
 
@@ -50,14 +56,14 @@ list(REMOVE_ITEM _deps ${_windlls})
 if(CODEC2_BUILD_DIR)
     list(FIND _deps libcodec2.dll _loc)
     list(REMOVE_AT _deps ${_loc})
-    find_library(CODEC2 codec2 NO_DEFAULT_PATH PATHS ${CODEC2_BUILD_DIR}/src)
+    find_library(CODEC2 codec2 NO_DEFAULT_PATH PATHS ${CODEC2_BUILD_DIR}/src REQUIRED)
     file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         TYPE EXECUTABLE FILES ${CODEC2})
 endif()
 if(LPCNET_BUILD_DIR)
     list(FIND _deps liblpcnetfreedv.dll _loc)
     list(REMOVE_AT _deps ${_loc})
-    find_library(LPCNET lpcnetfreedv NO_DEFAULT_PATH PATHS ${LPCNET_BUILD_DIR}/src)
+    find_library(LPCNET lpcnetfreedv NO_DEFAULT_PATH PATHS ${LPCNET_BUILD_DIR}/src REQUIRED)
     file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         TYPE EXECUTABLE FILES ${LPCNET})
 endif()
@@ -68,7 +74,7 @@ message("There are ${_dep_len} dependencies to scan.")
 while(_deps)
     foreach(_runtime ${_deps})
         message("Looking for ${_runtime}")
-        find_library(RUNTIME_${_runtime} ${_runtime})
+        find_library(RUNTIME_${_runtime} NAMES ${_runtime} PATHS ${FREEDV_PACKAGE_SEARCH_PATHS} REQUIRED)
         if(RUNTIME_${_runtime})
             message("Found: ${RUNTIME_${_runtime}}")
             file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
