@@ -7,11 +7,6 @@
 #
 cmake_minimum_required(VERSION 3.13)
 
-# Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP in CMake 3.24.
-if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
-    cmake_policy(SET CMP0135 NEW)
-endif (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
-
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
 
 set(PROJECT_NAME FreeDV)
