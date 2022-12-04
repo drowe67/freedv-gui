@@ -71,6 +71,7 @@ set( _windlls
     SHLWAPI.dll
     UxTheme.dll
     OLEACC.dll
+    msvcrt.dll
 
     # The below are additional DLLs required when compiled
     # using the LLVM version of MinGW.
