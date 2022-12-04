@@ -13,6 +13,7 @@ FetchContent_GetProperties(portaudio)
 if(NOT portaudio_POPULATED)
   FetchContent_Populate(portaudio)
   add_subdirectory(${portaudio_SOURCE_DIR} ${portaudio_BINARY_DIR} EXCLUDE_FROM_ALL)
+  list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${portaudio_BINARY_DIR})
 endif()
 
 list(APPEND FREEDV_LINK_LIBS PortAudio)

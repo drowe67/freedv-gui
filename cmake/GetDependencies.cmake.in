@@ -19,6 +19,7 @@ else()
 endif()
 
 set(FREEDV_USING_LLVM_MINGW @FREEDV_USING_LLVM_MINGW@)
+set(FREEDV_PACKAGE_SEARCH_PATHS @FREEDV_PACKAGE_SEARCH_PATHS@)
 
 set(CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM windows+pe)
 set(CMAKE_GET_RUNTIME_DEPENDENCIES_TOOL objdump)
@@ -63,18 +64,18 @@ set( _windlls
     RPCRT4.dll
     comdlg32.dll
     COMDLG32.DLL
+    SETUPAPI.dll
+    WINSPOOL.DRV
+    VERSION.dll
+    SHLWAPI.dll
+    UxTheme.dll
+    OLEACC.dll
 
     # The below are additional DLLs required when compiled
     # using the LLVM version of MinGW.
 
-    SETUPAPI.dll
-    WINSPOOL.DRV
-    VERSION.dll
     api-ms-win-crt-locale-l1-1-0.dll
     api-ms-win-crt-filesystem-l1-1-0.dll
-    SHLWAPI.dll
-    UxTheme.dll
-    OLEACC.dll
     api-ms-win-crt-environment-l1-1-0.dll
     api-ms-win-crt-utility-l1-1-0.dll
     api-ms-win-crt-time-l1-1-0.dll
@@ -92,14 +93,14 @@ list(REMOVE_ITEM _deps ${_windlls})
 # Handle internal libraries separately.
 if(CODEC2_BUILD_DIR)
     list(REMOVE_ITEM _deps libcodec2.dll)
-    find_library(CODEC2 codec2 NO_DEFAULT_PATH PATHS ${CODEC2_BUILD_DIR}/src)
+    find_library(CODEC2 codec2 NO_DEFAULT_PATH PATHS ${CODEC2_BUILD_DIR}/src REQUIRED)
     string(REPLACE ".a" "" CODEC2_FINAL ${CODEC2})
     file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         TYPE EXECUTABLE FILES ${CODEC2_FINAL})
 endif()
 if(LPCNET_BUILD_DIR)
     list(REMOVE_ITEM _deps liblpcnetfreedv.dll)
-    find_library(LPCNET lpcnetfreedv NO_DEFAULT_PATH PATHS ${LPCNET_BUILD_DIR}/src)
+    find_library(LPCNET lpcnetfreedv NO_DEFAULT_PATH PATHS ${LPCNET_BUILD_DIR}/src REQUIRED)
     string(REPLACE ".a" "" LPCNET_FINAL ${LPCNET})
     file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         TYPE EXECUTABLE FILES ${LPCNET_FINAL})
@@ -124,9 +125,9 @@ while(_deps)
     foreach(_runtime ${_deps})
         message("Looking for ${_runtime}")
         if(FREEDV_USING_LLVM_MINGW)
-            find_file(RUNTIME_${_runtime} NAMES ${_runtime} PATHS ${LLVM_ADDITIONAL_LIB_PATH})
+            find_file(RUNTIME_${_runtime} NAMES ${_runtime} PATHS ${LLVM_ADDITIONAL_LIB_PATH} REQUIRED)
         else(FREEDV_USING_LLVM_MINGW)
-            find_library(RUNTIME_${_runtime} ${_runtime})
+            find_library(RUNTIME_${_runtime} NAMES ${_runtime} PATHS ${FREEDV_PACKAGE_SEARCH_PATHS} REQUIRED)
         endif(FREEDV_USING_LLVM_MINGW)
         if(RUNTIME_${_runtime})
             message("Found: ${RUNTIME_${_runtime}}")

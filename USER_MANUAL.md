@@ -781,11 +781,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## TBD TBD
+## V1.8.5 December 2022
 
 1. Build system:
     * Add checks for .git folder to prevent errors when building from official release tarballs. (PR #294)
-    * Simplify PortAudio static build to fix multi-core build issue on macOS. (PR #304)
+    * Simplify PortAudio static build to fix multi-core build issue on macOS. (PR #304, #308)
     * Upgrade bootstrapped wxWidgets to v3.2.1. (PR #302)
     * Upgrade Docker container to Fedora 37. (PR #306)
 2. Enhancements:
