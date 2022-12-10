@@ -1682,45 +1682,39 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         m_rb2020c,
 #endif // FREEDV_MODE_2020C
     };
+    buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), (wxRadioButton*)event.GetEventObject()));        
     
     txModeChangeMutex.Lock();
     
     if (m_rb1600->GetValue()) 
     {
         g_mode = FREEDV_MODE_1600;
-        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb1600));        
     }
     else if (m_rb700c->GetValue()) 
     {
         g_mode = FREEDV_MODE_700C;
-        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb700c));
     }
     else if (m_rb700d->GetValue()) 
     {
         g_mode = FREEDV_MODE_700D;
-        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb700d));
     }
     else if (m_rb700e->GetValue()) 
     {
         g_mode = FREEDV_MODE_700E;
-        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb700e));
     }
     else if (m_rb800xa->GetValue()) 
     {
         g_mode = FREEDV_MODE_800XA;
-        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb800xa));
     }
     else if (m_rb2400b->GetValue()) 
     {
         g_mode = FREEDV_MODE_2400B;
-        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb2400b));
     }
     else if (m_rb2020->GetValue()) 
     {
         assert(wxGetApp().m_2020Allowed);
         
         g_mode = FREEDV_MODE_2020;
-        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb2020));
     }
 #if defined(FREEDV_MODE_2020B)
     else if (m_rb2020b->GetValue()) 
@@ -1728,7 +1722,6 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         assert(wxGetApp().m_2020Allowed);
         
         g_mode = FREEDV_MODE_2020B;
-        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb2020b));
     }
 #endif // FREEDV_MODE_2020B
 #if defined(FREEDV_MODE_2020C)
