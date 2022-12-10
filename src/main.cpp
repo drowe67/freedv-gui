@@ -1728,7 +1728,6 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     else if (m_rb2020c->GetValue()) 
     {
         g_mode = FREEDV_MODE_2020C;
-        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb2020c));
     }
 #endif // FREEDV_MODE_2020C
     
