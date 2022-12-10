@@ -781,6 +781,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## TBD TBD 2023
+
+1. Enhancements:
+    * Add 2020B to multi-RX feature to enable RX and TX without restarting session. (PR #312)
+
 ## V1.8.5 December 2022
 
 1. Build system:
