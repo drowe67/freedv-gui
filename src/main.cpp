@@ -1765,12 +1765,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_togBtnVoiceKeyer->Enable();
 
         if (g_mode == FREEDV_MODE_2400B || g_mode == FREEDV_MODE_800XA || 
-#if defined(FREEDV_MODE_2020B)
-            g_mode == FREEDV_MODE_2020B || /* note: 2020B don't play well with multi-RX atm */
-#endif // FREEDV_MODE_2020B
-#if defined(FREEDV_MODE_2020C)
-            g_mode == FREEDV_MODE_2020C || /* note: 2020C don't play well with multi-RX atm */
-#endif // FREEDV_MODE_2020C
             !wxGetApp().m_boolMultipleRx)
         {
             m_rb1600->Disable();
@@ -1793,6 +1787,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             if(wxGetApp().m_2020Allowed)
             {
                 freedvInterface.addRxMode(FREEDV_MODE_2020);
+#if defined(FREEDV_MODE_2020B)
+                freedvInterface.addRxMode(FREEDV_MODE_2020B);
+#endif // FREEDV_MODE_2020B
             }
             
             int rxModes[] = {
@@ -1814,12 +1811,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             
             m_rb800xa->Disable();
             m_rb2400b->Disable();
-#if defined(FREEDV_MODE_2020B)
-            m_rb2020b->Disable();
-#endif // FREEDV_MODE_2020B
-#if defined(FREEDV_MODE_2020C)
-            m_rb2020c->Disable();
-#endif // FREEDV_MODE_2020C
         }
         
         // Default voice keyer sample rate to 8K. The exact voice keyer
