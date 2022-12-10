@@ -1656,8 +1656,13 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         m_rb2020b,
 #endif // FREEDV_MODE_2020B
     };
-    buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), (wxRadioButton*)event.GetEventObject()));        
-    
+
+    auto eventObject = event.GetEventObject();
+    if (eventObject != nullptr)
+    {
+        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), (wxRadioButton*)eventObject));
+    }
+
     txModeChangeMutex.Lock();
     
     if (m_rb1600->GetValue()) 
@@ -1714,11 +1719,13 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     // Manually implement mutually exclusive behavior as
     // we can't rely on wxWidgets doing it on account of
     // how we're splitting the modes.
-    for (auto& var : buttonsToClear)
+    if (eventObject != nullptr)
     {
-        var->SetValue(false);
+        for (auto& var : buttonsToClear)
+        {
+            var->SetValue(false);
+        }
     }
-    
 }
 
 //-------------------------------------------------------------------------
@@ -1752,7 +1759,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_textCurrentDecodeMode->Enable();
 
         // determine what mode we are using
-        OnChangeTxMode(event);
+        wxCommandEvent tmpEvent;
+        OnChangeTxMode(tmpEvent);
 
         // init freedv states
         m_togBtnSplit->Enable();
