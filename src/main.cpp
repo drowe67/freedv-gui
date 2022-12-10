@@ -21,6 +21,7 @@
 //==========================================================================
 
 #include <time.h>
+#include <vector>
 #include <deque>
 #include <random>
 #include <chrono>
@@ -1654,9 +1655,6 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 #if defined(FREEDV_MODE_2020B)
         m_rb2020b,
 #endif // FREEDV_MODE_2020B
-#if defined(FREEDV_MODE_2020C)
-        m_rb2020c,
-#endif // FREEDV_MODE_2020C
     };
     
     txModeChangeMutex.Lock();
