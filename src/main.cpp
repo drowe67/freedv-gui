@@ -21,6 +21,7 @@
 //==========================================================================
 
 #include <time.h>
+#include <vector>
 #include <deque>
 #include <random>
 #include <chrono>
@@ -1665,37 +1666,61 @@ void MainFrame::OnExit(wxCommandEvent& event)
 
 void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 {
+    std::vector<wxRadioButton*> buttonsToClear 
+    {
+        m_rb700c,
+        m_rb700d,
+        m_rb700e,
+        m_rb800xa,
+        m_rb1600,
+        m_rb2400b,
+        m_rb2020,
+#if defined(FREEDV_MODE_2020B)
+        m_rb2020b,
+#endif // FREEDV_MODE_2020B
+#if defined(FREEDV_MODE_2020C)
+        m_rb2020c,
+#endif // FREEDV_MODE_2020C
+    };
+    
     txModeChangeMutex.Lock();
     
     if (m_rb1600->GetValue()) 
     {
         g_mode = FREEDV_MODE_1600;
+        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb1600));        
     }
     else if (m_rb700c->GetValue()) 
     {
         g_mode = FREEDV_MODE_700C;
+        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb700c));
     }
     else if (m_rb700d->GetValue()) 
     {
         g_mode = FREEDV_MODE_700D;
+        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb700d));
     }
     else if (m_rb700e->GetValue()) 
     {
         g_mode = FREEDV_MODE_700E;
+        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb700e));
     }
     else if (m_rb800xa->GetValue()) 
     {
         g_mode = FREEDV_MODE_800XA;
+        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb800xa));
     }
     else if (m_rb2400b->GetValue()) 
     {
         g_mode = FREEDV_MODE_2400B;
+        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb2400b));
     }
     else if (m_rb2020->GetValue()) 
     {
         assert(wxGetApp().m_2020Allowed);
         
         g_mode = FREEDV_MODE_2020;
+        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb2020));
     }
 #if defined(FREEDV_MODE_2020B)
     else if (m_rb2020b->GetValue()) 
@@ -1703,12 +1728,14 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         assert(wxGetApp().m_2020Allowed);
         
         g_mode = FREEDV_MODE_2020B;
+        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb2020b));
     }
 #endif // FREEDV_MODE_2020B
 #if defined(FREEDV_MODE_2020C)
     else if (m_rb2020c->GetValue()) 
     {
         g_mode = FREEDV_MODE_2020C;
+        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), m_rb2020c));
     }
 #endif // FREEDV_MODE_2020C
     
@@ -1723,6 +1750,15 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     m_newSpkOutFilter = true;
     
     txModeChangeMutex.Unlock();
+    
+    // Manually implement mutually exclusive behavior as
+    // we can't rely on wxWidgets doing it on account of
+    // how we're splitting the modes.
+    for (auto& var : buttonsToClear)
+    {
+        var->SetValue(false);
+    }
+    
 }
 
 //-------------------------------------------------------------------------
@@ -1790,6 +1826,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 #if defined(FREEDV_MODE_2020B)
                 freedvInterface.addRxMode(FREEDV_MODE_2020B);
 #endif // FREEDV_MODE_2020B
+#if defined(FREEDV_MODE_2020C)
+                freedvInterface.addRxMode(FREEDV_MODE_2020C);
+#endif // FREEDV_MODE_2020C
             }
             
             int rxModes[] = {

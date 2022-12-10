@@ -55,6 +55,7 @@
 #include <wx/listbox.h>
 #include <wx/notebook.h>
 #include <wx/listctrl.h>
+#include <wx/collpane.h>
 
 #include "freedv_api.h" // for FREEDV_MODE_*
 
@@ -69,6 +70,8 @@
 #define ID_PASTE 1006
 #define ID_OPTIONS 1007
 #define ID_ABOUT 1008
+
+#define ID_MODE_COLLAPSE 1100
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class TopFrame
@@ -128,7 +131,11 @@ class TopFrame : public wxFrame
 #if defined(FREEDV_MODE_2020C)
         wxRadioButton *m_rb2020c;
 #endif // FREEDV_MODE_2020C
-                
+
+        wxCollapsiblePane *m_collpane;
+        wxStaticBox* modeBox;
+        wxStaticBoxSizer* sbSizer_mode;
+        
         wxMenuItem* m_menuItemPlayFileToMicIn;
         wxMenuItem* m_menuItemRecFileFromRadio;
         wxMenuItem* m_menuItemRecFileFromModulator;
@@ -189,6 +196,8 @@ class TopFrame : public wxFrame
         virtual void OnChangeTxLevel( wxScrollEvent& event ) { event.Skip(); }
         
         virtual void OnChangeReportFrequency( wxCommandEvent& event ) { event.Skip(); }
+        
+        virtual void OnChangeCollapseState(wxCollapsiblePaneEvent& event);
         
     public:
         wxToggleButton* m_togBtnOnOff;

@@ -781,6 +781,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## TBD TBD 2023
+
+1. Enhancements
+    * Hide modes not on the SM1000 by default. (PR #313)
+    
 ## V1.8.5 December 2022
 
 1. Build system:
