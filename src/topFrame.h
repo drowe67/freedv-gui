@@ -128,7 +128,10 @@ class TopFrame : public wxFrame
 #if defined(FREEDV_MODE_2020B)
         wxRadioButton *m_rb2020b;
 #endif // FREEDV_MODE_2020B
-        
+
+        wxRadioButton* m_hiddenMode1;
+        wxRadioButton* m_hiddenMode2;
+
         wxCollapsiblePane *m_collpane;
         wxStaticBox* modeBox;
         wxStaticBoxSizer* sbSizer_mode;

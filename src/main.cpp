@@ -1643,8 +1643,12 @@ void MainFrame::OnExit(wxCommandEvent& event)
 
 void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 {
+    wxRadioButton* hiddenModeToSet = nullptr;
     std::vector<wxRadioButton*> buttonsToClear 
     {
+        m_hiddenMode1,
+        m_hiddenMode2,
+
         m_rb700c,
         m_rb700d,
         m_rb700e,
@@ -1657,9 +1661,19 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 #endif // FREEDV_MODE_2020B
     };
 
-    auto eventObject = event.GetEventObject();
+    auto eventObject = (wxRadioButton*)event.GetEventObject();
     if (eventObject != nullptr)
     {
+        std::string label = (const char*)eventObject->GetLabel().ToUTF8();
+        if (label == "700D" || label == "700E" || label == "1600")
+        {
+            hiddenModeToSet = m_hiddenMode2;
+        } 
+        else
+        {
+            hiddenModeToSet = m_hiddenMode1;
+        } 
+ 
         buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), (wxRadioButton*)eventObject));
     }
 
@@ -1721,10 +1735,14 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     // how we're splitting the modes.
     if (eventObject != nullptr)
     {
+        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), hiddenModeToSet));
+
         for (auto& var : buttonsToClear)
         {
             var->SetValue(false);
         }
+
+        hiddenModeToSet->SetValue(true);
     }
 }
 
