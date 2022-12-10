@@ -332,6 +332,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     sbSizer_mode->Add(m_rb700e, 0, wxALIGN_LEFT|wxALL, 1);
     m_rb1600 = new wxRadioButton( modeBox, wxID_ANY, wxT("1600"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_mode->Add(m_rb1600, 0, wxALIGN_LEFT|wxALL, 1);
+    m_hiddenMode1 = new wxRadioButton( modeBox, wxID_ANY, wxT("hidden2"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_mode->Add(m_hiddenMode1, 0, wxALIGN_LEFT|wxALL, 1);
+    m_hiddenMode1->Show(false);
     
     m_collpane = new wxCollapsiblePane(modeBox, ID_MODE_COLLAPSE, "Others:");
     sbSizer_mode->Add(m_collpane, 0, wxGROW|wxALL, 5);
@@ -355,6 +358,12 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_rb2020c = new wxRadioButton( otherModeWin, wxID_ANY, wxT("2020C"), wxDefaultPosition, wxDefaultSize,  0);
     otherModeSizer->Add(m_rb2020c, 1, wxALIGN_LEFT|wxALL|wxGROW, 1);
 #endif // FREEDV_MODE_2020C
+    m_hiddenMode2 = new wxRadioButton( otherModeWin, wxID_ANY, wxT("hidden2"), wxDefaultPosition, wxDefaultSize, 0);
+    otherModeSizer->Add(m_hiddenMode2, 0, wxALIGN_LEFT|wxALL, 1);
+    m_hiddenMode2->Show(false);
+
+    m_hiddenMode1->SetValue(true);
+    m_hiddenMode2->SetValue(true);
 
     sbSizer_mode->SetMinSize(wxSize(100,-1));
     otherModeWin->SetSizer(otherModeSizer);
