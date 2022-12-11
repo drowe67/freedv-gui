@@ -582,6 +582,21 @@ setDefaultMode:
 #endif // defined(FREEDV_MODE_2020B)
     pConfig->SetPath(wxT("/"));
     
+    // Set initial state of additional modes.
+    switch(mode)
+    {
+        case 0:
+        case 4:
+        case 5:
+            // 700D/E and 1600; don't expand additional modes
+            break;
+        default:
+            m_collpane->Collapse(false);
+            wxCollapsiblePaneEvent evt;
+            OnChangeCollapseState(evt);
+            break;
+    }
+    
     m_togBtnSplit->Disable();
     m_togBtnAnalog->Disable();
     m_btnTogPTT->Disable();
