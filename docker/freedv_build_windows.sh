@@ -1,5 +1,10 @@
 #!/bin/bash
 
+FDV_CURRENT_BRANCH=`git rev-parse --abbrev-ref HEAD 2>/dev/null`
+FDV_CURRENT_BRANCH=${FDV_CURRENT_BRANCH:=master}
+FDV_CURRENT_REPO=`git remote get-url origin 2>/dev/null`
+FDV_CURRENT_REPO=${FDV_CURRENT_REPO:=https://github.com/drowe67/freedv-gui.git}
+
 function print_help {
     echo
     echo "Build freedv-gui for Windows using Docker"
@@ -9,10 +14,10 @@ function print_help {
     echo "    -d                  debug mode; trace script execution"
     echo "    --noclean           start from a previous build (git pull && make), which is faster for small changes."
     echo "                        The default is a clean build from a fresh git clone (slow but safer)"
-    echo "    --build             Update docker image first (run if you have modifed the docker scripts in fdv_win_fedora)"
+    echo "    --build             Update docker image first (run if you have modified the docker scripts in fdv_win_fedora)"
     echo "    --rebuild           Completely recreate docker image first (e.g. run if you have new rpm packages)"
-    echo "    --repo GitRepo      (default https://github.com/drowe67/freedv-gui.git)"
-    echo "    --branch GitBranch  (default master)"
+    echo "    --repo GitRepo      (default $FDV_CURRENT_REPO)"
+    echo "    --branch GitBranch  (default $FDV_CURRENT_BRANCH)"
     echo "    --bootstrap-wx      Builds wxWidgets from source (may take significantly longer to complete)"
     echo
     exit
@@ -22,8 +27,8 @@ function print_help {
 FDV_CLEAN=1
 FDV_BUILD=0
 FDV_REBUILD=0
-FDV_GIT_REPO=https://github.com/drowe67/freedv-gui.git
-FDV_GIT_BRANCH=master
+FDV_GIT_REPO=$FDV_CURRENT_REPO
+FDV_GIT_BRANCH=$FDV_CURRENT_BRANCH
 FDV_BOOTSTRAP_WX=0
 
 POSITIONAL=()
@@ -97,4 +102,4 @@ FDV_CLEAN=$FDV_CLEAN FDV_BOOTSTRAP_WX=$FDV_BOOTSTRAP_WX FDV_CMAKE=$FDV_CMAKE FDV
 docker-compose -f docker-compose-win.yml up --remove-orphans >> $log
 package_docker_path=$(cat $log | sed  -n "s/.*package: \(.*exe\) .*/\1/p")
 echo $package_docker_path
-docker cp fdv_win_fed34_c:$package_docker_path .
+docker cp fdv_win_fed37_c:$package_docker_path .

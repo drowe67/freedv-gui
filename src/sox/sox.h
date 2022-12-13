@@ -1,6 +1,6 @@
 /* libSoX Library Public Interface
  *
- * Copyright 1999-2011 Chris Bagwell and SoX Contributors.
+ * Copyright 1999-2012 Chris Bagwell and SoX Contributors.
  *
  * This source code is freely redistributable and may be used for
  * any purpose.  This copyright notice must be maintained.
@@ -22,6 +22,7 @@ LSX_ and lsx_ symbols should not be used by libSoX-based applications.
 #include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -30,6 +31,19 @@ extern "C" {
 /* Suppress warnings from use of type long long. */
 #if defined __GNUC__
 #pragma GCC system_header
+#endif
+
+#if defined __GNUC__
+#define LSX_GCC(maj, min) \
+  ((__GNUC__ > (maj)) || (__GNUC__ == (maj) && __GNUC_MINOR__ >= (min)))
+#else
+#define LSX_GCC(maj, min) 0
+#endif
+
+#if LSX_GCC(4,9)
+#define _Ret_ __attribute__ ((returns_nonnull))
+#define _Ret_valid_ _Ret_
+#define _Ret_z_ _Ret_
 #endif
 
 /*****************************************************************************
@@ -44,7 +58,7 @@ Plugins API:
 Attribute required on all functions exported by libSoX and on all function
 pointer types used by the libSoX API.
 */
-#ifdef __GNUC__
+#if defined __GNUC__ && defined __i386__
 #define LSX_API  __attribute__ ((cdecl)) /* libSoX function */
 #elif _MSC_VER
 #define LSX_API  __cdecl /* libSoX function */
@@ -374,108 +388,49 @@ Basic typedefs:
 Client API:
 Signed twos-complement 8-bit type. Typically defined as signed char.
 */
-#if SCHAR_MAX==127 && SCHAR_MIN==(-128)
-typedef signed char sox_int8_t;
-#elif CHAR_MAX==127 && CHAR_MIN==(-128)
-typedef char sox_int8_t;
-#else
-#error Unable to determine an appropriate definition for sox_int8_t.
-#endif
+typedef int8_t sox_int8_t;
 
 /**
 Client API:
 Unsigned 8-bit type. Typically defined as unsigned char.
 */
-#if UCHAR_MAX==0xff
-typedef unsigned char sox_uint8_t;
-#elif CHAR_MAX==0xff && CHAR_MIN==0
-typedef char sox_uint8_t;
-#else
-#error Unable to determine an appropriate definition for sox_uint8_t.
-#endif
+typedef uint8_t sox_uint8_t;
 
 /**
 Client API:
 Signed twos-complement 16-bit type. Typically defined as short.
 */
-#if SHRT_MAX==32767 && SHRT_MIN==(-32768)
-typedef short sox_int16_t;
-#elif INT_MAX==32767 && INT_MIN==(-32768)
-typedef int sox_int16_t;
-#else
-#error Unable to determine an appropriate definition for sox_int16_t.
-#endif
+typedef int16_t sox_int16_t;
 
 /**
 Client API:
 Unsigned 16-bit type. Typically defined as unsigned short.
 */
-#if USHRT_MAX==0xffff
-typedef unsigned short sox_uint16_t;
-#elif UINT_MAX==0xffff
-typedef unsigned int sox_uint16_t;
-#else
-#error Unable to determine an appropriate definition for sox_uint16_t.
-#endif
+typedef uint16_t sox_uint16_t;
 
 /**
 Client API:
 Signed twos-complement 32-bit type. Typically defined as int.
 */
-#if INT_MAX==2147483647 && INT_MIN==(-2147483647-1)
-typedef int sox_int32_t;
-#elif LONG_MAX==2147483647 && LONG_MIN==(-2147483647-1)
-typedef long sox_int32_t;
-#else
-#error Unable to determine an appropriate definition for sox_int32_t.
-#endif
+typedef int32_t sox_int32_t;
 
 /**
 Client API:
 Unsigned 32-bit type. Typically defined as unsigned int.
 */
-#if UINT_MAX==0xffffffff
-typedef unsigned int sox_uint32_t;
-#elif ULONG_MAX==0xffffffff
-typedef unsigned long sox_uint32_t;
-#else
-#error Unable to determine an appropriate definition for sox_uint32_t.
-#endif
+typedef uint32_t sox_uint32_t;
 
 /**
 Client API:
 Signed twos-complement 64-bit type. Typically defined as long or long long.
 */
-#if LONG_MAX==9223372036854775807 && LONG_MIN==(-9223372036854775807-1)
-typedef long sox_int64_t;
-#elif defined(_MSC_VER)
-typedef __int64 sox_int64_t;
-#else
-typedef long long sox_int64_t;
-#endif
+typedef int64_t sox_int64_t;
 
 /**
 Client API:
 Unsigned 64-bit type. Typically defined as unsigned long or unsigned long long.
 */
-#if ULONG_MAX==0xffffffffffffffff
-typedef unsigned long sox_uint64_t;
-#elif defined(_MSC_VER)
-typedef unsigned __int64 sox_uint64_t;
-#else
-typedef unsigned long long sox_uint64_t;
-#endif
-
-#ifndef _DOXYGEN_
-lsx_static_assert(sizeof(sox_int8_t)==1,   sox_int8_size);
-lsx_static_assert(sizeof(sox_uint8_t)==1,  sox_uint8_size);
-lsx_static_assert(sizeof(sox_int16_t)==2,  sox_int16_size);
-lsx_static_assert(sizeof(sox_uint16_t)==2, sox_uint16_size);
-lsx_static_assert(sizeof(sox_int32_t)==4,  sox_int32_size);
-lsx_static_assert(sizeof(sox_uint32_t)==4, sox_uint32_size);
-lsx_static_assert(sizeof(sox_int64_t)==8,  sox_int64_size);
-lsx_static_assert(sizeof(sox_uint64_t)==8, sox_uint64_size);
-#endif
+typedef uint64_t sox_uint64_t;
 
 /**
 Client API:
@@ -516,6 +471,7 @@ Client API:
 Boolean type, assignment (but not necessarily binary) compatible with C++ bool.
 */
 typedef enum sox_bool {
+    sox_bool_dummy = -1, /* Ensure a signed type */
     sox_false, /**< False = 0. */
     sox_true   /**< True = 1. */
 } sox_bool;
@@ -592,6 +548,7 @@ typedef enum sox_encoding_t {
   SOX_ENCODING_AMR_NB    , /**< AMR-NB compression */
   SOX_ENCODING_CVSD      , /**< Continuously Variable Slope Delta modulation */
   SOX_ENCODING_LPC10     , /**< Linear Predictive Coding */
+  SOX_ENCODING_OPUS      , /**< Opus compression */
 
   SOX_ENCODINGS            /**< End of list marker */
 } sox_encoding_t;
@@ -661,7 +618,7 @@ The API version of the sox.h file. It is not meant to follow the version
 number of SoX but it has historically. Please do not count on
 SOX_LIB_VERSION_CODE staying in sync with the libSoX version.
 */
-#define SOX_LIB_VERSION_CODE   SOX_LIB_VERSION(14, 4, 1)
+#define SOX_LIB_VERSION_CODE   SOX_LIB_VERSION(14, 4, 2)
 
 /**
 Client API:
@@ -755,7 +712,7 @@ Min value for sox_sample_t = 0x80000000.
  * Rounding: halves toward +inf, all others to nearest integer.
  *
  * Clips? shows whether on not there is the possibility of a conversion
- * clipping to the minimum or maximum value when inputing from or outputing
+ * clipping to the minimum or maximum value when inputing from or outputting
  * to a given type.
  *
  * Unsigned integers are converted to and from signed integers by flipping
@@ -785,7 +742,7 @@ Converts sox_sample_t to an unsigned integer of width (bits).
 @returns Unsigned integer of width (bits).
 */
 #define SOX_SAMPLE_TO_UNSIGNED(bits,d,clips) \
-  (sox_uint##bits##_t)(SOX_SAMPLE_TO_SIGNED(bits,d,clips)^SOX_INT_MIN(bits))
+  (sox_uint##bits##_t)(SOX_SAMPLE_TO_SIGNED(bits,d,clips) ^ SOX_INT_MIN(bits))
 
 /**
 Client API:
@@ -795,8 +752,13 @@ Converts sox_sample_t to a signed integer of width (bits).
 @param clips Variable that is incremented if the result is too big.
 @returns Signed integer of width (bits).
 */
-#define SOX_SAMPLE_TO_SIGNED(bits,d,clips) \
-  (sox_int##bits##_t)(LSX_USE_VAR(sox_macro_temp_double),sox_macro_temp_sample=(d),sox_macro_temp_sample>SOX_SAMPLE_MAX-(1<<(31-bits))?++(clips),SOX_INT_MAX(bits):((sox_uint32_t)(sox_macro_temp_sample+(1<<(31-bits))))>>(32-bits))
+#define SOX_SAMPLE_TO_SIGNED(bits,d,clips)                              \
+  (sox_int##bits##_t)(                                                  \
+    LSX_USE_VAR(sox_macro_temp_double),                                 \
+    sox_macro_temp_sample = (d),                                        \
+    sox_macro_temp_sample > SOX_SAMPLE_MAX - (1 << (31-bits)) ?         \
+      ++(clips), SOX_INT_MAX(bits) :                                    \
+      ((sox_uint32_t)(sox_macro_temp_sample + (1 << (31-bits)))) >> (32-bits))
 
 /**
 Client API:
@@ -805,7 +767,7 @@ Converts signed integer of width (bits) to sox_sample_t.
 @param d    Input sample to be converted.
 @returns SoX native sample value.
 */
-#define SOX_SIGNED_TO_SAMPLE(bits,d)((sox_sample_t)(d)<<(32-bits))
+#define SOX_SIGNED_TO_SAMPLE(bits,d) ((sox_sample_t)(d) << (32-bits))
 
 /**
 Client API:
@@ -814,7 +776,8 @@ Converts unsigned integer of width (bits) to sox_sample_t.
 @param d    Input sample to be converted.
 @returns SoX native sample value.
 */
-#define SOX_UNSIGNED_TO_SAMPLE(bits,d)(SOX_SIGNED_TO_SAMPLE(bits,d)^SOX_SAMPLE_NEG)
+#define SOX_UNSIGNED_TO_SAMPLE(bits,d) \
+      (SOX_SIGNED_TO_SAMPLE(bits,d) ^ SOX_SAMPLE_NEG)
 
 /**
 Client API:
@@ -877,7 +840,8 @@ Converts unsigned 32-bit integer to sox_sample_t.
 @param clips The parameter is not used.
 @returns SoX native sample value.
 */
-#define SOX_UNSIGNED_32BIT_TO_SAMPLE(d,clips) ((sox_sample_t)(d)^SOX_SAMPLE_NEG)
+#define SOX_UNSIGNED_32BIT_TO_SAMPLE(d,clips) \
+  ((sox_sample_t)(d) ^ SOX_SAMPLE_NEG)
 
 /**
 Client API:
@@ -895,7 +859,7 @@ Converts 32-bit float to sox_sample_t.
 @param clips Variable to increment if the input sample is too large or too small.
 @returns SoX native sample value.
 */
-#define SOX_FLOAT_32BIT_TO_SAMPLE(d,clips) (sox_sample_t)(LSX_USE_VAR(sox_macro_temp_sample),sox_macro_temp_double=(d)*(SOX_SAMPLE_MAX+1.),sox_macro_temp_double<SOX_SAMPLE_MIN?++(clips),SOX_SAMPLE_MIN:sox_macro_temp_double>=SOX_SAMPLE_MAX+1.?sox_macro_temp_double>SOX_SAMPLE_MAX+1.?++(clips),SOX_SAMPLE_MAX:SOX_SAMPLE_MAX:sox_macro_temp_double)
+#define SOX_FLOAT_32BIT_TO_SAMPLE(d,clips) SOX_FLOAT_64BIT_TO_SAMPLE(d, clips)
 
 /**
 Client API:
@@ -904,7 +868,20 @@ Converts 64-bit float to sox_sample_t.
 @param clips Variable to increment if the input sample is too large or too small.
 @returns SoX native sample value.
 */
-#define SOX_FLOAT_64BIT_TO_SAMPLE(d,clips) (sox_sample_t)(LSX_USE_VAR(sox_macro_temp_sample),sox_macro_temp_double=(d)*(SOX_SAMPLE_MAX+1.),sox_macro_temp_double<0?sox_macro_temp_double<=SOX_SAMPLE_MIN-.5?++(clips),SOX_SAMPLE_MIN:sox_macro_temp_double-.5:sox_macro_temp_double>=SOX_SAMPLE_MAX+.5?sox_macro_temp_double>SOX_SAMPLE_MAX+1.?++(clips),SOX_SAMPLE_MAX:SOX_SAMPLE_MAX:sox_macro_temp_double+.5)
+#define SOX_FLOAT_64BIT_TO_SAMPLE(d, clips)                     \
+  (sox_sample_t)(                                               \
+    LSX_USE_VAR(sox_macro_temp_sample),                         \
+    sox_macro_temp_double = (d) * (SOX_SAMPLE_MAX + 1.0),       \
+    sox_macro_temp_double < 0 ?                                 \
+      sox_macro_temp_double <= SOX_SAMPLE_MIN - 0.5 ?           \
+        ++(clips), SOX_SAMPLE_MIN :                             \
+        sox_macro_temp_double - 0.5 :                           \
+      sox_macro_temp_double >= SOX_SAMPLE_MAX + 0.5 ?           \
+        sox_macro_temp_double > SOX_SAMPLE_MAX + 1.0 ?          \
+          ++(clips), SOX_SAMPLE_MAX :                           \
+          SOX_SAMPLE_MAX :                                      \
+        sox_macro_temp_double + 0.5                             \
+  )
 
 /**
 Client API:
@@ -974,9 +951,9 @@ Converts SoX native sample to a signed 32-bit integer.
 Client API:
 Converts SoX native sample to a 32-bit float.
 @param d Input sample to be converted.
-@param clips Variable to increment if input sample is too large.
+@param clips The parameter is not used.
 */
-#define SOX_SAMPLE_TO_FLOAT_32BIT(d,clips) (LSX_USE_VAR(sox_macro_temp_double),sox_macro_temp_sample=(d),sox_macro_temp_sample>SOX_SAMPLE_MAX-128?++(clips),1:(((sox_macro_temp_sample+128)&~255)*(1./(SOX_SAMPLE_MAX+1.))))
+#define SOX_SAMPLE_TO_FLOAT_32BIT(d,clips) ((d)*(1.0 / (SOX_SAMPLE_MAX + 1.0)))
 
 /**
 Client API:
@@ -984,7 +961,7 @@ Converts SoX native sample to a 64-bit float.
 @param d Input sample to be converted.
 @param clips The parameter is not used.
 */
-#define SOX_SAMPLE_TO_FLOAT_64BIT(d,clips) ((d)*(1./(SOX_SAMPLE_MAX+1.)))
+#define SOX_SAMPLE_TO_FLOAT_64BIT(d,clips) ((d)*(1.0 / (SOX_SAMPLE_MAX + 1.0)))
 
 /**
 Client API:
@@ -1117,10 +1094,10 @@ Callback to write a message to an output device (console or log file),
 used by sox_globals_t.output_message_handler.
 */
 typedef void (LSX_API * sox_output_message_handler_t)(
-    unsigned level,                       /* 1 = FAIL, 2 = WARN, 3 = INFO, 4 = DEBUG, 5 = DEBUG_MORE, 6 = DEBUG_MOST. */
-    LSX_PARAM_IN_Z char const * filename, /* Source code __FILENAME__ from which message originates. */
-    LSX_PARAM_IN_PRINTF char const * fmt, /* Message format string. */
-    LSX_PARAM_IN va_list ap               /* Message format parameters. */
+    unsigned level,                       /**< 1 = FAIL, 2 = WARN, 3 = INFO, 4 = DEBUG, 5 = DEBUG_MORE, 6 = DEBUG_MOST. */
+    LSX_PARAM_IN_Z char const * filename, /**< Source code __FILENAME__ from which message originates. */
+    LSX_PARAM_IN_PRINTF char const * fmt, /**< Message format string. */
+    LSX_PARAM_IN va_list ap               /**< Message format parameters. */
     );
 
 /**
@@ -1357,6 +1334,12 @@ typedef struct sox_globals_t {
   char       * tmp_path;         /**< Private: client-configured path to use for temporary files */
   sox_bool     use_magic;        /**< Private: true if client has requested use of 'magic' file-type detection */
   sox_bool     use_threads;      /**< Private: true if client has requested parallel effects processing */
+
+  /**
+  Log to base 2 of minimum size (in bytes) used by libSoX for DFT (filtering).
+  Plugins should use similarly-sized DFTs to get best performance.
+  */
+  size_t       log2_dft_min_size;
 } sox_globals_t;
 
 /**
@@ -1603,14 +1586,15 @@ struct sox_effect_t {
   sox_encodinginfo_t       const * in_encoding;  /**< Information about the incoming data encoding */
   sox_encodinginfo_t       const * out_encoding; /**< Information about the outgoing data encoding */
   sox_effect_handler_t     handler;   /**< The handler for this effect */
-  sox_sample_t             * obuf;    /**< output buffer */
-  size_t                   obeg;      /**< output buffer: start of valid data section */
-  size_t                   oend;      /**< output buffer: one past valid data section (oend-obeg is length of current content) */
-  size_t               imin;          /**< minimum input buffer content required for calling this effect's flow function; set via lsx_effect_set_imin() */
   sox_uint64_t         clips;         /**< increment if clipping occurs */
   size_t               flows;         /**< 1 if MCHAN, number of chans otherwise */
   size_t               flow;          /**< flow number */
   void                 * priv;        /**< Effect's private data area (each flow has a separate copy) */
+  /* The following items are private to the libSoX effects chain functions. */
+  sox_sample_t             * obuf;    /**< output buffer */
+  size_t                   obeg;      /**< output buffer: start of valid data section */
+  size_t                   oend;      /**< output buffer: one past valid data section (oend-obeg is length of current content) */
+  size_t               imin;          /**< minimum input buffer content required for calling this effect's flow function; set via lsx_effect_set_imin() */
 };
 
 /**
@@ -1619,13 +1603,13 @@ Chain of effects to be applied to a stream.
 */
 typedef struct sox_effects_chain_t {
   sox_effect_t **effects;                  /**< Table of effects to be applied to a stream */
-  unsigned table_size;                     /**< Number of entries in effects table */
-  unsigned length;                         /**< Number of effects to be applied */
-  sox_sample_t **ibufc;                    /**< Channel interleave buffer */
-  sox_sample_t **obufc;                    /**< Channel interleave buffer */
+  size_t length;                           /**< Number of effects to be applied */
   sox_effects_globals_t global_info;       /**< Copy of global effects settings */
   sox_encodinginfo_t const * in_enc;       /**< Input encoding */
   sox_encodinginfo_t const * out_enc;      /**< Output encoding */
+  /* The following items are private to the libSoX effects chain functions. */
+  size_t table_size;                       /**< Size of effects table (including unused entries) */
+  sox_sample_t *il_buf;                    /**< Channel interleave buffer */
 } sox_effects_chain_t;
 
 /*****************************************************************************
@@ -1637,7 +1621,7 @@ Client API:
 Returns version number string of libSoX, for example, "14.4.0".
 @returns The version number string of libSoX, for example, "14.4.0".
 */
-LSX_RETURN_VALID_Z LSX_RETURN_PURE
+LSX_RETURN_VALID_Z
 char const *
 LSX_API
 sox_version(void);
@@ -2441,7 +2425,7 @@ Finds the file extension for a filename.
 @returns the file extension, not including the '.', or null if filename does
 not have an extension.
 */
-LSX_RETURN_VALID_Z LSX_RETURN_PURE
+LSX_RETURN_OPT LSX_RETURN_PURE
 char const *
 LSX_API
 lsx_find_file_extension(
@@ -2597,6 +2581,17 @@ int
 LSX_API
 lsx_getopt(
     LSX_PARAM_INOUT lsx_getopt_t * state /**< The getopt state pointer. */
+    );
+
+/**
+Plugins API:
+Gets the file length, or 0 if the file is not seekable/normal.
+@returns The file length, or 0 if the file is not seekable/normal.
+*/
+sox_uint64_t
+LSX_API
+lsx_filelength(
+    LSX_PARAM_IN sox_format_t * ft
     );
 
 /* WARNING END */

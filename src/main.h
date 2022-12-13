@@ -22,8 +22,7 @@
 #ifndef __FDMDV2_MAIN__
 #define __FDMDV2_MAIN__
 
-#include "version.h"
-#include "../config.h"
+#include "config.h"
 #include <wx/wx.h>
 
 #include <wx/tglbtn.h>
@@ -71,7 +70,6 @@
 #include "codec2.h"
 #include "codec2_fifo.h"
 #include "modem_stats.h"
-#include "lpcnet_freedv.h"
 
 #include "topFrame.h"
 #include "dlg_easy_setup.h"
@@ -82,9 +80,7 @@
 #include "plot_scatter.h"
 #include "plot_waterfall.h"
 #include "plot_spectrum.h"
-#include "pa_wrapper.h"
 #include "sndfile.h"
-#include "portaudio.h"
 #include "dlg_audiooptions.h"
 #include "dlg_filter.h"
 #include "dlg_options.h"
@@ -94,12 +90,16 @@
 #include "serialport.h" 
 #include "pskreporter.h"
 #include "freedv_interface.h"
+#include "audio/AudioEngineFactory.h"
+#include "audio/IAudioDevice.h"
+#include "pipeline/paCallbackData.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
 #define _DUMMY_DATA             1
 //#define _AUDIO_PASSTHROUGH    1
 #define _REFRESH_TIMER_PERIOD   (DT*1000)
+
 //#define _USE_ABOUT_DIALOG       1
 
 enum {
@@ -109,6 +109,7 @@ enum {
         ID_TIMER_SCATTER,
         ID_TIMER_SCALAR,
         ID_TIMER_PSKREPORTER,
+        ID_TIMER_UPD_FREQ,
      };
 
 #define EXCHANGE_DATA_IN    0
@@ -116,12 +117,6 @@ enum {
 
 extern int                 g_verbose;
 extern int                 g_nSoundCards;
-extern int                 g_soundCard1InDeviceNum;
-extern int                 g_soundCard1OutDeviceNum;
-extern int                 g_soundCard1SampleRate;
-extern int                 g_soundCard2InDeviceNum;
-extern int                 g_soundCard2OutDeviceNum;
-extern int                 g_soundCard2SampleRate;
 
 // Voice Keyer Constants
 
@@ -150,6 +145,7 @@ extern int                 g_soundCard2SampleRate;
 #define DS_SYNC_WAIT_TIME 5.0
 
 class MainFrame;
+class FilterDlg;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainApp
@@ -184,9 +180,13 @@ class MainApp : public wxApp
 
         // Sound card
         wxString m_soundCard1InDeviceName;
+        int m_soundCard1InSampleRate;
         wxString m_soundCard2InDeviceName;
+        int m_soundCard2InSampleRate;
         wxString m_soundCard1OutDeviceName;
+        int m_soundCard1OutSampleRate;
         wxString m_soundCard2OutDeviceName;
+        int m_soundCard2OutSampleRate;
         
         // PTT -----------------------------------
 
@@ -201,6 +201,7 @@ class MainApp : public wxApp
 
         bool                m_boolHamlibUseForPTT;
         unsigned int        m_intHamlibRig;
+        wxString            m_strHamlibRigName;
         wxString            m_strHamlibSerialPort;
         unsigned int        m_intHamlibSerialRate;
         unsigned int        m_intHamlibIcomCIVHex;
@@ -234,6 +235,7 @@ class MainApp : public wxApp
         wxString            m_callSign;
         unsigned int        m_textEncoding;
         bool                m_snrSlow;
+        unsigned int        m_statsResetTimeSec;
 
         // LPC Post Filter
         bool                m_codec2LPCPostFilterEnable;
@@ -255,6 +257,7 @@ class MainApp : public wxApp
         float               m_MicInMidGaindB;
         float               m_MicInMidQ;
         bool                m_MicInEQEnable;
+        float               m_MicInVolInDB;
 
         // Spk Out Equaliser
         float               m_SpkOutBassFreqHz;
@@ -265,18 +268,7 @@ class MainApp : public wxApp
         float               m_SpkOutMidGaindB;
         float               m_SpkOutMidQ;
         bool                m_SpkOutEQEnable;
-
-        // Flags for displaying windows
-        int                 m_show_wf;
-        int                 m_show_spect;
-        int                 m_show_scatter;
-        int                 m_show_timing;
-        int                 m_show_freq;
-        int                 m_show_speech_in;
-        int                 m_show_speech_out;
-        int                 m_show_demod_in;
-        int                 m_show_test_frame_errors;
-        int                 m_show_test_frame_errors_hist;
+        float               m_SpkOutVolInDB;
 
         // optional vox trigger tone
         bool                m_leftChannelVoxTone;
@@ -290,7 +282,6 @@ class MainApp : public wxApp
 
         wxRect              m_rTopWindow;
 
-        int                 m_framesPerBuffer;
         int                 m_fifoSize_ms;
 
         // PSK Reporter configuration
@@ -325,9 +316,6 @@ class MainApp : public wxApp
         bool       m_FreeDV700Combine;
         bool       m_FreeDV700ManualUnSync;
 
-        bool       m_PhaseEstBW;
-        bool       m_PhaseEstDPSK;
-
         // Noise simulation
 
         int        m_noise_snr;
@@ -352,90 +340,15 @@ class MainApp : public wxApp
         bool       m_txRxThreadHighPriority;
 
         int        m_prevMode;
+        
+        bool       m_firstTimeUse;
+        bool       m_2020Allowed;
 
     protected:
 };
 
 // declare global static function wxGetApp()
 DECLARE_APP(MainApp)
-
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-// paCallBackData
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-typedef struct paCallBackData
-{
-    paCallBackData()
-        : insrc1(nullptr)
-        , outsrc1(nullptr)
-        , insrc2(nullptr)
-        , outsrc2(nullptr)
-        , insrcsf(nullptr)
-        , insrctxsf(nullptr)
-        , infifo1(nullptr)
-        , outfifo1(nullptr)
-        , infifo2(nullptr)
-        , outfifo2(nullptr)
-        , rxinfifo(nullptr)
-        , rxoutfifo(nullptr)
-        , inputChannels1(0)
-        , inputChannels2(0)
-        , outputChannels1(0)
-        , outputChannels2(0)
-        , sbqMicInBass(nullptr)
-        , sbqMicInTreble(nullptr)
-        , sbqMicInMid(nullptr)
-        , sbqSpkOutBass(nullptr)
-        , sbqSpkOutTreble(nullptr)
-        , sbqSpkOutMid(nullptr)
-        , micInEQEnable(false)
-        , spkOutEQEnable(false)
-        , leftChannelVoxTone(false)
-        , voxTonePhase(0.0)
-    {
-        // empty
-    }
-    
-    // libresample states for 48 to 8 kHz conversions
-
-    SRC_STATE      *insrc1;
-    SRC_STATE      *outsrc1;
-    SRC_STATE      *insrc2;
-    SRC_STATE      *outsrc2;
-    SRC_STATE      *insrcsf;
-    SRC_STATE      *insrctxsf;
-
-    // FIFOs attached to first sound card
-
-    struct FIFO    *infifo1;
-    struct FIFO    *outfifo1;
-
-    // FIFOs attached to second sound card
-    struct FIFO    *infifo2;
-    struct FIFO    *outfifo2;
-
-    // FIFOs for rx process
-    struct FIFO    *rxinfifo;
-    struct FIFO    *rxoutfifo;
-
-    int             inputChannels1, inputChannels2;
-    int             outputChannels1, outputChannels2;
-
-    // EQ filter states
-    void           *sbqMicInBass;
-    void           *sbqMicInTreble;
-    void           *sbqMicInMid;
-    void           *sbqSpkOutBass;
-    void           *sbqSpkOutTreble;
-    void           *sbqSpkOutMid;
-
-    bool            micInEQEnable;
-    bool            spkOutEQEnable;
-
-    // optional loud tone on left channel to reliably trigger vox
-    bool            leftChannelVoxTone;
-    float           voxTonePhase;
-
-} paCallBackData;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // panel with custom loop checkbox for play file dialog
@@ -471,7 +384,7 @@ private:
     wxTextCtrl *m_secondsToRecord;
 };
 
-class txRxThread;
+class TxRxThread;
 class UDPThread;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -490,6 +403,7 @@ class MainFrame : public TopFrame
         MainFrame(wxWindow *parent);
         virtual ~MainFrame();
 
+        FilterDlg*              m_filterDialog;
         PlotSpectrum*           m_panelSpectrum;
         PlotWaterfall*          m_panelWaterfall;
         PlotScatter*            m_panelScatter;
@@ -503,15 +417,8 @@ class MainFrame : public TopFrame
 
         bool                    m_RxRunning;
 
-        PortAudioWrap           *m_rxInPa;
-        PortAudioWrap           *m_rxOutPa;
-        PortAudioWrap           *m_txInPa;
-        PortAudioWrap           *m_txOutPa;
-
-        PaError                 m_rxErr;
-        PaError                 m_txErr;
-
-        txRxThread*             m_txRxThread;
+        TxRxThread*             m_txThread;
+        TxRxThread*             m_rxThread;
         
         bool                    OpenHamlibRig();
         void                    OpenSerialPort(void);
@@ -526,34 +433,10 @@ class MainFrame : public TopFrame
         
         // Not sure why we have the option to disable timers. TBD?
         wxTimer                 m_pskReporterTimer;
+        wxTimer                 m_updFreqStatusTimer; //[UP]
 #endif
 
     void destroy_fifos(void);
-    void destroy_src(void);
-    void autoDetectSoundCards(PortAudioWrap *pa);
-
-        static int rxCallback(
-                                const void *inBuffer,
-                                void *outBuffer,
-                                unsigned long framesPerBuffer,
-                                const PaStreamCallbackTimeInfo *outTime,
-                                PaStreamCallbackFlags statusFlags,
-                                void *userData
-                             );
-
-        static int txCallback(
-                                const void *inBuffer,
-                                void *outBuffer,
-                                unsigned long framesPerBuffer,
-                                const PaStreamCallbackTimeInfo *outTime,
-                                PaStreamCallbackFlags statusFlags,
-                                void *userData
-                             );
-
-
-    void initPortAudioDevice(PortAudioWrap *pa, int inDevice, int outDevice, 
-                             int soundCard, int sampleRate, int inputChannels,
-                             int outputChannels);
 
     void togglePTT(void);
 
@@ -639,6 +522,7 @@ class MainFrame : public TopFrame
         void OnSize( wxSizeEvent& event );
         void OnUpdateUI( wxUpdateUIEvent& event );
         void OnDeleteConfig(wxCommandEvent&);
+        void OnDeleteConfigUI( wxUpdateUIEvent& event );
 #ifdef _USE_TIMER
         void OnTimer(wxTimerEvent &evt);
 #endif
@@ -654,6 +538,12 @@ class MainFrame : public TopFrame
         
         void OnChangeReportFrequency( wxCommandEvent& event );
     private:
+        std::shared_ptr<IAudioDevice> rxInSoundDevice;
+        std::shared_ptr<IAudioDevice> rxOutSoundDevice;
+        std::shared_ptr<IAudioDevice> txInSoundDevice;
+        std::shared_ptr<IAudioDevice> txOutSoundDevice;
+        
+        int         m_timeSinceSyncLoss;
         bool        m_useMemory;
         wxTextCtrl* m_tc;
         int         m_zoom;
@@ -685,42 +575,16 @@ class MainFrame : public TopFrame
         int        vk_repeats, vk_repeat_counter;
         float      vk_rx_time;
         float      vk_rx_sync_time;
-
-        void       checkAvxSupport();
-        bool       isAvxPresent;
         
         int         getSoundCardIDFromName(wxString& name, bool input);
-        bool        validateSoundCardSetup(bool startup = false);
-};
+        bool        validateSoundCardSetup();
+        
+        void loadConfiguration_();
+        void resetStats_();
 
-void txRxProcessing();
-
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-// class txRxThread - experimental tx/rx processing thread
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-class txRxThread : public wxThread
-{
-public:
-    txRxThread(void) : wxThread(wxTHREAD_JOINABLE) { m_run = 1; }
-
-    // thread execution starts here
-    void *Entry()
-    {
-        while (m_run)
-        {
-            txRxProcessing();
-            wxThread::Sleep(20);
-        }
-        Pa_Terminate();
-        return NULL;
-    }
-
-    // called when the thread exits - whether it terminates normally or is
-    // stopped with Delete() (but not when it is Kill()ed!)
-    void OnExit() { }
-
-public:
-    bool  m_run;
+#if defined(FREEDV_MODE_2020)
+        void test2020Mode_();
+#endif // defined(FREEDV_MODE_2020)
 };
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=

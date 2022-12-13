@@ -10,14 +10,16 @@
 
 void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q, int sampleRate)
 {
+    const int STR_LENGTH = 80;
+    
     char  *arg[SBQ_MAX_ARGS];
-    char   argstorage[SBQ_MAX_ARGS][80];
-    void  *sbq;
+    char   argstorage[SBQ_MAX_ARGS][STR_LENGTH];
     int    i, argc;
 
     assert((strcmp(filterType, "bass") == 0)   ||
            (strcmp(filterType, "treble") == 0) ||
-           (strcmp(filterType, "equalizer") == 0));
+           (strcmp(filterType, "equalizer") == 0) ||
+           (strcmp(filterType, "vol") == 0));
 
     for(i=0; i<SBQ_MAX_ARGS; i++) {
         arg[i] = &argstorage[i][0];
@@ -26,26 +28,32 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
     argc = 0;
 
     if ((strcmp(filterType, "bass") == 0) || (strcmp(filterType, "treble") == 0)) {
-        sprintf(arg[argc++], "%s", filterType);
-        sprintf(arg[argc++], "%f", gaindB+1E-6);
-        sprintf(arg[argc++], "%f", freqHz);
-        sprintf(arg[argc++], "%d", sampleRate);
+        snprintf(arg[argc++], STR_LENGTH, "%s", filterType);
+        snprintf(arg[argc++], STR_LENGTH, "%f", gaindB+1E-6);
+        snprintf(arg[argc++], STR_LENGTH, "%f", freqHz);
+        snprintf(arg[argc++], STR_LENGTH, "%d", sampleRate);
     }
 
     if (strcmp(filterType, "equalizer") == 0) {
-        sprintf(arg[argc++], "%s", filterType);
-        sprintf(arg[argc++], "%f", freqHz);
-        sprintf(arg[argc++], "%f", Q);
-        sprintf(arg[argc++], "%f", gaindB+1E-6);
-        sprintf(arg[argc++], "%d", sampleRate);
+        snprintf(arg[argc++], STR_LENGTH, "%s", filterType);
+        snprintf(arg[argc++], STR_LENGTH, "%f", freqHz);
+        snprintf(arg[argc++], STR_LENGTH, "%f", Q);
+        snprintf(arg[argc++], STR_LENGTH, "%f", gaindB+1E-6);
+        snprintf(arg[argc++], STR_LENGTH, "%d", sampleRate);
+    }
+    
+    if (strcmp(filterType, "vol") == 0)
+    {
+        snprintf(arg[argc++], STR_LENGTH, "%s", filterType);
+        snprintf(arg[argc++], STR_LENGTH, "%f", gaindB);
+        snprintf(arg[argc++], STR_LENGTH, "%s", "dB");
+        snprintf(arg[argc++], STR_LENGTH, "%f", 0.05); // to prevent clipping
+        snprintf(arg[argc++], STR_LENGTH, "%d", sampleRate);
     }
 
     assert(argc <= SBQ_MAX_ARGS);
     // Note - the argc count doesn't include the command!
-    sbq = sox_biquad_create(argc-1, (const char **)arg);
-    assert(sbq != NULL);
-
-    return sbq;
+    return sox_biquad_create(argc-1, (const char **)arg);
 }
 
 void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSampleRate)
@@ -57,6 +65,10 @@ void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSam
         cb->sbqMicInBass   = designAnEQFilter("bass", wxGetApp().m_MicInBassFreqHz, wxGetApp().m_MicInBassGaindB, txSampleRate);
         cb->sbqMicInTreble = designAnEQFilter("treble", wxGetApp().m_MicInTrebleFreqHz, wxGetApp().m_MicInTrebleGaindB, txSampleRate);
         cb->sbqMicInMid    = designAnEQFilter("equalizer", wxGetApp().m_MicInMidFreqHz, wxGetApp().m_MicInMidGaindB, wxGetApp().m_MicInMidQ, txSampleRate);
+        cb->sbqMicInVol    = designAnEQFilter("vol", 0, wxGetApp().m_MicInVolInDB, 0, txSampleRate);
+        
+        // Note: vol can be a no-op!
+        assert(cb->sbqMicInBass != nullptr && cb->sbqMicInTreble != nullptr && cb->sbqMicInMid != nullptr);
     }
 
     // init Spk Out Equaliser Filters
@@ -68,6 +80,10 @@ void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSam
         cb->sbqSpkOutBass   = designAnEQFilter("bass", wxGetApp().m_SpkOutBassFreqHz, wxGetApp().m_SpkOutBassGaindB, rxSampleRate);
         cb->sbqSpkOutTreble = designAnEQFilter("treble", wxGetApp().m_SpkOutTrebleFreqHz, wxGetApp().m_SpkOutTrebleGaindB, rxSampleRate);
         cb->sbqSpkOutMid    = designAnEQFilter("equalizer", wxGetApp().m_SpkOutMidFreqHz, wxGetApp().m_SpkOutMidGaindB, wxGetApp().m_SpkOutMidQ, rxSampleRate);
+        cb->sbqSpkOutVol    = designAnEQFilter("vol", 0, wxGetApp().m_SpkOutVolInDB, 0, txSampleRate);
+        
+        // Note: vol can be a no-op!
+        assert(cb->sbqSpkOutBass != nullptr && cb->sbqSpkOutTreble != nullptr && cb->sbqSpkOutMid != nullptr);
     }
     
     m_newMicInFilter = false;
@@ -84,9 +100,12 @@ void  MainFrame::deleteEQFilters(paCallBackData *cb)
         sox_biquad_destroy(cb->sbqMicInTreble);
         sox_biquad_destroy(cb->sbqMicInMid);
         
+        if (cb->sbqMicInVol) sox_biquad_destroy(cb->sbqMicInVol);
+        
         cb->sbqMicInBass = nullptr;
         cb->sbqMicInTreble = nullptr;
         cb->sbqMicInMid = nullptr;
+        cb->sbqMicInVol = nullptr;
     }
     
     if (m_newSpkOutFilter) 
@@ -96,10 +115,13 @@ void  MainFrame::deleteEQFilters(paCallBackData *cb)
         sox_biquad_destroy(cb->sbqSpkOutBass);    
         sox_biquad_destroy(cb->sbqSpkOutTreble);
         sox_biquad_destroy(cb->sbqSpkOutMid);
+        
+        if (cb->sbqSpkOutVol) sox_biquad_destroy(cb->sbqSpkOutVol);
 
         cb->sbqSpkOutBass = nullptr;
         cb->sbqSpkOutTreble = nullptr;
         cb->sbqSpkOutMid = nullptr;
+        cb->sbqSpkOutVol = nullptr;
     }
 }
 

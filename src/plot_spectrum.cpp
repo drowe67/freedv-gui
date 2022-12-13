@@ -150,8 +150,10 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx)
 //-------------------------------------------------------------------------
 void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
 {
+    const int STR_LENGTH = 15;
+    
     int      x, y, text_w, text_h;
-    char     buf[15];
+    char     buf[STR_LENGTH];
     wxString s;
     float    f, mag, freq_hz_to_px, mag_dB_to_py;
 
@@ -175,7 +177,7 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
 
     int textXStep = STEP_F_HZ*freq_hz_to_px;
     int textYStep = STEP_MAG_DB*mag_dB_to_py;
-    sprintf(buf, "%4.0fHz", (float)MAX_F_HZ - STEP_F_HZ);
+    snprintf(buf, STR_LENGTH, "%4.0fHz", (float)MAX_F_HZ - STEP_F_HZ);
     GetTextExtent(buf, &text_w, &text_h);
     int overlappedText = (text_w > textXStep) || (text_h > textYStep);
     //printf("text_w: %d textXStep: %d text_h: %d textYStep: %d  overlappedText: %d\n", text_w, textXStep, 
@@ -192,7 +194,7 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
         ctx->SetPen(wxPen(BLACK_COLOR, 1));
         ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
 
-        sprintf(buf, "%4.0fHz", f);
+        snprintf(buf, STR_LENGTH, "%4.0fHz", f);
         GetTextExtent(buf, &text_w, &text_h);
         if (!overlappedText)
             ctx->DrawText(buf, x - text_w/2, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
@@ -214,7 +216,7 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
         y += PLOT_BORDER;
         ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
                 (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), y);
-        sprintf(buf, "%3.0fdB", mag);
+        snprintf(buf, STR_LENGTH, "%3.0fdB", mag);
         GetTextExtent(buf, &text_w, &text_h);
         if (!overlappedText)
             ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);

@@ -5,6 +5,7 @@
 */
 
 #include "main.h"
+#include "lpcnet_freedv.h"
 
 extern int g_mode;
 extern bool  g_modal;
@@ -89,9 +90,19 @@ void MainFrame::OnToolsAudioUI(wxUpdateUIEvent& event)
 void MainFrame::OnToolsFilter(wxCommandEvent& event)
 {
     wxUnusedVar(event);
-    FilterDlg *dlg = new FilterDlg(NULL, m_RxRunning, &m_newMicInFilter, &m_newSpkOutFilter);
-    dlg->ShowModal();
-    delete dlg;
+    
+    if (m_filterDialog == nullptr)
+    {
+         m_filterDialog = new FilterDlg(NULL, m_RxRunning, &m_newMicInFilter, &m_newSpkOutFilter);
+    }
+    else
+    {
+        m_filterDialog->Iconize(false);
+        m_filterDialog->SetFocus();
+        m_filterDialog->Raise();
+    }
+    
+    m_filterDialog->Show();
 }
 
 //-------------------------------------------------------------------------
@@ -102,7 +113,10 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     wxUnusedVar(event);
     g_modal = true;
     //fprintf(stderr,"g_modal: %d\n", g_modal);
-    optionsDlg->Show();
+    optionsDlg->ShowModal();
+    
+    // Show/hide frequency box based on PSK Reporter status.
+    m_freqBox->Show(wxGetApp().m_psk_enable);
 }
 
 //-------------------------------------------------------------------------
@@ -214,7 +228,10 @@ bool MainFrame::OpenHamlibRig() {
 void MainFrame::OnCloseFrame(wxCloseEvent& event)
 {
     //fprintf(stderr, "MainFrame::OnCloseFrame()\n");
-    Pa_Terminate();
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->stop();
+    engine->setOnEngineError(nullptr, nullptr);
+    
     Destroy();
 }
 
@@ -243,13 +260,23 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
 {
     if(pConfig->DeleteAll())
     {
-        wxLogMessage(wxT("Config file/registry key successfully deleted.  Please restart FreeDV."));
-        wxConfigBase::DontCreateOnDemand();
+        wxLogMessage(wxT("Config file/registry key successfully deleted."));
+        
+        // Resets all configuration to defaults.
+        loadConfiguration_();
     }
     else
     {
         wxLogError(wxT("Deleting config file/registry key failed."));
     }
+}
+
+//-------------------------------------------------------------------------
+// OnDeleteConfigUI()
+//-------------------------------------------------------------------------
+void MainFrame::OnDeleteConfigUI( wxUpdateUIEvent& event )
+{
+    event.Enable(!m_RxRunning);
 }
 
 //-------------------------------------------------------------------------
@@ -273,7 +300,7 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 {
     char sqsnr[15];
     g_SquelchLevel = (float)m_sliderSQ->GetValue()/2.0 - 5.0;
-    sprintf(sqsnr, "%4.1f dB", g_SquelchLevel); // 0.5 dB steps
+    snprintf(sqsnr, 15, "%4.1f dB", g_SquelchLevel); // 0.5 dB steps
     wxString sqsnr_string(sqsnr);
     m_textSQ->SetLabel(sqsnr_string);
 
@@ -287,7 +314,7 @@ void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
 {
     char fmt[15];
     g_txLevel = m_sliderTxLevel->GetValue();
-    sprintf(fmt, "%0.1f dB", (double)(g_txLevel)/10.0);
+    snprintf(fmt, 15, "%0.1f dB", (double)(g_txLevel)/10.0);
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
     
@@ -410,7 +437,7 @@ void MainFrame::togglePTT(void) {
         m_textSync->Enable();
         m_textCurrentDecodeMode->Enable();
         
-        // Reenable On/Off button.
+        // Re-enable On/Off button.
         m_togBtnOnOff->Enable(true);
     }
     else
@@ -511,8 +538,7 @@ void MainFrame::OnReSync(wxCommandEvent& event)
     }
 }
 
-
-void MainFrame::OnBerReset(wxCommandEvent& event)
+void MainFrame::resetStats_()
 {
     if (m_RxRunning)  {
         freedvInterface.resetBitStats();
@@ -525,6 +551,11 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
         // resets variance stats every time it is called
         freedvInterface.setEq(wxGetApp().m_700C_EQ);
     }
+}
+
+void MainFrame::OnBerReset(wxCommandEvent& event)
+{
+    resetStats_();
 }
 
 void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )

@@ -56,6 +56,7 @@
 #include <wx/notebook.h>
 #include <wx/listctrl.h>
 
+#include "freedv_api.h" // for FREEDV_MODE_*
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -121,13 +122,16 @@ class TopFrame : public wxFrame
         wxRadioButton *m_rb1600;
         wxRadioButton *m_rb2400b;
         wxRadioButton *m_rb2020;
-
+#if defined(FREEDV_MODE_2020B)
+        wxRadioButton *m_rb2020b;
+#endif // FREEDV_MODE_2020B
+        
         wxMenuItem* m_menuItemPlayFileToMicIn;
         wxMenuItem* m_menuItemRecFileFromRadio;
         wxMenuItem* m_menuItemRecFileFromModulator;
         wxMenuItem* m_menuItemPlayFileFromRadio;
     
-        // Virtual event handlers, overide them in your derived class
+        // Virtual event handlers, override them in your derived class
         virtual void topFrame_OnClose( wxCloseEvent& event ) { event.Skip(); }
         virtual void topFrame_OnPaint( wxPaintEvent& event ) { event.Skip(); }
         virtual void topFrame_OnSize( wxSizeEvent& event ) { event.Skip(); }
@@ -195,8 +199,9 @@ class TopFrame : public wxFrame
         wxToggleButton* m_togBtnLoopTx;
         wxAuiNotebook* m_auiNbookCtrl;
         wxTextCtrl*   m_txtCtrlReportFrequency;
+        wxStaticBox*  m_freqBox;
 
-        TopFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("FreeDV ") + _(FREEDV_VERSION), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(561,300 ), long style = wxDEFAULT_FRAME_STYLE|wxRESIZE_BORDER );
+        TopFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("FreeDV "), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(561,300 ), long style = wxDEFAULT_FRAME_STYLE|wxRESIZE_BORDER );
 
         ~TopFrame();
 };

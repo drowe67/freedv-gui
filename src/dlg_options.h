@@ -114,9 +114,6 @@ class OptionsDlg : public wxDialog
         wxCheckBox   *m_ckboxFreeDV700txBPF;
         wxCheckBox   *m_ckboxFreeDV700Combine;
         wxCheckBox   *m_ckboxFreeDV700ManualUnSync;
-        
-        wxCheckBox   *m_ckboxPhaseEstBW;
-        wxCheckBox   *m_ckboxPhaseEstDPSK;
 
         wxRadioButton *m_rb_textEncoding1;
         wxRadioButton *m_rb_textEncoding2;
@@ -133,7 +130,6 @@ class OptionsDlg : public wxDialog
         wxStaticText  *m_textFifos;
         wxStaticText  *m_textPA1;
         wxStaticText  *m_textPA2;
-        wxTextCtrl    *m_txtCtrlframesPerBuffer;
         wxTextCtrl    *m_txtCtrlFifoSize;
         wxCheckBox    *m_ckboxTxRxThreadPriority;
         wxCheckBox    *m_ckboxTxRxDumpTiming;
@@ -149,6 +145,7 @@ class OptionsDlg : public wxDialog
 
         wxCheckBox*  m_ckboxMultipleRx;
         wxCheckBox*  m_ckboxSingleRxThread;
+        wxTextCtrl*  m_statsResetTime;
         
         unsigned int  event_in_serial, event_out_serial;
 

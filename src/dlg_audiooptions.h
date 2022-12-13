@@ -28,12 +28,6 @@
 #define AUDIO_IN            0
 #define AUDIO_OUT           1
 
-#include "portaudio.h"
-#ifdef WIN32
-#if PA_USE_ASIO
-#include "pa_asio.h"
-#endif
-#endif
 #include "codec2_fifo.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -54,29 +48,21 @@ class AudioInfoDisplay
 class AudioOptsDialog : public wxDialog
 {
     private:
-
+        std::thread*    m_audioPlotThread;
     protected:
-        PaError         pa_err;
         bool            m_isPaInitialized;
-
-        int             rxInAudioDeviceNum;
-        int             rxOutAudioDeviceNum;
-        int             txInAudioDeviceNum;
-        int             txOutAudioDeviceNum;
 
         void buildTestControls(PlotScalar **plotScalar, wxButton **btnTest, 
                                wxPanel *parentPanel, wxBoxSizer *bSizer, wxString buttonLabel);
-        void plotDeviceInputForAFewSecs(int devNum, PlotScalar *plotScalar);
-        void plotDeviceOutputForAFewSecs(int devNum, PlotScalar *plotScalar);
+        void plotDeviceInputForAFewSecs(wxString devName, PlotScalar *plotScalar);
+        void plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *plotScalar);
 
-        int buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, int devNum, int in_out);
+        int buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, wxString devName, int in_out);
         void populateParams(AudioInfoDisplay);
-        void showAPIInfo();
-        int setTextCtrlIfDevNumValid(wxTextCtrl *textCtrl, wxListCtrl *listCtrl, int devNum);
-        void Pa_Init(void);
+        bool setTextCtrlIfDevNameValid(wxTextCtrl *textCtrl, wxListCtrl *listCtrl, wxString devName);
+        void audioEngineInit(void);
         void OnDeviceSelect(wxComboBox *cbSampleRate, 
                             wxTextCtrl *textCtrl, 
-                            int        *devNum, 
                             wxListCtrl *listCtrlDevices, 
                             int         index,
                             int         in_out);
@@ -128,25 +114,13 @@ class AudioOptsDialog : public wxDialog
         wxButton* m_btnTxOutTest;
         PlotScalar* m_plotScalarTxOut;
 
-        wxPanel* m_panelAPI;
-
-        wxStaticText* m_staticText7;
-        wxStaticText* m_textStringVer;
-        wxStaticText* m_staticText8;
-        wxStaticText* m_textIntVer;
-        wxStaticText* m_staticText5;
-        wxStaticText* m_textCDevCount;
-        wxStaticText* m_staticText4;
-        wxStaticText* m_textAPICount;
         wxButton* m_btnRefresh;
         wxStdDialogButtonSizer* m_sdbSizer1;
         wxButton* m_sdbSizer1OK;
         wxButton* m_sdbSizer1Apply;
         wxButton* m_sdbSizer1Cancel;
-
-        std::thread* m_audioTestThread;
         
-        // Virtual event handlers, overide them in your derived class
+        // Virtual event handlers, override them in your derived class
         //virtual void OnActivateApp( wxActivateEvent& event ) { event.Skip(); }
 //        virtual void OnCloseFrame( wxCloseEvent& event ) { event.Skip(); }
 
@@ -164,7 +138,7 @@ class AudioOptsDialog : public wxDialog
         void OnApplyAudioParameters( wxCommandEvent& event );
         void OnCancelAudioParameters( wxCommandEvent& event );
         void OnOkAudioParameters( wxCommandEvent& event );
-        // Virtual event handlers, overide them in your derived class
+        // Virtual event handlers, override them in your derived class
         void OnClose( wxCloseEvent& event ) { event.Skip(); }
         void OnHibernate( wxActivateEvent& event ) { event.Skip(); }
         void OnIconize( wxIconizeEvent& event ) { event.Skip(); }

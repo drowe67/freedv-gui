@@ -4,6 +4,10 @@
 #include <wx/stattext.h>
 #include <wx/combobox.h>
 #include <vector>
+#include <thread>
+#include <condition_variable>
+#include <mutex>
+
 extern "C" {
 #include <hamlib/rig.h>
 }
@@ -13,6 +17,11 @@ class Hamlib {
     public:
         Hamlib();
         ~Hamlib();
+        
+        // Name to index lookup and vice versa.
+        unsigned int rigNameToIndex(std::string rigName);
+        std::string rigIndexToName(unsigned int rigIndex);
+        
         void populateComboBox(wxComboBox *cb);
         bool connect(unsigned int rig_index, const char *serial_port, const int serial_rate, const int civ_hex = 0);
         bool ptt(bool press, wxString &hamlibError);
@@ -29,13 +38,12 @@ class Hamlib {
         typedef std::vector<const struct rig_caps *> riglist_t;
 
     private:
-        static int hamlib_freq_cb(RIG* rig, vfo_t currVFO, freq_t currFreq, void* ptr);
-        static int hamlib_mode_cb(RIG* rig, vfo_t currVFO, rmode_t currMode, pbwidth_t passband, void* ptr);
-
         void update_mode_status();
-
-        rig_model_t m_rig_model;
+        void statusUpdateThreadEntryFn_();
+        void update_from_hamlib_();
+        
         RIG *m_rig;
+        rig_model_t m_rig_model;
         /* Sorted list of rigs. */
         riglist_t m_rigList;
 
@@ -45,6 +53,12 @@ class Hamlib {
         freq_t m_currFreq;
         rmode_t m_currMode;
         bool m_vhfUhfMode;
+        
+        // Data elements to support running Hamlib operations in a separate thread.
+        bool threadRunning_;
+        std::thread statusUpdateThread_;
+        std::condition_variable statusUpdateCV_;
+        std::mutex statusUpdateMutex_;
 };
 
 #endif /*HAMLIB_H*/

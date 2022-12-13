@@ -8,14 +8,14 @@ This document describes how to build the FreeDV GUI program for various operatin
   * [FreeDV GUI User Manual](USER_MANUAL.md)
   * [Building for Windows using Docker](docker/README_docker.md)
   
-## Building on Ubuntu Linux (16-20)
+## Building on Ubuntu Linux (16-20) with PortAudio
   ```
   $ sudo apt install libspeexdsp-dev libsamplerate0-dev sox git \
   libwxgtk3.0-gtk3-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev \
-  libgsm1-dev libsndfile-dev cmake module-assistant build-essential
+  libgsm1-dev libsndfile1-dev cmake module-assistant build-essential
   $ git clone https://github.com/drowe67/freedv-gui.git
   $ cd freedv-gui
-  $ ./build_linux.sh
+  $ ./build_linux.sh portaudio
   ```
   (For Ubuntu 20.04 the wxWidgets package is named `libwxgtk3.0-gtk3-dev`.)
   
@@ -26,21 +26,54 @@ This document describes how to build the FreeDV GUI program for various operatin
   
   Note this builds all libraries locally, nothing is installed on your machine.  ```make install``` is not required.
 
-## Building on Fedora Linux
+## Building on Fedora Linux with PortAudio
   ```
   $ sudo dnf groupinstall "Development Tools"
   $ sudo dnf install cmake wxGTK3-devel portaudio-devel libsamplerate-devel \
     libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
-    gsm-devel
+    gsm-devel gcc-c++ sox
   $ git clone https://github.com/drowe67/freedv-gui.git
   $ cd freedv-gui
-  $ ./build_linux.sh
+  $ ./build_linux.sh portaudio
   ```
   Then run with:
   ```
   $ ./build_linux/src/freedv
   ```
 
+## Building on Ubuntu Linux (16-20) with PulseAudio
+  ```
+  $ sudo apt install libspeexdsp-dev libsamplerate0-dev sox git \
+  libwxgtk3.0-gtk3-dev libhamlib-dev libasound2-dev libao-dev \
+  libgsm1-dev libsndfile1-dev cmake module-assistant build-essential libpulse-dev
+  $ git clone https://github.com/drowe67/freedv-gui.git
+  $ cd freedv-gui
+  $ ./build_linux.sh pulseaudio
+  ```
+  (For Ubuntu 20.04 the wxWidgets package is named `libwxgtk3.0-gtk3-dev`.)
+  
+  Then run with:
+  ```
+  $ ./build_linux/src/freedv
+  ```
+  
+  Note this builds all libraries locally, nothing is installed on your machine.  ```make install``` is not required.
+
+## Building on Fedora Linux with PulseAudio
+  ```
+  $ sudo dnf groupinstall "Development Tools"
+  $ sudo dnf install cmake wxGTK3-devel libsamplerate-devel \
+    libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
+    gsm-devel pulseaudio-libs-devel gcc-c++ sox
+  $ git clone https://github.com/drowe67/freedv-gui.git
+  $ cd freedv-gui
+  $ ./build_linux.sh pulseaudio
+  ```
+  Then run with:
+  ```
+  $ ./build_linux/src/freedv
+  ```
+  
 ## Installing on Linux
 
 You need to install the codec2 and lpcnetfreedv shared libraries, and freedv-gui:
@@ -130,9 +163,19 @@ Testing FreeDV API:
   $ play -t .s16 -r 16000 -b 16 out.raw
 ```
 
-## Building and installing on OSX
+## Building and installing on macOS
 
-Please see [README.osx](README.osx).
+Using MacPorts, most of the appropriate dependencies can be installed by:
+
+$ sudo port install subversion git libtool sox +universal cmake
+
+It should be fairly similar using HomeBrew, but you will need to replace all the /opt/ paths in the following instructions.
+
+Note: If using an ARM Mac, you may need to build and install the Git version of MacPorts first. See https://guide.macports.org/#installing.macports.git for more details on how to do this.
+
+Once the dependencies are installed, you can then run the `build_osx.sh` script inside the source tree to build
+FreeDV and associated libraries (codec2, LPCNet, hamlib). A FreeDV.app app bundle will be created inside the build_osx/src
+folder which can be copied to your system's Applications folder.
 
 ## Building and installing on FreeBSD
 

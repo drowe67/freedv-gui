@@ -56,8 +56,6 @@
 
 // sample rate I/O & conversion constants
 
-#define MAX_FPB             8096                           // maximum value of portAudio framesPerBuffer
-#define PA_FPB              256                            // default value of portAudio framesPerBuffer
 #define SAMPLE_RATE         48000                          // 48 kHz sampling rate rec. as we can trust accuracy of sound card
 #define N8                  160                            // processing buffer size at 8 kHz
 #define MEM8                (FDMDV_OS_TAPS/FDMDV_OS)
@@ -73,7 +71,7 @@
 #define MAX_BITS_PER_FDMDV_FRAME 40                            // 2000 bit/s mode
 
 // Squelch
-#define SQ_DEFAULT_SNR       2.0
+#define SQ_DEFAULT_SNR       -2.0
 
 // Level Gauge
 #define FROM_RADIO_MAX       0.8

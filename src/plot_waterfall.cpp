@@ -100,7 +100,7 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
         wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
         gc->SetBrush(ltGraphBkgBrush);
         gc->SetPen(wxPen(BLACK_COLOR, 0));
-        gc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+        gc->DrawRectangle(0, 0, m_imgWidth, m_imgHeight);  // DC waterfall bitmap starts at origin and spans full width
         delete gc;
     }
 
@@ -208,7 +208,7 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
             wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
             mGc->SetBrush(ltGraphBkgBrush);
             mGc->SetPen(wxPen(BLACK_COLOR, 0));
-            mGc->DrawRectangle(PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+            mGc->DrawRectangle(0, 0, m_imgWidth, m_imgHeight); // DC waterfall bitmap starts at origin and spans full width
             delete mGc;
         }
     }
@@ -231,8 +231,10 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
 //-------------------------------------------------------------------------
 void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
 {
+    const int STR_LENGTH = 15;
+    
     int      x, y, text_w, text_h;
-    char     buf[15];
+    char     buf[STR_LENGTH];
     wxString s;
     float    f, time, freq_hz_to_px, time_s_to_py;
 
@@ -256,7 +258,7 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
 
     int textXStep = STEP_F_HZ*freq_hz_to_px;
     int textYStep = WATERFALL_SECS_STEP*time_s_to_py;
-    sprintf(buf, "%4.0fHz", (float)MAX_F_HZ - STEP_F_HZ);
+    snprintf(buf, STR_LENGTH, "%4.0fHz", (float)MAX_F_HZ - STEP_F_HZ);
     GetTextExtent(buf, &text_w, &text_h);
     int overlappedText = (text_w > textXStep) || (text_h > textYStep);
 
@@ -272,7 +274,7 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
         else
             ctx->StrokeLine(x, PLOT_BORDER, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
             
-        sprintf(buf, "%4.0fHz", f);
+        snprintf(buf, STR_LENGTH, "%4.0fHz", f);
         GetTextExtent(buf, &text_w, &text_h);
         if (!overlappedText)
             ctx->DrawText(buf, x - text_w/2, (YBOTTOM_TEXT_OFFSET/2));
@@ -294,7 +296,7 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
         if (m_graticule)
             ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
                         (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), y);
-        sprintf(buf, "%3.0fs", time);
+        snprintf(buf, STR_LENGTH, "%3.0fs", time);
 	    GetTextExtent(buf, &text_w, &text_h);
         if (!overlappedText)
             ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);

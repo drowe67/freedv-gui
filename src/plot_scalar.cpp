@@ -254,9 +254,11 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
 //-------------------------------------------------------------------------
 void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
 {
+    const int STR_LENGTH = 15;
+    
     float    t, a;
     int      x, y, text_w, text_h;
-    char     buf[15];
+    char     buf[STR_LENGTH];
     wxString s;
     float    sec_to_px;
     float    a_to_py;
@@ -293,7 +295,7 @@ void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
             ctx->StrokeLine(x, plotHeight + PLOT_BORDER, x, PLOT_BORDER);
         }
         if (!m_mini) {
-            sprintf(buf, "%2.1fs", t);
+            snprintf(buf, STR_LENGTH, "%2.1fs", t);
             GetTextExtent(buf, &text_w, &text_h);
             ctx->DrawText(buf, x - text_w/2, plotHeight + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
         }
@@ -319,7 +321,7 @@ void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
                         (plotWidth + PLOT_BORDER + XLEFT_OFFSET), y);
         }
         if (!m_mini) {
-            sprintf(buf, m_a_fmt, a);
+            snprintf(buf, STR_LENGTH, m_a_fmt, a);
             GetTextExtent(buf, &text_w, &text_h);
             ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
         }

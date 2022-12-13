@@ -66,7 +66,7 @@ sox_version_info_t const * sox_version_info(void)
         NULL,
 #endif
         /* sox_time */
-        __DATE__ " " __TIME__,
+        NULL,
         /* sox_distro */
 #ifdef DISTRO
         DISTRO,
@@ -133,7 +133,8 @@ static sox_globals_t s_sox_globals = {
   NULL,            /* char const * subsystem */
   NULL,            /* char       * tmp_path */
   sox_false,       /* sox_bool     use_magic */
-  sox_false        /* sox_bool     use_threads */
+  sox_false,       /* sox_bool     use_threads */
+  10               /* size_t       log2_dft_min_size */
 };
 
 sox_globals_t * sox_get_globals(void)
@@ -218,8 +219,6 @@ int sox_init(void)
 
 int sox_quit(void)
 {
-  #ifndef __FREEDV__
   sox_format_quit();
-  #endif
   return lsx_effects_quit();
 }

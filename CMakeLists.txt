@@ -5,10 +5,36 @@
 # Please report questions, comments, problems, or patches to the freetel
 # mailing list: https://lists.sourceforge.net/lists/listinfo/freetel-codec2
 #
+cmake_minimum_required(VERSION 3.13)
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
 
-cmake_minimum_required(VERSION 3.0)
+set(PROJECT_NAME FreeDV)
+set(PROJECT_VERSION 1.8.5)
+set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
+set(PROJECT_HOMEPAGE_URL "https://freedv.org")
+
+if(APPLE)
+    project(
+        ${PROJECT_NAME}
+        VERSION ${PROJECT_VERSION}
+        DESCRIPTION ${PROJECT_DESCRIPTION}
+        HOMEPAGE_URL ${PROJECT_HOMEPAGE_URL}
+        LANGUAGES C CXX OBJCXX
+    )
+else(APPLE)
+    project(
+        ${PROJECT_NAME}
+        VERSION ${PROJECT_VERSION}
+        DESCRIPTION ${PROJECT_DESCRIPTION}
+        HOMEPAGE_URL ${PROJECT_HOMEPAGE_URL}
+        LANGUAGES C CXX
+    )
+endif(APPLE)    
+
+# Adds a tag to the end of the version string. Leave empty
+# for official release builds.
+set(FREEDV_VERSION_TAG "")
 
 # Prevent in-source builds to protect automake/autoconf config.
 # If an in-source build is attempted, you will still need to clean up a few
@@ -24,44 +50,18 @@ endif("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
 # Set local module path.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-project(FreeDV)
-
 # Build universal ARM64 and x86_64 binaries on Mac.
 if(BUILD_OSX_UNIVERSAL)
 set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
 endif(BUILD_OSX_UNIVERSAL)
 
-# https://cmake.org/cmake/help/git-stage/policy/CMP0075.html
-if(POLICY CMP0075)
-    cmake_policy(SET CMP0075 NEW)
-endif()
-
 # Return the date (yyyy-mm-dd)
-macro(DATE RESULT)
-  execute_process(COMMAND "date" "+%Y%m%d" OUTPUT_VARIABLE ${RESULT})
-endmacro()
-DATE(DATE_RESULT)
-string(REGEX REPLACE "\n$" "" DATE_RESULT "${DATE_RESULT}")
+string(TIMESTAMP DATE_RESULT "%Y-%m-%d" UTC)
 message(STATUS "Compilation date = XX${DATE_RESULT}XX")
 
 #
-# Set FreeDV version and generate src/version.h
+# generate src/version.h
 #
-set(FREEDV_VERSION_MAJOR 1)
-set(FREEDV_VERSION_MINOR 6)
-set(FREEDV_VERSION_PATCH 1)
-set(FREEDV_VERSION_SUFFIX "")
-
-set(FREEDV_VERSION ${FREEDV_VERSION_MAJOR}.${FREEDV_VERSION_MINOR})
-if(FREEDV_VERSION_PATCH)
-    set(FREEDV_VERSION ${FREEDV_VERSION}.${FREEDV_VERSION_PATCH})
-endif()
-if(FREEDV_VERSION_SUFFIX)
-    set(FREEDV_VERSION_STRING "${FREEDV_VERSION} ${FREEDV_VERSION_SUFFIX}")
-else()
-    set(FREEDV_VERSION_STRING "${FREEDV_VERSION}")
-endif()
-message(STATUS "FreeDV version: ${FREEDV_VERSION_STRING}")
 configure_file(cmake/version.h.in src/version.h @ONLY)
 
 # Set default build type
@@ -96,18 +96,22 @@ else()
         add_definitions(-DGIT_HASH="None")
 endif()
 
-
 # Set default build flags.
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 if(APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -std=c++11")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif(APPLE)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 #
 # Setup cmake options
 #
 set(CMAKE_VERBOSE_MAKEFILE TRUE CACHE BOOL "Verbose makefile.")
+set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE CACHE BOOL "Enable IDE features.")
 set(USE_INTERNAL_CODEC2 FALSE CACHE BOOL
     "Download and build codec2 and lpcnetfreedv instead of using the system library.")
 set(USE_STATIC_DEPS FALSE CACHE BOOL
@@ -122,6 +126,8 @@ set(USE_STATIC_SPEEXDSP FALSE CACHE BOOL
     "Download and build static speex instead of the system library.")
 set(BOOTSTRAP_WXWIDGETS FALSE CACHE BOOL
     "Download and build static wxWidgets instead of the system library.")
+set(USE_PULSEAUDIO FALSE CACHE BOOL
+    "Use PulseAudio instead of PortAudio for audio I/O.")
 
 if(USE_STATIC_DEPS)
     set(USE_STATIC_PORTAUDIO TRUE FORCE)
@@ -136,18 +142,6 @@ if(BOOTSTRAP_WXWIDGETS)
     message(STATUS "Adding wxWidgets build target...")
     include(cmake/BuildWxWidgets.cmake)
 endif(BOOTSTRAP_WXWIDGETS)
-
-#
-# Perform bootstrap build of wxWidgets
-#
-if(BOOTSTRAP_WXWIDGETS AND NOT EXISTS ${WXCONFIG})
-    message(STATUS "Will perform bootstrap build of wxWidgets.
-   After make step completes, re-run cmake and make again to perform FreeDV build.")
-#
-# Continue normal build if not bootstrapping wxWidgets or is already built.
-#
-else(BOOTSTRAP_WXWIDGETS AND NOT EXISTS ${WXCONFIG})
-
 
 #
 # Various hacks and work arounds for building under MinGW.
@@ -232,13 +226,20 @@ if(CODEC2_BUILD_DIR)
     endif()
     set(USE_INTERNAL_CODEC2 OFF CACHE BOOL "" FORCE)
     message(STATUS "Using codec2 from build directory...")
+
+    # Theoretically this isn't needed due to the PATHS argument below, but 
+    # Fedora 37 (inside the Docker container) can't find Codec2 without it.
+    set(codec2_DIR ${CODEC2_BUILD_DIR})
+
     find_package(codec2 REQUIRED
         NO_DEFAULT_PATH
         PATHS ${CODEC2_BUILD_DIR}
         CONFIGS codec2.cmake
     )
+    get_target_property(CODEC2_INCLUDE_DIRS codec2 INTERFACE_INCLUDE_DIRECTORIES)
     if(LPCNET_BUILD_DIR)
         message(STATUS "Using LPCNet from build directory...")
+        set(lpcnet_DIR ${LPCNET_BUILD_DIR})
         find_package(lpcnet REQUIRED
             NO_DEFAULT_PATH
             PATHS ${LPCNET_BUILD_DIR}
@@ -284,9 +285,9 @@ endif(CODEC2_BUILD_DIR)
 
 
 #
-# Find or build portaudio Library
+# Find or build portaudio/PulseAudio Library
 #
-if(NOT USE_STATIC_PORTAUDIO)
+if(NOT USE_STATIC_PORTAUDIO AND NOT USE_PULSEAUDIO)
     message(STATUS "Looking for portaudio...")
     find_package(portaudio-2.0 REQUIRED)
     if(PORTAUDIO_FOUND)
@@ -309,10 +310,26 @@ On Windows it's easiest to use the cmake option: USE_STATIC_PORTAUDIO"
     if(NOT ${PORTAUDIO_VERSION} EQUAL 19 AND NOT MINGW)
         message(WARNING "Portaudio versions other than 19 are known to have issues. You have been warned!")
     endif()
-else(NOT USE_STATIC_PORTAUDIO)
+elseif(USE_PULSEAUDIO)
+    message(STATUS "Finding PulseAudio...")
+    find_package(PulseAudio REQUIRED)
+    if(PULSEAUDIO_FOUND)
+        message(STATUS "  PulseAudio library: ${PULSEAUDIO_LIBRARY}")
+        message(STATUS "  PulseAudio headers: ${PULSEAUDIO_INCLUDE_DIR}")
+        list(APPEND FREEDV_LINK_LIBS ${PULSEAUDIO_LIBRARY})
+        include_directories(${PULSEAUDIO_INCLUDE_DIR})
+        add_definitions(-DAUDIO_ENGINE_PULSEAUDIO_ENABLE)
+    else()
+        message(FATAL_ERROR "PulseAudio library not found.
+On Linux systems try installing:
+    pulseaudio-libs-devel  (RPM based systems)
+    libpulse-dev           (DEB based systems)
+")
+     endif()
+else()
     message(STATUS "Will attempt static build of portaudio.")
     include(cmake/Buildportaudio-2.0.cmake)
-endif(NOT USE_STATIC_PORTAUDIO)
+endif()
 
 #
 # Hamlib library
@@ -388,13 +405,6 @@ endif(NOT USE_STATIC_SNDFILE)
 # Find wxWidgets
 #
 if(NOT BOOTSTRAP_WXWIDGETS)
-    set(WXCONFIG "" CACHE FILEPATH "Location of wx-config binary.")
-    set(WXRC "" CACHE FILEPATH "Location of wxrc binary.")
-else(NOT BOOTSTRAP_WXWIDGETS)
-#	set(WXCONFIG "${CMAKE_BINARY_DIR}/external/dist/bin/wx-config")
-#    set(WXRC "${CMAKE_BINARY_DIR}/external/dist/bin/wxrc")
-#    list(APPEND FREEDV_STATIC_DEPS wxWidgets)
-endif(NOT BOOTSTRAP_WXWIDGETS)
 message(STATUS "Looking for wxWidgets...")
 if(WXCONFIG)
     message(STATUS "wx-config: ${WXCONFIG}")
@@ -435,6 +445,9 @@ if(wxWidgets_FOUND)
     include("${wxWidgets_USE_FILE}")
     list(APPEND FREEDV_LINK_LIBS ${wxWidgets_LIBRARIES})
 endif(wxWidgets_FOUND)
+else(NOT BOOTSTRAP_WXWIDGETS)
+    set(DARK_MODE_DISABLE "false")
+endif(NOT BOOTSTRAP_WXWIDGETS)
 
 #
 # Find speex library
@@ -478,6 +491,11 @@ On Linux systems try installing:
     endif()
 endif()
 
+# Enable CTest tests for freedv-gui
+option(UNITTEST "Build unittest binaries." OFF)
+if(UNITTEST)
+enable_testing()
+endif(UNITTEST)
 
 #
 # Freedv
@@ -501,13 +519,16 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "HF Digital Voice for Radio Amateurs")
 set(CPACK_PACKAGE_VENDOR "CMake")
 #set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
-set(CPACK_PACKAGE_VERSION_MAJOR ${FREEDV_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${FREEDV_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_MAJOR ${FreeDV_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${FreeDV_VERSION_MINOR})
 # CPack expects a patch level version so set it here and override if we
 # are actually setting one.
 set(CPACK_PACKAGE_VERSION_PATCH 0)
-if(FREEDV_VERSION_PATCH)
-    set(CPACK_PACKAGE_VERSION_PATCH ${FREEDV_VERSION_PATCH})
+if(FreeDV_VERSION_PATCH)
+    set(CPACK_PACKAGE_VERSION_PATCH ${FreeDV_VERSION_PATCH})
+endif()
+if(FreeDV_VERSION_TWEAK)
+    set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}.${FreeDV_VERSION_TWEAK}")
 endif()
 if(FREEDV_VERSION_SUFFIX)
     #set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}-${FREEDV_VERSION_SUFFIX}")
@@ -563,10 +584,13 @@ elseif(UNIX AND NOT APPLE)
     # Linux packaging
     SET(CPACK_GENERATOR "DEB")
     SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Mooneer Salem <mooneer@gmail.com>") #required
-    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 0.9.2), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libportaudio2 (>= 19.6.0-1build1), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
+    if(USE_PULSEAUDIO)
+    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.0.6), lpcnet (>= 0.4.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libpulse0 (>= 14.2-2), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
+    else(USE_PULSEAUDIO)
+    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.0.6), lpcnet (>= 0.4.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libportaudio2 (>= 19.6.0-1build1), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
+    endif(USE_PULSEAUDIO)
+
     SET(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
     include(CPack)
 
 endif(WIN32)
-
-endif(BOOTSTRAP_WXWIDGETS AND NOT EXISTS ${WXCONFIG})

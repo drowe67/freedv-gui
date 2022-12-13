@@ -121,7 +121,7 @@ nudged.  More **is not better** with the FreeDV transmit signal.
 Overdriving your transmitter will lead to a distorted transit signal, and
 a poor SNR at the receiver.  This is a very common problem.
 
-1. FreeDV 700D and 700E can drive your transmitter at an average power of 40% of it's peak power rating.  For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.
+1. FreeDV 700D and 700E can drive your transmitter at an average power of 40% of its peak power rating.  For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.
 
 1. Adjust the microphone audio so the peaks are not clipping, and the
 average is about half the maximum.
@@ -160,7 +160,7 @@ Once you have configured PTT, try the **Test** button.
 
 Serial PTT support is complex.  We get many reports that FreeDV
 PTT doesn't work on a particular radio, but may work fine with other
-programs such as Fldigi.  This is often a mis-match between the serial
+programs such as Fldigi.  This is often a mismatch between the serial
 parameters Hamlib is using with FreeDV and your radio. For example you
 may have changed the default serial rate on your radio. Carefully
 check the serial parameters on your radio match those used by FreeDV
@@ -289,16 +289,35 @@ of the ```dialout``` group?
 1. Contact the digital voice mailing list.  Be specific about your
 hardware, what you have tried, and the exact nature of the problem.
 
+## I'm on Windows and serial port PTT doesn't work with my USB to serial adapter.
+
+Please verify that you are running the correct drivers for the USB to serial adapter
+that you're using. Information and download links for the drivers used by the most
+common devices can be found [here](https://www.miklor.com/COM/UV_Drivers.php). 
+
+While it is preferred to use devices that use authorized/original versions of the
+various USB to serial chipsets, it is possible to use some cloned devices with 
+older drivers. When doing this, you may also need to force Windows to use an older 
+version of a driver instead of automatically updating the driver on reboot. See
+[here](https://wethegeek.com/how-to-disable-automatic-driver-updates-in-windows-10/)
+for instructions on doing so in Windows 10. For Windows 8:
+
+1. Search for "Change device" in the Windows 8 Start menu.
+1. Click on where it says "Change device installation settings".
+1. Select the "No, let me choose what to do" option.
+1. Check the "automatically get the device app" option, then click Save changes to save the settings you just chose.
+
 ## FreeDV 2020 mode is greyed out
 
-You must have a modern CPU with AVX support to run FreeDV 2020.  If
-you do not have AVX the FreeDV 2020 mode button will be greyed out.
-A Microsoft utlity called [coreinfo](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo)
-can be also used to determine if your CPU supports AVX.  A * means
-you have AVX, a - means no AVX:
+In order to use FreeDV 2020 mode, you must have one of the following:
+
+1. An Intel based CPU with AVX support. A Microsoft utility called [coreinfo](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo)
+can be used to determine if your CPU supports AVX.  A * means you have 
+AVX, a - means no AVX:
+
 ```
 AES             -       Supports AES extensions
-AVX             *       Supports AVX intruction extensions
+AVX             *       Supports AVX instruction extensions
 FMA             -       Supports FMA extensions using YMM state
 ```
 
@@ -308,6 +327,10 @@ or the output of the `lscpu` command:
 lscpu | grep -o "avx[^ ]*"
 ```
 will display `avx` (or `avx2`) if your CPU supports the instructions.
+
+2. A Mac with an ARM processor (e.g. 2020 Mac Mini or later).
+
+If your system does not meet either (1) or (2), the 2020 option will be grayed out.
 
 ## FreeDV 2020 mode is slow on ARM Macs
 
@@ -357,10 +380,6 @@ with a valid sync is received for a few seconds the voice keyer stops.
 The Options-PTT dialog can be used to select the wave file, set the Rx
 delay, and number of times the tx/rx cycle repeats.
 
-The wave file for the voice keyer should be in 8kHz mono 16 bit sample
-form (16 kHz for 2020).  Use a free application such as Audacity to convert a file you
-have recorded to this format.
-
 # Multiple Configurations
 
 By default, FreeDV uses the following locations to store configuration:
@@ -377,6 +396,26 @@ to the following locations:
 * Linux: ~/
 * macOS: ~/Library/Preferences/
 * Windows: C:\\Users\\[username]\\AppData\\Roaming
+
+## Executing FreeDV With a Different Configuration (Windows)
+
+On Windows, you can create shortcuts to FreeDV with different file names for the "-f" command line
+option as described above. To create a shortcut, right-click on the Desktop or in File Explorer and 
+choose New->Shortcut. Click on Browse and navigate to one of the following paths:
+
+* C:\\Program Files\\FreeDV [version]\\bin\\freedv.exe
+* C:\\Program Files (x86)\\FreeDV [version]\\bin\\freedv.exe (if the 32 bit version is installed on a 64 bit machine)
+
+Click Next and give the shortcut a unique description (e.g. "FreeDV IC-7300"). Then push Finish to create the shortcut.
+
+Once the shortcut has been created, right-click it and choose Properties. Find the Shortcut tab in the resulting dialog
+box and add "-f" followed by the desired filename to the end of the text in the Target field. Do not add any other
+quote marks.
+
+For example, to use a file called IC7300.conf stored in the Hamradio directory on the C drive the Target field should 
+appear as follows:
+
+"C:\\Program Files\\FreeDV [version]\\bin\\freedv.exe" -f C:\\Hamradio\\IC7300.conf
 
 # PSK Reporter (Experimental)
 
@@ -495,7 +534,19 @@ FreeDV 2020 Tips:
 1. There is a 2 second end-to-end latency.  You are welcome to try tuning
    this (Tools - Options - FIFO size, also see Sound Card Debug
    section below).
-1. The voice keyer file must be 16 kHz mono 16 bit sample format.
+
+## FreeDV 2020B
+
+Experimental mode developed in February 2022.  The goal of this mode is to improve the performance of FreeDV 2020 over HF channels.
+
+Here are the three main innovations, and the theoretical improvements:
+
+1. Compression (clipping) of the 2020x modem waveforms has been added, which is worth about 4dB. This should also improve the original FreeDV 2020 mode.  The Clipping checkbox is located on Tools-Options-Modem.  As per the other warnings in this manual please make sure you transmitter can handle the higher RMS power.
+1. 2020B is like 700E to 700D - it works with fast fading but requires a few more dB of SNR. This will make it usable in European Winter (or over the South Pole Argentina to Australia) type channels - if you have enough SNR. The challenge with this mode is squeezing all the information we need (enough pilots symbols for fast fading, LPCNet, FEC bits) into a 2100 Hz channel - we are pushing up again the edges of many SSB filters. It also uses unequal FEC, just the most important 11 bits are protected.
+
+This modes is under development and may change at any time.  If you experience comparability issues with another operator - check your Git Hash values on the Help-about menu to ensure you are running the same versions of LPCNet and codec2.
+
+It is recommended that multi-rx be disabled when using 2020B. This mode is not supported by multi-rx, you will need to manually coordinate the mode with other stations.
 
 # Tools Menu
 
@@ -505,7 +556,7 @@ This section describes features on Tools-Filter.
 
 Control | Description
  -------------------------- | ------------------------------------------------------------------------ |
-Noise Supression | Enable noise supression, dereverberation, AGC of mic signal using the Speex pre-processor
+Noise Suppression | Enable noise suppression, dereverberation, AGC of mic signal using the Speex pre-processor
 700C/700D Auto EQ | Automatic equalisation for FreeDV 700C and FreeDV 700D Codec input audio
 
 Auto EQ (Automatic Equalisation) adjusts the input speech spectrum to best fit the speech codec. It can remove annoying bass artefacts and make the codec speech easier to understand.
@@ -523,16 +574,6 @@ Clipping | Increases the average power. Ensure your transmitter can handle high 
 700C Diversity Combine | Combining of two sets of 700C carriers for better fading channel performance
 Tx Band Pass Filter | Reduces Tx spectrum bandwidth
 Manual Unsync | Forces modem to remain in sync, and not drop sync automatically
-
-### OFDM Modem Phase Estimator Options (Experimental)
-
-These options apply to the FreeDV 700D and 2020 modes that use the OFDM modem:
-
-1. The High Bandwidth option gives better performance on channels where the phase changes quickly, for example fast fading HF channels and the Es'Hail 2 satellite. When unchecked, the phase estimator bandwidth is automatically selected.  It starts off high to enable fast sync, then switches to low bandwidth to optimise performance for low SNR HF channels.
-
-1. The DPSK (differential PSK) checkbox has a similar effect - better performance on High SNR channels where the phase changes rapidly.  This option converts the OFDM modem to use differential PSK rather than coherent PSK.  DPSK is used by earlier FreeDV modes such as FreeDV 1600.  It affects the Tx and Rx side, so both sides must select DPSK.
-
-If you have problems with 700D or 2020 sync even though you have a strong signal - try these options.
 
 # Helping Improve FreeDV
 
@@ -740,6 +781,119 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.8.5 December 2022
+
+1. Build system:
+    * Add checks for .git folder to prevent errors when building from official release tarballs. (PR #294)
+    * Simplify PortAudio static build to fix multi-core build issue on macOS. (PR #304, #308)
+    * Upgrade bootstrapped wxWidgets to v3.2.1. (PR #302)
+    * Upgrade Docker container to Fedora 37. (PR #306)
+2. Enhancements:
+    * Update FreeDV configuration defaults to improve first-time usability. (PR #293)
+3. Bugfixes:
+    * Fix issue preventing macOS binaries from running on releases older than 12.0. (PR #301)
+    * Fix issue with 2020B not being selected as default on next start (PR #299)
+4. Documentation:
+    * Update manual to reflect Ubuntu renaming libsndfile-dev to libsnd1file-dev. (PR #297)
+
+## V1.8.4 October 2022
+
+1. Build system:
+    * Updates to reflect LPCNet decoupling from Codec2 (PR #274)
+2. Bugfixes:
+    * Add missed UI disable on startup for 2020B mode. (PR #279)
+    * Fixed TX audio dropouts when using different sample rates. (PR #287)
+    * Remove sample rates above 48K from audio configuration. (PR #288)
+3. Enhancements:
+    * Add alternate method of determining 2020 support for non-x86 machines. (PR #280)
+    * Remove unnecessary BW and DPSK options from UI. (PR #283)
+    * Stats on left hand side of main window now auto-reset after user-configurable time period (default 10s). (PR #262, #286)
+
+## V1.8.3.1 August 2022
+
+1. Build system:
+    * Fix issue preventing patch version from being passed to Windows installer. (PR #271)
+    
+## V1.8.3 August 2022
+
+1. Build system:
+    * Build Git version of Hamlib for Windows builds. (PR #261)
+    * Remove build date and time from libsox. (PR #267)
+    * Refactor CMakeList.txt using newer project format. (PR #268)
+1. Enhancements:
+    * Update frequency and mode display every 5 sec. (PR #266)
+    
+## V1.8.2 July 2022
+
+1. Enhancements:
+    * Save rig names instead of IDs to prevent Hamlib off by one issues. (PR #256)
+2. Bugfixes:
+    * Increase plot buffer size to resolve issues with "To Spkr/Headphones" tab (PR #258)
+3. Build system:
+    * Depend on Codec2 1.0.5. (PR #259)
+    
+## V1.8.1 July 2022
+
+1. Bugfixes:
+    * Disable 2020B unless the installed Codec2 provides it. (PR #257)
+2. Build system:
+    * Update build scripts to use specific Codec2 and LPCNet versions. (PR #257)
+    
+## V1.8.0 July 2022
+
+1. Enhancements:
+    * PSK Reporter: Encodes callsign regardless of whether the internet is working. (PR #214)
+    * PSK Reporter: Sends report upon pushing Stop (vs. simply clearing the report list). (PR #214)
+    * PSK Reporter: Performs reporting in background instead of hanging the caller of the PskReporter class. (PR #214)
+    * PSK Reporter: Suppress reporting if we're playing back a radio file (to avoid false reports). (PR #214)
+    * Filter dialog: Increase length of vertical sliders to simplify fine-tuning. (PR #224)
+    * Modem compression (Tools-Options-Modem Clipping checkbox) added to FreeDV 2020 for increased RMS power. (PR #211)
+    * Added experimental 2020B mode. (PR #211)
+    * Refactored audio handling to use pipeline design pattern. (PR #219)
+    * Eliminated requirement to use the same audio sample rate for both mic and speaker devices. (PR #219, #234)
+    * 60 meters shows as USB and not LSB for countries where FreeDV usage is legal on that band. (PR #243)
+    * Improved audio quality and reduced CPU usage for multi-RX. (PR #246)
+2. Build system:
+    * Add spell checking of codebase on every Git push. (PR #216)
+    * Build Windows build on every Git push. (PR #220)
+    * Default branch and repo to the current branch and repo for Docker (or else reasonable defaults). (PR #233)
+3. Documentation:
+    * Removed obsolete references to required sample rates for voice keyer files. (PR #219)
+    * Add troubleshooting instructions for serial port PTT on Windows. (PR #226)
+    * Add missing gcc-g++ package to Fedora build instructions. (PR #235)
+    * Add missing sox package to Fedora build instructions. (PR #241)
+4. Bugfixes:
+    * Suppress refresh of the sync indicator if disabled/no change in sync. (PR #230)
+    * Clarify location from where to run Docker build script. (PR #231)
+    * Change shutdown ordering to prevent hangs on slower systems. (PR #236)
+    * Disable PulseAudio suspend failure due to interactions with pipewire. (PR #239)
+
+## V1.7.0 February 2022
+
+1. Bugfixes:
+    * Resolves issue with waterfall appearing garbled on some systems. (PR #205)
+    * Resolves issue with Restore Defaults restoring previous settings on exit. (PR #207)
+    * Resolves issue with some sound valid sound devices causing PortAudio errors during startup checks. (PR #192)
+2. Enhancements:
+    * Removes requirement to restart FreeDV after using Restore Defaults. (PR #207)
+    * Hides frequency display on main window unless PSK Reporter reporting is turned on. (PR #207)
+    * Scales per-mode squelch settings when in multi-RX mode to reduce unwanted noise. (PR #186)
+    * Single-thread mode is now the default when multi-RX is turned on. (PR #175)
+    * Makes multi-RX mode the default. (PR #175)
+    * Mic In/Speaker Out volume controls added to Filter window. (PR #208)
+    * Cleans up UI for filters and makes the dialog non-modal. (PR #208)
+    * Adds optional support for PulseAudio on Linux systems. (PR #194)
+3. Documentation:
+    * Adds section on creating Windows shortcuts to handle multiple configurations. (PR #204)
+    * Resolves issue with PDF image placement. (PR #203)
+4. Build System:
+    * Uses more portable way of referring to Bash in build scripts. (PR #200)
+    * User manual now installed along with executable. (PR #187)
+    * macOS app bundle generated by CMake instead of manually. (PR #184)
+    * Fail as soon as a step in the build script fails. (PR #183)
+    * Have Windows uninstaller clean up Registry. (PR #182)
+    * Windows installer now installs sample .wav files. (PR #182)
+    
 ## V1.6.1 September 2021
 
 1. Bugfixes:
@@ -835,3 +989,4 @@ _Note: The PSK Reporter feature beginning in this release is incompatible with v
 * [FreeDV Web site](http://freedv.org)
 * [FreeDV Technology Overview](https://github.com/drowe67/codec2/blob/master/README_freedv.md)
 * [Digitalvoice mailing list](https://groups.google.com/forum/#!forum/digitalvoice)
+ 

@@ -23,6 +23,9 @@
 
 #include <vector>
 #include <algorithm>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 #include <wx/settings.h>
 
@@ -44,7 +47,8 @@ Hamlib::Hamlib() :
     m_freqBox(NULL),
     m_currFreq(0),
     m_currMode(RIG_MODE_USB),
-    m_vhfUhfMode(false)  {
+    m_vhfUhfMode(false),
+    threadRunning_(false)  {
     /* Stop hamlib from spewing info to stderr. */
     rig_set_debug(RIG_DEBUG_NONE);
 
@@ -82,6 +86,32 @@ static bool rig_cmp(const struct rig_caps *rig1, const struct rig_caps *rig2) {
 
     /* Compare rig ID. */
     return rig1->rig_model < rig2->rig_model;
+}
+
+unsigned int Hamlib::rigNameToIndex(std::string rigName)
+{
+    unsigned int index = 0;
+    for (auto& entry : m_rigList)
+    {
+        char name[128];
+        snprintf(name, 128, "%s %s", entry->mfg_name, entry->model_name); 
+        
+        if (rigName == std::string(name))
+        {
+            return index;
+        }
+        
+        index++;
+    }
+    
+    return -1;
+}
+
+std::string Hamlib::rigIndexToName(unsigned int rigIndex)
+{
+    char name[128];
+    snprintf(name, 128, "%s %s", m_rigList[rigIndex]->mfg_name, m_rigList[rigIndex]->model_name); 
+    return name;
 }
 
 freq_t Hamlib::get_frequency(void) const
@@ -158,7 +188,7 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
     if (g_verbose) fprintf(stderr, "hamlib: stop_bits..: %d\n", m_rig->state.rigport.parm.serial.stop_bits);
 
     if (rig_open(m_rig) == RIG_OK) {
-        if (g_verbose) fprintf(stderr, "hamlib: rig_open() OK\n");
+        if (g_verbose) fprintf(stderr, "hamlib: rig_open() OK\n");        
         return true;
     }
     if (g_verbose) fprintf(stderr, "hamlib: rig_open() failed ...\n");
@@ -182,6 +212,8 @@ int Hamlib::get_stop_bits(void) {
 }
 
 bool Hamlib::ptt(bool press, wxString &hamlibError) {
+    std::unique_lock<std::mutex> lock(statusUpdateMutex_);
+    
     if (g_verbose) fprintf(stderr,"Hamlib::ptt: %d\n", press);
     hamlibError = "";
 
@@ -204,48 +236,17 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
     return retcode == RIG_OK;
 }
 
-int Hamlib::hamlib_freq_cb(RIG* rig, vfo_t currVFO, freq_t currFreq, void* ptr)
-{
-    Hamlib* thisPtr = (Hamlib*)ptr;
-    thisPtr->m_currFreq = currFreq;
-    thisPtr->update_mode_status();
-    return RIG_OK;
-}
-
-int Hamlib::hamlib_mode_cb(RIG* rig, vfo_t currVFO, rmode_t currMode, pbwidth_t passband, void* ptr)
-{
-    Hamlib* thisPtr = (Hamlib*)ptr;
-    thisPtr->m_currMode = currMode;
-    thisPtr->update_mode_status();
-    return RIG_OK;
-}
-
 int Hamlib::update_frequency_and_mode(void)
 {
-    rmode_t mode = RIG_MODE_NONE;
-    pbwidth_t passband = 0;
-    int result = rig_get_mode(m_rig, RIG_VFO_CURR, &mode, &passband);
-    if (result != RIG_OK)
+    if (m_rig == nullptr)
     {
-        if (g_verbose) fprintf(stderr, "rig_get_mode: error = %s \n", rigerror(result));
-    }
-    else
-    {
-        freq_t freq = 0;
-        result = rig_get_freq(m_rig, RIG_VFO_CURR, &freq);
-        if (result != RIG_OK)
-        {
-            if (g_verbose) fprintf(stderr, "rig_get_freq: error = %s \n", rigerror(result));
-        }
-        else
-        {
-            m_currMode = mode;
-            m_currFreq = freq;
-            update_mode_status();
-        }
+        return RIG_EARG; // "NULL RIG handle or any invalid pointer parameter in get arg"
     }
     
-    return result;
+    // Trigger update.
+    statusUpdateCV_.notify_one();
+
+    return 0;
 }
 
 void Hamlib::enable_mode_detection(wxStaticText* statusBox, wxTextCtrl* freqBox, bool vhfUhfMode)
@@ -259,50 +260,101 @@ void Hamlib::enable_mode_detection(wxStaticText* statusBox, wxTextCtrl* freqBox,
     m_modeBox = statusBox;
     m_modeBox->Enable(true);
 
+    // Start status update thread
+    assert(!statusUpdateThread_.joinable());
+    statusUpdateThread_ = std::thread(&Hamlib::statusUpdateThreadEntryFn_, this);
+}
+
+void Hamlib::disable_mode_detection()
+{
+    threadRunning_ = false;
+    statusUpdateCV_.notify_one();
+    
+    if (statusUpdateThread_.joinable())
+    {
+        statusUpdateThread_.join();
+    }
+}
+
+
+void Hamlib::statusUpdateThreadEntryFn_()
+{
+    threadRunning_ = true;
+    
     // Populate initial state.
     int result = update_frequency_and_mode();
 
     // If we couldn't get current mode/frequency for any reason, disable the UI for it.
     if (result != RIG_OK)
     {
-        m_modeBox->SetLabel(wxT("unk"));
-        m_modeBox->Enable(false);
-        m_modeBox->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-        m_modeBox = NULL;
+        m_modeBox->CallAfter([&]() {
+            m_modeBox->SetLabel(wxT("unk"));
+            m_modeBox->Enable(false);
+            m_modeBox->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+            m_modeBox = NULL;
+        });
+        
+        threadRunning_ = false;
+        return;
     }
-    else
+    
+    update_from_hamlib_();
+    
+    while (threadRunning_)
     {
-        // TBD: Due to hamlib not supporting polling on Windows, the bottom is temporarily
-        // disabled. When/if that changes, re-enabling is a simple matter of removing
-        // the #if/#endif below.
-#if 0
-        // Enable rig callbacks.
-        rig_set_freq_callback(m_rig, &hamlib_freq_cb, this);
-        rig_set_mode_callback(m_rig, &hamlib_mode_cb, this);
-        rig_set_trn(m_rig, RIG_TRN_POLL);
-#endif
+        std::unique_lock<std::mutex> lock(statusUpdateMutex_);
+        
+        // Wait for refresh trigger from UI thread.
+        statusUpdateCV_.wait_for(lock, 10s);
+        if (!threadRunning_) break;
+        
+        update_from_hamlib_();
+    }
+    
+    if (m_modeBox != NULL) 
+    {
+        // Disable control.
+        m_modeBox->CallAfter([&]() {
+            m_modeBox->SetLabel(wxT("unk"));
+            m_modeBox->Enable(false);
+            m_modeBox->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+            m_modeBox = NULL;
+        });
     }
 }
 
-void Hamlib::disable_mode_detection()
+void Hamlib::update_from_hamlib_()
 {
-    if (m_modeBox != NULL) 
+    rmode_t mode = RIG_MODE_NONE;
+    pbwidth_t passband = 0;
+    vfo_t currVfo = RIG_VFO_A;
+    int result = rig_get_vfo(m_rig, &currVfo);
+    if (result != RIG_OK && result != -RIG_ENAVAIL)
     {
-        // TBD: Due to hamlib not supporting polling on Windows, the bottom is temporarily
-        // disabled. When/if that changes, re-enabling is a simple matter of removing
-        // the #if/#endif below.
-#if 0
-        // Disable callbacks.
-        rig_set_trn(m_rig, RIG_TRN_OFF);
-        rig_set_freq_callback(m_rig, NULL, NULL);
-        rig_set_mode_callback(m_rig, NULL, NULL);
-#endif
-    
-        // Disable control.
-        m_modeBox->SetLabel(wxT("unk"));
-        m_modeBox->Enable(false);
-        m_modeBox->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-        m_modeBox = NULL;
+        if (g_verbose) fprintf(stderr, "rig_get_vfo: error = %s \n", rigerror(result));
+    }
+    else
+    {
+        result = rig_get_mode(m_rig, currVfo, &mode, &passband);
+        if (result != RIG_OK)
+        {
+            if (g_verbose) fprintf(stderr, "rig_get_mode: error = %s \n", rigerror(result));
+        }
+        else
+        {
+            freq_t freq = 0;
+            result = rig_get_freq(m_rig, currVfo, &freq);
+            if (result != RIG_OK)
+            {
+                if (g_verbose) fprintf(stderr, "rig_get_freq: error = %s \n", rigerror(result));
+            }
+            else
+            {
+                m_currMode = mode;
+                m_currFreq = freq;
+                m_modeBox->CallAfter([&]() { update_mode_status(); });
+            }
+        }
     }
 }
 
@@ -318,11 +370,19 @@ void Hamlib::update_mode_status()
     else
         m_modeBox->SetLabel(rig_strrmode(m_currMode));
 
-    // Update color
+    // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
+    bool is60MeterBand = m_currFreq >= 5250000 && m_currFreq <= 5450000;
+    
+    // Update color based on the mode and current frequency.
+    bool isUsbFreq = m_currFreq >= 10000000 || is60MeterBand;
+    bool isLsbFreq = m_currFreq < 10000000 && !is60MeterBand;
+    bool isFmFreq = m_currFreq >= 29510000;
+    
     bool isMatchingMode = 
-        (m_currFreq >= 10000000 && (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)) ||
-        (m_currFreq < 10000000 && (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)) ||
-        (m_vhfUhfMode && m_currFreq >= 29510000 && (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_PKTFM));
+        (isUsbFreq && (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)) ||
+        (isLsbFreq && (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)) ||
+        (m_vhfUhfMode && isFmFreq && (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_PKTFM));
+    
     if (isMatchingMode)
     {
         m_modeBox->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
@@ -341,6 +401,9 @@ void Hamlib::update_mode_status()
 
 void Hamlib::close(void) {
     if(m_rig) {
+        // Turn off status thread if needed.
+        disable_mode_detection();
+        
         rig_close(m_rig);
         rig_cleanup(m_rig);
         m_rig = NULL;

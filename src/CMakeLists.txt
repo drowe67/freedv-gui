@@ -5,7 +5,6 @@ set(FREEDV_SOURCES
     dlg_options.cpp
     dlg_ptt.cpp
     main.cpp
-    pa_wrapper.cpp
     plot.cpp
     plot_scalar.cpp
     plot_scatter.cpp
@@ -15,6 +14,7 @@ set(FREEDV_SOURCES
     serialport.cpp
     topFrame.cpp
     sox_biquad.c
+    sox_biquad.h
     comp.h
     dlg_audiooptions.h
     dlg_filter.h
@@ -22,29 +22,12 @@ set(FREEDV_SOURCES
     dlg_ptt.h
     defines.h
     main.h
-    pa_wrapper.h
     plot.h
     plot_scalar.h
     plot_scatter.h
     plot_spectrum.h
     plot_waterfall.h
     hamlib.h
-    sox_biquad.h
-    sox/band.h
-    sox/biquad.c
-    sox/biquads.c
-    sox/biquad.h
-    sox/effects.c
-    sox/effects.h
-    sox/effects_i.c
-    sox/formats_i.c
-    sox/libsox.c
-    sox/sox.h
-    sox/sox_i.h
-    sox/soxomp.h
-    sox/util.h
-    sox/xmalloc.h
-    sox/xmalloc.c
     topFrame.h
     version.h
     osx_interface.h
@@ -68,6 +51,11 @@ set(FREEDV_LINK_LIBS_OSX
     "-framework AVFoundation"
 )
 
+# Compile FreeDV components
+add_subdirectory(audio)
+add_subdirectory(pipeline)
+add_subdirectory(sox)
+
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.
 # In addition, there are some required OSX-specific code files for platform specific handling.
 if(APPLE)
@@ -79,9 +67,9 @@ if(APPLE)
         MACOSX_BUNDLE_GUI_IDENTIFIER org.freedv.freedv
         MACOSX_BUNDLE_BUNDLE_NAME FreeDV
         MACOSX_BNUDLE_COPYRIGHT "Copyright (c) 2021 FreeDV"
-        MACOSX_BUNDLE_BUNDLE_VERSION "${FREEDV_VERSION}"
-        MACOSX_BUNDLE_BUNDLE_SHORT_VERSION_STRING "${FREEDV_VERSION}"
-        MACOSX_BUNDLE_BUNDLE_LONG_VERSION_STRING "${FREEDV_VERSION}"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${FreeDV_VERSION}"
+        MACOSX_BUNDLE_BUNDLE_SHORT_VERSION_STRING "${FreeDV_VERSION}"
+        MACOSX_BUNDLE_BUNDLE_LONG_VERSION_STRING "${FreeDV_VERSION}"
         MACOSX_BUNDLE_ICON_FILE "freedv"
         MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/src/info.plist.in
     )
@@ -91,33 +79,52 @@ endif(APPLE)
 
 # Link imported or build tree targets.
 if(APPLE)
-target_link_libraries(FreeDV codec2 lpcnetfreedv)
+target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_sox lpcnetfreedv codec2)
 else(APPLE)
-target_link_libraries(freedv codec2 lpcnetfreedv)
+target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_sox lpcnetfreedv codec2)
 endif(APPLE)
 
-# Add build dependencies for interally built external libraries.
+# Add build dependencies for internally built external libraries.
 if(USE_INTERNAL_CODEC2)
     add_dependencies(freedv build_codec2 build_lpcnetfreedv)
 endif()
 
-# Add depenencies for other statically built libraries, if applicable.
+# Add dependencies for other statically built libraries, if applicable.
 if(FREEDV_STATIC_DEPS)
     if(APPLE)
     add_dependencies(FreeDV ${FREEDV_STATIC_DEPS})
     else(APPLE)
     add_dependencies(freedv ${FREEDV_STATIC_DEPS})
     endif(APPLE)
+    add_dependencies(fdv_audio ${FREEDV_STATIC_DEPS})
+    add_dependencies(fdv_audio_pipeline ${FREEDV_STATIC_DEPS})
+    add_dependencies(fdv_sox ${FREEDV_STATIC_DEPS})
 endif(FREEDV_STATIC_DEPS)
 
 # Link other dependencies
 if(APPLE)
 target_link_libraries(FreeDV ${FREEDV_LINK_LIBS} ${FREEDV_LINK_LIBS_OSX})
 elseif(WIN32)
-target_link_libraries(freedv ${FREEDV_LINK_LIBS} ws2_32)
+target_link_libraries(freedv ${FREEDV_LINK_LIBS} ws2_32 usb-1.0)
 else()
 target_link_libraries(freedv ${FREEDV_LINK_LIBS})
 endif(APPLE)
+
+if(BOOTSTRAP_WXWIDGETS)
+    if(APPLE)
+        target_compile_definitions(FreeDV PRIVATE ${WXBUILD_BUILD_DEFS})
+        target_include_directories(FreeDV PRIVATE ${WXBUILD_INCLUDES})
+        
+        add_dependencies(FreeDV wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
+        target_link_libraries(FreeDV wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid)
+    else(APPLE)
+        target_compile_definitions(freedv PRIVATE ${WXBUILD_BUILD_DEFS})
+        target_include_directories(freedv PRIVATE ${WXBUILD_INCLUDES})
+        
+        add_dependencies(freedv wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
+        target_link_libraries(freedv wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid)
+    endif(APPLE)
+endif(BOOTSTRAP_WXWIDGETS)
 
 # For older Xcode (< 9.0), bypass usage of @available.
 if(APPLE)
@@ -125,6 +132,11 @@ if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0.900037)
 add_definitions(-DAPPLE_OLD_XCODE)
 endif(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0.0.900037)
 endif(APPLE)
+
+# If a release tag's set, pass it to the compiler.
+if(FREEDV_VERSION_TAG)
+add_definitions(-DFREEDV_VERSION_TAG="${FREEDV_VERSION_TAG}")
+endif(FREEDV_VERSION_TAG)
 
 # Insert source and generated header directories before other search directories.
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
