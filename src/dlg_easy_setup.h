@@ -95,16 +95,16 @@ class EasySetupDialog : public wxDialog
              SoundDeviceData() 
                  : rxDeviceName("none")
                  , txDeviceName("none")
-                 , rxDeviceIndex(-1)
-                 , txDeviceIndex(-1)
+                 , rxSampleRate(44100)
+                 , txSampleRate(44100)
              {
                  // empty
              } 
              
              wxString rxDeviceName;
              wxString txDeviceName;
-             int rxDeviceIndex;
-             int txDeviceIndex;
+             int rxSampleRate;
+             int txSampleRate;
          };
          
          static int OnPortAudioCallback_(const void *input, void *output, unsigned long frameCount, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData);
@@ -113,8 +113,6 @@ class EasySetupDialog : public wxDialog
          void updateHamlibDevices_();
          void resetIcomCIVStatus();
          
-         int analogDevicePlaybackDeviceId_;
-         int analogDeviceRecordDeviceId_;
          Hamlib* hamlibTestObject_;
          PaStream* radioOutputStream_;
          int sineWaveSampleNumber_;

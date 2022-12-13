@@ -26,7 +26,7 @@
 
 #include "main.h"
 #include "dlg_easy_setup.h"
-#include "pa_wrapper.h"
+#include "audio/AudioEngineFactory.h"
 
 #ifdef __WIN32__
 #include <wx/msw/registry.h>
@@ -364,22 +364,14 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
                 wxGetApp().m_soundCard2InDeviceName = "none";
                 wxGetApp().m_soundCard2OutDeviceName = "none";
                 wxGetApp().m_soundCard1InDeviceName = deviceData->rxDeviceName;
-                g_soundCard1InDeviceNum = deviceData->rxDeviceIndex;
                 wxGetApp().m_soundCard1OutDeviceName = m_analogDevicePlayback->GetLabel();
-                g_soundCard1OutDeviceNum = analogDevicePlaybackDeviceId_;
             }
             else
             {
                 wxGetApp().m_soundCard2InDeviceName = m_analogDeviceRecord->GetLabel();
-                g_soundCard2InDeviceNum = analogDeviceRecordDeviceId_;
                 wxGetApp().m_soundCard2OutDeviceName = m_analogDevicePlayback->GetLabel();
-                g_soundCard2OutDeviceNum = analogDevicePlaybackDeviceId_;
                 wxGetApp().m_soundCard1InDeviceName = deviceData->rxDeviceName;
-                g_soundCard1InDeviceNum = deviceData->rxDeviceIndex;
                 wxGetApp().m_soundCard1OutDeviceName = deviceData->txDeviceName;
-                g_soundCard1OutDeviceNum = deviceData->txDeviceIndex;
-                
-                g_soundCard2SampleRate = 48000;
             }
             
             pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);	
@@ -861,104 +853,50 @@ void EasySetupDialog::updateHamlibDevices_()
 
 void EasySetupDialog::updateAudioDevices_()
 {
-    PaError pa_err;
-    if((pa_err = Pa_Initialize()) != paNoError)
+    std::map<wxString, SoundDeviceData*> finalDeviceList;
+    auto audioEngine = AudioEngineFactory::GetAudioEngine();
+    auto inputDevices = audioEngine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
+    auto outputDevices = audioEngine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
+    
+    wxRegEx soundDeviceCleanup("^(Microphone|Speakers) \\(");
+    wxRegEx rightParenRgx("\\)$");
+    
+    for (auto& dev : inputDevices)
     {
-        wxMessageBox(wxT("Port Audio failed to initialize"), wxT("Pa_Initialize"), wxOK);
-        return;
+        wxString cleanedDeviceName = dev.name;
+        if (soundDeviceCleanup.Replace(&cleanedDeviceName, "") > 0)
+        {
+            rightParenRgx.Replace(&cleanedDeviceName, "");
+        }
+        
+        SoundDeviceData* soundData = new SoundDeviceData();
+        assert(soundData != nullptr);
+        
+        soundData->rxDeviceName = dev.name;
+        soundData->rxSampleRate = dev.defaultSampleRate;
+        
+        finalDeviceList[cleanedDeviceName] = soundData;
     }
     
-    std::map<wxString, SoundDeviceData*> finalDeviceList;
-    int numDevices = Pa_GetDeviceCount();
-    for (int index = 0; index < numDevices; index++)
+    for (auto& dev : outputDevices)
     {
-        const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(index);
-        
-        // Only devices that have both input and output channels should be considered for radio devices.
-        // These are typically ones such as "USB Audio CODEC" as built into SignaLink et al.
-        if (deviceInfo->maxInputChannels > 0 || deviceInfo->maxOutputChannels > 0)
+        wxString cleanedDeviceName = dev.name;
+        if (soundDeviceCleanup.Replace(&cleanedDeviceName, "") > 0)
         {
-            wxString hostApiName(wxString::FromUTF8(Pa_GetHostApiInfo(deviceInfo->hostApi)->name));           
-
-            // Exclude DirectSound devices from the list, as they are duplicates to MME
-            // devices and sometimes do not work well for users
-            if(hostApiName.Find("DirectSound") != wxNOT_FOUND)
-                continue;
-
-            // Exclude "surround" devices as they clutter the dev list and are not used
-            wxString devName(wxString::FromUTF8(deviceInfo->name));
-            if(devName.Find("surround") != wxNOT_FOUND)
-                continue; 
-            
-            PaStreamParameters   inputParameters, outputParameters;
-            
-            inputParameters.device = index;
-            inputParameters.channelCount = 1;
-            inputParameters.sampleFormat = paInt16;
-            inputParameters.suggestedLatency = 0;
-            inputParameters.hostApiSpecificStreamInfo = NULL;
-        
-            outputParameters.device = index;
-            outputParameters.channelCount = 1;
-            outputParameters.sampleFormat = paInt16;
-            outputParameters.suggestedLatency = 0;
-            outputParameters.hostApiSpecificStreamInfo = NULL;
-            
-            PaError err = Pa_IsFormatSupported(&inputParameters, &outputParameters, 48000);
-            if (err == paFormatIsSupported)
-            {
-                SoundDeviceData* soundData = new SoundDeviceData();
-                assert(soundData != nullptr);
-                
-                soundData->rxDeviceName = devName;
-                soundData->rxDeviceIndex = index;
-                soundData->txDeviceName = devName;
-                soundData->txDeviceIndex = index;
-                
-                finalDeviceList[devName] = soundData;
-            }
-            else
-            {
-                // Windows uses separate sound devices for input and output. Additionally, they
-                // tend to be named differently (e.g. "Microphone (USB Audio CODEC)" and "Speakers (USB Audio CODEC)")
-                // so we need to match/combine the two for display purposes.
-                //
-                // XXX: this cleanup won't handle non-English names but shouldn't screw them up.
-                wxRegEx soundDeviceCleanup("^(Microphone|Speakers) \\(");
-                wxString cleanedDeviceName = devName;
-                if (soundDeviceCleanup.Replace(&cleanedDeviceName, "") > 0)
-                {
-                    wxRegEx rightParenRgx("\\)$");
-                    rightParenRgx.Replace(&cleanedDeviceName, "");
-                }
-                
-                // Get any entry we previously created or create a fresh one.
-                SoundDeviceData* soundData = finalDeviceList[cleanedDeviceName];
-                if (soundData == nullptr)
-                {
-                    soundData = new SoundDeviceData();
-                    assert(soundData != nullptr);
-                    
-                    finalDeviceList[cleanedDeviceName] = soundData;                    
-                }
-                
-                // Can we open for input?
-                err = Pa_IsFormatSupported(&inputParameters, NULL, 48000);
-                if (err == paFormatIsSupported)
-                {
-                    soundData->rxDeviceName = devName;
-                    soundData->rxDeviceIndex = index;
-                }
-                
-                // If not, can we open for output?
-                err = Pa_IsFormatSupported(NULL, &outputParameters, 48000);
-                if (err == paFormatIsSupported)
-                {
-                    soundData->txDeviceName = devName;
-                    soundData->txDeviceIndex = index;
-                }
-            }
+            rightParenRgx.Replace(&cleanedDeviceName, "");
         }
+        
+        SoundDeviceData* soundData = finalDeviceList[cleanedDeviceName];
+        if (soundData == nullptr)
+        {
+            SoundDeviceData* soundData = new SoundDeviceData();
+            assert(soundData != nullptr);
+            
+            finalDeviceList[cleanedDeviceName] = soundData;
+        }
+        
+        soundData->txDeviceName = dev.name;
+        soundData->txSampleRate = dev.defaultSampleRate;
     }
     
     // FlexRadio shortcut: all devices starting with "DAX Audio RX" should be linked
@@ -1018,11 +956,10 @@ void EasySetupDialog::updateAudioDevices_()
         m_radioDevice->SetSelection(0);
     }
     
-    PaDeviceIndex defaultInIndex = Pa_GetDefaultInputDevice();
-    if (defaultInIndex != paNoDevice)
+    auto defaultInputDevice = audioEngine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_IN);
+    if (defaultInputDevice != nullptr)
     {
-        const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(defaultInIndex);
-        wxString devName(wxString::FromUTF8(deviceInfo->name));
+        wxString devName(defaultInputDevice->name);
         m_analogDeviceRecord->SetLabel(devName);
         analogDeviceRecordDeviceId_ = defaultInIndex;
     }
@@ -1032,14 +969,11 @@ void EasySetupDialog::updateAudioDevices_()
         analogDeviceRecordDeviceId_ = -1;
     }
     
-    PaDeviceIndex defaultOutIndex = Pa_GetDefaultOutputDevice();
-    if (defaultOutIndex != paNoDevice)
+    auto defaultOutputDevice = audioEngine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_IN);
+    if (defaultOutputDevice != nullptr)
     {
-        const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(defaultOutIndex);
-        wxString devName(wxString::FromUTF8(deviceInfo->name));
+        wxString devName(defaultOutputDevice->name);
         m_analogDevicePlayback->SetLabel(devName);
         analogDevicePlaybackDeviceId_ = defaultOutIndex;
     }
-    
-    Pa_Terminate();
 }
