@@ -364,6 +364,8 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
                 wxGetApp().m_soundCard1InSampleRate = deviceData->rxSampleRate;
                 wxGetApp().m_soundCard1OutDeviceName = m_analogDevicePlayback->GetLabel();
                 wxGetApp().m_soundCard1OutSampleRate = analogDevicePlaybackDeviceSampleRate_;
+
+                g_nSoundCards = 1;
             }
             else
             {
@@ -375,6 +377,8 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
                 wxGetApp().m_soundCard1InSampleRate = deviceData->rxSampleRate;
                 wxGetApp().m_soundCard1OutDeviceName = deviceData->txDeviceName;
                 wxGetApp().m_soundCard1OutSampleRate = deviceData->txSampleRate;
+
+                g_nSoundCards = 2;
             }
             
             pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);	
