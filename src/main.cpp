@@ -2592,7 +2592,7 @@ void MainFrame::startRxStream()
     }
 }
 
-bool MainFrame::validateSoundCardSetup(bool startup)
+bool MainFrame::validateSoundCardSetup()
 {
     bool canRun = true;
     

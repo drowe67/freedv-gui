@@ -24,7 +24,7 @@
 
 #include "main.h"
 #include "defines.h"
-#include "portaudio.h"
+#include "audio/IAudioEngine.h"
 #include "hamlib.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -107,15 +107,19 @@ class EasySetupDialog : public wxDialog
              int txSampleRate;
          };
          
-         static int OnPortAudioCallback_(const void *input, void *output, unsigned long frameCount, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData);
-
          void updateAudioDevices_();
          void updateHamlibDevices_();
          void resetIcomCIVStatus();
          
          Hamlib* hamlibTestObject_;
-         PaStream* radioOutputStream_;
          int sineWaveSampleNumber_;
+
+         wxString analogDeviceRecordDeviceName_;
+         int analogDeviceRecordDeviceSampleRate_;
+         wxString analogDevicePlaybackDeviceName_;
+         int analogDevicePlaybackDeviceSampleRate_;
+
+         std::shared_ptr<IAudioDevice> txTestAudioDevice_;
 };
 
 #endif // __EASY_SETUP_DIALOG__
