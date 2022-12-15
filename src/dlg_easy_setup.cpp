@@ -47,6 +47,9 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
 {
     hamlibTestObject_ = new Hamlib();
     assert(hamlibTestObject_ != nullptr);
+
+    serialPortTestObject_ = new Serialport();
+    assert(serialPortTestObject_ != nullptr);
     
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);
     
@@ -281,6 +284,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
 EasySetupDialog::~EasySetupDialog()
 {
     delete hamlibTestObject_;
+    delete serialPortTestObject_;
     
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(EasySetupDialog::OnInitDialog));
     this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(EasySetupDialog::OnClose));
@@ -679,6 +683,11 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
             hamlibTestObject_->ptt(false, error);
             hamlibTestObject_->close();
         }
+        else if (serialPortTestObject_->isopen())
+        {
+            serialPortTestObject_->ptt(false);
+            serialPortTestObject_->closeport();
+        }
         
         m_radioDevice->Enable(true);
         m_advancedSoundSetup->Enable(true);
@@ -747,6 +756,30 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
             wxString error;
             hamlibTestObject_->ptt(true, error);
         }
+        else if (m_ckUseSerialPTT->GetValue())
+        {
+            wxString serialPort = m_cbSerialPort->GetValue();
+
+            bool useRTS = m_rbUseRTS->GetValue();
+            bool RTSPos = m_ckRTSPos->IsChecked();
+            bool useDTR = m_rbUseDTR->GetValue();
+            bool DTRPos = m_ckDTRPos->IsChecked();
+
+            if (!serialPortTestObject_->openport(
+                    serialPort,
+                    useRTS,
+                    RTSPos,
+                    useDTR,
+                    DTRPos))
+            {
+                wxMessageBox(
+                    "Couldn't connect to Radio.  Make sure the serial Device and Params match your radio", 
+                    wxT("Error"), wxOK | wxICON_ERROR, this);
+                return;
+            }
+            
+            serialPortTestObject_->ptt(true);
+        }
         
         // Start playing a sine wave through the radio's device
         if (radioOutDeviceName != "none")
@@ -809,6 +842,7 @@ void EasySetupDialog::PTTUseHamLibClicked(wxCommandEvent& event)
     if (m_ckUseHamlibPTT->GetValue())
     {
         m_hamlibBox->Show();
+        resetIcomCIVStatus();
     }
     else
     {

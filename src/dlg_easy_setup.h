@@ -26,6 +26,7 @@
 #include "defines.h"
 #include "audio/IAudioEngine.h"
 #include "hamlib.h"
+#include "serialport.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class EasySetupDlg
@@ -127,6 +128,7 @@ class EasySetupDialog : public wxDialog
          void resetIcomCIVStatus();
          
          Hamlib* hamlibTestObject_;
+         Serialport* serialPortTestObject_;
          int sineWaveSampleNumber_;
 
          wxString analogDeviceRecordDeviceName_;
