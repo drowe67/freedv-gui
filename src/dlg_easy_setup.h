@@ -69,7 +69,10 @@ class EasySetupDialog : public wxDialog
         wxStaticText* m_analogDeviceRecord;
         
         // Step 2: CAT setup
-        wxCheckBox *m_ckUseHamlibPTT;
+        wxRadioButton *m_ckNoPTT;
+        wxRadioButton *m_ckUseHamlibPTT;
+
+        wxStaticBox* m_hamlibBox;
         wxComboBox *m_cbRigName;
         wxComboBox *m_cbSerialPort;
         wxComboBox *m_cbSerialRate;

@@ -93,48 +93,63 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     wxStaticBox *setupCatControlBox = new wxStaticBox(panel, wxID_ANY, _("Step 2: Setup CAT Control"));
     wxStaticBoxSizer* setupCatControlBoxSizer = new wxStaticBoxSizer( setupCatControlBox, wxVERTICAL);
     
-    wxGridSizer* gridSizerhl = new wxGridSizer(5, 2, 0, 0);
-    setupCatControlBoxSizer->Add(gridSizerhl, 1, wxEXPAND|wxALIGN_LEFT, 5);
+    wxBoxSizer* catTypeSizer = new wxBoxSizer(wxHORIZONTAL);
+    setupCatControlBoxSizer->Add(catTypeSizer, 1, wxEXPAND|wxALIGN_LEFT, 5);
 
-    /* Use Hamlib for PTT checkbox. */
+    /* No CAT Control radio button */
 
-    m_ckUseHamlibPTT = new wxCheckBox(setupCatControlBox, wxID_ANY, _("Use Hamlib PTT"), wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckNoPTT = new wxRadioButton(setupCatControlBox, wxID_ANY, _("No PTT/CAT Control"), wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckNoPTT->SetValue(true);
+    catTypeSizer->Add(m_ckNoPTT, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+        
+    /* Use Hamlib for PTT radio button. */
+
+    m_ckUseHamlibPTT = new wxRadioButton(setupCatControlBox, wxID_ANY, _("Hamlib CAT Control"), wxDefaultPosition, wxSize(-1, -1), 0);
     m_ckUseHamlibPTT->SetValue(false);
-    gridSizerhl->Add(m_ckUseHamlibPTT, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    gridSizerhl->Add(new wxStaticText(setupCatControlBox, -1, wxT("")), 0, wxEXPAND);
+    catTypeSizer->Add(m_ckUseHamlibPTT, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    //gridSizerhl->Add(new wxStaticText(setupCatControlBox, -1, wxT("")), 0, wxEXPAND);
+
+    /* Hamlib box */
+    m_hamlibBox = new wxStaticBox(setupCatControlBox, wxID_ANY, _("Hamlib CAT Control"));
+    wxStaticBoxSizer* hamlibBoxSizer = new wxStaticBoxSizer(m_hamlibBox, wxVERTICAL);
+    wxGridSizer* gridSizerhl = new wxGridSizer(4, 2, 0, 0);
+    hamlibBoxSizer->Add(gridSizerhl);
+    setupCatControlBoxSizer->Add(hamlibBoxSizer);
 
     /* Hamlib Rig Type combobox. */
 
-    gridSizerhl->Add(new wxStaticText(setupCatControlBox, wxID_ANY, _("Rig Model:"), wxDefaultPosition, wxDefaultSize, 0), 
+    gridSizerhl->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("Rig Model:"), wxDefaultPosition, wxDefaultSize, 0), 
                       0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
-    m_cbRigName = new wxComboBox(setupCatControlBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
+    m_cbRigName = new wxComboBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
     gridSizerhl->Add(m_cbRigName, 0, wxEXPAND, 0);
 
     /* Hamlib Serial Port combobox. */
 
-    gridSizerhl->Add(new wxStaticText(setupCatControlBox, wxID_ANY, _("Serial Device (or hostname:port):"), wxDefaultPosition, wxDefaultSize, 0), 
+    gridSizerhl->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("Serial Device (or hostname:port):"), wxDefaultPosition, wxDefaultSize, 0), 
                       0, wxALIGN_CENTER_VERTICAL |  wxALIGN_RIGHT, 20);
-    m_cbSerialPort = new wxComboBox(setupCatControlBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN);
+    m_cbSerialPort = new wxComboBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN);
     m_cbSerialPort->SetMinSize(wxSize(140, -1));
     gridSizerhl->Add(m_cbSerialPort, 0, wxEXPAND, 0);
 
     /* Hamlib Icom CI-V address text box. */
-    m_stIcomCIVHex = new wxStaticText(setupCatControlBox, wxID_ANY, _("Radio Address:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_stIcomCIVHex = new wxStaticText(m_hamlibBox, wxID_ANY, _("Radio Address:"), wxDefaultPosition, wxDefaultSize, 0);
     gridSizerhl->Add(m_stIcomCIVHex, 
                       0, wxALIGN_CENTER_VERTICAL |  wxALIGN_RIGHT, 20);
-    m_tcIcomCIVHex = new wxTextCtrl(setupCatControlBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(35, -1), 0, wxNumericPropertyValidator(wxNumericPropertyValidator::Unsigned, 16));
+    m_tcIcomCIVHex = new wxTextCtrl(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(35, -1), 0, wxNumericPropertyValidator(wxNumericPropertyValidator::Unsigned, 16));
     m_tcIcomCIVHex->SetMaxLength(2);
     gridSizerhl->Add(m_tcIcomCIVHex, 0, wxALIGN_CENTER_VERTICAL, 0);
     
     /* Hamlib Serial Rate combobox. */
 
-    gridSizerhl->Add(new wxStaticText(setupCatControlBox, wxID_ANY, _("Serial Rate:"), wxDefaultPosition, wxDefaultSize, 0), 
+    gridSizerhl->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("Serial Rate:"), wxDefaultPosition, wxDefaultSize, 0), 
                       0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
-    m_cbSerialRate = new wxComboBox(setupCatControlBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, -1), 0, NULL, wxCB_DROPDOWN);
+    m_cbSerialRate = new wxComboBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, -1), 0, NULL, wxCB_DROPDOWN);
     gridSizerhl->Add(m_cbSerialRate, 0, wxALIGN_CENTER_VERTICAL, 0);
     
     wxBoxSizer* pttButtonSizer = new wxBoxSizer(wxHORIZONTAL);
     
+    /* Advanced/test buttons */
+
     m_advancedPTTSetup = new wxButton(setupCatControlBox, wxID_ANY, wxT("Advanced"),  wxDefaultPosition, wxDefaultSize, 0);
     pttButtonSizer->Add(m_advancedPTTSetup, 0, wxEXPAND, 3);
 
@@ -198,8 +213,8 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(EasySetupDialog::OnInitDialog));
     this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(EasySetupDialog::OnClose));
     
-    m_ckUseHamlibPTT->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(EasySetupDialog::PTTUseHamLibClicked), NULL, this);
-    m_ckUseHamlibPTT->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(EasySetupDialog::PTTUseHamLibClicked), NULL, this);
+    m_ckUseHamlibPTT->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(EasySetupDialog::PTTUseHamLibClicked), NULL, this);
+    m_ckNoPTT->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(EasySetupDialog::PTTUseHamLibClicked), NULL, this);
     
     m_cbRigName->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(EasySetupDialog::HamlibRigNameChanged), NULL, this);
     
@@ -220,8 +235,9 @@ EasySetupDialog::~EasySetupDialog()
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(EasySetupDialog::OnInitDialog));
     this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(EasySetupDialog::OnClose));
     
-    m_ckUseHamlibPTT->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(EasySetupDialog::PTTUseHamLibClicked), NULL, this);
-    
+    m_ckUseHamlibPTT->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(EasySetupDialog::PTTUseHamLibClicked), NULL, this);
+    m_ckNoPTT->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(EasySetupDialog::PTTUseHamLibClicked), NULL, this);
+
     m_cbRigName->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(EasySetupDialog::HamlibRigNameChanged), NULL, this);
     
     m_advancedSoundSetup->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(EasySetupDialog::OnAdvancedSoundSetup), NULL, this);
@@ -401,45 +417,53 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
     if (inout == EXCHANGE_DATA_IN)
     {
         m_ckUseHamlibPTT->SetValue(wxGetApp().m_boolHamlibUseForPTT);
-        m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
-        resetIcomCIVStatus();
-        m_cbSerialPort->SetValue(wxGetApp().m_strHamlibSerialPort);
 
-        if (wxGetApp().m_intHamlibSerialRate == 0) {
-            m_cbSerialRate->SetSelection(0);
-        } else {
-            m_cbSerialRate->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intHamlibSerialRate));
+        if (wxGetApp().m_boolHamlibUseForPTT)
+        {
+            m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
+            resetIcomCIVStatus();
+            m_cbSerialPort->SetValue(wxGetApp().m_strHamlibSerialPort);
+
+            if (wxGetApp().m_intHamlibSerialRate == 0) {
+                m_cbSerialRate->SetSelection(0);
+            } else {
+                m_cbSerialRate->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intHamlibSerialRate));
+            }
+
+            m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02X"), wxGetApp().m_intHamlibIcomCIVHex));
         }
-
-        m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02X"), wxGetApp().m_intHamlibIcomCIVHex));
     }
     else if (inout == EXCHANGE_DATA_OUT)
     {
         Hamlib *hamlib = wxGetApp().m_hamlib;
         wxGetApp().m_boolHamlibUseForPTT = m_ckUseHamlibPTT->GetValue();
-        wxGetApp().m_intHamlibRig = m_cbRigName->GetSelection();
-        wxGetApp().m_strHamlibRigName = hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
-        wxGetApp().m_strHamlibSerialPort = m_cbSerialPort->GetValue();
-        
-        wxString s = m_tcIcomCIVHex->GetValue();
-        long hexAddress = 0;
-        m_tcIcomCIVHex->GetValue().ToLong(&hexAddress, 16);
-        wxGetApp().m_intHamlibIcomCIVHex = hexAddress;
-        
-        s = m_cbSerialRate->GetValue();
-        if (s == "default") {
-            wxGetApp().m_intHamlibSerialRate = 0;
-        } else {
-            long tmp;
-            m_cbSerialRate->GetValue().ToLong(&tmp); 
-            wxGetApp().m_intHamlibSerialRate = tmp;
-        }
-        if (g_verbose) fprintf(stderr, "serial rate: %d\n", wxGetApp().m_intHamlibSerialRate);
-
         pConfig->Write(wxT("/Hamlib/UseForPTT"), wxGetApp().m_boolHamlibUseForPTT);
-        pConfig->Write(wxT("/Hamlib/RigNameStr"), wxGetApp().m_strHamlibRigName);
-        pConfig->Write(wxT("/Hamlib/SerialPort"), wxGetApp().m_strHamlibSerialPort);
-        pConfig->Write(wxT("/Hamlib/SerialRate"), wxGetApp().m_intHamlibSerialRate);
+
+        if (m_ckUseHamlibPTT->GetValue())
+        {
+            wxGetApp().m_intHamlibRig = m_cbRigName->GetSelection();
+            wxGetApp().m_strHamlibRigName = hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
+            wxGetApp().m_strHamlibSerialPort = m_cbSerialPort->GetValue();
+            
+            wxString s = m_tcIcomCIVHex->GetValue();
+            long hexAddress = 0;
+            m_tcIcomCIVHex->GetValue().ToLong(&hexAddress, 16);
+            wxGetApp().m_intHamlibIcomCIVHex = hexAddress;
+            
+            s = m_cbSerialRate->GetValue();
+            if (s == "default") {
+                wxGetApp().m_intHamlibSerialRate = 0;
+            } else {
+                long tmp;
+                m_cbSerialRate->GetValue().ToLong(&tmp); 
+                wxGetApp().m_intHamlibSerialRate = tmp;
+            }
+            if (g_verbose) fprintf(stderr, "serial rate: %d\n", wxGetApp().m_intHamlibSerialRate);
+
+            pConfig->Write(wxT("/Hamlib/RigNameStr"), wxGetApp().m_strHamlibRigName);
+            pConfig->Write(wxT("/Hamlib/SerialPort"), wxGetApp().m_strHamlibSerialPort);
+            pConfig->Write(wxT("/Hamlib/SerialRate"), wxGetApp().m_intHamlibSerialRate);
+        }
     }
 }
 
@@ -690,10 +714,17 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
 
 void EasySetupDialog::PTTUseHamLibClicked(wxCommandEvent& event)
 {
-    m_cbRigName->Enable(m_ckUseHamlibPTT->GetValue());
-    m_cbSerialPort->Enable(m_ckUseHamlibPTT->GetValue());
-    m_cbSerialRate->Enable(m_ckUseHamlibPTT->GetValue());
-    m_tcIcomCIVHex->Enable(m_ckUseHamlibPTT->GetValue());
+    if (m_ckUseHamlibPTT->GetValue())
+    {
+        m_hamlibBox->Show();
+    }
+    else
+    {
+        m_hamlibBox->Hide();
+    }
+
+    Layout();
+    SetSize(GetBestSize());
 }
 
 void EasySetupDialog::updateHamlibDevices_()
