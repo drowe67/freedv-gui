@@ -223,7 +223,7 @@ void FreeDVInterface::stop()
     rxMode_ = 0;
 }
 
-void FreeDVInterface::setRunTimeOptions(int clip, int bpf)
+void FreeDVInterface::setRunTimeOptions(bool clip, bool bpf)
 {
     for (auto& dv : dvObjects_)
     {
@@ -493,7 +493,7 @@ int FreeDVInterface::getRxSpeechSampleRate() const
     return result;
 }
 
-void FreeDVInterface::setSquelch(int enable, float level)
+void FreeDVInterface::setSquelch(bool enable, float level)
 {
     int index = 0;
     
