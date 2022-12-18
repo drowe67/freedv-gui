@@ -785,6 +785,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Build system:
     * Suppress documentation generation when tagging releases. (PR #314)
+2. Bugfixes:
+    * Update labling of clipping and BPF options to match actual behavior. (PR #319)
 
 ## V1.8.5 December 2022
 
