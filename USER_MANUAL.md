@@ -787,6 +787,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Suppress documentation generation when tagging releases. (PR #314)
 2. Enhancements:
     * Add 2020B to multi-RX feature to enable RX and TX without restarting session. (PR #312)
+    * Hide modes not on the SM1000 by default. (PR #313)
 
 ## V1.8.5 December 2022
 

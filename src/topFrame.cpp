@@ -273,7 +273,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //=====================================================
     // Right side
     //=====================================================
-    wxSizer* rightSizer = new wxWrapSizer(wxVERTICAL);
+    rightSizer = new wxWrapSizer(wxVERTICAL);
 
     //=====================================================
     // Squelch Slider Control
@@ -323,32 +323,49 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Mode box
     //------------------------------
-    wxStaticBoxSizer* sbSizer_mode;
-    wxStaticBox* modeBox = new wxStaticBox(panel, wxID_ANY, _("&Mode"));
+    modeBox = new wxStaticBox(panel, wxID_ANY, _("&Mode"));
     sbSizer_mode = new wxStaticBoxSizer(modeBox, wxVERTICAL);
 
-    m_rb700c = new wxRadioButton( modeBox, wxID_ANY, wxT("700C"), wxDefaultPosition, wxDefaultSize,  wxRB_GROUP);
-    sbSizer_mode->Add(m_rb700c, 0, wxALIGN_LEFT|wxALL, 1);
-    m_rb700d = new wxRadioButton( modeBox, wxID_ANY, wxT("700D"), wxDefaultPosition, wxDefaultSize,  0);
+    m_rb700d = new wxRadioButton( modeBox, wxID_ANY, wxT("700D"), wxDefaultPosition, wxDefaultSize,  wxRB_GROUP);
     sbSizer_mode->Add(m_rb700d, 0, wxALIGN_LEFT|wxALL, 1);
     m_rb700e = new wxRadioButton( modeBox, wxID_ANY, wxT("700E"), wxDefaultPosition, wxDefaultSize,  0);
     sbSizer_mode->Add(m_rb700e, 0, wxALIGN_LEFT|wxALL, 1);
-    m_rb800xa = new wxRadioButton( modeBox, wxID_ANY, wxT("800XA"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_mode->Add(m_rb800xa, 0, wxALIGN_LEFT|wxALL, 1);
     m_rb1600 = new wxRadioButton( modeBox, wxID_ANY, wxT("1600"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_mode->Add(m_rb1600, 0, wxALIGN_LEFT|wxALL, 1);
-    m_rb2400b = new wxRadioButton( modeBox, wxID_ANY, wxT("2400B"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_mode->Add(m_rb2400b, 0, wxALIGN_LEFT|wxALL, 1);
-    m_rb2020 = new wxRadioButton( modeBox, wxID_ANY, wxT("2020"), wxDefaultPosition, wxDefaultSize,  0);
-    sbSizer_mode->Add(m_rb2020, 0, wxALIGN_LEFT|wxALL, 1);
+    m_hiddenMode1 = new wxRadioButton( modeBox, wxID_ANY, wxT("hidden2"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_mode->Add(m_hiddenMode1, 0, wxALIGN_LEFT|wxALL, 1);
+    m_hiddenMode1->Show(false);
+    
+    m_collpane = new wxCollapsiblePane(modeBox, ID_MODE_COLLAPSE, "Others:");
+    sbSizer_mode->Add(m_collpane, 0, wxGROW|wxALL, 5);
+    
+    wxWindow *otherModeWin = m_collpane->GetPane();
+    wxSizer *otherModeSizer = new wxBoxSizer(wxVERTICAL);
+    
+    m_rb700c = new wxRadioButton( otherModeWin, wxID_ANY, wxT("700C"), wxDefaultPosition, wxDefaultSize,  0);
+    otherModeSizer->Add(m_rb700c, 1, wxALIGN_LEFT|wxALL|wxGROW, 1);
+    m_rb800xa = new wxRadioButton( otherModeWin, wxID_ANY, wxT("800XA"), wxDefaultPosition, wxDefaultSize, 0);
+    otherModeSizer->Add(m_rb800xa, 1, wxALIGN_LEFT|wxALL|wxGROW, 1);
+    m_rb2400b = new wxRadioButton( otherModeWin, wxID_ANY, wxT("2400B"), wxDefaultPosition, wxDefaultSize, 0);
+    otherModeSizer->Add(m_rb2400b, 1, wxALIGN_LEFT|wxALL|wxGROW, 1);
+    m_rb2020 = new wxRadioButton( otherModeWin, wxID_ANY, wxT("2020"), wxDefaultPosition, wxDefaultSize,  0);
+    otherModeSizer->Add(m_rb2020, 1, wxALIGN_LEFT|wxALL|wxGROW, 1);
 #if defined(FREEDV_MODE_2020B)
-    m_rb2020b = new wxRadioButton( modeBox, wxID_ANY, wxT("2020B"), wxDefaultPosition, wxDefaultSize,  0);
-    sbSizer_mode->Add(m_rb2020b, 0, wxALIGN_LEFT|wxALL, 1);
+    m_rb2020b = new wxRadioButton( otherModeWin, wxID_ANY, wxT("2020B"), wxDefaultPosition, wxDefaultSize,  0);
+    otherModeSizer->Add(m_rb2020b, 1, wxALIGN_LEFT|wxALL|wxGROW, 1);
 #endif // FREEDV_MODE_2020B
-    sbSizer_mode->SetMinSize(wxSize(100,-1));
-    m_rb1600->SetValue(true);
+    m_hiddenMode2 = new wxRadioButton( otherModeWin, wxID_ANY, wxT("hidden2"), wxDefaultPosition, wxDefaultSize, 0);
+    otherModeSizer->Add(m_hiddenMode2, 0, wxALIGN_LEFT|wxALL, 1);
+    m_hiddenMode2->Show(false);
 
-    rightSizer->Add(sbSizer_mode,0, wxALL|wxEXPAND, 3);
+    m_hiddenMode1->SetValue(true);
+    m_hiddenMode2->SetValue(true);
+
+    sbSizer_mode->SetMinSize(wxSize(100,-1));
+    otherModeWin->SetSizer(otherModeSizer);
+    otherModeSizer->SetSizeHints(otherModeWin);
+
+    rightSizer->Add(sbSizer_mode,0, wxALL|wxGROW, 3);
 
     //=====================================================
     // Control Toggles box
@@ -466,17 +483,17 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //=====================================================
     // End of layout
     //=====================================================
-
+    
     //-------------------
     // Tab ordering for accessibility
     //-------------------
     m_auiNbookCtrl->MoveBeforeInTabOrder(m_BtnCallSignReset);
     m_sliderSQ->MoveBeforeInTabOrder(m_ckboxSQ);
-    m_rb700c->MoveBeforeInTabOrder(m_rb700d);
     m_rb700d->MoveBeforeInTabOrder(m_rb700e);
-    m_rb700e->MoveBeforeInTabOrder(m_rb800xa);
-    m_rb800xa->MoveBeforeInTabOrder(m_rb1600);
-    m_rb1600->MoveBeforeInTabOrder(m_rb2400b);
+    m_rb700e->MoveBeforeInTabOrder(m_rb1600);
+    
+    m_rb700c->MoveBeforeInTabOrder(m_rb800xa);
+    m_rb800xa->MoveBeforeInTabOrder(m_rb2400b);
     m_rb2400b->MoveBeforeInTabOrder(m_rb2020);
 #if defined(FREEDV_MODE_2020B)
     m_rb2020->MoveBeforeInTabOrder(m_rb2020b);
@@ -549,6 +566,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_rb2020b->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
 #endif // FREEDV_MODE_2020B
     
+    m_collpane->Connect(wxEVT_COLLAPSIBLEPANE_CHANGED, wxCollapsiblePaneEventHandler(TopFrame::OnChangeCollapseState), NULL, this);
+    
     m_sliderTxLevel->Connect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Connect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Connect(wxEVT_SCROLL_LINEUP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
@@ -620,6 +639,8 @@ TopFrame::~TopFrame()
     m_rb2020b->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
 #endif // FREEDV_MODE_2020B
     
+    m_collpane->Disconnect(wxEVT_COLLAPSIBLEPANE_CHANGED, wxCollapsiblePaneEventHandler(TopFrame::OnChangeCollapseState), NULL, this);
+    
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_LINEUP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
@@ -631,4 +652,13 @@ TopFrame::~TopFrame()
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     
     m_txtCtrlReportFrequency->Disconnect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
+}
+
+void TopFrame::OnChangeCollapseState(wxCollapsiblePaneEvent& event)
+{
+    auto bestSize = modeBox->GetBestSize();
+    auto curSize = modeBox->GetSize();
+
+    modeBox->SetSize(wxSize(curSize.GetWidth(), bestSize.GetHeight()));
+    rightSizer->Layout();
 }

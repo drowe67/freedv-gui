@@ -21,6 +21,7 @@
 //==========================================================================
 
 #include <time.h>
+#include <vector>
 #include <deque>
 #include <random>
 #include <chrono>
@@ -580,6 +581,21 @@ setDefaultMode:
     }
 #endif // defined(FREEDV_MODE_2020B)
     pConfig->SetPath(wxT("/"));
+    
+    // Set initial state of additional modes.
+    switch(mode)
+    {
+        case 0:
+        case 4:
+        case 5:
+            // 700D/E and 1600; don't expand additional modes
+            break;
+        default:
+            m_collpane->Collapse(false);
+            wxCollapsiblePaneEvent evt;
+            OnChangeCollapseState(evt);
+            break;
+    }
     
     m_togBtnSplit->Disable();
     m_togBtnAnalog->Disable();
@@ -1642,6 +1658,40 @@ void MainFrame::OnExit(wxCommandEvent& event)
 
 void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 {
+    wxRadioButton* hiddenModeToSet = nullptr;
+    std::vector<wxRadioButton*> buttonsToClear 
+    {
+        m_hiddenMode1,
+        m_hiddenMode2,
+
+        m_rb700c,
+        m_rb700d,
+        m_rb700e,
+        m_rb800xa,
+        m_rb1600,
+        m_rb2400b,
+        m_rb2020,
+#if defined(FREEDV_MODE_2020B)
+        m_rb2020b,
+#endif // FREEDV_MODE_2020B
+    };
+
+    auto eventObject = (wxRadioButton*)event.GetEventObject();
+    if (eventObject != nullptr)
+    {
+        std::string label = (const char*)eventObject->GetLabel().ToUTF8();
+        if (label == "700D" || label == "700E" || label == "1600")
+        {
+            hiddenModeToSet = m_hiddenMode2;
+        } 
+        else
+        {
+            hiddenModeToSet = m_hiddenMode1;
+        } 
+ 
+        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), (wxRadioButton*)eventObject));
+    }
+
     txModeChangeMutex.Lock();
     
     if (m_rb1600->GetValue()) 
@@ -1694,6 +1744,21 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     m_newSpkOutFilter = true;
     
     txModeChangeMutex.Unlock();
+    
+    // Manually implement mutually exclusive behavior as
+    // we can't rely on wxWidgets doing it on account of
+    // how we're splitting the modes.
+    if (eventObject != nullptr)
+    {
+        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), hiddenModeToSet));
+
+        for (auto& var : buttonsToClear)
+        {
+            var->SetValue(false);
+        }
+
+        hiddenModeToSet->SetValue(true);
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -1727,7 +1792,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_textCurrentDecodeMode->Enable();
 
         // determine what mode we are using
-        OnChangeTxMode(event);
+        wxCommandEvent tmpEvent;
+        OnChangeTxMode(tmpEvent);
 
         // init freedv states
         m_togBtnSplit->Enable();
