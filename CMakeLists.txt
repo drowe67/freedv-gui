@@ -147,9 +147,8 @@ endif(USE_STATIC_DEPS)
 #
 # Find wxWidgets
 #
+set(DARK_MODE_DISABLE "false")
 if(NOT BOOTSTRAP_WXWIDGETS)
-    set(DARK_MODE_DISABLE "false")
-
     message(STATUS "Looking for wxWidgets...")
     if(WXCONFIG)
         message(STATUS "wx-config: ${WXCONFIG}")
