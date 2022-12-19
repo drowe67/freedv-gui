@@ -312,12 +312,8 @@ else(CODEC2_BUILD_DIR)
             list(APPEND FREEDV_LINK_LIBS ${CODEC2_LIBRARY})
             include_directories(${CODEC2_INCLUDE_DIRS})
         else()
-            message(FATAL_ERROR "codec2 library not found.
-Linux:
-Codec2 may not be in your distribution so build yourself or use the cmake option to build internally.
-Windws:
-It's easiest to use the cmake option: USE_INTERNAL_CODEC2 or use build trees for codec2 and lpcnetfreedv."
-        )
+            message(STATUS "Will attempt internal build of codec2 and lpcnetfreedv.")
+            include(cmake/BuildCodec2.cmake)
         endif()
     endif()
 endif(CODEC2_BUILD_DIR)
