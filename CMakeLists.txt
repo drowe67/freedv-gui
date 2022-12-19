@@ -145,12 +145,42 @@ if(USE_STATIC_DEPS)
 endif(USE_STATIC_DEPS)
 
 #
-# Pull in external wxWidgets target if performing static build.
+# Find wxWidgets
 #
+if(NOT BOOTSTRAP_WXWIDGETS)
+    set(DARK_MODE_DISABLE "false")
+
+    message(STATUS "Looking for wxWidgets...")
+    if(WXCONFIG)
+        message(STATUS "wx-config: ${WXCONFIG}")
+        set(wxWidgets_CONFIG_EXECUTABLE ${WXCONFIG})
+    endif(WXCONFIG)
+    if(WXRC)
+        message(STATUS "wxrc: ${WXRC}")
+        set(wxWidgets_wxrc_EXECUTABLE ${WXRC})
+    endif(WXRC)
+    set(WX_VERSION_MIN 3.0.0)
+    set(WX_31_VERSION_MIN 3.1.3)
+    find_package(wxWidgets COMPONENTS core base aui html net adv propgrid)
+    if(NOT wxWidgets_FOUND)
+        set(BOOTSTRAP_WXWIDGETS TRUE)
+    else()
+        execute_process(COMMAND sh "${wxWidgets_CONFIG_EXECUTABLE}" --version
+            OUTPUT_VARIABLE WX_VERSION)
+        string(STRIP ${WX_VERSION} WX_VERSION)
+        if(WX_VERSION VERSION_EQUAL ${WX_VERSION_MIN}
+           OR WX_VERSION VERSION_GREATER ${WX_VERSION_MIN})
+            message(STATUS "wxWidgets version: ${WX_VERSION}")
+        else()
+            set(BOOTSTRAP_WXWIDGETS TRUE)
+        endif()
+    endif()
+endif()
+
 if(BOOTSTRAP_WXWIDGETS)
     message(STATUS "Adding wxWidgets build target...")
     include(cmake/BuildWxWidgets.cmake)
-endif(BOOTSTRAP_WXWIDGETS)
+endif()
 
 #
 # Various hacks and work arounds for building under MinGW.
@@ -399,37 +429,6 @@ else(NOT USE_STATIC_SNDFILE)
     include(cmake/BuildSndfile.cmake)
 endif(NOT USE_STATIC_SNDFILE)
 
-#
-# Find wxWidgets
-#
-if(NOT BOOTSTRAP_WXWIDGETS)
-message(STATUS "Looking for wxWidgets...")
-if(WXCONFIG)
-    message(STATUS "wx-config: ${WXCONFIG}")
-    set(wxWidgets_CONFIG_EXECUTABLE ${WXCONFIG})
-endif(WXCONFIG)
-if(WXRC)
-    message(STATUS "wxrc: ${WXRC}")
-    set(wxWidgets_wxrc_EXECUTABLE ${WXRC})
-endif(WXRC)
-set(WX_VERSION_MIN 3.0.0)
-set(WX_31_VERSION_MIN 3.1.3)
-find_package(wxWidgets REQUIRED core base aui html net adv propgrid)
-execute_process(COMMAND sh "${wxWidgets_CONFIG_EXECUTABLE}" --version
-    OUTPUT_VARIABLE WX_VERSION)
-string(STRIP ${WX_VERSION} WX_VERSION)
-if(WX_VERSION VERSION_EQUAL ${WX_VERSION_MIN}
-    OR WX_VERSION VERSION_GREATER ${WX_VERSION_MIN})
-   message(STATUS "wxWidgets version: ${WX_VERSION}")
-else()
-    message(FATAL_ERROR "wxWidgets must be installed on your system.
-Please check that wx-config is in path, the directory
-where wxWidgets libraries are installed (returned by
-'wx-config --libs' or 'wx-config --static --libs' command)
-is in LD_LIBRARY_PATH or equivalent variable and
-wxWidgets version is ${WX_VERSION_MIN} or above.")
-endif()
-
 if(APPLE)
 if(WX_VERSION VERSION_EQUAL ${WX_31_VERSION_MIN}
    OR WX_VERSION VERSION_GREATER ${WX_31_VERSION_MIN})
@@ -443,9 +442,6 @@ if(wxWidgets_FOUND)
     include("${wxWidgets_USE_FILE}")
     list(APPEND FREEDV_LINK_LIBS ${wxWidgets_LIBRARIES})
 endif(wxWidgets_FOUND)
-else(NOT BOOTSTRAP_WXWIDGETS)
-    set(DARK_MODE_DISABLE "false")
-endif(NOT BOOTSTRAP_WXWIDGETS)
 
 #
 # Find speex library
