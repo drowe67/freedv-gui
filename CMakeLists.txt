@@ -180,6 +180,15 @@ endif()
 if(BOOTSTRAP_WXWIDGETS)
     message(STATUS "Adding wxWidgets build target...")
     include(cmake/BuildWxWidgets.cmake)
+else()
+    if(APPLE)
+        if(WX_VERSION VERSION_EQUAL ${WX_31_VERSION_MIN}
+           OR WX_VERSION VERSION_GREATER ${WX_31_VERSION_MIN})
+            set(DARK_MODE_DISABLE "false")
+        else()
+            set(DARK_MODE_DISABLE "true")
+       endif()
+    endif(APPLE)
 endif()
 
 #
@@ -424,15 +433,6 @@ else(NOT USE_STATIC_SNDFILE)
     message(STATUS "Will attempt static build of sndfile.")
     include(cmake/BuildSndfile.cmake)
 endif(NOT USE_STATIC_SNDFILE)
-
-if(APPLE)
-if(WX_VERSION VERSION_EQUAL ${WX_31_VERSION_MIN}
-   OR WX_VERSION VERSION_GREATER ${WX_31_VERSION_MIN})
-    set(DARK_MODE_DISABLE "false")
-else()
-    set(DARK_MODE_DISABLE "true")
-endif()
-endif(APPLE)
 
 if(wxWidgets_FOUND)
     include("${wxWidgets_USE_FILE}")
