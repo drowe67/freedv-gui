@@ -72,9 +72,13 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
         
         std::string hostApiName = Pa_GetHostApiInfo(deviceInfo->hostApi)->name;
         if (hostApiName.find("DirectSound") != std::string::npos ||
-            hostApiName.find("surround") != std::string::npos)
+            hostApiName.find("surround") != std::string::npos ||
+            hostApiName.find("Windows WASAPI") != std::string::npos ||
+            hostApiName.find("Windows WDM-KS") != std::string::npos)
         {
-            // Skip DirectSound devices due to poor real-time performance.
+            // Skip non-MME/Core Audio devices as that was the old behavior.
+            // Note: DirectSound in particular hasn't been shown 
+            //       due to poor real-time performance.
             continue;
         }
         
