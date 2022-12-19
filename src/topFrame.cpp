@@ -273,7 +273,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //=====================================================
     // Right side
     //=====================================================
-    wxSizer* rightSizer = new wxWrapSizer(wxVERTICAL);
+    rightSizer = new wxWrapSizer(wxVERTICAL);
 
     //=====================================================
     // Squelch Slider Control
@@ -669,19 +669,9 @@ TopFrame::~TopFrame()
 
 void TopFrame::OnChangeCollapseState(wxCollapsiblePaneEvent& event)
 {
-    int width = 0;
-    int height = 0;
-    
-    // Resizing window fixes the layout after expanding/collapsing
-    // the additional modes. This isn't ideal, but adding 1 to width 
-    // and height followed by restoring it isn't noticeable to users.
-    GetSize(&width, &height);
-    
-    width++;
-    height++;
-    SetSize(wxDefaultCoord, wxDefaultCoord, width, height);
-    
-    width--;
-    height--;
-    SetSize(wxDefaultCoord, wxDefaultCoord, width, height);
+    auto bestSize = modeBox->GetBestSize();
+    auto curSize = modeBox->GetSize();
+
+    modeBox->SetSize(wxSize(curSize.GetWidth(), bestSize.GetHeight()));
+    rightSizer->Layout();
 }

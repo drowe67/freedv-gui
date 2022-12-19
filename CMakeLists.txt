@@ -7,12 +7,20 @@
 #
 cmake_minimum_required(VERSION 3.13)
 
+# Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP in CMake 3.24.
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
+	cmake_policy(SET CMP0135 NEW)
+endif()
+
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
 
 set(PROJECT_NAME FreeDV)
 set(PROJECT_VERSION 1.8.6)
 set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
 set(PROJECT_HOMEPAGE_URL "https://freedv.org")
+
+# Makes FreeDV overridden CMake platform available for ARM MinGW builds.
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
 if(APPLE)
     project(
@@ -133,15 +141,54 @@ if(USE_STATIC_DEPS)
     set(USE_STATIC_PORTAUDIO TRUE FORCE)
     set(USE_STATIC_SNDFILE TRUE FORCE)
     set(USE_STATIC_SAMPLERATE TRUE FORCE)
+    set(USE_STATIC_SPEEXDSP TRUE FORCE)
 endif(USE_STATIC_DEPS)
 
 #
-# Pull in external wxWidgets target if performing static build.
+# Find wxWidgets
 #
+set(DARK_MODE_DISABLE "false")
+if(NOT BOOTSTRAP_WXWIDGETS)
+    message(STATUS "Looking for wxWidgets...")
+    if(WXCONFIG)
+        message(STATUS "wx-config: ${WXCONFIG}")
+        set(wxWidgets_CONFIG_EXECUTABLE ${WXCONFIG})
+    endif(WXCONFIG)
+    if(WXRC)
+        message(STATUS "wxrc: ${WXRC}")
+        set(wxWidgets_wxrc_EXECUTABLE ${WXRC})
+    endif(WXRC)
+    set(WX_VERSION_MIN 3.0.0)
+    set(WX_31_VERSION_MIN 3.1.3)
+    find_package(wxWidgets COMPONENTS core base aui html net adv propgrid)
+    if(NOT wxWidgets_FOUND)
+        set(BOOTSTRAP_WXWIDGETS TRUE)
+    else()
+        execute_process(COMMAND sh "${wxWidgets_CONFIG_EXECUTABLE}" --version
+            OUTPUT_VARIABLE WX_VERSION)
+        string(STRIP ${WX_VERSION} WX_VERSION)
+        if(WX_VERSION VERSION_EQUAL ${WX_VERSION_MIN}
+           OR WX_VERSION VERSION_GREATER ${WX_VERSION_MIN})
+            message(STATUS "wxWidgets version: ${WX_VERSION}")
+        else()
+            set(BOOTSTRAP_WXWIDGETS TRUE)
+        endif()
+    endif()
+endif()
+
 if(BOOTSTRAP_WXWIDGETS)
     message(STATUS "Adding wxWidgets build target...")
     include(cmake/BuildWxWidgets.cmake)
-endif(BOOTSTRAP_WXWIDGETS)
+else()
+    if(APPLE)
+        if(WX_VERSION VERSION_EQUAL ${WX_31_VERSION_MIN}
+           OR WX_VERSION VERSION_GREATER ${WX_31_VERSION_MIN})
+            set(DARK_MODE_DISABLE "false")
+        else()
+            set(DARK_MODE_DISABLE "true")
+       endif()
+    endif(APPLE)
+endif()
 
 #
 # Various hacks and work arounds for building under MinGW.
@@ -273,12 +320,8 @@ else(CODEC2_BUILD_DIR)
             list(APPEND FREEDV_LINK_LIBS ${CODEC2_LIBRARY})
             include_directories(${CODEC2_INCLUDE_DIRS})
         else()
-            message(FATAL_ERROR "codec2 library not found.
-Linux:
-Codec2 may not be in your distribution so build yourself or use the cmake option to build internally.
-Windws:
-It's easiest to use the cmake option: USE_INTERNAL_CODEC2 or use build trees for codec2 and lpcnetfreedv."
-        )
+            message(STATUS "Will attempt internal build of codec2 and lpcnetfreedv.")
+            include(cmake/BuildCodec2.cmake)
         endif()
     endif()
 endif(CODEC2_BUILD_DIR)
@@ -344,11 +387,8 @@ if(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
     include_directories(${HAMLIB_INCLUDE_DIR})
     list(APPEND FREEDV_LINK_LIBS ${HAMLIB_LIBRARY})
 else(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
-    message(FATAL_ERROR "hamlib not found.
-On Linux systems try installing:
-    hamlib-devel  (RPM based systems)
-    libhamlib-dev (DEB based systems)"
-    )
+    message(STATUS "Using static Hamlib build")
+    include(cmake/BuildHamlib.cmake)
 endif(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
 
 
@@ -365,12 +405,8 @@ if(NOT USE_STATIC_SAMPLERATE)
         list(APPEND FREEDV_LINK_LIBS ${LIBSAMPLERATE})
         include_directories(${LIBSAMPLERATE_INCLUDE_DIR})
     else(LIBSTAMPLERATE AND LIBSAMPLERATE_INCLUDE_DIR)
-        message(FATAL_ERROR "samplerate library not found.
-On Linux systems try installing:
-    samplerate-devel  (RPM based systems)
-    libsamplerate-dev (DEB based systems)
-On Windows it's easiest to use the cmake option: USE_STATIC_SAMPLERATE"
-        )
+        message(STATUS "Will attempt static build of samplerate.")
+        include(cmake/BuildSamplerate.cmake)
     endif(LIBSAMPLERATE AND LIBSAMPLERATE_INCLUDE_DIR)
 else(NOT USE_STATIC_SAMPLERATE)
     message(STATUS "Will attempt static build of samplerate.")
@@ -389,65 +425,18 @@ if(NOT USE_STATIC_SNDFILE)
     if(LIBSNDFILE AND LIBSNDFILE_INCLUDE_DIR)
         list(APPEND FREEDV_LINK_LIBS ${LIBSNDFILE})
     else(LIBSNDFILE AND LIBSNDFILE_INCLUDE_DIR)
-        message(FATAL_ERROR "sndfile library not found.
-On Linux systems try installing:
-    libsndfile-devel (RPM based systems)
-    libsndfile-dev   (DEB based systems)
-On Windows it's easiest to use the cmake option: USE_STATIC_SNDFILE"
-        )
+        message(STATUS "Will attempt static build of sndfile.")
+        include(cmake/BuildSndfile.cmake)
     endif(LIBSNDFILE AND LIBSNDFILE_INCLUDE_DIR)
 else(NOT USE_STATIC_SNDFILE)
     message(STATUS "Will attempt static build of sndfile.")
     include(cmake/BuildSndfile.cmake)
 endif(NOT USE_STATIC_SNDFILE)
 
-#
-# Find wxWidgets
-#
-if(NOT BOOTSTRAP_WXWIDGETS)
-message(STATUS "Looking for wxWidgets...")
-if(WXCONFIG)
-    message(STATUS "wx-config: ${WXCONFIG}")
-    set(wxWidgets_CONFIG_EXECUTABLE ${WXCONFIG})
-endif(WXCONFIG)
-if(WXRC)
-    message(STATUS "wxrc: ${WXRC}")
-    set(wxWidgets_wxrc_EXECUTABLE ${WXRC})
-endif(WXRC)
-set(WX_VERSION_MIN 3.0.0)
-set(WX_31_VERSION_MIN 3.1.3)
-find_package(wxWidgets REQUIRED core base aui html net adv propgrid)
-execute_process(COMMAND sh "${wxWidgets_CONFIG_EXECUTABLE}" --version
-    OUTPUT_VARIABLE WX_VERSION)
-string(STRIP ${WX_VERSION} WX_VERSION)
-if(WX_VERSION VERSION_EQUAL ${WX_VERSION_MIN}
-    OR WX_VERSION VERSION_GREATER ${WX_VERSION_MIN})
-   message(STATUS "wxWidgets version: ${WX_VERSION}")
-else()
-    message(FATAL_ERROR "wxWidgets must be installed on your system.
-Please check that wx-config is in path, the directory
-where wxWidgets libraries are installed (returned by
-'wx-config --libs' or 'wx-config --static --libs' command)
-is in LD_LIBRARY_PATH or equivalent variable and
-wxWidgets version is ${WX_VERSION_MIN} or above.")
-endif()
-
-if(APPLE)
-if(WX_VERSION VERSION_EQUAL ${WX_31_VERSION_MIN}
-   OR WX_VERSION VERSION_GREATER ${WX_31_VERSION_MIN})
-    set(DARK_MODE_DISABLE "false")
-else()
-    set(DARK_MODE_DISABLE "true")
-endif()
-endif(APPLE)
-
 if(wxWidgets_FOUND)
     include("${wxWidgets_USE_FILE}")
     list(APPEND FREEDV_LINK_LIBS ${wxWidgets_LIBRARIES})
 endif(wxWidgets_FOUND)
-else(NOT BOOTSTRAP_WXWIDGETS)
-    set(DARK_MODE_DISABLE "false")
-endif(NOT BOOTSTRAP_WXWIDGETS)
 
 #
 # Find speex library
@@ -465,7 +454,8 @@ if(NOT USE_STATIC_SPEEXDSP)
         message(STATUS "Could not find speexdsp, reverting to static build.")
         include(cmake/BuildSpeex.cmake)
     else(SPEEXDSP_INCLUDE_DIR AND SPEEXDSP_LIBRARY)
-        message(FATAL_ERROR "Speex DSP library not found!")
+        message(STATUS "Will attempt static build of speex.")
+        include(cmake/BuildSpeex.cmake)
     endif(SPEEXDSP_INCLUDE_DIR AND SPEEXDSP_LIBRARY)
 else()
     message(STATUS "Will attempt static build of speex.")
@@ -506,13 +496,6 @@ add_subdirectory(src)
 add_subdirectory(contrib)
 
 message(STATUS "Build type will be: ${CMAKE_BUILD_TYPE}")
-
-# Adds support for "make dist" target.
-set(ARCHIVE_NAME "freedv-${FREEDV_VERSION_MAJOR}.${FREEDV_VERSION_MINOR}.${FREEDV_VERSION_PATCH}")
-add_custom_target(dist
-    COMMAND git archive --prefix=${ARCHIVE_NAME}/ HEAD
-        | bzip2 > ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 # CPack configuration for Windows and Linux.
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "HF Digital Voice for Radio Amateurs")

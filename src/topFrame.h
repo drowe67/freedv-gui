@@ -135,6 +135,8 @@ class TopFrame : public wxFrame
         wxRadioButton* m_hiddenMode1;
         wxRadioButton* m_hiddenMode2;
 
+        wxSizer* rightSizer;
+        
         wxCollapsiblePane *m_collpane;
         wxStaticBox* modeBox;
         wxStaticBoxSizer* sbSizer_mode;
