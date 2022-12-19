@@ -423,7 +423,7 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_recFileFromRadioPath = pConfig->Read("/File/recFileFromRadioPath", wxT(""));
     wxGetApp().m_recFileFromRadioSecs = pConfig->Read("/File/recFileFromRadioSecs", 60);
     wxGetApp().m_recFileFromModulatorPath = pConfig->Read("/File/recFileFromModulatorPath", wxT(""));
-    wxGetApp().m_recFileFromModulatorSecs = pConfig->Read("/File/recFileFromModulatorSecs", 10);
+    wxGetApp().m_recFileFromModulatorSecs = pConfig->Read("/File/recFileFromModulatorSecs", 60);
     wxGetApp().m_playFileFromRadioPath = pConfig->Read("/File/playFileFromRadioPath", wxT(""));
 
     // PTT -------------------------------------------------------------------
