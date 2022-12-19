@@ -35,4 +35,5 @@ set_target_properties(codec2 PROPERTIES
 
 add_dependencies(build_codec2 build_lpcnetfreedv)
 
-include_directories(${CMAKE_BINARY_DIR}/codec2_src/src ${CMAKE_BINARY_DIR}/codec2_build)
+set(CODEC2_INCLUDE_DIRS ${CMAKE_BINARY_DIR}/codec2_src/src ${CMAKE_BINARY_DIR}/codec2_build)
+include_directories(${CODEC2_INCLUDE_DIRS})
