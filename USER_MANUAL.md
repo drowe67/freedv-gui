@@ -785,6 +785,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Build system:
     * Suppress documentation generation when tagging releases. (PR #314)
+2. Enhancements:
+    * Increase the default Record From Modulator time to 60 seconds. (PR #321)
 
 ## V1.8.5 December 2022
 
