@@ -541,7 +541,7 @@ void MainFrame::loadConfiguration_()
 
     wxString freqStr = pConfig->Read(wxT("/PSKReporter/FrequencyHzStr"), wxT("0"));
     wxGetApp().m_psk_freq = atoll(freqStr.ToUTF8());
-    m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((float)wxGetApp().m_psk_freq)/1000.0));
+    m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((double)wxGetApp().m_psk_freq)/1000.0));
     
     // Waterfall configuration
     wxGetApp().m_waterfallColor = (int)pConfig->Read(wxT("/Waterfall/Color"), (int)0); // 0-2
