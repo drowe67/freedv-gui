@@ -56,7 +56,7 @@ public:
     int getTxMode() const { return txMode_; }
     bool isRunning() const { return dvObjects_.size() > 0; }
     bool isModeActive(int mode) const { return std::find(enabledModes_.begin(), enabledModes_.end(), mode) != enabledModes_.end(); }
-    void setRunTimeOptions(int clip, int bpf);
+    void setRunTimeOptions(bool clip, bool bpf);
     
     const char* getCurrentModeStr() const;
     bool usingTestFrames() const;
@@ -95,7 +95,7 @@ public:
     
     void setTextVaricodeNum(int num);
     
-    void setSquelch(int enable, float level);
+    void setSquelch(bool enable, float level);
     
     void setCarrierAmplitude(int c, float amp);
     

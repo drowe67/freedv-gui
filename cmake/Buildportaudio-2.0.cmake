@@ -1,4 +1,4 @@
-set(BUILD_SHARED_LIBS OFF CACHE STRING "Disable shared libraries for portaudio")
+#set(BUILD_SHARED_LIBS OFF CACHE STRING "Disable shared libraries for portaudio")
 
 include(FetchContent)
 FetchContent_Declare(
