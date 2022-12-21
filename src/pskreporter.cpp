@@ -45,19 +45,19 @@ static const unsigned char rxFormatHeader[] = {
 };
 
 // TX record:
-/* For senderCallsign, frequency, sNR (1 byte), mode, informationSource (1 byte), flowStartSeconds use */
+/* For senderCallsign, frequency (5 bytes--needed for 10+GHz), sNR (1 byte), mode, informationSource (1 byte), flowStartSeconds use */
 
 static const unsigned char txFormatHeader[] = {
     0x00, 0x02, 0x00, 0x34, 0x99, 0x93, 0x00, 0x06,
     0x80, 0x01, 0xFF, 0xFF, 0x00, 0x00, 0x76, 0x8F,
-    0x80, 0x05, 0x00, 0x04, 0x00, 0x00, 0x76, 0x8F,
+    0x80, 0x05, 0x00, 0x05, 0x00, 0x00, 0x76, 0x8F,
     0x80, 0x06, 0x00, 0x01, 0x00, 0x00, 0x76, 0x8F,
     0x80, 0x0A, 0xFF, 0xFF, 0x00, 0x00, 0x76, 0x8F,
     0x80, 0x0B, 0x00, 0x01, 0x00, 0x00, 0x76, 0x8F,
     0x00, 0x96, 0x00, 0x04
 };
 
-SenderRecord::SenderRecord(std::string callsign, unsigned int frequency, char snr)
+SenderRecord::SenderRecord(std::string callsign, uint64_t frequency, char snr)
     : callsign(callsign)
     , frequency(frequency)
     , snr(snr)
@@ -81,23 +81,24 @@ void SenderRecord::encode(char* buf)
     
     // Encode frequency
     fieldPtr += 1 + callsign.size();
-    *((unsigned int*)fieldPtr) = htonl(frequency);
-    
+    *fieldPtr++ = ((frequency >> 32) & 0xff);;
+    *fieldPtr++ = ((frequency >> 24) & 0xff);
+    *fieldPtr++ = ((frequency >> 16) & 0xff);
+    *fieldPtr++ = ((frequency >>  8) & 0xff);
+    *fieldPtr++ = (frequency & 0xff);
+
     // Encode SNR
-    fieldPtr += sizeof(unsigned int);
-    *fieldPtr = snr;
+    *fieldPtr++ = snr;
     
     // Encode mode
-    fieldPtr += 1;
     *fieldPtr = (char)mode.size();
     memcpy(fieldPtr + 1, mode.c_str(), mode.size());
     
     // Encode infoSource
     fieldPtr += 1 + mode.size();
-    *fieldPtr = infoSource;
+    *fieldPtr++ = infoSource;
     
     // Encode flow start time
-    fieldPtr += 1;
     *((unsigned int*)fieldPtr) = htonl(flowTimeSeconds);
 }
 
@@ -119,7 +120,7 @@ PskReporter::~PskReporter()
     }
 }
 
-void PskReporter::addReceiveRecord(std::string callsign, unsigned int frequency, char snr)
+void PskReporter::addReceiveRecord(std::string callsign, uint64_t frequency, char snr)
 {
     recordList_.push_back(SenderRecord(callsign, frequency, snr));
 }

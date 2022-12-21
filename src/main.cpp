@@ -1408,7 +1408,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 {
                     fprintf(
                         stderr, 
-                        "Adding callsign %s @ SNR %d, freq %ld to PSK Reporter.\n", 
+                        "Adding callsign %s @ SNR %d, freq %lld to PSK Reporter.\n", 
                         wxGetApp().m_pskPendingCallsign.c_str(), 
                         wxGetApp().m_pskPendingSnr,
                         freq);

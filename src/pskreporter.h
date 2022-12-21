@@ -4,13 +4,13 @@
 struct SenderRecord
 {
     std::string callsign;
-    unsigned int frequency;
+    uint64_t frequency;
     char snr;
     std::string mode;
     char infoSource;
     int flowTimeSeconds;
     
-    SenderRecord(std::string callsign, unsigned int frequency, char snr);
+    SenderRecord(std::string callsign, uint64_t frequency, char snr);
     
     int recordSize();    
     void encode(char* buf);
@@ -22,7 +22,7 @@ public:
     PskReporter(std::string callsign, std::string gridSquare, std::string software);
     virtual ~PskReporter();
     
-    void addReceiveRecord(std::string callsign, unsigned int frequency, char snr);
+    void addReceiveRecord(std::string callsign, uint64_t frequency, char snr);
     void send();
 
 private:
