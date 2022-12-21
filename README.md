@@ -142,6 +142,36 @@ Building FreeDV for 64 Bit windows:
   $ make package
 ```
 
+### Building FreeDV using LLVM MinGW (EXPERIMENTAL)
+
+It is now possible to use the LLVM version of MinGW to build FreeDV. This allows
+one to build FreeDV for ARM as well as for Intel Windows systems, including support
+for 2020 mode (on systems fast enough to acceptably decode it).
+
+#### Prerequisites
+
+* CMake >= 3.25.0
+* Linux (tested on Ubuntu 22.04)
+    * *NOTE: This does not currently work on macOS due to CMake using incorrect library suffixes.*
+* NSIS for generating the installer (for example, `sudo apt install nsis` on Ubuntu)
+
+#### Instructions
+
+1. Download LLVM MinGW at https://github.com/mstorsjo/llvm-mingw/releases/tag/20220906.
+2. Decompress into your preferred location. For example: `tar xvf llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64.tar.xz`
+3. Add LLVM MinGW to your PATH: `export PATH=/path/to/llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64/bin:$PATH`
+4. Create a build folder inside freedv-gui: `mkdir build_win64`
+5. Run CMake to configure the FreeDV build: `cd build_win64 && cmake -DCMAKE_TOOLCHAIN_FILE=${PWD}/../cross-compile/freedv-mingw-llvm-[architecture].cmake ..`
+   * Valid architectures are: aarch64, armv7, i686, x86_64
+6. Build FreeDV as normal: `make`
+7. Create FreeDV installer: `make package`
+
+#### Known Issues
+
+* NSIS-related issues:
+    * ARM installers will not properly register in Windows despite installing properly.
+    * ARM installers do not install into C:\Program Files (ARM) as expected.
+
 ### Testing Windows Build
 
 Conveniently, it is possible to run Windows executables using Wine on Fedora:
