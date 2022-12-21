@@ -179,17 +179,25 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox *sb_freedv700 = new wxStaticBox(m_modemTab, wxID_ANY, _("Modem Options"));
     sbSizer_freedv700 = new wxStaticBoxSizer(sb_freedv700, wxHORIZONTAL);
 
+    wxBoxSizer* optionsCol1 = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* optionsCol2 = new wxBoxSizer(wxVERTICAL);
+
     m_ckboxFreeDV700txClip = new wxCheckBox(m_modemTab, wxID_ANY, _("Clipping"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_freedv700->Add(m_ckboxFreeDV700txClip, 0, wxALIGN_LEFT, 0);
+    optionsCol1->Add(m_ckboxFreeDV700txClip, 0, wxALL | wxALIGN_LEFT, 5);
+
     m_ckboxFreeDV700Combine = new wxCheckBox(m_modemTab, wxID_ANY, _("700C Diversity Combine"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_freedv700->Add(m_ckboxFreeDV700Combine, 0, wxALIGN_LEFT, 0);
+    optionsCol1->Add(m_ckboxFreeDV700Combine, 0, wxALL | wxALIGN_LEFT, 5);
+
     m_ckboxFreeDV700txBPF = new wxCheckBox(m_modemTab, wxID_ANY, _(" 700D/E TX Band Pass Filter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_freedv700->Add(m_ckboxFreeDV700txBPF, 0, wxALIGN_LEFT, 0);
+    optionsCol2->Add(m_ckboxFreeDV700txBPF, 0, wxALL | wxALIGN_LEFT, 5);
 
     m_ckboxFreeDV700ManualUnSync = new wxCheckBox(m_modemTab, wxID_ANY, _("700D Manual UnSync"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_freedv700->Add(m_ckboxFreeDV700ManualUnSync, 0, wxALIGN_LEFT, 0);
+    optionsCol2->Add(m_ckboxFreeDV700ManualUnSync, 0, wxALL | wxALIGN_LEFT, 5);
 
-    sizerModem->Add(sbSizer_freedv700, 0, wxALL|wxEXPAND, 3);
+    sbSizer_freedv700->Add(optionsCol1);
+    sbSizer_freedv700->Add(optionsCol2);
+
+    sizerModem->Add(sbSizer_freedv700, 0, wxALL|wxEXPAND, 5);
 
     //------------------------------
     // Half/Full duplex selection
@@ -197,37 +205,43 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     wxStaticBox *sb_duplex = new wxStaticBox(m_modemTab, wxID_ANY, _("Half/Full Duplex Operation"));
     wxStaticBoxSizer* sbSizer_duplex = new wxStaticBoxSizer(sb_duplex, wxHORIZONTAL);
+
     m_ckHalfDuplex = new wxCheckBox(m_modemTab, wxID_ANY, _("Half Duplex"), wxDefaultPosition, wxSize(-1,-1), 0);
-    sbSizer_duplex->Add(m_ckHalfDuplex, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
-    sizerModem->Add(sbSizer_duplex,0, wxALL|wxEXPAND, 3);
+    sbSizer_duplex->Add(m_ckHalfDuplex, 0, wxALL | wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
+
+    sizerModem->Add(sbSizer_duplex,0, wxALL | wxEXPAND, 5);
 
     //------------------------------
     // Multiple RX selection
     //------------------------------
     wxStaticBox *sb_multirx = new wxStaticBox(m_modemTab, wxID_ANY, _("Multiple RX Operation"));
     wxStaticBoxSizer* sbSizer_multirx = new wxStaticBoxSizer(sb_multirx, wxVERTICAL);
+
     wxBoxSizer* sbSizer_simultaneousDecode = new wxBoxSizer(wxHORIZONTAL);
     m_ckboxMultipleRx = new wxCheckBox(m_modemTab, wxID_ANY, _("Simultaneously Decode All HF Modes"), wxDefaultPosition, wxSize(-1,-1), 0);
-    sbSizer_simultaneousDecode->Add(m_ckboxMultipleRx, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_simultaneousDecode->Add(m_ckboxMultipleRx, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     sbSizer_multirx->Add(sbSizer_simultaneousDecode, 0, wxALIGN_LEFT, 0);
     
     wxBoxSizer* sbSizer_singleThread = new wxBoxSizer(wxHORIZONTAL);
     m_ckboxSingleRxThread = new wxCheckBox(m_modemTab, wxID_ANY, _("Use single thread for multiple RX operation"), wxDefaultPosition, wxSize(-1,-1), 0);
-    sbSizer_singleThread->Add(m_ckboxSingleRxThread, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_singleThread->Add(m_ckboxSingleRxThread, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     sbSizer_multirx->Add(sbSizer_singleThread, 0, wxALIGN_LEFT, 0);
     
-    sizerModem->Add(sbSizer_multirx,0, wxALL|wxEXPAND, 3);
+    sizerModem->Add(sbSizer_multirx,0, wxALL|wxEXPAND, 5);
     
     wxStaticBox *sb_modemstats = new wxStaticBox(m_modemTab, wxID_ANY, _("Modem Statistics"));
     wxStaticBoxSizer* sbSizer_modemstats = new wxStaticBoxSizer(sb_modemstats, wxVERTICAL);
+
     wxBoxSizer* sbSizer_statsResetTime = new wxBoxSizer(wxHORIZONTAL);
     wxStaticText *m_staticTextResetTime = new wxStaticText(m_modemTab, wxID_ANY, _("Time before resetting stats (sec):"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_statsResetTime->Add(m_staticTextResetTime, 0, wxALIGN_CENTER_VERTICAL , 5);
+    sbSizer_statsResetTime->Add(m_staticTextResetTime, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
     m_statsResetTime = new wxTextCtrl(m_modemTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    sbSizer_statsResetTime->Add(m_statsResetTime, 0, wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_statsResetTime->Add(m_statsResetTime, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+
     sbSizer_modemstats->Add(sbSizer_statsResetTime, 0, wxALIGN_LEFT, 0);
     
-    sizerModem->Add(sbSizer_modemstats,0, wxALL|wxEXPAND, 3);
+    sizerModem->Add(sbSizer_modemstats,0, wxALL | wxEXPAND, 5);
         
     m_modemTab->SetSizer(sizerModem);
     
