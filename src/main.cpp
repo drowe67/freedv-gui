@@ -538,7 +538,7 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_psk_enable = pConfig->ReadBool(wxT("/PSKReporter/Enable"), false);
     wxGetApp().m_psk_callsign = pConfig->Read(wxT("/PSKReporter/Callsign"), wxT(""));
     wxGetApp().m_psk_grid_square = pConfig->Read(wxT("/PSKReporter/GridSquare"), wxT(""));
-    wxGetApp().m_psk_freq = (uint64_t)pConfig->Read(wxT("/PSKReporter/FrequencyHz"), (uint64_t)0);
+    wxGetApp().m_psk_freq = (int64_t)pConfig->Read(wxT("/PSKReporter/FrequencyHz"), (int64_t)0);
     m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((float)wxGetApp().m_psk_freq)/1000.0));
     
     // Waterfall configuration
@@ -1396,7 +1396,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     wxGetApp().m_hamlib->update_frequency_and_mode();
                 }
             
-                uint64_t freq = wxGetApp().m_psk_freq;
+                int64_t freq = wxGetApp().m_psk_freq;
 
                 // Only report if there's a valid reporting frequency and if we're not playing 
                 // a recording through ourselves (to avoid false reports).
@@ -1404,7 +1404,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 {
                     fprintf(
                         stderr, 
-                        "Adding callsign %s @ SNR %d, freq %d to PSK Reporter.\n", 
+                        "Adding callsign %s @ SNR %ld, freq %d to PSK Reporter.\n", 
                         wxGetApp().m_pskPendingCallsign.c_str(), 
                         wxGetApp().m_pskPendingSnr,
                         freq);
