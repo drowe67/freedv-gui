@@ -539,7 +539,8 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_psk_callsign = pConfig->Read(wxT("/PSKReporter/Callsign"), wxT(""));
     wxGetApp().m_psk_grid_square = pConfig->Read(wxT("/PSKReporter/GridSquare"), wxT(""));
 
-    wxGetApp().m_psk_freq = (int64_t)pConfig->ReadLongLong(wxT("/PSKReporter/FrequencyHz"), (int64_t)0);
+    wxString freqStr = pConfig->Read(wxT("/PSKReporter/FrequencyHzStr"), wxT("0"));
+    wxGetApp().m_psk_freq = atoll(freqStr.ToUTF8());
     m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((float)wxGetApp().m_psk_freq)/1000.0));
     
     // Waterfall configuration
@@ -929,7 +930,9 @@ MainFrame::~MainFrame()
     pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);
     pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
     pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
-    pConfig->Write(wxT("/PSKReporter/FrequencyHz"), wxGetApp().m_psk_freq);
+
+    wxString tempFreqStr = wxString::Format(wxT("%ld"), wxGetApp().m_psk_freq);
+    pConfig->Write(wxT("/PSKReporter/FrequencyHzStr"), tempFreqStr);
     
     // Waterfall configuration
     pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
@@ -1405,7 +1408,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 {
                     fprintf(
                         stderr, 
-                        "Adding callsign %s @ SNR %ld, freq %d to PSK Reporter.\n", 
+                        "Adding callsign %s @ SNR %d, freq %ld to PSK Reporter.\n", 
                         wxGetApp().m_pskPendingCallsign.c_str(), 
                         wxGetApp().m_pskPendingSnr,
                         freq);
