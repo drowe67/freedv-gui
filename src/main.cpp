@@ -538,7 +538,8 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_psk_enable = pConfig->ReadBool(wxT("/PSKReporter/Enable"), false);
     wxGetApp().m_psk_callsign = pConfig->Read(wxT("/PSKReporter/Callsign"), wxT(""));
     wxGetApp().m_psk_grid_square = pConfig->Read(wxT("/PSKReporter/GridSquare"), wxT(""));
-    wxGetApp().m_psk_freq = (int64_t)pConfig->Read(wxT("/PSKReporter/FrequencyHz"), (int64_t)0);
+
+    wxGetApp().m_psk_freq = (int64_t)pConfig->ReadLongLong(wxT("/PSKReporter/FrequencyHz"), (int64_t)0);
     m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((float)wxGetApp().m_psk_freq)/1000.0));
     
     // Waterfall configuration
