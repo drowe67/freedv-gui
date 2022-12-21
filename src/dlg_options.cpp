@@ -240,22 +240,38 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     wxStaticBoxSizer* sbSizer_testFrames;
     wxStaticBox *sb_testFrames = new wxStaticBox(m_simulationTab, wxID_ANY, _("Testing and Channel Simulation"));
-    sbSizer_testFrames = new wxStaticBoxSizer(sb_testFrames, wxHORIZONTAL);
+    sbSizer_testFrames = new wxStaticBoxSizer(sb_testFrames, wxVERTICAL);
 
     m_ckboxTestFrame = new wxCheckBox(m_simulationTab, wxID_ANY, _("Test Frames"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_testFrames->Add(m_ckboxTestFrame, 0, wxALIGN_LEFT, 0);
+    sbSizer_testFrames->Add(m_ckboxTestFrame, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_ckboxChannelNoise = new wxCheckBox(m_simulationTab, wxID_ANY, _("Channel Noise   SNR (dB):"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_testFrames->Add(m_ckboxChannelNoise, 0, wxALIGN_LEFT, 0);
+    wxBoxSizer* channelNoiseSizer = new wxBoxSizer(wxHORIZONTAL);
+
+    m_ckboxChannelNoise = new wxCheckBox(m_simulationTab, wxID_ANY, _("Channel Noise"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    channelNoiseSizer->Add(m_ckboxChannelNoise, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+
+    wxStaticText *channelNoiseDbLabel = new wxStaticText(m_simulationTab, wxID_ANY, _("SNR (dB):"), wxDefaultPosition, wxDefaultSize, 0);
+    channelNoiseSizer->Add(channelNoiseDbLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
     m_txtNoiseSNR = new wxTextCtrl(m_simulationTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_NUMERIC));
-    sbSizer_testFrames->Add(m_txtNoiseSNR, 0, wxALIGN_LEFT, 0);
+    channelNoiseSizer->Add(m_txtNoiseSNR, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_ckboxAttnCarrierEn = new wxCheckBox(m_simulationTab, wxID_ANY, _("Attn Carrier  Carrier:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_testFrames->Add(m_ckboxAttnCarrierEn, 0, wxALIGN_LEFT, 0);
+    sbSizer_testFrames->Add(channelNoiseSizer);
+
+    wxBoxSizer* attnCarrierSizer = new wxBoxSizer(wxHORIZONTAL);
+
+    m_ckboxAttnCarrierEn = new wxCheckBox(m_simulationTab, wxID_ANY, _("Attn Carrier"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    attnCarrierSizer->Add(m_ckboxAttnCarrierEn, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+
+    wxStaticText *carrierLabel = new wxStaticText(m_simulationTab, wxID_ANY, _("Carrier:"), wxDefaultPosition, wxDefaultSize, 0);
+    attnCarrierSizer->Add(carrierLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
     m_txtAttnCarrier = new wxTextCtrl(m_simulationTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    sbSizer_testFrames->Add(m_txtAttnCarrier, 0, wxALIGN_LEFT, 0);
+    attnCarrierSizer->Add(m_txtAttnCarrier, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    sizerSimulation->Add(sbSizer_testFrames,0, wxALL|wxEXPAND, 3);
+    sbSizer_testFrames->Add(attnCarrierSizer);
+
+    sizerSimulation->Add(sbSizer_testFrames,0, wxALL|wxEXPAND, 5);
 
     //------------------------------
     // Interfering tone
@@ -265,16 +281,22 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox *sb_tone = new wxStaticBox(m_simulationTab, wxID_ANY, _("Simulated Interference Tone"));
     sbSizer_tone = new wxStaticBoxSizer(sb_tone, wxHORIZONTAL);
 
-    m_ckboxTone = new wxCheckBox(m_simulationTab, wxID_ANY, _("Tone   Freq (Hz):"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_tone->Add(m_ckboxTone, 0, wxALIGN_LEFT, 0);
-    m_txtToneFreqHz = new wxTextCtrl(m_simulationTab, wxID_ANY,  "1000", wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    sbSizer_tone->Add(m_txtToneFreqHz, 0, wxALIGN_LEFT, 0);
-    wxStaticText *m_staticTextta = new wxStaticText(m_simulationTab, wxID_ANY, _(" Amplitude (pk): "), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_tone->Add(m_staticTextta, 0, wxALIGN_CENTER_VERTICAL, 5);    
-    m_txtToneAmplitude = new wxTextCtrl(m_simulationTab, wxID_ANY,  "1000", wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    sbSizer_tone->Add(m_txtToneAmplitude, 0, wxALIGN_LEFT, 0);
+    m_ckboxTone = new wxCheckBox(m_simulationTab, wxID_ANY, _("Tone"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_tone->Add(m_ckboxTone, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    sizerSimulation->Add(sbSizer_tone,0, wxALL|wxEXPAND, 3);
+    wxStaticText *toneFreqLabel = new wxStaticText(m_simulationTab, wxID_ANY, _("Freq (Hz):"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_tone->Add(toneFreqLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtToneFreqHz = new wxTextCtrl(m_simulationTab, wxID_ANY,  "1000", wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    sbSizer_tone->Add(m_txtToneFreqHz, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+
+    wxStaticText *m_staticTextta = new wxStaticText(m_simulationTab, wxID_ANY, _("Amplitude (pk): "), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_tone->Add(m_staticTextta, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtToneAmplitude = new wxTextCtrl(m_simulationTab, wxID_ANY,  "1000", wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    sbSizer_tone->Add(m_txtToneAmplitude, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+
+    sizerSimulation->Add(sbSizer_tone,0, wxALL|wxEXPAND, 5);
 
     m_simulationTab->SetSizer(sizerSimulation);
     
