@@ -788,6 +788,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Simplify build to reduce need for build scripts. (PR #305)
 2. Bugfixes:
     * Filter out non-MME devices to match previous behavior. (PR #318)
+    * Use 64 bit int for frequency to enable reporting microwave frequencies. (PR #325)
 3. Enhancements:
     * Add 2020B to multi-RX feature to enable RX and TX without restarting session. (PR #312)
     * Hide modes not on the SM1000 by default. (PR #313)
