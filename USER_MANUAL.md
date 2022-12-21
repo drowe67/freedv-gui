@@ -788,6 +788,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Simplify build to reduce need for build scripts. (PR #305)
 2. Bugfixes:
     * Filter out non-MME devices to match previous behavior. (PR #318)
+    * Resolves issue with minimum button sizing in the Filter dialog. (PR #326)
 3. Enhancements:
     * Add 2020B to multi-RX feature to enable RX and TX without restarting session. (PR #312)
     * Hide modes not on the SM1000 by default. (PR #313)
