@@ -123,13 +123,13 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBoxSizer* sbSizer_waterfallColor =  new wxStaticBoxSizer(sb_waterfall, wxHORIZONTAL);
     
     m_waterfallColorScheme1 = new wxRadioButton(m_displayTab, wxID_ANY, _("Multicolor"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    sbSizer_waterfallColor->Add(m_waterfallColorScheme1, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_waterfallColor->Add(m_waterfallColorScheme1, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     m_waterfallColorScheme2 = new wxRadioButton(m_displayTab, wxID_ANY, _("Black && White"), wxDefaultPosition, wxDefaultSize);
-    sbSizer_waterfallColor->Add(m_waterfallColorScheme2, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_waterfallColor->Add(m_waterfallColorScheme2, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     m_waterfallColorScheme3 = new wxRadioButton(m_displayTab, wxID_ANY, _("Blue Tint"), wxDefaultPosition, wxDefaultSize);
-    sbSizer_waterfallColor->Add(m_waterfallColorScheme3, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_waterfallColor->Add(m_waterfallColorScheme3, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    sizerDisplay->Add(sbSizer_waterfallColor, 0, wxALL | wxEXPAND, 3);
+    sizerDisplay->Add(sbSizer_waterfallColor, 0, wxALL | wxEXPAND, 5);
     
     m_displayTab->SetSizer(sizerDisplay);
     
