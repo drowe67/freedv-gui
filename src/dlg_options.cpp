@@ -84,9 +84,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_txtCtrlCallSign = new wxTextCtrl(m_reportingTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
     m_txtCtrlCallSign->SetToolTip(_("Txt Msg you can send along with Voice"));
-    sbSizer_callSign->Add(m_txtCtrlCallSign, 0, wxALL|wxEXPAND, 3);
+    sbSizer_callSign->Add(m_txtCtrlCallSign, 0, wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL, 5);
 
-    sizerReporting->Add(sbSizer_callSign,0, wxALL|wxEXPAND, 3);
+    sizerReporting->Add(sbSizer_callSign,0, wxALL | wxEXPAND, 5);
  
     //----------------------------------------------------------
     // PSK Reporter 
@@ -96,21 +96,21 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox* sb_psk = new wxStaticBox(m_reportingTab, wxID_ANY, _("PSK Reporter"));
     sbSizer_psk = new wxStaticBoxSizer(sb_psk, wxHORIZONTAL);
     m_ckbox_psk_enable = new wxCheckBox(m_reportingTab, wxID_ANY, _("Enable Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_psk->Add(m_ckbox_psk_enable, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_psk->Add(m_ckbox_psk_enable, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    wxStaticText* labelPskCallsign = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Callsign: "), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_psk->Add(labelPskCallsign, 0,  wxRIGHT | wxALIGN_CENTER_VERTICAL, 3);
+    wxStaticText* labelPskCallsign = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Callsign:"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_psk->Add(labelPskCallsign, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     m_txt_callsign = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
-    sbSizer_psk->Add(m_txt_callsign, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_psk->Add(m_txt_callsign, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    wxStaticText* labelPskGridSquare = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Grid Square: "), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_psk->Add(labelPskGridSquare, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, 3);
+    wxStaticText* labelPskGridSquare = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Grid Square:"), wxDefaultPosition, wxDefaultSize, 0);
+    sbSizer_psk->Add(labelPskGridSquare, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     m_txt_grid_square = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(70,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
-    sbSizer_psk->Add(m_txt_grid_square, 0,  wxRIGHT | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_psk->Add(m_txt_grid_square, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    sizerReporting->Add(sbSizer_psk,0, wxALL|wxEXPAND, 3);
+    sizerReporting->Add(sbSizer_psk,0, wxALL | wxEXPAND, 5);
     m_reportingTab->SetSizer(sizerReporting);
         
     // Display tab
