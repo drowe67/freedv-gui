@@ -540,7 +540,7 @@ class MainFrame : public TopFrame
         std::shared_ptr<IAudioDevice> txInSoundDevice;
         std::shared_ptr<IAudioDevice> txOutSoundDevice;
         
-        int         m_timeSinceSyncLoss;
+        unsigned int         m_timeSinceSyncLoss;
         bool        m_useMemory;
         wxTextCtrl* m_tc;
         int         m_zoom;

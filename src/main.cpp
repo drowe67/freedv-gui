@@ -1406,12 +1406,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 // a recording through ourselves (to avoid false reports).
                 if (freq > 0 && !g_playFileFromRadio)
                 {
+                    long long freqLongLong = freq;
                     fprintf(
                         stderr, 
                         "Adding callsign %s @ SNR %d, freq %lld to PSK Reporter.\n", 
                         wxGetApp().m_pskPendingCallsign.c_str(), 
                         wxGetApp().m_pskPendingSnr,
-                        freq);
+                        freqLongLong);
         
                     wxGetApp().m_pskReporter->addReceiveRecord(
                         wxGetApp().m_pskPendingCallsign,
