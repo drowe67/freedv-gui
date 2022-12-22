@@ -45,9 +45,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 {
     sessionActive_ = false;
     
-    this->SetSizeHints(wxDefaultSize, wxDefaultSize);
-    
     wxPanel* panel = new wxPanel(this);
+    panel->SetMinSize(wxSize(700, -1));
     
     wxBoxSizer* bSizer30;
     bSizer30 = new wxBoxSizer(wxVERTICAL);
@@ -141,30 +140,40 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // Voice Keyer 
     //----------------------------------------------------------------------
 
-    wxStaticBoxSizer* staticBoxSizer28a = new wxStaticBoxSizer( new wxStaticBox(m_keyerTab, wxID_ANY, _("Voice Keyer")), wxHORIZONTAL);
+    wxStaticBoxSizer* staticBoxSizer28a = new wxStaticBoxSizer( new wxStaticBox(m_keyerTab, wxID_ANY, _("Voice Keyer")), wxVERTICAL);
+
+    wxBoxSizer* voiceKeyerSizer1 = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* voiceKeyerSizer2 = new wxBoxSizer(wxHORIZONTAL);
 
     wxStaticText *m_staticText28b = new wxStaticText(m_keyerTab, wxID_ANY, _("Wave File: "), wxDefaultPosition, wxDefaultSize, 0);
-    staticBoxSizer28a->Add(m_staticText28b, 0, wxALIGN_CENTER_VERTICAL, 5);    
+    voiceKeyerSizer1->Add(m_staticText28b, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
     m_txtCtrlVoiceKeyerWaveFile = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
     m_txtCtrlVoiceKeyerWaveFile->SetToolTip(_("Wave file to play for Voice Keyer"));
-    staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerWaveFile, 0, 0, 5);
+    voiceKeyerSizer1->Add(m_txtCtrlVoiceKeyerWaveFile, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     m_buttonChooseVoiceKeyerWaveFile = new wxButton(m_keyerTab, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
-    staticBoxSizer28a->Add(m_buttonChooseVoiceKeyerWaveFile, 0, wxALIGN_CENTER_VERTICAL, 5);
+    m_buttonChooseVoiceKeyerWaveFile->SetMinSize(wxSize(120, -1));
+    voiceKeyerSizer1->Add(m_buttonChooseVoiceKeyerWaveFile, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    wxStaticText *m_staticText28c = new wxStaticText(m_keyerTab, wxID_ANY, _("   Rx Pause: "), wxDefaultPosition, wxDefaultSize, 0);
-    staticBoxSizer28a->Add(m_staticText28c, 0, wxALIGN_CENTER_VERTICAL , 5);
+    wxStaticText *m_staticText28c = new wxStaticText(m_keyerTab, wxID_ANY, _("Rx Pause:"), wxDefaultPosition, wxDefaultSize, 0);
+    voiceKeyerSizer2->Add(m_staticText28c, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
     m_txtCtrlVoiceKeyerRxPause = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
     m_txtCtrlVoiceKeyerRxPause->SetToolTip(_("How long to wait in Rx mode before repeat"));
-    staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerRxPause, 0, 0, 5);
+    voiceKeyerSizer2->Add(m_txtCtrlVoiceKeyerRxPause, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    wxStaticText *m_staticText28d = new wxStaticText(m_keyerTab, wxID_ANY, _("   Repeats: "), wxDefaultPosition, wxDefaultSize, 0);
-    staticBoxSizer28a->Add(m_staticText28d, 0, wxALIGN_CENTER_VERTICAL, 5);
+    wxStaticText *m_staticText28d = new wxStaticText(m_keyerTab, wxID_ANY, _("Repeats:"), wxDefaultPosition, wxDefaultSize, 0);
+    voiceKeyerSizer2->Add(m_staticText28d, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
     m_txtCtrlVoiceKeyerRepeats = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
     m_txtCtrlVoiceKeyerRepeats->SetToolTip(_("How long to wait in Rx mode before repeat"));
-    staticBoxSizer28a->Add(m_txtCtrlVoiceKeyerRepeats, 0, 0, 5);
+    voiceKeyerSizer2->Add(m_txtCtrlVoiceKeyerRepeats, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    sizerKeyer->Add(staticBoxSizer28a,0, wxALL|wxEXPAND, 3);
+    staticBoxSizer28a->Add(voiceKeyerSizer1);
+    staticBoxSizer28a->Add(voiceKeyerSizer2);
+
+    sizerKeyer->Add(staticBoxSizer28a,0, wxALL | wxEXPAND, 5);
     
     m_keyerTab->SetSizer(sizerKeyer);
     
