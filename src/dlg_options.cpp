@@ -84,7 +84,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_txtCtrlCallSign = new wxTextCtrl(m_reportingTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
     m_txtCtrlCallSign->SetToolTip(_("Txt Msg you can send along with Voice"));
-    sbSizer_callSign->Add(m_txtCtrlCallSign, 0, wxALL | wxEXPAND | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_callSign->Add(m_txtCtrlCallSign, 0, wxALL | wxEXPAND, 5);
 
     sizerReporting->Add(sbSizer_callSign,0, wxALL | wxEXPAND, 5);
  
@@ -266,7 +266,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_testFrames = new wxStaticBoxSizer(sb_testFrames, wxVERTICAL);
 
     m_ckboxTestFrame = new wxCheckBox(m_simulationTab, wxID_ANY, _("Test Frames"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_testFrames->Add(m_ckboxTestFrame, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_testFrames->Add(m_ckboxTestFrame, 0, wxALL | wxALIGN_LEFT, 5);
 
     wxBoxSizer* channelNoiseSizer = new wxBoxSizer(wxHORIZONTAL);
 
@@ -334,7 +334,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox* sb_udp = new wxStaticBox(m_interfacingTab, wxID_ANY, _("UDP Messages"));
     sbSizer_udp = new wxStaticBoxSizer(sb_udp, wxVERTICAL);
     m_ckbox_udp_enable = new wxCheckBox(m_interfacingTab, wxID_ANY, _("Enable UDP Messages"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_udp->Add(m_ckbox_udp_enable, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_udp->Add(m_ckbox_udp_enable, 0, wxALL, 5);
 
     wxBoxSizer* portNumberSizer = new wxBoxSizer(wxHORIZONTAL);
     wxStaticText* udpPortNumberLabel = new wxStaticText(m_interfacingTab, wxID_ANY, _("UDP Port Number:"), wxDefaultPosition, wxDefaultSize, 0);
@@ -363,9 +363,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_console = new wxStaticBoxSizer(sb_console, wxHORIZONTAL);
 
     m_ckboxDebugConsole = new wxCheckBox(m_debugTab, wxID_ANY, _("Show Console"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_console->Add(m_ckboxDebugConsole, 0, wxALIGN_LEFT, 0);
+    sbSizer_console->Add(m_ckboxDebugConsole, 0, wxALIGN_LEFT, 5);
 
-    sizerDebug->Add(sbSizer_console,0, wxALL|wxEXPAND, 3);
+    sizerDebug->Add(sbSizer_console,0, wxALL|wxEXPAND, 5);
 #endif // __WXMSW__
     
     //----------------------------------------------------------
@@ -387,7 +387,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // Reset stats button
     
     m_BtnFifoReset = new wxButton(m_debugTab, wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_fifo1->Add(m_BtnFifoReset, 0,  wxALIGN_LEFT, 5);
+    sbSizer_fifo1->Add(m_BtnFifoReset, 0,  wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     sbSizer_fifo->Add(sbSizer_fifo1);
 
     // text lines with fifo counters
