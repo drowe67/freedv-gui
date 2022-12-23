@@ -538,8 +538,10 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_psk_enable = pConfig->ReadBool(wxT("/PSKReporter/Enable"), false);
     wxGetApp().m_psk_callsign = pConfig->Read(wxT("/PSKReporter/Callsign"), wxT(""));
     wxGetApp().m_psk_grid_square = pConfig->Read(wxT("/PSKReporter/GridSquare"), wxT(""));
-    wxGetApp().m_psk_freq = (int)pConfig->Read(wxT("/PSKReporter/FrequencyHz"), (int)0);
-    m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((float)wxGetApp().m_psk_freq)/1000.0));
+
+    wxString freqStr = pConfig->Read(wxT("/PSKReporter/FrequencyHzStr"), wxT("0"));
+    wxGetApp().m_psk_freq = atoll(freqStr.ToUTF8());
+    m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((double)wxGetApp().m_psk_freq)/1000.0));
     
     // Waterfall configuration
     wxGetApp().m_waterfallColor = (int)pConfig->Read(wxT("/Waterfall/Color"), (int)0); // 0-2
@@ -928,7 +930,9 @@ MainFrame::~MainFrame()
     pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);
     pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
     pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
-    pConfig->Write(wxT("/PSKReporter/FrequencyHz"), wxGetApp().m_psk_freq);
+
+    wxString tempFreqStr = wxString::Format(wxT("%ld"), wxGetApp().m_psk_freq);
+    pConfig->Write(wxT("/PSKReporter/FrequencyHzStr"), tempFreqStr);
     
     // Waterfall configuration
     pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
@@ -1396,18 +1400,19 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     wxGetApp().m_hamlib->update_frequency_and_mode();
                 }
             
-                unsigned int freq = wxGetApp().m_psk_freq;
+                int64_t freq = wxGetApp().m_psk_freq;
 
                 // Only report if there's a valid reporting frequency and if we're not playing 
                 // a recording through ourselves (to avoid false reports).
                 if (freq > 0 && !g_playFileFromRadio)
                 {
+                    long long freqLongLong = freq;
                     fprintf(
                         stderr, 
-                        "Adding callsign %s @ SNR %d, freq %d to PSK Reporter.\n", 
+                        "Adding callsign %s @ SNR %d, freq %lld to PSK Reporter.\n", 
                         wxGetApp().m_pskPendingCallsign.c_str(), 
                         wxGetApp().m_pskPendingSnr,
-                        freq);
+                        freqLongLong);
         
                     wxGetApp().m_pskReporter->addReceiveRecord(
                         wxGetApp().m_pskPendingCallsign,
