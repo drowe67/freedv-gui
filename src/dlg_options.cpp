@@ -363,9 +363,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_console = new wxStaticBoxSizer(sb_console, wxHORIZONTAL);
 
     m_ckboxDebugConsole = new wxCheckBox(m_debugTab, wxID_ANY, _("Show Console"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_console->Add(m_ckboxDebugConsole, 0, wxALIGN_LEFT, 0);
+    sbSizer_console->Add(m_ckboxDebugConsole, 0, wxALIGN_LEFT, 5);
 
-    sizerDebug->Add(sbSizer_console,0, wxALL|wxEXPAND, 3);
+    sizerDebug->Add(sbSizer_console,0, wxALL|wxEXPAND, 5);
 #endif // __WXMSW__
     
     //----------------------------------------------------------
