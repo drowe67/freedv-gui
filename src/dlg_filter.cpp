@@ -322,7 +322,7 @@ void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWin
     *slider = new wxSlider(parent, wxID_ANY, 0, 0, SLIDER_MAX, wxDefaultPosition); 
     (*slider)->SetMinSize(wxSize(SLIDER_LENGTH,wxDefaultCoord));
 
-    bs->Add(*slider, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 2);
+    bs->Add(*slider, 0, wxALL|wxEXPAND, 2);
 
     *stValue = new wxStaticText(parent, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     bs->Add(*stValue, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT|wxALL, 2);
