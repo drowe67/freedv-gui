@@ -20,6 +20,7 @@
 //
 //==========================================================================
 
+#include <inttypes.h>
 #include <time.h>
 #include <vector>
 #include <deque>
@@ -931,7 +932,7 @@ MainFrame::~MainFrame()
     pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
     pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
 
-    wxString tempFreqStr = wxString::Format(wxT("%ld"), wxGetApp().m_psk_freq);
+    wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), wxGetApp().m_psk_freq);
     pConfig->Write(wxT("/PSKReporter/FrequencyHzStr"), tempFreqStr);
     
     // Waterfall configuration
