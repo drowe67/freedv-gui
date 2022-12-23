@@ -548,6 +548,7 @@ if(WIN32)
         @ONLY
     )
     install(SCRIPT ${CMAKE_BINARY_DIR}/cmake/GetDependencies.cmake)
+
     # There is a bug in NSI that does not handle full unix paths properly. Make
     # sure there is at least one set of four (4) backlasshes.
     #set(CPACK_PACKAGE_ICON "${CMake_SOURCE_DIR}/Utilities/Release\\\\InstallIcon.bmp")
@@ -562,6 +563,10 @@ if(WIN32)
     set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "DeleteRegKey HKLM 'SOFTWARE\\\\CODEC2-Project\\\\FreeDV'")
     set(CPACK_NSIS_MENU_LINKS "share/freedv-gui/USER_MANUAL.pdf" "FreeDV User Manual")
     
+    if (FREEDV_USING_LLVM_MINGW)
+        set(CPACK_PACKAGE_FILE_NAME "FreeDV-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-windows-${CMAKE_SYSTEM_PROCESSOR}")
+    endif (FREEDV_USING_LLVM_MINGW)
+
     include(CPack)
 elseif(UNIX AND NOT APPLE)
     # Linux packaging

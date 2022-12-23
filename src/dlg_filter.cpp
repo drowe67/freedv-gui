@@ -56,8 +56,6 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_newMicInFilter = newMicInFilter;
     m_newSpkOutFilter = newSpkOutFilter;
 
-    this->SetSizeHints(wxDefaultSize, wxDefaultSize);
-
     wxBoxSizer* bSizer30;
     bSizer30 = new wxBoxSizer(wxVERTICAL);
 
@@ -77,7 +75,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     wxBoxSizer* sizerBetaGamma = new wxBoxSizer(wxVERTICAL);
     newLPCPFControl(&m_codec2LPCPostFilterBeta, &m_staticTextBeta, lpcPostFilterBox, sizerBetaGamma, "Beta");
     newLPCPFControl(&m_codec2LPCPostFilterGamma, &m_staticTextGamma, lpcPostFilterBox, sizerBetaGamma, "Gamma");
-    lpcpfs->Add(sizerBetaGamma);
+    lpcpfs->Add(sizerBetaGamma, 0, wxALL | wxEXPAND, 5);
     
     m_LPCPostFilterDefault = new wxButton(lpcPostFilterBox, wxID_ANY, wxT("Default"));
     lpcpfs->Add(m_LPCPostFilterDefault, 0, wxALL|wxALIGN_CENTRE_HORIZONTAL|wxALIGN_CENTRE_VERTICAL, 5);
@@ -321,13 +319,15 @@ void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWin
     wxStaticText* st = new wxStaticText(parent, wxID_ANY, controlName, wxDefaultPosition, wxSize(70,-1), wxALIGN_RIGHT);
     bs->Add(st, 0, wxALIGN_CENTER_VERTICAL|wxALL, 2);
 
-    *slider = new wxSlider(parent, wxID_ANY, 0, 0, SLIDER_MAX, wxDefaultPosition, wxSize(SLIDER_LENGTH,wxDefaultCoord));
-    bs->Add(*slider, 1, wxALIGN_CENTER_VERTICAL|wxALL, 2);
+    *slider = new wxSlider(parent, wxID_ANY, 0, 0, SLIDER_MAX, wxDefaultPosition); 
+    (*slider)->SetMinSize(wxSize(SLIDER_LENGTH,wxDefaultCoord));
+
+    bs->Add(*slider, 0, wxALL|wxEXPAND, 2);
 
     *stValue = new wxStaticText(parent, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
-    bs->Add(*stValue, 1, wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT|wxALL, 2);
+    bs->Add(*stValue, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT|wxALL, 2);
 
-    s->Add(bs, 0);
+    s->Add(bs, 0, wxALL | wxEXPAND, 0);
 }
 
 void FilterDlg::newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString controlName)
