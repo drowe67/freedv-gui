@@ -788,6 +788,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Simplify build to reduce need for build scripts. (PR #305, #329)
 2. Bugfixes:
     * Filter out non-MME devices to match previous behavior. (PR #318)
+    * Use 64 bit int for frequency to enable reporting microwave frequencies. (PR #325)
     * Resolves issue with minimum button sizing in the Filter dialog. (PR #326)
     * Update labling of clipping and BPF options to match actual behavior. (PR #319)
     * Adjustss positioning and spacing of controls in the Options dialog to prevent truncation. (PR #328)(
