@@ -69,7 +69,7 @@ SenderRecord::SenderRecord(std::string callsign, uint64_t frequency, char snr)
 
 int SenderRecord::recordSize()
 {
-    return (1 + callsign.size()) + 4 + 1 + (1 + mode.size()) + 1 + 4;
+    return (1 + callsign.size()) + 5 + 1 + (1 + mode.size()) + 1 + 4;
 }
 
 void SenderRecord::encode(char* buf)
