@@ -12,6 +12,10 @@ set(CMAKE_AR ${triple}-ar)
 set(CMAKE_RANLIB ${triple}-ranlib)
 set(CMAKE_RC_COMPILER ${triple}-windres)
 
+set(CMAKE_C_FLAGS -gcodeview)
+set(CMAKE_CXX_FLAGS -gcodeview)
+set(CMAKE_EXE_LINKER_FLAGS -Wl,--pdb=)
+
 # For make package use.
 set(CMAKE_OBJDUMP ${triple}-objdump)
 set(FREEDV_USING_LLVM_MINGW 1)
