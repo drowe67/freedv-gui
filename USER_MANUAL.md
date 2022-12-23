@@ -785,7 +785,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Build system:
     * Suppress documentation generation when tagging releases. (PR #314)
-    * Simplify build to reduce need for build scripts. (PR #305)
+    * Simplify build to reduce need for build scripts. (PR #305, #329)
 2. Bugfixes:
     * Filter out non-MME devices to match previous behavior. (PR #318)
     * Resolves issue with minimum button sizing in the Filter dialog. (PR #326)
