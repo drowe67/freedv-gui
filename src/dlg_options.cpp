@@ -200,9 +200,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxFreeDV700txBPF = new wxCheckBox(m_modemTab, wxID_ANY, _(" 700D/E TX Band Pass Filter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     optionsCol2->Add(m_ckboxFreeDV700txBPF, 0, wxALL | wxALIGN_LEFT, 5);
 
-    m_ckboxFreeDV700ManualUnSync = new wxCheckBox(m_modemTab, wxID_ANY, _("700D Manual UnSync"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    optionsCol2->Add(m_ckboxFreeDV700ManualUnSync, 0, wxALL | wxALIGN_LEFT, 5);
-
     sbSizer_freedv700->Add(optionsCol1);
     sbSizer_freedv700->Add(optionsCol2);
 
@@ -469,8 +466,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_ckboxFreeDV700txClip->MoveBeforeInTabOrder(m_ckboxFreeDV700Combine);
     m_ckboxFreeDV700Combine->MoveBeforeInTabOrder(m_ckboxFreeDV700txBPF);
-    m_ckboxFreeDV700txBPF->MoveBeforeInTabOrder(m_ckboxFreeDV700ManualUnSync);
-    m_ckboxFreeDV700ManualUnSync->MoveBeforeInTabOrder(m_ckHalfDuplex);
+    m_ckboxFreeDV700txBPF->MoveBeforeInTabOrder(m_ckHalfDuplex);
     m_ckHalfDuplex->MoveBeforeInTabOrder(m_ckboxMultipleRx);
     m_ckboxMultipleRx->MoveBeforeInTabOrder(m_ckboxSingleRxThread);
     m_ckboxSingleRxThread->MoveBeforeInTabOrder(m_statsResetTime);
@@ -621,7 +617,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxFreeDV700txClip->SetValue(wxGetApp().m_FreeDV700txClip);
         m_ckboxFreeDV700txBPF->SetValue(wxGetApp().m_FreeDV700txBPF);
         m_ckboxFreeDV700Combine->SetValue(wxGetApp().m_FreeDV700Combine);
-        m_ckboxFreeDV700ManualUnSync->SetValue(wxGetApp().m_FreeDV700ManualUnSync);
 
 #ifdef __WXMSW__
         m_ckboxDebugConsole->SetValue(wxGetApp().m_debug_console);
@@ -741,7 +736,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_FreeDV700txClip = m_ckboxFreeDV700txClip->GetValue();
         wxGetApp().m_FreeDV700txBPF = m_ckboxFreeDV700txBPF->GetValue();
         wxGetApp().m_FreeDV700Combine = m_ckboxFreeDV700Combine->GetValue();
-        wxGetApp().m_FreeDV700ManualUnSync = m_ckboxFreeDV700ManualUnSync->GetValue();
 
 #ifdef __WXMSW__
         wxGetApp().m_debug_console = m_ckboxDebugConsole->GetValue();
@@ -782,7 +776,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
             pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
             pConfig->Write(wxT("/FreeDV700/txBPF"), wxGetApp().m_FreeDV700txBPF);
-            pConfig->Write(wxT("/FreeDV700/manualUnSync"), wxGetApp().m_FreeDV700ManualUnSync);
 
             pConfig->Write(wxT("/Noise/noise_snr"),  wxGetApp().m_noise_snr);
 

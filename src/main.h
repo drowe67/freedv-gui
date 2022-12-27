@@ -313,7 +313,6 @@ class MainApp : public wxApp
         bool       m_FreeDV700txClip;
         bool       m_FreeDV700txBPF;
         bool       m_FreeDV700Combine;
-        bool       m_FreeDV700ManualUnSync;
 
         // Noise simulation
 

@@ -566,14 +566,13 @@ Auto EQ (Automatic Equalisation) adjusts the input speech spectrum to best fit t
 
 ## Tools - Options
 
-### FreeDV 700 C/D/E Options
+### Modem Options
 
 Control | Description
  ------------------------------ | ----------------------------------------------------------------------------- |
 Clipping | Increases the average power. Ensure your transmitter can handle high RMS powers before using!
 700C Diversity Combine | Combining of two sets of 700C carriers for better fading channel performance
 Tx Band Pass Filter | Reduces Tx spectrum bandwidth
-Manual Unsync | Forces modem to remain in sync, and not drop sync automatically
 
 # Helping Improve FreeDV
 
