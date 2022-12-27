@@ -288,7 +288,7 @@ class MainApp : public wxApp
         bool                m_psk_enable;
         wxString            m_psk_callsign;
         wxString            m_psk_grid_square;
-        int                 m_psk_freq;
+        uint64_t            m_psk_freq;
 
         PskReporter*            m_pskReporter;
         std::string         m_pskPendingCallsign;
@@ -543,7 +543,7 @@ class MainFrame : public TopFrame
         std::shared_ptr<IAudioDevice> txInSoundDevice;
         std::shared_ptr<IAudioDevice> txOutSoundDevice;
         
-        int         m_timeSinceSyncLoss;
+        unsigned int         m_timeSinceSyncLoss;
         bool        m_useMemory;
         wxTextCtrl* m_tc;
         int         m_zoom;

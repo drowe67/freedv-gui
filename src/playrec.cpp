@@ -242,6 +242,7 @@ MyExtraRecFilePanel::MyExtraRecFilePanel(wxWindow *parent): wxPanel(parent)
     m_secondsToRecord = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
     m_secondsToRecord->SetToolTip(_("Number of seconds to record for"));
     m_secondsToRecord->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_recFileFromRadioSecs));
+    m_secondsToRecord->SetMinSize(wxSize(50, -1));
     sizerTop->Add(m_secondsToRecord, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
     SetSizerAndFit(sizerTop);
 }

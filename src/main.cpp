@@ -20,7 +20,9 @@
 //
 //==========================================================================
 
+#include <inttypes.h>
 #include <time.h>
+#include <vector>
 #include <deque>
 #include <random>
 #include <chrono>
@@ -423,7 +425,7 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_recFileFromRadioPath = pConfig->Read("/File/recFileFromRadioPath", wxT(""));
     wxGetApp().m_recFileFromRadioSecs = pConfig->Read("/File/recFileFromRadioSecs", 60);
     wxGetApp().m_recFileFromModulatorPath = pConfig->Read("/File/recFileFromModulatorPath", wxT(""));
-    wxGetApp().m_recFileFromModulatorSecs = pConfig->Read("/File/recFileFromModulatorSecs", 10);
+    wxGetApp().m_recFileFromModulatorSecs = pConfig->Read("/File/recFileFromModulatorSecs", 60);
     wxGetApp().m_playFileFromRadioPath = pConfig->Read("/File/playFileFromRadioPath", wxT(""));
 
     // PTT -------------------------------------------------------------------
@@ -537,8 +539,10 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_psk_enable = pConfig->ReadBool(wxT("/PSKReporter/Enable"), false);
     wxGetApp().m_psk_callsign = pConfig->Read(wxT("/PSKReporter/Callsign"), wxT(""));
     wxGetApp().m_psk_grid_square = pConfig->Read(wxT("/PSKReporter/GridSquare"), wxT(""));
-    wxGetApp().m_psk_freq = (int)pConfig->Read(wxT("/PSKReporter/FrequencyHz"), (int)0);
-    m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((float)wxGetApp().m_psk_freq)/1000.0));
+
+    wxString freqStr = pConfig->Read(wxT("/PSKReporter/FrequencyHzStr"), wxT("0"));
+    wxGetApp().m_psk_freq = atoll(freqStr.ToUTF8());
+    m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((double)wxGetApp().m_psk_freq)/1000.0));
     
     // Waterfall configuration
     wxGetApp().m_waterfallColor = (int)pConfig->Read(wxT("/Waterfall/Color"), (int)0); // 0-2
@@ -580,6 +584,21 @@ setDefaultMode:
     }
 #endif // defined(FREEDV_MODE_2020B)
     pConfig->SetPath(wxT("/"));
+    
+    // Set initial state of additional modes.
+    switch(mode)
+    {
+        case 0:
+        case 4:
+        case 5:
+            // 700D/E and 1600; don't expand additional modes
+            break;
+        default:
+            m_collpane->Collapse(false);
+            wxCollapsiblePaneEvent evt;
+            OnChangeCollapseState(evt);
+            break;
+    }
     
     m_togBtnSplit->Disable();
     m_togBtnAnalog->Disable();
@@ -912,7 +931,9 @@ MainFrame::~MainFrame()
     pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);
     pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
     pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
-    pConfig->Write(wxT("/PSKReporter/FrequencyHz"), wxGetApp().m_psk_freq);
+
+    wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), wxGetApp().m_psk_freq);
+    pConfig->Write(wxT("/PSKReporter/FrequencyHzStr"), tempFreqStr);
     
     // Waterfall configuration
     pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
@@ -1380,18 +1401,19 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     wxGetApp().m_hamlib->update_frequency_and_mode();
                 }
             
-                unsigned int freq = wxGetApp().m_psk_freq;
+                int64_t freq = wxGetApp().m_psk_freq;
 
                 // Only report if there's a valid reporting frequency and if we're not playing 
                 // a recording through ourselves (to avoid false reports).
                 if (freq > 0 && !g_playFileFromRadio)
                 {
+                    long long freqLongLong = freq;
                     fprintf(
                         stderr, 
-                        "Adding callsign %s @ SNR %d, freq %d to PSK Reporter.\n", 
+                        "Adding callsign %s @ SNR %d, freq %lld to PSK Reporter.\n", 
                         wxGetApp().m_pskPendingCallsign.c_str(), 
                         wxGetApp().m_pskPendingSnr,
-                        freq);
+                        freqLongLong);
         
                     wxGetApp().m_pskReporter->addReceiveRecord(
                         wxGetApp().m_pskPendingCallsign,
@@ -1642,6 +1664,40 @@ void MainFrame::OnExit(wxCommandEvent& event)
 
 void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 {
+    wxRadioButton* hiddenModeToSet = nullptr;
+    std::vector<wxRadioButton*> buttonsToClear 
+    {
+        m_hiddenMode1,
+        m_hiddenMode2,
+
+        m_rb700c,
+        m_rb700d,
+        m_rb700e,
+        m_rb800xa,
+        m_rb1600,
+        m_rb2400b,
+        m_rb2020,
+#if defined(FREEDV_MODE_2020B)
+        m_rb2020b,
+#endif // FREEDV_MODE_2020B
+    };
+
+    auto eventObject = (wxRadioButton*)event.GetEventObject();
+    if (eventObject != nullptr)
+    {
+        std::string label = (const char*)eventObject->GetLabel().ToUTF8();
+        if (label == "700D" || label == "700E" || label == "1600")
+        {
+            hiddenModeToSet = m_hiddenMode2;
+        } 
+        else
+        {
+            hiddenModeToSet = m_hiddenMode1;
+        } 
+ 
+        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), (wxRadioButton*)eventObject));
+    }
+
     txModeChangeMutex.Lock();
     
     if (m_rb1600->GetValue()) 
@@ -1694,6 +1750,21 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     m_newSpkOutFilter = true;
     
     txModeChangeMutex.Unlock();
+    
+    // Manually implement mutually exclusive behavior as
+    // we can't rely on wxWidgets doing it on account of
+    // how we're splitting the modes.
+    if (eventObject != nullptr)
+    {
+        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), hiddenModeToSet));
+
+        for (auto& var : buttonsToClear)
+        {
+            var->SetValue(false);
+        }
+
+        hiddenModeToSet->SetValue(true);
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -1727,7 +1798,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_textCurrentDecodeMode->Enable();
 
         // determine what mode we are using
-        OnChangeTxMode(event);
+        wxCommandEvent tmpEvent;
+        OnChangeTxMode(tmpEvent);
 
         // init freedv states
         m_togBtnSplit->Enable();
@@ -1736,9 +1808,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_togBtnVoiceKeyer->Enable();
 
         if (g_mode == FREEDV_MODE_2400B || g_mode == FREEDV_MODE_800XA || 
-#if defined(FREEDV_MODE_2020B)
-            g_mode == FREEDV_MODE_2020B || /* note: 2020B don't play well with multi-RX atm */
-#endif // FREEDV_MODE_2020B
             !wxGetApp().m_boolMultipleRx)
         {
             m_rb1600->Disable();
@@ -1758,6 +1827,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             if(wxGetApp().m_2020Allowed)
             {
                 freedvInterface.addRxMode(FREEDV_MODE_2020);
+#if defined(FREEDV_MODE_2020B)
+                freedvInterface.addRxMode(FREEDV_MODE_2020B);
+#endif // FREEDV_MODE_2020B
             }
             
             int rxModes[] = {
@@ -1779,9 +1851,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             
             m_rb800xa->Disable();
             m_rb2400b->Disable();
-#if defined(FREEDV_MODE_2020B)
-            m_rb2020b->Disable();
-#endif // FREEDV_MODE_2020B
         }
         
         // Default voice keyer sample rate to 8K. The exact voice keyer

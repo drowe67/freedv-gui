@@ -142,6 +142,35 @@ Building FreeDV for 64 Bit windows:
   $ make package
 ```
 
+### Building FreeDV using LLVM MinGW (EXPERIMENTAL)
+
+It is now possible to use the LLVM version of MinGW to build FreeDV. This allows
+one to build FreeDV for ARM as well as for Intel Windows systems, including support
+for 2020 mode (on systems fast enough to acceptably decode it).
+
+#### Prerequisites
+
+* CMake >= 3.25.0
+* Linux (tested on Ubuntu 22.04)
+    * *NOTE: This does not currently work on macOS due to CMake using incorrect library suffixes.*
+* NSIS for generating the installer (for example, `sudo apt install nsis` on Ubuntu)
+
+#### Instructions
+
+1. Download LLVM MinGW at https://github.com/mstorsjo/llvm-mingw/releases/tag/20220906.
+2. Decompress into your preferred location. For example: `tar xvf llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64.tar.xz` (The exact filename here will depend on the file downloaded in step (1). Note that for best results, you should use a build containing "ucrt" in the file name corresponding to the platform which you're building the Windows binary from.)
+3. Add LLVM MinGW to your PATH: `export PATH=/path/to/llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64/bin:$PATH`. (The folder containing the LLVM tools is typically named the same as the file downloaded in step (2) minus the extension.)
+4. Create a build folder inside freedv-gui: `mkdir build_windows`
+5. Run CMake to configure the FreeDV build: `cd build_windows && cmake -DCMAKE_TOOLCHAIN_FILE=${PWD}/../cross-compile/freedv-mingw-llvm-[architecture].cmake ..`
+   * Valid architectures are: aarch64, armv7, i686, x86_64
+6. Build FreeDV as normal: `make` (You can also add `-j[num]` to the end of this command to use multiple cores and shorten the build time.)
+7. Create FreeDV installer: `make package`
+
+#### Known Issues
+
+* NSIS-related issues:
+    * ARM installers will not properly register in Windows despite installing properly. You can still run the application manually by navigating to C:\Program Files\FreeDV \[version\]\ using File Explorer and double-clicking on `freedv.exe`.
+
 ### Testing Windows Build
 
 Conveniently, it is possible to run Windows executables using Wine on Fedora:
