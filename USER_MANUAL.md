@@ -572,7 +572,7 @@ Control | Description
  ------------------------------ | ----------------------------------------------------------------------------- |
 Clipping | Increases the average power. Ensure your transmitter can handle high RMS powers before using!
 700C Diversity Combine | Combining of two sets of 700C carriers for better fading channel performance
-Tx Band Pass Filter | Reduces Tx spectrum bandwidth
+TX Band Pass Filter | Reduces TX spectrum bandwidth
 
 # Helping Improve FreeDV
 

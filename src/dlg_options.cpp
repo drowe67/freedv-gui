@@ -194,7 +194,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxFreeDV700Combine = new wxCheckBox(m_modemTab, wxID_ANY, _("700C Diversity Combine"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700Combine, 0, wxALL | wxALIGN_LEFT, 5);
 
-    m_ckboxFreeDV700txBPF = new wxCheckBox(m_modemTab, wxID_ANY, _(" 700D/E TX Band Pass Filter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDV700txBPF = new wxCheckBox(m_modemTab, wxID_ANY, _("TX Band Pass Filter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700txBPF, 0, wxALL | wxALIGN_LEFT, 5);
 
     sizerModem->Add(sbSizer_freedv700, 0, wxALL|wxEXPAND, 5);
