@@ -337,6 +337,8 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
                 {
                     m_analogDevicePlayback->SetSelection(index);
                 }
+
+                radioSoundDevice = soundCard1InDeviceName;
             }
             else 
             {
@@ -373,7 +375,7 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
                 if (data != nullptr)
                 {
                     bool rxDeviceNameMatches = data->rxDeviceName == soundCard1InDeviceName;
-                    bool isRxOnly = m_analogDeviceRecord->GetLabel() == RX_ONLY_STRING;
+                    bool isRxOnly = m_analogDeviceRecord->GetStringSelection() == RX_ONLY_STRING;
                     bool txDeviceNameMatches = data->txDeviceName == soundCard1OutDeviceName;
                     
                     if (rxDeviceNameMatches && (isRxOnly || txDeviceNameMatches))
@@ -407,7 +409,17 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
         {
             SoundDeviceData* deviceData = (SoundDeviceData*)m_radioDevice->GetClientObject(index);
             
-            if (m_analogDeviceRecord->GetLabel() == RX_ONLY_STRING)
+            SoundDeviceData* analogPlaybackDeviceData = 
+                (SoundDeviceData*)m_analogDevicePlayback->GetClientObject(
+                    m_analogDevicePlayback->GetSelection()
+                );
+
+            SoundDeviceData* analogRecordDeviceData = 
+                (SoundDeviceData*)m_analogDeviceRecord->GetClientObject(
+                    m_analogDeviceRecord->GetSelection()
+                );
+            
+            if (analogRecordDeviceData->txDeviceName == "none")
             {
                 wxGetApp().m_soundCard2InDeviceName = "none";
                 wxGetApp().m_soundCard2InSampleRate = -1;
@@ -416,11 +428,6 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
                 wxGetApp().m_soundCard1InDeviceName = deviceData->rxDeviceName;
                 wxGetApp().m_soundCard1InSampleRate = deviceData->rxSampleRate;
 
-                SoundDeviceData* analogPlaybackDeviceData = 
-                    (SoundDeviceData*)m_analogDevicePlayback->GetClientObject(
-                        m_analogDevicePlayback->GetSelection()
-                    );
-
                 wxGetApp().m_soundCard1OutDeviceName = analogPlaybackDeviceData->rxDeviceName;
                 wxGetApp().m_soundCard1OutSampleRate = analogPlaybackDeviceData->rxSampleRate;
 
@@ -428,16 +435,6 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
             }
             else
             {
-                SoundDeviceData* analogPlaybackDeviceData = 
-                    (SoundDeviceData*)m_analogDevicePlayback->GetClientObject(
-                        m_analogDevicePlayback->GetSelection()
-                    );
-
-                SoundDeviceData* analogRecordDeviceData = 
-                    (SoundDeviceData*)m_analogDeviceRecord->GetClientObject(
-                        m_analogDeviceRecord->GetSelection()
-                    );
-
                 wxGetApp().m_soundCard2InDeviceName = analogRecordDeviceData->txDeviceName;
                 wxGetApp().m_soundCard2InSampleRate = analogRecordDeviceData->txSampleRate;
                 wxGetApp().m_soundCard2OutDeviceName = analogPlaybackDeviceData->rxDeviceName;
@@ -712,7 +709,7 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
         int radioOutSampleRate = -1;
         
         // Use the global settings if we're using multiple sound devices on the radio side.
-        if (m_analogDeviceRecord->GetLabel() != RX_ONLY_STRING)
+        if (m_analogDeviceRecord->GetStringSelection() != RX_ONLY_STRING)
         {
             if (selectedString == MULTIPLE_DEVICES_STRING)
             {
