@@ -66,8 +66,8 @@ class EasySetupDialog : public wxDialog
         // Step 1: sound device selection
         wxComboBox* m_radioDevice;
         wxButton* m_advancedSoundSetup;
-        wxStaticText* m_analogDevicePlayback;
-        wxStaticText* m_analogDeviceRecord;
+        wxComboBox* m_analogDevicePlayback;
+        wxComboBox* m_analogDeviceRecord;
         
         // Step 2: CAT setup
         wxRadioButton *m_ckNoPTT;
@@ -130,11 +130,6 @@ class EasySetupDialog : public wxDialog
          Hamlib* hamlibTestObject_;
          Serialport* serialPortTestObject_;
          int sineWaveSampleNumber_;
-
-         wxString analogDeviceRecordDeviceName_;
-         int analogDeviceRecordDeviceSampleRate_;
-         wxString analogDevicePlaybackDeviceName_;
-         int analogDevicePlaybackDeviceSampleRate_;
 
          std::shared_ptr<IAudioDevice> txTestAudioDevice_;
 };

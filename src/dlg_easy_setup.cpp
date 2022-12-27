@@ -74,13 +74,13 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     wxStaticText* labelAnalogPlayDevice = new wxStaticText(selectSoundDeviceBox, wxID_ANY, wxT("Decoded audio plays back through: "), wxDefaultPosition, wxDefaultSize, 0);
     gridSizerSoundDevice->Add(labelAnalogPlayDevice, 0, wxALIGN_RIGHT, 0);
     
-    m_analogDevicePlayback = new wxStaticText(selectSoundDeviceBox, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxST_ELLIPSIZE_END);
+    m_analogDevicePlayback = new wxComboBox(selectSoundDeviceBox, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
     gridSizerSoundDevice->Add(m_analogDevicePlayback, 0, wxEXPAND, 0);
     
     wxStaticText* labelAnalogRecordDevice = new wxStaticText(selectSoundDeviceBox, wxID_ANY, wxT("Transmitted audio records through: "), wxDefaultPosition, wxDefaultSize, 0);
     gridSizerSoundDevice->Add(labelAnalogRecordDevice, 0, wxALIGN_RIGHT, 0);
     
-    m_analogDeviceRecord = new wxStaticText(selectSoundDeviceBox, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxST_ELLIPSIZE_END);
+    m_analogDeviceRecord = new wxComboBox(selectSoundDeviceBox, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
     gridSizerSoundDevice->Add(m_analogDeviceRecord, 0, wxEXPAND, 0);
         
     wxBoxSizer* advancedSoundSetupSizer = new wxBoxSizer(wxHORIZONTAL);
@@ -328,18 +328,30 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
             if (soundCard2InDeviceName == "none" && soundCard2OutDeviceName == "none")
             {
                 // RX-only setup
-                m_analogDeviceRecord->SetLabel(RX_ONLY_STRING);
-                m_analogDevicePlayback->SetLabel(soundCard1OutDeviceName);
-                radioSoundDevice = soundCard1InDeviceName;
-                analogDevicePlaybackDeviceName_ = soundCard1OutDeviceName;
+                auto index = m_analogDeviceRecord->FindString(RX_ONLY_STRING);
+                assert(index >= 0);
+                m_analogDeviceRecord->SetSelection(index);
+
+                index = m_analogDevicePlayback->FindString(soundCard1OutDeviceName);
+                if (index >= 0)
+                {
+                    m_analogDevicePlayback->SetSelection(index);
+                }
             }
             else 
             {
                 // RX and TX setup
-                m_analogDeviceRecord->SetLabel(soundCard2InDeviceName);
-                analogDevicePlaybackDeviceName_ = soundCard2OutDeviceName;
-                m_analogDevicePlayback->SetLabel(soundCard2OutDeviceName);
-                analogDeviceRecordDeviceName_ = soundCard2InDeviceName;
+                auto index = m_analogDeviceRecord->FindString(soundCard2InDeviceName);
+                if (index >= 0)
+                {
+                    m_analogDeviceRecord->SetSelection(index);
+                }
+
+                index = m_analogDevicePlayback->FindString(soundCard2OutDeviceName);
+                if (index >= 0)
+                {
+                    m_analogDevicePlayback->SetSelection(index);
+                }                
                 
                 if (soundCard1OutDeviceName == soundCard1InDeviceName)
                 {
@@ -350,36 +362,6 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
                 {
                     radioSoundDevice = MULTIPLE_DEVICES_STRING;
                 }
-            }
-        }
-        
-        // Use defaults for analog devices if the current analog device IDs don't exist.
-        auto audioEngine = AudioEngineFactory::GetAudioEngine();
-        
-        if (analogDeviceRecordDeviceName_ == "none")
-        {
-            auto inDevice = audioEngine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_IN);
-            if (inDevice.isValid())
-            {
-                wxString devName(inDevice.name);
-                m_analogDeviceRecord->SetLabel(devName);
-                analogDeviceRecordDeviceName_ = devName;
-            }
-            else
-            {
-                m_analogDeviceRecord->SetLabel(RX_ONLY_STRING);
-                analogDeviceRecordDeviceName_ = "none";
-            }
-        }
-    
-        if (analogDevicePlaybackDeviceName_ == "none")
-        {
-            auto outDevice = audioEngine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_OUT);
-            if (outDevice.isValid())
-            {
-                wxString devName(outDevice.name);
-                m_analogDevicePlayback->SetLabel(devName);
-                analogDevicePlaybackDeviceName_ = devName;
             }
         }
         
@@ -433,17 +415,33 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
                 wxGetApp().m_soundCard2OutSampleRate = -1;
                 wxGetApp().m_soundCard1InDeviceName = deviceData->rxDeviceName;
                 wxGetApp().m_soundCard1InSampleRate = deviceData->rxSampleRate;
-                wxGetApp().m_soundCard1OutDeviceName = m_analogDevicePlayback->GetLabel();
-                wxGetApp().m_soundCard1OutSampleRate = analogDevicePlaybackDeviceSampleRate_;
+
+                SoundDeviceData* analogPlaybackDeviceData = 
+                    (SoundDeviceData*)m_analogDevicePlayback->GetClientObject(
+                        m_analogDevicePlayback->GetSelection()
+                    );
+
+                wxGetApp().m_soundCard1OutDeviceName = analogPlaybackDeviceData->rxDeviceName;
+                wxGetApp().m_soundCard1OutSampleRate = analogPlaybackDeviceData->rxSampleRate;
 
                 g_nSoundCards = 1;
             }
             else
             {
-                wxGetApp().m_soundCard2InSampleRate = analogDeviceRecordDeviceSampleRate_;
-                wxGetApp().m_soundCard2InDeviceName = m_analogDeviceRecord->GetLabel();
-                wxGetApp().m_soundCard2OutDeviceName = m_analogDevicePlayback->GetLabel();
-                wxGetApp().m_soundCard2OutSampleRate = analogDevicePlaybackDeviceSampleRate_;
+                SoundDeviceData* analogPlaybackDeviceData = 
+                    (SoundDeviceData*)m_analogDevicePlayback->GetClientObject(
+                        m_analogDevicePlayback->GetSelection()
+                    );
+
+                SoundDeviceData* analogRecordDeviceData = 
+                    (SoundDeviceData*)m_analogDeviceRecord->GetClientObject(
+                        m_analogDeviceRecord->GetSelection()
+                    );
+
+                wxGetApp().m_soundCard2InDeviceName = analogRecordDeviceData->txDeviceName;
+                wxGetApp().m_soundCard2InSampleRate = analogRecordDeviceData->txSampleRate;
+                wxGetApp().m_soundCard2OutDeviceName = analogPlaybackDeviceData->rxDeviceName;
+                wxGetApp().m_soundCard2OutSampleRate = analogPlaybackDeviceData->rxSampleRate;
                 wxGetApp().m_soundCard1InDeviceName = deviceData->rxDeviceName;
                 wxGetApp().m_soundCard1InSampleRate = deviceData->rxSampleRate;
                 wxGetApp().m_soundCard1OutDeviceName = deviceData->txDeviceName;
@@ -1017,7 +1015,10 @@ void EasySetupDialog::updateHamlibDevices_()
 
 void EasySetupDialog::updateAudioDevices_()
 {
-    std::map<wxString, SoundDeviceData*> finalDeviceList;
+    std::map<wxString, SoundDeviceData*> finalRadioDeviceList;
+    std::map<wxString, SoundDeviceData*> finalAnalogRxDeviceList;
+    std::map<wxString, SoundDeviceData*> finalAnalogTxDeviceList;
+
     auto audioEngine = AudioEngineFactory::GetAudioEngine();
     audioEngine->start();
 
@@ -1041,9 +1042,25 @@ void EasySetupDialog::updateAudioDevices_()
         soundData->rxDeviceName = dev.name;
         soundData->rxSampleRate = dev.defaultSampleRate;
         
-        finalDeviceList[cleanedDeviceName] = soundData;
+        finalRadioDeviceList[cleanedDeviceName] = soundData;
+
+        if (!cleanedDeviceName.StartsWith("DAX "))
+        {
+            SoundDeviceData* txSoundData = new SoundDeviceData();
+            assert(txSoundData != nullptr);
+
+            txSoundData->txDeviceName = dev.name;
+            txSoundData->txSampleRate = dev.defaultSampleRate;
+
+            finalAnalogTxDeviceList[cleanedDeviceName] = txSoundData;
+        }
     }
     
+    finalAnalogTxDeviceList[RX_ONLY_STRING] = new SoundDeviceData();
+    assert(finalAnalogTxDeviceList[RX_ONLY_STRING] != nullptr);
+    finalAnalogTxDeviceList[RX_ONLY_STRING]->txDeviceName = "none";
+    finalAnalogTxDeviceList[RX_ONLY_STRING]->txSampleRate = 0;
+
     for (auto& dev : outputDevices)
     {
         wxString cleanedDeviceName = dev.name;
@@ -1052,17 +1069,28 @@ void EasySetupDialog::updateAudioDevices_()
             rightParenRgx.Replace(&cleanedDeviceName, "");
         }
         
-        SoundDeviceData* soundData = finalDeviceList[cleanedDeviceName];
+        SoundDeviceData* soundData = finalRadioDeviceList[cleanedDeviceName];
         if (soundData == nullptr)
         {
             soundData = new SoundDeviceData();
             assert(soundData != nullptr);
             
-            finalDeviceList[cleanedDeviceName] = soundData;
+            finalRadioDeviceList[cleanedDeviceName] = soundData;
         }
         
         soundData->txDeviceName = dev.name;
         soundData->txSampleRate = dev.defaultSampleRate;
+
+        if (!cleanedDeviceName.StartsWith("DAX "))
+        {
+            SoundDeviceData* rxSoundData = new SoundDeviceData();
+            assert(rxSoundData != nullptr);
+
+            rxSoundData->rxDeviceName = dev.name;
+            rxSoundData->rxSampleRate = dev.defaultSampleRate;
+            
+            finalAnalogRxDeviceList[cleanedDeviceName] = rxSoundData;
+        }
     }
     
     // FlexRadio shortcut: all devices starting with "DAX Audio RX" should be linked
@@ -1070,7 +1098,7 @@ void EasySetupDialog::updateAudioDevices_()
     // applications intended to be used on a Flex radio.
     wxString fullTxDeviceName;
     int flexTxDeviceSampleRate = -1;
-    for (auto& kvp : finalDeviceList)
+    for (auto& kvp : finalRadioDeviceList)
     {
         if (kvp.first.StartsWith("DAX Audio TX"))
         {
@@ -1093,7 +1121,7 @@ void EasySetupDialog::updateAudioDevices_()
     
     if (fullTxDeviceName != "")
     {
-        for (auto& kvp : finalDeviceList)
+        for (auto& kvp : finalRadioDeviceList)
         {
             if (kvp.first.StartsWith("DAX Audio RX"))
             {
@@ -1104,7 +1132,7 @@ void EasySetupDialog::updateAudioDevices_()
     }
     
     // Add the ones we found to the device list.
-    for (auto& kvp : finalDeviceList)
+    for (auto& kvp : finalRadioDeviceList)
     {
         // Only include devices that we have both RX and TX IDs for.
         if (kvp.second->rxDeviceName == "none" ||
@@ -1125,27 +1153,56 @@ void EasySetupDialog::updateAudioDevices_()
         m_radioDevice->SetSelection(0);
     }
     
+    for (auto& kvp : finalAnalogRxDeviceList)
+    {
+        m_analogDevicePlayback->Append(kvp.first, kvp.second);
+    }
+
+    if (m_analogDevicePlayback->GetCount() > 0)
+    {
+        // Default to the first found device.
+        m_analogDevicePlayback->SetSelection(0);
+    }
+
+    for (auto& kvp : finalAnalogTxDeviceList)
+    {
+        m_analogDeviceRecord->Append(kvp.first, kvp.second);
+    }
+    
+    if (m_analogDeviceRecord->GetCount() > 0)
+    {
+        // Default to the first found device.
+        m_analogDeviceRecord->SetSelection(0);
+    }
+
     auto defaultInputDevice = audioEngine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_IN);
     if (defaultInputDevice.isValid())
     {
         wxString devName(defaultInputDevice.name);
-        m_analogDeviceRecord->SetLabel(devName);
-        analogDeviceRecordDeviceName_ = devName;
-        analogDeviceRecordDeviceSampleRate_ = defaultInputDevice.defaultSampleRate;
+
+        auto index = m_analogDeviceRecord->FindString(devName);
+        if (index > 0)
+        {
+            m_analogDeviceRecord->SetSelection(index);
+        }
     }
     else
     {
-        m_analogDeviceRecord->SetLabel(RX_ONLY_STRING);
-        analogDeviceRecordDeviceName_ = "none";
+        auto index = m_analogDeviceRecord->FindString(RX_ONLY_STRING);
+        assert (index > 0);
+        m_analogDeviceRecord->SetSelection(index);
     }
     
     auto defaultOutputDevice = audioEngine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_OUT);
     if (defaultOutputDevice.isValid())
     {
         wxString devName(defaultOutputDevice.name);
-        m_analogDevicePlayback->SetLabel(devName);
-        analogDevicePlaybackDeviceName_ = devName;
-        analogDevicePlaybackDeviceSampleRate_ = defaultOutputDevice.defaultSampleRate;
+
+        auto index = m_analogDevicePlayback->FindString(devName);
+        if (index > 0)
+        {
+            m_analogDevicePlayback->SetSelection(index);
+        }
     }
 
     audioEngine->stop();
