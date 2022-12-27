@@ -188,20 +188,14 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox *sb_freedv700 = new wxStaticBox(m_modemTab, wxID_ANY, _("Modem Options"));
     sbSizer_freedv700 = new wxStaticBoxSizer(sb_freedv700, wxHORIZONTAL);
 
-    wxBoxSizer* optionsCol1 = new wxBoxSizer(wxVERTICAL);
-    wxBoxSizer* optionsCol2 = new wxBoxSizer(wxVERTICAL);
-
     m_ckboxFreeDV700txClip = new wxCheckBox(m_modemTab, wxID_ANY, _("Clipping"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    optionsCol1->Add(m_ckboxFreeDV700txClip, 0, wxALL | wxALIGN_LEFT, 5);
+    sbSizer_freedv700->Add(m_ckboxFreeDV700txClip, 0, wxALL | wxALIGN_LEFT, 5);
 
     m_ckboxFreeDV700Combine = new wxCheckBox(m_modemTab, wxID_ANY, _("700C Diversity Combine"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    optionsCol1->Add(m_ckboxFreeDV700Combine, 0, wxALL | wxALIGN_LEFT, 5);
+    sbSizer_freedv700->Add(m_ckboxFreeDV700Combine, 0, wxALL | wxALIGN_LEFT, 5);
 
     m_ckboxFreeDV700txBPF = new wxCheckBox(m_modemTab, wxID_ANY, _(" 700D/E TX Band Pass Filter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    optionsCol2->Add(m_ckboxFreeDV700txBPF, 0, wxALL | wxALIGN_LEFT, 5);
-
-    sbSizer_freedv700->Add(optionsCol1);
-    sbSizer_freedv700->Add(optionsCol2);
+    sbSizer_freedv700->Add(m_ckboxFreeDV700txBPF, 0, wxALL | wxALIGN_LEFT, 5);
 
     sizerModem->Add(sbSizer_freedv700, 0, wxALL|wxEXPAND, 5);
 
