@@ -521,7 +521,6 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_FreeDV700txClip = (float)pConfig->Read(wxT("/FreeDV700/txClip"), t);
     wxGetApp().m_FreeDV700txBPF = (float)pConfig->Read(wxT("/FreeDV700/txBPF"), t);
     wxGetApp().m_FreeDV700Combine = 1;
-    wxGetApp().m_FreeDV700ManualUnSync = (float)pConfig->Read(wxT("/FreeDV700/manualUnSync"), f);
 
     wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
 
@@ -1859,12 +1858,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         
         wxGetApp().m_prevMode = g_mode;
         freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread, wxGetApp().m_psk_enable);
-        
-        if (wxGetApp().m_FreeDV700ManualUnSync) {
-            freedvInterface.setSync(FREEDV_SYNC_MANUAL);
-        } else {
-            freedvInterface.setSync(FREEDV_SYNC_AUTO);
-        }
 
         // Codec 2 VQ Equaliser
         freedvInterface.setEq(wxGetApp().m_700C_EQ);
