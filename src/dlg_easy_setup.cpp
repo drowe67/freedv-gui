@@ -405,60 +405,71 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
         wxString selectedString = m_radioDevice->GetString(index);
         
         // DO NOT update the radio devices if the user used advanced settings to set them.
+        bool updateRadioDevices = false;
         if (selectedString != MULTIPLE_DEVICES_STRING)
         {
-            SoundDeviceData* deviceData = (SoundDeviceData*)m_radioDevice->GetClientObject(index);
+            updateRadioDevices = true;
+        }
+        
+        SoundDeviceData* deviceData = (SoundDeviceData*)m_radioDevice->GetClientObject(index);
             
-            SoundDeviceData* analogPlaybackDeviceData = 
-                (SoundDeviceData*)m_analogDevicePlayback->GetClientObject(
-                    m_analogDevicePlayback->GetSelection()
-                );
+        SoundDeviceData* analogPlaybackDeviceData = 
+            (SoundDeviceData*)m_analogDevicePlayback->GetClientObject(
+                m_analogDevicePlayback->GetSelection()
+                    );
 
-            SoundDeviceData* analogRecordDeviceData = 
-                (SoundDeviceData*)m_analogDeviceRecord->GetClientObject(
-                    m_analogDeviceRecord->GetSelection()
-                );
+        SoundDeviceData* analogRecordDeviceData = 
+            (SoundDeviceData*)m_analogDeviceRecord->GetClientObject(
+                m_analogDeviceRecord->GetSelection()
+                    );
             
-            if (analogRecordDeviceData->txDeviceName == "none")
+        if (analogRecordDeviceData->txDeviceName == "none")
+        {
+            wxGetApp().m_soundCard2InDeviceName = "none";
+            wxGetApp().m_soundCard2InSampleRate = -1;
+            wxGetApp().m_soundCard2OutDeviceName = "none";
+            wxGetApp().m_soundCard2OutSampleRate = -1;
+            
+            if (updateRadioDevices)
             {
-                wxGetApp().m_soundCard2InDeviceName = "none";
-                wxGetApp().m_soundCard2InSampleRate = -1;
-                wxGetApp().m_soundCard2OutDeviceName = "none";
-                wxGetApp().m_soundCard2OutSampleRate = -1;
                 wxGetApp().m_soundCard1InDeviceName = deviceData->rxDeviceName;
                 wxGetApp().m_soundCard1InSampleRate = deviceData->rxSampleRate;
-
-                wxGetApp().m_soundCard1OutDeviceName = analogPlaybackDeviceData->rxDeviceName;
-                wxGetApp().m_soundCard1OutSampleRate = analogPlaybackDeviceData->rxSampleRate;
-
-                g_nSoundCards = 1;
             }
-            else
+            
+            wxGetApp().m_soundCard1OutDeviceName = analogPlaybackDeviceData->rxDeviceName;
+            wxGetApp().m_soundCard1OutSampleRate = analogPlaybackDeviceData->rxSampleRate;
+
+            g_nSoundCards = 1;
+        }
+        else
+        {
+            wxGetApp().m_soundCard2InDeviceName = analogRecordDeviceData->txDeviceName;
+            wxGetApp().m_soundCard2InSampleRate = analogRecordDeviceData->txSampleRate;
+            wxGetApp().m_soundCard2OutDeviceName = analogPlaybackDeviceData->rxDeviceName;
+            wxGetApp().m_soundCard2OutSampleRate = analogPlaybackDeviceData->rxSampleRate;
+            
+            if (updateRadioDevices)
             {
-                wxGetApp().m_soundCard2InDeviceName = analogRecordDeviceData->txDeviceName;
-                wxGetApp().m_soundCard2InSampleRate = analogRecordDeviceData->txSampleRate;
-                wxGetApp().m_soundCard2OutDeviceName = analogPlaybackDeviceData->rxDeviceName;
-                wxGetApp().m_soundCard2OutSampleRate = analogPlaybackDeviceData->rxSampleRate;
                 wxGetApp().m_soundCard1InDeviceName = deviceData->rxDeviceName;
                 wxGetApp().m_soundCard1InSampleRate = deviceData->rxSampleRate;
                 wxGetApp().m_soundCard1OutDeviceName = deviceData->txDeviceName;
                 wxGetApp().m_soundCard1OutSampleRate = deviceData->txSampleRate;
-
-                g_nSoundCards = 2;
             }
-            
-            pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);	
-            pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);	
-            pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);	
-            pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
-        
-            pConfig->Write(wxT("/Audio/soundCard1InSampleRate"), wxGetApp().m_soundCard1InSampleRate);	
-            pConfig->Write(wxT("/Audio/soundCard1OutSampleRate"), wxGetApp().m_soundCard1OutSampleRate);	
-            pConfig->Write(wxT("/Audio/soundCard2InSampleRate"), wxGetApp().m_soundCard2InSampleRate);	
-            pConfig->Write(wxT("/Audio/soundCard2OutSampleRate"), wxGetApp().m_soundCard2OutSampleRate);
 
-            pConfig->Flush();
+            g_nSoundCards = 2;
         }
+            
+        pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);	
+        pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);	
+        pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);	
+        pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
+        
+        pConfig->Write(wxT("/Audio/soundCard1InSampleRate"), wxGetApp().m_soundCard1InSampleRate);	
+        pConfig->Write(wxT("/Audio/soundCard1OutSampleRate"), wxGetApp().m_soundCard1OutSampleRate);	
+        pConfig->Write(wxT("/Audio/soundCard2InSampleRate"), wxGetApp().m_soundCard2InSampleRate);	
+        pConfig->Write(wxT("/Audio/soundCard2OutSampleRate"), wxGetApp().m_soundCard2OutSampleRate);
+
+        pConfig->Flush();
     }
 }
 
