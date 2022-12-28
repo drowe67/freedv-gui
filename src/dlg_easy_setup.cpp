@@ -316,6 +316,11 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
 {
     if (inout == EXCHANGE_DATA_IN)
     {
+        // Set initial selections so we have something valid on exit
+        m_analogDevicePlayback->SetSelection(0);
+        m_analogDeviceRecord->SetSelection(0);
+        m_radioDevice->SetSelection(0);
+
         wxString soundCard1InDeviceName = wxGetApp().m_soundCard1InDeviceName;
         wxString soundCard1OutDeviceName = wxGetApp().m_soundCard1OutDeviceName;
         wxString soundCard2InDeviceName = wxGetApp().m_soundCard2InDeviceName;
@@ -392,12 +397,6 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
         {
             m_radioDevice->SetSelection(index);
         }
-        else
-        {
-            m_radioDevice->Insert(radioSoundDevice, 0, (wxClientData*)nullptr);
-            index = 0;
-        }
-        m_radioDevice->SetSelection(index);
     }
     else if (inout == EXCHANGE_DATA_OUT)
     {
