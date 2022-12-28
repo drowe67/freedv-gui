@@ -51,8 +51,6 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     serialPortTestObject_ = new Serialport();
     assert(serialPortTestObject_ != nullptr);
     
-    this->SetSizeHints(wxDefaultSize, wxDefaultSize);
-    
     // Create top-level of control hierarchy.
     wxPanel* panel = new wxPanel(this);
     wxBoxSizer* sectionSizer = new wxBoxSizer(wxVERTICAL);
@@ -261,6 +259,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     
     this->Layout();
     this->Centre(wxBOTH);
+    this->SetMinSize(GetBestSize());
     
     // Hook in events
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(EasySetupDialog::OnInitDialog));
@@ -507,6 +506,7 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
 
         Layout();
         SetSize(GetBestSize());
+        SetMinSize(GetBestSize());
     }
     else if (inout == EXCHANGE_DATA_OUT)
     {
@@ -856,6 +856,7 @@ void EasySetupDialog::PTTUseHamLibClicked(wxCommandEvent& event)
 
     Layout();
     SetSize(GetBestSize());
+    SetMinSize(GetBestSize());
 }
 
 void EasySetupDialog::updateHamlibDevices_()
