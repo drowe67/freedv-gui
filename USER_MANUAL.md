@@ -784,6 +784,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Code Cleanup:
     * Remove "force sync" option from Tools->Options (PR #332)
+2. Enhancements:
+    * Add "Easy Setup" dialog to simplify first time setup. (PR #189)
 
 ## V1.8.6 December 2022
 

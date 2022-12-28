@@ -1,5 +1,6 @@
 set(FREEDV_SOURCES
     dlg_audiooptions.cpp
+    dlg_easy_setup.cpp
     dlg_filter.cpp
     dlg_options.cpp
     dlg_ptt.cpp
@@ -163,7 +164,7 @@ if(APPLE)
         COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${LPCNET_BUILD_DIR}/src:${portaudio_BINARY_DIR}:${samplerate_BINARY_DIR}/src:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib -s ${LPCNET_BUILD_DIR}/src -s ${CODEC2_BUILD_DIR}/src -s ${CMAKE_BINARY_DIR}/LPCNet_build/src -s ${CMAKE_BINARY_DIR}/codec2_build/src -s ${portaudio_BINARY_DIR} -s ${samplerate_BINARY_DIR}/src
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/freedv.icns FreeDV.app/Contents/Resources
         COMMAND mkdir dist_tmp
-        COMMAND cp -r FreeDV.app dist_tmp
+        COMMAND cp -r FreeDV.app dist_tmp 
         COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO -fs HFS+ ./FreeDV.dmg
         COMMAND rm -rf dist_tmp
     )
