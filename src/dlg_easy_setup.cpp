@@ -884,7 +884,7 @@ void EasySetupDialog::updateHamlibDevices_()
     for(i=0; i<WXSIZEOF(serialRates); i++) {
         m_cbSerialRate->Append(serialRates[i]);
     }
-
+    m_cbSerialRate->SetSelection(0);
     m_cbSerialPort->Clear();
     
     std::vector<wxString> portList;
