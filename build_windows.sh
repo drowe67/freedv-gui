@@ -22,7 +22,7 @@ export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 
-CODEC2_BRANCH=master
+CODEC2_BRANCH=ms-codec2-test-build
 LPCNET_BRANCH=master
 
 # OK, build and test LPCNet

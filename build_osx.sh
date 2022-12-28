@@ -8,7 +8,7 @@ export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 export HAMLIBDIR=$FREEDVGUIDIR/hamlib
-export CODEC2_BRANCH=master
+export CODEC2_BRANCH=ms-codec2-test-build
 export LPCNET_BRANCH=master
 export UT_ENABLE=${UT_ENABLE:-0}
 
