@@ -316,59 +316,73 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
 {
     if (inout == EXCHANGE_DATA_IN)
     {
-        // Set initial selections so we have something valid on exit
-        m_analogDevicePlayback->SetSelection(0);
-        m_analogDeviceRecord->SetSelection(0);
-        m_radioDevice->SetSelection(0);
-
         wxString soundCard1InDeviceName = wxGetApp().m_soundCard1InDeviceName;
+        int soundCard1InSampleRate = wxGetApp().m_soundCard1InSampleRate;
         wxString soundCard1OutDeviceName = wxGetApp().m_soundCard1OutDeviceName;
+        int soundCard1OutSampleRate = wxGetApp().m_soundCard1OutSampleRate;
         wxString soundCard2InDeviceName = wxGetApp().m_soundCard2InDeviceName;
         wxString soundCard2OutDeviceName = wxGetApp().m_soundCard2OutDeviceName;
         wxString radioSoundDevice;
         
-        if (soundCard1InDeviceName != "none" && soundCard1OutDeviceName != "none")
+        if (soundCard1InDeviceName == "none" && soundCard1OutDeviceName == "none")
         {
-            // Previous existing setup, determine what it is
-            if (soundCard2InDeviceName == "none" && soundCard2OutDeviceName == "none")
+            // Set initial selections so we have something valid on exit.
+            SoundDeviceData* analogPlaybackDeviceData = 
+                (SoundDeviceData*)m_analogDevicePlayback->GetClientObject(0);
+
+            SoundDeviceData* radioDeviceData  = 
+                (SoundDeviceData*)m_radioDevice->GetClientObject(0);
+
+            soundCard1InDeviceName = radioDeviceData->rxDeviceName;
+            soundCard1OutDeviceName = analogPlaybackDeviceData->rxDeviceName;
+        }
+
+        // Previous existing setup, determine what it is
+        if (soundCard2InDeviceName == "none" && soundCard2OutDeviceName == "none")
+        {
+            // RX-only setup
+            auto index = m_analogDeviceRecord->FindString(RX_ONLY_STRING);
+            assert(index >= 0);
+            m_analogDeviceRecord->SetSelection(index);
+
+            index = m_analogDevicePlayback->FindString(soundCard1OutDeviceName);
+            if (index >= 0)
             {
-                // RX-only setup
-                auto index = m_analogDeviceRecord->FindString(RX_ONLY_STRING);
-                assert(index >= 0);
-                m_analogDeviceRecord->SetSelection(index);
-
-                index = m_analogDevicePlayback->FindString(soundCard1OutDeviceName);
-                if (index >= 0)
-                {
-                    m_analogDevicePlayback->SetSelection(index);
-                }
-
-                radioSoundDevice = soundCard1InDeviceName;
+                m_analogDevicePlayback->SetSelection(index);
             }
-            else 
-            {
-                // RX and TX setup
-                auto index = m_analogDeviceRecord->FindString(soundCard2InDeviceName);
-                if (index >= 0)
-                {
-                    m_analogDeviceRecord->SetSelection(index);
-                }
 
-                index = m_analogDevicePlayback->FindString(soundCard2OutDeviceName);
+            radioSoundDevice = soundCard1InDeviceName;
+        }
+        else 
+        {
+            // RX and TX setup
+            auto index = m_analogDeviceRecord->FindString(soundCard2InDeviceName);
+            if (index >= 0)
+            {
+                m_analogDeviceRecord->SetSelection(index);
+            }
+
+            index = m_analogDevicePlayback->FindString(soundCard2OutDeviceName);
+            if (index >= 0)
+            {
+                m_analogDevicePlayback->SetSelection(index);
+            }                
+            
+            if (soundCard1OutDeviceName == soundCard1InDeviceName)
+            {
+                // We're not on a setup with different sound devices on the radio side (e.g. SDRs)
+                radioSoundDevice = soundCard1InDeviceName;
+
+                // Remove multiple devices entry if it's in there.
+                int index = m_radioDevice->FindString(MULTIPLE_DEVICES_STRING);
                 if (index >= 0)
                 {
-                    m_analogDevicePlayback->SetSelection(index);
-                }                
-                
-                if (soundCard1OutDeviceName == soundCard1InDeviceName)
-                {
-                    // We're not on a setup with different sound devices on the radio side (e.g. SDRs)
-                    radioSoundDevice = soundCard1InDeviceName;
+                    m_radioDevice->Delete(index);
                 }
-                else
-                {
-                    radioSoundDevice = MULTIPLE_DEVICES_STRING;
-                }
+            }
+            else
+            {
+                radioSoundDevice = MULTIPLE_DEVICES_STRING;
             }
         }
         
@@ -391,11 +405,24 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
                 }
             }
         }
-          
+
         int index = m_radioDevice->FindString(radioSoundDevice);
         if (index != wxNOT_FOUND)
         {
             m_radioDevice->SetSelection(index);
+        }
+        else if (radioSoundDevice == MULTIPLE_DEVICES_STRING)
+        {
+            SoundDeviceData* data = new SoundDeviceData();
+            assert(data != nullptr);
+
+            data->rxDeviceName = soundCard1InDeviceName;
+            data->rxSampleRate = soundCard1InSampleRate;
+            data->txDeviceName = soundCard1OutDeviceName;
+            data->txSampleRate = soundCard1OutSampleRate;
+
+            m_radioDevice->Insert(MULTIPLE_DEVICES_STRING, 0, data);
+            m_radioDevice->SetSelection(0);
         }
     }
     else if (inout == EXCHANGE_DATA_OUT)
