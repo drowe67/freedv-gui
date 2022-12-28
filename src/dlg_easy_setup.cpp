@@ -1049,7 +1049,7 @@ void EasySetupDialog::updateAudioDevices_()
             txSoundData->txDeviceName = dev.name;
             txSoundData->txSampleRate = dev.defaultSampleRate;
 
-            finalAnalogTxDeviceList[cleanedDeviceName] = txSoundData;
+            finalAnalogTxDeviceList[dev.name] = txSoundData;
         }
     }
     
@@ -1086,7 +1086,7 @@ void EasySetupDialog::updateAudioDevices_()
             rxSoundData->rxDeviceName = dev.name;
             rxSoundData->rxSampleRate = dev.defaultSampleRate;
             
-            finalAnalogRxDeviceList[cleanedDeviceName] = rxSoundData;
+            finalAnalogRxDeviceList[dev.name] = rxSoundData;
         }
     }
     
