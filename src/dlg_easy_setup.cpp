@@ -392,12 +392,6 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
         {
             m_radioDevice->SetSelection(index);
         }
-        else
-        {
-            m_radioDevice->Insert(radioSoundDevice, 0, (wxClientData*)nullptr);
-            index = 0;
-        }
-        m_radioDevice->SetSelection(index);
     }
     else if (inout == EXCHANGE_DATA_OUT)
     {
