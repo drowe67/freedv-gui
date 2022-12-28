@@ -113,7 +113,6 @@ class OptionsDlg : public wxDialog
         wxCheckBox   *m_ckboxFreeDV700txClip;
         wxCheckBox   *m_ckboxFreeDV700txBPF;
         wxCheckBox   *m_ckboxFreeDV700Combine;
-        wxCheckBox   *m_ckboxFreeDV700ManualUnSync;
 
         wxRadioButton *m_rb_textEncoding1;
         wxRadioButton *m_rb_textEncoding2;
