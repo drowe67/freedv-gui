@@ -1061,7 +1061,7 @@ void EasySetupDialog::updateAudioDevices_()
     auto inputDevices = audioEngine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
     auto outputDevices = audioEngine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
     
-    wxRegEx soundDeviceCleanup("^(Microphone|Speakers) \\(");
+    wxRegEx soundDeviceCleanup("^(Microphone|Speakers) \\(|^alsa_(input|output)\\.");
     wxRegEx rightParenRgx("\\)$");
     
     for (auto& dev : inputDevices)
