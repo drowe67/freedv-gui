@@ -3,11 +3,38 @@
 <p>This is a live document. Notes on new FreeDV features are being added as they are developed.</p>
 <h1 data-number="2" id="getting-started"><span class="header-section-number">2</span> Getting Started</h1>
 <p>This section contains instructions to help you get started.</p>
-<h2 data-number="2.1" id="sound-card-configuration"><span class="header-section-number">2.1</span> Sound Card Configuration</h2>
+<h2 data-number="2.1" id="easy-setup"><span class="header-section-number">2.1</span> Easy Setup</h2>
+<p>Upon starting FreeDV for the first time, the Easy Setup dialog will appear. This is a streamlined setup process for FreeDV optimized for hardware commonly used by amateur radio operators and is divided into three sections:</p>
+<ol type="1">
+<li>Sound card configuration,</li>
+<li>CAT/PTT control, and</li>
+<li>Reporting.</li>
+</ol>
+<p>These sections are shown below:</p>
+<figure>
+<img src="doc/easy_setup.png" alt="" /><figcaption>Easy Setup dialog</figcaption>
+</figure>
+<p>Note that you can always return to this dialog by going to Tools-&gt;Easy Setup.</p>
+<h3 data-number="2.1.1" id="sound-card-configuration"><span class="header-section-number">2.1.1</span> Sound Card Configuration</h3>
+<p>To configure your sound card(s) using Easy Setup, simply select the sound device associated with your radio and the microphone and speaker devices you wish to use to hear decoded audio as well as to transmit audio. If you’re setting up a receive-only station, you can choose “None” for the transmit audio device.</p>
+<p>Note that some configurations (for example, SDR setups involving multiple radio sound devices) may not be able to be configured with Easy Setup. For those, you can choose the “Advanced” button and proceed to “Advanced Setup” below.</p>
+<h3 data-number="2.1.2" id="catptt-control"><span class="header-section-number">2.1.2</span> CAT/PTT control</h3>
+<p>Easy Setup supports three methods of radio control:</p>
+<ol type="1">
+<li>No radio control (e.g. using a VOX audio device such as SignaLink),</li>
+<li>Hamlib CAT control, and</li>
+<li>Serial port PTT control.</li>
+</ol>
+<p>Simply select the option that matches your radio setup and the required fields will appear. For Hamlib, these are typically the type of radio you’re using as well as the serial port it’s connected to (or TCP/IP hostname:port). Serial port PTT control requires the serial port your radio is using as well as whether your radio’s PTT is triggered via the RTS or DTR pin (and the required polarity for either).</p>
+<p>If required, the “Advanced” button in this section will allow you to configure PTT input (e.g. for a footswitch) and additional VOX related options. The “Test” button will emit a constant carrier on the selected radio sound device as well as enable PTT to allow you to adjust your radio sound levels (see “Sound Card Levels” below).</p>
+<h3 data-number="2.1.3" id="reporting"><span class="header-section-number">2.1.3</span> Reporting</h3>
+<p>While not required, it is recommended to enable PSK Reporter reporting so that others can see who is currently receiving them. Both sides of a contact must have this enabled in order for this feature to work. To configure PSK Reporter reporting, simply enable the feature here and enter your callsign and current grid square.</p>
+<h2 data-number="2.2" id="advanced-setup"><span class="header-section-number">2.2</span> Advanced Setup</h2>
+<h3 data-number="2.2.1" id="sound-card-configuration-1"><span class="header-section-number">2.2.1</span> Sound Card Configuration</h3>
 <p>For Receive only operation you just need one sound card; this is a great way to get started.</p>
 <p>For Tx/Rx operation you need two sound cards. One connects to your radio, and one for the operator. The sound card connecting to the radio can be a rig interface device like a Signalink, RIGblaster, your radio’s internal USB sound card, or a home brew rig interface.</p>
 <p>The second sound card is often a set of USB headphones or your computer’s internal sound card.</p>
-<h2 data-number="2.2" id="receive-only-one-sound-card"><span class="header-section-number">2.2</span> Receive Only (One Sound Card)</h2>
+<h3 data-number="2.2.2" id="receive-only-one-sound-card"><span class="header-section-number">2.2.2</span> Receive Only (One Sound Card)</h3>
 <p>Start with just a receive only station. You just need the basic sound hardware in your computer, for example a microphone/speaker on your computer.</p>
 <ol type="1">
 <li>Open the <em>Tools - Audio Config</em> Dialog</li>
@@ -22,33 +49,7 @@
 <p>When you press Start FreeDV will start decoding any incoming signals on the microphone input, playing the decoded audio out of your speaker. If no valid FreeDV signals are received, no audio will be played.</p>
 <p>If you connect the microphone input on your computer to your radio receiver, you can decode off air signals. If you have a rig interface, try configuring that as the <em>From Radio To Computer</em> device, with your computer’s sound card as the <em>From Computer To Speaker/Headphone</em> device.</p>
 <p>If you don’t have anyone to transmit FreeDV signals to you, try the test wave files in the next section.</p>
-<h2 data-number="2.3" id="test-wave-files"><span class="header-section-number">2.3</span> Test Wave Files</h2>
-<p>In the installation are audio files containing off-air FreeDV modem signals. There is one file per FreeDV mode and are in the following locations depending on platform:</p>
-<table>
-<thead>
-<tr class="header">
-<th>Platform</th>
-<th>Typical Location</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Windows</td>
-<td>C:\Program Files\FreeDV [version]\share\freedv-gui\wav</td>
-</tr>
-<tr class="even">
-<td>Linux</td>
-<td>/usr/share/freedv-gui/wav or /usr/local/share/freedv-gui/wav</td>
-</tr>
-<tr class="odd">
-<td>macOS</td>
-<td>See https://github.com/drowe67/freedv-gui/tree/master/wav</td>
-</tr>
-</tbody>
-</table>
-<p>To play these files, first select a FreeDV mode and press Start. Then choose a file using “Tools - Start/Stop Play File From Radio”. You should then hear decoded FreeDV speech.</p>
-<p>These files will give you a feel for what FreeDV signals sound like, and for the basic operation of the FreeDV software.</p>
-<h2 data-number="2.4" id="transmitreceive-two-sound-cards"><span class="header-section-number">2.4</span> Transmit/Receive (Two Sound Cards)</h2>
+<h3 data-number="2.2.3" id="transmitreceive-two-sound-cards"><span class="header-section-number">2.2.3</span> Transmit/Receive (Two Sound Cards)</h3>
 <p>For Tx/Rx operation you need to configure two sound cards, by setting up Tools - Audio Config <em>Transmit</em> and <em>Receive</em> Tabs.</p>
 <p>When receiving, FreeDV off-air signals <strong>from</strong> your radio are decoded by your computer and sent <strong>to</strong> your speaker/headphones, where you can listen to them.</p>
 <p>When transmitting, FreeDV takes your voice <strong>from</strong> the microphone, and encodes it to a FreeDV signal in you computer which is sent <strong>to</strong> your radio for transmission over the air.</p>
@@ -88,29 +89,11 @@
 </tr>
 </tbody>
 </table>
-<h2 data-number="2.5" id="changing-audio-devices"><span class="header-section-number">2.5</span> Changing Audio Devices</h2>
+<h3 data-number="2.2.4" id="changing-audio-devices"><span class="header-section-number">2.2.4</span> Changing Audio Devices</h3>
 <p>If you change audio devices (e.g. add or remove sound cards, USB hardware), it’s a good idea to check the Tools/Audio Config dialog before pressing <strong>Start</strong>, to verify the audio devices are as expected. This is particularly important if any audio devices e.g. Headsets, USB Sound Cards, or Virtual Cables have been disconnected since the last time FreeDV was used.</p>
 <p>Hitting <strong>Refresh</strong> in the lower left hand corner of the Tools/Audio Config will normally update the audio devices list. Keeping a screen shot of a known working configuration will be useful for new users. Unexpected audio configuration changes may also occur following a Windows updates.</p>
 <p>Another solution is to re-start FreeDV and check Tools/Audio Config again after changing any audio hardware.</p>
-<p>If you change/remove USB audio devices without refreshing Tools/Audio Config, FreeDV may crash.</p>
-<h2 data-number="2.6" id="sound-card-levels"><span class="header-section-number">2.6</span> Sound Card Levels</h2>
-<p>Sound card levels are generally adjusted in the computer’s Control Panel or Settings, or in some cases via controls on your rig interface hardware or menus on your radio. In-app adjustments can also be done by using the ‘TX Level’ slider at the bottom of the main screen; anything below 0 dB attenuates the transmit signal.</p>
-<p>When FreeDV is running, you can observe the sound card signals in the main window tabs (From Radio, From Mic, To Speaker).</p>
-<ol type="1">
-<li><p>On receive, FreeDV is not very sensitive to the <strong>From Radio</strong> level, adjust so it is mid-range and not clipping. FreeDV uses phase shift keying (PSK) so is not sensitive to amplitude.</p></li>
-<li><p>The transmit level from your computer to your radio is important. On transmit, adjust your level so that the ALC is <strong>just</strong> being nudged. More <strong>is not better</strong> with the FreeDV transmit signal. Overdriving your transmitter will lead to a distorted transit signal, and a poor SNR at the receiver. This is a very common problem.</p></li>
-<li><p>FreeDV 700D and 700E can drive your transmitter at an average power of 40% of its peak power rating. For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.</p></li>
-<li><p>Adjust the microphone audio so the peaks are not clipping, and the average is about half the maximum.</p></li>
-</ol>
-<h2 data-number="2.7" id="audio-processing"><span class="header-section-number">2.7</span> Audio Processing</h2>
-<p>FreeDV likes a clean path through your radio. Turn all audio processing <strong>OFF</strong> on transmit and receive:</p>
-<ul>
-<li><p>On receive, DSP noise reduction should be off.</p></li>
-<li><p>On transmit, speech compression should be off.</p></li>
-<li><p>Keep the receive audio path as “flat” as possible, no special filters.</p></li>
-<li><p>FreeDV will not work any better if you band pass filter the off air received signals. It has its own, very tight filters in the demodulator.</p></li>
-</ul>
-<h2 data-number="2.8" id="ptt-configuration"><span class="header-section-number">2.8</span> PTT Configuration</h2>
+<h3 data-number="2.2.5" id="ptt-configuration"><span class="header-section-number">2.2.5</span> PTT Configuration</h3>
 <p>The Tools - PTT dialog supports three different ways to control PTT on your radio:</p>
 <ul>
 <li>VOX: sends a tone to the left channel of the Transmit/To Radio sound card</li>
@@ -121,16 +104,59 @@
 <p>Once you have configured PTT, try the <strong>Test</strong> button.</p>
 <p>Serial PTT support is complex. We get many reports that FreeDV PTT doesn’t work on a particular radio, but may work fine with other programs such as Fldigi. This is often a mismatch between the serial parameters Hamlib is using with FreeDV and your radio. For example you may have changed the default serial rate on your radio. Carefully check the serial parameters on your radio match those used by FreeDV in the PTT Dialog.</p>
 <p>Also see <a href="#common-problems">Common Problems</a> section of this manual.</p>
-<h2 data-number="2.9" id="hamlib"><span class="header-section-number">2.9</span> HamLib</h2>
+<h3 data-number="2.2.6" id="hamlib"><span class="header-section-number">2.2.6</span> HamLib</h3>
 <p>Hamlib comes with a default serial rate for each radio. If your radio has a different serial rate change the Serial Rate drop down box to match your radio.</p>
 <p>When <strong>Test</strong> is pressed, the “Serial Params” field is populated and displayed. This will help track down any mismatches between Hamlib and your radio.</p>
 <p>If you are really stuck, download Hamlib and test your radio’s PTT using the command line <code>rigctl</code> program.</p>
-<h2 data-number="2.10" id="icom-radio-configuration"><span class="header-section-number">2.10</span> Icom Radio Configuration</h2>
+<h3 data-number="2.2.7" id="icom-radio-configuration"><span class="header-section-number">2.2.7</span> Icom Radio Configuration</h3>
 <p>If using an Icom radio, Hamlib will use the radio’s default CI-V address when connecting. If this has been changed, you can specify the correct address in the “Radio Address” field (valid values are 00 through FF in hexadecimal).</p>
 <p>Note that “00” is the “wildcard” CI-V address. Your radio must have the “CI-V Transceive” option enabled in order for it to respond to commands to that address. Otherwise, FreeDV must be configured to use the same CI-V address as configured in the radio. For best results, ensure that there are no other Icom/CI-V capable devices in the chain if “00”/“CI-V Transceive” is used.</p>
-<h2 data-number="2.11" id="changing-com-port-on-windows"><span class="header-section-number">2.11</span> Changing COM Port On Windows</h2>
+<h3 data-number="2.2.8" id="changing-com-port-on-windows"><span class="header-section-number">2.2.8</span> Changing COM Port On Windows</h3>
 <p>If you change the COM port of a USB-Serial device in Device Manager, please unplug and plug back in the USB device. Windows/FreeDV won’t recognise the device on the new COM Port until it has been unplugged/plugged.</p>
-<h2 data-number="2.12" id="usb-or-lsb"><span class="header-section-number">2.12</span> USB or LSB?</h2>
+<h2 data-number="2.3" id="test-wave-files"><span class="header-section-number">2.3</span> Test Wave Files</h2>
+<p>In the installation are audio files containing off-air FreeDV modem signals. There is one file per FreeDV mode and are in the following locations depending on platform:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Platform</th>
+<th>Typical Location</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Windows</td>
+<td>C:\Program Files\FreeDV [version]\share\freedv-gui\wav</td>
+</tr>
+<tr class="even">
+<td>Linux</td>
+<td>/usr/share/freedv-gui/wav or /usr/local/share/freedv-gui/wav</td>
+</tr>
+<tr class="odd">
+<td>macOS</td>
+<td>See https://github.com/drowe67/freedv-gui/tree/master/wav</td>
+</tr>
+</tbody>
+</table>
+<p>To play these files, first select a FreeDV mode and press Start. Then choose a file using “Tools - Start/Stop Play File From Radio”. You should then hear decoded FreeDV speech.</p>
+<p>These files will give you a feel for what FreeDV signals sound like, and for the basic operation of the FreeDV software.</p>
+<h2 data-number="2.4" id="sound-card-levels"><span class="header-section-number">2.4</span> Sound Card Levels</h2>
+<p>Sound card levels are generally adjusted in the computer’s Control Panel or Settings, or in some cases via controls on your rig interface hardware or menus on your radio. In-app adjustments can also be done by using the ‘TX Level’ slider at the bottom of the main screen; anything below 0 dB attenuates the transmit signal.</p>
+<p>When FreeDV is running, you can observe the sound card signals in the main window tabs (From Radio, From Mic, To Speaker).</p>
+<ol type="1">
+<li><p>On receive, FreeDV is not very sensitive to the <strong>From Radio</strong> level, adjust so it is mid-range and not clipping. FreeDV uses phase shift keying (PSK) so is not sensitive to amplitude.</p></li>
+<li><p>The transmit level from your computer to your radio is important. On transmit, adjust your level so that the ALC is <strong>just</strong> being nudged. More <strong>is not better</strong> with the FreeDV transmit signal. Overdriving your transmitter will lead to a distorted transit signal, and a poor SNR at the receiver. This is a very common problem.</p></li>
+<li><p>FreeDV 700D and 700E can drive your transmitter at an average power of 40% of its peak power rating. For example 40W RMS for a 100W PEP radio. Make sure your transmitter can handle continuous power output at these levels, and reduce the power if necessary.</p></li>
+<li><p>Adjust the microphone audio so the peaks are not clipping, and the average is about half the maximum.</p></li>
+</ol>
+<h2 data-number="2.5" id="audio-processing"><span class="header-section-number">2.5</span> Audio Processing</h2>
+<p>FreeDV likes a clean path through your radio. Turn all audio processing <strong>OFF</strong> on transmit and receive:</p>
+<ul>
+<li><p>On receive, DSP noise reduction should be off.</p></li>
+<li><p>On transmit, speech compression should be off.</p></li>
+<li><p>Keep the receive audio path as “flat” as possible, no special filters.</p></li>
+<li><p>FreeDV will not work any better if you band pass filter the off air received signals. It has its own, very tight filters in the demodulator.</p></li>
+</ul>
+<h2 data-number="2.6" id="usb-or-lsb"><span class="header-section-number">2.6</span> USB or LSB?</h2>
 <p>On bands below 10 MHz, LSB is used for FreeDV. On 10MHz and above, USB is used. After much debate, the FreeDV community has adopted the same conventions as SSB, based on the reasoning that FreeDV is a voice mode.</p>
 <p>As an aid to the above, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn’t enabled, or if your radio doesn’t support retrieving frequency and mode over CAT, it will remain grayed out with “unk” displaying instead of the mode (for “unknown”).</p>
 <h1 data-number="3" id="common-problems"><span class="header-section-number">3</span> Common Problems</h1>
@@ -565,7 +591,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </tbody>
 </table>
 <h1 data-number="16" id="release-notes"><span class="header-section-number">16</span> Release Notes</h1>
-<h2 data-number="16.1" id="tbd-tbd-2023"><span class="header-section-number">16.1</span> TBD TBD 2023</h2>
+<h2 data-number="16.1" id="v1.8.7-tbd-2023"><span class="header-section-number">16.1</span> V1.8.7 TBD 2023</h2>
 <ol type="1">
 <li>Code Cleanup:
 <ul>
@@ -574,6 +600,12 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Enhancements:
 <ul>
 <li>Add “Easy Setup” dialog to simplify first time setup. (PR #189)</li>
+</ul></li>
+<li>Bugfixes:
+<ul>
+<li>Add a bit of extra space for the sample rate drop-downs. (PR #336)</li>
+<li>Add units for SNR gauge to match squelch gauge. (PR #339)</li>
+<li>Fix compiler errors due to recent samplerate changes. (PR #338)</li>
 </ul></li>
 </ol>
 <h2 data-number="16.2" id="v1.8.6-december-2022"><span class="header-section-number">16.2</span> V1.8.6 December 2022</h2>
