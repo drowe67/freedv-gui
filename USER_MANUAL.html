@@ -12,7 +12,7 @@
 </ol>
 <p>These sections are shown below:</p>
 <figure>
-<img src="doc/easy_setup.png" alt="" /><figcaption>Easy Setup dialog</figcaption>
+<img src="contrib/easy_setup.png" alt="" /><figcaption>Easy Setup dialog</figcaption>
 </figure>
 <p>Note that you can always return to this dialog by going to Tools-&gt;Easy Setup.</p>
 <h3 data-number="2.1.1" id="sound-card-configuration"><span class="header-section-number">2.1.1</span> Sound Card Configuration</h3>
@@ -31,11 +31,8 @@
 <p>While not required, it is recommended to enable PSK Reporter reporting so that others can see who is currently receiving them. Both sides of a contact must have this enabled in order for this feature to work. To configure PSK Reporter reporting, simply enable the feature here and enter your callsign and current grid square.</p>
 <h2 data-number="2.2" id="advanced-setup"><span class="header-section-number">2.2</span> Advanced Setup</h2>
 <h3 data-number="2.2.1" id="sound-card-configuration-1"><span class="header-section-number">2.2.1</span> Sound Card Configuration</h3>
-<p>For Receive only operation you just need one sound card; this is a great way to get started.</p>
-<p>For Tx/Rx operation you need two sound cards. One connects to your radio, and one for the operator. The sound card connecting to the radio can be a rig interface device like a Signalink, RIGblaster, your radio’s internal USB sound card, or a home brew rig interface.</p>
-<p>The second sound card is often a set of USB headphones or your computer’s internal sound card.</p>
-<h3 data-number="2.2.2" id="receive-only-one-sound-card"><span class="header-section-number">2.2.2</span> Receive Only (One Sound Card)</h3>
-<p>Start with just a receive only station. You just need the basic sound hardware in your computer, for example a microphone/speaker on your computer.</p>
+<h4 data-number="2.2.1.1" id="receive-only-one-sound-card"><span class="header-section-number">2.2.1.1</span> Receive Only (One Sound Card)</h4>
+<p>For this setup, you just need the basic sound hardware in your computer, for example a microphone/speaker on your computer.</p>
 <ol type="1">
 <li>Open the <em>Tools - Audio Config</em> Dialog</li>
 <li>At the bottom select <em>Receive</em> Tab</li>
@@ -49,7 +46,7 @@
 <p>When you press Start FreeDV will start decoding any incoming signals on the microphone input, playing the decoded audio out of your speaker. If no valid FreeDV signals are received, no audio will be played.</p>
 <p>If you connect the microphone input on your computer to your radio receiver, you can decode off air signals. If you have a rig interface, try configuring that as the <em>From Radio To Computer</em> device, with your computer’s sound card as the <em>From Computer To Speaker/Headphone</em> device.</p>
 <p>If you don’t have anyone to transmit FreeDV signals to you, try the test wave files in the next section.</p>
-<h3 data-number="2.2.3" id="transmitreceive-two-sound-cards"><span class="header-section-number">2.2.3</span> Transmit/Receive (Two Sound Cards)</h3>
+<h4 data-number="2.2.1.2" id="transmitreceive-two-sound-cards"><span class="header-section-number">2.2.1.2</span> Transmit/Receive (Two Sound Cards)</h4>
 <p>For Tx/Rx operation you need to configure two sound cards, by setting up Tools - Audio Config <em>Transmit</em> and <em>Receive</em> Tabs.</p>
 <p>When receiving, FreeDV off-air signals <strong>from</strong> your radio are decoded by your computer and sent <strong>to</strong> your speaker/headphones, where you can listen to them.</p>
 <p>When transmitting, FreeDV takes your voice <strong>from</strong> the microphone, and encodes it to a FreeDV signal in you computer which is sent <strong>to</strong> your radio for transmission over the air.</p>
@@ -89,11 +86,11 @@
 </tr>
 </tbody>
 </table>
-<h3 data-number="2.2.4" id="changing-audio-devices"><span class="header-section-number">2.2.4</span> Changing Audio Devices</h3>
+<h4 data-number="2.2.1.3" id="changing-audio-devices"><span class="header-section-number">2.2.1.3</span> Changing Audio Devices</h4>
 <p>If you change audio devices (e.g. add or remove sound cards, USB hardware), it’s a good idea to check the Tools/Audio Config dialog before pressing <strong>Start</strong>, to verify the audio devices are as expected. This is particularly important if any audio devices e.g. Headsets, USB Sound Cards, or Virtual Cables have been disconnected since the last time FreeDV was used.</p>
 <p>Hitting <strong>Refresh</strong> in the lower left hand corner of the Tools/Audio Config will normally update the audio devices list. Keeping a screen shot of a known working configuration will be useful for new users. Unexpected audio configuration changes may also occur following a Windows updates.</p>
 <p>Another solution is to re-start FreeDV and check Tools/Audio Config again after changing any audio hardware.</p>
-<h3 data-number="2.2.5" id="ptt-configuration"><span class="header-section-number">2.2.5</span> PTT Configuration</h3>
+<h3 data-number="2.2.2" id="ptt-configuration"><span class="header-section-number">2.2.2</span> PTT Configuration</h3>
 <p>The Tools - PTT dialog supports three different ways to control PTT on your radio:</p>
 <ul>
 <li>VOX: sends a tone to the left channel of the Transmit/To Radio sound card</li>
@@ -104,14 +101,14 @@
 <p>Once you have configured PTT, try the <strong>Test</strong> button.</p>
 <p>Serial PTT support is complex. We get many reports that FreeDV PTT doesn’t work on a particular radio, but may work fine with other programs such as Fldigi. This is often a mismatch between the serial parameters Hamlib is using with FreeDV and your radio. For example you may have changed the default serial rate on your radio. Carefully check the serial parameters on your radio match those used by FreeDV in the PTT Dialog.</p>
 <p>Also see <a href="#common-problems">Common Problems</a> section of this manual.</p>
-<h3 data-number="2.2.6" id="hamlib"><span class="header-section-number">2.2.6</span> HamLib</h3>
+<h4 data-number="2.2.2.1" id="hamlib"><span class="header-section-number">2.2.2.1</span> HamLib</h4>
 <p>Hamlib comes with a default serial rate for each radio. If your radio has a different serial rate change the Serial Rate drop down box to match your radio.</p>
 <p>When <strong>Test</strong> is pressed, the “Serial Params” field is populated and displayed. This will help track down any mismatches between Hamlib and your radio.</p>
 <p>If you are really stuck, download Hamlib and test your radio’s PTT using the command line <code>rigctl</code> program.</p>
-<h3 data-number="2.2.7" id="icom-radio-configuration"><span class="header-section-number">2.2.7</span> Icom Radio Configuration</h3>
+<h4 data-number="2.2.2.2" id="icom-radio-configuration"><span class="header-section-number">2.2.2.2</span> Icom Radio Configuration</h4>
 <p>If using an Icom radio, Hamlib will use the radio’s default CI-V address when connecting. If this has been changed, you can specify the correct address in the “Radio Address” field (valid values are 00 through FF in hexadecimal).</p>
 <p>Note that “00” is the “wildcard” CI-V address. Your radio must have the “CI-V Transceive” option enabled in order for it to respond to commands to that address. Otherwise, FreeDV must be configured to use the same CI-V address as configured in the radio. For best results, ensure that there are no other Icom/CI-V capable devices in the chain if “00”/“CI-V Transceive” is used.</p>
-<h3 data-number="2.2.8" id="changing-com-port-on-windows"><span class="header-section-number">2.2.8</span> Changing COM Port On Windows</h3>
+<h4 data-number="2.2.2.3" id="changing-com-port-on-windows"><span class="header-section-number">2.2.2.3</span> Changing COM Port On Windows</h4>
 <p>If you change the COM port of a USB-Serial device in Device Manager, please unplug and plug back in the USB device. Windows/FreeDV won’t recognise the device on the new COM Port until it has been unplugged/plugged.</p>
 <h2 data-number="2.3" id="test-wave-files"><span class="header-section-number">2.3</span> Test Wave Files</h2>
 <p>In the installation are audio files containing off-air FreeDV modem signals. There is one file per FreeDV mode and are in the following locations depending on platform:</p>
@@ -185,14 +182,14 @@
 <p>Once the shortcut has been created, right-click it and choose Properties. Find the Shortcut tab in the resulting dialog box and add “-f” followed by the desired filename to the end of the text in the Target field. Do not add any other quote marks.</p>
 <p>For example, to use a file called IC7300.conf stored in the Hamradio directory on the C drive the Target field should appear as follows:</p>
 <p>“C:\Program Files\FreeDV [version]\bin\freedv.exe” -f C:\Hamradio\IC7300.conf</p>
-<h1 data-number="5" id="psk-reporter-experimental"><span class="header-section-number">5</span> PSK Reporter (Experimental)</h1>
+<h1 data-number="5" id="psk-reporter"><span class="header-section-number">5</span> PSK Reporter</h1>
 <p>FreeDV has the ability to send FreeDV signal reports to <a href="https://pskreporter.info/">PSK Reporter</a> by enabling the option in Tools-Options and specifying your callsign and grid square. When enabled, this causes FreeDV to disable the free form <strong>Txt Msg</strong> field and only transmit the <strong>Callsign</strong> field.</p>
 <p>FreeDV validates the received information before submitting a position report to PSK Reporter. This is to ensure that FreeDV does not report invalid callsigns to the service (e.g. ones that don’t exist or that correspond to real non-FreeDV users). However, all received text will display in the main window even if it has errors.</p>
 <p>Reports sent to PSK Reporter will display using the mode “FREEDV” for ease of filtering. The frequency that FreeDV reports to PSK Reporter is set by changing the “Report Frequency” text box in the main window. This is in kilohertz (kHz) and will turn red if the entered value is invalid. If Hamlib support is also enabled, this frequency will automatically update on start/stop as well as when switching between transmit and receive.</p>
-<h1 data-number="6" id="multiple-mode-support-experimental"><span class="header-section-number">6</span> Multiple Mode Support (Experimental)</h1>
+<h1 data-number="6" id="multiple-mode-support"><span class="header-section-number">6</span> Multiple Mode Support</h1>
 <p>FreeDV can simultaneously decode the following modes when selected prior to pushing “Start”:</p>
 <ul>
-<li>2020</li>
+<li>2020/2020B</li>
 <li>700C/D/E</li>
 <li>1600</li>
 </ul>
