@@ -67,6 +67,8 @@ can see who is currently receiving them. Both sides of a contact must have this 
 in order for this feature to work. To configure PSK Reporter reporting, simply enable
 the feature here and enter your callsign and current grid square.
 
+For more information about the PSK Reporter feature, see the "PSK Reporter" section below.
+
 ## Advanced Setup
 
 ### Sound Card Configuration
@@ -306,9 +308,14 @@ appear as follows:
 
 FreeDV has the ability to send FreeDV signal reports to [PSK Reporter](https://pskreporter.info/)
 by enabling the option in Tools-Options and specifying your callsign and grid square. When enabled, this causes
-FreeDV to disable the free form **Txt Msg** field and only transmit the **Callsign** field.
+FreeDV to disable the free form **Txt Msg** field and only transmit the **Callsign** field. As this
+uses a different encoding format from the free-form text field, both sides of the contact must have
+this enabled for the contact to be reported to the PSK Reporter service.
 
-FreeDV validates the received information before submitting a position report to PSK Reporter. This is to ensure that FreeDV does not report invalid callsigns to the service (e.g. ones that don't exist or that correspond to real non-FreeDV users). However, all received text will display in the main window even if it has errors.
+FreeDV validates the received information before submitting a position report to PSK Reporter. This 
+is to ensure that FreeDV does not report invalid callsigns to the service (e.g. ones that don't exist 
+or that correspond to real non-FreeDV users). However, if the PSK Reporter function is disabled,
+all received text will display in the main window even if it has errors.
 
 Reports sent to PSK Reporter will display using the mode "FREEDV" for ease of filtering. The frequency that 
 FreeDV reports to PSK Reporter is set by changing the "Report Frequency" text box in the main window. This 
