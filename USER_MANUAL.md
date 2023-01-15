@@ -21,7 +21,7 @@ by amateur radio operators and is divided into three sections:
 
 These sections are shown below:
 
-![Easy Setup dialog](doc/easy_setup.png)
+![Easy Setup dialog](contrib/easy_setup.png)
 
 Note that you can always return to this dialog by going to Tools->Easy Setup.
 
@@ -66,22 +66,10 @@ the feature here and enter your callsign and current grid square.
 
 ### Sound Card Configuration
 
-For Receive only operation you just need one sound card; this is a
-great way to get started.
+#### Receive Only (One Sound Card)
 
-For Tx/Rx operation you need two sound cards.  One connects to your
-radio, and one for the operator.  The sound card connecting to the
-radio can be a rig interface device like a Signalink, RIGblaster,
-your radio's internal USB sound card, or a home brew rig interface.
-
-The second sound card is often a set of USB headphones or your
-computer's internal sound card.
-
-### Receive Only (One Sound Card)
-
-Start with just a receive only station.  You just need the basic sound
-hardware in your computer, for example a microphone/speaker on your
-computer.
+For this setup, you just need the basic sound hardware in your computer, 
+for example a microphone/speaker on your computer.
 
 1. Open the *Tools - Audio Config* Dialog
 1. At the bottom select *Receive* Tab
@@ -106,8 +94,7 @@ Speaker/Headphone* device.
 If you don't have anyone to transmit FreeDV signals to you, try the
 test wave files in the next section.
 
-
-### Transmit/Receive (Two Sound Cards)
+#### Transmit/Receive (Two Sound Cards)
 
 For Tx/Rx operation you need to configure two sound cards, by setting
 up Tools - Audio Config *Transmit* and *Receive* Tabs.
@@ -127,7 +114,7 @@ Receive Tab | Output From Computer To Speaker/Headphones | The decoded audio fro
 Transmit Tab | Input From Microphone To Computer | Your voice from the microphone to your computer
 Transmit Tab | Output From Computer To Radio | The FreeDV signal from your computer sent **to** your rig interface for Tx
 
-### Changing Audio Devices
+#### Changing Audio Devices
 
 If you change audio devices (e.g. add or remove sound cards, USB hardware), it's a good idea to check the Tools/Audio Config dialog before pressing **Start**, to verify the audio devices are as expected. This is particularly important if any audio devices e.g. Headsets, USB Sound Cards, or Virtual Cables have been disconnected since the last time FreeDV was used.
 
@@ -162,7 +149,7 @@ in the PTT Dialog.
 
 Also see [Common Problems](#common-problems) section of this manual.
 
-### HamLib
+#### HamLib
 
 Hamlib comes with a default serial rate for each radio.  If your radio
 has a different serial rate change the Serial Rate drop down box to
@@ -175,7 +162,7 @@ and your radio.
 If you are really stuck, download Hamlib and test your radio's PTT
 using the command line ```rigctl``` program.
 
-### Icom Radio Configuration 
+#### Icom Radio Configuration 
 
 If using an Icom radio, Hamlib will use the radio's default CI-V address
 when connecting. If this has been changed, you can specify the correct
@@ -189,7 +176,7 @@ CI-V address as configured in the radio. For best results, ensure that
 there are no other Icom/CI-V capable devices in the chain if 
 "00"/"CI-V Transceive" is used.
 
-### Changing COM Port On Windows
+#### Changing COM Port On Windows
 
 If you change the COM port of a USB-Serial device in Device Manager,
 please unplug and plug back in the USB device.  Windows/FreeDV won't
@@ -310,7 +297,7 @@ appear as follows:
 
 "C:\\Program Files\\FreeDV [version]\\bin\\freedv.exe" -f C:\\Hamradio\\IC7300.conf
 
-# PSK Reporter (Experimental)
+# PSK Reporter
 
 FreeDV has the ability to send FreeDV signal reports to [PSK Reporter](https://pskreporter.info/)
 by enabling the option in Tools-Options and specifying your callsign and grid square. When enabled, this causes
@@ -323,11 +310,11 @@ FreeDV reports to PSK Reporter is set by changing the "Report Frequency" text bo
 is in kilohertz (kHz) and will turn red if the entered value is invalid. If Hamlib support is also enabled, 
 this frequency will automatically update on start/stop as well as when switching between transmit and receive.
 
-# Multiple Mode Support (Experimental)
+# Multiple Mode Support
 
 FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
 
-* 2020
+* 2020/2020B
 * 700C/D/E
 * 1600
 
