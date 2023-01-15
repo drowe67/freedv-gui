@@ -32,6 +32,11 @@ associated with your radio and the microphone and speaker devices you wish to us
 to hear decoded audio as well as to transmit audio. If you're setting up a receive-only
 station, you can choose "None" for the transmit audio device.
 
+Additionally, if you are using a Flex 6000 series radio on the Windows platform, 
+FreeDV will automatically select the DAX TX sound device. It is necessary only to 
+select the correct "slice" for the radio sound device and the two devices to use for 
+analog receive and transmit (e.g. your computer's built in microphone and speaker devices).
+
 Note that some configurations (for example, SDR setups involving multiple radio sound
 devices) may not be able to be configured with Easy Setup. For those, you can choose
 the "Advanced" button and proceed to "Advanced Setup" below.
@@ -821,7 +826,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V1.8.7 TBD 2023
+## V1.8.7 January 2023
 
 1. Code Cleanup:
     * Remove "force sync" option from Tools->Options (PR #332)
