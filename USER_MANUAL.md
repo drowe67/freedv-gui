@@ -23,7 +23,7 @@ These sections are shown below:
 
 ![Easy Setup dialog](contrib/easy_setup.png)
 
-Note that you can always return to this dialog by going to Tools->Easy Setup.
+Note that you can always return to this dialog by going to *Tools - Easy Setup*.
 
 ### Sound Card Configuration
 
