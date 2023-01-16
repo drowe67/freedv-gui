@@ -1725,38 +1725,38 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 
     txModeChangeMutex.Lock();
     
-    if (eventObject == m_rb1600) 
+    if (eventObject == m_rb1600 || (eventObject == nullptr && m_rb1600->GetValue())) 
     {
         g_mode = FREEDV_MODE_1600;
     }
-    else if (eventObject == m_rb700c) 
+    else if (eventObject == m_rb700c || (eventObject == nullptr && m_rb700c->GetValue())) 
     {
         g_mode = FREEDV_MODE_700C;
     }
-    else if (eventObject == m_rb700d) 
+    else if (eventObject == m_rb700d || (eventObject == nullptr && m_rb700d->GetValue())) 
     {
         g_mode = FREEDV_MODE_700D;
     }
-    else if (eventObject == m_rb700e) 
+    else if (eventObject == m_rb700e || (eventObject == nullptr && m_rb700e->GetValue())) 
     {
         g_mode = FREEDV_MODE_700E;
     }
-    else if (eventObject == m_rb800xa) 
+    else if (eventObject == m_rb800xa || (eventObject == nullptr && m_rb800xa->GetValue())) 
     {
         g_mode = FREEDV_MODE_800XA;
     }
-    else if (eventObject == m_rb2400b) 
+    else if (eventObject == m_rb2400b || (eventObject == nullptr && m_rb2400b->GetValue())) 
     {
         g_mode = FREEDV_MODE_2400B;
     }
-    else if (eventObject == m_rb2020) 
+    else if (eventObject == m_rb2020 || (eventObject == nullptr && m_rb2020->GetValue())) 
     {
         assert(wxGetApp().m_2020Allowed);
         
         g_mode = FREEDV_MODE_2020;
     }
 #if defined(FREEDV_MODE_2020B)
-    else if (eventObject == m_rb2020b) 
+    else if (eventObject == m_rb2020b || (eventObject == nullptr && m_rb2020b->GetValue())) 
     {
         assert(wxGetApp().m_2020Allowed);
         
