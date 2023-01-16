@@ -44,6 +44,23 @@ void MainFrame::OnExitClick(wxCommandEvent& event)
 }
 
 //-------------------------------------------------------------------------
+// OnToolsEasySetup()
+//-------------------------------------------------------------------------
+void MainFrame::OnToolsEasySetup(wxCommandEvent& event)
+{
+    EasySetupDialog* dlg = new EasySetupDialog(this);
+    dlg->ShowModal();
+}
+
+//-------------------------------------------------------------------------
+// OnToolsEasySetupUI()
+//-------------------------------------------------------------------------
+void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
+{
+    event.Enable(!m_RxRunning);
+}
+
+//-------------------------------------------------------------------------
 // OnToolsAudio()
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsAudio(wxCommandEvent& event)

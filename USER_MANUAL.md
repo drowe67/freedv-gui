@@ -9,24 +9,74 @@ This is a live document.  Notes on new FreeDV features are being added as they a
 
 This section contains instructions to help you get started.
 
-## Sound Card Configuration
+## Easy Setup
 
-For Receive only operation you just need one sound card; this is a
-great way to get started.
+Upon starting FreeDV for the first time, the Easy Setup dialog will appear. This
+is a streamlined setup process for FreeDV optimized for hardware commonly used
+by amateur radio operators and is divided into three sections:
 
-For Tx/Rx operation you need two sound cards.  One connects to your
-radio, and one for the operator.  The sound card connecting to the
-radio can be a rig interface device like a Signalink, RIGblaster,
-your radio's internal USB sound card, or a home brew rig interface.
+1. Sound card configuration,
+2. CAT/PTT control, and
+3. Reporting.
 
-The second sound card is often a set of USB headphones or your
-computer's internal sound card.
+These sections are shown below:
 
-## Receive Only (One Sound Card)
+![Easy Setup dialog](contrib/easy_setup.png)
 
-Start with just a receive only station.  You just need the basic sound
-hardware in your computer, for example a microphone/speaker on your
-computer.
+Note that you can always return to this dialog by going to *Tools - Easy Setup*.
+
+### Sound Card Configuration
+
+To configure your sound card(s) using Easy Setup, simply select the sound device 
+associated with your radio and the microphone and speaker devices you wish to use
+to hear decoded audio as well as to transmit audio. If you're setting up a receive-only
+station, you can choose "None" for the transmit audio device.
+
+Additionally, if you are using a Flex 6000 series radio on the Windows platform, 
+FreeDV will automatically select the DAX TX sound device. It is necessary only to 
+select the correct "slice" for the radio sound device and the two devices to use for 
+analog receive and transmit (e.g. your computer's built in microphone and speaker devices).
+
+Note that some configurations (for example, SDR setups involving multiple radio sound
+devices) may not be able to be configured with Easy Setup. For those, you can choose
+the "Advanced" button and proceed to "Advanced Setup" below.
+
+### CAT/PTT control
+
+Easy Setup supports three methods of radio control:
+
+1. No radio control (e.g. using a VOX audio device such as SignaLink),
+2. Hamlib CAT control, and
+3. Serial port PTT control.
+
+Simply select the option that matches your radio setup and the required fields will
+appear. For Hamlib, these are typically the type of radio you're using as well as the
+serial port it's connected to (or TCP/IP hostname:port). Serial port PTT control requires 
+the serial port your radio is using as well as whether your radio's PTT is triggered
+via the RTS or DTR pin (and the required polarity for either).
+
+If required, the "Advanced" button in this section will allow you to configure PTT input
+(e.g. for a footswitch) and additional VOX related options. The "Test" button will
+emit a constant carrier on the selected radio sound device as well as enable PTT to allow
+you to adjust your radio sound levels (see "Sound Card Levels" below).
+
+### Reporting
+
+While not required, it is recommended to enable PSK Reporter reporting so that others
+can see who is currently receiving them. Both sides of a contact must have this enabled
+in order for this feature to work. To configure PSK Reporter reporting, simply enable
+the feature here and enter your callsign and current grid square.
+
+For more information about the PSK Reporter feature, see the "PSK Reporter" section below.
+
+## Advanced Setup
+
+### Sound Card Configuration
+
+#### Receive Only (One Sound Card)
+
+For this setup, you just need the basic sound hardware in your computer, 
+for example a microphone/speaker on your computer.
 
 1. Open the *Tools - Audio Config* Dialog
 1. At the bottom select *Receive* Tab
@@ -51,26 +101,7 @@ Speaker/Headphone* device.
 If you don't have anyone to transmit FreeDV signals to you, try the
 test wave files in the next section.
 
-## Test Wave Files
-
-In the installation are audio files containing off-air FreeDV modem signals. 
-There is one file per FreeDV mode and are in the following locations depending 
-on platform:
-
-| Platform | Typical Location                                             |
-|----------|--------------------------------------------------------------|
-| Windows  | C:\\Program Files\\FreeDV [version]\\share\\freedv-gui\\wav  |
-| Linux    | /usr/share/freedv-gui/wav or /usr/local/share/freedv-gui/wav |
-| macOS    | See https://github.com/drowe67/freedv-gui/tree/master/wav    |
-
-To play these files, first select a FreeDV mode and press Start.  Then 
-choose a file using "Tools - Start/Stop Play File From Radio".  You should 
-then hear decoded FreeDV speech.
-
-These files will give you a feel for what FreeDV signals sound like,
-and for the basic operation of the FreeDV software.
-
-## Transmit/Receive (Two Sound Cards)
+#### Transmit/Receive (Two Sound Cards)
 
 For Tx/Rx operation you need to configure two sound cards, by setting
 up Tools - Audio Config *Transmit* and *Receive* Tabs.
@@ -90,7 +121,7 @@ Receive Tab | Output From Computer To Speaker/Headphones | The decoded audio fro
 Transmit Tab | Input From Microphone To Computer | Your voice from the microphone to your computer
 Transmit Tab | Output From Computer To Radio | The FreeDV signal from your computer sent **to** your rig interface for Tx
 
-## Changing Audio Devices
+#### Changing Audio Devices
 
 If you change audio devices (e.g. add or remove sound cards, USB hardware), it's a good idea to check the Tools/Audio Config dialog before pressing **Start**, to verify the audio devices are as expected. This is particularly important if any audio devices e.g. Headsets, USB Sound Cards, or Virtual Cables have been disconnected since the last time FreeDV was used.
 
@@ -98,7 +129,85 @@ Hitting **Refresh** in the lower left hand corner of the Tools/Audio Config will
 
 Another solution is to re-start FreeDV and check Tools/Audio Config again after changing any audio hardware.
 
-If you change/remove USB audio devices without refreshing Tools/Audio Config, FreeDV may crash.
+### PTT Configuration
+
+The Tools - PTT dialog supports three different ways to control PTT on
+your radio:
+
++ VOX: sends a tone to the left channel of the Transmit/To Radio sound card
++ Hamlib: support for many different radios via the Hamlib library and a serial port (or via TCP/IP for some devices, e.g. SDRs or FLrig/rigctld).
++ Serial Port: direct access to the serial port pins
+
+You may also optionally configure a second serial port for PTT input.
+This can be useful for interfacing devices like foot switches to 
+FreeDV. If configured, FreeDV will switch into transmit mode (including
+sending the needed Hamlib or serial commands to initiate PTT) when it
+detects the configured signal.
+
+Once you have configured PTT, try the **Test** button.
+
+Serial PTT support is complex.  We get many reports that FreeDV
+PTT doesn't work on a particular radio, but may work fine with other
+programs such as Fldigi.  This is often a mismatch between the serial
+parameters Hamlib is using with FreeDV and your radio. For example you
+may have changed the default serial rate on your radio. Carefully
+check the serial parameters on your radio match those used by FreeDV
+in the PTT Dialog.
+
+Also see [Common Problems](#common-problems) section of this manual.
+
+#### HamLib
+
+Hamlib comes with a default serial rate for each radio.  If your radio
+has a different serial rate change the Serial Rate drop down box to
+match your radio.
+
+When **Test** is pressed, the "Serial Params" field is populated and
+displayed.  This will help track down any mismatches between Hamlib
+and your radio.
+
+If you are really stuck, download Hamlib and test your radio's PTT
+using the command line ```rigctl``` program.
+
+#### Icom Radio Configuration 
+
+If using an Icom radio, Hamlib will use the radio's default CI-V address
+when connecting. If this has been changed, you can specify the correct
+address in the "Radio Address" field (valid values are 00 through FF
+in hexadecimal). 
+
+Note that "00" is the "wildcard" CI-V address. Your radio must have the 
+"CI-V Transceive" option enabled in order for it to respond to commands
+to that address. Otherwise, FreeDV must be configured to use the same
+CI-V address as configured in the radio. For best results, ensure that
+there are no other Icom/CI-V capable devices in the chain if 
+"00"/"CI-V Transceive" is used.
+
+#### Changing COM Port On Windows
+
+If you change the COM port of a USB-Serial device in Device Manager,
+please unplug and plug back in the USB device.  Windows/FreeDV won't
+recognise the device on the new COM Port until it has been
+unplugged/plugged.
+
+## Test Wave Files
+
+In the installation are audio files containing off-air FreeDV modem signals. 
+There is one file per FreeDV mode and are in the following locations depending 
+on platform:
+
+| Platform | Typical Location                                             |
+|----------|--------------------------------------------------------------|
+| Windows  | C:\\Program Files\\FreeDV [version]\\share\\freedv-gui\\wav  |
+| Linux    | /usr/share/freedv-gui/wav or /usr/local/share/freedv-gui/wav |
+| macOS    | See https://github.com/drowe67/freedv-gui/tree/master/wav    |
+
+To play these files, first select a FreeDV mode and press Start.  Then 
+choose a file using "Tools - Start/Stop Play File From Radio".  You should 
+then hear decoded FreeDV speech.
+
+These files will give you a feel for what FreeDV signals sound like,
+and for the basic operation of the FreeDV software.
 
 ## Sound Card Levels
 
@@ -141,233 +250,11 @@ processing **OFF** on transmit and receive:
 received signals.  It has its own, very tight filters in the
 demodulator.
 
-## PTT Configuration
-
-The Tools - PTT dialog supports three different ways to control PTT on
-your radio:
-
-+ VOX: sends a tone to the left channel of the Transmit/To Radio sound card
-+ Hamlib: support for many different radios via the Hamlib library and a serial port (or via TCP/IP for some devices, e.g. SDRs or FLrig/rigctld).
-+ Serial Port: direct access to the serial port pins
-
-You may also optionally configure a second serial port for PTT input.
-This can be useful for interfacing devices like foot switches to 
-FreeDV. If configured, FreeDV will switch into transmit mode (including
-sending the needed Hamlib or serial commands to initiate PTT) when it
-detects the configured signal.
-
-Once you have configured PTT, try the **Test** button.
-
-Serial PTT support is complex.  We get many reports that FreeDV
-PTT doesn't work on a particular radio, but may work fine with other
-programs such as Fldigi.  This is often a mismatch between the serial
-parameters Hamlib is using with FreeDV and your radio. For example you
-may have changed the default serial rate on your radio. Carefully
-check the serial parameters on your radio match those used by FreeDV
-in the PTT Dialog.
-
-Also see [Common Problems](#common-problems) section of this manual.
-
-## HamLib
-
-Hamlib comes with a default serial rate for each radio.  If your radio
-has a different serial rate change the Serial Rate drop down box to
-match your radio.
-
-When **Test** is pressed, the "Serial Params" field is populated and
-displayed.  This will help track down any mismatches between Hamlib
-and your radio.
-
-If you are really stuck, download Hamlib and test your radio's PTT
-using the command line ```rigctl``` program.
-
-## Icom Radio Configuration 
-
-If using an Icom radio, Hamlib will use the radio's default CI-V address
-when connecting. If this has been changed, you can specify the correct
-address in the "Radio Address" field (valid values are 00 through FF
-in hexadecimal). 
-
-Note that "00" is the "wildcard" CI-V address. Your radio must have the 
-"CI-V Transceive" option enabled in order for it to respond to commands
-to that address. Otherwise, FreeDV must be configured to use the same
-CI-V address as configured in the radio. For best results, ensure that
-there are no other Icom/CI-V capable devices in the chain if 
-"00"/"CI-V Transceive" is used.
-
-## Changing COM Port On Windows
-
-If you change the COM port of a USB-Serial device in Device Manager,
-please unplug and plug back in the USB device.  Windows/FreeDV won't
-recognise the device on the new COM Port until it has been
-unplugged/plugged.
-
 ## USB or LSB?
 
 On bands below 10 MHz, LSB is used for FreeDV.  On 10MHz and above, USB is used. After much debate, the FreeDV community has adopted the same conventions as SSB, based on the reasoning that FreeDV is a voice mode.
 
 As an aid to the above, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn't enabled, or if your radio doesn't support retrieving frequency and mode over CAT, it will remain grayed out with "unk" displaying instead of the mode (for "unknown").
-
-# Common Problems
-
-## Overdriving Transmit Level
-
-This is a very common problem for first time FreeDV users.  Adjust your transmit levels so the ALC is just being nudged. More power is not better with FreeDV.  An overdriven signal will have poor SNR at the receiver.  For FreeDV 700D/700E operation with the clipper, make sure your transmitter can sustain high average power levels without damage (e.g. 40W RMS on a 100W PEP radio).
-
-## I can't set up FreeDV, especially the Sound Cards
-
-This can be challenging the first time around:
-
-1. Try a receive only (one audio card) set up first.
-
-1. Ask someone who already runs FreeDV for help.
-
-1. If you don't know anyone local, ask for help on the digital voice
-mailing list.  Be specific about the hardware you have and the exact
-nature of your problem.
-
-## Hamlib does not work with my Icom radio
-
-The most common issue with Icom radios is that the CI-V address configured
-in FreeDV does not match the address configured in the radio. Ensure that
-the CI-V address in both FreeDV and on the radio are the same. If "00" is
-used on the FreeDV side, ensure that the "CI-V Transceive" option is enabled
-on the radio or else the radio will not respond to requests directed to that
-address.
-
-On newer radios (e.g. 7300, 7610), you may also need to set "CI-V USB Echo Back" 
-to ON as this may be set to OFF by default.
-
-## I need help with my radio or rig interface
-
-There are many radios, many computers, and many sound cards.  It is
-impossible to test them all. Many radios have intricate menus with
-custom settings.  It is unreasonable to expect the authors of FreeDV to
-have special knowledge of your exact hardware.
-
-However someone may have worked through the same problem as you.  Ask
-on the digital voice mailing list.
-
-## Can't hear anything on receive
-
-Many FreeDV modes will not play any audio if there is no valid signal.
-You may also have squelch set too high.  In some modes the **Analog**
-button will let you hear the received signal from the SSB radio.
-
-Try the Test Wave Files above to get a feel for what a FreeDV signal
-looks and sounds like.
-
-## The signal is strong but FreeDV won't get sync and decode
-
-Do you have the correct sideband? See USB or LSB section.
-
-Is it a FreeDV signal?  SSTV uses similar frequencies. To understand what FreeDV sounds like, see the Test Wave Files section.
-
-## Trouble getting Sync with 700D
-
-You need to be within +/- 60 Hz on the transmit signal.  It helps if
-both the Tx and Rx stations tune to known, exact frequencies such as
-exactly 7.177MHz.  On channels with fast fading sync may take a few
-seconds.
-
-## PTT doesn't work.  It works with Fldigi and other Hamlib applications.
-
-Many people struggle with initial PTT setup:
-
-1. Read the PTT Configuration section above.
-
-1. Try the Tools - PTT Test function.
-
-1. Check your rig serial settings.  Did you change them from defaults
-for another program?
-
-1. Linux version: do you have permissions for the serial port?  Are you a member
-of the ```dialout``` group?
-
-1. Ask someone who already uses FreeDV to help.
-
-1. Contact the digital voice mailing list.  Be specific about your
-hardware, what you have tried, and the exact nature of the problem.
-
-## I'm on Windows and serial port PTT doesn't work with my USB to serial adapter.
-
-Please verify that you are running the correct drivers for the USB to serial adapter
-that you're using. Information and download links for the drivers used by the most
-common devices can be found [here](https://www.miklor.com/COM/UV_Drivers.php). 
-
-While it is preferred to use devices that use authorized/original versions of the
-various USB to serial chipsets, it is possible to use some cloned devices with 
-older drivers. When doing this, you may also need to force Windows to use an older 
-version of a driver instead of automatically updating the driver on reboot. See
-[here](https://wethegeek.com/how-to-disable-automatic-driver-updates-in-windows-10/)
-for instructions on doing so in Windows 10. For Windows 8:
-
-1. Search for "Change device" in the Windows 8 Start menu.
-1. Click on where it says "Change device installation settings".
-1. Select the "No, let me choose what to do" option.
-1. Check the "automatically get the device app" option, then click Save changes to save the settings you just chose.
-
-## FreeDV 2020 mode is greyed out
-
-In order to use FreeDV 2020 mode, you must have one of the following:
-
-1. An Intel based CPU with AVX support. A Microsoft utility called [coreinfo](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo)
-can be used to determine if your CPU supports AVX.  A * means you have 
-AVX, a - means no AVX:
-
-```
-AES             -       Supports AES extensions
-AVX             *       Supports AVX instruction extensions
-FMA             -       Supports FMA extensions using YMM state
-```
-
-On Linux, you can check for `avx` in the **flags** section of `/proc/cpuinfo`
-or the output of the `lscpu` command:
-```
-lscpu | grep -o "avx[^ ]*"
-```
-will display `avx` (or `avx2`) if your CPU supports the instructions.
-
-2. A Mac with an ARM processor (e.g. 2020 Mac Mini or later).
-
-If your system does not meet either (1) or (2), the 2020 option will be grayed out.
-
-## FreeDV 2020 mode is slow on ARM Macs
-
-Preliminary testing on ARM Macs has shown that NEON optimizations in LPCNet are
-sufficient to allow 2020 to be whitelisted on those machines. However, this is
-definitely experimental. If you are experiencing issues with 2020 mode on these
-Macs, please let the development team know so that further investigation can be done.
-
-## I installed a new version and FreeDV stopped working
-
-You may need to clean out the previous configuration.  Try Tools - Restore Defaults.  Set up your sound cards again with Tools - Audio Config.
-
-## FreeDV crashes when I press Start
-
-Have you removed/changed USB audio devices? If you remove/change USB audio devices without pressing Tools - Audio Config, FreeDV may crash.  See Changing Audio Devices above.
-
-## FreeDV can't be opened on OSX because the developer cannot be verified
-
-From January 2020 Apple is enforcing notarization for all OSX applications.  The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.
-
-![Notarization Error](contrib/osx_notarization1.png)
-
-Security & Privacy shows the Open Anyway option for FreeDV:
-
-![Security and Privacy](contrib/osx_notarization2.png)
-
-![Open FreeDV](contrib/osx_notarization3.png)
-
-Or you can use command line options:
-
-```
-xattr -d com.apple.quarantine FreeDV.app
-```
-or
-```
-xattr -d -r com.apple.quarantine FreeDV.app
-```
 
 # Voice Keyer
 
@@ -417,24 +304,29 @@ appear as follows:
 
 "C:\\Program Files\\FreeDV [version]\\bin\\freedv.exe" -f C:\\Hamradio\\IC7300.conf
 
-# PSK Reporter (Experimental)
+# PSK Reporter
 
 FreeDV has the ability to send FreeDV signal reports to [PSK Reporter](https://pskreporter.info/)
 by enabling the option in Tools-Options and specifying your callsign and grid square. When enabled, this causes
-FreeDV to disable the free form **Txt Msg** field and only transmit the **Callsign** field.
+FreeDV to disable the free form **Txt Msg** field and only transmit the **Callsign** field. As this
+uses a different encoding format from the free-form text field, both sides of the contact must have
+this enabled for the contact to be reported to the PSK Reporter service.
 
-FreeDV validates the received information before submitting a position report to PSK Reporter. This is to ensure that FreeDV does not report invalid callsigns to the service (e.g. ones that don't exist or that correspond to real non-FreeDV users). However, all received text will display in the main window even if it has errors.
+FreeDV validates the received information before submitting a position report to PSK Reporter. This 
+is to ensure that FreeDV does not report invalid callsigns to the service (e.g. ones that don't exist 
+or that correspond to real non-FreeDV users). However, if the PSK Reporter function is disabled,
+all received text will display in the main window even if it has errors.
 
 Reports sent to PSK Reporter will display using the mode "FREEDV" for ease of filtering. The frequency that 
 FreeDV reports to PSK Reporter is set by changing the "Report Frequency" text box in the main window. This 
 is in kilohertz (kHz) and will turn red if the entered value is invalid. If Hamlib support is also enabled, 
 this frequency will automatically update on start/stop as well as when switching between transmit and receive.
 
-# Multiple Mode Support (Experimental)
+# Multiple Mode Support
 
 FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
 
-* 2020
+* 2020/2020B
 * 700C/D/E
 * 1600
 
@@ -762,6 +654,167 @@ On Linux, using the Alsa loopback module:
 1. The space bar can be used to toggle PTT.
 1. You can left click on the main window to adjust tuning, the vertical red line on the frequency scale will show the current centre frequency.  FreeDV will automatically track any drift once it syncs.
 
+# Common Problems
+
+## Overdriving Transmit Level
+
+This is a very common problem for first time FreeDV users.  Adjust your transmit levels so the ALC is just being nudged. More power is not better with FreeDV.  An overdriven signal will have poor SNR at the receiver.  For FreeDV 700D/700E operation with the clipper, make sure your transmitter can sustain high average power levels without damage (e.g. 40W RMS on a 100W PEP radio).
+
+## I can't set up FreeDV, especially the Sound Cards
+
+This can be challenging the first time around:
+
+1. Try a receive only (one audio card) set up first.
+
+1. Ask someone who already runs FreeDV for help.
+
+1. If you don't know anyone local, ask for help on the digital voice
+mailing list.  Be specific about the hardware you have and the exact
+nature of your problem.
+
+## Hamlib does not work with my Icom radio
+
+The most common issue with Icom radios is that the CI-V address configured
+in FreeDV does not match the address configured in the radio. Ensure that
+the CI-V address in both FreeDV and on the radio are the same. If "00" is
+used on the FreeDV side, ensure that the "CI-V Transceive" option is enabled
+on the radio or else the radio will not respond to requests directed to that
+address.
+
+On newer radios (e.g. 7300, 7610), you may also need to set "CI-V USB Echo Back" 
+to ON as this may be set to OFF by default.
+
+## I need help with my radio or rig interface
+
+There are many radios, many computers, and many sound cards.  It is
+impossible to test them all. Many radios have intricate menus with
+custom settings.  It is unreasonable to expect the authors of FreeDV to
+have special knowledge of your exact hardware.
+
+However someone may have worked through the same problem as you.  Ask
+on the digital voice mailing list.
+
+## Can't hear anything on receive
+
+Many FreeDV modes will not play any audio if there is no valid signal.
+You may also have squelch set too high.  In some modes the **Analog**
+button will let you hear the received signal from the SSB radio.
+
+Try the Test Wave Files above to get a feel for what a FreeDV signal
+looks and sounds like.
+
+## The signal is strong but FreeDV won't get sync and decode
+
+Do you have the correct sideband? See USB or LSB section.
+
+Is it a FreeDV signal?  SSTV uses similar frequencies. To understand what FreeDV sounds like, see the Test Wave Files section.
+
+## Trouble getting Sync with 700D
+
+You need to be within +/- 60 Hz on the transmit signal.  It helps if
+both the Tx and Rx stations tune to known, exact frequencies such as
+exactly 7.177MHz.  On channels with fast fading sync may take a few
+seconds.
+
+## PTT doesn't work.  It works with Fldigi and other Hamlib applications.
+
+Many people struggle with initial PTT setup:
+
+1. Read the PTT Configuration section above.
+
+1. Try the Tools - PTT Test function.
+
+1. Check your rig serial settings.  Did you change them from defaults
+for another program?
+
+1. Linux version: do you have permissions for the serial port?  Are you a member
+of the ```dialout``` group?
+
+1. Ask someone who already uses FreeDV to help.
+
+1. Contact the digital voice mailing list.  Be specific about your
+hardware, what you have tried, and the exact nature of the problem.
+
+## I'm on Windows and serial port PTT doesn't work with my USB to serial adapter.
+
+Please verify that you are running the correct drivers for the USB to serial adapter
+that you're using. Information and download links for the drivers used by the most
+common devices can be found [here](https://www.miklor.com/COM/UV_Drivers.php). 
+
+While it is preferred to use devices that use authorized/original versions of the
+various USB to serial chipsets, it is possible to use some cloned devices with 
+older drivers. When doing this, you may also need to force Windows to use an older 
+version of a driver instead of automatically updating the driver on reboot. See
+[here](https://wethegeek.com/how-to-disable-automatic-driver-updates-in-windows-10/)
+for instructions on doing so in Windows 10. For Windows 8:
+
+1. Search for "Change device" in the Windows 8 Start menu.
+1. Click on where it says "Change device installation settings".
+1. Select the "No, let me choose what to do" option.
+1. Check the "automatically get the device app" option, then click Save changes to save the settings you just chose.
+
+## FreeDV 2020 mode is greyed out
+
+In order to use FreeDV 2020 mode, you must have one of the following:
+
+1. An Intel based CPU with AVX support. A Microsoft utility called [coreinfo](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo)
+can be used to determine if your CPU supports AVX.  A * means you have 
+AVX, a - means no AVX:
+
+```
+AES             -       Supports AES extensions
+AVX             *       Supports AVX instruction extensions
+FMA             -       Supports FMA extensions using YMM state
+```
+
+On Linux, you can check for `avx` in the **flags** section of `/proc/cpuinfo`
+or the output of the `lscpu` command:
+```
+lscpu | grep -o "avx[^ ]*"
+```
+will display `avx` (or `avx2`) if your CPU supports the instructions.
+
+2. A Mac with an ARM processor (e.g. 2020 Mac Mini or later).
+
+If your system does not meet either (1) or (2), the 2020 option will be grayed out.
+
+## FreeDV 2020 mode is slow on ARM Macs
+
+Preliminary testing on ARM Macs has shown that NEON optimizations in LPCNet are
+sufficient to allow 2020 to be whitelisted on those machines. However, this is
+definitely experimental. If you are experiencing issues with 2020 mode on these
+Macs, please let the development team know so that further investigation can be done.
+
+## I installed a new version and FreeDV stopped working
+
+You may need to clean out the previous configuration.  Try Tools - Restore Defaults.  Set up your sound cards again with Tools - Audio Config.
+
+## FreeDV crashes when I press Start
+
+Have you removed/changed USB audio devices? If you remove/change USB audio devices without pressing Tools - Audio Config, FreeDV may crash.  See Changing Audio Devices above.
+
+## FreeDV can't be opened on OSX because the developer cannot be verified
+
+From January 2020 Apple is enforcing notarization for all OSX applications.  The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.
+
+![Notarization Error](contrib/osx_notarization1.png)
+
+Security & Privacy shows the Open Anyway option for FreeDV:
+
+![Security and Privacy](contrib/osx_notarization2.png)
+
+![Open FreeDV](contrib/osx_notarization3.png)
+
+Or you can use command line options:
+
+```
+xattr -d com.apple.quarantine FreeDV.app
+```
+or
+```
+xattr -d -r com.apple.quarantine FreeDV.app
+```
+
 # Converting this document to PDF
 
 For the Linux inclined:
@@ -780,11 +833,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V1.8.7 TBD 2023
+## V1.8.7 January 2023
 
 1. Code Cleanup:
     * Remove "force sync" option from Tools->Options (PR #332)
-2. Bugfixes:
+2. Enhancements:
+    * Add "Easy Setup" dialog to simplify first time setup. (PR #189)
+3. Bugfixes:
     * Add a bit of extra space for the sample rate drop-downs. (PR #336)
     * Add units for SNR gauge to match squelch gauge. (PR #339)
     * Fix compiler errors due to recent samplerate changes. (PR #338)

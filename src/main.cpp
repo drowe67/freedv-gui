@@ -2713,8 +2713,11 @@ bool MainFrame::validateSoundCardSetup()
     
     if (canRun && g_nSoundCards == 0)
     {
-        // Initial setup. Remind user to configure sound cards first.
-        wxMessageBox(wxString("It looks like this is your first time running FreeDV. Please go to Tools->Audio Config... to choose your sound card(s) before using."), wxT("First Time Setup"), wxOK, this);
+        // Initial setup. Display Easy Setup dialog.
+        CallAfter([&]() {
+            EasySetupDialog* dlg = new EasySetupDialog(this);
+            dlg->ShowModal();
+        });
         canRun = false;
     }
     
