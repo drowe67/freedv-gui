@@ -125,7 +125,9 @@ class EasySetupDialog : public wxDialog
          
          void updateAudioDevices_();
          void updateHamlibDevices_();
-         void resetIcomCIVStatus();
+         void resetIcomCIVStatus_();
+         bool canTestRadioSettings_();
+         bool canSaveSettings_();
          
          Hamlib* hamlibTestObject_;
          Serialport* serialPortTestObject_;

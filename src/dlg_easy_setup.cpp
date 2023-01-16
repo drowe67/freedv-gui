@@ -502,7 +502,7 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
             m_serialBox->Hide();
 
             m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
-            resetIcomCIVStatus();
+            resetIcomCIVStatus_();
             m_cbSerialPort->SetValue(wxGetApp().m_strHamlibSerialPort);
 
             if (wxGetApp().m_intHamlibSerialRate == 0) {
@@ -615,10 +615,10 @@ void EasySetupDialog::OnPSKReporterChecked(wxCommandEvent& event)
 
 void EasySetupDialog::HamlibRigNameChanged(wxCommandEvent& event)
 {
-    resetIcomCIVStatus();
+    resetIcomCIVStatus_();
 }
 
-void EasySetupDialog::resetIcomCIVStatus()
+void EasySetupDialog::resetIcomCIVStatus_()
 {
     std::string rigName = m_cbRigName->GetString(m_cbRigName->GetCurrentSelection()).ToStdString();
     if (rigName.find("Icom") == 0)
@@ -644,7 +644,10 @@ void EasySetupDialog::OnInitDialog(wxInitDialogEvent& event)
 void EasySetupDialog::OnOK(wxCommandEvent& event)
 {
     OnApply(event);
-    this->EndModal(wxID_OK);
+    if (canSaveSettings_())
+    {
+        this->EndModal(wxID_OK);
+    }
 }
 
 void EasySetupDialog::OnCancel(wxCommandEvent& event)
@@ -659,7 +662,16 @@ void EasySetupDialog::OnClose(wxCloseEvent& event)
 
 void EasySetupDialog::OnApply(wxCommandEvent& event)
 {
-    ExchangeData(EXCHANGE_DATA_OUT);
+    if (canSaveSettings_())
+    {
+        ExchangeData(EXCHANGE_DATA_OUT);
+    }
+    else
+    {
+        wxMessageBox(
+            "Some settings have not been configured. Please check your radio and audio device settings and try again.", 
+            wxT("Error"), wxOK, this);
+    }
 }
 
 void EasySetupDialog::OnAdvancedSoundSetup(wxCommandEvent& event)
@@ -691,172 +703,181 @@ void EasySetupDialog::OnAdvancedPTTSetup(wxCommandEvent& event)
 
 void EasySetupDialog::OnTest(wxCommandEvent& event)
 {
-    if (m_buttonTest->GetLabel() == "Stop Test")
+    if (canTestRadioSettings_())
     {
-        // Stop the currently running test
-        if (txTestAudioDevice_ != nullptr)
+        if (m_buttonTest->GetLabel() == "Stop Test")
         {
-            txTestAudioDevice_->stop();
-            txTestAudioDevice_ = nullptr;
-        }
-        
-        if (hamlibTestObject_->isActive())
-        {
-            wxString error;
-            hamlibTestObject_->ptt(false, error);
-            hamlibTestObject_->close();
-        }
-        else if (serialPortTestObject_->isopen())
-        {
-            serialPortTestObject_->ptt(false);
-            serialPortTestObject_->closeport();
-        }
-        
-        m_radioDevice->Enable(true);
-        m_advancedSoundSetup->Enable(true);
-        m_ckUseHamlibPTT->Enable(true);
-        m_cbRigName->Enable(true);
-        m_cbSerialPort->Enable(true);
-        m_cbSerialRate->Enable(true);
-        m_tcIcomCIVHex->Enable(true);
-        m_advancedPTTSetup->Enable(true);
-        m_ckbox_psk_enable->Enable(true);
-        m_txt_callsign->Enable(true);
-        m_txt_grid_square->Enable(true);
-        m_buttonOK->Enable(true);
-        m_buttonCancel->Enable(true);
-        m_buttonApply->Enable(true);
-        
-        m_buttonTest->SetLabel("Test");
-    }
-    else
-    {
-        int index = m_radioDevice->GetSelection();
-        wxString selectedString = m_radioDevice->GetString(index);
-        wxString radioOutDeviceName = "none";
-        int radioOutSampleRate = -1;
-        
-        // Use the global settings if we're using multiple sound devices on the radio side.
-        if (m_analogDeviceRecord->GetStringSelection() != RX_ONLY_STRING)
-        {
-            if (selectedString == MULTIPLE_DEVICES_STRING)
+            // Stop the currently running test
+            if (txTestAudioDevice_ != nullptr)
             {
-                radioOutDeviceName = wxGetApp().m_soundCard1OutDeviceName;
-                radioOutSampleRate = wxGetApp().m_soundCard1OutSampleRate;
+                txTestAudioDevice_->stop();
+                txTestAudioDevice_ = nullptr;
             }
-            else
-            {
-                SoundDeviceData* deviceData = (SoundDeviceData*)m_radioDevice->GetClientObject(index);
-                radioOutDeviceName = deviceData->txDeviceName;
-                radioOutSampleRate = deviceData->txSampleRate;
-            }
-        }
         
-        // Turn on transmit if Hamlib is enabled.
-        if (m_ckUseHamlibPTT->GetValue())
-        {
-            int rig = m_cbRigName->GetSelection();
-            wxString serialPort = m_cbSerialPort->GetValue();
-            
-            wxString s = m_tcIcomCIVHex->GetValue();
-            long civHexAddress = 0;
-            m_tcIcomCIVHex->GetValue().ToLong(&civHexAddress, 16);
-            
-            long rate = 0;
-            s = m_cbSerialRate->GetValue();
-            if (s != "default") {
-                m_cbSerialRate->GetValue().ToLong(&rate);
-            } 
-            
-            if (!hamlibTestObject_->connect(rig, serialPort, rate, civHexAddress))
+            if (hamlibTestObject_->isActive())
             {
-                wxMessageBox(
-                    "Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
-                    wxT("Error"), wxOK | wxICON_ERROR, this);
-                return;
-            }
-            
-            wxString error;
-            hamlibTestObject_->ptt(true, error);
-        }
-        else if (m_ckUseSerialPTT->GetValue())
-        {
-            wxString serialPort = m_cbSerialPort->GetValue();
-
-            bool useRTS = m_rbUseRTS->GetValue();
-            bool RTSPos = m_ckRTSPos->IsChecked();
-            bool useDTR = m_rbUseDTR->GetValue();
-            bool DTRPos = m_ckDTRPos->IsChecked();
-
-            if (!serialPortTestObject_->openport(
-                    serialPort,
-                    useRTS,
-                    RTSPos,
-                    useDTR,
-                    DTRPos))
-            {
-                wxMessageBox(
-                    "Couldn't connect to Radio.  Make sure the serial Device and Params match your radio", 
-                    wxT("Error"), wxOK | wxICON_ERROR, this);
-                return;
-            }
-            
-            serialPortTestObject_->ptt(true);
-        }
-        
-        // Start playing a sine wave through the radio's device
-        if (radioOutDeviceName != "none")
-        {
-            auto audioEngine = AudioEngineFactory::GetAudioEngine();
-            audioEngine->start();
-
-            txTestAudioDevice_ = audioEngine->getAudioDevice(radioOutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, radioOutSampleRate, 1);
-
-            if (txTestAudioDevice_ == nullptr)
-            {
-                wxMessageBox(
-                    "Error opening radio sound device. Please double-check configuration and try again.", 
-                    wxT("Error"), wxOK | wxICON_ERROR, this);
-                    
                 wxString error;
                 hamlibTestObject_->ptt(false, error);
                 hamlibTestObject_->close();
-                
-                audioEngine->stop();
-                return;
             }
-            
-            sineWaveSampleNumber_ = 0;
-            txTestAudioDevice_->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
-                short* audioData = static_cast<short*>(data);
-    
-                for (unsigned long index = 0; index < size; index++)
-                {
-                    *audioData++ = (SHRT_MAX) * sin(2 * PI * (1500) * sineWaveSampleNumber_ / 48000);
-                    sineWaveSampleNumber_ = (sineWaveSampleNumber_ + 1) % 48000;
-                }
-
-            }, this);
-            txTestAudioDevice_->start();
+            else if (serialPortTestObject_->isopen())
+            {
+                serialPortTestObject_->ptt(false);
+                serialPortTestObject_->closeport();
+            }
+        
+            m_radioDevice->Enable(true);
+            m_advancedSoundSetup->Enable(true);
+            m_ckUseHamlibPTT->Enable(true);
+            m_cbRigName->Enable(true);
+            m_cbSerialPort->Enable(true);
+            m_cbSerialRate->Enable(true);
+            m_tcIcomCIVHex->Enable(true);
+            m_advancedPTTSetup->Enable(true);
+            m_ckbox_psk_enable->Enable(true);
+            m_txt_callsign->Enable(true);
+            m_txt_grid_square->Enable(true);
+            m_buttonOK->Enable(true);
+            m_buttonCancel->Enable(true);
+            m_buttonApply->Enable(true);
+        
+            m_buttonTest->SetLabel("Test");
         }
+        else
+        {
+            int index = m_radioDevice->GetSelection();
+            wxString selectedString = m_radioDevice->GetString(index);
+            wxString radioOutDeviceName = "none";
+            int radioOutSampleRate = -1;
         
-        // Disable all UI except the Stop button.
-        m_radioDevice->Enable(false);
-        m_advancedSoundSetup->Enable(false);
-        m_ckUseHamlibPTT->Enable(false);
-        m_cbRigName->Enable(false);
-        m_cbSerialPort->Enable(false);
-        m_cbSerialRate->Enable(false);
-        m_tcIcomCIVHex->Enable(false);
-        m_advancedPTTSetup->Enable(false);
-        m_ckbox_psk_enable->Enable(false);
-        m_txt_callsign->Enable(false);
-        m_txt_grid_square->Enable(false);
-        m_buttonOK->Enable(false);
-        m_buttonCancel->Enable(false);
-        m_buttonApply->Enable(false);
+            // Use the global settings if we're using multiple sound devices on the radio side.
+            if (m_analogDeviceRecord->GetStringSelection() != RX_ONLY_STRING)
+            {
+                if (selectedString == MULTIPLE_DEVICES_STRING)
+                {
+                    radioOutDeviceName = wxGetApp().m_soundCard1OutDeviceName;
+                    radioOutSampleRate = wxGetApp().m_soundCard1OutSampleRate;
+                }
+                else
+                {
+                    SoundDeviceData* deviceData = (SoundDeviceData*)m_radioDevice->GetClientObject(index);
+                    radioOutDeviceName = deviceData->txDeviceName;
+                    radioOutSampleRate = deviceData->txSampleRate;
+                }
+            }
         
-        m_buttonTest->SetLabel("Stop Test");
+            // Turn on transmit if Hamlib is enabled.
+            if (m_ckUseHamlibPTT->GetValue())
+            {
+                int rig = m_cbRigName->GetSelection();
+                wxString serialPort = m_cbSerialPort->GetValue();
+            
+                wxString s = m_tcIcomCIVHex->GetValue();
+                long civHexAddress = 0;
+                m_tcIcomCIVHex->GetValue().ToLong(&civHexAddress, 16);
+            
+                long rate = 0;
+                s = m_cbSerialRate->GetValue();
+                if (s != "default") {
+                    m_cbSerialRate->GetValue().ToLong(&rate);
+                } 
+            
+                if (!hamlibTestObject_->connect(rig, serialPort, rate, civHexAddress))
+                {
+                    wxMessageBox(
+                        "Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
+                        wxT("Error"), wxOK | wxICON_ERROR, this);
+                    return;
+                }
+            
+                wxString error;
+                hamlibTestObject_->ptt(true, error);
+            }
+            else if (m_ckUseSerialPTT->GetValue())
+            {
+                wxString serialPort = m_cbSerialPort->GetValue();
+
+                bool useRTS = m_rbUseRTS->GetValue();
+                bool RTSPos = m_ckRTSPos->IsChecked();
+                bool useDTR = m_rbUseDTR->GetValue();
+                bool DTRPos = m_ckDTRPos->IsChecked();
+
+                if (!serialPortTestObject_->openport(
+                        serialPort,
+                        useRTS,
+                        RTSPos,
+                        useDTR,
+                        DTRPos))
+                {
+                    wxMessageBox(
+                        "Couldn't connect to Radio.  Make sure the serial Device and Params match your radio", 
+                        wxT("Error"), wxOK | wxICON_ERROR, this);
+                    return;
+                }
+            
+                serialPortTestObject_->ptt(true);
+            }
+        
+            // Start playing a sine wave through the radio's device
+            if (radioOutDeviceName != "none")
+            {
+                auto audioEngine = AudioEngineFactory::GetAudioEngine();
+                audioEngine->start();
+
+                txTestAudioDevice_ = audioEngine->getAudioDevice(radioOutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, radioOutSampleRate, 1);
+
+                if (txTestAudioDevice_ == nullptr)
+                {
+                    wxMessageBox(
+                        "Error opening radio sound device. Please double-check configuration and try again.", 
+                        wxT("Error"), wxOK | wxICON_ERROR, this);
+                    
+                    wxString error;
+                    hamlibTestObject_->ptt(false, error);
+                    hamlibTestObject_->close();
+                
+                    audioEngine->stop();
+                    return;
+                }
+            
+                sineWaveSampleNumber_ = 0;
+                txTestAudioDevice_->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
+                    short* audioData = static_cast<short*>(data);
+    
+                    for (unsigned long index = 0; index < size; index++)
+                    {
+                        *audioData++ = (SHRT_MAX) * sin(2 * PI * (1500) * sineWaveSampleNumber_ / 48000);
+                        sineWaveSampleNumber_ = (sineWaveSampleNumber_ + 1) % 48000;
+                    }
+
+                }, this);
+                txTestAudioDevice_->start();
+            }
+        
+            // Disable all UI except the Stop button.
+            m_radioDevice->Enable(false);
+            m_advancedSoundSetup->Enable(false);
+            m_ckUseHamlibPTT->Enable(false);
+            m_cbRigName->Enable(false);
+            m_cbSerialPort->Enable(false);
+            m_cbSerialRate->Enable(false);
+            m_tcIcomCIVHex->Enable(false);
+            m_advancedPTTSetup->Enable(false);
+            m_ckbox_psk_enable->Enable(false);
+            m_txt_callsign->Enable(false);
+            m_txt_grid_square->Enable(false);
+            m_buttonOK->Enable(false);
+            m_buttonCancel->Enable(false);
+            m_buttonApply->Enable(false);
+        
+            m_buttonTest->SetLabel("Stop Test");
+        }
+    }
+    else
+    {
+        wxMessageBox(
+            "Some settings have not been configured. Please check your radio and audio device settings and try again.", 
+            wxT("Error"), wxOK, this);
     }
 }
 
@@ -865,7 +886,7 @@ void EasySetupDialog::PTTUseHamLibClicked(wxCommandEvent& event)
     if (m_ckUseHamlibPTT->GetValue())
     {
         m_hamlibBox->Show();
-        resetIcomCIVStatus();
+        resetIcomCIVStatus_();
     }
     else
     {
@@ -1232,4 +1253,45 @@ void EasySetupDialog::updateAudioDevices_()
     }
 
     audioEngine->stop();
+}
+
+bool EasySetupDialog::canTestRadioSettings_()
+{
+    Hamlib *hamlib = wxGetApp().m_hamlib;
+    
+    bool radioDeviceSelected = m_radioDevice->GetSelection() >= 0;
+    bool analogPlayDeviceSelected = m_analogDevicePlayback->GetSelection() >= 0;
+    bool analogRecordDeviceSelected = m_analogDeviceRecord->GetSelection() >= 0;
+    bool soundDevicesConfigured = radioDeviceSelected && analogPlayDeviceSelected && analogRecordDeviceSelected;
+    
+    bool noPttSelected = m_ckUseHamlibPTT->GetValue();
+    bool hamlibSelected = m_ckUseHamlibPTT->GetValue();
+    bool serialSelected = m_ckUseSerialPTT->GetValue();
+    
+    bool hamlibSerialPortEntered = m_cbSerialPort->GetValue().Length() > 0;
+    bool icomRadioSelected = hamlib->rigIndexToName(m_cbRigName->GetSelection()).find("Icom") != std::string::npos;
+    bool icomCIVEntered = m_tcIcomCIVHex->GetValue().Length() > 0;
+    bool hamlibValid = hamlibSerialPortEntered && (!icomRadioSelected || icomCIVEntered);
+    
+    bool serialPttPortEntered = m_cbCtlDevicePath->GetValue().Length() > 0;
+    bool useDtrSelected = m_rbUseDTR->GetValue();
+    bool useRtsSelected = m_rbUseRTS->GetValue();
+    bool serialPttValid = serialPttPortEntered && (useDtrSelected || useRtsSelected);
+    
+    bool radioCommValid = 
+        noPttSelected || (hamlibSelected && hamlibValid) || 
+        (serialSelected && serialPttValid);
+    
+    return soundDevicesConfigured && radioCommValid;
+}
+
+bool EasySetupDialog::canSaveSettings_()
+{
+    bool radioSettingsValid = canTestRadioSettings_();
+
+    bool isPSKReporterEnabled = m_ckbox_psk_enable->GetValue();
+    bool callsignValid = m_txt_callsign->GetValue().Length() > 0;
+    bool gridSquareValid = m_txt_grid_square->GetValue().Length() > 0;
+    
+    return radioSettingsValid && (!isPSKReporterEnabled || (callsignValid && gridSquareValid));
 }
