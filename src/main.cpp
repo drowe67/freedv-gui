@@ -1240,7 +1240,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (snr_limited < -5.0) snr_limited = -5.0;
         if (snr_limited > 20.0) snr_limited = 20.0;
         char snr[15];
-        snprintf(snr, 15, "%4.1f", g_snr);
+        snprintf(snr, 15, "%4.1f dB", g_snr);
 
         //fprintf(stderr, "g_mode: %d snr_est: %f m_snrBeta: %f g_snr: %f snr_limited: %f\n", g_mode, g_stats.snr_est,  m_snrBeta, g_snr, snr_limited);
 
@@ -2756,8 +2756,11 @@ bool MainFrame::validateSoundCardSetup()
     
     if (canRun && g_nSoundCards == 0)
     {
-        // Initial setup. Remind user to configure sound cards first.
-        wxMessageBox(wxString("It looks like this is your first time running FreeDV. Please go to Tools->Audio Config... to choose your sound card(s) before using."), wxT("First Time Setup"), wxOK, this);
+        // Initial setup. Display Easy Setup dialog.
+        CallAfter([&]() {
+            EasySetupDialog* dlg = new EasySetupDialog(this);
+            dlg->ShowModal();
+        });
         canRun = false;
     }
     

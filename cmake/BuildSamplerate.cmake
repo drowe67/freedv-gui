@@ -6,7 +6,7 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/libsndfile/libsamplerate.git
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
-    GIT_TAG        master
+    GIT_TAG        0.2.2
 )
 
 FetchContent_GetProperties(samplerate)
