@@ -1764,7 +1764,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     }
 #endif // FREEDV_MODE_2020B
 #if defined(FREEDV_MODE_2020C)
-    else if (m_rb2020c->GetValue()) 
+    else if (eventObject == m_rb2020c) 
     {
         assert(wxGetApp().m_2020Allowed);
 
