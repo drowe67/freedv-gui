@@ -833,6 +833,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## TBD TBD 2023
+
+1. Bugfixes:
+    * Resolve compile failure in EasySetupDialog on openSUSE. (PR #344)
+    
 ## V1.8.7 January 2023
 
 1. Code Cleanup:
