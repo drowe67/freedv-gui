@@ -103,5 +103,3 @@ docker-compose -f docker-compose-win.yml up --remove-orphans >> $log
 package_docker_path=$(cat $log | sed  -n "s/.*package: \(.*exe\) .*/\1/p")
 echo $package_docker_path
 docker cp fdv_win_fed37_c:$package_docker_path .
-
-cat $log
