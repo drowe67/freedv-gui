@@ -782,7 +782,7 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                     m_cbSerialRate->GetValue().ToLong(&rate);
                 } 
             
-                if (!hamlibTestObject_->connect(rig, serialPort, rate, civHexAddress))
+                if (!hamlibTestObject_->connect(rig, (const char*)serialPort.ToUTF8(), rate, civHexAddress))
                 {
                     wxMessageBox(
                         "Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
@@ -803,7 +803,7 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                 bool DTRPos = m_ckDTRPos->IsChecked();
 
                 if (!serialPortTestObject_->openport(
-                        serialPort,
+                        (const char*)serialPort.ToUTF8(),
                         useRTS,
                         RTSPos,
                         useDTR,
