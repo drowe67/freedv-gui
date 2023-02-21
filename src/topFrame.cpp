@@ -371,11 +371,11 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_hiddenMode1->SetValue(true);
     m_hiddenMode2->SetValue(true);
 
-    sbSizer_mode->SetMinSize(wxSize(100,-1));
+    sbSizer_mode->SetMinSize(wxSize(100,240));
     otherModeWin->SetSizer(otherModeSizer);
     otherModeSizer->SetSizeHints(otherModeWin);
 
-    rightSizer->Add(sbSizer_mode,0, wxALL|wxGROW, 3);
+    rightSizer->Add(sbSizer_mode,0, wxALL, 3);
 
     //=====================================================
     // Control Toggles box
@@ -670,9 +670,5 @@ TopFrame::~TopFrame()
 
 void TopFrame::OnChangeCollapseState(wxCollapsiblePaneEvent& event)
 {
-    auto bestSize = modeBox->GetBestSize();
-    auto curSize = modeBox->GetSize();
-
-    modeBox->SetSize(wxSize(curSize.GetWidth(), bestSize.GetHeight()));
-    rightSizer->Layout();
+    // empty
 }
