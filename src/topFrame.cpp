@@ -353,16 +353,16 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxSizer *otherModeSizer = new wxBoxSizer(wxVERTICAL);
     
     m_rb700c = new wxRadioButton( otherModeWin, wxID_ANY, wxT("700C"), wxDefaultPosition, wxDefaultSize,  0);
-    otherModeSizer->Add(m_rb700c, 1, wxALIGN_LEFT|wxALL|wxGROW, 1);
+    otherModeSizer->Add(m_rb700c, 1, wxALIGN_LEFT|wxALL|wxEXPAND, 1);
     m_rb800xa = new wxRadioButton( otherModeWin, wxID_ANY, wxT("800XA"), wxDefaultPosition, wxDefaultSize, 0);
-    otherModeSizer->Add(m_rb800xa, 1, wxALIGN_LEFT|wxALL|wxGROW, 1);
+    otherModeSizer->Add(m_rb800xa, 1, wxALIGN_LEFT|wxALL|wxEXPAND, 1);
     m_rb2400b = new wxRadioButton( otherModeWin, wxID_ANY, wxT("2400B"), wxDefaultPosition, wxDefaultSize, 0);
-    otherModeSizer->Add(m_rb2400b, 1, wxALIGN_LEFT|wxALL|wxGROW, 1);
+    otherModeSizer->Add(m_rb2400b, 1, wxALIGN_LEFT|wxALL|wxEXPAND, 1);
     m_rb2020 = new wxRadioButton( otherModeWin, wxID_ANY, wxT("2020"), wxDefaultPosition, wxDefaultSize,  0);
-    otherModeSizer->Add(m_rb2020, 1, wxALIGN_LEFT|wxALL|wxGROW, 1);
+    otherModeSizer->Add(m_rb2020, 1, wxALIGN_LEFT|wxALL|wxEXPAND, 1);
 #if defined(FREEDV_MODE_2020B)
     m_rb2020b = new wxRadioButton( otherModeWin, wxID_ANY, wxT("2020B"), wxDefaultPosition, wxDefaultSize,  0);
-    otherModeSizer->Add(m_rb2020b, 1, wxALIGN_LEFT|wxALL|wxGROW, 1);
+    otherModeSizer->Add(m_rb2020b, 1, wxALIGN_LEFT|wxALL|wxEXPAND, 1);
 #endif // FREEDV_MODE_2020B
     m_hiddenMode2 = new wxRadioButton( otherModeWin, wxID_ANY, wxT("hidden2"), wxDefaultPosition, wxDefaultSize, 0);
     otherModeSizer->Add(m_hiddenMode2, 0, wxALIGN_LEFT|wxALL, 1);
@@ -670,5 +670,9 @@ TopFrame::~TopFrame()
 
 void TopFrame::OnChangeCollapseState(wxCollapsiblePaneEvent& event)
 {
-    // empty
+    auto bestSize = modeBox->GetBestSize();
+    auto curSize = modeBox->GetSize();
+
+    modeBox->SetSize(wxSize(curSize.GetWidth(), bestSize.GetHeight()));
+    rightSizer->Layout();
 }
