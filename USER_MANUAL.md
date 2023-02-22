@@ -833,6 +833,12 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## TBD TBD 2023
+
+1. Bugfixes:
+    * Resolve compile failure in EasySetupDialog on openSUSE. (PR #344)
+    * Prevent Mode box from auto-resizing to avoid unexpected movement of other controls. (PR #347)
+    
 ## V1.8.7 January 2023
 
 1. Code Cleanup:
@@ -843,6 +849,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add a bit of extra space for the sample rate drop-downs. (PR #336)
     * Add units for SNR gauge to match squelch gauge. (PR #339)
     * Fix compiler errors due to recent samplerate changes. (PR #338)
+    * Fix inability to change to certain FreeDV modes for transmit. (PR #340)
 
 ## V1.8.6 December 2022
 
