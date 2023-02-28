@@ -782,6 +782,11 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                     m_cbSerialRate->GetValue().ToLong(&rate);
                 } 
             
+                if (!wxGetApp().CanAccessSerialPort((const char*)serialPort.ToUTF8()))
+                {
+                    return;
+                }
+                
                 if (!hamlibTestObject_->connect(rig, (const char*)serialPort.ToUTF8(), rate, civHexAddress))
                 {
                     wxMessageBox(
@@ -797,6 +802,11 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
             {
                 wxString serialPort = m_cbSerialPort->GetValue();
 
+                if (!wxGetApp().CanAccessSerialPort((const char*)serialPort.ToUTF8()))
+                {
+                    return;
+                }
+                
                 bool useRTS = m_rbUseRTS->GetValue();
                 bool RTSPos = m_ckRTSPos->IsChecked();
                 bool useDTR = m_rbUseDTR->GetValue();

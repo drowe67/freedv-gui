@@ -564,40 +564,42 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
 
         if (g_verbose) fprintf(stderr, "serial rate: %d\n", serial_rate);
 
-        // try to open rig
+        if (wxGetApp().CanAccessSerialPort((const char*)port.ToUTF8()))
+        {
+            // try to open rig
+            Hamlib *hamlib = wxGetApp().m_hamlib; 
+            bool status = hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, hexAddress);
+            if (status == false) {
+                wxMessageBox("Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
+                wxT("Error"), wxOK | wxICON_ERROR, this);
+                return;
+            }
+            else {
+                wxString hamlib_serial_config;
+                hamlib_serial_config.sprintf(" %d, %d, %d", 
+                                             hamlib->get_serial_rate(),
+                                             hamlib->get_data_bits(),
+                                             hamlib->get_stop_bits());
+                m_cbSerialParams->SetLabel(hamlib_serial_config);
+           }
 
-        Hamlib *hamlib = wxGetApp().m_hamlib; 
-        bool status = hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, hexAddress);
-        if (status == false) {
-            wxMessageBox("Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
-            wxT("Error"), wxOK | wxICON_ERROR, this);
-            return;
-        }
-        else {
-            wxString hamlib_serial_config;
-            hamlib_serial_config.sprintf(" %d, %d, %d", 
-                                         hamlib->get_serial_rate(),
-                                         hamlib->get_data_bits(),
-                                         hamlib->get_stop_bits());
-            m_cbSerialParams->SetLabel(hamlib_serial_config);
-       }
+            // toggle PTT
 
-        // toggle PTT
+            wxString hamlibError;
+            if (hamlib->ptt(true, hamlibError) == false) {
+                wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError + 
+                             wxString(".  Make sure the Hamlib serial Device, Rate, and Params match your radio"), 
+                             wxT("Error"), wxOK | wxICON_ERROR, this);
+                return;
+            }
 
-        wxString hamlibError;
-        if (hamlib->ptt(true, hamlibError) == false) {
-            wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError + 
-                         wxString(".  Make sure the Hamlib serial Device, Rate, and Params match your radio"), 
-                         wxT("Error"), wxOK | wxICON_ERROR, this);
-            return;
-        }
+            wxSleep(1);
 
-        wxSleep(1);
-
-        if (hamlib->ptt(false, hamlibError) == false) {
-            wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError +
-                         wxString(".  Make sure the Hamlib serial Device, Rate, and Params match your radio"), 
-                         wxT("Error"), wxOK | wxICON_ERROR, this);
+            if (hamlib->ptt(false, hamlibError) == false) {
+                wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError +
+                             wxString(".  Make sure the Hamlib serial Device, Rate, and Params match your radio"), 
+                             wxT("Error"), wxOK | wxICON_ERROR, this);
+            }
         }
     }
 
@@ -611,29 +613,32 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
         if (g_verbose) fprintf(stderr, "opening serial port: ");
         fputs(ctrlport.c_str(), stderr);            // don't escape crazy Microsoft bakslash-ified comm port names
         if (g_verbose) fprintf(stderr,"\n");
+        
+        if (wxGetApp().CanAccessSerialPort((const char*)ctrlport.ToUTF8()))
+        {
+            bool success = serialport->openport(ctrlport.c_str(),
+                                                m_rbUseRTS->GetValue(),
+                                                m_ckRTSPos->IsChecked(),
+                                                m_rbUseDTR->GetValue(),
+                                                m_ckDTRPos->IsChecked());
 
-        bool success = serialport->openport(ctrlport.c_str(),
-                                            m_rbUseRTS->GetValue(),
-                                            m_ckRTSPos->IsChecked(),
-                                            m_rbUseDTR->GetValue(),
-                                            m_ckDTRPos->IsChecked());
+            if (g_verbose) fprintf(stderr, "serial port open\n");
 
-        if (g_verbose) fprintf(stderr, "serial port open\n");
+            if (!success) {
+                wxString errorMessage = "Couldn't open serial port " + ctrlport + ". This is likely due to not having permission to access the chosen port.";
+                wxMessageBox(errorMessage, wxT("Error"), wxOK | wxICON_ERROR, this);
+            }
 
-        if (!success) {
-            wxString errorMessage = "Couldn't open serial port " + ctrlport + ". This is likely due to not having permission to access the chosen port.";
-            wxMessageBox(errorMessage, wxT("Error"), wxOK | wxICON_ERROR, this);
+            // assert PTT port for 1 sec
+
+            serialport->ptt(true);
+            wxSleep(1);
+            serialport->ptt(false);
+
+            if (g_verbose) fprintf(stderr, "closing serial port\n");
+            serialport->closeport();
+            if (g_verbose) fprintf(stderr, "serial port closed\n");
         }
-
-        // assert PTT port for 1 sec
-
-        serialport->ptt(true);
-        wxSleep(1);
-        serialport->ptt(false);
-
-        if (g_verbose) fprintf(stderr, "closing serial port\n");
-        serialport->closeport();
-        if (g_verbose) fprintf(stderr, "serial port closed\n");
     }
     
 }

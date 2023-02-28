@@ -42,6 +42,78 @@ void clickTune(float freq) {
     fprintf(stderr, "g_TxFreqOffsetHz: %f g_RxFreqOffsetHz: %f\n", g_TxFreqOffsetHz, g_RxFreqOffsetHz);
 }
 
+bool MainApp::CanAccessSerialPort(std::string portName)
+{
+    bool couldOpen = true;
+    com_handle_t com_handle = COM_HANDLE_INVALID;
+    
+#ifdef _WIN32
+    {
+        if (portName.substr(0, 3) != "COM")
+        {
+            // assume we can open if we don't have a valid port name.
+            return couldOpen;
+        }
+        
+        TCHAR  nameWithStrangePrefix[100];
+        StringCchPrintf(nameWithStrangePrefix, 100, TEXT("\\\\.\\%hs"), portName.c_str());
+	
+        if((com_handle=CreateFile(nameWithStrangePrefix
+                                   ,GENERIC_READ | GENERIC_WRITE/* Access */
+                                   ,0				/* Share mode */
+                                   ,NULL		 	/* Security attributes */
+                                   ,OPEN_EXISTING		/* Create access */
+                                   ,0                           /* File attributes */
+                                   ,NULL		        /* Template */
+                                   ))==INVALID_HANDLE_VALUE) {
+           couldOpen = false;
+    	}
+        else
+        {
+            CloseHandle(com_handle);
+        }
+    }
+#else
+	{
+        if (portName.substr(0, 5) != "/dev/")
+        {
+            // assume we can open if we don't have a valid port name.
+            return couldOpen;
+        }
+        
+		if((com_handle=open(portName.c_str(), O_NONBLOCK|O_RDWR))== COM_HANDLE_INVALID)
+        {
+            couldOpen = false;
+        }
+        else
+        {
+            close(com_handle);
+        }
+	}
+#endif
+    
+    if (!couldOpen)
+    {
+        std::string errorMessage = "Could not open serial port " + portName + ".";
+        
+        #ifdef _WIN32
+        errorMessage += " Please ensure that no other applications are accessing the port.";
+        #elif __linux
+        errorMessage += " Please ensure that you have permission to access the port. Adding yourself to the 'dialout' group (and logging out/back in) will typically ensure this.";
+        #else
+        errorMessage += " Please ensure that you have permission to access the port.";
+        #endif
+         
+        CallAfter([&]() {
+            wxMessageBox(
+                errorMessage, 
+                wxT("Error"), wxOK | wxICON_ERROR, GetTopWindow());
+        });
+    }
+    
+    return couldOpen;
+}
+
 //----------------------------------------------------------------
 // OpenSerialPort()
 //----------------------------------------------------------------
@@ -50,19 +122,25 @@ void MainFrame::OpenSerialPort(void)
 {
     Serialport *serialport = wxGetApp().m_serialport;
 
-    if(!wxGetApp().m_strRigCtrlPort.IsEmpty()) {
-       serialport->openport(wxGetApp().m_strRigCtrlPort.c_str(),
-                            wxGetApp().m_boolUseRTS,
-                            wxGetApp().m_boolRTSPos,
-                            wxGetApp().m_boolUseDTR,
-                            wxGetApp().m_boolDTRPos);
-       if (serialport->isopen()) {
-            // always start PTT in Rx state
-           serialport->ptt(false);
-       }
-       else {
-           wxMessageBox("Couldn't open serial port for PTT output", wxT("Error"), wxOK | wxICON_ERROR, this);
-       }
+    if(!wxGetApp().m_strRigCtrlPort.IsEmpty()) 
+    {
+        if (wxGetApp().CanAccessSerialPort((const char*)wxGetApp().m_strRigCtrlPort.ToUTF8()))
+        {
+            serialport->openport(wxGetApp().m_strRigCtrlPort.c_str(),
+                    wxGetApp().m_boolUseRTS,
+                    wxGetApp().m_boolRTSPos,
+                    wxGetApp().m_boolUseDTR,
+                    wxGetApp().m_boolDTRPos);
+            if (serialport->isopen()) 
+            {
+                // always start PTT in Rx state
+                serialport->ptt(false);
+            }
+            else 
+            {
+                wxMessageBox("Couldn't open serial port for PTT output", wxT("Error"), wxOK | wxICON_ERROR, this);
+            }
+        }
     }
 }
 
@@ -91,22 +169,33 @@ void MainFrame::OpenPTTInPort(void)
 {
     Serialport *serialport = wxGetApp().m_pttInSerialPort;
 
-    if(!wxGetApp().m_strPTTInputPort.IsEmpty()) {
-       serialport->openport(wxGetApp().m_strPTTInputPort.c_str(),
-                            false,
-                            false,
-                            false,
-                            false);
-       if (!serialport->isopen()) {
-           wxMessageBox("Couldn't open PTT input port", wxT("Error"), wxOK | wxICON_ERROR, this);
-       } else {
-           // Set up PTT monitoring. When PTT state changes, we should also change 
-           // the PTT state in th app.
-           serialport->enablePttInputMonitoring(wxGetApp().m_boolCTSPos, [&](bool pttState) {
-               fprintf(stderr, "PTT input state is now %d\n", pttState);
-               GetEventHandler()->CallAfter([&]() { m_btnTogPTT->SetValue(pttState); togglePTT(); });
-           });
-       }
+    if(!wxGetApp().m_strPTTInputPort.IsEmpty()) 
+    {
+        if (wxGetApp().CanAccessSerialPort((const char*)wxGetApp().m_strPTTInputPort.ToUTF8()))
+        {
+            serialport->openport(
+                wxGetApp().m_strPTTInputPort.c_str(),
+                false,
+                false,
+                false,
+                false);
+            if (!serialport->isopen()) 
+            {
+                wxMessageBox("Couldn't open PTT input port", wxT("Error"), wxOK | wxICON_ERROR, this);
+            } 
+            else 
+            {
+                // Set up PTT monitoring. When PTT state changes, we should also change 
+                // the PTT state in th app.
+                serialport->enablePttInputMonitoring(wxGetApp().m_boolCTSPos, [&](bool pttState) {
+                    fprintf(stderr, "PTT input state is now %d\n", pttState);
+                    GetEventHandler()->CallAfter([&]() { 
+                        m_btnTogPTT->SetValue(pttState); 
+                        togglePTT(); 
+                    });
+                });
+            }
+        }
     }
 }
 

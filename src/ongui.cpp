@@ -209,17 +209,24 @@ bool MainFrame::OpenHamlibRig() {
     int rig = wxGetApp().m_intHamlibRig;
     wxString port = wxGetApp().m_strHamlibSerialPort;
     int serial_rate = wxGetApp().m_intHamlibSerialRate;
-    bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, wxGetApp().m_intHamlibIcomCIVHex);
-    if (status == false)
+    if (wxGetApp().CanAccessSerialPort((const char*)port.ToUTF8()))
     {
-        wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
+        bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, wxGetApp().m_intHamlibIcomCIVHex);
+        if (status == false)
+        {
+            wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
+        }
+        else
+        {
+            wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, m_txtCtrlReportFrequency, g_mode == FREEDV_MODE_2400B);
+        }
+    
+        return status;
     }
     else
     {
-        wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, m_txtCtrlReportFrequency, g_mode == FREEDV_MODE_2400B);
+        return false;
     }
-    
-    return status;
 }
 
 //-------------------------------------------------------------------------
