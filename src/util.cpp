@@ -7,6 +7,10 @@
 #include "main.h"
 #include "codec2_fdmdv.h"
 
+#ifdef _WIN32
+#include <strsafe.h>
+#endif
+
 // Callback from plot_spectrum & plot_waterfall.  would be nice to
 // work out a way to do this without globals.
 extern float           g_RxFreqOffsetHz;
