@@ -924,8 +924,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Filter out non-MME devices to match previous behavior. (PR #318)
     * Use 64 bit int for frequency to enable reporting microwave frequencies. (PR #325, #331)
     * Resolves issue with minimum button sizing in the Filter dialog. (PR #326, #331)
-    * Update labling of clipping and BPF options to match actual behavior. (PR #319)
-    * Adjustss positioning and spacing of controls in the Options dialog to prevent truncation. (PR #328, #331)
+    * Update labeling of clipping and BPF options to match actual behavior. (PR #319)
+    * Adjusts positioning and spacing of controls in the Options dialog to prevent truncation. (PR #328, #331)
 3. Enhancements:
     * Add 2020B to multi-RX feature to enable RX and TX without restarting session. (PR #312)
     * Hide modes not on the SM1000 by default. (PR #313)
