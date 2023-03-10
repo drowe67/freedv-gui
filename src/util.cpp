@@ -108,7 +108,7 @@ bool MainApp::CanAccessSerialPort(std::string portName)
         errorMessage += " Please ensure that you have permission to access the port.";
         #endif
          
-        CallAfter([&]() {
+        CallAfter([&, errorMessage]() {
             wxMessageBox(
                 errorMessage, 
                 wxT("Error"), wxOK | wxICON_ERROR, GetTopWindow());
