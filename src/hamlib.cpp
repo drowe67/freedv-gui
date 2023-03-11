@@ -220,20 +220,25 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
     if(!m_rig)
         return false;
 
-    /* TODO(Joel): make ON_DATA and ON configurable. */
-
     ptt_t on = press ? RIG_PTT_ON : RIG_PTT_OFF;
-
-    /* TODO(Joel): what should the VFO option be? */
-
-    int retcode = rig_set_ptt(m_rig, RIG_VFO_CURR, on);
-    if (g_verbose) fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", retcode);
-    if (retcode != RIG_OK ) {
-        if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(retcode));
-        hamlibError = rigerror(retcode);
+    vfo_t currVfo = RIG_VFO_A;
+    int result = rig_get_vfo(m_rig, &currVfo);
+    if (result != RIG_OK && result != -RIG_ENAVAIL)
+    {
+        hamlibError = rigerror(result);
+        if (g_verbose) fprintf(stderr, "rig_get_vfo: error = %s \n", rigerror(result));
     }
-
-    return retcode == RIG_OK;
+    else
+    {
+        result = rig_set_ptt(m_rig, RIG_VFO_CURR, on);
+        if (g_verbose) fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", result);
+        if (result != RIG_OK ) {
+            if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
+            hamlibError = rigerror(result);
+        }
+    }
+    
+    return result == RIG_OK;
 }
 
 int Hamlib::update_frequency_and_mode(void)
