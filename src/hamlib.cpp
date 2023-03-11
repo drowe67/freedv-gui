@@ -230,7 +230,7 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
     }
     else
     {
-        result = rig_set_ptt(m_rig, RIG_VFO_CURR, on);
+        result = rig_set_ptt(m_rig, currVfo, on);
         if (g_verbose) fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", result);
         if (result != RIG_OK ) {
             if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
