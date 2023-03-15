@@ -53,6 +53,7 @@ class Hamlib {
         freq_t m_currFreq;
         rmode_t m_currMode;
         bool m_vhfUhfMode;
+        bool pttSet_;
         
         // Data elements to support running Hamlib operations in a separate thread.
         bool threadRunning_;

@@ -48,6 +48,7 @@ Hamlib::Hamlib() :
     m_currFreq(0),
     m_currMode(RIG_MODE_USB),
     m_vhfUhfMode(false),
+    pttSet_(false),
     threadRunning_(false)  {
     /* Stop hamlib from spewing info to stderr. */
     rig_set_debug(RIG_DEBUG_NONE);
@@ -236,6 +237,14 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
             if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
             hamlibError = rigerror(result);
         }
+        else
+        {
+            pttSet_ = press;
+            if (!press)
+            {
+                update_frequency_and_mode();
+            }
+        }
     }
     
     return result == RIG_OK;
@@ -330,6 +339,12 @@ void Hamlib::statusUpdateThreadEntryFn_()
 
 void Hamlib::update_from_hamlib_()
 {
+    if (pttSet_)
+    {
+        // ignore Hamlib update when PTT active.
+        return;
+    }
+    
     rmode_t mode = RIG_MODE_NONE;
     pbwidth_t passband = 0;
     vfo_t currVfo = RIG_VFO_A;
