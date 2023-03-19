@@ -840,6 +840,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Prevent Mode box from auto-resizing to avoid unexpected movement of other controls. (PR #347)
 2. Build system:
     * CPack: Properly handle the case where FREEDV_HASH doesn't exist. (PR #345)
+3. Enhancements:
+    * Use same VFO retrieval mechanism for PTT as with frequency sync. (PR #350)
     
 ## V1.8.7 January 2023
 
