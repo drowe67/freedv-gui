@@ -48,6 +48,7 @@ Hamlib::Hamlib() :
     m_currFreq(0),
     m_currMode(RIG_MODE_USB),
     m_vhfUhfMode(false),
+    pttSet_(false),
     threadRunning_(false)  {
     /* Stop hamlib from spewing info to stderr. */
     rig_set_debug(RIG_DEBUG_NONE);
@@ -220,20 +221,33 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
     if(!m_rig)
         return false;
 
-    /* TODO(Joel): make ON_DATA and ON configurable. */
-
     ptt_t on = press ? RIG_PTT_ON : RIG_PTT_OFF;
-
-    /* TODO(Joel): what should the VFO option be? */
-
-    int retcode = rig_set_ptt(m_rig, RIG_VFO_CURR, on);
-    if (g_verbose) fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", retcode);
-    if (retcode != RIG_OK ) {
-        if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(retcode));
-        hamlibError = rigerror(retcode);
+    vfo_t currVfo = RIG_VFO_A;
+    int result = rig_get_vfo(m_rig, &currVfo);
+    if (result != RIG_OK && result != -RIG_ENAVAIL)
+    {
+        hamlibError = rigerror(result);
+        if (g_verbose) fprintf(stderr, "rig_get_vfo: error = %s \n", rigerror(result));
     }
-
-    return retcode == RIG_OK;
+    else
+    {
+        result = rig_set_ptt(m_rig, currVfo, on);
+        if (g_verbose) fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", result);
+        if (result != RIG_OK ) {
+            if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
+            hamlibError = rigerror(result);
+        }
+        else
+        {
+            pttSet_ = press;
+            if (!press)
+            {
+                update_frequency_and_mode();
+            }
+        }
+    }
+    
+    return result == RIG_OK;
 }
 
 int Hamlib::update_frequency_and_mode(void)
@@ -325,6 +339,12 @@ void Hamlib::statusUpdateThreadEntryFn_()
 
 void Hamlib::update_from_hamlib_()
 {
+    if (pttSet_)
+    {
+        // ignore Hamlib update when PTT active.
+        return;
+    }
+    
     rmode_t mode = RIG_MODE_NONE;
     pbwidth_t passband = 0;
     vfo_t currVfo = RIG_VFO_A;
