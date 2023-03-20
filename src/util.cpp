@@ -103,7 +103,7 @@ bool MainApp::CanAccessSerialPort(std::string portName)
         #ifdef _WIN32
         errorMessage += " Please ensure that no other applications are accessing the port.";
         #elif __linux
-        errorMessage += " Please ensure that you have permission to access the port. Adding yourself to the 'dialout' group (and logging out/back in) will typically ensure this.";
+        errorMessage += " Please ensure that you have permission to access the port. Adding yourself to the 'dialout' group (and logging out/back in) along with reattaching your radio to your PC will typically ensure this.";
         #else
         errorMessage += " Please ensure that you have permission to access the port.";
         #endif
