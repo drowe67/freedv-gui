@@ -88,7 +88,10 @@ void FreeDVInterface::OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr,
     FreeDVInterface* obj = (FreeDVInterface*)state;
     assert(obj != nullptr);
     
-    obj->receivedReliableText_ = txt_ptr;
+    {
+        std::unique_lock<std::mutex> lock(obj->reliableTextMutex_);
+        obj->receivedReliableText_ = txt_ptr;
+    }
     reliable_text_reset(rt);
 }
 
@@ -513,11 +516,16 @@ void FreeDVInterface::resetReliableText()
     {
         reliable_text_reset(rt);
     }
-    receivedReliableText_ = "";
+    
+    {
+        std::unique_lock<std::mutex> lock(reliableTextMutex_);
+        receivedReliableText_ = "";
+    }
 }
 
 const char* FreeDVInterface::getReliableText()
 {
+    std::unique_lock<std::mutex> lock(reliableTextMutex_);
     char* ret = new char[receivedReliableText_.size() + 1];
     assert(ret != nullptr);
     
