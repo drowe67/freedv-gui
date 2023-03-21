@@ -1,6 +1,8 @@
 #if !defined(PSK_REPORTER_H)
 #define PSK_REPORTER_H
 
+#include <mutex>
+
 struct SenderRecord
 {
     std::string callsign;
