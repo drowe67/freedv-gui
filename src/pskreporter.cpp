@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <thread>
+#include <functional>
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
