@@ -1015,8 +1015,6 @@ MainFrame::~MainFrame()
     
     if (wxGetApp().m_pskReporter)
     {
-        wxGetApp().m_pskReporter->send();
-        
         delete wxGetApp().m_pskReporter;
         wxGetApp().m_pskReporter = nullptr;
     }
@@ -2037,10 +2035,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         }
 
         if (wxGetApp().m_pskReporter)
-        {
-            // Send any reports we may have pending.
-            wxGetApp().m_pskReporter->send();
-            
+        {            
             delete wxGetApp().m_pskReporter;
             wxGetApp().m_pskReporter = NULL;
         }
