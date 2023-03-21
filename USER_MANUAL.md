@@ -841,6 +841,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Build system:
     * CPack: Properly handle the case where FREEDV_HASH doesn't exist. (PR #345)
 3. Enhancements:
+    * Show friendlier error if serial ports can't be opened. (PR #348)
     * Use same VFO retrieval mechanism for PTT as with frequency sync. (PR #350)
     
 ## V1.8.7 January 2023

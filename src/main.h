@@ -165,6 +165,9 @@ class MainApp : public wxApp
         virtual bool        OnCmdLineParsed(wxCmdLineParser& parser);
         virtual int         OnExit();
 
+
+        bool                    CanAccessSerialPort(std::string portName);
+        
         wxString            m_strVendName;
         wxString            m_StrAppName;
 
