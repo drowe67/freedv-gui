@@ -166,6 +166,7 @@ private:
     
     std::deque<reliable_text_t> reliableText_;
     std::string receivedReliableText_;
+    std::mutex reliableTextMutex_;
     
     int preProcessRxFn_(ParallelStep* ps);
     int postProcessRxFn_(ParallelStep* ps);
