@@ -1287,7 +1287,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     g_resyncs++;
                 
                     // Auto-reset stats if we've gone long enough since losing sync.
-                    if (m_timeSinceSyncLoss >= wxGetApp().m_statsResetTimeSec)
+                    // NOTE: m_timeSinceSyncLoss is in milliseconds.
+                    if (m_timeSinceSyncLoss >= wxGetApp().m_statsResetTimeSec * 1000)
                     {
                         resetStats_();
                         
