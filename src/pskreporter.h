@@ -33,6 +33,7 @@ private:
     std::string receiverGridSquare_;
     std::string decodingSoftware_;
     std::vector<SenderRecord> recordList_;
+    std::mutex recordListMutex_;
     
     int getRxDataSize_();    
     int getTxDataSize_();    

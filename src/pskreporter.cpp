@@ -122,12 +122,13 @@ PskReporter::~PskReporter()
 
 void PskReporter::addReceiveRecord(std::string callsign, uint64_t frequency, char snr)
 {
+    std::unique_lock<std::mutex> lock(recordListMutex_);
     recordList_.push_back(SenderRecord(callsign, frequency, snr));
 }
 
 void PskReporter::send()
 {
-    auto task = std::thread([&]() { reportCommon_(); });
+    auto task = std::thread(std::bind(&PskReporter::reportCommon_, this));
     
     // Allow the reporting to run without needing to wait for it.
     task.detach();
@@ -213,6 +214,7 @@ void PskReporter::encodeSenderRecords_(char* buf)
 
 bool PskReporter::reportCommon_()
 {
+    std::unique_lock<std::mutex> lock(recordListMutex_);
     if (recordList_.size() > 0)
     {
         // Header (2) + length (2) + time (4) + sequence # (4) + random identifier (4) +
