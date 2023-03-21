@@ -1015,6 +1015,8 @@ MainFrame::~MainFrame()
     
     if (wxGetApp().m_pskReporter)
     {
+        wxGetApp().m_pskReporter->send();
+        
         delete wxGetApp().m_pskReporter;
         wxGetApp().m_pskReporter = nullptr;
     }

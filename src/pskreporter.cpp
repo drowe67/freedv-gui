@@ -213,87 +213,90 @@ void PskReporter::encodeSenderRecords_(char* buf)
 
 bool PskReporter::reportCommon_()
 {
-    // Header (2) + length (2) + time (4) + sequence # (4) + random identifier (4) +
-    // RX format block + TX format block + RX data + TX data
-    int dgSize = 16 + sizeof(rxFormatHeader) + sizeof(txFormatHeader) + getRxDataSize_() + getTxDataSize_();
-    if (getTxDataSize_() == 0) dgSize -= sizeof(txFormatHeader);
-
-    char* packet = new char[dgSize];
-    memset(packet, 0, dgSize);
-
-    // Encode packet header.
-    packet[0] = 0x00;
-    packet[1] = 0x0A;
-
-    // Encode datagram size.
-    char* fieldLoc = &packet[2];
-    *((unsigned short*)fieldLoc) = htons(dgSize);
-
-    // Encode send time.
-    fieldLoc += sizeof(unsigned short);
-    *((unsigned int*)fieldLoc) = htonl(time(0));
-
-    // Encode sequence number.
-    fieldLoc += sizeof(unsigned int);
-    *((unsigned int*)fieldLoc) = htonl(currentSequenceNumber_++);
-
-    // Encode random identifier.
-    fieldLoc += sizeof(unsigned int);
-    *((unsigned int*)fieldLoc) = htonl(randomIdentifier_);
-
-    // Copy RX and TX format headers.
-    fieldLoc += sizeof(unsigned int);
-    memcpy(fieldLoc, rxFormatHeader, sizeof(rxFormatHeader));
-    fieldLoc += sizeof(rxFormatHeader);
-
-    if (getTxDataSize_() > 0)
+    if (recordList_.size() > 0)
     {
-        memcpy(fieldLoc, txFormatHeader, sizeof(txFormatHeader));
-        fieldLoc += sizeof(txFormatHeader);
-    }
+        // Header (2) + length (2) + time (4) + sequence # (4) + random identifier (4) +
+        // RX format block + TX format block + RX data + TX data
+        int dgSize = 16 + sizeof(rxFormatHeader) + sizeof(txFormatHeader) + getRxDataSize_() + getTxDataSize_();
+        if (getTxDataSize_() == 0) dgSize -= sizeof(txFormatHeader);
 
-    // Encode receiver and sender records.
-    encodeReceiverRecord_(fieldLoc);
-    fieldLoc += getRxDataSize_();
-    encodeSenderRecords_(fieldLoc);
+        char* packet = new char[dgSize];
+        memset(packet, 0, dgSize);
 
-    recordList_.clear();
+        // Encode packet header.
+        packet[0] = 0x00;
+        packet[1] = 0x0A;
 
-    // Send to PSKReporter.    
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_protocol = 0;
+        // Encode datagram size.
+        char* fieldLoc = &packet[2];
+        *((unsigned short*)fieldLoc) = htons(dgSize);
+
+        // Encode send time.
+        fieldLoc += sizeof(unsigned short);
+        *((unsigned int*)fieldLoc) = htonl(time(0));
+
+        // Encode sequence number.
+        fieldLoc += sizeof(unsigned int);
+        *((unsigned int*)fieldLoc) = htonl(currentSequenceNumber_++);
+
+        // Encode random identifier.
+        fieldLoc += sizeof(unsigned int);
+        *((unsigned int*)fieldLoc) = htonl(randomIdentifier_);
+
+        // Copy RX and TX format headers.
+        fieldLoc += sizeof(unsigned int);
+        memcpy(fieldLoc, rxFormatHeader, sizeof(rxFormatHeader));
+        fieldLoc += sizeof(rxFormatHeader);
+
+        if (getTxDataSize_() > 0)
+        {
+            memcpy(fieldLoc, txFormatHeader, sizeof(txFormatHeader));
+            fieldLoc += sizeof(txFormatHeader);
+        }
+
+        // Encode receiver and sender records.
+        encodeReceiverRecord_(fieldLoc);
+        fieldLoc += getRxDataSize_();
+        encodeSenderRecords_(fieldLoc);
+
+        recordList_.clear();
+
+        // Send to PSKReporter.    
+        struct addrinfo hints;
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_UNSPEC;
+        hints.ai_socktype = SOCK_DGRAM;
+        hints.ai_protocol = 0;
 #ifdef WIN32
-    hints.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
+        hints.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
 #else
-    hints.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED | AI_NUMERICSERV;
+        hints.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED | AI_NUMERICSERV;
 #endif // WIN32
-    struct addrinfo* res = NULL;
-    int err = getaddrinfo(PSK_REPORTER_HOSTNAME, PSK_REPORTER_PORT, &hints, &res);
-    if (err != 0) {
-        if (g_verbose) fprintf(stderr, "cannot resolve %s (err=%d)", PSK_REPORTER_HOSTNAME, err);
-        return false;
-    }
+        struct addrinfo* res = NULL;
+        int err = getaddrinfo(PSK_REPORTER_HOSTNAME, PSK_REPORTER_PORT, &hints, &res);
+        if (err != 0) {
+            if (g_verbose) fprintf(stderr, "cannot resolve %s (err=%d)", PSK_REPORTER_HOSTNAME, err);
+            return false;
+        }
 
-    int fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if(fd < 0){
-        if (g_verbose) fprintf(stderr, "cannot open PSK Reporter socket (err=%d)\n", errno);
-        return false;
-    }
+        int fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+        if(fd < 0){
+            if (g_verbose) fprintf(stderr, "cannot open PSK Reporter socket (err=%d)\n", errno);
+            return false;
+        }
 
-    if (sendto(fd, packet, dgSize, 0, res->ai_addr, res->ai_addrlen) < 0){
+        if (sendto(fd, packet, dgSize, 0, res->ai_addr, res->ai_addrlen) < 0){
+            delete[] packet;
+            if (g_verbose) fprintf(stderr, "cannot send message to PSK Reporter (err=%d)\n", errno);
+            close(fd);
+            return false;
+        }
         delete[] packet;
-        if (g_verbose) fprintf(stderr, "cannot send message to PSK Reporter (err=%d)\n", errno);
         close(fd);
-        return false;
-    }
-    delete[] packet;
-    close(fd);
 
-    freeaddrinfo(res);
-    return true;    
+        freeaddrinfo(res);
+    }
+    return true;
 }
 
 #if 0
