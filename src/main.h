@@ -294,8 +294,6 @@ class MainApp : public wxApp
         uint64_t            m_psk_freq;
 
         PskReporter*            m_pskReporter;
-        std::string         m_pskPendingCallsign;
-        char                m_pskPendingSnr;
         
         // Waterfall display
         int                 m_waterfallColor;
