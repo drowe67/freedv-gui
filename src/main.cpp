@@ -1785,6 +1785,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         endingTx = false;
         
         m_timeSinceSyncLoss = 0;
+        m_txtCtrlCallSign->SetValue(wxT(""));
+        memset(m_callsign, 0, MAX_CALLSIGN);
+        m_pcallsign = m_callsign;
+
+        freedvInterface.resetReliableText();
         
         //
         // Start Running -------------------------------------------------
