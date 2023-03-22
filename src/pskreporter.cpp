@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <thread>
+#include <functional>
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
@@ -122,12 +123,20 @@ PskReporter::~PskReporter()
 
 void PskReporter::addReceiveRecord(std::string callsign, uint64_t frequency, char snr)
 {
+    std::unique_lock<std::mutex> lock(recordListMutex_);
     recordList_.push_back(SenderRecord(callsign, frequency, snr));
+    
+    // This is unlikely to be hit but in case we come close to filling up an entire
+    // UDP datagram, we should go ahead and send whatever reports we have early.
+    if (recordList_.size() >= 50)
+    {
+        send();
+    }
 }
 
 void PskReporter::send()
 {
-    auto task = std::thread([&]() { reportCommon_(); });
+    auto task = std::thread(std::bind(&PskReporter::reportCommon_, this));
     
     // Allow the reporting to run without needing to wait for it.
     task.detach();
@@ -213,6 +222,8 @@ void PskReporter::encodeSenderRecords_(char* buf)
 
 bool PskReporter::reportCommon_()
 {
+    std::unique_lock<std::mutex> lock(recordListMutex_);
+
     // Header (2) + length (2) + time (4) + sequence # (4) + random identifier (4) +
     // RX format block + TX format block + RX data + TX data
     int dgSize = 16 + sizeof(rxFormatHeader) + sizeof(txFormatHeader) + getRxDataSize_() + getTxDataSize_();
@@ -293,7 +304,8 @@ bool PskReporter::reportCommon_()
     close(fd);
 
     freeaddrinfo(res);
-    return true;    
+
+    return true;
 }
 
 #if 0

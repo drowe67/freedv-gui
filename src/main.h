@@ -165,6 +165,9 @@ class MainApp : public wxApp
         virtual bool        OnCmdLineParsed(wxCmdLineParser& parser);
         virtual int         OnExit();
 
+
+        bool                    CanAccessSerialPort(std::string portName);
+        
         wxString            m_strVendName;
         wxString            m_StrAppName;
 
@@ -291,8 +294,6 @@ class MainApp : public wxApp
         uint64_t            m_psk_freq;
 
         PskReporter*            m_pskReporter;
-        std::string         m_pskPendingCallsign;
-        char                m_pskPendingSnr;
         
         // Waterfall display
         int                 m_waterfallColor;

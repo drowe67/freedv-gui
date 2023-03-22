@@ -1303,28 +1303,31 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             auto oldColor = m_textSync->GetForegroundColour();
             wxColour newColor = g_State ? wxColour( 0, 255, 0 ) : wxColour( 255, 0, 0 ); // green if sync, red otherwise
         
-            if (g_State) {
-                if (g_prev_State == 0) {
+            if (g_State) 
+            {
+                if (g_prev_State == 0) 
+                {
                     g_resyncs++;
-            
-                    // Clear RX text to reduce the incidence of incorrect callsigns extracted with
-                    // the PSK Reporter callsign extraction logic.
-                    m_txtCtrlCallSign->SetValue(wxT(""));
-                    memset(m_callsign, 0, MAX_CALLSIGN);
-                    m_pcallsign = m_callsign;
-            
-                    // Get current time to enforce minimum sync time requirement for PSK Reporter.
-                    g_sync_time = time(0);
-            
-                    freedvInterface.resetReliableText();
                 
                     // Auto-reset stats if we've gone long enough since losing sync.
-                    if (m_timeSinceSyncLoss >= wxGetApp().m_statsResetTimeSec)
+                    // NOTE: m_timeSinceSyncLoss is in milliseconds.
+                    if (m_timeSinceSyncLoss >= wxGetApp().m_statsResetTimeSec * 1000)
                     {
                         resetStats_();
+                        
+                        // Clear RX text to reduce the incidence of incorrect callsigns extracted with
+                        // the PSK Reporter callsign extraction logic.
+                        m_txtCtrlCallSign->SetValue(wxT(""));
+                        memset(m_callsign, 0, MAX_CALLSIGN);
+                        m_pcallsign = m_callsign;
+            
+                        // Get current time to enforce minimum sync time requirement for PSK Reporter.
+                        g_sync_time = time(0);
+            
+                        freedvInterface.resetReliableText();
                     }
-                    m_timeSinceSyncLoss = 0;
                 }
+                m_timeSinceSyncLoss = 0;
             }
             else
             {
@@ -1403,48 +1406,48 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             const char* text = freedvInterface.getReliableText();
             assert(text != nullptr);
             wxString wxCallsign = text;
-            m_txtCtrlCallSign->SetValue(wxCallsign);
             delete[] text;
         
             if (wxCallsign.Length() > 0)
             {
+                m_txtCtrlCallSign->SetValue(wxCallsign);
+                freedvInterface.resetReliableText();
+                
                 wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
-                if (callsignFormat.Matches(wxCallsign) && wxGetApp().m_pskPendingCallsign != callsignFormat.GetMatch(wxCallsign, 1).ToStdString())
+                if (callsignFormat.Matches(wxCallsign))
                 {
                     wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
-                    wxGetApp().m_pskPendingCallsign = rxCallsign.ToStdString();
-                    wxGetApp().m_pskPendingSnr = (int)(g_snr + 0.5);
-                }
-            }
-            else if (wxGetApp().m_pskPendingCallsign != "")
-            {
-                if (wxGetApp().m_boolHamlibUseForPTT)
-                {
-                    wxGetApp().m_hamlib->update_frequency_and_mode();
-                }
+                    std::string pendingCallsign = rxCallsign.ToStdString();
+                    auto pendingSnr = (int)(g_snr + 0.5);
+           
+                    if (wxGetApp().m_boolHamlibUseForPTT)
+                    {
+                        wxGetApp().m_hamlib->update_frequency_and_mode();
+                    }
             
-                int64_t freq = wxGetApp().m_psk_freq;
+                    int64_t freq = wxGetApp().m_psk_freq;
 
-                // Only report if there's a valid reporting frequency and if we're not playing 
-                // a recording through ourselves (to avoid false reports).
-                if (freq > 0 && !g_playFileFromRadio)
-                {
-                    long long freqLongLong = freq;
-                    fprintf(
-                        stderr, 
-                        "Adding callsign %s @ SNR %d, freq %lld to PSK Reporter.\n", 
-                        wxGetApp().m_pskPendingCallsign.c_str(), 
-                        wxGetApp().m_pskPendingSnr,
-                        freqLongLong);
+                    // Only report if there's a valid reporting frequency and if we're not playing 
+                    // a recording through ourselves (to avoid false reports).
+                    if (freq > 0)
+                    {
+                        long long freqLongLong = freq;
+                        fprintf(
+                            stderr, 
+                            "Adding callsign %s @ SNR %d, freq %lld to PSK Reporter.\n", 
+                            pendingCallsign.c_str(), 
+                            pendingSnr,
+                            freqLongLong);
         
-                    wxGetApp().m_pskReporter->addReceiveRecord(
-                        wxGetApp().m_pskPendingCallsign,
-                        freq,
-                        wxGetApp().m_pskPendingSnr);
+                        if (!g_playFileFromRadio)
+                        {
+                            wxGetApp().m_pskReporter->addReceiveRecord(
+                                pendingCallsign,
+                                freq,
+                                pendingSnr);
+                        }
+                    }
                 }
-            
-                wxGetApp().m_pskPendingCallsign = "";
-                wxGetApp().m_pskPendingSnr = 0;
             }
         }
     
@@ -1816,6 +1819,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         endingTx = false;
         
         m_timeSinceSyncLoss = 0;
+        m_txtCtrlCallSign->SetValue(wxT(""));
+        memset(m_callsign, 0, MAX_CALLSIGN);
+        m_pcallsign = m_callsign;
+
+        freedvInterface.resetReliableText();
         
         //
         // Start Running -------------------------------------------------
@@ -2008,9 +2016,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                             wxGetApp().m_psk_grid_square.ToStdString(),
                             std::string("FreeDV ") + FREEDV_VERSION);
                         assert(wxGetApp().m_pskReporter != nullptr);
-                        
-                        wxGetApp().m_pskPendingCallsign = "";
-                        wxGetApp().m_pskPendingSnr = 0;
         
                         // Enable PSK Reporter timer (every 5 minutes).
                         m_pskReporterTimer.Start(5 * 60 * 1000);
@@ -2078,7 +2083,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         }
 
         if (wxGetApp().m_pskReporter)
-        {
+        {            
             delete wxGetApp().m_pskReporter;
             wxGetApp().m_pskReporter = NULL;
         }

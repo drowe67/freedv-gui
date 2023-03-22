@@ -590,12 +590,22 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </tbody>
 </table>
 <h1 data-number="16" id="release-notes"><span class="header-section-number">16</span> Release Notes</h1>
-<h2 data-number="16.1" id="tbd-tbd-2023"><span class="header-section-number">16.1</span> TBD TBD 2023</h2>
+<h2 data-number="16.1" id="v1.8.8-march-2023"><span class="header-section-number">16.1</span> V1.8.8 March 2023</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
 <li>Resolve compile failure in EasySetupDialog on openSUSE. (PR #344)</li>
 <li>Prevent Mode box from auto-resizing to avoid unexpected movement of other controls. (PR #347)</li>
+</ul></li>
+<li>Build system:
+<ul>
+<li>CPack: Properly handle the case where FREEDV_HASH doesn’t exist. (PR #345)</li>
+</ul></li>
+<li>Enhancements:
+<ul>
+<li>Show friendlier error if serial ports can’t be opened. (PR #348)</li>
+<li>Use same VFO retrieval mechanism for PTT as with frequency sync. (PR #350)</li>
+<li>Tweak PSK Reporter handling to report received callsigns more quickly. (PR #352)</li>
 </ul></li>
 </ol>
 <h2 data-number="16.2" id="v1.8.7-january-2023"><span class="header-section-number">16.2</span> V1.8.7 January 2023</h2>

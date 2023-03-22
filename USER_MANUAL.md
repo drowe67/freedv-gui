@@ -833,11 +833,17 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## TBD TBD 2023
+## V1.8.8 March 2023
 
 1. Bugfixes:
     * Resolve compile failure in EasySetupDialog on openSUSE. (PR #344)
     * Prevent Mode box from auto-resizing to avoid unexpected movement of other controls. (PR #347)
+2. Build system:
+    * CPack: Properly handle the case where FREEDV_HASH doesn't exist. (PR #345)
+3. Enhancements:
+    * Show friendlier error if serial ports can't be opened. (PR #348)
+    * Use same VFO retrieval mechanism for PTT as with frequency sync. (PR #350)
+    * Tweak PSK Reporter handling to report received callsigns more quickly. (PR #352)
     
 ## V1.8.7 January 2023
 

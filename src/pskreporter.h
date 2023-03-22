@@ -1,6 +1,8 @@
 #if !defined(PSK_REPORTER_H)
 #define PSK_REPORTER_H
 
+#include <mutex>
+
 struct SenderRecord
 {
     std::string callsign;
@@ -33,6 +35,7 @@ private:
     std::string receiverGridSquare_;
     std::string decodingSoftware_;
     std::vector<SenderRecord> recordList_;
+    std::mutex recordListMutex_;
     
     int getRxDataSize_();    
     int getTxDataSize_();    
