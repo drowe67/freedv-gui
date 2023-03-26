@@ -343,6 +343,10 @@ wxThread::ExitCode Serialport::PttMonitorThread::Entry()
 
 void Serialport::enablePttInputMonitoring(bool ctsPos, std::function<void(bool)> pttChangeFn)
 {
+    // Set RTS and DTR enabled for certain PTT input interfaces
+    raiseRTS();
+    raiseDTR();
+
     m_pttChangeFn = pttChangeFn;
     m_currentPttInputState = false;
     m_pttMonitoringThread = new PttMonitorThread(this, ctsPos);

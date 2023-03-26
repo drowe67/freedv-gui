@@ -833,6 +833,17 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.8.9 TBD 2023
+
+1. Enhancements:
+    * Add 20% buffer for systems that are marginally able to decode 2020. (PR #355)
+    * Enable RTS and DTR for PTT input to provide a voltage source for some footswitches. (PR #354)
+
+## V1.8.8.1 March 2023
+
+1. Bugfixes:
+    * Downgrade hamlib for Windows and macOS due to PTT and CAT control bugs on various radios. (PR #357)
+
 ## V1.8.8 March 2023
 
 1. Bugfixes:
