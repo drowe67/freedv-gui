@@ -345,7 +345,7 @@ void MainFrame::test2020Mode_()
         }
         auto endTime = systemClock.now();
         auto timeTaken = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-        if (timeTaken > std::chrono::milliseconds(500))
+        if (timeTaken > std::chrono::milliseconds(600))
         {
             allowed = false;
         }
