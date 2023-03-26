@@ -833,6 +833,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.8.8.1 March 2023
+
+1. Bugfixes:
+    * Downgrade hamlib for Windows and macOS due to PTT and CAT control bugs on various radios. (PR #357)
+
 ## V1.8.8 March 2023
 
 1. Bugfixes:
