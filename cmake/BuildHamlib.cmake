@@ -15,7 +15,7 @@ endif(MINGW AND CMAKE_CROSSCOMPILING)
 include(ExternalProject)
 ExternalProject_Add(hamlib
     GIT_REPOSITORY https://github.com/Hamlib/Hamlib.git
-    GIT_TAG origin/master
+    GIT_TAG 4.5.4
     BUILD_IN_SOURCE 1
     INSTALL_DIR external/dist
     CONFIGURE_COMMAND ./bootstrap && ${CONFIGURE_COMMAND}
