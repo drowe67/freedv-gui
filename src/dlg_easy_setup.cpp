@@ -35,7 +35,7 @@
 #include <string.h>
 #endif
 
-#define PI 3.1415
+#define PI 3.14159
 
 #define RX_ONLY_STRING "None (receive only)"
 #define MULTIPLE_DEVICES_STRING "(multiple)"
