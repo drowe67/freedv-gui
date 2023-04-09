@@ -20,6 +20,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Install required packages
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: apt-get install nsis
+
     - name: Download MinGW LLVM
       shell: bash
       working-directory: ${{github.workspace}}
