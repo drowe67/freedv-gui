@@ -1274,7 +1274,7 @@ bool EasySetupDialog::canTestRadioSettings_()
     bool analogRecordDeviceSelected = m_analogDeviceRecord->GetSelection() >= 0;
     bool soundDevicesConfigured = radioDeviceSelected && analogPlayDeviceSelected && analogRecordDeviceSelected;
     
-    bool noPttSelected = m_ckUseHamlibPTT->GetValue();
+    bool noPttSelected = m_ckNoPTT->GetValue();
     bool hamlibSelected = m_ckUseHamlibPTT->GetValue();
     bool serialSelected = m_ckUseSerialPTT->GetValue();
     
