@@ -20,7 +20,25 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Download MinGW LLVM
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+        wget https://github.com/mstorsjo/llvm-mingw/releases/download/20230320/llvm-mingw-20230320-ucrt-ubuntu-18.04-x86_64.tar.xz 
+        tar xvf llvm-mingw-20230320-ucrt-ubuntu-18.04-x86_64.tar.xz
+
+    - name: Configure freedv-gui
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20230320-ucrt-ubuntu-18.04-x86_64/bin:$PATH
+        mkdir build_windows
+        cd build_windows
+        cmake -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake ..
+
     - name: Build freedv-gui
       shell: bash
-      working-directory: ${{github.workspace}}/docker
-      run: ./freedv_build_windows.sh --branch ${{github.ref_name}} 64
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+        export PATH=${{github.workspace}}/llvm-mingw-20230320-ucrt-ubuntu-18.04-x86_64/bin:$PATH
+        make
