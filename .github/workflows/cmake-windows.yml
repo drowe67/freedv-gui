@@ -23,4 +23,4 @@ jobs:
     - name: Build freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}/docker
-      run: ./freedv_build_windows.sh --branch ${{github.ref_name}} 64 && cat build_log.txt
+      run: ./freedv_build_windows.sh --branch ${{github.ref_name}} 64
