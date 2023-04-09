@@ -842,6 +842,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix typo preventing use of Easy Setup when not having a radio configured. (PR #359)
 3. Build system:
     * GitHub action now uses LLVM MinGW for pull requests. (PR #360)
+    * Update Speex build code to avoid unnecessary rebuilds. (PR #361)
 
 ## V1.8.8.1 March 2023
 
