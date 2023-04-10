@@ -838,6 +838,12 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Enhancements:
     * Add 20% buffer for systems that are marginally able to decode 2020. (PR #355)
     * Enable RTS and DTR for PTT input to provide a voltage source for some footswitches. (PR #354)
+2. Bugfixes:
+    * Fix typo preventing use of Easy Setup when not having a radio configured. (PR #359)
+3. Build system:
+    * GitHub action now uses LLVM MinGW for pull requests. (PR #360)
+    * Update Speex/Hamlib build code to avoid unnecessary rebuilds. (PR #361)
+    * Upgrade Hamlib to version 4.5.5. (PR #361)
 
 ## V1.8.8.1 March 2023
 
