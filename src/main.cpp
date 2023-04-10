@@ -629,6 +629,23 @@ setDefaultMode:
     
     // Show/hide frequency box based on PSK Reporter enablement
     m_freqBox->Show(wxGetApp().m_psk_enable);
+
+    // Show/hide callsign combo box based on PSK Reporter enablement
+    if (wxGetApp().m_psk_enable)
+    {
+        m_cboLastReportedCallsigns->Show();
+        m_txtCtrlCallSign->Hide();
+    }
+    else
+    {
+        m_cboLastReportedCallsigns->Hide();
+        m_txtCtrlCallSign->Show();
+    }
+
+    // Relayout window so that the changes can take effect.
+    auto currentSizer = m_panel->GetSizer();
+    m_panel->SetSizerAndFit(currentSizer, false);
+    m_panel->Layout();
 }
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -1318,6 +1335,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         // Clear RX text to reduce the incidence of incorrect callsigns extracted with
                         // the PSK Reporter callsign extraction logic.
                         m_txtCtrlCallSign->SetValue(wxT(""));
+                        m_cboLastReportedCallsigns->SetValue(wxT(""));
                         memset(m_callsign, 0, MAX_CALLSIGN);
                         m_pcallsign = m_callsign;
             
@@ -1410,7 +1428,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         
             if (wxCallsign.Length() > 0)
             {
-                m_txtCtrlCallSign->SetValue(wxCallsign);
                 freedvInterface.resetReliableText();
                 
                 wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
@@ -1419,6 +1436,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
                     std::string pendingCallsign = rxCallsign.ToStdString();
                     auto pendingSnr = (int)(g_snr + 0.5);
+
+                    if (m_cboLastReportedCallsigns->GetCount() == 0 || m_cboLastReportedCallsigns->GetString(0) != rxCallsign)
+                    {
+                        m_cboLastReportedCallsigns->Insert(rxCallsign, 0);
+                    }
+                    m_cboLastReportedCallsigns->SetSelection(0);
+                    m_cboLastReportedCallsigns->SetValue(rxCallsign);
            
                     if (wxGetApp().m_boolHamlibUseForPTT)
                     {
@@ -1820,6 +1844,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         
         m_timeSinceSyncLoss = 0;
         m_txtCtrlCallSign->SetValue(wxT(""));
+        m_cboLastReportedCallsigns->Clear();
         memset(m_callsign, 0, MAX_CALLSIGN);
         m_pcallsign = m_callsign;
 

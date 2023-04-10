@@ -56,6 +56,7 @@
 #include <wx/notebook.h>
 #include <wx/listctrl.h>
 #include <wx/collpane.h>
+#include <wx/combobox.h>
 
 #include "freedv_api.h" // for FREEDV_MODE_*
 
@@ -81,6 +82,7 @@ class TopFrame : public wxFrame
     private:
 
     protected:
+        wxPanel* m_panel;
         wxMenuBar* m_menubarMain;
         wxMenu* file;
         wxMenu* edit;
@@ -94,6 +96,7 @@ class TopFrame : public wxFrame
 
         wxButton*     m_BtnCallSignReset;
         wxTextCtrl*   m_txtCtrlCallSign;
+        wxComboBox*   m_cboLastReportedCallsigns;
         wxStaticText* m_txtModeStatus;
 
         wxStaticText* m_txtTxLevelNum;
