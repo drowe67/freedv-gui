@@ -24,7 +24,7 @@ cd $FREEDVGUIDIR
 if [ ! -d hamlib-code ]; then
     git clone https://github.com/Hamlib/Hamlib.git hamlib-code
 fi
-cd hamlib-code && git checkout master && git pull
+cd hamlib-code && git checkout 4.5.5 && git pull
 ./bootstrap
 CFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" ./configure --disable-shared --prefix $HAMLIBDIR
 make -j4
