@@ -322,6 +322,10 @@ FreeDV reports to PSK Reporter is set by changing the "Report Frequency" text bo
 is in kilohertz (kHz) and will turn red if the entered value is invalid. If Hamlib support is also enabled, 
 this frequency will automatically update on start/stop as well as when switching between transmit and receive.
 
+FreeDV will also show the callsigns of previously received signals. To view those, click on the arrow
+next to the last received callsign at the bottom of the window. These are in descending order by time
+of receipt (i.e. the most recently received callsign will appear at the top of the list).
+
 # Multiple Mode Support
 
 FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
