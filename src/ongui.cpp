@@ -117,6 +117,21 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     
     // Show/hide frequency box based on PSK Reporter status.
     m_freqBox->Show(wxGetApp().m_psk_enable);
+
+    // Show/hide callsign combo box based on PSK Reporter Status
+    if (wxGetApp().m_psk_enable)
+    {
+        m_cboLastReportedCallsigns->Show();
+        m_txtCtrlCallSign->Hide();
+    }
+    else
+    {
+        m_cboLastReportedCallsigns->Hide();
+        m_txtCtrlCallSign->Show();
+    }
+
+    // Relayout window so that the changes can take effect.
+    m_panel->Layout();
 }
 
 //-------------------------------------------------------------------------
