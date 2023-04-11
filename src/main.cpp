@@ -1414,9 +1414,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     std::string pendingCallsign = rxCallsign.ToStdString();
                     auto pendingSnr = (int)(g_snr + 0.5);
 
-                    if (m_cboLastReportedCallsigns->GetCount() == 0 || m_cboLastReportedCallsigns->GetString(0) != rxCallsign)
+                    if (m_cboLastReportedCallsigns->GetCount() == 0 || !m_cboLastReportedCallsigns->GetString(0).EndsWith(wxT(" ") + rxCallsign))
                     {
-                        m_cboLastReportedCallsigns->Insert(rxCallsign, 0);
+                        auto currentTime = wxDateTime::Now();
+                        wxString callsignEntry = "";
+                        
+                        callsignEntry.Printf(wxT("(%s %s) %s"), currentTime.FormatISODate(), currentTime.FormatISOTime(), rxCallsign);
+                        m_cboLastReportedCallsigns->Insert(callsignEntry, 0);
                     }
                     m_cboLastReportedCallsigns->SetSelection(0);
                     m_cboLastReportedCallsigns->SetValue(rxCallsign);
