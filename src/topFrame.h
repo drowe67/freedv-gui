@@ -56,7 +56,9 @@
 #include <wx/notebook.h>
 #include <wx/listctrl.h>
 #include <wx/collpane.h>
-#include <wx/combobox.h>
+#include <wx/combo.h>
+
+#include "wxListViewComboPopup.h"
 
 #include "freedv_api.h" // for FREEDV_MODE_*
 
@@ -73,6 +75,8 @@
 #define ID_ABOUT 1008
 
 #define ID_MODE_COLLAPSE 1100
+
+class wxListViewComboPopup;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class TopFrame
@@ -96,7 +100,10 @@ class TopFrame : public wxFrame
 
         wxButton*     m_BtnCallSignReset;
         wxTextCtrl*   m_txtCtrlCallSign;
-        wxComboBox*   m_cboLastReportedCallsigns;
+        
+        wxComboCtrl*   m_cboLastReportedCallsigns;
+        wxListViewComboPopup* m_lastReportedCallsignListView;
+        
         wxStaticText* m_txtModeStatus;
 
         wxStaticText* m_txtTxLevelNum;
