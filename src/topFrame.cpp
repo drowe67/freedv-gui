@@ -274,8 +274,13 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_txtCtrlCallSign->SetToolTip(_("Call Sign of transmitting station will appear here"));
     m_txtCtrlCallSign->SetSizeHints(wxSize(100,-1));
 
-    m_cboLastReportedCallsigns = new wxComboBox(m_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, nullptr, wxCB_READONLY);
+    m_cboLastReportedCallsigns = new wxComboCtrl(m_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxCB_READONLY);
+    m_lastReportedCallsignListView = new wxListViewComboPopup();
+    m_cboLastReportedCallsigns->SetPopupControl(m_lastReportedCallsignListView);
     m_cboLastReportedCallsigns->SetSizeHints(wxSize(100,-1));
+    
+    m_lastReportedCallsignListView->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_LEFT, 125);
+    m_lastReportedCallsignListView->InsertColumn(1, wxT("Date/Time"), wxLIST_FORMAT_LEFT, 250);
 
     bSizer15->Add(m_txtCtrlCallSign, 1, wxALL|wxEXPAND, 5);
     bSizer15->Add(m_cboLastReportedCallsigns, 1, wxALL|wxEXPAND, 5);

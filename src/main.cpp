@@ -1437,12 +1437,18 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     std::string pendingCallsign = rxCallsign.ToStdString();
                     auto pendingSnr = (int)(g_snr + 0.5);
 
-                    if (m_cboLastReportedCallsigns->GetCount() == 0 || m_cboLastReportedCallsigns->GetString(0) != rxCallsign)
+                    if (m_lastReportedCallsignListView->GetItemCount() == 0 || m_lastReportedCallsignListView->GetItemText(0, 0) != rxCallsign)
                     {
-                        m_cboLastReportedCallsigns->Insert(rxCallsign, 0);
+                        auto currentTime = wxDateTime::Now();
+                        wxString currentTimeAsString = "";
+                        
+                        currentTimeAsString.Printf(wxT("%s %s"), currentTime.FormatISODate(), currentTime.FormatISOTime());
+                        
+                        auto index = m_lastReportedCallsignListView->InsertItem(0, rxCallsign, 0);
+                        m_lastReportedCallsignListView->SetItem(index, 1, currentTimeAsString);
                     }
-                    m_cboLastReportedCallsigns->SetSelection(0);
-                    m_cboLastReportedCallsigns->SetValue(rxCallsign);
+                    
+                    m_cboLastReportedCallsigns->SetText(rxCallsign);
            
                     if (wxGetApp().m_boolHamlibUseForPTT)
                     {
@@ -1844,7 +1850,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         
         m_timeSinceSyncLoss = 0;
         m_txtCtrlCallSign->SetValue(wxT(""));
-        m_cboLastReportedCallsigns->Clear();
+        m_lastReportedCallsignListView->DeleteAllItems();
+                
+        m_cboLastReportedCallsigns->SetText(wxT(""));
         memset(m_callsign, 0, MAX_CALLSIGN);
         m_pcallsign = m_callsign;
 
