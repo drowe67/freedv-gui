@@ -88,9 +88,9 @@ void PlotWaterfall::OnSize(wxSizeEvent& event)
 
     // we want a bit map the size of m_rGrid
 
-    m_imgHeight = m_rGrid.GetHeight();
-    m_imgWidth = m_rGrid.GetWidth();    
-    m_fullBmp = new wxBitmap(std::max(1,m_imgWidth), std::max(1,m_imgHeight));
+    m_imgHeight = std::max(1,m_rGrid.GetHeight());
+    m_imgWidth = std::max(1,m_rGrid.GetWidth());
+    m_fullBmp = new wxBitmap(m_imgWidth, m_imgHeight);
 
     // Reset bitmap to black.   
     {
@@ -198,7 +198,7 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
         // we want a bit map the size of m_rGrid
         m_imgHeight = m_rGrid.GetHeight();
         m_imgWidth = m_rGrid.GetWidth();
-        m_fullBmp = new wxBitmap(std::max(1,m_imgWidth), std::max(1,m_imgHeight));
+        m_fullBmp = new wxBitmap(m_imgWidth, m_imgHeight);
         
         // Reset bitmap to black.   
         {
