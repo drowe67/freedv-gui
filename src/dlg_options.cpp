@@ -111,6 +111,15 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_psk->Add(m_txt_grid_square, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     sizerReporting->Add(sbSizer_psk,0, wxALL | wxEXPAND, 5);
+    
+    wxStaticBoxSizer* sbSizer_callsign_list;
+    wxStaticBox* sb_callsignList = new wxStaticBox(m_reportingTab, wxID_ANY, _("Callsign List"));
+    sbSizer_callsign_list = new wxStaticBoxSizer(sb_callsignList, wxHORIZONTAL);
+    m_ckbox_use_utc_time = new wxCheckBox(m_reportingTab, wxID_ANY, _("Use UTC Time"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_callsign_list->Add(m_ckbox_use_utc_time, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    sizerReporting->Add(sbSizer_callsign_list,0, wxALL | wxEXPAND, 5);
+    
     m_reportingTab->SetSizer(sizerReporting);
         
     // Display tab
@@ -621,6 +630,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txt_callsign->SetValue(wxGetApp().m_psk_callsign);
         m_txt_grid_square->SetValue(wxGetApp().m_psk_grid_square);
         
+        // Callsign list config
+        m_ckbox_use_utc_time->SetValue(wxGetApp().m_useUTCTime);
+        
         // Stats reset time
         m_statsResetTime->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_statsResetTimeSec));
         
@@ -740,6 +752,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_psk_callsign = m_txt_callsign->GetValue();
         wxGetApp().m_psk_grid_square = m_txt_grid_square->GetValue();
         
+        // Callsign list config
+        wxGetApp().m_useUTCTime = m_ckbox_use_utc_time->GetValue();
+        
         // Waterfall color
         if (m_waterfallColorScheme1->GetValue())
         {
@@ -782,6 +797,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);
             pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
             pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
+            
+            pConfig->Write(wxT("/CallsignList/UseUTCTime"), wxGetApp().m_useUTCTime);
             
             pConfig->Write(wxT("/Stats/ResetTime"), wxGetApp().m_statsResetTimeSec);
             
@@ -934,6 +951,7 @@ void OptionsDlg::updatePSKReporterState()
 {
     if (!sessionActive_)
     {
+        m_ckbox_use_utc_time->Enable(true);
         m_ckbox_psk_enable->Enable(true);
         if (m_ckbox_psk_enable->GetValue())
         {
@@ -955,6 +973,8 @@ void OptionsDlg::updatePSKReporterState()
         m_txtCtrlCallSign->Enable(false);
         m_txt_callsign->Enable(false);
         m_txt_grid_square->Enable(false);
+        
+        m_ckbox_use_utc_time->Enable(false);
     }
 }
 

@@ -543,6 +543,8 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_psk_freq = atoll(freqStr.ToUTF8());
     m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((double)wxGetApp().m_psk_freq)/1000.0));
     
+    wxGetApp().m_useUTCTime = pConfig->ReadBool(wxT("/CallsignList/UseUTCTime"), false);
+    
     // Waterfall configuration
     wxGetApp().m_waterfallColor = (int)pConfig->Read(wxT("/Waterfall/Color"), (int)0); // 0-2
     
@@ -950,6 +952,8 @@ MainFrame::~MainFrame()
 
     wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), wxGetApp().m_psk_freq);
     pConfig->Write(wxT("/PSKReporter/FrequencyHzStr"), tempFreqStr);
+    
+    pConfig->Write(wxT("/CallsignList/UseUTCTime"), wxGetApp().m_useUTCTime);
     
     // Waterfall configuration
     pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
@@ -1419,6 +1423,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         auto currentTime = wxDateTime::Now();
                         wxString currentTimeAsString = "";
                         
+                        if (wxGetApp().m_useUTCTime)
+                        {
+                            currentTime = currentTime.ToUTC();
+                        }
                         currentTimeAsString.Printf(wxT("%s %s"), currentTime.FormatISODate(), currentTime.FormatISOTime());
                         
                         auto index = m_lastReportedCallsignListView->InsertItem(0, rxCallsign, 0);

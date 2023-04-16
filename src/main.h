@@ -292,6 +292,9 @@ class MainApp : public wxApp
         wxString            m_psk_callsign;
         wxString            m_psk_grid_square;
         uint64_t            m_psk_freq;
+        
+        // Callsign list configuration
+        bool                m_useUTCTime;
 
         PskReporter*            m_pskReporter;
         
