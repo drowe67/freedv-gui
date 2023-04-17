@@ -146,6 +146,8 @@ class OptionsDlg : public wxDialog
         wxCheckBox*  m_ckboxSingleRxThread;
         wxTextCtrl*  m_statsResetTime;
         
+        wxCheckBox*  m_ckbox_use_utc_time;
+        
         unsigned int  event_in_serial, event_out_serial;
 
         void OnChooseVoiceKeyerWaveFile(wxCommandEvent& event);

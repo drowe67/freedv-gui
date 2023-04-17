@@ -543,6 +543,8 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_psk_freq = atoll(freqStr.ToUTF8());
     m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((double)wxGetApp().m_psk_freq)/1000.0));
     
+    wxGetApp().m_useUTCTime = pConfig->ReadBool(wxT("/CallsignList/UseUTCTime"), false);
+    
     // Waterfall configuration
     wxGetApp().m_waterfallColor = (int)pConfig->Read(wxT("/Waterfall/Color"), (int)0); // 0-2
     
@@ -619,6 +621,23 @@ setDefaultMode:
     
     // Show/hide frequency box based on PSK Reporter enablement
     m_freqBox->Show(wxGetApp().m_psk_enable);
+
+    // Show/hide callsign combo box based on PSK Reporter enablement
+    if (wxGetApp().m_psk_enable)
+    {
+        m_cboLastReportedCallsigns->Show();
+        m_txtCtrlCallSign->Hide();
+    }
+    else
+    {
+        m_cboLastReportedCallsigns->Hide();
+        m_txtCtrlCallSign->Show();
+    }
+
+    // Relayout window so that the changes can take effect.
+    auto currentSizer = m_panel->GetSizer();
+    m_panel->SetSizerAndFit(currentSizer, false);
+    m_panel->Layout();
 }
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -933,6 +952,8 @@ MainFrame::~MainFrame()
 
     wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), wxGetApp().m_psk_freq);
     pConfig->Write(wxT("/PSKReporter/FrequencyHzStr"), tempFreqStr);
+    
+    pConfig->Write(wxT("/CallsignList/UseUTCTime"), wxGetApp().m_useUTCTime);
     
     // Waterfall configuration
     pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
@@ -1295,6 +1316,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         // Clear RX text to reduce the incidence of incorrect callsigns extracted with
                         // the PSK Reporter callsign extraction logic.
                         m_txtCtrlCallSign->SetValue(wxT(""));
+                        m_cboLastReportedCallsigns->SetValue(wxT(""));
                         memset(m_callsign, 0, MAX_CALLSIGN);
                         m_pcallsign = m_callsign;
             
@@ -1387,7 +1409,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         
             if (wxCallsign.Length() > 0)
             {
-                m_txtCtrlCallSign->SetValue(wxCallsign);
                 freedvInterface.resetReliableText();
                 
                 wxRegEx callsignFormat("(([A-Za-z0-9]+/)?[A-Za-z0-9]{1,3}[0-9][A-Za-z0-9]*[A-Za-z](/[A-Za-z0-9]+)?)");
@@ -1396,6 +1417,23 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
                     std::string pendingCallsign = rxCallsign.ToStdString();
                     auto pendingSnr = (int)(g_snr + 0.5);
+
+                    if (m_lastReportedCallsignListView->GetItemCount() == 0 || m_lastReportedCallsignListView->GetItemText(0, 0) != rxCallsign)
+                    {
+                        auto currentTime = wxDateTime::Now();
+                        wxString currentTimeAsString = "";
+                        
+                        if (wxGetApp().m_useUTCTime)
+                        {
+                            currentTime = currentTime.ToUTC();
+                        }
+                        currentTimeAsString.Printf(wxT("%s %s"), currentTime.FormatISODate(), currentTime.FormatISOTime());
+                        
+                        auto index = m_lastReportedCallsignListView->InsertItem(0, rxCallsign, 0);
+                        m_lastReportedCallsignListView->SetItem(index, 1, currentTimeAsString);
+                    }
+                    
+                    m_cboLastReportedCallsigns->SetText(rxCallsign);
            
                     if (wxGetApp().m_boolHamlibUseForPTT)
                     {
@@ -1786,6 +1824,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         
         m_timeSinceSyncLoss = 0;
         m_txtCtrlCallSign->SetValue(wxT(""));
+        m_lastReportedCallsignListView->DeleteAllItems();
+                
+        m_cboLastReportedCallsigns->SetText(wxT(""));
         memset(m_callsign, 0, MAX_CALLSIGN);
         m_pcallsign = m_callsign;
 

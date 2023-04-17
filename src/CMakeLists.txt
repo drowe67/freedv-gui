@@ -41,6 +41,8 @@ set(FREEDV_SOURCES
     ongui.cpp
     freedv_interface.cpp
     freedv_interface.h        
+    wxListViewComboPopup.cpp
+    wxListViewComboPopup.h
 )
 
 set(FREEDV_SOURCES_OSX

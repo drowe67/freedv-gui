@@ -188,6 +188,7 @@
 <p>FreeDV has the ability to send FreeDV signal reports to <a href="https://pskreporter.info/">PSK Reporter</a> by enabling the option in Tools-Options and specifying your callsign and grid square. When enabled, this causes FreeDV to disable the free form <strong>Txt Msg</strong> field and only transmit the <strong>Callsign</strong> field. As this uses a different encoding format from the free-form text field, both sides of the contact must have this enabled for the contact to be reported to the PSK Reporter service.</p>
 <p>FreeDV validates the received information before submitting a position report to PSK Reporter. This is to ensure that FreeDV does not report invalid callsigns to the service (e.g. ones that don’t exist or that correspond to real non-FreeDV users). However, if the PSK Reporter function is disabled, all received text will display in the main window even if it has errors.</p>
 <p>Reports sent to PSK Reporter will display using the mode “FREEDV” for ease of filtering. The frequency that FreeDV reports to PSK Reporter is set by changing the “Report Frequency” text box in the main window. This is in kilohertz (kHz) and will turn red if the entered value is invalid. If Hamlib support is also enabled, this frequency will automatically update on start/stop as well as when switching between transmit and receive.</p>
+<p>FreeDV will also show the callsigns of previously received signals. To view those, click on the arrow next to the last received callsign at the bottom of the window. These are in descending order by time of receipt (i.e. the most recently received callsign will appear at the top of the list).</p>
 <h1 data-number="6" id="multiple-mode-support"><span class="header-section-number">6</span> Multiple Mode Support</h1>
 <p>FreeDV can simultaneously decode the following modes when selected prior to pushing “Start”:</p>
 <ul>
@@ -596,6 +597,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <ul>
 <li>Add 20% buffer for systems that are marginally able to decode 2020. (PR #355)</li>
 <li>Enable RTS and DTR for PTT input to provide a voltage source for some footswitches. (PR #354)</li>
+<li>Show previously received callsigns in main window. (PR #362)</li>
 </ul></li>
 <li>Bugfixes:
 <ul>
