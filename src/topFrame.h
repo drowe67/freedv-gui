@@ -127,6 +127,8 @@ class TopFrame : public wxFrame
 
         wxStaticText  *m_textSync;
         wxButton      *m_BtnReSync;
+        
+        wxToggleButton      *m_audioRecord;
 
         wxRadioButton *m_rb700c;
         wxRadioButton *m_rb700d;
@@ -193,6 +195,8 @@ class TopFrame : public wxFrame
         virtual void OnTogBtnAnalogClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnVoiceKeyerClick( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnPTT( wxCommandEvent& event ) { event.Skip(); }
+        
+        virtual void OnTogBtnRecord( wxCommandEvent& event ) { event.Skip(); }
 
         virtual void OnTogBtnSplitClickUI(wxUpdateUIEvent& event) { event.Skip(); }
         virtual void OnTogBtnAnalogClickUI(wxUpdateUIEvent& event) { event.Skip(); }
