@@ -515,6 +515,7 @@ class MainFrame : public TopFrame
         void OnTogBtnPTT( wxCommandEvent& event );
         void OnTogBtnVoiceKeyerClick (wxCommandEvent& event);
         void OnTogBtnOnOff( wxCommandEvent& event );
+        void OnTogBtnRecord( wxCommandEvent& event );
 
         void OnCallSignReset( wxCommandEvent& event );
         void OnBerReset( wxCommandEvent& event );

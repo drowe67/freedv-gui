@@ -7,6 +7,8 @@
 
 #include "main.h"
 
+#include <wx/stdpaths.h>
+
 extern wxMutex g_mutexProtectingCallbackData;
 SNDFILE            *g_sfPlayFile;
 bool                g_playFileToMicIn;
@@ -269,6 +271,8 @@ void MainFrame::StopRecFileFromRadio()
                      , wxT("Recording radio Output"), wxOK);
         
         g_mutexProtectingCallbackData.Unlock();
+        
+        m_audioRecord->SetValue(g_recFileFromRadio);
     }
 }
 
@@ -378,6 +382,42 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         g_recFileFromRadio = true;
     }
 
+    m_audioRecord->SetValue(g_recFileFromRadio);
+}
+
+void MainFrame::OnTogBtnRecord( wxCommandEvent& event )
+{
+    if (g_recFileFromRadio) 
+    {
+        StopRecFileFromRadio();
+    }
+    else
+    {
+        auto wxStandardPathObj = wxStandardPaths::Get();
+        auto documentsDir = wxStandardPathObj.GetDocumentsDir();
+        
+        auto currentTime = wxDateTime::Now().Format(_("%Y%m%d-%H%M%S"));
+        wxString    soundFile = wxString::Format(_("%s/FreeDV_FromRadio_%s.wav"), documentsDir, currentTime);
+        SF_INFO     sfInfo;
+    
+        sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+        sfInfo.channels   = 1;
+        sfInfo.samplerate = wxGetApp().m_soundCard1InSampleRate;
+    
+        g_recFromRadioSamples = UINT32_MAX; // record until stopped
+    
+        g_sfRecFile = sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo);
+        if(g_sfRecFile == NULL)
+        {
+            wxString strErr = sf_strerror(NULL);
+            wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
+            return;
+        }
+
+        SetStatusText(wxT("Recording File: ") + soundFile + wxT(" From Radio") , 0);
+        m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Stop Record File - From Radio...")));
+        g_recFileFromRadio = true;
+    }
 }
 
 void MainFrame::StopRecFileFromModulator()
