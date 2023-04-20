@@ -405,39 +405,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     bSizer1511->Add(m_togBtnOnOff, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
     sbSizer5->Add(bSizer1511, 0, wxEXPAND, 1);
 
-#ifdef UNIMPLEMENTED
-    //------------------------------
-    // Toggle Loopback button for RX
-    //------------------------------
-    wxBoxSizer* bSizer15113;
-    bSizer15113 = new wxBoxSizer(wxHORIZONTAL);
-    wxBoxSizer* bSizer15111;
-    bSizer15111 = new wxBoxSizer(wxVERTICAL);
-    wxSize wxSz = wxSize(44, 30);
-    m_togBtnLoopRx = new wxToggleButton(m_panel, wxID_ANY, _("Loop\nRX"), wxDefaultPosition, wxSz, 0);
-    m_togBtnLoopRx->SetFont(wxFont(6, 70, 90, 90, false, wxEmptyString));
-    m_togBtnLoopRx->SetToolTip(_("Loopback Receive audio data."));
-
-    bSizer15111->Add(m_togBtnLoopRx, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 0);
-
-    //sbSizer5->Add(bSizer15111, 0, wxEXPAND, 1);
-    bSizer15113->Add(bSizer15111, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 0);
-
-    //------------------------------
-    // Toggle Loopback button for Tx
-    //------------------------------
-    wxBoxSizer* bSizer15112;
-    bSizer15112 = new wxBoxSizer(wxVERTICAL);
-    m_togBtnLoopTx = new wxToggleButton(m_panel, wxID_ANY, _("Loop\nTX"), wxDefaultPosition, wxSz, 0);
-    m_togBtnLoopTx->SetFont(wxFont(6, 70, 90, 90, false, wxEmptyString));
-    m_togBtnLoopTx->SetToolTip(_("Loopback Transmit audio data."));
-
-    bSizer15112->Add(m_togBtnLoopTx, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 0);
-    bSizer15113->Add(bSizer15112, 0,  wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 0);
-
-    sbSizer5->Add(bSizer15113, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
-#endif
-
     wxBoxSizer* bSizer13;
     bSizer13 = new wxBoxSizer(wxVERTICAL);
 

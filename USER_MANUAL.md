@@ -854,6 +854,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * macOS builds should also not use Hamlib master. (PR #364)
 4. Cleanup:
     * Remove 'Split' button from UI. (PR #372)
+    * Remove dead code for RX/TX loopback buttons. (PR #372)
 
 ## V1.8.8.1 March 2023
 

@@ -216,8 +216,6 @@ class TopFrame : public wxFrame
         wxToggleButton* m_togBtnAnalog;
         wxToggleButton* m_togBtnVoiceKeyer;
         wxToggleButton* m_btnTogPTT;
-        wxToggleButton* m_togBtnLoopRx;
-        wxToggleButton* m_togBtnLoopTx;
         wxAuiNotebook* m_auiNbookCtrl;
         wxTextCtrl*   m_txtCtrlReportFrequency;
         wxStaticBox*  m_freqBox;
