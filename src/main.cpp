@@ -83,7 +83,6 @@ int g_txLevel = 0;
 int   g_SquelchActive;
 float g_SquelchLevel;
 int   g_analog;
-int   g_split;
 int   g_tx;
 float g_snr;
 bool  g_half_duplex;
@@ -773,7 +772,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_TxFreqOffsetHz = 0.0;
 
     g_tx = 0;
-    g_split = 0;
 
     // data states
     g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);

@@ -438,17 +438,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     sbSizer5->Add(bSizer15113, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
 #endif
 
-    //------------------------------
-    // Split Frequency Mode Toggle
-    //------------------------------
-    wxBoxSizer* bSizer151;
-    bSizer151 = new wxBoxSizer(wxVERTICAL);
-
-    m_togBtnSplit = new wxToggleButton(controlBox, wxID_ANY, _("Sp&lit"), wxDefaultPosition, wxDefaultSize, 0);
-    m_togBtnSplit->SetToolTip(_("Toggle split frequency mode."));
-
-    bSizer151->Add(m_togBtnSplit, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
-    sbSizer5->Add(bSizer151, 0, wxALL|wxEXPAND, 1);
     wxBoxSizer* bSizer13;
     bSizer13 = new wxBoxSizer(wxVERTICAL);
 
