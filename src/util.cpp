@@ -15,7 +15,6 @@
 // work out a way to do this without globals.
 extern float           g_RxFreqOffsetHz;
 extern float           g_TxFreqOffsetHz;
-extern int             g_split;
 extern FreeDVInterface freedvInterface;
 extern int             g_tx;
 
@@ -36,13 +35,8 @@ void clickTune(float freq) {
         fprintf(stderr, "indent!\n");
     }
 
-    if (g_split) {
-        g_RxFreqOffsetHz = FDMDV_FCENTRE - freq;
-    }
-    else {
-        g_TxFreqOffsetHz = freq - FDMDV_FCENTRE;
-        g_RxFreqOffsetHz = FDMDV_FCENTRE - freq;
-    }
+    g_TxFreqOffsetHz = freq - FDMDV_FCENTRE;
+    g_RxFreqOffsetHz = FDMDV_FCENTRE - freq;
     fprintf(stderr, "g_TxFreqOffsetHz: %f g_RxFreqOffsetHz: %f\n", g_TxFreqOffsetHz, g_RxFreqOffsetHz);
 }
 
