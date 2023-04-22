@@ -227,28 +227,35 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
         return false;
 
     ptt_t on = press ? RIG_PTT_ON : RIG_PTT_OFF;
-    vfo_t currVfo = RIG_VFO_A;
-    int result = rig_get_vfo(m_rig, &currVfo);
-    if (result != RIG_OK && result != -RIG_ENAVAIL)
+    vfo_t currVfo = RIG_VFO_CURR;
+    
+    char buf[256];
+    rig_get_vfo_list(m_rig, buf, 256);
+    std::string vfoList = buf;
+    
+    if (vfoList.find("VFOB") != std::string::npos)
     {
+        int result = rig_get_vfo(m_rig, &currVfo);
+        if (result != RIG_OK && result != -RIG_ENAVAIL)
+        {
+            // Note: we'll still attempt operation below using RIG_VFO_CURR just in case.
+            currVfo = RIG_VFO_CURR;
+            if (g_verbose) fprintf(stderr, "rig_get_vfo: error = %s \n", rigerror(result));
+        }
+    }
+    
+    int result = rig_set_ptt(m_rig, currVfo, on);
+    if (g_verbose) fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", result);
+    if (result != RIG_OK ) {
+        if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
         hamlibError = rigerror(result);
-        if (g_verbose) fprintf(stderr, "rig_get_vfo: error = %s \n", rigerror(result));
     }
     else
     {
-        result = rig_set_ptt(m_rig, currVfo, on);
-        if (g_verbose) fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", result);
-        if (result != RIG_OK ) {
-            if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
-            hamlibError = rigerror(result);
-        }
-        else
+        pttSet_ = press;
+        if (!press)
         {
-            pttSet_ = press;
-            if (!press)
-            {
-                update_frequency_and_mode();
-            }
+            update_frequency_and_mode();
         }
     }
     
@@ -352,33 +359,41 @@ void Hamlib::update_from_hamlib_()
     
     rmode_t mode = RIG_MODE_NONE;
     pbwidth_t passband = 0;
-    vfo_t currVfo = RIG_VFO_A;
-    int result = rig_get_vfo(m_rig, &currVfo);
-    if (result != RIG_OK && result != -RIG_ENAVAIL)
+    vfo_t currVfo = RIG_VFO_CURR;
+    
+    char buf[256];
+    rig_get_vfo_list(m_rig, buf, 256);
+    std::string vfoList = buf;
+    
+    if (vfoList.find("VFOB") != std::string::npos)
     {
-        if (g_verbose) fprintf(stderr, "rig_get_vfo: error = %s \n", rigerror(result));
+        int result = rig_get_vfo(m_rig, &currVfo);
+        if (result != RIG_OK && result != -RIG_ENAVAIL)
+        {
+            // Note: we'll still attempt operation below using RIG_VFO_CURR just in case.
+            currVfo = RIG_VFO_CURR;
+            if (g_verbose) fprintf(stderr, "rig_get_vfo: error = %s \n", rigerror(result));
+        }
+    }
+    
+    int result = rig_get_mode(m_rig, currVfo, &mode, &passband);
+    if (result != RIG_OK)
+    {
+        if (g_verbose) fprintf(stderr, "rig_get_mode: error = %s \n", rigerror(result));
     }
     else
     {
-        result = rig_get_mode(m_rig, currVfo, &mode, &passband);
+        freq_t freq = 0;
+        result = rig_get_freq(m_rig, currVfo, &freq);
         if (result != RIG_OK)
         {
-            if (g_verbose) fprintf(stderr, "rig_get_mode: error = %s \n", rigerror(result));
+            if (g_verbose) fprintf(stderr, "rig_get_freq: error = %s \n", rigerror(result));
         }
         else
         {
-            freq_t freq = 0;
-            result = rig_get_freq(m_rig, currVfo, &freq);
-            if (result != RIG_OK)
-            {
-                if (g_verbose) fprintf(stderr, "rig_get_freq: error = %s \n", rigerror(result));
-            }
-            else
-            {
-                m_currMode = mode;
-                m_currFreq = freq;
-                m_modeBox->CallAfter([&]() { update_mode_status(); });
-            }
+            m_currMode = mode;
+            m_currFreq = freq;
+            m_modeBox->CallAfter([&]() { update_mode_status(); });
         }
     }
 }
