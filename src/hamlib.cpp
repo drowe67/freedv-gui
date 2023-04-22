@@ -24,6 +24,7 @@
 #include <vector>
 #include <algorithm>
 #include <chrono>
+#include <sstream>
 
 using namespace std::chrono_literals;
 
@@ -174,19 +175,17 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
         if (g_verbose) fprintf(stderr, "hamlib: ignoring CI-V configuration due to non-Icom radio\r\n");
     }
 
-#if defined(HAMLIB_FILPATHLEN)
-    strncpy(m_rig->state.rigport.pathname, serial_port, HAMLIB_FILPATHLEN - 1);
-#else 
-    strncpy(m_rig->state.rigport.pathname, serial_port, FILPATHLEN - 1);
-#endif // HAMLIB_FILPATHLEN
+    rig_set_conf(m_rig, rig_token_lookup(m_rig, "rig_pathname"), serial_port);
 
     if (serial_rate) {
         if (g_verbose) fprintf(stderr, "hamlib: setting serial rate: %d\n", serial_rate);
-        m_rig->state.rigport.parm.serial.rate = serial_rate;
+        std::stringstream ss;
+        ss << serial_rate;
+        rig_set_conf(m_rig, rig_token_lookup(m_rig, "serial_speed"), ss.str().c_str());
     }
-    if (g_verbose) fprintf(stderr, "hamlib: serial rate: %d\n", m_rig->state.rigport.parm.serial.rate);
-    if (g_verbose) fprintf(stderr, "hamlib: data_bits..: %d\n", m_rig->state.rigport.parm.serial.data_bits);
-    if (g_verbose) fprintf(stderr, "hamlib: stop_bits..: %d\n", m_rig->state.rigport.parm.serial.stop_bits);
+    if (g_verbose) fprintf(stderr, "hamlib: serial rate: %d\n", get_serial_rate());
+    if (g_verbose) fprintf(stderr, "hamlib: data_bits..: %d\n", get_data_bits());
+    if (g_verbose) fprintf(stderr, "hamlib: stop_bits..: %d\n", get_stop_bits());
 
     if (rig_open(m_rig) == RIG_OK) {
         if (g_verbose) fprintf(stderr, "hamlib: rig_open() OK\n");        
@@ -201,15 +200,21 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
 }
 
 int Hamlib::get_serial_rate(void) {
-    return m_rig->state.rigport.parm.serial.rate;
+    char buf[128];
+    rig_get_conf(m_rig, rig_token_lookup(m_rig, "serial_speed"), buf);
+    return atoi(buf);
 }
 
 int Hamlib::get_data_bits(void) {
-    return m_rig->state.rigport.parm.serial.data_bits;
+    char buf[128];
+    rig_get_conf(m_rig, rig_token_lookup(m_rig, "data_bits"), buf);
+    return atoi(buf);
 }
 
 int Hamlib::get_stop_bits(void) {
-    return m_rig->state.rigport.parm.serial.stop_bits;
+    char buf[128];
+    rig_get_conf(m_rig, rig_token_lookup(m_rig, "stop_bits"), buf);
+    return atoi(buf);
 }
 
 bool Hamlib::ptt(bool press, wxString &hamlibError) {
