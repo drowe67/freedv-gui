@@ -202,6 +202,8 @@ class MainApp : public wxApp
         int                 m_intVoiceKeyerRxPause;
         int                 m_intVoiceKeyerRepeats;
 
+        wxString            m_txtQuickRecordPath;
+    
         bool                m_boolHamlibUseForPTT;
         unsigned int        m_intHamlibRig;
         wxString            m_strHamlibRigName;

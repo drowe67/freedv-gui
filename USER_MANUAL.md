@@ -258,14 +258,24 @@ As an aid to the above, FreeDV will show the current mode on the bottom of the w
 
 # Voice Keyer
 
-The Voice Keyer Button on the front page, and the Options-PTT dialog
-puts FreeDV and your radio into transmit, reads a wave file of your
-voice to call CQ, and then switches to receive to see if anyone is
-replying.  If you press the space bar the voice keyer stops.  If a signal
-with a valid sync is received for a few seconds the voice keyer stops.
+The Voice Keyer Button on the front page puts FreeDV and your radio into 
+transmit, reads a wave file of your voice to call CQ, and then switches to 
+receive to see if anyone is replying.  If you press the space bar or click
+the PTT button, the voice keyer stops.  If a signal with a valid sync is 
+received for a few seconds the voice keyer also stops.
 
-The Options-PTT dialog can be used to select the wave file, set the Rx
-delay, and number of times the tx/rx cycle repeats.
+The Audio tab inside Tools-Options can be used to select the wave file, set 
+the Rx delay, and number of times the tx/rx cycle repeats.
+
+# Quick Record
+
+To quickly record incoming signals from the radio, a 'Record' button is provided
+in the main window. Clicking this button will create a file beginning with the
+name "FreeDV_FromRadio" and containing the current date and time. Clicking 'Record'
+again will stop recording.
+
+The Audio tab inside Tools-Options allows control of where these recordings are
+saved. By default, this is inside the current user's Documents folder.
 
 # Multiple Configurations
 

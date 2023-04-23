@@ -98,6 +98,10 @@ class OptionsDlg : public wxDialog
         wxTextCtrl   *m_txtCtrlVoiceKeyerRxPause;
         wxTextCtrl   *m_txtCtrlVoiceKeyerRepeats;
 
+        /* Quick Record */
+        wxButton     *m_buttonChooseQuickRecordPath;
+        wxTextCtrl   *m_txtCtrlQuickRecordPath;
+        
         /* test frames, other simulated channel impairments */
 
         wxCheckBox   *m_ckboxTestFrame;
@@ -151,6 +155,7 @@ class OptionsDlg : public wxDialog
         unsigned int  event_in_serial, event_out_serial;
 
         void OnChooseVoiceKeyerWaveFile(wxCommandEvent& event);
+        void OnChooseQuickRecordPath(wxCommandEvent& event);
 
      private:
          void updatePSKReporterState();
