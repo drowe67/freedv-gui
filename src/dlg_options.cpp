@@ -612,6 +612,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlVoiceKeyerRxPause->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRxPause));
         m_txtCtrlVoiceKeyerRepeats->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRepeats));
 
+        m_txtCtrlQuickRecordPath->SetValue(wxGetApp().m_txtQuickRecordPath);
+        
         m_ckHalfDuplex->SetValue(wxGetApp().m_boolHalfDuplex);
 
         m_ckboxMultipleRx->SetValue(wxGetApp().m_boolMultipleRx);
@@ -726,7 +728,10 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         if (tmp < 0) {tmp = 0;} if (tmp > 100) {tmp = 100;}
         wxGetApp().m_intVoiceKeyerRepeats = (int)tmp;
         pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_intVoiceKeyerRepeats);
-
+        
+        wxGetApp().m_txtQuickRecordPath = m_txtCtrlQuickRecordPath->GetValue();
+        pConfig->Write(wxT("/QuickRecord/SavePath"), wxGetApp().m_txtQuickRecordPath);
+        
         wxGetApp().m_testFrames    = m_ckboxTestFrame->GetValue();
 
         wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();

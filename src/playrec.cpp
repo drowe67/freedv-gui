@@ -7,8 +7,6 @@
 
 #include "main.h"
 
-#include <wx/stdpaths.h>
-
 extern wxMutex g_mutexProtectingCallbackData;
 SNDFILE            *g_sfPlayFile;
 bool                g_playFileToMicIn;
@@ -393,11 +391,9 @@ void MainFrame::OnTogBtnRecord( wxCommandEvent& event )
     }
     else
     {
-        auto wxStandardPathObj = wxStandardPaths::Get();
-        auto documentsDir = wxStandardPathObj.GetDocumentsDir();
-        
         auto currentTime = wxDateTime::Now().Format(_("%Y%m%d-%H%M%S"));
-        wxString    soundFile = wxString::Format(_("%s/FreeDV_FromRadio_%s.wav"), documentsDir, currentTime);
+        wxFileName filePath(wxGetApp().m_txtQuickRecordPath, wxString::Format(_("FreeDV_FromRadio_%s.wav"), currentTime));
+        wxString    soundFile = filePath.GetFullPath();
         SF_INFO     sfInfo;
     
         sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
