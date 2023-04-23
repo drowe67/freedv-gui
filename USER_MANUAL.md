@@ -845,7 +845,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Show previously received callsigns in main window. (PR #362)
 2. Bugfixes:
     * Fix typo preventing use of Easy Setup when not having a radio configured. (PR #359)
-    * Fix crash on Windows after resizing the window to hide the waterfall. (PR #366)
+    * Fix crash on Windows after resizing the window to hide the waterfall. (PR #366, #375)
 3. Build system:
     * GitHub action now uses LLVM MinGW for pull requests. (PR #360)
     * Update Speex/Hamlib build code to avoid unnecessary rebuilds. (PR #361)
