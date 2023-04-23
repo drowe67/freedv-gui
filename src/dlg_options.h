@@ -98,6 +98,10 @@ class OptionsDlg : public wxDialog
         wxTextCtrl   *m_txtCtrlVoiceKeyerRxPause;
         wxTextCtrl   *m_txtCtrlVoiceKeyerRepeats;
 
+        /* Quick Record */
+        wxButton     *m_buttonChooseQuickRecordPath;
+        wxTextCtrl   *m_txtCtrlQuickRecordPath;
+        
         /* test frames, other simulated channel impairments */
 
         wxCheckBox   *m_ckboxTestFrame;

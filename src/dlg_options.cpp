@@ -63,7 +63,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_notebook->AddPage(m_reportingTab, _("Reporting"));
     m_notebook->AddPage(m_displayTab, _("Display"));
-    m_notebook->AddPage(m_keyerTab, _("Voice Keyer"));
+    m_notebook->AddPage(m_keyerTab, _("Audio"));
     m_notebook->AddPage(m_modemTab, _("Modem"));
     m_notebook->AddPage(m_simulationTab, _("Simulation"));
     m_notebook->AddPage(m_interfacingTab, _("UDP"));
@@ -185,6 +185,29 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sizerKeyer->Add(staticBoxSizer28a,0, wxALL | wxEXPAND, 5);
     
     m_keyerTab->SetSizer(sizerKeyer);
+    
+    //------------------------------
+    // Quick Record
+    //------------------------------
+    
+    wxStaticBoxSizer* sbsQuickRecord = new wxStaticBoxSizer( new wxStaticBox(m_keyerTab, wxID_ANY, _("Quick Record")), wxVERTICAL);
+
+    wxBoxSizer* quickRecordSizer = new wxBoxSizer(wxHORIZONTAL);
+
+    wxStaticText *staticTextQRPath = new wxStaticText(m_keyerTab, wxID_ANY, _("Location to save recordings: "), wxDefaultPosition, wxDefaultSize, 0);
+    quickRecordSizer->Add(staticTextQRPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtCtrlQuickRecordPath = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
+    m_txtCtrlQuickRecordPath->SetToolTip(_("Location which to save recordings started via the Record button in the main window."));
+    quickRecordSizer->Add(m_txtCtrlQuickRecordPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_buttonChooseQuickRecordPath = new wxButton(m_keyerTab, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_buttonChooseQuickRecordPath->SetMinSize(wxSize(120, -1));
+    quickRecordSizer->Add(m_buttonChooseQuickRecordPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    sbsQuickRecord->Add(quickRecordSizer);
+    
+    sizerKeyer->Add(sbsQuickRecord,0, wxALL | wxEXPAND, 5);
     
     // Modem tab
     wxBoxSizer* sizerModem = new wxBoxSizer(wxVERTICAL);
