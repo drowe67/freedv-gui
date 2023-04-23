@@ -981,7 +981,7 @@ void EasySetupDialog::updateHamlibDevices_()
 #ifdef __FreeBSD__
     if(glob("/dev/tty*", GLOB_MARK, NULL, &gl)==0) {
 #else
-    if(glob("/dev/tty.*", GLOB_MARK, NULL, &gl)==0) {
+    if(glob("/dev/cu.*", GLOB_MARK, NULL, &gl)==0) {
 #endif
         for(unsigned int i=0; i<gl.gl_pathc; i++) {
             if(gl.gl_pathv[i][strlen(gl.gl_pathv[i])-1]=='/')
