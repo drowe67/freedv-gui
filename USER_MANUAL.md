@@ -849,6 +849,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix crash on Windows after resizing the window to hide the waterfall. (PR #366)
     * Fix issue preventing Yaesu sound devices from appearing in Easy Setup. (PR #371)
     * Use /dev/cu.* instead of /dev/tty.* on macOS. (PR #377)
+    * Hamlib: avoid use of rig_get_vfo() for radios with only one VFO. (PR #376)
 3. Build system:
     * GitHub action now uses LLVM MinGW for pull requests. (PR #360)
     * Update Speex/Hamlib build code to avoid unnecessary rebuilds. (PR #361)
