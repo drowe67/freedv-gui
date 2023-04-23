@@ -400,18 +400,21 @@ void PlotWaterfall::plotPixelData()
     // on macOS due to how it handles color spaces.
     ResetMainWindowColorSpace();
 
-    wxImage* tmpImage = new wxImage(m_imgWidth, dy, (unsigned char*)&dyImageData, true);
-    wxBitmap* tmpBmp = new wxBitmap(*tmpImage);
+    if (dy > 0)
     {
-        wxMemoryDC fullBmpSourceDC(*m_fullBmp);
-        wxMemoryDC fullBmpDestDC(*m_fullBmp);
-        wxMemoryDC tmpBmpSourceDC(*tmpBmp);
+        wxImage* tmpImage = new wxImage(m_imgWidth, dy, (unsigned char*)&dyImageData, true);
+        wxBitmap* tmpBmp = new wxBitmap(*tmpImage);
+        {
+            wxMemoryDC fullBmpSourceDC(*m_fullBmp);
+            wxMemoryDC fullBmpDestDC(*m_fullBmp);
+            wxMemoryDC tmpBmpSourceDC(*tmpBmp);
 
-        fullBmpDestDC.Blit(0, dy, m_imgWidth, m_imgHeight - dy, &fullBmpSourceDC, 0, 0);
-        fullBmpDestDC.Blit(0, 0, m_imgWidth, dy, &tmpBmpSourceDC, 0, 0);
+            fullBmpDestDC.Blit(0, dy, m_imgWidth, m_imgHeight - dy, &fullBmpSourceDC, 0, 0);
+            fullBmpDestDC.Blit(0, 0, m_imgWidth, dy, &tmpBmpSourceDC, 0, 0);
+        }
+        delete tmpBmp; 
+        delete tmpImage;
     }
-    delete tmpBmp; 
-    delete tmpImage;
 }
 
 //-------------------------------------------------------------------------
