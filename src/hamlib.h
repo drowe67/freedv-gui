@@ -42,6 +42,8 @@ class Hamlib {
         void statusUpdateThreadEntryFn_();
         void update_from_hamlib_();
         
+        vfo_t getCurrentVfo_();
+        
         RIG *m_rig;
         rig_model_t m_rig_model;
         /* Sorted list of rigs. */
