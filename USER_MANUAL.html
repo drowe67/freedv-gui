@@ -604,7 +604,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Fix typo preventing use of Easy Setup when not having a radio configured. (PR #359)</li>
 <li>Fix crash on Windows after resizing the window to hide the waterfall. (PR #366, #375)</li>
 <li>Use /dev/cu.* instead of /dev/tty.* on macOS. (PR #377)</li>
-<li>Hamlib: avoid use of rig_get_vfo() for radios with only one VFO. (PR #376) &gt;&gt;&gt;&gt;&gt;&gt;&gt; master</li>
+<li>Hamlib: avoid use of rig_get_vfo() for radios with only one VFO. (PR #376)</li>
 </ul></li>
 <li>Build system:
 <ul>
@@ -613,6 +613,11 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Upgrade Hamlib to version 4.5.5. (PR #361)</li>
 <li>Fix typo preventing proper naming of installers for test builds. (PR #363)</li>
 <li>macOS builds should also not use Hamlib master. (PR #364)</li>
+</ul></li>
+<li>Cleanup:
+<ul>
+<li>Remove ‘Split’ button from UI. (PR #372)</li>
+<li>Remove dead code for RX/TX loopback buttons. (PR #372)</li>
 </ul></li>
 </ol>
 <h2 data-number="16.2" id="v1.8.8.1-march-2023"><span class="header-section-number">16.2</span> V1.8.8.1 March 2023</h2>
