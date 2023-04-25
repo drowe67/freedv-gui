@@ -84,7 +84,6 @@ int g_txLevel = 0;
 int   g_SquelchActive;
 float g_SquelchLevel;
 int   g_analog;
-int   g_split;
 int   g_tx;
 float g_snr;
 bool  g_half_duplex;
@@ -606,7 +605,6 @@ setDefaultMode:
             break;
     }
     
-    m_togBtnSplit->Disable();
     m_togBtnAnalog->Disable();
     m_btnTogPTT->Disable();
     m_togBtnVoiceKeyer->Disable();
@@ -735,7 +733,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
 //    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
      m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
-    m_togBtnSplit->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnSplitClickUI), NULL, this);
     m_togBtnAnalog->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
    // m_btnTogPTT->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnPTT_UI), NULL, this);
 
@@ -778,7 +775,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     g_TxFreqOffsetHz = 0.0;
 
     g_tx = 0;
-    g_split = 0;
 
     // data states
     g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
@@ -991,7 +987,6 @@ MainFrame::~MainFrame()
    pConfig->Flush();
 
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
-    m_togBtnSplit->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnSplitClickUI), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
 
     if (m_RxRunning)
@@ -1698,7 +1693,6 @@ void MainFrame::OnExit(wxCommandEvent& event)
     {
         stopRxStream();
     }
-    m_togBtnSplit->Disable();
     m_togBtnAnalog->Disable();
     //m_btnTogPTT->Disable();
 
@@ -1857,7 +1851,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         OnChangeTxMode(tmpEvent);
 
         // init freedv states
-        m_togBtnSplit->Enable();
         m_togBtnAnalog->Enable();
         m_btnTogPTT->Enable();
         m_togBtnVoiceKeyer->Enable();
@@ -2118,7 +2111,6 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_textSync->Disable();
         m_textCurrentDecodeMode->Disable();
 
-        m_togBtnSplit->Disable();
         m_togBtnAnalog->Disable();
         m_btnTogPTT->Disable();
         m_togBtnVoiceKeyer->Disable();

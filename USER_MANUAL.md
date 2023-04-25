@@ -856,13 +856,19 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add Record button to the main window to easily allow recording of the incoming signal. (PR #369)
 2. Bugfixes:
     * Fix typo preventing use of Easy Setup when not having a radio configured. (PR #359)
-    * Fix crash on Windows after resizing the window to hide the waterfall. (PR #366)
+    * Fix issue preventing Yaesu sound devices from appearing in Easy Setup. (PR #371)
+    * Fix crash on Windows after resizing the window to hide the waterfall. (PR #366, #375)
+    * Use /dev/cu.* instead of /dev/tty.* on macOS. (PR #377)
+    * Hamlib: avoid use of rig_get_vfo() for radios with only one VFO. (PR #376)
 3. Build system:
     * GitHub action now uses LLVM MinGW for pull requests. (PR #360)
     * Update Speex/Hamlib build code to avoid unnecessary rebuilds. (PR #361)
     * Upgrade Hamlib to version 4.5.5. (PR #361)
     * Fix typo preventing proper naming of installers for test builds. (PR #363)
     * macOS builds should also not use Hamlib master. (PR #364)
+4. Cleanup:
+    * Remove 'Split' button from UI. (PR #372)
+    * Remove dead code for RX/TX loopback buttons. (PR #372)
 
 ## V1.8.8.1 March 2023
 

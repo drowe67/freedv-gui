@@ -24,6 +24,7 @@
 #include <vector>
 #include <algorithm>
 #include <chrono>
+#include <sstream>
 
 using namespace std::chrono_literals;
 
@@ -174,19 +175,17 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
         if (g_verbose) fprintf(stderr, "hamlib: ignoring CI-V configuration due to non-Icom radio\r\n");
     }
 
-#if defined(HAMLIB_FILPATHLEN)
-    strncpy(m_rig->state.rigport.pathname, serial_port, HAMLIB_FILPATHLEN - 1);
-#else 
-    strncpy(m_rig->state.rigport.pathname, serial_port, FILPATHLEN - 1);
-#endif // HAMLIB_FILPATHLEN
+    rig_set_conf(m_rig, rig_token_lookup(m_rig, "rig_pathname"), serial_port);
 
     if (serial_rate) {
         if (g_verbose) fprintf(stderr, "hamlib: setting serial rate: %d\n", serial_rate);
-        m_rig->state.rigport.parm.serial.rate = serial_rate;
+        std::stringstream ss;
+        ss << serial_rate;
+        rig_set_conf(m_rig, rig_token_lookup(m_rig, "serial_speed"), ss.str().c_str());
     }
-    if (g_verbose) fprintf(stderr, "hamlib: serial rate: %d\n", m_rig->state.rigport.parm.serial.rate);
-    if (g_verbose) fprintf(stderr, "hamlib: data_bits..: %d\n", m_rig->state.rigport.parm.serial.data_bits);
-    if (g_verbose) fprintf(stderr, "hamlib: stop_bits..: %d\n", m_rig->state.rigport.parm.serial.stop_bits);
+    if (g_verbose) fprintf(stderr, "hamlib: serial rate: %d\n", get_serial_rate());
+    if (g_verbose) fprintf(stderr, "hamlib: data_bits..: %d\n", get_data_bits());
+    if (g_verbose) fprintf(stderr, "hamlib: stop_bits..: %d\n", get_stop_bits());
 
     if (rig_open(m_rig) == RIG_OK) {
         if (g_verbose) fprintf(stderr, "hamlib: rig_open() OK\n");        
@@ -201,15 +200,21 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
 }
 
 int Hamlib::get_serial_rate(void) {
-    return m_rig->state.rigport.parm.serial.rate;
+    char buf[128];
+    rig_get_conf(m_rig, rig_token_lookup(m_rig, "serial_speed"), buf);
+    return atoi(buf);
 }
 
 int Hamlib::get_data_bits(void) {
-    return m_rig->state.rigport.parm.serial.data_bits;
+    char buf[128];
+    rig_get_conf(m_rig, rig_token_lookup(m_rig, "data_bits"), buf);
+    return atoi(buf);
 }
 
 int Hamlib::get_stop_bits(void) {
-    return m_rig->state.rigport.parm.serial.stop_bits;
+    char buf[128];
+    rig_get_conf(m_rig, rig_token_lookup(m_rig, "stop_bits"), buf);
+    return atoi(buf);
 }
 
 bool Hamlib::ptt(bool press, wxString &hamlibError) {
@@ -222,28 +227,20 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
         return false;
 
     ptt_t on = press ? RIG_PTT_ON : RIG_PTT_OFF;
-    vfo_t currVfo = RIG_VFO_A;
-    int result = rig_get_vfo(m_rig, &currVfo);
-    if (result != RIG_OK && result != -RIG_ENAVAIL)
-    {
+    vfo_t currVfo = getCurrentVfo_();
+        
+    int result = rig_set_ptt(m_rig, currVfo, on);
+    if (g_verbose) fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", result);
+    if (result != RIG_OK ) {
+        if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
         hamlibError = rigerror(result);
-        if (g_verbose) fprintf(stderr, "rig_get_vfo: error = %s \n", rigerror(result));
     }
     else
     {
-        result = rig_set_ptt(m_rig, currVfo, on);
-        if (g_verbose) fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", result);
-        if (result != RIG_OK ) {
-            if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
-            hamlibError = rigerror(result);
-        }
-        else
+        pttSet_ = press;
+        if (!press)
         {
-            pttSet_ = press;
-            if (!press)
-            {
-                update_frequency_and_mode();
-            }
+            update_frequency_and_mode();
         }
     }
     
@@ -347,33 +344,26 @@ void Hamlib::update_from_hamlib_()
     
     rmode_t mode = RIG_MODE_NONE;
     pbwidth_t passband = 0;
-    vfo_t currVfo = RIG_VFO_A;
-    int result = rig_get_vfo(m_rig, &currVfo);
-    if (result != RIG_OK && result != -RIG_ENAVAIL)
+    vfo_t currVfo = getCurrentVfo_();    
+    
+    int result = rig_get_mode(m_rig, currVfo, &mode, &passband);
+    if (result != RIG_OK)
     {
-        if (g_verbose) fprintf(stderr, "rig_get_vfo: error = %s \n", rigerror(result));
+        if (g_verbose) fprintf(stderr, "rig_get_mode: error = %s \n", rigerror(result));
     }
     else
     {
-        result = rig_get_mode(m_rig, currVfo, &mode, &passband);
+        freq_t freq = 0;
+        result = rig_get_freq(m_rig, currVfo, &freq);
         if (result != RIG_OK)
         {
-            if (g_verbose) fprintf(stderr, "rig_get_mode: error = %s \n", rigerror(result));
+            if (g_verbose) fprintf(stderr, "rig_get_freq: error = %s \n", rigerror(result));
         }
         else
         {
-            freq_t freq = 0;
-            result = rig_get_freq(m_rig, currVfo, &freq);
-            if (result != RIG_OK)
-            {
-                if (g_verbose) fprintf(stderr, "rig_get_freq: error = %s \n", rigerror(result));
-            }
-            else
-            {
-                m_currMode = mode;
-                m_currFreq = freq;
-                m_modeBox->CallAfter([&]() { update_mode_status(); });
-            }
+            m_currMode = mode;
+            m_currFreq = freq;
+            m_modeBox->CallAfter([&]() { update_mode_status(); });
         }
     }
 }
@@ -428,4 +418,25 @@ void Hamlib::close(void) {
         rig_cleanup(m_rig);
         m_rig = NULL;
     }
+}
+
+vfo_t Hamlib::getCurrentVfo_()
+{
+    vfo_t vfo = RIG_VFO_CURR;
+    char buf[256];
+    rig_get_vfo_list(m_rig, buf, 256);
+    std::string vfoList = buf;
+    
+    if (vfoList.find("VFOB") != std::string::npos)
+    {
+        int result = rig_get_vfo(m_rig, &vfo);
+        if (result != RIG_OK && result != -RIG_ENAVAIL)
+        {
+            // Note: we'll still attempt operation using RIG_VFO_CURR just in case.
+            if (g_verbose) fprintf(stderr, "rig_get_vfo: error = %s \n", rigerror(result));
+            vfo = RIG_VFO_CURR;
+        }
+    }
+    
+    return vfo;
 }
