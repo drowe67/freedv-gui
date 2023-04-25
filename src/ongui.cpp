@@ -13,7 +13,6 @@ extern bool  g_modal;
 extern int   g_SquelchActive;
 extern float g_SquelchLevel;
 extern int   g_analog;
-extern int   g_split;
 extern int   g_tx;
 extern int   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
@@ -504,15 +503,6 @@ void MainFrame::togglePTT(void) {
     m_textLevel->SetLabel(wxT(""));
     m_gaugeLevel->SetValue(0);
     endingTx = false;
-}
-
-
-void MainFrame::OnTogBtnSplitClick(wxCommandEvent& event) {
-    if (g_split)
-        g_split = 0;
-    else
-        g_split = 1;
-    event.Skip();
 }
 
 //-------------------------------------------------------------------------
