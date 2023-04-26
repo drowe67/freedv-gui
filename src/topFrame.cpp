@@ -466,7 +466,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_panel->SetSizerAndFit(bSizer1);
     this->Layout();
 
-    m_statusBar1 = this->CreateStatusBar(3, wxST_SIZEGRIP, wxID_ANY);
+    m_statusBar1 = this->CreateStatusBar(1, wxSTB_DEFAULT_STYLE, wxID_ANY);
     
     //=====================================================
     // End of layout
