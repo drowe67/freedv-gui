@@ -630,6 +630,7 @@ setDefaultMode:
     {
         m_cboLastReportedCallsigns->Show();
         m_txtCtrlCallSign->Hide();
+        m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
     }
     else
     {
@@ -1319,6 +1320,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         // the PSK Reporter callsign extraction logic.
                         m_txtCtrlCallSign->SetValue(wxT(""));
                         m_cboLastReportedCallsigns->SetValue(wxT(""));
+                        m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
                         memset(m_callsign, 0, MAX_CALLSIGN);
                         m_pcallsign = m_callsign;
             
@@ -1436,6 +1438,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     }
                     
                     m_cboLastReportedCallsigns->SetText(rxCallsign);
+                    m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
            
                     if (wxGetApp().m_boolHamlibUseForPTT)
                     {
@@ -1826,6 +1829,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_timeSinceSyncLoss = 0;
         m_txtCtrlCallSign->SetValue(wxT(""));
         m_lastReportedCallsignListView->DeleteAllItems();
+        m_cboLastReportedCallsigns->Enable(false);
                 
         m_cboLastReportedCallsigns->SetText(wxT(""));
         memset(m_callsign, 0, MAX_CALLSIGN);
