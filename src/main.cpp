@@ -136,7 +136,6 @@ extern int                 g_sfFs;
 extern int                 g_sfTxFs;
 extern bool                g_loopPlayFileFromRadio;
 extern int                 g_playFileFromRadioEventId;
-extern float               g_blink;
 
 extern SNDFILE            *g_sfRecFileFromModulator;
 extern bool                g_recFileFromModulator;
@@ -1632,19 +1631,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (IsIconized())
                 Restore();
             m_schedule_restore = false;
-        }
-
-        // Blink file playback status line
-
-        if (g_playFileFromRadio) {
-            g_blink += DT;
-            //fprintf(g_logfile, "g_blink: %f\n", g_blink);
-            if ((g_blink >= 1.0) && (g_blink < 2.0))
-                SetStatusText(wxT("Playing into from radio"), 0);
-            if (g_blink >= 2.0) {
-                SetStatusText(wxT(""), 0);
-                g_blink = 0.0;
-            }
         }
     
         // Voice Keyer state machine

@@ -42,7 +42,7 @@ int MainFrame::VoiceKeyerStartTx(void)
         g_sfTxFs = sfInfo.samplerate;
         g_sfPlayFile = tmpPlayFile;
         
-        SetStatusText(wxT("Voice Keyer: Playing File") + wxGetApp().m_txtVoiceKeyerWaveFile + wxT(" to Mic Input") , 0);
+        SetStatusText(wxT("Voice Keyer: Playing file ") + wxGetApp().m_txtVoiceKeyerWaveFile + wxT(" to mic input") , 0);
         g_loopPlayFileToMicIn = false;
         g_playFileToMicIn = true;
 
