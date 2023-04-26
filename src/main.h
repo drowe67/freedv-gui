@@ -202,6 +202,8 @@ class MainApp : public wxApp
         int                 m_intVoiceKeyerRxPause;
         int                 m_intVoiceKeyerRepeats;
 
+        wxString            m_txtQuickRecordPath;
+    
         bool                m_boolHamlibUseForPTT;
         unsigned int        m_intHamlibRig;
         wxString            m_strHamlibRigName;
@@ -515,6 +517,7 @@ class MainFrame : public TopFrame
         void OnTogBtnPTT( wxCommandEvent& event );
         void OnTogBtnVoiceKeyerClick (wxCommandEvent& event);
         void OnTogBtnOnOff( wxCommandEvent& event );
+        void OnTogBtnRecord( wxCommandEvent& event );
 
         void OnCallSignReset( wxCommandEvent& event );
         void OnBerReset( wxCommandEvent& event );

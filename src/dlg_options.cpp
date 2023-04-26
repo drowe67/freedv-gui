@@ -63,7 +63,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_notebook->AddPage(m_reportingTab, _("Reporting"));
     m_notebook->AddPage(m_displayTab, _("Display"));
-    m_notebook->AddPage(m_keyerTab, _("Voice Keyer"));
+    m_notebook->AddPage(m_keyerTab, _("Audio"));
     m_notebook->AddPage(m_modemTab, _("Modem"));
     m_notebook->AddPage(m_simulationTab, _("Simulation"));
     m_notebook->AddPage(m_interfacingTab, _("UDP"));
@@ -185,6 +185,29 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sizerKeyer->Add(staticBoxSizer28a,0, wxALL | wxEXPAND, 5);
     
     m_keyerTab->SetSizer(sizerKeyer);
+    
+    //------------------------------
+    // Quick Record
+    //------------------------------
+    
+    wxStaticBoxSizer* sbsQuickRecord = new wxStaticBoxSizer( new wxStaticBox(m_keyerTab, wxID_ANY, _("Quick Record")), wxVERTICAL);
+
+    wxBoxSizer* quickRecordSizer = new wxBoxSizer(wxHORIZONTAL);
+
+    wxStaticText *staticTextQRPath = new wxStaticText(m_keyerTab, wxID_ANY, _("Location to save recordings: "), wxDefaultPosition, wxDefaultSize, 0);
+    quickRecordSizer->Add(staticTextQRPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtCtrlQuickRecordPath = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
+    m_txtCtrlQuickRecordPath->SetToolTip(_("Location which to save recordings started via the Record button in the main window."));
+    quickRecordSizer->Add(m_txtCtrlQuickRecordPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_buttonChooseQuickRecordPath = new wxButton(m_keyerTab, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_buttonChooseQuickRecordPath->SetMinSize(wxSize(120, -1));
+    quickRecordSizer->Add(m_buttonChooseQuickRecordPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    sbsQuickRecord->Add(quickRecordSizer);
+    
+    sizerKeyer->Add(sbsQuickRecord,0, wxALL | wxEXPAND, 5);
     
     // Modem tab
     wxBoxSizer* sizerModem = new wxBoxSizer(wxVERTICAL);
@@ -524,6 +547,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_buttonChooseVoiceKeyerWaveFile->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFile), NULL, this);
 
+    m_buttonChooseQuickRecordPath->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
+
     m_BtnFifoReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
     m_btn_udp_test->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnUDPTest), NULL, this);
 
@@ -558,6 +583,7 @@ OptionsDlg::~OptionsDlg()
     m_ckboxFreeDV700txClip->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700txClip), NULL, this);
     m_ckboxFreeDV700Combine->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700Combine), NULL, this);
     m_buttonChooseVoiceKeyerWaveFile->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFile), NULL, this);
+    m_buttonChooseQuickRecordPath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
 
     m_BtnFifoReset->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
     m_btn_udp_test->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnUDPTest), NULL, this);
@@ -589,6 +615,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlVoiceKeyerRxPause->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRxPause));
         m_txtCtrlVoiceKeyerRepeats->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRepeats));
 
+        m_txtCtrlQuickRecordPath->SetValue(wxGetApp().m_txtQuickRecordPath);
+        
         m_ckHalfDuplex->SetValue(wxGetApp().m_boolHalfDuplex);
 
         m_ckboxMultipleRx->SetValue(wxGetApp().m_boolMultipleRx);
@@ -703,7 +731,10 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         if (tmp < 0) {tmp = 0;} if (tmp > 100) {tmp = 100;}
         wxGetApp().m_intVoiceKeyerRepeats = (int)tmp;
         pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_intVoiceKeyerRepeats);
-
+        
+        wxGetApp().m_txtQuickRecordPath = m_txtCtrlQuickRecordPath->GetValue();
+        pConfig->Write(wxT("/QuickRecord/SavePath"), wxGetApp().m_txtQuickRecordPath);
+        
         wxGetApp().m_testFrames    = m_ckboxTestFrame->GetValue();
 
         wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
@@ -876,6 +907,19 @@ void OptionsDlg::OnChooseVoiceKeyerWaveFile(wxCommandEvent& event) {
      wxGetApp().m_txtVoiceKeyerWaveFile = openFileDialog.GetPath();
      wxFileName::SplitPath(wxGetApp().m_txtVoiceKeyerWaveFile, &wxGetApp().m_txtVoiceKeyerWaveFilePath, &fileName, &extension);
      m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().m_txtVoiceKeyerWaveFile);
+}
+
+void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent& event) {
+     wxDirDialog pathDialog(
+                                 this,
+                                 wxT("Choose Quick Record save location"),
+                                 wxGetApp().m_txtQuickRecordPath
+                                 );
+     if(pathDialog.ShowModal() == wxID_CANCEL) {
+         return;     // the user changed their mind...
+     }
+
+     m_txtCtrlQuickRecordPath->SetValue(pathDialog.GetPath());
 }
 
 //  Run time update of carrier amplitude attenuation

@@ -28,6 +28,7 @@
 #include <chrono>
 #include <climits>
 #include <wx/cmdline.h>
+#include <wx/stdpaths.h>
 #include "version.h"
 #include "main.h"
 #include "osx_interface.h"
@@ -439,6 +440,10 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_intVoiceKeyerRxPause = pConfig->Read(wxT("/VoiceKeyer/RxPause"), 10);
     wxGetApp().m_intVoiceKeyerRepeats = pConfig->Read(wxT("/VoiceKeyer/Repeats"), 5);
 
+    auto wxStandardPathObj = wxStandardPaths::Get();
+    auto documentsDir = wxStandardPathObj.GetDocumentsDir();
+    wxGetApp().m_txtQuickRecordPath = pConfig->Read(wxT("/QuickRecord/SavePath"), documentsDir);
+    
     wxGetApp().m_boolHamlibUseForPTT = pConfig->ReadBool("/Hamlib/UseForPTT", false);
     wxGetApp().m_intHamlibIcomCIVHex = pConfig->ReadLong("/Hamlib/IcomCIVHex", 0);
     
@@ -908,6 +913,8 @@ MainFrame::~MainFrame()
     pConfig->Write(wxT("/VoiceKeyer/WaveFile"), wxGetApp().m_txtVoiceKeyerWaveFile);
     pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_intVoiceKeyerRxPause);
     pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_intVoiceKeyerRepeats);
+    
+    pConfig->Write(wxT("/QuickRecord/SavePath"), wxGetApp().m_txtQuickRecordPath);
 
     pConfig->Write(wxT("/Rig/HalfDuplex"),              wxGetApp().m_boolHalfDuplex);
     pConfig->Write(wxT("/Rig/MultipleRx"), wxGetApp().m_boolMultipleRx);
