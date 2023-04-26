@@ -159,9 +159,12 @@
 <p>On bands below 10 MHz, LSB is used for FreeDV. On 10MHz and above, USB is used. After much debate, the FreeDV community has adopted the same conventions as SSB, based on the reasoning that FreeDV is a voice mode.</p>
 <p>As an aid to the above, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn’t enabled, or if your radio doesn’t support retrieving frequency and mode over CAT, it will remain grayed out with “unk” displaying instead of the mode (for “unknown”).</p>
 <h1 data-number="3" id="voice-keyer"><span class="header-section-number">3</span> Voice Keyer</h1>
-<p>The Voice Keyer Button on the front page, and the Options-PTT dialog puts FreeDV and your radio into transmit, reads a wave file of your voice to call CQ, and then switches to receive to see if anyone is replying. If you press the space bar the voice keyer stops. If a signal with a valid sync is received for a few seconds the voice keyer stops.</p>
-<p>The Options-PTT dialog can be used to select the wave file, set the Rx delay, and number of times the tx/rx cycle repeats.</p>
-<h1 data-number="4" id="multiple-configurations"><span class="header-section-number">4</span> Multiple Configurations</h1>
+<p>The Voice Keyer Button on the front page puts FreeDV and your radio into transmit, reads a wave file of your voice to call CQ, and then switches to receive to see if anyone is replying. If you press the space bar or click the PTT button, the voice keyer stops. If a signal with a valid sync is received for a few seconds the voice keyer also stops.</p>
+<p>The Audio tab inside Tools-Options can be used to select the wave file, set the Rx delay, and number of times the tx/rx cycle repeats.</p>
+<h1 data-number="4" id="quick-record"><span class="header-section-number">4</span> Quick Record</h1>
+<p>To quickly record incoming signals from the radio, a ‘Record’ button is provided in the main window. Clicking this button will create a file beginning with the name “FreeDV_FromRadio” and containing the current date and time. Clicking ‘Record’ again will stop recording.</p>
+<p>The Audio tab inside Tools-Options allows control of where these recordings are saved. By default, this is inside the current user’s Documents folder.</p>
+<h1 data-number="5" id="multiple-configurations"><span class="header-section-number">5</span> Multiple Configurations</h1>
 <p>By default, FreeDV uses the following locations to store configuration:</p>
 <ul>
 <li>Linux: ~/.FreeDV</li>
@@ -174,7 +177,7 @@
 <li>macOS: ~/Library/Preferences/</li>
 <li>Windows: C:\Users\[username]\AppData\Roaming</li>
 </ul>
-<h2 data-number="4.1" id="executing-freedv-with-a-different-configuration-windows"><span class="header-section-number">4.1</span> Executing FreeDV With a Different Configuration (Windows)</h2>
+<h2 data-number="5.1" id="executing-freedv-with-a-different-configuration-windows"><span class="header-section-number">5.1</span> Executing FreeDV With a Different Configuration (Windows)</h2>
 <p>On Windows, you can create shortcuts to FreeDV with different file names for the “-f” command line option as described above. To create a shortcut, right-click on the Desktop or in File Explorer and choose New-&gt;Shortcut. Click on Browse and navigate to one of the following paths:</p>
 <ul>
 <li>C:\Program Files\FreeDV [version]\bin\freedv.exe</li>
@@ -184,12 +187,12 @@
 <p>Once the shortcut has been created, right-click it and choose Properties. Find the Shortcut tab in the resulting dialog box and add “-f” followed by the desired filename to the end of the text in the Target field. Do not add any other quote marks.</p>
 <p>For example, to use a file called IC7300.conf stored in the Hamradio directory on the C drive the Target field should appear as follows:</p>
 <p>“C:\Program Files\FreeDV [version]\bin\freedv.exe” -f C:\Hamradio\IC7300.conf</p>
-<h1 data-number="5" id="psk-reporter"><span class="header-section-number">5</span> PSK Reporter</h1>
+<h1 data-number="6" id="psk-reporter"><span class="header-section-number">6</span> PSK Reporter</h1>
 <p>FreeDV has the ability to send FreeDV signal reports to <a href="https://pskreporter.info/">PSK Reporter</a> by enabling the option in Tools-Options and specifying your callsign and grid square. When enabled, this causes FreeDV to disable the free form <strong>Txt Msg</strong> field and only transmit the <strong>Callsign</strong> field. As this uses a different encoding format from the free-form text field, both sides of the contact must have this enabled for the contact to be reported to the PSK Reporter service.</p>
 <p>FreeDV validates the received information before submitting a position report to PSK Reporter. This is to ensure that FreeDV does not report invalid callsigns to the service (e.g. ones that don’t exist or that correspond to real non-FreeDV users). However, if the PSK Reporter function is disabled, all received text will display in the main window even if it has errors.</p>
 <p>Reports sent to PSK Reporter will display using the mode “FREEDV” for ease of filtering. The frequency that FreeDV reports to PSK Reporter is set by changing the “Report Frequency” text box in the main window. This is in kilohertz (kHz) and will turn red if the entered value is invalid. If Hamlib support is also enabled, this frequency will automatically update on start/stop as well as when switching between transmit and receive.</p>
 <p>FreeDV will also show the callsigns of previously received signals. To view those, click on the arrow next to the last received callsign at the bottom of the window. These are in descending order by time of receipt (i.e. the most recently received callsign will appear at the top of the list).</p>
-<h1 data-number="6" id="multiple-mode-support"><span class="header-section-number">6</span> Multiple Mode Support</h1>
+<h1 data-number="7" id="multiple-mode-support"><span class="header-section-number">7</span> Multiple Mode Support</h1>
 <p>FreeDV can simultaneously decode the following modes when selected prior to pushing “Start”:</p>
 <ul>
 <li>2020/2020B</li>
@@ -199,7 +202,7 @@
 <p>In addition, FreeDV can allow the user to switch between the above modes for transmit without having to push “Stop” first. These features can be enabled by going to Tools-&gt;Options-&gt;Modem and checking the “Simultaneously Decode All HF Modes” option. Note that this may consume significant additional CPU resources, which can cause decode problems. In addition, these features are automatically disabled if 800XA or 2400B are selected before pushing “Start” due to the significant additional CPU resources required to decode these modes.</p>
 <p>By default, FreeDV will use as many threads/cores in parallel as required to decode all supported HF modes. On some slower systems, it may be necessary to enable the “Use single thread for multiple RX operation” option as well. This results in FreeDV decoding each mode in series and additionally short circuits the list of modes to be checked when in sync.</p>
 <p>Additionally, the squelch setting with simultaneous decode enabled is relative to the mode that supports the weakest signals (currently 700D). The squelch for other modes will be set to a value higher than the slider (which is calculated by adding the difference between the “Min SNR” of 700D and the mode in question; see “FreeDV Modes” below). For example, the squelch for 700E when the squelch slider is set to -2.0 becomes 1.0dB. This is designed to reduce undesired pops and clicks due to false decodes.</p>
-<h1 data-number="7" id="freedv-modes"><span class="header-section-number">7</span> FreeDV Modes</h1>
+<h1 data-number="8" id="freedv-modes"><span class="header-section-number">8</span> FreeDV Modes</h1>
 <p>The following table is a guide to the different modes, using analog SSB and Skype as anchors for a rough guide to audio quality:</p>
 <table>
 <thead>
@@ -273,15 +276,15 @@
 </table>
 <p>The Min SNR is roughly the SNR where you cannot converse without repeating yourself. The numbers above are on channels without fading (AWGN channels like VHF radio). For fading channels the minimum SNR is a few dB higher. The Fading column shows how robust the mode is to HF Fading channels, higher is more robust.</p>
 <p>The more advanced 700D and 2020 modes have a high latency due to the use of large Forward Error Correction (FEC) codes. They buffer many frames of speech, which combined with PC sound card buffering results in end-to-end latencies of 1-2 seconds. They may take a few seconds to sync at the start of an over, especially in fading channels.</p>
-<h2 data-number="7.1" id="freedv-700d"><span class="header-section-number">7.1</span> FreeDV 700D</h2>
+<h2 data-number="8.1" id="freedv-700d"><span class="header-section-number">8.1</span> FreeDV 700D</h2>
 <p>In mid 2018 FreeDV 700D was released, with a new OFDM modem, powerful Forward Error Correction (FEC) and optional interleaving. It uses the same 700 bit/s speech codec at 700C. It operates at SNRs as low as -2dB, and has good HF channel performance. It is around 10dB better than FreeDV 1600 on fading channels, and is competitive with SSB at low SNRs. The FEC provides some protection from urban HF noise.</p>
 <p>FreeDV 700D is sensitive to tuning. To obtain sync you must be within +/- 60Hz of the transmit frequency. This is straightforward with modern radios which are generally accurate to +/-1 Hz, but requires skill and practice when used with older, VFO based radios.</p>
-<h2 data-number="7.2" id="freedv-700e"><span class="header-section-number">7.2</span> FreeDV 700E</h2>
+<h2 data-number="8.2" id="freedv-700e"><span class="header-section-number">8.2</span> FreeDV 700E</h2>
 <p>FreeDV 700E was developed in December 2020 using lessons learned from on air operation of 700C and 700D. A variant of 700D, it uses a shorter frame size (80ms) to reduce latency and sync time. It is optimised for fast fading channels channels with up to 4Hz Doppler spread and 6ms delay spread. FreeDV 7000E uses the same 700 bit/s codec as FreeDV 700C and 700D. It requires about 3dB more power than 700D, but can operate reliably on fast fading channels.</p>
 <p>The 700E release also includes optional compression (clipping) of the 700D and 700E transmit waveforms to reduce the Peak to Average Power Ratio to about 4dB. For example a 100W PEP transmitter can be driven to about 40W RMS. This is an improvement of 6dB over previous releases of FreeDV 700D. Before enabling the clipper make sure your transmitter is capable of handling sustained high average power without damage.</p>
 <p>Clipping can be enabled via Tools-Options.</p>
 <p>On good channels with high SNR clipping may actually reduce the SNR of the received signal. This is intentional - we are adding some pre-distortion in order to increase the RMS power. Forward error correction (FEC) will clean up any errors introduced by clipping, and on poor channels the benefits of increased signal power outweigh the slight reduction in SNR on good channels.</p>
-<h2 data-number="7.3" id="freedv-2020"><span class="header-section-number">7.3</span> FreeDV 2020</h2>
+<h2 data-number="8.3" id="freedv-2020"><span class="header-section-number">8.3</span> FreeDV 2020</h2>
 <p>FreeDV 2020 was developed in 2019. It uses an experimental codec based on the LPCNet neural net (deep learning) synthesis engine developed by Jean-Marc Valin. It offers 8 kHz audio bandwidth in an RF bandwidth of just 1600 Hz. FreeDV 2020 employs the same OFDM modem and FEC as 700D.</p>
 <p>The purpose of FreeDV 2020 is to test neural net speech coding over HF radio. It is highly experimental, and possibly the first use of neural net vocoders in a real world, over the air system.</p>
 <p>FreeDV 2020 is designed for slow fading HF channels with a SNR of 10dB or better. It is not designed for fast fading or very low SNRs like 700D. It is designed to be a high quality alternative to SSB in channels where SSB is already an “arm-chair” copy. On an AWGN (non- fading channel), it will deliver reasonable speech quality down to 2dB SNR.</p>
@@ -293,7 +296,7 @@
 <li>With significant fading, sync may take a few seconds.</li>
 <li>There is a 2 second end-to-end latency. You are welcome to try tuning this (Tools - Options - FIFO size, also see Sound Card Debug section below).</li>
 </ol>
-<h2 data-number="7.4" id="freedv-2020b"><span class="header-section-number">7.4</span> FreeDV 2020B</h2>
+<h2 data-number="8.4" id="freedv-2020b"><span class="header-section-number">8.4</span> FreeDV 2020B</h2>
 <p>Experimental mode developed in February 2022. The goal of this mode is to improve the performance of FreeDV 2020 over HF channels.</p>
 <p>Here are the three main innovations, and the theoretical improvements:</p>
 <ol type="1">
@@ -302,8 +305,8 @@
 </ol>
 <p>This modes is under development and may change at any time. If you experience comparability issues with another operator - check your Git Hash values on the Help-about menu to ensure you are running the same versions of LPCNet and codec2.</p>
 <p>It is recommended that multi-rx be disabled when using 2020B. This mode is not supported by multi-rx, you will need to manually coordinate the mode with other stations.</p>
-<h1 data-number="8" id="tools-menu"><span class="header-section-number">8</span> Tools Menu</h1>
-<h2 data-number="8.1" id="tools---filter"><span class="header-section-number">8.1</span> Tools - Filter</h2>
+<h1 data-number="9" id="tools-menu"><span class="header-section-number">9</span> Tools Menu</h1>
+<h2 data-number="9.1" id="tools---filter"><span class="header-section-number">9.1</span> Tools - Filter</h2>
 <p>This section describes features on Tools-Filter.</p>
 <table>
 <colgroup>
@@ -332,8 +335,8 @@
 <li><a href="http://www.rowetel.com/?p=6778">Blog Post on Auto EQ Part 1</a></li>
 <li><a href="http://www.rowetel.com/?p=6860">Blog Post on Auto EQ Part 2</a></li>
 </ul>
-<h2 data-number="8.2" id="tools---options"><span class="header-section-number">8.2</span> Tools - Options</h2>
-<h3 data-number="8.2.1" id="modem-options"><span class="header-section-number">8.2.1</span> Modem Options</h3>
+<h2 data-number="9.2" id="tools---options"><span class="header-section-number">9.2</span> Tools - Options</h2>
+<h3 data-number="9.2.1" id="modem-options"><span class="header-section-number">9.2.1</span> Modem Options</h3>
 <table>
 <colgroup>
 <col style="width: 28%" />
@@ -360,7 +363,7 @@
 </tr>
 </tbody>
 </table>
-<h1 data-number="9" id="helping-improve-freedv"><span class="header-section-number">9</span> Helping Improve FreeDV</h1>
+<h1 data-number="10" id="helping-improve-freedv"><span class="header-section-number">10</span> Helping Improve FreeDV</h1>
 <p>If you have an interesting test case, for example:</p>
 <ol type="1">
 <li>FreeDV working poorly with a particular person or microphone.</li>
@@ -370,7 +373,7 @@
 </ol>
 <p>Please send the developers an off air recording of the signal. FreeDV can record files from your radio using Tools-Record File from Radio. A recording of 30 to 60 seconds is most useful.</p>
 <p>With a recording we can reproduce your exact problem. If we can reproduce it we can fix it. Recordings are much more useful than anecdotes or subjective reports like “FreeDV doesn’t work”, “SSB is better”, or “On 23 December it didn’t work well on grid location XYZ”. With subjective reports problems are impossible to reproduce, cannot be fixed, and you are unlikely to get the attention of the developers.</p>
-<h1 data-number="10" id="multiple-panes-in-gui-window"><span class="header-section-number">10</span> Multiple Panes in GUI window</h1>
+<h1 data-number="11" id="multiple-panes-in-gui-window"><span class="header-section-number">11</span> Multiple Panes in GUI window</h1>
 <p>It is possible to have multiple panes opened within the GUI window for example, to observe both the Waterfall and Spectrum Tabs. New panes may be added above, below, left or right of existing panes.</p>
 <p>A new visible pane is created by hovering the cursor over the required Tab, click and hold the left mouse button and drag the Tab to the required position and releasing the mouse button. If currently two panes are stacked vertically a third pane may be added either beside either pane or to the left/right of both panes. If the Tab is required adjacent to both panes then it must be dragged to the left/right of the junction of the existing Tabs.</p>
 <p>As the Tab is dragged into position a faint blue/grey image will show the position to be occupied by the pane. Panes may be relocated back to the menu bar by a similar process.</p>
@@ -379,8 +382,8 @@
 <figure>
 <img src="contrib/multiple_panes.png" alt="" /><figcaption>Multiple Panes</figcaption>
 </figure>
-<h1 data-number="11" id="advanceddeveloper-features"><span class="header-section-number">11</span> Advanced/Developer Features</h1>
-<h2 data-number="11.1" id="stats-window"><span class="header-section-number">11.1</span> Stats Window</h2>
+<h1 data-number="12" id="advanceddeveloper-features"><span class="header-section-number">12</span> Advanced/Developer Features</h1>
+<h2 data-number="12.1" id="stats-window"><span class="header-section-number">12.1</span> Stats Window</h2>
 <p>Located on the lower left hand side of the main screen.</p>
 <table>
 <thead>
@@ -421,13 +424,13 @@
 </tbody>
 </table>
 <p>The sample clock offset is the estimated difference between the modulator (tx) and demodulator (rx) sample clocks. For example if the transmit station sound card is sampling at 44000 Hz and the receive station sound card 44001 Hz, the sample clock offset would be ((44000-44001)/44000)*1E6 = 22.7 ppm.</p>
-<h2 data-number="11.2" id="timing-delta-tab"><span class="header-section-number">11.2</span> Timing Delta Tab</h2>
+<h2 data-number="12.2" id="timing-delta-tab"><span class="header-section-number">12.2</span> Timing Delta Tab</h2>
 <p>This indicates the symbol timing estimate of the demodulator, in the range of +/- 0.5 of a symbol. With off air signals this will have a sawtooth appearance, as the demod tracks the modulator sample clock. The steeper the slope, the greater the sample clock offset.</p>
 <ul>
 <li><a href="http://www.rowetel.com/?p=6041">FreeDV 1600 Sample Clock Offset Bug</a></li>
 <li><a href="http://www.rowetel.com/?p=2433">Testing a FDMDV Modem</a></li>
 </ul>
-<h2 data-number="11.3" id="udp-messages"><span class="header-section-number">11.3</span> UDP Messages</h2>
+<h2 data-number="12.3" id="udp-messages"><span class="header-section-number">12.3</span> UDP Messages</h2>
 <p>When FreeDV syncs on a received signal for 5 seconds, it will send a “rx sync” UDP message to a port on your machine (localhost). An external program or script listening on this port can then take some action, for example send “spotting” information to a web server or send an email your phone.</p>
 <p>Enable UDP messages on Tools-Options, and test using the “Test” button.</p>
 <p>On Linux you can test reception of messages using netcat:</p>
@@ -436,9 +439,9 @@
 <p>Usage for Gmail:</p>
 <pre><code>python send_email_on_sync.py --listen_port 3000 --smtp_server smtp.gmail.com \
 --smtp_port 587 your@gmail.com your_pass</code></pre>
-<h2 data-number="11.4" id="sound-card-debug"><span class="header-section-number">11.4</span> Sound Card Debug</h2>
+<h2 data-number="12.4" id="sound-card-debug"><span class="header-section-number">12.4</span> Sound Card Debug</h2>
 <p>These features were added for FreeDV 700D, to help diagnose sound card issues during development.</p>
-<h3 data-number="11.4.1" id="tools---options-dialog"><span class="header-section-number">11.4.1</span> Tools - Options dialog:</h3>
+<h3 data-number="12.4.1" id="tools---options-dialog"><span class="header-section-number">12.4.1</span> Tools - Options dialog:</h3>
 <p>Debug FIFO and PortAudio counters: used for debugging audio problems on 700D. During beta testing there were problems with break up in the 700D Tx and Rx audio on Windows.</p>
 <p>The PortAudio counters (PortAudio1 and PortAudio2) should not increment when running in Tx or Rx, as this indicates samples are being lost by the sound driver which will lead to sync problems.</p>
 <p>The Fifo counter outempty1 counter should not increment during Tx, as this indicates FreeDV is not supplying samples fast enough to the PortAudio drivers. The results will be resyncs at the receiver.</p>
@@ -453,7 +456,7 @@
 <p>The txThreadPriority checkbox reduces the priority of the main txRx thread in FreeDV which may help the sound driver thread process samples.</p>
 <p>The txRxDumpTiming check box dumps timing information to a console that is used for debugging the rx break up problem on 700D. Each number is how many ms the txRxThread took to run.</p>
 <p>The txRxDumpTiming check box dumps the number of samples free in the tx FIFO sending samples to the Tx. If this hits zero, your tx audio will break up and the rx will lose sync. Tx audio break up will also occur if you see “outfifo1” being incremented on the “Fifo” line during tx. Try increasing the FifoSize.</p>
-<h2 data-number="11.5" id="test-frame-histogram"><span class="header-section-number">11.5</span> Test Frame Histogram</h2>
+<h2 data-number="12.5" id="test-frame-histogram"><span class="header-section-number">12.5</span> Test Frame Histogram</h2>
 <p>This feature was developed for testing FreeDV 700C. Select the Test Frame Histogram tab on Front Page</p>
 <p>Displays BER of each carrier when in “test frame” mode. As each QPSK carrier has 2 bits there are 2*Nc histogram points.</p>
 <p>Ideally all carriers will have about the same BER (+/- 20% after 5000 total bit errors), however problems can occur with filtering in the tx path. If one carrier has less power, then it will have a higher BER. The errors in this carrier will tend to dominate overall BER. For example if one carrier is attenuated due to SSB filter ripple in the tx path then the BER on that carrier will be higher. This is bad news for DV.</p>
@@ -464,7 +467,7 @@
 <li><p>Monitor the error histogram for a few minutes, until you have say 5000 total bit errors. You have a problem if the BER of any carrier is more than 20% different from the rest.</p></li>
 <li><p>A typical issue will be one carrier at 1.0 and the others at 0.5, indicating the poorer carrier BER is twice the larger.</p></li>
 </ol>
-<h2 data-number="11.6" id="full-duplex-testing-with-loopback"><span class="header-section-number">11.6</span> Full Duplex Testing with loopback</h2>
+<h2 data-number="12.6" id="full-duplex-testing-with-loopback"><span class="header-section-number">12.6</span> Full Duplex Testing with loopback</h2>
 <p>Tools - Options - Half Duplex check box</p>
 <p>FreeDV GUI can operate in full duplex mode which is useful for development or listening to your own FreeDV signal as only one PC is required. Normal operation is half duplex.</p>
 <p>Tx and Rx signals can be looped back via an analog connection between the sound cards.</p>
@@ -474,36 +477,36 @@
 
   In Tools - Audio Config - Receive Tab  - From Radio select -&gt; Loopback: Loopback PCM (hw:1,0)
                           - Transmit Tab - To Radio select   -&gt; Loopback: Loopback PCM (hw:1,1)</code></pre>
-<h1 data-number="12" id="tips"><span class="header-section-number">12</span> Tips</h1>
+<h1 data-number="13" id="tips"><span class="header-section-number">13</span> Tips</h1>
 <ol type="1">
 <li>The space bar can be used to toggle PTT.</li>
 <li>You can left click on the main window to adjust tuning, the vertical red line on the frequency scale will show the current centre frequency. FreeDV will automatically track any drift once it syncs.</li>
 </ol>
-<h1 data-number="13" id="common-problems"><span class="header-section-number">13</span> Common Problems</h1>
-<h2 data-number="13.1" id="overdriving-transmit-level"><span class="header-section-number">13.1</span> Overdriving Transmit Level</h2>
+<h1 data-number="14" id="common-problems"><span class="header-section-number">14</span> Common Problems</h1>
+<h2 data-number="14.1" id="overdriving-transmit-level"><span class="header-section-number">14.1</span> Overdriving Transmit Level</h2>
 <p>This is a very common problem for first time FreeDV users. Adjust your transmit levels so the ALC is just being nudged. More power is not better with FreeDV. An overdriven signal will have poor SNR at the receiver. For FreeDV 700D/700E operation with the clipper, make sure your transmitter can sustain high average power levels without damage (e.g. 40W RMS on a 100W PEP radio).</p>
-<h2 data-number="13.2" id="i-cant-set-up-freedv-especially-the-sound-cards"><span class="header-section-number">13.2</span> I can’t set up FreeDV, especially the Sound Cards</h2>
+<h2 data-number="14.2" id="i-cant-set-up-freedv-especially-the-sound-cards"><span class="header-section-number">14.2</span> I can’t set up FreeDV, especially the Sound Cards</h2>
 <p>This can be challenging the first time around:</p>
 <ol type="1">
 <li><p>Try a receive only (one audio card) set up first.</p></li>
 <li><p>Ask someone who already runs FreeDV for help.</p></li>
 <li><p>If you don’t know anyone local, ask for help on the digital voice mailing list. Be specific about the hardware you have and the exact nature of your problem.</p></li>
 </ol>
-<h2 data-number="13.3" id="hamlib-does-not-work-with-my-icom-radio"><span class="header-section-number">13.3</span> Hamlib does not work with my Icom radio</h2>
+<h2 data-number="14.3" id="hamlib-does-not-work-with-my-icom-radio"><span class="header-section-number">14.3</span> Hamlib does not work with my Icom radio</h2>
 <p>The most common issue with Icom radios is that the CI-V address configured in FreeDV does not match the address configured in the radio. Ensure that the CI-V address in both FreeDV and on the radio are the same. If “00” is used on the FreeDV side, ensure that the “CI-V Transceive” option is enabled on the radio or else the radio will not respond to requests directed to that address.</p>
 <p>On newer radios (e.g. 7300, 7610), you may also need to set “CI-V USB Echo Back” to ON as this may be set to OFF by default.</p>
-<h2 data-number="13.4" id="i-need-help-with-my-radio-or-rig-interface"><span class="header-section-number">13.4</span> I need help with my radio or rig interface</h2>
+<h2 data-number="14.4" id="i-need-help-with-my-radio-or-rig-interface"><span class="header-section-number">14.4</span> I need help with my radio or rig interface</h2>
 <p>There are many radios, many computers, and many sound cards. It is impossible to test them all. Many radios have intricate menus with custom settings. It is unreasonable to expect the authors of FreeDV to have special knowledge of your exact hardware.</p>
 <p>However someone may have worked through the same problem as you. Ask on the digital voice mailing list.</p>
-<h2 data-number="13.5" id="cant-hear-anything-on-receive"><span class="header-section-number">13.5</span> Can’t hear anything on receive</h2>
+<h2 data-number="14.5" id="cant-hear-anything-on-receive"><span class="header-section-number">14.5</span> Can’t hear anything on receive</h2>
 <p>Many FreeDV modes will not play any audio if there is no valid signal. You may also have squelch set too high. In some modes the <strong>Analog</strong> button will let you hear the received signal from the SSB radio.</p>
 <p>Try the Test Wave Files above to get a feel for what a FreeDV signal looks and sounds like.</p>
-<h2 data-number="13.6" id="the-signal-is-strong-but-freedv-wont-get-sync-and-decode"><span class="header-section-number">13.6</span> The signal is strong but FreeDV won’t get sync and decode</h2>
+<h2 data-number="14.6" id="the-signal-is-strong-but-freedv-wont-get-sync-and-decode"><span class="header-section-number">14.6</span> The signal is strong but FreeDV won’t get sync and decode</h2>
 <p>Do you have the correct sideband? See USB or LSB section.</p>
 <p>Is it a FreeDV signal? SSTV uses similar frequencies. To understand what FreeDV sounds like, see the Test Wave Files section.</p>
-<h2 data-number="13.7" id="trouble-getting-sync-with-700d"><span class="header-section-number">13.7</span> Trouble getting Sync with 700D</h2>
+<h2 data-number="14.7" id="trouble-getting-sync-with-700d"><span class="header-section-number">14.7</span> Trouble getting Sync with 700D</h2>
 <p>You need to be within +/- 60 Hz on the transmit signal. It helps if both the Tx and Rx stations tune to known, exact frequencies such as exactly 7.177MHz. On channels with fast fading sync may take a few seconds.</p>
-<h2 data-number="13.8" id="ptt-doesnt-work.-it-works-with-fldigi-and-other-hamlib-applications."><span class="header-section-number">13.8</span> PTT doesn’t work. It works with Fldigi and other Hamlib applications.</h2>
+<h2 data-number="14.8" id="ptt-doesnt-work.-it-works-with-fldigi-and-other-hamlib-applications."><span class="header-section-number">14.8</span> PTT doesn’t work. It works with Fldigi and other Hamlib applications.</h2>
 <p>Many people struggle with initial PTT setup:</p>
 <ol type="1">
 <li><p>Read the PTT Configuration section above.</p></li>
@@ -513,7 +516,7 @@
 <li><p>Ask someone who already uses FreeDV to help.</p></li>
 <li><p>Contact the digital voice mailing list. Be specific about your hardware, what you have tried, and the exact nature of the problem.</p></li>
 </ol>
-<h2 data-number="13.9" id="im-on-windows-and-serial-port-ptt-doesnt-work-with-my-usb-to-serial-adapter."><span class="header-section-number">13.9</span> I’m on Windows and serial port PTT doesn’t work with my USB to serial adapter.</h2>
+<h2 data-number="14.9" id="im-on-windows-and-serial-port-ptt-doesnt-work-with-my-usb-to-serial-adapter."><span class="header-section-number">14.9</span> I’m on Windows and serial port PTT doesn’t work with my USB to serial adapter.</h2>
 <p>Please verify that you are running the correct drivers for the USB to serial adapter that you’re using. Information and download links for the drivers used by the most common devices can be found <a href="https://www.miklor.com/COM/UV_Drivers.php">here</a>.</p>
 <p>While it is preferred to use devices that use authorized/original versions of the various USB to serial chipsets, it is possible to use some cloned devices with older drivers. When doing this, you may also need to force Windows to use an older version of a driver instead of automatically updating the driver on reboot. See <a href="https://wethegeek.com/how-to-disable-automatic-driver-updates-in-windows-10/">here</a> for instructions on doing so in Windows 10. For Windows 8:</p>
 <ol type="1">
@@ -522,7 +525,7 @@
 <li>Select the “No, let me choose what to do” option.</li>
 <li>Check the “automatically get the device app” option, then click Save changes to save the settings you just chose.</li>
 </ol>
-<h2 data-number="13.10" id="freedv-2020-mode-is-greyed-out"><span class="header-section-number">13.10</span> FreeDV 2020 mode is greyed out</h2>
+<h2 data-number="14.10" id="freedv-2020-mode-is-greyed-out"><span class="header-section-number">14.10</span> FreeDV 2020 mode is greyed out</h2>
 <p>In order to use FreeDV 2020 mode, you must have one of the following:</p>
 <ol type="1">
 <li>An Intel based CPU with AVX support. A Microsoft utility called <a href="https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo">coreinfo</a> can be used to determine if your CPU supports AVX. A * means you have AVX, a - means no AVX:</li>
@@ -537,13 +540,13 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>A Mac with an ARM processor (e.g. 2020 Mac Mini or later).</li>
 </ol>
 <p>If your system does not meet either (1) or (2), the 2020 option will be grayed out.</p>
-<h2 data-number="13.11" id="freedv-2020-mode-is-slow-on-arm-macs"><span class="header-section-number">13.11</span> FreeDV 2020 mode is slow on ARM Macs</h2>
+<h2 data-number="14.11" id="freedv-2020-mode-is-slow-on-arm-macs"><span class="header-section-number">14.11</span> FreeDV 2020 mode is slow on ARM Macs</h2>
 <p>Preliminary testing on ARM Macs has shown that NEON optimizations in LPCNet are sufficient to allow 2020 to be whitelisted on those machines. However, this is definitely experimental. If you are experiencing issues with 2020 mode on these Macs, please let the development team know so that further investigation can be done.</p>
-<h2 data-number="13.12" id="i-installed-a-new-version-and-freedv-stopped-working"><span class="header-section-number">13.12</span> I installed a new version and FreeDV stopped working</h2>
+<h2 data-number="14.12" id="i-installed-a-new-version-and-freedv-stopped-working"><span class="header-section-number">14.12</span> I installed a new version and FreeDV stopped working</h2>
 <p>You may need to clean out the previous configuration. Try Tools - Restore Defaults. Set up your sound cards again with Tools - Audio Config.</p>
-<h2 data-number="13.13" id="freedv-crashes-when-i-press-start"><span class="header-section-number">13.13</span> FreeDV crashes when I press Start</h2>
+<h2 data-number="14.13" id="freedv-crashes-when-i-press-start"><span class="header-section-number">14.13</span> FreeDV crashes when I press Start</h2>
 <p>Have you removed/changed USB audio devices? If you remove/change USB audio devices without pressing Tools - Audio Config, FreeDV may crash. See Changing Audio Devices above.</p>
-<h2 data-number="13.14" id="freedv-cant-be-opened-on-osx-because-the-developer-cannot-be-verified"><span class="header-section-number">13.14</span> FreeDV can’t be opened on OSX because the developer cannot be verified</h2>
+<h2 data-number="14.14" id="freedv-cant-be-opened-on-osx-because-the-developer-cannot-be-verified"><span class="header-section-number">14.14</span> FreeDV can’t be opened on OSX because the developer cannot be verified</h2>
 <p>From January 2020 Apple is enforcing notarization for all OSX applications. The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.</p>
 <figure>
 <img src="contrib/osx_notarization1.png" alt="" /><figcaption>Notarization Error</figcaption>
@@ -559,11 +562,11 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <pre><code>xattr -d com.apple.quarantine FreeDV.app</code></pre>
 <p>or</p>
 <pre><code>xattr -d -r com.apple.quarantine FreeDV.app</code></pre>
-<h1 data-number="14" id="converting-this-document-to-pdf"><span class="header-section-number">14</span> Converting this document to PDF</h1>
+<h1 data-number="15" id="converting-this-document-to-pdf"><span class="header-section-number">15</span> Converting this document to PDF</h1>
 <p>For the Linux inclined:</p>
 <pre><code>$ pandoc USER_MANUAL.md -o USER_MANUAL.pdf &quot;-fmarkdown-implicit_figures -o&quot; \
 --from=markdown -V geometry:margin=.4in --toc --highlight-style=espresso</code></pre>
-<h1 data-number="15" id="glossary"><span class="header-section-number">15</span> Glossary</h1>
+<h1 data-number="16" id="glossary"><span class="header-section-number">16</span> Glossary</h1>
 <table>
 <colgroup>
 <col style="width: 7%" />
@@ -590,14 +593,15 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </tr>
 </tbody>
 </table>
-<h1 data-number="16" id="release-notes"><span class="header-section-number">16</span> Release Notes</h1>
-<h2 data-number="16.1" id="v1.8.9-tbd-2023"><span class="header-section-number">16.1</span> V1.8.9 TBD 2023</h2>
+<h1 data-number="17" id="release-notes"><span class="header-section-number">17</span> Release Notes</h1>
+<h2 data-number="17.1" id="v1.8.9-tbd-2023"><span class="header-section-number">17.1</span> V1.8.9 TBD 2023</h2>
 <ol type="1">
 <li>Enhancements:
 <ul>
 <li>Add 20% buffer for systems that are marginally able to decode 2020. (PR #355)</li>
 <li>Enable RTS and DTR for PTT input to provide a voltage source for some footswitches. (PR #354)</li>
 <li>Show previously received callsigns in main window. (PR #362, #378)</li>
+<li>Add Record button to the main window to easily allow recording of the incoming signal. (PR #369)</li>
 </ul></li>
 <li>Bugfixes:
 <ul>
@@ -621,14 +625,14 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Remove dead code for RX/TX loopback buttons. (PR #372)</li>
 </ul></li>
 </ol>
-<h2 data-number="16.2" id="v1.8.8.1-march-2023"><span class="header-section-number">16.2</span> V1.8.8.1 March 2023</h2>
+<h2 data-number="17.2" id="v1.8.8.1-march-2023"><span class="header-section-number">17.2</span> V1.8.8.1 March 2023</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
 <li>Downgrade hamlib for Windows and macOS due to PTT and CAT control bugs on various radios. (PR #357)</li>
 </ul></li>
 </ol>
-<h2 data-number="16.3" id="v1.8.8-march-2023"><span class="header-section-number">16.3</span> V1.8.8 March 2023</h2>
+<h2 data-number="17.3" id="v1.8.8-march-2023"><span class="header-section-number">17.3</span> V1.8.8 March 2023</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -646,7 +650,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Tweak PSK Reporter handling to report received callsigns more quickly. (PR #352)</li>
 </ul></li>
 </ol>
-<h2 data-number="16.4" id="v1.8.7-january-2023"><span class="header-section-number">16.4</span> V1.8.7 January 2023</h2>
+<h2 data-number="17.4" id="v1.8.7-january-2023"><span class="header-section-number">17.4</span> V1.8.7 January 2023</h2>
 <ol type="1">
 <li>Code Cleanup:
 <ul>
@@ -664,7 +668,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Fix inability to change to certain FreeDV modes for transmit. (PR #340)</li>
 </ul></li>
 </ol>
-<h2 data-number="16.5" id="v1.8.6-december-2022"><span class="header-section-number">16.5</span> V1.8.6 December 2022</h2>
+<h2 data-number="17.5" id="v1.8.6-december-2022"><span class="header-section-number">17.5</span> V1.8.6 December 2022</h2>
 <ol type="1">
 <li>Build system:
 <ul>
@@ -690,7 +694,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Adjusted function prototypes to use bool instead of int. (PR #316)</li>
 </ul></li>
 </ol>
-<h2 data-number="16.6" id="v1.8.5-december-2022"><span class="header-section-number">16.6</span> V1.8.5 December 2022</h2>
+<h2 data-number="17.6" id="v1.8.5-december-2022"><span class="header-section-number">17.6</span> V1.8.5 December 2022</h2>
 <ol type="1">
 <li>Build system:
 <ul>
@@ -713,7 +717,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Update manual to reflect Ubuntu renaming libsndfile-dev to libsnd1file-dev. (PR #297)</li>
 </ul></li>
 </ol>
-<h2 data-number="16.7" id="v1.8.4-october-2022"><span class="header-section-number">16.7</span> V1.8.4 October 2022</h2>
+<h2 data-number="17.7" id="v1.8.4-october-2022"><span class="header-section-number">17.7</span> V1.8.4 October 2022</h2>
 <ol type="1">
 <li>Build system:
 <ul>
@@ -732,14 +736,14 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Stats on left hand side of main window now auto-reset after user-configurable time period (default 10s). (PR #262, #286)</li>
 </ul></li>
 </ol>
-<h2 data-number="16.8" id="v1.8.3.1-august-2022"><span class="header-section-number">16.8</span> V1.8.3.1 August 2022</h2>
+<h2 data-number="17.8" id="v1.8.3.1-august-2022"><span class="header-section-number">17.8</span> V1.8.3.1 August 2022</h2>
 <ol type="1">
 <li>Build system:
 <ul>
 <li>Fix issue preventing patch version from being passed to Windows installer. (PR #271)</li>
 </ul></li>
 </ol>
-<h2 data-number="16.9" id="v1.8.3-august-2022"><span class="header-section-number">16.9</span> V1.8.3 August 2022</h2>
+<h2 data-number="17.9" id="v1.8.3-august-2022"><span class="header-section-number">17.9</span> V1.8.3 August 2022</h2>
 <ol type="1">
 <li>Build system:
 <ul>
@@ -752,7 +756,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Update frequency and mode display every 5 sec. (PR #266)</li>
 </ul></li>
 </ol>
-<h2 data-number="16.10" id="v1.8.2-july-2022"><span class="header-section-number">16.10</span> V1.8.2 July 2022</h2>
+<h2 data-number="17.10" id="v1.8.2-july-2022"><span class="header-section-number">17.10</span> V1.8.2 July 2022</h2>
 <ol type="1">
 <li>Enhancements:
 <ul>
@@ -767,7 +771,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Depend on Codec2 1.0.5. (PR #259)</li>
 </ul></li>
 </ol>
-<h2 data-number="16.11" id="v1.8.1-july-2022"><span class="header-section-number">16.11</span> V1.8.1 July 2022</h2>
+<h2 data-number="17.11" id="v1.8.1-july-2022"><span class="header-section-number">17.11</span> V1.8.1 July 2022</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -778,7 +782,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Update build scripts to use specific Codec2 and LPCNet versions. (PR #257)</li>
 </ul></li>
 </ol>
-<h2 data-number="16.12" id="v1.8.0-july-2022"><span class="header-section-number">16.12</span> V1.8.0 July 2022</h2>
+<h2 data-number="17.12" id="v1.8.0-july-2022"><span class="header-section-number">17.12</span> V1.8.0 July 2022</h2>
 <ol type="1">
 <li>Enhancements:
 <ul>
@@ -815,7 +819,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Disable PulseAudio suspend failure due to interactions with pipewire. (PR #239)</li>
 </ul></li>
 </ol>
-<h2 data-number="16.13" id="v1.7.0-february-2022"><span class="header-section-number">16.13</span> V1.7.0 February 2022</h2>
+<h2 data-number="17.13" id="v1.7.0-february-2022"><span class="header-section-number">17.13</span> V1.7.0 February 2022</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -849,7 +853,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Windows installer now installs sample .wav files. (PR #182)</li>
 </ul></li>
 </ol>
-<h2 data-number="16.14" id="v1.6.1-september-2021"><span class="header-section-number">16.14</span> V1.6.1 September 2021</h2>
+<h2 data-number="17.14" id="v1.6.1-september-2021"><span class="header-section-number">17.14</span> V1.6.1 September 2021</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -867,7 +871,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </ul></li>
 </ol>
 <p><em>Note: The PSK Reporter feature beginning in this release is incompatible with versions older than 1.6.1 due to a change in how callsigns are encoded.</em></p>
-<h2 data-number="16.15" id="v1.6.0-august-2021"><span class="header-section-number">16.15</span> V1.6.0 August 2021</h2>
+<h2 data-number="17.15" id="v1.6.0-august-2021"><span class="header-section-number">17.15</span> V1.6.0 August 2021</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
@@ -902,43 +906,43 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Created “make dist” target for easy tarball generation. (PR #152)</li>
 </ul></li>
 </ol>
-<h2 data-number="16.16" id="v1.5.3-april-2021"><span class="header-section-number">16.16</span> V1.5.3 April 2021</h2>
+<h2 data-number="17.16" id="v1.5.3-april-2021"><span class="header-section-number">17.16</span> V1.5.3 April 2021</h2>
 <ol type="1">
 <li>Simultaneous decode of 2020, 1600 and 700C/D/E (without needing to push Stop first, change the mode and push Start again).</li>
 <li>Dynamic switching of the current Tx mode between the aforementioned modes, again without needing to restart the session.</li>
 <li>A Tx level slider on the right hand side of the main screen to fine-tune transmit output (to more easily avoid clipping ALC and conflicting with other soundcard ham radio applications).</li>
 </ol>
-<h2 data-number="16.17" id="v1.5.2-january-2021"><span class="header-section-number">16.17</span> V1.5.2 January 2021</h2>
+<h2 data-number="17.17" id="v1.5.2-january-2021"><span class="header-section-number">17.17</span> V1.5.2 January 2021</h2>
 <ol type="1">
 <li>Updates storage for sound card configuration to use device names instead of IDs.</li>
 <li>Detects changes to computer sound card configuration and notifies user when devices go away.</li>
 </ol>
-<h2 data-number="16.18" id="v1.5.1-january-2021"><span class="header-section-number">16.18</span> V1.5.1 January 2021</h2>
+<h2 data-number="17.18" id="v1.5.1-january-2021"><span class="header-section-number">17.18</span> V1.5.1 January 2021</h2>
 <ol type="1">
 <li>Experimental support for reporting to <a href="https://pskreporter.info">PSK Reporter</a> added.</li>
 <li>Bug fixes with audio configuration to allow mono devices to be used along with stereo ones.</li>
 <li>Tweaks to user interface and record/playback functionality to improve usability.</li>
 <li>Bug fixes and tweaks to improve voice keyer support.</li>
 </ol>
-<h2 data-number="16.19" id="v1.5.0-december-2020"><span class="header-section-number">16.19</span> V1.5.0 December 2020</h2>
+<h2 data-number="17.19" id="v1.5.0-december-2020"><span class="header-section-number">17.19</span> V1.5.0 December 2020</h2>
 <ol type="1">
 <li>FreeDV 700E, better performance than 700D on fast fading channels</li>
 <li>FreeDV 700D/700E clipper to increase average transmit power by 6dB</li>
 </ol>
-<h2 data-number="16.20" id="v1.4.3-august-2020"><span class="header-section-number">16.20</span> V1.4.3 August 2020</h2>
+<h2 data-number="17.20" id="v1.4.3-august-2020"><span class="header-section-number">17.20</span> V1.4.3 August 2020</h2>
 <ol type="1">
 <li>Maintenance Release (no major new features)</li>
 <li>Changes to support wxWidgets 3.1 (but Windows versions built against wxWidgets 3.0)</li>
 <li>Under the hood - OFDM modem has been refactored, shouldn’t affect freedv-gui operation</li>
 </ol>
-<h2 data-number="16.21" id="v1.4.2-july-2020"><span class="header-section-number">16.21</span> V1.4.2 July 2020</h2>
+<h2 data-number="17.21" id="v1.4.2-july-2020"><span class="header-section-number">17.21</span> V1.4.2 July 2020</h2>
 <ol type="1">
 <li>Maintenance Release (no major new features)</li>
 <li>Improved squelch/audio pass through on 700D/2020/2400B</li>
 <li>Under the hood - Codec2 library has been refactored, shouldn’t affect freedv-gui operation</li>
 <li>Removed Project Horus support (now being maintained outside of Codec2/FreeDV)</li>
 </ol>
-<h2 data-number="16.22" id="v1.4-june-october-2019"><span class="header-section-number">16.22</span> V1.4 June-October 2019</h2>
+<h2 data-number="17.22" id="v1.4-june-october-2019"><span class="header-section-number">17.22</span> V1.4 June-October 2019</h2>
 <ol type="1">
 <li>FreeDV 2020, Project Horus Binary Modes.</li>
 <li><a href="http://www.rowetel.com/?p=6824">Improved OFDM Modem Acquisition</a>, this will improve sync time on FreeDV 700D and 2020 on HF fading channels, and can also handle +/- 60 Hz frequency offsets when tuning.</li>
@@ -946,11 +950,11 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Wide bandwidth phase estimation and DPSK for OFDM modes (700D/2020) for fast fading/QO-100 channels (Tools-Options)</li>
 <li>Better speech quality on FreeDV 700C/700D with Auto equaliser (Tools-Filter)</li>
 </ol>
-<h2 data-number="16.23" id="v1.3-may-2018"><span class="header-section-number">16.23</span> V1.3 May 2018</h2>
+<h2 data-number="17.23" id="v1.3-may-2018"><span class="header-section-number">17.23</span> V1.3 May 2018</h2>
 <ul>
 <li>FreeDV 700D</li>
 </ul>
-<h1 data-number="17" id="references"><span class="header-section-number">17</span> References</h1>
+<h1 data-number="18" id="references"><span class="header-section-number">18</span> References</h1>
 <ul>
 <li><a href="http://freedv.org">FreeDV Web site</a></li>
 <li><a href="https://github.com/drowe67/codec2/blob/master/README_freedv.md">FreeDV Technology Overview</a></li>
