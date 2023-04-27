@@ -24,7 +24,6 @@ int                 g_sfFs;
 int                 g_sfTxFs;
 bool                g_loopPlayFileFromRadio;
 int                 g_playFileFromRadioEventId;
-float               g_blink;
 
 SNDFILE            *g_sfRecFileFromModulator;
 bool                g_recFileFromModulator = false;
@@ -132,7 +131,7 @@ void MainFrame::OnPlayFileToMicIn(wxCommandEvent& event)
         // Huh?! I just copied wxWidgets-2.9.4/samples/dialogs ....
         g_loopPlayFileToMicIn = static_cast<MyExtraPlayFilePanel*>(ctrl)->getLoopPlayFileToMicIn();
 
-        SetStatusText(wxT("Playing File: ") + fileName + wxT(" to Mic Input") , 0);
+        SetStatusText(wxT("Playing file ") + fileName + wxT(" as mic input") , 0);
         g_playFileToMicIn = true;
         
         m_menuItemPlayFileToMicIn->SetItemLabel(wxString(_("Stop Play File - Mic In...")));
@@ -145,8 +144,7 @@ void MainFrame::StopPlaybackFileFromRadio()
     g_playFileFromRadio = false;
     sf_close(g_sfPlayFileFromRadio);
     g_sfPlayFileFromRadio = nullptr;
-    SetStatusText(wxT(""),0);
-    SetStatusText(wxT(""),1);
+    SetStatusText(wxT(""));
     m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Start Play File - From Radio...")));
     g_mutexProtectingCallbackData.Unlock();
 }
@@ -219,15 +217,18 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
         // Huh?! I just copied wxWidgets-2.9.4/samples/dialogs ....
         g_loopPlayFileFromRadio = static_cast<MyExtraPlayFilePanel*>(ctrl)->getLoopPlayFileToMicIn();
 
-        SetStatusText(wxT("Playing into from radio"), 0);
+        wxString statusText = "";
         if(extension == wxT("raw")) {
-            wxString stringnumber = wxString::Format(wxT("%d"), (int)sfInfo.samplerate);
-            SetStatusText(wxT("raw file assuming Fs=") + stringnumber, 1);
+            statusText = wxString::Format(wxT("Playing raw file %s as radio input (assuming Fs=%d)"), soundFile, (int)sfInfo.samplerate);
         }
+        else
+        {
+            statusText = wxString::Format(wxT("Playing file %s as radio input"), soundFile);
+        }
+        SetStatusText(statusText, 0);
         if (g_verbose) fprintf(stderr, "OnPlayFileFromRadio:: Playing File Fs = %d\n", (int)sfInfo.samplerate);
         m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Stop Play File - From Radio...")));
         g_playFileFromRadio = true;
-        g_blink = 0.0;
     }
 }
 
@@ -264,10 +265,6 @@ void MainFrame::StopRecFileFromRadio()
         SetStatusText(wxT(""));
         
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Start Record File - From Radio...")));
-        
-        wxMessageBox(wxT("Recording radio output to file complete")
-                     , wxT("Recording radio Output"), wxOK);
-        
         g_mutexProtectingCallbackData.Unlock();
         
         m_audioRecord->SetValue(g_recFileFromRadio);
@@ -375,7 +372,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
             return;
         }
 
-        SetStatusText(wxT("Recording File: ") + fileName + wxT(" From Radio") , 0);
+        SetStatusText(wxT("Recording file ") + fileName + wxT(" from radio") , 0);
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Stop Record File - From Radio...")));
         g_recFileFromRadio = true;
     }
@@ -410,7 +407,7 @@ void MainFrame::OnTogBtnRecord( wxCommandEvent& event )
             return;
         }
 
-        SetStatusText(wxT("Recording File: ") + soundFile + wxT(" From Radio") , 0);
+        SetStatusText(wxT("Recording file ") + soundFile + wxT(" from radio"), 0);
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Stop Record File - From Radio...")));
         g_recFileFromRadio = true;
     }
@@ -428,8 +425,6 @@ void MainFrame::StopRecFileFromModulator()
         g_sfRecFileFromModulator = nullptr;
         SetStatusText(wxT(""));
         m_menuItemRecFileFromModulator->SetItemLabel(wxString(_("Start Record File - From Modulator...")));
-        wxMessageBox(wxT("Recording modulator output to file complete")
-                     , wxT("Recording Modulation Output"), wxOK);
         g_mutexProtectingCallbackData.Unlock();
     }
 }
@@ -541,7 +536,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
             return;
         }
 
-        SetStatusText(wxT("Recording File: ") + fileName + wxT(" From Modulator") , 0);
+        SetStatusText(wxT("Recording file ") + fileName + wxT(" from modulator") , 0);
         m_menuItemRecFileFromModulator->SetItemLabel(wxString(_("Stop Record File - From Modulator...")));
         g_recFileFromModulator = true;
     }

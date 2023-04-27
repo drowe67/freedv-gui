@@ -136,7 +136,6 @@ extern int                 g_sfFs;
 extern int                 g_sfTxFs;
 extern bool                g_loopPlayFileFromRadio;
 extern int                 g_playFileFromRadioEventId;
-extern float               g_blink;
 
 extern SNDFILE            *g_sfRecFileFromModulator;
 extern bool                g_recFileFromModulator;
@@ -630,6 +629,7 @@ setDefaultMode:
     {
         m_cboLastReportedCallsigns->Show();
         m_txtCtrlCallSign->Hide();
+        m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
     }
     else
     {
@@ -1319,6 +1319,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         // the PSK Reporter callsign extraction logic.
                         m_txtCtrlCallSign->SetValue(wxT(""));
                         m_cboLastReportedCallsigns->SetValue(wxT(""));
+                        m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
                         memset(m_callsign, 0, MAX_CALLSIGN);
                         m_pcallsign = m_callsign;
             
@@ -1436,6 +1437,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     }
                     
                     m_cboLastReportedCallsigns->SetText(rxCallsign);
+                    m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
            
                     if (wxGetApp().m_boolHamlibUseForPTT)
                     {
@@ -1630,19 +1632,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 Restore();
             m_schedule_restore = false;
         }
-
-        // Blink file playback status line
-
-        if (g_playFileFromRadio) {
-            g_blink += DT;
-            //fprintf(g_logfile, "g_blink: %f\n", g_blink);
-            if ((g_blink >= 1.0) && (g_blink < 2.0))
-                SetStatusText(wxT("Playing into from radio"), 0);
-            if (g_blink >= 2.0) {
-                SetStatusText(wxT(""), 0);
-                g_blink = 0.0;
-            }
-        }
     
         // Voice Keyer state machine
         VoiceKeyerProcessEvent(VK_DT);
@@ -1826,6 +1815,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_timeSinceSyncLoss = 0;
         m_txtCtrlCallSign->SetValue(wxT(""));
         m_lastReportedCallsignListView->DeleteAllItems();
+        m_cboLastReportedCallsigns->Enable(false);
                 
         m_cboLastReportedCallsigns->SetText(wxT(""));
         memset(m_callsign, 0, MAX_CALLSIGN);
@@ -2714,6 +2704,21 @@ bool MainFrame::validateSoundCardSetup()
     }, nullptr);
     engine->start();
     
+    auto defaultInputDevice = engine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_IN);
+    auto defaultOutputDevice = engine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_OUT);
+    
+    bool hasSoundCard1InDevice = wxGetApp().m_soundCard1InDeviceName != "none";
+    bool hasSoundCard1OutDevice = wxGetApp().m_soundCard1OutDeviceName != "none";
+    bool hasSoundCard2InDevice = wxGetApp().m_soundCard2InDeviceName != "none";
+    bool hasSoundCard2OutDevice = wxGetApp().m_soundCard2OutDeviceName != "none";
+    
+    g_nSoundCards = 0;
+    if (hasSoundCard1InDevice && hasSoundCard1OutDevice) {
+        g_nSoundCards = 1;
+        if (hasSoundCard2InDevice && hasSoundCard2OutDevice)
+            g_nSoundCards = 2;
+    }
+    
     // For the purposes of validation, number of channels isn't necessary.
     auto soundCard1InDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard1InSampleRate, 1);
     auto soundCard1OutDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard1OutSampleRate, 1);
@@ -2749,11 +2754,51 @@ bool MainFrame::validateSoundCardSetup()
         canRun = false;
     }
     
-    g_nSoundCards = 0;
-    if (soundCard1InDevice && soundCard1OutDevice) {
-        g_nSoundCards = 1;
-        if (soundCard2InDevice && soundCard2OutDevice)
-            g_nSoundCards = 2;
+    if (!canRun)
+    {
+        if (g_nSoundCards == 1)
+        {
+            if (!soundCard1OutDevice)
+            {
+                wxGetApp().m_soundCard1OutDeviceName = defaultOutputDevice.name;
+                wxGetApp().m_soundCard1OutSampleRate = defaultOutputDevice.defaultSampleRate;
+            }
+        }
+        else if (g_nSoundCards == 2)
+        {
+            if (!soundCard2InDevice)
+            {
+                // If we're not already using the default input device as the radio input device, use that instead.
+                if (defaultInputDevice.name != wxGetApp().m_soundCard1InDeviceName)
+                {
+                    wxGetApp().m_soundCard2InDeviceName = defaultInputDevice.name;
+                    wxGetApp().m_soundCard2InSampleRate = defaultInputDevice.defaultSampleRate;
+                }
+                else
+                {
+                    wxGetApp().m_soundCard2InDeviceName = "none";
+                }
+            }
+        
+            if (!soundCard2OutDevice)
+            {
+                // If we're not already using the default output device as the radio input device, use that instead.
+                if (defaultOutputDevice.name != wxGetApp().m_soundCard1OutDeviceName)
+                {
+                    wxGetApp().m_soundCard2OutDeviceName = defaultOutputDevice.name;
+                    wxGetApp().m_soundCard2OutSampleRate = defaultOutputDevice.defaultSampleRate;
+                }
+                else
+                {
+                    wxGetApp().m_soundCard2OutDeviceName = "none";
+                }
+            }
+            
+            if (wxGetApp().m_soundCard2InDeviceName == "none" && wxGetApp().m_soundCard2OutDeviceName == "none")
+            {
+                g_nSoundCards = 1;
+            }
+        }
     }
     
     if (canRun && g_nSoundCards == 0)

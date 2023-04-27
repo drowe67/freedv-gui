@@ -167,8 +167,7 @@ void MainFrame::OnToolsComCfgUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnHelpCheckUpdates(wxCommandEvent& event)
 {
-    wxMessageBox("Got Click!", "OnHelpCheckUpdates", wxOK);
-    event.Skip();
+    wxLaunchDefaultBrowser("https://github.com/drowe67/freedv-gui/releases");
 }
 
 //-------------------------------------------------------------------------
@@ -176,7 +175,7 @@ void MainFrame::OnHelpCheckUpdates(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnHelpCheckUpdatesUI(wxUpdateUIEvent& event)
 {
-    event.Enable(false);
+    event.Enable(!m_RxRunning);
 }
 
 //-------------------------------------------------------------------------

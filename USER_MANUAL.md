@@ -852,14 +852,18 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Enhancements:
     * Add 20% buffer for systems that are marginally able to decode 2020. (PR #355)
     * Enable RTS and DTR for PTT input to provide a voltage source for some footswitches. (PR #354)
-    * Show previously received callsigns in main window. (PR #362)
+    * Show previously received callsigns in main window. (PR #362, #378)
     * Add Record button to the main window to easily allow recording of the incoming signal. (PR #369)
+    * Open GitHub releases page if Check For Updates is selected. (PR #382)
 2. Bugfixes:
     * Fix typo preventing use of Easy Setup when not having a radio configured. (PR #359)
-    * Fix crash on Windows after resizing the window to hide the waterfall. (PR #366)
     * Fix issue preventing Yaesu sound devices from appearing in Easy Setup. (PR #371)
+    * Fix crash on Windows after resizing the window to hide the waterfall. (PR #366, #375)
     * Use /dev/cu.* instead of /dev/tty.* on macOS. (PR #377)
     * Hamlib: avoid use of rig_get_vfo() for radios with only one VFO. (PR #376)
+    * Prevent status bar text from truncating unless required. (PR #379)
+    * Prevent devices from rearranging if one disappears. (PR #381)
+    * Remove record completion popups to align with file playback behavior. (PR #380)
 3. Build system:
     * GitHub action now uses LLVM MinGW for pull requests. (PR #360)
     * Update Speex/Hamlib build code to avoid unnecessary rebuilds. (PR #361)
