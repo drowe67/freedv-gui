@@ -265,10 +265,6 @@ void MainFrame::StopRecFileFromRadio()
         SetStatusText(wxT(""));
         
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Start Record File - From Radio...")));
-        
-        wxMessageBox(wxT("Recording radio output to file complete")
-                     , wxT("Recording radio Output"), wxOK);
-        
         g_mutexProtectingCallbackData.Unlock();
         
         m_audioRecord->SetValue(g_recFileFromRadio);
@@ -429,8 +425,6 @@ void MainFrame::StopRecFileFromModulator()
         g_sfRecFileFromModulator = nullptr;
         SetStatusText(wxT(""));
         m_menuItemRecFileFromModulator->SetItemLabel(wxString(_("Start Record File - From Modulator...")));
-        wxMessageBox(wxT("Recording modulator output to file complete")
-                     , wxT("Recording Modulation Output"), wxOK);
         g_mutexProtectingCallbackData.Unlock();
     }
 }
