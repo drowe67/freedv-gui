@@ -2704,6 +2704,21 @@ bool MainFrame::validateSoundCardSetup()
     }, nullptr);
     engine->start();
     
+    auto defaultInputDevice = engine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_IN);
+    auto defaultOutputDevice = engine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_OUT);
+    
+    bool hasSoundCard1InDevice = wxGetApp().m_soundCard1InDeviceName != "none";
+    bool hasSoundCard1OutDevice = wxGetApp().m_soundCard1OutDeviceName != "none";
+    bool hasSoundCard2InDevice = wxGetApp().m_soundCard2InDeviceName != "none";
+    bool hasSoundCard2OutDevice = wxGetApp().m_soundCard2OutDeviceName != "none";
+    
+    g_nSoundCards = 0;
+    if (hasSoundCard1InDevice && hasSoundCard1OutDevice) {
+        g_nSoundCards = 1;
+        if (hasSoundCard2InDevice && hasSoundCard2OutDevice)
+            g_nSoundCards = 2;
+    }
+    
     // For the purposes of validation, number of channels isn't necessary.
     auto soundCard1InDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard1InSampleRate, 1);
     auto soundCard1OutDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard1OutSampleRate, 1);
@@ -2739,11 +2754,51 @@ bool MainFrame::validateSoundCardSetup()
         canRun = false;
     }
     
-    g_nSoundCards = 0;
-    if (soundCard1InDevice && soundCard1OutDevice) {
-        g_nSoundCards = 1;
-        if (soundCard2InDevice && soundCard2OutDevice)
-            g_nSoundCards = 2;
+    if (!canRun)
+    {
+        if (g_nSoundCards == 1)
+        {
+            if (!soundCard1OutDevice)
+            {
+                wxGetApp().m_soundCard1OutDeviceName = defaultOutputDevice.name;
+                wxGetApp().m_soundCard1OutSampleRate = defaultOutputDevice.defaultSampleRate;
+            }
+        }
+        else if (g_nSoundCards == 2)
+        {
+            if (!soundCard2InDevice)
+            {
+                // If we're not already using the default input device as the radio input device, use that instead.
+                if (defaultInputDevice.name != wxGetApp().m_soundCard1InDeviceName)
+                {
+                    wxGetApp().m_soundCard2InDeviceName = defaultInputDevice.name;
+                    wxGetApp().m_soundCard2InSampleRate = defaultInputDevice.defaultSampleRate;
+                }
+                else
+                {
+                    wxGetApp().m_soundCard2InDeviceName = "none";
+                }
+            }
+        
+            if (!soundCard2OutDevice)
+            {
+                // If we're not already using the default output device as the radio input device, use that instead.
+                if (defaultOutputDevice.name != wxGetApp().m_soundCard1OutDeviceName)
+                {
+                    wxGetApp().m_soundCard2OutDeviceName = defaultOutputDevice.name;
+                    wxGetApp().m_soundCard2OutSampleRate = defaultOutputDevice.defaultSampleRate;
+                }
+                else
+                {
+                    wxGetApp().m_soundCard2OutDeviceName = "none";
+                }
+            }
+            
+            if (wxGetApp().m_soundCard2InDeviceName == "none" && wxGetApp().m_soundCard2OutDeviceName == "none")
+            {
+                g_nSoundCards = 1;
+            }
+        }
     }
     
     if (canRun && g_nSoundCards == 0)
