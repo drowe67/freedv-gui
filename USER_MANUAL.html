@@ -594,22 +594,26 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </tbody>
 </table>
 <h1 data-number="17" id="release-notes"><span class="header-section-number">17</span> Release Notes</h1>
-<h2 data-number="17.1" id="v1.8.9-tbd-2023"><span class="header-section-number">17.1</span> V1.8.9 TBD 2023</h2>
+<h2 data-number="17.1" id="v1.8.9-april-2023"><span class="header-section-number">17.1</span> V1.8.9 April 2023</h2>
 <ol type="1">
 <li>Enhancements:
 <ul>
 <li>Add 20% buffer for systems that are marginally able to decode 2020. (PR #355)</li>
 <li>Enable RTS and DTR for PTT input to provide a voltage source for some footswitches. (PR #354)</li>
-<li>Show previously received callsigns in main window. (PR #362)</li>
+<li>Show previously received callsigns in main window. (PR #362, #378)</li>
 <li>Add Record button to the main window to easily allow recording of the incoming signal. (PR #369)</li>
+<li>Open GitHub releases page if Check For Updates is selected. (PR #382)</li>
 </ul></li>
 <li>Bugfixes:
 <ul>
 <li>Fix typo preventing use of Easy Setup when not having a radio configured. (PR #359)</li>
-<li>Fix crash on Windows after resizing the window to hide the waterfall. (PR #366)</li>
 <li>Fix issue preventing Yaesu sound devices from appearing in Easy Setup. (PR #371)</li>
+<li>Fix crash on Windows after resizing the window to hide the waterfall. (PR #366, #375)</li>
 <li>Use /dev/cu.* instead of /dev/tty.* on macOS. (PR #377)</li>
 <li>Hamlib: avoid use of rig_get_vfo() for radios with only one VFO. (PR #376)</li>
+<li>Prevent status bar text from truncating unless required. (PR #379)</li>
+<li>Prevent devices from rearranging if one disappears. (PR #381)</li>
+<li>Remove record completion popups to align with file playback behavior. (PR #380)</li>
 </ul></li>
 <li>Build system:
 <ul>
