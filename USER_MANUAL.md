@@ -854,6 +854,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Enable RTS and DTR for PTT input to provide a voltage source for some footswitches. (PR #354)
     * Show previously received callsigns in main window. (PR #362, #378)
     * Add Record button to the main window to easily allow recording of the incoming signal. (PR #369)
+    * Open GitHub releases page if Check For Updates is selected. (PR #382)
 2. Bugfixes:
     * Fix typo preventing use of Easy Setup when not having a radio configured. (PR #359)
     * Fix issue preventing Yaesu sound devices from appearing in Easy Setup. (PR #371)
