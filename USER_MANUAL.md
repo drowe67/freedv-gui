@@ -861,6 +861,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Use /dev/cu.* instead of /dev/tty.* on macOS. (PR #377)
     * Hamlib: avoid use of rig_get_vfo() for radios with only one VFO. (PR #376)
     * Prevent status bar text from truncating unless required. (PR #379)
+    * Prevent devices from rearranging if one disappears. (PR #381)
 3. Build system:
     * GitHub action now uses LLVM MinGW for pull requests. (PR #360)
     * Update Speex/Hamlib build code to avoid unnecessary rebuilds. (PR #361)
