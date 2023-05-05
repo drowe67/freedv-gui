@@ -1246,7 +1246,7 @@ void EasySetupDialog::updateAudioDevices_()
     else
     {
         auto index = m_analogDeviceRecord->FindString(RX_ONLY_STRING);
-        assert (index > 0);
+        assert (index >= 0);
         m_analogDeviceRecord->SetSelection(index);
     }
     
