@@ -331,11 +331,13 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
             {
                 // RX-only setup
                 auto index = m_analogDeviceRecord->FindString(RX_ONLY_STRING);
-                assert(index >= 0);
-                m_analogDeviceRecord->SetSelection(index);
-
+                if (index != wxNOT_FOUND)
+                {
+                    m_analogDeviceRecord->SetSelection(index);
+                }
+                
                 index = m_analogDevicePlayback->FindString(soundCard1OutDeviceName);
-                if (index >= 0)
+                if (index != wxNOT_FOUND)
                 {
                     m_analogDevicePlayback->SetSelection(index);
                 }
@@ -346,13 +348,13 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
             {
                 // RX and TX setup
                 auto index = m_analogDeviceRecord->FindString(soundCard2InDeviceName);
-                if (index >= 0)
+                if (index != wxNOT_FOUND)
                 {
                     m_analogDeviceRecord->SetSelection(index);
                 }
 
                 index = m_analogDevicePlayback->FindString(soundCard2OutDeviceName);
-                if (index >= 0)
+                if (index != wxNOT_FOUND)
                 {
                     m_analogDevicePlayback->SetSelection(index);
                 }                
@@ -364,7 +366,7 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
 
                     // Remove multiple devices entry if it's in there.
                     int index = m_radioDevice->FindString(MULTIPLE_DEVICES_STRING);
-                    if (index >= 0)
+                    if (index != wxNOT_FOUND)
                     {
                         m_radioDevice->Delete(index);
                     }
@@ -1238,7 +1240,7 @@ void EasySetupDialog::updateAudioDevices_()
         wxString devName(defaultInputDevice.name);
 
         auto index = m_analogDeviceRecord->FindString(devName);
-        if (index > 0)
+        if (index != wxNOT_FOUND)
         {
             m_analogDeviceRecord->SetSelection(index);
         }
@@ -1246,8 +1248,10 @@ void EasySetupDialog::updateAudioDevices_()
     else
     {
         auto index = m_analogDeviceRecord->FindString(RX_ONLY_STRING);
-        assert (index >= 0);
-        m_analogDeviceRecord->SetSelection(index);
+        if (index != wxNOT_FOUND)
+        {
+            m_analogDeviceRecord->SetSelection(index);
+        }
     }
     
     auto defaultOutputDevice = audioEngine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_OUT);
@@ -1256,7 +1260,7 @@ void EasySetupDialog::updateAudioDevices_()
         wxString devName(defaultOutputDevice.name);
 
         auto index = m_analogDevicePlayback->FindString(devName);
-        if (index > 0)
+        if (index != wxNOT_FOUND)
         {
             m_analogDevicePlayback->SetSelection(index);
         }
