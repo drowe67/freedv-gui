@@ -847,6 +847,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## TBD TBD 2023
+
+1. Bugfixes:
+    * Hamlib: use RIG_VFO_TX for PTT and RIG_VFO_CURR for RX. (PR #385)
+
 ## V1.8.9 April 2023
 
 1. Enhancements:
