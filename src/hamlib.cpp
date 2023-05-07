@@ -248,7 +248,7 @@ pttAttempt:
     }
     else if (result != RIG_OK)
     {
-        // We supposedly have multple VFOs but ran into problems when setting
+        // We supposedly have multiple VFOs but ran into problems when setting
         // PTT. Make a last ditch attempt with RIG_CURR_VFO before completely
         // failing.
         currVfo = RIG_CURR_VFO;
