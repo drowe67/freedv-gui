@@ -850,6 +850,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 ## TBD TBD 2023
 
 1. Bugfixes:
+    * Fix incorrect assertion causing crash on certain systems without a microphone. (PR #384)
     * Shrink sliders so that the Filter window can fit on a 720p display. (PR #386)
 
 ## V1.8.9 April 2023
