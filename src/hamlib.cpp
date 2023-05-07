@@ -188,7 +188,16 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
     if (g_verbose) fprintf(stderr, "hamlib: stop_bits..: %d\n", get_stop_bits());
 
     if (rig_open(m_rig) == RIG_OK) {
-        if (g_verbose) fprintf(stderr, "hamlib: rig_open() OK\n");        
+        if (g_verbose) fprintf(stderr, "hamlib: rig_open() OK\n");
+        
+        // Determine whether we have multiple VFOs.
+        multipleVfos_ = false;
+        freq_t tmpFreq = 0;
+        if (rig_get_freq(m_rig, RIG_VFO_B, &tmpFreq) == RIG_OK)
+        {
+            multipleVfos_ = true;
+        }
+        
         return true;
     }
     if (g_verbose) fprintf(stderr, "hamlib: rig_open() failed ...\n");
@@ -228,12 +237,22 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
 
     ptt_t on = press ? RIG_PTT_ON : RIG_PTT_OFF;
     vfo_t currVfo = getCurrentVfo_();
-        
+
+pttAttempt:
     int result = rig_set_ptt(m_rig, currVfo, on);
     if (g_verbose) fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", result);
-    if (result != RIG_OK ) {
+    if (result != RIG_OK && currVfo == RIG_CURR_VFO) 
+    {
         if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
         hamlibError = rigerror(result);
+    }
+    else if (result != RIG_OK)
+    {
+        // We supposedly have multple VFOs but ran into problems when setting
+        // PTT. Make a last ditch attempt with RIG_CURR_VFO before completely
+        // failing.
+        currVfo = RIG_CURR_VFO;
+        goto pttAttempt;
     }
     else
     {
@@ -345,19 +364,37 @@ void Hamlib::update_from_hamlib_()
     rmode_t mode = RIG_MODE_NONE;
     pbwidth_t passband = 0;
     vfo_t currVfo = getCurrentVfo_();    
-    
+
+modeAttempt:
     int result = rig_get_mode(m_rig, currVfo, &mode, &passband);
-    if (result != RIG_OK)
+    if (result != RIG_OK && currVfo == RIG_CURR_VFO)
     {
         if (g_verbose) fprintf(stderr, "rig_get_mode: error = %s \n", rigerror(result));
     }
+    else if (result != RIG_OK)
+    {
+        // We supposedly have multiple VFOs but ran into problems 
+        // trying to get information about the supposed active VFO.
+        // Make a last ditch effort using RIG_CURR_VFO before fully failing.
+        currVfo = RIG_CURR_VFO;
+        goto modeAttempt;
+    }
     else
     {
+freqAttempt:
         freq_t freq = 0;
         result = rig_get_freq(m_rig, currVfo, &freq);
-        if (result != RIG_OK)
+        if (result != RIG_OK && currVfo == RIG_CURR_VFO)
         {
             if (g_verbose) fprintf(stderr, "rig_get_freq: error = %s \n", rigerror(result));
+        }
+        else if (result != RIG_OK)
+        {
+            // We supposedly have multiple VFOs but ran into problems 
+            // trying to get information about the supposed active VFO.
+            // Make a last ditch effort using RIG_CURR_VFO before fully failing.
+            currVfo = RIG_CURR_VFO;
+            goto freqAttempt;
         }
         else
         {
@@ -423,11 +460,8 @@ void Hamlib::close(void) {
 vfo_t Hamlib::getCurrentVfo_()
 {
     vfo_t vfo = RIG_VFO_CURR;
-    char buf[256];
-    rig_get_vfo_list(m_rig, buf, 256);
-    std::string vfoList = buf;
     
-    if (vfoList.find("VFOB") != std::string::npos)
+    if (multipleVfos_)
     {
         int result = rig_get_vfo(m_rig, &vfo);
         if (result != RIG_OK && result != -RIG_ENAVAIL)
