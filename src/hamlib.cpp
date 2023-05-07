@@ -227,7 +227,7 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
         return false;
 
     ptt_t on = press ? RIG_PTT_ON : RIG_PTT_OFF;
-    vfo_t currVfo = getCurrentVfo_(true);
+    vfo_t currVfo = getCurrentVfo_();
         
     int result = rig_set_ptt(m_rig, currVfo, on);
     if (g_verbose) fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", result);
@@ -344,7 +344,7 @@ void Hamlib::update_from_hamlib_()
     
     rmode_t mode = RIG_MODE_NONE;
     pbwidth_t passband = 0;
-    vfo_t currVfo = getCurrentVfo_(false);    
+    vfo_t currVfo = getCurrentVfo_();    
     
     int result = rig_get_mode(m_rig, currVfo, &mode, &passband);
     if (result != RIG_OK)
@@ -420,12 +420,22 @@ void Hamlib::close(void) {
     }
 }
 
-vfo_t Hamlib::getCurrentVfo_(bool tx)
+vfo_t Hamlib::getCurrentVfo_()
 {
     vfo_t vfo = RIG_VFO_CURR;
-    if (tx)
+    char buf[256];
+    rig_get_vfo_list(m_rig, buf, 256);
+    std::string vfoList = buf;
+    
+    if (vfoList.find("VFOB") != std::string::npos)
     {
-        vfo = RIG_VFO_TX;
+        int result = rig_get_vfo(m_rig, &vfo);
+        if (result != RIG_OK && result != -RIG_ENAVAIL)
+        {
+            // Note: we'll still attempt operation using RIG_VFO_CURR just in case.
+            if (g_verbose) fprintf(stderr, "rig_get_vfo: error = %s \n", rigerror(result));
+            vfo = RIG_VFO_CURR;
+        }
     }
     
     return vfo;
