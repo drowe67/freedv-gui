@@ -241,7 +241,7 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
 pttAttempt:
     int result = rig_set_ptt(m_rig, currVfo, on);
     if (g_verbose) fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", result);
-    if (result != RIG_OK && currVfo == RIG_CURR_VFO) 
+    if (result != RIG_OK && currVfo == RIG_VFO_CURR) 
     {
         if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
         hamlibError = rigerror(result);
@@ -249,9 +249,9 @@ pttAttempt:
     else if (result != RIG_OK)
     {
         // We supposedly have multiple VFOs but ran into problems when setting
-        // PTT. Make a last ditch attempt with RIG_CURR_VFO before completely
+        // PTT. Make a last ditch attempt with RIG_VFO_CURR before completely
         // failing.
-        currVfo = RIG_CURR_VFO;
+        currVfo = RIG_VFO_CURR;
         goto pttAttempt;
     }
     else
@@ -367,7 +367,7 @@ void Hamlib::update_from_hamlib_()
 
 modeAttempt:
     int result = rig_get_mode(m_rig, currVfo, &mode, &passband);
-    if (result != RIG_OK && currVfo == RIG_CURR_VFO)
+    if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
         if (g_verbose) fprintf(stderr, "rig_get_mode: error = %s \n", rigerror(result));
     }
@@ -375,8 +375,8 @@ modeAttempt:
     {
         // We supposedly have multiple VFOs but ran into problems 
         // trying to get information about the supposed active VFO.
-        // Make a last ditch effort using RIG_CURR_VFO before fully failing.
-        currVfo = RIG_CURR_VFO;
+        // Make a last ditch effort using RIG_VFO_CURR before fully failing.
+        currVfo = RIG_VFO_CURR;
         goto modeAttempt;
     }
     else
@@ -384,7 +384,7 @@ modeAttempt:
 freqAttempt:
         freq_t freq = 0;
         result = rig_get_freq(m_rig, currVfo, &freq);
-        if (result != RIG_OK && currVfo == RIG_CURR_VFO)
+        if (result != RIG_OK && currVfo == RIG_VFO_CURR)
         {
             if (g_verbose) fprintf(stderr, "rig_get_freq: error = %s \n", rigerror(result));
         }
@@ -392,8 +392,8 @@ freqAttempt:
         {
             // We supposedly have multiple VFOs but ran into problems 
             // trying to get information about the supposed active VFO.
-            // Make a last ditch effort using RIG_CURR_VFO before fully failing.
-            currVfo = RIG_CURR_VFO;
+            // Make a last ditch effort using RIG_VFO_CURR before fully failing.
+            currVfo = RIG_VFO_CURR;
             goto freqAttempt;
         }
         else
