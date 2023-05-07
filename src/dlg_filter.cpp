@@ -21,7 +21,7 @@
 #include "dlg_filter.h"
 
 #define SLIDER_MAX 100
-#define SLIDER_LENGTH 200
+#define SLIDER_LENGTH 100
 
 #define FILTER_MIN_MAG_DB -20.0
 #define FILTER_MAX_MAG_DB  20.0
