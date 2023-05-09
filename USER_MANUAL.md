@@ -854,6 +854,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Bugfixes:
     * Fix incorrect assertion causing crash on certain systems without a microphone. (PR #384)
     * Shrink sliders so that the Filter window can fit on a 720p display. (PR #386)
+3. Enhancements:
+    * Add last received SNR to callsign list. (PR #389)
 
 ## V1.8.9 April 2023
 
