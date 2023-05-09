@@ -1436,6 +1436,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         m_lastReportedCallsignListView->SetItem(index, 1, currentTimeAsString);
                     }
                     
+                    wxString snrAsString;
+                    snrAsString.Printf(wxT("%d"), pendingSnr);
+                    auto index = m_lastReportedCallsignListView->GetTopItem();
+                    m_lastReportedCallsignListView->SetItem(index, 2, snrAsString);
+                    
                     m_cboLastReportedCallsigns->SetText(rxCallsign);
                     m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
            
