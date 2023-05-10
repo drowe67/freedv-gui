@@ -58,7 +58,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_keyerTab = new wxPanel(m_notebook, wxID_ANY);
     m_modemTab = new wxPanel(m_notebook, wxID_ANY);
     m_simulationTab = new wxPanel(m_notebook, wxID_ANY);
-    m_interfacingTab = new wxPanel(m_notebook, wxID_ANY);
     m_debugTab = new wxPanel(m_notebook, wxID_ANY);
     
     m_notebook->AddPage(m_reportingTab, _("Reporting"));
@@ -66,7 +65,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_notebook->AddPage(m_keyerTab, _("Audio"));
     m_notebook->AddPage(m_modemTab, _("Modem"));
     m_notebook->AddPage(m_simulationTab, _("Simulation"));
-    m_notebook->AddPage(m_interfacingTab, _("UDP"));
     m_notebook->AddPage(m_debugTab, _("Debugging"));
     
     bSizer30->Add(m_notebook, 0, wxALL | wxEXPAND, 3);
@@ -345,33 +343,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sizerSimulation->Add(sbSizer_tone,0, wxALL|wxEXPAND, 5);
 
     m_simulationTab->SetSizer(sizerSimulation);
-    
-    // Interfacing tab
-    wxBoxSizer* sizerInterfacing = new wxBoxSizer(wxVERTICAL);
-    
-    //----------------------------------------------------------
-    // UDP Send Messages on Events
-    //----------------------------------------------------------
-
-    wxStaticBoxSizer* sbSizer_udp;
-    wxStaticBox* sb_udp = new wxStaticBox(m_interfacingTab, wxID_ANY, _("UDP Messages"));
-    sbSizer_udp = new wxStaticBoxSizer(sb_udp, wxVERTICAL);
-    m_ckbox_udp_enable = new wxCheckBox(m_interfacingTab, wxID_ANY, _("Enable UDP Messages"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_udp->Add(m_ckbox_udp_enable, 0, wxALL, 5);
-
-    wxBoxSizer* portNumberSizer = new wxBoxSizer(wxHORIZONTAL);
-    wxStaticText* udpPortNumberLabel = new wxStaticText(m_interfacingTab, wxID_ANY, _("UDP Port Number:"), wxDefaultPosition, wxDefaultSize, 0);
-    portNumberSizer->Add(udpPortNumberLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    m_txt_udp_port = new wxTextCtrl(m_interfacingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(70,-1), 0, wxTextValidator(wxFILTER_DIGITS));
-    portNumberSizer->Add(m_txt_udp_port, 0, wxALL, 5);
-    m_btn_udp_test = new wxButton(m_interfacingTab, wxID_ANY, _("Test"), wxDefaultPosition, wxDefaultSize, 0);
-    portNumberSizer->Add(m_btn_udp_test, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
-
-    sbSizer_udp->Add(portNumberSizer, 0, wxALL, 5);
-    sizerInterfacing->Add(sbSizer_udp, 0, wxALL | wxEXPAND, 5);
-
-    m_interfacingTab->SetSizer(sizerInterfacing);
         
     // Debug tab
     wxBoxSizer* sizerDebug = new wxBoxSizer(wxVERTICAL);
@@ -505,9 +476,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxTone->MoveBeforeInTabOrder(m_txtToneFreqHz);
     m_txtToneFreqHz->MoveBeforeInTabOrder(m_txtToneAmplitude);
     
-    m_ckbox_udp_enable->MoveBeforeInTabOrder(m_txt_udp_port);
-    m_txt_udp_port->MoveBeforeInTabOrder(m_btn_udp_test);
-    
     m_txtCtrlFifoSize->MoveBeforeInTabOrder(m_ckboxVerbose);
     m_ckboxVerbose->MoveBeforeInTabOrder(m_ckboxTxRxThreadPriority);
     m_ckboxTxRxThreadPriority->MoveBeforeInTabOrder(m_ckboxTxRxDumpTiming);
@@ -519,8 +487,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_displayTab->MoveBeforeInTabOrder(m_keyerTab);
     m_keyerTab->MoveBeforeInTabOrder(m_modemTab);
     m_modemTab->MoveBeforeInTabOrder(m_simulationTab);
-    m_simulationTab->MoveBeforeInTabOrder(m_interfacingTab);
-    m_interfacingTab->MoveBeforeInTabOrder(m_debugTab);
+    m_simulationTab->MoveBeforeInTabOrder(m_debugTab);
     
     m_notebook->MoveBeforeInTabOrder(m_sdbSizer5OK);
     m_sdbSizer5OK->MoveBeforeInTabOrder(m_sdbSizer5Cancel);
@@ -550,11 +517,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_buttonChooseQuickRecordPath->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
 
     m_BtnFifoReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
-    m_btn_udp_test->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnUDPTest), NULL, this);
 
     m_ckbox_psk_enable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnPSKReporterEnable), NULL, this);
     m_ckboxTone->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
-    m_ckbox_udp_enable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnUDPStateEnable), NULL, this);
     
     m_ckboxMultipleRx->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
     
@@ -586,7 +551,6 @@ OptionsDlg::~OptionsDlg()
     m_buttonChooseQuickRecordPath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
 
     m_BtnFifoReset->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
-    m_btn_udp_test->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnUDPTest), NULL, this);
 
 #ifdef __WXMSW__
     m_ckboxDebugConsole->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnDebugConsole), NULL, this);
@@ -594,7 +558,6 @@ OptionsDlg::~OptionsDlg()
     
     m_ckbox_psk_enable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnPSKReporterEnable), NULL, this);
     m_ckboxTone->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
-    m_ckbox_udp_enable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnUDPStateEnable), NULL, this);
     
     m_ckboxMultipleRx->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
 }
@@ -633,9 +596,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         m_ckboxAttnCarrierEn->SetValue(wxGetApp().m_attn_carrier_en);
         m_txtAttnCarrier->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_attn_carrier));
-
-        m_ckbox_udp_enable->SetValue(wxGetApp().m_udp_enable);
-        m_txt_udp_port->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_udp_port));
 
         m_txtCtrlFifoSize->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_fifoSize_ms));
 
@@ -703,7 +663,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         updateChannelNoiseState();
         updateAttnCarrierState();
         updateToneState();
-        updateUDPState();
         updateMultipleRxState();
     }
 
@@ -765,11 +724,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         g_verbose = m_ckboxVerbose->GetValue();
         g_freedv_verbose = m_ckboxFreeDVAPIVerbose->GetValue();
 
-        wxGetApp().m_udp_enable     = m_ckbox_udp_enable->GetValue();
-        long port;
-        m_txt_udp_port->GetValue().ToLong(&port);
-        wxGetApp().m_udp_port       = (int)port;
-
         wxGetApp().m_FreeDV700txClip = m_ckboxFreeDV700txClip->GetValue();
         wxGetApp().m_FreeDV700txBPF = m_ckboxFreeDV700txBPF->GetValue();
         wxGetApp().m_FreeDV700Combine = m_ckboxFreeDV700Combine->GetValue();
@@ -810,9 +764,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 #ifdef SHORT_VARICODE
             pConfig->Write(wxT("/Data/TextEncoding"), wxGetApp().m_textEncoding);
 #endif
-
-            pConfig->Write(wxT("/UDP/enable"), wxGetApp().m_udp_enable);
-            pConfig->Write(wxT("/UDP/port"),  wxGetApp().m_udp_port);
 
             pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
             pConfig->Write(wxT("/FreeDV700/txBPF"), wxGetApp().m_FreeDV700txBPF);
@@ -984,13 +935,6 @@ void OptionsDlg::OnFifoReset(wxCommandEvent& event)
     }
 }
 
-void OptionsDlg::OnUDPTest(wxCommandEvent& event)
-{
-    char s[80];
-    snprintf(s, 80, "hello from FreeDV!");
-    UDPSend(wxGetApp().m_udp_port, s, strlen(s)+1);
-}
-
 void OptionsDlg::updatePSKReporterState()
 {
     if (!sessionActive_)
@@ -1038,12 +982,6 @@ void OptionsDlg::updateToneState()
     m_txtToneAmplitude->Enable(m_ckboxTone->GetValue());
 }
 
-void OptionsDlg::updateUDPState()
-{
-    m_txt_udp_port->Enable(m_ckbox_udp_enable->GetValue());
-    m_btn_udp_test->Enable(m_ckbox_udp_enable->GetValue());
-}
-
 void OptionsDlg::updateMultipleRxState()
 {
     if (!sessionActive_)
@@ -1067,11 +1005,6 @@ void OptionsDlg::OnPSKReporterEnable(wxCommandEvent& event)
 void OptionsDlg::OnToneStateEnable(wxCommandEvent& event)
 {
     updateToneState();
-}
-
-void OptionsDlg::OnUDPStateEnable(wxCommandEvent& event)
-{
-    updateUDPState();
 }
 
 void OptionsDlg::OnMultipleRxEnable(wxCommandEvent& event)

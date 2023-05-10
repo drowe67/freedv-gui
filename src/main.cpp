@@ -167,10 +167,6 @@ FILE *g_logfile;
 
 // Config file management 
 wxConfigBase *pConfig = NULL;
-    
-// UDP socket available to send messages
-
-extern wxDatagramSocket *g_sock;
 
 // WxWidgets - initialize the application
 
@@ -518,9 +514,6 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_callSign = pConfig->Read("/Data/CallSign", wxT(""));
     wxGetApp().m_textEncoding = pConfig->Read("/Data/TextEncoding", 1);
 
-    wxGetApp().m_udp_enable = (float)pConfig->Read(wxT("/UDP/enable"), f);
-    wxGetApp().m_udp_port = (int)pConfig->Read(wxT("/UDP/port"), 3000);
-
     wxGetApp().m_FreeDV700txClip = (float)pConfig->Read(wxT("/FreeDV700/txClip"), t);
     wxGetApp().m_FreeDV700txBPF = (float)pConfig->Read(wxT("/FreeDV700/txBPF"), t);
     wxGetApp().m_FreeDV700Combine = 1;
@@ -839,8 +832,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     wxGetApp().m_txRxThreadHighPriority = true;
     g_dump_timing = g_dump_fifo_state = 0;
-
-    UDPInit();
 }
 
 //-------------------------------------------------------------------------
@@ -937,9 +928,6 @@ MainFrame::~MainFrame()
 
     pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
     pConfig->Write(wxT("/Data/TextEncoding"), wxGetApp().m_textEncoding);
-
-    pConfig->Write(wxT("/UDP/enable"), wxGetApp().m_udp_enable);
-    pConfig->Write(wxT("/UDP/port"),  wxGetApp().m_udp_port);
 
     pConfig->Write(wxT("/Filter/MicInEQEnable"), wxGetApp().m_MicInEQEnable);
     pConfig->Write(wxT("/Filter/SpkOutEQEnable"), wxGetApp().m_SpkOutEQEnable);
@@ -2816,120 +2804,3 @@ bool MainFrame::validateSoundCardSetup()
     
     return canRun;
 }
-
-
-#ifdef __UDP_SUPPORT__
-
-//----------------------------------------------------------------
-// PollUDP() - see if any commands on UDP port
-//----------------------------------------------------------------
-
-// test this puppy with netcat:
-//   $ echo "hello" | nc -u -q1 localhost 3000
-
-int MainFrame::PollUDP(void)
-{
-    // this will block until message received, so we put it in it's own thread
-    const int STR_LENGTH = 80;
-    char buf[1024];
-    char reply[STR_LENGTH];
-    size_t n = m_udp_sock->RecvFrom(m_udp_addr, buf, sizeof(buf)).LastCount();
-
-    if (n) {
-        wxString bufstr = wxString::From8BitData(buf, n);
-        bufstr.Trim();
-        wxString ipaddr = m_udp_addr.IPAddress();
-        printf("Received: \"%s\" from %s:%u\n",
-               (const char *)bufstr.c_str(),
-               (const char *)ipaddr.c_str(), m_udp_addr.Service());
-
-        // for security only accept commands from local host
-
-        snprintf(reply, STR_LENGTH, "nope\n");
-        if (ipaddr.Cmp(_("127.0.0.1")) == 0) {
-
-            // process commands
-
-            if (bufstr.Cmp(_("restore")) == 0) {
-                m_schedule_restore = true;  // Make Restore happen in main thread to avoid crashing
-                snprintf(reply, STR_LENGTH, "ok\n");
-            }
-
-            wxString itemToSet, val;
-            if (bufstr.StartsWith(_("set "), &itemToSet)) {
-                if (itemToSet.StartsWith("txtmsg ", &val)) {
-                    // note: if options dialog is open this will get overwritten
-                    wxGetApp().m_callSign = val;
-                }
-                snprintf(reply, STR_LENGTH, "ok\n");
-            }
-            if (bufstr.StartsWith(_("ptton"), &itemToSet)) {
-                // note: if options dialog is open this will get overwritten
-                m_btnTogPTT->SetValue(true);
-                togglePTT();
-                snprintf(reply, STR_LENGTH, "ok\n");
-            }
-            if (bufstr.StartsWith(_("pttoff"), &itemToSet)) {
-                // note: if options dialog is open this will get overwritten
-                m_btnTogPTT->SetValue(false);
-                togglePTT();
-                snprintf(reply, STR_LENGTH, "ok\n");
-            }
-
-        }
-        else {
-            printf("We only accept messages from localhost!\n");
-        }
-
-       if ( m_udp_sock->SendTo(m_udp_addr, reply, strlen(reply)).LastCount() != strlen(reply)) {
-           printf("ERROR: failed to send data\n");
-        }
-    }
-
-    return n;
-}
-
-void MainFrame::startUDPThread(void) {
-    fprintf(stderr, "starting UDP thread!\n");
-    m_UDPThread = new UDPThread;
-    m_UDPThread->mf = this;
-    if (m_UDPThread->Create() != wxTHREAD_NO_ERROR ) {
-        wxLogError(wxT("Can't create thread!"));
-    }
-    if (m_UDPThread->Run() != wxTHREAD_NO_ERROR ) {
-        wxLogError(wxT("Can't start thread!"));
-        delete m_UDPThread;
-    }
-}
-
-void MainFrame::stopUDPThread(void) {
-    printf("stopping UDP thread!\n");
-    if ((m_UDPThread != NULL) && m_UDPThread->m_run) {
-        m_UDPThread->m_run = 0;
-        m_UDPThread->Wait();
-        m_UDPThread = NULL;
-    }
-}
-
-void *UDPThread::Entry() {
-    //fprintf(stderr, "UDP thread started!\n");
-    while (m_run) {
-        if (wxGetApp().m_udp_enable) {
-            printf("m_udp_enable\n");
-            mf->m_udp_addr.Service(wxGetApp().m_udp_port);
-            mf->m_udp_sock = new wxDatagramSocket(mf->m_udp_addr, wxSOCKET_NOWAIT);
-
-            while (m_run && wxGetApp().m_udp_enable) {
-                if (mf->PollUDP() == 0) {
-                    wxThread::Sleep(20);
-                }
-            }
-
-            delete mf->m_udp_sock;
-        }
-        wxThread::Sleep(20);
-    }
-    return NULL;
-}
-
-#endif

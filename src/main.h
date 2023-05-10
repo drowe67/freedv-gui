@@ -278,10 +278,6 @@ class MainApp : public wxApp
         // optional vox trigger tone
         bool                m_leftChannelVoxTone;
 
-        // UDP control port
-        bool                m_udp_enable;
-        int                 m_udp_port;
-
         // notebook display after tx->rxtransition
         int                 m_rxNbookCtrl;
 
@@ -390,7 +386,6 @@ private:
 };
 
 class TxRxThread;
-class UDPThread;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainFrame
@@ -445,12 +440,6 @@ class MainFrame : public TopFrame
 
     void togglePTT(void);
 
-    wxIPV4address           m_udp_addr;
-    wxDatagramSocket       *m_udp_sock;
-    UDPThread              *m_UDPThread;
-    void                    startUDPThread(void);
-    void                    stopUDPThread(void);
-    int                     PollUDP();
     bool                    m_schedule_restore;
 
     // Voice Keyer state machine
@@ -593,26 +582,6 @@ class MainFrame : public TopFrame
 #endif // defined(FREEDV_MODE_2020)
 };
 
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-// class UDPThread - waits for UDP messages
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-class UDPThread : public wxThread
-{
-public:
-    UDPThread(void) : wxThread(wxTHREAD_JOINABLE) { m_run = 1; }
-
-    // thread execution starts here
-    void *Entry();
-
-    // called when the thread exits - whether it terminates normally or is
-    // stopped with Delete() (but not when it is Kill()ed!)
-    void OnExit() { }
-
-public:
-    MainFrame              *mf;
-    bool                    m_run;
-};
-
 void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs);
 
 int resample(SRC_STATE *src,
@@ -637,8 +606,5 @@ void my_put_next_rx_char(void *callback_state, char c);
 // helper complex freq shift function
 
 void freq_shift_coh(COMP rx_fdm_fcorr[], COMP rx_fdm[], float foff, float Fs, COMP *foff_phase_rect, int nin);
-
-void UDPSend(int port, char *buf, unsigned int n);
-void UDPInit(void);
 
 #endif //__FDMDV2_MAIN__

@@ -33,7 +33,6 @@ set(FREEDV_SOURCES
     osx_interface.h
     pskreporter.cpp
     pskreporter.h
-    udp.cpp
     util.cpp
     eq.cpp
     voicekeyer.cpp
