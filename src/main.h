@@ -88,7 +88,7 @@
 #include "comp_prim.h"
 #include "hamlib.h"
 #include "serialport.h" 
-#include "pskreporter.h"
+#include "reporting/pskreporter.h"
 #include "freedv_interface.h"
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
