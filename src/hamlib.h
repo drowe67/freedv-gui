@@ -56,6 +56,7 @@ class Hamlib {
         rmode_t m_currMode;
         bool m_vhfUhfMode;
         bool pttSet_;
+        bool multipleVfos_;
         
         // Data elements to support running Hamlib operations in a separate thread.
         bool threadRunning_;
