@@ -88,7 +88,7 @@
 #include "comp_prim.h"
 #include "hamlib.h"
 #include "serialport.h" 
-#include "reporting/pskreporter.h"
+#include "reporting/IReporter.h"
 #include "freedv_interface.h"
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
@@ -294,7 +294,7 @@ class MainApp : public wxApp
         // Callsign list configuration
         bool                m_useUTCTime;
 
-        PskReporter*            m_pskReporter;
+        std::vector<IReporter*> m_reporters;
         
         // Waterfall display
         int                 m_waterfallColor;

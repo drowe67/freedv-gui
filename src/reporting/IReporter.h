@@ -28,6 +28,8 @@
 class IReporter
 {
 public:
+    virtual ~IReporter() = default;
+    
     virtual void addReceiveRecord(std::string callsign, uint64_t frequency, char snr) = 0;
     virtual void send() = 0;
 };

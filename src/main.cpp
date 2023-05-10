@@ -36,6 +36,7 @@
 #include "audio/AudioEngineFactory.h"
 #include "codec2_fdmdv.h"
 #include "pipeline/TxRxThread.h"
+#include "reporting/pskreporter.h"
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
@@ -204,7 +205,11 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
-    m_pskReporter = NULL;
+    for (auto& obj : m_reporters)
+    {
+        delete obj;
+    }
+    m_reporters.clear();
     
     if(!wxApp::OnInit())
     {
@@ -1024,10 +1029,13 @@ MainFrame::~MainFrame()
         delete wxGetApp().m_hamlib;
     }
     
-    if (wxGetApp().m_pskReporter)
+    if (wxGetApp().m_reporters.size() > 0)
     {
-        delete wxGetApp().m_pskReporter;
-        wxGetApp().m_pskReporter = nullptr;
+        for (auto& obj : wxGetApp().m_reporters)
+        {
+            delete obj;
+        }
+        wxGetApp().m_reporters.clear();
     }
 }
 
@@ -1050,8 +1058,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 {    
     if (evt.GetTimer().GetId() == ID_TIMER_PSKREPORTER)
     {
-        // PSK Reporter timer fired; send in-progress packet.
-        wxGetApp().m_pskReporter->send();
+        // Reporter timer fired; send in-progress packet.
+        for (auto& obj : wxGetApp().m_reporters)
+        {
+            obj->send();
+        }
     }
     else if (evt.GetTimer().GetId() == ID_TIMER_UPD_FREQ)
     {
@@ -1391,7 +1402,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
         // c) We don't currently have a pending report to add to the outbound list for the active callsign.
         // When the above is true, capture the callsign and current SNR and add to the PSK Reporter object's outbound list.
-        if (wxGetApp().m_pskReporter != NULL && wxGetApp().m_psk_enable)
+        if (wxGetApp().m_reporters.size() > 0 && wxGetApp().m_psk_enable)
         {
             const char* text = freedvInterface.getReliableText();
             assert(text != nullptr);
@@ -1448,10 +1459,13 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         
                         if (!g_playFileFromRadio)
                         {
-                            wxGetApp().m_pskReporter->addReceiveRecord(
-                                pendingCallsign,
-                                freq,
-                                pendingSnr);
+                            for (auto& obj : wxGetApp().m_reporters)
+                            {
+                                obj->addReceiveRecord(
+                                    pendingCallsign,
+                                    freq,
+                                    pendingSnr);
+                            }
                         }
                     }
                 }
@@ -1644,10 +1658,13 @@ void MainFrame::OnExit(wxCommandEvent& event)
         wxGetApp().m_hamlib->close();
     }
 
-    if (wxGetApp().m_pskReporter)
+    if (wxGetApp().m_reporters.size() > 0)
     {
-        delete wxGetApp().m_pskReporter;
-        wxGetApp().m_pskReporter = NULL;
+        for (auto& obj : wxGetApp().m_reporters)
+        {
+            delete obj;
+        }
+        wxGetApp().m_reporters.clear();
     }
     
     //fprintf(stderr, "MainFrame::OnExit\n");
@@ -1970,7 +1987,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 startRxStream();
 
                 // attempt to start PTT ......
-                wxGetApp().m_pskReporter = NULL;
+                for (auto& obj : wxGetApp().m_reporters)
+                {
+                    delete obj;
+                }
+                wxGetApp().m_reporters.clear();
+                
                 if (wxGetApp().m_boolHamlibUseForPTT)
                     OpenHamlibRig();
 
@@ -1987,19 +2009,25 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                     }
                     else
                     {
-                        wxGetApp().m_pskReporter = new PskReporter(
-                            wxGetApp().m_psk_callsign.ToStdString(), 
-                            wxGetApp().m_psk_grid_square.ToStdString(),
-                            std::string("FreeDV ") + FREEDV_VERSION);
-                        assert(wxGetApp().m_pskReporter != nullptr);
-        
+                        auto pskReporter = 
+                            new PskReporter(
+                                wxGetApp().m_psk_callsign.ToStdString(), 
+                                wxGetApp().m_psk_grid_square.ToStdString(),
+                                std::string("FreeDV ") + FREEDV_VERSION);
+                        assert(pskReporter != nullptr);
+                        wxGetApp().m_reporters.push_back(pskReporter);
+                        
                         // Enable PSK Reporter timer (every 5 minutes).
                         m_pskReporterTimer.Start(5 * 60 * 1000);
                     }
                 }
                 else
                 {
-                    wxGetApp().m_pskReporter = NULL;
+                    for (auto& obj : wxGetApp().m_reporters)
+                    {
+                        delete obj;
+                    }
+                    wxGetApp().m_reporters.clear();
                 }
 
                 if (wxGetApp().m_boolUseSerialPTTInput)
@@ -2058,10 +2086,13 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             }
         }
 
-        if (wxGetApp().m_pskReporter)
+        if (wxGetApp().m_reporters.size() > 0)
         {            
-            delete wxGetApp().m_pskReporter;
-            wxGetApp().m_pskReporter = NULL;
+            for (auto& obj : wxGetApp().m_reporters)
+            {
+                delete obj;
+            }
+            wxGetApp().m_reporters.clear();
         }
         
         if (wxGetApp().m_boolUseSerialPTT) {
