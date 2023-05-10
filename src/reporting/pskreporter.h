@@ -2,6 +2,7 @@
 #define PSK_REPORTER_H
 
 #include <mutex>
+#include "IReporter.h"
 
 struct SenderRecord
 {
@@ -18,14 +19,14 @@ struct SenderRecord
     void encode(char* buf);
 };
 
-class PskReporter
+class PskReporter : public IReporter
 {
 public:
     PskReporter(std::string callsign, std::string gridSquare, std::string software);
     virtual ~PskReporter();
     
-    void addReceiveRecord(std::string callsign, uint64_t frequency, char snr);
-    void send();
+    virtual void addReceiveRecord(std::string callsign, uint64_t frequency, char snr);
+    virtual void send();
 
 private:
     unsigned int currentSequenceNumber_;
