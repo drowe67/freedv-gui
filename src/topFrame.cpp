@@ -291,8 +291,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_cboLastReportedCallsigns->SetSizeHints(wxSize(100,-1));
     
     m_lastReportedCallsignListView->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_LEFT, 125);
-    m_lastReportedCallsignListView->InsertColumn(1, wxT("Date/Time"), wxLIST_FORMAT_LEFT, 250);
-    m_lastReportedCallsignListView->InsertColumn(2, wxT("SNR"), wxLIST_FORMAT_LEFT, 75);
+    m_lastReportedCallsignListView->InsertColumn(1, wxT("Date/Time"), wxLIST_FORMAT_CENTRE, 175);
+    m_lastReportedCallsignListView->InsertColumn(2, wxT("SNR (dB)"), wxLIST_FORMAT_CENTRE, 75);
 
     bSizer15->Add(m_txtCtrlCallSign, 1, wxALL|wxEXPAND, 5);
     bSizer15->Add(m_cboLastReportedCallsigns, 1, wxALL|wxEXPAND, 5);
