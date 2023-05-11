@@ -1806,6 +1806,12 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 
         hiddenModeToSet->SetValue(true);
     }
+    
+    // Report TX change to registered reporters
+    for (auto& obj : wxGetApp().m_reporters)
+    {
+        obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+    }
 }
 
 //-------------------------------------------------------------------------
