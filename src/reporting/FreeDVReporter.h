@@ -41,6 +41,7 @@ public:
     
 private:
     sio::client sioClient_;
+    int64_t currFreq_;
 };
 
 #endif // FREEDV_REPORTER_H

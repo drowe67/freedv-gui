@@ -1074,7 +1074,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         } 
      }
      else
-     {  
+     {
+         // Report current frequency to reporters
+         auto freq = wxGetApp().m_hamlib->get_frequency();
+         for (auto& ptr : wxGetApp().m_reporters)
+         {
+             ptr->freqChange(freq);
+         }
+         
         int r,c;
 
         if (m_panelWaterfall->checkDT()) {

@@ -23,6 +23,7 @@
 #include "FreeDVReporter.h"
 
 FreeDVReporter::FreeDVReporter(std::string callsign, std::string gridSquare, std::string software)
+    : currFreq_(0)
 {
     // Connect and send initial info.
     // TBD - determine final location of site
@@ -41,10 +42,14 @@ FreeDVReporter::~FreeDVReporter()
 
 void FreeDVReporter::freqChange(uint64_t frequency)
 {
-    sio::message::ptr freqDataPtr = sio::object_message::create();
-    auto freqData = (sio::object_message*)freqDataPtr.get();
-    freqData->insert("frequency", sio::int_message::create(frequency));
-    sioClient_.socket()->emit("freq_change", freqDataPtr);
+    if (currFreq_ != frequency)
+    {
+        sio::message::ptr freqDataPtr = sio::object_message::create();
+        auto freqData = (sio::object_message*)freqDataPtr.get();
+        freqData->insert("freq", sio::int_message::create(frequency));
+        sioClient_.socket()->emit("freq_change", freqDataPtr);
+    }
+    currFreq_ = frequency;
 }
 
 void FreeDVReporter::transmit(std::string mode, bool tx)
