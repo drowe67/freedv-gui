@@ -502,6 +502,12 @@ void MainFrame::togglePTT(void) {
     m_textLevel->SetLabel(wxT(""));
     m_gaugeLevel->SetValue(0);
     endingTx = false;
+    
+    // Report TX change to registered reporters
+    for (auto& obj : wxGetApp().m_reporters)
+    {
+        obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+    }
 }
 
 //-------------------------------------------------------------------------
