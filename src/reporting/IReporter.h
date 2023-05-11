@@ -33,7 +33,7 @@ public:
     virtual void freqChange(uint64_t frequency) = 0;
     virtual void transmit(std::string mode, bool tx) = 0;
         
-    virtual void addReceiveRecord(std::string callsign, uint64_t frequency, char snr) = 0;
+    virtual void addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, char snr) = 0;
     virtual void send() = 0;
 };
 

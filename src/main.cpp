@@ -1469,6 +1469,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                             {
                                 obj->addReceiveRecord(
                                     pendingCallsign,
+                                    freedvInterface.getCurrentModeStr(),
                                     freq,
                                     pendingSnr);
                             }

@@ -42,4 +42,4 @@ add_library(fdv_reporting STATIC
 
 add_dependencies(fdv_reporting build_sioclient)
 target_link_libraries(fdv_reporting PUBLIC sioclient)
-target_include_directories(fdv_reporting PUBLIC ${SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
+target_include_directories(fdv_reporting PUBLIC ${SOURCE_DIR}/src)

@@ -26,11 +26,12 @@ FreeDVReporter::FreeDVReporter(std::string callsign, std::string gridSquare, std
 {
     // Connect and send initial info.
     // TBD - determine final location of site
-    sio::message::ptr auth = sio::object_message::create();
-    ((sio::object_message*)auth.get())->insert("callsign", callsign);
-    ((sio::object_message*)auth.get())->insert("grid_square", gridSquare);
-    ((sio::object_message*)auth.get())->insert("version", software);
-    sioClient_.connect("http://127.0.0.1:8080", auth);
+    sio::message::ptr authPtr = sio::object_message::create();
+    auto auth = (sio::object_message*)authPtr.get();
+    auth->insert("callsign", callsign);
+    auth->insert("grid_square", gridSquare);
+    auth->insert("version", software);
+    sioClient_.connect("http://127.0.0.1:8080", authPtr);
 }
 
 FreeDVReporter::~FreeDVReporter()
@@ -40,22 +41,31 @@ FreeDVReporter::~FreeDVReporter()
 
 void FreeDVReporter::freqChange(uint64_t frequency)
 {
-    sio::message::ptr freqData = sio::object_message::create();
-    ((sio::object_message*)freqData.get())->insert("frequency", sio::int_message::create(frequency));
-    sioClient_.socket()->emit("freq_change", freqData);
+    sio::message::ptr freqDataPtr = sio::object_message::create();
+    auto freqData = (sio::object_message*)freqDataPtr.get();
+    freqData->insert("frequency", sio::int_message::create(frequency));
+    sioClient_.socket()->emit("freq_change", freqDataPtr);
 }
 
 void FreeDVReporter::transmit(std::string mode, bool tx)
 {
-    sio::message::ptr txData = sio::object_message::create();
-    ((sio::object_message*)txData.get())->insert("mode", mode);
-    ((sio::object_message*)txData.get())->insert("transmitting", sio::bool_message::create(tx));
-    sioClient_.socket()->emit("tx_report", txData);
+    sio::message::ptr txDataPtr = sio::object_message::create();
+    auto txData = (sio::object_message*)txDataPtr.get();
+    txData->insert("mode", mode);
+    txData->insert("transmitting", sio::bool_message::create(tx));
+    sioClient_.socket()->emit("tx_report", txDataPtr);
 }
     
-void FreeDVReporter::addReceiveRecord(std::string callsign, uint64_t frequency, char snr)
+void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, char snr)
 {
-    // TBD
+    sio::message::ptr rxDataPtr = sio::object_message::create();
+    auto rxData = (sio::object_message*)rxDataPtr.get();
+    
+    rxData->insert("callsign", callsign);
+    rxData->insert("mode", mode);
+    rxData->insert("snr", sio::int_message::create(snr));
+    
+    sioClient_.socket()->emit("rx_report", rxDataPtr);
 }
 
 void FreeDVReporter::send()

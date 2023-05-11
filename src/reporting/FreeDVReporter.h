@@ -36,7 +36,7 @@ public:
     virtual void freqChange(uint64_t frequency) override;
     virtual void transmit(std::string mode, bool tx) override;
         
-    virtual void addReceiveRecord(std::string callsign, uint64_t frequency, char snr) override;
+    virtual void addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, char snr) override;
     virtual void send() override;
     
 private:
