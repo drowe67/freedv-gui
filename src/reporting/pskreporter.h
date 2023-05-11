@@ -45,10 +45,14 @@ class PskReporter : public IReporter
 {
 public:
     PskReporter(std::string callsign, std::string gridSquare, std::string software);
-    virtual ~PskReporter();
+    virtual ~PskReporter() override;
     
-    virtual void addReceiveRecord(std::string callsign, uint64_t frequency, char snr);
-    virtual void send();
+    virtual void addReceiveRecord(std::string callsign, uint64_t frequency, char snr) override;
+    virtual void send() override;
+    
+    // The below aren't implemented for PSK Reporter.
+    virtual void freqChange(uint64_t frequency) override { };
+    virtual void transmit(std::string mode, bool tx) override { }
 
 private:
     unsigned int currentSequenceNumber_;

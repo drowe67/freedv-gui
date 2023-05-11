@@ -1,9 +1,9 @@
-#ifndef I_REPORTER_H
-#define I_REPORTER_H
+#ifndef FREEDV_REPORTER_H
+#define FREEDV_REPORTER_H
 
 //=========================================================================
-// Name:            IReporter.h
-// Purpose:         Public interface for reporting classes.
+// Name:            FreeDVReporter.h
+// Purpose:         Implementation of interface to freedv-reporter
 //
 // Authors:         Mooneer Salem
 // License:
@@ -24,17 +24,23 @@
 //=========================================================================
 
 #include <string>
+#include "sio_client.h"
+#include "IReporter.h"
 
-class IReporter
+class FreeDVReporter : public IReporter
 {
 public:
-    virtual ~IReporter() = default;
+    FreeDVReporter(std::string callsign, std::string gridSquare, std::string software);
+    virtual ~FreeDVReporter();
 
-    virtual void freqChange(uint64_t frequency) = 0;
-    virtual void transmit(std::string mode, bool tx) = 0;
+    virtual void freqChange(uint64_t frequency) override;
+    virtual void transmit(std::string mode, bool tx) override;
         
-    virtual void addReceiveRecord(std::string callsign, uint64_t frequency, char snr) = 0;
-    virtual void send() = 0;
+    virtual void addReceiveRecord(std::string callsign, uint64_t frequency, char snr) override;
+    virtual void send() override;
+    
+private:
+    sio::client sioClient_;
 };
 
-#endif // I_REPORTER_H
+#endif // FREEDV_REPORTER_H

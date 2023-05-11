@@ -37,6 +37,7 @@
 #include "codec2_fdmdv.h"
 #include "pipeline/TxRxThread.h"
 #include "reporting/pskreporter.h"
+#include "reporting/FreeDVReporter.h"
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
@@ -2021,6 +2022,14 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                                 std::string("FreeDV ") + FREEDV_VERSION);
                         assert(pskReporter != nullptr);
                         wxGetApp().m_reporters.push_back(pskReporter);
+                        
+                        auto freedvReporter =
+                            new FreeDVReporter(
+                                wxGetApp().m_psk_callsign.ToStdString(), 
+                                wxGetApp().m_psk_grid_square.ToStdString(),
+                                std::string("FreeDV ") + FREEDV_VERSION);
+                        assert(freedvReporter);
+                        wxGetApp().m_reporters.push_back(freedvReporter);
                         
                         // Enable PSK Reporter timer (every 5 minutes).
                         m_pskReporterTimer.Start(5 * 60 * 1000);
