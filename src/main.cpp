@@ -1437,7 +1437,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     }
                     
                     wxString snrAsString;
-                    snrAsString.Printf(wxT("%d"), pendingSnr);
+                    snrAsString.Printf(wxT("%0.1f"), g_snr);
                     auto index = m_lastReportedCallsignListView->GetTopItem();
                     m_lastReportedCallsignListView->SetItem(index, 2, snrAsString);
                     
