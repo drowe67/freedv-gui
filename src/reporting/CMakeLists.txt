@@ -27,7 +27,7 @@ endif(APPLE)
 
 ExternalProject_Get_Property(build_sioclient BINARY_DIR)
 ExternalProject_Get_Property(build_sioclient SOURCE_DIR)
-add_library(sioclient SHARED IMPORTED)
+add_library(sioclient STATIC IMPORTED)
 
 set_target_properties(sioclient PROPERTIES 
     IMPORTED_LOCATION "${BINARY_DIR}/libsioclient${CMAKE_STATIC_LIBRARY_SUFFIX}"
