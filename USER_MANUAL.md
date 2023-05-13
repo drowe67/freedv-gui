@@ -856,6 +856,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix incorrect assertion causing crash on certain systems without a microphone. (PR #384)
     * Shrink sliders so that the Filter window can fit on a 720p display. (PR #386)
     * Hamlib: use RIG_VFO_CURR if explicit VFO doesn't work. (PR #385)
+    * Fix various misspellings in codebase. (PR #392)
 3. Enhancements:
     * Add last received SNR to callsign list. (PR #389, #391)
 
@@ -924,8 +925,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Filter out non-MME devices to match previous behavior. (PR #318)
     * Use 64 bit int for frequency to enable reporting microwave frequencies. (PR #325, #331)
     * Resolves issue with minimum button sizing in the Filter dialog. (PR #326, #331)
-    * Update labling of clipping and BPF options to match actual behavior. (PR #319)
-    * Adjustss positioning and spacing of controls in the Options dialog to prevent truncation. (PR #328, #331)
+    * Update labeling of clipping and BPF options to match actual behavior. (PR #319)
+    * Adjusts positioning and spacing of controls in the Options dialog to prevent truncation. (PR #328, #331)
 3. Enhancements:
     * Add 2020B to multi-RX feature to enable RX and TX without restarting session. (PR #312)
     * Hide modes not on the SM1000 by default. (PR #313)

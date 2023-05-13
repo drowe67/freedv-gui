@@ -722,7 +722,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_panelTestFrameErrors = new PlotScalar((wxFrame*) m_auiNbookCtrl, 2*MODEM_STATS_NC_MAX, 30.0, DT, 0, 2*MODEM_STATS_NC_MAX+2, 1, 1, "", 1);
     m_auiNbookCtrl->AddPage(m_panelTestFrameErrors, L"Test Frame Errors", true, wxNullBitmap);
 
-    // Add Test Frame Historgram window.  1 column for every bit, 2 bits per carrier
+    // Add Test Frame Histogram window.  1 column for every bit, 2 bits per carrier
     m_panelTestFrameErrorsHist = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 1.0, 1.0/(2*MODEM_STATS_NC_MAX), 0.001, 0.1, 1.0/MODEM_STATS_NC_MAX, 0.1, "%0.0E", 0);
     m_auiNbookCtrl->AddPage(m_panelTestFrameErrorsHist, L"Test Frame Histogram", true, wxNullBitmap);
     m_panelTestFrameErrorsHist->setBarGraph(1);
@@ -1198,7 +1198,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         m_panelScatter->Refresh();
 
-        // Oscilliscope type speech plots -------------------------------------------------------
+        // Oscilloscope type speech plots -------------------------------------------------------
 
         short speechInPlotSamples[WAVEFORM_PLOT_BUF];
         if (codec2_fifo_read(g_plotSpeechInFifo, speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
