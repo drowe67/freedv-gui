@@ -33,7 +33,7 @@ FreeDVReporter::FreeDVReporter(std::string callsign, std::string gridSquare, std
     auth->insert("grid_square", gridSquare);
     auth->insert("version", software);
     auth->insert("role", "report");
-    sioClient_.connect("https://freedv-reporter.k6aq.net/", authPtr);
+    sioClient_.connect("http://freedv-reporter.k6aq.net/", authPtr);
 }
 
 FreeDVReporter::~FreeDVReporter()
