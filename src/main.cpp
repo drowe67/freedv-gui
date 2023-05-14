@@ -2047,6 +2047,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                         
                         // Enable PSK Reporter timer (every 5 minutes).
                         m_pskReporterTimer.Start(5 * 60 * 1000);
+                        
+                        // Immediately transmit selected TX mode to avoid UI glitches.
+                        for (auto& obj : wxGetApp().m_reporters)
+                        {
+                            obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+                        }
                     }
                 }
                 else
