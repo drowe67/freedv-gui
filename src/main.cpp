@@ -1079,7 +1079,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          auto freq = wxGetApp().m_hamlib->get_frequency();
          for (auto& ptr : wxGetApp().m_reporters)
          {
-             ptr->freqChange(freq);
+             ptr->freqChange(wxGetApp().m_psk_freq);
          }
          
         int r,c;
@@ -2048,10 +2048,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                         // Enable PSK Reporter timer (every 5 minutes).
                         m_pskReporterTimer.Start(5 * 60 * 1000);
                         
-                        // Immediately transmit selected TX mode to avoid UI glitches.
+                        // Immediately transmit selected TX mode and frequency to avoid UI glitches.
                         for (auto& obj : wxGetApp().m_reporters)
                         {
                             obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+                            obj->freqChange(wxGetApp().m_psk_freq);
                         }
                     }
                 }
