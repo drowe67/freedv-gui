@@ -3,6 +3,7 @@ if(CMAKE_CROSSCOMPILING)
     set(SIO_CMAKE_ARGS ${SIO_CMAKE_ARGS} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
 endif()
 
+include(FetchContent)
 FetchContent_Declare(
     sioclient
     GIT_REPOSITORY https://github.com/socketio/socket.io-client-cpp.git
