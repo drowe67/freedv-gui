@@ -3,6 +3,30 @@ if(CMAKE_CROSSCOMPILING)
     set(SIO_CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
 endif()
 
+# We need to set up OpenSSL as we don't want to use an insecure connection
+# to the reporting server. 
+if(WIN32)
+    # On Windows, it's very unlikely we'll have pre-built binaries available.
+    # Set the project up to build it from source. 
+    # XXX - This may take quite a long time. Consider maintaining DLLs separately
+    # (especially for ARM) and download those instead if possible.
+    set(BUILD_OPENSSL ON)
+    set(OPENSSL_BUILD_VERSION "3.1.0")
+    set(CROSS ON)
+    
+    include(FetchContent)
+    FetchContent_Declare(
+      openssl_wrapper
+      GIT_REPOSITORY https://github.com/viaduck/openssl-cmake
+      GIT_TAG        master
+    )
+    
+    FetchContent_MakeAvailable(openssl_wrapper)
+endif(WIN32)
+
+find_package(OpenSSL REQUIRED)
+    
+
 include(ExternalProject)
 if(APPLE)
     ExternalProject_Add(build_sioclient
@@ -27,9 +51,9 @@ endif(APPLE)
 
 ExternalProject_Get_Property(build_sioclient BINARY_DIR)
 ExternalProject_Get_Property(build_sioclient SOURCE_DIR)
-add_library(sioclient STATIC IMPORTED)
+add_library(sioclient_tls STATIC IMPORTED)
 
-set_target_properties(sioclient PROPERTIES 
+set_target_properties(sioclient_tls PROPERTIES 
     IMPORTED_LOCATION "${BINARY_DIR}/libsioclient${CMAKE_STATIC_LIBRARY_SUFFIX}"
     IMPORTED_IMPLIB   "${BINARY_DIR}/libsioclient${CMAKE_IMPORT_LIBRARY_SUFFIX}"
 )
@@ -42,5 +66,5 @@ add_library(fdv_reporting STATIC
 )
 
 add_dependencies(fdv_reporting build_sioclient)
-target_link_libraries(fdv_reporting PUBLIC sioclient)
+target_link_libraries(fdv_reporting PUBLIC sioclient_tls OpenSSL::Crypto)
 target_include_directories(fdv_reporting PUBLIC ${SOURCE_DIR}/src)
