@@ -18,8 +18,12 @@ else()
     set(LPCNET_BUILD_DIR @LPCNET_BUILD_DIR@)
 endif()
 
+
 set(FREEDV_USING_LLVM_MINGW @FREEDV_USING_LLVM_MINGW@)
 set(FREEDV_PACKAGE_SEARCH_PATHS @FREEDV_PACKAGE_SEARCH_PATHS@)
+list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${CMAKE_BINARY_DIR}/src/reporting/libressl_build/crypto)
+list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${CMAKE_BINARY_DIR}/src/reporting/libressl_build/ssl)
+list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${CMAKE_BINARY_DIR}/src/reporting/libressl_build/tls)
 
 set(CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM windows+pe)
 set(CMAKE_GET_RUNTIME_DEPENDENCIES_TOOL objdump)
@@ -72,6 +76,7 @@ set( _windlls
     UxTheme.dll
     OLEACC.dll
     msvcrt.dll
+    bcrypt.dll
 
     # The below are additional DLLs required when compiled
     # using the LLVM version of MinGW.
