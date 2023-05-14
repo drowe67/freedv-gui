@@ -102,5 +102,5 @@ add_library(fdv_reporting STATIC
 
 add_dependencies(fdv_reporting build_sioclient)
 add_definitions(-DSIO_TLS)
-target_link_libraries(fdv_reporting PUBLIC sioclient_tls OpenSSL::Crypto)
+target_link_libraries(fdv_reporting PUBLIC sioclient_tls OpenSSL::Crypto OpenSSL::SSL)
 target_include_directories(fdv_reporting PUBLIC ${SOURCE_DIR}/src)
