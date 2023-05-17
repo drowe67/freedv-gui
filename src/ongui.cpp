@@ -115,10 +115,10 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     optionsDlg->ShowModal();
     
     // Show/hide frequency box based on PSK Reporter status.
-    m_freqBox->Show(wxGetApp().m_psk_enable);
+    m_freqBox->Show(wxGetApp().m_reportingEnabled);
 
     // Show/hide callsign combo box based on PSK Reporter Status
-    if (wxGetApp().m_psk_enable)
+    if (wxGetApp().m_reportingEnabled)
     {
         m_cboLastReportedCallsigns->Show();
         m_txtCtrlCallSign->Hide();
@@ -580,8 +580,8 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     wxString freqStr = m_txtCtrlReportFrequency->GetValue();
     if (freqStr.Length() > 0)
     {
-        wxGetApp().m_psk_freq = atof(freqStr.ToUTF8()) * 1000;
-        if (wxGetApp().m_psk_freq > 0)
+        wxGetApp().m_reportingFrequency = atof(freqStr.ToUTF8()) * 1000;
+        if (wxGetApp().m_reportingFrequency > 0)
         {
             m_txtCtrlReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
         }
@@ -592,14 +592,14 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     }
     else
     {
-        wxGetApp().m_psk_freq = 0;
+        wxGetApp().m_reportingFrequency = 0;
         m_txtCtrlReportFrequency->SetForegroundColour(wxColor(*wxRED));
     }
     
     // Report current frequency to reporters
     for (auto& ptr : wxGetApp().m_reporters)
     {
-        ptr->freqChange(wxGetApp().m_psk_freq);
+        ptr->freqChange(wxGetApp().m_reportingFrequency);
     }
 }
 

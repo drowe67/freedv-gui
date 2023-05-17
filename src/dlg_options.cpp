@@ -87,29 +87,53 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sizerReporting->Add(sbSizer_callSign,0, wxALL | wxEXPAND, 5);
  
     //----------------------------------------------------------
-    // PSK Reporter 
+    // Reporting Options 
     //----------------------------------------------------------
 
-    wxStaticBoxSizer* sbSizer_psk;
-    wxStaticBox* sb_psk = new wxStaticBox(m_reportingTab, wxID_ANY, _("PSK Reporter"));
-    sbSizer_psk = new wxStaticBoxSizer(sb_psk, wxHORIZONTAL);
-    m_ckbox_psk_enable = new wxCheckBox(m_reportingTab, wxID_ANY, _("Enable Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_psk->Add(m_ckbox_psk_enable, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    wxStaticBoxSizer* sbSizerReportingRows;
+    wxBoxSizer* sbSizerReportingGeneral = new wxBoxSizer(wxHORIZONTAL);
+    
+    wxStaticBox* sbReporting = new wxStaticBox(m_reportingTab, wxID_ANY, _("Reporting"));
+    
+    sbSizerReportingRows = new wxStaticBoxSizer(sbReporting, wxVERTICAL);
+    m_ckboxReportingEnable = new wxCheckBox(m_reportingTab, wxID_ANY, _("Enable Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizerReportingGeneral->Add(m_ckboxReportingEnable, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     wxStaticText* labelPskCallsign = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Callsign:"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_psk->Add(labelPskCallsign, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizerReportingGeneral->Add(labelPskCallsign, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     m_txt_callsign = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
-    sbSizer_psk->Add(m_txt_callsign, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizerReportingGeneral->Add(m_txt_callsign, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     wxStaticText* labelPskGridSquare = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Grid Square:"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_psk->Add(labelPskGridSquare, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizerReportingGeneral->Add(labelPskGridSquare, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     m_txt_grid_square = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(70,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
-    sbSizer_psk->Add(m_txt_grid_square, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizerReportingGeneral->Add(m_txt_grid_square, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    sizerReporting->Add(sbSizer_psk,0, wxALL | wxEXPAND, 5);
+    sbSizerReportingRows->Add(sbSizerReportingGeneral, 0, wxALL | wxEXPAND, 5);
     
+    // PSK Reporter options
+    wxBoxSizer* sbSizerReportingPSK = new wxBoxSizer(wxHORIZONTAL);
+    m_ckboxPskReporterEnable = new wxCheckBox(m_reportingTab, wxID_ANY, _("Enable PSK Reporter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizerReportingPSK->Add(m_ckboxPskReporterEnable, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizerReportingRows->Add(sbSizerReportingPSK, 0, wxALL | wxEXPAND, 5);
+    
+    // FreeDV Reporter options
+    wxBoxSizer* sbSizerReportingFreeDV = new wxBoxSizer(wxHORIZONTAL);
+    m_ckboxFreeDVReporterEnable = new wxCheckBox(m_reportingTab, wxID_ANY, _("Enable FreeDV Reporter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizerReportingFreeDV->Add(m_ckboxFreeDVReporterEnable, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    wxStaticText* labelFreeDVHostName = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Hostname:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_freedvReporterHostname = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    sbSizerReportingFreeDV->Add(labelFreeDVHostName, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizerReportingFreeDV->Add(m_freedvReporterHostname, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    sbSizerReportingRows->Add(sbSizerReportingFreeDV, 0, wxALL | wxEXPAND, 5);
+    
+    sizerReporting->Add(sbSizerReportingRows, 0, wxALL | wxEXPAND, 5);
+    
+    // Callsign list settings
     wxStaticBoxSizer* sbSizer_callsign_list;
     wxStaticBox* sb_callsignList = new wxStaticBox(m_reportingTab, wxID_ANY, _("Callsign List"));
     sbSizer_callsign_list = new wxStaticBoxSizer(sb_callsignList, wxHORIZONTAL);
@@ -450,9 +474,13 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     //-------------------
     // Tab ordering for accessibility
     //-------------------
-    m_txtCtrlCallSign->MoveBeforeInTabOrder(m_ckbox_psk_enable);
-    m_ckbox_psk_enable->MoveBeforeInTabOrder(m_txt_callsign);
+    m_txtCtrlCallSign->MoveBeforeInTabOrder(m_ckboxReportingEnable);
+    m_ckboxReportingEnable->MoveBeforeInTabOrder(m_txt_callsign);
     m_txt_callsign->MoveBeforeInTabOrder(m_txt_grid_square);
+    
+    m_txt_grid_square->MoveBeforeInTabOrder(m_ckboxPskReporterEnable);
+    m_ckboxPskReporterEnable->MoveBeforeInTabOrder(m_ckboxFreeDVReporterEnable);
+    m_ckboxFreeDVReporterEnable->MoveBeforeInTabOrder(m_freedvReporterHostname);
     
     m_waterfallColorScheme1->MoveBeforeInTabOrder(m_waterfallColorScheme2);
     m_waterfallColorScheme2->MoveBeforeInTabOrder(m_waterfallColorScheme3);
@@ -518,7 +546,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     m_BtnFifoReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
 
-    m_ckbox_psk_enable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnPSKReporterEnable), NULL, this);
+    m_ckboxReportingEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
+    m_ckboxFreeDVReporterEnable->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxTone->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
     
     m_ckboxMultipleRx->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
@@ -556,7 +585,8 @@ OptionsDlg::~OptionsDlg()
     m_ckboxDebugConsole->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnDebugConsole), NULL, this);
 #endif
     
-    m_ckbox_psk_enable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnPSKReporterEnable), NULL, this);
+    m_ckboxReportingEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
+    m_ckboxFreeDVReporterEnable->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingEnable), NULL, this);
     m_ckboxTone->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
     
     m_ckboxMultipleRx->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
@@ -613,11 +643,18 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxDebugConsole->SetValue(wxGetApp().m_debug_console);
 #endif
         
-        // PSK Reporter config
-        m_ckbox_psk_enable->SetValue(wxGetApp().m_psk_enable);
-        m_txt_callsign->SetValue(wxGetApp().m_psk_callsign);
-        m_txt_grid_square->SetValue(wxGetApp().m_psk_grid_square);
+        // General reporting config
+        m_ckboxReportingEnable->SetValue(wxGetApp().m_reportingEnabled);
+        m_txt_callsign->SetValue(wxGetApp().m_reportingCallsign);
+        m_txt_grid_square->SetValue(wxGetApp().m_reportingGridSquare);
+
+        // PSK Reporter options
+        m_ckboxPskReporterEnable->SetValue(wxGetApp().m_pskReporterEnabled);
         
+        // FreeDV Reporter options
+        m_ckboxFreeDVReporterEnable->SetValue(wxGetApp().m_freedvReporterEnabled);
+        m_freedvReporterHostname->SetValue(wxGetApp().m_freedvReporterHostname);
+                
         // Callsign list config
         m_ckbox_use_utc_time->SetValue(wxGetApp().m_useUTCTime);
         
@@ -659,7 +696,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         }
         
         // Update control state based on checkbox state.
-        updatePSKReporterState();
+        updateReportingState();
         updateChannelNoiseState();
         updateAttnCarrierState();
         updateToneState();
@@ -732,11 +769,18 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_debug_console = m_ckboxDebugConsole->GetValue();
 #endif
 
-        // PSK Reporter config
-        wxGetApp().m_psk_enable = m_ckbox_psk_enable->GetValue();
-        wxGetApp().m_psk_callsign = m_txt_callsign->GetValue();
-        wxGetApp().m_psk_grid_square = m_txt_grid_square->GetValue();
+        // General reporting config
+        wxGetApp().m_reportingEnabled = m_ckboxReportingEnable->GetValue();
+        wxGetApp().m_reportingCallsign = m_txt_callsign->GetValue();
+        wxGetApp().m_reportingGridSquare = m_txt_grid_square->GetValue();
+
+        // PSK Reporter options
+        wxGetApp().m_pskReporterEnabled = m_ckboxPskReporterEnable->GetValue();
         
+        // FreeDV Reporter options
+        wxGetApp().m_freedvReporterEnabled = m_ckboxFreeDVReporterEnable->GetValue();
+        wxGetApp().m_freedvReporterHostname = m_freedvReporterHostname->GetValue();
+                
         // Callsign list config
         wxGetApp().m_useUTCTime = m_ckbox_use_utc_time->GetValue();
         
@@ -776,9 +820,17 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             pConfig->Write(wxT("/Debug/verbose"), g_verbose);
             pConfig->Write(wxT("/Debug/APIverbose"), g_freedv_verbose);
 
-            pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);
-            pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
-            pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
+            // General reporting parameters
+            pConfig->Write(wxT("/Reporting/Enable"), wxGetApp().m_reportingEnabled);
+            pConfig->Write(wxT("/Reporting/Callsign"), wxGetApp().m_reportingCallsign);
+            pConfig->Write(wxT("/Reporting/GridSquare"), wxGetApp().m_reportingGridSquare);
+        
+            // PSK Reporter parameters
+            pConfig->Write(wxT("/Reporting/PSKReporter/Enable"), wxGetApp().m_pskReporterEnabled);
+    
+            // FreDV Reporter options
+            pConfig->Write(wxT("/Reporting/FreeDV/Enable"), wxGetApp().m_freedvReporterEnabled);
+            pConfig->Write(wxT("/Reporting/FreeDV/Hostname"), wxGetApp().m_freedvReporterHostname);
             
             pConfig->Write(wxT("/CallsignList/UseUTCTime"), wxGetApp().m_useUTCTime);
             
@@ -935,32 +987,49 @@ void OptionsDlg::OnFifoReset(wxCommandEvent& event)
     }
 }
 
-void OptionsDlg::updatePSKReporterState()
+void OptionsDlg::updateReportingState()
 {
     if (!sessionActive_)
     {
         m_ckbox_use_utc_time->Enable(true);
-        m_ckbox_psk_enable->Enable(true);
-        if (m_ckbox_psk_enable->GetValue())
+        m_ckboxReportingEnable->Enable(true);
+        if (m_ckboxReportingEnable->GetValue())
         {
             m_txtCtrlCallSign->Enable(false);
             m_txt_callsign->Enable(true);
             m_txt_grid_square->Enable(true);
+            m_ckboxPskReporterEnable->Enable(true);
+            m_ckboxFreeDVReporterEnable->Enable(true);
+            
+            if (m_ckboxFreeDVReporterEnable->GetValue())
+            {
+                m_freedvReporterHostname->Enable(true);
+            }
+            else
+            {
+                m_freedvReporterHostname->Enable(false);
+            }
         }
         else
         {
             m_txtCtrlCallSign->Enable(true);
             m_txt_callsign->Enable(false);
             m_txt_grid_square->Enable(false);
+            m_ckboxPskReporterEnable->Enable(false);
+            m_ckboxFreeDVReporterEnable->Enable(false);
+            m_freedvReporterHostname->Enable(false);
         }    
     }
     else
     {
-        // Txt Msg/PSK Reporter options cannot be modified during a session.
-        m_ckbox_psk_enable->Enable(false);
+        // Txt Msg/Reporter options cannot be modified during a session.
+        m_ckboxReportingEnable->Enable(false);
         m_txtCtrlCallSign->Enable(false);
         m_txt_callsign->Enable(false);
         m_txt_grid_square->Enable(false);
+        m_ckboxPskReporterEnable->Enable(false);
+        m_ckboxFreeDVReporterEnable->Enable(false);
+        m_freedvReporterHostname->Enable(false);
         
         m_ckbox_use_utc_time->Enable(false);
     }
@@ -997,9 +1066,9 @@ void OptionsDlg::updateMultipleRxState()
     }
 }
 
-void OptionsDlg::OnPSKReporterEnable(wxCommandEvent& event)
+void OptionsDlg::OnReportingEnable(wxCommandEvent& event)
 {
-    updatePSKReporterState();
+    updateReportingState();
 }
 
 void OptionsDlg::OnToneStateEnable(wxCommandEvent& event)

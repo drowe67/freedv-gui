@@ -22,7 +22,7 @@
 
 #include "FreeDVReporter.h"
 
-FreeDVReporter::FreeDVReporter(std::string callsign, std::string gridSquare, std::string software)
+FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software)
     : lastFrequency_(0)
     , tx_(false)
 {
@@ -43,7 +43,7 @@ FreeDVReporter::FreeDVReporter(std::string callsign, std::string gridSquare, std
         transmit(mode_, tx_);
     });
     
-    sioClient_.connect("http://freedv-reporter.k6aq.net/", authPtr);
+    sioClient_.connect(std::string("http://") + hostname + "/", authPtr);
 }
 
 FreeDVReporter::~FreeDVReporter()

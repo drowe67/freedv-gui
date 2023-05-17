@@ -536,14 +536,27 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_tone = 0;
     wxGetApp().m_tone_freq_hz = 1000;
     wxGetApp().m_tone_amplitude = 500;
-    
-    wxGetApp().m_psk_enable = pConfig->ReadBool(wxT("/PSKReporter/Enable"), false);
-    wxGetApp().m_psk_callsign = pConfig->Read(wxT("/PSKReporter/Callsign"), wxT(""));
-    wxGetApp().m_psk_grid_square = pConfig->Read(wxT("/PSKReporter/GridSquare"), wxT(""));
 
-    wxString freqStr = pConfig->Read(wxT("/PSKReporter/FrequencyHzStr"), wxT("0"));
-    wxGetApp().m_psk_freq = atoll(freqStr.ToUTF8());
-    m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((double)wxGetApp().m_psk_freq)/1000.0));
+    // Save old parameters so that they can be copied over to the new locations.
+    auto oldPskEnable = pConfig->ReadBool(wxT("/PSKReporter/Enable"), false); 
+    auto oldPskCallsign = pConfig->Read(wxT("/PSKReporter/Callsign"), wxT(""));
+    auto oldGridSquare = pConfig->Read(wxT("/PSKReporter/GridSquare"), wxT(""));
+    auto oldFreqStr = pConfig->Read(wxT("/PSKReporter/FrequencyHzStr"), wxT("0"));
+    
+    // General reporting parameters
+    wxGetApp().m_reportingEnabled = pConfig->ReadBool(wxT("/Reporting/Enable"), oldPskEnable);
+    wxGetApp().m_reportingCallsign = pConfig->Read(wxT("/Reporting/Callsign"), oldPskCallsign);
+    wxGetApp().m_reportingGridSquare = pConfig->Read(wxT("/Reporting/GridSquare"), oldGridSquare);
+    wxString freqStr = pConfig->Read(wxT("/Reporting/Frequency"), oldFreqStr);
+    wxGetApp().m_reportingFrequency = atoll(freqStr.ToUTF8());
+    m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((double)wxGetApp().m_reportingFrequency)/1000.0));
+    
+    // PSK Reporter parameters
+    wxGetApp().m_pskReporterEnabled = pConfig->ReadBool(wxT("/Reporting/PSKReporter/Enable"), oldPskEnable);
+    
+    // FreeDV Reporter parameters
+    wxGetApp().m_freedvReporterEnabled = pConfig->ReadBool(wxT("/Reporting/FreeDVReporter/Enable"), true);
+    wxGetApp().m_freedvReporterHostname = pConfig->Read(wxT("/Reporting/FreeDV/Hostname"), wxT(FREEDV_REPORTER_DEFAULT_HOSTNAME));
     
     wxGetApp().m_useUTCTime = pConfig->ReadBool(wxT("/CallsignList/UseUTCTime"), false);
     
@@ -620,11 +633,11 @@ setDefaultMode:
     m_ckboxSNR->SetValue(wxGetApp().m_snrSlow);
     setsnrBeta(wxGetApp().m_snrSlow);
     
-    // Show/hide frequency box based on PSK Reporter enablement
-    m_freqBox->Show(wxGetApp().m_psk_enable);
+    // Show/hide frequency box based on reporting enablement
+    m_freqBox->Show(wxGetApp().m_reportingEnabled);
 
-    // Show/hide callsign combo box based on PSK Reporter enablement
-    if (wxGetApp().m_psk_enable)
+    // Show/hide callsign combo box based on reporting enablement
+    if (wxGetApp().m_reportingEnabled)
     {
         m_cboLastReportedCallsigns->Show();
         m_txtCtrlCallSign->Hide();
@@ -943,12 +956,20 @@ MainFrame::~MainFrame()
 
     pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
 
-    pConfig->Write(wxT("/PSKReporter/Enable"), wxGetApp().m_psk_enable);
-    pConfig->Write(wxT("/PSKReporter/Callsign"), wxGetApp().m_psk_callsign);
-    pConfig->Write(wxT("/PSKReporter/GridSquare"), wxGetApp().m_psk_grid_square);
-
-    wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), wxGetApp().m_psk_freq);
-    pConfig->Write(wxT("/PSKReporter/FrequencyHzStr"), tempFreqStr);
+    // General reporting parameters
+    pConfig->Write(wxT("/Reporting/Enable"), wxGetApp().m_reportingEnabled);
+    pConfig->Write(wxT("/Reporting/Callsign"), wxGetApp().m_reportingCallsign);
+    pConfig->Write(wxT("/Reporting/GridSquare"), wxGetApp().m_reportingGridSquare);
+    
+    wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), wxGetApp().m_reportingFrequency);
+    pConfig->Write(wxT("/Reporting/Frequency"), tempFreqStr);
+        
+    // PSK Reporter parameters
+    pConfig->Write(wxT("/Reporting/PSKReporter/Enable"), wxGetApp().m_pskReporterEnabled);
+    
+    // FreDV Reporter options
+    pConfig->Write(wxT("/Reporting/FreeDV/Enable"), wxGetApp().m_freedvReporterEnabled);
+    pConfig->Write(wxT("/Reporting/FreeDV/Hostname"), wxGetApp().m_freedvReporterHostname);
     
     pConfig->Write(wxT("/CallsignList/UseUTCTime"), wxGetApp().m_useUTCTime);
     
@@ -1353,7 +1374,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         char callsign[MAX_CALLSIGN];
         memset(callsign, 0, MAX_CALLSIGN);
     
-        if (!wxGetApp().m_psk_enable)
+        if (!wxGetApp().m_reportingEnabled)
         {
             strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
             if (strlen(callsign) < MAX_CALLSIGN - 1)
@@ -1399,12 +1420,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             }
         }
 
-        // We should only report to PSK Reporter when all of the following are true:
+        // We should only report to reporters when all of the following are true:
         // a) The callsign encoder indicates a valid callsign has been received.
         // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
         // c) We don't currently have a pending report to add to the outbound list for the active callsign.
         // When the above is true, capture the callsign and current SNR and add to the PSK Reporter object's outbound list.
-        if (wxGetApp().m_reporters.size() > 0 && wxGetApp().m_psk_enable)
+        if (wxGetApp().m_reporters.size() > 0 && wxGetApp().m_reportingEnabled)
         {
             const char* text = freedvInterface.getReliableText();
             assert(text != nullptr);
@@ -1450,7 +1471,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         wxGetApp().m_hamlib->update_frequency_and_mode();
                     }
             
-                    int64_t freq = wxGetApp().m_psk_freq;
+                    int64_t freq = wxGetApp().m_reportingFrequency;
 
                     // Only report if there's a valid reporting frequency and if we're not playing 
                     // a recording through ourselves (to avoid false reports).
@@ -1915,7 +1936,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         g_sfTxFs = FS;
         
         wxGetApp().m_prevMode = g_mode;
-        freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread, wxGetApp().m_psk_enable);
+        freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread, wxGetApp().m_reportingEnabled);
 
         // Codec 2 VQ Equaliser
         freedvInterface.setEq(wxGetApp().m_700C_EQ);
@@ -1924,7 +1945,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         freedvInterface.setVerbose(g_freedv_verbose);
 
         // Text field/callsign callbacks.
-        if (!wxGetApp().m_psk_enable)
+        if (!wxGetApp().m_reportingEnabled)
         {
             freedvInterface.setTextCallbackFn(&my_put_next_rx_char, &my_get_next_tx_char);
         }
@@ -1932,7 +1953,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         {
             char temp[9];
             memset(temp, 0, 9);
-            strncpy(temp, wxGetApp().m_psk_callsign.ToUTF8(), 8); // One less than the size of temp to ensure we don't overwrite the null.
+            strncpy(temp, wxGetApp().m_reportingCallsign.ToUTF8(), 8); // One less than the size of temp to ensure we don't overwrite the null.
             fprintf(stderr, "Setting callsign to %s\n", temp);
             freedvInterface.setReliableText(temp);
         }
@@ -1964,7 +1985,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         m_panelWaterfall->setFs(freedvInterface.getTxModemSampleRate());
 
         // Init text msg decoding
-        if (!wxGetApp().m_psk_enable)
+        if (!wxGetApp().m_reportingEnabled)
             freedvInterface.setTextVaricodeNum(wxGetApp().m_textEncoding);
 
         // scatter plot (PSK) or Eye (FSK) mode
@@ -2015,29 +2036,36 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 }
                 
                 // Initialize PSK Reporter reporting.
-                if (wxGetApp().m_psk_enable)
+                if (wxGetApp().m_reportingEnabled)
                 {        
-                    if (wxGetApp().m_psk_callsign.ToStdString() == "" || wxGetApp().m_psk_grid_square.ToStdString() == "")
+                    if (wxGetApp().m_reportingCallsign.ToStdString() == "" || wxGetApp().m_reportingGridSquare.ToStdString() == "")
                     {
-                        wxMessageBox("PSK Reporter reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+                        wxMessageBox("Reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
                     }
                     else
                     {
-                        auto pskReporter = 
-                            new PskReporter(
-                                wxGetApp().m_psk_callsign.ToStdString(), 
-                                wxGetApp().m_psk_grid_square.ToStdString(),
-                                std::string("FreeDV ") + FREEDV_VERSION);
-                        assert(pskReporter != nullptr);
-                        wxGetApp().m_reporters.push_back(pskReporter);
+                        if (wxGetApp().m_pskReporterEnabled)
+                        {
+                            auto pskReporter = 
+                                new PskReporter(
+                                    wxGetApp().m_reportingCallsign.ToStdString(), 
+                                    wxGetApp().m_reportingGridSquare.ToStdString(),
+                                    std::string("FreeDV ") + FREEDV_VERSION);
+                            assert(pskReporter != nullptr);
+                            wxGetApp().m_reporters.push_back(pskReporter);
+                        }
                         
-                        auto freedvReporter =
-                            new FreeDVReporter(
-                                wxGetApp().m_psk_callsign.ToStdString(), 
-                                wxGetApp().m_psk_grid_square.ToStdString(),
-                                std::string("FreeDV ") + FREEDV_VERSION);
-                        assert(freedvReporter);
-                        wxGetApp().m_reporters.push_back(freedvReporter);
+                        if (wxGetApp().m_freedvReporterEnabled)
+                        {
+                            auto freedvReporter =
+                                new FreeDVReporter(
+                                    wxGetApp().m_freedvReporterHostname.ToStdString(),
+                                    wxGetApp().m_reportingCallsign.ToStdString(), 
+                                    wxGetApp().m_reportingGridSquare.ToStdString(),
+                                    std::string("FreeDV ") + FREEDV_VERSION);
+                            assert(freedvReporter);
+                            wxGetApp().m_reporters.push_back(freedvReporter);
+                        }
                         
                         // Enable PSK Reporter timer (every 5 minutes).
                         m_pskReporterTimer.Start(5 * 60 * 1000);
@@ -2046,7 +2074,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                         for (auto& obj : wxGetApp().m_reporters)
                         {
                             obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
-                            obj->freqChange(wxGetApp().m_psk_freq);
+                            obj->freqChange(wxGetApp().m_reportingFrequency);
                         }
                     }
                 }

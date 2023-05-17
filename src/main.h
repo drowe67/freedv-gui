@@ -285,11 +285,18 @@ class MainApp : public wxApp
 
         int                 m_fifoSize_ms;
 
+        // General reporting configuration
+        bool                m_reportingEnabled;
+        wxString            m_reportingCallsign;
+        wxString            m_reportingGridSquare;
+        uint64_t            m_reportingFrequency;
+        
         // PSK Reporter configuration
-        bool                m_psk_enable;
-        wxString            m_psk_callsign;
-        wxString            m_psk_grid_square;
-        uint64_t            m_psk_freq;
+        bool                m_pskReporterEnabled;
+        
+        // FreeDV Reporter configuration
+        bool                m_freedvReporterEnabled;
+        wxString            m_freedvReporterHostname;
         
         // Callsign list configuration
         bool                m_useUTCTime;

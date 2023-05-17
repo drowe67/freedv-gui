@@ -46,7 +46,7 @@ class OptionsDlg : public wxDialog
         {
             sessionActive_ = active; 
         
-            updatePSKReporterState();
+            updateReportingState();
         }
         
     protected:
@@ -68,7 +68,7 @@ class OptionsDlg : public wxDialog
 
         void    OnFifoReset(wxCommandEvent& event);
         
-        void    OnPSKReporterEnable(wxCommandEvent& event);
+        void    OnReportingEnable(wxCommandEvent& event);
         void    OnToneStateEnable(wxCommandEvent& event);
         void    OnMultipleRxEnable(wxCommandEvent& event);
         wxTextCtrl   *m_txtCtrlCallSign; // TODO: this should be renamed to tx_txtmsg, and rename all related incl persis strge
@@ -118,9 +118,14 @@ class OptionsDlg : public wxDialog
         wxRadioButton *m_rb_textEncoding1;
         wxRadioButton *m_rb_textEncoding2;
 
-        wxCheckBox    *m_ckbox_psk_enable;
+        wxCheckBox    *m_ckboxReportingEnable;
         wxTextCtrl    *m_txt_callsign;
         wxTextCtrl    *m_txt_grid_square;
+        
+        wxCheckBox    *m_ckboxPskReporterEnable;
+        
+        wxCheckBox    *m_ckboxFreeDVReporterEnable;
+        wxTextCtrl    *m_freedvReporterHostname;
         
         wxButton*     m_BtnFifoReset;
         wxStaticText  *m_textFifos;
@@ -151,7 +156,7 @@ class OptionsDlg : public wxDialog
         void OnChooseQuickRecordPath(wxCommandEvent& event);
 
      private:
-         void updatePSKReporterState();
+         void updateReportingState();
          void updateChannelNoiseState();
          void updateAttnCarrierState();
          void updateToneState();
