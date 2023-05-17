@@ -2055,7 +2055,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                             wxGetApp().m_reporters.push_back(pskReporter);
                         }
                         
-                        if (wxGetApp().m_freedvReporterEnabled)
+                        if (wxGetApp().m_freedvReporterEnabled && wxGetApp().m_freedvReporterHostname.ToStdString() != "")
                         {
                             auto freedvReporter =
                                 new FreeDVReporter(
@@ -2065,6 +2065,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                                     std::string("FreeDV ") + FREEDV_VERSION);
                             assert(freedvReporter);
                             wxGetApp().m_reporters.push_back(freedvReporter);
+                        }
+                        else if (wxGetApp().m_freedvReporterEnabled)
+                        {
+                            wxMessageBox("FreeDV Reporter requires a valid hostname. Reporting to FreeDV Reporter will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
                         }
                         
                         // Enable PSK Reporter timer (every 5 minutes).
