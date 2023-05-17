@@ -59,7 +59,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
 
     wxStaticBox* hamlibBox = new wxStaticBox(panel, wxID_ANY, _("Hamlib Settings"));
     wxStaticBoxSizer* staticBoxSizer18 = new wxStaticBoxSizer( hamlibBox, wxHORIZONTAL);
-    wxGridSizer* gridSizerhl = new wxGridSizer(6, 2, 0, 0);
+    wxGridSizer* gridSizerhl = new wxGridSizer(7, 2, 0, 0);
     staticBoxSizer18->Add(gridSizerhl, 1, wxEXPAND|wxALIGN_LEFT, 5);
 
     /* Use Hamlib for PTT checkbox. */
@@ -100,7 +100,20 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
                       0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
     m_cbSerialRate = new wxComboBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, -1), 0, NULL, wxCB_DROPDOWN);
     gridSizerhl->Add(m_cbSerialRate, 0, wxALIGN_CENTER_VERTICAL, 0);
+    
+    /* Hamlib PTT Method combobox. */
 
+    gridSizerhl->Add(new wxStaticText(hamlibBox, wxID_ANY, _("PTT uses:"), wxDefaultPosition, wxDefaultSize, 0), 
+                      0, wxALIGN_CENTER_VERTICAL |  wxALIGN_RIGHT, 20);
+    m_cbPttMethod = new wxComboBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
+    m_cbPttMethod->SetMinSize(wxSize(140, -1));
+    gridSizerhl->Add(m_cbPttMethod, 0, wxEXPAND, 0);
+    
+    // Add valid PTT options to combo box.
+    m_cbPttMethod->Append(wxT("CAT"));
+    m_cbPttMethod->Append(wxT("RTS"));
+    m_cbPttMethod->Append(wxT("DTR"));
+    
     gridSizerhl->Add(new wxStaticText(hamlibBox, wxID_ANY, _("Serial Params:"), wxDefaultPosition, wxDefaultSize, 0), 
                       0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
     m_cbSerialParams = new wxStaticText(hamlibBox, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, 0);
@@ -437,6 +450,8 @@ void ComPortsDlg::ExchangeData(int inout)
 
         m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02X"), wxGetApp().m_intHamlibIcomCIVHex));
         
+        m_cbPttMethod->SetSelection((int)wxGetApp().m_hamlibPttType);
+        
         /* Serial PTT */
 
         m_ckUseSerialPTT->SetValue(wxGetApp().m_boolUseSerialPTT);
@@ -484,11 +499,14 @@ void ComPortsDlg::ExchangeData(int inout)
         }
         if (g_verbose) fprintf(stderr, "serial rate: %d\n", wxGetApp().m_intHamlibSerialRate);
 
+        wxGetApp().m_hamlibPttType = (Hamlib::PttType)m_cbPttMethod->GetSelection();
+        
         pConfig->Write(wxT("/Hamlib/UseForPTT"), wxGetApp().m_boolHamlibUseForPTT);
         pConfig->Write(wxT("/Hamlib/RigNameStr"), wxGetApp().m_strHamlibRigName);
         pConfig->Write(wxT("/Hamlib/SerialPort"), wxGetApp().m_strHamlibSerialPort);
         pConfig->Write(wxT("/Hamlib/SerialRate"), wxGetApp().m_intHamlibSerialRate);
-
+        pConfig->Write(wxT("/Hamlib/PttType"), (long)wxGetApp().m_hamlibPttType);
+        
         /* Serial settings */
 
         wxGetApp().m_boolUseSerialPTT           = m_ckUseSerialPTT->IsChecked();
