@@ -486,6 +486,8 @@ class MainFrame : public TopFrame
 
         void OnToolsEasySetup( wxCommandEvent& event );
         void OnToolsEasySetupUI( wxUpdateUIEvent& event );
+        void OnToolsFreeDVReporter( wxCommandEvent& event ) override;
+        void OnToolsFreeDVReporterUI( wxUpdateUIEvent& event ) override;
         void OnToolsAudio( wxCommandEvent& event );
         void OnToolsAudioUI( wxUpdateUIEvent& event );
         void OnToolsComCfg( wxCommandEvent& event );

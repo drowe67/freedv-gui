@@ -60,6 +60,23 @@ void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
 }
 
 //-------------------------------------------------------------------------
+// OnToolsFreeDVReporter()
+//-------------------------------------------------------------------------
+void MainFrame::OnToolsFreeDVReporter(wxCommandEvent& event)
+{
+    std::string url = "https://" + wxGetApp().m_freedvReporterHostname.ToStdString() + "/";
+    wxLaunchDefaultBrowser(url);
+}
+
+//-------------------------------------------------------------------------
+// OnToolsFreeDVReporterUI()
+//-------------------------------------------------------------------------
+void MainFrame::OnToolsFreeDVReporterUI(wxUpdateUIEvent& event)
+{
+    event.Enable(wxGetApp().m_freedvReporterHostname.ToStdString() != "");
+}
+
+//-------------------------------------------------------------------------
 // OnToolsAudio()
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsAudio(wxCommandEvent& event)
