@@ -595,5 +595,11 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
         wxGetApp().m_psk_freq = 0;
         m_txtCtrlReportFrequency->SetForegroundColour(wxColor(*wxRED));
     }
+    
+    // Report current frequency to reporters
+    for (auto& ptr : wxGetApp().m_reporters)
+    {
+        ptr->freqChange(wxGetApp().m_psk_freq);
+    }
 }
 

@@ -23,7 +23,8 @@
 #include "FreeDVReporter.h"
 
 FreeDVReporter::FreeDVReporter(std::string callsign, std::string gridSquare, std::string software)
-    : currFreq_(0)
+    : lastFrequency_(0)
+    , tx_(false)
 {
     // Connect and send initial info.
     // TBD - determine final location of site
@@ -33,6 +34,15 @@ FreeDVReporter::FreeDVReporter(std::string callsign, std::string gridSquare, std
     auth->insert("grid_square", gridSquare);
     auth->insert("version", software);
     auth->insert("role", "report");
+    
+    // Reconnect listener should re-report frequency so that "unknown"
+    // doesn't appear.
+    sioClient_.set_reconnect_listener([&](unsigned, unsigned)
+    {
+        freqChange(lastFrequency_);
+        transmit(mode_, tx_);
+    });
+    
     sioClient_.connect("http://freedv-reporter.k6aq.net/", authPtr);
 }
 
@@ -43,14 +53,13 @@ FreeDVReporter::~FreeDVReporter()
 
 void FreeDVReporter::freqChange(uint64_t frequency)
 {
-    if (currFreq_ != frequency)
-    {
-        sio::message::ptr freqDataPtr = sio::object_message::create();
-        auto freqData = (sio::object_message*)freqDataPtr.get();
-        freqData->insert("freq", sio::int_message::create(frequency));
-        sioClient_.socket()->emit("freq_change", freqDataPtr);
-    }
-    currFreq_ = frequency;
+    sio::message::ptr freqDataPtr = sio::object_message::create();
+    auto freqData = (sio::object_message*)freqDataPtr.get();
+    freqData->insert("freq", sio::int_message::create(frequency));
+    sioClient_.socket()->emit("freq_change", freqDataPtr);
+    
+    // Save last frequency in case we need to reconnect.
+    lastFrequency_ = frequency;
 }
 
 void FreeDVReporter::transmit(std::string mode, bool tx)
@@ -60,6 +69,10 @@ void FreeDVReporter::transmit(std::string mode, bool tx)
     txData->insert("mode", mode);
     txData->insert("transmitting", sio::bool_message::create(tx));
     sioClient_.socket()->emit("tx_report", txDataPtr);
+    
+    // Save last mode and TX state in case we have to reconnect.
+    mode_ = mode;
+    tx_ = tx;
 }
     
 void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, char snr)

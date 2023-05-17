@@ -41,7 +41,9 @@ public:
     
 private:
     sio::client sioClient_;
-    int64_t currFreq_;
+    uint64_t lastFrequency_;
+    std::string mode_;
+    bool tx_;
 };
 
 #endif // FREEDV_REPORTER_H
