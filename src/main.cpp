@@ -462,6 +462,7 @@ void MainFrame::loadConfiguration_()
         wxGetApp().m_intHamlibRig = wxGetApp().m_hamlib->rigNameToIndex(std::string(wxGetApp().m_strHamlibRigName.ToUTF8()));
     }
     
+    wxGetApp().m_hamlibPttType = (Hamlib::PttType)pConfig->ReadLong("/Hamlib/PttType", 0);
     wxGetApp().m_strHamlibSerialPort = pConfig->Read("/Hamlib/SerialPort", "");
     wxGetApp().m_intHamlibSerialRate = pConfig->ReadLong("/Hamlib/SerialRate", 0);
 
@@ -741,8 +742,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_panelTestFrameErrorsHist->setBarGraph(1);
     m_panelTestFrameErrorsHist->setLogY(1);
 
-    validateSoundCardSetup();
-
 //    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
      m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
@@ -840,6 +839,15 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         
     pConfig->Write(wxT("/FirstTimeUse"), false);
 
+    if (wxGetApp().m_firstTimeUse)
+    {
+        // Initial setup. Display Easy Setup dialog.
+        CallAfter([&]() {
+            EasySetupDialog* dlg = new EasySetupDialog(this);
+            dlg->ShowModal();
+        });
+    }
+    
     //#define FTEST
     #ifdef FTEST
     ftest = fopen("ftest.raw", "wb");
@@ -934,7 +942,7 @@ MainFrame::~MainFrame()
     pConfig->Write("/Hamlib/SerialPort", wxGetApp().m_strHamlibSerialPort);
     pConfig->Write("/Hamlib/SerialRate", wxGetApp().m_intHamlibSerialRate);
     pConfig->Write("/Hamlib/IcomCIVHex", wxGetApp().m_intHamlibIcomCIVHex);
-
+    pConfig->Write("/Hamlib/PttType", (long)wxGetApp().m_hamlibPttType);
 
     pConfig->Write(wxT("/File/playFileToMicInPath"),    wxGetApp().m_playFileToMicInPath);
     pConfig->Write(wxT("/File/recFileFromRadioPath"),   wxGetApp().m_recFileFromRadioPath);
