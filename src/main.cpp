@@ -730,8 +730,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_panelTestFrameErrorsHist->setBarGraph(1);
     m_panelTestFrameErrorsHist->setLogY(1);
 
-    validateSoundCardSetup();
-
 //    this->Connect(m_menuItemHelpUpdates->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnHelpCheckUpdatesUI));
      m_togBtnOnOff->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
@@ -829,6 +827,15 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         
     pConfig->Write(wxT("/FirstTimeUse"), false);
 
+    if (wxGetApp().m_firstTimeUse)
+    {
+        // Initial setup. Display Easy Setup dialog.
+        CallAfter([&]() {
+            EasySetupDialog* dlg = new EasySetupDialog(this);
+            dlg->ShowModal();
+        });
+    }
+    
     //#define FTEST
     #ifdef FTEST
     ftest = fopen("ftest.raw", "wb");
