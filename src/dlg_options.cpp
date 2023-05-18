@@ -125,7 +125,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizerReportingFreeDV->Add(m_ckboxFreeDVReporterEnable, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     wxStaticText* labelFreeDVHostName = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Hostname:"), wxDefaultPosition, wxDefaultSize, 0);
-    m_freedvReporterHostname = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    m_freedvReporterHostname = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0);
     sbSizerReportingFreeDV->Add(labelFreeDVHostName, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     sbSizerReportingFreeDV->Add(m_freedvReporterHostname, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
