@@ -460,6 +460,7 @@ void MainFrame::loadConfiguration_()
         wxGetApp().m_intHamlibRig = wxGetApp().m_hamlib->rigNameToIndex(std::string(wxGetApp().m_strHamlibRigName.ToUTF8()));
     }
     
+    wxGetApp().m_hamlibPttType = (Hamlib::PttType)pConfig->ReadLong("/Hamlib/PttType", 0);
     wxGetApp().m_strHamlibSerialPort = pConfig->Read("/Hamlib/SerialPort", "");
     wxGetApp().m_intHamlibSerialRate = pConfig->ReadLong("/Hamlib/SerialRate", 0);
 
@@ -931,7 +932,7 @@ MainFrame::~MainFrame()
     pConfig->Write("/Hamlib/SerialPort", wxGetApp().m_strHamlibSerialPort);
     pConfig->Write("/Hamlib/SerialRate", wxGetApp().m_intHamlibSerialRate);
     pConfig->Write("/Hamlib/IcomCIVHex", wxGetApp().m_intHamlibIcomCIVHex);
-
+    pConfig->Write("/Hamlib/PttType", (long)wxGetApp().m_hamlibPttType);
 
     pConfig->Write(wxT("/File/playFileToMicInPath"),    wxGetApp().m_playFileToMicInPath);
     pConfig->Write(wxT("/File/recFileFromRadioPath"),   wxGetApp().m_recFileFromRadioPath);

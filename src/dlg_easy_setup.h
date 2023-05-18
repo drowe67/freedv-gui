@@ -82,6 +82,7 @@ class EasySetupDialog : public wxDialog
         wxStaticText  *m_cbSerialParams;
         wxStaticText *m_stIcomCIVHex;
         wxTextCtrl *m_tcIcomCIVHex;
+        wxComboBox *m_cbPttMethod;
 
         // Step 2b: Serial PTT
         wxStaticBox* m_serialBox;

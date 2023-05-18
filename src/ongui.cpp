@@ -224,7 +224,7 @@ bool MainFrame::OpenHamlibRig() {
     int serial_rate = wxGetApp().m_intHamlibSerialRate;
     if (wxGetApp().CanAccessSerialPort((const char*)port.ToUTF8()))
     {
-        bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, wxGetApp().m_intHamlibIcomCIVHex);
+        bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, wxGetApp().m_intHamlibIcomCIVHex, wxGetApp().m_hamlibPttType);
         if (status == false)
         {
             wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);

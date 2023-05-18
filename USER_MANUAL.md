@@ -860,6 +860,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 3. Enhancements:
     * Add last received SNR to callsign list. (PR #389, #391)
     * Defer sound device checking until Start is pushed. (PR #393)
+    * Add ability for Hamlib to use RTS/DTR instead of CAT for PTT. (PR #394)
 
 ## V1.8.9 April 2023
 

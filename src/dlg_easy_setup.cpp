@@ -118,7 +118,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     m_hamlibBox = new wxStaticBox(setupCatControlBox, wxID_ANY, _("Hamlib CAT Control"));
     m_hamlibBox->Hide();
     wxStaticBoxSizer* hamlibBoxSizer = new wxStaticBoxSizer(m_hamlibBox, wxVERTICAL);
-    wxGridSizer* gridSizerhl = new wxGridSizer(4, 2, 0, 0);
+    wxGridSizer* gridSizerhl = new wxGridSizer(5, 2, 0, 0);
     hamlibBoxSizer->Add(gridSizerhl);
     setupCatControlBoxSizer->Add(hamlibBoxSizer);
 
@@ -151,6 +151,19 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
                       0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
     m_cbSerialRate = new wxComboBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, -1), 0, NULL, wxCB_DROPDOWN);
     gridSizerhl->Add(m_cbSerialRate, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    /* Hamlib PTT Method combobox. */
+
+    gridSizerhl->Add(new wxStaticText(m_hamlibBox, wxID_ANY, _("PTT uses:"), wxDefaultPosition, wxDefaultSize, 0), 
+                      0, wxALIGN_CENTER_VERTICAL |  wxALIGN_RIGHT, 20);
+    m_cbPttMethod = new wxComboBox(m_hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
+    m_cbPttMethod->SetSize(wxSize(140, -1));
+    gridSizerhl->Add(m_cbPttMethod, 0, wxALIGN_CENTER_VERTICAL, 0);
+    
+    // Add valid PTT options to combo box.
+    m_cbPttMethod->Append(wxT("CAT"));
+    m_cbPttMethod->Append(wxT("RTS"));
+    m_cbPttMethod->Append(wxT("DTR"));
     
     /* Serial port box */
     m_serialBox = new wxStaticBox(setupCatControlBox, wxID_ANY, _("Serial PTT"));
@@ -514,6 +527,8 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
             }
 
             m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02X"), wxGetApp().m_intHamlibIcomCIVHex));
+            
+            m_cbPttMethod->SetSelection((int)wxGetApp().m_hamlibPttType);
         }
         else if (wxGetApp().m_boolUseSerialPTT)
         {
@@ -570,6 +585,9 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
             pConfig->Write(wxT("/Hamlib/RigNameStr"), wxGetApp().m_strHamlibRigName);
             pConfig->Write(wxT("/Hamlib/SerialPort"), wxGetApp().m_strHamlibSerialPort);
             pConfig->Write(wxT("/Hamlib/SerialRate"), wxGetApp().m_intHamlibSerialRate);
+            
+            wxGetApp().m_hamlibPttType = (Hamlib::PttType)m_cbPttMethod->GetSelection();
+            pConfig->Write(wxT("/Hamlib/PttType"), (long)wxGetApp().m_hamlibPttType);
         }
         else if (m_ckUseSerialPTT->GetValue())
         {
@@ -789,7 +807,9 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                     return;
                 }
                 
-                if (!hamlibTestObject_->connect(rig, (const char*)serialPort.ToUTF8(), rate, civHexAddress))
+                auto pttType = (Hamlib::PttType)m_cbPttMethod->GetSelection();
+                
+                if (!hamlibTestObject_->connect(rig, (const char*)serialPort.ToUTF8(), rate, civHexAddress, pttType))
                 {
                     wxMessageBox(
                         "Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
