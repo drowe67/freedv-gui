@@ -743,6 +743,7 @@ void ComPortsDlg::updateControlState()
     m_cbSerialPort->Enable(m_ckUseHamlibPTT->GetValue());
     m_cbSerialRate->Enable(m_ckUseHamlibPTT->GetValue());
     m_tcIcomCIVHex->Enable(m_ckUseHamlibPTT->GetValue());
+    m_cbPttMethod->Enable(m_ckUseHamlibPTT->GetValue());
 
     m_cbCtlDevicePath->Enable(m_ckUseSerialPTT->GetValue());
     m_rbUseDTR->Enable(m_ckUseSerialPTT->GetValue());
