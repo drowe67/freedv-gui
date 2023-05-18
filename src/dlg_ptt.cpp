@@ -106,8 +106,8 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     gridSizerhl->Add(new wxStaticText(hamlibBox, wxID_ANY, _("PTT uses:"), wxDefaultPosition, wxDefaultSize, 0), 
                       0, wxALIGN_CENTER_VERTICAL |  wxALIGN_RIGHT, 20);
     m_cbPttMethod = new wxComboBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
-    m_cbPttMethod->SetMinSize(wxSize(140, -1));
-    gridSizerhl->Add(m_cbPttMethod, 0, wxEXPAND, 0);
+    m_cbPttMethod->SetSize(wxSize(140, -1));
+    gridSizerhl->Add(m_cbPttMethod, 0, wxALIGN_CENTER_VERTICAL, 0);
     
     // Add valid PTT options to combo box.
     m_cbPttMethod->Append(wxT("CAT"));
