@@ -131,7 +131,7 @@ void Hamlib::populateComboBox(wxComboBox *cb) {
     }
 }
 
-bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int serial_rate, const int civ_hex) {
+bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int serial_rate, const int civ_hex, const PttType pttType) {
 
     /* Look up model from index. */
 
@@ -187,6 +187,20 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
     if (g_verbose) fprintf(stderr, "hamlib: data_bits..: %d\n", get_data_bits());
     if (g_verbose) fprintf(stderr, "hamlib: stop_bits..: %d\n", get_stop_bits());
 
+    // Set PTT type as needed.
+    switch(pttType)
+    {
+        case PTT_VIA_RTS:
+            rig_set_conf(m_rig, rig_token_lookup(m_rig, "ptt_type"), "RTS");
+            break;
+        case PTT_VIA_DTR:
+            rig_set_conf(m_rig, rig_token_lookup(m_rig, "ptt_type"), "DTR");
+            break;
+        case PTT_VIA_CAT:
+        default:
+            break;
+    }
+    
     if (rig_open(m_rig) == RIG_OK) {
         if (g_verbose) fprintf(stderr, "hamlib: rig_open() OK\n");
         
