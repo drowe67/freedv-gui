@@ -1,19 +1,19 @@
 if(MINGW AND CMAKE_CROSSCOMPILING)
-    set(CONFIGURE_COMMAND ./configure --host=${HOST} --target=${HOST} --disable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-libusb CFLAGS=-g\ -O2\ -fstack-protector CXXFLAGS=-g\ -O2\ -fstack-protector)
+    set(CONFIGURE_COMMAND ./configure --host=${HOST} --target=${HOST} --without-cxx-binding --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-libusb CFLAGS=-g\ -O2\ -fstack-protector CXXFLAGS=-g\ -O2\ -fstack-protector)
 else(MINGW AND CMAKE_CROSSCOMPILING)
 if(APPLE)
 if(BUILD_OSX_UNIVERSAL)
-    set(CONFIGURE_COMMAND ./configure --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-libusb CFLAGS=-g\ -O2\ -mmacosx-version-min=10.9\ -arch\ x86_64\ -arch\ arm64 CXXFLAGS=-g\ -O2\ -mmacosx-version-min=10.9\ -arch\ x86_64\ -arch\ arm64)
+    set(CONFIGURE_COMMAND ./configure --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-cxx-binding --without-libusb CFLAGS=-g\ -O2\ -mmacosx-version-min=10.9\ -arch\ x86_64\ -arch\ arm64 CXXFLAGS=-g\ -O2\ -mmacosx-version-min=10.9\ -arch\ x86_64\ -arch\ arm64)
 else()
-    set(CONFIGURE_COMMAND ./configure --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-libusb CFLAGS=-g\ -O2\ -mmacosx-version-min=10.9 CXXFLAGS=-g\ -O2\ -mmacosx-version-min=10.9)
+    set(CONFIGURE_COMMAND ./configure --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-cxx-binding --without-libusb CFLAGS=-g\ -O2\ -mmacosx-version-min=10.9 CXXFLAGS=-g\ -O2\ -mmacosx-version-min=10.9)
 endif(BUILD_OSX_UNIVERSAL)
 else()
-    set(CONFIGURE_COMMAND ./configure --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-libusb CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER})
+    set(CONFIGURE_COMMAND ./configure --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-cxx-binding --without-libusb CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER})
 endif()
 endif(MINGW AND CMAKE_CROSSCOMPILING)
 
 include(ExternalProject)
-ExternalProject_Add(hamlib
+ExternalProject_Add(build_hamlib
     URL https://github.com/Hamlib/Hamlib/archive/refs/heads/Hamlib-4.5.5.zip
     BUILD_IN_SOURCE 1
     INSTALL_DIR external/dist
@@ -22,15 +22,16 @@ ExternalProject_Add(hamlib
     INSTALL_COMMAND $(MAKE) install
 )
 
-ExternalProject_Get_Property(hamlib BINARY_DIR)
-ExternalProject_Get_Property(hamlib SOURCE_DIR)
+ExternalProject_Get_Property(build_hamlib BINARY_DIR)
+ExternalProject_Get_Property(build_hamlib SOURCE_DIR)
 add_library(hamlib SHARED IMPORTED)
 
 set_target_properties(hamlib PROPERTIES
-    IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/external/dist/src/libhamlib${CMAKE_SHARED_LIBRARY_SUFFIX}"
-    IMPORTED_IMPLIB   "${CMAKE_BINARY_DIR}/external/dist/src/libhamlib${CMAKE_IMPORT_LIBRARY_SUFFIX}"
+    IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/external/dist/lib/libhamlib${CMAKE_SHARED_LIBRARY_SUFFIX}"
+    IMPORTED_IMPLIB   "${CMAKE_BINARY_DIR}/external/dist/lib/libhamlib${CMAKE_IMPORT_LIBRARY_SUFFIX}"
 )
 
+add_dependencies(hamlib build_hamlib)
 include_directories(${CMAKE_BINARY_DIR}/external/dist/include)
 
 list(APPEND FREEDV_LINK_LIBS hamlib)    
