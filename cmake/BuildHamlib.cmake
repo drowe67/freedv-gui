@@ -1,6 +1,8 @@
 if(MINGW AND CMAKE_CROSSCOMPILING)
     set(CONFIGURE_COMMAND ./configure --host=${HOST} --target=${HOST} --without-cxx-binding --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-libusb CFLAGS=-g\ -O2\ -fstack-protector CXXFLAGS=-g\ -O2\ -fstack-protector)
+    set(HAMLIB_PATCH_CMD patch -p1 < ${CMAKE_SOURCE_DIR}/hamlib-windows.patch)
 else(MINGW AND CMAKE_CROSSCOMPILING)
+    set(HAMLIB_PATCH_CMD "")
 if(APPLE)
 if(BUILD_OSX_UNIVERSAL)
     set(CONFIGURE_COMMAND ./configure --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-cxx-binding --without-libusb CFLAGS=-g\ -O2\ -mmacosx-version-min=10.9\ -arch\ x86_64\ -arch\ arm64 CXXFLAGS=-g\ -O2\ -mmacosx-version-min=10.9\ -arch\ x86_64\ -arch\ arm64)
@@ -17,6 +19,7 @@ ExternalProject_Add(build_hamlib
     URL https://github.com/Hamlib/Hamlib/archive/refs/heads/Hamlib-4.5.5.zip
     BUILD_IN_SOURCE 1
     INSTALL_DIR external/dist
+    PATCH_COMMAND ${HAMLIB_PATCH_CMD}
     CONFIGURE_COMMAND ./bootstrap && ${CONFIGURE_COMMAND}
     BUILD_COMMAND $(MAKE)
     INSTALL_COMMAND $(MAKE) install
