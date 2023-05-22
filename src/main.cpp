@@ -102,6 +102,7 @@ paCallBackData     *g_rxUserdata;
 int                 g_dump_timing;
 int                 g_dump_fifo_state;
 time_t              g_sync_time;
+bool                g_reported_initial_sync;
 
 // FIFOs used for plotting waveforms
 struct FIFO        *g_plotDemodInFifo;
@@ -1355,6 +1356,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             
                         // Get current time to enforce minimum sync time requirement for PSK Reporter.
                         g_sync_time = time(0);
+                        g_reported_initial_sync = false;
             
                         freedvInterface.resetReliableText();
                     }
@@ -1428,13 +1430,32 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             }
         }
 
-        // We should only report to reporters when all of the following are true:
-        // a) The callsign encoder indicates a valid callsign has been received.
-        // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
-        // c) We don't currently have a pending report to add to the outbound list for the active callsign.
-        // When the above is true, capture the callsign and current SNR and add to the PSK Reporter object's outbound list.
         if (wxGetApp().m_reporters.size() > 0 && wxGetApp().m_reportingEnabled)
         {
+            // If we've been in sync for 3 seconds, we should report RX without a callsign.
+            // We'll update again below if we did in fact get a callsign.
+            time_t currentTime = time(nullptr);
+            int64_t freq = wxGetApp().m_reportingFrequency;
+            auto pendingSnr = (int)(g_snr + 0.5);
+            if (!g_reported_initial_sync && (currentTime - g_sync_time) >= 3)
+            {
+                g_reported_initial_sync = true;
+                
+                for (auto& obj : wxGetApp().m_reporters)
+                {
+                    obj->addReceiveRecord(
+                        "",
+                        freedvInterface.getCurrentModeStr(),
+                        freq,
+                        pendingSnr);
+                }
+            }
+            
+            // We should only report callsigns to reporters when all of the following are true:
+            // a) The callsign encoder indicates a valid callsign has been received.
+            // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
+            // c) We don't currently have a pending report to add to the outbound list for the active callsign.
+            // When the above is true, capture the callsign and current SNR and add to the reporter object's outbound list.
             const char* text = freedvInterface.getReliableText();
             assert(text != nullptr);
             wxString wxCallsign = text;
@@ -1449,7 +1470,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 {
                     wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
                     std::string pendingCallsign = rxCallsign.ToStdString();
-                    auto pendingSnr = (int)(g_snr + 0.5);
 
                     if (m_lastReportedCallsignListView->GetItemCount() == 0 || m_lastReportedCallsignListView->GetItemText(0, 0) != rxCallsign)
                     {
@@ -1478,8 +1498,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     {
                         wxGetApp().m_hamlib->update_frequency_and_mode();
                     }
-            
-                    int64_t freq = wxGetApp().m_reportingFrequency;
 
                     // Only report if there's a valid reporting frequency and if we're not playing 
                     // a recording through ourselves (to avoid false reports).
@@ -1488,7 +1506,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         long long freqLongLong = freq;
                         fprintf(
                             stderr, 
-                            "Adding callsign %s @ SNR %d, freq %lld to PSK Reporter.\n", 
+                            "Adding callsign %s @ SNR %d, freq %lld to reporters.\n", 
                             pendingCallsign.c_str(), 
                             pendingSnr,
                             freqLongLong);
@@ -2043,7 +2061,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                     OpenSerialPort();
                 }
                 
-                // Initialize PSK Reporter reporting.
+                // Initialize reporting.
                 if (wxGetApp().m_reportingEnabled)
                 {        
                     if (wxGetApp().m_reportingCallsign.ToStdString() == "" || wxGetApp().m_reportingGridSquare.ToStdString() == "")
@@ -2079,7 +2097,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                             wxMessageBox("FreeDV Reporter requires a valid hostname. Reporting to FreeDV Reporter will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
                         }
                         
-                        // Enable PSK Reporter timer (every 5 minutes).
+                        // Enable reporter timer (every 5 minutes).
                         m_pskReporterTimer.Start(5 * 60 * 1000);
                         
                         // Immediately transmit selected TX mode and frequency to avoid UI glitches.
