@@ -1,4 +1,3 @@
-
 add_library(fdv_reporting STATIC
     pskreporter.cpp
     pskreporter.h
@@ -6,4 +5,6 @@ add_library(fdv_reporting STATIC
     FreeDVReporter.h
 )
 
+if(SIOCLIENT_ADD_DEPENDENCY)
 add_dependencies(fdv_reporting sioclient)
+endif(SIOCLIENT_ADD_DEPENDENCY)

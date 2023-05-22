@@ -3,6 +3,8 @@ if(CMAKE_CROSSCOMPILING)
     set(SIO_CMAKE_ARGS ${SIO_CMAKE_ARGS} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
 endif()
 
+set(SIOCLIENT_ADD_DEPENDENCY ON)
+
 include(ExternalProject)
 if(APPLE)
     ExternalProject_Add(build_sioclient
