@@ -1810,53 +1810,43 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     }
 }
 
-//-------------------------------------------------------------------------
-// OnTogBtnOnOff()
-//-------------------------------------------------------------------------
-void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
+void MainFrame::performFreeDVOn_()
 {
-    wxString startStop = m_togBtnOnOff->GetLabel();
-
-    // we are attempting to start
-
-    if (startStop.IsSameAs("&Start"))
+    if (g_verbose) fprintf(stderr, "Start .....\n");
+    g_queueResync = false;
+    endingTx = false;
+    
+    m_timeSinceSyncLoss = 0;
+    
+    CallAfter([&]() 
     {
-        if (g_verbose) fprintf(stderr, "Start .....\n");
-        g_queueResync = false;
-        endingTx = false;
-        
-        m_timeSinceSyncLoss = 0;
         m_txtCtrlCallSign->SetValue(wxT(""));
         m_lastReportedCallsignListView->DeleteAllItems();
         m_cboLastReportedCallsigns->Enable(false);
-                
+            
         m_cboLastReportedCallsigns->SetText(wxT(""));
-        memset(m_callsign, 0, MAX_CALLSIGN);
-        m_pcallsign = m_callsign;
+    });
+    
+    memset(m_callsign, 0, MAX_CALLSIGN);
+    m_pcallsign = m_callsign;
 
-        freedvInterface.resetReliableText();
-        
-        //
-        // Start Running -------------------------------------------------
-        //
+    freedvInterface.resetReliableText();
+    
+    //
+    // Start Running -------------------------------------------------
+    //
 
-        // modify some button states when running
+    vk_state = VK_IDLE;
 
-        m_togBtnOnOff->SetLabel(wxT("&Stop"));
-
-        vk_state = VK_IDLE;
-
+    // modify some button states when running
+    CallAfter([&]() 
+    {
         m_textSync->Enable();
         m_textCurrentDecodeMode->Enable();
-
+        
         // determine what mode we are using
         wxCommandEvent tmpEvent;
         OnChangeTxMode(tmpEvent);
-
-        // init freedv states
-        m_togBtnAnalog->Enable();
-        m_btnTogPTT->Enable();
-        m_togBtnVoiceKeyer->Enable();
 
         if (g_mode == FREEDV_MODE_2400B || g_mode == FREEDV_MODE_800XA || 
             !wxGetApp().m_boolMultipleRx)
@@ -1868,9 +1858,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_rb800xa->Disable();
             m_rb2400b->Disable();
             m_rb2020->Disable();
-#if defined(FREEDV_MODE_2020B)
+    #if defined(FREEDV_MODE_2020B)
             m_rb2020b->Disable();
-#endif // FREEDV_MODE_2020B
+    #endif // FREEDV_MODE_2020B
             freedvInterface.addRxMode(g_mode);
         }
         else
@@ -1878,17 +1868,17 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             if(wxGetApp().m_2020Allowed)
             {
                 freedvInterface.addRxMode(FREEDV_MODE_2020);
-#if defined(FREEDV_MODE_2020B)
+    #if defined(FREEDV_MODE_2020B)
                 freedvInterface.addRxMode(FREEDV_MODE_2020B);
-#endif // FREEDV_MODE_2020B
+    #endif // FREEDV_MODE_2020B
             }
-            
+        
             int rxModes[] = {
                 FREEDV_MODE_1600,
                 FREEDV_MODE_700E,
                 FREEDV_MODE_700C,
                 FREEDV_MODE_700D,
-                
+            
                 // These modes require more CPU than typical (and will drive at least one core to 100% if
                 // used with the other five above), so we're excluding them from multi-RX. They also aren't
                 // selectable during a session when multi-RX is enabled.
@@ -1899,15 +1889,15 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             {
                 freedvInterface.addRxMode(mode);
             }
-            
+        
             m_rb800xa->Disable();
             m_rb2400b->Disable();
         }
-        
+    
         // Default voice keyer sample rate to 8K. The exact voice keyer
         // sample rate will be determined when the .wav file is loaded.
         g_sfTxFs = FS;
-        
+    
         wxGetApp().m_prevMode = g_mode;
         freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread, wxGetApp().m_psk_enable);
 
@@ -1930,7 +1920,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             fprintf(stderr, "Setting callsign to %s\n", temp);
             freedvInterface.setReliableText(temp);
         }
-        
+    
         g_error_hist = new short[MODEM_STATS_NC_MAX*2];
         g_error_histn = new short[MODEM_STATS_NC_MAX*2];
         int i;
@@ -1951,174 +1941,200 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         if (g_verbose) fprintf(stderr, "freedv_get_n_speech_samples(tx): %d\n", freedvInterface.getTxNumSpeechSamples());
         if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(tx): %d\n", freedvInterface.getTxSpeechSampleRate());
-        
+    
         // adjust spectrum and waterfall freq scaling base on mode
-
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getTxModemSampleRate()/2)));
         m_panelWaterfall->setFs(freedvInterface.getTxModemSampleRate());
-
+    
         // Init text msg decoding
         if (!wxGetApp().m_psk_enable)
             freedvInterface.setTextVaricodeNum(wxGetApp().m_textEncoding);
 
         // scatter plot (PSK) or Eye (FSK) mode
-
         if ((g_mode == FREEDV_MODE_800XA) || (g_mode == FREEDV_MODE_2400A) || (g_mode == FREEDV_MODE_2400B)) {
             m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_EYE);
         }
         else {
             m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
         }
+    });
+    
+    int src_error;
+    g_spec_src = src_new(SRC_SINC_FASTEST, 1, &src_error);
+    assert(g_spec_src != NULL);
+    g_State = g_prev_State = 0;
+    g_snr = 0.0;
+    g_half_duplex = wxGetApp().m_boolHalfDuplex;
 
-        int src_error;
-        g_spec_src = src_new(SRC_SINC_FASTEST, 1, &src_error);
-        assert(g_spec_src != NULL);
-        g_State = g_prev_State = 0;
-        g_snr = 0.0;
-        g_half_duplex = wxGetApp().m_boolHalfDuplex;
+    m_pcallsign = m_callsign;
+    memset(m_callsign, 0, sizeof(m_callsign));
 
-        m_pcallsign = m_callsign;
-        memset(m_callsign, 0, sizeof(m_callsign));
-
-        m_maxLevel = 0;
+    m_maxLevel = 0;
+    CallAfter([&]() 
+    {
         m_textLevel->SetLabel(wxT(""));
         m_gaugeLevel->SetValue(0);
+    });
+    
+    //printf("m_textEncoding = %d\n", wxGetApp().m_textEncoding);
+    //printf("g_stats.snr: %f\n", g_stats.snr_est);
 
-        //printf("m_textEncoding = %d\n", wxGetApp().m_textEncoding);
-        //printf("g_stats.snr: %f\n", g_stats.snr_est);
-
-        // attempt to start sound cards and tx/rx processing
-        if (VerifyMicrophonePermissions())
+    // attempt to start sound cards and tx/rx processing
+    if (VerifyMicrophonePermissions())
+    {
+        if (validateSoundCardSetup())
         {
-            if (validateSoundCardSetup())
-            {
-                startRxStream();
+            startRxStream();
 
-                // attempt to start PTT ......
-                wxGetApp().m_pskReporter = NULL;
-                if (wxGetApp().m_boolHamlibUseForPTT)
-                    OpenHamlibRig();
+            // attempt to start PTT ......
+            wxGetApp().m_pskReporter = NULL;
+            if (wxGetApp().m_boolHamlibUseForPTT)
+                OpenHamlibRig();
 
-                if (wxGetApp().m_boolUseSerialPTT) {
-                    OpenSerialPort();
-                }
-                
-                // Initialize PSK Reporter reporting.
-                if (wxGetApp().m_psk_enable)
-                {        
-                    if (wxGetApp().m_psk_callsign.ToStdString() == "" || wxGetApp().m_psk_grid_square.ToStdString() == "")
+            if (wxGetApp().m_boolUseSerialPTT) {
+                OpenSerialPort();
+            }
+            
+            // Initialize PSK Reporter reporting.
+            if (wxGetApp().m_psk_enable)
+            {        
+                if (wxGetApp().m_psk_callsign.ToStdString() == "" || wxGetApp().m_psk_grid_square.ToStdString() == "")
+                {
+                    CallAfter([&]() 
                     {
                         wxMessageBox("PSK Reporter reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-                    }
-                    else
-                    {
-                        wxGetApp().m_pskReporter = new PskReporter(
-                            wxGetApp().m_psk_callsign.ToStdString(), 
-                            wxGetApp().m_psk_grid_square.ToStdString(),
-                            std::string("FreeDV ") + FREEDV_VERSION);
-                        assert(wxGetApp().m_pskReporter != nullptr);
-        
-                        // Enable PSK Reporter timer (every 5 minutes).
-                        m_pskReporterTimer.Start(5 * 60 * 1000);
-                    }
+                    });
                 }
                 else
                 {
-                    wxGetApp().m_pskReporter = NULL;
+                    wxGetApp().m_pskReporter = new PskReporter(
+                        wxGetApp().m_psk_callsign.ToStdString(), 
+                        wxGetApp().m_psk_grid_square.ToStdString(),
+                        std::string("FreeDV ") + FREEDV_VERSION);
+                    assert(wxGetApp().m_pskReporter != nullptr);
+    
+                    // Enable PSK Reporter timer (every 5 minutes).
+                    CallAfter([&]() 
+                    {
+                        m_pskReporterTimer.Start(5 * 60 * 1000);
+                    });
                 }
+            }
+            else
+            {
+                wxGetApp().m_pskReporter = NULL;
+            }
 
-                if (wxGetApp().m_boolUseSerialPTTInput)
-                {
-                    OpenPTTInPort();
-                }
+            if (wxGetApp().m_boolUseSerialPTTInput)
+            {
+                OpenPTTInPort();
+            }
 
-                if (m_RxRunning)
+            if (m_RxRunning)
+            {
+                CallAfter([&]() 
                 {
         #ifdef _USE_TIMER
                     m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
                     m_updFreqStatusTimer.Start(5*1000); // every 15 seconds[UP]
         #endif // _USE_TIMER
-                }
+                });
             }
         }
-        else
+    }
+    else
+    {
+        CallAfter([&]() 
         {
             wxMessageBox(wxString("Microphone permissions must be granted to FreeDV for it to function properly."), wxT("Error"), wxOK | wxICON_ERROR, this);
-        }
-
-        // Clear existing TX text, if any.
-        codec2_fifo_destroy(g_txDataInFifo);
-        g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
+        });
     }
 
-    // Stop was pressed or start up failed
+    // Clear existing TX text, if any.
+    codec2_fifo_destroy(g_txDataInFifo);
+    g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
+}
 
-    if (startStop.IsSameAs("&Stop") || !m_RxRunning ) {
-        if (g_verbose) fprintf(stderr, "Stop .....\n");
-        
-        //
-        // Stop Running -------------------------------------------------
-        //
+void MainFrame::performFreeDVOff_()
+{
+    if (g_verbose) fprintf(stderr, "Stop .....\n");
+    
+    //
+    // Stop Running -------------------------------------------------
+    //
 
 #ifdef _USE_TIMER
+    CallAfter([&]() 
+    {
         m_plotTimer.Stop();
         m_pskReporterTimer.Stop();
         m_updFreqStatusTimer.Stop(); // [UP]
+    });
 #endif // _USE_TIMER
 
-        // ensure we are not transmitting and shut down audio processing
+    // ensure we are not transmitting and shut down audio processing
 
-        if (wxGetApp().m_boolHamlibUseForPTT) {
-            Hamlib *hamlib = wxGetApp().m_hamlib;
-            wxString hamlibError;
-            if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
-                if (hamlib->isActive())
+    if (wxGetApp().m_boolHamlibUseForPTT) 
+    {
+        Hamlib *hamlib = wxGetApp().m_hamlib;
+        wxString hamlibError;
+        if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
+            if (hamlib->isActive())
+            {
+                if (hamlib->ptt(false, hamlibError) == false) 
                 {
-                    if (hamlib->ptt(false, hamlibError) == false) {
+                    CallAfter([&]() 
+                    {
                         wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
-                    }
-                    hamlib->disable_mode_detection();
-                    hamlib->close();
+                    });
                 }
+                hamlib->disable_mode_detection();
+                hamlib->close();
             }
         }
+    }
 
-        if (wxGetApp().m_pskReporter)
-        {            
-            delete wxGetApp().m_pskReporter;
-            wxGetApp().m_pskReporter = NULL;
-        }
-        
-        if (wxGetApp().m_boolUseSerialPTT) {
-            CloseSerialPort();
-        }
+    if (wxGetApp().m_pskReporter)
+    {            
+        delete wxGetApp().m_pskReporter;
+        wxGetApp().m_pskReporter = NULL;
+    }
+    
+    if (wxGetApp().m_boolUseSerialPTT) 
+    {
+        CloseSerialPort();
+    }
 
-        if (wxGetApp().m_boolUseSerialPTTInput)
-        {
-            ClosePTTInPort();
-        }
-        
+    if (wxGetApp().m_boolUseSerialPTTInput)
+    {
+        ClosePTTInPort();
+    }
+    
+    CallAfter([&]() 
+    {
         m_btnTogPTT->SetValue(false);
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
+    });
+    
+    stopRxStream();
+    src_delete(g_spec_src);
 
-        stopRxStream();
-        src_delete(g_spec_src);
+    // FreeDV clean up
+    delete[] g_error_hist;
+    delete[] g_error_histn;
+    freedvInterface.stop();
+    
+    m_newMicInFilter = m_newSpkOutFilter = true;
 
-        // FreeDV clean up
-        delete[] g_error_hist;
-        delete[] g_error_histn;
-        freedvInterface.stop();
-        
-        m_newMicInFilter = m_newSpkOutFilter = true;
-
+    CallAfter([&]() 
+    {
         m_textSync->Disable();
         m_textCurrentDecodeMode->Disable();
 
         m_togBtnAnalog->Disable();
         m_btnTogPTT->Disable();
         m_togBtnVoiceKeyer->Disable();
-        m_togBtnOnOff->SetLabel(wxT("&Start"));
-        
+    
         m_rb1600->Enable();
         m_rb700c->Enable();
         m_rb700d->Enable();
@@ -2128,13 +2144,69 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if(wxGetApp().m_2020Allowed)
         {
             m_rb2020->Enable();
-#if defined(FREEDV_MODE_2020B)
+    #if defined(FREEDV_MODE_2020B)
             m_rb2020b->Enable();
-#endif // FREEDV_MODE_2020B
+    #endif // FREEDV_MODE_2020B
         }
-   }
+    });
+}
+
+//-------------------------------------------------------------------------
+// OnTogBtnOnOff()
+//-------------------------------------------------------------------------
+void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
+{
+    // Disable buttons while on/off is occurring
+    m_togBtnOnOff->Enable(false);
+    m_togBtnAnalog->Enable(false);
+    m_togBtnVoiceKeyer->Enable(false);
+    m_btnTogPTT->Enable(false);
     
-    optionsDlg->setSessionActive(m_RxRunning);
+    wxString startStop = m_togBtnOnOff->GetLabel();
+    
+    // we are attempting to start
+
+    if (startStop.IsSameAs("&Start"))
+    {
+        std::thread onOffExec([this]() 
+        {
+            performFreeDVOn_();
+            
+            if (!m_RxRunning)
+            {
+                // Startup failed.
+                performFreeDVOff_();
+            }
+            else
+            {
+                m_togBtnOnOff->SetLabel(wxT("&Stop"));
+            }
+            
+            // On/Off actions complete, reenable button.
+            m_togBtnOnOff->Enable(true);
+            m_togBtnAnalog->Enable(true);
+            m_togBtnVoiceKeyer->Enable(true);
+            m_btnTogPTT->Enable(true);
+            optionsDlg->setSessionActive(m_RxRunning);
+        });
+        onOffExec.detach();
+    }
+    else if (startStop.IsSameAs("&Stop")) 
+    {
+        std::thread onOffExec([this]() 
+        {
+            performFreeDVOff_();
+            
+            // On/Off actions complete, reenable button.
+            m_togBtnOnOff->SetLabel(wxT("&Start"));
+            m_togBtnOnOff->Enable(true);
+            m_togBtnAnalog->Enable(true);
+            m_togBtnVoiceKeyer->Enable(true);
+            m_btnTogPTT->Enable(true);
+            optionsDlg->setSessionActive(m_RxRunning);
+        });
+        onOffExec.detach();
+    }
 }
 
 static std::mutex stoppingMutex;

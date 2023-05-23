@@ -592,6 +592,9 @@ class MainFrame : public TopFrame
 #if defined(FREEDV_MODE_2020)
         void test2020Mode_();
 #endif // defined(FREEDV_MODE_2020)
+        
+        void performFreeDVOn_();
+        void performFreeDVOff_();
 };
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
