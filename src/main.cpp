@@ -2182,7 +2182,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 m_togBtnOnOff->SetLabel(wxT("&Stop"));
             }
             
-            // On/Off actions complete, reenable button.
+            // On/Off actions complete, re-enable button.
             m_togBtnOnOff->Enable(true);
             m_togBtnAnalog->Enable(true);
             m_togBtnVoiceKeyer->Enable(true);
@@ -2197,7 +2197,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         {
             performFreeDVOff_();
             
-            // On/Off actions complete, reenable button.
+            // On/Off actions complete, re-enable button.
             m_togBtnOnOff->SetLabel(wxT("&Start"));
             m_togBtnOnOff->Enable(true);
             m_togBtnAnalog->Enable(true);
