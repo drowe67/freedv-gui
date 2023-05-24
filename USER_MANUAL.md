@@ -847,7 +847,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## TBD TBD 2023
+## V1.8.10 TBD 2023
 
 1. Build system:
     * Minimum required Codec2 version bumped up to 1.1.0. (PR #383)
@@ -859,6 +859,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix various misspellings in codebase. (PR #392)
 3. Enhancements:
     * Add last received SNR to callsign list. (PR #389, #391)
+    * Add support for FreeDV Reporter web-based tool. (PR #390)
     * Defer sound device checking until Start is pushed. (PR #393)
     * Add ability for Hamlib to use RTS/DTR instead of CAT for PTT. (PR #394)
 

@@ -59,6 +59,7 @@ public:
     void setRunTimeOptions(bool clip, bool bpf);
     
     const char* getCurrentModeStr() const;
+    const char* getCurrentTxModeStr() const;
     bool usingTestFrames() const;
     void resetTestFrameStats();
     void resetBitStats();

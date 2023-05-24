@@ -60,6 +60,23 @@ void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
 }
 
 //-------------------------------------------------------------------------
+// OnToolsFreeDVReporter()
+//-------------------------------------------------------------------------
+void MainFrame::OnToolsFreeDVReporter(wxCommandEvent& event)
+{
+    std::string url = "https://" + wxGetApp().m_freedvReporterHostname.ToStdString() + "/";
+    wxLaunchDefaultBrowser(url);
+}
+
+//-------------------------------------------------------------------------
+// OnToolsFreeDVReporterUI()
+//-------------------------------------------------------------------------
+void MainFrame::OnToolsFreeDVReporterUI(wxUpdateUIEvent& event)
+{
+    event.Enable(wxGetApp().m_freedvReporterHostname.ToStdString() != "");
+}
+
+//-------------------------------------------------------------------------
 // OnToolsAudio()
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsAudio(wxCommandEvent& event)
@@ -115,10 +132,10 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     optionsDlg->ShowModal();
     
     // Show/hide frequency box based on PSK Reporter status.
-    m_freqBox->Show(wxGetApp().m_psk_enable);
+    m_freqBox->Show(wxGetApp().m_reportingEnabled);
 
     // Show/hide callsign combo box based on PSK Reporter Status
-    if (wxGetApp().m_psk_enable)
+    if (wxGetApp().m_reportingEnabled)
     {
         m_cboLastReportedCallsigns->Show();
         m_txtCtrlCallSign->Hide();
@@ -502,6 +519,12 @@ void MainFrame::togglePTT(void) {
     m_textLevel->SetLabel(wxT(""));
     m_gaugeLevel->SetValue(0);
     endingTx = false;
+    
+    // Report TX change to registered reporters
+    for (auto& obj : wxGetApp().m_reporters)
+    {
+        obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -574,8 +597,8 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     wxString freqStr = m_txtCtrlReportFrequency->GetValue();
     if (freqStr.Length() > 0)
     {
-        wxGetApp().m_psk_freq = atof(freqStr.ToUTF8()) * 1000;
-        if (wxGetApp().m_psk_freq > 0)
+        wxGetApp().m_reportingFrequency = atof(freqStr.ToUTF8()) * 1000;
+        if (wxGetApp().m_reportingFrequency > 0)
         {
             m_txtCtrlReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
         }
@@ -586,8 +609,14 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     }
     else
     {
-        wxGetApp().m_psk_freq = 0;
+        wxGetApp().m_reportingFrequency = 0;
         m_txtCtrlReportFrequency->SetForegroundColour(wxColor(*wxRED));
+    }
+    
+    // Report current frequency to reporters
+    for (auto& ptr : wxGetApp().m_reporters)
+    {
+        ptr->freqChange(wxGetApp().m_reportingFrequency);
     }
 }
 

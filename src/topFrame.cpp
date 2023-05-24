@@ -69,6 +69,10 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_menuItemEasySetup = new wxMenuItem(tools, wxID_ANY, wxString(_("&Easy Setup...")) , _("Simplified setup of FreeDV"), wxITEM_NORMAL);
     tools->Append(m_menuItemEasySetup);
     
+    wxMenuItem* m_menuItemFreeDVReporter;
+    m_menuItemFreeDVReporter = new wxMenuItem(tools, wxID_ANY, wxString(_("FreeDV R&eporter")) , _("Opens browser window and displays FreeDV Reporter service."), wxITEM_NORMAL);
+    tools->Append(m_menuItemFreeDVReporter);
+    
     wxMenuItem* toolsSeparator1 = new wxMenuItem(tools, wxID_SEPARATOR);
     tools->Append(toolsSeparator1);
     
@@ -113,7 +117,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_menuItemHelpUpdates = new wxMenuItem(help, wxID_ANY, wxString(_("&Check for Updates")) , _("Checks for updates to FreeDV"), wxITEM_NORMAL);
     help->Append(m_menuItemHelpUpdates);
     m_menuItemHelpUpdates->Enable(false);
-
+    
     wxMenuItem* m_menuItemAbout;
     m_menuItemAbout = new wxMenuItem(help, ID_ABOUT, wxString(_("&About...")) , _("About this program"), wxITEM_NORMAL);
     help->Append(m_menuItemAbout);
@@ -504,6 +508,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     this->Connect(m_menuItemEasySetup->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsEasySetup));
     this->Connect(m_menuItemEasySetup->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsEasySetupUI));
+    this->Connect(m_menuItemFreeDVReporter->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsFreeDVReporter));
+    this->Connect(m_menuItemFreeDVReporter->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsFreeDVReporterUI));
     this->Connect(m_menuItemAudio->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsAudio));
     this->Connect(m_menuItemAudio->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(TopFrame::OnToolsAudioUI));
     this->Connect(m_menuItemFilter->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(TopFrame::OnToolsFilter));
