@@ -2281,6 +2281,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             // On/Off actions complete, re-enable button.
             m_togBtnOnOff->SetLabel(wxT("&Start"));
             m_togBtnOnOff->Enable(true);
+            m_togBtnOnOff->SetValue(false);
             m_togBtnAnalog->Enable(true);
             m_togBtnVoiceKeyer->Enable(true);
             m_btnTogPTT->Enable(true);
