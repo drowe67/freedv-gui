@@ -387,7 +387,7 @@ if(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
     include_directories(${HAMLIB_INCLUDE_DIR})
     list(APPEND FREEDV_LINK_LIBS ${HAMLIB_LIBRARY})
 else(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
-    message(STATUS "Using static Hamlib build")
+    message(STATUS "Using own Hamlib build")
     include(cmake/BuildHamlib.cmake)
 endif(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
 
