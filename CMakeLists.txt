@@ -15,7 +15,7 @@ endif()
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
 
 set(PROJECT_NAME FreeDV)
-set(PROJECT_VERSION 1.8.9)
+set(PROJECT_VERSION 1.8.10)
 set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
 set(PROJECT_HOMEPAGE_URL "https://freedv.org")
 
@@ -42,7 +42,7 @@ endif(APPLE)
 
 # Adds a tag to the end of the version string. Leave empty
 # for official release builds.
-set(FREEDV_VERSION_TAG "")
+set(FREEDV_VERSION_TAG "devel")
 
 # Prevent in-source builds to protect automake/autoconf config.
 # If an in-source build is attempted, you will still need to clean up a few
@@ -387,9 +387,25 @@ if(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
     include_directories(${HAMLIB_INCLUDE_DIR})
     list(APPEND FREEDV_LINK_LIBS ${HAMLIB_LIBRARY})
 else(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
-    message(STATUS "Using static Hamlib build")
+    message(STATUS "Using own Hamlib build")
     include(cmake/BuildHamlib.cmake)
 endif(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
+
+
+# sioclient library
+message(STATUS "Looking for sioclient...")
+find_path(SIOCLIENT_INCLUDE_DIR sio_client.h)
+find_library(SIOCLIENT_LIBRARY sioclient)
+message(STATUS "  Socket.io library: ${SIOCLIENT_LIBRARY}")
+message(STATUS "  Socket.io headers: ${SIOCLIENT_INCLUDE_DIR}")
+if(SIOCLIENT_LIBRARY AND SIOCLIENT_INCLUDE_DIR)
+    message(STATUS "Socket.io library found.")
+    include_directories(${SIOCLIENT_INCLUDE_DIR})
+    list(APPEND FREEDV_LINK_LIBS ${SIOCLIENT_LIBRARY})
+else(SIOCLIENT_LIBRARY AND SIOCLIENT_INCLUDE_DIR)
+    message(STATUS "Using static sioclient build")
+    include(cmake/BuildSocketIo.cmake)
+endif(SIOCLIENT_LIBRARY AND SIOCLIENT_INCLUDE_DIR)
 
 
 #

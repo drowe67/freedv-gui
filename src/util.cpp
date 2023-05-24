@@ -323,7 +323,7 @@ void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs)
     codec2_fifo_write(plotFifo, dec_samples, nSamples);
 }
 
-// State machine to detect sync and send a UDP message
+// State machine to detect sync
 
 void MainFrame::DetectSyncProcessEvent(void) {
     int next_state = ds_state;
@@ -339,8 +339,7 @@ void MainFrame::DetectSyncProcessEvent(void) {
 
     case DS_SYNC_WAIT:
 
-        // In this state we wait for a few seconds of valid sync, then
-        // send UDP message
+        // In this state we wait for a few seconds of valid sync.
 
         if (freedvInterface.getSync() == 0) {
             next_state = DS_IDLE;
@@ -349,10 +348,6 @@ void MainFrame::DetectSyncProcessEvent(void) {
         }
 
         if (ds_rx_time >= DS_SYNC_WAIT_TIME) {
-            char s[100]; snprintf(s, 100, "rx sync");
-            if (wxGetApp().m_udp_enable) {
-                UDPSend(wxGetApp().m_udp_port, s, strlen(s)+1);
-            }
             ds_rx_time = 0;
             next_state = DS_UNSYNC_WAIT;
         }

@@ -847,11 +847,12 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## TBD TBD 2023
+## V1.8.10 TBD 2023
 
 1. Build system:
     * Minimum required Codec2 version bumped up to 1.1.0. (PR #383)
     * Disable libusb support for Hamlib on all platforms, not just Windows. (PR #387)
+    * Build Hamlib as a dynamic library on Windows and macOS. (PR #395)
 2. Bugfixes:
     * Fix incorrect assertion causing crash on certain systems without a microphone. (PR #384)
     * Shrink sliders so that the Filter window can fit on a 720p display. (PR #386)
@@ -860,6 +861,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Prevent Start/Stop button from being pressed twice in a row during shutdown. (PR #399)
 3. Enhancements:
     * Add last received SNR to callsign list. (PR #389, #391)
+    * Add support for FreeDV Reporter web-based tool. (PR #390)
     * Defer sound device checking until Start is pushed. (PR #393)
     * Add ability for Hamlib to use RTS/DTR instead of CAT for PTT. (PR #394)
 

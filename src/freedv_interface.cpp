@@ -330,6 +330,17 @@ const char* FreeDVInterface::getCurrentModeStr() const
     }
 }
 
+const char* FreeDVInterface::getCurrentTxModeStr() const
+{
+    if (currentTxMode_ == nullptr)
+    {
+        return "unk";
+    }
+    else
+    {
+        return GetCurrentModeStrImpl_(txMode_);
+    }
+}
 
 void FreeDVInterface::changeTxMode(int txMode)
 {

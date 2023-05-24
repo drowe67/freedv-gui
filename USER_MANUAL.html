@@ -594,12 +594,13 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </tbody>
 </table>
 <h1 data-number="17" id="release-notes"><span class="header-section-number">17</span> Release Notes</h1>
-<h2 data-number="17.1" id="tbd-tbd-2023"><span class="header-section-number">17.1</span> TBD TBD 2023</h2>
+<h2 data-number="17.1" id="v1.8.10-tbd-2023"><span class="header-section-number">17.1</span> V1.8.10 TBD 2023</h2>
 <ol type="1">
 <li>Build system:
 <ul>
 <li>Minimum required Codec2 version bumped up to 1.1.0. (PR #383)</li>
 <li>Disable libusb support for Hamlib on all platforms, not just Windows. (PR #387)</li>
+<li>Build Hamlib as a dynamic library on Windows and macOS. (PR #395)</li>
 </ul></li>
 <li>Bugfixes:
 <ul>
@@ -612,6 +613,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Enhancements:
 <ul>
 <li>Add last received SNR to callsign list. (PR #389, #391)</li>
+<li>Add support for FreeDV Reporter web-based tool. (PR #390)</li>
 <li>Defer sound device checking until Start is pushed. (PR #393)</li>
 <li>Add ability for Hamlib to use RTS/DTR instead of CAT for PTT. (PR #394)</li>
 </ul></li>
