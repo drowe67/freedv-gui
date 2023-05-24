@@ -852,6 +852,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Build system:
     * Minimum required Codec2 version bumped up to 1.1.0. (PR #383)
     * Disable libusb support for Hamlib on all platforms, not just Windows. (PR #387)
+    * Build Hamlib as a dynamic library on Windows and macOS. (PR #395)
 2. Bugfixes:
     * Fix incorrect assertion causing crash on certain systems without a microphone. (PR #384)
     * Shrink sliders so that the Filter window can fit on a 720p display. (PR #386)
