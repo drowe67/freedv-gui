@@ -1878,14 +1878,14 @@ void MainFrame::performFreeDVOn_()
 
     vk_state = VK_IDLE;
 
-    std::mutex modeMtx;
-    std::condition_variable modeCv;
-    std::unique_lock<std::mutex> modeLock(modeMtx);
+    std::mutex modeMutex;
+    std::condition_variable modeConditionVariable;
+    std::unique_lock<std::mutex> modeLock(modeMutex);
 
     // modify some button states when running
     CallAfter([&]() 
     {
-        std::unique_lock<std::mutex> modeUL(modeMtx);
+        std::unique_lock<std::mutex> modeGuiLock(modeMutex);
 
         m_textSync->Enable();
         m_textCurrentDecodeMode->Enable();
@@ -2004,10 +2004,10 @@ void MainFrame::performFreeDVOn_()
             m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
         }
 
-        modeCv.notify_one();
+        modeConditionVariable.notify_one();
     });
     
-    modeCv.wait(modeLock);
+    modeConditionVariable.wait(modeLock);
 
     int src_error;
     g_spec_src = src_new(SRC_SINC_FASTEST, 1, &src_error);
