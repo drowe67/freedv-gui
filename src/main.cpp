@@ -2156,7 +2156,8 @@ void MainFrame::performFreeDVOff_()
     {
         Hamlib *hamlib = wxGetApp().m_hamlib;
         wxString hamlibError;
-        if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
+        if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) 
+        {
             if (hamlib->isActive())
             {
                 if (hamlib->ptt(false, hamlibError) == false) 
@@ -2265,9 +2266,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             
             // On/Off actions complete, re-enable button.
             m_togBtnOnOff->Enable(true);
-            m_togBtnAnalog->Enable(true);
-            m_togBtnVoiceKeyer->Enable(true);
-            m_btnTogPTT->Enable(true);
+            m_togBtnOnOff->SetValue(m_RxRunning);
+            m_togBtnAnalog->Enable(m_RxRunning);
+            m_togBtnVoiceKeyer->Enable(m_RxRunning);
+            m_btnTogPTT->Enable(m_RxRunning);
             optionsDlg->setSessionActive(m_RxRunning);
         });
         onOffExec.detach();
@@ -2281,10 +2283,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             // On/Off actions complete, re-enable button.
             m_togBtnOnOff->SetLabel(wxT("&Start"));
             m_togBtnOnOff->Enable(true);
-            m_togBtnOnOff->SetValue(false);
-            m_togBtnAnalog->Enable(true);
-            m_togBtnVoiceKeyer->Enable(true);
-            m_btnTogPTT->Enable(true);
+            m_togBtnOnOff->SetValue(m_RxRunning);
+            m_togBtnAnalog->Enable(m_RxRunning);
+            m_togBtnVoiceKeyer->Enable(m_RxRunning);
+            m_btnTogPTT->Enable(m_RxRunning);
             optionsDlg->setSessionActive(m_RxRunning);
         });
         onOffExec.detach();
