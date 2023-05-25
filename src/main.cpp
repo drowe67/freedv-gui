@@ -1085,7 +1085,12 @@ void MainFrame::OnIdle(wxIdleEvent &evt) {
 // keeps CPU load reasonable
 //----------------------------------------------------------------
 void MainFrame::OnTimer(wxTimerEvent &evt)
-{    
+{
+    if (!m_RxRunning)
+    {
+        return;
+    }
+
     if (evt.GetTimer().GetId() == ID_TIMER_PSKREPORTER)
     {
         // Reporter timer fired; send in-progress packet.
@@ -1873,9 +1878,15 @@ void MainFrame::performFreeDVOn_()
 
     vk_state = VK_IDLE;
 
+    std::mutex modeMtx;
+    std::condition_variable modeCv;
+    std::unique_lock<std::mutex> modeLock(modeMtx);
+
     // modify some button states when running
     CallAfter([&]() 
     {
+        std::unique_lock<std::mutex> modeUL(modeMtx);
+
         m_textSync->Enable();
         m_textCurrentDecodeMode->Enable();
         
@@ -1992,8 +2003,12 @@ void MainFrame::performFreeDVOn_()
         else {
             m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
         }
+
+        modeCv.notify_one();
     });
     
+    modeCv.wait(modeLock);
+
     int src_error;
     g_spec_src = src_new(SRC_SINC_FASTEST, 1, &src_error);
     assert(g_spec_src != NULL);
@@ -2259,13 +2274,14 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 // Startup failed.
                 performFreeDVOff_();
             }
-            else
+
+            // On/Off actions complete, re-enable button.
+            m_togBtnOnOff->Enable(true);
+            if (m_RxRunning)
             {
                 m_togBtnOnOff->SetLabel(wxT("&Stop"));
             }
             
-            // On/Off actions complete, re-enable button.
-            m_togBtnOnOff->Enable(true);
             m_togBtnOnOff->SetValue(m_RxRunning);
             m_togBtnAnalog->Enable(m_RxRunning);
             m_togBtnVoiceKeyer->Enable(m_RxRunning);
@@ -2281,8 +2297,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             performFreeDVOff_();
             
             // On/Off actions complete, re-enable button.
-            m_togBtnOnOff->SetLabel(wxT("&Start"));
             m_togBtnOnOff->Enable(true);
+            m_togBtnOnOff->SetLabel(wxT("&Start"));
             m_togBtnOnOff->SetValue(m_RxRunning);
             m_togBtnAnalog->Enable(m_RxRunning);
             m_togBtnVoiceKeyer->Enable(m_RxRunning);
