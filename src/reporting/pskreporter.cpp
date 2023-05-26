@@ -1,3 +1,26 @@
+//=========================================================================
+// Name:            pskreporter.cpp
+// Purpose:         Implementation of PSK Reporter support.
+//
+// Authors:         Mooneer Salem
+// License:
+//
+//  All rights reserved.
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License version 2.1,
+//  as published by the Free Software Foundation.  This program is
+//  distributed in the hope that it will be useful, but WITHOUT ANY
+//  WARRANTY; without even the implied warranty of MERCHANTABILITY or
+//  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+//  License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program; if not, see <http://www.gnu.org/licenses/>.
+//
+//=========================================================================
+
+
 #include <string>
 #include <vector>
 #include <cstdio>
@@ -121,7 +144,7 @@ PskReporter::~PskReporter()
     }
 }
 
-void PskReporter::addReceiveRecord(std::string callsign, uint64_t frequency, char snr)
+void PskReporter::addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, char snr)
 {
     std::unique_lock<std::mutex> lock(recordListMutex_);
     recordList_.push_back(SenderRecord(callsign, frequency, snr));
