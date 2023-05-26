@@ -206,8 +206,8 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
         
         // Determine whether we have multiple VFOs.
         multipleVfos_ = false;
-        freq_t tmpFreq = 0;
-        if (rig_get_freq(m_rig, RIG_VFO_B, &tmpFreq) == RIG_OK)
+        vfo_t vfo;
+        if (rig_get_vfo (m_rig, &vfo) == RIG_OK && (m_rig->state.vfo_list & RIG_VFO_B))
         {
             multipleVfos_ = true;
         }
