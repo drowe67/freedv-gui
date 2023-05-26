@@ -250,23 +250,11 @@ bool Hamlib::ptt(bool press, wxString &hamlibError) {
         return false;
 
     ptt_t on = press ? RIG_PTT_ON : RIG_PTT_OFF;
-    vfo_t currVfo = getCurrentVfo_();
 
-pttAttempt:
-    int result = rig_set_ptt(m_rig, currVfo, on);
-    if (g_verbose) fprintf(stderr,"Hamlib::ptt: rig_set_ptt returned: %d\n", result);
-    if (result != RIG_OK && currVfo == RIG_VFO_CURR) 
+    int result = rig_set_ptt(m_rig, RIG_VFO_CURR, on);
+    if (result != RIG_OK) 
     {
         if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
-        hamlibError = rigerror(result);
-    }
-    else if (result != RIG_OK)
-    {
-        // We supposedly have multiple VFOs but ran into problems when setting
-        // PTT. Make a last ditch attempt with RIG_VFO_CURR before completely
-        // failing.
-        currVfo = RIG_VFO_CURR;
-        goto pttAttempt;
     }
     else
     {
