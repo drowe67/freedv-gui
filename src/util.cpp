@@ -377,3 +377,19 @@ void MainFrame::DetectSyncProcessEvent(void) {
 }
 
 
+void MainFrame::executeOnUiThreadAndWait_(std::function<void()> fn)
+{
+    std::mutex funcMutex;
+    std::condition_variable funcConditionVariable;
+    std::unique_lock<std::mutex> funcLock(funcMutex);
+    
+    CallAfter([&]() {
+        std::unique_lock<std::mutex> guiLock(funcMutex);
+        
+        fn();
+        
+        funcConditionVariable.notify_one();
+    });
+    
+    funcConditionVariable.wait(funcLock);
+}

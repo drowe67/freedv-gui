@@ -1858,7 +1858,7 @@ void MainFrame::performFreeDVOn_()
     
     m_timeSinceSyncLoss = 0;
     
-    CallAfter([&]() 
+    executeOnUiThreadAndWait_([&]() 
     {
         m_txtCtrlCallSign->SetValue(wxT(""));
         m_lastReportedCallsignListView->DeleteAllItems();
@@ -1878,15 +1878,9 @@ void MainFrame::performFreeDVOn_()
 
     vk_state = VK_IDLE;
 
-    std::mutex modeMutex;
-    std::condition_variable modeConditionVariable;
-    std::unique_lock<std::mutex> modeLock(modeMutex);
-
     // modify some button states when running
-    CallAfter([&]() 
+    executeOnUiThreadAndWait_([&]() 
     {
-        std::unique_lock<std::mutex> modeGuiLock(modeMutex);
-
         m_textSync->Enable();
         m_textCurrentDecodeMode->Enable();
         
@@ -2003,11 +1997,7 @@ void MainFrame::performFreeDVOn_()
         else {
             m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
         }
-
-        modeConditionVariable.notify_one();
     });
-    
-    modeConditionVariable.wait(modeLock);
 
     int src_error;
     g_spec_src = src_new(SRC_SINC_FASTEST, 1, &src_error);
@@ -2020,7 +2010,7 @@ void MainFrame::performFreeDVOn_()
     memset(m_callsign, 0, sizeof(m_callsign));
 
     m_maxLevel = 0;
-    CallAfter([&]() 
+    executeOnUiThreadAndWait_([&]() 
     {
         m_textLevel->SetLabel(wxT(""));
         m_gaugeLevel->SetValue(0);
@@ -2058,7 +2048,7 @@ void MainFrame::performFreeDVOn_()
             {        
                 if (wxGetApp().m_reportingCallsign.ToStdString() == "" || wxGetApp().m_reportingGridSquare.ToStdString() == "")
                 {
-                    CallAfter([&]() 
+                    executeOnUiThreadAndWait_([&]() 
                     {
                         wxMessageBox("Reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
                     });
@@ -2089,14 +2079,14 @@ void MainFrame::performFreeDVOn_()
                     }
                     else if (wxGetApp().m_freedvReporterEnabled)
                     {
-                        CallAfter([&]() 
+                        executeOnUiThreadAndWait_([&]() 
                         {
                             wxMessageBox("FreeDV Reporter requires a valid hostname. Reporting to FreeDV Reporter will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
                         });
                     }
                     
                     // Enable FreeDV Reporter timer (every 5 minutes).
-                    CallAfter([&]() 
+                    executeOnUiThreadAndWait_([&]() 
                     {
                         m_pskReporterTimer.Start(5 * 60 * 1000);
                     });
@@ -2125,7 +2115,7 @@ void MainFrame::performFreeDVOn_()
 
             if (m_RxRunning)
             {
-                CallAfter([&]() 
+                executeOnUiThreadAndWait_([&]() 
                 {
         #ifdef _USE_TIMER
                     m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
@@ -2137,7 +2127,7 @@ void MainFrame::performFreeDVOn_()
     }
     else
     {
-        CallAfter([&]() 
+        executeOnUiThreadAndWait_([&]() 
         {
             wxMessageBox(wxString("Microphone permissions must be granted to FreeDV for it to function properly."), wxT("Error"), wxOK | wxICON_ERROR, this);
         });
@@ -2157,7 +2147,7 @@ void MainFrame::performFreeDVOff_()
     //
 
 #ifdef _USE_TIMER
-    CallAfter([&]() 
+    executeOnUiThreadAndWait_([&]() 
     {
         m_plotTimer.Stop();
         m_pskReporterTimer.Stop();
@@ -2177,7 +2167,7 @@ void MainFrame::performFreeDVOff_()
             {
                 if (hamlib->ptt(false, hamlibError) == false) 
                 {
-                    CallAfter([&]() 
+                    executeOnUiThreadAndWait_([&]() 
                     {
                         wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
                     });
@@ -2207,7 +2197,7 @@ void MainFrame::performFreeDVOff_()
         ClosePTTInPort();
     }
     
-    CallAfter([&]() 
+    executeOnUiThreadAndWait_([&]() 
     {
         m_btnTogPTT->SetValue(false);
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
@@ -2223,7 +2213,7 @@ void MainFrame::performFreeDVOff_()
     
     m_newMicInFilter = m_newSpkOutFilter = true;
 
-    CallAfter([&]() 
+    executeOnUiThreadAndWait_([&]() 
     {
         m_textSync->Disable();
         m_textCurrentDecodeMode->Disable();
