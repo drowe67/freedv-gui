@@ -2022,17 +2022,22 @@ void MainFrame::performFreeDVOn_()
     // attempt to start sound cards and tx/rx processing
     if (VerifyMicrophonePermissions())
     {
-        if (validateSoundCardSetup())
+        bool soundCardSetupValid = false;
+        executeOnUiThreadAndWait_([&]() {
+            soundCardSetupValid = validateSoundCardSetup();
+        });
+        
+        if (soundCardSetupValid)
         {
-            startRxStream();
-
-            // attempt to start PTT ......
             for (auto& obj : wxGetApp().m_reporters)
             {
                 delete obj;
             }
             wxGetApp().m_reporters.clear();
             
+            startRxStream();
+
+            // attempt to start PTT ......            
             if (wxGetApp().m_boolHamlibUseForPTT)
             {
                 OpenHamlibRig();
@@ -2177,15 +2182,6 @@ void MainFrame::performFreeDVOff_()
             }
         }
     }
-
-    if (wxGetApp().m_reporters.size() > 0)
-    {            
-        for (auto& obj : wxGetApp().m_reporters)
-        {
-            delete obj;
-        }
-        wxGetApp().m_reporters.clear();
-    }
     
     if (wxGetApp().m_boolUseSerialPTT) 
     {
@@ -2206,6 +2202,15 @@ void MainFrame::performFreeDVOff_()
     stopRxStream();
     src_delete(g_spec_src);
 
+    if (wxGetApp().m_reporters.size() > 0)
+    {            
+        for (auto& obj : wxGetApp().m_reporters)
+        {
+            delete obj;
+        }
+        wxGetApp().m_reporters.clear();
+    }
+    
     // FreeDV clean up
     delete[] g_error_hist;
     delete[] g_error_histn;
@@ -2390,16 +2395,20 @@ void MainFrame::startRxStream()
         
         auto engine = AudioEngineFactory::GetAudioEngine();
         engine->setOnEngineError([&](IAudioEngine&, std::string error, void* state) {
-            wxMessageBox(wxString::Format(
-                         "Error encountered while initializing the audio engine: %s.", 
-                         error), wxT("Error"), wxOK, this); 
+            executeOnUiThreadAndWait_([&]() {
+                wxMessageBox(wxString::Format(
+                             "Error encountered while initializing the audio engine: %s.", 
+                             error), wxT("Error"), wxOK, this); 
+            });
         }, nullptr);
         engine->start();
 
         if (g_nSoundCards == 0) 
         {
-            wxMessageBox(wxT("No Sound Cards configured, use Tools - Audio Config to configure"), wxT("Error"), wxOK);
-
+            executeOnUiThreadAndWait_([&]() {
+                wxMessageBox(wxT("No Sound Cards configured, use Tools - Audio Config to configure"), wxT("Error"), wxOK);
+            });
+            
             m_RxRunning = false;
             
             engine->stop();
@@ -2414,29 +2423,37 @@ void MainFrame::startRxStream()
             rxInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard1InSampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
             rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
-                pConfig->Flush();
+                CallAfter([&]() {
+                    wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
+                    pConfig->Flush();
+                });
             }, nullptr);
             
             rxOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard1OutSampleRate, 2);
             rxOutSoundDevice->setDescription("FreeDV to Speaker");
             rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
-                pConfig->Flush();
+                CallAfter([&]() {
+                    wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
+                    pConfig->Flush();
+                });
             }, nullptr);
             
             bool failed = false;
             if (!rxInSoundDevice)
             {
-                wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1InDeviceName), wxT("Error"), wxOK);
+                executeOnUiThreadAndWait_([&]() {
+                    wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1InDeviceName), wxT("Error"), wxOK);
+                });
                 failed = true;
             }
             
             if (!rxOutSoundDevice)
             {
-                wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1OutDeviceName), wxT("Error"), wxOK);
+                executeOnUiThreadAndWait_([&]() {
+                    wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1OutDeviceName), wxT("Error"), wxOK);
+                });
                 failed = true;
             }
             
@@ -2467,57 +2484,73 @@ void MainFrame::startRxStream()
             rxInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard1InSampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
             rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
-                pConfig->Flush();
+                CallAfter([&]() {
+                    wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
+                    pConfig->Flush();
+                });
             }, nullptr);
 
             rxOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard2OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard2OutSampleRate, 2);
             rxOutSoundDevice->setDescription("FreeDV to Speaker");
             rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                wxGetApp().m_soundCard2OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
-                pConfig->Flush();
+                CallAfter([&]() {
+                    wxGetApp().m_soundCard2OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
+                    pConfig->Flush();
+                });
             }, nullptr);
 
             txInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard2InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard2InSampleRate, 2);
             txInSoundDevice->setDescription("Mic to FreeDV");
             txInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                wxGetApp().m_soundCard2InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);
-                pConfig->Flush();
+                CallAfter([&]() {
+                    wxGetApp().m_soundCard2InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);
+                    pConfig->Flush();
+                });
             }, nullptr);
 
             txOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard1OutSampleRate, 2);
             txOutSoundDevice->setDescription("FreeDV to Radio");
             txOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
-                pConfig->Flush();
+                CallAfter([&]() {
+                    wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
+                    pConfig->Flush();
+                });
             }, nullptr);
             
             bool failed = false;
             if (!rxInSoundDevice)
             {
-                wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1InDeviceName), wxT("Error"), wxOK);
+                executeOnUiThreadAndWait_([&]() {
+                    wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1InDeviceName), wxT("Error"), wxOK);
+                });
                 failed = true;
             }
             
             if (!rxOutSoundDevice)
             {
-                wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard2OutDeviceName), wxT("Error"), wxOK);
+                executeOnUiThreadAndWait_([&]() {
+                    wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard2OutDeviceName), wxT("Error"), wxOK);
+                });
                 failed = true;
             }
             
             if (!txInSoundDevice)
             {
-                wxMessageBox(wxString::Format("Could not find TX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard2InDeviceName), wxT("Error"), wxOK);
+                executeOnUiThreadAndWait_([&]() {
+                    wxMessageBox(wxString::Format("Could not find TX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard2InDeviceName), wxT("Error"), wxOK);
+                });
                 failed = true;
             }
             
             if (!txOutSoundDevice)
             {
-                wxMessageBox(wxString::Format("Could not find TX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1OutDeviceName), wxT("Error"), wxOK);
+                executeOnUiThreadAndWait_([&]() {
+                    wxMessageBox(wxString::Format("Could not find TX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1OutDeviceName), wxT("Error"), wxOK);
+                });
                 failed = true;
             }
             
