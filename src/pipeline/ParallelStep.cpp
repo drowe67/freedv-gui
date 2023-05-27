@@ -187,6 +187,10 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
 
 void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
 {
+#if defined(__linux__)
+    pthread_setname_np(pthread_self(), "FreeDV ParallelStep");
+#endif // defined(__linux__)
+
     while(!threadState->exitingThread)
     {
         std::unique_lock<std::mutex> lock(threadState->queueMutex);
