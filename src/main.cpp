@@ -2249,12 +2249,10 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
     m_togBtnAnalog->Enable(false);
     m_togBtnVoiceKeyer->Enable(false);
     m_btnTogPTT->Enable(false);
-    
-    wxString startStop = m_togBtnOnOff->GetLabel();
-    
+        
     // we are attempting to start
 
-    if (startStop.IsSameAs("&Start"))
+    if (m_togBtnOnOff->GetValue())
     {
         std::thread onOffExec([this]() 
         {
@@ -2281,7 +2279,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         });
         onOffExec.detach();
     }
-    else if (startStop.IsSameAs("&Stop")) 
+    else
     {
         std::thread onOffExec([this]() 
         {
