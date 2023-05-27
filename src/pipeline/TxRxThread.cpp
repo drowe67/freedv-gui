@@ -402,6 +402,9 @@ void* TxRxThread::Entry()
         else rxProcessing_();
     }
     
+    // Force pipeline to delete itself when we're done with the thread.
+    pipeline_ = nullptr;
+    
     return NULL;
 }
 
