@@ -2270,7 +2270,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_togBtnAnalog->Enable(m_RxRunning);
             m_togBtnVoiceKeyer->Enable(m_RxRunning);
             m_btnTogPTT->Enable(m_RxRunning);
-            optionsDlg->setSessionActive(m_RxRunning);
+            executeOnUiThreadAndWait_([&]() {
+                optionsDlg->setSessionActive(m_RxRunning);
+            });
 
             if (m_RxRunning)
             {
