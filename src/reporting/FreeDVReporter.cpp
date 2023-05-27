@@ -48,7 +48,7 @@ FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::
 
 FreeDVReporter::~FreeDVReporter()
 {
-    // empty
+    sioClient_.sync_close();
 }
 
 void FreeDVReporter::freqChange(uint64_t frequency)
