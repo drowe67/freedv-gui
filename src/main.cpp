@@ -2244,6 +2244,8 @@ void MainFrame::performFreeDVOff_()
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 {
+    if (!m_togBtnOnOff->IsEnabled()) return;
+
     // Disable buttons while on/off is occurring
     m_togBtnOnOff->Enable(false);
     m_togBtnAnalog->Enable(false);
@@ -2265,17 +2267,17 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             }
 
             // On/Off actions complete, re-enable button.
-            m_togBtnOnOff->Enable(true);
-            if (m_RxRunning)
-            {
-                m_togBtnOnOff->SetLabel(wxT("&Stop"));
-            }
-            
-            m_togBtnOnOff->SetValue(m_RxRunning);
             m_togBtnAnalog->Enable(m_RxRunning);
             m_togBtnVoiceKeyer->Enable(m_RxRunning);
             m_btnTogPTT->Enable(m_RxRunning);
             optionsDlg->setSessionActive(m_RxRunning);
+
+            if (m_RxRunning)
+            {
+                m_togBtnOnOff->SetLabel(wxT("&Stop"));
+            }
+            m_togBtnOnOff->SetValue(m_RxRunning);
+            m_togBtnOnOff->Enable(true);
         });
         onOffExec.detach();
     }
@@ -2286,13 +2288,13 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             performFreeDVOff_();
             
             // On/Off actions complete, re-enable button.
-            m_togBtnOnOff->Enable(true);
-            m_togBtnOnOff->SetLabel(wxT("&Start"));
-            m_togBtnOnOff->SetValue(m_RxRunning);
             m_togBtnAnalog->Enable(m_RxRunning);
             m_togBtnVoiceKeyer->Enable(m_RxRunning);
             m_btnTogPTT->Enable(m_RxRunning);
             optionsDlg->setSessionActive(m_RxRunning);
+            m_togBtnOnOff->SetValue(m_RxRunning);
+            m_togBtnOnOff->SetLabel(wxT("&Start"));
+            m_togBtnOnOff->Enable(true);
         });
         onOffExec.detach();
     }
