@@ -93,9 +93,6 @@ extern wxMutex txModeChangeMutex;
 extern wxMutex g_mutexProtectingCallbackData;
 extern wxWindow* g_parent;
 
-#include <samplerate.h>
-extern SRC_STATE* g_spec_src;
-
 #include <sndfile.h>
 extern SNDFILE* g_sfPlayFile;
 extern SNDFILE* g_sfRecFileFromModulator;

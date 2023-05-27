@@ -1999,9 +1999,6 @@ void MainFrame::performFreeDVOn_()
         }
     });
 
-    int src_error;
-    g_spec_src = src_new(SRC_SINC_FASTEST, 1, &src_error);
-    assert(g_spec_src != NULL);
     g_State = g_prev_State = 0;
     g_snr = 0.0;
     g_half_duplex = wxGetApp().m_boolHalfDuplex;
@@ -2200,7 +2197,6 @@ void MainFrame::performFreeDVOff_()
     });
     
     stopRxStream();
-    src_delete(g_spec_src);
 
     if (wxGetApp().m_reporters.size() > 0)
     {            
