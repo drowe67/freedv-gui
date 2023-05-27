@@ -471,7 +471,7 @@ class MainFrame : public TopFrame
         void setsnrBeta(bool snrSlow);
 
         // protected event handlers
-        virtual void topFrame_OnSize( wxSizeEvent& event );
+        virtual void topFrame_OnSize( wxSizeEvent& event ) override;
         virtual void OnCloseFrame(wxCloseEvent& event);
         void OnExitClick(wxCommandEvent& event);
 
@@ -482,45 +482,45 @@ class MainFrame : public TopFrame
         void abortTxStream();
         void abortRxStream();
 
-        void OnTop(wxCommandEvent& event);
-        void OnExit( wxCommandEvent& event );
+        void OnTop(wxCommandEvent& event) override;
+        void OnExit( wxCommandEvent& event ) override;
 
-        void OnToolsEasySetup( wxCommandEvent& event );
-        void OnToolsEasySetupUI( wxUpdateUIEvent& event );
+        void OnToolsEasySetup( wxCommandEvent& event ) override;
+        void OnToolsEasySetupUI( wxUpdateUIEvent& event ) override;
         void OnToolsFreeDVReporter( wxCommandEvent& event ) override;
         void OnToolsFreeDVReporterUI( wxUpdateUIEvent& event ) override;
-        void OnToolsAudio( wxCommandEvent& event );
-        void OnToolsAudioUI( wxUpdateUIEvent& event );
-        void OnToolsComCfg( wxCommandEvent& event );
-        void OnToolsComCfgUI( wxUpdateUIEvent& event );
-        void OnToolsFilter( wxCommandEvent& event );
-        void OnToolsOptions(wxCommandEvent& event);
-        void OnToolsOptionsUI(wxUpdateUIEvent& event);
+        void OnToolsAudio( wxCommandEvent& event ) override;
+        void OnToolsAudioUI( wxUpdateUIEvent& event ) override;
+        void OnToolsComCfg( wxCommandEvent& event ) override;
+        void OnToolsComCfgUI( wxUpdateUIEvent& event ) override;
+        void OnToolsFilter( wxCommandEvent& event ) override;
+        void OnToolsOptions(wxCommandEvent& event) override;
+        void OnToolsOptionsUI(wxUpdateUIEvent& event) override;
 
-        void OnPlayFileToMicIn( wxCommandEvent& event );
-        void OnRecFileFromRadio( wxCommandEvent& event );
-        void OnRecFileFromModulator( wxCommandEvent& event);
-        void OnPlayFileFromRadio( wxCommandEvent& event );
+        void OnPlayFileToMicIn( wxCommandEvent& event ) override;
+        void OnRecFileFromRadio( wxCommandEvent& event ) override;
+        void OnRecFileFromModulator( wxCommandEvent& event) override;
+        void OnPlayFileFromRadio( wxCommandEvent& event ) override;
 
-        void OnHelpCheckUpdates( wxCommandEvent& event );
-        void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event );
-        void OnHelpAbout( wxCommandEvent& event );
-        void OnHelpManual( wxCommandEvent& event );
-        void OnCmdSliderScroll( wxScrollEvent& event );
-        void OnCheckSQClick( wxCommandEvent& event );
-        void OnCheckSNRClick( wxCommandEvent& event );
+        void OnHelpCheckUpdates( wxCommandEvent& event ) override;
+        void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event ) override;
+        void OnHelpAbout( wxCommandEvent& event ) override;
+        void OnHelpManual( wxCommandEvent& event ) override;
+        void OnCmdSliderScroll( wxScrollEvent& event ) override;
+        void OnCheckSQClick( wxCommandEvent& event ) override;
+        void OnCheckSNRClick( wxCommandEvent& event ) override;
 
         // Toggle Buttons
         void OnTogBtnSplitClick(wxCommandEvent& event);
-        void OnTogBtnAnalogClick(wxCommandEvent& event);
-        void OnTogBtnPTT( wxCommandEvent& event );
-        void OnTogBtnVoiceKeyerClick (wxCommandEvent& event);
-        void OnTogBtnOnOff( wxCommandEvent& event );
-        void OnTogBtnRecord( wxCommandEvent& event );
+        void OnTogBtnAnalogClick(wxCommandEvent& event) override;
+        void OnTogBtnPTT( wxCommandEvent& event ) override;
+        void OnTogBtnVoiceKeyerClick (wxCommandEvent& event) override;
+        void OnTogBtnOnOff( wxCommandEvent& event ) override;
+        void OnTogBtnRecord( wxCommandEvent& event ) override;
 
-        void OnCallSignReset( wxCommandEvent& event );
-        void OnBerReset( wxCommandEvent& event );
-        void OnReSync( wxCommandEvent& event );
+        void OnCallSignReset( wxCommandEvent& event ) override;
+        void OnBerReset( wxCommandEvent& event ) override;
+        void OnReSync( wxCommandEvent& event ) override;
 
         //System Events
         void OnPaint(wxPaintEvent& event);
@@ -537,11 +537,11 @@ class MainFrame : public TopFrame
 
         int VoiceKeyerStartTx(void);
 
-        void OnChangeTxMode( wxCommandEvent& event );
+        void OnChangeTxMode( wxCommandEvent& event ) override;
         
-        void OnChangeTxLevel( wxScrollEvent& event );
+        void OnChangeTxLevel( wxScrollEvent& event ) override;
         
-        void OnChangeReportFrequency( wxCommandEvent& event );
+        void OnChangeReportFrequency( wxCommandEvent& event ) override;
     private:
         std::shared_ptr<IAudioDevice> rxInSoundDevice;
         std::shared_ptr<IAudioDevice> rxOutSoundDevice;
