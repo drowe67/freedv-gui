@@ -188,7 +188,7 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
 void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
 {
 #if defined(__linux__)
-    pthread_setname_np(pthread_self(), "FreeDV ParallelStep");
+    pthread_setname_np(pthread_self(), "FreeDV PS");
 #endif // defined(__linux__)
 
     while(!threadState->exitingThread)
