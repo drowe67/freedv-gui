@@ -318,7 +318,7 @@ appear as follows:
 
 FreeDV has the ability to send FreeDV signal reports to various online spotting services
 by enabling the option in Tools-Options (in the Reporting tab) and specifying your callsign 
-and grid square. When enabled, this causes FreeDV to disable the free form **Txt Msg** 
+and Maidenhead grid square. When enabled, this causes FreeDV to disable the free form **Txt Msg** 
 field and only transmit the **Callsign** field. As this uses a different encoding format 
 from the free-form text field, both sides of the contact must have this enabled for the 
 contact to be reported.
@@ -336,7 +336,8 @@ along with the reporting feature as a whole:
 
 The frequency that FreeDV reports is set by changing the "Report Frequency" text box in the main window. This 
 is in kilohertz (kHz) and will turn red if the entered value is invalid. If Hamlib support is also enabled, 
-this frequency will automatically update approximately every five seconds while receiving.
+this frequency will automatically update approximately every five seconds while receiving, overwriting anything
+manually entered.
 
 FreeDV will also show the callsigns of previously received signals. To view those, click on the arrow
 next to the last received callsign at the bottom of the window. These are in descending order by time
