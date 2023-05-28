@@ -2259,7 +2259,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         std::thread onOffExec([this]() 
         {
 #if defined(__linux__)
-    pthread_setname_np(pthread_self(), "FreeDV GUI Helper - TurningOn");
+    pthread_setname_np(pthread_self(), "FreeDV TurningOn");
 #endif // defined(__linux__)
 
             performFreeDVOn_();
@@ -2292,7 +2292,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         std::thread onOffExec([this]() 
         {
 #if defined(__linux__)
-    pthread_setname_np(pthread_self(), "FreeDV GUI Helper - TurningOff");
+    pthread_setname_np(pthread_self(), "FreeDV TurningOff");
 #endif // defined(__linux__)
 
             performFreeDVOff_();
