@@ -62,12 +62,12 @@ you to adjust your radio sound levels (see "Sound Card Levels" below).
 
 ### Reporting
 
-While not required, it is recommended to enable PSK Reporter reporting so that others
+While not required, it is recommended to enable reporting so that others
 can see who is currently receiving them. Both sides of a contact must have this enabled
-in order for this feature to work. To configure PSK Reporter reporting, simply enable
+in order for this feature to work. To configure reporting, simply enable
 the feature here and enter your callsign and current grid square.
 
-For more information about the PSK Reporter feature, see the "PSK Reporter" section below.
+For more information about the reporting feature, see the "FreeDV Reporting" section below.
 
 ## Advanced Setup
 
@@ -314,23 +314,29 @@ appear as follows:
 
 "C:\\Program Files\\FreeDV [version]\\bin\\freedv.exe" -f C:\\Hamradio\\IC7300.conf
 
-# PSK Reporter
+# FreeDV Reporting
 
-FreeDV has the ability to send FreeDV signal reports to [PSK Reporter](https://pskreporter.info/)
-by enabling the option in Tools-Options and specifying your callsign and grid square. When enabled, this causes
-FreeDV to disable the free form **Txt Msg** field and only transmit the **Callsign** field. As this
-uses a different encoding format from the free-form text field, both sides of the contact must have
-this enabled for the contact to be reported to the PSK Reporter service.
+FreeDV has the ability to send FreeDV signal reports to various online spotting services
+by enabling the option in Tools-Options (in the Reporting tab) and specifying your callsign 
+and grid square. When enabled, this causes FreeDV to disable the free form **Txt Msg** 
+field and only transmit the **Callsign** field. As this uses a different encoding format 
+from the free-form text field, both sides of the contact must have this enabled for the 
+contact to be reported.
 
-FreeDV validates the received information before submitting a position report to PSK Reporter. This 
+FreeDV validates the received information before submitting a position report. This 
 is to ensure that FreeDV does not report invalid callsigns to the service (e.g. ones that don't exist 
-or that correspond to real non-FreeDV users). However, if the PSK Reporter function is disabled,
+or that correspond to real non-FreeDV users). However, if the reporting function is disabled,
 all received text will display in the main window even if it has errors.
 
-Reports sent to PSK Reporter will display using the mode "FREEDV" for ease of filtering. The frequency that 
-FreeDV reports to PSK Reporter is set by changing the "Report Frequency" text box in the main window. This 
+The following services are currently supported and can be individually enabled or disabled
+along with the reporting feature as a whole:
+
+* [PSK Reporter](https://pskreporter.info/) (using the "FREEDV" mode)
+* [FreeDV Reporter](https://freedv-reporter.k6aq.net/)
+
+The frequency that FreeDV reports is set by changing the "Report Frequency" text box in the main window. This 
 is in kilohertz (kHz) and will turn red if the entered value is invalid. If Hamlib support is also enabled, 
-this frequency will automatically update on start/stop as well as when switching between transmit and receive.
+this frequency will automatically update approximately every five seconds while receiving.
 
 FreeDV will also show the callsigns of previously received signals. To view those, click on the arrow
 next to the last received callsign at the bottom of the window. These are in descending order by time
