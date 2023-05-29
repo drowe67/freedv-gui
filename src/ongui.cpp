@@ -543,6 +543,15 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         m_panelWaterfall->setFs(freedvInterface.getRxModemSampleRate());
     }
 
+    // Report analog change to registered reporters
+    std::thread workerThread([&]() {
+        for (auto& obj : wxGetApp().m_reporters)
+        {
+            obj->inAnalogMode(g_analog);
+        }
+    });
+    workerThread.detach();
+    
     g_State = g_prev_State = 0;
     freedvInterface.getCurrentRxModemStats()->snr_est = 0;
 
