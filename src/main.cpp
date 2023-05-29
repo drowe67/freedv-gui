@@ -550,7 +550,7 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_reportingGridSquare = pConfig->Read(wxT("/Reporting/GridSquare"), oldGridSquare);
     wxString freqStr = pConfig->Read(wxT("/Reporting/Frequency"), oldFreqStr);
     wxGetApp().m_reportingFrequency = atoll(freqStr.ToUTF8());
-    m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((double)wxGetApp().m_reportingFrequency)/1000.0));
+    m_cboReportFrequency->SetValue(wxString::Format("%.1f", ((double)wxGetApp().m_reportingFrequency)/1000.0));
     
     // PSK Reporter parameters
     wxGetApp().m_pskReporterEnabled = pConfig->ReadBool(wxT("/Reporting/PSKReporter/Enable"), oldPskEnable);

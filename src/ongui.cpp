@@ -248,7 +248,7 @@ bool MainFrame::OpenHamlibRig() {
         }
         else
         {
-            wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, m_txtCtrlReportFrequency, g_mode == FREEDV_MODE_2400B);
+            wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, m_cboReportFrequency, g_mode == FREEDV_MODE_2400B);
         }
     
         return status;
@@ -594,23 +594,23 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
 
 void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
 {
-    wxString freqStr = m_txtCtrlReportFrequency->GetValue();
+    wxString freqStr = m_cboReportFrequency->GetValue();
     if (freqStr.Length() > 0)
     {
         wxGetApp().m_reportingFrequency = atof(freqStr.ToUTF8()) * 1000;
         if (wxGetApp().m_reportingFrequency > 0)
         {
-            m_txtCtrlReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+            m_cboReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
         }
         else
         {
-            m_txtCtrlReportFrequency->SetForegroundColour(wxColor(*wxRED));
+            m_cboReportFrequency->SetForegroundColour(wxColor(*wxRED));
         }
     }
     else
     {
         wxGetApp().m_reportingFrequency = 0;
-        m_txtCtrlReportFrequency->SetForegroundColour(wxColor(*wxRED));
+        m_cboReportFrequency->SetForegroundColour(wxColor(*wxRED));
     }
     
     // Report current frequency to reporters

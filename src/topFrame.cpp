@@ -458,9 +458,27 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     
     wxStaticText* reportFrequencyUnits = new wxStaticText(m_freqBox, wxID_ANY, wxT(" kHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     wxBoxSizer* txtReportFreqSizer = new wxBoxSizer(wxVERTICAL);
-    m_txtCtrlReportFrequency = new wxTextCtrl(m_freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_RIGHT);
-    m_txtCtrlReportFrequency->SetMinSize(wxSize(100,-1));
-    txtReportFreqSizer->Add(m_txtCtrlReportFrequency, 1, 0, 1);
+    wxString choices[] = {
+        _("3625.0"),
+        _("3643.0"),
+        _("3693.0"),
+        _("3697.0"),
+        _("5403.5"),
+        _("5366.3"),
+        _("7177.0"),
+        _("14236.0"),
+        _("14240.0"),
+        _("18188.0"),
+        _("21313.0"),
+        _("24933.0"),
+        _("28330.0"),
+        _("28720.0"),
+        _("10489640.0"),
+    };
+    int numChoices = sizeof(choices) / sizeof(wxString);
+    m_cboReportFrequency = new wxComboBox(m_freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, numChoices, choices, wxCB_DROPDOWN);
+    m_cboReportFrequency->SetMinSize(wxSize(100,-1));
+    txtReportFreqSizer->Add(m_cboReportFrequency, 1, 0, 1);
     reportFrequencySizer->Add(txtReportFreqSizer, 1, wxEXPAND, 1);
     reportFrequencySizer->Add(reportFrequencyUnits, 0, wxALIGN_CENTER_VERTICAL, 1);
     
@@ -577,7 +595,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderTxLevel->Connect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Connect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     
-    m_txtCtrlReportFrequency->Connect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
+    m_cboReportFrequency->Connect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
 }
 
 TopFrame::~TopFrame()
@@ -651,7 +669,7 @@ TopFrame::~TopFrame()
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_THUMBRELEASE, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_CHANGED, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     
-    m_txtCtrlReportFrequency->Disconnect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
+    m_cboReportFrequency->Disconnect(wxEVT_TEXT, wxCommandEventHandler(TopFrame::OnChangeReportFrequency), NULL, this);
 }
 
 void TopFrame::OnChangeCollapseState(wxCollapsiblePaneEvent& event)

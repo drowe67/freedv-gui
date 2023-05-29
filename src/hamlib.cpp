@@ -281,7 +281,7 @@ int Hamlib::update_frequency_and_mode(void)
     return 0;
 }
 
-void Hamlib::enable_mode_detection(wxStaticText* statusBox, wxTextCtrl* freqBox, bool vhfUhfMode)
+void Hamlib::enable_mode_detection(wxStaticText* statusBox, wxComboBox* freqBox, bool vhfUhfMode)
 {
     // Set VHF/UHF mode. This governs whether FM is an acceptable mode for the detection display.
     m_vhfUhfMode = vhfUhfMode;
