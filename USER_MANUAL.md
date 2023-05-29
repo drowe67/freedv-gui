@@ -871,6 +871,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add support for FreeDV Reporter web-based tool. (PR #390, #402)
     * Defer sound device checking until Start is pushed. (PR #393)
     * Add ability for Hamlib to use RTS/DTR instead of CAT for PTT. (PR #394)
+    * Automatically change radio frequency if the reporting frequency changes. (PR #405)
 
 ## V1.8.9 April 2023
 
