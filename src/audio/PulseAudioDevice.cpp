@@ -144,7 +144,7 @@ void PulseAudioDevice::start()
         {
             outputPendingThread_ = new std::thread([&]() {
 #if defined(__linux__)
-                pthread_setname_np(pthread_self(), "FreeDV PulseAudio Output");
+                pthread_setname_np(pthread_self(), "FreeDV PAOut");
 #endif // defined(__linux__)
 
                 while(outputPendingThreadActive_)

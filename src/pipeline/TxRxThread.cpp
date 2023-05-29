@@ -93,9 +93,6 @@ extern wxMutex txModeChangeMutex;
 extern wxMutex g_mutexProtectingCallbackData;
 extern wxWindow* g_parent;
 
-#include <samplerate.h>
-extern SRC_STATE* g_spec_src;
-
 #include <sndfile.h>
 extern SNDFILE* g_sfPlayFile;
 extern SNDFILE* g_sfRecFileFromModulator;
@@ -401,6 +398,9 @@ void* TxRxThread::Entry()
         if (m_tx) txProcessing_();
         else rxProcessing_();
     }
+    
+    // Force pipeline to delete itself when we're done with the thread.
+    pipeline_ = nullptr;
     
     return NULL;
 }

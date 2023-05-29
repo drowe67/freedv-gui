@@ -556,7 +556,7 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_pskReporterEnabled = pConfig->ReadBool(wxT("/Reporting/PSKReporter/Enable"), oldPskEnable);
     
     // FreeDV Reporter parameters
-    wxGetApp().m_freedvReporterEnabled = pConfig->ReadBool(wxT("/Reporting/FreeDVReporter/Enable"), true);
+    wxGetApp().m_freedvReporterEnabled = pConfig->ReadBool(wxT("/Reporting/FreeDV/Enable"), true);
     wxGetApp().m_freedvReporterHostname = pConfig->Read(wxT("/Reporting/FreeDV/Hostname"), wxT(FREEDV_REPORTER_DEFAULT_HOSTNAME));
     
     wxGetApp().m_useUTCTime = pConfig->ReadBool(wxT("/CallsignList/UseUTCTime"), false);
@@ -1085,7 +1085,12 @@ void MainFrame::OnIdle(wxIdleEvent &evt) {
 // keeps CPU load reasonable
 //----------------------------------------------------------------
 void MainFrame::OnTimer(wxTimerEvent &evt)
-{    
+{
+    if (!m_RxRunning)
+    {
+        return;
+    }
+
     if (evt.GetTimer().GetId() == ID_TIMER_PSKREPORTER)
     {
         // Reporter timer fired; send in-progress packet.
@@ -1845,53 +1850,43 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     }
 }
 
-//-------------------------------------------------------------------------
-// OnTogBtnOnOff()
-//-------------------------------------------------------------------------
-void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
+void MainFrame::performFreeDVOn_()
 {
-    wxString startStop = m_togBtnOnOff->GetLabel();
-
-    // we are attempting to start
-
-    if (startStop.IsSameAs("&Start"))
+    if (g_verbose) fprintf(stderr, "Start .....\n");
+    g_queueResync = false;
+    endingTx = false;
+    
+    m_timeSinceSyncLoss = 0;
+    
+    executeOnUiThreadAndWait_([&]() 
     {
-        if (g_verbose) fprintf(stderr, "Start .....\n");
-        g_queueResync = false;
-        endingTx = false;
-        
-        m_timeSinceSyncLoss = 0;
         m_txtCtrlCallSign->SetValue(wxT(""));
         m_lastReportedCallsignListView->DeleteAllItems();
         m_cboLastReportedCallsigns->Enable(false);
-                
+            
         m_cboLastReportedCallsigns->SetText(wxT(""));
-        memset(m_callsign, 0, MAX_CALLSIGN);
-        m_pcallsign = m_callsign;
+    });
+    
+    memset(m_callsign, 0, MAX_CALLSIGN);
+    m_pcallsign = m_callsign;
 
-        freedvInterface.resetReliableText();
-        
-        //
-        // Start Running -------------------------------------------------
-        //
+    freedvInterface.resetReliableText();
+    
+    //
+    // Start Running -------------------------------------------------
+    //
 
-        // modify some button states when running
+    vk_state = VK_IDLE;
 
-        m_togBtnOnOff->SetLabel(wxT("&Stop"));
-
-        vk_state = VK_IDLE;
-
+    // modify some button states when running
+    executeOnUiThreadAndWait_([&]() 
+    {
         m_textSync->Enable();
         m_textCurrentDecodeMode->Enable();
-
+        
         // determine what mode we are using
         wxCommandEvent tmpEvent;
         OnChangeTxMode(tmpEvent);
-
-        // init freedv states
-        m_togBtnAnalog->Enable();
-        m_btnTogPTT->Enable();
-        m_togBtnVoiceKeyer->Enable();
 
         if (g_mode == FREEDV_MODE_2400B || g_mode == FREEDV_MODE_800XA || 
             !wxGetApp().m_boolMultipleRx)
@@ -1903,9 +1898,9 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             m_rb800xa->Disable();
             m_rb2400b->Disable();
             m_rb2020->Disable();
-#if defined(FREEDV_MODE_2020B)
+    #if defined(FREEDV_MODE_2020B)
             m_rb2020b->Disable();
-#endif // FREEDV_MODE_2020B
+    #endif // FREEDV_MODE_2020B
             freedvInterface.addRxMode(g_mode);
         }
         else
@@ -1913,17 +1908,17 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             if(wxGetApp().m_2020Allowed)
             {
                 freedvInterface.addRxMode(FREEDV_MODE_2020);
-#if defined(FREEDV_MODE_2020B)
+    #if defined(FREEDV_MODE_2020B)
                 freedvInterface.addRxMode(FREEDV_MODE_2020B);
-#endif // FREEDV_MODE_2020B
+    #endif // FREEDV_MODE_2020B
             }
-            
+        
             int rxModes[] = {
                 FREEDV_MODE_1600,
                 FREEDV_MODE_700E,
                 FREEDV_MODE_700C,
                 FREEDV_MODE_700D,
-                
+            
                 // These modes require more CPU than typical (and will drive at least one core to 100% if
                 // used with the other five above), so we're excluding them from multi-RX. They also aren't
                 // selectable during a session when multi-RX is enabled.
@@ -1934,15 +1929,15 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             {
                 freedvInterface.addRxMode(mode);
             }
-            
+        
             m_rb800xa->Disable();
             m_rb2400b->Disable();
         }
-        
+    
         // Default voice keyer sample rate to 8K. The exact voice keyer
         // sample rate will be determined when the .wav file is loaded.
         g_sfTxFs = FS;
-        
+    
         wxGetApp().m_prevMode = g_mode;
         freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread, wxGetApp().m_reportingEnabled);
 
@@ -1965,7 +1960,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             fprintf(stderr, "Setting callsign to %s\n", temp);
             freedvInterface.setReliableText(temp);
         }
-        
+    
         g_error_hist = new short[MODEM_STATS_NC_MAX*2];
         g_error_histn = new short[MODEM_STATS_NC_MAX*2];
         int i;
@@ -1986,214 +1981,248 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
         if (g_verbose) fprintf(stderr, "freedv_get_n_speech_samples(tx): %d\n", freedvInterface.getTxNumSpeechSamples());
         if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(tx): %d\n", freedvInterface.getTxSpeechSampleRate());
-        
+    
         // adjust spectrum and waterfall freq scaling base on mode
-
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getTxModemSampleRate()/2)));
         m_panelWaterfall->setFs(freedvInterface.getTxModemSampleRate());
-
+    
         // Init text msg decoding
         if (!wxGetApp().m_reportingEnabled)
             freedvInterface.setTextVaricodeNum(wxGetApp().m_textEncoding);
 
         // scatter plot (PSK) or Eye (FSK) mode
-
         if ((g_mode == FREEDV_MODE_800XA) || (g_mode == FREEDV_MODE_2400A) || (g_mode == FREEDV_MODE_2400B)) {
             m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_EYE);
         }
         else {
             m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
         }
+    });
 
-        int src_error;
-        g_spec_src = src_new(SRC_SINC_FASTEST, 1, &src_error);
-        assert(g_spec_src != NULL);
-        g_State = g_prev_State = 0;
-        g_snr = 0.0;
-        g_half_duplex = wxGetApp().m_boolHalfDuplex;
+    g_State = g_prev_State = 0;
+    g_snr = 0.0;
+    g_half_duplex = wxGetApp().m_boolHalfDuplex;
 
-        m_pcallsign = m_callsign;
-        memset(m_callsign, 0, sizeof(m_callsign));
+    m_pcallsign = m_callsign;
+    memset(m_callsign, 0, sizeof(m_callsign));
 
-        m_maxLevel = 0;
+    m_maxLevel = 0;
+    executeOnUiThreadAndWait_([&]() 
+    {
         m_textLevel->SetLabel(wxT(""));
         m_gaugeLevel->SetValue(0);
+    });
+    
+    //printf("m_textEncoding = %d\n", wxGetApp().m_textEncoding);
+    //printf("g_stats.snr: %f\n", g_stats.snr_est);
 
-        //printf("m_textEncoding = %d\n", wxGetApp().m_textEncoding);
-        //printf("g_stats.snr: %f\n", g_stats.snr_est);
-
-        // attempt to start sound cards and tx/rx processing
-        if (VerifyMicrophonePermissions())
-        {
-            if (validateSoundCardSetup())
-            {
-                startRxStream();
-
-                // attempt to start PTT ......
-                for (auto& obj : wxGetApp().m_reporters)
-                {
-                    delete obj;
-                }
-                wxGetApp().m_reporters.clear();
-                
-                if (wxGetApp().m_boolHamlibUseForPTT)
-                    OpenHamlibRig();
-
-                if (wxGetApp().m_boolUseSerialPTT) {
-                    OpenSerialPort();
-                }
-                
-                // Initialize PSK Reporter reporting.
-                if (wxGetApp().m_reportingEnabled)
-                {        
-                    if (wxGetApp().m_reportingCallsign.ToStdString() == "" || wxGetApp().m_reportingGridSquare.ToStdString() == "")
-                    {
-                        wxMessageBox("Reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-                    }
-                    else
-                    {
-                        if (wxGetApp().m_pskReporterEnabled)
-                        {
-                            auto pskReporter = 
-                                new PskReporter(
-                                    wxGetApp().m_reportingCallsign.ToStdString(), 
-                                    wxGetApp().m_reportingGridSquare.ToStdString(),
-                                    std::string("FreeDV ") + FREEDV_VERSION);
-                            assert(pskReporter != nullptr);
-                            wxGetApp().m_reporters.push_back(pskReporter);
-                        }
-                        
-                        if (wxGetApp().m_freedvReporterEnabled && wxGetApp().m_freedvReporterHostname.ToStdString() != "")
-                        {
-                            auto freedvReporter =
-                                new FreeDVReporter(
-                                    wxGetApp().m_freedvReporterHostname.ToStdString(),
-                                    wxGetApp().m_reportingCallsign.ToStdString(), 
-                                    wxGetApp().m_reportingGridSquare.ToStdString(),
-                                    std::string("FreeDV ") + FREEDV_VERSION);
-                            assert(freedvReporter);
-                            wxGetApp().m_reporters.push_back(freedvReporter);
-                        }
-                        else if (wxGetApp().m_freedvReporterEnabled)
-                        {
-                            wxMessageBox("FreeDV Reporter requires a valid hostname. Reporting to FreeDV Reporter will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-                        }
-                        
-                        // Enable PSK Reporter timer (every 5 minutes).
-                        m_pskReporterTimer.Start(5 * 60 * 1000);
-                        
-                        // Immediately transmit selected TX mode and frequency to avoid UI glitches.
-                        for (auto& obj : wxGetApp().m_reporters)
-                        {
-                            obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
-                            obj->freqChange(wxGetApp().m_reportingFrequency);
-                        }
-                    }
-                }
-                else
-                {
-                    for (auto& obj : wxGetApp().m_reporters)
-                    {
-                        delete obj;
-                    }
-                    wxGetApp().m_reporters.clear();
-                }
-
-                if (wxGetApp().m_boolUseSerialPTTInput)
-                {
-                    OpenPTTInPort();
-                }
-
-                if (m_RxRunning)
-                {
-        #ifdef _USE_TIMER
-                    m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
-                    m_updFreqStatusTimer.Start(5*1000); // every 5 seconds[UP]
-        #endif // _USE_TIMER
-                }
-            }
-        }
-        else
-        {
-            wxMessageBox(wxString("Microphone permissions must be granted to FreeDV for it to function properly."), wxT("Error"), wxOK | wxICON_ERROR, this);
-        }
-
-        // Clear existing TX text, if any.
-        codec2_fifo_destroy(g_txDataInFifo);
-        g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
-    }
-
-    // Stop was pressed or start up failed
-
-    if (startStop.IsSameAs("&Stop") || !m_RxRunning ) {
-        if (g_verbose) fprintf(stderr, "Stop .....\n");
+    // attempt to start sound cards and tx/rx processing
+    if (VerifyMicrophonePermissions())
+    {
+        bool soundCardSetupValid = false;
+        executeOnUiThreadAndWait_([&]() {
+            soundCardSetupValid = validateSoundCardSetup();
+        });
         
-        //
-        // Stop Running -------------------------------------------------
-        //
-
-#ifdef _USE_TIMER
-        m_plotTimer.Stop();
-        m_pskReporterTimer.Stop();
-        m_updFreqStatusTimer.Stop(); // [UP]
-#endif // _USE_TIMER
-
-        // ensure we are not transmitting and shut down audio processing
-
-        if (wxGetApp().m_boolHamlibUseForPTT) {
-            Hamlib *hamlib = wxGetApp().m_hamlib;
-            wxString hamlibError;
-            if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
-                if (hamlib->isActive())
-                {
-                    if (hamlib->ptt(false, hamlibError) == false) {
-                        wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
-                    }
-                    hamlib->disable_mode_detection();
-                    hamlib->close();
-                }
-            }
-        }
-
-        if (wxGetApp().m_reporters.size() > 0)
-        {            
+        if (soundCardSetupValid)
+        {
             for (auto& obj : wxGetApp().m_reporters)
             {
                 delete obj;
             }
             wxGetApp().m_reporters.clear();
-        }
-        
-        if (wxGetApp().m_boolUseSerialPTT) {
-            CloseSerialPort();
-        }
+            
+            startRxStream();
 
-        if (wxGetApp().m_boolUseSerialPTTInput)
-        {
-            ClosePTTInPort();
+            // attempt to start PTT ......            
+            if (wxGetApp().m_boolHamlibUseForPTT)
+            {
+                OpenHamlibRig();
+            }
+            
+            if (wxGetApp().m_boolUseSerialPTT) 
+            {
+                OpenSerialPort();
+            }
+                
+            // Initialize PSK Reporter reporting.
+            if (wxGetApp().m_reportingEnabled)
+            {        
+                if (wxGetApp().m_reportingCallsign.ToStdString() == "" || wxGetApp().m_reportingGridSquare.ToStdString() == "")
+                {
+                    executeOnUiThreadAndWait_([&]() 
+                    {
+                        wxMessageBox("Reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+                    });
+                }
+                else
+                {
+                    if (wxGetApp().m_pskReporterEnabled)
+                    {
+                        auto pskReporter = 
+                            new PskReporter(
+                                wxGetApp().m_reportingCallsign.ToStdString(), 
+                                wxGetApp().m_reportingGridSquare.ToStdString(),
+                                std::string("FreeDV ") + FREEDV_VERSION);
+                        assert(pskReporter != nullptr);
+                        wxGetApp().m_reporters.push_back(pskReporter);
+                    }
+                    
+                    if (wxGetApp().m_freedvReporterEnabled && wxGetApp().m_freedvReporterHostname.ToStdString() != "")
+                    {
+                        auto freedvReporter =
+                            new FreeDVReporter(
+                                wxGetApp().m_freedvReporterHostname.ToStdString(),
+                                wxGetApp().m_reportingCallsign.ToStdString(), 
+                                wxGetApp().m_reportingGridSquare.ToStdString(),
+                                std::string("FreeDV ") + FREEDV_VERSION);
+                        assert(freedvReporter);
+                        wxGetApp().m_reporters.push_back(freedvReporter);
+                    }
+                    else if (wxGetApp().m_freedvReporterEnabled)
+                    {
+                        executeOnUiThreadAndWait_([&]() 
+                        {
+                            wxMessageBox("FreeDV Reporter requires a valid hostname. Reporting to FreeDV Reporter will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+                        });
+                    }
+                    
+                    // Enable FreeDV Reporter timer (every 5 minutes).
+                    executeOnUiThreadAndWait_([&]() 
+                    {
+                        m_pskReporterTimer.Start(5 * 60 * 1000);
+                    });
+
+                    // Immediately transmit selected TX mode and frequency to avoid UI glitches.
+                    for (auto& obj : wxGetApp().m_reporters)
+                    {
+                        obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+                        obj->freqChange(wxGetApp().m_reportingFrequency);
+                    }
+                }
+            }
+            else
+            {
+                for (auto& obj : wxGetApp().m_reporters)
+                {
+                    delete obj;
+                }
+                wxGetApp().m_reporters.clear();
+            }
+
+            if (wxGetApp().m_boolUseSerialPTTInput)
+            {
+                OpenPTTInPort();
+            }
+
+            if (m_RxRunning)
+            {
+                executeOnUiThreadAndWait_([&]() 
+                {
+        #ifdef _USE_TIMER
+                    m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
+                    m_updFreqStatusTimer.Start(5*1000); // every 5 seconds[UP]
+        #endif // _USE_TIMER
+                });
+            }
         }
-        
+    }
+    else
+    {
+        executeOnUiThreadAndWait_([&]() 
+        {
+            wxMessageBox(wxString("Microphone permissions must be granted to FreeDV for it to function properly."), wxT("Error"), wxOK | wxICON_ERROR, this);
+        });
+    }
+
+    // Clear existing TX text, if any.
+    codec2_fifo_destroy(g_txDataInFifo);
+    g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
+}
+
+void MainFrame::performFreeDVOff_()
+{
+    if (g_verbose) fprintf(stderr, "Stop .....\n");
+    
+    //
+    // Stop Running -------------------------------------------------
+    //
+
+#ifdef _USE_TIMER
+    executeOnUiThreadAndWait_([&]() 
+    {
+        m_plotTimer.Stop();
+        m_pskReporterTimer.Stop();
+        m_updFreqStatusTimer.Stop(); // [UP]
+    });
+#endif // _USE_TIMER
+
+    // ensure we are not transmitting and shut down audio processing
+
+    if (wxGetApp().m_boolHamlibUseForPTT) 
+    {
+        Hamlib *hamlib = wxGetApp().m_hamlib;
+        wxString hamlibError;
+        if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) 
+        {
+            if (hamlib->isActive())
+            {
+                if (hamlib->ptt(false, hamlibError) == false) 
+                {
+                    executeOnUiThreadAndWait_([&]() 
+                    {
+                        wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
+                    });
+                }
+                hamlib->disable_mode_detection();
+                hamlib->close();
+            }
+        }
+    }
+    
+    if (wxGetApp().m_boolUseSerialPTT) 
+    {
+        CloseSerialPort();
+    }
+
+    if (wxGetApp().m_boolUseSerialPTTInput)
+    {
+        ClosePTTInPort();
+    }
+    
+    executeOnUiThreadAndWait_([&]() 
+    {
         m_btnTogPTT->SetValue(false);
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
+    });
+    
+    stopRxStream();
 
-        stopRxStream();
-        src_delete(g_spec_src);
+    if (wxGetApp().m_reporters.size() > 0)
+    {            
+        for (auto& obj : wxGetApp().m_reporters)
+        {
+            delete obj;
+        }
+        wxGetApp().m_reporters.clear();
+    }
+    
+    // FreeDV clean up
+    delete[] g_error_hist;
+    delete[] g_error_histn;
+    freedvInterface.stop();
+    
+    m_newMicInFilter = m_newSpkOutFilter = true;
 
-        // FreeDV clean up
-        delete[] g_error_hist;
-        delete[] g_error_histn;
-        freedvInterface.stop();
-        
-        m_newMicInFilter = m_newSpkOutFilter = true;
-
+    executeOnUiThreadAndWait_([&]() 
+    {
         m_textSync->Disable();
         m_textCurrentDecodeMode->Disable();
 
         m_togBtnAnalog->Disable();
         m_btnTogPTT->Disable();
         m_togBtnVoiceKeyer->Disable();
-        m_togBtnOnOff->SetLabel(wxT("&Start"));
-        
+    
         m_rb1600->Enable();
         m_rb700c->Enable();
         m_rb700d->Enable();
@@ -2203,13 +2232,84 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
         if(wxGetApp().m_2020Allowed)
         {
             m_rb2020->Enable();
-#if defined(FREEDV_MODE_2020B)
+    #if defined(FREEDV_MODE_2020B)
             m_rb2020b->Enable();
-#endif // FREEDV_MODE_2020B
+    #endif // FREEDV_MODE_2020B
         }
-   }
-    
-    optionsDlg->setSessionActive(m_RxRunning);
+    });
+}
+
+//-------------------------------------------------------------------------
+// OnTogBtnOnOff()
+//-------------------------------------------------------------------------
+void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
+{
+    if (!m_togBtnOnOff->IsEnabled()) return;
+
+    // Disable buttons while on/off is occurring
+    m_togBtnOnOff->Enable(false);
+    m_togBtnAnalog->Enable(false);
+    m_togBtnVoiceKeyer->Enable(false);
+    m_btnTogPTT->Enable(false);
+        
+    // we are attempting to start
+
+    if (m_togBtnOnOff->GetValue())
+    {
+        std::thread onOffExec([this]() 
+        {
+#if defined(__linux__)
+    pthread_setname_np(pthread_self(), "FreeDV TurningOn");
+#endif // defined(__linux__)
+
+            performFreeDVOn_();
+            
+            if (!m_RxRunning)
+            {
+                // Startup failed.
+                performFreeDVOff_();
+            }
+
+            // On/Off actions complete, re-enable button.
+            executeOnUiThreadAndWait_([&]() {
+                m_togBtnAnalog->Enable(m_RxRunning);
+                m_togBtnVoiceKeyer->Enable(m_RxRunning);
+                m_btnTogPTT->Enable(m_RxRunning);
+                optionsDlg->setSessionActive(m_RxRunning);
+
+                if (m_RxRunning)
+                {
+                    m_togBtnOnOff->SetLabel(wxT("&Stop"));
+                }
+                m_togBtnOnOff->SetValue(m_RxRunning);
+                m_togBtnOnOff->Enable(true);
+            });
+        });
+        onOffExec.detach();
+    }
+    else
+    {
+        std::thread onOffExec([this]() 
+        {
+#if defined(__linux__)
+    pthread_setname_np(pthread_self(), "FreeDV TurningOff");
+#endif // defined(__linux__)
+
+            performFreeDVOff_();
+            
+            // On/Off actions complete, re-enable button.
+            executeOnUiThreadAndWait_([&]() {
+                m_togBtnAnalog->Enable(m_RxRunning);
+                m_togBtnVoiceKeyer->Enable(m_RxRunning);
+                m_btnTogPTT->Enable(m_RxRunning);
+                optionsDlg->setSessionActive(m_RxRunning);
+                m_togBtnOnOff->SetValue(m_RxRunning);
+                m_togBtnOnOff->SetLabel(wxT("&Start"));
+                m_togBtnOnOff->Enable(true);
+            });
+        });
+        onOffExec.detach();
+    }
 }
 
 static std::mutex stoppingMutex;
@@ -2303,16 +2403,20 @@ void MainFrame::startRxStream()
         
         auto engine = AudioEngineFactory::GetAudioEngine();
         engine->setOnEngineError([&](IAudioEngine&, std::string error, void* state) {
-            wxMessageBox(wxString::Format(
-                         "Error encountered while initializing the audio engine: %s.", 
-                         error), wxT("Error"), wxOK, this); 
+            executeOnUiThreadAndWait_([&]() {
+                wxMessageBox(wxString::Format(
+                             "Error encountered while initializing the audio engine: %s.", 
+                             error), wxT("Error"), wxOK, this); 
+            });
         }, nullptr);
         engine->start();
 
         if (g_nSoundCards == 0) 
         {
-            wxMessageBox(wxT("No Sound Cards configured, use Tools - Audio Config to configure"), wxT("Error"), wxOK);
-
+            executeOnUiThreadAndWait_([&]() {
+                wxMessageBox(wxT("No Sound Cards configured, use Tools - Audio Config to configure"), wxT("Error"), wxOK);
+            });
+            
             m_RxRunning = false;
             
             engine->stop();
@@ -2327,29 +2431,37 @@ void MainFrame::startRxStream()
             rxInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard1InSampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
             rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
-                pConfig->Flush();
+                CallAfter([&]() {
+                    wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
+                    pConfig->Flush();
+                });
             }, nullptr);
             
             rxOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard1OutSampleRate, 2);
             rxOutSoundDevice->setDescription("FreeDV to Speaker");
             rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
-                pConfig->Flush();
+                CallAfter([&]() {
+                    wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
+                    pConfig->Flush();
+                });
             }, nullptr);
             
             bool failed = false;
             if (!rxInSoundDevice)
             {
-                wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1InDeviceName), wxT("Error"), wxOK);
+                executeOnUiThreadAndWait_([&]() {
+                    wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1InDeviceName), wxT("Error"), wxOK);
+                });
                 failed = true;
             }
             
             if (!rxOutSoundDevice)
             {
-                wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1OutDeviceName), wxT("Error"), wxOK);
+                executeOnUiThreadAndWait_([&]() {
+                    wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1OutDeviceName), wxT("Error"), wxOK);
+                });
                 failed = true;
             }
             
@@ -2380,57 +2492,73 @@ void MainFrame::startRxStream()
             rxInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard1InSampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
             rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
-                pConfig->Flush();
+                CallAfter([&]() {
+                    wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
+                    pConfig->Flush();
+                });
             }, nullptr);
 
             rxOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard2OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard2OutSampleRate, 2);
             rxOutSoundDevice->setDescription("FreeDV to Speaker");
             rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                wxGetApp().m_soundCard2OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
-                pConfig->Flush();
+                CallAfter([&]() {
+                    wxGetApp().m_soundCard2OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
+                    pConfig->Flush();
+                });
             }, nullptr);
 
             txInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard2InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard2InSampleRate, 2);
             txInSoundDevice->setDescription("Mic to FreeDV");
             txInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                wxGetApp().m_soundCard2InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);
-                pConfig->Flush();
+                CallAfter([&]() {
+                    wxGetApp().m_soundCard2InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);
+                    pConfig->Flush();
+                });
             }, nullptr);
 
             txOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard1OutSampleRate, 2);
             txOutSoundDevice->setDescription("FreeDV to Radio");
             txOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
-                pConfig->Flush();
+                CallAfter([&]() {
+                    wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
+                    pConfig->Flush();
+                });
             }, nullptr);
             
             bool failed = false;
             if (!rxInSoundDevice)
             {
-                wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1InDeviceName), wxT("Error"), wxOK);
+                executeOnUiThreadAndWait_([&]() {
+                    wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1InDeviceName), wxT("Error"), wxOK);
+                });
                 failed = true;
             }
             
             if (!rxOutSoundDevice)
             {
-                wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard2OutDeviceName), wxT("Error"), wxOK);
+                executeOnUiThreadAndWait_([&]() {
+                    wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard2OutDeviceName), wxT("Error"), wxOK);
+                });
                 failed = true;
             }
             
             if (!txInSoundDevice)
             {
-                wxMessageBox(wxString::Format("Could not find TX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard2InDeviceName), wxT("Error"), wxOK);
+                executeOnUiThreadAndWait_([&]() {
+                    wxMessageBox(wxString::Format("Could not find TX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard2InDeviceName), wxT("Error"), wxOK);
+                });
                 failed = true;
             }
             
             if (!txOutSoundDevice)
             {
-                wxMessageBox(wxString::Format("Could not find TX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1OutDeviceName), wxT("Error"), wxOK);
+                executeOnUiThreadAndWait_([&]() {
+                    wxMessageBox(wxString::Format("Could not find TX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1OutDeviceName), wxT("Error"), wxOK);
+                });
                 failed = true;
             }
             

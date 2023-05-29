@@ -865,6 +865,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Shrink sliders so that the Filter window can fit on a 720p display. (PR #386, #396)
     * Hamlib: use RIG_VFO_CURR if explicit VFO doesn't work. (PR #385, #400)
     * Fix various misspellings in codebase. (PR #392)
+    * Prevent Start/Stop button from being pressed twice in a row during shutdown. (PR #399)
 3. Enhancements:
     * Add last received SNR to callsign list. (PR #389, #391)
     * Add support for FreeDV Reporter web-based tool. (PR #390, #402)

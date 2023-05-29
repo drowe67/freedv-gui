@@ -136,7 +136,10 @@ void MainFrame::OpenSerialPort(void)
             }
             else 
             {
-                wxMessageBox("Couldn't open serial port for PTT output", wxT("Error"), wxOK | wxICON_ERROR, this);
+                CallAfter([&]() 
+                {
+                    wxMessageBox("Couldn't open serial port for PTT output", wxT("Error"), wxOK | wxICON_ERROR, this);
+                });
             }
         }
     }
@@ -179,7 +182,10 @@ void MainFrame::OpenPTTInPort(void)
                 false);
             if (!serialport->isopen()) 
             {
-                wxMessageBox("Couldn't open PTT input port", wxT("Error"), wxOK | wxICON_ERROR, this);
+                CallAfter([&]() 
+                {
+                    wxMessageBox("Couldn't open PTT input port", wxT("Error"), wxOK | wxICON_ERROR, this);
+                });
             } 
             else 
             {
@@ -371,3 +377,19 @@ void MainFrame::DetectSyncProcessEvent(void) {
 }
 
 
+void MainFrame::executeOnUiThreadAndWait_(std::function<void()> fn)
+{
+    std::mutex funcMutex;
+    std::condition_variable funcConditionVariable;
+    std::unique_lock<std::mutex> funcLock(funcMutex);
+    
+    CallAfter([&]() {
+        std::unique_lock<std::mutex> guiLock(funcMutex);
+        
+        fn();
+        
+        funcConditionVariable.notify_one();
+    });
+    
+    funcConditionVariable.wait(funcLock);
+}
