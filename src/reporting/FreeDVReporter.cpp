@@ -23,32 +23,33 @@
 #include "FreeDVReporter.h"
 
 FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software)
-    : lastFrequency_(0)
+    : hostname_(hostname)
+    , callsign_(callsign)
+    , gridSquare_(gridSquare)
+    , software_(software)
+    , lastFrequency_(0)
     , tx_(false)
 {
-    // Connect and send initial info.
-    // TBD - determine final location of site
-    sio::message::ptr authPtr = sio::object_message::create();
-    auto auth = (sio::object_message*)authPtr.get();
-    auth->insert("callsign", callsign);
-    auth->insert("grid_square", gridSquare);
-    auth->insert("version", software);
-    auth->insert("role", "report");
-    
-    // Reconnect listener should re-report frequency so that "unknown"
-    // doesn't appear.
-    sioClient_.set_reconnect_listener([&](unsigned, unsigned)
-    {
-        freqChange(lastFrequency_);
-        transmit(mode_, tx_);
-    });
-    
-    sioClient_.connect(std::string("http://") + hostname + "/", authPtr);
+    connect_();
 }
 
 FreeDVReporter::~FreeDVReporter()
 {
     // empty
+}
+
+void FreeDVReporter::inAnalogMode(bool inAnalog)
+{
+    if (inAnalog)
+    {
+        sioClient_.close();
+    }
+    else
+    {
+        connect_();
+        freqChange(lastFrequency_);
+        transmit(mode_, tx_);
+    }
 }
 
 void FreeDVReporter::freqChange(uint64_t frequency)
@@ -90,4 +91,25 @@ void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, ui
 void FreeDVReporter::send()
 {
     // No implementation needed, we send RX/TX reports live.
+}
+
+void FreeDVReporter::connect_()
+{
+    // Connect and send initial info.
+    sio::message::ptr authPtr = sio::object_message::create();
+    auto auth = (sio::object_message*)authPtr.get();
+    auth->insert("callsign", callsign_);
+    auth->insert("grid_square", gridSquare_);
+    auth->insert("version", software_);
+    auth->insert("role", "report");
+    
+    // Reconnect listener should re-report frequency so that "unknown"
+    // doesn't appear.
+    sioClient_.set_reconnect_listener([&](unsigned, unsigned)
+    {
+        freqChange(lastFrequency_);
+        transmit(mode_, tx_);
+    });
+    
+    sioClient_.connect(std::string("http://") + hostname_ + "/", authPtr);
 }

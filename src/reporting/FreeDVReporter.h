@@ -35,15 +35,23 @@ public:
 
     virtual void freqChange(uint64_t frequency) override;
     virtual void transmit(std::string mode, bool tx) override;
-        
+    
+    virtual void inAnalogMode(bool inAnalog) override;
+    
     virtual void addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, char snr) override;
     virtual void send() override;
     
 private:
     sio::client sioClient_;
+    std::string hostname_;
+    std::string callsign_;
+    std::string gridSquare_;
+    std::string software_;
     uint64_t lastFrequency_;
     std::string mode_;
     bool tx_;
+    
+    void connect_();
 };
 
 #endif // FREEDV_REPORTER_H
