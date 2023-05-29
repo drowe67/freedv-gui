@@ -618,5 +618,13 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     {
         ptr->freqChange(wxGetApp().m_reportingFrequency);
     }
+    
+    if (wxGetApp().m_hamlib != nullptr && 
+        wxGetApp().m_reportingFrequency > 0 && 
+        wxGetApp().m_reportingFrequency != wxGetApp().m_hamlib->get_frequency())
+    {
+        // Request frequency/mode change on the radio side
+        wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency);
+    }
 }
 

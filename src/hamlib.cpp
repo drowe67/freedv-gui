@@ -308,6 +308,82 @@ void Hamlib::disable_mode_detection()
     }
 }
 
+void Hamlib::setFrequencyAndMode(uint64_t frequencyHz)
+{
+    if (m_rig == nullptr || pttSet_)
+    {
+        // Ignore if not connected or if transmitting
+        return;
+    }
+    
+    // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
+    bool is60MeterBand = frequencyHz >= 5250000 && frequencyHz <= 5450000;
+    
+    // Update color based on the mode and current frequency.
+    bool isUsbFreq = frequencyHz >= 10000000 || is60MeterBand;
+    bool isLsbFreq = frequencyHz < 10000000 && !is60MeterBand;
+    bool isFmFreq = frequencyHz >= 29510000;
+    
+    // Determine mode to switch to
+    rmode_t mode = RIG_MODE_NONE;
+    if (m_vhfUhfMode && isFmFreq)
+    {
+        mode = RIG_MODE_PKTFM;
+    }
+    else if (isUsbFreq)
+    {
+        mode = RIG_MODE_PKTUSB;
+    }
+    else if (isLsbFreq)
+    {
+        mode = RIG_MODE_PKTLSB;
+    }
+    else
+    {
+        assert(0);
+    }
+    
+    vfo_t currVfo = getCurrentVfo_();    
+
+modeAttempt:
+    int result = rig_set_mode(m_rig, currVfo, mode, RIG_PASSBAND_NOCHANGE);
+    if (result != RIG_OK && currVfo == RIG_VFO_CURR)
+    {
+        if (g_verbose) fprintf(stderr, "rig_set_mode: error = %s \n", rigerror(result));
+    }
+    else if (result != RIG_OK)
+    {
+        // We supposedly have multiple VFOs but ran into problems 
+        // trying to get information about the supposed active VFO.
+        // Make a last ditch effort using RIG_VFO_CURR before fully failing.
+        currVfo = RIG_VFO_CURR;
+        goto modeAttempt;
+    }
+    else
+    {
+freqAttempt:
+        result = rig_set_freq(m_rig, currVfo, frequencyHz);
+        if (result != RIG_OK && currVfo == RIG_VFO_CURR)
+        {
+            if (g_verbose) fprintf(stderr, "rig_set_freq: error = %s \n", rigerror(result));
+        }
+        else if (result != RIG_OK)
+        {
+            // We supposedly have multiple VFOs but ran into problems 
+            // trying to get information about the supposed active VFO.
+            // Make a last ditch effort using RIG_VFO_CURR before fully failing.
+            currVfo = RIG_VFO_CURR;
+            goto freqAttempt;
+        }
+        else
+        {
+            m_currMode = mode;
+            m_currFreq = frequencyHz;
+            m_modeBox->CallAfter([&]() { update_mode_status(); });
+        }
+    }
+}
+
 
 void Hamlib::statusUpdateThreadEntryFn_()
 {

@@ -34,6 +34,7 @@ class Hamlib {
         bool ptt(bool press, wxString &hamlibError);
         void enable_mode_detection(wxStaticText* statusBox, wxComboBox* freqBox, bool vhfUhfMode);
         void disable_mode_detection();
+        void setFrequencyAndMode(uint64_t frequencyHz);
         void close(void);
         int get_serial_rate(void);
         int get_data_bits(void);
