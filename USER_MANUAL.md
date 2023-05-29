@@ -868,7 +868,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Prevent Start/Stop button from being pressed twice in a row during shutdown. (PR #399)
 3. Enhancements:
     * Add last received SNR to callsign list. (PR #389, #391)
-    * Add support for FreeDV Reporter web-based tool. (PR #390, #402)
+    * Add support for FreeDV Reporter web-based tool. (PR #390, #402, #404)
     * Defer sound device checking until Start is pushed. (PR #393)
     * Add ability for Hamlib to use RTS/DTR instead of CAT for PTT. (PR #394)
     * Automatically change radio frequency if the reporting frequency changes. (PR #405)
