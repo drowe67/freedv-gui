@@ -552,6 +552,14 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     });
     workerThread.detach();
     
+    if (wxGetApp().m_hamlib != nullptr && 
+        wxGetApp().m_reportingFrequency > 0 && 
+        wxGetApp().m_reportingFrequency != wxGetApp().m_hamlib->get_frequency())
+    {
+        // Request frequency/mode change on the radio side
+        wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, g_analog);
+    }
+
     g_State = g_prev_State = 0;
     freedvInterface.getCurrentRxModemStats()->snr_est = 0;
 
@@ -633,7 +641,7 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
         wxGetApp().m_reportingFrequency != wxGetApp().m_hamlib->get_frequency())
     {
         // Request frequency/mode change on the radio side
-        wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency);
+        wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, g_analog);
     }
 }
 

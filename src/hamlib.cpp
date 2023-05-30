@@ -308,7 +308,7 @@ void Hamlib::disable_mode_detection()
     }
 }
 
-void Hamlib::setFrequencyAndMode(uint64_t frequencyHz)
+void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
 {
     if (m_rig == nullptr || pttSet_)
     {
@@ -328,15 +328,15 @@ void Hamlib::setFrequencyAndMode(uint64_t frequencyHz)
     rmode_t mode = RIG_MODE_NONE;
     if (m_vhfUhfMode && isFmFreq)
     {
-        mode = RIG_MODE_PKTFM;
+        mode = analog ? RIG_MODE_FM : RIG_MODE_PKTFM;
     }
     else if (isUsbFreq)
     {
-        mode = RIG_MODE_PKTUSB;
+        mode = analog ? RIG_MODE_PKTUSB : RIG_MODE_USB;
     }
     else if (isLsbFreq)
     {
-        mode = RIG_MODE_PKTLSB;
+        mode = analog ? RIG_MODE_PKTLSB : RIG_MODE_LSB;
     }
     else
     {
