@@ -398,7 +398,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_hiddenMode1->SetValue(true);
     m_hiddenMode2->SetValue(true);
 
-    sbSizer_mode->SetMinSize(wxSize(100,240));
+    sbSizer_mode->SetMinSize(wxSize(175,240));
     otherModeWin->SetSizer(otherModeSizer);
     otherModeSizer->SetSizeHints(otherModeWin);
 
@@ -477,7 +477,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     };
     int numChoices = sizeof(choices) / sizeof(wxString);
     m_cboReportFrequency = new wxComboBox(m_freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, numChoices, choices, wxCB_DROPDOWN);
-    m_cboReportFrequency->SetMinSize(wxSize(100,-1));
+    m_cboReportFrequency->SetMinSize(wxSize(150,-1));
     txtReportFreqSizer->Add(m_cboReportFrequency, 1, 0, 1);
     reportFrequencySizer->Add(txtReportFreqSizer, 1, wxEXPAND, 1);
     reportFrequencySizer->Add(reportFrequencyUnits, 0, wxALIGN_CENTER_VERTICAL, 1);
