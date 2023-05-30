@@ -48,6 +48,8 @@ Hamlib::Hamlib() :
     m_freqBox(NULL),
     m_currFreq(0),
     m_currMode(RIG_MODE_USB),
+    m_origFreq(0),
+    m_origMode(RIG_MODE_USB),
     m_vhfUhfMode(false),
     pttSet_(false),
     threadRunning_(false)  {
@@ -132,6 +134,8 @@ void Hamlib::populateComboBox(wxComboBox *cb) {
 }
 
 bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int serial_rate, const int civ_hex, const PttType pttType) {
+    m_origFreq = 0;
+    m_origMode = RIG_MODE_USB;
 
     /* Look up model from index. */
 
@@ -211,7 +215,13 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
         {
             multipleVfos_ = true;
         }
-        
+
+        // Get current frequency and mode when we first connect so we can 
+        // revert on close.        
+        update_from_hamlib_();
+        m_origFreq = m_currFreq;
+        m_origMode = m_currMode;
+
         return true;
     }
     if (g_verbose) fprintf(stderr, "hamlib: rig_open() failed ...\n");
@@ -306,6 +316,9 @@ void Hamlib::disable_mode_detection()
     {
         statusUpdateThread_.join();
     }
+
+    m_freqBox = nullptr;
+    m_modeBox = nullptr;
 }
 
 void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
@@ -342,7 +355,12 @@ void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
     {
         assert(0);
     }
-    
+
+    setFrequencyAndModeHelper_(frequencyHz, mode);
+}
+   
+void Hamlib::setFrequencyAndModeHelper_(uint64_t frequencyHz, rmode_t mode)
+{ 
     vfo_t currVfo = getCurrentVfo_();    
 
 modeAttempt:
@@ -379,7 +397,11 @@ freqAttempt:
         {
             m_currMode = mode;
             m_currFreq = frequencyHz;
-            m_modeBox->CallAfter([&]() { update_mode_status(); });
+
+            if (m_modeBox != nullptr)
+            {
+                m_modeBox->CallAfter([&]() { update_mode_status(); });
+            }
         }
     }
 }
@@ -478,7 +500,10 @@ freqAttempt:
         {
             m_currMode = mode;
             m_currFreq = freq;
-            m_modeBox->CallAfter([&]() { update_mode_status(); });
+            if (m_modeBox != nullptr)
+            {
+                m_modeBox->CallAfter([&]() { update_mode_status(); });
+            }
         }
     }
 }
@@ -528,7 +553,13 @@ void Hamlib::close(void) {
     if(m_rig) {
         // Turn off status thread if needed.
         disable_mode_detection();
-        
+       
+        // Recover original frequency and mode before closure.
+        if (m_origFreq > 0)
+        {
+            setFrequencyAndModeHelper_(m_origFreq, m_origMode);
+        }
+ 
         rig_close(m_rig);
         rig_cleanup(m_rig);
         m_rig = NULL;

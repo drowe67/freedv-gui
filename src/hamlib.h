@@ -49,6 +49,7 @@ class Hamlib {
         void update_mode_status();
         void statusUpdateThreadEntryFn_();
         void update_from_hamlib_();
+        void setFrequencyAndModeHelper_(uint64_t frequencyHz, rmode_t mode);
         
         vfo_t getCurrentVfo_();
         
@@ -62,6 +63,8 @@ class Hamlib {
         wxComboBox* m_freqBox;
         freq_t m_currFreq;
         rmode_t m_currMode;
+        freq_t m_origFreq;
+        rmode_t m_origMode;
         bool m_vhfUhfMode;
         bool pttSet_;
         bool multipleVfos_;
