@@ -52,6 +52,7 @@ Hamlib::Hamlib() :
     m_origMode(RIG_MODE_USB),
     m_vhfUhfMode(false),
     pttSet_(false),
+    updatesSuppressed_(false),
     threadRunning_(false)  {
     /* Stop hamlib from spewing info to stderr. */
     rig_set_debug(RIG_DEBUG_NONE);
@@ -131,6 +132,11 @@ void Hamlib::populateComboBox(wxComboBox *cb) {
         snprintf(name, 128, "%s %s", (*rig)->mfg_name, (*rig)->model_name); 
         cb->Append(name);
     }
+}
+
+void Hamlib::suppressFrequencyModeUpdates(bool suppress)
+{
+    updatesSuppressed_ = suppress;
 }
 
 bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int serial_rate, const int civ_hex, const PttType pttType) {
@@ -454,9 +460,9 @@ void Hamlib::statusUpdateThreadEntryFn_()
 
 void Hamlib::update_from_hamlib_()
 {
-    if (pttSet_)
+    if (pttSet_ || updatesSuppressed_)
     {
-        // ignore Hamlib update when PTT active.
+        // ignore Hamlib update when PTT active or we're otherwise suppressing updates.
         return;
     }
     

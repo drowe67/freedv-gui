@@ -646,3 +646,18 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     }
 }
 
+void MainFrame::OnReportFrequencySetFocus(wxFocusEvent& event)
+{
+    if (wxGetApp().m_hamlib != nullptr)
+    {
+        wxGetApp().m_hamlib->suppressFrequencyModeUpdates(true);
+    }
+}
+
+void MainFrame::OnReportFrequencyKillFocus(wxFocusEvent& event)
+{
+    if (wxGetApp().m_hamlib != nullptr)
+    {
+        wxGetApp().m_hamlib->suppressFrequencyModeUpdates(false);
+    }
+}

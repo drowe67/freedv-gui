@@ -35,6 +35,7 @@ class Hamlib {
         void enable_mode_detection(wxStaticText* statusBox, wxComboBox* freqBox, bool vhfUhfMode);
         void disable_mode_detection();
         void setFrequencyAndMode(uint64_t frequencyHz, bool analog);
+        void suppressFrequencyModeUpdates(bool suppress);
         void close(void);
         int get_serial_rate(void);
         int get_data_bits(void);
@@ -68,6 +69,7 @@ class Hamlib {
         bool m_vhfUhfMode;
         bool pttSet_;
         bool multipleVfos_;
+        bool updatesSuppressed_;
         
         // Data elements to support running Hamlib operations in a separate thread.
         bool threadRunning_;
