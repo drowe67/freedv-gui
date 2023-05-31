@@ -402,7 +402,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     otherModeWin->SetSizer(otherModeSizer);
     otherModeSizer->SetSizeHints(otherModeWin);
 
-    rightSizer->Add(sbSizer_mode,0, wxALL, 3);
+    rightSizer->Add(sbSizer_mode,0, wxEXPAND, 3);
 
     //=====================================================
     // Control Toggles box
