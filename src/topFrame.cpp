@@ -464,7 +464,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
         _("3693.0"),
         _("3697.0"),
         _("5403.5"),
-        _("5366.3"),
+        _("5366.5"),
         _("7177.0"),
         _("14236.0"),
         _("14240.0"),
