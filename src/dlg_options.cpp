@@ -54,6 +54,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // Create notebook and tabs.
     m_notebook = new wxNotebook(panel, wxID_ANY);
     m_reportingTab = new wxPanel(m_notebook, wxID_ANY);
+    m_rigControlTab = new wxPanel(m_notebook, wxID_ANY);
     m_displayTab = new wxPanel(m_notebook, wxID_ANY);
     m_keyerTab = new wxPanel(m_notebook, wxID_ANY);
     m_modemTab = new wxPanel(m_notebook, wxID_ANY);
@@ -61,6 +62,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_debugTab = new wxPanel(m_notebook, wxID_ANY);
     
     m_notebook->AddPage(m_reportingTab, _("Reporting"));
+    m_notebook->AddPage(m_rigControlTab, _("Rig Control"));
     m_notebook->AddPage(m_displayTab, _("Display"));
     m_notebook->AddPage(m_keyerTab, _("Audio"));
     m_notebook->AddPage(m_modemTab, _("Modem"));
@@ -143,6 +145,24 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sizerReporting->Add(sbSizer_callsign_list,0, wxALL | wxEXPAND, 5);
     
     m_reportingTab->SetSizer(sizerReporting);
+    
+    // Rig Control tab
+    wxBoxSizer* sizerRigControl = new wxBoxSizer(wxVERTICAL);
+    
+    //------------------------------
+    // Txt Msg Text Box
+    //------------------------------
+    
+    wxStaticBoxSizer* sbSizer_hamlib;
+    wxStaticBox *sb_hamlib = new wxStaticBox(m_rigControlTab, wxID_ANY, _("Hamlib Options"));
+    sbSizer_hamlib = new wxStaticBoxSizer(sb_hamlib, wxVERTICAL);
+    
+    m_ckboxUseAnalogModes = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Use USB/LSB instead of DIGU/DIGL"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_hamlib->Add(m_ckboxUseAnalogModes, 0, wxALL | wxALIGN_LEFT, 5);
+
+    sizerRigControl->Add(sbSizer_hamlib,0, wxALL | wxEXPAND, 5);
+    
+    m_rigControlTab->SetSizer(sizerRigControl);
         
     // Display tab
     wxBoxSizer* sizerDisplay = new wxBoxSizer(wxVERTICAL);
@@ -602,6 +622,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
     {
         m_txtCtrlCallSign->SetValue(wxGetApp().m_callSign);
 
+        m_ckboxUseAnalogModes->SetValue(wxGetApp().m_boolHamlibUseAnalogModes);
+        
         /* Voice Keyer */
 
         m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().m_txtVoiceKeyerWaveFile);
@@ -705,6 +727,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
     if(inout == EXCHANGE_DATA_OUT)
     {
+        wxGetApp().m_boolHamlibUseAnalogModes = m_ckboxUseAnalogModes->GetValue();
+        pConfig->Write(wxT("/Hamlib/UseAnalogModes"), wxGetApp().m_boolHamlibUseAnalogModes);
+        
         wxGetApp().m_callSign = m_txtCtrlCallSign->GetValue();
 
         wxGetApp().m_boolHalfDuplex = m_ckHalfDuplex->GetValue();

@@ -212,6 +212,7 @@ class MainApp : public wxApp
         unsigned int        m_intHamlibIcomCIVHex;
         Hamlib              *m_hamlib;
         Hamlib::PttType     m_hamlibPttType;
+        bool                m_boolHamlibUseAnalogModes;
 
         bool                m_boolUseSerialPTT;
         wxString            m_strRigCtrlPort;
