@@ -317,8 +317,6 @@ void Hamlib::disable_mode_detection()
         statusUpdateThread_.join();
     }
 
-    m_freqBox = nullptr;
-    m_modeBox = nullptr;
 }
 
 void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
@@ -341,15 +339,15 @@ void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
     rmode_t mode = RIG_MODE_NONE;
     if (m_vhfUhfMode && isFmFreq)
     {
-        mode = analog ? RIG_MODE_FM : RIG_MODE_PKTFM;
+        mode = !analog ? RIG_MODE_PKTFM : RIG_MODE_FM;
     }
     else if (isUsbFreq)
     {
-        mode = analog ? RIG_MODE_PKTUSB : RIG_MODE_USB;
+        mode = !analog ? RIG_MODE_PKTUSB : RIG_MODE_USB;
     }
     else if (isLsbFreq)
     {
-        mode = analog ? RIG_MODE_PKTLSB : RIG_MODE_LSB;
+        mode = !analog ? RIG_MODE_PKTLSB : RIG_MODE_LSB;
     }
     else
     {
@@ -421,7 +419,8 @@ void Hamlib::statusUpdateThreadEntryFn_()
             m_modeBox->SetLabel(wxT("unk"));
             m_modeBox->Enable(false);
             m_modeBox->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-            m_modeBox = NULL;
+            m_freqBox = nullptr;
+            m_modeBox = nullptr;
         });
         
         threadRunning_ = false;

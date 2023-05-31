@@ -248,6 +248,7 @@ bool MainFrame::OpenHamlibRig() {
         }
         else
         {
+            wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, g_analog);
             wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, m_cboReportFrequency, g_mode == FREEDV_MODE_2400B);
         }
     
