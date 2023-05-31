@@ -652,12 +652,20 @@ void MainFrame::OnReportFrequencySetFocus(wxFocusEvent& event)
     {
         wxGetApp().m_hamlib->suppressFrequencyModeUpdates(true);
     }
+    
+    TopFrame::OnReportFrequencySetFocus(event);
 }
 
 void MainFrame::OnReportFrequencyKillFocus(wxFocusEvent& event)
 {
+    // Handle any frequency changes as appropriate.
+    wxCommandEvent tmpEvent;
+    OnChangeReportFrequency(tmpEvent);
+    
     if (wxGetApp().m_hamlib != nullptr)
     {
         wxGetApp().m_hamlib->suppressFrequencyModeUpdates(false);
     }
+    
+    TopFrame::OnReportFrequencyKillFocus(event);
 }
