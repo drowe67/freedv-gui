@@ -456,24 +456,24 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_freqBox = new wxStaticBox(m_panel, wxID_ANY, _("Report Frequency"));
     wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(m_freqBox, wxHORIZONTAL);
     
-    wxStaticText* reportFrequencyUnits = new wxStaticText(m_freqBox, wxID_ANY, wxT(" kHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    wxStaticText* reportFrequencyUnits = new wxStaticText(m_freqBox, wxID_ANY, wxT(" MHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     wxBoxSizer* txtReportFreqSizer = new wxBoxSizer(wxVERTICAL);
     wxString choices[] = {
-        _("3625.0"),
-        _("3643.0"),
-        _("3693.0"),
-        _("3697.0"),
-        _("5403.5"),
-        _("5366.5"),
-        _("7177.0"),
-        _("14236.0"),
-        _("14240.0"),
-        _("18188.0"),
-        _("21313.0"),
-        _("24933.0"),
-        _("28330.0"),
-        _("28720.0"),
-        _("10489640.0"),
+        _("3.6250"),
+        _("3.6430"),
+        _("3.6930"),
+        _("3.6970"),
+        _("5.4035"),
+        _("5.3665"),
+        _("7.1770"),
+        _("14.2360"),
+        _("14.2400"),
+        _("18.1880"),
+        _("21.3130"),
+        _("24.9330"),
+        _("28.3300"),
+        _("28.7200"),
+        _("10489.6400"),
     };
     int numChoices = sizeof(choices) / sizeof(wxString);
     m_cboReportFrequency = new wxComboBox(m_freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, numChoices, choices, wxCB_DROPDOWN | wxTE_PROCESS_ENTER);
