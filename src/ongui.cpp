@@ -248,7 +248,8 @@ bool MainFrame::OpenHamlibRig() {
         }
         else
         {
-            wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, m_txtCtrlReportFrequency, g_mode == FREEDV_MODE_2400B);
+            wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);
+            wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, m_cboReportFrequency, g_mode == FREEDV_MODE_2400B);
         }
     
         return status;
@@ -552,6 +553,13 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     });
     workerThread.detach();
     
+    if (wxGetApp().m_hamlib != nullptr && 
+        wxGetApp().m_reportingFrequency > 0)
+    {
+        // Request frequency/mode change on the radio side
+        wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);
+    }
+
     g_State = g_prev_State = 0;
     freedvInterface.getCurrentRxModemStats()->snr_est = 0;
 
@@ -603,23 +611,23 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
 
 void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
 {
-    wxString freqStr = m_txtCtrlReportFrequency->GetValue();
+    wxString freqStr = m_cboReportFrequency->GetValue();
     if (freqStr.Length() > 0)
     {
-        wxGetApp().m_reportingFrequency = atof(freqStr.ToUTF8()) * 1000;
+        wxGetApp().m_reportingFrequency = atof(freqStr.ToUTF8()) * 1000 * 1000;
         if (wxGetApp().m_reportingFrequency > 0)
         {
-            m_txtCtrlReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+            m_cboReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
         }
         else
         {
-            m_txtCtrlReportFrequency->SetForegroundColour(wxColor(*wxRED));
+            m_cboReportFrequency->SetForegroundColour(wxColor(*wxRED));
         }
     }
     else
     {
         wxGetApp().m_reportingFrequency = 0;
-        m_txtCtrlReportFrequency->SetForegroundColour(wxColor(*wxRED));
+        m_cboReportFrequency->SetForegroundColour(wxColor(*wxRED));
     }
     
     // Report current frequency to reporters
@@ -627,5 +635,36 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     {
         ptr->freqChange(wxGetApp().m_reportingFrequency);
     }
+    
+    if (wxGetApp().m_hamlib != nullptr && 
+        wxGetApp().m_reportingFrequency > 0 && 
+        wxGetApp().m_reportingFrequency != wxGetApp().m_hamlib->get_frequency())
+    {
+        // Request frequency/mode change on the radio side
+        wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);
+    }
 }
 
+void MainFrame::OnReportFrequencySetFocus(wxFocusEvent& event)
+{
+    if (wxGetApp().m_hamlib != nullptr)
+    {
+        wxGetApp().m_hamlib->suppressFrequencyModeUpdates(true);
+    }
+    
+    TopFrame::OnReportFrequencySetFocus(event);
+}
+
+void MainFrame::OnReportFrequencyKillFocus(wxFocusEvent& event)
+{
+    // Handle any frequency changes as appropriate.
+    wxCommandEvent tmpEvent;
+    OnChangeReportFrequency(tmpEvent);
+    
+    if (wxGetApp().m_hamlib != nullptr)
+    {
+        wxGetApp().m_hamlib->suppressFrequencyModeUpdates(false);
+    }
+    
+    TopFrame::OnReportFrequencyKillFocus(event);
+}

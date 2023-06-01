@@ -77,11 +77,15 @@ class OptionsDlg : public wxDialog
 
         wxNotebook  *m_notebook;
         wxNotebookPage *m_reportingTab; // txt msg/PSK Reporter
+        wxNotebookPage *m_rigControlTab; // Rig Control
         wxNotebookPage *m_displayTab; // Waterfall color, other display config
         wxNotebookPage *m_keyerTab; // Voice Keyer
         wxNotebookPage *m_modemTab; // 700/OFDM/duplex
         wxNotebookPage *m_simulationTab; // testing/interference
         wxNotebookPage *m_debugTab; // Debug
+        
+        /* Hamlib options */
+        wxCheckBox   *m_ckboxUseAnalogModes;
         
         /* Waterfall color */
         wxRadioButton *m_waterfallColorScheme1; // Multicolored

@@ -32,8 +32,10 @@ class Hamlib {
         void populateComboBox(wxComboBox *cb);
         bool connect(unsigned int rig_index, const char *serial_port, const int serial_rate, const int civ_hex = 0, const PttType pttType = PTT_VIA_CAT);
         bool ptt(bool press, wxString &hamlibError);
-        void enable_mode_detection(wxStaticText* statusBox, wxTextCtrl* freqBox, bool vhfUhfMode);
+        void enable_mode_detection(wxStaticText* statusBox, wxComboBox* freqBox, bool vhfUhfMode);
         void disable_mode_detection();
+        void setFrequencyAndMode(uint64_t frequencyHz, bool analog);
+        void suppressFrequencyModeUpdates(bool suppress);
         void close(void);
         int get_serial_rate(void);
         int get_data_bits(void);
@@ -48,6 +50,7 @@ class Hamlib {
         void update_mode_status();
         void statusUpdateThreadEntryFn_();
         void update_from_hamlib_();
+        void setFrequencyAndModeHelper_(uint64_t frequencyHz, rmode_t mode);
         
         vfo_t getCurrentVfo_();
         
@@ -58,12 +61,15 @@ class Hamlib {
 
         /* Mode detection status box and state. */
         wxStaticText* m_modeBox;
-        wxTextCtrl* m_freqBox;
+        wxComboBox* m_freqBox;
         freq_t m_currFreq;
         rmode_t m_currMode;
+        freq_t m_origFreq;
+        rmode_t m_origMode;
         bool m_vhfUhfMode;
         bool pttSet_;
         bool multipleVfos_;
+        bool updatesSuppressed_;
         
         // Data elements to support running Hamlib operations in a separate thread.
         bool threadRunning_;

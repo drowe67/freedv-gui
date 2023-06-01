@@ -334,10 +334,10 @@ along with the reporting feature as a whole:
 * [PSK Reporter](https://pskreporter.info/) (using the "FREEDV" mode)
 * [FreeDV Reporter](https://freedv-reporter.k6aq.net/)
 
-The frequency that FreeDV reports is set by changing the "Report Frequency" text box in the main window. This 
+The frequency that FreeDV reports is set by changing the "Report Frequency" drop down box in the main window. This 
 is in kilohertz (kHz) and will turn red if the entered value is invalid. If Hamlib support is also enabled, 
-this frequency will automatically update approximately every five seconds while receiving, overwriting anything
-manually entered.
+this frequency will automatically remain in sync with the current VFO on the radio (i.e. if the frequency is changed
+in the application, the radio will also change its frequency).
 
 FreeDV will also show the callsigns of previously received signals. To view those, click on the arrow
 next to the last received callsign at the bottom of the window. These are in descending order by time
@@ -854,7 +854,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V1.8.10 TBD 2023
+## V1.8.10 June 2023
 
 1. Build system:
     * Minimum required Codec2 version bumped up to 1.1.0. (PR #383)
@@ -871,6 +871,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add support for FreeDV Reporter web-based tool. (PR #390, #402, #404)
     * Defer sound device checking until Start is pushed. (PR #393)
     * Add ability for Hamlib to use RTS/DTR instead of CAT for PTT. (PR #394)
+    * Automatically change radio frequency if the reporting frequency changes. (PR #405)
 
 ## V1.8.9 April 2023
 

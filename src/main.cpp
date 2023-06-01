@@ -447,6 +447,7 @@ void MainFrame::loadConfiguration_()
     
     wxGetApp().m_boolHamlibUseForPTT = pConfig->ReadBool("/Hamlib/UseForPTT", false);
     wxGetApp().m_intHamlibIcomCIVHex = pConfig->ReadLong("/Hamlib/IcomCIVHex", 0);
+    wxGetApp().m_boolHamlibUseAnalogModes = pConfig->ReadBool(wxT("/Hamlib/UseAnalogModes"), false);
     
     // Note: we're no longer using RigName but we need to bring over the old data
     // for backwards compatibility.
@@ -550,7 +551,7 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_reportingGridSquare = pConfig->Read(wxT("/Reporting/GridSquare"), oldGridSquare);
     wxString freqStr = pConfig->Read(wxT("/Reporting/Frequency"), oldFreqStr);
     wxGetApp().m_reportingFrequency = atoll(freqStr.ToUTF8());
-    m_txtCtrlReportFrequency->SetValue(wxString::Format("%.1f", ((double)wxGetApp().m_reportingFrequency)/1000.0));
+    m_cboReportFrequency->SetValue(wxString::Format("%.4f", ((double)wxGetApp().m_reportingFrequency)/1000.0/1000.0));
     
     // PSK Reporter parameters
     wxGetApp().m_pskReporterEnabled = pConfig->ReadBool(wxT("/Reporting/PSKReporter/Enable"), oldPskEnable);
@@ -943,6 +944,7 @@ MainFrame::~MainFrame()
     pConfig->Write("/Hamlib/SerialRate", wxGetApp().m_intHamlibSerialRate);
     pConfig->Write("/Hamlib/IcomCIVHex", wxGetApp().m_intHamlibIcomCIVHex);
     pConfig->Write("/Hamlib/PttType", (long)wxGetApp().m_hamlibPttType);
+    pConfig->Write(wxT("/Hamlib/UseAnalogModes"), wxGetApp().m_boolHamlibUseAnalogModes);
 
     pConfig->Write(wxT("/File/playFileToMicInPath"),    wxGetApp().m_playFileToMicInPath);
     pConfig->Write(wxT("/File/recFileFromRadioPath"),   wxGetApp().m_recFileFromRadioPath);

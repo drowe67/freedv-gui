@@ -48,8 +48,11 @@ Hamlib::Hamlib() :
     m_freqBox(NULL),
     m_currFreq(0),
     m_currMode(RIG_MODE_USB),
+    m_origFreq(0),
+    m_origMode(RIG_MODE_USB),
     m_vhfUhfMode(false),
     pttSet_(false),
+    updatesSuppressed_(false),
     threadRunning_(false)  {
     /* Stop hamlib from spewing info to stderr. */
     rig_set_debug(RIG_DEBUG_NONE);
@@ -131,7 +134,14 @@ void Hamlib::populateComboBox(wxComboBox *cb) {
     }
 }
 
+void Hamlib::suppressFrequencyModeUpdates(bool suppress)
+{
+    updatesSuppressed_ = suppress;
+}
+
 bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int serial_rate, const int civ_hex, const PttType pttType) {
+    m_origFreq = 0;
+    m_origMode = RIG_MODE_USB;
 
     /* Look up model from index. */
 
@@ -211,7 +221,13 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
         {
             multipleVfos_ = true;
         }
-        
+
+        // Get current frequency and mode when we first connect so we can 
+        // revert on close.        
+        update_from_hamlib_();
+        m_origFreq = m_currFreq;
+        m_origMode = m_currMode;
+
         return true;
     }
     if (g_verbose) fprintf(stderr, "hamlib: rig_open() failed ...\n");
@@ -281,7 +297,7 @@ int Hamlib::update_frequency_and_mode(void)
     return 0;
 }
 
-void Hamlib::enable_mode_detection(wxStaticText* statusBox, wxTextCtrl* freqBox, bool vhfUhfMode)
+void Hamlib::enable_mode_detection(wxStaticText* statusBox, wxComboBox* freqBox, bool vhfUhfMode)
 {
     // Set VHF/UHF mode. This governs whether FM is an acceptable mode for the detection display.
     m_vhfUhfMode = vhfUhfMode;
@@ -306,6 +322,92 @@ void Hamlib::disable_mode_detection()
     {
         statusUpdateThread_.join();
     }
+
+}
+
+void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
+{
+    if (m_rig == nullptr || pttSet_)
+    {
+        // Ignore if not connected or if transmitting
+        return;
+    }
+    
+    // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
+    bool is60MeterBand = frequencyHz >= 5250000 && frequencyHz <= 5450000;
+    
+    // Update color based on the mode and current frequency.
+    bool isUsbFreq = frequencyHz >= 10000000 || is60MeterBand;
+    bool isLsbFreq = frequencyHz < 10000000 && !is60MeterBand;
+    bool isFmFreq = frequencyHz >= 29510000;
+    
+    // Determine mode to switch to
+    rmode_t mode = RIG_MODE_NONE;
+    if (m_vhfUhfMode && isFmFreq)
+    {
+        mode = !analog ? RIG_MODE_PKTFM : RIG_MODE_FM;
+    }
+    else if (isUsbFreq)
+    {
+        mode = !analog ? RIG_MODE_PKTUSB : RIG_MODE_USB;
+    }
+    else if (isLsbFreq)
+    {
+        mode = !analog ? RIG_MODE_PKTLSB : RIG_MODE_LSB;
+    }
+    else
+    {
+        assert(0);
+    }
+
+    setFrequencyAndModeHelper_(frequencyHz, mode);
+}
+   
+void Hamlib::setFrequencyAndModeHelper_(uint64_t frequencyHz, rmode_t mode)
+{ 
+    vfo_t currVfo = getCurrentVfo_();    
+
+modeAttempt:
+    int result = rig_set_mode(m_rig, currVfo, mode, RIG_PASSBAND_NOCHANGE);
+    if (result != RIG_OK && currVfo == RIG_VFO_CURR)
+    {
+        if (g_verbose) fprintf(stderr, "rig_set_mode: error = %s \n", rigerror(result));
+    }
+    else if (result != RIG_OK)
+    {
+        // We supposedly have multiple VFOs but ran into problems 
+        // trying to get information about the supposed active VFO.
+        // Make a last ditch effort using RIG_VFO_CURR before fully failing.
+        currVfo = RIG_VFO_CURR;
+        goto modeAttempt;
+    }
+    else
+    {
+freqAttempt:
+        result = rig_set_freq(m_rig, currVfo, frequencyHz);
+        if (result != RIG_OK && currVfo == RIG_VFO_CURR)
+        {
+            if (g_verbose) fprintf(stderr, "rig_set_freq: error = %s \n", rigerror(result));
+        }
+        else if (result != RIG_OK)
+        {
+            // We supposedly have multiple VFOs but ran into problems 
+            // trying to get information about the supposed active VFO.
+            // Make a last ditch effort using RIG_VFO_CURR before fully failing.
+            currVfo = RIG_VFO_CURR;
+            goto freqAttempt;
+        }
+        else
+        {
+            m_currMode = mode;
+            m_currFreq = frequencyHz;
+
+            if (m_modeBox != nullptr)
+            {
+                m_modeBox->CallAfter([&]() { update_mode_status(); });
+            }
+        }
+    }
 }
 
 
@@ -323,7 +425,8 @@ void Hamlib::statusUpdateThreadEntryFn_()
             m_modeBox->SetLabel(wxT("unk"));
             m_modeBox->Enable(false);
             m_modeBox->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-            m_modeBox = NULL;
+            m_freqBox = nullptr;
+            m_modeBox = nullptr;
         });
         
         threadRunning_ = false;
@@ -357,9 +460,9 @@ void Hamlib::statusUpdateThreadEntryFn_()
 
 void Hamlib::update_from_hamlib_()
 {
-    if (pttSet_)
+    if (pttSet_ || updatesSuppressed_)
     {
-        // ignore Hamlib update when PTT active.
+        // ignore Hamlib update when PTT active or we're otherwise suppressing updates.
         return;
     }
     
@@ -402,7 +505,10 @@ freqAttempt:
         {
             m_currMode = mode;
             m_currFreq = freq;
-            m_modeBox->CallAfter([&]() { update_mode_status(); });
+            if (m_modeBox != nullptr)
+            {
+                m_modeBox->CallAfter([&]() { update_mode_status(); });
+            }
         }
     }
 }
@@ -442,7 +548,7 @@ void Hamlib::update_mode_status()
     }
 
     // Update frequency box
-    m_freqBox->SetValue(wxString::Format("%.1f", m_currFreq/1000));
+    m_freqBox->SetValue(wxString::Format("%.4f", m_currFreq/1000.0/1000.0));
     
     // Refresh
     m_modeBox->Refresh();
@@ -452,7 +558,13 @@ void Hamlib::close(void) {
     if(m_rig) {
         // Turn off status thread if needed.
         disable_mode_detection();
-        
+       
+        // Recover original frequency and mode before closure.
+        if (m_origFreq > 0)
+        {
+            setFrequencyAndModeHelper_(m_origFreq, m_origMode);
+        }
+ 
         rig_close(m_rig);
         rig_cleanup(m_rig);
         m_rig = NULL;
