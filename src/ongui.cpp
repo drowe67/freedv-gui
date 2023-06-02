@@ -609,8 +609,18 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
     resetStats_();
 }
 
-void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
+void MainFrame::OnChangeReportFrequencyVerify( wxCommandEvent& event )
 {
+    if (wxGetApp().m_hamlib != nullptr && wxGetApp().m_hamlib->isSuppressFrequencyModeUpdates())
+    {
+        return;
+    }
+    
+    OnChangeReportFrequency(event);
+}
+
+void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
+{    
     wxString freqStr = m_cboReportFrequency->GetValue();
     if (freqStr.Length() > 0)
     {

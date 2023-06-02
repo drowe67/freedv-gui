@@ -214,6 +214,7 @@ class TopFrame : public wxFrame
         virtual void OnChangeTxLevel( wxScrollEvent& event ) { event.Skip(); }
         
         virtual void OnChangeReportFrequency( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnChangeReportFrequencyVerify( wxCommandEvent& event ) { event.Skip(); }
         
         virtual void OnChangeCollapseState(wxCollapsiblePaneEvent& event);
         
