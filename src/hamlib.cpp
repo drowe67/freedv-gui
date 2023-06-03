@@ -366,9 +366,29 @@ void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
 void Hamlib::setFrequencyAndModeHelper_(uint64_t frequencyHz, rmode_t mode)
 { 
     vfo_t currVfo = getCurrentVfo_();    
-
+    bool setOkay = false;
+    
+freqAttempt:
+    int result = rig_set_freq(m_rig, currVfo, frequencyHz);
+    if (result != RIG_OK && currVfo == RIG_VFO_CURR)
+    {
+        if (g_verbose) fprintf(stderr, "rig_set_freq: error = %s \n", rigerror(result));
+    }
+    else if (result != RIG_OK)
+    {
+        // We supposedly have multiple VFOs but ran into problems 
+        // trying to get information about the supposed active VFO.
+        // Make a last ditch effort using RIG_VFO_CURR before fully failing.
+        currVfo = RIG_VFO_CURR;
+        goto freqAttempt;
+    }
+    else
+    {
+        setOkay = true;
+    }
+    
 modeAttempt:
-    int result = rig_set_mode(m_rig, currVfo, mode, RIG_PASSBAND_NOCHANGE);
+    result = rig_set_mode(m_rig, currVfo, mode, RIG_PASSBAND_NOCHANGE);
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
         if (g_verbose) fprintf(stderr, "rig_set_mode: error = %s \n", rigerror(result));
@@ -383,29 +403,20 @@ modeAttempt:
     }
     else
     {
-freqAttempt:
-        result = rig_set_freq(m_rig, currVfo, frequencyHz);
-        if (result != RIG_OK && currVfo == RIG_VFO_CURR)
-        {
-            if (g_verbose) fprintf(stderr, "rig_set_freq: error = %s \n", rigerror(result));
-        }
-        else if (result != RIG_OK)
-        {
-            // We supposedly have multiple VFOs but ran into problems 
-            // trying to get information about the supposed active VFO.
-            // Make a last ditch effort using RIG_VFO_CURR before fully failing.
-            currVfo = RIG_VFO_CURR;
-            goto freqAttempt;
-        }
-        else
-        {
-            m_currMode = mode;
-            m_currFreq = frequencyHz;
+        setOkay = true;
+    }
+    
+    // If we're able to set either frequency or mode, we should update UI accordingly.
+    // The actual configuration of the radio (in case of failure) will auto-update within
+    // a few seconds after this update.
+    if (setOkay)
+    {
+        m_currMode = mode;
+        m_currFreq = frequencyHz;
 
-            if (m_modeBox != nullptr)
-            {
-                m_modeBox->CallAfter([&]() { update_mode_status(); });
-            }
+        if (m_modeBox != nullptr)
+        {
+            m_modeBox->CallAfter([&]() { update_mode_status(); });
         }
     }
 }

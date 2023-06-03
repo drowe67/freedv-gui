@@ -677,6 +677,15 @@ On Linux, using the Alsa loopback module:
 
 # Common Problems
 
+## FreeDV Sets Radio To Wrong Mode
+
+By default, FreeDV attempts to set the radio's mode to DIGU/USB-D (or LSB equivalent for 40 meters and below). Some radios
+do not support data modes and only have USB and LSB. For these, you can go to Tools->Options->Rig Control and check the
+"Use USB/LSB instead of DIGU/DIGL" option. This will cause FreeDV to use the standard USB and LSB modes for rig control instead.
+
+Note that for best results, your radio should have all processing disabled if you're using the standard USB/LSB modes. This
+disabling of processing typically takes place when using data mode.
+
 ## Overdriving Transmit Level
 
 This is a very common problem for first time FreeDV users.  Adjust your transmit levels so the ALC is just being nudged. More power is not better with FreeDV.  An overdriven signal will have poor SNR at the receiver.  For FreeDV 700D/700E operation with the clipper, make sure your transmitter can sustain high average power levels without damage (e.g. 40W RMS on a 100W PEP radio).
@@ -853,6 +862,12 @@ FEC | Forward Error Correction - extra bits to we send to protect the speech cod
 LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
+
+## V1.8.10.1 June 2023
+
+1. Bugfixes:
+    * Fix bug with FreeDV Reporter going out of sync with radio. (PR #408)
+    * Allow frequency to be changed even if mode change fails. (PR #408)
 
 ## V1.8.10 June 2023
 

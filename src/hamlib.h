@@ -36,6 +36,7 @@ class Hamlib {
         void disable_mode_detection();
         void setFrequencyAndMode(uint64_t frequencyHz, bool analog);
         void suppressFrequencyModeUpdates(bool suppress);
+        bool isSuppressFrequencyModeUpdates() const { return updatesSuppressed_; }
         void close(void);
         int get_serial_rate(void);
         int get_data_bits(void);

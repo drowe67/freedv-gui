@@ -543,6 +543,7 @@ class MainFrame : public TopFrame
         void OnChangeTxLevel( wxScrollEvent& event ) override;
         
         void OnChangeReportFrequency( wxCommandEvent& event ) override;
+        void OnChangeReportFrequencyVerify( wxCommandEvent& event ) override;
         
         void OnReportFrequencySetFocus(wxFocusEvent& event) override;
         void OnReportFrequencyKillFocus(wxFocusEvent& event) override;
