@@ -545,13 +545,10 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     }
 
     // Report analog change to registered reporters
-    std::thread workerThread([&]() {
-        for (auto& obj : wxGetApp().m_reporters)
-        {
-            obj->inAnalogMode(g_analog);
-        }
-    });
-    workerThread.detach();
+    for (auto& obj : wxGetApp().m_reporters)
+    {
+        obj->inAnalogMode(g_analog);
+    }
     
     if (wxGetApp().m_hamlib != nullptr && 
         wxGetApp().m_reportingFrequency > 0)

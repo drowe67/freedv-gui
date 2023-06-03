@@ -23,69 +23,86 @@
 #include "FreeDVReporter.h"
 
 FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software)
-    : hostname_(hostname)
+    : isExiting_(false)
+    , hostname_(hostname)
     , callsign_(callsign)
     , gridSquare_(gridSquare)
     , software_(software)
     , lastFrequency_(0)
     , tx_(false)
 {
-    connect_();
+    fnQueueThread_ = std::thread(std::bind(&FreeDVReporter::threadEntryPoint_, this));
 }
 
 FreeDVReporter::~FreeDVReporter()
 {
-    // empty
+    isExiting_ = true;
+    fnQueueConditionVariable_.notify_one();
+    fnQueueThread_.join();
 }
 
 void FreeDVReporter::inAnalogMode(bool inAnalog)
 {
-    if (inAnalog)
-    {
-        sioClient_.close();
-    }
-    else
-    {
-        connect_();
-        freqChange(lastFrequency_);
-        transmit(mode_, tx_);
-    }
+    std::unique_lock<std::mutex> lk(fnQueueMutex_);
+    fnQueue_.push_back([&]() {
+        if (inAnalog)
+        {
+            sioClient_.sync_close();
+        }
+        else
+        {
+            connect_();
+        }
+    });
+    fnQueueConditionVariable_.notify_one();
 }
 
 void FreeDVReporter::freqChange(uint64_t frequency)
 {
-    sio::message::ptr freqDataPtr = sio::object_message::create();
-    auto freqData = (sio::object_message*)freqDataPtr.get();
-    freqData->insert("freq", sio::int_message::create(frequency));
-    sioClient_.socket()->emit("freq_change", freqDataPtr);
+    std::unique_lock<std::mutex> lk(fnQueueMutex_);
+    fnQueue_.push_back([&]() {
+        sio::message::ptr freqDataPtr = sio::object_message::create();
+        auto freqData = (sio::object_message*)freqDataPtr.get();
+        freqData->insert("freq", sio::int_message::create(frequency));
+        sioClient_.socket()->emit("freq_change", freqDataPtr);
     
-    // Save last frequency in case we need to reconnect.
-    lastFrequency_ = frequency;
+        // Save last frequency in case we need to reconnect.
+        lastFrequency_ = frequency;
+    });
+    fnQueueConditionVariable_.notify_one();
 }
 
 void FreeDVReporter::transmit(std::string mode, bool tx)
 {
-    sio::message::ptr txDataPtr = sio::object_message::create();
-    auto txData = (sio::object_message*)txDataPtr.get();
-    txData->insert("mode", mode);
-    txData->insert("transmitting", sio::bool_message::create(tx));
-    sioClient_.socket()->emit("tx_report", txDataPtr);
+    std::unique_lock<std::mutex> lk(fnQueueMutex_);
+    fnQueue_.push_back([&]() {
+        sio::message::ptr txDataPtr = sio::object_message::create();
+        auto txData = (sio::object_message*)txDataPtr.get();
+        txData->insert("mode", mode);
+        txData->insert("transmitting", sio::bool_message::create(tx));
+        sioClient_.socket()->emit("tx_report", txDataPtr);
     
-    // Save last mode and TX state in case we have to reconnect.
-    mode_ = mode;
-    tx_ = tx;
+        // Save last mode and TX state in case we have to reconnect.
+        mode_ = mode;
+        tx_ = tx;
+    });
+    fnQueueConditionVariable_.notify_one();
 }
     
 void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, char snr)
 {
-    sio::message::ptr rxDataPtr = sio::object_message::create();
-    auto rxData = (sio::object_message*)rxDataPtr.get();
+    std::unique_lock<std::mutex> lk(fnQueueMutex_);
+    fnQueue_.push_back([&]() {
+        sio::message::ptr rxDataPtr = sio::object_message::create();
+        auto rxData = (sio::object_message*)rxDataPtr.get();
     
-    rxData->insert("callsign", callsign);
-    rxData->insert("mode", mode);
-    rxData->insert("snr", sio::int_message::create(snr));
+        rxData->insert("callsign", callsign);
+        rxData->insert("mode", mode);
+        rxData->insert("snr", sio::int_message::create(snr));
     
-    sioClient_.socket()->emit("rx_report", rxDataPtr);
+        sioClient_.socket()->emit("rx_report", rxDataPtr);
+    });
+    fnQueueConditionVariable_.notify_one();
 }
 
 void FreeDVReporter::send()
@@ -105,6 +122,12 @@ void FreeDVReporter::connect_()
     
     // Reconnect listener should re-report frequency so that "unknown"
     // doesn't appear.
+    sioClient_.set_socket_open_listener([&](std::string)
+    {
+        freqChange(lastFrequency_);
+        transmit(mode_, tx_);
+    });
+    
     sioClient_.set_reconnect_listener([&](unsigned, unsigned)
     {
         freqChange(lastFrequency_);
@@ -112,4 +135,22 @@ void FreeDVReporter::connect_()
     });
     
     sioClient_.connect(std::string("http://") + hostname_ + "/", authPtr);
+}
+
+void FreeDVReporter::threadEntryPoint_()
+{
+    connect_();
+    
+    while (!isExiting_)
+    {
+        std::unique_lock<std::mutex> lk(fnQueueMutex_);
+        fnQueueConditionVariable_.wait(lk);
+        
+        // Execute queued method
+        while (!isExiting_ && fnQueue_.size() > 0)
+        {
+            fnQueue_.front()();
+            fnQueue_.erase(fnQueue_.begin());
+        }
+    }
 }
