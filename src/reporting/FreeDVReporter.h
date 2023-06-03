@@ -23,7 +23,12 @@
 //
 //=========================================================================
 
+#include <functional>
+#include <vector>
+#include <mutex>
+#include <condition_variable>
 #include <string>
+#include <thread>
 #include "sio_client.h"
 #include "IReporter.h"
 
@@ -42,6 +47,13 @@ public:
     virtual void send() override;
     
 private:
+    // Required elements to implement execution thread for FreeDV Reporter.
+    std::vector<std::function<void()> > fnQueue_;
+    std::mutex fnQueueMutex_;
+    std::condition_variable fnQueueConditionVariable_;
+    bool isExiting_;
+    std::thread fnQueueThread_;
+    
     sio::client sioClient_;
     std::string hostname_;
     std::string callsign_;
@@ -52,6 +64,8 @@ private:
     bool tx_;
     
     void connect_();
+    
+    void threadEntryPoint_();
 };
 
 #endif // FREEDV_REPORTER_H
