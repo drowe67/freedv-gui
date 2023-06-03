@@ -868,6 +868,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * Fix bug with FreeDV Reporter going out of sync with radio. (PR #408)
     * Allow frequency to be changed even if mode change fails. (PR #408)
+    * Fix crash when repeatedly switching in and out of Analog mode. (PR #413)
 
 ## V1.8.10 June 2023
 
