@@ -35,6 +35,7 @@ class Hamlib {
         void enable_mode_detection(wxStaticText* statusBox, wxComboBox* freqBox, bool vhfUhfMode);
         void disable_mode_detection();
         void setFrequencyAndMode(uint64_t frequencyHz, bool analog);
+        void setMode(bool analog);
         void suppressFrequencyModeUpdates(bool suppress);
         bool isSuppressFrequencyModeUpdates() const { return updatesSuppressed_; }
         void close(void);
@@ -51,7 +52,8 @@ class Hamlib {
         void update_mode_status();
         void statusUpdateThreadEntryFn_();
         void update_from_hamlib_();
-        void setFrequencyAndModeHelper_(uint64_t frequencyHz, rmode_t mode);
+        void setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyHz);
+        void setModeHelper_(vfo_t currVfo, rmode_t mode);
         
         vfo_t getCurrentVfo_();
         

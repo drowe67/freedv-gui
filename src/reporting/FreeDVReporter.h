@@ -53,6 +53,7 @@ private:
     std::condition_variable fnQueueConditionVariable_;
     bool isExiting_;
     std::thread fnQueueThread_;
+    bool isConnecting_;
     
     sio::client sioClient_;
     std::string hostname_;
@@ -66,6 +67,8 @@ private:
     void connect_();
     
     void threadEntryPoint_();
+    void freqChangeImpl_(uint64_t frequency);
+    void transmitImpl_(std::string mode, bool tx);
 };
 
 #endif // FREEDV_REPORTER_H

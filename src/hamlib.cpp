@@ -325,7 +325,7 @@ void Hamlib::disable_mode_detection()
 
 }
 
-void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
+void Hamlib::setMode(bool analog)
 {
     if (m_rig == nullptr || pttSet_)
     {
@@ -334,6 +334,7 @@ void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
     }
     
     // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
+    auto frequencyHz = get_frequency();
     bool is60MeterBand = frequencyHz >= 5250000 && frequencyHz <= 5450000;
     
     // Update color based on the mode and current frequency.
@@ -359,13 +360,62 @@ void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
     {
         assert(0);
     }
-
-    setFrequencyAndModeHelper_(frequencyHz, mode);
+    
+    vfo_t currVfo = getCurrentVfo_(); 
+    setModeHelper_(currVfo, mode);
 }
-   
-void Hamlib::setFrequencyAndModeHelper_(uint64_t frequencyHz, rmode_t mode)
-{ 
-    vfo_t currVfo = getCurrentVfo_();    
+
+void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
+{
+    if (m_rig == nullptr || pttSet_)
+    {
+        // Ignore if not connected or if transmitting
+        return;
+    }
+    
+    vfo_t currVfo = getCurrentVfo_(); 
+    setFrequencyHelper_(currVfo, frequencyHz);
+    setMode(analog);
+}
+  
+void Hamlib::setModeHelper_(vfo_t currVfo, rmode_t mode)
+{
+    bool setOkay = false;
+    
+modeAttempt:
+    int result = rig_set_mode(m_rig, currVfo, mode, RIG_PASSBAND_NOCHANGE);
+    if (result != RIG_OK && currVfo == RIG_VFO_CURR)
+    {
+        if (g_verbose) fprintf(stderr, "rig_set_mode: error = %s \n", rigerror(result));
+    }
+    else if (result != RIG_OK)
+    {
+        // We supposedly have multiple VFOs but ran into problems 
+        // trying to get information about the supposed active VFO.
+        // Make a last ditch effort using RIG_VFO_CURR before fully failing.
+        currVfo = RIG_VFO_CURR;
+        goto modeAttempt;
+    }
+    else
+    {
+        setOkay = true;
+    }
+
+    // If we're able to set either frequency or mode, we should update UI accordingly.
+    // The actual configuration of the radio (in case of failure) will auto-update within
+    // a few seconds after this update.
+    if (setOkay)
+    {
+        m_currMode = mode;
+        if (m_modeBox != nullptr)
+        {
+            m_modeBox->CallAfter([&]() { update_mode_status(); });
+        }
+    }
+}
+
+void Hamlib::setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyHz)
+{
     bool setOkay = false;
     
 freqAttempt:
@@ -387,40 +437,18 @@ freqAttempt:
         setOkay = true;
     }
     
-modeAttempt:
-    result = rig_set_mode(m_rig, currVfo, mode, RIG_PASSBAND_NOCHANGE);
-    if (result != RIG_OK && currVfo == RIG_VFO_CURR)
-    {
-        if (g_verbose) fprintf(stderr, "rig_set_mode: error = %s \n", rigerror(result));
-    }
-    else if (result != RIG_OK)
-    {
-        // We supposedly have multiple VFOs but ran into problems 
-        // trying to get information about the supposed active VFO.
-        // Make a last ditch effort using RIG_VFO_CURR before fully failing.
-        currVfo = RIG_VFO_CURR;
-        goto modeAttempt;
-    }
-    else
-    {
-        setOkay = true;
-    }
-    
     // If we're able to set either frequency or mode, we should update UI accordingly.
     // The actual configuration of the radio (in case of failure) will auto-update within
     // a few seconds after this update.
     if (setOkay)
     {
-        m_currMode = mode;
         m_currFreq = frequencyHz;
-
         if (m_modeBox != nullptr)
         {
             m_modeBox->CallAfter([&]() { update_mode_status(); });
         }
     }
 }
-
 
 void Hamlib::statusUpdateThreadEntryFn_()
 {
@@ -573,7 +601,9 @@ void Hamlib::close(void) {
         // Recover original frequency and mode before closure.
         if (m_origFreq > 0)
         {
-            setFrequencyAndModeHelper_(m_origFreq, m_origMode);
+            auto vfo = getCurrentVfo_();
+            setFrequencyHelper_(vfo, m_origFreq);
+            setModeHelper_(vfo, m_origMode);
         }
  
         rig_close(m_rig);

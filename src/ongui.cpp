@@ -553,8 +553,8 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     if (wxGetApp().m_hamlib != nullptr && 
         wxGetApp().m_reportingFrequency > 0)
     {
-        // Request frequency/mode change on the radio side
-        wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);
+        // Request mode change on the radio side
+        wxGetApp().m_hamlib->setMode(wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);
     }
 
     g_State = g_prev_State = 0;
