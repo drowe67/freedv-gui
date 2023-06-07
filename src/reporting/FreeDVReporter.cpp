@@ -46,7 +46,6 @@ FreeDVReporter::~FreeDVReporter()
     // Workaround for race condition in sioclient
     while (isConnecting_)
     {
-        using namespace std::chrono_literals;
         std::this_thread::sleep_for(20ms);
     }
 }
@@ -60,7 +59,6 @@ void FreeDVReporter::inAnalogMode(bool inAnalog)
             // Workaround for race condition in sioclient
             while (isConnecting_)
             {
-                using namespace std::chrono_literals;
                 std::this_thread::sleep_for(20ms);
             }
             
