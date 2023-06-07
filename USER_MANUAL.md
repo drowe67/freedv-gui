@@ -867,6 +867,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * Add missed captures for pavucontrol related handlers (PR #420)
+2. Enhancements:
+    * Turn PTT button red when transmitting. (PR #423)
 
 ## V1.8.10.1 June 2023
 
