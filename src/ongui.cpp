@@ -248,7 +248,10 @@ bool MainFrame::OpenHamlibRig() {
         }
         else
         {
-            wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);
+            if (wxGetApp().m_boolHamlibEnableFreqModeChanges)
+            {
+                wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);
+            }
             wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, m_cboReportFrequency, g_mode == FREEDV_MODE_2400B);
         }
     
@@ -551,7 +554,8 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     }
     
     if (wxGetApp().m_hamlib != nullptr && 
-        wxGetApp().m_reportingFrequency > 0)
+        wxGetApp().m_reportingFrequency > 0 &&
+        wxGetApp().m_boolHamlibEnableFreqModeChanges)
     {
         // Request mode change on the radio side
         wxGetApp().m_hamlib->setMode(wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);
@@ -645,7 +649,8 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     
     if (wxGetApp().m_hamlib != nullptr && 
         wxGetApp().m_reportingFrequency > 0 && 
-        wxGetApp().m_reportingFrequency != wxGetApp().m_hamlib->get_frequency())
+        wxGetApp().m_reportingFrequency != wxGetApp().m_hamlib->get_frequency() &&
+        wxGetApp().m_boolHamlibEnableFreqModeChanges)
     {
         // Request frequency/mode change on the radio side
         wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);

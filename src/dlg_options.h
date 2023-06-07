@@ -71,6 +71,8 @@ class OptionsDlg : public wxDialog
         void    OnReportingEnable(wxCommandEvent& event);
         void    OnToneStateEnable(wxCommandEvent& event);
         void    OnMultipleRxEnable(wxCommandEvent& event);
+        void    OnFreqModeChangeEnable(wxCommandEvent& event);
+        
         wxTextCtrl   *m_txtCtrlCallSign; // TODO: this should be renamed to tx_txtmsg, and rename all related incl persis strge
 
         wxCheckBox* m_ckHalfDuplex;
@@ -86,6 +88,7 @@ class OptionsDlg : public wxDialog
         
         /* Hamlib options */
         wxCheckBox   *m_ckboxUseAnalogModes;
+        wxCheckBox   *m_ckboxEnableFreqModeChanges;
         
         /* Waterfall color */
         wxRadioButton *m_waterfallColorScheme1; // Multicolored
@@ -165,6 +168,7 @@ class OptionsDlg : public wxDialog
          void updateAttnCarrierState();
          void updateToneState();
          void updateMultipleRxState();
+         void updateRigControlState();
          
          bool sessionActive_;
 };
