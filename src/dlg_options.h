@@ -89,6 +89,7 @@ class OptionsDlg : public wxDialog
         /* Hamlib options */
         wxCheckBox   *m_ckboxUseAnalogModes;
         wxCheckBox   *m_ckboxEnableFreqModeChanges;
+        wxCheckBox   *m_ckboxEnableSpacebarForPTT;
         
         /* Waterfall color */
         wxRadioButton *m_waterfallColorScheme1; // Multicolored
