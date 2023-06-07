@@ -526,6 +526,9 @@ void MainFrame::togglePTT(void) {
     {
         obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
     }
+
+    // Change button color depending on TX status.
+    m_btnTogPTT->SetBackgroundColour(g_tx ? *wxRED : wxNullColour);
 }
 
 //-------------------------------------------------------------------------
