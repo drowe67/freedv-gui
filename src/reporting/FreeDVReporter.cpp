@@ -22,6 +22,8 @@
 
 #include "FreeDVReporter.h"
 
+using namespace std::chrono_literals;
+
 FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software)
     : isExiting_(false)
     , isConnecting_(false)
@@ -152,10 +154,13 @@ void FreeDVReporter::threadEntryPoint_()
     while (!isExiting_)
     {
         std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueueConditionVariable_.wait(lk);
+        fnQueueConditionVariable_.wait_for(
+            lk, 
+            100ms,
+            [&]() { return isExiting_ || (!isConnecting_ && fnQueue_.size() > 0); });
         
         // Execute queued method
-        while (!isExiting_ && fnQueue_.size() > 0)
+        while (!isExiting_ && !isConnecting_ && fnQueue_.size() > 0)
         {
             auto fn = fnQueue_.front();
             fnQueue_.erase(fnQueue_.begin());
