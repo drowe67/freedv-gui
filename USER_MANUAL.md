@@ -869,6 +869,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add missed captures for pavucontrol related handlers (PR #420)
 2. Enhancements:
     * Add option to enable/disable Hamlib frequency/mode control. (PR #424)
+    * Add option to enable/disable Space key for PTT. (PR #425)
 
 ## V1.8.10.1 June 2023
 
