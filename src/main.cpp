@@ -446,6 +446,8 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_txtQuickRecordPath = pConfig->Read(wxT("/QuickRecord/SavePath"), documentsDir);
     
     wxGetApp().m_boolHamlibUseForPTT = pConfig->ReadBool("/Hamlib/UseForPTT", false);
+    wxGetApp().m_boolHamlibEnableFreqModeChanges = pConfig->ReadBool("/Hamlib/EnableFreqModeChanges", true);
+    
     wxGetApp().m_intHamlibIcomCIVHex = pConfig->ReadLong("/Hamlib/IcomCIVHex", 0);
     wxGetApp().m_boolHamlibUseAnalogModes = pConfig->ReadBool(wxT("/Hamlib/UseAnalogModes"), false);
     
@@ -959,6 +961,7 @@ MainFrame::~MainFrame()
     pConfig->Write("/Hamlib/IcomCIVHex", wxGetApp().m_intHamlibIcomCIVHex);
     pConfig->Write("/Hamlib/PttType", (long)wxGetApp().m_hamlibPttType);
     pConfig->Write(wxT("/Hamlib/UseAnalogModes"), wxGetApp().m_boolHamlibUseAnalogModes);
+    pConfig->Write(wxT("/Hamlib/EnableFreqModeChanges"), wxGetApp().m_boolHamlibEnableFreqModeChanges);
 
     pConfig->Write(wxT("/File/playFileToMicInPath"),    wxGetApp().m_playFileToMicInPath);
     pConfig->Write(wxT("/File/recFileFromRadioPath"),   wxGetApp().m_recFileFromRadioPath);

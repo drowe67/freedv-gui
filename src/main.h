@@ -205,6 +205,7 @@ class MainApp : public wxApp
         wxString            m_txtQuickRecordPath;
     
         bool                m_boolHamlibUseForPTT;
+        bool                m_boolHamlibEnableFreqModeChanges;
         unsigned int        m_intHamlibRig;
         wxString            m_strHamlibRigName;
         wxString            m_strHamlibSerialPort;

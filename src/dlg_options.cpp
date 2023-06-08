@@ -150,12 +150,15 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxBoxSizer* sizerRigControl = new wxBoxSizer(wxVERTICAL);
     
     //------------------------------
-    // Txt Msg Text Box
+    // Rig Control options
     //------------------------------
     
     wxStaticBoxSizer* sbSizer_hamlib;
     wxStaticBox *sb_hamlib = new wxStaticBox(m_rigControlTab, wxID_ANY, _("Hamlib Options"));
     sbSizer_hamlib = new wxStaticBoxSizer(sb_hamlib, wxVERTICAL);
+    
+    m_ckboxEnableFreqModeChanges = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Enable frequency and mode changes"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_hamlib->Add(m_ckboxEnableFreqModeChanges, 0, wxALL | wxALIGN_LEFT, 5);
     
     m_ckboxUseAnalogModes = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Use USB/LSB instead of DIGU/DIGL"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_hamlib->Add(m_ckboxUseAnalogModes, 0, wxALL | wxALIGN_LEFT, 5);
@@ -572,6 +575,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_ckboxMultipleRx->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
     
+    m_ckboxEnableFreqModeChanges->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
+    
     event_in_serial = 0;
     event_out_serial = 0;
 }
@@ -610,6 +615,8 @@ OptionsDlg::~OptionsDlg()
     m_ckboxTone->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnToneStateEnable), NULL, this);
     
     m_ckboxMultipleRx->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
+    
+    m_ckboxEnableFreqModeChanges->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
 }
 
 
@@ -623,6 +630,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlCallSign->SetValue(wxGetApp().m_callSign);
 
         m_ckboxUseAnalogModes->SetValue(wxGetApp().m_boolHamlibUseAnalogModes);
+        m_ckboxEnableFreqModeChanges->SetValue(wxGetApp().m_boolHamlibEnableFreqModeChanges);
         
         /* Voice Keyer */
 
@@ -723,12 +731,16 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         updateAttnCarrierState();
         updateToneState();
         updateMultipleRxState();
+        updateRigControlState();
     }
 
     if(inout == EXCHANGE_DATA_OUT)
     {
         wxGetApp().m_boolHamlibUseAnalogModes = m_ckboxUseAnalogModes->GetValue();
         pConfig->Write(wxT("/Hamlib/UseAnalogModes"), wxGetApp().m_boolHamlibUseAnalogModes);
+        
+        wxGetApp().m_boolHamlibEnableFreqModeChanges = m_ckboxEnableFreqModeChanges->GetValue();
+        pConfig->Write(wxT("/Hamlib/EnableFreqModeChanges"), wxGetApp().m_boolHamlibEnableFreqModeChanges);
         
         wxGetApp().m_callSign = m_txtCtrlCallSign->GetValue();
 
@@ -1091,6 +1103,21 @@ void OptionsDlg::updateMultipleRxState()
     }
 }
 
+void OptionsDlg::updateRigControlState()
+{
+    if (!sessionActive_)
+    {
+        m_ckboxEnableFreqModeChanges->Enable(true);
+        m_ckboxUseAnalogModes->Enable(m_ckboxEnableFreqModeChanges->GetValue());
+    }
+    else
+    {
+        // Rig control settings cannot be updated during a session.
+        m_ckboxUseAnalogModes->Enable(false);
+        m_ckboxEnableFreqModeChanges->Enable(false);
+    }
+}
+    
 void OptionsDlg::OnReportingEnable(wxCommandEvent& event)
 {
     updateReportingState();
@@ -1104,6 +1131,11 @@ void OptionsDlg::OnToneStateEnable(wxCommandEvent& event)
 void OptionsDlg::OnMultipleRxEnable(wxCommandEvent& event)
 {
     updateMultipleRxState();
+}
+
+void OptionsDlg::OnFreqModeChangeEnable(wxCommandEvent& event)
+{
+    updateRigControlState();
 }
 
 void OptionsDlg::DisplayFifoPACounters() {
