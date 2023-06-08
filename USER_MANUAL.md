@@ -868,6 +868,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * Add missed captures for pavucontrol related handlers. (PR #420)
     * Fix issue causing intermittent failures to report the current frequency to FreeDV Reporter. (PR #421)
+    * Set initial audio device count on startup. (PR #422)
 
 ## V1.8.10.1 June 2023
 

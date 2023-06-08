@@ -650,6 +650,20 @@ setDefaultMode:
         m_cboLastReportedCallsigns->Hide();
         m_txtCtrlCallSign->Show();
     }
+    
+    // Ensure that sound card count is correct. Otherwise the Audio Options won't show
+    // the correct devices prior to start.
+    bool hasSoundCard1InDevice = wxGetApp().m_soundCard1InDeviceName != "none";
+    bool hasSoundCard1OutDevice = wxGetApp().m_soundCard1OutDeviceName != "none";
+    bool hasSoundCard2InDevice = wxGetApp().m_soundCard2InDeviceName != "none";
+    bool hasSoundCard2OutDevice = wxGetApp().m_soundCard2OutDeviceName != "none";
+    
+    g_nSoundCards = 0;
+    if (hasSoundCard1InDevice && hasSoundCard1OutDevice) {
+        g_nSoundCards = 1;
+        if (hasSoundCard2InDevice && hasSoundCard2OutDevice)
+            g_nSoundCards = 2;
+    }
 
     // Relayout window so that the changes can take effect.
     auto currentSizer = m_panel->GetSizer();
