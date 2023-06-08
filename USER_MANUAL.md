@@ -867,6 +867,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * Add missed captures for pavucontrol related handlers (PR #420)
+    * Set initial audio device count on startup. (PR #422)
 
 ## V1.8.10.1 June 2023
 
