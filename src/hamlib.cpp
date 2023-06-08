@@ -53,7 +53,8 @@ Hamlib::Hamlib() :
     m_vhfUhfMode(false),
     pttSet_(false),
     updatesSuppressed_(false),
-    threadRunning_(false)  {
+    threadRunning_(false),
+    readOnly_(false)  {
     /* Stop hamlib from spewing info to stderr. */
     rig_set_debug(RIG_DEBUG_NONE);
 
@@ -327,7 +328,7 @@ void Hamlib::disable_mode_detection()
 
 void Hamlib::setMode(bool analog)
 {
-    if (m_rig == nullptr || pttSet_)
+    if (m_rig == nullptr || pttSet_ || readOnly_)
     {
         // Ignore if not connected or if transmitting
         return;
@@ -367,7 +368,7 @@ void Hamlib::setMode(bool analog)
 
 void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
 {
-    if (m_rig == nullptr || pttSet_)
+    if (m_rig == nullptr || pttSet_ || readOnly_)
     {
         // Ignore if not connected or if transmitting
         return;
@@ -559,7 +560,7 @@ void Hamlib::update_mode_status()
         m_modeBox->SetLabel(wxT("USB"));
     else if (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)
         m_modeBox->SetLabel(wxT("LSB"));
-    else if (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_FM)
+    else if (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_PKTFM)
         m_modeBox->SetLabel(wxT("FM"));
     else
         m_modeBox->SetLabel(rig_strrmode(m_currMode));
@@ -599,7 +600,7 @@ void Hamlib::close(void) {
         disable_mode_detection();
        
         // Recover original frequency and mode before closure.
-        if (m_origFreq > 0)
+        if (m_origFreq > 0 && !readOnly_)
         {
             auto vfo = getCurrentVfo_();
             setFrequencyHelper_(vfo, m_origFreq);

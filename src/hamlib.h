@@ -36,6 +36,7 @@ class Hamlib {
         void disable_mode_detection();
         void setFrequencyAndMode(uint64_t frequencyHz, bool analog);
         void setMode(bool analog);
+        void readOnly(bool readOnly) { readOnly_ = readOnly; }
         void suppressFrequencyModeUpdates(bool suppress);
         bool isSuppressFrequencyModeUpdates() const { return updatesSuppressed_; }
         void close(void);
@@ -73,6 +74,7 @@ class Hamlib {
         bool pttSet_;
         bool multipleVfos_;
         bool updatesSuppressed_;
+        bool readOnly_;
         
         // Data elements to support running Hamlib operations in a separate thread.
         bool threadRunning_;
