@@ -153,6 +153,15 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // Rig Control options
     //------------------------------
     
+    wxStaticBoxSizer* sbSizer_ptt;
+    wxStaticBox *sb_ptt = new wxStaticBox(m_rigControlTab, wxID_ANY, _("PTT Options"));
+    sbSizer_ptt = new wxStaticBoxSizer(sb_ptt, wxVERTICAL);
+    
+    m_ckboxEnableSpacebarForPTT = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Enable Space key for PTT"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_ptt->Add(m_ckboxEnableSpacebarForPTT, 0, wxALL | wxALIGN_LEFT, 5);
+    
+    sizerRigControl->Add(sbSizer_ptt,0, wxALL | wxEXPAND, 5);
+    
     wxStaticBoxSizer* sbSizer_hamlib;
     wxStaticBox *sb_hamlib = new wxStaticBox(m_rigControlTab, wxID_ANY, _("Hamlib Options"));
     sbSizer_hamlib = new wxStaticBoxSizer(sb_hamlib, wxVERTICAL);
@@ -629,6 +638,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
     {
         m_txtCtrlCallSign->SetValue(wxGetApp().m_callSign);
 
+        m_ckboxEnableSpacebarForPTT->SetValue(wxGetApp().m_boolEnableSpacebarForPTT);
         m_ckboxUseAnalogModes->SetValue(wxGetApp().m_boolHamlibUseAnalogModes);
         m_ckboxEnableFreqModeChanges->SetValue(wxGetApp().m_boolHamlibEnableFreqModeChanges);
         
@@ -736,6 +746,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
     if(inout == EXCHANGE_DATA_OUT)
     {
+        wxGetApp().m_boolEnableSpacebarForPTT = m_ckboxEnableSpacebarForPTT->GetValue();
+        pConfig->Write(wxT("/Rig/EnableSpacebarForPTT"), wxGetApp().m_boolEnableSpacebarForPTT);
+        
         wxGetApp().m_boolHamlibUseAnalogModes = m_ckboxUseAnalogModes->GetValue();
         pConfig->Write(wxT("/Hamlib/UseAnalogModes"), wxGetApp().m_boolHamlibUseAnalogModes);
         
@@ -1108,6 +1121,7 @@ void OptionsDlg::updateRigControlState()
     if (!sessionActive_)
     {
         m_ckboxEnableFreqModeChanges->Enable(true);
+        m_ckboxEnableSpacebarForPTT->Enable(true);
         m_ckboxUseAnalogModes->Enable(m_ckboxEnableFreqModeChanges->GetValue());
     }
     else
@@ -1115,6 +1129,7 @@ void OptionsDlg::updateRigControlState()
         // Rig control settings cannot be updated during a session.
         m_ckboxUseAnalogModes->Enable(false);
         m_ckboxEnableFreqModeChanges->Enable(false);
+        m_ckboxEnableSpacebarForPTT->Enable(false);
     }
 }
     

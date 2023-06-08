@@ -204,6 +204,7 @@ class MainApp : public wxApp
 
         wxString            m_txtQuickRecordPath;
     
+        bool                m_boolEnableSpacebarForPTT;
         bool                m_boolHamlibUseForPTT;
         bool                m_boolHamlibEnableFreqModeChanges;
         unsigned int        m_intHamlibRig;

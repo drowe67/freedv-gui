@@ -430,7 +430,7 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_playFileFromRadioPath = pConfig->Read("/File/playFileFromRadioPath", wxT(""));
 
     // PTT -------------------------------------------------------------------
-
+    wxGetApp().m_boolEnableSpacebarForPTT = pConfig->ReadBool("/Rig/EnableSpacebarForPTT", true);
     wxGetApp().m_boolHalfDuplex     = pConfig->ReadBool(wxT("/Rig/HalfDuplex"),     true);
     wxGetApp().m_boolMultipleRx     = pConfig->ReadBool(wxT("/Rig/MultipleRx"),     true);
     wxGetApp().m_boolSingleRxThread = pConfig->ReadBool(wxT("/Rig/SingleRxThread"), true);
@@ -950,6 +950,7 @@ MainFrame::~MainFrame()
     
     pConfig->Write(wxT("/QuickRecord/SavePath"), wxGetApp().m_txtQuickRecordPath);
 
+    pConfig->Write(wxT("/Rig/EnableSpacebarForPTT"), wxGetApp().m_boolEnableSpacebarForPTT);
     pConfig->Write(wxT("/Rig/HalfDuplex"),              wxGetApp().m_boolHalfDuplex);
     pConfig->Write(wxT("/Rig/MultipleRx"), wxGetApp().m_boolMultipleRx);
     pConfig->Write(wxT("/Rig/SingleRxThread"), wxGetApp().m_boolSingleRxThread);
