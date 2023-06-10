@@ -248,6 +248,7 @@ bool MainFrame::OpenHamlibRig() {
         }
         else
         {
+            wxGetApp().m_hamlib->readOnly(!wxGetApp().m_boolHamlibEnableFreqModeChanges);
             if (wxGetApp().m_boolHamlibEnableFreqModeChanges)
             {
                 wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);

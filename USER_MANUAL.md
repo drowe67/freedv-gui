@@ -870,7 +870,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix issue causing intermittent failures to report the current frequency to FreeDV Reporter. (PR #421)
     * Set initial audio device count on startup. (PR #422)
 2. Enhancements:
-    * Add option to enable/disable Hamlib frequency/mode control. (PR #424)
+    * Add option to enable/disable Hamlib frequency/mode control. (PR #424, #427)
     * Add option to enable/disable Space key for PTT. (PR #425)
     * Turn PTT button red when transmitting. (PR #423)
 
