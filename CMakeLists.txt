@@ -386,6 +386,16 @@ if(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
     message(STATUS "Hamlib library found.")
     include_directories(${HAMLIB_INCLUDE_DIR})
     list(APPEND FREEDV_LINK_LIBS ${HAMLIB_LIBRARY})
+
+    try_compile(
+        HAMLIB_HAS_GET_RIG_LIST
+        SOURCES ${CMAKE_SOURCE_DIR}/cmake/hamlib_rig_list.c)
+    if (HAMLIB_HAS_GET_RIG_LIST)
+        message(STATUS "Enabling rig_get_vfo_list support.")
+        add_definitions(-DHAMLIB_HAS_GET_RIG_LIST)
+    else (HAMLIB_HAS_GET_RIG_LIST)
+        message(STATUS "No rig_get_vfo_list support found, using alternate method.")
+    endif (HAMLIB_HAS_GET_RIG_LIST)
 else(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
     message(STATUS "Using own Hamlib build")
     include(cmake/BuildHamlib.cmake)
