@@ -142,6 +142,13 @@ if(FREEDV_VERSION_TAG)
 add_definitions(-DFREEDV_VERSION_TAG="${FREEDV_VERSION_TAG}")
 endif(FREEDV_VERSION_TAG)
 
+if (HAMLIB_HAS_GET_RIG_LIST)
+    message(STATUS "[Hamlib] Enabling rig_get_vfo_list support.")
+    add_definitions(-DHAMLIB_HAS_GET_RIG_LIST)
+else (HAMLIB_HAS_GET_RIG_LIST)
+    message(STATUS "[Hamlib] No rig_get_vfo_list support found, using alternate method.")
+endif (HAMLIB_HAS_GET_RIG_LIST)
+
 # Insert source and generated header directories before other search directories.
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 

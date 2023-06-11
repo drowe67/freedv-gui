@@ -389,16 +389,15 @@ if(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
 
     try_compile(
         HAMLIB_HAS_GET_RIG_LIST
-        SOURCES ${CMAKE_SOURCE_DIR}/cmake/hamlib_rig_list.c)
-    if (HAMLIB_HAS_GET_RIG_LIST)
-        message(STATUS "Enabling rig_get_vfo_list support.")
-        add_definitions(-DHAMLIB_HAS_GET_RIG_LIST)
-    else (HAMLIB_HAS_GET_RIG_LIST)
-        message(STATUS "No rig_get_vfo_list support found, using alternate method.")
-    endif (HAMLIB_HAS_GET_RIG_LIST)
+        SOURCES ${CMAKE_SOURCE_DIR}/cmake/hamlib_rig_list.c
+        LINK_LIBRARIES ${HAMLIB_LIBRARY}
+        CMAKE_FLAGS 
+            "-DINCLUDE_DIRECTORIES=${HAMLIB_INCLUDE_DIR}"
+        )
 else(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
     message(STATUS "Using own Hamlib build")
     include(cmake/BuildHamlib.cmake)
+    set(HAMLIB_HAS_GET_RIG_LIST TRUE) # We're assuming we're running a version that has it.
 endif(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
 
 

@@ -53,8 +53,8 @@ Hamlib::Hamlib() :
     m_vhfUhfMode(false),
     pttSet_(false),
     updatesSuppressed_(false),
-    threadRunning_(false),
-    readOnly_(false)  {
+    readOnly_(false),
+    threadRunning_(false)  {
     /* Stop hamlib from spewing info to stderr. */
     rig_set_debug(RIG_DEBUG_NONE);
 
@@ -217,11 +217,21 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
         
         // Determine whether we have multiple VFOs.
         multipleVfos_ = false;
+
+#if defined(HAMLIB_HAS_GET_RIG_LIST)
+        char tmpBuf[256];
+        if (rig_get_vfo_list(m_rig, tmpBuf, 256) == RIG_OK)
+        {
+            std::string tmpStr = tmpBuf;
+            multipleVfos_ = tmpStr.find("VFOB") != std::string::npos;
+        }
+#else
         vfo_t vfo;
         if (rig_get_vfo (m_rig, &vfo) == RIG_OK && (m_rig->state.vfo_list & RIG_VFO_B))
         {
             multipleVfos_ = true;
         }
+#endif // defined(HAMLIB_HAS_GET_RIG_LIST)
 
         // Get current frequency and mode when we first connect so we can 
         // revert on close.        
