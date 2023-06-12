@@ -396,6 +396,12 @@ void Hamlib::setModeHelper_(vfo_t currVfo, rmode_t mode)
 {
     bool setOkay = false;
     
+    if (mode == m_curMode)
+    {
+        // Don't attempt to update hamlib if we're already on this mode.
+        return;
+    }
+    
 modeAttempt:
     int result = rig_set_mode(m_rig, currVfo, mode, RIG_PASSBAND_NOCHANGE);
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
@@ -431,6 +437,12 @@ modeAttempt:
 void Hamlib::setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyHz)
 {
     bool setOkay = false;
+    
+    if (m_currFreq == frequencyHz)
+    {
+        // Don't attempt to set frequency if we're already there.
+        return;
+    }
     
 freqAttempt:
     int result = rig_set_freq(m_rig, currVfo, frequencyHz);
