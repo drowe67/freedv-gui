@@ -396,7 +396,7 @@ void Hamlib::setModeHelper_(vfo_t currVfo, rmode_t mode)
 {
     bool setOkay = false;
     
-    if (mode == m_curMode)
+    if (mode == m_currMode)
     {
         // Don't attempt to update hamlib if we're already on this mode.
         return;
