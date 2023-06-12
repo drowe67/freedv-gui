@@ -223,11 +223,14 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
         if (rig_get_vfo_list(m_rig, tmpBuf, 256) == RIG_OK)
         {
             std::string tmpStr = tmpBuf;
-            multipleVfos_ = tmpStr.find("VFOB") != std::string::npos;
+            multipleVfos_ = 
+                tmpStr.find("VFOB") != std::string::npos ||
+                tmpStr.find("SUB") != std::string::npos;
         }
 #else
         vfo_t vfo;
-        if (rig_get_vfo (m_rig, &vfo) == RIG_OK && (m_rig->state.vfo_list & RIG_VFO_B))
+        if (rig_get_vfo (m_rig, &vfo) == RIG_OK && 
+            (m_rig->state.vfo_list & RIG_VFO_B || m_rig->state.vfo_list & RIG_VFO_SUB))
         {
             multipleVfos_ = true;
         }
