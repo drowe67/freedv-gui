@@ -29,12 +29,28 @@
 #include <condition_variable>
 #include <string>
 #include <thread>
+#include <functional>
 #include "sio_client.h"
 #include "IReporter.h"
 
 class FreeDVReporter : public IReporter
 {
 public:
+    using ReporterConnectionFn = std::function<void()>;
+    
+    // sid, last_update, callsign, grid_square, version
+    // Used for both connect and disconnect
+    using ConnectionDataFn = std::function<void(std::string, std::string, std::string, std::string, std::string)>;
+    
+    // sid, last_update, callsign, grid_square, frequency
+    using FrequencyChangeFn = std::function<void(std::string, std::string, std::string, std::string, uint64_t)>;
+    
+    // sid, last_update, callsign, grid_square, txMode, transmitting, lastTx
+    using TxUpdateFn = std::function<void(std::string, std::string, std::string, std::string, std::string, bool, std::string)>;
+    
+    // sid, last_update, callsign, grid_square, received_callsign, snr, rxMode
+    using RxUpdateFn = std::function<void(std::string, std::string, std::string, std::string, std::string, float, std::string)>;
+    
     FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software);
     virtual ~FreeDVReporter();
 
@@ -45,6 +61,15 @@ public:
     
     virtual void addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, char snr) override;
     virtual void send() override;
+    
+    void setOnReporterConnectFn(ReporterConnectionFn fn);
+    void setOnReporterDisconnectFn(ReporterConnectionFn fn);
+    
+    void setOnUserConnectFn(ConnectionDataFn fn);
+    void setOnUserDisconnectFn(ConnectionDataFn fn);
+    void setOnFrequencyChangeFn(FrequencyChangeFn fn);
+    void setOnTransmitUpdateFn(TxUpdateFn fn);
+    void setOnReceiveUpdateFn(RxUpdateFn fn);
     
 private:
     // Required elements to implement execution thread for FreeDV Reporter.
@@ -63,6 +88,15 @@ private:
     uint64_t lastFrequency_;
     std::string mode_;
     bool tx_;
+    
+    ReporterConnectionFn onReporterConnectFn_;
+    ReporterConnectionFn onReporterDisconnectFn_;
+    
+    ConnectionDataFn onUserConnectFn_;
+    ConnectionDataFn onUserDisconnectFn_;
+    FrequencyChangeFn onFrequencyChangeFn_;
+    TxUpdateFn onTransmitUpdateFn_;
+    RxUpdateFn onReceiveUpdateFn_;
     
     void connect_();
     

@@ -682,6 +682,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     pthread_setname_np(pthread_self(), "FreeDV GUI");
 #endif // defined(__linux__)
 
+    m_reporterDialog = nullptr;
     m_filterDialog = nullptr;
 
     m_zoom              = 1.;
@@ -891,6 +892,15 @@ MainFrame::~MainFrame()
     if (m_filterDialog != nullptr)
     {
         m_filterDialog->Close();
+    }
+    
+    if (m_reporterDialog != nullptr)
+    {
+        m_reporterDialog->Hide();
+        m_reporterDialog->setReporter(nullptr);
+        m_reporterDialog->Close();
+        m_reporterDialog->Destroy();
+        m_reporterDialog = nullptr;
     }
     
     //fprintf(stderr, "MainFrame::~MainFrame()\n");
@@ -1879,7 +1889,7 @@ void MainFrame::performFreeDVOn_()
     m_timeSinceSyncLoss = 0;
     
     executeOnUiThreadAndWait_([&]() 
-    {
+    {        
         m_txtCtrlCallSign->SetValue(wxT(""));
         m_lastReportedCallsignListView->DeleteAllItems();
         m_cboLastReportedCallsigns->Enable(false);
@@ -2098,6 +2108,16 @@ void MainFrame::performFreeDVOn_()
                                 std::string("FreeDV ") + FREEDV_VERSION);
                         assert(freedvReporter);
                         wxGetApp().m_reporters.push_back(freedvReporter);
+                        
+                        // Make built in FreeDV Reporter client available.
+                        executeOnUiThreadAndWait_([&]() {
+                            if (m_reporterDialog == nullptr)
+                            {
+                                m_reporterDialog = new FreeDVReporterDialog(this);
+                            }
+                            
+                            m_reporterDialog->setReporter(freedvReporter);
+                        });
                     }
                     else if (wxGetApp().m_freedvReporterEnabled)
                     {
@@ -2171,6 +2191,13 @@ void MainFrame::performFreeDVOff_()
 #ifdef _USE_TIMER
     executeOnUiThreadAndWait_([&]() 
     {
+        if (m_reporterDialog != nullptr)
+        {
+            // Destroy only on exit.
+            m_reporterDialog->setReporter(nullptr);
+            m_reporterDialog->Hide();
+        }
+        
         m_plotTimer.Stop();
         m_pskReporterTimer.Stop();
         m_updFreqStatusTimer.Stop(); // [UP]

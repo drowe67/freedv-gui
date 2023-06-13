@@ -4,6 +4,7 @@ set(FREEDV_SOURCES
     dlg_filter.cpp
     dlg_options.cpp
     dlg_ptt.cpp
+    freedv_reporter.cpp
     main.cpp
     plot.cpp
     plot_scalar.cpp

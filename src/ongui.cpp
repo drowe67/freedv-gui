@@ -64,8 +64,15 @@ void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsFreeDVReporter(wxCommandEvent& event)
 {
-    std::string url = "https://" + wxGetApp().m_freedvReporterHostname.ToStdString() + "/";
-    wxLaunchDefaultBrowser(url);
+    if (m_reporterDialog != nullptr)
+    {
+        m_reporterDialog->Show();
+    }
+    else
+    {
+        std::string url = "https://" + wxGetApp().m_freedvReporterHostname.ToStdString() + "/";
+        wxLaunchDefaultBrowser(url);
+    }
 }
 
 //-------------------------------------------------------------------------
