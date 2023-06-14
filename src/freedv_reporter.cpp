@@ -58,6 +58,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     buttonSizer->Add(m_buttonOK, 0, wxALL, 2);
 
     m_buttonSendQSY = new wxButton(panel, wxID_ANY, _("Request QSY"));
+    m_buttonSendQSY->Enable(false); // disable by default unless we get a valid selection
     buttonSizer->Add(m_buttonSendQSY, 0, wxALL, 2);
 
     sectionSizer->Add(buttonSizer, 0, wxALL | wxALIGN_CENTER, 2);
@@ -77,6 +78,9 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Hook in events
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(FreeDVReporterDialog::OnInitDialog));
     this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(FreeDVReporterDialog::OnClose));
+    
+    m_listSpots->Connect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemSelected), NULL, this);
+    m_listSpots->Connect(wxEVT_LIST_ITEM_DESELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemDeselected), NULL, this);
 
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOK), NULL, this);
     m_buttonSendQSY->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnSendQSY), NULL, this);
@@ -86,6 +90,9 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
 {
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(FreeDVReporterDialog::OnInitDialog));
     this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(FreeDVReporterDialog::OnClose));
+    
+    m_listSpots->Disconnect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemSelected), NULL, this);
+    m_listSpots->Disconnect(wxEVT_LIST_ITEM_DESELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemDeselected), NULL, this);
     
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOK), NULL, this);
     m_buttonSendQSY->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnSendQSY), NULL, this);
@@ -138,6 +145,25 @@ void FreeDVReporterDialog::OnSendQSY(wxCommandEvent& event)
 void FreeDVReporterDialog::OnClose(wxCloseEvent& event)
 {
     Hide();
+}
+
+void FreeDVReporterDialog::OnItemSelected(wxListEvent& event)
+{
+    auto callsign = event.GetText();
+    
+    if (callsign != wxGetApp().m_reportingCallsign)
+    {
+        m_buttonSendQSY->Enable(true);
+    }
+    else
+    {
+        m_buttonSendQSY->Enable(false);
+    }
+}
+
+void FreeDVReporterDialog::OnItemDeselected(wxListEvent& event)
+{
+    m_buttonSendQSY->Enable(false);
 }
 
 // =================================================================================

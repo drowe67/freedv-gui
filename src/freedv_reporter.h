@@ -51,7 +51,10 @@ class FreeDVReporterDialog : public wxDialog
         void    OnSendQSY(wxCommandEvent& event);
         void    OnClose(wxCloseEvent& event);
         void    OnInitDialog(wxInitDialogEvent& event);
-
+        
+        void OnItemSelected(wxListEvent& event);
+        void OnItemDeselected(wxListEvent& event);
+        
         // Main list box that shows spots
         wxListView*   m_listSpots;
         
