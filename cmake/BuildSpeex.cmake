@@ -13,7 +13,7 @@ endif()
 
 include(ExternalProject)
 ExternalProject_Add(speex
-   URL https://gitlab.xiph.org/xiph/speexdsp/-/archive/master/speexdsp-master.tar.gz
+   URL https://github.com/xiph/speexdsp/archive/refs/heads/master.zip
    BUILD_IN_SOURCE 1
    INSTALL_DIR external/dist
    PATCH_COMMAND ./autogen.sh

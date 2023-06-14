@@ -2332,6 +2332,12 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 }
                 m_togBtnOnOff->SetValue(m_RxRunning);
                 m_togBtnOnOff->Enable(true);
+
+                // On some systems the Report Frequency box ends up getting
+                // focus after clicking on Start. This causes the frequency
+                // to never update. To avoid this, we force focus to be elsewhere
+                // in the window.
+                m_auiNbookCtrl->SetFocus();
             });
         });
         onOffExec.detach();
