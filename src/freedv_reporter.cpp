@@ -35,18 +35,18 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         
     // Main list box
     // =============================
-    m_listSpots = new wxListView(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
-    m_listSpots->InsertColumn(0, wxT("Callsign"));
-    m_listSpots->InsertColumn(1, wxT("Grid Square"));
-    m_listSpots->InsertColumn(2, wxT("Version"));
-    m_listSpots->InsertColumn(3, wxT("Frequency"));
-    m_listSpots->InsertColumn(4, wxT("Status"));
-    m_listSpots->InsertColumn(5, wxT("TX Mode"));
-    m_listSpots->InsertColumn(6, wxT("Last TX"));
-    m_listSpots->InsertColumn(7, wxT("Last RX Callsign"));
-    m_listSpots->InsertColumn(8, wxT("Last RX Mode"));
-    m_listSpots->InsertColumn(9, wxT("SNR"));
-    m_listSpots->InsertColumn(10, wxT("Last Update"));
+    m_listSpots = new wxListView(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_SINGLE_SEL | wxLC_REPORT | wxLC_HRULES);
+    m_listSpots->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_CENTER);
+    m_listSpots->InsertColumn(1, wxT("Grid Square"), wxLIST_FORMAT_CENTER);
+    m_listSpots->InsertColumn(2, wxT("Version"), wxLIST_FORMAT_CENTER);
+    m_listSpots->InsertColumn(3, wxT("Frequency"), wxLIST_FORMAT_CENTER);
+    m_listSpots->InsertColumn(4, wxT("Status"), wxLIST_FORMAT_CENTER);
+    m_listSpots->InsertColumn(5, wxT("TX Mode"), wxLIST_FORMAT_CENTER);
+    m_listSpots->InsertColumn(6, wxT("Last TX"), wxLIST_FORMAT_CENTER);
+    m_listSpots->InsertColumn(7, wxT("Last RX Callsign"), wxLIST_FORMAT_CENTER);
+    m_listSpots->InsertColumn(8, wxT("Last RX Mode"), wxLIST_FORMAT_CENTER);
+    m_listSpots->InsertColumn(9, wxT("SNR"), wxLIST_FORMAT_CENTER);
+    m_listSpots->InsertColumn(10, wxT("Last Update"), wxLIST_FORMAT_CENTER);
     
     sectionSizer->Add(m_listSpots, 0, wxALL | wxEXPAND, 2);
     
@@ -137,7 +137,7 @@ void FreeDVReporterDialog::OnSendQSY(wxCommandEvent& event)
 
 void FreeDVReporterDialog::OnClose(wxCloseEvent& event)
 {
-    // empty
+    Hide();
 }
 
 // =================================================================================
@@ -179,6 +179,12 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         
         auto lastUpdateTime = makeValidTime_(lastUpdate);
         m_listSpots->SetItem(itemIndex, 10, lastUpdateTime);
+        
+        // Resize all columns to the biggest value.
+        for (int col = 0; col <= 10; col++)
+        {
+            m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
+        }
     });
 }
 
@@ -190,6 +196,12 @@ void FreeDVReporterDialog::onUserDisconnectFn_(std::string sid, std::string last
         {
             m_listSpots->DeleteItem(iter->second);
             sessionIds_.erase(iter);
+            
+            // Resize all columns to the biggest value.
+            for (int col = 0; col <= 10; col++)
+            {
+                m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
+            }
         }
     });
 }
@@ -208,6 +220,12 @@ void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string las
             
             auto lastUpdateTime = makeValidTime_(lastUpdate);
             m_listSpots->SetItem(index, 10, lastUpdateTime);
+            
+            // Resize all columns to the biggest value.
+            for (int col = 0; col <= 10; col++)
+            {
+                m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
+            }
         }
     });
 }
@@ -240,6 +258,12 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
         
             auto lastUpdateTime = makeValidTime_(lastUpdate);
             m_listSpots->SetItem(index, 10, lastUpdateTime);
+            
+            // Resize all columns to the biggest value.
+            for (int col = 0; col <= 10; col++)
+            {
+                m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
+            }
         }
     });
 }
@@ -260,6 +284,12 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
             
             auto lastUpdateTime = makeValidTime_(lastUpdate);
             m_listSpots->SetItem(index, 10, lastUpdateTime);
+            
+            // Resize all columns to the biggest value.
+            for (int col = 0; col <= 10; col++)
+            {
+                m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
+            }
         }
     });
 }

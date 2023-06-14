@@ -39,7 +39,7 @@ class FreeDVReporterDialog : public wxDialog
                 wxWindowID id = wxID_ANY, const wxString& title = _("FreeDV Reporter"), 
                 const wxPoint& pos = wxDefaultPosition, 
                 const wxSize& size = wxDefaultSize, 
-                long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxTAB_TRAVERSAL );
+                long style = wxDEFAULT_DIALOG_STYLE|wxTAB_TRAVERSAL );
         ~FreeDVReporterDialog();
         
         void setReporter(FreeDVReporter* reporter);
