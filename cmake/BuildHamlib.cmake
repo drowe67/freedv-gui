@@ -34,6 +34,8 @@ set_target_properties(hamlib PROPERTIES
     IMPORTED_IMPLIB   "${CMAKE_BINARY_DIR}/external/dist/lib/libhamlib${CMAKE_IMPORT_LIBRARY_SUFFIX}"
 )
 
+message(STATUS "hamlib path" "${CMAKE_BINARY_DIR}/external/dist/lib/libhamlib${CMAKE_IMPORT_LIBRARY_SUFFIX}")
+
 add_dependencies(hamlib build_hamlib)
 include_directories(${CMAKE_BINARY_DIR}/external/dist/include)
 
