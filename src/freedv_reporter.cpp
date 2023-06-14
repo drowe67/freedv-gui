@@ -177,7 +177,7 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         m_listSpots->SetItem(itemIndex, 8, "Unknown");
         m_listSpots->SetItem(itemIndex, 9, "Unknown");
         
-        auto lastUpdateTime = makeValidTime_(lastUpdate).Format();
+        auto lastUpdateTime = makeValidTime_(lastUpdate);
         m_listSpots->SetItem(itemIndex, 10, lastUpdateTime);
     });
 }
@@ -206,7 +206,7 @@ void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string las
             wxString frequencyMHzString = wxString::Format(_("%.04f MHz"), frequencyMHz);
             m_listSpots->SetItem(index, 3, frequencyMHzString);
             
-            auto lastUpdateTime = makeValidTime_(lastUpdate).Format();
+            auto lastUpdateTime = makeValidTime_(lastUpdate);
             m_listSpots->SetItem(index, 10, lastUpdateTime);
         }
     });
@@ -235,17 +235,10 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
             m_listSpots->SetItem(index, 4, txStatus);
             m_listSpots->SetItem(index, 5, txMode);
             
-            if (lastTxDate.length() > 0)
-            {
-                auto lastTxTime = makeValidTime_(lastTxDate).Format();
-                m_listSpots->SetItem(index, 6, lastTxTime);
-            }
-            else
-            {
-                m_listSpots->SetItem(index, 6, _("Unknown"));
-            }
-            
-            auto lastUpdateTime = makeValidTime_(lastUpdate).Format();
+            auto lastTxTime = makeValidTime_(lastTxDate);
+            m_listSpots->SetItem(index, 6, lastTxTime);
+        
+            auto lastUpdateTime = makeValidTime_(lastUpdate);
             m_listSpots->SetItem(index, 10, lastUpdateTime);
         }
     });
@@ -253,7 +246,7 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
 
 void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode)
 {
-    CallAfter([&, sid, receivedCallsign, snr, rxMode]() {
+    CallAfter([&, sid, lastUpdate, receivedCallsign, snr, rxMode]() {
         auto iter = sessionIds_.find(sid);
         if (iter != sessionIds_.end())
         {
@@ -265,14 +258,14 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
             wxString snrString = wxString::Format(_("%.01f"), snr);
             m_listSpots->SetItem(index, 9, snrString);
             
-            auto lastUpdateTime = makeValidTime_(lastUpdate).Format();
+            auto lastUpdateTime = makeValidTime_(lastUpdate);
             m_listSpots->SetItem(index, 10, lastUpdateTime);
         }
     });
 }
 
-wxDateTime FreeDVReporterDialog::makeValidTime_(std::string timeStr)
-{
+wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr)
+{    
     wxRegEx millisecondsRemoval(_("\\.[^+-]+"));
     wxString tmp = timeStr;
     millisecondsRemoval.Replace(&tmp, _(""));
@@ -297,9 +290,13 @@ wxDateTime FreeDVReporterDialog::makeValidTime_(std::string timeStr)
     }
     
     wxDateTime tmpDate;
-    bool result = tmpDate.ParseISOCombined(tmp);
-    assert(result);
-    
-    tmpDate.MakeFromTimezone(timeZone);
-    return tmpDate;
+    if (tmpDate.ParseISOCombined(tmp))
+    {
+        tmpDate.MakeFromTimezone(timeZone);
+        return tmpDate.Format();
+    }
+    else
+    {
+        return _("Unknown");
+    }
 }
