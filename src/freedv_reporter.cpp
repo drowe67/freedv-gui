@@ -139,7 +139,32 @@ void FreeDVReporterDialog::OnOK(wxCommandEvent& event)
 
 void FreeDVReporterDialog::OnSendQSY(wxCommandEvent& event)
 {
-    // TBD
+    auto selectedIndex = m_listSpots->GetFirstSelected();
+    auto selectedCallsign = m_listSpots->GetItemText(selectedIndex);
+    std::string sid = "";
+    
+    // Find associated SID for given row in table.
+    for (auto& kvp : sessionIds_)
+    {
+        if (kvp.second == selectedIndex)
+        {
+            sid = kvp.first;
+            break;
+        }
+    }
+    
+    if (sid.length() > 0)
+    {
+        reporter_->requestQSY(sid, wxGetApp().m_reportingFrequency, ""); // Custom message TBD.
+        
+        wxString fullMessage = wxString::Format(_("QSY request sent to %s"), selectedCallsign);
+        wxMessageBox(fullMessage, wxT("FreeDV Reporter"), wxOK | wxICON_INFORMATION, this);
+    }
+    else
+    {
+        wxString fullMessage = wxString::Format(_("Could not send QSY request to %s. This is probably because they disconnected."), selectedCallsign);
+        wxMessageBox(fullMessage, wxT("FreeDV Reporter"), wxOK | wxICON_ERROR, this);
+    }
 }
 
 void FreeDVReporterDialog::OnClose(wxCloseEvent& event)

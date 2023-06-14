@@ -58,6 +58,18 @@ void FreeDVReporter::connect()
     fnQueueThread_ = std::thread(std::bind(&FreeDVReporter::threadEntryPoint_, this));
 }
 
+void FreeDVReporter::requestQSY(std::string sid, uint64_t frequencyHz, std::string message)
+{
+    sio::message::ptr qsyPtr = sio::object_message::create();
+    auto qsyData = (sio::object_message*)qsyPtr.get();
+
+    qsyData->insert("dest_sid", sid);
+    qsyData->insert("message", message);
+    qsyData->insert("frequency", sio::int_message::create(frequencyHz));
+
+    sioClient_.socket()->emit("qsy_request", qsyPtr);
+}
+
 void FreeDVReporter::inAnalogMode(bool inAnalog)
 {
     std::unique_lock<std::mutex> lk(fnQueueMutex_);
@@ -148,6 +160,11 @@ void FreeDVReporter::setOnTransmitUpdateFn(TxUpdateFn fn)
 void FreeDVReporter::setOnReceiveUpdateFn(RxUpdateFn fn)
 {
     onReceiveUpdateFn_ = fn;
+}
+
+void FreeDVReporter::setOnQSYRequestFn(QsyRequestFn fn)
+{
+    onQsyRequestFn_ = fn;
 }
 
 void FreeDVReporter::connect_()
@@ -275,6 +292,19 @@ void FreeDVReporter::connect_()
                 msgParams["callsign"]->get_string(),
                 msgParams["grid_square"]->get_string(),
                 msgParams["freq"]->get_int()
+            );
+        }
+    });
+    
+    sioClient_.socket()->on("qsy_request", [&](sio::event& ev) {
+        auto msgParams = ev.get_message()->get_map();
+        
+        if (onQsyRequestFn_)
+        {
+            onQsyRequestFn_(
+                msgParams["callsign"]->get_string(),
+                msgParams["frequency"]->get_int(),
+                msgParams["message"]->get_string()
             );
         }
     });

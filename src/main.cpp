@@ -2119,6 +2119,17 @@ void MainFrame::performFreeDVOn_()
                             m_reporterDialog->setReporter(freedvReporter);
                         });
                         
+                        // Set up QSY request handler
+                        // TBD: automatically change frequency via hamlib if enabled.
+                        freedvReporter->setOnQSYRequestFn([&](std::string callsign, uint64_t freqHz, std::string message) {
+                            double frequencyMHz = freqHz / 1000000.0;
+                            
+                            CallAfter([&, callsign, frequencyMHz]() {
+                                wxString fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz."), callsign, frequencyMHz);
+                                wxMessageBox(fullMessage, wxT("FreeDV Reporter"), wxOK | wxICON_INFORMATION, this);
+                            });
+                        });
+                        
                         freedvReporter->connect();
                     }
                     else if (wxGetApp().m_freedvReporterEnabled)

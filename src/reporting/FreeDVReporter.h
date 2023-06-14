@@ -51,10 +51,14 @@ public:
     // sid, last_update, callsign, grid_square, received_callsign, snr, rxMode
     using RxUpdateFn = std::function<void(std::string, std::string, std::string, std::string, std::string, float, std::string)>;
     
+    // callsign, frequency, message
+    using QsyRequestFn = std::function<void(std::string, uint64_t, std::string)>;
+    
     FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software);
     virtual ~FreeDVReporter();
 
     void connect();
+    void requestQSY(std::string sid, uint64_t frequencyHz, std::string message);
     
     virtual void freqChange(uint64_t frequency) override;
     virtual void transmit(std::string mode, bool tx) override;
@@ -72,6 +76,8 @@ public:
     void setOnFrequencyChangeFn(FrequencyChangeFn fn);
     void setOnTransmitUpdateFn(TxUpdateFn fn);
     void setOnReceiveUpdateFn(RxUpdateFn fn);
+    
+    void setOnQSYRequestFn(QsyRequestFn fn);
     
 private:
     // Required elements to implement execution thread for FreeDV Reporter.
@@ -100,6 +106,8 @@ private:
     TxUpdateFn onTransmitUpdateFn_;
     RxUpdateFn onReceiveUpdateFn_;
     
+    QsyRequestFn onQsyRequestFn_;
+        
     void connect_();
     
     void threadEntryPoint_();
