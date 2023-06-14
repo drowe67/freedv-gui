@@ -75,6 +75,8 @@ class FreeDVReporterDialog : public wxDialog
          void onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz);
          void onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate);
          void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
+         
+         wxDateTime makeValidTime_(std::string timeStr);
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__

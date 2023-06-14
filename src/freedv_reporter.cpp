@@ -19,14 +19,15 @@
 //
 //==========================================================================
 
+#include <wx/datetime.h>
 #include "freedv_reporter.h"
 
 using namespace std::placeholders;
 
 FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxDialog(parent, id, title, pos, size, style)
-    , listIndex_(0)
     , reporter_(nullptr)
+    , listIndex_(0)
 {
     // Create top-level of control hierarchy.
     wxPanel* panel = new wxPanel(this);
@@ -176,9 +177,8 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         m_listSpots->SetItem(itemIndex, 8, "Unknown");
         m_listSpots->SetItem(itemIndex, 9, "Unknown");
         
-        /*wxDateTime lastUpdateDate;
-        lastUpdateDate.ParseDateTime(lastUpdate);
-        m_listSpots->SetItem(itemIndex, 10, lastUpdateDate.Format());*/
+        auto lastUpdateTime = makeValidTime_(lastUpdate).Format();
+        m_listSpots->SetItem(itemIndex, 10, lastUpdateTime);
     });
 }
 
@@ -206,9 +206,8 @@ void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string las
             wxString frequencyMHzString = wxString::Format(_("%.04f MHz"), frequencyMHz);
             m_listSpots->SetItem(index, 3, frequencyMHzString);
             
-            /*wxDateTime lastUpdateDate;
-            lastUpdateDate.ParseDateTime(lastUpdate);
-            m_listSpots->SetItem(index, 10, lastUpdateDate.Format());*/
+            auto lastUpdateTime = makeValidTime_(lastUpdate).Format();
+            m_listSpots->SetItem(index, 10, lastUpdateTime);
         }
     });
 }
@@ -236,13 +235,18 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
             m_listSpots->SetItem(index, 4, txStatus);
             m_listSpots->SetItem(index, 5, txMode);
             
-            /*wxDateTime lastTx;
-            lastTx.ParseDateTime(lastTxDate);
-            m_listSpots->SetItem(index, 6, lastTx.Format());
+            if (lastTxDate.length() > 0)
+            {
+                auto lastTxTime = makeValidTime_(lastTxDate).Format();
+                m_listSpots->SetItem(index, 6, lastTxTime);
+            }
+            else
+            {
+                m_listSpots->SetItem(index, 6, _("Unknown"));
+            }
             
-            wxDateTime lastUpdateDate;
-            lastUpdateDate.ParseDateTime(lastUpdate);
-            m_listSpots->SetItem(index, 10, lastUpdateDate.Format());*/
+            auto lastUpdateTime = makeValidTime_(lastUpdate).Format();
+            m_listSpots->SetItem(index, 10, lastUpdateTime);
         }
     });
 }
@@ -261,9 +265,41 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
             wxString snrString = wxString::Format(_("%.01f"), snr);
             m_listSpots->SetItem(index, 9, snrString);
             
-            /*wxDateTime lastUpdateDate;
-            lastUpdateDate.ParseDateTime(lastUpdate);
-            m_listSpots->SetItem(index, 10, lastUpdateDate.Format());*/
+            auto lastUpdateTime = makeValidTime_(lastUpdate).Format();
+            m_listSpots->SetItem(index, 10, lastUpdateTime);
         }
     });
+}
+
+wxDateTime FreeDVReporterDialog::makeValidTime_(std::string timeStr)
+{
+    wxRegEx millisecondsRemoval(_("\\.[^+-]+"));
+    wxString tmp = timeStr;
+    millisecondsRemoval.Replace(&tmp, _(""));
+    
+    wxRegEx timezoneRgx(_("([+-])(\\d+):(\\d+)$"));
+    wxDateTime::TimeZone timeZone(0); // assume UTC by default
+    if (timezoneRgx.Matches(tmp))
+    {
+        auto tzOffset = timezoneRgx.GetMatch(tmp, 1);
+        auto hours = timezoneRgx.GetMatch(tmp, 2);
+        auto minutes = timezoneRgx.GetMatch(tmp, 3);
+        
+        int tzMinutes = wxAtoi(hours) * 60;
+        tzMinutes += wxAtoi(minutes);
+        
+        if (tzOffset == "-")
+        {
+            tzMinutes = -tzMinutes;
+        }
+        
+        timezoneRgx.Replace(&tmp, _(""));
+    }
+    
+    wxDateTime tmpDate;
+    bool result = tmpDate.ParseISOCombined(tmp);
+    assert(result);
+    
+    tmpDate.MakeFromTimezone(timeZone);
+    return tmpDate;
 }
