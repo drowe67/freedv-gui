@@ -2118,6 +2118,8 @@ void MainFrame::performFreeDVOn_()
                             
                             m_reporterDialog->setReporter(freedvReporter);
                         });
+                        
+                        freedvReporter->connect();
                     }
                     else if (wxGetApp().m_freedvReporterEnabled)
                     {

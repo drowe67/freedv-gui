@@ -34,20 +34,28 @@ FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::
     , lastFrequency_(0)
     , tx_(false)
 {
-    fnQueueThread_ = std::thread(std::bind(&FreeDVReporter::threadEntryPoint_, this));
+    // empty
 }
 
 FreeDVReporter::~FreeDVReporter()
 {
-    isExiting_ = true;
-    fnQueueConditionVariable_.notify_one();
-    fnQueueThread_.join();
-    
-    // Workaround for race condition in sioclient
-    while (isConnecting_)
+    if (fnQueueThread_.joinable())
     {
-        std::this_thread::sleep_for(20ms);
+        isExiting_ = true;
+        fnQueueConditionVariable_.notify_one();
+        fnQueueThread_.join();
+    
+        // Workaround for race condition in sioclient
+        while (isConnecting_)
+        {
+            std::this_thread::sleep_for(20ms);
+        }
     }
+}
+
+void FreeDVReporter::connect()
+{    
+    fnQueueThread_ = std::thread(std::bind(&FreeDVReporter::threadEntryPoint_, this));
 }
 
 void FreeDVReporter::inAnalogMode(bool inAnalog)
@@ -156,90 +164,7 @@ void FreeDVReporter::connect_()
     // doesn't appear.
     sioClient_.set_socket_open_listener([&](std::string)
     {
-        sioClient_.socket()->off_all();
-        
-        sioClient_.socket()->on("new_connection", [&](sio::event& ev) {
-            auto msgParams = ev.get_message()->get_map();
-        
-            if (onUserConnectFn_)
-            {
-                onUserConnectFn_(
-                    msgParams["sid"]->get_string(),
-                    msgParams["last_update"]->get_string(),
-                    msgParams["callsign"]->get_string(),
-                    msgParams["grid_square"]->get_string(),
-                    msgParams["version"]->get_string()
-                );
-            }
-        });
-    
-        sioClient_.socket()->on("remove_connection", [&](sio::event& ev) {
-            auto msgParams = ev.get_message()->get_map();
-        
-            if (onUserDisconnectFn_)
-            {
-                onUserDisconnectFn_(
-                    msgParams["sid"]->get_string(),
-                    msgParams["last_update"]->get_string(),
-                    msgParams["callsign"]->get_string(),
-                    msgParams["grid_square"]->get_string(),
-                    msgParams["version"]->get_string()
-                );
-            }
-        });
-    
-        sioClient_.socket()->on("tx_report", [&](sio::event& ev) {
-            auto msgParams = ev.get_message()->get_map();
-        
-            if (onTransmitUpdateFn_)
-            {
-                auto lastTx = msgParams["last_tx"];
-                
-                onTransmitUpdateFn_(
-                    msgParams["sid"]->get_string(),
-                    msgParams["last_update"]->get_string(),
-                    msgParams["callsign"]->get_string(),
-                    msgParams["grid_square"]->get_string(),
-                    msgParams["mode"]->get_string(),
-                    msgParams["transmitting"]->get_bool(),
-                    lastTx->get_flag() == sio::message::flag_null ? "" : lastTx->get_string()
-                );
-            }
-        });
-    
-        sioClient_.socket()->on("rx_report", [&](sio::event& ev) {
-            auto msgParams = ev.get_message()->get_map();
-        
-            if (onReceiveUpdateFn_)
-            {
-                onReceiveUpdateFn_(
-                    msgParams["sid"]->get_string(),
-                    msgParams["last_update"]->get_string(),
-                    msgParams["receiver_callsign"]->get_string(),
-                    msgParams["receiver_grid_square"]->get_string(),
-                    msgParams["callsign"]->get_string(),
-                    msgParams["snr"]->get_double(),
-                    msgParams["mode"]->get_string()
-                );
-            }
-        });
-    
-        sioClient_.socket()->on("freq_change", [&](sio::event& ev) {
-            auto msgParams = ev.get_message()->get_map();
-        
-            if (onFrequencyChangeFn_)
-            {
-                onFrequencyChangeFn_(
-                    msgParams["sid"]->get_string(),
-                    msgParams["last_update"]->get_string(),
-                    msgParams["callsign"]->get_string(),
-                    msgParams["grid_square"]->get_string(),
-                    msgParams["freq"]->get_int()
-                );
-            }
-        });
-        
-        isConnecting_ = false;
+        isConnecting_ = false;        
         freqChangeImpl_(lastFrequency_);
         transmitImpl_(mode_, tx_);
     });
@@ -272,6 +197,87 @@ void FreeDVReporter::connect_()
     
     isConnecting_ = true;
     sioClient_.connect(std::string("http://") + hostname_ + "/", authPtr);
+    
+    sioClient_.socket()->on("new_connection", [&](sio::event& ev) {
+        auto msgParams = ev.get_message()->get_map();
+
+        if (onUserConnectFn_)
+        {
+            onUserConnectFn_(
+                msgParams["sid"]->get_string(),
+                msgParams["last_update"]->get_string(),
+                msgParams["callsign"]->get_string(),
+                msgParams["grid_square"]->get_string(),
+                msgParams["version"]->get_string()
+            );
+        }
+    });
+
+    sioClient_.socket()->on("remove_connection", [&](sio::event& ev) {
+        auto msgParams = ev.get_message()->get_map();
+
+        if (onUserDisconnectFn_)
+        {
+            onUserDisconnectFn_(
+                msgParams["sid"]->get_string(),
+                msgParams["last_update"]->get_string(),
+                msgParams["callsign"]->get_string(),
+                msgParams["grid_square"]->get_string(),
+                msgParams["version"]->get_string()
+            );
+        }
+    });
+
+    sioClient_.socket()->on("tx_report", [&](sio::event& ev) {
+        auto msgParams = ev.get_message()->get_map();
+
+        if (onTransmitUpdateFn_)
+        {
+            auto lastTx = msgParams["last_tx"];
+        
+            onTransmitUpdateFn_(
+                msgParams["sid"]->get_string(),
+                msgParams["last_update"]->get_string(),
+                msgParams["callsign"]->get_string(),
+                msgParams["grid_square"]->get_string(),
+                msgParams["mode"]->get_string(),
+                msgParams["transmitting"]->get_bool(),
+                lastTx->get_flag() == sio::message::flag_null ? "" : lastTx->get_string()
+            );
+        }
+    });
+
+    sioClient_.socket()->on("rx_report", [&](sio::event& ev) {
+        auto msgParams = ev.get_message()->get_map();
+
+        if (onReceiveUpdateFn_)
+        {
+            onReceiveUpdateFn_(
+                msgParams["sid"]->get_string(),
+                msgParams["last_update"]->get_string(),
+                msgParams["receiver_callsign"]->get_string(),
+                msgParams["receiver_grid_square"]->get_string(),
+                msgParams["callsign"]->get_string(),
+                msgParams["snr"]->get_double(),
+                msgParams["mode"]->get_string()
+            );
+        }
+    });
+
+    sioClient_.socket()->on("freq_change", [&](sio::event& ev) {
+        auto msgParams = ev.get_message()->get_map();
+
+        if (onFrequencyChangeFn_)
+        {
+            onFrequencyChangeFn_(
+                msgParams["sid"]->get_string(),
+                msgParams["last_update"]->get_string(),
+                msgParams["callsign"]->get_string(),
+                msgParams["grid_square"]->get_string(),
+                msgParams["freq"]->get_int()
+            );
+        }
+    });
 }
 
 void FreeDVReporter::threadEntryPoint_()

@@ -54,6 +54,8 @@ public:
     FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software);
     virtual ~FreeDVReporter();
 
+    void connect();
+    
     virtual void freqChange(uint64_t frequency) override;
     virtual void transmit(std::string mode, bool tx) override;
     
