@@ -27,7 +27,6 @@ using namespace std::placeholders;
 FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxDialog(parent, id, title, pos, size, style)
     , reporter_(nullptr)
-    , listIndex_(0)
 {
     // Create top-level of control hierarchy.
     wxPanel* panel = new wxPanel(this);
@@ -140,30 +139,17 @@ void FreeDVReporterDialog::OnOK(wxCommandEvent& event)
 void FreeDVReporterDialog::OnSendQSY(wxCommandEvent& event)
 {
     auto selectedIndex = m_listSpots->GetFirstSelected();
-    auto selectedCallsign = m_listSpots->GetItemText(selectedIndex);
-    std::string sid = "";
-    
-    // Find associated SID for given row in table.
-    for (auto& kvp : sessionIds_)
+    if (selectedIndex >= 0)
     {
-        if (kvp.second == selectedIndex)
-        {
-            sid = kvp.first;
-            break;
-        }
-    }
+        auto selectedCallsign = m_listSpots->GetItemText(selectedIndex);
     
-    if (sid.length() > 0)
-    {
+        std::string* sidPtr = (std::string*)m_listSpots->GetItemData(selectedIndex);
+        std::string sid = *sidPtr;
+    
         reporter_->requestQSY(sid, wxGetApp().m_reportingFrequency, ""); // Custom message TBD.
-        
+    
         wxString fullMessage = wxString::Format(_("QSY request sent to %s"), selectedCallsign);
         wxMessageBox(fullMessage, wxT("FreeDV Reporter"), wxOK | wxICON_INFORMATION, this);
-    }
-    else
-    {
-        wxString fullMessage = wxString::Format(_("Could not send QSY request to %s. This is probably because they disconnected."), selectedCallsign);
-        wxMessageBox(fullMessage, wxT("FreeDV Reporter"), wxOK | wxICON_ERROR, this);
     }
 }
 
@@ -199,25 +185,29 @@ void FreeDVReporterDialog::OnItemDeselected(wxListEvent& event)
 void FreeDVReporterDialog::onReporterConnect_()
 {
     CallAfter([&]() {
-        m_listSpots->DeleteAllItems();
-        sessionIds_.clear();
+        for (auto index = m_listSpots->GetItemCount() - 1; index >= 0; index--)
+        {
+            delete (std::string*)m_listSpots->GetItemData(index);
+            m_listSpots->DeleteItem(index);
+        }
     });
 }
 
 void FreeDVReporterDialog::onReporterDisconnect_()
 {
     CallAfter([&]() {
-        m_listSpots->DeleteAllItems();
-        sessionIds_.clear();
+        for (auto index = m_listSpots->GetItemCount() - 1; index >= 0; index--)
+        {
+            delete (std::string*)m_listSpots->GetItemData(index);
+            m_listSpots->DeleteItem(index);
+        }
     });
 }
 
 void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version)
 {
     CallAfter([&, sid, lastUpdate, callsign, gridSquare, version]() {
-        sessionIds_[sid] = listIndex_++;
-        
-        auto itemIndex = m_listSpots->InsertItem(sessionIds_.size() - 1, callsign);
+        auto itemIndex = m_listSpots->InsertItem(m_listSpots->GetItemCount(), callsign);
         m_listSpots->SetItem(itemIndex, 1, gridSquare);
         m_listSpots->SetItem(itemIndex, 2, version);
         m_listSpots->SetItem(itemIndex, 3, "Unknown");
@@ -231,6 +221,8 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         auto lastUpdateTime = makeValidTime_(lastUpdate);
         m_listSpots->SetItem(itemIndex, 10, lastUpdateTime);
         
+        m_listSpots->SetItemPtrData(itemIndex, (wxUIntPtr)new std::string(sid));
+        
         // Resize all columns to the biggest value.
         for (int col = 0; col <= 10; col++)
         {
@@ -242,16 +234,14 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
 void FreeDVReporterDialog::onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version)
 {
     CallAfter([&, sid]() {
-        auto iter = sessionIds_.find(sid);
-        if (iter != sessionIds_.end())
+        for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
         {
-            m_listSpots->DeleteItem(iter->second);
-            sessionIds_.erase(iter);
-            
-            // Resize all columns to the biggest value.
-            for (int col = 0; col <= 10; col++)
+            std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
+            if (sid == *sidPtr)
             {
-                m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
+                delete (std::string*)m_listSpots->GetItemData(index);
+                m_listSpots->DeleteItem(index);
+                break;
             }
         }
     });
@@ -260,22 +250,26 @@ void FreeDVReporterDialog::onUserDisconnectFn_(std::string sid, std::string last
 void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz)
 {
     CallAfter([&, sid, frequencyHz, lastUpdate]() {
-        auto iter = sessionIds_.find(sid);
-        if (iter != sessionIds_.end())
+        for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
         {
-            auto index = iter->second;
-            double frequencyMHz = frequencyHz / 1000000.0;
-            
-            wxString frequencyMHzString = wxString::Format(_("%.04f MHz"), frequencyMHz);
-            m_listSpots->SetItem(index, 3, frequencyMHzString);
-            
-            auto lastUpdateTime = makeValidTime_(lastUpdate);
-            m_listSpots->SetItem(index, 10, lastUpdateTime);
-            
-            // Resize all columns to the biggest value.
-            for (int col = 0; col <= 10; col++)
+            std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
+            if (sid == *sidPtr)
             {
-                m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
+                double frequencyMHz = frequencyHz / 1000000.0;
+            
+                wxString frequencyMHzString = wxString::Format(_("%.04f MHz"), frequencyMHz);
+                m_listSpots->SetItem(index, 3, frequencyMHzString);
+            
+                auto lastUpdateTime = makeValidTime_(lastUpdate);
+                m_listSpots->SetItem(index, 10, lastUpdateTime);
+            
+                // Resize all columns to the biggest value.
+                for (int col = 0; col <= 10; col++)
+                {
+                    m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
+                }
+                
+                break;
             }
         }
     });
@@ -284,36 +278,38 @@ void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string las
 void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate)
 {
     CallAfter([&, sid, txMode, transmitting, lastTxDate, lastUpdate]() {
-        auto iter = sessionIds_.find(sid);
-        if (iter != sessionIds_.end())
+        for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
         {
-            auto index = iter->second;
-            
-            std::string txStatus = "Receiving";
-            if (transmitting)
+            std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
+            if (sid == *sidPtr)
             {
-                txStatus = "Transmitting";
-                //nonRedBackground_ = m_listSpots->GetItemBackgroundColour(index);
-                //m_listSpots->SetItemBackgroundColour(index, *wxRED);
-            }
-            else
-            {
-                //m_listSpots->SetItemBackgroundColour(index, nonRedBackground_);
-            }
+                std::string txStatus = "Receiving";
+                if (transmitting)
+                {
+                    txStatus = "Transmitting";
+                    //nonRedBackground_ = m_listSpots->GetItemBackgroundColour(index);
+                    //m_listSpots->SetItemBackgroundColour(index, *wxRED);
+                }
+                else
+                {
+                    //m_listSpots->SetItemBackgroundColour(index, nonRedBackground_);
+                }
             
-            m_listSpots->SetItem(index, 4, txStatus);
-            m_listSpots->SetItem(index, 5, txMode);
+                m_listSpots->SetItem(index, 4, txStatus);
+                m_listSpots->SetItem(index, 5, txMode);
             
-            auto lastTxTime = makeValidTime_(lastTxDate);
-            m_listSpots->SetItem(index, 6, lastTxTime);
+                auto lastTxTime = makeValidTime_(lastTxDate);
+                m_listSpots->SetItem(index, 6, lastTxTime);
         
-            auto lastUpdateTime = makeValidTime_(lastUpdate);
-            m_listSpots->SetItem(index, 10, lastUpdateTime);
+                auto lastUpdateTime = makeValidTime_(lastUpdate);
+                m_listSpots->SetItem(index, 10, lastUpdateTime);
             
-            // Resize all columns to the biggest value.
-            for (int col = 0; col <= 10; col++)
-            {
-                m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
+                // Resize all columns to the biggest value.
+                for (int col = 0; col <= 10; col++)
+                {
+                    m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
+                }
+                break;
             }
         }
     });
@@ -322,24 +318,27 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
 void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode)
 {
     CallAfter([&, sid, lastUpdate, receivedCallsign, snr, rxMode]() {
-        auto iter = sessionIds_.find(sid);
-        if (iter != sessionIds_.end())
+        for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
         {
-            auto index = iter->second;
-
-            m_listSpots->SetItem(index, 7, receivedCallsign);
-            m_listSpots->SetItem(index, 8, rxMode);
-            
-            wxString snrString = wxString::Format(_("%.01f"), snr);
-            m_listSpots->SetItem(index, 9, snrString);
-            
-            auto lastUpdateTime = makeValidTime_(lastUpdate);
-            m_listSpots->SetItem(index, 10, lastUpdateTime);
-            
-            // Resize all columns to the biggest value.
-            for (int col = 0; col <= 10; col++)
+            std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
+            if (sid == *sidPtr)
             {
-                m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
+                m_listSpots->SetItem(index, 7, receivedCallsign);
+                m_listSpots->SetItem(index, 8, rxMode);
+            
+                wxString snrString = wxString::Format(_("%.01f"), snr);
+                m_listSpots->SetItem(index, 9, snrString);
+            
+                auto lastUpdateTime = makeValidTime_(lastUpdate);
+                m_listSpots->SetItem(index, 10, lastUpdateTime);
+            
+                // Resize all columns to the biggest value.
+                for (int col = 0; col <= 10; col++)
+                {
+                    m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
+                }
+                
+                break;
             }
         }
     });

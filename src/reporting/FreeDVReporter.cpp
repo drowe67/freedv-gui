@@ -181,7 +181,8 @@ void FreeDVReporter::connect_()
     // doesn't appear.
     sioClient_.set_socket_open_listener([&](std::string)
     {
-        isConnecting_ = false;        
+        isConnecting_ = false;
+        
         freqChangeImpl_(lastFrequency_);
         transmitImpl_(mode_, tx_);
     });
@@ -189,11 +190,6 @@ void FreeDVReporter::connect_()
     sioClient_.set_reconnect_listener([&](unsigned, unsigned)
     {
         isConnecting_ = false;
-        
-        if (onReporterConnectFn_)
-        {
-            onReporterConnectFn_();
-        }
         
         freqChangeImpl_(lastFrequency_);
         transmitImpl_(mode_, tx_);
@@ -215,6 +211,12 @@ void FreeDVReporter::connect_()
     isConnecting_ = true;
     sioClient_.connect(std::string("http://") + hostname_ + "/", authPtr);
     
+    if (onReporterConnectFn_)
+    {
+        onReporterConnectFn_();
+    }
+    
+    sioClient_.socket()->off("new_connection");
     sioClient_.socket()->on("new_connection", [&](sio::event& ev) {
         auto msgParams = ev.get_message()->get_map();
 
@@ -230,6 +232,7 @@ void FreeDVReporter::connect_()
         }
     });
 
+    sioClient_.socket()->off("remove_connection");
     sioClient_.socket()->on("remove_connection", [&](sio::event& ev) {
         auto msgParams = ev.get_message()->get_map();
 
@@ -245,6 +248,7 @@ void FreeDVReporter::connect_()
         }
     });
 
+    sioClient_.socket()->off("tx_report");
     sioClient_.socket()->on("tx_report", [&](sio::event& ev) {
         auto msgParams = ev.get_message()->get_map();
 
@@ -264,6 +268,7 @@ void FreeDVReporter::connect_()
         }
     });
 
+    sioClient_.socket()->off("rx_report");
     sioClient_.socket()->on("rx_report", [&](sio::event& ev) {
         auto msgParams = ev.get_message()->get_map();
 
@@ -281,6 +286,7 @@ void FreeDVReporter::connect_()
         }
     });
 
+    sioClient_.socket()->off("freq_change");
     sioClient_.socket()->on("freq_change", [&](sio::event& ev) {
         auto msgParams = ev.get_message()->get_map();
 
@@ -296,6 +302,7 @@ void FreeDVReporter::connect_()
         }
     });
     
+    sioClient_.socket()->off("qsy_request");
     sioClient_.socket()->on("qsy_request", [&](sio::event& ev) {
         auto msgParams = ev.get_message()->get_map();
         

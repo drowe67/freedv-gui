@@ -67,8 +67,6 @@ class FreeDVReporterDialog : public wxDialog
 
      private:
          FreeDVReporter* reporter_;
-         std::map<std::string, long> sessionIds_;
-         int listIndex_;
          wxColour nonRedBackground_; // need to save BG since wxNullColour doesn't seem to work
          
          void onReporterConnect_();
