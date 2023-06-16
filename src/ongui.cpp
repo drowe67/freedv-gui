@@ -585,6 +585,9 @@ void MainFrame::OnCallSignReset(wxCommandEvent& event)
     wxString s;
     s.Printf("%s", m_callsign);
     m_txtCtrlCallSign->SetValue(s);
+    
+    m_lastReportedCallsignListView->DeleteAllItems();
+    m_cboLastReportedCallsigns->SetText(_(""));
 }
 
 
