@@ -50,6 +50,8 @@ class PlotScalar: public PlotPanel
          void setBarGraph(int bar_graph) { m_bar_graph = bar_graph; }
          void setLogY(int logy) { m_logy = logy; }
 
+         void clearSamples();
+         
     protected:
 
          int      m_channels;
