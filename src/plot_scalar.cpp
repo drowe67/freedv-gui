@@ -339,6 +339,11 @@ void PlotScalar::drawGraticule(wxGraphicsContext* ctx)
 
 }
 
+void PlotScalar::clearSamples()
+{
+    memset(m_mem, 0, sizeof(float) * m_samples);
+}
+
 //----------------------------------------------------------------
 // OnSize()
 //----------------------------------------------------------------
