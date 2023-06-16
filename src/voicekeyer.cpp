@@ -77,14 +77,18 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         // to Mic In
 
         if (vk_event == VK_SPACE_BAR) {
-            m_btnTogPTT->SetValue(false); togglePTT();
+            m_btnTogPTT->SetValue(false); 
+            m_btnTogPTT->SetBackgroundColour(wxNullColour);
+            togglePTT();
             m_togBtnVoiceKeyer->SetValue(false);
             next_state = VK_IDLE;
             CallAfter([&]() { StopPlayFileToMicIn(); });
         }
 
         if (vk_event == VK_PLAY_FINISHED) {
-            m_btnTogPTT->SetValue(false); togglePTT();
+            m_btnTogPTT->SetValue(false); 
+            m_btnTogPTT->SetBackgroundColour(wxNullColour);
+            togglePTT();
             vk_repeat_counter++;
             if (vk_repeat_counter > vk_repeats) {
                 m_togBtnVoiceKeyer->SetValue(false);
@@ -154,7 +158,9 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
     default:
         // catch anything we missed
 
-        m_btnTogPTT->SetValue(false); togglePTT();
+        m_btnTogPTT->SetValue(false); 
+        m_btnTogPTT->SetBackgroundColour(wxNullColour);
+        togglePTT();
         m_togBtnVoiceKeyer->SetValue(false);
         next_state = VK_IDLE;
     }
