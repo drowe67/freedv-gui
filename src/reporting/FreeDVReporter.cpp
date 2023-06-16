@@ -34,20 +34,40 @@ FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::
     , lastFrequency_(0)
     , tx_(false)
 {
-    fnQueueThread_ = std::thread(std::bind(&FreeDVReporter::threadEntryPoint_, this));
+    // empty
 }
 
 FreeDVReporter::~FreeDVReporter()
 {
-    isExiting_ = true;
-    fnQueueConditionVariable_.notify_one();
-    fnQueueThread_.join();
-    
-    // Workaround for race condition in sioclient
-    while (isConnecting_)
+    if (fnQueueThread_.joinable())
     {
-        std::this_thread::sleep_for(20ms);
+        isExiting_ = true;
+        fnQueueConditionVariable_.notify_one();
+        fnQueueThread_.join();
+    
+        // Workaround for race condition in sioclient
+        while (isConnecting_)
+        {
+            std::this_thread::sleep_for(20ms);
+        }
     }
+}
+
+void FreeDVReporter::connect()
+{    
+    fnQueueThread_ = std::thread(std::bind(&FreeDVReporter::threadEntryPoint_, this));
+}
+
+void FreeDVReporter::requestQSY(std::string sid, uint64_t frequencyHz, std::string message)
+{
+    sio::message::ptr qsyPtr = sio::object_message::create();
+    auto qsyData = (sio::object_message*)qsyPtr.get();
+
+    qsyData->insert("dest_sid", sid);
+    qsyData->insert("message", message);
+    qsyData->insert("frequency", sio::int_message::create(frequencyHz));
+
+    sioClient_.socket()->emit("qsy_request", qsyPtr);
 }
 
 void FreeDVReporter::inAnalogMode(bool inAnalog)
@@ -107,8 +127,48 @@ void FreeDVReporter::send()
     // No implementation needed, we send RX/TX reports live.
 }
 
-void FreeDVReporter::connect_()
+void FreeDVReporter::setOnReporterConnectFn(ReporterConnectionFn fn)
 {
+    onReporterConnectFn_ = fn;
+}
+
+void FreeDVReporter::setOnReporterDisconnectFn(ReporterConnectionFn fn)
+{
+    onReporterDisconnectFn_ = fn;
+}
+
+void FreeDVReporter::setOnUserConnectFn(ConnectionDataFn fn)
+{
+    onUserConnectFn_ = fn;
+}
+
+void FreeDVReporter::setOnUserDisconnectFn(ConnectionDataFn fn)
+{
+    onUserDisconnectFn_ = fn;
+}
+
+void FreeDVReporter::setOnFrequencyChangeFn(FrequencyChangeFn fn)
+{
+    onFrequencyChangeFn_ = fn;
+}
+
+void FreeDVReporter::setOnTransmitUpdateFn(TxUpdateFn fn)
+{
+    onTransmitUpdateFn_ = fn;
+}
+
+void FreeDVReporter::setOnReceiveUpdateFn(RxUpdateFn fn)
+{
+    onReceiveUpdateFn_ = fn;
+}
+
+void FreeDVReporter::setOnQSYRequestFn(QsyRequestFn fn)
+{
+    onQsyRequestFn_ = fn;
+}
+
+void FreeDVReporter::connect_()
+{        
     // Connect and send initial info.
     sio::message::ptr authPtr = sio::object_message::create();
     auto auth = (sio::object_message*)authPtr.get();
@@ -122,6 +182,7 @@ void FreeDVReporter::connect_()
     sioClient_.set_socket_open_listener([&](std::string)
     {
         isConnecting_ = false;
+        
         freqChangeImpl_(lastFrequency_);
         transmitImpl_(mode_, tx_);
     });
@@ -129,6 +190,7 @@ void FreeDVReporter::connect_()
     sioClient_.set_reconnect_listener([&](unsigned, unsigned)
     {
         isConnecting_ = false;
+        
         freqChangeImpl_(lastFrequency_);
         transmitImpl_(mode_, tx_);
     });
@@ -139,14 +201,124 @@ void FreeDVReporter::connect_()
     
     sioClient_.set_close_listener([&](sio::client::close_reason const&) {
         isConnecting_ = false;
+        
+        if (onReporterDisconnectFn_)
+        {
+            onReporterDisconnectFn_();
+        }
     });
     
     isConnecting_ = true;
     sioClient_.connect(std::string("http://") + hostname_ + "/", authPtr);
+    
+    if (onReporterConnectFn_)
+    {
+        onReporterConnectFn_();
+    }
+    
+    sioClient_.socket()->off("new_connection");
+    sioClient_.socket()->on("new_connection", [&](sio::event& ev) {
+        auto msgParams = ev.get_message()->get_map();
+
+        if (onUserConnectFn_)
+        {
+            onUserConnectFn_(
+                msgParams["sid"]->get_string(),
+                msgParams["last_update"]->get_string(),
+                msgParams["callsign"]->get_string(),
+                msgParams["grid_square"]->get_string(),
+                msgParams["version"]->get_string()
+            );
+        }
+    });
+
+    sioClient_.socket()->off("remove_connection");
+    sioClient_.socket()->on("remove_connection", [&](sio::event& ev) {
+        auto msgParams = ev.get_message()->get_map();
+
+        if (onUserDisconnectFn_)
+        {
+            onUserDisconnectFn_(
+                msgParams["sid"]->get_string(),
+                msgParams["last_update"]->get_string(),
+                msgParams["callsign"]->get_string(),
+                msgParams["grid_square"]->get_string(),
+                msgParams["version"]->get_string()
+            );
+        }
+    });
+
+    sioClient_.socket()->off("tx_report");
+    sioClient_.socket()->on("tx_report", [&](sio::event& ev) {
+        auto msgParams = ev.get_message()->get_map();
+
+        if (onTransmitUpdateFn_)
+        {
+            auto lastTx = msgParams["last_tx"];
+        
+            onTransmitUpdateFn_(
+                msgParams["sid"]->get_string(),
+                msgParams["last_update"]->get_string(),
+                msgParams["callsign"]->get_string(),
+                msgParams["grid_square"]->get_string(),
+                msgParams["mode"]->get_string(),
+                msgParams["transmitting"]->get_bool(),
+                lastTx->get_flag() == sio::message::flag_null ? "" : lastTx->get_string()
+            );
+        }
+    });
+
+    sioClient_.socket()->off("rx_report");
+    sioClient_.socket()->on("rx_report", [&](sio::event& ev) {
+        auto msgParams = ev.get_message()->get_map();
+
+        if (onReceiveUpdateFn_)
+        {
+            onReceiveUpdateFn_(
+                msgParams["sid"]->get_string(),
+                msgParams["last_update"]->get_string(),
+                msgParams["receiver_callsign"]->get_string(),
+                msgParams["receiver_grid_square"]->get_string(),
+                msgParams["callsign"]->get_string(),
+                msgParams["snr"]->get_double(),
+                msgParams["mode"]->get_string()
+            );
+        }
+    });
+
+    sioClient_.socket()->off("freq_change");
+    sioClient_.socket()->on("freq_change", [&](sio::event& ev) {
+        auto msgParams = ev.get_message()->get_map();
+
+        if (onFrequencyChangeFn_)
+        {
+            onFrequencyChangeFn_(
+                msgParams["sid"]->get_string(),
+                msgParams["last_update"]->get_string(),
+                msgParams["callsign"]->get_string(),
+                msgParams["grid_square"]->get_string(),
+                msgParams["freq"]->get_int()
+            );
+        }
+    });
+    
+    sioClient_.socket()->off("qsy_request");
+    sioClient_.socket()->on("qsy_request", [&](sio::event& ev) {
+        auto msgParams = ev.get_message()->get_map();
+        
+        if (onQsyRequestFn_)
+        {
+            onQsyRequestFn_(
+                msgParams["callsign"]->get_string(),
+                msgParams["frequency"]->get_int(),
+                msgParams["message"]->get_string()
+            );
+        }
+    });
 }
 
 void FreeDVReporter::threadEntryPoint_()
-{
+{    
     connect_();
     
     while (!isExiting_)

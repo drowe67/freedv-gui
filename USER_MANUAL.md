@@ -869,7 +869,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Clear audio plots when recording or playback starts. (PR #439)
     * Clear button now clears the callsign list. (PR #436)
     * Fix bug causing the PTT button to stay red after the voice keyer finishes TX. (PR #440)
-2. Build system:
+2. Enhancements:
+    * Add the ability to request that another FreeDV Reporter user QSY. (PR #434)
+3. Build system:
     * Bump Codec2 version to v1.1.1. (PR #437)
 
 ## V1.8.11 June 2023
