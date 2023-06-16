@@ -2123,10 +2123,22 @@ void MainFrame::performFreeDVOn_()
                         // TBD: automatically change frequency via hamlib if enabled.
                         freedvReporter->setOnQSYRequestFn([&](std::string callsign, uint64_t freqHz, std::string message) {
                             double frequencyMHz = freqHz / 1000000.0;
+                            wxString fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz."), callsign, frequencyMHz);
+                            int dialogStyle = wxOK | wxICON_INFORMATION;
                             
-                            CallAfter([&, callsign, frequencyMHz]() {
-                                wxString fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz."), callsign, frequencyMHz);
-                                wxMessageBox(fullMessage, wxT("FreeDV Reporter"), wxOK | wxICON_INFORMATION, this);
+                            if (wxGetApp().m_hamlib != nullptr && wxGetApp().m_boolHamlibEnableFreqModeChanges)
+                            {
+                                fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz. Would you like to change to that frequency now?"), callsign, frequencyMHz);
+                                dialogStyle = wxYES_NO | wxICON_QUESTION;
+                            }
+                            
+                            CallAfter([&, fullMessage, dialogStyle, frequencyMHz]() {
+                                auto answer = wxMessageBox(fullMessage, wxT("FreeDV Reporter"), dialogStyle, this);
+                                if (answer == wxYES)
+                                {
+                                    // This will implicitly cause Hamlib to change the frequecy and mode.
+                                    m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyMHz));
+                                }
                             });
                         });
                         

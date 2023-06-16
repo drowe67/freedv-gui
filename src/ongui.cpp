@@ -669,6 +669,11 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
         // Request frequency/mode change on the radio side
         wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);
     }
+    
+    if (m_reporterDialog != nullptr)
+    {
+        m_reporterDialog->refreshQSYButtonState();
+    }
 }
 
 void MainFrame::OnReportFrequencySetFocus(wxFocusEvent& event)

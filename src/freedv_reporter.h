@@ -43,6 +43,7 @@ class FreeDVReporterDialog : public wxDialog
         ~FreeDVReporterDialog();
         
         void setReporter(FreeDVReporter* reporter);
+        void refreshQSYButtonState();
         
     protected:
 

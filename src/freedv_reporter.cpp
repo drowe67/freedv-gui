@@ -160,21 +160,29 @@ void FreeDVReporterDialog::OnClose(wxCloseEvent& event)
 
 void FreeDVReporterDialog::OnItemSelected(wxListEvent& event)
 {
-    auto callsign = event.GetText();
-    
-    if (callsign != wxGetApp().m_reportingCallsign)
-    {
-        m_buttonSendQSY->Enable(true);
-    }
-    else
-    {
-        m_buttonSendQSY->Enable(false);
-    }
+   refreshQSYButtonState();
 }
 
 void FreeDVReporterDialog::OnItemDeselected(wxListEvent& event)
 {
     m_buttonSendQSY->Enable(false);
+}
+
+void FreeDVReporterDialog::refreshQSYButtonState()
+{
+    bool enabled = false;
+    auto selectedIndex = m_listSpots->GetFirstSelected();
+    if (selectedIndex >= 0)
+    {
+        auto selectedCallsign = m_listSpots->GetItemText(selectedIndex);
+    
+        if (selectedCallsign != wxGetApp().m_reportingCallsign && wxGetApp().m_reportingFrequency > 0)
+        {
+            enabled = true;
+        }
+    }
+    
+    m_buttonSendQSY->Enable(enabled);
 }
 
 // =================================================================================
