@@ -863,6 +863,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.8.12 TBD 2023
+
+1. Build System:
+    * Bump Codec2 version to v1.1.1. (PR #437)
+
 ## V1.8.11 June 2023
 
 1. Bugfixes:
