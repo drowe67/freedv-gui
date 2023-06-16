@@ -812,6 +812,12 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
         FIFO               *fifo, *callbackFifo;
         int src_error;
         
+        // Reset plot before starting.
+        CallAfter([&]() {
+            ps->clearSamples();
+            ps->Refresh();
+        });
+        
         fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
         src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
         
@@ -939,6 +945,12 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
         SRC_STATE          *src;
         FIFO               *fifo, *callbackFifo;
         int src_error, n = 0;
+        
+        // Reset plot before starting.
+        CallAfter([&]() {
+            ps->clearSamples();
+            ps->Refresh();
+        });
         
         fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
         src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
