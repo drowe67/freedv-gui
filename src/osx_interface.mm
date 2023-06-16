@@ -32,8 +32,6 @@ static bool globalHasAccess = false;
 
 bool VerifyMicrophonePermissions()
 {
-    return true;
-#if 0
     bool hasAccess = true;
 #ifndef APPLE_OLD_XCODE
     if (@available(macOS 10.14, *)) {
@@ -80,8 +78,6 @@ bool VerifyMicrophonePermissions()
 #endif // !APPLE_OLD_XCODE
 
     return hasAccess;
-#endif //
-    
 }
 
 void ResetMainWindowColorSpace()
