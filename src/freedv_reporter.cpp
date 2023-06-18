@@ -244,7 +244,7 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         // Resize all columns to the biggest value.
         for (int col = 0; col <= 10; col++)
         {
-            m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
+            m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
         }
         
         m_listSpots->Thaw();
