@@ -375,8 +375,8 @@ void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
     }
     
     vfo_t currVfo = getCurrentVfo_(); 
-    setFrequencyHelper_(currVfo, frequencyHz);
     setMode(analog);
+    setFrequencyHelper_(currVfo, frequencyHz);
 }
   
 void Hamlib::setModeHelper_(vfo_t currVfo, rmode_t mode)
