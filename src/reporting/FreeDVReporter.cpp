@@ -89,7 +89,7 @@ void FreeDVReporter::transmit(std::string mode, bool tx)
 void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, char snr)
 {
     std::unique_lock<std::mutex> lk(fnQueueMutex_);
-    fnQueue_.push_back([&, mode, snr]() {
+    fnQueue_.push_back([&, mode, snr, callsign]() {
         sio::message::ptr rxDataPtr = sio::object_message::create();
         auto rxData = (sio::object_message*)rxDataPtr.get();
     
