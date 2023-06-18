@@ -21,6 +21,7 @@
 //=========================================================================
 
 #include "FreeDVReporter.h"
+#include "sio_client.h"
 
 using namespace std::chrono_literals;
 
@@ -34,7 +35,8 @@ FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::
     , lastFrequency_(0)
     , tx_(false)
 {
-    // empty
+    sioClient_ = new sio::client();
+    assert(sioClient_ != nullptr);
 }
 
 FreeDVReporter::~FreeDVReporter()
@@ -51,6 +53,8 @@ FreeDVReporter::~FreeDVReporter()
             std::this_thread::sleep_for(20ms);
         }
     }
+    
+    delete sioClient_;
 }
 
 void FreeDVReporter::connect()
@@ -67,7 +71,7 @@ void FreeDVReporter::requestQSY(std::string sid, uint64_t frequencyHz, std::stri
     qsyData->insert("message", message);
     qsyData->insert("frequency", sio::int_message::create(frequencyHz));
 
-    sioClient_.socket()->emit("qsy_request", qsyPtr);
+    sioClient_->socket()->emit("qsy_request", qsyPtr);
 }
 
 void FreeDVReporter::inAnalogMode(bool inAnalog)
@@ -82,7 +86,7 @@ void FreeDVReporter::inAnalogMode(bool inAnalog)
                 std::this_thread::sleep_for(20ms);
             }
             
-            sioClient_.sync_close();
+            sioClient_->sync_close();
         }
         else
         {
@@ -117,7 +121,7 @@ void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, ui
         rxData->insert("mode", mode);
         rxData->insert("snr", sio::int_message::create(snr));
     
-        sioClient_.socket()->emit("rx_report", rxDataPtr);
+        sioClient_->socket()->emit("rx_report", rxDataPtr);
     });
     fnQueueConditionVariable_.notify_one();
 }
@@ -179,7 +183,7 @@ void FreeDVReporter::connect_()
     
     // Reconnect listener should re-report frequency so that "unknown"
     // doesn't appear.
-    sioClient_.set_socket_open_listener([&](std::string)
+    sioClient_->set_socket_open_listener([&](std::string)
     {
         isConnecting_ = false;
         
@@ -187,7 +191,7 @@ void FreeDVReporter::connect_()
         transmitImpl_(mode_, tx_);
     });
     
-    sioClient_.set_reconnect_listener([&](unsigned, unsigned)
+    sioClient_->set_reconnect_listener([&](unsigned, unsigned)
     {
         isConnecting_ = false;
         
@@ -195,11 +199,11 @@ void FreeDVReporter::connect_()
         transmitImpl_(mode_, tx_);
     });
     
-    sioClient_.set_fail_listener([&]() {
+    sioClient_->set_fail_listener([&]() {
         isConnecting_ = false;
     });
     
-    sioClient_.set_close_listener([&](sio::client::close_reason const&) {
+    sioClient_->set_close_listener([&](sio::client::close_reason const&) {
         isConnecting_ = false;
         
         if (onReporterDisconnectFn_)
@@ -209,15 +213,15 @@ void FreeDVReporter::connect_()
     });
     
     isConnecting_ = true;
-    sioClient_.connect(std::string("http://") + hostname_ + "/", authPtr);
+    sioClient_->connect(std::string("http://") + hostname_ + "/", authPtr);
     
     if (onReporterConnectFn_)
     {
         onReporterConnectFn_();
     }
     
-    sioClient_.socket()->off("new_connection");
-    sioClient_.socket()->on("new_connection", [&](sio::event& ev) {
+    sioClient_->socket()->off("new_connection");
+    sioClient_->socket()->on("new_connection", [&](sio::event& ev) {
         auto msgParams = ev.get_message()->get_map();
 
         if (onUserConnectFn_)
@@ -247,8 +251,8 @@ void FreeDVReporter::connect_()
         }
     });
 
-    sioClient_.socket()->off("remove_connection");
-    sioClient_.socket()->on("remove_connection", [&](sio::event& ev) {
+    sioClient_->socket()->off("remove_connection");
+    sioClient_->socket()->on("remove_connection", [&](sio::event& ev) {
         auto msgParams = ev.get_message()->get_map();
 
         if (onUserDisconnectFn_)
@@ -278,8 +282,8 @@ void FreeDVReporter::connect_()
         }
     });
 
-    sioClient_.socket()->off("tx_report");
-    sioClient_.socket()->on("tx_report", [&](sio::event& ev) {
+    sioClient_->socket()->off("tx_report");
+    sioClient_->socket()->on("tx_report", [&](sio::event& ev) {
         auto msgParams = ev.get_message()->get_map();
 
         if (onTransmitUpdateFn_)
@@ -314,8 +318,8 @@ void FreeDVReporter::connect_()
         }
     });
 
-    sioClient_.socket()->off("rx_report");
-    sioClient_.socket()->on("rx_report", [&](sio::event& ev) {
+    sioClient_->socket()->off("rx_report");
+    sioClient_->socket()->on("rx_report", [&](sio::event& ev) {
         auto msgParams = ev.get_message()->get_map();
         
         auto sid = msgParams["sid"];
@@ -351,8 +355,8 @@ void FreeDVReporter::connect_()
         }
     });
 
-    sioClient_.socket()->off("freq_change");
-    sioClient_.socket()->on("freq_change", [&](sio::event& ev) {
+    sioClient_->socket()->off("freq_change");
+    sioClient_->socket()->on("freq_change", [&](sio::event& ev) {
         auto msgParams = ev.get_message()->get_map();
 
         if (onFrequencyChangeFn_)
@@ -382,8 +386,8 @@ void FreeDVReporter::connect_()
         }
     });
     
-    sioClient_.socket()->off("qsy_request");
-    sioClient_.socket()->on("qsy_request", [&](sio::event& ev) {
+    sioClient_->socket()->off("qsy_request");
+    sioClient_->socket()->on("qsy_request", [&](sio::event& ev) {
         auto msgParams = ev.get_message()->get_map();
         
         auto callsign = msgParams["callsign"];
@@ -438,7 +442,7 @@ void FreeDVReporter::freqChangeImpl_(uint64_t frequency)
     sio::message::ptr freqDataPtr = sio::object_message::create();
     auto freqData = (sio::object_message*)freqDataPtr.get();
     freqData->insert("freq", sio::int_message::create(frequency));
-    sioClient_.socket()->emit("freq_change", freqDataPtr);
+    sioClient_->socket()->emit("freq_change", freqDataPtr);
 
     // Save last frequency in case we need to reconnect.
     lastFrequency_ = frequency;
@@ -450,7 +454,7 @@ void FreeDVReporter::transmitImpl_(std::string mode, bool tx)
     auto txData = (sio::object_message*)txDataPtr.get();
     txData->insert("mode", mode);
     txData->insert("transmitting", sio::bool_message::create(tx));
-    sioClient_.socket()->emit("tx_report", txDataPtr);
+    sioClient_->socket()->emit("tx_report", txDataPtr);
 
     // Save last mode and TX state in case we have to reconnect.
     mode_ = mode;

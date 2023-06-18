@@ -30,8 +30,12 @@
 #include <string>
 #include <thread>
 #include <functional>
-#include "sio_client.h"
 #include "IReporter.h"
+
+namespace sio
+{
+    class client; // forward declaration
+}
 
 class FreeDVReporter : public IReporter
 {
@@ -88,7 +92,7 @@ private:
     std::thread fnQueueThread_;
     bool isConnecting_;
     
-    sio::client sioClient_;
+    sio::client* sioClient_;
     std::string hostname_;
     std::string callsign_;
     std::string gridSquare_;
