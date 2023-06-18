@@ -222,13 +222,28 @@ void FreeDVReporter::connect_()
 
         if (onUserConnectFn_)
         {
-            onUserConnectFn_(
-                msgParams["sid"]->get_string(),
-                msgParams["last_update"]->get_string(),
-                msgParams["callsign"]->get_string(),
-                msgParams["grid_square"]->get_string(),
-                msgParams["version"]->get_string()
-            );
+            auto sid = msgParams["sid"];
+            auto lastUpdate = msgParams["last_update"];
+            auto callsign = msgParams["callsign"];
+            auto gridSquare = msgParams["grid_square"];
+            auto version = msgParams["version"];
+            
+            // Only call event handler if we received the correct data types
+            // for the items in the message.
+            if (sid->get_flag() == sio::message::flag_string &&
+                lastUpdate->get_flag() == sio::message::flag_string &&
+                callsign->get_flag() == sio::message::flag_string &&
+                gridSquare->get_flag() == sio::message::flag_string &&
+                version->get_flag() == sio::message::flag_string)
+            {
+                onUserConnectFn_(
+                    sid->get_string(),
+                    lastUpdate->get_string(),
+                    callsign->get_string(),
+                    gridSquare->get_string(),
+                    version->get_string()
+                );
+            }
         }
     });
 
@@ -238,13 +253,28 @@ void FreeDVReporter::connect_()
 
         if (onUserDisconnectFn_)
         {
-            onUserDisconnectFn_(
-                msgParams["sid"]->get_string(),
-                msgParams["last_update"]->get_string(),
-                msgParams["callsign"]->get_string(),
-                msgParams["grid_square"]->get_string(),
-                msgParams["version"]->get_string()
-            );
+            auto sid = msgParams["sid"];
+            auto lastUpdate = msgParams["last_update"];
+            auto callsign = msgParams["callsign"];
+            auto gridSquare = msgParams["grid_square"];
+            auto version = msgParams["version"];
+            
+            // Only call event handler if we received the correct data types
+            // for the items in the message.
+            if (sid->get_flag() == sio::message::flag_string &&
+                lastUpdate->get_flag() == sio::message::flag_string &&
+                callsign->get_flag() == sio::message::flag_string &&
+                gridSquare->get_flag() == sio::message::flag_string &&
+                version->get_flag() == sio::message::flag_string)
+            {
+                onUserDisconnectFn_(
+                    sid->get_string(),
+                    lastUpdate->get_string(),
+                    callsign->get_string(),
+                    gridSquare->get_string(),
+                    version->get_string()
+                );
+            }
         }
     });
 
@@ -254,35 +284,70 @@ void FreeDVReporter::connect_()
 
         if (onTransmitUpdateFn_)
         {
+            auto sid = msgParams["sid"];
+            auto lastUpdate = msgParams["last_update"];
+            auto callsign = msgParams["callsign"];
+            auto gridSquare = msgParams["grid_square"];
             auto lastTx = msgParams["last_tx"];
-        
-            onTransmitUpdateFn_(
-                msgParams["sid"]->get_string(),
-                msgParams["last_update"]->get_string(),
-                msgParams["callsign"]->get_string(),
-                msgParams["grid_square"]->get_string(),
-                msgParams["mode"]->get_string(),
-                msgParams["transmitting"]->get_bool(),
-                lastTx->get_flag() == sio::message::flag_null ? "" : lastTx->get_string()
-            );
+            auto mode = msgParams["mode"];
+            auto transmitting = msgParams["transmitting"];
+            
+            // Only call event handler if we received the correct data types
+            // for the items in the message.
+            if (sid->get_flag() == sio::message::flag_string &&
+                lastUpdate->get_flag() == sio::message::flag_string &&
+                callsign->get_flag() == sio::message::flag_string &&
+                gridSquare->get_flag() == sio::message::flag_string &&
+                mode->get_flag() == sio::message::flag_string &&
+                transmitting->get_flag() == sio::message::flag_boolean)
+            {
+                onTransmitUpdateFn_(
+                    sid->get_string(),
+                    lastUpdate->get_string(),
+                    callsign->get_string(),
+                    gridSquare->get_string(),
+                    mode->get_string(),
+                    transmitting->get_bool(),
+                    lastTx->get_flag() == sio::message::flag_null ? "" : lastTx->get_string()
+                );
+            }
         }
     });
 
     sioClient_.socket()->off("rx_report");
     sioClient_.socket()->on("rx_report", [&](sio::event& ev) {
         auto msgParams = ev.get_message()->get_map();
-
+        
+        auto sid = msgParams["sid"];
+        auto lastUpdate = msgParams["last_update"];
+        auto receiverCallsign = msgParams["receiver_callsign"];
+        auto receiverGridSquare = msgParams["receiver_grid_square"];
+        auto callsign = msgParams["callsign"];
+        auto snr = msgParams["snr"];
+        auto mode = msgParams["mode"];
+        
         if (onReceiveUpdateFn_)
         {
-            onReceiveUpdateFn_(
-                msgParams["sid"]->get_string(),
-                msgParams["last_update"]->get_string(),
-                msgParams["receiver_callsign"]->get_string(),
-                msgParams["receiver_grid_square"]->get_string(),
-                msgParams["callsign"]->get_string(),
-                msgParams["snr"]->get_double(),
-                msgParams["mode"]->get_string()
-            );
+            // Only call event handler if we received the correct data types
+            // for the items in the message.
+            if (sid->get_flag() == sio::message::flag_string &&
+                lastUpdate->get_flag() == sio::message::flag_string &&
+                callsign->get_flag() == sio::message::flag_string &&
+                receiverCallsign->get_flag() == sio::message::flag_string &&
+                receiverGridSquare->get_flag() == sio::message::flag_string &&
+                mode->get_flag() == sio::message::flag_string &&
+                snr->get_flag() == sio::message::flag_double)
+            {
+                onReceiveUpdateFn_(
+                    msgParams["sid"]->get_string(),
+                    msgParams["last_update"]->get_string(),
+                    msgParams["receiver_callsign"]->get_string(),
+                    msgParams["receiver_grid_square"]->get_string(),
+                    msgParams["callsign"]->get_string(),
+                    msgParams["snr"]->get_double(),
+                    msgParams["mode"]->get_string()
+                );
+            }
         }
     });
 
@@ -292,13 +357,28 @@ void FreeDVReporter::connect_()
 
         if (onFrequencyChangeFn_)
         {
-            onFrequencyChangeFn_(
-                msgParams["sid"]->get_string(),
-                msgParams["last_update"]->get_string(),
-                msgParams["callsign"]->get_string(),
-                msgParams["grid_square"]->get_string(),
-                msgParams["freq"]->get_int()
-            );
+            auto sid = msgParams["sid"];
+            auto lastUpdate = msgParams["last_update"];
+            auto callsign = msgParams["callsign"];
+            auto gridSquare = msgParams["grid_square"];
+            auto frequency = msgParams["freq"];
+            
+            // Only call event handler if we received the correct data types
+            // for the items in the message.
+            if (sid->get_flag() == sio::message::flag_string &&
+                lastUpdate->get_flag() == sio::message::flag_string &&
+                callsign->get_flag() == sio::message::flag_string &&
+                gridSquare->get_flag() == sio::message::flag_string &&
+                frequency->get_flag() == sio::message::flag_integer)
+            {
+                onFrequencyChangeFn_(
+                    sid->get_string(),
+                    lastUpdate->get_string(),
+                    callsign->get_string(),
+                    gridSquare->get_string(),
+                    frequency->get_int()
+                );
+            }
         }
     });
     
@@ -306,13 +386,24 @@ void FreeDVReporter::connect_()
     sioClient_.socket()->on("qsy_request", [&](sio::event& ev) {
         auto msgParams = ev.get_message()->get_map();
         
+        auto callsign = msgParams["callsign"];
+        auto frequency = msgParams["frequency"];
+        auto message = msgParams["message"];
+        
         if (onQsyRequestFn_)
         {
-            onQsyRequestFn_(
-                msgParams["callsign"]->get_string(),
-                msgParams["frequency"]->get_int(),
-                msgParams["message"]->get_string()
-            );
+            // Only call event handler if we received the correct data types
+            // for the items in the message.
+            if (callsign->get_flag() == sio::message::flag_string &&
+                frequency->get_flag() == sio::message::flag_integer &&
+                message->get_flag() == sio::message::flag_string)
+            {
+                onQsyRequestFn_(
+                    callsign->get_string(),
+                    frequency->get_int(),
+                    message->get_string()
+                );
+            }
         }
     });
 }
