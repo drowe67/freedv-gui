@@ -870,6 +870,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Clear button now clears the callsign list. (PR #436)
     * Fix bug causing the PTT button to stay red after the voice keyer finishes TX. (PR #440)
     * Fix FreeDV Reporter crash when sending RX record. (PR #443)
+    * Hamlib: set mode before frequency to avoid accidental offsetting. (PR #442)
 2. Build system:
     * Bump Codec2 version to v1.1.1. (PR #437)
 
