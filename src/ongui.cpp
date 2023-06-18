@@ -67,6 +67,8 @@ void MainFrame::OnToolsFreeDVReporter(wxCommandEvent& event)
     if (m_reporterDialog != nullptr)
     {
         m_reporterDialog->Show();
+        m_reporterDialog->Iconize(false); // undo minimize if required
+        m_reporterDialog->Raise(); // brings from background to foreground if required
     }
     else
     {

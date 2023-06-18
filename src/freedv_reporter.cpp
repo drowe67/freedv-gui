@@ -193,28 +193,38 @@ void FreeDVReporterDialog::refreshQSYButtonState()
 void FreeDVReporterDialog::onReporterConnect_()
 {
     CallAfter([&]() {
+        m_listSpots->Freeze();
+        
         for (auto index = m_listSpots->GetItemCount() - 1; index >= 0; index--)
         {
             delete (std::string*)m_listSpots->GetItemData(index);
             m_listSpots->DeleteItem(index);
         }
+        
+        m_listSpots->Thaw();
     });
 }
 
 void FreeDVReporterDialog::onReporterDisconnect_()
 {
     CallAfter([&]() {
+        m_listSpots->Freeze();
+        
         for (auto index = m_listSpots->GetItemCount() - 1; index >= 0; index--)
         {
             delete (std::string*)m_listSpots->GetItemData(index);
             m_listSpots->DeleteItem(index);
         }
+        
+        m_listSpots->Thaw();
     });
 }
 
 void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version)
 {
     CallAfter([&, sid, lastUpdate, callsign, gridSquare, version]() {
+        m_listSpots->Freeze();
+        
         auto itemIndex = m_listSpots->InsertItem(m_listSpots->GetItemCount(), callsign);
         m_listSpots->SetItem(itemIndex, 1, gridSquare);
         m_listSpots->SetItem(itemIndex, 2, version);
@@ -234,8 +244,10 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         // Resize all columns to the biggest value.
         for (int col = 0; col <= 10; col++)
         {
-            m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
+            m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
         }
+        
+        m_listSpots->Thaw();
     });
 }
 
@@ -265,17 +277,15 @@ void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string las
             {
                 double frequencyMHz = frequencyHz / 1000000.0;
             
+                m_listSpots->Freeze();
+                
                 wxString frequencyMHzString = wxString::Format(_("%.04f MHz"), frequencyMHz);
                 m_listSpots->SetItem(index, 3, frequencyMHzString);
             
                 auto lastUpdateTime = makeValidTime_(lastUpdate);
                 m_listSpots->SetItem(index, 10, lastUpdateTime);
             
-                // Resize all columns to the biggest value.
-                for (int col = 0; col <= 10; col++)
-                {
-                    m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
-                }
+                m_listSpots->Thaw();
                 
                 break;
             }
@@ -303,6 +313,8 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
                     //m_listSpots->SetItemBackgroundColour(index, nonRedBackground_);
                 }
             
+                m_listSpots->Freeze();
+                
                 m_listSpots->SetItem(index, 4, txStatus);
                 m_listSpots->SetItem(index, 5, txMode);
             
@@ -311,12 +323,9 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
         
                 auto lastUpdateTime = makeValidTime_(lastUpdate);
                 m_listSpots->SetItem(index, 10, lastUpdateTime);
+                
+                m_listSpots->Thaw();
             
-                // Resize all columns to the biggest value.
-                for (int col = 0; col <= 10; col++)
-                {
-                    m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
-                }
                 break;
             }
         }
@@ -331,6 +340,8 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
             std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
             if (sid == *sidPtr)
             {
+                m_listSpots->Freeze();
+                
                 m_listSpots->SetItem(index, 7, receivedCallsign);
                 m_listSpots->SetItem(index, 8, rxMode);
             
@@ -339,12 +350,8 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
             
                 auto lastUpdateTime = makeValidTime_(lastUpdate);
                 m_listSpots->SetItem(index, 10, lastUpdateTime);
-            
-                // Resize all columns to the biggest value.
-                for (int col = 0; col <= 10; col++)
-                {
-                    m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE);
-                }
+                
+                m_listSpots->Thaw();
                 
                 break;
             }
@@ -375,13 +382,23 @@ wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr)
         }
         
         timezoneRgx.Replace(&tmp, _(""));
+        
+        timeZone = wxDateTime::TimeZone(tzMinutes);
     }
     
     wxDateTime tmpDate;
     if (tmpDate.ParseISOCombined(tmp))
     {
         tmpDate.MakeFromTimezone(timeZone);
-        return tmpDate.Format();
+        if (wxGetApp().m_useUTCTime)
+        {
+            timeZone = wxDateTime::TimeZone(wxDateTime::TZ::UTC);
+        }
+        else
+        {
+            timeZone = wxDateTime::TimeZone(wxDateTime::TZ::Local);
+        }
+        return tmpDate.Format(wxDefaultDateTimeFormat, timeZone);
     }
     else
     {
