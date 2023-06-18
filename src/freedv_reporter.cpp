@@ -375,13 +375,23 @@ wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr)
         }
         
         timezoneRgx.Replace(&tmp, _(""));
+        
+        timeZone = wxDateTime::TimeZone(tzMinutes);
     }
     
     wxDateTime tmpDate;
     if (tmpDate.ParseISOCombined(tmp))
     {
         tmpDate.MakeFromTimezone(timeZone);
-        return tmpDate.Format();
+        if (wxGetApp().m_useUTCTime)
+        {
+            timeZone = wxDateTime::TimeZone(wxDateTime::TZ::UTC);
+        }
+        else
+        {
+            timeZone = wxDateTime::TimeZone(wxDateTime::TZ::Local);
+        }
+        return tmpDate.Format(wxDefaultDateTimeFormat, timeZone);
     }
     else
     {
