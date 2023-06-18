@@ -29,12 +29,12 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     , reporter_(nullptr)
 {
     // Create top-level of control hierarchy.
-    wxPanel* panel = new wxPanel(this);
-    wxBoxSizer* sectionSizer = new wxBoxSizer(wxVERTICAL);
-        
+    wxFlexGridSizer* sectionSizer = new wxFlexGridSizer(2, 1, 0, 0);
+    sectionSizer->AddGrowableRow(0);
+    
     // Main list box
     // =============================
-    m_listSpots = new wxListView(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_SINGLE_SEL | wxLC_REPORT | wxLC_HRULES);
+    m_listSpots = new wxListView(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_SINGLE_SEL | wxLC_REPORT | wxLC_HRULES);
     m_listSpots->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_CENTER);
     m_listSpots->InsertColumn(1, wxT("Grid Square"), wxLIST_FORMAT_CENTER);
     m_listSpots->InsertColumn(2, wxT("Version"), wxLIST_FORMAT_CENTER);
@@ -46,17 +46,17 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->InsertColumn(8, wxT("Last RX Mode"), wxLIST_FORMAT_CENTER);
     m_listSpots->InsertColumn(9, wxT("SNR"), wxLIST_FORMAT_CENTER);
     m_listSpots->InsertColumn(10, wxT("Last Update"), wxLIST_FORMAT_CENTER);
-    
+
     sectionSizer->Add(m_listSpots, 0, wxALL | wxEXPAND, 2);
     
     // Bottom buttons
     // =============================
     wxBoxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    m_buttonOK = new wxButton(panel, wxID_OK);
+    m_buttonOK = new wxButton(this, wxID_OK);
     buttonSizer->Add(m_buttonOK, 0, wxALL, 2);
 
-    m_buttonSendQSY = new wxButton(panel, wxID_ANY, _("Request QSY"));
+    m_buttonSendQSY = new wxButton(this, wxID_ANY, _("Request QSY"));
     m_buttonSendQSY->Enable(false); // disable by default unless we get a valid selection
     buttonSizer->Add(m_buttonSendQSY, 0, wxALL, 2);
 
@@ -64,11 +64,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     
     // Trigger auto-layout of window.
     // ==============================
-    panel->SetSizer(sectionSizer);
-    
-    wxBoxSizer* panelSizer = new wxBoxSizer(wxVERTICAL);
-    panelSizer->Add(panel, 0, wxEXPAND, 0);
-    this->SetSizerAndFit(panelSizer);
+    this->SetSizerAndFit(sectionSizer);
     
     this->Layout();
     this->Centre(wxBOTH);
