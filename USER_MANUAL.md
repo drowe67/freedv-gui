@@ -256,6 +256,21 @@ On bands below 10 MHz, LSB is used for FreeDV.  On 10MHz and above, USB is used.
 
 As an aid to the above, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn't enabled, or if your radio doesn't support retrieving frequency and mode over CAT, it will remain grayed out with "unk" displaying instead of the mode (for "unknown").
 
+## Transceiver Filters
+
+For most FreeDV use, your radio's filters should be set to the widest possible (typically around 3 KHz). This allows 
+easy switching between analog mode as well as the various FreeDV modes. However, if preferred, you can use the following
+filter widths for each of the modes below:
+
+| Mode | Width (KHz) |
+| --- | --- |
+| 1600 | 1.125 |
+| 700C | 1.500 |
+| 700D | 1.000 |
+| 700E | 1.500 |
+| 2020 | 1.600 |
+| 2020B | 2.100 |
+
 # Voice Keyer
 
 The Voice Keyer Button on the front page puts FreeDV and your radio into 
