@@ -888,6 +888,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Hamlib: set mode before frequency to avoid accidental offsetting. (PR #442)
 2. Build system:
     * Bump Codec2 version to v1.1.1. (PR #437)
+3. Documentation
+    * Add RF bandwidth information to user manual. (PR #444)
 
 ## V1.8.11 June 2023
 
