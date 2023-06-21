@@ -398,7 +398,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_hiddenMode1->SetValue(true);
     m_hiddenMode2->SetValue(true);
 
-    sbSizer_mode->SetMinSize(wxSize(175,240));
+    sbSizer_mode->SetMinSize(wxSize(175,250));
     otherModeWin->SetSizer(otherModeSizer);
     otherModeSizer->SetSizeHints(otherModeWin);
 
