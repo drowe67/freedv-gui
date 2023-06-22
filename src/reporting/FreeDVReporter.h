@@ -35,7 +35,7 @@
 class FreeDVReporter : public IReporter
 {
 public:
-    FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software);
+    FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly);
     virtual ~FreeDVReporter();
 
     virtual void freqChange(uint64_t frequency) override;
@@ -63,6 +63,7 @@ private:
     uint64_t lastFrequency_;
     std::string mode_;
     bool tx_;
+    bool rxOnly_;
     
     void connect_();
     
