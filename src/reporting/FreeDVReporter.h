@@ -42,9 +42,9 @@ class FreeDVReporter : public IReporter
 public:
     using ReporterConnectionFn = std::function<void()>;
     
-    // sid, last_update, callsign, grid_square, version
+    // sid, last_update, callsign, grid_square, version, rx_only
     // Used for both connect and disconnect
-    using ConnectionDataFn = std::function<void(std::string, std::string, std::string, std::string, std::string)>;
+    using ConnectionDataFn = std::function<void(std::string, std::string, std::string, std::string, std::string, bool)>;
     
     // sid, last_update, callsign, grid_square, frequency
     using FrequencyChangeFn = std::function<void(std::string, std::string, std::string, std::string, uint64_t)>;

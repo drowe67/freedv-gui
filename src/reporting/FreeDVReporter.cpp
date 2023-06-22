@@ -231,6 +231,7 @@ void FreeDVReporter::connect_()
             auto callsign = msgParams["callsign"];
             auto gridSquare = msgParams["grid_square"];
             auto version = msgParams["version"];
+            auto rxOnly = msgParams["rx_only"];
             
             // Only call event handler if we received the correct data types
             // for the items in the message.
@@ -238,14 +239,16 @@ void FreeDVReporter::connect_()
                 lastUpdate->get_flag() == sio::message::flag_string &&
                 callsign->get_flag() == sio::message::flag_string &&
                 gridSquare->get_flag() == sio::message::flag_string &&
-                version->get_flag() == sio::message::flag_string)
+                version->get_flag() == sio::message::flag_string &&
+                rxOnly->get_flag() == sio::message::flag_boolean)
             {
                 onUserConnectFn_(
                     sid->get_string(),
                     lastUpdate->get_string(),
                     callsign->get_string(),
                     gridSquare->get_string(),
-                    version->get_string()
+                    version->get_string(),
+                    rxOnly->get_bool()
                 );
             }
         }
@@ -262,6 +265,7 @@ void FreeDVReporter::connect_()
             auto callsign = msgParams["callsign"];
             auto gridSquare = msgParams["grid_square"];
             auto version = msgParams["version"];
+            auto rxOnly = msgParams["rx_only"];
             
             // Only call event handler if we received the correct data types
             // for the items in the message.
@@ -269,14 +273,16 @@ void FreeDVReporter::connect_()
                 lastUpdate->get_flag() == sio::message::flag_string &&
                 callsign->get_flag() == sio::message::flag_string &&
                 gridSquare->get_flag() == sio::message::flag_string &&
-                version->get_flag() == sio::message::flag_string)
+                version->get_flag() == sio::message::flag_string &&
+                rxOnly->get_flag() == sio::message::flag_boolean)
             {
                 onUserDisconnectFn_(
                     sid->get_string(),
                     lastUpdate->get_string(),
                     callsign->get_string(),
                     gridSquare->get_string(),
-                    version->get_string()
+                    version->get_string(),
+                    rxOnly->get_bool()
                 );
             }
         }

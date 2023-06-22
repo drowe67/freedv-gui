@@ -114,8 +114,8 @@ void FreeDVReporterDialog::setReporter(FreeDVReporter* reporter)
         reporter_->setOnReporterConnectFn(std::bind(&FreeDVReporterDialog::onReporterConnect_, this));
         reporter_->setOnReporterDisconnectFn(std::bind(&FreeDVReporterDialog::onReporterDisconnect_, this));
     
-        reporter_->setOnUserConnectFn(std::bind(&FreeDVReporterDialog::onUserConnectFn_, this, _1, _2, _3, _4, _5));
-        reporter_->setOnUserDisconnectFn(std::bind(&FreeDVReporterDialog::onUserDisconnectFn_, this, _1, _2, _3, _4, _5));
+        reporter_->setOnUserConnectFn(std::bind(&FreeDVReporterDialog::onUserConnectFn_, this, _1, _2, _3, _4, _5, _6));
+        reporter_->setOnUserDisconnectFn(std::bind(&FreeDVReporterDialog::onUserDisconnectFn_, this, _1, _2, _3, _4, _5, _6));
         reporter_->setOnFrequencyChangeFn(std::bind(&FreeDVReporterDialog::onFrequencyChangeFn_, this, _1, _2, _3, _4, _5));
         reporter_->setOnTransmitUpdateFn(std::bind(&FreeDVReporterDialog::onTransmitUpdateFn_, this, _1, _2, _3, _4, _5, _6, _7));
         reporter_->setOnReceiveUpdateFn(std::bind(&FreeDVReporterDialog::onReceiveUpdateFn_, this, _1, _2, _3, _4, _5, _6, _7));
@@ -216,18 +216,28 @@ void FreeDVReporterDialog::onReporterDisconnect_()
     });
 }
 
-void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version)
+void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
 {
-    CallAfter([&, sid, lastUpdate, callsign, gridSquare, version]() {
+    CallAfter([&, sid, lastUpdate, callsign, gridSquare, version, rxOnly]() {
         m_listSpots->Freeze();
         
         auto itemIndex = m_listSpots->InsertItem(m_listSpots->GetItemCount(), callsign);
         m_listSpots->SetItem(itemIndex, 1, gridSquare);
         m_listSpots->SetItem(itemIndex, 2, version);
         m_listSpots->SetItem(itemIndex, 3, "Unknown");
-        m_listSpots->SetItem(itemIndex, 4, "Unknown");
-        m_listSpots->SetItem(itemIndex, 5, "Unknown");
-        m_listSpots->SetItem(itemIndex, 6, "Unknown");
+        
+        if (rxOnly)
+        {
+            m_listSpots->SetItem(itemIndex, 4, "Receive Only");
+            m_listSpots->SetItem(itemIndex, 5, "N/A");
+            m_listSpots->SetItem(itemIndex, 6, "N/A");
+        }
+        else
+        {
+            m_listSpots->SetItem(itemIndex, 4, "Unknown");
+            m_listSpots->SetItem(itemIndex, 5, "Unknown");
+            m_listSpots->SetItem(itemIndex, 6, "Unknown");
+        }
         m_listSpots->SetItem(itemIndex, 7, "Unknown");
         m_listSpots->SetItem(itemIndex, 8, "Unknown");
         m_listSpots->SetItem(itemIndex, 9, "Unknown");
@@ -247,7 +257,7 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
     });
 }
 
-void FreeDVReporterDialog::onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version)
+void FreeDVReporterDialog::onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
 {
     CallAfter([&, sid]() {
         for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
@@ -311,12 +321,15 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
             
                 m_listSpots->Freeze();
                 
-                m_listSpots->SetItem(index, 4, txStatus);
-                m_listSpots->SetItem(index, 5, txMode);
-            
-                auto lastTxTime = makeValidTime_(lastTxDate);
-                m_listSpots->SetItem(index, 6, lastTxTime);
-        
+                if (m_listSpots->GetItemText(index, 4) != _("Receive Only"))
+                {
+                    m_listSpots->SetItem(index, 4, txStatus);
+                    m_listSpots->SetItem(index, 5, txMode);
+                
+                    auto lastTxTime = makeValidTime_(lastTxDate);
+                    m_listSpots->SetItem(index, 6, lastTxTime);
+                }
+                
                 auto lastUpdateTime = makeValidTime_(lastUpdate);
                 m_listSpots->SetItem(index, 10, lastUpdateTime);
                 
