@@ -873,6 +873,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Hamlib: set mode before frequency to avoid accidental offsetting. (PR #442)
 2. Enhancements:
     * Add the ability to request that another FreeDV Reporter user QSY. (PR #434)
+    * Display 'Digital' on button when Analog mode is active. (PR #447)
+    * Set minimum size for Mode box to 250px. (PR #446)
 3. Build system:
     * Bump Codec2 version to v1.1.1. (PR #437)
 
