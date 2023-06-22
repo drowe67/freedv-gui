@@ -611,10 +611,14 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Fix bug causing the PTT button to stay red after the voice keyer finishes TX. (PR #440)</li>
 <li>Fix FreeDV Reporter crash when sending RX record. (PR #443)</li>
 <li>Hamlib: set mode before frequency to avoid accidental offsetting. (PR #442)</li>
+<li>Disable PTT and Voice Keyer buttons if only RX devices are configured. (PR #449)</li>
 </ul></li>
 <li>Enhancements:
 <ul>
 <li>Add the ability to request that another FreeDV Reporter user QSY. (PR #434)</li>
+<li>Display ‘Digital’ on button when Analog mode is active. (PR #447)</li>
+<li>Set minimum size for Mode box to 250px. (PR #446)</li>
+<li>Notify FreeDV Reporter if only capable of RX. (PR #449)</li>
 </ul></li>
 <li>Build system:
 <ul>
