@@ -374,7 +374,7 @@ wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr)
     wxString tmp = timeStr;
     millisecondsRemoval.Replace(&tmp, _(""));
     
-    wxRegEx timezoneRgx(_("([+-])(\\d+):(\\d+)$"));
+    wxRegEx timezoneRgx(_("([+-])([0-9]+):([0-9]+)$"));
     wxDateTime::TimeZone timeZone(0); // assume UTC by default
     if (timezoneRgx.Matches(tmp))
     {

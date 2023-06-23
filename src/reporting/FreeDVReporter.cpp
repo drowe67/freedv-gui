@@ -340,6 +340,20 @@ void FreeDVReporter::connect_()
         
         if (onReceiveUpdateFn_)
         {
+            bool snrInteger =  snr->get_flag() == sio::message::flag_integer;
+            bool snrFloat =  snr->get_flag() == sio::message::flag_double;
+            bool snrValid = snrInteger || snrFloat;
+
+            float snrVal = 0;
+            if (snrInteger)
+            {
+                snrVal = snr->get_int();
+            }
+            else if (snrFloat)
+            {
+                snrVal = snr->get_double();
+            }
+
             // Only call event handler if we received the correct data types
             // for the items in the message.
             if (sid->get_flag() == sio::message::flag_string &&
@@ -348,16 +362,16 @@ void FreeDVReporter::connect_()
                 receiverCallsign->get_flag() == sio::message::flag_string &&
                 receiverGridSquare->get_flag() == sio::message::flag_string &&
                 mode->get_flag() == sio::message::flag_string &&
-                snr->get_flag() == sio::message::flag_double)
+                snrValid)
             {
                 onReceiveUpdateFn_(
-                    msgParams["sid"]->get_string(),
-                    msgParams["last_update"]->get_string(),
-                    msgParams["receiver_callsign"]->get_string(),
-                    msgParams["receiver_grid_square"]->get_string(),
-                    msgParams["callsign"]->get_string(),
-                    msgParams["snr"]->get_double(),
-                    msgParams["mode"]->get_string()
+                    sid->get_string(),
+                    lastUpdate->get_string(),
+                    receiverCallsign->get_string(),
+                    receiverGridSquare->get_string(),
+                    callsign->get_string(),
+                    snrVal,
+                    mode->get_string()
                 );
             }
         }
