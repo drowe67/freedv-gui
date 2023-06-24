@@ -53,8 +53,9 @@ Hamlib::Hamlib() :
     m_vhfUhfMode(false),
     pttSet_(false),
     updatesSuppressed_(false),
-    threadRunning_(false),
-    readOnly_(false)  {
+    readOnly_(false),
+    threadRunning_(false)
+{
     /* Stop hamlib from spewing info to stderr. */
     rig_set_debug(RIG_DEBUG_NONE);
 
@@ -326,7 +327,7 @@ void Hamlib::disable_mode_detection()
 
 }
 
-void Hamlib::setMode(bool analog)
+void Hamlib::setMode(bool analog, uint64_t frequencyHz)
 {
     if (m_rig == nullptr || pttSet_ || readOnly_)
     {
@@ -335,7 +336,6 @@ void Hamlib::setMode(bool analog)
     }
     
     // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
-    auto frequencyHz = get_frequency();
     bool is60MeterBand = frequencyHz >= 5250000 && frequencyHz <= 5450000;
     
     // Update color based on the mode and current frequency.
@@ -375,7 +375,7 @@ void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
     }
     
     vfo_t currVfo = getCurrentVfo_(); 
-    setMode(analog);
+    setMode(analog, frequencyHz);
     setFrequencyHelper_(currVfo, frequencyHz);
 }
   
