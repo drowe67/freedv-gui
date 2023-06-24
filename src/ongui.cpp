@@ -64,17 +64,14 @@ void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsFreeDVReporter(wxCommandEvent& event)
 {
-    if (m_reporterDialog != nullptr && m_RxRunning)
+    if (m_reporterDialog == nullptr)
     {
-        m_reporterDialog->Show();
-        m_reporterDialog->Iconize(false); // undo minimize if required
-        m_reporterDialog->Raise(); // brings from background to foreground if required
+        m_reporterDialog = new FreeDVReporterDialog(this);
     }
-    else
-    {
-        std::string url = "https://" + wxGetApp().m_freedvReporterHostname.ToStdString() + "/";
-        wxLaunchDefaultBrowser(url);
-    }
+
+    m_reporterDialog->Show();
+    m_reporterDialog->Iconize(false); // undo minimize if required
+    m_reporterDialog->Raise(); // brings from background to foreground if required
 }
 
 //-------------------------------------------------------------------------

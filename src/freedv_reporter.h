@@ -50,6 +50,7 @@ class FreeDVReporterDialog : public wxDialog
         // Handlers for events.
         void    OnOK(wxCommandEvent& event);
         void    OnSendQSY(wxCommandEvent& event);
+        void    OnOpenWebsite(wxCommandEvent& event);
         void    OnClose(wxCloseEvent& event);
         void    OnInitDialog(wxInitDialogEvent& event);
         
@@ -65,6 +66,7 @@ class FreeDVReporterDialog : public wxDialog
         // Step 4: test/save/cancel setup
         wxButton* m_buttonOK;
         wxButton* m_buttonSendQSY;
+        wxButton* m_buttonDisplayWebpage;
 
      private:
          FreeDVReporter* reporter_;

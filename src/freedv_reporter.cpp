@@ -60,6 +60,9 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_buttonSendQSY->Enable(false); // disable by default unless we get a valid selection
     buttonSizer->Add(m_buttonSendQSY, 0, wxALL, 2);
 
+    m_buttonDisplayWebpage = new wxButton(this, wxID_ANY, _("Open Website"));
+    buttonSizer->Add(m_buttonDisplayWebpage, 0, wxALL, 2);
+
     sectionSizer->Add(buttonSizer, 0, wxALL | wxALIGN_CENTER, 2);
     
     // Trigger auto-layout of window.
@@ -79,6 +82,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
 
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOK), NULL, this);
     m_buttonSendQSY->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnSendQSY), NULL, this);
+    m_buttonDisplayWebpage->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOpenWebsite), NULL, this);
 }
 
 FreeDVReporterDialog::~FreeDVReporterDialog()
@@ -91,6 +95,7 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOK), NULL, this);
     m_buttonSendQSY->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnSendQSY), NULL, this);
+    m_buttonDisplayWebpage->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOpenWebsite), NULL, this);
 }
 
 void FreeDVReporterDialog::setReporter(FreeDVReporter* reporter)
@@ -120,6 +125,11 @@ void FreeDVReporterDialog::setReporter(FreeDVReporter* reporter)
         reporter_->setOnTransmitUpdateFn(std::bind(&FreeDVReporterDialog::onTransmitUpdateFn_, this, _1, _2, _3, _4, _5, _6, _7));
         reporter_->setOnReceiveUpdateFn(std::bind(&FreeDVReporterDialog::onReceiveUpdateFn_, this, _1, _2, _3, _4, _5, _6, _7));
     }
+    else
+    {
+        // Spot list no longer valid, delete the items currently on there
+        m_listSpots->DeleteAllItems();
+    }
 }
 
 void FreeDVReporterDialog::OnInitDialog(wxInitDialogEvent& event)
@@ -147,6 +157,12 @@ void FreeDVReporterDialog::OnSendQSY(wxCommandEvent& event)
         wxString fullMessage = wxString::Format(_("QSY request sent to %s"), selectedCallsign);
         wxMessageBox(fullMessage, wxT("FreeDV Reporter"), wxOK | wxICON_INFORMATION, this);
     }
+}
+
+void FreeDVReporterDialog::OnOpenWebsite(wxCommandEvent& event)
+{
+    std::string url = "https://" + wxGetApp().m_freedvReporterHostname.ToStdString() + "/";
+    wxLaunchDefaultBrowser(url);
 }
 
 void FreeDVReporterDialog::OnClose(wxCloseEvent& event)
