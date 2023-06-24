@@ -872,9 +872,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix FreeDV Reporter crash when sending RX record. (PR #443)
     * Hamlib: set mode before frequency to avoid accidental offsetting. (PR #442)
     * Fix audio dialog plot display and lockup issues. (PR #450)
+    * Disable PTT and Voice Keyer buttons if only RX devices are configured. (PR #449)
 2. Enhancements:
     * Display 'Digital' on button when Analog mode is active. (PR #447)
     * Set minimum size for Mode box to 250px. (PR #446)
+    * Notify FreeDV Reporter if only capable of RX. (PR #449)
 3. Build system:
     * Bump Codec2 version to v1.1.1. (PR #437)
 4. Miscallenous:

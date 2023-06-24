@@ -1952,8 +1952,21 @@ void MainFrame::performFreeDVOn_()
         
             m_rb800xa->Disable();
             m_rb2400b->Disable();
+            
+            // If we're receive-only, it doesn't make sense to be able to change TX mode.
+            if (g_nSoundCards <= 1)
+            {
+                m_rb1600->Disable();
+                m_rb700c->Disable();
+                m_rb700d->Disable();
+                m_rb700e->Disable();
+                m_rb2020->Disable();
+        #if defined(FREEDV_MODE_2020B)
+                m_rb2020b->Disable();
+        #endif // FREEDV_MODE_2020B
+            }
         }
-    
+        
         // Default voice keyer sample rate to 8K. The exact voice keyer
         // sample rate will be determined when the .wav file is loaded.
         g_sfTxFs = FS;
@@ -2095,7 +2108,8 @@ void MainFrame::performFreeDVOn_()
                                 wxGetApp().m_freedvReporterHostname.ToStdString(),
                                 wxGetApp().m_reportingCallsign.ToStdString(), 
                                 wxGetApp().m_reportingGridSquare.ToStdString(),
-                                std::string("FreeDV ") + FREEDV_VERSION);
+                                std::string("FreeDV ") + FREEDV_VERSION,
+                                g_nSoundCards <= 1 ? true : false);
                         assert(freedvReporter);
                         wxGetApp().m_reporters.push_back(freedvReporter);
                     }
@@ -2293,8 +2307,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             // On/Off actions complete, re-enable button.
             executeOnUiThreadAndWait_([&]() {
                 m_togBtnAnalog->Enable(m_RxRunning);
-                m_togBtnVoiceKeyer->Enable(m_RxRunning);
-                m_btnTogPTT->Enable(m_RxRunning);
+                m_togBtnVoiceKeyer->Enable(m_RxRunning && (g_nSoundCards == 2));
+                m_btnTogPTT->Enable(m_RxRunning && (g_nSoundCards == 2));
                 optionsDlg->setSessionActive(m_RxRunning);
 
                 if (m_RxRunning)
