@@ -259,8 +259,11 @@ As an aid to the above, FreeDV will show the current mode on the bottom of the w
 ## Transceiver Filters
 
 For most FreeDV use, your radio's receive filters should be set to the widest possible (typically around 3 KHz). This allows
-easy switching between analog mode as well as the various FreeDV modes. Depending on propagation conditions and your radio, 
-narrower filters may or may not help improve SNR. For reference, the channel widths of the currently supported modes are below:
+easy switching between analog mode as well as the various FreeDV modes. Depending on your individual circumstances, narrower 
+filters may help with reception of FreeDV, but there has not been any testing to definitively confirm this or under what 
+circumatances (if any) where this would be the case.
+
+For reference, the channel widths of the currently supported modes are below:
 
 | Mode | Width (KHz) |
 | --- | --- |
