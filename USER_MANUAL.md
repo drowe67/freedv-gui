@@ -890,10 +890,17 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix bug causing the PTT button to stay red after the voice keyer finishes TX. (PR #440)
     * Fix FreeDV Reporter crash when sending RX record. (PR #443)
     * Hamlib: set mode before frequency to avoid accidental offsetting. (PR #442)
-2. Build system:
+    * Disable PTT and Voice Keyer buttons if only RX devices are configured. (PR #449)
+2. Enhancements:
+    * Display 'Digital' on button when Analog mode is active. (PR #447)
+    * Set minimum size for Mode box to 250px. (PR #446)
+    * Notify FreeDV Reporter if only capable of RX. (PR #449)
+3. Build system:
     * Bump Codec2 version to v1.1.1. (PR #437)
-3. Documentation
+4. Documentation
     * Add RF bandwidth information to user manual. (PR #444)
+5. Miscallenous::
+    * Set default FreeDV Reporter hostname to qso.freedv.org. (PR #448)
 
 ## V1.8.11 June 2023
 
