@@ -120,6 +120,11 @@ void FreeDVReporterDialog::setReporter(FreeDVReporter* reporter)
         reporter_->setOnTransmitUpdateFn(std::bind(&FreeDVReporterDialog::onTransmitUpdateFn_, this, _1, _2, _3, _4, _5, _6, _7));
         reporter_->setOnReceiveUpdateFn(std::bind(&FreeDVReporterDialog::onReceiveUpdateFn_, this, _1, _2, _3, _4, _5, _6, _7));
     }
+    else
+    {
+        // Spot list no longer valid, delete the items currently on there
+        m_listSpots->DeleteAllItems();
+    }
 }
 
 void FreeDVReporterDialog::OnInitDialog(wxInitDialogEvent& event)

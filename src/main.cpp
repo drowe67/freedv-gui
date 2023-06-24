@@ -2220,7 +2220,6 @@ void MainFrame::performFreeDVOff_()
         {
             // Destroy only on exit.
             m_reporterDialog->setReporter(nullptr);
-            m_reporterDialog->Hide();
         }
         
         m_plotTimer.Stop();
