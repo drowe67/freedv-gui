@@ -64,7 +64,7 @@ void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsFreeDVReporter(wxCommandEvent& event)
 {
-    if (m_reporterDialog != nullptr)
+    if (m_reporterDialog != nullptr && m_RxRunning)
     {
         m_reporterDialog->Show();
         m_reporterDialog->Iconize(false); // undo minimize if required
