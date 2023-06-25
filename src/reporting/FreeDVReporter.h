@@ -58,7 +58,7 @@ public:
     // callsign, frequency, message
     using QsyRequestFn = std::function<void(std::string, uint64_t, std::string)>;
     
-    FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software);
+    FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly);
     virtual ~FreeDVReporter();
 
     void connect();
@@ -100,6 +100,7 @@ private:
     uint64_t lastFrequency_;
     std::string mode_;
     bool tx_;
+    bool rxOnly_;
     
     ReporterConnectionFn onReporterConnectFn_;
     ReporterConnectionFn onReporterDisconnectFn_;

@@ -25,7 +25,7 @@
 
 using namespace std::chrono_literals;
 
-FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software)
+FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly)
     : isExiting_(false)
     , isConnecting_(false)
     , hostname_(hostname)
@@ -34,6 +34,7 @@ FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::
     , software_(software)
     , lastFrequency_(0)
     , tx_(false)
+    , rxOnly_(rxOnly)
 {
     sioClient_ = new sio::client();
     assert(sioClient_ != nullptr);
@@ -180,6 +181,7 @@ void FreeDVReporter::connect_()
     auth->insert("grid_square", gridSquare_);
     auth->insert("version", software_);
     auth->insert("role", "report");
+    auth->insert("rx_only", sio::bool_message::create(rxOnly_));
     
     // Reconnect listener should re-report frequency so that "unknown"
     // doesn't appear.
