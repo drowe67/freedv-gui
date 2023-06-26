@@ -84,6 +84,7 @@
 #include "dlg_audiooptions.h"
 #include "dlg_filter.h"
 #include "dlg_options.h"
+#include "freedv_reporter.h"
 #include "sox_biquad.h"
 #include "comp_prim.h"
 #include "hamlib.h"
@@ -146,6 +147,7 @@ extern int                 g_nSoundCards;
 
 class MainFrame;
 class FilterDlg;
+class FreeDVReporterDialog;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainApp
@@ -415,6 +417,7 @@ class MainFrame : public TopFrame
         virtual ~MainFrame();
 
         FilterDlg*              m_filterDialog;
+        FreeDVReporterDialog*   m_reporterDialog;
         PlotSpectrum*           m_panelSpectrum;
         PlotWaterfall*          m_panelWaterfall;
         PlotScatter*            m_panelScatter;

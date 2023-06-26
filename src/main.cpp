@@ -682,6 +682,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     pthread_setname_np(pthread_self(), "FreeDV GUI");
 #endif // defined(__linux__)
 
+    m_reporterDialog = nullptr;
     m_filterDialog = nullptr;
 
     m_zoom              = 1.;
@@ -891,6 +892,15 @@ MainFrame::~MainFrame()
     if (m_filterDialog != nullptr)
     {
         m_filterDialog->Close();
+    }
+    
+    if (m_reporterDialog != nullptr)
+    {
+        m_reporterDialog->Hide();
+        m_reporterDialog->setReporter(nullptr);
+        m_reporterDialog->Close();
+        m_reporterDialog->Destroy();
+        m_reporterDialog = nullptr;
     }
     
     //fprintf(stderr, "MainFrame::~MainFrame()\n");
@@ -1879,7 +1889,7 @@ void MainFrame::performFreeDVOn_()
     m_timeSinceSyncLoss = 0;
     
     executeOnUiThreadAndWait_([&]() 
-    {
+    {        
         m_txtCtrlCallSign->SetValue(wxT(""));
         m_lastReportedCallsignListView->DeleteAllItems();
         m_cboLastReportedCallsigns->Enable(false);
@@ -2112,6 +2122,41 @@ void MainFrame::performFreeDVOn_()
                                 g_nSoundCards <= 1 ? true : false);
                         assert(freedvReporter);
                         wxGetApp().m_reporters.push_back(freedvReporter);
+                        
+                        // Make built in FreeDV Reporter client available.
+                        executeOnUiThreadAndWait_([&]() {
+                            if (m_reporterDialog == nullptr)
+                            {
+                                m_reporterDialog = new FreeDVReporterDialog(this);
+                            }
+                            
+                            m_reporterDialog->setReporter(freedvReporter);
+                        });
+                        
+                        // Set up QSY request handler
+                        // TBD: automatically change frequency via hamlib if enabled.
+                        freedvReporter->setOnQSYRequestFn([&](std::string callsign, uint64_t freqHz, std::string message) {
+                            double frequencyMHz = freqHz / 1000000.0;
+                            wxString fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz."), callsign, frequencyMHz);
+                            int dialogStyle = wxOK | wxICON_INFORMATION;
+                            
+                            if (wxGetApp().m_hamlib != nullptr && wxGetApp().m_boolHamlibEnableFreqModeChanges)
+                            {
+                                fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz. Would you like to change to that frequency now?"), callsign, frequencyMHz);
+                                dialogStyle = wxYES_NO | wxICON_QUESTION;
+                            }
+                            
+                            CallAfter([&, fullMessage, dialogStyle, frequencyMHz]() {
+                                auto answer = wxMessageBox(fullMessage, wxT("FreeDV Reporter"), dialogStyle, this);
+                                if (answer == wxYES)
+                                {
+                                    // This will implicitly cause Hamlib to change the frequecy and mode.
+                                    m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyMHz));
+                                }
+                            });
+                        });
+                        
+                        freedvReporter->connect();
                     }
                     else if (wxGetApp().m_freedvReporterEnabled)
                     {
@@ -2185,6 +2230,12 @@ void MainFrame::performFreeDVOff_()
 #ifdef _USE_TIMER
     executeOnUiThreadAndWait_([&]() 
     {
+        if (m_reporterDialog != nullptr)
+        {
+            // Destroy only on exit.
+            m_reporterDialog->setReporter(nullptr);
+        }
+        
         m_plotTimer.Stop();
         m_pskReporterTimer.Stop();
         m_updFreqStatusTimer.Stop(); // [UP]

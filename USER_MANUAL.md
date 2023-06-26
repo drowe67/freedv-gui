@@ -874,6 +874,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix audio dialog plot display and lockup issues. (PR #450)
     * Disable PTT and Voice Keyer buttons if only RX devices are configured. (PR #449)
 2. Enhancements:
+    * Add the ability to request that another FreeDV Reporter user QSY. (PR #434)
     * Display 'Digital' on button when Analog mode is active. (PR #447)
     * Set minimum size for Mode box to 250px. (PR #446)
     * Notify FreeDV Reporter if only capable of RX. (PR #449)
