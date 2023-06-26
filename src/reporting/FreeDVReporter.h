@@ -29,15 +29,41 @@
 #include <condition_variable>
 #include <string>
 #include <thread>
-#include "sio_client.h"
+#include <functional>
 #include "IReporter.h"
+
+namespace sio
+{
+    class client; // forward declaration
+}
 
 class FreeDVReporter : public IReporter
 {
 public:
-    FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software);
+    using ReporterConnectionFn = std::function<void()>;
+    
+    // sid, last_update, callsign, grid_square, version, rx_only
+    // Used for both connect and disconnect
+    using ConnectionDataFn = std::function<void(std::string, std::string, std::string, std::string, std::string, bool)>;
+    
+    // sid, last_update, callsign, grid_square, frequency
+    using FrequencyChangeFn = std::function<void(std::string, std::string, std::string, std::string, uint64_t)>;
+    
+    // sid, last_update, callsign, grid_square, txMode, transmitting, lastTx
+    using TxUpdateFn = std::function<void(std::string, std::string, std::string, std::string, std::string, bool, std::string)>;
+    
+    // sid, last_update, callsign, grid_square, received_callsign, snr, rxMode
+    using RxUpdateFn = std::function<void(std::string, std::string, std::string, std::string, std::string, float, std::string)>;
+    
+    // callsign, frequency, message
+    using QsyRequestFn = std::function<void(std::string, uint64_t, std::string)>;
+    
+    FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly);
     virtual ~FreeDVReporter();
 
+    void connect();
+    void requestQSY(std::string sid, uint64_t frequencyHz, std::string message);
+    
     virtual void freqChange(uint64_t frequency) override;
     virtual void transmit(std::string mode, bool tx) override;
     
@@ -45,6 +71,17 @@ public:
     
     virtual void addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, char snr) override;
     virtual void send() override;
+    
+    void setOnReporterConnectFn(ReporterConnectionFn fn);
+    void setOnReporterDisconnectFn(ReporterConnectionFn fn);
+    
+    void setOnUserConnectFn(ConnectionDataFn fn);
+    void setOnUserDisconnectFn(ConnectionDataFn fn);
+    void setOnFrequencyChangeFn(FrequencyChangeFn fn);
+    void setOnTransmitUpdateFn(TxUpdateFn fn);
+    void setOnReceiveUpdateFn(RxUpdateFn fn);
+    
+    void setOnQSYRequestFn(QsyRequestFn fn);
     
 private:
     // Required elements to implement execution thread for FreeDV Reporter.
@@ -55,7 +92,7 @@ private:
     std::thread fnQueueThread_;
     bool isConnecting_;
     
-    sio::client sioClient_;
+    sio::client* sioClient_;
     std::string hostname_;
     std::string callsign_;
     std::string gridSquare_;
@@ -63,7 +100,19 @@ private:
     uint64_t lastFrequency_;
     std::string mode_;
     bool tx_;
+    bool rxOnly_;
     
+    ReporterConnectionFn onReporterConnectFn_;
+    ReporterConnectionFn onReporterDisconnectFn_;
+    
+    ConnectionDataFn onUserConnectFn_;
+    ConnectionDataFn onUserDisconnectFn_;
+    FrequencyChangeFn onFrequencyChangeFn_;
+    TxUpdateFn onTransmitUpdateFn_;
+    RxUpdateFn onReceiveUpdateFn_;
+    
+    QsyRequestFn onQsyRequestFn_;
+        
     void connect_();
     
     void threadEntryPoint_();

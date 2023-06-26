@@ -64,8 +64,14 @@ void MainFrame::OnToolsEasySetupUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsFreeDVReporter(wxCommandEvent& event)
 {
-    std::string url = "https://" + wxGetApp().m_freedvReporterHostname.ToStdString() + "/";
-    wxLaunchDefaultBrowser(url);
+    if (m_reporterDialog == nullptr)
+    {
+        m_reporterDialog = new FreeDVReporterDialog(this);
+    }
+
+    m_reporterDialog->Show();
+    m_reporterDialog->Iconize(false); // undo minimize if required
+    m_reporterDialog->Raise(); // brings from background to foreground if required
 }
 
 //-------------------------------------------------------------------------
@@ -667,6 +673,11 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     {
         // Request frequency/mode change on the radio side
         wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);
+    }
+    
+    if (m_reporterDialog != nullptr)
+    {
+        m_reporterDialog->refreshQSYButtonState();
     }
 }
 
