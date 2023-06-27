@@ -327,7 +327,6 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
                 if (transmitting)
                 {
                     txStatus = "Transmitting";
-                    //nonRedBackground_ = m_listSpots->GetItemBackgroundColour(index);
                     m_listSpots->SetItemBackgroundColour(index, *wxRED);
                 }
                 else
