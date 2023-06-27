@@ -70,7 +70,6 @@ class FreeDVReporterDialog : public wxDialog
 
      private:
          FreeDVReporter* reporter_;
-         wxColour nonRedBackground_; // need to save BG since wxNullColour doesn't seem to work
          
          void onReporterConnect_();
          void onReporterDisconnect_();
