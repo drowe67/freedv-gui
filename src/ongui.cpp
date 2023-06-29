@@ -713,6 +713,5 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
 
     m_collpane->SetBackgroundColour(currentControlBackground);
     m_collpane->GetPane()->SetBackgroundColour(currentControlBackground);
-    m_auiNbookCtrl->SetBackgroundColour(currentControlBackground);
     TopFrame::OnSystemColorChanged(event);
 }
