@@ -709,9 +709,8 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
 {
     // Works around issues on wxWidgets with certain controls not changing backgrounds
     // when the user switches between light and dark mode.
-    wxColour currentControlBackground = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+    wxColour currentControlBackground = wxTransparentColour;
 
-    SetBackgroundColour(currentControlBackground);
     m_collpane->SetBackgroundColour(currentControlBackground);
     m_collpane->GetPane()->SetBackgroundColour(currentControlBackground);
     m_auiNbookCtrl->SetBackgroundColour(currentControlBackground);
