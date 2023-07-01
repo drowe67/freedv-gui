@@ -878,6 +878,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Display 'Digital' on button when Analog mode is active. (PR #447)
     * Set minimum size for Mode box to 250px. (PR #446)
     * Notify FreeDV Reporter if only capable of RX. (PR #449)
+    * Hamlib: allow frequency and mode changes during TX. (PR #455)
 3. Build system:
     * Bump Codec2 version to v1.1.1. (PR #437)
 4. Miscallenous:
