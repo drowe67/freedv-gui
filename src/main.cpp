@@ -376,8 +376,6 @@ void MainFrame::loadConfiguration_()
     if (w < 0 || w > 2048) w = 800;
     if (h < 0 || h > 2048) h = 780;
 
-    wxGetApp().m_rxNbookCtrl        = pConfig->Read(wxT("/MainFrame/rxNbookCtrl"),    (long)0);
-
     g_SquelchActive = pConfig->Read(wxT("/Audio/SquelchActive"), (long)1);
     g_SquelchLevel = pConfig->Read(wxT("/Audio/SquelchLevel"), (int)(SQ_DEFAULT_SNR*2));
     g_SquelchLevel /= 2.0;
@@ -923,8 +921,6 @@ MainFrame::~MainFrame()
         wxGetApp().appConfiguration.mainWindowWidth = w;
         wxGetApp().appConfiguration.mainWindowHeight = h;
     }
-
-    pConfig->Write(wxT("/MainFrame/rxNbookCtrl"), wxGetApp().m_rxNbookCtrl);
 
     pConfig->Write(wxT("/Audio/SquelchActive"),         g_SquelchActive);
     pConfig->Write(wxT("/Audio/SquelchLevel"),          (int)(g_SquelchLevel*2.0));

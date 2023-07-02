@@ -39,6 +39,8 @@ public:
     ConfigurationDataElement<long> mainWindowWidth;
     ConfigurationDataElement<long> mainWindowHeight;
     
+    ConfigurationDataElement<long> currentNotebookTab;
+    
     void load(wxConfigBase* config);
     void save(wxConfigBase* config);
     

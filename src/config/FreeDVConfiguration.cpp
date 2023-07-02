@@ -31,6 +31,9 @@ FreeDVConfiguration::FreeDVConfiguration()
     , mainWindowTop("/MainFrame/top", 20)
     , mainWindowWidth("/MainFrame/width", 800)
     , mainWindowHeight("/MainFrame/height", 780)
+        
+    /* Current tab view */
+    , currentNotebookTab("/MainFrame/rxNbookCtrl", 0)
 {
     // empty
 }
@@ -44,6 +47,8 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, mainWindowTop);
     load_(config, mainWindowWidth);
     load_(config, mainWindowHeight);
+    
+    load_(config, currentNotebookTab);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -55,6 +60,8 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, mainWindowTop);
     save_(config, mainWindowWidth);
     save_(config, mainWindowHeight);
+    
+    save_(config, currentNotebookTab);
     
     config->Flush();
 }

@@ -274,9 +274,6 @@ class MainApp : public wxApp
         // optional vox trigger tone
         bool                m_leftChannelVoxTone;
 
-        // notebook display after tx->rxtransition
-        int                 m_rxNbookCtrl;
-
         wxRect              m_rTopWindow;
 
         int                 m_fifoSize_ms;
