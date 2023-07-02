@@ -63,6 +63,13 @@ public:
     ConfigurationDataElement<unsigned int> recFileFromModulatorSecs;
     ConfigurationDataElement<wxString> playFileFromRadioPath;
     
+    ConfigurationDataElement<bool> enableSpaceBarForPTT;
+    
+    ConfigurationDataElement<wxString> voiceKeyerWaveFilePath;
+    ConfigurationDataElement<wxString> voiceKeyerWaveFile;
+    ConfigurationDataElement<int> voiceKeyerRxPause;
+    ConfigurationDataElement<int> voiceKeyerRepeats;
+    
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };

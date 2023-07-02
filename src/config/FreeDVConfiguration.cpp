@@ -51,6 +51,13 @@ FreeDVConfiguration::FreeDVConfiguration()
     , recFileFromModulatorPath("/File/recFileFromModulatorPath", _(""))
     , recFileFromModulatorSecs("/File/recFileFromModulatorSecs", 60)
     , playFileFromRadioPath("/File/playFileFromRadioPath", _(""))
+        
+    , enableSpaceBarForPTT("/Rig/EnableSpacebarForPTT", true)
+        
+    , voiceKeyerWaveFilePath("/VoiceKeyer/WaveFilePath", _(""))
+    , voiceKeyerWaveFile("/VoiceKeyer/WaveFile", _("voicekeyer.wav"))
+    , voiceKeyerRxPause("/VoiceKeyer/RxPause", 10)
+    , voiceKeyerRepeats("/VoiceKeyer/Repeats", 5)
 {
     // empty
 }
@@ -84,6 +91,13 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, recFileFromModulatorPath);
     load_(config, recFileFromModulatorSecs);
     load_(config, playFileFromRadioPath);
+    
+    load_(config, enableSpaceBarForPTT);
+    
+    load_(config, voiceKeyerWaveFilePath);
+    load_(config, voiceKeyerWaveFile);
+    load_(config, voiceKeyerRxPause);
+    load_(config, voiceKeyerRepeats);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -115,6 +129,13 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, recFileFromModulatorPath);
     save_(config, recFileFromModulatorSecs);
     save_(config, playFileFromRadioPath);
+    
+    save_(config, enableSpaceBarForPTT);
+    
+    save_(config, voiceKeyerWaveFilePath);
+    save_(config, voiceKeyerWaveFile);
+    save_(config, voiceKeyerRxPause);
+    save_(config, voiceKeyerRepeats);
     
     config->Flush();
 }

@@ -179,14 +179,8 @@ class MainApp : public wxApp
         bool                m_boolMultipleRx;
         bool                m_boolSingleRxThread;
         
-        wxString            m_txtVoiceKeyerWaveFilePath;
-        wxString            m_txtVoiceKeyerWaveFile;
-        int                 m_intVoiceKeyerRxPause;
-        int                 m_intVoiceKeyerRepeats;
-
         wxString            m_txtQuickRecordPath;
     
-        bool                m_boolEnableSpacebarForPTT;
         unsigned int        m_intHamlibRig;
         Hamlib              *m_hamlib;
 

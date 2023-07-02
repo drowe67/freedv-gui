@@ -638,15 +638,15 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
     {
         m_txtCtrlCallSign->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString);
 
-        m_ckboxEnableSpacebarForPTT->SetValue(wxGetApp().m_boolEnableSpacebarForPTT);
+        m_ckboxEnableSpacebarForPTT->SetValue(wxGetApp().appConfiguration.enableSpaceBarForPTT);
         m_ckboxUseAnalogModes->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes);
         m_ckboxEnableFreqModeChanges->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
         
         /* Voice Keyer */
 
-        m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().m_txtVoiceKeyerWaveFile);
-        m_txtCtrlVoiceKeyerRxPause->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRxPause));
-        m_txtCtrlVoiceKeyerRepeats->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRepeats));
+        m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().appConfiguration.voiceKeyerWaveFile);
+        m_txtCtrlVoiceKeyerRxPause->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.voiceKeyerRxPause.get()));
+        m_txtCtrlVoiceKeyerRepeats->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.voiceKeyerRepeats.get()));
 
         m_txtCtrlQuickRecordPath->SetValue(wxGetApp().m_txtQuickRecordPath);
         
@@ -746,8 +746,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
     if(inout == EXCHANGE_DATA_OUT)
     {
-        wxGetApp().m_boolEnableSpacebarForPTT = m_ckboxEnableSpacebarForPTT->GetValue();
-        pConfig->Write(wxT("/Rig/EnableSpacebarForPTT"), wxGetApp().m_boolEnableSpacebarForPTT);
+        wxGetApp().appConfiguration.enableSpaceBarForPTT = m_ckboxEnableSpacebarForPTT->GetValue();
         
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes = m_ckboxUseAnalogModes->GetValue();
         
@@ -766,15 +765,13 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         
         /* Voice Keyer */
 
-        wxGetApp().m_txtVoiceKeyerWaveFile = m_txtCtrlVoiceKeyerWaveFile->GetValue();
-        pConfig->Write(wxT("/VoiceKeyer/WaveFile"), wxGetApp().m_txtVoiceKeyerWaveFile);
+        wxGetApp().appConfiguration.voiceKeyerWaveFile = m_txtCtrlVoiceKeyerWaveFile->GetValue();
+        
         long tmp;
-        m_txtCtrlVoiceKeyerRxPause->GetValue().ToLong(&tmp); if (tmp < 0) tmp = 0; wxGetApp().m_intVoiceKeyerRxPause = (int)tmp;
-        pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_intVoiceKeyerRxPause);
+        m_txtCtrlVoiceKeyerRxPause->GetValue().ToLong(&tmp); if (tmp < 0) tmp = 0; wxGetApp().appConfiguration.voiceKeyerRxPause = (int)tmp;
         m_txtCtrlVoiceKeyerRepeats->GetValue().ToLong(&tmp);
         if (tmp < 0) {tmp = 0;} if (tmp > 100) {tmp = 100;}
-        wxGetApp().m_intVoiceKeyerRepeats = (int)tmp;
-        pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_intVoiceKeyerRepeats);
+        wxGetApp().appConfiguration.voiceKeyerRepeats = (int)tmp;
         
         wxGetApp().m_txtQuickRecordPath = m_txtCtrlQuickRecordPath->GetValue();
         pConfig->Write(wxT("/QuickRecord/SavePath"), wxGetApp().m_txtQuickRecordPath);
@@ -926,7 +923,7 @@ void OptionsDlg::OnChooseVoiceKeyerWaveFile(wxCommandEvent& event) {
      wxFileDialog openFileDialog(
                                  this,
                                  wxT("Voice Keyer wave file"),
-                                 wxGetApp().m_txtVoiceKeyerWaveFilePath,
+                                 wxGetApp().appConfiguration.voiceKeyerWaveFilePath,
                                  wxEmptyString,
                                  wxT("WAV files (*.wav)|*.wav"),
                                  wxFD_OPEN
@@ -936,9 +933,10 @@ void OptionsDlg::OnChooseVoiceKeyerWaveFile(wxCommandEvent& event) {
      }
 
      wxString fileName, extension;
-     wxGetApp().m_txtVoiceKeyerWaveFile = openFileDialog.GetPath();
-     wxFileName::SplitPath(wxGetApp().m_txtVoiceKeyerWaveFile, &wxGetApp().m_txtVoiceKeyerWaveFilePath, &fileName, &extension);
-     m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().m_txtVoiceKeyerWaveFile);
+     wxGetApp().appConfiguration.voiceKeyerWaveFile = openFileDialog.GetPath();
+     wxString tmpString = wxGetApp().appConfiguration.voiceKeyerWaveFilePath;
+     wxFileName::SplitPath(wxGetApp().appConfiguration.voiceKeyerWaveFile, &tmpString, &fileName, &extension);
+     m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().appConfiguration.voiceKeyerWaveFile);
 }
 
 void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent& event) {

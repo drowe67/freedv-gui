@@ -416,7 +416,7 @@ int MainApp::FilterEvent(wxEvent& event)
             // only use space to toggle PTT if we are running and no modal dialogs (like options) up
             //fprintf(stderr,"frame->m_RxRunning: %d g_modal: %d\n",
             //        frame->m_RxRunning, g_modal);
-            if (frame->m_RxRunning && !g_modal && wxGetApp().m_boolEnableSpacebarForPTT) {
+            if (frame->m_RxRunning && !g_modal && wxGetApp().appConfiguration.enableSpaceBarForPTT) {
 
                 // space bar controls rx/rx if keyer not running
                 if (frame->vk_state == VK_IDLE) {
