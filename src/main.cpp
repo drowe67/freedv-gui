@@ -222,12 +222,6 @@ bool MainApp::OnInit()
     golay23_init();
     
     m_rTopWindow = wxRect(0, 0, 0, 0);
-    m_strRxInAudio.Empty();
-    m_strRxOutAudio.Empty();
-    m_textVoiceInput.Empty();
-    m_textVoiceOutput.Empty();
-    m_strSampleRate.Empty();
-    m_strBitrate.Empty();
 
      // Create the main application window
 

@@ -170,19 +170,6 @@ class MainApp : public wxApp
 
         bool                    CanAccessSerialPort(std::string portName);
         
-        wxString            m_strVendName;
-        wxString            m_StrAppName;
-
-        wxString            m_textNumChOut;
-        wxString            m_textNumChIn;
-
-        wxString            m_strRxInAudio;
-        wxString            m_strRxOutAudio;
-        wxString            m_textVoiceInput;
-        wxString            m_textVoiceOutput;
-        wxString            m_strSampleRate;
-        wxString            m_strBitrate;
-
         // Sound card
         wxString m_soundCard1InDeviceName;
         int m_soundCard1InSampleRate;
