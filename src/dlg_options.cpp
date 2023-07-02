@@ -639,8 +639,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlCallSign->SetValue(wxGetApp().m_callSign);
 
         m_ckboxEnableSpacebarForPTT->SetValue(wxGetApp().m_boolEnableSpacebarForPTT);
-        m_ckboxUseAnalogModes->SetValue(wxGetApp().m_boolHamlibUseAnalogModes);
-        m_ckboxEnableFreqModeChanges->SetValue(wxGetApp().m_boolHamlibEnableFreqModeChanges);
+        m_ckboxUseAnalogModes->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes);
+        m_ckboxEnableFreqModeChanges->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
         
         /* Voice Keyer */
 
@@ -749,11 +749,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_boolEnableSpacebarForPTT = m_ckboxEnableSpacebarForPTT->GetValue();
         pConfig->Write(wxT("/Rig/EnableSpacebarForPTT"), wxGetApp().m_boolEnableSpacebarForPTT);
         
-        wxGetApp().m_boolHamlibUseAnalogModes = m_ckboxUseAnalogModes->GetValue();
-        pConfig->Write(wxT("/Hamlib/UseAnalogModes"), wxGetApp().m_boolHamlibUseAnalogModes);
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes = m_ckboxUseAnalogModes->GetValue();
         
-        wxGetApp().m_boolHamlibEnableFreqModeChanges = m_ckboxEnableFreqModeChanges->GetValue();
-        pConfig->Write(wxT("/Hamlib/EnableFreqModeChanges"), wxGetApp().m_boolHamlibEnableFreqModeChanges);
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges = m_ckboxEnableFreqModeChanges->GetValue();
         
         wxGetApp().m_callSign = m_txtCtrlCallSign->GetValue();
 
@@ -889,7 +887,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             // Waterfall configuration
             pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
             
-            pConfig->Flush();
+            wxGetApp().appConfiguration.save(pConfig);
         }
     }
 }

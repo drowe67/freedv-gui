@@ -40,6 +40,8 @@ public:
     ConfigurationDataElement<UnderlyingDataType>& operator=(UnderlyingDataType val);
     operator UnderlyingDataType();
     
+    UnderlyingDataType* operator->();
+    
     UnderlyingDataType get();
     UnderlyingDataType getWithoutProcessing();
     void setWithoutProcessing(UnderlyingDataType val);
@@ -92,6 +94,12 @@ ConfigurationDataElement<UnderlyingDataType>& ConfigurationDataElement<Underlyin
     
     setWithoutProcessing(val);
     return *this;
+}
+
+template<typename UnderlyingDataType>
+UnderlyingDataType* ConfigurationDataElement<UnderlyingDataType>::operator->()
+{
+    return &data_;
 }
 
 template<typename UnderlyingDataType>

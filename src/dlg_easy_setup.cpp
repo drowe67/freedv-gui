@@ -498,39 +498,39 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
 {
     if (inout == EXCHANGE_DATA_IN)
     {
-        m_ckUseHamlibPTT->SetValue(wxGetApp().m_boolHamlibUseForPTT);
-        m_ckUseSerialPTT->SetValue(wxGetApp().m_boolUseSerialPTT);
+        m_ckUseHamlibPTT->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT);
+        m_ckUseSerialPTT->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT);
 
-        if (wxGetApp().m_boolHamlibUseForPTT)
+        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT)
         {
             m_hamlibBox->Show();
             m_serialBox->Hide();
 
             m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
             resetIcomCIVStatus_();
-            m_cbSerialPort->SetValue(wxGetApp().m_strHamlibSerialPort);
+            m_cbSerialPort->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort);
 
-            if (wxGetApp().m_intHamlibSerialRate == 0) {
+            if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate == 0) {
                 m_cbSerialRate->SetSelection(0);
             } else {
-                m_cbSerialRate->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intHamlibSerialRate));
+                m_cbSerialRate->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get()));
             }
 
-            m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02X"), wxGetApp().m_intHamlibIcomCIVHex));
+            m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02X"), wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress.get()));
             
-            m_cbPttMethod->SetSelection((int)wxGetApp().m_hamlibPttType);
+            m_cbPttMethod->SetSelection((int)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType);
         }
-        else if (wxGetApp().m_boolUseSerialPTT)
+        else if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT)
         {
             m_hamlibBox->Hide();
             m_serialBox->Show();
 
-            auto str = wxGetApp().m_strRigCtrlPort;
+            auto str = wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPort;
             m_cbCtlDevicePath->SetValue(str);
-            m_rbUseRTS->SetValue(wxGetApp().m_boolUseRTS);
-            m_ckRTSPos->SetValue(wxGetApp().m_boolRTSPos);
-            m_rbUseDTR->SetValue(wxGetApp().m_boolUseDTR);
-            m_ckDTRPos->SetValue(wxGetApp().m_boolDTRPos);
+            m_rbUseRTS->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseRTS);
+            m_ckRTSPos->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS);
+            m_rbUseDTR->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseDTR);
+            m_ckDTRPos->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR);
         }
         else
         {
@@ -545,54 +545,43 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
     else if (inout == EXCHANGE_DATA_OUT)
     {
         Hamlib *hamlib = wxGetApp().m_hamlib;
-        wxGetApp().m_boolHamlibUseForPTT = m_ckUseHamlibPTT->GetValue();
-        pConfig->Write(wxT("/Hamlib/UseForPTT"), wxGetApp().m_boolHamlibUseForPTT);
-
-        wxGetApp().m_boolUseSerialPTT = m_ckUseSerialPTT->GetValue();
-        pConfig->Write(wxT("/Rig/UseSerialPTT"), wxGetApp().m_boolUseSerialPTT);
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT = m_ckUseHamlibPTT->GetValue();
+        
+        wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT = m_ckUseSerialPTT->GetValue();
 
         if (m_ckUseHamlibPTT->GetValue())
         {
             wxGetApp().m_intHamlibRig = m_cbRigName->GetSelection();
-            wxGetApp().m_strHamlibRigName = hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
-            wxGetApp().m_strHamlibSerialPort = m_cbSerialPort->GetValue();
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort = m_cbSerialPort->GetValue();
             
             wxString s = m_tcIcomCIVHex->GetValue();
             long hexAddress = 0;
             m_tcIcomCIVHex->GetValue().ToLong(&hexAddress, 16);
-            wxGetApp().m_intHamlibIcomCIVHex = hexAddress;
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress = hexAddress;
             
             s = m_cbSerialRate->GetValue();
             if (s == "default") {
-                wxGetApp().m_intHamlibSerialRate = 0;
+                wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate = 0;
             } else {
                 long tmp;
                 m_cbSerialRate->GetValue().ToLong(&tmp); 
-                wxGetApp().m_intHamlibSerialRate = tmp;
+                wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate = tmp;
             }
-            if (g_verbose) fprintf(stderr, "serial rate: %d\n", wxGetApp().m_intHamlibSerialRate);
-
-            pConfig->Write(wxT("/Hamlib/RigNameStr"), wxGetApp().m_strHamlibRigName);
-            pConfig->Write(wxT("/Hamlib/SerialPort"), wxGetApp().m_strHamlibSerialPort);
-            pConfig->Write(wxT("/Hamlib/SerialRate"), wxGetApp().m_intHamlibSerialRate);
+            if (g_verbose) fprintf(stderr, "serial rate: %d\n", wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get());
             
-            wxGetApp().m_hamlibPttType = (Hamlib::PttType)m_cbPttMethod->GetSelection();
-            pConfig->Write(wxT("/Hamlib/PttType"), (long)wxGetApp().m_hamlibPttType);
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType = m_cbPttMethod->GetSelection();
         }
         else if (m_ckUseSerialPTT->GetValue())
         {
-            wxGetApp().m_strRigCtrlPort             = m_cbCtlDevicePath->GetValue();
-            wxGetApp().m_boolUseRTS                 = m_rbUseRTS->GetValue();
-            wxGetApp().m_boolRTSPos                 = m_ckRTSPos->IsChecked();
-            wxGetApp().m_boolUseDTR                 = m_rbUseDTR->GetValue();
-            wxGetApp().m_boolDTRPos                 = m_ckDTRPos->IsChecked();
-                    
-            pConfig->Write(wxT("/Rig/Port"),            wxGetApp().m_strRigCtrlPort); 
-            pConfig->Write(wxT("/Rig/UseRTS"),          wxGetApp().m_boolUseRTS);
-            pConfig->Write(wxT("/Rig/RTSPolarity"),     wxGetApp().m_boolRTSPos);
-            pConfig->Write(wxT("/Rig/UseDTR"),          wxGetApp().m_boolUseDTR);
-            pConfig->Write(wxT("/Rig/DTRPolarity"),     wxGetApp().m_boolDTRPos);
+            wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPort             = m_cbCtlDevicePath->GetValue();
+            wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseRTS                 = m_rbUseRTS->GetValue();
+            wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS                 = m_ckRTSPos->IsChecked();
+            wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseDTR                 = m_rbUseDTR->GetValue();
+            wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR                 = m_ckDTRPos->IsChecked();
         }
+        
+        wxGetApp().appConfiguration.save(pConfig);
     }
 }
 

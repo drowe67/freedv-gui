@@ -412,41 +412,18 @@ void MainFrame::loadConfiguration_()
     auto documentsDir = wxStandardPathObj.GetDocumentsDir();
     wxGetApp().m_txtQuickRecordPath = pConfig->Read(wxT("/QuickRecord/SavePath"), documentsDir);
     
-    wxGetApp().m_boolHamlibUseForPTT = pConfig->ReadBool("/Hamlib/UseForPTT", false);
-    wxGetApp().m_boolHamlibEnableFreqModeChanges = pConfig->ReadBool("/Hamlib/EnableFreqModeChanges", true);
-    
-    wxGetApp().m_intHamlibIcomCIVHex = pConfig->ReadLong("/Hamlib/IcomCIVHex", 0);
-    wxGetApp().m_boolHamlibUseAnalogModes = pConfig->ReadBool(wxT("/Hamlib/UseAnalogModes"), false);
-    
     // Note: we're no longer using RigName but we need to bring over the old data
-    // for backwards compatibility.
-    wxGetApp().m_strHamlibRigName = pConfig->Read(wxT("/Hamlib/RigNameStr"), wxT(""));
-    
-    if (wxGetApp().m_strHamlibRigName == wxT(""))
+    // for backwards compatibility.    
+    if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName == wxT(""))
     {
         wxGetApp().m_intHamlibRig = pConfig->ReadLong("/Hamlib/RigName", 0);
-        wxGetApp().m_strHamlibRigName = wxGetApp().m_hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = wxGetApp().m_hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
     }
     else
     {
-        wxGetApp().m_intHamlibRig = wxGetApp().m_hamlib->rigNameToIndex(std::string(wxGetApp().m_strHamlibRigName.ToUTF8()));
+        wxGetApp().m_intHamlibRig = wxGetApp().m_hamlib->rigNameToIndex(std::string(wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName->ToUTF8()));
     }
     
-    wxGetApp().m_hamlibPttType = (Hamlib::PttType)pConfig->ReadLong("/Hamlib/PttType", 0);
-    wxGetApp().m_strHamlibSerialPort = pConfig->Read("/Hamlib/SerialPort", "");
-    wxGetApp().m_intHamlibSerialRate = pConfig->ReadLong("/Hamlib/SerialRate", 0);
-
-    wxGetApp().m_boolUseSerialPTT   = pConfig->ReadBool(wxT("/Rig/UseSerialPTT"),   false);
-    wxGetApp().m_strRigCtrlPort     = pConfig->Read(wxT("/Rig/Port"),               wxT(""));
-    wxGetApp().m_boolUseRTS         = pConfig->ReadBool(wxT("/Rig/UseRTS"),         true);
-    wxGetApp().m_boolRTSPos         = pConfig->ReadBool(wxT("/Rig/RTSPolarity"),    true);
-    wxGetApp().m_boolUseDTR         = pConfig->ReadBool(wxT("/Rig/UseDTR"),         false);
-    wxGetApp().m_boolDTRPos         = pConfig->ReadBool(wxT("/Rig/DTRPolarity"),    false);
-
-    wxGetApp().m_boolUseSerialPTTInput = pConfig->ReadBool(wxT("/Rig/UseSerialPTTInput"),   false);
-    wxGetApp().m_strPTTInputPort     = pConfig->Read(wxT("/Rig/PttInPort"),               wxT(""));
-    wxGetApp().m_boolCTSPos         = pConfig->ReadBool(wxT("/Rig/CTSPolarity"),    false);
-
     assert(wxGetApp().m_serialport != NULL);
     assert(wxGetApp().m_pttInSerialPort != NULL);
     
@@ -886,14 +863,6 @@ MainFrame::~MainFrame()
     pConfig->Write(wxT("/Rig/MultipleRx"), wxGetApp().m_boolMultipleRx);
     pConfig->Write(wxT("/Rig/SingleRxThread"), wxGetApp().m_boolSingleRxThread);
     pConfig->Write(wxT("/Rig/leftChannelVoxTone"),      wxGetApp().m_leftChannelVoxTone);
-    pConfig->Write("/Hamlib/UseForPTT", wxGetApp().m_boolHamlibUseForPTT);
-    pConfig->Write("/Hamlib/RigNameStr", wxGetApp().m_strHamlibRigName);
-    pConfig->Write("/Hamlib/SerialPort", wxGetApp().m_strHamlibSerialPort);
-    pConfig->Write("/Hamlib/SerialRate", wxGetApp().m_intHamlibSerialRate);
-    pConfig->Write("/Hamlib/IcomCIVHex", wxGetApp().m_intHamlibIcomCIVHex);
-    pConfig->Write("/Hamlib/PttType", (long)wxGetApp().m_hamlibPttType);
-    pConfig->Write(wxT("/Hamlib/UseAnalogModes"), wxGetApp().m_boolHamlibUseAnalogModes);
-    pConfig->Write(wxT("/Hamlib/EnableFreqModeChanges"), wxGetApp().m_boolHamlibEnableFreqModeChanges);
 
     pConfig->Write(wxT("/Audio/snrSlow"), wxGetApp().m_snrSlow);
 
@@ -1421,7 +1390,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     m_cboLastReportedCallsigns->SetText(rxCallsign);
                     m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
            
-                    if (wxGetApp().m_boolHamlibUseForPTT)
+                    if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT)
                     {
                         wxGetApp().m_hamlib->update_frequency_and_mode();
                     }
@@ -1990,12 +1959,12 @@ void MainFrame::performFreeDVOn_()
             startRxStream();
 
             // attempt to start PTT ......            
-            if (wxGetApp().m_boolHamlibUseForPTT)
+            if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT)
             {
                 OpenHamlibRig();
             }
             
-            if (wxGetApp().m_boolUseSerialPTT) 
+            if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT) 
             {
                 OpenSerialPort();
             }
@@ -2052,7 +2021,7 @@ void MainFrame::performFreeDVOn_()
                             wxString fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz."), callsign, frequencyMHz);
                             int dialogStyle = wxOK | wxICON_INFORMATION;
                             
-                            if (wxGetApp().m_hamlib != nullptr && wxGetApp().m_boolHamlibEnableFreqModeChanges)
+                            if (wxGetApp().m_hamlib != nullptr && wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
                             {
                                 fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz. Would you like to change to that frequency now?"), callsign, frequencyMHz);
                                 dialogStyle = wxYES_NO | wxICON_QUESTION;
@@ -2101,7 +2070,7 @@ void MainFrame::performFreeDVOn_()
                 wxGetApp().m_reporters.clear();
             }
 
-            if (wxGetApp().m_boolUseSerialPTTInput)
+            if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTTInput)
             {
                 OpenPTTInPort();
             }
@@ -2156,11 +2125,11 @@ void MainFrame::performFreeDVOff_()
 
     // ensure we are not transmitting and shut down audio processing
 
-    if (wxGetApp().m_boolHamlibUseForPTT) 
+    if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT) 
     {
         Hamlib *hamlib = wxGetApp().m_hamlib;
         wxString hamlibError;
-        if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) 
+        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT && hamlib != NULL) 
         {
             if (hamlib->isActive())
             {
@@ -2177,12 +2146,12 @@ void MainFrame::performFreeDVOff_()
         }
     }
     
-    if (wxGetApp().m_boolUseSerialPTT) 
+    if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT) 
     {
         CloseSerialPort();
     }
 
-    if (wxGetApp().m_boolUseSerialPTTInput)
+    if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTTInput)
     {
         ClosePTTInPort();
     }

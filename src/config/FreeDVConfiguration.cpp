@@ -57,6 +57,10 @@ FreeDVConfiguration::FreeDVConfiguration()
 
 void FreeDVConfiguration::load(wxConfigBase* config)
 {
+    audioConfiguration.load(config);
+    filterConfiguration.load(config);
+    rigControlConfiguration.load(config);
+    
     load_(config, firstTimeUse);
     load_(config, freedv2020Allowed);
     
@@ -69,9 +73,6 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, squelchActive);
     load_(config, squelchLevel);
-    
-    audioConfiguration.load(config);
-    filterConfiguration.load(config);
     
     load_(config, fifoSizeMs);
     load_(config, transmitLevel);
@@ -86,6 +87,10 @@ void FreeDVConfiguration::load(wxConfigBase* config)
 
 void FreeDVConfiguration::save(wxConfigBase* config)
 {
+    audioConfiguration.save(config);
+    filterConfiguration.save(config);
+    rigControlConfiguration.save(config);
+    
     save_(config, firstTimeUse);
     save_(config, freedv2020Allowed);
     
@@ -99,9 +104,6 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, squelchActive);
     save_(config, squelchLevel);
     
-    audioConfiguration.save(config);
-    filterConfiguration.save(config);
-
     save_(config, fifoSizeMs);
     save_(config, transmitLevel);
     

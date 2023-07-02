@@ -235,7 +235,7 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
 // Attempt to talk to rig using Hamlib
 
 bool MainFrame::OpenHamlibRig() {
-    if (wxGetApp().m_boolHamlibUseForPTT != true)
+    if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT != true)
        return false;
     if (wxGetApp().m_intHamlibRig == 0)
         return false;
@@ -243,21 +243,21 @@ bool MainFrame::OpenHamlibRig() {
         return false;
 
     int rig = wxGetApp().m_intHamlibRig;
-    wxString port = wxGetApp().m_strHamlibSerialPort;
-    int serial_rate = wxGetApp().m_intHamlibSerialRate;
+    wxString port = wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort;
+    int serial_rate = wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate;
     if (wxGetApp().CanAccessSerialPort((const char*)port.ToUTF8()))
     {
-        bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, wxGetApp().m_intHamlibIcomCIVHex, wxGetApp().m_hamlibPttType);
+        bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress, (Hamlib::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get());
         if (status == false)
         {
             wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
         }
         else
         {
-            wxGetApp().m_hamlib->readOnly(!wxGetApp().m_boolHamlibEnableFreqModeChanges);
-            if (wxGetApp().m_boolHamlibEnableFreqModeChanges)
+            wxGetApp().m_hamlib->readOnly(!wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
+            if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
-                wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);
+                wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes ? true : g_analog);
             }
             wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, m_cboReportFrequency, g_mode == FREEDV_MODE_2400B);
         }
@@ -507,10 +507,10 @@ void MainFrame::togglePTT(void) {
 
     // Hamlib PTT
 
-    if (wxGetApp().m_boolHamlibUseForPTT) {
+    if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT) {
         Hamlib *hamlib = wxGetApp().m_hamlib;
         wxString hamlibError;
-        if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
+        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT && hamlib != NULL) {
             // Update mode display on the bottom of the main UI.
             if (hamlib->update_frequency_and_mode() != 0 || hamlib->ptt(g_tx, hamlibError) == false) {
                 wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
@@ -520,7 +520,7 @@ void MainFrame::togglePTT(void) {
 
     // Serial PTT
 
-    if (wxGetApp().m_boolUseSerialPTT && (wxGetApp().m_serialport->isopen())) {
+    if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT && (wxGetApp().m_serialport->isopen())) {
         wxGetApp().m_serialport->ptt(g_tx);
     }
 
@@ -569,11 +569,11 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     
     if (wxGetApp().m_hamlib != nullptr && 
         wxGetApp().m_reportingFrequency > 0 &&
-        wxGetApp().m_boolHamlibEnableFreqModeChanges)
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
     {
         // Request mode change on the radio side
         wxGetApp().m_hamlib->setMode(
-            wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog, 
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes ? true : g_analog, 
             wxGetApp().m_hamlib->get_frequency());
     }
 
@@ -669,10 +669,10 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     if (wxGetApp().m_hamlib != nullptr && 
         wxGetApp().m_reportingFrequency > 0 && 
         wxGetApp().m_reportingFrequency != wxGetApp().m_hamlib->get_frequency() &&
-        wxGetApp().m_boolHamlibEnableFreqModeChanges)
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
     {
         // Request frequency/mode change on the radio side
-        wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);
+        wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes ? true : g_analog);
     }
     
     if (m_reporterDialog != nullptr)

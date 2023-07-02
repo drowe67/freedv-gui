@@ -2,6 +2,7 @@ add_library(fdv_config STATIC
     AudioConfiguration.cpp
     FilterConfiguration.cpp
     FreeDVConfiguration.cpp
+    RigControlConfiguration.cpp
     WxWidgetsConfigStore.cpp
 )
 

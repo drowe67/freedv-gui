@@ -187,29 +187,12 @@ class MainApp : public wxApp
         wxString            m_txtQuickRecordPath;
     
         bool                m_boolEnableSpacebarForPTT;
-        bool                m_boolHamlibUseForPTT;
-        bool                m_boolHamlibEnableFreqModeChanges;
         unsigned int        m_intHamlibRig;
-        wxString            m_strHamlibRigName;
-        wxString            m_strHamlibSerialPort;
-        unsigned int        m_intHamlibSerialRate;
-        unsigned int        m_intHamlibIcomCIVHex;
         Hamlib              *m_hamlib;
-        Hamlib::PttType     m_hamlibPttType;
-        bool                m_boolHamlibUseAnalogModes;
 
-        bool                m_boolUseSerialPTT;
-        wxString            m_strRigCtrlPort;
-        bool                m_boolUseRTS;
-        bool                m_boolRTSPos;
-        bool                m_boolUseDTR;
-        bool                m_boolDTRPos;
         Serialport         *m_serialport;
 
         // PTT Input
-        bool                m_boolUseSerialPTTInput;
-        wxString            m_strPTTInputPort;
-        bool                m_boolCTSPos;
         Serialport         *m_pttInSerialPort;
 
         // Options dialog
@@ -218,9 +201,6 @@ class MainApp : public wxApp
         unsigned int        m_textEncoding;
         bool                m_snrSlow;
         unsigned int        m_statsResetTimeSec;
-
-        // Codec 2 700C Equaliser
-        bool                m_700C_EQ;
 
         // optional vox trigger tone
         bool                m_leftChannelVoxTone;

@@ -26,12 +26,17 @@
 #include "ConfigurationDataElement.h"
 #include "AudioConfiguration.h"
 #include "FilterConfiguration.h"
+#include "RigControlConfiguration.h"
 
 class FreeDVConfiguration : public WxWidgetsConfigStore
 {
 public:
     FreeDVConfiguration();
     virtual ~FreeDVConfiguration() = default;
+    
+    AudioConfiguration audioConfiguration;
+    FilterConfiguration filterConfiguration;
+    RigControlConfiguration rigControlConfiguration;
     
     ConfigurationDataElement<bool> firstTimeUse;
     ConfigurationDataElement<bool> freedv2020Allowed;
@@ -45,9 +50,6 @@ public:
     
     ConfigurationDataElement<long> squelchActive;
     ConfigurationDataElement<long> squelchLevel;
-    
-    AudioConfiguration audioConfiguration;
-    FilterConfiguration filterConfiguration;
     
     ConfigurationDataElement<int> fifoSizeMs;
     ConfigurationDataElement<int> transmitLevel;
