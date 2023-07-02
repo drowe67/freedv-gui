@@ -622,10 +622,10 @@ setDefaultMode:
     
     // Ensure that sound card count is correct. Otherwise the Audio Options won't show
     // the correct devices prior to start.
-    bool hasSoundCard1InDevice = wxGetApp().appConfiguration.soundCard1InDeviceName != "none";
-    bool hasSoundCard1OutDevice = wxGetApp().appConfiguration.soundCard1OutDeviceName != "none";
-    bool hasSoundCard2InDevice = wxGetApp().appConfiguration.soundCard2InDeviceName != "none";
-    bool hasSoundCard2OutDevice = wxGetApp().appConfiguration.soundCard2OutDeviceName != "none";
+    bool hasSoundCard1InDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName != "none";
+    bool hasSoundCard1OutDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName != "none";
+    bool hasSoundCard2InDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none";
+    bool hasSoundCard2OutDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none";
     
     g_nSoundCards = 0;
     if (hasSoundCard1InDevice && hasSoundCard1OutDevice) {
@@ -1498,11 +1498,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (g_nSoundCards == 1)
             {
                 // RX In isn't used here but we need to provide it anyway.
-                designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.soundCard1OutSampleRate, wxGetApp().appConfiguration.soundCard1InSampleRate);
+                designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate);
             }
             else
             {   
-                designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.soundCard2OutSampleRate, wxGetApp().appConfiguration.soundCard2InSampleRate);
+                designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
             }
             g_mutexProtectingCallbackData.Unlock();
             m_newMicInFilter = m_newSpkOutFilter = false;
@@ -2464,20 +2464,20 @@ void MainFrame::startRxStream()
         {
             // RX-only setup.
             // Note: we assume 2 channels, but IAudioEngine will automatically downgrade to 1 channel if needed.
-            rxInSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.soundCard1InSampleRate, 2);
+            rxInSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
             rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 CallAfter([&, newDeviceName]() {
-                    wxGetApp().appConfiguration.soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                     wxGetApp().appConfiguration.save(pConfig);
                 });
             }, nullptr);
             
-            rxOutSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.soundCard1OutSampleRate, 2);
+            rxOutSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 2);
             rxOutSoundDevice->setDescription("FreeDV to Speaker");
             rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 CallAfter([&, newDeviceName]() {
-                    wxGetApp().appConfiguration.soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                     wxGetApp().appConfiguration.save(pConfig);
                 });
             }, nullptr);
@@ -2486,7 +2486,7 @@ void MainFrame::startRxStream()
             if (!rxInSoundDevice)
             {
                 executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.soundCard1InDeviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -2494,7 +2494,7 @@ void MainFrame::startRxStream()
             if (!rxOutSoundDevice)
             {
                 executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.soundCard1OutDeviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -2523,38 +2523,38 @@ void MainFrame::startRxStream()
         {
             // RX + TX setup
             // Same note as above re: number of channels.
-            rxInSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.soundCard1InSampleRate, 2);
+            rxInSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
             rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 CallAfter([&, newDeviceName]() {
-                    wxGetApp().appConfiguration.soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                     wxGetApp().appConfiguration.save(pConfig);
                 });
             }, nullptr);
 
-            rxOutSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.soundCard2OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.soundCard2OutSampleRate, 2);
+            rxOutSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 2);
             rxOutSoundDevice->setDescription("FreeDV to Speaker");
             rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 CallAfter([&, newDeviceName]() {
-                    wxGetApp().appConfiguration.soundCard2OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                     wxGetApp().appConfiguration.save(pConfig);
                 });
             }, nullptr);
 
-            txInSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.soundCard2InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.soundCard2InSampleRate, 2);
+            txInSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate, 2);
             txInSoundDevice->setDescription("Mic to FreeDV");
             txInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 CallAfter([&, newDeviceName]() {
-                    wxGetApp().appConfiguration.soundCard2InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                     wxGetApp().appConfiguration.save(pConfig);
                 });
             }, nullptr);
 
-            txOutSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.soundCard1OutSampleRate, 2);
+            txOutSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 2);
             txOutSoundDevice->setDescription("FreeDV to Radio");
             txOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 CallAfter([&, newDeviceName]() {
-                    wxGetApp().appConfiguration.soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
                     wxGetApp().appConfiguration.save(pConfig);
                 });
             }, nullptr);
@@ -2563,7 +2563,7 @@ void MainFrame::startRxStream()
             if (!rxInSoundDevice)
             {
                 executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.soundCard1InDeviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -2571,7 +2571,7 @@ void MainFrame::startRxStream()
             if (!rxOutSoundDevice)
             {
                 executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.soundCard2OutDeviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -2579,7 +2579,7 @@ void MainFrame::startRxStream()
             if (!txInSoundDevice)
             {
                 executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format("Could not find TX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.soundCard2InDeviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format("Could not find TX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -2587,7 +2587,7 @@ void MainFrame::startRxStream()
             if (!txOutSoundDevice)
             {
                 executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format("Could not find TX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.soundCard1OutDeviceName.get()), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format("Could not find TX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -2634,15 +2634,15 @@ void MainFrame::startRxStream()
         // loop.
 
         int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
-        int soundCard1InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.soundCard1InSampleRate/1000;
-        int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.soundCard1OutSampleRate/1000;
+        int soundCard1InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate/1000;
+        int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate/1000;
         g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
         g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
 
         if (txInSoundDevice && txOutSoundDevice)
         {
-            int soundCard2InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.soundCard2InSampleRate/1000;
-            int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.soundCard2OutSampleRate/1000;
+            int soundCard2InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate/1000;
+            int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate/1000;
             g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
             g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
         
@@ -2690,7 +2690,7 @@ void MainFrame::startRxStream()
 
         m_newMicInFilter = m_newSpkOutFilter = true;
         g_mutexProtectingCallbackData.Lock();
-        designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.soundCard2OutSampleRate, wxGetApp().appConfiguration.soundCard2InSampleRate);
+        designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
         g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
         g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
         m_newMicInFilter = m_newSpkOutFilter = false;
@@ -2820,7 +2820,7 @@ void MainFrame::startRxStream()
                         {
                             if (cbData->leftChannelVoxTone)
                             {
-                                cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.soundCard1OutSampleRate;
+                                cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
                                 cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
                                 audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
                             }
@@ -2953,10 +2953,10 @@ bool MainFrame::validateSoundCardSetup()
     auto defaultInputDevice = engine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_IN);
     auto defaultOutputDevice = engine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_OUT);
     
-    bool hasSoundCard1InDevice = wxGetApp().appConfiguration.soundCard1InDeviceName != "none";
-    bool hasSoundCard1OutDevice = wxGetApp().appConfiguration.soundCard1OutDeviceName != "none";
-    bool hasSoundCard2InDevice = wxGetApp().appConfiguration.soundCard2InDeviceName != "none";
-    bool hasSoundCard2OutDevice = wxGetApp().appConfiguration.soundCard2OutDeviceName != "none";
+    bool hasSoundCard1InDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName != "none";
+    bool hasSoundCard1OutDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName != "none";
+    bool hasSoundCard2InDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none";
+    bool hasSoundCard2OutDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none";
     
     g_nSoundCards = 0;
     if (hasSoundCard1InDevice && hasSoundCard1OutDevice) {
@@ -2966,37 +2966,37 @@ bool MainFrame::validateSoundCardSetup()
     }
     
     // For the purposes of validation, number of channels isn't necessary.
-    auto soundCard1InDevice = engine->getAudioDevice(wxGetApp().appConfiguration.soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.soundCard1InSampleRate, 1);
-    auto soundCard1OutDevice = engine->getAudioDevice(wxGetApp().appConfiguration.soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.soundCard1OutSampleRate, 1);
-    auto soundCard2InDevice = engine->getAudioDevice(wxGetApp().appConfiguration.soundCard2InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.soundCard2InSampleRate, 1);
-    auto soundCard2OutDevice = engine->getAudioDevice(wxGetApp().appConfiguration.soundCard2OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.soundCard2OutSampleRate, 1);
+    auto soundCard1InDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate, 1);
+    auto soundCard1OutDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 1);
+    auto soundCard2InDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate, 1);
+    auto soundCard2OutDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 1);
 
-    if (wxGetApp().appConfiguration.soundCard1InDeviceName != "none" && !soundCard1InDevice)
+    if (wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName != "none" && !soundCard1InDevice)
     {
         wxMessageBox(wxString::Format(
             "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().appConfiguration.soundCard1InDeviceName.get()), wxT("Sound Device Removed"), wxOK, this);
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
         canRun = false;
     }
-    else if (canRun && wxGetApp().appConfiguration.soundCard1OutDeviceName != "none" && !soundCard1OutDevice)
+    else if (canRun && wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName != "none" && !soundCard1OutDevice)
     {
         wxMessageBox(wxString::Format(
             "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().appConfiguration.soundCard1OutDeviceName.get()), wxT("Sound Device Removed"), wxOK, this);
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
         canRun = false;
     }
-    else if (canRun && wxGetApp().appConfiguration.soundCard2InDeviceName != "none" && !soundCard2InDevice)
+    else if (canRun && wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none" && !soundCard2InDevice)
     {
         wxMessageBox(wxString::Format(
             "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().appConfiguration.soundCard2InDeviceName.get()), wxT("Sound Device Removed"), wxOK, this);
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
         canRun = false;
     }
-    else if (canRun && wxGetApp().appConfiguration.soundCard2OutDeviceName != "none" && !soundCard2OutDevice)
+    else if (canRun && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none" && !soundCard2OutDevice)
     {
         wxMessageBox(wxString::Format(
             "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().appConfiguration.soundCard2OutDeviceName.get()), wxT("Sound Device Removed"), wxOK, this);
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
         canRun = false;
     }
     
@@ -3006,8 +3006,8 @@ bool MainFrame::validateSoundCardSetup()
         {
             if (!soundCard1OutDevice)
             {
-                wxGetApp().appConfiguration.soundCard1OutDeviceName = defaultOutputDevice.name;
-                wxGetApp().appConfiguration.soundCard1OutSampleRate = defaultOutputDevice.defaultSampleRate;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = defaultOutputDevice.name;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = defaultOutputDevice.defaultSampleRate;
             }
         }
         else if (g_nSoundCards == 2)
@@ -3015,32 +3015,32 @@ bool MainFrame::validateSoundCardSetup()
             if (!soundCard2InDevice)
             {
                 // If we're not already using the default input device as the radio input device, use that instead.
-                if (defaultInputDevice.name != wxGetApp().appConfiguration.soundCard1InDeviceName)
+                if (defaultInputDevice.name != wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName)
                 {
-                    wxGetApp().appConfiguration.soundCard2InDeviceName = defaultInputDevice.name;
-                    wxGetApp().appConfiguration.soundCard2InSampleRate = defaultInputDevice.defaultSampleRate;
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = defaultInputDevice.name;
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = defaultInputDevice.defaultSampleRate;
                 }
                 else
                 {
-                    wxGetApp().appConfiguration.soundCard2InDeviceName = "none";
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = "none";
                 }
             }
         
             if (!soundCard2OutDevice)
             {
                 // If we're not already using the default output device as the radio input device, use that instead.
-                if (defaultOutputDevice.name != wxGetApp().appConfiguration.soundCard1OutDeviceName)
+                if (defaultOutputDevice.name != wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName)
                 {
-                    wxGetApp().appConfiguration.soundCard2OutDeviceName = defaultOutputDevice.name;
-                    wxGetApp().appConfiguration.soundCard2OutSampleRate = defaultOutputDevice.defaultSampleRate;
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = defaultOutputDevice.name;
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = defaultOutputDevice.defaultSampleRate;
                 }
                 else
                 {
-                    wxGetApp().appConfiguration.soundCard2OutDeviceName = "none";
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = "none";
                 }
             }
             
-            if (wxGetApp().appConfiguration.soundCard2InDeviceName == "none" && wxGetApp().appConfiguration.soundCard2OutDeviceName == "none")
+            if (wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName == "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName == "none")
             {
                 g_nSoundCards = 1;
             }

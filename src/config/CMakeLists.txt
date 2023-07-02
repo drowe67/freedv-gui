@@ -1,4 +1,5 @@
 add_library(fdv_config STATIC
+    AudioConfiguration.cpp
     FreeDVConfiguration.cpp
     WxWidgetsConfigStore.cpp
 )

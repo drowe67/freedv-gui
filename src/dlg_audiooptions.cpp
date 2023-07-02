@@ -402,25 +402,25 @@ int AudioOptsDialog::ExchangeData(int inout)
         }
 
         if (g_nSoundCards == 1) {
-            if (g_verbose) fprintf(stderr,"  m_soundCard1InSampleRate: %d\n", wxGetApp().appConfiguration.soundCard1InSampleRate.get());
+            if (g_verbose) fprintf(stderr,"  m_soundCard1InSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
             
             setTextCtrlIfDevNameValid(m_textCtrlRxIn, 
                                       m_listCtrlRxInDevices, 
-                                      wxGetApp().appConfiguration.soundCard1InDeviceName);
+                                      wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName);
 
-            if (g_verbose) fprintf(stderr,"  m_soundCard1OutSampleRate: %d\n", wxGetApp().appConfiguration.soundCard1OutSampleRate.get());
+            if (g_verbose) fprintf(stderr,"  m_soundCard1OutSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
             
             setTextCtrlIfDevNameValid(m_textCtrlRxOut, 
                                       m_listCtrlRxOutDevices, 
-                                      wxGetApp().appConfiguration.soundCard1OutDeviceName);
+                                      wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName);
 
             if ((m_textCtrlRxIn->GetValue() != "none") && (m_textCtrlRxOut->GetValue() != "none")) {
                 // Build sample rate dropdown lists
-                buildListOfSupportedSampleRates(m_cbSampleRateRxIn, wxGetApp().appConfiguration.soundCard1InDeviceName, AUDIO_IN);
-                buildListOfSupportedSampleRates(m_cbSampleRateRxOut, wxGetApp().appConfiguration.soundCard1OutDeviceName, AUDIO_OUT);
+                buildListOfSupportedSampleRates(m_cbSampleRateRxIn, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName, AUDIO_IN);
+                buildListOfSupportedSampleRates(m_cbSampleRateRxOut, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName, AUDIO_OUT);
                 
-                m_cbSampleRateRxIn->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.soundCard1InSampleRate.get()));
-                m_cbSampleRateRxOut->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.soundCard1OutSampleRate.get()));
+                m_cbSampleRateRxIn->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get()));
+                m_cbSampleRateRxOut->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get()));
             }
 
             m_textCtrlTxIn->SetValue("none");
@@ -428,46 +428,46 @@ int AudioOptsDialog::ExchangeData(int inout)
         }
 
         if (g_nSoundCards == 2) {
-            if (g_verbose) fprintf(stderr,"  m_soundCard1InSampleRate: %d\n", wxGetApp().appConfiguration.soundCard1InSampleRate.get());
+            if (g_verbose) fprintf(stderr,"  m_soundCard1InSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
             
             setTextCtrlIfDevNameValid(m_textCtrlRxIn, 
                                       m_listCtrlRxInDevices, 
-                                      wxGetApp().appConfiguration.soundCard1InDeviceName);
+                                      wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName);
             
-            if (g_verbose) fprintf(stderr,"  m_soundCard2OutSampleRate: %d\n", wxGetApp().appConfiguration.soundCard2OutSampleRate.get());
+            if (g_verbose) fprintf(stderr,"  m_soundCard2OutSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate.get());
             
             setTextCtrlIfDevNameValid(m_textCtrlRxOut, 
                                       m_listCtrlRxOutDevices, 
-                                      wxGetApp().appConfiguration.soundCard2OutDeviceName);
+                                      wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName);
             
-            if (g_verbose) fprintf(stderr,"  m_soundCard2InDeviceName: %d\n", wxGetApp().appConfiguration.soundCard2InSampleRate.get());
+            if (g_verbose) fprintf(stderr,"  m_soundCard2InDeviceName: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate.get());
             
             setTextCtrlIfDevNameValid(m_textCtrlTxIn, 
                                       m_listCtrlTxInDevices, 
-                                      wxGetApp().appConfiguration.soundCard2InDeviceName);
+                                      wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName);
             
-            if (g_verbose) fprintf(stderr,"  m_soundCard1OutSampleRate: %d\n", wxGetApp().appConfiguration.soundCard1OutSampleRate.get());
+            if (g_verbose) fprintf(stderr,"  m_soundCard1OutSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
             
             setTextCtrlIfDevNameValid(m_textCtrlTxOut, 
                                       m_listCtrlTxOutDevices, 
-                                      wxGetApp().appConfiguration.soundCard1OutDeviceName);
+                                      wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName);
 
             if ((m_textCtrlRxIn->GetValue() != "none") && (m_textCtrlTxOut->GetValue() != "none")) {
                 // Build sample rate dropdown lists
-                buildListOfSupportedSampleRates(m_cbSampleRateRxIn, wxGetApp().appConfiguration.soundCard1InDeviceName, AUDIO_IN);
-                buildListOfSupportedSampleRates(m_cbSampleRateTxOut, wxGetApp().appConfiguration.soundCard1OutDeviceName, AUDIO_OUT);
+                buildListOfSupportedSampleRates(m_cbSampleRateRxIn, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName, AUDIO_IN);
+                buildListOfSupportedSampleRates(m_cbSampleRateTxOut, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName, AUDIO_OUT);
                 
-                m_cbSampleRateRxIn->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.soundCard1InSampleRate.get()));
-                m_cbSampleRateTxOut->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.soundCard1OutSampleRate.get()));
+                m_cbSampleRateRxIn->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get()));
+                m_cbSampleRateTxOut->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get()));
             }
 
             if ((m_textCtrlTxIn->GetValue() != "none") && (m_textCtrlRxOut->GetValue() != "none")) {
                 // Build sample rate dropdown lists
-                buildListOfSupportedSampleRates(m_cbSampleRateTxIn, wxGetApp().appConfiguration.soundCard2InDeviceName, AUDIO_IN);
-                buildListOfSupportedSampleRates(m_cbSampleRateRxOut, wxGetApp().appConfiguration.soundCard2OutDeviceName, AUDIO_OUT);
+                buildListOfSupportedSampleRates(m_cbSampleRateTxIn, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName, AUDIO_IN);
+                buildListOfSupportedSampleRates(m_cbSampleRateRxOut, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName, AUDIO_OUT);
                 
-                m_cbSampleRateTxIn->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.soundCard2InSampleRate.get()));
-                m_cbSampleRateRxOut->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.soundCard2OutSampleRate.get()));
+                m_cbSampleRateTxIn->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate.get()));
+                m_cbSampleRateRxOut->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate.get()));
             }
         }
     }
@@ -537,29 +537,29 @@ int AudioOptsDialog::ExchangeData(int inout)
 
         if (valid_one_card_config) {
             g_nSoundCards = 1;
-            wxGetApp().appConfiguration.soundCard1InSampleRate = wxAtoi(sampleRate1);
-            wxGetApp().appConfiguration.soundCard1OutSampleRate = wxAtoi(sampleRate2);
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate = wxAtoi(sampleRate1);
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = wxAtoi(sampleRate2);
             
             if (g_verbose)
             {
-                fprintf(stderr,"  m_soundCard1InSampleRate: %d\n", wxGetApp().appConfiguration.soundCard1InSampleRate.get());
-                fprintf(stderr,"  m_soundCard1OutSampleRate: %d\n", wxGetApp().appConfiguration.soundCard1OutSampleRate.get());
+                fprintf(stderr,"  m_soundCard1InSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
+                fprintf(stderr,"  m_soundCard1OutSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
             }
         }
 
         if (valid_two_card_config) {
             g_nSoundCards = 2;
-            wxGetApp().appConfiguration.soundCard1InSampleRate = wxAtoi(sampleRate1);
-            wxGetApp().appConfiguration.soundCard2OutSampleRate = wxAtoi(sampleRate2);
-            wxGetApp().appConfiguration.soundCard2InSampleRate = wxAtoi(sampleRate3);
-            wxGetApp().appConfiguration.soundCard1OutSampleRate = wxAtoi(sampleRate4);
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate = wxAtoi(sampleRate1);
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = wxAtoi(sampleRate2);
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = wxAtoi(sampleRate3);
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = wxAtoi(sampleRate4);
             
             if (g_verbose)
             {
-                fprintf(stderr,"  m_soundCard1InSampleRate: %d\n", wxGetApp().appConfiguration.soundCard1InSampleRate.get());
-                fprintf(stderr,"  m_soundCard2OutSampleRate: %d\n", wxGetApp().appConfiguration.soundCard2OutSampleRate.get());
-                fprintf(stderr,"  m_soundCard2InSampleRate: %d\n", wxGetApp().appConfiguration.soundCard2InSampleRate.get());
-                fprintf(stderr,"  m_soundCard1OutSampleRate: %d\n", wxGetApp().appConfiguration.soundCard1OutSampleRate.get());
+                fprintf(stderr,"  m_soundCard1InSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
+                fprintf(stderr,"  m_soundCard2OutSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate.get());
+                fprintf(stderr,"  m_soundCard2InSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate.get());
+                fprintf(stderr,"  m_soundCard1OutSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
             }
         }
 
@@ -569,24 +569,24 @@ int AudioOptsDialog::ExchangeData(int inout)
         
         if (valid_one_card_config)
         {
-            wxGetApp().appConfiguration.soundCard1InDeviceName = m_textCtrlRxIn->GetValue();
-            wxGetApp().appConfiguration.soundCard1OutDeviceName = m_textCtrlRxOut->GetValue();
-            wxGetApp().appConfiguration.soundCard2InDeviceName = "none";
-            wxGetApp().appConfiguration.soundCard2OutDeviceName = "none";
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = m_textCtrlRxIn->GetValue();
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = m_textCtrlRxOut->GetValue();
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = "none";
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = "none";
         }
         else if (valid_two_card_config)
         {
-            wxGetApp().appConfiguration.soundCard1InDeviceName = m_textCtrlRxIn->GetValue();
-            wxGetApp().appConfiguration.soundCard1OutDeviceName = m_textCtrlTxOut->GetValue();
-            wxGetApp().appConfiguration.soundCard2InDeviceName = m_textCtrlTxIn->GetValue();
-            wxGetApp().appConfiguration.soundCard2OutDeviceName = m_textCtrlRxOut->GetValue();
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = m_textCtrlRxIn->GetValue();
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = m_textCtrlTxOut->GetValue();
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = m_textCtrlTxIn->GetValue();
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = m_textCtrlRxOut->GetValue();
         }
         else
         {
-            wxGetApp().appConfiguration.soundCard1InDeviceName = "none";
-            wxGetApp().appConfiguration.soundCard1OutDeviceName = "none";
-            wxGetApp().appConfiguration.soundCard2InDeviceName = "none";
-            wxGetApp().appConfiguration.soundCard2OutDeviceName = "none";
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = "none";
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = "none";
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = "none";
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = "none";
         }
 
         wxGetApp().appConfiguration.save(pConfig);        
