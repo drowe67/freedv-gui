@@ -158,7 +158,7 @@ void TxRxThread::initializePipeline_()
         eitherOrProcessSpeex->appendPipelineStep(std::shared_ptr<IPipelineStep>(speexStep));
         
         auto eitherOrSpeexStep = new EitherOrStep(
-            []() { return wxGetApp().m_speexpp_enable; },
+            []() { return wxGetApp().appConfiguration.filterConfiguration.speexppEnable; },
             std::shared_ptr<IPipelineStep>(eitherOrProcessSpeex),
             std::shared_ptr<IPipelineStep>(eitherOrBypassSpeex));
         auto speexLockStep = new ExclusiveAccessStep(eitherOrSpeexStep, callbackLockFn, callbackUnlockFn);

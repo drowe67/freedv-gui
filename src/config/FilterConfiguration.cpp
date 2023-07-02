@@ -24,14 +24,52 @@
 DEFINE_FILTER_CONFIG_NAMES(MicIn);
 DEFINE_FILTER_CONFIG_NAMES(SpkOut);
 
+FilterConfiguration::FilterConfiguration()
+    : codec2LPCPostFilterEnable("/Filter/codec2LPCPostFilterEnable", true)
+    , codec2LPCPostFilterBassBoost("/Filter/codec2LPCPostFilterBassBoost", true)
+    , codec2LPCPostFilterGamma("/Filter/codec2LPCPostFilterGamma", CODEC2_LPC_PF_GAMMA*100)
+    , codec2LPCPostFilterBeta("/Filter/codec2LPCPostFilterBeta", CODEC2_LPC_PF_BETA*100)
+    , speexppEnable("/Filter/speexpp_enable", true)
+    , enable700CEqualizer("/Filter/700C_EQ", true)
+{
+    std::function<float(float)> gammaBetaSaveProcessor = [](float val) {
+        return val * 100.0;
+    };
+    
+    std::function<float(float)> gammaBetaLoadProcessor = [](float val) {
+        return val / 100.0;
+    };
+    
+    codec2LPCPostFilterGamma.setSaveProcessor(gammaBetaSaveProcessor);
+    codec2LPCPostFilterBeta.setSaveProcessor(gammaBetaSaveProcessor);
+    codec2LPCPostFilterGamma.setLoadProcessor(gammaBetaLoadProcessor);
+    codec2LPCPostFilterBeta.setLoadProcessor(gammaBetaLoadProcessor);
+}
+
 void FilterConfiguration::load(wxConfigBase* config)
 {
     micInChannel.load(config);
     spkOutChannel.load(config);
+    
+    load_(config, codec2LPCPostFilterEnable);
+    load_(config, codec2LPCPostFilterBassBoost);
+    load_(config, codec2LPCPostFilterGamma);
+    load_(config, codec2LPCPostFilterBeta);
+    
+    load_(config, speexppEnable);
+    load_(config, enable700CEqualizer);
 }
 
 void FilterConfiguration::save(wxConfigBase* config)
 {
     micInChannel.save(config);
     spkOutChannel.save(config);
+    
+    save_(config, codec2LPCPostFilterEnable);
+    save_(config, codec2LPCPostFilterBassBoost);
+    save_(config, codec2LPCPostFilterGamma);
+    save_(config, codec2LPCPostFilterBeta);
+    
+    save_(config, speexppEnable);
+    save_(config, enable700CEqualizer);
 }

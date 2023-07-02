@@ -38,12 +38,19 @@ public:
     ConfigurationDataElement<UnderlyingDataType>& operator=(UnderlyingDataType val);
     operator UnderlyingDataType();
     
-    UnderlyingDataType& get();
+    UnderlyingDataType get();
+    UnderlyingDataType getWithoutProcessing();
+    void setWithoutProcessing(UnderlyingDataType val);
     
+    void setSaveProcessor(std::function<UnderlyingDataType(UnderlyingDataType)> fn);
+    void setLoadProcessor(std::function<UnderlyingDataType(UnderlyingDataType)> fn);
 private:
     const char* elementName_;
     UnderlyingDataType data_;
     UnderlyingDataType default_;
+    
+    std::function<UnderlyingDataType(UnderlyingDataType)> saveProcessor_;
+    std::function<UnderlyingDataType(UnderlyingDataType)> loadProcessor_;
 };
 
 template<typename UnderlyingDataType>
@@ -76,20 +83,59 @@ void ConfigurationDataElement<UnderlyingDataType>::setDefaultVal(UnderlyingDataT
 template<typename UnderlyingDataType>
 ConfigurationDataElement<UnderlyingDataType>& ConfigurationDataElement<UnderlyingDataType>::operator=(UnderlyingDataType val)
 {
-    data_ = val;
+    if (saveProcessor_)
+    {
+        val = saveProcessor_(val);
+    }
+    
+    setWithoutProcessing(val);
     return *this;
+}
+
+template<typename UnderlyingDataType>
+void ConfigurationDataElement<UnderlyingDataType>::setWithoutProcessing(UnderlyingDataType val)
+{
+    data_ = val;
+}
+
+template<typename UnderlyingDataType>
+UnderlyingDataType ConfigurationDataElement<UnderlyingDataType>::getWithoutProcessing()
+{
+    return data_;
 }
 
 template<typename UnderlyingDataType>
 ConfigurationDataElement<UnderlyingDataType>::operator UnderlyingDataType()
 {
+    if (loadProcessor_)
+    {
+        return loadProcessor_(data_);
+    }
+    
     return data_;
 }
 
 template<typename UnderlyingDataType>
-UnderlyingDataType& ConfigurationDataElement<UnderlyingDataType>::get()
+UnderlyingDataType ConfigurationDataElement<UnderlyingDataType>::get()
 {
+    if (loadProcessor_)
+    {
+        return loadProcessor_(data_);
+    }
+    
     return data_;
+}
+
+template<typename UnderlyingDataType>
+void ConfigurationDataElement<UnderlyingDataType>::setSaveProcessor(std::function<UnderlyingDataType(UnderlyingDataType)> fn)
+{
+    saveProcessor_ = fn;
+}
+
+template<typename UnderlyingDataType>
+void ConfigurationDataElement<UnderlyingDataType>::setLoadProcessor(std::function<UnderlyingDataType(UnderlyingDataType)> fn)
+{
+    loadProcessor_ = fn;
 }
 
 #endif // CONFIGURATION_DATA_ELEMENT_H

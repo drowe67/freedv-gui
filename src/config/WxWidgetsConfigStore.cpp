@@ -26,5 +26,5 @@ void WxWidgetsConfigStore::load_<unsigned int>(wxConfigBase* config, Configurati
 {
     long val;
     config->Read(configElement.getElementName(), &val, (long)configElement.getDefaultVal());
-    configElement = (unsigned int)val;
+    configElement.setWithoutProcessing((unsigned int)val);
 }

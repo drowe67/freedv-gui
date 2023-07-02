@@ -219,14 +219,6 @@ class MainApp : public wxApp
         bool                m_snrSlow;
         unsigned int        m_statsResetTimeSec;
 
-        // LPC Post Filter
-        bool                m_codec2LPCPostFilterEnable;
-        bool                m_codec2LPCPostFilterBassBoost;
-        float               m_codec2LPCPostFilterGamma;
-        float               m_codec2LPCPostFilterBeta;
-
-        // Speex Pre-Processor
-        bool                m_speexpp_enable;
         // Codec 2 700C Equaliser
         bool                m_700C_EQ;
 

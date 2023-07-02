@@ -22,6 +22,7 @@
 #ifndef FILTER_CONFIGURATION_H
 #define FILTER_CONFIGURATION_H
 
+#include "../defines.h"
 #include "WxWidgetsConfigStore.h"
 #include "ConfigurationDataElement.h"
 
@@ -66,11 +67,19 @@ public:
         virtual void save(wxConfigBase* config) override;
     };
     
-    FilterConfiguration() = default;
+    FilterConfiguration();
     virtual ~FilterConfiguration() = default;
     
     FilterChannel<MicIn> micInChannel;
     FilterChannel<SpkOut> spkOutChannel;
+    
+    ConfigurationDataElement<bool> codec2LPCPostFilterEnable;
+    ConfigurationDataElement<bool> codec2LPCPostFilterBassBoost;
+    ConfigurationDataElement<float> codec2LPCPostFilterGamma;
+    ConfigurationDataElement<float> codec2LPCPostFilterBeta;
+    
+    ConfigurationDataElement<bool> speexppEnable;
+    ConfigurationDataElement<bool> enable700CEqualizer;
     
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;

@@ -456,15 +456,6 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_snrSlow = pConfig->Read("/Audio/snrSlow", slow);
 
     bool t = true;     // prevents compile error when using default bool
-    wxGetApp().m_codec2LPCPostFilterEnable     = pConfig->Read(wxT("/Filter/codec2LPCPostFilterEnable"),    t);
-    wxGetApp().m_codec2LPCPostFilterBassBoost  = pConfig->Read(wxT("/Filter/codec2LPCPostFilterBassBoost"), t);
-    wxGetApp().m_codec2LPCPostFilterGamma      = (float)pConfig->Read(wxT("/Filter/codec2LPCPostFilterGamma"),     CODEC2_LPC_PF_GAMMA*100)/100.0;
-    wxGetApp().m_codec2LPCPostFilterBeta       = (float)pConfig->Read(wxT("/Filter/codec2LPCPostFilterBeta"),      CODEC2_LPC_PF_BETA*100)/100.0;
-    //printf("main(): m_codec2LPCPostFilterBeta: %f\n", wxGetApp().m_codec2LPCPostFilterBeta);
-
-    wxGetApp().m_speexpp_enable     = pConfig->Read(wxT("/Filter/speexpp_enable"),    t);
-    wxGetApp().m_700C_EQ     = pConfig->Read(wxT("/Filter/700C_EQ"),    t);
-
     bool f = false;
 
     wxGetApp().m_callSign = pConfig->Read("/Data/CallSign", wxT(""));
@@ -1906,7 +1897,7 @@ void MainFrame::performFreeDVOn_()
         freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread, wxGetApp().m_reportingEnabled);
 
         // Codec 2 VQ Equaliser
-        freedvInterface.setEq(wxGetApp().m_700C_EQ);
+        freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
 
         // Codec2 verbosity setting
         freedvInterface.setVerbose(g_freedv_verbose);
@@ -1935,10 +1926,10 @@ void MainFrame::performFreeDVOn_()
 
         // init Codec 2 LPC Post Filter (FreeDV 1600)
         freedvInterface.setLpcPostFilter(
-                                       wxGetApp().m_codec2LPCPostFilterEnable,
-                                       wxGetApp().m_codec2LPCPostFilterBassBoost,
-                                       wxGetApp().m_codec2LPCPostFilterBeta,
-                                       wxGetApp().m_codec2LPCPostFilterGamma);
+                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterEnable,
+                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBassBoost,
+                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBeta,
+                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterGamma);
 
         // Init Speex pre-processor states
         // by inspecting Speex source it seems that only denoiser is on by default

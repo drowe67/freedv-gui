@@ -389,17 +389,17 @@ void FilterDlg::ExchangeData(int inout)
     {
         // LPC Post filter
 
-        m_codec2LPCPostFilterEnable->SetValue(wxGetApp().m_codec2LPCPostFilterEnable);
-        m_codec2LPCPostFilterBassBoost->SetValue(wxGetApp().m_codec2LPCPostFilterBassBoost);
-        m_beta = wxGetApp().m_codec2LPCPostFilterBeta; setBeta();
-        m_gamma = wxGetApp().m_codec2LPCPostFilterGamma; setGamma();
+        m_codec2LPCPostFilterEnable->SetValue(wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterEnable);
+        m_codec2LPCPostFilterBassBoost->SetValue(wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBassBoost);
+        m_beta = wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBeta; setBeta();
+        m_gamma = wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterGamma; setGamma();
 
         // Speex Pre-Processor
 
-        m_ckboxSpeexpp->SetValue(wxGetApp().m_speexpp_enable);
+        m_ckboxSpeexpp->SetValue(wxGetApp().appConfiguration.filterConfiguration.speexppEnable);
 
         // Codec 2 700C EQ
-        m_ckbox700C_EQ->SetValue(wxGetApp().m_700C_EQ);
+        m_ckbox700C_EQ->SetValue(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
 
         // Mic In Equaliser
 
@@ -475,16 +475,16 @@ void FilterDlg::ExchangeData(int inout)
     {
         // LPC Post filter
 
-        wxGetApp().m_codec2LPCPostFilterEnable     = m_codec2LPCPostFilterEnable->GetValue();
-        wxGetApp().m_codec2LPCPostFilterBassBoost  = m_codec2LPCPostFilterBassBoost->GetValue();
-        wxGetApp().m_codec2LPCPostFilterBeta       = m_beta;
-        wxGetApp().m_codec2LPCPostFilterGamma      = m_gamma;
+        wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterEnable     = m_codec2LPCPostFilterEnable->GetValue();
+        wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBassBoost  = m_codec2LPCPostFilterBassBoost->GetValue();
+        wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBeta       = m_beta;
+        wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterGamma      = m_gamma;
 
         // Speex Pre-Processor
-        wxGetApp().m_speexpp_enable = m_ckboxSpeexpp->GetValue();
+        wxGetApp().appConfiguration.filterConfiguration.speexppEnable = m_ckboxSpeexpp->GetValue();
 
         // Codec 2 700C EQ
-        wxGetApp().m_700C_EQ = m_ckbox700C_EQ->GetValue();
+        wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer = m_ckbox700C_EQ->GetValue();
 
         // Mic In Equaliser
 
@@ -513,15 +513,6 @@ void FilterDlg::ExchangeData(int inout)
         wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midQ = (int)(100.0*m_SpkOutMid.Q);
 
         wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = (int)(10.0*m_SpkOutVol.gaindB);
-
-        pConfig->Write(wxT("/Filter/codec2LPCPostFilterEnable"),     wxGetApp().m_codec2LPCPostFilterEnable);
-        pConfig->Write(wxT("/Filter/codec2LPCPostFilterBassBoost"),  wxGetApp().m_codec2LPCPostFilterBassBoost);
-        pConfig->Write(wxT("/Filter/codec2LPCPostFilterBeta"),       (int)(m_beta*100.0));
-        pConfig->Write(wxT("/Filter/codec2LPCPostFilterGamma"),      (int)(m_gamma*100.0));
-
-        pConfig->Write(wxT("/Filter/speexpp_enable"),                wxGetApp().m_speexpp_enable);
-
-        pConfig->Write(wxT("/Filter/700C_EQ"),                       wxGetApp().m_700C_EQ);
 
         wxGetApp().appConfiguration.save(pConfig);
     }
@@ -669,14 +660,14 @@ void FilterDlg::OnGammaScroll(wxScrollEvent& event) {
 }
 
 void FilterDlg::OnSpeexppEnable(wxScrollEvent& event) {
-    wxGetApp().m_speexpp_enable = m_ckboxSpeexpp->GetValue();
+    wxGetApp().appConfiguration.filterConfiguration.speexppEnable = m_ckboxSpeexpp->GetValue();
     ExchangeData(EXCHANGE_DATA_OUT);
 }
 
 void FilterDlg::On700C_EQ(wxScrollEvent& event) {
-    wxGetApp().m_700C_EQ = m_ckbox700C_EQ->GetValue();
+    wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer = m_ckbox700C_EQ->GetValue();
     if (m_running) {
-        freedvInterface.setEq(wxGetApp().m_700C_EQ);
+        freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
     }
     ExchangeData(EXCHANGE_DATA_OUT);
 }

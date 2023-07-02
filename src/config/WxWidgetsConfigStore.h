@@ -46,13 +46,13 @@ void WxWidgetsConfigStore::load_(wxConfigBase* config, ConfigurationDataElement<
 {
     UnderlyingDataType val;
     config->Read(configElement.getElementName(), &val, configElement.getDefaultVal());
-    configElement = val;
+    configElement.setWithoutProcessing(val);
 }
 
 template<typename UnderlyingDataType>
 void WxWidgetsConfigStore::save_(wxConfigBase* config, ConfigurationDataElement<UnderlyingDataType>& configElement)
 {
-    config->Write(configElement.getElementName(), (UnderlyingDataType)configElement);
+    config->Write(configElement.getElementName(), configElement.getWithoutProcessing());
 }
 
 template<>
