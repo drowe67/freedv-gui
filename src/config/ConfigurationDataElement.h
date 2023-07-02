@@ -30,11 +30,15 @@ public:
     virtual ~ConfigurationDataElement() = default;
     
     const char* getElementName() const;
+    
+    void setDefaultVal(UnderlyingDataType& val); // useful for migration
     UnderlyingDataType& getDefaultVal();
     
     // Allows usage of class as though it were defined directly as UnderlyingDataType.
     ConfigurationDataElement<UnderlyingDataType>& operator=(UnderlyingDataType val);
     operator UnderlyingDataType();
+    
+    UnderlyingDataType& get();
     
 private:
     const char* elementName_;
@@ -64,6 +68,12 @@ UnderlyingDataType& ConfigurationDataElement<UnderlyingDataType>::getDefaultVal(
 }
 
 template<typename UnderlyingDataType>
+void ConfigurationDataElement<UnderlyingDataType>::setDefaultVal(UnderlyingDataType& val)
+{
+    default_ = val;
+}
+
+template<typename UnderlyingDataType>
 ConfigurationDataElement<UnderlyingDataType>& ConfigurationDataElement<UnderlyingDataType>::operator=(UnderlyingDataType val)
 {
     data_ = val;
@@ -72,6 +82,12 @@ ConfigurationDataElement<UnderlyingDataType>& ConfigurationDataElement<Underlyin
 
 template<typename UnderlyingDataType>
 ConfigurationDataElement<UnderlyingDataType>::operator UnderlyingDataType()
+{
+    return data_;
+}
+
+template<typename UnderlyingDataType>
+UnderlyingDataType& ConfigurationDataElement<UnderlyingDataType>::get()
 {
     return data_;
 }

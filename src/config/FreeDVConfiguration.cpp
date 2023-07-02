@@ -39,6 +39,16 @@ FreeDVConfiguration::FreeDVConfiguration()
     /* Squelch configuration */
     , squelchActive("/Audio/SquelchActive", 1)
     , squelchLevel("/Audio/SquelchLevel", (int)(SQ_DEFAULT_SNR*2))
+        
+    /* Sound device configuration */
+    , soundCard1InDeviceName("/Audio/soundCard1InDeviceName", "none")
+    , soundCard1InSampleRate("/Audio/soundCard1InSampleRate", -1)
+    , soundCard1OutDeviceName("/Audio/soundCard1OutDeviceName", "none")
+    , soundCard1OutSampleRate("/Audio/soundCard1OutSampleRate", -1)
+    , soundCard2InDeviceName("/Audio/soundCard2InDeviceName", "none")
+    , soundCard2InSampleRate("/Audio/soundCard2InSampleRate", -1)
+    , soundCard2OutDeviceName("/Audio/soundCard2OutDeviceName", "none")
+    , soundCard2OutSampleRate("/Audio/soundCard2OutSampleRate", -1)
 {
     // empty
 }
@@ -57,6 +67,23 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, squelchActive);
     load_(config, squelchLevel);
+    
+    // Migration -- grab old sample rates from older FreeDV configuration
+    int oldSoundCard1SampleRate = config->Read(wxT("/Audio/soundCard1SampleRate"), -1);
+    int oldSoundCard2SampleRate = config->Read(wxT("/Audio/soundCard2SampleRate"), -1);
+    soundCard1InSampleRate.setDefaultVal(oldSoundCard1SampleRate);
+    soundCard1OutSampleRate.setDefaultVal(oldSoundCard1SampleRate);
+    soundCard2InSampleRate.setDefaultVal(oldSoundCard2SampleRate);
+    soundCard2OutSampleRate.setDefaultVal(oldSoundCard2SampleRate);
+    
+    load_(config, soundCard1InDeviceName);
+    load_(config, soundCard1InSampleRate);
+    load_(config, soundCard1OutDeviceName);
+    load_(config, soundCard1OutSampleRate);
+    load_(config, soundCard2InDeviceName);
+    load_(config, soundCard2InSampleRate);
+    load_(config, soundCard2OutDeviceName);
+    load_(config, soundCard2OutSampleRate);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -73,6 +100,15 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     
     save_(config, squelchActive);
     save_(config, squelchLevel);
+    
+    save_(config, soundCard1InDeviceName);
+    save_(config, soundCard1InSampleRate);
+    save_(config, soundCard1OutDeviceName);
+    save_(config, soundCard1OutSampleRate);
+    save_(config, soundCard2InDeviceName);
+    save_(config, soundCard2InSampleRate);
+    save_(config, soundCard2OutDeviceName);
+    save_(config, soundCard2OutSampleRate);
     
     config->Flush();
 }

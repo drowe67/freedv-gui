@@ -173,16 +173,6 @@ class MainApp : public wxApp
         
         FreeDVConfiguration appConfiguration;
         
-        // Sound card
-        wxString m_soundCard1InDeviceName;
-        int m_soundCard1InSampleRate;
-        wxString m_soundCard2InDeviceName;
-        int m_soundCard2InSampleRate;
-        wxString m_soundCard1OutDeviceName;
-        int m_soundCard1OutSampleRate;
-        wxString m_soundCard2OutDeviceName;
-        int m_soundCard2OutSampleRate;
-        
         // PTT -----------------------------------
 
         bool                m_boolHalfDuplex;

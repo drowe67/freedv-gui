@@ -44,6 +44,15 @@ public:
     ConfigurationDataElement<long> squelchActive;
     ConfigurationDataElement<long> squelchLevel;
     
+    ConfigurationDataElement<wxString> soundCard1InDeviceName;
+    ConfigurationDataElement<int> soundCard1InSampleRate;
+    ConfigurationDataElement<wxString> soundCard1OutDeviceName;
+    ConfigurationDataElement<int> soundCard1OutSampleRate;
+    ConfigurationDataElement<wxString> soundCard2InDeviceName;
+    ConfigurationDataElement<int> soundCard2InSampleRate;
+    ConfigurationDataElement<wxString> soundCard2OutDeviceName;
+    ConfigurationDataElement<int> soundCard2OutSampleRate;
+    
     void load(wxConfigBase* config);
     void save(wxConfigBase* config);
     

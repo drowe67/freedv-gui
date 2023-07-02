@@ -314,7 +314,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         wxLogDebug("soundFile: %s", soundFile);
         sfInfo.format = 0;
 
-        int sample_rate = wxGetApp().m_soundCard1InSampleRate;
+        int sample_rate = wxGetApp().appConfiguration.soundCard1InSampleRate;
 
         if(!extension.IsEmpty())
         {
@@ -395,7 +395,7 @@ void MainFrame::OnTogBtnRecord( wxCommandEvent& event )
     
         sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
         sfInfo.channels   = 1;
-        sfInfo.samplerate = wxGetApp().m_soundCard1InSampleRate;
+        sfInfo.samplerate = wxGetApp().appConfiguration.soundCard1InSampleRate;
     
         g_recFromRadioSamples = UINT32_MAX; // record until stopped
     
@@ -478,7 +478,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
         wxLogDebug("soundFile: %s", soundFile);
         sfInfo.format = 0;
 
-        int sample_rate = wxGetApp().m_soundCard1OutSampleRate;
+        int sample_rate = wxGetApp().appConfiguration.soundCard1OutSampleRate;
 
         if(!extension.IsEmpty())
         {
