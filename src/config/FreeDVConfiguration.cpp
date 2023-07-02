@@ -19,6 +19,7 @@
 //
 //==========================================================================
 
+#include "../defines.h"
 #include "FreeDVConfiguration.h"
 
 FreeDVConfiguration::FreeDVConfiguration()
@@ -34,6 +35,10 @@ FreeDVConfiguration::FreeDVConfiguration()
         
     /* Current tab view */
     , currentNotebookTab("/MainFrame/rxNbookCtrl", 0)
+        
+    /* Squelch configuration */
+    , squelchActive("/Audio/SquelchActive", 1)
+    , squelchLevel("/Audio/SquelchLevel", (int)(SQ_DEFAULT_SNR*2))
 {
     // empty
 }
@@ -49,6 +54,9 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, mainWindowHeight);
     
     load_(config, currentNotebookTab);
+    
+    load_(config, squelchActive);
+    load_(config, squelchLevel);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -62,6 +70,9 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, mainWindowHeight);
     
     save_(config, currentNotebookTab);
+    
+    save_(config, squelchActive);
+    save_(config, squelchLevel);
     
     config->Flush();
 }

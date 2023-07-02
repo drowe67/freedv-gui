@@ -376,8 +376,8 @@ void MainFrame::loadConfiguration_()
     if (w < 0 || w > 2048) w = 800;
     if (h < 0 || h > 2048) h = 780;
 
-    g_SquelchActive = pConfig->Read(wxT("/Audio/SquelchActive"), (long)1);
-    g_SquelchLevel = pConfig->Read(wxT("/Audio/SquelchLevel"), (int)(SQ_DEFAULT_SNR*2));
+    g_SquelchActive = wxGetApp().appConfiguration.squelchActive;
+    g_SquelchLevel = wxGetApp().appConfiguration.squelchLevel;
     g_SquelchLevel /= 2.0;
     
     Move(x, y);
@@ -922,8 +922,8 @@ MainFrame::~MainFrame()
         wxGetApp().appConfiguration.mainWindowHeight = h;
     }
 
-    pConfig->Write(wxT("/Audio/SquelchActive"),         g_SquelchActive);
-    pConfig->Write(wxT("/Audio/SquelchLevel"),          (int)(g_SquelchLevel*2.0));
+    wxGetApp().appConfiguration.squelchActive = g_SquelchActive;
+    wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
 
     pConfig->Write(wxT("/Audio/fifoSize_ms"),              wxGetApp().m_fifoSize_ms);
 
