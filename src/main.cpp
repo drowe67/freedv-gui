@@ -351,8 +351,7 @@ void MainFrame::test2020Mode_()
     std::cout << "2020 allowed: " << allowed << std::endl;
     
     // Save results to configuration.
-    wxGetApp().m_2020Allowed = allowed;
-    pConfig->Write(wxT("/FreeDV2020/Allowed"), wxGetApp().m_2020Allowed);
+    wxGetApp().appConfiguration.freedv2020Allowed = allowed;
 }
 #endif // defined(FREEDV_MODE_2020)
 
@@ -361,8 +360,7 @@ void MainFrame::test2020Mode_()
 //-------------------------------------------------------------------------
 void MainFrame::loadConfiguration_()
 {
-    wxGetApp().m_firstTimeUse = pConfig->Read(wxT("/FirstTimeUse"), true);
-    wxGetApp().m_2020Allowed = pConfig->Read(wxT("/FreeDV2020/Allowed"), false);
+    wxGetApp().appConfiguration.load(pConfig);
     
     // restore frame position and size
     int x = pConfig->Read(wxT("/MainFrame/left"),       20);
@@ -579,7 +577,7 @@ setDefaultMode:
         m_rb800xa->SetValue(1);
     if (mode == 7)
         m_rb2400b->SetValue(1);
-    if ((mode == 9) && wxGetApp().m_2020Allowed)
+    if ((mode == 9) && wxGetApp().appConfiguration.freedv2020Allowed)
         m_rb2020->SetValue(1);
     else if (mode == 9)
     {
@@ -588,7 +586,7 @@ setDefaultMode:
         goto setDefaultMode;
     }
 #if defined(FREEDV_MODE_2020B)
-    if ((mode == 10) && wxGetApp().m_2020Allowed)
+    if ((mode == 10) && wxGetApp().appConfiguration.freedv2020Allowed)
         m_rb2020b->SetValue(1);
     else if (mode == 10)
     {
@@ -824,7 +822,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Init optional Windows debug console so we can see all those printfs
 
 #ifdef __WXMSW__
-    if (wxGetApp().m_debug_console || wxGetApp().m_firstTimeUse) {
+    if (wxGetApp().m_debug_console || wxGetApp().appConfiguration.firstTimeUse) {
         // somewhere to send printfs while developing
         int ret = AllocConsole();
         freopen("CONOUT$", "w", stdout);
@@ -835,23 +833,21 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     
 #if defined(FREEDV_MODE_2020)
     // First time use: make sure 2020 mode will actually work on this machine.
-    if (wxGetApp().m_firstTimeUse)
+    if (wxGetApp().appConfiguration.firstTimeUse)
     {
         test2020Mode_();
     }
 #endif // defined(FREEDV_MODE_2020)
     
-    if(!wxGetApp().m_2020Allowed)
+    if(!wxGetApp().appConfiguration.freedv2020Allowed)
     {
         m_rb2020->Disable();
 #if defined(FREEDV_MODE_2020B)
         m_rb2020b->Disable();
 #endif // FREEDV_MODE_2020B
     }
-        
-    pConfig->Write(wxT("/FirstTimeUse"), false);
 
-    if (wxGetApp().m_firstTimeUse)
+    if (wxGetApp().appConfiguration.firstTimeUse)
     {
         // Initial setup. Display Easy Setup dialog.
         CallAfter([&]() {
@@ -859,6 +855,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
             dlg->ShowModal();
         });
     }
+    
+    wxGetApp().appConfiguration.firstTimeUse = false;
     
     //#define FTEST
     #ifdef FTEST
@@ -1031,7 +1029,8 @@ MainFrame::~MainFrame()
         mode = 10;
 #endif // defined(FREEDV_MODE_2020B)
    pConfig->Write(wxT("/Audio/mode"), mode);
-   pConfig->Flush();
+   
+   wxGetApp().appConfiguration.save(pConfig);
 
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
@@ -1827,14 +1826,14 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     }
     else if (eventObject == m_rb2020 || (eventObject == nullptr && m_rb2020->GetValue())) 
     {
-        assert(wxGetApp().m_2020Allowed);
+        assert(wxGetApp().appConfiguration.freedv2020Allowed);
         
         g_mode = FREEDV_MODE_2020;
     }
 #if defined(FREEDV_MODE_2020B)
     else if (eventObject == m_rb2020b || (eventObject == nullptr && m_rb2020b->GetValue())) 
     {
-        assert(wxGetApp().m_2020Allowed);
+        assert(wxGetApp().appConfiguration.freedv2020Allowed);
         
         g_mode = FREEDV_MODE_2020B;
     }
@@ -1929,7 +1928,7 @@ void MainFrame::performFreeDVOn_()
         }
         else
         {        
-            if(wxGetApp().m_2020Allowed)
+            if(wxGetApp().appConfiguration.freedv2020Allowed)
             {
                 freedvInterface.addRxMode(FREEDV_MODE_2020);
     #if defined(FREEDV_MODE_2020B)
@@ -2308,7 +2307,7 @@ void MainFrame::performFreeDVOff_()
         m_rb700e->Enable();
         m_rb800xa->Enable();
         m_rb2400b->Enable();
-        if(wxGetApp().m_2020Allowed)
+        if(wxGetApp().appConfiguration.freedv2020Allowed)
         {
             m_rb2020->Enable();
     #if defined(FREEDV_MODE_2020B)

@@ -93,6 +93,7 @@
 #include "freedv_interface.h"
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
+#include "config/FreeDVConfiguration.h"
 #include "pipeline/paCallbackData.h"
 
 #define _USE_TIMER              1
@@ -169,6 +170,8 @@ class MainApp : public wxApp
 
 
         bool                    CanAccessSerialPort(std::string portName);
+        
+        FreeDVConfiguration appConfiguration;
         
         // Sound card
         wxString m_soundCard1InDeviceName;
@@ -341,9 +344,6 @@ class MainApp : public wxApp
         bool       m_txRxThreadHighPriority;
 
         int        m_prevMode;
-        
-        bool       m_firstTimeUse;
-        bool       m_2020Allowed;
 
     protected:
 };
