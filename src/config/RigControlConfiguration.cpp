@@ -41,6 +41,8 @@ RigControlConfiguration::RigControlConfiguration()
     , useSerialPTTInput("/Rig/UseSerialPTTInput", false)
     , serialPTTInputPort("/Rig/PttInPort", _(""))
     , serialPTTInputPolarityCTS("/Rig/CTSPolarity", false)
+        
+    , leftChannelVoxTone("/Rig/leftChannelVoxTone",  false)
 {
     // empty
 }
@@ -66,6 +68,8 @@ void RigControlConfiguration::load(wxConfigBase* config)
     load_(config, useSerialPTTInput);
     load_(config, serialPTTInputPort);
     load_(config, serialPTTInputPolarityCTS);
+    
+    load_(config, leftChannelVoxTone);
 }
 
 void RigControlConfiguration::save(wxConfigBase* config)
@@ -89,4 +93,6 @@ void RigControlConfiguration::save(wxConfigBase* config)
     save_(config, useSerialPTTInput);
     save_(config, serialPTTInputPort);
     save_(config, serialPTTInputPolarityCTS);
+    
+    save_(config, leftChannelVoxTone);
 }

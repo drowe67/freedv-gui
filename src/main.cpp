@@ -401,7 +401,6 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_boolHalfDuplex     = pConfig->ReadBool(wxT("/Rig/HalfDuplex"),     true);
     wxGetApp().m_boolMultipleRx     = pConfig->ReadBool(wxT("/Rig/MultipleRx"),     true);
     wxGetApp().m_boolSingleRxThread = pConfig->ReadBool(wxT("/Rig/SingleRxThread"), true);
-    wxGetApp().m_leftChannelVoxTone = pConfig->ReadBool("/Rig/leftChannelVoxTone",  false);
 
     wxGetApp().m_txtVoiceKeyerWaveFilePath = pConfig->Read(wxT("/VoiceKeyer/WaveFilePath"), wxT(""));
     wxGetApp().m_txtVoiceKeyerWaveFile = pConfig->Read(wxT("/VoiceKeyer/WaveFile"), wxT("voicekeyer.wav"));
@@ -861,7 +860,6 @@ MainFrame::~MainFrame()
     pConfig->Write(wxT("/Rig/HalfDuplex"),              wxGetApp().m_boolHalfDuplex);
     pConfig->Write(wxT("/Rig/MultipleRx"), wxGetApp().m_boolMultipleRx);
     pConfig->Write(wxT("/Rig/SingleRxThread"), wxGetApp().m_boolSingleRxThread);
-    pConfig->Write(wxT("/Rig/leftChannelVoxTone"),      wxGetApp().m_leftChannelVoxTone);
 
     pConfig->Write(wxT("/Audio/snrSlow"), wxGetApp().m_snrSlow);
 
@@ -2629,7 +2627,7 @@ void MainFrame::startRxStream()
 
         // optional tone in left channel to reliably trigger vox
 
-        g_rxUserdata->leftChannelVoxTone = wxGetApp().m_leftChannelVoxTone;
+        g_rxUserdata->leftChannelVoxTone = wxGetApp().appConfiguration.rigControlConfiguration.leftChannelVoxTone;
         g_rxUserdata->voxTonePhase = 0;
 
         // Set sound card callbacks

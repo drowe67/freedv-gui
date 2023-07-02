@@ -433,7 +433,7 @@ void ComPortsDlg::ExchangeData(int inout)
     wxString str;
     
     if(inout == EXCHANGE_DATA_IN) {
-        m_ckLeftChannelVoxTone->SetValue(wxGetApp().m_leftChannelVoxTone);
+        m_ckLeftChannelVoxTone->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.leftChannelVoxTone);
 
         /* Hamlib */
 
@@ -471,8 +471,7 @@ void ComPortsDlg::ExchangeData(int inout)
     }
 
     if (inout == EXCHANGE_DATA_OUT) {
-        wxGetApp().m_leftChannelVoxTone = m_ckLeftChannelVoxTone->GetValue();
-        pConfig->Write(wxT("/Rig/leftChannelVoxTone"), wxGetApp().m_leftChannelVoxTone);
+        wxGetApp().appConfiguration.rigControlConfiguration.leftChannelVoxTone = m_ckLeftChannelVoxTone->GetValue();
 
         /* Hamlib settings. */
 

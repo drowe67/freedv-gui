@@ -201,9 +201,6 @@ class MainApp : public wxApp
         bool                m_snrSlow;
         unsigned int        m_statsResetTimeSec;
 
-        // optional vox trigger tone
-        bool                m_leftChannelVoxTone;
-
         wxRect              m_rTopWindow;
 
         // General reporting configuration

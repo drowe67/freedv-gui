@@ -51,6 +51,8 @@ public:
     ConfigurationDataElement<wxString> serialPTTInputPort;
     ConfigurationDataElement<bool> serialPTTInputPolarityCTS;
     
+    ConfigurationDataElement<bool> leftChannelVoxTone;
+    
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };
