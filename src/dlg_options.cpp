@@ -667,7 +667,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxAttnCarrierEn->SetValue(wxGetApp().m_attn_carrier_en);
         m_txtAttnCarrier->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_attn_carrier));
 
-        m_txtCtrlFifoSize->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_fifoSize_ms));
+        m_txtCtrlFifoSize->SetValue(wxString::Format(wxT("%i"),wxGetApp().appConfiguration.fifoSizeMs.get()));
 
         m_ckboxTxRxThreadPriority->SetValue(wxGetApp().m_txRxThreadHighPriority);
         m_ckboxTxRxDumpTiming->SetValue(g_dump_timing);
@@ -803,7 +803,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         long FifoSize_ms;
         m_txtCtrlFifoSize->GetValue().ToLong(&FifoSize_ms);
-        wxGetApp().m_fifoSize_ms = (int)FifoSize_ms;
+        wxGetApp().appConfiguration.fifoSizeMs = (int)FifoSize_ms;
 
         wxGetApp().m_txRxThreadHighPriority = m_ckboxTxRxThreadPriority->GetValue();
         g_dump_timing = m_ckboxTxRxDumpTiming->GetValue();

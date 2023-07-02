@@ -388,10 +388,8 @@ void MainFrame::loadConfiguration_()
     if (h < size.GetHeight()) h = size.GetHeight();
     SetClientSize(w, h);
     SetSizeHints(size);
-
-    wxGetApp().m_fifoSize_ms = pConfig->Read(wxT("/Audio/fifoSize_ms"), (int)FIFO_SIZE);
         
-    g_txLevel = pConfig->Read(wxT("/Audio/transmitLevel"), (int)0);
+    g_txLevel = wxGetApp().appConfiguration.transmitLevel;
     char fmt[15];
     m_sliderTxLevel->SetValue(g_txLevel);
     snprintf(fmt, 15, "%0.1f dB", (double)g_txLevel / 10.0);
@@ -911,9 +909,7 @@ MainFrame::~MainFrame()
     wxGetApp().appConfiguration.squelchActive = g_SquelchActive;
     wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
 
-    pConfig->Write(wxT("/Audio/fifoSize_ms"),              wxGetApp().m_fifoSize_ms);
-
-    pConfig->Write(wxT("/Audio/transmitLevel"), g_txLevel);
+    wxGetApp().appConfiguration.transmitLevel = g_txLevel;
     
     pConfig->Write(wxT("/VoiceKeyer/WaveFilePath"), wxGetApp().m_txtVoiceKeyerWaveFilePath);
     pConfig->Write(wxT("/VoiceKeyer/WaveFile"), wxGetApp().m_txtVoiceKeyerWaveFile);
@@ -1945,7 +1941,7 @@ void MainFrame::performFreeDVOn_()
         g_sfTxFs = FS;
     
         wxGetApp().m_prevMode = g_mode;
-        freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread, wxGetApp().m_reportingEnabled);
+        freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread, wxGetApp().m_reportingEnabled);
 
         // Codec 2 VQ Equaliser
         freedvInterface.setEq(wxGetApp().m_700C_EQ);
@@ -2651,7 +2647,7 @@ void MainFrame::startRxStream()
         // transmit processng are all performed in the tx/rxProcessing
         // loop.
 
-        int m_fifoSize_ms = wxGetApp().m_fifoSize_ms;
+        int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
         int soundCard1InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.soundCard1InSampleRate/1000;
         int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.soundCard1OutSampleRate/1000;
         g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
@@ -2665,11 +2661,11 @@ void MainFrame::startRxStream()
             g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
         
             if (g_verbose) fprintf(stderr, "fifoSize_ms:  %d infifo2: %d/outfilo2: %d\n",
-                wxGetApp().m_fifoSize_ms, soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
+                wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
         }
 
         if (g_verbose) fprintf(stderr, "fifoSize_ms: %d infifo1: %d/outfilo1 %d\n",
-                wxGetApp().m_fifoSize_ms, soundCard1InFifoSizeSamples, soundCard1OutFifoSizeSamples);
+                wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard1InFifoSizeSamples, soundCard1OutFifoSizeSamples);
 
         // reset debug stats for FIFOs
 

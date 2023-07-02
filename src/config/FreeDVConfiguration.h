@@ -53,6 +53,9 @@ public:
     ConfigurationDataElement<wxString> soundCard2OutDeviceName;
     ConfigurationDataElement<int> soundCard2OutSampleRate;
     
+    ConfigurationDataElement<int> fifoSizeMs;
+    ConfigurationDataElement<int> transmitLevel;
+    
     void load(wxConfigBase* config);
     void save(wxConfigBase* config);
     

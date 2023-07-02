@@ -366,7 +366,7 @@ void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
     
-    pConfig->Write(wxT("/Audio/transmitLevel"), g_txLevel);
+    wxGetApp().appConfiguration.transmitLevel = g_txLevel;
 }
 
 //-------------------------------------------------------------------------

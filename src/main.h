@@ -266,8 +266,6 @@ class MainApp : public wxApp
 
         wxRect              m_rTopWindow;
 
-        int                 m_fifoSize_ms;
-
         // General reporting configuration
         bool                m_reportingEnabled;
         wxString            m_reportingCallsign;

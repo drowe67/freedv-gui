@@ -49,6 +49,10 @@ FreeDVConfiguration::FreeDVConfiguration()
     , soundCard2InSampleRate("/Audio/soundCard2InSampleRate", -1)
     , soundCard2OutDeviceName("/Audio/soundCard2OutDeviceName", "none")
     , soundCard2OutSampleRate("/Audio/soundCard2OutSampleRate", -1)
+        
+    /* Misc. audio settings */
+    , fifoSizeMs("/Audio/fifoSize_ms", (int)FIFO_SIZE)
+    , transmitLevel("/Audio/transmitLevel", 0)
 {
     // empty
 }
@@ -84,6 +88,9 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, soundCard2InSampleRate);
     load_(config, soundCard2OutDeviceName);
     load_(config, soundCard2OutSampleRate);
+    
+    load_(config, fifoSizeMs);
+    load_(config, transmitLevel);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -109,6 +116,9 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, soundCard2InSampleRate);
     save_(config, soundCard2OutDeviceName);
     save_(config, soundCard2OutSampleRate);
+    
+    save_(config, fifoSizeMs);
+    save_(config, transmitLevel);
     
     config->Flush();
 }
