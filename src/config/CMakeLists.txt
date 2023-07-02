@@ -1,5 +1,6 @@
 add_library(fdv_config STATIC
     FreeDVConfiguration.cpp
+    WxWidgetsConfigStore.cpp
 )
 
 target_include_directories(fdv_config PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)

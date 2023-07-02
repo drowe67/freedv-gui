@@ -22,14 +22,6 @@
 #include "../defines.h"
 #include "FreeDVConfiguration.h"
 
-template<>
-void FreeDVConfiguration::load_<unsigned int>(wxConfigBase* config, ConfigurationDataElement<unsigned int>& configElement)
-{
-    long val;
-    config->Read(configElement.getElementName(), &val, (long)configElement.getDefaultVal());
-    configElement = (unsigned int)val;
-}
-
 FreeDVConfiguration::FreeDVConfiguration()
     /* First time configuration options */
     : firstTimeUse("/FirstTimeUse", true)

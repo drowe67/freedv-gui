@@ -22,10 +22,10 @@
 #ifndef FREEDV_CONFIGURATION_H
 #define FREEDV_CONFIGURATION_H
 
-#include <wx/config.h>
+#include "WxWidgetsConfigStore.h"
 #include "ConfigurationDataElement.h"
 
-class FreeDVConfiguration
+class FreeDVConfiguration : public WxWidgetsConfigStore
 {
 public:
     FreeDVConfiguration();
@@ -63,29 +63,8 @@ public:
     ConfigurationDataElement<unsigned int> recFileFromModulatorSecs;
     ConfigurationDataElement<wxString> playFileFromRadioPath;
     
-    void load(wxConfigBase* config);
-    void save(wxConfigBase* config);
-    
-private:
-    template<typename UnderlyingDataType>
-    void load_(wxConfigBase* config, ConfigurationDataElement<UnderlyingDataType>& configElement);
-    
-    template<typename UnderlyingDataType>
-    void save_(wxConfigBase* config, ConfigurationDataElement<UnderlyingDataType>& configElement);
+    virtual void load(wxConfigBase* config) override;
+    virtual void save(wxConfigBase* config) override;
 };
-
-template<typename UnderlyingDataType>
-void FreeDVConfiguration::load_(wxConfigBase* config, ConfigurationDataElement<UnderlyingDataType>& configElement)
-{
-    UnderlyingDataType val;
-    config->Read(configElement.getElementName(), &val, configElement.getDefaultVal());
-    configElement = val;
-}
-
-template<typename UnderlyingDataType>
-void FreeDVConfiguration::save_(wxConfigBase* config, ConfigurationDataElement<UnderlyingDataType>& configElement)
-{
-    config->Write(configElement.getElementName(), (UnderlyingDataType)configElement);
-}
 
 #endif // FREEDV_CONFIGURATION_H
