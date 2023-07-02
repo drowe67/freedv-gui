@@ -436,7 +436,6 @@ void MainFrame::loadConfiguration_()
     bool f = false;
 
     wxGetApp().m_callSign = pConfig->Read("/Data/CallSign", wxT(""));
-    wxGetApp().m_textEncoding = pConfig->Read("/Data/TextEncoding", 1);
 
     wxGetApp().m_FreeDV700txClip = (float)pConfig->Read(wxT("/FreeDV700/txClip"), t);
     wxGetApp().m_FreeDV700txBPF = (float)pConfig->Read(wxT("/FreeDV700/txBPF"), t);
@@ -867,7 +866,6 @@ MainFrame::~MainFrame()
     pConfig->Write(wxT("/Audio/snrSlow"), wxGetApp().m_snrSlow);
 
     pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
-    pConfig->Write(wxT("/Data/TextEncoding"), wxGetApp().m_textEncoding);
 
     pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
     pConfig->Write(wxT("/Noise/noise_snr"), wxGetApp().m_noise_snr);
@@ -1912,7 +1910,7 @@ void MainFrame::performFreeDVOn_()
     
         // Init text msg decoding
         if (!wxGetApp().m_reportingEnabled)
-            freedvInterface.setTextVaricodeNum(wxGetApp().m_textEncoding);
+            freedvInterface.setTextVaricodeNum(1);
 
         // scatter plot (PSK) or Eye (FSK) mode
         if ((g_mode == FREEDV_MODE_800XA) || (g_mode == FREEDV_MODE_2400A) || (g_mode == FREEDV_MODE_2400B)) {
@@ -1936,9 +1934,6 @@ void MainFrame::performFreeDVOn_()
         m_textLevel->SetLabel(wxT(""));
         m_gaugeLevel->SetValue(0);
     });
-    
-    //printf("m_textEncoding = %d\n", wxGetApp().m_textEncoding);
-    //printf("g_stats.snr: %f\n", g_stats.snr_est);
 
     // attempt to start sound cards and tx/rx processing
     if (VerifyMicrophonePermissions())

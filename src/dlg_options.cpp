@@ -853,10 +853,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         
         if (storePersistent) {
             pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
-#ifdef SHORT_VARICODE
-            pConfig->Write(wxT("/Data/TextEncoding"), wxGetApp().m_textEncoding);
-#endif
-
+            
             pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
             pConfig->Write(wxT("/FreeDV700/txBPF"), wxGetApp().m_FreeDV700txBPF);
 

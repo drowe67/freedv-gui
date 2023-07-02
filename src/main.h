@@ -198,7 +198,6 @@ class MainApp : public wxApp
         // Options dialog
 
         wxString            m_callSign;
-        unsigned int        m_textEncoding;
         bool                m_snrSlow;
         unsigned int        m_statsResetTimeSec;
 
