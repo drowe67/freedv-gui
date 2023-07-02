@@ -79,7 +79,7 @@ void MainFrame::OnToolsFreeDVReporter(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsFreeDVReporterUI(wxUpdateUIEvent& event)
 {
-    event.Enable(wxGetApp().m_freedvReporterHostname.ToStdString() != "");
+    event.Enable(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString() != "");
 }
 
 //-------------------------------------------------------------------------
@@ -138,10 +138,10 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     optionsDlg->ShowModal();
     
     // Show/hide frequency box based on PSK Reporter status.
-    m_freqBox->Show(wxGetApp().m_reportingEnabled);
+    m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
     // Show/hide callsign combo box based on PSK Reporter Status
-    if (wxGetApp().m_reportingEnabled)
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
     {
         m_cboLastReportedCallsigns->Show();
         m_txtCtrlCallSign->Hide();
@@ -257,7 +257,7 @@ bool MainFrame::OpenHamlibRig() {
             wxGetApp().m_hamlib->readOnly(!wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
             if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
-                wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes ? true : g_analog);
+                wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes ? true : g_analog);
             }
             wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, m_cboReportFrequency, g_mode == FREEDV_MODE_2400B);
         }
@@ -568,7 +568,7 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     }
     
     if (wxGetApp().m_hamlib != nullptr && 
-        wxGetApp().m_reportingFrequency > 0 &&
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 &&
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
     {
         // Request mode change on the radio side
@@ -644,8 +644,8 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     wxString freqStr = m_cboReportFrequency->GetValue();
     if (freqStr.Length() > 0)
     {
-        wxGetApp().m_reportingFrequency = atof(freqStr.ToUTF8()) * 1000 * 1000;
-        if (wxGetApp().m_reportingFrequency > 0)
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = atof(freqStr.ToUTF8()) * 1000 * 1000;
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
         {
             m_cboReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
         }
@@ -656,23 +656,23 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     }
     else
     {
-        wxGetApp().m_reportingFrequency = 0;
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = 0;
         m_cboReportFrequency->SetForegroundColour(wxColor(*wxRED));
     }
     
     // Report current frequency to reporters
     for (auto& ptr : wxGetApp().m_reporters)
     {
-        ptr->freqChange(wxGetApp().m_reportingFrequency);
+        ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
     }
     
     if (wxGetApp().m_hamlib != nullptr && 
-        wxGetApp().m_reportingFrequency > 0 && 
-        wxGetApp().m_reportingFrequency != wxGetApp().m_hamlib->get_frequency() &&
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 && 
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency != wxGetApp().m_hamlib->get_frequency() &&
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
     {
         // Request frequency/mode change on the radio side
-        wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes ? true : g_analog);
+        wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes ? true : g_analog);
     }
     
     if (m_reporterDialog != nullptr)

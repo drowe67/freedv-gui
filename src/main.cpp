@@ -434,8 +434,6 @@ void MainFrame::loadConfiguration_()
     bool t = true;     // prevents compile error when using default bool
     bool f = false;
 
-    wxGetApp().m_callSign = pConfig->Read("/Data/CallSign", wxT(""));
-
     wxGetApp().m_FreeDV700txClip = (float)pConfig->Read(wxT("/FreeDV700/txClip"), t);
     wxGetApp().m_FreeDV700txBPF = (float)pConfig->Read(wxT("/FreeDV700/txBPF"), t);
     wxGetApp().m_FreeDV700Combine = 1;
@@ -452,30 +450,10 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_tone = 0;
     wxGetApp().m_tone_freq_hz = 1000;
     wxGetApp().m_tone_amplitude = 500;
-
-    // Save old parameters so that they can be copied over to the new locations.
-    auto oldPskEnable = pConfig->ReadBool(wxT("/PSKReporter/Enable"), false); 
-    auto oldPskCallsign = pConfig->Read(wxT("/PSKReporter/Callsign"), wxT(""));
-    auto oldGridSquare = pConfig->Read(wxT("/PSKReporter/GridSquare"), wxT(""));
-    auto oldFreqStr = pConfig->Read(wxT("/PSKReporter/FrequencyHzStr"), wxT("0"));
     
     // General reporting parameters
-    wxGetApp().m_reportingEnabled = pConfig->ReadBool(wxT("/Reporting/Enable"), oldPskEnable);
-    wxGetApp().m_reportingCallsign = pConfig->Read(wxT("/Reporting/Callsign"), oldPskCallsign);
-    wxGetApp().m_reportingGridSquare = pConfig->Read(wxT("/Reporting/GridSquare"), oldGridSquare);
-    wxString freqStr = pConfig->Read(wxT("/Reporting/Frequency"), oldFreqStr);
-    wxGetApp().m_reportingFrequency = atoll(freqStr.ToUTF8());
-    m_cboReportFrequency->SetValue(wxString::Format("%.4f", ((double)wxGetApp().m_reportingFrequency)/1000.0/1000.0));
-    
-    // PSK Reporter parameters
-    wxGetApp().m_pskReporterEnabled = pConfig->ReadBool(wxT("/Reporting/PSKReporter/Enable"), oldPskEnable);
-    
-    // FreeDV Reporter parameters
-    wxGetApp().m_freedvReporterEnabled = pConfig->ReadBool(wxT("/Reporting/FreeDV/Enable"), true);
-    wxGetApp().m_freedvReporterHostname = pConfig->Read(wxT("/Reporting/FreeDV/Hostname"), wxT(FREEDV_REPORTER_DEFAULT_HOSTNAME));
-    
-    wxGetApp().m_useUTCTime = pConfig->ReadBool(wxT("/CallsignList/UseUTCTime"), false);
-    
+    m_cboReportFrequency->SetValue(wxString::Format("%.4f", ((double)wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency)/1000.0/1000.0));
+        
     // Waterfall configuration
     wxGetApp().m_waterfallColor = (int)pConfig->Read(wxT("/Waterfall/Color"), (int)0); // 0-2
     
@@ -550,10 +528,10 @@ setDefaultMode:
     setsnrBeta(wxGetApp().m_snrSlow);
     
     // Show/hide frequency box based on reporting enablement
-    m_freqBox->Show(wxGetApp().m_reportingEnabled);
+    m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
     // Show/hide callsign combo box based on reporting enablement
-    if (wxGetApp().m_reportingEnabled)
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
     {
         m_cboLastReportedCallsigns->Show();
         m_txtCtrlCallSign->Hide();
@@ -863,29 +841,10 @@ MainFrame::~MainFrame()
 
     pConfig->Write(wxT("/Audio/snrSlow"), wxGetApp().m_snrSlow);
 
-    pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
-
     pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
     pConfig->Write(wxT("/Noise/noise_snr"), wxGetApp().m_noise_snr);
 
     pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
-
-    // General reporting parameters
-    pConfig->Write(wxT("/Reporting/Enable"), wxGetApp().m_reportingEnabled);
-    pConfig->Write(wxT("/Reporting/Callsign"), wxGetApp().m_reportingCallsign);
-    pConfig->Write(wxT("/Reporting/GridSquare"), wxGetApp().m_reportingGridSquare);
-    
-    wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), wxGetApp().m_reportingFrequency);
-    pConfig->Write(wxT("/Reporting/Frequency"), tempFreqStr);
-        
-    // PSK Reporter parameters
-    pConfig->Write(wxT("/Reporting/PSKReporter/Enable"), wxGetApp().m_pskReporterEnabled);
-    
-    // FreDV Reporter options
-    pConfig->Write(wxT("/Reporting/FreeDV/Enable"), wxGetApp().m_freedvReporterEnabled);
-    pConfig->Write(wxT("/Reporting/FreeDV/Hostname"), wxGetApp().m_freedvReporterHostname);
-    
-    pConfig->Write(wxT("/CallsignList/UseUTCTime"), wxGetApp().m_useUTCTime);
     
     // Waterfall configuration
     pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
@@ -1294,9 +1253,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         char callsign[MAX_CALLSIGN];
         memset(callsign, 0, MAX_CALLSIGN);
     
-        if (!wxGetApp().m_reportingEnabled)
+        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
         {
-            strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
+            strncpy(callsign, (const char*) wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString->mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
             if (strlen(callsign) < MAX_CALLSIGN - 1)
             {
                 strncat(callsign, "\r", 2);
@@ -1345,7 +1304,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
         // c) We don't currently have a pending report to add to the outbound list for the active callsign.
         // When the above is true, capture the callsign and current SNR and add to the PSK Reporter object's outbound list.
-        if (wxGetApp().m_reporters.size() > 0 && wxGetApp().m_reportingEnabled)
+        if (wxGetApp().m_reporters.size() > 0 && wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
         {
             const char* text = freedvInterface.getReliableText();
             assert(text != nullptr);
@@ -1368,7 +1327,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         auto currentTime = wxDateTime::Now();
                         wxString currentTimeAsString = "";
                         
-                        if (wxGetApp().m_useUTCTime)
+                        if (wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting)
                         {
                             currentTime = currentTime.ToUTC();
                         }
@@ -1391,7 +1350,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         wxGetApp().m_hamlib->update_frequency_and_mode();
                     }
             
-                    int64_t freq = wxGetApp().m_reportingFrequency;
+                    int64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
 
                     // Only report if there's a valid reporting frequency and if we're not playing 
                     // a recording through ourselves (to avoid false reports).
@@ -1859,7 +1818,7 @@ void MainFrame::performFreeDVOn_()
         g_sfTxFs = FS;
     
         wxGetApp().m_prevMode = g_mode;
-        freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread, wxGetApp().m_reportingEnabled);
+        freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
         // Codec 2 VQ Equaliser
         freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
@@ -1868,7 +1827,7 @@ void MainFrame::performFreeDVOn_()
         freedvInterface.setVerbose(g_freedv_verbose);
 
         // Text field/callsign callbacks.
-        if (!wxGetApp().m_reportingEnabled)
+        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
         {
             freedvInterface.setTextCallbackFn(&my_put_next_rx_char, &my_get_next_tx_char);
         }
@@ -1876,7 +1835,7 @@ void MainFrame::performFreeDVOn_()
         {
             char temp[9];
             memset(temp, 0, 9);
-            strncpy(temp, wxGetApp().m_reportingCallsign.ToUTF8(), 8); // One less than the size of temp to ensure we don't overwrite the null.
+            strncpy(temp, wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(), 8); // One less than the size of temp to ensure we don't overwrite the null.
             fprintf(stderr, "Setting callsign to %s\n", temp);
             freedvInterface.setReliableText(temp);
         }
@@ -1907,7 +1866,7 @@ void MainFrame::performFreeDVOn_()
         m_panelWaterfall->setFs(freedvInterface.getTxModemSampleRate());
     
         // Init text msg decoding
-        if (!wxGetApp().m_reportingEnabled)
+        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
             freedvInterface.setTextVaricodeNum(1);
 
         // scatter plot (PSK) or Eye (FSK) mode
@@ -1963,9 +1922,9 @@ void MainFrame::performFreeDVOn_()
             }
                 
             // Initialize PSK Reporter reporting.
-            if (wxGetApp().m_reportingEnabled)
+            if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
             {        
-                if (wxGetApp().m_reportingCallsign.ToStdString() == "" || wxGetApp().m_reportingGridSquare.ToStdString() == "")
+                if (wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString() == "" || wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString() == "")
                 {
                     executeOnUiThreadAndWait_([&]() 
                     {
@@ -1974,24 +1933,24 @@ void MainFrame::performFreeDVOn_()
                 }
                 else
                 {
-                    if (wxGetApp().m_pskReporterEnabled)
+                    if (wxGetApp().appConfiguration.reportingConfiguration.pskReporterEnabled)
                     {
                         auto pskReporter = 
                             new PskReporter(
-                                wxGetApp().m_reportingCallsign.ToStdString(), 
-                                wxGetApp().m_reportingGridSquare.ToStdString(),
+                                wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
+                                wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
                                 std::string("FreeDV ") + FREEDV_VERSION);
                         assert(pskReporter != nullptr);
                         wxGetApp().m_reporters.push_back(pskReporter);
                     }
                     
-                    if (wxGetApp().m_freedvReporterEnabled && wxGetApp().m_freedvReporterHostname.ToStdString() != "")
+                    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString() != "")
                     {
                         auto freedvReporter =
                             new FreeDVReporter(
-                                wxGetApp().m_freedvReporterHostname.ToStdString(),
-                                wxGetApp().m_reportingCallsign.ToStdString(), 
-                                wxGetApp().m_reportingGridSquare.ToStdString(),
+                                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString(),
+                                wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
+                                wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
                                 std::string("FreeDV ") + FREEDV_VERSION,
                                 g_nSoundCards <= 1 ? true : false);
                         assert(freedvReporter);
@@ -2032,7 +1991,7 @@ void MainFrame::performFreeDVOn_()
                         
                         freedvReporter->connect();
                     }
-                    else if (wxGetApp().m_freedvReporterEnabled)
+                    else if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
                     {
                         executeOnUiThreadAndWait_([&]() 
                         {
@@ -2050,7 +2009,7 @@ void MainFrame::performFreeDVOn_()
                     for (auto& obj : wxGetApp().m_reporters)
                     {
                         obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
-                        obj->freqChange(wxGetApp().m_reportingFrequency);
+                        obj->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
                     }
                 }
             }

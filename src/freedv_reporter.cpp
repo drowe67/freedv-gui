@@ -152,7 +152,7 @@ void FreeDVReporterDialog::OnSendQSY(wxCommandEvent& event)
         std::string* sidPtr = (std::string*)m_listSpots->GetItemData(selectedIndex);
         std::string sid = *sidPtr;
     
-        reporter_->requestQSY(sid, wxGetApp().m_reportingFrequency, ""); // Custom message TBD.
+        reporter_->requestQSY(sid, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, ""); // Custom message TBD.
     
         wxString fullMessage = wxString::Format(_("QSY request sent to %s"), selectedCallsign);
         wxMessageBox(fullMessage, wxT("FreeDV Reporter"), wxOK | wxICON_INFORMATION, this);
@@ -161,7 +161,7 @@ void FreeDVReporterDialog::OnSendQSY(wxCommandEvent& event)
 
 void FreeDVReporterDialog::OnOpenWebsite(wxCommandEvent& event)
 {
-    std::string url = "https://" + wxGetApp().m_freedvReporterHostname.ToStdString() + "/";
+    std::string url = "https://" + wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString() + "/";
     wxLaunchDefaultBrowser(url);
 }
 
@@ -188,7 +188,7 @@ void FreeDVReporterDialog::refreshQSYButtonState()
     {
         auto selectedCallsign = m_listSpots->GetItemText(selectedIndex);
     
-        if (selectedCallsign != wxGetApp().m_reportingCallsign && wxGetApp().m_reportingFrequency > 0)
+        if (selectedCallsign != wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign && wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
         {
             enabled = true;
         }
@@ -414,7 +414,7 @@ wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr)
     if (tmpDate.ParseISOCombined(tmp))
     {
         tmpDate.MakeFromTimezone(timeZone);
-        if (wxGetApp().m_useUTCTime)
+        if (wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting)
         {
             timeZone = wxDateTime::TimeZone(wxDateTime::TZ::UTC);
         }

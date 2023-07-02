@@ -27,6 +27,7 @@
 #include "AudioConfiguration.h"
 #include "FilterConfiguration.h"
 #include "RigControlConfiguration.h"
+#include "ReportingConfiguration.h"
 
 class FreeDVConfiguration : public WxWidgetsConfigStore
 {
@@ -37,6 +38,7 @@ public:
     AudioConfiguration audioConfiguration;
     FilterConfiguration filterConfiguration;
     RigControlConfiguration rigControlConfiguration;
+    ReportingConfiguration reportingConfiguration;
     
     ConfigurationDataElement<bool> firstTimeUse;
     ConfigurationDataElement<bool> freedv2020Allowed;

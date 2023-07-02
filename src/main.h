@@ -196,28 +196,10 @@ class MainApp : public wxApp
         Serialport         *m_pttInSerialPort;
 
         // Options dialog
-
-        wxString            m_callSign;
         bool                m_snrSlow;
         unsigned int        m_statsResetTimeSec;
 
         wxRect              m_rTopWindow;
-
-        // General reporting configuration
-        bool                m_reportingEnabled;
-        wxString            m_reportingCallsign;
-        wxString            m_reportingGridSquare;
-        uint64_t            m_reportingFrequency;
-        
-        // PSK Reporter configuration
-        bool                m_pskReporterEnabled;
-        
-        // FreeDV Reporter configuration
-        bool                m_freedvReporterEnabled;
-        wxString            m_freedvReporterHostname;
-        
-        // Callsign list configuration
-        bool                m_useUTCTime;
 
         std::vector<IReporter*> m_reporters;
         

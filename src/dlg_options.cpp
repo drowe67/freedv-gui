@@ -636,7 +636,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 {
     if(inout == EXCHANGE_DATA_IN)
     {
-        m_txtCtrlCallSign->SetValue(wxGetApp().m_callSign);
+        m_txtCtrlCallSign->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString);
 
         m_ckboxEnableSpacebarForPTT->SetValue(wxGetApp().m_boolEnableSpacebarForPTT);
         m_ckboxUseAnalogModes->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes);
@@ -684,19 +684,19 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 #endif
         
         // General reporting config
-        m_ckboxReportingEnable->SetValue(wxGetApp().m_reportingEnabled);
-        m_txt_callsign->SetValue(wxGetApp().m_reportingCallsign);
-        m_txt_grid_square->SetValue(wxGetApp().m_reportingGridSquare);
+        m_ckboxReportingEnable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+        m_txt_callsign->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign);
+        m_txt_grid_square->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare);
 
         // PSK Reporter options
-        m_ckboxPskReporterEnable->SetValue(wxGetApp().m_pskReporterEnabled);
+        m_ckboxPskReporterEnable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.pskReporterEnabled);
         
         // FreeDV Reporter options
-        m_ckboxFreeDVReporterEnable->SetValue(wxGetApp().m_freedvReporterEnabled);
-        m_freedvReporterHostname->SetValue(wxGetApp().m_freedvReporterHostname);
+        m_ckboxFreeDVReporterEnable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled);
+        m_freedvReporterHostname->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname);
                 
         // Callsign list config
-        m_ckbox_use_utc_time->SetValue(wxGetApp().m_useUTCTime);
+        m_ckbox_use_utc_time->SetValue(wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting);
         
         // Stats reset time
         m_statsResetTime->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_statsResetTimeSec));
@@ -753,7 +753,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges = m_ckboxEnableFreqModeChanges->GetValue();
         
-        wxGetApp().m_callSign = m_txtCtrlCallSign->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString = m_txtCtrlCallSign->GetValue();
 
         wxGetApp().m_boolHalfDuplex = m_ckHalfDuplex->GetValue();
         pConfig->Write(wxT("/Rig/HalfDuplex"), wxGetApp().m_boolHalfDuplex);
@@ -818,19 +818,19 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 #endif
 
         // General reporting config
-        wxGetApp().m_reportingEnabled = m_ckboxReportingEnable->GetValue();
-        wxGetApp().m_reportingCallsign = m_txt_callsign->GetValue();
-        wxGetApp().m_reportingGridSquare = m_txt_grid_square->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled = m_ckboxReportingEnable->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign = m_txt_callsign->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare = m_txt_grid_square->GetValue();
 
         // PSK Reporter options
-        wxGetApp().m_pskReporterEnabled = m_ckboxPskReporterEnable->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.pskReporterEnabled = m_ckboxPskReporterEnable->GetValue();
         
         // FreeDV Reporter options
-        wxGetApp().m_freedvReporterEnabled = m_ckboxFreeDVReporterEnable->GetValue();
-        wxGetApp().m_freedvReporterHostname = m_freedvReporterHostname->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled = m_ckboxFreeDVReporterEnable->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname = m_freedvReporterHostname->GetValue();
                 
         // Callsign list config
-        wxGetApp().m_useUTCTime = m_ckbox_use_utc_time->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting = m_ckbox_use_utc_time->GetValue();
         
         // Waterfall color
         if (m_waterfallColorScheme1->GetValue())
@@ -852,8 +852,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_statsResetTimeSec = resetTime;
         
         if (storePersistent) {
-            pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
-            
             pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
             pConfig->Write(wxT("/FreeDV700/txBPF"), wxGetApp().m_FreeDV700txBPF);
 
@@ -864,20 +862,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 #endif
             pConfig->Write(wxT("/Debug/verbose"), g_verbose);
             pConfig->Write(wxT("/Debug/APIverbose"), g_freedv_verbose);
-
-            // General reporting parameters
-            pConfig->Write(wxT("/Reporting/Enable"), wxGetApp().m_reportingEnabled);
-            pConfig->Write(wxT("/Reporting/Callsign"), wxGetApp().m_reportingCallsign);
-            pConfig->Write(wxT("/Reporting/GridSquare"), wxGetApp().m_reportingGridSquare);
-        
-            // PSK Reporter parameters
-            pConfig->Write(wxT("/Reporting/PSKReporter/Enable"), wxGetApp().m_pskReporterEnabled);
-    
-            // FreDV Reporter options
-            pConfig->Write(wxT("/Reporting/FreeDV/Enable"), wxGetApp().m_freedvReporterEnabled);
-            pConfig->Write(wxT("/Reporting/FreeDV/Hostname"), wxGetApp().m_freedvReporterHostname);
-            
-            pConfig->Write(wxT("/CallsignList/UseUTCTime"), wxGetApp().m_useUTCTime);
             
             pConfig->Write(wxT("/Stats/ResetTime"), wxGetApp().m_statsResetTimeSec);
             

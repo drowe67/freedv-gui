@@ -60,6 +60,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     audioConfiguration.load(config);
     filterConfiguration.load(config);
     rigControlConfiguration.load(config);
+    reportingConfiguration.load(config);
     
     load_(config, firstTimeUse);
     load_(config, freedv2020Allowed);
@@ -90,6 +91,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     audioConfiguration.save(config);
     filterConfiguration.save(config);
     rigControlConfiguration.save(config);
+    reportingConfiguration.save(config);
     
     save_(config, firstTimeUse);
     save_(config, freedv2020Allowed);

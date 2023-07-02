@@ -589,44 +589,32 @@ void EasySetupDialog::ExchangeReportingData(int inout)
 {
     if (inout == EXCHANGE_DATA_IN)
     {
-        m_ckbox_psk_enable->SetValue(wxGetApp().m_reportingEnabled);
-        m_txt_callsign->SetValue(wxGetApp().m_reportingCallsign);
-        m_txt_grid_square->SetValue(wxGetApp().m_reportingGridSquare);
+        m_ckbox_psk_enable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+        m_txt_callsign->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign);
+        m_txt_grid_square->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare);
     }
     else if (inout == EXCHANGE_DATA_OUT)
     {
-        if (wxGetApp().m_reportingEnabled != m_ckbox_psk_enable->GetValue())
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled != m_ckbox_psk_enable->GetValue())
         {
-            wxGetApp().m_reportingEnabled = m_ckbox_psk_enable->GetValue();
-            if (wxGetApp().m_reportingEnabled)
+            wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled = m_ckbox_psk_enable->GetValue();
+            if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
             {
                 // Enable both PSK Reporter and FreeDV Reporter by default.
-                wxGetApp().m_pskReporterEnabled = wxGetApp().m_reportingEnabled;
-                wxGetApp().m_freedvReporterEnabled = wxGetApp().m_reportingEnabled;
+                wxGetApp().appConfiguration.reportingConfiguration.pskReporterEnabled = wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled;
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled = wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled;
                 
-                if (wxGetApp().m_freedvReporterHostname == "")
+                if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname == "")
                 {
-                    wxGetApp().m_freedvReporterHostname = FREEDV_REPORTER_DEFAULT_HOSTNAME;
+                    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname = FREEDV_REPORTER_DEFAULT_HOSTNAME;
                 }
             }
         }
         
-        wxGetApp().m_reportingCallsign = m_txt_callsign->GetValue();
-        wxGetApp().m_reportingGridSquare = m_txt_grid_square->GetValue();
-        
-        // General reporting parameters
-        pConfig->Write(wxT("/Reporting/Enable"), wxGetApp().m_reportingEnabled);
-        pConfig->Write(wxT("/Reporting/Callsign"), wxGetApp().m_reportingCallsign);
-        pConfig->Write(wxT("/Reporting/GridSquare"), wxGetApp().m_reportingGridSquare);
-            
-        // PSK Reporter parameters
-        pConfig->Write(wxT("/Reporting/PSKReporter/Enable"), wxGetApp().m_pskReporterEnabled);
-    
-        // FreDV Reporter options
-        pConfig->Write(wxT("/Reporting/FreeDV/Enable"), wxGetApp().m_freedvReporterEnabled);
-        pConfig->Write(wxT("/Reporting/FreeDV/Hostname"), wxGetApp().m_freedvReporterHostname);
-        
-        pConfig->Flush();
+        wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign = m_txt_callsign->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare = m_txt_grid_square->GetValue();
+
+        wxGetApp().appConfiguration.save(pConfig);
     }
 }
 
