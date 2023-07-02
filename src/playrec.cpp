@@ -83,7 +83,7 @@ void MainFrame::OnPlayFileToMicIn(wxCommandEvent& event)
         wxFileDialog openFileDialog(
                                     this,
                                     wxT("Play File to Mic In"),
-                                    wxGetApp().m_playFileToMicInPath,
+                                    wxGetApp().appConfiguration.playFileToMicInPath,
                                     wxEmptyString,
                                     wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
                                     wxT("All files (*.*)|*.*"),
@@ -100,8 +100,8 @@ void MainFrame::OnPlayFileToMicIn(wxCommandEvent& event)
 
         wxString fileName, extension;
         soundFile = openFileDialog.GetPath();
-        wxFileName::SplitPath(soundFile, &wxGetApp().m_playFileToMicInPath, &fileName, &extension);
-        //wxLogDebug("m_playFileToMicInPath: %s", wxGetApp().m_playFileToMicInPath);
+        wxString tmpString = wxGetApp().appConfiguration.playFileToMicInPath;
+        wxFileName::SplitPath(soundFile, &tmpString, &fileName, &extension);
         sfInfo.format = 0;
 
         if(!extension.IsEmpty())
@@ -172,7 +172,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
         wxFileDialog openFileDialog(
                                     this,
                                     wxT("Play File - From Radio"),
-                                    wxGetApp().m_playFileFromRadioPath,
+                                    wxGetApp().appConfiguration.playFileFromRadioPath,
                                     wxEmptyString,
                                     wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
                                     wxT("All files (*.*)|*.*"),
@@ -189,8 +189,8 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
 
         wxString fileName, extension;
         soundFile = openFileDialog.GetPath();
-        wxFileName::SplitPath(soundFile, &wxGetApp().m_playFileFromRadioPath, &fileName, &extension);
-        //wxLogDebug("m_playFileToFromRadioPath: %s", wxGetApp().m_playFileFromRadioPath);
+        wxString tmpString = wxGetApp().appConfiguration.playFileFromRadioPath;
+        wxFileName::SplitPath(soundFile, &tmpString, &fileName, &extension);
         sfInfo.format = 0;
 
         if(!extension.IsEmpty())
@@ -242,7 +242,7 @@ MyExtraRecFilePanel::MyExtraRecFilePanel(wxWindow *parent): wxPanel(parent)
     sizerTop->Add(staticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
     m_secondsToRecord = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
     m_secondsToRecord->SetToolTip(_("Number of seconds to record for"));
-    m_secondsToRecord->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_recFileFromRadioSecs));
+    m_secondsToRecord->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.recFileFromRadioSecs.get()));
     m_secondsToRecord->SetMinSize(wxSize(50, -1));
     sizerTop->Add(m_secondsToRecord, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
     SetSizerAndFit(sizerTop);
@@ -289,7 +289,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         wxFileDialog openFileDialog(
                                     this,
                                     wxT("Record File From Radio"),
-                                    wxGetApp().m_recFileFromRadioPath,
+                                    wxGetApp().appConfiguration.recFileFromRadioPath,
                                     wxT("Untitled.wav"),
                                     wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
                                     wxT("All files (*.*)|*.*"),
@@ -309,8 +309,9 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
 
         wxString fileName, extension;
         soundFile = openFileDialog.GetPath();
-        wxFileName::SplitPath(soundFile, &wxGetApp().m_recFileFromRadioPath, &fileName, &extension);
-        wxLogDebug("m_recFileFromRadioPath: %s", wxGetApp().m_recFileFromRadioPath);
+        wxString tmpString = wxGetApp().appConfiguration.recFileFromRadioPath;
+        wxFileName::SplitPath(soundFile, &tmpString, &fileName, &extension);
+        wxLogDebug("m_recFileFromRadioPath: %s", wxGetApp().appConfiguration.recFileFromRadioPath.get());
         wxLogDebug("soundFile: %s", soundFile);
         sfInfo.format = 0;
 
@@ -342,7 +343,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
 
         // Bug: on Win32 I can't read m_recFileFromRadioSecs, so have hard coded it
 #ifdef __WIN32__
-        long secs = wxGetApp().m_recFileFromRadioSecs;
+        long secs = wxGetApp().appConfiguration.recFileFromRadioSecs;
         g_recFromRadioSamples = sample_rate*(unsigned int)secs;
 #else
         // work out number of samples to record
@@ -353,7 +354,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
 
         long secs;
         if (secsString.ToLong(&secs)) {
-            wxGetApp().m_recFileFromRadioSecs = (unsigned int)secs;
+            wxGetApp().appConfiguration.recFileFromRadioSecs = (unsigned int)secs;
             //printf(" secondsToRecord: %d\n",  (unsigned int)secs);
             g_recFromRadioSamples = sample_rate*(unsigned int)secs;
             //printf("g_recFromRadioSamples: %d\n", g_recFromRadioSamples);
@@ -453,7 +454,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
          wxFileDialog openFileDialog(
                                     this,
                                     wxT("Record File From Modulator"),
-                                    wxGetApp().m_recFileFromModulatorPath,
+                                    wxGetApp().appConfiguration.recFileFromModulatorPath,
                                     wxT("Untitled.wav"),
                                     wxT("WAV and RAW files (*.wav;*.raw)|*.wav;*.raw|")
                                     wxT("All files (*.*)|*.*"),
@@ -473,8 +474,9 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
 
         wxString fileName, extension;
         soundFile = openFileDialog.GetPath();
-        wxFileName::SplitPath(soundFile, &wxGetApp().m_recFileFromModulatorPath, &fileName, &extension);
-        wxLogDebug("m_recFileFromModulatorPath: %s", wxGetApp().m_recFileFromModulatorPath);
+        wxString tmpString = wxGetApp().appConfiguration.recFileFromModulatorPath;
+        wxFileName::SplitPath(soundFile, &tmpString, &fileName, &extension);
+        wxLogDebug("m_recFileFromModulatorPath: %s", wxGetApp().appConfiguration.recFileFromModulatorPath.get());
         wxLogDebug("soundFile: %s", soundFile);
         sfInfo.format = 0;
 
@@ -506,7 +508,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
 
         // Bug: on Win32 I can't read m_recFileFromModemSecs, so have hard coded it
 #ifdef __WIN32__
-        long secs = wxGetApp().m_recFileFromModulatorSecs;
+        long secs = wxGetApp().appConfiguration.recFileFromModulatorSecs;
         g_recFromModulatorSamples = sample_rate * (unsigned int)secs;
 #else
         // work out number of samples to record
@@ -517,7 +519,7 @@ void MainFrame::OnRecFileFromModulator(wxCommandEvent& event)
 
         long secs;
         if (secsString.ToLong(&secs)) {
-            wxGetApp().m_recFileFromModulatorSecs = (unsigned int)secs;
+            wxGetApp().appConfiguration.recFileFromModulatorSecs = (unsigned int)secs;
             //printf(" secondsToRecord: %d\n",  (unsigned int)secs);
             g_recFromModulatorSamples = sample_rate*(unsigned int)secs;
             //printf("g_recFromRadioSamples: %d\n", g_recFromRadioSamples);

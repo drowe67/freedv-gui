@@ -214,12 +214,7 @@ class MainApp : public wxApp
         
         // Play/Rec files
 
-        wxString            m_playFileToMicInPath;
-        wxString            m_recFileFromRadioPath;
-        wxString            m_recFileFromModulatorPath;
-        unsigned int        m_recFileFromRadioSecs;
         unsigned int        m_recFileFromModulatorSecs;
-        wxString            m_playFileFromRadioPath;
 
         // Options dialog
 

@@ -22,6 +22,14 @@
 #include "../defines.h"
 #include "FreeDVConfiguration.h"
 
+template<>
+void FreeDVConfiguration::load_<unsigned int>(wxConfigBase* config, ConfigurationDataElement<unsigned int>& configElement)
+{
+    long val;
+    config->Read(configElement.getElementName(), &val, (long)configElement.getDefaultVal());
+    configElement = (unsigned int)val;
+}
+
 FreeDVConfiguration::FreeDVConfiguration()
     /* First time configuration options */
     : firstTimeUse("/FirstTimeUse", true)
@@ -53,6 +61,14 @@ FreeDVConfiguration::FreeDVConfiguration()
     /* Misc. audio settings */
     , fifoSizeMs("/Audio/fifoSize_ms", (int)FIFO_SIZE)
     , transmitLevel("/Audio/transmitLevel", 0)
+        
+    /* Recording settings */
+    , playFileToMicInPath("/File/playFileToMicInPath", _(""))
+    , recFileFromRadioPath("/File/recFileFromRadioPath", _(""))
+    , recFileFromRadioSecs("/File/recFileFromRadioSecs", 60)
+    , recFileFromModulatorPath("/File/recFileFromModulatorPath", _(""))
+    , recFileFromModulatorSecs("/File/recFileFromModulatorSecs", 60)
+    , playFileFromRadioPath("/File/playFileFromRadioPath", _(""))
 {
     // empty
 }
@@ -91,6 +107,13 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, fifoSizeMs);
     load_(config, transmitLevel);
+    
+    load_(config, playFileToMicInPath);
+    load_(config, recFileFromRadioPath);
+    load_(config, recFileFromRadioSecs);
+    load_(config, recFileFromModulatorPath);
+    load_(config, recFileFromModulatorSecs);
+    load_(config, playFileFromRadioPath);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -119,6 +142,13 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     
     save_(config, fifoSizeMs);
     save_(config, transmitLevel);
+    
+    save_(config, playFileToMicInPath);
+    save_(config, recFileFromRadioPath);
+    save_(config, recFileFromRadioSecs);
+    save_(config, recFileFromModulatorPath);
+    save_(config, recFileFromModulatorSecs);
+    save_(config, playFileFromRadioPath);
     
     config->Flush();
 }

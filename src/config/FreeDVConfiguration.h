@@ -56,6 +56,13 @@ public:
     ConfigurationDataElement<int> fifoSizeMs;
     ConfigurationDataElement<int> transmitLevel;
     
+    ConfigurationDataElement<wxString> playFileToMicInPath;
+    ConfigurationDataElement<wxString> recFileFromRadioPath;
+    ConfigurationDataElement<unsigned int> recFileFromRadioSecs;
+    ConfigurationDataElement<wxString> recFileFromModulatorPath;
+    ConfigurationDataElement<unsigned int> recFileFromModulatorSecs;
+    ConfigurationDataElement<wxString> playFileFromRadioPath;
+    
     void load(wxConfigBase* config);
     void save(wxConfigBase* config);
     

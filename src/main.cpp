@@ -395,13 +395,6 @@ void MainFrame::loadConfiguration_()
     snprintf(fmt, 15, "%0.1f dB", (double)g_txLevel / 10.0);
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
-    
-    wxGetApp().m_playFileToMicInPath = pConfig->Read("/File/playFileToMicInPath",   wxT(""));
-    wxGetApp().m_recFileFromRadioPath = pConfig->Read("/File/recFileFromRadioPath", wxT(""));
-    wxGetApp().m_recFileFromRadioSecs = pConfig->Read("/File/recFileFromRadioSecs", 60);
-    wxGetApp().m_recFileFromModulatorPath = pConfig->Read("/File/recFileFromModulatorPath", wxT(""));
-    wxGetApp().m_recFileFromModulatorSecs = pConfig->Read("/File/recFileFromModulatorSecs", 60);
-    wxGetApp().m_playFileFromRadioPath = pConfig->Read("/File/playFileFromRadioPath", wxT(""));
 
     // PTT -------------------------------------------------------------------
     wxGetApp().m_boolEnableSpacebarForPTT = pConfig->ReadBool("/Rig/EnableSpacebarForPTT", true);
@@ -931,13 +924,6 @@ MainFrame::~MainFrame()
     pConfig->Write("/Hamlib/PttType", (long)wxGetApp().m_hamlibPttType);
     pConfig->Write(wxT("/Hamlib/UseAnalogModes"), wxGetApp().m_boolHamlibUseAnalogModes);
     pConfig->Write(wxT("/Hamlib/EnableFreqModeChanges"), wxGetApp().m_boolHamlibEnableFreqModeChanges);
-
-    pConfig->Write(wxT("/File/playFileToMicInPath"),    wxGetApp().m_playFileToMicInPath);
-    pConfig->Write(wxT("/File/recFileFromRadioPath"),   wxGetApp().m_recFileFromRadioPath);
-    pConfig->Write(wxT("/File/recFileFromRadioSecs"),   wxGetApp().m_recFileFromRadioSecs);
-    pConfig->Write(wxT("/File/recFileFromModulatorPath"),   wxGetApp().m_recFileFromModulatorPath);
-    pConfig->Write(wxT("/File/recFileFromModulatorSecs"),   wxGetApp().m_recFileFromModulatorSecs);
-    pConfig->Write(wxT("/File/playFileFromRadioPath"),  wxGetApp().m_playFileFromRadioPath);
 
     pConfig->Write(wxT("/Audio/snrSlow"), wxGetApp().m_snrSlow);
 
