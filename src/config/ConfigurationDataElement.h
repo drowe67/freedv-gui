@@ -22,6 +22,8 @@
 #ifndef CONFIGURATION_DATA_ELEMENT_H
 #define CONFIGURATION_DATA_ELEMENT_H
 
+#include <functional>
+
 template<typename UnderlyingDataType>
 class ConfigurationDataElement
 {
