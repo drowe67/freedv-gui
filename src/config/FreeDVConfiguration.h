@@ -34,6 +34,11 @@ public:
     ConfigurationDataElement<bool> firstTimeUse;
     ConfigurationDataElement<bool> freedv2020Allowed;
     
+    ConfigurationDataElement<long> mainWindowLeft;
+    ConfigurationDataElement<long> mainWindowTop;
+    ConfigurationDataElement<long> mainWindowWidth;
+    ConfigurationDataElement<long> mainWindowHeight;
+    
     void load(wxConfigBase* config);
     void save(wxConfigBase* config);
     

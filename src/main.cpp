@@ -363,10 +363,10 @@ void MainFrame::loadConfiguration_()
     wxGetApp().appConfiguration.load(pConfig);
     
     // restore frame position and size
-    int x = pConfig->Read(wxT("/MainFrame/left"),       20);
-    int y = pConfig->Read(wxT("/MainFrame/top"),        20);
-    int w = pConfig->Read(wxT("/MainFrame/width"),     800);
-    int h = pConfig->Read(wxT("/MainFrame/height"),    780);
+    int x = wxGetApp().appConfiguration.mainWindowLeft;
+    int y = wxGetApp().appConfiguration.mainWindowTop;
+    int w = wxGetApp().appConfiguration.mainWindowWidth;
+    int h = wxGetApp().appConfiguration.mainWindowHeight;
 
     // sanitise frame position as a first pass at Win32 registry bug
 
@@ -917,11 +917,11 @@ MainFrame::~MainFrame()
     if (!IsIconized()) {
         GetClientSize(&w, &h);
         GetPosition(&x, &y);
-        //fprintf(stderr, "x = %d y = %d w = %d h = %d\n", x,y,w,h);
-        pConfig->Write(wxT("/MainFrame/left"),               (long) x);
-        pConfig->Write(wxT("/MainFrame/top"),                (long) y);
-        pConfig->Write(wxT("/MainFrame/width"),              (long) w);
-        pConfig->Write(wxT("/MainFrame/height"),             (long) h);
+        
+        wxGetApp().appConfiguration.mainWindowLeft = x;
+        wxGetApp().appConfiguration.mainWindowTop = y;
+        wxGetApp().appConfiguration.mainWindowWidth = w;
+        wxGetApp().appConfiguration.mainWindowHeight = h;
     }
 
     pConfig->Write(wxT("/MainFrame/rxNbookCtrl"), wxGetApp().m_rxNbookCtrl);
