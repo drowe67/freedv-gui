@@ -403,69 +403,69 @@ void FilterDlg::ExchangeData(int inout)
 
         // Mic In Equaliser
 
-        m_MicInBass.freqHz = wxGetApp().m_MicInBassFreqHz;
+        m_MicInBass.freqHz = wxGetApp().appConfiguration.filterConfiguration.micInChannel.bassFreqHz;
         m_MicInBass.freqHz = limit(m_MicInBass.freqHz, 1.0, MAX_FREQ_BASS);
         setFreq(&m_MicInBass);
-        m_MicInBass.gaindB = wxGetApp().m_MicInBassGaindB;
+        m_MicInBass.gaindB = wxGetApp().appConfiguration.filterConfiguration.micInChannel.bassGaindB;
         m_MicInBass.gaindB = limit(m_MicInBass.gaindB, MIN_GAIN, MAX_GAIN);
         setGain(&m_MicInBass);
 
-        m_MicInTreble.freqHz = wxGetApp().m_MicInTrebleFreqHz;
+        m_MicInTreble.freqHz = wxGetApp().appConfiguration.filterConfiguration.micInChannel.trebleFreqHz;
         m_MicInTreble.freqHz = limit(m_MicInTreble.freqHz, 1.0, MAX_FREQ_TREBLE);
         setFreq(&m_MicInTreble);
-        m_MicInTreble.gaindB = wxGetApp().m_MicInTrebleGaindB;
+        m_MicInTreble.gaindB = wxGetApp().appConfiguration.filterConfiguration.micInChannel.trebleGaindB;
         m_MicInTreble.gaindB = limit(m_MicInTreble.gaindB, MIN_GAIN, MAX_GAIN);
         setGain(&m_MicInTreble);
 
-        m_MicInMid.freqHz = wxGetApp().m_MicInMidFreqHz;
+        m_MicInMid.freqHz = wxGetApp().appConfiguration.filterConfiguration.micInChannel.midFreqHz;
         m_MicInMid.freqHz = limit(m_MicInMid.freqHz, 1.0, MAX_FREQ_TREBLE);
         setFreq(&m_MicInMid);
-        m_MicInMid.gaindB = wxGetApp().m_MicInMidGaindB;
+        m_MicInMid.gaindB = wxGetApp().appConfiguration.filterConfiguration.micInChannel.midGainDB;
         m_MicInMid.gaindB = limit(m_MicInMid.gaindB, MIN_GAIN, MAX_GAIN);
         setGain(&m_MicInMid);
-        m_MicInMid.Q = wxGetApp().m_MicInMidQ;
+        m_MicInMid.Q = wxGetApp().appConfiguration.filterConfiguration.micInChannel.midQ;
         m_MicInMid.Q = limit(m_MicInMid.Q, pow(10.0,MIN_LOG10_Q), pow(10.0, MAX_LOG10_Q));
         setQ(&m_MicInMid);
 
-        m_MicInVol.gaindB = wxGetApp().m_MicInVolInDB;
+        m_MicInVol.gaindB = wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB;
         m_MicInVol.gaindB = limit(m_MicInVol.gaindB, MIN_GAIN, MAX_GAIN);
         setGain(&m_MicInVol);
 
-        m_MicInEnable->SetValue(wxGetApp().m_MicInEQEnable);
+        m_MicInEnable->SetValue(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
 
         plotMicInFilterSpectrum();
 
         // Spk Out Equaliser
 
-        m_SpkOutBass.freqHz = wxGetApp().m_SpkOutBassFreqHz;
+        m_SpkOutBass.freqHz = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.bassFreqHz;
         m_SpkOutBass.freqHz = limit(m_SpkOutBass.freqHz, 1.0, MAX_FREQ_BASS);
         setFreq(&m_SpkOutBass);
-        m_SpkOutBass.gaindB = wxGetApp().m_SpkOutBassGaindB;
+        m_SpkOutBass.gaindB = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.bassGaindB;
         m_SpkOutBass.gaindB = limit(m_SpkOutBass.gaindB, MIN_GAIN, MAX_GAIN);
         setGain(&m_SpkOutBass);
 
-        m_SpkOutTreble.freqHz = wxGetApp().m_SpkOutTrebleFreqHz;
+        m_SpkOutTreble.freqHz = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.trebleFreqHz;
         m_SpkOutTreble.freqHz = limit(m_SpkOutTreble.freqHz, 1.0, MAX_FREQ_TREBLE);
         setFreq(&m_SpkOutTreble);
-        m_SpkOutTreble.gaindB = wxGetApp().m_SpkOutTrebleGaindB;
+        m_SpkOutTreble.gaindB = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.trebleGaindB;
         m_SpkOutTreble.gaindB = limit(m_SpkOutTreble.gaindB, MIN_GAIN, MAX_GAIN);
         setGain(&m_SpkOutTreble);
 
-        m_SpkOutMid.freqHz = wxGetApp().m_SpkOutMidFreqHz;
+        m_SpkOutMid.freqHz = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midFreqHz;
         m_SpkOutMid.freqHz = limit(m_SpkOutMid.freqHz, 1.0, MAX_FREQ_TREBLE);
         setFreq(&m_SpkOutMid);
-        m_SpkOutMid.gaindB = wxGetApp().m_SpkOutMidGaindB;
+        m_SpkOutMid.gaindB = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midGainDB;
         m_SpkOutMid.gaindB = limit(m_SpkOutMid.gaindB, MIN_GAIN, MAX_GAIN);
         setGain(&m_SpkOutMid);
-        m_SpkOutMid.Q = wxGetApp().m_SpkOutMidQ;
+        m_SpkOutMid.Q = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midQ;
         m_SpkOutMid.Q = limit(m_SpkOutMid.Q, pow(10.0,MIN_LOG10_Q), pow(10.0, MAX_LOG10_Q));
         setQ(&m_SpkOutMid);
         
-        m_SpkOutVol.gaindB = wxGetApp().m_SpkOutVolInDB;
+        m_SpkOutVol.gaindB = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
         m_SpkOutVol.gaindB = limit(m_SpkOutVol.gaindB, MIN_GAIN, MAX_GAIN);
         setGain(&m_SpkOutVol);
 
-        m_SpkOutEnable->SetValue(wxGetApp().m_SpkOutEQEnable);
+        m_SpkOutEnable->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable);
 
         plotSpkOutFilterSpectrum();
         
@@ -488,31 +488,31 @@ void FilterDlg::ExchangeData(int inout)
 
         // Mic In Equaliser
 
-        wxGetApp().m_MicInBassFreqHz = m_MicInBass.freqHz;
-        wxGetApp().m_MicInBassGaindB = m_MicInBass.gaindB;
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.bassFreqHz = (int)m_MicInBass.freqHz;
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.bassGaindB = (int)(10.0*m_MicInBass.gaindB);
 
-        wxGetApp().m_MicInTrebleFreqHz = m_MicInTreble.freqHz;
-        wxGetApp().m_MicInTrebleGaindB = m_MicInTreble.gaindB;
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.trebleFreqHz = (int)m_MicInTreble.freqHz;
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.trebleGaindB = (int)(10.0*m_MicInTreble.gaindB);
 
-        wxGetApp().m_MicInMidFreqHz = m_MicInMid.freqHz;
-        wxGetApp().m_MicInMidGaindB = m_MicInMid.gaindB;
-        wxGetApp().m_MicInMidQ = m_MicInMid.Q;
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.midFreqHz = (int)m_MicInMid.freqHz;
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.midGainDB = (int)(10.0*m_MicInMid.gaindB);
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.midQ = (int)(100.0*m_MicInMid.Q);
 
-        wxGetApp().m_MicInVolInDB = m_MicInVol.gaindB;
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = (int)(10.0*m_MicInVol.gaindB);
         
         // Spk Out Equaliser
 
-        wxGetApp().m_SpkOutBassFreqHz = m_SpkOutBass.freqHz;
-        wxGetApp().m_SpkOutBassGaindB = m_SpkOutBass.gaindB;
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.bassFreqHz = (int)m_SpkOutBass.freqHz;
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.bassGaindB = (int)(10.0*m_SpkOutBass.gaindB);
 
-        wxGetApp().m_SpkOutTrebleFreqHz = m_SpkOutTreble.freqHz;
-        wxGetApp().m_SpkOutTrebleGaindB = m_SpkOutTreble.gaindB;
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.trebleFreqHz = (int)m_SpkOutTreble.freqHz;
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.trebleGaindB = (int)(10.0*m_SpkOutTreble.gaindB);
 
-        wxGetApp().m_SpkOutMidFreqHz = m_SpkOutMid.freqHz;
-        wxGetApp().m_SpkOutMidGaindB = m_SpkOutMid.gaindB;
-        wxGetApp().m_SpkOutMidQ = m_SpkOutMid.Q;
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midFreqHz = (int)m_SpkOutMid.freqHz;
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midGainDB = (int)(10.0*m_SpkOutMid.gaindB);
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midQ = (int)(100.0*m_SpkOutMid.Q);
 
-        wxGetApp().m_SpkOutVolInDB = m_SpkOutVol.gaindB;
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = (int)(10.0*m_SpkOutVol.gaindB);
 
         pConfig->Write(wxT("/Filter/codec2LPCPostFilterEnable"),     wxGetApp().m_codec2LPCPostFilterEnable);
         pConfig->Write(wxT("/Filter/codec2LPCPostFilterBassBoost"),  wxGetApp().m_codec2LPCPostFilterBassBoost);
@@ -523,25 +523,7 @@ void FilterDlg::ExchangeData(int inout)
 
         pConfig->Write(wxT("/Filter/700C_EQ"),                       wxGetApp().m_700C_EQ);
 
-        pConfig->Write(wxT("/Filter/MicInBassFreqHz"), (int)m_MicInBass.freqHz);
-        pConfig->Write(wxT("/Filter/MicInBassGaindB"), (int)(10.0*m_MicInBass.gaindB));
-        pConfig->Write(wxT("/Filter/MicInTrebleFreqHz"), (int)m_MicInTreble.freqHz);
-        pConfig->Write(wxT("/Filter/MicInTrebleGaindB"), (int)(10.0*m_MicInTreble.gaindB));
-        pConfig->Write(wxT("/Filter/MicInMidFreqHz"), (int)m_MicInMid.freqHz);
-        pConfig->Write(wxT("/Filter/MicInMidGaindB"), (int)(10.0*m_MicInMid.gaindB));
-        pConfig->Write(wxT("/Filter/MicInMidQ"), (int)(100.0*m_MicInMid.Q));
-        pConfig->Write(wxT("/Filter/MicInVolInDB"), (int)(10.0*m_MicInVol.gaindB));
-
-        pConfig->Write(wxT("/Filter/SpkOutBassFreqHz"), (int)m_SpkOutBass.freqHz);
-        pConfig->Write(wxT("/Filter/SpkOutBassGaindB"), (int)(10.0*m_SpkOutBass.gaindB));
-        pConfig->Write(wxT("/Filter/SpkOutTrebleFreqHz"), (int)m_SpkOutTreble.freqHz);
-        pConfig->Write(wxT("/Filter/SpkOutTrebleGaindB"), (int)(10.0*m_SpkOutTreble.gaindB));
-        pConfig->Write(wxT("/Filter/SpkOutMidQ"), (int)(100.0*m_SpkOutMid.Q));
-        pConfig->Write(wxT("/Filter/SpkOutMidFreqHz"), (int)m_SpkOutMid.freqHz);
-        pConfig->Write(wxT("/Filter/SpkOutMidGaindB"), (int)(10.0*m_SpkOutMid.gaindB));
-        pConfig->Write(wxT("/Filter/SpkOutVolInDB"), (int)(10.0*m_SpkOutVol.gaindB));
-
-        pConfig->Flush();
+        wxGetApp().appConfiguration.save(pConfig);
     }
 }
 
@@ -701,33 +683,33 @@ void FilterDlg::On700C_EQ(wxScrollEvent& event) {
 
 void FilterDlg::updateControlState()
 {
-    m_MicInBass.sliderFreq->Enable(wxGetApp().m_MicInEQEnable);
-    m_MicInBass.sliderGain->Enable(wxGetApp().m_MicInEQEnable);
+    m_MicInBass.sliderFreq->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
+    m_MicInBass.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
     
-    m_MicInMid.sliderFreq->Enable(wxGetApp().m_MicInEQEnable);
-    m_MicInMid.sliderGain->Enable(wxGetApp().m_MicInEQEnable);
-    m_MicInMid.sliderQ->Enable(wxGetApp().m_MicInEQEnable);
+    m_MicInMid.sliderFreq->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
+    m_MicInMid.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
+    m_MicInMid.sliderQ->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
     
-    m_MicInTreble.sliderFreq->Enable(wxGetApp().m_MicInEQEnable);
-    m_MicInTreble.sliderGain->Enable(wxGetApp().m_MicInEQEnable);
+    m_MicInTreble.sliderFreq->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
+    m_MicInTreble.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
     
-    m_MicInVol.sliderGain->Enable(wxGetApp().m_MicInEQEnable);
+    m_MicInVol.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
     
-    m_MicInDefault->Enable(wxGetApp().m_MicInEQEnable);
+    m_MicInDefault->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
     
-    m_SpkOutBass.sliderFreq->Enable(wxGetApp().m_SpkOutEQEnable);
-    m_SpkOutBass.sliderGain->Enable(wxGetApp().m_SpkOutEQEnable);
+    m_SpkOutBass.sliderFreq->Enable(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable);
+    m_SpkOutBass.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable);
     
-    m_SpkOutMid.sliderFreq->Enable(wxGetApp().m_SpkOutEQEnable);
-    m_SpkOutMid.sliderGain->Enable(wxGetApp().m_SpkOutEQEnable);
-    m_SpkOutMid.sliderQ->Enable(wxGetApp().m_SpkOutEQEnable);
+    m_SpkOutMid.sliderFreq->Enable(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable);
+    m_SpkOutMid.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable);
+    m_SpkOutMid.sliderQ->Enable(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable);
     
-    m_SpkOutTreble.sliderFreq->Enable(wxGetApp().m_SpkOutEQEnable);
-    m_SpkOutTreble.sliderGain->Enable(wxGetApp().m_SpkOutEQEnable);
+    m_SpkOutTreble.sliderFreq->Enable(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable);
+    m_SpkOutTreble.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable);
     
-    m_SpkOutVol.sliderGain->Enable(wxGetApp().m_SpkOutEQEnable);
+    m_SpkOutVol.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable);
     
-    m_SpkOutDefault->Enable(wxGetApp().m_SpkOutEQEnable);
+    m_SpkOutDefault->Enable(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable);
     
     m_codec2LPCPostFilterBeta->Enable(m_codec2LPCPostFilterEnable->GetValue());
     m_codec2LPCPostFilterBassBoost->Enable(m_codec2LPCPostFilterEnable->GetValue());
@@ -736,13 +718,13 @@ void FilterDlg::updateControlState()
 }
 
 void FilterDlg::OnMicInEnable(wxScrollEvent& event) {
-    wxGetApp().m_MicInEQEnable = m_MicInEnable->GetValue();
+    wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable = m_MicInEnable->GetValue();
     updateControlState();
     adjRunTimeMicInFilter();
 }
 
 void FilterDlg::OnSpkOutEnable(wxScrollEvent& event) {
-    wxGetApp().m_SpkOutEQEnable = m_SpkOutEnable->GetValue();
+    wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable = m_SpkOutEnable->GetValue();
     updateControlState();
     adjRunTimeSpkOutFilter();
 }

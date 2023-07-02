@@ -71,6 +71,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, squelchLevel);
     
     audioConfiguration.load(config);
+    filterConfiguration.load(config);
     
     load_(config, fifoSizeMs);
     load_(config, transmitLevel);
@@ -99,6 +100,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, squelchLevel);
     
     audioConfiguration.save(config);
+    filterConfiguration.save(config);
 
     save_(config, fifoSizeMs);
     save_(config, transmitLevel);

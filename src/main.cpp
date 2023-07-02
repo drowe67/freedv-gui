@@ -465,28 +465,7 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_speexpp_enable     = pConfig->Read(wxT("/Filter/speexpp_enable"),    t);
     wxGetApp().m_700C_EQ     = pConfig->Read(wxT("/Filter/700C_EQ"),    t);
 
-    wxGetApp().m_MicInBassFreqHz = (float)pConfig->Read(wxT("/Filter/MicInBassFreqHz"),    1);
-    wxGetApp().m_MicInBassGaindB = (float)pConfig->Read(wxT("/Filter/MicInBassGaindB"),    (long)0)/10.0;
-    wxGetApp().m_MicInTrebleFreqHz = (float)pConfig->Read(wxT("/Filter/MicInTrebleFreqHz"),    1);
-    wxGetApp().m_MicInTrebleGaindB = (float)pConfig->Read(wxT("/Filter/MicInTrebleGaindB"),    (long)0)/10.0;
-    wxGetApp().m_MicInMidFreqHz = (float)pConfig->Read(wxT("/Filter/MicInMidFreqHz"),    1);
-    wxGetApp().m_MicInMidGaindB = (float)pConfig->Read(wxT("/Filter/MicInMidGaindB"),    (long)0)/10.0;
-    wxGetApp().m_MicInMidQ = (float)pConfig->Read(wxT("/Filter/MicInMidQ"),              (long)100)/100.0;
-    wxGetApp().m_MicInVolInDB = (float)pConfig->Read(wxT("/Filter/MicInVolInDB"),    (long)0)/10.0;
-
     bool f = false;
-    wxGetApp().m_MicInEQEnable = (float)pConfig->Read(wxT("/Filter/MicInEQEnable"), f);
-
-    wxGetApp().m_SpkOutBassFreqHz = (float)pConfig->Read(wxT("/Filter/SpkOutBassFreqHz"),    1);
-    wxGetApp().m_SpkOutBassGaindB = (float)pConfig->Read(wxT("/Filter/SpkOutBassGaindB"),    (long)0)/10.0;
-    wxGetApp().m_SpkOutTrebleFreqHz = (float)pConfig->Read(wxT("/Filter/SpkOutTrebleFreqHz"),    1);
-    wxGetApp().m_SpkOutTrebleGaindB = (float)pConfig->Read(wxT("/Filter/SpkOutTrebleGaindB"),    (long)0)/10.0;
-    wxGetApp().m_SpkOutMidFreqHz = (float)pConfig->Read(wxT("/Filter/SpkOutMidFreqHz"),    1);
-    wxGetApp().m_SpkOutMidGaindB = (float)pConfig->Read(wxT("/Filter/SpkOutMidGaindB"),    (long)0)/10.0;
-    wxGetApp().m_SpkOutMidQ = (float)pConfig->Read(wxT("/Filter/SpkOutMidQ"),                (long)100)/100.0;
-    wxGetApp().m_SpkOutVolInDB = (float)pConfig->Read(wxT("/Filter/SpkOutVolInDB"),    (long)0)/10.0;
-
-    wxGetApp().m_SpkOutEQEnable = (float)pConfig->Read(wxT("/Filter/SpkOutEQEnable"), f);
 
     wxGetApp().m_callSign = pConfig->Read("/Data/CallSign", wxT(""));
     wxGetApp().m_textEncoding = pConfig->Read("/Data/TextEncoding", 1);
@@ -929,9 +908,6 @@ MainFrame::~MainFrame()
 
     pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
     pConfig->Write(wxT("/Data/TextEncoding"), wxGetApp().m_textEncoding);
-
-    pConfig->Write(wxT("/Filter/MicInEQEnable"), wxGetApp().m_MicInEQEnable);
-    pConfig->Write(wxT("/Filter/SpkOutEQEnable"), wxGetApp().m_SpkOutEQEnable);
 
     pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
     pConfig->Write(wxT("/Noise/noise_snr"), wxGetApp().m_noise_snr);
@@ -1508,8 +1484,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_newMicInFilter = m_newSpkOutFilter = false;
         }
     
-        g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
-        g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
+        g_rxUserdata->micInEQEnable = wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable;
+        g_rxUserdata->spkOutEQEnable = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable;
 
         // set some run time options (if applicable)
         freedvInterface.setRunTimeOptions(
@@ -2691,8 +2667,8 @@ void MainFrame::startRxStream()
         m_newMicInFilter = m_newSpkOutFilter = true;
         g_mutexProtectingCallbackData.Lock();
         designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
-        g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
-        g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
+        g_rxUserdata->micInEQEnable = wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable;
+        g_rxUserdata->spkOutEQEnable = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable;
         m_newMicInFilter = m_newSpkOutFilter = false;
         g_mutexProtectingCallbackData.Unlock();
 

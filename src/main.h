@@ -211,10 +211,6 @@ class MainApp : public wxApp
         wxString            m_strPTTInputPort;
         bool                m_boolCTSPos;
         Serialport         *m_pttInSerialPort;
-        
-        // Play/Rec files
-
-        unsigned int        m_recFileFromModulatorSecs;
 
         // Options dialog
 
@@ -233,28 +229,6 @@ class MainApp : public wxApp
         bool                m_speexpp_enable;
         // Codec 2 700C Equaliser
         bool                m_700C_EQ;
-
-        // Mic In Equaliser
-        float               m_MicInBassFreqHz;
-        float               m_MicInBassGaindB;
-        float               m_MicInTrebleFreqHz;
-        float               m_MicInTrebleGaindB;
-        float               m_MicInMidFreqHz;
-        float               m_MicInMidGaindB;
-        float               m_MicInMidQ;
-        bool                m_MicInEQEnable;
-        float               m_MicInVolInDB;
-
-        // Spk Out Equaliser
-        float               m_SpkOutBassFreqHz;
-        float               m_SpkOutBassGaindB;
-        float               m_SpkOutTrebleFreqHz;
-        float               m_SpkOutTrebleGaindB;
-        float               m_SpkOutMidFreqHz;
-        float               m_SpkOutMidGaindB;
-        float               m_SpkOutMidQ;
-        bool                m_SpkOutEQEnable;
-        float               m_SpkOutVolInDB;
 
         // optional vox trigger tone
         bool                m_leftChannelVoxTone;

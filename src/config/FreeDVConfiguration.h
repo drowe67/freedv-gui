@@ -25,6 +25,7 @@
 #include "WxWidgetsConfigStore.h"
 #include "ConfigurationDataElement.h"
 #include "AudioConfiguration.h"
+#include "FilterConfiguration.h"
 
 class FreeDVConfiguration : public WxWidgetsConfigStore
 {
@@ -46,6 +47,7 @@ public:
     ConfigurationDataElement<long> squelchLevel;
     
     AudioConfiguration audioConfiguration;
+    FilterConfiguration filterConfiguration;
     
     ConfigurationDataElement<int> fifoSizeMs;
     ConfigurationDataElement<int> transmitLevel;
