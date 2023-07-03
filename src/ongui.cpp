@@ -704,3 +704,14 @@ void MainFrame::OnReportFrequencyKillFocus(wxFocusEvent& event)
     
     TopFrame::OnReportFrequencyKillFocus(event);
 }
+
+void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
+{
+    // Works around issues on wxWidgets with certain controls not changing backgrounds
+    // when the user switches between light and dark mode.
+    wxColour currentControlBackground = wxTransparentColour;
+
+    m_collpane->SetBackgroundColour(currentControlBackground);
+    m_collpane->GetPane()->SetBackgroundColour(currentControlBackground);
+    TopFrame::OnSystemColorChanged(event);
+}

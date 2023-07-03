@@ -552,6 +552,8 @@ class MainFrame : public TopFrame
         
         void OnReportFrequencySetFocus(wxFocusEvent& event) override;
         void OnReportFrequencyKillFocus(wxFocusEvent& event) override;
+
+        void OnSystemColorChanged(wxSysColourChangedEvent& event) override;
         
     private:
         std::shared_ptr<IAudioDevice> rxInSoundDevice;
