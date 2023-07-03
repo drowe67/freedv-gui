@@ -650,10 +650,10 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         m_txtCtrlQuickRecordPath->SetValue(wxGetApp().m_txtQuickRecordPath);
         
-        m_ckHalfDuplex->SetValue(wxGetApp().m_boolHalfDuplex);
+        m_ckHalfDuplex->SetValue(wxGetApp().appConfiguration.halfDuplexMode);
 
-        m_ckboxMultipleRx->SetValue(wxGetApp().m_boolMultipleRx);
-        m_ckboxSingleRxThread->SetValue(wxGetApp().m_boolSingleRxThread);
+        m_ckboxMultipleRx->SetValue(wxGetApp().appConfiguration.multipleReceiveEnabled);
+        m_ckboxSingleRxThread->SetValue(wxGetApp().appConfiguration.multipleReceiveOnSingleThread);
         
         m_ckboxTestFrame->SetValue(wxGetApp().m_testFrames);
 
@@ -754,14 +754,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         
         wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString = m_txtCtrlCallSign->GetValue();
 
-        wxGetApp().m_boolHalfDuplex = m_ckHalfDuplex->GetValue();
-        pConfig->Write(wxT("/Rig/HalfDuplex"), wxGetApp().m_boolHalfDuplex);
-
-        wxGetApp().m_boolMultipleRx = m_ckboxMultipleRx->GetValue();
-        pConfig->Write(wxT("/Rig/MultipleRx"), wxGetApp().m_boolMultipleRx);
-        
-        wxGetApp().m_boolSingleRxThread = m_ckboxSingleRxThread->GetValue();
-        pConfig->Write(wxT("/Rig/SingleRxThread"), wxGetApp().m_boolSingleRxThread);
+        wxGetApp().appConfiguration.halfDuplexMode = m_ckHalfDuplex->GetValue();
+        wxGetApp().appConfiguration.multipleReceiveEnabled = m_ckboxMultipleRx->GetValue();
+        wxGetApp().appConfiguration.multipleReceiveOnSingleThread = m_ckboxSingleRxThread->GetValue();
         
         /* Voice Keyer */
 

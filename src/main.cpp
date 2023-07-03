@@ -397,10 +397,6 @@ void MainFrame::loadConfiguration_()
     m_txtTxLevelNum->SetLabel(fmtString);
 
     // PTT -------------------------------------------------------------------
-    wxGetApp().m_boolHalfDuplex     = pConfig->ReadBool(wxT("/Rig/HalfDuplex"),     true);
-    wxGetApp().m_boolMultipleRx     = pConfig->ReadBool(wxT("/Rig/MultipleRx"),     true);
-    wxGetApp().m_boolSingleRxThread = pConfig->ReadBool(wxT("/Rig/SingleRxThread"), true);
-
     auto wxStandardPathObj = wxStandardPaths::Get();
     auto documentsDir = wxStandardPathObj.GetDocumentsDir();
     wxGetApp().m_txtQuickRecordPath = pConfig->Read(wxT("/QuickRecord/SavePath"), documentsDir);
@@ -822,10 +818,6 @@ MainFrame::~MainFrame()
     wxGetApp().appConfiguration.transmitLevel = g_txLevel;
         
     pConfig->Write(wxT("/QuickRecord/SavePath"), wxGetApp().m_txtQuickRecordPath);
-
-    pConfig->Write(wxT("/Rig/HalfDuplex"),              wxGetApp().m_boolHalfDuplex);
-    pConfig->Write(wxT("/Rig/MultipleRx"), wxGetApp().m_boolMultipleRx);
-    pConfig->Write(wxT("/Rig/SingleRxThread"), wxGetApp().m_boolSingleRxThread);
 
     pConfig->Write(wxT("/Audio/snrSlow"), wxGetApp().m_snrSlow);
 
@@ -1743,7 +1735,7 @@ void MainFrame::performFreeDVOn_()
         OnChangeTxMode(tmpEvent);
 
         if (g_mode == FREEDV_MODE_2400B || g_mode == FREEDV_MODE_800XA || 
-            !wxGetApp().m_boolMultipleRx)
+            !wxGetApp().appConfiguration.multipleReceiveEnabled)
         {
             m_rb1600->Disable();
             m_rb700c->Disable();
@@ -1806,7 +1798,7 @@ void MainFrame::performFreeDVOn_()
         g_sfTxFs = FS;
     
         wxGetApp().m_prevMode = g_mode;
-        freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+        freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, !wxGetApp().appConfiguration.multipleReceiveEnabled || wxGetApp().appConfiguration.multipleReceiveOnSingleThread, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
         // Codec 2 VQ Equaliser
         freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
@@ -1868,7 +1860,7 @@ void MainFrame::performFreeDVOn_()
 
     g_State = g_prev_State = 0;
     g_snr = 0.0;
-    g_half_duplex = wxGetApp().m_boolHalfDuplex;
+    g_half_duplex = wxGetApp().appConfiguration.halfDuplexMode;
 
     m_pcallsign = m_callsign;
     memset(m_callsign, 0, sizeof(m_callsign));

@@ -70,6 +70,10 @@ public:
     ConfigurationDataElement<int> voiceKeyerRxPause;
     ConfigurationDataElement<int> voiceKeyerRepeats;
     
+    ConfigurationDataElement<bool> halfDuplexMode;
+    ConfigurationDataElement<bool> multipleReceiveEnabled;
+    ConfigurationDataElement<bool> multipleReceiveOnSingleThread;
+    
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };

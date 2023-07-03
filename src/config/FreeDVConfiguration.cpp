@@ -58,6 +58,10 @@ FreeDVConfiguration::FreeDVConfiguration()
     , voiceKeyerWaveFile("/VoiceKeyer/WaveFile", _("voicekeyer.wav"))
     , voiceKeyerRxPause("/VoiceKeyer/RxPause", 10)
     , voiceKeyerRepeats("/VoiceKeyer/Repeats", 5)
+        
+    , halfDuplexMode("/Rig/HalfDuplex", true)
+    , multipleReceiveEnabled("/Rig/MultipleRx", true)
+    , multipleReceiveOnSingleThread("/Rig/SingleRxThread", true)
 {
     // empty
 }
@@ -98,6 +102,10 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, voiceKeyerWaveFile);
     load_(config, voiceKeyerRxPause);
     load_(config, voiceKeyerRepeats);
+    
+    load_(config, halfDuplexMode);
+    load_(config, multipleReceiveEnabled);
+    load_(config, multipleReceiveOnSingleThread);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -136,6 +144,10 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, voiceKeyerWaveFile);
     save_(config, voiceKeyerRxPause);
     save_(config, voiceKeyerRepeats);
+    
+    save_(config, halfDuplexMode);
+    save_(config, multipleReceiveEnabled);
+    save_(config, multipleReceiveOnSingleThread);
     
     config->Flush();
 }

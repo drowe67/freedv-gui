@@ -174,11 +174,6 @@ class MainApp : public wxApp
         FreeDVConfiguration appConfiguration;
         
         // PTT -----------------------------------
-
-        bool                m_boolHalfDuplex;
-        bool                m_boolMultipleRx;
-        bool                m_boolSingleRxThread;
-        
         wxString            m_txtQuickRecordPath;
     
         unsigned int        m_intHamlibRig;
