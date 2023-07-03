@@ -188,9 +188,15 @@ void FreeDVReporterDialog::refreshQSYButtonState()
     {
         auto selectedCallsign = m_listSpots->GetItemText(selectedIndex);
     
-        if (selectedCallsign != wxGetApp().m_reportingCallsign && wxGetApp().m_reportingFrequency > 0)
+        if (selectedCallsign != wxGetApp().m_reportingCallsign && 
+            wxGetApp().m_reportingFrequency > 0)
         {
-            enabled = true;
+            wxString theirFreqString = m_listSpots->GetItemText(selectedIndex, 3);
+            wxRegEx mhzRegex(" MHz$");
+            mhzRegex.Replace(&theirFreqString, "");
+            
+            uint64_t theirFreq = wxAtof(theirFreqString) * 1000 * 1000;
+            enabled = theirFreq != wxGetApp().m_reportingFrequency;
         }
     }
     
