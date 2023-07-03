@@ -338,7 +338,7 @@ void TxRxThread::initializePipeline_()
             inputSampleRate_, outputSampleRate_,
             []() { return &g_State; },
             []() { return g_channel_noise; },
-            []() { return wxGetApp().m_noise_snr; },
+            []() { return wxGetApp().appConfiguration.noiseSNR; },
             []() { return g_RxFreqOffsetHz; },
             []() { return &g_sig_pwr_av; }
         );

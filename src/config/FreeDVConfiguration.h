@@ -76,6 +76,23 @@ public:
     
     ConfigurationDataElement<wxString> quickRecordPath;
     
+    ConfigurationDataElement<bool> freedv700Clip;
+    ConfigurationDataElement<bool> freedv700TxBPF;
+    
+    ConfigurationDataElement<int> noiseSNR;
+    
+    ConfigurationDataElement<bool> debugConsoleEnabled; // note: Windows only
+    
+    ConfigurationDataElement<bool> snrSlow;
+    
+    ConfigurationDataElement<bool> debugVerbose;
+    ConfigurationDataElement<bool> apiVerbose;
+    
+    ConfigurationDataElement<int> waterfallColor;
+    ConfigurationDataElement<unsigned int> statsResetTimeSecs;
+    
+    ConfigurationDataElement<int> currentFreeDVMode;
+    
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };

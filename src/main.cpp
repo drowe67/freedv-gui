@@ -414,21 +414,10 @@ void MainFrame::loadConfiguration_()
     
     // -----------------------------------------------------------------------
 
-    bool slow = false; // prevents compile error when using default bool
-    wxGetApp().m_snrSlow = pConfig->Read("/Audio/snrSlow", slow);
-
-    bool t = true;     // prevents compile error when using default bool
-    bool f = false;
-
-    wxGetApp().m_FreeDV700txClip = (float)pConfig->Read(wxT("/FreeDV700/txClip"), t);
-    wxGetApp().m_FreeDV700txBPF = (float)pConfig->Read(wxT("/FreeDV700/txBPF"), t);
     wxGetApp().m_FreeDV700Combine = 1;
 
-    wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
-
-    wxGetApp().m_debug_console = (float)pConfig->Read(wxT("/Debug/console"), f);
-    g_verbose = pConfig->Read(wxT("/Debug/verbose"), (long)0);
-    g_freedv_verbose = pConfig->Read(wxT("/Debug/APIverbose"), (long)0);
+    g_verbose = wxGetApp().appConfiguration.debugVerbose;
+    g_freedv_verbose = wxGetApp().appConfiguration.apiVerbose;
 
     wxGetApp().m_attn_carrier_en = 0;
     wxGetApp().m_attn_carrier    = 0;
@@ -439,15 +428,9 @@ void MainFrame::loadConfiguration_()
     
     // General reporting parameters
     m_cboReportFrequency->SetValue(wxString::Format("%.4f", ((double)wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency)/1000.0/1000.0));
-        
-    // Waterfall configuration
-    wxGetApp().m_waterfallColor = (int)pConfig->Read(wxT("/Waterfall/Color"), (int)0); // 0-2
     
-    // Time in seconds after losing sync before we reset the stats area
-    wxGetApp().m_statsResetTimeSec = (int)pConfig->Read(wxT("/Stats/ResetTime"), (int)10);
-    
-    int defaultMode = 4;
-    int mode  = pConfig->Read(wxT("/Audio/mode"), (long)defaultMode);
+    int defaultMode = wxGetApp().appConfiguration.currentFreeDVMode.getDefaultVal();
+    int mode = wxGetApp().appConfiguration.currentFreeDVMode;
 setDefaultMode:
     if (mode == 0)
         m_rb1600->SetValue(1);
@@ -510,8 +493,8 @@ setDefaultMode:
 
     // SNR settings
 
-    m_ckboxSNR->SetValue(wxGetApp().m_snrSlow);
-    setsnrBeta(wxGetApp().m_snrSlow);
+    m_ckboxSNR->SetValue(wxGetApp().appConfiguration.snrSlow);
+    setsnrBeta(wxGetApp().appConfiguration.snrSlow);
     
     // Show/hide frequency box based on reporting enablement
     m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
@@ -706,12 +689,12 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Init optional Windows debug console so we can see all those printfs
 
 #ifdef __WXMSW__
-    if (wxGetApp().m_debug_console || wxGetApp().appConfiguration.firstTimeUse) {
+    if (wxGetApp().appConfiguration.debugConsoleEnabled || wxGetApp().appConfiguration.firstTimeUse) {
         // somewhere to send printfs while developing
         int ret = AllocConsole();
         freopen("CONOUT$", "w", stdout);
         freopen("CONOUT$", "w", stderr);
-        fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().m_debug_console);
+        fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().appConfiguration.debugConsoleEnabled);
     }
 #endif
     
@@ -812,19 +795,6 @@ MainFrame::~MainFrame()
     wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
 
     wxGetApp().appConfiguration.transmitLevel = g_txLevel;
-
-    pConfig->Write(wxT("/Audio/snrSlow"), wxGetApp().m_snrSlow);
-
-    pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
-    pConfig->Write(wxT("/Noise/noise_snr"), wxGetApp().m_noise_snr);
-
-    pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
-    
-    // Waterfall configuration
-    pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
-    
-    // Time in seconds after losing sync before we reset the stats area
-    pConfig->Write(wxT("/Stats/ResetTime"), wxGetApp().m_statsResetTimeSec);
     
     int mode;
     if (m_rb1600->GetValue())
@@ -845,9 +815,9 @@ MainFrame::~MainFrame()
     if (m_rb2020b->GetValue())
         mode = 10;
 #endif // defined(FREEDV_MODE_2020B)
-   pConfig->Write(wxT("/Audio/mode"), mode);
-   
-   wxGetApp().appConfiguration.save(pConfig);
+    
+    wxGetApp().appConfiguration.currentFreeDVMode = mode;
+    wxGetApp().appConfiguration.save(pConfig);
 
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
@@ -955,7 +925,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (m_panelWaterfall->checkDT()) {
             m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
             m_panelWaterfall->m_newdata = true;
-            m_panelWaterfall->setColor(wxGetApp().m_waterfallColor);
+            m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
             m_panelWaterfall->Refresh();
         }
 
@@ -1186,7 +1156,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 
                     // Auto-reset stats if we've gone long enough since losing sync.
                     // NOTE: m_timeSinceSyncLoss is in milliseconds.
-                    if (m_timeSinceSyncLoss >= wxGetApp().m_statsResetTimeSec * 1000)
+                    if (m_timeSinceSyncLoss >= wxGetApp().appConfiguration.statsResetTimeSecs * 1000)
                     {
                         resetStats_();
                         
@@ -1209,7 +1179,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             else
             {
                 // Counts the amount of time since losing sync. Once we exceed
-                // wxGetApp().m_statsResetTimeSec, we will reset the stats. 
+                // wxGetApp().appConfiguration.statsResetTimeSecs, we will reset the stats. 
                 m_timeSinceSyncLoss += _REFRESH_TIMER_PERIOD;
             }
         
@@ -1378,8 +1348,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         // set some run time options (if applicable)
         freedvInterface.setRunTimeOptions(
-            (int)wxGetApp().m_FreeDV700txClip,
-            (int)wxGetApp().m_FreeDV700txBPF);
+            (int)wxGetApp().appConfiguration.freedv700Clip,
+            (int)wxGetApp().appConfiguration.freedv700TxBPF);
 
         // Test Frame Bit Error Updates ------------------------------------
 

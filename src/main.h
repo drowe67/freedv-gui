@@ -181,16 +181,9 @@ class MainApp : public wxApp
         // PTT Input
         Serialport         *m_pttInSerialPort;
 
-        // Options dialog
-        bool                m_snrSlow;
-        unsigned int        m_statsResetTimeSec;
-
         wxRect              m_rTopWindow;
 
         std::vector<IReporter*> m_reporters;
-        
-        // Waterfall display
-        int                 m_waterfallColor;
         
         bool                loadConfig();
         bool                saveConfig();
@@ -205,14 +198,7 @@ class MainApp : public wxApp
         MainFrame *frame;
 
         // 700 options
-
-        bool       m_FreeDV700txClip;
-        bool       m_FreeDV700txBPF;
         bool       m_FreeDV700Combine;
-
-        // Noise simulation
-
-        int        m_noise_snr;
 
         // carrier attenuation
 
@@ -224,10 +210,6 @@ class MainApp : public wxApp
         bool       m_tone;
         int        m_tone_freq_hz;
         int        m_tone_amplitude;
-
-        // Windows debug console
-
-        bool       m_debug_console;
 
         // debugging 700D audio break up
 

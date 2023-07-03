@@ -658,7 +658,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxTestFrame->SetValue(wxGetApp().m_testFrames);
 
         m_ckboxChannelNoise->SetValue(wxGetApp().m_channel_noise);
-        m_txtNoiseSNR->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_noise_snr));
+        m_txtNoiseSNR->SetValue(wxString::Format(wxT("%i"),wxGetApp().appConfiguration.noiseSNR.get()));
 
         m_ckboxTone->SetValue(wxGetApp().m_tone);
         m_txtToneFreqHz->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_tone_freq_hz));
@@ -675,12 +675,12 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxVerbose->SetValue(g_verbose);
         m_ckboxFreeDVAPIVerbose->SetValue(g_freedv_verbose);
        
-        m_ckboxFreeDV700txClip->SetValue(wxGetApp().m_FreeDV700txClip);
-        m_ckboxFreeDV700txBPF->SetValue(wxGetApp().m_FreeDV700txBPF);
+        m_ckboxFreeDV700txClip->SetValue(wxGetApp().appConfiguration.freedv700Clip);
+        m_ckboxFreeDV700txBPF->SetValue(wxGetApp().appConfiguration.freedv700TxBPF);
         m_ckboxFreeDV700Combine->SetValue(wxGetApp().m_FreeDV700Combine);
 
 #ifdef __WXMSW__
-        m_ckboxDebugConsole->SetValue(wxGetApp().m_debug_console);
+        m_ckboxDebugConsole->SetValue(wxGetApp().appConfiguration.debugConsoleEnabled);
 #endif
         
         // General reporting config
@@ -699,10 +699,10 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckbox_use_utc_time->SetValue(wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting);
         
         // Stats reset time
-        m_statsResetTime->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_statsResetTimeSec));
+        m_statsResetTime->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.statsResetTimeSecs.get()));
         
         // Waterfall color
-        switch (wxGetApp().m_waterfallColor)
+        switch (wxGetApp().appConfiguration.waterfallColor)
         {
             case 1:
                 m_waterfallColorScheme1->SetValue(false);
@@ -724,15 +724,15 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         
         if (m_waterfallColorScheme1->GetValue())
         {
-            wxGetApp().m_waterfallColor = 0;
+            wxGetApp().appConfiguration.waterfallColor = 0;
         }
         else if (m_waterfallColorScheme2->GetValue())
         {
-            wxGetApp().m_waterfallColor = 1;
+            wxGetApp().appConfiguration.waterfallColor = 1;
         }
         else if (m_waterfallColorScheme3->GetValue())
         {
-            wxGetApp().m_waterfallColor = 2;
+            wxGetApp().appConfiguration.waterfallColor = 2;
         }
         
         // Update control state based on checkbox state.
@@ -775,7 +775,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
         long noise_snr;
         m_txtNoiseSNR->GetValue().ToLong(&noise_snr);
-        wxGetApp().m_noise_snr = (int)noise_snr;
+        wxGetApp().appConfiguration.noiseSNR = (int)noise_snr;
         //fprintf(stderr, "noise_snr: %d\n", (int)noise_snr);
         
         wxGetApp().m_tone    = m_ckboxTone->GetValue();
@@ -800,12 +800,12 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         g_verbose = m_ckboxVerbose->GetValue();
         g_freedv_verbose = m_ckboxFreeDVAPIVerbose->GetValue();
 
-        wxGetApp().m_FreeDV700txClip = m_ckboxFreeDV700txClip->GetValue();
-        wxGetApp().m_FreeDV700txBPF = m_ckboxFreeDV700txBPF->GetValue();
+        wxGetApp().appConfiguration.freedv700Clip = m_ckboxFreeDV700txClip->GetValue();
+        wxGetApp().appConfiguration.freedv700TxBPF = m_ckboxFreeDV700txBPF->GetValue();
         wxGetApp().m_FreeDV700Combine = m_ckboxFreeDV700Combine->GetValue();
 
 #ifdef __WXMSW__
-        wxGetApp().m_debug_console = m_ckboxDebugConsole->GetValue();
+        wxGetApp().appConfiguration.debugConsoleEnabled = m_ckboxDebugConsole->GetValue();
 #endif
 
         // General reporting config
@@ -826,39 +826,25 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         // Waterfall color
         if (m_waterfallColorScheme1->GetValue())
         {
-            wxGetApp().m_waterfallColor = 0;
+            wxGetApp().appConfiguration.waterfallColor = 0;
         }
         else if (m_waterfallColorScheme2->GetValue())
         {
-            wxGetApp().m_waterfallColor = 1;
+            wxGetApp().appConfiguration.waterfallColor = 1;
         }
         else if (m_waterfallColorScheme3->GetValue())
         {
-            wxGetApp().m_waterfallColor = 2;
+            wxGetApp().appConfiguration.waterfallColor = 2;
         }
         
         // Stats reset time
         long resetTime;
         m_statsResetTime->GetValue().ToLong(&resetTime);
-        wxGetApp().m_statsResetTimeSec = resetTime;
+        wxGetApp().appConfiguration.statsResetTimeSecs = resetTime;
         
         if (storePersistent) {
-            pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
-            pConfig->Write(wxT("/FreeDV700/txBPF"), wxGetApp().m_FreeDV700txBPF);
-
-            pConfig->Write(wxT("/Noise/noise_snr"),  wxGetApp().m_noise_snr);
-
-#ifdef __WXMSW__
-            pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
-#endif
-            pConfig->Write(wxT("/Debug/verbose"), g_verbose);
-            pConfig->Write(wxT("/Debug/APIverbose"), g_freedv_verbose);
-            
-            pConfig->Write(wxT("/Stats/ResetTime"), wxGetApp().m_statsResetTimeSec);
-            
-            // Waterfall configuration
-            pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
-            
+            wxGetApp().appConfiguration.debugVerbose = g_verbose;
+            wxGetApp().appConfiguration.apiVerbose = g_freedv_verbose;            
             wxGetApp().appConfiguration.save(pConfig);
         }
     }
@@ -979,7 +965,7 @@ void OptionsDlg::OnAttnCarrierEn(wxScrollEvent& event) {
 }
 
 void OptionsDlg::OnFreeDV700txClip(wxScrollEvent& event) {
-    wxGetApp().m_FreeDV700txClip = m_ckboxFreeDV700txClip->GetValue();
+    wxGetApp().appConfiguration.freedv700Clip = m_ckboxFreeDV700txClip->GetValue();
 }
 
 void OptionsDlg::OnFreeDV700Combine(wxScrollEvent& event) {
@@ -987,14 +973,14 @@ void OptionsDlg::OnFreeDV700Combine(wxScrollEvent& event) {
 }
 
 void OptionsDlg::OnDebugConsole(wxScrollEvent& event) {
-    wxGetApp().m_debug_console = m_ckboxDebugConsole->GetValue();
+    wxGetApp().appConfiguration.debugConsoleEnabled = m_ckboxDebugConsole->GetValue();
 #ifdef __WXMSW__
     // somewhere to send printfs while developing, causes conmsole to pop up on Windows
-    if (wxGetApp().m_debug_console) {
+    if (wxGetApp().appConfiguration.debugConsoleEnabled) {
         int ret = AllocConsole();
         freopen("CONOUT$", "w", stdout); 
         freopen("CONOUT$", "w", stderr); 
-        if (g_verbose) fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().m_debug_console);
+        if (g_verbose) fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().appConfiguration.debugConsoleEnabled);
     } 
 #endif
 }

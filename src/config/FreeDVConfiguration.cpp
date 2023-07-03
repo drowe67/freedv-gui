@@ -66,6 +66,23 @@ FreeDVConfiguration::FreeDVConfiguration()
     , multipleReceiveOnSingleThread("/Rig/SingleRxThread", true)
         
     , quickRecordPath("/QuickRecord/SavePath", _(""))
+        
+    , freedv700Clip("/FreeDV700/txClip", true)
+    , freedv700TxBPF("/FreeDV700/txBPF", true)
+        
+    , noiseSNR("/Noise/noise_snr", 2)
+        
+    , debugConsoleEnabled("/Debug/console", false)
+        
+    , snrSlow("/Audio/snrSlow", false)
+        
+    , debugVerbose("/Debug/verbose", false)
+    , apiVerbose("/Debug/APIverbose", false)
+        
+    , waterfallColor("/Waterfall/Color", 0)
+    , statsResetTimeSecs("/Stats/ResetTime", 10)
+        
+    , currentFreeDVMode("/Audio/mode", 4)
 {
     // empty
 }
@@ -110,6 +127,23 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, halfDuplexMode);
     load_(config, multipleReceiveEnabled);
     load_(config, multipleReceiveOnSingleThread);
+    
+    load_(config, freedv700Clip);
+    load_(config, freedv700TxBPF);
+    
+    load_(config, noiseSNR);
+    
+    load_(config, debugConsoleEnabled);
+    
+    load_(config, snrSlow);
+    
+    load_(config, debugVerbose);
+    load_(config, apiVerbose);
+    
+    load_(config, waterfallColor);
+    
+    load_(config, statsResetTimeSecs);
+    load_(config, currentFreeDVMode);
     
     auto wxStandardPathObj = wxStandardPaths::Get();
     auto documentsDir = wxStandardPathObj.GetDocumentsDir();
@@ -159,6 +193,23 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, multipleReceiveOnSingleThread);
     
     save_(config, quickRecordPath);
+    
+    save_(config, freedv700Clip);
+    save_(config, freedv700TxBPF);
+    
+    save_(config, noiseSNR);
+    
+    save_(config, debugConsoleEnabled);
+    
+    save_(config, snrSlow);
+    
+    save_(config, debugVerbose);
+    save_(config, apiVerbose);
+    
+    save_(config, waterfallColor);
+    
+    save_(config, statsResetTimeSecs);
+    save_(config, currentFreeDVMode);
     
     config->Flush();
 }

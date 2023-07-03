@@ -401,9 +401,9 @@ void MainFrame::setsnrBeta(bool snrSlow)
 //-------------------------------------------------------------------------
 void MainFrame::OnCheckSNRClick(wxCommandEvent& event)
 {
-    wxGetApp().m_snrSlow = m_ckboxSNR->GetValue();
-    setsnrBeta(wxGetApp().m_snrSlow);
-    //printf("m_snrSlow: %d\n", (int)wxGetApp().m_snrSlow);
+    wxGetApp().appConfiguration.snrSlow = m_ckboxSNR->GetValue();
+    setsnrBeta(wxGetApp().appConfiguration.snrSlow);
+    //printf("m_snrSlow: %d\n", (int)wxGetApp().appConfiguration.snrSlow);
 }
 
 // check for space bar press (only when running)
