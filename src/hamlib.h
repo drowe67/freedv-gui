@@ -50,6 +50,7 @@ class Hamlib {
         typedef std::vector<const struct rig_caps *> riglist_t;
 
     private:
+        rmode_t getHamlibMode_(bool analog, uint64_t frequencyHz);
         void update_mode_status();
         void statusUpdateThreadEntryFn_();
         void update_from_hamlib_();

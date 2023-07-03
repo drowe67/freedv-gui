@@ -220,6 +220,8 @@ class TopFrame : public wxFrame
         
         virtual void OnReportFrequencySetFocus(wxFocusEvent& event) { event.Skip(); }
         virtual void OnReportFrequencyKillFocus(wxFocusEvent& event) { event.Skip(); }
+
+        virtual void OnSystemColorChanged(wxSysColourChangedEvent& event) { event.Skip(); }
         
     public:
         wxToggleButton* m_togBtnOnOff;
