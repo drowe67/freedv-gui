@@ -28,7 +28,7 @@
 class AudioConfiguration : public WxWidgetsConfigStore
 {
 public:
-    enum Direction { IN, OUT };
+    enum Direction { DIR_IN, DIR_OUT };
     
     template<int DeviceId, AudioConfiguration::Direction AudioDirection>
     class AudioDeviceConfigName
@@ -55,10 +55,10 @@ public:
     AudioConfiguration() = default;
     virtual ~AudioConfiguration() = default;
     
-    SoundDevice<1, AudioConfiguration::IN> soundCard1In;
-    SoundDevice<1, AudioConfiguration::OUT> soundCard1Out;
-    SoundDevice<2, AudioConfiguration::IN> soundCard2In;
-    SoundDevice<2, AudioConfiguration::OUT> soundCard2Out;
+    SoundDevice<1, Direction::DIR_IN> soundCard1In;
+    SoundDevice<1, Direction::DIR_OUT> soundCard1Out;
+    SoundDevice<2, Direction::DIR_IN> soundCard2In;
+    SoundDevice<2, Direction::DIR_OUT> soundCard2Out;
     
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
@@ -71,16 +71,16 @@ const char* AudioConfiguration::AudioDeviceConfigName<DeviceId, AudioDirection>:
 }
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::IN>::GetDeviceNameConfigName();
+const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::DIR_IN>::GetDeviceNameConfigName();
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::OUT>::GetDeviceNameConfigName();
+const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::DIR_OUT>::GetDeviceNameConfigName();
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::IN>::GetDeviceNameConfigName();
+const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::DIR_IN>::GetDeviceNameConfigName();
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::OUT>::GetDeviceNameConfigName();
+const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::DIR_OUT>::GetDeviceNameConfigName();
 
 template<int DeviceId, AudioConfiguration::Direction AudioDirection>
 const char* AudioConfiguration::AudioDeviceConfigName<DeviceId, AudioDirection>::GetSampleRateConfigName()
@@ -89,20 +89,20 @@ const char* AudioConfiguration::AudioDeviceConfigName<DeviceId, AudioDirection>:
 }
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::IN>::GetSampleRateConfigName();
+const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::DIR_IN>::GetSampleRateConfigName();
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::OUT>::GetSampleRateConfigName();
+const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::DIR_OUT>::GetSampleRateConfigName();
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::IN>::GetSampleRateConfigName();
+const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::DIR_IN>::GetSampleRateConfigName();
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::OUT>::GetSampleRateConfigName();
+const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::DIR_OUT>::GetSampleRateConfigName();
 
 template<int DeviceId, AudioConfiguration::Direction AudioDirection>
 AudioConfiguration::SoundDevice<DeviceId, AudioDirection>::SoundDevice()
-    : deviceName(AudioConfiguration::AudioDeviceConfigName<DeviceId, AudioDirection>::GetDeviceNameConfigName(), _("none"))
+    : deviceName(AudioConfiguration::AudioDeviceConfigName<DeviceId, AudioDirection>::GetDeviceNameConfigName(), "none")
     , sampleRate(AudioConfiguration::AudioDeviceConfigName<DeviceId, AudioDirection>::GetSampleRateConfigName(), -1)
 {
     // empty

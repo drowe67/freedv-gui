@@ -22,49 +22,49 @@
 #include "AudioConfiguration.h"
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::IN>::GetDeviceNameConfigName()
+const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::DIR_IN>::GetDeviceNameConfigName()
 {
     return "/Audio/soundCard1InDeviceName";
 }
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::OUT>::GetDeviceNameConfigName()
+const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::DIR_OUT>::GetDeviceNameConfigName()
 {
     return "/Audio/soundCard1OutDeviceName";
 }
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::IN>::GetDeviceNameConfigName()
+const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::DIR_IN>::GetDeviceNameConfigName()
 {
     return "/Audio/soundCard2InDeviceName";
 }
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::OUT>::GetDeviceNameConfigName()
+const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::DIR_OUT>::GetDeviceNameConfigName()
 {
     return "/Audio/soundCard2OutDeviceName";
 }
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::IN>::GetSampleRateConfigName()
+const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::DIR_IN>::GetSampleRateConfigName()
 {
     return "/Audio/soundCard1InSampleRate";
 }
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::OUT>::GetSampleRateConfigName()
+const char* AudioConfiguration::AudioDeviceConfigName<1, AudioConfiguration::DIR_OUT>::GetSampleRateConfigName()
 {
     return "/Audio/soundCard1OutSampleRate";
 }
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::IN>::GetSampleRateConfigName()
+const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::DIR_IN>::GetSampleRateConfigName()
 {
     return "/Audio/soundCard2InSampleRate";
 }
 
 template<>
-const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::OUT>::GetSampleRateConfigName()
+const char* AudioConfiguration::AudioDeviceConfigName<2, AudioConfiguration::DIR_OUT>::GetSampleRateConfigName()
 {
     return "/Audio/soundCard2OutSampleRate";
 }
