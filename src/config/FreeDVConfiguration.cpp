@@ -19,6 +19,8 @@
 //
 //==========================================================================
 
+#include <wx/stdpaths.h>
+
 #include "../defines.h"
 #include "FreeDVConfiguration.h"
 
@@ -62,6 +64,8 @@ FreeDVConfiguration::FreeDVConfiguration()
     , halfDuplexMode("/Rig/HalfDuplex", true)
     , multipleReceiveEnabled("/Rig/MultipleRx", true)
     , multipleReceiveOnSingleThread("/Rig/SingleRxThread", true)
+        
+    , quickRecordPath("/QuickRecord/SavePath", _(""))
 {
     // empty
 }
@@ -106,6 +110,11 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, halfDuplexMode);
     load_(config, multipleReceiveEnabled);
     load_(config, multipleReceiveOnSingleThread);
+    
+    auto wxStandardPathObj = wxStandardPaths::Get();
+    auto documentsDir = wxStandardPathObj.GetDocumentsDir();
+    quickRecordPath.setDefaultVal(documentsDir);
+    load_(config, quickRecordPath);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -148,6 +157,8 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, halfDuplexMode);
     save_(config, multipleReceiveEnabled);
     save_(config, multipleReceiveOnSingleThread);
+    
+    save_(config, quickRecordPath);
     
     config->Flush();
 }

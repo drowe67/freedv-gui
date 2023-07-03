@@ -28,7 +28,6 @@
 #include <chrono>
 #include <climits>
 #include <wx/cmdline.h>
-#include <wx/stdpaths.h>
 #include "version.h"
 #include "main.h"
 #include "osx_interface.h"
@@ -397,9 +396,6 @@ void MainFrame::loadConfiguration_()
     m_txtTxLevelNum->SetLabel(fmtString);
 
     // PTT -------------------------------------------------------------------
-    auto wxStandardPathObj = wxStandardPaths::Get();
-    auto documentsDir = wxStandardPathObj.GetDocumentsDir();
-    wxGetApp().m_txtQuickRecordPath = pConfig->Read(wxT("/QuickRecord/SavePath"), documentsDir);
     
     // Note: we're no longer using RigName but we need to bring over the old data
     // for backwards compatibility.    
@@ -816,8 +812,6 @@ MainFrame::~MainFrame()
     wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
 
     wxGetApp().appConfiguration.transmitLevel = g_txLevel;
-        
-    pConfig->Write(wxT("/QuickRecord/SavePath"), wxGetApp().m_txtQuickRecordPath);
 
     pConfig->Write(wxT("/Audio/snrSlow"), wxGetApp().m_snrSlow);
 

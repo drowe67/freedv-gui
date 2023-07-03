@@ -173,12 +173,9 @@ class MainApp : public wxApp
         
         FreeDVConfiguration appConfiguration;
         
-        // PTT -----------------------------------
-        wxString            m_txtQuickRecordPath;
-    
+        // PTT -----------------------------------    
         unsigned int        m_intHamlibRig;
         Hamlib              *m_hamlib;
-
         Serialport         *m_serialport;
 
         // PTT Input

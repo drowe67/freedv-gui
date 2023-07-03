@@ -648,7 +648,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlVoiceKeyerRxPause->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.voiceKeyerRxPause.get()));
         m_txtCtrlVoiceKeyerRepeats->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.voiceKeyerRepeats.get()));
 
-        m_txtCtrlQuickRecordPath->SetValue(wxGetApp().m_txtQuickRecordPath);
+        m_txtCtrlQuickRecordPath->SetValue(wxGetApp().appConfiguration.quickRecordPath);
         
         m_ckHalfDuplex->SetValue(wxGetApp().appConfiguration.halfDuplexMode);
 
@@ -768,8 +768,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         if (tmp < 0) {tmp = 0;} if (tmp > 100) {tmp = 100;}
         wxGetApp().appConfiguration.voiceKeyerRepeats = (int)tmp;
         
-        wxGetApp().m_txtQuickRecordPath = m_txtCtrlQuickRecordPath->GetValue();
-        pConfig->Write(wxT("/QuickRecord/SavePath"), wxGetApp().m_txtQuickRecordPath);
+        wxGetApp().appConfiguration.quickRecordPath = m_txtCtrlQuickRecordPath->GetValue();
         
         wxGetApp().m_testFrames    = m_ckboxTestFrame->GetValue();
 
@@ -938,7 +937,7 @@ void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent& event) {
      wxDirDialog pathDialog(
                                  this,
                                  wxT("Choose Quick Record save location"),
-                                 wxGetApp().m_txtQuickRecordPath
+                                 wxGetApp().appConfiguration.quickRecordPath
                                  );
      if(pathDialog.ShowModal() == wxID_CANCEL) {
          return;     // the user changed their mind...

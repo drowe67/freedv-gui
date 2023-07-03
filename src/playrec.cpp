@@ -390,7 +390,7 @@ void MainFrame::OnTogBtnRecord( wxCommandEvent& event )
     else
     {
         auto currentTime = wxDateTime::Now().Format(_("%Y%m%d-%H%M%S"));
-        wxFileName filePath(wxGetApp().m_txtQuickRecordPath, wxString::Format(_("FreeDV_FromRadio_%s.wav"), currentTime));
+        wxFileName filePath(wxGetApp().appConfiguration.quickRecordPath, wxString::Format(_("FreeDV_FromRadio_%s.wav"), currentTime));
         wxString    soundFile = filePath.GetFullPath();
         SF_INFO     sfInfo;
     

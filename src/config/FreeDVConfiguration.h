@@ -74,6 +74,8 @@ public:
     ConfigurationDataElement<bool> multipleReceiveEnabled;
     ConfigurationDataElement<bool> multipleReceiveOnSingleThread;
     
+    ConfigurationDataElement<wxString> quickRecordPath;
+    
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };
