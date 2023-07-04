@@ -22,6 +22,7 @@
 #ifndef FREEDV_CONFIGURATION_H
 #define FREEDV_CONFIGURATION_H
 
+#include <inttypes.h>
 #include "WxWidgetsConfigStore.h"
 #include "ConfigurationDataElement.h"
 #include "AudioConfiguration.h"
