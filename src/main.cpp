@@ -2138,16 +2138,23 @@ void MainFrame::performFreeDVOn_()
                         freedvReporter->setOnQSYRequestFn([&](std::string callsign, uint64_t freqHz, std::string message) {
                             double frequencyMHz = freqHz / 1000000.0;
                             wxString fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz."), callsign, frequencyMHz);
-                            int dialogStyle = wxOK | wxICON_INFORMATION;
+                            int dialogStyle = wxOK | wxICON_INFORMATION | wxCENTRE;
                             
                             if (wxGetApp().m_hamlib != nullptr && wxGetApp().m_boolHamlibEnableFreqModeChanges)
                             {
                                 fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz. Would you like to change to that frequency now?"), callsign, frequencyMHz);
-                                dialogStyle = wxYES_NO | wxICON_QUESTION;
+                                dialogStyle = wxYES_NO | wxICON_QUESTION | wxCENTRE;
                             }
                             
                             CallAfter([&, fullMessage, dialogStyle, frequencyMHz]() {
-                                auto answer = wxMessageBox(fullMessage, wxT("FreeDV Reporter"), dialogStyle, this);
+                                wxMessageDialog messageDialog(this, fullMessage, wxT("FreeDV Reporter"), dialogStyle);
+
+                                if (dialogStyle & wxYES_NO)
+                                {
+                                    messageDialog.SetYesNoLabels(_("Change Frequency"), _("Cancel"));
+                                }
+
+                                auto answer = messageDialog.ShowModal();
                                 if (answer == wxYES)
                                 {
                                     // This will implicitly cause Hamlib to change the frequecy and mode.
