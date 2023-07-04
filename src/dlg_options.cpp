@@ -174,6 +174,31 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     sizerRigControl->Add(sbSizer_hamlib,0, wxALL | wxEXPAND, 5);
     
+    wxStaticBoxSizer* sbSizer_freqList;
+    wxStaticBox *sb_freqList = new wxStaticBox(m_rigControlTab, wxID_ANY, _("Predefined Frequencies"));
+    sbSizer_freqList = new wxStaticBoxSizer(sb_freqList, wxVERTICAL);
+        
+    m_freqList = new wxListBox(m_rigControlTab, wxID_ANY);
+    m_freqList->SetMinSize(wxSize(250, -1));
+    sbSizer_freqList->Add(m_freqList, 0, wxALL | wxALIGN_LEFT, 5);
+    
+    wxBoxSizer* freqListButtonSizer = new wxBoxSizer(wxHORIZONTAL);
+    
+    wxStaticText* labelEnterFreq = new wxStaticText(m_rigControlTab, wxID_ANY, wxT("Enter frequency (MHz):"), wxDefaultPosition, wxDefaultSize, 0);
+    freqListButtonSizer->Add(labelEnterFreq, 0, wxALL | wxALIGN_LEFT, 5);
+    
+    m_txtCtrlNewFrequency = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(120,-1), 0);
+    freqListButtonSizer->Add(m_txtCtrlNewFrequency, 0, wxALL | wxALIGN_LEFT, 5);
+    
+    m_freqListAdd = new wxButton(m_rigControlTab, wxID_ANY, _("Add"), wxDefaultPosition, wxSize(-1,-1), 0);
+    freqListButtonSizer->Add(m_freqListAdd,  0, wxALL, 5);
+    m_freqListRemove = new wxButton(m_rigControlTab, wxID_ANY, _("Remove"), wxDefaultPosition, wxSize(-1,-1), 0);
+    freqListButtonSizer->Add(m_freqListRemove,  0, wxALL, 5);
+    
+    sbSizer_freqList->Add(freqListButtonSizer, 0, wxALL, 5);
+    
+    sizerRigControl->Add(sbSizer_freqList,0, wxALL | wxEXPAND, 5);
+    
     m_rigControlTab->SetSizer(sizerRigControl);
         
     // Display tab

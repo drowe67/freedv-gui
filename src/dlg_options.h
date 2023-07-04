@@ -158,6 +158,11 @@ class OptionsDlg : public wxDialog
         
         wxCheckBox*  m_ckbox_use_utc_time;
         
+        wxListBox*  m_freqList;
+        wxTextCtrl* m_txtCtrlNewFrequency;
+        wxButton*   m_freqListAdd;
+        wxButton*   m_freqListRemove;
+        
         unsigned int  event_in_serial, event_out_serial;
 
         void OnChooseVoiceKeyerWaveFile(wxCommandEvent& event);
