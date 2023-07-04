@@ -875,7 +875,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Disable PTT and Voice Keyer buttons if only RX devices are configured. (PR #449)
     * Fix Linux display bugs when switching between dark and light mode. (PR #454)
 2. Enhancements:
-    * Add the ability to request that another FreeDV Reporter user QSY. (PR #434, #453, #456, #458)
+    * Add the ability to request that another FreeDV Reporter user QSY. (PR #434, #453, #456, #458, #459)
     * Display 'Digital' on button when Analog mode is active. (PR #447)
     * Set minimum size for Mode box to 250px. (PR #446)
     * Notify FreeDV Reporter if only capable of RX. (PR #449)
