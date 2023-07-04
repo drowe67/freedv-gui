@@ -188,9 +188,15 @@ void FreeDVReporterDialog::refreshQSYButtonState()
     {
         auto selectedCallsign = m_listSpots->GetItemText(selectedIndex);
     
-        if (selectedCallsign != wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign && wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
+        if (selectedCallsign != wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign && 
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
         {
-            enabled = true;
+            wxString theirFreqString = m_listSpots->GetItemText(selectedIndex, 3);
+            wxRegEx mhzRegex(" MHz$");
+            mhzRegex.Replace(&theirFreqString, "");
+            
+            uint64_t theirFreq = wxAtof(theirFreqString) * 1000 * 1000;
+            enabled = theirFreq != wxGetApp().m_reportingFrequency;
         }
     }
     
@@ -327,11 +333,15 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
                 if (transmitting)
                 {
                     txStatus = "Transmitting";
-                    m_listSpots->SetItemBackgroundColour(index, *wxRED);
+                    
+                    wxColour lightRed(0xfc, 0x45, 0x00);
+                    m_listSpots->SetItemBackgroundColour(index, lightRed);
+                    m_listSpots->SetItemTextColour(index, *wxWHITE);
                 }
                 else
                 {
                     m_listSpots->SetItemBackgroundColour(index, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOX));
+                    m_listSpots->SetItemTextColour(index, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT));
                 }
             
                 m_listSpots->Freeze();
