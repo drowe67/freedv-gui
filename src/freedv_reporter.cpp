@@ -196,7 +196,7 @@ void FreeDVReporterDialog::refreshQSYButtonState()
             mhzRegex.Replace(&theirFreqString, "");
             
             uint64_t theirFreq = wxAtof(theirFreqString) * 1000 * 1000;
-            enabled = theirFreq != wxGetApp().m_reportingFrequency;
+            enabled = theirFreq != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
         }
     }
     
