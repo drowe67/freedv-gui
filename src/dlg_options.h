@@ -158,11 +158,25 @@ class OptionsDlg : public wxDialog
         
         wxCheckBox*  m_ckbox_use_utc_time;
         
+        wxListBox*  m_freqList;
+        wxTextCtrl* m_txtCtrlNewFrequency;
+        wxButton*   m_freqListAdd;
+        wxButton*   m_freqListRemove;
+        wxButton*   m_freqListMoveUp;
+        wxButton*   m_freqListMoveDown;
+        
         unsigned int  event_in_serial, event_out_serial;
 
         void OnChooseVoiceKeyerWaveFile(wxCommandEvent& event);
         void OnChooseQuickRecordPath(wxCommandEvent& event);
-
+        
+        void OnReportingFreqSelectionChange(wxCommandEvent& event);
+        void OnReportingFreqTextChange(wxCommandEvent& event);
+        void OnReportingFreqAdd(wxCommandEvent& event);
+        void OnReportingFreqRemove(wxCommandEvent& event);
+        void OnReportingFreqMoveUp(wxCommandEvent& event);
+        void OnReportingFreqMoveDown(wxCommandEvent& event);
+        
      private:
          void updateReportingState();
          void updateChannelNoiseState();

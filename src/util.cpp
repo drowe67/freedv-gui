@@ -120,15 +120,16 @@ void MainFrame::OpenSerialPort(void)
 {
     Serialport *serialport = wxGetApp().m_serialport;
 
-    if(!wxGetApp().m_strRigCtrlPort.IsEmpty()) 
+    if(!wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPort->IsEmpty()) 
     {
-        if (wxGetApp().CanAccessSerialPort((const char*)wxGetApp().m_strRigCtrlPort.ToUTF8()))
+        if (wxGetApp().CanAccessSerialPort((const char*)wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPort->ToUTF8()))
         {
-            serialport->openport(wxGetApp().m_strRigCtrlPort.c_str(),
-                    wxGetApp().m_boolUseRTS,
-                    wxGetApp().m_boolRTSPos,
-                    wxGetApp().m_boolUseDTR,
-                    wxGetApp().m_boolDTRPos);
+            serialport->openport(
+                    wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPort->c_str(),
+                    wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseRTS,
+                    wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS,
+                    wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseDTR,
+                    wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR);
             if (serialport->isopen()) 
             {
                 // always start PTT in Rx state
@@ -170,12 +171,12 @@ void MainFrame::OpenPTTInPort(void)
 {
     Serialport *serialport = wxGetApp().m_pttInSerialPort;
 
-    if(!wxGetApp().m_strPTTInputPort.IsEmpty()) 
+    if(!wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPort->IsEmpty()) 
     {
-        if (wxGetApp().CanAccessSerialPort((const char*)wxGetApp().m_strPTTInputPort.ToUTF8()))
+        if (wxGetApp().CanAccessSerialPort((const char*)wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPort->ToUTF8()))
         {
             serialport->openport(
-                wxGetApp().m_strPTTInputPort.c_str(),
+                wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPort->c_str(),
                 false,
                 false,
                 false,
@@ -191,7 +192,7 @@ void MainFrame::OpenPTTInPort(void)
             {
                 // Set up PTT monitoring. When PTT state changes, we should also change 
                 // the PTT state in th app.
-                serialport->enablePttInputMonitoring(wxGetApp().m_boolCTSPos, [&](bool pttState) {
+                serialport->enablePttInputMonitoring(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPolarityCTS, [&](bool pttState) {
                     fprintf(stderr, "PTT input state is now %d\n", pttState);
                     GetEventHandler()->CallAfter([&]() { 
                         m_btnTogPTT->SetValue(pttState); 

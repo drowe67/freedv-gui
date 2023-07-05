@@ -306,14 +306,14 @@ void Serialport::ptt(bool tx) {
 
     if (com_handle != COM_HANDLE_INVALID) {
         if (m_useRTS) {
-            //fprintf(stderr, "g_tx: %d m_boolRTSPos: %d serialLine: %d\n", g_tx, wxGetApp().m_boolRTSPos, g_tx == wxGetApp().m_boolRTSPos);
+            //fprintf(stderr, "g_tx: %d m_boolRTSPos: %d serialLine: %d\n", g_tx, wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS, g_tx == wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS);
             if (tx == m_RTSPos)
                 raiseRTS();
             else
                 lowerRTS();
         }
         if (m_useDTR) {
-            //fprintf(stderr, "g_tx: %d m_boolDTRPos: %d serialLine: %d\n", g_tx, wxGetApp().m_boolDTRPos, g_tx == wxGetApp().m_boolDTRPos);
+            //fprintf(stderr, "g_tx: %d m_boolDTRPos: %d serialLine: %d\n", g_tx, wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR, g_tx == wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR);
             if (tx == m_DTRPos)
                 raiseDTR();
             else

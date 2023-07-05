@@ -79,7 +79,7 @@ void MainFrame::OnToolsFreeDVReporter(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsFreeDVReporterUI(wxUpdateUIEvent& event)
 {
-    event.Enable(wxGetApp().m_freedvReporterHostname.ToStdString() != "");
+    event.Enable(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString() != "");
 }
 
 //-------------------------------------------------------------------------
@@ -135,25 +135,29 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     wxUnusedVar(event);
     g_modal = true;
     //fprintf(stderr,"g_modal: %d\n", g_modal);
-    optionsDlg->ShowModal();
+    if (optionsDlg->ShowModal() == wxOK)
+    {
+        // Update reporting list.
+        updateReportingFreqList_();
     
-    // Show/hide frequency box based on PSK Reporter status.
-    m_freqBox->Show(wxGetApp().m_reportingEnabled);
+        // Show/hide frequency box based on PSK Reporter status.
+        m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
-    // Show/hide callsign combo box based on PSK Reporter Status
-    if (wxGetApp().m_reportingEnabled)
-    {
-        m_cboLastReportedCallsigns->Show();
-        m_txtCtrlCallSign->Hide();
-    }
-    else
-    {
-        m_cboLastReportedCallsigns->Hide();
-        m_txtCtrlCallSign->Show();
-    }
+        // Show/hide callsign combo box based on PSK Reporter Status
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
+        {
+            m_cboLastReportedCallsigns->Show();
+            m_txtCtrlCallSign->Hide();
+        }
+        else
+        {
+            m_cboLastReportedCallsigns->Hide();
+            m_txtCtrlCallSign->Show();
+        }
 
-    // Relayout window so that the changes can take effect.
-    m_panel->Layout();
+        // Relayout window so that the changes can take effect.
+        m_panel->Layout();
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -235,7 +239,7 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
 // Attempt to talk to rig using Hamlib
 
 bool MainFrame::OpenHamlibRig() {
-    if (wxGetApp().m_boolHamlibUseForPTT != true)
+    if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT != true)
        return false;
     if (wxGetApp().m_intHamlibRig == 0)
         return false;
@@ -243,21 +247,21 @@ bool MainFrame::OpenHamlibRig() {
         return false;
 
     int rig = wxGetApp().m_intHamlibRig;
-    wxString port = wxGetApp().m_strHamlibSerialPort;
-    int serial_rate = wxGetApp().m_intHamlibSerialRate;
+    wxString port = wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort;
+    int serial_rate = wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate;
     if (wxGetApp().CanAccessSerialPort((const char*)port.ToUTF8()))
     {
-        bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, wxGetApp().m_intHamlibIcomCIVHex, wxGetApp().m_hamlibPttType);
+        bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress, (Hamlib::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get());
         if (status == false)
         {
             wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
         }
         else
         {
-            wxGetApp().m_hamlib->readOnly(!wxGetApp().m_boolHamlibEnableFreqModeChanges);
-            if (wxGetApp().m_boolHamlibEnableFreqModeChanges)
+            wxGetApp().m_hamlib->readOnly(!wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
+            if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
-                wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);
+                wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes ? true : g_analog);
             }
             wxGetApp().m_hamlib->enable_mode_detection(m_txtModeStatus, m_cboReportFrequency, g_mode == FREEDV_MODE_2400B);
         }
@@ -366,7 +370,7 @@ void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
     
-    pConfig->Write(wxT("/Audio/transmitLevel"), g_txLevel);
+    wxGetApp().appConfiguration.transmitLevel = g_txLevel;
 }
 
 //-------------------------------------------------------------------------
@@ -401,9 +405,9 @@ void MainFrame::setsnrBeta(bool snrSlow)
 //-------------------------------------------------------------------------
 void MainFrame::OnCheckSNRClick(wxCommandEvent& event)
 {
-    wxGetApp().m_snrSlow = m_ckboxSNR->GetValue();
-    setsnrBeta(wxGetApp().m_snrSlow);
-    //printf("m_snrSlow: %d\n", (int)wxGetApp().m_snrSlow);
+    wxGetApp().appConfiguration.snrSlow = m_ckboxSNR->GetValue();
+    setsnrBeta(wxGetApp().appConfiguration.snrSlow);
+    //printf("m_snrSlow: %d\n", (int)wxGetApp().appConfiguration.snrSlow);
 }
 
 // check for space bar press (only when running)
@@ -416,7 +420,7 @@ int MainApp::FilterEvent(wxEvent& event)
             // only use space to toggle PTT if we are running and no modal dialogs (like options) up
             //fprintf(stderr,"frame->m_RxRunning: %d g_modal: %d\n",
             //        frame->m_RxRunning, g_modal);
-            if (frame->m_RxRunning && !g_modal && wxGetApp().m_boolEnableSpacebarForPTT) {
+            if (frame->m_RxRunning && !g_modal && wxGetApp().appConfiguration.enableSpaceBarForPTT) {
 
                 // space bar controls rx/rx if keyer not running
                 if (frame->vk_state == VK_IDLE) {
@@ -478,7 +482,7 @@ void MainFrame::togglePTT(void) {
         }
         
         // tx-> rx transition, swap to the page we were on for last rx
-        m_auiNbookCtrl->ChangeSelection(wxGetApp().m_rxNbookCtrl);
+        m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
 
         // enable sync text
 
@@ -491,7 +495,7 @@ void MainFrame::togglePTT(void) {
     else
     {
         // rx-> tx transition, swap to Mic In page to monitor speech
-        wxGetApp().m_rxNbookCtrl = m_auiNbookCtrl->GetSelection();
+        wxGetApp().appConfiguration.currentNotebookTab = m_auiNbookCtrl->GetSelection();
         m_auiNbookCtrl->ChangeSelection(m_auiNbookCtrl->GetPageIndex((wxWindow *)m_panelSpeechIn));
 
         // disable sync text
@@ -507,10 +511,10 @@ void MainFrame::togglePTT(void) {
 
     // Hamlib PTT
 
-    if (wxGetApp().m_boolHamlibUseForPTT) {
+    if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT) {
         Hamlib *hamlib = wxGetApp().m_hamlib;
         wxString hamlibError;
-        if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) {
+        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT && hamlib != NULL) {
             // Update mode display on the bottom of the main UI.
             if (hamlib->update_frequency_and_mode() != 0 || hamlib->ptt(g_tx, hamlibError) == false) {
                 wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
@@ -520,7 +524,7 @@ void MainFrame::togglePTT(void) {
 
     // Serial PTT
 
-    if (wxGetApp().m_boolUseSerialPTT && (wxGetApp().m_serialport->isopen())) {
+    if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT && (wxGetApp().m_serialport->isopen())) {
         wxGetApp().m_serialport->ptt(g_tx);
     }
 
@@ -568,12 +572,12 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
     }
     
     if (wxGetApp().m_hamlib != nullptr && 
-        wxGetApp().m_reportingFrequency > 0 &&
-        wxGetApp().m_boolHamlibEnableFreqModeChanges)
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 &&
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
     {
         // Request mode change on the radio side
         wxGetApp().m_hamlib->setMode(
-            wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog, 
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes ? true : g_analog, 
             wxGetApp().m_hamlib->get_frequency());
     }
 
@@ -620,7 +624,7 @@ void MainFrame::resetStats_()
             g_error_histn[i] = 0;
         }
         // resets variance stats every time it is called
-        freedvInterface.setEq(wxGetApp().m_700C_EQ);
+        freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
     }
 }
 
@@ -644,8 +648,8 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     wxString freqStr = m_cboReportFrequency->GetValue();
     if (freqStr.Length() > 0)
     {
-        wxGetApp().m_reportingFrequency = atof(freqStr.ToUTF8()) * 1000 * 1000;
-        if (wxGetApp().m_reportingFrequency > 0)
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = atof(freqStr.ToUTF8()) * 1000 * 1000;
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
         {
             m_cboReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
         }
@@ -656,23 +660,23 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     }
     else
     {
-        wxGetApp().m_reportingFrequency = 0;
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = 0;
         m_cboReportFrequency->SetForegroundColour(wxColor(*wxRED));
     }
     
     // Report current frequency to reporters
     for (auto& ptr : wxGetApp().m_reporters)
     {
-        ptr->freqChange(wxGetApp().m_reportingFrequency);
+        ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
     }
     
     if (wxGetApp().m_hamlib != nullptr && 
-        wxGetApp().m_reportingFrequency > 0 && 
-        wxGetApp().m_reportingFrequency != wxGetApp().m_hamlib->get_frequency() &&
-        wxGetApp().m_boolHamlibEnableFreqModeChanges)
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 && 
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency != wxGetApp().m_hamlib->get_frequency() &&
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
     {
         // Request frequency/mode change on the radio side
-        wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().m_reportingFrequency, wxGetApp().m_boolHamlibUseAnalogModes ? true : g_analog);
+        wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes ? true : g_analog);
     }
     
     if (m_reporterDialog != nullptr)
@@ -714,4 +718,23 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
     m_collpane->SetBackgroundColour(currentControlBackground);
     m_collpane->GetPane()->SetBackgroundColour(currentControlBackground);
     TopFrame::OnSystemColorChanged(event);
+}
+
+void MainFrame::updateReportingFreqList_()
+{
+    uint64_t prevFreqInt = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+    auto prevSelected = wxString::Format(_("%.04f"), (double)prevFreqInt / (double)1000.0 / (double)1000.0);
+    m_cboReportFrequency->Clear();
+    
+    for (auto& item : wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList.get())
+    {
+        m_cboReportFrequency->Append(item);
+    }
+    
+    auto idx = m_cboReportFrequency->FindString(prevSelected);
+    if (idx >= 0)
+    {
+        m_cboReportFrequency->SetSelection(idx);
+        m_cboReportFrequency->SetValue(prevSelected);
+    }
 }

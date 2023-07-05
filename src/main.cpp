@@ -28,7 +28,6 @@
 #include <chrono>
 #include <climits>
 #include <wx/cmdline.h>
-#include <wx/stdpaths.h>
 #include "version.h"
 #include "main.h"
 #include "osx_interface.h"
@@ -222,12 +221,6 @@ bool MainApp::OnInit()
     golay23_init();
     
     m_rTopWindow = wxRect(0, 0, 0, 0);
-    m_strRxInAudio.Empty();
-    m_strRxOutAudio.Empty();
-    m_textVoiceInput.Empty();
-    m_textVoiceOutput.Empty();
-    m_strSampleRate.Empty();
-    m_strBitrate.Empty();
 
      // Create the main application window
 
@@ -357,8 +350,7 @@ void MainFrame::test2020Mode_()
     std::cout << "2020 allowed: " << allowed << std::endl;
     
     // Save results to configuration.
-    wxGetApp().m_2020Allowed = allowed;
-    pConfig->Write(wxT("/FreeDV2020/Allowed"), wxGetApp().m_2020Allowed);
+    wxGetApp().appConfiguration.freedv2020Allowed = allowed;
 }
 #endif // defined(FREEDV_MODE_2020)
 
@@ -367,14 +359,13 @@ void MainFrame::test2020Mode_()
 //-------------------------------------------------------------------------
 void MainFrame::loadConfiguration_()
 {
-    wxGetApp().m_firstTimeUse = pConfig->Read(wxT("/FirstTimeUse"), true);
-    wxGetApp().m_2020Allowed = pConfig->Read(wxT("/FreeDV2020/Allowed"), false);
+    wxGetApp().appConfiguration.load(pConfig);
     
     // restore frame position and size
-    int x = pConfig->Read(wxT("/MainFrame/left"),       20);
-    int y = pConfig->Read(wxT("/MainFrame/top"),        20);
-    int w = pConfig->Read(wxT("/MainFrame/width"),     800);
-    int h = pConfig->Read(wxT("/MainFrame/height"),    780);
+    int x = wxGetApp().appConfiguration.mainWindowLeft;
+    int y = wxGetApp().appConfiguration.mainWindowTop;
+    int w = wxGetApp().appConfiguration.mainWindowWidth;
+    int h = wxGetApp().appConfiguration.mainWindowHeight;
 
     // sanitise frame position as a first pass at Win32 registry bug
 
@@ -384,10 +375,8 @@ void MainFrame::loadConfiguration_()
     if (w < 0 || w > 2048) w = 800;
     if (h < 0 || h > 2048) h = 780;
 
-    wxGetApp().m_rxNbookCtrl        = pConfig->Read(wxT("/MainFrame/rxNbookCtrl"),    (long)0);
-
-    g_SquelchActive = pConfig->Read(wxT("/Audio/SquelchActive"), (long)1);
-    g_SquelchLevel = pConfig->Read(wxT("/Audio/SquelchLevel"), (int)(SQ_DEFAULT_SNR*2));
+    g_SquelchActive = wxGetApp().appConfiguration.squelchActive;
+    g_SquelchLevel = wxGetApp().appConfiguration.squelchLevel;
     g_SquelchLevel /= 2.0;
     
     Move(x, y);
@@ -398,141 +387,37 @@ void MainFrame::loadConfiguration_()
     if (h < size.GetHeight()) h = size.GetHeight();
     SetClientSize(w, h);
     SetSizeHints(size);
-
-    wxGetApp().m_fifoSize_ms = pConfig->Read(wxT("/Audio/fifoSize_ms"), (int)FIFO_SIZE);
-
-    wxGetApp().m_soundCard1InDeviceName = pConfig->Read(wxT("/Audio/soundCard1InDeviceName"), _("none"));
-    wxGetApp().m_soundCard1OutDeviceName = pConfig->Read(wxT("/Audio/soundCard1OutDeviceName"), _("none"));
-    wxGetApp().m_soundCard2InDeviceName = pConfig->Read(wxT("/Audio/soundCard2InDeviceName"), _("none"));	
-    wxGetApp().m_soundCard2OutDeviceName = pConfig->Read(wxT("/Audio/soundCard2OutDeviceName"), _("none"));	
         
-    g_txLevel = pConfig->Read(wxT("/Audio/transmitLevel"), (int)0);
+    g_txLevel = wxGetApp().appConfiguration.transmitLevel;
     char fmt[15];
     m_sliderTxLevel->SetValue(g_txLevel);
     snprintf(fmt, 15, "%0.1f dB", (double)g_txLevel / 10.0);
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
-    
-    // The below is the old way of storing the sample rates. Since we don't want to lose these if upgrading,
-    // we feed these in as defaults for the new sample rate keys.
-    int oldSoundCard1SampleRate = pConfig->Read(wxT("/Audio/soundCard1SampleRate"),          -1);
-    int oldSoundCard2SampleRate = pConfig->Read(wxT("/Audio/soundCard2SampleRate"),          -1);
-    wxGetApp().m_soundCard1InSampleRate = pConfig->Read(wxT("/Audio/soundCard1InSampleRate"), oldSoundCard1SampleRate);
-    wxGetApp().m_soundCard1OutSampleRate = pConfig->Read(wxT("/Audio/soundCard1OutSampleRate"), oldSoundCard1SampleRate);
-    wxGetApp().m_soundCard2InSampleRate = pConfig->Read(wxT("/Audio/soundCard2InSampleRate"), oldSoundCard2SampleRate);
-    wxGetApp().m_soundCard2OutSampleRate = pConfig->Read(wxT("/Audio/soundCard2OutSampleRate"), oldSoundCard2SampleRate);
-    
-    wxGetApp().m_playFileToMicInPath = pConfig->Read("/File/playFileToMicInPath",   wxT(""));
-    wxGetApp().m_recFileFromRadioPath = pConfig->Read("/File/recFileFromRadioPath", wxT(""));
-    wxGetApp().m_recFileFromRadioSecs = pConfig->Read("/File/recFileFromRadioSecs", 60);
-    wxGetApp().m_recFileFromModulatorPath = pConfig->Read("/File/recFileFromModulatorPath", wxT(""));
-    wxGetApp().m_recFileFromModulatorSecs = pConfig->Read("/File/recFileFromModulatorSecs", 60);
-    wxGetApp().m_playFileFromRadioPath = pConfig->Read("/File/playFileFromRadioPath", wxT(""));
 
     // PTT -------------------------------------------------------------------
-    wxGetApp().m_boolEnableSpacebarForPTT = pConfig->ReadBool("/Rig/EnableSpacebarForPTT", true);
-    wxGetApp().m_boolHalfDuplex     = pConfig->ReadBool(wxT("/Rig/HalfDuplex"),     true);
-    wxGetApp().m_boolMultipleRx     = pConfig->ReadBool(wxT("/Rig/MultipleRx"),     true);
-    wxGetApp().m_boolSingleRxThread = pConfig->ReadBool(wxT("/Rig/SingleRxThread"), true);
-    wxGetApp().m_leftChannelVoxTone = pConfig->ReadBool("/Rig/leftChannelVoxTone",  false);
-
-    wxGetApp().m_txtVoiceKeyerWaveFilePath = pConfig->Read(wxT("/VoiceKeyer/WaveFilePath"), wxT(""));
-    wxGetApp().m_txtVoiceKeyerWaveFile = pConfig->Read(wxT("/VoiceKeyer/WaveFile"), wxT("voicekeyer.wav"));
-    wxGetApp().m_intVoiceKeyerRxPause = pConfig->Read(wxT("/VoiceKeyer/RxPause"), 10);
-    wxGetApp().m_intVoiceKeyerRepeats = pConfig->Read(wxT("/VoiceKeyer/Repeats"), 5);
-
-    auto wxStandardPathObj = wxStandardPaths::Get();
-    auto documentsDir = wxStandardPathObj.GetDocumentsDir();
-    wxGetApp().m_txtQuickRecordPath = pConfig->Read(wxT("/QuickRecord/SavePath"), documentsDir);
-    
-    wxGetApp().m_boolHamlibUseForPTT = pConfig->ReadBool("/Hamlib/UseForPTT", false);
-    wxGetApp().m_boolHamlibEnableFreqModeChanges = pConfig->ReadBool("/Hamlib/EnableFreqModeChanges", true);
-    
-    wxGetApp().m_intHamlibIcomCIVHex = pConfig->ReadLong("/Hamlib/IcomCIVHex", 0);
-    wxGetApp().m_boolHamlibUseAnalogModes = pConfig->ReadBool(wxT("/Hamlib/UseAnalogModes"), false);
     
     // Note: we're no longer using RigName but we need to bring over the old data
-    // for backwards compatibility.
-    wxGetApp().m_strHamlibRigName = pConfig->Read(wxT("/Hamlib/RigNameStr"), wxT(""));
-    
-    if (wxGetApp().m_strHamlibRigName == wxT(""))
+    // for backwards compatibility.    
+    if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName == wxT(""))
     {
         wxGetApp().m_intHamlibRig = pConfig->ReadLong("/Hamlib/RigName", 0);
-        wxGetApp().m_strHamlibRigName = wxGetApp().m_hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = wxGetApp().m_hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
     }
     else
     {
-        wxGetApp().m_intHamlibRig = wxGetApp().m_hamlib->rigNameToIndex(std::string(wxGetApp().m_strHamlibRigName.ToUTF8()));
+        wxGetApp().m_intHamlibRig = wxGetApp().m_hamlib->rigNameToIndex(std::string(wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName->ToUTF8()));
     }
     
-    wxGetApp().m_hamlibPttType = (Hamlib::PttType)pConfig->ReadLong("/Hamlib/PttType", 0);
-    wxGetApp().m_strHamlibSerialPort = pConfig->Read("/Hamlib/SerialPort", "");
-    wxGetApp().m_intHamlibSerialRate = pConfig->ReadLong("/Hamlib/SerialRate", 0);
-
-    wxGetApp().m_boolUseSerialPTT   = pConfig->ReadBool(wxT("/Rig/UseSerialPTT"),   false);
-    wxGetApp().m_strRigCtrlPort     = pConfig->Read(wxT("/Rig/Port"),               wxT(""));
-    wxGetApp().m_boolUseRTS         = pConfig->ReadBool(wxT("/Rig/UseRTS"),         true);
-    wxGetApp().m_boolRTSPos         = pConfig->ReadBool(wxT("/Rig/RTSPolarity"),    true);
-    wxGetApp().m_boolUseDTR         = pConfig->ReadBool(wxT("/Rig/UseDTR"),         false);
-    wxGetApp().m_boolDTRPos         = pConfig->ReadBool(wxT("/Rig/DTRPolarity"),    false);
-
-    wxGetApp().m_boolUseSerialPTTInput = pConfig->ReadBool(wxT("/Rig/UseSerialPTTInput"),   false);
-    wxGetApp().m_strPTTInputPort     = pConfig->Read(wxT("/Rig/PttInPort"),               wxT(""));
-    wxGetApp().m_boolCTSPos         = pConfig->ReadBool(wxT("/Rig/CTSPolarity"),    false);
-
     assert(wxGetApp().m_serialport != NULL);
     assert(wxGetApp().m_pttInSerialPort != NULL);
     
     // -----------------------------------------------------------------------
 
-    bool slow = false; // prevents compile error when using default bool
-    wxGetApp().m_snrSlow = pConfig->Read("/Audio/snrSlow", slow);
-
-    bool t = true;     // prevents compile error when using default bool
-    wxGetApp().m_codec2LPCPostFilterEnable     = pConfig->Read(wxT("/Filter/codec2LPCPostFilterEnable"),    t);
-    wxGetApp().m_codec2LPCPostFilterBassBoost  = pConfig->Read(wxT("/Filter/codec2LPCPostFilterBassBoost"), t);
-    wxGetApp().m_codec2LPCPostFilterGamma      = (float)pConfig->Read(wxT("/Filter/codec2LPCPostFilterGamma"),     CODEC2_LPC_PF_GAMMA*100)/100.0;
-    wxGetApp().m_codec2LPCPostFilterBeta       = (float)pConfig->Read(wxT("/Filter/codec2LPCPostFilterBeta"),      CODEC2_LPC_PF_BETA*100)/100.0;
-    //printf("main(): m_codec2LPCPostFilterBeta: %f\n", wxGetApp().m_codec2LPCPostFilterBeta);
-
-    wxGetApp().m_speexpp_enable     = pConfig->Read(wxT("/Filter/speexpp_enable"),    t);
-    wxGetApp().m_700C_EQ     = pConfig->Read(wxT("/Filter/700C_EQ"),    t);
-
-    wxGetApp().m_MicInBassFreqHz = (float)pConfig->Read(wxT("/Filter/MicInBassFreqHz"),    1);
-    wxGetApp().m_MicInBassGaindB = (float)pConfig->Read(wxT("/Filter/MicInBassGaindB"),    (long)0)/10.0;
-    wxGetApp().m_MicInTrebleFreqHz = (float)pConfig->Read(wxT("/Filter/MicInTrebleFreqHz"),    1);
-    wxGetApp().m_MicInTrebleGaindB = (float)pConfig->Read(wxT("/Filter/MicInTrebleGaindB"),    (long)0)/10.0;
-    wxGetApp().m_MicInMidFreqHz = (float)pConfig->Read(wxT("/Filter/MicInMidFreqHz"),    1);
-    wxGetApp().m_MicInMidGaindB = (float)pConfig->Read(wxT("/Filter/MicInMidGaindB"),    (long)0)/10.0;
-    wxGetApp().m_MicInMidQ = (float)pConfig->Read(wxT("/Filter/MicInMidQ"),              (long)100)/100.0;
-    wxGetApp().m_MicInVolInDB = (float)pConfig->Read(wxT("/Filter/MicInVolInDB"),    (long)0)/10.0;
-
-    bool f = false;
-    wxGetApp().m_MicInEQEnable = (float)pConfig->Read(wxT("/Filter/MicInEQEnable"), f);
-
-    wxGetApp().m_SpkOutBassFreqHz = (float)pConfig->Read(wxT("/Filter/SpkOutBassFreqHz"),    1);
-    wxGetApp().m_SpkOutBassGaindB = (float)pConfig->Read(wxT("/Filter/SpkOutBassGaindB"),    (long)0)/10.0;
-    wxGetApp().m_SpkOutTrebleFreqHz = (float)pConfig->Read(wxT("/Filter/SpkOutTrebleFreqHz"),    1);
-    wxGetApp().m_SpkOutTrebleGaindB = (float)pConfig->Read(wxT("/Filter/SpkOutTrebleGaindB"),    (long)0)/10.0;
-    wxGetApp().m_SpkOutMidFreqHz = (float)pConfig->Read(wxT("/Filter/SpkOutMidFreqHz"),    1);
-    wxGetApp().m_SpkOutMidGaindB = (float)pConfig->Read(wxT("/Filter/SpkOutMidGaindB"),    (long)0)/10.0;
-    wxGetApp().m_SpkOutMidQ = (float)pConfig->Read(wxT("/Filter/SpkOutMidQ"),                (long)100)/100.0;
-    wxGetApp().m_SpkOutVolInDB = (float)pConfig->Read(wxT("/Filter/SpkOutVolInDB"),    (long)0)/10.0;
-
-    wxGetApp().m_SpkOutEQEnable = (float)pConfig->Read(wxT("/Filter/SpkOutEQEnable"), f);
-
-    wxGetApp().m_callSign = pConfig->Read("/Data/CallSign", wxT(""));
-    wxGetApp().m_textEncoding = pConfig->Read("/Data/TextEncoding", 1);
-
-    wxGetApp().m_FreeDV700txClip = (float)pConfig->Read(wxT("/FreeDV700/txClip"), t);
-    wxGetApp().m_FreeDV700txBPF = (float)pConfig->Read(wxT("/FreeDV700/txBPF"), t);
     wxGetApp().m_FreeDV700Combine = 1;
 
-    wxGetApp().m_noise_snr = (float)pConfig->Read(wxT("/Noise/noise_snr"), 2);
-
-    wxGetApp().m_debug_console = (float)pConfig->Read(wxT("/Debug/console"), f);
-    g_verbose = pConfig->Read(wxT("/Debug/verbose"), (long)0);
-    g_freedv_verbose = pConfig->Read(wxT("/Debug/APIverbose"), (long)0);
+    g_verbose = wxGetApp().appConfiguration.debugVerbose;
+    g_freedv_verbose = wxGetApp().appConfiguration.apiVerbose;
 
     wxGetApp().m_attn_carrier_en = 0;
     wxGetApp().m_attn_carrier    = 0;
@@ -540,38 +425,12 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_tone = 0;
     wxGetApp().m_tone_freq_hz = 1000;
     wxGetApp().m_tone_amplitude = 500;
-
-    // Save old parameters so that they can be copied over to the new locations.
-    auto oldPskEnable = pConfig->ReadBool(wxT("/PSKReporter/Enable"), false); 
-    auto oldPskCallsign = pConfig->Read(wxT("/PSKReporter/Callsign"), wxT(""));
-    auto oldGridSquare = pConfig->Read(wxT("/PSKReporter/GridSquare"), wxT(""));
-    auto oldFreqStr = pConfig->Read(wxT("/PSKReporter/FrequencyHzStr"), wxT("0"));
     
     // General reporting parameters
-    wxGetApp().m_reportingEnabled = pConfig->ReadBool(wxT("/Reporting/Enable"), oldPskEnable);
-    wxGetApp().m_reportingCallsign = pConfig->Read(wxT("/Reporting/Callsign"), oldPskCallsign);
-    wxGetApp().m_reportingGridSquare = pConfig->Read(wxT("/Reporting/GridSquare"), oldGridSquare);
-    wxString freqStr = pConfig->Read(wxT("/Reporting/Frequency"), oldFreqStr);
-    wxGetApp().m_reportingFrequency = atoll(freqStr.ToUTF8());
-    m_cboReportFrequency->SetValue(wxString::Format("%.4f", ((double)wxGetApp().m_reportingFrequency)/1000.0/1000.0));
+    m_cboReportFrequency->SetValue(wxString::Format("%.4f", ((double)wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency)/1000.0/1000.0));
     
-    // PSK Reporter parameters
-    wxGetApp().m_pskReporterEnabled = pConfig->ReadBool(wxT("/Reporting/PSKReporter/Enable"), oldPskEnable);
-    
-    // FreeDV Reporter parameters
-    wxGetApp().m_freedvReporterEnabled = pConfig->ReadBool(wxT("/Reporting/FreeDV/Enable"), true);
-    wxGetApp().m_freedvReporterHostname = pConfig->Read(wxT("/Reporting/FreeDV/Hostname"), wxT(FREEDV_REPORTER_DEFAULT_HOSTNAME));
-    
-    wxGetApp().m_useUTCTime = pConfig->ReadBool(wxT("/CallsignList/UseUTCTime"), false);
-    
-    // Waterfall configuration
-    wxGetApp().m_waterfallColor = (int)pConfig->Read(wxT("/Waterfall/Color"), (int)0); // 0-2
-    
-    // Time in seconds after losing sync before we reset the stats area
-    wxGetApp().m_statsResetTimeSec = (int)pConfig->Read(wxT("/Stats/ResetTime"), (int)10);
-    
-    int defaultMode = 4;
-    int mode  = pConfig->Read(wxT("/Audio/mode"), (long)defaultMode);
+    int defaultMode = wxGetApp().appConfiguration.currentFreeDVMode.getDefaultVal();
+    int mode = wxGetApp().appConfiguration.currentFreeDVMode;
 setDefaultMode:
     if (mode == 0)
         m_rb1600->SetValue(1);
@@ -585,7 +444,7 @@ setDefaultMode:
         m_rb800xa->SetValue(1);
     if (mode == 7)
         m_rb2400b->SetValue(1);
-    if ((mode == 9) && wxGetApp().m_2020Allowed)
+    if ((mode == 9) && wxGetApp().appConfiguration.freedv2020Allowed)
         m_rb2020->SetValue(1);
     else if (mode == 9)
     {
@@ -594,7 +453,7 @@ setDefaultMode:
         goto setDefaultMode;
     }
 #if defined(FREEDV_MODE_2020B)
-    if ((mode == 10) && wxGetApp().m_2020Allowed)
+    if ((mode == 10) && wxGetApp().appConfiguration.freedv2020Allowed)
         m_rb2020b->SetValue(1);
     else if (mode == 10)
     {
@@ -634,14 +493,14 @@ setDefaultMode:
 
     // SNR settings
 
-    m_ckboxSNR->SetValue(wxGetApp().m_snrSlow);
-    setsnrBeta(wxGetApp().m_snrSlow);
+    m_ckboxSNR->SetValue(wxGetApp().appConfiguration.snrSlow);
+    setsnrBeta(wxGetApp().appConfiguration.snrSlow);
     
     // Show/hide frequency box based on reporting enablement
-    m_freqBox->Show(wxGetApp().m_reportingEnabled);
+    m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
     // Show/hide callsign combo box based on reporting enablement
-    if (wxGetApp().m_reportingEnabled)
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
     {
         m_cboLastReportedCallsigns->Show();
         m_txtCtrlCallSign->Hide();
@@ -655,10 +514,10 @@ setDefaultMode:
     
     // Ensure that sound card count is correct. Otherwise the Audio Options won't show
     // the correct devices prior to start.
-    bool hasSoundCard1InDevice = wxGetApp().m_soundCard1InDeviceName != "none";
-    bool hasSoundCard1OutDevice = wxGetApp().m_soundCard1OutDeviceName != "none";
-    bool hasSoundCard2InDevice = wxGetApp().m_soundCard2InDeviceName != "none";
-    bool hasSoundCard2OutDevice = wxGetApp().m_soundCard2OutDeviceName != "none";
+    bool hasSoundCard1InDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName != "none";
+    bool hasSoundCard1OutDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName != "none";
+    bool hasSoundCard2InDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none";
+    bool hasSoundCard2OutDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none";
     
     g_nSoundCards = 0;
     if (hasSoundCard1InDevice && hasSoundCard1OutDevice) {
@@ -666,6 +525,9 @@ setDefaultMode:
         if (hasSoundCard2InDevice && hasSoundCard2OutDevice)
             g_nSoundCards = 2;
     }
+    
+    // Update the reporting list as needed.
+    updateReportingFreqList_();
 
     // Relayout window so that the changes can take effect.
     auto currentSizer = m_panel->GetSizer();
@@ -830,34 +692,32 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Init optional Windows debug console so we can see all those printfs
 
 #ifdef __WXMSW__
-    if (wxGetApp().m_debug_console || wxGetApp().m_firstTimeUse) {
+    if (wxGetApp().appConfiguration.debugConsoleEnabled || wxGetApp().appConfiguration.firstTimeUse) {
         // somewhere to send printfs while developing
         int ret = AllocConsole();
         freopen("CONOUT$", "w", stdout);
         freopen("CONOUT$", "w", stderr);
-        fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().m_debug_console);
+        fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().appConfiguration.debugConsoleEnabled.get());
     }
 #endif
     
 #if defined(FREEDV_MODE_2020)
     // First time use: make sure 2020 mode will actually work on this machine.
-    if (wxGetApp().m_firstTimeUse)
+    if (wxGetApp().appConfiguration.firstTimeUse)
     {
         test2020Mode_();
     }
 #endif // defined(FREEDV_MODE_2020)
     
-    if(!wxGetApp().m_2020Allowed)
+    if(!wxGetApp().appConfiguration.freedv2020Allowed)
     {
         m_rb2020->Disable();
 #if defined(FREEDV_MODE_2020B)
         m_rb2020b->Disable();
 #endif // FREEDV_MODE_2020B
     }
-        
-    pConfig->Write(wxT("/FirstTimeUse"), false);
 
-    if (wxGetApp().m_firstTimeUse)
+    if (wxGetApp().appConfiguration.firstTimeUse)
     {
         // Initial setup. Display Easy Setup dialog.
         CallAfter([&]() {
@@ -865,6 +725,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
             dlg->ShowModal();
         });
     }
+    
+    wxGetApp().appConfiguration.firstTimeUse = false;
     
     //#define FTEST
     #ifdef FTEST
@@ -925,97 +787,17 @@ MainFrame::~MainFrame()
     if (!IsIconized()) {
         GetClientSize(&w, &h);
         GetPosition(&x, &y);
-        //fprintf(stderr, "x = %d y = %d w = %d h = %d\n", x,y,w,h);
-        pConfig->Write(wxT("/MainFrame/left"),               (long) x);
-        pConfig->Write(wxT("/MainFrame/top"),                (long) y);
-        pConfig->Write(wxT("/MainFrame/width"),              (long) w);
-        pConfig->Write(wxT("/MainFrame/height"),             (long) h);
+        
+        wxGetApp().appConfiguration.mainWindowLeft = x;
+        wxGetApp().appConfiguration.mainWindowTop = y;
+        wxGetApp().appConfiguration.mainWindowWidth = w;
+        wxGetApp().appConfiguration.mainWindowHeight = h;
     }
 
-    pConfig->Write(wxT("/MainFrame/rxNbookCtrl"), wxGetApp().m_rxNbookCtrl);
+    wxGetApp().appConfiguration.squelchActive = g_SquelchActive;
+    wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
 
-    pConfig->Write(wxT("/Audio/SquelchActive"),         g_SquelchActive);
-    pConfig->Write(wxT("/Audio/SquelchLevel"),          (int)(g_SquelchLevel*2.0));
-
-    pConfig->Write(wxT("/Audio/fifoSize_ms"),              wxGetApp().m_fifoSize_ms);
-
-    pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);	
-    pConfig->Write(wxT("/Audio/soundCard1InSampleRate"), wxGetApp().m_soundCard1InSampleRate);	
-    
-    pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
-    pConfig->Write(wxT("/Audio/soundCard1OutSampleRate"), wxGetApp().m_soundCard1OutSampleRate);
-    
-    pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);
-    pConfig->Write(wxT("/Audio/soundCard2InSampleRate"), wxGetApp().m_soundCard2InSampleRate);
-    
-    pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
-    pConfig->Write(wxT("/Audio/soundCard2OutSampleRate"), wxGetApp().m_soundCard2OutSampleRate);
-
-    pConfig->Write(wxT("/Audio/transmitLevel"), g_txLevel);
-    
-    pConfig->Write(wxT("/VoiceKeyer/WaveFilePath"), wxGetApp().m_txtVoiceKeyerWaveFilePath);
-    pConfig->Write(wxT("/VoiceKeyer/WaveFile"), wxGetApp().m_txtVoiceKeyerWaveFile);
-    pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_intVoiceKeyerRxPause);
-    pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_intVoiceKeyerRepeats);
-    
-    pConfig->Write(wxT("/QuickRecord/SavePath"), wxGetApp().m_txtQuickRecordPath);
-
-    pConfig->Write(wxT("/Rig/EnableSpacebarForPTT"), wxGetApp().m_boolEnableSpacebarForPTT);
-    pConfig->Write(wxT("/Rig/HalfDuplex"),              wxGetApp().m_boolHalfDuplex);
-    pConfig->Write(wxT("/Rig/MultipleRx"), wxGetApp().m_boolMultipleRx);
-    pConfig->Write(wxT("/Rig/SingleRxThread"), wxGetApp().m_boolSingleRxThread);
-    pConfig->Write(wxT("/Rig/leftChannelVoxTone"),      wxGetApp().m_leftChannelVoxTone);
-    pConfig->Write("/Hamlib/UseForPTT", wxGetApp().m_boolHamlibUseForPTT);
-    pConfig->Write("/Hamlib/RigNameStr", wxGetApp().m_strHamlibRigName);
-    pConfig->Write("/Hamlib/SerialPort", wxGetApp().m_strHamlibSerialPort);
-    pConfig->Write("/Hamlib/SerialRate", wxGetApp().m_intHamlibSerialRate);
-    pConfig->Write("/Hamlib/IcomCIVHex", wxGetApp().m_intHamlibIcomCIVHex);
-    pConfig->Write("/Hamlib/PttType", (long)wxGetApp().m_hamlibPttType);
-    pConfig->Write(wxT("/Hamlib/UseAnalogModes"), wxGetApp().m_boolHamlibUseAnalogModes);
-    pConfig->Write(wxT("/Hamlib/EnableFreqModeChanges"), wxGetApp().m_boolHamlibEnableFreqModeChanges);
-
-    pConfig->Write(wxT("/File/playFileToMicInPath"),    wxGetApp().m_playFileToMicInPath);
-    pConfig->Write(wxT("/File/recFileFromRadioPath"),   wxGetApp().m_recFileFromRadioPath);
-    pConfig->Write(wxT("/File/recFileFromRadioSecs"),   wxGetApp().m_recFileFromRadioSecs);
-    pConfig->Write(wxT("/File/recFileFromModulatorPath"),   wxGetApp().m_recFileFromModulatorPath);
-    pConfig->Write(wxT("/File/recFileFromModulatorSecs"),   wxGetApp().m_recFileFromModulatorSecs);
-    pConfig->Write(wxT("/File/playFileFromRadioPath"),  wxGetApp().m_playFileFromRadioPath);
-
-    pConfig->Write(wxT("/Audio/snrSlow"), wxGetApp().m_snrSlow);
-
-    pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
-    pConfig->Write(wxT("/Data/TextEncoding"), wxGetApp().m_textEncoding);
-
-    pConfig->Write(wxT("/Filter/MicInEQEnable"), wxGetApp().m_MicInEQEnable);
-    pConfig->Write(wxT("/Filter/SpkOutEQEnable"), wxGetApp().m_SpkOutEQEnable);
-
-    pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
-    pConfig->Write(wxT("/Noise/noise_snr"), wxGetApp().m_noise_snr);
-
-    pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
-
-    // General reporting parameters
-    pConfig->Write(wxT("/Reporting/Enable"), wxGetApp().m_reportingEnabled);
-    pConfig->Write(wxT("/Reporting/Callsign"), wxGetApp().m_reportingCallsign);
-    pConfig->Write(wxT("/Reporting/GridSquare"), wxGetApp().m_reportingGridSquare);
-    
-    wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), wxGetApp().m_reportingFrequency);
-    pConfig->Write(wxT("/Reporting/Frequency"), tempFreqStr);
-        
-    // PSK Reporter parameters
-    pConfig->Write(wxT("/Reporting/PSKReporter/Enable"), wxGetApp().m_pskReporterEnabled);
-    
-    // FreDV Reporter options
-    pConfig->Write(wxT("/Reporting/FreeDV/Enable"), wxGetApp().m_freedvReporterEnabled);
-    pConfig->Write(wxT("/Reporting/FreeDV/Hostname"), wxGetApp().m_freedvReporterHostname);
-    
-    pConfig->Write(wxT("/CallsignList/UseUTCTime"), wxGetApp().m_useUTCTime);
-    
-    // Waterfall configuration
-    pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
-    
-    // Time in seconds after losing sync before we reset the stats area
-    pConfig->Write(wxT("/Stats/ResetTime"), wxGetApp().m_statsResetTimeSec);
+    wxGetApp().appConfiguration.transmitLevel = g_txLevel;
     
     int mode;
     if (m_rb1600->GetValue())
@@ -1036,8 +818,9 @@ MainFrame::~MainFrame()
     if (m_rb2020b->GetValue())
         mode = 10;
 #endif // defined(FREEDV_MODE_2020B)
-   pConfig->Write(wxT("/Audio/mode"), mode);
-   pConfig->Flush();
+    
+    wxGetApp().appConfiguration.currentFreeDVMode = mode;
+    wxGetApp().appConfiguration.save(pConfig);
 
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
@@ -1145,7 +928,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (m_panelWaterfall->checkDT()) {
             m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
             m_panelWaterfall->m_newdata = true;
-            m_panelWaterfall->setColor(wxGetApp().m_waterfallColor);
+            m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
             m_panelWaterfall->Refresh();
         }
 
@@ -1376,7 +1159,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 
                     // Auto-reset stats if we've gone long enough since losing sync.
                     // NOTE: m_timeSinceSyncLoss is in milliseconds.
-                    if (m_timeSinceSyncLoss >= wxGetApp().m_statsResetTimeSec * 1000)
+                    if (m_timeSinceSyncLoss >= wxGetApp().appConfiguration.statsResetTimeSecs * 1000)
                     {
                         resetStats_();
                         
@@ -1399,7 +1182,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             else
             {
                 // Counts the amount of time since losing sync. Once we exceed
-                // wxGetApp().m_statsResetTimeSec, we will reset the stats. 
+                // wxGetApp().appConfiguration.statsResetTimeSecs, we will reset the stats. 
                 m_timeSinceSyncLoss += _REFRESH_TIMER_PERIOD;
             }
         
@@ -1417,9 +1200,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         char callsign[MAX_CALLSIGN];
         memset(callsign, 0, MAX_CALLSIGN);
     
-        if (!wxGetApp().m_reportingEnabled)
+        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
         {
-            strncpy(callsign, (const char*) wxGetApp().m_callSign.mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
+            strncpy(callsign, (const char*) wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString->mb_str(wxConvUTF8), MAX_CALLSIGN - 2);
             if (strlen(callsign) < MAX_CALLSIGN - 1)
             {
                 strncat(callsign, "\r", 2);
@@ -1468,7 +1251,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // b) We detect a valid format callsign in the text (see https://en.wikipedia.org/wiki/Amateur_radio_call_signs).
         // c) We don't currently have a pending report to add to the outbound list for the active callsign.
         // When the above is true, capture the callsign and current SNR and add to the PSK Reporter object's outbound list.
-        if (wxGetApp().m_reporters.size() > 0 && wxGetApp().m_reportingEnabled)
+        if (wxGetApp().m_reporters.size() > 0 && wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
         {
             const char* text = freedvInterface.getReliableText();
             assert(text != nullptr);
@@ -1491,7 +1274,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         auto currentTime = wxDateTime::Now();
                         wxString currentTimeAsString = "";
                         
-                        if (wxGetApp().m_useUTCTime)
+                        if (wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting)
                         {
                             currentTime = currentTime.ToUTC();
                         }
@@ -1509,12 +1292,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     m_cboLastReportedCallsigns->SetText(rxCallsign);
                     m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
            
-                    if (wxGetApp().m_boolHamlibUseForPTT)
+                    if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT)
                     {
                         wxGetApp().m_hamlib->update_frequency_and_mode();
                     }
             
-                    int64_t freq = wxGetApp().m_reportingFrequency;
+                    int64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
 
                     // Only report if there's a valid reporting frequency and if we're not playing 
                     // a recording through ourselves (to avoid false reports).
@@ -1553,23 +1336,23 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (g_nSoundCards == 1)
             {
                 // RX In isn't used here but we need to provide it anyway.
-                designEQFilters(g_rxUserdata, wxGetApp().m_soundCard1OutSampleRate, wxGetApp().m_soundCard1InSampleRate);
+                designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate);
             }
             else
             {   
-                designEQFilters(g_rxUserdata, wxGetApp().m_soundCard2OutSampleRate, wxGetApp().m_soundCard2InSampleRate);
+                designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
             }
             g_mutexProtectingCallbackData.Unlock();
             m_newMicInFilter = m_newSpkOutFilter = false;
         }
     
-        g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
-        g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
+        g_rxUserdata->micInEQEnable = wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable;
+        g_rxUserdata->spkOutEQEnable = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable;
 
         // set some run time options (if applicable)
         freedvInterface.setRunTimeOptions(
-            (int)wxGetApp().m_FreeDV700txClip,
-            (int)wxGetApp().m_FreeDV700txBPF);
+            (int)wxGetApp().appConfiguration.freedv700Clip,
+            (int)wxGetApp().appConfiguration.freedv700TxBPF);
 
         // Test Frame Bit Error Updates ------------------------------------
 
@@ -1833,14 +1616,14 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     }
     else if (eventObject == m_rb2020 || (eventObject == nullptr && m_rb2020->GetValue())) 
     {
-        assert(wxGetApp().m_2020Allowed);
+        assert(wxGetApp().appConfiguration.freedv2020Allowed);
         
         g_mode = FREEDV_MODE_2020;
     }
 #if defined(FREEDV_MODE_2020B)
     else if (eventObject == m_rb2020b || (eventObject == nullptr && m_rb2020b->GetValue())) 
     {
-        assert(wxGetApp().m_2020Allowed);
+        assert(wxGetApp().appConfiguration.freedv2020Allowed);
         
         g_mode = FREEDV_MODE_2020B;
     }
@@ -1919,7 +1702,7 @@ void MainFrame::performFreeDVOn_()
         OnChangeTxMode(tmpEvent);
 
         if (g_mode == FREEDV_MODE_2400B || g_mode == FREEDV_MODE_800XA || 
-            !wxGetApp().m_boolMultipleRx)
+            !wxGetApp().appConfiguration.multipleReceiveEnabled)
         {
             m_rb1600->Disable();
             m_rb700c->Disable();
@@ -1935,7 +1718,7 @@ void MainFrame::performFreeDVOn_()
         }
         else
         {        
-            if(wxGetApp().m_2020Allowed)
+            if(wxGetApp().appConfiguration.freedv2020Allowed)
             {
                 freedvInterface.addRxMode(FREEDV_MODE_2020);
     #if defined(FREEDV_MODE_2020B)
@@ -1982,16 +1765,16 @@ void MainFrame::performFreeDVOn_()
         g_sfTxFs = FS;
     
         wxGetApp().m_prevMode = g_mode;
-        freedvInterface.start(g_mode, wxGetApp().m_fifoSize_ms, !wxGetApp().m_boolMultipleRx || wxGetApp().m_boolSingleRxThread, wxGetApp().m_reportingEnabled);
+        freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, !wxGetApp().appConfiguration.multipleReceiveEnabled || wxGetApp().appConfiguration.multipleReceiveOnSingleThread, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
         // Codec 2 VQ Equaliser
-        freedvInterface.setEq(wxGetApp().m_700C_EQ);
+        freedvInterface.setEq(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
 
         // Codec2 verbosity setting
         freedvInterface.setVerbose(g_freedv_verbose);
 
         // Text field/callsign callbacks.
-        if (!wxGetApp().m_reportingEnabled)
+        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
         {
             freedvInterface.setTextCallbackFn(&my_put_next_rx_char, &my_get_next_tx_char);
         }
@@ -1999,7 +1782,7 @@ void MainFrame::performFreeDVOn_()
         {
             char temp[9];
             memset(temp, 0, 9);
-            strncpy(temp, wxGetApp().m_reportingCallsign.ToUTF8(), 8); // One less than the size of temp to ensure we don't overwrite the null.
+            strncpy(temp, wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(), 8); // One less than the size of temp to ensure we don't overwrite the null.
             fprintf(stderr, "Setting callsign to %s\n", temp);
             freedvInterface.setReliableText(temp);
         }
@@ -2014,10 +1797,10 @@ void MainFrame::performFreeDVOn_()
 
         // init Codec 2 LPC Post Filter (FreeDV 1600)
         freedvInterface.setLpcPostFilter(
-                                       wxGetApp().m_codec2LPCPostFilterEnable,
-                                       wxGetApp().m_codec2LPCPostFilterBassBoost,
-                                       wxGetApp().m_codec2LPCPostFilterBeta,
-                                       wxGetApp().m_codec2LPCPostFilterGamma);
+                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterEnable,
+                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBassBoost,
+                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterBeta,
+                                       wxGetApp().appConfiguration.filterConfiguration.codec2LPCPostFilterGamma);
 
         // Init Speex pre-processor states
         // by inspecting Speex source it seems that only denoiser is on by default
@@ -2030,8 +1813,8 @@ void MainFrame::performFreeDVOn_()
         m_panelWaterfall->setFs(freedvInterface.getTxModemSampleRate());
     
         // Init text msg decoding
-        if (!wxGetApp().m_reportingEnabled)
-            freedvInterface.setTextVaricodeNum(wxGetApp().m_textEncoding);
+        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
+            freedvInterface.setTextVaricodeNum(1);
 
         // scatter plot (PSK) or Eye (FSK) mode
         if ((g_mode == FREEDV_MODE_800XA) || (g_mode == FREEDV_MODE_2400A) || (g_mode == FREEDV_MODE_2400B)) {
@@ -2044,7 +1827,7 @@ void MainFrame::performFreeDVOn_()
 
     g_State = g_prev_State = 0;
     g_snr = 0.0;
-    g_half_duplex = wxGetApp().m_boolHalfDuplex;
+    g_half_duplex = wxGetApp().appConfiguration.halfDuplexMode;
 
     m_pcallsign = m_callsign;
     memset(m_callsign, 0, sizeof(m_callsign));
@@ -2055,9 +1838,6 @@ void MainFrame::performFreeDVOn_()
         m_textLevel->SetLabel(wxT(""));
         m_gaugeLevel->SetValue(0);
     });
-    
-    //printf("m_textEncoding = %d\n", wxGetApp().m_textEncoding);
-    //printf("g_stats.snr: %f\n", g_stats.snr_est);
 
     // attempt to start sound cards and tx/rx processing
     if (VerifyMicrophonePermissions())
@@ -2078,20 +1858,20 @@ void MainFrame::performFreeDVOn_()
             startRxStream();
 
             // attempt to start PTT ......            
-            if (wxGetApp().m_boolHamlibUseForPTT)
+            if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT)
             {
                 OpenHamlibRig();
             }
             
-            if (wxGetApp().m_boolUseSerialPTT) 
+            if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT) 
             {
                 OpenSerialPort();
             }
                 
             // Initialize PSK Reporter reporting.
-            if (wxGetApp().m_reportingEnabled)
+            if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
             {        
-                if (wxGetApp().m_reportingCallsign.ToStdString() == "" || wxGetApp().m_reportingGridSquare.ToStdString() == "")
+                if (wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString() == "" || wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString() == "")
                 {
                     executeOnUiThreadAndWait_([&]() 
                     {
@@ -2100,24 +1880,24 @@ void MainFrame::performFreeDVOn_()
                 }
                 else
                 {
-                    if (wxGetApp().m_pskReporterEnabled)
+                    if (wxGetApp().appConfiguration.reportingConfiguration.pskReporterEnabled)
                     {
                         auto pskReporter = 
                             new PskReporter(
-                                wxGetApp().m_reportingCallsign.ToStdString(), 
-                                wxGetApp().m_reportingGridSquare.ToStdString(),
+                                wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
+                                wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
                                 std::string("FreeDV ") + FREEDV_VERSION);
                         assert(pskReporter != nullptr);
                         wxGetApp().m_reporters.push_back(pskReporter);
                     }
                     
-                    if (wxGetApp().m_freedvReporterEnabled && wxGetApp().m_freedvReporterHostname.ToStdString() != "")
+                    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString() != "")
                     {
                         auto freedvReporter =
                             new FreeDVReporter(
-                                wxGetApp().m_freedvReporterHostname.ToStdString(),
-                                wxGetApp().m_reportingCallsign.ToStdString(), 
-                                wxGetApp().m_reportingGridSquare.ToStdString(),
+                                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString(),
+                                wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
+                                wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
                                 std::string("FreeDV ") + FREEDV_VERSION,
                                 g_nSoundCards <= 1 ? true : false);
                         assert(freedvReporter);
@@ -2140,7 +1920,7 @@ void MainFrame::performFreeDVOn_()
                             wxString fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz."), callsign, frequencyMHz);
                             int dialogStyle = wxOK | wxICON_INFORMATION | wxCENTRE;
                             
-                            if (wxGetApp().m_hamlib != nullptr && wxGetApp().m_boolHamlibEnableFreqModeChanges)
+                            if (wxGetApp().m_hamlib != nullptr && wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
                             {
                                 fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz. Would you like to change to that frequency now?"), callsign, frequencyMHz);
                                 dialogStyle = wxYES_NO | wxICON_QUESTION | wxCENTRE;
@@ -2165,7 +1945,7 @@ void MainFrame::performFreeDVOn_()
                         
                         freedvReporter->connect();
                     }
-                    else if (wxGetApp().m_freedvReporterEnabled)
+                    else if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
                     {
                         executeOnUiThreadAndWait_([&]() 
                         {
@@ -2183,7 +1963,7 @@ void MainFrame::performFreeDVOn_()
                     for (auto& obj : wxGetApp().m_reporters)
                     {
                         obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
-                        obj->freqChange(wxGetApp().m_reportingFrequency);
+                        obj->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
                     }
                 }
             }
@@ -2196,7 +1976,7 @@ void MainFrame::performFreeDVOn_()
                 wxGetApp().m_reporters.clear();
             }
 
-            if (wxGetApp().m_boolUseSerialPTTInput)
+            if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTTInput)
             {
                 OpenPTTInPort();
             }
@@ -2251,11 +2031,11 @@ void MainFrame::performFreeDVOff_()
 
     // ensure we are not transmitting and shut down audio processing
 
-    if (wxGetApp().m_boolHamlibUseForPTT) 
+    if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT) 
     {
         Hamlib *hamlib = wxGetApp().m_hamlib;
         wxString hamlibError;
-        if (wxGetApp().m_boolHamlibUseForPTT && hamlib != NULL) 
+        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT && hamlib != NULL) 
         {
             if (hamlib->isActive())
             {
@@ -2272,12 +2052,12 @@ void MainFrame::performFreeDVOff_()
         }
     }
     
-    if (wxGetApp().m_boolUseSerialPTT) 
+    if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT) 
     {
         CloseSerialPort();
     }
 
-    if (wxGetApp().m_boolUseSerialPTTInput)
+    if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTTInput)
     {
         ClosePTTInPort();
     }
@@ -2321,7 +2101,7 @@ void MainFrame::performFreeDVOff_()
         m_rb700e->Enable();
         m_rb800xa->Enable();
         m_rb2400b->Enable();
-        if(wxGetApp().m_2020Allowed)
+        if(wxGetApp().appConfiguration.freedv2020Allowed)
         {
             m_rb2020->Enable();
     #if defined(FREEDV_MODE_2020B)
@@ -2526,23 +2306,21 @@ void MainFrame::startRxStream()
         {
             // RX-only setup.
             // Note: we assume 2 channels, but IAudioEngine will automatically downgrade to 1 channel if needed.
-            rxInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard1InSampleRate, 2);
+            rxInSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
             rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 CallAfter([&, newDeviceName]() {
-                    wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
-                    pConfig->Flush();
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    wxGetApp().appConfiguration.save(pConfig);
                 });
             }, nullptr);
             
-            rxOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard1OutSampleRate, 2);
+            rxOutSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 2);
             rxOutSoundDevice->setDescription("FreeDV to Speaker");
             rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 CallAfter([&, newDeviceName]() {
-                    wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
-                    pConfig->Flush();
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    wxGetApp().appConfiguration.save(pConfig);
                 });
             }, nullptr);
             
@@ -2550,7 +2328,7 @@ void MainFrame::startRxStream()
             if (!rxInSoundDevice)
             {
                 executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1InDeviceName), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -2558,7 +2336,7 @@ void MainFrame::startRxStream()
             if (!rxOutSoundDevice)
             {
                 executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1OutDeviceName), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -2587,43 +2365,39 @@ void MainFrame::startRxStream()
         {
             // RX + TX setup
             // Same note as above re: number of channels.
-            rxInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard1InSampleRate, 2);
+            rxInSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
             rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 CallAfter([&, newDeviceName]() {
-                    wxGetApp().m_soundCard1InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);
-                    pConfig->Flush();
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    wxGetApp().appConfiguration.save(pConfig);
                 });
             }, nullptr);
 
-            rxOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard2OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard2OutSampleRate, 2);
+            rxOutSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 2);
             rxOutSoundDevice->setDescription("FreeDV to Speaker");
             rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 CallAfter([&, newDeviceName]() {
-                    wxGetApp().m_soundCard2OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
-                    pConfig->Flush();
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    wxGetApp().appConfiguration.save(pConfig);
                 });
             }, nullptr);
 
-            txInSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard2InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard2InSampleRate, 2);
+            txInSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate, 2);
             txInSoundDevice->setDescription("Mic to FreeDV");
             txInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 CallAfter([&, newDeviceName]() {
-                    wxGetApp().m_soundCard2InDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);
-                    pConfig->Flush();
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    wxGetApp().appConfiguration.save(pConfig);
                 });
             }, nullptr);
 
-            txOutSoundDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard1OutSampleRate, 2);
+            txOutSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 2);
             txOutSoundDevice->setDescription("FreeDV to Radio");
             txOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
                 CallAfter([&, newDeviceName]() {
-                    wxGetApp().m_soundCard1OutDeviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);
-                    pConfig->Flush();
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    wxGetApp().appConfiguration.save(pConfig);
                 });
             }, nullptr);
             
@@ -2631,7 +2405,7 @@ void MainFrame::startRxStream()
             if (!rxInSoundDevice)
             {
                 executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1InDeviceName), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -2639,7 +2413,7 @@ void MainFrame::startRxStream()
             if (!rxOutSoundDevice)
             {
                 executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard2OutDeviceName), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -2647,7 +2421,7 @@ void MainFrame::startRxStream()
             if (!txInSoundDevice)
             {
                 executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format("Could not find TX input sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard2InDeviceName), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format("Could not find TX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -2655,7 +2429,7 @@ void MainFrame::startRxStream()
             if (!txOutSoundDevice)
             {
                 executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format("Could not find TX output sound device '%s'. Please check settings and try again.", wxGetApp().m_soundCard1OutDeviceName), wxT("Error"), wxOK);
+                    wxMessageBox(wxString::Format("Could not find TX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -2701,25 +2475,25 @@ void MainFrame::startRxStream()
         // transmit processng are all performed in the tx/rxProcessing
         // loop.
 
-        int m_fifoSize_ms = wxGetApp().m_fifoSize_ms;
-        int soundCard1InFifoSizeSamples = m_fifoSize_ms*wxGetApp().m_soundCard1InSampleRate/1000;
-        int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().m_soundCard1OutSampleRate/1000;
+        int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
+        int soundCard1InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate/1000;
+        int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate/1000;
         g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
         g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
 
         if (txInSoundDevice && txOutSoundDevice)
         {
-            int soundCard2InFifoSizeSamples = m_fifoSize_ms*wxGetApp().m_soundCard2InSampleRate/1000;
-            int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().m_soundCard2OutSampleRate/1000;
+            int soundCard2InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate/1000;
+            int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate/1000;
             g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
             g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
         
             if (g_verbose) fprintf(stderr, "fifoSize_ms:  %d infifo2: %d/outfilo2: %d\n",
-                wxGetApp().m_fifoSize_ms, soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
+                wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
         }
 
         if (g_verbose) fprintf(stderr, "fifoSize_ms: %d infifo1: %d/outfilo1 %d\n",
-                wxGetApp().m_fifoSize_ms, soundCard1InFifoSizeSamples, soundCard1OutFifoSizeSamples);
+                wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard1InFifoSizeSamples, soundCard1OutFifoSizeSamples);
 
         // reset debug stats for FIFOs
 
@@ -2758,15 +2532,15 @@ void MainFrame::startRxStream()
 
         m_newMicInFilter = m_newSpkOutFilter = true;
         g_mutexProtectingCallbackData.Lock();
-        designEQFilters(g_rxUserdata, wxGetApp().m_soundCard2OutSampleRate, wxGetApp().m_soundCard2InSampleRate);
-        g_rxUserdata->micInEQEnable = wxGetApp().m_MicInEQEnable;
-        g_rxUserdata->spkOutEQEnable = wxGetApp().m_SpkOutEQEnable;
+        designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
+        g_rxUserdata->micInEQEnable = wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable;
+        g_rxUserdata->spkOutEQEnable = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable;
         m_newMicInFilter = m_newSpkOutFilter = false;
         g_mutexProtectingCallbackData.Unlock();
 
         // optional tone in left channel to reliably trigger vox
 
-        g_rxUserdata->leftChannelVoxTone = wxGetApp().m_leftChannelVoxTone;
+        g_rxUserdata->leftChannelVoxTone = wxGetApp().appConfiguration.rigControlConfiguration.leftChannelVoxTone;
         g_rxUserdata->voxTonePhase = 0;
 
         // Set sound card callbacks
@@ -2888,7 +2662,7 @@ void MainFrame::startRxStream()
                         {
                             if (cbData->leftChannelVoxTone)
                             {
-                                cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().m_soundCard1OutSampleRate;
+                                cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
                                 cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
                                 audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
                             }
@@ -3021,10 +2795,10 @@ bool MainFrame::validateSoundCardSetup()
     auto defaultInputDevice = engine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_IN);
     auto defaultOutputDevice = engine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_OUT);
     
-    bool hasSoundCard1InDevice = wxGetApp().m_soundCard1InDeviceName != "none";
-    bool hasSoundCard1OutDevice = wxGetApp().m_soundCard1OutDeviceName != "none";
-    bool hasSoundCard2InDevice = wxGetApp().m_soundCard2InDeviceName != "none";
-    bool hasSoundCard2OutDevice = wxGetApp().m_soundCard2OutDeviceName != "none";
+    bool hasSoundCard1InDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName != "none";
+    bool hasSoundCard1OutDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName != "none";
+    bool hasSoundCard2InDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none";
+    bool hasSoundCard2OutDevice = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none";
     
     g_nSoundCards = 0;
     if (hasSoundCard1InDevice && hasSoundCard1OutDevice) {
@@ -3034,37 +2808,37 @@ bool MainFrame::validateSoundCardSetup()
     }
     
     // For the purposes of validation, number of channels isn't necessary.
-    auto soundCard1InDevice = engine->getAudioDevice(wxGetApp().m_soundCard1InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard1InSampleRate, 1);
-    auto soundCard1OutDevice = engine->getAudioDevice(wxGetApp().m_soundCard1OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard1OutSampleRate, 1);
-    auto soundCard2InDevice = engine->getAudioDevice(wxGetApp().m_soundCard2InDeviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().m_soundCard2InSampleRate, 1);
-    auto soundCard2OutDevice = engine->getAudioDevice(wxGetApp().m_soundCard2OutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().m_soundCard2OutSampleRate, 1);
+    auto soundCard1InDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate, 1);
+    auto soundCard1OutDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 1);
+    auto soundCard2InDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate, 1);
+    auto soundCard2OutDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 1);
 
-    if (wxGetApp().m_soundCard1InDeviceName != "none" && !soundCard1InDevice)
+    if (wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName != "none" && !soundCard1InDevice)
     {
         wxMessageBox(wxString::Format(
             "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().m_soundCard1InDeviceName), wxT("Sound Device Removed"), wxOK, this);
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
         canRun = false;
     }
-    else if (canRun && wxGetApp().m_soundCard1OutDeviceName != "none" && !soundCard1OutDevice)
+    else if (canRun && wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName != "none" && !soundCard1OutDevice)
     {
         wxMessageBox(wxString::Format(
             "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().m_soundCard1OutDeviceName), wxT("Sound Device Removed"), wxOK, this);
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
         canRun = false;
     }
-    else if (canRun && wxGetApp().m_soundCard2InDeviceName != "none" && !soundCard2InDevice)
+    else if (canRun && wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none" && !soundCard2InDevice)
     {
         wxMessageBox(wxString::Format(
             "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().m_soundCard2InDeviceName), wxT("Sound Device Removed"), wxOK, this);
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
         canRun = false;
     }
-    else if (canRun && wxGetApp().m_soundCard2OutDeviceName != "none" && !soundCard2OutDevice)
+    else if (canRun && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none" && !soundCard2OutDevice)
     {
         wxMessageBox(wxString::Format(
             "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().m_soundCard2OutDeviceName), wxT("Sound Device Removed"), wxOK, this);
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
         canRun = false;
     }
     
@@ -3074,8 +2848,8 @@ bool MainFrame::validateSoundCardSetup()
         {
             if (!soundCard1OutDevice)
             {
-                wxGetApp().m_soundCard1OutDeviceName = defaultOutputDevice.name;
-                wxGetApp().m_soundCard1OutSampleRate = defaultOutputDevice.defaultSampleRate;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = defaultOutputDevice.name;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = defaultOutputDevice.defaultSampleRate;
             }
         }
         else if (g_nSoundCards == 2)
@@ -3083,32 +2857,32 @@ bool MainFrame::validateSoundCardSetup()
             if (!soundCard2InDevice)
             {
                 // If we're not already using the default input device as the radio input device, use that instead.
-                if (defaultInputDevice.name != wxGetApp().m_soundCard1InDeviceName)
+                if (defaultInputDevice.name != wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName)
                 {
-                    wxGetApp().m_soundCard2InDeviceName = defaultInputDevice.name;
-                    wxGetApp().m_soundCard2InSampleRate = defaultInputDevice.defaultSampleRate;
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = defaultInputDevice.name;
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = defaultInputDevice.defaultSampleRate;
                 }
                 else
                 {
-                    wxGetApp().m_soundCard2InDeviceName = "none";
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = "none";
                 }
             }
         
             if (!soundCard2OutDevice)
             {
                 // If we're not already using the default output device as the radio input device, use that instead.
-                if (defaultOutputDevice.name != wxGetApp().m_soundCard1OutDeviceName)
+                if (defaultOutputDevice.name != wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName)
                 {
-                    wxGetApp().m_soundCard2OutDeviceName = defaultOutputDevice.name;
-                    wxGetApp().m_soundCard2OutSampleRate = defaultOutputDevice.defaultSampleRate;
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = defaultOutputDevice.name;
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = defaultOutputDevice.defaultSampleRate;
                 }
                 else
                 {
-                    wxGetApp().m_soundCard2OutDeviceName = "none";
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = "none";
                 }
             }
             
-            if (wxGetApp().m_soundCard2InDeviceName == "none" && wxGetApp().m_soundCard2OutDeviceName == "none")
+            if (wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName == "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName == "none")
             {
                 g_nSoundCards = 1;
             }
