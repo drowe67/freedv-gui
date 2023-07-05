@@ -186,16 +186,16 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     gridSizer->Add(m_freqList, wxGBPosition(0, 0), wxGBSpan(4, 2), wxEXPAND);
         
     m_freqListAdd = new wxButton(m_rigControlTab, wxID_ANY, _("Add"), wxDefaultPosition, wxSize(-1,-1), 0);
-    gridSizer->Add(m_freqListAdd, wxGBPosition(0, 2));
+    gridSizer->Add(m_freqListAdd, wxGBPosition(0, 2), wxDefaultSpan, wxEXPAND);
     m_freqListRemove = new wxButton(m_rigControlTab, wxID_ANY, _("Remove"), wxDefaultPosition, wxSize(-1,-1), 0);
-    gridSizer->Add(m_freqListRemove, wxGBPosition(1, 2));
+    gridSizer->Add(m_freqListRemove, wxGBPosition(1, 2), wxDefaultSpan, wxEXPAND);
     m_freqListMoveUp = new wxButton(m_rigControlTab, wxID_ANY, _("Move Up"), wxDefaultPosition, wxSize(-1,-1), 0);
-    gridSizer->Add(m_freqListMoveUp, wxGBPosition(2, 2));
+    gridSizer->Add(m_freqListMoveUp, wxGBPosition(2, 2), wxDefaultSpan, wxEXPAND);
     m_freqListMoveDown = new wxButton(m_rigControlTab, wxID_ANY, _("Move Down"), wxDefaultPosition, wxSize(-1,-1), 0);
-    gridSizer->Add(m_freqListMoveDown, wxGBPosition(3, 2));
+    gridSizer->Add(m_freqListMoveDown, wxGBPosition(3, 2), wxDefaultSpan, wxEXPAND);
     
     wxStaticText* labelEnterFreq = new wxStaticText(m_rigControlTab, wxID_ANY, wxT("Enter frequency (MHz):"), wxDefaultPosition, wxDefaultSize, 0);
-    gridSizer->Add(labelEnterFreq, wxGBPosition(4, 0));
+    gridSizer->Add(labelEnterFreq, wxGBPosition(4, 0), wxDefaultSpan, wxALIGN_CENTER_VERTICAL);
     
     m_txtCtrlNewFrequency = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
     gridSizer->Add(m_txtCtrlNewFrequency, wxGBPosition(4, 1), wxGBSpan(1, 2), wxEXPAND);
