@@ -620,6 +620,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_txtCtrlNewFrequency->Connect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnReportingFreqTextChange), NULL, this);
     m_freqListAdd->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqAdd), NULL, this);
     m_freqListRemove->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqRemove), NULL, this);
+    m_freqListMoveUp->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqMoveUp), NULL, this);
+    m_freqListMoveDown->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqMoveDown), NULL, this);
     
     event_in_serial = 0;
     event_out_serial = 0;
@@ -666,6 +668,8 @@ OptionsDlg::~OptionsDlg()
     m_txtCtrlNewFrequency->Disconnect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnReportingFreqTextChange), NULL, this);
     m_freqListAdd->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqAdd), NULL, this);
     m_freqListRemove->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqRemove), NULL, this);
+    m_freqListMoveUp->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqMoveUp), NULL, this);
+    m_freqListMoveDown->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqMoveDown), NULL, this);
 }
 
 
@@ -1215,11 +1219,36 @@ void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent& event)
     {
         m_freqListAdd->Enable(false);
         m_freqListRemove->Enable(true);
+        
+        if (idx == 0)
+        {
+            m_freqListMoveUp->Enable(false);
+            m_freqListMoveDown->Enable(true);
+        }
+        else if (idx == m_freqList->GetCount() - 1)
+        {
+            m_freqListMoveUp->Enable(true);
+            m_freqListMoveDown->Enable(false);
+        }
+        else
+        {
+            m_freqListMoveUp->Enable(true);
+            m_freqListMoveDown->Enable(true);
+        }
     }
     else if (rgx.Matches(m_txtCtrlNewFrequency->GetValue()))
     {
         m_freqListAdd->Enable(true);
         m_freqListRemove->Enable(false);
+        m_freqListMoveUp->Enable(false);
+        m_freqListMoveDown->Enable(false);
+    }
+    else
+    {
+        m_freqListAdd->Enable(false);
+        m_freqListRemove->Enable(false);
+        m_freqListMoveUp->Enable(false);
+        m_freqListMoveDown->Enable(false);
     }
 }
 
@@ -1238,4 +1267,34 @@ void OptionsDlg::OnReportingFreqRemove(wxCommandEvent& event)
         m_freqList->Delete(idx);
     }
     m_txtCtrlNewFrequency->SetValue("");
+}
+
+void OptionsDlg::OnReportingFreqMoveUp(wxCommandEvent& event)
+{
+    auto prevStr = m_txtCtrlNewFrequency->GetValue();
+    auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());
+    if (idx > 0)
+    {
+        m_freqList->Delete(idx);
+        m_freqList->Insert(prevStr, idx - 1);
+        m_freqList->SetSelection(idx - 1);
+    }
+    
+    // Refresh button status
+    m_txtCtrlNewFrequency->SetValue(prevStr);
+}
+
+void OptionsDlg::OnReportingFreqMoveDown(wxCommandEvent& event)
+{
+    auto prevStr = m_txtCtrlNewFrequency->GetValue();
+    auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());
+    if (idx < m_freqList->GetCount() - 1)
+    {
+        m_freqList->Delete(idx);
+        m_freqList->Insert(prevStr, idx + 1);
+        m_freqList->SetSelection(idx + 1);
+    }
+    
+    // Refresh button status
+    m_txtCtrlNewFrequency->SetValue(prevStr);
 }

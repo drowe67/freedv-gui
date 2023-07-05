@@ -174,6 +174,8 @@ class OptionsDlg : public wxDialog
         void OnReportingFreqTextChange(wxCommandEvent& event);
         void OnReportingFreqAdd(wxCommandEvent& event);
         void OnReportingFreqRemove(wxCommandEvent& event);
+        void OnReportingFreqMoveUp(wxCommandEvent& event);
+        void OnReportingFreqMoveDown(wxCommandEvent& event);
         
      private:
          void updateReportingState();
