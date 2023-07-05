@@ -167,7 +167,12 @@ class OptionsDlg : public wxDialog
 
         void OnChooseVoiceKeyerWaveFile(wxCommandEvent& event);
         void OnChooseQuickRecordPath(wxCommandEvent& event);
-
+        
+        void OnReportingFreqSelectionChange(wxCommandEvent& event);
+        void OnReportingFreqTextChange(wxCommandEvent& event);
+        void OnReportingFreqAdd(wxCommandEvent& event);
+        void OnReportingFreqRemove(wxCommandEvent& event);
+        
      private:
          void updateReportingState();
          void updateChannelNoiseState();

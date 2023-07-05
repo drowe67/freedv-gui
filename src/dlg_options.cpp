@@ -611,6 +611,11 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_ckboxEnableFreqModeChanges->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
     
+    m_freqList->Connect(wxEVT_LISTBOX, wxCommandEventHandler(OptionsDlg::OnReportingFreqSelectionChange), NULL, this);
+    m_txtCtrlNewFrequency->Connect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnReportingFreqTextChange), NULL, this);
+    m_freqListAdd->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqAdd), NULL, this);
+    m_freqListRemove->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqRemove), NULL, this);
+    
     event_in_serial = 0;
     event_out_serial = 0;
 }
@@ -651,6 +656,11 @@ OptionsDlg::~OptionsDlg()
     m_ckboxMultipleRx->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
     
     m_ckboxEnableFreqModeChanges->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
+
+    m_freqList->Disconnect(wxEVT_LISTBOX, wxCommandEventHandler(OptionsDlg::OnReportingFreqSelectionChange), NULL, this);
+    m_txtCtrlNewFrequency->Disconnect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnReportingFreqTextChange), NULL, this);
+    m_freqListAdd->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqAdd), NULL, this);
+    m_freqListRemove->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqRemove), NULL, this);
 }
 
 
@@ -779,7 +789,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
     {
         // Save new reporting frequency list.
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList->clear();
-        for (int index = 0; index < m_freqList->GetCount() index++)
+        for (int index = 0; index < m_freqList->GetCount(); index++)
         {
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList->push_back(m_freqList->GetString(index));
         }
@@ -1169,4 +1179,50 @@ void OptionsDlg::DisplayFifoPACounters() {
     snprintf(pa_counters2, STR_LENGTH, "Audio2: inUnderflow: %d inOverflow: %d outUnderflow %d outOverflow %d", g_AEstatus2[0], g_AEstatus2[1], g_AEstatus2[2], g_AEstatus2[3]);
     wxString pa_counters2_string(pa_counters2);
     m_textPA2->SetLabel(pa_counters2_string);
+}
+
+void OptionsDlg::OnReportingFreqSelectionChange(wxCommandEvent& event)
+{
+    auto sel = m_freqList->GetSelection();
+    if (sel >= 0)
+    {
+        m_txtCtrlNewFrequency->SetValue(m_freqList->GetString(sel));
+    }
+    else
+    {
+        m_txtCtrlNewFrequency->SetValue("");
+    }
+}
+
+void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent& event)
+{
+    wxRegEx rgx("[0-9]+(\\.[0-9]+)");
+    auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());
+    if (idx >= 0)
+    {
+        m_freqListAdd->Enable(false);
+        m_freqListRemove->Enable(true);
+    }
+    else if (rgx.Matches(m_txtCtrlNewFrequency->GetValue()))
+    {
+        m_freqListAdd->Enable(true);
+        m_freqListRemove->Enable(false);
+    }
+}
+
+void OptionsDlg::OnReportingFreqAdd(wxCommandEvent& event)
+{
+    auto val = m_txtCtrlNewFrequency->GetValue();
+    m_freqList->Append(val);
+    m_txtCtrlNewFrequency->SetValue("");
+}
+
+void OptionsDlg::OnReportingFreqRemove(wxCommandEvent& event)
+{
+    auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());
+    if (idx >= 0)
+    {
+        m_freqList->Delete(idx);
+    }
+    m_txtCtrlNewFrequency->SetValue("");
 }
