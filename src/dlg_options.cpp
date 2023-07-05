@@ -177,25 +177,33 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBoxSizer* sbSizer_freqList;
     wxStaticBox *sb_freqList = new wxStaticBox(m_rigControlTab, wxID_ANY, _("Predefined Frequencies"));
     sbSizer_freqList = new wxStaticBoxSizer(sb_freqList, wxVERTICAL);
-        
+    
+    wxBoxSizer* freqListRow1 = new wxBoxSizer(wxHORIZONTAL);
+
     m_freqList = new wxListBox(m_rigControlTab, wxID_ANY);
     m_freqList->SetMinSize(wxSize(250, -1));
-    sbSizer_freqList->Add(m_freqList, 0, wxALL | wxALIGN_LEFT, 5);
+    freqListRow1->Add(m_freqList, 0, wxALL | wxALIGN_LEFT, 5);
     
-    wxBoxSizer* freqListButtonSizer = new wxBoxSizer(wxHORIZONTAL);
-    
-    wxStaticText* labelEnterFreq = new wxStaticText(m_rigControlTab, wxID_ANY, wxT("Enter frequency (MHz):"), wxDefaultPosition, wxDefaultSize, 0);
-    freqListButtonSizer->Add(labelEnterFreq, 0, wxALL | wxALIGN_LEFT, 5);
-    
-    m_txtCtrlNewFrequency = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(120,-1), 0);
-    freqListButtonSizer->Add(m_txtCtrlNewFrequency, 0, wxALL | wxALIGN_LEFT, 5);
+    wxBoxSizer* freqListButtonSizer = new wxBoxSizer(wxVERTICAL);
     
     m_freqListAdd = new wxButton(m_rigControlTab, wxID_ANY, _("Add"), wxDefaultPosition, wxSize(-1,-1), 0);
     freqListButtonSizer->Add(m_freqListAdd,  0, wxALL, 5);
     m_freqListRemove = new wxButton(m_rigControlTab, wxID_ANY, _("Remove"), wxDefaultPosition, wxSize(-1,-1), 0);
     freqListButtonSizer->Add(m_freqListRemove,  0, wxALL, 5);
     
-    sbSizer_freqList->Add(freqListButtonSizer, 0, wxALL, 5);
+    freqListRow1->Add(freqListButtonSizer, 0, wxALL, 5);
+    
+    sbSizer_freqList->Add(freqListRow1, 0, wxALL, 5);
+    
+    wxBoxSizer* freqListRow2 = new wxBoxSizer(wxHORIZONTAL);
+    
+    wxStaticText* labelEnterFreq = new wxStaticText(m_rigControlTab, wxID_ANY, wxT("Enter frequency (MHz):"), wxDefaultPosition, wxDefaultSize, 0);
+    freqListRow2->Add(labelEnterFreq, 0, wxALL | wxALIGN_LEFT, 5);
+    
+    m_txtCtrlNewFrequency = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(120,-1), 0);
+    freqListRow2->Add(m_txtCtrlNewFrequency, 0, wxALL | wxALIGN_LEFT, 5);
+    
+    sbSizer_freqList->Add(freqListRow2, 0, wxALL, 5);
     
     sizerRigControl->Add(sbSizer_freqList,0, wxALL | wxEXPAND, 5);
     
@@ -907,6 +915,10 @@ void OptionsDlg::OnOK(wxCommandEvent& event)
     //this->EndModal(wxID_OK);
     g_modal = false;
     EndModal(wxOK);
+    
+    // Clear frequency list to prevent sizing issues on re-display.
+    // EXCHANGE_DATA_IN will repopulate then.
+    m_freqList->Clear();
 }
 
 //-------------------------------------------------------------------------
@@ -917,6 +929,10 @@ void OptionsDlg::OnCancel(wxCommandEvent& event)
     //this->EndModal(wxID_CANCEL);
     g_modal = false;
     EndModal(wxCANCEL);
+    
+    // Clear frequency list to prevent sizing issues on re-display.
+    // EXCHANGE_DATA_IN will repopulate then.
+    m_freqList->Clear();
 }
 
 //-------------------------------------------------------------------------
