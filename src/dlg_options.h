@@ -162,6 +162,8 @@ class OptionsDlg : public wxDialog
         wxTextCtrl* m_txtCtrlNewFrequency;
         wxButton*   m_freqListAdd;
         wxButton*   m_freqListRemove;
+        wxButton*   m_freqListMoveUp;
+        wxButton*   m_freqListMoveDown;
         
         unsigned int  event_in_serial, event_out_serial;
 

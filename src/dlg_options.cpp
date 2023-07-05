@@ -19,6 +19,7 @@
 //
 //==========================================================================
 
+#include <wx/gbsizer.h>
 #include "dlg_options.h"
 
 extern bool                g_modal;
@@ -178,32 +179,28 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox *sb_freqList = new wxStaticBox(m_rigControlTab, wxID_ANY, _("Predefined Frequencies"));
     sbSizer_freqList = new wxStaticBoxSizer(sb_freqList, wxVERTICAL);
     
-    wxBoxSizer* freqListRow1 = new wxBoxSizer(wxHORIZONTAL);
-
+    wxGridBagSizer* gridSizer = new wxGridBagSizer(5, 5);
+    
     m_freqList = new wxListBox(m_rigControlTab, wxID_ANY);
     m_freqList->SetMinSize(wxSize(250, -1));
-    freqListRow1->Add(m_freqList, 0, wxALL | wxALIGN_LEFT, 5);
-    
-    wxBoxSizer* freqListButtonSizer = new wxBoxSizer(wxVERTICAL);
-    
+    gridSizer->Add(m_freqList, wxGBPosition(0, 0), wxGBSpan(4, 2), wxEXPAND);
+        
     m_freqListAdd = new wxButton(m_rigControlTab, wxID_ANY, _("Add"), wxDefaultPosition, wxSize(-1,-1), 0);
-    freqListButtonSizer->Add(m_freqListAdd,  0, wxALL, 5);
+    gridSizer->Add(m_freqListAdd, wxGBPosition(0, 2));
     m_freqListRemove = new wxButton(m_rigControlTab, wxID_ANY, _("Remove"), wxDefaultPosition, wxSize(-1,-1), 0);
-    freqListButtonSizer->Add(m_freqListRemove,  0, wxALL, 5);
-    
-    freqListRow1->Add(freqListButtonSizer, 0, wxALL, 5);
-    
-    sbSizer_freqList->Add(freqListRow1, 0, wxALL, 5);
-    
-    wxBoxSizer* freqListRow2 = new wxBoxSizer(wxHORIZONTAL);
+    gridSizer->Add(m_freqListRemove, wxGBPosition(1, 2));
+    m_freqListMoveUp = new wxButton(m_rigControlTab, wxID_ANY, _("Move Up"), wxDefaultPosition, wxSize(-1,-1), 0);
+    gridSizer->Add(m_freqListMoveUp, wxGBPosition(2, 2));
+    m_freqListMoveDown = new wxButton(m_rigControlTab, wxID_ANY, _("Move Down"), wxDefaultPosition, wxSize(-1,-1), 0);
+    gridSizer->Add(m_freqListMoveDown, wxGBPosition(3, 2));
     
     wxStaticText* labelEnterFreq = new wxStaticText(m_rigControlTab, wxID_ANY, wxT("Enter frequency (MHz):"), wxDefaultPosition, wxDefaultSize, 0);
-    freqListRow2->Add(labelEnterFreq, 0, wxALL | wxALIGN_LEFT, 5);
+    gridSizer->Add(labelEnterFreq, wxGBPosition(4, 0));
     
-    m_txtCtrlNewFrequency = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(120,-1), 0);
-    freqListRow2->Add(m_txtCtrlNewFrequency, 0, wxALL | wxALIGN_LEFT, 5);
+    m_txtCtrlNewFrequency = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+    gridSizer->Add(m_txtCtrlNewFrequency, wxGBPosition(4, 1), wxGBSpan(1, 2), wxEXPAND);
     
-    sbSizer_freqList->Add(freqListRow2, 0, wxALL, 5);
+    sbSizer_freqList->Add(gridSizer, 0, wxALL, 5);
     
     sizerRigControl->Add(sbSizer_freqList,0, wxALL | wxEXPAND, 5);
     
