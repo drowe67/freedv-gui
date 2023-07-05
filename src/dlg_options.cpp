@@ -661,6 +661,12 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 {
     if(inout == EXCHANGE_DATA_IN)
     {
+        // Populate reporting frequency list.
+        for (auto& item : wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList.get())
+        {
+            m_freqList->Append(item);
+        }
+        
         m_txtCtrlCallSign->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString);
 
         m_ckboxEnableSpacebarForPTT->SetValue(wxGetApp().appConfiguration.enableSpaceBarForPTT);
@@ -771,6 +777,13 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
     if(inout == EXCHANGE_DATA_OUT)
     {
+        // Save new reporting frequency list.
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList->clear();
+        for (int index = 0; index < m_freqList->GetCount() index++)
+        {
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList->push_back(m_freqList->GetString(index));
+        }
+        
         wxGetApp().appConfiguration.enableSpaceBarForPTT = m_ckboxEnableSpacebarForPTT->GetValue();
         
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes = m_ckboxUseAnalogModes->GetValue();
