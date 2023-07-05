@@ -525,6 +525,9 @@ setDefaultMode:
         if (hasSoundCard2InDevice && hasSoundCard2OutDevice)
             g_nSoundCards = 2;
     }
+    
+    // Update the reporting list as needed.
+    updateReportingFreqList_();
 
     // Relayout window so that the changes can take effect.
     auto currentSizer = m_panel->GetSizer();
