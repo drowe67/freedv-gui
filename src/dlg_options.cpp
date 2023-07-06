@@ -1213,7 +1213,7 @@ void OptionsDlg::OnReportingFreqSelectionChange(wxCommandEvent& event)
 
 void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent& event)
 {
-    wxRegEx rgx("[0-9]+(\\.[0-9]+)");
+    wxRegEx rgx("[0-9]+(\\.[0-9]+)?");
     auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());
     if (idx != wxNOT_FOUND)
     {
@@ -1255,6 +1255,9 @@ void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent& event)
 void OptionsDlg::OnReportingFreqAdd(wxCommandEvent& event)
 {
     auto val = m_txtCtrlNewFrequency->GetValue();
+    
+    double dVal = wxAtof(val);
+    val = wxString::Format(_("%.04f"), dVal);
     m_freqList->Append(val);
     m_txtCtrlNewFrequency->SetValue("");
 }
