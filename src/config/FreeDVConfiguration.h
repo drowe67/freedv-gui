@@ -49,6 +49,12 @@ public:
     ConfigurationDataElement<long> mainWindowWidth;
     ConfigurationDataElement<long> mainWindowHeight;
     
+    ConfigurationDataElement<long> reporterWindowLeft;
+    ConfigurationDataElement<long> reporterWindowTop;
+    ConfigurationDataElement<long> reporterWindowWidth;
+    ConfigurationDataElement<long> reporterWindowHeight;
+    ConfigurationDataElement<bool> reporterWindowVisible;
+    
     ConfigurationDataElement<long> currentNotebookTab;
     
     ConfigurationDataElement<long> squelchActive;

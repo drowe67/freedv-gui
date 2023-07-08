@@ -530,6 +530,15 @@ setDefaultMode:
     auto currentSizer = m_panel->GetSizer();
     m_panel->SetSizerAndFit(currentSizer, false);
     m_panel->Layout();
+    
+    // If the FreeDV Reporter window was open on last execution, reopen it now.
+    CallAfter([&]() {
+        if (wxGetApp().appConfiguration.reporterWindowVisible)
+        {
+            wxCommandEvent event;
+            OnToolsFreeDVReporter(event);
+        }
+    });
 }
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -755,7 +764,6 @@ MainFrame::~MainFrame()
     
     if (m_reporterDialog != nullptr)
     {
-        m_reporterDialog->Hide();
         m_reporterDialog->setReporter(nullptr);
         m_reporterDialog->Close();
         m_reporterDialog->Destroy();

@@ -70,12 +70,23 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     this->SetSizerAndFit(sectionSizer);
     
     this->Layout();
-    this->Centre(wxBOTH);
+    
+    // Move FreeDV Reporter window back into last saved position
+    SetSize(wxSize(
+        wxGetApp().appConfiguration.reporterWindowWidth,
+        wxGetApp().appConfiguration.reporterWindowHeight));
+    SetPosition(wxPoint(
+        wxGetApp().appConfiguration.reporterWindowLeft,
+        wxGetApp().appConfiguration.reporterWindowTop));
+    
     this->SetMinSize(GetBestSize());
     
     // Hook in events
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(FreeDVReporterDialog::OnInitDialog));
     this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(FreeDVReporterDialog::OnClose));
+    this->Connect(wxEVT_SIZE, wxSizeEventHandler(FreeDVReporterDialog::OnSize));
+    this->Connect(wxEVT_MOVE, wxMoveEventHandler(FreeDVReporterDialog::OnMove));
+    this->Connect(wxEVT_SHOW, wxShowEventHandler(FreeDVReporterDialog::OnShow));
     
     m_listSpots->Connect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemSelected), NULL, this);
     m_listSpots->Connect(wxEVT_LIST_ITEM_DESELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemDeselected), NULL, this);
@@ -87,8 +98,11 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
 
 FreeDVReporterDialog::~FreeDVReporterDialog()
 {
+    this->Disconnect(wxEVT_SIZE, wxSizeEventHandler(FreeDVReporterDialog::OnSize));
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(FreeDVReporterDialog::OnInitDialog));
     this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(FreeDVReporterDialog::OnClose));
+    this->Disconnect(wxEVT_MOVE, wxMoveEventHandler(FreeDVReporterDialog::OnMove));
+    this->Disconnect(wxEVT_SHOW, wxShowEventHandler(FreeDVReporterDialog::OnShow));
     
     m_listSpots->Disconnect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemSelected), NULL, this);
     m_listSpots->Disconnect(wxEVT_LIST_ITEM_DESELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemDeselected), NULL, this);
@@ -137,8 +151,30 @@ void FreeDVReporterDialog::OnInitDialog(wxInitDialogEvent& event)
     // TBD
 }
 
+void FreeDVReporterDialog::OnShow(wxShowEvent& event)
+{
+    wxGetApp().appConfiguration.reporterWindowVisible = true;
+}
+
+void FreeDVReporterDialog::OnSize(wxSizeEvent& event)
+{
+    auto sz = GetSize();
+    
+    wxGetApp().appConfiguration.reporterWindowWidth = sz.GetWidth();
+    wxGetApp().appConfiguration.reporterWindowHeight = sz.GetHeight();
+}
+
+void FreeDVReporterDialog::OnMove(wxMoveEvent& event)
+{
+    auto pos = GetPosition();
+    
+    wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
+    wxGetApp().appConfiguration.reporterWindowTop = pos.y;
+}
+
 void FreeDVReporterDialog::OnOK(wxCommandEvent& event)
 {
+    wxGetApp().appConfiguration.reporterWindowVisible = false;
     Hide();
 }
 
@@ -167,6 +203,7 @@ void FreeDVReporterDialog::OnOpenWebsite(wxCommandEvent& event)
 
 void FreeDVReporterDialog::OnClose(wxCloseEvent& event)
 {
+    wxGetApp().appConfiguration.reporterWindowVisible = false;
     Hide();
 }
 
