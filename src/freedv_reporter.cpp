@@ -162,12 +162,14 @@ void FreeDVReporterDialog::OnSize(wxSizeEvent& event)
     
     wxGetApp().appConfiguration.reporterWindowWidth = sz.GetWidth();
     wxGetApp().appConfiguration.reporterWindowHeight = sz.GetHeight();
+
+    Layout();
 }
 
 void FreeDVReporterDialog::OnMove(wxMoveEvent& event)
 {
-    auto pos = GetPosition();
-    
+    auto pos = event.GetPosition();
+   
     wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
     wxGetApp().appConfiguration.reporterWindowTop = pos.y;
 }
