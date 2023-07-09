@@ -49,6 +49,8 @@ public:
     
     ConfigurationDataElement<bool> useUTCForReporting;
     
+    ConfigurationDataElement<std::vector<wxString> > reportingFrequencyList;
+    
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };

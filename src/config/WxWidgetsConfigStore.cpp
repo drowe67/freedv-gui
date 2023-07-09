@@ -19,6 +19,7 @@
 //
 //==========================================================================
 
+#include <wx/tokenzr.h>
 #include "WxWidgetsConfigStore.h"
 
 template<>
@@ -27,4 +28,56 @@ void WxWidgetsConfigStore::load_<unsigned int>(wxConfigBase* config, Configurati
     long val;
     config->Read(configElement.getElementName(), &val, (long)configElement.getDefaultVal());
     configElement.setWithoutProcessing((unsigned int)val);
+}
+
+/* Note: for string arrays, we're treating them as a list of strings separated by commas. */
+
+template<>
+void WxWidgetsConfigStore::load_<std::vector<wxString> >(wxConfigBase* config, ConfigurationDataElement<std::vector<wxString> >& configElement)
+{
+    wxString val;
+    wxString defaultVal = generateStringFromArray_(configElement.getDefaultVal());
+    
+    config->Read(configElement.getElementName(), &val, defaultVal);
+    configElement.setWithoutProcessing(generateArayFromString_(val));
+}
+
+template<>
+void WxWidgetsConfigStore::save_<std::vector<wxString> >(wxConfigBase* config, ConfigurationDataElement<std::vector<wxString> >& configElement)
+{
+    wxString val = generateStringFromArray_(configElement.getWithoutProcessing());
+    config->Write(configElement.getElementName(), val);
+}
+
+wxString WxWidgetsConfigStore::generateStringFromArray_(std::vector<wxString> vec)
+{
+    wxString rv = "";
+    
+    int count = vec.size();
+    for (auto& item : vec)
+    {
+        rv += item;
+        count--;
+        
+        if (count > 0)
+        {
+            rv += ",";
+        }
+    }
+    
+    return rv;
+}
+
+std::vector<wxString> WxWidgetsConfigStore::generateArayFromString_(wxString str)
+{
+    std::vector<wxString> rv;
+    
+    wxStringTokenizer tokenizer(str, ",");
+    while ( tokenizer.HasMoreTokens() )
+    {
+        wxString token = tokenizer.GetNextToken();
+        rv.push_back(token);
+    }
+    
+    return rv;
 }
