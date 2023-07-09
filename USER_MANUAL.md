@@ -887,6 +887,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 4. Miscallenous:
     * Set default FreeDV Reporter hostname to qso.freedv.org. (PR #448)
 
+*Note for Windows users: you may receive a one-time error message on startup 
+after upgrading indicating that certain Registry keys have incorrect types.
+This is expected as the formats of some configuration parameters have changed.*
+
 ## V1.8.11 June 2023
 
 1. Bugfixes:
