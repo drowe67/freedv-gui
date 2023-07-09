@@ -1935,7 +1935,7 @@ void MainFrame::performFreeDVOn_()
                                 }
 
                                 auto answer = messageDialog.ShowModal();
-                                if (answer == wxYES)
+                                if (answer == wxID_YES)
                                 {
                                     // This will implicitly cause Hamlib to change the frequecy and mode.
                                     m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyMHz));
