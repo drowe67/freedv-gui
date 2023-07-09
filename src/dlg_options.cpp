@@ -636,29 +636,29 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 {
     if(inout == EXCHANGE_DATA_IN)
     {
-        m_txtCtrlCallSign->SetValue(wxGetApp().m_callSign);
+        m_txtCtrlCallSign->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString);
 
-        m_ckboxEnableSpacebarForPTT->SetValue(wxGetApp().m_boolEnableSpacebarForPTT);
-        m_ckboxUseAnalogModes->SetValue(wxGetApp().m_boolHamlibUseAnalogModes);
-        m_ckboxEnableFreqModeChanges->SetValue(wxGetApp().m_boolHamlibEnableFreqModeChanges);
+        m_ckboxEnableSpacebarForPTT->SetValue(wxGetApp().appConfiguration.enableSpaceBarForPTT);
+        m_ckboxUseAnalogModes->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes);
+        m_ckboxEnableFreqModeChanges->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
         
         /* Voice Keyer */
 
-        m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().m_txtVoiceKeyerWaveFile);
-        m_txtCtrlVoiceKeyerRxPause->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRxPause));
-        m_txtCtrlVoiceKeyerRepeats->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intVoiceKeyerRepeats));
+        m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().appConfiguration.voiceKeyerWaveFile);
+        m_txtCtrlVoiceKeyerRxPause->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.voiceKeyerRxPause.get()));
+        m_txtCtrlVoiceKeyerRepeats->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.voiceKeyerRepeats.get()));
 
-        m_txtCtrlQuickRecordPath->SetValue(wxGetApp().m_txtQuickRecordPath);
+        m_txtCtrlQuickRecordPath->SetValue(wxGetApp().appConfiguration.quickRecordPath);
         
-        m_ckHalfDuplex->SetValue(wxGetApp().m_boolHalfDuplex);
+        m_ckHalfDuplex->SetValue(wxGetApp().appConfiguration.halfDuplexMode);
 
-        m_ckboxMultipleRx->SetValue(wxGetApp().m_boolMultipleRx);
-        m_ckboxSingleRxThread->SetValue(wxGetApp().m_boolSingleRxThread);
+        m_ckboxMultipleRx->SetValue(wxGetApp().appConfiguration.multipleReceiveEnabled);
+        m_ckboxSingleRxThread->SetValue(wxGetApp().appConfiguration.multipleReceiveOnSingleThread);
         
         m_ckboxTestFrame->SetValue(wxGetApp().m_testFrames);
 
         m_ckboxChannelNoise->SetValue(wxGetApp().m_channel_noise);
-        m_txtNoiseSNR->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_noise_snr));
+        m_txtNoiseSNR->SetValue(wxString::Format(wxT("%i"),wxGetApp().appConfiguration.noiseSNR.get()));
 
         m_ckboxTone->SetValue(wxGetApp().m_tone);
         m_txtToneFreqHz->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_tone_freq_hz));
@@ -667,7 +667,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxAttnCarrierEn->SetValue(wxGetApp().m_attn_carrier_en);
         m_txtAttnCarrier->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_attn_carrier));
 
-        m_txtCtrlFifoSize->SetValue(wxString::Format(wxT("%i"),wxGetApp().m_fifoSize_ms));
+        m_txtCtrlFifoSize->SetValue(wxString::Format(wxT("%i"),wxGetApp().appConfiguration.fifoSizeMs.get()));
 
         m_ckboxTxRxThreadPriority->SetValue(wxGetApp().m_txRxThreadHighPriority);
         m_ckboxTxRxDumpTiming->SetValue(g_dump_timing);
@@ -675,34 +675,34 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxVerbose->SetValue(g_verbose);
         m_ckboxFreeDVAPIVerbose->SetValue(g_freedv_verbose);
        
-        m_ckboxFreeDV700txClip->SetValue(wxGetApp().m_FreeDV700txClip);
-        m_ckboxFreeDV700txBPF->SetValue(wxGetApp().m_FreeDV700txBPF);
+        m_ckboxFreeDV700txClip->SetValue(wxGetApp().appConfiguration.freedv700Clip);
+        m_ckboxFreeDV700txBPF->SetValue(wxGetApp().appConfiguration.freedv700TxBPF);
         m_ckboxFreeDV700Combine->SetValue(wxGetApp().m_FreeDV700Combine);
 
 #ifdef __WXMSW__
-        m_ckboxDebugConsole->SetValue(wxGetApp().m_debug_console);
+        m_ckboxDebugConsole->SetValue(wxGetApp().appConfiguration.debugConsoleEnabled);
 #endif
         
         // General reporting config
-        m_ckboxReportingEnable->SetValue(wxGetApp().m_reportingEnabled);
-        m_txt_callsign->SetValue(wxGetApp().m_reportingCallsign);
-        m_txt_grid_square->SetValue(wxGetApp().m_reportingGridSquare);
+        m_ckboxReportingEnable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+        m_txt_callsign->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign);
+        m_txt_grid_square->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare);
 
         // PSK Reporter options
-        m_ckboxPskReporterEnable->SetValue(wxGetApp().m_pskReporterEnabled);
+        m_ckboxPskReporterEnable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.pskReporterEnabled);
         
         // FreeDV Reporter options
-        m_ckboxFreeDVReporterEnable->SetValue(wxGetApp().m_freedvReporterEnabled);
-        m_freedvReporterHostname->SetValue(wxGetApp().m_freedvReporterHostname);
+        m_ckboxFreeDVReporterEnable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled);
+        m_freedvReporterHostname->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname);
                 
         // Callsign list config
-        m_ckbox_use_utc_time->SetValue(wxGetApp().m_useUTCTime);
+        m_ckbox_use_utc_time->SetValue(wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting);
         
         // Stats reset time
-        m_statsResetTime->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_statsResetTimeSec));
+        m_statsResetTime->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.statsResetTimeSecs.get()));
         
         // Waterfall color
-        switch (wxGetApp().m_waterfallColor)
+        switch (wxGetApp().appConfiguration.waterfallColor)
         {
             case 1:
                 m_waterfallColorScheme1->SetValue(false);
@@ -724,15 +724,15 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         
         if (m_waterfallColorScheme1->GetValue())
         {
-            wxGetApp().m_waterfallColor = 0;
+            wxGetApp().appConfiguration.waterfallColor = 0;
         }
         else if (m_waterfallColorScheme2->GetValue())
         {
-            wxGetApp().m_waterfallColor = 1;
+            wxGetApp().appConfiguration.waterfallColor = 1;
         }
         else if (m_waterfallColorScheme3->GetValue())
         {
-            wxGetApp().m_waterfallColor = 2;
+            wxGetApp().appConfiguration.waterfallColor = 2;
         }
         
         // Update control state based on checkbox state.
@@ -746,47 +746,36 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
     if(inout == EXCHANGE_DATA_OUT)
     {
-        wxGetApp().m_boolEnableSpacebarForPTT = m_ckboxEnableSpacebarForPTT->GetValue();
-        pConfig->Write(wxT("/Rig/EnableSpacebarForPTT"), wxGetApp().m_boolEnableSpacebarForPTT);
+        wxGetApp().appConfiguration.enableSpaceBarForPTT = m_ckboxEnableSpacebarForPTT->GetValue();
         
-        wxGetApp().m_boolHamlibUseAnalogModes = m_ckboxUseAnalogModes->GetValue();
-        pConfig->Write(wxT("/Hamlib/UseAnalogModes"), wxGetApp().m_boolHamlibUseAnalogModes);
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes = m_ckboxUseAnalogModes->GetValue();
         
-        wxGetApp().m_boolHamlibEnableFreqModeChanges = m_ckboxEnableFreqModeChanges->GetValue();
-        pConfig->Write(wxT("/Hamlib/EnableFreqModeChanges"), wxGetApp().m_boolHamlibEnableFreqModeChanges);
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges = m_ckboxEnableFreqModeChanges->GetValue();
         
-        wxGetApp().m_callSign = m_txtCtrlCallSign->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString = m_txtCtrlCallSign->GetValue();
 
-        wxGetApp().m_boolHalfDuplex = m_ckHalfDuplex->GetValue();
-        pConfig->Write(wxT("/Rig/HalfDuplex"), wxGetApp().m_boolHalfDuplex);
-
-        wxGetApp().m_boolMultipleRx = m_ckboxMultipleRx->GetValue();
-        pConfig->Write(wxT("/Rig/MultipleRx"), wxGetApp().m_boolMultipleRx);
-        
-        wxGetApp().m_boolSingleRxThread = m_ckboxSingleRxThread->GetValue();
-        pConfig->Write(wxT("/Rig/SingleRxThread"), wxGetApp().m_boolSingleRxThread);
+        wxGetApp().appConfiguration.halfDuplexMode = m_ckHalfDuplex->GetValue();
+        wxGetApp().appConfiguration.multipleReceiveEnabled = m_ckboxMultipleRx->GetValue();
+        wxGetApp().appConfiguration.multipleReceiveOnSingleThread = m_ckboxSingleRxThread->GetValue();
         
         /* Voice Keyer */
 
-        wxGetApp().m_txtVoiceKeyerWaveFile = m_txtCtrlVoiceKeyerWaveFile->GetValue();
-        pConfig->Write(wxT("/VoiceKeyer/WaveFile"), wxGetApp().m_txtVoiceKeyerWaveFile);
+        wxGetApp().appConfiguration.voiceKeyerWaveFile = m_txtCtrlVoiceKeyerWaveFile->GetValue();
+        
         long tmp;
-        m_txtCtrlVoiceKeyerRxPause->GetValue().ToLong(&tmp); if (tmp < 0) tmp = 0; wxGetApp().m_intVoiceKeyerRxPause = (int)tmp;
-        pConfig->Write(wxT("/VoiceKeyer/RxPause"), wxGetApp().m_intVoiceKeyerRxPause);
+        m_txtCtrlVoiceKeyerRxPause->GetValue().ToLong(&tmp); if (tmp < 0) tmp = 0; wxGetApp().appConfiguration.voiceKeyerRxPause = (int)tmp;
         m_txtCtrlVoiceKeyerRepeats->GetValue().ToLong(&tmp);
         if (tmp < 0) {tmp = 0;} if (tmp > 100) {tmp = 100;}
-        wxGetApp().m_intVoiceKeyerRepeats = (int)tmp;
-        pConfig->Write(wxT("/VoiceKeyer/Repeats"), wxGetApp().m_intVoiceKeyerRepeats);
+        wxGetApp().appConfiguration.voiceKeyerRepeats = (int)tmp;
         
-        wxGetApp().m_txtQuickRecordPath = m_txtCtrlQuickRecordPath->GetValue();
-        pConfig->Write(wxT("/QuickRecord/SavePath"), wxGetApp().m_txtQuickRecordPath);
+        wxGetApp().appConfiguration.quickRecordPath = m_txtCtrlQuickRecordPath->GetValue();
         
         wxGetApp().m_testFrames    = m_ckboxTestFrame->GetValue();
 
         wxGetApp().m_channel_noise = m_ckboxChannelNoise->GetValue();
         long noise_snr;
         m_txtNoiseSNR->GetValue().ToLong(&noise_snr);
-        wxGetApp().m_noise_snr = (int)noise_snr;
+        wxGetApp().appConfiguration.noiseSNR = (int)noise_snr;
         //fprintf(stderr, "noise_snr: %d\n", (int)noise_snr);
         
         wxGetApp().m_tone    = m_ckboxTone->GetValue();
@@ -803,7 +792,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         long FifoSize_ms;
         m_txtCtrlFifoSize->GetValue().ToLong(&FifoSize_ms);
-        wxGetApp().m_fifoSize_ms = (int)FifoSize_ms;
+        wxGetApp().appConfiguration.fifoSizeMs = (int)FifoSize_ms;
 
         wxGetApp().m_txRxThreadHighPriority = m_ckboxTxRxThreadPriority->GetValue();
         g_dump_timing = m_ckboxTxRxDumpTiming->GetValue();
@@ -811,85 +800,52 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         g_verbose = m_ckboxVerbose->GetValue();
         g_freedv_verbose = m_ckboxFreeDVAPIVerbose->GetValue();
 
-        wxGetApp().m_FreeDV700txClip = m_ckboxFreeDV700txClip->GetValue();
-        wxGetApp().m_FreeDV700txBPF = m_ckboxFreeDV700txBPF->GetValue();
+        wxGetApp().appConfiguration.freedv700Clip = m_ckboxFreeDV700txClip->GetValue();
+        wxGetApp().appConfiguration.freedv700TxBPF = m_ckboxFreeDV700txBPF->GetValue();
         wxGetApp().m_FreeDV700Combine = m_ckboxFreeDV700Combine->GetValue();
 
 #ifdef __WXMSW__
-        wxGetApp().m_debug_console = m_ckboxDebugConsole->GetValue();
+        wxGetApp().appConfiguration.debugConsoleEnabled = m_ckboxDebugConsole->GetValue();
 #endif
 
         // General reporting config
-        wxGetApp().m_reportingEnabled = m_ckboxReportingEnable->GetValue();
-        wxGetApp().m_reportingCallsign = m_txt_callsign->GetValue();
-        wxGetApp().m_reportingGridSquare = m_txt_grid_square->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled = m_ckboxReportingEnable->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign = m_txt_callsign->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare = m_txt_grid_square->GetValue();
 
         // PSK Reporter options
-        wxGetApp().m_pskReporterEnabled = m_ckboxPskReporterEnable->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.pskReporterEnabled = m_ckboxPskReporterEnable->GetValue();
         
         // FreeDV Reporter options
-        wxGetApp().m_freedvReporterEnabled = m_ckboxFreeDVReporterEnable->GetValue();
-        wxGetApp().m_freedvReporterHostname = m_freedvReporterHostname->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled = m_ckboxFreeDVReporterEnable->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname = m_freedvReporterHostname->GetValue();
                 
         // Callsign list config
-        wxGetApp().m_useUTCTime = m_ckbox_use_utc_time->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting = m_ckbox_use_utc_time->GetValue();
         
         // Waterfall color
         if (m_waterfallColorScheme1->GetValue())
         {
-            wxGetApp().m_waterfallColor = 0;
+            wxGetApp().appConfiguration.waterfallColor = 0;
         }
         else if (m_waterfallColorScheme2->GetValue())
         {
-            wxGetApp().m_waterfallColor = 1;
+            wxGetApp().appConfiguration.waterfallColor = 1;
         }
         else if (m_waterfallColorScheme3->GetValue())
         {
-            wxGetApp().m_waterfallColor = 2;
+            wxGetApp().appConfiguration.waterfallColor = 2;
         }
         
         // Stats reset time
         long resetTime;
         m_statsResetTime->GetValue().ToLong(&resetTime);
-        wxGetApp().m_statsResetTimeSec = resetTime;
+        wxGetApp().appConfiguration.statsResetTimeSecs = resetTime;
         
         if (storePersistent) {
-            pConfig->Write(wxT("/Data/CallSign"), wxGetApp().m_callSign);
-#ifdef SHORT_VARICODE
-            pConfig->Write(wxT("/Data/TextEncoding"), wxGetApp().m_textEncoding);
-#endif
-
-            pConfig->Write(wxT("/FreeDV700/txClip"), wxGetApp().m_FreeDV700txClip);
-            pConfig->Write(wxT("/FreeDV700/txBPF"), wxGetApp().m_FreeDV700txBPF);
-
-            pConfig->Write(wxT("/Noise/noise_snr"),  wxGetApp().m_noise_snr);
-
-#ifdef __WXMSW__
-            pConfig->Write(wxT("/Debug/console"), wxGetApp().m_debug_console);
-#endif
-            pConfig->Write(wxT("/Debug/verbose"), g_verbose);
-            pConfig->Write(wxT("/Debug/APIverbose"), g_freedv_verbose);
-
-            // General reporting parameters
-            pConfig->Write(wxT("/Reporting/Enable"), wxGetApp().m_reportingEnabled);
-            pConfig->Write(wxT("/Reporting/Callsign"), wxGetApp().m_reportingCallsign);
-            pConfig->Write(wxT("/Reporting/GridSquare"), wxGetApp().m_reportingGridSquare);
-        
-            // PSK Reporter parameters
-            pConfig->Write(wxT("/Reporting/PSKReporter/Enable"), wxGetApp().m_pskReporterEnabled);
-    
-            // FreDV Reporter options
-            pConfig->Write(wxT("/Reporting/FreeDV/Enable"), wxGetApp().m_freedvReporterEnabled);
-            pConfig->Write(wxT("/Reporting/FreeDV/Hostname"), wxGetApp().m_freedvReporterHostname);
-            
-            pConfig->Write(wxT("/CallsignList/UseUTCTime"), wxGetApp().m_useUTCTime);
-            
-            pConfig->Write(wxT("/Stats/ResetTime"), wxGetApp().m_statsResetTimeSec);
-            
-            // Waterfall configuration
-            pConfig->Write(wxT("/Waterfall/Color"), wxGetApp().m_waterfallColor);
-            
-            pConfig->Flush();
+            wxGetApp().appConfiguration.debugVerbose = g_verbose;
+            wxGetApp().appConfiguration.apiVerbose = g_freedv_verbose;            
+            wxGetApp().appConfiguration.save(pConfig);
         }
     }
 }
@@ -947,7 +903,7 @@ void OptionsDlg::OnChooseVoiceKeyerWaveFile(wxCommandEvent& event) {
      wxFileDialog openFileDialog(
                                  this,
                                  wxT("Voice Keyer wave file"),
-                                 wxGetApp().m_txtVoiceKeyerWaveFilePath,
+                                 wxGetApp().appConfiguration.voiceKeyerWaveFilePath,
                                  wxEmptyString,
                                  wxT("WAV files (*.wav)|*.wav"),
                                  wxFD_OPEN
@@ -957,16 +913,17 @@ void OptionsDlg::OnChooseVoiceKeyerWaveFile(wxCommandEvent& event) {
      }
 
      wxString fileName, extension;
-     wxGetApp().m_txtVoiceKeyerWaveFile = openFileDialog.GetPath();
-     wxFileName::SplitPath(wxGetApp().m_txtVoiceKeyerWaveFile, &wxGetApp().m_txtVoiceKeyerWaveFilePath, &fileName, &extension);
-     m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().m_txtVoiceKeyerWaveFile);
+     wxGetApp().appConfiguration.voiceKeyerWaveFile = openFileDialog.GetPath();
+     wxString tmpString = wxGetApp().appConfiguration.voiceKeyerWaveFilePath;
+     wxFileName::SplitPath(wxGetApp().appConfiguration.voiceKeyerWaveFile, &tmpString, &fileName, &extension);
+     m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().appConfiguration.voiceKeyerWaveFile);
 }
 
 void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent& event) {
      wxDirDialog pathDialog(
                                  this,
                                  wxT("Choose Quick Record save location"),
-                                 wxGetApp().m_txtQuickRecordPath
+                                 wxGetApp().appConfiguration.quickRecordPath
                                  );
      if(pathDialog.ShowModal() == wxID_CANCEL) {
          return;     // the user changed their mind...
@@ -1008,7 +965,7 @@ void OptionsDlg::OnAttnCarrierEn(wxScrollEvent& event) {
 }
 
 void OptionsDlg::OnFreeDV700txClip(wxScrollEvent& event) {
-    wxGetApp().m_FreeDV700txClip = m_ckboxFreeDV700txClip->GetValue();
+    wxGetApp().appConfiguration.freedv700Clip = m_ckboxFreeDV700txClip->GetValue();
 }
 
 void OptionsDlg::OnFreeDV700Combine(wxScrollEvent& event) {
@@ -1016,14 +973,14 @@ void OptionsDlg::OnFreeDV700Combine(wxScrollEvent& event) {
 }
 
 void OptionsDlg::OnDebugConsole(wxScrollEvent& event) {
-    wxGetApp().m_debug_console = m_ckboxDebugConsole->GetValue();
+    wxGetApp().appConfiguration.debugConsoleEnabled = m_ckboxDebugConsole->GetValue();
 #ifdef __WXMSW__
     // somewhere to send printfs while developing, causes conmsole to pop up on Windows
-    if (wxGetApp().m_debug_console) {
+    if (wxGetApp().appConfiguration.debugConsoleEnabled) {
         int ret = AllocConsole();
         freopen("CONOUT$", "w", stdout); 
         freopen("CONOUT$", "w", stderr); 
-        if (g_verbose) fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().m_debug_console);
+        if (g_verbose) fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().appConfiguration.debugConsoleEnabled.get());
     } 
 #endif
 }

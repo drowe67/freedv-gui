@@ -53,6 +53,7 @@ set(FREEDV_LINK_LIBS_OSX
 
 # Compile FreeDV components
 add_subdirectory(audio)
+add_subdirectory(config)
 add_subdirectory(pipeline)
 add_subdirectory(reporting)
 add_subdirectory(sox)
@@ -80,9 +81,9 @@ endif(APPLE)
 
 # Link imported or build tree targets.
 if(APPLE)
-target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_reporting fdv_sox lpcnetfreedv codec2)
+target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_config fdv_reporting fdv_sox lpcnetfreedv codec2)
 else(APPLE)
-target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_reporting fdv_sox lpcnetfreedv codec2)
+target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_reporting fdv_sox lpcnetfreedv codec2)
 endif(APPLE)
 
 # Add build dependencies for internally built external libraries.

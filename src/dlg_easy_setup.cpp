@@ -329,12 +329,12 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
 {
     if (inout == EXCHANGE_DATA_IN)
     {
-        wxString soundCard1InDeviceName = wxGetApp().m_soundCard1InDeviceName;
-        int soundCard1InSampleRate = wxGetApp().m_soundCard1InSampleRate;
-        wxString soundCard1OutDeviceName = wxGetApp().m_soundCard1OutDeviceName;
-        int soundCard1OutSampleRate = wxGetApp().m_soundCard1OutSampleRate;
-        wxString soundCard2InDeviceName = wxGetApp().m_soundCard2InDeviceName;
-        wxString soundCard2OutDeviceName = wxGetApp().m_soundCard2OutDeviceName;
+        wxString soundCard1InDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName;
+        int soundCard1InSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
+        wxString soundCard1OutDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName;
+        int soundCard1OutSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
+        wxString soundCard2InDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName;
+        wxString soundCard2OutDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName;
         wxString radioSoundDevice;
         
         if (soundCard1InDeviceName != "none" && soundCard1OutDeviceName != "none")
@@ -456,51 +456,41 @@ void EasySetupDialog::ExchangeSoundDeviceData(int inout)
             
         if (analogRecordDeviceData->txDeviceName == "none")
         {
-            wxGetApp().m_soundCard2InDeviceName = "none";
-            wxGetApp().m_soundCard2InSampleRate = -1;
-            wxGetApp().m_soundCard2OutDeviceName = "none";
-            wxGetApp().m_soundCard2OutSampleRate = -1;
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = "none";
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = -1;
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = "none";
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = -1;
             
             if (updateRadioDevices)
             {
-                wxGetApp().m_soundCard1InDeviceName = deviceData->rxDeviceName;
-                wxGetApp().m_soundCard1InSampleRate = deviceData->rxSampleRate;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = deviceData->rxDeviceName;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate = deviceData->rxSampleRate;
             }
             
-            wxGetApp().m_soundCard1OutDeviceName = analogPlaybackDeviceData->rxDeviceName;
-            wxGetApp().m_soundCard1OutSampleRate = analogPlaybackDeviceData->rxSampleRate;
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = analogPlaybackDeviceData->rxDeviceName;
+            wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = analogPlaybackDeviceData->rxSampleRate;
 
             g_nSoundCards = 1;
         }
         else
         {
-            wxGetApp().m_soundCard2InDeviceName = analogRecordDeviceData->txDeviceName;
-            wxGetApp().m_soundCard2InSampleRate = analogRecordDeviceData->txSampleRate;
-            wxGetApp().m_soundCard2OutDeviceName = analogPlaybackDeviceData->rxDeviceName;
-            wxGetApp().m_soundCard2OutSampleRate = analogPlaybackDeviceData->rxSampleRate;
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = analogRecordDeviceData->txDeviceName;
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = analogRecordDeviceData->txSampleRate;
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = analogPlaybackDeviceData->rxDeviceName;
+            wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = analogPlaybackDeviceData->rxSampleRate;
             
             if (updateRadioDevices)
             {
-                wxGetApp().m_soundCard1InDeviceName = deviceData->rxDeviceName;
-                wxGetApp().m_soundCard1InSampleRate = deviceData->rxSampleRate;
-                wxGetApp().m_soundCard1OutDeviceName = deviceData->txDeviceName;
-                wxGetApp().m_soundCard1OutSampleRate = deviceData->txSampleRate;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = deviceData->rxDeviceName;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate = deviceData->rxSampleRate;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = deviceData->txDeviceName;
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = deviceData->txSampleRate;
             }
 
             g_nSoundCards = 2;
         }
-            
-        pConfig->Write(wxT("/Audio/soundCard1InDeviceName"), wxGetApp().m_soundCard1InDeviceName);	
-        pConfig->Write(wxT("/Audio/soundCard1OutDeviceName"), wxGetApp().m_soundCard1OutDeviceName);	
-        pConfig->Write(wxT("/Audio/soundCard2InDeviceName"), wxGetApp().m_soundCard2InDeviceName);	
-        pConfig->Write(wxT("/Audio/soundCard2OutDeviceName"), wxGetApp().m_soundCard2OutDeviceName);
         
-        pConfig->Write(wxT("/Audio/soundCard1InSampleRate"), wxGetApp().m_soundCard1InSampleRate);	
-        pConfig->Write(wxT("/Audio/soundCard1OutSampleRate"), wxGetApp().m_soundCard1OutSampleRate);	
-        pConfig->Write(wxT("/Audio/soundCard2InSampleRate"), wxGetApp().m_soundCard2InSampleRate);	
-        pConfig->Write(wxT("/Audio/soundCard2OutSampleRate"), wxGetApp().m_soundCard2OutSampleRate);
-
-        pConfig->Flush();
+        wxGetApp().appConfiguration.save(pConfig);
     }
 }
 
@@ -508,39 +498,39 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
 {
     if (inout == EXCHANGE_DATA_IN)
     {
-        m_ckUseHamlibPTT->SetValue(wxGetApp().m_boolHamlibUseForPTT);
-        m_ckUseSerialPTT->SetValue(wxGetApp().m_boolUseSerialPTT);
+        m_ckUseHamlibPTT->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT);
+        m_ckUseSerialPTT->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT);
 
-        if (wxGetApp().m_boolHamlibUseForPTT)
+        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT)
         {
             m_hamlibBox->Show();
             m_serialBox->Hide();
 
             m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
             resetIcomCIVStatus_();
-            m_cbSerialPort->SetValue(wxGetApp().m_strHamlibSerialPort);
+            m_cbSerialPort->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort);
 
-            if (wxGetApp().m_intHamlibSerialRate == 0) {
+            if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate == 0) {
                 m_cbSerialRate->SetSelection(0);
             } else {
-                m_cbSerialRate->SetValue(wxString::Format(wxT("%i"), wxGetApp().m_intHamlibSerialRate));
+                m_cbSerialRate->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get()));
             }
 
-            m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02X"), wxGetApp().m_intHamlibIcomCIVHex));
+            m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02X"), wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress.get()));
             
-            m_cbPttMethod->SetSelection((int)wxGetApp().m_hamlibPttType);
+            m_cbPttMethod->SetSelection((int)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType);
         }
-        else if (wxGetApp().m_boolUseSerialPTT)
+        else if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT)
         {
             m_hamlibBox->Hide();
             m_serialBox->Show();
 
-            auto str = wxGetApp().m_strRigCtrlPort;
+            auto str = wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPort;
             m_cbCtlDevicePath->SetValue(str);
-            m_rbUseRTS->SetValue(wxGetApp().m_boolUseRTS);
-            m_ckRTSPos->SetValue(wxGetApp().m_boolRTSPos);
-            m_rbUseDTR->SetValue(wxGetApp().m_boolUseDTR);
-            m_ckDTRPos->SetValue(wxGetApp().m_boolDTRPos);
+            m_rbUseRTS->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseRTS);
+            m_ckRTSPos->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS);
+            m_rbUseDTR->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseDTR);
+            m_ckDTRPos->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR);
         }
         else
         {
@@ -555,54 +545,43 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
     else if (inout == EXCHANGE_DATA_OUT)
     {
         Hamlib *hamlib = wxGetApp().m_hamlib;
-        wxGetApp().m_boolHamlibUseForPTT = m_ckUseHamlibPTT->GetValue();
-        pConfig->Write(wxT("/Hamlib/UseForPTT"), wxGetApp().m_boolHamlibUseForPTT);
-
-        wxGetApp().m_boolUseSerialPTT = m_ckUseSerialPTT->GetValue();
-        pConfig->Write(wxT("/Rig/UseSerialPTT"), wxGetApp().m_boolUseSerialPTT);
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT = m_ckUseHamlibPTT->GetValue();
+        
+        wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT = m_ckUseSerialPTT->GetValue();
 
         if (m_ckUseHamlibPTT->GetValue())
         {
             wxGetApp().m_intHamlibRig = m_cbRigName->GetSelection();
-            wxGetApp().m_strHamlibRigName = hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
-            wxGetApp().m_strHamlibSerialPort = m_cbSerialPort->GetValue();
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort = m_cbSerialPort->GetValue();
             
             wxString s = m_tcIcomCIVHex->GetValue();
             long hexAddress = 0;
             m_tcIcomCIVHex->GetValue().ToLong(&hexAddress, 16);
-            wxGetApp().m_intHamlibIcomCIVHex = hexAddress;
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress = hexAddress;
             
             s = m_cbSerialRate->GetValue();
             if (s == "default") {
-                wxGetApp().m_intHamlibSerialRate = 0;
+                wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate = 0;
             } else {
                 long tmp;
                 m_cbSerialRate->GetValue().ToLong(&tmp); 
-                wxGetApp().m_intHamlibSerialRate = tmp;
+                wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate = tmp;
             }
-            if (g_verbose) fprintf(stderr, "serial rate: %d\n", wxGetApp().m_intHamlibSerialRate);
-
-            pConfig->Write(wxT("/Hamlib/RigNameStr"), wxGetApp().m_strHamlibRigName);
-            pConfig->Write(wxT("/Hamlib/SerialPort"), wxGetApp().m_strHamlibSerialPort);
-            pConfig->Write(wxT("/Hamlib/SerialRate"), wxGetApp().m_intHamlibSerialRate);
+            if (g_verbose) fprintf(stderr, "serial rate: %d\n", wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get());
             
-            wxGetApp().m_hamlibPttType = (Hamlib::PttType)m_cbPttMethod->GetSelection();
-            pConfig->Write(wxT("/Hamlib/PttType"), (long)wxGetApp().m_hamlibPttType);
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType = m_cbPttMethod->GetSelection();
         }
         else if (m_ckUseSerialPTT->GetValue())
         {
-            wxGetApp().m_strRigCtrlPort             = m_cbCtlDevicePath->GetValue();
-            wxGetApp().m_boolUseRTS                 = m_rbUseRTS->GetValue();
-            wxGetApp().m_boolRTSPos                 = m_ckRTSPos->IsChecked();
-            wxGetApp().m_boolUseDTR                 = m_rbUseDTR->GetValue();
-            wxGetApp().m_boolDTRPos                 = m_ckDTRPos->IsChecked();
-                    
-            pConfig->Write(wxT("/Rig/Port"),            wxGetApp().m_strRigCtrlPort); 
-            pConfig->Write(wxT("/Rig/UseRTS"),          wxGetApp().m_boolUseRTS);
-            pConfig->Write(wxT("/Rig/RTSPolarity"),     wxGetApp().m_boolRTSPos);
-            pConfig->Write(wxT("/Rig/UseDTR"),          wxGetApp().m_boolUseDTR);
-            pConfig->Write(wxT("/Rig/DTRPolarity"),     wxGetApp().m_boolDTRPos);
+            wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPort             = m_cbCtlDevicePath->GetValue();
+            wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseRTS                 = m_rbUseRTS->GetValue();
+            wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS                 = m_ckRTSPos->IsChecked();
+            wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseDTR                 = m_rbUseDTR->GetValue();
+            wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR                 = m_ckDTRPos->IsChecked();
         }
+        
+        wxGetApp().appConfiguration.save(pConfig);
     }
 }
 
@@ -610,44 +589,32 @@ void EasySetupDialog::ExchangeReportingData(int inout)
 {
     if (inout == EXCHANGE_DATA_IN)
     {
-        m_ckbox_psk_enable->SetValue(wxGetApp().m_reportingEnabled);
-        m_txt_callsign->SetValue(wxGetApp().m_reportingCallsign);
-        m_txt_grid_square->SetValue(wxGetApp().m_reportingGridSquare);
+        m_ckbox_psk_enable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+        m_txt_callsign->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign);
+        m_txt_grid_square->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare);
     }
     else if (inout == EXCHANGE_DATA_OUT)
     {
-        if (wxGetApp().m_reportingEnabled != m_ckbox_psk_enable->GetValue())
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled != m_ckbox_psk_enable->GetValue())
         {
-            wxGetApp().m_reportingEnabled = m_ckbox_psk_enable->GetValue();
-            if (wxGetApp().m_reportingEnabled)
+            wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled = m_ckbox_psk_enable->GetValue();
+            if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
             {
                 // Enable both PSK Reporter and FreeDV Reporter by default.
-                wxGetApp().m_pskReporterEnabled = wxGetApp().m_reportingEnabled;
-                wxGetApp().m_freedvReporterEnabled = wxGetApp().m_reportingEnabled;
+                wxGetApp().appConfiguration.reportingConfiguration.pskReporterEnabled = wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled;
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled = wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled;
                 
-                if (wxGetApp().m_freedvReporterHostname == "")
+                if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname == "")
                 {
-                    wxGetApp().m_freedvReporterHostname = FREEDV_REPORTER_DEFAULT_HOSTNAME;
+                    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname = FREEDV_REPORTER_DEFAULT_HOSTNAME;
                 }
             }
         }
         
-        wxGetApp().m_reportingCallsign = m_txt_callsign->GetValue();
-        wxGetApp().m_reportingGridSquare = m_txt_grid_square->GetValue();
-        
-        // General reporting parameters
-        pConfig->Write(wxT("/Reporting/Enable"), wxGetApp().m_reportingEnabled);
-        pConfig->Write(wxT("/Reporting/Callsign"), wxGetApp().m_reportingCallsign);
-        pConfig->Write(wxT("/Reporting/GridSquare"), wxGetApp().m_reportingGridSquare);
-            
-        // PSK Reporter parameters
-        pConfig->Write(wxT("/Reporting/PSKReporter/Enable"), wxGetApp().m_pskReporterEnabled);
-    
-        // FreDV Reporter options
-        pConfig->Write(wxT("/Reporting/FreeDV/Enable"), wxGetApp().m_freedvReporterEnabled);
-        pConfig->Write(wxT("/Reporting/FreeDV/Hostname"), wxGetApp().m_freedvReporterHostname);
-        
-        pConfig->Flush();
+        wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign = m_txt_callsign->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare = m_txt_grid_square->GetValue();
+
+        wxGetApp().appConfiguration.save(pConfig);
     }
 }
 
@@ -799,8 +766,8 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
             {
                 if (selectedString == MULTIPLE_DEVICES_STRING)
                 {
-                    radioOutDeviceName = wxGetApp().m_soundCard1OutDeviceName;
-                    radioOutSampleRate = wxGetApp().m_soundCard1OutSampleRate;
+                    radioOutDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName;
+                    radioOutSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
                 }
                 else
                 {

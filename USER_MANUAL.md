@@ -882,8 +882,14 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Hamlib: allow frequency and mode changes during TX. (PR #455)
 3. Build system:
     * Bump Codec2 version to v1.1.1. (PR #437)
+4. Cleanup:
+    * Refactor configuration handling in the codebase. (PR #457)
 4. Miscallenous:
     * Set default FreeDV Reporter hostname to qso.freedv.org. (PR #448)
+
+*Note for Windows users: you may receive a one-time error message on startup 
+after upgrading indicating that certain Registry keys have incorrect types.
+This is expected as the formats of some configuration parameters have changed.*
 
 ## V1.8.11 June 2023
 
