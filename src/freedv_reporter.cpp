@@ -53,7 +53,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // =============================
     wxBoxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    m_buttonOK = new wxButton(this, wxID_OK);
+    m_buttonOK = new wxButton(this, wxID_OK, _("Close"));
     buttonSizer->Add(m_buttonOK, 0, wxALL, 2);
 
     m_buttonSendQSY = new wxButton(this, wxID_ANY, _("Request QSY"));
