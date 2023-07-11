@@ -31,10 +31,10 @@ int MainFrame::VoiceKeyerStartTx(void)
     SF_INFO sfInfo;
     sfInfo.format = 0;
 
-    SNDFILE* tmpPlayFile = sf_open(wxGetApp().m_txtVoiceKeyerWaveFile.mb_str(), SFM_READ, &sfInfo);
+    SNDFILE* tmpPlayFile = sf_open(wxGetApp().appConfiguration.voiceKeyerWaveFile->mb_str(), SFM_READ, &sfInfo);
     if(tmpPlayFile == NULL) {
         wxString strErr = sf_strerror(NULL);
-        wxMessageBox(strErr, wxT("Couldn't open:") + wxGetApp().m_txtVoiceKeyerWaveFile, wxOK);
+        wxMessageBox(strErr, wxT("Couldn't open:") + wxGetApp().appConfiguration.voiceKeyerWaveFile, wxOK);
         m_togBtnVoiceKeyer->SetValue(false);
         next_state = VK_IDLE;
     }
@@ -42,7 +42,7 @@ int MainFrame::VoiceKeyerStartTx(void)
         g_sfTxFs = sfInfo.samplerate;
         g_sfPlayFile = tmpPlayFile;
         
-        SetStatusText(wxT("Voice Keyer: Playing file ") + wxGetApp().m_txtVoiceKeyerWaveFile + wxT(" to mic input") , 0);
+        SetStatusText(wxT("Voice Keyer: Playing file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + wxT(" to mic input") , 0);
         g_loopPlayFileToMicIn = false;
         g_playFileToMicIn = true;
 
@@ -62,8 +62,8 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
     case VK_IDLE:
         if (vk_event == VK_START) {
             // sample these puppies at start just in case they are changed while VK running
-            vk_rx_pause = wxGetApp().m_intVoiceKeyerRxPause;
-            vk_repeats = wxGetApp().m_intVoiceKeyerRepeats;
+            vk_rx_pause = wxGetApp().appConfiguration.voiceKeyerRxPause;
+            vk_repeats = wxGetApp().appConfiguration.voiceKeyerRepeats;
             if (g_verbose) fprintf(stderr, "vk_rx_pause: %d vk_repeats: %d\n", vk_rx_pause, vk_repeats);
 
             vk_repeat_counter = 0;

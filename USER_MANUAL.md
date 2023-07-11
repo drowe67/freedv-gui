@@ -875,16 +875,23 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Disable PTT and Voice Keyer buttons if only RX devices are configured. (PR #449)
     * Fix Linux display bugs when switching between dark and light mode. (PR #454)
 2. Enhancements:
-    * Add the ability to request that another FreeDV Reporter user QSY. (PR #434, #453, #456, #458, #459)
+    * Add the ability to request that another FreeDV Reporter user QSY. (PR #434, #453, #456, #458, #459, #467)
     * Display 'Digital' on button when Analog mode is active. (PR #447)
     * Set minimum size for Mode box to 250px. (PR #446)
     * Notify FreeDV Reporter if only capable of RX. (PR #449)
     * Hamlib: allow frequency and mode changes during TX. (PR #455)
     * Auto-size columns in Audio Options to improve readability. (PR #461)
+    * Add support for modifying the drop down frequency list. (PR #460)
 3. Build system:
     * Bump Codec2 version to v1.1.1. (PR #437)
+4. Cleanup:
+    * Refactor configuration handling in the codebase. (PR #457)
 4. Miscallenous:
     * Set default FreeDV Reporter hostname to qso.freedv.org. (PR #448)
+
+*Note for Windows users: you may receive a one-time error message on startup 
+after upgrading indicating that certain Registry keys have incorrect types.
+This is expected as the formats of some configuration parameters have changed.*
 
 ## V1.8.11 June 2023
 
