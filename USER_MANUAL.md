@@ -863,7 +863,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V1.8.12 TBD 2023
+## V1.8.12 July 2023
 
 1. Bugfixes:
     * Clear audio plots when recording or playback starts. (PR #439)
