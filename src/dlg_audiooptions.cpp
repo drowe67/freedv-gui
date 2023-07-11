@@ -697,6 +697,12 @@ void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
 
     buf.Printf(wxT("%s"), "none");
     idx = ctrl->InsertItem(ctrl->GetItemCount(), buf);
+    
+    // Auto-size column widths to improve readability
+    for (int col = 0; col < 4; col++)
+    {
+        ctrl->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
+    }
 }
 
 //-------------------------------------------------------------------------
