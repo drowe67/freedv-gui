@@ -339,6 +339,11 @@ is in kilohertz (kHz) and will turn red if the entered value is invalid. If Haml
 this frequency will automatically remain in sync with the current VFO on the radio (i.e. if the frequency is changed
 in the application, the radio will also change its frequency).
 
+*Note: in some setups (such as when using ALE), it is not preferred to have the reporting frequency automatically be 
+in sync with the radio. For example, in the case of ALE, the radio's frequency changes multiple times per second while
+waiting for a contact, which is faster than FreeDV can pull the latest from the radio (every five seconds). This can 
+be disabled by enabling "Manual Frequency Reporting" in Tools->Options.*
+
 FreeDV will also show the callsigns of previously received signals. To view those, click on the arrow
 next to the last received callsign at the bottom of the window. These are in descending order by time
 of receipt (i.e. the most recently received callsign will appear at the top of the list).
