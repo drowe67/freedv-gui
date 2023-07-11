@@ -22,6 +22,8 @@
 #include <wx/datetime.h>
 #include "freedv_reporter.h"
 
+#define UNKNOWN_STR "        Unknown        "
+
 using namespace std::placeholders;
 
 FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
@@ -285,7 +287,7 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         auto itemIndex = m_listSpots->InsertItem(m_listSpots->GetItemCount(), callsign);
         m_listSpots->SetItem(itemIndex, 1, gridSquare);
         m_listSpots->SetItem(itemIndex, 2, version);
-        m_listSpots->SetItem(itemIndex, 3, "Unknown");
+        m_listSpots->SetItem(itemIndex, 3, UNKNOWN_STR);
         
         if (rxOnly)
         {
@@ -295,13 +297,13 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         }
         else
         {
-            m_listSpots->SetItem(itemIndex, 4, "Unknown");
-            m_listSpots->SetItem(itemIndex, 5, "Unknown");
-            m_listSpots->SetItem(itemIndex, 6, "Unknown");
+            m_listSpots->SetItem(itemIndex, 4, UNKNOWN_STR);
+            m_listSpots->SetItem(itemIndex, 5, UNKNOWN_STR);
+            m_listSpots->SetItem(itemIndex, 6, UNKNOWN_STR);
         }
-        m_listSpots->SetItem(itemIndex, 7, "Unknown");
-        m_listSpots->SetItem(itemIndex, 8, "Unknown");
-        m_listSpots->SetItem(itemIndex, 9, "Unknown");
+        m_listSpots->SetItem(itemIndex, 7, UNKNOWN_STR);
+        m_listSpots->SetItem(itemIndex, 8, UNKNOWN_STR);
+        m_listSpots->SetItem(itemIndex, 9, UNKNOWN_STR);
         
         auto lastUpdateTime = makeValidTime_(lastUpdate);
         m_listSpots->SetItem(itemIndex, 10, lastUpdateTime);
@@ -485,6 +487,6 @@ wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr)
     }
     else
     {
-        return _("Unknown");
+        return _(UNKNOWN_STR);
     }
 }
