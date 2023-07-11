@@ -883,6 +883,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Auto-size columns in Audio Options to improve readability. (PR #461)
     * Add support for modifying the drop down frequency list. (PR #460)
     * Preserve size and position of Audio Configuration dialog. (PR #466)
+    * Add ability to suppress automatic frequency reporting on radio changes. (PR #469)
 3. Build system:
     * Bump Codec2 version to v1.1.1. (PR #437)
 4. Cleanup:
