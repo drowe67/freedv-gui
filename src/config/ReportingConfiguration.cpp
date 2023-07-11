@@ -33,6 +33,8 @@ ReportingConfiguration::ReportingConfiguration()
         
     , reportingFrequency("/Reporting/Frequency", 0)
         
+    , manualFrequencyReporting("/Reporting/ManualFrequencyReporting", false)
+        
     , pskReporterEnabled("/Reporting/PSKReporter/Enable", false)
         
     , freedvReporterEnabled("/Reporting/FreeDV/Enable", true)
@@ -87,6 +89,8 @@ void ReportingConfiguration::load(wxConfigBase* config)
     
     load_(config, reportingFrequencyList);
     
+    load_(config, manualFrequencyReporting);
+    
     // Special load handling for reporting below.
     wxString freqStr = config->Read(reportingFrequency.getElementName(), oldFreqStr);
     reportingFrequency.setWithoutProcessing(atoll(freqStr.ToUTF8()));
@@ -108,6 +112,8 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, useUTCForReporting);
     
     save_(config, reportingFrequencyList);
+    
+    save_(config, manualFrequencyReporting);
     
     // Special save handling for reporting below.
     wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), reportingFrequency.getWithoutProcessing());
