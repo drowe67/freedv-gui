@@ -65,12 +65,6 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
 
     sectionSizer->Add(buttonSizer, 0, wxALL | wxALIGN_CENTER, 2);
     
-    // Trigger auto-layout of window.
-    // ==============================
-    this->SetSizerAndFit(sectionSizer);
-    
-    this->Layout();
-    
     // Move FreeDV Reporter window back into last saved position
     SetSize(wxSize(
         wxGetApp().appConfiguration.reporterWindowWidth,
@@ -80,6 +74,11 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         wxGetApp().appConfiguration.reporterWindowTop));
     
     this->SetMinSize(GetBestSize());
+    
+    // Trigger auto-layout of window.
+    // ==============================
+    this->SetSizerAndFit(sectionSizer);
+    this->Layout();
     
     // Hook in events
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(FreeDVReporterDialog::OnInitDialog));
