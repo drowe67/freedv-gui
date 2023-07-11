@@ -39,6 +39,24 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterHostname("/Reporting/FreeDV/Hostname", wxT(FREEDV_REPORTER_DEFAULT_HOSTNAME))
         
     , useUTCForReporting("/CallsignList/UseUTCTime", false)
+        
+    , reportingFrequencyList("/Reporting/FrequencyList", {
+        _("3.6250"),
+        _("3.6430"),
+        _("3.6930"),
+        _("3.6970"),
+        _("5.4035"),
+        _("5.3665"),
+        _("7.1770"),
+        _("14.2360"),
+        _("14.2400"),
+        _("18.1180"),
+        _("21.3130"),
+        _("24.9330"),
+        _("28.3300"),
+        _("28.7200"),
+        _("10489.6400"),
+    })
 {
     // empty
 }
@@ -67,6 +85,8 @@ void ReportingConfiguration::load(wxConfigBase* config)
     
     load_(config, useUTCForReporting);
     
+    load_(config, reportingFrequencyList);
+    
     // Special load handling for reporting below.
     wxString freqStr = config->Read(reportingFrequency.getElementName(), oldFreqStr);
     reportingFrequency.setWithoutProcessing(atoll(freqStr.ToUTF8()));
@@ -86,6 +106,8 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, freedvReporterHostname);
     
     save_(config, useUTCForReporting);
+    
+    save_(config, reportingFrequencyList);
     
     // Special save handling for reporting below.
     wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), reportingFrequency.getWithoutProcessing());

@@ -467,6 +467,8 @@ class MainFrame : public TopFrame
         void performFreeDVOff_();
         
         void executeOnUiThreadAndWait_(std::function<void()> fn);
+        
+        void updateReportingFreqList_();
 };
 
 void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs);

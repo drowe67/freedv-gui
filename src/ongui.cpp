@@ -135,25 +135,29 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
     wxUnusedVar(event);
     g_modal = true;
     //fprintf(stderr,"g_modal: %d\n", g_modal);
-    optionsDlg->ShowModal();
+    if (optionsDlg->ShowModal() == wxOK)
+    {
+        // Update reporting list.
+        updateReportingFreqList_();
     
-    // Show/hide frequency box based on PSK Reporter status.
-    m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+        // Show/hide frequency box based on PSK Reporter status.
+        m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
-    // Show/hide callsign combo box based on PSK Reporter Status
-    if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
-    {
-        m_cboLastReportedCallsigns->Show();
-        m_txtCtrlCallSign->Hide();
-    }
-    else
-    {
-        m_cboLastReportedCallsigns->Hide();
-        m_txtCtrlCallSign->Show();
-    }
+        // Show/hide callsign combo box based on PSK Reporter Status
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
+        {
+            m_cboLastReportedCallsigns->Show();
+            m_txtCtrlCallSign->Hide();
+        }
+        else
+        {
+            m_cboLastReportedCallsigns->Hide();
+            m_txtCtrlCallSign->Show();
+        }
 
-    // Relayout window so that the changes can take effect.
-    m_panel->Layout();
+        // Relayout window so that the changes can take effect.
+        m_panel->Layout();
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -714,4 +718,23 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
     m_collpane->SetBackgroundColour(currentControlBackground);
     m_collpane->GetPane()->SetBackgroundColour(currentControlBackground);
     TopFrame::OnSystemColorChanged(event);
+}
+
+void MainFrame::updateReportingFreqList_()
+{
+    uint64_t prevFreqInt = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+    auto prevSelected = wxString::Format(_("%.04f"), (double)prevFreqInt / (double)1000.0 / (double)1000.0);
+    m_cboReportFrequency->Clear();
+    
+    for (auto& item : wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList.get())
+    {
+        m_cboReportFrequency->Append(item);
+    }
+    
+    auto idx = m_cboReportFrequency->FindString(prevSelected);
+    if (idx >= 0)
+    {
+        m_cboReportFrequency->SetSelection(idx);
+        m_cboReportFrequency->SetValue(prevSelected);
+    }
 }

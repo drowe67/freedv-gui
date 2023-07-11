@@ -525,6 +525,9 @@ setDefaultMode:
         if (hasSoundCard2InDevice && hasSoundCard2OutDevice)
             g_nSoundCards = 2;
     }
+    
+    // Update the reporting list as needed.
+    updateReportingFreqList_();
 
     // Relayout window so that the changes can take effect.
     auto currentSizer = m_panel->GetSizer();
@@ -1946,7 +1949,7 @@ void MainFrame::performFreeDVOn_()
                                 }
 
                                 auto answer = messageDialog.ShowModal();
-                                if (answer == wxYES)
+                                if (answer == wxID_YES)
                                 {
                                     // This will implicitly cause Hamlib to change the frequecy and mode.
                                     m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyMHz));

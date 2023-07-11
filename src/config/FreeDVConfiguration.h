@@ -48,6 +48,11 @@ public:
     ConfigurationDataElement<long> mainWindowTop;
     ConfigurationDataElement<long> mainWindowWidth;
     ConfigurationDataElement<long> mainWindowHeight;
+
+    ConfigurationDataElement<long> audioConfigWindowLeft;
+    ConfigurationDataElement<long> audioConfigWindowTop;
+    ConfigurationDataElement<long> audioConfigWindowWidth;
+    ConfigurationDataElement<long> audioConfigWindowHeight;
     
     ConfigurationDataElement<long> reporterWindowLeft;
     ConfigurationDataElement<long> reporterWindowTop;

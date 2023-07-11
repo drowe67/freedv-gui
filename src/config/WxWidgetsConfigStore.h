@@ -22,6 +22,7 @@
 #ifndef WXWIDGETS_CONFIG_STORE_H
 #define WXWIDGETS_CONFIG_STORE_H
 
+#include <vector>
 #include <wx/config.h>
 #include "ConfigurationDataElement.h"
 
@@ -39,6 +40,9 @@ protected:
     
     template<typename UnderlyingDataType>
     void save_(wxConfigBase* config, ConfigurationDataElement<UnderlyingDataType>& configElement);
+    
+    wxString generateStringFromArray_(std::vector<wxString> vec);
+    std::vector<wxString> generateArayFromString_(wxString str);
 };
 
 template<typename UnderlyingDataType>
@@ -57,5 +61,11 @@ void WxWidgetsConfigStore::save_(wxConfigBase* config, ConfigurationDataElement<
 
 template<>
 void WxWidgetsConfigStore::load_<unsigned int>(wxConfigBase* config, ConfigurationDataElement<unsigned int>& configElement);
+
+// Special handling for loading and saving string arrays.
+template<>
+void WxWidgetsConfigStore::load_<std::vector<wxString> >(wxConfigBase* config, ConfigurationDataElement<std::vector<wxString> >& configElement);
+template<>
+void WxWidgetsConfigStore::save_<std::vector<wxString> >(wxConfigBase* config, ConfigurationDataElement<std::vector<wxString> >& configElement);
 
 #endif // WXWIDGETS_CONFIG_STORE_H
