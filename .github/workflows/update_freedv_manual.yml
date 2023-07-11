@@ -4,7 +4,9 @@ name: Render User Manual
  
 on:
   # Only run when User Manual markdown source changes
-  push:
+  pull_request:
+    types:
+      - closed
     paths: 
       - 'USER_MANUAL.md'
       
@@ -15,7 +17,7 @@ on:
 jobs:
   # This workflow contains a single job called "build"
   build:
-    if: contains(github.ref, 'refs/tags/') == false
+    if: github.event.pull_request.merged
 
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
