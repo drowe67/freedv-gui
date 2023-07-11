@@ -421,8 +421,16 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
                 m_listSpots->SetItem(index, 8, rxMode);
             
                 wxString snrString = wxString::Format(_("%.01f"), snr);
-                m_listSpots->SetItem(index, 9, snrString);
-            
+                if (receivedCallsign == "" && rxMode == "")
+                {
+                    // Frequency change--blank out SNR too.
+                    m_listSpots->SetItem(index, 9, _(""));
+                }
+                else
+                {
+                    m_listSpots->SetItem(index, 9, snrString);
+                }
+ 
                 auto lastUpdateTime = makeValidTime_(lastUpdate);
                 m_listSpots->SetItem(index, 10, lastUpdateTime);
                 
