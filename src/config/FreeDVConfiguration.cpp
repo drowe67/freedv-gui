@@ -34,6 +34,12 @@ FreeDVConfiguration::FreeDVConfiguration()
     , mainWindowTop("/MainFrame/top", 20)
     , mainWindowWidth("/MainFrame/width", 800)
     , mainWindowHeight("/MainFrame/height", 780)
+
+    /* Position and size of Audio Config window */
+    , audioConfigWindowLeft("/Windows/AudioConfig/left", -1)
+    , audioConfigWindowTop("/Windows/AudioConfig/top", -1)
+    , audioConfigWindowWidth("/Windows/AudioConfig/width", -1)
+    , audioConfigWindowHeight("/Windows/AudioConfig/height", -1)
         
     /* Current tab view */
     , currentNotebookTab("/MainFrame/rxNbookCtrl", 0)
@@ -101,6 +107,11 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, mainWindowTop);
     load_(config, mainWindowWidth);
     load_(config, mainWindowHeight);
+
+    load_(config, audioConfigWindowLeft);
+    load_(config, audioConfigWindowTop);
+    load_(config, audioConfigWindowWidth);
+    load_(config, audioConfigWindowHeight);
     
     load_(config, currentNotebookTab);
     
@@ -165,6 +176,11 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, mainWindowTop);
     save_(config, mainWindowWidth);
     save_(config, mainWindowHeight);
+
+    save_(config, audioConfigWindowLeft);
+    save_(config, audioConfigWindowTop);
+    save_(config, audioConfigWindowWidth);
+    save_(config, audioConfigWindowHeight);
     
     save_(config, currentNotebookTab);
     

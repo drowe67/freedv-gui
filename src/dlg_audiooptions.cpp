@@ -294,6 +294,23 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     populateParams(m_TxInDevices);
     populateParams(m_TxOutDevices);
 
+    // Load previously saved window size and position
+    int l = wxGetApp().appConfiguration.audioConfigWindowLeft;
+    int t = wxGetApp().appConfiguration.audioConfigWindowTop;
+    if (l >= 0 && t >= 0)
+    {
+        Move(
+            l,
+            t);
+    }
+    
+    wxSize sz = GetBestSize();
+    int w = wxGetApp().appConfiguration.audioConfigWindowWidth;
+    int h = wxGetApp().appConfiguration.audioConfigWindowHeight;
+    if (w < sz.GetWidth()) w = sz.GetWidth();
+    if (h < sz.GetHeight()) h = sz.GetHeight();
+    SetClientSize(w, h);
+    
     m_listCtrlRxInDevices->Connect( wxEVT_COMMAND_LIST_ITEM_SELECTED, wxListEventHandler( AudioOptsDialog::OnRxInDeviceSelect ), NULL, this );
     m_listCtrlRxOutDevices->Connect( wxEVT_COMMAND_LIST_ITEM_SELECTED, wxListEventHandler( AudioOptsDialog::OnRxOutDeviceSelect ), NULL, this );
     m_listCtrlTxInDevices->Connect( wxEVT_COMMAND_LIST_ITEM_SELECTED, wxListEventHandler( AudioOptsDialog::OnTxInDeviceSelect ), NULL, this );
@@ -326,6 +343,14 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 AudioOptsDialog::~AudioOptsDialog()
 {
+    // Save size and position
+    auto pos = GetPosition();
+    auto sz = GetClientSize();
+    wxGetApp().appConfiguration.audioConfigWindowLeft = pos.x;
+    wxGetApp().appConfiguration.audioConfigWindowTop = pos.y;
+    wxGetApp().appConfiguration.audioConfigWindowWidth = sz.GetWidth();
+    wxGetApp().appConfiguration.audioConfigWindowHeight = sz.GetHeight();
+
     AudioEngineFactory::GetAudioEngine()->stop();
 
     // Disconnect Events
@@ -697,6 +722,12 @@ void AudioOptsDialog::populateParams(AudioInfoDisplay ai)
 
     buf.Printf(wxT("%s"), "none");
     idx = ctrl->InsertItem(ctrl->GetItemCount(), buf);
+    
+    // Auto-size column widths to improve readability
+    for (int col = 0; col < 4; col++)
+    {
+        ctrl->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
+    }
 }
 
 //-------------------------------------------------------------------------

@@ -186,16 +186,16 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     gridSizer->Add(m_freqList, wxGBPosition(0, 0), wxGBSpan(4, 2), wxEXPAND);
         
     m_freqListAdd = new wxButton(m_rigControlTab, wxID_ANY, _("Add"), wxDefaultPosition, wxSize(-1,-1), 0);
-    gridSizer->Add(m_freqListAdd, wxGBPosition(0, 2));
+    gridSizer->Add(m_freqListAdd, wxGBPosition(0, 2), wxDefaultSpan, wxEXPAND);
     m_freqListRemove = new wxButton(m_rigControlTab, wxID_ANY, _("Remove"), wxDefaultPosition, wxSize(-1,-1), 0);
-    gridSizer->Add(m_freqListRemove, wxGBPosition(1, 2));
+    gridSizer->Add(m_freqListRemove, wxGBPosition(1, 2), wxDefaultSpan, wxEXPAND);
     m_freqListMoveUp = new wxButton(m_rigControlTab, wxID_ANY, _("Move Up"), wxDefaultPosition, wxSize(-1,-1), 0);
-    gridSizer->Add(m_freqListMoveUp, wxGBPosition(2, 2));
+    gridSizer->Add(m_freqListMoveUp, wxGBPosition(2, 2), wxDefaultSpan, wxEXPAND);
     m_freqListMoveDown = new wxButton(m_rigControlTab, wxID_ANY, _("Move Down"), wxDefaultPosition, wxSize(-1,-1), 0);
-    gridSizer->Add(m_freqListMoveDown, wxGBPosition(3, 2));
+    gridSizer->Add(m_freqListMoveDown, wxGBPosition(3, 2), wxDefaultSpan, wxEXPAND);
     
     wxStaticText* labelEnterFreq = new wxStaticText(m_rigControlTab, wxID_ANY, wxT("Enter frequency (MHz):"), wxDefaultPosition, wxDefaultSize, 0);
-    gridSizer->Add(labelEnterFreq, wxGBPosition(4, 0));
+    gridSizer->Add(labelEnterFreq, wxGBPosition(4, 0), wxDefaultSpan, wxALIGN_CENTER_VERTICAL);
     
     m_txtCtrlNewFrequency = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
     gridSizer->Add(m_txtCtrlNewFrequency, wxGBPosition(4, 1), wxGBSpan(1, 2), wxEXPAND);
@@ -798,7 +798,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
     {
         // Save new reporting frequency list.
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList->clear();
-        for (int index = 0; index < m_freqList->GetCount(); index++)
+        for (unsigned int index = 0; index < m_freqList->GetCount(); index++)
         {
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList->push_back(m_freqList->GetString(index));
         }
@@ -1213,9 +1213,9 @@ void OptionsDlg::OnReportingFreqSelectionChange(wxCommandEvent& event)
 
 void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent& event)
 {
-    wxRegEx rgx("[0-9]+(\\.[0-9]+)");
+    wxRegEx rgx("[0-9]+(\\.[0-9]+)?");
     auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());
-    if (idx >= 0)
+    if (idx != wxNOT_FOUND)
     {
         m_freqListAdd->Enable(false);
         m_freqListRemove->Enable(true);
@@ -1225,7 +1225,7 @@ void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent& event)
             m_freqListMoveUp->Enable(false);
             m_freqListMoveDown->Enable(true);
         }
-        else if (idx == m_freqList->GetCount() - 1)
+        else if ((unsigned)idx == m_freqList->GetCount() - 1)
         {
             m_freqListMoveUp->Enable(true);
             m_freqListMoveDown->Enable(false);
@@ -1255,6 +1255,9 @@ void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent& event)
 void OptionsDlg::OnReportingFreqAdd(wxCommandEvent& event)
 {
     auto val = m_txtCtrlNewFrequency->GetValue();
+    
+    double dVal = wxAtof(val);
+    val = wxString::Format(_("%.04f"), dVal);
     m_freqList->Append(val);
     m_txtCtrlNewFrequency->SetValue("");
 }
@@ -1273,7 +1276,7 @@ void OptionsDlg::OnReportingFreqMoveUp(wxCommandEvent& event)
 {
     auto prevStr = m_txtCtrlNewFrequency->GetValue();
     auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());
-    if (idx > 0)
+    if (idx != wxNOT_FOUND && idx > 0)
     {
         m_freqList->Delete(idx);
         m_freqList->Insert(prevStr, idx - 1);
@@ -1288,7 +1291,7 @@ void OptionsDlg::OnReportingFreqMoveDown(wxCommandEvent& event)
 {
     auto prevStr = m_txtCtrlNewFrequency->GetValue();
     auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());
-    if (idx < m_freqList->GetCount() - 1)
+    if (idx != wxNOT_FOUND && (unsigned int)idx < m_freqList->GetCount() - 1)
     {
         m_freqList->Delete(idx);
         m_freqList->Insert(prevStr, idx + 1);
