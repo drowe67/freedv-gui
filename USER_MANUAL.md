@@ -886,6 +886,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add ability to suppress automatic frequency reporting on radio changes. (PR #469)
 3. Build system:
     * Bump Codec2 version to v1.1.1. (PR #437)
+    * Generate PDF/HTML docs only on PR merge. (PR #471)
 4. Cleanup:
     * Refactor configuration handling in the codebase. (PR #457)
 4. Miscellaneous:
