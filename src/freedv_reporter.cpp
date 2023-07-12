@@ -518,7 +518,7 @@ void FreeDVReporterDialog::checkColumnsAndResize_()
             auto str = m_listSpots->GetItemText(index, col);
             auto strLength = str.length();
             auto itemFont = m_listSpots->GetItemFont(index);
-            auto charWidth = itemFont.GetPixelSize();
+            auto charWidth = itemFont.GetPixelSize().GetWidth();
             auto textWidth = charWidth * strLength;
             if (textWidth > columnLengths_[col])
             {
