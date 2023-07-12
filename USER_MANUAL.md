@@ -256,6 +256,24 @@ On bands below 10 MHz, LSB is used for FreeDV.  On 10MHz and above, USB is used.
 
 As an aid to the above, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn't enabled, or if your radio doesn't support retrieving frequency and mode over CAT, it will remain grayed out with "unk" displaying instead of the mode (for "unknown").
 
+## Transceiver Filters
+
+For most FreeDV use, your radio's receive and transmit filters should be set to the widest possible (typically around 3 KHz). 
+This allows easy switching between analog mode as well as the various FreeDV modes. There has not been any testing done to
+definitively confirm whether narrower bandwidths help with reception of FreeDV. Additionally, FreeDV already performs its own 
+transmit filtering, so using additional narrow filtering on the radio will likely have little benefit (again, untested).
+
+For reference, the channel widths of the currently supported modes are below:
+
+| Mode | Width (KHz) |
+| --- | --- |
+| 1600 | 1.125 |
+| 700C | 1.500 |
+| 700D | 1.000 |
+| 700E | 1.500 |
+| 2020 | 1.600 |
+| 2020B | 2.100 |
+
 # Voice Keyer
 
 The Voice Keyer Button on the front page puts FreeDV and your radio into 
@@ -893,9 +911,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 3. Build system:
     * Bump Codec2 version to v1.1.1. (PR #437)
     * Generate PDF/HTML docs only on PR merge. (PR #471)
-4. Cleanup:
+4. Documentation
+    * Add RF bandwidth information to user manual. (PR #444)
+5. Cleanup:
     * Refactor configuration handling in the codebase. (PR #457)
-4. Miscellaneous:
+6. Miscellaneous:
     * Set default FreeDV Reporter hostname to qso.freedv.org. (PR #448)
 
 *Note for Windows users: you may receive a one-time error message on startup 
