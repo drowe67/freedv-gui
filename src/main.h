@@ -84,6 +84,7 @@
 #include "dlg_audiooptions.h"
 #include "dlg_filter.h"
 #include "dlg_options.h"
+#include "freedv_reporter.h"
 #include "sox_biquad.h"
 #include "comp_prim.h"
 #include "hamlib.h"
@@ -92,6 +93,7 @@
 #include "freedv_interface.h"
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
+#include "config/FreeDVConfiguration.h"
 #include "pipeline/paCallbackData.h"
 
 #define _USE_TIMER              1
@@ -146,6 +148,7 @@ extern int                 g_nSoundCards;
 
 class MainFrame;
 class FilterDlg;
+class FreeDVReporterDialog;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainApp
@@ -168,147 +171,19 @@ class MainApp : public wxApp
 
         bool                    CanAccessSerialPort(std::string portName);
         
-        wxString            m_strVendName;
-        wxString            m_StrAppName;
-
-        wxString            m_textNumChOut;
-        wxString            m_textNumChIn;
-
-        wxString            m_strRxInAudio;
-        wxString            m_strRxOutAudio;
-        wxString            m_textVoiceInput;
-        wxString            m_textVoiceOutput;
-        wxString            m_strSampleRate;
-        wxString            m_strBitrate;
-
-        // Sound card
-        wxString m_soundCard1InDeviceName;
-        int m_soundCard1InSampleRate;
-        wxString m_soundCard2InDeviceName;
-        int m_soundCard2InSampleRate;
-        wxString m_soundCard1OutDeviceName;
-        int m_soundCard1OutSampleRate;
-        wxString m_soundCard2OutDeviceName;
-        int m_soundCard2OutSampleRate;
+        FreeDVConfiguration appConfiguration;
         
-        // PTT -----------------------------------
-
-        bool                m_boolHalfDuplex;
-        bool                m_boolMultipleRx;
-        bool                m_boolSingleRxThread;
-        
-        wxString            m_txtVoiceKeyerWaveFilePath;
-        wxString            m_txtVoiceKeyerWaveFile;
-        int                 m_intVoiceKeyerRxPause;
-        int                 m_intVoiceKeyerRepeats;
-
-        wxString            m_txtQuickRecordPath;
-    
-        bool                m_boolEnableSpacebarForPTT;
-        bool                m_boolHamlibUseForPTT;
-        bool                m_boolHamlibEnableFreqModeChanges;
+        // PTT -----------------------------------    
         unsigned int        m_intHamlibRig;
-        wxString            m_strHamlibRigName;
-        wxString            m_strHamlibSerialPort;
-        unsigned int        m_intHamlibSerialRate;
-        unsigned int        m_intHamlibIcomCIVHex;
         Hamlib              *m_hamlib;
-        Hamlib::PttType     m_hamlibPttType;
-        bool                m_boolHamlibUseAnalogModes;
-
-        bool                m_boolUseSerialPTT;
-        wxString            m_strRigCtrlPort;
-        bool                m_boolUseRTS;
-        bool                m_boolRTSPos;
-        bool                m_boolUseDTR;
-        bool                m_boolDTRPos;
         Serialport         *m_serialport;
 
         // PTT Input
-        bool                m_boolUseSerialPTTInput;
-        wxString            m_strPTTInputPort;
-        bool                m_boolCTSPos;
         Serialport         *m_pttInSerialPort;
-        
-        // Play/Rec files
-
-        wxString            m_playFileToMicInPath;
-        wxString            m_recFileFromRadioPath;
-        wxString            m_recFileFromModulatorPath;
-        unsigned int        m_recFileFromRadioSecs;
-        unsigned int        m_recFileFromModulatorSecs;
-        wxString            m_playFileFromRadioPath;
-
-        // Options dialog
-
-        wxString            m_callSign;
-        unsigned int        m_textEncoding;
-        bool                m_snrSlow;
-        unsigned int        m_statsResetTimeSec;
-
-        // LPC Post Filter
-        bool                m_codec2LPCPostFilterEnable;
-        bool                m_codec2LPCPostFilterBassBoost;
-        float               m_codec2LPCPostFilterGamma;
-        float               m_codec2LPCPostFilterBeta;
-
-        // Speex Pre-Processor
-        bool                m_speexpp_enable;
-        // Codec 2 700C Equaliser
-        bool                m_700C_EQ;
-
-        // Mic In Equaliser
-        float               m_MicInBassFreqHz;
-        float               m_MicInBassGaindB;
-        float               m_MicInTrebleFreqHz;
-        float               m_MicInTrebleGaindB;
-        float               m_MicInMidFreqHz;
-        float               m_MicInMidGaindB;
-        float               m_MicInMidQ;
-        bool                m_MicInEQEnable;
-        float               m_MicInVolInDB;
-
-        // Spk Out Equaliser
-        float               m_SpkOutBassFreqHz;
-        float               m_SpkOutBassGaindB;
-        float               m_SpkOutTrebleFreqHz;
-        float               m_SpkOutTrebleGaindB;
-        float               m_SpkOutMidFreqHz;
-        float               m_SpkOutMidGaindB;
-        float               m_SpkOutMidQ;
-        bool                m_SpkOutEQEnable;
-        float               m_SpkOutVolInDB;
-
-        // optional vox trigger tone
-        bool                m_leftChannelVoxTone;
-
-        // notebook display after tx->rxtransition
-        int                 m_rxNbookCtrl;
 
         wxRect              m_rTopWindow;
 
-        int                 m_fifoSize_ms;
-
-        // General reporting configuration
-        bool                m_reportingEnabled;
-        wxString            m_reportingCallsign;
-        wxString            m_reportingGridSquare;
-        uint64_t            m_reportingFrequency;
-        
-        // PSK Reporter configuration
-        bool                m_pskReporterEnabled;
-        
-        // FreeDV Reporter configuration
-        bool                m_freedvReporterEnabled;
-        wxString            m_freedvReporterHostname;
-        
-        // Callsign list configuration
-        bool                m_useUTCTime;
-
         std::vector<IReporter*> m_reporters;
-        
-        // Waterfall display
-        int                 m_waterfallColor;
         
         bool                loadConfig();
         bool                saveConfig();
@@ -323,14 +198,7 @@ class MainApp : public wxApp
         MainFrame *frame;
 
         // 700 options
-
-        bool       m_FreeDV700txClip;
-        bool       m_FreeDV700txBPF;
         bool       m_FreeDV700Combine;
-
-        // Noise simulation
-
-        int        m_noise_snr;
 
         // carrier attenuation
 
@@ -343,18 +211,11 @@ class MainApp : public wxApp
         int        m_tone_freq_hz;
         int        m_tone_amplitude;
 
-        // Windows debug console
-
-        bool       m_debug_console;
-
         // debugging 700D audio break up
 
         bool       m_txRxThreadHighPriority;
 
         int        m_prevMode;
-        
-        bool       m_firstTimeUse;
-        bool       m_2020Allowed;
 
     protected:
 };
@@ -415,6 +276,7 @@ class MainFrame : public TopFrame
         virtual ~MainFrame();
 
         FilterDlg*              m_filterDialog;
+        FreeDVReporterDialog*   m_reporterDialog;
         PlotSpectrum*           m_panelSpectrum;
         PlotWaterfall*          m_panelWaterfall;
         PlotScatter*            m_panelScatter;
@@ -549,6 +411,8 @@ class MainFrame : public TopFrame
         
         void OnReportFrequencySetFocus(wxFocusEvent& event) override;
         void OnReportFrequencyKillFocus(wxFocusEvent& event) override;
+
+        void OnSystemColorChanged(wxSysColourChangedEvent& event) override;
         
     private:
         std::shared_ptr<IAudioDevice> rxInSoundDevice;
@@ -603,6 +467,8 @@ class MainFrame : public TopFrame
         void performFreeDVOff_();
         
         void executeOnUiThreadAndWait_(std::function<void()> fn);
+        
+        void updateReportingFreqList_();
 };
 
 void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs);

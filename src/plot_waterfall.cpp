@@ -239,10 +239,11 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     float    f, time, freq_hz_to_px, time_s_to_py;
 
     wxBrush ltGraphBkgBrush;
+    wxColour foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
     ltGraphBkgBrush.SetStyle(wxBRUSHSTYLE_TRANSPARENT);
-    ltGraphBkgBrush.SetColour(*wxBLACK);
+    ltGraphBkgBrush.SetColour(foregroundColor);
     ctx->SetBrush(ltGraphBkgBrush);
-    ctx->SetPen(wxPen(BLACK_COLOR, 1));
+    ctx->SetPen(wxPen(foregroundColor, 1));
     
     wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
     ctx->SetFont(tmpFont);

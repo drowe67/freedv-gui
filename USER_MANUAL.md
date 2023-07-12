@@ -358,6 +358,11 @@ is in kilohertz (kHz) and will turn red if the entered value is invalid. If Haml
 this frequency will automatically remain in sync with the current VFO on the radio (i.e. if the frequency is changed
 in the application, the radio will also change its frequency).
 
+*Note: in some setups (such as when using ALE), it is not preferred to have the reporting frequency automatically be 
+in sync with the radio. For example, in the case of ALE, the radio's frequency changes multiple times per second while
+waiting for a contact, which is faster than FreeDV can pull the latest from the radio (every five seconds). This can 
+be disabled by enabling "Manual Frequency Reporting" in Tools->Options.*
+
 FreeDV will also show the callsigns of previously received signals. To view those, click on the arrow
 next to the last received callsign at the bottom of the window. These are in descending order by time
 of receipt (i.e. the most recently received callsign will appear at the top of the list).
@@ -889,18 +894,33 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Clear button now clears the callsign list. (PR #436)
     * Fix bug causing the PTT button to stay red after the voice keyer finishes TX. (PR #440)
     * Fix FreeDV Reporter crash when sending RX record. (PR #443)
-    * Hamlib: set mode before frequency to avoid accidental offsetting. (PR #442)
+    * Hamlib: set mode before frequency to avoid accidental offsetting. (PR #442, #452)
+    * Fix audio dialog plot display and lockup issues. (PR #450)
     * Disable PTT and Voice Keyer buttons if only RX devices are configured. (PR #449)
+    * Fix Linux display bugs when switching between dark and light mode. (PR #454)
 2. Enhancements:
+    * Add the ability to request that another FreeDV Reporter user QSY. (PR #434, #453, #456, #458, #459, #467)
     * Display 'Digital' on button when Analog mode is active. (PR #447)
     * Set minimum size for Mode box to 250px. (PR #446)
     * Notify FreeDV Reporter if only capable of RX. (PR #449)
+    * Hamlib: allow frequency and mode changes during TX. (PR #455)
+    * Auto-size columns in Audio Options to improve readability. (PR #461)
+    * Add support for modifying the drop down frequency list. (PR #460)
+    * Preserve size and position of Audio Configuration dialog. (PR #466)
+    * Add ability to suppress automatic frequency reporting on radio changes. (PR #469)
 3. Build system:
     * Bump Codec2 version to v1.1.1. (PR #437)
+    * Generate PDF/HTML docs only on PR merge. (PR #471)
 4. Documentation
     * Add RF bandwidth information to user manual. (PR #444)
-5. Miscallenous::
+5. Cleanup:
+    * Refactor configuration handling in the codebase. (PR #457)
+6. Miscellaneous:
     * Set default FreeDV Reporter hostname to qso.freedv.org. (PR #448)
+
+*Note for Windows users: you may receive a one-time error message on startup 
+after upgrading indicating that certain Registry keys have incorrect types.
+This is expected as the formats of some configuration parameters have changed.*
 
 ## V1.8.11 June 2023
 

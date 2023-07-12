@@ -35,7 +35,7 @@ class Hamlib {
         void enable_mode_detection(wxStaticText* statusBox, wxComboBox* freqBox, bool vhfUhfMode);
         void disable_mode_detection();
         void setFrequencyAndMode(uint64_t frequencyHz, bool analog);
-        void setMode(bool analog);
+        void setMode(bool analog, uint64_t frequencyHz);
         void readOnly(bool readOnly) { readOnly_ = readOnly; }
         void suppressFrequencyModeUpdates(bool suppress);
         bool isSuppressFrequencyModeUpdates() const { return updatesSuppressed_; }
@@ -50,6 +50,7 @@ class Hamlib {
         typedef std::vector<const struct rig_caps *> riglist_t;
 
     private:
+        rmode_t getHamlibMode_(bool analog, uint64_t frequencyHz);
         void update_mode_status();
         void statusUpdateThreadEntryFn_();
         void update_from_hamlib_();

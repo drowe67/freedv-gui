@@ -53,8 +53,9 @@ Hamlib::Hamlib() :
     m_vhfUhfMode(false),
     pttSet_(false),
     updatesSuppressed_(false),
-    threadRunning_(false),
-    readOnly_(false)  {
+    readOnly_(false),
+    threadRunning_(false)
+{
     /* Stop hamlib from spewing info to stderr. */
     rig_set_debug(RIG_DEBUG_NONE);
 
@@ -326,16 +327,89 @@ void Hamlib::disable_mode_detection()
 
 }
 
-void Hamlib::setMode(bool analog)
+void Hamlib::setMode(bool analog, uint64_t frequencyHz)
 {
-    if (m_rig == nullptr || pttSet_ || readOnly_)
+    if (m_rig == nullptr || readOnly_)
+    {
+        // Ignore if not connected 
+        return;
+    }
+
+    if (pttSet_)
+    {
+        // If transmitting, temporarily stop transmitting so we can change the mode.
+        int result = rig_set_ptt(m_rig, RIG_VFO_CURR, RIG_PTT_OFF);
+        if (result != RIG_OK) 
+        {
+            // If we can't stop transmitting, we shouldn't try to change the mode
+            // as it'll fail on some radios.
+            if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
+
+            return;
+        }
+    }
+
+    
+    vfo_t currVfo = getCurrentVfo_(); 
+    rmode_t mode = getHamlibMode_(analog, frequencyHz);
+    setModeHelper_(currVfo, mode);
+
+    if (pttSet_)
+    {
+        // If transmitting, temporarily stop transmitting so we can change the mode.
+        int result = rig_set_ptt(m_rig, RIG_VFO_CURR, RIG_PTT_ON);
+        if (result != RIG_OK) 
+        {
+            // If we can't stop transmitting, we shouldn't try to change the mode
+            // as it'll fail on some radios.
+            if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
+        }
+    }
+}
+
+void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
+{
+    if (m_rig == nullptr || readOnly_)
     {
         // Ignore if not connected or if transmitting
         return;
     }
     
+    if (pttSet_)
+    {
+        // If transmitting, temporarily stop transmitting so we can change the mode.
+        int result = rig_set_ptt(m_rig, RIG_VFO_CURR, RIG_PTT_OFF);
+        if (result != RIG_OK) 
+        {
+            // If we can't stop transmitting, we shouldn't try to change the mode
+            // as it'll fail on some radios.
+            if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
+
+            return;
+        }
+    }
+
+    vfo_t currVfo = getCurrentVfo_(); 
+    rmode_t mode = getHamlibMode_(analog, frequencyHz);
+    setModeHelper_(currVfo, mode);
+    setFrequencyHelper_(currVfo, frequencyHz);
+
+    if (pttSet_)
+    {
+        // If transmitting, temporarily stop transmitting so we can change the mode.
+        int result = rig_set_ptt(m_rig, RIG_VFO_CURR, RIG_PTT_ON);
+        if (result != RIG_OK) 
+        {
+            // If we can't stop transmitting, we shouldn't try to change the mode
+            // as it'll fail on some radios.
+            if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
+        }
+    }
+}
+  
+rmode_t Hamlib::getHamlibMode_(bool analog, uint64_t frequencyHz)
+{
     // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
-    auto frequencyHz = get_frequency();
     bool is60MeterBand = frequencyHz >= 5250000 && frequencyHz <= 5450000;
     
     // Update color based on the mode and current frequency.
@@ -361,24 +435,10 @@ void Hamlib::setMode(bool analog)
     {
         assert(0);
     }
-    
-    vfo_t currVfo = getCurrentVfo_(); 
-    setModeHelper_(currVfo, mode);
+
+    return mode;
 }
 
-void Hamlib::setFrequencyAndMode(uint64_t frequencyHz, bool analog)
-{
-    if (m_rig == nullptr || pttSet_ || readOnly_)
-    {
-        // Ignore if not connected or if transmitting
-        return;
-    }
-    
-    vfo_t currVfo = getCurrentVfo_(); 
-    setMode(analog);
-    setFrequencyHelper_(currVfo, frequencyHz);
-}
-  
 void Hamlib::setModeHelper_(vfo_t currVfo, rmode_t mode)
 {
     bool setOkay = false;
@@ -588,7 +648,10 @@ void Hamlib::update_mode_status()
     }
 
     // Update frequency box
-    m_freqBox->SetValue(wxString::Format("%.4f", m_currFreq/1000.0/1000.0));
+    if (m_freqBox != nullptr)
+    {
+        m_freqBox->SetValue(wxString::Format("%.4f", m_currFreq/1000.0/1000.0));
+    }
     
     // Refresh
     m_modeBox->Refresh();
@@ -596,6 +659,13 @@ void Hamlib::update_mode_status()
 
 void Hamlib::close(void) {
     if(m_rig) {
+        // Stop transmitting.
+        if (pttSet_)
+        {
+            wxString tmp;
+            ptt(false, tmp);
+        }
+
         // Turn off status thread if needed.
         disable_mode_detection();
        
