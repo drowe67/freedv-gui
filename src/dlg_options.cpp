@@ -116,6 +116,11 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     sbSizerReportingRows->Add(sbSizerReportingGeneral, 0, wxALL | wxEXPAND, 5);
     
+    wxBoxSizer* sbSizerReportingManualFrequency = new wxBoxSizer(wxHORIZONTAL);
+    m_ckboxManualFrequencyReporting = new wxCheckBox(m_reportingTab, wxID_ANY, _("Manual Frequency Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizerReportingManualFrequency->Add(m_ckboxManualFrequencyReporting, 0, wxALL | wxEXPAND, 5);
+    sbSizerReportingRows->Add(sbSizerReportingManualFrequency, 0, wxALL | wxEXPAND, 5);
+    
     // PSK Reporter options
     wxBoxSizer* sbSizerReportingPSK = new wxBoxSizer(wxHORIZONTAL);
     m_ckboxPskReporterEnable = new wxCheckBox(m_reportingTab, wxID_ANY, _("Enable PSK Reporter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
@@ -737,7 +742,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxReportingEnable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
         m_txt_callsign->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign);
         m_txt_grid_square->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare);
-
+        m_ckboxManualFrequencyReporting->SetValue(wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting);
+        
         // PSK Reporter options
         m_ckboxPskReporterEnable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.pskReporterEnabled);
         
@@ -869,7 +875,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled = m_ckboxReportingEnable->GetValue();
         wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign = m_txt_callsign->GetValue();
         wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare = m_txt_grid_square->GetValue();
-
+        wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting = m_ckboxManualFrequencyReporting->GetValue();
+        
         // PSK Reporter options
         wxGetApp().appConfiguration.reportingConfiguration.pskReporterEnabled = m_ckboxPskReporterEnable->GetValue();
         
@@ -1070,6 +1077,7 @@ void OptionsDlg::updateReportingState()
             m_txtCtrlCallSign->Enable(false);
             m_txt_callsign->Enable(true);
             m_txt_grid_square->Enable(true);
+            m_ckboxManualFrequencyReporting->Enable(true);
             m_ckboxPskReporterEnable->Enable(true);
             m_ckboxFreeDVReporterEnable->Enable(true);
             
@@ -1090,6 +1098,7 @@ void OptionsDlg::updateReportingState()
             m_ckboxPskReporterEnable->Enable(false);
             m_ckboxFreeDVReporterEnable->Enable(false);
             m_freedvReporterHostname->Enable(false);
+            m_ckboxManualFrequencyReporting->Enable(false);
         }    
     }
     else
@@ -1099,6 +1108,7 @@ void OptionsDlg::updateReportingState()
         m_txtCtrlCallSign->Enable(false);
         m_txt_callsign->Enable(false);
         m_txt_grid_square->Enable(false);
+        m_ckboxManualFrequencyReporting->Enable(false);
         m_ckboxPskReporterEnable->Enable(false);
         m_ckboxFreeDVReporterEnable->Enable(false);
         m_freedvReporterHostname->Enable(false);
