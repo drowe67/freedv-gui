@@ -73,6 +73,7 @@ class FreeDVReporterDialog : public wxDialog
 
      private:
          FreeDVReporter* reporter_;
+         std::map<int, int> columnLengths_;
          
          void onReporterConnect_();
          void onReporterDisconnect_();
@@ -83,6 +84,8 @@ class FreeDVReporterDialog : public wxDialog
          void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
          
          wxString makeValidTime_(std::string timeStr);
+         
+         void checkColumnsAndResize_();
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__

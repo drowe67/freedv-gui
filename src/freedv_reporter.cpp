@@ -22,7 +22,8 @@
 #include <wx/datetime.h>
 #include "freedv_reporter.h"
 
-#define UNKNOWN_STR "        Unknown        "
+#define UNKNOWN_STR "--"
+#define NUM_COLS (11)
 
 using namespace std::placeholders;
 
@@ -30,6 +31,11 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     : wxDialog(parent, id, title, pos, size, style)
     , reporter_(nullptr)
 {
+    for (int col = 0; col < NUM_COLS; col++)
+    {
+        columnLengths_[col] = 0;
+    }
+    
     // Create top-level of control hierarchy.
     wxFlexGridSizer* sectionSizer = new wxFlexGridSizer(2, 1, 0, 0);
     sectionSizer->AddGrowableRow(0);
@@ -310,11 +316,8 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         
         m_listSpots->SetItemPtrData(itemIndex, (wxUIntPtr)new std::string(sid));
         
-        // Resize all columns to the biggest value.
-        for (int col = 0; col <= 10; col++)
-        {
-            m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
-        }
+        // Resize all columns to the longest value.
+        checkColumnsAndResize_();
         
         m_listSpots->Thaw();
 
@@ -355,6 +358,9 @@ void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string las
             
                 auto lastUpdateTime = makeValidTime_(lastUpdate);
                 m_listSpots->SetItem(index, 10, lastUpdateTime);
+                
+                // Resize all columns to the longest value.
+                checkColumnsAndResize_();
             
                 m_listSpots->Thaw();
                 
@@ -401,6 +407,9 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
                 auto lastUpdateTime = makeValidTime_(lastUpdate);
                 m_listSpots->SetItem(index, 10, lastUpdateTime);
                 
+                // Resize all columns to the longest value.
+                checkColumnsAndResize_();
+                
                 m_listSpots->Thaw();
             
                 break;
@@ -435,6 +444,9 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
  
                 auto lastUpdateTime = makeValidTime_(lastUpdate);
                 m_listSpots->SetItem(index, 10, lastUpdateTime);
+                
+                // Resize all columns to the longest value.
+                checkColumnsAndResize_();
                 
                 m_listSpots->Thaw();
                 
@@ -488,5 +500,33 @@ wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr)
     else
     {
         return _(UNKNOWN_STR);
+    }
+}
+
+void FreeDVReporterDialog::checkColumnsAndResize_()
+{
+    std::map<int, bool> shouldResize;
+    
+    // Process all data in table and determine which columns now have longer text 
+    // (and thus should be auto-resized).
+    for (int index = 0; index < m_listSpots->GetItemCount(); index++)
+    {
+        for (int col = 0; col < NUM_COLS; col++)
+        {
+            auto str = m_listSpots->GetItemText(index, col);
+            if (str.length() > columnLengths_[col])
+            {
+                shouldResize[col] = true;
+                columnLengths_[col] = str.length();
+            }
+        }
+    }
+    
+    // Trigger auto-resize for columns as needed
+    for (auto& kvp : shouldResize)
+    {
+        // Note: we don't add anything to shouldResize that is false, so
+        // no need to check for shouldResize == true here.
+        m_listSpots->SetColumnWidth(kvp.first, wxLIST_AUTOSIZE_USEHEADER);
     }
 }
