@@ -290,7 +290,7 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
     CallAfter([&, sid, lastUpdate, callsign, gridSquare, version, rxOnly]() {
         m_listSpots->Freeze();
         
-        auto itemIndex = m_listSpots->InsertItem(m_listSpots->GetItemCount(), callsign);
+        auto itemIndex = m_listSpots->InsertItem(m_listSpots->GetItemCount(), wxString(callsign).Upper());
         m_listSpots->SetItem(itemIndex, 1, gridSquare);
         m_listSpots->SetItem(itemIndex, 2, version);
         m_listSpots->SetItem(itemIndex, 3, UNKNOWN_STR);
@@ -435,7 +435,9 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
                 if (receivedCallsign == "" && rxMode == "")
                 {
                     // Frequency change--blank out SNR too.
-                    m_listSpots->SetItem(index, 9, _(""));
+                    m_listSpots->SetItem(index, 7, UNKNOWN_STR);
+                    m_listSpots->SetItem(index, 8, UNKNOWN_STR);
+                    m_listSpots->SetItem(index, 9, UNKNOWN_STR);
                 }
                 else
                 {
