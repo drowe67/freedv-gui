@@ -42,6 +42,8 @@ public:
     // uint64_t inside the FreeDV application.
     ConfigurationDataElement<uint64_t> reportingFrequency; 
     
+    ConfigurationDataElement<bool> manualFrequencyReporting;
+    
     ConfigurationDataElement<bool> pskReporterEnabled;
     
     ConfigurationDataElement<bool> freedvReporterEnabled;
