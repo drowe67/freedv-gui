@@ -159,7 +159,7 @@
 <p>On bands below 10 MHz, LSB is used for FreeDV. On 10MHz and above, USB is used. After much debate, the FreeDV community has adopted the same conventions as SSB, based on the reasoning that FreeDV is a voice mode.</p>
 <p>As an aid to the above, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn’t enabled, or if your radio doesn’t support retrieving frequency and mode over CAT, it will remain grayed out with “unk” displaying instead of the mode (for “unknown”).</p>
 <h2 data-number="2.7" id="transceiver-filters"><span class="header-section-number">2.7</span> Transceiver Filters</h2>
-<p>For most FreeDV use, your radio’s receive and transmit filters should be set to the widest possible (typically around 3 KHz). This allows easy switching between analog mode as well as the various FreeDV modes. Depending on your individual circumstances, narrower receive filters may help with reception of FreeDV, but there has not been any testing to definitively confirm this or under what circumatances (if any) where this would be the case. Additionally, FreeDV already performs its own transmit filtering, so using additional narrow filtering on the radio will likely have little benefit (again, untested).</p>
+<p>For most FreeDV use, your radio’s receive and transmit filters should be set to the widest possible (typically around 3 KHz). This allows easy switching between analog mode as well as the various FreeDV modes. There has not been any testing done to definitively confirm whether narrower bandwidths help with reception of FreeDV. Additionally, FreeDV already performs its own transmit filtering, so using additional narrow filtering on the radio will likely have little benefit (again, untested).</p>
 <p>For reference, the channel widths of the currently supported modes are below:</p>
 <table>
 <thead>
@@ -233,6 +233,7 @@
 <li><a href="https://freedv-reporter.k6aq.net/">FreeDV Reporter</a></li>
 </ul>
 <p>The frequency that FreeDV reports is set by changing the “Report Frequency” drop down box in the main window. This is in kilohertz (kHz) and will turn red if the entered value is invalid. If Hamlib support is also enabled, this frequency will automatically remain in sync with the current VFO on the radio (i.e. if the frequency is changed in the application, the radio will also change its frequency).</p>
+<p><em>Note: in some setups (such as when using ALE), it is not preferred to have the reporting frequency automatically be in sync with the radio. For example, in the case of ALE, the radio’s frequency changes multiple times per second while waiting for a contact, which is faster than FreeDV can pull the latest from the radio (every five seconds). This can be disabled by enabling “Manual Frequency Reporting” in Tools-&gt;Options.</em></p>
 <p>FreeDV will also show the callsigns of previously received signals. To view those, click on the arrow next to the last received callsign at the bottom of the window. These are in descending order by time of receipt (i.e. the most recently received callsign will appear at the top of the list).</p>
 <h1 data-number="7" id="multiple-mode-support"><span class="header-section-number">7</span> Multiple Mode Support</h1>
 <p>FreeDV can simultaneously decode the following modes when selected prior to pushing “Start”:</p>
@@ -647,28 +648,42 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Clear button now clears the callsign list. (PR #436)</li>
 <li>Fix bug causing the PTT button to stay red after the voice keyer finishes TX. (PR #440)</li>
 <li>Fix FreeDV Reporter crash when sending RX record. (PR #443)</li>
-<li>Hamlib: set mode before frequency to avoid accidental offsetting. (PR #442)</li>
+<li>Hamlib: set mode before frequency to avoid accidental offsetting. (PR #442, #452)</li>
+<li>Fix audio dialog plot display and lockup issues. (PR #450)</li>
 <li>Disable PTT and Voice Keyer buttons if only RX devices are configured. (PR #449)</li>
+<li>Fix Linux display bugs when switching between dark and light mode. (PR #454)</li>
 </ul></li>
 <li>Enhancements:
 <ul>
+<li>Add the ability to request that another FreeDV Reporter user QSY. (PR #434, #453, #456, #458, #459, #467)</li>
 <li>Display ‘Digital’ on button when Analog mode is active. (PR #447)</li>
 <li>Set minimum size for Mode box to 250px. (PR #446)</li>
 <li>Notify FreeDV Reporter if only capable of RX. (PR #449)</li>
+<li>Hamlib: allow frequency and mode changes during TX. (PR #455)</li>
+<li>Auto-size columns in Audio Options to improve readability. (PR #461)</li>
+<li>Add support for modifying the drop down frequency list. (PR #460)</li>
+<li>Preserve size and position of Audio Configuration dialog. (PR #466)</li>
+<li>Add ability to suppress automatic frequency reporting on radio changes. (PR #469)</li>
 </ul></li>
 <li>Build system:
 <ul>
 <li>Bump Codec2 version to v1.1.1. (PR #437)</li>
+<li>Generate PDF/HTML docs only on PR merge. (PR #471)</li>
 </ul></li>
 <li>Documentation
 <ul>
 <li>Add RF bandwidth information to user manual. (PR #444)</li>
 </ul></li>
-<li>Miscallenous::
+<li>Cleanup:
+<ul>
+<li>Refactor configuration handling in the codebase. (PR #457)</li>
+</ul></li>
+<li>Miscellaneous:
 <ul>
 <li>Set default FreeDV Reporter hostname to qso.freedv.org. (PR #448)</li>
 </ul></li>
 </ol>
+<p><em>Note for Windows users: you may receive a one-time error message on startup after upgrading indicating that certain Registry keys have incorrect types. This is expected as the formats of some configuration parameters have changed.</em></p>
 <h2 data-number="17.2" id="v1.8.11-june-2023"><span class="header-section-number">17.2</span> V1.8.11 June 2023</h2>
 <ol type="1">
 <li>Bugfixes:
