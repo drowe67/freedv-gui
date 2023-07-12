@@ -130,6 +130,8 @@ class OptionsDlg : public wxDialog
         wxTextCtrl    *m_txt_callsign;
         wxTextCtrl    *m_txt_grid_square;
         
+        wxCheckBox    *m_ckboxManualFrequencyReporting;
+        
         wxCheckBox    *m_ckboxPskReporterEnable;
         
         wxCheckBox    *m_ckboxFreeDVReporterEnable;
