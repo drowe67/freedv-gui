@@ -44,7 +44,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Main list box
     // =============================
     m_listSpots = new wxListView(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_SINGLE_SEL | wxLC_REPORT | wxLC_HRULES);
-    m_listSpots->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
+    m_listSpots->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_CENTER, 100);
     m_listSpots->InsertColumn(1, wxT("Locator"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
     m_listSpots->InsertColumn(2, wxT("Version"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
     m_listSpots->InsertColumn(3, wxT("Frequency"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
