@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <string>
 #include <unistd.h>
 #include "serialport.h"
 
@@ -131,12 +132,12 @@ error:
         {
 #ifdef UNICODE
             std::vector<char> buffer;
-            std::string errFn = "[Unknown Function]"
-            int size = WideCharToMultiByte(CP_UTF8, 0, text, -1, NULL, 0, NULL, NULL);
+            std::string errFn = "[Unknown Function]";
+            int size = WideCharToMultiByte(CP_UTF8, 0, lpszFunction, -1, NULL, 0, NULL, NULL);
             if (size > 0) 
             {
                 buffer.resize(size);
-                WideCharToMultiByte(CP_UTF8, 0, text, -1, static_cast<BYTE*>(&buffer[0]), buffer.size(), NULL, NULL);
+                WideCharToMultiByte(CP_UTF8, 0, lpszFunction, -1, static_cast<LPSTR>(&buffer[0]), buffer.size(), NULL, NULL);
                 errFn = std::string(&buffer[0]);
             }
             else 
