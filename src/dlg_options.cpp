@@ -108,7 +108,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_txt_callsign = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
     sbSizerReportingGeneral->Add(m_txt_callsign, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    wxStaticText* labelPskGridSquare = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Grid Square:"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelPskGridSquare = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Grid Square/Locator:"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizerReportingGeneral->Add(labelPskGridSquare, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     m_txt_grid_square = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(70,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));

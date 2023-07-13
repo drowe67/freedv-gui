@@ -904,6 +904,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Set minimum size for Mode box to 250px. (PR #446)
     * Notify FreeDV Reporter if only capable of RX. (PR #449)
     * Hamlib: allow frequency and mode changes during TX. (PR #455)
+    * Save and restore size and position of FreeDV Reporter window on startup. (PR #462)
     * Auto-size columns in Audio Options to improve readability. (PR #461)
     * Add support for modifying the drop down frequency list. (PR #460)
     * Preserve size and position of Audio Configuration dialog. (PR #466)
