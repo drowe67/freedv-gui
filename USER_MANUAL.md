@@ -922,7 +922,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 *Note for Windows users: you may receive a one-time error message on startup 
 after upgrading from v1.8.12-20230705 indicating that certain Registry keys 
-have incorrect types. This is expected as part of the bugfix merged in PR #448.*
+have incorrect types. This is expected as part of the bugfix merged in PR #474.*
 
 ## V1.8.11 June 2023
 
