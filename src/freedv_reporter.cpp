@@ -518,23 +518,23 @@ void FreeDVReporterDialog::checkColumnsAndResize_()
         {
             auto str = m_listSpots->GetItemText(index, col);
             auto itemFont = m_listSpots->GetItemFont(index);
-            int w = 0;
-            int h = 0;
+            int textWidth = 0;
+            int textHeight = 0; // Note: unused
             
             // Note: if the font is invalid we should just use the default.
             if (itemFont.IsOk())
             {
-                GetTextExtent(str, &w, &h, nullptr, nullptr, &itemFont);
+                GetTextExtent(str, &textWidth, &textHeight, nullptr, nullptr, &itemFont);
             }
             else
             {
-                GetTextExtent(str, &w, &h);
+                GetTextExtent(str, &textWidth, &textHeight);
             }
             
-            if (w > columnLengths_[col])
+            if (textWidth > columnLengths_[col])
             {
                 shouldResize[col] = true;
-                columnLengths_[col] = w;
+                columnLengths_[col] = textWidth;
             }
         }
     }
