@@ -73,7 +73,7 @@ class FreeDVReporterDialog : public wxDialog
 
      private:
          FreeDVReporter* reporter_;
-         std::map<int, size_t> columnLengths_;
+         std::map<int, int> columnLengths_;
          
          void onReporterConnect_();
          void onReporterDisconnect_();
