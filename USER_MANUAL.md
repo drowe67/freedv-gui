@@ -915,14 +915,14 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 4. Documentation
     * Add RF bandwidth information to user manual. (PR #444)
 5. Cleanup:
-    * Refactor configuration handling in the codebase. (PR #457)
+    * Refactor configuration handling in the codebase. (PR #457, #474)
     * Clean up compiler warnings on Windows builds. (PR #475)
 6. Miscellaneous:
     * Set default FreeDV Reporter hostname to qso.freedv.org. (PR #448)
 
 *Note for Windows users: you may receive a one-time error message on startup 
-after upgrading indicating that certain Registry keys have incorrect types.
-This is expected as the formats of some configuration parameters have changed.*
+after upgrading from v1.8.12-20230705 indicating that certain Registry keys 
+have incorrect types. This is expected as part of the bugfix merged in PR #448.*
 
 ## V1.8.11 June 2023
 
