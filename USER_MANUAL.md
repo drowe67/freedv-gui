@@ -916,6 +916,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add RF bandwidth information to user manual. (PR #444)
 5. Cleanup:
     * Refactor configuration handling in the codebase. (PR #457)
+    * Clean up compiler warnings on Windows builds. (PR #475)
 6. Miscellaneous:
     * Set default FreeDV Reporter hostname to qso.freedv.org. (PR #448)
 
