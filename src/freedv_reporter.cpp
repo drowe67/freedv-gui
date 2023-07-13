@@ -271,6 +271,12 @@ void FreeDVReporterDialog::onReporterConnect_()
             m_listSpots->DeleteItem(index);
         }
         
+        // Reset lengths to force auto-resize on (re)connect.
+        for (int col = 0; col < NUM_COLS; col++)
+        {
+            columnLengths_[col] = 0;
+        }
+
         m_listSpots->Thaw();
     });
 }
@@ -284,6 +290,12 @@ void FreeDVReporterDialog::onReporterDisconnect_()
         {
             delete (std::string*)m_listSpots->GetItemData(index);
             m_listSpots->DeleteItem(index);
+        }
+
+        // Reset lengths to force auto-resize on (re)connect.
+        for (int col = 0; col < NUM_COLS; col++)
+        {
+            columnLengths_[col] = 0;
         }
         
         m_listSpots->Thaw();
