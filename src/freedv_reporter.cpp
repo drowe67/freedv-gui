@@ -517,10 +517,14 @@ void FreeDVReporterDialog::checkColumnsAndResize_()
         for (int col = 0; col < NUM_COLS; col++)
         {
             auto str = m_listSpots->GetItemText(index, col);
-            if (str.length() > columnLengths_[col])
+            auto itemFont = m_listSpots->GetItemFont(index);
+            int w = 0;
+            int h = 0;
+            GetTextExtent(str, &w, &h, nullptr, nullptr, &itemFont);
+            if (w > columnLengths_[col])
             {
                 shouldResize[col] = true;
-                columnLengths_[col] = str.length();
+                columnLengths_[col] = w;
             }
         }
     }
