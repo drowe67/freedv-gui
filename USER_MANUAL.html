@@ -158,6 +158,43 @@
 <h2 data-number="2.6" id="usb-or-lsb"><span class="header-section-number">2.6</span> USB or LSB?</h2>
 <p>On bands below 10 MHz, LSB is used for FreeDV. On 10MHz and above, USB is used. After much debate, the FreeDV community has adopted the same conventions as SSB, based on the reasoning that FreeDV is a voice mode.</p>
 <p>As an aid to the above, FreeDV will show the current mode on the bottom of the window upon pressing the Start button if Hamlib is enabled and your radio supports retrieving frequency and mode information over CAT. If your radio is using an unexpected mode (e.g. LSB on 20 meters), it will display that mode on the bottom of the window next to the Clear button in red letters. When a session is not active, Hamlib isn’t enabled, or if your radio doesn’t support retrieving frequency and mode over CAT, it will remain grayed out with “unk” displaying instead of the mode (for “unknown”).</p>
+<h2 data-number="2.7" id="transceiver-filters"><span class="header-section-number">2.7</span> Transceiver Filters</h2>
+<p>For most FreeDV use, your radio’s receive and transmit filters should be set to the widest possible (typically around 3 KHz). This allows easy switching between analog mode as well as the various FreeDV modes. There has not been any testing done to definitively confirm whether narrower bandwidths help with reception of FreeDV. Additionally, FreeDV already performs its own transmit filtering, so using additional narrow filtering on the radio will likely have little benefit (again, untested).</p>
+<p>For reference, the channel widths of the currently supported modes are below:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Mode</th>
+<th>Width (KHz)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1600</td>
+<td>1.125</td>
+</tr>
+<tr class="even">
+<td>700C</td>
+<td>1.500</td>
+</tr>
+<tr class="odd">
+<td>700D</td>
+<td>1.000</td>
+</tr>
+<tr class="even">
+<td>700E</td>
+<td>1.500</td>
+</tr>
+<tr class="odd">
+<td>2020</td>
+<td>1.600</td>
+</tr>
+<tr class="even">
+<td>2020B</td>
+<td>2.100</td>
+</tr>
+</tbody>
+</table>
 <h1 data-number="3" id="voice-keyer"><span class="header-section-number">3</span> Voice Keyer</h1>
 <p>The Voice Keyer Button on the front page puts FreeDV and your radio into transmit, reads a wave file of your voice to call CQ, and then switches to receive to see if anyone is replying. If you press the space bar or click the PTT button, the voice keyer stops. If a signal with a valid sync is received for a few seconds the voice keyer also stops.</p>
 <p>The Audio tab inside Tools-Options can be used to select the wave file, set the Rx delay, and number of times the tx/rx cycle repeats.</p>
@@ -618,11 +655,12 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </ul></li>
 <li>Enhancements:
 <ul>
-<li>Add the ability to request that another FreeDV Reporter user QSY. (PR #434, #453, #456, #458, #459, #467)</li>
+<li>Add the ability to request that another FreeDV Reporter user QSY. (PR #434, #453, #456, #458, #459, #467, #468)</li>
 <li>Display ‘Digital’ on button when Analog mode is active. (PR #447)</li>
 <li>Set minimum size for Mode box to 250px. (PR #446)</li>
 <li>Notify FreeDV Reporter if only capable of RX. (PR #449)</li>
 <li>Hamlib: allow frequency and mode changes during TX. (PR #455)</li>
+<li>Save and restore size and position of FreeDV Reporter window on startup. (PR #462)</li>
 <li>Auto-size columns in Audio Options to improve readability. (PR #461)</li>
 <li>Add support for modifying the drop down frequency list. (PR #460)</li>
 <li>Preserve size and position of Audio Configuration dialog. (PR #466)</li>
@@ -633,16 +671,21 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Bump Codec2 version to v1.1.1. (PR #437)</li>
 <li>Generate PDF/HTML docs only on PR merge. (PR #471)</li>
 </ul></li>
+<li>Documentation
+<ul>
+<li>Add RF bandwidth information to user manual. (PR #444)</li>
+</ul></li>
 <li>Cleanup:
 <ul>
-<li>Refactor configuration handling in the codebase. (PR #457)</li>
+<li>Refactor configuration handling in the codebase. (PR #457, #474)</li>
+<li>Clean up compiler warnings on Windows builds. (PR #475)</li>
 </ul></li>
 <li>Miscellaneous:
 <ul>
 <li>Set default FreeDV Reporter hostname to qso.freedv.org. (PR #448)</li>
 </ul></li>
 </ol>
-<p><em>Note for Windows users: you may receive a one-time error message on startup after upgrading indicating that certain Registry keys have incorrect types. This is expected as the formats of some configuration parameters have changed.</em></p>
+<p><em>Note for Windows users: you may receive a one-time error message on startup after upgrading from v1.8.12-20230705 indicating that certain Registry keys have incorrect types. This is expected as part of the bugfix merged in PR #448.</em></p>
 <h2 data-number="17.2" id="v1.8.11-june-2023"><span class="header-section-number">17.2</span> V1.8.11 June 2023</h2>
 <ol type="1">
 <li>Bugfixes:

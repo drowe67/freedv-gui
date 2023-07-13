@@ -22,30 +22,43 @@
 #include <wx/datetime.h>
 #include "freedv_reporter.h"
 
+#define UNKNOWN_STR "--"
+#define NUM_COLS (11)
+
 using namespace std::placeholders;
 
 FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxDialog(parent, id, title, pos, size, style)
     , reporter_(nullptr)
 {
+    for (int col = 0; col < NUM_COLS; col++)
+    {
+        columnLengths_[col] = 0;
+    }
+    
     // Create top-level of control hierarchy.
     wxFlexGridSizer* sectionSizer = new wxFlexGridSizer(2, 1, 0, 0);
     sectionSizer->AddGrowableRow(0);
+    sectionSizer->AddGrowableCol(0);
     
     // Main list box
     // =============================
     m_listSpots = new wxListView(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_SINGLE_SEL | wxLC_REPORT | wxLC_HRULES);
-    m_listSpots->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(1, wxT("Grid Square"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(2, wxT("Version"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(3, wxT("Frequency"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(4, wxT("Status"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(5, wxT("TX Mode"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(6, wxT("Last TX"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(7, wxT("Last RX Callsign"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(8, wxT("Last RX Mode"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(9, wxT("SNR"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(10, wxT("Last Update"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
+    m_listSpots->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(1, wxT("Locator"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(2, wxT("Version"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(3, wxT("Frequency"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(4, wxT("Status"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(5, wxT("TX Mode"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(6, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(7, wxT("Last RX Callsign"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(8, wxT("Last RX Mode"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(9, wxT("SNR"), wxLIST_FORMAT_CENTER, 40);
+    m_listSpots->InsertColumn(10, wxT("Last Update"), wxLIST_FORMAT_CENTER, 120);
+
+    // On Windows, the last column will end up taking a lot more space than desired regardless
+    // of the space we actually need. Create a "dummy" column to take that space instead.
+    m_listSpots->InsertColumn(11, wxT(""), wxLIST_FORMAT_CENTER, 1);
 
     sectionSizer->Add(m_listSpots, 0, wxALL | wxEXPAND, 2);
     
@@ -53,7 +66,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // =============================
     wxBoxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    m_buttonOK = new wxButton(this, wxID_OK);
+    m_buttonOK = new wxButton(this, wxID_OK, _("Close"));
     buttonSizer->Add(m_buttonOK, 0, wxALL, 2);
 
     m_buttonSendQSY = new wxButton(this, wxID_ANY, _("Request QSY"));
@@ -65,17 +78,28 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
 
     sectionSizer->Add(buttonSizer, 0, wxALL | wxALIGN_CENTER, 2);
     
+    this->SetMinSize(GetBestSize());
+    
     // Trigger auto-layout of window.
     // ==============================
     this->SetSizerAndFit(sectionSizer);
+
+    // Move FreeDV Reporter window back into last saved position
+    SetSize(wxSize(
+        wxGetApp().appConfiguration.reporterWindowWidth,
+        wxGetApp().appConfiguration.reporterWindowHeight));
+    SetPosition(wxPoint(
+        wxGetApp().appConfiguration.reporterWindowLeft,
+        wxGetApp().appConfiguration.reporterWindowTop));
     
     this->Layout();
-    this->Centre(wxBOTH);
-    this->SetMinSize(GetBestSize());
     
     // Hook in events
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(FreeDVReporterDialog::OnInitDialog));
     this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(FreeDVReporterDialog::OnClose));
+    this->Connect(wxEVT_SIZE, wxSizeEventHandler(FreeDVReporterDialog::OnSize));
+    this->Connect(wxEVT_MOVE, wxMoveEventHandler(FreeDVReporterDialog::OnMove));
+    this->Connect(wxEVT_SHOW, wxShowEventHandler(FreeDVReporterDialog::OnShow));
     
     m_listSpots->Connect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemSelected), NULL, this);
     m_listSpots->Connect(wxEVT_LIST_ITEM_DESELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemDeselected), NULL, this);
@@ -87,8 +111,11 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
 
 FreeDVReporterDialog::~FreeDVReporterDialog()
 {
+    this->Disconnect(wxEVT_SIZE, wxSizeEventHandler(FreeDVReporterDialog::OnSize));
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(FreeDVReporterDialog::OnInitDialog));
     this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(FreeDVReporterDialog::OnClose));
+    this->Disconnect(wxEVT_MOVE, wxMoveEventHandler(FreeDVReporterDialog::OnMove));
+    this->Disconnect(wxEVT_SHOW, wxShowEventHandler(FreeDVReporterDialog::OnShow));
     
     m_listSpots->Disconnect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemSelected), NULL, this);
     m_listSpots->Disconnect(wxEVT_LIST_ITEM_DESELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemDeselected), NULL, this);
@@ -137,8 +164,32 @@ void FreeDVReporterDialog::OnInitDialog(wxInitDialogEvent& event)
     // TBD
 }
 
+void FreeDVReporterDialog::OnShow(wxShowEvent& event)
+{
+    wxGetApp().appConfiguration.reporterWindowVisible = true;
+}
+
+void FreeDVReporterDialog::OnSize(wxSizeEvent& event)
+{
+    auto sz = GetSize();
+    
+    wxGetApp().appConfiguration.reporterWindowWidth = sz.GetWidth();
+    wxGetApp().appConfiguration.reporterWindowHeight = sz.GetHeight();
+
+    Layout();
+}
+
+void FreeDVReporterDialog::OnMove(wxMoveEvent& event)
+{
+    auto pos = event.GetPosition();
+   
+    wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
+    wxGetApp().appConfiguration.reporterWindowTop = pos.y;
+}
+
 void FreeDVReporterDialog::OnOK(wxCommandEvent& event)
 {
+    wxGetApp().appConfiguration.reporterWindowVisible = false;
     Hide();
 }
 
@@ -167,6 +218,7 @@ void FreeDVReporterDialog::OnOpenWebsite(wxCommandEvent& event)
 
 void FreeDVReporterDialog::OnClose(wxCloseEvent& event)
 {
+    wxGetApp().appConfiguration.reporterWindowVisible = false;
     Hide();
 }
 
@@ -219,6 +271,12 @@ void FreeDVReporterDialog::onReporterConnect_()
             m_listSpots->DeleteItem(index);
         }
         
+        // Reset lengths to force auto-resize on (re)connect.
+        for (int col = 0; col < NUM_COLS; col++)
+        {
+            columnLengths_[col] = 0;
+        }
+
         m_listSpots->Thaw();
     });
 }
@@ -233,6 +291,12 @@ void FreeDVReporterDialog::onReporterDisconnect_()
             delete (std::string*)m_listSpots->GetItemData(index);
             m_listSpots->DeleteItem(index);
         }
+
+        // Reset lengths to force auto-resize on (re)connect.
+        for (int col = 0; col < NUM_COLS; col++)
+        {
+            columnLengths_[col] = 0;
+        }
         
         m_listSpots->Thaw();
     });
@@ -243,10 +307,11 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
     CallAfter([&, sid, lastUpdate, callsign, gridSquare, version, rxOnly]() {
         m_listSpots->Freeze();
         
-        auto itemIndex = m_listSpots->InsertItem(m_listSpots->GetItemCount(), callsign);
-        m_listSpots->SetItem(itemIndex, 1, gridSquare);
+        auto itemIndex = m_listSpots->InsertItem(m_listSpots->GetItemCount(), wxString(callsign).Upper());
+        wxString gridSquareWxString = gridSquare;
+        m_listSpots->SetItem(itemIndex, 1, gridSquareWxString.Left(2).Upper() + gridSquareWxString.Mid(2));
         m_listSpots->SetItem(itemIndex, 2, version);
-        m_listSpots->SetItem(itemIndex, 3, "Unknown");
+        m_listSpots->SetItem(itemIndex, 3, UNKNOWN_STR);
         
         if (rxOnly)
         {
@@ -256,26 +321,25 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         }
         else
         {
-            m_listSpots->SetItem(itemIndex, 4, "Unknown");
-            m_listSpots->SetItem(itemIndex, 5, "Unknown");
-            m_listSpots->SetItem(itemIndex, 6, "Unknown");
+            m_listSpots->SetItem(itemIndex, 4, UNKNOWN_STR);
+            m_listSpots->SetItem(itemIndex, 5, UNKNOWN_STR);
+            m_listSpots->SetItem(itemIndex, 6, UNKNOWN_STR);
         }
-        m_listSpots->SetItem(itemIndex, 7, "Unknown");
-        m_listSpots->SetItem(itemIndex, 8, "Unknown");
-        m_listSpots->SetItem(itemIndex, 9, "Unknown");
+        m_listSpots->SetItem(itemIndex, 7, UNKNOWN_STR);
+        m_listSpots->SetItem(itemIndex, 8, UNKNOWN_STR);
+        m_listSpots->SetItem(itemIndex, 9, UNKNOWN_STR);
         
         auto lastUpdateTime = makeValidTime_(lastUpdate);
         m_listSpots->SetItem(itemIndex, 10, lastUpdateTime);
         
         m_listSpots->SetItemPtrData(itemIndex, (wxUIntPtr)new std::string(sid));
         
-        // Resize all columns to the biggest value.
-        for (int col = 0; col <= 10; col++)
-        {
-            m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
-        }
+        // Resize all columns to the longest value.
+        checkColumnsAndResize_();
         
         m_listSpots->Thaw();
+
+        Layout();
     });
 }
 
@@ -312,6 +376,9 @@ void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string las
             
                 auto lastUpdateTime = makeValidTime_(lastUpdate);
                 m_listSpots->SetItem(index, 10, lastUpdateTime);
+                
+                // Resize all columns to the longest value.
+                checkColumnsAndResize_();
             
                 m_listSpots->Thaw();
                 
@@ -358,6 +425,9 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
                 auto lastUpdateTime = makeValidTime_(lastUpdate);
                 m_listSpots->SetItem(index, 10, lastUpdateTime);
                 
+                // Resize all columns to the longest value.
+                checkColumnsAndResize_();
+                
                 m_listSpots->Thaw();
             
                 break;
@@ -380,10 +450,23 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
                 m_listSpots->SetItem(index, 8, rxMode);
             
                 wxString snrString = wxString::Format(_("%.01f"), snr);
-                m_listSpots->SetItem(index, 9, snrString);
-            
+                if (receivedCallsign == "" && rxMode == "")
+                {
+                    // Frequency change--blank out SNR too.
+                    m_listSpots->SetItem(index, 7, UNKNOWN_STR);
+                    m_listSpots->SetItem(index, 8, UNKNOWN_STR);
+                    m_listSpots->SetItem(index, 9, UNKNOWN_STR);
+                }
+                else
+                {
+                    m_listSpots->SetItem(index, 9, snrString);
+                }
+ 
                 auto lastUpdateTime = makeValidTime_(lastUpdate);
                 m_listSpots->SetItem(index, 10, lastUpdateTime);
+                
+                // Resize all columns to the longest value.
+                checkColumnsAndResize_();
                 
                 m_listSpots->Thaw();
                 
@@ -436,6 +519,48 @@ wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr)
     }
     else
     {
-        return _("Unknown");
+        return _(UNKNOWN_STR);
+    }
+}
+
+void FreeDVReporterDialog::checkColumnsAndResize_()
+{
+    std::map<int, bool> shouldResize;
+    
+    // Process all data in table and determine which columns now have longer text 
+    // (and thus should be auto-resized).
+    for (int index = 0; index < m_listSpots->GetItemCount(); index++)
+    {
+        for (int col = 0; col < NUM_COLS; col++)
+        {
+            auto str = m_listSpots->GetItemText(index, col);
+            auto itemFont = m_listSpots->GetItemFont(index);
+            int textWidth = 0;
+            int textHeight = 0; // Note: unused
+            
+            // Note: if the font is invalid we should just use the default.
+            if (itemFont.IsOk())
+            {
+                GetTextExtent(str, &textWidth, &textHeight, nullptr, nullptr, &itemFont);
+            }
+            else
+            {
+                GetTextExtent(str, &textWidth, &textHeight);
+            }
+            
+            if (textWidth > columnLengths_[col])
+            {
+                shouldResize[col] = true;
+                columnLengths_[col] = textWidth;
+            }
+        }
+    }
+    
+    // Trigger auto-resize for columns as needed
+    for (auto& kvp : shouldResize)
+    {
+        // Note: we don't add anything to shouldResize that is false, so
+        // no need to check for shouldResize == true here.
+        m_listSpots->SetColumnWidth(kvp.first, wxLIST_AUTOSIZE_USEHEADER);
     }
 }

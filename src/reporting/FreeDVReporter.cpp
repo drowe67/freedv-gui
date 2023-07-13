@@ -197,6 +197,16 @@ void FreeDVReporter::connect_()
     {
         isConnecting_ = false;
         
+        if (onReporterDisconnectFn_)
+        {
+            onReporterDisconnectFn_();
+        }
+        
+        if (onReporterConnectFn_)
+        {
+            onReporterConnectFn_();
+        }
+        
         freqChangeImpl_(lastFrequency_);
         transmitImpl_(mode_, tx_);
     });

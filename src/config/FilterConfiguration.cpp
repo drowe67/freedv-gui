@@ -23,12 +23,14 @@
 
 DEFINE_FILTER_CONFIG_NAMES(MicIn);
 DEFINE_FILTER_CONFIG_NAMES(SpkOut);
+DEFINE_FILTER_CONFIG_NAMES_OLD(MicIn);
+DEFINE_FILTER_CONFIG_NAMES_OLD(SpkOut);
 
 FilterConfiguration::FilterConfiguration()
     : codec2LPCPostFilterEnable("/Filter/codec2LPCPostFilterEnable", true)
     , codec2LPCPostFilterBassBoost("/Filter/codec2LPCPostFilterBassBoost", true)
-    , codec2LPCPostFilterGamma("/Filter/codec2LPCPostFilterGamma", CODEC2_LPC_PF_GAMMA*100)
-    , codec2LPCPostFilterBeta("/Filter/codec2LPCPostFilterBeta", CODEC2_LPC_PF_BETA*100)
+    , codec2LPCPostFilterGamma("/Filter/codec2LPCPostFilter/Gamma", CODEC2_LPC_PF_GAMMA*100)
+    , codec2LPCPostFilterBeta("/Filter/codec2LPCPostFilter/Beta", CODEC2_LPC_PF_BETA*100)
     , speexppEnable("/Filter/speexpp_enable", true)
     , enable700CEqualizer("/Filter/700C_EQ", true)
 {
@@ -48,6 +50,21 @@ FilterConfiguration::FilterConfiguration()
 
 void FilterConfiguration::load(wxConfigBase* config)
 {
+    // Migration: these values were using incorrect data types, so we have to
+    // move to new names in order to prevent Windows errors (for example:)
+    //
+    // 14:03:28: Registry value "HKCU\Software\freedv\Filter\codec2LPCPostFilterGamma" is not text (but of type DWORD)
+    // 14:03:28: Registry value "HKCU\Software\freedv\Filter\codec2LPCPostFilterBeta" is not text (but of type DWORD)
+    auto oldPostFilterGamma = (float)config->Read(
+        wxT("/Filter/codec2LPCPostFilterGamma"), 
+        CODEC2_LPC_PF_GAMMA*100);
+    codec2LPCPostFilterGamma.setDefaultVal(oldPostFilterGamma);
+    
+    auto oldPostFilterBeta = (float)config->Read(
+        wxT("/Filter/codec2LPCPostFilterBeta"), 
+        CODEC2_LPC_PF_BETA*100);
+    codec2LPCPostFilterBeta.setDefaultVal(oldPostFilterBeta);
+    
     micInChannel.load(config);
     spkOutChannel.load(config);
     

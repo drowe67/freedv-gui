@@ -489,30 +489,30 @@ void FilterDlg::ExchangeData(int inout)
         // Mic In Equaliser
 
         wxGetApp().appConfiguration.filterConfiguration.micInChannel.bassFreqHz = (int)m_MicInBass.freqHz;
-        wxGetApp().appConfiguration.filterConfiguration.micInChannel.bassGaindB = (int)(10.0*m_MicInBass.gaindB);
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.bassGaindB = m_MicInBass.gaindB;
 
         wxGetApp().appConfiguration.filterConfiguration.micInChannel.trebleFreqHz = (int)m_MicInTreble.freqHz;
-        wxGetApp().appConfiguration.filterConfiguration.micInChannel.trebleGaindB = (int)(10.0*m_MicInTreble.gaindB);
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.trebleGaindB = m_MicInTreble.gaindB;
 
         wxGetApp().appConfiguration.filterConfiguration.micInChannel.midFreqHz = (int)m_MicInMid.freqHz;
-        wxGetApp().appConfiguration.filterConfiguration.micInChannel.midGainDB = (int)(10.0*m_MicInMid.gaindB);
-        wxGetApp().appConfiguration.filterConfiguration.micInChannel.midQ = (int)(100.0*m_MicInMid.Q);
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.midGainDB = m_MicInMid.gaindB;
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.midQ = m_MicInMid.Q;
 
-        wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = (int)(10.0*m_MicInVol.gaindB);
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = m_MicInVol.gaindB;
         
         // Spk Out Equaliser
 
         wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.bassFreqHz = (int)m_SpkOutBass.freqHz;
-        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.bassGaindB = (int)(10.0*m_SpkOutBass.gaindB);
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.bassGaindB = m_SpkOutBass.gaindB;
 
         wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.trebleFreqHz = (int)m_SpkOutTreble.freqHz;
-        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.trebleGaindB = (int)(10.0*m_SpkOutTreble.gaindB);
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.trebleGaindB = m_SpkOutTreble.gaindB;
 
         wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midFreqHz = (int)m_SpkOutMid.freqHz;
-        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midGainDB = (int)(10.0*m_SpkOutMid.gaindB);
-        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midQ = (int)(100.0*m_SpkOutMid.Q);
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midGainDB = m_SpkOutMid.gaindB;
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midQ = m_SpkOutMid.Q;
 
-        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = (int)(10.0*m_SpkOutVol.gaindB);
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = m_SpkOutVol.gaindB;
 
         wxGetApp().appConfiguration.save(pConfig);
     }

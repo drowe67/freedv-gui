@@ -533,6 +533,15 @@ setDefaultMode:
     auto currentSizer = m_panel->GetSizer();
     m_panel->SetSizerAndFit(currentSizer, false);
     m_panel->Layout();
+    
+    // If the FreeDV Reporter window was open on last execution, reopen it now.
+    CallAfter([&]() {
+        if (wxGetApp().appConfiguration.reporterWindowVisible)
+        {
+            wxCommandEvent event;
+            OnToolsFreeDVReporter(event);
+        }
+    });
 }
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -758,7 +767,12 @@ MainFrame::~MainFrame()
     
     if (m_reporterDialog != nullptr)
     {
-        m_reporterDialog->Hide();
+        // wxWidgets doesn't fire wxEVT_MOVE events on Linux for some
+        // reason, so we need to grab and save the current position again.
+        auto pos = m_reporterDialog->GetPosition();
+        wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
+        wxGetApp().appConfiguration.reporterWindowTop = pos.y;
+
         m_reporterDialog->setReporter(nullptr);
         m_reporterDialog->Close();
         m_reporterDialog->Destroy();
