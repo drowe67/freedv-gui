@@ -56,6 +56,10 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->InsertColumn(9, wxT("SNR"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
     m_listSpots->InsertColumn(10, wxT("Last Update"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
 
+    // On wxWidgets, the last column will end up taking a lot more space than desired regardless
+    // of the space we actually need. Create a "dummy" column to take that space instead.
+    m_listSpots->InsertColumn(11, wxT(""), wxLIST_FORMAT_CENTER, 1);
+
     sectionSizer->Add(m_listSpots, 0, wxALL | wxEXPAND, 2);
     
     // Bottom buttons
