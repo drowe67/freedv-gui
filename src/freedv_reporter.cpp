@@ -39,6 +39,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Create top-level of control hierarchy.
     wxFlexGridSizer* sectionSizer = new wxFlexGridSizer(2, 1, 0, 0);
     sectionSizer->AddGrowableRow(0);
+    sectionSizer->AddGrowableCol(0);
     
     // Main list box
     // =============================
