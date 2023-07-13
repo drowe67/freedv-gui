@@ -44,19 +44,19 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Main list box
     // =============================
     m_listSpots = new wxListView(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_SINGLE_SEL | wxLC_REPORT | wxLC_HRULES);
-    m_listSpots->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_CENTER, 100);
-    m_listSpots->InsertColumn(1, wxT("Locator"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(2, wxT("Version"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(3, wxT("Frequency"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(4, wxT("Status"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(5, wxT("TX Mode"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(6, wxT("Last TX"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(7, wxT("Last RX Callsign"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(8, wxT("Last RX Mode"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(9, wxT("SNR"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
-    m_listSpots->InsertColumn(10, wxT("Last Update"), wxLIST_FORMAT_CENTER, wxLIST_AUTOSIZE_USEHEADER);
+    m_listSpots->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(1, wxT("Locator"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(2, wxT("Version"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(3, wxT("Frequency"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(4, wxT("Status"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(5, wxT("TX Mode"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(6, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(7, wxT("Last RX Callsign"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(8, wxT("Last RX Mode"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(9, wxT("SNR"), wxLIST_FORMAT_CENTER, 40);
+    m_listSpots->InsertColumn(10, wxT("Last Update"), wxLIST_FORMAT_CENTER, 120);
 
-    // On wxWidgets, the last column will end up taking a lot more space than desired regardless
+    // On Windows, the last column will end up taking a lot more space than desired regardless
     // of the space we actually need. Create a "dummy" column to take that space instead.
     m_listSpots->InsertColumn(11, wxT(""), wxLIST_FORMAT_CENTER, 1);
 
