@@ -13,7 +13,7 @@ set(CMAKE_RC_COMPILER ${triple}-windres)
 
 set(CMAKE_C_FLAGS -gcodeview)
 set(CMAKE_CXX_FLAGS -gcodeview)
-set(CMAKE_EXE_LINKER_FLAGS -Wl,--pdb=)
+set(CMAKE_EXE_LINKER_FLAGS -Wno-unused-command-line-argument -Wl,--pdb=)
 
 # For make package use.
 set(CMAKE_OBJDUMP ${triple}-objdump)

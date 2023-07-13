@@ -127,7 +127,27 @@ bool Serialport::openport(const char name[], bool useRTS, bool RTSPos, bool useD
 	    return true;
 	
 error:
-	    if (g_verbose) fprintf(stderr, "%s failed\n", lpszFunction);
+	    if (g_verbose)
+        {
+#ifdef UNICODE
+            std::vector<char> buffer;
+            std::string errFn = "[Unknown Function]"
+            int size = WideCharToMultiByte(CP_UTF8, 0, text, -1, NULL, 0, NULL, NULL);
+            if (size > 0) 
+            {
+                buffer.resize(size);
+                WideCharToMultiByte(CP_UTF8, 0, text, -1, static_cast<BYTE*>(&buffer[0]), buffer.size(), NULL, NULL);
+                errFn = std::string(&buffer[0]);
+            }
+            else 
+            {
+                // Error handling, probably shouldn't reach here
+            }
+            fprintf(stderr, "%s failed\n", errFn.c_str());
+#else
+            fprintf(stderr, "%s failed\n", lpszFunction);
+#endif // UNICODE
+        }
 	
         // Retrieve the system error message for the last-error code
 
