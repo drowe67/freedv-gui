@@ -291,7 +291,8 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         m_listSpots->Freeze();
         
         auto itemIndex = m_listSpots->InsertItem(m_listSpots->GetItemCount(), wxString(callsign).Upper());
-        m_listSpots->SetItem(itemIndex, 1, gridSquare);
+        wxString gridSquareWxString = gridSquare;
+        m_listSpots->SetItem(itemIndex, 1, gridSquareWxString.Left(2).Upper() + gridSquareWxString.Mid(2));
         m_listSpots->SetItem(itemIndex, 2, version);
         m_listSpots->SetItem(itemIndex, 3, UNKNOWN_STR);
         
