@@ -1820,7 +1820,7 @@ void MainFrame::performFreeDVOn_()
             freedvInterface.setTextVaricodeNum(1);
 
         // scatter plot (PSK) or Eye (FSK) mode
-        if ((g_mode == FREEDV_MODE_800XA) || (g_mode == FREEDV_MODE_2400A)) {
+        if (g_mode == FREEDV_MODE_800XA) {
             m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_EYE);
         }
         else {
