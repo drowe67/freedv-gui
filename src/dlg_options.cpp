@@ -187,8 +187,6 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxGridBagSizer* gridSizer = new wxGridBagSizer(5, 5);
     
     m_freqList = new wxListBox(m_rigControlTab, wxID_ANY, wxDefaultPosition, wxSize(350,150), 0, NULL, wxLB_SINGLE | wxLB_NEEDED_SB);
-    //m_freqList->SetMinSize(wxSize(250, -1));
-    //m_freqList->SetMaxSize(wxSize(-1, 350));
     gridSizer->Add(m_freqList, wxGBPosition(0, 0), wxGBSpan(5, 2), wxEXPAND);
 
     const int FREQ_LIST_BUTTON_WIDTH = 100; 
