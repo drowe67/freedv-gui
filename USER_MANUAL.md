@@ -886,6 +886,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.8.13 TBD 2023
+
+1. Bugfixes:
+    * Fix bug preventing proper Options window sizing on Windows. (PR #478)
+
 ## V1.8.12 July 2023
 
 1. Bugfixes:
