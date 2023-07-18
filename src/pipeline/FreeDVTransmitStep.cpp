@@ -83,7 +83,7 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
             
             codec2_fifo_read(inputSampleFifo_, codecInput, samplesUsedForFifo);
             
-            if (mode == FREEDV_MODE_800XA || mode == FREEDV_MODE_2400B) 
+            if (mode == FREEDV_MODE_800XA) 
             {
                 /* 800XA doesn't support complex output just yet */
                 freedv_tx(dv_, tmpOutput, codecInput);
@@ -143,7 +143,7 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
             {
                 codec2_fifo_read(inputSampleFifo_, codecInput, samplesUsedForFifo);
                 
-                if (mode == FREEDV_MODE_800XA || mode == FREEDV_MODE_2400B) 
+                if (mode == FREEDV_MODE_800XA) 
                 {
                     /* 800XA doesn't support complex output just yet */
                     freedv_tx(dv_, tmpOutput, codecInput);

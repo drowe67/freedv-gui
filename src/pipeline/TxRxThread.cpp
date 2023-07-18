@@ -481,8 +481,7 @@ void TxRxThread::txProcessing_()
     // Buffers re-used by tx and rx processing.  We take samples from
     // the sound card, and resample them for the freedv modem input
     // sample rate.  Typically the sound card is running at 48 or 44.1
-    // kHz, and the modem at 8kHz, however some modems such as FreeDV
-    // 2400A/B run at 48 kHz.
+    // kHz, and the modem at 8kHz
 
     // allocate enough room for 20ms processing buffers at maximum
     // sample rate of 48 kHz.  Note these buffer are used by rx and tx
@@ -582,8 +581,7 @@ void TxRxThread::rxProcessing_()
     // Buffers re-used by tx and rx processing.  We take samples from
     // the sound card, and resample them for the freedv modem input
     // sample rate.  Typically the sound card is running at 48 or 44.1
-    // kHz, and the modem at 8kHz, however some modems such as FreeDV
-    // 2400A/B run at 48 kHz.
+    // kHz, and the modem at 8kHz.
 
     // allocate enough room for 20ms processing buffers at maximum
     // sample rate of 48 kHz.  Note these buffer are used by rx and tx

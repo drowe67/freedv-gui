@@ -442,8 +442,7 @@ setDefaultMode:
         m_rb700e->SetValue(1);
     if (mode == 6)
         m_rb800xa->SetValue(1);
-    if (mode == 7)
-        m_rb2400b->SetValue(1);
+    // mode 7 was the former 2400B mode, now removed.
     if ((mode == 9) && wxGetApp().appConfiguration.freedv2020Allowed)
         m_rb2020->SetValue(1);
     else if (mode == 9)
@@ -824,8 +823,6 @@ MainFrame::~MainFrame()
         mode = 5;
     if (m_rb800xa->GetValue())
         mode = 6;
-    if (m_rb2400b->GetValue())
-        mode = 7;
     if (m_rb2020->GetValue())
         mode = 9;
 #if defined(FREEDV_MODE_2020B)
@@ -965,7 +962,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             }
             wxGetApp().m_prevMode = currentMode;
         
-            if ((currentMode == FREEDV_MODE_800XA) || (currentMode == FREEDV_MODE_2400B) ) {
+            if (currentMode == FREEDV_MODE_800XA) {
 
                 /* FSK Mode - eye diagram ---------------------------------------------------------*/
 
@@ -1579,7 +1576,6 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         m_rb700e,
         m_rb800xa,
         m_rb1600,
-        m_rb2400b,
         m_rb2020,
 #if defined(FREEDV_MODE_2020B)
         m_rb2020b,
@@ -1623,10 +1619,6 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     else if (eventObject == m_rb800xa || (eventObject == nullptr && m_rb800xa->GetValue())) 
     {
         g_mode = FREEDV_MODE_800XA;
-    }
-    else if (eventObject == m_rb2400b || (eventObject == nullptr && m_rb2400b->GetValue())) 
-    {
-        g_mode = FREEDV_MODE_2400B;
     }
     else if (eventObject == m_rb2020 || (eventObject == nullptr && m_rb2020->GetValue())) 
     {
@@ -1715,7 +1707,7 @@ void MainFrame::performFreeDVOn_()
         wxCommandEvent tmpEvent;
         OnChangeTxMode(tmpEvent);
 
-        if (g_mode == FREEDV_MODE_2400B || g_mode == FREEDV_MODE_800XA || 
+        if (g_mode == FREEDV_MODE_800XA || 
             !wxGetApp().appConfiguration.multipleReceiveEnabled)
         {
             m_rb1600->Disable();
@@ -1723,7 +1715,6 @@ void MainFrame::performFreeDVOn_()
             m_rb700d->Disable();
             m_rb700e->Disable();
             m_rb800xa->Disable();
-            m_rb2400b->Disable();
             m_rb2020->Disable();
     #if defined(FREEDV_MODE_2020B)
             m_rb2020b->Disable();
@@ -1749,7 +1740,6 @@ void MainFrame::performFreeDVOn_()
                 // These modes require more CPU than typical (and will drive at least one core to 100% if
                 // used with the other five above), so we're excluding them from multi-RX. They also aren't
                 // selectable during a session when multi-RX is enabled.
-                //FREEDV_MODE_2400B,
                 //FREEDV_MODE_800XA
             };
             for (auto& mode : rxModes)
@@ -1758,7 +1748,6 @@ void MainFrame::performFreeDVOn_()
             }
         
             m_rb800xa->Disable();
-            m_rb2400b->Disable();
             
             // If we're receive-only, it doesn't make sense to be able to change TX mode.
             if (g_nSoundCards <= 1)
@@ -1831,7 +1820,7 @@ void MainFrame::performFreeDVOn_()
             freedvInterface.setTextVaricodeNum(1);
 
         // scatter plot (PSK) or Eye (FSK) mode
-        if ((g_mode == FREEDV_MODE_800XA) || (g_mode == FREEDV_MODE_2400A) || (g_mode == FREEDV_MODE_2400B)) {
+        if (g_mode == FREEDV_MODE_800XA) {
             m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_EYE);
         }
         else {
@@ -2114,7 +2103,6 @@ void MainFrame::performFreeDVOff_()
         m_rb700d->Enable();
         m_rb700e->Enable();
         m_rb800xa->Enable();
-        m_rb2400b->Enable();
         if(wxGetApp().appConfiguration.freedv2020Allowed)
         {
             m_rb2020->Enable();

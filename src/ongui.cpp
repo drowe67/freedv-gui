@@ -267,7 +267,7 @@ bool MainFrame::OpenHamlibRig() {
                 m_txtModeStatus, 
                 wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled &&
                     wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting ? nullptr : m_cboReportFrequency, 
-                g_mode == FREEDV_MODE_2400B);
+                false);
         }
     
         return status;

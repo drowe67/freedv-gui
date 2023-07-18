@@ -383,8 +383,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     otherModeSizer->Add(m_rb700c, 1, wxALIGN_LEFT|wxALL|wxEXPAND, 1);
     m_rb800xa = new wxRadioButton( otherModeWin, wxID_ANY, wxT("800XA"), wxDefaultPosition, wxDefaultSize, 0);
     otherModeSizer->Add(m_rb800xa, 1, wxALIGN_LEFT|wxALL|wxEXPAND, 1);
-    m_rb2400b = new wxRadioButton( otherModeWin, wxID_ANY, wxT("2400B"), wxDefaultPosition, wxDefaultSize, 0);
-    otherModeSizer->Add(m_rb2400b, 1, wxALIGN_LEFT|wxALL|wxEXPAND, 1);
     m_rb2020 = new wxRadioButton( otherModeWin, wxID_ANY, wxT("2020"), wxDefaultPosition, wxDefaultSize,  0);
     otherModeSizer->Add(m_rb2020, 1, wxALIGN_LEFT|wxALL|wxEXPAND, 1);
 #if defined(FREEDV_MODE_2020B)
@@ -488,8 +486,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_rb700e->MoveBeforeInTabOrder(m_rb1600);
     
     m_rb700c->MoveBeforeInTabOrder(m_rb800xa);
-    m_rb800xa->MoveBeforeInTabOrder(m_rb2400b);
-    m_rb2400b->MoveBeforeInTabOrder(m_rb2020);
+    m_rb800xa->MoveBeforeInTabOrder(m_rb2020);
 #if defined(FREEDV_MODE_2020B)
     m_rb2020->MoveBeforeInTabOrder(m_rb2020b);
 #endif // FREEDV_MODE_2020B
@@ -559,7 +556,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_rb700e->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb800xa->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb1600->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
-    m_rb2400b->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb2020->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
 #if defined(FREEDV_MODE_2020B)
     m_rb2020b->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
@@ -639,7 +635,6 @@ TopFrame::~TopFrame()
     m_rb700e->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb800xa->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb1600->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
-    m_rb2400b->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb2020->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
 #if defined(FREEDV_MODE_2020B)
     m_rb2020b->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);

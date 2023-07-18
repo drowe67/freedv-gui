@@ -135,7 +135,6 @@ class TopFrame : public wxFrame
         wxRadioButton *m_rb700e;
         wxRadioButton *m_rb800xa;
         wxRadioButton *m_rb1600;
-        wxRadioButton *m_rb2400b;
         wxRadioButton *m_rb2020;
 #if defined(FREEDV_MODE_2020B)
         wxRadioButton *m_rb2020b;
