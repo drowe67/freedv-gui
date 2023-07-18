@@ -186,24 +186,25 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     wxGridBagSizer* gridSizer = new wxGridBagSizer(5, 5);
     
-    m_freqList = new wxListBox(m_rigControlTab, wxID_ANY);
-    m_freqList->SetMinSize(wxSize(250, -1));
-    gridSizer->Add(m_freqList, wxGBPosition(0, 0), wxGBSpan(4, 2), wxEXPAND);
-        
-    m_freqListAdd = new wxButton(m_rigControlTab, wxID_ANY, _("Add"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_freqList = new wxListBox(m_rigControlTab, wxID_ANY, wxDefaultPosition, wxSize(350,150), 0, NULL, wxLB_SINGLE | wxLB_NEEDED_SB);
+    gridSizer->Add(m_freqList, wxGBPosition(0, 0), wxGBSpan(5, 2), wxEXPAND);
+
+    const int FREQ_LIST_BUTTON_WIDTH = 100; 
+    const int FREQ_LIST_BUTTON_HEIGHT = -1;
+    m_freqListAdd = new wxButton(m_rigControlTab, wxID_ANY, _("Add"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
     gridSizer->Add(m_freqListAdd, wxGBPosition(0, 2), wxDefaultSpan, wxEXPAND);
-    m_freqListRemove = new wxButton(m_rigControlTab, wxID_ANY, _("Remove"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_freqListRemove = new wxButton(m_rigControlTab, wxID_ANY, _("Remove"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
     gridSizer->Add(m_freqListRemove, wxGBPosition(1, 2), wxDefaultSpan, wxEXPAND);
-    m_freqListMoveUp = new wxButton(m_rigControlTab, wxID_ANY, _("Move Up"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_freqListMoveUp = new wxButton(m_rigControlTab, wxID_ANY, _("Move Up"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
     gridSizer->Add(m_freqListMoveUp, wxGBPosition(2, 2), wxDefaultSpan, wxEXPAND);
-    m_freqListMoveDown = new wxButton(m_rigControlTab, wxID_ANY, _("Move Down"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_freqListMoveDown = new wxButton(m_rigControlTab, wxID_ANY, _("Move Down"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
     gridSizer->Add(m_freqListMoveDown, wxGBPosition(3, 2), wxDefaultSpan, wxEXPAND);
     
     wxStaticText* labelEnterFreq = new wxStaticText(m_rigControlTab, wxID_ANY, wxT("Enter frequency (MHz):"), wxDefaultPosition, wxDefaultSize, 0);
-    gridSizer->Add(labelEnterFreq, wxGBPosition(4, 0), wxDefaultSpan, wxALIGN_CENTER_VERTICAL);
+    gridSizer->Add(labelEnterFreq, wxGBPosition(5, 0), wxDefaultSpan, wxALIGN_CENTER_VERTICAL);
     
     m_txtCtrlNewFrequency = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-    gridSizer->Add(m_txtCtrlNewFrequency, wxGBPosition(4, 1), wxGBSpan(1, 2), wxEXPAND);
+    gridSizer->Add(m_txtCtrlNewFrequency, wxGBPosition(5, 1), wxGBSpan(1, 2), wxEXPAND);
     
     sbSizer_freqList->Add(gridSizer, 0, wxALL, 5);
     
@@ -537,7 +538,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     this->SetSizerAndFit(winSizer);
     this->Layout();
     this->Centre(wxBOTH);
- 
+
     //-------------------
     // Tab ordering for accessibility
     //-------------------
