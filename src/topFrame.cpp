@@ -326,10 +326,12 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderSQ->SetMinSize(wxSize(-1,150));
 
     // Add accessibility class so that the values are read back correctly.
+#if wxUSE_ACCESSIBILITY
     auto squelchSliderAccessibility = new DecibelSliderAccessible([&]() {
         return m_textSQ->GetLabel();
     });
     m_sliderSQ->SetAccessible(squelchSliderAccessibility);
+#endif // wxUSE_ACCESSIBILITY
 
     sbSizer3->Add(m_sliderSQ, 1, wxALIGN_CENTER_HORIZONTAL, 0);
 
@@ -343,7 +345,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Squelch Toggle Checkbox
     //------------------------------
-    m_ckboxSQ = new wxCheckBox(squelchBox, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxSQ = new wxCheckBox(squelchBox, wxID_ANY, _("Enable"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
 
     sbSizer3->Add(m_ckboxSQ, 0, wxALIGN_CENTER_HORIZONTAL, 0);
     rightSizer->Add(sbSizer3, 2, wxEXPAND, 0);
@@ -356,12 +358,14 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderTxLevel->SetToolTip(_("Sets TX attenuation (0-30dB))."));
     m_sliderTxLevel->SetMinSize(wxSize(-1,150));
     txLevelSizer->Add(m_sliderTxLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
-   
+
+#if wxUSE_ACCESSIBILITY 
     // Add accessibility class so that the values are read back correctly.
     auto txSliderAccessibility = new DecibelSliderAccessible([&]() {
         return m_txtTxLevelNum->GetLabel();
     });
     m_sliderTxLevel->SetAccessible(txSliderAccessibility);
+#endif // wxUSE_ACCESSIBILITY
  
     m_txtTxLevelNum = new wxStaticText(m_panel, wxID_ANY, wxT("0 dB"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_txtTxLevelNum->SetMinSize(wxSize(100,-1));

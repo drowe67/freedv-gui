@@ -1,5 +1,7 @@
 #include "DecibelSliderAccessible.h"
 
+#if wxUSE_ACCESSIBILITY
+
 DecibelSliderAccessible::DecibelSliderAccessible(std::function<wxString()> strValFn)
     : strValFn_(strValFn)
 {
@@ -12,3 +14,5 @@ wxAccStatus DecibelSliderAccessible::GetValue (int childId, wxString *strValue)
     *strValue = strValFn_();
     return wxACC_OK;
 }
+
+#endif // wxUSE_ACCESSIBILITY
