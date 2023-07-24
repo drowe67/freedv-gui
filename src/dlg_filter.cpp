@@ -330,6 +330,13 @@ void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWin
     bs->Add(*stValue, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT|wxALL, 2);
 
     s->Add(bs, 0, wxALL | wxEXPAND, 0);
+
+#if wxUSE_ACCESSIBILITY
+    auto lpcAccessible = new DecibelSliderAccessible([stValue]() {
+        return (*stValue)->GetLabel();
+    });
+    (*slider)->SetAccessible(lpcAccessible);
+#endif // wxUSE_ACCESSIBILITY
 }
 
 void FilterDlg::newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString controlName)
