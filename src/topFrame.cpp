@@ -19,8 +19,10 @@
 //  along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //==========================================================================
+
 #include <wx/wrapsizer.h>
 #include "topFrame.h"
+#include "DecibelSliderAccessible.h"
 
 extern int g_playFileToMicInEventId;
 extern int g_recFileFromRadioEventId;
@@ -323,6 +325,12 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderSQ->SetToolTip(_("Set Squelch level in dB."));
     m_sliderSQ->SetMinSize(wxSize(-1,150));
 
+    // Add accessibility class so that the values are read back correctly.
+    auto squelchSliderAccessibility = new DecibelSliderAccessible([&]() {
+        return m_textSQ->GetLabel();
+    });
+    m_sliderSQ->SetAccessible(squelchSliderAccessibility);
+
     sbSizer3->Add(m_sliderSQ, 1, wxALIGN_CENTER_HORIZONTAL, 0);
 
     //------------------------------
@@ -348,7 +356,13 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderTxLevel->SetToolTip(_("Sets TX attenuation (0-30dB))."));
     m_sliderTxLevel->SetMinSize(wxSize(-1,150));
     txLevelSizer->Add(m_sliderTxLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
-    
+   
+    // Add accessibility class so that the values are read back correctly.
+    auto txSliderAccessibility = new DecibelSliderAccessible([&]() {
+        return m_txtTxLevelNum->GetLabel();
+    });
+    m_sliderTxLevel->SetAccessible(txSliderAccessibility);
+ 
     m_txtTxLevelNum = new wxStaticText(m_panel, wxID_ANY, wxT("0 dB"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_txtTxLevelNum->SetMinSize(wxSize(100,-1));
     txLevelSizer->Add(m_txtTxLevelNum, 0, wxALIGN_CENTER_HORIZONTAL, 0);

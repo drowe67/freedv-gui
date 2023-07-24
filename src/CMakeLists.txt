@@ -1,4 +1,5 @@
 set(FREEDV_SOURCES
+    DecibelSliderAccessible.cpp
     dlg_audiooptions.cpp
     dlg_easy_setup.cpp
     dlg_filter.cpp
