@@ -452,6 +452,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_console->Add(m_ckboxDebugConsole, 0, wxALIGN_LEFT, 5);
 
     sizerDebug->Add(sbSizer_console,0, wxALL|wxEXPAND, 5);
+
 #endif // __WXMSW__
     
     //----------------------------------------------------------
@@ -512,7 +513,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sizerDebug->Add(sbSizer_fifo2,0, wxALL|wxEXPAND, 3);
 
     m_debugTab->SetSizer(sizerDebug);
-    
+
     //------------------------------
     // OK - Cancel - Apply Buttons 
     //------------------------------
@@ -573,12 +574,23 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxTone->MoveBeforeInTabOrder(m_txtToneFreqHz);
     m_txtToneFreqHz->MoveBeforeInTabOrder(m_txtToneAmplitude);
     
-    m_txtCtrlFifoSize->MoveBeforeInTabOrder(m_ckboxVerbose);
+    // Tab ordering for Debug tab.    
+#ifdef __WXMSW__
+    sb_console->MoveBeforeInTabOrder(sb_fifo);
+#endif // __WXMSW__
+    sb_fifo->MoveBeforeInTabOrder(sb_fifo2);
+
+    m_txtCtrlFifoSize->MoveBeforeInTabOrder(m_BtnFifoReset);
+    m_BtnFifoReset->MoveBeforeInTabOrder(m_ckboxVerbose);
+
     m_ckboxVerbose->MoveBeforeInTabOrder(m_ckboxTxRxThreadPriority);
     m_ckboxTxRxThreadPriority->MoveBeforeInTabOrder(m_ckboxTxRxDumpTiming);
     m_ckboxTxRxDumpTiming->MoveBeforeInTabOrder(m_ckboxTxRxDumpFifoState);
     m_ckboxTxRxDumpFifoState->MoveBeforeInTabOrder(m_ckboxFreeDVAPIVerbose);
-    m_ckboxFreeDVAPIVerbose->MoveBeforeInTabOrder(m_BtnFifoReset);
+
+#ifdef __WXMSW__
+    m_ckboxDebugConsole->MoveBeforeInTabOrder(m_txtCtrlFifoSize);
+#endif // __WXMSW__
     
     m_reportingTab->MoveBeforeInTabOrder(m_displayTab);    
     m_displayTab->MoveBeforeInTabOrder(m_keyerTab);
