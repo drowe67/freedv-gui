@@ -18,7 +18,9 @@
 //  along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //==========================================================================
+
 #include "dlg_filter.h"
+#include "DecibelSliderAccessible.h"
 
 #define SLIDER_MAX 100
 #define SLIDER_LENGTH 100
@@ -356,6 +358,13 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
         bsEQ->Add(sizerFreq, 1, wxEXPAND);
         eq.maxFreqHz = maxFreqHz;
         eq.sliderFreqId = eq.sliderFreq->GetId();
+
+#if wxUSE_ACCESSIBILITY
+        auto freqAccessible = new DecibelSliderAccessible([&, eq]() {
+            return eq.valueFreq->GetLabel();
+        });
+        eq.sliderFreq->SetAccessible(freqAccessible);
+#endif // wxUSE_ACCESSIBILITY
     }
     else
     {
@@ -366,11 +375,25 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
     newEQControl(parent, &eq.sliderGain, &eq.valueGain, sizerGain, "Gain");
     bsEQ->Add(sizerGain, 1, wxEXPAND);
     
+#if wxUSE_ACCESSIBILITY
+    auto gainAccessible = new DecibelSliderAccessible([&, eq]() {
+        return eq.valueGain->GetLabel();
+    });
+    eq.sliderGain->SetAccessible(gainAccessible);
+#endif // wxUSE_ACCESSIBILITY
+
     if (enableQ)
     {
         wxSizer* sizerQ = new wxBoxSizer(wxVERTICAL);
         newEQControl(parent, &eq.sliderQ, &eq.valueQ, sizerQ, "Q");
         bsEQ->Add(sizerQ, 1, wxEXPAND);
+
+#if wxUSE_ACCESSIBILITY
+        auto qAccessible = new DecibelSliderAccessible([&, eq]() {
+            return eq.valueQ->GetLabel();
+        });
+        eq.sliderQ->SetAccessible(qAccessible);
+#endif // wxUSE_ACCESSIBILITY
     }
     else
         eq.sliderQ = NULL;
