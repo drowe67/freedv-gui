@@ -546,7 +546,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxReportingEnable->MoveBeforeInTabOrder(m_txt_callsign);
     m_txt_callsign->MoveBeforeInTabOrder(m_txt_grid_square);
     
-    m_txt_grid_square->MoveBeforeInTabOrder(m_ckboxPskReporterEnable);
+    m_txt_grid_square->MoveBeforeInTabOrder(m_ckboxManualFrequencyReporting);
+    m_ckboxManualFrequencyReporting->MoveBeforeInTabOrder(m_ckboxPskReporterEnable);
     m_ckboxPskReporterEnable->MoveBeforeInTabOrder(m_ckboxFreeDVReporterEnable);
     m_ckboxFreeDVReporterEnable->MoveBeforeInTabOrder(m_freedvReporterHostname);
     
