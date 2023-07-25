@@ -58,7 +58,7 @@
 #include <wx/collpane.h>
 #include <wx/combo.h>
 
-#include "wxListViewComboPopup.h"
+#include "gui/util/wxListViewComboPopup.h"
 
 #include "freedv_api.h" // for FREEDV_MODE_*
 

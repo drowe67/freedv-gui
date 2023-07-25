@@ -19,8 +19,12 @@
 //  along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //==========================================================================
+
+#include <wx/regex.h>
 #include <wx/wrapsizer.h>
 #include "topFrame.h"
+#include "gui/util/NameOverrideAccessible.h"
+#include "gui/util/LabelOverrideAccessible.h"
 
 extern int g_playFileToMicInEventId;
 extern int g_recFileFromRadioEventId;
@@ -46,6 +50,20 @@ public:
 //=========================================================================
 TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(parent, id, title, pos, size, style)
 {
+#if wxUSE_ACCESSIBILITY
+    // Initialize accessibility logic
+    SetAccessible(new NameOverrideAccessible([&]() {
+        auto labelStr = GetLabel(); // note: should be equivalent to title.
+
+        // Ensures NVDA reads back version numbers as "x point y ..." rather
+        // than as a date.
+        wxRegEx rePoint("\\.");
+        rePoint.ReplaceAll(&labelStr, _(" point "));
+        
+        return labelStr;
+    }));
+#endif // wxUSE_ACCESSIBILITY
+    
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);
     //this->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
     //this->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
@@ -323,6 +341,14 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderSQ->SetToolTip(_("Set Squelch level in dB."));
     m_sliderSQ->SetMinSize(wxSize(-1,150));
 
+    // Add accessibility class so that the values are read back correctly.
+#if wxUSE_ACCESSIBILITY
+    auto squelchSliderAccessibility = new LabelOverrideAccessible([&]() {
+        return m_textSQ->GetLabel();
+    });
+    m_sliderSQ->SetAccessible(squelchSliderAccessibility);
+#endif // wxUSE_ACCESSIBILITY
+
     sbSizer3->Add(m_sliderSQ, 1, wxALIGN_CENTER_HORIZONTAL, 0);
 
     //------------------------------
@@ -335,7 +361,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Squelch Toggle Checkbox
     //------------------------------
-    m_ckboxSQ = new wxCheckBox(squelchBox, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxSQ = new wxCheckBox(squelchBox, wxID_ANY, _("Enable"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
 
     sbSizer3->Add(m_ckboxSQ, 0, wxALIGN_CENTER_HORIZONTAL, 0);
     rightSizer->Add(sbSizer3, 2, wxEXPAND, 0);
@@ -348,7 +374,15 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_sliderTxLevel->SetToolTip(_("Sets TX attenuation (0-30dB))."));
     m_sliderTxLevel->SetMinSize(wxSize(-1,150));
     txLevelSizer->Add(m_sliderTxLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
-    
+
+#if wxUSE_ACCESSIBILITY 
+    // Add accessibility class so that the values are read back correctly.
+    auto txSliderAccessibility = new LabelOverrideAccessible([&]() {
+        return m_txtTxLevelNum->GetLabel();
+    });
+    m_sliderTxLevel->SetAccessible(txSliderAccessibility);
+#endif // wxUSE_ACCESSIBILITY
+ 
     m_txtTxLevelNum = new wxStaticText(m_panel, wxID_ANY, wxT("0 dB"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     m_txtTxLevelNum->SetMinSize(wxSize(100,-1));
     txLevelSizer->Add(m_txtTxLevelNum, 0, wxALIGN_CENTER_HORIZONTAL, 0);

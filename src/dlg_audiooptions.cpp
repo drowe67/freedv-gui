@@ -126,7 +126,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     bSizer811a->Add(bSizer811, 0, wxEXPAND, 5);
 
     sbSizer2->Add(bSizer811a, 1, wxEXPAND, 2);
-    buildTestControls(&m_plotScalarRxIn, &m_btnRxInTest, m_panelRx, sbSizer2, _("Rec 2s"));
+    buildTestControls(&m_plotScalarRxIn, &m_btnRxInTest, m_panelRx, sbSizer2, _("Record 2 Seconds"));
 
     gSizer4->Add(sbSizer2, 1, wxEXPAND, 5);
 
@@ -156,7 +156,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     bSizer81a->Add(bSizer81, 0, wxEXPAND, 5);
 
     sbSizer3->Add(bSizer81a, 1, wxEXPAND, 2);
-    buildTestControls(&m_plotScalarRxOut, &m_btnRxOutTest, m_panelRx, sbSizer3, _("Play 2s"));
+    buildTestControls(&m_plotScalarRxOut, &m_btnRxOutTest, m_panelRx, sbSizer3, _("Play 2 Seconds"));
  
     gSizer4->Add(sbSizer3, 1, wxEXPAND, 2);
     bSizer20->Add(gSizer4, 1, wxEXPAND, 1);
@@ -198,7 +198,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     bSizer83a->Add(bSizer83, 0, wxEXPAND, 5);
 
     sbSizer22->Add(bSizer83a, 1, wxEXPAND, 2);
-    buildTestControls(&m_plotScalarTxIn, &m_btnTxInTest, m_panelTx, sbSizer22, _("Rec 2s"));
+    buildTestControls(&m_plotScalarTxIn, &m_btnTxInTest, m_panelTx, sbSizer22, _("Record 2 Seconds"));
 
     gSizer2->Add(sbSizer22, 1, wxEXPAND, 5);
 
@@ -227,7 +227,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
     bSizer82a->Add(bSizer82, 0, wxEXPAND, 5);
 
     sbSizer21->Add(bSizer82a, 1, wxEXPAND, 2);
-    buildTestControls(&m_plotScalarTxOut, &m_btnTxOutTest, m_panelTx, sbSizer21, _("Play 2s"));
+    buildTestControls(&m_plotScalarTxOut, &m_btnTxOutTest, m_panelTx, sbSizer21, _("Play 2 Seconds"));
 
     gSizer2->Add(sbSizer21, 1, wxEXPAND, 5);
     bSizer18->Add(gSizer2, 1, wxEXPAND, 1);

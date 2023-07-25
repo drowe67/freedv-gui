@@ -88,7 +88,6 @@ int   g_analog;
 int   g_tx;
 float g_snr;
 bool  g_half_duplex;
-bool  g_modal;
 SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
 
 // sending and receiving Call Sign data
@@ -687,8 +686,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     wxGetApp().m_testFrames = false;
     wxGetApp().m_channel_noise = false;
     g_tone_phase = 0.0;
-
-    g_modal = false;
 
     optionsDlg = new OptionsDlg(NULL);
     m_schedule_restore = false;

@@ -22,7 +22,6 @@
 #include <wx/gbsizer.h>
 #include "dlg_options.h"
 
-extern bool                g_modal;
 extern FreeDVInterface freedvInterface;
 
 // PortAudio over/underflow counters
@@ -355,7 +354,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBoxSizer* sbSizer_modemstats = new wxStaticBoxSizer(sb_modemstats, wxVERTICAL);
 
     wxBoxSizer* sbSizer_statsResetTime = new wxBoxSizer(wxHORIZONTAL);
-    wxStaticText *m_staticTextResetTime = new wxStaticText(m_modemTab, wxID_ANY, _("Time before resetting stats (sec):"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticTextResetTime = new wxStaticText(m_modemTab, wxID_ANY, _("Time before resetting stats (in seconds):"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_statsResetTime->Add(m_staticTextResetTime, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     m_statsResetTime = new wxTextCtrl(m_modemTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0, wxTextValidator(wxFILTER_DIGITS));
@@ -452,6 +451,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_console->Add(m_ckboxDebugConsole, 0, wxALIGN_LEFT, 5);
 
     sizerDebug->Add(sbSizer_console,0, wxALL|wxEXPAND, 5);
+
 #endif // __WXMSW__
     
     //----------------------------------------------------------
@@ -512,7 +512,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sizerDebug->Add(sbSizer_fifo2,0, wxALL|wxEXPAND, 3);
 
     m_debugTab->SetSizer(sizerDebug);
-    
+
     //------------------------------
     // OK - Cancel - Apply Buttons 
     //------------------------------
@@ -546,7 +546,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxReportingEnable->MoveBeforeInTabOrder(m_txt_callsign);
     m_txt_callsign->MoveBeforeInTabOrder(m_txt_grid_square);
     
-    m_txt_grid_square->MoveBeforeInTabOrder(m_ckboxPskReporterEnable);
+    m_txt_grid_square->MoveBeforeInTabOrder(m_ckboxManualFrequencyReporting);
+    m_ckboxManualFrequencyReporting->MoveBeforeInTabOrder(m_ckboxPskReporterEnable);
     m_ckboxPskReporterEnable->MoveBeforeInTabOrder(m_ckboxFreeDVReporterEnable);
     m_ckboxFreeDVReporterEnable->MoveBeforeInTabOrder(m_freedvReporterHostname);
     
@@ -572,12 +573,23 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxTone->MoveBeforeInTabOrder(m_txtToneFreqHz);
     m_txtToneFreqHz->MoveBeforeInTabOrder(m_txtToneAmplitude);
     
-    m_txtCtrlFifoSize->MoveBeforeInTabOrder(m_ckboxVerbose);
+    // Tab ordering for Debug tab.    
+#ifdef __WXMSW__
+    sb_console->MoveBeforeInTabOrder(sb_fifo);
+#endif // __WXMSW__
+    sb_fifo->MoveBeforeInTabOrder(sb_fifo2);
+
+    m_txtCtrlFifoSize->MoveBeforeInTabOrder(m_BtnFifoReset);
+    m_BtnFifoReset->MoveBeforeInTabOrder(m_ckboxVerbose);
+
     m_ckboxVerbose->MoveBeforeInTabOrder(m_ckboxTxRxThreadPriority);
     m_ckboxTxRxThreadPriority->MoveBeforeInTabOrder(m_ckboxTxRxDumpTiming);
     m_ckboxTxRxDumpTiming->MoveBeforeInTabOrder(m_ckboxTxRxDumpFifoState);
     m_ckboxTxRxDumpFifoState->MoveBeforeInTabOrder(m_ckboxFreeDVAPIVerbose);
-    m_ckboxFreeDVAPIVerbose->MoveBeforeInTabOrder(m_BtnFifoReset);
+
+#ifdef __WXMSW__
+    m_ckboxDebugConsole->MoveBeforeInTabOrder(m_txtCtrlFifoSize);
+#endif // __WXMSW__
     
     m_reportingTab->MoveBeforeInTabOrder(m_displayTab);    
     m_displayTab->MoveBeforeInTabOrder(m_keyerTab);
@@ -922,7 +934,6 @@ void OptionsDlg::OnOK(wxCommandEvent& event)
 {
     ExchangeData(EXCHANGE_DATA_OUT, true);
     //this->EndModal(wxID_OK);
-    g_modal = false;
     EndModal(wxOK);
     
     // Clear frequency list to prevent sizing issues on re-display.
@@ -936,7 +947,6 @@ void OptionsDlg::OnOK(wxCommandEvent& event)
 void OptionsDlg::OnCancel(wxCommandEvent& event)
 {
     //this->EndModal(wxID_CANCEL);
-    g_modal = false;
     EndModal(wxCANCEL);
     
     // Clear frequency list to prevent sizing issues on re-display.

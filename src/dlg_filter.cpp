@@ -18,7 +18,9 @@
 //  along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //==========================================================================
+
 #include "dlg_filter.h"
+#include "gui/util/LabelOverrideAccessible.h"
 
 #define SLIDER_MAX 100
 #define SLIDER_LENGTH 100
@@ -328,6 +330,13 @@ void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWin
     bs->Add(*stValue, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT|wxALL, 2);
 
     s->Add(bs, 0, wxALL | wxEXPAND, 0);
+
+#if wxUSE_ACCESSIBILITY
+    auto lpcAccessible = new LabelOverrideAccessible([stValue]() {
+        return (*stValue)->GetLabel();
+    });
+    (*slider)->SetAccessible(lpcAccessible);
+#endif // wxUSE_ACCESSIBILITY
 }
 
 void FilterDlg::newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString controlName)
@@ -356,6 +365,13 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
         bsEQ->Add(sizerFreq, 1, wxEXPAND);
         eq.maxFreqHz = maxFreqHz;
         eq.sliderFreqId = eq.sliderFreq->GetId();
+
+#if wxUSE_ACCESSIBILITY
+        auto freqAccessible = new LabelOverrideAccessible([&, eq]() {
+            return eq.valueFreq->GetLabel();
+        });
+        eq.sliderFreq->SetAccessible(freqAccessible);
+#endif // wxUSE_ACCESSIBILITY
     }
     else
     {
@@ -366,11 +382,25 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
     newEQControl(parent, &eq.sliderGain, &eq.valueGain, sizerGain, "Gain");
     bsEQ->Add(sizerGain, 1, wxEXPAND);
     
+#if wxUSE_ACCESSIBILITY
+    auto gainAccessible = new LabelOverrideAccessible([&, eq]() {
+        return eq.valueGain->GetLabel();
+    });
+    eq.sliderGain->SetAccessible(gainAccessible);
+#endif // wxUSE_ACCESSIBILITY
+
     if (enableQ)
     {
         wxSizer* sizerQ = new wxBoxSizer(wxVERTICAL);
         newEQControl(parent, &eq.sliderQ, &eq.valueQ, sizerQ, "Q");
         bsEQ->Add(sizerQ, 1, wxEXPAND);
+
+#if wxUSE_ACCESSIBILITY
+        auto qAccessible = new LabelOverrideAccessible([&, eq]() {
+            return eq.valueQ->GetLabel();
+        });
+        eq.sliderQ->SetAccessible(qAccessible);
+#endif // wxUSE_ACCESSIBILITY
     }
     else
         eq.sliderQ = NULL;
