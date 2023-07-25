@@ -22,7 +22,6 @@
 #include <wx/gbsizer.h>
 #include "dlg_options.h"
 
-extern bool                g_modal;
 extern FreeDVInterface freedvInterface;
 
 // PortAudio over/underflow counters
@@ -935,7 +934,6 @@ void OptionsDlg::OnOK(wxCommandEvent& event)
 {
     ExchangeData(EXCHANGE_DATA_OUT, true);
     //this->EndModal(wxID_OK);
-    g_modal = false;
     EndModal(wxOK);
     
     // Clear frequency list to prevent sizing issues on re-display.
@@ -949,7 +947,6 @@ void OptionsDlg::OnOK(wxCommandEvent& event)
 void OptionsDlg::OnCancel(wxCommandEvent& event)
 {
     //this->EndModal(wxID_CANCEL);
-    g_modal = false;
     EndModal(wxCANCEL);
     
     // Clear frequency list to prevent sizing issues on re-display.

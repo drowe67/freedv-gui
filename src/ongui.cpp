@@ -8,7 +8,6 @@
 #include "lpcnet_freedv.h"
 
 extern int g_mode;
-extern bool  g_modal;
 
 extern int   g_SquelchActive;
 extern float g_SquelchLevel;
@@ -133,8 +132,6 @@ void MainFrame::OnToolsFilter(wxCommandEvent& event)
 void MainFrame::OnToolsOptions(wxCommandEvent& event)
 {
     wxUnusedVar(event);
-    g_modal = true;
-    //fprintf(stderr,"g_modal: %d\n", g_modal);
     if (optionsDlg->ShowModal() == wxOK)
     {
         // Update reporting list.
@@ -422,9 +419,7 @@ int MainApp::FilterEvent(wxEvent& event)
         (((wxKeyEvent&)event).GetKeyCode() == WXK_SPACE))
         {
             // only use space to toggle PTT if we are running and no modal dialogs (like options) up
-            //fprintf(stderr,"frame->m_RxRunning: %d g_modal: %d\n",
-            //        frame->m_RxRunning, g_modal);
-            if (frame->m_RxRunning && !g_modal && wxGetApp().appConfiguration.enableSpaceBarForPTT) {
+            if (frame->m_RxRunning && wxApp::GetTopWindow()->HasFocus() && wxGetApp().appConfiguration.enableSpaceBarForPTT) {
 
                 // space bar controls rx/rx if keyer not running
                 if (frame->vk_state == VK_IDLE) {
