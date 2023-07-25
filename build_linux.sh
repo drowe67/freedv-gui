@@ -21,7 +21,7 @@ export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 
 # change this when working on combined codec2/freedv-gui changes
-CODEC2_BRANCH=v1.2.0
+CODEC2_BRANCH=1.2.0
 LPCNET_BRANCH=v0.5
 
 # OK, build and test LPCNet
