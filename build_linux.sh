@@ -41,7 +41,7 @@ cd $FREEDVGUIDIR
 if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2.git
 fi
-cd codec2 && git switch master && git pull && git checkout $CODEC2_BRANCH
+cd codec2 && git switch main && git pull && git checkout $CODEC2_BRANCH
 mkdir -p build_linux && cd build_linux && rm -Rf * && cmake -DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux .. && make VERBOSE=1
 # sanity check test
 cd src
