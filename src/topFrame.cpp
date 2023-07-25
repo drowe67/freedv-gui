@@ -48,6 +48,20 @@ public:
 //=========================================================================
 TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(parent, id, title, pos, size, style)
 {
+#if wxUSE_ACCESSIBILITY
+    // Initialize accessibility logic
+    SetAccessible(new LabelOverrideAccessible([&]() {
+        auto labelStr = GetLabel(); // note: should be equivalent to title.
+        
+        // Ensures NVDA reads back version numbers as "x point y ..." rather
+        // than as a date.
+        wxRegEx rePoint("\\.");
+        rePoint.ReplaceAll(&labelStr, _(" point "));
+        
+        return labelStr;
+    }));
+#endif // wxUSE_ACCESSIBILITY
+    
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);
     //this->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
     //this->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
