@@ -419,7 +419,7 @@ int MainApp::FilterEvent(wxEvent& event)
         (((wxKeyEvent&)event).GetKeyCode() == WXK_SPACE))
         {
             // only use space to toggle PTT if we are running and no modal dialogs (like options) up
-            if (frame->m_RxRunning && wxApp::GetTopWindow()->HasFocus() && wxGetApp().appConfiguration.enableSpaceBarForPTT) {
+            if (frame->m_RxRunning && frame->IsActive() && wxGetApp().appConfiguration.enableSpaceBarForPTT) {
 
                 // space bar controls rx/rx if keyer not running
                 if (frame->vk_state == VK_IDLE) {
