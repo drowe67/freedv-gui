@@ -20,7 +20,7 @@
 //==========================================================================
 
 #include "dlg_filter.h"
-#include "DecibelSliderAccessible.h"
+#include "gui/util/LabelOverrideAccessible.h"
 
 #define SLIDER_MAX 100
 #define SLIDER_LENGTH 100
@@ -332,7 +332,7 @@ void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWin
     s->Add(bs, 0, wxALL | wxEXPAND, 0);
 
 #if wxUSE_ACCESSIBILITY
-    auto lpcAccessible = new DecibelSliderAccessible([stValue]() {
+    auto lpcAccessible = new LabelOverrideAccessible([stValue]() {
         return (*stValue)->GetLabel();
     });
     (*slider)->SetAccessible(lpcAccessible);
@@ -367,7 +367,7 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
         eq.sliderFreqId = eq.sliderFreq->GetId();
 
 #if wxUSE_ACCESSIBILITY
-        auto freqAccessible = new DecibelSliderAccessible([&, eq]() {
+        auto freqAccessible = new LabelOverrideAccessible([&, eq]() {
             return eq.valueFreq->GetLabel();
         });
         eq.sliderFreq->SetAccessible(freqAccessible);
@@ -383,7 +383,7 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
     bsEQ->Add(sizerGain, 1, wxEXPAND);
     
 #if wxUSE_ACCESSIBILITY
-    auto gainAccessible = new DecibelSliderAccessible([&, eq]() {
+    auto gainAccessible = new LabelOverrideAccessible([&, eq]() {
         return eq.valueGain->GetLabel();
     });
     eq.sliderGain->SetAccessible(gainAccessible);
@@ -396,7 +396,7 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
         bsEQ->Add(sizerQ, 1, wxEXPAND);
 
 #if wxUSE_ACCESSIBILITY
-        auto qAccessible = new DecibelSliderAccessible([&, eq]() {
+        auto qAccessible = new LabelOverrideAccessible([&, eq]() {
             return eq.valueQ->GetLabel();
         });
         eq.sliderQ->SetAccessible(qAccessible);

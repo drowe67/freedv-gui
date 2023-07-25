@@ -22,7 +22,7 @@
 
 #include <wx/wrapsizer.h>
 #include "topFrame.h"
-#include "DecibelSliderAccessible.h"
+#include "gui/util/LabelOverrideAccessible.h"
 
 extern int g_playFileToMicInEventId;
 extern int g_recFileFromRadioEventId;
@@ -327,7 +327,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
     // Add accessibility class so that the values are read back correctly.
 #if wxUSE_ACCESSIBILITY
-    auto squelchSliderAccessibility = new DecibelSliderAccessible([&]() {
+    auto squelchSliderAccessibility = new LabelOverrideAccessible([&]() {
         return m_textSQ->GetLabel();
     });
     m_sliderSQ->SetAccessible(squelchSliderAccessibility);
@@ -361,7 +361,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 
 #if wxUSE_ACCESSIBILITY 
     // Add accessibility class so that the values are read back correctly.
-    auto txSliderAccessibility = new DecibelSliderAccessible([&]() {
+    auto txSliderAccessibility = new LabelOverrideAccessible([&]() {
         return m_txtTxLevelNum->GetLabel();
     });
     m_sliderTxLevel->SetAccessible(txSliderAccessibility);
