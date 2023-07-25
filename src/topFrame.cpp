@@ -20,8 +20,10 @@
 //
 //==========================================================================
 
+#include <wx/regex.h>
 #include <wx/wrapsizer.h>
 #include "topFrame.h"
+#include "gui/util/NameOverrideAccessible.h"
 #include "gui/util/LabelOverrideAccessible.h"
 
 extern int g_playFileToMicInEventId;
@@ -50,9 +52,9 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 {
 #if wxUSE_ACCESSIBILITY
     // Initialize accessibility logic
-    SetAccessible(new LabelOverrideAccessible([&]() {
+    SetAccessible(new NameOverrideAccessible([&]() {
         auto labelStr = GetLabel(); // note: should be equivalent to title.
-        
+
         // Ensures NVDA reads back version numbers as "x point y ..." rather
         // than as a date.
         wxRegEx rePoint("\\.");

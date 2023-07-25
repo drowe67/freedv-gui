@@ -1,5 +1,6 @@
 add_library(fdv_gui_util STATIC
     LabelOverrideAccessible.cpp
+    NameOverrideAccessible.cpp
     wxListViewComboPopup.cpp)
     
 if(BOOTSTRAP_WXWIDGETS)
