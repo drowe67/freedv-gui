@@ -8,8 +8,8 @@ export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 export HAMLIBDIR=$FREEDVGUIDIR/hamlib
-export CODEC2_BRANCH=master
-export LPCNET_BRANCH=master
+export CODEC2_BRANCH=1.2.0
+export LPCNET_BRANCH=v0.5
 export UT_ENABLE=${UT_ENABLE:-0}
 
 # Prerequisite: build dylibbundler
@@ -35,7 +35,7 @@ cd $FREEDVGUIDIR
 if [ ! -d LPCNet ]; then
     git clone https://github.com/drowe67/LPCNet.git
 fi
-cd $LPCNETDIR && git checkout v0.5 && git pull && git checkout $LPCNET_BRANCH
+cd $LPCNETDIR && git checkout master && git pull && git checkout $LPCNET_BRANCH
 mkdir  -p build_osx && cd build_osx && rm -Rf *
 cmake -DBUILD_OSX_UNIVERSAL=1 ..
 make -j4
@@ -48,7 +48,7 @@ cd $FREEDVGUIDIR
 if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2-new.git codec2
 fi
-cd codec2 && git checkout v1.1.1 && git pull && git checkout $CODEC2_BRANCH
+cd codec2 && git switch main && git pull && git checkout $CODEC2_BRANCH
 mkdir -p build_osx && cd build_osx && rm -Rf * && cmake -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx -DBUILD_OSX_UNIVERSAL=1 .. && make VERBOSE=1 -j4
 
 # sanity check test

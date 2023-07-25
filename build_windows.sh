@@ -22,7 +22,7 @@ export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
 export LPCNETDIR=$FREEDVGUIDIR/LPCNet
 
-CODEC2_BRANCH=v1.1.1
+CODEC2_BRANCH=1.2.0
 LPCNET_BRANCH=v0.5
 
 # OK, build and test LPCNet
@@ -39,7 +39,7 @@ cd $FREEDVGUIDIR
 if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2.git
 fi
-cd codec2 && git switch master && git pull && git checkout $CODEC2_BRANCH
+cd codec2 && git switch main && git pull && git checkout $CODEC2_BRANCH
 mkdir -p $BUILD_DIR && cd $BUILD_DIR && rm -Rf * && $CMAKE -DLPCNET_BUILD_DIR=$LPCNETDIR/$BUILD_DIR .. && make VERBOSE=1
 
 cd $FREEDVGUIDIR
