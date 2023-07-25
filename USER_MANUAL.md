@@ -891,6 +891,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * Fix bug preventing proper Options window sizing on Windows. (PR #478)
     * Fix various screen reader accessibility issues. (PR #481)
+    * Fix minor UI issues with the Easy Setup dialog. (PR #484)
 2. Build system:
     * Update Codec2 to v1.2.0. (PR #483)
 3. Cleanup:
