@@ -497,6 +497,10 @@ Noise Suppression | Enable noise suppression, dereverberation, AGC of mic signal
 
 Auto EQ (Automatic Equalisation) adjusts the input speech spectrum to best fit the speech codec. It can remove annoying bass artefacts and make the codec speech easier to understand.
 
+Bass/Mid/Treble (for both microphone and speaker) can also be adjusted here, either with the arrow keys or your
+mouse. A graph displaying the frequency response of the signal based on your current settings will display in
+this window as well.
+
 * [Blog Post on Auto EQ Part 1](http://www.rowetel.com/?p=6778)
 * [Blog Post on Auto EQ Part 2](http://www.rowetel.com/?p=6860)
 
