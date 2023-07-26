@@ -164,7 +164,8 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     m_cbPttMethod->Append(wxT("CAT"));
     m_cbPttMethod->Append(wxT("RTS"));
     m_cbPttMethod->Append(wxT("DTR"));
-    
+    m_cbPttMethod->SetSelection(0);
+
     /* Serial port box */
     m_serialBox = new wxStaticBox(setupCatControlBox, wxID_ANY, _("Serial PTT"));
     m_serialBox->Hide();
@@ -239,7 +240,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     m_txt_callsign = new wxTextCtrl(setupPskReporterBox, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
     sbSizer_psk->Add(m_txt_callsign, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
-    wxStaticText* labelPskGridSquare = new wxStaticText(setupPskReporterBox, wxID_ANY, wxT("Grid Square: "), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelPskGridSquare = new wxStaticText(setupPskReporterBox, wxID_ANY, wxT("Grid Square/Locator: "), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_psk->Add(labelPskGridSquare, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
     m_txt_grid_square = new wxTextCtrl(setupPskReporterBox, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(80,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
@@ -636,6 +637,12 @@ void EasySetupDialog::resetIcomCIVStatus_()
     {
         m_stIcomCIVHex->Show();
         m_tcIcomCIVHex->Show();
+
+        // Load existing CIV address so we can make sure we get the default.
+        if (m_tcIcomCIVHex->GetValue().length() == 0)
+        {
+            m_tcIcomCIVHex->SetValue(wxString::Format(wxT("%02X"), wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress.get()));
+        }
     }
     else
     {
