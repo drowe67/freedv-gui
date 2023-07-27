@@ -136,6 +136,41 @@ set(BOOTSTRAP_WXWIDGETS FALSE CACHE BOOL
     "Download and build static wxWidgets instead of the system library.")
 set(USE_PULSEAUDIO FALSE CACHE BOOL
     "Use PulseAudio instead of PortAudio for audio I/O.")
+set(SIGN_WINDOWS_BINARIES FALSE CACHE BOOL
+    "Enable signing of Windows binaries. See CODE_SIGNING.md for info.")
+
+if(SIGN_WINDOWS_BINARIES)
+    if(NOT WIN32 AND NOT MINGW)
+        message(FATAL_ERROR "Signing only makes sense for Windows builds.")
+    endif(NOT WIN32 AND NOT MINGW)
+
+    if(NOT DEFINED PKCS11_KEY_FILE OR NOT DEFINED CERTIFICATE_FILE)
+        message(FATAL_ERROR "Must provide key and certifcate files.")
+    endif(NOT DEFINED PKCS11_KEY_FILE OR NOT DEFINED CERTIFICATE_FILE)
+
+    # Default PKCS#11 engine if not provided.
+    if(NOT DEFINED PKCS11_ENGINE)
+        # XXX -- assuming Ubuntu on amd64
+        set(PKCS11_ENGINE /usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so)
+    endif(NOT DEFINED PKCS11_ENGINE)
+  
+    # Default PKCS#11 module if not provided.
+    if(NOT DEFINED PKCS11_MODULE)
+        # XXX -- we're assuming Ubuntu amd64 and YubiKey here.
+        set(PKCS11_MODULE /usr/lib/x86_64-linux-gnu/libykcs11.so)
+    endif(NOT DEFINED PKCS11_MODULE)
+    
+    # Look for osslsigncode    
+    find_program(
+        OSSLSIGNCODE_BIN
+        osslsigncode
+        REQUIRED)
+
+    # Generate command to execute for signing binaries.
+    execute_process(
+        COMMAND cat ${PKCS11_KEY_FILE}
+        OUTPUT_VARIABLE PKCS11_KEY)
+endif(SIGN_WINDOWS_BINARIES)
 
 if(USE_STATIC_DEPS)
     set(USE_STATIC_PORTAUDIO TRUE FORCE)
