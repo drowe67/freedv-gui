@@ -147,3 +147,4 @@ $
 
 * [Private Key Generation and CSR Attestation with YubiKey Manager
 ](https://signmycode.com/resources/private-key-generation-and-csr-attestation-with-yubikey-manager) - SignMyCode.com
+* [Yubico GitHub issue referring to osslsigncode](https://github.com/Yubico/yubico-piv-tool/issues/21)
