@@ -79,3 +79,8 @@ Executing: /lib/systemd/systemd-sysv-install enable pcscd
 Created symlink /etc/systemd/system/sockets.target.wants/pcscd.socket → /lib/systemd/system/pcscd.socket.
 $
 ```
+
+## Sources
+
+* [Private Key Generation and CSR Attestation with YubiKey Manager
+](https://signmycode.com/resources/private-key-generation-and-csr-attestation-with-yubikey-manager) - SignMyCode.com
