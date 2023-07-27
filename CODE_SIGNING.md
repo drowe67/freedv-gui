@@ -2,6 +2,9 @@
 
 ## Prerequisites:
 
+* Pending EV code signing certificate order with [SignMyCode.com](https://signmycode.com) or another Sectigo reseller.
+    * NOTE: this costs a fair bit of money, so it's more cost effective to purchase 3 year validity instead of 1.
+    * Preferable to use a company that will allow bringing your own YubiKey (or will at least give you one) to avoid compatibility issues. Some other code signing dongles are effectively Windows or macOS only.
 * Linux machine (Windows packages are currently generated using LLVM MinGW)
     * Required packages: pcscd, pcsc-tools, libfuse2*
 * YubiKey 5 FIPS
@@ -24,7 +27,7 @@ First, you'll need to configure a PIN (this only needs to be done once for each 
 5. Click on the "Use Default" checkbox next to "Current PIN", or else enter the existing PIN if there is one.
 6. Enter a new PIN in "New PIN" and "Confirm new PIN", then click "Change PIN".
 
-## Generating CSR for codesigning cert
+## Generating CSR for code signing cert
 
 1. Start YubiKey Manager and verify that the YubiKey is detected.
 2. Go to Applications and choose PIV.
