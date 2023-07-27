@@ -36,7 +36,7 @@ First, you'll need to configure a PIN (this only needs to be done once for each 
 7. Enter "freedv-gui" for "Subject" and click "Next".
 8. Verify that the settings appear like the below screenshot, then click "Generate":
 
-TBD screenshot
+![](./doc/csr-generation.png)
 
 9. Choose a location to save the CSR to, then click "Save".
 10. Enter your YubiKey's management key (you can choose "Use default" for the management key) and PIN.
