@@ -104,7 +104,7 @@ Object 7:
 Save the URL to a file for later use, e.g.
 
 ```
-echo "pkcs11:model=YubiKey%20YK5;manufacturer=Yubico%20%28www.yubico.com%29;serial=23228029;token=YubiKey%20PIV%20%2323228029;id=%01;object=Public%20key%20for%20PIV%20Authentication;type=public" > yubikey-key.url
+echo -n "pkcs11:model=YubiKey%20YK5;manufacturer=Yubico%20%28www.yubico.com%29;serial=23228029;token=YubiKey%20PIV%20%2323228029;id=%01;object=Public%20key%20for%20PIV%20Authentication;type=public" > yubikey-key.url
 ```
 
 ## Signing binaries manually
@@ -123,6 +123,22 @@ Notes:
 
 * The file specified by `-out` must not already exist. Otherwise, osslsigncode will error out.
 * libykcs11.so *must* be specified for osslsigncode. The default PKCS#11 module causes osslsigncode to segfault before it can finish signing the file.
+
+## Signing using CMake
+
+To build a signed Windows version of FreeDV, pass in `-DSIGN_WINDOWS_BINARIES=1` as well as the PKCS#11 key URL and the certificate file. For example:
+
+```
+$ mkdir build
+$ cd build
+$ cmake -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_KEY_FILE=/home/mooneer/yubikey-public.key` -DCERTIFICATE_FILE=/home/mooneer/freedv-gui-test.crt -DCMAKE_TOOLCHAIN_FILE=/home/mooneer/freedv-gui/cross-compile/freedv-mingw-llvm-x86_64.cmake ..
+$ make
+$ make package
+```
+
+(You can also override `PKCS11_ENGINE` and `PKCS11_MODULE` if you're not on e.g. x86_64 or if you're using something other than a YubiKey.)
+
+You will be prompted for your token's PIN several times during the build process. When done, the installer as well as freedv.exe will be signed with the provided certificate.
 
 ## Troubleshooting:
 
@@ -148,3 +164,4 @@ $
 * [Private Key Generation and CSR Attestation with YubiKey Manager
 ](https://signmycode.com/resources/private-key-generation-and-csr-attestation-with-yubikey-manager) - SignMyCode.com
 * [Yubico GitHub issue referring to osslsigncode](https://github.com/Yubico/yubico-piv-tool/issues/21)
+* [StackOverflow post on configuring CMake for code signing](https://stackoverflow.com/questions/72504366/how-to-sign-windows-binaries-and-nsis-installers-when-building-with-cmake-cpac)
