@@ -621,6 +621,12 @@ if(WIN32)
         set(CPACK_PACKAGE_FILE_NAME "FreeDV-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-windows-${CMAKE_SYSTEM_PROCESSOR}")
     endif (FREEDV_USING_LLVM_MINGW)
 
+    if(SIGN_WINDOWS_BINARIES)
+        # Add finalize command for NSIS so the installer/uninstaller can be
+        # signed too.
+        set(CPACK_NSIS_FINALIZE_CMD "mv %1 %1.tmp; ${OSSLSIGNCODE_BIN} sign -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -certs ${CERTIFICATE_FILE} -key \\\"${PKCS11_KEY}\\\" -in %1.tmp -out %1")
+    endif(SIGN_WINDOWS_BINARIES)
+
     include(CPack)
 elseif(UNIX AND NOT APPLE)
     # Linux packaging
