@@ -1,5 +1,16 @@
 # Code Signing Certificate HOWTO
 
+## Introduction
+
+Windows has a built-in anti-virus/anti-malware mechanism called Windows Defender. As part of the protection the operating system provides,
+it checks any .exe, .dll or installer files that are downloaded from the internet for a valid certificate. If one does not exist, Windows
+displays a SmartScreen validation error message that requires additional steps from the user in order to bypass and continue installation.
+Many users rightfully will not proceed with installation when faced with this message, assuming that the installer and/or FreeDV application
+is infected with a virus.
+
+To improve the FreeDV user experience, it was determined that the project should purchase a code signing certificate and begin signing
+official releases.
+
 ## Prerequisites:
 
 * Pending EV code signing certificate order with [SignMyCode.com](https://signmycode.com) or another Sectigo reseller.
