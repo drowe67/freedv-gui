@@ -40,7 +40,7 @@ First, you'll need to configure a PIN (this only needs to be done once for each 
 
 9. Choose a location to save the CSR to, then click "Save".
 10. Enter your YubiKey's management key (you can choose "Use default" for the management key) and PIN.
-121 Open the location you entered in (9) and copy/paste the contents into the Certificate Authority's website (where prompted for the CSR).
+11. Open the location you entered in (9) and copy/paste the contents into the Certificate Authority's website (where prompted for the CSR).
 
 ## Generating attestation certificate
 
