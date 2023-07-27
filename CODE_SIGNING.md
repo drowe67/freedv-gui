@@ -17,14 +17,14 @@ official releases.
     * NOTE: this costs a fair bit of money, so it's more cost effective to purchase 3 year validity instead of 1.
     * Preferable to use a company that will allow bringing your own YubiKey (or will at least give you one) to avoid compatibility issues. Some other code signing dongles are effectively Windows or macOS only.
 * Linux machine (Windows packages are currently generated using LLVM MinGW)
-    * Required packages: pcscd, pcsc-tools, libfuse2*
+    * Required packages: pcscd, pcsc-tools, libfuse2*, osslsigncode, opensc, opensc-pkcs11, libengine-pkcs11-openssl, gnutls-bin
 * YubiKey 5 FIPS
-    * [YubiKey Manager](https://www.yubico.com/support/download/yubikey-manager/) must be installed, including `ykman`:
+    * [YubiKey Manager](https://www.yubico.com/support/download/yubikey-manager/) must be installed, including `ykman` and the PIV tools:
 
 ```
 sudo apt-add-repository ppa:yubico/stable
 sudo apt update
-sudo apt install yubikey-manager
+sudo apt install yubikey-manager yubico-piv-tool ykcs11
 ```
     
 ## Initial YubiKey Setup
@@ -71,6 +71,58 @@ ykman piv certificates export f9 intermediate-cert-2023_2026.crt
 ```
 
 3. Open both of the files generated above and copy/paste where prompted into the Certificate Authority's website.
+
+## Generate self-signed certificate for testing
+
+1. Start YubiKey Manager and verify that the YubiKey is detected.
+2. Go to Applications and choose PIV.
+3. Click on the "Configure Certificates" button.
+4. Ensure that "Authentication" is selected and "Slot 9a" is displayed, then click the "Generate" button.
+5. Select "Self-signed certifcate" and choose "Next".
+6. Choose "ECCP384" for "Algorithm", then click "Next".
+7. Enter a descriptive name (e.g. "freedv-gui-test") and click "Next".
+8. Choose the desired expiration date and click "Next".
+9. Verify that all information is correct, then click "Generate".
+10. Click on "Export" and enter the location to save the self-signed certificate, then push "Save".
+
+## Locating signing key on YubiKey
+
+At the terminal, enter `p11tool --list-all --provider /usr/lib/x86_64-linux-gnu/libykcs11.so`. Look for something 
+like the following:
+
+```
+Object 7:
+	URL: pkcs11:model=YubiKey%20YK5;manufacturer=Yubico%20%28www.yubico.com%29;serial=23228029;token=YubiKey%20PIV%20%2323228029;id=%01;object=Public%20key%20for%20PIV%20Authentication;type=public
+	Type: Public key (EC/ECDSA-SECP384R1)
+	Label: Public key for PIV Authentication
+	Flags: CKA_EXTRACTABLE; 
+	ID: 01
+```
+
+(The important thing is that it should say "Public key for PIV Authentication".)
+
+Save the URL to a file for later use, e.g.
+
+```
+echo "pkcs11:model=YubiKey%20YK5;manufacturer=Yubico%20%28www.yubico.com%29;serial=23228029;token=YubiKey%20PIV%20%2323228029;id=%01;object=Public%20key%20for%20PIV%20Authentication;type=public" > yubikey-key.url
+```
+
+## Signing binaries manually
+
+Use something like the following command:
+
+```
+osslsigncode sign -pkcs11engine /usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so -pkcs11module /usr/lib/x86_64-linux-gnu/libykcs11.so -certs [path to exported or provided certicate] -key `cat yubikey-key.url` -in FreeDV-1.8.12-windows-x86_64.exe -out FreeDV-1.8.12-windows-x86_64-signed.exe
+```
+
+You will be asked for the YubiKey's PIN in order to complete the signature process. To verify that the file is correctly signed, copy it to a Windows machine and view the file's properties (under "Digital Signature"); the subject should match what was provided either for the CSR submitted to Sectigo/other Certificate Authority or what was entered when generating the self-signed certificate above:
+
+![](./doc/digitally-signed.png)
+
+Notes:
+
+* The file specified by `-out` must not already exist. Otherwise, osslsigncode will error out.
+* libykcs11.so *must* be specified for osslsigncode. The default PKCS#11 module causes osslsigncode to segfault before it can finish signing the file.
 
 ## Troubleshooting:
 
