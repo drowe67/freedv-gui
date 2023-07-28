@@ -897,6 +897,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix various screen reader accessibility issues. (PR #481)
     * Use separate maximums for each slider type on the Filter dialog. (PR #485)
     * Fix minor UI issues with the Easy Setup dialog. (PR #484)
+    * Adjust waterfall settings to better visualize 2 Hz fading. (PR #487)
 2. Build system:
     * Update Codec2 to v1.2.0. (PR #483)
 3. Cleanup:
