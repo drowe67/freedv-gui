@@ -30,7 +30,7 @@
 #define MIN_MAG_DB        -40.0     // min of spectrogram/waterfall magnitude axis
 #define MAX_MAG_DB          0.0     // max of spectrogram/waterfall magnitude axis
 #define STEP_MAG_DB         5.0     // magnitude axis step
-#define BETA                0.65    // constant for time averaging spectrum data
+#define BETA                0.75    // constant for time averaging spectrum data
 #define MIN_F_HZ            0       // min freq on Waterfall and Spectrum
 #define MAX_F_HZ            3000    // max freq on Waterfall and Spectrum
 #define STEP_F_HZ           500     // major (e.g. text legend) freq step on Waterfall and Spectrum graticule

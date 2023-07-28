@@ -315,7 +315,6 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
 //-------------------------------------------------------------------------
 void PlotWaterfall::plotPixelData()
 {
-    float       spec_index_per_px;
     float       intensity_per_dB;
     float       px_per_sec;
     int         index;
@@ -355,14 +354,13 @@ void PlotWaterfall::plotPixelData()
     m_max_mag = BETA*m_max_mag + (1 - BETA)*max_mag;
     m_min_mag = max_mag - 20.0;
     intensity_per_dB  = (float)256 /(m_max_mag - m_min_mag);
-    spec_index_per_px = ((float)(MAX_F_HZ)/(float)m_modem_stats_max_f_hz)*(float)MODEM_STATS_NSPEC / (float)m_imgWidth;
 
     // Draw last line of blocks using latest amplitude data ------------------
     int baseRowWidthPixels = ((float)MODEM_STATS_NSPEC / (float)m_modem_stats_max_f_hz) * MAX_F_HZ;
-    unsigned char dyImageData[3 * /*dy * */baseRowWidthPixels];
+    unsigned char dyImageData[3 * baseRowWidthPixels];
     for(px = 0; px < baseRowWidthPixels; px++)
     {
-        index = px; // * spec_index_per_px;
+        index = px;
         assert(index < MODEM_STATS_NSPEC);
 
         intensity = intensity_per_dB * (g_avmag[index] - m_min_mag);
