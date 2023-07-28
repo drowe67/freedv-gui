@@ -358,10 +358,11 @@ void PlotWaterfall::plotPixelData()
     spec_index_per_px = ((float)(MAX_F_HZ)/(float)m_modem_stats_max_f_hz)*(float)MODEM_STATS_NSPEC / (float)m_imgWidth;
 
     // Draw last line of blocks using latest amplitude data ------------------
-    unsigned char dyImageData[3 * /*dy * */m_imgWidth];
-    for(px = 0; px < m_imgWidth; px++)
+    int baseRowWidthPixels = ((float)MODEM_STATS_NSPEC / (float)m_modem_stats_max_f_hz) * MAX_F_HZ;
+    unsigned char dyImageData[3 * /*dy * */baseRowWidthPixels];
+    for(px = 0; px < baseRowWidthPixels; px++)
     {
-        index = px * spec_index_per_px;
+        index = px; // * spec_index_per_px;
         assert(index < MODEM_STATS_NSPEC);
 
         intensity = intensity_per_dB * (g_avmag[index] - m_min_mag);
@@ -399,7 +400,7 @@ void PlotWaterfall::plotPixelData()
 
     if (dy > 0)
     {
-        wxImage* tmpImage = new wxImage(m_imgWidth, 1, (unsigned char*)&dyImageData, true);
+        wxImage* tmpImage = new wxImage(baseRowWidthPixels, 1, (unsigned char*)&dyImageData, true);
         wxBitmap* tmpBmp = new wxBitmap(*tmpImage);
         {
             wxMemoryDC fullBmpSourceDC(*m_fullBmp);
@@ -407,7 +408,7 @@ void PlotWaterfall::plotPixelData()
             wxMemoryDC tmpBmpSourceDC(*tmpBmp);
 
             fullBmpDestDC.Blit(0, dy, m_imgWidth, m_imgHeight - dy, &fullBmpSourceDC, 0, 0);
-            fullBmpDestDC.StretchBlit(0, 0, m_imgWidth, dy, &tmpBmpSourceDC, 0, 0, m_imgWidth, 1);
+            fullBmpDestDC.StretchBlit(0, 0, m_imgWidth, dy, &tmpBmpSourceDC, 0, 0, baseRowWidthPixels, 1);
         }
         delete tmpBmp; 
         delete tmpImage;
