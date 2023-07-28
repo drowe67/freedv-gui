@@ -321,7 +321,6 @@ void PlotWaterfall::plotPixelData()
     int         index;
     int         dy;
     int         px;
-    int         py;
     int         intensity;
 
     /*
@@ -359,41 +358,38 @@ void PlotWaterfall::plotPixelData()
     spec_index_per_px = ((float)(MAX_F_HZ)/(float)m_modem_stats_max_f_hz)*(float)MODEM_STATS_NSPEC / (float)m_imgWidth;
 
     // Draw last line of blocks using latest amplitude data ------------------
-    unsigned char dyImageData[3 * dy * m_imgWidth];
-    for(py = dy - 1; py >= 0; py--)
+    unsigned char dyImageData[3 * /*dy * */m_imgWidth];
+    for(px = 0; px < m_imgWidth; px++)
     {
-        for(px = 0; px < m_imgWidth; px++)
-        {
-            index = px * spec_index_per_px;
-            assert(index < MODEM_STATS_NSPEC);
+        index = px * spec_index_per_px;
+        assert(index < MODEM_STATS_NSPEC);
 
-            intensity = intensity_per_dB * (g_avmag[index] - m_min_mag);
-            if(intensity > 255) intensity = 255;
-            if (intensity < 0) intensity = 0;
+        intensity = intensity_per_dB * (g_avmag[index] - m_min_mag);
+        if(intensity > 255) intensity = 255;
+        if (intensity < 0) intensity = 0;
 
-            int pixelPos = (py * m_imgWidth * 3) + (px * 3);
+        int pixelPos = (px * 3);
             
-            switch (m_colour) {
-            case 0:
-                dyImageData[pixelPos] = m_heatmap_lut[intensity] & 0xff;
-                dyImageData[pixelPos + 1] = (m_heatmap_lut[intensity] >> 8) & 0xff;
-                dyImageData[pixelPos + 2] = (m_heatmap_lut[intensity] >> 16) & 0xff;
-                break;
-            case 1:
-                dyImageData[pixelPos] = intensity;
-                dyImageData[pixelPos + 1] = intensity;
-                dyImageData[pixelPos + 2] = intensity;       
-                break;
-            case 2:
-                dyImageData[pixelPos] = intensity;
-                dyImageData[pixelPos + 1] = intensity;
-                if (intensity < 127)
-                    dyImageData[pixelPos + 2] = intensity*2;
-                else
-                    dyImageData[pixelPos + 2] = 255;
-                        
-                break;
-            }
+        switch (m_colour) {
+        case 0:
+            dyImageData[pixelPos] = m_heatmap_lut[intensity] & 0xff;
+            dyImageData[pixelPos + 1] = (m_heatmap_lut[intensity] >> 8) & 0xff;
+            dyImageData[pixelPos + 2] = (m_heatmap_lut[intensity] >> 16) & 0xff;
+            break;
+        case 1:
+            dyImageData[pixelPos] = intensity;
+            dyImageData[pixelPos + 1] = intensity;
+            dyImageData[pixelPos + 2] = intensity;       
+            break;
+        case 2:
+            dyImageData[pixelPos] = intensity;
+            dyImageData[pixelPos + 1] = intensity;
+            if (intensity < 127)
+                dyImageData[pixelPos + 2] = intensity*2;
+            else
+                dyImageData[pixelPos + 2] = 255;
+                    
+            break;
         }
     }
     
@@ -403,7 +399,7 @@ void PlotWaterfall::plotPixelData()
 
     if (dy > 0)
     {
-        wxImage* tmpImage = new wxImage(m_imgWidth, dy, (unsigned char*)&dyImageData, true);
+        wxImage* tmpImage = new wxImage(m_imgWidth, 1, (unsigned char*)&dyImageData, true);
         wxBitmap* tmpBmp = new wxBitmap(*tmpImage);
         {
             wxMemoryDC fullBmpSourceDC(*m_fullBmp);
@@ -411,7 +407,7 @@ void PlotWaterfall::plotPixelData()
             wxMemoryDC tmpBmpSourceDC(*tmpBmp);
 
             fullBmpDestDC.Blit(0, dy, m_imgWidth, m_imgHeight - dy, &fullBmpSourceDC, 0, 0);
-            fullBmpDestDC.Blit(0, 0, m_imgWidth, dy, &tmpBmpSourceDC, 0, 0);
+            fullBmpDestDC.StretchBlit(0, 0, m_imgWidth, dy, &tmpBmpSourceDC, 0, 0, m_imgWidth, 1);
         }
         delete tmpBmp; 
         delete tmpImage;
