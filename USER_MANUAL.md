@@ -897,9 +897,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix various screen reader accessibility issues. (PR #481)
     * Use separate maximums for each slider type on the Filter dialog. (PR #485)
     * Fix minor UI issues with the Easy Setup dialog. (PR #484)
-2. Build system:
+2. Enhancements:
+    * Allow users to configure PTT port separately from CAT if Hamlib is enabled. (PR #488)
+3. Build system:
     * Update Codec2 to v1.2.0. (PR #483)
-3. Cleanup:
+4. Cleanup:
     * Remove 2400B mode from the UI. (PR #479)
 
 ## V1.8.12 July 2023
