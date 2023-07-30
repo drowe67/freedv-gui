@@ -610,6 +610,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         "3"
     };
     m_cbxNumSpectrumAveraging = new wxComboBox(spectrumPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 3, samplingChoices, wxCB_DROPDOWN | wxCB_READONLY);
+    m_cbxNumSpectrumAveraging->SetSelection(0);
     spectrumPanelControlSizer->Add(m_cbxNumSpectrumAveraging, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     wxStaticText* labelSamples = new wxStaticText(spectrumPanel, wxID_ANY, wxT("sample(s)"), wxDefaultPosition, wxDefaultSize, 0);
