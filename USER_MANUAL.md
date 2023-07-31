@@ -497,6 +497,10 @@ Noise Suppression | Enable noise suppression, dereverberation, AGC of mic signal
 
 Auto EQ (Automatic Equalisation) adjusts the input speech spectrum to best fit the speech codec. It can remove annoying bass artefacts and make the codec speech easier to understand.
 
+Bass/Mid/Treble (for both microphone and speaker) can also be adjusted here, either with the arrow keys or your
+mouse. A graph displaying the frequency response of the signal based on your current settings will display in
+this window as well.
+
 * [Blog Post on Auto EQ Part 1](http://www.rowetel.com/?p=6778)
 * [Blog Post on Auto EQ Part 2](http://www.rowetel.com/?p=6860)
 
@@ -891,11 +895,18 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * Fix bug preventing proper Options window sizing on Windows. (PR #478)
     * Fix various screen reader accessibility issues. (PR #481)
+    * Use separate maximums for each slider type on the Filter dialog. (PR #485)
     * Fix minor UI issues with the Easy Setup dialog. (PR #484)
-2. Enhancements:
+    * Adjust waterfall settings to better visualize 2 Hz fading. (PR #487)
+    * Fix issue causing the waterfall to not scroll at the expected rate. (PR #487)
+2. Enhancements
+    * Allow users to configure PTT port separately from CAT if Hamlib is enabled. (PR #488)
+    * Add ability to average spectrum plot across 1-3 samples. (PR #487)
+    * Adjust sizing of main page tabs for better readability. (PR #487)
     * Add ability to sign Windows binaries for official releases. (PR #486)
 3. Build system:
     * Update Codec2 to v1.2.0. (PR #483)
+    * Deprecate PortAudio support on Linux. (PR #489)
 4. Cleanup:
     * Remove 2400B mode from the UI. (PR #479)
 

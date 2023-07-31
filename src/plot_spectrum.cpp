@@ -54,6 +54,7 @@ PlotSpectrum::PlotSpectrum(wxWindow* parent, float *magdB, int n_magdB,
     m_newdata       = false;
     m_firstPass     = true;
     m_line_color    = 0;
+    m_numSampleAveraging = 1;
     SetLabelSize(10.0);
 
     m_magdB         = magdB;
@@ -62,6 +63,18 @@ PlotSpectrum::PlotSpectrum(wxWindow* parent, float *magdB, int n_magdB,
     m_min_mag_db    = min_mag_db;
     m_rxFreq        = 0.0;
     m_clickTune     = clickTune;
+    
+    m_prevMagDB = new float[n_magdB];
+    assert(m_prevMagDB != nullptr);
+    
+    m_nextPrevMagDB = new float[n_magdB];
+    assert(m_nextPrevMagDB != nullptr);
+    
+    for (int index = 0; index < n_magdB; index++)
+    {
+        m_prevMagDB[index] = 0;
+        m_nextPrevMagDB[index] = 0;
+    }
 }
 
 //----------------------------------------------------------------
@@ -69,6 +82,11 @@ PlotSpectrum::PlotSpectrum(wxWindow* parent, float *magdB, int n_magdB,
 //----------------------------------------------------------------
 PlotSpectrum::~PlotSpectrum()
 {
+    delete[] m_prevMagDB;
+    m_prevMagDB = nullptr;
+    
+    delete[] m_nextPrevMagDB;
+    m_nextPrevMagDB = nullptr;
 }
 
 //----------------------------------------------------------------
@@ -126,7 +144,26 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx)
     for(index = 0; index < m_n_magdB; index++)
     {
         x = index*index_to_px;
-        mag = m_magdB[index];
+
+        switch(m_numSampleAveraging)
+        {
+            case 1:
+                mag = m_magdB[index];
+                break;
+            case 2:
+                mag = (m_magdB[index] + m_prevMagDB[index]) / 2;
+                break;
+            case 3:
+                mag = (m_magdB[index] + m_prevMagDB[index] + m_nextPrevMagDB[index]) / 3;
+                break;
+            default:
+                assert(0);
+                break;
+        }
+        
+        m_nextPrevMagDB[index] = m_prevMagDB[index];
+        m_prevMagDB[index] = m_magdB[index];
+        
         if (mag > m_max_mag_db) mag = m_max_mag_db;
         if (mag < m_min_mag_db) mag = m_min_mag_db;
         y = -(mag - m_max_mag_db) * mag_dB_to_py;

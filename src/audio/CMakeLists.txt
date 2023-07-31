@@ -1,16 +1,16 @@
-if(USE_PULSEAUDIO)
+if(USE_PULSEAUDIO AND LINUX)
 set(AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES
     PulseAudioDevice.cpp
     PulseAudioEngine.cpp
     )
 
-else(USE_PULSEAUDIO)
+else(USE_PULSEAUDIO AND LINUX)
 set(AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES
     PortAudioDevice.cpp
     PortAudioEngine.cpp
     )
 
-endif(USE_PULSEAUDIO)
+endif(USE_PULSEAUDIO AND LINUX)
 
 add_library(fdv_audio STATIC
     AudioDeviceSpecification.cpp

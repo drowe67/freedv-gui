@@ -24,6 +24,9 @@
 #include "main.h"
 #include "osx_interface.h"
 
+// Tweak accordingly
+#define Y_PER_SECOND (30) 
+
 extern float g_avmag[];                 // av mag spec passed in to draw() 
 void clickTune(float frequency); // callback to pass new click freq
 
@@ -236,7 +239,7 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     int      x, y, text_w, text_h;
     char     buf[STR_LENGTH];
     wxString s;
-    float    f, time, freq_hz_to_px, time_s_to_py;
+    float    f, time, freq_hz_to_px;
 
     wxBrush ltGraphBkgBrush;
     wxColour foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
@@ -249,7 +252,6 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     ctx->SetFont(tmpFont);
     
     freq_hz_to_px = (float)m_imgWidth/(MAX_F_HZ-MIN_F_HZ);
-    time_s_to_py = (float)m_imgHeight/WATERFALL_SECS_Y;
 
     // upper LH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER)
     // lower RH coords of plot area are (PLOT_BORDER + XLEFT_OFFSET + m_rGrid.GetWidth(), 
@@ -257,8 +259,8 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
 
     // Check if small screen size means text will overlap
 
-    int textXStep = STEP_F_HZ*freq_hz_to_px;
-    int textYStep = WATERFALL_SECS_STEP*time_s_to_py;
+    int textXStep = STEP_F_HZ * freq_hz_to_px;
+    int textYStep = WATERFALL_SECS_STEP * Y_PER_SECOND;
     snprintf(buf, STR_LENGTH, "%4.0fHz", (float)MAX_F_HZ - STEP_F_HZ);
     GetTextExtent(buf, &text_w, &text_h);
     int overlappedText = (text_w > textXStep) || (text_h > textYStep);
@@ -290,10 +292,10 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     
     // Horizontal gridlines
     ctx->SetPen(m_penDotDash);
-    for(time=0; time<=WATERFALL_SECS_Y; time+=WATERFALL_SECS_STEP) {
-       y = m_rGrid.GetHeight() - (WATERFALL_SECS_Y - time)*time_s_to_py;
-       y += PLOT_BORDER + YBOTTOM_TEXT_OFFSET;
-
+    for(y = PLOT_BORDER + YBOTTOM_TEXT_OFFSET, time=0; 
+        y < m_rGrid.GetHeight(); 
+        time += WATERFALL_SECS_STEP, y += Y_PER_SECOND * WATERFALL_SECS_STEP) 
+    {
         if (m_graticule)
             ctx->StrokeLine(PLOT_BORDER + XLEFT_OFFSET, y, 
                         (m_rGrid.GetWidth() + PLOT_BORDER + XLEFT_OFFSET), y);
@@ -315,13 +317,11 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
 //-------------------------------------------------------------------------
 void PlotWaterfall::plotPixelData()
 {
-    float       spec_index_per_px;
     float       intensity_per_dB;
     float       px_per_sec;
     int         index;
     int         dy;
     int         px;
-    int         py;
     int         intensity;
 
     /*
@@ -336,7 +336,7 @@ void PlotWaterfall::plotPixelData()
     */
 
     // determine dy, the height of one "block"
-    px_per_sec = (float)m_imgHeight / WATERFALL_SECS_Y;
+    px_per_sec = Y_PER_SECOND;
     dy = m_dT * px_per_sec;
 
     // update min and max amplitude estimates
@@ -356,44 +356,41 @@ void PlotWaterfall::plotPixelData()
     m_max_mag = BETA*m_max_mag + (1 - BETA)*max_mag;
     m_min_mag = max_mag - 20.0;
     intensity_per_dB  = (float)256 /(m_max_mag - m_min_mag);
-    spec_index_per_px = ((float)(MAX_F_HZ)/(float)m_modem_stats_max_f_hz)*(float)MODEM_STATS_NSPEC / (float)m_imgWidth;
 
     // Draw last line of blocks using latest amplitude data ------------------
-    unsigned char dyImageData[3 * dy * m_imgWidth];
-    for(py = dy - 1; py >= 0; py--)
+    int baseRowWidthPixels = ((float)MODEM_STATS_NSPEC / (float)m_modem_stats_max_f_hz) * MAX_F_HZ;
+    unsigned char dyImageData[3 * baseRowWidthPixels];
+    for(px = 0; px < baseRowWidthPixels; px++)
     {
-        for(px = 0; px < m_imgWidth; px++)
-        {
-            index = px * spec_index_per_px;
-            assert(index < MODEM_STATS_NSPEC);
+        index = px;
+        assert(index < MODEM_STATS_NSPEC);
 
-            intensity = intensity_per_dB * (g_avmag[index] - m_min_mag);
-            if(intensity > 255) intensity = 255;
-            if (intensity < 0) intensity = 0;
+        intensity = intensity_per_dB * (g_avmag[index] - m_min_mag);
+        if(intensity > 255) intensity = 255;
+        if (intensity < 0) intensity = 0;
 
-            int pixelPos = (py * m_imgWidth * 3) + (px * 3);
+        int pixelPos = (px * 3);
             
-            switch (m_colour) {
-            case 0:
-                dyImageData[pixelPos] = m_heatmap_lut[intensity] & 0xff;
-                dyImageData[pixelPos + 1] = (m_heatmap_lut[intensity] >> 8) & 0xff;
-                dyImageData[pixelPos + 2] = (m_heatmap_lut[intensity] >> 16) & 0xff;
-                break;
-            case 1:
-                dyImageData[pixelPos] = intensity;
-                dyImageData[pixelPos + 1] = intensity;
-                dyImageData[pixelPos + 2] = intensity;       
-                break;
-            case 2:
-                dyImageData[pixelPos] = intensity;
-                dyImageData[pixelPos + 1] = intensity;
-                if (intensity < 127)
-                    dyImageData[pixelPos + 2] = intensity*2;
-                else
-                    dyImageData[pixelPos + 2] = 255;
-                        
-                break;
-            }
+        switch (m_colour) {
+        case 0:
+            dyImageData[pixelPos] = m_heatmap_lut[intensity] & 0xff;
+            dyImageData[pixelPos + 1] = (m_heatmap_lut[intensity] >> 8) & 0xff;
+            dyImageData[pixelPos + 2] = (m_heatmap_lut[intensity] >> 16) & 0xff;
+            break;
+        case 1:
+            dyImageData[pixelPos] = intensity;
+            dyImageData[pixelPos + 1] = intensity;
+            dyImageData[pixelPos + 2] = intensity;       
+            break;
+        case 2:
+            dyImageData[pixelPos] = intensity;
+            dyImageData[pixelPos + 1] = intensity;
+            if (intensity < 127)
+                dyImageData[pixelPos + 2] = intensity*2;
+            else
+                dyImageData[pixelPos + 2] = 255;
+                    
+            break;
         }
     }
     
@@ -403,7 +400,7 @@ void PlotWaterfall::plotPixelData()
 
     if (dy > 0)
     {
-        wxImage* tmpImage = new wxImage(m_imgWidth, dy, (unsigned char*)&dyImageData, true);
+        wxImage* tmpImage = new wxImage(baseRowWidthPixels, 1, (unsigned char*)&dyImageData, true);
         wxBitmap* tmpBmp = new wxBitmap(*tmpImage);
         {
             wxMemoryDC fullBmpSourceDC(*m_fullBmp);
@@ -411,7 +408,7 @@ void PlotWaterfall::plotPixelData()
             wxMemoryDC tmpBmpSourceDC(*tmpBmp);
 
             fullBmpDestDC.Blit(0, dy, m_imgWidth, m_imgHeight - dy, &fullBmpSourceDC, 0, 0);
-            fullBmpDestDC.Blit(0, 0, m_imgWidth, dy, &tmpBmpSourceDC, 0, 0);
+            fullBmpDestDC.StretchBlit(0, 0, m_imgWidth, dy, &tmpBmpSourceDC, 0, 0, baseRowWidthPixels, 1);
         }
         delete tmpBmp; 
         delete tmpImage;

@@ -57,6 +57,7 @@ class ComPortsDlg : public wxDialog
         wxCheckBox *m_ckUseHamlibPTT;
         wxComboBox *m_cbRigName;
         wxComboBox *m_cbSerialPort;
+        wxComboBox *m_cbPttSerialPort;
         wxComboBox *m_cbSerialRate;
         wxStaticText  *m_cbSerialParams;
         wxStaticText *m_stIcomCIVHex;
@@ -95,6 +96,8 @@ protected:
         void PTTUseSerialClicked(wxCommandEvent& event);
         void PTTUseSerialInputClicked(wxCommandEvent& event);
         void HamlibRigNameChanged(wxCommandEvent& event);
+        void OnHamlibSerialPortChanged(wxCommandEvent& event);
+        void OnHamlibPttMethodChanged(wxCommandEvent& event);
         void resetIcomCIVStatus();
         bool savePttSettings();
         
