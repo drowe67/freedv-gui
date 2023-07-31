@@ -279,7 +279,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     long nb_style = wxAUI_NB_BOTTOM | wxAUI_NB_TAB_SPLIT | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS;
     m_auiNbookCtrl = new TabFreeAuiNotebook(m_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, nb_style);
     // This line sets the fontsize for the tabs on the notebook control
-    m_auiNbookCtrl->SetFont(wxFont(8, 70, 90, 90, false, wxEmptyString));
     m_auiNbookCtrl->SetMinSize(wxSize(375,375));
 
     upperSizer->Add(m_auiNbookCtrl, 1, wxALIGN_TOP|wxEXPAND, 1);
