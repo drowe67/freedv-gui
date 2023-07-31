@@ -555,6 +555,7 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
             wxGetApp().m_intHamlibRig = m_cbRigName->GetSelection();
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort = m_cbSerialPort->GetValue();
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort = m_cbSerialPort->GetValue();
             
             wxString s = m_tcIcomCIVHex->GetValue();
             long hexAddress = 0;

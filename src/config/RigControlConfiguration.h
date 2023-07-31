@@ -39,6 +39,7 @@ public:
     ConfigurationDataElement<unsigned int> hamlibPTTType;
     ConfigurationDataElement<unsigned int> hamlibSerialRate;
     ConfigurationDataElement<wxString> hamlibSerialPort;
+    ConfigurationDataElement<wxString> hamlibPttSerialPort;
     
     ConfigurationDataElement<bool> useSerialPTT;
     ConfigurationDataElement<wxString> serialPTTPort;

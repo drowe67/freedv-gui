@@ -245,10 +245,16 @@ bool MainFrame::OpenHamlibRig() {
 
     int rig = wxGetApp().m_intHamlibRig;
     wxString port = wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort;
+    wxString pttPort = wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort;
+    auto pttType = (Hamlib::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get();
+    
     int serial_rate = wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate;
-    if (wxGetApp().CanAccessSerialPort((const char*)port.ToUTF8()))
+    if (wxGetApp().CanAccessSerialPort((const char*)port.ToUTF8()) && (
+        pttType == Hamlib::PTT_VIA_CAT || wxGetApp().CanAccessSerialPort((const char*)pttPort.ToUTF8())))
     {
-        bool status = wxGetApp().m_hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress, (Hamlib::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get());
+        bool status = wxGetApp().m_hamlib->connect(
+            rig, port.mb_str(wxConvUTF8), serial_rate, wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress, 
+            pttType, pttType == Hamlib::PTT_VIA_CAT ? port.mb_str(wxConvUTF8) : pttPort.mb_str(wxConvUTF8));
         if (status == false)
         {
             wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
