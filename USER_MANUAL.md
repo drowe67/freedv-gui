@@ -899,6 +899,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix minor UI issues with the Easy Setup dialog. (PR #484)
 2. Build system:
     * Update Codec2 to v1.2.0. (PR #483)
+    * Deprecate PortAudio support on Linux. (PR #489)
 3. Cleanup:
     * Remove 2400B mode from the UI. (PR #479)
 
