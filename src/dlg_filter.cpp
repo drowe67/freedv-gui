@@ -22,7 +22,11 @@
 #include "dlg_filter.h"
 #include "gui/util/LabelOverrideAccessible.h"
 
-#define SLIDER_MAX 100
+#define SLIDER_MAX_FREQ_BASS 600
+#define SLIDER_MAX_FREQ 3900
+#define SLIDER_MAX_GAIN 400
+#define SLIDER_MAX_Q 100
+#define SLIDER_MAX_BETA_GAMMA 100
 #define SLIDER_LENGTH 100
 
 #define FILTER_MIN_MAG_DB -20.0
@@ -124,16 +128,16 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     eqMicInSizerEnable->Add(m_MicInDefault,0,wxALIGN_CENTRE_VERTICAL,20);
     eqMicInSizer->Add(eqMicInSizerEnable,0,wxEXPAND);
     
-    m_MicInVol    = newEQ(panelMicInEqualizer, eqMicInSizerVol, "Vol", MAX_FREQ_TREBLE, disableQ, disableFreq);
+    m_MicInVol    = newEQ(panelMicInEqualizer, eqMicInSizerVol, "Vol", MAX_FREQ_TREBLE, disableQ, disableFreq, SLIDER_MAX_FREQ);
     eqMicInSizerSliders->Add(eqMicInSizerVol, 1, wxALL, 7);
     
-    m_MicInBass   = newEQ(panelMicInEqualizer, eqMicInSizerBass, "Bass", MAX_FREQ_BASS, disableQ, enableFreq);
+    m_MicInBass   = newEQ(panelMicInEqualizer, eqMicInSizerBass, "Bass", MAX_FREQ_BASS, disableQ, enableFreq, SLIDER_MAX_FREQ_BASS);
     eqMicInSizerSliders->Add(eqMicInSizerBass, 1, wxALL, 7);
     
-    m_MicInMid    = newEQ(panelMicInEqualizer, eqMicInSizerMid, "Mid", MAX_FREQ_DEF, enableQ, enableFreq);
+    m_MicInMid    = newEQ(panelMicInEqualizer, eqMicInSizerMid, "Mid", MAX_FREQ_DEF, enableQ, enableFreq, SLIDER_MAX_FREQ);
     eqMicInSizerSliders->Add(eqMicInSizerMid, 1, wxALL, 7);
         
-    m_MicInTreble = newEQ(panelMicInEqualizer, eqMicInSizerTreble, "Treble", MAX_FREQ_TREBLE, disableQ, enableFreq);
+    m_MicInTreble = newEQ(panelMicInEqualizer, eqMicInSizerTreble, "Treble", MAX_FREQ_TREBLE, disableQ, enableFreq, SLIDER_MAX_FREQ);
     eqMicInSizerSliders->Add(eqMicInSizerTreble, 1, wxALL, 7);
 
     eqMicInSizer->Add(eqMicInSizerSliders, 0, wxEXPAND, 0);
@@ -152,16 +156,16 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     eqSpkOutSizerEnable->Add(m_SpkOutDefault,0,wxALIGN_CENTRE_VERTICAL,20);
     eqSpkOutSizer->Add(eqSpkOutSizerEnable,0,wxEXPAND);
     
-    m_SpkOutVol    = newEQ(panelSpkOutEqualizer, eqSpkOutSizerVol, "Vol", MAX_FREQ_TREBLE, disableQ, disableFreq);
+    m_SpkOutVol    = newEQ(panelSpkOutEqualizer, eqSpkOutSizerVol, "Vol", MAX_FREQ_TREBLE, disableQ, disableFreq, SLIDER_MAX_FREQ);
     eqSpkOutSizerSliders->Add(eqSpkOutSizerVol, 1, wxALL, 7);
     
-    m_SpkOutBass   = newEQ(panelSpkOutEqualizer, eqSpkOutSizerBass, "Bass"  , MAX_FREQ_BASS, disableQ, enableFreq);
+    m_SpkOutBass   = newEQ(panelSpkOutEqualizer, eqSpkOutSizerBass, "Bass"  , MAX_FREQ_BASS, disableQ, enableFreq, SLIDER_MAX_FREQ_BASS);
     eqSpkOutSizerSliders->Add(eqSpkOutSizerBass, 1, wxALL, 7);
     
-    m_SpkOutMid    = newEQ(panelSpkOutEqualizer, eqSpkOutSizerMid, "Mid"   , MAX_FREQ_DEF, enableQ, enableFreq);
+    m_SpkOutMid    = newEQ(panelSpkOutEqualizer, eqSpkOutSizerMid, "Mid"   , MAX_FREQ_DEF, enableQ, enableFreq, SLIDER_MAX_FREQ);
     eqSpkOutSizerSliders->Add(eqSpkOutSizerMid, 1, wxALL, 7);
         
-    m_SpkOutTreble = newEQ(panelSpkOutEqualizer, eqSpkOutSizerTreble, "Treble", MAX_FREQ_TREBLE, disableQ, enableFreq);
+    m_SpkOutTreble = newEQ(panelSpkOutEqualizer, eqSpkOutSizerTreble, "Treble", MAX_FREQ_TREBLE, disableQ, enableFreq, SLIDER_MAX_FREQ);
     eqSpkOutSizerSliders->Add(eqSpkOutSizerTreble, 1, wxALL, 7);
 
     eqSpkOutSizer->Add(eqSpkOutSizerSliders, 0, wxEXPAND, 0);
@@ -321,7 +325,7 @@ void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWin
     wxStaticText* st = new wxStaticText(parent, wxID_ANY, controlName, wxDefaultPosition, wxSize(70,-1), wxALIGN_RIGHT);
     bs->Add(st, 0, wxALIGN_CENTER_VERTICAL|wxALL, 2);
 
-    *slider = new wxSlider(parent, wxID_ANY, 0, 0, SLIDER_MAX, wxDefaultPosition); 
+    *slider = new wxSlider(parent, wxID_ANY, 0, 0, SLIDER_MAX_BETA_GAMMA, wxDefaultPosition); 
     (*slider)->SetMinSize(wxSize(SLIDER_LENGTH,wxDefaultCoord));
 
     bs->Add(*slider, 0, wxALL|wxEXPAND, 2);
@@ -339,19 +343,19 @@ void FilterDlg::newLPCPFControl(wxSlider **slider, wxStaticText **stValue, wxWin
 #endif // wxUSE_ACCESSIBILITY
 }
 
-void FilterDlg::newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString controlName)
+void FilterDlg::newEQControl(wxWindow* parent, wxSlider** slider, wxStaticText** value, wxSizer *sizer, wxString controlName, int max)
 {
     wxStaticText* label = new wxStaticText(parent, wxID_ANY, controlName, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
     sizer->Add(label, 0, wxALIGN_CENTER|wxALL, 0);
 
-    *slider = new wxSlider(parent, wxID_ANY, 0, 0, SLIDER_MAX, wxDefaultPosition, wxSize(wxDefaultCoord,SLIDER_LENGTH), wxSL_VERTICAL|wxSL_INVERSE|wxALIGN_CENTER);
+    *slider = new wxSlider(parent, wxID_ANY, 0, 0, max, wxDefaultPosition, wxSize(wxDefaultCoord,SLIDER_LENGTH), wxSL_VERTICAL|wxSL_INVERSE|wxALIGN_CENTER);
     sizer->Add(*slider, 1, wxALIGN_CENTER|wxALL, 0);
 
     *value = new wxStaticText(parent, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(40,-1), wxALIGN_CENTER);
     sizer->Add(*value, 0, wxALIGN_CENTER, 5);
 }
 
-EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFreqHz, bool enableQ, bool enableFreq)
+EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFreqHz, bool enableQ, bool enableFreq, int maxSliderFreq)
 {
     EQ eq;
 
@@ -361,7 +365,7 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
     if (enableFreq)
     {
         wxSizer* sizerFreq = new wxBoxSizer(wxVERTICAL);
-        newEQControl(parent, &eq.sliderFreq, &eq.valueFreq, sizerFreq, "Freq");
+        newEQControl(parent, &eq.sliderFreq, &eq.valueFreq, sizerFreq, "Freq", maxSliderFreq);
         bsEQ->Add(sizerFreq, 1, wxEXPAND);
         eq.maxFreqHz = maxFreqHz;
         eq.sliderFreqId = eq.sliderFreq->GetId();
@@ -379,7 +383,7 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
     }
     
     wxSizer* sizerGain = new wxBoxSizer(wxVERTICAL);
-    newEQControl(parent, &eq.sliderGain, &eq.valueGain, sizerGain, "Gain");
+    newEQControl(parent, &eq.sliderGain, &eq.valueGain, sizerGain, "Gain", SLIDER_MAX_GAIN);
     bsEQ->Add(sizerGain, 1, wxEXPAND);
     
 #if wxUSE_ACCESSIBILITY
@@ -392,7 +396,7 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
     if (enableQ)
     {
         wxSizer* sizerQ = new wxBoxSizer(wxVERTICAL);
-        newEQControl(parent, &eq.sliderQ, &eq.valueQ, sizerQ, "Q");
+        newEQControl(parent, &eq.sliderQ, &eq.valueQ, sizerQ, "Q", SLIDER_MAX_Q);
         bsEQ->Add(sizerQ, 1, wxEXPAND);
 
 #if wxUSE_ACCESSIBILITY
@@ -645,7 +649,7 @@ void FilterDlg::setBeta(void) {
     wxString buf;
     buf.Printf(wxT("%3.2f"), m_beta);
     m_staticTextBeta->SetLabel(buf);
-    int slider = (int)(m_beta*SLIDER_MAX + 0.5);
+    int slider = (int)(m_beta*SLIDER_MAX_BETA_GAMMA + 0.5);
     m_codec2LPCPostFilterBeta->SetValue(slider);
 }
 
@@ -663,7 +667,7 @@ void FilterDlg::setGamma(void) {
     wxString buf;
     buf.Printf(wxT("%3.2f"), m_gamma);
     m_staticTextGamma->SetLabel(buf);
-    int slider = (int)(m_gamma*SLIDER_MAX + 0.5);
+    int slider = (int)(m_gamma*SLIDER_MAX_BETA_GAMMA + 0.5);
     m_codec2LPCPostFilterGamma->SetValue(slider);
 }
 
@@ -678,13 +682,13 @@ void FilterDlg::OnBassBoost(wxScrollEvent& event) {
 }
 
 void FilterDlg::OnBetaScroll(wxScrollEvent& event) {
-    m_beta = (float)m_codec2LPCPostFilterBeta->GetValue()/SLIDER_MAX;
+    m_beta = (float)m_codec2LPCPostFilterBeta->GetValue()/SLIDER_MAX_BETA_GAMMA;
     setBeta();
     setCodec2();
 }
 
 void FilterDlg::OnGammaScroll(wxScrollEvent& event) {
-    m_gamma = (float)m_codec2LPCPostFilterGamma->GetValue()/SLIDER_MAX;
+    m_gamma = (float)m_codec2LPCPostFilterGamma->GetValue()/SLIDER_MAX_BETA_GAMMA;
     setGamma();
     setCodec2();
 }
@@ -755,13 +759,13 @@ void FilterDlg::setFreq(EQ *eq)
     wxString buf;
     buf.Printf(wxT("%3.0f"), eq->freqHz);
     eq->valueFreq->SetLabel(buf);
-    int slider = (int)((eq->freqHz/eq->maxFreqHz)*SLIDER_MAX + 0.5);
+    int slider = (int)((eq->freqHz/eq->maxFreqHz)*eq->sliderFreq->GetMax() + 0.5);
     eq->sliderFreq->SetValue(slider);
 }
 
 void FilterDlg::sliderToFreq(EQ *eq, bool micIn)
 {
-    eq->freqHz = ((float)eq->sliderFreq->GetValue()/SLIDER_MAX)*eq->maxFreqHz;
+    eq->freqHz = ((float)eq->sliderFreq->GetValue()/eq->sliderFreq->GetMax())*eq->maxFreqHz;
     if (eq->freqHz < 1.0) eq->freqHz = 1.0; // sox doesn't like 0 Hz;
     setFreq(eq);
     if (micIn) {
@@ -779,7 +783,7 @@ void FilterDlg::setGain(EQ *eq)
     wxString buf;
     buf.Printf(wxT("%3.1f"), eq->gaindB);
     eq->valueGain->SetLabel(buf);
-    int slider = (int)(((eq->gaindB-MIN_GAIN)/(MAX_GAIN-MIN_GAIN))*SLIDER_MAX + 0.5);
+    int slider = (int)(((eq->gaindB-MIN_GAIN)/(MAX_GAIN-MIN_GAIN))*SLIDER_MAX_GAIN + 0.5);
     eq->sliderGain->SetValue(slider);
 }
 
@@ -787,7 +791,7 @@ void FilterDlg::sliderToGain(EQ *eq, bool micIn)
 {
     float range = MAX_GAIN-MIN_GAIN;
 
-    eq->gaindB = MIN_GAIN + range*((float)eq->sliderGain->GetValue()/SLIDER_MAX);
+    eq->gaindB = MIN_GAIN + range*((float)eq->sliderGain->GetValue()/SLIDER_MAX_GAIN);
     //printf("gaindB: %f\n", eq->gaindB);
     setGain(eq);
     if (micIn) {
@@ -809,7 +813,7 @@ void FilterDlg::setQ(EQ *eq)
 
     float log10_range = MAX_LOG10_Q - MIN_LOG10_Q;
 
-    int slider = (int)(((log10(eq->Q+1E-6)-MIN_LOG10_Q)/log10_range)*SLIDER_MAX + 0.5);
+    int slider = (int)(((log10(eq->Q+1E-6)-MIN_LOG10_Q)/log10_range)*SLIDER_MAX_Q + 0.5);
     eq->sliderQ->SetValue(slider);
 }
 
@@ -817,7 +821,7 @@ void FilterDlg::sliderToQ(EQ *eq, bool micIn)
 {
     float log10_range = MAX_LOG10_Q - MIN_LOG10_Q;
 
-    float sliderNorm = (float)eq->sliderQ->GetValue()/SLIDER_MAX;
+    float sliderNorm = (float)eq->sliderQ->GetValue()/SLIDER_MAX_Q;
     float log10Q =  MIN_LOG10_Q + sliderNorm*(log10_range);
     eq->Q = pow(10.0, log10Q);
     //printf("log10Q: %f eq->Q: %f\n", log10Q, eq->Q);

@@ -59,7 +59,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
 
     wxStaticBox* hamlibBox = new wxStaticBox(panel, wxID_ANY, _("Hamlib Settings"));
     wxStaticBoxSizer* staticBoxSizer18 = new wxStaticBoxSizer( hamlibBox, wxHORIZONTAL);
-    wxGridSizer* gridSizerhl = new wxGridSizer(7, 2, 0, 0);
+    wxGridSizer* gridSizerhl = new wxGridSizer(8, 2, 0, 0);
     staticBoxSizer18->Add(gridSizerhl, 1, wxEXPAND|wxALIGN_LEFT, 5);
 
     /* Use Hamlib for PTT checkbox. */
@@ -108,6 +108,14 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     m_cbPttMethod = new wxComboBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
     m_cbPttMethod->SetSize(wxSize(140, -1));
     gridSizerhl->Add(m_cbPttMethod, 0, wxALIGN_CENTER_VERTICAL, 0);
+    
+    /* Hamlib PTT serial port combobox */
+    
+    gridSizerhl->Add(new wxStaticText(hamlibBox, wxID_ANY, _("PTT Serial Device:"), wxDefaultPosition, wxDefaultSize, 0), 
+                      0, wxALIGN_CENTER_VERTICAL |  wxALIGN_RIGHT, 20);
+    m_cbPttSerialPort = new wxComboBox(hamlibBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN);
+    m_cbPttSerialPort->SetMinSize(wxSize(140, -1));
+    gridSizerhl->Add(m_cbPttSerialPort, 0, wxEXPAND, 0);
     
     // Add valid PTT options to combo box.
     m_cbPttMethod->Append(wxT("CAT"));
@@ -244,6 +252,9 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     m_buttonCancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnCancel), NULL, this);
     m_buttonApply->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnApply), NULL, this);
     m_buttonTest->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnTest), NULL, this);
+    
+    m_cbSerialPort->Connect(wxEVT_TEXT, wxCommandEventHandler(ComPortsDlg::OnHamlibSerialPortChanged), NULL, this);
+    m_cbPttMethod->Connect(wxEVT_TEXT, wxCommandEventHandler(ComPortsDlg::OnHamlibPttMethodChanged), NULL, this);
 }
 
 //-------------------------------------------------------------------------
@@ -261,6 +272,8 @@ ComPortsDlg::~ComPortsDlg()
     m_buttonCancel->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnCancel), NULL, this);
     m_buttonApply->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnApply), NULL, this);
     m_buttonTest->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnTest), NULL, this);
+    m_cbSerialPort->Disconnect(wxEVT_TEXT, wxCommandEventHandler(ComPortsDlg::OnHamlibSerialPortChanged), NULL, this);
+    m_cbPttMethod->Disconnect(wxEVT_TEXT, wxCommandEventHandler(ComPortsDlg::OnHamlibPttMethodChanged), NULL, this);
 }
 
 //-------------------------------------------------------------------------
@@ -421,6 +434,7 @@ void ComPortsDlg::populatePortList()
     {
         m_cbCtlDevicePath->Append(port);
         m_cbSerialPort->Append(port);
+        m_cbPttSerialPort->Append(port);
         m_cbCtlDevicePathPttIn->Append(port);
     }
 }
@@ -441,6 +455,7 @@ void ComPortsDlg::ExchangeData(int inout)
         m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
         resetIcomCIVStatus();
         m_cbSerialPort->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort);
+        m_cbPttSerialPort->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort);
 
         if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate == 0) {
             m_cbSerialRate->SetSelection(0);
@@ -482,6 +497,7 @@ void ComPortsDlg::ExchangeData(int inout)
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
         
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort = m_cbSerialPort->GetValue();
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort = m_cbPttSerialPort->GetValue();
         
         wxString s = m_tcIcomCIVHex->GetValue();
         long hexAddress = 0;
@@ -546,6 +562,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
 
         int rig = m_cbRigName->GetSelection();
         wxString port = m_cbSerialPort->GetValue();
+        wxString pttPort = m_cbPttSerialPort->GetValue();
         wxString s = m_cbSerialRate->GetValue();
         int serial_rate;
         if (s == "default") {
@@ -570,7 +587,9 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
         {
             // try to open rig
             Hamlib *hamlib = wxGetApp().m_hamlib; 
-            bool status = hamlib->connect(rig, port.mb_str(wxConvUTF8), serial_rate, hexAddress, pttType);
+            bool status = hamlib->connect(
+                rig, port.mb_str(wxConvUTF8), serial_rate, hexAddress, pttType,
+                (pttType == Hamlib::PTT_VIA_CAT) ? port.mb_str(wxConvUTF8) : pttPort.mb_str(wxConvUTF8) );
             if (status == false) {
                 wxMessageBox("Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
                 wxT("Error"), wxOK | wxICON_ERROR, this);
@@ -728,6 +747,7 @@ void ComPortsDlg::updateControlState()
     m_cbSerialRate->Enable(m_ckUseHamlibPTT->GetValue());
     m_tcIcomCIVHex->Enable(m_ckUseHamlibPTT->GetValue());
     m_cbPttMethod->Enable(m_ckUseHamlibPTT->GetValue());
+    m_cbPttSerialPort->Enable(m_ckUseHamlibPTT->GetValue());
 
     m_cbCtlDevicePath->Enable(m_ckUseSerialPTT->GetValue());
     m_rbUseDTR->Enable(m_ckUseSerialPTT->GetValue());
@@ -739,4 +759,23 @@ void ComPortsDlg::updateControlState()
     m_ckCTSPos->Enable(m_ckUsePTTInput->GetValue());
     
     m_buttonTest->Enable(m_ckUseHamlibPTT->GetValue() || m_ckUseSerialPTT->GetValue());    
+    
+    if (m_cbPttMethod->GetValue() == _("CAT"))
+    {
+        m_cbPttSerialPort->Enable(false);
+    }
+}
+
+void ComPortsDlg::OnHamlibSerialPortChanged(wxCommandEvent& event)
+{
+    if (m_cbPttMethod->GetValue() == _("CAT"))
+    {
+        // Make sure PTT serial port matches CAT port
+        m_cbPttSerialPort->SetValue(m_cbSerialPort->GetValue());
+    }
+}
+
+void ComPortsDlg::OnHamlibPttMethodChanged(wxCommandEvent& event)
+{
+    updateControlState();
 }

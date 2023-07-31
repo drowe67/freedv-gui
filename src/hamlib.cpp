@@ -141,7 +141,7 @@ void Hamlib::suppressFrequencyModeUpdates(bool suppress)
     updatesSuppressed_ = suppress;
 }
 
-bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int serial_rate, const int civ_hex, const PttType pttType) {
+bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int serial_rate, const int civ_hex, const PttType pttType, const char *pttSerialPort) {
     m_origFreq = 0;
     m_origMode = RIG_MODE_USB;
 
@@ -189,6 +189,11 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
 
     rig_set_conf(m_rig, rig_token_lookup(m_rig, "rig_pathname"), serial_port);
 
+    if (pttSerialPort != nullptr)
+    {
+        rig_set_conf(m_rig, rig_token_lookup(m_rig, "ptt_pathname"), pttSerialPort);
+    }
+    
     if (serial_rate) {
         if (g_verbose) fprintf(stderr, "hamlib: setting serial rate: %d\n", serial_rate);
         std::stringstream ss;

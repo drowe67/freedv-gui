@@ -587,10 +587,39 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_auiNbookCtrl->AddPage(m_panelWaterfall, _("Waterfall"), true, wxNullBitmap);
 
     // Add Spectrum Plot window
-    m_panelSpectrum = new PlotSpectrum((wxFrame*) m_auiNbookCtrl, g_avmag,
+    wxPanel* spectrumPanel = new wxPanel(m_auiNbookCtrl);
+    
+    wxFlexGridSizer* spectrumPanelSizer = new wxFlexGridSizer(2, 1, 5, 5);
+    wxBoxSizer* spectrumPanelControlSizer = new wxBoxSizer(wxHORIZONTAL);
+    spectrumPanelSizer->AddGrowableRow(0);
+    spectrumPanelSizer->AddGrowableCol(0);
+    
+    // Actual Spectrum plot
+    m_panelSpectrum = new PlotSpectrum(spectrumPanel, g_avmag,
                                        MODEM_STATS_NSPEC*((float)MAX_F_HZ/MODEM_STATS_MAX_F_HZ));
     m_panelSpectrum->SetToolTip(_("Double-click to tune"));
-    m_auiNbookCtrl->AddPage(m_panelSpectrum, _("Spectrum"), true, wxNullBitmap);
+    spectrumPanelSizer->Add(m_panelSpectrum, 0, wxALL | wxEXPAND, 5);
+    
+    // Spectrum plot control interface
+    wxStaticText* labelAveraging = new wxStaticText(spectrumPanel, wxID_ANY, wxT("Average across"), wxDefaultPosition, wxDefaultSize, 0);
+    spectrumPanelControlSizer->Add(labelAveraging, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    wxString samplingChoices[] = {
+        "1",
+        "2",
+        "3"
+    };
+    m_cbxNumSpectrumAveraging = new wxComboBox(spectrumPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 3, samplingChoices, wxCB_DROPDOWN | wxCB_READONLY);
+    m_cbxNumSpectrumAveraging->SetSelection(0);
+    spectrumPanelControlSizer->Add(m_cbxNumSpectrumAveraging, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    wxStaticText* labelSamples = new wxStaticText(spectrumPanel, wxID_ANY, wxT("sample(s)"), wxDefaultPosition, wxDefaultSize, 0);
+    spectrumPanelControlSizer->Add(labelSamples, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    spectrumPanelSizer->Add(spectrumPanelControlSizer, 0, wxALL | wxEXPAND, 5);
+    spectrumPanel->SetSizerAndFit(spectrumPanelSizer);
+    
+    m_auiNbookCtrl->AddPage(spectrumPanel, _("Spectrum"), true, wxNullBitmap);
 
     // Add Scatter Plot window
     m_panelScatter = new PlotScatter((wxFrame*) m_auiNbookCtrl);
@@ -941,6 +970,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
 
         m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+        
+        // Note: each element in this combo box is a numeric value starting from 1,
+        // so just incrementing the selected index should get us the correct results.
+        m_panelSpectrum->setNumAveraging(m_cbxNumSpectrumAveraging->GetSelection() + 1);
+        
         m_panelSpectrum->m_newdata = true;
         m_panelSpectrum->Refresh();
 

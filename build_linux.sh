@@ -10,7 +10,7 @@ set -x -e
 UT_ENABLE=${UT_ENABLE:-0}
 
 # Allow building of either PulseAudio or PortAudio variants
-FREEDV_VARIANT=${1:-portaudio}
+FREEDV_VARIANT=${1:-pulseaudio}
 if [[ "$FREEDV_VARIANT" != "portaudio" && "$FREEDV_VARIANT" != "pulseaudio" ]]; then
     echo "Usage: build_linux.sh [portaudio|pulseaudio]"
     exit -1
@@ -56,6 +56,8 @@ fi
 mkdir  -p build_linux && cd build_linux && rm -Rf *
 if [[ "$FREEDV_VARIANT" == "pulseaudio" ]]; then
     PULSEAUDIO_PARAM="-DUSE_PULSEAUDIO=1"
+else
+    PULSEAUDIO_PARAM="-DUSE_PULSEAUDIO=0"
 fi
 cmake $PULSEAUDIO_PARAM -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux -DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux ..
 make VERBOSE=1
