@@ -134,7 +134,7 @@ set(USE_STATIC_SPEEXDSP FALSE CACHE BOOL
     "Download and build static speex instead of the system library.")
 set(BOOTSTRAP_WXWIDGETS FALSE CACHE BOOL
     "Download and build static wxWidgets instead of the system library.")
-set(USE_PULSEAUDIO FALSE CACHE BOOL
+set(USE_PULSEAUDIO TRUE CACHE BOOL
     "Use PulseAudio instead of PortAudio for audio I/O.")
 
 if(USE_STATIC_DEPS)
@@ -326,6 +326,9 @@ else(CODEC2_BUILD_DIR)
     endif()
 endif(CODEC2_BUILD_DIR)
 
+if (NOT USE_PULSEAUDIO AND LINUX)
+    message(WARNING "Use of PortAudio on Linux has been deprecated and may be explicitly disallowed in a future release. It is highly recommended that you use FreeDV's built-in PulseAudio support instead as this generally gives better results, especially on distributions that now use pipewire for audio.")
+endif(NOT USE_PULSEAUDIO AND LINUX)
 
 #
 # Find or build portaudio/PulseAudio Library
@@ -353,7 +356,7 @@ On Windows it's easiest to use the cmake option: USE_STATIC_PORTAUDIO"
     if(NOT ${PORTAUDIO_VERSION} EQUAL 19 AND NOT MINGW)
         message(WARNING "Portaudio versions other than 19 are known to have issues. You have been warned!")
     endif()
-elseif(USE_PULSEAUDIO)
+elseif(USE_PULSEAUDIO AND LINUX)
     message(STATUS "Finding PulseAudio...")
     find_package(PulseAudio REQUIRED)
     if(PULSEAUDIO_FOUND)
