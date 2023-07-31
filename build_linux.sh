@@ -10,7 +10,7 @@ set -x -e
 UT_ENABLE=${UT_ENABLE:-0}
 
 # Allow building of either PulseAudio or PortAudio variants
-FREEDV_VARIANT=${1:-portaudio}
+FREEDV_VARIANT=${1:-pulseaudio}
 if [[ "$FREEDV_VARIANT" != "portaudio" && "$FREEDV_VARIANT" != "pulseaudio" ]]; then
     echo "Usage: build_linux.sh [portaudio|pulseaudio]"
     exit -1
