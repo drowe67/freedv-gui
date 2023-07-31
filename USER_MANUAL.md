@@ -900,6 +900,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Adjust waterfall settings to better visualize 2 Hz fading. (PR #487)
     * Fix issue causing the waterfall to not scroll at the expected rate. (PR #487)
 2. Enhancements
+    * Allow users to configure PTT port separately from CAT if Hamlib is enabled. (PR #488)
     * Add ability to average spectrum plot across 1-3 samples. (PR #487)
     * Adjust sizing of main page tabs for better readability. (PR #487)
 3. Build system:

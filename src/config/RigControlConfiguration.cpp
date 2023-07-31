@@ -30,6 +30,7 @@ RigControlConfiguration::RigControlConfiguration()
     , hamlibPTTType("/Hamlib/PttType", 0)
     , hamlibSerialRate("/Hamlib/SerialRate", 0)
     , hamlibSerialPort("/Hamlib/SerialPort", "")
+    , hamlibPttSerialPort("/Hamlib/PttSerialPort", "")
         
     , useSerialPTT("/Rig/UseSerialPTT", false)
     , serialPTTPort("/Rig/Port", "")
@@ -58,6 +59,12 @@ void RigControlConfiguration::load(wxConfigBase* config)
     load_(config, hamlibSerialRate);
     load_(config, hamlibSerialPort);
     
+    // By default, the PTT serial port should be the same as the 
+    // regular serial port.
+    auto tmp = hamlibSerialPort.getWithoutProcessing();
+    hamlibPttSerialPort.setDefaultVal(tmp);
+    load_(config, hamlibPttSerialPort);
+    
     load_(config, useSerialPTT);
     load_(config, serialPTTPort);
     load_(config, serialPTTUseRTS);
@@ -82,6 +89,7 @@ void RigControlConfiguration::save(wxConfigBase* config)
     save_(config, hamlibPTTType);
     save_(config, hamlibSerialRate);
     save_(config, hamlibSerialPort);
+    save_(config, hamlibPttSerialPort);
     
     save_(config, useSerialPTT);
     save_(config, serialPTTPort);
