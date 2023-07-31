@@ -287,6 +287,7 @@ class MainFrame : public TopFrame
         PlotScalar*             m_panelDemodIn;
         PlotScalar*             m_panelTestFrameErrors;
         PlotScalar*             m_panelTestFrameErrorsHist;
+        wxComboBox*             m_cbxNumSpectrumAveraging;
 
         bool                    m_RxRunning;
 

@@ -36,6 +36,8 @@ class PlotSpectrum : public PlotPanel
         void setRxFreq(float rxFreq) { m_rxFreq = rxFreq; }
         void setFreqScale(int n_magdB) { m_n_magdB = n_magdB; }
 
+        void setNumAveraging(int n) { m_numSampleAveraging = n; }
+        
     protected:
         void        OnSize(wxSizeEvent& event);
         void        OnShow(wxShowEvent& event);
@@ -49,8 +51,11 @@ class PlotSpectrum : public PlotPanel
         float       m_max_mag_db;
         float       m_min_mag_db;
         float      *m_magdB;
+        float      *m_prevMagDB;
+        float      *m_nextPrevMagDB;
         int         m_n_magdB;  
         bool        m_clickTune;
+        int         m_numSampleAveraging;
 
         void        OnDoubleClickCommon(wxMouseEvent& event);
         
