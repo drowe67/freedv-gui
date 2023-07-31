@@ -56,6 +56,8 @@ fi
 mkdir  -p build_linux && cd build_linux && rm -Rf *
 if [[ "$FREEDV_VARIANT" == "pulseaudio" ]]; then
     PULSEAUDIO_PARAM="-DUSE_PULSEAUDIO=1"
+else
+    PULSEAUDIO_PARAM="-DUSE_PULSEAUDIO=0"
 fi
 cmake $PULSEAUDIO_PARAM -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux -DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux ..
 make VERBOSE=1

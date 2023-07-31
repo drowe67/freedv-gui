@@ -327,11 +327,7 @@ else(CODEC2_BUILD_DIR)
 endif(CODEC2_BUILD_DIR)
 
 if (NOT USE_PULSEAUDIO AND LINUX)
-    message(WARNING "
-Use of PortAudio on Linux has been deprecated and may be explicitly disallowed in a future
-release. It is highly recommended that you use FreeDV's built-in PulseAudio support instead 
-as this generally gives better results, especially on distributions that now use pipewire 
-for audio.")
+    message(WARNING "Use of PortAudio on Linux has been deprecated and may be explicitly disallowed in a future release. It is highly recommended that you use FreeDV's built-in PulseAudio support instead as this generally gives better results, especially on distributions that now use pipewire for audio.")
 endif(NOT USE_PULSEAUDIO AND LINUX)
 
 #
