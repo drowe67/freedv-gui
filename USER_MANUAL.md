@@ -903,6 +903,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Allow users to configure PTT port separately from CAT if Hamlib is enabled. (PR #488)
     * Add ability to average spectrum plot across 1-3 samples. (PR #487)
     * Adjust sizing of main page tabs for better readability. (PR #487)
+    * Add band filtering in the FreeDV Reporter dialog. (PR #490)
 3. Build system:
     * Update Codec2 to v1.2.0. (PR #483)
     * Deprecate PortAudio support on Linux. (PR #489)
