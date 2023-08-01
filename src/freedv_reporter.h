@@ -62,6 +62,8 @@ class FreeDVReporterDialog : public wxDialog
         void setReporter(FreeDVReporter* reporter);
         void refreshQSYButtonState();
         
+        void setBandFilter(FilterFrequency freq);
+        
     protected:
 
         // Handlers for events.
@@ -73,6 +75,7 @@ class FreeDVReporterDialog : public wxDialog
         void    OnSize(wxSizeEvent& event);
         void    OnMove(wxMoveEvent& event);
         void    OnShow(wxShowEvent& event);
+        void    OnBandFilterChange(wxCommandEvent& event);
         
         void OnItemSelected(wxListEvent& event);
         void OnItemDeselected(wxListEvent& event);
@@ -81,7 +84,10 @@ class FreeDVReporterDialog : public wxDialog
         wxListView*   m_listSpots;
         
         // QSY text
-        wxTextCtrl *m_qsyText;
+        wxTextCtrl* m_qsyText;
+        
+        // Band filter
+        wxComboBox* m_bandFilter;
         
         // Step 4: test/save/cancel setup
         wxButton* m_buttonOK;

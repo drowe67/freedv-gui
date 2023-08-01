@@ -38,9 +38,39 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     }
     
     // Create top-level of control hierarchy.
-    wxFlexGridSizer* sectionSizer = new wxFlexGridSizer(2, 1, 0, 0);
-    sectionSizer->AddGrowableRow(0);
+    wxFlexGridSizer* sectionSizer = new wxFlexGridSizer(3, 1, 0, 0);
+    sectionSizer->AddGrowableRow(1);
     sectionSizer->AddGrowableCol(0);
+    
+    // Band filter list
+    wxBoxSizer* bandFilterSizer = new wxBoxSizer(wxHORIZONTAL);
+    
+    wxString bandList[] = {
+        _("All bands"),
+        _("160 meters"),
+        _("80 meters"),
+        _("60 meters"),
+        _("40 meters"),
+        _("30 meters"),
+        _("20 meters"),
+        _("17 meters"),
+        _("15 meters"),
+        _("12 meters"),
+        _("10 meters"),
+        _("6 meters and above"),
+        _("Other"),
+    };
+    
+    bandFilterSizer->Add(new wxStaticText(this, wxID_ANY, _("Show stations on:"), wxDefaultPosition, wxDefaultSize, 0), 
+                          0, wxALIGN_CENTER_VERTICAL, 20);
+    
+    m_bandFilter = new wxComboBox(
+        this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 
+        sizeof(bandList) / sizeof(wxString), bandList, wxCB_DROPDOWN | wxCB_READONLY);
+    m_bandFilter->SetSelection(0);
+    
+    bandFilterSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+    sectionSizer->Add(bandFilterSizer, 0, wxALL | wxEXPAND, 2);
     
     // Main list box
     // =============================
@@ -108,6 +138,8 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOK), NULL, this);
     m_buttonSendQSY->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnSendQSY), NULL, this);
     m_buttonDisplayWebpage->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOpenWebsite), NULL, this);
+    
+    m_bandFilter->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnBandFilterChange), NULL, this);
 }
 
 FreeDVReporterDialog::~FreeDVReporterDialog()
@@ -124,6 +156,8 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOK), NULL, this);
     m_buttonSendQSY->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnSendQSY), NULL, this);
     m_buttonDisplayWebpage->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOpenWebsite), NULL, this);
+    
+    m_bandFilter->Disconnect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnBandFilterChange), NULL, this);
 }
 
 void FreeDVReporterDialog::setReporter(FreeDVReporter* reporter)
@@ -233,6 +267,12 @@ void FreeDVReporterDialog::OnItemDeselected(wxListEvent& event)
     m_buttonSendQSY->Enable(false);
 }
 
+void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
+{
+    FilterFrequency freq = (FilterFrequency)m_bandFilter->GetSelection();
+    setBandFilter(freq);
+}
+
 void FreeDVReporterDialog::refreshQSYButtonState()
 {
     bool enabled = false;
@@ -254,6 +294,33 @@ void FreeDVReporterDialog::refreshQSYButtonState()
     }
     
     m_buttonSendQSY->Enable(enabled);
+}
+
+void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
+{
+    currentBandFilter_ = freq;
+    
+    // Update displayed list based on new filter criteria.
+    m_listSpots->Freeze();
+
+    for (auto index = m_listSpots->GetItemCount() - 1; index >= 0; index--)
+    {
+        delete (std::string*)m_listSpots->GetItemData(index);
+        m_listSpots->DeleteItem(index);
+    }
+
+    // Reset lengths to force auto-resize on (re)connect.
+    for (int col = 0; col < NUM_COLS; col++)
+    {
+        columnLengths_[col] = 0;
+    }
+
+    for (auto& kvp : allReporterData_)
+    {
+        addOrUpdateListIfNotFiltered_(kvp.second);
+    }
+    
+    m_listSpots->Thaw();
 }
 
 // =================================================================================
