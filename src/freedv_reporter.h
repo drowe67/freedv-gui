@@ -35,6 +35,23 @@
 class FreeDVReporterDialog : public wxDialog
 {
     public:
+        enum FilterFrequency 
+        {
+            BAND_ALL,
+            BAND_160M,
+            BAND_80M,
+            BAND_60M,
+            BAND_40M,
+            BAND_30M,
+            BAND_20M,
+            BAND_17M,
+            BAND_15M,
+            BAND_12M,
+            BAND_10M,
+            BAND_VHF_UHF,
+            BAND_OTHER,            
+        };
+        
         FreeDVReporterDialog( wxWindow* parent,
                 wxWindowID id = wxID_ANY, const wxString& title = _("FreeDV Reporter"), 
                 const wxPoint& pos = wxDefaultPosition, 
@@ -72,12 +89,32 @@ class FreeDVReporterDialog : public wxDialog
         wxButton* m_buttonDisplayWebpage;
 
      private:
+         struct ReporterData
+         {
+             std::string sid;
+             wxString callsign;
+             wxString gridSquare;
+             wxString version;
+             uint64_t frequency;
+             wxString freqString;
+             wxString status;
+             wxString txMode;
+             bool transmitting;
+             wxString lastTx;
+             wxString lastRxCallsign;
+             wxString lastRxMode;
+             wxString snr;
+             wxString lastUpdate;
+         };
+         
          FreeDVReporter* reporter_;
          std::map<int, int> columnLengths_;
+         std::map<std::string, ReporterData*> allReporterData_;
+         FilterFrequency currentBandFilter_;
          
          void onReporterConnect_();
          void onReporterDisconnect_();
-         void onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOmly);
+         void onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly);
          void onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly);
          void onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz);
          void onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate);
@@ -86,6 +123,9 @@ class FreeDVReporterDialog : public wxDialog
          wxString makeValidTime_(std::string timeStr);
          
          void checkColumnsAndResize_();
+         
+         void addOrUpdateListIfNotFiltered_(ReporterData* data);
+         bool isFiltered_(uint64_t freq);
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__
