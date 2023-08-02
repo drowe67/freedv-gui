@@ -90,7 +90,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_bandFilter = new wxComboBox(
         this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 
         sizeof(bandList) / sizeof(wxString), bandList, wxCB_DROPDOWN | wxCB_READONLY);
-    m_bandFilter->SetSelection(0);
+    m_bandFilter->SetSelection(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter);
     
     buttonSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
@@ -266,7 +266,11 @@ void FreeDVReporterDialog::OnItemDeselected(wxListEvent& event)
 
 void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
 {
-    FilterFrequency freq = (FilterFrequency)m_bandFilter->GetSelection();
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter = 
+        m_bandFilter->GetSelection();
+    
+    FilterFrequency freq = 
+        (FilterFrequency)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter.get();
     setBandFilter(freq);
 }
 
