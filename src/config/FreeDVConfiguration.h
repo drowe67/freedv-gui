@@ -105,6 +105,8 @@ public:
     
     ConfigurationDataElement<int> currentFreeDVMode;
     
+    ConfigurationDataElement<int> currentSpectrumAveraging;
+    
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };

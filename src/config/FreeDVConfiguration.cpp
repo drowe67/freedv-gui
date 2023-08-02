@@ -96,6 +96,8 @@ FreeDVConfiguration::FreeDVConfiguration()
     , statsResetTimeSecs("/Stats/ResetTime", 10)
         
     , currentFreeDVMode("/Audio/mode", 4)
+        
+    , currentSpectrumAveraging("/Plot/Spectrum/CurrentAveraging", 0)
 {
     // empty
 }
@@ -168,6 +170,8 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, statsResetTimeSecs);
     load_(config, currentFreeDVMode);
+    
+    load_(config, currentSpectrumAveraging);
     
     auto wxStandardPathObj = wxStandardPaths::Get();
     auto documentsDir = wxStandardPathObj.GetDocumentsDir();
@@ -245,6 +249,8 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     
     save_(config, statsResetTimeSecs);
     save_(config, currentFreeDVMode);
+    
+    save_(config, currentSpectrumAveraging);
     
     config->Flush();
 }

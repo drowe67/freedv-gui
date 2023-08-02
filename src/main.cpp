@@ -610,8 +610,10 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         "3"
     };
     m_cbxNumSpectrumAveraging = new wxComboBox(spectrumPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 3, samplingChoices, wxCB_DROPDOWN | wxCB_READONLY);
-    m_cbxNumSpectrumAveraging->SetSelection(0);
+    m_cbxNumSpectrumAveraging->SetSelection(wxGetApp().appConfiguration.currentSpectrumAveraging);
     spectrumPanelControlSizer->Add(m_cbxNumSpectrumAveraging, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    m_cbxNumSpectrumAveraging->Connect(wxEVT_TEXT, wxCommandEventHandler(MainFrame::OnAveragingChange), NULL, this);
     
     wxStaticText* labelSamples = new wxStaticText(spectrumPanel, wxID_ANY, wxT("sample(s)"), wxDefaultPosition, wxDefaultSize, 0);
     spectrumPanelControlSizer->Add(labelSamples, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
@@ -859,6 +861,7 @@ MainFrame::~MainFrame()
     wxGetApp().appConfiguration.currentFreeDVMode = mode;
     wxGetApp().appConfiguration.save(pConfig);
 
+    m_cbxNumSpectrumAveraging->Disconnect(wxEVT_TEXT, wxCommandEventHandler(MainFrame::OnAveragingChange), NULL, this);
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
 
@@ -925,6 +928,10 @@ void MainFrame::OnIdle(wxIdleEvent &evt) {
 }
 #endif
 
+void MainFrame::OnAveragingChange(wxCommandEvent& event)
+{
+    wxGetApp().appConfiguration.currentSpectrumAveraging = m_cbxNumSpectrumAveraging->GetSelection();
+}
 
 #ifdef _USE_TIMER
 //----------------------------------------------------------------
