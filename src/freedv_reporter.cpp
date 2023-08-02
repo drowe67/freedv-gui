@@ -91,6 +91,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 
         sizeof(bandList) / sizeof(wxString), bandList, wxCB_DROPDOWN | wxCB_READONLY);
     m_bandFilter->SetSelection(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter);
+    setBandFilter((FilterFrequency)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter.get());
     
     buttonSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
@@ -334,6 +335,12 @@ void FreeDVReporterDialog::onReporterConnect_()
     CallAfter([&]() {
         m_listSpots->Freeze();
         
+        for (auto& kvp : allReporterData_)
+        {
+            delete kvp.second;
+        }
+        allReporterData_.clear();
+        
         for (auto index = m_listSpots->GetItemCount() - 1; index >= 0; index--)
         {
             delete (std::string*)m_listSpots->GetItemData(index);
@@ -354,6 +361,12 @@ void FreeDVReporterDialog::onReporterDisconnect_()
 {
     CallAfter([&]() {
         m_listSpots->Freeze();
+        
+        for (auto& kvp : allReporterData_)
+        {
+            delete kvp.second;
+        }
+        allReporterData_.clear();
         
         for (auto index = m_listSpots->GetItemCount() - 1; index >= 0; index--)
         {
