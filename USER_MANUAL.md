@@ -906,7 +906,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add band filtering in the FreeDV Reporter dialog. (PR #490)
 3. Build system:
     * Update Codec2 to v1.2.0. (PR #483)
-    * Deprecate PortAudio support on Linux. (PR #489)
+    * Deprecate PortAudio support on Linux. (PR #489, #491)
 4. Cleanup:
     * Remove 2400B mode from the UI. (PR #479)
 
