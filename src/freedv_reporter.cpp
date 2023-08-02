@@ -38,40 +38,10 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     }
     
     // Create top-level of control hierarchy.
-    wxFlexGridSizer* sectionSizer = new wxFlexGridSizer(3, 1, 0, 0);
-    sectionSizer->AddGrowableRow(1);
+    wxFlexGridSizer* sectionSizer = new wxFlexGridSizer(2, 1, 0, 0);
+    sectionSizer->AddGrowableRow(0);
     sectionSizer->AddGrowableCol(0);
-    
-    // Band filter list
-    wxBoxSizer* bandFilterSizer = new wxBoxSizer(wxHORIZONTAL);
-    
-    wxString bandList[] = {
-        _("All bands"),
-        _("160 meters"),
-        _("80 meters"),
-        _("60 meters"),
-        _("40 meters"),
-        _("30 meters"),
-        _("20 meters"),
-        _("17 meters"),
-        _("15 meters"),
-        _("12 meters"),
-        _("10 meters"),
-        _("6 meters and above"),
-        _("Other"),
-    };
-    
-    bandFilterSizer->Add(new wxStaticText(this, wxID_ANY, _("Show stations on:"), wxDefaultPosition, wxDefaultSize, 0), 
-                          0, wxALIGN_CENTER_VERTICAL, 20);
-    
-    m_bandFilter = new wxComboBox(
-        this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 
-        sizeof(bandList) / sizeof(wxString), bandList, wxCB_DROPDOWN | wxCB_READONLY);
-    m_bandFilter->SetSelection(0);
-    
-    bandFilterSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
-    sectionSizer->Add(bandFilterSizer, 0, wxALL | wxEXPAND, 2);
-    
+        
     // Main list box
     // =============================
     m_listSpots = new wxListView(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_SINGLE_SEL | wxLC_REPORT | wxLC_HRULES);
@@ -97,6 +67,33 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // =============================
     wxBoxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
 
+    // Band filter list    
+    wxString bandList[] = {
+        _("All bands"),
+        _("160 meters"),
+        _("80 meters"),
+        _("60 meters"),
+        _("40 meters"),
+        _("30 meters"),
+        _("20 meters"),
+        _("17 meters"),
+        _("15 meters"),
+        _("12 meters"),
+        _("10 meters"),
+        _("6 meters and above"),
+        _("Other"),
+    };
+    
+    buttonSizer->Add(new wxStaticText(this, wxID_ANY, _("Show stations on:"), wxDefaultPosition, wxDefaultSize, 0), 
+                          0, wxALIGN_CENTER_VERTICAL, 20);
+    
+    m_bandFilter = new wxComboBox(
+        this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 
+        sizeof(bandList) / sizeof(wxString), bandList, wxCB_DROPDOWN | wxCB_READONLY);
+    m_bandFilter->SetSelection(0);
+    
+    buttonSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+    
     m_buttonOK = new wxButton(this, wxID_OK, _("Close"));
     buttonSizer->Add(m_buttonOK, 0, wxALL, 2);
 
