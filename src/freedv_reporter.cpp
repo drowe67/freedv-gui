@@ -188,7 +188,7 @@ void FreeDVReporterDialog::setReporter(FreeDVReporter* reporter)
     else
     {
         // Spot list no longer valid, delete the items currently on there
-        m_listSpots->DeleteAllItems();
+        clearAllEntries_(true);
     }
 }
 
@@ -305,17 +305,7 @@ void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
     // Update displayed list based on new filter criteria.
     m_listSpots->Freeze();
 
-    for (auto index = m_listSpots->GetItemCount() - 1; index >= 0; index--)
-    {
-        delete (std::string*)m_listSpots->GetItemData(index);
-        m_listSpots->DeleteItem(index);
-    }
-
-    // Reset lengths to force auto-resize on (re)connect.
-    for (int col = 0; col < NUM_COLS; col++)
-    {
-        columnLengths_[col] = 0;
-    }
+    clearAllEntries_(false);
 
     for (auto& kvp : allReporterData_)
     {
@@ -323,6 +313,30 @@ void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
     }
     
     m_listSpots->Thaw();
+}
+
+void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
+{
+    if (clearForAllBands)
+    {
+        for (auto& kvp : allReporterData_)
+        {
+            delete kvp.second;
+        }
+        allReporterData_.clear();
+    }
+    
+    for (auto index = m_listSpots->GetItemCount() - 1; index >= 0; index--)
+    {
+        delete (std::string*)m_listSpots->GetItemData(index);
+        m_listSpots->DeleteItem(index);
+    }
+    
+    // Reset lengths to force auto-resize on (re)connect.
+    for (int col = 0; col < NUM_COLS; col++)
+    {
+        columnLengths_[col] = 0;
+    }
 }
 
 // =================================================================================
@@ -334,25 +348,7 @@ void FreeDVReporterDialog::onReporterConnect_()
 {
     CallAfter([&]() {
         m_listSpots->Freeze();
-        
-        for (auto& kvp : allReporterData_)
-        {
-            delete kvp.second;
-        }
-        allReporterData_.clear();
-        
-        for (auto index = m_listSpots->GetItemCount() - 1; index >= 0; index--)
-        {
-            delete (std::string*)m_listSpots->GetItemData(index);
-            m_listSpots->DeleteItem(index);
-        }
-        
-        // Reset lengths to force auto-resize on (re)connect.
-        for (int col = 0; col < NUM_COLS; col++)
-        {
-            columnLengths_[col] = 0;
-        }
-
+        clearAllEntries_(true);
         m_listSpots->Thaw();
     });
 }
@@ -361,25 +357,7 @@ void FreeDVReporterDialog::onReporterDisconnect_()
 {
     CallAfter([&]() {
         m_listSpots->Freeze();
-        
-        for (auto& kvp : allReporterData_)
-        {
-            delete kvp.second;
-        }
-        allReporterData_.clear();
-        
-        for (auto index = m_listSpots->GetItemCount() - 1; index >= 0; index--)
-        {
-            delete (std::string*)m_listSpots->GetItemData(index);
-            m_listSpots->DeleteItem(index);
-        }
-
-        // Reset lengths to force auto-resize on (re)connect.
-        for (int col = 0; col < NUM_COLS; col++)
-        {
-            columnLengths_[col] = 0;
-        }
-        
+        clearAllEntries_(true);        
         m_listSpots->Thaw();
     });
 }

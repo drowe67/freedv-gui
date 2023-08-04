@@ -118,6 +118,7 @@ class FreeDVReporterDialog : public wxDialog
          std::map<std::string, ReporterData*> allReporterData_;
          FilterFrequency currentBandFilter_;
          
+         void clearAllEntries_(bool clearForAllBands);
          void onReporterConnect_();
          void onReporterDisconnect_();
          void onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly);
