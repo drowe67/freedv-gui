@@ -671,6 +671,24 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_updFreqStatusTimer.SetOwner(this,ID_TIMER_UPD_FREQ);  //[UP]
     //m_panelWaterfall->Refresh();
 #endif
+    
+    // Create voice keyer popup menu.
+    voiceKeyerPopupMenu_ = new wxMenu();
+    assert(voiceKeyerPopupMenu_ != nullptr);
+
+    auto chooseVKFileMenuItem = voiceKeyerPopupMenu_->Append(wxID_NEW, _("&Use another voice keyer file..."));
+    voiceKeyerPopupMenu_->Connect(
+        chooseVKFileMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(MainFrame::OnChooseAlternateVoiceKeyerFile),
+        NULL,
+        this);
+        
+    auto recordNewVoiceKeyerFileMenuItem = voiceKeyerPopupMenu_->Append(wxID_NEW, _("&Record new voice keyer file..."));
+    voiceKeyerPopupMenu_->Connect(
+        recordNewVoiceKeyerFileMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(MainFrame::OnRecordNewVoiceKeyerFile),
+        NULL,
+        this);
 
     m_RxRunning = false;
     m_txThread = nullptr;
@@ -781,6 +799,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 //-------------------------------------------------------------------------
 MainFrame::~MainFrame()
 {
+    delete voiceKeyerPopupMenu_;
+    
     int x;
     int y;
     int w;

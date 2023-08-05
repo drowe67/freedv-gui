@@ -20,29 +20,52 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
     event.Skip();
 }
 
+void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
+{
+    wxFileDialog saveFileDialog(
+        this,
+        wxT("Select Voice Keyer File"),
+        wxGetApp().appConfiguration.playFileToMicInPath,
+        wxEmptyString,
+        wxT("WAV files (*.wav)|*.wav|")
+        wxT("All files (*.*)|*.*"),
+        wxFD_SAVE
+        );
+        
+    if(saveFileDialog.ShowModal() == wxID_CANCEL)
+    {
+        return;     // the user changed their mind...
+    }
+}
+
+void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
+{
+    wxFileDialog openFileDialog(
+        this,
+        wxT("Select Voice Keyer File"),
+        wxGetApp().appConfiguration.playFileToMicInPath,
+        wxEmptyString,
+        wxT("WAV files (*.wav)|*.wav|")
+        wxT("All files (*.*)|*.*"),
+        wxFD_OPEN | wxFD_FILE_MUST_EXIST
+        );
+
+    if(openFileDialog.ShowModal() == wxID_CANCEL)
+    {
+        return;     // the user changed their mind...
+    }
+
+    vkFileName_ = openFileDialog.GetPath();
+    m_togBtnVoiceKeyer->SetValue(true);
+    VoiceKeyerProcessEvent(VK_START);
+}
+
 void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event )
 {
     // Only handle right-click if idle
-    if (vk_state == VK_IDLE)
+    if (vk_state == VK_IDLE && !m_btnTogPTT->GetValue())
     {
-        wxFileDialog openFileDialog(
-            this,
-            wxT("Select Voice Keyer File"),
-            wxGetApp().appConfiguration.playFileToMicInPath,
-            wxEmptyString,
-            wxT("WAV files (*.wav)|*.wav|")
-            wxT("All files (*.*)|*.*"),
-            wxFD_OPEN | wxFD_FILE_MUST_EXIST
-            );
-            
-        if(openFileDialog.ShowModal() == wxID_CANCEL)
-        {
-            return;     // the user changed their mind...
-        }
-
-        vkFileName_ = openFileDialog.GetPath();
-        m_togBtnVoiceKeyer->SetValue(true);
-        VoiceKeyerProcessEvent(VK_START);
+        m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_);
     }
 }
 

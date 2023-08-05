@@ -416,6 +416,9 @@ class MainFrame : public TopFrame
 
         void OnSystemColorChanged(wxSysColourChangedEvent& event) override;
         
+        void OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event );
+        void OnRecordNewVoiceKeyerFile( wxCommandEvent& event );
+        
     private:
         std::shared_ptr<IAudioDevice> rxInSoundDevice;
         std::shared_ptr<IAudioDevice> rxOutSoundDevice;
@@ -456,6 +459,8 @@ class MainFrame : public TopFrame
         float      vk_rx_sync_time;
         
         std::string vkFileName_;
+        
+        wxMenu* voiceKeyerPopupMenu_;
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
