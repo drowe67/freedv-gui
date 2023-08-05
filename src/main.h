@@ -365,9 +365,7 @@ class MainFrame : public TopFrame
         void OnToolsOptions(wxCommandEvent& event) override;
         void OnToolsOptionsUI(wxUpdateUIEvent& event) override;
 
-        void OnPlayFileToMicIn( wxCommandEvent& event ) override;
         void OnRecFileFromRadio( wxCommandEvent& event ) override;
-        void OnRecFileFromModulator( wxCommandEvent& event) override;
         void OnPlayFileFromRadio( wxCommandEvent& event ) override;
 
         void OnHelpCheckUpdates( wxCommandEvent& event ) override;
