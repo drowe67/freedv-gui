@@ -144,9 +144,9 @@ if(SIGN_WINDOWS_BINARIES)
         message(FATAL_ERROR "Signing only makes sense for Windows builds.")
     endif(NOT WIN32 AND NOT MINGW)
 
-    if(NOT DEFINED PKCS11_KEY_FILE OR NOT DEFINED CERTIFICATE_FILE)
+    if(NOT DEFINED PKCS11_KEY_FILE OR NOT DEFINED PKCS11_CERTIFICATE_FILE)
         message(FATAL_ERROR "Must provide key and certifcate files.")
-    endif(NOT DEFINED PKCS11_KEY_FILE OR NOT DEFINED CERTIFICATE_FILE)
+    endif(NOT DEFINED PKCS11_KEY_FILE OR NOT DEFINED PKCS11_CERTIFICATE_FILE)
 
     # Default PKCS#11 engine if not provided.
     if(NOT DEFINED PKCS11_ENGINE)
@@ -159,7 +159,12 @@ if(SIGN_WINDOWS_BINARIES)
         # XXX -- we're assuming Ubuntu amd64 and YubiKey here.
         set(PKCS11_MODULE /usr/lib/x86_64-linux-gnu/libykcs11.so)
     endif(NOT DEFINED PKCS11_MODULE)
-    
+
+    # Default timestamping server
+    if(NOT DEFINED TIMESTAMP_SERVER)
+        set(TIMESTAMP_SERVER http://timestamp.sectigo.com)    
+    endif(NOT DEFINED TIMESTAMP_SERVER)
+
     # Look for osslsigncode    
     find_program(
         OSSLSIGNCODE_BIN
@@ -168,8 +173,14 @@ if(SIGN_WINDOWS_BINARIES)
 
     # Generate command to execute for signing binaries.
     execute_process(
-        COMMAND cat ${PKCS11_KEY_FILE}
+        COMMAND cat 
+        INPUT_FILE ${PKCS11_KEY_FILE}
         OUTPUT_VARIABLE PKCS11_KEY)
+
+    execute_process(
+        COMMAND cat 
+        INPUT_FILE ${PKCS11_CERTIFICATE_FILE}
+        OUTPUT_VARIABLE PKCS11_CERTIFICATE)
 endif(SIGN_WINDOWS_BINARIES)
 
 if(USE_STATIC_DEPS)
@@ -636,7 +647,7 @@ if(WIN32)
     if(SIGN_WINDOWS_BINARIES)
         # Add finalize command for NSIS so the installer/uninstaller can be
         # signed too.
-        set(CPACK_NSIS_FINALIZE_CMD "mv %1 %1.tmp; ${OSSLSIGNCODE_BIN} sign -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -certs ${CERTIFICATE_FILE} -key \\\"${PKCS11_KEY}\\\" -in %1.tmp -out %1")
+        set(CPACK_NSIS_FINALIZE_CMD "mv %1 %1.tmp; ${OSSLSIGNCODE_BIN} sign -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert \\\"${PKCS11_CERTIFICATE}\\\" -key \\\"${PKCS11_KEY}\\\" -t ${TIMESTAMP_SERVER} -in %1.tmp -out %1")
     endif(SIGN_WINDOWS_BINARIES)
 
     include(CPack)

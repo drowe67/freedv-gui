@@ -126,7 +126,7 @@ Notes:
 
 ## Signing using CMake
 
-To build a signed Windows version of FreeDV, pass in `-DSIGN_WINDOWS_BINARIES=1` as well as the PKCS#11 key URL and the certificate file. For example:
+To build a signed Windows version of FreeDV, pass in `-DSIGN_WINDOWS_BINARIES=1` as well as files containing the PKCS#11 key and certificate URLs. For example:
 
 ```
 $ mkdir build
