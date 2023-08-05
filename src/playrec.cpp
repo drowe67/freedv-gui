@@ -31,6 +31,7 @@ int                 g_recFromModulatorSamples;
 int                 g_recFileFromModulatorEventId;
 
 extern FreeDVInterface freedvInterface;
+extern bool g_tx;
 
 // extra panel added to file open dialog to add loop checkbox
 MyExtraPlayFilePanel::MyExtraPlayFilePanel(wxWindow *parent): wxPanel(parent)
@@ -181,11 +182,12 @@ static wxWindow* createMyExtraRecFilePanel(wxWindow *parent)
 
 void MainFrame::StopRecFileFromRadio()
 {
-    if (g_recFileFromRadio)
+    if (g_sfRecFile != nullptr)
     {
         if (g_verbose) fprintf(stderr, "Stopping Record....\n");
         g_mutexProtectingCallbackData.Lock();
         g_recFileFromRadio = false;
+        g_recFileFromModulator = false;
         sf_close(g_sfRecFile);
         g_sfRecFile = nullptr;
         g_sfRecFileFromModulator = nullptr;
@@ -205,7 +207,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
 {
     wxUnusedVar(event);
 
-    if (g_recFileFromRadio) {
+    if (g_sfRecFile != nullptr) {
         StopRecFileFromRadio();
     }
     else {
@@ -303,7 +305,17 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         SetStatusText(wxT("Recording file ") + fileName + wxT(" from radio") , 0);
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Stop Record File - From Radio...")));
         g_sfRecFileFromModulator = g_sfRecFile;
-        g_recFileFromRadio = true;
+        
+        if (!g_tx)
+        {
+            g_recFileFromModulator = false;
+            g_recFileFromRadio = true;
+        }
+        else
+        {
+            g_recFileFromRadio = false;
+            g_recFileFromModulator = true;
+        }
     }
 
     m_audioRecord->SetValue(g_recFileFromRadio);
@@ -311,7 +323,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
 
 void MainFrame::OnTogBtnRecord( wxCommandEvent& event )
 {
-    if (g_recFileFromRadio) 
+    if (g_sfRecFile != nullptr) 
     {
         StopRecFileFromRadio();
     }
@@ -339,6 +351,16 @@ void MainFrame::OnTogBtnRecord( wxCommandEvent& event )
         SetStatusText(wxT("Recording file ") + soundFile + wxT(" from radio"), 0);
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Stop Record File - From Radio...")));
         g_sfRecFileFromModulator = g_sfRecFile;
-        g_recFileFromRadio = true;
+        
+        if (!g_tx)
+        {
+            g_recFileFromModulator = false;
+            g_recFileFromRadio = true;
+        }
+        else
+        {
+            g_recFileFromRadio = false;
+            g_recFileFromModulator = true;
+        }
     }
 }
