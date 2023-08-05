@@ -141,6 +141,9 @@ extern SNDFILE            *g_sfRecFileFromModulator;
 extern bool                g_recFileFromModulator;
 extern int                 g_recFileFromModulatorEventId;
 
+extern SNDFILE            *g_sfRecMicFile;
+extern bool                g_recFileFromMic;
+
 wxWindow           *g_parent;
 
 // Click to tune rx and tx frequency offset states
@@ -711,6 +714,9 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     g_sfRecFileFromModulator = NULL;
     g_recFileFromModulator = false;
+    
+    g_sfRecMicFile = nullptr;
+    g_recFileFromMic = false;
 
     // init click-tune states
 

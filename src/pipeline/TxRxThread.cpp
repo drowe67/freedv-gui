@@ -96,7 +96,10 @@ extern wxWindow* g_parent;
 extern SNDFILE* g_sfPlayFile;
 extern SNDFILE* g_sfRecFileFromModulator;
 extern SNDFILE* g_sfRecFile;
+extern SNDFILE* g_sfRecMicFile;
 extern SNDFILE* g_sfPlayFileFromRadio;
+
+extern bool g_recFileFromMic;
 
 // TBD -- shouldn't be needed once we've fully converted over
 extern int resample(SRC_STATE *src,
@@ -123,6 +126,29 @@ void TxRxThread::initializePipeline_()
     if (m_tx)
     {
         pipeline_ = std::shared_ptr<AudioPipeline>(new AudioPipeline(inputSampleRate_, outputSampleRate_));
+        
+        // Record from mic step (optional)
+        auto recordMicStep = new RecordStep(
+            inputSampleRate_, 
+            []() { return g_sfRecMicFile; }, 
+            [](int numSamples) {
+                // Recording stops when the user explicitly tells us to,
+                // no action required here.
+            }
+        );
+        auto recordMicPipeline = new AudioPipeline(inputSampleRate_, inputSampleRate_);
+        recordMicPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordMicStep));
+        
+        auto recordMicTap = new TapStep(inputSampleRate_, recordMicPipeline);
+        auto bypassRecordMic = new AudioPipeline(inputSampleRate_, inputSampleRate_);
+        
+        auto eitherOrRecordMic = new EitherOrStep(
+            []() { return g_recFileFromMic && (g_sfRecMicFile != NULL); },
+            std::shared_ptr<IPipelineStep>(recordMicTap),
+            std::shared_ptr<IPipelineStep>(bypassRecordMic)
+        );
+        auto recordMicLockStep = new ExclusiveAccessStep(eitherOrRecordMic, callbackLockFn, callbackUnlockFn);
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordMicLockStep));
         
         // Mic In playback step (optional)
         auto eitherOrBypassPlay = new AudioPipeline(inputSampleRate_, inputSampleRate_);

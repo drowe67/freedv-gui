@@ -29,6 +29,11 @@ extern SNDFILE            *g_sfRecFile;
 extern bool g_recFileFromModulator;
 extern bool g_recFileFromRadio;
 
+extern SNDFILE            *g_sfRecMicFile;
+extern bool                g_recFileFromMic;
+
+extern wxMutex g_mutexProtectingCallbackData;
+
 //-------------------------------------------------------------------------
 // Forces redraw of main panels on window resize.
 //-------------------------------------------------------------------------
@@ -567,6 +572,17 @@ void MainFrame::togglePTT(void) {
             g_recFileFromRadio = false;
             g_recFileFromModulator = true;
         }
+    }
+    
+    // If recording a new VK file, stop doing that now.
+    if (g_recFileFromMic && !g_tx)
+    {
+        g_mutexProtectingCallbackData.Lock();
+        g_recFileFromMic = false;
+        sf_close(g_sfRecMicFile);
+        g_sfRecMicFile = nullptr;
+        SetStatusText(wxT(""));
+        g_mutexProtectingCallbackData.Unlock();
     }
 }
 

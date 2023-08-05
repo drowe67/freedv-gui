@@ -6,6 +6,9 @@
 
 #include "main.h"
 
+extern SNDFILE            *g_sfRecMicFile;
+extern bool                g_recFileFromMic;
+
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
     if (vk_state == VK_IDLE)
@@ -36,6 +39,40 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
     {
         return;     // the user changed their mind...
     }
+    
+    // The below code ensures that the last folder the above dialog was
+    // navigated to persists across executions.
+    wxString soundFile = saveFileDialog.GetPath();
+    wxString tmpString = wxGetApp().appConfiguration.playFileToMicInPath;
+    wxFileName::SplitPath(soundFile, &tmpString, nullptr, nullptr);
+    wxGetApp().appConfiguration.playFileToMicInPath = tmpString;
+    
+    /*
+SNDFILE            *g_sfRecMicFile;
+bool                g_recFileFromMic;
+    */
+    
+    int sample_rate = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
+    SF_INFO     sfInfo;
+    
+    sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+    sfInfo.channels   = 1;
+    sfInfo.samplerate = sample_rate;
+
+    g_sfRecMicFile = sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo);
+    if(g_sfRecMicFile == NULL)
+    {
+        wxString strErr = sf_strerror(NULL);
+        wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
+        return;
+    }
+
+    SetStatusText(wxT("Recording file ") + soundFile + wxT(" from microphone") , 0);
+    g_recFileFromMic = true;
+    
+    // Trigger recording so that we can actually pull audio from the microphone.
+    m_btnTogPTT->SetValue(true);
+    togglePTT();
 }
 
 void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
@@ -55,7 +92,14 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
         return;     // the user changed their mind...
     }
 
-    vkFileName_ = openFileDialog.GetPath();
+    // The below code ensures that the last folder the above dialog was
+    // navigated to persists across executions.
+    wxString tmpString = wxGetApp().appConfiguration.playFileToMicInPath;
+    wxString soundFile = openFileDialog.GetPath();
+    wxFileName::SplitPath(soundFile, &tmpString, nullptr, nullptr);
+    wxGetApp().appConfiguration.playFileToMicInPath = tmpString;
+    
+    vkFileName_ = soundFile;
     m_togBtnVoiceKeyer->SetValue(true);
     VoiceKeyerProcessEvent(VK_START);
 }

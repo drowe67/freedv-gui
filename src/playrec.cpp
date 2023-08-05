@@ -18,6 +18,9 @@ bool                g_recFileFromRadio;
 unsigned int        g_recFromRadioSamples;
 int                 g_recFileFromRadioEventId;
 
+SNDFILE            *g_sfRecMicFile;
+bool                g_recFileFromMic;
+
 SNDFILE            *g_sfPlayFileFromRadio;
 bool                g_playFileFromRadio;
 int                 g_sfFs;
