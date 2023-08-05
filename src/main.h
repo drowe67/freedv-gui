@@ -329,7 +329,6 @@ class MainFrame : public TopFrame
 
         void StopPlayFileToMicIn(void);
         void StopPlaybackFileFromRadio();
-        void StopRecFileFromModulator();
         void StopRecFileFromRadio();
         
     protected:

@@ -188,6 +188,7 @@ void MainFrame::StopRecFileFromRadio()
         g_recFileFromRadio = false;
         sf_close(g_sfRecFile);
         g_sfRecFile = nullptr;
+        g_sfRecFileFromModulator = nullptr;
         SetStatusText(wxT(""));
         
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Start Record File - From Radio...")));
@@ -301,6 +302,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
 
         SetStatusText(wxT("Recording file ") + fileName + wxT(" from radio") , 0);
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Stop Record File - From Radio...")));
+        g_sfRecFileFromModulator = g_sfRecFile;
         g_recFileFromRadio = true;
     }
 
@@ -336,21 +338,7 @@ void MainFrame::OnTogBtnRecord( wxCommandEvent& event )
 
         SetStatusText(wxT("Recording file ") + soundFile + wxT(" from radio"), 0);
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Stop Record File - From Radio...")));
+        g_sfRecFileFromModulator = g_sfRecFile;
         g_recFileFromRadio = true;
-    }
-}
-
-void MainFrame::StopRecFileFromModulator()
-{
-    // If the event loop takes a while to execute, we may end up being called
-    // multiple times. We don't want to repeat the following more than once.
-    if (g_recFileFromModulator) {
-        g_mutexProtectingCallbackData.Lock();
-        g_recFileFromModulator = false;
-        g_recFromModulatorSamples = 0;
-        sf_close(g_sfRecFileFromModulator);
-        g_sfRecFileFromModulator = nullptr;
-        SetStatusText(wxT(""));
-        g_mutexProtectingCallbackData.Unlock();
     }
 }

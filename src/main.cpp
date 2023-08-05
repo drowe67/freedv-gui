@@ -139,7 +139,6 @@ extern int                 g_playFileFromRadioEventId;
 
 extern SNDFILE            *g_sfRecFileFromModulator;
 extern bool                g_recFileFromModulator;
-extern int                 g_recFromModulatorSamples;
 extern int                 g_recFileFromModulatorEventId;
 
 wxWindow           *g_parent;

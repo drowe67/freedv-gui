@@ -63,7 +63,6 @@ extern struct FIFO* g_plotDemodInFifo;
 extern struct FIFO* g_plotSpeechOutFifo;
 extern int g_mode;
 extern bool g_recFileFromModulator;
-extern int g_recFromModulatorSamples;
 extern int g_txLevel;
 extern int g_dump_timing;
 extern bool g_queueResync;
@@ -202,14 +201,7 @@ void TxRxThread::initializePipeline_()
             outputSampleRate_, 
             []() { return g_sfRecFileFromModulator; }, 
             [](int numSamples) {
-                g_recFromModulatorSamples -= numSamples;
-                if (g_recFromModulatorSamples <= 0)
-                {
-                    // call stop record menu item, should be thread safe
-                    g_parent->CallAfter(&MainFrame::StopRecFileFromModulator);
-                
-                    wxPrintf("write mod output to file complete\n", g_recFromModulatorSamples);  // consider a popup
-                }
+                // empty
             });
         auto recordModulatedPipeline = new AudioPipeline(outputSampleRate_, recordModulatedStep->getOutputSampleRate());
         recordModulatedPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedStep));
