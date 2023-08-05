@@ -911,6 +911,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Allow use of a different voice keyer file by right-clicking on the Voice Keyer button. (PR #493)
     * Include TX audio in recorded audio files to enable recording a full QSO. (PR #493)
     * Add band filtering in the FreeDV Reporter dialog. (PR #490)
+    * Add ability to record new voice keyer files by right-clicking on the Voice Keyer button. (PR #493)
 3. Build system:
     * Update Codec2 to v1.2.0. (PR #483)
     * Deprecate PortAudio support on Linux. (PR #489, #491)
