@@ -675,7 +675,7 @@ bool FreeDVReporterDialog::isFiltered_(uint64_t freq)
     {
         bandForFreq = FilterFrequency::BAND_80M;
     }
-    else if (freq >= 5351500 && freq <= 5366500)
+    else if (freq >= 5250000 && freq <= 5450000)
     {
         bandForFreq = FilterFrequency::BAND_60M;
     }
