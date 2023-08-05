@@ -109,7 +109,8 @@ void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event )
     // Only handle right-click if idle
     if (vk_state == VK_IDLE && !m_btnTogPTT->GetValue())
     {
-        m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_);
+        auto sz = m_togBtnVoiceKeyer->GetSize();
+        m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_, wxPoint(-sz.GetWidth(), 0));
     }
 }
 
