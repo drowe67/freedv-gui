@@ -285,6 +285,11 @@ received for a few seconds the voice keyer also stops.
 The Audio tab inside Tools-Options can be used to select the wave file, set 
 the Rx delay, and number of times the tx/rx cycle repeats.
 
+Additional options are also available if you right-click on the Voice Keyer button:
+
+* "Use another voice keyer file": Allows you to trigger the voice keyer using a different file from the one configured in Tools->Options.
+* "Record new voice keyer file": Triggers transmit and records your microphone audio to a file that you select. Pushing the PTT button will stop recording.
+
 # Quick Record
 
 To quickly record incoming signals from the radio, a 'Record' button is provided
