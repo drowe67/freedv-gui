@@ -903,11 +903,14 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Allow users to configure PTT port separately from CAT if Hamlib is enabled. (PR #488)
     * Add ability to average spectrum plot across 1-3 samples. (PR #487, 492)
     * Adjust sizing of main page tabs for better readability. (PR #487)
+    * Allow use of a different voice keyer file by right-clicking on the Voice Keyer button. (PR #493)
+    * Include TX audio in recorded audio files to enable recording a full QSO. (PR #493)
 3. Build system:
     * Update Codec2 to v1.2.0. (PR #483)
     * Deprecate PortAudio support on Linux. (PR #489)
 4. Cleanup:
     * Remove 2400B mode from the UI. (PR #479)
+    * Remove rarely-used "Record File - From Modulator" and "Play File - Mic In" menu options. (PR #493)
 
 ## V1.8.12 July 2023
 
