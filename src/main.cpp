@@ -679,14 +679,14 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     voiceKeyerPopupMenu_ = new wxMenu();
     assert(voiceKeyerPopupMenu_ != nullptr);
 
-    auto chooseVKFileMenuItem = voiceKeyerPopupMenu_->Append(wxID_NEW, _("&Use another voice keyer file..."));
+    auto chooseVKFileMenuItem = voiceKeyerPopupMenu_->Append(wxID_ANY, _("&Use another voice keyer file..."));
     voiceKeyerPopupMenu_->Connect(
         chooseVKFileMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
         wxCommandEventHandler(MainFrame::OnChooseAlternateVoiceKeyerFile),
         NULL,
         this);
         
-    auto recordNewVoiceKeyerFileMenuItem = voiceKeyerPopupMenu_->Append(wxID_NEW, _("&Record new voice keyer file..."));
+    auto recordNewVoiceKeyerFileMenuItem = voiceKeyerPopupMenu_->Append(wxID_ANY, _("&Record new voice keyer file..."));
     voiceKeyerPopupMenu_->Connect(
         recordNewVoiceKeyerFileMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
         wxCommandEventHandler(MainFrame::OnRecordNewVoiceKeyerFile),

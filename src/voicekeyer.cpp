@@ -110,7 +110,7 @@ void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event )
     if (vk_state == VK_IDLE && !m_btnTogPTT->GetValue())
     {
         auto sz = m_togBtnVoiceKeyer->GetSize();
-        m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_, wxPoint(-sz.GetWidth(), 0));
+        m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
     }
 }
 
