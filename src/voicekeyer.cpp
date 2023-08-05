@@ -9,11 +9,41 @@
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
     if (vk_state == VK_IDLE)
+    {
+        m_togBtnVoiceKeyer->SetValue(true);
+        vkFileName_ = wxGetApp().appConfiguration.voiceKeyerWaveFile->mb_str();
         VoiceKeyerProcessEvent(VK_START);
+    }
     else
         VoiceKeyerProcessEvent(VK_SPACE_BAR);
 
     event.Skip();
+}
+
+void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event )
+{
+    // Only handle right-click if idle
+    if (vk_state == VK_IDLE)
+    {
+        wxFileDialog openFileDialog(
+            this,
+            wxT("Select Voice Keyer File"),
+            wxGetApp().appConfiguration.playFileToMicInPath,
+            wxEmptyString,
+            wxT("WAV files (*.wav)|*.wav|")
+            wxT("All files (*.*)|*.*"),
+            wxFD_OPEN | wxFD_FILE_MUST_EXIST
+            );
+            
+        if(openFileDialog.ShowModal() == wxID_CANCEL)
+        {
+            return;     // the user changed their mind...
+        }
+
+        vkFileName_ = openFileDialog.GetPath();
+        m_togBtnVoiceKeyer->SetValue(true);
+        VoiceKeyerProcessEvent(VK_START);
+    }
 }
 
 extern SNDFILE *g_sfPlayFile;
@@ -31,10 +61,10 @@ int MainFrame::VoiceKeyerStartTx(void)
     SF_INFO sfInfo;
     sfInfo.format = 0;
 
-    SNDFILE* tmpPlayFile = sf_open(wxGetApp().appConfiguration.voiceKeyerWaveFile->mb_str(), SFM_READ, &sfInfo);
+    SNDFILE* tmpPlayFile = sf_open(vkFileName_.c_str(), SFM_READ, &sfInfo);
     if(tmpPlayFile == NULL) {
         wxString strErr = sf_strerror(NULL);
-        wxMessageBox(strErr, wxT("Couldn't open:") + wxGetApp().appConfiguration.voiceKeyerWaveFile, wxOK);
+        wxMessageBox(strErr, wxT("Couldn't open:") + vkFileName_, wxOK);
         m_togBtnVoiceKeyer->SetValue(false);
         next_state = VK_IDLE;
     }
@@ -42,7 +72,7 @@ int MainFrame::VoiceKeyerStartTx(void)
         g_sfTxFs = sfInfo.samplerate;
         g_sfPlayFile = tmpPlayFile;
         
-        SetStatusText(wxT("Voice Keyer: Playing file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + wxT(" to mic input") , 0);
+        SetStatusText(wxT("Voice Keyer: Playing file ") + vkFileName_ + wxT(" to mic input") , 0);
         g_loopPlayFileToMicIn = false;
         g_playFileToMicIn = true;
 

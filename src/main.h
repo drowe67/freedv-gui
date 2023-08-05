@@ -380,6 +380,8 @@ class MainFrame : public TopFrame
         void OnTogBtnAnalogClick(wxCommandEvent& event) override;
         void OnTogBtnPTT( wxCommandEvent& event ) override;
         void OnTogBtnVoiceKeyerClick (wxCommandEvent& event) override;
+        void OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event ) override;
+        
         void OnTogBtnOnOff( wxCommandEvent& event ) override;
         void OnTogBtnRecord( wxCommandEvent& event ) override;
 
@@ -452,6 +454,8 @@ class MainFrame : public TopFrame
         int        vk_repeats, vk_repeat_counter;
         float      vk_rx_time;
         float      vk_rx_sync_time;
+        
+        std::string vkFileName_;
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
