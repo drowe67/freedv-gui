@@ -14,7 +14,6 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
     if (vk_state == VK_IDLE)
     {
         m_togBtnVoiceKeyer->SetValue(true);
-        vkFileName_ = wxGetApp().appConfiguration.voiceKeyerWaveFile->mb_str();
         VoiceKeyerProcessEvent(VK_START);
     }
     else
@@ -100,8 +99,6 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
     wxGetApp().appConfiguration.playFileToMicInPath = tmpString;
     
     vkFileName_ = soundFile;
-    m_togBtnVoiceKeyer->SetValue(true);
-    VoiceKeyerProcessEvent(VK_START);
 }
 
 void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event )

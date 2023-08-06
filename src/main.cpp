@@ -498,6 +498,9 @@ setDefaultMode:
     
     // Show/hide frequency box based on reporting enablement
     m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+    
+    // Load default voice keyer file as current.
+    vkFileName_ = wxGetApp().appConfiguration.voiceKeyerWaveFile->mb_str();
 
     // Show/hide callsign combo box based on reporting enablement
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
