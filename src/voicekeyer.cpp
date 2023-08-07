@@ -31,7 +31,7 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
         wxEmptyString,
         wxT("WAV files (*.wav)|*.wav|")
         wxT("All files (*.*)|*.*"),
-        wxFD_SAVE
+        wxFD_SAVE | wxFD_OVERWRITE_PROMPT
         );
         
     if(saveFileDialog.ShowModal() == wxID_CANCEL)
@@ -43,8 +43,15 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
     // navigated to persists across executions.
     wxString soundFile = saveFileDialog.GetPath();
     wxString tmpString = wxGetApp().appConfiguration.playFileToMicInPath;
-    wxFileName::SplitPath(soundFile, &tmpString, nullptr, nullptr);
+    wxString extension;
+    wxFileName::SplitPath(soundFile, &tmpString, nullptr, &extension);
     wxGetApp().appConfiguration.playFileToMicInPath = tmpString;
+    
+    // Append .wav extension to the end if needed.
+    if (extension.Lower() != _("wav"))
+    {
+        soundFile += ".wav";
+    }
     
     int sample_rate = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
     SF_INFO     sfInfo;
