@@ -46,11 +46,6 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
     wxFileName::SplitPath(soundFile, &tmpString, nullptr, nullptr);
     wxGetApp().appConfiguration.playFileToMicInPath = tmpString;
     
-    /*
-SNDFILE            *g_sfRecMicFile;
-bool                g_recFileFromMic;
-    */
-    
     int sample_rate = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
     SF_INFO     sfInfo;
     
@@ -68,6 +63,11 @@ bool                g_recFileFromMic;
 
     SetStatusText(wxT("Recording file ") + soundFile + wxT(" from microphone") , 0);
     g_recFileFromMic = true;
+    vkFileName_ = soundFile;
+    
+    // Disable Analog and VK buttons while recording is happening
+    m_togBtnAnalog->Enable(false);
+    m_togBtnVoiceKeyer->Enable(false);
     
     // Trigger recording so that we can actually pull audio from the microphone.
     m_btnTogPTT->SetValue(true);
