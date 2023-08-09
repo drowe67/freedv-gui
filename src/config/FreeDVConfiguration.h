@@ -107,6 +107,8 @@ public:
     
     ConfigurationDataElement<int> currentSpectrumAveraging;
     
+    ConfigurationDataElement<wxString> tabLayout;
+    
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };

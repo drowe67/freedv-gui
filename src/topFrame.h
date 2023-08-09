@@ -236,4 +236,19 @@ class TopFrame : public wxFrame
         ~TopFrame();
 };
 
+// Override for wxAuiNotebook to prevent tabbing to it.
+class TabFreeAuiNotebook : public wxAuiNotebook
+{
+public:
+    TabFreeAuiNotebook();
+    TabFreeAuiNotebook(wxWindow *parent, wxWindowID id=wxID_ANY, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxAUI_NB_DEFAULT_STYLE);
+    
+    bool AcceptsFocus() const;
+    bool AcceptsFocusFromKeyboard() const;
+    bool AcceptsFocusRecursively() const;
+    
+    wxString SavePerspective();
+    bool LoadPerspective(const wxString& layout);
+};
+
 #endif //__TOPFRAME_H__

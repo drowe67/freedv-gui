@@ -32,18 +32,179 @@ extern int g_playFileFromRadioEventId;
 extern int g_recFileFromModulatorEventId;
 extern int g_txLevel;
 
-// Override for wxAuiNotebook to prevent tabbing to it.
-class TabFreeAuiNotebook : public wxAuiNotebook
+// THIS IS VERY MUCH A HACK! wxTabFrame is not in the public interface and should
+// not be here. Unfortunately this is needed to get the tab state loaded and
+// saved. Here's hoping this interface remains stable.
+//
+// (Last retrieved from wxWidgets 3.2 on August 8, 2023.)
+class wxTabFrame : public wxWindow
 {
 public:
-    TabFreeAuiNotebook() : wxAuiNotebook() { }
-    TabFreeAuiNotebook(wxWindow *parent, wxWindowID id=wxID_ANY, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxAUI_NB_DEFAULT_STYLE)
+
+    wxTabFrame();
+    ~wxTabFrame();
+    void SetTabCtrlHeight(int h);
+    
+protected:
+    void DoSetSize(int x, int y,
+                   int width, int height,
+                   int WXUNUSED(sizeFlags = wxSIZE_AUTO)) wxOVERRIDE;
+    void DoGetClientSize(int* x, int* y) const wxOVERRIDE;
+    
+public:
+    bool Show( bool WXUNUSED(show = true) ) wxOVERRIDE;
+    void DoSizing();
+
+protected:
+    void DoGetSize(int* x, int* y) const wxOVERRIDE;
+    
+public:
+    void Update() wxOVERRIDE;
+
+    wxRect m_rect;
+    wxRect m_tab_rect;
+    wxAuiTabCtrl* m_tabs;
+    int m_tabCtrlHeight;    
+};
+    
+TabFreeAuiNotebook::TabFreeAuiNotebook() : wxAuiNotebook() { }
+TabFreeAuiNotebook::TabFreeAuiNotebook(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style)
         : wxAuiNotebook(parent, id, pos, size, style) { }
     
-    bool AcceptsFocus() const { return false; }
-    bool AcceptsFocusFromKeyboard() const { return false; }
-    bool AcceptsFocusRecursively() const { return false; }
-};
+bool TabFreeAuiNotebook::AcceptsFocus() const { return false; }
+bool TabFreeAuiNotebook::AcceptsFocusFromKeyboard() const { return false; }
+bool TabFreeAuiNotebook::AcceptsFocusRecursively() const { return false; }
+
+// SavePerspective and LoadPerspective below credit https://forums.kirix.com/viewtopicdafe.html?f=15&t=542
+// with minor modifications to make it compile on modern wxWidgets.
+wxString TabFreeAuiNotebook::SavePerspective() {
+    // Build list of panes/tabs
+    wxString tabs;
+    wxAuiPaneInfoArray& all_panes = m_mgr.GetAllPanes();
+     const size_t pane_count = all_panes.GetCount();
+
+     for (size_t i = 0; i < pane_count; ++i)
+     {
+       wxAuiPaneInfo& pane = all_panes.Item(i);
+       if (pane.name == wxT("dummy"))
+             continue;
+
+         wxTabFrame* tabframe = (wxTabFrame*)pane.window;
+  
+       if (!tabs.empty()) tabs += wxT("|");
+       tabs += pane.name;
+       tabs += wxT("=");
+  
+       // add tab id's
+       size_t page_count = tabframe->m_tabs->GetPageCount();
+       for (size_t p = 0; p < page_count; ++p)
+       {
+          wxAuiNotebookPage& page = tabframe->m_tabs->GetPage(p);
+          const size_t page_idx = m_tabs.GetIdxFromWindow(page.window);
+     
+          if (p) tabs += wxT(",");
+
+          if ((int)page_idx == m_curPage) tabs += wxT("*");
+          else if ((int)p == tabframe->m_tabs->GetActivePage()) tabs += wxT("+");
+          tabs += wxString::Format(wxT("%zu"), page_idx);
+       }
+    }
+    tabs += wxT("@");
+
+    // Add frame perspective
+    tabs += m_mgr.SavePerspective();
+
+    return tabs;
+}
+
+bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
+    // Remove all tab ctrls (but still keep them in main index)
+    const size_t tab_count = m_tabs.GetPageCount();
+    for (size_t i = 0; i < tab_count; ++i) {
+       wxWindow* wnd = m_tabs.GetWindowFromIdx(i);
+
+       // find out which onscreen tab ctrl owns this tab
+       wxAuiTabCtrl* ctrl;
+       int ctrl_idx;
+       if (!FindTab(wnd, &ctrl, &ctrl_idx))
+          return false;
+
+       // remove the tab from ctrl
+       if (!ctrl->RemovePage(wnd))
+          return false;
+    }
+    RemoveEmptyTabFrames();
+
+    size_t sel_page = 0;
+
+    wxString tabs = layout.BeforeFirst(wxT('@'));
+    while (1)
+     {
+       const wxString tab_part = tabs.BeforeFirst(wxT('|'));
+  
+       // if the string is empty, we're done parsing
+         if (tab_part.empty())
+             break;
+
+       // Get pane name
+       const wxString pane_name = tab_part.BeforeFirst(wxT('='));
+
+       // create a new tab frame
+       wxTabFrame* new_tabs = new wxTabFrame;
+       new_tabs->m_tabs = new wxAuiTabCtrl(this,
+                                  m_tabIdCounter++);
+ //                            wxDefaultPosition,
+ //                            wxDefaultSize,
+ //                            wxNO_BORDER|wxWANTS_CHARS);
+       new_tabs->m_tabs->SetArtProvider(m_tabs.GetArtProvider()->Clone());
+       new_tabs->SetTabCtrlHeight(m_tabCtrlHeight);
+       new_tabs->m_tabs->SetFlags(m_flags);
+       wxAuiTabCtrl *dest_tabs = new_tabs->m_tabs;
+
+       // create a pane info structure with the information
+       // about where the pane should be added
+       wxAuiPaneInfo pane_info = wxAuiPaneInfo().Name(pane_name).Bottom().CaptionVisible(false);
+       m_mgr.AddPane(new_tabs, pane_info);
+
+       // Get list of tab id's and move them to pane
+       wxString tab_list = tab_part.AfterFirst(wxT('='));
+       while(1) {
+          wxString tab = tab_list.BeforeFirst(wxT(','));
+          if (tab.empty()) break;
+          tab_list = tab_list.AfterFirst(wxT(','));
+
+          // Check if this page has an 'active' marker
+          const wxChar c = tab[0];
+          if (c == wxT('+') || c == wxT('*')) {
+             tab = tab.Mid(1); 
+          }
+
+          const size_t tab_idx = wxAtoi(tab.c_str());
+          if (tab_idx >= GetPageCount()) continue;
+
+          // Move tab to pane
+          wxAuiNotebookPage& page = m_tabs.GetPage(tab_idx);
+          const size_t newpage_idx = dest_tabs->GetPageCount();
+          dest_tabs->InsertPage(page.window, page, newpage_idx);
+
+          if (c == wxT('+')) dest_tabs->SetActivePage(newpage_idx);
+          else if ( c == wxT('*')) sel_page = tab_idx;
+       }
+       dest_tabs->DoShowHide();
+
+       tabs = tabs.AfterFirst(wxT('|'));
+    }
+
+    // Load the frame perspective
+    const wxString frames = layout.AfterFirst(wxT('@'));
+    m_mgr.LoadPerspective(frames);
+
+    // Force refresh of selection
+    m_curPage = -1;
+    SetSelection(sel_page);
+
+    return true;
+}
 
 //=========================================================================
 // Code that lays out the main application window

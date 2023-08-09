@@ -526,11 +526,18 @@ setDefaultMode:
     
     // Update the reporting list as needed.
     updateReportingFreqList_();
-
+    
     // Relayout window so that the changes can take effect.
     auto currentSizer = m_panel->GetSizer();
     m_panel->SetSizerAndFit(currentSizer, false);
     m_panel->Layout();
+    
+    if (wxGetApp().appConfiguration.tabLayout != "")
+    {
+        ((TabFreeAuiNotebook*)m_auiNbookCtrl)->LoadPerspective(wxGetApp().appConfiguration.tabLayout);
+        const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
+    }
+    //m_auiNbookCtrl->Update();
     
     // If the FreeDV Reporter window was open on last execution, reopen it now.
     CallAfter([&]() {
@@ -578,8 +585,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     this->Connect(m_menuItemToolsConfigDelete->GetId(), wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnDeleteConfigUI));
 
     tools->Append(m_menuItemToolsConfigDelete);
-
-    loadConfiguration_();
     
     // Add Waterfall Plot window
     m_panelWaterfall = new PlotWaterfall((wxFrame*) m_auiNbookCtrl, false, 0);
@@ -665,6 +670,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_togBtnAnalog->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
    // m_btnTogPTT->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnPTT_UI), NULL, this);
 
+    loadConfiguration_();
+    
 #ifdef _USE_TIMER
     Bind(wxEVT_TIMER, &MainFrame::OnTimer, this);       // ID_MY_WINDOW);
     m_plotTimer.SetOwner(this, ID_TIMER_WATERFALL);
@@ -782,6 +789,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 //-------------------------------------------------------------------------
 MainFrame::~MainFrame()
 {
+    wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
+    
     int x;
     int y;
     int w;

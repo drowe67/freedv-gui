@@ -98,6 +98,8 @@ FreeDVConfiguration::FreeDVConfiguration()
     , currentFreeDVMode("/Audio/mode", 4)
         
     , currentSpectrumAveraging("/Plot/Spectrum/CurrentAveraging", 0)
+        
+    , tabLayout("/MainFrame/TabLayout", _(""))
 {
     // empty
 }
@@ -177,6 +179,8 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     auto documentsDir = wxStandardPathObj.GetDocumentsDir();
     quickRecordPath.setDefaultVal(documentsDir);
     load_(config, quickRecordPath);
+    
+    load_(config, tabLayout);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -251,6 +255,8 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, currentFreeDVMode);
     
     save_(config, currentSpectrumAveraging);
+    
+    save_(config, tabLayout);
     
     config->Flush();
 }
