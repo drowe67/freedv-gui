@@ -80,6 +80,7 @@ extern int g_State;
 extern int g_channel_noise;
 extern float g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
+extern bool g_voice_keyer_record;
 
 #include <speex/speex_preprocess.h>
 
@@ -512,7 +513,7 @@ void TxRxThread::txProcessing_()
     //  TX side processing --------------------------------------------
     //
 
-    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
+    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_record))) {
         // Lock the mode mutex so that TX state doesn't change on us during processing.
         txModeChangeMutex.Lock();
         
@@ -627,7 +628,7 @@ void TxRxThread::rxProcessing_()
     assert(nsam != 0);
 
     // while we have enough input samples available ... 
-    while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
+    while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && !g_voice_keyer_record && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
 
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);

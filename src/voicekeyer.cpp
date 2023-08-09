@@ -8,16 +8,37 @@
 
 extern SNDFILE            *g_sfRecMicFile;
 extern bool                g_recFileFromMic;
+extern bool g_voice_keyer_record;
+extern wxMutex g_mutexProtectingCallbackData;
 
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
-    if (vk_state == VK_IDLE)
+    // If recording a new VK file, stop doing that now.
+    if (g_recFileFromMic)
     {
-        m_togBtnVoiceKeyer->SetValue(true);
-        VoiceKeyerProcessEvent(VK_START);
+        g_voice_keyer_record = false;
+        
+        g_mutexProtectingCallbackData.Lock();
+        g_recFileFromMic = false;
+        sf_close(g_sfRecMicFile);
+        g_sfRecMicFile = nullptr;
+        SetStatusText(wxT(""));
+        g_mutexProtectingCallbackData.Unlock();
+        
+        m_togBtnAnalog->Enable(true);
+        m_togBtnVoiceKeyer->SetValue(false);
+        m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
     }
     else
-        VoiceKeyerProcessEvent(VK_SPACE_BAR);
+    {
+        if (vk_state == VK_IDLE)
+        {
+            m_togBtnVoiceKeyer->SetValue(true);
+            VoiceKeyerProcessEvent(VK_START);
+        }
+        else
+            VoiceKeyerProcessEvent(VK_SPACE_BAR);
+    }
 
     event.Skip();
 }
@@ -74,11 +95,11 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
     
     // Disable Analog and VK buttons while recording is happening
     m_togBtnAnalog->Enable(false);
-    m_togBtnVoiceKeyer->Enable(false);
+    m_togBtnVoiceKeyer->SetValue(true);
+    m_togBtnVoiceKeyer->SetBackgroundColour(*wxRED);
     
-    // Trigger recording so that we can actually pull audio from the microphone.
-    m_btnTogPTT->SetValue(true);
-    togglePTT();
+    // Turn on TX pipeline so we can record.
+    g_voice_keyer_record = true;
 }
 
 void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )

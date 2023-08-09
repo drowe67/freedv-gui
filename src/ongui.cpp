@@ -23,6 +23,7 @@ extern int g_txLevel;
 extern wxConfigBase *pConfig;
 extern bool endingTx;
 extern int g_outfifo1_empty;
+extern bool g_voice_keyer_record;
 
 extern SNDFILE            *g_sfRecFileFromModulator;
 extern SNDFILE            *g_sfRecFile;
@@ -574,17 +575,6 @@ void MainFrame::togglePTT(void) {
             g_recFileFromRadio = false;
             g_recFileFromModulator = true;
         }
-    }
-    
-    // If recording a new VK file, stop doing that now.
-    if (g_recFileFromMic && !g_tx)
-    {
-        g_mutexProtectingCallbackData.Lock();
-        g_recFileFromMic = false;
-        sf_close(g_sfRecMicFile);
-        g_sfRecMicFile = nullptr;
-        SetStatusText(wxT(""));
-        g_mutexProtectingCallbackData.Unlock();
     }
 }
 
