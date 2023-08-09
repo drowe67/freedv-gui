@@ -288,7 +288,7 @@ the Rx delay, and number of times the tx/rx cycle repeats.
 Additional options are also available if you right-click on the Voice Keyer button:
 
 * "Use another voice keyer file": Allows you to trigger the voice keyer using a different file from the one configured in Tools->Options.
-* "Record new voice keyer file": Triggers transmit and records your microphone audio to a file that you select. Pushing the PTT button will stop recording.
+* "Record new voice keyer file": Triggers transmit and records your microphone audio to a file that you select. Pushing the Voice Keyer button will stop recording.
 
 # Quick Record
 
