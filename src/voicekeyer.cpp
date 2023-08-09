@@ -6,14 +6,137 @@
 
 #include "main.h"
 
+extern SNDFILE            *g_sfRecMicFile;
+extern bool                g_recFileFromMic;
+extern bool g_voice_keyer_record;
+extern wxMutex g_mutexProtectingCallbackData;
+
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
-    if (vk_state == VK_IDLE)
-        VoiceKeyerProcessEvent(VK_START);
+    // If recording a new VK file, stop doing that now.
+    if (g_recFileFromMic)
+    {
+        g_voice_keyer_record = false;
+        
+        g_mutexProtectingCallbackData.Lock();
+        g_recFileFromMic = false;
+        sf_close(g_sfRecMicFile);
+        g_sfRecMicFile = nullptr;
+        SetStatusText(wxT(""));
+        g_mutexProtectingCallbackData.Unlock();
+        
+        m_togBtnAnalog->Enable(true);
+        m_togBtnVoiceKeyer->SetValue(false);
+        m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+    }
     else
-        VoiceKeyerProcessEvent(VK_SPACE_BAR);
+    {
+        if (vk_state == VK_IDLE)
+        {
+            m_togBtnVoiceKeyer->SetValue(true);
+            VoiceKeyerProcessEvent(VK_START);
+        }
+        else
+            VoiceKeyerProcessEvent(VK_SPACE_BAR);
+    }
 
     event.Skip();
+}
+
+void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
+{
+    wxFileDialog saveFileDialog(
+        this,
+        wxT("Select Voice Keyer File"),
+        wxGetApp().appConfiguration.playFileToMicInPath,
+        wxEmptyString,
+        wxT("WAV files (*.wav)|*.wav|")
+        wxT("All files (*.*)|*.*"),
+        wxFD_SAVE | wxFD_OVERWRITE_PROMPT
+        );
+        
+    if(saveFileDialog.ShowModal() == wxID_CANCEL)
+    {
+        return;     // the user changed their mind...
+    }
+    
+    // The below code ensures that the last folder the above dialog was
+    // navigated to persists across executions.
+    wxString soundFile = saveFileDialog.GetPath();
+    wxString tmpString = wxGetApp().appConfiguration.playFileToMicInPath;
+    wxString extension;
+    wxFileName::SplitPath(soundFile, &tmpString, nullptr, &extension);
+    wxGetApp().appConfiguration.playFileToMicInPath = tmpString;
+    
+    // Append .wav extension to the end if needed.
+    if (extension.Lower() != _("wav"))
+    {
+        soundFile += ".wav";
+    }
+    
+    int sample_rate = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
+    SF_INFO     sfInfo;
+    
+    sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
+    sfInfo.channels   = 1;
+    sfInfo.samplerate = sample_rate;
+
+    g_sfRecMicFile = sf_open(soundFile.c_str(), SFM_WRITE, &sfInfo);
+    if(g_sfRecMicFile == NULL)
+    {
+        wxString strErr = sf_strerror(NULL);
+        wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
+        return;
+    }
+
+    SetStatusText(wxT("Recording file ") + soundFile + wxT(" from microphone") , 0);
+    g_recFileFromMic = true;
+    vkFileName_ = soundFile;
+    
+    // Disable Analog and VK buttons while recording is happening
+    m_togBtnAnalog->Enable(false);
+    m_togBtnVoiceKeyer->SetValue(true);
+    m_togBtnVoiceKeyer->SetBackgroundColour(*wxRED);
+    
+    // Turn on TX pipeline so we can record.
+    g_voice_keyer_record = true;
+}
+
+void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
+{
+    wxFileDialog openFileDialog(
+        this,
+        wxT("Select Voice Keyer File"),
+        wxGetApp().appConfiguration.playFileToMicInPath,
+        wxEmptyString,
+        wxT("WAV files (*.wav)|*.wav|")
+        wxT("All files (*.*)|*.*"),
+        wxFD_OPEN | wxFD_FILE_MUST_EXIST
+        );
+
+    if(openFileDialog.ShowModal() == wxID_CANCEL)
+    {
+        return;     // the user changed their mind...
+    }
+
+    // The below code ensures that the last folder the above dialog was
+    // navigated to persists across executions.
+    wxString tmpString = wxGetApp().appConfiguration.playFileToMicInPath;
+    wxString soundFile = openFileDialog.GetPath();
+    wxFileName::SplitPath(soundFile, &tmpString, nullptr, nullptr);
+    wxGetApp().appConfiguration.playFileToMicInPath = tmpString;
+    
+    vkFileName_ = soundFile;
+}
+
+void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event )
+{
+    // Only handle right-click if idle
+    if (vk_state == VK_IDLE && !m_btnTogPTT->GetValue())
+    {
+        auto sz = m_togBtnVoiceKeyer->GetSize();
+        m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
+    }
 }
 
 extern SNDFILE *g_sfPlayFile;
@@ -31,10 +154,10 @@ int MainFrame::VoiceKeyerStartTx(void)
     SF_INFO sfInfo;
     sfInfo.format = 0;
 
-    SNDFILE* tmpPlayFile = sf_open(wxGetApp().appConfiguration.voiceKeyerWaveFile->mb_str(), SFM_READ, &sfInfo);
+    SNDFILE* tmpPlayFile = sf_open(vkFileName_.c_str(), SFM_READ, &sfInfo);
     if(tmpPlayFile == NULL) {
         wxString strErr = sf_strerror(NULL);
-        wxMessageBox(strErr, wxT("Couldn't open:") + wxGetApp().appConfiguration.voiceKeyerWaveFile, wxOK);
+        wxMessageBox(strErr, wxT("Couldn't open:") + vkFileName_, wxOK);
         m_togBtnVoiceKeyer->SetValue(false);
         next_state = VK_IDLE;
     }
@@ -42,7 +165,7 @@ int MainFrame::VoiceKeyerStartTx(void)
         g_sfTxFs = sfInfo.samplerate;
         g_sfPlayFile = tmpPlayFile;
         
-        SetStatusText(wxT("Voice Keyer: Playing file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + wxT(" to mic input") , 0);
+        SetStatusText(wxT("Voice Keyer: Playing file ") + vkFileName_ + wxT(" to mic input") , 0);
         g_loopPlayFileToMicIn = false;
         g_playFileToMicIn = true;
 

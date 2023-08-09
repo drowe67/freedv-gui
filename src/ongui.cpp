@@ -23,6 +23,17 @@ extern int g_txLevel;
 extern wxConfigBase *pConfig;
 extern bool endingTx;
 extern int g_outfifo1_empty;
+extern bool g_voice_keyer_record;
+
+extern SNDFILE            *g_sfRecFileFromModulator;
+extern SNDFILE            *g_sfRecFile;
+extern bool g_recFileFromModulator;
+extern bool g_recFileFromRadio;
+
+extern SNDFILE            *g_sfRecMicFile;
+extern bool                g_recFileFromMic;
+
+extern wxMutex g_mutexProtectingCallbackData;
 
 //-------------------------------------------------------------------------
 // Forces redraw of main panels on window resize.
@@ -488,14 +499,16 @@ void MainFrame::togglePTT(void) {
         
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
-
+        
         // enable sync text
 
         m_textSync->Enable();
         m_textCurrentDecodeMode->Enable();
         
-        // Re-enable On/Off button.
+        // Re-enable buttons.
         m_togBtnOnOff->Enable(true);
+        m_togBtnAnalog->Enable(true);
+        m_togBtnVoiceKeyer->Enable(true);
     }
     else
     {
@@ -548,6 +561,21 @@ void MainFrame::togglePTT(void) {
 
     // Change button color depending on TX status.
     m_btnTogPTT->SetBackgroundColour(g_tx ? *wxRED : wxNullColour);
+    
+    // If we're recording, switch to/from modulator and radio.
+    if (g_sfRecFile != nullptr)
+    {
+        if (!g_tx)
+        {
+            g_recFileFromModulator = false;
+            g_recFileFromRadio = true;
+        }
+        else
+        {
+            g_recFileFromRadio = false;
+            g_recFileFromModulator = true;
+        }
+    }
 }
 
 //-------------------------------------------------------------------------

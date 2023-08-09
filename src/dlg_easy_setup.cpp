@@ -1007,7 +1007,8 @@ void EasySetupDialog::updateHamlibDevices_()
         for(unsigned int i=0; i<gl.gl_pathc; i++) {
             if(gl.gl_pathv[i][strlen(gl.gl_pathv[i])-1]=='/')
                 continue;
-                
+
+#if defined(__FreeBSD__)
             /* Exclude pseudo TTYs */
             if(gl.gl_pathv[i][8] >= 'l' && gl.gl_pathv[i][8] <= 's')
                 continue;
@@ -1017,6 +1018,10 @@ void EasySetupDialog::updateHamlibDevices_()
             /* Exclude virtual TTYs */
             if(gl.gl_pathv[i][8] == 'v')
                 continue;
+#else
+            if (!strcmp("/dev/cu.wlan-debug", gl.gl_pathv[i]))
+                continue;
+#endif // defined(__FreeBSD__)
 
             /* Exclude initial-state and lock-state devices */
 #ifndef __WXOSX__
