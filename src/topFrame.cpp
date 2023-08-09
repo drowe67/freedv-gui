@@ -22,6 +22,8 @@
 
 #include <wx/regex.h>
 #include <wx/wrapsizer.h>
+#include <wx/aui/tabmdi.h>
+
 #include "topFrame.h"
 #include "gui/util/NameOverrideAccessible.h"
 #include "gui/util/LabelOverrideAccessible.h"
@@ -33,40 +35,143 @@ extern int g_recFileFromModulatorEventId;
 extern int g_txLevel;
 
 // THIS IS VERY MUCH A HACK! wxTabFrame is not in the public interface and should
-// not be here. Unfortunately this is needed to get the tab state loaded and
-// saved. Here's hoping this interface remains stable.
+// not be here, even named as something else. Unfortunately this is needed to get 
+// the tab state loaded and saved. Here's hoping this interface remains stable.
 //
-// (Last retrieved from wxWidgets 3.2 on August 8, 2023.)
-class wxTabFrame : public wxWindow
+// (Last retrieved from wxWidgets 3.0.5.1 on August 8, 2023.)
+class wxTabFrameOurs : public wxWindow
 {
 public:
 
-    wxTabFrame();
-    ~wxTabFrame();
-    void SetTabCtrlHeight(int h);
-    
+    wxTabFrameOurs()
+    {
+        m_tabs = NULL;
+        m_rect = wxRect(0,0,200,200);
+        m_tabCtrlHeight = 20;
+    }
+
+    ~wxTabFrameOurs()
+    {
+        wxDELETE(m_tabs);
+    }
+
+    void SetTabCtrlHeight(int h)
+    {
+        m_tabCtrlHeight = h;
+    }
+
 protected:
     void DoSetSize(int x, int y,
                    int width, int height,
-                   int WXUNUSED(sizeFlags = wxSIZE_AUTO)) wxOVERRIDE;
-    void DoGetClientSize(int* x, int* y) const wxOVERRIDE;
-    
+                   int WXUNUSED(sizeFlags = wxSIZE_AUTO))
+    {
+        m_rect = wxRect(x, y, width, height);
+        DoSizing();
+    }
+
+    void DoGetClientSize(int* x, int* y) const
+    {
+        *x = m_rect.width;
+        *y = m_rect.height;
+    }
+
 public:
-    bool Show( bool WXUNUSED(show = true) ) wxOVERRIDE;
-    void DoSizing();
+    bool Show( bool WXUNUSED(show = true) ) { return false; }
+
+    void DoSizing()
+    {
+        if (!m_tabs)
+            return;
+
+        if (m_tabs->IsFrozen() || m_tabs->GetParent()->IsFrozen())
+            return;
+
+        m_tab_rect = wxRect(m_rect.x, m_rect.y, m_rect.width, m_tabCtrlHeight);
+        if (m_tabs->GetFlags() & wxAUI_NB_BOTTOM)
+        {
+            m_tab_rect = wxRect (m_rect.x, m_rect.y + m_rect.height - m_tabCtrlHeight, m_rect.width, m_tabCtrlHeight);
+            m_tabs->SetSize     (m_rect.x, m_rect.y + m_rect.height - m_tabCtrlHeight, m_rect.width, m_tabCtrlHeight);
+            m_tabs->SetRect     (wxRect(0, 0, m_rect.width, m_tabCtrlHeight));
+        }
+        else //TODO: if (GetFlags() & wxAUI_NB_TOP)
+        {
+            m_tab_rect = wxRect (m_rect.x, m_rect.y, m_rect.width, m_tabCtrlHeight);
+            m_tabs->SetSize     (m_rect.x, m_rect.y, m_rect.width, m_tabCtrlHeight);
+            m_tabs->SetRect     (wxRect(0, 0,        m_rect.width, m_tabCtrlHeight));
+        }
+        // TODO: else if (GetFlags() & wxAUI_NB_LEFT){}
+        // TODO: else if (GetFlags() & wxAUI_NB_RIGHT){}
+
+        m_tabs->Refresh();
+        m_tabs->Update();
+
+        wxAuiNotebookPageArray& pages = m_tabs->GetPages();
+        size_t i, page_count = pages.GetCount();
+
+        for (i = 0; i < page_count; ++i)
+        {
+            wxAuiNotebookPage& page = pages.Item(i);
+            int border_space = m_tabs->GetArtProvider()->GetAdditionalBorderSpace(page.window);
+
+            int height = m_rect.height - m_tabCtrlHeight - border_space;
+            if ( height < 0 )
+            {
+                // avoid passing negative height to wxWindow::SetSize(), this
+                // results in assert failures/GTK+ warnings
+                height = 0;
+            }
+            int width = m_rect.width - 2 * border_space;
+            if (width < 0)
+                width = 0;
+
+            if (m_tabs->GetFlags() & wxAUI_NB_BOTTOM)
+            {
+                page.window->SetSize(m_rect.x + border_space,
+                                     m_rect.y + border_space,
+                                     width,
+                                     height);
+            }
+            else //TODO: if (GetFlags() & wxAUI_NB_TOP)
+            {
+                page.window->SetSize(m_rect.x + border_space,
+                                     m_rect.y + m_tabCtrlHeight,
+                                     width,
+                                     height);
+            }
+            // TODO: else if (GetFlags() & wxAUI_NB_LEFT){}
+            // TODO: else if (GetFlags() & wxAUI_NB_RIGHT){}
+
+#if wxUSE_MDI
+            if (wxDynamicCast(page.window, wxAuiMDIChildFrame))
+            {
+                wxAuiMDIChildFrame* wnd = (wxAuiMDIChildFrame*)page.window;
+                wnd->ApplyMDIChildFrameRect();
+            }
+#endif
+        }
+    }
 
 protected:
-    void DoGetSize(int* x, int* y) const wxOVERRIDE;
-    
+    void DoGetSize(int* x, int* y) const
+    {
+        if (x)
+            *x = m_rect.GetWidth();
+        if (y)
+            *y = m_rect.GetHeight();
+    }
+
 public:
-    void Update() wxOVERRIDE;
+    void Update()
+    {
+        // does nothing
+    }
 
     wxRect m_rect;
     wxRect m_tab_rect;
     wxAuiTabCtrl* m_tabs;
-    int m_tabCtrlHeight;    
+    int m_tabCtrlHeight;
 };
-    
+ 
 TabFreeAuiNotebook::TabFreeAuiNotebook() : wxAuiNotebook() { }
 TabFreeAuiNotebook::TabFreeAuiNotebook(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style)
         : wxAuiNotebook(parent, id, pos, size, style) { }
@@ -89,7 +194,7 @@ wxString TabFreeAuiNotebook::SavePerspective() {
        if (pane.name == wxT("dummy"))
              continue;
 
-         wxTabFrame* tabframe = (wxTabFrame*)pane.window;
+         wxTabFrameOurs* tabframe = (wxTabFrameOurs*)pane.window;
   
        if (!tabs.empty()) tabs += wxT("|");
        tabs += pane.name;
@@ -150,14 +255,14 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
        const wxString pane_name = tab_part.BeforeFirst(wxT('='));
 
        // create a new tab frame
-       wxTabFrame* new_tabs = new wxTabFrame;
+       wxTabFrameOurs* new_tabs = new wxTabFrameOurs();
        new_tabs->m_tabs = new wxAuiTabCtrl(this,
                                   m_tabIdCounter++);
  //                            wxDefaultPosition,
  //                            wxDefaultSize,
  //                            wxNO_BORDER|wxWANTS_CHARS);
        new_tabs->m_tabs->SetArtProvider(m_tabs.GetArtProvider()->Clone());
-       new_tabs->SetTabCtrlHeight(m_tabCtrlHeight);
+       new_tabs->m_tabCtrlHeight = m_tabCtrlHeight;
        new_tabs->m_tabs->SetFlags(m_flags);
        wxAuiTabCtrl *dest_tabs = new_tabs->m_tabs;
 
