@@ -85,27 +85,30 @@ ykman piv certificates export f9 intermediate-cert-2023_2026.crt
 9. Verify that all information is correct, then click "Generate".
 10. Click on "Export" and enter the location to save the self-signed certificate, then push "Save".
 
-## Locating signing key on YubiKey
+## Locating signing key and certificate on YubiKey
 
 At the terminal, enter `p11tool --list-all --provider /usr/lib/x86_64-linux-gnu/libykcs11.so`. Look for something 
 like the following:
 
 ```
-Object 7:
-	URL: pkcs11:model=YubiKey%20YK5;manufacturer=Yubico%20%28www.yubico.com%29;serial=23228029;token=YubiKey%20PIV%20%2323228029;id=%01;object=Public%20key%20for%20PIV%20Authentication;type=public
-	Type: Public key (EC/ECDSA-SECP384R1)
-	Label: Public key for PIV Authentication
-	Flags: CKA_EXTRACTABLE; 
+Object 4:
+	URL: pkcs11:model=YubiKey%20YK5;manufacturer=Yubico%20%28www.yubico.com%29;serial=23228029;token=YubiKey%20PIV%20%2323228029;id=%01;object=X.509%20Certificate%20for%20PIV%20Authentication;type=cert
+	Type: X.509 Certificate (EC/ECDSA-SECP384R1)
+	Expires: Sun Aug  9 16:59:59 2026
+	Label: X.509 Certificate for PIV Authentication
 	ID: 01
 ```
 
-(The important thing is that it should say "Public key for PIV Authentication".)
+(The important thing is that the ID should correspond to the slot where the certificate was installed. For example, 01 corresponds to slot 9a on the YubiKey. Additionally, the expiry date should match the certificate that was issued.)
 
-Save the URL to a file for later use, e.g.
+Save the URLs to files for later use, e.g.
 
 ```
-echo -n "pkcs11:model=YubiKey%20YK5;manufacturer=Yubico%20%28www.yubico.com%29;serial=23228029;token=YubiKey%20PIV%20%2323228029;id=%01;object=Public%20key%20for%20PIV%20Authentication;type=public" > yubikey-key.url
+echo -n "pkcs11:id=%01;type=private" > ~/yubikey-key.url
+echo -n "pkcs11:id=%01" > ~/yubikey-cert.url
 ```
+
+Note that the URLs in the above commands are shortened from what `p11tool` displays; this is possible if the issued certificate is the only one on the YubiKey.
 
 ## Signing binaries manually
 
@@ -131,7 +134,7 @@ To build a signed Windows version of FreeDV, pass in `-DSIGN_WINDOWS_BINARIES=1`
 ```
 $ mkdir build
 $ cd build
-$ cmake -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_KEY_FILE=/home/mooneer/yubikey-public.key` -DCERTIFICATE_FILE=/home/mooneer/freedv-gui-test.crt -DCMAKE_TOOLCHAIN_FILE=/home/mooneer/freedv-gui/cross-compile/freedv-mingw-llvm-x86_64.cmake ..
+$ cmake -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_KEY_FILE=~/key.url` -DPKCS11_CERTIFICATE_FILE=~/cert.url -DCMAKE_TOOLCHAIN_FILE=/home/mooneer/freedv-gui/cross-compile/freedv-mingw-llvm-x86_64.cmake ..
 $ make
 $ make package
 ```
@@ -158,6 +161,11 @@ Executing: /lib/systemd/systemd-sysv-install enable pcscd
 Created symlink /etc/systemd/system/sockets.target.wants/pcscd.socket → /lib/systemd/system/pcscd.socket.
 $
 ```
+
+### File appears to sign successfully but fails to verify
+
+This is likely due to a problem with the certificate. Open a technical support case with your certificate 
+provider as they may need to reissue.
 
 ## Sources
 
