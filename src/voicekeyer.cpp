@@ -139,6 +139,11 @@ void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event )
     }
 }
 
+void MainFrame::OnSetMonitorVKAudio( wxCommandEvent& event )
+{
+    wxGetApp().appConfiguration.monitorVoiceKeyerAudio = event.IsChecked();
+}
+
 extern SNDFILE *g_sfPlayFile;
 extern bool g_playFileToMicIn;
 extern bool g_loopPlayFileToMicIn;

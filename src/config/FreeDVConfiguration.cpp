@@ -98,6 +98,9 @@ FreeDVConfiguration::FreeDVConfiguration()
     , currentFreeDVMode("/Audio/mode", 4)
         
     , currentSpectrumAveraging("/Plot/Spectrum/CurrentAveraging", 0)
+        
+    , monitorVoiceKeyerAudio("/Monitor/VoiceKeyerAudio", false)
+    , monitorTxAudio("/Monitor/TransmitAudio", false)
 {
     // empty
 }
@@ -172,6 +175,9 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, currentFreeDVMode);
     
     load_(config, currentSpectrumAveraging);
+    
+    load_(config, monitorVoiceKeyerAudio);
+    load_(config, monitorTxAudio);
     
     auto wxStandardPathObj = wxStandardPaths::Get();
     auto documentsDir = wxStandardPathObj.GetDocumentsDir();
@@ -251,6 +257,9 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, currentFreeDVMode);
     
     save_(config, currentSpectrumAveraging);
+    
+    save_(config, monitorVoiceKeyerAudio);
+    save_(config, monitorTxAudio);
     
     config->Flush();
 }

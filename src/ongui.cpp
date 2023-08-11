@@ -458,6 +458,11 @@ int MainApp::FilterEvent(wxEvent& event)
     return -1;
 }
 
+void MainFrame::OnSetMonitorTxAudio( wxCommandEvent& event )
+{
+    wxGetApp().appConfiguration.monitorTxAudio = event.IsChecked();
+}
+
 //-------------------------------------------------------------------------
 // OnTogBtnPTTRightClick(): show right-click menu for PTT button
 //-------------------------------------------------------------------------

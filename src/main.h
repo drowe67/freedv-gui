@@ -420,6 +420,9 @@ class MainFrame : public TopFrame
         void OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event );
         void OnRecordNewVoiceKeyerFile( wxCommandEvent& event );
         
+        void OnSetMonitorVKAudio( wxCommandEvent& event );
+        void OnSetMonitorTxAudio( wxCommandEvent& event );
+        
     private:
         std::shared_ptr<IAudioDevice> rxInSoundDevice;
         std::shared_ptr<IAudioDevice> rxOutSoundDevice;

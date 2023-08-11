@@ -700,12 +700,24 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     voiceKeyerPopupMenu_->AppendSeparator();
     
     auto monitorVKMenuItem = voiceKeyerPopupMenu_->AppendCheckItem(wxID_ANY, _("Monitor recorded audio"));
+    voiceKeyerPopupMenu_->Check(monitorVKMenuItem->GetId(), wxGetApp().appConfiguration.monitorVoiceKeyerAudio);
+    voiceKeyerPopupMenu_->Connect(
+        monitorVKMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(MainFrame::OnSetMonitorVKAudio),
+        NULL,
+        this);
         
     // Create PTT popup menu
     pttPopupMenu_ = new wxMenu();
     assert(pttPopupMenu_ != nullptr);
     
     auto monitorMenuItem = pttPopupMenu_->AppendCheckItem(wxID_ANY, _("Monitor transmitted audio"));
+    pttPopupMenu_->Check(monitorMenuItem->GetId(), wxGetApp().appConfiguration.monitorTxAudio);
+    pttPopupMenu_->Connect(
+        monitorMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(MainFrame::OnSetMonitorTxAudio),
+        NULL,
+        this);
 
     m_RxRunning = false;
     m_txThread = nullptr;

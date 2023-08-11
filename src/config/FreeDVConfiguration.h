@@ -107,6 +107,9 @@ public:
     
     ConfigurationDataElement<int> currentSpectrumAveraging;
     
+    ConfigurationDataElement<bool> monitorVoiceKeyerAudio;
+    ConfigurationDataElement<bool> monitorTxAudio;
+    
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };
