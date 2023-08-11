@@ -95,6 +95,7 @@
 #include "audio/IAudioDevice.h"
 #include "config/FreeDVConfiguration.h"
 #include "pipeline/paCallbackData.h"
+#include "pipeline/LinkStep.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -216,6 +217,8 @@ class MainApp : public wxApp
         bool       m_txRxThreadHighPriority;
 
         int        m_prevMode;
+        
+        std::shared_ptr<LinkStep> linkStep;
 
     protected:
 };

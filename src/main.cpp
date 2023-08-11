@@ -720,9 +720,11 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         this);
 
     m_RxRunning = false;
+
     m_txThread = nullptr;
     m_rxThread = nullptr;
-
+    wxGetApp().linkStep = nullptr;
+    
 #ifdef _USE_ONIDLE
     Connect(wxEVT_IDLE, wxIdleEventHandler(MainFrame::OnIdle), NULL, this);
 #endif //_USE_ONIDLE
@@ -2337,6 +2339,7 @@ void MainFrame::stopRxStream()
             m_rxThread = nullptr;
         }
 
+        wxGetApp().linkStep = nullptr;
         destroy_fifos();
         
         // Free memory allocated for filters.
@@ -2825,10 +2828,13 @@ void MainFrame::startRxStream()
             }, nullptr);
         }
         
+        // Create link to allow monitoring TX/VK audio
+        wxGetApp().linkStep = std::make_shared<LinkStep>(rxOutSoundDevice->getSampleRate());
+        
         // start tx/rx processing thread
         if (txInSoundDevice && txOutSoundDevice)
         {
-            m_txThread = new TxRxThread(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate());
+            m_txThread = new TxRxThread(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate(), wxGetApp().linkStep.get());
             if ( m_txThread->Create() != wxTHREAD_NO_ERROR )
             {
                 wxLogError(wxT("Can't create TX thread!"));
@@ -2846,7 +2852,7 @@ void MainFrame::startRxStream()
             }
         }
 
-        m_rxThread = new TxRxThread(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate());
+        m_rxThread = new TxRxThread(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep.get());
         if ( m_rxThread->Create() != wxTHREAD_NO_ERROR )
         {
             wxLogError(wxT("Can't create RX thread!"));

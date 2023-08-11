@@ -42,6 +42,8 @@
 #include "FreeDVReceiveStep.h"
 #include "ExclusiveAccessStep.h"
 
+#include "LinkStep.h"
+
 #include <wx/stopwatch.h>
 
 // External globals
@@ -200,6 +202,16 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqMicInVol);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerStep));
         
+        // Take TX audio post-equalizer and send it to RX for possible monitoring use.
+        if (equalizedMicAudioLink_ != nullptr)
+        {
+            auto micAudioPipeline = new AudioPipeline(equalizedMicAudioLink_->getSampleRate(), equalizedMicAudioLink_->getSampleRate());
+            micAudioPipeline->appendPipelineStep(equalizedMicAudioLink_->getInputPipelineStep());
+        
+            auto micAudioTap = std::make_shared<TapStep>(inputSampleRate_, micAudioPipeline);
+            pipeline_->appendPipelineStep(micAudioTap);
+        }
+                
         // Resample for plot step
         auto resampleForPlotStep = new ResampleForPlotStep(g_plotSpeechInFifo);
         auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
@@ -388,6 +400,20 @@ void TxRxThread::initializePipeline_()
         auto resampleForPlotOutTap = new TapStep(outputSampleRate_, resampleForPlotOutPipeline);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutTap));
         
+        // Replace received audio with microphone audio if we're monitoring TX/voice keyer recording.
+        if (equalizedMicAudioLink_ != nullptr)
+        {
+            auto bypassMonitorAudio = new AudioPipeline(outputSampleRate_, outputSampleRate_);        
+            auto eitherOrMicMonitorStep = new EitherOrStep(
+                []() { return 
+                    (g_voice_keyer_record && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
+                    (g_tx && wxGetApp().appConfiguration.monitorTxAudio); },
+                std::shared_ptr<IPipelineStep>(equalizedMicAudioLink_->getOutputPipelineStep()),
+                std::shared_ptr<IPipelineStep>(bypassMonitorAudio)
+            );
+            pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrMicMonitorStep));
+        }
+        
         // Clear anything in the FIFO before resuming decode.
         clearFifos_();
     }
@@ -444,6 +470,11 @@ void TxRxThread::notify()
 void TxRxThread::clearFifos_()
 {
     paCallBackData  *cbData = g_rxUserdata;
+    
+    if (equalizedMicAudioLink_ != nullptr && !g_tx)
+    {
+        equalizedMicAudioLink_->clearFifo();
+    }
     
     if (m_tx)
     {
@@ -627,8 +658,13 @@ void TxRxThread::rxProcessing_()
     assert(nsam <= 10*N48);
     assert(nsam != 0);
 
+    bool processInputFifo = 
+        (g_voice_keyer_record && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
+        (g_tx && wxGetApp().appConfiguration.monitorTxAudio) ||
+        (!g_voice_keyer_record && ((g_half_duplex && !g_tx) || !g_half_duplex));
+    
     // while we have enough input samples available ... 
-    while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && !g_voice_keyer_record && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
+    while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && processInputFifo) {
 
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
@@ -639,6 +675,15 @@ void TxRxThread::rxProcessing_()
         auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
         auto outputSamples = pipeline_->execute(inputSamplesPtr, nsam, &nout);
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
-        codec2_fifo_write(outFifo, outputSamples.get(), nout);
+        
+        if (nout > 0)
+        {
+            codec2_fifo_write(outFifo, outputSamples.get(), nout);
+        }
+        
+        processInputFifo = 
+                (g_voice_keyer_record && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
+                (g_tx && wxGetApp().appConfiguration.monitorTxAudio) ||
+                (!g_voice_keyer_record && ((g_half_duplex && !g_tx) || !g_half_duplex));
     }
 }
