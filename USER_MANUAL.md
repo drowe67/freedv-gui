@@ -289,6 +289,14 @@ Additional options are also available if you right-click on the Voice Keyer butt
 
 * "Use another voice keyer file": Allows you to trigger the voice keyer using a different file from the one configured in Tools->Options.
 * "Record new voice keyer file": Triggers transmit and records your microphone audio to a file that you select. Pushing the Voice Keyer button will stop recording.
+* "Monitor recorded audio": Allows monitoring of microphone audio while recording voice keyer file. If enabled, a checkmark will appear next to this option.
+
+# Monitoring TX Audio
+
+FreeDV has the ability to monitor transmit audio. This can be useful for adjusting 
+microphone filters when your radio is plugged into a dummy load. To enable this,
+right-click on the PTT button and choose "Monitor transmitted audio". A checkmark
+will appear next to this menu option when enabled.
 
 # Quick Record
 
