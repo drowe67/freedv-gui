@@ -459,6 +459,15 @@ int MainApp::FilterEvent(wxEvent& event)
 }
 
 //-------------------------------------------------------------------------
+// OnTogBtnPTTRightClick(): show right-click menu for PTT button
+//-------------------------------------------------------------------------
+void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& event )
+{
+    auto sz = m_btnTogPTT->GetSize();
+    m_btnTogPTT->PopupMenu(pttPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
+}
+
+//-------------------------------------------------------------------------
 // OnTogBtnPTT ()
 //-------------------------------------------------------------------------
 void MainFrame::OnTogBtnPTT (wxCommandEvent& event)

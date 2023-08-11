@@ -379,6 +379,7 @@ class MainFrame : public TopFrame
         void OnTogBtnSplitClick(wxCommandEvent& event);
         void OnTogBtnAnalogClick(wxCommandEvent& event) override;
         void OnTogBtnPTT( wxCommandEvent& event ) override;
+        void OnTogBtnPTTRightClick( wxContextMenuEvent& event ) override;
         void OnTogBtnVoiceKeyerClick (wxCommandEvent& event) override;
         void OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event ) override;
         
@@ -461,6 +462,7 @@ class MainFrame : public TopFrame
         std::string vkFileName_;
         
         wxMenu* voiceKeyerPopupMenu_;
+        wxMenu* pttPopupMenu_;
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
