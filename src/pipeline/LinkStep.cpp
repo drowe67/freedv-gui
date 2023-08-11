@@ -20,6 +20,7 @@
 //
 //=========================================================================
 
+#include <cassert>
 #include <algorithm>
 #include "LinkStep.h"
 
