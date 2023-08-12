@@ -167,6 +167,14 @@ $
 This is likely due to a problem with the certificate. Open a technical support case with your certificate 
 provider as they may need to reissue.
 
+### Windows Defender SmartScreen popups appear despite use of EV certificate
+
+Some things to check:
+
+1. Ensure that `signtool.exe /v /debug /pa file.exe` validates the signed file successfully. (Or use the equivalent `osslsigncode verify -CAfile RootCertificateBundle.crt --TSA-CAfile /usr/lib/ssl/certs/ca-certificates.crt -in file.exe` on Linux/macOS.)
+2. The timestamp hash should be the same as the file hash for SmartScreen to properly accept the signed file. If not, the file will need to be re-signed (and CMakeLists.txt possibly updated).
+3. Some EV (and all OV) certificates may need a couple of days at minimum to be accepted by Microsoft. It may be possible to accelerate this by sending the signed file to Microsoft for analysis.
+
 ## Sources
 
 * [Private Key Generation and CSR Attestation with YubiKey Manager
