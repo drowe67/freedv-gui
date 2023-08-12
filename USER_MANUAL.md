@@ -289,7 +289,7 @@ Additional options are also available if you right-click on the Voice Keyer butt
 
 * "Use another voice keyer file": Allows you to trigger the voice keyer using a different file from the one configured in Tools->Options.
 * "Record new voice keyer file": Triggers transmit and records your microphone audio to a file that you select. Pushing the Voice Keyer button will stop recording.
-* "Monitor recorded audio": Allows monitoring of microphone audio while recording voice keyer file. If enabled, a checkmark will appear next to this option.
+* "Monitor transmitted audio": Allows monitoring of audio while transmitting the voice keyer file. If enabled, a checkmark will appear next to this option.
 
 # Monitoring TX Audio
 
