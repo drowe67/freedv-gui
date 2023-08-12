@@ -1,1 +1,28 @@
+1 VERSIONINFO
+  FILEVERSION 1,9,0,0
+  PRODUCTVERSION 1,9,0,0
+  FILEFLAGSMASK 0x00000000
+  FILEOS 0x00000001
+  FILETYPE 0x00000001
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "FreeDV\0"
+            VALUE "FileDescription", "Digital voice mode for HF radio\0"
+            VALUE "FileVersion", "1.9.0\0"
+            VALUE "InternalName", "FreeDV\0"
+            VALUE "LegalCopyright", "Copyright (c) 2023 FreeDV\0"
+            VALUE "LegalTrademarks", "\0"
+            VALUE "ProductName", "FreeDV - Digital voice mode for HF radio\0"
+            VALUE "ProductVersion", "1.9.0\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 1200
+    END
+END
+
 id ICON "./freedv.ico"
