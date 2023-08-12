@@ -15,7 +15,7 @@ BEGIN
             VALUE "InternalName", "FreeDV\0"
             VALUE "LegalCopyright", "Copyright (c) 2023 FreeDV\0"
             VALUE "LegalTrademarks", "\0"
-            VALUE "ProductName", "FreeDV - Digital voice mode for HF radio\0"
+            VALUE "ProductName", "FreeDV\0"
             VALUE "ProductVersion", "1.9.0\0"
         END
     END

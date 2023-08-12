@@ -586,7 +586,11 @@ if(FreeDV_VERSION_PATCH)
 endif()
 if(FreeDV_VERSION_TWEAK)
     set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}.${FreeDV_VERSION_TWEAK}")
-endif()
+    set(CPACK_VER_TWEAK "${CPACK_PACKAGE_VERSION_PATCH}")
+else(FreeDV_VERSION_TWEAK)
+    set(CPACK_VER_TWEAK "${CPACK_PACKAGE_VERSION_PATCH}.0")
+endif(FreeDV_VERSION_TWEAK)
+    
 if(FREEDV_VERSION_TAG)
     if(FREEDV_HASH)
         set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}-${FREEDV_VERSION_TAG}-${DATE_RESULT}-${FREEDV_HASH}")
@@ -639,7 +643,20 @@ if(WIN32)
         "http://freedv.org" "FreeDV Homepage")
     set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "DeleteRegKey HKLM 'SOFTWARE\\\\CODEC2-Project\\\\FreeDV'")
     set(CPACK_NSIS_MENU_LINKS "share/freedv-gui/USER_MANUAL.pdf" "FreeDV User Manual")
-    
+
+    set(CPACK_NSIS_DEFINES
+        "${CPACK_NSIS_DEFINES}
+VIProductVersion \\\"${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_VER_TWEAK}\\\"
+VIFileVersion \\\"${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_VER_TWEAK}\\\"
+VIAddVersionKey \\\"ProductName\\\" \\\"FreeDV\\\"
+VIAddVersionKey \\\"ProductVersion\\\" \\\"${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_VER_TWEAK}\\\"
+VIAddVersionKey \\\"Company\\\" \\\"FreeDV\\\"
+VIAddVersionKey \\\"LegalCopyright\\\" \\\"Copyright (c) 2023 FreeDV\\\"
+VIAddVersionKey \\\"FileDescription\\\" \\\"Digital voice mode for HF radio\\\"
+VIAddVersionKey \\\"FileVersion\\\" \\\"${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_VER_TWEAK}\\\"
+VIAddVersionKey \\\"GitHash\\\" \\\"${FREEDV_HASH}\\\"
+    ")
+
     if (FREEDV_USING_LLVM_MINGW)
         set(CPACK_PACKAGE_FILE_NAME "FreeDV-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-windows-${CMAKE_SYSTEM_PROCESSOR}")
     endif (FREEDV_USING_LLVM_MINGW)
