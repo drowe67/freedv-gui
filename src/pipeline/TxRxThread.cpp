@@ -376,12 +376,31 @@ void TxRxThread::initializePipeline_()
         rfDemodulationPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(rfDemodulationStep));
         
         auto eitherOrRfDemodulationStep = new EitherOrStep(
-            []() { return g_analog; },
+            [this]() { return g_analog ||
+                (equalizedMicAudioLink_ != nullptr && (
+                    (g_voice_keyer_record && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
+                    (g_tx && wxGetApp().appConfiguration.monitorTxAudio)
+                )); },
             std::shared_ptr<IPipelineStep>(bypassRfDemodulationPipeline),
             std::shared_ptr<IPipelineStep>(rfDemodulationPipeline)
         );
+
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRfDemodulationStep));
         
+        // Replace received audio with microphone audio if we're monitoring TX/voice keyer recording.
+        if (equalizedMicAudioLink_ != nullptr)
+        {
+            auto bypassMonitorAudio = new AudioPipeline(outputSampleRate_, outputSampleRate_);        
+            auto eitherOrMicMonitorStep = new EitherOrStep(
+                []() { return 
+                    (g_voice_keyer_record && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
+                    (g_tx && wxGetApp().appConfiguration.monitorTxAudio); },
+                std::shared_ptr<IPipelineStep>(equalizedMicAudioLink_->getOutputPipelineStep()),
+                std::shared_ptr<IPipelineStep>(bypassMonitorAudio)
+            );
+            bypassRfDemodulationPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrMicMonitorStep));
+        }
+
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
             outputSampleRate_, 
@@ -399,20 +418,6 @@ void TxRxThread::initializePipeline_()
 
         auto resampleForPlotOutTap = new TapStep(outputSampleRate_, resampleForPlotOutPipeline);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutTap));
-        
-        // Replace received audio with microphone audio if we're monitoring TX/voice keyer recording.
-        if (equalizedMicAudioLink_ != nullptr)
-        {
-            auto bypassMonitorAudio = new AudioPipeline(outputSampleRate_, outputSampleRate_);        
-            auto eitherOrMicMonitorStep = new EitherOrStep(
-                []() { return 
-                    (g_voice_keyer_record && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
-                    (g_tx && wxGetApp().appConfiguration.monitorTxAudio); },
-                std::shared_ptr<IPipelineStep>(equalizedMicAudioLink_->getOutputPipelineStep()),
-                std::shared_ptr<IPipelineStep>(bypassMonitorAudio)
-            );
-            pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrMicMonitorStep));
-        }
         
         // Clear anything in the FIFO before resuming decode.
         clearFifos_();
