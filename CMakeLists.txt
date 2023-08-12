@@ -162,12 +162,12 @@ if(SIGN_WINDOWS_BINARIES)
 
     # Default timestamping server
     if(NOT DEFINED TIMESTAMP_SERVER)
-        set(TIMESTAMP_SERVER http://timestamp.sectigo.com/)    
+        set(TIMESTAMP_SERVER http://timestamp.digicert.com/)    
     endif(NOT DEFINED TIMESTAMP_SERVER)
 
     # Default hash algorithm
     if(NOT DEFINED SIGN_HASH)
-        set(SIGN_HASH sha384)
+        set(SIGN_HASH sha256)
     endif(NOT DEFINED SIGN_HASH)
 
     # Look for osslsigncode    
