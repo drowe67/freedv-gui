@@ -178,7 +178,7 @@ if(SIGN_WINDOWS_BINARIES)
         TARGET freedv 
         POST_BUILD
         COMMAND mv $<TARGET_FILE:freedv> $<TARGET_FILE:freedv>.tmp
-        COMMAND ${OSSLSIGNCODE_BIN} ARGS sign -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert "${PKCS11_CERTIFICATE}" -key "${PKCS11_KEY}" -h sha256 -ts ${TIMESTAMP_SERVER} -in $<TARGET_FILE:freedv>.tmp -out $<TARGET_FILE:freedv>
+        COMMAND ${OSSLSIGNCODE_BIN} ARGS sign -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert "${PKCS11_CERTIFICATE}" -key "${PKCS11_KEY}" -h sha384 -ts ${TIMESTAMP_SERVER} -comm -in $<TARGET_FILE:freedv>.tmp -out $<TARGET_FILE:freedv>
         COMMAND rm $<TARGET_FILE:freedv>.tmp
         VERBATIM)
 endif(SIGN_WINDOWS_BINARIES)

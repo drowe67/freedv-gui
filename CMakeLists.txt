@@ -162,7 +162,7 @@ if(SIGN_WINDOWS_BINARIES)
 
     # Default timestamping server
     if(NOT DEFINED TIMESTAMP_SERVER)
-        set(TIMESTAMP_SERVER http://timestamp.sectigo.com)    
+        set(TIMESTAMP_SERVER http://timestamp.sectigo.com/)    
     endif(NOT DEFINED TIMESTAMP_SERVER)
 
     # Look for osslsigncode    
@@ -647,7 +647,7 @@ if(WIN32)
     if(SIGN_WINDOWS_BINARIES)
         # Add finalize command for NSIS so the installer/uninstaller can be
         # signed too.
-        set(CPACK_NSIS_FINALIZE_CMD "mv %1 %1.tmp; ${OSSLSIGNCODE_BIN} sign -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert \\\"${PKCS11_CERTIFICATE}\\\" -key \\\"${PKCS11_KEY}\\\" -h sha256 -ts ${TIMESTAMP_SERVER} -in %1.tmp -out %1")
+        set(CPACK_NSIS_FINALIZE_CMD "mv %1 %1.tmp; ${OSSLSIGNCODE_BIN} sign -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert \\\"${PKCS11_CERTIFICATE}\\\" -key \\\"${PKCS11_KEY}\\\" -h sha384 -comm -ts ${TIMESTAMP_SERVER} -in %1.tmp -out %1")
     endif(SIGN_WINDOWS_BINARIES)
 
     include(CPack)
