@@ -108,7 +108,7 @@ echo -n "pkcs11:id=%01;type=private" > ~/yubikey-key.url
 echo -n "pkcs11:id=%01" > ~/yubikey-cert.url
 ```
 
-Note that the URLs in the above commands are shortened from what `p11tool` displays; this is possible if the issued certificate is the only one on the YubiKey.
+Note that the URLs in the above commands are shortened from what `p11tool` displays; this is possible if it's able to uniquely identify a certificate using the provided information. If there's only one certificate installed on the YubiKey, it's also possible to just create empty files for the certificate and key URLs (and in fact, may be necessary for the correct certificate to be used).
 
 ## Signing binaries manually
 

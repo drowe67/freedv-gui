@@ -165,6 +165,11 @@ if(SIGN_WINDOWS_BINARIES)
         set(TIMESTAMP_SERVER http://timestamp.sectigo.com/)    
     endif(NOT DEFINED TIMESTAMP_SERVER)
 
+    # Default hash algorithm
+    if(NOT DEFINED SIGN_HASH)
+        set(SIGN_HASH sha384)
+    endif(NOT DEFINED SIGN_HASH)
+
     # Look for osslsigncode    
     find_program(
         OSSLSIGNCODE_BIN
@@ -172,15 +177,10 @@ if(SIGN_WINDOWS_BINARIES)
         REQUIRED)
 
     # Generate command to execute for signing binaries.
-    execute_process(
-        COMMAND cat 
-        INPUT_FILE ${PKCS11_KEY_FILE}
-        OUTPUT_VARIABLE PKCS11_KEY)
-
-    execute_process(
-        COMMAND cat 
-        INPUT_FILE ${PKCS11_CERTIFICATE_FILE}
-        OUTPUT_VARIABLE PKCS11_CERTIFICATE)
+    file(READ ${PKCS11_KEY_FILE} PKCS11_KEY_TMP)
+    file(READ ${PKCS11_CERTIFICATE_FILE} PKCS11_CERTIFICATE_TMP)
+    string(REPLACE "\n" "" PKCS11_KEY "${PKCS11_KEY_TMP}")
+    string(REPLACE "\n" "" PKCS11_CERTIFICATE "${PKCS11_CERTIFICATE_TMP}")
 endif(SIGN_WINDOWS_BINARIES)
 
 if(USE_STATIC_DEPS)
@@ -647,7 +647,7 @@ if(WIN32)
     if(SIGN_WINDOWS_BINARIES)
         # Add finalize command for NSIS so the installer/uninstaller can be
         # signed too.
-        set(CPACK_NSIS_FINALIZE_CMD "mv %1 %1.tmp; ${OSSLSIGNCODE_BIN} sign -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert \\\"${PKCS11_CERTIFICATE}\\\" -key \\\"${PKCS11_KEY}\\\" -h sha384 -comm -ts ${TIMESTAMP_SERVER} -in %1.tmp -out %1")
+        set(CPACK_NSIS_FINALIZE_CMD "mv %1 %1.tmp; ${OSSLSIGNCODE_BIN} sign -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert \\\"${PKCS11_CERTIFICATE}\\\" -key \\\"${PKCS11_KEY}\\\" -h ${SIGN_HASH} -comm -ts ${TIMESTAMP_SERVER} -in %1.tmp -out %1")
     endif(SIGN_WINDOWS_BINARIES)
 
     include(CPack)
