@@ -8,16 +8,14 @@
 
 extern SNDFILE            *g_sfRecMicFile;
 extern bool                g_recFileFromMic;
-extern bool g_voice_keyer_record;
+extern bool g_voice_keyer_tx;
 extern wxMutex g_mutexProtectingCallbackData;
 
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
     // If recording a new VK file, stop doing that now.
     if (g_recFileFromMic)
-    {
-        g_voice_keyer_record = false;
-        
+    {       
         g_mutexProtectingCallbackData.Lock();
         g_recFileFromMic = false;
         sf_close(g_sfRecMicFile);
@@ -97,9 +95,6 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
     m_togBtnAnalog->Enable(false);
     m_togBtnVoiceKeyer->SetValue(true);
     m_togBtnVoiceKeyer->SetBackgroundColour(*wxRED);
-    
-    // Turn on TX pipeline so we can record.
-    g_voice_keyer_record = true;
 }
 
 void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
@@ -176,6 +171,11 @@ int MainFrame::VoiceKeyerStartTx(void)
 
         m_btnTogPTT->SetValue(true); togglePTT();
         next_state = VK_TX;
+
+        if (wxGetApp().appConfiguration.monitorVoiceKeyerAudio)
+        {
+            g_voice_keyer_tx = true;
+        }
     }
 
     return next_state;
@@ -188,6 +188,8 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
     switch(vk_state) {
 
     case VK_IDLE:
+        g_voice_keyer_tx = false;
+
         if (vk_event == VK_START) {
             // sample these puppies at start just in case they are changed while VK running
             vk_rx_pause = wxGetApp().appConfiguration.voiceKeyerRxPause;
@@ -231,6 +233,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         break;
 
      case VK_RX:
+        g_voice_keyer_tx = false;
 
         // in this state we are receiving and waiting for
         // delay timer or valid sync
@@ -256,6 +259,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         break;
 
      case VK_SYNC_WAIT:
+        g_voice_keyer_tx = false;
 
         // In this state we wait for valid sync to last
         // VK_SYNC_WAIT_TIME seconds
@@ -291,6 +295,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         togglePTT();
         m_togBtnVoiceKeyer->SetValue(false);
         next_state = VK_IDLE;
+        g_voice_keyer_tx = false;
     }
 
     //if ((vk_event != VK_DT) || (vk_state != next_state))

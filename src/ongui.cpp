@@ -23,7 +23,7 @@ extern int g_txLevel;
 extern wxConfigBase *pConfig;
 extern bool endingTx;
 extern int g_outfifo1_empty;
-extern bool g_voice_keyer_record;
+extern bool g_voice_keyer_tx;
 
 extern SNDFILE            *g_sfRecFileFromModulator;
 extern SNDFILE            *g_sfRecFile;

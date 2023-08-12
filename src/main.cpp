@@ -88,7 +88,7 @@ int   g_analog;
 int   g_tx;
 float g_snr;
 bool  g_half_duplex;
-bool  g_voice_keyer_record;
+bool  g_voice_keyer_tx;
 SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
 
 // sending and receiving Call Sign data
@@ -699,7 +699,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     
     voiceKeyerPopupMenu_->AppendSeparator();
     
-    auto monitorVKMenuItem = voiceKeyerPopupMenu_->AppendCheckItem(wxID_ANY, _("Monitor recorded audio"));
+    auto monitorVKMenuItem = voiceKeyerPopupMenu_->AppendCheckItem(wxID_ANY, _("Monitor transmitted audio"));
     voiceKeyerPopupMenu_->Check(monitorVKMenuItem->GetId(), wxGetApp().appConfiguration.monitorVoiceKeyerAudio);
     voiceKeyerPopupMenu_->Connect(
         monitorVKMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 

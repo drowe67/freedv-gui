@@ -82,7 +82,7 @@ extern int g_State;
 extern int g_channel_noise;
 extern float g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
-extern bool g_voice_keyer_record;
+extern bool g_voice_keyer_tx;
 
 #include <speex/speex_preprocess.h>
 
@@ -378,7 +378,7 @@ void TxRxThread::initializePipeline_()
         auto eitherOrRfDemodulationStep = new EitherOrStep(
             [this]() { return g_analog ||
                 (equalizedMicAudioLink_ != nullptr && (
-                    (g_voice_keyer_record && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
+                    (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
                     (g_tx && wxGetApp().appConfiguration.monitorTxAudio)
                 )); },
             std::shared_ptr<IPipelineStep>(bypassRfDemodulationPipeline),
@@ -393,7 +393,7 @@ void TxRxThread::initializePipeline_()
             auto bypassMonitorAudio = new AudioPipeline(outputSampleRate_, outputSampleRate_);        
             auto eitherOrMicMonitorStep = new EitherOrStep(
                 []() { return 
-                    (g_voice_keyer_record && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
+                    (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
                     (g_tx && wxGetApp().appConfiguration.monitorTxAudio); },
                 std::shared_ptr<IPipelineStep>(equalizedMicAudioLink_->getOutputPipelineStep()),
                 std::shared_ptr<IPipelineStep>(bypassMonitorAudio)
@@ -549,7 +549,7 @@ void TxRxThread::txProcessing_()
     //  TX side processing --------------------------------------------
     //
 
-    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_record))) {
+    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_tx))) {
         // Lock the mode mutex so that TX state doesn't change on us during processing.
         txModeChangeMutex.Lock();
         
@@ -664,9 +664,9 @@ void TxRxThread::rxProcessing_()
     assert(nsam != 0);
 
     bool processInputFifo = 
-        (g_voice_keyer_record && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
+        (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
         (g_tx && wxGetApp().appConfiguration.monitorTxAudio) ||
-        (!g_voice_keyer_record && ((g_half_duplex && !g_tx) || !g_half_duplex));
+        (!g_voice_keyer_tx && ((g_half_duplex && !g_tx) || !g_half_duplex));
     
     // while we have enough input samples available ... 
     while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && processInputFifo) {
@@ -687,8 +687,8 @@ void TxRxThread::rxProcessing_()
         }
         
         processInputFifo = 
-                (g_voice_keyer_record && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
+                (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
                 (g_tx && wxGetApp().appConfiguration.monitorTxAudio) ||
-                (!g_voice_keyer_record && ((g_half_duplex && !g_tx) || !g_half_duplex));
+                (!g_voice_keyer_tx && ((g_half_duplex && !g_tx) || !g_half_duplex));
     }
 }
