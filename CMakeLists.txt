@@ -672,7 +672,7 @@ VIAddVersionKey \\\"GitHash\\\" \\\"${FREEDV_HASH}\\\"
     if(SIGN_WINDOWS_BINARIES)
         # Add finalize command for NSIS so the installer/uninstaller can be
         # signed too.
-        set(CPACK_NSIS_FINALIZE_CMD "mv %1 %1.tmp; ${OSSLSIGNCODE_BIN} sign -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert \\\"${PKCS11_CERTIFICATE}\\\" -key \\\"${PKCS11_KEY}\\\" -h ${SIGN_HASH} -comm -ts ${TIMESTAMP_SERVER} -ac ${INTERMEDIATE_CERT_FILE} -in %1.tmp -out %1")
+        set(CPACK_NSIS_FINALIZE_CMD "mv %1 %1.tmp; ${OSSLSIGNCODE_BIN} sign -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert \\\"${PKCS11_CERTIFICATE}\\\" -key \\\"${PKCS11_KEY}\\\" -h ${SIGN_HASH} -comm -ts ${TIMESTAMP_SERVER} -ac ${INTERMEDIATE_CERT_FILE} -n \\\"FreeDV - ${PROJECT_DESCRIPTION}\\\" -i \\\"https://freedv.org/\\\" -in %1.tmp -out %1")
     endif(SIGN_WINDOWS_BINARIES)
 
     include(CPack)
