@@ -250,7 +250,8 @@ if(MINGW)
     include(cmake/MinGW.cmake)
     # This sets up the exe icon for windows under mingw.
     set(RES_FILES "")
-    set(RES_FILES "${CMAKE_SOURCE_DIR}/contrib/freedv.rc")
+
+    set(RES_FILES "${CMAKE_BINARY_DIR}/freedv.rc")
     set(CMAKE_RC_COMPILER_INIT windres)
     enable_language(RC)
     set(CMAKE_RC_COMPILE_OBJECT
@@ -644,18 +645,25 @@ if(WIN32)
     set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "DeleteRegKey HKLM 'SOFTWARE\\\\CODEC2-Project\\\\FreeDV'")
     set(CPACK_NSIS_MENU_LINKS "share/freedv-gui/USER_MANUAL.pdf" "FreeDV User Manual")
 
+    set(CPACK_WIN_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_VER_TWEAK}")
+
+    string(TIMESTAMP COPYRIGHT_YEAR "%Y")
     set(CPACK_NSIS_DEFINES
         "${CPACK_NSIS_DEFINES}
-VIProductVersion \\\"${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_VER_TWEAK}\\\"
-VIFileVersion \\\"${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_VER_TWEAK}\\\"
+VIProductVersion \\\"${CPACK_WIN_VERSION}\\\"
+VIFileVersion \\\"${CPACK_WIN_VERSION}\\\"
 VIAddVersionKey \\\"ProductName\\\" \\\"FreeDV\\\"
-VIAddVersionKey \\\"ProductVersion\\\" \\\"${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_VER_TWEAK}\\\"
+VIAddVersionKey \\\"ProductVersion\\\" \\\"${CPACK_WIN_VERSION}\\\"
 VIAddVersionKey \\\"Company\\\" \\\"FreeDV\\\"
-VIAddVersionKey \\\"LegalCopyright\\\" \\\"Copyright (c) 2023 FreeDV\\\"
-VIAddVersionKey \\\"FileDescription\\\" \\\"Digital voice mode for HF radio\\\"
-VIAddVersionKey \\\"FileVersion\\\" \\\"${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_VER_TWEAK}\\\"
+VIAddVersionKey \\\"LegalCopyright\\\" \\\"Copyright (c) ${COPYRIGHT_YEAR} FreeDV\\\"
+VIAddVersionKey \\\"FileDescription\\\" \\\"FreeDV - ${PROJECT_DESCRIPTION}\\\"
+VIAddVersionKey \\\"FileVersion\\\" \\\"${CPACK_WIN_VERSION}\\\"
 VIAddVersionKey \\\"GitHash\\\" \\\"${FREEDV_HASH}\\\"
     ")
+
+    # Ensures that we don't need to constantly update the rc file on every new release.
+    string(REPLACE "." "," VERSION_AS_RC ${CPACK_WIN_VERSION})
+    configure_file(${CMAKE_SOURCE_DIR}/contrib/freedv.rc.in ${CMAKE_BINARY_DIR}/freedv.rc)
 
     if (FREEDV_USING_LLVM_MINGW)
         set(CPACK_PACKAGE_FILE_NAME "FreeDV-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-windows-${CMAKE_SYSTEM_PROCESSOR}")
