@@ -41,7 +41,7 @@
 #include "ComputeRfSpectrumStep.h"
 #include "FreeDVReceiveStep.h"
 #include "ExclusiveAccessStep.h"
-
+#include "MuteStep.h"
 #include "LinkStep.h"
 
 #include <wx/stopwatch.h>
@@ -103,6 +103,7 @@ extern SNDFILE* g_sfRecMicFile;
 extern SNDFILE* g_sfPlayFileFromRadio;
 
 extern bool g_recFileFromMic;
+extern bool g_recVoiceKeyerFile;
 
 // TBD -- shouldn't be needed once we've fully converted over
 extern int resample(SRC_STATE *src,
@@ -146,7 +147,7 @@ void TxRxThread::initializePipeline_()
         auto bypassRecordMic = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         
         auto eitherOrRecordMic = new EitherOrStep(
-            []() { return g_recFileFromMic && (g_sfRecMicFile != NULL); },
+            []() { return (g_recVoiceKeyerFile || g_recFileFromMic) && (g_sfRecMicFile != NULL); },
             std::shared_ptr<IPipelineStep>(recordMicTap),
             std::shared_ptr<IPipelineStep>(bypassRecordMic)
         );
@@ -378,6 +379,7 @@ void TxRxThread::initializePipeline_()
         auto eitherOrRfDemodulationStep = new EitherOrStep(
             [this]() { return g_analog ||
                 (equalizedMicAudioLink_ != nullptr && (
+                    (g_recVoiceKeyerFile) ||
                     (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
                     (g_tx && wxGetApp().appConfiguration.monitorTxAudio)
                 )); },
@@ -390,13 +392,25 @@ void TxRxThread::initializePipeline_()
         // Replace received audio with microphone audio if we're monitoring TX/voice keyer recording.
         if (equalizedMicAudioLink_ != nullptr)
         {
-            auto bypassMonitorAudio = new AudioPipeline(outputSampleRate_, outputSampleRate_);        
+            auto bypassMonitorAudio = new AudioPipeline(inputSampleRate_, outputSampleRate_);
+
+            auto monitorPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
+            monitorPipeline->appendPipelineStep(equalizedMicAudioLink_->getOutputPipelineStep());
+
+            auto muteStep = new MuteStep(inputSampleRate_, outputSampleRate_);
+
+            auto eitherOrMuteStep = new EitherOrStep(
+                []() { return g_recVoiceKeyerFile; },
+                std::shared_ptr<IPipelineStep>(muteStep),
+                std::shared_ptr<IPipelineStep>(bypassMonitorAudio)
+            );
+
             auto eitherOrMicMonitorStep = new EitherOrStep(
                 []() { return 
                     (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
                     (g_tx && wxGetApp().appConfiguration.monitorTxAudio); },
-                std::shared_ptr<IPipelineStep>(equalizedMicAudioLink_->getOutputPipelineStep()),
-                std::shared_ptr<IPipelineStep>(bypassMonitorAudio)
+                std::shared_ptr<IPipelineStep>(monitorPipeline),
+                std::shared_ptr<IPipelineStep>(eitherOrMuteStep)
             );
             bypassRfDemodulationPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrMicMonitorStep));
         }
@@ -549,7 +563,7 @@ void TxRxThread::txProcessing_()
     //  TX side processing --------------------------------------------
     //
 
-    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_tx))) {
+    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_tx || g_recVoiceKeyerFile || g_recFileFromMic))) {
         // Lock the mode mutex so that TX state doesn't change on us during processing.
         txModeChangeMutex.Lock();
         

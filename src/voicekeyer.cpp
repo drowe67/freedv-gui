@@ -7,17 +7,17 @@
 #include "main.h"
 
 extern SNDFILE            *g_sfRecMicFile;
-extern bool                g_recFileFromMic;
+bool                g_recVoiceKeyerFile;
 extern bool g_voice_keyer_tx;
 extern wxMutex g_mutexProtectingCallbackData;
 
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
     // If recording a new VK file, stop doing that now.
-    if (g_recFileFromMic)
+    if (g_recVoiceKeyerFile)
     {       
         g_mutexProtectingCallbackData.Lock();
-        g_recFileFromMic = false;
+        g_recVoiceKeyerFile = false;
         sf_close(g_sfRecMicFile);
         g_sfRecMicFile = nullptr;
         SetStatusText(wxT(""));
@@ -72,7 +72,7 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
         soundFile += ".wav";
     }
     
-    int sample_rate = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
+    int sample_rate = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
     SF_INFO     sfInfo;
     
     sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
@@ -88,7 +88,7 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
     }
 
     SetStatusText(wxT("Recording file ") + soundFile + wxT(" from microphone") , 0);
-    g_recFileFromMic = true;
+    g_recVoiceKeyerFile = true;
     vkFileName_ = soundFile;
     
     // Disable Analog and VK buttons while recording is happening

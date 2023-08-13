@@ -144,6 +144,7 @@ extern int                 g_recFileFromModulatorEventId;
 
 extern SNDFILE            *g_sfRecMicFile;
 extern bool                g_recFileFromMic;
+extern bool                g_recVoiceKeyerFile;
 
 wxWindow           *g_parent;
 
@@ -745,6 +746,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     
     g_sfRecMicFile = nullptr;
     g_recFileFromMic = false;
+    g_recVoiceKeyerFile = false;
 
     // init click-tune states
 

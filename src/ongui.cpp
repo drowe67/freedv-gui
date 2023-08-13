@@ -31,7 +31,6 @@ extern bool g_recFileFromModulator;
 extern bool g_recFileFromRadio;
 
 extern SNDFILE            *g_sfRecMicFile;
-extern bool                g_recFileFromMic;
 
 extern wxMutex g_mutexProtectingCallbackData;
 
