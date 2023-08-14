@@ -543,7 +543,6 @@ setDefaultMode:
         ((TabFreeAuiNotebook*)m_auiNbookCtrl)->LoadPerspective(wxGetApp().appConfiguration.tabLayout);
         const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
     }
-    //m_auiNbookCtrl->Update();
     
     // If the FreeDV Reporter window was open on last execution, reopen it now.
     CallAfter([&]() {
@@ -816,8 +815,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 //-------------------------------------------------------------------------
 MainFrame::~MainFrame()
 {
-    wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
-
     delete voiceKeyerPopupMenu_;
     
     int x;
@@ -872,6 +869,8 @@ MainFrame::~MainFrame()
         wxGetApp().appConfiguration.mainWindowWidth = w;
         wxGetApp().appConfiguration.mainWindowHeight = h;
     }
+
+    wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
 
     wxGetApp().appConfiguration.squelchActive = g_SquelchActive;
     wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
