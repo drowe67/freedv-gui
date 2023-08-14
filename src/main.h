@@ -329,7 +329,6 @@ class MainFrame : public TopFrame
 
         void StopPlayFileToMicIn(void);
         void StopPlaybackFileFromRadio();
-        void StopRecFileFromModulator();
         void StopRecFileFromRadio();
         
     protected:
@@ -365,9 +364,7 @@ class MainFrame : public TopFrame
         void OnToolsOptions(wxCommandEvent& event) override;
         void OnToolsOptionsUI(wxUpdateUIEvent& event) override;
 
-        void OnPlayFileToMicIn( wxCommandEvent& event ) override;
         void OnRecFileFromRadio( wxCommandEvent& event ) override;
-        void OnRecFileFromModulator( wxCommandEvent& event) override;
         void OnPlayFileFromRadio( wxCommandEvent& event ) override;
 
         void OnHelpCheckUpdates( wxCommandEvent& event ) override;
@@ -383,6 +380,8 @@ class MainFrame : public TopFrame
         void OnTogBtnAnalogClick(wxCommandEvent& event) override;
         void OnTogBtnPTT( wxCommandEvent& event ) override;
         void OnTogBtnVoiceKeyerClick (wxCommandEvent& event) override;
+        void OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event ) override;
+        
         void OnTogBtnOnOff( wxCommandEvent& event ) override;
         void OnTogBtnRecord( wxCommandEvent& event ) override;
 
@@ -416,6 +415,9 @@ class MainFrame : public TopFrame
         void OnReportFrequencyKillFocus(wxFocusEvent& event) override;
 
         void OnSystemColorChanged(wxSysColourChangedEvent& event) override;
+        
+        void OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event );
+        void OnRecordNewVoiceKeyerFile( wxCommandEvent& event );
         
     private:
         std::shared_ptr<IAudioDevice> rxInSoundDevice;
@@ -455,6 +457,10 @@ class MainFrame : public TopFrame
         int        vk_repeats, vk_repeat_counter;
         float      vk_rx_time;
         float      vk_rx_sync_time;
+        
+        std::string vkFileName_;
+        
+        wxMenu* voiceKeyerPopupMenu_;
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();

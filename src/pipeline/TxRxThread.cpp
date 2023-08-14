@@ -63,7 +63,6 @@ extern struct FIFO* g_plotDemodInFifo;
 extern struct FIFO* g_plotSpeechOutFifo;
 extern int g_mode;
 extern bool g_recFileFromModulator;
-extern int g_recFromModulatorSamples;
 extern int g_txLevel;
 extern int g_dump_timing;
 extern bool g_queueResync;
@@ -81,6 +80,7 @@ extern int g_State;
 extern int g_channel_noise;
 extern float g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
+extern bool g_voice_keyer_record;
 
 #include <speex/speex_preprocess.h>
 
@@ -97,7 +97,10 @@ extern wxWindow* g_parent;
 extern SNDFILE* g_sfPlayFile;
 extern SNDFILE* g_sfRecFileFromModulator;
 extern SNDFILE* g_sfRecFile;
+extern SNDFILE* g_sfRecMicFile;
 extern SNDFILE* g_sfPlayFileFromRadio;
+
+extern bool g_recFileFromMic;
 
 // TBD -- shouldn't be needed once we've fully converted over
 extern int resample(SRC_STATE *src,
@@ -124,6 +127,29 @@ void TxRxThread::initializePipeline_()
     if (m_tx)
     {
         pipeline_ = std::shared_ptr<AudioPipeline>(new AudioPipeline(inputSampleRate_, outputSampleRate_));
+        
+        // Record from mic step (optional)
+        auto recordMicStep = new RecordStep(
+            inputSampleRate_, 
+            []() { return g_sfRecMicFile; }, 
+            [](int numSamples) {
+                // Recording stops when the user explicitly tells us to,
+                // no action required here.
+            }
+        );
+        auto recordMicPipeline = new AudioPipeline(inputSampleRate_, inputSampleRate_);
+        recordMicPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordMicStep));
+        
+        auto recordMicTap = new TapStep(inputSampleRate_, recordMicPipeline);
+        auto bypassRecordMic = new AudioPipeline(inputSampleRate_, inputSampleRate_);
+        
+        auto eitherOrRecordMic = new EitherOrStep(
+            []() { return g_recFileFromMic && (g_sfRecMicFile != NULL); },
+            std::shared_ptr<IPipelineStep>(recordMicTap),
+            std::shared_ptr<IPipelineStep>(bypassRecordMic)
+        );
+        auto recordMicLockStep = new ExclusiveAccessStep(eitherOrRecordMic, callbackLockFn, callbackUnlockFn);
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordMicLockStep));
         
         // Mic In playback step (optional)
         auto eitherOrBypassPlay = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -202,14 +228,7 @@ void TxRxThread::initializePipeline_()
             outputSampleRate_, 
             []() { return g_sfRecFileFromModulator; }, 
             [](int numSamples) {
-                g_recFromModulatorSamples -= numSamples;
-                if (g_recFromModulatorSamples <= 0)
-                {
-                    // call stop record menu item, should be thread safe
-                    g_parent->CallAfter(&MainFrame::StopRecFileFromModulator);
-                
-                    wxPrintf("write mod output to file complete\n", g_recFromModulatorSamples);  // consider a popup
-                }
+                // empty
             });
         auto recordModulatedPipeline = new AudioPipeline(outputSampleRate_, recordModulatedStep->getOutputSampleRate());
         recordModulatedPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedStep));
@@ -494,7 +513,7 @@ void TxRxThread::txProcessing_()
     //  TX side processing --------------------------------------------
     //
 
-    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex))) {
+    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_record))) {
         // Lock the mode mutex so that TX state doesn't change on us during processing.
         txModeChangeMutex.Lock();
         
@@ -609,7 +628,7 @@ void TxRxThread::rxProcessing_()
     assert(nsam != 0);
 
     // while we have enough input samples available ... 
-    while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
+    while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && !g_voice_keyer_record && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
 
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);

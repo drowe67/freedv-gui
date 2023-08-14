@@ -198,6 +198,11 @@
 <h1 data-number="3" id="voice-keyer"><span class="header-section-number">3</span> Voice Keyer</h1>
 <p>The Voice Keyer Button on the front page puts FreeDV and your radio into transmit, reads a wave file of your voice to call CQ, and then switches to receive to see if anyone is replying. If you press the space bar or click the PTT button, the voice keyer stops. If a signal with a valid sync is received for a few seconds the voice keyer also stops.</p>
 <p>The Audio tab inside Tools-Options can be used to select the wave file, set the Rx delay, and number of times the tx/rx cycle repeats.</p>
+<p>Additional options are also available if you right-click on the Voice Keyer button:</p>
+<ul>
+<li>“Use another voice keyer file”: Allows you to trigger the voice keyer using a different file from the one configured in Tools-&gt;Options.</li>
+<li>“Record new voice keyer file”: Triggers transmit and records your microphone audio to a file that you select. Pushing the Voice Keyer button will stop recording.</li>
+</ul>
 <h1 data-number="4" id="quick-record"><span class="header-section-number">4</span> Quick Record</h1>
 <p>To quickly record incoming signals from the radio, a ‘Record’ button is provided in the main window. Clicking this button will create a file beginning with the name “FreeDV_FromRadio” and containing the current date and time. Clicking ‘Record’ again will stop recording.</p>
 <p>The Audio tab inside Tools-Options allows control of where these recordings are saved. By default, this is inside the current user’s Documents folder.</p>
@@ -658,7 +663,10 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Allow users to configure PTT port separately from CAT if Hamlib is enabled. (PR #488)</li>
 <li>Add ability to average spectrum plot across 1-3 samples. (PR #487, 492)</li>
 <li>Adjust sizing of main page tabs for better readability. (PR #487)</li>
+<li>Allow use of a different voice keyer file by right-clicking on the Voice Keyer button. (PR #493)</li>
+<li>Include TX audio in recorded audio files to enable recording a full QSO. (PR #493)</li>
 <li>Add band filtering in the FreeDV Reporter dialog. (PR #490, #494)</li>
+<li>Add ability to record new voice keyer files by right-clicking on the Voice Keyer button. (PR #493)</li>
 </ul></li>
 <li>Build system:
 <ul>
@@ -668,6 +676,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Cleanup:
 <ul>
 <li>Remove 2400B mode from the UI. (PR #479)</li>
+<li>Remove rarely-used “Record File - From Modulator” and “Play File - Mic In” menu options. (PR #493)</li>
 </ul></li>
 </ol>
 <h2 data-number="17.2" id="v1.8.12-july-2023"><span class="header-section-number">17.2</span> V1.8.12 July 2023</h2>

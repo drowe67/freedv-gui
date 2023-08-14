@@ -285,6 +285,11 @@ received for a few seconds the voice keyer also stops.
 The Audio tab inside Tools-Options can be used to select the wave file, set 
 the Rx delay, and number of times the tx/rx cycle repeats.
 
+Additional options are also available if you right-click on the Voice Keyer button:
+
+* "Use another voice keyer file": Allows you to trigger the voice keyer using a different file from the one configured in Tools->Options.
+* "Record new voice keyer file": Triggers transmit and records your microphone audio to a file that you select. Pushing the Voice Keyer button will stop recording.
+
 # Quick Record
 
 To quickly record incoming signals from the radio, a 'Record' button is provided
@@ -904,12 +909,16 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Allow users to configure PTT port separately from CAT if Hamlib is enabled. (PR #488)
     * Add ability to average spectrum plot across 1-3 samples. (PR #487, 492)
     * Adjust sizing of main page tabs for better readability. (PR #487)
+    * Allow use of a different voice keyer file by right-clicking on the Voice Keyer button. (PR #493)
+    * Include TX audio in recorded audio files to enable recording a full QSO. (PR #493)
     * Add band filtering in the FreeDV Reporter dialog. (PR #490, #494)
+    * Add ability to record new voice keyer files by right-clicking on the Voice Keyer button. (PR #493)
 3. Build system:
     * Update Codec2 to v1.2.0. (PR #483)
     * Deprecate PortAudio support on Linux. (PR #489, #491)
 4. Cleanup:
     * Remove 2400B mode from the UI. (PR #479)
+    * Remove rarely-used "Record File - From Modulator" and "Play File - Mic In" menu options. (PR #493)
 
 ## V1.8.12 July 2023
 

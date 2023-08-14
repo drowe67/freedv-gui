@@ -88,6 +88,7 @@ int   g_analog;
 int   g_tx;
 float g_snr;
 bool  g_half_duplex;
+bool  g_voice_keyer_record;
 SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
 
 // sending and receiving Call Sign data
@@ -139,8 +140,10 @@ extern int                 g_playFileFromRadioEventId;
 
 extern SNDFILE            *g_sfRecFileFromModulator;
 extern bool                g_recFileFromModulator;
-extern int                 g_recFromModulatorSamples;
 extern int                 g_recFileFromModulatorEventId;
+
+extern SNDFILE            *g_sfRecMicFile;
+extern bool                g_recFileFromMic;
 
 wxWindow           *g_parent;
 
@@ -496,6 +499,9 @@ setDefaultMode:
     
     // Show/hide frequency box based on reporting enablement
     m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+    
+    // Load default voice keyer file as current.
+    vkFileName_ = wxGetApp().appConfiguration.voiceKeyerWaveFile->mb_str();
 
     // Show/hide callsign combo box based on reporting enablement
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
@@ -679,6 +685,24 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_updFreqStatusTimer.SetOwner(this,ID_TIMER_UPD_FREQ);  //[UP]
     //m_panelWaterfall->Refresh();
 #endif
+    
+    // Create voice keyer popup menu.
+    voiceKeyerPopupMenu_ = new wxMenu();
+    assert(voiceKeyerPopupMenu_ != nullptr);
+
+    auto chooseVKFileMenuItem = voiceKeyerPopupMenu_->Append(wxID_ANY, _("&Use another voice keyer file..."));
+    voiceKeyerPopupMenu_->Connect(
+        chooseVKFileMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(MainFrame::OnChooseAlternateVoiceKeyerFile),
+        NULL,
+        this);
+        
+    auto recordNewVoiceKeyerFileMenuItem = voiceKeyerPopupMenu_->Append(wxID_ANY, _("&Record new voice keyer file..."));
+    voiceKeyerPopupMenu_->Connect(
+        recordNewVoiceKeyerFileMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(MainFrame::OnRecordNewVoiceKeyerFile),
+        NULL,
+        this);
 
     m_RxRunning = false;
     m_txThread = nullptr;
@@ -701,6 +725,9 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     g_sfRecFileFromModulator = NULL;
     g_recFileFromModulator = false;
+    
+    g_sfRecMicFile = nullptr;
+    g_recFileFromMic = false;
 
     // init click-tune states
 
@@ -790,6 +817,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 MainFrame::~MainFrame()
 {
     wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
+
+    delete voiceKeyerPopupMenu_;
     
     int x;
     int y;
