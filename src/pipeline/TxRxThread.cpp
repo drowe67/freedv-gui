@@ -388,32 +388,6 @@ void TxRxThread::initializePipeline_()
         );
 
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRfDemodulationStep));
-        
-        // Replace received audio with microphone audio if we're monitoring TX/voice keyer recording.
-        if (equalizedMicAudioLink_ != nullptr)
-        {
-            auto bypassMonitorAudio = new AudioPipeline(inputSampleRate_, outputSampleRate_);
-
-            auto monitorPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
-            monitorPipeline->appendPipelineStep(equalizedMicAudioLink_->getOutputPipelineStep());
-
-            auto muteStep = new MuteStep(inputSampleRate_, outputSampleRate_);
-
-            auto eitherOrMuteStep = new EitherOrStep(
-                []() { return g_recVoiceKeyerFile; },
-                std::shared_ptr<IPipelineStep>(muteStep),
-                std::shared_ptr<IPipelineStep>(bypassMonitorAudio)
-            );
-
-            auto eitherOrMicMonitorStep = new EitherOrStep(
-                []() { return 
-                    (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
-                    (g_tx && wxGetApp().appConfiguration.monitorTxAudio); },
-                std::shared_ptr<IPipelineStep>(monitorPipeline),
-                std::shared_ptr<IPipelineStep>(eitherOrMuteStep)
-            );
-            bypassRfDemodulationPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrMicMonitorStep));
-        }
 
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
@@ -432,6 +406,35 @@ void TxRxThread::initializePipeline_()
 
         auto resampleForPlotOutTap = new TapStep(outputSampleRate_, resampleForPlotOutPipeline);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutTap));
+        
+        // Replace received audio with microphone audio if we're monitoring TX/voice keyer recording.
+        if (equalizedMicAudioLink_ != nullptr)
+        {
+            auto bypassMonitorAudio = new AudioPipeline(outputSampleRate_, outputSampleRate_);
+            auto mutePipeline = new AudioPipeline(outputSampleRate_, outputSampleRate_);
+            
+            auto monitorPipeline = new AudioPipeline(outputSampleRate_, outputSampleRate_);
+            monitorPipeline->appendPipelineStep(equalizedMicAudioLink_->getOutputPipelineStep());
+
+            auto muteStep = new MuteStep(outputSampleRate_);
+            
+            mutePipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(muteStep));
+            
+            auto eitherOrMuteStep = new EitherOrStep(
+                []() { return g_recVoiceKeyerFile; },
+                std::shared_ptr<IPipelineStep>(mutePipeline),
+                std::shared_ptr<IPipelineStep>(bypassMonitorAudio)
+            );
+
+            auto eitherOrMicMonitorStep = new EitherOrStep(
+                []() { return 
+                    (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
+                    (g_tx && wxGetApp().appConfiguration.monitorTxAudio); },
+                std::shared_ptr<IPipelineStep>(monitorPipeline),
+                std::shared_ptr<IPipelineStep>(eitherOrMuteStep)
+            );
+            pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrMicMonitorStep));
+        }
         
         // Clear anything in the FIFO before resuming decode.
         clearFifos_();

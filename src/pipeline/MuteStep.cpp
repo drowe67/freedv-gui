@@ -24,9 +24,8 @@
 #include <cstring>
 #include "MuteStep.h"
 
-MuteStep::MuteStep(int inputSampleRate, int outputSampleRate)
-    : inputSampleRate_(inputSampleRate)
-    , outputSampleRate_(outputSampleRate)
+MuteStep::MuteStep(int outputSampleRate)
+    : sampleRate_(outputSampleRate)
 {
     // empty
 }
@@ -39,14 +38,19 @@ MuteStep::MuteStep(int inputSampleRate, int outputSampleRate)
 // Returns: Array of int16 values corresponding to result audio.
 std::shared_ptr<short> MuteStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    *numOutputSamples = numInputSamples * ((double)outputSampleRate_ / (double)inputSampleRate_);
+    *numOutputSamples = numInputSamples;
     
     if (*numOutputSamples > 0)
     {
         short* outputSamples = new short[*numOutputSamples];
         assert(outputSamples != nullptr);
 
-        memset(outputSamples, 0, *numOutputSamples);
+        // memset() doesn't work here for some reason even though it theoretically should.
+        for (int i = 0; i < numInputSamples; i++)
+        {
+            outputSamples[i] = 0;
+        }
+
         return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
     }
     else

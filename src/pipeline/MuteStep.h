@@ -28,14 +28,14 @@
 class MuteStep : public IPipelineStep
 {
 public:
-    MuteStep(int inputSampleRate, int outputSampleRate);
+    MuteStep(int outputSampleRate);
     virtual ~MuteStep() = default;
     
     // Returns required input sample rate.
-    virtual int getInputSampleRate() const override { return inputSampleRate_; }
+    virtual int getInputSampleRate() const override { return sampleRate_; }
 
     // Returns output sample rate after performing the pipeline step.
-    virtual int getOutputSampleRate() const override { return outputSampleRate_; }
+    virtual int getOutputSampleRate() const override { return sampleRate_; }
     
     // Executes pipeline step.
     // Required parameters:
@@ -46,8 +46,7 @@ public:
     virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
 
 private:
-    int inputSampleRate_;
-    int outputSampleRate_;
+    int sampleRate_;
 };
 
 #endif // AUDIO_PIPELINE__MUTE_STEP_H
