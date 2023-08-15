@@ -921,6 +921,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Remove 2400B mode from the UI. (PR #479)
     * Remove rarely-used "Record File - From Modulator" and "Play File - Mic In" menu options. (PR #493)
 
+*Note: Official Windows releases are now signed using Software Freedom Conservancy's code certificate. To validate that the installers and binary files are properly signed, right-click on the file, choose Properties and go to the 'Digital Signatures' tab.*
+
 ## V1.8.12 July 2023
 
 1. Bugfixes:
