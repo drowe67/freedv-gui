@@ -151,7 +151,7 @@ You will be prompted for your token's PIN several times during the build process
 
 ## Auto-building signed binaries for all supported architectures
 
-You can auto-build installes for all supported architectures (x86_64, i686, armv7, aarch64)
+You can auto-build installers for all supported architectures (x86_64, i686, armv7, aarch64)
 by using the `build_signed_windows_release.sh` script as follows:
 
 ```
