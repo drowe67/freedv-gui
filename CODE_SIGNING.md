@@ -161,6 +161,8 @@ $ ./build_signed_windows_release.sh ~/key.url ~/cert.url ~/intermediate-certs.cr
 A `build_windows` directory will be created with installers for each architecture
 when complete. This may take quite a while (for example, ~1 hour on a 2019 MacBook Pro).
 
+*NOTE: Ensure that LLVM MinGW and osslsigncode are in your PATH before executing the above command.*
+
 ## Troubleshooting:
 
 ### I'm running a VMWare VM and YubiKey Manager doesn't detect my YubiKey 
