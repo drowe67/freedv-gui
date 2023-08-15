@@ -29,13 +29,19 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
     }
     else
     {
+        bool enableVK = false;
+        
         if (vk_state == VK_IDLE)
         {
             m_togBtnVoiceKeyer->SetValue(true);
             VoiceKeyerProcessEvent(VK_START);
+            enableVK = true;
         }
         else
             VoiceKeyerProcessEvent(VK_SPACE_BAR);
+        
+        wxColour vkBackgroundColor(52, 75, 100);
+        m_togBtnVoiceKeyer->SetOwnBackgroundColour(enableVK ? vkBackgroundColor : wxNullColour);
     }
 
     event.Skip();
