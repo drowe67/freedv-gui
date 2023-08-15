@@ -15,7 +15,7 @@ endif()
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
 
 set(PROJECT_NAME FreeDV)
-set(PROJECT_VERSION 1.8.13)
+set(PROJECT_VERSION 1.9.0)
 set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
 set(PROJECT_HOMEPAGE_URL "https://freedv.org")
 
@@ -42,7 +42,7 @@ endif(APPLE)
 
 # Adds a tag to the end of the version string. Leave empty
 # for official release builds.
-set(FREEDV_VERSION_TAG "devel")
+set(FREEDV_VERSION_TAG "")
 
 # Prevent in-source builds to protect automake/autoconf config.
 # If an in-source build is attempted, you will still need to clean up a few
@@ -136,6 +136,52 @@ set(BOOTSTRAP_WXWIDGETS FALSE CACHE BOOL
     "Download and build static wxWidgets instead of the system library.")
 set(USE_PULSEAUDIO TRUE CACHE BOOL
     "Use PulseAudio instead of PortAudio for audio I/O.")
+set(SIGN_WINDOWS_BINARIES FALSE CACHE BOOL
+    "Enable signing of Windows binaries. See CODE_SIGNING.md for info.")
+
+if(SIGN_WINDOWS_BINARIES)
+    if(NOT WIN32 AND NOT MINGW)
+        message(FATAL_ERROR "Signing only makes sense for Windows builds.")
+    endif(NOT WIN32 AND NOT MINGW)
+
+    if(NOT DEFINED PKCS11_KEY_FILE OR NOT DEFINED PKCS11_CERTIFICATE_FILE OR NOT DEFINED INTERMEDIATE_CERT_FILE)
+        message(FATAL_ERROR "Must provide key and certifcate files.")
+    endif(NOT DEFINED PKCS11_KEY_FILE OR NOT DEFINED PKCS11_CERTIFICATE_FILE OR NOT DEFINED INTERMEDIATE_CERT_FILE)
+
+    # Default PKCS#11 engine if not provided.
+    if(NOT DEFINED PKCS11_ENGINE)
+        # XXX -- assuming Ubuntu on amd64
+        set(PKCS11_ENGINE /usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so)
+    endif(NOT DEFINED PKCS11_ENGINE)
+  
+    # Default PKCS#11 module if not provided.
+    if(NOT DEFINED PKCS11_MODULE)
+        # XXX -- we're assuming Ubuntu amd64 and YubiKey here.
+        set(PKCS11_MODULE /usr/lib/x86_64-linux-gnu/libykcs11.so)
+    endif(NOT DEFINED PKCS11_MODULE)
+
+    # Default timestamping server
+    if(NOT DEFINED TIMESTAMP_SERVER)
+        set(TIMESTAMP_SERVER http://timestamp.digicert.com/)    
+    endif(NOT DEFINED TIMESTAMP_SERVER)
+
+    # Default hash algorithm
+    if(NOT DEFINED SIGN_HASH)
+        set(SIGN_HASH sha256)
+    endif(NOT DEFINED SIGN_HASH)
+
+    # Look for osslsigncode    
+    find_program(
+        OSSLSIGNCODE_BIN
+        osslsigncode
+        REQUIRED)
+
+    # Generate command to execute for signing binaries.
+    file(READ ${PKCS11_KEY_FILE} PKCS11_KEY_TMP)
+    file(READ ${PKCS11_CERTIFICATE_FILE} PKCS11_CERTIFICATE_TMP)
+    string(REPLACE "\n" "" PKCS11_KEY "${PKCS11_KEY_TMP}")
+    string(REPLACE "\n" "" PKCS11_CERTIFICATE "${PKCS11_CERTIFICATE_TMP}")
+endif(SIGN_WINDOWS_BINARIES)
 
 if(USE_STATIC_DEPS)
     set(USE_STATIC_PORTAUDIO TRUE FORCE)
@@ -204,7 +250,8 @@ if(MINGW)
     include(cmake/MinGW.cmake)
     # This sets up the exe icon for windows under mingw.
     set(RES_FILES "")
-    set(RES_FILES "${CMAKE_SOURCE_DIR}/contrib/freedv.rc")
+
+    set(RES_FILES "${CMAKE_BINARY_DIR}/freedv.rc")
     set(CMAKE_RC_COMPILER_INIT windres)
     enable_language(RC)
     set(CMAKE_RC_COMPILE_OBJECT
@@ -540,7 +587,11 @@ if(FreeDV_VERSION_PATCH)
 endif()
 if(FreeDV_VERSION_TWEAK)
     set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}.${FreeDV_VERSION_TWEAK}")
-endif()
+    set(CPACK_VER_TWEAK "${CPACK_PACKAGE_VERSION_PATCH}")
+else(FreeDV_VERSION_TWEAK)
+    set(CPACK_VER_TWEAK "${CPACK_PACKAGE_VERSION_PATCH}.0")
+endif(FreeDV_VERSION_TWEAK)
+    
 if(FREEDV_VERSION_TAG)
     if(FREEDV_HASH)
         set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}-${FREEDV_VERSION_TAG}-${DATE_RESULT}-${FREEDV_HASH}")
@@ -593,10 +644,36 @@ if(WIN32)
         "http://freedv.org" "FreeDV Homepage")
     set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "DeleteRegKey HKLM 'SOFTWARE\\\\CODEC2-Project\\\\FreeDV'")
     set(CPACK_NSIS_MENU_LINKS "share/freedv-gui/USER_MANUAL.pdf" "FreeDV User Manual")
-    
+
+    set(CPACK_WIN_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_VER_TWEAK}")
+
+    string(TIMESTAMP COPYRIGHT_YEAR "%Y")
+    set(CPACK_NSIS_DEFINES
+        "${CPACK_NSIS_DEFINES}
+VIProductVersion \\\"${CPACK_WIN_VERSION}\\\"
+VIFileVersion \\\"${CPACK_WIN_VERSION}\\\"
+VIAddVersionKey \\\"ProductName\\\" \\\"FreeDV\\\"
+VIAddVersionKey \\\"ProductVersion\\\" \\\"${CPACK_WIN_VERSION}\\\"
+VIAddVersionKey \\\"Company\\\" \\\"FreeDV\\\"
+VIAddVersionKey \\\"LegalCopyright\\\" \\\"Copyright (c) ${COPYRIGHT_YEAR} FreeDV\\\"
+VIAddVersionKey \\\"FileDescription\\\" \\\"FreeDV - ${PROJECT_DESCRIPTION}\\\"
+VIAddVersionKey \\\"FileVersion\\\" \\\"${CPACK_WIN_VERSION}\\\"
+VIAddVersionKey \\\"GitHash\\\" \\\"${FREEDV_HASH}\\\"
+    ")
+
+    # Ensures that we don't need to constantly update the rc file on every new release.
+    string(REPLACE "." "," VERSION_AS_RC ${CPACK_WIN_VERSION})
+    configure_file(${CMAKE_SOURCE_DIR}/contrib/freedv.rc.in ${CMAKE_BINARY_DIR}/freedv.rc)
+
     if (FREEDV_USING_LLVM_MINGW)
         set(CPACK_PACKAGE_FILE_NAME "FreeDV-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-windows-${CMAKE_SYSTEM_PROCESSOR}")
     endif (FREEDV_USING_LLVM_MINGW)
+
+    if(SIGN_WINDOWS_BINARIES)
+        # Add finalize command for NSIS so the installer/uninstaller can be
+        # signed too.
+        set(CPACK_NSIS_FINALIZE_CMD "mv %1 %1.tmp; ${OSSLSIGNCODE_BIN} sign -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert \\\"${PKCS11_CERTIFICATE}\\\" -key \\\"${PKCS11_KEY}\\\" -h ${SIGN_HASH} -comm -ts ${TIMESTAMP_SERVER} -ac ${INTERMEDIATE_CERT_FILE} -n \\\"FreeDV - ${PROJECT_DESCRIPTION}\\\" -i \\\"https://freedv.org/\\\" -in %1.tmp -out %1")
+    endif(SIGN_WINDOWS_BINARIES)
 
     include(CPack)
 elseif(UNIX AND NOT APPLE)

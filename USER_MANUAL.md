@@ -903,7 +903,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V1.8.13 TBD 2023
+## V1.9.0 August 2023
 
 1. Bugfixes:
     * Fix bug preventing proper Options window sizing on Windows. (PR #478)
@@ -917,6 +917,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Allow users to configure PTT port separately from CAT if Hamlib is enabled. (PR #488)
     * Add ability to average spectrum plot across 1-3 samples. (PR #487, 492)
     * Adjust sizing of main page tabs for better readability. (PR #487)
+    * Add ability to sign Windows binaries for official releases. (PR #486)
     * Allow use of a different voice keyer file by right-clicking on the Voice Keyer button. (PR #493)
     * Include TX audio in recorded audio files to enable recording a full QSO. (PR #493)
     * Add band filtering in the FreeDV Reporter dialog. (PR #490, #494)
@@ -927,6 +928,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 4. Cleanup:
     * Remove 2400B mode from the UI. (PR #479)
     * Remove rarely-used "Record File - From Modulator" and "Play File - Mic In" menu options. (PR #493)
+
+*Note: Official Windows releases are now signed using Software Freedom Conservancy's code certificate. To validate that the installers and binary files are properly signed, right-click on the file, choose Properties and go to the 'Digital Signatures' tab.*
 
 ## V1.8.12 July 2023
 
