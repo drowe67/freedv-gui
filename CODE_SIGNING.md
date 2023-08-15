@@ -129,17 +129,21 @@ Notes:
 
 ## Signing using CMake
 
-To build a signed Windows version of FreeDV, pass in `-DSIGN_WINDOWS_BINARIES=1` as well as files containing the PKCS#11 key and certificate URLs. For example:
+To build a signed Windows version of FreeDV, pass in `-DSIGN_WINDOWS_BINARIES=1` as well as files containing the intermediare/root certificates, PKCS#11 key and certificate URLs. For example:
 
 ```
 $ mkdir build
 $ cd build
-$ cmake -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_KEY_FILE=~/key.url` -DPKCS11_CERTIFICATE_FILE=~/cert.url -DCMAKE_TOOLCHAIN_FILE=/home/mooneer/freedv-gui/cross-compile/freedv-mingw-llvm-x86_64.cmake ..
+$ cmake -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_KEY_FILE=~/key.url` -DPKCS11_CERTIFICATE_FILE=~/cert.url -DINTERMEDIATE_CERT_FILE=~/cacerts.crt -DCMAKE_TOOLCHAIN_FILE=/home/mooneer/freedv-gui/cross-compile/freedv-mingw-llvm-x86_64.cmake ..
 $ make
 $ make package
 ```
 
-(You can also override `PKCS11_ENGINE` and `PKCS11_MODULE` if you're not on e.g. x86_64 or if you're using something other than a YubiKey.)
+Other optional variables that can be set are as follows:
+
+* `PKCS11_ENGINE` / `PKCS11_MODULE`: Paths to the PKCS11 engine and module libraries on your system. This is mainly used for those who aren't compiling on amd64 and/or aren't using a YubiKey.
+* `TIMESTAMP_SERVER`: If you prefer an alternate timestamping server than the default.
+* `SIGN_HASH`: If you prefer a different hashing algorithm than the default SHA256. (Note: the timestamping server will automatically use this hashing algorithm or stronger.)
 
 You will be prompted for your token's PIN several times during the build process. When done, the installer as well as freedv.exe will be signed with the provided certificate.
 
