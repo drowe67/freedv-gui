@@ -40,8 +40,8 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
         else
             VoiceKeyerProcessEvent(VK_SPACE_BAR);
         
-        wxColour vkBackgroundColor(52, 75, 100);
-        m_togBtnVoiceKeyer->SetOwnBackgroundColour(enableVK ? vkBackgroundColor : wxNullColour);
+        wxColour vkBackgroundColor(55, 155, 175);
+        m_togBtnVoiceKeyer->SetBackgroundColour(enableVK ? vkBackgroundColor : wxNullColour);
     }
 
     event.Skip();
@@ -164,8 +164,9 @@ int MainFrame::VoiceKeyerStartTx(void)
     if(tmpPlayFile == NULL) {
         wxString strErr = sf_strerror(NULL);
         wxMessageBox(strErr, wxT("Couldn't open:") + vkFileName_, wxOK);
-        m_togBtnVoiceKeyer->SetValue(false);
         next_state = VK_IDLE;
+        m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+        m_togBtnVoiceKeyer->SetValue(false);
     }
     else {
         g_sfTxFs = sfInfo.samplerate;
