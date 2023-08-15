@@ -44,6 +44,13 @@ macro(freedv_get_dependencies OUTPUT_VAR FILENAME)
         OUTPUT_VARIABLE ${OUTPUT_VAR})
 endmacro()
 
+# Code signing function
+function(freedv_sign_dependency FILENAME OUT)
+    execute_process(
+        COMMAND @OSSLSIGNCODE_BIN@ sign -pkcs11engine @PKCS11_ENGINE@ -pkcs11module @PKCS11_MODULE@ -pkcs11cert "@PKCS11_CERTIFICATE@" -key "@PKCS11_KEY@" -h @SIGN_HASH@ -comm -ts @TIMESTAMP_SERVER@ -ac @INTERMEDIATE_CERT_FILE@ -n "FreeDV - @PROJECT_DESCRIPTION@" -i "https://freedv.org/" -in "${FILENAME}" -out "${OUT}"
+    )
+endfunction()
+
 freedv_get_dependencies(_deps ${FREEDV_EXE})
 
 message("Found Win32 dependencies: ${_deps}")
@@ -95,20 +102,32 @@ set( _windlls
 )
 list(REMOVE_ITEM _deps ${_windlls})
 
+execute_process(
+    COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/bin
+)
+
 # Handle internal libraries separately.
 if(CODEC2_BUILD_DIR)
     list(REMOVE_ITEM _deps libcodec2.dll)
     find_library(CODEC2 codec2 NO_DEFAULT_PATH PATHS ${CODEC2_BUILD_DIR}/src REQUIRED)
     string(REPLACE ".a" "" CODEC2_FINAL ${CODEC2})
-    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
-        TYPE EXECUTABLE FILES ${CODEC2_FINAL})
+
+    message("Found: libcodec2.dll")
+    #file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
+    #    TYPE EXECUTABLE FILES ${CODEC2_FINAL})
+
+    freedv_sign_dependency(${CODEC2_FINAL} ${CMAKE_INSTALL_PREFIX}/bin/libcodec2.dll)
 endif()
 if(LPCNET_BUILD_DIR)
     list(REMOVE_ITEM _deps liblpcnetfreedv.dll)
     find_library(LPCNET lpcnetfreedv NO_DEFAULT_PATH PATHS ${LPCNET_BUILD_DIR}/src REQUIRED)
     string(REPLACE ".a" "" LPCNET_FINAL ${LPCNET})
-    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
-        TYPE EXECUTABLE FILES ${LPCNET_FINAL})
+
+    message("Found: liblpcnetfreedv.dll")
+    #file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
+    #    TYPE EXECUTABLE FILES ${LPCNET_FINAL})
+
+    freedv_sign_dependency(${LPCNET_FINAL} ${CMAKE_INSTALL_PREFIX}/bin/liblpcnetfreedv.dll)
 endif()
 
 if(FREEDV_USING_LLVM_MINGW)
@@ -139,9 +158,12 @@ while(_deps)
         #endif(FREEDV_USING_LLVM_MINGW)
         if(RUNTIME_${_runtime})
             message("Found: ${RUNTIME_${_runtime}}")
-            file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
-                TYPE EXECUTABLE FILES "${RUNTIME_${_runtime}}")
-            freedv_get_dependencies(_newdep "${RUNTIME_${_runtime}}")
+            #file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
+            #    TYPE EXECUTABLE FILES "${RUNTIME_${_runtime}}")
+
+            freedv_sign_dependency(${RUNTIME_${_runtime}} ${CMAKE_INSTALL_PREFIX}/bin/${_runtime})
+
+            freedv_get_dependencies(_newdep "${CMAKE_INSTALL_PREFIX}/bin/${_runtime}")
             list(APPEND _newdeps ${_newdep})
             list(APPEND _good_deps ${_runtime})
         else()
