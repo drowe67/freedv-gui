@@ -147,6 +147,20 @@ Other optional variables that can be set are as follows:
 
 You will be prompted for your token's PIN several times during the build process. When done, the installer as well as freedv.exe will be signed with the provided certificate.
 
+*NOTE: The PIN prompts can be auto-filled by using the URL `pkcs11:id=%01;type=private?pin-value=xxxxxx` for the key (where `xxxxxx` is your token's PIN). The best practice is to exclude the `?pin-value=xxxxxx` and manually enter the PIN each time, however.*
+
+## Auto-building signed binaries for all supported architectures
+
+You can auto-build installes for all supported architectures (x86_64, i686, armv7, aarch64)
+by using the `build_signed_windows_release.sh` script as follows:
+
+```
+$ ./build_signed_windows_release.sh ~/key.url ~/cert.url ~/intermediate-certs.crt
+```
+
+A `build_windows` directory will be created with installers for each architecture
+when complete. This may take quite a while (for example, ~1 hour on a 2019 MacBook Pro).
+
 ## Troubleshooting:
 
 ### I'm running a VMWare VM and YubiKey Manager doesn't detect my YubiKey 
