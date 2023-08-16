@@ -218,6 +218,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
             togglePTT();
             m_togBtnVoiceKeyer->SetValue(false);
+            m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
             next_state = VK_IDLE;
             CallAfter([&]() { StopPlayFileToMicIn(); });
         }
@@ -229,6 +230,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
             vk_repeat_counter++;
             if (vk_repeat_counter > vk_repeats) {
                 m_togBtnVoiceKeyer->SetValue(false);
+                m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
                 next_state = VK_IDLE;
             }
             else {
@@ -260,6 +262,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
         if (vk_event == VK_SPACE_BAR) {
             m_togBtnVoiceKeyer->SetValue(false);
+            m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
             next_state = VK_IDLE;
         }
 
@@ -273,6 +276,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
         if (vk_event == VK_SPACE_BAR) {
             m_togBtnVoiceKeyer->SetValue(false);
+            m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
             next_state = VK_IDLE;
         }
 
@@ -289,6 +293,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
             if (vk_rx_sync_time >= VK_SYNC_WAIT_TIME) {
                 m_togBtnVoiceKeyer->SetValue(false);
+                m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
                 next_state = VK_IDLE;
             }
         }
@@ -301,6 +306,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         m_btnTogPTT->SetBackgroundColour(wxNullColour);
         togglePTT();
         m_togBtnVoiceKeyer->SetValue(false);
+        m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
         next_state = VK_IDLE;
         g_voice_keyer_tx = false;
     }
