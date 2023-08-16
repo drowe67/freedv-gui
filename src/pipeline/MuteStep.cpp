@@ -45,7 +45,7 @@ std::shared_ptr<short> MuteStep::execute(std::shared_ptr<short> inputSamples, in
         short* outputSamples = new short[*numOutputSamples];
         assert(outputSamples != nullptr);
 
-        memset(outputSamples, 0, sizeof(short) * numInputSamples);
+        memset(outputSamples, 0, sizeof(short) * (*numOutputSamples));
 
         return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
     }
