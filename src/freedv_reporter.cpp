@@ -617,10 +617,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     
     if (itemIndex >= 0 && filtered)
     {
-        // Remove as it has been filtered out.
-        delete allReporterData_[data->sid];
-        allReporterData_.erase(data->sid);
-        
+        // Remove as it has been filtered out.       
         delete (std::string*)m_listSpots->GetItemData(itemIndex);
         m_listSpots->DeleteItem(itemIndex);
         
