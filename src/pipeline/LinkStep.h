@@ -29,7 +29,7 @@
 class LinkStep
 {
 public:
-    LinkStep(int outputSampleRate, size_t numSamples = 8000);
+    LinkStep(int outputSampleRate, size_t numSamples = 48000);
     virtual ~LinkStep();
     
     // Get the constituent pipeline steps.
