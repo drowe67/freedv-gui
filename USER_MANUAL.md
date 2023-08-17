@@ -899,6 +899,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * Revert BETA back to prior 1.9.0 value for waterfall. (PR #503)
+    * Optimize FreeDV Reporter window logic to reduce likelihood of waterfall stuttering. (PR #505)
+    * Fix intermittent crash during FreeDV Reporter updates. (PR #505)
 
 ## V1.9.0 August 2023
 
