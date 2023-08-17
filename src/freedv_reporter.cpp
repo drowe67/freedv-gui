@@ -618,26 +618,31 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
 
 void FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val)
 {
-    m_listSpots->SetItem(row, col, val);
+    auto oldText = m_listSpots->GetItemText(row, col);
     
-    auto itemFont = m_listSpots->GetItemFont(row);
-    int textWidth = 0;
-    int textHeight = 0; // Note: unused
+    if (oldText != val)
+    {
+        m_listSpots->SetItem(row, col, val);
     
-    // Note: if the font is invalid we should just use the default.
-    if (itemFont.IsOk())
-    {
-        GetTextExtent(val, &textWidth, &textHeight, nullptr, nullptr, &itemFont);
-    }
-    else
-    {
-        GetTextExtent(val, &textWidth, &textHeight);
-    }
+        auto itemFont = m_listSpots->GetItemFont(row);
+        int textWidth = 0;
+        int textHeight = 0; // Note: unused
     
-    if (textWidth > columnLengths_[col])
-    {
-        columnLengths_[col] = textWidth;
-        m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
+        // Note: if the font is invalid we should just use the default.
+        if (itemFont.IsOk())
+        {
+            GetTextExtent(val, &textWidth, &textHeight, nullptr, nullptr, &itemFont);
+        }
+        else
+        {
+            GetTextExtent(val, &textWidth, &textHeight);
+        }
+    
+        if (textWidth > columnLengths_[col])
+        {
+            columnLengths_[col] = textWidth;
+            m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
+        }
     }
 }
 
