@@ -939,6 +939,7 @@ MainFrame::~MainFrame()
     if (wxGetApp().m_hamlib)
     {
         delete wxGetApp().m_hamlib;
+        wxGetApp().m_hamlib = nullptr;
     }
     
     if (wxGetApp().m_reporters.size() > 0)
@@ -1589,6 +1590,9 @@ void MainFrame::OnExit(wxCommandEvent& event)
     {
         wxGetApp().m_hamlib->disable_mode_detection();
         wxGetApp().m_hamlib->close();
+        
+        delete wxGetApp().m_hamlib;
+        wxGetApp().m_hamlib = nullptr;
     }
 
     if (wxGetApp().m_reporters.size() > 0)
