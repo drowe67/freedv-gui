@@ -616,6 +616,8 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                 wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError + 
                              wxString(".  Make sure the Hamlib serial Device, Rate, and Params match your radio"), 
                              wxT("Error"), wxOK | wxICON_ERROR, this);
+                             
+                hamlib->close();
                 return;
             }
 
@@ -626,6 +628,8 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                              wxString(".  Make sure the Hamlib serial Device, Rate, and Params match your radio"), 
                              wxT("Error"), wxOK | wxICON_ERROR, this);
             }
+            
+            hamlib->close();
         }
     }
 
