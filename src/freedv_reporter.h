@@ -129,10 +129,10 @@ class FreeDVReporterDialog : public wxDialog
          
          wxString makeValidTime_(std::string timeStr);
          
-         void checkColumnsAndResize_();
-         
          void addOrUpdateListIfNotFiltered_(ReporterData* data);
          bool isFiltered_(uint64_t freq);
+         
+         void setColumnForRow_(int row, int col, wxString val);
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__

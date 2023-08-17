@@ -558,48 +558,6 @@ wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr)
     }
 }
 
-void FreeDVReporterDialog::checkColumnsAndResize_()
-{
-    std::map<int, bool> shouldResize;
-    
-    // Process all data in table and determine which columns now have longer text 
-    // (and thus should be auto-resized).
-    for (int index = 0; index < m_listSpots->GetItemCount(); index++)
-    {
-        for (int col = 0; col < NUM_COLS; col++)
-        {
-            auto str = m_listSpots->GetItemText(index, col);
-            auto itemFont = m_listSpots->GetItemFont(index);
-            int textWidth = 0;
-            int textHeight = 0; // Note: unused
-            
-            // Note: if the font is invalid we should just use the default.
-            if (itemFont.IsOk())
-            {
-                GetTextExtent(str, &textWidth, &textHeight, nullptr, nullptr, &itemFont);
-            }
-            else
-            {
-                GetTextExtent(str, &textWidth, &textHeight);
-            }
-            
-            if (textWidth > columnLengths_[col])
-            {
-                shouldResize[col] = true;
-                columnLengths_[col] = textWidth;
-            }
-        }
-    }
-    
-    // Trigger auto-resize for columns as needed
-    for (auto& kvp : shouldResize)
-    {
-        // Note: we don't add anything to shouldResize that is false, so
-        // no need to check for shouldResize == true here.
-        m_listSpots->SetColumnWidth(kvp.first, wxLIST_AUTOSIZE_USEHEADER);
-    }
-}
-
 void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
 {
     bool filtered = isFiltered_(data->frequency);
@@ -634,16 +592,16 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
         return;
     }
     
-    m_listSpots->SetItem(itemIndex, 1, data->gridSquare);
-    m_listSpots->SetItem(itemIndex, 2, data->version);
-    m_listSpots->SetItem(itemIndex, 3, data->freqString);
-    m_listSpots->SetItem(itemIndex, 4, data->status);
-    m_listSpots->SetItem(itemIndex, 5, data->txMode);
-    m_listSpots->SetItem(itemIndex, 6, data->lastTx);
-    m_listSpots->SetItem(itemIndex, 7, data->lastRxCallsign);
-    m_listSpots->SetItem(itemIndex, 8, data->lastRxMode);
-    m_listSpots->SetItem(itemIndex, 9, data->snr);
-    m_listSpots->SetItem(itemIndex, 10, data->lastUpdate);
+    setColumnForRow_(itemIndex, 1, data->gridSquare);
+    setColumnForRow_(itemIndex, 2, data->version);
+    setColumnForRow_(itemIndex, 3, data->freqString);
+    setColumnForRow_(itemIndex, 4, data->status);
+    setColumnForRow_(itemIndex, 5, data->txMode);
+    setColumnForRow_(itemIndex, 6, data->lastTx);
+    setColumnForRow_(itemIndex, 7, data->lastRxCallsign);
+    setColumnForRow_(itemIndex, 8, data->lastRxMode);
+    setColumnForRow_(itemIndex, 9, data->snr);
+    setColumnForRow_(itemIndex, 10, data->lastUpdate);
     
     if (data->transmitting)
     {
@@ -656,8 +614,31 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
         m_listSpots->SetItemBackgroundColour(itemIndex, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOX));
         m_listSpots->SetItemTextColour(itemIndex, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT));
     }
+}
+
+void FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val)
+{
+    m_listSpots->SetItem(row, col, val);
     
-    checkColumnsAndResize_();
+    auto itemFont = m_listSpots->GetItemFont(row);
+    int textWidth = 0;
+    int textHeight = 0; // Note: unused
+    
+    // Note: if the font is invalid we should just use the default.
+    if (itemFont.IsOk())
+    {
+        GetTextExtent(val, &textWidth, &textHeight, nullptr, nullptr, &itemFont);
+    }
+    else
+    {
+        GetTextExtent(val, &textWidth, &textHeight);
+    }
+    
+    if (textWidth > columnLengths_[col])
+    {
+        columnLengths_[col] = textWidth;
+        m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
+    }
 }
 
 bool FreeDVReporterDialog::isFiltered_(uint64_t freq)
