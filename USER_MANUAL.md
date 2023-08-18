@@ -913,6 +913,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix serial port contention issue while testing PTT multiple times. (PR #506)
 2. Enhancements:
     * Add support for monitoring voice keyer and regular TX audio. (PR #500)
+    * Add background coloring to indicate that the voice keyer is active. (PR #500)
 
 ## V1.9.0 August 2023
 
