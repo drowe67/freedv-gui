@@ -88,7 +88,7 @@ int   g_analog;
 int   g_tx;
 float g_snr;
 bool  g_half_duplex;
-bool  g_voice_keyer_record;
+bool  g_voice_keyer_tx;
 SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
 
 // sending and receiving Call Sign data
@@ -144,6 +144,7 @@ extern int                 g_recFileFromModulatorEventId;
 
 extern SNDFILE            *g_sfRecMicFile;
 extern bool                g_recFileFromMic;
+extern bool                g_recVoiceKeyerFile;
 
 wxWindow           *g_parent;
 
@@ -696,11 +697,35 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         wxCommandEventHandler(MainFrame::OnRecordNewVoiceKeyerFile),
         NULL,
         this);
+    
+    voiceKeyerPopupMenu_->AppendSeparator();
+    
+    auto monitorVKMenuItem = voiceKeyerPopupMenu_->AppendCheckItem(wxID_ANY, _("Monitor transmitted audio"));
+    voiceKeyerPopupMenu_->Check(monitorVKMenuItem->GetId(), wxGetApp().appConfiguration.monitorVoiceKeyerAudio);
+    voiceKeyerPopupMenu_->Connect(
+        monitorVKMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(MainFrame::OnSetMonitorVKAudio),
+        NULL,
+        this);
+        
+    // Create PTT popup menu
+    pttPopupMenu_ = new wxMenu();
+    assert(pttPopupMenu_ != nullptr);
+    
+    auto monitorMenuItem = pttPopupMenu_->AppendCheckItem(wxID_ANY, _("Monitor transmitted audio"));
+    pttPopupMenu_->Check(monitorMenuItem->GetId(), wxGetApp().appConfiguration.monitorTxAudio);
+    pttPopupMenu_->Connect(
+        monitorMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(MainFrame::OnSetMonitorTxAudio),
+        NULL,
+        this);
 
     m_RxRunning = false;
+
     m_txThread = nullptr;
     m_rxThread = nullptr;
-
+    wxGetApp().linkStep = nullptr;
+    
 #ifdef _USE_ONIDLE
     Connect(wxEVT_IDLE, wxIdleEventHandler(MainFrame::OnIdle), NULL, this);
 #endif //_USE_ONIDLE
@@ -721,6 +746,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     
     g_sfRecMicFile = nullptr;
     g_recFileFromMic = false;
+    g_recVoiceKeyerFile = false;
 
     // init click-tune states
 
@@ -2319,6 +2345,7 @@ void MainFrame::stopRxStream()
             m_rxThread = nullptr;
         }
 
+        wxGetApp().linkStep = nullptr;
         destroy_fifos();
         
         // Free memory allocated for filters.
@@ -2807,10 +2834,13 @@ void MainFrame::startRxStream()
             }, nullptr);
         }
         
+        // Create link to allow monitoring TX/VK audio
+        wxGetApp().linkStep = std::make_shared<LinkStep>(rxOutSoundDevice->getSampleRate());
+        
         // start tx/rx processing thread
         if (txInSoundDevice && txOutSoundDevice)
         {
-            m_txThread = new TxRxThread(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate());
+            m_txThread = new TxRxThread(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate(), wxGetApp().linkStep.get());
             if ( m_txThread->Create() != wxTHREAD_NO_ERROR )
             {
                 wxLogError(wxT("Can't create TX thread!"));
@@ -2828,7 +2858,7 @@ void MainFrame::startRxStream()
             }
         }
 
-        m_rxThread = new TxRxThread(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate());
+        m_rxThread = new TxRxThread(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep.get());
         if ( m_rxThread->Create() != wxTHREAD_NO_ERROR )
         {
             wxLogError(wxT("Can't create RX thread!"));

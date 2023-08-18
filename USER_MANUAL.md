@@ -289,6 +289,14 @@ Additional options are also available if you right-click on the Voice Keyer butt
 
 * "Use another voice keyer file": Allows you to trigger the voice keyer using a different file from the one configured in Tools->Options.
 * "Record new voice keyer file": Triggers transmit and records your microphone audio to a file that you select. Pushing the Voice Keyer button will stop recording.
+* "Monitor transmitted audio": Allows monitoring of audio while transmitting the voice keyer file. If enabled, a checkmark will appear next to this option.
+
+# Monitoring TX Audio
+
+FreeDV has the ability to monitor transmit audio. This can be useful for adjusting 
+microphone filters when your radio is plugged into a dummy load. To enable this,
+right-click on the PTT button and choose "Monitor transmitted audio". A checkmark
+will appear next to this menu option when enabled.
 
 # Quick Record
 
@@ -903,6 +911,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix intermittent crash during FreeDV Reporter updates. (PR #505)
     * Fix intermittent crash on exit due to Hamlib related UI update code executing after deletion. (PR #506)
     * Fix serial port contention issue while testing PTT multiple times. (PR #506)
+2. Enhancements:
+    * Add support for monitoring voice keyer and regular TX audio. (PR #500)
+    * Add background coloring to indicate that the voice keyer is active. (PR #500)
 
 ## V1.9.0 August 2023
 

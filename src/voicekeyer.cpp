@@ -7,19 +7,17 @@
 #include "main.h"
 
 extern SNDFILE            *g_sfRecMicFile;
-extern bool                g_recFileFromMic;
-extern bool g_voice_keyer_record;
+bool                g_recVoiceKeyerFile;
+extern bool g_voice_keyer_tx;
 extern wxMutex g_mutexProtectingCallbackData;
 
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
     // If recording a new VK file, stop doing that now.
-    if (g_recFileFromMic)
-    {
-        g_voice_keyer_record = false;
-        
+    if (g_recVoiceKeyerFile)
+    {       
         g_mutexProtectingCallbackData.Lock();
-        g_recFileFromMic = false;
+        g_recVoiceKeyerFile = false;
         sf_close(g_sfRecMicFile);
         g_sfRecMicFile = nullptr;
         SetStatusText(wxT(""));
@@ -28,16 +26,25 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
         m_togBtnAnalog->Enable(true);
         m_togBtnVoiceKeyer->SetValue(false);
         m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+        
+        // Switch back to previous tab once done with recording
+        m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
     }
     else
     {
+        bool enableVK = false;
+        
         if (vk_state == VK_IDLE)
         {
             m_togBtnVoiceKeyer->SetValue(true);
             VoiceKeyerProcessEvent(VK_START);
+            enableVK = true;
         }
         else
             VoiceKeyerProcessEvent(VK_SPACE_BAR);
+        
+        wxColour vkBackgroundColor(55, 155, 175);
+        m_togBtnVoiceKeyer->SetBackgroundColour(enableVK ? vkBackgroundColor : wxNullColour);
     }
 
     event.Skip();
@@ -74,7 +81,7 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
         soundFile += ".wav";
     }
     
-    int sample_rate = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
+    int sample_rate = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
     SF_INFO     sfInfo;
     
     sfInfo.format     = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
@@ -90,16 +97,17 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
     }
 
     SetStatusText(wxT("Recording file ") + soundFile + wxT(" from microphone") , 0);
-    g_recFileFromMic = true;
+    g_recVoiceKeyerFile = true;
     vkFileName_ = soundFile;
+    
+    // Switch tab to "From Mic" during recording.
+    wxGetApp().appConfiguration.currentNotebookTab = m_auiNbookCtrl->GetSelection();
+    m_auiNbookCtrl->ChangeSelection(m_auiNbookCtrl->GetPageIndex((wxWindow *)m_panelSpeechIn));
     
     // Disable Analog and VK buttons while recording is happening
     m_togBtnAnalog->Enable(false);
     m_togBtnVoiceKeyer->SetValue(true);
     m_togBtnVoiceKeyer->SetBackgroundColour(*wxRED);
-    
-    // Turn on TX pipeline so we can record.
-    g_voice_keyer_record = true;
 }
 
 void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
@@ -139,6 +147,11 @@ void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event )
     }
 }
 
+void MainFrame::OnSetMonitorVKAudio( wxCommandEvent& event )
+{
+    wxGetApp().appConfiguration.monitorVoiceKeyerAudio = event.IsChecked();
+}
+
 extern SNDFILE *g_sfPlayFile;
 extern bool g_playFileToMicIn;
 extern bool g_loopPlayFileToMicIn;
@@ -158,8 +171,9 @@ int MainFrame::VoiceKeyerStartTx(void)
     if(tmpPlayFile == NULL) {
         wxString strErr = sf_strerror(NULL);
         wxMessageBox(strErr, wxT("Couldn't open:") + vkFileName_, wxOK);
-        m_togBtnVoiceKeyer->SetValue(false);
         next_state = VK_IDLE;
+        m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+        m_togBtnVoiceKeyer->SetValue(false);
     }
     else {
         g_sfTxFs = sfInfo.samplerate;
@@ -171,6 +185,11 @@ int MainFrame::VoiceKeyerStartTx(void)
 
         m_btnTogPTT->SetValue(true); togglePTT();
         next_state = VK_TX;
+
+        if (wxGetApp().appConfiguration.monitorVoiceKeyerAudio)
+        {
+            g_voice_keyer_tx = true;
+        }
     }
 
     return next_state;
@@ -183,6 +202,8 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
     switch(vk_state) {
 
     case VK_IDLE:
+        g_voice_keyer_tx = false;
+
         if (vk_event == VK_START) {
             // sample these puppies at start just in case they are changed while VK running
             vk_rx_pause = wxGetApp().appConfiguration.voiceKeyerRxPause;
@@ -204,6 +225,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
             togglePTT();
             m_togBtnVoiceKeyer->SetValue(false);
+            m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
             next_state = VK_IDLE;
             CallAfter([&]() { StopPlayFileToMicIn(); });
         }
@@ -215,6 +237,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
             vk_repeat_counter++;
             if (vk_repeat_counter > vk_repeats) {
                 m_togBtnVoiceKeyer->SetValue(false);
+                m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
                 next_state = VK_IDLE;
             }
             else {
@@ -226,6 +249,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         break;
 
      case VK_RX:
+        g_voice_keyer_tx = false;
 
         // in this state we are receiving and waiting for
         // delay timer or valid sync
@@ -245,18 +269,21 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
         if (vk_event == VK_SPACE_BAR) {
             m_togBtnVoiceKeyer->SetValue(false);
+            m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
             next_state = VK_IDLE;
         }
 
         break;
 
      case VK_SYNC_WAIT:
+        g_voice_keyer_tx = false;
 
         // In this state we wait for valid sync to last
         // VK_SYNC_WAIT_TIME seconds
 
         if (vk_event == VK_SPACE_BAR) {
             m_togBtnVoiceKeyer->SetValue(false);
+            m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
             next_state = VK_IDLE;
         }
 
@@ -273,6 +300,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
             if (vk_rx_sync_time >= VK_SYNC_WAIT_TIME) {
                 m_togBtnVoiceKeyer->SetValue(false);
+                m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
                 next_state = VK_IDLE;
             }
         }
@@ -285,7 +313,9 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         m_btnTogPTT->SetBackgroundColour(wxNullColour);
         togglePTT();
         m_togBtnVoiceKeyer->SetValue(false);
+        m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
         next_state = VK_IDLE;
+        g_voice_keyer_tx = false;
     }
 
     //if ((vk_event != VK_DT) || (vk_state != next_state))

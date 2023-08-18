@@ -41,6 +41,8 @@
 #include "ComputeRfSpectrumStep.h"
 #include "FreeDVReceiveStep.h"
 #include "ExclusiveAccessStep.h"
+#include "MuteStep.h"
+#include "LinkStep.h"
 
 #include <wx/stopwatch.h>
 
@@ -80,7 +82,7 @@ extern int g_State;
 extern int g_channel_noise;
 extern float g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
-extern bool g_voice_keyer_record;
+extern bool g_voice_keyer_tx;
 
 #include <speex/speex_preprocess.h>
 
@@ -101,6 +103,7 @@ extern SNDFILE* g_sfRecMicFile;
 extern SNDFILE* g_sfPlayFileFromRadio;
 
 extern bool g_recFileFromMic;
+extern bool g_recVoiceKeyerFile;
 
 // TBD -- shouldn't be needed once we've fully converted over
 extern int resample(SRC_STATE *src,
@@ -144,7 +147,7 @@ void TxRxThread::initializePipeline_()
         auto bypassRecordMic = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         
         auto eitherOrRecordMic = new EitherOrStep(
-            []() { return g_recFileFromMic && (g_sfRecMicFile != NULL); },
+            []() { return (g_recVoiceKeyerFile || g_recFileFromMic) && (g_sfRecMicFile != NULL); },
             std::shared_ptr<IPipelineStep>(recordMicTap),
             std::shared_ptr<IPipelineStep>(bypassRecordMic)
         );
@@ -200,6 +203,16 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqMicInVol);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerStep));
         
+        // Take TX audio post-equalizer and send it to RX for possible monitoring use.
+        if (equalizedMicAudioLink_ != nullptr)
+        {
+            auto micAudioPipeline = new AudioPipeline(inputSampleRate_, equalizedMicAudioLink_->getSampleRate());
+            micAudioPipeline->appendPipelineStep(equalizedMicAudioLink_->getInputPipelineStep());
+        
+            auto micAudioTap = std::make_shared<TapStep>(inputSampleRate_, micAudioPipeline);
+            pipeline_->appendPipelineStep(micAudioTap);
+        }
+                
         // Resample for plot step
         auto resampleForPlotStep = new ResampleForPlotStep(g_plotSpeechInFifo);
         auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
@@ -363,13 +376,48 @@ void TxRxThread::initializePipeline_()
         );
         rfDemodulationPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(rfDemodulationStep));
         
+        // Replace received audio with microphone audio if we're monitoring TX/voice keyer recording.
+        if (equalizedMicAudioLink_ != nullptr)
+        {
+            auto bypassMonitorAudio = new AudioPipeline(inputSampleRate_, outputSampleRate_);
+            auto mutePipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
+            
+            auto monitorPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
+            monitorPipeline->appendPipelineStep(equalizedMicAudioLink_->getOutputPipelineStep());
+
+            auto muteStep = new MuteStep(outputSampleRate_);
+            
+            mutePipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(muteStep));
+            
+            auto eitherOrMuteStep = new EitherOrStep(
+                []() { return g_recVoiceKeyerFile; },
+                std::shared_ptr<IPipelineStep>(mutePipeline),
+                std::shared_ptr<IPipelineStep>(bypassMonitorAudio)
+            );
+
+            auto eitherOrMicMonitorStep = new EitherOrStep(
+                []() { return 
+                    (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
+                    (g_tx && wxGetApp().appConfiguration.monitorTxAudio); },
+                std::shared_ptr<IPipelineStep>(monitorPipeline),
+                std::shared_ptr<IPipelineStep>(eitherOrMuteStep)
+            );
+            bypassRfDemodulationPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrMicMonitorStep));
+        }
+        
         auto eitherOrRfDemodulationStep = new EitherOrStep(
-            []() { return g_analog; },
+            [this]() { return g_analog ||
+                (equalizedMicAudioLink_ != nullptr && (
+                    (g_recVoiceKeyerFile) ||
+                    (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
+                    (g_tx && wxGetApp().appConfiguration.monitorTxAudio)
+                )); },
             std::shared_ptr<IPipelineStep>(bypassRfDemodulationPipeline),
             std::shared_ptr<IPipelineStep>(rfDemodulationPipeline)
         );
+
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRfDemodulationStep));
-        
+
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
             outputSampleRate_, 
@@ -445,6 +493,11 @@ void TxRxThread::clearFifos_()
 {
     paCallBackData  *cbData = g_rxUserdata;
     
+    if (equalizedMicAudioLink_ != nullptr && !g_tx)
+    {
+        equalizedMicAudioLink_->clearFifo();
+    }
+    
     if (m_tx)
     {
         auto used = codec2_fifo_used(cbData->outfifo1);
@@ -513,7 +566,7 @@ void TxRxThread::txProcessing_()
     //  TX side processing --------------------------------------------
     //
 
-    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_record))) {
+    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_tx || g_recVoiceKeyerFile || g_recFileFromMic))) {
         // Lock the mode mutex so that TX state doesn't change on us during processing.
         txModeChangeMutex.Lock();
         
@@ -627,8 +680,13 @@ void TxRxThread::rxProcessing_()
     assert(nsam <= 10*N48);
     assert(nsam != 0);
 
+    bool processInputFifo = 
+        (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
+        (g_tx && wxGetApp().appConfiguration.monitorTxAudio) ||
+        (!g_voice_keyer_tx && ((g_half_duplex && !g_tx) || !g_half_duplex));
+    
     // while we have enough input samples available ... 
-    while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && !g_voice_keyer_record && ((g_half_duplex && !g_tx) || !g_half_duplex)) {
+    while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && processInputFifo) {
 
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
@@ -639,6 +697,15 @@ void TxRxThread::rxProcessing_()
         auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
         auto outputSamples = pipeline_->execute(inputSamplesPtr, nsam, &nout);
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
-        codec2_fifo_write(outFifo, outputSamples.get(), nout);
+        
+        if (nout > 0)
+        {
+            codec2_fifo_write(outFifo, outputSamples.get(), nout);
+        }
+        
+        processInputFifo = 
+                (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
+                (g_tx && wxGetApp().appConfiguration.monitorTxAudio) ||
+                (!g_voice_keyer_tx && ((g_half_duplex && !g_tx) || !g_half_duplex));
     }
 }

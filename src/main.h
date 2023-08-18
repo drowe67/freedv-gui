@@ -95,6 +95,7 @@
 #include "audio/IAudioDevice.h"
 #include "config/FreeDVConfiguration.h"
 #include "pipeline/paCallbackData.h"
+#include "pipeline/LinkStep.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -216,6 +217,8 @@ class MainApp : public wxApp
         bool       m_txRxThreadHighPriority;
 
         int        m_prevMode;
+        
+        std::shared_ptr<LinkStep> linkStep;
 
     protected:
 };
@@ -379,6 +382,7 @@ class MainFrame : public TopFrame
         void OnTogBtnSplitClick(wxCommandEvent& event);
         void OnTogBtnAnalogClick(wxCommandEvent& event) override;
         void OnTogBtnPTT( wxCommandEvent& event ) override;
+        void OnTogBtnPTTRightClick( wxContextMenuEvent& event ) override;
         void OnTogBtnVoiceKeyerClick (wxCommandEvent& event) override;
         void OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event ) override;
         
@@ -418,6 +422,9 @@ class MainFrame : public TopFrame
         
         void OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event );
         void OnRecordNewVoiceKeyerFile( wxCommandEvent& event );
+        
+        void OnSetMonitorVKAudio( wxCommandEvent& event );
+        void OnSetMonitorTxAudio( wxCommandEvent& event );
         
     private:
         std::shared_ptr<IAudioDevice> rxInSoundDevice;
@@ -461,6 +468,7 @@ class MainFrame : public TopFrame
         std::string vkFileName_;
         
         wxMenu* voiceKeyerPopupMenu_;
+        wxMenu* pttPopupMenu_;
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();

@@ -199,7 +199,8 @@ void MainFrame::StopRecFileFromRadio()
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Start Record File - From Radio...")));
         g_mutexProtectingCallbackData.Unlock();
         
-        m_audioRecord->SetValue(g_recFileFromRadio);
+        m_audioRecord->SetValue(false);
+        m_audioRecord->SetBackgroundColour(wxNullColour);
     }
 }
 
@@ -319,9 +320,10 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
             g_recFileFromRadio = false;
             g_recFileFromModulator = true;
         }
+        
+        m_audioRecord->SetValue(true);
+        m_audioRecord->SetBackgroundColour(*wxRED);
     }
-
-    m_audioRecord->SetValue(g_recFileFromRadio);
 }
 
 void MainFrame::OnTogBtnRecord( wxCommandEvent& event )
@@ -365,5 +367,7 @@ void MainFrame::OnTogBtnRecord( wxCommandEvent& event )
             g_recFileFromRadio = false;
             g_recFileFromModulator = true;
         }
+        
+        m_audioRecord->SetBackgroundColour(*wxRED);
     }
 }

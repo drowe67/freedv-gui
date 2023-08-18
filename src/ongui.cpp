@@ -23,7 +23,7 @@ extern int g_txLevel;
 extern wxConfigBase *pConfig;
 extern bool endingTx;
 extern int g_outfifo1_empty;
-extern bool g_voice_keyer_record;
+extern bool g_voice_keyer_tx;
 
 extern SNDFILE            *g_sfRecFileFromModulator;
 extern SNDFILE            *g_sfRecFile;
@@ -31,7 +31,6 @@ extern bool g_recFileFromModulator;
 extern bool g_recFileFromRadio;
 
 extern SNDFILE            *g_sfRecMicFile;
-extern bool                g_recFileFromMic;
 
 extern wxMutex g_mutexProtectingCallbackData;
 
@@ -456,6 +455,20 @@ int MainApp::FilterEvent(wxEvent& event)
         }
 
     return -1;
+}
+
+void MainFrame::OnSetMonitorTxAudio( wxCommandEvent& event )
+{
+    wxGetApp().appConfiguration.monitorTxAudio = event.IsChecked();
+}
+
+//-------------------------------------------------------------------------
+// OnTogBtnPTTRightClick(): show right-click menu for PTT button
+//-------------------------------------------------------------------------
+void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& event )
+{
+    auto sz = m_btnTogPTT->GetSize();
+    m_btnTogPTT->PopupMenu(pttPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
 }
 
 //-------------------------------------------------------------------------
