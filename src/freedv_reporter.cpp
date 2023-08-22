@@ -550,7 +550,7 @@ wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr)
         {
             timeZone = wxDateTime::TimeZone(wxDateTime::TZ::Local);
         }
-        return tmpDate.Format(wxDefaultDateTimeFormat, timeZone);
+        return tmpDate.Format(_("%x %X"), timeZone);
     }
     else
     {

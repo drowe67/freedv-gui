@@ -220,6 +220,7 @@ class MainApp : public wxApp
         
         std::shared_ptr<LinkStep> linkStep;
 
+        wxLocale m_locale;
     protected:
 };
 
