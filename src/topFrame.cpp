@@ -204,6 +204,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBoxSizer* sbSizerAudioRecordPlay = new wxStaticBoxSizer(audioBox, wxVERTICAL);
     
     m_audioRecord = new wxToggleButton(audioBox, wxID_ANY, _("Record"), wxDefaultPosition, wxDefaultSize, 0);
+    m_audioRecord->SetToolTip(_("Records incoming over the air signals as well as anything transmitted."));
     sbSizerAudioRecordPlay->Add(m_audioRecord, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 1);
     
     leftSizer->Add(sbSizerAudioRecordPlay, 0, wxALL|wxEXPAND, 3);
