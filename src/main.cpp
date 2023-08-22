@@ -208,6 +208,9 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
+    // Initialize locale.
+    m_locale.Init();
+
     for (auto& obj : m_reporters)
     {
         delete obj;
