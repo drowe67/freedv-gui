@@ -32,19 +32,13 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
     }
     else
     {
-        bool enableVK = false;
-        
         if (vk_state == VK_IDLE)
         {
             m_togBtnVoiceKeyer->SetValue(true);
             VoiceKeyerProcessEvent(VK_START);
-            enableVK = true;
         }
         else
             VoiceKeyerProcessEvent(VK_SPACE_BAR);
-        
-        wxColour vkBackgroundColor(55, 155, 175);
-        m_togBtnVoiceKeyer->SetBackgroundColour(enableVK ? vkBackgroundColor : wxNullColour);
     }
 
     event.Skip();
@@ -185,6 +179,9 @@ int MainFrame::VoiceKeyerStartTx(void)
 
         m_btnTogPTT->SetValue(true); togglePTT();
         next_state = VK_TX;
+        
+        wxColour vkBackgroundColor(55, 155, 175);
+        m_togBtnVoiceKeyer->SetBackgroundColour(vkBackgroundColor);
 
         if (wxGetApp().appConfiguration.monitorVoiceKeyerAudio)
         {
