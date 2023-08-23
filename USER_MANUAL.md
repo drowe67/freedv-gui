@@ -907,6 +907,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * Initialize locale so that times appear correctly. (PR #509)
+    * Fix issue with Voice Keyer button turning blue even if file doesn't exist. (PR #511)
+    * Fix issue with Voice Keyer file changes via Tools->Options not taking effect until restart. (PR #511)
+2. Enhancements:
+    * Add tooltip to Record button to claify its behavior. (PR #511)
 
 ## V1.9.1 August 2023
 

@@ -161,6 +161,13 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
             m_cboLastReportedCallsigns->Hide();
             m_txtCtrlCallSign->Show();
         }
+        
+        // 
+        auto newVkFile = wxGetApp().appConfiguration.voiceKeyerWaveFile->mb_str();
+        if (vkFileName_ != newVkFile)
+        {
+            vkFileName_ = newVkFile;
+        }
 
         // Relayout window so that the changes can take effect.
         m_panel->Layout();
