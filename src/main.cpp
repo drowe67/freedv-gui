@@ -156,7 +156,7 @@ float               g_TxFreqOffsetHz;
 // TODO: review code and see if we need this any more, as fifos should
 // now be thread safe
 
-wxMutex g_mutexProtectingCallbackData;
+wxMutex g_mutexProtectingCallbackData(wxMUTEX_RECURSIVE);
 
 // TX mode change mutex
 wxMutex txModeChangeMutex;

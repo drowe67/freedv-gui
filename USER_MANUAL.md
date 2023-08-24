@@ -909,6 +909,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Initialize locale so that times appear correctly. (PR #509)
     * Fix issue with Voice Keyer button turning blue even if file doesn't exist. (PR #511)
     * Fix issue with Voice Keyer file changes via Tools->Options not taking effect until restart. (PR #511)
+    * Eliminate mutex errors during Visual Studio debugging. (PR #512)
 2. Enhancements:
     * Add tooltip to Record button to claify its behavior. (PR #511)
 
