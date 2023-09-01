@@ -25,6 +25,8 @@
 #include <string>
 #include <map>
 
+#include <wx/imaglist.h>
+
 #include "main.h"
 #include "defines.h"
 #include "reporting/FreeDVReporter.h"
@@ -79,10 +81,14 @@ class FreeDVReporterDialog : public wxDialog
         
         void OnItemSelected(wxListEvent& event);
         void OnItemDeselected(wxListEvent& event);
+        void OnSortColumn(wxListEvent& event);
         
         // Main list box that shows spots
         wxListView*   m_listSpots;
-        
+        wxImageList*  m_sortIcons;
+        int upIconIndex_;
+        int downIconIndex_;
+
         // QSY text
         wxTextCtrl* m_qsyText;
         
@@ -117,6 +123,8 @@ class FreeDVReporterDialog : public wxDialog
          std::map<int, int> columnLengths_;
          std::map<std::string, ReporterData*> allReporterData_;
          FilterFrequency currentBandFilter_;
+         int currentSortColumn_;
+         bool sortAscending_;
          
          void clearAllEntries_(bool clearForAllBands);
          void onReporterConnect_();
@@ -133,6 +141,8 @@ class FreeDVReporterDialog : public wxDialog
          bool isFiltered_(uint64_t freq);
          
          void setColumnForRow_(int row, int col, wxString val);
+
+         static int ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__

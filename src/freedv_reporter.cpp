@@ -31,6 +31,8 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     : wxDialog(parent, id, title, pos, size, style)
     , reporter_(nullptr)
     , currentBandFilter_(FreeDVReporterDialog::BAND_ALL)
+    , currentSortColumn_(-1)
+    , sortAscending_(false)
 {
     for (int col = 0; col < NUM_COLS; col++)
     {
@@ -62,6 +64,21 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->InsertColumn(11, wxT(""), wxLIST_FORMAT_CENTER, 1);
 
     sectionSizer->Add(m_listSpots, 0, wxALL | wxEXPAND, 2);
+
+    // Add sorting up/down arrows.
+    wxArtProvider provider;
+    m_sortIcons = new wxImageList(16, 16, true, 2);
+    auto upIcon = provider.GetBitmap("wxART_GO_UP");
+    assert(upIcon.IsOk());
+    upIconIndex_ = m_sortIcons->Add(upIcon);
+    assert(upIconIndex_ >= 0);
+
+    auto downIcon = provider.GetBitmap("wxART_GO_DOWN");
+    assert(downIcon.IsOk());
+    downIconIndex_ = m_sortIcons->Add(downIcon);
+    assert(downIconIndex_ >= 0);
+
+    m_listSpots->AssignImageList(m_sortIcons, wxIMAGE_LIST_SMALL);
     
     // Bottom buttons
     // =============================
@@ -132,6 +149,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     
     m_listSpots->Connect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemSelected), NULL, this);
     m_listSpots->Connect(wxEVT_LIST_ITEM_DESELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemDeselected), NULL, this);
+    m_listSpots->Connect(wxEVT_LIST_COL_CLICK, wxListEventHandler(FreeDVReporterDialog::OnSortColumn), NULL, this);
 
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOK), NULL, this);
     m_buttonSendQSY->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnSendQSY), NULL, this);
@@ -150,6 +168,7 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     
     m_listSpots->Disconnect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemSelected), NULL, this);
     m_listSpots->Disconnect(wxEVT_LIST_ITEM_DESELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemDeselected), NULL, this);
+    m_listSpots->Disconnect(wxEVT_LIST_COL_CLICK, wxListEventHandler(FreeDVReporterDialog::OnSortColumn), NULL, this);
     
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOK), NULL, this);
     m_buttonSendQSY->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnSendQSY), NULL, this);
@@ -265,6 +284,38 @@ void FreeDVReporterDialog::OnItemDeselected(wxListEvent& event)
     m_buttonSendQSY->Enable(false);
 }
 
+void FreeDVReporterDialog::OnSortColumn(wxListEvent& event)
+{
+    int col = event.GetColumn();
+
+    if (currentSortColumn_ != col)
+    {
+        if (currentSortColumn_ != -1)
+        {
+            m_listSpots->SetColumnImage(currentSortColumn_, -1);
+        }
+
+        currentSortColumn_ = col;
+        m_listSpots->SetColumnImage(currentSortColumn_, upIconIndex_);
+        sortAscending_ = true;
+    }
+    else if (sortAscending_)
+    {
+        sortAscending_ = false;
+        m_listSpots->SetColumnImage(currentSortColumn_, downIconIndex_);
+    }
+    else
+    {
+        m_listSpots->SetColumnImage(currentSortColumn_, -1);
+        currentSortColumn_ = -1;
+    }
+
+    if (currentSortColumn_ != -1)
+    {
+        m_listSpots->SortItems(&FreeDVReporterDialog::ListCompareFn_, (wxIntPtr)this);
+    }
+}
+
 void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
 {
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter = 
@@ -337,6 +388,64 @@ void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
     {
         columnLengths_[col] = 0;
     }
+}
+
+int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData)
+{
+    FreeDVReporterDialog* thisPtr = (FreeDVReporterDialog*)sortData;
+    std::string* leftSid = (std::string*)item1;
+    std::string* rightSid = (std::string*)item2;
+    auto leftData = thisPtr->allReporterData_[*leftSid];
+    auto rightData = thisPtr->allReporterData_[*rightSid];
+
+    int result = 0;
+
+    switch(thisPtr->currentSortColumn_)
+    {
+        case 0:
+            result = leftData->callsign.CmpNoCase(rightData->callsign);
+            break;
+        case 1:
+            result = leftData->gridSquare.CmpNoCase(rightData->gridSquare);
+            break;
+        case 2:
+            result = leftData->version.CmpNoCase(rightData->version);
+            break;
+        case 3:
+            result = leftData->frequency - rightData->frequency;
+            break;
+        case 4:
+            result = leftData->status.CmpNoCase(rightData->status);
+            break;
+        case 5:
+            result = leftData->txMode.CmpNoCase(rightData->txMode);
+            break;
+        case 6:
+            result = leftData->lastTx.CmpNoCase(rightData->lastTx);
+            break;
+        case 7:
+            result = leftData->lastRxCallsign.CmpNoCase(rightData->lastRxCallsign);
+            break;
+        case 8:
+            result = leftData->lastRxMode.CmpNoCase(rightData->lastRxMode);
+            break;
+        case 9:
+            result = leftData->snr.CmpNoCase(rightData->snr);
+            break;
+        case 10:
+            result = leftData->lastUpdate.CmpNoCase(rightData->lastUpdate);
+            break;
+        default:
+            assert(false);
+            break;
+    }
+
+    if (!thisPtr->sortAscending_)
+    {
+        result = -result;
+    }
+
+    return result;
 }
 
 // =================================================================================
@@ -562,6 +671,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
 {
     bool filtered = isFiltered_(data->frequency);
     int itemIndex = -1;
+    bool removed = false;
     
     for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
     {
@@ -578,6 +688,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
         // Remove as it has been filtered out.       
         delete (std::string*)m_listSpots->GetItemData(itemIndex);
         m_listSpots->DeleteItem(itemIndex);
+        removed = true;
         
         return;
     }
@@ -613,6 +724,11 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     {
         m_listSpots->SetItemBackgroundColour(itemIndex, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOX));
         m_listSpots->SetItemTextColour(itemIndex, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT));
+    }
+
+    if (!removed && currentSortColumn_ != -1)
+    {
+        m_listSpots->SortItems(&FreeDVReporterDialog::ListCompareFn_, (wxIntPtr)this);
     }
 }
 
