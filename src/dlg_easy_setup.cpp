@@ -44,6 +44,7 @@ extern wxConfigBase *pConfig;
 
 EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxDialog(parent, id, title, pos, size, style)
+    , hasAppliedChanges_(false)
 {
     hamlibTestObject_ = new Hamlib();
     assert(hamlibTestObject_ != nullptr);
@@ -665,18 +666,18 @@ void EasySetupDialog::OnOK(wxCommandEvent& event)
     OnApply(event);
     if (canSaveSettings_())
     {
-        this->EndModal(wxID_OK);
+        this->EndModal(wxOK);
     }
 }
 
 void EasySetupDialog::OnCancel(wxCommandEvent& event)
 {
-    this->EndModal(wxID_CANCEL);
+    this->EndModal(hasAppliedChanges_ ? wxOK : wxCANCEL);
 }
 
 void EasySetupDialog::OnClose(wxCloseEvent& event)
 {
-    this->EndModal(wxID_CANCEL);
+    this->EndModal(hasAppliedChanges_ ? wxOK : wxCANCEL);
 }
 
 void EasySetupDialog::OnApply(wxCommandEvent& event)
@@ -684,6 +685,7 @@ void EasySetupDialog::OnApply(wxCommandEvent& event)
     if (canSaveSettings_())
     {
         ExchangeData(EXCHANGE_DATA_OUT);
+        hasAppliedChanges_ = true;
     }
     else
     {
