@@ -362,16 +362,11 @@ void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
     currentBandFilter_ = freq;
     
     // Update displayed list based on new filter criteria.
-    m_listSpots->Freeze();
-
     clearAllEntries_(false);
-
     for (auto& kvp : allReporterData_)
     {
         addOrUpdateListIfNotFiltered_(kvp.second);
     }
-    
-    m_listSpots->Thaw();
 }
 
 void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
@@ -589,18 +584,14 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
 void FreeDVReporterDialog::onReporterConnect_()
 {
     CallAfter([&]() {
-        m_listSpots->Freeze();
         clearAllEntries_(true);
-        m_listSpots->Thaw();
     });
 }
 
 void FreeDVReporterDialog::onReporterDisconnect_()
 {
     CallAfter([&]() {
-        m_listSpots->Freeze();
         clearAllEntries_(true);        
-        m_listSpots->Thaw();
     });
 }
 
@@ -683,9 +674,7 @@ void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string las
             iter->second->lastUpdate = lastUpdateTime;
             iter->second->frequency = frequencyHz;
             
-            m_listSpots->Freeze();
             addOrUpdateListIfNotFiltered_(iter->second);
-            m_listSpots->Thaw();
         }
     });
 }
@@ -716,9 +705,7 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             iter->second->lastUpdate = lastUpdateTime;
             
-            m_listSpots->Freeze();
             addOrUpdateListIfNotFiltered_(iter->second);
-            m_listSpots->Thaw();
         }
     });
 }
@@ -748,9 +735,7 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             iter->second->lastUpdate = lastUpdateTime;
             
-            m_listSpots->Freeze();
             addOrUpdateListIfNotFiltered_(iter->second);
-            m_listSpots->Thaw();
         }
     });
 }
