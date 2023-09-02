@@ -913,6 +913,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add timeout during deletion of FreeDVReporter object. (PR #515)
 2. Enhancements:
     * Add tooltip to Record button to claify its behavior. (PR #511)
+    * Add highlighting for RX rows in FreeDV Reporter (to match web version). (PR #519)
+    * Add Distance column in FreeDV Reporter window. (PR #519)
+    * Add support for sorting columns in FreeDV Reporter window. (PR #519)
 
 ## V1.9.1 August 2023
 
