@@ -344,7 +344,7 @@ void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
 
 void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
 {
-    // Iterate across all visible rows. If a row is currently hightlighted
+    // Iterate across all visible rows. If a row is currently highlighted
     // green and it's been more than >10 seconds, clear coloring.
     auto curDate = wxDateTime::Now();
     for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
