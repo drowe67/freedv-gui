@@ -24,7 +24,7 @@
 #include "freedv_reporter.h"
 
 #define UNKNOWN_STR "--"
-#define NUM_COLS (11)
+#define NUM_COLS (12)
 
 using namespace std::placeholders;
 
