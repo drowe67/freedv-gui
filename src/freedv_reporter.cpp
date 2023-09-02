@@ -543,8 +543,8 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         if (rxOnly)
         {
             temp->status = "Receive Only";
-            temp->txMode = "N/A";
-            temp->lastTx = "N/A";
+            temp->txMode = UNKNOWN_STR;
+            temp->lastTx = UNKNOWN_STR;
         }
         else
         {
