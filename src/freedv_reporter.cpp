@@ -50,14 +50,14 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots = new wxListView(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_SINGLE_SEL | wxLC_REPORT | wxLC_HRULES);
     m_listSpots->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(1, wxT("Locator"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(2, wxT("Distance"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(2, wxT("Dist (km)"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(3, wxT("Version"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(4, wxT("Frequency"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(5, wxT("Status"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(6, wxT("TX Mode"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(7, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(8, wxT("Last RX Callsign"), wxLIST_FORMAT_CENTER, 120);
-    m_listSpots->InsertColumn(9, wxT("Last RX Mode"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(8, wxT("RX Call"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(9, wxT("RX Mode"), wxLIST_FORMAT_CENTER, 120);
     m_listSpots->InsertColumn(10, wxT("SNR"), wxLIST_FORMAT_CENTER, 40);
     m_listSpots->InsertColumn(11, wxT("Last Update"), wxLIST_FORMAT_CENTER, 120);
 
@@ -636,14 +636,21 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         temp->callsign = wxString(callsign).Upper();
         temp->gridSquare = gridSquareWxString.Left(2).Upper() + gridSquareWxString.Mid(2);
         temp->distanceVal = calculateDistance_(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, gridSquareWxString);
-        temp->distance = wxString::Format("%.01f km", temp->distanceVal);
+        if (temp->distanceVal < 10.0)
+        {
+            temp->distance = wxString::Format("%.01f", temp->distanceVal);
+        }
+        else
+        {
+            temp->distance = wxString::Format("%.0f", temp->distanceVal);
+        }
         temp->version = version;
         temp->freqString = UNKNOWN_STR;
         temp->transmitting = false;
         
         if (rxOnly)
         {
-            temp->status = "Receive Only";
+            temp->status = "RX Only";
             temp->txMode = UNKNOWN_STR;
             temp->lastTx = UNKNOWN_STR;
         }
@@ -833,6 +840,8 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
         }
     }
     
+    bool needResort = false;
+
     if (itemIndex >= 0 && filtered)
     {
         // Remove as it has been filtered out.       
@@ -844,6 +853,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     {
         itemIndex = m_listSpots->InsertItem(m_listSpots->GetItemCount(), data->callsign);
         m_listSpots->SetItemPtrData(itemIndex, (wxUIntPtr)new std::string(data->sid));
+        needResort = currentSortColumn_ == 0;
     }
     else if (filtered)
     {
@@ -852,7 +862,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     }
     
     bool changed = setColumnForRow_(itemIndex, 1, data->gridSquare);
-    bool needResort = changed && currentSortColumn_ == 1;
+    needResort = changed && currentSortColumn_ == 1;
     changed = setColumnForRow_(itemIndex, 2, data->distance);
     needResort |= changed && currentSortColumn_ == 2;
     changed = setColumnForRow_(itemIndex, 3, data->version);
