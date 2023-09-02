@@ -912,8 +912,12 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Eliminate mutex errors during Visual Studio debugging. (PR #512)
     * Add timeout during deletion of FreeDVReporter object. (PR #515)
     * Fixes bug preventing display of reporting UI if enabled on first start. (PR #520)
+    * Adjust vertical tick lengths on waterfall to prevent text overlap. (PR #518)
+    * Adjust coloring of text and ticks on spectrum plot to improve visibility when in dark mode. (PR #518)
 2. Enhancements:
     * Add tooltip to Record button to claify its behavior. (PR #511)
+3. Cleanup:
+    * Remove unneeded 2400B and 2020B sample files. (PR #521)
 
 ## V1.9.1 August 2023
 

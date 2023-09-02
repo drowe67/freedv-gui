@@ -195,10 +195,11 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
     float    f, mag, freq_hz_to_px, mag_dB_to_py;
 
     wxBrush ltGraphBkgBrush;
+    wxColour foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
     ltGraphBkgBrush.SetStyle(wxBRUSHSTYLE_TRANSPARENT);
-    ltGraphBkgBrush.SetColour(*wxBLACK);
+    ltGraphBkgBrush.SetColour(foregroundColor);
     ctx->SetBrush(ltGraphBkgBrush);
-    ctx->SetPen(wxPen(BLACK_COLOR, 1));
+    ctx->SetPen(wxPen(foregroundColor, 1));
     
     wxGraphicsFont tmpFont = ctx->CreateFont(GetFont(), GetForegroundColour());
     ctx->SetFont(tmpFont);
@@ -228,7 +229,7 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
 
         ctx->SetPen(m_penShortDash);
         ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, PLOT_BORDER);
-        ctx->SetPen(wxPen(BLACK_COLOR, 1));
+        ctx->SetPen(wxPen(foregroundColor, 1));
         ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
 
         snprintf(buf, STR_LENGTH, "%4.0fHz", f);
@@ -237,7 +238,7 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
             ctx->DrawText(buf, x - text_w/2, m_rGrid.GetHeight() + PLOT_BORDER + YBOTTOM_TEXT_OFFSET);
     }
 
-    ctx->SetPen(wxPen(BLACK_COLOR, 1));
+    ctx->SetPen(wxPen(foregroundColor, 1));
     for(f=STEP_MINOR_F_HZ; f<MAX_F_HZ; f+=STEP_MINOR_F_HZ) 
     {
         x = f*freq_hz_to_px;
