@@ -133,6 +133,7 @@ class EasySetupDialog : public wxDialog
          Hamlib* hamlibTestObject_;
          Serialport* serialPortTestObject_;
          int sineWaveSampleNumber_;
+         bool hasAppliedChanges_;
 
          std::shared_ptr<IAudioDevice> txTestAudioDevice_;
 };

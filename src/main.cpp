@@ -814,7 +814,26 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         // Initial setup. Display Easy Setup dialog.
         CallAfter([&]() {
             EasySetupDialog* dlg = new EasySetupDialog(this);
-            dlg->ShowModal();
+            if (dlg->ShowModal() == wxOK)
+            {
+                // Show/hide frequency box based on PSK Reporter status.
+                m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+
+                // Show/hide callsign combo box based on PSK Reporter Status
+                if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
+                {
+                    m_cboLastReportedCallsigns->Show();
+                    m_txtCtrlCallSign->Hide();
+                }
+                else
+                {
+                    m_cboLastReportedCallsigns->Hide();
+                    m_txtCtrlCallSign->Show();
+                }
+
+                // Relayout window so that the changes can take effect.
+                m_panel->Layout();
+            }
         });
     }
     
@@ -3000,7 +3019,26 @@ bool MainFrame::validateSoundCardSetup()
         // Initial setup. Display Easy Setup dialog.
         CallAfter([&]() {
             EasySetupDialog* dlg = new EasySetupDialog(this);
-            dlg->ShowModal();
+            if (dlg->ShowModal() == wxOK)
+            {
+                // Show/hide frequency box based on PSK Reporter status.
+                m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+
+                // Show/hide callsign combo box based on PSK Reporter Status
+                if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
+                {
+                    m_cboLastReportedCallsigns->Show();
+                    m_txtCtrlCallSign->Hide();
+                }
+                else
+                {
+                    m_cboLastReportedCallsigns->Hide();
+                    m_txtCtrlCallSign->Show();
+                }
+
+                // Relayout window so that the changes can take effect.
+                m_panel->Layout();
+            }
         });
         canRun = false;
     }
