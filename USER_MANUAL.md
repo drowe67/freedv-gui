@@ -911,6 +911,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix issue with Voice Keyer file changes via Tools->Options not taking effect until restart. (PR #511)
     * Eliminate mutex errors during Visual Studio debugging. (PR #512)
     * Add timeout during deletion of FreeDVReporter object. (PR #515)
+    * Adjust vertical tick lengths on waterfall to prevent text overlap. (PR #518)
+    * Adjust coloring of text and ticks on spectrum plot to improve visibility when in dark mode. (PR #518)
 2. Enhancements:
     * Add tooltip to Record button to claify its behavior. (PR #511)
 
