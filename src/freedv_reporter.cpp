@@ -19,6 +19,7 @@
 //
 //==========================================================================
 
+#include <math.h>
 #include <wx/datetime.h>
 #include "freedv_reporter.h"
 
@@ -49,19 +50,20 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots = new wxListView(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_SINGLE_SEL | wxLC_REPORT | wxLC_HRULES);
     m_listSpots->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(1, wxT("Locator"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(2, wxT("Version"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(3, wxT("Frequency"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(4, wxT("Status"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(5, wxT("TX Mode"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(6, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(7, wxT("Last RX Callsign"), wxLIST_FORMAT_CENTER, 120);
-    m_listSpots->InsertColumn(8, wxT("Last RX Mode"), wxLIST_FORMAT_CENTER, 120);
-    m_listSpots->InsertColumn(9, wxT("SNR"), wxLIST_FORMAT_CENTER, 40);
-    m_listSpots->InsertColumn(10, wxT("Last Update"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(2, wxT("Distance"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(3, wxT("Version"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(4, wxT("Frequency"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(5, wxT("Status"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(6, wxT("TX Mode"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(7, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(8, wxT("Last RX Callsign"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(9, wxT("Last RX Mode"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(10, wxT("SNR"), wxLIST_FORMAT_CENTER, 40);
+    m_listSpots->InsertColumn(11, wxT("Last Update"), wxLIST_FORMAT_CENTER, 120);
 
     // On Windows, the last column will end up taking a lot more space than desired regardless
     // of the space we actually need. Create a "dummy" column to take that space instead.
-    m_listSpots->InsertColumn(11, wxT(""), wxLIST_FORMAT_CENTER, 1);
+    m_listSpots->InsertColumn(12, wxT(""), wxLIST_FORMAT_CENTER, 1);
 
     sectionSizer->Add(m_listSpots, 0, wxALL | wxEXPAND, 2);
 
@@ -288,6 +290,12 @@ void FreeDVReporterDialog::OnSortColumn(wxListEvent& event)
 {
     int col = event.GetColumn();
 
+    if (col > 11)
+    {
+        // Don't allow sorting by "fake" columns.
+        col = -1;
+    }
+    
     if (currentSortColumn_ != col)
     {
         if (currentSortColumn_ != -1)
@@ -390,6 +398,76 @@ void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
     }
 }
 
+double FreeDVReporterDialog::calculateDistance_(wxString gridSquare1, wxString gridSquare2)
+{
+    double lat1 = 0;
+    double lon1 = 0;
+    double lat2 = 0;
+    double lon2 = 0 ;
+    
+    // Grab latitudes and longitudes for the two locations.
+    calculateLatLonFromGridSquare_(gridSquare1, lat1, lon1);
+    calculateLatLonFromGridSquare_(gridSquare2, lat2, lon2);
+    
+    // Use Haversine formula to calculate distance. See
+    // https://stackoverflow.com/questions/27928/calculate-distance-between-two-latitude-longitude-points-haversine-formula.
+    const double EARTH_RADIUS = 6371;
+    double dLat = DegreesToRadians_(lat2-lat1);
+    double dLon = DegreesToRadians_(lon2-lon1); 
+    double a = 
+        sin(dLat/2) * sin(dLat/2) +
+        cos(DegreesToRadians_(lat1)) * cos(DegreesToRadians_(lat2)) * 
+        sin(dLon/2) * sin(dLon/2);
+    double c = 2 * atan2(sqrt(a), sqrt(1-a)); 
+    return EARTH_RADIUS * c;
+}
+
+void FreeDVReporterDialog::calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon)
+{
+    char charA = 'A';
+    char char0 = '0';
+    
+    // Uppercase grid square for easier processing
+    gridSquare.MakeUpper();
+    
+    // Start from antimeridian South Pole (e.g. over the Pacific, not over the UK)
+    lon = -180.0;
+    lat = -90.0;
+    
+    // Process first two characters
+    lon += ((char)gridSquare.GetChar(0) - charA) * 20;
+    lat += ((char)gridSquare.GetChar(1) - charA) * 10;
+    
+    // Then next two
+    lon += ((char)gridSquare.GetChar(2) - char0) * 2;
+    lat += ((char)gridSquare.GetChar(3) - char0) * 1;
+    
+    // If grid square is 6 or more letters, THEN use the next two.
+    // Otherwise, optional.
+    if (gridSquare.Length() >= 6)
+    {
+        lon += ((char)gridSquare.GetChar(4) - charA) * 5.0 / 60;
+        lat += ((char)gridSquare.GetChar(5) - charA) * 2.5 / 60;
+    }
+    
+    // Center in middle of grid square
+    if (gridSquare.Length() >= 6)
+    {
+        lon += 5.0 / 60 / 2;
+        lat += 2.5 / 60 / 2;
+    }
+    else
+    {
+        lon += 2 / 2;
+        lat += 1.0 / 2;
+    }
+}
+
+double FreeDVReporterDialog::DegreesToRadians_(double degrees)
+{
+    return degrees * (M_PI / 180.0);
+}
+
 int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData)
 {
     FreeDVReporterDialog* thisPtr = (FreeDVReporterDialog*)sortData;
@@ -409,18 +487,21 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
             result = leftData->gridSquare.CmpNoCase(rightData->gridSquare);
             break;
         case 2:
-            result = leftData->version.CmpNoCase(rightData->version);
+            result = leftData->distanceVal - rightData->distanceVal;
             break;
         case 3:
-            result = leftData->frequency - rightData->frequency;
+            result = leftData->version.CmpNoCase(rightData->version);
             break;
         case 4:
-            result = leftData->status.CmpNoCase(rightData->status);
+            result = leftData->frequency - rightData->frequency;
             break;
         case 5:
-            result = leftData->txMode.CmpNoCase(rightData->txMode);
+            result = leftData->status.CmpNoCase(rightData->status);
             break;
         case 6:
+            result = leftData->txMode.CmpNoCase(rightData->txMode);
+            break;
+        case 7:
             if (leftData->lastTxDate.IsValid() && rightData->lastTxDate.IsValid())
             {
                 if (leftData->lastTxDate.IsEarlierThan(rightData->lastTxDate))
@@ -449,16 +530,16 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
                 result = 0;
             }
             break;
-        case 7:
+        case 8:
             result = leftData->lastRxCallsign.CmpNoCase(rightData->lastRxCallsign);
             break;
-        case 8:
+        case 9:
             result = leftData->lastRxMode.CmpNoCase(rightData->lastRxMode);
             break;
-        case 9:
+        case 10:
             result = leftData->snr.CmpNoCase(rightData->snr);
             break;
-        case 10:
+        case 11:
             if (leftData->lastUpdateDate.IsValid() && rightData->lastUpdateDate.IsValid())
             {
                 if (leftData->lastUpdateDate.IsEarlierThan(rightData->lastUpdateDate))
@@ -536,6 +617,8 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         temp->sid = sid;
         temp->callsign = wxString(callsign).Upper();
         temp->gridSquare = gridSquareWxString.Left(2).Upper() + gridSquareWxString.Mid(2);
+        temp->distanceVal = calculateDistance_(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, gridSquareWxString);
+        temp->distance = wxString::Format("%.01f km", temp->distanceVal);
         temp->version = version;
         temp->freqString = UNKNOWN_STR;
         temp->transmitting = false;
@@ -758,15 +841,16 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     }
     
     setColumnForRow_(itemIndex, 1, data->gridSquare);
-    setColumnForRow_(itemIndex, 2, data->version);
-    setColumnForRow_(itemIndex, 3, data->freqString);
-    setColumnForRow_(itemIndex, 4, data->status);
-    setColumnForRow_(itemIndex, 5, data->txMode);
-    setColumnForRow_(itemIndex, 6, data->lastTx);
-    setColumnForRow_(itemIndex, 7, data->lastRxCallsign);
-    setColumnForRow_(itemIndex, 8, data->lastRxMode);
-    setColumnForRow_(itemIndex, 9, data->snr);
-    setColumnForRow_(itemIndex, 10, data->lastUpdate);
+    setColumnForRow_(itemIndex, 2, data->distance);
+    setColumnForRow_(itemIndex, 3, data->version);
+    setColumnForRow_(itemIndex, 4, data->freqString);
+    setColumnForRow_(itemIndex, 5, data->status);
+    setColumnForRow_(itemIndex, 6, data->txMode);
+    setColumnForRow_(itemIndex, 7, data->lastTx);
+    setColumnForRow_(itemIndex, 8, data->lastRxCallsign);
+    setColumnForRow_(itemIndex, 9, data->lastRxMode);
+    setColumnForRow_(itemIndex, 10, data->snr);
+    setColumnForRow_(itemIndex, 11, data->lastUpdate);
     
     if (data->transmitting)
     {

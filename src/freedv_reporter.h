@@ -106,6 +106,8 @@ class FreeDVReporterDialog : public wxDialog
              std::string sid;
              wxString callsign;
              wxString gridSquare;
+             double distanceVal;
+             wxString distance;
              wxString version;
              uint64_t frequency;
              wxString freqString;
@@ -143,8 +145,12 @@ class FreeDVReporterDialog : public wxDialog
          bool isFiltered_(uint64_t freq);
          
          void setColumnForRow_(int row, int col, wxString val);
+         
+         double calculateDistance_(wxString gridSquare1, wxString gridSquare2);
+         void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);
 
          static int ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
+         static double DegreesToRadians_(double degrees);
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__
