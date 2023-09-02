@@ -113,10 +113,12 @@ class FreeDVReporterDialog : public wxDialog
              wxString txMode;
              bool transmitting;
              wxString lastTx;
+             wxDateTime lastTxDate;
              wxString lastRxCallsign;
              wxString lastRxMode;
              wxString snr;
              wxString lastUpdate;
+             wxDateTime lastUpdateDate;
          };
          
          FreeDVReporter* reporter_;
@@ -135,7 +137,7 @@ class FreeDVReporterDialog : public wxDialog
          void onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate);
          void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
          
-         wxString makeValidTime_(std::string timeStr);
+         wxString makeValidTime_(std::string timeStr, wxDateTime& timeObj);
          
          void addOrUpdateListIfNotFiltered_(ReporterData* data);
          bool isFiltered_(uint64_t freq);

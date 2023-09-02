@@ -421,7 +421,33 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
             result = leftData->txMode.CmpNoCase(rightData->txMode);
             break;
         case 6:
-            result = leftData->lastTx.CmpNoCase(rightData->lastTx);
+            if (leftData->lastTxDate.IsValid() && rightData->lastTxDate.IsValid())
+            {
+                if (leftData->lastTxDate.IsEarlierThan(rightData->lastTxDate))
+                {
+                    result = -1;
+                }
+                else if (leftData->lastTxDate.IsLaterThan(rightData->lastTxDate))
+                {
+                    result = 1;
+                }
+                else
+                {
+                    result = 0;
+                }
+            }
+            else if (!leftData->lastTxDate.IsValid() && rightData->lastTxDate.IsValid())
+            {
+                result = -1;
+            }
+            else if (leftData->lastTxDate.IsValid() && !rightData->lastTxDate.IsValid())
+            {
+                result = 1;
+            }
+            else
+            {
+                result = 0;
+            }
             break;
         case 7:
             result = leftData->lastRxCallsign.CmpNoCase(rightData->lastRxCallsign);
@@ -433,7 +459,33 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
             result = leftData->snr.CmpNoCase(rightData->snr);
             break;
         case 10:
-            result = leftData->lastUpdate.CmpNoCase(rightData->lastUpdate);
+            if (leftData->lastUpdateDate.IsValid() && rightData->lastUpdateDate.IsValid())
+            {
+                if (leftData->lastUpdateDate.IsEarlierThan(rightData->lastUpdateDate))
+                {
+                    result = -1;
+                }
+                else if (leftData->lastUpdateDate.IsLaterThan(rightData->lastUpdateDate))
+                {
+                    result = 1;
+                }
+                else
+                {
+                    result = 0;
+                }
+            }
+            else if (!leftData->lastUpdateDate.IsValid() && rightData->lastUpdateDate.IsValid())
+            {
+                result = -1;
+            }
+            else if (leftData->lastUpdateDate.IsValid() && !rightData->lastUpdateDate.IsValid())
+            {
+                result = 1;
+            }
+            else
+            {
+                result = 0;
+            }
             break;
         default:
             assert(false);
@@ -505,7 +557,7 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         temp->lastRxMode = UNKNOWN_STR;
         temp->snr = UNKNOWN_STR;
         
-        auto lastUpdateTime = makeValidTime_(lastUpdate);
+        auto lastUpdateTime = makeValidTime_(lastUpdate, temp->lastUpdateDate);
         temp->lastUpdate = lastUpdateTime;
         
         allReporterData_[sid] = temp;
@@ -541,7 +593,7 @@ void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string las
             double frequencyMHz = frequencyHz / 1000000.0;
             
             wxString frequencyMHzString = wxString::Format(_("%.04f MHz"), frequencyMHz);
-            auto lastUpdateTime = makeValidTime_(lastUpdate);
+            auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             
             iter->second->frequency = frequencyHz;
             iter->second->freqString = frequencyMHzString;
@@ -574,11 +626,11 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
                 iter->second->status = txStatus;
                 iter->second->txMode = txMode;
                 
-                auto lastTxTime = makeValidTime_(lastTxDate);
+                auto lastTxTime = makeValidTime_(lastTxDate, iter->second->lastTxDate);
                 iter->second->lastTx = lastTxTime;
             }
             
-            auto lastUpdateTime = makeValidTime_(lastUpdate);
+            auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             iter->second->lastUpdate = lastUpdateTime;
             
             m_listSpots->Freeze();
@@ -610,7 +662,7 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
                 iter->second->snr = snrString;
             }
 
-            auto lastUpdateTime = makeValidTime_(lastUpdate);
+            auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             iter->second->lastUpdate = lastUpdateTime;
             
             m_listSpots->Freeze();
@@ -620,7 +672,7 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
     });
 }
 
-wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr)
+wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr, wxDateTime& timeObj)
 {    
     wxRegEx millisecondsRemoval(_("\\.[^+-]+"));
     wxString tmp = timeStr;
@@ -651,6 +703,7 @@ wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr)
     if (tmpDate.ParseISOCombined(tmp))
     {
         tmpDate.MakeFromTimezone(timeZone);
+        timeObj = tmpDate;
         if (wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting)
         {
             timeZone = wxDateTime::TimeZone(wxDateTime::TZ::UTC);
@@ -663,6 +716,7 @@ wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr)
     }
     else
     {
+        timeObj = wxDateTime();
         return _(UNKNOWN_STR);
     }
 }
