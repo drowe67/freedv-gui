@@ -275,7 +275,7 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
         if (m_graticule)
             ctx->StrokeLine(x, m_imgHeight + PLOT_BORDER, x, PLOT_BORDER);
         else
-            ctx->StrokeLine(x, PLOT_BORDER + 5, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
+            ctx->StrokeLine(x, PLOT_BORDER + 8, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
             
         snprintf(buf, STR_LENGTH, "%4.0fHz", f);
         GetTextExtent(buf, &text_w, &text_h);
@@ -287,7 +287,7 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
     {
         x = f*freq_hz_to_px;
         x += PLOT_BORDER + XLEFT_OFFSET;
-        ctx->StrokeLine(x, PLOT_BORDER + 10, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
+        ctx->StrokeLine(x, PLOT_BORDER + 13, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
     }
     
     // Horizontal gridlines
