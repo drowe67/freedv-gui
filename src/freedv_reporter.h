@@ -82,6 +82,7 @@ class FreeDVReporterDialog : public wxDialog
         void OnItemSelected(wxListEvent& event);
         void OnItemDeselected(wxListEvent& event);
         void OnSortColumn(wxListEvent& event);
+        void OnTimer(wxTimerEvent& event);
         
         // Main list box that shows spots
         wxListView*   m_listSpots;
@@ -99,6 +100,9 @@ class FreeDVReporterDialog : public wxDialog
         wxButton* m_buttonOK;
         wxButton* m_buttonSendQSY;
         wxButton* m_buttonDisplayWebpage;
+        
+        // Timer to unhighlight RX rows after 10s (like with web-based Reporter)
+        wxTimer* m_highlightClearTimer;
 
      private:
          struct ReporterData
@@ -116,6 +120,7 @@ class FreeDVReporterDialog : public wxDialog
              bool transmitting;
              wxString lastTx;
              wxDateTime lastTxDate;
+             wxDateTime lastRxDate;
              wxString lastRxCallsign;
              wxString lastRxMode;
              wxString snr;

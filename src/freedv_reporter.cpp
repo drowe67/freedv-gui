@@ -142,7 +142,12 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     
     this->Layout();
     
+    // Set up highlight clear timer
+    m_highlightClearTimer = new wxTimer(this);
+    m_highlightClearTimer->Start(1000);
+    
     // Hook in events
+    this->Connect(wxEVT_TIMER, wxTimerEventHandler(FreeDVReporterDialog::OnTimer), NULL, this);
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(FreeDVReporterDialog::OnInitDialog));
     this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(FreeDVReporterDialog::OnClose));
     this->Connect(wxEVT_SIZE, wxSizeEventHandler(FreeDVReporterDialog::OnSize));
@@ -162,6 +167,9 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
 
 FreeDVReporterDialog::~FreeDVReporterDialog()
 {
+    m_highlightClearTimer->Stop();
+    
+    this->Disconnect(wxEVT_TIMER, wxTimerEventHandler(FreeDVReporterDialog::OnTimer), NULL, this);
     this->Disconnect(wxEVT_SIZE, wxSizeEventHandler(FreeDVReporterDialog::OnSize));
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(FreeDVReporterDialog::OnInitDialog));
     this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(FreeDVReporterDialog::OnClose));
@@ -332,6 +340,25 @@ void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
     FilterFrequency freq = 
         (FilterFrequency)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter.get();
     setBandFilter(freq);
+}
+
+void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
+{
+    // Iterate across all visible rows. If a row is currently hightlighted
+    // green and it's been more than >10 seconds, clear coloring.
+    auto curDate = wxDateTime::Now();
+    for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
+    {
+        std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
+        auto reportData = allReporterData_[*sidPtr];
+        
+        if (!reportData->transmitting &&
+            (!reportData->lastRxDate.IsValid() || !reportData->lastRxDate.IsEqualUpTo(curDate, wxTimeSpan(0, 0, 10))))
+        {
+            m_listSpots->SetItemBackgroundColour(index, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOX));
+            m_listSpots->SetItemTextColour(index, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT));
+        }
+    }
 }
 
 void FreeDVReporterDialog::refreshQSYButtonState()
@@ -719,6 +746,9 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
             iter->second->lastRxCallsign = receivedCallsign;
             iter->second->lastRxMode = rxMode;
             
+            auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
+            iter->second->lastUpdate = lastUpdateTime;
+            
             wxString snrString = wxString::Format(_("%.01f"), snr);
             if (receivedCallsign == "" && rxMode == "")
             {
@@ -726,14 +756,13 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
                 iter->second->lastRxCallsign = UNKNOWN_STR;
                 iter->second->lastRxMode = UNKNOWN_STR;
                 iter->second->snr = UNKNOWN_STR;
+                iter->second->lastRxDate = wxDateTime();
             }
             else
             {
                 iter->second->snr = snrString;
+                iter->second->lastRxDate = iter->second->lastUpdateDate;
             }
-
-            auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
-            iter->second->lastUpdate = lastUpdateTime;
             
             addOrUpdateListIfNotFiltered_(iter->second);
         }
@@ -842,6 +871,12 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
         wxColour lightRed(0xfc, 0x45, 0x00);
         m_listSpots->SetItemBackgroundColour(itemIndex, lightRed);
         m_listSpots->SetItemTextColour(itemIndex, *wxWHITE);
+    }
+    else if (data->lastRxDate.IsValid() && data->lastRxDate.IsEqualUpTo(wxDateTime::Now(), wxTimeSpan(0, 0, 10)))
+    {
+        wxColour lightGreen(0x6f, 0xec, 0x72);
+        m_listSpots->SetItemBackgroundColour(itemIndex, lightGreen);
+        m_listSpots->SetItemTextColour(itemIndex, *wxBLACK);
     }
     else
     {
