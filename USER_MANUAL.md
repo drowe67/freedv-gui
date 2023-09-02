@@ -915,6 +915,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Adjust coloring of text and ticks on spectrum plot to improve visibility when in dark mode. (PR #518)
 2. Enhancements:
     * Add tooltip to Record button to claify its behavior. (PR #511)
+3. Cleanup:
+    * Remove unneeded 2400B and 2020B sample files. (PR #521)
 
 ## V1.9.1 August 2023
 
