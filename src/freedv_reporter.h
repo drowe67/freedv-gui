@@ -149,7 +149,7 @@ class FreeDVReporterDialog : public wxDialog
          void addOrUpdateListIfNotFiltered_(ReporterData* data);
          bool isFiltered_(uint64_t freq);
          
-         void setColumnForRow_(int row, int col, wxString val);
+         bool setColumnForRow_(int row, int col, wxString val);
          
          double calculateDistance_(wxString gridSquare1, wxString gridSquare2);
          void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);

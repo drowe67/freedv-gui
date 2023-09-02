@@ -822,7 +822,6 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
 {
     bool filtered = isFiltered_(data->frequency);
     int itemIndex = -1;
-    bool removed = false;
     
     for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
     {
@@ -838,9 +837,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     {
         // Remove as it has been filtered out.       
         delete (std::string*)m_listSpots->GetItemData(itemIndex);
-        m_listSpots->DeleteItem(itemIndex);
-        removed = true;
-        
+        m_listSpots->DeleteItem(itemIndex);       
         return;
     }
     else if (itemIndex == -1 && !filtered)
@@ -854,17 +851,28 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
         return;
     }
     
-    setColumnForRow_(itemIndex, 1, data->gridSquare);
-    setColumnForRow_(itemIndex, 2, data->distance);
-    setColumnForRow_(itemIndex, 3, data->version);
-    setColumnForRow_(itemIndex, 4, data->freqString);
-    setColumnForRow_(itemIndex, 5, data->status);
-    setColumnForRow_(itemIndex, 6, data->txMode);
-    setColumnForRow_(itemIndex, 7, data->lastTx);
-    setColumnForRow_(itemIndex, 8, data->lastRxCallsign);
-    setColumnForRow_(itemIndex, 9, data->lastRxMode);
-    setColumnForRow_(itemIndex, 10, data->snr);
-    setColumnForRow_(itemIndex, 11, data->lastUpdate);
+    bool changed = setColumnForRow_(itemIndex, 1, data->gridSquare);
+    bool needResort = changed && currentSortColumn_ == 1;
+    changed = setColumnForRow_(itemIndex, 2, data->distance);
+    needResort |= changed && currentSortColumn_ == 2;
+    changed = setColumnForRow_(itemIndex, 3, data->version);
+    needResort |= changed && currentSortColumn_ == 3;
+    changed = setColumnForRow_(itemIndex, 4, data->freqString);
+    needResort |= changed && currentSortColumn_ == 4;
+    changed = setColumnForRow_(itemIndex, 5, data->status);
+    needResort |= changed && currentSortColumn_ == 5;
+    changed = setColumnForRow_(itemIndex, 6, data->txMode);
+    needResort |= changed && currentSortColumn_ == 6;
+    changed = setColumnForRow_(itemIndex, 7, data->lastTx);
+    needResort |= changed && currentSortColumn_ == 7;
+    changed = setColumnForRow_(itemIndex, 8, data->lastRxCallsign);
+    needResort |= changed && currentSortColumn_ == 8;
+    changed = setColumnForRow_(itemIndex, 9, data->lastRxMode);
+    needResort |= changed && currentSortColumn_ == 9;
+    changed = setColumnForRow_(itemIndex, 10, data->snr);
+    needResort |= changed && currentSortColumn_ == 10;
+    changed = setColumnForRow_(itemIndex, 11, data->lastUpdate);
+    needResort |= changed && currentSortColumn_ == 11;
     
     if (data->transmitting)
     {
@@ -884,18 +892,20 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
         m_listSpots->SetItemTextColour(itemIndex, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT));
     }
 
-    if (!removed && currentSortColumn_ != -1)
+    if (needResort)
     {
         m_listSpots->SortItems(&FreeDVReporterDialog::ListCompareFn_, (wxIntPtr)this);
     }
 }
 
-void FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val)
+bool FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val)
 {
+    bool result = false;
     auto oldText = m_listSpots->GetItemText(row, col);
     
     if (oldText != val)
     {
+        result = true;
         m_listSpots->SetItem(row, col, val);
     
         auto itemFont = m_listSpots->GetItemFont(row);
@@ -918,6 +928,8 @@ void FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val)
             m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
         }
     }
+
+    return result;
 }
 
 bool FreeDVReporterDialog::isFiltered_(uint64_t freq)
