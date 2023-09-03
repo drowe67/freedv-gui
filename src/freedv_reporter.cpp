@@ -923,7 +923,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     {
         wxColour lightRed(0xfc, 0x45, 0x00);
         m_listSpots->SetItemBackgroundColour(itemIndex, lightRed);
-        m_listSpots->SetItemTextColour(itemIndex, *wxWHITE);
+        m_listSpots->SetItemTextColour(itemIndex, *wxBLACK);
     }
     else if (data->lastRxDate.IsValid() && data->lastRxDate.IsEqualUpTo(wxDateTime::Now(), wxTimeSpan(0, 0, 10)))
     {
