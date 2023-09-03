@@ -1111,7 +1111,7 @@ void EasySetupDialog::updateAudioDevices_()
     auto outputDevices = audioEngine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
     
     wxRegEx soundDeviceCleanup("^([:alpha:]+)[:space:]*\\(|^alsa_(input|output)\\.");
-    wxRegEx rightParenRgx("[:space:]*\\)[:space:]*$");
+    wxRegEx rightParenRgx("\\)[:space:]*$");
     
     for (auto& dev : inputDevices)
     {
