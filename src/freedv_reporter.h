@@ -63,6 +63,7 @@ class FreeDVReporterDialog : public wxDialog
         
         void setReporter(FreeDVReporter* reporter);
         void refreshQSYButtonState();
+        void refreshDistanceColumn();
         
         void setBandFilter(FilterFrequency freq);
         

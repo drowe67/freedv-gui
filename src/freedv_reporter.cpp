@@ -190,6 +190,23 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     m_bandFilter->Disconnect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnBandFilterChange), NULL, this);
 }
 
+void FreeDVReporterDialog::refreshDistanceColumn()
+{
+    wxListItem item;
+    m_listSpots->GetColumn(2, item);
+
+    if (wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
+    {
+        item.SetText("Dist (km)");
+    }
+    else
+    {
+        item.SetText("Dist (mi)");
+    }
+
+    m_listSpots->SetColumn(2, item);
+}
+
 void FreeDVReporterDialog::setReporter(FreeDVReporter* reporter)
 {
     if (reporter_ != nullptr)
@@ -646,6 +663,14 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         temp->callsign = wxString(callsign).Upper();
         temp->gridSquare = gridSquareWxString.Left(2).Upper() + gridSquareWxString.Mid(2);
         temp->distanceVal = calculateDistance_(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, gridSquareWxString);
+
+        if (!wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
+        {
+            // Convert to miles for those who prefer it
+            // (calculateDistance_() returns distance in km).
+            temp->distanceVal *= 0.621371;
+        }
+
         if (temp->distanceVal < 10.0)
         {
             temp->distance = wxString::Format("%.01f", temp->distanceVal);
