@@ -163,6 +163,9 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_buttonDisplayWebpage->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOpenWebsite), NULL, this);
     
     m_bandFilter->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnBandFilterChange), NULL, this);
+
+    // Trigger sorting on last sorted column
+    sortColumn_(wxGetApp().appConfiguration.reporterWindowCurrentSort);
 }
 
 FreeDVReporterDialog::~FreeDVReporterDialog()
@@ -303,33 +306,8 @@ void FreeDVReporterDialog::OnSortColumn(wxListEvent& event)
         // Don't allow sorting by "fake" columns.
         col = -1;
     }
-    
-    if (currentSortColumn_ != col)
-    {
-        if (currentSortColumn_ != -1)
-        {
-            m_listSpots->SetColumnImage(currentSortColumn_, -1);
-        }
 
-        currentSortColumn_ = col;
-        m_listSpots->SetColumnImage(currentSortColumn_, upIconIndex_);
-        sortAscending_ = true;
-    }
-    else if (sortAscending_)
-    {
-        sortAscending_ = false;
-        m_listSpots->SetColumnImage(currentSortColumn_, downIconIndex_);
-    }
-    else
-    {
-        m_listSpots->SetColumnImage(currentSortColumn_, -1);
-        currentSortColumn_ = -1;
-    }
-
-    if (currentSortColumn_ != -1)
-    {
-        m_listSpots->SortItems(&FreeDVReporterDialog::ListCompareFn_, (wxIntPtr)this);
-    }
+    sortColumn_(col);
 }
 
 void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
@@ -394,6 +372,38 @@ void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
     {
         addOrUpdateListIfNotFiltered_(kvp.second);
     }
+}
+
+void FreeDVReporterDialog::sortColumn_(int col)
+{    
+    if (currentSortColumn_ != col)
+    {
+        if (currentSortColumn_ != -1)
+        {
+            m_listSpots->SetColumnImage(currentSortColumn_, -1);
+        }
+
+        currentSortColumn_ = col;
+        m_listSpots->SetColumnImage(currentSortColumn_, upIconIndex_);
+        sortAscending_ = true;
+    }
+    else if (sortAscending_)
+    {
+        sortAscending_ = false;
+        m_listSpots->SetColumnImage(currentSortColumn_, downIconIndex_);
+    }
+    else
+    {
+        m_listSpots->SetColumnImage(currentSortColumn_, -1);
+        currentSortColumn_ = -1;
+    }
+
+    if (currentSortColumn_ != -1)
+    {
+        m_listSpots->SortItems(&FreeDVReporterDialog::ListCompareFn_, (wxIntPtr)this);
+    }
+
+    wxGetApp().appConfiguration.reporterWindowCurrentSort = currentSortColumn_;
 }
 
 void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
