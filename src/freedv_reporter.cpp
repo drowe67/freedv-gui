@@ -872,7 +872,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     }
     
     bool changed = setColumnForRow_(itemIndex, 1, data->gridSquare);
-    needResort = changed && currentSortColumn_ == 1;
+    needResort |= changed && currentSortColumn_ == 1;
     changed = setColumnForRow_(itemIndex, 2, data->distance);
     needResort |= changed && currentSortColumn_ == 2;
     changed = setColumnForRow_(itemIndex, 3, data->version);
