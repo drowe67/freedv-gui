@@ -46,7 +46,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sessionActive_ = false;
     
     wxPanel* panel = new wxPanel(this);
-    panel->SetMinSize(wxSize(700, -1));
+    panel->SetMinSize(wxSize(720, -1));
     
     wxBoxSizer* bSizer30;
     bSizer30 = new wxBoxSizer(wxVERTICAL);
