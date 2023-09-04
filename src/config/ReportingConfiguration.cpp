@@ -40,7 +40,7 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterEnabled("/Reporting/FreeDV/Enable", true)
     , freedvReporterHostname("/Reporting/FreeDV/Hostname", wxT(FREEDV_REPORTER_DEFAULT_HOSTNAME))
     , freedvReporterBandFilter("/Reporting/FreeDV/CurrentBandFilter", 0)
-    , useMetricDistances("/Reporting/FreeDVReporter/UseMetricDistances", true)
+    , useMetricDistances("/Reporting/FreeDV/UseMetricDistances", true)
         
     , useUTCForReporting("/CallsignList/UseUTCTime", false)
         
