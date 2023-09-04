@@ -397,7 +397,7 @@ void FreeDVReporterDialog::sortColumn_(int col)
     {
         if (currentSortColumn_ != -1)
         {
-            m_listSpots->SetColumnImage(currentSortColumn_, -1);
+            m_listSpots->ClearColumnImage(currentSortColumn_);
         }
 
         currentSortColumn_ = col;
@@ -411,7 +411,10 @@ void FreeDVReporterDialog::sortColumn_(int col)
     }
     else
     {
-        m_listSpots->SetColumnImage(currentSortColumn_, -1);
+        if (currentSortColumn_ >= 0)
+        {
+            m_listSpots->ClearColumnImage(currentSortColumn_);
+        }
         currentSortColumn_ = -1;
     }
 
