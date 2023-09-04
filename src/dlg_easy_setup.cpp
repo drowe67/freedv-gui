@@ -1112,8 +1112,10 @@ void EasySetupDialog::updateAudioDevices_()
     
     for (auto& dev : inputDevices)
     {
-        if (dev.name.Find(_("Microsoft Sound Mapper")) != -1)
+        if (dev.name.Find(_("Microsoft Sound Mapper")) != -1 ||
+            dev.name.Find(_(" [Loopback]")) != -1)
         {
+            // Sound mapper and loopback devices should be skipped.
             continue;
         }
 
@@ -1146,6 +1148,13 @@ void EasySetupDialog::updateAudioDevices_()
 
     for (auto& dev : outputDevices)
     {
+        if (dev.name.Find(_("Microsoft Sound Mapper")) != -1 ||
+            dev.name.Find(_(" [Loopback]")) != -1)
+        {
+            // Sound mapper and loopback devices should be skipped.
+            continue;
+        }
+
         // For Windows, some devices have a designator at the beginning
         // (e.g. "Microphone (USB Audio CODEC)" and "Speakers (USB Audio CODEC)".
         // We need to be able to strip the designator without affecting
@@ -1201,6 +1210,7 @@ void EasySetupDialog::updateAudioDevices_()
                         cleanedDeviceName.RemoveLast(1);
                     }
                 }
+
                 finalRadioDeviceList.erase(oldDeviceName);
                 finalRadioDeviceList[cleanedDeviceName] = foundItem;
             }
@@ -1237,7 +1247,7 @@ void EasySetupDialog::updateAudioDevices_()
     int flexTxDeviceSampleRate = -1;
     for (auto& kvp : finalRadioDeviceList)
     {
-        if (kvp.first.StartsWith("DAX Audio TX"))
+        if (kvp.first.StartsWith("DAX Audio TX") && kvp.second->txSampleRate > 0&& kvp.second->txDeviceName != "none")
         {
             fullTxDeviceName = kvp.second->txDeviceName;
             flexTxDeviceSampleRate = kvp.second->txSampleRate;
