@@ -394,7 +394,7 @@ bool AudioOptsDialog::setTextCtrlIfDevNameValid(wxTextCtrl *textCtrl, wxListCtrl
     // ignore last list entry as it is the "none" entry
     for(int i = 0; i < listCtrl->GetItemCount() - 1; i++) 
     {
-        if (devName == listCtrl->GetItemText(i, 0))
+        if (listCtrl->GetItemText(i, 0).Find(devName) == 0)
         {
             textCtrl->SetValue(listCtrl->GetItemText(i, 0));
             if (g_verbose) fprintf(stderr,"setting focus of %d\n", i);
@@ -633,7 +633,7 @@ int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, w
     cbSampleRate->Clear();
     for (auto& dev : deviceList)
     {
-        if (dev.name == devName)
+        if (dev.name.Find(devName) == 0)
         {
             auto supportedSampleRates =
                 engine->getSupportedSampleRates(
@@ -848,7 +848,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
         for (auto& devInfo : devList)
         {
-            if (devInfo.name == devName)
+            if (devInfo.name.Find(devName) == 0)
             {
                 int sampleCount = 0;
                 int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
@@ -973,7 +973,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
         for (auto& devInfo : devList)
         {
-            if (devInfo.name == devName)
+            if (devInfo.name.Find(devName) == 0)
             {
                 int sampleCount = 0;
                 int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());

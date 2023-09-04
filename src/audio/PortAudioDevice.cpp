@@ -35,7 +35,18 @@ PortAudioDevice::PortAudioDevice(int deviceId, IAudioEngine::AudioDirection dire
     , numChannels_(numChannels)
     , deviceStream_(nullptr)
 {
-    // empty
+    auto deviceInfo = Pa_GetDeviceInfo(deviceId_);
+    std::string hostApiName = Pa_GetHostApiInfo(deviceInfo->hostApi)->name;
+
+    // Windows only: we are switching from MME to WASAPI. A side effect
+    // of this is that we really only support one sample rate. Instead
+    // of erroring out, let's just use the device's default sample rate 
+    // instead to prevent users from needing to reconfigure as much as
+    // possible.
+    if (hostApiName.find("Windows WASAPI") != std::string::npos)
+    {
+        sampleRate_ = deviceInfo->defaultSampleRate;
+    }
 }
 
 PortAudioDevice::~PortAudioDevice()
@@ -49,11 +60,12 @@ PortAudioDevice::~PortAudioDevice()
 void PortAudioDevice::start()
 {
     PaStreamParameters streamParameters;
-    
+    auto deviceInfo = Pa_GetDeviceInfo(deviceId_);
+
     streamParameters.device = deviceId_;
     streamParameters.channelCount = numChannels_;
     streamParameters.sampleFormat = paInt16;
-    streamParameters.suggestedLatency = Pa_GetDeviceInfo(deviceId_)->defaultHighInputLatency;
+    streamParameters.suggestedLatency = deviceInfo->defaultHighInputLatency;
     streamParameters.hostApiSpecificStreamInfo = NULL;
     
     auto error = Pa_OpenStream(
