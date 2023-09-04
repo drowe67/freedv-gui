@@ -167,7 +167,6 @@ bool endingTx;
 // Option test file to log samples
 
 FILE *ftest;
-FILE *g_logfile;
 
 // Config file management 
 wxConfigBase *pConfig = NULL;
@@ -375,7 +374,6 @@ void MainFrame::loadConfiguration_()
 
     // sanitise frame position as a first pass at Win32 registry bug
 
-    //fprintf(g_logfile, "x = %d y = %d w = %d h = %d\n", x,y,w,h);
     if (x < 0 || x > 2048) x = 20;
     if (y < 0 || y > 2048) y = 20;
     if (w < 0 || w > 2048) w = 800;
@@ -565,12 +563,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_filterDialog = nullptr;
 
     m_zoom              = 1.;
-
-    #ifdef __WXMSW__
-    g_logfile = stderr;
-    #else
-    g_logfile = stderr;
-    #endif
 
     // Init Hamlib library, but we don't start talking to any rigs yet
 
@@ -886,10 +878,6 @@ MainFrame::~MainFrame()
     //fprintf(stderr, "MainFrame::~MainFrame()\n");
     #ifdef FTEST
     fclose(ftest);
-    #endif
-
-    #ifdef __WXMSW__
-    fclose(g_logfile);
     #endif
 
     if (wxGetApp().m_serialport)
@@ -2033,6 +2021,7 @@ void MainFrame::performFreeDVOn_()
                             }
                             
                             m_reporterDialog->setReporter(freedvReporter);
+                            m_reporterDialog->refreshDistanceColumn();
                         });
                         
                         // Set up QSY request handler

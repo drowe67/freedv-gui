@@ -97,6 +97,7 @@ void MainFrame::OnToolsFreeDVReporter(wxCommandEvent& event)
         m_reporterDialog = new FreeDVReporterDialog(this);
     }
 
+    m_reporterDialog->refreshDistanceColumn();
     m_reporterDialog->Show();
     m_reporterDialog->Iconize(false); // undo minimize if required
     m_reporterDialog->Raise(); // brings from background to foreground if required
@@ -181,11 +182,17 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
             m_txtCtrlCallSign->Show();
         }
         
-        // 
+        // Update voice keyer file if different
         auto newVkFile = wxGetApp().appConfiguration.voiceKeyerWaveFile->mb_str();
         if (vkFileName_ != newVkFile)
         {
             vkFileName_ = newVkFile;
+        }
+
+        // Refresh distance column label in case setting was changed.
+        if (m_reporterDialog != nullptr)
+        {
+            m_reporterDialog->refreshDistanceColumn();
         }
 
         // Relayout window so that the changes can take effect.
