@@ -60,6 +60,7 @@ public:
     ConfigurationDataElement<long> reporterWindowHeight;
     ConfigurationDataElement<bool> reporterWindowVisible;
     ConfigurationDataElement<int> reporterWindowCurrentSort;
+    ConfigurationDataElement<bool> reporterWindowCurrentSortDirection;
     
     ConfigurationDataElement<long> currentNotebookTab;
     

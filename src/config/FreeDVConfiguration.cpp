@@ -48,6 +48,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     , reporterWindowHeight("/Windows/FreeDVReporter/height", -1)
     , reporterWindowVisible("/Windows/FreeDVReporter/visible", false)
     , reporterWindowCurrentSort("/Windows/FreeDVReporter/currentSort", -1)
+    , reporterWindowCurrentSortDirection("/Windows/FreeDVReporter/currentSortDirection", true)
         
     /* Current tab view */
     , currentNotebookTab("/MainFrame/rxNbookCtrl", 0)
@@ -132,6 +133,7 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, reporterWindowHeight);
     load_(config, reporterWindowVisible);
     load_(config, reporterWindowCurrentSort);
+    load_(config, reporterWindowCurrentSortDirection);
     
     load_(config, currentNotebookTab);
     
@@ -213,6 +215,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, reporterWindowHeight);
     save_(config, reporterWindowVisible);
     save_(config, reporterWindowCurrentSort);
+    save_(config, reporterWindowCurrentSortDirection);
     
     save_(config, currentNotebookTab);
     

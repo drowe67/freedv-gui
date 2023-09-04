@@ -153,6 +153,7 @@ class FreeDVReporterDialog : public wxDialog
          bool setColumnForRow_(int row, int col, wxString val);
 
          void sortColumn_(int col);
+         void sortColumn_(int col, bool direction);
          
          double calculateDistance_(wxString gridSquare1, wxString gridSquare2);
          void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);
