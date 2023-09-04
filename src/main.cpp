@@ -2021,6 +2021,7 @@ void MainFrame::performFreeDVOn_()
                             }
                             
                             m_reporterDialog->setReporter(freedvReporter);
+                            m_reporterDialog->refreshDistanceColumn();
                         });
                         
                         // Set up QSY request handler

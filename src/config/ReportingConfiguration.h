@@ -49,6 +49,7 @@ public:
     ConfigurationDataElement<bool> freedvReporterEnabled;
     ConfigurationDataElement<wxString> freedvReporterHostname;
     ConfigurationDataElement<int> freedvReporterBandFilter;
+    ConfigurationDataElement<bool> useMetricDistances;
     
     ConfigurationDataElement<bool> useUTCForReporting;
     

@@ -136,6 +136,7 @@ class OptionsDlg : public wxDialog
         
         wxCheckBox    *m_ckboxFreeDVReporterEnable;
         wxTextCtrl    *m_freedvReporterHostname;
+        wxCheckBox    *m_useMetricDistances;
         
         wxButton*     m_BtnFifoReset;
         wxStaticText  *m_textFifos;

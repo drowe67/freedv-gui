@@ -25,6 +25,8 @@
 #include <string>
 #include <map>
 
+#include <wx/imaglist.h>
+
 #include "main.h"
 #include "defines.h"
 #include "reporting/FreeDVReporter.h"
@@ -61,6 +63,7 @@ class FreeDVReporterDialog : public wxDialog
         
         void setReporter(FreeDVReporter* reporter);
         void refreshQSYButtonState();
+        void refreshDistanceColumn();
         
         void setBandFilter(FilterFrequency freq);
         
@@ -79,10 +82,15 @@ class FreeDVReporterDialog : public wxDialog
         
         void OnItemSelected(wxListEvent& event);
         void OnItemDeselected(wxListEvent& event);
+        void OnSortColumn(wxListEvent& event);
+        void OnTimer(wxTimerEvent& event);
         
         // Main list box that shows spots
         wxListView*   m_listSpots;
-        
+        wxImageList*  m_sortIcons;
+        int upIconIndex_;
+        int downIconIndex_;
+
         // QSY text
         wxTextCtrl* m_qsyText;
         
@@ -93,6 +101,9 @@ class FreeDVReporterDialog : public wxDialog
         wxButton* m_buttonOK;
         wxButton* m_buttonSendQSY;
         wxButton* m_buttonDisplayWebpage;
+        
+        // Timer to unhighlight RX rows after 10s (like with web-based Reporter)
+        wxTimer* m_highlightClearTimer;
 
      private:
          struct ReporterData
@@ -100,6 +111,8 @@ class FreeDVReporterDialog : public wxDialog
              std::string sid;
              wxString callsign;
              wxString gridSquare;
+             double distanceVal;
+             wxString distance;
              wxString version;
              uint64_t frequency;
              wxString freqString;
@@ -107,16 +120,21 @@ class FreeDVReporterDialog : public wxDialog
              wxString txMode;
              bool transmitting;
              wxString lastTx;
+             wxDateTime lastTxDate;
+             wxDateTime lastRxDate;
              wxString lastRxCallsign;
              wxString lastRxMode;
              wxString snr;
              wxString lastUpdate;
+             wxDateTime lastUpdateDate;
          };
          
          FreeDVReporter* reporter_;
          std::map<int, int> columnLengths_;
          std::map<std::string, ReporterData*> allReporterData_;
          FilterFrequency currentBandFilter_;
+         int currentSortColumn_;
+         bool sortAscending_;
          
          void clearAllEntries_(bool clearForAllBands);
          void onReporterConnect_();
@@ -127,12 +145,21 @@ class FreeDVReporterDialog : public wxDialog
          void onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate);
          void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
          
-         wxString makeValidTime_(std::string timeStr);
+         wxString makeValidTime_(std::string timeStr, wxDateTime& timeObj);
          
          void addOrUpdateListIfNotFiltered_(ReporterData* data);
          bool isFiltered_(uint64_t freq);
          
-         void setColumnForRow_(int row, int col, wxString val);
+         bool setColumnForRow_(int row, int col, wxString val);
+
+         void sortColumn_(int col);
+         void sortColumn_(int col, bool direction);
+         
+         double calculateDistance_(wxString gridSquare1, wxString gridSquare2);
+         void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);
+
+         static int ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
+         static double DegreesToRadians_(double degrees);
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__

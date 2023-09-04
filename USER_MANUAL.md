@@ -917,6 +917,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix intermittent crash on exit due to improperly closing stderr. (PR #526)
 2. Enhancements:
     * Add tooltip to Record button to claify its behavior. (PR #511)
+    * Add highlighting for RX rows in FreeDV Reporter (to match web version). (PR #519)
+    * Add Distance column in FreeDV Reporter window. (PR #519)
+    * Add support for sorting columns in FreeDV Reporter window. (PR #519)
 3. Cleanup:
     * Remove unneeded 2400B and 2020B sample files. (PR #521)
 
