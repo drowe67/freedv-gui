@@ -1202,9 +1202,10 @@ void EasySetupDialog::updateAudioDevices_()
                 // Rename device in device list to "cleaned up" name.
                 cleanedDeviceName.Trim(false);
                 cleanedDeviceName.Trim(true);
-                if (cleanedDeviceName.Left(1) == _("("))
+                auto parenthesisLoc = cleanedDeviceName.Find(_("("));
+                if (parenthesisLoc >= 0)
                 {
-                    cleanedDeviceName.Remove(0, 1);
+                    cleanedDeviceName = cleanedDeviceName.Mid(parenthesisLoc + 1);
                     if (cleanedDeviceName.Right(1) == _(")"))
                     {
                         cleanedDeviceName.RemoveLast(1);
@@ -1247,7 +1248,7 @@ void EasySetupDialog::updateAudioDevices_()
     int flexTxDeviceSampleRate = -1;
     for (auto& kvp : finalRadioDeviceList)
     {
-        if (kvp.first.StartsWith("DAX Audio TX") && kvp.second->txSampleRate > 0&& kvp.second->txDeviceName != "none")
+        if (kvp.first.StartsWith("DAX Audio TX") && kvp.second->txSampleRate > 0 && kvp.second->txDeviceName != "none")
         {
             fullTxDeviceName = kvp.second->txDeviceName;
             flexTxDeviceSampleRate = kvp.second->txSampleRate;
