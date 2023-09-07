@@ -35,6 +35,7 @@ FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::
     , lastFrequency_(0)
     , tx_(false)
     , rxOnly_(rxOnly)
+    , hidden_(false)
 {
     sioClient_ = new sio::client();
     assert(sioClient_ != nullptr);
@@ -112,6 +113,20 @@ void FreeDVReporter::transmit(std::string mode, bool tx)
 {
     std::unique_lock<std::mutex> lk(fnQueueMutex_);
     fnQueue_.push_back(std::bind(&FreeDVReporter::transmitImpl_, this, mode, tx));
+    fnQueueConditionVariable_.notify_one();
+}
+
+void FreeDVReporter::hideFromView()
+{
+    std::unique_lock<std::mutex> lk(fnQueueMutex_);
+    fnQueue_.push_back(std::bind(&FreeDVReporter::hideFromViewImpl_, this));
+    fnQueueConditionVariable_.notify_one();
+}
+
+void FreeDVReporter::showOurselves()
+{
+    std::unique_lock<std::mutex> lk(fnQueueMutex_);
+    fnQueue_.push_back(std::bind(&FreeDVReporter::showOurselvesImpl_, this));
     fnQueueConditionVariable_.notify_one();
 }
     
@@ -193,8 +208,15 @@ void FreeDVReporter::connect_()
     {
         isConnecting_ = false;
         
-        freqChangeImpl_(lastFrequency_);
-        transmitImpl_(mode_, tx_);
+        if (hidden_)
+        {
+            hideFromView();
+        }
+        else
+        {
+            freqChangeImpl_(lastFrequency_);
+            transmitImpl_(mode_, tx_);
+        }
     });
     
     sioClient_->set_reconnect_listener([&](unsigned, unsigned)
@@ -211,8 +233,15 @@ void FreeDVReporter::connect_()
             onReporterConnectFn_();
         }
         
-        freqChangeImpl_(lastFrequency_);
-        transmitImpl_(mode_, tx_);
+        if (hidden_)
+        {
+            hideFromView();
+        }
+        else
+        {
+            freqChangeImpl_(lastFrequency_);
+            transmitImpl_(mode_, tx_);
+        }
     });
     
     sioClient_->set_fail_listener([&]() {
@@ -495,4 +524,16 @@ void FreeDVReporter::transmitImpl_(std::string mode, bool tx)
     // Save last mode and TX state in case we have to reconnect.
     mode_ = mode;
     tx_ = tx;
+}
+
+void FreeDVReporter::hideFromViewImpl_()
+{
+    sioClient_->socket()->emit("hide_self");
+    hidden_ = true;
+}
+
+void FreeDVReporter::showOurselvesImpl_()
+{
+    sioClient_->socket()->emit("show_self");
+    hidden_ = false;
 }

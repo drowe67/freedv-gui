@@ -207,9 +207,9 @@ void FreeDVReporterDialog::refreshDistanceColumn()
     m_listSpots->SetColumn(2, item);
 }
 
-void FreeDVReporterDialog::setReporter(FreeDVReporter* reporter)
+void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
 {
-    if (reporter_ != nullptr)
+    if (reporter_)
     {
         reporter_->setOnReporterConnectFn(FreeDVReporter::ReporterConnectionFn());
         reporter_->setOnReporterDisconnectFn(FreeDVReporter::ReporterConnectionFn());
@@ -223,7 +223,7 @@ void FreeDVReporterDialog::setReporter(FreeDVReporter* reporter)
     
     reporter_ = reporter;
     
-    if (reporter_ != nullptr)
+    if (reporter_)
     {
         reporter_->setOnReporterConnectFn(std::bind(&FreeDVReporterDialog::onReporterConnect_, this));
         reporter_->setOnReporterDisconnectFn(std::bind(&FreeDVReporterDialog::onReporterDisconnect_, this));

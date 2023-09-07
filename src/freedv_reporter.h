@@ -61,7 +61,7 @@ class FreeDVReporterDialog : public wxDialog
                 long style = wxDEFAULT_DIALOG_STYLE | wxTAB_TRAVERSAL | wxMINIMIZE_BOX | wxRESIZE_BORDER);
         ~FreeDVReporterDialog();
         
-        void setReporter(FreeDVReporter* reporter);
+        void setReporter(std::shared_ptr<FreeDVReporter> reporter);
         void refreshQSYButtonState();
         void refreshDistanceColumn();
         
@@ -129,7 +129,7 @@ class FreeDVReporterDialog : public wxDialog
              wxDateTime lastUpdateDate;
          };
          
-         FreeDVReporter* reporter_;
+         std::shared_ptr<FreeDVReporter> reporter_;
          std::map<int, int> columnLengths_;
          std::map<std::string, ReporterData*> allReporterData_;
          FilterFrequency currentBandFilter_;

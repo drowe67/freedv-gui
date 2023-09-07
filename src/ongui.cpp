@@ -74,6 +74,9 @@ void MainFrame::OnToolsEasySetup(wxCommandEvent& event)
             m_txtCtrlCallSign->Show();
         }
 
+        // Initialize FreeDV Reporter if required.
+        initializeFreeDVReporter_();
+        
         // Relayout window so that the changes can take effect.
         m_panel->Layout();
     }
@@ -188,6 +191,9 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         {
             vkFileName_ = newVkFile;
         }
+        
+        // Initialize FreeDV Reporter if required.
+        initializeFreeDVReporter_();
 
         // Refresh distance column label in case setting was changed.
         if (m_reporterDialog != nullptr)
