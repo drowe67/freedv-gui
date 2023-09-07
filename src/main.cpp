@@ -1994,6 +1994,15 @@ void MainFrame::performFreeDVOn_()
                         m_pskReporterTimer.Start(5 * 60 * 1000);
                     });
 
+                    // Make sure QSY button becomes enabled after start.
+                    executeOnUiThreadAndWait_([&]() 
+                    {
+                        if (m_reporterDialog != nullptr)
+                        {
+                            m_reporterDialog->refreshQSYButtonState();
+                        }
+                    });
+                    
                     // Immediately transmit selected TX mode and frequency to avoid UI glitches.
                     for (auto& obj : wxGetApp().m_reporters)
                     {
@@ -2128,6 +2137,12 @@ void MainFrame::performFreeDVOff_()
     #if defined(FREEDV_MODE_2020B)
             m_rb2020b->Enable();
     #endif // FREEDV_MODE_2020B
+        }
+        
+        // Make sure QSY button becomes disabled after stop.
+        if (m_reporterDialog != nullptr)
+        {
+            m_reporterDialog->refreshQSYButtonState();
         }
     });
 }

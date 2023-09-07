@@ -23,6 +23,10 @@
 #include <wx/datetime.h>
 #include "freedv_reporter.h"
 
+#include "freedv_interface.h"
+
+extern FreeDVInterface freedvInterface;
+
 #define UNKNOWN_STR "--"
 #define NUM_COLS (12)
 
@@ -365,7 +369,8 @@ void FreeDVReporterDialog::refreshQSYButtonState()
         auto selectedCallsign = m_listSpots->GetItemText(selectedIndex);
     
         if (selectedCallsign != wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign && 
-            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 &&
+            freedvInterface.isRunning())
         {
             wxString theirFreqString = m_listSpots->GetItemText(selectedIndex, 3);
             wxRegEx mhzRegex(" MHz$");
