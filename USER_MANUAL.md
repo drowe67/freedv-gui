@@ -921,6 +921,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add highlighting for RX rows in FreeDV Reporter (to match web version). (PR #519)
     * Add Distance column in FreeDV Reporter window. (PR #519)
     * Add support for sorting columns in FreeDV Reporter window. (PR #519)
+    * Allow use of FreeDV Reporter without having a session running. (PR #529)
 3. Cleanup:
     * Remove unneeded 2400B and 2020B sample files. (PR #521)
 
