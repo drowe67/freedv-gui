@@ -23,6 +23,10 @@
 #include <wx/datetime.h>
 #include "freedv_reporter.h"
 
+#include "freedv_interface.h"
+
+extern FreeDVInterface freedvInterface;
+
 #define UNKNOWN_STR "--"
 #define NUM_COLS (12)
 
@@ -207,9 +211,9 @@ void FreeDVReporterDialog::refreshDistanceColumn()
     m_listSpots->SetColumn(2, item);
 }
 
-void FreeDVReporterDialog::setReporter(FreeDVReporter* reporter)
+void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
 {
-    if (reporter_ != nullptr)
+    if (reporter_)
     {
         reporter_->setOnReporterConnectFn(FreeDVReporter::ReporterConnectionFn());
         reporter_->setOnReporterDisconnectFn(FreeDVReporter::ReporterConnectionFn());
@@ -223,7 +227,7 @@ void FreeDVReporterDialog::setReporter(FreeDVReporter* reporter)
     
     reporter_ = reporter;
     
-    if (reporter_ != nullptr)
+    if (reporter_)
     {
         reporter_->setOnReporterConnectFn(std::bind(&FreeDVReporterDialog::onReporterConnect_, this));
         reporter_->setOnReporterDisconnectFn(std::bind(&FreeDVReporterDialog::onReporterDisconnect_, this));
@@ -365,7 +369,8 @@ void FreeDVReporterDialog::refreshQSYButtonState()
         auto selectedCallsign = m_listSpots->GetItemText(selectedIndex);
     
         if (selectedCallsign != wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign && 
-            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 &&
+            freedvInterface.isRunning())
         {
             wxString theirFreqString = m_listSpots->GetItemText(selectedIndex, 3);
             wxRegEx mhzRegex(" MHz$");

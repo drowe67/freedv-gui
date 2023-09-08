@@ -90,6 +90,7 @@
 #include "hamlib.h"
 #include "serialport.h" 
 #include "reporting/IReporter.h"
+#include "reporting/FreeDVReporter.h"
 #include "freedv_interface.h"
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
@@ -184,7 +185,12 @@ class MainApp : public wxApp
 
         wxRect              m_rTopWindow;
 
-        std::vector<IReporter*> m_reporters;
+        // To support viewing FreeDV Reporter data outside of a session, we need to have
+        // a running connection and know when to appropriately kill it. A shared_ptr
+        // allows us to do so.
+        std::shared_ptr<FreeDVReporter> m_sharedReporterObject;
+        
+        std::vector<std::shared_ptr<IReporter> > m_reporters;
         
         bool                loadConfig();
         bool                saveConfig();
@@ -487,6 +493,8 @@ class MainFrame : public TopFrame
         void executeOnUiThreadAndWait_(std::function<void()> fn);
         
         void updateReportingFreqList_();
+        
+        void initializeFreeDVReporter_();
 };
 
 void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs);

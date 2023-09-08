@@ -83,6 +83,9 @@ public:
     
     void setOnQSYRequestFn(QsyRequestFn fn);
     
+    void hideFromView();
+    void showOurselves();
+    
 private:
     // Required elements to implement execution thread for FreeDV Reporter.
     std::vector<std::function<void()> > fnQueue_;
@@ -101,6 +104,7 @@ private:
     std::string mode_;
     bool tx_;
     bool rxOnly_;
+    bool hidden_;
     
     ReporterConnectionFn onReporterConnectFn_;
     ReporterConnectionFn onReporterDisconnectFn_;
@@ -118,6 +122,9 @@ private:
     void threadEntryPoint_();
     void freqChangeImpl_(uint64_t frequency);
     void transmitImpl_(std::string mode, bool tx);
+    
+    void hideFromViewImpl_();
+    void showOurselvesImpl_();
 };
 
 #endif // FREEDV_REPORTER_H
