@@ -914,6 +914,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fixes bug preventing display of reporting UI if enabled on first start. (PR #520)
     * Adjust vertical tick lengths on waterfall to prevent text overlap. (PR #518)
     * Adjust coloring of text and ticks on spectrum plot to improve visibility when in dark mode. (PR #518)
+    * Resolve issue preventing proper device name display in Easy Setup for non-English versions of Windows. (PR #524)
     * Fix intermittent crash on exit due to improperly closing stderr. (PR #526)
     * Fix issue preventing proper generation of unsigned Windows installers. (PR 528)
 2. Enhancements:

@@ -73,7 +73,8 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
         std::string hostApiName = Pa_GetHostApiInfo(deviceInfo->hostApi)->name;
         if (hostApiName.find("DirectSound") != std::string::npos ||
             hostApiName.find("surround") != std::string::npos ||
-            hostApiName.find("Windows WASAPI") != std::string::npos ||
+            //hostApiName.find("Windows WASAPI") != std::string::npos ||
+            hostApiName.find("MME") != std::string::npos ||
             hostApiName.find("Windows WDM-KS") != std::string::npos)
         {
             // Skip non-MME/Core Audio devices as that was the old behavior.
@@ -107,7 +108,7 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, A
     
     for (auto& device : devInfo)
     {
-        if (deviceName == device.name)
+        if (device.name.Find(deviceName) == 0)
         {
             PaStreamParameters streamParameters;
             
@@ -164,7 +165,7 @@ std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(wxString deviceNam
     
     for (auto& dev : deviceList)
     {
-        if (dev.name == deviceName)
+        if (dev.name.Find(deviceName) == 0)
         {
             auto devObj = new PortAudioDevice(dev.deviceId, direction, sampleRate, dev.maxChannels >= numChannels ? numChannels : dev.maxChannels);
             return std::shared_ptr<IAudioDevice>(devObj);
