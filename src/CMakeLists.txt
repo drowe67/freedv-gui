@@ -170,3 +170,15 @@ if(APPLE)
         COMMAND rm -rf dist_tmp
     )
 endif(APPLE)
+
+# Custom commands for signing Windows binaries
+if(SIGN_WINDOWS_BINARIES)
+    # Add custom command to sign freedv.exe.
+    add_custom_command(
+        TARGET freedv 
+        POST_BUILD
+        COMMAND mv $<TARGET_FILE:freedv> $<TARGET_FILE:freedv>.tmp
+        COMMAND ${OSSLSIGNCODE_BIN} ARGS sign -pkcs11engine ${PKCS11_ENGINE} -pkcs11module ${PKCS11_MODULE} -pkcs11cert "${PKCS11_CERTIFICATE}" -key "${PKCS11_KEY}" -h ${SIGN_HASH} -ts ${TIMESTAMP_SERVER} -comm -ac ${INTERMEDIATE_CERT_FILE} -n "FreeDV - ${PROJECT_DESCRIPTION}" -i "https://freedv.org/" -in $<TARGET_FILE:freedv>.tmp -out $<TARGET_FILE:freedv>
+        COMMAND rm $<TARGET_FILE:freedv>.tmp
+        VERBATIM)
+endif(SIGN_WINDOWS_BINARIES)

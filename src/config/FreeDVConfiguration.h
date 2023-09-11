@@ -59,6 +59,8 @@ public:
     ConfigurationDataElement<long> reporterWindowWidth;
     ConfigurationDataElement<long> reporterWindowHeight;
     ConfigurationDataElement<bool> reporterWindowVisible;
+    ConfigurationDataElement<int> reporterWindowCurrentSort;
+    ConfigurationDataElement<bool> reporterWindowCurrentSortDirection;
     
     ConfigurationDataElement<long> currentNotebookTab;
     
@@ -108,6 +110,9 @@ public:
     ConfigurationDataElement<int> currentSpectrumAveraging;
     
     ConfigurationDataElement<wxString> tabLayout;
+
+    ConfigurationDataElement<bool> monitorVoiceKeyerAudio;
+    ConfigurationDataElement<bool> monitorTxAudio;
     
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;

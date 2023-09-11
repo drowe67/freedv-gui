@@ -23,7 +23,7 @@ extern int g_txLevel;
 extern wxConfigBase *pConfig;
 extern bool endingTx;
 extern int g_outfifo1_empty;
-extern bool g_voice_keyer_record;
+extern bool g_voice_keyer_tx;
 
 extern SNDFILE            *g_sfRecFileFromModulator;
 extern SNDFILE            *g_sfRecFile;
@@ -31,7 +31,6 @@ extern bool g_recFileFromModulator;
 extern bool g_recFileFromRadio;
 
 extern SNDFILE            *g_sfRecMicFile;
-extern bool                g_recFileFromMic;
 
 extern wxMutex g_mutexProtectingCallbackData;
 
@@ -58,7 +57,29 @@ void MainFrame::OnExitClick(wxCommandEvent& event)
 void MainFrame::OnToolsEasySetup(wxCommandEvent& event)
 {
     EasySetupDialog* dlg = new EasySetupDialog(this);
-    dlg->ShowModal();
+    if (dlg->ShowModal() == wxOK)
+    {
+        // Show/hide frequency box based on PSK Reporter status.
+        m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
+
+        // Show/hide callsign combo box based on PSK Reporter Status
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
+        {
+            m_cboLastReportedCallsigns->Show();
+            m_txtCtrlCallSign->Hide();
+        }
+        else
+        {
+            m_cboLastReportedCallsigns->Hide();
+            m_txtCtrlCallSign->Show();
+        }
+
+        // Initialize FreeDV Reporter if required.
+        initializeFreeDVReporter_();
+        
+        // Relayout window so that the changes can take effect.
+        m_panel->Layout();
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -79,6 +100,7 @@ void MainFrame::OnToolsFreeDVReporter(wxCommandEvent& event)
         m_reporterDialog = new FreeDVReporterDialog(this);
     }
 
+    m_reporterDialog->refreshDistanceColumn();
     m_reporterDialog->Show();
     m_reporterDialog->Iconize(false); // undo minimize if required
     m_reporterDialog->Raise(); // brings from background to foreground if required
@@ -161,6 +183,22 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         {
             m_cboLastReportedCallsigns->Hide();
             m_txtCtrlCallSign->Show();
+        }
+        
+        // Update voice keyer file if different
+        auto newVkFile = wxGetApp().appConfiguration.voiceKeyerWaveFile->mb_str();
+        if (vkFileName_ != newVkFile)
+        {
+            vkFileName_ = newVkFile;
+        }
+        
+        // Initialize FreeDV Reporter if required.
+        initializeFreeDVReporter_();
+
+        // Refresh distance column label in case setting was changed.
+        if (m_reporterDialog != nullptr)
+        {
+            m_reporterDialog->refreshDistanceColumn();
         }
 
         // Relayout window so that the changes can take effect.
@@ -456,6 +494,20 @@ int MainApp::FilterEvent(wxEvent& event)
         }
 
     return -1;
+}
+
+void MainFrame::OnSetMonitorTxAudio( wxCommandEvent& event )
+{
+    wxGetApp().appConfiguration.monitorTxAudio = event.IsChecked();
+}
+
+//-------------------------------------------------------------------------
+// OnTogBtnPTTRightClick(): show right-click menu for PTT button
+//-------------------------------------------------------------------------
+void MainFrame::OnTogBtnPTTRightClick( wxContextMenuEvent& event )
+{
+    auto sz = m_btnTogPTT->GetSize();
+    m_btnTogPTT->PopupMenu(pttPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
 }
 
 //-------------------------------------------------------------------------

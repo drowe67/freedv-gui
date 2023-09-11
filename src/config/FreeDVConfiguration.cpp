@@ -47,6 +47,8 @@ FreeDVConfiguration::FreeDVConfiguration()
     , reporterWindowWidth("/Windows/FreeDVReporter/width", -1)
     , reporterWindowHeight("/Windows/FreeDVReporter/height", -1)
     , reporterWindowVisible("/Windows/FreeDVReporter/visible", false)
+    , reporterWindowCurrentSort("/Windows/FreeDVReporter/currentSort", -1)
+    , reporterWindowCurrentSortDirection("/Windows/FreeDVReporter/currentSortDirection", true)
         
     /* Current tab view */
     , currentNotebookTab("/MainFrame/rxNbookCtrl", 0)
@@ -100,6 +102,9 @@ FreeDVConfiguration::FreeDVConfiguration()
     , currentSpectrumAveraging("/Plot/Spectrum/CurrentAveraging", 0)
         
     , tabLayout("/MainFrame/TabLayout", _(""))
+
+    , monitorVoiceKeyerAudio("/Monitor/VoiceKeyerAudio", false)
+    , monitorTxAudio("/Monitor/TransmitAudio", false)
 {
     // empty
 }
@@ -129,6 +134,8 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, reporterWindowWidth);
     load_(config, reporterWindowHeight);
     load_(config, reporterWindowVisible);
+    load_(config, reporterWindowCurrentSort);
+    load_(config, reporterWindowCurrentSortDirection);
     
     load_(config, currentNotebookTab);
     
@@ -175,6 +182,9 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, currentSpectrumAveraging);
     
+    load_(config, monitorVoiceKeyerAudio);
+    load_(config, monitorTxAudio);
+    
     auto wxStandardPathObj = wxStandardPaths::Get();
     auto documentsDir = wxStandardPathObj.GetDocumentsDir();
     quickRecordPath.setDefaultVal(documentsDir);
@@ -208,6 +218,8 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, reporterWindowWidth);
     save_(config, reporterWindowHeight);
     save_(config, reporterWindowVisible);
+    save_(config, reporterWindowCurrentSort);
+    save_(config, reporterWindowCurrentSortDirection);
     
     save_(config, currentNotebookTab);
     
@@ -257,6 +269,9 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, currentSpectrumAveraging);
     
     save_(config, tabLayout);
+
+    save_(config, monitorVoiceKeyerAudio);
+    save_(config, monitorTxAudio);
     
     config->Flush();
 }

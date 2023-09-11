@@ -44,6 +44,7 @@ extern wxConfigBase *pConfig;
 
 EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxDialog(parent, id, title, pos, size, style)
+    , hasAppliedChanges_(false)
 {
     hamlibTestObject_ = new Hamlib();
     assert(hamlibTestObject_ != nullptr);
@@ -665,18 +666,18 @@ void EasySetupDialog::OnOK(wxCommandEvent& event)
     OnApply(event);
     if (canSaveSettings_())
     {
-        this->EndModal(wxID_OK);
+        this->EndModal(wxOK);
     }
 }
 
 void EasySetupDialog::OnCancel(wxCommandEvent& event)
 {
-    this->EndModal(wxID_CANCEL);
+    this->EndModal(hasAppliedChanges_ ? wxOK : wxCANCEL);
 }
 
 void EasySetupDialog::OnClose(wxCloseEvent& event)
 {
-    this->EndModal(wxID_CANCEL);
+    this->EndModal(hasAppliedChanges_ ? wxOK : wxCANCEL);
 }
 
 void EasySetupDialog::OnApply(wxCommandEvent& event)
@@ -684,6 +685,7 @@ void EasySetupDialog::OnApply(wxCommandEvent& event)
     if (canSaveSettings_())
     {
         ExchangeData(EXCHANGE_DATA_OUT);
+        hasAppliedChanges_ = true;
     }
     else
     {
@@ -1108,16 +1110,16 @@ void EasySetupDialog::updateAudioDevices_()
     auto inputDevices = audioEngine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
     auto outputDevices = audioEngine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
     
-    wxRegEx soundDeviceCleanup("^(Microphone|Speakers|Line) \\(|^alsa_(input|output)\\.");
-    wxRegEx rightParenRgx("\\)$");
-    
     for (auto& dev : inputDevices)
     {
-        wxString cleanedDeviceName = dev.name;
-        if (soundDeviceCleanup.Replace(&cleanedDeviceName, "") > 0)
+        if (dev.name.Find(_("Microsoft Sound Mapper")) != -1 ||
+            dev.name.Find(_(" [Loopback]")) != -1)
         {
-            rightParenRgx.Replace(&cleanedDeviceName, "");
+            // Sound mapper and loopback devices should be skipped.
+            continue;
         }
+
+        wxString cleanedDeviceName = dev.name;
         
         SoundDeviceData* soundData = new SoundDeviceData();
         assert(soundData != nullptr);
@@ -1146,12 +1148,75 @@ void EasySetupDialog::updateAudioDevices_()
 
     for (auto& dev : outputDevices)
     {
-        wxString cleanedDeviceName = dev.name;
-        if (soundDeviceCleanup.Replace(&cleanedDeviceName, "") > 0)
+        if (dev.name.Find(_("Microsoft Sound Mapper")) != -1 ||
+            dev.name.Find(_(" [Loopback]")) != -1)
         {
-            rightParenRgx.Replace(&cleanedDeviceName, "");
+            // Sound mapper and loopback devices should be skipped.
+            continue;
         }
-        
+
+        // For Windows, some devices have a designator at the beginning
+        // (e.g. "Microphone (USB Audio CODEC)" and "Speakers (USB Audio CODEC)".
+        // We need to be able to strip the designator without affecting
+        // the actual name of the device. To do this, we remove a character
+        // at a time from the beginning of the device name until we find a
+        // device in the current list with the same suffix. If we do find
+        // such a device, then we use this suffix as the device name to show
+        // in the list instead.
+        wxString cleanedDeviceName = dev.name;
+        if (finalRadioDeviceList.find(dev.name) == finalRadioDeviceList.end())
+        {
+            SoundDeviceData* foundItem = nullptr;
+            wxString oldDeviceName;
+            do
+            {
+                for (auto& kvp : finalRadioDeviceList)
+                {
+                    if (kvp.first.Find("DAX") == 0)
+                    {
+                        // FlexRadio devices are treated differently
+                        // so we shouldn't consider them here.
+                        continue;
+                    }
+
+                    auto suffix = kvp.first.Mid(kvp.first.size() - cleanedDeviceName.size());
+                    if (suffix == cleanedDeviceName)
+                    {
+                        foundItem = kvp.second;
+                        oldDeviceName = kvp.first;
+                        break;
+                    }
+                }
+                if (foundItem == nullptr)
+                {
+                    cleanedDeviceName = cleanedDeviceName.Mid(1);
+                }
+            } while (cleanedDeviceName.Length() > 5 && foundItem == nullptr);
+
+            if (foundItem == nullptr)
+            {
+                cleanedDeviceName = dev.name;
+            }
+            else
+            {
+                // Rename device in device list to "cleaned up" name.
+                cleanedDeviceName.Trim(false);
+                cleanedDeviceName.Trim(true);
+                auto parenthesisLoc = cleanedDeviceName.Find(_("("));
+                if (parenthesisLoc >= 0)
+                {
+                    cleanedDeviceName = cleanedDeviceName.Mid(parenthesisLoc + 1);
+                    if (cleanedDeviceName.Right(1) == _(")"))
+                    {
+                        cleanedDeviceName.RemoveLast(1);
+                    }
+                }
+
+                finalRadioDeviceList.erase(oldDeviceName);
+                finalRadioDeviceList[cleanedDeviceName] = foundItem;
+            }
+        }
+
         SoundDeviceData* soundData = finalRadioDeviceList[cleanedDeviceName];
         if (soundData == nullptr)
         {
@@ -1183,7 +1248,7 @@ void EasySetupDialog::updateAudioDevices_()
     int flexTxDeviceSampleRate = -1;
     for (auto& kvp : finalRadioDeviceList)
     {
-        if (kvp.first.StartsWith("DAX Audio TX"))
+        if (kvp.first.StartsWith("DAX Audio TX") && kvp.second->txSampleRate > 0 && kvp.second->txDeviceName != "none")
         {
             fullTxDeviceName = kvp.second->txDeviceName;
             flexTxDeviceSampleRate = kvp.second->txSampleRate;

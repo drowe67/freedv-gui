@@ -30,19 +30,23 @@
 
 #include "AudioPipeline.h"
 
+// Forward declarations
+class LinkStep;
+
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // class txRxThread - experimental tx/rx processing thread
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 class TxRxThread : public wxThread
 {
 public:
-    TxRxThread(bool tx, int inputSampleRate, int outputSampleRate) 
+    TxRxThread(bool tx, int inputSampleRate, int outputSampleRate, LinkStep* micAudioLink) 
         : wxThread(wxTHREAD_JOINABLE)
         , m_tx(tx)
         , m_run(1)
         , pipeline_(nullptr)
         , inputSampleRate_(inputSampleRate)
-        , outputSampleRate_(outputSampleRate) 
+        , outputSampleRate_(outputSampleRate)
+        , equalizedMicAudioLink_(micAudioLink)
     { 
         assert(inputSampleRate_ > 0);
         assert(outputSampleRate_ > 0);
@@ -67,6 +71,7 @@ private:
     std::shared_ptr<AudioPipeline> pipeline_;
     int inputSampleRate_;
     int outputSampleRate_;
+    LinkStep* equalizedMicAudioLink_;
     
     void initializePipeline_();
     void txProcessing_();

@@ -289,6 +289,14 @@ Additional options are also available if you right-click on the Voice Keyer butt
 
 * "Use another voice keyer file": Allows you to trigger the voice keyer using a different file from the one configured in Tools->Options.
 * "Record new voice keyer file": Triggers transmit and records your microphone audio to a file that you select. Pushing the Voice Keyer button will stop recording.
+* "Monitor transmitted audio": Allows monitoring of audio while transmitting the voice keyer file. If enabled, a checkmark will appear next to this option.
+
+# Monitoring TX Audio
+
+FreeDV has the ability to monitor transmit audio. This can be useful for adjusting 
+microphone filters when your radio is plugged into a dummy load. To enable this,
+right-click on the PTT button and choose "Monitor transmitted audio". A checkmark
+will appear next to this menu option when enabled.
 
 # Quick Record
 
@@ -895,7 +903,42 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V1.8.13 TBD 2023
+## V1.9.2 TBD 2023
+
+1. Bugfixes:
+    * Initialize locale so that times appear correctly. (PR #509)
+    * Fix issue with Voice Keyer button turning blue even if file doesn't exist. (PR #511)
+    * Fix issue with Voice Keyer file changes via Tools->Options not taking effect until restart. (PR #511)
+    * Eliminate mutex errors during Visual Studio debugging. (PR #512)
+    * Add timeout during deletion of FreeDVReporter object. (PR #515)
+    * Fixes bug preventing display of reporting UI if enabled on first start. (PR #520)
+    * Adjust vertical tick lengths on waterfall to prevent text overlap. (PR #518)
+    * Adjust coloring of text and ticks on spectrum plot to improve visibility when in dark mode. (PR #518)
+    * Resolve issue preventing proper device name display in Easy Setup for non-English versions of Windows. (PR #524)
+    * Fix intermittent crash on exit due to improperly closing stderr. (PR #526)
+    * Fix issue preventing proper generation of unsigned Windows installers. (PR 528)
+2. Enhancements:
+    * Add tooltip to Record button to claify its behavior. (PR #511)
+    * Add highlighting for RX rows in FreeDV Reporter (to match web version). (PR #519)
+    * Add Distance column in FreeDV Reporter window. (PR #519)
+    * Add support for sorting columns in FreeDV Reporter window. (PR #519)
+    * Allow use of FreeDV Reporter without having a session running. (PR #529)
+3. Cleanup:
+    * Remove unneeded 2400B and 2020B sample files. (PR #521)
+
+## V1.9.1 August 2023
+
+1. Bugfixes:
+    * Revert BETA back to prior 1.9.0 value for waterfall. (PR #503)
+    * Optimize FreeDV Reporter window logic to reduce likelihood of waterfall stuttering. (PR #505)
+    * Fix intermittent crash during FreeDV Reporter updates. (PR #505)
+    * Fix intermittent crash on exit due to Hamlib related UI update code executing after deletion. (PR #506)
+    * Fix serial port contention issue while testing PTT multiple times. (PR #506)
+2. Enhancements:
+    * Add support for monitoring voice keyer and regular TX audio. (PR #500)
+    * Add background coloring to indicate that the voice keyer is active. (PR #500)
+
+## V1.9.0 August 2023
 
 1. Bugfixes:
     * Fix bug preventing proper Options window sizing on Windows. (PR #478)
@@ -909,6 +952,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Allow users to configure PTT port separately from CAT if Hamlib is enabled. (PR #488)
     * Add ability to average spectrum plot across 1-3 samples. (PR #487, 492)
     * Adjust sizing of main page tabs for better readability. (PR #487)
+    * Add ability to sign Windows binaries for official releases. (PR #486)
     * Allow use of a different voice keyer file by right-clicking on the Voice Keyer button. (PR #493)
     * Include TX audio in recorded audio files to enable recording a full QSO. (PR #493)
     * Add band filtering in the FreeDV Reporter dialog. (PR #490, #494)
@@ -919,6 +963,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 4. Cleanup:
     * Remove 2400B mode from the UI. (PR #479)
     * Remove rarely-used "Record File - From Modulator" and "Play File - Mic In" menu options. (PR #493)
+
+*Note: Official Windows releases are now signed using Software Freedom Conservancy's code certificate. To validate that the installers and binary files are properly signed, right-click on the file, choose Properties and go to the 'Digital Signatures' tab.*
 
 ## V1.8.12 July 2023
 

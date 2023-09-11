@@ -90,11 +90,13 @@
 #include "hamlib.h"
 #include "serialport.h" 
 #include "reporting/IReporter.h"
+#include "reporting/FreeDVReporter.h"
 #include "freedv_interface.h"
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
 #include "config/FreeDVConfiguration.h"
 #include "pipeline/paCallbackData.h"
+#include "pipeline/LinkStep.h"
 
 #define _USE_TIMER              1
 #define _USE_ONIDLE             1
@@ -183,7 +185,12 @@ class MainApp : public wxApp
 
         wxRect              m_rTopWindow;
 
-        std::vector<IReporter*> m_reporters;
+        // To support viewing FreeDV Reporter data outside of a session, we need to have
+        // a running connection and know when to appropriately kill it. A shared_ptr
+        // allows us to do so.
+        std::shared_ptr<FreeDVReporter> m_sharedReporterObject;
+        
+        std::vector<std::shared_ptr<IReporter> > m_reporters;
         
         bool                loadConfig();
         bool                saveConfig();
@@ -216,7 +223,10 @@ class MainApp : public wxApp
         bool       m_txRxThreadHighPriority;
 
         int        m_prevMode;
+        
+        std::shared_ptr<LinkStep> linkStep;
 
+        wxLocale m_locale;
     protected:
 };
 
@@ -379,6 +389,7 @@ class MainFrame : public TopFrame
         void OnTogBtnSplitClick(wxCommandEvent& event);
         void OnTogBtnAnalogClick(wxCommandEvent& event) override;
         void OnTogBtnPTT( wxCommandEvent& event ) override;
+        void OnTogBtnPTTRightClick( wxContextMenuEvent& event ) override;
         void OnTogBtnVoiceKeyerClick (wxCommandEvent& event) override;
         void OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event ) override;
         
@@ -418,6 +429,9 @@ class MainFrame : public TopFrame
         
         void OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event );
         void OnRecordNewVoiceKeyerFile( wxCommandEvent& event );
+        
+        void OnSetMonitorVKAudio( wxCommandEvent& event );
+        void OnSetMonitorTxAudio( wxCommandEvent& event );
         
     private:
         std::shared_ptr<IAudioDevice> rxInSoundDevice;
@@ -461,6 +475,7 @@ class MainFrame : public TopFrame
         std::string vkFileName_;
         
         wxMenu* voiceKeyerPopupMenu_;
+        wxMenu* pttPopupMenu_;
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
@@ -478,6 +493,8 @@ class MainFrame : public TopFrame
         void executeOnUiThreadAndWait_(std::function<void()> fn);
         
         void updateReportingFreqList_();
+        
+        void initializeFreeDVReporter_();
 };
 
 void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs);

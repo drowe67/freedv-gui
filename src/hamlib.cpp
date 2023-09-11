@@ -322,6 +322,9 @@ void Hamlib::enable_mode_detection(wxStaticText* statusBox, wxComboBox* freqBox,
 
 void Hamlib::disable_mode_detection()
 {
+    m_freqBox = nullptr;
+    m_modeBox = nullptr;
+    
     threadRunning_ = false;
     statusUpdateCV_.notify_one();
     
@@ -620,46 +623,49 @@ freqAttempt:
 
 void Hamlib::update_mode_status()
 {
-    // Update string value.
-    if (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)
-        m_modeBox->SetLabel(wxT("USB"));
-    else if (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)
-        m_modeBox->SetLabel(wxT("LSB"));
-    else if (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_PKTFM)
-        m_modeBox->SetLabel(wxT("FM"));
-    else
-        m_modeBox->SetLabel(rig_strrmode(m_currMode));
+    if (m_modeBox != nullptr)
+    {
+        // Update string value.
+        if (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)
+            m_modeBox->SetLabel(wxT("USB"));
+        else if (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)
+            m_modeBox->SetLabel(wxT("LSB"));
+        else if (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_PKTFM)
+            m_modeBox->SetLabel(wxT("FM"));
+        else
+            m_modeBox->SetLabel(rig_strrmode(m_currMode));
 
-    // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
-    bool is60MeterBand = m_currFreq >= 5250000 && m_currFreq <= 5450000;
+        // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
+        bool is60MeterBand = m_currFreq >= 5250000 && m_currFreq <= 5450000;
     
-    // Update color based on the mode and current frequency.
-    bool isUsbFreq = m_currFreq >= 10000000 || is60MeterBand;
-    bool isLsbFreq = m_currFreq < 10000000 && !is60MeterBand;
-    bool isFmFreq = m_currFreq >= 29510000;
+        // Update color based on the mode and current frequency.
+        bool isUsbFreq = m_currFreq >= 10000000 || is60MeterBand;
+        bool isLsbFreq = m_currFreq < 10000000 && !is60MeterBand;
+        bool isFmFreq = m_currFreq >= 29510000;
     
-    bool isMatchingMode = 
-        (isUsbFreq && (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)) ||
-        (isLsbFreq && (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)) ||
-        (m_vhfUhfMode && isFmFreq && (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_PKTFM));
+        bool isMatchingMode = 
+            (isUsbFreq && (m_currMode == RIG_MODE_USB || m_currMode == RIG_MODE_PKTUSB)) ||
+            (isLsbFreq && (m_currMode == RIG_MODE_LSB || m_currMode == RIG_MODE_PKTLSB)) ||
+            (m_vhfUhfMode && isFmFreq && (m_currMode == RIG_MODE_FM || m_currMode == RIG_MODE_PKTFM));
     
-    if (isMatchingMode)
-    {
-        m_modeBox->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-    }
-    else
-    {
-        m_modeBox->SetForegroundColour(wxColor(*wxRED));
-    }
+        if (isMatchingMode)
+        {
+            m_modeBox->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+        }
+        else
+        {
+            m_modeBox->SetForegroundColour(wxColor(*wxRED));
+        }
 
-    // Update frequency box
-    if (m_freqBox != nullptr)
-    {
-        m_freqBox->SetValue(wxString::Format("%.4f", m_currFreq/1000.0/1000.0));
-    }
+        // Update frequency box
+        if (m_freqBox != nullptr)
+        {
+            m_freqBox->SetValue(wxString::Format("%.4f", m_currFreq/1000.0/1000.0));
+        }
     
-    // Refresh
-    m_modeBox->Refresh();
+        // Refresh
+        m_modeBox->Refresh();
+    }
 }
 
 void Hamlib::close(void) {
