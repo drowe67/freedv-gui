@@ -550,7 +550,8 @@ As the Tab is dragged into position a faint blue/grey image will show the positi
 
 Tabs can be resized as required by hovering the cursor over the border and clicking and holding the left mouse button and dragging to required size.
 
-The layout is not saved when the program is exited and must be recreated next time the program is started
+By default, the tab layout is not saved. However, by enabling experimental features (see "Advanced/Developer Features"), experimental support for
+saving and restoring the tab layout will be enabled. This has not been well tested and may have hidden bugs or other issues.
 
 ![Multiple Panes](contrib/multiple_panes.png)
 
@@ -709,6 +710,14 @@ On Linux, using the Alsa loopback module:
   In Tools - Audio Config - Receive Tab  - From Radio select -> Loopback: Loopback PCM (hw:1,0)
                           - Transmit Tab - To Radio select   -> Loopback: Loopback PCM (hw:1,1)
 ```
+
+## Experimental Features
+
+Occasionally there are some features that may be unstable or otherwise not ready to officially be released.
+To experiment with these features, you can go to Tools->Options->Debugging and enable "Enable Experimental
+Features". Note that if you have problems after enabling this setting, it is recommended to disable it again to
+verify that an experimental feature is not causing trouble. (Additionally, if you're able to confirm that
+an experimental feature is causing problems, please file a bug report!)
 
 # Tips
 
