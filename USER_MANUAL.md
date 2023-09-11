@@ -916,14 +916,16 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Adjust coloring of text and ticks on spectrum plot to improve visibility when in dark mode. (PR #518)
     * Resolve issue preventing proper device name display in Easy Setup for non-English versions of Windows. (PR #524)
     * Fix intermittent crash on exit due to improperly closing stderr. (PR #526)
-    * Fix issue preventing proper generation of unsigned Windows installers. (PR 528)
 2. Enhancements:
     * Add tooltip to Record button to claify its behavior. (PR #511)
     * Add highlighting for RX rows in FreeDV Reporter (to match web version). (PR #519)
     * Add Distance column in FreeDV Reporter window. (PR #519)
     * Add support for sorting columns in FreeDV Reporter window. (PR #519)
     * Allow use of FreeDV Reporter without having a session running. (PR #529)
-3. Cleanup:
+3. Build system:
+    * Upgrade wxWidgets on binary builds to 3.2.2.1. (PR #531)
+    * Fix issue preventing proper generation of unsigned Windows installers. (PR 528)
+4. Cleanup:
     * Remove unneeded 2400B and 2020B sample files. (PR #521)
 
 ## V1.9.1 August 2023
