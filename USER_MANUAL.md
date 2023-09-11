@@ -923,6 +923,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add Distance column in FreeDV Reporter window. (PR #519)
     * Add support for sorting columns in FreeDV Reporter window. (PR #519)
     * Allow use of FreeDV Reporter without having a session running. (PR #529)
+    * Adds support for saving and restoring tab state. (PR #497)
+        * *NOTE: Requires 'Enable Experimental Features' to be turned on, see below.*
+    * Adds configuration item allowing optional use of experimental features. (PR #497)
+        * This option is called "Enable Experimental Features" in Tools->Options->Debugging.
 3. Cleanup:
     * Remove unneeded 2400B and 2020B sample files. (PR #521)
 
