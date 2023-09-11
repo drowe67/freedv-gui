@@ -536,7 +536,7 @@ setDefaultMode:
     m_panel->SetSizerAndFit(currentSizer, false);
     m_panel->Layout();
     
-    if (wxGetApp().appConfiguration.tabLayout != "")
+    if (wxGetApp().appConfiguration.experimentalFeatures && wxGetApp().appConfiguration.tabLayout != "")
     {
         ((TabFreeAuiNotebook*)m_auiNbookCtrl)->LoadPerspective(wxGetApp().appConfiguration.tabLayout);
         const_cast<wxAuiManager&>(m_auiNbookCtrl->GetAuiManager()).Update();
@@ -905,8 +905,11 @@ MainFrame::~MainFrame()
         wxGetApp().appConfiguration.mainWindowHeight = h;
     }
 
-    wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
-
+    if (wxGetApp().appConfiguration.experimentalFeatures)
+    {
+        wxGetApp().appConfiguration.tabLayout = ((TabFreeAuiNotebook*)m_auiNbookCtrl)->SavePerspective();
+    }
+    
     wxGetApp().appConfiguration.squelchActive = g_SquelchActive;
     wxGetApp().appConfiguration.squelchLevel = (int)(g_SquelchLevel*2.0);
 
