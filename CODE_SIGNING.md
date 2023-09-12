@@ -15,117 +15,58 @@ official releases.
 
 * Pending EV code signing certificate order with [SignMyCode.com](https://signmycode.com) or another Sectigo reseller.
     * NOTE: this costs a fair bit of money, so it's more cost effective to purchase 3 year validity instead of 1.
-    * Preferable to use a company that will allow bringing your own YubiKey (or will at least give you one) to avoid compatibility issues. Some other code signing dongles are effectively Windows or macOS only.
+    * There are specific requirements for the private/public key in order for the EV certificate to behave properly, so it is *not* recommended to bring your own key. Currently (as of 2023) Sectigo issues RSA 4096 bit keys onto their SafeNet tokens.
+    * EV certificates require a legally registered entity to issue, so (as of 2023) our fiscal sponsor ([Software Freedom Conservancy](https://sfconservancy.org/)) has been the entity on the certificate.
 * Linux machine (Windows packages are currently generated using LLVM MinGW)
     * Required packages: pcscd, pcsc-tools, libfuse2*, osslsigncode, opensc, opensc-pkcs11, libengine-pkcs11-openssl, gnutls-bin
-* YubiKey 5 FIPS
-    * [YubiKey Manager](https://www.yubico.com/support/download/yubikey-manager/) must be installed, including `ykman` and the PIV tools:
+
+## Installing SafeNet Authentication Client on Linux
+
+Download SafeNet Authentication Client from [here](https://comodoca.my.salesforce.com/sfc/p/1N000002Ljih/a/3l000000GBKA/jByoGtRgjuh1HrkxbtiH5QE2asIHbqCTQJcCLBqd8.o) and install the Ubuntu package as follows:
 
 ```
-sudo apt-add-repository ppa:yubico/stable
-sudo apt update
-sudo apt install yubikey-manager yubico-piv-tool ykcs11
-```
-    
-## Initial YubiKey Setup
-
-First, you'll need to configure a PIN (this only needs to be done once for each new YubiKey):
-
-1. Start YubiKey Manager and verify that the YubiKey is detected.
-2. Go to Applications and choose PIV.
-3. Click on the "Configure PINs" button.
-4. Click on the "Change PIN" button.
-5. Click on the "Use Default" checkbox next to "Current PIN", or else enter the existing PIN if there is one.
-6. Enter a new PIN in "New PIN" and "Confirm new PIN", then click "Change PIN".
-
-## Generating CSR for code signing cert
-
-1. Start YubiKey Manager and verify that the YubiKey is detected.
-2. Go to Applications and choose PIV.
-3. Click on the "Configure Certificates" button.
-4. Ensure that "Authentication" is selected and "Slot 9a" is displayed, then click the "Generate" button.
-5. Choose "Certificate Signing Request" and then click "Next".
-6. Choose "ECCP384" for "Algorithm", then click "Next".
-    * NOTE: this can only be "ECCP384" or "ECCP384" for code signing certificates.
-7. Enter "freedv-gui" for "Subject" and click "Next".
-8. Verify that the settings appear like the below screenshot, then click "Generate":
-
-![](./doc/csr-generation.png)
-
-9. Choose a location to save the CSR to, then click "Save".
-10. Enter your YubiKey's management key (you can choose "Use default" for the management key) and PIN.
-11. Open the location you entered in (9) and copy/paste the contents into the Certificate Authority's website (where prompted for the CSR).
-
-## Generating attestation certificate
-
-1. Retrieve attestation certificate:
-
-```
-ykman piv keys attest 9a attestation-cert-2023_2026.crt
+$ unzip "SafeNet Authentication Client 10.8 R1 GA Linux.zip"
+$ cd "SAC_10_8_R1 GA/Installation/Standard/Ubuntu-2204"
+$ sudo dpkg -i safenetauthenticationclient_10.8.1050_amd64.deb
 ```
 
-2. Retrieve intermediate certificate:
+## Locating signing key and certificate on token
 
-```
-ykman piv certificates export f9 intermediate-cert-2023_2026.crt
-```
-
-3. Open both of the files generated above and copy/paste where prompted into the Certificate Authority's website.
-
-## Generate self-signed certificate for testing
-
-1. Start YubiKey Manager and verify that the YubiKey is detected.
-2. Go to Applications and choose PIV.
-3. Click on the "Configure Certificates" button.
-4. Ensure that "Authentication" is selected and "Slot 9a" is displayed, then click the "Generate" button.
-5. Select "Self-signed certifcate" and choose "Next".
-6. Choose "ECCP384" for "Algorithm", then click "Next".
-7. Enter a descriptive name (e.g. "freedv-gui-test") and click "Next".
-8. Choose the desired expiration date and click "Next".
-9. Verify that all information is correct, then click "Generate".
-10. Click on "Export" and enter the location to save the self-signed certificate, then push "Save".
-
-## Locating signing key and certificate on YubiKey
-
-At the terminal, enter `p11tool --list-all --provider /usr/lib/x86_64-linux-gnu/libykcs11.so`. Look for something 
+At the terminal, enter `p11tool --list-all --provider /usr/lib/libeToken.so`. Look for something 
 like the following:
 
 ```
-Object 4:
-	URL: pkcs11:model=YubiKey%20YK5;manufacturer=Yubico%20%28www.yubico.com%29;serial=23228029;token=YubiKey%20PIV%20%2323228029;id=%01;object=X.509%20Certificate%20for%20PIV%20Authentication;type=cert
-	Type: X.509 Certificate (EC/ECDSA-SECP384R1)
-	Expires: Sun Aug  9 16:59:59 2026
-	Label: X.509 Certificate for PIV Authentication
-	ID: 01
+Object 0:
+	URL: pkcs11:model=ID%20Prime%20MD;manufacturer=Gemalto;serial=CB64B873EE27EF1B;token=Software%20Freedom%20Conservancy%2C%20In;id=%87%7F%E9%6E%9E%86%84%43;object=Sectigo_20230908155653;type=cert
+	Type: X.509 Certificate (RSA-4096)
+	Expires: Mon Sep  7 16:59:59 2026
+	Label: Sectigo_20230908155653
+	ID: 87:7f:e9:6e:9e:86:84:43
 ```
-
-(The important thing is that the ID should correspond to the slot where the certificate was installed. For example, 01 corresponds to slot 9a on the YubiKey. Additionally, the expiry date should match the certificate that was issued.)
 
 Save the URLs to files for later use, e.g.
 
 ```
-echo -n "pkcs11:id=%01;type=private" > ~/yubikey-key.url
-echo -n "pkcs11:id=%01" > ~/yubikey-cert.url
+echo -n "pkcs11:model=ID%20Prime%20MD;manufacturer=Gemalto;serial=CB64B873EE27EF1B;token=Software%20Freedom%20Conservancy%2C%20In;id=%87%7F%E9%6E%9E%86%84%43;type=private" > ~/key.url
+echo -n "pkcs11:model=ID%20Prime%20MD;manufacturer=Gemalto;serial=CB64B873EE27EF1B;token=Software%20Freedom%20Conservancy%2C%20In;id=%87%7F%E9%6E%9E%86%84%43;object=Sectigo_20230908155653;type=cert" > ~/cert.url
 ```
-
-Note that the URLs in the above commands are shortened from what `p11tool` displays; this is possible if it's able to uniquely identify a certificate using the provided information. If there's only one certificate installed on the YubiKey, it's also possible to just create empty files for the certificate and key URLs (and in fact, may be necessary for the correct certificate to be used).
 
 ## Signing binaries manually
 
 Use something like the following command:
 
 ```
-osslsigncode sign -pkcs11engine /usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so -pkcs11module /usr/lib/x86_64-linux-gnu/libykcs11.so -certs [path to exported or provided certicate] -key `cat yubikey-key.url` -in FreeDV-1.8.12-windows-x86_64.exe -out FreeDV-1.8.12-windows-x86_64-signed.exe
+osslsigncode sign -pkcs11engine /usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so -pkcs11module /usr/lib/libeToken.so -certs [path to exported or provided certicate] -key `cat key.url` -in FreeDV-1.8.12-windows-x86_64.exe -out FreeDV-1.8.12-windows-x86_64-signed.exe
 ```
 
-You will be asked for the YubiKey's PIN in order to complete the signature process. To verify that the file is correctly signed, copy it to a Windows machine and view the file's properties (under the "Digital Signatures" tab); the subject should match what was provided either for the CSR submitted to Sectigo/other Certificate Authority or what was entered when generating the self-signed certificate above:
+You will be asked for the token's's PIN in order to complete the signature process. To verify that the file is correctly signed, copy it to a Windows machine and view the file's properties (under the "Digital Signatures" tab); the subject should match what was provided either for the CSR submitted to Sectigo/other Certificate Authority or what was entered when generating the self-signed certificate above:
 
 ![](./doc/digitally-signed.png)
 
 Notes:
 
 * The file specified by `-out` must not already exist. Otherwise, osslsigncode will error out.
-* libykcs11.so *must* be specified for osslsigncode. The default PKCS#11 module causes osslsigncode to segfault before it can finish signing the file.
+* libeToken.so *must* be specified for osslsigncode. Other PKCS11 modules may work but haven't been tested.
 
 ## Signing using CMake
 
@@ -141,13 +82,13 @@ $ make package
 
 Other optional variables that can be set are as follows:
 
-* `PKCS11_ENGINE` / `PKCS11_MODULE`: Paths to the PKCS11 engine and module libraries on your system. This is mainly used for those who aren't compiling on amd64 and/or aren't using a YubiKey.
+* `PKCS11_ENGINE` / `PKCS11_MODULE`: Paths to the PKCS11 engine and module libraries on your system. This is mainly used for those who aren't compiling on amd64 and/or aren't using a SafeNet token.
 * `TIMESTAMP_SERVER`: If you prefer an alternate timestamping server than the default.
 * `SIGN_HASH`: If you prefer a different hashing algorithm than the default SHA256. (Note: the timestamping server will automatically use this hashing algorithm or stronger.)
 
 You will be prompted for your token's PIN several times during the build process. When done, the installer as well as freedv.exe will be signed with the provided certificate.
 
-*NOTE: The PIN prompts can be auto-filled by using the URL `pkcs11:id=%01;type=private?pin-value=xxxxxx` for the key (where `xxxxxx` is your token's PIN). The best practice is to exclude the `?pin-value=xxxxxx` and manually enter the PIN each time, however.*
+*NOTE: The PIN prompts can be auto-filled by appending `?pin-value=xxxxxx` to the key's URL (where `xxxxxx` is your token's PIN). The best practice is to exclude the `?pin-value=xxxxxx` and manually enter the PIN each time, however.*
 
 ## Auto-building signed binaries for all supported architectures
 
@@ -165,7 +106,7 @@ when complete. This may take quite a while (for example, ~1 hour on a 2019 MacBo
 
 ## Troubleshooting:
 
-### I'm running a VMWare VM and YubiKey Manager doesn't detect my YubiKey 
+### I'm running a VMWare VM and the system doesn't detect my token 
 
 Follow the instructions [here](https://support.yubico.com/hc/en-us/articles/360013647640-Troubleshooting-Device-Passthrough-with-VMware-Workstation-and-VMware-Fusion) to update your VM's .vmx file to allow the VM to take full control. This is a problem at least on macOS hosts, not sure on other platforms.
 
@@ -193,11 +134,12 @@ Some things to check:
 
 1. Ensure that `signtool.exe /v /debug /pa file.exe` validates the signed file successfully. (Or use the equivalent `osslsigncode verify -CAfile RootCertificateBundle.crt --TSA-CAfile /usr/lib/ssl/certs/ca-certificates.crt -in file.exe` on Linux/macOS.)
 2. The timestamp hash should be the same as the file hash for SmartScreen to properly accept the signed file. If not, the file will need to be re-signed (and CMakeLists.txt possibly updated).
-3. Some EV (and all OV) certificates may need a couple of days at minimum to be accepted by Microsoft. It may be possible to accelerate this by sending the signed file to Microsoft for analysis.
+3. OV certificates may need a couple of days at minimum to be accepted by Microsoft. It may be possible to accelerate this by sending the signed file to Microsoft for analysis.
+4. Problems that will definitely require a re-issue:
+    * [ECDSA keys do not work well](https://vcsjones.dev/authenticode-and-ecc/) for code signing. Yes, this is still a problem in 2023 despite the date of the blog post. If you use your certificate vendor's token instead of your own, this isn't likely to be the problem but still worth noting here in case you're tempted to buy a YubiKey FIPS token (which supposedly works but never fully removed SmartScreen popups for the FreeDV project).
+    * If you're still tempted to bring your own token, note that the [CA Forum mandates a minimum RSA key length of 3072 bits](https://knowledge.digicert.com/alerts/code-signing-new-minimum-rsa-keysize.html). Anything shorter than that will definitely cause problems.
 
 ## Sources
 
-* [Private Key Generation and CSR Attestation with YubiKey Manager
-](https://signmycode.com/resources/private-key-generation-and-csr-attestation-with-yubikey-manager) - SignMyCode.com
 * [Yubico GitHub issue referring to osslsigncode](https://github.com/Yubico/yubico-piv-tool/issues/21)
 * [StackOverflow post on configuring CMake for code signing](https://stackoverflow.com/questions/72504366/how-to-sign-windows-binaries-and-nsis-installers-when-building-with-cmake-cpac)
