@@ -938,6 +938,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 3. Build system:
     * Upgrade wxWidgets on binary builds to 3.2.2.1. (PR #531)
     * Fix issue preventing proper generation of unsigned Windows installers. (PR #528)
+    * Update code signing documentation and defaults to use certificate provider's token instead of our own. (PR #533)
 4. Cleanup:
     * Remove unneeded 2400B and 2020B sample files. (PR #521)
 
