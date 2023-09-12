@@ -84,6 +84,7 @@ class FreeDVReporterDialog : public wxDialog
         void OnItemDeselected(wxListEvent& event);
         void OnSortColumn(wxListEvent& event);
         void OnTimer(wxTimerEvent& event);
+        void OnFilterTrackingEnable(wxCommandEvent& event);
         
         // Main list box that shows spots
         wxListView*   m_listSpots;
@@ -96,6 +97,7 @@ class FreeDVReporterDialog : public wxDialog
         
         // Band filter
         wxComboBox* m_bandFilter;
+        wxCheckBox* m_trackFrequency;
         
         // Step 4: test/save/cancel setup
         wxButton* m_buttonOK;
@@ -148,6 +150,7 @@ class FreeDVReporterDialog : public wxDialog
          wxString makeValidTime_(std::string timeStr, wxDateTime& timeObj);
          
          void addOrUpdateListIfNotFiltered_(ReporterData* data);
+         FilterFrequency getFilterForFrequency_(uint64_t freq);
          bool isFiltered_(uint64_t freq);
          
          bool setColumnForRow_(int row, int col, wxString val);
