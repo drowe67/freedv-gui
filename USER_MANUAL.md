@@ -935,6 +935,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
         * *NOTE: Requires 'Enable Experimental Features' to be turned on, see below.*
     * Adds configuration item allowing optional use of experimental features. (PR #497)
         * This option is called "Enable Experimental Features" in Tools->Options->Debugging.
+    * Add FreeDV Reporter option to have the band filter track the current frequency. (PR #534)
 3. Build system:
     * Upgrade wxWidgets on binary builds to 3.2.2.1. (PR #531)
     * Fix issue preventing proper generation of unsigned Windows installers. (PR #528)

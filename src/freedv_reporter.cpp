@@ -118,6 +118,10 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     
     buttonSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
+    m_trackFrequency = new wxCheckBox(this, wxID_ANY, _("Track current frequency"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    buttonSizer->Add(m_trackFrequency, 0, wxALL | wxALIGN_LEFT, 5);
+    m_trackFrequency->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency);
+    
     m_buttonOK = new wxButton(this, wxID_OK, _("Close"));
     buttonSizer->Add(m_buttonOK, 0, wxALL, 2);
 
@@ -167,14 +171,27 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_buttonDisplayWebpage->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOpenWebsite), NULL, this);
     
     m_bandFilter->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnBandFilterChange), NULL, this);
-
+    m_trackFrequency->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
+    
     // Trigger sorting on last sorted column
     sortColumn_(wxGetApp().appConfiguration.reporterWindowCurrentSort, wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
+    
+    // Trigger filter update if we're starting with tracking enabled
+    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency)
+    {
+        m_bandFilter->Enable(false);
+        
+        FilterFrequency freq = 
+            getFilterForFrequency_(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        setBandFilter(freq);
+    }
 }
 
 FreeDVReporterDialog::~FreeDVReporterDialog()
 {
     m_highlightClearTimer->Stop();
+    
+    m_trackFrequency->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
     
     this->Disconnect(wxEVT_TIMER, wxTimerEventHandler(FreeDVReporterDialog::OnTimer), NULL, this);
     this->Disconnect(wxEVT_SIZE, wxSizeEventHandler(FreeDVReporterDialog::OnSize));
@@ -360,8 +377,38 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
     }
 }
 
+void FreeDVReporterDialog::OnFilterTrackingEnable(wxCommandEvent& event)
+{
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency
+        = m_trackFrequency->GetValue();
+    m_bandFilter->Enable(
+        !wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency);
+    
+    FilterFrequency freq;
+    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency)
+    {
+        freq = 
+            getFilterForFrequency_(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+    }
+    else
+    {
+        freq = 
+            (FilterFrequency)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter.get();
+    }
+    
+    setBandFilter(freq);
+}
+
 void FreeDVReporterDialog::refreshQSYButtonState()
 {
+    // Update filter if the frequency's changed.
+    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency)
+    {
+        FilterFrequency freq = 
+            getFilterForFrequency_(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        setBandFilter(freq);
+    }
+    
     bool enabled = false;
     auto selectedIndex = m_listSpots->GetFirstSelected();
     if (selectedIndex >= 0)
@@ -989,7 +1036,7 @@ bool FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val)
     return result;
 }
 
-bool FreeDVReporterDialog::isFiltered_(uint64_t freq)
+FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequency_(uint64_t freq)
 {
     auto bandForFreq = FilterFrequency::BAND_OTHER;
     
@@ -1037,6 +1084,13 @@ bool FreeDVReporterDialog::isFiltered_(uint64_t freq)
     {
         bandForFreq = FilterFrequency::BAND_VHF_UHF;
     }
+    
+    return bandForFreq;
+}
+
+bool FreeDVReporterDialog::isFiltered_(uint64_t freq)
+{
+    auto bandForFreq = getFilterForFrequency_(freq);
     
     if (currentBandFilter_ == FilterFrequency::BAND_ALL)
     {

@@ -50,6 +50,7 @@ public:
     ConfigurationDataElement<wxString> freedvReporterHostname;
     ConfigurationDataElement<int> freedvReporterBandFilter;
     ConfigurationDataElement<bool> useMetricDistances;
+    ConfigurationDataElement<bool> freedvReporterBandFilterTracksFrequency;
     
     ConfigurationDataElement<bool> useUTCForReporting;
     
