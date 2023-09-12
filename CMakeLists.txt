@@ -156,8 +156,8 @@ if(SIGN_WINDOWS_BINARIES)
   
     # Default PKCS#11 module if not provided.
     if(NOT DEFINED PKCS11_MODULE)
-        # XXX -- we're assuming Ubuntu amd64 and YubiKey here.
-        set(PKCS11_MODULE /usr/lib/x86_64-linux-gnu/libykcs11.so)
+        # XXX -- we're assuming Ubuntu amd64 and SafeNet here.
+        set(PKCS11_MODULE /usr/lib/libeToken.so)
     endif(NOT DEFINED PKCS11_MODULE)
 
     # Default timestamping server
