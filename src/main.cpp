@@ -2977,7 +2977,11 @@ bool MainFrame::validateSoundCardSetup()
 
 void MainFrame::initializeFreeDVReporter_()
 {
-    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled && wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString() != "")
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled &&
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled &&
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString() != "" &&
+        wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString() != "" &&
+        wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString() != "")
     {
         wxGetApp().m_sharedReporterObject =
             std::make_shared<FreeDVReporter>(
@@ -3048,9 +3052,18 @@ void MainFrame::initializeFreeDVReporter_()
             m_reporterDialog = nullptr;
         }
         
-        if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled &&
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
         {
-            wxMessageBox("FreeDV Reporter requires a valid hostname. Reporting to FreeDV Reporter will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+            if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString() == "")
+            {
+                wxMessageBox("FreeDV Reporter requires a valid hostname. Reporting to FreeDV Reporter will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+            }
+            else if (wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString() == "" ||
+                     wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString() == "")
+            {
+                wxMessageBox("FreeDV Reporter requires a valid callsign and grid square in Tools->Options. Reporting to FreeDV Reporter will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+            }
         }
     }
 }
