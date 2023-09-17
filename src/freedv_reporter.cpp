@@ -29,6 +29,7 @@ extern FreeDVInterface freedvInterface;
 
 #define UNKNOWN_STR "--"
 #define NUM_COLS (12)
+#define RX_ONLY_STATUS "RX Only"
 
 using namespace std::placeholders;
 
@@ -756,7 +757,7 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         
         if (rxOnly)
         {
-            temp->status = "RX Only";
+            temp->status = RX_ONLY_STATUS;
             temp->txMode = UNKNOWN_STR;
             temp->lastTx = UNKNOWN_STR;
         }
@@ -833,7 +834,7 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
                 txStatus = "Transmitting";
             }
             
-            if (iter->second->status != _("Receive Only"))
+            if (iter->second->status != _(RX_ONLY_STATUS))
             {
                 iter->second->status = txStatus;
                 iter->second->txMode = txMode;
