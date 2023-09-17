@@ -1102,6 +1102,9 @@ void OptionsDlg::updateReportingState()
     {
         m_ckbox_use_utc_time->Enable(true);
         m_ckboxReportingEnable->Enable(true);
+        m_useMetricDistances->Enable(true);
+        m_freedvReporterHostname->Enable(true);
+
         if (m_ckboxReportingEnable->GetValue())
         {
             m_txtCtrlCallSign->Enable(false);
@@ -1131,6 +1134,8 @@ void OptionsDlg::updateReportingState()
         m_ckboxManualFrequencyReporting->Enable(false);
         m_ckboxPskReporterEnable->Enable(false);
         m_ckboxFreeDVReporterEnable->Enable(false);
+        m_useMetricDistances->Enable(false);
+        m_freedvReporterHostname->Enable(false);
         
         m_ckbox_use_utc_time->Enable(false);
     }
