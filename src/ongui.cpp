@@ -170,10 +170,10 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         // Update reporting list.
         updateReportingFreqList_();
     
-        // Show/hide frequency box based on PSK Reporter status.
+        // Show/hide frequency box based on reporting status.
         m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
-        // Show/hide callsign combo box based on PSK Reporter Status
+        // Show/hide callsign combo box based on reporting Status
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
         {
             m_cboLastReportedCallsigns->Show();

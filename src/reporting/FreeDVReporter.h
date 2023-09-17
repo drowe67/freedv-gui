@@ -85,6 +85,8 @@ public:
     
     void hideFromView();
     void showOurselves();
+
+    bool isValidForReporting();
     
 private:
     // Required elements to implement execution thread for FreeDV Reporter.

@@ -415,7 +415,8 @@ void FreeDVReporterDialog::refreshQSYButtonState()
     {
         auto selectedCallsign = m_listSpots->GetItemText(selectedIndex);
     
-        if (selectedCallsign != wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign && 
+        if (reporter_->isValidForReporting() &&
+            selectedCallsign != wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign && 
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 &&
             freedvInterface.isRunning())
         {
@@ -721,23 +722,34 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         temp->sid = sid;
         temp->callsign = wxString(callsign).Upper();
         temp->gridSquare = gridSquareWxString.Left(2).Upper() + gridSquareWxString.Mid(2);
-        temp->distanceVal = calculateDistance_(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, gridSquareWxString);
 
-        if (!wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare == "")
         {
-            // Convert to miles for those who prefer it
-            // (calculateDistance_() returns distance in km).
-            temp->distanceVal *= 0.621371;
-        }
-
-        if (temp->distanceVal < 10.0)
-        {
-            temp->distance = wxString::Format("%.01f", temp->distanceVal);
+            // Invalid grid square means we can't calculate a distance.
+            temp->distance = UNKNOWN_STR;
+            temp->distanceVal = 0;
         }
         else
         {
-            temp->distance = wxString::Format("%.0f", temp->distanceVal);
+            temp->distanceVal = calculateDistance_(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, gridSquareWxString);
+
+            if (!wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
+            {
+                // Convert to miles for those who prefer it
+                // (calculateDistance_() returns distance in km).
+                temp->distanceVal *= 0.621371;
+            }
+
+            if (temp->distanceVal < 10.0)
+            {
+                temp->distance = wxString::Format("%.01f", temp->distanceVal);
+            }
+            else
+            {
+                temp->distance = wxString::Format("%.0f", temp->distanceVal);
+            }
         }
+
         temp->version = version;
         temp->freqString = UNKNOWN_STR;
         temp->transmitting = false;
