@@ -707,9 +707,19 @@ int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj)
     
     if (dvWithSync == nullptr)
     {
-        // Default to the first DV object if there's no sync.
-        indexWithSync = 0;
-        dvWithSync = dvObjects_[0];
+        // Default to the TX DV object if there's no sync.
+        int index = 0;
+        indexWithSync = index;
+        for (auto& mode : enabledModes_)
+        {
+            if (mode == txMode_)
+            {
+                indexWithSync = index;
+                break;
+            }
+            index++;
+        }
+        dvWithSync = dvObjects_[indexWithSync];
     }
 
 skipSyncCheck:        
