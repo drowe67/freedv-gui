@@ -32,6 +32,9 @@
 #include <functional>
 #include "IReporter.h"
 
+// FreeDV Reporter default hostname
+#define FREEDV_REPORTER_DEFAULT_HOSTNAME "qso.freedv.org"
+
 namespace sio
 {
     class client; // forward declaration

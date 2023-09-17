@@ -21,7 +21,7 @@
 
 #include <inttypes.h>
 
-#include "../defines.h"
+#include "reporting/FreeDVReporter.h"
 #include "ReportingConfiguration.h"
 
 ReportingConfiguration::ReportingConfiguration()

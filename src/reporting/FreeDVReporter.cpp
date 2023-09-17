@@ -20,7 +20,6 @@
 //
 //=========================================================================
 
-#include "defines.h"
 #include "FreeDVReporter.h"
 #include "sio_client.h"
 
