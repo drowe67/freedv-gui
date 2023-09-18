@@ -230,6 +230,53 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_waterfallColor->Add(m_waterfallColorScheme3, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     sizerDisplay->Add(sbSizer_waterfallColor, 0, wxALL | wxEXPAND, 5);
+
+    //----------------------------------------------------------
+    // FreeDV Reporter colors
+    //----------------------------------------------------------
+    wxStaticBox* sb_reporterColor = new wxStaticBox(m_displayTab, wxID_ANY, _("FreeDV Reporter colors"));
+    wxStaticBoxSizer* sbSizer_reporterColor =  new wxStaticBoxSizer(sb_reporterColor, wxVERTICAL);
+
+    wxBoxSizer* reporterTxColorSizer = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* reporterRxColorSizer = new wxBoxSizer(wxHORIZONTAL);
+
+    // TX colors
+    wxStaticText* labelReporterTxStation = new wxStaticText(m_displayTab, wxID_ANY, wxT("TX Stations:"), wxDefaultPosition, wxDefaultSize, 0);
+    reporterTxColorSizer->Add(labelReporterTxStation, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    wxStaticText* labelReporterTxBackgroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Background"), wxDefaultPosition, wxDefaultSize, 0);
+    reporterTxColorSizer->Add(labelReporterTxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_freedvReporterTxBackgroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
+    reporterTxColorSizer->Add(m_freedvReporterTxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    wxStaticText* labelReporterTxForegroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Foreground"), wxDefaultPosition, wxDefaultSize, 0);
+    reporterTxColorSizer->Add(labelReporterTxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_freedvReporterTxForegroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
+    reporterTxColorSizer->Add(m_freedvReporterTxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    sbSizer_reporterColor->Add(reporterTxColorSizer, 0, wxALL, 5);
+
+    // RX colors
+    wxStaticText* labelReporterRxStation = new wxStaticText(m_displayTab, wxID_ANY, wxT("RX Stations:"), wxDefaultPosition, wxDefaultSize, 0);
+    reporterRxColorSizer->Add(labelReporterRxStation, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    wxStaticText* labelReporterRxBackgroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Background"), wxDefaultPosition, wxDefaultSize, 0);
+    reporterRxColorSizer->Add(labelReporterRxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_freedvReporterRxBackgroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
+    reporterRxColorSizer->Add(m_freedvReporterRxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    wxStaticText* labelReporterRxForegroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Foreground"), wxDefaultPosition, wxDefaultSize, 0);
+    reporterRxColorSizer->Add(labelReporterRxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_freedvReporterRxForegroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
+    reporterRxColorSizer->Add(m_freedvReporterRxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    sbSizer_reporterColor->Add(reporterRxColorSizer, 0, wxALL, 5);
+
+    sizerDisplay->Add(sbSizer_reporterColor, 0, wxALL | wxEXPAND, 5);
     
     m_displayTab->SetSizer(sizerDisplay);
     
@@ -706,6 +753,17 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 {
     if(inout == EXCHANGE_DATA_IN)
     {
+        // Populate FreeDV Reporter color settings
+        wxColour rxBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
+        wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
+        wxColour txBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
+        wxColour txForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
+
+        m_freedvReporterRxBackgroundColor->SetColour(rxBackgroundColor);
+        m_freedvReporterRxForegroundColor->SetColour(rxForegroundColor);
+        m_freedvReporterTxBackgroundColor->SetColour(txBackgroundColor);
+        m_freedvReporterTxForegroundColor->SetColour(txForegroundColor);
+
         // Populate reporting frequency list.
         for (auto& item : wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList.get())
         {
@@ -826,6 +884,19 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
     if(inout == EXCHANGE_DATA_OUT)
     {
+        // Populate FreeDV Reporter color settings
+        wxColour rxBackgroundColor = m_freedvReporterRxBackgroundColor->GetColour();
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor = rxBackgroundColor.GetAsString(wxC2S_HTML_SYNTAX);
+
+        wxColour rxForegroundColor = m_freedvReporterRxForegroundColor->GetColour();
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor = rxForegroundColor.GetAsString(wxC2S_HTML_SYNTAX);
+
+        wxColour txBackgroundColor = m_freedvReporterTxBackgroundColor->GetColour();
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor = txBackgroundColor.GetAsString(wxC2S_HTML_SYNTAX);
+
+        wxColour txForegroundColor = m_freedvReporterTxForegroundColor->GetColour();
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor = txForegroundColor.GetAsString(wxC2S_HTML_SYNTAX);
+
         // Save new reporting frequency list.
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList->clear();
         for (unsigned int index = 0; index < m_freqList->GetCount(); index++)

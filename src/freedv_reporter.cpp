@@ -987,10 +987,10 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     }
     else if (data->lastRxDate.IsValid() && data->lastRxDate.IsEqualUpTo(wxDateTime::Now(), wxTimeSpan(0, 0, 10)))
     {
-        wxColour rxBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
-        wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
-        m_listSpots->SetItemBackgroundColour(itemIndex, rxForegroundColor);
-        m_listSpots->SetItemTextColour(itemIndex, rxBackgroundColor);
+        wxColour rxBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
+        wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
+        m_listSpots->SetItemBackgroundColour(itemIndex, rxBackgroundColor);
+        m_listSpots->SetItemTextColour(itemIndex, rxForegroundColor);
     }
     else
     {
