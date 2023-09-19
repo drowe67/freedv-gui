@@ -22,6 +22,8 @@
 #ifndef __OPTIONS_DIALOG__
 #define __OPTIONS_DIALOG__
 
+#include <wx/clrpicker.h>
+
 #include "main.h"
 #include "defines.h"
 
@@ -95,7 +97,13 @@ class OptionsDlg : public wxDialog
         wxRadioButton *m_waterfallColorScheme1; // Multicolored
         wxRadioButton *m_waterfallColorScheme2; // Black & white
         wxRadioButton *m_waterfallColorScheme3; // Blue tint?
-        
+
+        /* FreeDV Reporter colors */
+        wxColourPickerCtrl* m_freedvReporterTxBackgroundColor;
+        wxColourPickerCtrl* m_freedvReporterTxForegroundColor;
+        wxColourPickerCtrl* m_freedvReporterRxBackgroundColor;
+        wxColourPickerCtrl* m_freedvReporterRxForegroundColor;
+
         /* Voice Keyer */
 
         wxButton     *m_buttonChooseVoiceKeyerWaveFile;
