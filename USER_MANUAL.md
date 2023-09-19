@@ -912,6 +912,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.9.3 TBD 2023
+
+1. Bugfixes:
+    * TBD
+2. Enhancements:
+    * Add configuration for background/foreground colors in FreeDV Reporter. (PR #545)
+
 ## V1.9.2 September 2023
 
 1. Bugfixes:

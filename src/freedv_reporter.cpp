@@ -980,15 +980,17 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     
     if (data->transmitting)
     {
-        wxColour lightRed(0xfc, 0x45, 0x00);
-        m_listSpots->SetItemBackgroundColour(itemIndex, lightRed);
-        m_listSpots->SetItemTextColour(itemIndex, *wxBLACK);
+        wxColour txBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
+        wxColour txForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
+        m_listSpots->SetItemBackgroundColour(itemIndex, txBackgroundColor);
+        m_listSpots->SetItemTextColour(itemIndex, txForegroundColor);
     }
     else if (data->lastRxDate.IsValid() && data->lastRxDate.IsEqualUpTo(wxDateTime::Now(), wxTimeSpan(0, 0, 10)))
     {
-        wxColour rxForegroundColor(55, 155, 175);
-        m_listSpots->SetItemBackgroundColour(itemIndex, rxForegroundColor);
-        m_listSpots->SetItemTextColour(itemIndex, *wxBLACK);
+        wxColour rxBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
+        wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
+        m_listSpots->SetItemBackgroundColour(itemIndex, rxBackgroundColor);
+        m_listSpots->SetItemTextColour(itemIndex, rxForegroundColor);
     }
     else
     {
