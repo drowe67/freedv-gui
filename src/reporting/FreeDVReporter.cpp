@@ -94,24 +94,14 @@ void FreeDVReporter::inAnalogMode(bool inAnalog)
 {
     if (isValidForReporting())
     {
-        std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueue_.push_back([&, inAnalog]() {
-            if (inAnalog)
-            {
-                // Workaround for race condition in sioclient
-                while (isConnecting_)
-                {
-                    std::this_thread::sleep_for(20ms);
-                }
-                
-                sioClient_->sync_close();
-            }
-            else
-            {
-                connect_();
-            }
-        });
-        fnQueueConditionVariable_.notify_one();
+        if (inAnalog)
+        {
+            hideFromView();
+        }
+        else
+        {
+            showOurselves();
+        }
     }
 }
 
