@@ -121,27 +121,32 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     // PSK Reporter options
     wxBoxSizer* sbSizerReportingPSK = new wxBoxSizer(wxHORIZONTAL);
-    m_ckboxPskReporterEnable = new wxCheckBox(m_reportingTab, wxID_ANY, _("Enable PSK Reporter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxPskReporterEnable = new wxCheckBox(m_reportingTab, wxID_ANY, _("Report to PSK Reporter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizerReportingPSK->Add(m_ckboxPskReporterEnable, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     sbSizerReportingRows->Add(sbSizerReportingPSK, 0, wxALL | wxEXPAND, 5);
     
     // FreeDV Reporter options
     wxBoxSizer* sbSizerReportingFreeDV = new wxBoxSizer(wxHORIZONTAL);
-    m_ckboxFreeDVReporterEnable = new wxCheckBox(m_reportingTab, wxID_ANY, _("Enable FreeDV Reporter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDVReporterEnable = new wxCheckBox(m_reportingTab, wxID_ANY, _("Report to FreeDV Reporter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizerReportingFreeDV->Add(m_ckboxFreeDVReporterEnable, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    
-    wxStaticText* labelFreeDVHostName = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Hostname:"), wxDefaultPosition, wxDefaultSize, 0);
-    m_freedvReporterHostname = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0);
-    sbSizerReportingFreeDV->Add(labelFreeDVHostName, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    sbSizerReportingFreeDV->Add(m_freedvReporterHostname, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    
-    m_useMetricDistances = new wxCheckBox(m_reportingTab, wxID_ANY, _("Distances in km"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizerReportingFreeDV->Add(m_useMetricDistances, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
     sbSizerReportingRows->Add(sbSizerReportingFreeDV, 0, wxALL | wxEXPAND, 5);
     
     sizerReporting->Add(sbSizerReportingRows, 0, wxALL | wxEXPAND, 5);
     
+    // FreeDV Reporter options that don't depend on Reporting checkboxes
+    wxStaticBox* sbReportingFreeDV = new wxStaticBox(m_reportingTab, wxID_ANY, _("FreeDV Reporter"));
+    wxStaticBoxSizer* sbSizerReportingFreeDVNoCall = new wxStaticBoxSizer(sbReportingFreeDV, wxHORIZONTAL);
+
+    wxStaticText* labelFreeDVHostName = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Hostname:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_freedvReporterHostname = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0);
+    sbSizerReportingFreeDVNoCall->Add(labelFreeDVHostName, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizerReportingFreeDVNoCall->Add(m_freedvReporterHostname, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    m_useMetricDistances = new wxCheckBox(m_reportingTab, wxID_ANY, _("Distances in km"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizerReportingFreeDVNoCall->Add(m_useMetricDistances, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    sizerReporting->Add(sbSizerReportingFreeDVNoCall, 0, wxALL | wxEXPAND, 5);
+
     // Callsign list settings
     wxStaticBoxSizer* sbSizer_callsign_list;
     wxStaticBox* sb_callsignList = new wxStaticBox(m_reportingTab, wxID_ANY, _("Callsign List"));
@@ -1168,6 +1173,9 @@ void OptionsDlg::updateReportingState()
     {
         m_ckbox_use_utc_time->Enable(true);
         m_ckboxReportingEnable->Enable(true);
+        m_useMetricDistances->Enable(true);
+        m_freedvReporterHostname->Enable(true);
+
         if (m_ckboxReportingEnable->GetValue())
         {
             m_txtCtrlCallSign->Enable(false);
@@ -1176,17 +1184,6 @@ void OptionsDlg::updateReportingState()
             m_ckboxManualFrequencyReporting->Enable(true);
             m_ckboxPskReporterEnable->Enable(true);
             m_ckboxFreeDVReporterEnable->Enable(true);
-            
-            if (m_ckboxFreeDVReporterEnable->GetValue())
-            {
-                m_freedvReporterHostname->Enable(true);
-                m_useMetricDistances->Enable(true);
-            }
-            else
-            {
-                m_freedvReporterHostname->Enable(false);
-                m_useMetricDistances->Enable(false);
-            }
         }
         else
         {
@@ -1195,9 +1192,7 @@ void OptionsDlg::updateReportingState()
             m_txt_grid_square->Enable(false);
             m_ckboxPskReporterEnable->Enable(false);
             m_ckboxFreeDVReporterEnable->Enable(false);
-            m_freedvReporterHostname->Enable(false);
             m_ckboxManualFrequencyReporting->Enable(false);
-            m_useMetricDistances->Enable(false);
         }    
     }
     else
@@ -1210,8 +1205,8 @@ void OptionsDlg::updateReportingState()
         m_ckboxManualFrequencyReporting->Enable(false);
         m_ckboxPskReporterEnable->Enable(false);
         m_ckboxFreeDVReporterEnable->Enable(false);
-        m_freedvReporterHostname->Enable(false);
         m_useMetricDistances->Enable(false);
+        m_freedvReporterHostname->Enable(false);
         
         m_ckbox_use_utc_time->Enable(false);
     }

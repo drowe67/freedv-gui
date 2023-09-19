@@ -1993,12 +1993,12 @@ void MainFrame::performFreeDVOn_()
                         wxGetApp().m_reporters.push_back(pskReporter);
                     }
                     
-                    if (wxGetApp().m_sharedReporterObject)
+                    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
                     {
                         wxGetApp().m_reporters.push_back(wxGetApp().m_sharedReporterObject);
                         wxGetApp().m_sharedReporterObject->showOurselves();
                     }
-                    
+
                     // Enable FreeDV Reporter timer (every 5 minutes).
                     executeOnUiThreadAndWait_([&]() 
                     {
@@ -2977,93 +2977,53 @@ bool MainFrame::validateSoundCardSetup()
 
 void MainFrame::initializeFreeDVReporter_()
 {
-    if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled &&
-        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled &&
-        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString() != "" &&
-        wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString() != "" &&
-        wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString() != "")
+    wxGetApp().m_sharedReporterObject =
+        std::make_shared<FreeDVReporter>(
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString(),
+            wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
+            wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
+            std::string("FreeDV ") + FREEDV_VERSION,
+            g_nSoundCards <= 1 ? true : false);
+    assert(wxGetApp().m_sharedReporterObject);
+    
+    // Make built in FreeDV Reporter client available.
+    if (m_reporterDialog == nullptr)
     {
-        wxGetApp().m_sharedReporterObject =
-            std::make_shared<FreeDVReporter>(
-                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString(),
-                wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
-                wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
-                std::string("FreeDV ") + FREEDV_VERSION,
-                g_nSoundCards <= 1 ? true : false);
-        assert(wxGetApp().m_sharedReporterObject);
+        m_reporterDialog = new FreeDVReporterDialog(this);
+    }
         
-        // Make built in FreeDV Reporter client available.
-        if (m_reporterDialog == nullptr)
+    m_reporterDialog->setReporter(wxGetApp().m_sharedReporterObject);
+    m_reporterDialog->refreshDistanceColumn();
+    
+    // Set up QSY request handler
+    wxGetApp().m_sharedReporterObject->setOnQSYRequestFn([&](std::string callsign, uint64_t freqHz, std::string message) {
+        double frequencyMHz = freqHz / 1000000.0;
+        wxString fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz."), callsign, frequencyMHz);
+        int dialogStyle = wxOK | wxICON_INFORMATION | wxCENTRE;
+        
+        if (wxGetApp().m_hamlib != nullptr && wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
         {
-            m_reporterDialog = new FreeDVReporterDialog(this);
+            fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz. Would you like to change to that frequency now?"), callsign, frequencyMHz);
+            dialogStyle = wxYES_NO | wxICON_QUESTION | wxCENTRE;
         }
-            
-        m_reporterDialog->setReporter(wxGetApp().m_sharedReporterObject);
-        m_reporterDialog->refreshDistanceColumn();
         
-        // Set up QSY request handler
-        // TBD: automatically change frequency via hamlib if enabled.
-        wxGetApp().m_sharedReporterObject->setOnQSYRequestFn([&](std::string callsign, uint64_t freqHz, std::string message) {
-            double frequencyMHz = freqHz / 1000000.0;
-            wxString fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz."), callsign, frequencyMHz);
-            int dialogStyle = wxOK | wxICON_INFORMATION | wxCENTRE;
-            
-            if (wxGetApp().m_hamlib != nullptr && wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+        CallAfter([&, fullMessage, dialogStyle, frequencyMHz]() {
+            wxMessageDialog messageDialog(this, fullMessage, wxT("FreeDV Reporter"), dialogStyle);
+
+            if (dialogStyle & wxYES_NO)
             {
-                fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz. Would you like to change to that frequency now?"), callsign, frequencyMHz);
-                dialogStyle = wxYES_NO | wxICON_QUESTION | wxCENTRE;
+                messageDialog.SetYesNoLabels(_("Change Frequency"), _("Cancel"));
             }
-            
-            CallAfter([&, fullMessage, dialogStyle, frequencyMHz]() {
-                wxMessageDialog messageDialog(this, fullMessage, wxT("FreeDV Reporter"), dialogStyle);
 
-                if (dialogStyle & wxYES_NO)
-                {
-                    messageDialog.SetYesNoLabels(_("Change Frequency"), _("Cancel"));
-                }
-
-                auto answer = messageDialog.ShowModal();
-                if (answer == wxID_YES)
-                {
-                    // This will implicitly cause Hamlib to change the frequecy and mode.
-                    m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyMHz));
-                }
-            });
+            auto answer = messageDialog.ShowModal();
+            if (answer == wxID_YES)
+            {
+                // This will implicitly cause Hamlib to change the frequecy and mode.
+                m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyMHz));
+            }
         });
-        
-        wxGetApp().m_sharedReporterObject->connect();
-        wxGetApp().m_sharedReporterObject->hideFromView();
-    }
-    else
-    {
-        wxGetApp().m_sharedReporterObject = nullptr;
-        
-        if (m_reporterDialog != nullptr)
-        {
-            // wxWidgets doesn't fire wxEVT_MOVE events on Linux for some
-            // reason, so we need to grab and save the current position again.
-            auto pos = m_reporterDialog->GetPosition();
-            wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
-            wxGetApp().appConfiguration.reporterWindowTop = pos.y;
-
-            m_reporterDialog->setReporter(nullptr);
-            m_reporterDialog->Close();
-            m_reporterDialog->Destroy();
-            m_reporterDialog = nullptr;
-        }
-        
-        if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled &&
-            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
-        {
-            if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString() == "")
-            {
-                wxMessageBox("FreeDV Reporter requires a valid hostname. Reporting to FreeDV Reporter will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-            }
-            else if (wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString() == "" ||
-                     wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString() == "")
-            {
-                wxMessageBox("FreeDV Reporter requires a valid callsign and grid square in Tools->Options. Reporting to FreeDV Reporter will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-            }
-        }
-    }
+    });
+    
+    wxGetApp().m_sharedReporterObject->connect();
+    wxGetApp().m_sharedReporterObject->hideFromView();
 }

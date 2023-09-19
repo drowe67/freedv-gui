@@ -119,13 +119,23 @@ void MainFrame::OnToolsFreeDVReporterUI(wxUpdateUIEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsAudio(wxCommandEvent& event)
 {
+    bool oldRxOnly = g_nSoundCards <= 1 ? true : false;
+
     wxUnusedVar(event);
     int rv = 0;
     AudioOptsDialog *dlg = new AudioOptsDialog(NULL);
     rv = dlg->ShowModal();
-    if(rv == wxID_OK)
+    if(rv == wxOK)
     {
         dlg->ExchangeData(EXCHANGE_DATA_OUT);
+
+        bool newRxOnly = g_nSoundCards <= 1 ? true : false;
+        if (oldRxOnly != newRxOnly &&
+            wxGetApp().m_sharedReporterObject->isValidForReporting())
+        {
+            // Receive Only status has changed, refresh FreeDV Reporter
+            initializeFreeDVReporter_();
+        }
     }
     delete dlg;
 }
@@ -170,10 +180,10 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         // Update reporting list.
         updateReportingFreqList_();
     
-        // Show/hide frequency box based on PSK Reporter status.
+        // Show/hide frequency box based on reporting status.
         m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
-        // Show/hide callsign combo box based on PSK Reporter Status
+        // Show/hide callsign combo box based on reporting Status
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
         {
             m_cboLastReportedCallsigns->Show();

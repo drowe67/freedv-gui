@@ -915,9 +915,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 ## V1.9.3 TBD 2023
 
 1. Bugfixes:
-    * TBD
+    * FreeDV Reporter: Fix regression preventing proper display of "RX Only" stations. (PR #542)
 2. Enhancements:
     * Add configuration for background/foreground colors in FreeDV Reporter. (PR #545)
+    * Always connect to FreeDV Reporter (in view only mode if necessary), regardless of valid configuration. (PR #542)
 
 ## V1.9.2 September 2023
 
