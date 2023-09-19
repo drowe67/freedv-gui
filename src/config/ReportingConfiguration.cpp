@@ -22,6 +22,7 @@
 #include <inttypes.h>
 
 #include "../defines.h"
+#include "reporting/FreeDVReporter.h"
 #include "ReportingConfiguration.h"
 
 ReportingConfiguration::ReportingConfiguration()
@@ -62,6 +63,10 @@ ReportingConfiguration::ReportingConfiguration()
         _("28.7200"),
         _("10489.6400"),
     })
+    , freedvReporterTxRowBackgroundColor("/Reporting/FreeDV/TxRowBackgroundColor", "#fc4500")
+    , freedvReporterTxRowForegroundColor("/Reporting/FreeDV/TxRowForegroundColor", "#000000")
+    , freedvReporterRxRowBackgroundColor("/Reporting/FreeDV/RxRowBackgroundColor", "#379baf")
+    , freedvReporterRxRowForegroundColor("/Reporting/FreeDV/RxRowForegroundColor", "#000000")
 {
     // empty
 }
@@ -96,6 +101,11 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, reportingFrequencyList);
     
     load_(config, manualFrequencyReporting);
+
+    load_(config, freedvReporterTxRowBackgroundColor);
+    load_(config, freedvReporterTxRowForegroundColor);
+    load_(config, freedvReporterRxRowBackgroundColor);
+    load_(config, freedvReporterRxRowForegroundColor);
     
     // Special load handling for reporting below.
     wxString freqStr = config->Read(reportingFrequency.getElementName(), oldFreqStr);
@@ -123,6 +133,11 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, reportingFrequencyList);
     
     save_(config, manualFrequencyReporting);
+
+    save_(config, freedvReporterTxRowBackgroundColor);
+    save_(config, freedvReporterTxRowForegroundColor);
+    save_(config, freedvReporterRxRowBackgroundColor);
+    save_(config, freedvReporterRxRowForegroundColor);
     
     // Special save handling for reporting below.
     wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), reportingFrequency.getWithoutProcessing());

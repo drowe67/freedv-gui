@@ -101,7 +101,4 @@ enum
 
 #define PLUGIN_MAX_PARAMS 4
 
-// FreeDV Reporter info
-#define FREEDV_REPORTER_DEFAULT_HOSTNAME "qso.freedv.org"
-
 #endif  //__FDMDV2_DEFINES__

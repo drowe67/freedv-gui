@@ -29,6 +29,7 @@ extern FreeDVInterface freedvInterface;
 
 #define UNKNOWN_STR "--"
 #define NUM_COLS (12)
+#define RX_ONLY_STATUS "RX Only"
 
 using namespace std::placeholders;
 
@@ -415,7 +416,8 @@ void FreeDVReporterDialog::refreshQSYButtonState()
     {
         auto selectedCallsign = m_listSpots->GetItemText(selectedIndex);
     
-        if (selectedCallsign != wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign && 
+        if (reporter_->isValidForReporting() &&
+            selectedCallsign != wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign && 
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 &&
             freedvInterface.isRunning())
         {
@@ -721,30 +723,41 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         temp->sid = sid;
         temp->callsign = wxString(callsign).Upper();
         temp->gridSquare = gridSquareWxString.Left(2).Upper() + gridSquareWxString.Mid(2);
-        temp->distanceVal = calculateDistance_(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, gridSquareWxString);
 
-        if (!wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare == "")
         {
-            // Convert to miles for those who prefer it
-            // (calculateDistance_() returns distance in km).
-            temp->distanceVal *= 0.621371;
-        }
-
-        if (temp->distanceVal < 10.0)
-        {
-            temp->distance = wxString::Format("%.01f", temp->distanceVal);
+            // Invalid grid square means we can't calculate a distance.
+            temp->distance = UNKNOWN_STR;
+            temp->distanceVal = 0;
         }
         else
         {
-            temp->distance = wxString::Format("%.0f", temp->distanceVal);
+            temp->distanceVal = calculateDistance_(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, gridSquareWxString);
+
+            if (!wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
+            {
+                // Convert to miles for those who prefer it
+                // (calculateDistance_() returns distance in km).
+                temp->distanceVal *= 0.621371;
+            }
+
+            if (temp->distanceVal < 10.0)
+            {
+                temp->distance = wxString::Format("%.01f", temp->distanceVal);
+            }
+            else
+            {
+                temp->distance = wxString::Format("%.0f", temp->distanceVal);
+            }
         }
+
         temp->version = version;
         temp->freqString = UNKNOWN_STR;
         temp->transmitting = false;
         
         if (rxOnly)
         {
-            temp->status = "RX Only";
+            temp->status = RX_ONLY_STATUS;
             temp->txMode = UNKNOWN_STR;
             temp->lastTx = UNKNOWN_STR;
         }
@@ -821,7 +834,7 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
                 txStatus = "Transmitting";
             }
             
-            if (iter->second->status != _("Receive Only"))
+            if (iter->second->status != _(RX_ONLY_STATUS))
             {
                 iter->second->status = txStatus;
                 iter->second->txMode = txMode;
@@ -980,15 +993,17 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     
     if (data->transmitting)
     {
-        wxColour lightRed(0xfc, 0x45, 0x00);
-        m_listSpots->SetItemBackgroundColour(itemIndex, lightRed);
-        m_listSpots->SetItemTextColour(itemIndex, *wxBLACK);
+        wxColour txBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
+        wxColour txForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
+        m_listSpots->SetItemBackgroundColour(itemIndex, txBackgroundColor);
+        m_listSpots->SetItemTextColour(itemIndex, txForegroundColor);
     }
     else if (data->lastRxDate.IsValid() && data->lastRxDate.IsEqualUpTo(wxDateTime::Now(), wxTimeSpan(0, 0, 10)))
     {
-        wxColour rxForegroundColor(55, 155, 175);
-        m_listSpots->SetItemBackgroundColour(itemIndex, rxForegroundColor);
-        m_listSpots->SetItemTextColour(itemIndex, *wxBLACK);
+        wxColour rxBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
+        wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
+        m_listSpots->SetItemBackgroundColour(itemIndex, rxBackgroundColor);
+        m_listSpots->SetItemTextColour(itemIndex, rxForegroundColor);
     }
     else
     {

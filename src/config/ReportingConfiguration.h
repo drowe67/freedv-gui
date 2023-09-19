@@ -55,6 +55,11 @@ public:
     ConfigurationDataElement<bool> useUTCForReporting;
     
     ConfigurationDataElement<std::vector<wxString> > reportingFrequencyList;
+
+    ConfigurationDataElement<wxString> freedvReporterTxRowBackgroundColor;
+    ConfigurationDataElement<wxString> freedvReporterTxRowForegroundColor;
+    ConfigurationDataElement<wxString> freedvReporterRxRowBackgroundColor;
+    ConfigurationDataElement<wxString> freedvReporterRxRowForegroundColor;
     
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
