@@ -265,6 +265,7 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
 
        // Get list of tab id's and move them to pane
        wxString tab_list = tab_part.AfterFirst(wxT('='));
+       size_t activePage = -1;
        while(1) {
           wxString tab = tab_list.BeforeFirst(wxT(','));
           if (tab.empty()) break;
@@ -284,9 +285,10 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
           const size_t newpage_idx = dest_tabs->GetPageCount();
           dest_tabs->InsertPage(page.window, page, newpage_idx);
 
-          if (c == wxT('+')) dest_tabs->SetActivePage(newpage_idx);
+          if (c == wxT('+')) activePage = newpage_idx;
           else if ( c == wxT('*')) sel_page = tab_idx;
        }
+       if (activePage >= 0) dest_tabs->SetActivePage(activePage);
        dest_tabs->DoShowHide();
 
        tabs = tabs.AfterFirst(wxT('|'));
