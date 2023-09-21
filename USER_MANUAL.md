@@ -918,6 +918,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FreeDV Reporter: Fix regression preventing proper display of "RX Only" stations. (PR #542)
     * Default to the audio from the current TX mode if no modes decode (works around Codec2 bug with 1600 mode). (PR #544)
     * Fix bug preventing proper restore of selected tabs. (PR #548)
+    * Improve labeling of PTT/CAT control options. (PR #550)
 2. Enhancements:
     * Add configuration for background/foreground colors in FreeDV Reporter. (PR #545)
     * Always connect to FreeDV Reporter (in view only mode if necessary), regardless of valid configuration. (PR #542, #547)
