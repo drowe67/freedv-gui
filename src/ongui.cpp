@@ -358,7 +358,7 @@ void MainFrame::OnCloseFrame(wxCloseEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnTop(wxCommandEvent& event)
 {
-    int style = GetWindowStyle();
+    auto style = GetWindowStyle();
 
     if (style & wxSTAY_ON_TOP)
     {
@@ -368,6 +368,7 @@ void MainFrame::OnTop(wxCommandEvent& event)
     {
         style |= wxSTAY_ON_TOP;
     }
+
     SetWindowStyle(style);
 }
 
