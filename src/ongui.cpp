@@ -358,16 +358,17 @@ void MainFrame::OnCloseFrame(wxCloseEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnTop(wxCommandEvent& event)
 {
-    int style = GetWindowStyle();
+    auto style = GetWindowStyle();
 
-    if (style & wxSTAY_ON_TOP)
-    {
-        style &= ~wxSTAY_ON_TOP;
-    }
-    else
+    // Clear wxSTAY_ON_TOP first if it's already set.
+    style &= ~wxSTAY_ON_TOP;
+    
+    // (Re)set wxSTAY_ON_TOP depending on whether the menu option is checked.
+    if (event.IsChecked())
     {
         style |= wxSTAY_ON_TOP;
     }
+
     SetWindowStyle(style);
 }
 
