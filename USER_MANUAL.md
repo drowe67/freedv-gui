@@ -129,9 +129,9 @@ Hitting **Refresh** in the lower left hand corner of the Tools/Audio Config will
 
 Another solution is to re-start FreeDV and check Tools/Audio Config again after changing any audio hardware.
 
-### PTT Configuration
+### CAT/PTT Configuration
 
-The Tools - PTT dialog supports three different ways to control PTT on
+The Tools->CAT and PTT Config dialog supports three different ways to control PTT on
 your radio:
 
 + VOX: sends a tone to the left channel of the Transmit/To Radio sound card
@@ -797,11 +797,11 @@ seconds.
 
 ## PTT doesn't work.  It works with Fldigi and other Hamlib applications.
 
-Many people struggle with initial PTT setup:
+Many people struggle with initial CAT control and PTT setup:
 
-1. Read the PTT Configuration section above.
+1. Read the "CAT/PTT Configuration" section above.
 
-1. Try the Tools - PTT Test function.
+1. Try the "Test PTT" button inside Tools->CAT and PTT Config.
 
 1. Check your rig serial settings.  Did you change them from defaults
 for another program?
@@ -918,6 +918,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FreeDV Reporter: Fix regression preventing proper display of "RX Only" stations. (PR #542)
     * Default to the audio from the current TX mode if no modes decode (works around Codec2 bug with 1600 mode). (PR #544)
     * Fix bug preventing proper restore of selected tabs. (PR #548)
+    * Improve labeling of PTT/CAT control options. (PR #550)
     * Clarify behavior of "On Top" menu option. (PR #549)
 2. Enhancements:
     * Add configuration for background/foreground colors in FreeDV Reporter. (PR #545)

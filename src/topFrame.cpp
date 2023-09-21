@@ -363,7 +363,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     tools->Append(m_menuItemAudio);
 
     wxMenuItem* m_menuItemRigCtrlCfg;
-    m_menuItemRigCtrlCfg = new wxMenuItem(tools, wxID_ANY, wxString(_("P&TT Config...")) , _("Configures FreeDV integration with radio"), wxITEM_NORMAL);
+    m_menuItemRigCtrlCfg = new wxMenuItem(tools, wxID_ANY, wxString(_("CAT and P&TT Config...")) , _("Configures FreeDV integration with radio"), wxITEM_NORMAL);
     tools->Append(m_menuItemRigCtrlCfg);
 
     wxMenuItem* m_menuItemOptions;
