@@ -583,9 +583,9 @@
 <li>Check the “automatically get the device app” option, then click Save changes to save the settings you just chose.</li>
 </ol>
 <h2 data-number="15.11" id="freedv-2020-mode-is-greyed-out"><span class="header-section-number">15.11</span> FreeDV 2020 mode is greyed out</h2>
-<p>In order to use FreeDV 2020 mode, you must have one of the following:</p>
+<p>In order to use FreeDV 2020 mode, you must have both of the following:</p>
 <ol type="1">
-<li>An Intel based CPU with AVX support. A Microsoft utility called <a href="https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo">coreinfo</a> can be used to determine if your CPU supports AVX. A * means you have AVX, a - means no AVX:</li>
+<li>If using an Intel based CPU, it must have AVX support. A Microsoft utility called <a href="https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo">coreinfo</a> can be used to determine if your CPU supports AVX. A * means you have AVX, a - means no AVX:</li>
 </ol>
 <pre><code>AES             -       Supports AES extensions
 AVX             *       Supports AVX instruction extensions
@@ -594,16 +594,14 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <pre><code>lscpu | grep -o &quot;avx[^ ]*&quot;</code></pre>
 <p>will display <code>avx</code> (or <code>avx2</code>) if your CPU supports the instructions.</p>
 <ol start="2" type="1">
-<li>A Mac with an ARM processor (e.g. 2020 Mac Mini or later).</li>
+<li>Your computer must be able to decode 2020 at a minimum of 2x real time (i.e. &lt; 0.5 seconds for 1 second of encoded audio). A Mac with an ARM processor (e.g. 2020 Mac Mini or later) is an example of such a device.</li>
 </ol>
 <p>If your system does not meet either (1) or (2), the 2020 option will be grayed out.</p>
-<h2 data-number="15.12" id="freedv-2020-mode-is-slow-on-arm-macs"><span class="header-section-number">15.12</span> FreeDV 2020 mode is slow on ARM Macs</h2>
-<p>Preliminary testing on ARM Macs has shown that NEON optimizations in LPCNet are sufficient to allow 2020 to be whitelisted on those machines. However, this is definitely experimental. If you are experiencing issues with 2020 mode on these Macs, please let the development team know so that further investigation can be done.</p>
-<h2 data-number="15.13" id="i-installed-a-new-version-and-freedv-stopped-working"><span class="header-section-number">15.13</span> I installed a new version and FreeDV stopped working</h2>
+<h2 data-number="15.12" id="i-installed-a-new-version-and-freedv-stopped-working"><span class="header-section-number">15.12</span> I installed a new version and FreeDV stopped working</h2>
 <p>You may need to clean out the previous configuration. Try Tools - Restore Defaults. Set up your sound cards again with Tools - Audio Config.</p>
-<h2 data-number="15.14" id="freedv-crashes-when-i-press-start"><span class="header-section-number">15.14</span> FreeDV crashes when I press Start</h2>
+<h2 data-number="15.13" id="freedv-crashes-when-i-press-start"><span class="header-section-number">15.13</span> FreeDV crashes when I press Start</h2>
 <p>Have you removed/changed USB audio devices? If you remove/change USB audio devices without pressing Tools - Audio Config, FreeDV may crash. See Changing Audio Devices above.</p>
-<h2 data-number="15.15" id="freedv-cant-be-opened-on-osx-because-the-developer-cannot-be-verified"><span class="header-section-number">15.15</span> FreeDV can’t be opened on OSX because the developer cannot be verified</h2>
+<h2 data-number="15.14" id="freedv-cant-be-opened-on-osx-because-the-developer-cannot-be-verified"><span class="header-section-number">15.14</span> FreeDV can’t be opened on OSX because the developer cannot be verified</h2>
 <p>From January 2020 Apple is enforcing notarization for all OSX applications. The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.</p>
 <figure>
 <img src="contrib/osx_notarization1.png" alt="" /><figcaption>Notarization Error</figcaption>
@@ -619,6 +617,8 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <pre><code>xattr -d com.apple.quarantine FreeDV.app</code></pre>
 <p>or</p>
 <pre><code>xattr -d -r com.apple.quarantine FreeDV.app</code></pre>
+<h2 data-number="15.15" id="im-on-a-mac-and-my-preferred-audio-device-isnt-appearing"><span class="header-section-number">15.15</span> I’m on a Mac and my preferred audio device isn’t appearing</h2>
+<p>macOS has a longstanding issue that prevents certain audio devices from appearing. More info <a href="http://www.w1hkj.com/files/fldigi/AppleAudioCodec.html">here</a>.</p>
 <h1 data-number="16" id="converting-this-document-to-pdf"><span class="header-section-number">16</span> Converting this document to PDF</h1>
 <p>For the Linux inclined:</p>
 <pre><code>$ pandoc USER_MANUAL.md -o USER_MANUAL.pdf &quot;-fmarkdown-implicit_figures -o&quot; \
@@ -665,6 +665,10 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <ul>
 <li>Add configuration for background/foreground colors in FreeDV Reporter. (PR #545)</li>
 <li>Always connect to FreeDV Reporter (in view only mode if necessary), regardless of valid configuration. (PR #542, #547)</li>
+</ul></li>
+<li>Documentation:
+<ul>
+<li>Add information about multiple audio devices and macOS. (PR #554)</li>
 </ul></li>
 </ol>
 <h2 data-number="18.2" id="v1.9.2-september-2023"><span class="header-section-number">18.2</span> V1.9.2 September 2023</h2>
