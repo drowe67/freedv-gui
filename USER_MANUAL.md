@@ -921,6 +921,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Enhancements:
     * Add configuration for background/foreground colors in FreeDV Reporter. (PR #545)
     * Always connect to FreeDV Reporter (in view only mode if necessary), regardless of valid configuration. (PR #542, #547)
+    * Add None as a valid PTT method and make it report RX Only. (PR #556)
 3. Documentation:
     * Add information about multiple audio devices and macOS. (PR #554)
 
