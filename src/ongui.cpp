@@ -232,7 +232,11 @@ void MainFrame::OnToolsComCfg(wxCommandEvent& event)
 
     ComPortsDlg *dlg = new ComPortsDlg(NULL);
 
-    dlg->ShowModal();
+    if (dlg->ShowModal() == wxID_OK)
+    {
+        // Reinitialize FreeDV Reporter again in case we changed PTT method.
+        initializeFreeDVReporter_();
+    }
 
     delete dlg;
 }
@@ -309,11 +313,11 @@ bool MainFrame::OpenHamlibRig() {
     
     int serial_rate = wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate;
     if (wxGetApp().CanAccessSerialPort((const char*)port.ToUTF8()) && (
-        pttType == Hamlib::PTT_VIA_CAT || wxGetApp().CanAccessSerialPort((const char*)pttPort.ToUTF8())))
+        pttType == Hamlib::PTT_VIA_CAT || pttType == Hamlib::PTT_VIA_NONE || wxGetApp().CanAccessSerialPort((const char*)pttPort.ToUTF8())))
     {
         bool status = wxGetApp().m_hamlib->connect(
             rig, port.mb_str(wxConvUTF8), serial_rate, wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress, 
-            pttType, pttType == Hamlib::PTT_VIA_CAT ? port.mb_str(wxConvUTF8) : pttPort.mb_str(wxConvUTF8));
+            pttType, pttType == Hamlib::PTT_VIA_CAT || pttType == Hamlib::PTT_VIA_NONE ? port.mb_str(wxConvUTF8) : pttPort.mb_str(wxConvUTF8));
         if (status == false)
         {
             wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
