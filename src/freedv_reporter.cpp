@@ -407,7 +407,11 @@ void FreeDVReporterDialog::refreshQSYButtonState()
     {
         FilterFrequency freq = 
             getFilterForFrequency_(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-        setBandFilter(freq);
+        
+        if (currentBandFilter_ != freq)
+        {
+            setBandFilter(freq);
+        }
     }
     
     bool enabled = false;
@@ -421,7 +425,7 @@ void FreeDVReporterDialog::refreshQSYButtonState()
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 &&
             freedvInterface.isRunning())
         {
-            wxString theirFreqString = m_listSpots->GetItemText(selectedIndex, 3);
+            wxString theirFreqString = m_listSpots->GetItemText(selectedIndex, 4);
             wxRegEx mhzRegex(" MHz$");
             mhzRegex.Replace(&theirFreqString, "");
             
