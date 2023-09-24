@@ -30,6 +30,10 @@ if(APPLE)
         HOMEPAGE_URL ${PROJECT_HOMEPAGE_URL}
         LANGUAGES C CXX OBJCXX
     )
+
+    # Workaround for Xcode 15 bug preventing FreeDV binaries from starting
+    # on older versions of macOS. See https://developer.apple.com/documentation/xcode-release-notes/xcode-15-release-notes#Linking.
+    add_link_options("-Wl,-ld_classic")
 else(APPLE)
     project(
         ${PROJECT_NAME}

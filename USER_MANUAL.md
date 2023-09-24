@@ -917,6 +917,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix bug preventing proper restore of selected tabs. (PR #548)
     * Improve labeling of PTT/CAT control options. (PR #550)
     * Clarify behavior of "On Top" menu option. (PR #549)
+    * Work around Xcode issue preventing FreeDV from starting on macOS < 12. (PR #553)
 2. Enhancements:
     * Add configuration for background/foreground colors in FreeDV Reporter. (PR #545)
     * Always connect to FreeDV Reporter (in view only mode if necessary), regardless of valid configuration. (PR #542, #547)
