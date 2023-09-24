@@ -834,9 +834,9 @@ for instructions on doing so in Windows 10. For Windows 8:
 
 ## FreeDV 2020 mode is greyed out
 
-In order to use FreeDV 2020 mode, you must have one of the following:
+In order to use FreeDV 2020 mode, you must have both of the following:
 
-1. An Intel based CPU with AVX support. A Microsoft utility called [coreinfo](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo)
+1. If using an Intel based CPU, it must have AVX support. A Microsoft utility called [coreinfo](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo)
 can be used to determine if your CPU supports AVX.  A * means you have 
 AVX, a - means no AVX:
 
@@ -853,16 +853,9 @@ lscpu | grep -o "avx[^ ]*"
 ```
 will display `avx` (or `avx2`) if your CPU supports the instructions.
 
-2. A Mac with an ARM processor (e.g. 2020 Mac Mini or later).
+2. Your computer must be able to decode 2020 at a minimum of 2x real time (i.e. < 0.5 seconds for 1 second of encoded audio). A Mac with an ARM processor (e.g. 2020 Mac Mini or later) is an example of such a device.
 
 If your system does not meet either (1) or (2), the 2020 option will be grayed out.
-
-## FreeDV 2020 mode is slow on ARM Macs
-
-Preliminary testing on ARM Macs has shown that NEON optimizations in LPCNet are
-sufficient to allow 2020 to be whitelisted on those machines. However, this is
-definitely experimental. If you are experiencing issues with 2020 mode on these
-Macs, please let the development team know so that further investigation can be done.
 
 ## I installed a new version and FreeDV stopped working
 
@@ -894,6 +887,10 @@ or
 xattr -d -r com.apple.quarantine FreeDV.app
 ```
 
+## I'm on a Mac and my preferred audio device isn't appearing
+
+macOS has a longstanding issue that prevents certain audio devices from appearing. More info [here](http://www.w1hkj.com/files/fldigi/AppleAudioCodec.html).
+
 # Converting this document to PDF
 
 For the Linux inclined:
@@ -923,6 +920,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Enhancements:
     * Add configuration for background/foreground colors in FreeDV Reporter. (PR #545)
     * Always connect to FreeDV Reporter (in view only mode if necessary), regardless of valid configuration. (PR #542, #547)
+3. Documentation:
+    * Add information about multiple audio devices and macOS. (PR #554)
 
 ## V1.9.2 September 2023
 
