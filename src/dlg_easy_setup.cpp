@@ -165,7 +165,7 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     m_cbPttMethod->Append(wxT("CAT"));
     m_cbPttMethod->Append(wxT("RTS"));
     m_cbPttMethod->Append(wxT("DTR"));
-    m_cbPttMethod->Append(wxT("None"));
+    m_cbPttMethod->Append(wxT("None (RX Only)"));
     m_cbPttMethod->SetSelection(0);
 
     /* Serial port box */
