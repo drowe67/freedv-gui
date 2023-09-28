@@ -912,7 +912,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 ## V1.9.3 TBD 2023
 
 1. Bugfixes:
-    * FreeDV Reporter: Fix regression preventing proper display of "RX Only" stations. (PR #542)
+    * FreeDV Reporter:
+        * Fix regression preventing proper display of "RX Only" stations. (PR #542)
+        * Fix issue causing duplicate entries when filtering is enabled and users disconnect/reconnect. (PR #557)
     * Default to the audio from the current TX mode if no modes decode (works around Codec2 bug with 1600 mode). (PR #544)
     * Fix bug preventing proper restore of selected tabs. (PR #548)
     * Improve labeling of PTT/CAT control options. (PR #550)
