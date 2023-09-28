@@ -786,15 +786,19 @@ void FreeDVReporterDialog::onUserDisconnectFn_(std::string sid, std::string last
         {
             std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
             if (sid == *sidPtr)
-            {
-                delete allReporterData_[sid];
-                allReporterData_.erase(sid);
-                
+            {            
                 delete (std::string*)m_listSpots->GetItemData(index);
                 m_listSpots->DeleteItem(index);
                 
                 break;
             }
+        }
+        
+        auto iter = allReporterData_.find(sid);
+        if (iter != allReporterData_.end())
+        {
+            delete allReporterData_[sid];
+            allReporterData_.erase(iter);
         }
     });
 }
