@@ -19,7 +19,8 @@ class Hamlib {
         {
             PTT_VIA_CAT = 0,
             PTT_VIA_RTS,
-            PTT_VIA_DTR
+            PTT_VIA_DTR,
+            PTT_VIA_NONE,
         };
         
         Hamlib();

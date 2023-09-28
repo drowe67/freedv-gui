@@ -213,6 +213,9 @@ bool Hamlib::connect(unsigned int rig_index, const char *serial_port, const int 
         case PTT_VIA_DTR:
             rig_set_conf(m_rig, rig_token_lookup(m_rig, "ptt_type"), "DTR");
             break;
+        case PTT_VIA_NONE:
+            rig_set_conf(m_rig, rig_token_lookup(m_rig, "ptt_type"), "NONE");
+            break;
         case PTT_VIA_CAT:
         default:
             break;
