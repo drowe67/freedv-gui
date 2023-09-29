@@ -655,7 +655,11 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <ol type="1">
 <li>Bugfixes:
 <ul>
-<li>FreeDV Reporter: Fix regression preventing proper display of “RX Only” stations. (PR #542)</li>
+<li>FreeDV Reporter:
+<ul>
+<li>Fix regression preventing proper display of “RX Only” stations. (PR #542)</li>
+<li>Fix issue causing duplicate entries when filtering is enabled and users disconnect/reconnect. (PR #557)</li>
+</ul></li>
 <li>Default to the audio from the current TX mode if no modes decode (works around Codec2 bug with 1600 mode). (PR #544)</li>
 <li>Fix bug preventing proper restore of selected tabs. (PR #548)</li>
 <li>Improve labeling of PTT/CAT control options. (PR #550)</li>
