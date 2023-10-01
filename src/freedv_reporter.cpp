@@ -30,6 +30,7 @@ extern FreeDVInterface freedvInterface;
 #define UNKNOWN_STR "--"
 #define NUM_COLS (12)
 #define RX_ONLY_STATUS "RX Only"
+#define RX_COLORING_TIMEOUT_SEC (20)
 
 using namespace std::placeholders;
 
@@ -362,15 +363,15 @@ void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
 void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
 {
     // Iterate across all visible rows. If a row is currently highlighted
-    // green and it's been more than >10 seconds, clear coloring.
-    auto curDate = wxDateTime::Now();
+    // green and it's been more than >20 seconds, clear coloring.
+    auto curDate = wxDateTime::Now().ToUTC();
     for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
     {
         std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
         auto reportData = allReporterData_[*sidPtr];
         
         if (!reportData->transmitting &&
-            (!reportData->lastRxDate.IsValid() || !reportData->lastRxDate.IsEqualUpTo(curDate, wxTimeSpan(0, 0, 10))))
+            (!reportData->lastRxDate.IsValid() || !reportData->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_TIMEOUT_SEC))))
         {
             m_listSpots->SetItemBackgroundColour(index, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOX));
             m_listSpots->SetItemTextColour(index, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT));
@@ -1006,7 +1007,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
         m_listSpots->SetItemBackgroundColour(itemIndex, txBackgroundColor);
         m_listSpots->SetItemTextColour(itemIndex, txForegroundColor);
     }
-    else if (data->lastRxDate.IsValid() && data->lastRxDate.IsEqualUpTo(wxDateTime::Now(), wxTimeSpan(0, 0, 10)))
+    else if (data->lastRxDate.IsValid() && data->lastRxDate.ToUTC().IsEqualUpTo(wxDateTime::Now().ToUTC(), wxTimeSpan(0, 0, RX_COLORING_TIMEOUT_SEC)))
     {
         wxColour rxBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
         wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
