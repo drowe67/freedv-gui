@@ -210,6 +210,14 @@ bool MainApp::OnInit()
     // Initialize locale.
     m_locale.Init();
 
+    // Check System language to force dot "." as decimal separator
+    int sys_lang = wxLocale::GetSystemLanguage();
+    if( sys_lang != wxLANGUAGE_DEFAULT )
+    {
+        // Restore "C" numeric locale
+        setlocale(LC_NUMERIC, "C");
+    }
+
     m_reporters.clear();
     
     if(!wxApp::OnInit())
