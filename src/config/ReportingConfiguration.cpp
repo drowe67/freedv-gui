@@ -19,6 +19,7 @@
 //
 //==========================================================================
 
+#include <wx/tokenzr.h>
 #include <inttypes.h>
 
 #include "../defines.h"
@@ -68,7 +69,57 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterRxRowBackgroundColor("/Reporting/FreeDV/RxRowBackgroundColor", "#379baf")
     , freedvReporterRxRowForegroundColor("/Reporting/FreeDV/RxRowForegroundColor", "#000000")
 {
-    // empty
+    // Special handling for the frequency list to properly handle locales
+    reportingFrequencyList.setLoadProcessor([](std::vector<wxString> list) {
+        std::vector<wxString> newList;
+        for (auto& val : list)
+        {
+            // Frequencies are unfortunately saved in US format (legacy behavior). We need 
+            // to manually parse and convert to Hz, then output MHz values in the user's current
+            // locale.
+            wxStringTokenizer tok(val, ".");
+            wxString wholeNumber = tok.GetNextToken();
+            wxString fraction = "0";
+            if (tok.HasMoreTokens())
+            {
+                fraction = tok.GetNextToken();
+                if (fraction.Length() < 6)
+                {
+                    fraction += wxString('0', 6 - fraction.Length());
+                }
+            }
+
+            long hz = 0;
+            long mhz = 0;
+            wholeNumber.ToLong(&mhz);
+            fraction.ToLong(&hz);
+            uint64_t freq = mhz * 1000000 + hz;
+
+            float mhzFloat = freq / 1000000.0;
+            newList.push_back(wxString::Format("%.04f", mhzFloat));
+        }
+
+        return newList;
+    });
+
+    reportingFrequencyList.setSaveProcessor([](std::vector<wxString> list) {
+        std::vector<wxString> newList;
+        for (auto& val : list)
+        {
+            // Frequencies are unfortunately saved in US format (legacy behavior). We need 
+            // to manually parse and convert to Hz, then output MHz values in US format.
+            double mhz = 0.0;
+            val.ToDouble(&mhz);
+
+            uint64_t hz = mhz * 1000000;
+            uint64_t mhzInt = hz / 1000000;
+            hz = hz % 1000000;
+
+            wxString newVal = wxString::Format("%" PRIu64 ".%06" PRIu64, mhzInt, hz);
+            newList.push_back(newVal);
+        }
+        return newList;
+    });
 }
 
 void ReportingConfiguration::load(wxConfigBase* config)
