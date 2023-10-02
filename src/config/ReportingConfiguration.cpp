@@ -83,10 +83,11 @@ ReportingConfiguration::ReportingConfiguration()
             if (tok.HasMoreTokens())
             {
                 fraction = tok.GetNextToken();
-                if (fraction.Length() < 6)
-                {
-                    fraction += wxString('0', 6 - fraction.Length());
-                }
+            }
+
+            if (fraction.Length() < 6)
+            {
+                fraction += wxString('0', 6 - fraction.Length());
             }
 
             long hz = 0;
