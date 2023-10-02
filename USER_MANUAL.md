@@ -129,9 +129,9 @@ Hitting **Refresh** in the lower left hand corner of the Tools/Audio Config will
 
 Another solution is to re-start FreeDV and check Tools/Audio Config again after changing any audio hardware.
 
-### PTT Configuration
+### CAT/PTT Configuration
 
-The Tools - PTT dialog supports three different ways to control PTT on
+The Tools->CAT and PTT Config dialog supports three different ways to control PTT on
 your radio:
 
 + VOX: sends a tone to the left channel of the Transmit/To Radio sound card
@@ -797,11 +797,11 @@ seconds.
 
 ## PTT doesn't work.  It works with Fldigi and other Hamlib applications.
 
-Many people struggle with initial PTT setup:
+Many people struggle with initial CAT control and PTT setup:
 
-1. Read the PTT Configuration section above.
+1. Read the "CAT/PTT Configuration" section above.
 
-1. Try the Tools - PTT Test function.
+1. Try the "Test PTT" button inside Tools->CAT and PTT Config.
 
 1. Check your rig serial settings.  Did you change them from defaults
 for another program?
@@ -834,9 +834,9 @@ for instructions on doing so in Windows 10. For Windows 8:
 
 ## FreeDV 2020 mode is greyed out
 
-In order to use FreeDV 2020 mode, you must have one of the following:
+In order to use FreeDV 2020 mode, you must have both of the following:
 
-1. An Intel based CPU with AVX support. A Microsoft utility called [coreinfo](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo)
+1. If using an Intel based CPU, it must have AVX support. A Microsoft utility called [coreinfo](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo)
 can be used to determine if your CPU supports AVX.  A * means you have 
 AVX, a - means no AVX:
 
@@ -853,16 +853,9 @@ lscpu | grep -o "avx[^ ]*"
 ```
 will display `avx` (or `avx2`) if your CPU supports the instructions.
 
-2. A Mac with an ARM processor (e.g. 2020 Mac Mini or later).
+2. Your computer must be able to decode 2020 at a minimum of 2x real time (i.e. < 0.5 seconds for 1 second of encoded audio). A Mac with an ARM processor (e.g. 2020 Mac Mini or later) is an example of such a device.
 
 If your system does not meet either (1) or (2), the 2020 option will be grayed out.
-
-## FreeDV 2020 mode is slow on ARM Macs
-
-Preliminary testing on ARM Macs has shown that NEON optimizations in LPCNet are
-sufficient to allow 2020 to be whitelisted on those machines. However, this is
-definitely experimental. If you are experiencing issues with 2020 mode on these
-Macs, please let the development team know so that further investigation can be done.
 
 ## I installed a new version and FreeDV stopped working
 
@@ -894,6 +887,10 @@ or
 xattr -d -r com.apple.quarantine FreeDV.app
 ```
 
+## I'm on a Mac and my preferred audio device isn't appearing
+
+macOS has a longstanding issue that prevents certain audio devices from appearing. More info [here](http://www.w1hkj.com/files/fldigi/AppleAudioCodec.html).
+
 # Converting this document to PDF
 
 For the Linux inclined:
@@ -915,13 +912,23 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 ## V1.9.3 TBD 2023
 
 1. Bugfixes:
-    * FreeDV Reporter: Fix regression preventing proper display of "RX Only" stations. (PR #542)
+    * FreeDV Reporter:
+        * Fix regression preventing proper display of "RX Only" stations. (PR #542)
+        * Fix issue causing duplicate entries when filtering is enabled and users disconnect/reconnect. (PR #557)
     * Default to the audio from the current TX mode if no modes decode (works around Codec2 bug with 1600 mode). (PR #544)
     * Fix bug preventing proper restore of selected tabs. (PR #548)
     * Properly handle frequency entry based on user's current location. (PR #561)
+    * Improve labeling of PTT/CAT control options. (PR #550)
+    * Clarify behavior of "On Top" menu option. (PR #549)
+    * Work around Xcode issue preventing FreeDV from starting on macOS < 12. (PR #553)
+    * Fix issue preventing selection of FreeDV Reporter users during band tracking. (PR #555)
 2. Enhancements:
     * Add configuration for background/foreground colors in FreeDV Reporter. (PR #545)
     * Always connect to FreeDV Reporter (in view only mode if necessary), regardless of valid configuration. (PR #542, #547)
+    * Add None as a valid PTT method and make it report RX Only. (PR #556)
+    * Increase RX coloring timeout in FreeDV Reporter to 20 seconds. (PR #558)
+3. Documentation:
+    * Add information about multiple audio devices and macOS. (PR #554)
 
 ## V1.9.2 September 2023
 
