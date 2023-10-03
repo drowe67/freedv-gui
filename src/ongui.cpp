@@ -760,7 +760,7 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     wxString freqStr = m_cboReportFrequency->GetValue();
     if (freqStr.Length() > 0)
     {
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = atof(freqStr.ToUTF8()) * 1000 * 1000;
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = round(atof(freqStr.ToUTF8()) * 1000 * 1000);
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
         {
             m_cboReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));

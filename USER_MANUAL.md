@@ -922,6 +922,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Work around Xcode issue preventing FreeDV from starting on macOS < 12. (PR #553)
     * Fix issue preventing selection of FreeDV Reporter users during band tracking. (PR #555)
     * Work around issue preventing consistent switchover to 'From Mic' tab on voice keyer TX. (PR #563)
+    * Fix rounding error when changing reporting frequency. (PR #562)
 2. Enhancements:
     * Add configuration for background/foreground colors in FreeDV Reporter. (PR #545)
     * Always connect to FreeDV Reporter (in view only mode if necessary), regardless of valid configuration. (PR #542, #547)
