@@ -917,6 +917,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
         * Fix issue causing duplicate entries when filtering is enabled and users disconnect/reconnect. (PR #557)
     * Default to the audio from the current TX mode if no modes decode (works around Codec2 bug with 1600 mode). (PR #544)
     * Fix bug preventing proper restore of selected tabs. (PR #548)
+    * Properly handle frequency entry based on user's current location. (PR #561)
     * Improve labeling of PTT/CAT control options. (PR #550)
     * Clarify behavior of "On Top" menu option. (PR #549)
     * Work around Xcode issue preventing FreeDV from starting on macOS < 12. (PR #553)

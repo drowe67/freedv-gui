@@ -903,11 +903,12 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor = txForegroundColor.GetAsString(wxC2S_HTML_SYNTAX);
 
         // Save new reporting frequency list.
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList->clear();
+        std::vector<wxString> tmpList;
         for (unsigned int index = 0; index < m_freqList->GetCount(); index++)
         {
-            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList->push_back(m_freqList->GetString(index));
+            tmpList.push_back(m_freqList->GetString(index));
         }
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList = tmpList;
         
         wxGetApp().appConfiguration.enableSpaceBarForPTT = m_ckboxEnableSpacebarForPTT->GetValue();
         
