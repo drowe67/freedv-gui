@@ -581,7 +581,19 @@ void MainFrame::togglePTT(void) {
     {
         // rx-> tx transition, swap to Mic In page to monitor speech
         wxGetApp().appConfiguration.currentNotebookTab = m_auiNbookCtrl->GetSelection();
-        m_auiNbookCtrl->ChangeSelection(m_auiNbookCtrl->GetPageIndex((wxWindow *)m_panelSpeechIn));
+        
+        // Note: GetPageIndex sometimes returns the incorrect results, so iterating and finding
+        // the current page ourselves is a better bet.
+        size_t index = 0;
+        for (; index < m_auiNbookCtrl->GetPageCount(); index++)
+        {
+            auto page = m_auiNbookCtrl->GetPage(index);
+            if (page == (wxWindow *)m_panelSpeechIn)
+            {
+                m_auiNbookCtrl->ChangeSelection(index);
+                break;
+            }
+        }
 
         // disable sync text
 
