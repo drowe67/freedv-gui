@@ -1657,7 +1657,6 @@ void MainFrame::OnExit(wxCommandEvent& event)
         stopRxStream();
     }
     m_togBtnAnalog->Disable();
-    //m_btnTogPTT->Disable();
 
     auto engine = AudioEngineFactory::GetAudioEngine();
     engine->stop();
@@ -2192,8 +2191,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             // On/Off actions complete, re-enable button.
             executeOnUiThreadAndWait_([&]() {
                 m_togBtnAnalog->Enable(m_RxRunning);
-                m_togBtnVoiceKeyer->Enable(m_RxRunning && (g_nSoundCards == 2));
-                m_btnTogPTT->Enable(m_RxRunning && (g_nSoundCards == 2));
+                m_togBtnVoiceKeyer->Enable(m_RxRunning && (g_nSoundCards == 2) && ((Hamlib::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() != Hamlib::PTT_VIA_NONE));
+                m_btnTogPTT->Enable(m_RxRunning && (g_nSoundCards == 2) && ((Hamlib::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() != Hamlib::PTT_VIA_NONE));
                 optionsDlg->setSessionActive(m_RxRunning);
 
                 if (m_RxRunning)
@@ -2983,7 +2982,7 @@ void MainFrame::initializeFreeDVReporter_()
             wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
             wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
             std::string("FreeDV ") + FREEDV_VERSION,
-            g_nSoundCards <= 1 ? true : false);
+            g_nSoundCards <= 1 || (Hamlib::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() == Hamlib::PTT_VIA_NONE ? true : false);
     assert(wxGetApp().m_sharedReporterObject);
     
     // Make built in FreeDV Reporter client available.

@@ -45,7 +45,7 @@
 class ComPortsDlg : public wxDialog
 {
      public:
-        ComPortsDlg(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("PTT Config"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(450,300), long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER);
+        ComPortsDlg(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("CAT and PTT Config"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(450,300), long style = wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER);
         virtual ~ComPortsDlg();
         void    ExchangeData(int inout);
 
