@@ -36,7 +36,7 @@ public:
     virtual ~EventHandler() = default;
     
     void operator() (FnArgs... args);
-    EventHandler<FnArgs...>& operator+=(FnType fn) const;
+    EventHandler<FnArgs...>& operator+=(FnType fn);
     void clear();
     
 private:
@@ -53,7 +53,7 @@ void EventHandler<FnArgs...>::operator() (FnArgs... args)
 }
 
 template<typename... FnArgs>
-EventHandler<FnArgs...>& EventHandler<FnArgs...>::operator+=(FnType fn) const
+EventHandler<FnArgs...>& EventHandler<FnArgs...>::operator+=(FnType fn)
 {
     fnList_.push_back(fn);
     return *this;
