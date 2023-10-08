@@ -57,6 +57,7 @@ public:
     
     virtual void connect() override;
     virtual void disconnect() override;
+    virtual bool isConnected() override;
 
 protected:
     SerialPortRigController(std::string serialPort);

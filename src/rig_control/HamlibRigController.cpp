@@ -63,22 +63,26 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     , rig_(nullptr)
     , multipleVfos_(false)
     , pttSet_(false)
+    , currFreq_(0)
+    , currMode_(0)
 {
     // Perform initial load of rig list if this is our first time being created.
-    std::unique_lock<std::mutex> lk(RigListMutex_);
-    if (RigList_.size() == 0)
-    {
-        /* Stop hamlib from spewing info to stderr. */
-        rig_set_debug(RIG_DEBUG_NONE);
+    InitializeHamlibLibrary();
+}
 
-        /* Create sorted list of rigs. */
-        rig_load_all_backends();
-        rig_list_foreach(&HamlibRigController::BuildRigList_, &RigList_);
-        std::sort(RigList_.begin(), RigList_.end(), &HamlibRigController::RigCompare_);
-
-        /* Reset debug output. */
-        rig_set_debug(RIG_DEBUG_VERBOSE);
-    }
+HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort)
+    : rigName_(RigIndexToName(rigIndex))
+    , serialPort_(serialPort)
+    , serialRate_(serialRate)
+    , civHex_(civHex)
+    , pttType_(pttType)
+    , pttSerialPort_(pttSerialPort)
+    , rig_(nullptr)
+    , multipleVfos_(false)
+    , pttSet_(false)
+{
+    // Perform initial load of rig list if this is our first time being created.
+    InitializeHamlibLibrary();
 }
 
 HamlibRigController::~HamlibRigController()
@@ -100,6 +104,24 @@ HamlibRigController::~HamlibRigController()
     cv.wait(lk);
 }
 
+void HamlibRigController::InitializeHamlibLibrary()
+{
+    std::unique_lock<std::mutex> lk(RigListMutex_);
+    if (RigList_.size() == 0)
+    {
+        /* Stop hamlib from spewing info to stderr. */
+        rig_set_debug(RIG_DEBUG_NONE);
+
+        /* Create sorted list of rigs. */
+        rig_load_all_backends();
+        rig_list_foreach(&HamlibRigController::BuildRigList_, &RigList_);
+        std::sort(RigList_.begin(), RigList_.end(), &HamlibRigController::RigCompare_);
+
+        /* Reset debug output. */
+        rig_set_debug(RIG_DEBUG_VERBOSE);
+    }
+}
+
 void HamlibRigController::connect()
 {
     enqueue_(std::bind(&HamlibRigController::connectImpl_, this));
@@ -108,6 +130,11 @@ void HamlibRigController::connect()
 void HamlibRigController::disconnect()
 {
     enqueue_(std::bind(&HamlibRigController::disconnectImpl_, this));
+}
+
+bool HamlibRigController::isConnected()
+{
+    return rig_ != nullptr;
 }
 
 void HamlibRigController::ptt(bool state)
@@ -130,8 +157,10 @@ void HamlibRigController::requestCurrentFrequencyMode()
     enqueue_(std::bind(&HamlibRigController::requestCurrentFrequencyModeImpl_, this));
 }
 
-int HamlibRigController::rigNameToIndex_(std::string rigName)
+int HamlibRigController::RigNameToIndex(std::string rigName)
 {
+    InitializeHamlibLibrary();
+
     int index = 0;
     for (auto& entry : RigList_)
     {
@@ -149,6 +178,21 @@ int HamlibRigController::rigNameToIndex_(std::string rigName)
     return -1;
 }
 
+std::string HamlibRigController::RigIndexToName(unsigned int rigIndex)
+{
+    InitializeHamlibLibrary();
+
+    char name[128];
+    snprintf(name, 128, "%s %s", RigList_[rigIndex]->mfg_name, RigList_[rigIndex]->model_name); 
+    return name;
+}
+
+int HamlibRigController::GetNumberSupportedRadios()
+{
+    InitializeHamlibLibrary();
+    return RigList_.size();
+}
+
 // Note: these execute in the thread created by ThreadedObject on object instantiation.
 
 void HamlibRigController::connectImpl_()
@@ -160,7 +204,7 @@ void HamlibRigController::connectImpl_()
         return;
     }
     
-    auto rigIndex = rigNameToIndex_(rigName_);
+    auto rigIndex = RigNameToIndex(rigName_);
     if (rigIndex == -1)
     {
         std::string errMsg = "Could not find rig " + rigName_ + " in Hamlib database.";
@@ -308,6 +352,11 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
         onRigError(this, "Cannot get current frequency/mode: not connected to radio");
         return;
     }
+
+    if (currFreq_ == frequencyHz)
+    {
+        return;
+    }
     
     if (pttSet_)
     {
@@ -371,6 +420,11 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
             return;
     }
     
+    if (currMode_ == hamlibMode)
+    {
+        return;
+    }
+
     if (pttSet_)
     {
         // If transmitting, temporarily stop transmitting so we can change the mode.
@@ -502,6 +556,11 @@ vfo_t HamlibRigController::getCurrentVfo_()
 void HamlibRigController::setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyHz)
 {
     bool setOkay = false;
+
+    if (currFreq_ == frequencyHz)
+    {
+        return;
+    }
     
 freqAttempt:
     int result = rig_set_freq(rig_, currVfo, frequencyHz);
@@ -527,6 +586,7 @@ freqAttempt:
     // a few seconds after this update.
     if (setOkay)
     {
+        currFreq_ = frequencyHz;
         requestCurrentFrequencyMode();
     }
 }
@@ -535,6 +595,11 @@ void HamlibRigController::setModeHelper_(vfo_t currVfo, rmode_t mode)
 {
     bool setOkay = false;
     
+    if (currMode_ == mode)
+    {
+        return;
+    }
+
 modeAttempt:
     int result = rig_set_mode(rig_, currVfo, mode, RIG_PASSBAND_NOCHANGE);
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
@@ -559,6 +624,7 @@ modeAttempt:
     // a few seconds after this update.
     if (setOkay)
     {
+        currMode_ = mode;
         requestCurrentFrequencyMode();
     }
 }

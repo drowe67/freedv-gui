@@ -11,8 +11,6 @@ set(FREEDV_SOURCES
     plot_scatter.cpp
     plot_spectrum.cpp
     plot_waterfall.cpp
-    hamlib.cpp
-    serialport.cpp
     topFrame.cpp
     sox_biquad.c
     sox_biquad.h
@@ -28,7 +26,6 @@ set(FREEDV_SOURCES
     plot_scatter.h
     plot_spectrum.h
     plot_waterfall.h
-    hamlib.h
     topFrame.h
     version.h
     osx_interface.h

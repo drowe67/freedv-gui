@@ -48,15 +48,22 @@ public:
     };
     
     HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex = 0, const PttType pttType = PTT_VIA_CAT, std::string pttSerialPort = std::string());
+    HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex = 0, const PttType pttType = PTT_VIA_CAT, std::string pttSerialPort = std::string());
     virtual ~HamlibRigController();
     
     virtual void connect() override;
     virtual void disconnect() override;
+    virtual bool isConnected() override;
     virtual void ptt(bool state) override;
     virtual void setFrequency(uint64_t frequency) override;
     virtual void setMode(IRigFrequencyController::Mode mode) override;
     virtual void requestCurrentFrequencyMode() override;
-    
+
+    static void InitializeHamlibLibrary();
+    static int RigNameToIndex(std::string rigName);
+    static std::string RigIndexToName(unsigned int rigIndex);
+    static int GetNumberSupportedRadios();
+
 private:
     using RigList = std::vector<const struct rig_caps *>;
     
@@ -70,8 +77,9 @@ private:
     RIG* rig_;
     bool multipleVfos_;
     bool pttSet_;
+    uint64_t currFreq_;
+    rmode_t currMode_;
     
-    int rigNameToIndex_(std::string rigName);
     vfo_t getCurrentVfo_();
     void setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyHz);
     void setModeHelper_(vfo_t currVfo, rmode_t mode);

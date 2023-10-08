@@ -118,30 +118,26 @@ bool MainApp::CanAccessSerialPort(std::string portName)
 
 void MainFrame::OpenSerialPort(void)
 {
-    Serialport *serialport = wxGetApp().m_serialport;
-
     if(!wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPort->IsEmpty()) 
     {
         if (wxGetApp().CanAccessSerialPort((const char*)wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPort->ToUTF8()))
         {
-            serialport->openport(
-                    wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPort->c_str(),
+            wxGetApp().m_serialport = std::make_shared<SerialPortOutRigController>(
+                    (const char*)wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPort->c_str(),
                     wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseRTS,
                     wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS,
                     wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseDTR,
                     wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR);
-            if (serialport->isopen()) 
-            {
-                // always start PTT in Rx state
-                serialport->ptt(false);
-            }
-            else 
-            {
+            
+            wxGetApp().m_serialport->onRigError += [&](IRigController*, std::string err) {
+                std::string fullErrMsg = "Couldn't open serial port for PTT output: " + err; 
                 CallAfter([&]() 
                 {
-                    wxMessageBox("Couldn't open serial port for PTT output", wxT("Error"), wxOK | wxICON_ERROR, this);
+                    wxMessageBox(fullErrMsg, wxT("Error"), wxOK | wxICON_ERROR, this);
                 });
-            }
+            };
+
+            wxGetApp().m_serialport->connect();
         }
     }
 }
@@ -153,13 +149,10 @@ void MainFrame::OpenSerialPort(void)
 
 void MainFrame::CloseSerialPort(void)
 {
-    Serialport *serialport = wxGetApp().m_serialport;
-    if (serialport->isopen()) {
-        // always end with PTT in rx state
-
-        serialport->ptt(false);
-        serialport->closeport();
-    }
+    // always end with PTT in rx state
+    wxGetApp().m_serialport->ptt(false);
+    wxGetApp().m_serialport->disconnect();
+    wxGetApp().m_serialport = nullptr;
 }
 
 
@@ -169,37 +162,33 @@ void MainFrame::CloseSerialPort(void)
 
 void MainFrame::OpenPTTInPort(void)
 {
-    Serialport *serialport = wxGetApp().m_pttInSerialPort;
-
     if(!wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPort->IsEmpty()) 
     {
         if (wxGetApp().CanAccessSerialPort((const char*)wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPort->ToUTF8()))
         {
-            serialport->openport(
-                wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPort->c_str(),
-                false,
-                false,
-                false,
-                false);
-            if (!serialport->isopen()) 
+            wxGetApp().m_pttInSerialPort = std::make_shared<SerialPortInRigController>(
+                (const char*)wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPort->c_str(),
+                wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPolarityCTS);
+            
+            wxGetApp().m_pttInSerialPort->onRigError += [&](IRigController*, std::string err)
             {
+                std::string fullErr = "Couldn't open PTT input port: " + err;
                 CallAfter([&]() 
                 {
-                    wxMessageBox("Couldn't open PTT input port", wxT("Error"), wxOK | wxICON_ERROR, this);
+                    wxMessageBox(fullErr, wxT("Error"), wxOK | wxICON_ERROR, this);
                 });
-            } 
-            else 
+            };
+
+            wxGetApp().m_pttInSerialPort->onPttChange += [&](IRigController*, bool pttState)
             {
-                // Set up PTT monitoring. When PTT state changes, we should also change 
-                // the PTT state in th app.
-                serialport->enablePttInputMonitoring(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPolarityCTS, [&](bool pttState) {
-                    fprintf(stderr, "PTT input state is now %d\n", pttState);
-                    GetEventHandler()->CallAfter([&]() { 
-                        m_btnTogPTT->SetValue(pttState); 
-                        togglePTT(); 
-                    });
+                fprintf(stderr, "PTT input state is now %d\n", pttState);
+                GetEventHandler()->CallAfter([&]() { 
+                    m_btnTogPTT->SetValue(pttState); 
+                    togglePTT(); 
                 });
-            }
+            };
+
+            wxGetApp().m_pttInSerialPort->connect();
         }
     }
 }
@@ -211,10 +200,8 @@ void MainFrame::OpenPTTInPort(void)
 
 void MainFrame::ClosePTTInPort(void)
 {
-    Serialport *serialport = wxGetApp().m_pttInSerialPort;
-    if (serialport->isopen()) {
-        serialport->closeport();
-    }
+    wxGetApp().m_pttInSerialPort->disconnect();
+    wxGetApp().m_pttInSerialPort = nullptr;
 }
 
 struct FIFO extern  *g_txDataInFifo;

@@ -60,6 +60,11 @@ void SerialPortRigController::disconnect()
     enqueue_(std::bind(&SerialPortRigController::disconnectImpl_, this));
 }
 
+bool SerialPortRigController::isConnected()
+{
+    return serialPortHandle_ != COM_HANDLE_INVALID;
+}
+
 //----------------------------------------------------------------
 // (raise|lower)(RTS|DTR)()
 //
