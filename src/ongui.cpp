@@ -317,8 +317,8 @@ bool MainFrame::OpenHamlibRig() {
             rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress, 
             pttType, pttType == HamlibRigController::PTT_VIA_CAT || pttType == HamlibRigController::PTT_VIA_NONE ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8));
 
-        std::mutex mtx;
-        std::condition_variable cv;
+        std::mutex* mtx = new std::mutex;
+        std::condition_variable* cv = new std::condition_variable;
 
         wxGetApp().m_hamlib->onRigError += [&](IRigController*, std::string err)
         {
@@ -327,17 +327,28 @@ bool MainFrame::OpenHamlibRig() {
                 wxMessageBox(fullErr, wxT("Error"), wxOK | wxICON_ERROR, this);
             });
 
-            cv.notify_one();
+            if (cv)
+            {
+                cv->notify_one();
+            }
         };
 
         wxGetApp().m_hamlib->onRigConnected += [&](IRigController*) {
-            cv.notify_one();
+            if (cv)
+            {
+                cv->notify_one();
+            }
 
             if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
                 wxGetApp().m_hamlib->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
                 wxGetApp().m_hamlib->setMode(getCurrentMode_());
             }
+        };
+
+        wxGetApp().m_hamlib->onRigDisconnected += [&](IRigController*) {
+            m_txtModeStatus->SetLabel(wxT("unk"));
+            m_txtModeStatus->Enable(false);
         };
 
         wxGetApp().m_hamlib->onFreqModeChange += [&](IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
@@ -348,21 +359,26 @@ bool MainFrame::OpenHamlibRig() {
                 {
                     case IRigFrequencyController::USB:
                     case IRigFrequencyController::DIGU:
-                        modeBox->SetLabel(wxT("USB"));
+                        m_txtModeStatus->SetLabel(wxT("USB"));
+                        m_txtModeStatus->Enable(true);
                         break;
                     case IRigFrequencyController::LSB:
                     case IRigFrequencyController::DIGL:
-                        modeBox->SetLabel(wxT("LSB"));
+                        m_txtModeStatus->SetLabel(wxT("LSB"));
+                        m_txtModeStatus->Enable(true);
                         break;
                     case IRigFrequencyController::FM:
                     case IRigFrequencyController::DIGFM:
-                        modeBox->SetLabel(wxT("FM"));
+                        m_txtModeStatus->SetLabel(wxT("FM"));
+                        m_txtModeStatus->Enable(true);
                         break;
                     case IRigFrequencyController::AM:
-                        modeBox->SetLabel(wxT("AM"));
+                        m_txtModeStatus->SetLabel(wxT("AM"));
+                        m_txtModeStatus->Enable(true);
                         break;
                     default:
-                        modeBox->SetLabel(wxT("unk"));
+                        m_txtModeStatus->SetLabel(wxT("unk"));
+                        m_txtModeStatus->Enable(false);
                         break;
                 }
 
@@ -379,11 +395,11 @@ bool MainFrame::OpenHamlibRig() {
     
                 if (isMatchingMode)
                 {
-                    modeBox->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+                    m_txtModeStatus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
                 }
                 else
                 {
-                    modeBox->SetForegroundColour(wxColor(*wxRED));
+                    m_txtModeStatus->SetForegroundColour(wxColor(*wxRED));
                 }
 
                 // Update frequency box
@@ -392,13 +408,18 @@ bool MainFrame::OpenHamlibRig() {
                 {
                     m_cboReportFrequency->SetValue(wxString::Format("%.4f", freq/1000.0/1000.0));
                 }
-                modeBox->Refresh();
+                m_txtModeStatus->Refresh();
             });
         };
 
-        std::unique_lock<std::mutex> lk(mtx);
+        std::unique_lock<std::mutex> lk(*mtx);
         wxGetApp().m_hamlib->connect();
-        cv.wait(lk);
+        cv->wait(lk);
+
+        delete cv;
+        delete mtx;
+        cv = nullptr;
+        mtx = nullptr;
 
         return wxGetApp().m_hamlib->isConnected();
     }
