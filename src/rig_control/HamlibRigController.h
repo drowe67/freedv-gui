@@ -71,7 +71,7 @@ private:
     bool multipleVfos_;
     bool pttSet_;
     
-    unsigned int rigNameToIndex_(std::string rigName);
+    int rigNameToIndex_(std::string rigName);
     vfo_t getCurrentVfo_();
     void setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyHz);
     void setModeHelper_(vfo_t currVfo, rmode_t mode);

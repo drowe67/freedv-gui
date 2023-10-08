@@ -24,6 +24,7 @@
 #include <condition_variable>
 #include <functional>
 #include <sstream>
+#include <algorithm>
 
 #include "HamlibRigController.h"
 
@@ -73,7 +74,7 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
         /* Create sorted list of rigs. */
         rig_load_all_backends();
         rig_list_foreach(&HamlibRigController::BuildRigList_, &RigList_);
-        sort(RigList_.begin(), RigList_.end(), &HamlibRigController::RigCompare_);
+        std::sort(RigList_.begin(), RigList_.end(), &HamlibRigController::RigCompare_);
 
         /* Reset debug output. */
         rig_set_debug(RIG_DEBUG_VERBOSE);
@@ -129,9 +130,9 @@ void HamlibRigController::requestCurrentFrequencyMode()
     enqueue_(std::bind(&HamlibRigController::requestCurrentFrequencyModeImpl_, this));
 }
 
-unsigned int HamlibRigController::rigNameToIndex_(std::string rigName)
+int HamlibRigController::rigNameToIndex_(std::string rigName)
 {
-    unsigned int index = 0;
+    int index = 0;
     for (auto& entry : RigList_)
     {
         char name[128];
