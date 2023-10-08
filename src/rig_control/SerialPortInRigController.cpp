@@ -50,18 +50,18 @@ SerialPortInRigController::SerialPortInRigController(std::string serialPort, boo
 
 bool SerialPortInRigController::getCTS_() 
 {
-	if(serialPortHandle_ == COM_HANDLE_INVALID)
-		return false;
+    if(serialPortHandle_ == COM_HANDLE_INVALID)
+        return false;
 #ifdef _WIN32
     DWORD modemFlags = 0;
-	GetCommModemStatus(com_handle, &modemFlags);
+    GetCommModemStatus(serialPortHandle_, &modemFlags);
     return (modemFlags & MS_CTS_ON);
 #else
-	{	// For C89 happiness
-		int flags = 0;
-		ioctl(serialPortHandle_, TIOCMGET, &flags);
+    {    // For C89 happiness
+        int flags = 0;
+        ioctl(serialPortHandle_, TIOCMGET, &flags);
         return flags & TIOCM_CTS;
-	}
+    }
 #endif    
 }
 

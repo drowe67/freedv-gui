@@ -68,57 +68,57 @@ void SerialPortRigController::disconnect()
 
 void SerialPortRigController::raiseDTR_(void)
 {
-	if(serialPortHandle_ == COM_HANDLE_INVALID)
-		return;
+    if(serialPortHandle_ == COM_HANDLE_INVALID)
+        return;
 #ifdef _WIN32
-	EscapeCommFunction(serialPortHandle_, SETDTR);
+    EscapeCommFunction(serialPortHandle_, SETDTR);
 #else
-	{	// For C89 happiness
-		int flags = TIOCM_DTR;
-		ioctl(serialPortHandle_, TIOCMBIS, &flags);
-	}
+    {    // For C89 happiness
+        int flags = TIOCM_DTR;
+        ioctl(serialPortHandle_, TIOCMBIS, &flags);
+    }
 #endif
 }
 
 void SerialPortRigController::raiseRTS_(void)
 {
-	if(serialPortHandle_ == COM_HANDLE_INVALID)
-		return;
+    if(serialPortHandle_ == COM_HANDLE_INVALID)
+        return;
 #ifdef _WIN32
-	EscapeCommFunction(serialPortHandle_, SETRTS);
+    EscapeCommFunction(serialPortHandle_, SETRTS);
 #else
-	{	// For C89 happiness
-		int flags = TIOCM_RTS;
-		ioctl(serialPortHandle_, TIOCMBIS, &flags);
-	}
+    {    // For C89 happiness
+        int flags = TIOCM_RTS;
+        ioctl(serialPortHandle_, TIOCMBIS, &flags);
+    }
 #endif
 }
 
 void SerialPortRigController::lowerDTR_(void)
 {
-	if(serialPortHandle_ == COM_HANDLE_INVALID)
-		return;
+    if(serialPortHandle_ == COM_HANDLE_INVALID)
+        return;
 #ifdef _WIN32
-	EscapeCommFunction(serialPortHandle_, CLRDTR);
+    EscapeCommFunction(serialPortHandle_, CLRDTR);
 #else
-	{	// For C89 happiness
-		int flags = TIOCM_DTR;
-		ioctl(serialPortHandle_, TIOCMBIC, &flags);
-	}
+    {    // For C89 happiness
+        int flags = TIOCM_DTR;
+        ioctl(serialPortHandle_, TIOCMBIC, &flags);
+    }
 #endif
 }
 
 void SerialPortRigController::lowerRTS_(void)
 {
-	if(serialPortHandle_ == COM_HANDLE_INVALID)
-		return;
+    if(serialPortHandle_ == COM_HANDLE_INVALID)
+        return;
 #ifdef _WIN32
-	EscapeCommFunction(serialPortHandle_, CLRRTS);
+    EscapeCommFunction(serialPortHandle_, CLRRTS);
 #else
-	{	// For C89 happiness
-		int flags = TIOCM_RTS;
-		ioctl(serialPortHandle_, TIOCMBIC, &flags);
-	}
+    {    // For C89 happiness
+        int flags = TIOCM_RTS;
+        ioctl(serialPortHandle_, TIOCMBIC, &flags);
+    }
 #endif
 }
 
@@ -129,14 +129,14 @@ void SerialPortRigController::connectImpl_()
 #ifdef _WIN32
     {
         COMMTIMEOUTS timeouts;
-        DCB	dcb;
+        DCB    dcb;
         TCHAR  lpszFunction[100];
-	
+    
         // As per:
         //   [1] https://support.microsoft.com/en-us/help/115831/howto-specify-serial-ports-larger-than-com9
         //   [2] Hamlib lib/termios.c, win32_serial_open()
 
-    	/*  
+        /*  
                 To test change of COM port for USB serial device on Windows
 
                 1/ Run->devmgmnt.msc
@@ -144,75 +144,76 @@ void SerialPortRigController::connectImpl_()
                 3/ Unplug USB serial device and plug in again.  This is really important.  FreeDV won't recognise
                    new COM port number until this is done.
                 4/ Test PTT on FreeDV Tools->PTT
-    	*/
+        */
 
         TCHAR  nameWithStrangePrefix[100];
         StringCchPrintf(nameWithStrangePrefix, 100, TEXT("\\\\.\\%hs"), serialPort_.c_str());
         if (g_verbose) _tprintf(_T("nameWithStrangePrefix: %s\r\n"), nameWithStrangePrefix);
-	
+    
         if((serialPortHandle_=CreateFile(nameWithStrangePrefix
                                    ,GENERIC_READ | GENERIC_WRITE/* Access */
-                                   ,0				/* Share mode */
-                                   ,NULL		 	/* Security attributes */
-                                   ,OPEN_EXISTING		/* Create access */
+                                   ,0                /* Share mode */
+                                   ,NULL             /* Security attributes */
+                                   ,OPEN_EXISTING        /* Create access */
                                    ,0                           /* File attributes */
-                                   ,NULL		        /* Template */
+                                   ,NULL                /* Template */
                                    ))==INVALID_HANDLE_VALUE) {
-    	    StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("CreateFile"));
-    	    goto error;
-    	}
+            StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("CreateFile"));
+            goto error;
+        }
         if (g_verbose) fprintf(stderr, "CreateFileA OK\n");
-	
+    
         if(GetCommTimeouts(serialPortHandle_, &timeouts)) {
             if (g_verbose) fprintf(stderr, "GetCommTimeouts OK\n");
         
             timeouts.ReadIntervalTimeout=MAXDWORD;
             timeouts.ReadTotalTimeoutMultiplier=0;
-            timeouts.ReadTotalTimeoutConstant=0;		// No-wait read timeout
+            timeouts.ReadTotalTimeoutConstant=0;        // No-wait read timeout
             timeouts.WriteTotalTimeoutMultiplier=0;
-            timeouts.WriteTotalTimeoutConstant=5000;	// 5 seconds
-    	    if (!SetCommTimeouts(serialPortHandle_,&timeouts)) {
-    	        StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("SetCommTimeouts"));
-                goto error;	      
-    	    }
-    	    if (g_verbose) fprintf(stderr, "SetCommTimeouts OK\n");
+            timeouts.WriteTotalTimeoutConstant=5000;    // 5 seconds
+            if (!SetCommTimeouts(serialPortHandle_,&timeouts)) {
+                StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("SetCommTimeouts"));
+                goto error;          
+            }
+            if (g_verbose) fprintf(stderr, "SetCommTimeouts OK\n");
         } else {
-    	    StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("GetCommTimeouts"));
+            StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("GetCommTimeouts"));
             goto error;
         }
 
         /* Force N-8-1 mode: */
         if(GetCommState(serialPortHandle_, &dcb)==TRUE) {
-	    if (g_verbose) fprintf(stderr, "GetCommState OK\n");
-	    
-            dcb.ByteSize		= 8;
-            dcb.Parity			= NOPARITY;
-            dcb.StopBits		= ONESTOPBIT;
-            dcb.DCBlength		= sizeof(DCB);
-            dcb.fBinary			= TRUE;
-            dcb.fOutxCtsFlow	= FALSE;
-            dcb.fOutxDsrFlow	= FALSE;
-            dcb.fDtrControl		= DTR_CONTROL_DISABLE;
-            dcb.fDsrSensitivity	= FALSE;
+        if (g_verbose) fprintf(stderr, "GetCommState OK\n");
+        
+            dcb.ByteSize        = 8;
+            dcb.Parity            = NOPARITY;
+            dcb.StopBits        = ONESTOPBIT;
+            dcb.DCBlength        = sizeof(DCB);
+            dcb.fBinary            = TRUE;
+            dcb.fOutxCtsFlow    = FALSE;
+            dcb.fOutxDsrFlow    = FALSE;
+            dcb.fDtrControl        = DTR_CONTROL_DISABLE;
+            dcb.fDsrSensitivity    = FALSE;
             dcb.fTXContinueOnXoff= TRUE;
-            dcb.fOutX			= FALSE;
-            dcb.fInX			= FALSE;
-            dcb.fRtsControl		= RTS_CONTROL_DISABLE;
-            dcb.fAbortOnError	= FALSE;
+            dcb.fOutX            = FALSE;
+            dcb.fInX            = FALSE;
+            dcb.fRtsControl        = RTS_CONTROL_DISABLE;
+            dcb.fAbortOnError    = FALSE;
             if (!SetCommState(serialPortHandle_, &dcb)) {
-  	            StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("SetCommState"));
+                  StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("SetCommState"));
                 goto error;           
             }
-	    if (g_verbose) fprintf(stderr, "SetCommState OK\n");
+        if (g_verbose) fprintf(stderr, "SetCommState OK\n");
         } else {
-  	        StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("GetCommState"));
+            StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("GetCommState"));
             goto error;           
         }
-	
-	    return true;
-	
+
+        onRigConnected(this);
+        return;
+    
 error:
-	    if (g_verbose)
+        if (g_verbose)
         {
 #ifdef UNICODE
             std::vector<char> buffer;
@@ -233,7 +234,7 @@ error:
             fprintf(stderr, "%s failed\n", lpszFunction);
 #endif // UNICODE
         }
-	
+    
         // Retrieve the system error message for the last-error code
 
         LPVOID lpMsgBuf;
@@ -264,72 +265,73 @@ error:
         LocalFree(lpMsgBuf);
         LocalFree(lpDisplayBuf);
 
-	    return;
+        return;
     }
 #else
-	{
-		struct termios t;
+    {
+        struct termios t;
 
-		if((serialPortHandle_=open(serialPort_.c_str(), O_NONBLOCK|O_RDWR))== COM_HANDLE_INVALID)
+        if((serialPortHandle_=open(serialPort_.c_str(), O_NONBLOCK|O_RDWR))== COM_HANDLE_INVALID)
         {
             std::string errMsg = "Could not open serial port " + serialPort_;
             onRigError(this, errMsg);
             return;
         }
 
-		if(tcgetattr(serialPortHandle_, &t)==-1) 
+        if(tcgetattr(serialPortHandle_, &t)==-1) 
         {
-			close(serialPortHandle_);
-			serialPortHandle_ = COM_HANDLE_INVALID;
-			
+            close(serialPortHandle_);
+            serialPortHandle_ = COM_HANDLE_INVALID;
+            
             std::string errMsg = "Could not open serial port " + serialPort_;
             onRigError(this, errMsg);
             return;
-		}
+        }
 
-		t.c_iflag = (
-					  IGNBRK   /* ignore BREAK condition */
-					| IGNPAR   /* ignore (discard) parity errors */
-					);
-		t.c_oflag = 0;	/* No output processing */
-		t.c_cflag = (
-					  CS8         /* 8 bits */
-					| CREAD       /* enable receiver */
+        t.c_iflag = (
+                      IGNBRK   /* ignore BREAK condition */
+                    | IGNPAR   /* ignore (discard) parity errors */
+                    );
+        t.c_oflag = 0;    /* No output processing */
+        t.c_cflag = (
+                      CS8         /* 8 bits */
+                    | CREAD       /* enable receiver */
 
-		/*
-		Fun snippet from the FreeBSD manpage:
+        /*
+        Fun snippet from the FreeBSD manpage:
 
-			 If CREAD is set, the receiver is enabled.  Otherwise, no character is
-			 received.  Not all hardware supports this bit.  In fact, this flag is
-			 pretty silly and if it were not part of the termios specification it
-			 would be omitted.
-		*/
-					| CLOCAL      /* ignore modem status lines */
-					);
+             If CREAD is set, the receiver is enabled.  Otherwise, no character is
+             received.  Not all hardware supports this bit.  In fact, this flag is
+             pretty silly and if it were not part of the termios specification it
+             would be omitted.
+        */
+                    | CLOCAL      /* ignore modem status lines */
+                    );
 
-		t.c_lflag = 0;	/* No local modes */
-		if(tcsetattr(serialPortHandle_, TCSANOW, &t)==-1) 
+        t.c_lflag = 0;    /* No local modes */
+        if(tcsetattr(serialPortHandle_, TCSANOW, &t)==-1) 
         {
-			close(serialPortHandle_);
-			serialPortHandle_ = COM_HANDLE_INVALID;
-			
+            close(serialPortHandle_);
+            serialPortHandle_ = COM_HANDLE_INVALID;
+            
             std::string errMsg = "Could not open serial port " + serialPort_;
             onRigError(this, errMsg);
             return;
-		}
-		
-	}
+        }
+
+        onRigConnected(this);        
+    }
 #endif
 
-    onRigConnected(this);
 }
+
 
 void SerialPortRigController::disconnectImpl_()
 {
 #ifdef _WIN32
-	CloseHandle(serialPortHandle_);
+    CloseHandle(serialPortHandle_);
 #else
-	close(serialPortHandle_);
+    close(serialPortHandle_);
 #endif
     serialPortHandle_ = COM_HANDLE_INVALID;
 
