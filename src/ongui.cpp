@@ -317,28 +317,15 @@ bool MainFrame::OpenHamlibRig() {
             rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress, 
             pttType, pttType == HamlibRigController::PTT_VIA_CAT || pttType == HamlibRigController::PTT_VIA_NONE ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8));
 
-        std::mutex* mtx = new std::mutex;
-        std::condition_variable* cv = new std::condition_variable;
-
-        wxGetApp().m_hamlib->onRigError += [&](IRigController*, std::string err)
+        wxGetApp().m_hamlib->onRigError += [this](IRigController*, std::string err)
         {
             std::string fullErr = "Couldn't connect to Radio with hamlib: " + err;
-            CallAfter([&]() {
+            CallAfter([&, fullErr]() {
                 wxMessageBox(fullErr, wxT("Error"), wxOK | wxICON_ERROR, this);
             });
-
-            if (cv)
-            {
-                cv->notify_one();
-            }
         };
 
         wxGetApp().m_hamlib->onRigConnected += [&](IRigController*) {
-            if (cv)
-            {
-                cv->notify_one();
-            }
-
             if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
                 wxGetApp().m_hamlib->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
@@ -347,13 +334,15 @@ bool MainFrame::OpenHamlibRig() {
         };
 
         wxGetApp().m_hamlib->onRigDisconnected += [&](IRigController*) {
-            m_txtModeStatus->SetLabel(wxT("unk"));
-            m_txtModeStatus->Enable(false);
+            CallAfter([&]() {
+                m_txtModeStatus->SetLabel(wxT("unk"));
+                m_txtModeStatus->Enable(false);
+            });
         };
 
         wxGetApp().m_hamlib->onFreqModeChange += [&](IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
         {
-            CallAfter([&]() {
+            CallAfter([&, mode, freq]() {
                 // Update string value.
                 switch(mode)
                 {
@@ -412,16 +401,8 @@ bool MainFrame::OpenHamlibRig() {
             });
         };
 
-        std::unique_lock<std::mutex> lk(*mtx);
         wxGetApp().m_hamlib->connect();
-        cv->wait(lk);
-
-        delete cv;
-        delete mtx;
-        cv = nullptr;
-        mtx = nullptr;
-
-        return wxGetApp().m_hamlib->isConnected();
+        return true;
     }
     else
     {

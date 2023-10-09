@@ -459,7 +459,6 @@ void HamlibRigController::requestCurrentFrequencyModeImpl_()
 {
     if (rig_ == nullptr)
     {
-        onRigError(this, "Cannot get current frequency/mode: not connected to radio");
         return;
     }
     
