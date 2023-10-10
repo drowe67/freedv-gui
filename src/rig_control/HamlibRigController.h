@@ -47,8 +47,8 @@ public:
         PTT_VIA_NONE,
     };
     
-    HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex = 0, const PttType pttType = PTT_VIA_CAT, std::string pttSerialPort = std::string());
-    HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex = 0, const PttType pttType = PTT_VIA_CAT, std::string pttSerialPort = std::string());
+    HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex = 0, const PttType pttType = PTT_VIA_CAT, std::string pttSerialPort = std::string(), bool restoreFreqModeOnDisconnect = false);
+    HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex = 0, const PttType pttType = PTT_VIA_CAT, std::string pttSerialPort = std::string(), bool restoreFreqModeOnDisconnect = false);
     virtual ~HamlibRigController();
     
     virtual void connect() override;
@@ -79,6 +79,9 @@ private:
     bool pttSet_;
     uint64_t currFreq_;
     rmode_t currMode_;
+    bool restoreOnDisconnect_;
+    uint64_t origFreq_;
+    rmode_t origMode_;
     
     vfo_t getCurrentVfo_();
     void setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyHz);

@@ -53,7 +53,7 @@ bool HamlibRigController::RigCompare_(const struct rig_caps *rig1, const struct 
     return rig1->rig_model < rig2->rig_model;
 }
 
-HamlibRigController::HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort)
+HamlibRigController::HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect)
     : rigName_(rigName)
     , serialPort_(serialPort)
     , serialRate_(serialRate)
@@ -65,12 +65,15 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     , pttSet_(false)
     , currFreq_(0)
     , currMode_(0)
+    , restoreOnDisconnect_(restoreFreqModeOnDisconnect)
+    , origFreq_(0)
+    , origMode_(0)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
 }
 
-HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort)
+HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect)
     : rigName_(RigIndexToName(rigIndex))
     , serialPort_(serialPort)
     , serialRate_(serialRate)
@@ -80,6 +83,9 @@ HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, c
     , rig_(nullptr)
     , multipleVfos_(false)
     , pttSet_(false)
+    , restoreOnDisconnect_(restoreFreqModeOnDisconnect)
+    , origFreq_(0)
+    , origMode_(0)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -213,6 +219,9 @@ void HamlibRigController::connectImpl_()
     }
     
     /* Initialise, configure and open. */
+    origFreq_ = 0;
+    origMode_ = 0;
+    
     rig_ = rig_init(RigList_[rigIndex]->rig_model);
     if (!rig_) 
     {
@@ -303,6 +312,17 @@ void HamlibRigController::disconnectImpl_()
             pttImpl_(false);
         }
  
+        // If we're told to restore on disconnect, do so.
+        if (restoreOnDisconnect_)
+        {
+            vfo_t currVfo = getCurrentVfo_(); 
+            setFrequencyHelper_(currVfo, origFreq_);
+            setModeHelper_(currVfo, origMode_);
+        }
+        
+        origFreq_ = 0;
+        origMode_ = 0;
+        
         rig_close(rig_);
         rig_cleanup(rig_);
         rig_ = nullptr;
@@ -527,6 +547,14 @@ freqAttempt:
                 default:
                     currMode = UNKNOWN;
                     break;
+            }
+            
+            // If this is the first time we're retrieving the current frequency/mode,
+            // store it for later restore on disconnect.
+            if (origFreq_ == 0)
+            {
+                origFreq_ = freq;
+                origMode_ = mode;
             }
             
             onFreqModeChange(this, freq, currMode);

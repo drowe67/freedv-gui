@@ -315,7 +315,8 @@ bool MainFrame::OpenHamlibRig() {
     {
         wxGetApp().m_hamlib = std::make_shared<HamlibRigController>(
             rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress, 
-            pttType, pttType == HamlibRigController::PTT_VIA_CAT || pttType == HamlibRigController::PTT_VIA_NONE ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8));
+            pttType, pttType == HamlibRigController::PTT_VIA_CAT || pttType == HamlibRigController::PTT_VIA_NONE ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8),
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
 
         wxGetApp().m_hamlib->onRigError += [this](IRigController*, std::string err)
         {
