@@ -29,6 +29,7 @@ SerialPortInRigController::SerialPortInRigController(std::string serialPort, boo
     , threadExiting_(false)
     , ctsPos_(ctsPos)
     , currentPttInputState_(false)
+    , firstPoll_(true)
 {
     // Perform required initialization on successful connection.
     onRigConnected += [&](IRigController*) {
@@ -39,6 +40,7 @@ SerialPortInRigController::SerialPortInRigController(std::string serialPort, boo
         // Start polling thread.
         threadExiting_ = false;
         currentPttInputState_ = false;
+        firstPoll_ = true;
         pollThread_ = std::thread(std::bind(&SerialPortInRigController::pollThreadEntry_, this));
     };
 
@@ -88,8 +90,9 @@ void SerialPortInRigController::pollThreadEntry_()
 void SerialPortInRigController::pollSerialPort_()
 {
     bool pttState = getCTS_();
-    if (pttState != currentPttInputState_)
+    if (firstPoll_ || pttState != currentPttInputState_)
     {
+        firstPoll_ = false;
         currentPttInputState_ = pttState;
         onPttChange(this, currentPttInputState_ == ctsPos_);
     }

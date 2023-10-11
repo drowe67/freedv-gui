@@ -41,7 +41,8 @@ private:
     bool threadExiting_;
     bool ctsPos_;
     bool currentPttInputState_;
-
+    bool firstPoll_;
+    
     bool getCTS_(void);
 
     void pollThreadEntry_();
