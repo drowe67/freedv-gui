@@ -931,6 +931,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Increase RX coloring timeout in FreeDV Reporter to 20 seconds. (PR #558)
 3. Documentation:
     * Add information about multiple audio devices and macOS. (PR #554)
+4. Cleanup:
+    * Refactor rig control handling to improve performance and maintainability. (PR #564)
 
 ## V1.9.2 September 2023
 
