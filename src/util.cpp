@@ -150,9 +150,12 @@ void MainFrame::OpenSerialPort(void)
 void MainFrame::CloseSerialPort(void)
 {
     // always end with PTT in rx state
-    wxGetApp().m_serialport->ptt(false);
-    wxGetApp().m_serialport->disconnect();
-    wxGetApp().m_serialport = nullptr;
+    if (wxGetApp().m_serialport)
+    {
+        wxGetApp().m_serialport->ptt(false);
+        wxGetApp().m_serialport->disconnect();
+        wxGetApp().m_serialport = nullptr;
+    }
 }
 
 
@@ -200,8 +203,11 @@ void MainFrame::OpenPTTInPort(void)
 
 void MainFrame::ClosePTTInPort(void)
 {
-    wxGetApp().m_pttInSerialPort->disconnect();
-    wxGetApp().m_pttInSerialPort = nullptr;
+    if (wxGetApp().m_pttInSerialPort)
+    {
+        wxGetApp().m_pttInSerialPort->disconnect();
+        wxGetApp().m_pttInSerialPort = nullptr;
+    }
 }
 
 struct FIFO extern  *g_txDataInFifo;
