@@ -278,7 +278,8 @@ void HamlibRigController::connectImpl_()
             break;
     }
     
-    if (rig_open(rig_) == RIG_OK) 
+    auto result = rig_open(rig_);
+    if (result == RIG_OK) 
     {
         if (g_verbose) fprintf(stderr, "hamlib: rig_open() OK\n");
         onRigConnected(this);
@@ -295,6 +296,11 @@ void HamlibRigController::connectImpl_()
         // revert on close.
         requestCurrentFrequencyMode();
         return;
+    }
+    else
+    {
+        std::string errMsg = std::string("Could not connect to radio: ") + rigerror(result);
+        onRigError(this, errMsg);
     }
     if (g_verbose) fprintf(stderr, "hamlib: rig_open() failed ...\n");
 
@@ -335,7 +341,6 @@ void HamlibRigController::pttImpl_(bool state)
 
     if (rig_ == nullptr)
     {
-        onRigError(this, "Cannot set PTT: not connected to radio");
         return;
     }
 
@@ -369,7 +374,6 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
 {
     if (rig_ == nullptr)
     {
-        onRigError(this, "Cannot get current frequency/mode: not connected to radio");
         return;
     }
 
@@ -388,6 +392,9 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
             // as it'll fail on some radios.
             if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
 
+            std::string errMsg = std::string("Could not disable PTT prior to frequency change: ") + rigerror(result);
+            onRigError(this, errMsg);
+            
             return;
         }
     }
@@ -404,6 +411,9 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
             // If we can't stop transmitting, we shouldn't try to change the mode
             // as it'll fail on some radios.
             if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
+            
+            std::string errMsg = std::string("Could not enable PTT after frequency change: ") + rigerror(result);
+            onRigError(this, errMsg);
         }
     }
 }
@@ -440,7 +450,7 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
             return;
     }
     
-    if (currMode_ == hamlibMode)
+    if (rig_ == nullptr || currMode_ == hamlibMode)
     {
         return;
     }
@@ -454,6 +464,9 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
             // If we can't stop transmitting, we shouldn't try to change the mode
             // as it'll fail on some radios.
             if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
+            
+            std::string errMsg = std::string("Could not disable PTT prior to mode change: ") + rigerror(result);
+            onRigError(this, errMsg);
 
             return;
         }
@@ -471,6 +484,9 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
             // If we can't stop transmitting, we shouldn't try to change the mode
             // as it'll fail on some radios.
             if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
+            
+            std::string errMsg = std::string("Could not enable PTT after mode change: ") + rigerror(result);
+            onRigError(this, errMsg);
         }
     }
 }
