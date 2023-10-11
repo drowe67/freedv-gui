@@ -48,6 +48,17 @@ SerialPortInRigController::SerialPortInRigController(std::string serialPort, boo
     };
 }
 
+SerialPortInRigController::~SerialPortInRigController()
+{
+    onRigDisconnected.clear();
+    
+    if (pollThread_.joinable())
+    {
+        threadExiting_ = true;
+        pollThread_.join();
+    }
+}
+
 bool SerialPortInRigController::getCTS_() 
 {
     if(serialPortHandle_ == COM_HANDLE_INVALID)

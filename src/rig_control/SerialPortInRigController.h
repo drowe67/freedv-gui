@@ -31,7 +31,7 @@ class SerialPortInRigController : virtual public IRigPttController, virtual publ
 {
 public:
     SerialPortInRigController(std::string serialPort, bool ctsPos);
-    virtual ~SerialPortInRigController() = default;
+    virtual ~SerialPortInRigController();
 
     virtual void ptt(bool state) override { /* does not support output */ }
 
