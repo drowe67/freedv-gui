@@ -294,7 +294,7 @@ void HamlibRigController::connectImpl_()
 
         // Get current frequency and mode when we first connect so we can 
         // revert on close.
-        requestCurrentFrequencyMode();
+        requestCurrentFrequencyModeImpl_();
         return;
     }
     else
