@@ -1943,9 +1943,17 @@ void MainFrame::performFreeDVOn_()
         m_textLevel->SetLabel(wxT(""));
         m_gaugeLevel->SetValue(0);
     });
-
+    
     // attempt to start sound cards and tx/rx processing
-    if (VerifyMicrophonePermissions())
+    bool micPermissionsSuccessful = false;
+    executeOnUiThreadAndWait_([&]() 
+    {
+        // Note: this executes on the UI thread as macOS may need to display popups
+        // to process this request.
+        micPermissionsSuccessful = VerifyMicrophonePermissions();
+    });
+    
+    if (micPermissionsSuccessful)
     {
         bool soundCardSetupValid = false;
         executeOnUiThreadAndWait_([&]() {

@@ -29,34 +29,38 @@
 static std::mutex osx_permissions_mutex;
 static std::condition_variable osx_permissions_condvar;
 static bool globalHasAccess = false;
+static bool globalAccessCompleted = false;
 
 bool VerifyMicrophonePermissions()
 {
     bool hasAccess = true;
 #ifndef APPLE_OLD_XCODE
     if (@available(macOS 10.14, *)) {
+        globalAccessCompleted = false;
+        
         // OSX >= 10.14: Request permission to access the camera and microphone.
         switch ([AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio])
         {
             case AVAuthorizationStatusAuthorized:
             {
-                // The user has previously granted access to the camera.
+                // The user has previously granted access to the microphone.
                 break;
             }
             case AVAuthorizationStatusNotDetermined:
             {
-                // The app hasn't yet asked the user for camera access.
+                // The app hasn't yet asked the user for microphone access.
                 // Note that this call is asynchronous but we need to wait for a response before
                 // proceeding. TBD for improvement.
                 [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL granted) {
                     std::unique_lock<std::mutex> lk(osx_permissions_mutex);
                     globalHasAccess = granted;
+                    globalAccessCompleted = true;
                     osx_permissions_condvar.notify_one();
                 }];
 
                 {
                     std::unique_lock<std::mutex> lk(osx_permissions_mutex);
-                    osx_permissions_condvar.wait(lk);
+                    osx_permissions_condvar.wait(lk, []() { return globalAccessCompleted; });
                     hasAccess = globalHasAccess;
                 }
                 break;
