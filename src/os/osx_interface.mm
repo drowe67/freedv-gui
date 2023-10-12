@@ -22,22 +22,13 @@
 
 #import <AVFoundation/AVFoundation.h>
 #import <AppKit/AppKit.h>
-#include <mutex>
-#include <condition_variable>
-#include "osx_interface.h"
+#include "os_interface.h"
 
-static std::mutex osx_permissions_mutex;
-static std::condition_variable osx_permissions_condvar;
-static bool globalHasAccess = false;
-static bool globalAccessCompleted = false;
-
-bool VerifyMicrophonePermissions()
+void VerifyMicrophonePermissions(std::promise<bool>& microphonePromise)
 {
-    bool hasAccess = true;
 #ifndef APPLE_OLD_XCODE
-    if (@available(macOS 10.14, *)) {
-        globalAccessCompleted = false;
-        
+    if (@available(macOS 10.14, *)) 
+    {        
         // OSX >= 10.14: Request permission to access the camera and microphone.
         switch ([AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio])
         {
@@ -49,27 +40,17 @@ bool VerifyMicrophonePermissions()
             case AVAuthorizationStatusNotDetermined:
             {
                 // The app hasn't yet asked the user for microphone access.
-                // Note that this call is asynchronous but we need to wait for a response before
-                // proceeding. TBD for improvement.
                 [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL granted) {
-                    std::unique_lock<std::mutex> lk(osx_permissions_mutex);
-                    globalHasAccess = granted;
-                    globalAccessCompleted = true;
-                    osx_permissions_condvar.notify_one();
+                    microphonePromise.set_value(granted);
                 }];
 
-                {
-                    std::unique_lock<std::mutex> lk(osx_permissions_mutex);
-                    osx_permissions_condvar.wait(lk, []() { return globalAccessCompleted; });
-                    hasAccess = globalHasAccess;
-                }
                 break;
             }
             case AVAuthorizationStatusDenied:
             case AVAuthorizationStatusRestricted:
             {
                 // The user has previously denied access or otherwise can't grant permissions.
-                hasAccess = false;
+                microphonePromise.set_value(false);
                 break;
             }
             default:
@@ -79,9 +60,9 @@ bool VerifyMicrophonePermissions()
             }
         }
     }
+#else
+    microphonePromise.set_value(true);
 #endif // !APPLE_OLD_XCODE
-
-    return hasAccess;
 }
 
 void ResetMainWindowColorSpace()
