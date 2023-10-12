@@ -35,6 +35,7 @@ void VerifyMicrophonePermissions(std::promise<bool>& microphonePromise)
             case AVAuthorizationStatusAuthorized:
             {
                 // The user has previously granted access to the microphone.
+                microphonePromise.set_value(true);
                 break;
             }
             case AVAuthorizationStatusNotDetermined:
