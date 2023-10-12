@@ -22,7 +22,7 @@
 #include <algorithm>
 #include "wx/wx.h"
 #include "main.h"
-#include "osx_interface.h"
+#include "os/os_interface.h"
 
 // Tweak accordingly
 #define Y_PER_SECOND (30) 

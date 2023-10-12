@@ -30,7 +30,7 @@
 #include <wx/cmdline.h>
 #include "version.h"
 #include "main.h"
-#include "osx_interface.h"
+#include "os/os_interface.h"
 #include "freedv_interface.h"
 #include "audio/AudioEngineFactory.h"
 #include "codec2_fdmdv.h"
@@ -1915,9 +1915,20 @@ void MainFrame::performFreeDVOn_()
         m_textLevel->SetLabel(wxT(""));
         m_gaugeLevel->SetValue(0);
     });
-
+    
     // attempt to start sound cards and tx/rx processing
-    if (VerifyMicrophonePermissions())
+    std::promise<bool> tmpPromise;
+    std::future<bool> tmpFuture = tmpPromise.get_future();
+
+    // Note: this executes on the UI thread as macOS may need to display popups
+    // to process this request.
+    CallAfter([&]() {
+        VerifyMicrophonePermissions(tmpPromise);
+    });
+
+    tmpFuture.wait();
+    
+    if (tmpFuture.get())
     {
         bool soundCardSetupValid = false;
         executeOnUiThreadAndWait_([&]() {

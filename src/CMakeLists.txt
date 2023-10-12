@@ -28,7 +28,6 @@ set(FREEDV_SOURCES
     plot_waterfall.h
     topFrame.h
     version.h
-    osx_interface.h
     util.cpp
     eq.cpp
     voicekeyer.cpp
@@ -36,10 +35,6 @@ set(FREEDV_SOURCES
     ongui.cpp
     freedv_interface.cpp
     freedv_interface.h        
-)
-
-set(FREEDV_SOURCES_OSX
-    osx_interface.mm
 )
 
 set(FREEDV_LINK_LIBS_OSX
@@ -50,6 +45,7 @@ set(FREEDV_LINK_LIBS_OSX
 add_subdirectory(audio)
 add_subdirectory(config)
 add_subdirectory(gui)
+add_subdirectory(os)
 add_subdirectory(pipeline)
 add_subdirectory(reporting)
 add_subdirectory(rig_control)
@@ -61,7 +57,7 @@ add_subdirectory(util)
 if(APPLE)
     set(RES_FILES freedv.icns)
     set_source_files_properties(freedv.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
-    add_executable(FreeDV MACOSX_BUNDLE ${FREEDV_SOURCES} ${RES_FILES} ${FREEDV_SOURCES_OSX})
+    add_executable(FreeDV MACOSX_BUNDLE ${FREEDV_SOURCES} ${RES_FILES})
     set_target_properties(FreeDV PROPERTIES
         BUNDLE True
         MACOSX_BUNDLE_GUI_IDENTIFIER org.freedv.freedv
@@ -79,9 +75,9 @@ endif(APPLE)
 
 # Link imported or build tree targets.
 if(APPLE)
-target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_config fdv_gui_util fdv_reporting fdv_rig_control fdv_sox fdv_util lpcnetfreedv codec2)
+target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_config fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox lpcnetfreedv codec2)
 else(APPLE)
-target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_util fdv_reporting fdv_rig_control fdv_sox fdv_util lpcnetfreedv codec2)
+target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox lpcnetfreedv codec2)
 endif(APPLE)
 
 # Add build dependencies for internally built external libraries.
