@@ -22,50 +22,35 @@
 
 #import <AVFoundation/AVFoundation.h>
 #import <AppKit/AppKit.h>
-#include <mutex>
-#include <condition_variable>
-#include "osx_interface.h"
+#include "os_interface.h"
 
-static std::mutex osx_permissions_mutex;
-static std::condition_variable osx_permissions_condvar;
-static bool globalHasAccess = false;
-
-bool VerifyMicrophonePermissions()
+void VerifyMicrophonePermissions(std::promise<bool>& microphonePromise)
 {
-    bool hasAccess = true;
 #ifndef APPLE_OLD_XCODE
-    if (@available(macOS 10.14, *)) {
+    if (@available(macOS 10.14, *)) 
+    {        
         // OSX >= 10.14: Request permission to access the camera and microphone.
         switch ([AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio])
         {
             case AVAuthorizationStatusAuthorized:
             {
-                // The user has previously granted access to the camera.
+                // The user has previously granted access to the microphone.
                 break;
             }
             case AVAuthorizationStatusNotDetermined:
             {
-                // The app hasn't yet asked the user for camera access.
-                // Note that this call is asynchronous but we need to wait for a response before
-                // proceeding. TBD for improvement.
+                // The app hasn't yet asked the user for microphone access.
                 [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL granted) {
-                    std::unique_lock<std::mutex> lk(osx_permissions_mutex);
-                    globalHasAccess = granted;
-                    osx_permissions_condvar.notify_one();
+                    microphonePromise.set_value(granted);
                 }];
 
-                {
-                    std::unique_lock<std::mutex> lk(osx_permissions_mutex);
-                    osx_permissions_condvar.wait(lk);
-                    hasAccess = globalHasAccess;
-                }
                 break;
             }
             case AVAuthorizationStatusDenied:
             case AVAuthorizationStatusRestricted:
             {
                 // The user has previously denied access or otherwise can't grant permissions.
-                hasAccess = false;
+                microphonePromise.set_value(false);
                 break;
             }
             default:
@@ -75,9 +60,9 @@ bool VerifyMicrophonePermissions()
             }
         }
     }
+#else
+    microphonePromise.set_value(true);
 #endif // !APPLE_OLD_XCODE
-
-    return hasAccess;
 }
 
 void ResetMainWindowColorSpace()

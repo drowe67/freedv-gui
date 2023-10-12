@@ -1,5 +1,5 @@
 //==========================================================================
-// Name:            osx_interface.h
+// Name:            os_interface.h
 //
 // Purpose:         Provides C wrapper to needed Objective-C calls.
 // Created:         Nov. 23, 2019
@@ -19,20 +19,16 @@
 //  along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //==========================================================================
-#ifndef __OSX_INTERFACE__
-#define __OSX_INTERFACE__
+#ifndef __OS_INTERFACE__
+#define __OS_INTERFACE__
+
+#include <future>
 
 // Checks whether FreeDV has permissions to access the microphone on OSX Catalina
 // and above. If the user doesn't grant permissions (returns FALSE), the GUI 
 // should be able to properly handle the situation.
-#ifdef __APPLE__
-extern "C" bool VerifyMicrophonePermissions();
-#else
-// Stub for non-Apple platforms
-#define VerifyMicrophonePermissions() (true)
-#endif // __APPLE__
+void VerifyMicrophonePermissions(std::promise<bool>& promise);
 
-#ifdef __APPLE__
 // macOS does color space conversions in the background when rendering PlotWaterfall.
 // This causes FreeDV to use ~30-50% more CPU that it otherwise would (despite wxWidgets
 // using sRGB internally). Because of this, we reset the main window's color space to 
@@ -41,9 +37,5 @@ extern "C" bool VerifyMicrophonePermissions();
 // See https://github.com/OpenTTD/OpenTTD/issues/7644 and https://trac.wxwidgets.org/ticket/18516
 // for more details.
 extern "C" void ResetMainWindowColorSpace();
-#else
-// Stub for non-Apple platforms
-#define ResetMainWindowColorSpace() 
-#endif // __APPLE__
 
-#endif // __OSX_INTERFACE__
+#endif // __OS_INTERFACE__
