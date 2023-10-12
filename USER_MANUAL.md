@@ -929,7 +929,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Always connect to FreeDV Reporter (in view only mode if necessary), regardless of valid configuration. (PR #542, #547)
     * Add None as a valid PTT method and make it report RX Only. (PR #556)
     * Increase RX coloring timeout in FreeDV Reporter to 20 seconds. (PR #558)
-3. Documentation:
+3. Build system:
+    * Upgrade wxWidgets on binary builds to 3.2.3. (PR #565)
+4. Documentation:
     * Add information about multiple audio devices and macOS. (PR #554)
 
 ## V1.9.2 September 2023
