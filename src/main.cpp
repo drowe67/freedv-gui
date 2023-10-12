@@ -2129,6 +2129,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 {
     if (!m_togBtnOnOff->IsEnabled()) return;
 
+    m_togBtnOnOff->SetFocus();
+    
     // Disable buttons while on/off is occurring
     m_togBtnOnOff->Enable(false);
     m_togBtnAnalog->Enable(false);

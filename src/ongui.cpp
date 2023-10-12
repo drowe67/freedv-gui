@@ -399,9 +399,14 @@ bool MainFrame::OpenHamlibRig() {
                     m_cboReportFrequency->SetValue(wxString::Format("%.4f", freq/1000.0/1000.0));
                 }
                 m_txtModeStatus->Refresh();
+
+                // Suppress updates if the Report Frequency box has focus.
+                suppressFreqModeUpdates_ = m_cboReportFrequency->HasFocus();
             });
         };
 
+        // Temporarily suppress frequency updates until we're fully connected.
+        suppressFreqModeUpdates_ = true;
         wxGetApp().m_hamlib->connect();
         return true;
     }
