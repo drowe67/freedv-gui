@@ -868,6 +868,17 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
         {
             m_cboReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+
+            // Round to the nearest 100 Hz.
+            uint64_t wholeFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency / 100;
+            uint64_t remainder = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency % 100;
+
+            if (remainder >= 50)
+            {
+                wholeFreq++;
+            }
+
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = wholeFreq * 100;
         }
         else
         {
