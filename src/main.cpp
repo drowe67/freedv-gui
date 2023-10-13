@@ -248,14 +248,9 @@ int MainApp::OnExit()
 }
 
 #if defined(FREEDV_MODE_2020)
-//-------------------------------------------------------------------------
-// test2020Mode_(): Makes sure that 2020 mode will work 
-//-------------------------------------------------------------------------
-void MainFrame::test2020Mode_()
+bool MainFrame::test2020HWAllowed_()
 {
     bool allowed = true;
-    
-    printf("Making sure your machine can handle 2020 mode:\n");
 
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
     // AVX checking code on x86 is here due to LPCNet in binary builds being
@@ -273,13 +268,26 @@ void MainFrame::test2020Mode_()
     } else {
         allowed = false;
     }
-    
+#endif // defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+
+    return allowed;
+}
+
+//-------------------------------------------------------------------------
+// test2020Mode_(): Makes sure that 2020 mode will work 
+//-------------------------------------------------------------------------
+void MainFrame::test2020Mode_()
+{    
+    printf("Making sure your machine can handle 2020 mode:\n");
+
+    bool allowed = test2020HWAllowed_();
+    wxGetApp().appConfiguration.freedvAVXSupported = allowed;
+
     if (!allowed)
     {
         std::cout << "Warning: AVX support not found!" << std::endl;
     }
     else
-#endif // defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
     {
         // Sanity check: encode 1 second of 16 KHz white noise and then try to
         // decode it. If it takes longer than 0.5 seconds, it's unlikely that 
@@ -443,7 +451,7 @@ setDefaultMode:
     if (mode == 6)
         m_rb800xa->SetValue(1);
     // mode 7 was the former 2400B mode, now removed.
-    if ((mode == 9) && wxGetApp().appConfiguration.freedv2020Allowed)
+    if ((mode == 9) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
         m_rb2020->SetValue(1);
     else if (mode == 9)
     {
@@ -452,7 +460,7 @@ setDefaultMode:
         goto setDefaultMode;
     }
 #if defined(FREEDV_MODE_2020B)
-    if ((mode == 10) && wxGetApp().appConfiguration.freedv2020Allowed)
+    if ((mode == 10) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
         m_rb2020b->SetValue(1);
     else if (mode == 10)
     {
@@ -796,9 +804,13 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     {
         test2020Mode_();
     }
+    else
+    {
+        wxGetApp().appConfiguration.freedvAVXSupported = test2020HWAllowed_();
+    }
 #endif // defined(FREEDV_MODE_2020)
     
-    if(!wxGetApp().appConfiguration.freedv2020Allowed)
+    if(!wxGetApp().appConfiguration.freedv2020Allowed || !wxGetApp().appConfiguration.freedvAVXSupported)
     {
         m_rb2020->Disable();
 #if defined(FREEDV_MODE_2020B)
@@ -1724,14 +1736,14 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     }
     else if (eventObject == m_rb2020 || (eventObject == nullptr && m_rb2020->GetValue())) 
     {
-        assert(wxGetApp().appConfiguration.freedv2020Allowed);
+        assert(wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported);
         
         g_mode = FREEDV_MODE_2020;
     }
 #if defined(FREEDV_MODE_2020B)
     else if (eventObject == m_rb2020b || (eventObject == nullptr && m_rb2020b->GetValue())) 
     {
-        assert(wxGetApp().appConfiguration.freedv2020Allowed);
+        assert(wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported);
         
         g_mode = FREEDV_MODE_2020B;
     }
@@ -1825,7 +1837,7 @@ void MainFrame::performFreeDVOn_()
         }
         else
         {        
-            if(wxGetApp().appConfiguration.freedv2020Allowed)
+            if(wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
             {
                 freedvInterface.addRxMode(FREEDV_MODE_2020);
     #if defined(FREEDV_MODE_2020B)
@@ -2152,7 +2164,7 @@ void MainFrame::performFreeDVOff_()
         m_rb700d->Enable();
         m_rb700e->Enable();
         m_rb800xa->Enable();
-        if(wxGetApp().appConfiguration.freedv2020Allowed)
+        if(wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
         {
             m_rb2020->Enable();
     #if defined(FREEDV_MODE_2020B)

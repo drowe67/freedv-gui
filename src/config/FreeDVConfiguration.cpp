@@ -28,6 +28,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     /* First time configuration options */
     : firstTimeUse("/FirstTimeUse", true)
     , freedv2020Allowed("/FreeDV2020/Allowed", false)
+    , freedvAVXSupported("/FreeDV2020/AVXSupported", false)
         
     /* Position and size of main window */
     , mainWindowLeft("/MainFrame/left", 20)
