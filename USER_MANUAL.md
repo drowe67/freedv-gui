@@ -314,7 +314,7 @@ By default, FreeDV uses the following locations to store configuration:
 
 * Linux: ~/.FreeDV 
 * macOS: ~/Library/Preferences/FreeDV\ Preferences
-* Windows: Registry (HKEY\_CURRENT\_USER\\SOFTWARE\\CODEC2-Project\\FreeDV)
+* Windows: Registry (HKEY\_CURRENT\_USER\\SOFTWARE\\freedv)
 
 If you'd like to store the configuration in another location (or store multiple configurations),
 FreeDV accepts the -f (or --config) command line arguments to provide an alternate location. An
@@ -935,6 +935,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Upgrade wxWidgets on binary builds to 3.2.3. (PR #565)
 4. Documentation:
     * Add information about multiple audio devices and macOS. (PR #554)
+    * Windows: Fix Registry path in documentation. (PR #571)
 5. Cleanup:
     * Refactor rig control handling to improve performance and maintainability. (PR #564)
 
