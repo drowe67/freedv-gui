@@ -59,7 +59,8 @@ PlotScalar::PlotScalar(wxWindow* parent,
     m_graticule_t_step = graticule_t_step;
     m_graticule_a_step = graticule_a_step;
     assert(strlen(a_fmt) < 15);
-    strcpy(m_a_fmt, a_fmt);
+    memset(m_a_fmt, 0, sizeof(m_a_fmt));
+    strncpy(m_a_fmt, a_fmt, strlen(a_fmt));
     m_mini = mini;
     m_bar_graph = 0;
     m_logy = 0;

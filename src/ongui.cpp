@@ -303,40 +303,112 @@ bool MainFrame::OpenHamlibRig() {
        return false;
     if (wxGetApp().m_intHamlibRig == 0)
         return false;
-    if (wxGetApp().m_hamlib == NULL)
-        return false;
 
     int rig = wxGetApp().m_intHamlibRig;
     wxString port = wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort;
     wxString pttPort = wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort;
-    auto pttType = (Hamlib::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get();
+    auto pttType = (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get();
     
     int serial_rate = wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate;
     if (wxGetApp().CanAccessSerialPort((const char*)port.ToUTF8()) && (
-        pttType == Hamlib::PTT_VIA_CAT || pttType == Hamlib::PTT_VIA_NONE || wxGetApp().CanAccessSerialPort((const char*)pttPort.ToUTF8())))
+        pttType == HamlibRigController::PTT_VIA_CAT || pttType == HamlibRigController::PTT_VIA_NONE || wxGetApp().CanAccessSerialPort((const char*)pttPort.ToUTF8())))
     {
-        bool status = wxGetApp().m_hamlib->connect(
-            rig, port.mb_str(wxConvUTF8), serial_rate, wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress, 
-            pttType, pttType == Hamlib::PTT_VIA_CAT || pttType == Hamlib::PTT_VIA_NONE ? port.mb_str(wxConvUTF8) : pttPort.mb_str(wxConvUTF8));
-        if (status == false)
+        wxGetApp().m_hamlib = std::make_shared<HamlibRigController>(
+            rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress, 
+            pttType, pttType == HamlibRigController::PTT_VIA_CAT || pttType == HamlibRigController::PTT_VIA_NONE ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8),
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
+
+        wxGetApp().m_hamlib->onRigError += [this](IRigController*, std::string err)
         {
-            wxMessageBox("Couldn't connect to Radio with hamlib", wxT("Error"), wxOK | wxICON_ERROR, this);
-        }
-        else
-        {
-            wxGetApp().m_hamlib->readOnly(!wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
+            std::string fullErr = "Couldn't connect to Radio with hamlib: " + err;
+            CallAfter([&, fullErr]() {
+                wxMessageBox(fullErr, wxT("Error"), wxOK | wxICON_ERROR, this);
+            });
+        };
+
+        wxGetApp().m_hamlib->onRigConnected += [&](IRigController*) {
             if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
-                wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes ? true : g_analog);
+                wxGetApp().m_hamlib->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+                wxGetApp().m_hamlib->setMode(getCurrentMode_());
             }
-            wxGetApp().m_hamlib->enable_mode_detection(
-                m_txtModeStatus, 
-                wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled &&
-                    wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting ? nullptr : m_cboReportFrequency, 
-                false);
-        }
+        };
+
+        wxGetApp().m_hamlib->onRigDisconnected += [&](IRigController*) {
+            CallAfter([&]() {
+                m_txtModeStatus->SetLabel(wxT("unk"));
+                m_txtModeStatus->Enable(false);
+            });
+        };
+
+        wxGetApp().m_hamlib->onFreqModeChange += [&](IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
+        {
+            CallAfter([&, mode, freq]() {
+                // Update string value.
+                switch(mode)
+                {
+                    case IRigFrequencyController::USB:
+                    case IRigFrequencyController::DIGU:
+                        m_txtModeStatus->SetLabel(wxT("USB"));
+                        m_txtModeStatus->Enable(true);
+                        break;
+                    case IRigFrequencyController::LSB:
+                    case IRigFrequencyController::DIGL:
+                        m_txtModeStatus->SetLabel(wxT("LSB"));
+                        m_txtModeStatus->Enable(true);
+                        break;
+                    case IRigFrequencyController::FM:
+                    case IRigFrequencyController::DIGFM:
+                        m_txtModeStatus->SetLabel(wxT("FM"));
+                        m_txtModeStatus->Enable(true);
+                        break;
+                    case IRigFrequencyController::AM:
+                        m_txtModeStatus->SetLabel(wxT("AM"));
+                        m_txtModeStatus->Enable(true);
+                        break;
+                    default:
+                        m_txtModeStatus->SetLabel(wxT("unk"));
+                        m_txtModeStatus->Enable(false);
+                        break;
+                }
+
+                // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
+                bool is60MeterBand = freq >= 5250000 && freq <= 5450000;
     
-        return status;
+                // Update color based on the mode and current frequency.
+                bool isUsbFreq = freq >= 10000000 || is60MeterBand;
+                bool isLsbFreq = freq < 10000000 && !is60MeterBand;
+    
+                bool isMatchingMode = 
+                    (isUsbFreq && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
+                    (isLsbFreq && (mode == IRigFrequencyController::LSB || mode == IRigFrequencyController::DIGL));
+    
+                if (isMatchingMode)
+                {
+                    m_txtModeStatus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+                }
+                else
+                {
+                    m_txtModeStatus->SetForegroundColour(wxColor(*wxRED));
+                }
+
+                // Update frequency box
+                if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
+                    !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting)
+                {
+                    m_cboReportFrequency->SetValue(wxString::Format("%.4f", freq/1000.0/1000.0));
+                }
+                m_txtModeStatus->Refresh();
+
+                // Suppress updates if the Report Frequency box has focus.
+                suppressFreqModeUpdates_ = m_cboReportFrequency->HasFocus();
+            });
+        };
+
+        // Temporarily suppress frequency updates until we're fully connected.
+        suppressFreqModeUpdates_ = true;
+        wxGetApp().m_hamlib->connect();
+        return true;
     }
     else
     {
@@ -609,19 +681,16 @@ void MainFrame::togglePTT(void) {
     // Hamlib PTT
 
     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT) {
-        Hamlib *hamlib = wxGetApp().m_hamlib;
-        wxString hamlibError;
-        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT && hamlib != NULL) {
+        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT && wxGetApp().m_hamlib != nullptr) {
             // Update mode display on the bottom of the main UI.
-            if (hamlib->update_frequency_and_mode() != 0 || hamlib->ptt(g_tx, hamlibError) == false) {
-                wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
-            }
+            wxGetApp().m_hamlib->requestCurrentFrequencyMode();
+            wxGetApp().m_hamlib->ptt(g_tx);
         }
     }
 
     // Serial PTT
 
-    if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT && (wxGetApp().m_serialport->isopen())) {
+    if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT && (wxGetApp().m_serialport->isConnected())) {
         wxGetApp().m_serialport->ptt(g_tx);
     }
 
@@ -657,6 +726,43 @@ void MainFrame::togglePTT(void) {
     }
 }
 
+HamlibRigController::Mode MainFrame::getCurrentMode_()
+{
+    bool useAnalog = 
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes || g_analog;
+    HamlibRigController::Mode newMode;
+    if (useAnalog)
+    {
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency < 10000000)
+        {
+            newMode = HamlibRigController::LSB;
+        }
+        else
+        {
+            newMode = HamlibRigController::USB;
+        }
+    }
+    else
+    {
+        // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
+        bool is60MeterBand = 
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency >= 5250000 && 
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency <= 5450000;
+
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency < 10000000 &&
+            !is60MeterBand)
+        {
+            newMode = HamlibRigController::DIGL;
+        }
+        else
+        {
+            newMode = HamlibRigController::DIGU;
+        }
+    }
+
+    return newMode;
+}
+
 //-------------------------------------------------------------------------
 // OnTogBtnAnalogClick()
 //-------------------------------------------------------------------------
@@ -688,9 +794,7 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
     {
         // Request mode change on the radio side
-        wxGetApp().m_hamlib->setMode(
-            wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes ? true : g_analog, 
-            wxGetApp().m_hamlib->get_frequency());
+        wxGetApp().m_hamlib->setMode(getCurrentMode_());
     }
 
     g_State = g_prev_State = 0;
@@ -747,7 +851,7 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
 
 void MainFrame::OnChangeReportFrequencyVerify( wxCommandEvent& event )
 {
-    if (wxGetApp().m_hamlib != nullptr && wxGetApp().m_hamlib->isSuppressFrequencyModeUpdates())
+    if (wxGetApp().m_hamlib != nullptr && suppressFreqModeUpdates_)
     {
         return;
     }
@@ -764,6 +868,17 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
         {
             m_cboReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+
+            // Round to the nearest 100 Hz.
+            uint64_t wholeFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency / 100;
+            uint64_t remainder = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency % 100;
+
+            if (remainder >= 50)
+            {
+                wholeFreq++;
+            }
+
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = wholeFreq * 100;
         }
         else
         {
@@ -784,11 +899,11 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     
     if (wxGetApp().m_hamlib != nullptr && 
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 && 
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency != wxGetApp().m_hamlib->get_frequency() &&
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
     {
         // Request frequency/mode change on the radio side
-        wxGetApp().m_hamlib->setFrequencyAndMode(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes ? true : g_analog);
+        wxGetApp().m_hamlib->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        wxGetApp().m_hamlib->setMode(getCurrentMode_());
     }
     
     if (m_reporterDialog != nullptr)
@@ -799,11 +914,7 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
 
 void MainFrame::OnReportFrequencySetFocus(wxFocusEvent& event)
 {
-    if (wxGetApp().m_hamlib != nullptr)
-    {
-        wxGetApp().m_hamlib->suppressFrequencyModeUpdates(true);
-    }
-    
+    suppressFreqModeUpdates_ = true;
     TopFrame::OnReportFrequencySetFocus(event);
 }
 
@@ -813,11 +924,8 @@ void MainFrame::OnReportFrequencyKillFocus(wxFocusEvent& event)
     wxCommandEvent tmpEvent;
     OnChangeReportFrequency(tmpEvent);
     
-    if (wxGetApp().m_hamlib != nullptr)
-    {
-        wxGetApp().m_hamlib->suppressFrequencyModeUpdates(false);
-    }
-    
+    suppressFreqModeUpdates_ = false;
+
     TopFrame::OnReportFrequencyKillFocus(event);
 }
 

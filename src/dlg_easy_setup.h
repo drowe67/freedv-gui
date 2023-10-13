@@ -25,8 +25,8 @@
 #include "main.h"
 #include "defines.h"
 #include "audio/IAudioEngine.h"
-#include "hamlib.h"
-#include "serialport.h"
+#include "rig_control/HamlibRigController.h"
+#include "rig_control/SerialPortOutRigController.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class EasySetupDlg
@@ -130,8 +130,8 @@ class EasySetupDialog : public wxDialog
          bool canTestRadioSettings_();
          bool canSaveSettings_();
          
-         Hamlib* hamlibTestObject_;
-         Serialport* serialPortTestObject_;
+         std::shared_ptr<HamlibRigController> hamlibTestObject_;
+         std::shared_ptr<SerialPortOutRigController> serialPortTestObject_;
          int sineWaveSampleNumber_;
          bool hasAppliedChanges_;
 

@@ -44,3 +44,4 @@ list(APPEND FREEDV_STATIC_DEPS hamlib)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector")
+set(HAMLIB_ADD_DEPENDENCY TRUE)

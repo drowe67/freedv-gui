@@ -23,7 +23,7 @@
 #define __COMPORTS_DIALOG__
 
 #include "main.h"
-#include "hamlib.h"
+#include "rig_control/HamlibRigController.h"
 #include <wx/settings.h>
 #include <wx/xrc/xmlres.h>
 #include <wx/xrc/xh_bmp.h>
@@ -63,7 +63,7 @@ class ComPortsDlg : public wxDialog
         wxStaticText *m_stIcomCIVHex;
         wxTextCtrl *m_tcIcomCIVHex;
         wxComboBox *m_cbPttMethod;
-        Hamlib *m_hamlib;
+        std::shared_ptr<HamlibRigController> m_hamlib;
 
         /* Serial Settings */
 

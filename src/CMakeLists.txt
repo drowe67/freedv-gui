@@ -11,8 +11,6 @@ set(FREEDV_SOURCES
     plot_scatter.cpp
     plot_spectrum.cpp
     plot_waterfall.cpp
-    hamlib.cpp
-    serialport.cpp
     topFrame.cpp
     sox_biquad.c
     sox_biquad.h
@@ -28,7 +26,6 @@ set(FREEDV_SOURCES
     plot_scatter.h
     plot_spectrum.h
     plot_waterfall.h
-    hamlib.h
     topFrame.h
     version.h
     util.cpp
@@ -51,7 +48,9 @@ add_subdirectory(gui)
 add_subdirectory(os)
 add_subdirectory(pipeline)
 add_subdirectory(reporting)
+add_subdirectory(rig_control)
 add_subdirectory(sox)
+add_subdirectory(util)
 
 # WIN32 is needed for Windows GUI apps and is ignored for UNIX like systems.
 # In addition, there are some required OSX-specific code files for platform specific handling.
@@ -76,9 +75,9 @@ endif(APPLE)
 
 # Link imported or build tree targets.
 if(APPLE)
-target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_config fdv_gui_util fdv_os_wrapper fdv_reporting fdv_sox lpcnetfreedv codec2)
+target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_config fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util lpcnetfreedv codec2)
 else(APPLE)
-target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_util fdv_os_wrapper fdv_reporting fdv_sox lpcnetfreedv codec2)
+target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util lpcnetfreedv codec2)
 endif(APPLE)
 
 # Add build dependencies for internally built external libraries.

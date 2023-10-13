@@ -1,0 +1,82 @@
+//=========================================================================
+// Name:            SerialPortOutRigController.cpp
+// Purpose:         Controls PTT on radios using serial port.
+//
+// Authors:         Mooneer Salem
+// License:
+//
+//  All rights reserved.
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License version 2.1,
+//  as published by the Free Software Foundation.  This program is
+//  distributed in the hope that it will be useful, but WITHOUT ANY
+//  WARRANTY; without even the implied warranty of MERCHANTABILITY or
+//  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+//  License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program; if not, see <http://www.gnu.org/licenses/>.
+//
+//=========================================================================
+
+#include "SerialPortOutRigController.h"
+
+SerialPortOutRigController::SerialPortOutRigController(std::string serialPort, bool useRTS, bool RTSPos, bool useDTR, bool DTRPos)
+    : SerialPortRigController(serialPort)
+    , useRTS_(useRTS)
+    , rtsPos_(RTSPos)
+    , useDTR_(useDTR)
+    , dtrPos_(DTRPos)
+{
+    // Ensure that PTT is disabled on successful connect.
+    onRigConnected += [&](IRigController*) {
+        ptt(false);
+    };
+}
+
+SerialPortOutRigController::~SerialPortOutRigController()
+{
+    // Disable PTT before shutdown.
+    ptt(false);
+}
+
+void SerialPortOutRigController::ptt(bool state)
+{
+    enqueue_(std::bind(&SerialPortOutRigController::pttImpl_, this, state));
+}
+
+void SerialPortOutRigController::pttImpl_(bool state)
+{
+       /*  Truth table:
+
+          g_tx   RTSPos   RTS
+          -------------------
+          0      1        0
+          1      1        1
+          0      0        1
+          1      0        0
+
+          exclusive NOR
+    */
+
+    if (serialPortHandle_ != COM_HANDLE_INVALID) 
+    {
+        if (useRTS_) {
+            //fprintf(stderr, "g_tx: %d m_boolRTSPos: %d serialLine: %d\n", g_tx, wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS, g_tx == wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS);
+            if (state == rtsPos_)
+                raiseRTS_();
+            else
+                lowerRTS_();
+        }
+        if (useDTR_) {
+            //fprintf(stderr, "g_tx: %d m_boolDTRPos: %d serialLine: %d\n", g_tx, wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR, g_tx == wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR);
+            if (state == dtrPos_)
+                raiseDTR_();
+            else
+                lowerDTR_();
+        }
+ 
+        onPttChange(this, state);
+    }
+}
