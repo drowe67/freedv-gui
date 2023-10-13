@@ -925,6 +925,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Work around issue preventing consistent switchover to 'From Mic' tab on voice keyer TX. (PR #563)
     * Fix rounding error when changing reporting frequency. (PR #562)
     * Fix issue causing multiple macOS microphone permissions popups to appear. (PR #566, 567)
+    * macOS: Fix crash on start when using Rosetta. (PR #569)
 2. Enhancements:
     * Add configuration for background/foreground colors in FreeDV Reporter. (PR #545)
     * Always connect to FreeDV Reporter (in view only mode if necessary), regardless of valid configuration. (PR #542, #547)
