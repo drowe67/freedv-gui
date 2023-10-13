@@ -214,7 +214,7 @@
 <ul>
 <li>Linux: ~/.FreeDV</li>
 <li>macOS: ~/Library/Preferences/FreeDV Preferences</li>
-<li>Windows: Registry (HKEY_CURRENT_USER\SOFTWARE\CODEC2-Project\FreeDV)</li>
+<li>Windows: Registry (HKEY_CURRENT_USER\SOFTWARE\freedv)</li>
 </ul>
 <p>If you’d like to store the configuration in another location (or store multiple configurations), FreeDV accepts the -f (or –config) command line arguments to provide an alternate location. An absolute path is recommended here; however, if only a relative path is provided, it will be relative to the following locations:</p>
 <ul>
@@ -686,6 +686,7 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Documentation:
 <ul>
 <li>Add information about multiple audio devices and macOS. (PR #554)</li>
+<li>Windows: Fix Registry path in documentation. (PR #571)</li>
 </ul></li>
 <li>Cleanup:
 <ul>
