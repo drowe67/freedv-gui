@@ -410,15 +410,12 @@ void MainFrame::loadConfiguration_()
     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName == wxT(""))
     {
         wxGetApp().m_intHamlibRig = pConfig->ReadLong("/Hamlib/RigName", 0);
-        wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = wxGetApp().m_hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = HamlibRigController::RigIndexToName(wxGetApp().m_intHamlibRig);
     }
     else
     {
-        wxGetApp().m_intHamlibRig = wxGetApp().m_hamlib->rigNameToIndex(std::string(wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName->ToUTF8()));
+        wxGetApp().m_intHamlibRig = HamlibRigController::RigNameToIndex(std::string(wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName->ToUTF8()));
     }
-    
-    assert(wxGetApp().m_serialport != NULL);
-    assert(wxGetApp().m_pttInSerialPort != NULL);
     
     // -----------------------------------------------------------------------
 
@@ -576,15 +573,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_filterDialog = nullptr;
 
     m_zoom              = 1.;
-
-    // Init Hamlib library, but we don't start talking to any rigs yet
-
-    wxGetApp().m_hamlib = new Hamlib();
-
-    // Init Serialport library, but as with Hamlib we don't start talking to any rigs yet
-
-    wxGetApp().m_serialport = new Serialport();
-    wxGetApp().m_pttInSerialPort = new Serialport();
+    suppressFreqModeUpdates_ = false;
     
     tools->AppendSeparator();
     wxMenuItem* m_menuItemToolsConfigDelete;
@@ -897,15 +886,8 @@ MainFrame::~MainFrame()
     fclose(ftest);
     #endif
 
-    if (wxGetApp().m_serialport)
-    {
-        delete wxGetApp().m_serialport;
-    }
-
-    if (wxGetApp().m_pttInSerialPort)
-    {
-        delete wxGetApp().m_pttInSerialPort;
-    }
+    wxGetApp().m_serialport = nullptr;
+    wxGetApp().m_pttInSerialPort = nullptr;
     
     if (!IsIconized()) {
         GetClientSize(&w, &h);
@@ -994,12 +976,7 @@ MainFrame::~MainFrame()
         optionsDlg = NULL;
     }
 
-    if (wxGetApp().m_hamlib)
-    {
-        delete wxGetApp().m_hamlib;
-        wxGetApp().m_hamlib = nullptr;
-    }
-    
+    wxGetApp().m_hamlib = nullptr;    
     wxGetApp().m_reporters.clear();
 }
 
@@ -1040,10 +1017,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     else if (evt.GetTimer().GetId() == ID_TIMER_UPD_FREQ)
     {
         // show freq. and mode [UP]
-        if (wxGetApp().m_hamlib->isActive()) 
+        if (wxGetApp().m_hamlib && wxGetApp().m_hamlib->isConnected()) 
         {
             if (g_verbose) fprintf(stderr, "update freq and mode ....\n"); 
-            wxGetApp().m_hamlib->update_frequency_and_mode();
+            wxGetApp().m_hamlib->requestCurrentFrequencyMode();
         }
      }
      else
@@ -1424,7 +1401,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
            
                     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT)
                     {
-                        wxGetApp().m_hamlib->update_frequency_and_mode();
+                        wxGetApp().m_hamlib->requestCurrentFrequencyMode();
                     }
             
                     int64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
@@ -1635,14 +1612,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 //-------------------------------------------------------------------------
 void MainFrame::OnExit(wxCommandEvent& event)
 {
-    // Note: sideband detection needs to be disabled here instead
-    // of in the destructor due to its need to touch the UI.
     if (wxGetApp().m_hamlib)
     {
-        wxGetApp().m_hamlib->disable_mode_detection();
-        wxGetApp().m_hamlib->close();
-        
-        delete wxGetApp().m_hamlib;
+        wxGetApp().m_hamlib->disconnect();
         wxGetApp().m_hamlib = nullptr;
     }
 
@@ -2100,23 +2072,16 @@ void MainFrame::performFreeDVOff_()
 
     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT) 
     {
-        Hamlib *hamlib = wxGetApp().m_hamlib;
-        wxString hamlibError;
-        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT && hamlib != NULL) 
+        auto hamlib = wxGetApp().m_hamlib;
+        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT && hamlib != nullptr) 
         {
-            if (hamlib->isActive())
+            if (hamlib->isConnected())
             {
-                if (hamlib->ptt(false, hamlibError) == false) 
-                {
-                    executeOnUiThreadAndWait_([&]() 
-                    {
-                        wxMessageBox(wxString("Hamlib PTT Error: ") + hamlibError, wxT("Error"), wxOK | wxICON_ERROR, this);
-                    });
-                }
-                hamlib->disable_mode_detection();
-                hamlib->close();
+                hamlib->ptt(false);
+                hamlib->disconnect();
             }
         }
+        wxGetApp().m_hamlib = nullptr;
     }
     
     if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT) 
@@ -2187,6 +2152,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 {
     if (!m_togBtnOnOff->IsEnabled()) return;
 
+    m_togBtnOnOff->SetFocus();
+    
     // Disable buttons while on/off is occurring
     m_togBtnOnOff->Enable(false);
     m_togBtnAnalog->Enable(false);
@@ -2214,8 +2181,8 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             // On/Off actions complete, re-enable button.
             executeOnUiThreadAndWait_([&]() {
                 m_togBtnAnalog->Enable(m_RxRunning);
-                m_togBtnVoiceKeyer->Enable(m_RxRunning && (g_nSoundCards == 2) && ((Hamlib::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() != Hamlib::PTT_VIA_NONE));
-                m_btnTogPTT->Enable(m_RxRunning && (g_nSoundCards == 2) && ((Hamlib::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() != Hamlib::PTT_VIA_NONE));
+                m_togBtnVoiceKeyer->Enable(m_RxRunning && (g_nSoundCards == 2) && ((HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() != HamlibRigController::PTT_VIA_NONE));
+                m_btnTogPTT->Enable(m_RxRunning && (g_nSoundCards == 2) && ((HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() != HamlibRigController::PTT_VIA_NONE));
                 optionsDlg->setSessionActive(m_RxRunning);
 
                 if (m_RxRunning)
@@ -3005,7 +2972,7 @@ void MainFrame::initializeFreeDVReporter_()
             wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
             wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
             std::string("FreeDV ") + FREEDV_VERSION,
-            g_nSoundCards <= 1 || (Hamlib::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() == Hamlib::PTT_VIA_NONE ? true : false);
+            g_nSoundCards <= 1 || (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() == HamlibRigController::PTT_VIA_NONE ? true : false);
     assert(wxGetApp().m_sharedReporterObject);
     
     // Make built in FreeDV Reporter client available.

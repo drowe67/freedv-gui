@@ -87,8 +87,9 @@
 #include "freedv_reporter.h"
 #include "sox_biquad.h"
 #include "comp_prim.h"
-#include "hamlib.h"
-#include "serialport.h" 
+#include "rig_control/HamlibRigController.h"
+#include "rig_control/SerialPortOutRigController.h"
+#include "rig_control/SerialPortInRigController.h"
 #include "reporting/IReporter.h"
 #include "reporting/FreeDVReporter.h"
 #include "freedv_interface.h"
@@ -177,11 +178,11 @@ class MainApp : public wxApp
         
         // PTT -----------------------------------    
         unsigned int        m_intHamlibRig;
-        Hamlib              *m_hamlib;
-        Serialport         *m_serialport;
+        std::shared_ptr<HamlibRigController> m_hamlib;
+        std::shared_ptr<SerialPortOutRigController> m_serialport;
 
         // PTT Input
-        Serialport         *m_pttInSerialPort;
+        std::shared_ptr<SerialPortInRigController> m_pttInSerialPort;
 
         wxRect              m_rTopWindow;
 
@@ -471,6 +472,7 @@ class MainFrame : public TopFrame
         int        vk_repeats, vk_repeat_counter;
         float      vk_rx_time;
         float      vk_rx_sync_time;
+        bool suppressFreqModeUpdates_;
         
         std::string vkFileName_;
         
@@ -482,6 +484,8 @@ class MainFrame : public TopFrame
         
         void loadConfiguration_();
         void resetStats_();
+
+        HamlibRigController::Mode getCurrentMode_();
 
 #if defined(FREEDV_MODE_2020)
         void test2020Mode_();

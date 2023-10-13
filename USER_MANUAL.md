@@ -935,6 +935,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Upgrade wxWidgets on binary builds to 3.2.3. (PR #565)
 4. Documentation:
     * Add information about multiple audio devices and macOS. (PR #554)
+5. Cleanup:
+    * Refactor rig control handling to improve performance and maintainability. (PR #564)
 
 ## V1.9.2 September 2023
 

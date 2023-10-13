@@ -44,14 +44,10 @@ extern wxConfigBase *pConfig;
 
 EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxDialog(parent, id, title, pos, size, style)
+    , hamlibTestObject_(nullptr)
+    , serialPortTestObject_(nullptr)
     , hasAppliedChanges_(false)
-{
-    hamlibTestObject_ = new Hamlib();
-    assert(hamlibTestObject_ != nullptr);
-
-    serialPortTestObject_ = new Serialport();
-    assert(serialPortTestObject_ != nullptr);
-    
+{    
     // Create top-level of control hierarchy.
     wxPanel* panel = new wxPanel(this);
     wxBoxSizer* sectionSizer = new wxBoxSizer(wxVERTICAL);
@@ -299,8 +295,8 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
 
 EasySetupDialog::~EasySetupDialog()
 {
-    delete hamlibTestObject_;
-    delete serialPortTestObject_;
+    hamlibTestObject_ = nullptr;
+    serialPortTestObject_ = nullptr;
     
     this->Disconnect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(EasySetupDialog::OnInitDialog));
     this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(EasySetupDialog::OnClose));
@@ -547,7 +543,6 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
     }
     else if (inout == EXCHANGE_DATA_OUT)
     {
-        Hamlib *hamlib = wxGetApp().m_hamlib;
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT = m_ckUseHamlibPTT->GetValue();
         
         wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT = m_ckUseSerialPTT->GetValue();
@@ -555,7 +550,7 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
         if (m_ckUseHamlibPTT->GetValue())
         {
             wxGetApp().m_intHamlibRig = m_cbRigName->GetSelection();
-            wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = hamlib->rigIndexToName(wxGetApp().m_intHamlibRig);
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibRigName = HamlibRigController::RigIndexToName(wxGetApp().m_intHamlibRig);
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialPort = m_cbSerialPort->GetValue();
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibPttSerialPort = m_cbSerialPort->GetValue();
             
@@ -736,17 +731,19 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                 txTestAudioDevice_ = nullptr;
             }
         
-            if (hamlibTestObject_->isActive())
+            if (hamlibTestObject_->isConnected())
             {
-                wxString error;
-                hamlibTestObject_->ptt(false, error);
-                hamlibTestObject_->close();
+                hamlibTestObject_->ptt(false);
+                hamlibTestObject_->disconnect();
             }
-            else if (serialPortTestObject_->isopen())
+            else if (serialPortTestObject_->isConnected())
             {
                 serialPortTestObject_->ptt(false);
-                serialPortTestObject_->closeport();
+                serialPortTestObject_->disconnect();
             }
+
+            hamlibTestObject_ = nullptr;
+            serialPortTestObject_ = nullptr;
         
             m_radioDevice->Enable(true);
             m_advancedSoundSetup->Enable(true);
@@ -809,18 +806,22 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                     return;
                 }
                 
-                auto pttType = (Hamlib::PttType)m_cbPttMethod->GetSelection();
+                auto pttType = (HamlibRigController::PttType)m_cbPttMethod->GetSelection();
                 
-                if (!hamlibTestObject_->connect(rig, (const char*)serialPort.ToUTF8(), rate, civHexAddress, pttType))
-                {
-                    wxMessageBox(
-                        "Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
-                        wxT("Error"), wxOK | wxICON_ERROR, this);
-                    return;
-                }
-            
-                wxString error;
-                hamlibTestObject_->ptt(true, error);
+                hamlibTestObject_ = std::make_shared<HamlibRigController>(rig, (const char*)serialPort.ToUTF8(), rate, civHexAddress, pttType);
+                hamlibTestObject_->onRigError += [&](IRigController*, std::string error) {
+                    CallAfter([&]() {
+                        wxMessageBox(
+                            "Couldn't connect to Radio with Hamlib.  Make sure the Hamlib serial Device, Rate, and Params match your radio", 
+                            wxT("Error"), wxOK | wxICON_ERROR, this);
+                    });
+                };
+
+                hamlibTestObject_->onRigConnected += [&](IRigController*) {
+                    hamlibTestObject_->ptt(true);
+                };
+
+                hamlibTestObject_->connect();
             }
             else if (m_ckUseSerialPTT->GetValue())
             {
@@ -836,20 +837,23 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                 bool useDTR = m_rbUseDTR->GetValue();
                 bool DTRPos = m_ckDTRPos->IsChecked();
 
-                if (!serialPortTestObject_->openport(
-                        (const char*)serialPort.ToUTF8(),
-                        useRTS,
-                        RTSPos,
-                        useDTR,
-                        DTRPos))
-                {
-                    wxMessageBox(
-                        "Couldn't connect to Radio.  Make sure the serial Device and Params match your radio", 
-                        wxT("Error"), wxOK | wxICON_ERROR, this);
-                    return;
-                }
-            
-                serialPortTestObject_->ptt(true);
+                serialPortTestObject_ = std::make_shared<SerialPortOutRigController>(
+                    (const char*)serialPort.ToUTF8(),
+                    useRTS,
+                    RTSPos,
+                    useDTR,
+                    DTRPos
+                );
+                serialPortTestObject_->onRigError += [&](IRigController*, std::string error) {
+                    CallAfter([&]() {
+                        wxMessageBox(
+                            "Couldn't connect to Radio.  Make sure the serial Device and Params match your radio", 
+                            wxT("Error"), wxOK | wxICON_ERROR, this);
+                    });
+                };
+                serialPortTestObject_->onRigConnected += [&](IRigController*) {
+                    serialPortTestObject_->ptt(true);
+                };                
             }
         
             // Start playing a sine wave through the radio's device
@@ -866,9 +870,18 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                         "Error opening radio sound device. Please double-check configuration and try again.", 
                         wxT("Error"), wxOK | wxICON_ERROR, this);
                     
-                    wxString error;
-                    hamlibTestObject_->ptt(false, error);
-                    hamlibTestObject_->close();
+                    if (hamlibTestObject_ != nullptr)
+                    {
+                        hamlibTestObject_->ptt(false);
+                        hamlibTestObject_->disconnect();
+                        hamlibTestObject_ = nullptr;
+                    }
+                    else if (serialPortTestObject_ != nullptr)
+                    {
+                        serialPortTestObject_->ptt(false);
+                        serialPortTestObject_->disconnect();
+                        serialPortTestObject_ = nullptr;
+                    }
                 
                     audioEngine->stop();
                     return;
@@ -943,11 +956,12 @@ void EasySetupDialog::PTTUseHamLibClicked(wxCommandEvent& event)
 
 void EasySetupDialog::updateHamlibDevices_()
 {
-    if (wxGetApp().m_hamlib)
+    auto numHamlibDevices = HamlibRigController::GetNumberSupportedRadios();
+    for (auto index = 0; index < numHamlibDevices; index++)
     {
-        wxGetApp().m_hamlib->populateComboBox(m_cbRigName);
-        m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
+        m_cbRigName->Append(HamlibRigController::RigIndexToName(index));
     }
+    m_cbRigName->SetSelection(wxGetApp().m_intHamlibRig);
     
     /* populate Hamlib serial rate combo box */
 
@@ -1360,9 +1374,7 @@ void EasySetupDialog::updateAudioDevices_()
 }
 
 bool EasySetupDialog::canTestRadioSettings_()
-{
-    Hamlib *hamlib = wxGetApp().m_hamlib;
-    
+{   
     bool radioDeviceSelected = m_radioDevice->GetSelection() >= 0;
     bool analogPlayDeviceSelected = m_analogDevicePlayback->GetSelection() >= 0;
     bool analogRecordDeviceSelected = m_analogDeviceRecord->GetSelection() >= 0;
@@ -1373,7 +1385,7 @@ bool EasySetupDialog::canTestRadioSettings_()
     bool serialSelected = m_ckUseSerialPTT->GetValue();
     
     bool hamlibSerialPortEntered = m_cbSerialPort->GetValue().Length() > 0;
-    bool icomRadioSelected = hamlib->rigIndexToName(m_cbRigName->GetSelection()).find("Icom") != std::string::npos;
+    bool icomRadioSelected = HamlibRigController::RigIndexToName(m_cbRigName->GetSelection()).find("Icom") != std::string::npos;
     bool icomCIVEntered = m_tcIcomCIVHex->GetValue().Length() > 0;
     bool hamlibValid = hamlibSerialPortEntered && (!icomRadioSelected || icomCIVEntered);
     
