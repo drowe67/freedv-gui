@@ -314,7 +314,7 @@ By default, FreeDV uses the following locations to store configuration:
 
 * Linux: ~/.FreeDV 
 * macOS: ~/Library/Preferences/FreeDV\ Preferences
-* Windows: Registry (HKEY\_CURRENT\_USER\\SOFTWARE\\CODEC2-Project\\FreeDV)
+* Windows: Registry (HKEY\_CURRENT\_USER\\SOFTWARE\\freedv)
 
 If you'd like to store the configuration in another location (or store multiple configurations),
 FreeDV accepts the -f (or --config) command line arguments to provide an alternate location. An
