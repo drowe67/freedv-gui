@@ -312,7 +312,7 @@ saved. By default, this is inside the current user's Documents folder.
 
 By default, FreeDV uses the following locations to store configuration:
 
-* Linux: ~/.FreeDV 
+* Linux: ~/.freedv
 * macOS: ~/Library/Preferences/FreeDV\ Preferences
 * Windows: Registry (HKEY\_CURRENT\_USER\\SOFTWARE\\freedv)
 
@@ -935,7 +935,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Upgrade wxWidgets on binary builds to 3.2.3. (PR #565)
 4. Documentation:
     * Add information about multiple audio devices and macOS. (PR #554)
-    * Windows: Fix Registry path in documentation. (PR #571)
+    * Fix Registry and config file paths in documentation. (PR #571)
 5. Cleanup:
     * Refactor rig control handling to improve performance and maintainability. (PR #564)
 
