@@ -10,3 +10,9 @@ target_include_directories(fdv_rig_control PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.
 if(HAMLIB_ADD_DEPENDENCY)
 add_dependencies(fdv_rig_control hamlib)
 endif(HAMLIB_ADD_DEPENDENCY)
+
+if(WIN32)
+# Add OmniRig support on Windows
+add_subdirectory(omnirig)
+target_link_libraries(fdv_rig_control PUBLIC fdv_rig_control_omnirig)
+endif(WIN32)
