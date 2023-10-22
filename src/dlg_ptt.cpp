@@ -675,6 +675,8 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                 cv.notify_one();
             };
 
+            serialPort->connect();
+            
             std::unique_lock<std::mutex> lk(mtx);
             cv.wait(lk);
 
