@@ -853,7 +853,8 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                 };
                 serialPortTestObject_->onRigConnected += [&](IRigController*) {
                     serialPortTestObject_->ptt(true);
-                };                
+                };          
+                serialPortTestObject_->connect();      
             }
         
             // Start playing a sine wave through the radio's device
