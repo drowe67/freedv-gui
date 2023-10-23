@@ -632,6 +632,8 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                 }
             };
 
+            hamlib->connect();
+            
             std::unique_lock<std::mutex> lk(mtx);
             cv.wait(lk);
             
