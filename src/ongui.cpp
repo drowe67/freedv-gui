@@ -313,12 +313,16 @@ bool MainFrame::OpenHamlibRig() {
     if (wxGetApp().CanAccessSerialPort((const char*)port.ToUTF8()) && (
         pttType == HamlibRigController::PTT_VIA_CAT || pttType == HamlibRigController::PTT_VIA_NONE || wxGetApp().CanAccessSerialPort((const char*)pttPort.ToUTF8())))
     {
-        wxGetApp().m_hamlib = std::make_shared<HamlibRigController>(
+        auto tmp = std::make_shared<HamlibRigController>(
             rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress, 
             pttType, pttType == HamlibRigController::PTT_VIA_CAT || pttType == HamlibRigController::PTT_VIA_NONE ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8),
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
 
-        wxGetApp().m_hamlib->onRigError += [this](IRigController*, std::string err)
+        // Hamlib also controls PTT.
+        wxGetApp().rigFrequencyController = tmp;
+        wxGetApp().rigPttController = tmp;
+        
+        wxGetApp().rigFrequencyController->onRigError += [this](IRigController*, std::string err)
         {
             std::string fullErr = "Couldn't connect to Radio with hamlib: " + err;
             CallAfter([&, fullErr]() {
@@ -326,22 +330,22 @@ bool MainFrame::OpenHamlibRig() {
             });
         };
 
-        wxGetApp().m_hamlib->onRigConnected += [&](IRigController*) {
+        wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController*) {
             if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
-                wxGetApp().m_hamlib->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-                wxGetApp().m_hamlib->setMode(getCurrentMode_());
+                wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+                wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
             }
         };
 
-        wxGetApp().m_hamlib->onRigDisconnected += [&](IRigController*) {
+        wxGetApp().rigFrequencyController->onRigDisconnected += [&](IRigController*) {
             CallAfter([&]() {
                 m_txtModeStatus->SetLabel(wxT("unk"));
                 m_txtModeStatus->Enable(false);
             });
         };
 
-        wxGetApp().m_hamlib->onFreqModeChange += [&](IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
+        wxGetApp().rigFrequencyController->onFreqModeChange += [&](IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
         {
             CallAfter([&, mode, freq]() {
                 // Update string value.
@@ -407,7 +411,7 @@ bool MainFrame::OpenHamlibRig() {
 
         // Temporarily suppress frequency updates until we're fully connected.
         suppressFreqModeUpdates_ = true;
-        wxGetApp().m_hamlib->connect();
+        wxGetApp().rigFrequencyController->connect();
         return true;
     }
     else
@@ -678,20 +682,16 @@ void MainFrame::togglePTT(void) {
 
     g_tx = m_btnTogPTT->GetValue();
 
-    // Hamlib PTT
-
     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT) {
-        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT && wxGetApp().m_hamlib != nullptr) {
+        if (wxGetApp().rigFrequencyController != nullptr && wxGetApp().rigFrequencyController->isConnected()) {
             // Update mode display on the bottom of the main UI.
-            wxGetApp().m_hamlib->requestCurrentFrequencyMode();
-            wxGetApp().m_hamlib->ptt(g_tx);
+            wxGetApp().rigFrequencyController->requestCurrentFrequencyMode();
         }
     }
 
-    // Serial PTT
-
-    if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT && (wxGetApp().m_serialport->isConnected())) {
-        wxGetApp().m_serialport->ptt(g_tx);
+    if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected()) 
+    {
+        wxGetApp().rigPttController->ptt(g_tx);
     }
 
     // reset level gauge
@@ -789,12 +789,12 @@ void MainFrame::OnTogBtnAnalogClick (wxCommandEvent& event)
         obj->inAnalogMode(g_analog);
     }
     
-    if (wxGetApp().m_hamlib != nullptr && 
+    if (wxGetApp().rigFrequencyController != nullptr && 
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 &&
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
     {
         // Request mode change on the radio side
-        wxGetApp().m_hamlib->setMode(getCurrentMode_());
+        wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
     }
 
     g_State = g_prev_State = 0;
@@ -851,7 +851,7 @@ void MainFrame::OnBerReset(wxCommandEvent& event)
 
 void MainFrame::OnChangeReportFrequencyVerify( wxCommandEvent& event )
 {
-    if (wxGetApp().m_hamlib != nullptr && suppressFreqModeUpdates_)
+    if (wxGetApp().rigFrequencyController != nullptr && suppressFreqModeUpdates_)
     {
         return;
     }
@@ -897,13 +897,13 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
         ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
     }
     
-    if (wxGetApp().m_hamlib != nullptr && 
+    if (wxGetApp().rigFrequencyController != nullptr && 
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 && 
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
     {
         // Request frequency/mode change on the radio side
-        wxGetApp().m_hamlib->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-        wxGetApp().m_hamlib->setMode(getCurrentMode_());
+        wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
     }
     
     if (m_reporterDialog != nullptr)

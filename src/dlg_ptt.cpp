@@ -908,7 +908,11 @@ void ComPortsDlg::updateControlState()
     m_cbOmniRigRigId->Enable(m_ckUseOmniRig->GetValue());
 #endif // defined(WIN32)
     
-    m_buttonTest->Enable(m_ckUseHamlibPTT->GetValue() || m_ckUseSerialPTT->GetValue() || m_ckUseOmniRig->GetValue());    
+    m_buttonTest->Enable(m_ckUseHamlibPTT->GetValue() || m_ckUseSerialPTT->GetValue()
+#if defined(WIN32)
+         || m_ckUseOmniRig->GetValue()
+#endif // defined(WIN32)
+    );    
     
     if (m_cbPttMethod->GetValue() == _("CAT"))
     {

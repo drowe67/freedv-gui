@@ -886,7 +886,8 @@ MainFrame::~MainFrame()
     fclose(ftest);
     #endif
 
-    wxGetApp().m_serialport = nullptr;
+    wxGetApp().rigPttController = nullptr;
+    wxGetApp().rigFrequencyController = nullptr;
     wxGetApp().m_pttInSerialPort = nullptr;
     
     if (!IsIconized()) {
@@ -976,7 +977,8 @@ MainFrame::~MainFrame()
         optionsDlg = NULL;
     }
 
-    wxGetApp().m_hamlib = nullptr;    
+    wxGetApp().rigFrequencyController = nullptr;
+    wxGetApp().rigPttController = nullptr;
     wxGetApp().m_reporters.clear();
 }
 
@@ -1017,10 +1019,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     else if (evt.GetTimer().GetId() == ID_TIMER_UPD_FREQ)
     {
         // show freq. and mode [UP]
-        if (wxGetApp().m_hamlib && wxGetApp().m_hamlib->isConnected()) 
+        if (wxGetApp().rigFrequencyController && wxGetApp().rigFrequencyController->isConnected()) 
         {
             if (g_verbose) fprintf(stderr, "update freq and mode ....\n"); 
-            wxGetApp().m_hamlib->requestCurrentFrequencyMode();
+            wxGetApp().rigFrequencyController->requestCurrentFrequencyMode();
         }
      }
      else
@@ -1401,7 +1403,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
            
                     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT)
                     {
-                        wxGetApp().m_hamlib->requestCurrentFrequencyMode();
+                        wxGetApp().rigFrequencyController->requestCurrentFrequencyMode();
                     }
             
                     int64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
@@ -1612,10 +1614,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 //-------------------------------------------------------------------------
 void MainFrame::OnExit(wxCommandEvent& event)
 {
-    if (wxGetApp().m_hamlib)
+    if (wxGetApp().rigFrequencyController)
     {
-        wxGetApp().m_hamlib->disconnect();
-        wxGetApp().m_hamlib = nullptr;
+        wxGetApp().rigFrequencyController->disconnect();
+        wxGetApp().rigFrequencyController = nullptr;
+    }
+    
+    if (wxGetApp().rigPttController)
+    {
+        wxGetApp().rigPttController->disconnect();
+        wxGetApp().rigPttController = nullptr;
     }
 
     wxGetApp().m_reporters.clear();
@@ -2067,27 +2075,20 @@ void MainFrame::performFreeDVOff_()
         m_updFreqStatusTimer.Stop(); // [UP]
     });
 #endif // _USE_TIMER
-
-    // ensure we are not transmitting and shut down audio processing
-
-    if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT) 
-    {
-        auto hamlib = wxGetApp().m_hamlib;
-        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT && hamlib != nullptr) 
-        {
-            if (hamlib->isConnected())
-            {
-                hamlib->ptt(false);
-                hamlib->disconnect();
-            }
-        }
-        wxGetApp().m_hamlib = nullptr;
-    }
     
-    if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT) 
+    // always end with PTT in rx state
+    if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected())
     {
-        CloseSerialPort();
+        wxGetApp().rigPttController->ptt(false);
+        wxGetApp().rigPttController->disconnect();
     }
+    wxGetApp().rigPttController = nullptr;
+
+    if (wxGetApp().rigFrequencyController != nullptr && wxGetApp().rigFrequencyController->isConnected())
+    {
+        wxGetApp().rigFrequencyController->disconnect();
+    }
+    wxGetApp().rigFrequencyController = nullptr;
 
     if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTTInput)
     {
@@ -2990,7 +2991,7 @@ void MainFrame::initializeFreeDVReporter_()
         wxString fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz."), callsign, frequencyMHz);
         int dialogStyle = wxOK | wxICON_INFORMATION | wxCENTRE;
         
-        if (wxGetApp().m_hamlib != nullptr && wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+        if (wxGetApp().rigFrequencyController != nullptr && wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
         {
             fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz. Would you like to change to that frequency now?"), callsign, frequencyMHz);
             dialogStyle = wxYES_NO | wxICON_QUESTION | wxCENTRE;
