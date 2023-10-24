@@ -62,7 +62,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
 
     wxStaticBox* hamlibBox = new wxStaticBox(panel, wxID_ANY, _("Hamlib Settings"));
     wxStaticBoxSizer* staticBoxSizer18 = new wxStaticBoxSizer( hamlibBox, wxHORIZONTAL);
-    wxGridSizer* gridSizerhl = new wxGridSizer(8, 2, 0, 0);
+    wxGridSizer* gridSizerhl = new wxGridSizer(7, 2, 0, 0);
     staticBoxSizer18->Add(gridSizerhl, 1, wxEXPAND|wxALIGN_LEFT, 5);
 
     /* Use Hamlib for PTT checkbox. */
@@ -131,11 +131,6 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     m_cbPttMethod->Append(wxT("DTR"));
     m_cbPttMethod->Append(wxT("None (RX Only)"));
     
-    gridSizerhl->Add(new wxStaticText(hamlibBox, wxID_ANY, _("Serial Params:"), wxDefaultPosition, wxDefaultSize, 0), 
-                      0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 20);
-    m_cbSerialParams = new wxStaticText(hamlibBox, wxID_ANY, _(""), wxDefaultPosition, wxDefaultSize, 0);
-    gridSizerhl->Add(m_cbSerialParams, 0, wxALIGN_CENTER_VERTICAL, 0);
-
     mainSizer->Add(staticBoxSizer18, 0, wxEXPAND, 5);
 
     //----------------------------------------------------------------------
