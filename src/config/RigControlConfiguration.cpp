@@ -41,7 +41,7 @@ RigControlConfiguration::RigControlConfiguration()
 
 #if defined(WIN32)
     , useOmniRig("/Rig/UseOmniRig", false)
-    , omniRigRigId("/Rig/OmniRigRigId", 9)
+    , omniRigRigId("/Rig/OmniRigRigId", 0)
 #endif // defined(WIN32)
                 
     , useSerialPTTInput("/Rig/UseSerialPTTInput", false)

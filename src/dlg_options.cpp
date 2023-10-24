@@ -175,7 +175,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sizerRigControl->Add(sbSizer_ptt,0, wxALL | wxEXPAND, 5);
     
     wxStaticBoxSizer* sbSizer_hamlib;
-    wxStaticBox *sb_hamlib = new wxStaticBox(m_rigControlTab, wxID_ANY, _("Hamlib Options"));
+    wxStaticBox *sb_hamlib = new wxStaticBox(m_rigControlTab, wxID_ANY, _("Frequency/Mode Control Options"));
     sbSizer_hamlib = new wxStaticBoxSizer(sb_hamlib, wxVERTICAL);
     
     m_ckboxEnableFreqModeChanges = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Enable frequency and mode changes"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
