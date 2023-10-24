@@ -7,6 +7,10 @@
 #include "main.h"
 #include "lpcnet_freedv.h"
 
+#if defined(WIN32)
+#include "rig_control/omnirig/OmniRigController.h"
+#endif // defined(WIN32)
+
 extern int g_mode;
 
 extern int   g_SquelchActive;
@@ -422,7 +426,7 @@ bool MainFrame::OpenHamlibRig() {
 
 #if defined(WIN32)
 // TBD -- a lot of this can be combined with the Hamlib logic above.
-bool MainFrame::OpenOmniRig() 
+void MainFrame::OpenOmniRig() 
 {
     auto tmp = std::make_shared<OmniRigController>(wxGetApp().appConfiguration.rigControlConfiguration.omniRigRigId);
 
