@@ -62,7 +62,6 @@ class ComPortsDlg : public wxDialog
         wxStaticText *m_stIcomCIVHex;
         wxTextCtrl *m_tcIcomCIVHex;
         wxComboBox *m_cbPttMethod;
-        std::shared_ptr<HamlibRigController> m_hamlib;
 
         /* Serial Settings */
 

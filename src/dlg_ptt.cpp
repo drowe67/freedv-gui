@@ -36,7 +36,7 @@
 #include "rig_control/SerialPortOutRigController.h"
 
 #if defined(WIN32)
-#include "rig_control/OmniRigController.h"
+#include "rig_control/omnirig/OmniRigController.h"
 #endif // defined(WIN32)
 
 using namespace std::chrono_literals;
@@ -540,7 +540,7 @@ void ComPortsDlg::ExchangeData(int inout)
 #if defined(WIN32)
         /* OmniRig */
         m_ckUseOmniRig->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.useOmniRig);
-        m_cbOmniRigRigId->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.omniRigRigId);
+        m_cbOmniRigRigId->SetSelection(wxGetApp().appConfiguration.rigControlConfiguration.omniRigRigId);
 #endif // defined(WIN32)
         
         updateControlState();
@@ -592,7 +592,7 @@ void ComPortsDlg::ExchangeData(int inout)
 #if defined(WIN32)
         /* OmniRig */
         wxGetApp().appConfiguration.rigControlConfiguration.useOmniRig = m_ckUseOmniRig->GetValue();
-        wxGetApp().appConfiguration.rigControlConfiguration.omniRigRigId = m_cbOmniRigRigId->GetValue();
+        wxGetApp().appConfiguration.rigControlConfiguration.omniRigRigId = m_cbOmniRigRigId->GetCurrentSelection();
 #endif // defined(WIN32)
         
         wxGetApp().appConfiguration.save(pConfig);
@@ -753,9 +753,9 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
     else if (m_ckUseOmniRig->IsChecked())
     {
         // try to open rig
-        std::shared_ptr<OmniRigRigController> rig = 
-            std::make_shared<OmniRigRigController>(
-                m_cbOmniRigRigId->GetValue());
+        std::shared_ptr<OmniRigController> rig = 
+            std::make_shared<OmniRigController>(
+                m_cbOmniRigRigId->GetCurrentSelection());
 
         std::mutex mtx;
         std::condition_variable cv;
@@ -770,7 +770,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
         };
 
         rig->onRigConnected += [&](IRigController*) {
-            hamlib->ptt(true);
+            rig->ptt(true);
         };
 
         rig->onPttChange += [&](IRigController*, bool state) {
