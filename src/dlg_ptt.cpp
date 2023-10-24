@@ -785,6 +785,8 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             }
         };
 
+        rig->connect();
+
         std::unique_lock<std::mutex> lk(mtx);
         cv.wait(lk);
         
@@ -906,7 +908,7 @@ void ComPortsDlg::updateControlState()
     m_cbOmniRigRigId->Enable(m_ckUseOmniRig->GetValue());
 #endif // defined(WIN32)
     
-    m_buttonTest->Enable(m_ckUseHamlibPTT->GetValue() || m_ckUseSerialPTT->GetValue());    
+    m_buttonTest->Enable(m_ckUseHamlibPTT->GetValue() || m_ckUseSerialPTT->GetValue() || m_ckUseOmniRig->GetValue());    
     
     if (m_cbPttMethod->GetValue() == _("CAT"))
     {
