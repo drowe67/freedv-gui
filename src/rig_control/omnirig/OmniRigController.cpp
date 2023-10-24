@@ -46,7 +46,21 @@ OmniRigController::OmniRigController(int rigId, bool restoreOnDisconnect)
 
 OmniRigController::~OmniRigController()
 {
-    disconnect();
+    // Disconnect in a synchronous fashion before killing our thread.
+    std::condition_variable cv;
+    std::mutex mtx;
+    std::unique_lock<std::mutex> lk(mtx);
+
+    enqueue_([&]() {
+        std::unique_lock<std::mutex> innerLock(mtx);
+        if (rig_ != nullptr)
+        {
+            disconnectImpl_();
+        }
+        cv.notify_one();
+    });
+
+    cv.wait(lk);
 }
 
 void OmniRigController::connect()
@@ -139,7 +153,7 @@ void OmniRigController::disconnectImpl_()
         // If we're told to restore on disconnect, do so.
         if (restoreOnDisconnect_)
         {
-            rig_->put_Freq(origFreq_);
+            setFrequencyImpl_(origFreq_);
             rig_->put_Mode(origMode_);
         }
 
@@ -210,13 +224,13 @@ void OmniRigController::setFrequencyImpl_(uint64_t frequencyHz)
 
                 if (vfo == PM_VFOA || vfo == PM_VFOAA || vfo == PM_VFOAB)
                 {
-                    std::cerr << "[OmniRig] got freq for VFOA: " << tmpFreq << std::endl;
                     result = rig_->get_FreqA(&tmpFreq);
+                    std::cerr << "[OmniRig] got freq for VFOA: " << tmpFreq << std::endl;
                 }
                 else if (vfo == PM_VFOB || vfo == PM_VFOBB || vfo == PM_VFOBA)
                 {
-                    std::cerr << "[OmniRig] got freq for VFOB: " << tmpFreq << std::endl;
                     result = rig_->get_FreqB(&tmpFreq);
+                    std::cerr << "[OmniRig] got freq for VFOB: " << tmpFreq << std::endl;
                 }
             }
         }
