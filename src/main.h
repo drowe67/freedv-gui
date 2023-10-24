@@ -306,6 +306,9 @@ class MainFrame : public TopFrame
         TxRxThread*             m_rxThread;
         
         bool                    OpenHamlibRig();
+#if defined(WIN32)
+        void                    OpenOmniRig();
+#endif // defined(WIN32)
         void                    OpenSerialPort(void);
         void                    OpenPTTInPort(void);
         void                    ClosePTTInPort(void);

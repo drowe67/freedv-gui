@@ -1966,11 +1966,16 @@ void MainFrame::performFreeDVOn_()
             {
                 OpenHamlibRig();
             }
-            
-            if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT) 
+            else if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT) 
             {
                 OpenSerialPort();
             }
+#if defined(WIN32)
+            else if (wxGetApp().appConfiguration.rigControlConfiguration.useOmniRig)
+            {
+                OpenOmniRig();
+            }
+#endif // defined(WIN32)
                 
             // Initialize PSK Reporter reporting.
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)

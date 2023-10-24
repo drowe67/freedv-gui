@@ -420,6 +420,109 @@ bool MainFrame::OpenHamlibRig() {
     }
 }
 
+#if defined(WIN32)
+// TBD -- a lot of this can be combined with the Hamlib logic above.
+bool MainFrame::OpenOmniRig() 
+{
+    auto tmp = std::make_shared<OmniRigController>(wxGetApp().appConfiguration.rigControlConfiguration.omniRigRigId);
+
+    // OmniRig also controls PTT.
+    wxGetApp().rigFrequencyController = tmp;
+    wxGetApp().rigPttController = tmp;
+    
+    wxGetApp().rigFrequencyController->onRigError += [this](IRigController*, std::string err)
+    {
+        std::string fullErr = "Couldn't connect to Radio with OmniRig: " + err;
+        CallAfter([&, fullErr]() {
+            wxMessageBox(fullErr, wxT("Error"), wxOK | wxICON_ERROR, this);
+        });
+    };
+
+    wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController*) {
+        //if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+        {
+            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+            wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+        }
+    };
+
+    wxGetApp().rigFrequencyController->onRigDisconnected += [&](IRigController*) {
+        CallAfter([&]() {
+            m_txtModeStatus->SetLabel(wxT("unk"));
+            m_txtModeStatus->Enable(false);
+        });
+    };
+
+    wxGetApp().rigFrequencyController->onFreqModeChange += [&](IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
+    {
+        CallAfter([&, mode, freq]() {
+            // Update string value.
+            switch(mode)
+            {
+                case IRigFrequencyController::USB:
+                case IRigFrequencyController::DIGU:
+                    m_txtModeStatus->SetLabel(wxT("USB"));
+                    m_txtModeStatus->Enable(true);
+                    break;
+                case IRigFrequencyController::LSB:
+                case IRigFrequencyController::DIGL:
+                    m_txtModeStatus->SetLabel(wxT("LSB"));
+                    m_txtModeStatus->Enable(true);
+                    break;
+                case IRigFrequencyController::FM:
+                case IRigFrequencyController::DIGFM:
+                    m_txtModeStatus->SetLabel(wxT("FM"));
+                    m_txtModeStatus->Enable(true);
+                    break;
+                case IRigFrequencyController::AM:
+                    m_txtModeStatus->SetLabel(wxT("AM"));
+                    m_txtModeStatus->Enable(true);
+                    break;
+                default:
+                    m_txtModeStatus->SetLabel(wxT("unk"));
+                    m_txtModeStatus->Enable(false);
+                    break;
+            }
+
+            // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
+            bool is60MeterBand = freq >= 5250000 && freq <= 5450000;
+
+            // Update color based on the mode and current frequency.
+            bool isUsbFreq = freq >= 10000000 || is60MeterBand;
+            bool isLsbFreq = freq < 10000000 && !is60MeterBand;
+
+            bool isMatchingMode = 
+                (isUsbFreq && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
+                (isLsbFreq && (mode == IRigFrequencyController::LSB || mode == IRigFrequencyController::DIGL));
+
+            if (isMatchingMode)
+            {
+                m_txtModeStatus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+            }
+            else
+            {
+                m_txtModeStatus->SetForegroundColour(wxColor(*wxRED));
+            }
+
+            // Update frequency box
+            if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
+                !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting)
+            {
+                m_cboReportFrequency->SetValue(wxString::Format("%.4f", freq/1000.0/1000.0));
+            }
+            m_txtModeStatus->Refresh();
+
+            // Suppress updates if the Report Frequency box has focus.
+            suppressFreqModeUpdates_ = m_cboReportFrequency->HasFocus();
+        });
+    };
+
+    // Temporarily suppress frequency updates until we're fully connected.
+    suppressFreqModeUpdates_ = true;
+    wxGetApp().rigFrequencyController->connect();
+}
+#endif // defined(WIN32)
+
 //-------------------------------------------------------------------------
 // OnCloseFrame()
 //-------------------------------------------------------------------------
