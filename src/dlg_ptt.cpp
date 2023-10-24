@@ -32,6 +32,13 @@
 #include <sstream>
 #include <chrono>
 
+#include "rig_control/HamlibRigController.h"
+#include "rig_control/SerialPortOutRigController.h"
+
+#if defined(WIN32)
+#include "rig_control/OmniRigController.h"
+#endif // defined(WIN32)
+
 using namespace std::chrono_literals;
 
 extern wxConfigBase *pConfig;
@@ -222,6 +229,34 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     
     pttInBoxSizer->Add(gridSizerPttIn, 1, wxEXPAND, 5);
     
+#if defined(WIN32)
+    
+    //----------------------------------------------------------------------
+    // OmniRig for PTT/frequency control
+    //----------------------------------------------------------------------
+
+    wxStaticBox* omniRigBox = new wxStaticBox(panel, wxID_ANY, _("OmniRig Settings"));
+    wxStaticBoxSizer* omniRigBoxSizer = new wxStaticBoxSizer( omniRigBox, wxHORIZONTAL);
+
+    /* Use OmniRig checkbox. */
+
+    m_ckUseOmniRig = new wxCheckBox(omniRigBox, wxID_ANY, _("Enable CAT control via OmniRig"), wxDefaultPosition, wxSize(-1, -1), 0);
+    m_ckUseOmniRig->SetValue(false);
+    omniRigBoxSizer->Add(m_ckUseOmniRig, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    /* OmniRig Rig ID combobox. */
+
+    omniRigBoxSizer->Add(new wxStaticText(omniRigBox, wxID_ANY, _("Rig ID:"), wxDefaultPosition, wxDefaultSize, 0), 
+                      0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_cbOmniRigRigId = new wxComboBox(omniRigBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
+
+    m_cbOmniRigRigId->Append("1");
+    m_cbOmniRigRigId->Append("2");
+    omniRigBoxSizer->Add(m_cbOmniRigRigId, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    mainSizer->Add(omniRigBoxSizer, 0, wxEXPAND, 5);
+    
+#endif // defined(WIN32)
+    
     //----------------------------------------------------------------------
     // OK - Cancel - Apply
     //----------------------------------------------------------------------
@@ -255,6 +290,11 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     this->Connect(wxEVT_INIT_DIALOG, wxInitDialogEventHandler(ComPortsDlg::OnInitDialog), NULL, this);
     m_ckUseHamlibPTT->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(ComPortsDlg::PTTUseHamLibClicked), NULL, this);
     m_ckUseSerialPTT->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(ComPortsDlg::PTTUseSerialClicked), NULL, this);
+    
+#if defined(WIN32)
+    m_ckUseOmniRig->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(ComPortsDlg::PTTUseOmniRigClicked), NULL, this);
+#endif // defined(WIN32)
+    
     m_ckUsePTTInput->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(ComPortsDlg::PTTUseSerialInputClicked), NULL, this);
     m_cbRigName->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(ComPortsDlg::HamlibRigNameChanged), NULL, this);
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ComPortsDlg::OnOK), NULL, this);
@@ -491,11 +531,18 @@ void ComPortsDlg::ExchangeData(int inout)
         m_rbUseDTR->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseDTR);
         m_ckDTRPos->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR);
         
+        /* PTT Input */
         m_ckUsePTTInput->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTTInput);
         str = wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPort;
         m_cbCtlDevicePathPttIn->SetValue(str);
         m_ckCTSPos->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPolarityCTS);
 
+#if defined(WIN32)
+        /* OmniRig */
+        m_ckUseOmniRig->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.useOmniRig);
+        m_cbOmniRigRigId->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.omniRigRigId);
+#endif // defined(WIN32)
+        
         updateControlState();
     }
 
@@ -542,6 +589,12 @@ void ComPortsDlg::ExchangeData(int inout)
         wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPort = m_cbCtlDevicePathPttIn->GetValue();
         wxGetApp().appConfiguration.rigControlConfiguration.serialPTTInputPolarityCTS = m_ckCTSPos->IsChecked();
         
+#if defined(WIN32)
+        /* OmniRig */
+        wxGetApp().appConfiguration.rigControlConfiguration.useOmniRig = m_ckUseOmniRig->GetValue();
+        wxGetApp().appConfiguration.rigControlConfiguration.omniRigRigId = m_cbOmniRigRigId->GetValue();
+#endif // defined(WIN32)
+        
         wxGetApp().appConfiguration.save(pConfig);
     }
 }
@@ -552,6 +605,11 @@ void ComPortsDlg::ExchangeData(int inout)
 void ComPortsDlg::PTTUseHamLibClicked(wxCommandEvent& event)
 {
     m_ckUseSerialPTT->SetValue(false);
+    
+#if defined(WIN32)
+    m_ckUseOmniRig->SetValue(false);
+#endif // defined(WIN32)
+    
     updateControlState();
 }
 
@@ -638,16 +696,15 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             hamlib->disconnect();
         }
     }
-
-    /* Serial PTT */
-
-    if (m_ckUseSerialPTT->IsChecked()) {       
+    else if (m_ckUseSerialPTT->IsChecked()) 
+    {
+        /* Serial PTT */       
         wxString ctrlport;
         ctrlport = m_cbCtlDevicePath->GetValue();
         if (g_verbose) fprintf(stderr, "opening serial port: ");
         fputs(ctrlport.c_str(), stderr);            // don't escape crazy Microsoft bakslash-ified comm port names
         if (g_verbose) fprintf(stderr,"\n");
-        
+    
         if (wxGetApp().CanAccessSerialPort((const char*)ctrlport.ToUTF8()))
         {
             std::shared_ptr<SerialPortOutRigController> serialPort = std::make_shared<SerialPortOutRigController>(
@@ -692,8 +749,61 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
         }
     }
     
+#if defined(WIN32)
+    else if (m_ckUseOmniRig->IsChecked())
+    {
+        // try to open rig
+        std::shared_ptr<OmniRigRigController> rig = 
+            std::make_shared<OmniRigRigController>(
+                m_cbOmniRigRigId->GetValue());
+
+        std::mutex mtx;
+        std::condition_variable cv;
+
+        rig->onRigError += [&](IRigController*, std::string error) {
+            CallAfter([&]() {
+                wxMessageBox("Couldn't connect to Radio with OmniRig.  Make sure the rig ID and OmniRig configuration is correct.", 
+                    wxT("Error"), wxOK | wxICON_ERROR, this);
+
+                cv.notify_one();
+            });
+        };
+
+        rig->onRigConnected += [&](IRigController*) {
+            hamlib->ptt(true);
+        };
+
+        rig->onPttChange += [&](IRigController*, bool state) {
+            if (state)
+            {
+                std::this_thread::sleep_for(1s);
+                rig->ptt(false);
+            }
+            else
+            {
+                cv.notify_one();
+            }
+        };
+
+        std::unique_lock<std::mutex> lk(mtx);
+        cv.wait(lk);
+        
+        rig->disconnect();
+    }  
+#endif // defined(WIN32)
 }
 
+#if defined(WIN32)
+//-------------------------------------------------------------------------
+// PTTUseSerialClicked()
+//-------------------------------------------------------------------------
+void ComPortsDlg::PTTUseOmniRigClicked(wxCommandEvent& event)
+{
+    m_ckUseHamlibPTT->SetValue(false);
+    m_ckUseSerialPTT->SetValue(false);
+    updateControlState();
+}
+#endif // defined(WIN32)
 
 //-------------------------------------------------------------------------
 // PTTUseSerialClicked()
@@ -701,6 +811,10 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
 void ComPortsDlg::PTTUseSerialClicked(wxCommandEvent& event)
 {
     m_ckUseHamlibPTT->SetValue(false);
+#if defined(WIN32)
+    m_ckUseOmniRig->SetValue(false);
+#endif // defined(WIN32)
+    
     updateControlState();
 }
 
@@ -787,6 +901,10 @@ void ComPortsDlg::updateControlState()
     
     m_cbCtlDevicePathPttIn->Enable(m_ckUsePTTInput->GetValue());
     m_ckCTSPos->Enable(m_ckUsePTTInput->GetValue());
+    
+#if defined(WIN32)
+    m_cbOmniRigRigId->Enable(m_ckUseOmniRig->GetValue());
+#endif // defined(WIN32)
     
     m_buttonTest->Enable(m_ckUseHamlibPTT->GetValue() || m_ckUseSerialPTT->GetValue());    
     

@@ -23,7 +23,6 @@
 #define __COMPORTS_DIALOG__
 
 #include "main.h"
-#include "rig_control/HamlibRigController.h"
 #include <wx/settings.h>
 #include <wx/xrc/xmlres.h>
 #include <wx/xrc/xh_bmp.h>
@@ -81,6 +80,11 @@ class ComPortsDlg : public wxDialog
         wxCheckBox    *m_ckCTSPos;
         wxComboBox    *m_cbCtlDevicePathPttIn;
 
+#if defined(WIN32)
+        wxCheckBox    *m_ckUseOmniRig;
+        wxComboBox    *m_cbOmniRigRigId;
+#endif // defined(WIN32)
+        
         /* Test - Ok - Cancel - Apply */
 
         wxButton* m_buttonTest;
@@ -94,6 +98,11 @@ protected:
 
         void PTTUseHamLibClicked(wxCommandEvent& event);
         void PTTUseSerialClicked(wxCommandEvent& event);
+        
+#if defined(WIN32)
+        void PTTUseOmniRigClicked(wxCommandEvent& event);
+#endif // deinfed(WIN32)
+        
         void PTTUseSerialInputClicked(wxCommandEvent& event);
         void HamlibRigNameChanged(wxCommandEvent& event);
         void OnHamlibSerialPortChanged(wxCommandEvent& event);
