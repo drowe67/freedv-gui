@@ -428,7 +428,9 @@ bool MainFrame::OpenHamlibRig() {
 // TBD -- a lot of this can be combined with the Hamlib logic above.
 void MainFrame::OpenOmniRig() 
 {
-    auto tmp = std::make_shared<OmniRigController>(wxGetApp().appConfiguration.rigControlConfiguration.omniRigRigId);
+    auto tmp = std::make_shared<OmniRigController>(
+        wxGetApp().appConfiguration.rigControlConfiguration.omniRigRigId,
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
 
     // OmniRig also controls PTT.
     wxGetApp().rigFrequencyController = tmp;
@@ -443,7 +445,7 @@ void MainFrame::OpenOmniRig()
     };
 
     wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController*) {
-        //if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
         {
             wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
             wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
@@ -969,6 +971,8 @@ void MainFrame::OnChangeReportFrequencyVerify( wxCommandEvent& event )
 void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
 {    
     wxString freqStr = m_cboReportFrequency->GetValue();
+    auto oldFreq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+
     if (freqStr.Length() > 0)
     {
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = round(atof(freqStr.ToUTF8()) * 1000 * 1000);
@@ -997,22 +1001,25 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = 0;
         m_cboReportFrequency->SetForegroundColour(wxColor(*wxRED));
     }
+
+    if (oldFreq != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency)
+    {    
+        // Report current frequency to reporters
+        for (auto& ptr : wxGetApp().m_reporters)
+        {
+            ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        }
     
-    // Report current frequency to reporters
-    for (auto& ptr : wxGetApp().m_reporters)
-    {
-        ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        if (wxGetApp().rigFrequencyController != nullptr && 
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 && 
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+        {
+            // Request frequency/mode change on the radio side
+            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+            wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+        }
     }
-    
-    if (wxGetApp().rigFrequencyController != nullptr && 
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 && 
-        wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
-    {
-        // Request frequency/mode change on the radio side
-        wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-        wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
-    }
-    
+
     if (m_reporterDialog != nullptr)
     {
         m_reporterDialog->refreshQSYButtonState();
