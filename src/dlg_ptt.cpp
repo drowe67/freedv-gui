@@ -789,7 +789,7 @@ void ComPortsDlg::updateControlState()
     
     m_buttonTest->Enable(m_ckUseHamlibPTT->GetValue() || m_ckUseSerialPTT->GetValue());    
     
-    if (m_cbPttMethod->GetValue() == _("CAT"))
+    if (m_cbPttMethod->GetValue() == _("CAT") || m_cbPttMethod->GetValue() == _("None (RX Only)"))
     {
         m_cbPttSerialPort->Enable(false);
     }
