@@ -916,6 +916,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix issue causing improper RX Only reporting when hamlib is disabled. (PR #579)
     * Fix compiler error on some Linux installations. (PR #578)
     * Fix issue causing error on startup after testing setup with Easy Setup. (PR #575)
+    * Fix issue preventing PSK Reporter from being enabled by default. (PR #575)
 2. Enhancements:
     * Add experimental support for OmniRig to FreeDV. (PR #575)
         * *Note: This is only available on Windows.*
