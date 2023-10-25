@@ -25,7 +25,7 @@
 #include <functional>
 #include <sstream>
 #include <algorithm>
-#include <string>
+#include <cstring>
 #include <strings.h>
 
 #include "HamlibRigController.h"
