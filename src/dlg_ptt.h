@@ -59,7 +59,6 @@ class ComPortsDlg : public wxDialog
         wxComboBox *m_cbSerialPort;
         wxComboBox *m_cbPttSerialPort;
         wxComboBox *m_cbSerialRate;
-        wxStaticText  *m_cbSerialParams;
         wxStaticText *m_stIcomCIVHex;
         wxTextCtrl *m_tcIcomCIVHex;
         wxComboBox *m_cbPttMethod;

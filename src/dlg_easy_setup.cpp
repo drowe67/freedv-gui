@@ -731,12 +731,12 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                 txTestAudioDevice_ = nullptr;
             }
         
-            if (hamlibTestObject_->isConnected())
+            if (hamlibTestObject_ != nullptr && hamlibTestObject_->isConnected())
             {
                 hamlibTestObject_->ptt(false);
                 hamlibTestObject_->disconnect();
             }
-            else if (serialPortTestObject_->isConnected())
+            else if (serialPortTestObject_ != nullptr && serialPortTestObject_->isConnected())
             {
                 serialPortTestObject_->ptt(false);
                 serialPortTestObject_->disconnect();
@@ -825,10 +825,15 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
             }
             else if (m_ckUseSerialPTT->GetValue())
             {
-                wxString serialPort = m_cbSerialPort->GetValue();
+                wxString serialPort = m_cbCtlDevicePath->GetValue();
 
                 if (!wxGetApp().CanAccessSerialPort((const char*)serialPort.ToUTF8()))
                 {
+                    CallAfter([&]() {
+                        wxMessageBox(
+                            "Couldn't connect to Radio.  Make sure the serial Device and Params match your radio", 
+                            wxT("Error"), wxOK | wxICON_ERROR, this);
+                    });
                     return;
                 }
                 
@@ -853,7 +858,8 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                 };
                 serialPortTestObject_->onRigConnected += [&](IRigController*) {
                     serialPortTestObject_->ptt(true);
-                };                
+                };          
+                serialPortTestObject_->connect();      
             }
         
             // Start playing a sine wave through the radio's device
