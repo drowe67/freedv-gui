@@ -48,6 +48,11 @@ public:
     ConfigurationDataElement<bool> serialPTTUseDTR;
     ConfigurationDataElement<bool> serialPTTPolarityDTR;
     
+#if defined(WIN32)
+    ConfigurationDataElement<bool> useOmniRig;
+    ConfigurationDataElement<unsigned int> omniRigRigId;
+#endif // defined(WIN32)
+    
     ConfigurationDataElement<bool> useSerialPTTInput;
     ConfigurationDataElement<wxString> serialPTTInputPort;
     ConfigurationDataElement<bool> serialPTTInputPolarityCTS;

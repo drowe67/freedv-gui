@@ -122,14 +122,15 @@ void MainFrame::OpenSerialPort(void)
     {
         if (wxGetApp().CanAccessSerialPort((const char*)wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPort->ToUTF8()))
         {
-            wxGetApp().m_serialport = std::make_shared<SerialPortOutRigController>(
+            wxGetApp().rigPttController = std::make_shared<SerialPortOutRigController>(
                     (const char*)wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPort->c_str(),
                     wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseRTS,
                     wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS,
                     wxGetApp().appConfiguration.rigControlConfiguration.serialPTTUseDTR,
                     wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR);
+            wxGetApp().rigFrequencyController = nullptr;
             
-            wxGetApp().m_serialport->onRigError += [&](IRigController*, std::string err) {
+            wxGetApp().rigPttController->onRigError += [&](IRigController*, std::string err) {
                 std::string fullErrMsg = "Couldn't open serial port for PTT output: " + err; 
                 CallAfter([&]() 
                 {
@@ -137,27 +138,10 @@ void MainFrame::OpenSerialPort(void)
                 });
             };
 
-            wxGetApp().m_serialport->connect();
+            wxGetApp().rigPttController->connect();
         }
     }
 }
-
-
-//----------------------------------------------------------------
-// CloseSerialPort()
-//----------------------------------------------------------------
-
-void MainFrame::CloseSerialPort(void)
-{
-    // always end with PTT in rx state
-    if (wxGetApp().m_serialport)
-    {
-        wxGetApp().m_serialport->ptt(false);
-        wxGetApp().m_serialport->disconnect();
-        wxGetApp().m_serialport = nullptr;
-    }
-}
-
 
 //----------------------------------------------------------------
 // OpenPTTInPort()

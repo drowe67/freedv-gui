@@ -178,8 +178,8 @@ class MainApp : public wxApp
         
         // PTT -----------------------------------    
         unsigned int        m_intHamlibRig;
-        std::shared_ptr<HamlibRigController> m_hamlib;
-        std::shared_ptr<SerialPortOutRigController> m_serialport;
+        std::shared_ptr<IRigFrequencyController> rigFrequencyController;
+        std::shared_ptr<IRigPttController> rigPttController;
 
         // PTT Input
         std::shared_ptr<SerialPortInRigController> m_pttInSerialPort;
@@ -306,8 +306,10 @@ class MainFrame : public TopFrame
         TxRxThread*             m_rxThread;
         
         bool                    OpenHamlibRig();
+#if defined(WIN32)
+        void                    OpenOmniRig();
+#endif // defined(WIN32)
         void                    OpenSerialPort(void);
-        void                    CloseSerialPort(void);
         void                    OpenPTTInPort(void);
         void                    ClosePTTInPort(void);
 

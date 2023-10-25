@@ -38,7 +38,12 @@ RigControlConfiguration::RigControlConfiguration()
     , serialPTTPolarityRTS("/Rig/RTSPolarity", true)
     , serialPTTUseDTR("/Rig/UseDTR", false)
     , serialPTTPolarityDTR("/Rig/DTRPolarity", false)
-        
+
+#if defined(WIN32)
+    , useOmniRig("/Rig/UseOmniRig", false)
+    , omniRigRigId("/Rig/OmniRigRigId", 0)
+#endif // defined(WIN32)
+                
     , useSerialPTTInput("/Rig/UseSerialPTTInput", false)
     , serialPTTInputPort("/Rig/PttInPort", "")
     , serialPTTInputPolarityCTS("/Rig/CTSPolarity", false)
@@ -72,6 +77,11 @@ void RigControlConfiguration::load(wxConfigBase* config)
     load_(config, serialPTTUseDTR);
     load_(config, serialPTTPolarityDTR);
     
+#if defined(WIN32)
+    load_(config, useOmniRig);
+    load_(config, omniRigRigId);
+#endif // defined(WIN32)
+    
     load_(config, useSerialPTTInput);
     load_(config, serialPTTInputPort);
     load_(config, serialPTTInputPolarityCTS);
@@ -98,6 +108,11 @@ void RigControlConfiguration::save(wxConfigBase* config)
     save_(config, serialPTTUseDTR);
     save_(config, serialPTTPolarityDTR);
     
+#if defined(WIN32)
+    save_(config, useOmniRig);
+    save_(config, omniRigRigId);
+#endif // defined(WIN32)
+        
     save_(config, useSerialPTTInput);
     save_(config, serialPTTInputPort);
     save_(config, serialPTTInputPolarityCTS);

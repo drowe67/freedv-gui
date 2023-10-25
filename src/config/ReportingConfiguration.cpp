@@ -37,7 +37,7 @@ ReportingConfiguration::ReportingConfiguration()
         
     , manualFrequencyReporting("/Reporting/ManualFrequencyReporting", false)
         
-    , pskReporterEnabled("/Reporting/PSKReporter/Enable", false)
+    , pskReporterEnabled("/Reporting/PSKReporter/Enable", true)
         
     , freedvReporterEnabled("/Reporting/FreeDV/Enable", true)
     , freedvReporterHostname("/Reporting/FreeDV/Hostname", wxT(FREEDV_REPORTER_DEFAULT_HOSTNAME))
