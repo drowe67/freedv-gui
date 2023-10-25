@@ -651,13 +651,22 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 </tbody>
 </table>
 <h1 data-number="18" id="release-notes"><span class="header-section-number">18</span> Release Notes</h1>
-<h2 data-number="18.1" id="v1.9.4-tbd-2023"><span class="header-section-number">18.1</span> V1.9.4 TBD 2023</h2>
+<h2 data-number="18.1" id="v1.9.4-october-2023"><span class="header-section-number">18.1</span> V1.9.4 October 2023</h2>
 <ol type="1">
 <li>Bugfixes:
 <ul>
 <li>Fix issue causing hanging while testing serial port PTT. (PR #577)</li>
 <li>Fix issue causing improper RX Only reporting when hamlib is disabled. (PR #579)</li>
 <li>Fix compiler error on some Linux installations. (PR #578)</li>
+<li>Fix issue causing error on startup after testing setup with Easy Setup. (PR #575)</li>
+<li>Fix issue preventing PSK Reporter from being enabled by default. (PR #575)</li>
+</ul></li>
+<li>Enhancements:
+<ul>
+<li>Add experimental support for OmniRig to FreeDV. (PR #575)
+<ul>
+<li><em>Note: This is only available on Windows.</em></li>
+</ul></li>
 </ul></li>
 </ol>
 <h2 data-number="18.2" id="v1.9.3-october-2023"><span class="header-section-number">18.2</span> V1.9.3 October 2023</h2>
