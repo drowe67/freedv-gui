@@ -145,9 +145,8 @@ struct PulseAudioDeviceListTemp
 
 std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(AudioDirection direction)
 {
-    PulseAudioDeviceListTemp tempObj = {
-        .thisPtr = this
-    };
+    PulseAudioDeviceListTemp tempObj;
+    tempObj.thisPtr = this;
     
     pa_operation* op = nullptr;
     
@@ -231,9 +230,8 @@ struct PaDefaultAudioDeviceTemp
 
 AudioDeviceSpecification PulseAudioEngine::getDefaultAudioDevice(AudioDirection direction)
 {
-    PaDefaultAudioDeviceTemp tempData = {
-        .mainloop = mainloop_
-    };
+    PaDefaultAudioDeviceTemp tempData;
+    tempData.mainloop = mainloop_;
     
     pa_threaded_mainloop_lock(mainloop_);
     auto op = pa_context_get_server_info(context_, [](pa_context *c, const pa_server_info *i, void *userdata) {
