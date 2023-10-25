@@ -729,6 +729,9 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
             {
                 txTestAudioDevice_->stop();
                 txTestAudioDevice_ = nullptr;
+
+                auto audioEngine = AudioEngineFactory::GetAudioEngine();
+                audioEngine->stop();
             }
         
             if (hamlibTestObject_ != nullptr && hamlibTestObject_->isConnected())
