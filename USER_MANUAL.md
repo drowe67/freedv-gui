@@ -917,7 +917,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix compiler error on some Linux installations. (PR #578)
 2. Enhancements:
     * Add experimental support for OmniRig to FreeDV. (PR #575)
-      *Note: This is only available on Windows.*
+        * *Note: This is only available on Windows.*
 
 ## V1.9.3 October 2023
 
