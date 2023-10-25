@@ -913,6 +913,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * Fix issue causing hanging while testing serial port PTT. (PR #577)
+    * Fix issue causing improper RX Only reporting when hamlib is disabled. (PR #579)
 
 ## V1.9.3 October 2023
 

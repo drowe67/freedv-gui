@@ -2180,9 +2180,15 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
 
             // On/Off actions complete, re-enable button.
             executeOnUiThreadAndWait_([&]() {
+                bool txEnabled = 
+                    m_RxRunning && 
+                    (g_nSoundCards == 2) && 
+                    (!wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT ||
+                     (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() != HamlibRigController::PTT_VIA_NONE);
+                
                 m_togBtnAnalog->Enable(m_RxRunning);
-                m_togBtnVoiceKeyer->Enable(m_RxRunning && (g_nSoundCards == 2) && ((HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() != HamlibRigController::PTT_VIA_NONE));
-                m_btnTogPTT->Enable(m_RxRunning && (g_nSoundCards == 2) && ((HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() != HamlibRigController::PTT_VIA_NONE));
+                m_togBtnVoiceKeyer->Enable(txEnabled);
+                m_btnTogPTT->Enable(txEnabled);
                 optionsDlg->setSessionActive(m_RxRunning);
 
                 if (m_RxRunning)
@@ -2966,13 +2972,19 @@ bool MainFrame::validateSoundCardSetup()
 
 void MainFrame::initializeFreeDVReporter_()
 {
+    bool hamlibDisabledForRigControl = 
+        (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT &&
+         (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() == HamlibRigController::PTT_VIA_NONE);
+    bool receiveOnly = 
+        g_nSoundCards <= 1 || hamlibDisabledForRigControl;
+    
     wxGetApp().m_sharedReporterObject =
         std::make_shared<FreeDVReporter>(
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString(),
             wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
             wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
             std::string("FreeDV ") + FREEDV_VERSION,
-            g_nSoundCards <= 1 || (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() == HamlibRigController::PTT_VIA_NONE ? true : false);
+            receiveOnly);
     assert(wxGetApp().m_sharedReporterObject);
     
     // Make built in FreeDV Reporter client available.
