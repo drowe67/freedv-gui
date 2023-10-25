@@ -25,6 +25,8 @@
 #include <functional>
 #include <sstream>
 #include <algorithm>
+#include <cstring>
+#include <strings.h>
 
 #include "HamlibRigController.h"
 
@@ -64,10 +66,10 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     , multipleVfos_(false)
     , pttSet_(false)
     , currFreq_(0)
-    , currMode_(0)
+    , currMode_(RIG_MODE_NONE)
     , restoreOnDisconnect_(restoreFreqModeOnDisconnect)
     , origFreq_(0)
-    , origMode_(0)
+    , origMode_(RIG_MODE_NONE)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -83,9 +85,11 @@ HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, c
     , rig_(nullptr)
     , multipleVfos_(false)
     , pttSet_(false)
+    , currFreq_(0)
+    , currMode_(RIG_MODE_NONE)
     , restoreOnDisconnect_(restoreFreqModeOnDisconnect)
     , origFreq_(0)
-    , origMode_(0)
+    , origMode_(RIG_MODE_NONE)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -220,7 +224,7 @@ void HamlibRigController::connectImpl_()
     
     /* Initialise, configure and open. */
     origFreq_ = 0;
-    origMode_ = 0;
+    origMode_ = RIG_MODE_NONE;
     
     rig_ = rig_init(RigList_[rigIndex]->rig_model);
     if (!rig_) 
@@ -327,7 +331,7 @@ void HamlibRigController::disconnectImpl_()
         }
         
         origFreq_ = 0;
-        origMode_ = 0;
+        origMode_ = RIG_MODE_NONE;
         
         rig_close(rig_);
         rig_cleanup(rig_);
