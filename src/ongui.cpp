@@ -837,36 +837,25 @@ void MainFrame::togglePTT(void) {
 
 HamlibRigController::Mode MainFrame::getCurrentMode_()
 {
+    // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
+    bool is60MeterBand = 
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency >= 5250000 && 
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency <= 5450000;
+    
     bool useAnalog = 
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes || g_analog;
+    HamlibRigController::Mode lsbMode = useAnalog ? HamlibRigController::LSB : HamlibRigController::DIGL;
+    HamlibRigController::Mode usbMode = useAnalog ? HamlibRigController::USB : HamlibRigController::DIGU;
+    
     HamlibRigController::Mode newMode;
-    if (useAnalog)
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency < 10000000 &&
+        !is60MeterBand)
     {
-        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency < 10000000)
-        {
-            newMode = HamlibRigController::LSB;
-        }
-        else
-        {
-            newMode = HamlibRigController::USB;
-        }
+        newMode = lsbMode;
     }
     else
     {
-        // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
-        bool is60MeterBand = 
-            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency >= 5250000 && 
-            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency <= 5450000;
-
-        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency < 10000000 &&
-            !is60MeterBand)
-        {
-            newMode = HamlibRigController::DIGL;
-        }
-        else
-        {
-            newMode = HamlibRigController::DIGU;
-        }
+        newMode = usbMode;
     }
 
     return newMode;
