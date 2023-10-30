@@ -401,7 +401,7 @@ bool MainFrame::OpenHamlibRig() {
                 }
 
                 // Suppress updates if the Report Frequency box has focus.
-                suppressFreqModeUpdates_ = m_cboReportFrequency->HasFocus();
+                //suppressFreqModeUpdates_ = m_cboReportFrequency->HasFocus();
 
                 // Update frequency box
                 if (!suppressFreqModeUpdates_ && (
