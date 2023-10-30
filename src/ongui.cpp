@@ -335,7 +335,7 @@ bool MainFrame::OpenHamlibRig() {
         };
 
         wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController*) {
-            if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+            if (wxGetApp().rigFrequencyController && wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
             {
                 wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
                 wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
@@ -401,15 +401,13 @@ bool MainFrame::OpenHamlibRig() {
                 }
 
                 // Update frequency box
-                if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
-                    !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting)
+                if (!suppressFreqModeUpdates_ && (
+                    !wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
+                    !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting))
                 {
                     m_cboReportFrequency->SetValue(wxString::Format("%.4f", freq/1000.0/1000.0));
                 }
                 m_txtModeStatus->Refresh();
-
-                // Suppress updates if the Report Frequency box has focus.
-                suppressFreqModeUpdates_ = m_cboReportFrequency->HasFocus();
             });
         };
 
