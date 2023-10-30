@@ -400,9 +400,6 @@ bool MainFrame::OpenHamlibRig() {
                     m_txtModeStatus->SetForegroundColour(wxColor(*wxRED));
                 }
 
-                // Suppress updates if the Report Frequency box has focus.
-                //suppressFreqModeUpdates_ = m_cboReportFrequency->HasFocus();
-
                 // Update frequency box
                 if (!suppressFreqModeUpdates_ && (
                     !wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
