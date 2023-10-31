@@ -63,7 +63,7 @@ you to adjust your radio sound levels (see "Sound Card Levels" below).
 ### Reporting
 
 While not required, it is recommended to enable reporting so that others
-can see who is currently receiving them. This will also allow the FreeDV
+can see who is currently receiving them. This also allows the FreeDV
 applicaton to control the radio's frequency and mode. Both sides of a contact 
 must have this enabled in order for contacts to be reported. To configure 
 reporting, simply enable the feature here and enter your callsign and current 
@@ -365,12 +365,13 @@ The following services are currently supported and can be individually enabled o
 along with the reporting feature as a whole:
 
 * [PSK Reporter](https://pskreporter.info/) (using the "FREEDV" mode)
-* [FreeDV Reporter](https://freedv-reporter.k6aq.net/)
+* [FreeDV Reporter](https://qso.freedv.org/) -- also accessible via the Tools->FreeDV Reporter menu option.
 
 The frequency that FreeDV reports is set by changing the "Report Frequency" drop down box in the main window. This 
 is in kilohertz (kHz) and will turn red if the entered value is invalid. If Hamlib support is also enabled, 
 this frequency will automatically remain in sync with the current VFO on the radio (i.e. if the frequency is changed
-in the application, the radio will also change its frequency).
+in the application, the radio will also change its frequency). Double-clicking on users in the Tools->FreeDV Reporter
+window will also cause this frequency to change to match the other user.
 
 *Note: in some setups (such as when using ALE), it is not preferred to have the reporting frequency automatically be 
 in sync with the radio. For example, in the case of ALE, the radio's frequency changes multiple times per second while
@@ -916,6 +917,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * Fix bug preventing frequency updates from being properly suppressed when frequency control is in focus. (PR #585)
     * Fix bug preventing 60 meter frequencies from using USB with DIGU/DIGL disabled. (PR #589)
+2. Enhancements:
+    * Add ability to double-click FreeDV Reporter entries to change the radio's frequency. (PR #592)
 
 ## V1.9.4 October 2023
 
