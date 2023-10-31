@@ -63,9 +63,11 @@ you to adjust your radio sound levels (see "Sound Card Levels" below).
 ### Reporting
 
 While not required, it is recommended to enable reporting so that others
-can see who is currently receiving them. Both sides of a contact must have this enabled
-in order for this feature to work. To configure reporting, simply enable
-the feature here and enter your callsign and current grid square.
+can see who is currently receiving them. This will also allow the FreeDV
+applicaton to control the radio's frequency and mode. Both sides of a contact 
+must have this enabled in order for contacts to be reported. To configure 
+reporting, simply enable the feature here and enter your callsign and current 
+grid square/locator.
 
 For more information about the reporting feature, see the "FreeDV Reporting" section below.
 
