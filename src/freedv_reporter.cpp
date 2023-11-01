@@ -120,8 +120,17 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     
     buttonSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
-    m_trackFrequency = new wxCheckBox(this, wxID_ANY, _("Track current frequency"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_trackFrequency = new wxCheckBox(this, wxID_ANY, _("Track current:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     buttonSizer->Add(m_trackFrequency, 0, wxALL | wxALIGN_LEFT, 5);
+    
+    m_trackFreqBand = new wxRadioButton(this, wxID_ANY, _("band"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    buttonSizer->Add(m_trackFreqBand, 0, wxALL | wxALIGN_LEFT, 5);
+    m_trackFreqBand->Enable(false);
+    
+    m_trackExactFreq = new wxRadioButton(this, wxID_ANY, _("frequency"), wxDefaultPosition, wxDefaultSize, 0);
+    buttonSizer->Add(m_trackExactFreq, 0, wxALL | wxALIGN_LEFT, 5);
+    m_trackExactFreq->Enable(false);
+    
     m_trackFrequency->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency);
     
     m_buttonOK = new wxButton(this, wxID_OK, _("Close"));
@@ -174,11 +183,15 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     
     m_bandFilter->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnBandFilterChange), NULL, this);
     m_trackFrequency->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
+    m_trackFreqBand->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
+    m_trackExactFreq->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
     
     // Trigger sorting on last sorted column
     sortColumn_(wxGetApp().appConfiguration.reporterWindowCurrentSort, wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
     
     // Trigger filter update if we're starting with tracking enabled
+    m_trackFreqBand->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFreqBand);
+    m_trackExactFreq->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksExactFreq);
     if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency)
     {
         m_bandFilter->Enable(false);
@@ -194,6 +207,8 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     m_highlightClearTimer->Stop();
     
     m_trackFrequency->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
+    m_trackFreqBand->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
+    m_trackExactFreq->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
     
     this->Disconnect(wxEVT_TIMER, wxTimerEventHandler(FreeDVReporterDialog::OnTimer), NULL, this);
     this->Disconnect(wxEVT_SIZE, wxSizeEventHandler(FreeDVReporterDialog::OnSize));
@@ -386,6 +401,14 @@ void FreeDVReporterDialog::OnFilterTrackingEnable(wxCommandEvent& event)
     m_bandFilter->Enable(
         !wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency);
     
+    m_trackFreqBand->Enable(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency);
+    m_trackExactFreq->Enable(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency);
+    
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFreqBand =
+        m_trackFreqBand->GetValue();
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksExactFreq =
+        m_trackExactFreq->GetValue();
+    
     FilterFrequency freq;
     if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency)
     {
@@ -409,7 +432,7 @@ void FreeDVReporterDialog::refreshQSYButtonState()
         FilterFrequency freq = 
             getFilterForFrequency_(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
         
-        if (currentBandFilter_ != freq)
+        if (currentBandFilter_ != freq || wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksExactFreq)
         {
             setBandFilter(freq);
         }
@@ -1122,6 +1145,10 @@ bool FreeDVReporterDialog::isFiltered_(uint64_t freq)
     }
     else
     {
-        return bandForFreq != currentBandFilter_;
+        return 
+            (bandForFreq != currentBandFilter_) ||
+            (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency &&
+                wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksExactFreq &&
+                freq != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
     }
 }
