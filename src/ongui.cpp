@@ -335,7 +335,9 @@ bool MainFrame::OpenHamlibRig() {
         };
 
         wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController*) {
-            if (wxGetApp().rigFrequencyController && wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+            if (wxGetApp().rigFrequencyController && 
+                wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges &&
+                wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
             {
                 wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
                 wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
@@ -564,16 +566,37 @@ void MainFrame::OnTop(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnDeleteConfig(wxCommandEvent&)
 {
-    if(pConfig->DeleteAll())
+    wxMessageDialog messageDialog(
+        this, "Would you like to restore configuration to defaults?", wxT("Restore Defaults"),
+        wxYES_NO | wxICON_QUESTION | wxCENTRE);
+
+    auto answer = messageDialog.ShowModal();
+    if (answer == wxID_YES)
     {
-        wxLogMessage(wxT("Config file/registry key successfully deleted."));
-        
-        // Resets all configuration to defaults.
-        loadConfiguration_();
-    }
-    else
-    {
-        wxLogError(wxT("Deleting config file/registry key failed."));
+        if(pConfig->DeleteAll())
+        {
+            wxLogMessage(wxT("Config file/registry key successfully deleted."));
+            
+            if (wxGetApp().m_sharedReporterObject)
+            {
+                wxGetApp().m_sharedReporterObject = nullptr;
+            }
+
+            if (m_reporterDialog != nullptr)
+            {
+                m_reporterDialog->setReporter(nullptr);
+                m_reporterDialog->Close();
+                m_reporterDialog->Destroy();
+                m_reporterDialog = nullptr;
+            }
+            
+            // Resets all configuration to defaults.
+            loadConfiguration_();
+        }
+        else
+        {
+            wxLogError(wxT("Deleting config file/registry key failed."));
+        }
     }
 }
 
