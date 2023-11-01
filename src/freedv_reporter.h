@@ -86,6 +86,8 @@ class FreeDVReporterDialog : public wxDialog
         void OnTimer(wxTimerEvent& event);
         void OnFilterTrackingEnable(wxCommandEvent& event);
         
+        void OnDoubleClick(wxMouseEvent& event);
+        
         // Main list box that shows spots
         wxListView*   m_listSpots;
         wxImageList*  m_sortIcons;
