@@ -914,6 +914,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * Fix bug preventing frequency updates from being properly suppressed when frequency control is in focus. (PR #585)
     * Fix bug preventing 60 meter frequencies from using USB with DIGU/DIGL disabled. (PR #589)
+2. Enhancements:
+    * FreeDV Reporter: Add support for filtering the exact frequency. (PR #596)
 
 ## V1.9.4 October 2023
 
