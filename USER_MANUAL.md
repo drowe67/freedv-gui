@@ -918,7 +918,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix bug preventing frequency updates from being properly suppressed when frequency control is in focus. (PR #585)
     * Fix bug preventing 60 meter frequencies from using USB with DIGU/DIGL disabled. (PR #589)
     * Additional fix for PR #561 to parse/format frequencies using current locale. (PR #595)
+    * Fix bug preventing FreeDV Reporter window from closing after resetting configuration to defaults. (PR #593)
 2. Enhancements:
+    * Add confirmation dialog box before actually resetting configuration to defaults. (PR #593)
     * Add ability to double-click FreeDV Reporter entries to change the radio's frequency. (PR #592)
 
 ## V1.9.4 October 2023
