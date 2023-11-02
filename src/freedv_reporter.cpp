@@ -196,6 +196,8 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency)
     {
         m_bandFilter->Enable(false);
+        m_trackFreqBand->Enable(true);
+        m_trackExactFreq->Enable(true);
         
         FilterFrequency freq = 
             getFilterForFrequency_(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
