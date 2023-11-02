@@ -44,6 +44,7 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterBandFilter("/Reporting/FreeDV/CurrentBandFilter", 0)
     , useMetricDistances("/Reporting/FreeDV/UseMetricDistances", true)
     , freedvReporterBandFilterTracksFrequency("/Reporting/FreeDV/BandFilterTracksFrequency", false)
+    , freedvReporterForceReceiveOnly("/Reporting/FreeDV/ForceReceiveOnly", false)
         
     , useUTCForReporting("/CallsignList/UseUTCTime", false)
         
@@ -147,6 +148,7 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, freedvReporterBandFilter);
     load_(config, useMetricDistances);
     load_(config, freedvReporterBandFilterTracksFrequency);
+    load_(config, freedvReporterForceReceiveOnly);
     
     load_(config, useUTCForReporting);
     
@@ -179,6 +181,7 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, freedvReporterBandFilter);
     save_(config, useMetricDistances);
     save_(config, freedvReporterBandFilterTracksFrequency);
+    save_(config, freedvReporterForceReceiveOnly);
     
     save_(config, useUTCForReporting);
     

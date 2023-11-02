@@ -2188,6 +2188,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             executeOnUiThreadAndWait_([&]() {
                 bool txEnabled = 
                     m_RxRunning && 
+                    !wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly &&
                     (g_nSoundCards == 2) && 
                     (!wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT ||
                      (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() != HamlibRigController::PTT_VIA_NONE);
@@ -2982,6 +2983,7 @@ void MainFrame::initializeFreeDVReporter_()
         (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT &&
          (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() == HamlibRigController::PTT_VIA_NONE);
     bool receiveOnly = 
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly || 
         g_nSoundCards <= 1 || hamlibDisabledForRigControl;
     
     wxGetApp().m_sharedReporterObject =
