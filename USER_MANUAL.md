@@ -917,6 +917,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * Fix bug preventing frequency updates from being properly suppressed when frequency control is in focus. (PR #585)
     * Fix bug preventing 60 meter frequencies from using USB with DIGU/DIGL disabled. (PR #589)
+    * Additional fix for PR #561 to parse/format frequencies using current locale. (PR #595)
     * Add entitlements to work around macOS Sonoma permissions bug. (PR #598)
     * Fix bug preventing FreeDV Reporter window from closing after resetting configuration to defaults. (PR #593)
 2. Enhancements:

@@ -4,6 +4,10 @@
   The simpler GUI event handlers.
 */
 
+#include <sstream>
+#include <iomanip>
+#include <locale>
+
 #include "main.h"
 #include "lpcnet_freedv.h"
 
@@ -419,7 +423,12 @@ bool MainFrame::OpenHamlibRig() {
                     !wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
                     !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting))
                 {
-                    m_cboReportFrequency->SetValue(wxString::Format("%.4f", freq/1000.0/1000.0));
+                    // wxString::Format() doesn't respect locale but C++ iomanip should. Use the latter instead.
+                    std::stringstream ss;
+                    std::locale loc("");
+                    ss.imbue(loc);
+                    ss << std::fixed << std::setprecision(4) << (freq / 1000.0 / 1000.0);
+                    m_cboReportFrequency->SetValue(ss.str());
                 }
                 m_txtModeStatus->Refresh();
             });
@@ -995,7 +1004,14 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
 
     if (freqStr.Length() > 0)
     {
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = round(atof(freqStr.ToUTF8()) * 1000 * 1000);
+        double tmp = 0;
+        std::stringstream ss(std::string(freqStr.ToUTF8()));
+        std::locale loc("");
+        ss.imbue(loc);
+
+        ss >> std::fixed >> std::setprecision(4) >> tmp;
+
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = round(tmp * 1000 * 1000);
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
         {
             m_cboReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
