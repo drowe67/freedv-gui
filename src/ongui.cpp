@@ -323,6 +323,7 @@ bool MainFrame::OpenHamlibRig() {
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
 
         // Hamlib also controls PTT.
+        firstFreqUpdateOnConnect_ = false;
         wxGetApp().rigFrequencyController = tmp;
         wxGetApp().rigPttController = tmp;
         
@@ -339,6 +340,11 @@ bool MainFrame::OpenHamlibRig() {
                 wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges &&
                 wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
             {
+                // Suppress the frequency update message that will occur immediately after
+                // connect; this will prevent overwriting of whatever's in the text box.
+                firstFreqUpdateOnConnect_ = true;
+
+                // Set frequency/mode to the one pre-selected by the user before start.
                 wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
                 wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
             }
@@ -354,6 +360,12 @@ bool MainFrame::OpenHamlibRig() {
         wxGetApp().rigFrequencyController->onFreqModeChange += [&](IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
         {
             CallAfter([&, mode, freq]() {
+                if (firstFreqUpdateOnConnect_)
+                {
+                    firstFreqUpdateOnConnect_ = false;
+                    return;
+                }
+
                 // Update string value.
                 switch(mode)
                 {
@@ -413,8 +425,6 @@ bool MainFrame::OpenHamlibRig() {
             });
         };
 
-        // Temporarily suppress frequency updates until we're fully connected.
-        suppressFreqModeUpdates_ = true;
         wxGetApp().rigFrequencyController->connect();
         return true;
     }
@@ -1044,11 +1054,11 @@ void MainFrame::OnReportFrequencySetFocus(wxFocusEvent& event)
 
 void MainFrame::OnReportFrequencyKillFocus(wxFocusEvent& event)
 {
+    suppressFreqModeUpdates_ = false;
+    
     // Handle any frequency changes as appropriate.
     wxCommandEvent tmpEvent;
     OnChangeReportFrequency(tmpEvent);
-    
-    suppressFreqModeUpdates_ = false;
 
     TopFrame::OnReportFrequencyKillFocus(event);
 }
