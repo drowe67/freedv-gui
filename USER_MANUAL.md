@@ -922,6 +922,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Enhancements:
     * Add confirmation dialog box before actually resetting configuration to defaults. (PR #593)
     * Add ability to double-click FreeDV Reporter entries to change the radio's frequency. (PR #592)
+    * FreeDV Reporter: Add ability to force RX Only reporting in Tools->Options. (PR #599)
 
 ## V1.9.4 October 2023
 
