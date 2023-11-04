@@ -475,6 +475,7 @@ class MainFrame : public TopFrame
         float      vk_rx_time;
         float      vk_rx_sync_time;
         bool suppressFreqModeUpdates_;
+        bool firstFreqUpdateOnConnect_;
         
         std::string vkFileName_;
         

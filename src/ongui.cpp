@@ -4,6 +4,10 @@
   The simpler GUI event handlers.
 */
 
+#include <sstream>
+#include <iomanip>
+#include <locale>
+
 #include "main.h"
 #include "lpcnet_freedv.h"
 
@@ -323,6 +327,7 @@ bool MainFrame::OpenHamlibRig() {
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
 
         // Hamlib also controls PTT.
+        firstFreqUpdateOnConnect_ = false;
         wxGetApp().rigFrequencyController = tmp;
         wxGetApp().rigPttController = tmp;
         
@@ -339,6 +344,11 @@ bool MainFrame::OpenHamlibRig() {
                 wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges &&
                 wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
             {
+                // Suppress the frequency update message that will occur immediately after
+                // connect; this will prevent overwriting of whatever's in the text box.
+                firstFreqUpdateOnConnect_ = true;
+
+                // Set frequency/mode to the one pre-selected by the user before start.
                 wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
                 wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
             }
@@ -354,6 +364,12 @@ bool MainFrame::OpenHamlibRig() {
         wxGetApp().rigFrequencyController->onFreqModeChange += [&](IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
         {
             CallAfter([&, mode, freq]() {
+                if (firstFreqUpdateOnConnect_)
+                {
+                    firstFreqUpdateOnConnect_ = false;
+                    return;
+                }
+
                 // Update string value.
                 switch(mode)
                 {
@@ -407,14 +423,17 @@ bool MainFrame::OpenHamlibRig() {
                     !wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
                     !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting))
                 {
-                    m_cboReportFrequency->SetValue(wxString::Format("%.4f", freq/1000.0/1000.0));
+                    // wxString::Format() doesn't respect locale but C++ iomanip should. Use the latter instead.
+                    std::stringstream ss;
+                    std::locale loc("");
+                    ss.imbue(loc);
+                    ss << std::fixed << std::setprecision(4) << (freq / 1000.0 / 1000.0);
+                    m_cboReportFrequency->SetValue(ss.str());
                 }
                 m_txtModeStatus->Refresh();
             });
         };
 
-        // Temporarily suppress frequency updates until we're fully connected.
-        suppressFreqModeUpdates_ = true;
         wxGetApp().rigFrequencyController->connect();
         return true;
     }
@@ -985,7 +1004,14 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
 
     if (freqStr.Length() > 0)
     {
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = round(atof(freqStr.ToUTF8()) * 1000 * 1000);
+        double tmp = 0;
+        std::stringstream ss(std::string(freqStr.ToUTF8()));
+        std::locale loc("");
+        ss.imbue(loc);
+
+        ss >> std::fixed >> std::setprecision(4) >> tmp;
+
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = round(tmp * 1000 * 1000);
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
         {
             m_cboReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
@@ -1011,15 +1037,15 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = 0;
         m_cboReportFrequency->SetForegroundColour(wxColor(*wxRED));
     }
+  
+    // Report current frequency to reporters
+    for (auto& ptr : wxGetApp().m_reporters)
+    {
+        ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+    }
 
     if (oldFreq != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency)
-    {    
-        // Report current frequency to reporters
-        for (auto& ptr : wxGetApp().m_reporters)
-        {
-            ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-        }
-    
+    {      
         if (wxGetApp().rigFrequencyController != nullptr && 
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 && 
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
@@ -1044,11 +1070,11 @@ void MainFrame::OnReportFrequencySetFocus(wxFocusEvent& event)
 
 void MainFrame::OnReportFrequencyKillFocus(wxFocusEvent& event)
 {
+    suppressFreqModeUpdates_ = false;
+    
     // Handle any frequency changes as appropriate.
     wxCommandEvent tmpEvent;
     OnChangeReportFrequency(tmpEvent);
-    
-    suppressFreqModeUpdates_ = false;
 
     TopFrame::OnReportFrequencyKillFocus(event);
 }
