@@ -100,6 +100,8 @@ class FreeDVReporterDialog : public wxDialog
         // Band filter
         wxComboBox* m_bandFilter;
         wxCheckBox* m_trackFrequency;
+        wxRadioButton* m_trackFreqBand;
+        wxRadioButton* m_trackExactFreq;
         
         // Step 4: test/save/cancel setup
         wxButton* m_buttonOK;

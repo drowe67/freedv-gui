@@ -921,6 +921,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add entitlements to work around macOS Sonoma permissions bug. (PR #598)
     * Fix bug preventing FreeDV Reporter window from closing after resetting configuration to defaults. (PR #593)
 2. Enhancements:
+    * FreeDV Reporter: Add support for filtering the exact frequency. (PR #596)
     * Add confirmation dialog box before actually resetting configuration to defaults. (PR #593)
     * Add ability to double-click FreeDV Reporter entries to change the radio's frequency. (PR #592)
 
