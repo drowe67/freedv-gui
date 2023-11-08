@@ -1,0 +1,17 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1600871..613cb09 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -169,10 +169,10 @@ set(LPCNET_ROOT http://rowetel.com/downloads/deep/)
+ set(LPCNET_FILE lpcnet_191005_v1.0.tgz)
+ set(LPCNET_URL ${LPCNET_ROOT}${LPCNET_FILE})
+ 
+-if(EXISTS ${CMAKE_BINARY_DIR}/${LPCNET_FILE})
++if(EXISTS ${CMAKE_SOURCE_DIR}/${LPCNET_FILE})
+     set(lpcnet_SOURCE_DIR ${CMAKE_BINARY_DIR}/src)
+     file(MAKE_DIRECTORY ${lpcnet_SOURCE_DIR})
+-    execute_process(COMMAND tar -xzf ${CMAKE_BINARY_DIR}/${LPCNET_FILE} -C ${CMAKE_BINARY_DIR}/src)
++    execute_process(COMMAND tar -xzf ${CMAKE_SOURCE_DIR}/${LPCNET_FILE} -C ${CMAKE_BINARY_DIR}/src)
+ 
+ # Work around not having the FetchContent module.
+ elseif(CMAKE_VERSION VERSION_LESS 3.11.4)

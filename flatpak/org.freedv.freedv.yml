@@ -1,0 +1,71 @@
+app-id: org.freedv.freedv
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+command: freedv
+finish-args:
+    - --share=network
+    - --socket=wayland
+    - --share=ipc
+    - --socket=fallback-x11
+    - --socket=pulseaudio
+    - --filesystem=home
+modules:
+    - name: wxWidgets
+      buildsystem: cmake
+      builddir: true
+      sources:
+          - type: git
+            url: https://github.com/wxWidgets/wxWidgets
+            tag: v3.2.3
+    - name: LPCNet
+      buildsystem: cmake
+      builddir: true
+      sources:
+          - type: git
+            url: https://github.com/drowe67/LPCNet.git
+            tag: v0.5
+          - type: file
+            url: http://rowetel.com/downloads/deep/lpcnet_191005_v1.0.tgz
+            sha256: 509440924751fdd87ffaa5683ee3dddd937af5c833b9104ccce65d51614926c8
+          - type: patch
+            path: LPCNet-flatpak-support.patch
+    - name: codec2
+      buildsystem: cmake
+      builddir: true
+      modules:
+          - LPCNet
+      sources:
+          - type: git
+            url: https://github.com/drowe67/codec2.git
+            tag: 1.2.0
+      config-opts:
+          - -DLPCNET=ON
+    - name: hamlib
+      buildsystem: autotools
+      sources:
+          - type: git
+            url: https://github.com/Hamlib/Hamlib.git
+            tag: 4.5.5
+    - name: socketio-cpp
+      buildsystem: cmake
+      sources:
+          - type: git
+            url: https://github.com/socketio/socket.io-client-cpp.git
+            tag: master
+      config-opts:
+          - -DBUILD_TESTING=OFF
+    - name: freedv
+      buildsystem: cmake
+      builddir: true
+      modules:
+          - wxWidgets
+          - LPCNet
+          - codec2
+          - hamlib
+          - socketio-cpp
+      sources:
+          - type: git
+            url: https://github.com/drowe67/freedv-gui.git
+            tag: v1.9.4
+
