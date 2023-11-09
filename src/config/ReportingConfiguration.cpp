@@ -51,13 +51,16 @@ ReportingConfiguration::ReportingConfiguration()
     , useUTCForReporting("/CallsignList/UseUTCTime", false)
         
     , reportingFrequencyList("/Reporting/FrequencyList", {
+        _("1.9970"),
         _("3.6250"),
         _("3.6430"),
         _("3.6930"),
         _("3.6970"),
+        _("3.8500"),
         _("5.4035"),
         _("5.3665"),
         _("7.1770"),
+        _("7.1970"),
         _("14.2360"),
         _("14.2400"),
         _("18.1180"),
