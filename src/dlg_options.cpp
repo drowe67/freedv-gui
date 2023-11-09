@@ -1190,6 +1190,7 @@ void OptionsDlg::updateReportingState()
             m_ckboxManualFrequencyReporting->Enable(true);
             m_ckboxPskReporterEnable->Enable(true);
             m_ckboxFreeDVReporterEnable->Enable(true);
+            m_ckboxFreeDVReporterForceReceiveOnly->Enable(true);
         }
         else
         {
@@ -1199,6 +1200,7 @@ void OptionsDlg::updateReportingState()
             m_ckboxPskReporterEnable->Enable(false);
             m_ckboxFreeDVReporterEnable->Enable(false);
             m_ckboxManualFrequencyReporting->Enable(false);
+            m_ckboxFreeDVReporterForceReceiveOnly->Enable(true);
         }    
     }
     else
@@ -1213,6 +1215,7 @@ void OptionsDlg::updateReportingState()
         m_ckboxFreeDVReporterEnable->Enable(false);
         m_useMetricDistances->Enable(false);
         m_freedvReporterHostname->Enable(false);
+        m_ckboxFreeDVReporterForceReceiveOnly->Enable(false);
         
         m_ckbox_use_utc_time->Enable(false);
     }
