@@ -145,6 +145,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_useMetricDistances = new wxCheckBox(m_reportingTab, wxID_ANY, _("Distances in km"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizerReportingFreeDVNoCall->Add(m_useMetricDistances, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
+    m_ckboxFreeDVReporterForceReceiveOnly = new wxCheckBox(m_reportingTab, wxID_ANY, _("Force RX Only reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizerReportingFreeDVNoCall->Add(m_ckboxFreeDVReporterForceReceiveOnly, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
     sizerReporting->Add(sbSizerReportingFreeDVNoCall, 0, wxALL | wxEXPAND, 5);
 
     // Callsign list settings
@@ -837,7 +840,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxFreeDVReporterEnable->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled);
         m_freedvReporterHostname->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname);
         m_useMetricDistances->SetValue(wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances);
-                
+        m_ckboxFreeDVReporterForceReceiveOnly->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly);
+        
         // Callsign list config
         m_ckbox_use_utc_time->SetValue(wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting);
         
@@ -987,6 +991,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled = m_ckboxFreeDVReporterEnable->GetValue();
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname = m_freedvReporterHostname->GetValue();
         wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances = m_useMetricDistances->GetValue();
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly = m_ckboxFreeDVReporterForceReceiveOnly->GetValue();
                 
         // Callsign list config
         wxGetApp().appConfiguration.reportingConfiguration.useUTCForReporting = m_ckbox_use_utc_time->GetValue();
@@ -1185,6 +1190,7 @@ void OptionsDlg::updateReportingState()
             m_ckboxManualFrequencyReporting->Enable(true);
             m_ckboxPskReporterEnable->Enable(true);
             m_ckboxFreeDVReporterEnable->Enable(true);
+            m_ckboxFreeDVReporterForceReceiveOnly->Enable(true);
         }
         else
         {
@@ -1194,6 +1200,7 @@ void OptionsDlg::updateReportingState()
             m_ckboxPskReporterEnable->Enable(false);
             m_ckboxFreeDVReporterEnable->Enable(false);
             m_ckboxManualFrequencyReporting->Enable(false);
+            m_ckboxFreeDVReporterForceReceiveOnly->Enable(true);
         }    
     }
     else
@@ -1208,6 +1215,7 @@ void OptionsDlg::updateReportingState()
         m_ckboxFreeDVReporterEnable->Enable(false);
         m_useMetricDistances->Enable(false);
         m_freedvReporterHostname->Enable(false);
+        m_ckboxFreeDVReporterForceReceiveOnly->Enable(false);
         
         m_ckbox_use_utc_time->Enable(false);
     }

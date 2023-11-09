@@ -2188,6 +2188,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
             executeOnUiThreadAndWait_([&]() {
                 bool txEnabled = 
                     m_RxRunning && 
+                    !wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly &&
                     (g_nSoundCards == 2) && 
                     (!wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT ||
                      (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() != HamlibRigController::PTT_VIA_NONE);
@@ -2982,8 +2983,10 @@ void MainFrame::initializeFreeDVReporter_()
         (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT &&
          (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() == HamlibRigController::PTT_VIA_NONE);
     bool receiveOnly = 
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly || 
         g_nSoundCards <= 1 || hamlibDisabledForRigControl;
     
+    auto oldReporterObject = wxGetApp().m_sharedReporterObject;
     wxGetApp().m_sharedReporterObject =
         std::make_shared<FreeDVReporter>(
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString(),
@@ -2992,6 +2995,20 @@ void MainFrame::initializeFreeDVReporter_()
             std::string("FreeDV ") + FREEDV_VERSION,
             receiveOnly);
     assert(wxGetApp().m_sharedReporterObject);
+    
+    // If we're running, remove any existing reporter object.
+    if (oldReporterObject != nullptr)
+    {
+        for (auto& ptr : wxGetApp().m_reporters)
+        {
+            if (ptr == oldReporterObject)
+            {
+                oldReporterObject = nullptr;
+                ptr = wxGetApp().m_sharedReporterObject;
+                break;
+            }
+        }
+    }
     
     // Make built in FreeDV Reporter client available.
     if (m_reporterDialog == nullptr)
@@ -3032,5 +3049,13 @@ void MainFrame::initializeFreeDVReporter_()
     });
     
     wxGetApp().m_sharedReporterObject->connect();
-    wxGetApp().m_sharedReporterObject->hideFromView();
+    if (!freedvInterface.isRunning())
+    {
+        wxGetApp().m_sharedReporterObject->hideFromView();
+    }
+    else
+    {
+        wxGetApp().m_sharedReporterObject->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+        wxGetApp().m_sharedReporterObject->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+    }
 }

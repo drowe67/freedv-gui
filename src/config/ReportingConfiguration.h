@@ -51,6 +51,7 @@ public:
     ConfigurationDataElement<int> freedvReporterBandFilter;
     ConfigurationDataElement<bool> useMetricDistances;
     ConfigurationDataElement<bool> freedvReporterBandFilterTracksFrequency;
+    ConfigurationDataElement<bool> freedvReporterForceReceiveOnly;
     ConfigurationDataElement<bool> freedvReporterBandFilterTracksFreqBand;
     ConfigurationDataElement<bool> freedvReporterBandFilterTracksExactFreq;
     

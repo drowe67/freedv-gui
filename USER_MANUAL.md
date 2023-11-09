@@ -924,6 +924,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FreeDV Reporter: Add support for filtering the exact frequency. (PR #596)
     * Add confirmation dialog box before actually resetting configuration to defaults. (PR #593)
     * Add ability to double-click FreeDV Reporter entries to change the radio's frequency. (PR #592)
+    * FreeDV Reporter: Add ability to force RX Only reporting in Tools->Options. (PR #599)
     * Add new 160m/80m/40m calling frequencies for IARU R2. (PR #601)
 
 ## V1.9.4 October 2023
