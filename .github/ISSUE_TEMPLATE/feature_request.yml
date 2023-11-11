@@ -23,7 +23,6 @@ body:
           description: Is this a feature for FreeDV? If so, how will it help enhance HF Digital Voice for Amateur radio?
       validations:
           required: true
-          required: true
     - type: dropdown
       id: vhf-or-uhf
       attributes:
