@@ -1,0 +1,80 @@
+name: Feature Request
+description: Request a new feature to be implemented in FreeDV
+title: "[Feature Request] "
+labels: ["feature proposal"]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Thank you for submitting a feature request! We are a small team and need to prioritize our work to
+              allow us to do the most for the community. Because of this, we request that you provide the following
+              information if possible.
+    - type: input
+      id: contact
+      attributes:
+          label: Contact Details
+          description: How many people want the feature? Please supply contacts details for at least 3 of them.
+          placeholder: ex: email@example.com or GitHub usernames
+      validations:
+    - type: textarea
+      id: feature-for-this-project
+      attributes:
+          label: Feature for this project
+          description: Is this a feature for FreeDV? If so, how will it help enhance HF Digital Voice for Amateur radio?
+      validations:
+          required: true
+          required: true
+    - type: dropdown
+      id: vhf-or-uhf
+      attributes:
+          label: VHF/UHF
+          description: Is this a feature for UHF or VHF? (If so please talk to [M17](https://m17project.org/), rather than FreeDV.)
+          options:
+              - Yes
+              - No
+          validations:
+              required: true
+    - type: dropdown
+      id: deprecated
+      attributes:
+          label: Deprecated features
+          description: Does the feature relate to [deprecated](https://github.com/drowe67/codec2#old-code-and-deprecated-features) code that will be deleted in the near future?
+          options:
+              - Yes
+              - No
+          validations:
+              required: true
+    - type: dropdown
+      id: standard-compiler
+      attributes:
+          label: Non-standard compiler
+          description: Is the feature a port to a [non C99 compatible](https://github.com/drowe67/codec2#ports-to-non-c99-compilers) compiler? (We have standardized on C99.)
+          options:
+              - Yes
+              - No
+          validations:
+              required: true
+    - type: dropdown
+      id: feature-legal
+      attributes:
+          label: Non-standard compiler
+          description: Is the feature legal for Amateur Radio worldwide? Export Control regulations in many countries limit speech coding to a minimum of 700 bit/s and forbids encryption.
+          options:
+              - Yes
+              - No
+          validations:
+              required: true
+    - type: textarea
+      id: feature-impl-help
+      attributes:
+          label: Implementation assistance
+          description: Your feature will take effort to implement. If the FreeDV developers work on your feature they won’t be doing other important work on the project. What help can you give in implementing/documenting/testing/supporting the feature?
+      validations:
+          required: true
+    - type: textarea
+      id: feature-support-help
+      attributes:
+          label: Support assistance
+          description: It takes effort from the FreeDV developers to maintain and support features. What help can you give in maintaining/supporting/documenting the feature in the next 1-5 years?
+      validations:
+          required: true
