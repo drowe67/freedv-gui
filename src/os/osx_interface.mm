@@ -75,3 +75,8 @@ void ResetMainWindowColorSpace()
     assert(cs != nullptr);
     CGColorSpaceRelease(cs);
 }
+
+std::string GetOperatingSystemString()
+{
+    return "macos";
+}

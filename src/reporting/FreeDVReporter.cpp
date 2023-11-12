@@ -22,6 +22,7 @@
 
 #include "FreeDVReporter.h"
 #include "sio_client.h"
+#include "../os/os_interface.h"
 
 using namespace std::chrono_literals;
 
@@ -230,6 +231,7 @@ void FreeDVReporter::connect_()
         auth->insert("grid_square", gridSquare_);
         auth->insert("version", software_);
         auth->insert("rx_only", sio::bool_message::create(rxOnly_));
+        auth->insert("os", GetOperatingSystemString());
     }
 
     // Reconnect listener should re-report frequency so that "unknown"

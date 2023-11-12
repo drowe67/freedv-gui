@@ -23,6 +23,7 @@
 #define __OS_INTERFACE__
 
 #include <future>
+#include <string>
 
 // Checks whether FreeDV has permissions to access the microphone on OSX Catalina
 // and above. If the user doesn't grant permissions (returns FALSE), the GUI 
@@ -37,5 +38,9 @@ void VerifyMicrophonePermissions(std::promise<bool>& promise);
 // See https://github.com/OpenTTD/OpenTTD/issues/7644 and https://trac.wxwidgets.org/ticket/18516
 // for more details.
 extern "C" void ResetMainWindowColorSpace();
+
+// Retrieves a string representing the operating system that FreeDV is running on.
+// This can be either "windows", "linux", "macos" or "other".
+std::string GetOperatingSystemString();
 
 #endif // __OS_INTERFACE__
