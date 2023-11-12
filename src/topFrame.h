@@ -194,6 +194,8 @@ class TopFrame : public wxFrame
         
         virtual void OnTogBtnPTT( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnTogBtnPTTRightClick( wxContextMenuEvent& event ) { event.Skip(); }
+
+        virtual void OnHelp( wxCommandEvent& event ) { event.Skip(); }
         
         virtual void OnTogBtnRecord( wxCommandEvent& event ) { event.Skip(); }
 
@@ -226,6 +228,7 @@ class TopFrame : public wxFrame
         wxToggleButton* m_togBtnAnalog;
         wxToggleButton* m_togBtnVoiceKeyer;
         wxToggleButton* m_btnTogPTT;
+        wxButton* m_btnHelp;
         wxAuiNotebook* m_auiNbookCtrl;
         wxComboBox*   m_cboReportFrequency;
         wxStaticBox*  m_freqBox;
