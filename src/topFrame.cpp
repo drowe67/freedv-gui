@@ -707,7 +707,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_togBtnOnOff = new wxToggleButton(controlBox, wxID_ANY, _("&Start"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnOnOff->SetToolTip(_("Begin/End receiving data."));
     bSizer1511->Add(m_togBtnOnOff, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
-    sbSizer5->Add(bSizer1511, 0, wxEXPAND, 1);
+    sbSizer5->Add(bSizer1511, 0, wxALL | wxEXPAND, 1);
 
     wxBoxSizer* bSizer13;
     bSizer13 = new wxBoxSizer(wxVERTICAL);
@@ -737,7 +737,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnTogPTT = new wxToggleButton(controlBox, wxID_ANY, _("&PTT"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnTogPTT->SetToolTip(_("Push to Talk - Switch between Receive and Transmit. Right-click for additional options."));
     bSizer11->Add(m_btnTogPTT, 1, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
-    sbSizer5->Add(bSizer11, 2, wxEXPAND, 1);
+    sbSizer5->Add(bSizer11, 0, wxALL | wxEXPAND, 1);
 
     //------------------------------
     // Help button: goes to Help page on website
@@ -747,7 +747,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnHelp = new wxButton(controlBox, wxID_ANY, _("Get Help"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnHelp->SetToolTip(_("Get help with FreeDV."));
     bSizer12->Add(m_btnHelp, 1, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
-    sbSizer5->Add(bSizer12, 2, wxEXPAND, 1);
+    sbSizer5->Add(bSizer12, 0, wxALL | wxEXPAND, 1);
 
     rightSizer->Add(sbSizer5, 2, wxALL|wxEXPAND, 1);
 
