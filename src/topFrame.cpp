@@ -520,6 +520,17 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     levelSizer->Add(m_gaugeLevel, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 10);
 
     leftSizer->Add(levelSizer, 2, wxALL|wxEXPAND, 1);
+    
+    //------------------------------
+    // Help button: goes to Help page on website
+    //------------------------------
+    wxStaticBox* helpBox = new wxStaticBox(m_panel, wxID_ANY, _("Assistance"));
+    wxStaticBoxSizer* helpSizer = new wxStaticBoxSizer(helpBox, wxVERTICAL);
+    
+    m_btnHelp = new wxButton(helpBox, wxID_ANY, _("Get Help"), wxDefaultPosition, wxDefaultSize, 0);
+    m_btnHelp->SetToolTip(_("Get help with FreeDV."));
+    helpSizer->Add(m_btnHelp, 1, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
+    leftSizer->Add(helpSizer, 0, wxALL | wxEXPAND, 1);
 
     bSizer1->Add(leftSizer, 0, wxALL|wxEXPAND, 5);
 
@@ -738,16 +749,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnTogPTT->SetToolTip(_("Push to Talk - Switch between Receive and Transmit. Right-click for additional options."));
     bSizer11->Add(m_btnTogPTT, 1, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
     sbSizer5->Add(bSizer11, 0, wxALL | wxEXPAND, 1);
-
-    //------------------------------
-    // Help button: goes to Help page on website
-    //------------------------------
-    wxBoxSizer* bSizer12;
-    bSizer12 = new wxBoxSizer(wxVERTICAL);
-    m_btnHelp = new wxButton(controlBox, wxID_ANY, _("Get Help"), wxDefaultPosition, wxDefaultSize, 0);
-    m_btnHelp->SetToolTip(_("Get help with FreeDV."));
-    bSizer12->Add(m_btnHelp, 1, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
-    sbSizer5->Add(bSizer12, 0, wxALL | wxEXPAND, 1);
 
     rightSizer->Add(sbSizer5, 2, wxALL|wxEXPAND, 1);
 
