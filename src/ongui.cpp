@@ -1093,7 +1093,15 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
 void MainFrame::updateReportingFreqList_()
 {
     uint64_t prevFreqInt = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
-    auto prevSelected = wxString::Format(_("%.04f"), (double)prevFreqInt / (double)1000.0 / (double)1000.0);
+
+    double freq =  ((double)prevFreqInt)/1000.0/1000.0;
+
+    std::stringstream ss;
+    std::locale loc("");
+    ss.imbue(loc);
+    ss << std::fixed << std::setprecision(4) << freq;
+    std::string prevSelected = ss.str();
+
     m_cboReportFrequency->Clear();
     
     for (auto& item : wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList.get())
@@ -1105,6 +1113,6 @@ void MainFrame::updateReportingFreqList_()
     if (idx >= 0)
     {
         m_cboReportFrequency->SetSelection(idx);
-        m_cboReportFrequency->SetValue(prevSelected);
     }
+    m_cboReportFrequency->SetValue(prevSelected);
 }
