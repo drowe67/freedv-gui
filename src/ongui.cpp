@@ -286,7 +286,7 @@ void MainFrame::OnHelpManual( wxCommandEvent& event )
 //-------------------------------------------------------------------------
 void MainFrame::OnHelp( wxCommandEvent& event )
 {
-    wxLaunchDefaultBrowser("https://freedv.org/help-resources/");
+    wxLaunchDefaultBrowser("https://freedv.org/#gethelp");
 }
 
 //-------------------------------------------------------------------------
