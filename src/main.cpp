@@ -22,6 +22,8 @@
 
 #include <inttypes.h>
 #include <time.h>
+#include <sstream>
+#include <iomanip>
 #include <vector>
 #include <deque>
 #include <random>
@@ -432,8 +434,21 @@ void MainFrame::loadConfiguration_()
     wxGetApp().m_tone_amplitude = 500;
     
     // General reporting parameters
-    m_cboReportFrequency->SetValue(wxString::Format("%.4f", ((double)wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency)/1000.0/1000.0));
-    
+
+    // wxString::Format() doesn't respect locale but C++ iomanip should. Use the latter instead.
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
+    {
+        double freq =  ((double)wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency)/1000.0/1000.0;
+
+        std::stringstream ss;
+        std::locale loc("");
+        ss.imbue(loc);
+        ss << std::fixed << std::setprecision(4) << freq;
+        std::string sVal = ss.str();
+
+        m_cboReportFrequency->SetValue(sVal);
+    }
+
     int defaultMode = wxGetApp().appConfiguration.currentFreeDVMode.getDefaultVal();
     int mode = wxGetApp().appConfiguration.currentFreeDVMode;
 setDefaultMode:

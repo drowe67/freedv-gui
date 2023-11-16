@@ -920,6 +920,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Additional fix for PR #561 to parse/format frequencies using current locale. (PR #595)
     * Add entitlements to work around macOS Sonoma permissions bug. (PR #598)
     * Fix bug preventing FreeDV Reporter window from closing after resetting configuration to defaults. (PR #593)
+    * Fix bug preventing reload of manually entered frequency on start. (PR #608)
 2. Enhancements:
     * FreeDV Reporter: Add support for filtering the exact frequency. (PR #596)
     * Add confirmation dialog box before actually resetting configuration to defaults. (PR #593)
