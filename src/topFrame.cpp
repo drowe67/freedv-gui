@@ -412,6 +412,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //=====================================================
     // Left side
     //=====================================================
+    wxSizer* leftOuterSizer = new wxBoxSizer(wxVERTICAL);
     wxSizer* leftSizer = new wxWrapSizer(wxVERTICAL);
 
     wxStaticBoxSizer* snrSizer;
@@ -421,7 +422,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // S/N ratio Gauge (vert. bargraph)
     //------------------------------
-    m_gaugeSNR = new wxGauge(snrBox, wxID_ANY, 25, wxDefaultPosition, wxSize(15,150), wxGA_SMOOTH|wxGA_VERTICAL);
+    m_gaugeSNR = new wxGauge(snrBox, wxID_ANY, 25, wxDefaultPosition, wxSize(15,135), wxGA_SMOOTH|wxGA_VERTICAL);
     m_gaugeSNR->SetToolTip(_("Displays signal to noise ratio in dB."));
     snrSizer->Add(m_gaugeSNR, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 10);
 
@@ -529,10 +530,11 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     
     m_btnHelp = new wxButton(helpBox, wxID_ANY, _("Get Help"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnHelp->SetToolTip(_("Get help with FreeDV."));
-    helpSizer->Add(m_btnHelp, 1, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
-    leftSizer->Add(helpSizer, 0, wxALL | wxEXPAND, 1);
+    helpSizer->Add(m_btnHelp, 0, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
+    leftOuterSizer->Add(leftSizer, 2, wxALL | wxEXPAND, 1);
+    leftOuterSizer->Add(helpSizer, 0, wxFIXED_MINSIZE | wxALL | wxEXPAND, 1);
 
-    bSizer1->Add(leftSizer, 0, wxALL|wxEXPAND, 5);
+    bSizer1->Add(leftOuterSizer, 0, wxALL|wxEXPAND, 5);
 
     //=====================================================
     // Center Section
@@ -774,7 +776,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     this->Layout();
 
     m_statusBar1 = this->CreateStatusBar(1, wxSTB_DEFAULT_STYLE, wxID_ANY);
-    
+   
     //=====================================================
     // End of layout
     //=====================================================
