@@ -912,7 +912,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V1.9.5 TBD 2023
+## V1.9.5 November 2023
 
 1. Bugfixes:
     * Fix bug preventing frequency updates from being properly suppressed when frequency control is in focus. (PR #585)
@@ -927,7 +927,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add ability to double-click FreeDV Reporter entries to change the radio's frequency. (PR #592)
     * FreeDV Reporter: Add ability to force RX Only reporting in Tools->Options. (PR #599)
     * Add new 160m/80m/40m calling frequencies for IARU R2. (PR #601)
-3. Other:
+    * Add Help button to allow users to get help more easily. (PR #607)
+3. Build system:
+    * Upgrade wxWidgets to 3.2.4. (PR #607)
+4. Other:
     * Report OS usage to FreeDV Reporter. (PR #606)
 
 ## V1.9.4 October 2023

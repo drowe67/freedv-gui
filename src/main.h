@@ -396,6 +396,8 @@ class MainFrame : public TopFrame
         void OnTogBtnVoiceKeyerClick (wxCommandEvent& event) override;
         void OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event ) override;
         
+        void OnHelp( wxCommandEvent& event ) override;
+
         void OnTogBtnOnOff( wxCommandEvent& event ) override;
         void OnTogBtnRecord( wxCommandEvent& event ) override;
 
