@@ -928,7 +928,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FreeDV Reporter: Add ability to force RX Only reporting in Tools->Options. (PR #599)
     * Add new 160m/80m/40m calling frequencies for IARU R2. (PR #601)
     * Add Help button to allow users to get help more easily. (PR #607)
-3. Other:
+3. Build system:
+    * Upgrade wxWidgets to 3.2.4. (PR #607)
+4. Other:
     * Report OS usage to FreeDV Reporter. (PR #606)
 
 ## V1.9.4 October 2023
