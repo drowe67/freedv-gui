@@ -912,6 +912,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.9.6 TBD 2023
+
+1. Bugfixes:
+    * Use SetSize/GetSize instead of SetClientSize/GetClientSize to work around startup sizing issue. (PR #611)
+
 ## V1.9.5 November 2023
 
 1. Bugfixes:
