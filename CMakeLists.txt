@@ -15,7 +15,7 @@ endif()
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
 
 set(PROJECT_NAME FreeDV)
-set(PROJECT_VERSION 1.9.5)
+set(PROJECT_VERSION 1.9.6)
 set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
 set(PROJECT_HOMEPAGE_URL "https://freedv.org")
 
@@ -46,7 +46,7 @@ endif(APPLE)
 
 # Adds a tag to the end of the version string. Leave empty
 # for official release builds.
-set(FREEDV_VERSION_TAG "")
+set(FREEDV_VERSION_TAG "devel")
 
 # Prevent in-source builds to protect automake/autoconf config.
 # If an in-source build is attempted, you will still need to clean up a few

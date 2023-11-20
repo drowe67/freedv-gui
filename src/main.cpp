@@ -395,9 +395,9 @@ void MainFrame::loadConfiguration_()
 
     if (w < size.GetWidth()) w = size.GetWidth();
     if (h < size.GetHeight()) h = size.GetHeight();
-    SetClientSize(w, h);
+    SetSize(w, h);
     SetSizeHints(size);
-        
+    
     g_txLevel = wxGetApp().appConfiguration.transmitLevel;
     char fmt[15];
     m_sliderTxLevel->SetValue(g_txLevel);
@@ -906,7 +906,7 @@ MainFrame::~MainFrame()
     wxGetApp().m_pttInSerialPort = nullptr;
     
     if (!IsIconized()) {
-        GetClientSize(&w, &h);
+        GetSize(&w, &h);
         GetPosition(&x, &y);
         
         wxGetApp().appConfiguration.mainWindowLeft = x;
