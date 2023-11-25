@@ -416,7 +416,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxSizer* leftSizer = new wxWrapSizer(wxVERTICAL);
 
     wxStaticBoxSizer* snrSizer;
-    wxStaticBox* snrBox = new wxStaticBox(m_panel, wxID_ANY, _("SNR"), wxDefaultPosition, wxSize(150,-1));
+    wxStaticBox* snrBox = new wxStaticBox(m_panel, wxID_ANY, _("SNR"), wxDefaultPosition, wxSize(100,-1));
     snrSizer = new wxStaticBoxSizer(snrBox, wxVERTICAL);
 
     //------------------------------
@@ -446,7 +446,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Sync  Indicator box
     //------------------------------
     wxStaticBoxSizer* sbSizer3_33;
-    wxStaticBox* syncBox = new wxStaticBox(m_panel, wxID_ANY, _("Sync"), wxDefaultPosition, wxSize(150,-1));
+    wxStaticBox* syncBox = new wxStaticBox(m_panel, wxID_ANY, _("Sync"), wxDefaultPosition, wxSize(100,-1));
     sbSizer3_33 = new wxStaticBoxSizer(syncBox, wxVERTICAL);
 
     m_textSync = new wxStaticText(syncBox, wxID_ANY, wxT("Modem"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
@@ -465,7 +465,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Audio Recording/Playback
     //------------------------------
-    wxStaticBox* audioBox = new wxStaticBox(m_panel, wxID_ANY, _("Audio"), wxDefaultPosition, wxSize(150,-1));
+    wxStaticBox* audioBox = new wxStaticBox(m_panel, wxID_ANY, _("Audio"), wxDefaultPosition, wxSize(100,-1));
     wxStaticBoxSizer* sbSizerAudioRecordPlay = new wxStaticBoxSizer(audioBox, wxVERTICAL);
     
     m_audioRecord = new wxToggleButton(audioBox, wxID_ANY, _("Record"), wxDefaultPosition, wxDefaultSize, 0);
@@ -479,7 +479,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
 
     wxStaticBoxSizer* sbSizer_ber;
-    wxStaticBox* statsBox = new wxStaticBox(m_panel, wxID_ANY, _("Stats"), wxDefaultPosition, wxSize(150,-1));
+    wxStaticBox* statsBox = new wxStaticBox(m_panel, wxID_ANY, _("Stats"), wxDefaultPosition, wxSize(100,-1));
     sbSizer_ber = new wxStaticBoxSizer(statsBox, wxVERTICAL);
 
     m_BtnBerReset = new wxButton(statsBox, wxID_ANY, _("&Reset"), wxDefaultPosition, wxDefaultSize, 0);
@@ -512,7 +512,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBox* levelBox = new wxStaticBox(m_panel, wxID_ANY, _("Level"));
     levelSizer = new wxStaticBoxSizer(levelBox, wxVERTICAL);
     
-    m_textLevel = new wxStaticText(levelBox, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(150,-1), wxALIGN_CENTRE);
+    m_textLevel = new wxStaticText(levelBox, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(100,-1), wxALIGN_CENTRE);
     m_textLevel->SetForegroundColour(wxColour(255,0,0));
     levelSizer->Add(m_textLevel, 0, wxALIGN_CENTER_HORIZONTAL, 1);
 
@@ -603,7 +603,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Squelch Slider Control
     //=====================================================
     wxStaticBoxSizer* sbSizer3;
-    wxStaticBox* squelchBox = new wxStaticBox(m_panel, wxID_ANY, _("S&quelch"), wxDefaultPosition, wxSize(150,-1));
+    wxStaticBox* squelchBox = new wxStaticBox(m_panel, wxID_ANY, _("S&quelch"), wxDefaultPosition, wxSize(100,-1));
     sbSizer3 = new wxStaticBoxSizer(squelchBox, wxVERTICAL);
 
     m_sliderSQ = new wxSlider(squelchBox, wxID_ANY, 0, 0, 40, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS|wxSL_INVERSE|wxSL_VERTICAL);
@@ -636,7 +636,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     rightSizer->Add(sbSizer3, 2, wxALL | wxEXPAND, 2);
 
     // Transmit Level slider
-    wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(new wxStaticBox(m_panel, wxID_ANY, _("TX &Attenuation"), wxDefaultPosition, wxSize(150,-1)), wxVERTICAL);
+    wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(new wxStaticBox(m_panel, wxID_ANY, _("TX &Attenuation"), wxDefaultPosition, wxSize(100,-1)), wxVERTICAL);
     
     // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
     m_sliderTxLevel = new wxSlider(m_panel, wxID_ANY, g_txLevel, -300, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS|wxSL_INVERSE|wxSL_VERTICAL);
@@ -663,7 +663,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Mode box
     //------------------------------
-    modeBox = new wxStaticBox(m_panel, wxID_ANY, _("&Mode"), wxDefaultPosition, wxSize(150,-1));
+    modeBox = new wxStaticBox(m_panel, wxID_ANY, _("&Mode"), wxDefaultPosition, wxSize(100,-1));
     sbSizer_mode = new wxStaticBoxSizer(modeBox, wxVERTICAL);
 
     m_rb700d = new wxRadioButton( modeBox, wxID_ANY, wxT("700D"), wxDefaultPosition, wxDefaultSize,  wxRB_GROUP);
@@ -699,7 +699,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_hiddenMode1->SetValue(true);
     m_hiddenMode2->SetValue(true);
 
-    sbSizer_mode->SetMinSize(wxSize(175,225));
+    sbSizer_mode->SetMinSize(wxSize(75,225));
     otherModeWin->SetSizer(otherModeSizer);
     otherModeSizer->SetSizeHints(otherModeWin);
 
@@ -709,7 +709,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Control Toggles box
     //=====================================================
     wxStaticBoxSizer* sbSizer5;
-    wxStaticBox* controlBox = new wxStaticBox(m_panel, wxID_ANY, _("Control"), wxDefaultPosition, wxSize(150,-1));
+    wxStaticBox* controlBox = new wxStaticBox(m_panel, wxID_ANY, _("Control"), wxDefaultPosition, wxSize(100,-1));
     sbSizer5 = new wxStaticBoxSizer(controlBox, wxVERTICAL);
     wxBoxSizer* bSizer1511;
     bSizer1511 = new wxBoxSizer(wxVERTICAL);
@@ -755,10 +755,10 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     rightSizer->Add(sbSizer5, 2, wxALL|wxEXPAND, 2);
 
     // Frequency text field (PSK Reporter)
-    m_freqBox = new wxStaticBox(m_panel, wxID_ANY, _("Report Frequency"));
+    m_freqBox = new wxStaticBox(m_panel, wxID_ANY, _("Report Freq. (MHz)"));
     wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(m_freqBox, wxHORIZONTAL);
     
-    wxStaticText* reportFrequencyUnits = new wxStaticText(m_freqBox, wxID_ANY, wxT(" MHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    //wxStaticText* reportFrequencyUnits = new wxStaticText(m_freqBox, wxID_ANY, wxT(" MHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     wxBoxSizer* txtReportFreqSizer = new wxBoxSizer(wxVERTICAL);
     
     m_cboReportFrequency = new wxComboBox(m_freqBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxTE_PROCESS_ENTER);
@@ -766,7 +766,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     txtReportFreqSizer->Add(m_cboReportFrequency, 1, wxALL, 5);
     
     reportFrequencySizer->Add(txtReportFreqSizer, 1, wxEXPAND, 1);
-    reportFrequencySizer->Add(reportFrequencyUnits, 0, wxALIGN_CENTER_VERTICAL, 1);
+    //reportFrequencySizer->Add(reportFrequencyUnits, 0, wxALIGN_CENTER_VERTICAL, 1);
     
     rightSizer->Add(reportFrequencySizer, 0, wxALL, 2);
     
