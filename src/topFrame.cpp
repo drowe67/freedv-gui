@@ -606,7 +606,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBox* squelchBox = new wxStaticBox(m_panel, wxID_ANY, _("S&quelch"), wxDefaultPosition, wxSize(100,-1));
     sbSizer3 = new wxStaticBoxSizer(squelchBox, wxVERTICAL);
 
-    m_sliderSQ = new wxSlider(squelchBox, wxID_ANY, 0, 0, 40, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS|wxSL_INVERSE);
+    m_sliderSQ = new wxSlider(squelchBox, wxID_ANY, 0, 0, 40, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
     m_sliderSQ->SetToolTip(_("Set Squelch level in dB."));
     m_sliderSQ->SetMinSize(wxSize(135,-1));
 
@@ -639,7 +639,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxBoxSizer* txLevelSizer = new wxStaticBoxSizer(new wxStaticBox(m_panel, wxID_ANY, _("TX &Attenuation"), wxDefaultPosition, wxSize(100,-1)), wxVERTICAL);
     
     // Sliders are integer values, so we're multiplying min/max by 10 here to allow 1 decimal precision.
-    m_sliderTxLevel = new wxSlider(m_panel, wxID_ANY, g_txLevel, -300, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS|wxSL_INVERSE);
+    m_sliderTxLevel = new wxSlider(m_panel, wxID_ANY, g_txLevel, -300, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS);
     m_sliderTxLevel->SetToolTip(_("Sets TX attenuation (0-30dB))."));
     m_sliderTxLevel->SetMinSize(wxSize(150,-1));
     txLevelSizer->Add(m_sliderTxLevel, 1, wxALIGN_CENTER_HORIZONTAL, 0);
