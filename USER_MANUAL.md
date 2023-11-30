@@ -916,6 +916,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * Use SetSize/GetSize instead of SetClientSize/GetClientSize to work around startup sizing issue. (PR #611)
+    * Check for RIGCAPS_NOT_CONST in Hamlib 4.6. (PR #615)
 
 ## V1.9.5 November 2023
 
