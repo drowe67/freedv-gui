@@ -35,7 +35,11 @@ extern int g_verbose;
 HamlibRigController::RigList HamlibRigController::RigList_;
 std::mutex HamlibRigController::RigListMutex_;
 
-int HamlibRigController::BuildRigList_(const struct rig_caps *rig, rig_ptr_t rigList) {
+#if RIGCAPS_NOT_CONST
+int HamlibRigController::BuildRigList_(struct rig_caps *rig, rig_ptr_t rigList) {
+#else
+int HamlibRigController::BuildRigList_(const struct rig_caps *rig, rig_ptr_t rigList) {    
+#endif // RIGCAPS_NOT_CONST
     ((HamlibRigController::RigList *)rigList)->push_back(rig); 
     return 1;
 }
