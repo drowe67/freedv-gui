@@ -325,10 +325,10 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
 #endif // wxUSE_ACCESSIBILITY
     
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);
-    //this->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-    //this->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
+    
     //=====================================================
     // Menubar Setup
+    //=====================================================
     m_menubarMain = new wxMenuBar(wxMB_DOCKABLE);
     file = new wxMenu();
 
@@ -443,6 +443,23 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     leftSizer->Add(snrSizer, 2, wxEXPAND|wxALL, 2);
 
     //------------------------------
+    // Signal Level(vert. bargraph)
+    //------------------------------
+    wxStaticBoxSizer* levelSizer;
+    wxStaticBox* levelBox = new wxStaticBox(m_panel, wxID_ANY, _("Level"));
+    levelSizer = new wxStaticBoxSizer(levelBox, wxVERTICAL);
+    
+    m_textLevel = new wxStaticText(levelBox, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(100,-1), wxALIGN_CENTRE);
+    m_textLevel->SetForegroundColour(wxColour(255,0,0));
+    levelSizer->Add(m_textLevel, 0, wxALIGN_CENTER_HORIZONTAL, 1);
+
+    m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
+    m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode.  If Red you should reduce your levels"));
+    levelSizer->Add(m_gaugeLevel, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 10);
+
+    leftSizer->Add(levelSizer, 2, wxALL|wxEXPAND, 2);
+    
+    //------------------------------
     // Sync  Indicator box
     //------------------------------
     wxStaticBoxSizer* sbSizer3_33;
@@ -506,23 +523,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     leftSizer->Add(sbSizer_ber,0, wxALL|wxEXPAND, 2);
 
     //------------------------------
-    // Signal Level(vert. bargraph)
-    //------------------------------
-    wxStaticBoxSizer* levelSizer;
-    wxStaticBox* levelBox = new wxStaticBox(m_panel, wxID_ANY, _("Level"));
-    levelSizer = new wxStaticBoxSizer(levelBox, wxVERTICAL);
-    
-    m_textLevel = new wxStaticText(levelBox, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(100,-1), wxALIGN_CENTRE);
-    m_textLevel->SetForegroundColour(wxColour(255,0,0));
-    levelSizer->Add(m_textLevel, 0, wxALIGN_CENTER_HORIZONTAL, 1);
-
-    m_gaugeLevel = new wxGauge(levelBox, wxID_ANY, 100, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
-    m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode.  If Red you should reduce your levels"));
-    levelSizer->Add(m_gaugeLevel, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 10);
-
-    leftSizer->Add(levelSizer, 2, wxALL|wxEXPAND, 2);
-    
-    //------------------------------
     // Help button: goes to Help page on website
     //------------------------------
     wxStaticBox* helpBox = new wxStaticBox(m_panel, wxID_ANY, _("Assistance"));
@@ -531,6 +531,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnHelp = new wxButton(helpBox, wxID_ANY, _("Get Help"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnHelp->SetToolTip(_("Get help with FreeDV."));
     helpSizer->Add(m_btnHelp, 0, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    leftSizer->SetMinSize(wxSize(-1, 375));
     leftOuterSizer->Add(leftSizer, 2, wxALL | wxEXPAND, 1);
     leftOuterSizer->Add(helpSizer, 0, wxFIXED_MINSIZE | wxALL | wxEXPAND, 1);
 
