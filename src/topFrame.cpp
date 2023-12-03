@@ -520,7 +520,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_textCodec2Var = new wxStaticText(statsBox, wxID_ANY, wxT("Var: 0"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_ber->Add(m_textCodec2Var, 0, wxALL | wxALIGN_LEFT, 1);
 
-    leftSizer->Add(sbSizer_ber,0, wxALL|wxEXPAND, 2);
+    leftSizer->Add(sbSizer_ber,0, wxALL|wxEXPAND|wxFIXED_MINSIZE, 2);
 
     //------------------------------
     // Help button: goes to Help page on website
@@ -532,7 +532,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnHelp->SetToolTip(_("Get help with FreeDV."));
     helpSizer->Add(m_btnHelp, 0, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5);
     leftSizer->SetMinSize(wxSize(-1, 375));
-    leftOuterSizer->Add(leftSizer, 2, wxALL | wxEXPAND, 1);
+    leftOuterSizer->Add(leftSizer, 2, wxALL | wxEXPAND | wxFIXED_MINSIZE, 1);
     leftOuterSizer->Add(helpSizer, 0, wxFIXED_MINSIZE | wxALL | wxEXPAND, 1);
 
     bSizer1->Add(leftOuterSizer, 0, wxALL|wxEXPAND, 5);
@@ -777,7 +777,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     this->Layout();
 
     m_statusBar1 = this->CreateStatusBar(1, wxSTB_DEFAULT_STYLE, wxID_ANY);
-   
+    this->SetMinSize(wxSize(-1, 435));
+
     //=====================================================
     // End of layout
     //=====================================================

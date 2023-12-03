@@ -391,7 +391,7 @@ void MainFrame::loadConfiguration_()
     
     Move(x, y);
     Fit();
-    wxSize size = GetBestSize();
+    wxSize size = GetMinSize();
 
     if (w < size.GetWidth()) w = size.GetWidth();
     if (h < size.GetHeight()) h = size.GetHeight();
