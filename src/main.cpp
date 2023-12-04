@@ -390,13 +390,28 @@ void MainFrame::loadConfiguration_()
     g_SquelchLevel /= 2.0;
     
     Move(x, y);
-    Fit();
     wxSize size = GetMinSize();
 
     if (w < size.GetWidth()) w = size.GetWidth();
     if (h < size.GetHeight()) h = size.GetHeight();
-    SetSize(w, h);
-    SetSizeHints(size);
+    
+    // XXX - with really short windows, wxWidgets sometimes doesn't size
+    // the components properly until the user resizes the window (even if only
+    // by a pixel or two). As a really hacky workaround, we emulate this behavior
+    // when restoring window sizing. These resize events also happen after configuration
+    // is restored but I'm not sure this is necessary.
+    CallAfter([=]()
+    {
+        SetSize(w, h);
+    });
+    CallAfter([=]()
+    {
+        SetSize(w + 1, h + 1);
+    });
+    CallAfter([=]()
+    {
+        SetSize(w, h);
+    });
     
     g_txLevel = wxGetApp().appConfiguration.transmitLevel;
     char fmt[15];

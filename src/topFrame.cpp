@@ -446,10 +446,10 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Signal Level(vert. bargraph)
     //------------------------------
     wxStaticBoxSizer* levelSizer;
-    wxStaticBox* levelBox = new wxStaticBox(m_panel, wxID_ANY, _("Level"));
+    wxStaticBox* levelBox = new wxStaticBox(m_panel, wxID_ANY, _("Level"), wxDefaultPosition, wxSize(100,-1));
     levelSizer = new wxStaticBoxSizer(levelBox, wxVERTICAL);
     
-    m_textLevel = new wxStaticText(levelBox, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(100,-1), wxALIGN_CENTRE);
+    m_textLevel = new wxStaticText(levelBox, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
     m_textLevel->SetForegroundColour(wxColour(255,0,0));
     levelSizer->Add(m_textLevel, 0, wxALIGN_CENTER_HORIZONTAL, 1);
 
@@ -525,7 +525,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Help button: goes to Help page on website
     //------------------------------
-    wxStaticBox* helpBox = new wxStaticBox(m_panel, wxID_ANY, _("Assistance"));
+    wxStaticBox* helpBox = new wxStaticBox(m_panel, wxID_ANY, _("Assistance"), wxDefaultPosition, wxSize(100,-1));
     wxStaticBoxSizer* helpSizer = new wxStaticBoxSizer(helpBox, wxVERTICAL);
     
     m_btnHelp = new wxButton(helpBox, wxID_ANY, _("Get Help"), wxDefaultPosition, wxDefaultSize, 0);
@@ -756,7 +756,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     rightSizer->Add(sbSizer5, 2, wxALL|wxEXPAND, 2);
 
     // Frequency text field (PSK Reporter)
-    m_freqBox = new wxStaticBox(m_panel, wxID_ANY, _("Report Freq. (MHz)"));
+    m_freqBox = new wxStaticBox(m_panel, wxID_ANY, _("Report Freq. (MHz)"), wxDefaultPosition, wxSize(100,-1));
     wxBoxSizer* reportFrequencySizer = new wxStaticBoxSizer(m_freqBox, wxHORIZONTAL);
     
     //wxStaticText* reportFrequencyUnits = new wxStaticText(m_freqBox, wxID_ANY, wxT(" MHz"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
@@ -777,7 +777,6 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     this->Layout();
 
     m_statusBar1 = this->CreateStatusBar(1, wxSTB_DEFAULT_STYLE, wxID_ANY);
-    this->SetMinSize(wxSize(-1, 435));
 
     //=====================================================
     // End of layout
