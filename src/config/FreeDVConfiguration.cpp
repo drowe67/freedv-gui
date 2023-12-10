@@ -196,6 +196,8 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, experimentalFeatures);
     load_(config, tabLayout);
+
+    load_(config, txRxDelayMilliseconds);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -278,6 +280,8 @@ void FreeDVConfiguration::save(wxConfigBase* config)
 
     save_(config, monitorVoiceKeyerAudio);
     save_(config, monitorTxAudio);
+
+    save_(config, txRxDelayMilliseconds);
     
     config->Flush();
 }
