@@ -107,6 +107,8 @@ FreeDVConfiguration::FreeDVConfiguration()
 
     , monitorVoiceKeyerAudio("/Monitor/VoiceKeyerAudio", false)
     , monitorTxAudio("/Monitor/TransmitAudio", false)
+
+    , txRxDelayMilliseconds("/Audio/TxRxDelayMilliseconds", 0)
 {
     // empty
 }

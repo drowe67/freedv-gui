@@ -797,6 +797,14 @@ void MainFrame::togglePTT(void) {
             wxThread::Sleep(50);
         }
         
+        // Wait an additional configured timeframe before actually clearing PTT (below)
+        if (wxGetApp().appConfiguration.txRxDelayMilliseconds > 0)
+        {
+            // Delay outbound TX audio if going into TX.
+            std::this_thread::sleep_for(std::chrono::milliseconds(wxGetApp().appConfiguration.txRxDelayMilliseconds.get()));
+        }
+        g_tx = false;
+
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
         
@@ -837,8 +845,6 @@ void MainFrame::togglePTT(void) {
         m_togBtnOnOff->Enable(false);
     }
 
-    g_tx = m_btnTogPTT->GetValue();
-
     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT) {
         if (wxGetApp().rigFrequencyController != nullptr && wxGetApp().rigFrequencyController->isConnected()) {
             // Update mode display on the bottom of the main UI.
@@ -846,9 +852,10 @@ void MainFrame::togglePTT(void) {
         }
     }
 
+    auto newTx = m_btnTogPTT->GetValue();
     if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected()) 
     {
-        wxGetApp().rigPttController->ptt(g_tx);
+        wxGetApp().rigPttController->ptt(newTx);
     }
 
     // reset level gauge
@@ -861,16 +868,16 @@ void MainFrame::togglePTT(void) {
     // Report TX change to registered reporters
     for (auto& obj : wxGetApp().m_reporters)
     {
-        obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+        obj->transmit(freedvInterface.getCurrentTxModeStr(), newTx);
     }
 
     // Change button color depending on TX status.
-    m_btnTogPTT->SetBackgroundColour(g_tx ? *wxRED : wxNullColour);
+    m_btnTogPTT->SetBackgroundColour(newTx ? *wxRED : wxNullColour);
     
     // If we're recording, switch to/from modulator and radio.
     if (g_sfRecFile != nullptr)
     {
-        if (!g_tx)
+        if (!newTx)
         {
             g_recFileFromModulator = false;
             g_recFileFromRadio = true;
@@ -880,6 +887,19 @@ void MainFrame::togglePTT(void) {
             g_recFileFromRadio = false;
             g_recFileFromModulator = true;
         }
+    }
+
+    if (newTx)
+    {
+        if (wxGetApp().appConfiguration.txRxDelayMilliseconds > 0)
+        {
+            // Delay outbound TX audio if going into TX.
+            std::this_thread::sleep_for(std::chrono::milliseconds(wxGetApp().appConfiguration.txRxDelayMilliseconds.get()));
+        }
+
+        // g_tx governs when audio actually goes out during TX, so don't set to true until
+        // after the delay occurs.
+        g_tx = true;
     }
 }
 

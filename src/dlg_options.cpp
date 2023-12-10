@@ -174,7 +174,17 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_ckboxEnableSpacebarForPTT = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Enable Space key for PTT"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_ptt->Add(m_ckboxEnableSpacebarForPTT, 0, wxALL | wxALIGN_LEFT, 5);
+
+    wxSizer* txRxDelaySizer = new wxBoxSizer(wxHORIZONTAL);
     
+    auto txRxDelayLabel = new wxStaticText(m_rigControlTab, wxID_ANY, _("TX/RX Delay (milliseconds): "));
+    txRxDelaySizer->Add(txRxDelayLabel, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtTxRxDelayMilliseconds = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtTxRxDelayMilliseconds->SetToolTip(_("The amount of time to wait between toggling PTT and stopping/starting TX audio in milliseconds."));
+    txRxDelaySizer->Add(m_txtTxRxDelayMilliseconds, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    sbSizer_ptt->Add(txRxDelaySizer, 0, wxALL, 0);
     sizerRigControl->Add(sbSizer_ptt,0, wxALL | wxEXPAND, 5);
     
     wxStaticBoxSizer* sbSizer_hamlib;
@@ -781,6 +791,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlCallSign->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString);
 
         m_ckboxEnableSpacebarForPTT->SetValue(wxGetApp().appConfiguration.enableSpaceBarForPTT);
+        m_txtTxRxDelayMilliseconds->SetValue(wxString::Format("%d", wxGetApp().appConfiguration.txRxDelayMilliseconds.get()));
         m_ckboxUseAnalogModes->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes);
         m_ckboxEnableFreqModeChanges->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
         
@@ -915,6 +926,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList = tmpList;
         
         wxGetApp().appConfiguration.enableSpaceBarForPTT = m_ckboxEnableSpacebarForPTT->GetValue();
+
+        wxGetApp().appConfiguration.txRxDelayMilliseconds = wxAtoi(m_txtTxRxDelayMilliseconds->GetValue());
         
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes = m_ckboxUseAnalogModes->GetValue();
         
@@ -1258,6 +1271,7 @@ void OptionsDlg::updateRigControlState()
     {
         m_ckboxEnableFreqModeChanges->Enable(true);
         m_ckboxEnableSpacebarForPTT->Enable(true);
+        m_txtTxRxDelayMilliseconds->Enable(true);
         m_ckboxUseAnalogModes->Enable(m_ckboxEnableFreqModeChanges->GetValue());
     }
     else
@@ -1266,6 +1280,7 @@ void OptionsDlg::updateRigControlState()
         m_ckboxUseAnalogModes->Enable(false);
         m_ckboxEnableFreqModeChanges->Enable(false);
         m_ckboxEnableSpacebarForPTT->Enable(false);
+        m_txtTxRxDelayMilliseconds->Enable(false);
     }
 }
     
