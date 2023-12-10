@@ -1994,9 +1994,17 @@ void MainFrame::performFreeDVOn_()
             {
                 OpenSerialPort();
             }
-#if defined(WIN32)
-            else if (wxGetApp().appConfiguration.rigControlConfiguration.useOmniRig)
+            else
             {
+                wxGetApp().rigPttController = nullptr;
+            }
+            
+#if defined(WIN32)
+            if (wxGetApp().appConfiguration.rigControlConfiguration.useOmniRig)
+            {
+                // OmniRig can be anbled along with serial port PTT.
+                // The logic below will ensure we don't overwrite the serial PTT
+                // handler.
                 OpenOmniRig();
             }
 #endif // defined(WIN32)

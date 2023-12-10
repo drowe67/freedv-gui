@@ -249,8 +249,9 @@
 <li>2020/2020B</li>
 <li>700C/D/E</li>
 <li>1600</li>
+<li>800XA</li>
 </ul>
-<p>In addition, FreeDV can allow the user to switch between the above modes for transmit without having to push “Stop” first. These features can be enabled by going to Tools-&gt;Options-&gt;Modem and checking the “Simultaneously Decode All HF Modes” option. Note that this may consume significant additional CPU resources, which can cause decode problems. In addition, these features are automatically disabled if 800XA or 2400B are selected before pushing “Start” due to the significant additional CPU resources required to decode these modes.</p>
+<p>In addition, FreeDV can allow the user to switch between the above modes for transmit without having to push “Stop” first. These features can be enabled by going to Tools-&gt;Options-&gt;Modem and checking the “Simultaneously Decode All HF Modes” option. Note that this may consume significant additional CPU resources, which can cause decode problems.</p>
 <p>By default, FreeDV will use as many threads/cores in parallel as required to decode all supported HF modes. On some slower systems, it may be necessary to enable the “Use single thread for multiple RX operation” option as well. This results in FreeDV decoding each mode in series and additionally short circuits the list of modes to be checked when in sync.</p>
 <p>Additionally, the squelch setting with simultaneous decode enabled is relative to the mode that supports the weakest signals (currently 700D). The squelch for other modes will be set to a value higher than the slider (which is calculated by adding the difference between the “Min SNR” of 700D and the mode in question; see “FreeDV Modes” below). For example, the squelch for 700E when the squelch slider is set to -2.0 becomes 1.0dB. This is designed to reduce undesired pops and clicks due to false decodes.</p>
 <h1 data-number="9" id="freedv-modes"><span class="header-section-number">9</span> FreeDV Modes</h1>
@@ -658,6 +659,10 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Use SetSize/GetSize instead of SetClientSize/GetClientSize to work around startup sizing issue. (PR #611)</li>
 <li>Check for RIGCAPS_NOT_CONST in Hamlib 4.6. (PR #615)</li>
 <li>Make main screen gauges horizontal to work around sizing/layout issues. (PR #613)</li>
+</ul></li>
+<li>Enhancements:
+<ul>
+<li>Add 800XA to multi-RX list. (PR #617)</li>
 </ul></li>
 </ol>
 <h2 data-number="18.2" id="v1.9.5-november-2023"><span class="header-section-number">18.2</span> V1.9.5 November 2023</h2>

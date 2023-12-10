@@ -919,6 +919,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Make main screen gauges horizontal to work around sizing/layout issues. (PR #613)
 2. Enhancements:
     * Add option to add a delay after starting TX and before ending TX. (PR #618)
+    * Allow serial PTT to be enabled along with OmniRig. (PR #619)
     * Add 800XA to multi-RX list. (PR #617)
 
 ## V1.9.5 November 2023
