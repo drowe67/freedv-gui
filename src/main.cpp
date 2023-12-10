@@ -1831,8 +1831,7 @@ void MainFrame::performFreeDVOn_()
         wxCommandEvent tmpEvent;
         OnChangeTxMode(tmpEvent);
 
-        if (g_mode == FREEDV_MODE_800XA || 
-            !wxGetApp().appConfiguration.multipleReceiveEnabled)
+        if (!wxGetApp().appConfiguration.multipleReceiveEnabled)
         {
             m_rb1600->Disable();
             m_rb700c->Disable();
@@ -1860,19 +1859,14 @@ void MainFrame::performFreeDVOn_()
                 FREEDV_MODE_700E,
                 FREEDV_MODE_700C,
                 FREEDV_MODE_700D,
-            
-                // These modes require more CPU than typical (and will drive at least one core to 100% if
-                // used with the other five above), so we're excluding them from multi-RX. They also aren't
-                // selectable during a session when multi-RX is enabled.
-                //FREEDV_MODE_800XA
+                FREEDV_MODE_800XA
             };
+
             for (auto& mode : rxModes)
             {
                 freedvInterface.addRxMode(mode);
             }
         
-            m_rb800xa->Disable();
-            
             // If we're receive-only, it doesn't make sense to be able to change TX mode.
             if (g_nSoundCards <= 1)
             {
