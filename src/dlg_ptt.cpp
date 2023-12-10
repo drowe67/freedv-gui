@@ -796,12 +796,11 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
 
 #if defined(WIN32)
 //-------------------------------------------------------------------------
-// PTTUseSerialClicked()
+// PTTUseOmniRigClicked()
 //-------------------------------------------------------------------------
 void ComPortsDlg::PTTUseOmniRigClicked(wxCommandEvent& event)
 {
     m_ckUseHamlibPTT->SetValue(false);
-    m_ckUseSerialPTT->SetValue(false);
     updateControlState();
 }
 #endif // defined(WIN32)
@@ -811,11 +810,7 @@ void ComPortsDlg::PTTUseOmniRigClicked(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void ComPortsDlg::PTTUseSerialClicked(wxCommandEvent& event)
 {
-    m_ckUseHamlibPTT->SetValue(false);
-#if defined(WIN32)
-    m_ckUseOmniRig->SetValue(false);
-#endif // defined(WIN32)
-    
+    m_ckUseHamlibPTT->SetValue(false);    
     updateControlState();
 }
 

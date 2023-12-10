@@ -461,8 +461,11 @@ void MainFrame::OpenOmniRig()
 
     // OmniRig also controls PTT.
     wxGetApp().rigFrequencyController = tmp;
-    wxGetApp().rigPttController = tmp;
-    
+    if (!wxGetApp().rigPttController)
+    {
+        wxGetApp().rigPttController = tmp;
+    }
+
     wxGetApp().rigFrequencyController->onRigError += [this](IRigController*, std::string err)
     {
         std::string fullErr = "Couldn't connect to Radio with OmniRig: " + err;
