@@ -919,6 +919,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Make main screen gauges horizontal to work around sizing/layout issues. (PR #613)
 2. Enhancements:
     * Add 800XA to multi-RX list. (PR #617)
+    * Add logic to report status message to FreeDV Reporter. (PR #620)
 
 ## V1.9.5 November 2023
 
