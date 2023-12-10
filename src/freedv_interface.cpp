@@ -107,6 +107,8 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
             return 4.0f;
         case FREEDV_MODE_2020:
             return 2.0f;
+        case FREEDV_MODE_800XA:
+            return 2.0f;
         default:
             return 0.0f;
     }

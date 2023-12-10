@@ -389,12 +389,11 @@ FreeDV can simultaneously decode the following modes when selected prior to push
 * 2020/2020B
 * 700C/D/E
 * 1600
+* 800XA
 
 In addition, FreeDV can allow the user to switch between the above modes for transmit without having to push "Stop" first. 
 These features can be enabled by going to Tools->Options->Modem and checking the "Simultaneously Decode All HF Modes" option. Note that
-this may consume significant additional CPU resources, which can cause decode problems. In addition, these features are automatically
-disabled if 800XA or 2400B are selected before pushing "Start" due to the significant additional CPU resources required to decode these
-modes.
+this may consume significant additional CPU resources, which can cause decode problems. 
 
 By default, FreeDV will use as many threads/cores in parallel as required to decode all supported HF modes. On some slower systems, it may be
 necessary to enable the "Use single thread for multiple RX operation" option as well. This results in FreeDV decoding each mode in series
@@ -920,6 +919,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Make main screen gauges horizontal to work around sizing/layout issues. (PR #613)
 2. Enhancements:
     * Allow serial PTT to be enabled along with OmniRig. (PR #619)
+    * Add 800XA to multi-RX list. (PR #617)
 
 ## V1.9.5 November 2023
 
