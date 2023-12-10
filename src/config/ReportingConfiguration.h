@@ -54,6 +54,7 @@ public:
     ConfigurationDataElement<bool> freedvReporterForceReceiveOnly;
     ConfigurationDataElement<bool> freedvReporterBandFilterTracksFreqBand;
     ConfigurationDataElement<bool> freedvReporterBandFilterTracksExactFreq;
+    ConfigurationDataElement<wxString> freedvReporterStatusText;
     
     ConfigurationDataElement<bool> useUTCForReporting;
     

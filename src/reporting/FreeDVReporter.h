@@ -61,11 +61,15 @@ public:
     // callsign, frequency, message
     using QsyRequestFn = std::function<void(std::string, uint64_t, std::string)>;
     
+    // sid, last_update, message
+    using MessageUpdateFn = std::function<void(std::string, std::string, std::string)>;
+
     FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly);
     virtual ~FreeDVReporter();
 
     void connect();
     void requestQSY(std::string sid, uint64_t frequencyHz, std::string message);
+    void updateMessage(std::string message);
     
     virtual void freqChange(uint64_t frequency) override;
     virtual void transmit(std::string mode, bool tx) override;
@@ -85,7 +89,8 @@ public:
     void setOnReceiveUpdateFn(RxUpdateFn fn);
     
     void setOnQSYRequestFn(QsyRequestFn fn);
-    
+    void setMessageUpdateFn(MessageUpdateFn fn);
+
     void hideFromView();
     void showOurselves();
 
@@ -110,6 +115,7 @@ private:
     bool tx_;
     bool rxOnly_;
     bool hidden_;
+    std::string message_;
     
     ReporterConnectionFn onReporterConnectFn_;
     ReporterConnectionFn onReporterDisconnectFn_;
@@ -121,12 +127,14 @@ private:
     RxUpdateFn onReceiveUpdateFn_;
     
     QsyRequestFn onQsyRequestFn_;
+    MessageUpdateFn onMessageUpdateFn_;
         
     void connect_();
     
     void threadEntryPoint_();
     void freqChangeImpl_(uint64_t frequency);
     void transmitImpl_(std::string mode, bool tx);
+    void sendMessageImpl_(std::string message);
     
     void hideFromViewImpl_();
     void showOurselvesImpl_();

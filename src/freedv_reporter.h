@@ -79,6 +79,7 @@ class FreeDVReporterDialog : public wxDialog
         void    OnMove(wxMoveEvent& event);
         void    OnShow(wxShowEvent& event);
         void    OnBandFilterChange(wxCommandEvent& event);
+        void    OnStatusTextChange(wxCommandEvent& event);
         
         void OnItemSelected(wxListEvent& event);
         void OnItemDeselected(wxListEvent& event);
@@ -102,6 +103,9 @@ class FreeDVReporterDialog : public wxDialog
         wxCheckBox* m_trackFrequency;
         wxRadioButton* m_trackFreqBand;
         wxRadioButton* m_trackExactFreq;
+
+        // Status message
+        wxTextCtrl* m_statusMessage;
         
         // Step 4: test/save/cancel setup
         wxButton* m_buttonOK;
@@ -133,6 +137,7 @@ class FreeDVReporterDialog : public wxDialog
              wxString snr;
              wxString lastUpdate;
              wxDateTime lastUpdateDate;
+             wxString userMessage;
          };
          
          std::shared_ptr<FreeDVReporter> reporter_;
@@ -150,7 +155,8 @@ class FreeDVReporterDialog : public wxDialog
          void onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz);
          void onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate);
          void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
-         
+         void onMessageUpdateFn_(std::string sid, std::string lastUpdate, std::string message);
+
          wxString makeValidTime_(std::string timeStr, wxDateTime& timeObj);
          
          void addOrUpdateListIfNotFiltered_(ReporterData* data);
