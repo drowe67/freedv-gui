@@ -108,7 +108,7 @@ void MainFrame::OnToolsFreeDVReporter(wxCommandEvent& event)
         m_reporterDialog = new FreeDVReporterDialog(this);
     }
 
-    m_reporterDialog->refreshDistanceColumn();
+    m_reporterDialog->refreshLayout();
     m_reporterDialog->Show();
     m_reporterDialog->Iconize(false); // undo minimize if required
     m_reporterDialog->Raise(); // brings from background to foreground if required
@@ -210,13 +210,23 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
             vkFileName_ = newVkFile;
         }
         
+        // Adjust frequency labels on main window
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            m_freqBox->SetLabel(_("Report Freq. (KHz)"));
+        }
+        else
+        {
+            m_freqBox->SetLabel(_("Report Freq. (MHz)"));
+        }
+        
         // Initialize FreeDV Reporter if required.
         initializeFreeDVReporter_();
 
         // Refresh distance column label in case setting was changed.
         if (m_reporterDialog != nullptr)
         {
-            m_reporterDialog->refreshDistanceColumn();
+            m_reporterDialog->refreshLayout();
         }
 
         // Relayout window so that the changes can take effect.
@@ -435,7 +445,16 @@ bool MainFrame::OpenHamlibRig() {
                     std::stringstream ss;
                     std::locale loc("");
                     ss.imbue(loc);
-                    ss << std::fixed << std::setprecision(4) << (freq / 1000.0 / 1000.0);
+                    
+                    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+                    {
+                        ss << std::fixed << std::setprecision(1) << (freq / 1000.0);
+                    }
+                    else
+                    {
+                        ss << std::fixed << std::setprecision(4) << (freq / 1000.0 / 1000.0);
+                    }
+                    
                     m_cboReportFrequency->SetValue(ss.str());
                 }
                 m_txtModeStatus->Refresh();
@@ -544,7 +563,14 @@ void MainFrame::OpenOmniRig()
             if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
                 !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting)
             {
-                m_cboReportFrequency->SetValue(wxString::Format("%.4f", freq/1000.0/1000.0));
+                if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+                {
+                    m_cboReportFrequency->SetValue(wxString::Format("%.1f", freq / 1000.0));
+                }
+                else
+                {
+                    m_cboReportFrequency->SetValue(wxString::Format("%.4f", freq / 1000.0 / 1000.0));
+                }
             }
             m_txtModeStatus->Refresh();
 
@@ -1019,10 +1045,18 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
         std::stringstream ss(std::string(freqStr.ToUTF8()));
         std::locale loc("");
         ss.imbue(loc);
+        
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            ss >> std::fixed >> std::setprecision(1) >> tmp;
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = round(tmp * 1000);
+        }
+        else
+        {
+            ss >> std::fixed >> std::setprecision(4) >> tmp;
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = round(tmp * 1000 * 1000);
+        }
 
-        ss >> std::fixed >> std::setprecision(4) >> tmp;
-
-        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = round(tmp * 1000 * 1000);
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
         {
             m_cboReportFrequency->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
@@ -1105,12 +1139,24 @@ void MainFrame::updateReportingFreqList_()
 {
     uint64_t prevFreqInt = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
 
-    double freq =  ((double)prevFreqInt)/1000.0/1000.0;
+    double freq =  ((double)prevFreqInt)/1000.0;
+    if (!wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        freq /= 1000.0;
+    }
 
     std::stringstream ss;
     std::locale loc("");
     ss.imbue(loc);
-    ss << std::fixed << std::setprecision(4) << freq;
+    
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        ss << std::fixed << std::setprecision(1) << freq;
+    }
+    else
+    {
+        ss << std::fixed << std::setprecision(4) << freq;
+    }
     std::string prevSelected = ss.str();
 
     m_cboReportFrequency->Clear();
@@ -1126,4 +1172,14 @@ void MainFrame::updateReportingFreqList_()
         m_cboReportFrequency->SetSelection(idx);
     }
     m_cboReportFrequency->SetValue(prevSelected);
+    
+    // Update associated label if the units have changed
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        m_freqBox->SetLabel(_("Report Freq. (KHz)"));
+    }
+    else
+    {
+        m_freqBox->SetLabel(_("Report Freq. (MHz)"));
+    }
 }

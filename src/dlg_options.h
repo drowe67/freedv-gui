@@ -172,6 +172,7 @@ class OptionsDlg : public wxDialog
         wxCheckBox*  m_ckbox_use_utc_time;
         
         wxListBox*  m_freqList;
+        wxStaticText* m_labelEnterFreq;
         wxTextCtrl* m_txtCtrlNewFrequency;
         wxButton*   m_freqListAdd;
         wxButton*   m_freqListRemove;
