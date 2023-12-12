@@ -186,6 +186,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_ckboxUseAnalogModes = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Use USB/LSB instead of DIGU/DIGL"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_hamlib->Add(m_ckboxUseAnalogModes, 0, wxALL | wxALIGN_LEFT, 5);
+    
+    m_ckboxFrequencyEntryAsKHz = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Frequency entry in KHz"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_hamlib->Add(m_ckboxFrequencyEntryAsKHz, 0, wxALL | wxALIGN_LEFT, 5);
 
     sizerRigControl->Add(sbSizer_hamlib,0, wxALL | wxEXPAND, 5);
     
@@ -790,6 +793,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxEnableSpacebarForPTT->SetValue(wxGetApp().appConfiguration.enableSpaceBarForPTT);
         m_ckboxUseAnalogModes->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes);
         m_ckboxEnableFreqModeChanges->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
+        m_ckboxFrequencyEntryAsKHz->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz);
         
         /* Voice Keyer */
 
@@ -1035,6 +1039,12 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             wxGetApp().appConfiguration.debugVerbose = g_verbose;
             wxGetApp().appConfiguration.apiVerbose = g_freedv_verbose;            
             wxGetApp().appConfiguration.save(pConfig);
+            
+            // Save reporting frequency units last due to how the frequency list is stored.
+            // Then reload the configuration to ensure that the displayed frequencies are correct.
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz = m_ckboxFrequencyEntryAsKHz->GetValue();
+            wxGetApp().appConfiguration.save(pConfig);
+            wxGetApp().appConfiguration.load(pConfig);
         }
     }
 }
@@ -1072,6 +1082,10 @@ void OptionsDlg::OnCancel(wxCommandEvent& event)
 void OptionsDlg::OnApply(wxCommandEvent& event)
 {
     ExchangeData(EXCHANGE_DATA_OUT, true);
+    
+    // Reload saved data to ensure the frequency list is properly displayed.
+    m_freqList->Clear();
+    ExchangeData(EXCHANGE_DATA_IN, false);
 }
 
 //-------------------------------------------------------------------------
