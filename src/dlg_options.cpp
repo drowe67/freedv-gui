@@ -1081,8 +1081,33 @@ void OptionsDlg::OnCancel(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnApply(wxCommandEvent& event)
 {
+    bool oldFreqAsKHz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
+    
     ExchangeData(EXCHANGE_DATA_OUT, true);
     
+    bool khzChanged = 
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz != oldFreqAsKHz;
+    
+    // If there's something in the frequency entry textbox (i.e. if the user pushes Apply),
+    // convert to the correct units.
+    auto freqString = m_txtCtrlNewFrequency->GetValue();
+    if (freqString.Length() > 0 && khzChanged)
+    {
+        double freqDouble = 0;
+        freqString.ToDouble(&freqDouble);
+        
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            freqDouble *= 1000;
+            m_txtCtrlNewFrequency->SetValue(wxString::Format("%.01f", freqDouble));
+        }
+        else
+        {
+            freqDouble /= 1000.0;
+            m_txtCtrlNewFrequency->SetValue(wxString::Format("%.04f", freqDouble));
+        }
+    }
+        
     // Reload saved data to ensure the frequency list is properly displayed.
     m_freqList->Clear();
     ExchangeData(EXCHANGE_DATA_IN, false);
