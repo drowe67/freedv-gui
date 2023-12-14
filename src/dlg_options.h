@@ -92,6 +92,7 @@ class OptionsDlg : public wxDialog
         wxCheckBox   *m_ckboxUseAnalogModes;
         wxCheckBox   *m_ckboxEnableFreqModeChanges;
         wxCheckBox   *m_ckboxEnableSpacebarForPTT;
+        wxCheckBox   *m_ckboxFrequencyEntryAsKHz;
         
         /* Waterfall color */
         wxRadioButton *m_waterfallColorScheme1; // Multicolored
@@ -172,6 +173,7 @@ class OptionsDlg : public wxDialog
         wxCheckBox*  m_ckbox_use_utc_time;
         
         wxListBox*  m_freqList;
+        wxStaticText* m_labelEnterFreq;
         wxTextCtrl* m_txtCtrlNewFrequency;
         wxButton*   m_freqListAdd;
         wxButton*   m_freqListRemove;
