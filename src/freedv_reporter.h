@@ -165,7 +165,7 @@ class FreeDVReporterDialog : public wxDialog
          double calculateDistance_(wxString gridSquare1, wxString gridSquare2);
          void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);
 
-         static int ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) wxCALLBACK;
+         static wxCALLBACK int ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
          static double DegreesToRadians_(double degrees);
 };
 
