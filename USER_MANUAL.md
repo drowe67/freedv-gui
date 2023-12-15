@@ -919,6 +919,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Check for RIGCAPS_NOT_CONST in Hamlib 4.6. (PR #615)
     * Make main screen gauges horizontal to work around sizing/layout issues. (PR #613)
     * Fix compiler issue with certain versions of MinGW. (PR #622)
+    * Suppress use of space bar when in RX Only mode. (PR #623)
 2. Enhancements:
     * Allow serial PTT to be enabled along with OmniRig. (PR #619)
     * Add 800XA to multi-RX list. (PR #617)
