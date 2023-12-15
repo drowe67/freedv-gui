@@ -344,6 +344,8 @@ class MainFrame : public TopFrame
         void StopPlaybackFileFromRadio();
         void StopRecFileFromRadio();
         
+        bool isReceiveOnly();
+        
     protected:
 
         void setsnrBeta(bool snrSlow);

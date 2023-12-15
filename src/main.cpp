@@ -3036,12 +3036,7 @@ bool MainFrame::validateSoundCardSetup()
 
 void MainFrame::initializeFreeDVReporter_()
 {
-    bool hamlibDisabledForRigControl = 
-        (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT &&
-         (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() == HamlibRigController::PTT_VIA_NONE);
-    bool receiveOnly = 
-        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly || 
-        g_nSoundCards <= 1 || hamlibDisabledForRigControl;
+    bool receiveOnly = isReceiveOnly();
     
     auto oldReporterObject = wxGetApp().m_sharedReporterObject;
     wxGetApp().m_sharedReporterObject =
