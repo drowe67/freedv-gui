@@ -180,7 +180,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     auto txRxDelayLabel = new wxStaticText(m_rigControlTab, wxID_ANY, _("TX/RX Delay (milliseconds): "));
     txRxDelaySizer->Add(txRxDelayLabel, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtTxRxDelayMilliseconds = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtTxRxDelayMilliseconds = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(80,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     m_txtTxRxDelayMilliseconds->SetToolTip(_("The amount of time to wait between toggling PTT and stopping/starting TX audio in milliseconds."));
     txRxDelaySizer->Add(m_txtTxRxDelayMilliseconds, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
