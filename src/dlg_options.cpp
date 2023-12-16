@@ -180,7 +180,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     auto txRxDelayLabel = new wxStaticText(m_rigControlTab, wxID_ANY, _("TX/RX Delay (milliseconds): "));
     txRxDelaySizer->Add(txRxDelayLabel, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtTxRxDelayMilliseconds = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtTxRxDelayMilliseconds = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(80,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     m_txtTxRxDelayMilliseconds->SetToolTip(_("The amount of time to wait between toggling PTT and stopping/starting TX audio in milliseconds."));
     txRxDelaySizer->Add(m_txtTxRxDelayMilliseconds, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
@@ -196,6 +196,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_ckboxUseAnalogModes = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Use USB/LSB instead of DIGU/DIGL"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_hamlib->Add(m_ckboxUseAnalogModes, 0, wxALL | wxALIGN_LEFT, 5);
+    
+    m_ckboxFrequencyEntryAsKHz = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Frequency entry in KHz"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_hamlib->Add(m_ckboxFrequencyEntryAsKHz, 0, wxALL | wxALIGN_LEFT, 5);
 
     sizerRigControl->Add(sbSizer_hamlib,0, wxALL | wxEXPAND, 5);
     
@@ -219,8 +222,15 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_freqListMoveDown = new wxButton(m_rigControlTab, wxID_ANY, _("Move Down"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
     gridSizer->Add(m_freqListMoveDown, wxGBPosition(3, 2), wxDefaultSpan, wxEXPAND);
     
-    wxStaticText* labelEnterFreq = new wxStaticText(m_rigControlTab, wxID_ANY, wxT("Enter frequency (MHz):"), wxDefaultPosition, wxDefaultSize, 0);
-    gridSizer->Add(labelEnterFreq, wxGBPosition(5, 0), wxDefaultSpan, wxALIGN_CENTER_VERTICAL);
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        m_labelEnterFreq = new wxStaticText(m_rigControlTab, wxID_ANY, wxT("Enter frequency (KHz):"), wxDefaultPosition, wxDefaultSize, 0);
+    }
+    else
+    {
+        m_labelEnterFreq = new wxStaticText(m_rigControlTab, wxID_ANY, wxT("Enter frequency (MHz):"), wxDefaultPosition, wxDefaultSize, 0);
+    }
+    gridSizer->Add(m_labelEnterFreq, wxGBPosition(5, 0), wxDefaultSpan, wxALIGN_CENTER_VERTICAL);
     
     m_txtCtrlNewFrequency = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
     gridSizer->Add(m_txtCtrlNewFrequency, wxGBPosition(5, 1), wxGBSpan(1, 2), wxEXPAND);
@@ -794,6 +804,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtTxRxDelayMilliseconds->SetValue(wxString::Format("%d", wxGetApp().appConfiguration.txRxDelayMilliseconds.get()));
         m_ckboxUseAnalogModes->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes);
         m_ckboxEnableFreqModeChanges->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
+        m_ckboxFrequencyEntryAsKHz->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz);
         
         /* Voice Keyer */
 
@@ -891,6 +902,15 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         else if (m_waterfallColorScheme3->GetValue())
         {
             wxGetApp().appConfiguration.waterfallColor = 2;
+        }
+        
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            m_labelEnterFreq->SetLabel(wxT("Enter frequency (KHz):"));
+        }
+        else
+        {
+            m_labelEnterFreq->SetLabel(wxT("Enter frequency (MHz):"));
         }
         
         // Update control state based on checkbox state.
@@ -1032,6 +1052,12 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
             wxGetApp().appConfiguration.debugVerbose = g_verbose;
             wxGetApp().appConfiguration.apiVerbose = g_freedv_verbose;            
             wxGetApp().appConfiguration.save(pConfig);
+            
+            // Save reporting frequency units last due to how the frequency list is stored.
+            // Then reload the configuration to ensure that the displayed frequencies are correct.
+            wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz = m_ckboxFrequencyEntryAsKHz->GetValue();
+            wxGetApp().appConfiguration.save(pConfig);
+            wxGetApp().appConfiguration.load(pConfig);
         }
     }
 }
@@ -1068,7 +1094,36 @@ void OptionsDlg::OnCancel(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void OptionsDlg::OnApply(wxCommandEvent& event)
 {
+    bool oldFreqAsKHz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
+    
     ExchangeData(EXCHANGE_DATA_OUT, true);
+    
+    bool khzChanged = 
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz != oldFreqAsKHz;
+    
+    // If there's something in the frequency entry textbox (i.e. if the user pushes Apply),
+    // convert to the correct units.
+    auto freqString = m_txtCtrlNewFrequency->GetValue();
+    if (freqString.Length() > 0 && khzChanged)
+    {
+        double freqDouble = 0;
+        freqString.ToDouble(&freqDouble);
+        
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            freqDouble *= 1000;
+            m_txtCtrlNewFrequency->SetValue(wxString::Format("%.01f", freqDouble));
+        }
+        else
+        {
+            freqDouble /= 1000.0;
+            m_txtCtrlNewFrequency->SetValue(wxString::Format("%.04f", freqDouble));
+        }
+    }
+        
+    // Reload saved data to ensure the frequency list is properly displayed.
+    m_freqList->Clear();
+    ExchangeData(EXCHANGE_DATA_IN, false);
 }
 
 //-------------------------------------------------------------------------

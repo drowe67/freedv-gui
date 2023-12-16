@@ -113,6 +113,20 @@ bool MainApp::CanAccessSerialPort(std::string portName)
 }
 
 //----------------------------------------------------------------
+// isReceiveOnly()
+//----------------------------------------------------------------
+
+bool MainFrame::isReceiveOnly()
+{
+    bool hamlibDisabledForRigControl = 
+        (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT &&
+         (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() == HamlibRigController::PTT_VIA_NONE);
+    return 
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly || 
+        g_nSoundCards <= 1 || hamlibDisabledForRigControl;
+}
+
+//----------------------------------------------------------------
 // OpenSerialPort()
 //----------------------------------------------------------------
 
