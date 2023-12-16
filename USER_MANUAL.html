@@ -240,7 +240,7 @@
 <li><a href="https://pskreporter.info/">PSK Reporter</a> (using the “FREEDV” mode)</li>
 <li><a href="https://qso.freedv.org/">FreeDV Reporter</a> – also accessible via the Tools-&gt;FreeDV Reporter menu option.</li>
 </ul>
-<p>The frequency that FreeDV reports is set by changing the “Report Frequency” drop down box in the main window. This is in kilohertz (kHz) and will turn red if the entered value is invalid. If Hamlib support is also enabled, this frequency will automatically remain in sync with the current VFO on the radio (i.e. if the frequency is changed in the application, the radio will also change its frequency). Double-clicking on users in the Tools-&gt;FreeDV Reporter window will also cause this frequency to change to match the other user.</p>
+<p>The frequency that FreeDV reports is set by changing the “Report Frequency” drop down box in the main window. This is either in kilohertz (KHz) or megahertz (MHz) (configurable by going to Tools-&gt;Options-&gt;Rig Control and checking or unchecking “Frequency entry in KHz”) and will turn red if the entered value is invalid. If Hamlib support is also enabled, this frequency will automatically remain in sync with the current VFO on the radio (i.e. if the frequency is changed in the application, the radio will also change its frequency). Double-clicking on users in the Tools-&gt;FreeDV Reporter window will also cause this frequency to change to match the other user.</p>
 <p><em>Note: in some setups (such as when using ALE), it is not preferred to have the reporting frequency automatically be in sync with the radio. For example, in the case of ALE, the radio’s frequency changes multiple times per second while waiting for a contact, which is faster than FreeDV can pull the latest from the radio (every five seconds). This can be disabled by enabling “Manual Frequency Reporting” in Tools-&gt;Options.</em></p>
 <p>FreeDV will also show the callsigns of previously received signals. To view those, click on the arrow next to the last received callsign at the bottom of the window. These are in descending order by time of receipt (i.e. the most recently received callsign will appear at the top of the list).</p>
 <h1 data-number="8" id="multiple-mode-support"><span class="header-section-number">8</span> Multiple Mode Support</h1>
@@ -659,10 +659,14 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Use SetSize/GetSize instead of SetClientSize/GetClientSize to work around startup sizing issue. (PR #611)</li>
 <li>Check for RIGCAPS_NOT_CONST in Hamlib 4.6. (PR #615)</li>
 <li>Make main screen gauges horizontal to work around sizing/layout issues. (PR #613)</li>
+<li>Fix compiler issue with certain versions of MinGW. (PR #622)</li>
+<li>Suppress use of space bar when in RX Only mode. (PR #623)</li>
 </ul></li>
 <li>Enhancements:
 <ul>
+<li>Allow serial PTT to be enabled along with OmniRig. (PR #619)</li>
 <li>Add 800XA to multi-RX list. (PR #617)</li>
+<li>Allow display and entry of frequencies in KHz. (PR #621)</li>
 </ul></li>
 </ol>
 <h2 data-number="18.2" id="v1.9.5-november-2023"><span class="header-section-number">18.2</span> V1.9.5 November 2023</h2>

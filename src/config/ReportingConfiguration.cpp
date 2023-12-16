@@ -75,9 +75,11 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterTxRowForegroundColor("/Reporting/FreeDV/TxRowForegroundColor", "#000000")
     , freedvReporterRxRowBackgroundColor("/Reporting/FreeDV/RxRowBackgroundColor", "#379baf")
     , freedvReporterRxRowForegroundColor("/Reporting/FreeDV/RxRowForegroundColor", "#000000")
+        
+    , reportingFrequencyAsKhz("/Reporting/FrequencyAsKHz", false)
 {
     // Special handling for the frequency list to properly handle locales
-    reportingFrequencyList.setLoadProcessor([](std::vector<wxString> list) {
+    reportingFrequencyList.setLoadProcessor([this](std::vector<wxString> list) {
         std::vector<wxString> newList;
         for (auto& val : list)
         {
@@ -103,14 +105,22 @@ ReportingConfiguration::ReportingConfiguration()
             fraction.ToLong(&hz);
             uint64_t freq = mhz * 1000000 + hz;
 
-            float mhzFloat = freq / 1000000.0;
-            newList.push_back(wxString::Format("%.04f", mhzFloat));
+            if (reportingFrequencyAsKhz)
+            {
+                float khzFloat = freq / 1000.0;
+                newList.push_back(wxString::Format("%.01f", khzFloat));
+            }
+            else
+            {
+                float mhzFloat = freq / 1000000.0;
+                newList.push_back(wxString::Format("%.04f", mhzFloat));
+            }
         }
 
         return newList;
     });
 
-    reportingFrequencyList.setSaveProcessor([](std::vector<wxString> list) {
+    reportingFrequencyList.setSaveProcessor([this](std::vector<wxString> list) {
         std::vector<wxString> newList;
         for (auto& val : list)
         {
@@ -118,6 +128,12 @@ ReportingConfiguration::ReportingConfiguration()
             // to manually parse and convert to Hz, then output MHz values in US format.
             double mhz = 0.0;
             val.ToDouble(&mhz);
+            
+            if (reportingFrequencyAsKhz)
+            {
+                // Frequencies are in KHz, so divide one more time to get MHz.
+                mhz /= 1000.0;
+            }
 
             uint64_t hz = mhz * 1000000;
             uint64_t mhzInt = hz / 1000000;
@@ -161,6 +177,10 @@ void ReportingConfiguration::load(wxConfigBase* config)
     
     load_(config, useUTCForReporting);
     
+    // Note: this needs to be loaded before the frequency list so that
+    // we get the values formatted as KHz (if so configured).
+    load_(config, reportingFrequencyAsKhz);
+    
     load_(config, reportingFrequencyList);
     
     load_(config, manualFrequencyReporting);
@@ -197,6 +217,7 @@ void ReportingConfiguration::save(wxConfigBase* config)
     
     save_(config, useUTCForReporting);
     
+    save_(config, reportingFrequencyAsKhz);
     save_(config, reportingFrequencyList);
     
     save_(config, manualFrequencyReporting);

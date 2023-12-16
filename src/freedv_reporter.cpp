@@ -252,7 +252,7 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     m_bandFilter->Disconnect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnBandFilterChange), NULL, this);
 }
 
-void FreeDVReporterDialog::refreshDistanceColumn()
+void FreeDVReporterDialog::refreshLayout()
 {
     wxListItem item;
     m_listSpots->GetColumn(2, item);
@@ -267,6 +267,27 @@ void FreeDVReporterDialog::refreshDistanceColumn()
     }
 
     m_listSpots->SetColumn(2, item);
+    
+    // Refresh frequency units as appropriate.
+    for (auto& kvp : allReporterData_)
+    {
+        double frequencyUserReadable = kvp.second->frequency / 1000.0;
+        wxString frequencyString;
+        
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            frequencyString = wxString::Format(_("%.01f KHz"), frequencyUserReadable);
+        }
+        else
+        {
+            frequencyUserReadable /= 1000.0;
+            frequencyString = wxString::Format(_("%.04f MHz"), frequencyUserReadable);
+        }
+        
+        kvp.second->freqString = frequencyString;
+        
+        addOrUpdateListIfNotFiltered_(kvp.second);
+    }
 }
 
 void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
@@ -505,10 +526,22 @@ void FreeDVReporterDialog::refreshQSYButtonState()
             freedvInterface.isRunning())
         {
             wxString theirFreqString = m_listSpots->GetItemText(selectedIndex, 4);
-            wxRegEx mhzRegex(" MHz$");
-            mhzRegex.Replace(&theirFreqString, "");
             
-            uint64_t theirFreq = wxAtof(theirFreqString) * 1000 * 1000;
+            uint64_t theirFreq = 0;
+            if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+            {
+                wxRegEx khzRegex(" KHz$");
+                khzRegex.Replace(&theirFreqString, "");
+            
+                theirFreq = wxAtof(theirFreqString) * 1000;
+            }
+            else
+            {
+                wxRegEx mhzRegex(" MHz$");
+                mhzRegex.Replace(&theirFreqString, "");
+            
+                theirFreq = wxAtof(theirFreqString) * 1000 * 1000;
+            }
             enabled = theirFreq != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
         }
     }
@@ -895,15 +928,23 @@ void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string las
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
-            double frequencyMHz = frequencyHz / 1000000.0;
+            double frequencyUserReadable = frequencyHz / 1000.0;
+            wxString frequencyString;
             
-            wxString frequencyMHzString = wxString::Format(_("%.04f MHz"), frequencyMHz);
+            if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+            {
+                frequencyString = wxString::Format(_("%.01f KHz"), frequencyUserReadable);
+            }
+            else
+            {
+                frequencyUserReadable /= 1000.0;
+                frequencyString = wxString::Format(_("%.04f MHz"), frequencyUserReadable);
+            }
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             
             iter->second->frequency = frequencyHz;
-            iter->second->freqString = frequencyMHzString;
+            iter->second->freqString = frequencyString;
             iter->second->lastUpdate = lastUpdateTime;
-            iter->second->frequency = frequencyHz;
             
             addOrUpdateListIfNotFiltered_(iter->second);
         }

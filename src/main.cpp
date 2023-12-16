@@ -420,6 +420,16 @@ void MainFrame::loadConfiguration_()
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
 
+    // Adjust frequency entry labels
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        m_freqBox->SetLabel(_("Report Freq. (KHz)"));
+    }
+    else
+    {
+        m_freqBox->SetLabel(_("Report Freq. (MHz)"));
+    }
+    
     // PTT -------------------------------------------------------------------
     
     // Note: we're no longer using RigName but we need to bring over the old data
@@ -453,14 +463,29 @@ void MainFrame::loadConfiguration_()
     // wxString::Format() doesn't respect locale but C++ iomanip should. Use the latter instead.
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
     {
-        double freq =  ((double)wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency)/1000.0/1000.0;
+        double freqFactor = 1000.0;
+        
+        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            freqFactor *= 1000.0;
+        }
+        
+        double freq =  ((double)wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency) / freqFactor;
 
         std::stringstream ss;
         std::locale loc("");
         ss.imbue(loc);
-        ss << std::fixed << std::setprecision(4) << freq;
+        
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            ss << std::fixed << std::setprecision(1) << freq;
+        }
+        else
+        {
+            ss << std::fixed << std::setprecision(4) << freq;
+        }
+        
         std::string sVal = ss.str();
-
         m_cboReportFrequency->SetValue(sVal);
     }
 
@@ -1994,9 +2019,17 @@ void MainFrame::performFreeDVOn_()
             {
                 OpenSerialPort();
             }
-#if defined(WIN32)
-            else if (wxGetApp().appConfiguration.rigControlConfiguration.useOmniRig)
+            else
             {
+                wxGetApp().rigPttController = nullptr;
+            }
+            
+#if defined(WIN32)
+            if (wxGetApp().appConfiguration.rigControlConfiguration.useOmniRig)
+            {
+                // OmniRig can be anbled along with serial port PTT.
+                // The logic below will ensure we don't overwrite the serial PTT
+                // handler.
                 OpenOmniRig();
             }
 #endif // defined(WIN32)
@@ -3003,12 +3036,7 @@ bool MainFrame::validateSoundCardSetup()
 
 void MainFrame::initializeFreeDVReporter_()
 {
-    bool hamlibDisabledForRigControl = 
-        (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT &&
-         (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() == HamlibRigController::PTT_VIA_NONE);
-    bool receiveOnly = 
-        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly || 
-        g_nSoundCards <= 1 || hamlibDisabledForRigControl;
+    bool receiveOnly = isReceiveOnly();
     
     auto oldReporterObject = wxGetApp().m_sharedReporterObject;
     wxGetApp().m_sharedReporterObject =
@@ -3041,21 +3069,30 @@ void MainFrame::initializeFreeDVReporter_()
     }
         
     m_reporterDialog->setReporter(wxGetApp().m_sharedReporterObject);
-    m_reporterDialog->refreshDistanceColumn();
+    m_reporterDialog->refreshLayout();
     
     // Set up QSY request handler
     wxGetApp().m_sharedReporterObject->setOnQSYRequestFn([&](std::string callsign, uint64_t freqHz, std::string message) {
-        double frequencyMHz = freqHz / 1000000.0;
-        wxString fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz."), callsign, frequencyMHz);
+        double freqFactor = 1000.0;
+        std::string fmtMsg = "%s has requested that you QSY to %.01f KHz.";
+        
+        if (!wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            freqFactor *= 1000.0;
+            fmtMsg = "%s has requested that you QSY to %.04f MHz.";
+        }
+        
+        double frequencyReadable = freqHz / freqFactor;
+        wxString fullMessage = wxString::Format(wxString(fmtMsg), callsign, frequencyReadable);
         int dialogStyle = wxOK | wxICON_INFORMATION | wxCENTRE;
         
         if (wxGetApp().rigFrequencyController != nullptr && wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
         {
-            fullMessage = wxString::Format(_("%s has requested that you QSY to %.04f MHz. Would you like to change to that frequency now?"), callsign, frequencyMHz);
+            fullMessage = wxString::Format(_("%s Would you like to change to that frequency now?"), fullMessage);
             dialogStyle = wxYES_NO | wxICON_QUESTION | wxCENTRE;
         }
         
-        CallAfter([&, fullMessage, dialogStyle, frequencyMHz]() {
+        CallAfter([&, fullMessage, dialogStyle, frequencyReadable]() {
             wxMessageDialog messageDialog(this, fullMessage, wxT("FreeDV Reporter"), dialogStyle);
 
             if (dialogStyle & wxYES_NO)
@@ -3067,7 +3104,14 @@ void MainFrame::initializeFreeDVReporter_()
             if (answer == wxID_YES)
             {
                 // This will implicitly cause Hamlib to change the frequecy and mode.
-                m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyMHz));
+                if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+                {
+                    m_cboReportFrequency->SetValue(wxString::Format("%.1f", frequencyReadable));
+                }
+                else
+                {
+                    m_cboReportFrequency->SetValue(wxString::Format("%.4f", frequencyReadable));
+                }
             }
         });
     });
