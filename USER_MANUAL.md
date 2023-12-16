@@ -368,10 +368,11 @@ along with the reporting feature as a whole:
 * [FreeDV Reporter](https://qso.freedv.org/) -- also accessible via the Tools->FreeDV Reporter menu option.
 
 The frequency that FreeDV reports is set by changing the "Report Frequency" drop down box in the main window. This 
-is in kilohertz (kHz) and will turn red if the entered value is invalid. If Hamlib support is also enabled, 
-this frequency will automatically remain in sync with the current VFO on the radio (i.e. if the frequency is changed
-in the application, the radio will also change its frequency). Double-clicking on users in the Tools->FreeDV Reporter
-window will also cause this frequency to change to match the other user.
+is either in kilohertz (KHz) or megahertz (MHz) (configurable by going to Tools->Options->Rig Control and checking
+or unchecking "Frequency entry in KHz") and will turn red if the entered value is invalid. If Hamlib support is 
+also enabled, this frequency will automatically remain in sync with the current VFO on the radio (i.e. if the 
+frequency is changed in the application, the radio will also change its frequency). Double-clicking on users in 
+the Tools->FreeDV Reporter window will also cause this frequency to change to match the other user.
 
 *Note: in some setups (such as when using ALE), it is not preferred to have the reporting frequency automatically be 
 in sync with the radio. For example, in the case of ALE, the radio's frequency changes multiple times per second while
@@ -917,10 +918,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Use SetSize/GetSize instead of SetClientSize/GetClientSize to work around startup sizing issue. (PR #611)
     * Check for RIGCAPS_NOT_CONST in Hamlib 4.6. (PR #615)
     * Make main screen gauges horizontal to work around sizing/layout issues. (PR #613)
+    * Fix compiler issue with certain versions of MinGW. (PR #622)
+    * Suppress use of space bar when in RX Only mode. (PR #623)
 2. Enhancements:
     * Add option to add a delay after starting TX and before ending TX. (PR #618)
     * Allow serial PTT to be enabled along with OmniRig. (PR #619)
     * Add 800XA to multi-RX list. (PR #617)
+    * Allow display and entry of frequencies in KHz. (PR #621)
 
 ## V1.9.5 November 2023
 
