@@ -866,7 +866,6 @@ void MainFrame::togglePTT(void) {
     m_maxLevel = 0;
     m_textLevel->SetLabel(wxT(""));
     m_gaugeLevel->SetValue(0);
-    endingTx = false;
     
     // Report TX change to registered reporters
     for (auto& obj : wxGetApp().m_reporters)
@@ -894,6 +893,8 @@ void MainFrame::togglePTT(void) {
 
     if (newTx)
     {
+        endingTx = false;
+            
         if (wxGetApp().appConfiguration.txRxDelayMilliseconds > 0)
         {
             // Delay outbound TX audio if going into TX.
