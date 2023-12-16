@@ -98,10 +98,10 @@ ReportingConfiguration::ReportingConfiguration()
                 fraction += wxString('0', 6 - fraction.Length());
             }
 
-            long hz = 0;
-            long mhz = 0;
-            wholeNumber.ToLong(&mhz);
-            fraction.ToLong(&hz);
+            long long hz = 0;
+            long long mhz = 0;
+            wholeNumber.ToLongLong(&mhz);
+            fraction.ToLongLong(&hz);
             uint64_t freq = mhz * 1000000 + hz;
 
             if (reportingFrequencyAsKhz)

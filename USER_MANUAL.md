@@ -920,6 +920,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Make main screen gauges horizontal to work around sizing/layout issues. (PR #613)
     * Fix compiler issue with certain versions of MinGW. (PR #622)
     * Suppress use of space bar when in RX Only mode. (PR #623)
+    * Fix Windows-specific issue preventing entry of very high frequencies. (PR #624)
 2. Enhancements:
     * Allow serial PTT to be enabled along with OmniRig. (PR #619)
     * Add 800XA to multi-RX list. (PR #617)
