@@ -58,7 +58,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->InsertColumn(1, wxT("Locator"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(2, wxT("Dist (km)"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(3, wxT("Version"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(4, wxT("Frequency"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(4, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("KHz") : wxT("MHz"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(5, wxT("Status"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(6, wxT("TX Mode"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(7, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
@@ -269,6 +269,17 @@ void FreeDVReporterDialog::refreshLayout()
     m_listSpots->SetColumn(2, item);
     
     // Refresh frequency units as appropriate.
+    m_listSpots->GetColumn(4, item);
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        item.SetText("KHz");
+    }
+    else
+    {
+        item.SetText("MHz");
+    }
+    m_listSpots->SetColumn(4, item);
+
     for (auto& kvp : allReporterData_)
     {
         double frequencyUserReadable = kvp.second->frequency / 1000.0;
@@ -276,12 +287,12 @@ void FreeDVReporterDialog::refreshLayout()
         
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            frequencyString = wxString::Format(_("%.01f KHz"), frequencyUserReadable);
+            frequencyString = wxString::Format(_("%.01f"), frequencyUserReadable);
         }
         else
         {
             frequencyUserReadable /= 1000.0;
-            frequencyString = wxString::Format(_("%.04f MHz"), frequencyUserReadable);
+            frequencyString = wxString::Format(_("%.04f"), frequencyUserReadable);
         }
         
         kvp.second->freqString = frequencyString;
@@ -530,16 +541,10 @@ void FreeDVReporterDialog::refreshQSYButtonState()
             uint64_t theirFreq = 0;
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
             {
-                wxRegEx khzRegex(" KHz$");
-                khzRegex.Replace(&theirFreqString, "");
-            
                 theirFreq = wxAtof(theirFreqString) * 1000;
             }
             else
             {
-                wxRegEx mhzRegex(" MHz$");
-                mhzRegex.Replace(&theirFreqString, "");
-            
                 theirFreq = wxAtof(theirFreqString) * 1000 * 1000;
             }
             enabled = theirFreq != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
@@ -933,12 +938,12 @@ void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string las
             
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
             {
-                frequencyString = wxString::Format(_("%.01f KHz"), frequencyUserReadable);
+                frequencyString = wxString::Format(_("%.01f"), frequencyUserReadable);
             }
             else
             {
                 frequencyUserReadable /= 1000.0;
-                frequencyString = wxString::Format(_("%.04f MHz"), frequencyUserReadable);
+                frequencyString = wxString::Format(_("%.04f"), frequencyUserReadable);
             }
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             
@@ -959,10 +964,10 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
         {
             iter->second->transmitting = transmitting;
             
-            std::string txStatus = "Receiving";
+            std::string txStatus = "RX";
             if (transmitting)
             {
-                txStatus = "Transmitting";
+                txStatus = "TX";
             }
             
             if (iter->second->status != _(RX_ONLY_STATUS))
