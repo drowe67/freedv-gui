@@ -124,23 +124,23 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     reportingSettingsSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
     m_trackFrequency = new wxCheckBox(this, wxID_ANY, _("Track current:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    reportingSettingsSizer->Add(m_trackFrequency, 0, wxALL | wxALIGN_LEFT, 5);
+    reportingSettingsSizer->Add(m_trackFrequency, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     
     m_trackFreqBand = new wxRadioButton(this, wxID_ANY, _("band"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    reportingSettingsSizer->Add(m_trackFreqBand, 0, wxALL | wxALIGN_LEFT, 5);
+    reportingSettingsSizer->Add(m_trackFreqBand, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     m_trackFreqBand->Enable(false);
     
     m_trackExactFreq = new wxRadioButton(this, wxID_ANY, _("frequency"), wxDefaultPosition, wxDefaultSize, 0);
-    reportingSettingsSizer->Add(m_trackExactFreq, 0, wxALL | wxALIGN_LEFT, 5);
+    reportingSettingsSizer->Add(m_trackExactFreq, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     m_trackExactFreq->Enable(false);
     
     m_trackFrequency->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency);
 
     auto statusMessageLabel = new wxStaticText(this, wxID_ANY, _("Status message:"), wxDefaultPosition, wxDefaultSize);
-    reportingSettingsSizer->Add(statusMessageLabel, 0, wxALL | wxALIGN_LEFT, 5);
+    reportingSettingsSizer->Add(statusMessageLabel, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     m_statusMessage = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxSize(250, -1));
-    reportingSettingsSizer->Add(m_statusMessage, 0, wxALL | wxALIGN_LEFT, 5);
+    reportingSettingsSizer->Add(m_statusMessage, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     bottomRowSizer->Add(reportingSettingsSizer, 0, wxALL | wxALIGN_CENTER, 0);
     
