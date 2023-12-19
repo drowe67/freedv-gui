@@ -48,7 +48,7 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterBandFilterTracksFreqBand("/Reporting/FreeDV/BandFilterTracking/TracksFreqBand", true)
     , freedvReporterBandFilterTracksExactFreq("/Reporting/FreeDV/BandFilterTracking/TracksExactFreq", false)
     , freedvReporterStatusText("/Reporting/FreeDV/StatusText", _(""))
-        
+    , freedvReporterRecentStatusTexts("/Reporting/FreeDV/RecentStatusTexts", {})
     , useUTCForReporting("/CallsignList/UseUTCTime", false)
         
     , reportingFrequencyList("/Reporting/FrequencyList", {
@@ -174,7 +174,8 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, freedvReporterBandFilterTracksFreqBand);
     load_(config, freedvReporterBandFilterTracksExactFreq);
     load_(config, freedvReporterStatusText);
-    
+    load_(config, freedvReporterRecentStatusTexts);
+
     load_(config, useUTCForReporting);
     
     // Note: this needs to be loaded before the frequency list so that
@@ -214,6 +215,7 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, freedvReporterBandFilterTracksFreqBand);
     save_(config, freedvReporterBandFilterTracksExactFreq);
     save_(config, freedvReporterStatusText);
+    save_(config, freedvReporterRecentStatusTexts);
     
     save_(config, useUTCForReporting);
     

@@ -55,6 +55,7 @@ public:
     ConfigurationDataElement<bool> freedvReporterBandFilterTracksFreqBand;
     ConfigurationDataElement<bool> freedvReporterBandFilterTracksExactFreq;
     ConfigurationDataElement<wxString> freedvReporterStatusText;
+    ConfigurationDataElement<std::vector<wxString> > freedvReporterRecentStatusTexts;
     
     ConfigurationDataElement<bool> useUTCForReporting;
     

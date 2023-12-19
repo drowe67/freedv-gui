@@ -31,6 +31,7 @@ extern FreeDVInterface freedvInterface;
 #define NUM_COLS (13)
 #define RX_ONLY_STATUS "RX Only"
 #define RX_COLORING_TIMEOUT_SEC (20)
+#define STATUS_MESSAGE_MRU_MAX_SIZE (10)
 
 using namespace std::placeholders;
 
@@ -214,8 +215,12 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Trigger sorting on last sorted column
     sortColumn_(wxGetApp().appConfiguration.reporterWindowCurrentSort, wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
     
-    // Update status message
+    // Update status message and MRU list
     m_statusMessage->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText);
+    for (auto& msg : wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts.get())
+    {
+        m_statusMessage->Append(msg);
+    }
 
     // Trigger filter update if we're starting with tracking enabled
     m_trackFreqBand->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFreqBand);
@@ -521,6 +526,28 @@ void FreeDVReporterDialog::OnStatusTextSet(wxCommandEvent& event)
     }
 
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText = statusMsg;
+
+    // Add to MRU list if not already there. Otherwise, move to top.
+    auto location = m_statusMessage->FindString(statusMsg);
+    if (location >= 0)
+    {
+        m_statusMessage->Delete(location);
+    }
+    m_statusMessage->Insert(statusMsg, 0);
+
+    // If we have more than the maximum number in the MRU list, 
+    // remove from bottom.
+    while (m_statusMessage->GetCount() > STATUS_MESSAGE_MRU_MAX_SIZE)
+    {
+        m_statusMessage->Delete(m_statusMessage->GetCount() - 1);
+    }
+
+    // Preserve current state of the MRU list.
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->clear();
+    for (unsigned int index = 0; index < m_statusMessage->GetCount(); index++)
+    {
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->push_back(m_statusMessage->GetString(index));
+    }
 }
 
 void FreeDVReporterDialog::OnStatusTextClear(wxCommandEvent& event)
