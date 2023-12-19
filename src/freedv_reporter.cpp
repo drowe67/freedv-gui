@@ -60,7 +60,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->InsertColumn(3, wxT("Version"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(4, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("KHz") : wxT("MHz"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(5, wxT("Status"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(6, wxT("Message"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(6, wxT("Msg"), wxLIST_FORMAT_CENTER, 120);
     m_listSpots->InsertColumn(7, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(8, wxT("Mode"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(9, wxT("RX Call"), wxLIST_FORMAT_CENTER, 120);
@@ -97,18 +97,18 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
 
     // Band filter list    
     wxString bandList[] = {
-        _("All bands"),
-        _("160 meters"),
-        _("80 meters"),
-        _("60 meters"),
-        _("40 meters"),
-        _("30 meters"),
-        _("20 meters"),
-        _("17 meters"),
-        _("15 meters"),
-        _("12 meters"),
-        _("10 meters"),
-        _("6 meters and above"),
+        _("All"),
+        _("160 m"),
+        _("80 m"),
+        _("60 m"),
+        _("40 m"),
+        _("30 m"),
+        _("20 m"),
+        _("17 m"),
+        _("15 m"),
+        _("12 m"),
+        _("10 m"),
+        _(">= 6 m"),
         _("Other"),
     };
     
@@ -136,10 +136,10 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     
     m_trackFrequency->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency);
 
-    auto statusMessageLabel = new wxStaticText(this, wxID_ANY, _("Status message:"), wxDefaultPosition, wxDefaultSize);
+    auto statusMessageLabel = new wxStaticText(this, wxID_ANY, _("Msg:"), wxDefaultPosition, wxDefaultSize);
     reportingSettingsSizer->Add(statusMessageLabel, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_statusMessage = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxSize(250, -1));
+    m_statusMessage = new wxTextCtrl(this, wxID_ANY, _(""), wxDefaultPosition, wxSize(175, -1));
     reportingSettingsSizer->Add(m_statusMessage, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     bottomRowSizer->Add(reportingSettingsSizer, 0, wxALL | wxALIGN_CENTER, 0);
