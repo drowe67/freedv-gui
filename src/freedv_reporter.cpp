@@ -56,7 +56,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots = new wxListView(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_SINGLE_SEL | wxLC_REPORT | wxLC_HRULES);
     m_listSpots->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(1, wxT("Locator"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(2, wxT("Dist (km)"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(2, wxT("KM"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(3, wxT("Version"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(4, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("KHz") : wxT("MHz"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(5, wxT("Status"), wxLIST_FORMAT_CENTER, 80);
@@ -259,11 +259,11 @@ void FreeDVReporterDialog::refreshLayout()
 
     if (wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
     {
-        item.SetText("Dist (km)");
+        item.SetText("KM");
     }
     else
     {
-        item.SetText("Dist (mi)");
+        item.SetText("Miles");
     }
 
     m_listSpots->SetColumn(2, item);
