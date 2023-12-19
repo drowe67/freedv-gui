@@ -32,6 +32,7 @@ extern wxConfigBase *pConfig;
 extern bool endingTx;
 extern int g_outfifo1_empty;
 extern bool g_voice_keyer_tx;
+extern paCallBackData* g_rxUserdata;
 
 extern SNDFILE            *g_sfRecFileFromModulator;
 extern SNDFILE            *g_sfRecFile;
@@ -816,12 +817,14 @@ void MainFrame::togglePTT(void) {
         wxThread::Sleep(msSleep);
         
         // Trigger end of TX processing. This causes us to wait for the remaining samples
-        // to flow through the system before toggling PTT.  Note 1000ms timeout as backup
-        int sample = g_outfifo1_empty;
+        // to flow through the system before toggling PTT.  Note:
+        //    1. 1000ms timeout as backup.
+        //    2. Minimum number of samples to exit wait is based on default settings for
+        //       the PulseAudio and PortAudio engines (see audio folder).
         endingTx = true;
 
         int i = 0;
-        while ((i < 20) && (g_outfifo1_empty == sample)) {
+        while ((i < 20) && (codec2_fifo_used(g_rxUserdata->outfifo1) > 0)) {
             i++;
             wxThread::Sleep(50);
         }
