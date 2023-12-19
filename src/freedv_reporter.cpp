@@ -61,10 +61,10 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->InsertColumn(4, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("KHz") : wxT("MHz"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(5, wxT("Status"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(6, wxT("Message"), wxLIST_FORMAT_CENTER, 120);
-    m_listSpots->InsertColumn(7, wxT("TX Mode"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(8, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(7, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(8, wxT("Mode"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(9, wxT("RX Call"), wxLIST_FORMAT_CENTER, 120);
-    m_listSpots->InsertColumn(10, wxT("RX Mode"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(10, wxT("Mode"), wxLIST_FORMAT_CENTER, 120);
     m_listSpots->InsertColumn(11, wxT("SNR"), wxLIST_FORMAT_CENTER, 40);
     m_listSpots->InsertColumn(12, wxT("Last Update"), wxLIST_FORMAT_CENTER, 120);
 
@@ -733,9 +733,6 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
             result = leftData->userMessage.CmpNoCase(rightData->userMessage);
             break;
         case 7:
-            result = leftData->txMode.CmpNoCase(rightData->txMode);
-            break;
-        case 8:
             if (leftData->lastTxDate.IsValid() && rightData->lastTxDate.IsValid())
             {
                 if (leftData->lastTxDate.IsEarlierThan(rightData->lastTxDate))
@@ -763,6 +760,9 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
             {
                 result = 0;
             }
+            break;
+        case 8:
+            result = leftData->txMode.CmpNoCase(rightData->txMode);
             break;
         case 9:
             result = leftData->lastRxCallsign.CmpNoCase(rightData->lastRxCallsign);
@@ -1132,9 +1132,9 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     needResort |= changed && currentSortColumn_ == 5;
     changed = setColumnForRow_(itemIndex, 6, data->userMessage);
     needResort |= changed && currentSortColumn_ == 6;
-    changed = setColumnForRow_(itemIndex, 7, data->txMode);
+    changed = setColumnForRow_(itemIndex, 7, data->lastTx);
     needResort |= changed && currentSortColumn_ == 7;
-    changed = setColumnForRow_(itemIndex, 8, data->lastTx);
+    changed = setColumnForRow_(itemIndex, 8, data->txMode);
     needResort |= changed && currentSortColumn_ == 8;
     changed = setColumnForRow_(itemIndex, 9, data->lastRxCallsign);
     needResort |= changed && currentSortColumn_ == 9;
