@@ -60,13 +60,13 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->InsertColumn(3, wxT("Version"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(4, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("KHz") : wxT("MHz"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(5, wxT("Status"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(6, wxT("TX Mode"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(7, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(8, wxT("RX Call"), wxLIST_FORMAT_CENTER, 120);
-    m_listSpots->InsertColumn(9, wxT("RX Mode"), wxLIST_FORMAT_CENTER, 120);
-    m_listSpots->InsertColumn(10, wxT("SNR"), wxLIST_FORMAT_CENTER, 40);
-    m_listSpots->InsertColumn(11, wxT("Last Update"), wxLIST_FORMAT_CENTER, 120);
-    m_listSpots->InsertColumn(12, wxT("Message"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(6, wxT("Message"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(7, wxT("TX Mode"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(8, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(9, wxT("RX Call"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(10, wxT("RX Mode"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(11, wxT("SNR"), wxLIST_FORMAT_CENTER, 40);
+    m_listSpots->InsertColumn(12, wxT("Last Update"), wxLIST_FORMAT_CENTER, 120);
 
     // On Windows, the last column will end up taking a lot more space than desired regardless
     // of the space we actually need. Create a "dummy" column to take that space instead.
@@ -730,9 +730,12 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
             result = leftData->status.CmpNoCase(rightData->status);
             break;
         case 6:
-            result = leftData->txMode.CmpNoCase(rightData->txMode);
+            result = leftData->userMessage.CmpNoCase(rightData->userMessage);
             break;
         case 7:
+            result = leftData->txMode.CmpNoCase(rightData->txMode);
+            break;
+        case 8:
             if (leftData->lastTxDate.IsValid() && rightData->lastTxDate.IsValid())
             {
                 if (leftData->lastTxDate.IsEarlierThan(rightData->lastTxDate))
@@ -761,16 +764,16 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
                 result = 0;
             }
             break;
-        case 8:
+        case 9:
             result = leftData->lastRxCallsign.CmpNoCase(rightData->lastRxCallsign);
             break;
-        case 9:
+        case 10:
             result = leftData->lastRxMode.CmpNoCase(rightData->lastRxMode);
             break;
-        case 10:
+        case 11:
             result = leftData->snr.CmpNoCase(rightData->snr);
             break;
-        case 11:
+        case 12:
             if (leftData->lastUpdateDate.IsValid() && rightData->lastUpdateDate.IsValid())
             {
                 if (leftData->lastUpdateDate.IsEarlierThan(rightData->lastUpdateDate))
@@ -798,9 +801,6 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
             {
                 result = 0;
             }
-            break;
-        case 12:
-            result = leftData->userMessage.CmpNoCase(rightData->userMessage);
             break;
         default:
             assert(false);
@@ -1130,19 +1130,19 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     needResort |= changed && currentSortColumn_ == 4;
     changed = setColumnForRow_(itemIndex, 5, data->status);
     needResort |= changed && currentSortColumn_ == 5;
-    changed = setColumnForRow_(itemIndex, 6, data->txMode);
+    changed = setColumnForRow_(itemIndex, 6, data->userMessage);
     needResort |= changed && currentSortColumn_ == 6;
-    changed = setColumnForRow_(itemIndex, 7, data->lastTx);
+    changed = setColumnForRow_(itemIndex, 7, data->txMode);
     needResort |= changed && currentSortColumn_ == 7;
-    changed = setColumnForRow_(itemIndex, 8, data->lastRxCallsign);
+    changed = setColumnForRow_(itemIndex, 8, data->lastTx);
     needResort |= changed && currentSortColumn_ == 8;
-    changed = setColumnForRow_(itemIndex, 9, data->lastRxMode);
+    changed = setColumnForRow_(itemIndex, 9, data->lastRxCallsign);
     needResort |= changed && currentSortColumn_ == 9;
-    changed = setColumnForRow_(itemIndex, 10, data->snr);
+    changed = setColumnForRow_(itemIndex, 10, data->lastRxMode);
     needResort |= changed && currentSortColumn_ == 10;
-    changed = setColumnForRow_(itemIndex, 11, data->lastUpdate);
+    changed = setColumnForRow_(itemIndex, 11, data->snr);
     needResort |= changed && currentSortColumn_ == 11;
-    changed = setColumnForRow_(itemIndex, 12, data->userMessage);
+    changed = setColumnForRow_(itemIndex, 12, data->lastUpdate);
     needResort |= changed && currentSortColumn_ == 12;
     
     if (data->transmitting)
