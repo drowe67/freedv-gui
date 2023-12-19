@@ -350,7 +350,8 @@ void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
         reporter_->setMessageUpdateFn(std::bind(&FreeDVReporterDialog::onMessageUpdateFn_, this, _1, _2, _3));
 
         // Update status message
-        m_statusMessage->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText);
+        auto statusMsg = m_statusMessage->GetValue();
+        reporter_->updateMessage(statusMsg.ToStdString());
     }
     else
     {
