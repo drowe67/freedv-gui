@@ -79,7 +79,8 @@ class FreeDVReporterDialog : public wxDialog
         void    OnMove(wxMoveEvent& event);
         void    OnShow(wxShowEvent& event);
         void    OnBandFilterChange(wxCommandEvent& event);
-        void    OnStatusTextChange(wxCommandEvent& event);
+        void    OnStatusTextSet(wxCommandEvent& event);
+        void    OnStatusTextClear(wxCommandEvent& event);
         
         void OnItemSelected(wxListEvent& event);
         void OnItemDeselected(wxListEvent& event);
@@ -105,7 +106,9 @@ class FreeDVReporterDialog : public wxDialog
         wxRadioButton* m_trackExactFreq;
 
         // Status message
-        wxTextCtrl* m_statusMessage;
+        wxComboBox* m_statusMessage;
+        wxButton* m_buttonSet;
+        wxButton* m_buttonClear;
         
         // Step 4: test/save/cancel setup
         wxButton* m_buttonOK;
