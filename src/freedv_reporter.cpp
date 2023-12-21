@@ -519,7 +519,7 @@ void FreeDVReporterDialog::OnDoubleClick(wxMouseEvent& event)
 
 void FreeDVReporterDialog::OnStatusTextSet(wxCommandEvent& event)
 {
-    auto statusMsg = m_statusMessage->GetValue();
+    auto statusMsg = m_statusMessage->GetValue().SubString(0, 14); // 15 character maximum limit
 
     if (reporter_)
     {
