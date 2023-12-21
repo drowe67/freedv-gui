@@ -200,6 +200,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     
     m_statusMessage->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
     m_statusMessage->Connect(wxEVT_TEXT_ENTER, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
+    m_statusMessage->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSet->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
     m_buttonClear->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextClear), NULL, this);
 
@@ -259,6 +260,7 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     
     m_statusMessage->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
     m_statusMessage->Disconnect(wxEVT_TEXT_ENTER, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
+    m_statusMessage->Disconnect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSet->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
     m_buttonClear->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextClear), NULL, this);
 
@@ -316,6 +318,10 @@ void FreeDVReporterDialog::refreshLayout()
         
         addOrUpdateListIfNotFiltered_(kvp.second);
     }
+
+    // Update status controls.
+    wxCommandEvent tmpEvent;
+    OnStatusTextChange(tmpEvent);
 }
 
 void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
@@ -515,6 +521,14 @@ void FreeDVReporterDialog::OnDoubleClick(wxMouseEvent& event)
         
         wxGetApp().rigFrequencyController->setFrequency(allReporterData_[*sidPtr]->frequency);
     }
+}
+
+void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent& event)
+{
+    auto statusMsg = m_statusMessage->GetValue();
+
+    m_buttonSet->Enable(statusMsg != wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText);
+    m_buttonClear->Enable(statusMsg.size() > 0);
 }
 
 void FreeDVReporterDialog::OnStatusTextSet(wxCommandEvent& event)
