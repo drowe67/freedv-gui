@@ -545,6 +545,9 @@ void FreeDVReporterDialog::OnStatusTextSet(wxCommandEvent& event)
             m_statusMessage->Delete(m_statusMessage->GetCount() - 1);
         }
 
+        // Reselect "new" first entry to avoid display issues
+        m_statusMessage->SetSelection(0);
+
         // Preserve current state of the MRU list.
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->clear();
         for (unsigned int index = 0; index < m_statusMessage->GetCount(); index++)
@@ -561,6 +564,7 @@ void FreeDVReporterDialog::OnStatusTextClear(wxCommandEvent& event)
         reporter_->updateMessage("");
     }
 
+    m_statusMessage->SetValue("");
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText = "";
 }
 
