@@ -582,8 +582,8 @@ void FreeDVReporterDialog::OnStatusTextClear(wxCommandEvent& event)
         reporter_->updateMessage("");
     }
 
-    m_statusMessage->SetValue("");
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText = "";
+    m_statusMessage->SetValue("");
 }
 
 void FreeDVReporterDialog::refreshQSYButtonState()
