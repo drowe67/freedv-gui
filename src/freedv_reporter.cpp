@@ -32,6 +32,7 @@ extern FreeDVInterface freedvInterface;
 #define RX_ONLY_STATUS "RX Only"
 #define RX_COLORING_TIMEOUT_SEC (20)
 #define STATUS_MESSAGE_MRU_MAX_SIZE (10)
+#define MESSAGE_CHAR_LIMIT (15)
 
 using namespace std::placeholders;
 
@@ -522,7 +523,13 @@ void FreeDVReporterDialog::OnDoubleClick(wxMouseEvent& event)
 
 void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent& event)
 {
-    auto statusMsg = m_statusMessage->GetValue();
+    auto statusMsg = m_statusMessage->GetValue().SubString(0, MESSAGE_CHAR_LIMIT - 1); 
+
+    // Prevent entry of text longer than the character limit.
+    if (statusMsg != m_statusMessage->GetValue())
+    {
+        m_statusMessage->SetValue(statusMsg);
+    }
 
     m_buttonSet->Enable(statusMsg != wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText);
     m_buttonClear->Enable(statusMsg.size() > 0);
@@ -530,7 +537,7 @@ void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent& event)
 
 void FreeDVReporterDialog::OnStatusTextSet(wxCommandEvent& event)
 {
-    auto statusMsg = m_statusMessage->GetValue().SubString(0, 14); // 15 character maximum limit
+    auto statusMsg = m_statusMessage->GetValue().SubString(0, MESSAGE_CHAR_LIMIT - 1); 
 
     if (reporter_)
     {
