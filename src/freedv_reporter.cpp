@@ -103,7 +103,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_buttonSendQSY->Enable(false); // disable by default unless we get a valid selection
     reportingSettingsSizer->Add(m_buttonSendQSY, 0, wxALL, 5);
 
-    m_buttonDisplayWebpage = new wxButton(this, wxID_ANY, _("Open Website"));
+    m_buttonDisplayWebpage = new wxButton(this, wxID_ANY, _("Website"));
     reportingSettingsSizer->Add(m_buttonDisplayWebpage, 0, wxALL, 5);
 
     // Band filter list    
@@ -134,7 +134,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     
     reportingSettingsSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
-    m_trackFrequency = new wxCheckBox(this, wxID_ANY, _("Track current:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_trackFrequency = new wxCheckBox(this, wxID_ANY, _("Track:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     reportingSettingsSizer->Add(m_trackFrequency, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     
     m_trackFreqBand = new wxRadioButton(this, wxID_ANY, _("band"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
