@@ -528,26 +528,29 @@ void FreeDVReporterDialog::OnStatusTextSet(wxCommandEvent& event)
 
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText = statusMsg;
 
-    // Add to MRU list if not already there. Otherwise, move to top.
-    auto location = m_statusMessage->FindString(statusMsg);
-    if (location >= 0)
+    if (statusMsg.size() > 0)
     {
-        m_statusMessage->Delete(location);
-    }
-    m_statusMessage->Insert(statusMsg, 0);
+        // Add to MRU list if not already there. Otherwise, move to top.
+        auto location = m_statusMessage->FindString(statusMsg);
+        if (location >= 0)
+        {
+            m_statusMessage->Delete(location);
+        }
+        m_statusMessage->Insert(statusMsg, 0);
 
-    // If we have more than the maximum number in the MRU list, 
-    // remove from bottom.
-    while (m_statusMessage->GetCount() > STATUS_MESSAGE_MRU_MAX_SIZE)
-    {
-        m_statusMessage->Delete(m_statusMessage->GetCount() - 1);
-    }
+        // If we have more than the maximum number in the MRU list, 
+        // remove from bottom.
+        while (m_statusMessage->GetCount() > STATUS_MESSAGE_MRU_MAX_SIZE)
+        {
+            m_statusMessage->Delete(m_statusMessage->GetCount() - 1);
+        }
 
-    // Preserve current state of the MRU list.
-    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->clear();
-    for (unsigned int index = 0; index < m_statusMessage->GetCount(); index++)
-    {
-        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->push_back(m_statusMessage->GetString(index));
+        // Preserve current state of the MRU list.
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->clear();
+        for (unsigned int index = 0; index < m_statusMessage->GetCount(); index++)
+        {
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->push_back(m_statusMessage->GetString(index));
+        }
     }
 }
 
