@@ -701,6 +701,7 @@ void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
     for (int col = 0; col < NUM_COLS; col++)
     {
         columnLengths_[col] = 0;
+        m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
     }
 }
 
