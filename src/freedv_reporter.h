@@ -142,6 +142,7 @@ class FreeDVReporterDialog : public wxDialog
              wxString lastUpdate;
              wxDateTime lastUpdateDate;
              wxString userMessage;
+             wxDateTime lastUpdateUserMessage;
          };
          
          std::shared_ptr<FreeDVReporter> reporter_;
