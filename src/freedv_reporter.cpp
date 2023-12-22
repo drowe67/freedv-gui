@@ -1119,8 +1119,8 @@ void FreeDVReporterDialog::onMessageUpdateFn_(std::string sid, std::string lastU
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             iter->second->lastUpdate = lastUpdateTime;
 
-            // Only highlight on non-empty messages.
-            if (message.size() > 0)
+            // Only highlight on non-empty messages not from ourselves.
+            if (message.size() > 0 && iter->second->callsign != wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign)
             {
                 iter->second->lastUpdateUserMessage = iter->second->lastUpdateDate;
             }
