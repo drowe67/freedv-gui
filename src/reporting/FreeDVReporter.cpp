@@ -227,6 +227,11 @@ void FreeDVReporter::setMessageUpdateFn(MessageUpdateFn fn)
     onMessageUpdateFn_ = fn;
 }
 
+void FreeDVReporter::setConnectionSuccessfulFn(ConnectionSuccessfulFn fn)
+{
+    onConnectionSuccessfulFn_ = fn;
+}
+
 bool FreeDVReporter::isValidForReporting()
 {
     return callsign_ != "" && gridSquare_ != "";
@@ -347,6 +352,14 @@ void FreeDVReporter::connect_()
                     rxOnly->get_bool()
                 );
             }
+        }
+    });
+
+    sioClient_->socket()->off("connection_successful");
+    sioClient_->socket()->on("connection_successful", [&](sio::event& ev) {
+        if (onConnectionSuccessfulFn_)
+        {
+            onConnectionSuccessfulFn_();
         }
     });
 

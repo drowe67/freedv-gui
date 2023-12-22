@@ -151,6 +151,7 @@ class FreeDVReporterDialog : public wxDialog
          FilterFrequency currentBandFilter_;
          int currentSortColumn_;
          bool sortAscending_;
+         bool isConnected_;
          
          void clearAllEntries_(bool clearForAllBands);
          void onReporterConnect_();
@@ -161,6 +162,7 @@ class FreeDVReporterDialog : public wxDialog
          void onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate);
          void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
          void onMessageUpdateFn_(std::string sid, std::string lastUpdate, std::string message);
+         void onConnectionSuccessfulFn_();
 
          wxString makeValidTime_(std::string timeStr, wxDateTime& timeObj);
          

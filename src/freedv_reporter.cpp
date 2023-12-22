@@ -43,6 +43,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     , currentBandFilter_(FreeDVReporterDialog::BAND_ALL)
     , currentSortColumn_(-1)
     , sortAscending_(false)
+    , isConnected_(false)
 {
     for (int col = 0; col < NUM_COLS; col++)
     {
@@ -339,6 +340,7 @@ void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
         reporter_->setOnReceiveUpdateFn(FreeDVReporter::RxUpdateFn());
 
         reporter_->setMessageUpdateFn(FreeDVReporter::MessageUpdateFn());
+        reporter_->setConnectionSuccessfulFn(FreeDVReporter::ConnectionSuccessfulFn());
     }
     
     reporter_ = reporter;
@@ -355,6 +357,7 @@ void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
         reporter_->setOnReceiveUpdateFn(std::bind(&FreeDVReporterDialog::onReceiveUpdateFn_, this, _1, _2, _3, _4, _5, _6, _7));
 
         reporter_->setMessageUpdateFn(std::bind(&FreeDVReporterDialog::onMessageUpdateFn_, this, _1, _2, _3));
+        reporter_->setConnectionSuccessfulFn(std::bind(&FreeDVReporterDialog::onConnectionSuccessfulFn_, this));
 
         // Update status message
         auto statusMsg = m_statusMessage->GetValue();
@@ -913,6 +916,7 @@ void FreeDVReporterDialog::onReporterConnect_()
 void FreeDVReporterDialog::onReporterDisconnect_()
 {
     CallAfter([&]() {
+        isConnected_ = false;
         clearAllEntries_(true);        
     });
 }
@@ -984,6 +988,12 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         
         allReporterData_[sid] = temp;
     });
+}
+
+void FreeDVReporterDialog::onConnectionSuccessfulFn_()
+{
+    // Enable highlighting now that we're fully connected.
+    isConnected_ = true;
 }
 
 void FreeDVReporterDialog::onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
@@ -1119,8 +1129,8 @@ void FreeDVReporterDialog::onMessageUpdateFn_(std::string sid, std::string lastU
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             iter->second->lastUpdate = lastUpdateTime;
 
-            // Only highlight on non-empty messages not from ourselves.
-            if (message.size() > 0 && iter->second->callsign != wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign)
+            // Only highlight on non-empty messages.
+            if (message.size() > 0 && isConnected_)
             {
                 iter->second->lastUpdateUserMessage = iter->second->lastUpdateDate;
             }
@@ -1210,6 +1220,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     }
     
     bool needResort = false;
+    bool isAdded = false;
 
     if (itemIndex >= 0 && filtered)
     {
@@ -1220,6 +1231,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     }
     else if (itemIndex == -1 && !filtered)
     {
+        isAdded = true;
         itemIndex = m_listSpots->InsertItem(m_listSpots->GetItemCount(), data->callsign);
         m_listSpots->SetItemPtrData(itemIndex, (wxUIntPtr)new std::string(data->sid));
         needResort = currentSortColumn_ == 0;
@@ -1270,7 +1282,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
         m_listSpots->SetItemBackgroundColour(itemIndex, rxBackgroundColor);
         m_listSpots->SetItemTextColour(itemIndex, rxForegroundColor);
     }
-    else if (data->lastUpdateUserMessage.IsValid() && data->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC)))
+    else if (!isAdded && data->lastUpdateUserMessage.IsValid() && data->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC)))
     {
         wxColour rxBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor);
         wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor);
