@@ -34,6 +34,7 @@ extern FreeDVInterface freedvInterface;
 #define MSG_COLORING_TIMEOUT_SEC (5)
 #define STATUS_MESSAGE_MRU_MAX_SIZE (10)
 #define MESSAGE_CHAR_LIMIT (15)
+#define MESSAGE_COLUMN_ID (6)
 
 using namespace std::placeholders;
 
@@ -1325,7 +1326,8 @@ bool FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val, std:
             GetTextExtent(val, &textWidth, &textHeight);
         }
     
-        if (textWidth > columnLengths_[col])
+        // Always force a resize for the Msg column.
+        if (textWidth > columnLengths_[col] || col == MESSAGE_COLUMN_ID)
         {
             columnLengths_[col] = textWidth;
             colResizeList[col]++;
