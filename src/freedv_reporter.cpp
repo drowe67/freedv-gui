@@ -1118,8 +1118,13 @@ void FreeDVReporterDialog::onMessageUpdateFn_(std::string sid, std::string lastU
             
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             iter->second->lastUpdate = lastUpdateTime;
-            iter->second->lastUpdateUserMessage = iter->second->lastUpdateDate;
-            
+
+            // Only highlight on non-empty messages.
+            if (message.size() > 0)
+            {
+                iter->second->lastUpdateUserMessage = iter->second->lastUpdateDate;
+            }
+
             std::map<int, int> colResizeList;
             addOrUpdateListIfNotFiltered_(iter->second, colResizeList);
             resizeChangedColumns_(colResizeList);
@@ -1225,7 +1230,6 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
         return;
     }
 
-    bool changedMessage = false;
     bool changed = setColumnForRow_(itemIndex, 1, data->gridSquare, colResizeList);
     needResort |= changed && currentSortColumn_ == 1;
     changed = setColumnForRow_(itemIndex, 2, data->distance, colResizeList);
@@ -1237,7 +1241,6 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     changed = setColumnForRow_(itemIndex, 5, data->status, colResizeList);
     needResort |= changed && currentSortColumn_ == 5;
     changed = setColumnForRow_(itemIndex, 6, data->userMessage, colResizeList);
-    changedMessage = changed && data->userMessage.size() > 0; // only highlight if change resulted in a non-empty message.
     needResort |= changed && currentSortColumn_ == 6;
     changed = setColumnForRow_(itemIndex, 7, data->lastTx, colResizeList);
     needResort |= changed && currentSortColumn_ == 7;
@@ -1267,10 +1270,10 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
         m_listSpots->SetItemBackgroundColour(itemIndex, rxBackgroundColor);
         m_listSpots->SetItemTextColour(itemIndex, rxForegroundColor);
     }
-    else if (changedMessage || (data->lastUpdateUserMessage.IsValid() && data->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC))))
+    else if (data->lastUpdateUserMessage.IsValid() && data->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC)))
     {
-        wxColour rxBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
-        wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
+        wxColour rxBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor);
+        wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor);
         m_listSpots->SetItemBackgroundColour(itemIndex, rxBackgroundColor);
         m_listSpots->SetItemTextColour(itemIndex, rxForegroundColor);
     }

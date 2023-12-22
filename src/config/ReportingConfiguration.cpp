@@ -75,6 +75,8 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterTxRowForegroundColor("/Reporting/FreeDV/TxRowForegroundColor", "#000000")
     , freedvReporterRxRowBackgroundColor("/Reporting/FreeDV/RxRowBackgroundColor", "#379baf")
     , freedvReporterRxRowForegroundColor("/Reporting/FreeDV/RxRowForegroundColor", "#000000")
+    , freedvReporterMsgRowBackgroundColor("/Reporting/FreeDV/MsgRowBackgroundColor", "#E58BE5")
+    , freedvReporterMsgRowForegroundColor("/Reporting/FreeDV/MsgRowForegroundColor", "#000000")
         
     , reportingFrequencyAsKhz("/Reporting/FrequencyAsKHz", false)
 {
@@ -190,7 +192,9 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, freedvReporterTxRowForegroundColor);
     load_(config, freedvReporterRxRowBackgroundColor);
     load_(config, freedvReporterRxRowForegroundColor);
-    
+    load_(config, freedvReporterMsgRowBackgroundColor);
+    load_(config, freedvReporterMsgRowForegroundColor);
+
     // Special load handling for reporting below.
     wxString freqStr = config->Read(reportingFrequency.getElementName(), oldFreqStr);
     reportingFrequency.setWithoutProcessing(atoll(freqStr.ToUTF8()));
@@ -228,6 +232,8 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, freedvReporterTxRowForegroundColor);
     save_(config, freedvReporterRxRowBackgroundColor);
     save_(config, freedvReporterRxRowForegroundColor);
+    save_(config, freedvReporterMsgRowBackgroundColor);
+    save_(config, freedvReporterMsgRowForegroundColor);
     
     // Special save handling for reporting below.
     wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), reportingFrequency.getWithoutProcessing());

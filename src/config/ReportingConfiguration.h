@@ -65,6 +65,8 @@ public:
     ConfigurationDataElement<wxString> freedvReporterTxRowForegroundColor;
     ConfigurationDataElement<wxString> freedvReporterRxRowBackgroundColor;
     ConfigurationDataElement<wxString> freedvReporterRxRowForegroundColor;
+    ConfigurationDataElement<wxString> freedvReporterMsgRowBackgroundColor;
+    ConfigurationDataElement<wxString> freedvReporterMsgRowForegroundColor;
     
     ConfigurationDataElement<bool> reportingFrequencyAsKhz;
     
