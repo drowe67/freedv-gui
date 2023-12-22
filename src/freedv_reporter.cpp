@@ -65,7 +65,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->InsertColumn(3, wxT("Version"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(4, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("KHz") : wxT("MHz"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(5, wxT("Status"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(6, wxT("Msg"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(6, wxT("Msg"), wxLIST_FORMAT_CENTER, 20);
     m_listSpots->InsertColumn(7, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(8, wxT("Mode"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(9, wxT("RX Call"), wxLIST_FORMAT_CENTER, 120);
@@ -707,7 +707,7 @@ void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
         delete (std::string*)m_listSpots->GetItemData(index);
         m_listSpots->DeleteItem(index);
     }
-    
+
     // Reset lengths to force auto-resize on (re)connect.
     for (int col = 0; col < NUM_COLS; col++)
     {
@@ -965,6 +965,7 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
 
         temp->version = version;
         temp->freqString = UNKNOWN_STR;
+        temp->userMessage = UNKNOWN_STR;
         temp->transmitting = false;
         
         if (rxOnly)
@@ -1125,7 +1126,14 @@ void FreeDVReporterDialog::onMessageUpdateFn_(std::string sid, std::string lastU
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
-            iter->second->userMessage = message;
+            if (message.size() == 0)
+            {
+                iter->second->userMessage = UNKNOWN_STR;
+            }
+            else
+            {
+                iter->second->userMessage = message;
+            }
             
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             iter->second->lastUpdate = lastUpdateTime;
