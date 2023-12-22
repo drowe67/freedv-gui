@@ -806,6 +806,7 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
 }
 
 void MainFrame::togglePTT(void) {
+    std::chrono::high_resolution_clock highResClock;
 
     // Change tabbed page in centre panel depending on PTT state
 
@@ -814,26 +815,58 @@ void MainFrame::togglePTT(void) {
         // Sleep for long enough that we get the remaining [blocksize] ms of audio.
         int msSleep = (1000 * freedvInterface.getTxNumSpeechSamples()) / freedvInterface.getTxSpeechSampleRate();
         if (g_verbose) fprintf(stderr, "Sleeping for %d ms prior to ending TX\n", msSleep);
-        wxThread::Sleep(msSleep);
+
+        auto before = highResClock.now();
+
+        while(true)
+        {
+            auto diff = highResClock.now() - before;
+            if (diff >= std::chrono::milliseconds(msSleep))
+            {
+                break;
+            }
+
+            wxThread::Sleep(1);
+            wxGetApp().Yield(true);
+        }
         
         // Trigger end of TX processing. This causes us to wait for the remaining samples
-        // to flow through the system before toggling PTT.  Note:
-        //    1. 1000ms timeout as backup.
-        //    2. Minimum number of samples to exit wait is based on default settings for
-        //       the PulseAudio and PortAudio engines (see audio folder).
+        // to flow through the system before toggling PTT.  Note that there is a 1000ms 
+        // timeout as backup.
         endingTx = true;
 
-        int i = 0;
-        while ((i < 20) && (codec2_fifo_used(g_rxUserdata->outfifo1) > 0)) {
-            i++;
-            wxThread::Sleep(50);
+        before = highResClock.now();
+        while(true)
+        {
+            auto diff = highResClock.now() - before;
+            if (diff >= std::chrono::milliseconds(1000) || codec2_fifo_used(g_rxUserdata->outfifo1) == 0)
+            {
+                break;
+            }
+
+            wxThread::Sleep(1);
+
+            // Yield() used to avoid lack of UI responsiveness during delay.
+            wxGetApp().Yield(true);
         }
         
         // Wait an additional configured timeframe before actually clearing PTT (below)
         if (wxGetApp().appConfiguration.txRxDelayMilliseconds > 0)
         {
             // Delay outbound TX audio if going into TX.
-            std::this_thread::sleep_for(std::chrono::milliseconds(wxGetApp().appConfiguration.txRxDelayMilliseconds.get()));
+            // Yield() used to avoid lack of UI responsiveness during delay.
+            before = highResClock.now();
+            while(true)
+            {
+                auto diff = highResClock.now() - before;
+                if (diff >= std::chrono::milliseconds(wxGetApp().appConfiguration.txRxDelayMilliseconds.get()))
+                {
+                    break;
+                }
+
+                wxThread::Sleep(1);
+                wxGetApp().Yield(true);
+            }
         }
         g_tx = false;
 
@@ -927,7 +960,19 @@ void MainFrame::togglePTT(void) {
         if (wxGetApp().appConfiguration.txRxDelayMilliseconds > 0)
         {
             // Delay outbound TX audio if going into TX.
-            std::this_thread::sleep_for(std::chrono::milliseconds(wxGetApp().appConfiguration.txRxDelayMilliseconds.get()));
+            // Note: Yield() used here to avoid lack of UI responsiveness during delay.
+            auto before = highResClock.now();
+            while(true)
+            {
+                auto diff = highResClock.now() - before;
+                if (diff >= std::chrono::milliseconds(wxGetApp().appConfiguration.txRxDelayMilliseconds.get()))
+                {
+                    break;
+                }
+
+                wxThread::Sleep(1);
+                wxGetApp().Yield(true);
+            }
         }
 
         // g_tx governs when audio actually goes out during TX, so don't set to true until
