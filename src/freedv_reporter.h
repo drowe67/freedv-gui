@@ -163,11 +163,12 @@ class FreeDVReporterDialog : public wxDialog
 
          wxString makeValidTime_(std::string timeStr, wxDateTime& timeObj);
          
-         void addOrUpdateListIfNotFiltered_(ReporterData* data);
+         void addOrUpdateListIfNotFiltered_(ReporterData* data, std::map<int, int>& colResizeList);
          FilterFrequency getFilterForFrequency_(uint64_t freq);
          bool isFiltered_(uint64_t freq);
          
-         bool setColumnForRow_(int row, int col, wxString val);
+         bool setColumnForRow_(int row, int col, wxString val, std::map<int, int>& colResizeList);
+         void resizeChangedColumns_(std::map<int, int>& colResizeList);
 
          void sortColumn_(int col);
          void sortColumn_(int col, bool direction);

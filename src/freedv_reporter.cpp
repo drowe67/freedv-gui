@@ -297,6 +297,7 @@ void FreeDVReporterDialog::refreshLayout()
     }
     m_listSpots->SetColumn(4, item);
 
+    std::map<int, int> colResizeList;
     for (auto& kvp : allReporterData_)
     {
         double frequencyUserReadable = kvp.second->frequency / 1000.0;
@@ -314,8 +315,9 @@ void FreeDVReporterDialog::refreshLayout()
         
         kvp.second->freqString = frequencyString;
         
-        addOrUpdateListIfNotFiltered_(kvp.second);
+        addOrUpdateListIfNotFiltered_(kvp.second, colResizeList);
     }
+    resizeChangedColumns_(colResizeList);
 
     // Update status controls.
     wxCommandEvent tmpEvent;
@@ -635,10 +637,13 @@ void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
     
     // Update displayed list based on new filter criteria.
     clearAllEntries_(false);
+
+    std::map<int, int> colResizeList;
     for (auto& kvp : allReporterData_)
     {
-        addOrUpdateListIfNotFiltered_(kvp.second);
+        addOrUpdateListIfNotFiltered_(kvp.second, colResizeList);
     }
+    resizeChangedColumns_(colResizeList);
 }
 
 void FreeDVReporterDialog::sortColumn_(int col)
@@ -1027,7 +1032,9 @@ void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string las
             iter->second->freqString = frequencyString;
             iter->second->lastUpdate = lastUpdateTime;
             
-            addOrUpdateListIfNotFiltered_(iter->second);
+            std::map<int, int> colResizeList;
+            addOrUpdateListIfNotFiltered_(iter->second, colResizeList);
+            resizeChangedColumns_(colResizeList);
         }
     });
 }
@@ -1058,7 +1065,9 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             iter->second->lastUpdate = lastUpdateTime;
             
-            addOrUpdateListIfNotFiltered_(iter->second);
+            std::map<int, int> colResizeList;
+            addOrUpdateListIfNotFiltered_(iter->second, colResizeList);
+            resizeChangedColumns_(colResizeList);
         }
     });
 }
@@ -1090,7 +1099,9 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
                 iter->second->lastRxDate = iter->second->lastUpdateDate;
             }
             
-            addOrUpdateListIfNotFiltered_(iter->second);
+            std::map<int, int> colResizeList;
+            addOrUpdateListIfNotFiltered_(iter->second, colResizeList);
+            resizeChangedColumns_(colResizeList);
         }
     });
 }
@@ -1106,7 +1117,9 @@ void FreeDVReporterDialog::onMessageUpdateFn_(std::string sid, std::string lastU
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             iter->second->lastUpdate = lastUpdateTime;
             
-            addOrUpdateListIfNotFiltered_(iter->second);
+            std::map<int, int> colResizeList;
+            addOrUpdateListIfNotFiltered_(iter->second, colResizeList);
+            resizeChangedColumns_(colResizeList);
         }
     });
 }
@@ -1160,7 +1173,20 @@ wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr, wxDateTime& t
     }
 }
 
-void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
+void FreeDVReporterDialog::resizeChangedColumns_(std::map<int, int>& colResizeList)
+{
+    for (auto& kvp : colResizeList)
+    {
+        m_listSpots->SetColumnWidth(kvp.first, wxLIST_AUTOSIZE_USEHEADER);
+    }
+
+    // Call Update() to force immediate redraw of the list. This is needed
+    // to work around a wxWidgets issue where the column headers don't resize,
+    // but the widths of the column data do.
+    m_listSpots->Update();
+}
+
+void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std::map<int, int>& colResizeList)
 {
     bool filtered = isFiltered_(data->frequency);
     int itemIndex = -1;
@@ -1195,30 +1221,30 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
         // Don't add for now as it's not supposed to display.
         return;
     }
-    
-    bool changed = setColumnForRow_(itemIndex, 1, data->gridSquare);
+
+    bool changed = setColumnForRow_(itemIndex, 1, data->gridSquare, colResizeList);
     needResort |= changed && currentSortColumn_ == 1;
-    changed = setColumnForRow_(itemIndex, 2, data->distance);
+    changed = setColumnForRow_(itemIndex, 2, data->distance, colResizeList);
     needResort |= changed && currentSortColumn_ == 2;
-    changed = setColumnForRow_(itemIndex, 3, data->version);
+    changed = setColumnForRow_(itemIndex, 3, data->version, colResizeList);
     needResort |= changed && currentSortColumn_ == 3;
-    changed = setColumnForRow_(itemIndex, 4, data->freqString);
+    changed = setColumnForRow_(itemIndex, 4, data->freqString, colResizeList);
     needResort |= changed && currentSortColumn_ == 4;
-    changed = setColumnForRow_(itemIndex, 5, data->status);
+    changed = setColumnForRow_(itemIndex, 5, data->status, colResizeList);
     needResort |= changed && currentSortColumn_ == 5;
-    changed = setColumnForRow_(itemIndex, 6, data->userMessage);
+    changed = setColumnForRow_(itemIndex, 6, data->userMessage, colResizeList);
     needResort |= changed && currentSortColumn_ == 6;
-    changed = setColumnForRow_(itemIndex, 7, data->lastTx);
+    changed = setColumnForRow_(itemIndex, 7, data->lastTx, colResizeList);
     needResort |= changed && currentSortColumn_ == 7;
-    changed = setColumnForRow_(itemIndex, 8, data->txMode);
+    changed = setColumnForRow_(itemIndex, 8, data->txMode, colResizeList);
     needResort |= changed && currentSortColumn_ == 8;
-    changed = setColumnForRow_(itemIndex, 9, data->lastRxCallsign);
+    changed = setColumnForRow_(itemIndex, 9, data->lastRxCallsign, colResizeList);
     needResort |= changed && currentSortColumn_ == 9;
-    changed = setColumnForRow_(itemIndex, 10, data->lastRxMode);
+    changed = setColumnForRow_(itemIndex, 10, data->lastRxMode, colResizeList);
     needResort |= changed && currentSortColumn_ == 10;
-    changed = setColumnForRow_(itemIndex, 11, data->snr);
+    changed = setColumnForRow_(itemIndex, 11, data->snr, colResizeList);
     needResort |= changed && currentSortColumn_ == 11;
-    changed = setColumnForRow_(itemIndex, 12, data->lastUpdate);
+    changed = setColumnForRow_(itemIndex, 12, data->lastUpdate, colResizeList);
     needResort |= changed && currentSortColumn_ == 12;
     
     if (data->transmitting)
@@ -1247,7 +1273,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     }
 }
 
-bool FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val)
+bool FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val, std::map<int, int>& colResizeList)
 {
     bool result = false;
     auto oldText = m_listSpots->GetItemText(row, col);
@@ -1274,7 +1300,7 @@ bool FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val)
         if (textWidth > columnLengths_[col])
         {
             columnLengths_[col] = textWidth;
-            m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
+            colResizeList[col]++;
         }
     }
 
