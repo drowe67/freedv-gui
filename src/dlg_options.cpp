@@ -257,6 +257,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     wxBoxSizer* reporterTxColorSizer = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer* reporterRxColorSizer = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* reporterMsgColorSizer = new wxBoxSizer(wxHORIZONTAL);
 
     // TX colors
     wxStaticText* labelReporterTxStation = new wxStaticText(m_displayTab, wxID_ANY, wxT("TX Stations:"), wxDefaultPosition, wxDefaultSize, 0);
@@ -293,6 +294,24 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     reporterRxColorSizer->Add(m_freedvReporterRxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     sbSizer_reporterColor->Add(reporterRxColorSizer, 0, wxALL, 5);
+
+    // Message colors
+    wxStaticText* labelReporterMsgStation = new wxStaticText(m_displayTab, wxID_ANY, wxT("Message updates:"), wxDefaultPosition, wxDefaultSize, 0);
+    reporterMsgColorSizer->Add(labelReporterMsgStation, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    wxStaticText* labelReporterMsgBackgroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Background"), wxDefaultPosition, wxDefaultSize, 0);
+    reporterMsgColorSizer->Add(labelReporterMsgBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_freedvReporterMsgBackgroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
+    reporterMsgColorSizer->Add(m_freedvReporterMsgBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    wxStaticText* labelReporterMsgForegroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Foreground"), wxDefaultPosition, wxDefaultSize, 0);
+    reporterMsgColorSizer->Add(labelReporterMsgForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_freedvReporterMsgForegroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
+    reporterMsgColorSizer->Add(m_freedvReporterMsgForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    sbSizer_reporterColor->Add(reporterMsgColorSizer, 0, wxALL, 5);
 
     sizerDisplay->Add(sbSizer_reporterColor, 0, wxALL | wxEXPAND, 5);
     
@@ -776,11 +795,15 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
         wxColour txBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
         wxColour txForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
+        wxColour msgBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor);
+        wxColour msgForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor);
 
         m_freedvReporterRxBackgroundColor->SetColour(rxBackgroundColor);
         m_freedvReporterRxForegroundColor->SetColour(rxForegroundColor);
         m_freedvReporterTxBackgroundColor->SetColour(txBackgroundColor);
         m_freedvReporterTxForegroundColor->SetColour(txForegroundColor);
+        m_freedvReporterMsgBackgroundColor->SetColour(msgBackgroundColor);
+        m_freedvReporterMsgForegroundColor->SetColour(msgForegroundColor);
 
         // Populate reporting frequency list.
         for (auto& item : wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList.get())
@@ -925,6 +948,12 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
 
         wxColour txForegroundColor = m_freedvReporterTxForegroundColor->GetColour();
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor = txForegroundColor.GetAsString(wxC2S_HTML_SYNTAX);
+
+        wxColour msgBackgroundColor = m_freedvReporterMsgBackgroundColor->GetColour();
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor = msgBackgroundColor.GetAsString(wxC2S_HTML_SYNTAX);
+
+        wxColour msgForegroundColor = m_freedvReporterMsgForegroundColor->GetColour();
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor = msgForegroundColor.GetAsString(wxC2S_HTML_SYNTAX);
 
         // Save new reporting frequency list.
         std::vector<wxString> tmpList;
