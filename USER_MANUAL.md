@@ -922,6 +922,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Suppress use of space bar when in RX Only mode. (PR #623)
     * Fix Windows-specific issue preventing entry of very high frequencies. (PR #624)
 2. Enhancements:
+    * Add option to add a delay after starting TX and before ending TX. (PR #618)
     * Allow serial PTT to be enabled along with OmniRig. (PR #619)
     * Add 800XA to multi-RX list. (PR #617)
     * Allow display and entry of frequencies in KHz. (PR #621)

@@ -92,6 +92,7 @@ class OptionsDlg : public wxDialog
         wxCheckBox   *m_ckboxUseAnalogModes;
         wxCheckBox   *m_ckboxEnableFreqModeChanges;
         wxCheckBox   *m_ckboxEnableSpacebarForPTT;
+        wxTextCtrl   *m_txtTxRxDelayMilliseconds;
         wxCheckBox   *m_ckboxFrequencyEntryAsKHz;
         
         /* Waterfall color */
