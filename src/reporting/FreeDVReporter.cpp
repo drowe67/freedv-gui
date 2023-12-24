@@ -91,6 +91,18 @@ void FreeDVReporter::requestQSY(std::string sid, uint64_t frequencyHz, std::stri
     }
 }
 
+void FreeDVReporter::updateMessage(std::string message)
+{
+    message_ = message;
+
+    if (isValidForReporting())
+    {
+        std::unique_lock<std::mutex> lk(fnQueueMutex_);
+        fnQueue_.push_back(std::bind(&FreeDVReporter::sendMessageImpl_, this, message_));
+        fnQueueConditionVariable_.notify_one();
+    }
+}
+
 void FreeDVReporter::inAnalogMode(bool inAnalog)
 {
     if (isValidForReporting())
@@ -210,6 +222,21 @@ void FreeDVReporter::setOnQSYRequestFn(QsyRequestFn fn)
     onQsyRequestFn_ = fn;
 }
 
+void FreeDVReporter::setMessageUpdateFn(MessageUpdateFn fn)
+{
+    onMessageUpdateFn_ = fn;
+}
+
+void FreeDVReporter::setConnectionSuccessfulFn(ConnectionSuccessfulFn fn)
+{
+    onConnectionSuccessfulFn_ = fn;
+}
+
+void FreeDVReporter::setAboutToShowSelfFn(AboutToShowSelfFn fn)
+{
+    onAboutToShowSelfFn_ = fn;
+}
+
 bool FreeDVReporter::isValidForReporting()
 {
     return callsign_ != "" && gridSquare_ != "";
@@ -248,6 +275,7 @@ void FreeDVReporter::connect_()
         {
             freqChangeImpl_(lastFrequency_);
             transmitImpl_(mode_, tx_);
+            sendMessageImpl_(message_);
         }
     });
     
@@ -273,6 +301,7 @@ void FreeDVReporter::connect_()
         {
             freqChangeImpl_(lastFrequency_);
             transmitImpl_(mode_, tx_);
+            sendMessageImpl_(message_);
         }
     });
     
@@ -328,6 +357,14 @@ void FreeDVReporter::connect_()
                     rxOnly->get_bool()
                 );
             }
+        }
+    });
+
+    sioClient_->socket()->off("connection_successful");
+    sioClient_->socket()->on("connection_successful", [&](sio::event& ev) {
+        if (onConnectionSuccessfulFn_)
+        {
+            onConnectionSuccessfulFn_();
         }
     });
 
@@ -482,6 +519,31 @@ void FreeDVReporter::connect_()
             }
         }
     });
+
+    sioClient_->socket()->off("message_update");
+    sioClient_->socket()->on("message_update", [&](sio::event& ev) {    
+        auto msgParams = ev.get_message()->get_map();
+
+        if (onMessageUpdateFn_)
+        {
+            auto sid = msgParams["sid"];
+            auto lastUpdate = msgParams["last_update"];
+            auto message = msgParams["message"];
+
+            // Only call event handler if we received the correct data types
+            // for the items in the message.
+            if (sid->get_flag() == sio::message::flag_string &&
+                lastUpdate->get_flag() == sio::message::flag_string &&
+                message->get_flag() == sio::message::flag_string)
+            {
+                onMessageUpdateFn_(
+                    sid->get_string(),
+                    lastUpdate->get_string(),
+                    message->get_string()
+                );
+            }
+        }
+    });
     
     sioClient_->socket()->off("qsy_request");
     sioClient_->socket()->on("qsy_request", [&](sio::event& ev) {
@@ -558,6 +620,17 @@ void FreeDVReporter::transmitImpl_(std::string mode, bool tx)
     tx_ = tx;
 }
 
+void FreeDVReporter::sendMessageImpl_(std::string message)
+{
+    sio::message::ptr txDataPtr = sio::object_message::create();
+    auto txData = (sio::object_message*)txDataPtr.get();
+    txData->insert("message", message);
+    sioClient_->socket()->emit("message_update", txDataPtr);
+
+    // Save last mode and TX state in case we have to reconnect.
+    message_ = message;
+}
+
 void FreeDVReporter::hideFromViewImpl_()
 {
     sioClient_->socket()->emit("hide_self");
@@ -566,6 +639,11 @@ void FreeDVReporter::hideFromViewImpl_()
 
 void FreeDVReporter::showOurselvesImpl_()
 {
+    if (onAboutToShowSelfFn_)
+    {
+        onAboutToShowSelfFn_();
+    }
+    
     sioClient_->socket()->emit("show_self");
     hidden_ = false;
 }

@@ -28,9 +28,13 @@
 extern FreeDVInterface freedvInterface;
 
 #define UNKNOWN_STR "--"
-#define NUM_COLS (12)
+#define NUM_COLS (13)
 #define RX_ONLY_STATUS "RX Only"
 #define RX_COLORING_TIMEOUT_SEC (20)
+#define MSG_COLORING_TIMEOUT_SEC (5)
+#define STATUS_MESSAGE_MRU_MAX_SIZE (10)
+#define MESSAGE_CHAR_LIMIT (15)
+#define MESSAGE_COLUMN_ID (6)
 
 using namespace std::placeholders;
 
@@ -40,6 +44,8 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     , currentBandFilter_(FreeDVReporterDialog::BAND_ALL)
     , currentSortColumn_(-1)
     , sortAscending_(false)
+    , isConnected_(false)
+    , filterSelfMessageUpdates_(false)
 {
     for (int col = 0; col < NUM_COLS; col++)
     {
@@ -56,20 +62,21 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots = new wxListView(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_SINGLE_SEL | wxLC_REPORT | wxLC_HRULES);
     m_listSpots->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(1, wxT("Locator"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(2, wxT("Dist (km)"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(2, wxT("KM"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(3, wxT("Version"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(4, wxT("Frequency"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(4, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("KHz") : wxT("MHz"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(5, wxT("Status"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(6, wxT("TX Mode"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(6, wxT("Msg"), wxLIST_FORMAT_CENTER, 20);
     m_listSpots->InsertColumn(7, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(8, wxT("RX Call"), wxLIST_FORMAT_CENTER, 120);
-    m_listSpots->InsertColumn(9, wxT("RX Mode"), wxLIST_FORMAT_CENTER, 120);
-    m_listSpots->InsertColumn(10, wxT("SNR"), wxLIST_FORMAT_CENTER, 40);
-    m_listSpots->InsertColumn(11, wxT("Last Update"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(8, wxT("Mode"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(9, wxT("RX Call"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(10, wxT("Mode"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(11, wxT("SNR"), wxLIST_FORMAT_CENTER, 40);
+    m_listSpots->InsertColumn(12, wxT("Last Update"), wxLIST_FORMAT_CENTER, 120);
 
     // On Windows, the last column will end up taking a lot more space than desired regardless
     // of the space we actually need. Create a "dummy" column to take that space instead.
-    m_listSpots->InsertColumn(12, wxT(""), wxLIST_FORMAT_CENTER, 1);
+    m_listSpots->InsertColumn(13, wxT(""), wxLIST_FORMAT_CENTER, 1);
 
     sectionSizer->Add(m_listSpots, 0, wxALL | wxEXPAND, 2);
 
@@ -90,27 +97,38 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     
     // Bottom buttons
     // =============================
-    wxBoxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* bottomRowSizer = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* reportingSettingsSizer = new wxBoxSizer(wxHORIZONTAL);
+
+    m_buttonOK = new wxButton(this, wxID_OK, _("Close"));
+    reportingSettingsSizer->Add(m_buttonOK, 0, wxALL, 5);
+
+    m_buttonSendQSY = new wxButton(this, wxID_ANY, _("Request QSY"));
+    m_buttonSendQSY->Enable(false); // disable by default unless we get a valid selection
+    reportingSettingsSizer->Add(m_buttonSendQSY, 0, wxALL, 5);
+
+    m_buttonDisplayWebpage = new wxButton(this, wxID_ANY, _("Website"));
+    reportingSettingsSizer->Add(m_buttonDisplayWebpage, 0, wxALL, 5);
 
     // Band filter list    
     wxString bandList[] = {
-        _("All bands"),
-        _("160 meters"),
-        _("80 meters"),
-        _("60 meters"),
-        _("40 meters"),
-        _("30 meters"),
-        _("20 meters"),
-        _("17 meters"),
-        _("15 meters"),
-        _("12 meters"),
-        _("10 meters"),
-        _("6 meters and above"),
+        _("All"),
+        _("160 m"),
+        _("80 m"),
+        _("60 m"),
+        _("40 m"),
+        _("30 m"),
+        _("20 m"),
+        _("17 m"),
+        _("15 m"),
+        _("12 m"),
+        _("10 m"),
+        _(">= 6 m"),
         _("Other"),
     };
     
-    buttonSizer->Add(new wxStaticText(this, wxID_ANY, _("Show stations on:"), wxDefaultPosition, wxDefaultSize, 0), 
-                          0, wxALIGN_CENTER_VERTICAL, 20);
+    reportingSettingsSizer->Add(new wxStaticText(this, wxID_ANY, _("Band:"), wxDefaultPosition, wxDefaultSize, 0), 
+                          0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     m_bandFilter = new wxComboBox(
         this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 
@@ -118,32 +136,36 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_bandFilter->SetSelection(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter);
     setBandFilter((FilterFrequency)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter.get());
     
-    buttonSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
+    reportingSettingsSizer->Add(m_bandFilter, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
-    m_trackFrequency = new wxCheckBox(this, wxID_ANY, _("Track current:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    buttonSizer->Add(m_trackFrequency, 0, wxALL | wxALIGN_LEFT, 5);
+    m_trackFrequency = new wxCheckBox(this, wxID_ANY, _("Track:"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    reportingSettingsSizer->Add(m_trackFrequency, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     
     m_trackFreqBand = new wxRadioButton(this, wxID_ANY, _("band"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    buttonSizer->Add(m_trackFreqBand, 0, wxALL | wxALIGN_LEFT, 5);
+    reportingSettingsSizer->Add(m_trackFreqBand, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     m_trackFreqBand->Enable(false);
     
-    m_trackExactFreq = new wxRadioButton(this, wxID_ANY, _("frequency"), wxDefaultPosition, wxDefaultSize, 0);
-    buttonSizer->Add(m_trackExactFreq, 0, wxALL | wxALIGN_LEFT, 5);
+    m_trackExactFreq = new wxRadioButton(this, wxID_ANY, _("freq."), wxDefaultPosition, wxDefaultSize, 0);
+    reportingSettingsSizer->Add(m_trackExactFreq, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     m_trackExactFreq->Enable(false);
     
     m_trackFrequency->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency);
-    
-    m_buttonOK = new wxButton(this, wxID_OK, _("Close"));
-    buttonSizer->Add(m_buttonOK, 0, wxALL, 2);
 
-    m_buttonSendQSY = new wxButton(this, wxID_ANY, _("Request QSY"));
-    m_buttonSendQSY->Enable(false); // disable by default unless we get a valid selection
-    buttonSizer->Add(m_buttonSendQSY, 0, wxALL, 2);
+    auto statusMessageLabel = new wxStaticText(this, wxID_ANY, _("Message:"), wxDefaultPosition, wxDefaultSize);
+    reportingSettingsSizer->Add(statusMessageLabel, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_buttonDisplayWebpage = new wxButton(this, wxID_ANY, _("Open Website"));
-    buttonSizer->Add(m_buttonDisplayWebpage, 0, wxALL, 2);
+    m_statusMessage = new wxComboBox(this, wxID_ANY, _(""), wxDefaultPosition, wxSize(180, -1), 0, nullptr, wxCB_DROPDOWN | wxTE_PROCESS_ENTER);
+    reportingSettingsSizer->Add(m_statusMessage, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    sectionSizer->Add(buttonSizer, 0, wxALL | wxALIGN_CENTER, 2);
+    m_buttonSet = new wxButton(this, wxID_ANY, _("Set"));
+    reportingSettingsSizer->Add(m_buttonSet, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_buttonClear = new wxButton(this, wxID_ANY, _("Clear"));
+    reportingSettingsSizer->Add(m_buttonClear, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    bottomRowSizer->Add(reportingSettingsSizer, 0, wxALL | wxALIGN_CENTER, 0);
+
+    sectionSizer->Add(bottomRowSizer, 0, wxALL | wxALIGN_CENTER, 2);
     
     this->SetMinSize(GetBestSize());
     
@@ -178,6 +200,12 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->Connect(wxEVT_LIST_COL_CLICK, wxListEventHandler(FreeDVReporterDialog::OnSortColumn), NULL, this);
     m_listSpots->Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(FreeDVReporterDialog::OnDoubleClick), NULL, this);
     
+    m_statusMessage->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
+    m_statusMessage->Connect(wxEVT_TEXT_ENTER, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
+    m_statusMessage->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
+    m_buttonSet->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
+    m_buttonClear->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextClear), NULL, this);
+
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOK), NULL, this);
     m_buttonSendQSY->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnSendQSY), NULL, this);
     m_buttonDisplayWebpage->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOpenWebsite), NULL, this);
@@ -190,6 +218,13 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Trigger sorting on last sorted column
     sortColumn_(wxGetApp().appConfiguration.reporterWindowCurrentSort, wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
     
+    // Update status message and MRU list
+    m_statusMessage->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText);
+    for (auto& msg : wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts.get())
+    {
+        m_statusMessage->Append(msg);
+    }
+
     // Trigger filter update if we're starting with tracking enabled
     m_trackFreqBand->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFreqBand);
     m_trackExactFreq->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksExactFreq);
@@ -225,6 +260,12 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     m_listSpots->Disconnect(wxEVT_LIST_COL_CLICK, wxListEventHandler(FreeDVReporterDialog::OnSortColumn), NULL, this);
     m_listSpots->Disconnect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(FreeDVReporterDialog::OnDoubleClick), NULL, this);
     
+    m_statusMessage->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
+    m_statusMessage->Disconnect(wxEVT_TEXT_ENTER, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
+    m_statusMessage->Disconnect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
+    m_buttonSet->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
+    m_buttonClear->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextClear), NULL, this);
+
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOK), NULL, this);
     m_buttonSendQSY->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnSendQSY), NULL, this);
     m_buttonDisplayWebpage->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOpenWebsite), NULL, this);
@@ -239,16 +280,28 @@ void FreeDVReporterDialog::refreshLayout()
 
     if (wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
     {
-        item.SetText("Dist (km)");
+        item.SetText("KM");
     }
     else
     {
-        item.SetText("Dist (mi)");
+        item.SetText("Miles");
     }
 
     m_listSpots->SetColumn(2, item);
     
     // Refresh frequency units as appropriate.
+    m_listSpots->GetColumn(4, item);
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+    {
+        item.SetText("KHz");
+    }
+    else
+    {
+        item.SetText("MHz");
+    }
+    m_listSpots->SetColumn(4, item);
+
+    std::map<int, int> colResizeList;
     for (auto& kvp : allReporterData_)
     {
         double frequencyUserReadable = kvp.second->frequency / 1000.0;
@@ -256,18 +309,23 @@ void FreeDVReporterDialog::refreshLayout()
         
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            frequencyString = wxString::Format(_("%.01f KHz"), frequencyUserReadable);
+            frequencyString = wxString::Format(_("%.01f"), frequencyUserReadable);
         }
         else
         {
             frequencyUserReadable /= 1000.0;
-            frequencyString = wxString::Format(_("%.04f MHz"), frequencyUserReadable);
+            frequencyString = wxString::Format(_("%.04f"), frequencyUserReadable);
         }
         
         kvp.second->freqString = frequencyString;
         
-        addOrUpdateListIfNotFiltered_(kvp.second);
+        addOrUpdateListIfNotFiltered_(kvp.second, colResizeList);
     }
+    resizeChangedColumns_(colResizeList);
+
+    // Update status controls.
+    wxCommandEvent tmpEvent;
+    OnStatusTextChange(tmpEvent);
 }
 
 void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
@@ -282,6 +340,10 @@ void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
         reporter_->setOnFrequencyChangeFn(FreeDVReporter::FrequencyChangeFn());
         reporter_->setOnTransmitUpdateFn(FreeDVReporter::TxUpdateFn());
         reporter_->setOnReceiveUpdateFn(FreeDVReporter::RxUpdateFn());
+
+        reporter_->setMessageUpdateFn(FreeDVReporter::MessageUpdateFn());
+        reporter_->setConnectionSuccessfulFn(FreeDVReporter::ConnectionSuccessfulFn());
+        reporter_->setAboutToShowSelfFn(FreeDVReporter::AboutToShowSelfFn());
     }
     
     reporter_ = reporter;
@@ -296,6 +358,14 @@ void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
         reporter_->setOnFrequencyChangeFn(std::bind(&FreeDVReporterDialog::onFrequencyChangeFn_, this, _1, _2, _3, _4, _5));
         reporter_->setOnTransmitUpdateFn(std::bind(&FreeDVReporterDialog::onTransmitUpdateFn_, this, _1, _2, _3, _4, _5, _6, _7));
         reporter_->setOnReceiveUpdateFn(std::bind(&FreeDVReporterDialog::onReceiveUpdateFn_, this, _1, _2, _3, _4, _5, _6, _7));
+
+        reporter_->setMessageUpdateFn(std::bind(&FreeDVReporterDialog::onMessageUpdateFn_, this, _1, _2, _3));
+        reporter_->setConnectionSuccessfulFn(std::bind(&FreeDVReporterDialog::onConnectionSuccessfulFn_, this));
+        reporter_->setAboutToShowSelfFn(std::bind(&FreeDVReporterDialog::onAboutToShowSelfFn_, this));
+
+        // Update status message
+        auto statusMsg = m_statusMessage->GetValue();
+        reporter_->updateMessage(statusMsg.ToStdString());
     }
     else
     {
@@ -381,7 +451,7 @@ void FreeDVReporterDialog::OnSortColumn(wxListEvent& event)
 {
     int col = event.GetColumn();
 
-    if (col > 11)
+    if (col > 12)
     {
         // Don't allow sorting by "fake" columns.
         col = -1;
@@ -411,7 +481,8 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
         auto reportData = allReporterData_[*sidPtr];
         
         if (!reportData->transmitting &&
-            (!reportData->lastRxDate.IsValid() || !reportData->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_TIMEOUT_SEC))))
+            (!reportData->lastRxDate.IsValid() || !reportData->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_TIMEOUT_SEC))) &&
+            (!reportData->lastUpdateUserMessage.IsValid() || !reportData->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC))))
         {
             m_listSpots->SetItemBackgroundColour(index, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOX));
             m_listSpots->SetItemTextColour(index, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT));
@@ -461,6 +532,71 @@ void FreeDVReporterDialog::OnDoubleClick(wxMouseEvent& event)
     }
 }
 
+void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent& event)
+{
+    auto statusMsg = m_statusMessage->GetValue().SubString(0, MESSAGE_CHAR_LIMIT - 1); 
+
+    // Prevent entry of text longer than the character limit.
+    if (statusMsg != m_statusMessage->GetValue())
+    {
+        m_statusMessage->SetValue(statusMsg);
+    }
+
+    m_buttonSet->Enable(statusMsg != wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText);
+    m_buttonClear->Enable(statusMsg.size() > 0);
+}
+
+void FreeDVReporterDialog::OnStatusTextSet(wxCommandEvent& event)
+{
+    auto statusMsg = m_statusMessage->GetValue().SubString(0, MESSAGE_CHAR_LIMIT - 1); 
+
+    if (reporter_)
+    {
+        reporter_->updateMessage(statusMsg.ToStdString());
+    }
+
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText = statusMsg;
+
+    if (statusMsg.size() > 0)
+    {
+        // Add to MRU list if not already there. Otherwise, move to top.
+        auto location = m_statusMessage->FindString(statusMsg);
+        if (location >= 0)
+        {
+            m_statusMessage->Delete(location);
+        }
+        m_statusMessage->Insert(statusMsg, 0);
+
+        // If we have more than the maximum number in the MRU list, 
+        // remove from bottom.
+        while (m_statusMessage->GetCount() > STATUS_MESSAGE_MRU_MAX_SIZE)
+        {
+            m_statusMessage->Delete(m_statusMessage->GetCount() - 1);
+        }
+
+        // Reselect "new" first entry to avoid display issues
+        m_statusMessage->SetSelection(0);
+
+        // Preserve current state of the MRU list.
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->clear();
+        for (unsigned int index = 0; index < m_statusMessage->GetCount(); index++)
+        {
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->push_back(m_statusMessage->GetString(index));
+        }
+    }
+}
+
+void FreeDVReporterDialog::OnStatusTextClear(wxCommandEvent& event)
+{
+    if (reporter_)
+    {
+        reporter_->updateMessage("");
+    }
+
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText = "";
+    m_statusMessage->SetValue("");
+}
+
 void FreeDVReporterDialog::refreshQSYButtonState()
 {
     // Update filter if the frequency's changed.
@@ -491,16 +627,10 @@ void FreeDVReporterDialog::refreshQSYButtonState()
             uint64_t theirFreq = 0;
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
             {
-                wxRegEx khzRegex(" KHz$");
-                khzRegex.Replace(&theirFreqString, "");
-            
                 theirFreq = wxAtof(theirFreqString) * 1000;
             }
             else
             {
-                wxRegEx mhzRegex(" MHz$");
-                mhzRegex.Replace(&theirFreqString, "");
-            
                 theirFreq = wxAtof(theirFreqString) * 1000 * 1000;
             }
             enabled = theirFreq != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
@@ -516,10 +646,13 @@ void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
     
     // Update displayed list based on new filter criteria.
     clearAllEntries_(false);
+
+    std::map<int, int> colResizeList;
     for (auto& kvp : allReporterData_)
     {
-        addOrUpdateListIfNotFiltered_(kvp.second);
+        addOrUpdateListIfNotFiltered_(kvp.second, colResizeList);
     }
+    resizeChangedColumns_(colResizeList);
 }
 
 void FreeDVReporterDialog::sortColumn_(int col)
@@ -577,11 +710,12 @@ void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
         delete (std::string*)m_listSpots->GetItemData(index);
         m_listSpots->DeleteItem(index);
     }
-    
+
     // Reset lengths to force auto-resize on (re)connect.
     for (int col = 0; col < NUM_COLS; col++)
     {
         columnLengths_[col] = 0;
+        m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
     }
 }
 
@@ -686,7 +820,7 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
             result = leftData->status.CmpNoCase(rightData->status);
             break;
         case 6:
-            result = leftData->txMode.CmpNoCase(rightData->txMode);
+            result = leftData->userMessage.CmpNoCase(rightData->userMessage);
             break;
         case 7:
             if (leftData->lastTxDate.IsValid() && rightData->lastTxDate.IsValid())
@@ -718,15 +852,18 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
             }
             break;
         case 8:
-            result = leftData->lastRxCallsign.CmpNoCase(rightData->lastRxCallsign);
+            result = leftData->txMode.CmpNoCase(rightData->txMode);
             break;
         case 9:
-            result = leftData->lastRxMode.CmpNoCase(rightData->lastRxMode);
+            result = leftData->lastRxCallsign.CmpNoCase(rightData->lastRxCallsign);
             break;
         case 10:
-            result = leftData->snr.CmpNoCase(rightData->snr);
+            result = leftData->lastRxMode.CmpNoCase(rightData->lastRxMode);
             break;
         case 11:
+            result = leftData->snr.CmpNoCase(rightData->snr);
+            break;
+        case 12:
             if (leftData->lastUpdateDate.IsValid() && rightData->lastUpdateDate.IsValid())
             {
                 if (leftData->lastUpdateDate.IsEarlierThan(rightData->lastUpdateDate))
@@ -768,6 +905,14 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
     return result;
 }
 
+void FreeDVReporterDialog::execQueuedAction_()
+{
+    // This ensures that we handle server events in the order they're received.
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    fnQueue_[0]();
+    fnQueue_.erase(fnQueue_.begin());
+}
+
 // =================================================================================
 // Note: these methods below do not run under the UI thread, so we need to make sure
 // UI actions happen there.
@@ -775,21 +920,34 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
 
 void FreeDVReporterDialog::onReporterConnect_()
 {
-    CallAfter([&]() {
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+
+    fnQueue_.push_back([&]() {
+        filterSelfMessageUpdates_ = false;
         clearAllEntries_(true);
     });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::onReporterDisconnect_()
 {
-    CallAfter([&]() {
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&]() {
+        isConnected_ = false;
+        filterSelfMessageUpdates_ = false;
         clearAllEntries_(true);        
     });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
 {
-    CallAfter([&, sid, lastUpdate, callsign, gridSquare, version, rxOnly]() {
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+
+    fnQueue_.push_back([&, sid, lastUpdate, callsign, gridSquare, version, rxOnly]() {
         // Initially populate stored report data, but don't add to the viewable list just yet. 
         // We only add on frequency update and only if the filters check out.
         ReporterData* temp = new ReporterData;
@@ -830,6 +988,7 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
 
         temp->version = version;
         temp->freqString = UNKNOWN_STR;
+        temp->userMessage = UNKNOWN_STR;
         temp->transmitting = false;
         
         if (rxOnly)
@@ -854,11 +1013,27 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         
         allReporterData_[sid] = temp;
     });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
+}
+
+void FreeDVReporterDialog::onConnectionSuccessfulFn_()
+{
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&]() {
+        // Enable highlighting now that we're fully connected.
+        isConnected_ = true;
+    });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
 {
-    CallAfter([&, sid]() {
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&, sid]() {
         for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
         {
             std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
@@ -867,6 +1042,14 @@ void FreeDVReporterDialog::onUserDisconnectFn_(std::string sid, std::string last
                 delete (std::string*)m_listSpots->GetItemData(index);
                 m_listSpots->DeleteItem(index);
                 
+                // Force resizing of all columns. This should reduce space if needed.
+                std::map<int, int> colResizeList;
+                for (int i = 0; i < NUM_COLS; i++)
+                {
+                    colResizeList[i] = 1;
+                    columnLengths_[i] = 0;
+                }
+                resizeChangedColumns_(colResizeList);
                 break;
             }
         }
@@ -878,11 +1061,15 @@ void FreeDVReporterDialog::onUserDisconnectFn_(std::string sid, std::string last
             allReporterData_.erase(iter);
         }
     });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz)
 {
-    CallAfter([&, sid, frequencyHz, lastUpdate]() {
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&, sid, frequencyHz, lastUpdate]() {
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
@@ -891,12 +1078,12 @@ void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string las
             
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
             {
-                frequencyString = wxString::Format(_("%.01f KHz"), frequencyUserReadable);
+                frequencyString = wxString::Format(_("%.01f"), frequencyUserReadable);
             }
             else
             {
                 frequencyUserReadable /= 1000.0;
-                frequencyString = wxString::Format(_("%.04f MHz"), frequencyUserReadable);
+                frequencyString = wxString::Format(_("%.04f"), frequencyUserReadable);
             }
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             
@@ -904,23 +1091,29 @@ void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string las
             iter->second->freqString = frequencyString;
             iter->second->lastUpdate = lastUpdateTime;
             
-            addOrUpdateListIfNotFiltered_(iter->second);
+            std::map<int, int> colResizeList;
+            addOrUpdateListIfNotFiltered_(iter->second, colResizeList);
+            resizeChangedColumns_(colResizeList);
         }
     });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate)
 {
-    CallAfter([&, sid, txMode, transmitting, lastTxDate, lastUpdate]() {
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&, sid, txMode, transmitting, lastTxDate, lastUpdate]() {
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
             iter->second->transmitting = transmitting;
             
-            std::string txStatus = "Receiving";
+            std::string txStatus = "RX";
             if (transmitting)
             {
-                txStatus = "Transmitting";
+                txStatus = "TX";
             }
             
             if (iter->second->status != _(RX_ONLY_STATUS))
@@ -935,14 +1128,20 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             iter->second->lastUpdate = lastUpdateTime;
             
-            addOrUpdateListIfNotFiltered_(iter->second);
+            std::map<int, int> colResizeList;
+            addOrUpdateListIfNotFiltered_(iter->second, colResizeList);
+            resizeChangedColumns_(colResizeList);
         }
     });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode)
 {
-    CallAfter([&, sid, lastUpdate, receivedCallsign, snr, rxMode]() {
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&, sid, lastUpdate, receivedCallsign, snr, rxMode]() {
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
@@ -967,9 +1166,68 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
                 iter->second->lastRxDate = iter->second->lastUpdateDate;
             }
             
-            addOrUpdateListIfNotFiltered_(iter->second);
+            std::map<int, int> colResizeList;
+            addOrUpdateListIfNotFiltered_(iter->second, colResizeList);
+            resizeChangedColumns_(colResizeList);
         }
     });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
+}
+
+void FreeDVReporterDialog::onMessageUpdateFn_(std::string sid, std::string lastUpdate, std::string message)
+{
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&, sid, lastUpdate, message]() {
+        auto iter = allReporterData_.find(sid);
+        if (iter != allReporterData_.end())
+        {
+            if (message.size() == 0)
+            {
+                iter->second->userMessage = UNKNOWN_STR;
+            }
+            else
+            {
+                iter->second->userMessage = message;
+            }
+            
+            auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
+            iter->second->lastUpdate = lastUpdateTime;
+
+            // Only highlight on non-empty messages.
+            bool ourCallsign = iter->second->callsign == wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign;
+            bool filteringSelf = ourCallsign && filterSelfMessageUpdates_;
+            
+            if (message.size() > 0 && isConnected_ && !filteringSelf)
+            {
+                fprintf(stderr, "XXX message is being updated\n");
+                iter->second->lastUpdateUserMessage = iter->second->lastUpdateDate;
+            }
+            else if (ourCallsign && filteringSelf)
+            {
+                // Filter only until we show up again, then return to normal behavior.
+                filterSelfMessageUpdates_ = false;
+            }
+            
+            std::map<int, int> colResizeList;
+            addOrUpdateListIfNotFiltered_(iter->second, colResizeList);
+            resizeChangedColumns_(colResizeList);
+        }
+    });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
+}
+
+void FreeDVReporterDialog::onAboutToShowSelfFn_()
+{
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&]() {
+        filterSelfMessageUpdates_ = true;
+    });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr, wxDateTime& timeObj)
@@ -1021,7 +1279,20 @@ wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr, wxDateTime& t
     }
 }
 
-void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
+void FreeDVReporterDialog::resizeChangedColumns_(std::map<int, int>& colResizeList)
+{
+    for (auto& kvp : colResizeList)
+    {
+        m_listSpots->SetColumnWidth(kvp.first, wxLIST_AUTOSIZE_USEHEADER);
+    }
+
+    // Call Update() to force immediate redraw of the list. This is needed
+    // to work around a wxWidgets issue where the column headers don't resize,
+    // but the widths of the column data do.
+    m_listSpots->Update();
+}
+
+void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std::map<int, int>& colResizeList)
 {
     bool filtered = isFiltered_(data->frequency);
     int itemIndex = -1;
@@ -1037,16 +1308,28 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     }
     
     bool needResort = false;
+    bool isAdded = false;
 
     if (itemIndex >= 0 && filtered)
     {
         // Remove as it has been filtered out.       
         delete (std::string*)m_listSpots->GetItemData(itemIndex);
-        m_listSpots->DeleteItem(itemIndex);       
+        m_listSpots->DeleteItem(itemIndex);
+        
+        // Force resizing of all columns. This should reduce space if needed.
+        std::map<int, int> colResizeList;
+        for (int i = 0; i < NUM_COLS; i++)
+        {
+            colResizeList[i] = 1;
+            columnLengths_[i] = 0;
+        }
+        resizeChangedColumns_(colResizeList);
+        
         return;
     }
     else if (itemIndex == -1 && !filtered)
     {
+        isAdded = true;
         itemIndex = m_listSpots->InsertItem(m_listSpots->GetItemCount(), data->callsign);
         m_listSpots->SetItemPtrData(itemIndex, (wxUIntPtr)new std::string(data->sid));
         needResort = currentSortColumn_ == 0;
@@ -1056,30 +1339,33 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
         // Don't add for now as it's not supposed to display.
         return;
     }
-    
-    bool changed = setColumnForRow_(itemIndex, 1, data->gridSquare);
+
+    bool changed = setColumnForRow_(itemIndex, 1, data->gridSquare, colResizeList);
     needResort |= changed && currentSortColumn_ == 1;
-    changed = setColumnForRow_(itemIndex, 2, data->distance);
+    changed = setColumnForRow_(itemIndex, 2, data->distance, colResizeList);
     needResort |= changed && currentSortColumn_ == 2;
-    changed = setColumnForRow_(itemIndex, 3, data->version);
+    changed = setColumnForRow_(itemIndex, 3, data->version, colResizeList);
     needResort |= changed && currentSortColumn_ == 3;
-    changed = setColumnForRow_(itemIndex, 4, data->freqString);
+    changed = setColumnForRow_(itemIndex, 4, data->freqString, colResizeList);
     needResort |= changed && currentSortColumn_ == 4;
-    changed = setColumnForRow_(itemIndex, 5, data->status);
+    changed = setColumnForRow_(itemIndex, 5, data->status, colResizeList);
     needResort |= changed && currentSortColumn_ == 5;
-    changed = setColumnForRow_(itemIndex, 6, data->txMode);
+    changed = setColumnForRow_(itemIndex, 6, data->userMessage, colResizeList);
     needResort |= changed && currentSortColumn_ == 6;
-    changed = setColumnForRow_(itemIndex, 7, data->lastTx);
+    changed = setColumnForRow_(itemIndex, 7, data->lastTx, colResizeList);
     needResort |= changed && currentSortColumn_ == 7;
-    changed = setColumnForRow_(itemIndex, 8, data->lastRxCallsign);
+    changed = setColumnForRow_(itemIndex, 8, data->txMode, colResizeList);
     needResort |= changed && currentSortColumn_ == 8;
-    changed = setColumnForRow_(itemIndex, 9, data->lastRxMode);
+    changed = setColumnForRow_(itemIndex, 9, data->lastRxCallsign, colResizeList);
     needResort |= changed && currentSortColumn_ == 9;
-    changed = setColumnForRow_(itemIndex, 10, data->snr);
+    changed = setColumnForRow_(itemIndex, 10, data->lastRxMode, colResizeList);
     needResort |= changed && currentSortColumn_ == 10;
-    changed = setColumnForRow_(itemIndex, 11, data->lastUpdate);
+    changed = setColumnForRow_(itemIndex, 11, data->snr, colResizeList);
     needResort |= changed && currentSortColumn_ == 11;
+    changed = setColumnForRow_(itemIndex, 12, data->lastUpdate, colResizeList);
+    needResort |= changed && currentSortColumn_ == 12;
     
+    auto curDate = wxDateTime::Now().ToUTC();
     if (data->transmitting)
     {
         wxColour txBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
@@ -1087,10 +1373,17 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
         m_listSpots->SetItemBackgroundColour(itemIndex, txBackgroundColor);
         m_listSpots->SetItemTextColour(itemIndex, txForegroundColor);
     }
-    else if (data->lastRxDate.IsValid() && data->lastRxDate.ToUTC().IsEqualUpTo(wxDateTime::Now().ToUTC(), wxTimeSpan(0, 0, RX_COLORING_TIMEOUT_SEC)))
+    else if (data->lastRxDate.IsValid() && data->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_TIMEOUT_SEC)))
     {
         wxColour rxBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
         wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
+        m_listSpots->SetItemBackgroundColour(itemIndex, rxBackgroundColor);
+        m_listSpots->SetItemTextColour(itemIndex, rxForegroundColor);
+    }
+    else if (!isAdded && data->lastUpdateUserMessage.IsValid() && data->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC)))
+    {
+        wxColour rxBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor);
+        wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor);
         m_listSpots->SetItemBackgroundColour(itemIndex, rxBackgroundColor);
         m_listSpots->SetItemTextColour(itemIndex, rxForegroundColor);
     }
@@ -1106,7 +1399,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data)
     }
 }
 
-bool FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val)
+bool FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val, std::map<int, int>& colResizeList)
 {
     bool result = false;
     auto oldText = m_listSpots->GetItemText(row, col);
@@ -1130,10 +1423,11 @@ bool FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val)
             GetTextExtent(val, &textWidth, &textHeight);
         }
     
-        if (textWidth > columnLengths_[col])
+        // Always force a resize for the Msg column.
+        if (textWidth > columnLengths_[col] || col == MESSAGE_COLUMN_ID)
         {
             columnLengths_[col] = textWidth;
-            m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
+            colResizeList[col]++;
         }
     }
 

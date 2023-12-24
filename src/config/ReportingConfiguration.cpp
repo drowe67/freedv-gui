@@ -47,7 +47,8 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterForceReceiveOnly("/Reporting/FreeDV/ForceReceiveOnly", false)
     , freedvReporterBandFilterTracksFreqBand("/Reporting/FreeDV/BandFilterTracking/TracksFreqBand", true)
     , freedvReporterBandFilterTracksExactFreq("/Reporting/FreeDV/BandFilterTracking/TracksExactFreq", false)
-        
+    , freedvReporterStatusText("/Reporting/FreeDV/StatusText", _(""))
+    , freedvReporterRecentStatusTexts("/Reporting/FreeDV/RecentStatusTexts", {})
     , useUTCForReporting("/CallsignList/UseUTCTime", false)
         
     , reportingFrequencyList("/Reporting/FrequencyList", {
@@ -74,6 +75,8 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterTxRowForegroundColor("/Reporting/FreeDV/TxRowForegroundColor", "#000000")
     , freedvReporterRxRowBackgroundColor("/Reporting/FreeDV/RxRowBackgroundColor", "#379baf")
     , freedvReporterRxRowForegroundColor("/Reporting/FreeDV/RxRowForegroundColor", "#000000")
+    , freedvReporterMsgRowBackgroundColor("/Reporting/FreeDV/MsgRowBackgroundColor", "#E58BE5")
+    , freedvReporterMsgRowForegroundColor("/Reporting/FreeDV/MsgRowForegroundColor", "#000000")
         
     , reportingFrequencyAsKhz("/Reporting/FrequencyAsKHz", false)
 {
@@ -172,7 +175,9 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, freedvReporterForceReceiveOnly);
     load_(config, freedvReporterBandFilterTracksFreqBand);
     load_(config, freedvReporterBandFilterTracksExactFreq);
-    
+    load_(config, freedvReporterStatusText);
+    load_(config, freedvReporterRecentStatusTexts);
+
     load_(config, useUTCForReporting);
     
     // Note: this needs to be loaded before the frequency list so that
@@ -187,7 +192,9 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, freedvReporterTxRowForegroundColor);
     load_(config, freedvReporterRxRowBackgroundColor);
     load_(config, freedvReporterRxRowForegroundColor);
-    
+    load_(config, freedvReporterMsgRowBackgroundColor);
+    load_(config, freedvReporterMsgRowForegroundColor);
+
     // Special load handling for reporting below.
     wxString freqStr = config->Read(reportingFrequency.getElementName(), oldFreqStr);
     reportingFrequency.setWithoutProcessing(atoll(freqStr.ToUTF8()));
@@ -211,6 +218,8 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, freedvReporterForceReceiveOnly);
     save_(config, freedvReporterBandFilterTracksFreqBand);
     save_(config, freedvReporterBandFilterTracksExactFreq);
+    save_(config, freedvReporterStatusText);
+    save_(config, freedvReporterRecentStatusTexts);
     
     save_(config, useUTCForReporting);
     
@@ -223,6 +232,8 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, freedvReporterTxRowForegroundColor);
     save_(config, freedvReporterRxRowBackgroundColor);
     save_(config, freedvReporterRxRowForegroundColor);
+    save_(config, freedvReporterMsgRowBackgroundColor);
+    save_(config, freedvReporterMsgRowForegroundColor);
     
     // Special save handling for reporting below.
     wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), reportingFrequency.getWithoutProcessing());

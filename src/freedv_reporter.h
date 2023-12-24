@@ -24,6 +24,7 @@
 
 #include <string>
 #include <map>
+#include <vector>
 
 #include <wx/imaglist.h>
 
@@ -79,6 +80,9 @@ class FreeDVReporterDialog : public wxDialog
         void    OnMove(wxMoveEvent& event);
         void    OnShow(wxShowEvent& event);
         void    OnBandFilterChange(wxCommandEvent& event);
+        void    OnStatusTextSet(wxCommandEvent& event);
+        void    OnStatusTextClear(wxCommandEvent& event);
+        void    OnStatusTextChange(wxCommandEvent& event);
         
         void OnItemSelected(wxListEvent& event);
         void OnItemDeselected(wxListEvent& event);
@@ -102,6 +106,11 @@ class FreeDVReporterDialog : public wxDialog
         wxCheckBox* m_trackFrequency;
         wxRadioButton* m_trackFreqBand;
         wxRadioButton* m_trackExactFreq;
+
+        // Status message
+        wxComboBox* m_statusMessage;
+        wxButton* m_buttonSet;
+        wxButton* m_buttonClear;
         
         // Step 4: test/save/cancel setup
         wxButton* m_buttonOK;
@@ -110,6 +119,9 @@ class FreeDVReporterDialog : public wxDialog
         
         // Timer to unhighlight RX rows after 10s (like with web-based Reporter)
         wxTimer* m_highlightClearTimer;
+        
+        std::vector<std::function<void()> > fnQueue_;
+        std::mutex fnQueueMtx_;
 
      private:
          struct ReporterData
@@ -133,6 +145,8 @@ class FreeDVReporterDialog : public wxDialog
              wxString snr;
              wxString lastUpdate;
              wxDateTime lastUpdateDate;
+             wxString userMessage;
+             wxDateTime lastUpdateUserMessage;
          };
          
          std::shared_ptr<FreeDVReporter> reporter_;
@@ -141,6 +155,8 @@ class FreeDVReporterDialog : public wxDialog
          FilterFrequency currentBandFilter_;
          int currentSortColumn_;
          bool sortAscending_;
+         bool isConnected_;
+         bool filterSelfMessageUpdates_;
          
          void clearAllEntries_(bool clearForAllBands);
          void onReporterConnect_();
@@ -150,20 +166,26 @@ class FreeDVReporterDialog : public wxDialog
          void onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz);
          void onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate);
          void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
-         
+         void onMessageUpdateFn_(std::string sid, std::string lastUpdate, std::string message);
+         void onConnectionSuccessfulFn_();
+         void onAboutToShowSelfFn_();
+
          wxString makeValidTime_(std::string timeStr, wxDateTime& timeObj);
          
-         void addOrUpdateListIfNotFiltered_(ReporterData* data);
+         void addOrUpdateListIfNotFiltered_(ReporterData* data, std::map<int, int>& colResizeList);
          FilterFrequency getFilterForFrequency_(uint64_t freq);
          bool isFiltered_(uint64_t freq);
          
-         bool setColumnForRow_(int row, int col, wxString val);
+         bool setColumnForRow_(int row, int col, wxString val, std::map<int, int>& colResizeList);
+         void resizeChangedColumns_(std::map<int, int>& colResizeList);
 
          void sortColumn_(int col);
          void sortColumn_(int col, bool direction);
          
          double calculateDistance_(wxString gridSquare1, wxString gridSquare2);
          void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);
+         
+         void execQueuedAction_();
 
          static wxCALLBACK int ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
          static double DegreesToRadians_(double degrees);
