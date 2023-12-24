@@ -1042,6 +1042,13 @@ void FreeDVReporterDialog::onUserDisconnectFn_(std::string sid, std::string last
                 delete (std::string*)m_listSpots->GetItemData(index);
                 m_listSpots->DeleteItem(index);
                 
+                // Force resizing of all columns. This should reduce space if needed.
+                std::map<int, int> colResizeList;
+                for (int i = 0; i < NUM_COLS; i++)
+                {
+                    colResizeList[i] = 1;
+                }
+                resizeChangedColumns_(colResizeList);
                 break;
             }
         }
@@ -1306,7 +1313,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     {
         // Remove as it has been filtered out.       
         delete (std::string*)m_listSpots->GetItemData(itemIndex);
-        m_listSpots->DeleteItem(itemIndex);       
+        m_listSpots->DeleteItem(itemIndex);
         return;
     }
     else if (itemIndex == -1 && !filtered)
