@@ -1047,6 +1047,7 @@ void FreeDVReporterDialog::onUserDisconnectFn_(std::string sid, std::string last
                 for (int i = 0; i < NUM_COLS; i++)
                 {
                     colResizeList[i] = 1;
+                    columnLengths_[i] = 0;
                 }
                 resizeChangedColumns_(colResizeList);
                 break;
@@ -1314,6 +1315,16 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
         // Remove as it has been filtered out.       
         delete (std::string*)m_listSpots->GetItemData(itemIndex);
         m_listSpots->DeleteItem(itemIndex);
+        
+        // Force resizing of all columns. This should reduce space if needed.
+        std::map<int, int> colResizeList;
+        for (int i = 0; i < NUM_COLS; i++)
+        {
+            colResizeList[i] = 1;
+            columnLengths_[i] = 0;
+        }
+        resizeChangedColumns_(colResizeList);
+        
         return;
     }
     else if (itemIndex == -1 && !filtered)
