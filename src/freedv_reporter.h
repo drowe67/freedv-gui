@@ -24,6 +24,7 @@
 
 #include <string>
 #include <map>
+#include <vector>
 
 #include <wx/imaglist.h>
 
@@ -118,6 +119,9 @@ class FreeDVReporterDialog : public wxDialog
         
         // Timer to unhighlight RX rows after 10s (like with web-based Reporter)
         wxTimer* m_highlightClearTimer;
+        
+        std::vector<std::function<void()> > fnQueue_;
+        std::mutex fnQueueMtx_;
 
      private:
          struct ReporterData
@@ -152,6 +156,7 @@ class FreeDVReporterDialog : public wxDialog
          int currentSortColumn_;
          bool sortAscending_;
          bool isConnected_;
+         bool filterSelfMessageUpdates_;
          
          void clearAllEntries_(bool clearForAllBands);
          void onReporterConnect_();
@@ -163,6 +168,7 @@ class FreeDVReporterDialog : public wxDialog
          void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
          void onMessageUpdateFn_(std::string sid, std::string lastUpdate, std::string message);
          void onConnectionSuccessfulFn_();
+         void onAboutToShowSelfFn_();
 
          wxString makeValidTime_(std::string timeStr, wxDateTime& timeObj);
          
@@ -178,6 +184,8 @@ class FreeDVReporterDialog : public wxDialog
          
          double calculateDistance_(wxString gridSquare1, wxString gridSquare2);
          void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);
+         
+         void execQueuedAction_();
 
          static wxCALLBACK int ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
          static double DegreesToRadians_(double degrees);

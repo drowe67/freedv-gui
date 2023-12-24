@@ -232,6 +232,11 @@ void FreeDVReporter::setConnectionSuccessfulFn(ConnectionSuccessfulFn fn)
     onConnectionSuccessfulFn_ = fn;
 }
 
+void FreeDVReporter::setAboutToShowSelfFn(AboutToShowSelfFn fn)
+{
+    onAboutToShowSelfFn_ = fn;
+}
+
 bool FreeDVReporter::isValidForReporting()
 {
     return callsign_ != "" && gridSquare_ != "";
@@ -516,7 +521,7 @@ void FreeDVReporter::connect_()
     });
 
     sioClient_->socket()->off("message_update");
-    sioClient_->socket()->on("message_update", [&](sio::event& ev) {
+    sioClient_->socket()->on("message_update", [&](sio::event& ev) {    
         auto msgParams = ev.get_message()->get_map();
 
         if (onMessageUpdateFn_)
@@ -634,6 +639,11 @@ void FreeDVReporter::hideFromViewImpl_()
 
 void FreeDVReporter::showOurselvesImpl_()
 {
+    if (onAboutToShowSelfFn_)
+    {
+        onAboutToShowSelfFn_();
+    }
+    
     sioClient_->socket()->emit("show_self");
     hidden_ = false;
 }

@@ -66,6 +66,9 @@ public:
 
     // Connection successful -- no arguments
     using ConnectionSuccessfulFn = std::function<void()>;
+    
+    // About to show self -- no arguments
+    using AboutToShowSelfFn = std::function<void()>;
 
     FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly);
     virtual ~FreeDVReporter();
@@ -94,6 +97,7 @@ public:
     void setOnQSYRequestFn(QsyRequestFn fn);
     void setMessageUpdateFn(MessageUpdateFn fn);
     void setConnectionSuccessfulFn(ConnectionSuccessfulFn fn);
+    void setAboutToShowSelfFn(AboutToShowSelfFn fn);
 
     void hideFromView();
     void showOurselves();
@@ -133,6 +137,7 @@ private:
     QsyRequestFn onQsyRequestFn_;
     MessageUpdateFn onMessageUpdateFn_;
     ConnectionSuccessfulFn onConnectionSuccessfulFn_;
+    AboutToShowSelfFn onAboutToShowSelfFn_;
         
     void connect_();
     

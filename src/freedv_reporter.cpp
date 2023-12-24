@@ -45,6 +45,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     , currentSortColumn_(-1)
     , sortAscending_(false)
     , isConnected_(false)
+    , filterSelfMessageUpdates_(false)
 {
     for (int col = 0; col < NUM_COLS; col++)
     {
@@ -342,6 +343,7 @@ void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
 
         reporter_->setMessageUpdateFn(FreeDVReporter::MessageUpdateFn());
         reporter_->setConnectionSuccessfulFn(FreeDVReporter::ConnectionSuccessfulFn());
+        reporter_->setAboutToShowSelfFn(FreeDVReporter::AboutToShowSelfFn());
     }
     
     reporter_ = reporter;
@@ -359,6 +361,7 @@ void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
 
         reporter_->setMessageUpdateFn(std::bind(&FreeDVReporterDialog::onMessageUpdateFn_, this, _1, _2, _3));
         reporter_->setConnectionSuccessfulFn(std::bind(&FreeDVReporterDialog::onConnectionSuccessfulFn_, this));
+        reporter_->setAboutToShowSelfFn(std::bind(&FreeDVReporterDialog::onAboutToShowSelfFn_, this));
 
         // Update status message
         auto statusMsg = m_statusMessage->GetValue();
@@ -902,6 +905,14 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
     return result;
 }
 
+void FreeDVReporterDialog::execQueuedAction_()
+{
+    // This ensures that we handle server events in the order they're received.
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    fnQueue_[0]();
+    fnQueue_.erase(fnQueue_.begin());
+}
+
 // =================================================================================
 // Note: these methods below do not run under the UI thread, so we need to make sure
 // UI actions happen there.
@@ -909,22 +920,34 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
 
 void FreeDVReporterDialog::onReporterConnect_()
 {
-    CallAfter([&]() {
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+
+    fnQueue_.push_back([&]() {
+        filterSelfMessageUpdates_ = false;
         clearAllEntries_(true);
     });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::onReporterDisconnect_()
 {
-    CallAfter([&]() {
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&]() {
         isConnected_ = false;
+        filterSelfMessageUpdates_ = false;
         clearAllEntries_(true);        
     });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
 {
-    CallAfter([&, sid, lastUpdate, callsign, gridSquare, version, rxOnly]() {
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+
+    fnQueue_.push_back([&, sid, lastUpdate, callsign, gridSquare, version, rxOnly]() {
         // Initially populate stored report data, but don't add to the viewable list just yet. 
         // We only add on frequency update and only if the filters check out.
         ReporterData* temp = new ReporterData;
@@ -990,17 +1013,27 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         
         allReporterData_[sid] = temp;
     });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::onConnectionSuccessfulFn_()
 {
-    // Enable highlighting now that we're fully connected.
-    isConnected_ = true;
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&]() {
+        // Enable highlighting now that we're fully connected.
+        isConnected_ = true;
+    });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
 {
-    CallAfter([&, sid]() {
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&, sid]() {
         for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
         {
             std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
@@ -1020,11 +1053,15 @@ void FreeDVReporterDialog::onUserDisconnectFn_(std::string sid, std::string last
             allReporterData_.erase(iter);
         }
     });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz)
 {
-    CallAfter([&, sid, frequencyHz, lastUpdate]() {
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&, sid, frequencyHz, lastUpdate]() {
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
@@ -1051,11 +1088,15 @@ void FreeDVReporterDialog::onFrequencyChangeFn_(std::string sid, std::string las
             resizeChangedColumns_(colResizeList);
         }
     });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate)
 {
-    CallAfter([&, sid, txMode, transmitting, lastTxDate, lastUpdate]() {
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&, sid, txMode, transmitting, lastTxDate, lastUpdate]() {
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
@@ -1084,11 +1125,15 @@ void FreeDVReporterDialog::onTransmitUpdateFn_(std::string sid, std::string last
             resizeChangedColumns_(colResizeList);
         }
     });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode)
 {
-    CallAfter([&, sid, lastUpdate, receivedCallsign, snr, rxMode]() {
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&, sid, lastUpdate, receivedCallsign, snr, rxMode]() {
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
@@ -1118,11 +1163,15 @@ void FreeDVReporterDialog::onReceiveUpdateFn_(std::string sid, std::string lastU
             resizeChangedColumns_(colResizeList);
         }
     });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::onMessageUpdateFn_(std::string sid, std::string lastUpdate, std::string message)
 {
-    CallAfter([&, sid, lastUpdate, message]() {
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&, sid, lastUpdate, message]() {
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
@@ -1139,16 +1188,38 @@ void FreeDVReporterDialog::onMessageUpdateFn_(std::string sid, std::string lastU
             iter->second->lastUpdate = lastUpdateTime;
 
             // Only highlight on non-empty messages.
-            if (message.size() > 0 && isConnected_)
+            bool ourCallsign = iter->second->callsign == wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign;
+            bool filteringSelf = ourCallsign && filterSelfMessageUpdates_;
+            
+            if (message.size() > 0 && isConnected_ && !filteringSelf)
             {
+                fprintf(stderr, "XXX message is being updated\n");
                 iter->second->lastUpdateUserMessage = iter->second->lastUpdateDate;
             }
-
+            else if (ourCallsign && filteringSelf)
+            {
+                // Filter only until we show up again, then return to normal behavior.
+                filterSelfMessageUpdates_ = false;
+            }
+            
             std::map<int, int> colResizeList;
             addOrUpdateListIfNotFiltered_(iter->second, colResizeList);
             resizeChangedColumns_(colResizeList);
         }
     });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
+}
+
+void FreeDVReporterDialog::onAboutToShowSelfFn_()
+{
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    
+    fnQueue_.push_back([&]() {
+        filterSelfMessageUpdates_ = true;
+    });
+    
+    CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
 wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr, wxDateTime& timeObj)
