@@ -833,13 +833,14 @@ void MainFrame::togglePTT(void) {
         // Trigger end of TX processing. This causes us to wait for the remaining samples
         // to flow through the system before toggling PTT.  Note that there is a 1000ms 
         // timeout as backup.
+        int sample = g_outfifo1_empty;
         endingTx = true;
 
         before = highResClock.now();
         while(true)
         {
             auto diff = highResClock.now() - before;
-            if (diff >= std::chrono::milliseconds(1000) || codec2_fifo_used(g_rxUserdata->outfifo1) == 0)
+            if (diff >= std::chrono::milliseconds(1000) || (g_outfifo1_empty != sample))
             {
                 break;
             }
