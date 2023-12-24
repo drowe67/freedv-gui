@@ -927,6 +927,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add 800XA to multi-RX list. (PR #617)
     * Add logic to report status message to FreeDV Reporter. (PR #620)
     * Allow display and entry of frequencies in KHz. (PR #621)
+    * Add 5368.5 KHz to the default frequency list. (PR #626)
 
 ## V1.9.5 November 2023
 
