@@ -174,7 +174,17 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_ckboxEnableSpacebarForPTT = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Enable Space key for PTT"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_ptt->Add(m_ckboxEnableSpacebarForPTT, 0, wxALL | wxALIGN_LEFT, 5);
+
+    wxSizer* txRxDelaySizer = new wxBoxSizer(wxHORIZONTAL);
     
+    auto txRxDelayLabel = new wxStaticText(m_rigControlTab, wxID_ANY, _("TX/RX Delay (milliseconds): "));
+    txRxDelaySizer->Add(txRxDelayLabel, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtTxRxDelayMilliseconds = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(80,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtTxRxDelayMilliseconds->SetToolTip(_("The amount of time to wait between toggling PTT and stopping/starting TX audio in milliseconds."));
+    txRxDelaySizer->Add(m_txtTxRxDelayMilliseconds, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    sbSizer_ptt->Add(txRxDelaySizer, 0, wxALL, 0);
     sizerRigControl->Add(sbSizer_ptt,0, wxALL | wxEXPAND, 5);
     
     wxStaticBoxSizer* sbSizer_hamlib;
@@ -255,44 +265,57 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox* sb_reporterColor = new wxStaticBox(m_displayTab, wxID_ANY, _("FreeDV Reporter colors"));
     wxStaticBoxSizer* sbSizer_reporterColor =  new wxStaticBoxSizer(sb_reporterColor, wxVERTICAL);
 
-    wxBoxSizer* reporterTxColorSizer = new wxBoxSizer(wxHORIZONTAL);
-    wxBoxSizer* reporterRxColorSizer = new wxBoxSizer(wxHORIZONTAL);
+    wxFlexGridSizer* reporterColorSizer = new wxFlexGridSizer(5, wxSize(5, 5));
 
     // TX colors
     wxStaticText* labelReporterTxStation = new wxStaticText(m_displayTab, wxID_ANY, wxT("TX Stations:"), wxDefaultPosition, wxDefaultSize, 0);
-    reporterTxColorSizer->Add(labelReporterTxStation, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    reporterColorSizer->Add(labelReporterTxStation, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     wxStaticText* labelReporterTxBackgroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Background"), wxDefaultPosition, wxDefaultSize, 0);
-    reporterTxColorSizer->Add(labelReporterTxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    reporterColorSizer->Add(labelReporterTxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     m_freedvReporterTxBackgroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
-    reporterTxColorSizer->Add(m_freedvReporterTxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    reporterColorSizer->Add(m_freedvReporterTxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     wxStaticText* labelReporterTxForegroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Foreground"), wxDefaultPosition, wxDefaultSize, 0);
-    reporterTxColorSizer->Add(labelReporterTxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    reporterColorSizer->Add(labelReporterTxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     m_freedvReporterTxForegroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
-    reporterTxColorSizer->Add(m_freedvReporterTxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    sbSizer_reporterColor->Add(reporterTxColorSizer, 0, wxALL, 5);
+    reporterColorSizer->Add(m_freedvReporterTxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     // RX colors
     wxStaticText* labelReporterRxStation = new wxStaticText(m_displayTab, wxID_ANY, wxT("RX Stations:"), wxDefaultPosition, wxDefaultSize, 0);
-    reporterRxColorSizer->Add(labelReporterRxStation, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    reporterColorSizer->Add(labelReporterRxStation, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     wxStaticText* labelReporterRxBackgroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Background"), wxDefaultPosition, wxDefaultSize, 0);
-    reporterRxColorSizer->Add(labelReporterRxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    reporterColorSizer->Add(labelReporterRxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     m_freedvReporterRxBackgroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
-    reporterRxColorSizer->Add(m_freedvReporterRxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    reporterColorSizer->Add(m_freedvReporterRxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     wxStaticText* labelReporterRxForegroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Foreground"), wxDefaultPosition, wxDefaultSize, 0);
-    reporterRxColorSizer->Add(labelReporterRxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    reporterColorSizer->Add(labelReporterRxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     m_freedvReporterRxForegroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
-    reporterRxColorSizer->Add(m_freedvReporterRxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    reporterColorSizer->Add(m_freedvReporterRxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    sbSizer_reporterColor->Add(reporterRxColorSizer, 0, wxALL, 5);
+    // Message colors
+    wxStaticText* labelReporterMsgStation = new wxStaticText(m_displayTab, wxID_ANY, wxT("Message updates:"), wxDefaultPosition, wxDefaultSize, 0);
+    reporterColorSizer->Add(labelReporterMsgStation, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    wxStaticText* labelReporterMsgBackgroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Background"), wxDefaultPosition, wxDefaultSize, 0);
+    reporterColorSizer->Add(labelReporterMsgBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_freedvReporterMsgBackgroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
+    reporterColorSizer->Add(m_freedvReporterMsgBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    wxStaticText* labelReporterMsgForegroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Foreground"), wxDefaultPosition, wxDefaultSize, 0);
+    reporterColorSizer->Add(labelReporterMsgForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_freedvReporterMsgForegroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
+    reporterColorSizer->Add(m_freedvReporterMsgForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    sbSizer_reporterColor->Add(reporterColorSizer, 0, wxALL, 5);
 
     sizerDisplay->Add(sbSizer_reporterColor, 0, wxALL | wxEXPAND, 5);
     
@@ -776,11 +799,15 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
         wxColour txBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
         wxColour txForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
+        wxColour msgBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor);
+        wxColour msgForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor);
 
         m_freedvReporterRxBackgroundColor->SetColour(rxBackgroundColor);
         m_freedvReporterRxForegroundColor->SetColour(rxForegroundColor);
         m_freedvReporterTxBackgroundColor->SetColour(txBackgroundColor);
         m_freedvReporterTxForegroundColor->SetColour(txForegroundColor);
+        m_freedvReporterMsgBackgroundColor->SetColour(msgBackgroundColor);
+        m_freedvReporterMsgForegroundColor->SetColour(msgForegroundColor);
 
         // Populate reporting frequency list.
         for (auto& item : wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList.get())
@@ -791,6 +818,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtCtrlCallSign->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString);
 
         m_ckboxEnableSpacebarForPTT->SetValue(wxGetApp().appConfiguration.enableSpaceBarForPTT);
+        m_txtTxRxDelayMilliseconds->SetValue(wxString::Format("%d", wxGetApp().appConfiguration.txRxDelayMilliseconds.get()));
         m_ckboxUseAnalogModes->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes);
         m_ckboxEnableFreqModeChanges->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
         m_ckboxFrequencyEntryAsKHz->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz);
@@ -926,6 +954,12 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxColour txForegroundColor = m_freedvReporterTxForegroundColor->GetColour();
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor = txForegroundColor.GetAsString(wxC2S_HTML_SYNTAX);
 
+        wxColour msgBackgroundColor = m_freedvReporterMsgBackgroundColor->GetColour();
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor = msgBackgroundColor.GetAsString(wxC2S_HTML_SYNTAX);
+
+        wxColour msgForegroundColor = m_freedvReporterMsgForegroundColor->GetColour();
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor = msgForegroundColor.GetAsString(wxC2S_HTML_SYNTAX);
+
         // Save new reporting frequency list.
         std::vector<wxString> tmpList;
         for (unsigned int index = 0; index < m_freqList->GetCount(); index++)
@@ -935,6 +969,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyList = tmpList;
         
         wxGetApp().appConfiguration.enableSpaceBarForPTT = m_ckboxEnableSpacebarForPTT->GetValue();
+
+        wxGetApp().appConfiguration.txRxDelayMilliseconds = wxAtoi(m_txtTxRxDelayMilliseconds->GetValue());
         
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes = m_ckboxUseAnalogModes->GetValue();
         
@@ -1313,6 +1349,7 @@ void OptionsDlg::updateRigControlState()
     {
         m_ckboxEnableFreqModeChanges->Enable(true);
         m_ckboxEnableSpacebarForPTT->Enable(true);
+        m_txtTxRxDelayMilliseconds->Enable(true);
         m_ckboxUseAnalogModes->Enable(m_ckboxEnableFreqModeChanges->GetValue());
     }
     else
@@ -1321,6 +1358,7 @@ void OptionsDlg::updateRigControlState()
         m_ckboxUseAnalogModes->Enable(false);
         m_ckboxEnableFreqModeChanges->Enable(false);
         m_ckboxEnableSpacebarForPTT->Enable(false);
+        m_txtTxRxDelayMilliseconds->Enable(false);
     }
 }
     

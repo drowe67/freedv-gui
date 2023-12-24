@@ -32,6 +32,7 @@ extern wxConfigBase *pConfig;
 extern bool endingTx;
 extern int g_outfifo1_empty;
 extern bool g_voice_keyer_tx;
+extern paCallBackData* g_rxUserdata;
 
 extern SNDFILE            *g_sfRecFileFromModulator;
 extern SNDFILE            *g_sfRecFile;
@@ -805,6 +806,7 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
 }
 
 void MainFrame::togglePTT(void) {
+    std::chrono::high_resolution_clock highResClock;
 
     // Change tabbed page in centre panel depending on PTT state
 
@@ -813,19 +815,62 @@ void MainFrame::togglePTT(void) {
         // Sleep for long enough that we get the remaining [blocksize] ms of audio.
         int msSleep = (1000 * freedvInterface.getTxNumSpeechSamples()) / freedvInterface.getTxSpeechSampleRate();
         if (g_verbose) fprintf(stderr, "Sleeping for %d ms prior to ending TX\n", msSleep);
-        wxThread::Sleep(msSleep);
+
+        auto before = highResClock.now();
+
+        while(true)
+        {
+            auto diff = highResClock.now() - before;
+            if (diff >= std::chrono::milliseconds(msSleep))
+            {
+                break;
+            }
+
+            wxThread::Sleep(1);
+            wxGetApp().Yield(true);
+        }
         
         // Trigger end of TX processing. This causes us to wait for the remaining samples
-        // to flow through the system before toggling PTT.  Note 1000ms timeout as backup
+        // to flow through the system before toggling PTT.  Note that there is a 1000ms 
+        // timeout as backup.
         int sample = g_outfifo1_empty;
         endingTx = true;
 
-        int i = 0;
-        while ((i < 20) && (g_outfifo1_empty == sample)) {
-            i++;
-            wxThread::Sleep(50);
+        before = highResClock.now();
+        while(true)
+        {
+            auto diff = highResClock.now() - before;
+            if (diff >= std::chrono::milliseconds(1000) || (g_outfifo1_empty != sample))
+            {
+                break;
+            }
+
+            wxThread::Sleep(1);
+
+            // Yield() used to avoid lack of UI responsiveness during delay.
+            wxGetApp().Yield(true);
         }
         
+        // Wait an additional configured timeframe before actually clearing PTT (below)
+        if (wxGetApp().appConfiguration.txRxDelayMilliseconds > 0)
+        {
+            // Delay outbound TX audio if going into TX.
+            // Yield() used to avoid lack of UI responsiveness during delay.
+            before = highResClock.now();
+            while(true)
+            {
+                auto diff = highResClock.now() - before;
+                if (diff >= std::chrono::milliseconds(wxGetApp().appConfiguration.txRxDelayMilliseconds.get()))
+                {
+                    break;
+                }
+
+                wxThread::Sleep(1);
+                wxGetApp().Yield(true);
+            }
+        }
+        g_tx = false;
+
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
         
@@ -866,8 +911,6 @@ void MainFrame::togglePTT(void) {
         m_togBtnOnOff->Enable(false);
     }
 
-    g_tx = m_btnTogPTT->GetValue();
-
     if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT) {
         if (wxGetApp().rigFrequencyController != nullptr && wxGetApp().rigFrequencyController->isConnected()) {
             // Update mode display on the bottom of the main UI.
@@ -875,9 +918,10 @@ void MainFrame::togglePTT(void) {
         }
     }
 
+    auto newTx = m_btnTogPTT->GetValue();
     if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected()) 
     {
-        wxGetApp().rigPttController->ptt(g_tx);
+        wxGetApp().rigPttController->ptt(newTx);
     }
 
     // reset level gauge
@@ -885,21 +929,20 @@ void MainFrame::togglePTT(void) {
     m_maxLevel = 0;
     m_textLevel->SetLabel(wxT(""));
     m_gaugeLevel->SetValue(0);
-    endingTx = false;
     
     // Report TX change to registered reporters
     for (auto& obj : wxGetApp().m_reporters)
     {
-        obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+        obj->transmit(freedvInterface.getCurrentTxModeStr(), newTx);
     }
 
     // Change button color depending on TX status.
-    m_btnTogPTT->SetBackgroundColour(g_tx ? *wxRED : wxNullColour);
+    m_btnTogPTT->SetBackgroundColour(newTx ? *wxRED : wxNullColour);
     
     // If we're recording, switch to/from modulator and radio.
     if (g_sfRecFile != nullptr)
     {
-        if (!g_tx)
+        if (!newTx)
         {
             g_recFileFromModulator = false;
             g_recFileFromRadio = true;
@@ -909,6 +952,33 @@ void MainFrame::togglePTT(void) {
             g_recFileFromRadio = false;
             g_recFileFromModulator = true;
         }
+    }
+
+    if (newTx)
+    {
+        endingTx = false;
+            
+        if (wxGetApp().appConfiguration.txRxDelayMilliseconds > 0)
+        {
+            // Delay outbound TX audio if going into TX.
+            // Note: Yield() used here to avoid lack of UI responsiveness during delay.
+            auto before = highResClock.now();
+            while(true)
+            {
+                auto diff = highResClock.now() - before;
+                if (diff >= std::chrono::milliseconds(wxGetApp().appConfiguration.txRxDelayMilliseconds.get()))
+                {
+                    break;
+                }
+
+                wxThread::Sleep(1);
+                wxGetApp().Yield(true);
+            }
+        }
+
+        // g_tx governs when audio actually goes out during TX, so don't set to true until
+        // after the delay occurs.
+        g_tx = true;
     }
 }
 

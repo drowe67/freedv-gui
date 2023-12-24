@@ -119,6 +119,8 @@ public:
 
     ConfigurationDataElement<bool> monitorVoiceKeyerAudio;
     ConfigurationDataElement<bool> monitorTxAudio;
+
+    ConfigurationDataElement<int> txRxDelayMilliseconds;
     
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;

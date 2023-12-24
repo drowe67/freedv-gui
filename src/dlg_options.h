@@ -92,6 +92,7 @@ class OptionsDlg : public wxDialog
         wxCheckBox   *m_ckboxUseAnalogModes;
         wxCheckBox   *m_ckboxEnableFreqModeChanges;
         wxCheckBox   *m_ckboxEnableSpacebarForPTT;
+        wxTextCtrl   *m_txtTxRxDelayMilliseconds;
         wxCheckBox   *m_ckboxFrequencyEntryAsKHz;
         
         /* Waterfall color */
@@ -104,6 +105,8 @@ class OptionsDlg : public wxDialog
         wxColourPickerCtrl* m_freedvReporterTxForegroundColor;
         wxColourPickerCtrl* m_freedvReporterRxBackgroundColor;
         wxColourPickerCtrl* m_freedvReporterRxForegroundColor;
+        wxColourPickerCtrl* m_freedvReporterMsgBackgroundColor;
+        wxColourPickerCtrl* m_freedvReporterMsgForegroundColor;
 
         /* Voice Keyer */
 

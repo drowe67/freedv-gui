@@ -54,6 +54,8 @@ public:
     ConfigurationDataElement<bool> freedvReporterForceReceiveOnly;
     ConfigurationDataElement<bool> freedvReporterBandFilterTracksFreqBand;
     ConfigurationDataElement<bool> freedvReporterBandFilterTracksExactFreq;
+    ConfigurationDataElement<wxString> freedvReporterStatusText;
+    ConfigurationDataElement<std::vector<wxString> > freedvReporterRecentStatusTexts;
     
     ConfigurationDataElement<bool> useUTCForReporting;
     
@@ -63,6 +65,8 @@ public:
     ConfigurationDataElement<wxString> freedvReporterTxRowForegroundColor;
     ConfigurationDataElement<wxString> freedvReporterRxRowBackgroundColor;
     ConfigurationDataElement<wxString> freedvReporterRxRowForegroundColor;
+    ConfigurationDataElement<wxString> freedvReporterMsgRowBackgroundColor;
+    ConfigurationDataElement<wxString> freedvReporterMsgRowForegroundColor;
     
     ConfigurationDataElement<bool> reportingFrequencyAsKhz;
     
