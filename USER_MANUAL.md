@@ -912,6 +912,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.9.7 TBD 2024
+
+1. Bugfixes:
+    * Use double precision instead of float for loading frequency list. (PR #627)
+
 ## V1.9.6 December 2023
 
 1. Bugfixes:
