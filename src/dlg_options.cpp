@@ -20,6 +20,7 @@
 //==========================================================================
 
 #include <wx/gbsizer.h>
+#include <wx/numformatter.h>
 #include "dlg_options.h"
 
 extern FreeDVInterface freedvInterface;
@@ -937,6 +938,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         updateToneState();
         updateMultipleRxState();
         updateRigControlState();
+
+        wxCommandEvent tmpEvent;
+        OnReportingFreqTextChange(tmpEvent);
     }
 
     if(inout == EXCHANGE_DATA_OUT)
@@ -1420,7 +1424,9 @@ void OptionsDlg::OnReportingFreqSelectionChange(wxCommandEvent& event)
 
 void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent& event)
 {
-    wxRegEx rgx("[0-9]+(\\.[0-9]+)?");
+    double tmpValue = 0.0;
+    bool validNumber = wxNumberFormatter::FromString(m_txtCtrlNewFrequency->GetValue(), &tmpValue);
+
     auto idx = m_freqList->FindString(m_txtCtrlNewFrequency->GetValue());
     if (idx != wxNOT_FOUND)
     {
@@ -1443,7 +1449,7 @@ void OptionsDlg::OnReportingFreqTextChange(wxCommandEvent& event)
             m_freqListMoveDown->Enable(true);
         }
     }
-    else if (rgx.Matches(m_txtCtrlNewFrequency->GetValue()))
+    else if (validNumber && tmpValue > 0)
     {
         m_freqListAdd->Enable(true);
         m_freqListRemove->Enable(false);
