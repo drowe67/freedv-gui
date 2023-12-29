@@ -23,10 +23,11 @@
 #include "ThreadedObject.h"
 
 ThreadedObject::ThreadedObject()
-    : isDestroying_(false),
-      objectThread_(std::bind(&ThreadedObject::eventLoop_, this))
+    : isDestroying_(false)
 {
-    // empty
+    // Instantiate thread here rather than the initializer since otherwise
+    // we might not be able to guarantee that the mutex is initialized first.
+    objectThread_ = std::thread(std::bind(&ThreadedObject::eventLoop_, this));
 }
 
 ThreadedObject::~ThreadedObject()
