@@ -541,10 +541,6 @@ void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent& event)
     {
         m_statusMessage->SetValue(statusMsg);
     }
-
-    auto statusMsgNotEmpty = statusMsg.size() > 0;
-    m_buttonSet->Enable(statusMsgNotEmpty);
-    m_buttonClear->Enable(statusMsgNotEmpty);
 }
 
 void FreeDVReporterDialog::OnStatusTextSet(wxCommandEvent& event)
