@@ -80,7 +80,7 @@ void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSam
         cb->sbqSpkOutBass   = designAnEQFilter("bass", wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.bassFreqHz, wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.bassGaindB, rxSampleRate);
         cb->sbqSpkOutTreble = designAnEQFilter("treble", wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.trebleFreqHz, wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.trebleGaindB, rxSampleRate);
         cb->sbqSpkOutMid    = designAnEQFilter("equalizer", wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midFreqHz, wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midGainDB, wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midQ, rxSampleRate);
-        cb->sbqSpkOutVol    = designAnEQFilter("vol", 0, wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 0, txSampleRate);
+        cb->sbqSpkOutVol    = designAnEQFilter("vol", 0, wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 0, rxSampleRate);
         
         // Note: vol can be a no-op!
         assert(cb->sbqSpkOutBass != nullptr && cb->sbqSpkOutTreble != nullptr && cb->sbqSpkOutMid != nullptr);
