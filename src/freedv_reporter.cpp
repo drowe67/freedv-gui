@@ -730,10 +730,16 @@ void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
         allReporterData_.clear();
     }
     
+    std::vector<std::string*> stringItemsToDelete;
     for (auto index = m_listSpots->GetItemCount() - 1; index >= 0; index--)
     {
-        delete (std::string*)m_listSpots->GetItemData(index);
-        m_listSpots->DeleteItem(index);
+        stringItemsToDelete.push_back((std::string*)m_listSpots->GetItemData(index));
+    }
+    m_listSpots->DeleteAllItems();
+
+    for (auto& ptr : stringItemsToDelete)
+    {
+        delete ptr;
     }
 
     // Reset lengths to force auto-resize on (re)connect.
@@ -742,6 +748,8 @@ void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
         columnLengths_[col] = 0;
         m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
     }
+
+    m_listSpots->Update();
 }
 
 double FreeDVReporterDialog::calculateDistance_(wxString gridSquare1, wxString gridSquare2)
