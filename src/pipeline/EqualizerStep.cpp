@@ -20,9 +20,9 @@
 //
 //=========================================================================
 
-
 #include "EqualizerStep.h"
 
+#include <cstring>
 #include "../sox_biquad.h"
 #include <assert.h>
 
