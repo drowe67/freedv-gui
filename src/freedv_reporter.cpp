@@ -480,13 +480,41 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
         std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
         auto reportData = allReporterData_[*sidPtr];
         
-        if (!reportData->transmitting &&
-            (!reportData->lastRxDate.IsValid() || !reportData->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_TIMEOUT_SEC))) &&
-            (!reportData->lastUpdateUserMessage.IsValid() || !reportData->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC))))
+        bool isTransmitting = reportData->transmitting;
+        bool isReceiving = 
+            reportData->lastRxDate.IsValid() && 
+            reportData->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_TIMEOUT_SEC));
+        bool isMessaging = 
+            reportData->lastUpdateUserMessage.IsValid() && 
+            reportData->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC));
+        
+        // Messaging notifications take highest priority.
+        wxColour backgroundColor;
+        wxColour foregroundColor;
+        
+        if (isMessaging)
         {
-            m_listSpots->SetItemBackgroundColour(index, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOX));
-            m_listSpots->SetItemTextColour(index, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT));
+            backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor);
+            foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor);
         }
+        else if (isReceiving)
+        {
+            backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
+            foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
+        }
+        else if (isTransmitting)
+        {
+            backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
+            foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
+        }
+        else
+        {
+            backgroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOX);
+            foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT);
+        }
+
+        m_listSpots->SetItemBackgroundColour(index, backgroundColor);
+        m_listSpots->SetItemTextColour(index, foregroundColor);
     }
 }
 
@@ -541,9 +569,6 @@ void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent& event)
     {
         m_statusMessage->SetValue(statusMsg);
     }
-
-    m_buttonSet->Enable(statusMsg != wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText);
-    m_buttonClear->Enable(statusMsg.size() > 0);
 }
 
 void FreeDVReporterDialog::OnStatusTextSet(wxCommandEvent& event)
@@ -705,10 +730,16 @@ void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
         allReporterData_.clear();
     }
     
+    std::vector<std::string*> stringItemsToDelete;
     for (auto index = m_listSpots->GetItemCount() - 1; index >= 0; index--)
     {
-        delete (std::string*)m_listSpots->GetItemData(index);
-        m_listSpots->DeleteItem(index);
+        stringItemsToDelete.push_back((std::string*)m_listSpots->GetItemData(index));
+    }
+    m_listSpots->DeleteAllItems();
+
+    for (auto& ptr : stringItemsToDelete)
+    {
+        delete ptr;
     }
 
     // Reset lengths to force auto-resize on (re)connect.
@@ -717,6 +748,8 @@ void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
         columnLengths_[col] = 0;
         m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
     }
+
+    m_listSpots->Update();
 }
 
 double FreeDVReporterDialog::calculateDistance_(wxString gridSquare1, wxString gridSquare2)
@@ -1201,7 +1234,6 @@ void FreeDVReporterDialog::onMessageUpdateFn_(std::string sid, std::string lastU
             
             if (message.size() > 0 && isConnected_ && !filteringSelf)
             {
-                fprintf(stderr, "XXX message is being updated\n");
                 iter->second->lastUpdateUserMessage = iter->second->lastUpdateDate;
             }
             else if (ourCallsign && filteringSelf)
@@ -1308,7 +1340,6 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     }
     
     bool needResort = false;
-    bool isAdded = false;
 
     if (itemIndex >= 0 && filtered)
     {
@@ -1329,7 +1360,6 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     }
     else if (itemIndex == -1 && !filtered)
     {
-        isAdded = true;
         itemIndex = m_listSpots->InsertItem(m_listSpots->GetItemCount(), data->callsign);
         m_listSpots->SetItemPtrData(itemIndex, (wxUIntPtr)new std::string(data->sid));
         needResort = currentSortColumn_ == 0;
@@ -1365,33 +1395,33 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     changed = setColumnForRow_(itemIndex, 12, data->lastUpdate, colResizeList);
     needResort |= changed && currentSortColumn_ == 12;
     
+    // Messaging updates take highest priority.
     auto curDate = wxDateTime::Now().ToUTC();
-    if (data->transmitting)
+    wxColour backgroundColor;
+    wxColour foregroundColor;
+    if (data->lastUpdateUserMessage.IsValid() && data->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC)))
     {
-        wxColour txBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
-        wxColour txForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
-        m_listSpots->SetItemBackgroundColour(itemIndex, txBackgroundColor);
-        m_listSpots->SetItemTextColour(itemIndex, txForegroundColor);
+        backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor);
+        foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor);
+    }
+    else if (data->transmitting)
+    {
+        backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
+        foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
     }
     else if (data->lastRxDate.IsValid() && data->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_TIMEOUT_SEC)))
     {
-        wxColour rxBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
-        wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
-        m_listSpots->SetItemBackgroundColour(itemIndex, rxBackgroundColor);
-        m_listSpots->SetItemTextColour(itemIndex, rxForegroundColor);
-    }
-    else if (!isAdded && data->lastUpdateUserMessage.IsValid() && data->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC)))
-    {
-        wxColour rxBackgroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor);
-        wxColour rxForegroundColor(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor);
-        m_listSpots->SetItemBackgroundColour(itemIndex, rxBackgroundColor);
-        m_listSpots->SetItemTextColour(itemIndex, rxForegroundColor);
+        backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
+        foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
     }
     else
     {
-        m_listSpots->SetItemBackgroundColour(itemIndex, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOX));
-        m_listSpots->SetItemTextColour(itemIndex, wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT));
+        backgroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOX);
+        foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT);
     }
+
+    m_listSpots->SetItemBackgroundColour(itemIndex, backgroundColor);
+    m_listSpots->SetItemTextColour(itemIndex, foregroundColor);
 
     if (needResort)
     {
