@@ -1493,26 +1493,39 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     
         // Run time update of EQ filters -----------------------------------
 
-        if (m_newMicInFilter || m_newSpkOutFilter) {
-            g_mutexProtectingCallbackData.Lock();
+        g_mutexProtectingCallbackData.Lock();
+
+        bool micEqEnableOld = g_rxUserdata->micInEQEnable;
+        bool spkrEqEnableOld = g_rxUserdata->spkOutEQEnable;
+
+        if (m_newMicInFilter || m_newSpkOutFilter ||
+            micEqEnableOld != wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable ||
+            spkrEqEnableOld != wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable) {
+            
             deleteEQFilters(g_rxUserdata);
         
-            if (g_nSoundCards == 1)
+            g_rxUserdata->micInEQEnable = wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable;
+            g_rxUserdata->spkOutEQEnable = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable;
+
+            if (
+                wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable ||
+                wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable)
             {
-                // RX In isn't used here but we need to provide it anyway.
-                designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate);
+                if (g_nSoundCards == 1)
+                {
+                    // RX In isn't used here but we need to provide it anyway.
+                    designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate);
+                }
+                else
+                {   
+                    designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
+                }
             }
-            else
-            {   
-                designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
-            }
-            g_mutexProtectingCallbackData.Unlock();
+
             m_newMicInFilter = m_newSpkOutFilter = false;
         }
+        g_mutexProtectingCallbackData.Unlock();
     
-        g_rxUserdata->micInEQEnable = wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable;
-        g_rxUserdata->spkOutEQEnable = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable;
-
         // set some run time options (if applicable)
         freedvInterface.setRunTimeOptions(
             (int)wxGetApp().appConfiguration.freedv700Clip,
@@ -2639,9 +2652,20 @@ void MainFrame::startRxStream()
 
         m_newMicInFilter = m_newSpkOutFilter = true;
         g_mutexProtectingCallbackData.Lock();
-        designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
+
         g_rxUserdata->micInEQEnable = wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable;
         g_rxUserdata->spkOutEQEnable = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable;
+
+        if (
+            wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable ||
+            wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable)
+        {
+            designEQFilters(
+                g_rxUserdata, 
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
+        }
+
         m_newMicInFilter = m_newSpkOutFilter = false;
         g_mutexProtectingCallbackData.Unlock();
 
@@ -2931,6 +2955,16 @@ void MainFrame::startRxStream()
         }
 
         if (g_verbose) fprintf(stderr, "starting tx/rx processing thread\n");
+
+        // Work around an issue where the buttons stay disabled even if there
+        // is an error opening one or more audio device(s).
+        bool txDevicesRunning = 
+            (!txInSoundDevice || txInSoundDevice->isRunning()) &&
+            (!txOutSoundDevice || txOutSoundDevice->isRunning());
+        bool rxDevicesRunning = 
+            (rxInSoundDevice && rxInSoundDevice->isRunning()) &&
+            (rxOutSoundDevice && rxOutSoundDevice->isRunning());
+        m_RxRunning = txDevicesRunning && rxDevicesRunning;
     }
 }
 

@@ -919,6 +919,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Improve validation of frequencies in Options dialog. (PR #628)
     * Fix typo resulting in TX device sample rate being used for filter initialization. (PR #630)
     * Fix intermittent crash resulting from object thread starting before object is fully initialized. (PR #630)
+    * Prevent creation of filters if not enabled. (PR #631)
     * Fix issue preventing Start button from reenabling itself on audio device errors. (PR #636)
 2. Enhancements:
     * Allow user to refresh status message even if it hasn't been changed. (PR #632)

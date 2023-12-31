@@ -20,15 +20,11 @@
 //
 //=========================================================================
 
-
 #include "EqualizerStep.h"
 
+#include <cstring>
 #include "../sox_biquad.h"
 #include <assert.h>
-
-// TBD -- use std::mutex instead of wxMutex to remove wxWidgets dependency.
-#include <wx/wx.h>
-extern wxMutex g_mutexProtectingCallbackData;
 
 EqualizerStep::EqualizerStep(int sampleRate, bool* enableFilter, void** bassFilter, void** midFilter, void** trebleFilter, void** volFilter)
     : sampleRate_(sampleRate)
@@ -63,18 +59,25 @@ std::shared_ptr<short> EqualizerStep::execute(std::shared_ptr<short> inputSample
     
     memcpy(outputSamples, inputSamples.get(), sizeof(short)*numInputSamples);
     
-    g_mutexProtectingCallbackData.Lock();
     if (*enableFilter_)
     {
-        sox_biquad_filter(*bassFilter_, outputSamples, outputSamples, numInputSamples);
-        sox_biquad_filter(*trebleFilter_, outputSamples, outputSamples, numInputSamples);
-        sox_biquad_filter(*midFilter_, outputSamples, outputSamples, numInputSamples);
+        if (*bassFilter_)
+        {
+            sox_biquad_filter(*bassFilter_, outputSamples, outputSamples, numInputSamples);
+        }
+        if (*trebleFilter_)
+        {
+            sox_biquad_filter(*trebleFilter_, outputSamples, outputSamples, numInputSamples);
+        }
+        if (*midFilter_)
+        {
+            sox_biquad_filter(*midFilter_, outputSamples, outputSamples, numInputSamples);
+        }
         if (*volFilter_)
         {
             sox_biquad_filter(*volFilter_, outputSamples, outputSamples, numInputSamples);
         }
     }
-    g_mutexProtectingCallbackData.Unlock();
     
     *numOutputSamples = numInputSamples;
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());

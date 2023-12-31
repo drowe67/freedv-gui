@@ -51,6 +51,7 @@
 
 extern FreeDVInterface freedvInterface;
 extern wxConfigBase *pConfig;
+extern wxMutex g_mutexProtectingCallbackData;
     
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class FilterDlg
@@ -743,14 +744,10 @@ void FilterDlg::updateControlState()
 }
 
 void FilterDlg::OnMicInEnable(wxScrollEvent& event) {
-    wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable = m_MicInEnable->GetValue();
-    updateControlState();
     adjRunTimeMicInFilter();
 }
 
 void FilterDlg::OnSpkOutEnable(wxScrollEvent& event) {
-    wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable = m_SpkOutEnable->GetValue();
-    updateControlState();
     adjRunTimeSpkOutFilter();
 }
 
@@ -847,19 +844,29 @@ void FilterDlg::plotSpkOutFilterSpectrum(void) {
 void FilterDlg::adjRunTimeMicInFilter(void) {
     // signal an adjustment in running filter coeffs
 
+    g_mutexProtectingCallbackData.Lock();
     ExchangeData(EXCHANGE_DATA_OUT);
     if (m_running) {
         *m_newMicInFilter = true;
     }
+    wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable = m_MicInEnable->GetValue();
+    g_mutexProtectingCallbackData.Unlock();
+
+    updateControlState();
 }
 
 void FilterDlg::adjRunTimeSpkOutFilter(void) {
     // signal an adjustment in running filter coeffs
 
+    g_mutexProtectingCallbackData.Lock();
     ExchangeData(EXCHANGE_DATA_OUT);
     if (m_running) {
         *m_newSpkOutFilter = true;
     }
+    wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable = m_SpkOutEnable->GetValue();
+    g_mutexProtectingCallbackData.Unlock();
+
+    updateControlState();
 }
 
 
