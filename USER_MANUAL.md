@@ -921,6 +921,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix intermittent crash resulting from object thread starting before object is fully initialized. (PR #630)
     * Prevent creation of filters if not enabled. (PR #631)
     * Fix issue preventing Start button from reenabling itself on audio device errors. (PR #636)
+    * Fix issue preventing proper FreeDV Reporter column sizing on Windows. (PR #638)
 2. Enhancements:
     * Allow user to refresh status message even if it hasn't been changed. (PR #632)
     * Increase priority of status message highlight. (PR #632)
