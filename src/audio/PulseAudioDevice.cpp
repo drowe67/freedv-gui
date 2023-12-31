@@ -55,6 +55,11 @@ PulseAudioDevice::~PulseAudioDevice()
     }
 }
 
+bool PulseAudioDevice::isRunning()
+{
+    return stream_ != nullptr;
+}
+
 void PulseAudioDevice::start()
 {
     pa_sample_spec sample_specification;

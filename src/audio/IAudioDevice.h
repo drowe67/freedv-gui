@@ -43,6 +43,8 @@ public:
     virtual void start() = 0;
     virtual void stop() = 0;
 
+    virtual bool isRunning() = 0;
+
     // Sets user friendly description of device. Not used by all engines.
     void setDescription(std::string desc);
     

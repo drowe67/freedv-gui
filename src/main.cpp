@@ -2655,10 +2655,6 @@ void MainFrame::startRxStream()
         {
             CallAfter([&, error]() {
                 wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
-
-                // Force shutdown of connection
-                wxCommandEvent tmpEvent;
-                OnTogBtnOnOff(tmpEvent);
             });
         };
 
@@ -2888,6 +2884,16 @@ void MainFrame::startRxStream()
         }
 
         if (g_verbose) fprintf(stderr, "starting tx/rx processing thread\n");
+
+        // Work around an issue where the buttons stay disabled even if there
+        // is an error opening one or more audio device(s).
+        bool txDevicesRunning = 
+            (!txInSoundDevice || txInSoundDevice->isRunning()) &&
+            (!txOutSoundDevice || txOutSoundDevice->isRunning());
+        bool rxDevicesRunning = 
+            (rxInSoundDevice && rxInSoundDevice->isRunning()) &&
+            (rxOutSoundDevice && rxOutSoundDevice->isRunning());
+        m_RxRunning = txDevicesRunning && rxDevicesRunning;
     }
 }
 
