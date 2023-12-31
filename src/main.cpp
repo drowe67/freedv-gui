@@ -2684,10 +2684,6 @@ void MainFrame::startRxStream()
                 wxCommandEvent tmpEvent;
                 OnTogBtnOnOff(tmpEvent);
             });
-
-            // Force shutdown of connection
-            wxCommandEvent tmpEvent;
-            OnTogBtnOnOff(tmpEvent);
         };
 
         rxInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
