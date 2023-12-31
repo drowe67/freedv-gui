@@ -618,6 +618,14 @@ install(
 )    
 
 if(WIN32)
+    # Install pdb files.
+    install(
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/src/freedv.pdb 
+        DESTINATION bin
+    )
+endif(WIN32)
+
+if(WIN32)
     #
     # Cpack NSIS configuration for Windows.
     #
