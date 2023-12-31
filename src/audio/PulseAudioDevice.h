@@ -36,13 +36,11 @@ class PulseAudioDevice : public IAudioDevice
 public:
     virtual ~PulseAudioDevice();
     
-    virtual int getNumChannels() override { return numChannels_; }
-    virtual int getSampleRate() const override { return sampleRate_; }
+    virtual int getNumChannels() { return numChannels_; }
+    virtual int getSampleRate() const { return sampleRate_; }
     
-    virtual void start() override;
-    virtual void stop() override;
-
-    virtual bool isRunning() override;
+    virtual void start();
+    virtual void stop();
     
 protected:
     // PulseAudioDevice cannot be created directly, only via PulseAudioEngine.

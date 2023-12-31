@@ -2679,6 +2679,10 @@ void MainFrame::startRxStream()
         {
             CallAfter([&, error]() {
                 wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
+
+                // Force shutdown of connection
+                wxCommandEvent tmpEvent;
+                OnTogBtnOnOff(tmpEvent);
             });
 
             // Force shutdown of connection
