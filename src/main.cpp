@@ -2023,94 +2023,94 @@ void MainFrame::performFreeDVOn_()
             
             startRxStream();
 
+            // attempt to start PTT ......            
+            if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT)
+            {
+                OpenHamlibRig();
+            }
+            else if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT) 
+            {
+                OpenSerialPort();
+            }
+            else
+            {
+                wxGetApp().rigPttController = nullptr;
+            }
+            
+#if defined(WIN32)
+            if (wxGetApp().appConfiguration.rigControlConfiguration.useOmniRig)
+            {
+                // OmniRig can be anbled along with serial port PTT.
+                // The logic below will ensure we don't overwrite the serial PTT
+                // handler.
+                OpenOmniRig();
+            }
+#endif // defined(WIN32)
+                
+            // Initialize PSK Reporter reporting.
+            if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
+            {        
+                if (wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString() == "" || wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString() == "")
+                {
+                    executeOnUiThreadAndWait_([&]() 
+                    {
+                        wxMessageBox("Reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
+                    });
+                }
+                else
+                {
+                    if (wxGetApp().appConfiguration.reportingConfiguration.pskReporterEnabled)
+                    {
+                        auto pskReporter = 
+                            std::make_shared<PskReporter>(
+                                wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
+                                wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
+                                std::string("FreeDV ") + FREEDV_VERSION);
+                        assert(pskReporter != nullptr);
+                        wxGetApp().m_reporters.push_back(pskReporter);
+                    }
+                    
+                    if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
+                    {
+                        wxGetApp().m_reporters.push_back(wxGetApp().m_sharedReporterObject);
+                        wxGetApp().m_sharedReporterObject->showOurselves();
+                    }
+
+                    // Enable FreeDV Reporter timer (every 5 minutes).
+                    executeOnUiThreadAndWait_([&]() 
+                    {
+                        m_pskReporterTimer.Start(5 * 60 * 1000);
+                    });
+
+                    // Make sure QSY button becomes enabled after start.
+                    executeOnUiThreadAndWait_([&]() 
+                    {
+                        if (m_reporterDialog != nullptr)
+                        {
+                            m_reporterDialog->refreshQSYButtonState();
+                        }
+                    });
+                    
+                    // Immediately transmit selected TX mode and frequency to avoid UI glitches.
+                    for (auto& obj : wxGetApp().m_reporters)
+                    {
+                        obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+                        obj->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+                    }
+                }
+            }
+            else
+            {
+                wxGetApp().m_reporters.clear();
+            }
+
+            if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTTInput)
+            {
+                OpenPTTInPort();
+            }
+
             if (m_RxRunning)
             {
-                // attempt to start PTT ......            
-                if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT)
-                {
-                    OpenHamlibRig();
-                }
-                else if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTT) 
-                {
-                    OpenSerialPort();
-                }
-                else
-                {
-                    wxGetApp().rigPttController = nullptr;
-                }
-                
-    #if defined(WIN32)
-                if (wxGetApp().appConfiguration.rigControlConfiguration.useOmniRig)
-                {
-                    // OmniRig can be anbled along with serial port PTT.
-                    // The logic below will ensure we don't overwrite the serial PTT
-                    // handler.
-                    OpenOmniRig();
-                }
-    #endif // defined(WIN32)
-                    
-                // Initialize PSK Reporter reporting.
-                if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
-                {        
-                    if (wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString() == "" || wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString() == "")
-                    {
-                        executeOnUiThreadAndWait_([&]() 
-                        {
-                            wxMessageBox("Reporting requires a valid callsign and grid square in Tools->Options. Reporting will be disabled.", wxT("Error"), wxOK | wxICON_ERROR, this);
-                        });
-                    }
-                    else
-                    {
-                        if (wxGetApp().appConfiguration.reportingConfiguration.pskReporterEnabled)
-                        {
-                            auto pskReporter = 
-                                std::make_shared<PskReporter>(
-                                    wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
-                                    wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
-                                    std::string("FreeDV ") + FREEDV_VERSION);
-                            assert(pskReporter != nullptr);
-                            wxGetApp().m_reporters.push_back(pskReporter);
-                        }
-                        
-                        if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterEnabled)
-                        {
-                            wxGetApp().m_reporters.push_back(wxGetApp().m_sharedReporterObject);
-                            wxGetApp().m_sharedReporterObject->showOurselves();
-                        }
-
-                        // Enable FreeDV Reporter timer (every 5 minutes).
-                        executeOnUiThreadAndWait_([&]() 
-                        {
-                            m_pskReporterTimer.Start(5 * 60 * 1000);
-                        });
-
-                        // Make sure QSY button becomes enabled after start.
-                        executeOnUiThreadAndWait_([&]() 
-                        {
-                            if (m_reporterDialog != nullptr)
-                            {
-                                m_reporterDialog->refreshQSYButtonState();
-                            }
-                        });
-                        
-                        // Immediately transmit selected TX mode and frequency to avoid UI glitches.
-                        for (auto& obj : wxGetApp().m_reporters)
-                        {
-                            obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
-                            obj->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-                        }
-                    }
-                }
-                else
-                {
-                    wxGetApp().m_reporters.clear();
-                }
-
-                if (wxGetApp().appConfiguration.rigControlConfiguration.useSerialPTTInput)
-                {
-                    OpenPTTInPort();
-                }
-
                 executeOnUiThreadAndWait_([&]() 
                 {
         #ifdef _USE_TIMER
@@ -2889,28 +2889,7 @@ void MainFrame::startRxStream()
             }
             
             txInSoundDevice->start();
-            if (!txInSoundDevice->isRunning())
-            {
-                rxInSoundDevice.reset();
-                rxOutSoundDevice.reset();
-                txInSoundDevice.reset();
-                txOutSoundDevice.reset();
-                m_RxRunning = false;
-                return;
-            }
-
             txOutSoundDevice->start();
-            if (!txOutSoundDevice->isRunning())
-            {
-                txInSoundDevice->stop();
-
-                rxInSoundDevice.reset();
-                rxOutSoundDevice.reset();
-                txInSoundDevice.reset();
-                txOutSoundDevice.reset();
-                m_RxRunning = false;
-                return;
-            }
             
             if ( m_txThread->Run() != wxTHREAD_NO_ERROR )
             {
@@ -2929,33 +2908,7 @@ void MainFrame::startRxStream()
         }
 
         rxInSoundDevice->start();
-        if (!rxInSoundDevice->isRunning())
-        {
-            if (txInSoundDevice) txInSoundDevice->stop();
-            if (txOutSoundDevice) txOutSoundDevice->stop();
-            
-            rxInSoundDevice.reset();
-            rxOutSoundDevice.reset();
-            txInSoundDevice.reset();
-            txOutSoundDevice.reset();
-            m_RxRunning = false;
-            return;
-        }
-
         rxOutSoundDevice->start();
-        if (!rxOutSoundDevice->isRunning())
-        {
-            if (txInSoundDevice) txInSoundDevice->stop();
-            if (txOutSoundDevice) txOutSoundDevice->stop();
-            rxInSoundDevice->stop();
-
-            rxInSoundDevice.reset();
-            rxOutSoundDevice.reset();
-            txInSoundDevice.reset();
-            txOutSoundDevice.reset();
-            m_RxRunning = false;
-            return;
-        }
 
         if ( m_rxThread->Run() != wxTHREAD_NO_ERROR )
         {
@@ -2963,6 +2916,16 @@ void MainFrame::startRxStream()
         }
 
         if (g_verbose) fprintf(stderr, "starting tx/rx processing thread\n");
+
+        // Work around an issue where the buttons stay disabled even if there
+        // is an error opening one or more audio device(s).
+        bool txDevicesRunning = 
+            (!txInSoundDevice || txInSoundDevice->isRunning()) &&
+            (!txOutSoundDevice || txOutSoundDevice->isRunning());
+        bool rxDevicesRunning = 
+            (rxInSoundDevice && rxInSoundDevice->isRunning()) &&
+            (rxOutSoundDevice && rxOutSoundDevice->isRunning());
+        m_RxRunning = txDevicesRunning && rxDevicesRunning;
     }
 }
 
