@@ -50,6 +50,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     , sortAscending_(false)
     , isConnected_(false)
     , filterSelfMessageUpdates_(false)
+    , filteredFrequency_(0)
 {
     for (int col = 0; col < NUM_COLS; col++)
     {
@@ -526,15 +527,15 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
             backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor);
             foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor);
         }
-        else if (isReceiving)
-        {
-            backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
-            foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
-        }
         else if (isTransmitting)
         {
             backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
             foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
+        }
+        else if (isReceiving)
+        {
+            backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
+            foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
         }
         else
         {
@@ -696,17 +697,22 @@ void FreeDVReporterDialog::refreshQSYButtonState()
 
 void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
 {
-    currentBandFilter_ = freq;
-    
-    // Update displayed list based on new filter criteria.
-    clearAllEntries_(false);
-
-    std::map<int, int> colResizeList;
-    for (auto& kvp : allReporterData_)
+    if (filteredFrequency_ != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency ||
+        currentBandFilter_ != freq)
     {
-        addOrUpdateListIfNotFiltered_(kvp.second, colResizeList);
+        filteredFrequency_ = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+        currentBandFilter_ = freq;
+    
+        // Update displayed list based on new filter criteria.
+        clearAllEntries_(false);
+
+        std::map<int, int> colResizeList;
+        for (auto& kvp : allReporterData_)
+        {
+            addOrUpdateListIfNotFiltered_(kvp.second, colResizeList);
+        }
+        resizeChangedColumns_(colResizeList);
     }
-    resizeChangedColumns_(colResizeList);
 }
 
 void FreeDVReporterDialog::sortColumn_(int col)
@@ -1606,6 +1612,6 @@ bool FreeDVReporterDialog::isFiltered_(uint64_t freq)
             (bandForFreq != currentBandFilter_) ||
             (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency &&
                 wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksExactFreq &&
-                freq != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+                freq != filteredFrequency_);
     }
 }

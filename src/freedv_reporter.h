@@ -157,6 +157,7 @@ class FreeDVReporterDialog : public wxDialog
          bool sortAscending_;
          bool isConnected_;
          bool filterSelfMessageUpdates_;
+         uint64_t filteredFrequency_;
          
          void clearAllEntries_(bool clearForAllBands);
          void onReporterConnect_();
