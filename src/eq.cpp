@@ -59,7 +59,7 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
 void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSampleRate)
 {
     // init Mic In Equaliser Filters
-    if (m_newMicInFilter) {
+    if (cb->micInEQEnable) {
         assert(cb->sbqMicInBass == nullptr && cb->sbqMicInTreble == nullptr && cb->sbqMicInMid == nullptr);
         //printf("designing new Min In filters\n");
         cb->sbqMicInBass   = designAnEQFilter("bass", wxGetApp().appConfiguration.filterConfiguration.micInChannel.bassFreqHz, wxGetApp().appConfiguration.filterConfiguration.micInChannel.bassGaindB, txSampleRate);
@@ -73,14 +73,14 @@ void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSam
 
     // init Spk Out Equaliser Filters
 
-    if (m_newSpkOutFilter) {
+    if (cb->spkOutEQEnable) {
         assert(cb->sbqSpkOutBass == nullptr && cb->sbqSpkOutTreble == nullptr && cb->sbqSpkOutMid == nullptr);
         //printf("designing new Spk Out filters\n");
         //printf("designEQFilters: wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.bassFreqHz: %f\n",wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.bassFreqHz);
         cb->sbqSpkOutBass   = designAnEQFilter("bass", wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.bassFreqHz, wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.bassGaindB, rxSampleRate);
         cb->sbqSpkOutTreble = designAnEQFilter("treble", wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.trebleFreqHz, wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.trebleGaindB, rxSampleRate);
         cb->sbqSpkOutMid    = designAnEQFilter("equalizer", wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midFreqHz, wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midGainDB, wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.midQ, rxSampleRate);
-        cb->sbqSpkOutVol    = designAnEQFilter("vol", 0, wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 0, txSampleRate);
+        cb->sbqSpkOutVol    = designAnEQFilter("vol", 0, wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB, 0, rxSampleRate);
         
         // Note: vol can be a no-op!
         assert(cb->sbqSpkOutBass != nullptr && cb->sbqSpkOutTreble != nullptr && cb->sbqSpkOutMid != nullptr);
@@ -94,13 +94,25 @@ void  MainFrame::deleteEQFilters(paCallBackData *cb)
 {
     if (m_newMicInFilter) 
     {
-        assert(cb->sbqMicInBass != nullptr && cb->sbqMicInTreble != nullptr && cb->sbqMicInMid != nullptr);
+        if (cb->sbqMicInBass != nullptr)
+        {
+            sox_biquad_destroy(cb->sbqMicInBass);
+        }
         
-        sox_biquad_destroy(cb->sbqMicInBass);
-        sox_biquad_destroy(cb->sbqMicInTreble);
-        sox_biquad_destroy(cb->sbqMicInMid);
+        if (cb->sbqMicInTreble != nullptr)
+        {
+            sox_biquad_destroy(cb->sbqMicInTreble);
+        }
         
-        if (cb->sbqMicInVol) sox_biquad_destroy(cb->sbqMicInVol);
+        if (cb->sbqMicInMid != nullptr)
+        {
+            sox_biquad_destroy(cb->sbqMicInMid);
+        }
+        
+        if (cb->sbqMicInVol != nullptr)
+        {
+            sox_biquad_destroy(cb->sbqMicInVol);
+        }
         
         cb->sbqMicInBass = nullptr;
         cb->sbqMicInTreble = nullptr;
@@ -109,14 +121,26 @@ void  MainFrame::deleteEQFilters(paCallBackData *cb)
     }
     
     if (m_newSpkOutFilter) 
-    {
-        assert(cb->sbqSpkOutBass != nullptr && cb->sbqSpkOutTreble != nullptr && cb->sbqSpkOutMid != nullptr);
+    {        
+        if (cb->sbqSpkOutBass != nullptr)
+        {
+            sox_biquad_destroy(cb->sbqSpkOutBass);    
+        }
+
+        if (cb->sbqSpkOutTreble != nullptr)
+        {
+            sox_biquad_destroy(cb->sbqSpkOutTreble);
+        }
+
+        if (cb->sbqSpkOutMid != nullptr)
+        {
+            sox_biquad_destroy(cb->sbqSpkOutMid);
+        }
         
-        sox_biquad_destroy(cb->sbqSpkOutBass);    
-        sox_biquad_destroy(cb->sbqSpkOutTreble);
-        sox_biquad_destroy(cb->sbqSpkOutMid);
-        
-        if (cb->sbqSpkOutVol) sox_biquad_destroy(cb->sbqSpkOutVol);
+        if (cb->sbqSpkOutVol != nullptr)
+        {
+            sox_biquad_destroy(cb->sbqSpkOutVol);
+        }
 
         cb->sbqSpkOutBass = nullptr;
         cb->sbqSpkOutTreble = nullptr;

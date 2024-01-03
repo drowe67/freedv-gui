@@ -110,13 +110,13 @@ ReportingConfiguration::ReportingConfiguration()
 
             if (reportingFrequencyAsKhz)
             {
-                float khzFloat = freq / 1000.0;
-                newList.push_back(wxString::Format("%.01f", khzFloat));
+                double khzFloat = freq / 1000.0;
+                newList.push_back(wxString::Format("%.01lf", khzFloat));
             }
             else
             {
-                float mhzFloat = freq / 1000000.0;
-                newList.push_back(wxString::Format("%.04f", mhzFloat));
+                double mhzFloat = freq / 1000000.0;
+                newList.push_back(wxString::Format("%.04lf", mhzFloat));
             }
         }
 

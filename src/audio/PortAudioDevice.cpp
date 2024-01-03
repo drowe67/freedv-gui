@@ -57,6 +57,11 @@ PortAudioDevice::~PortAudioDevice()
     }
 }
 
+bool PortAudioDevice::isRunning()
+{
+    return deviceStream_ != nullptr;
+}
+
 void PortAudioDevice::start()
 {
     PaStreamParameters streamParameters;
