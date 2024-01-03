@@ -1,7 +1,7 @@
 # Introduction
 
 FreeDV GUI (or just FreeDV) is a GUI program for Linux, Windows, and
-OSX for running FreeDV on a desktop PC or laptop.
+macOS for running FreeDV on a desktop PC or laptop.
 
 This is a live document.  Notes on new FreeDV features are being added as they are developed. 
 
@@ -64,7 +64,7 @@ you to adjust your radio sound levels (see "Sound Card Levels" below).
 
 While not required, it is recommended to enable reporting so that others
 can see who is currently receiving them. This also allows the FreeDV
-applicaton to control the radio's frequency and mode. Both sides of a contact 
+application to control the radio's frequency and mode. Both sides of a contact 
 must have this enabled in order for contacts to be reported. To configure 
 reporting, simply enable the feature here and enter your callsign and current 
 grid square/locator.
@@ -105,7 +105,7 @@ test wave files in the next section.
 
 #### Transmit/Receive (Two Sound Cards)
 
-For Tx/Rx operation you need to configure two sound cards, by setting
+For TX/RX operation you need to configure two sound cards, by setting
 up Tools - Audio Config *Transmit* and *Receive* Tabs.
 
 When receiving, FreeDV off-air signals **from** your radio are decoded
@@ -121,7 +121,7 @@ Tab | Sound Device | Notes
 Receive Tab | Input To Computer From Radio | The off air FreeDV signal **from** your radio rig interface to your computer
 Receive Tab | Output From Computer To Speaker/Headphones | The decoded audio from your computer to your Speaker/Headphones
 Transmit Tab | Input From Microphone To Computer | Your voice from the microphone to your computer
-Transmit Tab | Output From Computer To Radio | The FreeDV signal from your computer sent **to** your rig interface for Tx
+Transmit Tab | Output From Computer To Radio | The FreeDV signal from your computer sent **to** your rig interface for TX
 
 #### Changing Audio Devices
 
@@ -158,7 +158,7 @@ in the PTT Dialog.
 
 Also see [Common Problems](#common-problems) section of this manual.
 
-#### HamLib
+#### Hamlib
 
 Hamlib comes with a default serial rate for each radio.  If your radio
 has a different serial rate change the Serial Rate drop down box to
@@ -189,7 +189,7 @@ there are no other Icom/CI-V capable devices in the chain if
 
 If you change the COM port of a USB-Serial device in Device Manager,
 please unplug and plug back in the USB device.  Windows/FreeDV won't
-recognise the device on the new COM Port until it has been
+recognize the device on the new COM Port until it has been
 unplugged/plugged.
 
 ## Test Wave Files
@@ -285,7 +285,7 @@ the PTT button, the voice keyer stops.  If a signal with a valid sync is
 received for a few seconds the voice keyer also stops.
 
 The Audio tab inside Tools-Options can be used to select the wave file, set 
-the Rx delay, and number of times the tx/rx cycle repeats.
+the RX delay, and number of times the TX/RX cycle repeats.
 
 Additional options are also available if you right-click on the Voice Keyer button:
 
@@ -448,7 +448,7 @@ skill and practice when used with older, VFO based radios.
 
 ## FreeDV 700E
 
-FreeDV 700E was developed in December 2020 using lessons learned from on air operation of 700C and 700D.  A variant of 700D, it uses a shorter frame size (80ms) to reduce latency and sync time.  It is optimised for fast fading channels channels with up to 4Hz Doppler spread and 6ms delay spread.  FreeDV 7000E uses the same 700 bit/s codec as FreeDV 700C and 700D.  It requires about 3dB more power than 700D, but can operate reliably on fast fading channels.
+FreeDV 700E was developed in December 2020 using lessons learned from on air operation of 700C and 700D.  A variant of 700D, it uses a shorter frame size (80ms) to reduce latency and sync time.  It is optimized for fast fading channels channels with up to 4Hz Doppler spread and 6ms delay spread.  FreeDV 7000E uses the same 700 bit/s codec as FreeDV 700C and 700D.  It requires about 3dB more power than 700D, but can operate reliably on fast fading channels.
 
 The 700E release also includes optional compression (clipping) of the 700D and 700E transmit waveforms to reduce the Peak to Average Power Ratio to about 4dB.  For example a 100W PEP transmitter can be driven to about 40W RMS.  This is an improvement of 6dB over previous releases of FreeDV 700D. Before enabling the clipper make sure your transmitter is capable of handling sustained high average power without damage.  
 
@@ -498,7 +498,7 @@ Here are the three main innovations, and the theoretical improvements:
 
 This modes is under development and may change at any time.  If you experience comparability issues with another operator - check your Git Hash values on the Help-about menu to ensure you are running the same versions of LPCNet and codec2.
 
-It is recommended that multi-rx be disabled when using 2020B. This mode is not supported by multi-rx, you will need to manually coordinate the mode with other stations.
+It is recommended that multi-RX be disabled when using 2020B. This mode is not supported by multi-RX, you will need to manually coordinate the mode with other stations.
 
 # Tools Menu
 
@@ -508,10 +508,10 @@ This section describes features on Tools-Filter.
 
 Control | Description
  -------------------------- | ------------------------------------------------------------------------ |
-Noise Suppression | Enable noise suppression, dereverberation, AGC of mic signal using the Speex pre-processor
-700C/700D Auto EQ | Automatic equalisation for FreeDV 700C and FreeDV 700D Codec input audio
+Noise Suppression | Enable noise suppression, de-reverberation, AGC of mic signal using the Speex pre-processor
+700C/700D Auto EQ | Automatic equalization for FreeDV 700C and FreeDV 700D Codec input audio
 
-Auto EQ (Automatic Equalisation) adjusts the input speech spectrum to best fit the speech codec. It can remove annoying bass artefacts and make the codec speech easier to understand.
+Auto EQ (Automatic Equalization) adjusts the input speech spectrum to best fit the speech codec. It can remove annoying bass artifacts and make the codec speech easier to understand.
 
 Bass/Mid/Treble (for both microphone and speaker) can also be adjusted here, either with the arrow keys or your
 mouse. A graph displaying the frequency response of the signal based on your current settings will display in
@@ -549,7 +549,7 @@ It is possible to have multiple panes opened within the GUI window for example, 
 
 A new visible pane is created by hovering the cursor over the required Tab, click and hold the left mouse button and drag the Tab to the required position and releasing the mouse button. If currently two panes are stacked vertically a third pane may be added either beside either pane or to the left/right of both panes.  If the Tab is required adjacent to both panes then it must be dragged to the left/right of the junction of the existing Tabs.
 
-As the Tab is dragged into position a faint blue/grey image will show the position to be occupied by the pane. Panes may be relocated back to the menu bar by a similar process.
+As the Tab is dragged into position a faint blue/gray image will show the position to be occupied by the pane. Panes may be relocated back to the menu bar by a similar process.
 
 Tabs can be resized as required by hovering the cursor over the border and clicking and holding the left mouse button and dragging to required size.
 
@@ -575,7 +575,7 @@ Sync | Sync metric (OFDM modes like 700D and 2020)
 Var | Speech encoder distortion for 700C/700D (see Auto EQ)
 
 The sample clock offset is the estimated difference between the
-modulator (tx) and demodulator (rx) sample clocks.  For example if the
+modulator (TX) and demodulator (RX) sample clocks.  For example if the
 transmit station sound card is sampling at 44000 Hz and the receive
 station sound card 44001 Hz, the sample clock offset would be
 ((44000-44001)/44000)*1E6 = 22.7 ppm.
@@ -590,29 +590,6 @@ The steeper the slope, the greater the sample clock offset.
 * [FreeDV 1600 Sample Clock Offset Bug](http://www.rowetel.com/?p=6041)
 * [Testing a FDMDV Modem](http://www.rowetel.com/?p=2433)
 
-## UDP Messages
-
-When FreeDV syncs on a received signal for 5 seconds, it will send a
-"rx sync" UDP message to a port on your machine (localhost).  An
-external program or script listening on this port can then take some
-action, for example send "spotting" information to a web server or
-send an email your phone.
-
-Enable UDP messages on Tools-Options, and test using the "Test"
-button.
-
-On Linux you can test reception of messages using netcat:
-```
-  $ nc -ul 3000
-```  
-A sample script to email you on FreeDV sync: [send_email_on_sync.py](src/send_email_on_sync.py)
-
-Usage for Gmail:
-```
-python send_email_on_sync.py --listen_port 3000 --smtp_server smtp.gmail.com \
---smtp_port 587 your@gmail.com your_pass
-```
-
 ## Sound Card Debug
 
 These features were added for FreeDV 700D, to help diagnose sound card
@@ -622,14 +599,14 @@ issues during development.
 
 Debug FIFO and PortAudio counters: used for debugging audio
 problems on 700D.  During beta testing there were problems with break
-up in the 700D Tx and Rx audio on Windows.
+up in the 700D TX and RX audio on Windows.
 
 The PortAudio counters (PortAudio1 and PortAudio2) should not
-increment when running in Tx or Rx, as this indicates samples are
+increment when running in TX or RX, as this indicates samples are
 being lost by the sound driver which will lead to sync problems.
 
 The Fifo counter outempty1 counter should not increment during
-Tx, as this indicates FreeDV is not supplying samples fast enough to
+TX, as this indicates FreeDV is not supplying samples fast enough to
 the PortAudio drivers.  The results will be resyncs at the receiver.
 
 Check these counters by pressing Start, then Reset them and observe
@@ -647,19 +624,19 @@ If the PortAudio counters are incrementing on receive try:
   If the outempty1 counter is incrementing on transmit try increasing
   the FifoSize.
 
-  The txThreadPriority checkbox reduces the priority of the main txRx
+  The txThreadPriority checkbox reduces the priority of the main txRX
   thread in FreeDV which may help the sound driver thread process
   samples.
 
-  The txRxDumpTiming check box dumps timing information to a console
-  that is used for debugging the rx break up problem on 700D.  Each
-  number is how many ms the txRxThread took to run.
+  The txRXDumpTiming check box dumps timing information to a console
+  that is used for debugging the RX break up problem on 700D.  Each
+  number is how many ms the txRXThread took to run.
 
-  The txRxDumpTiming check box dumps the number of samples free in the
-  tx FIFO sending samples to the Tx.  If this hits zero, your tx audio
-  will break up and the rx will lose sync.  Tx audio break up will
+  The txRXDumpTiming check box dumps the number of samples free in the
+  TX FIFO sending samples to the TX.  If this hits zero, your TX audio
+  will break up and the RX will lose sync.  TX audio break up will
   also occur if you see "outfifo1" being incremented on the "Fifo"
-  line during tx.  Try increasing the FifoSize.
+  line during TX.  Try increasing the FifoSize.
 
 ## Test Frame Histogram
 
@@ -671,20 +648,20 @@ carrier has 2 bits there are 2*Nc histogram points.
 
 Ideally all carriers will have about the same BER (+/- 20% after 5000
 total bit errors), however problems can occur with filtering in the
-tx path.  If one carrier has less power, then it will have a higher
+TX path.  If one carrier has less power, then it will have a higher
 BER.  The errors in this carrier will tend to dominate overall
 BER. For example if one carrier is attenuated due to SSB filter ripple
-in the tx path then the BER on that carrier will be higher.  This is
+in the TX path then the BER on that carrier will be higher.  This is
 bad news for DV.
 
 Suggested usage:
 
-1. Transmit FreeDV in test frame mode.  Use a 2nd rx (or
-get a friend) to monitor your rx signal with FreeDV in test frame
+1. Transmit FreeDV in test frame mode.  Use a 2nd RX (or
+get a friend) to monitor your RX signal with FreeDV in test frame
 mode.  
 
-1.  Adjust your rx SNR to get a BER of a few % (e.g. reduce tx
-power, use a short antenna for the rx, point your beam away, adjust rx
+1.  Adjust your RX SNR to get a BER of a few % (e.g. reduce TX
+power, use a short antenna for the RX, point your beam away, adjust RX
 RF gain).  
 
 1. Monitor the error histogram for a few minutes, until you have say
@@ -702,10 +679,10 @@ FreeDV GUI can operate in full duplex mode which is useful for
 development or listening to your own FreeDV signal as only one PC is
 required.  Normal operation is half duplex.
 
-Tx and Rx signals can be looped back via an analog connection between
+TX and RX signals can be looped back via an analog connection between
 the sound cards.
 
-On Linux, using the Alsa loopback module:
+On Linux, using the ALSA loopback module:
 ```
   $ sudo modprobe snd-aloop
   $ ./freedv
@@ -725,7 +702,7 @@ an experimental feature is causing problems, please file a bug report!)
 # Tips
 
 1. The space bar can be used to toggle PTT.
-1. You can left click on the main window to adjust tuning, the vertical red line on the frequency scale will show the current centre frequency.  FreeDV will automatically track any drift once it syncs.
+1. You can left click on the main window to adjust tuning, the vertical red line on the frequency scale will show the current center frequency.  FreeDV will automatically track any drift once it syncs.
 
 # Common Problems
 
@@ -794,7 +771,7 @@ Is it a FreeDV signal?  SSTV uses similar frequencies. To understand what FreeDV
 ## Trouble getting Sync with 700D
 
 You need to be within +/- 60 Hz on the transmit signal.  It helps if
-both the Tx and Rx stations tune to known, exact frequencies such as
+both the TX and RX stations tune to known, exact frequencies such as
 exactly 7.177MHz.  On channels with fast fading sync may take a few
 seconds.
 
@@ -835,7 +812,7 @@ for instructions on doing so in Windows 10. For Windows 8:
 1. Select the "No, let me choose what to do" option.
 1. Check the "automatically get the device app" option, then click Save changes to save the settings you just chose.
 
-## FreeDV 2020 mode is greyed out
+## FreeDV 2020 mode is grayed out
 
 In order to use FreeDV 2020 mode, you must have both of the following:
 
@@ -868,9 +845,9 @@ You may need to clean out the previous configuration.  Try Tools - Restore Defau
 
 Have you removed/changed USB audio devices? If you remove/change USB audio devices without pressing Tools - Audio Config, FreeDV may crash.  See Changing Audio Devices above.
 
-## FreeDV can't be opened on OSX because the developer cannot be verified
+## FreeDV can't be opened on macOS because the developer cannot be verified
 
-From January 2020 Apple is enforcing notarization for all OSX applications.  The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.
+From January 2020 Apple is enforcing notarization for all macOS applications.  The FreeDV developers do not wish to operate within the Apple ecosystem due to the cost/intrusiveness of this requirement.
 
 ![Notarization Error](contrib/osx_notarization1.png)
 
@@ -920,7 +897,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix typo resulting in TX device sample rate being used for filter initialization. (PR #630)
     * Fix intermittent crash resulting from object thread starting before object is fully initialized. (PR #630)
     * Prevent creation of filters if not enabled. (PR #631)
-    * Fix issue preventing Start button from reenabling itself on audio device errors. (PR #636)
+    * Fix issue preventing Start button from re-enabling itself on audio device errors. (PR #636)
     * Fix issue preventing proper FreeDV Reporter column sizing on Windows. (PR #638)
     * Fix flicker in FreeDV Reporter window when tracking by frequency. (PR #637)
 2. Enhancements:
@@ -928,6 +905,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Increase priority of status message highlight. (PR #632)
 3. Build system:
     * Include PDB debugging file for FreeDV. (PR #633)
+4. Documentation:
+    * Fix spelling, etc. mistakes in the documentation. (PR #640)
 
 ## V1.9.6 December 2023
 
@@ -971,7 +950,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * Fix issue causing hanging while testing serial port PTT. (PR #577)
-    * Fix issue causing improper RX Only reporting when hamlib is disabled. (PR #579)
+    * Fix issue causing improper RX Only reporting when Hamlib is disabled. (PR #579)
     * Fix compiler error on some Linux installations. (PR #578)
     * Fix issue causing error on startup after testing setup with Easy Setup. (PR #575)
     * Fix issue preventing PSK Reporter from being enabled by default. (PR #575)
@@ -1187,7 +1166,7 @@ have incorrect types. This is expected as part of the bugfix merged in PR #474.*
 ## V1.8.8.1 March 2023
 
 1. Bugfixes:
-    * Downgrade hamlib for Windows and macOS due to PTT and CAT control bugs on various radios. (PR #357)
+    * Downgrade Hamlib for Windows and macOS due to PTT and CAT control bugs on various radios. (PR #357)
 
 ## V1.8.8 March 2023
 
