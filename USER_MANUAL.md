@@ -900,6 +900,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix issue preventing Start button from re-enabling itself on audio device errors. (PR #636)
     * Fix issue preventing proper FreeDV Reporter column sizing on Windows. (PR #638)
     * Fix flicker in FreeDV Reporter window when tracking by frequency. (PR #637)
+    * Update Filter dialog to better handle resizing. (PR #641)
 2. Enhancements:
     * Allow user to refresh status message even if it hasn't been changed. (PR #632)
     * Increase priority of status message highlight. (PR #632)
