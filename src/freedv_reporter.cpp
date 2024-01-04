@@ -27,7 +27,7 @@
 
 extern FreeDVInterface freedvInterface;
 
-#define UNKNOWN_STR "--"
+#define UNKNOWN_STR ""
 #if defined(WIN32)
 #define NUM_COLS (14) /* Note: need empty column 0 to work around callsign truncation issue. */
 #else
