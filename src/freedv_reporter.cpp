@@ -71,26 +71,26 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Create "hidden" column at the beginning. The column logic in wxWidgets
     // seems to want to add an image to column 0, which affects
     // autosizing.
-    m_listSpots->InsertColumn(col++, wxT(""), wxLIST_FORMAT_CENTER, 1);
+    m_listSpots->InsertColumn(col++, wxT(""), wxLIST_FORMAT_LEFT, 1);
 #endif // defined(WIN32)
 
-    m_listSpots->InsertColumn(col++, wxT("Callsign"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(col++, wxT("Locator"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(col++, wxT("km"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(col++, wxT("Version"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(col++, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("KHz") : wxT("MHz"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(col++, wxT("Status"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(col++, wxT("Msg"), wxLIST_FORMAT_CENTER, 20);
-    m_listSpots->InsertColumn(col++, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(col++, wxT("Mode"), wxLIST_FORMAT_CENTER, 80);
-    m_listSpots->InsertColumn(col++, wxT("RX Call"), wxLIST_FORMAT_CENTER, 120);
-    m_listSpots->InsertColumn(col++, wxT("Mode"), wxLIST_FORMAT_CENTER, 120);
-    m_listSpots->InsertColumn(col++, wxT("SNR"), wxLIST_FORMAT_CENTER, 40);
-    m_listSpots->InsertColumn(col++, wxT("Last Update"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(col++, wxT("Callsign"), wxLIST_FORMAT_LEFT, 80);
+    m_listSpots->InsertColumn(col++, wxT("Locator"), wxLIST_FORMAT_LEFT, 80);
+    m_listSpots->InsertColumn(col++, wxT("km"), wxLIST_FORMAT_LEFT, 80);
+    m_listSpots->InsertColumn(col++, wxT("Version"), wxLIST_FORMAT_LEFT, 80);
+    m_listSpots->InsertColumn(col++, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("KHz") : wxT("MHz"), wxLIST_FORMAT_LEFT, 80);
+    m_listSpots->InsertColumn(col++, wxT("Status"), wxLIST_FORMAT_LEFT, 80);
+    m_listSpots->InsertColumn(col++, wxT("Msg"), wxLIST_FORMAT_LEFT, 20);
+    m_listSpots->InsertColumn(col++, wxT("Last TX"), wxLIST_FORMAT_LEFT, 80);
+    m_listSpots->InsertColumn(col++, wxT("Mode"), wxLIST_FORMAT_LEFT, 80);
+    m_listSpots->InsertColumn(col++, wxT("RX Call"), wxLIST_FORMAT_LEFT, 120);
+    m_listSpots->InsertColumn(col++, wxT("Mode"), wxLIST_FORMAT_LEFT, 120);
+    m_listSpots->InsertColumn(col++, wxT("SNR"), wxLIST_FORMAT_LEFT, 40);
+    m_listSpots->InsertColumn(col++, wxT("Last Update"), wxLIST_FORMAT_LEFT, 120);
 
     // On Windows, the last column will end up taking a lot more space than desired regardless
     // of the space we actually need. Create a "dummy" column to take that space instead.
-    m_listSpots->InsertColumn(col++, wxT(""), wxLIST_FORMAT_CENTER, 1);
+    m_listSpots->InsertColumn(col++, wxT(""), wxLIST_FORMAT_LEFT, 1);
 
     sectionSizer->Add(m_listSpots, 0, wxALL | wxEXPAND, 2);
 
@@ -1438,43 +1438,43 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     col = 1;
 #endif // defined(WIN32)
 
-    bool changed = setColumnForRow_(itemIndex, col++, data->callsign, colResizeList);
+    bool changed = setColumnForRow_(itemIndex, col++, " "+data->callsign, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, data->gridSquare, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, " "+data->gridSquare, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, data->distance, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, " "+data->distance, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, data->version, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, " "+data->version, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, data->freqString, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, " "+data->freqString, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, data->status, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, " "+data->status, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, data->userMessage, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, " "+data->userMessage, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, data->lastTx, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, " "+data->lastTx, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, data->txMode, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, " "+data->txMode, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, data->lastRxCallsign, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, " "+data->lastRxCallsign, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, data->lastRxMode, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, " "+data->lastRxMode, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, data->snr, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, " "+data->snr, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, data->lastUpdate, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, " "+data->lastUpdate, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
     
     // Messaging updates take highest priority.
