@@ -902,6 +902,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix flicker in FreeDV Reporter window when tracking by frequency. (PR #637)
     * Update Filter dialog to better handle resizing. (PR #641)
     * Fix capitalization of distance units in FreeDV Reporter window. (PR #642)
+    * Rename KHz to kHz in documentation and UI. (PR #643)
 2. Enhancements:
     * Allow user to refresh status message even if it hasn't been changed. (PR #632)
     * Increase priority of status message highlight. (PR #632)
