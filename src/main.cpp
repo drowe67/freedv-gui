@@ -291,7 +291,7 @@ void MainFrame::test2020Mode_()
     }
     else
     {
-        // Sanity check: encode 1 second of 16 KHz white noise and then try to
+        // Sanity check: encode 1 second of 16 kHz white noise and then try to
         // decode it. If it takes longer than 0.5 seconds, it's unlikely that 
         // 2020/2020B will work properly on this machine.
         printf("Generating test audio...\n");
@@ -423,7 +423,7 @@ void MainFrame::loadConfiguration_()
     // Adjust frequency entry labels
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
-        m_freqBox->SetLabel(_("Report Freq. (KHz)"));
+        m_freqBox->SetLabel(_("Report Freq. (kHz)"));
     }
     else
     {
@@ -3155,7 +3155,7 @@ void MainFrame::initializeFreeDVReporter_()
     // Set up QSY request handler
     wxGetApp().m_sharedReporterObject->setOnQSYRequestFn([&](std::string callsign, uint64_t freqHz, std::string message) {
         double freqFactor = 1000.0;
-        std::string fmtMsg = "%s has requested that you QSY to %.01f KHz.";
+        std::string fmtMsg = "%s has requested that you QSY to %.01f kHz.";
         
         if (!wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {

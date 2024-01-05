@@ -214,7 +214,7 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         // Adjust frequency labels on main window
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            m_freqBox->SetLabel(_("Report Freq. (KHz)"));
+            m_freqBox->SetLabel(_("Report Freq. (kHz)"));
         }
         else
         {
@@ -1246,7 +1246,7 @@ void MainFrame::updateReportingFreqList_()
     // Update associated label if the units have changed
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
-        m_freqBox->SetLabel(_("Report Freq. (KHz)"));
+        m_freqBox->SetLabel(_("Report Freq. (kHz)"));
     }
     else
     {
