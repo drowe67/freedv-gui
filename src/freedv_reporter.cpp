@@ -76,17 +76,17 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
 
     m_listSpots->InsertColumn(col++, wxT("Callsign"), wxLIST_FORMAT_LEFT, 80);
     m_listSpots->InsertColumn(col++, wxT("Locator"), wxLIST_FORMAT_LEFT, 80);
-    m_listSpots->InsertColumn(col++, wxT("km   "), wxLIST_FORMAT_RIGHT, 80);
+    m_listSpots->InsertColumn(col++, wxT("km"), wxLIST_FORMAT_RIGHT, 80);
     m_listSpots->InsertColumn(col++, wxT("Version"), wxLIST_FORMAT_LEFT, 80);
-    m_listSpots->InsertColumn(col++, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("kHz   ") : wxT("MHz   "), wxLIST_FORMAT_RIGHT, 80);
+    m_listSpots->InsertColumn(col++, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("kHz") : wxT("MHz"), wxLIST_FORMAT_RIGHT, 80);
     m_listSpots->InsertColumn(col++, wxT("Status"), wxLIST_FORMAT_LEFT, 80);
     m_listSpots->InsertColumn(col++, wxT("Msg"), wxLIST_FORMAT_LEFT, 20);
-    m_listSpots->InsertColumn(col++, wxT("Last TX"), wxLIST_FORMAT_LEFT, 80);
+    m_listSpots->InsertColumn(col++, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
     m_listSpots->InsertColumn(col++, wxT("Mode"), wxLIST_FORMAT_LEFT, 80);
     m_listSpots->InsertColumn(col++, wxT("RX Call"), wxLIST_FORMAT_LEFT, 120);
     m_listSpots->InsertColumn(col++, wxT("Mode"), wxLIST_FORMAT_LEFT, 120);
-    m_listSpots->InsertColumn(col++, wxT("SNR   "), wxLIST_FORMAT_RIGHT, 40);
-    m_listSpots->InsertColumn(col++, wxT("Last Update"), wxLIST_FORMAT_LEFT, 120);
+    m_listSpots->InsertColumn(col++, wxT("SNR"), wxLIST_FORMAT_RIGHT, 40);
+    m_listSpots->InsertColumn(col++, wxT("Last Update"), wxLIST_FORMAT_CENTER, 120);
 
     // On Windows, the last column will end up taking a lot more space than desired regardless
     // of the space we actually need. Create a "dummy" column to take that space instead.
@@ -1061,14 +1061,8 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
                 temp->distanceVal *= 0.621371;
             }
 
-            if (0 < temp->distanceVal < 10.0)
-            {
-                temp->distance = wxString::Format("%.01f", temp->distanceVal);
-            }
-            else
-            {
-                temp->distance = wxString::Format("%.0f", temp->distanceVal);
-            }
+        temp->distance = wxString::Format("%.0f", temp->distanceVal);
+
         }
 
         temp->version = version;
