@@ -301,11 +301,11 @@ void FreeDVReporterDialog::refreshLayout()
 
     if (wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
     {
-        item.SetText("km");
+        item.SetText("km ");
     }
     else
     {
-        item.SetText("mi");
+        item.SetText("Miles");
     }
 
     m_listSpots->SetColumn(2 + colOffset, item);
@@ -1453,7 +1453,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     changed = setColumnForRow_(itemIndex, col++, " "+data->userMessage, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, " "+data->lastTx, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, data->lastTx, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
     changed = setColumnForRow_(itemIndex, col++, " "+data->txMode, colResizeList);
@@ -1468,7 +1468,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     changed = setColumnForRow_(itemIndex, col++, data->snr, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, " "+data->lastUpdate, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, data->lastUpdate, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
     
     // Messaging updates take highest priority.
