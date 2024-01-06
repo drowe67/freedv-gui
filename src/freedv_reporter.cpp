@@ -81,12 +81,12 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->InsertColumn(col++, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("kHz") : wxT("MHz"), wxLIST_FORMAT_RIGHT, 80);
     m_listSpots->InsertColumn(col++, wxT("Status"), wxLIST_FORMAT_LEFT, 80);
     m_listSpots->InsertColumn(col++, wxT("Msg"), wxLIST_FORMAT_LEFT, 20);
-    m_listSpots->InsertColumn(col++, wxT("Last TX"), wxLIST_FORMAT_CENTER, 80);
+    m_listSpots->InsertColumn(col++, wxT("Last TX"), wxLIST_FORMAT_LEFT, 80);
     m_listSpots->InsertColumn(col++, wxT("Mode"), wxLIST_FORMAT_LEFT, 80);
     m_listSpots->InsertColumn(col++, wxT("RX Call"), wxLIST_FORMAT_LEFT, 120);
     m_listSpots->InsertColumn(col++, wxT("Mode"), wxLIST_FORMAT_LEFT, 120);
     m_listSpots->InsertColumn(col++, wxT("SNR"), wxLIST_FORMAT_RIGHT, 40);
-    m_listSpots->InsertColumn(col++, wxT("Last Update"), wxLIST_FORMAT_CENTER, 120);
+    m_listSpots->InsertColumn(col++, wxT("Last Update"), wxLIST_FORMAT_LEFT, 120);
 
     // On Windows, the last column will end up taking a lot more space than desired regardless
     // of the space we actually need. Create a "dummy" column to take that space instead.
@@ -1453,7 +1453,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     changed = setColumnForRow_(itemIndex, col++, " "+data->userMessage, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, data->lastTx, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, " "+data->lastTx, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
     changed = setColumnForRow_(itemIndex, col++, " "+data->txMode, colResizeList);
@@ -1468,7 +1468,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     changed = setColumnForRow_(itemIndex, col++, data->snr, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    changed = setColumnForRow_(itemIndex, col++, data->lastUpdate, colResizeList);
+    changed = setColumnForRow_(itemIndex, col++, " "+data->lastUpdate, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
     
     // Messaging updates take highest priority.
