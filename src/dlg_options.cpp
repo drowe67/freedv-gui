@@ -198,7 +198,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxUseAnalogModes = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Use USB/LSB instead of DIGU/DIGL"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_hamlib->Add(m_ckboxUseAnalogModes, 0, wxALL | wxALIGN_LEFT, 5);
     
-    m_ckboxFrequencyEntryAsKHz = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Frequency entry in KHz"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFrequencyEntryAsKHz = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Frequency entry in kHz"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_hamlib->Add(m_ckboxFrequencyEntryAsKHz, 0, wxALL | wxALIGN_LEFT, 5);
 
     sizerRigControl->Add(sbSizer_hamlib,0, wxALL | wxEXPAND, 5);
@@ -225,7 +225,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
-        m_labelEnterFreq = new wxStaticText(m_rigControlTab, wxID_ANY, wxT("Enter frequency (KHz):"), wxDefaultPosition, wxDefaultSize, 0);
+        m_labelEnterFreq = new wxStaticText(m_rigControlTab, wxID_ANY, wxT("Enter frequency (kHz):"), wxDefaultPosition, wxDefaultSize, 0);
     }
     else
     {
@@ -924,7 +924,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         
         if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
         {
-            m_labelEnterFreq->SetLabel(wxT("Enter frequency (KHz):"));
+            m_labelEnterFreq->SetLabel(wxT("Enter frequency (kHz):"));
         }
         else
         {

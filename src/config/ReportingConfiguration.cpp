@@ -134,7 +134,7 @@ ReportingConfiguration::ReportingConfiguration()
             
             if (reportingFrequencyAsKhz)
             {
-                // Frequencies are in KHz, so divide one more time to get MHz.
+                // Frequencies are in kHz, so divide one more time to get MHz.
                 mhz /= 1000.0;
             }
 
@@ -182,7 +182,7 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, useUTCForReporting);
     
     // Note: this needs to be loaded before the frequency list so that
-    // we get the values formatted as KHz (if so configured).
+    // we get the values formatted as kHz (if so configured).
     load_(config, reportingFrequencyAsKhz);
     
     load_(config, reportingFrequencyList);

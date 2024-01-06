@@ -32,7 +32,7 @@
 class ComputeRfSpectrumStep : public IPipelineStep
 {
 public:
-    // Note: only supports 8KHz, so needs to be inserted into an AudioPipeline
+    // Note: only supports 8 kHz, so needs to be inserted into an AudioPipeline
     // in order to downconvert properly.
     ComputeRfSpectrumStep(
         std::function<struct MODEM_STATS*()> modemStatsFn,

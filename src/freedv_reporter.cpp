@@ -78,7 +78,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->InsertColumn(col++, wxT("Locator"), wxLIST_FORMAT_LEFT, 80);
     m_listSpots->InsertColumn(col++, wxT("km"), wxLIST_FORMAT_LEFT, 80);
     m_listSpots->InsertColumn(col++, wxT("Version"), wxLIST_FORMAT_LEFT, 80);
-    m_listSpots->InsertColumn(col++, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("KHz") : wxT("MHz"), wxLIST_FORMAT_LEFT, 80);
+    m_listSpots->InsertColumn(col++, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("kHz") : wxT("MHz"), wxLIST_FORMAT_LEFT, 80);
     m_listSpots->InsertColumn(col++, wxT("Status"), wxLIST_FORMAT_LEFT, 80);
     m_listSpots->InsertColumn(col++, wxT("Msg"), wxLIST_FORMAT_LEFT, 20);
     m_listSpots->InsertColumn(col++, wxT("Last TX"), wxLIST_FORMAT_LEFT, 80);
@@ -314,7 +314,7 @@ void FreeDVReporterDialog::refreshLayout()
     m_listSpots->GetColumn(4 + colOffset, item);
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
-        item.SetText("KHz");
+        item.SetText("kHz");
     }
     else
     {
