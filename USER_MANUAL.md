@@ -260,14 +260,14 @@ As an aid to the above, FreeDV will show the current mode on the bottom of the w
 
 ## Transceiver Filters
 
-For most FreeDV use, your radio's receive and transmit filters should be set to the widest possible (typically around 3 KHz). 
+For most FreeDV use, your radio's receive and transmit filters should be set to the widest possible (typically around 3 kHz). 
 This allows easy switching between analog mode as well as the various FreeDV modes. There has not been any testing done to
 definitively confirm whether narrower bandwidths help with reception of FreeDV. Additionally, FreeDV already performs its own 
 transmit filtering, so using additional narrow filtering on the radio will likely have little benefit (again, untested).
 
 For reference, the channel widths of the currently supported modes are below:
 
-| Mode | Width (KHz) |
+| Mode | Width (kHz) |
 | --- | --- |
 | 1600 | 1.125 |
 | 700C | 1.500 |
@@ -368,8 +368,8 @@ along with the reporting feature as a whole:
 * [FreeDV Reporter](https://qso.freedv.org/) -- also accessible via the Tools->FreeDV Reporter menu option.
 
 The frequency that FreeDV reports is set by changing the "Report Frequency" drop down box in the main window. This 
-is either in kilohertz (KHz) or megahertz (MHz) (configurable by going to Tools->Options->Rig Control and checking
-or unchecking "Frequency entry in KHz") and will turn red if the entered value is invalid. If Hamlib support is 
+is either in kilohertz (kHz) or megahertz (MHz) (configurable by going to Tools->Options->Rig Control and checking
+or unchecking "Frequency entry in kHz") and will turn red if the entered value is invalid. If Hamlib support is 
 also enabled, this frequency will automatically remain in sync with the current VFO on the radio (i.e. if the 
 frequency is changed in the application, the radio will also change its frequency). Double-clicking on users in 
 the Tools->FreeDV Reporter window will also cause this frequency to change to match the other user.
@@ -902,6 +902,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix flicker in FreeDV Reporter window when tracking by frequency. (PR #637)
     * Update Filter dialog to better handle resizing. (PR #641)
     * Fix capitalization of distance units in FreeDV Reporter window. (PR #642)
+    * Rename KHz to kHz in documentation and UI. (PR #643)
 2. Enhancements:
     * Allow user to refresh status message even if it hasn't been changed. (PR #632)
     * Increase priority of status message highlight. (PR #632)
@@ -924,8 +925,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Allow serial PTT to be enabled along with OmniRig. (PR #619)
     * Add 800XA to multi-RX list. (PR #617)
     * Add logic to report status message to FreeDV Reporter. (PR #620)
-    * Allow display and entry of frequencies in KHz. (PR #621)
-    * Add 5368.5 KHz to the default frequency list. (PR #626)
+    * Allow display and entry of frequencies in kHz. (PR #621)
+    * Add 5368.5 kHz to the default frequency list. (PR #626)
 
 ## V1.9.5 November 2023
 
