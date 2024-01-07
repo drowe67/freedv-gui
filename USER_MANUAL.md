@@ -906,6 +906,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Enhancements:
     * Allow user to refresh status message even if it hasn't been changed. (PR #632)
     * Increase priority of status message highlight. (PR #632)
+    * Adjust FreeDV Reporter data display to better match accepted UX standards. (PR #644)
 3. Build system:
     * Include PDB debugging file for FreeDV. (PR #633)
 4. Documentation:
