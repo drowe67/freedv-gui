@@ -850,15 +850,14 @@ void FreeDVReporterDialog::calculateLatLonFromGridSquare_(wxString gridSquare, d
     
     // If grid square is 6 or more letters, THEN use the next two.
     // Otherwise, optional.
-    if (gridSquare.Length() >= 6)
+    wxString optionalSegment = gridSquare.Mid(4, 2);
+    wxRegEx allLetters(_("^[a-z]{2}$"));
+    if (gridSquare.Length() >= 6 && allLetters.Matches(optionalSegment))
     {
         lon += ((char)gridSquare.GetChar(4) - charA) * 5.0 / 60;
         lat += ((char)gridSquare.GetChar(5) - charA) * 2.5 / 60;
-    }
     
-    // Center in middle of grid square
-    if (gridSquare.Length() >= 6)
-    {
+        // Center in middle of grid square
         lon += 5.0 / 60 / 2;
         lat += 2.5 / 60 / 2;
     }
@@ -1038,13 +1037,24 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
         ReporterData* temp = new ReporterData;
         assert(temp != nullptr);
         
-        wxString gridSquareWxString = gridSquare;
+        // Limit grid square display to six characters.
+        wxString gridSquareWxString = wxString(gridSquare).Left(6);
         
         temp->sid = sid;
         temp->callsign = wxString(callsign).Upper();
-        temp->gridSquare = gridSquareWxString.Left(2).Upper() + gridSquareWxString.Mid(2);
+        temp->gridSquare = gridSquareWxString.Left(2).Upper() + gridSquareWxString.Mid(2, 2);
 
-        if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare == "")
+        // Lowercase final letters of grid square per standard.
+        if (gridSquareWxString.Length() >= 6)
+        {
+            temp->gridSquare += gridSquareWxString.Mid(4, 2).Lower();
+        }
+
+        wxRegEx gridSquareRegex(_("^[A-Za-z]{2}[0-9]{2}"));
+        bool validCharactersInGridSquare = gridSquareRegex.Matches(temp->gridSquare);
+
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare == "" ||
+            !validCharactersInGridSquare)
         {
             // Invalid grid square means we can't calculate a distance.
             temp->distance = UNKNOWN_STR;
@@ -1061,8 +1071,7 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
                 temp->distanceVal *= 0.621371;
             }
 
-        temp->distance = wxString::Format("%.0f", temp->distanceVal);
-
+            temp->distance = wxString::Format("%.0f", temp->distanceVal);
         }
 
         temp->version = version;
