@@ -54,7 +54,7 @@ static int DefaultColumnWidths_[] = {
     65,
     60,
     75,
-    80,
+    60,
     65,
     60,
     60,
