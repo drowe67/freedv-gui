@@ -47,7 +47,7 @@ static int DefaultColumnWidths_[] = {
     1,
 #endif // defined(WIN32)
     70,
-    70,
+    65,
     60,
     70,
     60,
@@ -1567,18 +1567,14 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
 
 int FreeDVReporterDialog::getSizeForTableCellString_(wxString str)
 {
-    auto itemFont = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT); //attr.font;
     int textWidth = 0;
     int textHeight = 0; // note: unused
 
-    m_listSpots->GetTextExtent(str, &textWidth, &textHeight, nullptr, nullptr, &itemFont);
+    m_listSpots->GetTextExtent(str, &textWidth, &textHeight);
 
     // Add buffer for sort indicator and to ensure wxWidgets doesn't truncate anything almost exactly
     // fitting the new column size.
     textWidth += m_sortIcons->GetIcon(upIconIndex_).GetSize().GetWidth();
-
-    // Add additional buffer to provide space between columns.
-    textWidth += 15;
 
     return textWidth;
 }
