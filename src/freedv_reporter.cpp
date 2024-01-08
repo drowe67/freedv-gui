@@ -42,6 +42,26 @@ extern FreeDVInterface freedvInterface;
 
 using namespace std::placeholders;
 
+static int DefaultColumnWidths_[] = {
+#if defined(WIN32)
+    1,
+#endif // defined(WIN32)
+    70,
+    70,
+    60,
+    70,
+    60,
+    65,
+    60,
+    75,
+    80,
+    65,
+    60,
+    60,
+    100,
+    1
+};
+
 FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxDialog(parent, id, title, pos, size, style)
     , reporter_(nullptr)
@@ -54,7 +74,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
 {
     for (int col = 0; col < NUM_COLS; col++)
     {
-        columnLengths_[col] = 0;
+        columnLengths_[col] = DefaultColumnWidths_[col];
     }
     
     // Create top-level of control hierarchy.
@@ -71,26 +91,41 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Create "hidden" column at the beginning. The column logic in wxWidgets
     // seems to want to add an image to column 0, which affects
     // autosizing.
-    m_listSpots->InsertColumn(col++, wxT(""), wxLIST_FORMAT_LEFT, 1);
+    m_listSpots->InsertColumn(col, wxT(""), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
+    col++;
 #endif // defined(WIN32)
 
-    m_listSpots->InsertColumn(col++, wxT("Callsign"), wxLIST_FORMAT_LEFT, 80);
-    m_listSpots->InsertColumn(col++, wxT("Locator"), wxLIST_FORMAT_LEFT, 80);
-    m_listSpots->InsertColumn(col++, wxT("km"), wxLIST_FORMAT_RIGHT, 80);
-    m_listSpots->InsertColumn(col++, wxT("Version"), wxLIST_FORMAT_LEFT, 80);
-    m_listSpots->InsertColumn(col++, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("kHz") : wxT("MHz"), wxLIST_FORMAT_RIGHT, 80);
-    m_listSpots->InsertColumn(col++, wxT("Status"), wxLIST_FORMAT_LEFT, 80);
-    m_listSpots->InsertColumn(col++, wxT("Msg"), wxLIST_FORMAT_LEFT, 20);
-    m_listSpots->InsertColumn(col++, wxT("Last TX"), wxLIST_FORMAT_LEFT, 80);
-    m_listSpots->InsertColumn(col++, wxT("Mode"), wxLIST_FORMAT_LEFT, 80);
-    m_listSpots->InsertColumn(col++, wxT("RX Call"), wxLIST_FORMAT_LEFT, 120);
-    m_listSpots->InsertColumn(col++, wxT("Mode"), wxLIST_FORMAT_LEFT, 120);
-    m_listSpots->InsertColumn(col++, wxT("SNR"), wxLIST_FORMAT_RIGHT, 40);
-    m_listSpots->InsertColumn(col++, wxT("Last Update"), wxLIST_FORMAT_LEFT, 120);
+    m_listSpots->InsertColumn(col, wxT("Callsign"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
+    col++;
+    m_listSpots->InsertColumn(col, wxT("Locator"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
+    col++;
+    m_listSpots->InsertColumn(col, wxT("km"), wxLIST_FORMAT_RIGHT, DefaultColumnWidths_[col]);
+    col++;
+    m_listSpots->InsertColumn(col, wxT("Version"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
+    col++;
+    m_listSpots->InsertColumn(col, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("kHz") : wxT("MHz"), wxLIST_FORMAT_RIGHT, DefaultColumnWidths_[col]);
+    col++;
+    m_listSpots->InsertColumn(col, wxT("Status"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
+    col++;
+    m_listSpots->InsertColumn(col, wxT("Msg"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
+    col++;
+    m_listSpots->InsertColumn(col, wxT("Last TX"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
+    col++;
+    m_listSpots->InsertColumn(col, wxT("Mode"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
+    col++;
+    m_listSpots->InsertColumn(col, wxT("RX Call"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
+    col++;
+    m_listSpots->InsertColumn(col, wxT("Mode"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
+    col++;
+    m_listSpots->InsertColumn(col, wxT("SNR"), wxLIST_FORMAT_RIGHT, DefaultColumnWidths_[col]);
+    col++;
+    m_listSpots->InsertColumn(col, wxT("Last Update"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
+    col++;
 
     // On Windows, the last column will end up taking a lot more space than desired regardless
     // of the space we actually need. Create a "dummy" column to take that space instead.
-    m_listSpots->InsertColumn(col++, wxT(""), wxLIST_FORMAT_LEFT, 1);
+    m_listSpots->InsertColumn(col, wxT(""), wxLIST_FORMAT_LEFT, 1);
+    col++;
 
     sectionSizer->Add(m_listSpots, 0, wxALL | wxEXPAND, 2);
 
@@ -797,8 +832,8 @@ void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
         }
 #endif // defined(WIN32)
 
-        columnLengths_[col] = 0;
-        m_listSpots->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
+        columnLengths_[col] = DefaultColumnWidths_[col];
+        m_listSpots->SetColumnWidth(col, columnLengths_[col]);
     }
 
     m_listSpots->Update();
@@ -1117,31 +1152,53 @@ void FreeDVReporterDialog::onConnectionSuccessfulFn_()
     CallAfter(std::bind(&FreeDVReporterDialog::execQueuedAction_, this));
 }
 
+void FreeDVReporterDialog::resizeAllColumns_()
+{
+    std::map<int, int> newMaxSizes;
+    std::map<int, int> colResizeList;
+    for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
+    {
+        for (int i = 0; i < NUM_COLS; i++)
+        {
+            wxString colText = m_listSpots->GetItemText(index, i);
+            auto newSize = std::max(getSizeForTableCellString_(colText), DefaultColumnWidths_[i]);
+            if (newSize > newMaxSizes[i])
+            {
+                newMaxSizes[i] = newSize;
+            }
+
+            colResizeList[i] = 1;
+        }
+    }
+
+    columnLengths_ = newMaxSizes;
+    resizeChangedColumns_(colResizeList);
+}
+
 void FreeDVReporterDialog::onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
     
     fnQueue_.push_back([&, sid]() {
+        int indexToDelete = -1;
         for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
         {
             std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
             if (sid == *sidPtr)
-            {            
-                delete (std::string*)m_listSpots->GetItemData(index);
-                m_listSpots->DeleteItem(index);
-                
-                // Force resizing of all columns. This should reduce space if needed.
-                std::map<int, int> colResizeList;
-                for (int i = 0; i < NUM_COLS; i++)
-                {
-                    colResizeList[i] = 1;
-                    columnLengths_[i] = 0;
-                }
-                resizeChangedColumns_(colResizeList);
+            {
+                indexToDelete = index;
                 break;
             }
         }
         
+        if (indexToDelete >= 0)
+        {
+            delete (std::string*)m_listSpots->GetItemData(indexToDelete);
+            m_listSpots->DeleteItem(indexToDelete);
+
+            resizeAllColumns_();
+        }
+
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
@@ -1378,7 +1435,7 @@ void FreeDVReporterDialog::resizeChangedColumns_(std::map<int, int>& colResizeLi
         }
 #endif // defined(WIN32)
 
-        m_listSpots->SetColumnWidth(kvp.first, wxLIST_AUTOSIZE_USEHEADER);
+        m_listSpots->SetColumnWidth(kvp.first, columnLengths_[kvp.first]);
     }
 
     // Call Update() to force immediate redraw of the list. This is needed
@@ -1411,13 +1468,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
         m_listSpots->DeleteItem(itemIndex);
         
         // Force resizing of all columns. This should reduce space if needed.
-        std::map<int, int> colResizeList;
-        for (int i = 0; i < NUM_COLS; i++)
-        {
-            colResizeList[i] = 1;
-            columnLengths_[i] = 0;
-        }
-        resizeChangedColumns_(colResizeList);
+        resizeAllColumns_();
         
         return;
     }
@@ -1514,6 +1565,24 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     }
 }
 
+int FreeDVReporterDialog::getSizeForTableCellString_(wxString str)
+{
+    auto itemFont = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT); //attr.font;
+    int textWidth = 0;
+    int textHeight = 0; // note: unused
+
+    m_listSpots->GetTextExtent(str, &textWidth, &textHeight, nullptr, nullptr, &itemFont);
+
+    // Add buffer for sort indicator and to ensure wxWidgets doesn't truncate anything almost exactly
+    // fitting the new column size.
+    textWidth += m_sortIcons->GetIcon(upIconIndex_).GetSize().GetWidth();
+
+    // Add additional buffer to provide space between columns.
+    textWidth += 15;
+
+    return textWidth;
+}
+
 bool FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val, std::map<int, int>& colResizeList)
 {
     bool result = false;
@@ -1524,22 +1593,10 @@ bool FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val, std:
         result = true;
         m_listSpots->SetItem(row, col, val);
     
-        auto itemFont = m_listSpots->GetItemFont(row);
-        int textWidth = 0;
-        int textHeight = 0; // Note: unused
-    
-        // Note: if the font is invalid we should just use the default.
-        if (itemFont.IsOk())
-        {
-            GetTextExtent(val, &textWidth, &textHeight, nullptr, nullptr, &itemFont);
-        }
-        else
-        {
-            GetTextExtent(val, &textWidth, &textHeight);
-        }
-    
-        // Always force a resize for the Msg column.
-        if (textWidth > columnLengths_[col] || col == MESSAGE_COLUMN_ID)
+        int textWidth = std::max(getSizeForTableCellString_(val), DefaultColumnWidths_[col]);
+
+        // Resize column if not big enough.
+        if (textWidth > columnLengths_[col])
         {
             columnLengths_[col] = textWidth;
             colResizeList[col]++;

@@ -188,6 +188,9 @@ class FreeDVReporterDialog : public wxDialog
          
          void execQueuedAction_();
 
+         void resizeAllColumns_();
+         int getSizeForTableCellString_(wxString string);
+
          static wxCALLBACK int ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
          static double DegreesToRadians_(double degrees);
 };
