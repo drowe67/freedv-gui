@@ -243,6 +243,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     this->Connect(wxEVT_SIZE, wxSizeEventHandler(FreeDVReporterDialog::OnSize));
     this->Connect(wxEVT_MOVE, wxMoveEventHandler(FreeDVReporterDialog::OnMove));
     this->Connect(wxEVT_SHOW, wxShowEventHandler(FreeDVReporterDialog::OnShow));
+    this->Connect(wxEVT_SYS_COLOUR_CHANGED, wxSysColourChangedEventHandler(FreeDVReporterDialog::OnSystemColorChanged));
     
     m_listSpots->Connect(wxEVT_LIST_ITEM_SELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemSelected), NULL, this);
     m_listSpots->Connect(wxEVT_LIST_ITEM_DESELECTED, wxListEventHandler(FreeDVReporterDialog::OnItemDeselected), NULL, this);
@@ -428,6 +429,20 @@ void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
         // Spot list no longer valid, delete the items currently on there
         clearAllEntries_(true);
     }
+}
+
+void FreeDVReporterDialog::OnSystemColorChanged(wxSysColourChangedEvent& event)
+{
+    // Works around issues on wxWidgets with certain controls not changing backgrounds
+    // when the user switches between light and dark mode.
+    wxColour currentControlBackground = wxTransparentColour;
+
+    m_listSpots->SetBackgroundColour(currentControlBackground);
+#if !defined(WIN32)
+    ((wxWindow*)m_listSpots->m_headerWin)->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+#endif //!defined(WIN32)
+
+    event.Skip();
 }
 
 void FreeDVReporterDialog::OnInitDialog(wxInitDialogEvent& event)

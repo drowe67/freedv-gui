@@ -83,7 +83,8 @@ class FreeDVReporterDialog : public wxDialog
         void    OnStatusTextSet(wxCommandEvent& event);
         void    OnStatusTextClear(wxCommandEvent& event);
         void    OnStatusTextChange(wxCommandEvent& event);
-        
+        void    OnSystemColorChanged(wxSysColourChangedEvent& event);
+
         void OnItemSelected(wxListEvent& event);
         void OnItemDeselected(wxListEvent& event);
         void OnSortColumn(wxListEvent& event);
