@@ -81,6 +81,8 @@ class FreeDVReporterDialog : public wxDialog
         void    OnShow(wxShowEvent& event);
         void    OnBandFilterChange(wxCommandEvent& event);
         void    OnStatusTextSet(wxCommandEvent& event);
+        void    OnStatusTextSetAndSaveMessage(wxCommandEvent& event);
+        void    OnStatusTextSetContextMenu(wxContextMenuEvent& event);
         void    OnStatusTextClear(wxCommandEvent& event);
         void    OnStatusTextChange(wxCommandEvent& event);
         void    OnSystemColorChanged(wxSysColourChangedEvent& event);
@@ -112,6 +114,7 @@ class FreeDVReporterDialog : public wxDialog
         wxComboBox* m_statusMessage;
         wxButton* m_buttonSet;
         wxButton* m_buttonClear;
+        wxMenu* setPopupMenu_;
         
         // Step 4: test/save/cancel setup
         wxButton* m_buttonOK;
