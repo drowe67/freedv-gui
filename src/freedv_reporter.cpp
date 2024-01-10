@@ -682,8 +682,7 @@ void FreeDVReporterDialog::OnStatusTextSet(wxCommandEvent& event)
 
 void FreeDVReporterDialog::OnStatusTextSetContextMenu(wxContextMenuEvent& event)
 {
-    auto sz = m_buttonSet->GetSize();
-    m_buttonSet->PopupMenu(setPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
+    m_buttonSet->PopupMenu(setPopupMenu_);
 }
 
 void FreeDVReporterDialog::OnStatusTextSetAndSaveMessage(wxCommandEvent& event)
