@@ -83,7 +83,8 @@ class FreeDVReporterDialog : public wxDialog
         void    OnStatusTextSet(wxCommandEvent& event);
         void    OnStatusTextClear(wxCommandEvent& event);
         void    OnStatusTextChange(wxCommandEvent& event);
-        
+        void    OnSystemColorChanged(wxSysColourChangedEvent& event);
+
         void OnItemSelected(wxListEvent& event);
         void OnItemDeselected(wxListEvent& event);
         void OnSortColumn(wxListEvent& event);
@@ -187,6 +188,9 @@ class FreeDVReporterDialog : public wxDialog
          void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);
          
          void execQueuedAction_();
+
+         void resizeAllColumns_();
+         int getSizeForTableCellString_(wxString string);
 
          static wxCALLBACK int ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
          static double DegreesToRadians_(double degrees);

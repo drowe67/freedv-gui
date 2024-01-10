@@ -903,10 +903,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Update Filter dialog to better handle resizing. (PR #641)
     * Fix capitalization of distance units in FreeDV Reporter window. (PR #642)
     * Rename KHz to kHz in documentation and UI. (PR #643)
+    * Avoid calculating distances in FreeDV Reporter window for those with invalid grid squares. (PR #646)
+    * Fix display bugs in FreeDV Reporter window when switching between dark and light mode. (PR #646)
 2. Enhancements:
     * Allow user to refresh status message even if it hasn't been changed. (PR #632)
     * Increase priority of status message highlight. (PR #632)
     * Adjust FreeDV Reporter data display to better match accepted UX standards. (PR #644)
+    * Further reduce required space for each column in FreeDV Reporter window. (PR #646)
 3. Build system:
     * Include PDB debugging file for FreeDV. (PR #633)
 4. Documentation:
