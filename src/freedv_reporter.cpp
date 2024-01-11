@@ -214,7 +214,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     reportingSettingsSizer->Add(m_buttonSet, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     m_buttonClear = new wxButton(this, wxID_ANY, _("Clear"));
-    m_buttonClear->SetToolTip(_("Clears message from FreeDV Reporter."));
+    m_buttonClear->SetToolTip(_("Clears message from FreeDV Reporter. Right-click for additional options."));
     reportingSettingsSizer->Add(m_buttonClear, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     bottomRowSizer->Add(reportingSettingsSizer, 0, wxALL | wxALIGN_CENTER, 0);
