@@ -82,6 +82,7 @@ class FreeDVReporterDialog : public wxDialog
         void    OnBandFilterChange(wxCommandEvent& event);
         void    OnStatusTextSend(wxCommandEvent& event);
         void    OnStatusTextSendAndSaveMessage(wxCommandEvent& event);
+        void    OnStatusTextSaveMessage(wxCommandEvent& event);
         void    OnStatusTextSendContextMenu(wxContextMenuEvent& event);
         void    OnStatusTextClear(wxCommandEvent& event);
         void    OnStatusTextClearContextMenu(wxContextMenuEvent& event);

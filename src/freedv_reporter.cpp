@@ -245,10 +245,17 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     setPopupMenu_ = new wxMenu();
     assert(setPopupMenu_ != nullptr);
     
-    auto setSaveMenuItem = setPopupMenu_->Append(wxID_ANY, _("Set and save message"));
+    auto setSaveMenuItem = setPopupMenu_->Append(wxID_ANY, _("Send and save message"));
     setPopupMenu_->Connect(
         setSaveMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
         wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSendAndSaveMessage),
+        NULL,
+        this);
+
+    auto saveMenuItem = setPopupMenu_->Append(wxID_ANY, _("Only save message"));
+    setPopupMenu_->Connect(
+        saveMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSaveMessage),
         NULL,
         this);
 
@@ -707,7 +714,11 @@ void FreeDVReporterDialog::OnStatusTextSendContextMenu(wxContextMenuEvent& event
 void FreeDVReporterDialog::OnStatusTextSendAndSaveMessage(wxCommandEvent& event)
 {
     OnStatusTextSend(event);
+    OnStatusTextSaveMessage(event);
+}
 
+void FreeDVReporterDialog::OnStatusTextSaveMessage(wxCommandEvent& event)
+{
     auto statusMsg = m_statusMessage->GetValue().SubString(0, MESSAGE_CHAR_LIMIT - 1); 
     if (statusMsg.size() > 0)
     {
