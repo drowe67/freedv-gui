@@ -773,16 +773,12 @@ void FreeDVReporterDialog::OnStatusTextClearSelected(wxCommandEvent& event)
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->push_back(m_statusMessage->GetString(index));
         }
     }
-
-    OnStatusTextClear(event);
 }
 
 void FreeDVReporterDialog::OnStatusTextClearAll(wxCommandEvent& event)
 {
     m_statusMessage->Clear();
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->clear();
-
-    OnStatusTextClear(event);
 }
 
 void FreeDVReporterDialog::refreshQSYButtonState()
