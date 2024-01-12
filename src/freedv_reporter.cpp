@@ -984,7 +984,7 @@ void FreeDVReporterDialog::calculateLatLonFromGridSquare_(wxString gridSquare, d
     // If grid square is 6 or more letters, THEN use the next two.
     // Otherwise, optional.
     wxString optionalSegment = gridSquare.Mid(4, 2);
-    wxRegEx allLetters(_("^[a-z]{2}$"));
+    wxRegEx allLetters(_("^[A-Z]{2}$"));
     if (gridSquare.Length() >= 6 && allLetters.Matches(optionalSegment))
     {
         lon += ((char)gridSquare.GetChar(4) - charA) * 5.0 / 60;
