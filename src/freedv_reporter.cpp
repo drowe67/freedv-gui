@@ -704,6 +704,24 @@ void FreeDVReporterDialog::OnStatusTextSend(wxCommandEvent& event)
     }
 
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText = statusMsg;
+
+    // If already on the list, move to the top of the list.
+    auto location = m_statusMessage->FindString(statusMsg);
+    if (location >= 0)
+    {
+        m_statusMessage->Delete(location);
+        m_statusMessage->Insert(statusMsg, 0);
+
+        // Reselect "new" first entry to avoid display issues
+        m_statusMessage->SetSelection(0);
+
+        // Preserve current state of the MRU list.
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->clear();
+        for (unsigned int index = 0; index < m_statusMessage->GetCount(); index++)
+        {
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->push_back(m_statusMessage->GetString(index));
+        }
+    }   
 }
 
 void FreeDVReporterDialog::OnStatusTextSendContextMenu(wxContextMenuEvent& event)
@@ -722,11 +740,11 @@ void FreeDVReporterDialog::OnStatusTextSaveMessage(wxCommandEvent& event)
     auto statusMsg = m_statusMessage->GetValue().SubString(0, MESSAGE_CHAR_LIMIT - 1); 
     if (statusMsg.size() > 0)
     {
-        // Add to MRU list if not already there. Otherwise, move to top.
         auto location = m_statusMessage->FindString(statusMsg);
         if (location >= 0)
         {
-            m_statusMessage->Delete(location);
+            // Don't save if already in the list.
+            return;
         }
         m_statusMessage->Insert(statusMsg, 0);
 
