@@ -912,6 +912,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Further reduce required space for each column in FreeDV Reporter window. (PR #646)
 3. Build system:
     * Include PDB debugging file for FreeDV. (PR #633)
+    * End support for 32 bit ARM on Windows. (PR #651)
 4. Documentation:
     * Fix spelling, etc. mistakes in the documentation. (PR #640)
 
