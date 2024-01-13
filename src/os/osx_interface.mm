@@ -61,6 +61,10 @@ void VerifyMicrophonePermissions(std::promise<bool>& microphonePromise)
             }
         }
     }
+    else
+    {
+        microphonePromise.set_value(true);
+    }
 #else
     microphonePromise.set_value(true);
 #endif // !APPLE_OLD_XCODE
