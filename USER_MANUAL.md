@@ -918,6 +918,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * End support for 32 bit ARM on Windows. (PR #651)
 4. Documentation:
     * Fix spelling, etc. mistakes in the documentation. (PR #640)
+5. Code cleanup:
+    * Move GUI related files into their own folder. (PR #654)
+    * Move build scripts into cmake folder. (PR #654)
+    * Remove no longer used scripts and patch files. (PR #654)
 
 ## V1.9.6 December 2023
 
