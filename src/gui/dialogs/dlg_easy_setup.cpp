@@ -24,6 +24,7 @@
 #include <climits>
 #include <cmath>
 
+#include <wx/wx.h>
 #include <wx/valnum.h>
 
 #include "main.h"
