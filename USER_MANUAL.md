@@ -905,6 +905,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Rename KHz to kHz in documentation and UI. (PR #643)
     * Avoid calculating distances in FreeDV Reporter window for those with invalid grid squares. (PR #646, #649)
     * Fix display bugs in FreeDV Reporter window when switching between dark and light mode. (PR #646)
+    * Add guard code to prevent FreeDV Reporter window from being off screen on startup. (PR #650)
     * Fix issue preventing FreeDV startup on macOS <= 10.13. (PR #652)
 2. Enhancements:
     * Allow user to refresh status message even if it hasn't been changed. (PR #632)

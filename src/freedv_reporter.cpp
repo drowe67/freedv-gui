@@ -21,6 +21,7 @@
 
 #include <math.h>
 #include <wx/datetime.h>
+#include <wx/display.h>
 #include "freedv_reporter.h"
 
 #include "freedv_interface.h"
@@ -234,9 +235,34 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     SetPosition(wxPoint(
         wxGetApp().appConfiguration.reporterWindowLeft,
         wxGetApp().appConfiguration.reporterWindowTop));
-    
+
     this->Layout();
-    
+
+    // Make sure we didn't end up placing it off the screen in a location that can't
+    // easily be brought back.
+    auto displayNo = wxDisplay::GetFromWindow(this);
+    if (displayNo == wxNOT_FOUND)
+    {
+        displayNo = 0;
+    }
+    wxDisplay currentDisplay(displayNo);
+    wxPoint actualPos = GetPosition();
+    wxSize actualWindowSize = GetSize();
+    wxRect actualDisplaySize = currentDisplay.GetClientArea();
+    if (actualPos.x < (-0.9 * actualWindowSize.GetWidth()) ||
+        actualPos.x > (0.9 * actualDisplaySize.GetWidth()))
+    {
+        actualPos.x = 0;
+    }
+    if (actualPos.y < 0 ||
+        actualPos.y > (0.9 * actualDisplaySize.GetHeight()))
+    {
+        actualPos.y = 0;
+    }
+    wxGetApp().appConfiguration.reporterWindowLeft = actualPos.x;
+    wxGetApp().appConfiguration.reporterWindowTop = actualPos.y;
+    SetPosition(actualPos);
+
     // Set up highlight clear timer
     m_highlightClearTimer = new wxTimer(this);
     m_highlightClearTimer->Start(1000);
