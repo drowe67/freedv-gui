@@ -136,9 +136,15 @@ Testing FreeDV API:
 
 Using MacPorts, most of the appropriate dependencies can be installed by:
 
-$ sudo port install subversion git libtool sox +universal cmake
+```
+$ sudo port install automake git libtool sox +universal cmake
+```
 
-It should be fairly similar using HomeBrew, but you will need to replace all the /opt/ paths in the following instructions.
+and on Homebrew:
+
+```
+$ sudo brew install automake libtool git sox cmake
+```
 
 Once the dependencies are installed, you can then run the `build_osx.sh` script inside the source tree to build
 FreeDV and associated libraries (codec2, LPCNet, hamlib). A FreeDV.app app bundle will be created inside the build_osx/src
