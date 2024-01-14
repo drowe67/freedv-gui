@@ -76,11 +76,13 @@ You need to install the codec2 and lpcnetfreedv shared libraries, and freedv-gui
 
 The ```wav``` directory contains test files of modulated audio that you can use to test FreeDV (see the [USER_MANUAL](USER_MANUAL.md)).
 
-## Building for Windows using Docker
+## Building for Windows
+
+### Building using Docker
 
 The Windows build process has been automated using a Docker container, see the freedv-gui Docker [README](docker/README_docker.md).
 
-### Building FreeDV using LLVM MinGW (EXPERIMENTAL)
+### Building LLVM MinGW (EXPERIMENTAL)
 
 It is now possible to use the LLVM version of MinGW to build FreeDV. This allows
 one to build FreeDV for ARM as well as for Intel Windows systems, including support
