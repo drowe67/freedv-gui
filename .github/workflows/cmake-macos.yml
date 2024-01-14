@@ -20,6 +20,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Install packages
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: sudo brew install automake libtool
+
     - name: Build freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}
