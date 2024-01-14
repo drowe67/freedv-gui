@@ -21,6 +21,8 @@
 #ifndef __FDMDV2_PLOT_WATERFALL__
 #define __FDMDV2_PLOT_WATERFALL__
 
+#include <wx/graphics.h>
+
 #include "plot.h"
 #include "../../defines.h"
 
