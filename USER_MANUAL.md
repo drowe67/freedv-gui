@@ -906,13 +906,16 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Avoid calculating distances in FreeDV Reporter window for those with invalid grid squares. (PR #646, #649)
     * Fix display bugs in FreeDV Reporter window when switching between dark and light mode. (PR #646)
     * Add guard code to prevent FreeDV Reporter window from being off screen on startup. (PR #650)
+    * Fix issue preventing FreeDV startup on macOS <= 10.13. (PR #652)
 2. Enhancements:
     * Allow user to refresh status message even if it hasn't been changed. (PR #632)
     * Increase priority of status message highlight. (PR #632)
     * Adjust FreeDV Reporter data display to better match accepted UX standards. (PR #644)
     * Further reduce required space for each column in FreeDV Reporter window. (PR #646)
+    * Provide an option Do save only certain FreeDV Reporter messages sent to the server. (PR #647)
 3. Build system:
     * Include PDB debugging file for FreeDV. (PR #633)
+    * End support for 32 bit ARM on Windows. (PR #651)
 4. Documentation:
     * Fix spelling, etc. mistakes in the documentation. (PR #640)
 
