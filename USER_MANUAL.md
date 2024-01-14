@@ -911,6 +911,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Increase priority of status message highlight. (PR #632)
     * Adjust FreeDV Reporter data display to better match accepted UX standards. (PR #644)
     * Further reduce required space for each column in FreeDV Reporter window. (PR #646)
+    * Provide an option Do save only certain FreeDV Reporter messages sent to the server. (PR #647)
 3. Build system:
     * Include PDB debugging file for FreeDV. (PR #633)
     * End support for 32 bit ARM on Windows. (PR #651)

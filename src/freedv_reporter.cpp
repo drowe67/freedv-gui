@@ -150,13 +150,16 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     wxBoxSizer* reportingSettingsSizer = new wxBoxSizer(wxHORIZONTAL);
 
     m_buttonOK = new wxButton(this, wxID_OK, _("Close"));
+    m_buttonOK->SetToolTip(_("Closes FreeDV Reporter window."));
     reportingSettingsSizer->Add(m_buttonOK, 0, wxALL, 5);
 
     m_buttonSendQSY = new wxButton(this, wxID_ANY, _("Request QSY"));
+    m_buttonSendQSY->SetToolTip(_("Asks selected user to switch to your frequency."));
     m_buttonSendQSY->Enable(false); // disable by default unless we get a valid selection
     reportingSettingsSizer->Add(m_buttonSendQSY, 0, wxALL, 5);
 
     m_buttonDisplayWebpage = new wxButton(this, wxID_ANY, _("Website"));
+    m_buttonDisplayWebpage->SetToolTip(_("Opens FreeDV Reporter in your Web browser."));
     reportingSettingsSizer->Add(m_buttonDisplayWebpage, 0, wxALL, 5);
 
     // Band filter list    
@@ -206,10 +209,12 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_statusMessage = new wxComboBox(this, wxID_ANY, _(""), wxDefaultPosition, wxSize(180, -1), 0, nullptr, wxCB_DROPDOWN | wxTE_PROCESS_ENTER);
     reportingSettingsSizer->Add(m_statusMessage, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_buttonSet = new wxButton(this, wxID_ANY, _("Set"));
-    reportingSettingsSizer->Add(m_buttonSet, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_buttonSend = new wxButton(this, wxID_ANY, _("Send"));
+    m_buttonSend->SetToolTip(_("Sends message to FreeDV Reporter. Right-click for additional options."));
+    reportingSettingsSizer->Add(m_buttonSend, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     m_buttonClear = new wxButton(this, wxID_ANY, _("Clear"));
+    m_buttonClear->SetToolTip(_("Clears message from FreeDV Reporter. Right-click for additional options."));
     reportingSettingsSizer->Add(m_buttonClear, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     bottomRowSizer->Add(reportingSettingsSizer, 0, wxALL | wxALIGN_CENTER, 0);
@@ -235,6 +240,44 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Set up highlight clear timer
     m_highlightClearTimer = new wxTimer(this);
     m_highlightClearTimer->Start(1000);
+
+    // Create Set popup menu
+    setPopupMenu_ = new wxMenu();
+    assert(setPopupMenu_ != nullptr);
+    
+    auto setSaveMenuItem = setPopupMenu_->Append(wxID_ANY, _("Send and save message"));
+    setPopupMenu_->Connect(
+        setSaveMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSendAndSaveMessage),
+        NULL,
+        this);
+
+    auto saveMenuItem = setPopupMenu_->Append(wxID_ANY, _("Only save message"));
+    setPopupMenu_->Connect(
+        saveMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSaveMessage),
+        NULL,
+        this);
+
+    // Create Clear popup menu
+    clearPopupMenu_ = new wxMenu();
+    assert(clearPopupMenu_ != nullptr);
+
+    auto clearSelectedMenuItem = clearPopupMenu_->Append(wxID_ANY, _("Remove selected from list"));
+    clearPopupMenu_->Connect(
+        clearSelectedMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED,
+        wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextClearSelected),
+        NULL,
+        this
+    );
+
+    auto clearAllMenuItem = clearPopupMenu_->Append(wxID_ANY, _("Clear all messages from list"));
+    clearPopupMenu_->Connect(
+        clearAllMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED,
+        wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextClearAll),
+        NULL,
+        this
+    );
     
     // Hook in events
     this->Connect(wxEVT_TIMER, wxTimerEventHandler(FreeDVReporterDialog::OnTimer), NULL, this);
@@ -250,11 +293,11 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->Connect(wxEVT_LIST_COL_CLICK, wxListEventHandler(FreeDVReporterDialog::OnSortColumn), NULL, this);
     m_listSpots->Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(FreeDVReporterDialog::OnDoubleClick), NULL, this);
     
-    m_statusMessage->Connect(wxEVT_COMBOBOX, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
-    m_statusMessage->Connect(wxEVT_TEXT_ENTER, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
     m_statusMessage->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
-    m_buttonSet->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
+    m_buttonSend->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
+    m_buttonSend->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnStatusTextSendContextMenu), NULL, this);
     m_buttonClear->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextClear), NULL, this);
+    m_buttonClear->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnStatusTextClearContextMenu), NULL, this);
 
     m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOK), NULL, this);
     m_buttonSendQSY->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnSendQSY), NULL, this);
@@ -310,11 +353,11 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     m_listSpots->Disconnect(wxEVT_LIST_COL_CLICK, wxListEventHandler(FreeDVReporterDialog::OnSortColumn), NULL, this);
     m_listSpots->Disconnect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(FreeDVReporterDialog::OnDoubleClick), NULL, this);
     
-    m_statusMessage->Disconnect(wxEVT_COMBOBOX, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
-    m_statusMessage->Disconnect(wxEVT_TEXT_ENTER, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
     m_statusMessage->Disconnect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
-    m_buttonSet->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSet), NULL, this);
+    m_buttonSend->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
     m_buttonClear->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextClear), NULL, this);
+    m_buttonSend->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnStatusTextSendContextMenu), NULL, this);
+    m_buttonClear->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnStatusTextClearContextMenu), NULL, this);
 
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnOK), NULL, this);
     m_buttonSendQSY->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnSendQSY), NULL, this);
@@ -651,7 +694,7 @@ void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent& event)
     }
 }
 
-void FreeDVReporterDialog::OnStatusTextSet(wxCommandEvent& event)
+void FreeDVReporterDialog::OnStatusTextSend(wxCommandEvent& event)
 {
     auto statusMsg = m_statusMessage->GetValue().SubString(0, MESSAGE_CHAR_LIMIT - 1); 
 
@@ -662,13 +705,46 @@ void FreeDVReporterDialog::OnStatusTextSet(wxCommandEvent& event)
 
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText = statusMsg;
 
+    // If already on the list, move to the top of the list.
+    auto location = m_statusMessage->FindString(statusMsg);
+    if (location >= 0)
+    {
+        m_statusMessage->Delete(location);
+        m_statusMessage->Insert(statusMsg, 0);
+
+        // Reselect "new" first entry to avoid display issues
+        m_statusMessage->SetSelection(0);
+
+        // Preserve current state of the MRU list.
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->clear();
+        for (unsigned int index = 0; index < m_statusMessage->GetCount(); index++)
+        {
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->push_back(m_statusMessage->GetString(index));
+        }
+    }   
+}
+
+void FreeDVReporterDialog::OnStatusTextSendContextMenu(wxContextMenuEvent& event)
+{
+    m_buttonSend->PopupMenu(setPopupMenu_);
+}
+
+void FreeDVReporterDialog::OnStatusTextSendAndSaveMessage(wxCommandEvent& event)
+{
+    OnStatusTextSend(event);
+    OnStatusTextSaveMessage(event);
+}
+
+void FreeDVReporterDialog::OnStatusTextSaveMessage(wxCommandEvent& event)
+{
+    auto statusMsg = m_statusMessage->GetValue().SubString(0, MESSAGE_CHAR_LIMIT - 1); 
     if (statusMsg.size() > 0)
     {
-        // Add to MRU list if not already there. Otherwise, move to top.
         auto location = m_statusMessage->FindString(statusMsg);
         if (location >= 0)
         {
-            m_statusMessage->Delete(location);
+            // Don't save if already in the list.
+            return;
         }
         m_statusMessage->Insert(statusMsg, 0);
 
@@ -700,6 +776,38 @@ void FreeDVReporterDialog::OnStatusTextClear(wxCommandEvent& event)
 
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText = "";
     m_statusMessage->SetValue("");
+}
+
+void FreeDVReporterDialog::OnStatusTextClearContextMenu(wxContextMenuEvent& event)
+{
+    m_buttonClear->PopupMenu(clearPopupMenu_);
+}
+
+void FreeDVReporterDialog::OnStatusTextClearSelected(wxCommandEvent& event)
+{
+    auto statusMsg = m_statusMessage->GetValue().SubString(0, MESSAGE_CHAR_LIMIT - 1); 
+    if (statusMsg.size() > 0)
+    {
+        // Remove from MRU list if there.
+        auto location = m_statusMessage->FindString(statusMsg);
+        if (location >= 0)
+        {
+            m_statusMessage->Delete(location);
+        }
+
+        // Preserve current state of the MRU list.
+        wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->clear();
+        for (unsigned int index = 0; index < m_statusMessage->GetCount(); index++)
+        {
+            wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->push_back(m_statusMessage->GetString(index));
+        }
+    }
+}
+
+void FreeDVReporterDialog::OnStatusTextClearAll(wxCommandEvent& event)
+{
+    m_statusMessage->Clear();
+    wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->clear();
 }
 
 void FreeDVReporterDialog::refreshQSYButtonState()
