@@ -11,6 +11,12 @@
 #include "main.h"
 #include "lpcnet_freedv.h"
 
+#include "gui/dialogs/dlg_easy_setup.h"
+#include "gui/dialogs/dlg_filter.h"
+#include "gui/dialogs/dlg_audiooptions.h"
+#include "gui/dialogs/dlg_options.h"
+#include "gui/dialogs/dlg_ptt.h"
+
 #if defined(WIN32)
 #include "rig_control/omnirig/OmniRigController.h"
 #endif // defined(WIN32)

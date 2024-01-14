@@ -24,8 +24,12 @@
 #include <climits>
 #include <cmath>
 
+#include <wx/valnum.h>
+
 #include "main.h"
 #include "dlg_easy_setup.h"
+#include "dlg_audiooptions.h"
+#include "dlg_ptt.h"
 #include "audio/AudioEngineFactory.h"
 
 #ifdef __WIN32__
@@ -35,7 +39,9 @@
 #include <string.h>
 #endif
 
+#ifndef PI
 #define PI 3.14159
+#endif // PI
 
 #define RX_ONLY_STRING "None (receive only)"
 #define MULTIPLE_DEVICES_STRING "(multiple)"

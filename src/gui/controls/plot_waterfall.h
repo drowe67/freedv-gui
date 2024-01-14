@@ -22,7 +22,7 @@
 #define __FDMDV2_PLOT_WATERFALL__
 
 #include "plot.h"
-#include "defines.h"
+#include "../../defines.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class PlotWaterfall

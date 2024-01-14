@@ -30,6 +30,7 @@
 #include <chrono>
 #include <climits>
 #include <wx/cmdline.h>
+
 #include "version.h"
 #include "main.h"
 #include "os/os_interface.h"
@@ -39,6 +40,10 @@
 #include "pipeline/TxRxThread.h"
 #include "reporting/pskreporter.h"
 #include "reporting/FreeDVReporter.h"
+
+#include "gui/dialogs/dlg_options.h"
+#include "gui/dialogs/dlg_filter.h"
+#include "gui/dialogs/dlg_easy_setup.h"
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1

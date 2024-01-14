@@ -22,13 +22,20 @@
 #define __AudioOptsDialog__
 
 #include <thread>
-#include "main.h"
+#include <wx/listctrl.h>
+#include <wx/combobox.h>
+#include <wx/textctrl.h>
+#include <wx/notebook.h>
+#include <wx/panel.h>
+#include <wx/stattext.h>
+#include <wx/dialog.h>
+#include <wx/sizer.h>
+
+#include "gui/controls/plot_scalar.h"
 
 #define ID_AUDIO_OPTIONS    1000
 #define AUDIO_IN            0
 #define AUDIO_OUT           1
-
-#include "codec2_fifo.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // AudioInfoDisplay
