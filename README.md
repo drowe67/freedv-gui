@@ -12,7 +12,7 @@ This document describes how to build the FreeDV GUI program for various operatin
 
   ```
   $ sudo apt install libspeexdsp-dev libsamplerate0-dev sox git \
-  libwxgtk3.0-gtk3-dev libhamlib-dev libasound2-dev libao-dev \
+  libwxgtk3.2-dev libhamlib-dev libasound2-dev libao-dev \
   libgsm1-dev libsndfile1-dev cmake module-assistant build-essential
   $ git clone https://github.com/drowe67/freedv-gui.git
   $ cd freedv-gui
@@ -102,7 +102,7 @@ for 2020 mode (on systems fast enough to acceptably decode it).
 3. Add LLVM MinGW to your PATH: `export PATH=/path/to/llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64/bin:$PATH`. (The folder containing the LLVM tools is typically named the same as the file downloaded in step (2) minus the extension.)
 4. Create a build folder inside freedv-gui: `mkdir build_windows`
 5. Run CMake to configure the FreeDV build: `cd build_windows && cmake -DCMAKE_TOOLCHAIN_FILE=${PWD}/../cross-compile/freedv-mingw-llvm-[architecture].cmake ..`
-   * Valid architectures are: aarch64, armv7, i686, x86_64
+   * Valid architectures are: aarch64 (64 bit ARM), i686 (32 bit Intel/AMD), x86_64 (64 bit Intel/AMD)
 6. Build FreeDV as normal: `make` (You can also add `-j[num]` to the end of this command to use multiple cores and shorten the build time.)
 7. Create FreeDV installer: `make package`
 
