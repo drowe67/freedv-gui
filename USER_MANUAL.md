@@ -889,7 +889,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V1.9.7 TBD 2024
+## V1.9.7 January 2024
 
 1. Bugfixes:
     * Use double precision instead of float for loading frequency list. (PR #627)
@@ -909,6 +909,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix issue preventing FreeDV startup on macOS <= 10.13. (PR #652)
     * On startup, only jiggle height and not width. (PR #653)
     * Fix issue preventing FreeDV from being linked with older versions of Xcode. (PR #654)
+    * Fix issue preventing TX audio from resuming after going from TX->RX in full duplex mode. (PR #655)
 2. Enhancements:
     * Allow user to refresh status message even if it hasn't been changed. (PR #632)
     * Increase priority of status message highlight. (PR #632)
