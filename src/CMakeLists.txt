@@ -1,40 +1,14 @@
 set(FREEDV_SOURCES
-    dlg_audiooptions.cpp
-    dlg_easy_setup.cpp
-    dlg_filter.cpp
-    dlg_options.cpp
-    dlg_ptt.cpp
     freedv_reporter.cpp
     main.cpp
-    plot.cpp
-    plot_scalar.cpp
-    plot_scatter.cpp
-    plot_spectrum.cpp
-    plot_waterfall.cpp
     topFrame.cpp
     sox_biquad.c
-    sox_biquad.h
-    comp.h
-    dlg_audiooptions.h
-    dlg_filter.h
-    dlg_options.h
-    dlg_ptt.h
-    defines.h
-    main.h
-    plot.h
-    plot_scalar.h
-    plot_scatter.h
-    plot_spectrum.h
-    plot_waterfall.h
-    topFrame.h
-    version.h
     util.cpp
     eq.cpp
     voicekeyer.cpp
     playrec.cpp
     ongui.cpp
     freedv_interface.cpp
-    freedv_interface.h        
 )
 
 set(FREEDV_LINK_LIBS_OSX
@@ -75,9 +49,9 @@ endif(APPLE)
 
 # Link imported or build tree targets.
 if(APPLE)
-target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_config fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util lpcnetfreedv codec2)
+target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util lpcnetfreedv codec2)
 else(APPLE)
-target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util lpcnetfreedv codec2)
+target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util lpcnetfreedv codec2)
 endif(APPLE)
 
 # Add build dependencies for internally built external libraries.

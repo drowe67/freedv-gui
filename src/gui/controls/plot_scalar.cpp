@@ -19,8 +19,10 @@
 //
 //==========================================================================
 #include <string.h>
-#include "wx/wx.h"
-#include "main.h"
+
+#include <wx/wx.h>
+#include <wx/graphics.h>
+
 #include "plot_scalar.h"
 
 BEGIN_EVENT_TABLE(PlotScalar, PlotPanel)

@@ -1,6 +1,6 @@
 //==========================================================================
-// Name:            plot_spectrum.h
-// Purpose:         Defines a spectrum plot derived from plot class.
+// Name:            plot_waterfall.h
+// Purpose:         Defines a waterfall plot derivative of plot.
 // Created:         June 22, 2012
 // Authors:         David Rowe, David Witten
 // 
@@ -18,48 +18,64 @@
 //  along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //==========================================================================
-#ifndef __FDMDV2_PLOT_SPECTRUM__
-#define __FDMDV2_PLOT_SPECTRUM__
+#ifndef __FDMDV2_PLOT_WATERFALL__
+#define __FDMDV2_PLOT_WATERFALL__
+
+#include <wx/graphics.h>
 
 #include "plot.h"
-#include "defines.h"
+#include "../../defines.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-// Class Waterfall
+// Class PlotWaterfall
+//
+// @class $(Name)
+// @author $(User)
+// @date $(Date)
+// @file $(CurrentFileName).$(CurrentFileExt)
+// @brief
+//
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-class PlotSpectrum : public PlotPanel
+class PlotWaterfall : public PlotPanel
 {
     public:
-    PlotSpectrum(wxWindow* parent, float *magdB, int n_magdB, 
-                 float min_mag_db=MIN_MAG_DB, float max_mag_db=MAX_MAG_DB, bool clickTune=true);
-        ~PlotSpectrum();
+        PlotWaterfall(wxWindow* parent, bool graticule, int colour);
+        ~PlotWaterfall();
+        bool checkDT(void);
+        void setGreyscale(bool greyscale) { m_greyscale = greyscale; }
         void setRxFreq(float rxFreq) { m_rxFreq = rxFreq; }
-        void setFreqScale(int n_magdB) { m_n_magdB = n_magdB; }
-
-        void setNumAveraging(int n) { m_numSampleAveraging = n; }
+        void setFs(int fs) { m_modem_stats_max_f_hz = fs/2; }
+        void setColor(int color) { m_colour = color; }
         
     protected:
+        unsigned    m_heatmap_lut[256];
+
+        unsigned    heatmap(float val, float min, float max);
+
         void        OnSize(wxSizeEvent& event);
         void        OnShow(wxShowEvent& event);
         void        drawGraticule(wxGraphicsContext* ctx);
-        void        draw(wxGraphicsContext* ctx);
+        void        draw(wxGraphicsContext* gc);
+        void        plotPixelData();
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
         void        OnMouseRightDoubleClick(wxMouseEvent& event);
 
-   private:
+    private:
+        float       m_dT;
         float       m_rxFreq;
-        float       m_max_mag_db;
-        float       m_min_mag_db;
-        float      *m_magdB;
-        float      *m_prevMagDB;
-        float      *m_nextPrevMagDB;
-        int         m_n_magdB;  
-        bool        m_clickTune;
-        int         m_numSampleAveraging;
+        bool        m_graticule;
+        float       m_min_mag;
+        float       m_max_mag;
+        int         m_colour;
+        int         m_modem_stats_max_f_hz;
 
-        void        OnDoubleClickCommon(wxMouseEvent& event);
+        wxBitmap* m_fullBmp;
+        int m_imgHeight;
+        int m_imgWidth;
         
+        void        OnDoubleClickCommon(wxMouseEvent& event);
+
         DECLARE_EVENT_TABLE()
 };
 
-#endif //__FDMDV2_PLOT_SPECTRUM__
+#endif //__FDMDV2_PLOT_WATERFALL__

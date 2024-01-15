@@ -20,9 +20,11 @@
 //==========================================================================
 #include <string.h>
 #include <algorithm>
-#include "wx/wx.h"
-#include "main.h"
+
+#include <wx/wx.h>
 #include "os/os_interface.h"
+
+#include "plot_waterfall.h"
 
 // Tweak accordingly
 #define Y_PER_SECOND (30) 

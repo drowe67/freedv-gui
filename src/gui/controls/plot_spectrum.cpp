@@ -19,9 +19,9 @@
 //
 //==========================================================================
 #include <string.h>
-#include "wx/wx.h"
+#include <wx/wx.h>
 
-#include "main.h"
+#include "plot_spectrum.h"
 
 void clickTune(float frequency); // callback to pass new click freq
 

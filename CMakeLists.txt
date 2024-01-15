@@ -33,7 +33,9 @@ if(APPLE)
 
     # Workaround for Xcode 15 bug preventing FreeDV binaries from starting
     # on older versions of macOS. See https://developer.apple.com/documentation/xcode-release-notes/xcode-15-release-notes#Linking.
-    add_link_options("-Wl,-ld_classic")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15.0.0.0)
+        add_link_options("-Wl,-ld_classic")
+    endif(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15.0.0.0)
 else(APPLE)
     project(
         ${PROJECT_NAME}
@@ -75,6 +77,9 @@ message(STATUS "Compilation date = XX${DATE_RESULT}XX")
 # generate src/version.h
 #
 configure_file(cmake/version.h.in src/version.h @ONLY)
+
+# Generate custom CTest config
+configure_file(cmake/CTestCustom.cmake ${CMAKE_BINARY_DIR})
 
 # Set default build type
 if(NOT CMAKE_BUILD_TYPE)

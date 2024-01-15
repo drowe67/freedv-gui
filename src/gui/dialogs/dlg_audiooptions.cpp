@@ -22,10 +22,15 @@
 
 #include <chrono>
 
-#include "main.h"
+#include <wx/app.h>
+#include <wx/confbase.h>
+
 #include "dlg_audiooptions.h"
+
 #include "audio/AudioEngineFactory.h"
 #include "audio/IAudioDevice.h"
+
+#include "main.h"
 
 using namespace std::chrono_literals;
 

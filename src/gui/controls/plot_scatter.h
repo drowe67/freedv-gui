@@ -21,9 +21,11 @@
 #ifndef __FDMDV2_PLOT_SCATTER__
 #define __FDMDV2_PLOT_SCATTER__
 
+#include <wx/graphics.h>
+
 #include "comp.h"
 #include "plot.h"
-#include "defines.h"
+#include "../../defines.h"
 
 #define PLOT_SCATTER_MODE_SCATTER            0
 #define PLOT_SCATTER_MODE_EYE                1
