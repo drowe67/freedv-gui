@@ -406,7 +406,7 @@ void MainFrame::loadConfiguration_()
     });
     CallAfter([=]()
     {
-        SetSize(w + 1, h + 1);
+        SetSize(w, h - 1);
     });
     CallAfter([=]()
     {
