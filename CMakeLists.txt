@@ -78,6 +78,9 @@ message(STATUS "Compilation date = XX${DATE_RESULT}XX")
 #
 configure_file(cmake/version.h.in src/version.h @ONLY)
 
+# Generate custom CTest config
+configure_file(cmake/CTestCustom.cmake ${CMAKE_BINARY_DIR})
+
 # Set default build type
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")

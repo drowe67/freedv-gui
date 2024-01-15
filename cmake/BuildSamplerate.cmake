@@ -1,5 +1,7 @@
 set(SAMPLERATE_VERSION "0.2.2")
 
+set(BUILD_TESTING OFF CACHE BOOL "Enable unit tests for libsamplerate")
+
 include(FetchContent)
 FetchContent_Declare(
     samplerate
