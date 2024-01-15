@@ -908,6 +908,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add guard code to prevent FreeDV Reporter window from being off screen on startup. (PR #650)
     * Fix issue preventing FreeDV startup on macOS <= 10.13. (PR #652)
     * On startup, only jiggle height and not width. (PR #653)
+    * Fix issue preventing FreeDV from being linked with older versions of Xcode. (PR #654)
 2. Enhancements:
     * Allow user to refresh status message even if it hasn't been changed. (PR #632)
     * Increase priority of status message highlight. (PR #632)
