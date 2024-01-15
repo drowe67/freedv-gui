@@ -876,6 +876,7 @@ void MainFrame::togglePTT(void) {
             }
         }
         g_tx = false;
+        endingTx = false;
 
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
