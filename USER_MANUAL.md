@@ -916,6 +916,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 3. Build system:
     * Include PDB debugging file for FreeDV. (PR #633)
     * End support for 32 bit ARM on Windows. (PR #651)
+    * Begin performing CI builds for macOS. (PR #654)
 4. Documentation:
     * Fix spelling, etc. mistakes in the documentation. (PR #640)
     * Update README to reflect latest state of codebase. (PR #654)
