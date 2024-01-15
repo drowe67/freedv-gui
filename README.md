@@ -78,26 +78,20 @@ The ```wav``` directory contains test files of modulated audio that you can use 
 
 ## Building for Windows
 
-### Building using Docker
-
-The Windows build process has been automated using a Docker container, see the freedv-gui Docker [README](docker/README_docker.md).
-
-### Building LLVM MinGW (EXPERIMENTAL)
-
-It is now possible to use the LLVM version of MinGW to build FreeDV. This allows
+Windows releases are built using the LLVM version of MinGW. This allows
 one to build FreeDV for ARM as well as for Intel Windows systems, including support
 for 2020 mode (on systems fast enough to acceptably decode it).
 
-#### Prerequisites
+### Prerequisites
 
 * CMake >= 3.25.0
 * Linux (tested on Ubuntu 22.04)
     * *NOTE: This does not currently work on macOS due to CMake using incorrect library suffixes.*
 * NSIS for generating the installer (for example, `sudo apt install nsis` on Ubuntu)
 
-#### Instructions
+### Instructions
 
-1. Download LLVM MinGW at https://github.com/mstorsjo/llvm-mingw/releases/tag/20220906.
+1. Download LLVM MinGW at https://github.com/mstorsjo/llvm-mingw/releases/.
 2. Decompress into your preferred location. For example: `tar xvf llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64.tar.xz` (The exact filename here will depend on the file downloaded in step (1). Note that for best results, you should use a build containing "ucrt" in the file name corresponding to the platform which you're building the Windows binary from.)
 3. Add LLVM MinGW to your PATH: `export PATH=/path/to/llvm-mingw-20220906-ucrt-ubuntu-18.04-x86_64/bin:$PATH`. (The folder containing the LLVM tools is typically named the same as the file downloaded in step (2) minus the extension.)
 4. Create a build folder inside freedv-gui: `mkdir build_windows`
@@ -106,31 +100,10 @@ for 2020 mode (on systems fast enough to acceptably decode it).
 6. Build FreeDV as normal: `make` (You can also add `-j[num]` to the end of this command to use multiple cores and shorten the build time.)
 7. Create FreeDV installer: `make package`
 
-#### Known Issues
+### Known Issues
 
 * NSIS-related issues:
     * ARM installers will not properly register in Windows despite installing properly. You can still run the application manually by navigating to C:\Program Files\FreeDV \[version\]\ using File Explorer and double-clicking on `freedv.exe`.
-
-### Testing Windows Build
-
-Conveniently, it is possible to run Windows executables using Wine on Fedora:
-
-Testing LPCNet:
-```
-  $ cd ~/freedv-gui/LPCNet/build_win/src
-  $ WINEPATH=$HOME/freedv-gui/codec2/build_win/src';'$HOME/freedv-gui/build_win/_CPack_Packages/win64/NSIS/FreeDV-1.4.0-devel-win64/bin/ wine lpcnet_enc.exe --infile all.wav --outfile all.bit
-  $ WINEPATH=$HOME/freedv-gui/codec2/build_win/src';'$HOME/freedv-gui/build_win/_CPack_Packages/win64/NSIS/FreeDV-1.4.0-devel-win64/bin/ wine lpcnet_dec.exe --infile all.bin --outfile all_out.raw
-  $ cat all_out.raw | aplay -f S16_LE -r 16000
-
-```
-
-Testing FreeDV API:
-
-```
-  $ cd freedv-gui/codec2/build_win/src
-  $ WINEPATH=$HOME/freedv-gui/LPCNet/build_win/src';'$HOME/freedv-gui/build_win/_CPack_Packages/win64/NSIS/FreeDV-1.4.0-devel-win64/bin/ wine freedv_rx 2020 ~/freedv-gui/wav/all_2020.wav out.raw
-  $ play -t .s16 -r 16000 -b 16 out.raw
-```
 
 ## Building and installing on macOS
 
