@@ -58,6 +58,8 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
 
 void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSampleRate)
 {
+    deleteEQFilters(cb);
+    
     // init Mic In Equaliser Filters
     if (cb->micInEQEnable) {
         assert(cb->sbqMicInBass == nullptr && cb->sbqMicInTreble == nullptr && cb->sbqMicInMid == nullptr);
