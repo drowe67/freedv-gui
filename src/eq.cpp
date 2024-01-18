@@ -100,25 +100,24 @@ void  MainFrame::deleteEQFilters(paCallBackData *cb)
         {
             sox_biquad_destroy(cb->sbqMicInBass);
         }
+        cb->sbqMicInBass = nullptr;
         
         if (cb->sbqMicInTreble != nullptr)
         {
             sox_biquad_destroy(cb->sbqMicInTreble);
         }
+        cb->sbqMicInTreble = nullptr;
         
         if (cb->sbqMicInMid != nullptr)
         {
             sox_biquad_destroy(cb->sbqMicInMid);
         }
+        cb->sbqMicInMid = nullptr;
         
         if (cb->sbqMicInVol != nullptr)
         {
             sox_biquad_destroy(cb->sbqMicInVol);
         }
-        
-        cb->sbqMicInBass = nullptr;
-        cb->sbqMicInTreble = nullptr;
-        cb->sbqMicInMid = nullptr;
         cb->sbqMicInVol = nullptr;
     }
     
@@ -128,25 +127,24 @@ void  MainFrame::deleteEQFilters(paCallBackData *cb)
         {
             sox_biquad_destroy(cb->sbqSpkOutBass);    
         }
+        cb->sbqSpkOutBass = nullptr;
 
         if (cb->sbqSpkOutTreble != nullptr)
         {
             sox_biquad_destroy(cb->sbqSpkOutTreble);
         }
+        cb->sbqSpkOutTreble = nullptr;
 
         if (cb->sbqSpkOutMid != nullptr)
         {
             sox_biquad_destroy(cb->sbqSpkOutMid);
         }
+        cb->sbqSpkOutMid = nullptr;
         
         if (cb->sbqSpkOutVol != nullptr)
         {
             sox_biquad_destroy(cb->sbqSpkOutVol);
         }
-
-        cb->sbqSpkOutBass = nullptr;
-        cb->sbqSpkOutTreble = nullptr;
-        cb->sbqSpkOutMid = nullptr;
         cb->sbqSpkOutVol = nullptr;
     }
 }
