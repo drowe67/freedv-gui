@@ -1512,9 +1512,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             g_rxUserdata->micInEQEnable = wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable;
             g_rxUserdata->spkOutEQEnable = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable;
 
-            if (
-                wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable ||
-                wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable)
+            if (m_newMicInFilter || m_newSpkOutFilter)
             {
                 if (g_nSoundCards == 1)
                 {

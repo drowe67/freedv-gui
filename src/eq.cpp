@@ -58,8 +58,6 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
 
 void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSampleRate)
 {
-    deleteEQFilters(cb);
-    
     // init Mic In Equaliser Filters
     if (cb->micInEQEnable) {
         assert(cb->sbqMicInBass == nullptr && cb->sbqMicInTreble == nullptr && cb->sbqMicInMid == nullptr);
@@ -87,66 +85,57 @@ void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSam
         // Note: vol can be a no-op!
         assert(cb->sbqSpkOutBass != nullptr && cb->sbqSpkOutTreble != nullptr && cb->sbqSpkOutMid != nullptr);
     }
-    
-    m_newMicInFilter = false;
-    m_newSpkOutFilter = false;
 }
 
 void  MainFrame::deleteEQFilters(paCallBackData *cb)
 {
-    if (m_newMicInFilter) 
+    if (cb->sbqMicInBass != nullptr)
     {
-        if (cb->sbqMicInBass != nullptr)
-        {
-            sox_biquad_destroy(cb->sbqMicInBass);
-        }
-        cb->sbqMicInBass = nullptr;
-        
-        if (cb->sbqMicInTreble != nullptr)
-        {
-            sox_biquad_destroy(cb->sbqMicInTreble);
-        }
-        cb->sbqMicInTreble = nullptr;
-        
-        if (cb->sbqMicInMid != nullptr)
-        {
-            sox_biquad_destroy(cb->sbqMicInMid);
-        }
-        cb->sbqMicInMid = nullptr;
-        
-        if (cb->sbqMicInVol != nullptr)
-        {
-            sox_biquad_destroy(cb->sbqMicInVol);
-        }
-        cb->sbqMicInVol = nullptr;
+        sox_biquad_destroy(cb->sbqMicInBass);
     }
+    cb->sbqMicInBass = nullptr;
     
-    if (m_newSpkOutFilter) 
-    {        
-        if (cb->sbqSpkOutBass != nullptr)
-        {
-            sox_biquad_destroy(cb->sbqSpkOutBass);    
-        }
-        cb->sbqSpkOutBass = nullptr;
-
-        if (cb->sbqSpkOutTreble != nullptr)
-        {
-            sox_biquad_destroy(cb->sbqSpkOutTreble);
-        }
-        cb->sbqSpkOutTreble = nullptr;
-
-        if (cb->sbqSpkOutMid != nullptr)
-        {
-            sox_biquad_destroy(cb->sbqSpkOutMid);
-        }
-        cb->sbqSpkOutMid = nullptr;
-        
-        if (cb->sbqSpkOutVol != nullptr)
-        {
-            sox_biquad_destroy(cb->sbqSpkOutVol);
-        }
-        cb->sbqSpkOutVol = nullptr;
+    if (cb->sbqMicInTreble != nullptr)
+    {
+        sox_biquad_destroy(cb->sbqMicInTreble);
     }
+    cb->sbqMicInTreble = nullptr;
+    
+    if (cb->sbqMicInMid != nullptr)
+    {
+        sox_biquad_destroy(cb->sbqMicInMid);
+    }
+    cb->sbqMicInMid = nullptr;
+    
+    if (cb->sbqMicInVol != nullptr)
+    {
+        sox_biquad_destroy(cb->sbqMicInVol);
+    }
+    cb->sbqMicInVol = nullptr;
+    
+    if (cb->sbqSpkOutBass != nullptr)
+    {
+        sox_biquad_destroy(cb->sbqSpkOutBass);    
+    }
+    cb->sbqSpkOutBass = nullptr;
+
+    if (cb->sbqSpkOutTreble != nullptr)
+    {
+        sox_biquad_destroy(cb->sbqSpkOutTreble);
+    }
+    cb->sbqSpkOutTreble = nullptr;
+
+    if (cb->sbqSpkOutMid != nullptr)
+    {
+        sox_biquad_destroy(cb->sbqSpkOutMid);
+    }
+    cb->sbqSpkOutMid = nullptr;
+    
+    if (cb->sbqSpkOutVol != nullptr)
+    {
+        sox_biquad_destroy(cb->sbqSpkOutVol);
+    }
+    cb->sbqSpkOutVol = nullptr;
 }
 
 
