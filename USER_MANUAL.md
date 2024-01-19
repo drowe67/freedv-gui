@@ -892,7 +892,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 ## V1.9.7.2 January 2024
 
 1. Bugfixes:
-    * Another attempt at fixing the crash previously thought to have been fixed by 1.9.7.1. (PR #657)
+    * Another attempt at fixing the crash previously thought to have been fixed by 1.9.7.1. (PR #659)
 
 ## V1.9.7.1 January 2024
 
