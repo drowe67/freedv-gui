@@ -130,8 +130,9 @@ void AudioPipeline::reloadResultResampler_()
 {
     bool createResampler = 
         resultSampler_ == nullptr || 
-        (pipelineSteps_.size() == 0 && getInputSampleRate() != getOutputSampleRate()) ||
-        resultSampler_->getInputSampleRate() != pipelineSteps_[pipelineSteps_.size() - 1]->getOutputSampleRate();
+        (pipelineSteps_.size() == 0 && 
+            (resultSampler_->getInputSampleRate() != getInputSampleRate() || resultSampler_->getOutputSampleRate() != getOutputSampleRate())) ||
+        (pipelineSteps_.size() > 0 && resultSampler_->getInputSampleRate() != pipelineSteps_[pipelineSteps_.size() - 1]->getOutputSampleRate());
     
     if (createResampler)
     {
