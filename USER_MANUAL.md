@@ -889,6 +889,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.9.8 TBD 2024
+
+2. Enhancements:
+    * Add Frequency column to RX drop-down. (PR #663)
+
 ## V1.9.7.2 January 2024
 
 1. Bugfixes:
