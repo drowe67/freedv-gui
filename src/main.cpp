@@ -1450,13 +1450,26 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         currentTimeAsString.Printf(wxT("%s %s"), currentTime.FormatISODate(), currentTime.FormatISOTime());
                         
                         auto index = m_lastReportedCallsignListView->InsertItem(0, rxCallsign, 0);
-                        m_lastReportedCallsignListView->SetItem(index, 1, currentTimeAsString);
+
+                        wxString freqString;
+                        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+                        {
+                            double freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get() / 1000.0;
+                            freqString = wxString::Format("%.01f", freq);
+                        }
+                        else
+                        {
+                            double freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get() / 1000000.0;
+                            freqString = wxString::Format("%.04f", freq);
+                        }
+                        m_lastReportedCallsignListView->SetItem(index, 1, freqString);
+                        m_lastReportedCallsignListView->SetItem(index, 2, currentTimeAsString);
                     }
                     
                     wxString snrAsString;
                     snrAsString.Printf(wxT("%0.1f"), g_snr);
                     auto index = m_lastReportedCallsignListView->GetTopItem();
-                    m_lastReportedCallsignListView->SetItem(index, 2, snrAsString);
+                    m_lastReportedCallsignListView->SetItem(index, 3, snrAsString);
                     
                     m_cboLastReportedCallsigns->SetText(rxCallsign);
                     m_cboLastReportedCallsigns->Enable(m_lastReportedCallsignListView->GetItemCount() > 0);
