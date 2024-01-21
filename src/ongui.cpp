@@ -190,6 +190,8 @@ void MainFrame::OnToolsFilter(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void MainFrame::OnToolsOptions(wxCommandEvent& event)
 {
+    bool oldFreqAsKHz = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz;
+
     wxUnusedVar(event);
     if (optionsDlg->ShowModal() == wxOK)
     {
@@ -227,7 +229,33 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         {
             m_freqBox->SetLabel(_("Report Freq. (MHz)"));
         }
-        
+
+        // If the "Frequency as kHz" option has changed, update the frequencies
+        // in the main window's callsign list.
+        if (oldFreqAsKHz != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+        {
+            for (int index = 0; index < m_lastReportedCallsignListView->GetItemCount(); index++)
+            {
+                wxString newFreq = "";
+                wxString freq = m_lastReportedCallsignListView->GetItemText(index, 1);
+                double freqDouble = 0;
+                freq.ToDouble(&freqDouble);
+
+                if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+                {
+                    freqDouble *= 1000.0;
+                    newFreq = wxString::Format("%.01f", freqDouble);
+                }
+                else
+                {
+                    freqDouble /= 1000.0;
+                    newFreq = wxString::Format("%.04f", freqDouble);
+                }
+
+                m_lastReportedCallsignListView->SetItem(index, 1, newFreq);
+            }
+        }
+
         // Initialize FreeDV Reporter if required.
         initializeFreeDVReporter_();
 
