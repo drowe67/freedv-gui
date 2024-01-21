@@ -1,5 +1,4 @@
 set(FREEDV_SOURCES
-    freedv_reporter.cpp
     main.cpp
     topFrame.cpp
     sox_biquad.c

@@ -44,6 +44,7 @@
 #include "gui/dialogs/dlg_options.h"
 #include "gui/dialogs/dlg_filter.h"
 #include "gui/dialogs/dlg_easy_setup.h"
+#include "gui/dialogs/freedv_reporter.h"
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
