@@ -1438,7 +1438,21 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     std::string pendingCallsign = rxCallsign.ToStdString();
                     auto pendingSnr = (int)(g_snr + 0.5);
 
-                    if (m_lastReportedCallsignListView->GetItemCount() == 0 || m_lastReportedCallsignListView->GetItemText(0, 0) != rxCallsign)
+                    wxString freqString;
+                    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+                    {
+                        double freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get() / 1000.0;
+                        freqString = wxString::Format("%.01f", freq);
+                    }
+                    else
+                    {
+                        double freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get() / 1000000.0;
+                        freqString = wxString::Format("%.04f", freq);
+                    }
+
+                    if (m_lastReportedCallsignListView->GetItemCount() == 0 || 
+                        m_lastReportedCallsignListView->GetItemText(0, 0) != rxCallsign ||
+                        m_lastReportedCallsignListView->GetItemText(0, 1) != freqString)
                     {
                         auto currentTime = wxDateTime::Now();
                         wxString currentTimeAsString = "";
@@ -1450,18 +1464,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         currentTimeAsString.Printf(wxT("%s %s"), currentTime.FormatISODate(), currentTime.FormatISOTime());
                         
                         auto index = m_lastReportedCallsignListView->InsertItem(0, rxCallsign, 0);
-
-                        wxString freqString;
-                        if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-                        {
-                            double freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get() / 1000.0;
-                            freqString = wxString::Format("%.01f", freq);
-                        }
-                        else
-                        {
-                            double freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency.get() / 1000000.0;
-                            freqString = wxString::Format("%.04f", freq);
-                        }
                         m_lastReportedCallsignListView->SetItem(index, 1, freqString);
                         m_lastReportedCallsignListView->SetItem(index, 2, currentTimeAsString);
                     }
