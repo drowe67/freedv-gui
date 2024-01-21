@@ -16,6 +16,7 @@
 #include "gui/dialogs/dlg_audiooptions.h"
 #include "gui/dialogs/dlg_options.h"
 #include "gui/dialogs/dlg_ptt.h"
+#include "gui/dialogs/freedv_reporter.h"
 
 #if defined(WIN32)
 #include "rig_control/omnirig/OmniRigController.h"

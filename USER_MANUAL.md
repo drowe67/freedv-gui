@@ -895,6 +895,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Prevent unnecessary recreation of resamplers in analog mode. (PR #661)
 2. Enhancements:
     * Add Frequency column to RX drop-down. (PR #663)
+3. Code cleanup:
+    * Move FreeDV Reporter dialog code to dialogs section of codebase. (PR #664)
 
 ## V1.9.7.2 January 2024
 

@@ -78,7 +78,6 @@
 #include "gui/controls/plot_waterfall.h"
 #include "gui/controls/plot_spectrum.h"
 #include "sndfile.h"
-#include "freedv_reporter.h"
 #include "sox_biquad.h"
 #include "comp_prim.h"
 #include "rig_control/HamlibRigController.h"
