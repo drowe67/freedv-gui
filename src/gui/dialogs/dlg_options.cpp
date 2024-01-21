@@ -83,7 +83,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_callSign = new wxStaticBoxSizer(sb_textMsg, wxVERTICAL);
 
     m_txtCtrlCallSign = new wxTextCtrl(m_reportingTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-    m_txtCtrlCallSign->SetToolTip(_("Txt Msg you can send along with Voice"));
+    m_txtCtrlCallSign->SetToolTip(_("Text message that you can send along with your voice. Note that this does not have error correction and thus is not guaranteed to arrive at the receiving station."));
     sbSizer_callSign->Add(m_txtCtrlCallSign, 0, wxALL | wxEXPAND, 5);
 
     sizerReporting->Add(sbSizer_callSign,0, wxALL | wxEXPAND, 5);
