@@ -68,6 +68,8 @@ class FreeDVReporterDialog : public wxDialog
         
         void setBandFilter(FilterFrequency freq);
         
+        bool isTextMessageFieldInFocus();
+        
     protected:
 
         // Handlers for events.

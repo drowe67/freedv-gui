@@ -787,7 +787,12 @@ int MainApp::FilterEvent(wxEvent& event)
         (((wxKeyEvent&)event).GetKeyCode() == WXK_SPACE))
         {
             // only use space to toggle PTT if we are running and no modal dialogs (like options) up
-            if (frame->m_RxRunning && frame->IsActive() && wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly()) {
+            bool mainWindowActive = frame->IsActive();
+            bool reporterActiveButNotUpdatingTextMessage = 
+                frame->m_reporterDialog != nullptr && frame->m_reporterDialog->IsActive() && 
+                !frame->m_reporterDialog->isTextMessageFieldInFocus();
+            if (frame->m_RxRunning && (mainWindowActive || reporterActiveButNotUpdatingTextMessage) && 
+                wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly()) {
 
                 // space bar controls rx/rx if keyer not running
                 if (frame->vk_state == VK_IDLE) {

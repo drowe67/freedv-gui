@@ -392,6 +392,11 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     m_bandFilter->Disconnect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnBandFilterChange), NULL, this);
 }
 
+bool FreeDVReporterDialog::isTextMessageFieldInFocus()
+{
+    return m_statusMessage->HasFocus();
+}
+
 void FreeDVReporterDialog::refreshLayout()
 {
     int colOffset = 0;
