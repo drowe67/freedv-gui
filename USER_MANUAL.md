@@ -893,6 +893,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * Prevent unnecessary recreation of resamplers in analog mode. (PR #661)
+    * Better handle high sample rate audio devices. (PR #668)
 2. Enhancements:
     * Add Frequency column to RX drop-down. (PR #663)
 3. Code cleanup:
