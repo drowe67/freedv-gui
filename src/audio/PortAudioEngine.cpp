@@ -163,6 +163,24 @@ std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(wxString deviceNam
 {
     auto deviceList = getAudioDeviceList(direction);
     
+    auto supportedSampleRates = getSupportedSampleRates(deviceName, direction);
+    bool found = false;
+    for (auto& rate : supportedSampleRates)
+    {
+        if (rate == sampleRate)
+        {
+            found = true;
+            break;
+        }
+    }
+
+    if (!found)
+    {
+        // Zero out the input sample rate. The device object will use the default sample rate
+        // instead.
+        sampleRate = 0;
+    }
+    
     for (auto& dev : deviceList)
     {
         if (dev.name.Find(deviceName) == 0)

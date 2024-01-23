@@ -43,7 +43,13 @@ PortAudioDevice::PortAudioDevice(int deviceId, IAudioEngine::AudioDirection dire
     // of erroring out, let's just use the device's default sample rate 
     // instead to prevent users from needing to reconfigure as much as
     // possible.
-    if (hostApiName.find("Windows WASAPI") != std::string::npos)
+    //
+    // Additionally, if we somehow get a sample rate of 0 (which normally
+    // wouldn't happen, but just in case), use the default sample rate
+    // as well. The correct sample rate will eventually be retrieved by
+    // higher level code and re-saved.
+    if (hostApiName.find("Windows WASAPI") != std::string::npos ||
+        sampleRate == 0)
     {
         sampleRate_ = deviceInfo->defaultSampleRate;
     }

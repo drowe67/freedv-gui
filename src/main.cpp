@@ -2499,6 +2499,13 @@ void MainFrame::startRxStream()
             
                 return;
             }
+            else
+            {
+                // Re-save sample rates in case they were somehow invalid before
+                // device creation.
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate = rxInSoundDevice->getSampleRate();
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = rxOutSoundDevice->getSampleRate();
+            }
         }
         else
         {
@@ -2601,6 +2608,16 @@ void MainFrame::startRxStream()
                 engine->setOnEngineError(nullptr, nullptr);
             
                 return;
+            }
+            else
+            {
+                // Re-save sample rates in case they were somehow invalid before
+                // device creation.
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate = rxInSoundDevice->getSampleRate();
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = rxOutSoundDevice->getSampleRate();
+
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = txInSoundDevice->getSampleRate();
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = txOutSoundDevice->getSampleRate();
             }
         }
 
