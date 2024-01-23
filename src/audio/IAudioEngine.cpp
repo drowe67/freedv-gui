@@ -29,6 +29,9 @@ int IAudioEngine::StandardSampleRates[] =
     16000,    22050,
     24000,    32000,
     44100,    48000,
+    88200,    96000,
+    176400,   192000,
+    352800,   384000,
     -1          // negative terminated  list
 };
 

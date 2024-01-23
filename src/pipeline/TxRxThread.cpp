@@ -557,13 +557,6 @@ void TxRxThread::txProcessing_()
     // sample rate.  Typically the sound card is running at 48 or 44.1
     // kHz, and the modem at 8kHz
 
-    // allocate enough room for 20ms processing buffers at maximum
-    // sample rate of 48 kHz.  Note these buffer are used by rx and tx
-    // side processing
-
-    short           insound_card[10*N48];
-    int             nout;
-
     //
     //  TX side processing --------------------------------------------
     //
@@ -597,7 +590,11 @@ void TxRxThread::txProcessing_()
     	}
 
         int nsam_in_48 = freedvInterface.getTxNumSpeechSamples() * ((float)inputSampleRate_ / (float)freedvInterface.getTxSpeechSampleRate());
-        assert(nsam_in_48 > 0 && nsam_in_48 < 10*N48);
+        assert(nsam_in_48 > 0);
+
+        short           insound_card[nsam_in_48];
+        int             nout;
+
         
         while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {        
             // OK to generate a frame of modem output samples we need
@@ -657,13 +654,6 @@ void TxRxThread::rxProcessing_()
     // sample rate.  Typically the sound card is running at 48 or 44.1
     // kHz, and the modem at 8kHz.
 
-    // allocate enough room for 20ms processing buffers at maximum
-    // sample rate of 48 kHz.  Note these buffer are used by rx and tx
-    // side processing
-
-    short           insound_card[10*N48];
-    int             nout;
-
     //
     //  RX side processing --------------------------------------------
     //
@@ -679,8 +669,11 @@ void TxRxThread::rxProcessing_()
     // Attempt to read one processing frame (about 20ms) of receive samples,  we 
     // keep this frame duration constant across modes and sound card sample rates
     int nsam = (int)(inputSampleRate_ * FRAME_DURATION);
-    assert(nsam <= 10*N48);
-    assert(nsam != 0);
+    assert(nsam > 0);
+
+    short           insound_card[nsam];
+    int             nout;
+
 
     bool processInputFifo = 
         (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
