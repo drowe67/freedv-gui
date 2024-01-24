@@ -86,10 +86,41 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
         if ((direction == AUDIO_ENGINE_IN && deviceInfo->maxInputChannels > 0) || 
             (direction == AUDIO_ENGINE_OUT && deviceInfo->maxOutputChannels > 0))
         {
+            // Detect the minimum number of channels available as PortAudio doesn't
+            // provide this info. This should in theory be 1 but at least one device 
+            // (Focusrite Scarlett) will not accept anything less than 4 channels 
+            // on Windows.
+            PaStreamParameters streamParameters;
+            streamParameters.device = index;
+            streamParameters.channelCount = 
+                direction == AUDIO_ENGINE_IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
+            streamParameters.sampleFormat = paInt16;
+            streamParameters.suggestedLatency = Pa_GetDeviceInfo(index)->defaultHighInputLatency;
+            streamParameters.hostApiSpecificStreamInfo = NULL;
+            
+            while (streamParameters.channelCount >= 1)
+            {
+                PaError err = Pa_IsFormatSupported(
+                    direction == AUDIO_ENGINE_IN ? &streamParameters : NULL, 
+                    direction == AUDIO_ENGINE_OUT ? &streamParameters : NULL, 
+                    deviceInfo->defaultSampleRate);
+                
+                if (err == paFormatIsSupported)
+                {
+                    streamParameters.channelCount--;
+                }
+                else 
+                {
+                    break;
+                }
+            }
+
+            // Add information about this device to the result array.
             AudioDeviceSpecification device;
             device.deviceId = index;
             device.name = wxString::FromUTF8(deviceInfo->name);
             device.apiName = hostApiName;
+            device.minChannels = streamParameters.channelCount + 1;
             device.maxChannels = 
                 direction == AUDIO_ENGINE_IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
             device.defaultSampleRate = deviceInfo->defaultSampleRate;
@@ -113,7 +144,7 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, A
             PaStreamParameters streamParameters;
             
             streamParameters.device = device.deviceId;
-            streamParameters.channelCount = 1;
+            streamParameters.channelCount = device.minChannels;
             streamParameters.sampleFormat = paInt16;
             streamParameters.suggestedLatency = Pa_GetDeviceInfo(device.deviceId)->defaultHighInputLatency;
             streamParameters.hostApiSpecificStreamInfo = NULL;
@@ -185,7 +216,12 @@ std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(wxString deviceNam
     {
         if (dev.name.Find(deviceName) == 0)
         {
-            auto devObj = new PortAudioDevice(dev.deviceId, direction, sampleRate, dev.maxChannels >= numChannels ? numChannels : dev.maxChannels);
+            // Ensure that the passed-in number of channels is within the allowed range.
+            numChannels = std::max(numChannels, dev.minChannels);
+            numChannels = std::min(numChannels, dev.maxChannels);
+
+            // Create device object.
+            auto devObj = new PortAudioDevice(dev.deviceId, direction, sampleRate, numChannels);
             return std::shared_ptr<IAudioDevice>(devObj);
         }
     }

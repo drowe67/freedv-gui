@@ -167,6 +167,7 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
             device.name = i->name;
             device.apiName = "PulseAudio";
             device.maxChannels = i->sample_spec.channels;
+            device.minChannels = 1; // TBD: can minimum be >1 on PulseAudio or pipewire?
             device.defaultSampleRate = i->sample_spec.rate;
             
             tempObj->result.push_back(device);
@@ -189,6 +190,7 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
             device.name = i->name;
             device.apiName = "PulseAudio";
             device.maxChannels = i->sample_spec.channels;
+            device.minChannels = 1; // TBD: can minimum be >1 on PulseAudio or pipewire?
             device.defaultSampleRate = i->sample_spec.rate;
             
             tempObj->result.push_back(device);
@@ -294,6 +296,11 @@ std::shared_ptr<IAudioDevice> PulseAudioEngine::getAudioDevice(wxString deviceNa
                 sampleRate = dev.defaultSampleRate;
             }
 
+            // Cap number of channels to allowed range.
+            numChannels = std::max(numChannels, dev.minChannels);
+            numChannels = std::min(numChannels, dev.maxChannels);
+
+            // Create device object.
             auto devObj = 
                 new PulseAudioDevice(
                     mainloop_, context_, deviceName, direction, sampleRate, 

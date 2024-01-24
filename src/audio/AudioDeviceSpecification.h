@@ -33,6 +33,7 @@ struct AudioDeviceSpecification
     wxString apiName;
     int defaultSampleRate;
     int maxChannels;
+    int minChannels;
     
     bool isValid() const;
     static AudioDeviceSpecification GetInvalidDevice();
