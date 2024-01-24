@@ -2820,12 +2820,12 @@ void MainFrame::startRxStream()
                 int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
                 if (result == 0) {
 
-                    // write signal to both channels if the device can support two channels.
+                    // write signal to all channels if the device can support 2+ channels.
                     // Otherwise, we assume we're only dealing with one channel and write
                     // only to that channel.
-                    if (dev.getNumChannels() == 2)
+                    if (dev.getNumChannels() >= 2)
                     {
-                        for(size_t i = 0; i < size; i++, audioData += 2) 
+                        for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels()) 
                         {
                             if (cbData->leftChannelVoxTone)
                             {
@@ -2836,7 +2836,10 @@ void MainFrame::startRxStream()
                             else
                                 audioData[0] = outdata[i];
 
-                            audioData[1] = outdata[i];
+                            for (auto j = 1; j < dev.getNumChannels(); j++)
+                            {
+                                audioData[j] = outdata[i];
+                            }
                         }
                     }
                     else
