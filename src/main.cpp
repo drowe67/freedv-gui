@@ -2746,6 +2746,7 @@ void MainFrame::startRxStream()
         }, nullptr);
         
         rxInSoundDevice->setOnAudioError(errorCallback, nullptr);
+        rxOutSoundDevice->setOnAudioError(errorCallback, nullptr);
         
         if (txInSoundDevice && txOutSoundDevice)
         {
