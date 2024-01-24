@@ -92,13 +92,13 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
             // on Windows.
             PaStreamParameters streamParameters;
             streamParameters.device = index;
-            streamParameters.channelCount = 
-                direction == AUDIO_ENGINE_IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
+            streamParameters.channelCount = 1; 
             streamParameters.sampleFormat = paInt16;
             streamParameters.suggestedLatency = Pa_GetDeviceInfo(index)->defaultHighInputLatency;
             streamParameters.hostApiSpecificStreamInfo = NULL;
             
-            while (streamParameters.channelCount >= 1)
+            int maxChannels = direction == AUDIO_ENGINE_IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
+            while (streamParameters.channelCount < maxChannels)
             {
                 PaError err = Pa_IsFormatSupported(
                     direction == AUDIO_ENGINE_IN ? &streamParameters : NULL, 
@@ -107,12 +107,10 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
                 
                 if (err == paFormatIsSupported)
                 {
-                    streamParameters.channelCount--;
-                }
-                else 
-                {
                     break;
                 }
+
+                streamParameters.channelCount++;
             }
 
             // Add information about this device to the result array.
@@ -120,7 +118,7 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
             device.deviceId = index;
             device.name = wxString::FromUTF8(deviceInfo->name);
             device.apiName = hostApiName;
-            device.minChannels = streamParameters.channelCount + 1;
+            device.minChannels = streamParameters.channelCount;
             device.maxChannels = 
                 direction == AUDIO_ENGINE_IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
             device.defaultSampleRate = deviceInfo->defaultSampleRate;
