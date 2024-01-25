@@ -648,6 +648,9 @@ FMA             -       Supports FMA extensions using YMM state</code></pre>
 <li>Bugfixes:
 <ul>
 <li>Prevent unnecessary recreation of resamplers in analog mode. (PR #661)</li>
+<li>Better handle high sample rate audio devices and those with &gt;2 channels. (PR #668)</li>
+<li>Fix issue preventing errors from being displayed for issues involving the FreeDV-&gt;Speaker sound device. (PR #668)</li>
+<li>Fix issue resulting in incorrect audio device usage after validation failure if no valid default exists. (PR #668)</li>
 </ul></li>
 <li>Enhancements:
 <ul>
