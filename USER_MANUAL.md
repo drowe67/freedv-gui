@@ -901,6 +901,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add Frequency column to RX drop-down. (PR #663)
     * Update tooltip for the free form text field to indicate that it's not covered by FEC. (PR #665)
     * Enable use of space bar for PTT when in the FreeDV Reporter window. (PR #666)
+    * Move TX Mode column to left of Status in FreeDV Reporter window. (PR #670)
 3. Code cleanup:
     * Move FreeDV Reporter dialog code to dialogs section of codebase. (PR #664)
 
