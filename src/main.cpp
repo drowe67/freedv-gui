@@ -3077,15 +3077,20 @@ bool MainFrame::validateSoundCardSetup()
     {
         if (g_nSoundCards == 1)
         {
-            if (!soundCard1OutDevice)
+            if (!soundCard1OutDevice && defaultOutputDevice.isValid())
             {
                 wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = defaultOutputDevice.name;
                 wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = defaultOutputDevice.defaultSampleRate;
             }
+            else
+            {
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = "none";
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = 0;
+            }
         }
         else if (g_nSoundCards == 2)
         {
-            if (!soundCard2InDevice)
+            if (!soundCard2InDevice && defaultInputDevice.isValid())
             {
                 // If we're not already using the default input device as the radio input device, use that instead.
                 if (defaultInputDevice.name != wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName)
@@ -3096,10 +3101,16 @@ bool MainFrame::validateSoundCardSetup()
                 else
                 {
                     wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = "none";
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = 0;
                 }
             }
+            else
+            {
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = "none";
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = 0;
+            }
         
-            if (!soundCard2OutDevice)
+            if (!soundCard2OutDevice && defaultOutputDevice.isValid())
             {
                 // If we're not already using the default output device as the radio input device, use that instead.
                 if (defaultOutputDevice.name != wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName)
@@ -3110,7 +3121,13 @@ bool MainFrame::validateSoundCardSetup()
                 else
                 {
                     wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = "none";
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = 0;
                 }
+            }
+            else
+            {
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = "none";
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = 0;
             }
             
             if (wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName == "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName == "none")
