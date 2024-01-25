@@ -106,13 +106,13 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     col++;
     m_listSpots->InsertColumn(col, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz ? wxT("kHz") : wxT("MHz"), wxLIST_FORMAT_RIGHT, DefaultColumnWidths_[col]);
     col++;
+    m_listSpots->InsertColumn(col, wxT("Mode"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
+    col++;
     m_listSpots->InsertColumn(col, wxT("Status"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
     col++;
     m_listSpots->InsertColumn(col, wxT("Msg"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
     col++;
     m_listSpots->InsertColumn(col, wxT("Last TX"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
-    col++;
-    m_listSpots->InsertColumn(col, wxT("Mode"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
     col++;
     m_listSpots->InsertColumn(col, wxT("RX Call"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
     col++;
@@ -1090,12 +1090,15 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
             result = leftData->frequency - rightData->frequency;
             break;
         case 5:
-            result = leftData->status.CmpNoCase(rightData->status);
+            result = leftData->txMode.CmpNoCase(rightData->txMode);
             break;
         case 6:
-            result = leftData->userMessage.CmpNoCase(rightData->userMessage);
+            result = leftData->status.CmpNoCase(rightData->status);
             break;
         case 7:
+            result = leftData->userMessage.CmpNoCase(rightData->userMessage);
+            break;
+        case 8:
             if (leftData->lastTxDate.IsValid() && rightData->lastTxDate.IsValid())
             {
                 if (leftData->lastTxDate.IsEarlierThan(rightData->lastTxDate))
@@ -1123,9 +1126,6 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
             {
                 result = 0;
             }
-            break;
-        case 8:
-            result = leftData->txMode.CmpNoCase(rightData->txMode);
             break;
         case 9:
             result = leftData->lastRxCallsign.CmpNoCase(rightData->lastRxCallsign);
@@ -1661,6 +1661,9 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     changed = setColumnForRow_(itemIndex, col++, data->freqString, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
+    changed = setColumnForRow_(itemIndex, col++, " "+data->txMode, colResizeList);
+    needResort |= changed && currentSortColumn_ == (col - 1);
+
     changed = setColumnForRow_(itemIndex, col++, " "+data->status, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
@@ -1668,9 +1671,6 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     needResort |= changed && currentSortColumn_ == (col - 1);
 
     changed = setColumnForRow_(itemIndex, col++, " "+data->lastTx, colResizeList);
-    needResort |= changed && currentSortColumn_ == (col - 1);
-
-    changed = setColumnForRow_(itemIndex, col++, " "+data->txMode, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
     changed = setColumnForRow_(itemIndex, col++, " "+data->lastRxCallsign, colResizeList);
