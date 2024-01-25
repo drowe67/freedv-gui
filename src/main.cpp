@@ -2499,6 +2499,13 @@ void MainFrame::startRxStream()
             
                 return;
             }
+            else
+            {
+                // Re-save sample rates in case they were somehow invalid before
+                // device creation.
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate = rxInSoundDevice->getSampleRate();
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = rxOutSoundDevice->getSampleRate();
+            }
         }
         else
         {
@@ -2601,6 +2608,16 @@ void MainFrame::startRxStream()
                 engine->setOnEngineError(nullptr, nullptr);
             
                 return;
+            }
+            else
+            {
+                // Re-save sample rates in case they were somehow invalid before
+                // device creation.
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate = rxInSoundDevice->getSampleRate();
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = rxOutSoundDevice->getSampleRate();
+
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = txInSoundDevice->getSampleRate();
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = txOutSoundDevice->getSampleRate();
             }
         }
 
@@ -2729,6 +2746,7 @@ void MainFrame::startRxStream()
         }, nullptr);
         
         rxInSoundDevice->setOnAudioError(errorCallback, nullptr);
+        rxOutSoundDevice->setOnAudioError(errorCallback, nullptr);
         
         if (txInSoundDevice && txOutSoundDevice)
         {
@@ -2803,12 +2821,12 @@ void MainFrame::startRxStream()
                 int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
                 if (result == 0) {
 
-                    // write signal to both channels if the device can support two channels.
+                    // write signal to all channels if the device can support 2+ channels.
                     // Otherwise, we assume we're only dealing with one channel and write
                     // only to that channel.
-                    if (dev.getNumChannels() == 2)
+                    if (dev.getNumChannels() >= 2)
                     {
-                        for(size_t i = 0; i < size; i++, audioData += 2) 
+                        for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels()) 
                         {
                             if (cbData->leftChannelVoxTone)
                             {
@@ -2819,7 +2837,10 @@ void MainFrame::startRxStream()
                             else
                                 audioData[0] = outdata[i];
 
-                            audioData[1] = outdata[i];
+                            for (auto j = 1; j < dev.getNumChannels(); j++)
+                            {
+                                audioData[j] = outdata[i];
+                            }
                         }
                     }
                     else
@@ -3056,15 +3077,20 @@ bool MainFrame::validateSoundCardSetup()
     {
         if (g_nSoundCards == 1)
         {
-            if (!soundCard1OutDevice)
+            if (!soundCard1OutDevice && defaultOutputDevice.isValid())
             {
                 wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = defaultOutputDevice.name;
                 wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = defaultOutputDevice.defaultSampleRate;
             }
+            else
+            {
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = "none";
+                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = 0;
+            }
         }
         else if (g_nSoundCards == 2)
         {
-            if (!soundCard2InDevice)
+            if (!soundCard2InDevice && defaultInputDevice.isValid())
             {
                 // If we're not already using the default input device as the radio input device, use that instead.
                 if (defaultInputDevice.name != wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName)
@@ -3075,10 +3101,16 @@ bool MainFrame::validateSoundCardSetup()
                 else
                 {
                     wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = "none";
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = 0;
                 }
             }
+            else
+            {
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = "none";
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = 0;
+            }
         
-            if (!soundCard2OutDevice)
+            if (!soundCard2OutDevice && defaultOutputDevice.isValid())
             {
                 // If we're not already using the default output device as the radio input device, use that instead.
                 if (defaultOutputDevice.name != wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName)
@@ -3089,7 +3121,13 @@ bool MainFrame::validateSoundCardSetup()
                 else
                 {
                     wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = "none";
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = 0;
                 }
+            }
+            else
+            {
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = "none";
+                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = 0;
             }
             
             if (wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName == "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName == "none")

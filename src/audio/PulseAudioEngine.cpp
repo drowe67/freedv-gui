@@ -167,6 +167,7 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
             device.name = i->name;
             device.apiName = "PulseAudio";
             device.maxChannels = i->sample_spec.channels;
+            device.minChannels = 1; // TBD: can minimum be >1 on PulseAudio or pipewire?
             device.defaultSampleRate = i->sample_spec.rate;
             
             tempObj->result.push_back(device);
@@ -189,6 +190,7 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
             device.name = i->name;
             device.apiName = "PulseAudio";
             device.maxChannels = i->sample_spec.channels;
+            device.minChannels = 1; // TBD: can minimum be >1 on PulseAudio or pipewire?
             device.defaultSampleRate = i->sample_spec.rate;
             
             tempObj->result.push_back(device);
@@ -215,7 +217,11 @@ std::vector<int> PulseAudioEngine::getSupportedSampleRates(wxString deviceName, 
     int index = 0;
     while (IAudioEngine::StandardSampleRates[index] != -1)
     {
-        result.push_back(IAudioEngine::StandardSampleRates[index++]);
+        if (IAudioEngine::StandardSampleRates[index] <= 192000)
+        {
+            result.push_back(IAudioEngine::StandardSampleRates[index]);
+        }
+        index++;
     }
     
     return result;
@@ -269,10 +275,32 @@ std::shared_ptr<IAudioDevice> PulseAudioEngine::getAudioDevice(wxString deviceNa
 {
     auto deviceList = getAudioDeviceList(direction);
     
+    auto supportedSampleRates = getSupportedSampleRates(deviceName, direction);
+    bool found = false;
+    for (auto& rate : supportedSampleRates)
+    {
+        if (rate == sampleRate)
+        {
+            found = true;
+            break;
+        }
+    }
+
     for (auto& dev : deviceList)
     {
         if (dev.name == deviceName)
         {
+            if (!found)
+            {
+                // Use device's default sample rate if we somehow got an unsupported one.
+                sampleRate = dev.defaultSampleRate;
+            }
+
+            // Cap number of channels to allowed range.
+            numChannels = std::max(numChannels, dev.minChannels);
+            numChannels = std::min(numChannels, dev.maxChannels);
+
+            // Create device object.
             auto devObj = 
                 new PulseAudioDevice(
                     mainloop_, context_, deviceName, direction, sampleRate, 
