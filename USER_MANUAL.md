@@ -895,6 +895,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Prevent unnecessary recreation of resamplers in analog mode. (PR #661)
     * Better handle high sample rate audio devices and those with >2 channels. (PR #668)
     * Fix issue preventing errors from being displayed for issues involving the FreeDV->Speaker sound device. (PR #668)
+    * Fix issue resulting in incorrect audio device usage after validation failure if no valid default exists. (PR #668)
 2. Enhancements:
     * Add Frequency column to RX drop-down. (PR #663)
     * Update tooltip for the free form text field to indicate that it's not covered by FEC. (PR #665)
