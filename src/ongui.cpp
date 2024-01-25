@@ -794,13 +794,18 @@ int MainApp::FilterEvent(wxEvent& event)
             if (frame->m_RxRunning && (mainWindowActive || reporterActiveButNotUpdatingTextMessage) && 
                 wxGetApp().appConfiguration.enableSpaceBarForPTT && !frame->isReceiveOnly()) {
 
-                // space bar controls rx/rx if keyer not running
+                // space bar controls tx/rx if keyer not running
                 if (frame->vk_state == VK_IDLE) {
                     if (frame->m_btnTogPTT->GetValue())
                         frame->m_btnTogPTT->SetValue(false);
                     else
                         frame->m_btnTogPTT->SetValue(true);
 
+                    // Update background color of button here because when toggling PTT via keyboard,
+                    // the background color for some reason doesn't update inside togglePTT().
+                    frame->m_btnTogPTT->SetBackgroundColour(frame->m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
+
+                    // Actually toggle PTT.
                     frame->togglePTT();
                 }
                 else // space bar stops keyer
