@@ -215,6 +215,9 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
+    // Initialize autoupdate.
+    initializeAutoUpdate();
+
     // Initialize locale.
     m_locale.Init();
 
@@ -252,6 +255,9 @@ bool MainApp::OnInit()
 //-------------------------------------------------------------------------
 int MainApp::OnExit()
 {
+    // Cleanup autoupdate.
+    cleanupAutoUpdate();
+
     return 0;
 }
 

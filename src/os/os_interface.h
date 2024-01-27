@@ -43,4 +43,14 @@ extern "C" void ResetMainWindowColorSpace();
 // This can be either "windows", "linux", "macos" or "other".
 std::string GetOperatingSystemString();
 
+// Autoupdate: initialize autoupdater.
+void initializeAutoUpdate();
+
+// Autoupdate: cleanup autoupdater.
+void cleanupAutoUpdate();
+
+// Autoupdate: URL to appcast file containing update data.
+// Shared between Windows and macOS.
+#define FREEDV_APPCAST_URL "https://k6aq.net/freedv-update/appcast.xml"
+
 #endif // __OS_INTERFACE__
