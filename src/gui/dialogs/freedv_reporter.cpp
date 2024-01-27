@@ -1092,7 +1092,8 @@ double FreeDVReporterDialog::DegreesToRadians_(double degrees)
 
 double FreeDVReporterDialog::RadiansToDegrees_(double radians)
 {
-    return (radians > 0 ? radians : (2*M_PI + radians)) * 360 / (2*M_PI);
+    auto result = (radians > 0 ? radians : (2*M_PI + radians)) * 360 / (2*M_PI);
+    return (result == 360) ? 0 : result;
 }
 
 int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData)
