@@ -1301,8 +1301,16 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
 
             temp->distance = wxString::Format("%.0f", temp->distanceVal);
 
-            temp->headingVal = calculateBearingInDegrees_(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, gridSquareWxString);
-            temp->heading = wxString::Format("%.0f", temp->headingVal);
+            if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare == gridSquareWxString)
+            {
+                temp->headingVal = 0;
+                temp->heading = UNKNOWN_STR;
+            }
+            else
+            {
+                temp->headingVal = calculateBearingInDegrees_(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, gridSquareWxString);
+                temp->heading = wxString::Format("%.0f", temp->headingVal);
+            }
         }
 
         temp->version = version;
