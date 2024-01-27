@@ -21,7 +21,7 @@ endif()
 
 set(FREEDV_USING_LLVM_MINGW @FREEDV_USING_LLVM_MINGW@)
 set(FREEDV_PACKAGE_SEARCH_PATHS @FREEDV_PACKAGE_SEARCH_PATHS@)
-list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${CMAKE_BINARY_DIR}/external/dist/bin)
+list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${CMAKE_BINARY_DIR}/external/dist/bin ${CMAKE_BINARY_DIR}/external/dist/lib)
 
 set(CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM windows+pe)
 set(CMAKE_GET_RUNTIME_DEPENDENCIES_TOOL objdump)
@@ -60,6 +60,10 @@ endfunction()
 
 freedv_get_dependencies(_deps ${FREEDV_EXE})
 
+# Ensure that WebView2Loader.dll gets included as that's needed by WinSparkle
+# (but not detected by the dependency scan).
+list(APPEND _deps WebView2Loader.dll)
+
 message("Found Win32 dependencies: ${_deps}")
 
 # Filter libraries known to be provided by Windows
@@ -89,6 +93,8 @@ set( _windlls
     OLEACC.dll
     msvcrt.dll
     bcrypt.dll
+    WININET.dll
+    CRYPT32.dll
 
     # The below are additional DLLs required when compiled
     # using the LLVM version of MinGW.
@@ -106,6 +112,7 @@ set( _windlls
     api-ms-win-crt-heap-l1-1-0.dll
     api-ms-win-crt-convert-l1-1-0.dll
     api-ms-win-crt-multibyte-l1-1-0.dll
+    api-ms-win-crt-conio-l1-1-0.dll
 )
 list(REMOVE_ITEM _deps ${_windlls})
 

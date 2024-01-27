@@ -16,10 +16,10 @@ if(WIN32)
         SOURCE_DIR winsparkle_src
         SOURCE_SUBDIR cmake
         BINARY_DIR winsparkle_build
+        INSTALL_DIR ${CMAKE_BINARY_DIR}/external/dist
         GIT_REPOSITORY https://github.com/vslavik/winsparkle.git
         GIT_TAG master
-        CMAKE_ARGS ${WINSPARKLE_CMAKE_ARGS}
-        INSTALL_COMMAND ""
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/external/dist ${WINSPARKLE_CMAKE_ARGS}
     )
 
     ExternalProject_Get_Property(build_winsparkle BINARY_DIR)
