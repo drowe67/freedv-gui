@@ -6,6 +6,8 @@
     
 #include "main.h"
 
+extern int g_nSoundCards;
+
 #define SBQ_MAX_ARGS 5
 
 void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q, int sampleRate)
@@ -59,7 +61,7 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
 void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSampleRate)
 {
     // init Mic In Equaliser Filters
-    if (cb->micInEQEnable) {
+    if (cb->micInEQEnable && g_nSoundCards > 1) {
         assert(cb->sbqMicInBass == nullptr && cb->sbqMicInTreble == nullptr && cb->sbqMicInMid == nullptr);
         //printf("designing new Min In filters\n");
         cb->sbqMicInBass   = designAnEQFilter("bass", wxGetApp().appConfiguration.filterConfiguration.micInChannel.bassFreqHz, wxGetApp().appConfiguration.filterConfiguration.micInChannel.bassGaindB, txSampleRate);
