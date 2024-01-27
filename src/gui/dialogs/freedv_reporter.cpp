@@ -50,6 +50,7 @@ static int DefaultColumnWidths_[] = {
     70,
     65,
     60,
+    60,
     70,
     60,
     65,
@@ -101,6 +102,8 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->InsertColumn(col, wxT("Locator"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
     col++;
     m_listSpots->InsertColumn(col, wxT("km"), wxLIST_FORMAT_RIGHT, DefaultColumnWidths_[col]);
+    col++;
+    m_listSpots->InsertColumn(col, wxT("Hdg"), wxLIST_FORMAT_RIGHT, DefaultColumnWidths_[col]);
     col++;
     m_listSpots->InsertColumn(col, wxT("Version"), wxLIST_FORMAT_LEFT, DefaultColumnWidths_[col]);
     col++;
@@ -605,7 +608,7 @@ void FreeDVReporterDialog::OnSortColumn(wxListEvent& event)
     }
 #endif // defined(WIN32)
 
-    if (col > 12)
+    if (col > (NUM_COLS - 1))
     {
         // Don't allow sorting by "fake" columns.
         col = -1;
@@ -998,7 +1001,7 @@ double FreeDVReporterDialog::calculateDistance_(wxString gridSquare1, wxString g
     double lat1 = 0;
     double lon1 = 0;
     double lat2 = 0;
-    double lon2 = 0 ;
+    double lon2 = 0;
     
     // Grab latitudes and longitudes for the two locations.
     calculateLatLonFromGridSquare_(gridSquare1, lat1, lon1);
@@ -1057,9 +1060,40 @@ void FreeDVReporterDialog::calculateLatLonFromGridSquare_(wxString gridSquare, d
     }
 }
 
+double FreeDVReporterDialog::calculateBearingInDegrees_(wxString gridSquare1, wxString gridSquare2)
+{
+    double lat1 = 0;
+    double lon1 = 0;
+    double lat2 = 0;
+    double lon2 = 0;
+    
+    // Grab latitudes and longitudes for the two locations.
+    calculateLatLonFromGridSquare_(gridSquare1, lat1, lon1);
+    calculateLatLonFromGridSquare_(gridSquare2, lat2, lon2);
+
+    // Convert latitudes and longitudes into radians
+    lat1 = DegreesToRadians_(lat1);
+    lat2 = DegreesToRadians_(lat2);
+    lon1 = DegreesToRadians_(lon1);
+    lon2 = DegreesToRadians_(lon2);
+
+    double diffLongitude = lon2 - lon1;
+    double x = cos(lat2) * sin(diffLongitude);
+    double y = (cos(lat1) * sin(lat2)) - (sin(lat1) * cos(lat2) * cos(diffLongitude));
+    double radians = atan2(x, y);
+
+    return RadiansToDegrees_(radians);
+}
+
 double FreeDVReporterDialog::DegreesToRadians_(double degrees)
 {
     return degrees * (M_PI / 180.0);
+}
+
+double FreeDVReporterDialog::RadiansToDegrees_(double radians)
+{
+    auto result = (radians > 0 ? radians : (2*M_PI + radians)) * 360 / (2*M_PI);
+    return (result == 360) ? 0 : result;
 }
 
 int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData)
@@ -1084,21 +1118,24 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
             result = leftData->distanceVal - rightData->distanceVal;
             break;
         case 3:
-            result = leftData->version.CmpNoCase(rightData->version);
+            result = leftData->headingVal - rightData->headingVal;
             break;
         case 4:
-            result = leftData->frequency - rightData->frequency;
+            result = leftData->version.CmpNoCase(rightData->version);
             break;
         case 5:
-            result = leftData->txMode.CmpNoCase(rightData->txMode);
+            result = leftData->frequency - rightData->frequency;
             break;
         case 6:
-            result = leftData->status.CmpNoCase(rightData->status);
+            result = leftData->txMode.CmpNoCase(rightData->txMode);
             break;
         case 7:
-            result = leftData->userMessage.CmpNoCase(rightData->userMessage);
+            result = leftData->status.CmpNoCase(rightData->status);
             break;
         case 8:
+            result = leftData->userMessage.CmpNoCase(rightData->userMessage);
+            break;
+        case 9:
             if (leftData->lastTxDate.IsValid() && rightData->lastTxDate.IsValid())
             {
                 if (leftData->lastTxDate.IsEarlierThan(rightData->lastTxDate))
@@ -1127,16 +1164,16 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
                 result = 0;
             }
             break;
-        case 9:
+        case 10:
             result = leftData->lastRxCallsign.CmpNoCase(rightData->lastRxCallsign);
             break;
-        case 10:
+        case 11:
             result = leftData->lastRxMode.CmpNoCase(rightData->lastRxMode);
             break;
-        case 11:
+        case 12:
             result = leftData->snr.CmpNoCase(rightData->snr);
             break;
-        case 12:
+        case 13:
             if (leftData->lastUpdateDate.IsValid() && rightData->lastUpdateDate.IsValid())
             {
                 if (leftData->lastUpdateDate.IsEarlierThan(rightData->lastUpdateDate))
@@ -1248,6 +1285,8 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
             // Invalid grid square means we can't calculate a distance.
             temp->distance = UNKNOWN_STR;
             temp->distanceVal = 0;
+            temp->heading = UNKNOWN_STR;
+            temp->headingVal = 0;
         }
         else
         {
@@ -1261,6 +1300,17 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
             }
 
             temp->distance = wxString::Format("%.0f", temp->distanceVal);
+
+            if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare == gridSquareWxString)
+            {
+                temp->headingVal = 0;
+                temp->heading = UNKNOWN_STR;
+            }
+            else
+            {
+                temp->headingVal = calculateBearingInDegrees_(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, gridSquareWxString);
+                temp->heading = wxString::Format("%.0f", temp->headingVal);
+            }
         }
 
         temp->version = version;
@@ -1653,6 +1703,9 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     needResort |= changed && currentSortColumn_ == (col - 1);
 
     changed = setColumnForRow_(itemIndex, col++, data->distance, colResizeList);
+    needResort |= changed && currentSortColumn_ == (col - 1);
+
+    changed = setColumnForRow_(itemIndex, col++, data->heading, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
     changed = setColumnForRow_(itemIndex, col++, " "+data->version, colResizeList);
