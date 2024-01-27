@@ -10,7 +10,7 @@ set(FREEDV_SOURCES
     freedv_interface.cpp
 )
 
-set(FREEDV_LINK_LIBS_OSX
+list(APPEND FREEDV_LINK_LIBS_OSX
     "-framework AVFoundation"
 )
 
@@ -35,7 +35,7 @@ if(APPLE)
         BUNDLE True
         MACOSX_BUNDLE_GUI_IDENTIFIER org.freedv.freedv
         MACOSX_BUNDLE_BUNDLE_NAME FreeDV
-        MACOSX_BNUDLE_COPYRIGHT "Copyright (c) 2021 FreeDV"
+        MACOSX_BNUDLE_COPYRIGHT "Copyright (c) 2024 FreeDV"
         MACOSX_BUNDLE_BUNDLE_VERSION "${FreeDV_VERSION}"
         MACOSX_BUNDLE_BUNDLE_SHORT_VERSION_STRING "${FreeDV_VERSION}"
         MACOSX_BUNDLE_BUNDLE_LONG_VERSION_STRING "${FreeDV_VERSION}"
@@ -76,6 +76,7 @@ endif(FREEDV_STATIC_DEPS)
 
 # Link other dependencies
 if(APPLE)
+target_link_options(FreeDV PRIVATE -F ${CMAKE_CURRENT_BINARY_DIR}/os/sparkle_src)
 target_link_libraries(FreeDV ${FREEDV_LINK_LIBS} ${FREEDV_LINK_LIBS_OSX})
 elseif(WIN32)
 target_link_libraries(freedv ${FREEDV_LINK_LIBS} ws2_32)
@@ -130,7 +131,7 @@ if(APPLE)
         TARGET FreeDV
         POST_BUILD
         COMMAND rm -rf dist_tmp FreeDV.dmg || true
-        COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${LPCNET_BUILD_DIR}/src:${portaudio_BINARY_DIR}:${samplerate_BINARY_DIR}/src:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib -s ${LPCNET_BUILD_DIR}/src -s ${CODEC2_BUILD_DIR}/src -s ${CMAKE_BINARY_DIR}/LPCNet_build/src -s ${CMAKE_BINARY_DIR}/codec2_build/src -s ${portaudio_BINARY_DIR} -s ${samplerate_BINARY_DIR}/src
+        COMMAND DYLD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/src/os/sparkle_src:${CODEC2_BUILD_DIR}/src:${LPCNET_BUILD_DIR}/src:${portaudio_BINARY_DIR}:${samplerate_BINARY_DIR}/src:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib -s ${LPCNET_BUILD_DIR}/src -s ${CODEC2_BUILD_DIR}/src -s ${CMAKE_BINARY_DIR}/LPCNet_build/src -s ${CMAKE_BINARY_DIR}/codec2_build/src -s ${portaudio_BINARY_DIR} -s ${samplerate_BINARY_DIR}/src -f -s ${CMAKE_BINARY_DIR}/src/os/sparkle_src/Sparkle.framework/Versions/Current
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/freedv.icns FreeDV.app/Contents/Resources
         COMMAND codesign --force --options runtime --timestamp --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/entitlements.plist --sign - ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app
         COMMAND mkdir dist_tmp

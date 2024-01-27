@@ -1,8 +1,24 @@
+# General OS specific hooks
 if(APPLE)
     set(OS_WRAP_FILES osx_interface.mm)
 else(APPLE)
     set(OS_WRAP_FILES osx_stubs.cpp)
 endif(APPLE)
+
+# Autoupdate handling
+if(WIN32)
+    list(APPEND OS_WRAP_FILES windows_autoupdate.cpp)
+elseif(APPLE)
+    list(APPEND OS_WRAP_FILES macos_autoupdate.mm)
+else()
+    list(APPEND OS_WRAP_FILES no_autoupdate.cpp)
+endif()
+
+add_library(fdv_os_wrapper STATIC
+    ${OS_WRAP_FILES}
+)
+
+include(ExternalProject)
 
 if(WIN32)
     # Auto-update functionality requires winsparkle, so build the DLL for it.
@@ -11,7 +27,6 @@ if(WIN32)
     endif()
 
     # Build winsparkle library 
-    include(ExternalProject)
     ExternalProject_Add(build_winsparkle
         SOURCE_DIR winsparkle_src
         SOURCE_SUBDIR cmake
@@ -35,19 +50,28 @@ if(WIN32)
     include_directories(${WINSPARKLE_INCLUDE_DIRS})
 
     # Add SW update related hooks.
-    list(APPEND OS_WRAP_FILES windows_autoupdate.cpp)
     set(AUTOUPDATE_LIBRARY winsparkle)
     add_dependencies(winsparkle build_winsparkle)
 elseif(APPLE)
-    # TBD: Sparkle support for updates on macOS.
-    list(APPEND OS_WRAP_FILES no_autoupdate.cpp)
-else()
-    list(APPEND OS_WRAP_FILES no_autoupdate.cpp)
-endif()
+    # Download Sparkle
+    ExternalProject_Add(build_sparkle
+        URL https://github.com/sparkle-project/Sparkle/releases/download/2.5.2/Sparkle-2.5.2.tar.xz
+        SOURCE_DIR sparkle_src
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+        UPDATE_COMMAND "" # Skip annoying updates for every build
+        INSTALL_COMMAND ""
+    )
+    ExternalProject_Get_Property(build_sparkle SOURCE_DIR)
+    add_library(sparkle SHARED IMPORTED)
 
-add_library(fdv_os_wrapper STATIC
-    ${OS_WRAP_FILES}
-)
+    set(AUTOUPDATE_LIBRARY "-framework Sparkle")
+
+    # Ensure that the compile step can find Sparkle.framework.
+    target_compile_options(fdv_os_wrapper PRIVATE -F ${SOURCE_DIR})
+    target_link_directories(fdv_os_wrapper PRIVATE ${SOURCE_DIR})
+    add_dependencies(fdv_os_wrapper build_sparkle)
+endif()
 
 target_include_directories(fdv_os_wrapper PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
 target_link_libraries(fdv_os_wrapper PRIVATE ${AUTOUPDATE_LIBRARY})
