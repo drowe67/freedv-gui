@@ -424,7 +424,7 @@ void FreeDVReporterDialog::refreshLayout()
     m_listSpots->SetColumn(2 + colOffset, item);
     
     // Refresh frequency units as appropriate.
-    m_listSpots->GetColumn(4 + colOffset, item);
+    m_listSpots->GetColumn(5 + colOffset, item);
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
         item.SetText("kHz");
@@ -433,7 +433,7 @@ void FreeDVReporterDialog::refreshLayout()
     {
         item.SetText("MHz");
     }
-    m_listSpots->SetColumn(4 + colOffset, item);
+    m_listSpots->SetColumn(5 + colOffset, item);
 
     std::map<int, int> colResizeList;
     for (auto& kvp : allReporterData_)
@@ -869,7 +869,7 @@ void FreeDVReporterDialog::refreshQSYButtonState()
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 &&
             freedvInterface.isRunning())
         {
-            wxString theirFreqString = m_listSpots->GetItemText(selectedIndex, 4);
+            wxString theirFreqString = m_listSpots->GetItemText(selectedIndex, 5);
             
             uint64_t theirFreq = 0;
             if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
