@@ -1532,8 +1532,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             {
                 if (g_nSoundCards == 1)
                 {
-                    // RX In isn't used here but we need to provide it anyway.
-                    designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate);
+                    designEQFilters(g_rxUserdata, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 0);
                 }
                 else
                 {   
@@ -2696,10 +2695,20 @@ void MainFrame::startRxStream()
             wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable ||
             wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable)
         {
-            designEQFilters(
-                g_rxUserdata, 
-                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 
-                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
+            if (g_nSoundCards == 1)
+            {
+                designEQFilters(
+                    g_rxUserdata, 
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 
+                    0);
+            }
+            else
+            {
+                designEQFilters(
+                    g_rxUserdata, 
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate);
+            }
         }
 
         m_newMicInFilter = m_newSpkOutFilter = false;

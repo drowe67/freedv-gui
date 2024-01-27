@@ -897,6 +897,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix issue preventing errors from being displayed for issues involving the FreeDV->Speaker sound device. (PR #668)
     * Fix issue resulting in incorrect audio device usage after validation failure if no valid default exists. (PR #668)
     * Fix bug where PTT button background color doesn't change when toggling PTT via space bar. (PR #669)
+    * Fix bug where FreeDV crashes if only RX sound devices are configured with mic filters turned on. (PR #673)
 2. Enhancements:
     * Add Frequency column to RX drop-down. (PR #663)
     * Update tooltip for the free form text field to indicate that it's not covered by FEC. (PR #665)
