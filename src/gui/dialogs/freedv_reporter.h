@@ -142,6 +142,8 @@ class FreeDVReporterDialog : public wxDialog
              wxString gridSquare;
              double distanceVal;
              wxString distance;
+             double headingVal;
+             wxString heading;
              wxString version;
              uint64_t frequency;
              wxString freqString;
@@ -195,6 +197,7 @@ class FreeDVReporterDialog : public wxDialog
          void sortColumn_(int col, bool direction);
          
          double calculateDistance_(wxString gridSquare1, wxString gridSquare2);
+         double calculateBearingInDegrees_(wxString gridSquare1, wxString gridSquare2);
          void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);
          
          void execQueuedAction_();
@@ -204,6 +207,7 @@ class FreeDVReporterDialog : public wxDialog
 
          static wxCALLBACK int ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
          static double DegreesToRadians_(double degrees);
+         static double RadiansToDegrees_(double radians);
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__
