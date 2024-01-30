@@ -65,7 +65,7 @@ static int DefaultColumnWidths_[] = {
 };
 
 FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
-    : wxDialog(parent, id, title, pos, size, style)
+    : wxFrame(parent, id, title, pos, size, style)
     , reporter_(nullptr)
     , currentBandFilter_(FreeDVReporterDialog::BAND_ALL)
     , currentSortColumn_(-1)
