@@ -904,6 +904,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Enable use of space bar for PTT when in the FreeDV Reporter window. (PR #666)
     * Move TX Mode column to left of Status in FreeDV Reporter window. (PR #670)
     * Add heading column to FreeDV Reporter window. (PR #672, #675)
+    * Prevent FreeDV Reporter window from being above the main window. (PR #679)
 3. Code cleanup:
     * Move FreeDV Reporter dialog code to dialogs section of codebase. (PR #664)
 
