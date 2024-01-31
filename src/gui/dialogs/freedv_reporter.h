@@ -35,7 +35,7 @@
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class FreeDVReporterDialog
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-class FreeDVReporterDialog : public wxDialog
+class FreeDVReporterDialog : public wxFrame
 {
     public:
         enum FilterFrequency 
@@ -59,7 +59,7 @@ class FreeDVReporterDialog : public wxDialog
                 wxWindowID id = wxID_ANY, const wxString& title = _("FreeDV Reporter"), 
                 const wxPoint& pos = wxDefaultPosition, 
                 const wxSize& size = wxDefaultSize, 
-                long style = wxDEFAULT_DIALOG_STYLE | wxTAB_TRAVERSAL | wxMINIMIZE_BOX | wxRESIZE_BORDER);
+                long style = wxCAPTION | wxCLOSE_BOX | wxSYSTEM_MENU | wxMINIMIZE_BOX | wxRESIZE_BORDER);
         ~FreeDVReporterDialog();
         
         void setReporter(std::shared_ptr<FreeDVReporter> reporter);
