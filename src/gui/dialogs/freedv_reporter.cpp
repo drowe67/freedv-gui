@@ -28,11 +28,26 @@
 
 extern FreeDVInterface freedvInterface;
 
+#define CALLSIGN_COL (0)
+#define GRID_SQUARE_COL (1)
+#define DISTANCE_COL (2)
+#define HEADING_COL (3)
+#define VERSION_COL (4)
+#define FREQUENCY_COL (5)
+#define TX_MODE_COL (6)
+#define STATUS_COL (7)
+#define USER_MESSAGE_COL (8)
+#define LAST_TX_DATE_COL (9)
+#define LAST_RX_CALLSIGN_COL (10)
+#define LAST_RX_MODE_COL (11)
+#define SNR_COL (12)
+#define LAST_UPDATE_DATE_COL (13)
+
 #define UNKNOWN_STR ""
 #if defined(WIN32)
-#define NUM_COLS (14) /* Note: need empty column 0 to work around callsign truncation issue. */
+#define NUM_COLS (LAST_UPDATE_DATE_COL + 2) /* Note: need empty column 0 to work around callsign truncation issue. */
 #else
-#define NUM_COLS (13)
+#define NUM_COLS (LAST_UPDATE_DATE_COL + 1)
 #endif // defined(WIN32)
 #define RX_ONLY_STATUS "RX Only"
 #define RX_COLORING_TIMEOUT_SEC (20)
@@ -1106,36 +1121,40 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
 
     int result = 0;
 
+#if defined(WIN32)
+    switch(thisPtr->currentSortColumn_ - 1)
+#else
     switch(thisPtr->currentSortColumn_)
+#endif //defined(WIN32)
     {
-        case 0:
+        case CALLSIGN_COL:
             result = leftData->callsign.CmpNoCase(rightData->callsign);
             break;
-        case 1:
+        case GRID_SQUARE_COL:
             result = leftData->gridSquare.CmpNoCase(rightData->gridSquare);
             break;
-        case 2:
+        case DISTANCE_COL:
             result = leftData->distanceVal - rightData->distanceVal;
             break;
-        case 3:
+        case HEADING_COL:
             result = leftData->headingVal - rightData->headingVal;
             break;
-        case 4:
+        case VERSION_COL:
             result = leftData->version.CmpNoCase(rightData->version);
             break;
-        case 5:
+        case FREQUENCY_COL:
             result = leftData->frequency - rightData->frequency;
             break;
-        case 6:
+        case TX_MODE_COL:
             result = leftData->txMode.CmpNoCase(rightData->txMode);
             break;
-        case 7:
+        case STATUS_COL:
             result = leftData->status.CmpNoCase(rightData->status);
             break;
-        case 8:
+        case USER_MESSAGE_COL:
             result = leftData->userMessage.CmpNoCase(rightData->userMessage);
             break;
-        case 9:
+        case LAST_TX_DATE_COL:
             if (leftData->lastTxDate.IsValid() && rightData->lastTxDate.IsValid())
             {
                 if (leftData->lastTxDate.IsEarlierThan(rightData->lastTxDate))
@@ -1164,16 +1183,16 @@ int FreeDVReporterDialog::ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPt
                 result = 0;
             }
             break;
-        case 10:
+        case LAST_RX_CALLSIGN_COL:
             result = leftData->lastRxCallsign.CmpNoCase(rightData->lastRxCallsign);
             break;
-        case 11:
+        case LAST_RX_MODE_COL:
             result = leftData->lastRxMode.CmpNoCase(rightData->lastRxMode);
             break;
-        case 12:
+        case SNR_COL:
             result = leftData->snr.CmpNoCase(rightData->snr);
             break;
-        case 13:
+        case LAST_UPDATE_DATE_COL:
             if (leftData->lastUpdateDate.IsValid() && rightData->lastUpdateDate.IsValid())
             {
                 if (leftData->lastUpdateDate.IsEarlierThan(rightData->lastUpdateDate))
