@@ -425,7 +425,7 @@ void FreeDVReporterDialog::refreshLayout()
 #endif // defined(WIN32)
 
     wxListItem item;
-    m_listSpots->GetColumn(2 + colOffset, item);
+    m_listSpots->GetColumn(DISTANCE_COL + colOffset, item);
 
     if (wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
     {
@@ -436,10 +436,10 @@ void FreeDVReporterDialog::refreshLayout()
         item.SetText("Miles");
     }
 
-    m_listSpots->SetColumn(2 + colOffset, item);
+    m_listSpots->SetColumn(DISTANCE_COL + colOffset, item);
     
     // Refresh frequency units as appropriate.
-    m_listSpots->GetColumn(5 + colOffset, item);
+    m_listSpots->GetColumn(FREQUENCY_COL + colOffset, item);
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
         item.SetText("kHz");
@@ -448,7 +448,19 @@ void FreeDVReporterDialog::refreshLayout()
     {
         item.SetText("MHz");
     }
-    m_listSpots->SetColumn(5 + colOffset, item);
+    m_listSpots->SetColumn(FREQUENCY_COL + colOffset, item);
+
+    // Change direction/heading column label based on preferences
+    m_listSpots->GetColumn(HEADING_COL + colOffset, item);
+    if (wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal)
+    {
+        item.SetText("Dir");
+    }
+    else
+    {
+        item.SetText("Hdg");
+    }
+    m_listSpots->SetColumn(HEADING_COL + colOffset, item);
 
     std::map<int, int> colResizeList;
     for (auto& kvp : allReporterData_)
@@ -467,6 +479,19 @@ void FreeDVReporterDialog::refreshLayout()
         }
         
         kvp.second->freqString = frequencyString;
+
+        // Refresh cardinal vs. degree directions.
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare != kvp.second->gridSquare)
+        {
+            if (wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal)
+            {
+                kvp.second->heading = GetCardinalDirection_(kvp.second->headingVal);
+            }
+            else
+            {
+                kvp.second->heading = wxString::Format("%.0f", kvp.second->headingVal);
+            }
+        }
         
         addOrUpdateListIfNotFiltered_(kvp.second, colResizeList);
     }
@@ -1328,7 +1353,14 @@ void FreeDVReporterDialog::onUserConnectFn_(std::string sid, std::string lastUpd
             else
             {
                 temp->headingVal = calculateBearingInDegrees_(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, gridSquareWxString);
-                temp->heading = wxString::Format("%.0f", temp->headingVal);
+                if (wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal)
+                {
+                    temp->heading = GetCardinalDirection_(temp->headingVal);
+                }
+                else
+                {
+                    temp->heading = wxString::Format("%.0f", temp->headingVal);
+                }
             }
         }
 
@@ -1896,4 +1928,11 @@ bool FreeDVReporterDialog::isFiltered_(uint64_t freq)
                 wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksExactFreq &&
                 freq != filteredFrequency_);
     }
+}
+
+wxString FreeDVReporterDialog::GetCardinalDirection_(int degrees)
+{
+    int cardinalDirectionNumber( static_cast<int>( ( ( degrees / 360.0 ) * 16 ) + 0.5 )  % 16 );
+    const char* const cardinalDirectionTexts[] = { "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "SW", "WNW", "NW", "NNW" };
+    return cardinalDirectionTexts[cardinalDirectionNumber];
 }

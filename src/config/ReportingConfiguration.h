@@ -69,6 +69,7 @@ public:
     ConfigurationDataElement<wxString> freedvReporterMsgRowForegroundColor;
     
     ConfigurationDataElement<bool> reportingFrequencyAsKhz;
+    ConfigurationDataElement<bool> reportingDirectionAsCardinal;
     
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;

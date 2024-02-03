@@ -80,6 +80,7 @@ ReportingConfiguration::ReportingConfiguration()
     , freedvReporterMsgRowForegroundColor("/Reporting/FreeDV/MsgRowForegroundColor", "#000000")
         
     , reportingFrequencyAsKhz("/Reporting/FrequencyAsKHz", false)
+    , reportingDirectionAsCardinal("/Reporting/DirectionAsCardinal", false)
 {
     // Special handling for the frequency list to properly handle locales
     reportingFrequencyList.setLoadProcessor([this](std::vector<wxString> list) {
@@ -196,6 +197,8 @@ void ReportingConfiguration::load(wxConfigBase* config)
     load_(config, freedvReporterMsgRowBackgroundColor);
     load_(config, freedvReporterMsgRowForegroundColor);
 
+    load_(config, reportingDirectionAsCardinal);
+
     // Special load handling for reporting below.
     wxString freqStr = config->Read(reportingFrequency.getElementName(), oldFreqStr);
     reportingFrequency.setWithoutProcessing(atoll(freqStr.ToUTF8()));
@@ -235,6 +238,8 @@ void ReportingConfiguration::save(wxConfigBase* config)
     save_(config, freedvReporterRxRowForegroundColor);
     save_(config, freedvReporterMsgRowBackgroundColor);
     save_(config, freedvReporterMsgRowForegroundColor);
+
+    save_(config, reportingDirectionAsCardinal);
     
     // Special save handling for reporting below.
     wxString tempFreqStr = wxString::Format(wxT("%" PRIu64), reportingFrequency.getWithoutProcessing());
