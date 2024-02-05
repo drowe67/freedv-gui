@@ -455,10 +455,12 @@ void FreeDVReporterDialog::refreshLayout()
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal)
     {
         item.SetText("Dir");
+        item.SetAlign(wxLIST_FORMAT_LEFT);
     }
     else
     {
         item.SetText("Hdg");
+        item.SetAlign(wxLIST_FORMAT_RIGHT);
     }
     m_listSpots->SetColumn(HEADING_COL + colOffset, item);
 
