@@ -208,6 +208,7 @@ class FreeDVReporterDialog : public wxFrame
          static wxCALLBACK int ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
          static double DegreesToRadians_(double degrees);
          static double RadiansToDegrees_(double radians);
+         static wxString GetCardinalDirection_(int degrees);
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__
