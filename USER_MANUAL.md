@@ -889,7 +889,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V1.9.8 TBD 2024
+## V1.9.8 February 2024
 
 1. Bugfixes:
     * Prevent unnecessary recreation of resamplers in analog mode. (PR #661)
