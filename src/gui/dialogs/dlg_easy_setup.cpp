@@ -736,9 +736,6 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
             {
                 txTestAudioDevice_->stop();
                 txTestAudioDevice_ = nullptr;
-
-                auto audioEngine = AudioEngineFactory::GetAudioEngine();
-                audioEngine->stop();
             }
         
             if (hamlibTestObject_ != nullptr && hamlibTestObject_->isConnected())
@@ -876,8 +873,6 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
             if (radioOutDeviceName != "none")
             {
                 auto audioEngine = AudioEngineFactory::GetAudioEngine();
-                audioEngine->start();
-
                 txTestAudioDevice_ = audioEngine->getAudioDevice(radioOutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, radioOutSampleRate, 1);
 
                 if (txTestAudioDevice_ == nullptr)
@@ -898,8 +893,6 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                         serialPortTestObject_->disconnect();
                         serialPortTestObject_ = nullptr;
                     }
-                
-                    audioEngine->stop();
                     return;
                 }
             
@@ -1136,8 +1129,9 @@ void EasySetupDialog::updateAudioDevices_()
     std::map<wxString, SoundDeviceData*> finalAnalogTxDeviceList;
 
     auto audioEngine = AudioEngineFactory::GetAudioEngine();
+    audioEngine->stop();
     audioEngine->start();
-
+    
     auto inputDevices = audioEngine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
     auto outputDevices = audioEngine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
     
@@ -1385,8 +1379,6 @@ void EasySetupDialog::updateAudioDevices_()
             m_analogDevicePlayback->SetSelection(index);
         }
     }
-
-    audioEngine->stop();
 }
 
 bool EasySetupDialog::canTestRadioSettings_()

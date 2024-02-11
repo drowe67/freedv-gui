@@ -20,6 +20,9 @@
 //
 //=========================================================================
 
+#include <mutex>
+#include <condition_variable>
+
 #include <wx/string.h>
 #include "portaudio.h"
 #include "PortAudioDevice.h"
@@ -51,17 +54,66 @@ void PortAudioEngine::start()
     }
     else
     {
+        if (cachePopulationThread_.joinable())
+        {
+            cachePopulationThread_.join();
+        }
+        
+        std::mutex theadStartMtx;
+        std::condition_variable threadStartCV;
+        std::unique_lock<std::mutex> threadStartLock(theadStartMtx);
+        
+        cachePopulationThread_ = std::thread([&]() {
+            std::unique_lock<std::recursive_mutex> lock(deviceCacheMutex_);
+            
+            {
+                std::unique_lock<std::mutex> innerThreadStartLock(theadStartMtx);
+                threadStartCV.notify_one();
+            }
+            
+            deviceListCache_[AUDIO_ENGINE_IN] = getAudioDeviceList_(AUDIO_ENGINE_IN);
+            deviceListCache_[AUDIO_ENGINE_OUT] = getAudioDeviceList_(AUDIO_ENGINE_OUT);
+        });
+        
+        threadStartCV.wait(threadStartLock);
+        
         initialized_ = true;
     }
 }
 
 void PortAudioEngine::stop()
 {
+    if (cachePopulationThread_.joinable())
+    {
+        cachePopulationThread_.join();
+    }
+    
     Pa_Terminate();
+    
     initialized_ = false;
+    deviceListCache_.clear();
+    sampleRateList_.clear();
 }
 
 std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioDirection direction)
+{
+    std::unique_lock<std::recursive_mutex> lock(deviceCacheMutex_);
+    return deviceListCache_[direction];
+}
+
+std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, AudioDirection direction)
+{
+    std::unique_lock<std::recursive_mutex> lock(deviceCacheMutex_);
+    
+    auto key = std::pair<wxString, AudioDirection>(deviceName, direction);
+    if (sampleRateList_.count(key) == 0)
+    {
+        sampleRateList_[key] = getSupportedSampleRates_(deviceName, direction);
+    }
+    return sampleRateList_[key];
+}
+
+std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList_(AudioDirection direction)
 {
     int numDevices = Pa_GetDeviceCount();
     std::vector<AudioDeviceSpecification> result;
@@ -130,14 +182,14 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
     return result;
 }
 
-std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, AudioDirection direction)
+std::vector<int> PortAudioEngine::getSupportedSampleRates_(wxString deviceName, AudioDirection direction)
 {
     std::vector<int> result;
     auto devInfo = getAudioDeviceList(direction);
     
     for (auto& device : devInfo)
     {
-        if (device.name.Find(deviceName) == 0)
+        if (device.name.IsSameAs(deviceName))
         {
             PaStreamParameters streamParameters;
             
@@ -161,7 +213,9 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, A
                 }
                 
                 rateIndex++;
-            }            
+            }
+            
+            break;
         }
     }
     

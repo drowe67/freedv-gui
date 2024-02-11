@@ -630,6 +630,17 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     pthread_setname_np(pthread_self(), "FreeDV GUI");
 #endif // defined(__linux__)
 
+    // Begin loading of audio device cache.
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->setOnEngineError([&](IAudioEngine&, std::string error, void* state) {
+        executeOnUiThreadAndWait_([&, error]() {
+            wxMessageBox(wxString::Format(
+                         "Error encountered while initializing the audio engine: %s.", 
+                         error), wxT("Error"), wxOK, this); 
+        });
+    }, nullptr);
+    engine->start();
+    
     m_reporterDialog = nullptr;
     m_filterDialog = nullptr;
 
@@ -2391,10 +2402,6 @@ void MainFrame::stopRxStream()
         m_newSpkOutFilter = true;
         deleteEQFilters(g_rxUserdata);
         delete g_rxUserdata;
-        
-        auto engine = AudioEngineFactory::GetAudioEngine();
-        engine->stop();
-        engine->setOnEngineError(nullptr, nullptr);
     }
 }
 
@@ -2416,28 +2423,16 @@ void MainFrame::startRxStream()
     if (g_verbose) fprintf(stderr, "startRxStream .....\n");
     if(!m_RxRunning) {
         m_RxRunning = true;
-        
-        auto engine = AudioEngineFactory::GetAudioEngine();
-        engine->setOnEngineError([&](IAudioEngine&, std::string error, void* state) {
-            executeOnUiThreadAndWait_([&, error]() {
-                wxMessageBox(wxString::Format(
-                             "Error encountered while initializing the audio engine: %s.", 
-                             error), wxT("Error"), wxOK, this); 
-            });
-        }, nullptr);
-        engine->start();
 
+        auto engine = AudioEngineFactory::GetAudioEngine();
+        
         if (g_nSoundCards == 0) 
         {
             executeOnUiThreadAndWait_([&]() {
                 wxMessageBox(wxT("No Sound Cards configured, use Tools - Audio Config to configure"), wxT("Error"), wxOK);
             });
             
-            m_RxRunning = false;
-            
-            engine->stop();
-            engine->setOnEngineError(nullptr, nullptr);
-            
+            m_RxRunning = false;            
             return;
         }
         else if (g_nSoundCards == 1)
@@ -2491,11 +2486,7 @@ void MainFrame::startRxStream()
                     rxOutSoundDevice.reset();
                 }
                 
-                m_RxRunning = false;
-            
-                engine->stop();
-                engine->setOnEngineError(nullptr, nullptr);
-            
+                m_RxRunning = false;            
                 return;
             }
             else
@@ -2602,10 +2593,6 @@ void MainFrame::startRxStream()
                 }
                 
                 m_RxRunning = false;
-            
-                engine->stop();
-                engine->setOnEngineError(nullptr, nullptr);
-            
                 return;
             }
             else
@@ -3023,14 +3010,6 @@ bool MainFrame::validateSoundCardSetup()
     
     // Translate device names to IDs
     auto engine = AudioEngineFactory::GetAudioEngine();
-    engine->setOnEngineError([&](IAudioEngine&, std::string error, void* state) {
-        CallAfter([&]() {
-            wxMessageBox(wxString::Format(
-                "Error encountered while initializing the audio engine: %s.", 
-                error), wxT("Error"), wxOK, this); 
-        });
-    }, nullptr);
-    engine->start();
     
     auto defaultInputDevice = engine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_IN);
     auto defaultOutputDevice = engine->getDefaultAudioDevice(IAudioEngine::AUDIO_ENGINE_OUT);
@@ -3174,9 +3153,6 @@ bool MainFrame::validateSoundCardSetup()
         });
         canRun = false;
     }
-    
-    engine->stop();
-    engine->setOnEngineError(nullptr, nullptr);
     
     return canRun;
 }
