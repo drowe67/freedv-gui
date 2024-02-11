@@ -1935,6 +1935,6 @@ bool FreeDVReporterDialog::isFiltered_(uint64_t freq)
 wxString FreeDVReporterDialog::GetCardinalDirection_(int degrees)
 {
     int cardinalDirectionNumber( static_cast<int>( ( ( degrees / 360.0 ) * 16 ) + 0.5 )  % 16 );
-    const char* const cardinalDirectionTexts[] = { "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "SW", "WNW", "NW", "NNW" };
+    const char* const cardinalDirectionTexts[] = { "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW" };
     return cardinalDirectionTexts[cardinalDirectionNumber];
 }
