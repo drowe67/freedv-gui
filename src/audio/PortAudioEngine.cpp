@@ -144,25 +144,44 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList_(Audio
             // on Windows.
             PaStreamParameters streamParameters;
             streamParameters.device = index;
-            streamParameters.channelCount = 1; 
             streamParameters.sampleFormat = paInt16;
             streamParameters.suggestedLatency = Pa_GetDeviceInfo(index)->defaultHighInputLatency;
             streamParameters.hostApiSpecificStreamInfo = NULL;
-            
-            int maxChannels = direction == AUDIO_ENGINE_IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
-            while (streamParameters.channelCount < maxChannels)
-            {
-                PaError err = Pa_IsFormatSupported(
-                    direction == AUDIO_ENGINE_IN ? &streamParameters : NULL, 
-                    direction == AUDIO_ENGINE_OUT ? &streamParameters : NULL, 
-                    deviceInfo->defaultSampleRate);
-                
-                if (err == paFormatIsSupported)
-                {
-                    break;
-                }
+            streamParameters.channelCount = 1;
 
-                streamParameters.channelCount++;
+            // On Linux, the below logic causes the device lookup process to take MUCH
+            // longer than it does on other platforms, mainly because of the special devices
+            // it provides to PortAudio. For these, we're just going to assume the minimum
+            // valid channels is 1.
+            int maxChannels = direction == AUDIO_ENGINE_IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
+            bool isDeviceWithKnownMinimum = 
+                !strcmp(deviceInfo->name, "sysdefault") ||            
+                !strcmp(deviceInfo->name, "front") ||            
+                !strcmp(deviceInfo->name, "surround") ||            
+                !strcmp(deviceInfo->name, "samplerate") ||            
+                !strcmp(deviceInfo->name, "speexrate") ||            
+                !strcmp(deviceInfo->name, "pulse") ||            
+                !strcmp(deviceInfo->name, "upmix") ||            
+                !strcmp(deviceInfo->name, "vdownmix") ||            
+                !strcmp(deviceInfo->name, "dmix") ||            
+                !strcmp(deviceInfo->name, "default");
+            if (!isDeviceWithKnownMinimum)
+            {
+                while (streamParameters.channelCount < maxChannels)
+                {
+                    fprintf(stderr, "checking channel# %d for device %s\n", streamParameters.channelCount, deviceInfo->name);
+                    PaError err = Pa_IsFormatSupported(
+                        direction == AUDIO_ENGINE_IN ? &streamParameters : NULL, 
+                        direction == AUDIO_ENGINE_OUT ? &streamParameters : NULL, 
+                        deviceInfo->defaultSampleRate);
+                
+                    if (err != paFormatIsSupported)
+                    {
+                        break;
+                    }
+
+                    streamParameters.channelCount++;
+                }
             }
 
             // Add information about this device to the result array.
@@ -171,8 +190,7 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList_(Audio
             device.name = wxString::FromUTF8(deviceInfo->name);
             device.apiName = hostApiName;
             device.minChannels = streamParameters.channelCount;
-            device.maxChannels = 
-                direction == AUDIO_ENGINE_IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
+            device.maxChannels = maxChannels;
             device.defaultSampleRate = deviceInfo->defaultSampleRate;
             
             result.push_back(device);
