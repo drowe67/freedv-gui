@@ -893,6 +893,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * Fix typo in cardinal directions list. (PR #688)
+    * Shrink size of callsign list to prevent it from disappearing off the screen. (PR #692)
 
 ## V1.9.8 February 2024
 

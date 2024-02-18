@@ -581,6 +581,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_lastReportedCallsignListView = new wxListViewComboPopup();
     m_cboLastReportedCallsigns->SetPopupControl(m_lastReportedCallsignListView);
     m_cboLastReportedCallsigns->SetSizeHints(wxSize(100,-1));
+    m_cboLastReportedCallsigns->SetPopupMaxHeight(150);
     
     m_lastReportedCallsignListView->InsertColumn(0, wxT("Callsign"), wxLIST_FORMAT_LEFT, 100);
     m_lastReportedCallsignListView->InsertColumn(1, wxT("Frequency"), wxLIST_FORMAT_RIGHT, 75);
