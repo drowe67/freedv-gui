@@ -169,7 +169,6 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList_(Audio
             {
                 while (streamParameters.channelCount < maxChannels)
                 {
-                    fprintf(stderr, "checking channel# %d for device %s\n", streamParameters.channelCount, deviceInfo->name);
                     PaError err = Pa_IsFormatSupported(
                         direction == AUDIO_ENGINE_IN ? &streamParameters : NULL, 
                         direction == AUDIO_ENGINE_OUT ? &streamParameters : NULL, 
