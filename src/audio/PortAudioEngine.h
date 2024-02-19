@@ -23,6 +23,9 @@
 #ifndef PORT_AUDIO_ENGINE_H
 #define PORT_AUDIO_ENGINE_H
 
+#include <map>
+#include <thread>
+#include <mutex>
 #include "IAudioEngine.h"
 
 class PortAudioEngine : public IAudioEngine
@@ -40,6 +43,15 @@ public:
     
 private:
     bool initialized_;
+
+    // Device cache and associated management.
+    std::map<AudioDirection, std::vector<AudioDeviceSpecification> > deviceListCache_;
+    std::map<std::pair<wxString, AudioDirection>, std::vector<int> > sampleRateList_;
+    std::recursive_mutex deviceCacheMutex_;
+    std::thread cachePopulationThread_;
+    
+    std::vector<AudioDeviceSpecification> getAudioDeviceList_(AudioDirection direction);
+    std::vector<int> getSupportedSampleRates_(wxString deviceName, AudioDirection direction);
 };
 
 #endif // PORT_AUDIO_ENGINE_H
