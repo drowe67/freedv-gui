@@ -895,6 +895,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Cache PortAudio sound info to improve startup performance. (PR #689)
     * Fix typo in cardinal directions list. (PR #688)
     * Shrink size of callsign list to prevent it from disappearing off the screen. (PR #692)
+2. Enhancements:
+    * Allow longer length user messages. (PR #694)
 
 ## V1.9.8 February 2024
 
