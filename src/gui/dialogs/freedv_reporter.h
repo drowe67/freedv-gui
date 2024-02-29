@@ -27,6 +27,7 @@
 #include <vector>
 
 #include <wx/imaglist.h>
+#include <wx/tipwin.h>
 
 #include "main.h"
 #include "defines.h"
@@ -97,6 +98,7 @@ class FreeDVReporterDialog : public wxFrame
         void OnItemDeselected(wxListEvent& event);
         void OnSortColumn(wxListEvent& event);
         void OnTimer(wxTimerEvent& event);
+        void AdjustToolTip(wxMouseEvent& event);
         void OnFilterTrackingEnable(wxCommandEvent& event);
         
         void OnDoubleClick(wxMouseEvent& event);
@@ -134,6 +136,8 @@ class FreeDVReporterDialog : public wxFrame
         std::vector<std::function<void()> > fnQueue_;
         std::mutex fnQueueMtx_;
 
+        wxTipWindow* tipWindow_;
+        
      private:
          struct ReporterData
          {
