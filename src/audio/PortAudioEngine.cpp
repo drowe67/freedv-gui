@@ -20,6 +20,8 @@
 //
 //=========================================================================
 
+#include <sstream>
+#include <iomanip>
 #include <mutex>
 #include <condition_variable>
 
@@ -47,9 +49,18 @@ void PortAudioEngine::start()
     auto error = Pa_Initialize();
     if (error != paNoError)
     {
+        std::string errText = Pa_GetErrorText(error);
+        if (error == paUnanticipatedHostError)
+        {
+            std::stringstream ss;
+            auto errInfo = Pa_GetLastHostErrorInfo();
+            ss << " (error code " << std::hex << errInfo->errorCode << " - " << std::string(errInfo->errorText) << ")";
+            errText += ss.str();
+        }
+
         if (onAudioErrorFunction)
         {
-            onAudioErrorFunction(*this, Pa_GetErrorText(error), onAudioErrorState);
+            onAudioErrorFunction(*this, errText, onAudioErrorState);
         }
     }
     else

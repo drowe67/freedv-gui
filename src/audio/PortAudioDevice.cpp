@@ -20,6 +20,8 @@
 //
 //=========================================================================
 
+#include <sstream>
+#include <iomanip>
 #include <cstring>
 #include "PortAudioDevice.h"
 #include "portaudio.h"
@@ -95,9 +97,18 @@ void PortAudioDevice::start()
         error = Pa_StartStream(deviceStream_);
         if (error != paNoError)
         {
+            std::string errText = Pa_GetErrorText(error);
+            if (error == paUnanticipatedHostError)
+            {
+                std::stringstream ss;
+                auto errInfo = Pa_GetLastHostErrorInfo();
+                ss << " (error code " << std::hex << errInfo->errorCode << " - " << std::string(errInfo->errorText) << ")";
+                errText += ss.str();
+            }
+
             if (onAudioErrorFunction)
             {
-                onAudioErrorFunction(*this, Pa_GetErrorText(error), onAudioErrorState);
+                onAudioErrorFunction(*this, errText, onAudioErrorState);
             }
             
             Pa_CloseStream(deviceStream_);
@@ -106,9 +117,18 @@ void PortAudioDevice::start()
     }
     else
     {
+        std::string errText = Pa_GetErrorText(error);
+        if (error == paUnanticipatedHostError)
+        {
+            std::stringstream ss;
+            auto errInfo = Pa_GetLastHostErrorInfo();
+            ss << " (error code " << std::hex << errInfo->errorCode << " - " << std::string(errInfo->errorText) << ")";
+            errText += ss.str();
+        }
+
         if (onAudioErrorFunction)
         {
-            onAudioErrorFunction(*this, Pa_GetErrorText(error), onAudioErrorState);
+            onAudioErrorFunction(*this, errText, onAudioErrorState);
         }
         deviceStream_ = nullptr;
     }
