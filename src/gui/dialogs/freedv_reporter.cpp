@@ -772,31 +772,34 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
     int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
     int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
     
-    auto selectedIndex = m_listSpots->GetFirstSelected();
     wxRect rect;
     int desiredCol = USER_MESSAGE_COL;
 #if defined(WIN32)
     desiredCol++;
 #endif // defined(WIN32)
     
-    bool itemSelected = selectedIndex >= 0;
-    bool gotUserMessageColBounds = itemSelected && m_listSpots->GetSubItemRect(selectedIndex, desiredCol, rect);
-    bool mouseInBounds = gotUserMessageColBounds && rect.Contains(mouseX, mouseY);
-    
-    if (itemSelected && gotUserMessageColBounds && mouseInBounds)
+    for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
     {
-        // Show popup corresponding to the full message.
-        std::string* sidPtr = (std::string*)m_listSpots->GetItemData(selectedIndex);
-        auto userMessage = allReporterData_[*sidPtr]->userMessage;
-        wxString userMessageTruncated = userMessage.SubString(0, MESSAGE_CHAR_LIMIT - 1);
-        
-        if (tipWindow_ == nullptr && userMessage != userMessageTruncated)
+        bool gotUserMessageColBounds = m_listSpots->GetSubItemRect(index, desiredCol, rect);
+        bool mouseInBounds = gotUserMessageColBounds && rect.Contains(mouseX, mouseY);
+    
+        if (gotUserMessageColBounds && mouseInBounds)
         {
-            // Use screen coordinates to determine bounds.
-            auto pos = rect.GetPosition();
-            rect.SetPosition(ClientToScreen(pos));
+            // Show popup corresponding to the full message.
+            std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
+            auto userMessage = allReporterData_[*sidPtr]->userMessage;
+            wxString userMessageTruncated = userMessage.SubString(0, MESSAGE_CHAR_LIMIT - 1);
+        
+            if (tipWindow_ == nullptr && userMessage != userMessageTruncated)
+            {
+                // Use screen coordinates to determine bounds.
+                auto pos = rect.GetPosition();
+                rect.SetPosition(ClientToScreen(pos));
             
-            tipWindow_ = new wxTipWindow(m_listSpots, userMessage, 1000, &tipWindow_, &rect);
+                tipWindow_ = new wxTipWindow(m_listSpots, userMessage, 1000, &tipWindow_, &rect);
+            }
+            
+            break;
         }
     }
 }
