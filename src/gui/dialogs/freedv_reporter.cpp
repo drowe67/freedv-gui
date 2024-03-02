@@ -792,6 +792,10 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
         
         if (tipWindow_ == nullptr && userMessage != userMessageTruncated)
         {
+            // Use screen coordinates to determine bounds.
+            auto pos = rect.GetPosition();
+            rect.SetPosition(ClientToScreen(pos));
+            
             tipWindow_ = new wxTipWindow(m_listSpots, userMessage, 1000, &tipWindow_, &rect);
         }
     }
