@@ -898,6 +898,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Enhancements:
     * Add additional error reporting in case of PortAudio failures. (PR #695)
     * Allow longer length user messages. (PR #694)
+    * Add context menu for copying messages to the clipboard. (PR #694)
 
 ## V1.9.8 February 2024
 
