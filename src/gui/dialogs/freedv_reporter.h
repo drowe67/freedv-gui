@@ -100,6 +100,8 @@ class FreeDVReporterDialog : public wxFrame
         void OnTimer(wxTimerEvent& event);
         void AdjustToolTip(wxMouseEvent& event);
         void OnFilterTrackingEnable(wxCommandEvent& event);
+        void OnRightClickSpotsList(wxContextMenuEvent& event);
+        void OnCopyUserMessage(wxCommandEvent& event);
         
         void OnDoubleClick(wxMouseEvent& event);
         
@@ -108,6 +110,8 @@ class FreeDVReporterDialog : public wxFrame
         wxImageList*  m_sortIcons;
         int upIconIndex_;
         int downIconIndex_;
+        wxMenu* spotsPopupMenu_;
+        wxString tempUserMessage; // to store the currently hovering message prior to going on the clipboard
 
         // QSY text
         wxTextCtrl* m_qsyText;

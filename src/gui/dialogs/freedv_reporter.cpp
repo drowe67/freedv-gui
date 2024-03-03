@@ -22,6 +22,7 @@
 #include <math.h>
 #include <wx/datetime.h>
 #include <wx/display.h>
+#include <wx/clipbrd.h>
 #include "freedv_reporter.h"
 
 #include "freedv_interface.h"
@@ -323,6 +324,17 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         NULL,
         this
     );
+        
+    // Create popup menu for spots list
+    spotsPopupMenu_ = new wxMenu();
+    assert(spotsPopupMenu_ != nullptr);
+
+    auto copyUserMessageMenuItem = spotsPopupMenu_->Append(wxID_ANY, _("Copy message"));
+    spotsPopupMenu_->Connect(
+        copyUserMessageMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        wxCommandEventHandler(FreeDVReporterDialog::OnCopyUserMessage),
+        NULL,
+        this);
     
     // Hook in events
     this->Connect(wxEVT_TIMER, wxTimerEventHandler(FreeDVReporterDialog::OnTimer), NULL, this);
@@ -338,6 +350,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->Connect(wxEVT_LIST_COL_CLICK, wxListEventHandler(FreeDVReporterDialog::OnSortColumn), NULL, this);
     m_listSpots->Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(FreeDVReporterDialog::OnDoubleClick), NULL, this);
     m_listSpots->Connect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);
+    m_listSpots->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
     
     m_statusMessage->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
@@ -399,6 +412,7 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     m_listSpots->Disconnect(wxEVT_LIST_COL_CLICK, wxListEventHandler(FreeDVReporterDialog::OnSortColumn), NULL, this);
     m_listSpots->Disconnect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(FreeDVReporterDialog::OnDoubleClick), NULL, this);
     m_listSpots->Disconnect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);
+    m_listSpots->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
     
     m_statusMessage->Disconnect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
@@ -787,20 +801,44 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
         {
             // Show popup corresponding to the full message.
             std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
-            auto userMessage = allReporterData_[*sidPtr]->userMessage;
-            wxString userMessageTruncated = userMessage.SubString(0, MESSAGE_CHAR_LIMIT - 1);
+            tempUserMessage = allReporterData_[*sidPtr]->userMessage;
+            wxString userMessageTruncated = tempUserMessage.SubString(0, MESSAGE_CHAR_LIMIT - 1);
         
-            if (tipWindow_ == nullptr && userMessage != userMessageTruncated)
+            if (tipWindow_ == nullptr && tempUserMessage != userMessageTruncated)
             {
                 // Use screen coordinates to determine bounds.
                 auto pos = rect.GetPosition();
                 rect.SetPosition(ClientToScreen(pos));
             
-                tipWindow_ = new wxTipWindow(m_listSpots, userMessage, 1000, &tipWindow_, &rect);
+                tipWindow_ = new wxTipWindow(m_listSpots, tempUserMessage, 1000, &tipWindow_, &rect);
             }
             
             break;
         }
+        else
+        {
+            tempUserMessage = _("");
+        }
+    }
+}
+
+void FreeDVReporterDialog::OnRightClickSpotsList( wxContextMenuEvent& event )
+{
+    if (tempUserMessage != _(""))
+    {
+        // Only show the popup if we're already hovering over a message.
+        m_listSpots->PopupMenu(spotsPopupMenu_); //, wxPoint(-sz.GetWidth() - 25, 0));
+    }
+}
+
+void FreeDVReporterDialog::OnCopyUserMessage(wxCommandEvent& event)
+{
+    if (wxTheClipboard->Open())
+    {
+        // This data objects are held by the clipboard,
+        // so do not delete them in the app.
+        wxTheClipboard->SetData( new wxTextDataObject(tempUserMessage) );
+        wxTheClipboard->Close();
     }
 }
 
