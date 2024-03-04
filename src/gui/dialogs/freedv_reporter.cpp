@@ -811,6 +811,15 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
                 rect.SetPosition(ClientToScreen(pos));
             
                 tipWindow_ = new wxTipWindow(m_listSpots, tempUserMessage, 1000, &tipWindow_, &rect);
+                tipWindow_->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
+                tipWindow_->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
+                
+                // Make sure we actually override behavior of needed events inside the tooltip.
+                for (auto& child : tipWindow_->GetChildren())
+                {
+                    child->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
+                    child->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
+                }
             }
             
             break;
@@ -822,8 +831,20 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
     }
 }
 
+void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent& event)
+{
+    wxContextMenuEvent contextEvent;
+    OnRightClickSpotsList(contextEvent);
+}
+
 void FreeDVReporterDialog::OnRightClickSpotsList( wxContextMenuEvent& event )
 {
+    if (tipWindow_ != nullptr)
+    {
+        tipWindow_->Close();
+        tipWindow_ = nullptr;
+    }
+    
     if (tempUserMessage != _(""))
     {
         // Only show the popup if we're already hovering over a message.

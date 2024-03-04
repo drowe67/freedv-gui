@@ -102,6 +102,7 @@ class FreeDVReporterDialog : public wxFrame
         void OnFilterTrackingEnable(wxCommandEvent& event);
         void OnRightClickSpotsList(wxContextMenuEvent& event);
         void OnCopyUserMessage(wxCommandEvent& event);
+        void SkipMouseEvent(wxMouseEvent& event);
         
         void OnDoubleClick(wxMouseEvent& event);
         
