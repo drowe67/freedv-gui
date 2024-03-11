@@ -844,11 +844,19 @@ void FreeDVReporterDialog::OnRightClickSpotsList( wxContextMenuEvent& event )
         tipWindow_->Close();
         tipWindow_ = nullptr;
     }
-    
+
     if (tempUserMessage != _(""))
     {
         // Only show the popup if we're already hovering over a message.
-        m_listSpots->PopupMenu(spotsPopupMenu_); //, wxPoint(-sz.GetWidth() - 25, 0));
+        const wxPoint pt = wxGetMousePosition();
+        int mouseX = pt.x - m_listSpots->GetScreenPosition().x;
+        int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
+
+        // 170 here has been determined via experimentation to avoid an issue 
+        // on some KDE installations where the popup menu immediately closes after
+        // right-clicking. This in effect causes the popup to open to the left of
+        // the mouse pointer.
+        m_listSpots->PopupMenu(spotsPopupMenu_, wxPoint(mouseX - 170, mouseY));
     }
 }
 
