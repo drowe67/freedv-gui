@@ -27,6 +27,7 @@
 #include <vector>
 
 #include <wx/imaglist.h>
+#include <wx/tipwin.h>
 
 #include "main.h"
 #include "defines.h"
@@ -97,7 +98,11 @@ class FreeDVReporterDialog : public wxFrame
         void OnItemDeselected(wxListEvent& event);
         void OnSortColumn(wxListEvent& event);
         void OnTimer(wxTimerEvent& event);
+        void AdjustToolTip(wxMouseEvent& event);
         void OnFilterTrackingEnable(wxCommandEvent& event);
+        void OnRightClickSpotsList(wxContextMenuEvent& event);
+        void OnCopyUserMessage(wxCommandEvent& event);
+        void SkipMouseEvent(wxMouseEvent& event);
         
         void OnDoubleClick(wxMouseEvent& event);
         
@@ -106,6 +111,8 @@ class FreeDVReporterDialog : public wxFrame
         wxImageList*  m_sortIcons;
         int upIconIndex_;
         int downIconIndex_;
+        wxMenu* spotsPopupMenu_;
+        wxString tempUserMessage_; // to store the currently hovering message prior to going on the clipboard
 
         // QSY text
         wxTextCtrl* m_qsyText;
@@ -134,6 +141,8 @@ class FreeDVReporterDialog : public wxFrame
         std::vector<std::function<void()> > fnQueue_;
         std::mutex fnQueueMtx_;
 
+        wxTipWindow* tipWindow_;
+        
      private:
          struct ReporterData
          {
