@@ -112,7 +112,7 @@ class FreeDVReporterDialog : public wxFrame
         int upIconIndex_;
         int downIconIndex_;
         wxMenu* spotsPopupMenu_;
-        wxString tempUserMessage; // to store the currently hovering message prior to going on the clipboard
+        wxString tempUserMessage_; // to store the currently hovering message prior to going on the clipboard
 
         // QSY text
         wxTextCtrl* m_qsyText;

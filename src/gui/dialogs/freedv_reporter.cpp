@@ -801,16 +801,16 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
         {
             // Show popup corresponding to the full message.
             std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
-            tempUserMessage = allReporterData_[*sidPtr]->userMessage;
-            wxString userMessageTruncated = tempUserMessage.SubString(0, MESSAGE_CHAR_LIMIT - 1);
+            tempUserMessage_ = allReporterData_[*sidPtr]->userMessage;
+            wxString userMessageTruncated = tempUserMessage_.SubString(0, MESSAGE_CHAR_LIMIT - 1);
         
-            if (tipWindow_ == nullptr && tempUserMessage != userMessageTruncated)
+            if (tipWindow_ == nullptr && tempUserMessage_ != userMessageTruncated)
             {
                 // Use screen coordinates to determine bounds.
                 auto pos = rect.GetPosition();
                 rect.SetPosition(ClientToScreen(pos));
             
-                tipWindow_ = new wxTipWindow(m_listSpots, tempUserMessage, 1000, &tipWindow_, &rect);
+                tipWindow_ = new wxTipWindow(m_listSpots, tempUserMessage_, 1000, &tipWindow_, &rect);
                 tipWindow_->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
                 tipWindow_->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
                 
@@ -826,7 +826,7 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
         }
         else
         {
-            tempUserMessage = _("");
+            tempUserMessage_ = _("");
         }
     }
 }
@@ -845,7 +845,7 @@ void FreeDVReporterDialog::OnRightClickSpotsList( wxContextMenuEvent& event )
         tipWindow_ = nullptr;
     }
 
-    if (tempUserMessage != _(""))
+    if (tempUserMessage_ != _(""))
     {
         // Only show the popup if we're already hovering over a message.
         const wxPoint pt = wxGetMousePosition();
@@ -866,7 +866,7 @@ void FreeDVReporterDialog::OnCopyUserMessage(wxCommandEvent& event)
     {
         // This data objects are held by the clipboard,
         // so do not delete them in the app.
-        wxTheClipboard->SetData( new wxTextDataObject(tempUserMessage) );
+        wxTheClipboard->SetData( new wxTextDataObject(tempUserMessage_) );
         wxTheClipboard->Close();
     }
 }
