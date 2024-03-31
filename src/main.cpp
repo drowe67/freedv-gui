@@ -252,6 +252,7 @@ bool MainApp::OnInit()
 //-------------------------------------------------------------------------
 int MainApp::OnExit()
 {
+    fprintf(stderr, "XXX we're done\n");
     return 0;
 }
 

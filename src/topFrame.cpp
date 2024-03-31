@@ -968,6 +968,8 @@ TopFrame::~TopFrame()
     
     m_cboReportFrequency->Disconnect(wxEVT_SET_FOCUS, wxFocusEventHandler(TopFrame::OnReportFrequencySetFocus), NULL, this);
     m_cboReportFrequency->Disconnect(wxEVT_KILL_FOCUS, wxFocusEventHandler(TopFrame::OnReportFrequencyKillFocus), NULL, this);
+
+    m_txtCtrlCallSign->Destroy();
 }
 
 void TopFrame::OnChangeCollapseState(wxCollapsiblePaneEvent& event)
