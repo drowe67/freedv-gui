@@ -25,7 +25,7 @@ bool tapDataEqual()
     short* pData = new short[1];
     pData[0] = 10000;
     
-    std::shared_ptr<short> input(pData);
+    std::shared_ptr<short> input(pData, std::default_delete<short[]>());
     auto result = tapStep.execute(input, 1, &outputSamples);
     if (outputSamples != 1)
     {

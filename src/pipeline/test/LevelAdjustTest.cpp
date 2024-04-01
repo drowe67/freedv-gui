@@ -9,7 +9,7 @@ bool levelAdjustCommon(float val)
     short* pData = new short[1];
     pData[0] = 10000;
     
-    auto result = levelAdjustStep.execute(std::shared_ptr<short>(pData), 1, &outputSamples);
+    auto result = levelAdjustStep.execute(std::shared_ptr<short>(pData, std::default_delete<short[]>()), 1, &outputSamples);
     if (outputSamples != 1)
     {
         std::cerr << "[outputSamples[" << outputSamples << "] != 1]...";
