@@ -1044,22 +1044,18 @@ void FreeDVReporterDialog::refreshQSYButtonState()
 
 void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
 {
-    if (filteredFrequency_ != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency ||
-        currentBandFilter_ != freq)
-    {
-        filteredFrequency_ = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
-        currentBandFilter_ = freq;
-    
-        // Update displayed list based on new filter criteria.
-        clearAllEntries_(false);
+    filteredFrequency_ = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+    currentBandFilter_ = freq;
 
-        std::map<int, int> colResizeList;
-        for (auto& kvp : allReporterData_)
-        {
-            addOrUpdateListIfNotFiltered_(kvp.second, colResizeList);
-        }
-        resizeChangedColumns_(colResizeList);
+    // Update displayed list based on new filter criteria.
+    clearAllEntries_(false);
+
+    std::map<int, int> colResizeList;
+    for (auto& kvp : allReporterData_)
+    {
+        addOrUpdateListIfNotFiltered_(kvp.second, colResizeList);
     }
+    resizeChangedColumns_(colResizeList);
 }
 
 void FreeDVReporterDialog::sortColumn_(int col)
