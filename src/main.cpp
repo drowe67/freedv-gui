@@ -2288,9 +2288,7 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 bool txEnabled = 
                     m_RxRunning && 
                     !wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly &&
-                    (g_nSoundCards == 2) && 
-                    (!wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT ||
-                     (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() != HamlibRigController::PTT_VIA_NONE);
+                    (g_nSoundCards == 2);
                 
                 m_togBtnAnalog->Enable(m_RxRunning);
                 m_togBtnVoiceKeyer->Enable(txEnabled);
