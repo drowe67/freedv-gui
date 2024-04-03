@@ -26,7 +26,7 @@ bool exclusiveAccessMethodsCalled()
     pVal[0] = 10000;
     
     int outputSamples = 0;
-    std::shared_ptr<short> input(pVal);
+    std::shared_ptr<short> input(pVal, std::default_delete<short[]>());
     auto result = exclusiveAccessStep.execute(input, 1, &outputSamples);
     
     if (outputSamples != 1)
