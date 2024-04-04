@@ -118,12 +118,9 @@ bool MainApp::CanAccessSerialPort(std::string portName)
 
 bool MainFrame::isReceiveOnly()
 {
-    bool hamlibDisabledForRigControl = 
-        (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT &&
-         (HamlibRigController::PttType)wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType.get() == HamlibRigController::PTT_VIA_NONE);
     return 
         wxGetApp().appConfiguration.reportingConfiguration.freedvReporterForceReceiveOnly || 
-        g_nSoundCards <= 1 || hamlibDisabledForRigControl;
+        g_nSoundCards <= 1;
 }
 
 //----------------------------------------------------------------
@@ -183,9 +180,17 @@ void MainFrame::OpenPTTInPort(void)
             wxGetApp().m_pttInSerialPort->onPttChange += [&](IRigController*, bool pttState)
             {
                 fprintf(stderr, "PTT input state is now %d\n", pttState);
-                GetEventHandler()->CallAfter([&]() { 
-                    m_btnTogPTT->SetValue(pttState); 
-                    togglePTT(); 
+                GetEventHandler()->CallAfter([&]() {
+                    if (pttState != m_btnTogPTT->GetValue())
+                    {
+                        m_btnTogPTT->SetValue(pttState); 
+                        
+                        // Update background color of button here because when toggling PTT via CTS,
+                        // the background color for some reason doesn't update inside togglePTT().
+                        m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
+                        
+                        togglePTT(); 
+                    }
                 });
             };
 

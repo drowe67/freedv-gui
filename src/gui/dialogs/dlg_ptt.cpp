@@ -136,7 +136,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     m_cbPttMethod->Append(wxT("CAT"));
     m_cbPttMethod->Append(wxT("RTS"));
     m_cbPttMethod->Append(wxT("DTR"));
-    m_cbPttMethod->Append(wxT("None (RX Only)"));
+    m_cbPttMethod->Append(wxT("None"));
     
     mainSizer->Add(staticBoxSizer18, 0, wxEXPAND, 5);
 
@@ -908,7 +908,7 @@ void ComPortsDlg::updateControlState()
 #endif // defined(WIN32)
     );    
     
-    if (m_cbPttMethod->GetValue() == _("CAT") || m_cbPttMethod->GetValue() == _("None (RX Only)"))
+    if (m_cbPttMethod->GetValue() == _("CAT") || m_cbPttMethod->GetValue() == _("None"))
     {
         m_cbPttSerialPort->Enable(false);
     }

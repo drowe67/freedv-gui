@@ -897,6 +897,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Shrink size of callsign list to prevent it from disappearing off the screen. (PR #692)
     * Clean up memory leak in FreeDV Reporter window. (PR #705)
     * Fix issue causing delayed filter updates when going from tracking band to frequency. (PR #704)
+    * Fix hanging issue with footswitch configured. (PR #707)
 2. Enhancements:
     * Add additional error reporting in case of PortAudio failures. (PR #695)
     * Allow longer length user messages. (PR #694)

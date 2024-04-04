@@ -273,13 +273,13 @@ void HamlibRigController::connectImpl_()
     switch(pttType_)
     {
         case PTT_VIA_RTS:
-            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "RTS");
+            rig_->state.pttport.type.ptt = RIG_PTT_SERIAL_RTS;
             break;
         case PTT_VIA_DTR:
-            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "DTR");
+            rig_->state.pttport.type.ptt = RIG_PTT_SERIAL_DTR;
             break;
         case PTT_VIA_NONE:
-            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "NONE");
+            rig_->state.pttport.type.ptt = RIG_PTT_NONE;
             break;
         case PTT_VIA_CAT:
         default:
@@ -354,7 +354,11 @@ void HamlibRigController::pttImpl_(bool state)
 
     ptt_t on = state ? RIG_PTT_ON : RIG_PTT_OFF;
 
-    int result = rig_set_ptt(rig_, RIG_VFO_CURR, on);
+    int result = RIG_OK;
+    if (pttType_ != PTT_VIA_NONE)
+    {
+        result = rig_set_ptt(rig_, RIG_VFO_CURR, on);
+    }
     if (result != RIG_OK) 
     {
         if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
