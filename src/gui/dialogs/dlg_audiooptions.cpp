@@ -50,6 +50,18 @@ extern wxConfigBase *pConfig;
 void AudioOptsDialog::audioEngineInit(void)
 {
     m_isPaInitialized = true;
+
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->setOnEngineError([this](IAudioEngine&, std::string error, void*)
+    {
+        CallAfter([&]() {
+            wxMessageBox(wxT("Sound engine failed to initialize"), wxT("Error"), wxOK);
+        });
+        
+        m_isPaInitialized = false;
+    }, nullptr);
+    
+    engine->start();
 }
 
 
@@ -344,6 +356,8 @@ AudioOptsDialog::~AudioOptsDialog()
     wxGetApp().appConfiguration.audioConfigWindowWidth = sz.GetWidth();
     wxGetApp().appConfiguration.audioConfigWindowHeight = sz.GetHeight();
 
+    AudioEngineFactory::GetAudioEngine()->stop();
+
     // Disconnect Events
     this->Disconnect(wxEVT_HIBERNATE, wxActivateEventHandler(AudioOptsDialog::OnHibernate));
     this->Disconnect(wxEVT_ICONIZE, wxIconizeEventHandler(AudioOptsDialog::OnIconize));
@@ -624,7 +638,7 @@ int AudioOptsDialog::buildListOfSupportedSampleRates(wxComboBox *cbSampleRate, w
     cbSampleRate->Clear();
     for (auto& dev : deviceList)
     {
-        if (dev.name.IsSameAs(devName))
+        if (dev.name.Find(devName) == 0)
         {
             auto supportedSampleRates =
                 engine->getSupportedSampleRates(
@@ -1043,6 +1057,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
                     }
     
                     device->stop();
+                
                     codec2_fifo_destroy(callbackFifo);
                 }
                 break;
@@ -1134,6 +1149,9 @@ void AudioOptsDialog::OnCancelAudioParameters(wxCommandEvent& event)
 {
     if(m_isPaInitialized)
     {
+        auto engine = AudioEngineFactory::GetAudioEngine();
+        engine->stop();
+        engine->setOnEngineError(nullptr, nullptr);
         m_isPaInitialized = false;
     }
     EndModal(wxCANCEL);
@@ -1152,6 +1170,9 @@ void AudioOptsDialog::OnOkAudioParameters(wxCommandEvent& event)
     if (status == 0) {
         if(m_isPaInitialized)
         {
+            auto engine = AudioEngineFactory::GetAudioEngine();
+            engine->stop();
+            engine->setOnEngineError(nullptr, nullptr);
             m_isPaInitialized = false;
         }
         EndModal(wxOK);
