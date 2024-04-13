@@ -132,11 +132,16 @@ endif(APPLE)
 
 # Custom commands to build OSX images.
 if(APPLE)
+    if(NOT LPCNET_DISABLE)
+        set(LPCNET_DYLIBBUNDLER_PATH ${LPCNET_BUILD_DIR}/src:)
+        set(LPCNET_DYLIBBUNDLER_ARG -s ${LPCNET_BUILD_DIR}/src)
+    endif(NOT LPCNET_DISABLE)
+
     add_custom_command(
         TARGET FreeDV
         POST_BUILD
         COMMAND rm -rf dist_tmp FreeDV.dmg || true
-        COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${LPCNET_BUILD_DIR}/src:${portaudio_BINARY_DIR}:${samplerate_BINARY_DIR}/src:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib -s ${LPCNET_BUILD_DIR}/src -s ${CODEC2_BUILD_DIR}/src -s ${CMAKE_BINARY_DIR}/LPCNet_build/src -s ${CMAKE_BINARY_DIR}/codec2_build/src -s ${portaudio_BINARY_DIR} -s ${samplerate_BINARY_DIR}/src
+        COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${LPCNET_DYLIBBUNDLER_PATH}${portaudio_BINARY_DIR}:${samplerate_BINARY_DIR}/src:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib ${LPCNET_DYLIBBUNDLER_ARG} -s ${CODEC2_BUILD_DIR}/src -s ${CMAKE_BINARY_DIR}/LPCNet_build/src -s ${CMAKE_BINARY_DIR}/codec2_build/src -s ${portaudio_BINARY_DIR} -s ${samplerate_BINARY_DIR}/src
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/freedv.icns FreeDV.app/Contents/Resources
         COMMAND codesign --force --options runtime --timestamp --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/entitlements.plist --sign - ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app
         COMMAND mkdir dist_tmp
