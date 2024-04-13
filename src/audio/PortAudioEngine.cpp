@@ -21,10 +21,6 @@
 //=========================================================================
 
 #include <sstream>
-#include <iomanip>
-#include <mutex>
-#include <condition_variable>
-
 #include <wx/string.h>
 #include "portaudio.h"
 #include "PortAudioDevice.h"
@@ -65,66 +61,17 @@ void PortAudioEngine::start()
     }
     else
     {
-        if (cachePopulationThread_.joinable())
-        {
-            cachePopulationThread_.join();
-        }
-        
-        std::mutex theadStartMtx;
-        std::condition_variable threadStartCV;
-        std::unique_lock<std::mutex> threadStartLock(theadStartMtx);
-        
-        cachePopulationThread_ = std::thread([&]() {
-            std::unique_lock<std::recursive_mutex> lock(deviceCacheMutex_);
-            
-            {
-                std::unique_lock<std::mutex> innerThreadStartLock(theadStartMtx);
-                threadStartCV.notify_one();
-            }
-            
-            deviceListCache_[AUDIO_ENGINE_IN] = getAudioDeviceList_(AUDIO_ENGINE_IN);
-            deviceListCache_[AUDIO_ENGINE_OUT] = getAudioDeviceList_(AUDIO_ENGINE_OUT);
-        });
-        
-        threadStartCV.wait(threadStartLock);
-        
         initialized_ = true;
     }
 }
 
 void PortAudioEngine::stop()
 {
-    if (cachePopulationThread_.joinable())
-    {
-        cachePopulationThread_.join();
-    }
-    
     Pa_Terminate();
-    
     initialized_ = false;
-    deviceListCache_.clear();
-    sampleRateList_.clear();
 }
 
 std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioDirection direction)
-{
-    std::unique_lock<std::recursive_mutex> lock(deviceCacheMutex_);
-    return deviceListCache_[direction];
-}
-
-std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, AudioDirection direction)
-{
-    std::unique_lock<std::recursive_mutex> lock(deviceCacheMutex_);
-    
-    auto key = std::pair<wxString, AudioDirection>(deviceName, direction);
-    if (sampleRateList_.count(key) == 0)
-    {
-        sampleRateList_[key] = getSupportedSampleRates_(deviceName, direction);
-    }
-    return sampleRateList_[key];
-}
-
-std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList_(AudioDirection direction)
 {
     int numDevices = Pa_GetDeviceCount();
     std::vector<AudioDeviceSpecification> result;
@@ -155,27 +102,17 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList_(Audio
             // on Windows.
             PaStreamParameters streamParameters;
             streamParameters.device = index;
+            streamParameters.channelCount = 1; 
             streamParameters.sampleFormat = paInt16;
             streamParameters.suggestedLatency = Pa_GetDeviceInfo(index)->defaultHighInputLatency;
             streamParameters.hostApiSpecificStreamInfo = NULL;
-            streamParameters.channelCount = 1;
 
-            // On Linux, the below logic causes the device lookup process to take MUCH
-            // longer than it does on other platforms, mainly because of the special devices
-            // it provides to PortAudio. For these, we're just going to assume the minimum
-            // valid channels is 1.
+            // On Linux, the below logic causes the device lookup process to take MUCH	
+            // longer than it does on other platforms, mainly because of the special devices	
+            // it provides to PortAudio. For these, we're just going to assume the minimum	
+            // valid channels is 1.            
             int maxChannels = direction == AUDIO_ENGINE_IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
-            bool isDeviceWithKnownMinimum = 
-                !strcmp(deviceInfo->name, "sysdefault") ||            
-                !strcmp(deviceInfo->name, "front") ||            
-                !strcmp(deviceInfo->name, "surround") ||            
-                !strcmp(deviceInfo->name, "samplerate") ||            
-                !strcmp(deviceInfo->name, "speexrate") ||            
-                !strcmp(deviceInfo->name, "pulse") ||            
-                !strcmp(deviceInfo->name, "upmix") ||            
-                !strcmp(deviceInfo->name, "vdownmix") ||            
-                !strcmp(deviceInfo->name, "dmix") ||            
-                !strcmp(deviceInfo->name, "default");
+            bool isDeviceWithKnownMinimum = IsDeviceWhitelisted_(deviceInfo->name);
             if (!isDeviceWithKnownMinimum)
             {
                 while (streamParameters.channelCount < maxChannels)
@@ -185,7 +122,7 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList_(Audio
                         direction == AUDIO_ENGINE_OUT ? &streamParameters : NULL, 
                         deviceInfo->defaultSampleRate);
                 
-                    if (err != paFormatIsSupported)
+                    if (err == paFormatIsSupported)
                     {
                         break;
                     }
@@ -199,8 +136,18 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList_(Audio
             device.deviceId = index;
             device.name = wxString::FromUTF8(deviceInfo->name);
             device.apiName = hostApiName;
-            device.minChannels = streamParameters.channelCount;
-            device.maxChannels = maxChannels;
+
+            // For "whitelisted" devices, also assume channel counts
+            if (IsDeviceWhitelisted_(deviceInfo->name))
+            {
+                device.maxChannels = 2;
+            }
+            else
+            {
+                device.minChannels = streamParameters.channelCount;
+                device.maxChannels = 
+                    direction == AUDIO_ENGINE_IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
+            }
             device.defaultSampleRate = deviceInfo->defaultSampleRate;
             
             result.push_back(device);
@@ -210,7 +157,7 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList_(Audio
     return result;
 }
 
-std::vector<int> PortAudioEngine::getSupportedSampleRates_(wxString deviceName, AudioDirection direction)
+std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, AudioDirection direction)
 {
     std::vector<int> result;
     auto devInfo = getAudioDeviceList(direction);
@@ -230,11 +177,17 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates_(wxString deviceName, 
             int rateIndex = 0;
             while (IAudioEngine::StandardSampleRates[rateIndex] != -1)
             {
-                PaError err = Pa_IsFormatSupported(
-                    direction == AUDIO_ENGINE_IN ? &streamParameters : NULL, 
-                    direction == AUDIO_ENGINE_OUT ? &streamParameters : NULL, 
-                    IAudioEngine::StandardSampleRates[rateIndex]);
-                
+                PaError err = paFormatIsSupported;
+
+                bool isDeviceWithKnownMinimum = IsDeviceWhitelisted_(deviceName);
+                if (!isDeviceWithKnownMinimum)
+                {
+                    err = Pa_IsFormatSupported(
+                        direction == AUDIO_ENGINE_IN ? &streamParameters : NULL, 
+                        direction == AUDIO_ENGINE_OUT ? &streamParameters : NULL, 
+                        IAudioEngine::StandardSampleRates[rateIndex]);
+                }
+
                 if (err == paFormatIsSupported)
                 {
                     result.push_back(IAudioEngine::StandardSampleRates[rateIndex]);
@@ -242,8 +195,14 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates_(wxString deviceName, 
                 
                 rateIndex++;
             }
-            
-            break;
+
+            // If we can't find a supported sample rate, just assume that the
+            // default sample rate is supported. If that can't actually be used,
+            // we can deal with it later.
+            if (result.size() == 0)
+            {
+                result.push_back(device.defaultSampleRate);
+            }
         }
     }
     
@@ -294,7 +253,7 @@ std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(wxString deviceNam
     
     for (auto& dev : deviceList)
     {
-        if (dev.name.Find(deviceName) == 0)
+        if (dev.name.IsSameAs(deviceName))
         {
             // Ensure that the passed-in number of channels is within the allowed range.
             numChannels = std::max(numChannels, dev.minChannels);
@@ -307,4 +266,19 @@ std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(wxString deviceNam
     }
 
     return nullptr;
+}
+
+bool PortAudioEngine::IsDeviceWhitelisted_(const char* devName)
+{
+    return
+        !strcmp(devName, "sysdefault") ||            
+        !strcmp(devName, "front") ||            
+        !strcmp(devName, "surround") ||            
+        !strcmp(devName, "samplerate") ||            
+        !strcmp(devName, "speexrate") ||            
+        !strcmp(devName, "pulse") ||            
+        !strcmp(devName, "upmix") ||            
+        !strcmp(devName, "vdownmix") ||            
+        !strcmp(devName, "dmix") ||            
+        !strcmp(devName, "default");
 }

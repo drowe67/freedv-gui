@@ -889,6 +889,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.9.9.1 April 2024
+
+1. Bugfixes:
+    * Revert PR #689 and reimplement fix for original startup delay issue. (PR #712)
+
 ## V1.9.9 April 2024
 
 1. Bugfixes:

@@ -50,6 +50,18 @@ extern wxConfigBase *pConfig;
 void AudioOptsDialog::audioEngineInit(void)
 {
     m_isPaInitialized = true;
+
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->setOnEngineError([this](IAudioEngine&, std::string error, void*)
+    {
+        CallAfter([&]() {
+            wxMessageBox(wxT("Sound engine failed to initialize"), wxT("Error"), wxOK);
+        });
+        
+        m_isPaInitialized = false;
+    }, nullptr);
+    
+    engine->start();
 }
 
 
@@ -344,6 +356,8 @@ AudioOptsDialog::~AudioOptsDialog()
     wxGetApp().appConfiguration.audioConfigWindowWidth = sz.GetWidth();
     wxGetApp().appConfiguration.audioConfigWindowHeight = sz.GetHeight();
 
+    AudioEngineFactory::GetAudioEngine()->stop();
+
     // Disconnect Events
     this->Disconnect(wxEVT_HIBERNATE, wxActivateEventHandler(AudioOptsDialog::OnHibernate));
     this->Disconnect(wxEVT_ICONIZE, wxIconizeEventHandler(AudioOptsDialog::OnIconize));
@@ -385,7 +399,7 @@ bool AudioOptsDialog::setTextCtrlIfDevNameValid(wxTextCtrl *textCtrl, wxListCtrl
     // ignore last list entry as it is the "none" entry
     for(int i = 0; i < listCtrl->GetItemCount() - 1; i++) 
     {
-        if (listCtrl->GetItemText(i, 0).Find(devName) == 0)
+        if (listCtrl->GetItemText(i, 0).IsSameAs(devName))
         {
             textCtrl->SetValue(listCtrl->GetItemText(i, 0));
             if (g_verbose) fprintf(stderr,"setting focus of %d\n", i);
@@ -839,7 +853,7 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
         for (auto& devInfo : devList)
         {
-            if (devInfo.name.Find(devName) == 0)
+            if (devInfo.name.IsSameAs(devName))
             {
                 int sampleCount = 0;
                 int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
@@ -964,7 +978,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
         for (auto& devInfo : devList)
         {
-            if (devInfo.name.Find(devName) == 0)
+            if (devInfo.name.IsSameAs(devName))
             {
                 int sampleCount = 0;
                 int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
@@ -1043,6 +1057,7 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
                     }
     
                     device->stop();
+                
                     codec2_fifo_destroy(callbackFifo);
                 }
                 break;
@@ -1134,6 +1149,9 @@ void AudioOptsDialog::OnCancelAudioParameters(wxCommandEvent& event)
 {
     if(m_isPaInitialized)
     {
+        auto engine = AudioEngineFactory::GetAudioEngine();
+        engine->stop();
+        engine->setOnEngineError(nullptr, nullptr);
         m_isPaInitialized = false;
     }
     EndModal(wxCANCEL);
@@ -1152,6 +1170,9 @@ void AudioOptsDialog::OnOkAudioParameters(wxCommandEvent& event)
     if (status == 0) {
         if(m_isPaInitialized)
         {
+            auto engine = AudioEngineFactory::GetAudioEngine();
+            engine->stop();
+            engine->setOnEngineError(nullptr, nullptr);
             m_isPaInitialized = false;
         }
         EndModal(wxOK);

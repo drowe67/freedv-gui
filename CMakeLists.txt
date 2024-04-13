@@ -15,7 +15,7 @@ endif()
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
 
 set(PROJECT_NAME FreeDV)
-set(PROJECT_VERSION 1.9.9)
+set(PROJECT_VERSION 1.9.9.1)
 set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
 set(PROJECT_HOMEPAGE_URL "https://freedv.org")
 
@@ -417,7 +417,7 @@ if(NOT USE_STATIC_PORTAUDIO AND NOT USE_PULSEAUDIO)
         message(FATAL_ERROR "portaudio library not found.
 On Linux systems try installing:
     portaudio-devel  (RPM based systems)
-    libportaudio-dev (DEB based systems)
+    portaudio19-dev (DEB based systems)
 On Windows it's easiest to use the cmake option: USE_STATIC_PORTAUDIO"
         )
     endif()
