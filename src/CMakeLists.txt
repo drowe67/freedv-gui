@@ -62,9 +62,9 @@ endif(APPLE)
 # Add build dependencies for internally built external libraries.
 if(USE_INTERNAL_CODEC2)
     if(APPLE)
-        add_dependencies(FreeDV build_codec2 build_lpcnetfreedv)
+        add_dependencies(FreeDV build_codec2)
     else(APPLE)
-        add_dependencies(freedv build_codec2 build_lpcnetfreedv)
+        add_dependencies(freedv build_codec2)
     endif(APPLE)
 endif()
 

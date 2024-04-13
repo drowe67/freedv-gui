@@ -39,7 +39,7 @@ jobs:
         export PATH=${{github.workspace}}/llvm-mingw-20230320-ucrt-ubuntu-18.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake ..
+        cmake -DBOOTSTRAP_LPCNET=1 -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake ..
 
     - name: Build freedv-gui
       shell: bash
