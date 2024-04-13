@@ -112,17 +112,7 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
             // it provides to PortAudio. For these, we're just going to assume the minimum	
             // valid channels is 1.            
             int maxChannels = direction == AUDIO_ENGINE_IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
-            bool isDeviceWithKnownMinimum = 
-                !strcmp(deviceInfo->name, "sysdefault") ||            
-                !strcmp(deviceInfo->name, "front") ||            
-                !strcmp(deviceInfo->name, "surround") ||            
-                !strcmp(deviceInfo->name, "samplerate") ||            
-                !strcmp(deviceInfo->name, "speexrate") ||            
-                !strcmp(deviceInfo->name, "pulse") ||            
-                !strcmp(deviceInfo->name, "upmix") ||            
-                !strcmp(deviceInfo->name, "vdownmix") ||            
-                !strcmp(deviceInfo->name, "dmix") ||            
-                !strcmp(deviceInfo->name, "default");
+            bool isDeviceWithKnownMinimum = IsDeviceWhitelisted_(deviceInfo->name);
             if (!isDeviceWithKnownMinimum)
             {
                 while (streamParameters.channelCount < maxChannels)
@@ -146,9 +136,18 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
             device.deviceId = index;
             device.name = wxString::FromUTF8(deviceInfo->name);
             device.apiName = hostApiName;
-            device.minChannels = streamParameters.channelCount;
-            device.maxChannels = 
-                direction == AUDIO_ENGINE_IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
+
+            // For "whitelisted" devices, also assume channel counts
+            if (IsDeviceWhitelisted_(deviceInfo->name))
+            {
+                device.maxChannels = 2;
+            }
+            else
+            {
+                device.minChannels = streamParameters.channelCount;
+                device.maxChannels = 
+                    direction == AUDIO_ENGINE_IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
+            }
             device.defaultSampleRate = deviceInfo->defaultSampleRate;
             
             result.push_back(device);
@@ -180,17 +179,7 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, A
             {
                 PaError err = paFormatIsSupported;
 
-                bool isDeviceWithKnownMinimum = 
-                    !strcmp(deviceName, "sysdefault") ||            
-                    !strcmp(deviceName, "front") ||            
-                    !strcmp(deviceName, "surround") ||            
-                    !strcmp(deviceName, "samplerate") ||            
-                    !strcmp(deviceName, "speexrate") ||            
-                    !strcmp(deviceName, "pulse") ||            
-                    !strcmp(deviceName, "upmix") ||            
-                    !strcmp(deviceName, "vdownmix") ||            
-                    !strcmp(deviceName, "dmix") ||            
-                    !strcmp(deviceName, "default");
+                bool isDeviceWithKnownMinimum = IsDeviceWhitelisted_(deviceName);
                 if (!isDeviceWithKnownMinimum)
                 {
                     err = Pa_IsFormatSupported(
@@ -269,4 +258,19 @@ std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(wxString deviceNam
     }
 
     return nullptr;
+}
+
+bool PortAudioEngine::IsDeviceWhitelisted_(const char* devName)
+{
+    return
+        !strcmp(devName, "sysdefault") ||            
+        !strcmp(devName, "front") ||            
+        !strcmp(devName, "surround") ||            
+        !strcmp(devName, "samplerate") ||            
+        !strcmp(devName, "speexrate") ||            
+        !strcmp(devName, "pulse") ||            
+        !strcmp(devName, "upmix") ||            
+        !strcmp(devName, "vdownmix") ||            
+        !strcmp(devName, "dmix") ||            
+        !strcmp(devName, "default");
 }

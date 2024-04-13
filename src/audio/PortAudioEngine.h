@@ -40,6 +40,8 @@ public:
     
 private:
     bool initialized_;
+
+    static bool IsDeviceWhitelisted_(const char* devName);
 };
 
 #endif // PORT_AUDIO_ENGINE_H
