@@ -69,7 +69,7 @@ $ LPCNET_DISABLE=1 ./build_linux.sh
 ```
 
 or alternatively, do not pass in `LPCNET_BUILD_DIR` to `cmake` if manually executing the build.
-This also has the side effect of disabling 2020 and 2020B in the user interface, preventing it
+This also has the side effect of disabling 2020 and 2020B in the user interface, preventing either 
 from being selected.
 
 *Note: if you don't already have Codec2 installed on your machine, you will need to pass `-DBOOTSTRAP_LPCNET=1`
