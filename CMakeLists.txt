@@ -130,7 +130,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_VERBOSE_MAKEFILE TRUE CACHE BOOL "Verbose makefile.")
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE CACHE BOOL "Enable IDE features.")
 set(USE_INTERNAL_CODEC2 FALSE CACHE BOOL
-    "Download and build codec2 and lpcnetfreedv instead of using the system library.")
+    "Download and build codec2  instead of using the system library.")
+set(BOOTSTRAP_LPCNET FALSE CACHE BOOL
+    "Download and build LPCNet instead of using the system library.")
 set(USE_STATIC_DEPS FALSE CACHE BOOL
     "Download and build static libraries instead of system libraries.")
 set(USE_STATIC_PORTAUDIO FALSE CACHE BOOL
@@ -254,7 +256,7 @@ if(MINGW)
     # shared DLL doesn't work.
     set(USE_STATIC_PORTAUDIO TRUE)
     unset(USE_INTERNAL_CODEC2 CACHE)
-    set(USE_INTERNAL_CODEC2 TRUE CACHE BOOL "Perform nternal buils of codec2 and lpcnetfreedv")
+    set(USE_INTERNAL_CODEC2 TRUE CACHE BOOL "Perform internal builds of codec2")
     # Setup HOST variables.
     include(cmake/MinGW.cmake)
     # This sets up the exe icon for windows under mingw.
