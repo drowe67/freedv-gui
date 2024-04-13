@@ -56,7 +56,7 @@ if [ $LPCNET_DISABLE == 0 ]; then
 fi
 
 if [ $LPCNET_DISABLE == 0 ]; then
-    LPCNET_CMAKE_CMD="-DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux"
+    LPCNET_CMAKE_CMD="-DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx"
 fi
 
 # Build codec2 with LPCNet and test FreeDV 2020 support
