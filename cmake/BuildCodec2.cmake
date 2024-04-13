@@ -38,9 +38,8 @@ set_target_properties(codec2 PROPERTIES
     IMPORTED_IMPLIB   "${BINARY_DIR}/src/libcodec2${CMAKE_IMPORT_LIBRARY_SUFFIX}"
 )
 
-add_dependencies(build_codec2)
 if(BOOTSTRAP_LPCNET)
-add_dependencies(build_lpcnetfreedv)
+add_dependencies(build_codec2 build_lpcnetfreedv)
 endif(BOOTSTRAP_LPCNET)
 
 set(CODEC2_INCLUDE_DIRS ${CMAKE_BINARY_DIR}/codec2_src/src ${CMAKE_BINARY_DIR}/codec2_build)
