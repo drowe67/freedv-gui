@@ -161,7 +161,7 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, A
     
     for (auto& device : devInfo)
     {
-        if (device.name.Find(deviceName) == 0)
+        if (device.name.IsSameAs(deviceName))
         {
             PaStreamParameters streamParameters;
             
@@ -236,7 +236,7 @@ std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(wxString deviceNam
     
     for (auto& dev : deviceList)
     {
-        if (dev.name.Find(deviceName) == 0)
+        if (dev.name.IsSameAs(deviceName))
         {
             // Ensure that the passed-in number of channels is within the allowed range.
             numChannels = std::max(numChannels, dev.minChannels);
