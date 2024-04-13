@@ -889,7 +889,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V1.9.9 TBD 2024
+## V1.9.9 April 2024
 
 1. Bugfixes:
     * Cache PortAudio sound info to improve startup performance. (PR #689)
@@ -904,6 +904,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add context menu for copying messages to the clipboard. (PR #694)
 3. Documentation:
     * Remove broken links in README. (PR #709)
+4. Build system:
+    * Add ability to build without LPCNet in preparation for potential future deprecation of 2020/2020B. (PR #711)
 
 ## V1.9.8 February 2024
 

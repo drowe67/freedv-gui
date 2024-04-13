@@ -8,6 +8,7 @@
 set -x -e
 
 UT_ENABLE=${UT_ENABLE:-0}
+LPCNET_DISABLE=${LPCNET_DISABLE:-0}
 
 # Allow building of either PulseAudio or PortAudio variants
 FREEDV_VARIANT=${1:-pulseaudio}
@@ -26,15 +27,31 @@ LPCNET_BRANCH=v0.5
 
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
-if [ ! -d LPCNet ]; then
-    git clone https://github.com/drowe67/LPCNet.git
+if [ $LPCNET_DISABLE == 0 ]; then
+    if [ ! -d LPCNet ]; then
+        git clone https://github.com/drowe67/LPCNet.git
+    fi
+    cd $LPCNETDIR && git switch master && git pull && git checkout $LPCNET_BRANCH
+    mkdir  -p build_linux && cd build_linux && rm -Rf *
+    cmake ..
+    if [ $? == 0 ]; then
+        make
+        if [ $? == 0 ]; then
+            # sanity check test
+            cd src && sox ../../wav/wia.wav -t raw -r 16000 - | ./lpcnet_enc -s | ./lpcnet_dec -s > /dev/null
+        else
+            echo "Warning: LPCNet build failed, disabling"
+            LPCNET_DISABLE=1
+        fi
+    else
+        echo "Warning: LPCNet build failed, disabling"
+        LPCNET_DISABLE=1
+    fi
 fi
-cd $LPCNETDIR && git switch master && git pull && git checkout $LPCNET_BRANCH
-mkdir  -p build_linux && cd build_linux && rm -Rf *
-cmake ..
-make
-# sanity check test
-cd src && sox ../../wav/wia.wav -t raw -r 16000 - | ./lpcnet_enc -s | ./lpcnet_dec -s > /dev/null
+
+if [ $LPCNET_DISABLE == 0 ]; then
+    LPCNET_CMAKE_CMD="-DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux"
+fi
 
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
@@ -42,11 +59,13 @@ if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2.git
 fi
 cd codec2 && git switch main && git pull && git checkout $CODEC2_BRANCH
-mkdir -p build_linux && cd build_linux && rm -Rf * && cmake -DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux .. && make VERBOSE=1
-# sanity check test
-cd src
-export LD_LIBRARY_PATH=$LPCNETDIR/build_linux/src
-./freedv_tx 2020 $LPCNETDIR/wav/wia.wav - | ./freedv_rx 2020 - /dev/null
+mkdir -p build_linux && cd build_linux && rm -Rf * && cmake $LPCNET_CMAKE_CMD .. && make VERBOSE=1
+if [ $LPCNET_DISABLE == 0 ]; then
+    # sanity check test
+    cd src
+    export LD_LIBRARY_PATH=$LPCNETDIR/build_linux/src
+    ./freedv_tx 2020 $LPCNETDIR/wav/wia.wav - | ./freedv_rx 2020 - /dev/null
+fi
 
 # Finally, build freedv-gui
 cd $FREEDVGUIDIR
@@ -59,5 +78,5 @@ if [[ "$FREEDV_VARIANT" == "pulseaudio" ]]; then
 else
     PULSEAUDIO_PARAM="-DUSE_PULSEAUDIO=0"
 fi
-cmake $PULSEAUDIO_PARAM -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux -DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux ..
+cmake $PULSEAUDIO_PARAM -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux $LPCNET_CMAKE_CMD ..
 make VERBOSE=1

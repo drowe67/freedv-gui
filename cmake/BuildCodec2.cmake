@@ -9,10 +9,15 @@ if(BUILD_OSX_UNIVERSAL)
 endif(BUILD_OSX_UNIVERSAL)
 
 # Bootstrap lpcnetfreedv library
-include(cmake/BuildLPCNet.cmake)
+if(BOOTSTRAP_LPCNET)
+    include(cmake/BuildLPCNet.cmake)
+    set(CODEC2_CMAKE_ARGS ${CODEC2_CMAKE_ARGS} -DLPCNET_BUILD_DIR=${CMAKE_BINARY_DIR}/LPCNet_build)
+else(BOOTSTRAP_LPCNET)
+    add_definitions(-DLPCNET_DISABLED)
+    set(LPCNET_DISABLED YES)
+endif(BOOTSTRAP_LPCNET)
 
 # Build codec2 library with lpcnetfreedv
-set(CODEC2_CMAKE_ARGS ${CODEC2_CMAKE_ARGS} -DLPCNET_BUILD_DIR=${CMAKE_BINARY_DIR}/LPCNet_build)
 include(ExternalProject)
 ExternalProject_Add(build_codec2
    SOURCE_DIR codec2_src
@@ -33,7 +38,9 @@ set_target_properties(codec2 PROPERTIES
     IMPORTED_IMPLIB   "${BINARY_DIR}/src/libcodec2${CMAKE_IMPORT_LIBRARY_SUFFIX}"
 )
 
+if(BOOTSTRAP_LPCNET)
 add_dependencies(build_codec2 build_lpcnetfreedv)
+endif(BOOTSTRAP_LPCNET)
 
 set(CODEC2_INCLUDE_DIRS ${CMAKE_BINARY_DIR}/codec2_src/src ${CMAKE_BINARY_DIR}/codec2_build)
 include_directories(${CODEC2_INCLUDE_DIRS})
