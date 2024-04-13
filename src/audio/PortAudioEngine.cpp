@@ -178,11 +178,27 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, A
             int rateIndex = 0;
             while (IAudioEngine::StandardSampleRates[rateIndex] != -1)
             {
-                PaError err = Pa_IsFormatSupported(
-                    direction == AUDIO_ENGINE_IN ? &streamParameters : NULL, 
-                    direction == AUDIO_ENGINE_OUT ? &streamParameters : NULL, 
-                    IAudioEngine::StandardSampleRates[rateIndex]);
-                
+                PaError err = paFormatIsSupported;
+
+                bool isDeviceWithKnownMinimum = 
+                    !strcmp(deviceName, "sysdefault") ||            
+                    !strcmp(deviceName, "front") ||            
+                    !strcmp(deviceName, "surround") ||            
+                    !strcmp(deviceName, "samplerate") ||            
+                    !strcmp(deviceName, "speexrate") ||            
+                    !strcmp(deviceName, "pulse") ||            
+                    !strcmp(deviceName, "upmix") ||            
+                    !strcmp(deviceName, "vdownmix") ||            
+                    !strcmp(deviceName, "dmix") ||            
+                    !strcmp(deviceName, "default");
+                if (!isDeviceWithKnownMinimum)
+                {
+                    err = Pa_IsFormatSupported(
+                        direction == AUDIO_ENGINE_IN ? &streamParameters : NULL, 
+                        direction == AUDIO_ENGINE_OUT ? &streamParameters : NULL, 
+                        IAudioEngine::StandardSampleRates[rateIndex]);
+                }
+
                 if (err == paFormatIsSupported)
                 {
                     result.push_back(IAudioEngine::StandardSampleRates[rateIndex]);
