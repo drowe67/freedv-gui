@@ -11,6 +11,7 @@ export HAMLIBDIR=$FREEDVGUIDIR/hamlib
 export CODEC2_BRANCH=1.2.0
 export LPCNET_BRANCH=v0.5
 export UT_ENABLE=${UT_ENABLE:-0}
+LPCNET_DISABLE=${LPCNET_DISABLE:-0}
 
 # Prerequisite: build dylibbundler
 if [ ! -d macdylibbundler ]; then
@@ -32,16 +33,31 @@ make install
 
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
-if [ ! -d LPCNet ]; then
-    git clone https://github.com/drowe67/LPCNet.git
+if [ $LPCNET_DISABLE == 0 ]; then
+    if [ ! -d LPCNet ]; then
+        git clone https://github.com/drowe67/LPCNet.git
+    fi
+    cd $LPCNETDIR && git checkout master && git pull && git checkout $LPCNET_BRANCH
+    mkdir  -p build_osx && cd build_osx && rm -Rf *
+    cmake -DBUILD_OSX_UNIVERSAL=1 ..
+    if [ $? == 0 ]; then
+        make -j4
+        if [ $? == 0 ]; then
+            # sanity check test
+            cd src && sox ../../wav/wia.wav -t raw -r 16000 - | ./lpcnet_enc -s | ./lpcnet_dec -s > /dev/null
+        else
+            echo "Warning: LPCNet build failed, disabling"
+            LPCNET_DISABLE=1
+        fi
+    else
+        echo "Warning: LPCNet build failed, disabling"
+        LPCNET_DISABLE=1
+    fi
 fi
-cd $LPCNETDIR && git checkout master && git pull && git checkout $LPCNET_BRANCH
-mkdir  -p build_osx && cd build_osx && rm -Rf *
-cmake -DBUILD_OSX_UNIVERSAL=1 ..
-make -j4
 
-# sanity check test
-cd src && sox ../../wav/wia.wav -t raw -r 16000 - | ./lpcnet_enc -s | ./lpcnet_dec -s > /dev/null
+if [ $LPCNET_DISABLE == 0 ]; then
+    LPCNET_CMAKE_CMD="-DLPCNET_BUILD_DIR=$LPCNETDIR/build_linux"
+fi
 
 # Build codec2 with LPCNet and test FreeDV 2020 support
 cd $FREEDVGUIDIR
@@ -49,7 +65,7 @@ if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2-new.git codec2
 fi
 cd codec2 && git switch main && git pull && git checkout $CODEC2_BRANCH
-mkdir -p build_osx && cd build_osx && rm -Rf * && cmake -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx -DBUILD_OSX_UNIVERSAL=1 .. && make VERBOSE=1 -j4
+mkdir -p build_osx && cd build_osx && rm -Rf * && cmake ${LPCNET_CMAKE_CMD} -DBUILD_OSX_UNIVERSAL=1 .. && make VERBOSE=1 -j4
 
 # sanity check test
 cd src
@@ -62,5 +78,5 @@ if [ -d .git ]; then
     git pull
 fi
 mkdir  -p build_osx && cd build_osx && rm -Rf *
-cmake -DUNITTEST=1 -DBUILD_OSX_UNIVERSAL=1 -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug  -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_SPEEXDSP=1 -DUSE_STATIC_PORTAUDIO=1 -DUSE_STATIC_SAMPLERATE=1 -DUSE_STATIC_SNDFILE=1 -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.dylib -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx -DLPCNET_BUILD_DIR=$LPCNETDIR/build_osx ..
+cmake -DUNITTEST=1 -DBUILD_OSX_UNIVERSAL=1 -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug  -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_SPEEXDSP=1 -DUSE_STATIC_PORTAUDIO=1 -DUSE_STATIC_SAMPLERATE=1 -DUSE_STATIC_SNDFILE=1 -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.dylib -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx ${LPCNET_CMAKE_CMD} ..
 make VERBOSE=1 -j8

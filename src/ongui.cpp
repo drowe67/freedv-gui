@@ -9,7 +9,9 @@
 #include <locale>
 
 #include "main.h"
+#if !defined(LPCNET_DISABLED)
 #include "lpcnet_freedv.h"
+#endif // defined(LPCNET_DISABLED)
 
 #include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/dlg_filter.h"
@@ -351,8 +353,14 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
                 wxT("freedv-gui version: %s\n")
                 wxT("freedv-gui git hash: %s\n")
                 wxT("codec2 git hash: %s\n")
-                wxT("lpcnet git hash: %s\n"),
-                FREEDV_VERSION, FREEDV_VERSION, GIT_HASH, freedv_get_hash(), lpcnet_get_hash());
+#if !defined(LPCNET_DISABLED)
+                wxT("lpcnet git hash: %s\n")
+#endif // !defined(LPCNET_DISABLED)
+                , FREEDV_VERSION, FREEDV_VERSION, GIT_HASH, freedv_get_hash()
+#if !defined(LPCNET_DISABLED)
+                , lpcnet_get_hash()
+#endif // !defined(LPCNET_DISABLED)
+                );
 
     wxMessageBox(msg, wxT("About"), wxOK | wxICON_INFORMATION, this);
 }

@@ -288,7 +288,10 @@ void MainFrame::test2020Mode_()
 {    
     printf("Making sure your machine can handle 2020 mode:\n");
 
-    bool allowed = test2020HWAllowed_();
+    bool allowed = false;
+
+#if !defined(LPCNET_DISABLED)
+    allowed = test2020HWAllowed_();
     wxGetApp().appConfiguration.freedvAVXSupported = allowed;
 
     if (!allowed)
@@ -363,6 +366,7 @@ void MainFrame::test2020Mode_()
     
         std::cout << "One second of 2020 decoded in " << timeTaken.count() << " ms" << std::endl;
     }
+#endif // !defined(LPCNET_DISABLED)
     
     std::cout << "2020 allowed: " << allowed << std::endl;
     
@@ -859,7 +863,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     }
 #endif
     
-#if defined(FREEDV_MODE_2020)
+#if defined(FREEDV_MODE_2020) && !defined(LPCNET_DISABLED)
     // First time use: make sure 2020 mode will actually work on this machine.
     if (wxGetApp().appConfiguration.firstTimeUse)
     {
@@ -869,7 +873,10 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     {
         wxGetApp().appConfiguration.freedvAVXSupported = test2020HWAllowed_();
     }
-#endif // defined(FREEDV_MODE_2020)
+#else
+    // Disable LPCNet if not compiled in.
+    wxGetApp().appConfiguration.freedv2020Allowed = false;
+#endif // defined(FREEDV_MODE_2020) && !defined(LPCNET_DISABLED)
     
     if(!wxGetApp().appConfiguration.freedv2020Allowed || !wxGetApp().appConfiguration.freedvAVXSupported)
     {
