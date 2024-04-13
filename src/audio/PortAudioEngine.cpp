@@ -106,7 +106,11 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
             streamParameters.sampleFormat = paInt16;
             streamParameters.suggestedLatency = Pa_GetDeviceInfo(index)->defaultHighInputLatency;
             streamParameters.hostApiSpecificStreamInfo = NULL;
-            
+
+            // On Linux, the below logic causes the device lookup process to take MUCH	
+            // longer than it does on other platforms, mainly because of the special devices	
+            // it provides to PortAudio. For these, we're just going to assume the minimum	
+            // valid channels is 1.            
             int maxChannels = direction == AUDIO_ENGINE_IN ? deviceInfo->maxInputChannels : deviceInfo->maxOutputChannels;
             bool isDeviceWithKnownMinimum = 
                 !strcmp(deviceInfo->name, "sysdefault") ||            
