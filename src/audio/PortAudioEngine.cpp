@@ -194,7 +194,15 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, A
                 }
                 
                 rateIndex++;
-            }            
+            }
+
+            // If we can't find a supported sample rate, just assume that the
+            // default sample rate is supported. If that can't actually be used,
+            // we can deal with it later.
+            if (result.size() == 0)
+            {
+                result.push_back(device.defaultSampleRate);
+            }
         }
     }
     
