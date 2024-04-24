@@ -889,6 +889,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## TBD TBD 2024
+
+1. Bugfixes:
+    * Remove TX attenuation and squelch tooltips. (PR #717)
+
 ## V1.9.9.1 April 2024
 
 1. Bugfixes:
