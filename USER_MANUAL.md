@@ -889,6 +889,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## TBD TBD 2024
+
+1. Bugfixes:
+    * Disable 800XA radio button when in RX Only mode. (PR #716)
+
 ## V1.9.9.1 April 2024
 
 1. Bugfixes:

@@ -1937,6 +1937,7 @@ void MainFrame::performFreeDVOn_()
                 m_rb700c->Disable();
                 m_rb700d->Disable();
                 m_rb700e->Disable();
+                m_rb800xa->Disable();
                 m_rb2020->Disable();
         #if defined(FREEDV_MODE_2020B)
                 m_rb2020b->Disable();
