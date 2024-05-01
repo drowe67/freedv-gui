@@ -25,6 +25,7 @@
 #include "pipeline/ParallelStep.h"
 #include "pipeline/FreeDVTransmitStep.h"
 #include "pipeline/FreeDVReceiveStep.h"
+#include "pipeline/ExternVocoderStep.h"
 
 using namespace std::placeholders;
 
@@ -127,6 +128,15 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
     float minimumSnr = 999.0f;
     for (auto& mode : enabledModes_)
     {
+        if (mode == -1)
+        {
+            // Special-case to allow use of external vocoder
+            // NOTE: multi-RX is NOT supported.
+            rxMode_ = -1;
+            txMode_ = -1;
+            continue;
+        }
+
         struct freedv* dv = freedv_open(mode);
         assert(dv != nullptr);
         
@@ -421,12 +431,16 @@ void FreeDVInterface::setTextCallbackFn(void (*rxFunc)(void *, char), char (*txF
 
 int FreeDVInterface::getTxModemSampleRate() const
 {
+    if (txMode_ == -1) return 16000;
+
     assert(currentTxMode_ != nullptr);
     return freedv_get_modem_sample_rate(currentTxMode_);
 }
 
 int FreeDVInterface::getTxSpeechSampleRate() const
 {
+    if (txMode_ == -1) return 16000;
+
     assert(currentTxMode_ != nullptr);
     return freedv_get_speech_sample_rate(currentTxMode_);
 }
@@ -559,7 +573,13 @@ void FreeDVInterface::setReliableText(const char* callsign)
 IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int outputSampleRate, std::function<float()> getFreqOffsetFn)
 {
     std::vector<IPipelineStep*> parallelSteps;
-    
+   
+    if (txMode_ == -1)
+    {
+        // special handling for external vocoder
+        parallelSteps.push_back(new ExternVocoderStep("/home/parallels/radae/radio_ae/inference.py", 16000));
+    }
+ 
     for (auto& dv : dvObjects_)
     {
         parallelSteps.push_back(new FreeDVTransmitStep(dv, getFreqOffsetFn));
@@ -608,6 +628,12 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     state->getFreqOffsetFn = getFreqOffsetFn;
     state->getSigPwrAvgFn = getSigPwrAvgFn;
     
+    if (txMode_ == -1)
+    {
+        // special handling for external vocoder
+        parallelSteps.push_back(new ExternVocoderStep("/home/parallels/radae/radio_ae/rx.py", 16000));
+    }
+ 
     for (auto& dv : dvObjects_)
     {
         auto recvStep = new FreeDVReceiveStep(dv);

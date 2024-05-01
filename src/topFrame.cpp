@@ -683,6 +683,8 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxWindow *otherModeWin = m_collpane->GetPane();
     wxSizer *otherModeSizer = new wxBoxSizer(wxVERTICAL);
     
+    m_rbExternalVocoder = new wxRadioButton( otherModeWin, wxID_ANY, wxT("External"), wxDefaultPosition, wxDefaultSize,  0);
+    otherModeSizer->Add(m_rbExternalVocoder, 1, wxALIGN_LEFT|wxALL|wxEXPAND, 1);
     m_rb700c = new wxRadioButton( otherModeWin, wxID_ANY, wxT("700C"), wxDefaultPosition, wxDefaultSize,  0);
     otherModeSizer->Add(m_rb700c, 1, wxALIGN_LEFT|wxALL|wxEXPAND, 1);
     m_rb800xa = new wxRadioButton( otherModeWin, wxID_ANY, wxT("800XA"), wxDefaultPosition, wxDefaultSize, 0);
@@ -857,6 +859,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_BtnBerReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnBerReset), NULL, this);
     m_BtnReSync->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnReSync), NULL, this);
     
+    m_rbExternalVocoder->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb700c->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb700d->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb700e->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
@@ -938,6 +941,7 @@ TopFrame::~TopFrame()
 
     m_audioRecord->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnRecord), NULL, this);
 
+    m_rbExternalVocoder->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb700c->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb700d->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb700e->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
