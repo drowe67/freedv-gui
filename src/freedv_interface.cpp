@@ -486,7 +486,7 @@ void FreeDVInterface::setTextVaricodeNum(int num)
 
 int FreeDVInterface::getRxModemSampleRate() const
 {
-    if (rxMode_ == -1) return 16000;
+    if (rxMode_ == -1) return 8000;
 
     int result = 0;
     for (auto& dv : dvObjects_)
@@ -499,7 +499,7 @@ int FreeDVInterface::getRxModemSampleRate() const
 
 int FreeDVInterface::getRxNumModemSamples() const
 {
-    if (rxMode_ == -1) return 16000;
+    if (rxMode_ == -1) return 1024;
 
     int result = 0;
     for (auto& dv : dvObjects_)
@@ -512,6 +512,8 @@ int FreeDVInterface::getRxNumModemSamples() const
 
 int FreeDVInterface::getRxNumSpeechSamples() const
 {
+    if (rxMode_ == -1) return 1024;
+
     int result = 0;
     for (auto& dv : dvObjects_)
     {
@@ -523,6 +525,8 @@ int FreeDVInterface::getRxNumSpeechSamples() const
 
 int FreeDVInterface::getRxSpeechSampleRate() const
 {
+    if (rxMode_ == -1) return 16000;
+
     int result = 0;
     for (auto& dv : dvObjects_)
     {
