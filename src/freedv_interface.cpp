@@ -284,16 +284,20 @@ void FreeDVInterface::setTestFrames(bool testFrames, bool combine)
 
 int FreeDVInterface::getTotalBits()
 {
+    if (currentRxMode_ == nullptr) return 1;
     return freedv_get_total_bits(currentRxMode_);
 }
 
 int FreeDVInterface::getTotalBitErrors()
 {
+    if (currentRxMode_ == nullptr) return 0;
     return freedv_get_total_bit_errors(currentRxMode_);
 }
 
 float FreeDVInterface::getVariance() const
 {
+    if (currentRxMode_ == nullptr) return 0.0;
+
     struct CODEC2 *c2 = freedv_get_codec2(currentRxMode_);
     if (c2 != NULL)
         return codec2_get_var(c2);
@@ -303,6 +307,8 @@ float FreeDVInterface::getVariance() const
 
 int FreeDVInterface::getErrorPattern(short** outputPattern)
 {
+    if (currentRxMode_ == nullptr) return 0;
+
     int size = freedv_get_sz_error_pattern(currentRxMode_);
     if (size > 0)
     {
@@ -381,6 +387,7 @@ void FreeDVInterface::setSync(int val)
 
 int FreeDVInterface::getSync() const
 {
+    if (currentRxMode_ == nullptr) return 1;
     return freedv_get_sync(currentRxMode_);
 }
 
@@ -752,21 +759,29 @@ int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj)
 
 skipSyncCheck:        
     struct MODEM_STATS* stats = getCurrentRxModemStats();
-    
-    // grab extended stats so we can plot spectrum, scatter diagram etc
-    freedv_get_modem_extended_stats(dvWithSync, stats);
 
-    // Update sync as it may have gone stale during decode
-    *state->getRxStateFn() = stats->sync != 0;
-            
-    if (*state->getRxStateFn())
+    if (dvWithSync != nullptr)
     {
-        rxMode_ = enabledModes_[indexWithSync];  
-        currentRxMode_ = dvWithSync;
-        lastSyncRxMode_ = currentRxMode_;
-    } 
+        // grab extended stats so we can plot spectrum, scatter diagram etc
+        freedv_get_modem_extended_stats(dvWithSync, stats);
 
-    *state->getSigPwrAvgFn() = ((FreeDVReceiveStep*)stepObj->getParallelSteps()[indexWithSync].get())->getSigPwrAvg();
+        // Update sync as it may have gone stale during decode
+        *state->getRxStateFn() = stats->sync != 0;
     
+        if (*state->getRxStateFn())
+        {
+            rxMode_ = enabledModes_[indexWithSync];  
+            currentRxMode_ = dvWithSync;
+            lastSyncRxMode_ = currentRxMode_;
+        } 
+        *state->getSigPwrAvgFn() = ((FreeDVReceiveStep*)stepObj->getParallelSteps()[indexWithSync].get())->getSigPwrAvg();
+    }
+    else
+    {
+        // assume external mode is in sync
+        *state->getRxStateFn() = 1;
+        *state->getSigPwrAvgFn() = 0;
+    }
+            
     return indexWithSync;
 };
