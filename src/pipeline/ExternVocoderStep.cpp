@@ -53,12 +53,13 @@ ExternVocoderStep::ExternVocoderStep(std::string scriptPath, int workingSampleRa
     if (recvProcessId_ == 0)
     {
         // Child process, redirect stdin/stdout and execute receiver
-        close(STDOUT_FILENO);
-        close(STDIN_FILENO);
-        rv = dup2(stdoutPipes[0], STDOUT_FILENO);
+        rv = dup2(stdoutPipes[1], STDOUT_FILENO);
         assert(rv != -1);
         rv = dup2(stdinPipes[0], STDIN_FILENO);
         assert(rv != -1);
+
+        close(stdoutPipes[0]);
+        close(stdinPipes[1]);
 
         // Tokenize and generate an argv for exec()
         std::vector<std::string> args;
@@ -91,6 +92,11 @@ ExternVocoderStep::ExternVocoderStep(std::string scriptPath, int workingSampleRa
         fprintf(stderr, "WARNING: could not run %s (errno %d)\n", scriptPath.c_str(), errno);
         exit(-1);
     }
+    else
+    {
+        close(stdoutPipes[1]);
+        close(stdinPipes[0]);
+    }
 }
 
 ExternVocoderStep::~ExternVocoderStep()
@@ -113,7 +119,7 @@ int ExternVocoderStep::getOutputSampleRate() const
 
 std::shared_ptr<short> ExternVocoderStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    const int MIN_NUM_SAMPLES_TO_READ = 4096;
+    const int MIN_NUM_SAMPLES_TO_READ = 1024;
     int samplesToRead = std::max(MIN_NUM_SAMPLES_TO_READ, numInputSamples);
 
     *numOutputSamples = 0;
@@ -129,9 +135,10 @@ std::shared_ptr<short> ExternVocoderStep::execute(std::shared_ptr<short> inputSa
         *numOutputSamples = 0;
     }
 
-    short* newOutputSamples = new short[*numOutputSamples];
-    assert(newOutputSamples != nullptr);
+    outputSamples = new short[*numOutputSamples];
+    assert(outputSamples != nullptr);
         
-    memcpy(newOutputSamples, output_buf, *numOutputSamples * sizeof(short));
+    memcpy(outputSamples, output_buf, *numOutputSamples * sizeof(short));
+
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
 }
