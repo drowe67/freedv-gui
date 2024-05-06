@@ -427,6 +427,33 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sizerModem->Add(sbSizer_duplex,0, wxALL | wxEXPAND, 5);
 
     //------------------------------
+    // External vocoder
+    //------------------------------
+
+    wxStaticBox *sb_vocoder = new wxStaticBox(m_modemTab, wxID_ANY, _("External Vocoder"));
+    wxStaticBoxSizer* sbSizer_vocoder = new wxStaticBoxSizer(sb_vocoder, wxVERTICAL);
+
+    wxSizer* vocoderRxSizer = new wxBoxSizer(wxHORIZONTAL);
+    wxStaticText *staticTextVocoderRXCmd = new wxStaticText(m_modemTab, wxID_ANY, _("RX command: "), wxDefaultPosition, wxDefaultSize, 0);
+    vocoderRxSizer->Add(staticTextVocoderRXCmd, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtCtrlExternalVocoderRxCommand = 
+        new wxTextCtrl(m_modemTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300, -1), 0);
+    vocoderRxSizer->Add(m_txtCtrlExternalVocoderRxCommand, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_vocoder->Add(vocoderRxSizer, 0, wxALL | wxEXPAND, 5);
+
+    wxSizer* vocoderTxSizer = new wxBoxSizer(wxHORIZONTAL);
+    wxStaticText *staticTextVocoderTXCmd = new wxStaticText(m_modemTab, wxID_ANY, _("TX command: "), wxDefaultPosition, wxDefaultSize, 0);
+    vocoderTxSizer->Add(staticTextVocoderTXCmd, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    m_txtCtrlExternalVocoderTxCommand = 
+        new wxTextCtrl(m_modemTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300, -1), 0);
+    vocoderTxSizer->Add(m_txtCtrlExternalVocoderTxCommand, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sbSizer_vocoder->Add(vocoderTxSizer, 0, wxALL | wxEXPAND, 5);
+
+    sizerModem->Add(sbSizer_vocoder,0, wxALL | wxEXPAND, 5);
+
+    //------------------------------
     // Multiple RX selection
     //------------------------------
     wxStaticBox *sb_multirx = new wxStaticBox(m_modemTab, wxID_ANY, _("Multiple RX Operation"));
@@ -837,6 +864,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         
         m_ckHalfDuplex->SetValue(wxGetApp().appConfiguration.halfDuplexMode);
 
+        m_txtCtrlExternalVocoderTxCommand->SetValue(wxGetApp().appConfiguration.externalVocoderTxCommand);
+        m_txtCtrlExternalVocoderRxCommand->SetValue(wxGetApp().appConfiguration.externalVocoderRxCommand);
+
         m_ckboxMultipleRx->SetValue(wxGetApp().appConfiguration.multipleReceiveEnabled);
         m_ckboxSingleRxThread->SetValue(wxGetApp().appConfiguration.multipleReceiveOnSingleThread);
         
@@ -1035,6 +1065,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.freedv700Clip = m_ckboxFreeDV700txClip->GetValue();
         wxGetApp().appConfiguration.freedv700TxBPF = m_ckboxFreeDV700txBPF->GetValue();
         wxGetApp().m_FreeDV700Combine = m_ckboxFreeDV700Combine->GetValue();
+
+        wxGetApp().appConfiguration.externalVocoderTxCommand = m_txtCtrlExternalVocoderTxCommand->GetValue();
+        wxGetApp().appConfiguration.externalVocoderRxCommand = m_txtCtrlExternalVocoderRxCommand->GetValue();
 
 #ifdef __WXMSW__
         wxGetApp().appConfiguration.debugConsoleEnabled = m_ckboxDebugConsole->GetValue();

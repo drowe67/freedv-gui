@@ -22,6 +22,7 @@
 
 #include <sys/wait.h>
 #include <sstream>
+#include <vector>
 #include <cassert>
 #include "ExternVocoderStep.h"
 #include "codec2_fifo.h"
@@ -59,8 +60,34 @@ ExternVocoderStep::ExternVocoderStep(std::string scriptPath, int workingSampleRa
         rv = dup2(stdinPipes[0], STDIN_FILENO);
         assert(rv != -1);
 
+        // Tokenize and generate an argv for exec()
+        std::vector<std::string> args;
+        std::stringstream ss(scriptPath);
+        std::string tmp;
+        while(std::getline(ss, tmp, ' '))
+        {
+            args.push_back(tmp);
+        }        
+
+        char** argv = new char*[args.size() + 1];
+        assert(argv != nullptr);
+        int index = 0;
+        for (auto& arg : args)
+        {
+            fprintf(stderr, "arg %d: %s\n", index, arg.c_str());
+            argv[index] = new char[arg.size() + 1];
+            assert(argv[index] != nullptr);
+
+            memset(argv[index], 0, arg.size() + 1);
+            strncpy(argv[index], arg.c_str(), arg.size());
+
+            index++;
+        }
+
+        argv[index] = nullptr;
+
         // Should not normally return.
-        execl("/home/parallels/radae/radio_ae/py/bin/python3", "/home/parallels/radae/radio_ae/py/bin/python3", scriptPath.c_str(), "-", "-");
+        execv(argv[0], argv);
         fprintf(stderr, "WARNING: could not run %s (errno %d)\n", scriptPath.c_str(), errno);
         exit(-1);
     }

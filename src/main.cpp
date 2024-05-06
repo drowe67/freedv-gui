@@ -1961,6 +1961,10 @@ void MainFrame::performFreeDVOn_()
         g_sfTxFs = FS;
     
         wxGetApp().m_prevMode = g_mode;
+
+        freedvInterface.setExternVocoderRxCommand((const char*)wxGetApp().appConfiguration.externalVocoderRxCommand.get().ToUTF8());
+        freedvInterface.setExternVocoderTxCommand((const char*)wxGetApp().appConfiguration.externalVocoderTxCommand.get().ToUTF8());
+
         freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, !wxGetApp().appConfiguration.multipleReceiveEnabled || wxGetApp().appConfiguration.multipleReceiveOnSingleThread, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
         // Codec 2 VQ Equaliser

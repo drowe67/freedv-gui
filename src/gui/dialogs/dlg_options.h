@@ -118,7 +118,11 @@ class OptionsDlg : public wxDialog
         /* Quick Record */
         wxButton     *m_buttonChooseQuickRecordPath;
         wxTextCtrl   *m_txtCtrlQuickRecordPath;
-        
+       
+        // external vocoder options
+        wxTextCtrl   *m_txtCtrlExternalVocoderRxCommand;
+        wxTextCtrl   *m_txtCtrlExternalVocoderTxCommand;
+ 
         /* test frames, other simulated channel impairments */
 
         wxCheckBox   *m_ckboxTestFrame;

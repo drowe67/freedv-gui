@@ -584,7 +584,7 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
     if (txMode_ == -1)
     {
         // special handling for external vocoder
-        parallelSteps.push_back(new ExternVocoderStep("/home/parallels/radae/radio_ae/inference.py", 16000));
+        parallelSteps.push_back(new ExternVocoderStep(externVocoderTxCommand_, 16000));
     }
  
     for (auto& dv : dvObjects_)
@@ -638,7 +638,7 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     if (txMode_ == -1)
     {
         // special handling for external vocoder
-        parallelSteps.push_back(new ExternVocoderStep("/home/parallels/radae/radio_ae/rx.py", 16000));
+        parallelSteps.push_back(new ExternVocoderStep(externVocoderRxCommand_, 16000));
     }
  
     for (auto& dv : dvObjects_)
