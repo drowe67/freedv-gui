@@ -134,11 +134,15 @@ std::shared_ptr<short> ExternVocoderStep::execute(std::shared_ptr<short> inputSa
     {
         *numOutputSamples = 0;
     }
+    else
+    {
+        *numOutputSamples /= sizeof(short);
 
-    outputSamples = new short[*numOutputSamples];
-    assert(outputSamples != nullptr);
+        outputSamples = new short[*numOutputSamples];
+        assert(outputSamples != nullptr);
         
-    memcpy(outputSamples, output_buf, *numOutputSamples * sizeof(short));
+        memcpy(outputSamples, output_buf, *numOutputSamples * sizeof(short));
+    }
 
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
 }

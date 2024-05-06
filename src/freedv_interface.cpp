@@ -639,18 +639,22 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     {
         // special handling for external vocoder
         parallelSteps.push_back(new ExternVocoderStep(externVocoderRxCommand_, 16000));
+
+        state->preProcessFn = [&](ParallelStep*) { return -1; };
+        state->postProcessFn = [&](ParallelStep*) { return 0; };
     }
- 
-    for (auto& dv : dvObjects_)
+    else
     {
-        auto recvStep = new FreeDVReceiveStep(dv);
-        assert(recvStep != nullptr);
+        for (auto& dv : dvObjects_)
+        {
+            auto recvStep = new FreeDVReceiveStep(dv);
+            assert(recvStep != nullptr);
         
-        parallelSteps.push_back(recvStep);
-    }
-    
-    state->preProcessFn = std::bind(&FreeDVInterface::preProcessRxFn_, this, _1);
-    state->postProcessFn = std::bind(&FreeDVInterface::postProcessRxFn_, this, _1);
+            parallelSteps.push_back(recvStep);
+        }
+        state->preProcessFn = std::bind(&FreeDVInterface::preProcessRxFn_, this, _1);
+        state->postProcessFn = std::bind(&FreeDVInterface::postProcessRxFn_, this, _1);
+    } 
         
     auto parallelStep = new ParallelStep(
         inputSampleRate,
