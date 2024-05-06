@@ -704,6 +704,8 @@ int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj)
     int maxSyncFound = -25;
     struct freedv* dvWithSync = nullptr;
 
+    if (dvObjects_.size() == 0) goto skipSyncCheck;
+    
     for (auto& dv : dvObjects_)
     {
         if (dv == currentRxMode_ && freedv_get_sync(currentRxMode_))
