@@ -486,6 +486,8 @@ void FreeDVInterface::setTextVaricodeNum(int num)
 
 int FreeDVInterface::getRxModemSampleRate() const
 {
+    if (rxMode_ == -1) return 16000;
+
     int result = 0;
     for (auto& dv : dvObjects_)
     {
@@ -497,6 +499,8 @@ int FreeDVInterface::getRxModemSampleRate() const
 
 int FreeDVInterface::getRxNumModemSamples() const
 {
+    if (rxMode_ == -1) return 16000;
+
     int result = 0;
     for (auto& dv : dvObjects_)
     {
