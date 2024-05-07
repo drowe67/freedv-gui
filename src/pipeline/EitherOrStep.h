@@ -36,6 +36,8 @@ public:
     virtual int getInputSampleRate() const;
     virtual int getOutputSampleRate() const;
     virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
+
+    virtual void dump(int indentLevel = 0) override;
     
 private:
     std::function<bool()> conditionalFn_;

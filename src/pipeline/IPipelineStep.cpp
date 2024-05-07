@@ -20,9 +20,15 @@
 //
 //=========================================================================
 
+#include <iostream>
 #include "IPipelineStep.h"
 
 IPipelineStep::~IPipelineStep()
 {
     // empty
+}
+
+void IPipelineStep::dump(int indentLevel)
+{
+    std::cout << typeid(*this).name() << "[inputSR = " << getInputSampleRate() << ", outputSR = " << getOutputSampleRate() << "]" << std::endl;
 }

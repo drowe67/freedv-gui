@@ -51,6 +51,8 @@ public:
     const std::vector<std::shared_ptr<IPipelineStep>> getParallelSteps() const { return parallelSteps_; }
 
     std::shared_ptr<void> getState() { return state_; }
+
+    virtual void dump(int indentLevel = 0) override;
         
 private:
     typedef std::pair<std::shared_ptr<short>, int> TaskResult;

@@ -689,6 +689,8 @@ void TxRxThread::rxProcessing_()
         short* inputSamples = new short[nsam];
         memcpy(inputSamples, insound_card, nsam * sizeof(short));
         
+        pipeline_->dump();
+
         auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
         auto outputSamples = pipeline_->execute(inputSamplesPtr, nsam, &nout);
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
