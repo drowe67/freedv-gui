@@ -134,6 +134,7 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
             // NOTE: multi-RX is NOT supported.
             rxMode_ = -1;
             txMode_ = -1;
+            modemStatsIndex_ = 0;
             continue;
         }
 
