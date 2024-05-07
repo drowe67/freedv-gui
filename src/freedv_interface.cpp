@@ -439,7 +439,7 @@ void FreeDVInterface::setTextCallbackFn(void (*rxFunc)(void *, char), char (*txF
 
 int FreeDVInterface::getTxModemSampleRate() const
 {
-    if (txMode_ == -1) return 16000;
+    if (txMode_ == -1) return 8000;
 
     assert(currentTxMode_ != nullptr);
     return freedv_get_modem_sample_rate(currentTxMode_);
@@ -447,7 +447,7 @@ int FreeDVInterface::getTxModemSampleRate() const
 
 int FreeDVInterface::getTxSpeechSampleRate() const
 {
-    if (txMode_ == -1) return 16000;
+    if (txMode_ == -1) return 8000;
 
     assert(currentTxMode_ != nullptr);
     return freedv_get_speech_sample_rate(currentTxMode_);
@@ -526,7 +526,7 @@ int FreeDVInterface::getRxNumSpeechSamples() const
 
 int FreeDVInterface::getRxSpeechSampleRate() const
 {
-    if (rxMode_ == -1) return 16000;
+    if (rxMode_ == -1) return 8000;
 
     int result = 0;
     for (auto& dv : dvObjects_)
