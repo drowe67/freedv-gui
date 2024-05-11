@@ -21,6 +21,7 @@
 //
 //=========================================================================
 
+#include <iostream>
 #include "ExclusiveAccessStep.h"
 
 ExclusiveAccessStep::ExclusiveAccessStep(IPipelineStep* step, std::function<void()> lockFn, std::function<void()> unlockFn)
@@ -53,4 +54,13 @@ std::shared_ptr<short> ExclusiveAccessStep::execute(std::shared_ptr<short> input
     unlockFn_();
 
     return result;
+}
+
+void ExclusiveAccessStep::dump(int indentLevel)
+{
+    IPipelineStep::dump(indentLevel);
+    indentLevel += 4;
+
+    std::cout << std::string(indentLevel, ' ');
+    step_->dump(indentLevel);
 }

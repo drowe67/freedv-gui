@@ -20,6 +20,7 @@
 //
 //=========================================================================
 
+#include <iostream>
 #include <chrono>
 #include <cassert>
 #include "ParallelStep.h"
@@ -233,4 +234,24 @@ std::future<ParallelStep::TaskResult> ParallelStep::enqueueTask_(ThreadInfo* tas
     }
     
     return theFuture;
+}
+
+void ParallelStep::dump(int indentLevel)
+{
+    IPipelineStep::dump(indentLevel);
+    indentLevel += 4;
+
+    for (int index = 0; index < parallelSteps_.size(); index++)
+    {
+        std::cout << std::string(indentLevel, ' ') << "[" << index << "] ";
+        if (getInputSampleRate() != parallelSteps_[index]->getInputSampleRate())
+        {
+            std::cout << "[resample from " << getInputSampleRate() << " to " << parallelSteps_[index]->getInputSampleRate() << "] ";
+        }
+        parallelSteps_[index]->dump(indentLevel);
+        if (parallelSteps_[index]->getOutputSampleRate() != getOutputSampleRate())
+        {
+            std::cout << std::string(indentLevel + 4, ' ') << "[resample from " << parallelSteps_[index]->getOutputSampleRate() << " to " << getOutputSampleRate() << "] " << std::endl;
+        }
+    }
 }

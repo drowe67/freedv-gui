@@ -20,6 +20,7 @@
 //
 //=========================================================================
 
+#include <iostream>
 #include "AudioPipeline.h"
 
 AudioPipeline::AudioPipeline(int inputSampleRate, int outputSampleRate)
@@ -55,6 +56,12 @@ std::shared_ptr<short> AudioPipeline::execute(std::shared_ptr<short> inputSample
     {
         if (resamplers_[index])
         {
+            if (resamplers_[index]->getOutputSampleRate() != pipelineSteps_[index]->getInputSampleRate())
+            {
+                resamplers_[index] = nullptr;
+                reloadResampler_(index);
+            }
+
             tempResult = resamplers_[index]->execute(tempInput, tempInputSamples, &tempOutputSamples);
             tempInput = tempResult;
             tempInputSamples = tempOutputSamples;
@@ -149,5 +156,30 @@ void AudioPipeline::reloadResultResampler_()
         {
             resultSampler_ = nullptr;
         }
+    }
+}
+
+void AudioPipeline::dump(int indentLevel)
+{
+    IPipelineStep::dump(indentLevel);
+
+    indentLevel += 4;
+
+    for (size_t index = 0; index < pipelineSteps_.size(); index++)
+    {
+        std::cout << std::string(indentLevel, ' ');
+
+        if (resamplers_[index])
+        {
+            std::cout << "[resample from " << resamplers_[index]->getInputSampleRate() << " to " << resamplers_[index]->getOutputSampleRate() << "] ";
+        }
+        
+        pipelineSteps_[index]->dump(indentLevel);
+    }
+
+    if (resultSampler_)
+    {
+        std::cout << std::string(indentLevel, ' ');
+        resultSampler_->dump(indentLevel);
     }
 }

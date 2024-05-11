@@ -38,6 +38,8 @@ public:
     virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
     
     void appendPipelineStep(std::shared_ptr<IPipelineStep> pipelineStep);
+
+    virtual void dump(int indentLevel = 0) override;
     
 private:
     int inputSampleRate_;

@@ -122,6 +122,9 @@ public:
 
     ConfigurationDataElement<int> txRxDelayMilliseconds;
     
+    ConfigurationDataElement<wxString> externalVocoderRxCommand;
+    ConfigurationDataElement<wxString> externalVocoderTxCommand;
+
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };

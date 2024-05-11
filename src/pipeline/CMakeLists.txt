@@ -9,6 +9,7 @@ add_library(fdv_audio_pipeline STATIC
     EqualizerStep.cpp
     ExclusiveAccessStep.h
     ExclusiveAccessStep.cpp
+    ExternVocoderStep.cpp
     FreeDVReceiveStep.h
     FreeDVReceiveStep.cpp
     FreeDVTransmitStep.h

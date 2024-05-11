@@ -1,6 +1,6 @@
 //=========================================================================
-// Name:            EitherOrStep.h
-// Purpose:         Describes an either/or step in the audio pipeline.
+// Name:            ExternVocoderStep.h
+// Purpose:         Describes a demodulation step in the audio pipeline.
 //
 // Authors:         Mooneer Salem
 // License:
@@ -20,29 +20,28 @@
 //
 //=========================================================================
 
-#ifndef AUDIO_PIPELINE__EITHER_OR_STEP_H
-#define AUDIO_PIPELINE__EITHER_OR_STEP_H
+#ifndef AUDIO_PIPELINE__EXTERN_VOCODER_STEP_H
+#define AUDIO_PIPELINE__EXTERN_VOCODER_STEP_H
 
-#include <functional>
+#include <unistd.h>
+#include <string>
 #include "IPipelineStep.h"
-#include "ResampleStep.h"
 
-class EitherOrStep : public IPipelineStep
+class ExternVocoderStep : public IPipelineStep
 {
 public:
-    EitherOrStep(std::function<bool()> conditionalFn, std::shared_ptr<IPipelineStep> trueStep, std::shared_ptr<IPipelineStep> falseStep);
-    virtual ~EitherOrStep();
+    ExternVocoderStep(std::string scriptPath, int workingSampleRate);
+    virtual ~ExternVocoderStep();
     
     virtual int getInputSampleRate() const;
     virtual int getOutputSampleRate() const;
     virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
-
-    virtual void dump(int indentLevel = 0) override;
     
 private:
-    std::function<bool()> conditionalFn_;
-    std::shared_ptr<IPipelineStep> falseStep_;
-    std::shared_ptr<IPipelineStep> trueStep_;
+    int sampleRate_;
+    pid_t recvProcessId_;
+    int receiveStdoutFd_;
+    int receiveStdinFd_;
 };
 
-#endif // AUDIO_PIPELINE__EITHER_OR_STEP_H
+#endif // AUDIO_PIPELINE__EXTERN_VOCODER_STEP_H

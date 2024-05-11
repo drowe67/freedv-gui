@@ -109,6 +109,9 @@ FreeDVConfiguration::FreeDVConfiguration()
     , monitorTxAudio("/Monitor/TransmitAudio", false)
 
     , txRxDelayMilliseconds("/Audio/TxRxDelayMilliseconds", 0)
+
+    , externalVocoderRxCommand("/ExternalVocoder/RxCommand", _(""))
+    , externalVocoderTxCommand("/ExternalVocoder/TxCommand", _(""))
 {
     // empty
 }
@@ -198,6 +201,9 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, tabLayout);
 
     load_(config, txRxDelayMilliseconds);
+
+    load_(config, externalVocoderRxCommand);
+    load_(config, externalVocoderTxCommand);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -282,6 +288,9 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, monitorTxAudio);
 
     save_(config, txRxDelayMilliseconds);
+
+    save_(config, externalVocoderRxCommand);
+    save_(config, externalVocoderTxCommand);
     
     config->Flush();
 }
