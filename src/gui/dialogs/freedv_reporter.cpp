@@ -350,7 +350,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(FreeDVReporterDialog::OnDoubleClick), NULL, this);
     m_listSpots->Connect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);
     m_listSpots->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
-    m_listSpots->Connect(wxEVT_LIST_COL_END_DRAG, wxListEventHandler(FreeDVReporterDialog::AdjustMsgColWidth), NULL, this);
+    m_listSpots->Connect(wxEVT_LIST_COL_DRAGGING, wxListEventHandler(FreeDVReporterDialog::AdjustMsgColWidth), NULL, this);
     
     m_statusMessage->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
@@ -414,7 +414,7 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     m_listSpots->Disconnect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(FreeDVReporterDialog::OnDoubleClick), NULL, this);
     m_listSpots->Disconnect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);
     m_listSpots->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
-    m_listSpots->Disconnect(wxEVT_LIST_COL_END_DRAG, wxListEventHandler(FreeDVReporterDialog::AdjustMsgColWidth), NULL, this);
+    m_listSpots->Disconnect(wxEVT_LIST_COL_DRAGGING, wxListEventHandler(FreeDVReporterDialog::AdjustMsgColWidth), NULL, this);
     
     m_statusMessage->Disconnect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
