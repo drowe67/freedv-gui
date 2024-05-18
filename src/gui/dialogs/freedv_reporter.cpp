@@ -70,7 +70,7 @@ static int DefaultColumnWidths_[] = {
     60,
     65,
     60,
-    75,
+    130,
     60,
     65,
     60,
@@ -675,20 +675,24 @@ void FreeDVReporterDialog::AdjustMsgColWidth(wxListEvent& event)
     
     int currentColWidth = m_listSpots->GetColumnWidth(desiredCol);
     int textWidth = 0;
-    int textHeight = 0; // note: unused
 
     // Iterate through and re-truncate column as required.
     for (int index = 0; index < m_listSpots->GetItemCount(); index++)
     {
         std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
-        wxString tempUserMessage = allReporterData_[*sidPtr]->userMessage;
+        wxString tempUserMessage = _(" ") + allReporterData_[*sidPtr]->userMessage;
         
-        m_listSpots->GetTextExtent(tempUserMessage, &textWidth, &textHeight);
+        textWidth = getSizeForTableCellString_(tempUserMessage);
         int tmpLength = allReporterData_[*sidPtr]->userMessage.Length() - 1;
-        while (textWidth >= currentColWidth && tmpLength >= 0)
+        while (textWidth > currentColWidth && tmpLength >= 0)
         {
             tempUserMessage = allReporterData_[*sidPtr]->userMessage.SubString(0, tmpLength--) + _("...");
-            m_listSpots->GetTextExtent(tempUserMessage, &textWidth, &textHeight);
+            textWidth = getSizeForTableCellString_(tempUserMessage);
+        }
+        
+        if (tmpLength > 0 && tmpLength < (allReporterData_[*sidPtr]->userMessage.Length() - 1))
+        {
+            tempUserMessage = allReporterData_[*sidPtr]->userMessage.SubString(0, tmpLength) + _("...");
         }
         
         m_listSpots->SetItem(index, desiredCol, tempUserMessage);
@@ -1928,19 +1932,23 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     needResort |= changed && currentSortColumn_ == (col - 1);
 
     int textWidth = 0;
-    int textHeight = 0; // unused
     int currentColWidth = m_listSpots->GetColumnWidth(col);
     
-    wxString userMessageTruncated = data->userMessage;
-    m_listSpots->GetTextExtent(userMessageTruncated, &textWidth, &textHeight);
+    wxString userMessageTruncated = _(" ") + data->userMessage;
+    textWidth = getSizeForTableCellString_(userMessageTruncated);
     int tmpLength = data->userMessage.Length() - 1;
-    while (textWidth >= currentColWidth && tmpLength >= 0)
+    while (textWidth > currentColWidth && tmpLength > 0)
     {
         userMessageTruncated = data->userMessage.SubString(0, tmpLength--) + _("...");
-        m_listSpots->GetTextExtent(userMessageTruncated, &textWidth, &textHeight);
+        textWidth = getSizeForTableCellString_(userMessageTruncated);
     }
     
-    changed = setColumnForRow_(itemIndex, col++, " "+userMessageTruncated, colResizeList);
+    if (tmpLength > 0 && tmpLength < (data->userMessage.Length() - 1))
+    {
+        userMessageTruncated = data->userMessage.SubString(0, tmpLength) + _("...");
+    }
+    
+    changed = setColumnForRow_(itemIndex, col++, userMessageTruncated, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
     changed = setColumnForRow_(itemIndex, col++, " "+data->lastTx, colResizeList);
