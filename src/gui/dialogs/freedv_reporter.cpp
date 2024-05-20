@@ -1179,6 +1179,11 @@ void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
     }
 
     // Reset lengths to force auto-resize on (re)connect.
+    int userMsgCol = USER_MESSAGE_COL;
+#if defined(WIN32)
+    userMsgCol++;
+#endif // defined(WIN32)
+    
     for (int col = 0; col < NUM_COLS; col++)
     {
 #if defined(WIN32)
@@ -1189,10 +1194,13 @@ void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
         }
 #endif // defined(WIN32)
 
-        columnLengths_[col] = DefaultColumnWidths_[col];
-        m_listSpots->SetColumnWidth(col, columnLengths_[col]);
+        if (col != userMsgCol)
+        {
+            columnLengths_[col] = DefaultColumnWidths_[col];
+            m_listSpots->SetColumnWidth(col, columnLengths_[col]);
+        }
     }
-
+    
     m_listSpots->Update();
 }
 
