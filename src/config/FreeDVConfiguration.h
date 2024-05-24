@@ -121,6 +121,8 @@ public:
     ConfigurationDataElement<bool> monitorTxAudio;
 
     ConfigurationDataElement<int> txRxDelayMilliseconds;
+
+    ConfigurationDataElement<int> reportingUserMsgColWidth;
     
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;

@@ -94,7 +94,14 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     {
         columnLengths_[col] = DefaultColumnWidths_[col];
     }
-    
+
+    int userMsgDefaultColWidth = wxGetApp().appConfiguration.reportingUserMsgColWidth;
+    int userColNum = USER_MESSAGE_COL;
+#if defined(WIN32)
+    userColNum++;
+#endif // defined(WIN32)
+    DefaultColumnWidths_[userColNum] = userMsgDefaultColWidth;
+
     // Create top-level of control hierarchy.
     wxFlexGridSizer* sectionSizer = new wxFlexGridSizer(2, 1, 0, 0);
     sectionSizer->AddGrowableRow(0);
@@ -675,6 +682,8 @@ void FreeDVReporterDialog::AdjustMsgColWidth(wxListEvent& event)
     
     int currentColWidth = m_listSpots->GetColumnWidth(desiredCol);
     int textWidth = 0;
+
+    wxGetApp().appConfiguration.reportingUserMsgColWidth = currentColWidth;
 
     // Iterate through and re-truncate column as required.
     for (int index = 0; index < m_listSpots->GetItemCount(); index++)
