@@ -103,6 +103,7 @@ class FreeDVReporterDialog : public wxFrame
         void OnRightClickSpotsList(wxContextMenuEvent& event);
         void OnCopyUserMessage(wxCommandEvent& event);
         void SkipMouseEvent(wxMouseEvent& event);
+        void AdjustMsgColWidth(wxListEvent& event);
         
         void OnDoubleClick(wxMouseEvent& event);
         
