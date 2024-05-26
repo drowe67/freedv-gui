@@ -899,6 +899,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * Revert PR #689 and reimplement fix for original startup delay issue. (PR #712)
+2. Enhancements:
+    * Allow "Msg" column to be resized by the user. (PR #721)
 
 ## V1.9.9 April 2024
 
