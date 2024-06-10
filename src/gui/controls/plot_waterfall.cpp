@@ -307,11 +307,22 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
             ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
    }
 
-    // red rx tuning line
-    ctx->SetPen(wxPen(RED_COLOR, 2));
-    x = m_rxFreq*freq_hz_to_px;
-    x += PLOT_BORDER + XLEFT_OFFSET;
-    ctx->StrokeLine(x, 0, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
+   // get average offset and draw sync tuning line
+   float sum = 0.0;
+   for (auto& f : rxOffsets_)
+   {
+       sum += f;
+   }
+   ctx->SetPen(wxPen(GREEN_COLOR, 2));
+   x = (m_rxFreq + (sum / rxOffsets_.size())) * freq_hz_to_px;
+   x += PLOT_BORDER + XLEFT_OFFSET;
+   ctx->StrokeLine(x, 0, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
+   
+   // red rx tuning line
+   ctx->SetPen(wxPen(RED_COLOR, 2));
+   x = m_rxFreq*freq_hz_to_px;
+   x += PLOT_BORDER + XLEFT_OFFSET;
+   ctx->StrokeLine(x, 0, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
 }
 
 //-------------------------------------------------------------------------
