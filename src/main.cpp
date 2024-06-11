@@ -1102,6 +1102,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_panelWaterfall->m_newdata = true;
             m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
             m_panelWaterfall->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
+            m_panelWaterfall->setSync(freedvInterface.getSync() ? true : false);
             m_panelWaterfall->Refresh();
         }
 

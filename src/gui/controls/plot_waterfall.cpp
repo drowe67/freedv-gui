@@ -73,6 +73,7 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): Plot
     m_max_mag = MAX_MAG_DB;
     m_min_mag = MIN_MAG_DB;
     m_fullBmp = NULL;
+    sync_ = false;
 }
 
 // When the window size gets set we can work outthe size of the window
@@ -317,7 +318,7 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
    float averageOffset = sum / rxOffsets_.size();
    
    // get average offset and draw sync tuning line
-   ctx->SetPen(wxPen(GREEN_COLOR, 2));
+   ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 2));
    x = (m_rxFreq + averageOffset) * freq_hz_to_px;
    x += PLOT_BORDER + XLEFT_OFFSET;
    ctx->StrokeLine(x, 0, x, verticalBarLength);

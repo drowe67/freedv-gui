@@ -47,6 +47,7 @@ class PlotWaterfall : public PlotPanel
         void setRxFreq(float rxFreq) { m_rxFreq = rxFreq; }
         void setFs(int fs) { m_modem_stats_max_f_hz = fs/2; }
         void setColor(int color) { m_colour = color; }
+        void setSync(bool sync) { sync_ = sync; }
         
         void addOffset(float offset)
         {
@@ -80,6 +81,7 @@ class PlotWaterfall : public PlotPanel
         int         m_colour;
         int         m_modem_stats_max_f_hz;
         std::deque<float> rxOffsets_;
+        bool        sync_;
 
         wxBitmap* m_fullBmp;
         int m_imgHeight;

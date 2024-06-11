@@ -73,6 +73,8 @@
 #define LIGHT_YELLOW_COLOR  wxColor(0xFF, 0xFF, 0xB5)
 #define DARK_YELLOW_COLOR   wxColor(0xFF, 0xFF, 0x08)
 
+#define ORANGE_COLOR        wxColor(0xFF, 0xA5, 0x00)
+
 class MainFrame;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
