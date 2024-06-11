@@ -306,23 +306,27 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
         if (!overlappedText)
             ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
    }
-
-   // get average offset and draw sync tuning line
+   
+   float verticalBarLength = PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5;
+   
    float sum = 0.0;
    for (auto& f : rxOffsets_)
    {
        sum += f;
    }
+   float averageOffset = sum / rxOffsets_.size();
+   
+   // get average offset and draw sync tuning line
    ctx->SetPen(wxPen(GREEN_COLOR, 2));
-   x = (m_rxFreq + (sum / rxOffsets_.size())) * freq_hz_to_px;
+   x = (m_rxFreq + averageOffset) * freq_hz_to_px;
    x += PLOT_BORDER + XLEFT_OFFSET;
-   ctx->StrokeLine(x, 0, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
+   ctx->StrokeLine(x, 0, x, verticalBarLength);
    
    // red rx tuning line
    ctx->SetPen(wxPen(RED_COLOR, 2));
    x = m_rxFreq*freq_hz_to_px;
    x += PLOT_BORDER + XLEFT_OFFSET;
-   ctx->StrokeLine(x, 0, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
+   ctx->StrokeLine(x, 0, x, 2 * verticalBarLength / 3);
 }
 
 //-------------------------------------------------------------------------
