@@ -21,7 +21,6 @@
 #ifndef __FDMDV2_PLOT_WATERFALL__
 #define __FDMDV2_PLOT_WATERFALL__
 
-#include <deque>
 #include <wx/graphics.h>
 
 #include "plot.h"
@@ -47,17 +46,6 @@ class PlotWaterfall : public PlotPanel
         void setRxFreq(float rxFreq) { m_rxFreq = rxFreq; }
         void setFs(int fs) { m_modem_stats_max_f_hz = fs/2; }
         void setColor(int color) { m_colour = color; }
-        void setSync(bool sync) { sync_ = sync; }
-        
-        void addOffset(float offset)
-        {
-            rxOffsets_.push_back(offset);
-            if (rxOffsets_.size() >= 20)
-            {
-                // Limit to ~2 seconds worth of offsets for averaging
-                rxOffsets_.pop_front();
-            }
-        }
         
     protected:
         unsigned    m_heatmap_lut[256];
@@ -80,8 +68,6 @@ class PlotWaterfall : public PlotPanel
         float       m_max_mag;
         int         m_colour;
         int         m_modem_stats_max_f_hz;
-        std::deque<float> rxOffsets_;
-        bool        sync_;
 
         wxBitmap* m_fullBmp;
         int m_imgHeight;

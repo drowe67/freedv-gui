@@ -20,6 +20,9 @@
 //==========================================================================
 #ifndef __FDMDV2_PLOT__
 #define __FDMDV2_PLOT__
+
+#include <deque>
+
 #include <wx/wx.h>
 #include <wx/aui/auibook.h>
 #include <wx/rawbmp.h>
@@ -128,6 +131,17 @@ class PlotPanel : public wxPanel
         virtual void    OnShow(wxShowEvent& event);
         virtual double  GetLabelSize();
         virtual void    SetLabelSize(double size);
+        
+        void setSync(bool sync) { sync_ = sync; }
+        void addOffset(float offset)
+        {
+            rxOffsets_.push_back(offset);
+            if (rxOffsets_.size() >= 20)
+            {
+                // Limit to ~2 seconds worth of offsets for averaging
+                rxOffsets_.pop_front();
+            }
+        }
 
     protected:
         int             m_x;
@@ -146,6 +160,10 @@ class PlotPanel : public wxPanel
         double          m_zoomFactor;
         int             m_greyscale;
         int             m_line_color;
+        
+        std::deque<float> rxOffsets_;
+        bool        sync_;
+        
     DECLARE_EVENT_TABLE()
 };
 #endif //__FDMDV2_PLOT__

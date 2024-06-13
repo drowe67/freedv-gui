@@ -1111,7 +1111,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // Note: each element in this combo box is a numeric value starting from 1,
         // so just incrementing the selected index should get us the correct results.
         m_panelSpectrum->setNumAveraging(m_cbxNumSpectrumAveraging->GetSelection() + 1);
-        
+        m_panelSpectrum->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
+        m_panelSpectrum->setSync(freedvInterface.getSync() ? true : false);
         m_panelSpectrum->m_newdata = true;
         m_panelSpectrum->Refresh();
 
