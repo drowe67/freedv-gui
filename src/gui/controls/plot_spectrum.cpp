@@ -273,13 +273,13 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
         float averageOffset = sum / rxOffsets_.size();
    
         // get average offset and draw sync tuning line
-        ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 2));
+        ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
         x = (m_rxFreq + averageOffset) * freq_hz_to_px;
         x += PLOT_BORDER + XLEFT_OFFSET;
         ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rCtrl.GetHeight());
    
         // red rx tuning line
-        ctx->SetPen(wxPen(RED_COLOR, 2));
+        ctx->SetPen(wxPen(RED_COLOR, 3));
         x = m_rxFreq*freq_hz_to_px;
         x += PLOT_BORDER + XLEFT_OFFSET;
         ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rCtrl.GetHeight() - verticalBarLength / 3);
