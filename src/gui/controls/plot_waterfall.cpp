@@ -504,16 +504,19 @@ void PlotWaterfall::OnKeyDown(wxKeyEvent& event)
             break;
     }
     
-    currRxFreq += direction * 10;
-    if (currRxFreq < MIN_F_HZ)
+    if (direction)
     {
-        currRxFreq = MIN_F_HZ;
+        currRxFreq += direction * 10;
+        if (currRxFreq < MIN_F_HZ)
+        {
+            currRxFreq = MIN_F_HZ;
+        }
+        else if (currRxFreq > MAX_F_HZ)
+        {
+            currRxFreq = MAX_F_HZ;
+        }
+        clickTune(currRxFreq);
     }
-    else if (currRxFreq > MAX_F_HZ)
-    {
-        currRxFreq = MAX_F_HZ;
-    }
-    clickTune(currRxFreq);
 }
 
 //-------------------------------------------------------------------------
