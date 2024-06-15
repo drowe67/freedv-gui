@@ -36,6 +36,7 @@ BEGIN_EVENT_TABLE(PlotSpectrum, PlotPanel)
     EVT_MOUSEWHEEL      (PlotSpectrum::OnMouseWheelMoved)
     EVT_PAINT           (PlotSpectrum::OnPaint)
     EVT_SHOW            (PlotSpectrum::OnShow)
+    EVT_KEY_DOWN        (PlotSpectrum::OnKeyDown)
 END_EVENT_TABLE()
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -344,6 +345,38 @@ void PlotSpectrum::OnMouseWheelMoved(wxMouseEvent& event)
     }
     
     currRxFreq += direction * (event.GetLinesPerAction() * 10);
+    if (currRxFreq < MIN_F_HZ)
+    {
+        currRxFreq = MIN_F_HZ;
+    }
+    else if (currRxFreq > MAX_F_HZ)
+    {
+        currRxFreq = MAX_F_HZ;
+    }
+    clickTune(currRxFreq);
+}
+
+//-------------------------------------------------------------------------
+// OnKeyDown()
+//-------------------------------------------------------------------------
+void PlotSpectrum::OnKeyDown(wxKeyEvent& event)
+{
+    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz;
+    float direction = 0;
+    
+    switch (event.GetKeyCode())
+    {
+        case WXK_LEFT:
+        case WXK_DOWN:
+            direction = -1.0;
+            break;
+        case WXK_RIGHT:
+        case WXK_UP:
+            direction = 1.0;
+            break;
+    }
+    
+    currRxFreq += direction * 10;
     if (currRxFreq < MIN_F_HZ)
     {
         currRxFreq = MIN_F_HZ;

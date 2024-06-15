@@ -48,6 +48,7 @@ class PlotSpectrum : public PlotPanel
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
         void        OnMouseRightDoubleClick(wxMouseEvent& event);
         void        OnMouseWheelMoved(wxMouseEvent& event);
+        void        OnKeyDown(wxKeyEvent& event);
 
    private:
         float       m_rxFreq;

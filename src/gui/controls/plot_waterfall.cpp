@@ -43,6 +43,7 @@ BEGIN_EVENT_TABLE(PlotWaterfall, PlotPanel)
     EVT_MOUSEWHEEL      (PlotWaterfall::OnMouseWheelMoved)
     EVT_SIZE            (PlotWaterfall::OnSize)
     EVT_SHOW            (PlotWaterfall::OnShow)
+    EVT_KEY_DOWN        (PlotWaterfall::OnKeyDown)
 END_EVENT_TABLE()
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -474,6 +475,38 @@ void PlotWaterfall::OnMouseWheelMoved(wxMouseEvent& event)
     }
     
     currRxFreq += direction * (event.GetLinesPerAction() * 10);
+    if (currRxFreq < MIN_F_HZ)
+    {
+        currRxFreq = MIN_F_HZ;
+    }
+    else if (currRxFreq > MAX_F_HZ)
+    {
+        currRxFreq = MAX_F_HZ;
+    }
+    clickTune(currRxFreq);
+}
+
+//-------------------------------------------------------------------------
+// OnKeyDown()
+//-------------------------------------------------------------------------
+void PlotWaterfall::OnKeyDown(wxKeyEvent& event)
+{
+    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz;
+    float direction = 0;
+    
+    switch (event.GetKeyCode())
+    {
+        case WXK_LEFT:
+        case WXK_DOWN:
+            direction = -1.0;
+            break;
+        case WXK_RIGHT:
+        case WXK_UP:
+            direction = 1.0;
+            break;
+    }
+    
+    currRxFreq += direction * 10;
     if (currRxFreq < MIN_F_HZ)
     {
         currRxFreq = MIN_F_HZ;
