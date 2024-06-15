@@ -116,7 +116,7 @@ class PlotPanel : public wxPanel
         virtual void    OnMouseLeftDown(wxMouseEvent& event);
         void            OnMouseLeftUp(wxMouseEvent& event);
         virtual void    OnMouseRightDown(wxMouseEvent& event);
-        void            OnMouseWheelMoved(wxMouseEvent& event);
+        virtual void    OnMouseWheelMoved(wxMouseEvent& event);
         void            OnClose(wxCloseEvent& event ){ event.Skip(); }
         virtual void    OnSize( wxSizeEvent& event ) = 0;
         void            OnErase(wxEraseEvent& event);

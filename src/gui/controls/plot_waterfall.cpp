@@ -25,11 +25,13 @@
 #include "os/os_interface.h"
 
 #include "plot_waterfall.h"
+#include "codec2_fdmdv.h" // for FDMDV_FCENTRE
 
 // Tweak accordingly
 #define Y_PER_SECOND (30) 
 
 extern float g_avmag[];                 // av mag spec passed in to draw() 
+extern float           g_RxFreqOffsetHz;
 void clickTune(float frequency); // callback to pass new click freq
 
 BEGIN_EVENT_TABLE(PlotWaterfall, PlotPanel)
@@ -457,6 +459,30 @@ void PlotWaterfall::OnDoubleClickCommon(wxMouseEvent& event)
         // communicate back to other threads
         clickTune(clickFreq);
     }
+}
+
+//-------------------------------------------------------------------------
+// OnMouseWheelMoved()
+//-------------------------------------------------------------------------
+void PlotWaterfall::OnMouseWheelMoved(wxMouseEvent& event)
+{
+    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz;
+    float direction = 1.0;
+    if (event.GetWheelRotation() < 0)
+    {
+        direction = -1.0;
+    }
+    
+    currRxFreq += direction * (event.GetLinesPerAction() * 10);
+    if (currRxFreq < MIN_F_HZ)
+    {
+        currRxFreq = MIN_F_HZ;
+    }
+    else if (currRxFreq > MAX_F_HZ)
+    {
+        currRxFreq = MAX_F_HZ;
+    }
+    clickTune(currRxFreq);
 }
 
 //-------------------------------------------------------------------------

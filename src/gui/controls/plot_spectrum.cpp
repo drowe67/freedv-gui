@@ -22,8 +22,10 @@
 #include <wx/wx.h>
 
 #include "plot_spectrum.h"
+#include "codec2_fdmdv.h" // for FDMDV_FCENTRE
 
 void clickTune(float frequency); // callback to pass new click freq
+extern float           g_RxFreqOffsetHz;
 
 BEGIN_EVENT_TABLE(PlotSpectrum, PlotPanel)
     EVT_MOTION          (PlotSpectrum::OnMouseMove)
@@ -327,4 +329,28 @@ void PlotSpectrum::OnMouseLeftDoubleClick(wxMouseEvent& event)
 void PlotSpectrum::OnMouseRightDoubleClick(wxMouseEvent& event)
 {
     OnDoubleClickCommon(event);
+}
+
+//-------------------------------------------------------------------------
+// OnMouseWheelMoved()
+//-------------------------------------------------------------------------
+void PlotSpectrum::OnMouseWheelMoved(wxMouseEvent& event)
+{
+    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz;
+    float direction = 1.0;
+    if (event.GetWheelRotation() < 0)
+    {
+        direction = -1.0;
+    }
+    
+    currRxFreq += direction * (event.GetLinesPerAction() * 10);
+    if (currRxFreq < MIN_F_HZ)
+    {
+        currRxFreq = MIN_F_HZ;
+    }
+    else if (currRxFreq > MAX_F_HZ)
+    {
+        currRxFreq = MAX_F_HZ;
+    }
+    clickTune(currRxFreq);
 }
