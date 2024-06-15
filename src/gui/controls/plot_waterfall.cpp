@@ -496,11 +496,9 @@ void PlotWaterfall::OnKeyDown(wxKeyEvent& event)
     
     switch (event.GetKeyCode())
     {
-        case WXK_LEFT:
         case WXK_DOWN:
             direction = -1.0;
             break;
-        case WXK_RIGHT:
         case WXK_UP:
             direction = 1.0;
             break;
