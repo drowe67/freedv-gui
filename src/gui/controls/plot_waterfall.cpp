@@ -474,7 +474,7 @@ void PlotWaterfall::OnMouseWheelMoved(wxMouseEvent& event)
         direction = -1.0;
     }
     
-    currRxFreq += direction * (event.GetLinesPerAction() * 10);
+    currRxFreq += direction * 10;
     if (currRxFreq < MIN_F_HZ)
     {
         currRxFreq = MIN_F_HZ;
