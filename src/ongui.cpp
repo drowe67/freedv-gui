@@ -1263,7 +1263,7 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
     TopFrame::OnSystemColorChanged(event);
 }
 
-void MainFrame::OnToolsCenterRX(wxCommandEvent& event)
+void MainFrame::OnCenterRx(wxCommandEvent& event)
 {
     clickTune(FDMDV_FCENTRE);
 }
