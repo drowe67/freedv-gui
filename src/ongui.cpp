@@ -24,6 +24,8 @@
 #include "rig_control/omnirig/OmniRigController.h"
 #endif // defined(WIN32)
 
+#include "codec2_fdmdv.h" // for FDMDV_FCENTRE
+
 extern int g_mode;
 
 extern int   g_SquelchActive;
@@ -51,6 +53,8 @@ extern bool g_recFileFromRadio;
 extern SNDFILE            *g_sfRecMicFile;
 
 extern wxMutex g_mutexProtectingCallbackData;
+
+void clickTune(float frequency); // callback to pass new click freq
 
 //-------------------------------------------------------------------------
 // Forces redraw of main panels on window resize.
@@ -1257,6 +1261,11 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
     m_collpane->SetBackgroundColour(currentControlBackground);
     m_collpane->GetPane()->SetBackgroundColour(currentControlBackground);
     TopFrame::OnSystemColorChanged(event);
+}
+
+void MainFrame::OnToolsCenterRX(wxCommandEvent& event)
+{
+    clickTune(FDMDV_FCENTRE);
 }
 
 void MainFrame::updateReportingFreqList_()
