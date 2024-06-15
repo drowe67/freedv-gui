@@ -304,7 +304,8 @@ void PlotSpectrum::OnDoubleClickCommon(wxMouseEvent& event)
     // valid click if inside of plot
     if ((pt.x >= 0) && (pt.x <= m_rGrid.GetWidth()) && (pt.y >=0) && m_clickTune) {
         float freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
-        float clickFreq = (float)pt.x/freq_hz_to_px;
+        int clickFreq = (int)((float)pt.x/freq_hz_to_px);
+        clickFreq -= clickFreq % 10;
 
         // see PlotWaterfall::OnMouseDown()
 

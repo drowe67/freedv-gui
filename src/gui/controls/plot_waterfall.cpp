@@ -451,8 +451,9 @@ void PlotWaterfall::OnDoubleClickCommon(wxMouseEvent& event)
     if ((pt.x >= 0) && (pt.x <= m_imgWidth) && (pt.y >=0)) 
     {
         float freq_hz_to_px = (float)m_imgWidth/(MAX_F_HZ-MIN_F_HZ);
-        float clickFreq = (float)pt.x/freq_hz_to_px;
-
+        int clickFreq = (int)((float)pt.x/freq_hz_to_px);
+        clickFreq -= clickFreq % 10;
+        
         // communicate back to other threads
         clickTune(clickFreq);
     }
