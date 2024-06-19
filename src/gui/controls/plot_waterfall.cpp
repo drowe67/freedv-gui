@@ -40,6 +40,7 @@ BEGIN_EVENT_TABLE(PlotWaterfall, PlotPanel)
     EVT_LEFT_DCLICK     (PlotWaterfall::OnMouseLeftDoubleClick)
     EVT_LEFT_UP         (PlotWaterfall::OnMouseLeftUp)
     EVT_RIGHT_DCLICK    (PlotWaterfall::OnMouseRightDoubleClick)
+    EVT_MIDDLE_DOWN     (PlotWaterfall::OnMouseMiddleDown)
     EVT_MOUSEWHEEL      (PlotWaterfall::OnMouseWheelMoved)
     EVT_SIZE            (PlotWaterfall::OnSize)
     EVT_SHOW            (PlotWaterfall::OnShow)
@@ -535,3 +536,10 @@ void PlotWaterfall::OnMouseRightDoubleClick(wxMouseEvent& event)
     OnDoubleClickCommon(event);
 }
 
+//-------------------------------------------------------------------------
+// OnMouseMiddleDown()
+//-------------------------------------------------------------------------
+void PlotWaterfall::OnMouseMiddleDown(wxMouseEvent& event)
+{
+    clickTune(FDMDV_FCENTRE);
+}

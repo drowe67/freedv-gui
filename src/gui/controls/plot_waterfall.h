@@ -59,6 +59,7 @@ class PlotWaterfall : public PlotPanel
         void        plotPixelData();
         void        OnMouseLeftDoubleClick(wxMouseEvent& event);
         void        OnMouseRightDoubleClick(wxMouseEvent& event);
+        void        OnMouseMiddleDown(wxMouseEvent& event);
         void        OnMouseWheelMoved(wxMouseEvent& event);
         void        OnKeyDown(wxKeyEvent& event);
 

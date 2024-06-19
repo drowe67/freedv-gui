@@ -32,6 +32,7 @@ BEGIN_EVENT_TABLE(PlotSpectrum, PlotPanel)
     EVT_LEFT_DOWN       (PlotSpectrum::OnMouseLeftDown)
     EVT_LEFT_DCLICK     (PlotSpectrum::OnMouseLeftDoubleClick)
     EVT_LEFT_UP         (PlotSpectrum::OnMouseLeftUp)
+    EVT_MIDDLE_DOWN     (PlotSpectrum::OnMouseMiddleDown)
     EVT_RIGHT_DCLICK    (PlotSpectrum::OnMouseRightDoubleClick)
     EVT_MOUSEWHEEL      (PlotSpectrum::OnMouseWheelMoved)
     EVT_PAINT           (PlotSpectrum::OnPaint)
@@ -387,4 +388,12 @@ void PlotSpectrum::OnKeyDown(wxKeyEvent& event)
         }
         clickTune(currRxFreq);
     }
+}
+
+//-------------------------------------------------------------------------
+// OnMouseMiddleDown()
+//-------------------------------------------------------------------------
+void PlotSpectrum::OnMouseMiddleDown(wxMouseEvent& event)
+{
+    clickTune(FDMDV_FCENTRE);
 }
