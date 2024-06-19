@@ -20,6 +20,9 @@
 //==========================================================================
 #ifndef __FDMDV2_PLOT__
 #define __FDMDV2_PLOT__
+
+#include <deque>
+
 #include <wx/wx.h>
 #include <wx/aui/auibook.h>
 #include <wx/rawbmp.h>
@@ -73,6 +76,8 @@
 #define LIGHT_YELLOW_COLOR  wxColor(0xFF, 0xFF, 0xB5)
 #define DARK_YELLOW_COLOR   wxColor(0xFF, 0xFF, 0x08)
 
+#define ORANGE_COLOR        wxColor(0xFF, 0xA5, 0x00)
+
 class MainFrame;
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -111,7 +116,7 @@ class PlotPanel : public wxPanel
         virtual void    OnMouseLeftDown(wxMouseEvent& event);
         void            OnMouseLeftUp(wxMouseEvent& event);
         virtual void    OnMouseRightDown(wxMouseEvent& event);
-        void            OnMouseWheelMoved(wxMouseEvent& event);
+        virtual void    OnMouseWheelMoved(wxMouseEvent& event);
         void            OnClose(wxCloseEvent& event ){ event.Skip(); }
         virtual void    OnSize( wxSizeEvent& event ) = 0;
         void            OnErase(wxEraseEvent& event);
@@ -126,6 +131,17 @@ class PlotPanel : public wxPanel
         virtual void    OnShow(wxShowEvent& event);
         virtual double  GetLabelSize();
         virtual void    SetLabelSize(double size);
+        
+        void setSync(bool sync) { sync_ = sync; }
+        void addOffset(float offset)
+        {
+            rxOffsets_.push_back(offset);
+            if (rxOffsets_.size() >= 20)
+            {
+                // Limit to ~2 seconds worth of offsets for averaging
+                rxOffsets_.pop_front();
+            }
+        }
 
     protected:
         int             m_x;
@@ -144,6 +160,10 @@ class PlotPanel : public wxPanel
         double          m_zoomFactor;
         int             m_greyscale;
         int             m_line_color;
+        
+        std::deque<float> rxOffsets_;
+        bool        sync_;
+        
     DECLARE_EVENT_TABLE()
 };
 #endif //__FDMDV2_PLOT__

@@ -374,6 +374,8 @@ class MainFrame : public TopFrame
 
         void OnRecFileFromRadio( wxCommandEvent& event ) override;
         void OnPlayFileFromRadio( wxCommandEvent& event ) override;
+        
+        void OnCenterRx(wxCommandEvent& event) override;
 
         void OnHelpCheckUpdates( wxCommandEvent& event ) override;
         void OnHelpCheckUpdatesUI( wxUpdateUIEvent& event ) override;

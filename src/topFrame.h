@@ -127,6 +127,7 @@ class TopFrame : public wxFrame
 
         wxStaticText  *m_textSync;
         wxButton      *m_BtnReSync;
+        wxButton      *m_btnCenterRx;
         
         wxToggleButton      *m_audioRecord;
 
@@ -169,6 +170,7 @@ class TopFrame : public wxFrame
         virtual void OnToolsFilter( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsFilterUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsOptions( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnCenterRx( wxCommandEvent& event ) { event.Skip(); }
 
         virtual void OnToolsUDP( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsOptionsUI( wxUpdateUIEvent& event ) { event.Skip(); }

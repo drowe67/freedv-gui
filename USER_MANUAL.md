@@ -889,13 +889,18 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V1.9.9.3 TBD 2024
+
+1. Enhancements:
+    * Show green line indicating RX frequency. (PR #725)
+2. Build system:
+    * Allow overrriding the version tag when building. (PR #727)
+
 ## V1.9.9.2 June 2024
 
 1. Bugfixes:
     * Remove TX attenuation and squelch tooltips. (PR #717)
     * Disable 800XA radio button when in RX Only mode. (PR #716)
-2. Build system:
-    * Allow overrriding the version tag when building. (PR #727)
 
 ## V1.9.9.1 April 2024
 

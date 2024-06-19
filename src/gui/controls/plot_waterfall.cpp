@@ -25,11 +25,13 @@
 #include "os/os_interface.h"
 
 #include "plot_waterfall.h"
+#include "codec2_fdmdv.h" // for FDMDV_FCENTRE
 
 // Tweak accordingly
 #define Y_PER_SECOND (30) 
 
 extern float g_avmag[];                 // av mag spec passed in to draw() 
+extern float           g_RxFreqOffsetHz;
 void clickTune(float frequency); // callback to pass new click freq
 
 BEGIN_EVENT_TABLE(PlotWaterfall, PlotPanel)
@@ -38,9 +40,11 @@ BEGIN_EVENT_TABLE(PlotWaterfall, PlotPanel)
     EVT_LEFT_DCLICK     (PlotWaterfall::OnMouseLeftDoubleClick)
     EVT_LEFT_UP         (PlotWaterfall::OnMouseLeftUp)
     EVT_RIGHT_DCLICK    (PlotWaterfall::OnMouseRightDoubleClick)
+    EVT_MIDDLE_DOWN     (PlotWaterfall::OnMouseMiddleDown)
     EVT_MOUSEWHEEL      (PlotWaterfall::OnMouseWheelMoved)
     EVT_SIZE            (PlotWaterfall::OnSize)
     EVT_SHOW            (PlotWaterfall::OnShow)
+    EVT_KEY_DOWN        (PlotWaterfall::OnKeyDown)
 END_EVENT_TABLE()
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -73,6 +77,7 @@ PlotWaterfall::PlotWaterfall(wxWindow* parent, bool graticule, int colour): Plot
     m_max_mag = MAX_MAG_DB;
     m_min_mag = MIN_MAG_DB;
     m_fullBmp = NULL;
+    sync_ = false;
 }
 
 // When the window size gets set we can work outthe size of the window
@@ -306,12 +311,27 @@ void PlotWaterfall::drawGraticule(wxGraphicsContext* ctx)
         if (!overlappedText)
             ctx->DrawText(buf, PLOT_BORDER + XLEFT_OFFSET - text_w - XLEFT_TEXT_OFFSET, y-text_h/2);
    }
-
-    // red rx tuning line
-    ctx->SetPen(wxPen(RED_COLOR, 2));
-    x = m_rxFreq*freq_hz_to_px;
-    x += PLOT_BORDER + XLEFT_OFFSET;
-    ctx->StrokeLine(x, 0, x, PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5);
+   
+   float verticalBarLength = PLOT_BORDER + YBOTTOM_TEXT_OFFSET + 5;
+   
+   float sum = 0.0;
+   for (auto& f : rxOffsets_)
+   {
+       sum += f;
+   }
+   float averageOffset = sum / rxOffsets_.size();
+   
+   // get average offset and draw sync tuning line
+   ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
+   x = (m_rxFreq + averageOffset) * freq_hz_to_px;
+   x += PLOT_BORDER + XLEFT_OFFSET;
+   ctx->StrokeLine(x, 0, x, verticalBarLength);
+   
+   // red rx tuning line
+   ctx->SetPen(wxPen(RED_COLOR, 3));
+   x = m_rxFreq*freq_hz_to_px;
+   x += PLOT_BORDER + XLEFT_OFFSET;
+   ctx->StrokeLine(x, 0, x, 2 * verticalBarLength / 3);
 }
 
 //-------------------------------------------------------------------------
@@ -435,10 +455,68 @@ void PlotWaterfall::OnDoubleClickCommon(wxMouseEvent& event)
     if ((pt.x >= 0) && (pt.x <= m_imgWidth) && (pt.y >=0)) 
     {
         float freq_hz_to_px = (float)m_imgWidth/(MAX_F_HZ-MIN_F_HZ);
-        float clickFreq = (float)pt.x/freq_hz_to_px;
-
+        int clickFreq = (int)((float)pt.x/freq_hz_to_px);
+        clickFreq -= clickFreq % 10;
+        
         // communicate back to other threads
         clickTune(clickFreq);
+    }
+}
+
+//-------------------------------------------------------------------------
+// OnMouseWheelMoved()
+//-------------------------------------------------------------------------
+void PlotWaterfall::OnMouseWheelMoved(wxMouseEvent& event)
+{
+    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz;
+    float direction = 1.0;
+    if (event.GetWheelRotation() < 0)
+    {
+        direction = -1.0;
+    }
+    
+    currRxFreq += direction * 10;
+    if (currRxFreq < MIN_F_HZ)
+    {
+        currRxFreq = MIN_F_HZ;
+    }
+    else if (currRxFreq > MAX_F_HZ)
+    {
+        currRxFreq = MAX_F_HZ;
+    }
+    clickTune(currRxFreq);
+}
+
+//-------------------------------------------------------------------------
+// OnKeyDown()
+//-------------------------------------------------------------------------
+void PlotWaterfall::OnKeyDown(wxKeyEvent& event)
+{
+    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz;
+    float direction = 0;
+    
+    switch (event.GetKeyCode())
+    {
+        case WXK_DOWN:
+            direction = -1.0;
+            break;
+        case WXK_UP:
+            direction = 1.0;
+            break;
+    }
+    
+    if (direction)
+    {
+        currRxFreq += direction * 10;
+        if (currRxFreq < MIN_F_HZ)
+        {
+            currRxFreq = MIN_F_HZ;
+        }
+        else if (currRxFreq > MAX_F_HZ)
+        {
+            currRxFreq = MAX_F_HZ;
+        }
+        clickTune(currRxFreq);
     }
 }
 
@@ -458,3 +536,10 @@ void PlotWaterfall::OnMouseRightDoubleClick(wxMouseEvent& event)
     OnDoubleClickCommon(event);
 }
 
+//-------------------------------------------------------------------------
+// OnMouseMiddleDown()
+//-------------------------------------------------------------------------
+void PlotWaterfall::OnMouseMiddleDown(wxMouseEvent& event)
+{
+    clickTune(FDMDV_FCENTRE);
+}
