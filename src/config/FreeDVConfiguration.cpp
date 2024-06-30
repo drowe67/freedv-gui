@@ -162,6 +162,35 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, voiceKeyerWaveFilePath);
     load_(config, voiceKeyerWaveFile);
+    
+    auto wxStandardPathObj = wxStandardPaths::Get();
+    auto documentsDir = wxStandardPathObj.GetDocumentsDir();
+    
+    if (voiceKeyerWaveFilePath == "")
+    {
+        // Migrate from previous versions where voiceKeyerWaveFilePath wasn't used.
+        wxString tmp = voiceKeyerWaveFile;
+        wxString path;
+        wxString name;
+        wxString ext;
+        
+        wxFileName::SplitPath(tmp, &path, &name, &ext);
+        if (ext != "")
+        {
+            name = name + "." + ext;
+        }
+        
+        if (path == "")
+        {
+            // Default path to the Documents folder if one isn't provided
+            // (i.e. in the case of the old VK filename default)
+            path = documentsDir;
+        }
+        
+        voiceKeyerWaveFilePath = path;
+        voiceKeyerWaveFile = name;
+    }
+    
     load_(config, voiceKeyerRxPause);
     load_(config, voiceKeyerRepeats);
     
@@ -191,8 +220,6 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     load_(config, monitorVoiceKeyerAudio);
     load_(config, monitorTxAudio);
     
-    auto wxStandardPathObj = wxStandardPaths::Get();
-    auto documentsDir = wxStandardPathObj.GetDocumentsDir();
     quickRecordPath.setDefaultVal(documentsDir);
     load_(config, quickRecordPath);
     
