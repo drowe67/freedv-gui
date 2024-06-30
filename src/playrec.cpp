@@ -141,6 +141,9 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
             wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
             return;
         }
+        
+        // Save path for future use
+        wxGetApp().appConfiguration.playFileFromRadioPath = tmpString;
 
         wxWindow * const ctrl = openFileDialog.GetExtraControl();
 
@@ -305,6 +308,9 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
             wxMessageBox(strErr, wxT("Couldn't open sound file"), wxOK);
             return;
         }
+        
+        // Save path for future use
+        wxGetApp().appConfiguration.recFileFromRadioPath = tmpString;
 
         SetStatusText(wxT("Recording file ") + fileName + wxT(" from radio") , 0);
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Stop Record File - From Radio...")));
