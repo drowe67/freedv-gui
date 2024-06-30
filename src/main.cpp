@@ -569,7 +569,17 @@ setDefaultMode:
     m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
     
     // Load default voice keyer file as current.
-    vkFileName_ = wxGetApp().appConfiguration.voiceKeyerWaveFile->mb_str();
+    if (wxGetApp().appConfiguration.voiceKeyerWaveFile != "")
+    {
+        wxFileName fullVKPath(wxGetApp().appConfiguration.voiceKeyerWaveFilePath, wxGetApp().appConfiguration.voiceKeyerWaveFile);
+        vkFileName_ = fullVKPath.GetFullPath().mb_str();
+        
+        m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
+    }
+    else
+    {
+        vkFileName_ = "";
+    }
 
     // Show/hide callsign combo box based on reporting enablement
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
