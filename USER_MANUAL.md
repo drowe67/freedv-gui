@@ -891,9 +891,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 ## V1.9.9.3 TBD 2024
 
-1. Enhancements:
+1. Bugfixes:
+    * Fix bug preventing saving of the previously used path when playing back files. (PR #729)
+2. Enhancements:
     * Show green line indicating RX frequency. (PR #725)
-2. Build system:
+3. Build system:
     * Allow overrriding the version tag when building. (PR #727)
 
 ## V1.9.9.2 June 2024
