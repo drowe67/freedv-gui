@@ -575,6 +575,10 @@ setDefaultMode:
         vkFileName_ = fullVKPath.GetFullPath().mb_str();
         
         m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
+        
+        wxString fileNameWithoutExt;
+        wxFileName::SplitPath(wxGetApp().appConfiguration.voiceKeyerWaveFile, nullptr, &fileNameWithoutExt, nullptr);
+        m_togBtnVoiceKeyer->SetLabel(_("Voice Keyer\n") + fileNameWithoutExt);
     }
     else
     {

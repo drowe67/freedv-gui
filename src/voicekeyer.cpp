@@ -66,10 +66,12 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
     wxString soundFile = saveFileDialog.GetPath();
     wxString tmpString = wxGetApp().appConfiguration.playFileToMicInPath;
     wxString fileName;
+    wxString fileNameWithoutExt;
     wxString extension;
-    wxFileName::SplitPath(soundFile, &tmpString, &fileName, &extension);
+    wxFileName::SplitPath(soundFile, &tmpString, &fileNameWithoutExt, &extension);
     wxGetApp().appConfiguration.voiceKeyerWaveFilePath = tmpString;
     
+    fileName = fileNameWithoutExt;
     // Append .wav extension to the end if needed.
     if (extension.Lower() != _("wav"))
     {
@@ -107,6 +109,7 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
     m_togBtnVoiceKeyer->SetBackgroundColour(*wxRED);
     
     m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
+    m_togBtnVoiceKeyer->SetLabel(_("Voice Keyer\n") + fileNameWithoutExt);
 }
 
 void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
@@ -131,19 +134,25 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
     wxString tmpString = wxGetApp().appConfiguration.playFileToMicInPath;
     wxString soundFile = openFileDialog.GetPath();
     wxString fileName;
+    wxString fileNameWithoutExt;
     wxString fileExt;
-    wxFileName::SplitPath(soundFile, &tmpString, &fileName, &fileExt);
+    wxFileName::SplitPath(soundFile, &tmpString, &fileNameWithoutExt, &fileExt);
     wxGetApp().appConfiguration.voiceKeyerWaveFilePath = tmpString;
     
     if (fileExt != "")
     {
-        fileName = fileName + "." + fileExt;
+        fileName = fileNameWithoutExt + "." + fileExt;
+    }
+    else
+    {
+        fileName = fileNameWithoutExt;
     }
     wxGetApp().appConfiguration.voiceKeyerWaveFile = fileName;
     
     vkFileName_ = soundFile;
     
     m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
+    m_togBtnVoiceKeyer->SetLabel(_("Voice Keyer\n") + fileNameWithoutExt);
 }
 
 void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event )
