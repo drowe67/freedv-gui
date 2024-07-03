@@ -20,6 +20,7 @@
 //==========================================================================
 
 #include <wx/stdpaths.h>
+#include <wx/filename.h>
 
 #include "../defines.h"
 #include "FreeDVConfiguration.h"
