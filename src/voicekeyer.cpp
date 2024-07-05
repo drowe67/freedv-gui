@@ -109,7 +109,7 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
     m_togBtnVoiceKeyer->SetBackgroundColour(*wxRED);
     
     m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
-    m_togBtnVoiceKeyer->SetLabel(_("Voice Keyer\n") + fileNameWithoutExt);
+    setVoiceKeyerButtonLabel_(fileNameWithoutExt);
 }
 
 void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
@@ -152,7 +152,7 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
     vkFileName_ = soundFile;
     
     m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
-    m_togBtnVoiceKeyer->SetLabel(_("Voice Keyer\n") + fileNameWithoutExt);
+    setVoiceKeyerButtonLabel_(fileNameWithoutExt);
 }
 
 void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event )

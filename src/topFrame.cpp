@@ -983,3 +983,28 @@ void TopFrame::OnChangeCollapseState(wxCollapsiblePaneEvent& event)
     modeBox->SetSize(wxSize(curSize.GetWidth(), bestSize.GetHeight()));
     rightSizer->Layout();
 }
+
+void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)
+{
+    wxString vkLabel = _("Voice Keyer");
+    int vkLabelWidth = 0;
+    int filenameWidth = 0;
+    int tmp = 0;
+    
+    m_togBtnVoiceKeyer->GetTextExtent(vkLabel, &vkLabelWidth, &tmp);
+    m_togBtnVoiceKeyer->GetTextExtent(filename, &filenameWidth, &tmp);
+    
+    fprintf(stderr, "vkLabelSize = %d, filenameSize = %d\n", vkLabelWidth, filenameWidth);
+    
+    // Truncate filename as required to ensure button isn't made wider than needed.
+    bool isTruncated = false;
+    while (filename.size() > 1 && filenameWidth > vkLabelWidth)
+    {
+        isTruncated = true;
+        filename = filename.Mid(0, filename.size() - 1);
+        
+        wxString tmpString = filename + _("...");
+        m_togBtnVoiceKeyer->GetTextExtent(tmpString, &filenameWidth, &tmp);
+    }
+    m_togBtnVoiceKeyer->SetLabel(vkLabel + _("\n") + filename + (isTruncated ? _("...") : _("")));
+}

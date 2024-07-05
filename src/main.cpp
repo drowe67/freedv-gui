@@ -578,7 +578,7 @@ setDefaultMode:
         
         wxString fileNameWithoutExt;
         wxFileName::SplitPath(wxGetApp().appConfiguration.voiceKeyerWaveFile, nullptr, &fileNameWithoutExt, nullptr);
-        m_togBtnVoiceKeyer->SetLabel(_("Voice Keyer\n") + fileNameWithoutExt);
+        setVoiceKeyerButtonLabel_(fileNameWithoutExt);
     }
     else
     {
