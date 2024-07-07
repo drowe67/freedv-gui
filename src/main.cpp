@@ -567,23 +567,6 @@ setDefaultMode:
     
     // Show/hide frequency box based on reporting enablement
     m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
-    
-    // Load default voice keyer file as current.
-    if (wxGetApp().appConfiguration.voiceKeyerWaveFile != "")
-    {
-        wxFileName fullVKPath(wxGetApp().appConfiguration.voiceKeyerWaveFilePath, wxGetApp().appConfiguration.voiceKeyerWaveFile);
-        vkFileName_ = fullVKPath.GetFullPath().mb_str();
-        
-        m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
-        
-        wxString fileNameWithoutExt;
-        wxFileName::SplitPath(wxGetApp().appConfiguration.voiceKeyerWaveFile, nullptr, &fileNameWithoutExt, nullptr);
-        setVoiceKeyerButtonLabel_(fileNameWithoutExt);
-    }
-    else
-    {
-        vkFileName_ = "";
-    }
 
     // Show/hide callsign combo box based on reporting enablement
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
@@ -619,6 +602,23 @@ setDefaultMode:
     auto currentSizer = m_panel->GetSizer();
     m_panel->SetSizerAndFit(currentSizer, false);
     m_panel->Layout();
+    
+    // Load default voice keyer file as current.
+    if (wxGetApp().appConfiguration.voiceKeyerWaveFile != "")
+    {
+        wxFileName fullVKPath(wxGetApp().appConfiguration.voiceKeyerWaveFilePath, wxGetApp().appConfiguration.voiceKeyerWaveFile);
+        vkFileName_ = fullVKPath.GetFullPath().mb_str();
+        
+        m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
+        
+        wxString fileNameWithoutExt;
+        wxFileName::SplitPath(wxGetApp().appConfiguration.voiceKeyerWaveFile, nullptr, &fileNameWithoutExt, nullptr);
+        setVoiceKeyerButtonLabel_(fileNameWithoutExt);
+    }
+    else
+    {
+        vkFileName_ = "";
+    }
     
     if (wxGetApp().appConfiguration.experimentalFeatures && wxGetApp().appConfiguration.tabLayout != "")
     {
