@@ -722,28 +722,28 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //-------------------------------
     m_togBtnOnOff = new wxToggleButton(controlBox, wxID_ANY, _("&Start"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnOnOff->SetToolTip(_("Begin/End receiving data."));
-    sbSizer5->Add(m_togBtnOnOff, 0, wxALL | wxEXPAND, 1);
+    sbSizer5->Add(m_togBtnOnOff, 0, wxALL | wxEXPAND, 5);
 
     //------------------------------
     // Analog Passthrough Toggle
     //------------------------------
     m_togBtnAnalog = new wxToggleButton(controlBox, wxID_ANY, _("A&nalog"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnAnalog->SetToolTip(_("Toggle analog/digital operation."));
-    sbSizer5->Add(m_togBtnAnalog, 0, wxALL | wxEXPAND, 1);
+    sbSizer5->Add(m_togBtnAnalog, 0, wxALL | wxEXPAND, 5);
 
     //------------------------------
     // Voice Keyer Toggle
     //------------------------------
     m_togBtnVoiceKeyer = new wxToggleButton(controlBox, wxID_ANY, _("Voice &Keyer"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer. Right-click for additional options."));
-    sbSizer5->Add(m_togBtnVoiceKeyer, 0, wxALL | wxEXPAND, 1);
+    sbSizer5->Add(m_togBtnVoiceKeyer, 0, wxALL | wxEXPAND, 5);
 
     //------------------------------
     // PTT button: Toggle Transmit/Receive mode
     //------------------------------
     m_btnTogPTT = new wxToggleButton(controlBox, wxID_ANY, _("&PTT"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnTogPTT->SetToolTip(_("Push to Talk - Switch between Receive and Transmit. Right-click for additional options."));
-    sbSizer5->Add(m_btnTogPTT, 0, wxALL | wxEXPAND, 1);
+    sbSizer5->Add(m_btnTogPTT, 0, wxALL | wxEXPAND, 5);
 
     rightSizer->Add(sbSizer5, 2, wxALL|wxEXPAND, 2);
 
