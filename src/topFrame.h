@@ -84,7 +84,7 @@ class wxListViewComboPopup;
 class TopFrame : public wxFrame
 {
     private:
-
+        
     protected:
         wxPanel* m_panel;
         wxMenuBar* m_menubarMain;
@@ -224,6 +224,8 @@ class TopFrame : public wxFrame
         virtual void OnReportFrequencyKillFocus(wxFocusEvent& event) { event.Skip(); }
 
         virtual void OnSystemColorChanged(wxSysColourChangedEvent& event) { event.Skip(); }
+        
+        void setVoiceKeyerButtonLabel_(wxString filename);
         
     public:
         wxToggleButton* m_togBtnOnOff;

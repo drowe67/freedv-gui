@@ -337,16 +337,16 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxBoxSizer* voiceKeyerSizer1 = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer* voiceKeyerSizer2 = new wxBoxSizer(wxHORIZONTAL);
 
-    wxStaticText *m_staticText28b = new wxStaticText(m_keyerTab, wxID_ANY, _("Wave File: "), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticText28b = new wxStaticText(m_keyerTab, wxID_ANY, _("File location: "), wxDefaultPosition, wxDefaultSize, 0);
     voiceKeyerSizer1->Add(m_staticText28b, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtCtrlVoiceKeyerWaveFile = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
-    m_txtCtrlVoiceKeyerWaveFile->SetToolTip(_("Wave file to play for Voice Keyer"));
-    voiceKeyerSizer1->Add(m_txtCtrlVoiceKeyerWaveFile, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_txtCtrlVoiceKeyerWaveFilePath = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
+    m_txtCtrlVoiceKeyerWaveFilePath->SetToolTip(_("Path to Voice Keyer audio files"));
+    voiceKeyerSizer1->Add(m_txtCtrlVoiceKeyerWaveFilePath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_buttonChooseVoiceKeyerWaveFile = new wxButton(m_keyerTab, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
-    m_buttonChooseVoiceKeyerWaveFile->SetMinSize(wxSize(120, -1));
-    voiceKeyerSizer1->Add(m_buttonChooseVoiceKeyerWaveFile, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    m_buttonChooseVoiceKeyerWaveFilePath = new wxButton(m_keyerTab, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_buttonChooseVoiceKeyerWaveFilePath->SetMinSize(wxSize(120, -1));
+    voiceKeyerSizer1->Add(m_buttonChooseVoiceKeyerWaveFilePath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     wxStaticText *m_staticText28c = new wxStaticText(m_keyerTab, wxID_ANY, _("Rx Pause:"), wxDefaultPosition, wxDefaultSize, 0);
     voiceKeyerSizer2->Add(m_staticText28c, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
@@ -654,8 +654,8 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_waterfallColorScheme1->MoveBeforeInTabOrder(m_waterfallColorScheme2);
     m_waterfallColorScheme2->MoveBeforeInTabOrder(m_waterfallColorScheme3);
     
-    m_txtCtrlVoiceKeyerWaveFile->MoveBeforeInTabOrder(m_buttonChooseVoiceKeyerWaveFile);
-    m_buttonChooseVoiceKeyerWaveFile->MoveBeforeInTabOrder(m_txtCtrlVoiceKeyerRxPause);
+    m_txtCtrlVoiceKeyerWaveFilePath->MoveBeforeInTabOrder(m_buttonChooseVoiceKeyerWaveFilePath);
+    m_buttonChooseVoiceKeyerWaveFilePath->MoveBeforeInTabOrder(m_txtCtrlVoiceKeyerRxPause);
     m_txtCtrlVoiceKeyerRxPause->MoveBeforeInTabOrder(m_txtCtrlVoiceKeyerRepeats);
     
     m_ckboxFreeDV700txClip->MoveBeforeInTabOrder(m_ckboxFreeDV700Combine);
@@ -720,7 +720,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_ckboxDebugConsole->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnDebugConsole), NULL, this);
 #endif
 
-    m_buttonChooseVoiceKeyerWaveFile->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFile), NULL, this);
+    m_buttonChooseVoiceKeyerWaveFilePath->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFilePath), NULL, this);
 
     m_buttonChooseQuickRecordPath->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
 
@@ -765,7 +765,7 @@ OptionsDlg::~OptionsDlg()
 
     m_ckboxFreeDV700txClip->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700txClip), NULL, this);
     m_ckboxFreeDV700Combine->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(OptionsDlg::OnFreeDV700Combine), NULL, this);
-    m_buttonChooseVoiceKeyerWaveFile->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFile), NULL, this);
+    m_buttonChooseVoiceKeyerWaveFilePath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseVoiceKeyerWaveFilePath), NULL, this);
     m_buttonChooseQuickRecordPath->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnChooseQuickRecordPath), NULL, this);
 
     m_BtnFifoReset->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnFifoReset), NULL, this);
@@ -829,7 +829,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         
         /* Voice Keyer */
 
-        m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().appConfiguration.voiceKeyerWaveFile);
+        m_txtCtrlVoiceKeyerWaveFilePath->SetValue(wxGetApp().appConfiguration.voiceKeyerWaveFilePath);
         m_txtCtrlVoiceKeyerRxPause->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.voiceKeyerRxPause.get()));
         m_txtCtrlVoiceKeyerRepeats->SetValue(wxString::Format(wxT("%i"), wxGetApp().appConfiguration.voiceKeyerRepeats.get()));
 
@@ -992,7 +992,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         
         /* Voice Keyer */
 
-        wxGetApp().appConfiguration.voiceKeyerWaveFile = m_txtCtrlVoiceKeyerWaveFile->GetValue();
+        wxGetApp().appConfiguration.voiceKeyerWaveFilePath = m_txtCtrlVoiceKeyerWaveFilePath->GetValue();
         
         long tmp;
         m_txtCtrlVoiceKeyerRxPause->GetValue().ToLong(&tmp); if (tmp < 0) tmp = 0; wxGetApp().appConfiguration.voiceKeyerRxPause = (int)tmp;
@@ -1178,24 +1178,18 @@ void OptionsDlg::OnChannelNoise(wxScrollEvent& event) {
 }
 
 
-void OptionsDlg::OnChooseVoiceKeyerWaveFile(wxCommandEvent& event) {
-     wxFileDialog openFileDialog(
-                                 this,
-                                 wxT("Voice Keyer wave file"),
-                                 wxGetApp().appConfiguration.voiceKeyerWaveFilePath,
-                                 wxEmptyString,
-                                 wxT("WAV files (*.wav)|*.wav"),
-                                 wxFD_OPEN
-                                 );
-     if(openFileDialog.ShowModal() == wxID_CANCEL) {
-         return;     // the user changed their mind...
-     }
-
-     wxString fileName, extension;
-     wxGetApp().appConfiguration.voiceKeyerWaveFile = openFileDialog.GetPath();
-     wxString tmpString = wxGetApp().appConfiguration.voiceKeyerWaveFilePath;
-     wxFileName::SplitPath(wxGetApp().appConfiguration.voiceKeyerWaveFile, &tmpString, &fileName, &extension);
-     m_txtCtrlVoiceKeyerWaveFile->SetValue(wxGetApp().appConfiguration.voiceKeyerWaveFile);
+void OptionsDlg::OnChooseVoiceKeyerWaveFilePath(wxCommandEvent& event) {
+    wxDirDialog pathDialog(
+                                this,
+                                wxT("Voice Keyer file location"),
+                                wxGetApp().appConfiguration.voiceKeyerWaveFilePath
+                                );
+                                
+    if(pathDialog.ShowModal() == wxID_CANCEL) {
+        return;     // the user changed their mind...
+    }
+    
+    m_txtCtrlVoiceKeyerWaveFilePath->SetValue(pathDialog.GetPath());
 }
 
 void OptionsDlg::OnChooseQuickRecordPath(wxCommandEvent& event) {

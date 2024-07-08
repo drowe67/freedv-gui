@@ -716,46 +716,34 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     wxStaticBoxSizer* sbSizer5;
     wxStaticBox* controlBox = new wxStaticBox(m_panel, wxID_ANY, _("Control"), wxDefaultPosition, wxSize(100,-1));
     sbSizer5 = new wxStaticBoxSizer(controlBox, wxVERTICAL);
-    wxBoxSizer* bSizer1511;
-    bSizer1511 = new wxBoxSizer(wxVERTICAL);
 
     //-------------------------------
     // Stop/Stop signal processing (rx and tx)
     //-------------------------------
     m_togBtnOnOff = new wxToggleButton(controlBox, wxID_ANY, _("&Start"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnOnOff->SetToolTip(_("Begin/End receiving data."));
-    bSizer1511->Add(m_togBtnOnOff, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 2);
-    sbSizer5->Add(bSizer1511, 0, wxTOP | wxLEFT | wxRIGHT | wxEXPAND, 1);
-
-    wxBoxSizer* bSizer13;
-    bSizer13 = new wxBoxSizer(wxVERTICAL);
+    sbSizer5->Add(m_togBtnOnOff, 0, wxALL | wxEXPAND, 5);
 
     //------------------------------
     // Analog Passthrough Toggle
     //------------------------------
     m_togBtnAnalog = new wxToggleButton(controlBox, wxID_ANY, _("A&nalog"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnAnalog->SetToolTip(_("Toggle analog/digital operation."));
-    bSizer13->Add(m_togBtnAnalog, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 2);
-    sbSizer5->Add(bSizer13, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
+    sbSizer5->Add(m_togBtnAnalog, 0, wxALL | wxEXPAND, 5);
 
     //------------------------------
     // Voice Keyer Toggle
     //------------------------------
     m_togBtnVoiceKeyer = new wxToggleButton(controlBox, wxID_ANY, _("Voice &Keyer"), wxDefaultPosition, wxDefaultSize, 0);
     m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer. Right-click for additional options."));
-    wxBoxSizer* bSizer13a = new wxBoxSizer(wxVERTICAL);
-    bSizer13a->Add(m_togBtnVoiceKeyer, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 2);
-    sbSizer5->Add(bSizer13a, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 1);
+    sbSizer5->Add(m_togBtnVoiceKeyer, 0, wxALL | wxEXPAND, 5);
 
     //------------------------------
     // PTT button: Toggle Transmit/Receive mode
     //------------------------------
-    wxBoxSizer* bSizer11;
-    bSizer11 = new wxBoxSizer(wxVERTICAL);
     m_btnTogPTT = new wxToggleButton(controlBox, wxID_ANY, _("&PTT"), wxDefaultPosition, wxDefaultSize, 0);
     m_btnTogPTT->SetToolTip(_("Push to Talk - Switch between Receive and Transmit. Right-click for additional options."));
-    bSizer11->Add(m_btnTogPTT, 1, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 2);
-    sbSizer5->Add(bSizer11, 0, wxBOTTOM | wxLEFT | wxRIGHT | wxEXPAND, 1);
+    sbSizer5->Add(m_btnTogPTT, 0, wxALL | wxEXPAND, 5);
 
     rightSizer->Add(sbSizer5, 2, wxALL|wxEXPAND, 2);
 
@@ -982,4 +970,30 @@ void TopFrame::OnChangeCollapseState(wxCollapsiblePaneEvent& event)
 
     modeBox->SetSize(wxSize(curSize.GetWidth(), bestSize.GetHeight()));
     rightSizer->Layout();
+}
+
+void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)
+{
+    wxString vkLabel = _("Voice Keyer");
+    int vkLabelWidth = 0;
+    int filenameWidth = 0;
+    int tmp = 0;
+    
+    wxSize buttonSize = m_togBtnVoiceKeyer->GetSize();
+    vkLabelWidth = buttonSize.GetWidth() * 0.95;
+    m_togBtnVoiceKeyer->GetTextExtent(filename, &filenameWidth, &tmp);
+    
+    //fprintf(stderr, "vkLabelSize = %d, filenameSize = %d\n", vkLabelWidth, filenameWidth);
+    
+    // Truncate filename as required to ensure button isn't made wider than needed.
+    bool isTruncated = false;
+    while (filename.size() > 1 && filenameWidth > vkLabelWidth)
+    {
+        isTruncated = true;
+        filename = filename.Mid(0, filename.size() - 1);
+        
+        wxString tmpString = filename + _("...");
+        m_togBtnVoiceKeyer->GetTextExtent(tmpString, &filenameWidth, &tmp);
+    }
+    m_togBtnVoiceKeyer->SetLabel(vkLabel + _("\n") + filename + (isTruncated ? _("...") : _("")));
 }

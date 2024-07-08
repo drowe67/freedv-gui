@@ -49,7 +49,7 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
     wxFileDialog saveFileDialog(
         this,
         wxT("Select Voice Keyer File"),
-        wxGetApp().appConfiguration.playFileToMicInPath,
+        wxGetApp().appConfiguration.voiceKeyerWaveFilePath,
         wxEmptyString,
         wxT("WAV files (*.wav)|*.wav|")
         wxT("All files (*.*)|*.*"),
@@ -65,15 +65,20 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
     // navigated to persists across executions.
     wxString soundFile = saveFileDialog.GetPath();
     wxString tmpString = wxGetApp().appConfiguration.playFileToMicInPath;
+    wxString fileName;
+    wxString fileNameWithoutExt;
     wxString extension;
-    wxFileName::SplitPath(soundFile, &tmpString, nullptr, &extension);
-    wxGetApp().appConfiguration.playFileToMicInPath = tmpString;
+    wxFileName::SplitPath(soundFile, &tmpString, &fileNameWithoutExt, &extension);
+    wxGetApp().appConfiguration.voiceKeyerWaveFilePath = tmpString;
     
+    fileName = fileNameWithoutExt;
     // Append .wav extension to the end if needed.
     if (extension.Lower() != _("wav"))
     {
+        fileName += ".wav";
         soundFile += ".wav";
     }
+    wxGetApp().appConfiguration.voiceKeyerWaveFile = fileName;
     
     int sample_rate = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
     SF_INFO     sfInfo;
@@ -102,6 +107,9 @@ void MainFrame::OnRecordNewVoiceKeyerFile( wxCommandEvent& event )
     m_togBtnAnalog->Enable(false);
     m_togBtnVoiceKeyer->SetValue(true);
     m_togBtnVoiceKeyer->SetBackgroundColour(*wxRED);
+    
+    m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
+    setVoiceKeyerButtonLabel_(fileNameWithoutExt);
 }
 
 void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
@@ -109,7 +117,7 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
     wxFileDialog openFileDialog(
         this,
         wxT("Select Voice Keyer File"),
-        wxGetApp().appConfiguration.playFileToMicInPath,
+        wxGetApp().appConfiguration.voiceKeyerWaveFilePath,
         wxEmptyString,
         wxT("WAV files (*.wav)|*.wav|")
         wxT("All files (*.*)|*.*"),
@@ -125,10 +133,26 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
     // navigated to persists across executions.
     wxString tmpString = wxGetApp().appConfiguration.playFileToMicInPath;
     wxString soundFile = openFileDialog.GetPath();
-    wxFileName::SplitPath(soundFile, &tmpString, nullptr, nullptr);
-    wxGetApp().appConfiguration.playFileToMicInPath = tmpString;
+    wxString fileName;
+    wxString fileNameWithoutExt;
+    wxString fileExt;
+    wxFileName::SplitPath(soundFile, &tmpString, &fileNameWithoutExt, &fileExt);
+    wxGetApp().appConfiguration.voiceKeyerWaveFilePath = tmpString;
+    
+    if (fileExt != "")
+    {
+        fileName = fileNameWithoutExt + "." + fileExt;
+    }
+    else
+    {
+        fileName = fileNameWithoutExt;
+    }
+    wxGetApp().appConfiguration.voiceKeyerWaveFile = fileName;
     
     vkFileName_ = soundFile;
+    
+    m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
+    setVoiceKeyerButtonLabel_(fileNameWithoutExt);
 }
 
 void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event )
@@ -155,6 +179,23 @@ extern int g_sfTxFs;
 int MainFrame::VoiceKeyerStartTx(void)
 {
     int next_state;
+    
+    // Check if VK file exists. If it doesn't, force the user to select another one.
+    if (vkFileName_ == "" || !wxFile::Exists(vkFileName_))
+    {
+        vkFileName_ = "";
+        wxCommandEvent tmpEvent;
+        OnChooseAlternateVoiceKeyerFile(tmpEvent);
+        
+        if (vkFileName_ == "")
+        {
+            // Cancel VK if user refuses to choose a new file.
+            next_state = VK_IDLE;
+            m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+            m_togBtnVoiceKeyer->SetValue(false);
+            return next_state;
+        }
+    }
 
     // start playing wave file or die trying
 
