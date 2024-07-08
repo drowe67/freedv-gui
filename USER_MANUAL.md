@@ -898,6 +898,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Update configuration of the Voice Keyer feature based on user feedback. (PR #730)
 3. Build system:
     * Allow overrriding the version tag when building. (PR #727)
+    * Update wxWidgets to 3.2.5. (PR #731)
 
 ## V1.9.9.2 June 2024
 
