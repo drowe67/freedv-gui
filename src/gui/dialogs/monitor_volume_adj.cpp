@@ -21,20 +21,23 @@
 
 #include <wx/stattext.h>
 #include <wx/sizer.h>
+#include <wx/panel.h>
+#include <wx/statbox.h>
+
 #include "monitor_volume_adj.h"
 
 MonitorVolumeAdjPopup::MonitorVolumeAdjPopup( wxWindow* parent, ConfigurationDataElement<float>& configVal )
     : wxPopupTransientWindow(parent)
     , configVal_(configVal)
 {
-    wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
+    wxStaticBoxSizer* mainSizer = new wxStaticBoxSizer(wxVERTICAL, this);
     
-    wxStaticText* controlLabel = new wxStaticText(this, wxID_ANY, wxT("Monitor volume (dB):"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* controlLabel = new wxStaticText(mainSizer->GetStaticBox(), wxID_ANY, wxT("Monitor volume (dB):"), wxDefaultPosition, wxDefaultSize, 0);
     mainSizer->Add(controlLabel, 0, wxALL | wxEXPAND, 2);
     
-    volumeSlider_ = new wxSlider(this, wxID_ANY, configVal, -40, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS | wxSL_LABELS);
+    volumeSlider_ = new wxSlider(mainSizer->GetStaticBox(), wxID_ANY, configVal, -40, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS | wxSL_LABELS);
     mainSizer->Add(volumeSlider_, 0, wxALL | wxEXPAND, 2);
-    
+        
     SetSizerAndFit(mainSizer);
     Layout();
     
