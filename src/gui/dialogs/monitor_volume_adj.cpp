@@ -23,7 +23,7 @@
 #include <wx/sizer.h>
 #include "monitor_volume_adj.h"
 
-MontiorVolumeAdjPopup::MontiorVolumeAdjPopup( wxWindow* parent, ConfigurationDataElement<float>& configVal )
+MonitorVolumeAdjPopup::MonitorVolumeAdjPopup( wxWindow* parent, ConfigurationDataElement<float>& configVal )
     : wxPopupTransientWindow(parent)
     , configVal_(configVal)
 {
@@ -39,7 +39,7 @@ MontiorVolumeAdjPopup::MontiorVolumeAdjPopup( wxWindow* parent, ConfigurationDat
     Layout();
     
     // Link event handlers
-    volumeSlider_->Connect(wxEVT_SLIDER, wxCommandEventHandler(MontiorVolumeAdjPopup::OnSliderAdjusted), NULL, this);
+    volumeSlider_->Connect(wxEVT_SLIDER, wxCommandEventHandler(MonitorVolumeAdjPopup::OnSliderAdjusted), NULL, this);
     
     // Make popup show up to the left of (and above) mouse cursor position
     wxPoint pt = wxGetMousePosition();
@@ -48,12 +48,12 @@ MontiorVolumeAdjPopup::MontiorVolumeAdjPopup( wxWindow* parent, ConfigurationDat
     SetPosition( pt );
 }
 
-MontiorVolumeAdjPopup::~MontiorVolumeAdjPopup()
+MonitorVolumeAdjPopup::~MonitorVolumeAdjPopup()
 {
     // TBD
 }
 
-void MontiorVolumeAdjPopup::OnSliderAdjusted(wxCommandEvent& event)
+void MonitorVolumeAdjPopup::OnSliderAdjusted(wxCommandEvent& event)
 {
     configVal_ = volumeSlider_->GetValue();
 }

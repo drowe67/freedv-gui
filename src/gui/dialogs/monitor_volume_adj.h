@@ -28,13 +28,13 @@
 #include "config/ConfigurationDataElement.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-// Class MontiorVolumeAdjPopup
+// Class MonitorVolumeAdjPopup
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-class MontiorVolumeAdjPopup : public wxPopupTransientWindow
+class MonitorVolumeAdjPopup : public wxPopupTransientWindow
 {
     public:        
-        MontiorVolumeAdjPopup( wxWindow* parent, ConfigurationDataElement<float>& configVal );
-        ~MontiorVolumeAdjPopup();
+        MonitorVolumeAdjPopup( wxWindow* parent, ConfigurationDataElement<float>& configVal );
+        ~MonitorVolumeAdjPopup();
         
     protected:
         void OnSliderAdjusted(wxCommandEvent& event);
