@@ -30,12 +30,9 @@ MonitorVolumeAdjPopup::MonitorVolumeAdjPopup( wxWindow* parent, ConfigurationDat
     : wxPopupTransientWindow(parent)
     , configVal_(configVal)
 {
-    wxStaticBoxSizer* mainSizer = new wxStaticBoxSizer(wxVERTICAL, this);
+    wxStaticBoxSizer* mainSizer = new wxStaticBoxSizer(wxVERTICAL, this, _("Monitor volume (dB)"));
     
-    wxStaticText* controlLabel = new wxStaticText(mainSizer->GetStaticBox(), wxID_ANY, wxT("Monitor volume (dB):"), wxDefaultPosition, wxDefaultSize, 0);
-    mainSizer->Add(controlLabel, 0, wxALL | wxEXPAND, 2);
-    
-    volumeSlider_ = new wxSlider(mainSizer->GetStaticBox(), wxID_ANY, configVal, -40, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS | wxSL_LABELS);
+    volumeSlider_ = new wxSlider(mainSizer->GetStaticBox(), wxID_ANY, configVal, -40, 0, wxDefaultPosition, wxSize(250, -1), wxSL_AUTOTICKS | wxSL_LABELS);
     mainSizer->Add(volumeSlider_, 0, wxALL | wxEXPAND, 2);
         
     SetSizerAndFit(mainSizer);
@@ -53,7 +50,7 @@ MonitorVolumeAdjPopup::MonitorVolumeAdjPopup( wxWindow* parent, ConfigurationDat
 
 MonitorVolumeAdjPopup::~MonitorVolumeAdjPopup()
 {
-    // TBD
+    volumeSlider_->Disconnect(wxEVT_SLIDER, wxCommandEventHandler(MonitorVolumeAdjPopup::OnSliderAdjusted), NULL, this);
 }
 
 void MonitorVolumeAdjPopup::OnSliderAdjusted(wxCommandEvent& event)
