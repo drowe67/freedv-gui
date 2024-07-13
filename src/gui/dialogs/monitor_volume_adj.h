@@ -25,19 +25,23 @@
 #include <wx/popupwin.h>
 #include <wx/slider.h>
 
+#include "config/ConfigurationDataElement.h"
+
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MontiorVolumeAdjPopup
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 class MontiorVolumeAdjPopup : public wxPopupTransientWindow
 {
     public:        
-        MontiorVolumeAdjPopup( wxWindow* parent );
+        MontiorVolumeAdjPopup( wxWindow* parent, ConfigurationDataElement<float>& configVal );
         ~MontiorVolumeAdjPopup();
         
     protected:
+        void OnSliderAdjusted(wxCommandEvent& event);
         
     private:
         wxSlider* volumeSlider_;
+        ConfigurationDataElement<float>& configVal_;
 };
 
 #endif // __MONITOR_VOLUME_ADJ__

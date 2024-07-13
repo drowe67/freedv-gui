@@ -842,7 +842,7 @@ void MainFrame::OnSetMonitorTxAudio( wxCommandEvent& event )
 
 void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& event )
 {
-    auto popup = new MontiorVolumeAdjPopup(this);
+    auto popup = new MontiorVolumeAdjPopup(this, wxGetApp().appConfiguration.monitorTxAudioVol);
     popup->Popup();
 }
 

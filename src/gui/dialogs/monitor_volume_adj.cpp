@@ -22,19 +22,23 @@
 #include <wx/sizer.h>
 #include "monitor_volume_adj.h"
 
-MontiorVolumeAdjPopup::MontiorVolumeAdjPopup( wxWindow* parent )
+MontiorVolumeAdjPopup::MontiorVolumeAdjPopup( wxWindow* parent, ConfigurationDataElement<float>& configVal )
     : wxPopupTransientWindow(parent)
+    , configVal_(configVal)
 {
     wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
     
     wxStaticText* controlLabel = new wxStaticText(this, wxID_ANY, wxT("Monitor volume (dB):"), wxDefaultPosition, wxDefaultSize, 0);
     mainSizer->Add(controlLabel, 0, wxALL | wxEXPAND, 2);
     
-    volumeSlider_ = new wxSlider(this, wxID_ANY, 0, -20, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS | wxSL_LABELS);
+    volumeSlider_ = new wxSlider(this, wxID_ANY, configVal, -20, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS | wxSL_LABELS);
     mainSizer->Add(volumeSlider_, 0, wxALL | wxEXPAND, 2);
     
     SetSizerAndFit(mainSizer);
     Layout();
+    
+    // Link event handlers
+    volumeSlider_->Connect(wxEVT_SLIDER, wxCommandEventHandler(MontiorVolumeAdjPopup::OnSliderAdjusted), NULL, this);
     
     // Make popup show up to the left of (and above) mouse cursor position
     wxPoint pt = wxGetMousePosition();
@@ -46,4 +50,9 @@ MontiorVolumeAdjPopup::MontiorVolumeAdjPopup( wxWindow* parent )
 MontiorVolumeAdjPopup::~MontiorVolumeAdjPopup()
 {
     // TBD
+}
+
+void MontiorVolumeAdjPopup::OnSliderAdjusted(wxCommandEvent& event)
+{
+    configVal_ = volumeSlider_->GetValue();
 }

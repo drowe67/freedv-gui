@@ -178,7 +178,7 @@ void MainFrame::OnSetMonitorVKAudio( wxCommandEvent& event )
 
 void MainFrame::OnSetMonitorVKAudioVol( wxCommandEvent& event )
 {
-    auto popup = new MontiorVolumeAdjPopup(this);
+    auto popup = new MontiorVolumeAdjPopup(this, wxGetApp().appConfiguration.monitorVoiceKeyerAudioVol);
     popup->Popup();
 }
 
