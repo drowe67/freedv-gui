@@ -485,6 +485,8 @@ class MainFrame : public TopFrame
         wxMenu* pttPopupMenu_;
         wxMenuItem* adjustMonitorPttVolMenuItem_;
         wxMenuItem* adjustMonitorVKVolMenuItem_;
+        wxMenuItem* chooseVKFileMenuItem_;
+        wxMenuItem* recordNewVoiceKeyerFileMenuItem_;
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();

@@ -158,12 +158,15 @@ void MainFrame::OnChooseAlternateVoiceKeyerFile( wxCommandEvent& event )
 
 void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event )
 {
-    // Only handle right-click if idle
-    if (vk_state == VK_IDLE && !m_btnTogPTT->GetValue())
-    {
-        auto sz = m_togBtnVoiceKeyer->GetSize();
-        m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
-    }
+    // Only enable VK file selection on idle
+    bool enabled = vk_state == VK_IDLE && !m_btnTogPTT->GetValue();
+    chooseVKFileMenuItem_->Enable(enabled);
+    recordNewVoiceKeyerFileMenuItem_->Enable(enabled);
+    
+    // Trigger right-click menu popup in a location that will prevent it from
+    // ending up off the screen.
+    auto sz = m_togBtnVoiceKeyer->GetSize();
+    m_togBtnVoiceKeyer->PopupMenu(voiceKeyerPopupMenu_, wxPoint(-sz.GetWidth() - 25, 0));
 }
 
 void MainFrame::OnSetMonitorVKAudio( wxCommandEvent& event )
