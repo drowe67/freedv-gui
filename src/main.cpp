@@ -784,6 +784,15 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         NULL,
         this);
         
+    adjustMonitorVKVolMenuItem_ = voiceKeyerPopupMenu_->Append(wxID_ANY, _("Adjust Monitor Volume..."));
+    adjustMonitorVKVolMenuItem_->Enable(wxGetApp().appConfiguration.monitorVoiceKeyerAudio);
+    voiceKeyerPopupMenu_->Connect(
+        adjustMonitorVKVolMenuItem_->GetId(), wxEVT_COMMAND_MENU_SELECTED,
+        wxCommandEventHandler(MainFrame::OnSetMonitorVKAudioVol),
+        NULL,
+        this
+        );
+        
     // Create PTT popup menu
     pttPopupMenu_ = new wxMenu();
     assert(pttPopupMenu_ != nullptr);
@@ -795,6 +804,15 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         wxCommandEventHandler(MainFrame::OnSetMonitorTxAudio),
         NULL,
         this);
+        
+    adjustMonitorPttVolMenuItem_ = pttPopupMenu_->Append(wxID_ANY, _("Adjust Monitor Volume..."));
+    adjustMonitorPttVolMenuItem_->Enable(wxGetApp().appConfiguration.monitorTxAudio);
+    pttPopupMenu_->Connect(
+        adjustMonitorPttVolMenuItem_->GetId(), wxEVT_COMMAND_MENU_SELECTED,
+        wxCommandEventHandler(MainFrame::OnSetMonitorTxAudioVol),
+        NULL,
+        this
+        );
 
     m_RxRunning = false;
 

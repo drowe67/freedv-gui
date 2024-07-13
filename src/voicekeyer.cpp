@@ -5,6 +5,7 @@
 */
 
 #include "main.h"
+#include "gui/dialogs/monitor_volume_adj.h"
 
 extern SNDFILE            *g_sfRecMicFile;
 bool                g_recVoiceKeyerFile;
@@ -168,6 +169,14 @@ void MainFrame::OnTogBtnVoiceKeyerRightClick( wxContextMenuEvent& event )
 void MainFrame::OnSetMonitorVKAudio( wxCommandEvent& event )
 {
     wxGetApp().appConfiguration.monitorVoiceKeyerAudio = event.IsChecked();
+    adjustMonitorVKVolMenuItem_->Enable(wxGetApp().appConfiguration.monitorVoiceKeyerAudio);
+    
+}
+
+void MainFrame::OnSetMonitorVKAudioVol( wxCommandEvent& event )
+{
+    auto popup = new MontiorVolumeAdjPopup(this);
+    popup->Popup();
 }
 
 extern SNDFILE *g_sfPlayFile;
