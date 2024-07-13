@@ -31,7 +31,7 @@ MontiorVolumeAdjPopup::MontiorVolumeAdjPopup( wxWindow* parent, ConfigurationDat
     wxStaticText* controlLabel = new wxStaticText(this, wxID_ANY, wxT("Monitor volume (dB):"), wxDefaultPosition, wxDefaultSize, 0);
     mainSizer->Add(controlLabel, 0, wxALL | wxEXPAND, 2);
     
-    volumeSlider_ = new wxSlider(this, wxID_ANY, configVal, -20, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS | wxSL_LABELS);
+    volumeSlider_ = new wxSlider(this, wxID_ANY, configVal, -40, 0, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS | wxSL_LABELS);
     mainSizer->Add(volumeSlider_, 0, wxALL | wxEXPAND, 2);
     
     SetSizerAndFit(mainSizer);
