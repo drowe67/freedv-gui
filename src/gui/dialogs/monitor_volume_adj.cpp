@@ -19,6 +19,7 @@
 //
 //==========================================================================
 
+#include <wx/stattext.h>
 #include <wx/sizer.h>
 #include "monitor_volume_adj.h"
 
