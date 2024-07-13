@@ -107,7 +107,9 @@ FreeDVConfiguration::FreeDVConfiguration()
     , tabLayout("/MainFrame/TabLayout", _(""))
 
     , monitorVoiceKeyerAudio("/Monitor/VoiceKeyerAudio", false)
+    , monitorVoiceKeyerAudioVol("/Monitor/VoiceKeyerAudioVol", 0)
     , monitorTxAudio("/Monitor/TransmitAudio", false)
+    , monitorTxAudioVol("/Monitor/TransmitAudioVol", 0)
 
     , txRxDelayMilliseconds("/Audio/TxRxDelayMilliseconds", 0)
 
@@ -220,6 +222,8 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, monitorVoiceKeyerAudio);
     load_(config, monitorTxAudio);
+    load_(config, monitorVoiceKeyerAudioVol);
+    load_(config, monitorTxAudioVol);
     
     quickRecordPath.setDefaultVal(documentsDir);
     load_(config, quickRecordPath);
@@ -312,6 +316,8 @@ void FreeDVConfiguration::save(wxConfigBase* config)
 
     save_(config, monitorVoiceKeyerAudio);
     save_(config, monitorTxAudio);
+    save_(config, monitorVoiceKeyerAudioVol);
+    save_(config, monitorTxAudioVol);
 
     save_(config, txRxDelayMilliseconds);
 
