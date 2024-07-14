@@ -435,6 +435,9 @@ class MainFrame : public TopFrame
         void OnSetMonitorVKAudio( wxCommandEvent& event );
         void OnSetMonitorTxAudio( wxCommandEvent& event );
         
+        void OnSetMonitorVKAudioVol( wxCommandEvent& event );
+        void OnSetMonitorTxAudioVol( wxCommandEvent& event );
+        
     private:
         std::shared_ptr<IAudioDevice> rxInSoundDevice;
         std::shared_ptr<IAudioDevice> rxOutSoundDevice;
@@ -480,6 +483,10 @@ class MainFrame : public TopFrame
         
         wxMenu* voiceKeyerPopupMenu_;
         wxMenu* pttPopupMenu_;
+        wxMenuItem* adjustMonitorPttVolMenuItem_;
+        wxMenuItem* adjustMonitorVKVolMenuItem_;
+        wxMenuItem* chooseVKFileMenuItem_;
+        wxMenuItem* recordNewVoiceKeyerFileMenuItem_;
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();

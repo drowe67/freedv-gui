@@ -19,6 +19,7 @@
 #include "gui/dialogs/dlg_options.h"
 #include "gui/dialogs/dlg_ptt.h"
 #include "gui/dialogs/freedv_reporter.h"
+#include "gui/dialogs/monitor_volume_adj.h"
 
 #if defined(WIN32)
 #include "rig_control/omnirig/OmniRigController.h"
@@ -836,6 +837,13 @@ int MainApp::FilterEvent(wxEvent& event)
 void MainFrame::OnSetMonitorTxAudio( wxCommandEvent& event )
 {
     wxGetApp().appConfiguration.monitorTxAudio = event.IsChecked();
+    adjustMonitorPttVolMenuItem_->Enable(wxGetApp().appConfiguration.monitorTxAudio);
+}
+
+void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& event )
+{
+    auto popup = new MonitorVolumeAdjPopup(this, wxGetApp().appConfiguration.monitorTxAudioVol);
+    popup->Popup();
 }
 
 //-------------------------------------------------------------------------

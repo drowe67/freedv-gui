@@ -118,7 +118,9 @@ public:
     ConfigurationDataElement<wxString> tabLayout;
 
     ConfigurationDataElement<bool> monitorVoiceKeyerAudio;
+    ConfigurationDataElement<float> monitorVoiceKeyerAudioVol;
     ConfigurationDataElement<bool> monitorTxAudio;
+    ConfigurationDataElement<float> monitorTxAudioVol;
 
     ConfigurationDataElement<int> txRxDelayMilliseconds;
 
