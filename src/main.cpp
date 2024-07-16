@@ -3094,97 +3094,26 @@ bool MainFrame::validateSoundCardSetup()
     auto soundCard2InDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate, 1);
     auto soundCard2OutDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 1);
 
+    wxString failedDeviceName;
     if (wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName != "none" && !soundCard1InDevice)
     {
-        wxMessageBox(wxString::Format(
-            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
+        failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get();
         canRun = false;
     }
     else if (canRun && wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName != "none" && !soundCard1OutDevice)
     {
-        wxMessageBox(wxString::Format(
-            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
+        failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get();
         canRun = false;
     }
     else if (canRun && wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none" && !soundCard2InDevice)
     {
-        wxMessageBox(wxString::Format(
-            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
+        failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get();
         canRun = false;
     }
     else if (canRun && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none" && !soundCard2OutDevice)
     {
-        wxMessageBox(wxString::Format(
-            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
+        failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get();
         canRun = false;
-    }
-    
-    if (!canRun)
-    {
-        if (g_nSoundCards == 1)
-        {
-            if (!soundCard1OutDevice && defaultOutputDevice.isValid())
-            {
-                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = defaultOutputDevice.name;
-                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = defaultOutputDevice.defaultSampleRate;
-            }
-            else
-            {
-                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = "none";
-                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = 0;
-            }
-        }
-        else if (g_nSoundCards == 2)
-        {
-            if (!soundCard2InDevice && defaultInputDevice.isValid())
-            {
-                // If we're not already using the default input device as the radio input device, use that instead.
-                if (defaultInputDevice.name != wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName)
-                {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = defaultInputDevice.name;
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = defaultInputDevice.defaultSampleRate;
-                }
-                else
-                {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = "none";
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = 0;
-                }
-            }
-            else
-            {
-                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = "none";
-                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = 0;
-            }
-        
-            if (!soundCard2OutDevice && defaultOutputDevice.isValid())
-            {
-                // If we're not already using the default output device as the radio input device, use that instead.
-                if (defaultOutputDevice.name != wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName)
-                {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = defaultOutputDevice.name;
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = defaultOutputDevice.defaultSampleRate;
-                }
-                else
-                {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = "none";
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = 0;
-                }
-            }
-            else
-            {
-                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = "none";
-                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = 0;
-            }
-            
-            if (wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName == "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName == "none")
-            {
-                g_nSoundCards = 1;
-            }
-        }
     }
     
     if (canRun && g_nSoundCards == 0)
@@ -3214,6 +3143,12 @@ bool MainFrame::validateSoundCardSetup()
             }
         });
         canRun = false;
+    }
+    else if (!canRun)
+    {
+        wxMessageBox(wxString::Format(
+            "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Audio Config... to check your settings.", 
+            failedDeviceName), wxT("Sound Device Not Found"), wxOK, this);
     }
     
     engine->stop();

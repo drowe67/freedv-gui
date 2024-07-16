@@ -897,6 +897,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Show green line indicating RX frequency. (PR #725)
     * Update configuration of the Voice Keyer feature based on user feedback. (PR #730)
     * Add monitor volume adjustment. (PR #733)
+    * Avoid modifying the audio device configuration without the user explicitly doing so. (PR #735)
 3. Build system:
     * Allow overrriding the version tag when building. (PR #727)
     * Update wxWidgets to 3.2.5. (PR #731)
