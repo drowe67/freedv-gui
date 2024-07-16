@@ -3147,8 +3147,8 @@ bool MainFrame::validateSoundCardSetup()
     else if (!canRun)
     {
         wxMessageBox(wxString::Format(
-            "Your %s device cannot be found and may have been removed from your system. Please reattach this device and go to Tools->Audio Config... to confirm your audio setup.", 
-            failedDeviceName), wxT("Sound Device Removed"), wxOK, this);
+            "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Audio Config... to check your settings.", 
+            failedDeviceName), wxT("Sound Device Not Found"), wxOK, this);
     }
     
     engine->stop();
