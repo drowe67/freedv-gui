@@ -25,7 +25,7 @@ cd $FREEDVGUIDIR
 if [ ! -d hamlib-code ]; then
     git clone https://github.com/Hamlib/Hamlib.git hamlib-code
 fi
-cd hamlib-code && git checkout 4.5.5 && git pull
+cd hamlib-code && git checkout master && git pull
 ./bootstrap
 CFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" ./configure --enable-shared --prefix $HAMLIBDIR
 make -j4
@@ -78,5 +78,5 @@ if [ -d .git ]; then
     git pull
 fi
 mkdir  -p build_osx && cd build_osx && rm -Rf *
-cmake -DUNITTEST=1 -DBUILD_OSX_UNIVERSAL=1 -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug  -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_SPEEXDSP=1 -DUSE_STATIC_PORTAUDIO=1 -DUSE_STATIC_SAMPLERATE=1 -DUSE_STATIC_SNDFILE=1 -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.dylib -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx ${LPCNET_CMAKE_CMD} ..
+CFLAGS=-fsanitize=address CXXFLAGS=-fsanitize=address cmake -DUNITTEST=1 -DBUILD_OSX_UNIVERSAL=1 -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug  -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_SPEEXDSP=1 -DUSE_STATIC_PORTAUDIO=1 -DUSE_STATIC_SAMPLERATE=1 -DUSE_STATIC_SNDFILE=1 -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.dylib -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx ${LPCNET_CMAKE_CMD} ..
 make VERBOSE=1 -j8
