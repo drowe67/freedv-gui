@@ -168,6 +168,7 @@ class MainApp : public wxApp
         bool                    CanAccessSerialPort(std::string portName);
         
         FreeDVConfiguration appConfiguration;
+        wxString customConfigFileName;
         
         // PTT -----------------------------------    
         unsigned int        m_intHamlibRig;
