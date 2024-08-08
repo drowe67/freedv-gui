@@ -204,6 +204,12 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         fprintf(stderr, "Loading configuration from %s\n", (const char*)configPath.ToUTF8());
         pConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), configPath, configPath, wxCONFIG_USE_LOCAL_FILE);
         wxConfigBase::Set(pConfig);
+        
+        // On Linux/macOS, this replaces $HOME with "~" to shorten the title a bit.
+        wxFileName fn(configPath);
+        fn.ReplaceEnvVariable("HOME", "~");
+        
+        customConfigFileName = fn.GetShortPath();
     }
     pConfig->SetRecordDefaults();
     
@@ -240,7 +246,7 @@ bool MainApp::OnInit()
     // displayed. But it doesn't when built from command line.  Why?
 
     frame->m_auiNbookCtrl->ChangeSelection(0);
-    frame->Layout();
+    frame->Layout();    
     frame->Show();
     g_parent =frame;
 
@@ -648,6 +654,12 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     pthread_setname_np(pthread_self(), "FreeDV GUI");
 #endif // defined(__linux__)
 
+    // Add config file name to title bar if provided at the command line.
+    if (wxGetApp().customConfigFileName != "")
+    {
+        SetTitle(wxString::Format("%s (%s)", _("FreeDV ") + _(FREEDV_VERSION), wxGetApp().customConfigFileName));
+    }
+    
     m_reporterDialog = nullptr;
     m_filterDialog = nullptr;
 
