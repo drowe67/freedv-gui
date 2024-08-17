@@ -455,12 +455,16 @@ int FreeDVInterface::getTxSpeechSampleRate() const
 
 int FreeDVInterface::getTxNumSpeechSamples() const
 {
+    if (txMode_ == -1) return 1024;
+
     assert(currentTxMode_ != nullptr);
     return freedv_get_n_speech_samples(currentTxMode_);   
 }
 
 int FreeDVInterface::getTxNNomModemSamples() const
 {
+    if (txMode_ == -1) return 1024;
+
     assert(currentTxMode_ != nullptr);
     return freedv_get_n_nom_modem_samples(currentTxMode_);   
 }
@@ -603,6 +607,9 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
     
     std::function<int(ParallelStep*)> modeFn = 
         [&](ParallelStep*) {
+            // Special handling for external vocoder.
+            if (txMode_ == -1) return 0;
+
             int index = 0;
             for (auto& dv : dvObjects_)
             {

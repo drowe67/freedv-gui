@@ -128,7 +128,10 @@ std::shared_ptr<short> ExternVocoderStep::execute(std::shared_ptr<short> inputSa
     short output_buf[samplesToRead];
     short* inputPtr = inputSamples.get();
 
-    write(receiveStdinFd_, inputPtr, numInputSamples * sizeof(short));
+    if (numInputSamples > 0)
+    {
+        write(receiveStdinFd_, inputPtr, numInputSamples * sizeof(short));
+    }
     *numOutputSamples = read(receiveStdoutFd_, output_buf, samplesToRead * sizeof(short)); 
     if (*numOutputSamples == -1)
     {
