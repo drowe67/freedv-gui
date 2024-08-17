@@ -597,7 +597,7 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
     if (txMode_ == -1)
     {
         // special handling for external vocoder
-        parallelSteps.push_back(new ExternVocoderStep(externVocoderTxCommand_, 16000));
+        parallelSteps.push_back(new ExternVocoderStep(externVocoderTxCommand_, 16000, 8000));
     }
  
     for (auto& dv : dvObjects_)
@@ -654,7 +654,7 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     if (txMode_ == -1)
     {
         // special handling for external vocoder
-        parallelSteps.push_back(new ExternVocoderStep(externVocoderRxCommand_, 16000));
+        parallelSteps.push_back(new ExternVocoderStep(externVocoderRxCommand_, 8000, 16000));
 
         state->preProcessFn = [&](ParallelStep*) { return -1; };
         state->postProcessFn = [&](ParallelStep*) { return 0; };

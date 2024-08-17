@@ -28,8 +28,9 @@
 #include "codec2_fifo.h"
 #include "../defines.h"
 
-ExternVocoderStep::ExternVocoderStep(std::string scriptPath, int workingSampleRate)
+ExternVocoderStep::ExternVocoderStep(std::string scriptPath, int workingSampleRate, int outputSampleRate)
     : sampleRate_(workingSampleRate)
+    , outputSampleRate_(outputSampleRate)
 {
     // Create pipes for stdin/stdout
     int stdinPipes[2];
@@ -114,7 +115,7 @@ int ExternVocoderStep::getInputSampleRate() const
 
 int ExternVocoderStep::getOutputSampleRate() const
 {
-    return sampleRate_;
+    return outputSampleRate_;
 }
 
 std::shared_ptr<short> ExternVocoderStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)

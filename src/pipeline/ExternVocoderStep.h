@@ -30,7 +30,7 @@
 class ExternVocoderStep : public IPipelineStep
 {
 public:
-    ExternVocoderStep(std::string scriptPath, int workingSampleRate);
+    ExternVocoderStep(std::string scriptPath, int workingSampleRate, int outputSampleRate);
     virtual ~ExternVocoderStep();
     
     virtual int getInputSampleRate() const;
@@ -39,6 +39,7 @@ public:
     
 private:
     int sampleRate_;
+    int outputSampleRate_;
     pid_t recvProcessId_;
     int receiveStdoutFd_;
     int receiveStdinFd_;
