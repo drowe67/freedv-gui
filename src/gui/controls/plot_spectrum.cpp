@@ -22,18 +22,22 @@
 #include <wx/wx.h>
 
 #include "plot_spectrum.h"
+#include "codec2_fdmdv.h" // for FDMDV_FCENTRE
 
 void clickTune(float frequency); // callback to pass new click freq
+extern float           g_RxFreqOffsetHz;
 
 BEGIN_EVENT_TABLE(PlotSpectrum, PlotPanel)
     EVT_MOTION          (PlotSpectrum::OnMouseMove)
     EVT_LEFT_DOWN       (PlotSpectrum::OnMouseLeftDown)
     EVT_LEFT_DCLICK     (PlotSpectrum::OnMouseLeftDoubleClick)
     EVT_LEFT_UP         (PlotSpectrum::OnMouseLeftUp)
+    EVT_MIDDLE_DOWN     (PlotSpectrum::OnMouseMiddleDown)
     EVT_RIGHT_DCLICK    (PlotSpectrum::OnMouseRightDoubleClick)
     EVT_MOUSEWHEEL      (PlotSpectrum::OnMouseWheelMoved)
     EVT_PAINT           (PlotSpectrum::OnPaint)
     EVT_SHOW            (PlotSpectrum::OnShow)
+    EVT_KEY_DOWN        (PlotSpectrum::OnKeyDown)
 END_EVENT_TABLE()
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -263,11 +267,26 @@ void PlotSpectrum::drawGraticule(wxGraphicsContext* ctx)
     // red rx tuning line
     
     if (m_rxFreq != 0.0) {
-        ctx->SetPen(wxPen(RED_COLOR, 2));
+        float verticalBarLength = m_rCtrl.GetHeight() - (m_rGrid.GetHeight()+ PLOT_BORDER);
+   
+        float sum = 0.0;
+        for (auto& f : rxOffsets_)
+        {
+            sum += f;
+        }
+        float averageOffset = sum / rxOffsets_.size();
+   
+        // get average offset and draw sync tuning line
+        ctx->SetPen(wxPen(sync_ ? GREEN_COLOR : ORANGE_COLOR, 3));
+        x = (m_rxFreq + averageOffset) * freq_hz_to_px;
+        x += PLOT_BORDER + XLEFT_OFFSET;
+        ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rCtrl.GetHeight());
+   
+        // red rx tuning line
+        ctx->SetPen(wxPen(RED_COLOR, 3));
         x = m_rxFreq*freq_hz_to_px;
         x += PLOT_BORDER + XLEFT_OFFSET;
-        //printf("m_rxFreq %f x %d\n", m_rxFreq, x);
-        ctx->StrokeLine(x, m_rGrid.GetHeight()+ PLOT_BORDER, x, m_rCtrl.GetHeight());
+        ctx->StrokeLine(x, m_rGrid.GetHeight() + PLOT_BORDER, x, m_rCtrl.GetHeight() - verticalBarLength / 3);
     }
 
 }
@@ -289,7 +308,8 @@ void PlotSpectrum::OnDoubleClickCommon(wxMouseEvent& event)
     // valid click if inside of plot
     if ((pt.x >= 0) && (pt.x <= m_rGrid.GetWidth()) && (pt.y >=0) && m_clickTune) {
         float freq_hz_to_px = (float)m_rGrid.GetWidth()/(MAX_F_HZ-MIN_F_HZ);
-        float clickFreq = (float)pt.x/freq_hz_to_px;
+        int clickFreq = (int)((float)pt.x/freq_hz_to_px);
+        clickFreq -= clickFreq % 10;
 
         // see PlotWaterfall::OnMouseDown()
 
@@ -311,4 +331,69 @@ void PlotSpectrum::OnMouseLeftDoubleClick(wxMouseEvent& event)
 void PlotSpectrum::OnMouseRightDoubleClick(wxMouseEvent& event)
 {
     OnDoubleClickCommon(event);
+}
+
+//-------------------------------------------------------------------------
+// OnMouseWheelMoved()
+//-------------------------------------------------------------------------
+void PlotSpectrum::OnMouseWheelMoved(wxMouseEvent& event)
+{
+    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz;
+    float direction = 1.0;
+    if (event.GetWheelRotation() < 0)
+    {
+        direction = -1.0;
+    }
+    
+    currRxFreq += direction * 10;
+    if (currRxFreq < MIN_F_HZ)
+    {
+        currRxFreq = MIN_F_HZ;
+    }
+    else if (currRxFreq > MAX_F_HZ)
+    {
+        currRxFreq = MAX_F_HZ;
+    }
+    clickTune(currRxFreq);
+}
+
+//-------------------------------------------------------------------------
+// OnKeyDown()
+//-------------------------------------------------------------------------
+void PlotSpectrum::OnKeyDown(wxKeyEvent& event)
+{
+    float currRxFreq = FDMDV_FCENTRE - g_RxFreqOffsetHz;
+    float direction = 0;
+    
+    switch (event.GetKeyCode())
+    {
+        case WXK_DOWN:
+            direction = -1.0;
+            break;
+        case WXK_UP:
+            direction = 1.0;
+            break;
+    }
+    
+    if (direction)
+    {
+        currRxFreq += direction * 10;
+        if (currRxFreq < MIN_F_HZ)
+        {
+            currRxFreq = MIN_F_HZ;
+        }
+        else if (currRxFreq > MAX_F_HZ)
+        {
+            currRxFreq = MAX_F_HZ;
+        }
+        clickTune(currRxFreq);
+    }
+}
+
+//-------------------------------------------------------------------------
+// OnMouseMiddleDown()
+//-------------------------------------------------------------------------
+void PlotSpectrum::OnMouseMiddleDown(wxMouseEvent& event)
+{
+    clickTune(FDMDV_FCENTRE);
 }

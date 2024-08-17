@@ -84,7 +84,7 @@ class wxListViewComboPopup;
 class TopFrame : public wxFrame
 {
     private:
-
+        
     protected:
         wxPanel* m_panel;
         wxMenuBar* m_menubarMain;
@@ -127,6 +127,7 @@ class TopFrame : public wxFrame
 
         wxStaticText  *m_textSync;
         wxButton      *m_BtnReSync;
+        wxButton      *m_btnCenterRx;
         
         wxToggleButton      *m_audioRecord;
 
@@ -170,6 +171,7 @@ class TopFrame : public wxFrame
         virtual void OnToolsFilter( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsFilterUI( wxUpdateUIEvent& event ) { event.Skip(); }
         virtual void OnToolsOptions( wxCommandEvent& event ) { event.Skip(); }
+        virtual void OnCenterRx( wxCommandEvent& event ) { event.Skip(); }
 
         virtual void OnToolsUDP( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnToolsOptionsUI( wxUpdateUIEvent& event ) { event.Skip(); }
@@ -223,6 +225,8 @@ class TopFrame : public wxFrame
         virtual void OnReportFrequencyKillFocus(wxFocusEvent& event) { event.Skip(); }
 
         virtual void OnSystemColorChanged(wxSysColourChangedEvent& event) { event.Skip(); }
+        
+        void setVoiceKeyerButtonLabel_(wxString filename);
         
     public:
         wxToggleButton* m_togBtnOnOff;

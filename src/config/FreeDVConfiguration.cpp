@@ -20,6 +20,7 @@
 //==========================================================================
 
 #include <wx/stdpaths.h>
+#include <wx/filename.h>
 
 #include "../defines.h"
 #include "FreeDVConfiguration.h"
@@ -106,12 +107,16 @@ FreeDVConfiguration::FreeDVConfiguration()
     , tabLayout("/MainFrame/TabLayout", _(""))
 
     , monitorVoiceKeyerAudio("/Monitor/VoiceKeyerAudio", false)
+    , monitorVoiceKeyerAudioVol("/Monitor/VoiceKeyerAudioVol", 0)
     , monitorTxAudio("/Monitor/TransmitAudio", false)
+    , monitorTxAudioVol("/Monitor/TransmitAudioVol", 0)
 
     , txRxDelayMilliseconds("/Audio/TxRxDelayMilliseconds", 0)
 
     , externalVocoderRxCommand("/ExternalVocoder/RxCommand", _(""))
     , externalVocoderTxCommand("/ExternalVocoder/TxCommand", _(""))
+
+    , reportingUserMsgColWidth("/Windows/FreeDVReporter/reportingUserMsgColWidth", 130)
 {
     // empty
 }
@@ -163,6 +168,35 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, voiceKeyerWaveFilePath);
     load_(config, voiceKeyerWaveFile);
+    
+    auto wxStandardPathObj = wxStandardPaths::Get();
+    auto documentsDir = wxStandardPathObj.GetDocumentsDir();
+    
+    if (voiceKeyerWaveFilePath == "")
+    {
+        // Migrate from previous versions where voiceKeyerWaveFilePath wasn't used.
+        wxString tmp = voiceKeyerWaveFile;
+        wxString path;
+        wxString name;
+        wxString ext;
+        
+        wxFileName::SplitPath(tmp, &path, &name, &ext);
+        if (ext != "")
+        {
+            name = name + "." + ext;
+        }
+        
+        if (path == "")
+        {
+            // Default path to the Documents folder if one isn't provided
+            // (i.e. in the case of the old VK filename default)
+            path = documentsDir;
+        }
+        
+        voiceKeyerWaveFilePath = path;
+        voiceKeyerWaveFile = name;
+    }
+    
     load_(config, voiceKeyerRxPause);
     load_(config, voiceKeyerRepeats);
     
@@ -191,9 +225,9 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     
     load_(config, monitorVoiceKeyerAudio);
     load_(config, monitorTxAudio);
+    load_(config, monitorVoiceKeyerAudioVol);
+    load_(config, monitorTxAudioVol);
     
-    auto wxStandardPathObj = wxStandardPaths::Get();
-    auto documentsDir = wxStandardPathObj.GetDocumentsDir();
     quickRecordPath.setDefaultVal(documentsDir);
     load_(config, quickRecordPath);
     
@@ -204,6 +238,8 @@ void FreeDVConfiguration::load(wxConfigBase* config)
 
     load_(config, externalVocoderRxCommand);
     load_(config, externalVocoderTxCommand);
+
+    load_(config, reportingUserMsgColWidth);
 }
 
 void FreeDVConfiguration::save(wxConfigBase* config)
@@ -286,11 +322,15 @@ void FreeDVConfiguration::save(wxConfigBase* config)
 
     save_(config, monitorVoiceKeyerAudio);
     save_(config, monitorTxAudio);
+    save_(config, monitorVoiceKeyerAudioVol);
+    save_(config, monitorTxAudioVol);
 
     save_(config, txRxDelayMilliseconds);
 
     save_(config, externalVocoderRxCommand);
     save_(config, externalVocoderTxCommand);
+
+    save_(config, reportingUserMsgColWidth);
     
     config->Flush();
 }

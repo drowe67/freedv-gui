@@ -889,7 +889,20 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## TBD TBD 2024
+## V1.9.10 TBD 2024
+
+1. Bugfixes:
+    * Fix bug preventing saving of the previously used path when playing back files. (PR #729)
+2. Enhancements:
+    * Show green line indicating RX frequency. (PR #725)
+    * Update configuration of the Voice Keyer feature based on user feedback. (PR #730)
+    * Add monitor volume adjustment. (PR #733)
+    * Avoid modifying the audio device configuration without the user explicitly doing so. (PR #735)
+3. Build system:
+    * Allow overrriding the version tag when building. (PR #727)
+    * Update wxWidgets to 3.2.5. (PR #731)
+
+## V1.9.9.2 June 2024
 
 1. Bugfixes:
     * Remove TX attenuation and squelch tooltips. (PR #717)
@@ -899,6 +912,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * Revert PR #689 and reimplement fix for original startup delay issue. (PR #712)
+2. Enhancements:
+    * Allow "Msg" column to be resized by the user. (PR #721)
 
 ## V1.9.9 April 2024
 

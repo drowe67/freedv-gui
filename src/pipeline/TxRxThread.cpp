@@ -385,6 +385,21 @@ void TxRxThread::initializePipeline_()
             
             auto monitorPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
             monitorPipeline->appendPipelineStep(equalizedMicAudioLink_->getOutputPipelineStep());
+            
+            auto monitorLevelStep = std::make_shared<LevelAdjustStep>(outputSampleRate_, [&]() {
+                double volInDb = 0;
+                if (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio)
+                {
+                    volInDb = wxGetApp().appConfiguration.monitorVoiceKeyerAudioVol;
+                }
+                else
+                {
+                    volInDb = wxGetApp().appConfiguration.monitorTxAudioVol;
+                }
+                
+                return std::exp(volInDb/20.0f * std::log(10.0f));
+            });
+            monitorPipeline->appendPipelineStep(monitorLevelStep);
 
             auto muteStep = new MuteStep(outputSampleRate_);
             

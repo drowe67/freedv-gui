@@ -54,7 +54,6 @@ extern FreeDVInterface freedvInterface;
 #define RX_COLORING_TIMEOUT_SEC (20)
 #define MSG_COLORING_TIMEOUT_SEC (5)
 #define STATUS_MESSAGE_MRU_MAX_SIZE (10)
-#define MESSAGE_CHAR_LIMIT (15)
 #define MESSAGE_COLUMN_ID (6)
 
 using namespace std::placeholders;
@@ -71,7 +70,7 @@ static int DefaultColumnWidths_[] = {
     60,
     65,
     60,
-    75,
+    130,
     60,
     65,
     60,
@@ -95,7 +94,14 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     {
         columnLengths_[col] = DefaultColumnWidths_[col];
     }
-    
+
+    int userMsgDefaultColWidth = wxGetApp().appConfiguration.reportingUserMsgColWidth;
+    int userColNum = USER_MESSAGE_COL;
+#if defined(WIN32)
+    userColNum++;
+#endif // defined(WIN32)
+    DefaultColumnWidths_[userColNum] = userMsgDefaultColWidth;
+
     // Create top-level of control hierarchy.
     wxFlexGridSizer* sectionSizer = new wxFlexGridSizer(2, 1, 0, 0);
     sectionSizer->AddGrowableRow(0);
@@ -351,6 +357,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(FreeDVReporterDialog::OnDoubleClick), NULL, this);
     m_listSpots->Connect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);
     m_listSpots->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
+    m_listSpots->Connect(wxEVT_LIST_COL_DRAGGING, wxListEventHandler(FreeDVReporterDialog::AdjustMsgColWidth), NULL, this);
     
     m_statusMessage->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
@@ -414,6 +421,7 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     m_listSpots->Disconnect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(FreeDVReporterDialog::OnDoubleClick), NULL, this);
     m_listSpots->Disconnect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);
     m_listSpots->Disconnect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
+    m_listSpots->Disconnect(wxEVT_LIST_COL_DRAGGING, wxListEventHandler(FreeDVReporterDialog::AdjustMsgColWidth), NULL, this);
     
     m_statusMessage->Disconnect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
@@ -659,6 +667,47 @@ void FreeDVReporterDialog::OnItemDeselected(wxListEvent& event)
     m_buttonSendQSY->Enable(false);
 }
 
+void FreeDVReporterDialog::AdjustMsgColWidth(wxListEvent& event)
+{
+    int col = event.GetColumn();
+    int desiredCol = USER_MESSAGE_COL;
+#if defined(WIN32)
+    desiredCol++;
+#endif // defined(WIN32)
+    
+    if (col != desiredCol)
+    {
+        return;
+    }
+    
+    int currentColWidth = m_listSpots->GetColumnWidth(desiredCol);
+    int textWidth = 0;
+
+    wxGetApp().appConfiguration.reportingUserMsgColWidth = currentColWidth;
+
+    // Iterate through and re-truncate column as required.
+    for (int index = 0; index < m_listSpots->GetItemCount(); index++)
+    {
+        std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
+        wxString tempUserMessage = _(" ") + allReporterData_[*sidPtr]->userMessage;
+        
+        textWidth = getSizeForTableCellString_(tempUserMessage);
+        int tmpLength = allReporterData_[*sidPtr]->userMessage.Length() - 1;
+        while (textWidth > currentColWidth && tmpLength >= 0)
+        {
+            tempUserMessage = allReporterData_[*sidPtr]->userMessage.SubString(0, tmpLength--) + _("...");
+            textWidth = getSizeForTableCellString_(tempUserMessage);
+        }
+        
+        if (tmpLength > 0 && tmpLength < (allReporterData_[*sidPtr]->userMessage.Length() - 1))
+        {
+            tempUserMessage = allReporterData_[*sidPtr]->userMessage.SubString(0, tmpLength) + _("...");
+        }
+        
+        m_listSpots->SetItem(index, desiredCol, tempUserMessage);
+    }
+}
+
 void FreeDVReporterDialog::OnSortColumn(wxListEvent& event)
 {
     int col = event.GetColumn();
@@ -808,7 +857,7 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
             // Show popup corresponding to the full message.
             std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
             tempUserMessage_ = allReporterData_[*sidPtr]->userMessage;
-            wxString userMessageTruncated = tempUserMessage_.SubString(0, MESSAGE_CHAR_LIMIT - 1);
+            wxString userMessageTruncated = m_listSpots->GetItemText(index, desiredCol);
         
             if (tipWindow_ == nullptr && tempUserMessage_ != userMessageTruncated)
             {
@@ -1139,6 +1188,11 @@ void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
     }
 
     // Reset lengths to force auto-resize on (re)connect.
+    int userMsgCol = USER_MESSAGE_COL;
+#if defined(WIN32)
+    userMsgCol++;
+#endif // defined(WIN32)
+    
     for (int col = 0; col < NUM_COLS; col++)
     {
 #if defined(WIN32)
@@ -1149,10 +1203,13 @@ void FreeDVReporterDialog::clearAllEntries_(bool clearForAllBands)
         }
 #endif // defined(WIN32)
 
-        columnLengths_[col] = DefaultColumnWidths_[col];
-        m_listSpots->SetColumnWidth(col, columnLengths_[col]);
+        if (col != userMsgCol)
+        {
+            columnLengths_[col] = DefaultColumnWidths_[col];
+            m_listSpots->SetColumnWidth(col, columnLengths_[col]);
+        }
     }
-
+    
     m_listSpots->Update();
 }
 
@@ -1891,13 +1948,24 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     changed = setColumnForRow_(itemIndex, col++, " "+data->status, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
-    wxString userMessageTruncated = data->userMessage.SubString(0, MESSAGE_CHAR_LIMIT - 1);
-    if (userMessageTruncated != data->userMessage)
+    int textWidth = 0;
+    int currentColWidth = m_listSpots->GetColumnWidth(col);
+    
+    wxString userMessageTruncated = _(" ") + data->userMessage;
+    textWidth = getSizeForTableCellString_(userMessageTruncated);
+    int tmpLength = data->userMessage.Length() - 1;
+    while (textWidth > currentColWidth && tmpLength > 0)
     {
-        userMessageTruncated += _("...");
+        userMessageTruncated = data->userMessage.SubString(0, tmpLength--) + _("...");
+        textWidth = getSizeForTableCellString_(userMessageTruncated);
     }
     
-    changed = setColumnForRow_(itemIndex, col++, " "+userMessageTruncated, colResizeList);
+    if (tmpLength > 0 && tmpLength < (data->userMessage.Length() - 1))
+    {
+        userMessageTruncated = data->userMessage.SubString(0, tmpLength) + _("...");
+    }
+    
+    changed = setColumnForRow_(itemIndex, col++, userMessageTruncated, colResizeList);
     needResort |= changed && currentSortColumn_ == (col - 1);
 
     changed = setColumnForRow_(itemIndex, col++, " "+data->lastTx, colResizeList);

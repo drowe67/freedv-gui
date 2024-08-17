@@ -569,9 +569,6 @@ setDefaultMode:
     
     // Show/hide frequency box based on reporting enablement
     m_freqBox->Show(wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
-    
-    // Load default voice keyer file as current.
-    vkFileName_ = wxGetApp().appConfiguration.voiceKeyerWaveFile->mb_str();
 
     // Show/hide callsign combo box based on reporting enablement
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
@@ -607,6 +604,23 @@ setDefaultMode:
     auto currentSizer = m_panel->GetSizer();
     m_panel->SetSizerAndFit(currentSizer, false);
     m_panel->Layout();
+    
+    // Load default voice keyer file as current.
+    if (wxGetApp().appConfiguration.voiceKeyerWaveFile != "")
+    {
+        wxFileName fullVKPath(wxGetApp().appConfiguration.voiceKeyerWaveFilePath, wxGetApp().appConfiguration.voiceKeyerWaveFile);
+        vkFileName_ = fullVKPath.GetFullPath().mb_str();
+        
+        m_togBtnVoiceKeyer->SetToolTip(_("Toggle Voice Keyer using file ") + wxGetApp().appConfiguration.voiceKeyerWaveFile + _(". Right-click for additional options."));
+        
+        wxString fileNameWithoutExt;
+        wxFileName::SplitPath(wxGetApp().appConfiguration.voiceKeyerWaveFile, nullptr, &fileNameWithoutExt, nullptr);
+        setVoiceKeyerButtonLabel_(fileNameWithoutExt);
+    }
+    else
+    {
+        vkFileName_ = "";
+    }
     
     if (wxGetApp().appConfiguration.experimentalFeatures && wxGetApp().appConfiguration.tabLayout != "")
     {
@@ -748,16 +762,16 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     voiceKeyerPopupMenu_ = new wxMenu();
     assert(voiceKeyerPopupMenu_ != nullptr);
 
-    auto chooseVKFileMenuItem = voiceKeyerPopupMenu_->Append(wxID_ANY, _("&Use another voice keyer file..."));
+    chooseVKFileMenuItem_ = voiceKeyerPopupMenu_->Append(wxID_ANY, _("&Use another voice keyer file..."));
     voiceKeyerPopupMenu_->Connect(
-        chooseVKFileMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        chooseVKFileMenuItem_->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
         wxCommandEventHandler(MainFrame::OnChooseAlternateVoiceKeyerFile),
         NULL,
         this);
         
-    auto recordNewVoiceKeyerFileMenuItem = voiceKeyerPopupMenu_->Append(wxID_ANY, _("&Record new voice keyer file..."));
+    recordNewVoiceKeyerFileMenuItem_ = voiceKeyerPopupMenu_->Append(wxID_ANY, _("&Record new voice keyer file..."));
     voiceKeyerPopupMenu_->Connect(
-        recordNewVoiceKeyerFileMenuItem->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
+        recordNewVoiceKeyerFileMenuItem_->GetId(), wxEVT_COMMAND_MENU_SELECTED, 
         wxCommandEventHandler(MainFrame::OnRecordNewVoiceKeyerFile),
         NULL,
         this);
@@ -772,6 +786,15 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         NULL,
         this);
         
+    adjustMonitorVKVolMenuItem_ = voiceKeyerPopupMenu_->Append(wxID_ANY, _("Adjust Monitor Volume..."));
+    adjustMonitorVKVolMenuItem_->Enable(wxGetApp().appConfiguration.monitorVoiceKeyerAudio);
+    voiceKeyerPopupMenu_->Connect(
+        adjustMonitorVKVolMenuItem_->GetId(), wxEVT_COMMAND_MENU_SELECTED,
+        wxCommandEventHandler(MainFrame::OnSetMonitorVKAudioVol),
+        NULL,
+        this
+        );
+        
     // Create PTT popup menu
     pttPopupMenu_ = new wxMenu();
     assert(pttPopupMenu_ != nullptr);
@@ -783,6 +806,15 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         wxCommandEventHandler(MainFrame::OnSetMonitorTxAudio),
         NULL,
         this);
+        
+    adjustMonitorPttVolMenuItem_ = pttPopupMenu_->Append(wxID_ANY, _("Adjust Monitor Volume..."));
+    adjustMonitorPttVolMenuItem_->Enable(wxGetApp().appConfiguration.monitorTxAudio);
+    pttPopupMenu_->Connect(
+        adjustMonitorPttVolMenuItem_->GetId(), wxEVT_COMMAND_MENU_SELECTED,
+        wxCommandEventHandler(MainFrame::OnSetMonitorTxAudioVol),
+        NULL,
+        this
+        );
 
     m_RxRunning = false;
 
@@ -1105,6 +1137,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
             m_panelWaterfall->m_newdata = true;
             m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
+            m_panelWaterfall->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
+            m_panelWaterfall->setSync(freedvInterface.getSync() ? true : false);
             m_panelWaterfall->Refresh();
         }
 
@@ -1113,7 +1147,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // Note: each element in this combo box is a numeric value starting from 1,
         // so just incrementing the selected index should get us the correct results.
         m_panelSpectrum->setNumAveraging(m_cbxNumSpectrumAveraging->GetSelection() + 1);
-        
+        m_panelSpectrum->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
+        m_panelSpectrum->setSync(freedvInterface.getSync() ? true : false);
         m_panelSpectrum->m_newdata = true;
         m_panelSpectrum->Refresh();
 
@@ -3075,97 +3110,26 @@ bool MainFrame::validateSoundCardSetup()
     auto soundCard2InDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate, 1);
     auto soundCard2OutDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 1);
 
+    wxString failedDeviceName;
     if (wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName != "none" && !soundCard1InDevice)
     {
-        wxMessageBox(wxString::Format(
-            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
+        failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get();
         canRun = false;
     }
     else if (canRun && wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName != "none" && !soundCard1OutDevice)
     {
-        wxMessageBox(wxString::Format(
-            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
+        failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get();
         canRun = false;
     }
     else if (canRun && wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none" && !soundCard2InDevice)
     {
-        wxMessageBox(wxString::Format(
-            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
+        failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get();
         canRun = false;
     }
     else if (canRun && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none" && !soundCard2OutDevice)
     {
-        wxMessageBox(wxString::Format(
-            "Your %s device cannot be found and may have been removed from your system. Please go to Tools->Audio Config... to confirm your audio setup.", 
-            wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get()), wxT("Sound Device Removed"), wxOK, this);
+        failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get();
         canRun = false;
-    }
-    
-    if (!canRun)
-    {
-        if (g_nSoundCards == 1)
-        {
-            if (!soundCard1OutDevice && defaultOutputDevice.isValid())
-            {
-                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = defaultOutputDevice.name;
-                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = defaultOutputDevice.defaultSampleRate;
-            }
-            else
-            {
-                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = "none";
-                wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = 0;
-            }
-        }
-        else if (g_nSoundCards == 2)
-        {
-            if (!soundCard2InDevice && defaultInputDevice.isValid())
-            {
-                // If we're not already using the default input device as the radio input device, use that instead.
-                if (defaultInputDevice.name != wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName)
-                {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = defaultInputDevice.name;
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = defaultInputDevice.defaultSampleRate;
-                }
-                else
-                {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = "none";
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = 0;
-                }
-            }
-            else
-            {
-                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = "none";
-                wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = 0;
-            }
-        
-            if (!soundCard2OutDevice && defaultOutputDevice.isValid())
-            {
-                // If we're not already using the default output device as the radio input device, use that instead.
-                if (defaultOutputDevice.name != wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName)
-                {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = defaultOutputDevice.name;
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = defaultOutputDevice.defaultSampleRate;
-                }
-                else
-                {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = "none";
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = 0;
-                }
-            }
-            else
-            {
-                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = "none";
-                wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate = 0;
-            }
-            
-            if (wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName == "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName == "none")
-            {
-                g_nSoundCards = 1;
-            }
-        }
     }
     
     if (canRun && g_nSoundCards == 0)
@@ -3195,6 +3159,12 @@ bool MainFrame::validateSoundCardSetup()
             }
         });
         canRun = false;
+    }
+    else if (!canRun)
+    {
+        wxMessageBox(wxString::Format(
+            "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Audio Config... to check your settings.", 
+            failedDeviceName), wxT("Sound Device Not Found"), wxOK, this);
     }
     
     engine->stop();

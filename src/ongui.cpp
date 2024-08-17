@@ -19,10 +19,13 @@
 #include "gui/dialogs/dlg_options.h"
 #include "gui/dialogs/dlg_ptt.h"
 #include "gui/dialogs/freedv_reporter.h"
+#include "gui/dialogs/monitor_volume_adj.h"
 
 #if defined(WIN32)
 #include "rig_control/omnirig/OmniRigController.h"
 #endif // defined(WIN32)
+
+#include "codec2_fdmdv.h" // for FDMDV_FCENTRE
 
 extern int g_mode;
 
@@ -51,6 +54,8 @@ extern bool g_recFileFromRadio;
 extern SNDFILE            *g_sfRecMicFile;
 
 extern wxMutex g_mutexProtectingCallbackData;
+
+void clickTune(float frequency); // callback to pass new click freq
 
 //-------------------------------------------------------------------------
 // Forces redraw of main panels on window resize.
@@ -216,10 +221,12 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         }
         
         // Update voice keyer file if different
-        auto newVkFile = wxGetApp().appConfiguration.voiceKeyerWaveFile->mb_str();
+        auto newVkFile = wxGetApp().appConfiguration.voiceKeyerWaveFilePath->mb_str();
         if (vkFileName_ != newVkFile)
         {
-            vkFileName_ = newVkFile;
+            // Clear filename to force reselection next time VK is triggered.
+            vkFileName_ = "";
+            wxGetApp().appConfiguration.voiceKeyerWaveFile = "";
         }
         
         // Adjust frequency labels on main window
@@ -830,6 +837,13 @@ int MainApp::FilterEvent(wxEvent& event)
 void MainFrame::OnSetMonitorTxAudio( wxCommandEvent& event )
 {
     wxGetApp().appConfiguration.monitorTxAudio = event.IsChecked();
+    adjustMonitorPttVolMenuItem_->Enable(wxGetApp().appConfiguration.monitorTxAudio);
+}
+
+void MainFrame::OnSetMonitorTxAudioVol( wxCommandEvent& event )
+{
+    auto popup = new MonitorVolumeAdjPopup(this, wxGetApp().appConfiguration.monitorTxAudioVol);
+    popup->Popup();
 }
 
 //-------------------------------------------------------------------------
@@ -1257,6 +1271,11 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
     m_collpane->SetBackgroundColour(currentControlBackground);
     m_collpane->GetPane()->SetBackgroundColour(currentControlBackground);
     TopFrame::OnSystemColorChanged(event);
+}
+
+void MainFrame::OnCenterRx(wxCommandEvent& event)
+{
+    clickTune(FDMDV_FCENTRE);
 }
 
 void MainFrame::updateReportingFreqList_()
