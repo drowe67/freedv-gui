@@ -102,9 +102,17 @@ ExternVocoderStep::ExternVocoderStep(std::string scriptPath, int workingSampleRa
 
 ExternVocoderStep::~ExternVocoderStep()
 {
-    // Close pipes and wait for process to terminate.
+    // Close pipes and kill process. Hopefully the process
+    // will die on its own but if it doesn't, force kill it.
     close(receiveStdoutFd_);
     close(receiveStdinFd_);
+
+    kill(recvProcessId_, SIGTERM);
+    for (int count = 0; count < 5 && waitpid(recvProcessId_, NULL, WNOHANG) <= 0; count++)
+    {
+        sleep(1);
+    }
+    kill(recvProcessId_, SIGKILL);
     waitpid(recvProcessId_, NULL, 0);
 }
 
