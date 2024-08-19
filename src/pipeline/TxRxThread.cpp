@@ -648,7 +648,8 @@ void TxRxThread::txProcessing_()
     {
         // Deallocates TX pipeline when not in use. This is needed to reset the state of
         // certain TX pipeline steps (such as Speex).
-        pipeline_ = nullptr;
+        // XXX: temporarily disabling due to latency of RADAE scripts while restarting.
+        //pipeline_ = nullptr;
         
         // Wipe anything added in the FIFO to prevent pops on next TX.
         clearFifos_();
