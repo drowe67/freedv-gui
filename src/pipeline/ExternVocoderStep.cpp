@@ -24,6 +24,7 @@
 #include <sstream>
 #include <vector>
 #include <cassert>
+#include <functional>
 #include "ExternVocoderStep.h"
 #include "codec2_fifo.h"
 #include "../defines.h"
