@@ -25,7 +25,14 @@
 
 #include <unistd.h>
 #include <string>
+#include <thread>
 #include "IPipelineStep.h"
+
+// Forward definition of structs from Codec2.
+extern "C"
+{
+    struct FIFO;
+}
 
 class ExternVocoderStep : public IPipelineStep
 {
@@ -43,6 +50,17 @@ private:
     pid_t recvProcessId_;
     int receiveStdoutFd_;
     int receiveStdinFd_;
+    struct FIFO* inputSampleFifo_;
+    struct FIFO* outputSampleFifo_;
+    
+    std::thread vocoderProcessHandlerThread_;
+    bool isExiting_;
+    
+    std::string scriptPath_;
+    
+    void threadEntry_();
+    void openProcess_();
+    void closeProcess_();
 };
 
 #endif // AUDIO_PIPELINE__EXTERN_VOCODER_STEP_H

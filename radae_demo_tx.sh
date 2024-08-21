@@ -13,6 +13,6 @@ RADAE_VENV=$2
 # the RADAE folder.
 cd $RADAE_PATH
 export PATH=$RADAE_VENV/bin:$PATH
-stdbuf -i0 -o0 build/src/lpcnet_demo -features - - | \
-stdbuf -i0 -o0 python3 radae_tx.py model19_check3/checkpoints/checkpoint_epoch_100.pth --auxdata | \
-stdbuf -i0 -o0 python3 f32toint16.py --real --scale 16383
+build/src/lpcnet_demo -features - - | \
+    python3 -u radae_tx.py model19_check3/checkpoints/checkpoint_epoch_100.pth --auxdata | \
+    python3 -u f32toint16.py --real --scale 16383
