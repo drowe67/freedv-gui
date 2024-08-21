@@ -388,7 +388,7 @@ void FreeDVInterface::setSync(int val)
 
 int FreeDVInterface::getSync() const
 {
-    if (currentRxMode_ == nullptr) return 1;
+    if (currentRxMode_ == nullptr) return 0;
     return freedv_get_sync(currentRxMode_);
 }
 
