@@ -206,10 +206,8 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         wxConfigBase::Set(pConfig);
         
         // On Linux/macOS, this replaces $HOME with "~" to shorten the title a bit.
-        wxFileName fn(configPath);
-        fn.ReplaceEnvVariable("HOME", "~");
-        
-        customConfigFileName = fn.GetShortPath();
+        wxFileName fn(configPath);        
+        customConfigFileName = fn.GetFullName();
     }
     pConfig->SetRecordDefaults();
     
