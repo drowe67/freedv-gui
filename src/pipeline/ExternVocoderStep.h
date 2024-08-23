@@ -23,7 +23,12 @@
 #ifndef AUDIO_PIPELINE__EXTERN_VOCODER_STEP_H
 #define AUDIO_PIPELINE__EXTERN_VOCODER_STEP_H
 
+#ifdef WIN32
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif // WIN32
+
 #include <string>
 #include <thread>
 #include "IPipelineStep.h"
@@ -47,9 +52,18 @@ public:
 private:
     int sampleRate_;
     int outputSampleRate_;
+    
+#ifdef WIN32
+    HANDLE recvProcessHandle_;
+    HANDLE receiveStdoutHandle_;
+    HANDLE receiveStdinHandle_;
+    HANDLE receiveStderrHandle_;
+#else
     pid_t recvProcessId_;
     int receiveStdoutFd_;
     int receiveStdinFd_;
+#endif // WIN32
+    
     struct FIFO* inputSampleFifo_;
     struct FIFO* outputSampleFifo_;
     

@@ -20,7 +20,12 @@
 //
 //=========================================================================
 
+#ifdef WIN32
 #include <sys/wait.h>
+#else
+#include <windows.h>
+#endif // WIN32
+
 #include <sstream>
 #include <vector>
 #include <cassert>
@@ -32,7 +37,20 @@
 ExternVocoderStep::ExternVocoderStep(std::string scriptPath, int workingSampleRate, int outputSampleRate)
     : sampleRate_(workingSampleRate)
     , outputSampleRate_(outputSampleRate)
+        
+#ifdef WIN32
+    , recvProcessHandle_(nullptr)
+    , receiveStdoutHandle_(nullptr)
+    , receiveStdinHandle_(nullptr)
+    , receiveStderrHandle_(nullptr)
+#else
+    , recvProcessId_(0)
+    , receiveStdoutFd_(-1)
+    , receiveStdinFd_(-1)
+#endif // WIN32
+        
     , inputSampleFifo_(nullptr)
+    , outputSampleFifo_(nullptr)
     , isExiting_(false)
     , scriptPath_(scriptPath)
 {
@@ -98,6 +116,177 @@ std::shared_ptr<short> ExternVocoderStep::execute(std::shared_ptr<short> inputSa
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
 }
 
+#ifdef WIN32
+void ExternVocoderStep::openProcess_()
+{
+    // Ensure that handles are inherited by the child process.
+    SECURITY_ATTRIBUTES saAttr;
+    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES); 
+    saAttr.bInheritHandle = TRUE; 
+    saAttr.lpSecurityDescriptor = NULL; 
+    
+    HANDLE tmpStdoutWrHandle = NULL;
+    HANDLE tmpStdoutErrHandle = NULL;
+    HANDLE tmpStdinRdHandle = NULL;
+    
+    // Create a pipe for the child process's STDOUT. 
+    if (!CreatePipe(&receiveStdoutHandle_, &tmpStdoutWrHandle, &saAttr, 0) || 
+        !SetHandleInformation(receiveStdoutHandle_, HANDLE_FLAG_INHERIT, 0))
+    {
+        fprintf(stderr, "WARNING: cannot create pipe for stdout!\n");
+        if (receiveStdoutHandle_ != nullptr) 
+        {
+            CloseHandle(receiveStdoutHandle_);
+            CloseHandle(tmpStdoutWrHandle);
+            receiveStdoutHandle_ = nullptr;
+        }
+        return;
+    }
+    
+    // Create a pipe for the child process's STDERR. 
+    if (!CreatePipe(&receiveStderrHandle_, &tmpStderrWrHandle, &saAttr, 0) || 
+        !SetHandleInformation(receiveStderrHandle_, HANDLE_FLAG_INHERIT, 0))
+    {
+        fprintf(stderr, "WARNING: cannot create pipe for stdout!\n");
+        if (receiveStderrHandle_ != nullptr) 
+        {
+            CloseHandle(receiveStderrHandle_);
+            CloseHandle(tmpStderrWrHandle);
+            receiveStderrHandle_ = nullptr;
+        }
+        return;
+    }
+
+    // Create a pipe for the child process's STDIN. 
+    if (!CreatePipe(&tmpStdinRdHandle, &receiveStdinHandle_, &saAttr, 0) ||
+        !SetHandleInformation(receiveStdinHandle_, HANDLE_FLAG_INHERIT, 0)
+    {
+        fprintf(stderr, "WARNING: cannot create pipe for stdin!\n");
+        if (receiveStdinHandle_ != nullptr) 
+        {
+            CloseHandle(receiveStdinHandle_);
+            CloseHandle(tmpStdinRdHandle);
+            receiveStdinHandle_ = nullptr;
+        }
+        return;
+    }
+    
+    // Create process
+    PROCESS_INFORMATION piProcInfo; 
+    STARTUPINFO siStartInfo;
+    
+    // Set up members of the PROCESS_INFORMATION structure. 
+    ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
+ 
+    // Set up members of the STARTUPINFO structure. 
+    // This structure specifies the STDIN and STDOUT handles for redirection.
+    ZeroMemory( &siStartInfo, sizeof(STARTUPINFO) );
+    siStartInfo.cb = sizeof(STARTUPINFO); 
+    siStartInfo.hStdError = tmpStderrWrHandle;
+    siStartInfo.hStdOutput = tmpStdoutWrHandle;
+    siStartInfo.hStdInput = tmpStdinRdHandle;
+    siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
+    
+    BOOL success = CreateProcessA(NULL, 
+          scriptPath_.c_str(),     // command line 
+          NULL,          // process security attributes 
+          NULL,          // primary thread security attributes 
+          TRUE,          // handles are inherited 
+          0,             // creation flags 
+          NULL,          // use parent's environment 
+          NULL,          // use parent's current directory 
+          &siStartInfo,  // STARTUPINFO pointer 
+          &piProcInfo);  // receives PROCESS_INFORMATION 
+    
+    CloseHandle(tmpStdinRdHandle);
+    CloseHandle(tmpStdoutWrHandle);
+    CloseHandle(tmpStderrWrHandle);
+    
+    if (!success)
+    {
+        fprintf(stderr, "WARNING: cannot run %s\n", scriptPath_.c_str());
+        
+        CloseHandle(receiveStdinHandle_);
+        CloseHandle(receiveStdoutHandle_);
+        CloseHandle(receiveStderrHandle_);
+        receiveStdinHandle_ = NULL;
+        receiveStdoutHandle_ = NULL;
+        receiveStderrHandle_ = NULL;
+        
+        return;
+    }
+    
+    // Save process handle so we can terminate it later
+    recvProcessHandle = piProcInfo.hProcess;
+}
+
+void ExternVocoderStep::closeProcess_()
+{
+    if (recvProcessHandle_ != NULL)
+    {
+        CloseHandle(receiveStdinHandle_);
+        CloseHandle(receiveStdoutHandle_);
+        CloseHandle(receiveStderrHandle_);
+        TerminateProcess(recvProcessHandle_, 0);
+    
+        // Make sure process has actually terminated
+        WaitForSingleObject(recvProcessHandle_, INFINITE);
+    }
+}
+
+void ExternVocoderStep::threadEntry_()
+{
+    const int NUM_SAMPLES_TO_READ_WRITE = 1;
+    
+    openProcess_();
+    
+    while (!isExiting_)
+    {
+        bool operationCompleted = false;
+        
+        // Read data from STDERR if available
+        DWORD bytesAvailable = 0;
+        if (PeekNamedPipe(receiveStderrHandle_, NULL, 0, NULL, &bytesAvailable, NULL) && bytesAvailable > 0)
+        {
+            char buf[bytesAvailable];
+            ReadFile(receiveStderrHandle_, buf, bytesAvailable, NULL, NULL);
+            fprintf(stderr, "%s", buf);
+            
+            operationCompleted = true;
+        }
+        
+        // Read data from STDOUT if available
+        bytesAvailable = 0;
+        if (PeekNamedPipe(receiveStdoutHandle_, NULL, 0, NULL, &bytesAvailable, NULL) && bytesAvailable > 0)
+        {
+            char buf[bytesAvailable];
+            ReadFile(receiveStdoutHandle_, buf, bytesAvailable, NULL, NULL);
+            codec2_fifo_write(outputSampleFifo_, (short*)&buf[0], bytesAvailable / sizeof(short));
+            
+            operationCompleted = true;
+        }
+        
+        // Write data to STDIN if available
+        if (codec2_fifo_used(inputSampleFifo_) >= NUM_SAMPLES_TO_READ_WRITE)
+        {
+            short val[NUM_SAMPLES_TO_READ_WRITE];
+            codec2_fifo_read(inputSampleFifo_, val, NUM_SAMPLES_TO_READ_WRITE);
+            WriteFile(receiveStdinHandle_, val, NUM_SAMPLES_TO_READ_WRITE * sizeof(short), NULL, NULL);
+            
+            operationCompleted = true;
+        }
+        
+        // Wait 10ms if we didn't do anything in this round
+        if (!operationCompleted)
+        {
+            Sleep(10);
+        }
+    }
+    
+    closeProcess_();
+}
+
+#else
 void ExternVocoderStep::openProcess_()
 {
     // Create pipes for stdin/stdout
@@ -229,3 +418,4 @@ void ExternVocoderStep::threadEntry_()
     
     closeProcess_();
 }
+#endif // WIN32
