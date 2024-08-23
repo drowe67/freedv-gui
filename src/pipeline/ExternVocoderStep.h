@@ -45,9 +45,9 @@ public:
     ExternVocoderStep(std::string scriptPath, int workingSampleRate, int outputSampleRate);
     virtual ~ExternVocoderStep();
     
-    virtual int getInputSampleRate() const;
-    virtual int getOutputSampleRate() const;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
+    virtual int getInputSampleRate() const override;
+    virtual int getOutputSampleRate() const override;
+    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
     
 private:
     int sampleRate_;

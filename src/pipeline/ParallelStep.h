@@ -44,9 +44,9 @@ public:
         std::shared_ptr<void> state);
     virtual ~ParallelStep();
     
-    virtual int getInputSampleRate() const;
-    virtual int getOutputSampleRate() const;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
+    virtual int getInputSampleRate() const override;
+    virtual int getOutputSampleRate() const override;
+    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
     
     const std::vector<std::shared_ptr<IPipelineStep>> getParallelSteps() const { return parallelSteps_; }
 

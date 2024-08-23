@@ -33,9 +33,9 @@ public:
     AudioPipeline(int inputSampleRate, int outputSampleRate);
     virtual ~AudioPipeline();
     
-    virtual int getInputSampleRate() const;
-    virtual int getOutputSampleRate() const;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
+    virtual int getInputSampleRate() const override;
+    virtual int getOutputSampleRate() const override;
+    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
     
     void appendPipelineStep(std::shared_ptr<IPipelineStep> pipelineStep);
 

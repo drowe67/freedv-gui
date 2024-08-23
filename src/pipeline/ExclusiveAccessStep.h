@@ -34,10 +34,10 @@ public:
     ExclusiveAccessStep(IPipelineStep* step, std::function<void()> lockFn, std::function<void()> unlockFn);
     virtual ~ExclusiveAccessStep();
     
-    virtual int getInputSampleRate() const;
-    virtual int getOutputSampleRate() const;
+    virtual int getInputSampleRate() const override;
+    virtual int getOutputSampleRate() const override;
     
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
+    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
 
     virtual void dump(int indentLevel = 0) override;
     
