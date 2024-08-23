@@ -21,9 +21,9 @@
 //=========================================================================
 
 #ifdef WIN32
-#include <sys/wait.h>
-#else
 #include <windows.h>
+#else
+#include <sys/wait.h>
 #endif // WIN32
 
 #include <sstream>
