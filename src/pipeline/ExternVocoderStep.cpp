@@ -20,12 +20,6 @@
 //
 //=========================================================================
 
-#ifdef WIN32
-#include <windows.h>
-#else
-#include <sys/wait.h>
-#endif // WIN32
-
 #include <sstream>
 #include <vector>
 #include <cassert>
@@ -34,11 +28,17 @@
 #include "codec2_fifo.h"
 #include "../defines.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/wait.h>
+#endif // _WIN32
+
 ExternVocoderStep::ExternVocoderStep(std::string scriptPath, int workingSampleRate, int outputSampleRate)
     : sampleRate_(workingSampleRate)
     , outputSampleRate_(outputSampleRate)
         
-#ifdef WIN32
+#ifdef _WIN32
     , recvProcessHandle_(nullptr)
     , receiveStdoutHandle_(nullptr)
     , receiveStdinHandle_(nullptr)
@@ -47,7 +47,7 @@ ExternVocoderStep::ExternVocoderStep(std::string scriptPath, int workingSampleRa
     , recvProcessId_(0)
     , receiveStdoutFd_(-1)
     , receiveStdinFd_(-1)
-#endif // WIN32
+#endif // _WIN32
         
     , inputSampleFifo_(nullptr)
     , outputSampleFifo_(nullptr)
@@ -116,7 +116,7 @@ std::shared_ptr<short> ExternVocoderStep::execute(std::shared_ptr<short> inputSa
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
 }
 
-#ifdef WIN32
+#ifdef _WIN32
 void ExternVocoderStep::openProcess_()
 {
     // Ensure that handles are inherited by the child process.
@@ -126,7 +126,7 @@ void ExternVocoderStep::openProcess_()
     saAttr.lpSecurityDescriptor = NULL; 
     
     HANDLE tmpStdoutWrHandle = NULL;
-    HANDLE tmpStdoutErrHandle = NULL;
+    HANDLE tmpStderrWrHandle = NULL;
     HANDLE tmpStdinRdHandle = NULL;
     
     // Create a pipe for the child process's STDOUT. 
@@ -159,7 +159,7 @@ void ExternVocoderStep::openProcess_()
 
     // Create a pipe for the child process's STDIN. 
     if (!CreatePipe(&tmpStdinRdHandle, &receiveStdinHandle_, &saAttr, 0) ||
-        !SetHandleInformation(receiveStdinHandle_, HANDLE_FLAG_INHERIT, 0)
+        !SetHandleInformation(receiveStdinHandle_, HANDLE_FLAG_INHERIT, 0))
     {
         fprintf(stderr, "WARNING: cannot create pipe for stdin!\n");
         if (receiveStdinHandle_ != nullptr) 
@@ -173,7 +173,7 @@ void ExternVocoderStep::openProcess_()
     
     // Create process
     PROCESS_INFORMATION piProcInfo; 
-    STARTUPINFO siStartInfo;
+    STARTUPINFOA siStartInfo;
     
     // Set up members of the PROCESS_INFORMATION structure. 
     ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
@@ -188,7 +188,7 @@ void ExternVocoderStep::openProcess_()
     siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
     
     BOOL success = CreateProcessA(NULL, 
-          scriptPath_.c_str(),     // command line 
+          (char*)scriptPath_.c_str(),     // command line 
           NULL,          // process security attributes 
           NULL,          // primary thread security attributes 
           TRUE,          // handles are inherited 
@@ -217,7 +217,7 @@ void ExternVocoderStep::openProcess_()
     }
     
     // Save process handle so we can terminate it later
-    recvProcessHandle = piProcInfo.hProcess;
+    recvProcessHandle_ = piProcInfo.hProcess;
 }
 
 void ExternVocoderStep::closeProcess_()
@@ -418,4 +418,4 @@ void ExternVocoderStep::threadEntry_()
     
     closeProcess_();
 }
-#endif // WIN32
+#endif // _WIN32
