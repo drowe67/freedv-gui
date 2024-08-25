@@ -55,6 +55,11 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     , serialPortTestObject_(nullptr)
     , hasAppliedChanges_(false)
 {    
+    if (wxGetApp().customConfigFileName != "")
+    {
+        SetTitle(wxString::Format("%s (%s)", title, wxGetApp().customConfigFileName));
+    }
+    
     // Create top-level of control hierarchy.
     wxPanel* panel = new wxPanel(this);
     wxBoxSizer* sectionSizer = new wxBoxSizer(wxVERTICAL);
