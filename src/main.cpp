@@ -674,7 +674,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     
     // Add Waterfall Plot window
     m_panelWaterfall = new PlotWaterfall((wxFrame*) m_auiNbookCtrl, false, 0);
-    m_panelWaterfall->SetToolTip(_("Double-click to tune"));
+    m_panelWaterfall->SetToolTip(_("Double click to tune, middle click to re-center"));
     m_auiNbookCtrl->AddPage(m_panelWaterfall, _("Waterfall"), true, wxNullBitmap);
 
     // Add Spectrum Plot window
@@ -688,7 +688,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Actual Spectrum plot
     m_panelSpectrum = new PlotSpectrum(spectrumPanel, g_avmag,
                                        MODEM_STATS_NSPEC*((float)MAX_F_HZ/MODEM_STATS_MAX_F_HZ));
-    m_panelSpectrum->SetToolTip(_("Double-click to tune"));
+    m_panelSpectrum->SetToolTip(_("Double click to tune, middle click to re-center"));
     spectrumPanelSizer->Add(m_panelSpectrum, 0, wxALL | wxEXPAND, 5);
     
     // Spectrum plot control interface
