@@ -105,9 +105,9 @@ std::shared_ptr<short> ExternVocoderStep::execute(std::shared_ptr<short> inputSa
     
     // Read and return output samples from thread.
     *numOutputSamples = codec2_fifo_used(outputSampleFifo_);
+    *numOutputSamples = std::min(*numOutputSamples, MAX_OUTPUT_SAMPLES);
     if (*numOutputSamples > 0)
     {
-        *numOutputSamples = std::min(*numOutputSamples, MAX_OUTPUT_SAMPLES);
         outputSamples = new short[*numOutputSamples];
         assert(outputSamples != nullptr);
         
