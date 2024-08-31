@@ -249,13 +249,15 @@ void ExternVocoderStep::KillProcessTree_(DWORD myprocID)
 void ExternVocoderStep::threadEntry_()
 {
     const int NUM_SAMPLES_TO_READ_WRITE = 160;
-    
+    const int BYTES_TO_READ_WRITE = NUM_SAMPLES_TO_READ_WRITE * sizeof(short);
+    const int STDERR_BYTES_TO_READ = 4096;
+ 
     openProcess_();
 
     // Kick off reading from stdout/stderr
-    char* stdoutBuffer = new char[4096];
+    char* stdoutBuffer = new char[BYTES_TO_READ_WRITE];
     assert(stdoutBuffer != nullptr);
-    char* stderrBuffer = new char[4096];
+    char* stderrBuffer = new char[STDERR_BYTES_TO_READ];
     assert(stderrBuffer != nullptr);
     FileReadBuffer* stdoutRead = new FileReadBuffer();
     assert(stdoutRead != nullptr);
@@ -270,9 +272,9 @@ void ExternVocoderStep::threadEntry_()
         fprintf(stderr, "%s", buf);
     };
 
-    InitFileReadBuffer_(stdoutRead, receiveStdoutHandle_, stdoutBuffer, 4096, onStdoutRead);
+    InitFileReadBuffer_(stdoutRead, receiveStdoutHandle_, stdoutBuffer, BYTES_TO_READ_WRITE, onStdoutRead);
     ScheduleFileRead_(stdoutRead);
-    InitFileReadBuffer_(stderrRead, receiveStderrHandle_, stderrBuffer, 4096, onStderrRead);
+    InitFileReadBuffer_(stderrRead, receiveStderrHandle_, stderrBuffer, STDERR_BYTES_TO_READ, onStderrRead);
     ScheduleFileRead_(stderrRead);
 
     while (!isExiting_ && !stdoutRead->eof && !stderrRead->eof)
@@ -282,7 +284,7 @@ void ExternVocoderStep::threadEntry_()
         {
             short val[NUM_SAMPLES_TO_READ_WRITE];
             codec2_fifo_read(inputSampleFifo_, val, NUM_SAMPLES_TO_READ_WRITE);
-            WriteFile(receiveStdinHandle_, val, NUM_SAMPLES_TO_READ_WRITE * sizeof(short), NULL, NULL);
+            WriteFile(receiveStdinHandle_, val, BYTES_TO_READ_WRITE, NULL, NULL);
         }
         else
         {
