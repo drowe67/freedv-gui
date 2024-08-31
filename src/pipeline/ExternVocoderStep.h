@@ -54,6 +54,27 @@ private:
     int outputSampleRate_;
     
 #ifdef _WIN32
+    struct FileReadBuffer
+    {
+        OVERLAPPED Overlapped;
+
+        // Some buffer to read into
+        void* Buffer;
+        size_t BufferSize;
+
+        // The handle to the file or pipe.
+        HANDLE FileHandle;
+        PTP_IO Io;
+        PTP_TIMER Timer;
+
+        // Callback when data is read
+        std::function<void(char*, size_t)> onDataRead;
+
+        // Indicator that there's nothing left to read
+        bool eof;
+    };
+
+    DWORD recvProcessId_;
     HANDLE recvProcessHandle_;
     HANDLE receiveStdoutHandle_;
     HANDLE receiveStdinHandle_;
@@ -75,6 +96,24 @@ private:
     void threadEntry_();
     void openProcess_();
     void closeProcess_();
+
+#ifdef _WIN32
+    static void KillProcessTree_(DWORD myprocID);
+
+    // Adapted from https://blog.s-schoener.com/2024-06-16-stream-redirection-win32/.
+    static void CreateAsyncPipe_(HANDLE* outRead, HANDLE* outWrite);
+    static void ScheduleFileRead_(FileReadBuffer* readBuffer);
+    static void CALLBACK FileReadComplete_(
+        PTP_CALLBACK_INSTANCE instance,
+        void* context,
+        void* overlapped,
+        ULONG ioResult,
+        ULONG_PTR numBytesRead,
+        PTP_IO io
+    );
+    static void InitFileReadBuffer_(FileReadBuffer* readBuffer, HANDLE handle, void* buffer, size_t bufferSize, std::function<void(char*, size_t)> onDataRead);
+#endif // _WIN32
+
 };
 
 #endif // AUDIO_PIPELINE__EXTERN_VOCODER_STEP_H
