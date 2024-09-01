@@ -269,7 +269,13 @@ void ExternVocoderStep::threadEntry_()
     };
 
     std::function<void(char*, size_t)> onStderrRead = [&](char* buf, size_t bytesAvailable) {
-        fprintf(stderr, "%s", buf);
+        std::string tmp(buf, bytesAvailable);
+        size_t start_pos = 0;
+        while((start_pos = tmp.find("\n", start_pos)) != std::string::npos) {
+            tmp.replace(start_pos, 1, "\r\n");
+            start_pos += 2;
+        }
+        fprintf(stderr, "%s", tmp.c_str());
     };
 
     InitFileReadBuffer_(stdoutRead, receiveStdoutHandle_, stdoutBuffer, BYTES_TO_READ_WRITE, onStdoutRead);
