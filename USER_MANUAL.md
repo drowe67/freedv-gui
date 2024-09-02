@@ -893,6 +893,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * Fix bug preventing saving of the previously used path when playing back files. (PR #729)
+    * Set timeout for Hamlib comms to avoid GUI getting stuck. (PR #746)
 2. Enhancements:
     * Show green line indicating RX frequency. (PR #725)
     * Update configuration of the Voice Keyer feature based on user feedback. (PR #730)
