@@ -12,5 +12,5 @@ rem
 rem Note: Current RADAE scripts seem to require being executed from
 rem the RADAE folder.
 cd %RADAE_PATH%
-set PATH=%RADAE_VENV%\scripts;%PATH%
-build\src\lpcnet_demo -features - - | %RADAE_VENV%\scripts\python.exe -u radae_tx.py model19_check3\checkpoints\checkpoint_epoch_100.pth --auxdata | %RADAE_VENV%\scripts\python.exe -u f32toint16.py --real --scale 16383
+set PATH=%RADAE_VENV%;%PATH%
+build\src\lpcnet_demo -features - - | %RADAE_VENV%\python.exe -u radae_tx.py model19_check3\checkpoints\checkpoint_epoch_100.pth --auxdata | %RADAE_VENV%\python.exe -u f32toint16.py --real --scale 16383
