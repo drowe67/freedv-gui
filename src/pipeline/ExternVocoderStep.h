@@ -101,7 +101,7 @@ private:
     static void KillProcessTree_(DWORD myprocID);
 
     // Adapted from https://blog.s-schoener.com/2024-06-16-stream-redirection-win32/.
-    static void CreateAsyncPipe_(HANDLE* outRead, HANDLE* outWrite);
+    static void CreateAsyncPipe_(HANDLE* outRead, HANDLE* outWrite, bool inv = false);
     static void ScheduleFileRead_(FileReadBuffer* readBuffer);
     static void CALLBACK FileReadComplete_(
         PTP_CALLBACK_INSTANCE instance,

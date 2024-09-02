@@ -130,23 +130,10 @@ void ExternVocoderStep::openProcess_()
     HANDLE tmpStderrWrHandle = NULL;
     HANDLE tmpStdinRdHandle = NULL;
     
-    // Create pipes for the child process's stdout/stderr.
+    // Create pipes for the child process's stdin/stdout/stderr.
     CreateAsyncPipe_(&receiveStdoutHandle_, &tmpStdoutWrHandle);
     CreateAsyncPipe_(&receiveStderrHandle_, &tmpStderrWrHandle);
-
-    // Create a pipe for the child process's stdin. 
-    if (!CreatePipe(&tmpStdinRdHandle, &receiveStdinHandle_, &saAttr, 0) ||
-        !SetHandleInformation(receiveStdinHandle_, HANDLE_FLAG_INHERIT, 0))
-    {
-        fprintf(stderr, "WARNING: cannot create pipe for stdin!\n");
-        if (receiveStdinHandle_ != nullptr) 
-        {
-            CloseHandle(receiveStdinHandle_);
-            CloseHandle(tmpStdinRdHandle);
-            receiveStdinHandle_ = nullptr;
-        }
-        return;
-    }
+    CreateAsyncPipe_(&tmpStdinRdHandle, &receiveStdinHandle_, true);
     
     // Create process
     PROCESS_INFORMATION piProcInfo; 
@@ -248,7 +235,7 @@ void ExternVocoderStep::KillProcessTree_(DWORD myprocID)
 
 void ExternVocoderStep::threadEntry_()
 {
-    const int NUM_SAMPLES_TO_READ_WRITE = 160;
+    const int NUM_SAMPLES_TO_READ_WRITE = 512;
     const int BYTES_TO_READ_WRITE = NUM_SAMPLES_TO_READ_WRITE * sizeof(short);
     const int STDERR_BYTES_TO_READ = 4096;
  
@@ -314,8 +301,10 @@ void ExternVocoderStep::threadEntry_()
     delete[] stderrBuffer;
 }
 
-void ExternVocoderStep::CreateAsyncPipe_(HANDLE* outRead, HANDLE* outWrite)
+void ExternVocoderStep::CreateAsyncPipe_(HANDLE* outRead, HANDLE* outWrite, bool inv)
 {
+    const int PIPE_SIZE = (4096 + 24); // https://github.com/brettwooldridge/NuProcess/issues/117
+
     // Generate unique name for the pipe.
     UUID uuid;
     UuidCreate(&uuid);
@@ -332,13 +321,13 @@ void ExternVocoderStep::CreateAsyncPipe_(HANDLE* outRead, HANDLE* outWrite)
         pipeName,
         // Set FILE_FLAG_OVERLAPPED to enable async I/O for reading from the pipe.
         // Note that we still need to set PIPE_WAIT.
-        PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
+        (inv ? PIPE_ACCESS_OUTBOUND : PIPE_ACCESS_INBOUND) | FILE_FLAG_OVERLAPPED,
         PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
         Instances,
         // in-bound buffer size
-        4096,
+        inv ? 0 : PIPE_SIZE,
         // out-going buffer size
-        0,
+        inv ? PIPE_SIZE : 0,
         // default timeout for some functions we're not using
         0,
         nullptr
@@ -357,7 +346,7 @@ void ExternVocoderStep::CreateAsyncPipe_(HANDLE* outRead, HANDLE* outWrite)
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
     saAttr.bInheritHandle = TRUE;
     saAttr.lpSecurityDescriptor = NULL;
-    HANDLE write = CreateFileA(pipeName, GENERIC_WRITE, 0, &saAttr, OPEN_EXISTING, 0, 0);
+    HANDLE write = CreateFileA(pipeName, (inv ? GENERIC_READ : GENERIC_WRITE), 0, &saAttr, OPEN_EXISTING, 0, 0);
     if (write == INVALID_HANDLE_VALUE)
     {
         fprintf(stderr, "Failed to open named pipe (error %lu)", GetLastError());
@@ -365,8 +354,16 @@ void ExternVocoderStep::CreateAsyncPipe_(HANDLE* outRead, HANDLE* outWrite)
         return;
     }
 
-    *outRead = read;
-    *outWrite = write;
+    if (inv)
+    {
+        *outRead = write;
+        *outWrite = read;
+    }
+    else
+    {
+        *outRead = read;
+        *outWrite = write;
+    }
 }
 
 void ExternVocoderStep::ScheduleFileRead_(FileReadBuffer* readBuffer)
