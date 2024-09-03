@@ -276,11 +276,13 @@ void ExternVocoderStep::threadEntry_()
     while (!isExiting_ && !stdoutRead->eof && !stderrRead->eof)
     {
         // Write data to STDIN if available
-        if (codec2_fifo_used(inputSampleFifo_) >= NUM_SAMPLES_TO_READ_WRITE)
+        int used = codec2_fifo_used(inputSampleFifo_);
+        if (used > 0)
         {
-            short val[NUM_SAMPLES_TO_READ_WRITE];
-            codec2_fifo_read(inputSampleFifo_, val, NUM_SAMPLES_TO_READ_WRITE);
-            WriteFile(receiveStdinHandle_, val, BYTES_TO_READ_WRITE, NULL, NULL);
+            used = std::min(used, 2048); // 4K max buffer size
+            short val[used];
+            codec2_fifo_read(inputSampleFifo_, val, used);
+            WriteFile(receiveStdinHandle_, val, used * sizeof(short), NULL, NULL);
         }
         else
         {
