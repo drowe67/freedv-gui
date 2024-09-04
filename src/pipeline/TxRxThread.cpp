@@ -20,6 +20,8 @@
 //
 //=========================================================================
 
+#include <chrono>
+
 // This forces us to use freedv-gui's version rather than another one.
 // TBD -- may not be needed once we fully switch over to the audio pipeline.
 #include "../defines.h"
@@ -564,6 +566,7 @@ void TxRxThread::clearFifos_()
 
 void TxRxThread::txProcessing_()
 {
+    std::chrono::high_resolution_clock highResClock;
     wxStopWatch sw;
     paCallBackData  *cbData = g_rxUserdata;
 
@@ -628,7 +631,8 @@ void TxRxThread::txProcessing_()
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
             int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);            
             if (nread != 0 && endingTx) break;
-            
+           
+            auto beginTime = highResClock.now(); 
             short* inputSamples = new short[nsam_in_48];
             memcpy(inputSamples, insound_card, nsam_in_48 * sizeof(short));
             
@@ -640,6 +644,13 @@ void TxRxThread::txProcessing_()
             }
             
             codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
+            while(true)
+            {
+                auto diff = highResClock.now() - beginTime;
+                auto audioTimeMs = nsam_in_48 * 1000 / inputSampleRate_;
+                if (diff > std::chrono::milliseconds(audioTimeMs)) break;
+                wxThread::Sleep(1);
+            }
         }
         
         txModeChangeMutex.Unlock();
