@@ -95,6 +95,8 @@ int ExternVocoderStep::getOutputSampleRate() const
 
 std::shared_ptr<short> ExternVocoderStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
+    const int MAX_OUTPUT_SAMPLES = 1024;
+
     *numOutputSamples = 0;
     short* outputSamples = nullptr;
 
@@ -102,12 +104,6 @@ std::shared_ptr<short> ExternVocoderStep::execute(std::shared_ptr<short> inputSa
     if (numInputSamples > 0)
     {
         codec2_fifo_write(inputSampleFifo_, inputSamples.get(), numInputSamples);
-#ifdef _WIN32
-        // XXX: simulate required processing time as actual I/O is handled
-        // by another thread. For some reason this is only needed on Windows.
-        int timeToSleep = (numInputSamples * 1000 / getInputSampleRate()) >> 2;
-        if (timeToSleep > 0) Sleep(timeToSleep);
-#endif // _WIN32
     }
  
     // Read and return output samples from thread.
