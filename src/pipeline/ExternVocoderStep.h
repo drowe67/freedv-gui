@@ -42,7 +42,7 @@ extern "C"
 class ExternVocoderStep : public IPipelineStep
 {
 public:
-    ExternVocoderStep(std::string scriptPath, int workingSampleRate, int outputSampleRate);
+    ExternVocoderStep(std::string scriptPath, int workingSampleRate, int outputSampleRate, int minSamplesToReturn = 0);
     virtual ~ExternVocoderStep();
     
     virtual int getInputSampleRate() const override;
@@ -52,6 +52,7 @@ public:
 private:
     int sampleRate_;
     int outputSampleRate_;
+    int minSamplesToReturn_;
     
 #ifdef _WIN32
     struct FileReadBuffer

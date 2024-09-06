@@ -597,7 +597,7 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
     if (txMode_ == -1)
     {
         // special handling for external vocoder
-        parallelSteps.push_back(new ExternVocoderStep(externVocoderTxCommand_, 16000, 8000));
+        parallelSteps.push_back(new ExternVocoderStep(externVocoderTxCommand_, 16000, 8000, 960));
     }
  
     for (auto& dv : dvObjects_)

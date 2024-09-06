@@ -24,6 +24,7 @@
 #include <vector>
 #include <cassert>
 #include <functional>
+#include <chrono>
 #include "ExternVocoderStep.h"
 #include "codec2_fifo.h"
 #include "../defines.h"
@@ -35,9 +36,10 @@
 #include <sys/wait.h>
 #endif // _WIN32
 
-ExternVocoderStep::ExternVocoderStep(std::string scriptPath, int workingSampleRate, int outputSampleRate)
+ExternVocoderStep::ExternVocoderStep(std::string scriptPath, int workingSampleRate, int outputSampleRate, int minSamplesToReturn)
     : sampleRate_(workingSampleRate)
     , outputSampleRate_(outputSampleRate)
+    , minSamplesToReturn_(minSamplesToReturn)
         
 #ifdef _WIN32
     , recvProcessHandle_(nullptr)
@@ -104,6 +106,17 @@ std::shared_ptr<short> ExternVocoderStep::execute(std::shared_ptr<short> inputSa
     if (numInputSamples > 0)
     {
         codec2_fifo_write(inputSampleFifo_, inputSamples.get(), numInputSamples);
+        
+        std::chrono::high_resolution_clock highResClock;
+        auto beginTime = highResClock.now(); 
+        auto audioTimeMs = (minSamplesToReturn_ * 1000) / outputSampleRate_;
+        
+        while (codec2_fifo_used(outputSampleFifo_) < minSamplesToReturn_)
+        {
+            auto diff = highResClock.now() - beginTime;
+            if (diff > std::chrono::milliseconds(audioTimeMs)) break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
     }
  
     // Read and return output samples from thread.
@@ -116,6 +129,8 @@ std::shared_ptr<short> ExternVocoderStep::execute(std::shared_ptr<short> inputSa
         
         codec2_fifo_read(outputSampleFifo_, outputSamples, *numOutputSamples);
     }
+    
+    //fprintf(stderr, "XXX numInput: %d, numOutput: %d\n", numInputSamples, *numOutputSamples);
 
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
 }
