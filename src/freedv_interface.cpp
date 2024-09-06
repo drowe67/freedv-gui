@@ -455,7 +455,7 @@ int FreeDVInterface::getTxSpeechSampleRate() const
 
 int FreeDVInterface::getTxNumSpeechSamples() const
 {
-    if (txMode_ == -1) return 1024;
+    if (txMode_ == -1) return 1920;
 
     assert(currentTxMode_ != nullptr);
     return freedv_get_n_speech_samples(currentTxMode_);   
@@ -463,7 +463,7 @@ int FreeDVInterface::getTxNumSpeechSamples() const
 
 int FreeDVInterface::getTxNNomModemSamples() const
 {
-    if (txMode_ == -1) return 512;
+    if (txMode_ == -1) return 960;
 
     assert(currentTxMode_ != nullptr);
     return freedv_get_n_nom_modem_samples(currentTxMode_);   
