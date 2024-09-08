@@ -59,6 +59,11 @@ extern wxMutex g_mutexProtectingCallbackData;
 FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool *newSpkOutFilter,
                      wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
+    if (wxGetApp().customConfigFileName != "")
+    {
+        SetTitle(wxString::Format("%s (%s)", title, wxGetApp().customConfigFileName));
+    }
+    
     m_running = running;
     m_newMicInFilter = newMicInFilter;
     m_newSpkOutFilter = newSpkOutFilter;

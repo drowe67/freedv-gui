@@ -90,6 +90,11 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     , filterSelfMessageUpdates_(false)
     , filteredFrequency_(0)
 {
+    if (wxGetApp().customConfigFileName != "")
+    {
+        SetTitle(wxString::Format("%s (%s)", _("FreeDV Reporter"), wxGetApp().customConfigFileName));
+    }
+    
     for (int col = 0; col < NUM_COLS; col++)
     {
         columnLengths_[col] = DefaultColumnWidths_[col];

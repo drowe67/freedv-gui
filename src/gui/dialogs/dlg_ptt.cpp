@@ -48,6 +48,11 @@ extern wxConfigBase *pConfig;
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
+    if (wxGetApp().customConfigFileName != "")
+    {
+        SetTitle(wxString::Format("%s (%s)", title, wxGetApp().customConfigFileName));
+    }
+    
     wxPanel* panel = new wxPanel(this);
     
     wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
