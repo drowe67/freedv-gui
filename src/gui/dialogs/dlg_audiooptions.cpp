@@ -88,6 +88,11 @@ void AudioOptsDialog::buildTestControls(PlotScalar **plotScalar, wxButton **btnT
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
+    if (wxGetApp().customConfigFileName != "")
+    {
+        SetTitle(wxString::Format("%s (%s)", title, wxGetApp().customConfigFileName));
+    }
+    
     if (g_verbose) fprintf(stderr, "pos %d %d\n", pos.x, pos.y);
     audioEngineInit();
 
