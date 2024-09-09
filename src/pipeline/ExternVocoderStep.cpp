@@ -97,8 +97,6 @@ int ExternVocoderStep::getOutputSampleRate() const
 
 std::shared_ptr<short> ExternVocoderStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    const int MAX_OUTPUT_SAMPLES = 1024;
-
     *numOutputSamples = 0;
     short* outputSamples = nullptr;
 

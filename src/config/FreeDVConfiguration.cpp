@@ -113,10 +113,10 @@ FreeDVConfiguration::FreeDVConfiguration()
 
     , txRxDelayMilliseconds("/Audio/TxRxDelayMilliseconds", 0)
 
+    , reportingUserMsgColWidth("/Windows/FreeDVReporter/reportingUserMsgColWidth", 130)
+
     , externalVocoderRxCommand("/ExternalVocoder/RxCommand", _(""))
     , externalVocoderTxCommand("/ExternalVocoder/TxCommand", _(""))
-
-    , reportingUserMsgColWidth("/Windows/FreeDVReporter/reportingUserMsgColWidth", 130)
 {
     // empty
 }
