@@ -43,6 +43,7 @@
 
 class IPipelineStep;
 class ParallelStep;
+class ExternVocoderStep;
 
 class FreeDVInterface
 {
@@ -119,6 +120,8 @@ public:
     void setExternVocoderRxCommand(std::string command) { externVocoderRxCommand_ = command; }
     void setExternVocoderTxCommand(std::string command) { externVocoderTxCommand_ = command; }
  
+    void restartTxVocoder();
+
 private:
     struct ReceivePipelineState
     {
@@ -174,6 +177,8 @@ private:
    
     std::string externVocoderRxCommand_;
     std::string externVocoderTxCommand_;
+
+    ExternVocoderStep* txVocoderStep_;
  
     int preProcessRxFn_(ParallelStep* ps);
     int postProcessRxFn_(ParallelStep* ps);

@@ -56,6 +56,7 @@ ExternVocoderStep::ExternVocoderStep(std::string scriptPath, int workingSampleRa
     , outputSampleFifo_(nullptr)
     , isExiting_(false)
     , scriptPath_(scriptPath)
+    , isRestarting_(false)
 {
     // Create FIFOs so we don't lose any samples during run
     inputSampleFifo_ = codec2_fifo_create(16384);
@@ -131,6 +132,18 @@ std::shared_ptr<short> ExternVocoderStep::execute(std::shared_ptr<short> inputSa
     //fprintf(stderr, "XXX numInput: %d, numOutput: %d\n", numInputSamples, *numOutputSamples);
 
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
+}
+
+void ExternVocoderStep::restartVocoder()
+{
+    isRestarting_ = true;
+
+#ifdef _WIN32
+    // TBD
+#else
+    close(receiveStdinFd_);
+    receiveStdinFd_ = -1;
+#endif // _WIN32
 }
 
 #ifdef _WIN32
@@ -590,45 +603,63 @@ void ExternVocoderStep::threadEntry_()
 {
     const int NUM_SAMPLES_TO_READ_WRITE = 1;
     
-    openProcess_();
-    
     while (!isExiting_)
     {
-        fd_set processReadFds;
-        fd_set processWriteFds;
-        FD_ZERO(&processReadFds);
-        FD_ZERO(&processWriteFds);
-        
-        FD_SET(receiveStdinFd_, &processWriteFds);
-        FD_SET(receiveStdoutFd_, &processReadFds);
-        
-        // 10ms timeout
-        struct timeval tv;
-        tv.tv_sec = 0;
-        tv.tv_usec = 10000;
-        
-        int rv = select(std::max(receiveStdinFd_, receiveStdoutFd_) + 1, &processReadFds, &processWriteFds, nullptr, &tv);
-        if (rv > 0)
+        openProcess_();
+
+        while (!isRestarting_ && !isExiting_)
         {
-            if (FD_ISSET(receiveStdinFd_, &processWriteFds) && codec2_fifo_used(inputSampleFifo_) >= NUM_SAMPLES_TO_READ_WRITE)
-            {
-                // Can write to process
-                short val[NUM_SAMPLES_TO_READ_WRITE];
-                codec2_fifo_read(inputSampleFifo_, val, NUM_SAMPLES_TO_READ_WRITE);
-                write(receiveStdinFd_, val, NUM_SAMPLES_TO_READ_WRITE * sizeof(short));
-            }
+            fd_set processReadFds;
+            fd_set processWriteFds;
+            FD_ZERO(&processReadFds);
+            FD_ZERO(&processWriteFds);
             
-            if (FD_ISSET(receiveStdoutFd_, &processReadFds))
+            if (receiveStdinFd_ != -1)
             {
-                short output_buf[NUM_SAMPLES_TO_READ_WRITE];
-                if ((rv = read(receiveStdoutFd_, output_buf, NUM_SAMPLES_TO_READ_WRITE * sizeof(short))) > 0)
+                FD_SET(receiveStdinFd_, &processWriteFds);
+            }
+            FD_SET(receiveStdoutFd_, &processReadFds);
+            
+            // 10ms timeout
+            struct timeval tv;
+            tv.tv_sec = 0;
+            tv.tv_usec = 10000;
+            
+            int rv = select(std::max(receiveStdinFd_, receiveStdoutFd_) + 1, &processReadFds, &processWriteFds, nullptr, &tv);
+            if (rv > 0)
+            {
+                if (receiveStdinFd_ != -1 && FD_ISSET(receiveStdinFd_, &processWriteFds) && codec2_fifo_used(inputSampleFifo_) >= NUM_SAMPLES_TO_READ_WRITE)
                 {
-                    codec2_fifo_write(outputSampleFifo_, output_buf, rv / sizeof(short));
+                    // Can write to process
+                    short val[NUM_SAMPLES_TO_READ_WRITE];
+                    codec2_fifo_read(inputSampleFifo_, val, NUM_SAMPLES_TO_READ_WRITE);
+                    write(receiveStdinFd_, val, NUM_SAMPLES_TO_READ_WRITE * sizeof(short));
+                }
+                
+                if (FD_ISSET(receiveStdoutFd_, &processReadFds))
+                {
+                    short output_buf[NUM_SAMPLES_TO_READ_WRITE];
+                    if ((rv = read(receiveStdoutFd_, output_buf, NUM_SAMPLES_TO_READ_WRITE * sizeof(short))) > 0)
+                    {
+                        codec2_fifo_write(outputSampleFifo_, output_buf, rv / sizeof(short));
+                    }
                 }
             }
+            else if (rv == -1)
+            {
+                break;
+            }
+        }
+
+        closeProcess_();
+
+        if (isRestarting_)
+        {
+            isRestarting_ = false;
+
+            // Sleep for 1s before restarting
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }
-    
-    closeProcess_();
 }
 #endif // _WIN32

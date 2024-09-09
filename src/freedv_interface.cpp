@@ -64,7 +64,8 @@ FreeDVInterface::FreeDVInterface() :
     modemStatsIndex_(0),
     currentTxMode_(nullptr),
     currentRxMode_(nullptr),
-    lastSyncRxMode_(nullptr)
+    lastSyncRxMode_(nullptr),
+    txVocoderStep_(nullptr)
 {
     // empty
 }
@@ -113,6 +114,11 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
         default:
             return 0.0f;
     }
+}
+
+void FreeDVInterface::restartTxVocoder() 
+{ 
+    txVocoderStep_->restartVocoder(); 
 }
 
 void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText)
@@ -232,6 +238,7 @@ void FreeDVInterface::stop()
     modemStatsList_ = nullptr;
     currentTxMode_ = nullptr;
     currentRxMode_ = nullptr;
+    txVocoderStep_ = nullptr;
     modemStatsIndex_ = 0;
     txMode_ = 0;
     rxMode_ = 0;
@@ -597,7 +604,8 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
     if (txMode_ == -1)
     {
         // special handling for external vocoder
-        parallelSteps.push_back(new ExternVocoderStep(externVocoderTxCommand_, 16000, 8000, 960));
+        txVocoderStep_ = new ExternVocoderStep(externVocoderTxCommand_, 16000, 8000, 960);
+        parallelSteps.push_back(txVocoderStep_);
     }
  
     for (auto& dv : dvObjects_)

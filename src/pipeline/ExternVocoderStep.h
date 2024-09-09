@@ -49,6 +49,8 @@ public:
     virtual int getOutputSampleRate() const override;
     virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
     
+    void restartVocoder();
+
 private:
     int sampleRate_;
     int outputSampleRate_;
@@ -93,6 +95,7 @@ private:
     bool isExiting_;
     
     std::string scriptPath_;
+    bool isRestarting_;
     
     void threadEntry_();
     void openProcess_();
