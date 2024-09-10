@@ -643,6 +643,7 @@ void TxRxThread::txProcessing_()
                         auto outputSamples = pipeline_->execute(inputSamplesPtr, 0, &nout);
                         if (nout > 0)
                         {
+                            fprintf(stderr, "YYY outputting %d remaining samples\n", nout);
                             codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
                         }
                     } while (nout > 0);

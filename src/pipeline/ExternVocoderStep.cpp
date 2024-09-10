@@ -137,13 +137,6 @@ std::shared_ptr<short> ExternVocoderStep::execute(std::shared_ptr<short> inputSa
 void ExternVocoderStep::restartVocoder()
 {
     isRestarting_ = true;
-
-#ifdef _WIN32
-    // TBD
-#else
-    close(receiveStdinFd_);
-    receiveStdinFd_ = -1;
-#endif // _WIN32
 }
 
 #ifdef _WIN32
@@ -543,6 +536,8 @@ void ExternVocoderStep::openProcess_()
         assert(rv != -1);
 
         close(stdoutPipes[0]);
+        close(stdoutPipes[1]);
+        close(stdinPipes[0]);
         close(stdinPipes[1]);
 
         // Tokenize and generate an argv for exec()
@@ -607,7 +602,7 @@ void ExternVocoderStep::threadEntry_()
     {
         openProcess_();
 
-        while (!isRestarting_ && !isExiting_)
+        while (!isExiting_)
         {
             fd_set processReadFds;
             fd_set processWriteFds;
@@ -633,7 +628,11 @@ void ExternVocoderStep::threadEntry_()
                     // Can write to process
                     short val[NUM_SAMPLES_TO_READ_WRITE];
                     codec2_fifo_read(inputSampleFifo_, val, NUM_SAMPLES_TO_READ_WRITE);
-                    write(receiveStdinFd_, val, NUM_SAMPLES_TO_READ_WRITE * sizeof(short));
+                    if (write(receiveStdinFd_, val, NUM_SAMPLES_TO_READ_WRITE * sizeof(short)) == -1)
+                    {
+                        fprintf(stderr, "[ExternVocoderStep] write() failed (errno %d)\n", errno);
+                        break;
+                    }
                 }
                 
                 if (FD_ISSET(receiveStdoutFd_, &processReadFds))
@@ -643,20 +642,33 @@ void ExternVocoderStep::threadEntry_()
                     {
                         codec2_fifo_write(outputSampleFifo_, output_buf, rv / sizeof(short));
                     }
+                    else if (rv == -1)
+                    {
+                        fprintf(stderr, "[ExternVocoderStep] read() failed (errno %d)\n", errno);
+                        break;
+                    }
                 }
             }
             else if (rv == -1)
             {
+                fprintf(stderr, "[ExternVocoderStep] select() failed (errno %d, filenos %d / %d)\n", errno, receiveStdinFd_, receiveStdoutFd_);
                 break;
+            }
+            
+            if (isRestarting_)
+            {
+                // Close stdin and wait for process to die.
+                fprintf(stderr, "[ExternVocoerStep] Restarting...\n");
+                isRestarting_ = false;
+                close(receiveStdinFd_);
+                receiveStdinFd_ = -1;
             }
         }
 
         closeProcess_();
 
-        if (isRestarting_)
+        if (!isExiting_)
         {
-            isRestarting_ = false;
-
             // Sleep for 1s before restarting
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
