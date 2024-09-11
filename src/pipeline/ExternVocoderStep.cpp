@@ -530,14 +530,15 @@ void ExternVocoderStep::openProcess_()
     if (recvProcessId_ == 0)
     {
         // Child process, redirect stdin/stdout and execute receiver
-        rv = dup2(stdoutPipes[1], STDOUT_FILENO);
-        assert(rv != -1);
         rv = dup2(stdinPipes[0], STDIN_FILENO);
         assert(rv != -1);
+        close(stdinPipes[0]);
+
+        rv = dup2(stdoutPipes[1], STDOUT_FILENO);
+        assert(rv != -1);
+        close(stdoutPipes[1]);
 
         close(stdoutPipes[0]);
-        close(stdoutPipes[1]);
-        close(stdinPipes[0]);
         close(stdinPipes[1]);
 
         // Tokenize and generate an argv for exec()
@@ -647,6 +648,10 @@ void ExternVocoderStep::threadEntry_()
                         fprintf(stderr, "[ExternVocoderStep] read() failed (errno %d)\n", errno);
                         break;
                     }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
             else if (rv == -1)
@@ -654,15 +659,17 @@ void ExternVocoderStep::threadEntry_()
                 fprintf(stderr, "[ExternVocoderStep] select() failed (errno %d, filenos %d / %d)\n", errno, receiveStdinFd_, receiveStdoutFd_);
                 break;
             }
-            
+           
+#if 0 
             if (isRestarting_)
             {
                 // Close stdin and wait for process to die.
-                fprintf(stderr, "[ExternVocoerStep] Restarting...\n");
+                fprintf(stderr, "[ExternVocoderStep] Restarting...\n");
                 isRestarting_ = false;
                 close(receiveStdinFd_);
                 receiveStdinFd_ = -1;
             }
+#endif // 0
         }
 
         closeProcess_();

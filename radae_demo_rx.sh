@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 RADAE_PATH=$1
 RADAE_VENV=$2
