@@ -899,6 +899,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add monitor volume adjustment. (PR #733)
     * Avoid modifying the audio device configuration without the user explicitly doing so. (PR #735)
     * If provided by user, add config file to titlebar. (PR #738)
+    * Minor adjustments to spectrum/waterfall tooltips. (PR #743)
 3. Build system:
     * Allow overrriding the version tag when building. (PR #727)
     * Update wxWidgets to 3.2.5. (PR #731)
