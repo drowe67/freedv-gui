@@ -22,6 +22,7 @@
 
 #include "TapStep.h"
 
+#include <iostream>
 #include <assert.h>
 
 TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
@@ -54,4 +55,12 @@ std::shared_ptr<short> TapStep::execute(std::shared_ptr<short> inputSamples, int
     
     *numOutputSamples = numInputSamples;
     return inputSamples;
+}
+
+void TapStep::dump(int indentLevel)
+{
+    IPipelineStep::dump(indentLevel);
+    indentLevel += 4;
+    std::cout << std::string(indentLevel, ' ');
+    tapStep_->dump(indentLevel);
 }

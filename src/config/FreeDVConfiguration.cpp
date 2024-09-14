@@ -114,6 +114,9 @@ FreeDVConfiguration::FreeDVConfiguration()
     , txRxDelayMilliseconds("/Audio/TxRxDelayMilliseconds", 0)
 
     , reportingUserMsgColWidth("/Windows/FreeDVReporter/reportingUserMsgColWidth", 130)
+
+    , externalVocoderRxCommand("/ExternalVocoder/RxCommand", _(""))
+    , externalVocoderTxCommand("/ExternalVocoder/TxCommand", _(""))
 {
     // empty
 }
@@ -240,6 +243,9 @@ void FreeDVConfiguration::load(wxConfigBase* config)
 
     load_(config, txRxDelayMilliseconds);
 
+    load_(config, externalVocoderRxCommand);
+    load_(config, externalVocoderTxCommand);
+
     load_(config, reportingUserMsgColWidth);
 }
 
@@ -327,6 +333,9 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     save_(config, monitorTxAudioVol);
 
     save_(config, txRxDelayMilliseconds);
+
+    save_(config, externalVocoderRxCommand);
+    save_(config, externalVocoderTxCommand);
 
     save_(config, reportingUserMsgColWidth);
     

@@ -20,6 +20,8 @@
 //
 //=========================================================================
 
+#include <chrono>
+
 // This forces us to use freedv-gui's version rather than another one.
 // TBD -- may not be needed once we fully switch over to the audio pipeline.
 #include "../defines.h"
@@ -627,8 +629,28 @@ void TxRxThread::txProcessing_()
             // There may be recorded audio left to encode while ending TX. To handle this,
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
             int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);            
-            if (nread != 0 && endingTx) break;
-            
+            if (nread != 0 && endingTx)
+            {
+                if (freedvInterface.getCurrentMode() == -1)
+                {
+                    // Special case for handling RADAE EOT
+                    freedvInterface.restartTxVocoder();
+
+                    short* inputSamples = new short[1];
+                    auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
+                    do
+                    {
+                        auto outputSamples = pipeline_->execute(inputSamplesPtr, 0, &nout);
+                        if (nout > 0)
+                        {
+                            fprintf(stderr, "YYY outputting %d remaining samples\n", nout);
+                            codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
+                        }
+                    } while (nout > 0);
+                }
+                break;
+            }
+           
             short* inputSamples = new short[nsam_in_48];
             memcpy(inputSamples, insound_card, nsam_in_48 * sizeof(short));
             
@@ -648,7 +670,8 @@ void TxRxThread::txProcessing_()
     {
         // Deallocates TX pipeline when not in use. This is needed to reset the state of
         // certain TX pipeline steps (such as Speex).
-        pipeline_ = nullptr;
+        // XXX: temporarily disabling due to latency of RADAE scripts while restarting.
+        //pipeline_ = nullptr;
         
         // Wipe anything added in the FIFO to prevent pops on next TX.
         clearFifos_();
@@ -704,6 +727,8 @@ void TxRxThread::rxProcessing_()
         short* inputSamples = new short[nsam];
         memcpy(inputSamples, insound_card, nsam * sizeof(short));
         
+        //pipeline_->dump();
+
         auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
         auto outputSamples = pipeline_->execute(inputSamplesPtr, nsam, &nout);
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;

@@ -20,6 +20,7 @@
 //
 //=========================================================================
 
+#include <iostream>
 #include <assert.h>
 #include "EitherOrStep.h"
 
@@ -59,4 +60,16 @@ std::shared_ptr<short> EitherOrStep::execute(std::shared_ptr<short> inputSamples
     {
         return falseStep_->execute(inputSamples, numInputSamples, numOutputSamples);
     }
+}
+
+void EitherOrStep::dump(int indentLevel)
+{
+    IPipelineStep::dump(indentLevel);
+
+    indentLevel += 4;
+
+    std::cout << std::string(indentLevel, ' ') << "[true] ";
+    trueStep_->dump(indentLevel);
+    std::cout << std::string(indentLevel, ' ') << "[false] ";
+    falseStep_->dump(indentLevel);
 }

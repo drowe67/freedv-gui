@@ -224,6 +224,16 @@ int MainFrame::VoiceKeyerStartTx(void)
     }
     else {
         g_sfTxFs = sfInfo.samplerate;
+        
+        if (g_sfTxFs < 16000)
+        {
+            wxMessageBox(wxT("The selected voice keyer file does not have a high enough sample rate to guarantee acceptable audio quality. Please ensure that your file's sample rate is 16 kHz or greater."), wxT("Sample Rate Too Low"), wxOK);
+            sf_close(tmpPlayFile);
+            m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+            m_togBtnVoiceKeyer->SetValue(false);
+            return VK_IDLE;
+        }
+        
         g_sfPlayFile = tmpPlayFile;
         
         SetStatusText(wxT("Voice Keyer: Playing file ") + vkFileName_ + wxT(" to mic input") , 0);

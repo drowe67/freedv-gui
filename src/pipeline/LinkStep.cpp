@@ -53,8 +53,11 @@ void LinkStep::clearFifo()
 std::shared_ptr<short> LinkStep::InputStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
     auto fifo = parent_->getFifo();
-    codec2_fifo_write(fifo, inputSamples.get(), numInputSamples);
-    
+    if (numInputSamples > 0)
+    {
+        codec2_fifo_write(fifo, inputSamples.get(), numInputSamples);
+    }
+ 
     // Since we short circuited to the output step, don't return any samples here.
     *numOutputSamples = 0;
     return nullptr;

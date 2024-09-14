@@ -126,6 +126,9 @@ public:
 
     ConfigurationDataElement<int> reportingUserMsgColWidth;
     
+    ConfigurationDataElement<wxString> externalVocoderRxCommand;
+    ConfigurationDataElement<wxString> externalVocoderTxCommand;
+
     virtual void load(wxConfigBase* config) override;
     virtual void save(wxConfigBase* config) override;
 };

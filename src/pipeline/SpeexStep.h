@@ -40,10 +40,10 @@ public:
     SpeexStep(int sampleRate);
     virtual ~SpeexStep();
     
-    virtual int getInputSampleRate() const;
-    virtual int getOutputSampleRate() const;
+    virtual int getInputSampleRate() const override;
+    virtual int getOutputSampleRate() const override;
     
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
+    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
     
 private:
     int sampleRate_;

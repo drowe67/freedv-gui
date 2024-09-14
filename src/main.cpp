@@ -516,6 +516,8 @@ setDefaultMode:
         m_rb700e->SetValue(1);
     if (mode == 6)
         m_rb800xa->SetValue(1);
+    if (mode == 11)
+        m_rbExternalVocoder->SetValue(1);
     // mode 7 was the former 2400B mode, now removed.
     if ((mode == 9) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
         m_rb2020->SetValue(1);
@@ -1033,6 +1035,8 @@ MainFrame::~MainFrame()
         mode = 6;
     if (m_rb2020->GetValue())
         mode = 9;
+    if (m_rbExternalVocoder->GetValue())
+        mode = 11;
 #if defined(FREEDV_MODE_2020B)
     if (m_rb2020b->GetValue())
         mode = 10;
@@ -1803,6 +1807,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         m_hiddenMode1,
         m_hiddenMode2,
 
+        m_rbExternalVocoder,
         m_rb700c,
         m_rb700d,
         m_rb700e,
@@ -1839,6 +1844,10 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     else if (eventObject == m_rb700c || (eventObject == nullptr && m_rb700c->GetValue())) 
     {
         g_mode = FREEDV_MODE_700C;
+    }
+    else if (eventObject == m_rbExternalVocoder || (eventObject == nullptr && m_rbExternalVocoder->GetValue())) 
+    {
+        g_mode = -1; // special number to trigger use of external vocoder instead
     }
     else if (eventObject == m_rb700d || (eventObject == nullptr && m_rb700d->GetValue())) 
     {
@@ -1939,9 +1948,10 @@ void MainFrame::performFreeDVOn_()
         wxCommandEvent tmpEvent;
         OnChangeTxMode(tmpEvent);
 
-        if (!wxGetApp().appConfiguration.multipleReceiveEnabled)
+        if (!wxGetApp().appConfiguration.multipleReceiveEnabled || m_rbExternalVocoder->GetValue())
         {
             m_rb1600->Disable();
+            m_rbExternalVocoder->Disable();
             m_rb700c->Disable();
             m_rb700d->Disable();
             m_rb700e->Disable();
@@ -1976,6 +1986,7 @@ void MainFrame::performFreeDVOn_()
             }
         
             // If we're receive-only, it doesn't make sense to be able to change TX mode.
+            m_rbExternalVocoder->Disable();
             if (g_nSoundCards <= 1)
             {
                 m_rb1600->Disable();
@@ -1995,6 +2006,10 @@ void MainFrame::performFreeDVOn_()
         g_sfTxFs = FS;
     
         wxGetApp().m_prevMode = g_mode;
+
+        freedvInterface.setExternVocoderRxCommand((const char*)wxGetApp().appConfiguration.externalVocoderRxCommand.get().ToUTF8());
+        freedvInterface.setExternVocoderTxCommand((const char*)wxGetApp().appConfiguration.externalVocoderTxCommand.get().ToUTF8());
+
         freedvInterface.start(g_mode, wxGetApp().appConfiguration.fifoSizeMs, !wxGetApp().appConfiguration.multipleReceiveEnabled || wxGetApp().appConfiguration.multipleReceiveOnSingleThread, wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled);
 
         // Codec 2 VQ Equaliser
@@ -2272,6 +2287,7 @@ void MainFrame::performFreeDVOff_()
         m_togBtnVoiceKeyer->Disable();
     
         m_rb1600->Enable();
+        m_rbExternalVocoder->Enable();
         m_rb700c->Enable();
         m_rb700d->Enable();
         m_rb700e->Enable();
@@ -3159,6 +3175,44 @@ bool MainFrame::validateSoundCardSetup()
         wxMessageBox(wxString::Format(
             "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Audio Config... to check your settings.", 
             failedDeviceName), wxT("Sound Device Not Found"), wxOK, this);
+    }
+    else
+    {
+        const int MIN_SAMPLE_RATE = 16000;
+        int failedSampleRate = 0;
+        
+        // Validate sample rates
+        if (wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate < MIN_SAMPLE_RATE)
+        {
+            failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get();
+            failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
+            canRun = false;
+        }
+        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate < MIN_SAMPLE_RATE)
+        {
+            failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get();
+            failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
+            canRun = false;
+        }
+        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate < MIN_SAMPLE_RATE)
+        {
+            failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get();
+            failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
+            canRun = false;
+        }
+        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate < MIN_SAMPLE_RATE)
+        {
+            failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get();
+            failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate;
+            canRun = false;
+        }
+        
+        if (!canRun)
+        {
+            wxMessageBox(wxString::Format(
+                "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Audio Config... to check your settings.", 
+                failedDeviceName, failedSampleRate, MIN_SAMPLE_RATE), wxT("Sample Rate Too Low"), wxOK, this);
+        }
     }
     
     engine->stop();

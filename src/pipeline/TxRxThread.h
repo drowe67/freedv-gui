@@ -72,7 +72,7 @@ private:
     int inputSampleRate_;
     int outputSampleRate_;
     LinkStep* equalizedMicAudioLink_;
-    
+
     void initializePipeline_();
     void txProcessing_();
     void rxProcessing_();

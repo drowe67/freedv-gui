@@ -41,9 +41,9 @@ public:
     FreeDVTransmitStep(struct freedv* dv, std::function<float()> getFreqOffsetFn);
     virtual ~FreeDVTransmitStep();
     
-    virtual int getInputSampleRate() const;
-    virtual int getOutputSampleRate() const;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
+    virtual int getInputSampleRate() const override;
+    virtual int getOutputSampleRate() const override;
+    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
     
 private:
     struct freedv* dv_;

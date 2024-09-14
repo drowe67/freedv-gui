@@ -43,6 +43,7 @@
 
 class IPipelineStep;
 class ParallelStep;
+class ExternVocoderStep;
 
 class FreeDVInterface
 {
@@ -115,7 +116,12 @@ public:
         std::function<float()> getFreqOffsetFn,
         std::function<float*()> getSigPwrAvgFn
     );
-        
+   
+    void setExternVocoderRxCommand(std::string command) { externVocoderRxCommand_ = command; }
+    void setExternVocoderTxCommand(std::string command) { externVocoderTxCommand_ = command; }
+ 
+    void restartTxVocoder();
+
 private:
     struct ReceivePipelineState
     {
@@ -168,7 +174,12 @@ private:
     std::deque<reliable_text_t> reliableText_;
     std::string receivedReliableText_;
     std::mutex reliableTextMutex_;
-    
+   
+    std::string externVocoderRxCommand_;
+    std::string externVocoderTxCommand_;
+
+    ExternVocoderStep* txVocoderStep_;
+ 
     int preProcessRxFn_(ParallelStep* ps);
     int postProcessRxFn_(ParallelStep* ps);
 };
