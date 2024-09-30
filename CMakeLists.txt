@@ -322,6 +322,10 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/soxconfig.h.in"
 find_package(Threads REQUIRED)
 message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 
+#
+# Build RADE. 
+# (TBD - allow override with own build, similar to Codec2)
+include(cmake/BuildRADE.cmake)
 
 #
 # Find codec2 and lpcnetfreedv
