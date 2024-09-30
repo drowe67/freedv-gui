@@ -40,4 +40,12 @@ install(
     FILES ${download_pip_SOURCE_DIR}/get-pip.py
     DESTINATION bin)
 
+# Install files needed for post-install to work.
+install(
+    FILES ${CMAKE_SOURCE_DIR}/cmake/rade-requirements.txt
+    DESTINATION bin)
+install(
+    FILES ${CMAKE_SOURCE_DIR}/cmake/rade-setup.bat
+    DESTINATION bin)
+
 endif(WIN32)
