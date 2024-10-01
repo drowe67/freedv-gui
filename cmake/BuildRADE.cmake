@@ -50,13 +50,11 @@ install(
 
 # Ensure that rade-setup.bat is executed by the installer,
 # otherwise no packages will be installed.
-list(APPEND CPACK_NSIS_EXTRA_INSTALL_COMMANDS
-    "ExecShellWait '' '\$INSTDIR\\bin\\rade-setup.bat' ''")
+set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS
+    "ExecShellWait '' '\$INSTDIR\\\\bin\\\\rade-setup.bat' ''")
 
 # Make sure we fully clean up after Python on uninstall.
-list(APPEND CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
-    "RMDir /r /REBOOTOK '\$INSTDIR\\bin\\Lib'"
-    "RMDir /r /REBOOTOK '\$INSTDIR\\bin\\scripts'"
-    "RMDir /r /REBOOTOK '\$INSTDIR\\bin\\share'")
+set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
+    "${CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS}\r\nRMDir /r /REBOOTOK '\$INSTDIR\\\\bin\\\\Lib'\r\nRMDir /r /REBOOTOK '\$INSTDIR\\\\bin\\\\scripts'\r\nRMDir /r /REBOOTOK '\$INSTDIR\\\\bin\\\\share'")
 
 endif(WIN32)
