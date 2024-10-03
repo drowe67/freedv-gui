@@ -1,3 +1,28 @@
+if(CMAKE_CROSSCOMPILING)
+    set(RADE_CMAKE_ARGS ${RADE_CMAKE_ARGS} -DPython3_ROOT_DIR=${Python3_ROOT_DIR} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
+endif()
+
+ExternalProject_Add(build_rade
+   SOURCE_DIR rade_src
+   BINARY_DIR rade_build
+   GIT_REPOSITORY https://github.com/drowe67/radae.git
+   GIT_TAG dr-embed
+   CMAKE_ARGS ${RADE_CMAKE_ARGS}
+   #CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET}
+   INSTALL_COMMAND ""
+)
+
+ExternalProject_Get_Property(build_rade BINARY_DIR)
+ExternalProject_Get_Property(build_rade SOURCE_DIR)
+add_library(rade SHARED IMPORTED)
+target_include_directories(rade INTERFACE ${SOURCE_DIR}/src)
+
+set_target_properties(rade PROPERTIES
+    IMPORTED_LOCATION "${BINARY_DIR}/src/librade${CMAKE_SHARED_LIBRARY_SUFFIX}"
+    IMPORTED_IMPLIB   "${BINARY_DIR}/src/librade${CMAKE_IMPORT_LIBRARY_SUFFIX}"
+)
+list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${BINARY_DIR}/src)
+
 if(WIN32)
 
 # XXX only x86_64 supported for now
@@ -47,6 +72,24 @@ install(
 install(
     FILES ${CMAKE_SOURCE_DIR}/cmake/rade-setup.bat
     DESTINATION bin)
+
+# Install RADE Python files
+install(
+    DIRECTORY ${SOURCE_DIR}/radae
+    DESTINATION bin)
+install(
+    FILES ${BINARY_DIR}/src/radae_rx.exe
+    DESTINATION bin)
+install(
+    FILES ${BINARY_DIR}/src/radae_tx.exe
+    DESTINATION bin)
+install(
+    FILES ${SOURCE_DIR}/embed/radae_tx.py ${SOURCE_DIR}/embed/radae_rx.py
+    DESTINATION bin)
+install(
+    FILES ${SOURCE_DIR}/model19_check3/checkpoints/checkpoint_epoch_100.pth
+    DESTINATION model19_check3/checkpoints
+)
 
 # Ensure that rade-setup.bat is executed by the installer,
 # otherwise no packages will be installed.

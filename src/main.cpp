@@ -46,6 +46,8 @@
 #include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/freedv_reporter.h"
 
+#include "rade_api.h"
+
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
 #define wxUSE_LIBJPEG   1
@@ -219,6 +221,9 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
+    // Print RADE API version. This also forces the RADE library to be linked.
+    fprintf(stderr, "Using RADE API version %d\n", rade_version());
+
     // Initialize locale.
     m_locale.Init();
 

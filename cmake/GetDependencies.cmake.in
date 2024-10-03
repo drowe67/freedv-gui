@@ -106,6 +106,9 @@ set( _windlls
     api-ms-win-crt-heap-l1-1-0.dll
     api-ms-win-crt-convert-l1-1-0.dll
     api-ms-win-crt-multibyte-l1-1-0.dll
+
+    # Filter Python DLLs as they're already included via install()
+    python312.dll
 )
 list(REMOVE_ITEM _deps ${_windlls})
 
