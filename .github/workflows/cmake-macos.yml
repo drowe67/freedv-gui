@@ -23,7 +23,7 @@ jobs:
     - name: Install packages
       shell: bash
       working-directory: ${{github.workspace}}
-      run: brew install automake libtool
+      run: brew install automake libtool numpy
 
     - name: Build freedv-gui
       shell: bash
