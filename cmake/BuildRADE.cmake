@@ -2,6 +2,7 @@ if(CMAKE_CROSSCOMPILING)
     set(RADE_CMAKE_ARGS ${RADE_CMAKE_ARGS} -DPython3_ROOT_DIR=${Python3_ROOT_DIR} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
 endif()
 
+include(ExternalProject)
 ExternalProject_Add(build_rade
    SOURCE_DIR rade_src
    BINARY_DIR rade_build
@@ -15,7 +16,7 @@ ExternalProject_Add(build_rade
 ExternalProject_Get_Property(build_rade BINARY_DIR)
 ExternalProject_Get_Property(build_rade SOURCE_DIR)
 add_library(rade SHARED IMPORTED)
-target_include_directories(rade INTERFACE ${SOURCE_DIR}/src)
+include_directories(${SOURCE_DIR}/src)
 
 set_target_properties(rade PROPERTIES
     IMPORTED_LOCATION "${BINARY_DIR}/src/librade${CMAKE_SHARED_LIBRARY_SUFFIX}"
