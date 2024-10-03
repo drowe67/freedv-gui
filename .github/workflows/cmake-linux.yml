@@ -28,7 +28,7 @@ jobs:
             
     - name: Spellcheck codebase
       shell: bash
-      run: codespell --ignore-words-list=inout,nin,ontop,parm,tthe,ue `find src -name '*.c*' -o -name '*.h' -o -name '*.mm'`
+      run: codespell --ignore-words-list=radae,rade,inout,nin,ontop,parm,tthe,ue `find src -name '*.c*' -o -name '*.h' -o -name '*.mm'`
 
     - name: Build freedv-gui using PortAudio
       shell: bash
