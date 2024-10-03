@@ -221,9 +221,6 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 //-------------------------------------------------------------------------
 bool MainApp::OnInit()
 {
-    // Print RADE API version. This also forces the RADE library to be linked.
-    fprintf(stderr, "Using RADE API version %d\n", rade_version());
-
     // Initialize locale.
     m_locale.Init();
 
@@ -899,6 +896,9 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     }
 #endif
     
+    // Print RADE API version. This also forces the RADE library to be linked.
+    fprintf(stderr, "Using RADE API version %d\n", rade_version());
+
 #if defined(FREEDV_MODE_2020) && !defined(LPCNET_DISABLED)
     // First time use: make sure 2020 mode will actually work on this machine.
     if (wxGetApp().appConfiguration.firstTimeUse)
