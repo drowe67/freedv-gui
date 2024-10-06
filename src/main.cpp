@@ -527,6 +527,10 @@ setDefaultMode:
         mode = defaultMode;
         goto setDefaultMode;
     }
+    if (mode == FREEDV_MODE_RADE)
+    {
+        m_rbRADE->SetValue(1);
+    }
 #if defined(FREEDV_MODE_2020B)
     if ((mode == 10) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
         m_rb2020b->SetValue(1);
@@ -1038,6 +1042,8 @@ MainFrame::~MainFrame()
         mode = 6;
     if (m_rb2020->GetValue())
         mode = 9;
+    if (m_rbRADE->GetValue())
+        mode = FREEDV_MODE_RADE;
 #if defined(FREEDV_MODE_2020B)
     if (m_rb2020b->GetValue())
         mode = 10;
@@ -1808,6 +1814,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         m_hiddenMode1,
         m_hiddenMode2,
 
+        m_rbRADE,
         m_rb700c,
         m_rb700d,
         m_rb700e,
@@ -1844,6 +1851,10 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     else if (eventObject == m_rb700c || (eventObject == nullptr && m_rb700c->GetValue())) 
     {
         g_mode = FREEDV_MODE_700C;
+    }
+    else if (eventObject == m_rbRADE || (eventObject == nullptr && m_rbRADE->GetValue())) 
+    {
+        g_mode = FREEDV_MODE_RADE;
     }
     else if (eventObject == m_rb700d || (eventObject == nullptr && m_rb700d->GetValue())) 
     {
@@ -1944,9 +1955,10 @@ void MainFrame::performFreeDVOn_()
         wxCommandEvent tmpEvent;
         OnChangeTxMode(tmpEvent);
 
-        if (!wxGetApp().appConfiguration.multipleReceiveEnabled)
+        if (!wxGetApp().appConfiguration.multipleReceiveEnabled || m_rbRADE->GetValue())
         {
             m_rb1600->Disable();
+            m_rbRADE->GetValue();
             m_rb700c->Disable();
             m_rb700d->Disable();
             m_rb700e->Disable();
@@ -1984,6 +1996,7 @@ void MainFrame::performFreeDVOn_()
             if (g_nSoundCards <= 1)
             {
                 m_rb1600->Disable();
+                m_rbRADE->Disable();
                 m_rb700c->Disable();
                 m_rb700d->Disable();
                 m_rb700e->Disable();
@@ -2276,6 +2289,7 @@ void MainFrame::performFreeDVOff_()
         m_btnTogPTT->Disable();
         m_togBtnVoiceKeyer->Disable();
     
+        m_rbRADE->Enable();
         m_rb1600->Enable();
         m_rb700c->Enable();
         m_rb700d->Enable();
