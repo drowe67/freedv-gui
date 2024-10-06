@@ -59,6 +59,12 @@ else(APPLE)
 target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util ${LPCNET_LIB_NAME} codec2 rade opus)
 endif(APPLE)
 
+if(APPLE)
+    add_dependencies(FreeDV build_opus build_rade)
+else(APPLE)
+    add_dependencies(freedv build_opus build_rade)
+endif(APPLE)
+
 # Add build dependencies for internally built external libraries.
 if(USE_INTERNAL_CODEC2)
     if(APPLE)

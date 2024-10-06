@@ -16,6 +16,7 @@ ExternalProject_Add(build_rade
 ExternalProject_Get_Property(build_rade BINARY_DIR)
 ExternalProject_Get_Property(build_rade SOURCE_DIR)
 add_library(rade SHARED IMPORTED)
+add_dependencies(rade build_rade)
 include_directories(${SOURCE_DIR}/src)
 
 set_target_properties(rade PROPERTIES
