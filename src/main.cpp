@@ -234,7 +234,10 @@ bool MainApp::OnInit()
     SetAppName(wxT("FreeDV"));      // not needed, it's the default value
     
     golay23_init();
-    
+   
+    // Initialize RADE.
+    rade_initialize();
+ 
     m_rTopWindow = wxRect(0, 0, 0, 0);
 
      // Create the main application window
@@ -1101,6 +1104,9 @@ MainFrame::~MainFrame()
     wxGetApp().rigFrequencyController = nullptr;
     wxGetApp().rigPttController = nullptr;
     wxGetApp().m_reporters.clear();
+
+    // Clean up RADE.
+    rade_finalize();
 }
 
 
