@@ -39,10 +39,23 @@
 #include "modem_stats.h"
 #include "reliable_text.h"
 
+// RADE required include files
+#include "rade_api.h"
+
+// TBD - need to wrap in "extern C" to avoid linker errors
+extern "C" 
+{
+    #include "fargan.h"
+}
+
 #include <samplerate.h>
 
 class IPipelineStep;
 class ParallelStep;
+
+// Anything above 255 is a RADE mode. There's only one right now,
+// this is just for future expansion.
+#define FREEDV_MODE_RADE ((1 << 8) + 1)
 
 class FreeDVInterface
 {
@@ -168,7 +181,10 @@ private:
     std::deque<reliable_text_t> reliableText_;
     std::string receivedReliableText_;
     std::mutex reliableTextMutex_;
-    
+   
+    struct rade* rade_;
+    FARGANState fargan_;
+ 
     int preProcessRxFn_(ParallelStep* ps);
     int postProcessRxFn_(ParallelStep* ps);
 };

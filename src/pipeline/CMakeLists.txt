@@ -1,43 +1,24 @@
 add_library(fdv_audio_pipeline STATIC
-    AudioPipeline.h
     AudioPipeline.cpp
-    ComputeRfSpectrumStep.h
     ComputeRfSpectrumStep.cpp
-    EitherOrStep.h
     EitherOrStep.cpp
-    EqualizerStep.h
     EqualizerStep.cpp
-    ExclusiveAccessStep.h
     ExclusiveAccessStep.cpp
-    FreeDVReceiveStep.h
     FreeDVReceiveStep.cpp
-    FreeDVTransmitStep.h
     FreeDVTransmitStep.cpp
-    IPipelineStep.h
     IPipelineStep.cpp
-    LevelAdjustStep.h
     LevelAdjustStep.cpp
-    LinkStep.h
     LinkStep.cpp
-    MuteStep.h
     MuteStep.cpp
-    ParallelStep.h
     ParallelStep.cpp
-    PlaybackStep.h
     PlaybackStep.cpp
-    RecordStep.h
+    RADEReceiveStep.cpp
     RecordStep.cpp
-    ResampleStep.h
     ResampleStep.cpp
-    ResamplePlotStep.h
     ResamplePlotStep.cpp
-    SpeexStep.h
     SpeexStep.cpp
-    TapStep.h
     TapStep.cpp
-    ToneInterfererStep.h
     ToneInterfererStep.cpp
-    TxRxThread.h
     TxRxThread.cpp
 )
 
