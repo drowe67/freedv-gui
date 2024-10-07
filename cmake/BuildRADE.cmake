@@ -86,11 +86,11 @@ install(
     FILES ${BINARY_DIR}/src/radae_tx.exe
     DESTINATION bin)
 install(
-    FILES ${SOURCE_DIR}/embed/radae_tx.py ${SOURCE_DIR}/embed/radae_rx.py
+    FILES ${SOURCE_DIR}/radae_txe.py ${SOURCE_DIR}/radae_rxe.py
     DESTINATION bin)
 install(
     FILES ${SOURCE_DIR}/model19_check3/checkpoints/checkpoint_epoch_100.pth
-    DESTINATION model19_check3/checkpoints
+    DESTINATION bin/model19_check3/checkpoints
 )
 
 # Ensure that rade-setup.bat is executed by the installer,
