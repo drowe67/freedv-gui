@@ -234,7 +234,15 @@ bool MainApp::OnInit()
     SetAppName(wxT("FreeDV"));      // not needed, it's the default value
     
     golay23_init();
-   
+  
+#if _WIN32
+    // Change current folder to the folder containing freedv.exe.
+    // This is needed so that Python can find RADE properly. 
+    wxFileName f(wxStandardPaths::Get().GetExecutablePath());
+    wxString appPath(f.GetPath());
+    wxSetWorkingDirectory(appPath);
+#endif // _WIN32
+
     // Initialize RADE.
     rade_initialize();
  
