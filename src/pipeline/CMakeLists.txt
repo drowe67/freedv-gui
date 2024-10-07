@@ -13,6 +13,7 @@ add_library(fdv_audio_pipeline STATIC
     ParallelStep.cpp
     PlaybackStep.cpp
     RADEReceiveStep.cpp
+    RADETransmitStep.cpp
     RecordStep.cpp
     ResampleStep.cpp
     ResamplePlotStep.cpp

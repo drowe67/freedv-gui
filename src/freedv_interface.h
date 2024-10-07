@@ -46,6 +46,7 @@
 extern "C" 
 {
     #include "fargan.h"
+    #include "lpcnet.h"
 }
 
 #include <samplerate.h>
@@ -184,7 +185,7 @@ private:
    
     struct rade* rade_;
     FARGANState fargan_;
- 
+    LPCNetEncState *lpcnetEncState_; 
     int preProcessRxFn_(ParallelStep* ps);
     int postProcessRxFn_(ParallelStep* ps);
 };
