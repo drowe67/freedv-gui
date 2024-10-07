@@ -30,6 +30,7 @@
 #include <chrono>
 #include <climits>
 #include <wx/cmdline.h>
+#include <wx/stdpaths.h>
 
 #include "version.h"
 #include "main.h"
