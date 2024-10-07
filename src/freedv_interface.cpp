@@ -400,6 +400,12 @@ const char* FreeDVInterface::getCurrentTxModeStr() const
 
 void FreeDVInterface::changeTxMode(int txMode)
 {
+    if (txMode >= FREEDV_MODE_RADE)
+    {
+        txMode_ = txMode;
+        return;
+    }
+
     int index = 0;
     for (auto& mode : enabledModes_)
     {
