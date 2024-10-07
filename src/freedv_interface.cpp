@@ -71,7 +71,8 @@ FreeDVInterface::FreeDVInterface() :
     currentRxMode_(nullptr),
     lastSyncRxMode_(nullptr),
     rade_(nullptr),
-    lpcnetEncState_(nullptr)
+    lpcnetEncState_(nullptr),
+    radeTxStep_(nullptr)
 {
     // empty
 }
@@ -266,6 +267,7 @@ void FreeDVInterface::stop()
         lpcnet_encoder_destroy(lpcnetEncState_);
     }
     lpcnetEncState_ = nullptr;
+    radeTxStep_ = nullptr;
 }
 
 void FreeDVInterface::setRunTimeOptions(bool clip, bool bpf)
@@ -666,8 +668,8 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
     if (txMode_ >= FREEDV_MODE_RADE)
     {
         // Special handling for RADE
-        auto txVocoderStep = new RADETransmitStep(rade_, lpcnetEncState_);
-        parallelSteps.push_back(txVocoderStep);
+        radeTxStep_ = new RADETransmitStep(rade_, lpcnetEncState_);
+        parallelSteps.push_back(radeTxStep_);
     }
  
     for (auto& dv : dvObjects_)
@@ -755,6 +757,11 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     );
     
     return parallelStep;
+}
+
+void FreeDVInterface::restartTxVocoder() 
+{ 
+    radeTxStep_->restartVocoder(); 
 }
 
 int FreeDVInterface::preProcessRxFn_(ParallelStep* stepObj)

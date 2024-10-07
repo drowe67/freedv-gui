@@ -38,6 +38,9 @@ public:
     virtual int getInputSampleRate() const;
     virtual int getOutputSampleRate() const;
     virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
+
+    // For triggering EOO
+    void restartVocoder();
     
 private:
     struct rade* dv_;

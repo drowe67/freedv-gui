@@ -121,3 +121,20 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
     
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
 }
+
+void RADETransmitStep::restartVocoder()
+{
+    // Queues up EOO for return on the next call to this pipeline step.
+    int numEOOSamples = rade_n_tx_eoo_out(dv_);
+    RADE_COMP eooOut[numEOOSamples];
+    short eooOutShort[numEOOSamples];
+
+    rade_tx_eoo(dv_, eooOut);
+
+    for (int index = 0; index < numEOOSamples; index++)
+    {
+        eooOutShort[index] = eooOut[index].real * 32767;
+    }
+
+    codec2_fifo_write(outputSampleFifo_, eooOutShort, numEOOSamples);
+}
