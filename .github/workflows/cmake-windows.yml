@@ -58,7 +58,7 @@ jobs:
         export PATH=${{github.workspace}}/llvm-mingw-20230320-ucrt-ubuntu-18.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DLPCNET_DISABLE=1 -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=${{github.workspace}}/win-venv/share/wenv/win32/drive_c/python-3.12.3.stable ..
+        cmake -DLPCNET_DISABLE=1 -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=${{github.workspace}}/win-venv/share/wenv/win32/drive_c/python-3.12.7.stable ..
 
     - name: Build freedv-gui
       shell: bash
