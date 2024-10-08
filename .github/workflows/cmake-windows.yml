@@ -23,7 +23,7 @@ jobs:
     - name: Install required packages
       shell: bash
       working-directory: ${{github.workspace}}
-      run: sudo apt-get install nsis python3-venv wine64
+      run: sudo apt-get install nsis python3-venv wine32
 
     - name: Create Windows Python environment for build
       shell: bash
