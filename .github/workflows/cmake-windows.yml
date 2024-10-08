@@ -20,10 +20,21 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Install Wine
+      run: |
+        sudo dpkg --add-architecture i386
+        sudo sh -c "curl https://dl.winehq.org/wine-builds/winehq.key | gpg --dearmor > /etc/apt/trusted.gpg.d/winehq.gpg"
+        sudo sh -c "apt-add-repository \"https://dl.winehq.org/wine-builds/ubuntu\""
+        sudo apt update
+        sudo apt-get install -yqq --allow-downgrades libgd3/focal libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
+        sudo apt-get purge -yqq libmono* moby* mono* php* libgdiplus libpcre2-posix3 libzip4
+        echo "/opt/wine-staging/bin" >> $GITHUB_PATH
+        sudo apt install -y --install-recommends wine-staging
+
     - name: Install required packages
       shell: bash
       working-directory: ${{github.workspace}}
-      run: sudo apt-get install nsis python3-venv wine32
+      run: sudo apt-get install nsis python3-venv
 
     - name: Create Windows Python environment for build
       shell: bash
