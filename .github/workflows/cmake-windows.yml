@@ -32,17 +32,15 @@ jobs:
     - name: Install required packages
       shell: bash
       working-directory: ${{github.workspace}}
-      run: sudo apt-get install nsis python3-venv
+      run: sudo apt-get install nsis
 
     - name: Create Windows Python environment for build
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          python3 -m venv win-venv
-          . ./win-venv/bin/activate
-          pip3 install wenv
-          wenv init
-          wenv pip install numpy
+          wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
+          wine ./python-3.12.7-amd64.exe /quiet InstallAllUsers=1
+          wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
 
     - name: Download MinGW LLVM
       shell: bash
@@ -58,7 +56,7 @@ jobs:
         export PATH=${{github.workspace}}/llvm-mingw-20230320-ucrt-ubuntu-18.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DLPCNET_DISABLE=1 -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=${{github.workspace}}/win-venv/share/wenv/win32/drive_c/python-3.12.7.stable ..
+        cmake -DLPCNET_DISABLE=1 -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=$HOME/.wine/drive_c/Program\ Files/Python312
 
     - name: Build freedv-gui
       shell: bash
