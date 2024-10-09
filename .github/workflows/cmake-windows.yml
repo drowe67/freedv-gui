@@ -24,7 +24,7 @@ jobs:
       run: |
         sudo dpkg --add-architecture i386
         sudo apt-get update
-        sudo apt install -y --install-recommends wine64 wine32
+        sudo apt install -y --install-recommends wine64 wine32 xvfb
 
     - name: Install required packages
       shell: bash
@@ -36,11 +36,10 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
-          export DISPLAY=
           export WINEPREFIX=`pwd`/wine-env
-          winecfg || :
-          wine ./python-3.12.7-amd64.exe /quiet InstallAllUsers=1
-          wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
+          xvfb run winecfg
+          xvfb run wine ./python-3.12.7-amd64.exe /quiet InstallAllUsers=1
+          xvfb run wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
 
     - name: Download MinGW LLVM
       shell: bash
