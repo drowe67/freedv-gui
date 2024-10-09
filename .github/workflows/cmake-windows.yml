@@ -46,8 +46,8 @@ jobs:
           export DISPLAY=
           export WINEPREFIX=`pwd`/wine-env
           wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
-          wine ./python-3.12.7-amd64.exe /quiet InstallAllUsers=1
-          wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
+          wine64 ./python-3.12.7-amd64.exe /quiet InstallAllUsers=1
+          wine64 c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
 
     - name: Download MinGW LLVM
       shell: bash
