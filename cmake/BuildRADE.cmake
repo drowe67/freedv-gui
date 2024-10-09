@@ -24,6 +24,7 @@ set_target_properties(rade PROPERTIES
     IMPORTED_IMPLIB   "${BINARY_DIR}/src/librade${CMAKE_IMPORT_LIBRARY_SUFFIX}"
 )
 list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${BINARY_DIR}/src)
+set(rade_BINARY_DIR ${BINARY_DIR})
 
 if(WIN32)
 
