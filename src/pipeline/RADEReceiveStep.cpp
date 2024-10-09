@@ -55,12 +55,12 @@ RADEReceiveStep::~RADEReceiveStep()
 
 int RADEReceiveStep::getInputSampleRate() const
 {
-    return 8000; 
+    return RADE_MODEM_SAMPLE_RATE;
 }
 
 int RADEReceiveStep::getOutputSampleRate() const
 {
-    return 16000;
+    return RADE_SPEECH_SAMPLE_RATE;
 }
 
 std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)

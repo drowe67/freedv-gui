@@ -19,8 +19,8 @@
 //
 //==========================================================================
 
-#ifndef CODEC2_INTERFACE_H
-#define CODEC2_INTERFACE_H
+#ifndef FREEDV_INTERFACE_H
+#define FREEDV_INTERFACE_H
 
 #include <pthread.h>
 
@@ -46,12 +46,14 @@
 extern "C" 
 {
     #include "fargan.h"
+    #include "lpcnet.h"
 }
 
 #include <samplerate.h>
 
 class IPipelineStep;
 class ParallelStep;
+class RADETransmitStep;
 
 // Anything above 255 is a RADE mode. There's only one right now,
 // this is just for future expansion.
@@ -128,7 +130,9 @@ public:
         std::function<float()> getFreqOffsetFn,
         std::function<float*()> getSigPwrAvgFn
     );
-        
+
+    void restartTxVocoder();
+ 
 private:
     struct ReceivePipelineState
     {
@@ -184,9 +188,11 @@ private:
    
     struct rade* rade_;
     FARGANState fargan_;
- 
+    LPCNetEncState *lpcnetEncState_; 
+    RADETransmitStep *radeTxStep_;
+
     int preProcessRxFn_(ParallelStep* ps);
     int postProcessRxFn_(ParallelStep* ps);
 };
 
-#endif // CODEC2_INTERFACE_H
+#endif // FREEDV_INTERFACE_H
