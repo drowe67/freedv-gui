@@ -20,30 +20,32 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install Wine
+    - name: Install WINE
       run: |
         sudo dpkg --add-architecture i386
         sudo apt-get update
-        sudo apt install -y --install-recommends wine64 wine32 xvfb
+        sudo apt install -y --install-recommends wine64 wine32
 
     - name: Install required packages
       shell: bash
       working-directory: ${{github.workspace}}
       run: sudo apt-get install nsis
 
-    - name: Install WINE
+    - name: Configure WINE
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
           export WINEPREFIX=`pwd`/wine-env
-          xvfb-run winecfg
+          export DISPLAY=
+          winecfg
 
     - name: Create Windows Python environment for build
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
           export DISPLAY=
+          export WINEPREFIX=`pwd`/wine-env
+          wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
           wine ./python-3.12.7-amd64.exe /quiet InstallAllUsers=1
           wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
 
