@@ -39,6 +39,8 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
+          export DISPLAY=
+          export WINEPREFIX=`pwd`/wine-env
           wine ./python-3.12.7-amd64.exe /quiet InstallAllUsers=1
           wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
 
@@ -53,10 +55,11 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
+        export WINEPREFIX=`pwd`/wine-env
         export PATH=${{github.workspace}}/llvm-mingw-20230320-ucrt-ubuntu-18.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DLPCNET_DISABLE=1 -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=$HOME/.wine/drive_c/Program\ Files/Python312
+        cmake -DLPCNET_DISABLE=1 -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=$WINEPREFIX/drive_c/Program\ Files/Python312
 
     - name: Build freedv-gui
       shell: bash
