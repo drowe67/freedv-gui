@@ -37,9 +37,9 @@ jobs:
       run: |
           wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
           export WINEPREFIX=`pwd`/wine-env
-          xvfb run winecfg
-          xvfb run wine ./python-3.12.7-amd64.exe /quiet InstallAllUsers=1
-          xvfb run wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
+          xvfb-run winecfg
+          xvfb-run wine ./python-3.12.7-amd64.exe /quiet InstallAllUsers=1
+          xvfb-run wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
 
     - name: Download MinGW LLVM
       shell: bash
