@@ -35,21 +35,16 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          export WINEPREFIX=`pwd`/wine-env
-          export WINEARCH=win64
-          export DISPLAY=
-          winecfg
+          WINEPREFIX=`pwd`/wine-env WINEARCH=win64 DISPLAY= winecfg
 
     - name: Create Windows Python environment for build
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          export DISPLAY=
           export WINEPREFIX=`pwd`/wine-env
-          export WINEARCH=win64
           wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
-          wine ./python-3.12.7-amd64.exe /quiet InstallAllUsers=1
-          wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
+          xvfb-run wine ./python-3.12.7-amd64.exe /quiet InstallAllUsers=1
+          xvfb-run wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
 
     - name: Download MinGW LLVM
       shell: bash
