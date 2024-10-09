@@ -22,7 +22,9 @@ jobs:
 
     - name: Install Wine
       run: |
-        sudo apt install -y --install-recommends wine64
+        sudo dpkg --add-architecture i386
+        sudo apt-get update
+        sudo apt install -y --install-recommends wine64 wine32
 
     - name: Install required packages
       shell: bash
