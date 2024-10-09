@@ -43,7 +43,7 @@ jobs:
       run: |
           export WINEPREFIX=`pwd`/wine-env
           wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
-          xvfb :0 -screen 0 1024x768x16 &
+          Xvfb :0 -screen 0 1024x768x16 &
           export DISPLAY=:0.0
           wine ./python-3.12.7-amd64.exe /quiet InstallAllUsers=1
           wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
