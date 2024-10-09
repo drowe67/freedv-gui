@@ -38,6 +38,7 @@ jobs:
           wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
           export DISPLAY=
           export WINEPREFIX=`pwd`/wine-env
+          winecfg || :
           wine ./python-3.12.7-amd64.exe /quiet InstallAllUsers=1
           wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
 
