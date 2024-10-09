@@ -35,7 +35,7 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          WINEPREFIX=`pwd`/wine-env WINEARCH=win64 DISPLAY= winecfg
+          WINEPREFIX=`pwd`/wine-env WINEARCH=win64 DISPLAY= winecfg /v win10
 
     - name: Create Windows Python environment for build
       shell: bash
