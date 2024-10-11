@@ -78,7 +78,6 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
             int numOutputSamples = rade_n_tx_out(dv_);
             short pcm[LPCNET_FRAME_SIZE];
             float features[NB_TOTAL_FEATURES];
-            float featuresIn[numRequiredFeaturesForRADE];
             RADE_COMP radeOut[numOutputSamples];
             short radeOutShort[numOutputSamples];
 
