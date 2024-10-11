@@ -236,13 +236,27 @@ bool MainApp::OnInit()
     
     golay23_init();
   
-#if _WIN32
+#if _WIN32 || __APPLE__
     // Change current folder to the folder containing freedv.exe.
     // This is needed so that Python can find RADE properly. 
     wxFileName f(wxStandardPaths::Get().GetExecutablePath());
     wxString appPath(f.GetPath());
     wxSetWorkingDirectory(appPath);
-#endif // _WIN32
+
+#if __APPLE__
+    // Set PYTHONPATH accordingly. We mainly want to be able to access
+    // the model (,pth) as well as the RADE Python code.
+    wxFileName path(appPath);
+    path.AppendDir("Resources");
+    wxSetWorkingDirectory(path.GetPath());
+    wxSetEnv("PYTHONPATH", path.GetPath() + ":/Users/mooneer/devel/freedv-gui/build_osx/temp-venv/lib/python3.12/site-packages");
+
+    wxString ppath;
+    wxGetEnv("PYTHONPATH", &ppath);
+    fprintf(stderr, "PYTHONPATH is %s\n", (const char*)ppath.ToUTF8());
+#endif // __APPLE__
+
+#endif // _WIN32 || __APPLE__
 
     // Initialize RADE.
     rade_initialize();

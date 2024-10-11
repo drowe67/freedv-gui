@@ -157,6 +157,9 @@ if(APPLE)
         COMMAND mkdir ARGS FreeDV.app/Contents/Frameworks
         COMMAND cp ARGS -r ${Python3_ROOT_DIR}/../../../Python.framework FreeDV.app/Contents/Frameworks
         COMMAND install_name_tool ARGS -add_rpath @loader_path/../Frameworks/Python.framework FreeDV.app/Contents/libs/librade*.dylib
+        COMMAND cp ARGS ../rade_src/radae_*e.py FreeDV.app/Contents/Resources
+        COMMAND cp ARGS -r ../rade_src/radae FreeDV.app/Contents/Resources
+        COMMAND cp ARGS -r ../rade_src/model19_check3 FreeDV.app/Contents/Resources
         COMMAND codesign --force --options runtime --timestamp --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/entitlements.plist --sign - ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app
         COMMAND mkdir dist_tmp
         COMMAND cp -r FreeDV.app dist_tmp 
