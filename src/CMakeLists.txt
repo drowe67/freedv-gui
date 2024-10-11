@@ -60,7 +60,11 @@ target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_con
 endif(APPLE)
 
 if(APPLE)
-    add_dependencies(FreeDV build_opus build_rade)
+    if (BUILD_OSX_UNIVERSAL)
+        add_dependencies(FreeDV build_opus_arm build_opus_x86 build_rade)
+    else (BUILD_OSX_UNIVERSAL)
+        add_dependencies(FreeDV build_opus build_rade)
+    endif (BUILD_OSX_UNIVERSAL)
 else(APPLE)
     add_dependencies(freedv build_opus build_rade)
 endif(APPLE)
