@@ -11,7 +11,7 @@ export HAMLIBDIR=$FREEDVGUIDIR/hamlib
 export CODEC2_BRANCH=1.2.0
 export LPCNET_BRANCH=v0.5
 export UT_ENABLE=${UT_ENABLE:-0}
-export LPCNET_DISABLE=${LPCNET_DISABLE:-0}
+export LPCNET_DISABLE=${LPCNET_DISABLE:-1}
 export UNIV_BUILD=${UNIV_BUILD:-1}
 
 # Prerequisite: build dylibbundler

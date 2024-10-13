@@ -8,7 +8,7 @@
 set -x -e
 
 UT_ENABLE=${UT_ENABLE:-0}
-LPCNET_DISABLE=${LPCNET_DISABLE:-0}
+LPCNET_DISABLE=${LPCNET_DISABLE:-1}
 
 # Allow building of either PulseAudio or PortAudio variants
 FREEDV_VARIANT=${1:-pulseaudio}
