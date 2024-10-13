@@ -27,9 +27,13 @@ list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${BINARY_DIR}/src)
 
 if(WIN32)
 
-# XXX only x86_64 supported for now
-set(PYTHON_URL https://www.python.org/ftp/python/3.12.6/python-3.12.6-embed-amd64.zip)
-set(PYTHON_HASH ae256f31ee4700eba679802233bff3e9)
+if (CMAKE_SYSTEM_PROCESSOR EQUAL "aarch64")
+    set(PYTHON_URL https://www.python.org/ftp/python/3.12.7/python-3.12.7-embed-arm64.zip)
+    set(PYTHON_HASH 6fc899d8dbd46dd2b585a038f7cf68a4)
+else()
+    set(PYTHON_URL https://www.python.org/ftp/python/3.12.7/python-3.12.7-embed-amd64.zip)
+    set(PYTHON_HASH 4c0a5a44d4ca1d0bc76fe08ea8b76adc)
+endif()
 
 # Download Python. This is only included in the installer.
 FetchContent_Declare(download_python3 
