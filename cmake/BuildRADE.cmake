@@ -34,13 +34,9 @@ set(rade_BINARY_DIR ${BINARY_DIR})
 
 if(WIN32)
 
-if (CMAKE_SYSTEM_PROCESSOR EQUAL "aarch64")
-    set(PYTHON_URL https://www.python.org/ftp/python/3.12.7/python-3.12.7-embed-arm64.zip)
-    set(PYTHON_HASH 6fc899d8dbd46dd2b585a038f7cf68a4)
-else()
-    set(PYTHON_URL https://www.python.org/ftp/python/3.12.7/python-3.12.7-embed-amd64.zip)
-    set(PYTHON_HASH 4c0a5a44d4ca1d0bc76fe08ea8b76adc)
-endif()
+# XXX only x86_64 supported for now
+set(PYTHON_URL https://www.python.org/ftp/python/3.12.7/python-3.12.7-embed-amd64.zip)
+set(PYTHON_HASH 4c0a5a44d4ca1d0bc76fe08ea8b76adc)
 
 # Download Python. This is only included in the installer.
 FetchContent_Declare(download_python3 
