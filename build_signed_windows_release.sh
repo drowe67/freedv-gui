@@ -24,7 +24,7 @@ WIN_BUILD_DIR=$SCRIPT_DIR/build_windows
 mkdir $WIN_BUILD_DIR
 cd $WIN_BUILD_DIR
 
-for arch in x86_64 i686 aarch64; do
+for arch in x86_64 aarch64; do
     BUILD_ARCH_DIR="$WIN_BUILD_DIR/build_win_$arch"
 
     # Clear existing build
