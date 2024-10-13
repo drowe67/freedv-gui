@@ -26,9 +26,14 @@ cd ..
 if [ ! -d Python.framework ]; then
     git clone https://github.com/gregneagle/relocatable-python.git
     cd relocatable-python
-    ./make_relocatable_python_framework.py --python-version 3.12.7 --pip-requirements=$PWD/../cmake/rade-requirements-build-macos.txt --os-version=11 --destination $PWD/../
+    ./make_relocatable_python_framework.py --python-version 3.12.7 --os-version=11 --destination $PWD/../
     cd ..
 fi
+
+# Prerequisite: Python packages
+rm -rf pkg-tmp
+./generate-univ-pkgs.sh
+./Python.framework/Versions/Current/bin/pip3 install pkg-tmp/*.whl
 
 # Prerequisite: build hamlib
 cd $FREEDVGUIDIR

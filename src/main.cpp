@@ -249,7 +249,7 @@ bool MainApp::OnInit()
     wxFileName path(appPath);
     path.AppendDir("Resources");
     wxSetWorkingDirectory(path.GetPath());
-    wxSetEnv("PYTHONPATH", path.GetPath() + ":/Users/mooneer/devel/freedv-gui/build_osx/temp-venv/lib/python3.12/site-packages");
+    wxSetEnv("PYTHONPATH", path.GetPath());
 
     wxString ppath;
     wxGetEnv("PYTHONPATH", &ppath);
