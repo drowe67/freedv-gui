@@ -376,26 +376,12 @@ int FreeDVInterface::getErrorPattern(short** outputPattern)
 
 const char* FreeDVInterface::getCurrentModeStr() const
 {
-    if (currentRxMode_ == nullptr)
-    {
-        return "unk";
-    }
-    else
-    {
-        return GetCurrentModeStrImpl_(rxMode_);
-    }
+    return GetCurrentModeStrImpl_(rxMode_);
 }
 
 const char* FreeDVInterface::getCurrentTxModeStr() const
 {
-    if (currentTxMode_ == nullptr)
-    {
-        return "unk";
-    }
-    else
-    {
-        return GetCurrentModeStrImpl_(txMode_);
-    }
+    return GetCurrentModeStrImpl_(txMode_);
 }
 
 void FreeDVInterface::changeTxMode(int txMode)
@@ -735,7 +721,7 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
         // special handling for RADE
         parallelSteps.push_back(new RADEReceiveStep(rade_, &fargan_));
 
-        state->preProcessFn = [&](ParallelStep*) { return -1; };
+        state->preProcessFn = [&](ParallelStep*) { return 0; };
         state->postProcessFn = [&](ParallelStep*) { return 0; };
     }
     else

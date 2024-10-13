@@ -50,6 +50,7 @@ endif(APPLE)
 # for official release builds.
 if(NOT DEFINED FREEDV_VERSION_TAG)
 set(FREEDV_VERSION_TAG "devel")
+add_definitions(-DUNOFFICIAL_RELEASE)
 endif(NOT DEFINED FREEDV_VERSION_TAG)
 
 # Prevent in-source builds to protect automake/autoconf config.
@@ -74,6 +75,7 @@ endif(BUILD_OSX_UNIVERSAL)
 # Return the date (yyyy-mm-dd)
 string(TIMESTAMP DATE_RESULT "%Y-%m-%d" UTC)
 message(STATUS "Compilation date = XX${DATE_RESULT}XX")
+add_definitions(-DFREEDV_BUILD_DATE="${DATE_RESULT}")
 
 #
 # generate src/version.h

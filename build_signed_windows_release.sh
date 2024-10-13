@@ -24,7 +24,7 @@ WIN_BUILD_DIR=$SCRIPT_DIR/build_windows
 mkdir $WIN_BUILD_DIR
 cd $WIN_BUILD_DIR
 
-for arch in x86_64 i686 aarch64; do
+for arch in x86_64 aarch64; do
     BUILD_ARCH_DIR="$WIN_BUILD_DIR/build_win_$arch"
 
     # Clear existing build
@@ -33,7 +33,7 @@ for arch in x86_64 i686 aarch64; do
     cd $BUILD_ARCH_DIR
 
     # Kick off new build with the given architecture
-    cmake -DBOOTSTRAP_LPCNET=1 -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_CERTIFICATE_FILE=$CERT_URL_FILE -DPKCS11_KEY_FILE=$KEY_URL_FILE -DINTERMEDIATE_CERT_FILE=$INTERMEDIATE_CERT_FILE -DCMAKE_TOOLCHAIN_FILE=$SCRIPT_DIR/cross-compile/freedv-mingw-llvm-$arch.cmake $SCRIPT_DIR
+    cmake -DLPCNET_DISABLE=1 -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_CERTIFICATE_FILE=$CERT_URL_FILE -DPKCS11_KEY_FILE=$KEY_URL_FILE -DINTERMEDIATE_CERT_FILE=$INTERMEDIATE_CERT_FILE -DCMAKE_TOOLCHAIN_FILE=$SCRIPT_DIR/cross-compile/freedv-mingw-llvm-$arch.cmake $SCRIPT_DIR
     make -j6 package
     cp FreeDV-*.exe $WIN_BUILD_DIR
     cd $WIN_BUILD_DIR

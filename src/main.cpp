@@ -60,6 +60,8 @@ extern "C" {
     extern void golay23_init(void);
 }
 
+#define EXPIRES_AFTER_TIMEFRAME (wxDateSpan(0, 6, 0)) /* 6 months */
+
 //-------------------------------------------------------------------
 // Bunch of globals used for communication with sound card call
 // back functions
@@ -236,14 +238,44 @@ bool MainApp::OnInit()
     
     golay23_init();
   
-#if _WIN32
+#if _WIN32 || __APPLE__
     // Change current folder to the folder containing freedv.exe.
     // This is needed so that Python can find RADE properly. 
     wxFileName f(wxStandardPaths::Get().GetExecutablePath());
     wxString appPath(f.GetPath());
     wxSetWorkingDirectory(appPath);
-#endif // _WIN32
 
+#if __APPLE__
+    // Set PYTHONPATH accordingly. We mainly want to be able to access
+    // the model (,pth) as well as the RADE Python code.
+    wxFileName path(appPath);
+    path.AppendDir("Resources");
+    wxSetWorkingDirectory(path.GetPath());
+    wxSetEnv("PYTHONPATH", path.GetPath());
+
+    wxString ppath;
+    wxGetEnv("PYTHONPATH", &ppath);
+    fprintf(stderr, "PYTHONPATH is %s\n", (const char*)ppath.ToUTF8());
+#endif // __APPLE__
+
+#endif // _WIN32 || __APPLE__
+
+#if defined(UNOFFICIAL_RELEASE)
+    // Terminate the application if the current date > expiration date
+    wxDateTime buildDate;
+    wxString::const_iterator iter;
+    buildDate.ParseDate(FREEDV_BUILD_DATE, &iter);
+    
+    auto expireDate = buildDate + EXPIRES_AFTER_TIMEFRAME;
+    auto currentDate = wxDateTime::Now();
+    
+    if (currentDate > expireDate)
+    {
+        wxMessageBox("This version of FreeDV has expired. Please download a new version from freedv.org.", "Application Expired");
+        return false;
+    }
+#endif // UNOFFICIAL_RELEASE
+    
     // Initialize RADE.
     rade_initialize();
  
@@ -675,6 +707,18 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     {
         SetTitle(wxString::Format("%s (%s)", _("FreeDV ") + _(FREEDV_VERSION), wxGetApp().customConfigFileName));
     }
+    
+#if defined(UNOFFICIAL_RELEASE)
+    wxDateTime buildDate;
+    wxString::const_iterator iter;
+    buildDate.ParseDate(FREEDV_BUILD_DATE, &iter);
+    
+    auto expireDate = buildDate + EXPIRES_AFTER_TIMEFRAME;
+    auto currentTitle = GetTitle();
+    
+    currentTitle += wxString::Format(" [Expires %s]", expireDate.FormatDate());
+    SetTitle(currentTitle);
+#endif // defined(UNOFFICIAL_RELEASE)
     
     m_reporterDialog = nullptr;
     m_filterDialog = nullptr;
@@ -1845,7 +1889,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     if (eventObject != nullptr)
     {
         std::string label = (const char*)eventObject->GetLabel().ToUTF8();
-        if (label == "700D" || label == "700E" || label == "1600")
+        if (label == "700D" || label == "700E" || label == "1600" || label == "RADE")
         {
             hiddenModeToSet = m_hiddenMode2;
         } 
@@ -1973,7 +2017,7 @@ void MainFrame::performFreeDVOn_()
         if (!wxGetApp().appConfiguration.multipleReceiveEnabled || m_rbRADE->GetValue())
         {
             m_rb1600->Disable();
-            m_rbRADE->GetValue();
+            m_rbRADE->Disable();
             m_rb700c->Disable();
             m_rb700d->Disable();
             m_rb700e->Disable();
@@ -1985,7 +2029,9 @@ void MainFrame::performFreeDVOn_()
             freedvInterface.addRxMode(g_mode);
         }
         else
-        {        
+        {
+            m_rbRADE->Disable();
+            
             if(wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
             {
                 freedvInterface.addRxMode(FREEDV_MODE_2020);
