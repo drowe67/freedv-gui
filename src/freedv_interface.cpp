@@ -721,7 +721,7 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
         // special handling for RADE
         parallelSteps.push_back(new RADEReceiveStep(rade_, &fargan_));
 
-        state->preProcessFn = [&](ParallelStep*) { return -1; };
+        state->preProcessFn = [&](ParallelStep*) { return 0; };
         state->postProcessFn = [&](ParallelStep*) { return 0; };
     }
     else
