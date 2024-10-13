@@ -1889,7 +1889,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     if (eventObject != nullptr)
     {
         std::string label = (const char*)eventObject->GetLabel().ToUTF8();
-        if (label == "700D" || label == "700E" || label == "1600")
+        if (label == "700D" || label == "700E" || label == "1600" || label == "RADE")
         {
             hiddenModeToSet = m_hiddenMode2;
         } 
@@ -2017,7 +2017,7 @@ void MainFrame::performFreeDVOn_()
         if (!wxGetApp().appConfiguration.multipleReceiveEnabled || m_rbRADE->GetValue())
         {
             m_rb1600->Disable();
-            m_rbRADE->GetValue();
+            m_rbRADE->Disable();
             m_rb700c->Disable();
             m_rb700d->Disable();
             m_rb700e->Disable();
@@ -2029,7 +2029,9 @@ void MainFrame::performFreeDVOn_()
             freedvInterface.addRxMode(g_mode);
         }
         else
-        {        
+        {
+            m_rbRADE->Disable();
+            
             if(wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
             {
                 freedvInterface.addRxMode(FREEDV_MODE_2020);
