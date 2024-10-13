@@ -60,6 +60,8 @@ extern "C" {
     extern void golay23_init(void);
 }
 
+#define EXPIRES_AFTER_TIMEFRAME (wxDateSpan(0, 6, 0)) /* 6 months */
+
 //-------------------------------------------------------------------
 // Bunch of globals used for communication with sound card call
 // back functions
@@ -258,6 +260,22 @@ bool MainApp::OnInit()
 
 #endif // _WIN32 || __APPLE__
 
+#if defined(UNOFFICIAL_RELEASE)
+    // Terminate the application if the current date > expiration date
+    wxDateTime buildDate;
+    wxString::const_iterator iter;
+    buildDate.ParseDate(FREEDV_BUILD_DATE, &iter);
+    
+    auto expireDate = buildDate + EXPIRES_AFTER_TIMEFRAME;
+    auto currentDate = wxDateTime::Now();
+    
+    if (currentDate > expireDate)
+    {
+        wxMessageBox("This version of FreeDV has expired. Please download a new version from freedv.org.", "Application Expired");
+        return false;
+    }
+#endif // UNOFFICIAL_RELEASE
+    
     // Initialize RADE.
     rade_initialize();
  
@@ -689,6 +707,18 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     {
         SetTitle(wxString::Format("%s (%s)", _("FreeDV ") + _(FREEDV_VERSION), wxGetApp().customConfigFileName));
     }
+    
+#if defined(UNOFFICIAL_RELEASE)
+    wxDateTime buildDate;
+    wxString::const_iterator iter;
+    buildDate.ParseDate(FREEDV_BUILD_DATE, &iter);
+    
+    auto expireDate = buildDate + EXPIRES_AFTER_TIMEFRAME;
+    auto currentTitle = GetTitle();
+    
+    currentTitle += wxString::Format(" [Expires %s]", expireDate.FormatDate());
+    SetTitle(currentTitle);
+#endif // defined(UNOFFICIAL_RELEASE)
     
     m_reporterDialog = nullptr;
     m_filterDialog = nullptr;
