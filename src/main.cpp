@@ -237,6 +237,11 @@ bool MainApp::OnInit()
     SetAppName(wxT("FreeDV"));      // not needed, it's the default value
     
     golay23_init();
+    
+    // Prevent conflicts between numpy/OpenBLAS threading and Python/C++ threading,
+    // improving performance.
+    wxSetEnv("OMP_NUM_THREADS", "1");
+    wxSetEnv("OPENBLAS_NUM_THREADS", "1");
   
 #if _WIN32 || __APPLE__
     // Change current folder to the folder containing freedv.exe.
