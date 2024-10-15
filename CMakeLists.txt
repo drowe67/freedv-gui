@@ -15,7 +15,7 @@ endif()
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
 
 set(PROJECT_NAME FreeDV)
-set(PROJECT_VERSION 1.9.10)
+set(PROJECT_VERSION 2.0.0)
 set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
 set(PROJECT_HOMEPAGE_URL "https://freedv.org")
 
@@ -50,6 +50,7 @@ endif(APPLE)
 # for official release builds.
 if(NOT DEFINED FREEDV_VERSION_TAG)
 set(FREEDV_VERSION_TAG "devel")
+add_definitions(-DUNOFFICIAL_RELEASE)
 endif(NOT DEFINED FREEDV_VERSION_TAG)
 
 # Prevent in-source builds to protect automake/autoconf config.
@@ -74,6 +75,7 @@ endif(BUILD_OSX_UNIVERSAL)
 # Return the date (yyyy-mm-dd)
 string(TIMESTAMP DATE_RESULT "%Y-%m-%d" UTC)
 message(STATUS "Compilation date = XX${DATE_RESULT}XX")
+add_definitions(-DFREEDV_BUILD_DATE="${DATE_RESULT}")
 
 #
 # generate src/version.h
@@ -322,6 +324,11 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/soxconfig.h.in"
 find_package(Threads REQUIRED)
 message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 
+#
+# Build RADE. 
+# (TBD - allow override with own build, similar to Codec2)
+include(cmake/BuildOpus.cmake)
+include(cmake/BuildRADE.cmake)
 
 #
 # Find codec2 and lpcnetfreedv
@@ -664,7 +671,7 @@ if(WIN32)
     set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_NSIS_MENU_LINKS
         "http://freedv.org" "FreeDV Homepage")
-    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "DeleteRegKey HKLM 'SOFTWARE\\\\CODEC2-Project\\\\FreeDV'")
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "${CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS}\r\nDeleteRegKey HKLM 'SOFTWARE\\\\CODEC2-Project\\\\FreeDV'")
     set(CPACK_NSIS_MENU_LINKS "share/freedv-gui/USER_MANUAL.pdf" "FreeDV User Manual")
 
     set(CPACK_WIN_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_VER_TWEAK}")

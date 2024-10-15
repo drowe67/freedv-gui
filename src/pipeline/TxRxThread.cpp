@@ -263,6 +263,13 @@ void TxRxThread::initializePipeline_()
         // TX attenuation step
         auto txAttenuationStep = new LevelAdjustStep(outputSampleRate_, []() {
             double dbLoss = g_txLevel / 10.0;
+            
+            if (freedvInterface.getTxMode() == FREEDV_MODE_RADE)
+            {
+                // Attenuate by 4 dB as there's no BPF; anything louder distorts the signal
+                dbLoss -= 4.0;
+            }
+            
             double scaleFactor = exp(dbLoss/20.0 * log(10.0));
             return scaleFactor; 
         });
@@ -627,7 +634,26 @@ void TxRxThread::txProcessing_()
             // There may be recorded audio left to encode while ending TX. To handle this,
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
             int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);            
-            if (nread != 0 && endingTx) break;
+            if (nread != 0 && endingTx)
+            {
+                if (freedvInterface.getCurrentMode() >= FREEDV_MODE_RADE)
+                {
+                    // Special case for handling RADE EOT
+                    freedvInterface.restartTxVocoder();
+
+                    short* inputSamples = new short[1];
+                    auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
+                    do
+                    {
+                        auto outputSamples = pipeline_->execute(inputSamplesPtr, 0, &nout);
+                        if (nout > 0 && outputSamples.get() != nullptr)
+                        {
+                            codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
+                        }
+                    } while (nout > 0);
+                }
+                break;
+            }
             
             short* inputSamples = new short[nsam_in_48];
             memcpy(inputSamples, insound_card, nsam_in_48 * sizeof(short));
@@ -639,7 +665,10 @@ void TxRxThread::txProcessing_()
                 fprintf(stderr, "  nout: %d\n", nout);
             }
             
-            codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
+            if (outputSamples.get() != nullptr)
+            {
+                codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
+            }
         }
         
         txModeChangeMutex.Unlock();
@@ -708,7 +737,7 @@ void TxRxThread::rxProcessing_()
         auto outputSamples = pipeline_->execute(inputSamplesPtr, nsam, &nout);
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
         
-        if (nout > 0)
+        if (nout > 0 && outputSamples.get() != nullptr)
         {
             codec2_fifo_write(outFifo, outputSamples.get(), nout);
         }
