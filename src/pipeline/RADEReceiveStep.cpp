@@ -73,7 +73,7 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
     float features_out[rade_n_features_in_out(dv_)];
     
     short* inputPtr = inputSamples.get();
-    while (numInputSamples > 0)
+    while (numInputSamples > 0 && inputPtr != nullptr)
     {
         codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
         numInputSamples--;

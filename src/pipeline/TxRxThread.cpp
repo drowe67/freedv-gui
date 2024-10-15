@@ -646,7 +646,7 @@ void TxRxThread::txProcessing_()
                     do
                     {
                         auto outputSamples = pipeline_->execute(inputSamplesPtr, 0, &nout);
-                        if (nout > 0)
+                        if (nout > 0 && outputSamples.get() != nullptr)
                         {
                             codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
                         }
@@ -665,7 +665,10 @@ void TxRxThread::txProcessing_()
                 fprintf(stderr, "  nout: %d\n", nout);
             }
             
-            codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
+            if (outputSamples.get() != nullptr)
+            {
+                codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
+            }
         }
         
         txModeChangeMutex.Unlock();
@@ -734,7 +737,7 @@ void TxRxThread::rxProcessing_()
         auto outputSamples = pipeline_->execute(inputSamplesPtr, nsam, &nout);
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
         
-        if (nout > 0)
+        if (nout > 0 && outputSamples.get() != nullptr)
         {
             codec2_fifo_write(outFifo, outputSamples.get(), nout);
         }

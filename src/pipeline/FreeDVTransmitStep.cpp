@@ -71,7 +71,7 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
     *numOutputSamples = 0;
     
     short* inputPtr = inputSamples.get();
-    while (numInputSamples > 0)
+    while (numInputSamples > 0 && inputPtr)
     {
         codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
         numInputSamples--;
@@ -116,60 +116,4 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
     }
     
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
-#if 0
-    short* outputSamples = nullptr;
-
-    int mode = freedv_get_mode(dv_);
-    int samplesUsedForFifo = freedv_get_n_speech_samples(dv_);
-    int numTransmitRuns = (codec2_fifo_used(inputSampleFifo_) + numInputSamples) / samplesUsedForFifo;
-    int nfreedv = freedv_get_n_nom_modem_samples(dv_);
-    
-    if (numTransmitRuns)
-    {
-        *numOutputSamples = freedv_get_n_nom_modem_samples(dv_) * numTransmitRuns;
-        outputSamples = new short[*numOutputSamples];
-        assert(outputSamples != nullptr);
-        
-        short codecInput[samplesUsedForFifo];
-        short* tmpOutput = outputSamples;
-        short* tmpInput = inputSamples.get();
-        
-        while (numInputSamples > 0)
-        {
-            codec2_fifo_write(inputSampleFifo_, tmpInput++, 1);
-            numInputSamples--;
-            
-            if (codec2_fifo_used(inputSampleFifo_) >= samplesUsedForFifo)
-            {
-                codec2_fifo_read(inputSampleFifo_, codecInput, samplesUsedForFifo);
-                
-                if (mode == FREEDV_MODE_800XA) 
-                {
-                    /* 800XA doesn't support complex output just yet */
-                    freedv_tx(dv_, tmpOutput, codecInput);
-                }
-                else 
-                {
-                    COMP tx_fdm[nfreedv];
-                    COMP tx_fdm_offset[nfreedv];
-                    
-                    freedv_comptx(dv_, tx_fdm, codecInput);
-                    
-                    freq_shift_coh(tx_fdm_offset, tx_fdm, getFreqOffsetFn_(), getOutputSampleRate(), &txFreqOffsetPhaseRectObj_, nfreedv);
-                    for(int i = 0; i<nfreedv; i++)
-                        tmpOutput[i] = tx_fdm_offset[i].real;
-                }
-                
-                tmpOutput += samplesUsedForFifo;
-            }
-        }
-    }
-    else
-    {
-        codec2_fifo_write(inputSampleFifo_, inputSamples.get(), numInputSamples);
-        *numOutputSamples = 0;
-    }
-
-    return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
-#endif
 }

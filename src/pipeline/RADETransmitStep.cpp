@@ -67,7 +67,7 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
     *numOutputSamples = 0;
     
     short* inputPtr = inputSamples.get();
-    while (numInputSamples > 0)
+    while (numInputSamples > 0 && inputPtr != nullptr)
     {
         codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
         numInputSamples--;

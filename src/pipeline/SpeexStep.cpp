@@ -62,6 +62,7 @@ int SpeexStep::getOutputSampleRate() const
 std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
     short* outputSamples = nullptr;
+    *numOutputSamples = 0;
     
     int numSpeexRuns = (codec2_fifo_used(inputSampleFifo_) + numInputSamples) / numSamplesPerSpeexRun_;
     if (numSpeexRuns > 0)
@@ -73,7 +74,7 @@ std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, i
         short* tmpOutput = outputSamples;
         short* tmpInput = inputSamples.get();
         
-        while (numInputSamples > 0)
+        while (numInputSamples > 0 && tmpInput != nullptr)
         {
             codec2_fifo_write(inputSampleFifo_, tmpInput++, 1);
             numInputSamples--;
@@ -86,10 +87,9 @@ std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, i
             }
         }
     }
-    else
+    else if (numInputSamples > 0 && inputSamples.get() != nullptr)
     {
         codec2_fifo_write(inputSampleFifo_, inputSamples.get(), numInputSamples);
-        *numOutputSamples = 0;
     }
     
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
