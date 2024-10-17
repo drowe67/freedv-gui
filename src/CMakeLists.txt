@@ -161,11 +161,14 @@ if(APPLE)
         COMMAND cp ARGS -r ../rade_src/radae FreeDV.app/Contents/Resources
         COMMAND cp ARGS -r ../rade_src/model19_check3 FreeDV.app/Contents/Resources
         COMMAND codesign --force --options runtime --timestamp --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/entitlements.plist --sign - ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app
+    )
+    
+    add_custom_target(dmg
         COMMAND mkdir dist_tmp
         COMMAND cp -r FreeDV.app dist_tmp 
         COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO -fs HFS+ ./FreeDV.dmg
         COMMAND rm -rf dist_tmp
-    )
+        DEPENDS FreeDV)
 endif(APPLE)
 
 # Custom commands for signing Windows binaries
