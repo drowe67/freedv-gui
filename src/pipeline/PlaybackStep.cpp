@@ -57,17 +57,19 @@ std::shared_ptr<short> PlaybackStep::execute(std::shared_ptr<short> inputSamples
     assert(playFile != nullptr);
 
     unsigned int nsf = numInputSamples * getOutputSampleRate()/getInputSampleRate();
-    assert(nsf > 0);
-
-    short* outputSamples = new short[nsf];
-    assert(outputSamples != nullptr);
-    
-    *numOutputSamples = sf_read_short(playFile, outputSamples, nsf);
-    if ((unsigned)*numOutputSamples < nsf)
+    short* outputSamples = nullptr;
+    *numOutputSamples = 0;
+    if (nsf > 0)
     {
-        fileCompleteFn_();
+        outputSamples = new short[nsf];
+        assert(outputSamples != nullptr);
+    
+        *numOutputSamples = sf_read_short(playFile, outputSamples, nsf);
+        if ((unsigned)*numOutputSamples < nsf)
+        {
+            fileCompleteFn_();
+        }
     }
-    *numOutputSamples = nsf;
 
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
 }

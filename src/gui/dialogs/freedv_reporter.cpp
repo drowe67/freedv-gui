@@ -1851,7 +1851,32 @@ wxString FreeDVReporterDialog::makeValidTime_(std::string timeStr, wxDateTime& t
         {
             timeZone = wxDateTime::TimeZone(wxDateTime::TZ::Local);
         }
-        return tmpDate.Format(_("%x %X"), timeZone);
+        
+        wxString formatStr = "%x %X";
+        
+#if __APPLE__
+        // Workaround for weird macOS bug preventing .Format from working properly when double-clicking
+        // on the .app in Finder. Running the app from Terminal seems to work fine with .Format for 
+        // some reason. O_o
+        struct tm tmpTm;
+        auto tmpDateTm = tmpDate.GetTm(timeZone);
+        
+        tmpTm.tm_sec = tmpDateTm.sec;
+        tmpTm.tm_min = tmpDateTm.min;
+        tmpTm.tm_hour = tmpDateTm.hour;
+        tmpTm.tm_mday = tmpDateTm.mday;
+        tmpTm.tm_mon = tmpDateTm.mon;
+        tmpTm.tm_year = tmpDateTm.year - 1900;
+        tmpTm.tm_wday = tmpDateTm.GetWeekDay();
+        tmpTm.tm_yday = tmpDateTm.yday;
+        tmpTm.tm_isdst = -1;
+        
+        char buf[4096];
+        strftime(buf, sizeof(buf), (const char*)formatStr.ToUTF8(), &tmpTm);
+        return buf;
+#else
+        return tmpDate.Format(formatStr, timeZone);
+#endif // __APPLE__
     }
     else
     {
