@@ -71,7 +71,8 @@ Linux by following these steps:
    $ cd freedv-gui
    $ python3 -m venv rade-venv
    $ . ./rade-venv/bin/activate
-   (rade-venv) $ pip3 install -r cmake/rade-requirements.txt
+   (rade-venv) $ pip3 install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+   (rade-venv) $ pip3 install matplotlib
    ```
 
    *Note: you may need to install `python3-venv` or your distro's equivalent package in order to create Python virtual environments.*
