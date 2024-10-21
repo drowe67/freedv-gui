@@ -70,19 +70,23 @@ Linux by following these steps:
    ```
    $ cd freedv-gui
    $ python3 -m venv rade-venv
-   $ ./rade-venv/bin/activate
+   $ . ./rade-venv/bin/activate
    (rade-venv) $ pip3 install -r cmake/rade-requirements.txt
    ```
 
 2. Build FreeDV to make sure the correct dependencies are linked in (namely numpy):
 
    ```
+   (rade-venv) $ pwd
+   /home/user/freedv-gui
    (rade-venv) $ ./build_linux.sh
    ```
 
 3. Make sure FreeDV can find the ML model:
 
    ```
+   (rade-venv) $ pwd
+   /home/user/freedv-gui
    (rade-venv) $ cd build_linux
    (rade-venv) $ ln -s `pwd`/rade_src/model19_check3 model19_check3
    ```
@@ -90,7 +94,9 @@ Linux by following these steps:
 4. Execute FreeDV:
 
    ```
-   (rade-venv) $ PYTHONPATH=`pwd`/rade_src src/freedv
+   (rade-venv) $ pwd
+   /home/user/freedv-gui/build_linux
+   (rade-venv) $ PYTHONPATH=`pwd`/rade_src:$PYTHONPATH src/freedv
    ```
 
 ## Building without LPCNet
