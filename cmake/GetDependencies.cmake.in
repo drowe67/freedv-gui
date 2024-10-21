@@ -10,12 +10,17 @@ set(CMAKE_FIND_LIBRARY_SUFFIXES @CMAKE_FIND_LIBRARY_SUFFIXES@)
 set(CMAKE_FIND_LIBRARY_PREFIXES @CMAKE_FIND_LIBRARY_PREFIXES@)
 set(CMAKE_SYSTEM_LIBRARY_PATH @CMAKE_SYSTEM_LIBRARY_PATH@)
 set(CMAKE_FIND_ROOT_PATH @CMAKE_FIND_ROOT_PATH@)
+set(LPCNET_DISABLED @LPCNET_DISABLED@)
 if(USE_INTERNAL_CODEC2)
     set(CODEC2_BUILD_DIR ${CMAKE_BINARY_DIR}/codec2_build)
-    set(LPCNET_BUILD_DIR ${CMAKE_BINARY_DIR}/LPCNet_build)
+    if(NOT LPCNET_DISABLED)
+        set(LPCNET_BUILD_DIR ${CMAKE_BINARY_DIR}/LPCNet_build)
+    endif(NOT LPCNET_DISABLED)
 else()
     set(CODEC2_BUILD_DIR @CODEC2_BUILD_DIR@)
-    set(LPCNET_BUILD_DIR @LPCNET_BUILD_DIR@)
+    if(NOT LPCNET_DISABLED)
+        set(LPCNET_BUILD_DIR @LPCNET_BUILD_DIR@)
+    endif(NOT LPCNET_DISABLED)
 endif()
 
 
@@ -106,6 +111,9 @@ set( _windlls
     api-ms-win-crt-heap-l1-1-0.dll
     api-ms-win-crt-convert-l1-1-0.dll
     api-ms-win-crt-multibyte-l1-1-0.dll
+
+    # Filter Python DLLs as they're already included via install()
+    python312.dll
 )
 list(REMOVE_ITEM _deps ${_windlls})
 

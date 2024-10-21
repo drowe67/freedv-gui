@@ -19,8 +19,8 @@
 //
 //==========================================================================
 
-#ifndef CODEC2_INTERFACE_H
-#define CODEC2_INTERFACE_H
+#ifndef FREEDV_INTERFACE_H
+#define FREEDV_INTERFACE_H
 
 #include <pthread.h>
 
@@ -39,10 +39,25 @@
 #include "modem_stats.h"
 #include "reliable_text.h"
 
+// RADE required include files
+#include "rade_api.h"
+
+// TBD - need to wrap in "extern C" to avoid linker errors
+extern "C" 
+{
+    #include "fargan.h"
+    #include "lpcnet.h"
+}
+
 #include <samplerate.h>
 
 class IPipelineStep;
 class ParallelStep;
+class RADETransmitStep;
+
+// Anything above 255 is a RADE mode. There's only one right now,
+// this is just for future expansion.
+#define FREEDV_MODE_RADE ((1 << 8) + 1)
 
 class FreeDVInterface
 {
@@ -115,7 +130,9 @@ public:
         std::function<float()> getFreqOffsetFn,
         std::function<float*()> getSigPwrAvgFn
     );
-        
+
+    void restartTxVocoder();
+ 
 private:
     struct ReceivePipelineState
     {
@@ -168,9 +185,14 @@ private:
     std::deque<reliable_text_t> reliableText_;
     std::string receivedReliableText_;
     std::mutex reliableTextMutex_;
-    
+   
+    struct rade* rade_;
+    FARGANState fargan_;
+    LPCNetEncState *lpcnetEncState_; 
+    RADETransmitStep *radeTxStep_;
+
     int preProcessRxFn_(ParallelStep* ps);
     int postProcessRxFn_(ParallelStep* ps);
 };
 
-#endif // CODEC2_INTERFACE_H
+#endif // FREEDV_INTERFACE_H

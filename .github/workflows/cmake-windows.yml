@@ -20,10 +20,38 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Install WINE
+      run: |
+        sudo dpkg --add-architecture i386
+        sudo sh -c "curl https://dl.winehq.org/wine-builds/winehq.key | gpg --dearmor > /etc/apt/trusted.gpg.d/winehq.gpg"
+        sudo sh -c "apt-add-repository \"https://dl.winehq.org/wine-builds/ubuntu\""
+        sudo apt-get update
+        echo "/opt/wine-staging/bin" >> $GITHUB_PATH
+        sudo apt install -y --install-recommends wine-staging
+        #sudo apt install -y --install-recommends wine64 wine32
+
     - name: Install required packages
       shell: bash
       working-directory: ${{github.workspace}}
       run: sudo apt-get install nsis
+
+    - name: Configure WINE
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          WINEPREFIX=`pwd`/wine-env WINEARCH=win64 DISPLAY= winecfg /v win10
+
+    - name: Create Windows Python environment for build
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          export WINEPREFIX=`pwd`/wine-env
+          wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
+          Xvfb :99 -screen 0 1024x768x16 &
+          export DISPLAY=:99.0
+          wine ./python-3.12.7-amd64.exe /quiet /log c:\\python.log InstallAllUsers=1 Include_doc=0 Include_tcltk=0 || :
+          cat $WINEPREFIX/drive_c/python.log
+          wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
 
     - name: Download MinGW LLVM
       shell: bash
@@ -36,10 +64,11 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
+        export WINEPREFIX=`pwd`/wine-env
         export PATH=${{github.workspace}}/llvm-mingw-20230320-ucrt-ubuntu-18.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DBOOTSTRAP_LPCNET=1 -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake ..
+        cmake -DLPCNET_DISABLE=1 -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=$WINEPREFIX/drive_c/Program\ Files/Python312 ..
 
     - name: Build freedv-gui
       shell: bash

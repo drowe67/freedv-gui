@@ -24,11 +24,11 @@ jobs:
       shell: bash
       run: |
            sudo apt-get update
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.0-gtk3-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev
+           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.0-gtk3-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev python3-numpy
             
     - name: Spellcheck codebase
       shell: bash
-      run: codespell --ignore-words-list=inout,nin,ontop,parm,tthe,ue `find src -name '*.c*' -o -name '*.h' -o -name '*.mm'`
+      run: codespell --ignore-words-list=radae,rade,inout,nin,ontop,parm,tthe,ue `find src -name '*.c*' -o -name '*.h' -o -name '*.mm'`
 
     - name: Build freedv-gui using PortAudio
       shell: bash

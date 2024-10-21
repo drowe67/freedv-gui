@@ -889,10 +889,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V1.9.10 TBD 2024
+## V2.0.0 TBD 2024
 
 1. Bugfixes:
     * Fix bug preventing saving of the previously used path when playing back files. (PR #729)
+    * Fix bug preventing proper time display in FreeDV Reporter on macOS. (PR #748)
 2. Enhancements:
     * Show green line indicating RX frequency. (PR #725)
     * Update configuration of the Voice Keyer feature based on user feedback. (PR #730, #746)
@@ -902,7 +903,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Minor adjustments to spectrum/waterfall tooltips. (PR #743)
 3. Build system:
     * Allow overrriding the version tag when building. (PR #727)
-    * Update wxWidgets to 3.2.5. (PR #731)
+    * Update wxWidgets to 3.2.6. (PR #748)
 
 ## V1.9.9.2 June 2024
 

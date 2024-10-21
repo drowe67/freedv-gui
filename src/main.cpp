@@ -30,6 +30,7 @@
 #include <chrono>
 #include <climits>
 #include <wx/cmdline.h>
+#include <wx/stdpaths.h>
 
 #include "version.h"
 #include "main.h"
@@ -46,6 +47,8 @@
 #include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/freedv_reporter.h"
 
+#include "rade_api.h"
+
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
 #define wxUSE_LIBJPEG   1
@@ -56,6 +59,8 @@
 extern "C" {
     extern void golay23_init(void);
 }
+
+#define EXPIRES_AFTER_TIMEFRAME (wxDateSpan(0, 6, 0)) /* 6 months */
 
 //-------------------------------------------------------------------
 // Bunch of globals used for communication with sound card call
@@ -233,6 +238,52 @@ bool MainApp::OnInit()
     
     golay23_init();
     
+    // Prevent conflicts between numpy/OpenBLAS threading and Python/C++ threading,
+    // improving performance.
+    wxSetEnv("OMP_NUM_THREADS", "1");
+    wxSetEnv("OPENBLAS_NUM_THREADS", "1");
+  
+#if _WIN32 || __APPLE__
+    // Change current folder to the folder containing freedv.exe.
+    // This is needed so that Python can find RADE properly. 
+    wxFileName f(wxStandardPaths::Get().GetExecutablePath());
+    wxString appPath(f.GetPath());
+    wxSetWorkingDirectory(appPath);
+
+#if __APPLE__
+    // Set PYTHONPATH accordingly. We mainly want to be able to access
+    // the model (,pth) as well as the RADE Python code.
+    wxFileName path(appPath);
+    path.AppendDir("Resources");
+    wxSetWorkingDirectory(path.GetPath());
+    wxSetEnv("PYTHONPATH", path.GetPath());
+
+    wxString ppath;
+    wxGetEnv("PYTHONPATH", &ppath);
+    fprintf(stderr, "PYTHONPATH is %s\n", (const char*)ppath.ToUTF8());
+#endif // __APPLE__
+
+#endif // _WIN32 || __APPLE__
+
+#if defined(UNOFFICIAL_RELEASE)
+    // Terminate the application if the current date > expiration date
+    wxDateTime buildDate;
+    wxString::const_iterator iter;
+    buildDate.ParseDate(FREEDV_BUILD_DATE, &iter);
+    
+    auto expireDate = buildDate + EXPIRES_AFTER_TIMEFRAME;
+    auto currentDate = wxDateTime::Now();
+    
+    if (currentDate > expireDate)
+    {
+        wxMessageBox("This version of FreeDV has expired. Please download a new version from freedv.org.", "Application Expired");
+        return false;
+    }
+#endif // UNOFFICIAL_RELEASE
+    
+    // Initialize RADE.
+    rade_initialize();
+ 
     m_rTopWindow = wxRect(0, 0, 0, 0);
 
      // Create the main application window
@@ -525,6 +576,10 @@ setDefaultMode:
         mode = defaultMode;
         goto setDefaultMode;
     }
+    if (mode == FREEDV_MODE_RADE)
+    {
+        m_rbRADE->SetValue(1);
+    }
 #if defined(FREEDV_MODE_2020B)
     if ((mode == 10) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
         m_rb2020b->SetValue(1);
@@ -657,6 +712,18 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     {
         SetTitle(wxString::Format("%s (%s)", _("FreeDV ") + _(FREEDV_VERSION), wxGetApp().customConfigFileName));
     }
+    
+#if defined(UNOFFICIAL_RELEASE)
+    wxDateTime buildDate;
+    wxString::const_iterator iter;
+    buildDate.ParseDate(FREEDV_BUILD_DATE, &iter);
+    
+    auto expireDate = buildDate + EXPIRES_AFTER_TIMEFRAME;
+    auto currentTitle = GetTitle();
+    
+    currentTitle += wxString::Format(" [Expires %s]", expireDate.FormatDate());
+    SetTitle(currentTitle);
+#endif // defined(UNOFFICIAL_RELEASE)
     
     m_reporterDialog = nullptr;
     m_filterDialog = nullptr;
@@ -894,6 +961,9 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     }
 #endif
     
+    // Print RADE API version. This also forces the RADE library to be linked.
+    fprintf(stderr, "Using RADE API version %d\n", rade_version());
+
 #if defined(FREEDV_MODE_2020) && !defined(LPCNET_DISABLED)
     // First time use: make sure 2020 mode will actually work on this machine.
     if (wxGetApp().appConfiguration.firstTimeUse)
@@ -1033,6 +1103,8 @@ MainFrame::~MainFrame()
         mode = 6;
     if (m_rb2020->GetValue())
         mode = 9;
+    if (m_rbRADE->GetValue())
+        mode = FREEDV_MODE_RADE;
 #if defined(FREEDV_MODE_2020B)
     if (m_rb2020b->GetValue())
         mode = 10;
@@ -1090,6 +1162,9 @@ MainFrame::~MainFrame()
     wxGetApp().rigFrequencyController = nullptr;
     wxGetApp().rigPttController = nullptr;
     wxGetApp().m_reporters.clear();
+
+    // Clean up RADE.
+    rade_finalize();
 }
 
 
@@ -1803,6 +1878,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
         m_hiddenMode1,
         m_hiddenMode2,
 
+        m_rbRADE,
         m_rb700c,
         m_rb700d,
         m_rb700e,
@@ -1818,7 +1894,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     if (eventObject != nullptr)
     {
         std::string label = (const char*)eventObject->GetLabel().ToUTF8();
-        if (label == "700D" || label == "700E" || label == "1600")
+        if (label == "700D" || label == "700E" || label == "1600" || label == "RADE")
         {
             hiddenModeToSet = m_hiddenMode2;
         } 
@@ -1839,6 +1915,10 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     else if (eventObject == m_rb700c || (eventObject == nullptr && m_rb700c->GetValue())) 
     {
         g_mode = FREEDV_MODE_700C;
+    }
+    else if (eventObject == m_rbRADE || (eventObject == nullptr && m_rbRADE->GetValue())) 
+    {
+        g_mode = FREEDV_MODE_RADE;
     }
     else if (eventObject == m_rb700d || (eventObject == nullptr && m_rb700d->GetValue())) 
     {
@@ -1939,9 +2019,10 @@ void MainFrame::performFreeDVOn_()
         wxCommandEvent tmpEvent;
         OnChangeTxMode(tmpEvent);
 
-        if (!wxGetApp().appConfiguration.multipleReceiveEnabled)
+        if (!wxGetApp().appConfiguration.multipleReceiveEnabled || m_rbRADE->GetValue())
         {
             m_rb1600->Disable();
+            m_rbRADE->Disable();
             m_rb700c->Disable();
             m_rb700d->Disable();
             m_rb700e->Disable();
@@ -1953,7 +2034,9 @@ void MainFrame::performFreeDVOn_()
             freedvInterface.addRxMode(g_mode);
         }
         else
-        {        
+        {
+            m_rbRADE->Disable();
+            
             if(wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
             {
                 freedvInterface.addRxMode(FREEDV_MODE_2020);
@@ -1979,6 +2062,7 @@ void MainFrame::performFreeDVOn_()
             if (g_nSoundCards <= 1)
             {
                 m_rb1600->Disable();
+                m_rbRADE->Disable();
                 m_rb700c->Disable();
                 m_rb700d->Disable();
                 m_rb700e->Disable();
@@ -2271,6 +2355,7 @@ void MainFrame::performFreeDVOff_()
         m_btnTogPTT->Disable();
         m_togBtnVoiceKeyer->Disable();
     
+        m_rbRADE->Enable();
         m_rb1600->Enable();
         m_rb700c->Enable();
         m_rb700d->Enable();
@@ -3159,6 +3244,44 @@ bool MainFrame::validateSoundCardSetup()
         wxMessageBox(wxString::Format(
             "Your %s device cannot be found and may have been removed from your system. Please reattach this device, close this message box and retry. If this fails, go to Tools->Audio Config... to check your settings.", 
             failedDeviceName), wxT("Sound Device Not Found"), wxOK, this);
+    }
+    else
+    {
+        const int MIN_SAMPLE_RATE = 16000;
+        int failedSampleRate = 0;
+        
+        // Validate sample rates
+        if (wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate < MIN_SAMPLE_RATE)
+        {
+            failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get();
+            failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
+            canRun = false;
+        }
+        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate < MIN_SAMPLE_RATE)
+        {
+            failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get();
+            failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
+            canRun = false;
+        }
+        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate < MIN_SAMPLE_RATE)
+        {
+            failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get();
+            failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
+            canRun = false;
+        }
+        else if (wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName != "none" && wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate < MIN_SAMPLE_RATE)
+        {
+            failedDeviceName = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get();
+            failedSampleRate = wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate;
+            canRun = false;
+        }
+        
+        if (!canRun)
+        {
+            wxMessageBox(wxString::Format(
+                "Your %s device is set to use a sample rate of %d, which is less than the minimum of %d. Please go to Tools->Audio Config... to check your settings.", 
+                failedDeviceName, failedSampleRate, MIN_SAMPLE_RATE), wxT("Sample Rate Too Low"), wxOK, this);
+        }
     }
     
     engine->stop();
