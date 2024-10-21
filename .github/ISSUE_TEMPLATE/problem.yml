@@ -1,0 +1,61 @@
+name: Software Issue
+description: Report a problem with the FreeDV application
+title: "[Software Issue] "
+labels: ["bug"]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Thank you for submitting a bug report! We are a small team, so your help is needed to reduce the amount
+              of work required to duplicate and fix your issue. Please fill out the following form as best as you're
+              able.
+    - type: dropdown
+      id: platform
+      attributes:
+          label: Platform
+          description: What operating system are you using?
+          options:
+              - "Linux"
+              - "macOS"
+              - "Windows"
+              - "Other (not supported)"
+    - type: input
+      id: platform-version
+      attributes:
+          label: Platform Version
+          description: What version of your operating system are you using?
+      validations:
+          required: true
+    - type: input
+      id: freedv-version
+      attributes:
+          label: FreeDV Version
+          description: What version of FreeDV are you using? (If using a test or preview build, please specify the Git hash from About in the Help menu.)
+      validations:
+          required: true
+    - type: textarea
+      id: steps-to-reproduce
+      attributes:
+          label: Steps to Reproduce
+          description: Please specify the exact steps required to duplicate the issue.
+      validations:
+          required: true
+    - type: textarea
+      id: expected-behavior
+      attributes:
+          label: Expected Behavior
+          description: What behavior did you expect by following the above steps?
+      validations:
+          required: true
+    - type: textarea
+      id: actual-behavior
+      attributes:
+          label: Actual Behavior
+          description: What behavior actually happened? Screenshots/video would especially be helpful, although not required.
+      validations:
+          required: true
+    - type: textarea
+      id: additional-comments
+      attributes:
+          label: Additional Comments
+          description: Any additional comments you may have can be specified here.
