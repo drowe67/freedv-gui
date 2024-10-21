@@ -30,7 +30,7 @@ body:
       id: freedv-version
       attributes:
           label: FreeDV Version
-          description: What version of FreeDV are you using? (Note: if using a test or preview build, please specify the Git hash from About in the Help menu.)
+          description: What version of FreeDV are you using? (If using a test or preview build, please specify the Git hash from About in the Help menu.)
       validations:
           required: true
     - type: textarea
