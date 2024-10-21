@@ -74,6 +74,8 @@ Linux by following these steps:
    (rade-venv) $ pip3 install -r cmake/rade-requirements.txt
    ```
 
+   *Note: you may need to install `python3-venv` or your distro's equivalent package in order to create Python virtual environments.*
+
 2. Build FreeDV to make sure the correct dependencies are linked in (namely numpy):
 
    ```
