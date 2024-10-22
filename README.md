@@ -75,13 +75,13 @@ Linux by following these steps:
    (rade-venv) $ pip3 install matplotlib
    ```
 
-   *Note: you may need to install `python3-venv` or your distro's equivalent package in order to create Python virtual environments.*
+   *Note: you may need to install `python3-venv` or your distro's equivalent package in order to create Python virtual environments. Python 3.9+ is also required for PyTorch to work.*
 
 2. Build FreeDV to make sure the correct dependencies are linked in (namely numpy):
 
    ```
    (rade-venv) $ pwd
-   /home/user/freedv-gui
+   /home/<user>/freedv-gui
    (rade-venv) $ ./build_linux.sh
    ```
 
@@ -89,7 +89,7 @@ Linux by following these steps:
 
    ```
    (rade-venv) $ pwd
-   /home/user/freedv-gui
+   /home/<user>/freedv-gui
    (rade-venv) $ cd build_linux
    (rade-venv) $ ln -s $PWD/rade_src/model19_check3 model19_check3
    ```
@@ -98,7 +98,7 @@ Linux by following these steps:
 
    ```
    (rade-venv) $ pwd
-   /home/user/freedv-gui/build_linux
+   /home/<user>/freedv-gui/build_linux
    (rade-venv) $ PYTHONPATH="$PWD/rade_src:$PYTHONPATH" src/freedv
    ```
 
