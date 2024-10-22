@@ -91,7 +91,7 @@ Linux by following these steps:
    (rade-venv) $ pwd
    /home/<user>/freedv-gui
    (rade-venv) $ cd build_linux
-   (rade-venv) $ ln -s $PWD/rade_src/model19_check3 model19_check3
+   (rade-venv) $ ln -s $(pwd)/rade_src/model19_check3 model19_check3
    ```
 
 4. Execute FreeDV:
@@ -99,7 +99,7 @@ Linux by following these steps:
    ```
    (rade-venv) $ pwd
    /home/<user>/freedv-gui/build_linux
-   (rade-venv) $ PYTHONPATH="$PWD/rade_src:$PYTHONPATH" src/freedv
+   (rade-venv) $ PYTHONPATH="$(pwd)/rade_src:$PYTHONPATH" src/freedv
    ```
 
 ## Building without LPCNet
