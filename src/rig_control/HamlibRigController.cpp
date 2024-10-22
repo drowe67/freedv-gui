@@ -286,6 +286,10 @@ void HamlibRigController::connectImpl_()
             break;
     }
     
+    rig_set_conf(rig_, rig_token_lookup(rig_, "timeout"), "1000");
+    rig_set_conf(rig_, rig_token_lookup(rig_, "retry"), "1");
+    rig_set_conf(rig_, rig_token_lookup(rig_, "timeout_retry"), "1");
+    
     auto result = rig_open(rig_);
     if (result == RIG_OK) 
     {
