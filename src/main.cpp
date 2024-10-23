@@ -297,7 +297,12 @@ void MainApp::UnitTest_()
         // Wait 5 seconds for FreeDV to stop
         std::this_thread::sleep_for(5s);
     }
-    
+    else
+    {
+        // Transmit fo 60 seconds
+        std::this_thread::sleep_for(60s);
+    }
+ 
     // Fire event to stop FreeDV
     fprintf(stderr, "Firing stop\n");
     CallAfter([&]() {
