@@ -20,6 +20,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Load loopback audio (needed for tests)
+      shell: bash
+      run: |
+           sudo modprobe snd-aloop enable=1,1,1,1 index=1,2,3,4
+
     - name: Install packages
       shell: bash
       run: |
