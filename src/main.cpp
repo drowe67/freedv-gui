@@ -31,6 +31,7 @@
 #include <climits>
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
+#include <wx/uiaction.h>
 
 #include "version.h"
 #include "main.h"
@@ -48,6 +49,8 @@
 #include "gui/dialogs/freedv_reporter.h"
 
 #include "rade_api.h"
+
+using namespace std::chrono_literals;
 
 #define wxUSE_FILEDLG   1
 #define wxUSE_LIBPNG    1
@@ -184,15 +187,145 @@ FILE *ftest;
 // Config file management 
 wxConfigBase *pConfig = NULL;
 
+// Unit test management
+wxString testName;
+wxString utFreeDVMode;
+
 // WxWidgets - initialize the application
 
 IMPLEMENT_APP(MainApp);
 
+void MainApp::UnitTest_()
+{
+    /*wxUIActionSimulator sim;
+    
+    // Bring window to the front
+    CallAfter([&]() {
+        frame->Raise();
+    });
+    
+    // Wait 100ms for FreeDV to come to foreground
+    std::this_thread::sleep_for(100ms);*/
+    
+    // Select FreeDV mode. Note, 2020 is deprecated so not testable here.
+    wxRadioButton* modeBtn = nullptr;
+    if (utFreeDVMode == "RADE")
+    {
+        modeBtn = frame->m_rbRADE;
+    }
+    /*else if (utFreeDVMode == "700C")
+    {
+        modeBtn = frame->m_rb700c;
+    }*/
+    else if (utFreeDVMode == "700D")
+    {
+        modeBtn = frame->m_rb700d;
+    }
+    else if (utFreeDVMode == "700E")
+    {
+        modeBtn = frame->m_rb700e;
+    }
+    /*else if (utFreeDVMode == "800XA")
+    {
+        modeBtn = frame->m_rb800xa;
+    }*/
+    else if (utFreeDVMode == "1600")
+    {
+        modeBtn = frame->m_rb1600;
+    }
+    
+    if (modeBtn != nullptr)
+    {
+        fprintf(stderr, "Firing mode change\n");
+        /*sim.MouseMove(modeBtn->GetScreenPosition());
+        sim.MouseClick();*/
+        CallAfter([&]() {
+            modeBtn->SetValue(true);
+            wxCommandEvent* modeEvent = new wxCommandEvent(wxEVT_RADIOBUTTON, modeBtn->GetId());
+            modeEvent->SetEventObject(modeBtn);
+            QueueEvent(modeEvent);
+        });
+    }
+    
+    // Fire event to start FreeDV
+    fprintf(stderr, "Firing start\n");
+    CallAfter([&]() {
+        frame->m_togBtnOnOff->SetValue(true);
+        wxCommandEvent* onEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_togBtnOnOff->GetId());
+        onEvent->SetEventObject(frame->m_togBtnOnOff);
+        frame->OnTogBtnOnOff(*onEvent);
+        delete onEvent;
+        //QueueEvent(onEvent);
+    });
+    /*sim.MouseMove(frame->m_togBtnOnOff->GetScreenPosition());
+    sim.MouseClick();*/
+    
+    // Wait 5 seconds for FreeDV to start
+    std::this_thread::sleep_for(5s);
+    
+    if (testName == "tx")
+    {        
+        // Fire event to begin TX
+        //sim.MouseMove(frame->m_btnTogPTT->GetScreenPosition());
+        //sim.MouseClick();
+        fprintf(stderr, "Firing PTT\n");
+        CallAfter([&]() {
+            frame->m_btnTogPTT->SetValue(true);
+            wxCommandEvent* txEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
+            txEvent->SetEventObject(frame->m_btnTogPTT);
+            //QueueEvent(txEvent);
+            frame->OnTogBtnPTT(*txEvent);
+            delete txEvent;
+        });
+        
+        // Transmit fo 60 seconds
+        std::this_thread::sleep_for(60s);
+        
+        // Stop transmitting
+        fprintf(stderr, "Firing PTT\n");
+        CallAfter([&]() {
+            frame->m_btnTogPTT->SetValue(false);
+            wxCommandEvent* rxEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
+            rxEvent->SetEventObject(frame->m_btnTogPTT);
+            frame->OnTogBtnPTT(*rxEvent);
+            delete rxEvent;
+            //QueueEvent(rxEvent);
+        });
+        /*sim.MouseMove(frame->m_btnTogPTT->GetScreenPosition());
+        sim.MouseClick();*/
+        
+        // Wait 5 seconds for FreeDV to stop
+        std::this_thread::sleep_for(5s);
+    }
+    
+    // Fire event to stop FreeDV
+    fprintf(stderr, "Firing stop\n");
+    CallAfter([&]() {
+        wxCommandEvent* offEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_togBtnOnOff->GetId());
+        offEvent->SetEventObject(frame->m_togBtnOnOff);
+        frame->m_togBtnOnOff->SetValue(false);
+        //QueueEvent(offEvent);
+        frame->OnTogBtnOnOff(*offEvent);
+        delete offEvent;
+    });
+    //sim.MouseMove(frame->m_togBtnOnOff->GetScreenPosition());
+    //sim.MouseClick();
+    
+    // Wait 5 seconds for FreeDV to stop
+    std::this_thread::sleep_for(5s);
+    
+    // Destroy main window to exit application. Must be done in UI thread to avoid problems.
+    CallAfter([&]() {
+        frame->Destroy();
+    });
+}
 
 void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
 {
     wxApp::OnInitCmdLine(parser);
     parser.AddOption("f", "config", "Use different configuration file instead of the default.");
+    parser.AddOption("ut", "unit_test", "Execute FreeDV in unit test mode.");
+    parser.AddOption("utmode", wxEmptyString, "Switch FreeDV to the given mode before UT execution.");
 }
 
 bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
@@ -215,6 +348,15 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         customConfigFileName = fn.GetFullName();
     }
     pConfig->SetRecordDefaults();
+    
+    if (parser.Found("ut", &testName))
+    {
+        fprintf(stderr, "Executing test %s\n", (const char*)testName.ToUTF8());
+        if (parser.Found("utmode", &utFreeDVMode))
+        {
+            fprintf(stderr, "Using mode %s for tests\n", (const char*)utFreeDVMode.ToUTF8());
+        }
+    }
     
     return true;
 }
@@ -297,8 +439,15 @@ bool MainApp::OnInit()
     frame->m_auiNbookCtrl->ChangeSelection(0);
     frame->Layout();    
     frame->Show();
-    g_parent =frame;
+    g_parent = frame;
 
+    // Begin test execution
+    if (testName != "")
+    {
+        std::thread utThread(std::bind(&MainApp::UnitTest_, this));
+        utThread.detach();
+    }
+    
     return true;
 }
 
