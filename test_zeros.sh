@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 FREEDV_TEST=$1
 FREEDV_MODE=$2
