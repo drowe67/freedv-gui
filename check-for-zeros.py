@@ -17,8 +17,8 @@ with open(sys.argv[1], "rb") as f:
         if buffer[0] == 0:
             if first_detected_index == -1:
                 first_detected_index = index
+                detected = True
             detected_index = index
-            detected = True
         elif index == (detected_index + 1):
             if (index - first_detected_index) > 1:
                 sys.stderr.write(f"Zero audio detected at index {index} ({index / 8000} seconds)")
