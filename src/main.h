@@ -223,6 +223,8 @@ class MainApp : public wxApp
 
         wxLocale m_locale;
     protected:
+    private:
+        void UnitTest_();
 };
 
 // declare global static function wxGetApp()
@@ -440,6 +442,8 @@ class MainFrame : public TopFrame
         void OnSetMonitorTxAudioVol( wxCommandEvent& event );
         
     private:
+        friend class MainApp; // needed for unit tests
+        
         std::shared_ptr<IAudioDevice> rxInSoundDevice;
         std::shared_ptr<IAudioDevice> rxOutSoundDevice;
         std::shared_ptr<IAudioDevice> txInSoundDevice;
