@@ -278,7 +278,7 @@ void MainApp::UnitTest_()
             delete txEvent;
         });
         
-        // Transmit fo 60 seconds
+        // Transmit for 60 seconds
         std::this_thread::sleep_for(60s);
         
         // Stop transmitting
