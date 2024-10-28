@@ -144,7 +144,11 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
             txMode_ = mode;
             modemStatsIndex_ = 0;
 
-            rade_ = rade_open("TBD");
+            // Suppress const string warning.
+            // TBD - modelFile may be used by RADE in the future!
+            char modelFile[1];
+            modelFile[0] = 0;
+            rade_ = rade_open(modelFile);
             assert(rade_ != nullptr);
 
             float zeros[320] = {0};

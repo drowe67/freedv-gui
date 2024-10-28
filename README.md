@@ -58,6 +58,50 @@ This document describes how to build the FreeDV GUI program for various operatin
   $ ./build_linux/src/freedv
   ```
 
+## Running RADE mode on Linux
+
+RADE is a new FreeDV mode that uses machine learning to improve voice quality and decoding ability.
+We are currently focused on Windows and macOS for initial development, but it is possible to run on 
+Linux by following these steps:
+
+1. Install PyTorch, TorchAudio and matplotlib Python packages. Some distros have packages for one or more of these,
+   but you can also use pip in a Python virtual environment (recommended to ensure the latest versions):
+
+   ```
+   $ cd freedv-gui
+   $ python3 -m venv rade-venv
+   $ . ./rade-venv/bin/activate
+   (rade-venv) $ pip3 install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+   (rade-venv) $ pip3 install matplotlib
+   ```
+
+   *Note: you may need to install `python3-venv` or your distro's equivalent package in order to create Python virtual environments. Python 3.9+ is also required for PyTorch to work.*
+
+2. Build FreeDV to make sure the correct dependencies are linked in (namely numpy):
+
+   ```
+   (rade-venv) $ pwd
+   /home/<user>/freedv-gui
+   (rade-venv) $ ./build_linux.sh
+   ```
+
+3. Make sure FreeDV can find the ML model:
+
+   ```
+   (rade-venv) $ pwd
+   /home/<user>/freedv-gui
+   (rade-venv) $ cd build_linux
+   (rade-venv) $ ln -s $(pwd)/rade_src/model19_check3 model19_check3
+   ```
+
+4. Execute FreeDV:
+
+   ```
+   (rade-venv) $ pwd
+   /home/<user>/freedv-gui/build_linux
+   (rade-venv) $ PYTHONPATH="$(pwd)/rade_src:$PYTHONPATH" src/freedv
+   ```
+
 ## Building without LPCNet
 
 In preparation for possible future deprecation of FreeDV 2020 and 2020B modes, it is
