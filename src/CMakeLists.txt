@@ -160,6 +160,11 @@ if(APPLE)
         COMMAND cp ARGS ../rade_src/radae_*e.py FreeDV.app/Contents/Resources
         COMMAND cp ARGS -r ../rade_src/radae FreeDV.app/Contents/Resources
         COMMAND cp ARGS -r ../rade_src/model19_check3 FreeDV.app/Contents/Resources
+        
+        # Precompile Python code to improve startup time
+        COMMAND cd FreeDV.app/Contents/Resources && ../Frameworks/Python.framework/Versions/Current/bin/python3 -c "import radae_txe\; import radae_rxe\;" && cd ../../..
+        
+        # Codesign binary so that it can execute
         COMMAND codesign --force --options runtime --timestamp --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/entitlements.plist --sign - ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app
     )
     
