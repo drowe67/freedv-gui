@@ -32,8 +32,11 @@ ExternalProject_Add(build_opus_arm
 ExternalProject_Get_Property(build_opus_arm BINARY_DIR)
 ExternalProject_Get_Property(build_opus_arm SOURCE_DIR)
 set(OPUS_ARM_BINARY_DIR ${BINARY_DIR})
+set(OPUS_ARM_SOURCE_DIR ${SOURCE_DIR})
 ExternalProject_Get_Property(build_opus_x86 BINARY_DIR)
+ExternalProject_Get_Property(build_opus_x86 SOURCE_DIR)
 set(OPUS_X86_BINARY_DIR ${BINARY_DIR})
+set(OPUS_X86_SOURCE_DIR ${SOURCE_DIR})
 
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libopus${CMAKE_STATIC_LIBRARY_SUFFIX}
@@ -44,7 +47,12 @@ add_custom_target(
     libopus.a
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/libopus${CMAKE_STATIC_LIBRARY_SUFFIX})
 
-include_directories(${SOURCE_DIR}/dnn ${SOURCE_DIR}/celt ${SOURCE_DIR}/include)
+set(FARGAN_CONFIG_H_FILE "${SOURCE_DIR}/config.h")
+set(FARGAN_ARM_CONFIG_H_FILE "${OPUS_ARM_SOURCE_DIR}/config.h")
+set(FARGAN_X86_CONFIG_H_FILE "${OPUS_X86_SOURCE_DIR}/config.h")
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/fargan_config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/fargan_config.h")
+include_directories(${SOURCE_DIR}/dnn ${SOURCE_DIR}/celt ${SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR})
 
 add_library(opus STATIC IMPORTED)
 add_dependencies(opus libopus.a)
