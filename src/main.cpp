@@ -299,8 +299,18 @@ void MainApp::UnitTest_()
     }
     else
     {
-        // Transmit fo 60 seconds
-        std::this_thread::sleep_for(60s);
+        // Receive for 60 seconds
+        auto sync = 0;
+        for (int i = 0; i < 60; i++)
+        {
+            std::this_thread::sleep_for(1s);
+            auto newSync = freedvInterface.getSync();
+            if (newSync != sync)
+            {
+                fprintf(stderr, "Sync changed from %d to %d\n", sync, newSync);
+                sync = newSync;
+            }
+        } 
     }
  
     // Fire event to stop FreeDV

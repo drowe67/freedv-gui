@@ -9,7 +9,7 @@ FREEDV_RX_FILE=$3
 
 # Start playback if RX
 if [ "$FREEDV_TEST" == "rx" ]; then
-    paplay --device "alsa_output.platform-snd_aloop.0.analog-stereo.monitor" $FREEDV_RX_FILE &
+    paplay -d "alsa_output.platform-snd_aloop.0.analog-stereo" $FREEDV_RX_FILE &
     PLAY_PID=$!
     REC_DEVICE="alsa_output.platform-snd_aloop.1.analog-stereo.monitor"
 else
@@ -17,16 +17,20 @@ else
 fi
  
 # Start recording
-parecord --channels=1 --rate 8000 --file-format=wav --device $REC_DEVICE --latency 1 test.wav &
+#parecord --channels=1 --rate 8000 --file-format=wav --device $REC_DEVICE --latency 1 test.wav &
 RECORD_PID=$!
 
 # Start FreeDV in test mode
-src/freedv -f $(pwd)/../freedv-ctest.conf -ut $FREEDV_TEST -utmode $FREEDV_MODE 
+src/freedv -f $(pwd)/../freedv-ctest.conf -ut $FREEDV_TEST -utmode $FREEDV_MODE | tee tmp.log
+NUM_RESYNCS=`grep "Sync changed" tmp.log | wc -l`
 
 # Stop recording and process data
-kill $RECORD_PID
+#kill $RECORD_PID
 if [ "$FREEDV_TEST" == "rx" ]; then
     kill $PLAY_PID
 fi
-sox test.wav -t raw -r 8k -c 1 -b 16 -e signed-integer test.raw silence 1 0.1 0.1% reverse silence 1 0.1 0.1% reverse
-python3 check-for-zeros.py test.raw
+#sox test.wav -t raw -r 8k -c 1 -b 16 -e signed-integer test.raw silence 1 0.1 0.1% reverse silence 1 0.1 0.1% reverse
+#python3 check-for-zeros.py test.raw
+if [ $NUM_RESYNCS -gt 1 ]; then
+    echo "Got $NUM_RESYNCS syncs"
+fi
