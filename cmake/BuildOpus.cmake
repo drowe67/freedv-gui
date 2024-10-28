@@ -80,6 +80,11 @@ set_target_properties(opus PROPERTIES
     IMPORTED_IMPLIB   "${BINARY_DIR}/.libs/libopus${CMAKE_STATIC_LIBRARY_SUFFIX}"
 )
 
-include_directories(${SOURCE_DIR}/dnn ${SOURCE_DIR}/celt ${SOURCE_DIR}/include)
+set(FARGAN_CONFIG_H_FILE "${SOURCE_DIR}/config.h")
+set(FARGAN_ARM_CONFIG_H_FILE "")
+set(FARGAN_X86_CONFIG_H_FILE "")
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/fargan_config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/fargan_config.h")
+include_directories(${SOURCE_DIR}/dnn ${SOURCE_DIR}/celt ${SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR})
 list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${BINARY_DIR}/.libs)
 endif(APPLE AND BUILD_OSX_UNIVERSAL)
