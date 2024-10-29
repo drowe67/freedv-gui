@@ -24,12 +24,12 @@ jobs:
       shell: bash
       run: |
            sudo apt-get update
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.0-gtk3-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev python3-numpy pulseaudio jackd2 alsa-utils dbus-x11
+           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.0-gtk3-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev python3-numpy pulseaudio jackd2 alsa-utils dbus-x11 xvfb linux-image-extra-virtual
             
-    #- name: Load loopback audio (needed for tests)
-    #  shell: bash
-    #  run: |
-    #       sudo modprobe snd-aloop enable=1,1,1,1 index=1,2,3,4
+    - name: Load loopback audio (needed for tests)
+      shell: bash
+      run: |
+           sudo modprobe snd-aloop enable=1,1,1,1 index=1,2,3,4
 
     - name: Spellcheck codebase
       shell: bash
