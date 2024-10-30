@@ -29,7 +29,7 @@ jobs:
     - name: Load loopback audio (needed for tests)
       shell: bash
       run: |
-           sudo modprobe snd-aloop enable=1,1,1,1 index=1,2,3,4
+           sudo modprobe snd_aloop enable=1,1,1,1 index=1,2,3,4
 
     - name: Spellcheck codebase
       shell: bash
