@@ -729,7 +729,7 @@ macro(DefineAudioTest utName)
     set_tests_properties(fullduplex_${utName} PROPERTIES FAIL_REGULAR_EXPRESSION "Got [0-9]+ sync changes")
 endmacro()
 
-#DefineAudioTest(RADE)
+DefineAudioTest(RADE)
 DefineAudioTest(700D)
 DefineAudioTest(700E)
 DefineAudioTest(1600)
