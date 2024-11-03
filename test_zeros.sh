@@ -54,7 +54,9 @@ if [ "$FREEDV_TEST" == "rx" ]; then
 else
     kill $RECORD_PID
     sox test.wav -t raw -r 8k -c 1 -b 16 -e signed-integer test.raw silence 1 0.1 0.1% reverse silence 1 0.1 0.1% reverse
-    python3 check-for-zeros.py test.raw
+
+    SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+    python3 $SCRIPTPATH/check-for-zeros.py test.raw
 fi
 
 # Clean up PulseAudio virtual devices
