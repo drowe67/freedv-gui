@@ -16,8 +16,14 @@ DRIVER_INDEX_FREEDV_COMPUTER_TO_SPEAKER=$(createVirtualAudioCable FreeDV_Compute
 DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER=$(createVirtualAudioCable FreeDV_Microphone_To_Computer)
 DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO=$(createVirtualAudioCable FreeDV_Computer_To_Radio)
 
-# Start playback if RX
-if [ "$FREEDV_TEST" == "rx" ]; then
+# If full duplex test, use correct config file and assume "rx" mode.
+FREEDV_CONF_FILE=freedv-ctest.conf
+if [ "$FREEDV_TEST" == "txrx" ]; then
+    FREEDV_TEST=rx
+    FREEDV_CONF_FILE=freedv-ctest-fullduplex.conf
+    REC_DEVICE="FreeDV_Computer_To_Speaker.monitor"
+elif [ "$FREEDV_TEST" == "rx" ]; then
+    # Start playback if RX
     paplay -d "FreeDV_Radio_To_Computer" $FREEDV_RX_FILE &
     PLAY_PID=$!
     REC_DEVICE="FreeDV_Computer_To_Speaker.monitor"
@@ -32,7 +38,7 @@ if [ "$FREEDV_TEST" == "tx" ]; then
 fi
 
 # Start FreeDV in test mode
-src/freedv -f $(pwd)/../freedv-ctest.conf -ut $FREEDV_TEST -utmode $FREEDV_MODE 2>&1 | tee tmp.log
+src/freedv -f $(pwd)/../$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE 2>&1 | tee tmp.log
 
 # Stop recording/playback and process data
 if [ "$FREEDV_TEST" == "rx" ]; then
