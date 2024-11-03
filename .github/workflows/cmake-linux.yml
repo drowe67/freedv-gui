@@ -24,7 +24,7 @@ jobs:
       shell: bash
       run: |
            sudo apt-get update
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.0-gtk3-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev python3-numpy xvfb pipewire-pulse pulseaudio pulseaudio-utils
+           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.0-gtk3-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev python3-numpy xvfb pulseaudio pulseaudio-utils pipewire-pulse
             
     - name: Spellcheck codebase
       shell: bash
@@ -46,5 +46,7 @@ jobs:
       run: |
           Xvfb :99 -screen 0 1024x768x16 &
           export DISPLAY=:99.0
+          sudo systemctl enable pipewire.service
+          sudo systemctl start pipewire.service
           ctest -V
       
