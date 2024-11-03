@@ -726,7 +726,7 @@ if (USE_PULSEAUDIO)
 # PulseAudio/pipewire.
 macro(DefineAudioTest utName)
     add_test(NAME fullduplex_${utName} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test_zeros.sh txrx ${utName}) 
-    set_tests_properties(fullduplex_${utName} PROPERTIES PASS_REGULAR_EXPRESSION "Got 1 sync changes")
+    set_tests_properties(fullduplex_${utName} PROPERTIES FAIL_REGULAR_EXPRESSION "Got [0-9]+ sync changes")
 endmacro()
 
 #DefineAudioTest(RADE)
