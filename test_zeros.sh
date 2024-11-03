@@ -49,9 +49,7 @@ src/freedv -f $(pwd)/../$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE 
 if [ "$FREEDV_TEST" == "rx" ]; then
     kill $PLAY_PID || echo "Already done playing"
     NUM_RESYNCS=`grep "Sync changed" tmp.log | wc -l`
-    if [ $NUM_RESYNCS -gt 1 ]; then
-        echo "Got $NUM_RESYNCS sync changes"
-    fi
+    echo "Got $NUM_RESYNCS sync changes"
 else
     kill $RECORD_PID
     sox test.wav -t raw -r 8k -c 1 -b 16 -e signed-integer test.raw silence 1 0.1 0.1% reverse silence 1 0.1 0.1% reverse
