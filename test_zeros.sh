@@ -32,14 +32,14 @@ if [ "$FREEDV_TEST" == "tx" ]; then
 fi
 
 # Start FreeDV in test mode
-src/freedv -f $(pwd)/../freedv-ctest.conf -ut $FREEDV_TEST -utmode $FREEDV_MODE | tee tmp.log
+src/freedv -f $(pwd)/../freedv-ctest.conf -ut $FREEDV_TEST -utmode $FREEDV_MODE 2>&1 | tee tmp.log
 
 # Stop recording/playback and process data
 if [ "$FREEDV_TEST" == "rx" ]; then
     kill $PLAY_PID || echo "Already done playing"
     NUM_RESYNCS=`grep "Sync changed" tmp.log | wc -l`
     if [ $NUM_RESYNCS -gt 1 ]; then
-        echo "Got $NUM_RESYNCS syncs"
+        echo "Got $NUM_RESYNCS sync changes"
     fi
 else
     kill $RECORD_PID
