@@ -15,6 +15,7 @@ DRIVER_INDEX_FREEDV_RADIO_TO_COMPUTER=$(createVirtualAudioCable FreeDV_Radio_To_
 DRIVER_INDEX_FREEDV_COMPUTER_TO_SPEAKER=$(createVirtualAudioCable FreeDV_Computer_To_Speaker)
 DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER=$(createVirtualAudioCable FreeDV_Microphone_To_Computer)
 DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO=$(createVirtualAudioCable FreeDV_Computer_To_Radio)
+DRIVER_INDEX_LOOPBACK=`pactl load-module module-loopback source="FreeDV_Computer_To_Radio.monitor" sink="FreeDV_Radio_To_Computer"`
 
 # If full duplex test, use correct config file and assume "rx" mode.
 FREEDV_CONF_FILE=freedv-ctest.conf
@@ -60,7 +61,8 @@ else
 fi
 
 # Clean up PulseAudio virtual devices
+pactl unload-module $DRIVER_INDEX_LOOPBACK
 pactl unload-module $DRIVER_INDEX_FREEDV_RADIO_TO_COMPUTER
 pactl unload-module $DRIVER_INDEX_FREEDV_COMPUTER_TO_SPEAKER
-pactl unload-module $DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER
 pactl unload-module $DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO
+pactl unload-module $DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER
