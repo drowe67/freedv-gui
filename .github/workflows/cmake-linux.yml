@@ -46,7 +46,6 @@ jobs:
       run: |
           Xvfb :99 -screen 0 1024x768x16 &
           export DISPLAY=:99.0
-          sudo systemctl enable pipewire.service
-          sudo systemctl start pipewire.service
+          systemctl --user status pipewire
           ctest -V
       
