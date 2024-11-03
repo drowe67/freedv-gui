@@ -22,6 +22,10 @@ if [ "$FREEDV_TEST" == "txrx" ]; then
     FREEDV_TEST=rx
     FREEDV_CONF_FILE=freedv-ctest-fullduplex.conf
     REC_DEVICE="FreeDV_Computer_To_Speaker.monitor"
+
+    # Generate sine wave for input
+    sox -r 48000 -n -b 16 -c 1 -t wav - synth 120 sin 1000 vol -10dB | paplay -d "FreeDV_Microphone_To_Computer" &
+    PLAY_PID=$!
 elif [ "$FREEDV_TEST" == "rx" ]; then
     # Start playback if RX
     paplay -d "FreeDV_Radio_To_Computer" $FREEDV_RX_FILE &
