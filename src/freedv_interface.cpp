@@ -429,7 +429,14 @@ int FreeDVInterface::getSync() const
     // Special case for RADE.
     if (currentRxMode_ == nullptr)
     {
-        return rade_sync(rade_);
+        if (rade_ != nullptr)
+        {
+            return rade_sync(rade_);
+        }
+        else
+        {
+            return 0;
+        }
     }
 
     return freedv_get_sync(currentRxMode_);
