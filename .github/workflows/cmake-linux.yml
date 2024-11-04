@@ -24,7 +24,7 @@ jobs:
       shell: bash
       run: |
            sudo apt-get update
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.0-gtk3-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pulseaudio pulseaudio-utils pipewire-pulse wireplumber
+           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.0-gtk3-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber
             
     - name: Spellcheck codebase
       shell: bash
@@ -52,13 +52,6 @@ jobs:
       run: |
           . ./rade-venv/bin/activate
           UT_ENABLE=1 ./build_linux.sh pulseaudio
-
-    - name: Prepare for UT execution
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-          mkdir -p ~/.config/wireplumber/main.lua.d
-          cp 51-disable-suspension.lua ~/.config/wireplumber/main.lua.d/51-disable-suspension.lua
 
     - name: Execute unit tests
       shell: bash
