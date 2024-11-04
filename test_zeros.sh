@@ -49,7 +49,7 @@ fi
 src/freedv -f $(pwd)/../$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE 2>&1 | tee tmp.log &
 
 FDV_PID=$!
-sleep 5
+sleep 30 
 wpctl status
 wait $FDV_PID
 
