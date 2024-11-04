@@ -53,6 +53,25 @@ jobs:
           . ./rade-venv/bin/activate
           UT_ENABLE=1 ./build_linux.sh pulseaudio
 
+    - name: Prepare for UT execution
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          mkdir -p ~/.config/wireplumber/main.lua.d
+          cat <<EOF >~/.config/wireplumber/main.lua.d/51-disable-suspension.lua
+table.insert (alsa_monitor.rules, {
+  matches = {
+    {
+      -- Matches all sinks.
+      { "node.name", "matches", "FreeDV_*" },
+    },
+  },
+  apply_properties = {
+    ["session.suspend-timeout-seconds"] = 0,  -- 0 disables suspend
+  },
+})
+EOF
+
     - name: Execute unit tests
       shell: bash
       working-directory: ${{github.workspace}}/build_linux
