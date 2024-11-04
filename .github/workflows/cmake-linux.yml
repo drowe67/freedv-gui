@@ -62,6 +62,5 @@ jobs:
           systemctl --user start wireplumber pipewire pipewire-pulse
           ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
           . ../rade-venv/bin/activate
-          systemctl --user status wireplumber pipewire pipewire-pulse
           PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V
       

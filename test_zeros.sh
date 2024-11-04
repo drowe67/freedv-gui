@@ -17,6 +17,9 @@ DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER=$(createVirtualAudioCable FreeDV_Micr
 DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO=$(createVirtualAudioCable FreeDV_Computer_To_Radio)
 DRIVER_INDEX_LOOPBACK=`pactl load-module module-loopback source="FreeDV_Computer_To_Radio.monitor" sink="FreeDV_Radio_To_Computer"`
 
+# For debugging--list sink info
+pactl list sinks
+
 # If full duplex test, use correct config file and assume "rx" mode.
 FREEDV_CONF_FILE=freedv-ctest.conf
 if [ "$FREEDV_TEST" == "txrx" ]; then
