@@ -66,6 +66,9 @@ jobs:
           eval "$(dbus-launch --sh-syntax --exit-with-x11)"
           metacity --sm-disable --replace &
           systemctl --user start wireplumber pipewire pipewire-pulse
+          sleep 5
+          journalctl -xe | grep pipewire
+          journalctl -xe | grep wireplumber
           ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
           . ../rade-venv/bin/activate
           PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V
