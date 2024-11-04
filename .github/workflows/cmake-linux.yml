@@ -59,7 +59,6 @@ jobs:
       run: |
           sudo systemctl enable rtkit-daemon
           sudo systemctl start rtkit-daemon
-          systemctl --user enable wireplumber pipewire pipewire-pulse
           Xvfb :99 -screen 0 1024x768x16 &
           sleep 5
           export DISPLAY=:99.0
@@ -67,6 +66,8 @@ jobs:
           mkdir -p $XDG_RUNTIME_DIR
           chmod 700 $XDG_RUNTIME_DIR
           eval "$(dbus-launch --sh-syntax --exit-with-x11)"
+          systemctl --user --now enable wireplumber pipewire pipewire-pulse
+          sleep 5
           metacity --sm-disable --replace &
           sleep 5
           ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3

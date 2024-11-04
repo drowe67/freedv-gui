@@ -197,15 +197,16 @@ IMPLEMENT_APP(MainApp);
 
 void MainApp::UnitTest_()
 {
-    /*wxUIActionSimulator sim;
-    
     // Bring window to the front
     CallAfter([&]() {
+        frame->Iconize(false);
+        frame->SetFocus();
         frame->Raise();
+        frame->Show(true);
     });
     
     // Wait 100ms for FreeDV to come to foreground
-    std::this_thread::sleep_for(100ms);*/
+    std::this_thread::sleep_for(100ms);
     
     // Select FreeDV mode. Note, 2020 is deprecated so not testable here.
     wxRadioButton* modeBtn = nullptr;
