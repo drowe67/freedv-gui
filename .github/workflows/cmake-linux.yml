@@ -24,7 +24,7 @@ jobs:
       shell: bash
       run: |
            sudo apt-get update
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.0-gtk3-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber gnome-themes-standard metacity
+           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.0-gtk3-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber gnome-themes-standard metacity dbus-x11 at-spi2-core
             
     - name: Spellcheck codebase
       shell: bash
@@ -59,6 +59,9 @@ jobs:
       run: |
           Xvfb :99 -screen 0 1024x768x16 &
           export DISPLAY=:99.0
+          export XDG_RUNTIME_DIR=/run/user/$(id -u)
+          mkdir -p $XDG_RUNTIME_DIR
+          eval "$(dbus-launch --sh-syntax --exit-with-x11)"
           metacity --sm-disable --replace &
           systemctl --user start wireplumber pipewire pipewire-pulse
           ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
