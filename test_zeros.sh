@@ -51,6 +51,7 @@ src/freedv -f $(pwd)/../$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE 
 FDV_PID=$!
 sleep 30 
 wpctl status
+pw-top -b -n 5
 wait $FDV_PID
 
 # Stop recording/playback and process data
