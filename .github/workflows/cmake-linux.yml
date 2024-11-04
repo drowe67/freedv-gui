@@ -66,13 +66,20 @@ jobs:
           mkdir -p $XDG_RUNTIME_DIR
           chmod 700 $XDG_RUNTIME_DIR
           eval "$(dbus-launch --sh-syntax --exit-with-x11)"
-          systemctl --user --now enable wireplumber pipewire pipewire-pulse
+          #systemctl --user --now enable wireplumber pipewire pipewire-pulse
+          export PIPEWIRE_DEBUG=D
+          export WIREPLUMBER_DEBUG=D
+          pipewire &
+          pipewire-pulse &
+          wireplumber &
           sleep 5
+          pactl info
+          wpctl status
           metacity --sm-disable --replace &
           sleep 5
           ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
           . ../rade-venv/bin/activate
-          PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V || echo "failed"
-          journalctl -xe | grep pipewire
-          journalctl -xe | grep wireplumber
+          PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V
+          #journalctl -xe | grep pipewire
+          #journalctl -xe | grep wireplumber
       
