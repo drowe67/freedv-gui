@@ -18,7 +18,7 @@ DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO=$(createVirtualAudioCable FreeDV_Computer_
 DRIVER_INDEX_LOOPBACK=`pactl load-module module-loopback source="FreeDV_Computer_To_Radio.monitor" sink="FreeDV_Radio_To_Computer"`
 
 # For debugging--list sink info
-pactl list sinks
+#pactl list sinks
 
 # If full duplex test, use correct config file and assume "rx" mode.
 FREEDV_CONF_FILE=freedv-ctest.conf
@@ -46,7 +46,12 @@ if [ "$FREEDV_TEST" == "tx" ]; then
 fi
 
 # Start FreeDV in test mode
-src/freedv -f $(pwd)/../$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE 2>&1 | tee tmp.log
+src/freedv -f $(pwd)/../$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE 2>&1 | tee tmp.log &
+
+FDV_PID=$!
+sleep 5
+wpctl status
+wait $FDV_PID
 
 # Stop recording/playback and process data
 if [ "$FREEDV_TEST" == "rx" ]; then
