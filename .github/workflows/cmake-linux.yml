@@ -73,9 +73,9 @@ jobs:
           pipewire &
           pipewire-pulse &
           wireplumber &
-          sleep 5
-          pactl info
-          wpctl status
+          #sleep 5
+          #pactl info
+          #wpctl status
           metacity --sm-disable --replace &
           sleep 5
           ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
