@@ -33,11 +33,8 @@ PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* c
     : context_(context)
     , mainloop_(mainloop)
     , stream_(nullptr)
-    , outputPending_(nullptr)
-    , outputPendingLength_(0)
     , outputPendingThreadActive_(false)
     , outputPendingThread_(nullptr)
-    , targetOutputPendingLength_(PULSE_FPB * numChannels * 2)
     , devName_(devName)
     , direction_(direction)
     , sampleRate_(sampleRate)
@@ -110,7 +107,6 @@ void PulseAudioDevice::start()
         strftime(buf, 256, "%c", p);
         fprintf(stderr, "PulseAudioDevice[%s]: connecting to playback device %s\n", buf, (const char*)devName_.ToUTF8());
         
-        pa_stream_set_write_callback(stream_, &PulseAudioDevice::StreamWriteCallback_, this);
         result = pa_stream_connect_playback(
             stream_, devName_.c_str(), &buffer_attr, 
             flags, NULL, NULL);
@@ -141,9 +137,6 @@ void PulseAudioDevice::start()
         // is necessary in order to ensure that we can 
         // provide data to PulseAudio at a rate expected
         // for the actual latency of the sound device.
-        outputPending_ = nullptr;
-        outputPendingLength_ = 0;
-        targetOutputPendingLength_ = PULSE_FPB * getNumChannels() * 2;
         outputPendingThreadActive_ = true;
         if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
         {
@@ -155,41 +148,17 @@ void PulseAudioDevice::start()
                 while(outputPendingThreadActive_)
                 {
                     auto currentTime = std::chrono::steady_clock::now();
-                    int currentLength = 0;
-
-                    {
-                        std::unique_lock<std::mutex> lk(outputPendingMutex_);
-                        currentLength = outputPendingLength_;
-                    }
-
-                    if (currentLength < targetOutputPendingLength_)
-                    {                        
-                        short data[PULSE_FPB * getNumChannels()];
-                        memset(data, 0, sizeof(data));
+                    short data[PULSE_FPB * getNumChannels()];
+                    memset(data, 0, sizeof(data));
                         
-                        if (onAudioDataFunction)
-                        {
-                            onAudioDataFunction(*this, data, PULSE_FPB, onAudioDataState);
-                        }
-    
-                        {
-                            std::unique_lock<std::mutex> lk(outputPendingMutex_);
-                            short* temp = new short[outputPendingLength_ + PULSE_FPB * getNumChannels()];
-                            assert(temp != nullptr);
-    
-                            if (outputPendingLength_ > 0)
-                            {
-                                memcpy(temp, outputPending_, outputPendingLength_ * sizeof(short));
-    
-                                delete[] outputPending_;
-                                outputPending_ = nullptr;
-                            }
-                            memcpy(temp + outputPendingLength_, data, sizeof(data));
-    
-                            outputPending_ = temp;
-                            outputPendingLength_ += PULSE_FPB * getNumChannels();
-                        }
+                    if (onAudioDataFunction)
+                    {
+                        onAudioDataFunction(*this, data, PULSE_FPB, onAudioDataState);
                     }
+
+                    pa_threaded_mainloop_lock(mainloop_);
+                    pa_stream_write(stream_, &data[0], sizeof(data), NULL, 0LL, PA_SEEK_RELATIVE);
+                    pa_threaded_mainloop_unlock(mainloop_);
 
                     // Sleep the required amount of time to ensure we call onAudioDataFunction
                     // every PULSE_FPB samples.
@@ -225,11 +194,6 @@ void PulseAudioDevice::stop()
         if (outputPendingThread_ != nullptr)
         {
             outputPendingThread_->join();
-
-            delete[] outputPending_;
-            outputPending_ = nullptr;
-            outputPendingLength_ = 0;
-
             delete outputPendingThread_;
             outputPendingThread_ = nullptr;
         }
@@ -241,54 +205,15 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
     const void* data = nullptr;
     PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
 
-    do
+    if (length == 0) return;
+    if (pa_stream_peek(s, &data, &length) < 0) return;
+
+    if (thisObj->onAudioDataFunction)
     {
-        pa_stream_peek(s, &data, &length);
-        if (!data || length == 0) 
-        {
-            break;
-        }
-
-        if (thisObj->onAudioDataFunction)
-        {
-            thisObj->onAudioDataFunction(*thisObj, (void*)data, length / thisObj->getNumChannels() / sizeof(short), thisObj->onAudioDataState);
-        }
-
-        pa_stream_drop(s);
-    } while (pa_stream_readable_size(s) > 0);
-}
-
-void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *userdata)
-{
-    if (length > 0)
-    {
-        // Note that PulseAudio gives us lengths in terms of number of bytes, not samples.
-        int numSamples = length / sizeof(short);
-        short data[numSamples];
-        memset(data, 0, sizeof(data));
-
-        PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
-        {
-            std::unique_lock<std::mutex> lk(thisObj->outputPendingMutex_);
-            if (thisObj->outputPendingLength_ >= numSamples)
-            {
-                memcpy(data, thisObj->outputPending_, sizeof(data));
-
-                short* tmp = new short[thisObj->outputPendingLength_ - numSamples];
-                assert(tmp != nullptr);
-
-                thisObj->outputPendingLength_ -= numSamples;
-                memcpy(tmp, thisObj->outputPending_ + numSamples, sizeof(short) * thisObj->outputPendingLength_);
-
-                delete[] thisObj->outputPending_;
-                thisObj->outputPending_ = tmp;
-            }
-
-            thisObj->targetOutputPendingLength_ = std::max(thisObj->targetOutputPendingLength_, 2 * numSamples);
-        }
-
-        pa_stream_write(s, &data[0], length, NULL, 0LL, PA_SEEK_RELATIVE);
+        thisObj->onAudioDataFunction(*thisObj, (void*)data, length / thisObj->getNumChannels() / sizeof(short), thisObj->onAudioDataState);
     }
+
+    pa_stream_drop(s);
 }
 
 void PulseAudioDevice::StreamStateCallback_(pa_stream *p, void *userdata)
