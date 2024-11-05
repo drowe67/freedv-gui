@@ -68,8 +68,8 @@ jobs:
           chmod 700 $XDG_RUNTIME_DIR
           eval "$(dbus-launch --sh-syntax --exit-with-x11)"
           #systemctl --user --now enable wireplumber pipewire pipewire-pulse
-          export PIPEWIRE_DEBUG=I
-          export WIREPLUMBER_DEBUG=I
+          #export PIPEWIRE_DEBUG=I
+          #export WIREPLUMBER_DEBUG=I
           pipewire &
           pipewire-pulse &
           wireplumber &
