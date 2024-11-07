@@ -9,6 +9,11 @@ createVirtualAudioCable () {
     pactl load-module module-null-sink sink_name=$CABLE_NAME sink_properties=device.description=$CABLE_NAME
 }
 
+FREEDV_RADIO_TO_COMPUTER_DEVICE="${FREEDV_RADIO_TO_COMPUTER_DEVICE:-FreeDV_Radio_To_Computer}"
+FREEDV_COMPUTER_TO_SPEAKER_DEVICE="${FREEDV_COMPUTER_TO_SPEAKER_DEVICE:-FreeDV_Computer_To_Speaker}"
+FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="${FREEDV_MICROPHONE_TO_COMPUTER_DEVICE:-FreeDV_Microphone_To_Computer.monitor}"
+FREEDV_COMPUTER_TO_RADIO_DEVICE="${FREEDV_COMPUTER_TO_RADIO_DEVICE:FreeDV_Computer_To_Radio}"
+
 # Automated script to help find audio dropouts.
 # NOTE: this must be run from "build_linux". Also assumes PulseAudio/pipewire.
 DRIVER_INDEX_FREEDV_RADIO_TO_COMPUTER=$(createVirtualAudioCable FreeDV_Radio_To_Computer)
@@ -19,26 +24,31 @@ DRIVER_INDEX_LOOPBACK=`pactl load-module module-loopback source="FreeDV_Computer
 
 # For debugging--list sink info
 #pactl list sinks
-
-# If full duplex test, use correct config file and assume "rx" mode.
-FREEDV_CONF_FILE=freedv-ctest.conf
-if [ "$FREEDV_TEST" == "txrx" ]; then
-    FREEDV_TEST=rx
+# If full duplex test, use correct config file and assume "rx" mode.  
+FREEDV_CONF_FILE=freedv-ctest.conf 
+if [ "$FREEDV_TEST" == "txrx" ]; then 
+    FREEDV_TEST=rx 
     FREEDV_CONF_FILE=freedv-ctest-fullduplex.conf
-    REC_DEVICE="FreeDV_Computer_To_Speaker.monitor"
+    REC_DEVICE="$FREEDV_COMPUTER_TO_SPEAKER_DEVICE"
 
     # Generate sine wave for input
-    sox -r 48000 -n -b 16 -c 1 -t wav - synth 120 sin 1000 vol -10dB | paplay -d "FreeDV_Microphone_To_Computer" &
+    sox -r 48000 -n -b 16 -c 1 -t wav - synth 120 sin 1000 vol -10dB | paplay -d $FREEDV_MICROPHONE_TO_COMPUTER_DEVICE &
     PLAY_PID=$!
 elif [ "$FREEDV_TEST" == "rx" ]; then
     # Start playback if RX
-    paplay -d "FreeDV_Radio_To_Computer" $FREEDV_RX_FILE &
+    paplay -d $FREEDV_RADIO_TO_COMPUTER_DEVICE $FREEDV_RX_FILE &
     PLAY_PID=$!
-    REC_DEVICE="FreeDV_Computer_To_Speaker.monitor"
+    REC_DEVICE="$FREEDV_COMPUTER_TO_SPEAKER_DEVICE.monitor"
 else
-    REC_DEVICE="FreeDV_Computer_To_Radio.monitor"
+    REC_DEVICE="$FREEDV_COMPUTER_TO_RADIO_DEVICE.monitor"
 fi
- 
+
+# Generate config file
+sed "s/@FREEDV_RADIO_TO_COMPUTER_DEVICE@/$FREEDV_RADIO_TO_COMPUTER_DEVICE/g" $(pwd)/../$FREEDV_CONF_FILE.tmpl | \
+    sed "s/@FREEDV_COMPUTER_TO_RADIO_DEVICE@/$FREEDV_COMPUTER_TO_RADIO_DEVICE/g" | \
+    sed "s/@FREEDV_COMPUTER_TO_SPEAKER_DEVICE@/$FREEDV_COMPUTER_TO_SPEAKER_DEVICE/g" | \
+    sed "s/@FREEDV_MICROPHONE_TO_COMPUTER_DEVICE@/$FREEDV_MICROPHONE_TO_COMPUTER_DEVICE/g" > $(pwd)/$FREEDV_CONF_FILE
+
 # Start recording
 if [ "$FREEDV_TEST" == "tx" ]; then
     parecord --channels=1 --rate 8000 --file-format=wav --device $REC_DEVICE --latency 1 test.wav &
@@ -46,7 +56,7 @@ if [ "$FREEDV_TEST" == "tx" ]; then
 fi
 
 # Start FreeDV in test mode
-src/freedv -f $(pwd)/../$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE 2>&1 | tee tmp.log &
+src/freedv -f $(pwd)/$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE 2>&1 | tee tmp.log &
 
 FDV_PID=$!
 #sleep 30 
