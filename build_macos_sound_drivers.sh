@@ -1,9 +1,11 @@
 #!/bin/bash
 
 git clone https://github.com/tmiw/BlackHole.git
-cd BlackHole
-
 for i in {1..3}; do
+    cd BlackHole
+    git reset --hard
+    rm -rf build
+
     export bundleID=audio.existential.BlackHole$i
     export driverName=BlackHole$i
     xcodebuild \
