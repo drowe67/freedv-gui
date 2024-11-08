@@ -673,6 +673,9 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
         [&](ParallelStep*) {
             int index = 0;
 
+            // Clear sync before TX
+            sync_ = 0;
+            
             // Special handling for RADE.
             if (txMode_ >= FREEDV_MODE_RADE) return 0;
 
