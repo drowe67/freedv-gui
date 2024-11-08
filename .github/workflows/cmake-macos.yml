@@ -23,7 +23,7 @@ jobs:
     - name: Install packages
       shell: bash
       working-directory: ${{github.workspace}}
-      run: brew install automake libtool numpy
+      run: brew install automake libtool numpy tccutil
 
     - name: Install virtual audio devices
       shell: bash
@@ -38,5 +38,7 @@ jobs:
     - name: Execute unit tests
       shell: bash
       working-directory: ${{github.workspace}}/build_osx
-      run: FREEDV_COMPUTER_TO_RADIO_DEVICE="BlackHoleRadio 2ch" FREEDV_RADIO_TO_COMPUTER_DEVICE="BlackHoleRadio 2ch 2" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ctest -V
+      run: |
+          sudo tccutil.py -i src/FreeDV.app/Contents/MacOS/FreeDV -s kTCCServiceMicrophone
+          FREEDV_COMPUTER_TO_RADIO_DEVICE="BlackHoleRadio 2ch" FREEDV_RADIO_TO_COMPUTER_DEVICE="BlackHoleRadio 2ch 2" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ctest -V
       
