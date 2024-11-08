@@ -39,12 +39,6 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}/build_osx
       run: |
-          sudo tccutil -i src/FreeDV.app/Contents/MacOS/FreeDV -s kTCCServiceMicrophone
-          FREEDV_COMPUTER_TO_RADIO_DEVICE="BlackHoleRadio 2ch" FREEDV_RADIO_TO_COMPUTER_DEVICE="BlackHoleRadio 2ch 2" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ../test_zeros.sh txrx 700D
-
-    - uses: actions/upload-artifact@v4
-      with:
-          name: Screenshot of failing test
-          path: ${{github.workspace}}/screenshot.png
-          compression-level: 0
+          sudo tccutil -i /usr/local/opt/runner/provisioner/provisioner -s kTCCServiceMicrophone
+          FREEDV_COMPUTER_TO_RADIO_DEVICE="BlackHoleRadio 2ch" FREEDV_RADIO_TO_COMPUTER_DEVICE="BlackHoleRadio 2ch 2" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ctest -V
            
