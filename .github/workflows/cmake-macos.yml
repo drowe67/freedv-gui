@@ -38,5 +38,5 @@ jobs:
     - name: Execute unit tests
       shell: bash
       working-directory: ${{github.workspace}}/build_osx
-      run: FREEDV_COMPUTER_TO_RADIO_DEVICE="BlackHole1" FREEDV_RADIO_TO_COMPUTER_DEVICE="BlackHole1" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole2" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole3" ctest -V
+      run: FREEDV_COMPUTER_TO_RADIO_DEVICE="BlackHoleRadio" FREEDV_RADIO_TO_COMPUTER_DEVICE="BlackHoleRadio 2" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2" ctest -V
       
