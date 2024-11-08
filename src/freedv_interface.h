@@ -191,7 +191,8 @@ private:
     FARGANState fargan_;
     LPCNetEncState *lpcnetEncState_; 
     RADETransmitStep *radeTxStep_;
-
+    int sync_;
+    
     int preProcessRxFn_(ParallelStep* ps);
     int postProcessRxFn_(ParallelStep* ps);
 };
