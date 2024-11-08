@@ -721,7 +721,6 @@ elseif(UNIX AND NOT APPLE)
 endif(WIN32)
 
 if(UNITTEST)
-if (LINUX AND USE_PULSEAUDIO)
 # The below tests are currently Linux-only due to a dependency on
 # PulseAudio/pipewire.
 macro(DefineAudioTest utName)
@@ -733,5 +732,4 @@ DefineAudioTest(RADE)
 DefineAudioTest(700D)
 DefineAudioTest(700E)
 DefineAudioTest(1600)
-endif (LINUX AND USE_PULSEAUDIO)
 endif(UNITTEST)
