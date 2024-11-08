@@ -9,14 +9,6 @@ env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Debug
 
-parameters:
-  - name: driverNames
-    type: object
-    default:
-        - 1
-        - 2
-        - 3
-
 jobs:
   build:
     # The CMake configure and build commands are platform agnostic and should work equally
