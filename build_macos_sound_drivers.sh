@@ -21,6 +21,7 @@ for i in {1..3}; do
         MACOSX_DEPLOYMENT_TARGET=10.13
 
     sudo mv build/BlackHole.driver /Library/Audio/Plug-Ins/HAL/$driverName.driver
+    cd ..
 done
 
 sudo killall -9 coreaudiod
