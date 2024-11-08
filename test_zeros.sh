@@ -44,17 +44,17 @@ if [ "$FREEDV_TEST" == "txrx" ]; then
 
     # Generate sine wave for input
     if [ "$OPERATING_SYSTEM" == "Linux" ]; then
-        sox -r 48000 -n -b 16 -c 1 -t wav - synth 120 sin 1000 vol -10dB | paplay -d $FREEDV_MICROPHONE_TO_COMPUTER_DEVICE &
+        sox -r 48000 -n -b 16 -c 1 -t wav - synth 120 sin 1000 vol -10dB | paplay -d "$FREEDV_MICROPHONE_TO_COMPUTER_DEVICE" &
     else
-        sox -r 48000 -n -b 16 -c 1 -t $SOX_DRIVER $FREEDV_MICROPHONE_TO_COMPUTER_DEVICE - synth 120 sin 1000 vol -10dB &
+        sox -r 48000 -n -b 16 -c 1 -t $SOX_DRIVER "$FREEDV_MICROPHONE_TO_COMPUTER_DEVICE" - synth 120 sin 1000 vol -10dB &
     fi
     PLAY_PID=$!
 elif [ "$FREEDV_TEST" == "rx" ]; then
     # Start playback if RX
     if [ "$OPERATING_SYSTEM" == "Linux" ]; then
-        paplay -d $FREEDV_RADIO_TO_COMPUTER_DEVICE $FREEDV_RX_FILE &
+        paplay -d "$FREEDV_RADIO_TO_COMPUTER_DEVICE" $FREEDV_RX_FILE &
     else
-        sox $FREEDV_RX_FILE -t $SOX_DRIVER $FREEDV_RADIO_TO_COMPUTER_DEVICE &
+        sox $FREEDV_RX_FILE -t $SOX_DRIVER "$FREEDV_RADIO_TO_COMPUTER_DEVICE" &
     fi
     PLAY_PID=$!
     REC_DEVICE="$FREEDV_COMPUTER_TO_SPEAKER_DEVICE.monitor"
@@ -78,9 +78,9 @@ fi
 # Start recording
 if [ "$FREEDV_TEST" == "tx" ]; then
     if [ "$OPERATING_SYSTEM" == "Linux" ]; then
-        parecord --channels=1 --rate 8000 --file-format=wav --device $REC_DEVICE --latency 1 test.wav &
+        parecord --channels=1 --rate 8000 --file-format=wav --device "$REC_DEVICE" --latency 1 test.wav &
     else
-        sox -t $SOX_DRIVER $REC_DEVICE -c 1 -r 8000 -t wav test.wav &
+        sox -t $SOX_DRIVER "$REC_DEVICE" -c 1 -r 8000 -t wav test.wav &
     fi
     RECORD_PID=$!
 fi
