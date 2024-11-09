@@ -44,6 +44,5 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}/build_osx
       run: |
-          sudo tccutil -i /usr/local/opt/runner/provisioner/provisioner -s kTCCServiceMicrophone
           FREEDV_COMPUTER_TO_RADIO_DEVICE="BlackHoleRadio 2ch" FREEDV_RADIO_TO_COMPUTER_DEVICE="BlackHoleRadio 2ch 2" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ctest -V
            
