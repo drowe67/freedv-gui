@@ -279,8 +279,8 @@ void MainApp::UnitTest_()
             delete txEvent;
         });
         
-        // Transmit for 120 seconds
-        std::this_thread::sleep_for(120s);
+        // Transmit for 60 seconds
+        std::this_thread::sleep_for(60s);
         
         // Stop transmitting
         fprintf(stderr, "Firing PTT\n");
@@ -300,9 +300,9 @@ void MainApp::UnitTest_()
     }
     else
     {
-        // Receive for 120 seconds
+        // Receive for 60 seconds
         auto sync = 0;
-        for (int i = 0; i < 120*10; i++)
+        for (int i = 0; i < 60*10; i++)
         {
             std::this_thread::sleep_for(100ms);
             auto newSync = freedvInterface.getSync();
