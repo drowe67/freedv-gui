@@ -54,8 +54,12 @@ private:
     pa_context* context_;
     pa_threaded_mainloop* mainloop_;
     pa_stream* stream_;
+    short* outputPending_;
+    int outputPendingLength_;
     bool outputPendingThreadActive_;
+    std::mutex outputPendingMutex_;
     std::thread* outputPendingThread_;
+    int targetOutputPendingLength_;
 
     wxString devName_;
     IAudioEngine::AudioDirection direction_;
