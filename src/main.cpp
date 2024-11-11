@@ -228,6 +228,7 @@ bool MainApp::OnInit()
     m_locale.Init();
 
     m_reporters.clear();
+    m_reportCounter = 0;
     
     if(!wxApp::OnInit())
     {
@@ -1641,15 +1642,17 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 wxGetApp().m_sharedReporterObject && 
                 freedvInterface.getCurrentMode() == FREEDV_MODE_RADE && 
                 freedvInterface.getSync())
-            {
+            {               
                 // Special case for RADE--report 'unk' for callsign so we can
                 // at least report that we're receiving *something*.
                 int64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
 
                 // Only report if there's a valid reporting frequency and if we're not playing 
                 // a recording through ourselves (to avoid false reports).
-                if (freq > 0)
+                wxGetApp().m_reportCounter = (wxGetApp().m_reportCounter + 1) % 10;
+                if (freq > 0 && wxGetApp().m_reportCounter == 0)
                 {
+                    wxGetApp().m_reportCounter = 0;
                     if (!g_playFileFromRadio)
                     {                
                         wxGetApp().m_sharedReporterObject->addReceiveRecord(
