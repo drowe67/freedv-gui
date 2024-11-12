@@ -22,14 +22,11 @@
 
 #include <cstring>
 #include <cstdio>
-#include <chrono>
 
 #include "PulseAudioDevice.h"
 
-using namespace std::chrono_literals;
-
 // Optimal settings based on ones used for PortAudio.
-#define PULSE_FPB 128
+#define PULSE_FPB 256
 #define PULSE_TARGET_LATENCY_US 20000
 
 PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
@@ -130,8 +127,7 @@ void PulseAudioDevice::start()
         result = pa_stream_connect_record(
             stream_, devName_.c_str(), &buffer_attr, flags);
     }
-    pa_threaded_mainloop_unlock(mainloop_);
-
+    
     if (result != 0)
     {
         if (onAudioErrorFunction)
@@ -166,7 +162,6 @@ void PulseAudioDevice::start()
                         currentLength = outputPendingLength_;
                     }
 
-                    bool wait = true;
                     if (currentLength < targetOutputPendingLength_)
                     {                        
                         short data[PULSE_FPB * getNumChannels()];
@@ -194,23 +189,20 @@ void PulseAudioDevice::start()
                             outputPending_ = temp;
                             outputPendingLength_ += PULSE_FPB * getNumChannels();
                         }
-
-                        wait = currentLength >= targetOutputPendingLength_;
                     }
 
                     // Sleep the required amount of time to ensure we call onAudioDataFunction
                     // every PULSE_FPB samples.
-                    if (wait)
-                    {
-                        int sleepTimeMilliseconds = ((double)PULSE_FPB)/((double)sampleRate_) * 1000.0;
-                        std::this_thread::sleep_until(currentTime + 
-                            std::chrono::milliseconds(sleepTimeMilliseconds));
-                    }
+                    int sleepTimeMilliseconds = ((double)PULSE_FPB)/((double)sampleRate_) * 1000.0;
+                    std::this_thread::sleep_until(currentTime + 
+                        std::chrono::milliseconds(sleepTimeMilliseconds));
                 }
             });
             assert(outputPendingThread_ != nullptr);
         }
     }
+
+    pa_threaded_mainloop_unlock(mainloop_);
 }
 
 void PulseAudioDevice::stop()
@@ -268,45 +260,34 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
 
 void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *userdata)
 {
-    PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
     if (length > 0)
     {
-        std::thread worker([thisObj, length, s]() {
-            // Note that PulseAudio gives us lengths in terms of number of bytes, not samples.
-            int numSamples = length / sizeof(short);
-            short data[numSamples];
-            memset(data, 0, sizeof(data));
+        // Note that PulseAudio gives us lengths in terms of number of bytes, not samples.
+        int numSamples = length / sizeof(short);
+        short data[numSamples];
+        memset(data, 0, sizeof(data));
 
+        PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
+        {
+            std::unique_lock<std::mutex> lk(thisObj->outputPendingMutex_);
+            if (thisObj->outputPendingLength_ >= numSamples)
             {
-                int pendingLength = 0;
-                std::unique_lock<std::mutex> lk(thisObj->outputPendingMutex_);
-                pendingLength = thisObj->outputPendingLength_;
-                lk.unlock();
+                memcpy(data, thisObj->outputPending_, sizeof(data));
 
-                numSamples = std::min(numSamples, pendingLength);
-                if (numSamples > 0)
-                {
-                    lk.lock();
-                    memcpy(data, thisObj->outputPending_, sizeof(data));
+                short* tmp = new short[thisObj->outputPendingLength_ - numSamples];
+                assert(tmp != nullptr);
 
-                    short* tmp = new short[thisObj->outputPendingLength_ - numSamples];
-                    assert(tmp != nullptr);
+                thisObj->outputPendingLength_ -= numSamples;
+                memcpy(tmp, thisObj->outputPending_ + numSamples, sizeof(short) * thisObj->outputPendingLength_);
 
-                    thisObj->outputPendingLength_ -= numSamples;
-                    memcpy(tmp, thisObj->outputPending_ + numSamples, sizeof(short) * thisObj->outputPendingLength_);
-
-                    delete[] thisObj->outputPending_;
-                    thisObj->outputPending_ = tmp;
-                    thisObj->targetOutputPendingLength_ = std::max(thisObj->targetOutputPendingLength_, 2 * numSamples);
-                    lk.unlock();
-
-                    pa_threaded_mainloop_lock(thisObj->mainloop_);
-                    pa_stream_write(s, &data[0], numSamples * sizeof(short), NULL, 0LL, PA_SEEK_RELATIVE);
-                    pa_threaded_mainloop_unlock(thisObj->mainloop_);
-                }
+                delete[] thisObj->outputPending_;
+                thisObj->outputPending_ = tmp;
             }
-        });
-        worker.detach();
+
+            thisObj->targetOutputPendingLength_ = std::max(thisObj->targetOutputPendingLength_, 2 * numSamples);
+        }
+
+        pa_stream_write(s, &data[0], length, NULL, 0LL, PA_SEEK_RELATIVE);
     }
 }
 
