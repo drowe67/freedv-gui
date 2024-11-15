@@ -1,16 +1,44 @@
-﻿function Test-FreeDV {
+﻿param (
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string] $RadioToComputerDevice, 
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string] $ComputerToSpeakerDevice, 
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string] $MicrophoneToComputerDevice, 
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string] $ComputerToRadioDevice,
+    
+    [ValidateSet("RADE", "700D", "700E", "1600")]
+    [ValidateNotNullOrEmpty()]
+    [string]$ModeToTest="RADE", 
+
+    [int] $NumberOfRuns=10)
+
+
+function Test-FreeDV {
     param (
-        $ModeToTest
+        $ModeToTest,
+        $RadioToComputerDevice,
+        $ComputerToSpeakerDevice,
+        $MicrophoneToComputerDevice,
+        $ComputerToRadioDevice
     )
 
     $current_loc = Get-Location
 
     # Generate new conf 
     $conf_tmpl = Get-Content "$current_loc\freedv-ctest-fullduplex.conf.tmpl"
-    $conf_tmpl = $conf_tmpl.Replace("@FREEDV_RADIO_TO_COMPUTER_DEVICE@", $FREEDV_RADIO_TO_COMPUTER_DEVICE)
-    $conf_tmpl = $conf_tmpl.Replace("@FREEDV_COMPUTER_TO_RADIO_DEVICE@", $FREEDV_COMPUTER_TO_RADIO_DEVICE)
-    $conf_tmpl = $conf_tmpl.Replace("@FREEDV_MICROPHONE_TO_COMPUTER_DEVICE@", $FREEDV_MICROPHONE_TO_COMPUTER_DEVICE)
-    $conf_tmpl = $conf_tmpl.Replace("@FREEDV_COMPUTER_TO_SPEAKER_DEVICE@", $FREEDV_COMPUTER_TO_SPEAKER_DEVICE)
+    $conf_tmpl = $conf_tmpl.Replace("@FREEDV_RADIO_TO_COMPUTER_DEVICE@", $RadioToComputerDevice)
+    $conf_tmpl = $conf_tmpl.Replace("@FREEDV_COMPUTER_TO_RADIO_DEVICE@", $ComputerToRadioDevice)
+    $conf_tmpl = $conf_tmpl.Replace("@FREEDV_MICROPHONE_TO_COMPUTER_DEVICE@", $MicrophoneToComputerDevice)
+    $conf_tmpl = $conf_tmpl.Replace("@FREEDV_COMPUTER_TO_SPEAKER_DEVICE@", $ComputerToSpeakerDevice)
     $tmp_file = New-TemporaryFile
     $conf_tmpl | Set-Content -Path $tmp_file.FullName
 
@@ -23,7 +51,7 @@
     $psi.FileName = "$current_loc\freedv.exe"
     $psi.WorkingDirectory = $current_loc
     $quoted_tmp_filename = "`"" + $tmp_file.FullName + "`""
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut txrx /utmode $mode_to_test")
+    $psi.Arguments = @("/f $quoted_tmp_filename /ut txrx /utmode $ModeToTest")
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
@@ -41,30 +69,25 @@
     return $false
 }
 
-$modes = @("700D", "700E", "1600", "RADE")
+$passes = 0
+$fails = 0
 
-$FREEDV_RADIO_TO_COMPUTER_DEVICE = "Microphone (iMic USB audio system)"
-$FREEDV_COMPUTER_TO_RADIO_DEVICE = "Speakers (iMic USB audio system)"
-$FREEDV_MICROPHONE_TO_COMPUTER_DEVICE = "Microphone Array (Realtek High Definition Audio(SST))"
-$FREEDV_COMPUTER_TO_SPEAKER_DEVICE = "Speakers (Realtek High Definition Audio(SST))"
-
-Foreach ($mode_to_test in $modes)
+for (($i = 0); $i -lt $NumberOfRuns; $i++)
 {
-    $passes = 0
-    $fails = 0
-
-    for (($i = 0); $i -lt 10; $i++)
+    $result = Test-FreeDV `
+        -ModeToTest $ModeToTest `
+        -RadioToComputerDevice $RadioToComputerDevice `
+        -ComputerToSpeakerDevice $ComputerToSpeakerDevice `
+        -MicrophoneToComputerDevice $MicrophoneToComputerDevice `
+        -ComputerToRadioDevice $ComputerToRadioDevice
+    if ($result -eq $true)
     {
-        $result = Test-FreeDV -ModeToTest $mode_to_test
-        if ($result -eq $true)
-        {
-            $passes++
-        }
-        else
-        {
-            $fails++
-        }
+        $passes++
     }
-
-    Write-Host "Mode: $mode_to_test, Passed: $passes, Failures: $fails"
+    else
+    {
+        $fails++
+    }
 }
+
+Write-Host "Mode: $ModeToTest, Total Runs: $NumberOfRuns, Passed: $passes, Failures: $fails"
