@@ -23,35 +23,35 @@ param (
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
     [string] 
-    "The sound device to receive RX audio from."
+    # The sound device to receive RX audio from.
     $RadioToComputerDevice, 
 
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
     [string] 
-    "The sound device to emit decoded audio to."
+    # The sound device to emit decoded audio to.
     $ComputerToSpeakerDevice, 
 
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
     [string] 
-    "The sound device to receive analog audio from."
+    # The sound device to receive analog audio from.
     $MicrophoneToComputerDevice, 
 
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
     [string] 
-    "The sound device to emit TX audio to."
+    # The sound device to emit TX audio to.
     $ComputerToRadioDevice,
     
     [ValidateSet("RADE", "700D", "700E", "1600")]
     [ValidateNotNullOrEmpty()]
     [string]
-    "The FreeDV mode to use for testing."
+    # The FreeDV mode to use for testing.
     $ModeToTest="RADE", 
 
     [int] 
-    "The number of times to execute the test."
+    # The number of times to execute the test.
     $NumberOfRuns=10)
 
 
