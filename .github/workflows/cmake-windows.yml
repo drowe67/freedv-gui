@@ -128,7 +128,7 @@ jobs:
     - run: 'Expand-Archive -Path vac470lite.zip -DestinationPath vac470lite'
     - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac470lite.cer -CertStoreLocation Cert:\LocalMachine\root'
     - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac470lite.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher'
-    - run: 'Scream\Install\helpers\devcon-x64.exe install vac470lite\vac470lite\vrtaucbl6x.inf "*Virtual Audio Cable"'
+    - run: 'Scream\Install\helpers\devcon-x64.exe install vac470lite\vac470lite\vrtaucbl6x.inf "*VirtualAudioCable"'
       # For convenience, make sure we fail fast if for whatever reason the install gets blocked on some GUI prompt.
       timeout-minutes: 5
 
