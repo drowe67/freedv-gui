@@ -76,3 +76,35 @@ jobs:
       run: |
         export PATH=${{github.workspace}}/llvm-mingw-20230320-ucrt-ubuntu-18.04-x86_64/bin:$PATH
         make -j6 package
+
+    - name: Rename installer
+      shell: bash
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+        mv FreeDV*.exe FreeDV.exe
+
+    - name: Stash for next step
+      uses: actions/upload-artifact@v4
+      with:
+        name: FreeDVSetupProgram
+        path: ${{github.workspace}}/build_windows/FreeDV.exe
+
+  test:
+    runs-on: windows-latest
+    needs: build
+    steps: 
+    - uses: actions/checkout@v2
+    - uses: actions/download-artifact@v4
+      with:
+        name: FreeDVSetupProgram
+        path: ${{github.workspace}}
+
+    - name: Install FreeDV on hard drive
+      shell: pwsh
+      run: |
+          .\FreeDV.exe /S /D=${{github.workspace}}\FreeDV-Install-Location
+
+    - name: List FreeDV folder
+      shell: pwsh
+      run: |
+          dir ${{github.workspace}}\FreeDV-Install-Location
