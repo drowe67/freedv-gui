@@ -48,7 +48,7 @@ jobs:
           export WINEPREFIX=`pwd`/wine-env
           wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
           Xvfb :99 -screen 0 1024x768x16 &
-          sleep 5
+          sleep 10
           export DISPLAY=:99.0
           wine ./python-3.12.7-amd64.exe /quiet /log c:\\python.log InstallAllUsers=1 Include_doc=0 Include_tcltk=0 || :
           cat $WINEPREFIX/drive_c/python.log
@@ -142,9 +142,17 @@ jobs:
       run: |
           Get-CimInstance win32_sounddevice
 
+    #- shell: powershell
+    #  run: Install-Module -Name PShot -AcceptLicense -Force
+
     - name: Test RADE
       shell: pwsh
       run: |
           cd ${{github.workspace}}\FreeDV-Install-Location\bin
           .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "CABLE Input (VB-Audio Virtual Cable)" -ComputerToRadioDevice "CABLE Output (VB-Audio Virtual Cable)" -MicrophoneToComputerDevice "Speakers (Scream (WDM)) [Loopback]" -ComputerToSpeakerDevice "Speakers (Scream (WDM))" -ModeToTest RADE -NumberOfRuns 1
       timeout-minutes: 3
+    #  continue-on-error: true
+
+    #- uses: actions/upload-artifact@v2
+    #  with:
+    #    path: 'PShot*'

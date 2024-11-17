@@ -99,6 +99,8 @@ function Test-FreeDV {
     $output = $process.StandardOutput.ReadToEnd();
     $process.WaitForExit()
 
+    Write-Host "$err_output"
+
     $syncs = $err_output.Split([Environment]::NewLine) | Where { $_.Contains("Sync changed") }
     if ($syncs.Count -eq 1) {
         return $true

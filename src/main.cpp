@@ -197,6 +197,19 @@ IMPLEMENT_APP(MainApp);
 
 void MainApp::UnitTest_()
 {
+    // List audio devices
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->start();
+    for (auto& dev : engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN))
+    {
+        fprintf(stderr, "Input audio device: %s\n", (const char*)dev.name.ToUTF8());
+    }
+    for (auto& dev : engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT))
+    {
+        fprintf(stderr, "Output audio device: %s\n", (const char*)dev.name.ToUTF8());
+    }
+    engine->stop();
+
     // Bring window to the front
     CallAfter([&]() {
         frame->Iconize(false);
@@ -207,7 +220,7 @@ void MainApp::UnitTest_()
     
     // Wait 100ms for FreeDV to come to foreground
     std::this_thread::sleep_for(100ms);
-    
+#if 0 
     // Select FreeDV mode. Note, 2020 is deprecated so not testable here.
     wxRadioButton* modeBtn = nullptr;
     if (utFreeDVMode == "RADE")
@@ -329,6 +342,7 @@ void MainApp::UnitTest_()
     
     // Wait 5 seconds for FreeDV to stop
     std::this_thread::sleep_for(5s);
+#endif
     
     // Destroy main window to exit application. Must be done in UI thread to avoid problems.
     CallAfter([&]() {
