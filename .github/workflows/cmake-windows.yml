@@ -105,7 +105,7 @@ jobs:
     - name: Install FreeDV on hard drive
       shell: pwsh
       run: |
-          .\FreeDV.exe /S /D=${{github.workspace}}\FreeDV-Install-Location
+          .\FreeDV.exe /S /D=${{github.workspace}}\FreeDV-Install-Location | Out-Null
 
     - name: Copy test script to install folder
       shell: pwsh
@@ -136,6 +136,14 @@ jobs:
 
     - name: Start Windows Audio Service
       run: net start audiosrv
+
+    - name: List audio devices
+      shell: pwsh
+      run: |
+          Install-PackageProvider NuGet -Force -Scope CurrentUser
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module -Name AudioDeviceCmdlets -Scope CurrentUser -Confirm:$False -Force
+          Get-AudioDevice -List
 
     - name: Test RADE
       shell: pwsh
