@@ -93,6 +93,11 @@ jobs:
   test:
     runs-on: windows-latest
     needs: build
+    env:
+      RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
+      COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
+      MICROPHONE_TO_COMPUTER_DEVICE: "Speakers (Scream (WDM)) [Loopback]" 
+      COMPUTER_TO_SPEAKER_DEVICE: "Speakers (Scream (WDM))" 
     steps: 
     - uses: actions/checkout@v4
     - uses: actions/download-artifact@v4
@@ -137,19 +142,19 @@ jobs:
     - name: Start Windows Audio Service
       run: net start audiosrv
 
-    - name: List audio devices
-      shell: pwsh
-      run: |
-          Get-CimInstance win32_sounddevice
+    #- name: List audio devices
+    #  shell: pwsh
+    #  run: |
+    #      Get-CimInstance win32_sounddevice
 
     #- shell: powershell
     #  run: Install-Module -Name PShot -AcceptLicense -Force
 
-    - name: Test RADE
+    - name: Test 700D
       shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
       run: |
-          cd ${{github.workspace}}\FreeDV-Install-Location\bin
-          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "CABLE Output (VB-Audio Virtual Cable)" -ComputerToRadioDevice "Speakers (VB-Audio Virtual Cable)" -MicrophoneToComputerDevice "Speakers (Scream (WDM)) [Loopback]" -ComputerToSpeakerDevice "Speakers (Scream (WDM))" -ModeToTest RADE -NumberOfRuns 1
+          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "$RADIO_TO_COMPUTER_DEVICE" -ComputerToRadioDevice "$COMPUTER_TO_RADIO_DEVICE" -MicrophoneToComputerDevice "$MICROPHONE_TO_COMPUTER_DEVICE" -ComputerToSpeakerDevice "$COMPUTER_TO_SPEAKER_DEVICE" -ModeToTest 700D -NumberOfRuns 1
       timeout-minutes: 3
     #  continue-on-error: true
 

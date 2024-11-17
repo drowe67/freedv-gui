@@ -220,7 +220,7 @@ void MainApp::UnitTest_()
     
     // Wait 100ms for FreeDV to come to foreground
     std::this_thread::sleep_for(100ms);
-#if 1 
+
     // Select FreeDV mode. Note, 2020 is deprecated so not testable here.
     wxRadioButton* modeBtn = nullptr;
     if (utFreeDVMode == "RADE")
@@ -342,7 +342,6 @@ void MainApp::UnitTest_()
     
     // Wait 5 seconds for FreeDV to stop
     std::this_thread::sleep_for(5s);
-#endif
     
     // Destroy main window to exit application. Must be done in UI thread to avoid problems.
     CallAfter([&]() {

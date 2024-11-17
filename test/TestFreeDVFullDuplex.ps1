@@ -131,7 +131,7 @@ for (($i = 0); $i -lt $NumberOfRuns; $i++)
 
 Write-Host "Mode: $ModeToTest, Total Runs: $NumberOfRuns, Passed: $passes, Failures: $fails"
 
-if ($fails > 0) {
+if ($fails -gt 0) {
     throw "Test failed"
 }
 
