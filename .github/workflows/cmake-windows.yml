@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Install WINE
       run: |
@@ -93,7 +93,7 @@ jobs:
     runs-on: windows-latest
     needs: build
     steps: 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - uses: actions/download-artifact@v4
       with:
         name: FreeDVSetupProgram
@@ -104,7 +104,39 @@ jobs:
       run: |
           .\FreeDV.exe /S /D=${{github.workspace}}\FreeDV-Install-Location
 
-    - name: List FreeDV folder
+    - name: Copy test script to install folder
       shell: pwsh
       run: |
-          dir ${{github.workspace}}\FreeDV-Install-Location
+          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVFullDuplex.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-fullduplex.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+
+    - name: Install VB-Cable ("Radio" sound device)
+      uses: LABSN/sound-ci-helpers@v1
+
+    - run: 'Invoke-WebRequest https://github.com/duncanthrax/scream/releases/download/4.0/Scream4.0.zip -OutFile Scream4.0.zip'
+    - run: 'Expand-Archive -Path Scream4.0.zip -DestinationPath Scream'
+    # To work around https://github.com/duncanthrax/scream/issues/215, create our own self-signed certificate for the Scream driver.
+    # makecert.exe insists on interactively asking the user for a password (sigh...), so use OpenSSL instead.
+    # `-extensions v3_req` is a trick to make sure the resulting cert has basic constraint CA:FALSE (the default is CA:TRUE which is problematic here) without having to create an OpenSSL config file.
+    - run: 'openssl req -batch -verbose -x509 -newkey rsa -keyout ScreamCertificate.pvk -out ScreamCertificate.cer -nodes -extensions v3_req'
+    - run: 'openssl pkcs12 -export -nodes -in ScreamCertificate.cer -inkey ScreamCertificate.pvk -out ScreamCertificate.pfx -passout pass:'
+    # Sign the driver with the self-signed certificate we just made.
+    - run: 'signtool sign /v /fd SHA256 /f ScreamCertificate.pfx Scream\Install\driver\x64\Scream.cat'
+    # Tell Windows to trust the self-signed certificate we just made.
+    # (For some reason it has to be added to both stores for it to work.)
+    - run: 'Import-Certificate -FilePath ScreamCertificate.cer -CertStoreLocation Cert:\LocalMachine\root'
+    - run: 'Import-Certificate -FilePath ScreamCertificate.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher'
+    # Finally, install the driver.
+    - run: 'Scream\Install\helpers\devcon-x64.exe install Scream\Install\driver\x64\Scream.inf *Scream'
+      # For convenience, make sure we fail fast if for whatever reason the install gets blocked on some GUI prompt.
+      timeout-minutes: 5
+
+    - name: Start Windows Audio Service
+      run: net start audiosrv
+
+    - name: Test RADE
+      shell: pwsh
+      run: |
+          cd ${{github.workspace}}\FreeDV-Install-Location\bin
+          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "CABLE Input (VB-Audio Virtual Cable)" -ComputerToRadioDevice "CABLE Output (VB-Audio Virtual Cable)" -MicrophoneToComputerDevice "Microsoft Sound Mapper - Input" -ComputerToSpeakerDevice "Speakers (Scream (WDM))" -ModeToTest RADE -NumberOfRuns 1
+      timeout-minutes: 3

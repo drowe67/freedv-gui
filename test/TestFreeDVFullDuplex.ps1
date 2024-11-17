@@ -128,3 +128,10 @@ for (($i = 0); $i -lt $NumberOfRuns; $i++)
 }
 
 Write-Host "Mode: $ModeToTest, Total Runs: $NumberOfRuns, Passed: $passes, Failures: $fails"
+
+if ($fails > 0) {
+    exit 1
+} else {
+    exit 0
+}
+
