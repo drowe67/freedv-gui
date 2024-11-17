@@ -133,5 +133,6 @@ Write-Host "Mode: $ModeToTest, Total Runs: $NumberOfRuns, Passed: $passes, Failu
 
 if ($fails -gt 0) {
     throw "Test failed"
+    exit 1
 }
 
