@@ -149,7 +149,7 @@ jobs:
       shell: pwsh
       run: |
           cd ${{github.workspace}}\FreeDV-Install-Location\bin
-          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "CABLE Input (VB-Audio Virtual Cable)" -ComputerToRadioDevice "CABLE Output (VB-Audio Virtual Cable)" -MicrophoneToComputerDevice "Speakers (Scream (WDM)) [Loopback]" -ComputerToSpeakerDevice "Speakers (Scream (WDM))" -ModeToTest RADE -NumberOfRuns 1
+          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "CABLE Output (VB-Audio Virtual Cable)" -ComputerToRadioDevice "Speakers (VB-Audio Virtual Cable)" -MicrophoneToComputerDevice "Speakers (Scream (WDM)) [Loopback]" -ComputerToSpeakerDevice "Speakers (Scream (WDM))" -ModeToTest RADE -NumberOfRuns 1
       timeout-minutes: 3
     #  continue-on-error: true
 
