@@ -140,14 +140,11 @@ jobs:
     - name: List audio devices
       shell: pwsh
       run: |
-          Install-PackageProvider NuGet -Force -Scope CurrentUser
-          Set-PSRepository PSGallery -InstallationPolicy Trusted
-          Install-Module -Name AudioDeviceCmdlets -Scope CurrentUser -Confirm:$False -Force
-          Get-AudioDevice -List
+          Get-CimInstance win32_sounddevice
 
     - name: Test RADE
       shell: pwsh
       run: |
           cd ${{github.workspace}}\FreeDV-Install-Location\bin
-          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "CABLE Input (VB-Audio Virtual Cable)" -ComputerToRadioDevice "CABLE Output (VB-Audio Virtual Cable)" -MicrophoneToComputerDevice "Microsoft Sound Mapper - Input" -ComputerToSpeakerDevice "Speakers (Scream (WDM))" -ModeToTest RADE -NumberOfRuns 1
+          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "CABLE Input (VB-Audio Virtual Cable)" -ComputerToRadioDevice "CABLE Output (VB-Audio Virtual Cable)" -MicrophoneToComputerDevice "Speakers (Scream (WDM)) [Loopback]" -ComputerToSpeakerDevice "Speakers (Scream (WDM))" -ModeToTest RADE -NumberOfRuns 1
       timeout-minutes: 3
