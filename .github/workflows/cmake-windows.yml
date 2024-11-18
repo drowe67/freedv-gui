@@ -137,7 +137,9 @@ jobs:
       timeout-minutes: 5
 
     - name: Start Windows Audio Service
-      run: net start audiosrv
+      run: |
+          net start audiosrv
+          net start AudioEndpointBuilder
 
     - name: List audio devices
       shell: pwsh
