@@ -125,6 +125,7 @@ void PortAudioDevice::start()
             ss << " (error code " << std::hex << errInfo->errorCode << " - " << std::string(errInfo->errorText) << ")";
             errText += ss.str();
         }
+        fprintf(stderr, "PortAudio error: %s, device: %s\n", errText.c_str()); 
 
         if (onAudioErrorFunction)
         {
