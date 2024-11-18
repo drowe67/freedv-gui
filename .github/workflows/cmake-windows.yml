@@ -138,6 +138,8 @@ jobs:
 
     - name: Start Windows Audio Service
       run: |
+          net stop audiosrv /y
+          net stop AudioEndpointBuilder /y
           net start audiosrv
           net start AudioEndpointBuilder
 
