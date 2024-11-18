@@ -121,17 +121,18 @@ jobs:
     - name: Install VB-Cable ("Radio" sound device)
       uses: LABSN/sound-ci-helpers@v1
 
-    - run: 'Invoke-WebRequest https://github.com/duncanthrax/scream/releases/download/4.0/Scream4.0.zip -OutFile Scream4.0.zip'
-    - run: 'Expand-Archive -Path Scream4.0.zip -DestinationPath Scream'
+    #- run: 'Invoke-WebRequest https://github.com/duncanthrax/scream/releases/download/4.0/Scream4.0.zip -OutFile Scream4.0.zip'
+    #- run: 'Expand-Archive -Path Scream4.0.zip -DestinationPath Scream'
 
-    - run: 'Invoke-WebRequest https://software.muzychenko.net/freeware/vac470lite.zip -OutFile vac470lite.zip'
-    - run: 'Expand-Archive -Path vac470lite.zip -DestinationPath vac470lite'
-    - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac470lite.cer -CertStoreLocation Cert:\LocalMachine\root'
-    - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac470lite.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher'
+    - run: 'Invoke-WebRequest https://software.muzychenko.net/trials/vac464.zip -OutFile vac464.zip'
+    - run: 'Expand-Archive -Path vac470lite.zip -DestinationPath vac464'
+    #- run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac470lite.cer -CertStoreLocation Cert:\LocalMachine\root'
+    #- run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac470lite.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher'
     - name: Install driver
       shell: pwsh
       run: |
-          Scream\Install\helpers\devcon-x64.exe install vac470lite\vac470lite\vrtaucbl6x.inf "*VirtualAudioCable" || & { "ignore need to reboot"; $global:LASTEXITCODE = 0 }
+          .\vac464\vac464\setup64.exe -s -k 30570681-0a8b-46e5-8cb2-d835f43af0c5
+          Start-Sleep -Seconds 10
       # For convenience, make sure we fail fast if for whatever reason the install gets blocked on some GUI prompt.
       timeout-minutes: 5
 
