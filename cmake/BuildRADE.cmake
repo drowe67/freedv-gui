@@ -110,14 +110,14 @@ install(
 
 # Install VS Redistributable
 install(
-    FILES ${download_vsr_SOURCE_DIR}/vc_redist.x86.exe
+    FILES ${download_vsr_SOURCE_DIR}/vc_redist.x64.exe
     DESTINATION bin)
 
 # Ensure that rade-setup.bat is executed by the installer,
 # otherwise no packages will be installed.
 set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS
-    "ExecWait '\"\$INSTDIR\\\\bin\\\\vcredist_x86.exe\" /install /passive'"
-    "ExecShellWait '' '\$INSTDIR\\\\bin\\\\rade-setup.bat' ''")
+    "ExecWait '\\\"\$INSTDIR\\\\bin\\\\vc_redist.x64.exe\\\" /install /passive'
+    ExecShellWait '' '\$INSTDIR\\\\bin\\\\rade-setup.bat' ''")
 
 # Make sure we fully clean up after Python on uninstall.
 set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
