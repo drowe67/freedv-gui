@@ -125,9 +125,9 @@ jobs:
     #- run: 'Expand-Archive -Path Scream4.0.zip -DestinationPath Scream'
 
     - run: 'Invoke-WebRequest https://software.muzychenko.net/trials/vac464.zip -OutFile vac464.zip'
-    - run: 'Expand-Archive -Path vac470lite.zip -DestinationPath vac464'
-    #- run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac470lite.cer -CertStoreLocation Cert:\LocalMachine\root'
-    #- run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac470lite.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher'
+    - run: 'Expand-Archive -Path vac464.zip -DestinationPath vac464'
+    - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac464.cer -CertStoreLocation Cert:\LocalMachine\root'
+    - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac464.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher'
     - name: Install driver
       shell: pwsh
       run: |
