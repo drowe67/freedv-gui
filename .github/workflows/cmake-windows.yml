@@ -128,17 +128,20 @@ jobs:
     - run: 'Expand-Archive -Path vac470lite.zip -DestinationPath vac470lite'
     - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac470lite.cer -CertStoreLocation Cert:\LocalMachine\root'
     - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac470lite.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher'
-    - run: 'Scream\Install\helpers\devcon-x64.exe install vac470lite\vac470lite\vrtaucbl6x.inf "*VirtualAudioCable"' || & { "ignore need to reboot"; $global:LASTEXITCODE = 0 }
+    - name: Install driver
+      shell: pwsh
+      run: |
+          Scream\Install\helpers\devcon-x64.exe install vac470lite\vac470lite\vrtaucbl6x.inf "*VirtualAudioCable" || & { "ignore need to reboot"; $global:LASTEXITCODE = 0 }
       # For convenience, make sure we fail fast if for whatever reason the install gets blocked on some GUI prompt.
       timeout-minutes: 5
 
     - name: Start Windows Audio Service
       run: net start audiosrv
 
-    #- name: List audio devices
-    #  shell: pwsh
-    #  run: |
-    #      Get-CimInstance win32_sounddevice
+    - name: List audio devices
+      shell: pwsh
+      run: |
+          Get-CimInstance win32_sounddevice
 
     #- shell: powershell
     #  run: Install-Module -Name PShot -AcceptLicense -Force
