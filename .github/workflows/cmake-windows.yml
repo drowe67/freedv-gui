@@ -131,7 +131,7 @@ jobs:
     - name: Install driver
       shell: pwsh
       run: |
-          .\vac464\vac464\setup64.exe -s -k 30570681-0a8b-46e5-8cb2-d835f43af0c5
+          .\vac464\setup64.exe -s -k 30570681-0a8b-46e5-8cb2-d835f43af0c5 | Out-Null
           Start-Sleep -Seconds 10
       # For convenience, make sure we fail fast if for whatever reason the install gets blocked on some GUI prompt.
       timeout-minutes: 5
