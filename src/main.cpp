@@ -3064,9 +3064,9 @@ void MainFrame::startRxStream()
         auto errorCallback = [&](IAudioDevice&, std::string error, void*)
         {
             fprintf(stderr, "AUDIO ERROR: %s\n", error.c_str());
-            CallAfter([&, error]() {
+            /*CallAfter([&, error]() {
                 wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
-            });
+            });*/
         };
 
         rxInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
