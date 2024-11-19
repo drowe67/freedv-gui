@@ -30,13 +30,15 @@
 // documentation) causes occasional audio pops/cracks on start for macOS.
 #define PA_FPB 256
 
-PortAudioDevice::PortAudioDevice(int deviceId, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
+PortAudioDevice::PortAudioDevice(int deviceId, wxString desc, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : deviceId_(deviceId)
     , direction_(direction)
     , sampleRate_(sampleRate)
     , numChannels_(numChannels)
     , deviceStream_(nullptr)
 {
+    setDescription((const char*)desc.ToUTF8());
+
     auto deviceInfo = Pa_GetDeviceInfo(deviceId_);
     std::string hostApiName = Pa_GetHostApiInfo(deviceInfo->hostApi)->name;
 
@@ -117,7 +119,7 @@ void PortAudioDevice::start()
     }
     else
     {
-        std::string errText = Pa_GetErrorText(error);
+        std::string errText = "Problem with device " + description + ":" + Pa_GetErrorText(error);
         if (error == paUnanticipatedHostError)
         {
             std::stringstream ss;

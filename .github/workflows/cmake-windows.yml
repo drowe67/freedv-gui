@@ -96,7 +96,7 @@ jobs:
     env:
       RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
       COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
-      MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable) [Loopback]" 
+      MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)" 
       COMPUTER_TO_SPEAKER_DEVICE: "Line 1 (Virtual Audio Cable)" 
     steps: 
     - uses: actions/checkout@v4

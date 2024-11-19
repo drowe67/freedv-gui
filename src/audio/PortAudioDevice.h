@@ -44,7 +44,7 @@ protected:
     // PortAudioDevice cannot be created directly, only via PortAudioEngine.
     friend class PortAudioEngine;
     
-    PortAudioDevice(int deviceId, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
+    PortAudioDevice(int deviceId, wxString desc, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
     
 private:
     int deviceId_;
