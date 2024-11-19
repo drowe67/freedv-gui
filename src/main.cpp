@@ -3063,6 +3063,7 @@ void MainFrame::startRxStream()
         // Set sound card callbacks
         auto errorCallback = [&](IAudioDevice&, std::string error, void*)
         {
+            fprintf(stderr, "AUDIO ERROR: %s\n", error.c_str());
             CallAfter([&, error]() {
                 wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
             });
