@@ -85,10 +85,10 @@ function Test-FreeDV {
     $psi.UseShellExecute = $false
     $psi.RedirectStandardError = $true
     $psi.RedirectStandardOutput = $true
-    $psi.FileName = "$current_loc\freedv.exe"
+    $psi.FileName = "$current_loc\Procdump\procdump64.exe"
     $psi.WorkingDirectory = $current_loc
     $quoted_tmp_filename = "`"" + $tmp_file.FullName + "`""
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut txrx /utmode $ModeToTest")
+    $psi.Arguments = @("-accepteula -ma -t -x dumps freedv.exe /f $quoted_tmp_filename /ut txrx /utmode $ModeToTest")
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi

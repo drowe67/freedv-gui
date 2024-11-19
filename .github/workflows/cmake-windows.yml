@@ -107,10 +107,10 @@ jobs:
   
     - uses: ilammy/msvc-dev-cmd@v1
  
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      with:
-        detached: true
+    #- name: Setup tmate session
+    #  uses: mxschmitt/action-tmate@v3
+    #  with:
+    #    detached: true
  
     - name: Install FreeDV on hard drive
       shell: pwsh
@@ -146,10 +146,26 @@ jobs:
       shell: pwsh
       run: |
           Get-CimInstance win32_sounddevice
-  
-    - name: Test RADE
+ 
+    - name: Prep ProcDump
       shell: pwsh
       working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
       run: |
-          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest RADE -NumberOfRuns 1
+          Invoke-WebRequest https://download.sysinternals.com/files/Procdump.zip -OutFile Procdump.zip
+          Expand-Archive -Path Procdump.zip -DestinationPath Procdump
+          mkdir dumps
+ 
+    - name: Test 700D
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      run: |
+          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest 700D -NumberOfRuns 1
       timeout-minutes: 3
+      continue-on-error: true
+
+    - name: Upload crash dump
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: CrashDump
+        path: ${{github.workspace}}/FreeDV-Install-Location/bin/dumps/**
