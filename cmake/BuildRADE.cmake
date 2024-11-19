@@ -55,6 +55,14 @@ if (NOT download_pip_POPULATED)
     FetchContent_Populate(download_pip)
 endif (NOT download_pip_POPULATED)
 
+# PyTorch needs the Visual Studio redistributable to be installed.
+FetchContent_Declare(download_vsr
+    URL https://aka.ms/vs/16/release/vc_redist.x64.exe
+    DOWNLOAD_NO_EXTRACT TRUE)
+if (NOT download_vsr_POPULATED)
+    FetchContent_Populate(download_vsr)
+endif (NOT download_vsr_POPULATED)
+
 # Per https://bnikolic.co.uk/blog/python/2022/03/14/python-embedwin.html
 # there are some tweaks we need to make to the embeddable package first
 # before FreeDV can use it. Additionally, renaming python312._pth does not
@@ -100,10 +108,16 @@ install(
     DESTINATION bin/model19_check3/checkpoints
 )
 
+# Install VS Redistributable
+install(
+    FILES ${download_vsr_SOURCE_DIR}/vc_redist.x64.exe
+    DESTINATION bin)
+
 # Ensure that rade-setup.bat is executed by the installer,
 # otherwise no packages will be installed.
 set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS
-    "ExecShellWait '' '\$INSTDIR\\\\bin\\\\rade-setup.bat' ''")
+    "ExecWait '\\\"\$INSTDIR\\\\bin\\\\vc_redist.x64.exe\\\" /install /passive'
+    ExecShellWait '' '\$INSTDIR\\\\bin\\\\rade-setup.bat' ''")
 
 # Make sure we fully clean up after Python on uninstall.
 set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
