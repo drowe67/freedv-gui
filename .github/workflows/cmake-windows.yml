@@ -107,10 +107,10 @@ jobs:
   
     - uses: ilammy/msvc-dev-cmd@v1
  
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      with:
-        detached: true
+    #- name: Setup tmate session
+    #  uses: mxschmitt/action-tmate@v3
+    #  with:
+    #    detached: true
  
     - name: Install FreeDV on hard drive
       shell: pwsh
