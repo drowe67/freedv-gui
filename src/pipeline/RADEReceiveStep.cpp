@@ -75,8 +75,6 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
     short* inputPtr = inputSamples.get();
     while (numInputSamples > 0 && inputPtr != nullptr)
     {
-        fprintf(stderr, "RADEReceiveStep: %p, %p, %d\n", inputPtr, dv_, numInputSamples);
-        
         codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
         numInputSamples--;
         
