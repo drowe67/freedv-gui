@@ -141,8 +141,9 @@ jobs:
     - name: Start Windows Audio Service
       run: |
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged" -Name Value -Value Allow
           net start audiosrv
-  
+
     - name: List audio devices
       shell: pwsh
       run: |
