@@ -137,8 +137,8 @@ jobs:
           Start-Sleep -Seconds 10
       # For convenience, make sure we fail fast if for whatever reason the install gets blocked on some GUI prompt.
       timeout-minutes: 5
-  
-    - name: Start Windows Audio Service
+
+    - name: Grant FreeDV access to the microphone 
       run: |
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
           Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
@@ -146,34 +146,41 @@ jobs:
           Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged" -Name Value -Value Allow
           New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\" -Name "AppPrivacy" -Force
           Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name LetAppsAccessMicrophone -Value 0
+
+    - name: Start Windows Audio Service
+      run: |
           net start audiosrv
 
     - name: List audio devices
       shell: pwsh
       run: |
           Get-CimInstance win32_sounddevice
- 
-    #- name: Prep ProcDump
-    #  shell: pwsh
-    #  working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-    #  run: |
-    #      Invoke-WebRequest https://download.sysinternals.com/files/Procdump.zip -OutFile Procdump.zip
-    #      Expand-Archive -Path Procdump.zip -DestinationPath Procdump
-    #      mkdir dumps
- 
+
+    - name: Test RADE
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      run: |
+          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest RADE -NumberOfRuns 1
+      timeout-minutes: 5
+
     - name: Test 700D
       shell: pwsh
       working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
       run: |
-          #.\Procdump\procdump64.exe -accepteula -mp -e 1 -at 120 -w freedv.exe &
           .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest 700D -NumberOfRuns 1
-          #Start-Sleep -Seconds 10
       timeout-minutes: 5
-      #continue-on-error: true
 
-    #- name: Upload crash dump
-    #  #if: ${{ failure() }}
-    #  uses: actions/upload-artifact@v4
-    #  with:
-    #    name: CrashDump
-    #    path: ${{github.workspace}}/FreeDV-Install-Location/bin/*.dmp
+    - name: Test 700E
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      run: |
+          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest 700E -NumberOfRuns 1
+      timeout-minutes: 5
+
+    - name: Test 1600
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      run: |
+          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest 1600 -NumberOfRuns 1
+      timeout-minutes: 5
+ 

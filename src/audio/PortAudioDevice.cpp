@@ -81,8 +81,6 @@ void PortAudioDevice::start()
     streamParameters.suggestedLatency = deviceInfo->defaultHighInputLatency;
     streamParameters.hostApiSpecificStreamInfo = NULL;
     
-    fprintf(stderr, "PortAudioDevice: opening ID %d with %d channels and %d sample rate\n", deviceId_, numChannels_, sampleRate_);
-    
     auto error = Pa_OpenStream(
         &deviceStream_,
         direction_ == IAudioEngine::AUDIO_ENGINE_IN ? &streamParameters : nullptr,
@@ -116,8 +114,6 @@ void PortAudioDevice::start()
             Pa_CloseStream(deviceStream_);
             deviceStream_ = nullptr;
         }
-        
-        fprintf(stderr, "PortAudioDevice: opened ID %d successfully\n", deviceId_);
     }
     else
     {
