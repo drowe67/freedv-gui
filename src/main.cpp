@@ -202,11 +202,11 @@ void MainApp::UnitTest_()
     engine->start();
     for (auto& dev : engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN))
     {
-        fprintf(stderr, "Input audio device: %s\n", (const char*)dev.name.ToUTF8());
+        fprintf(stderr, "Input audio device: %s (ID %d, sample rate %d, valid channels: %d-%d)\n", (const char*)dev.name.ToUTF8(), dev.deviceId,  dev.defaultSampleRate, dev.minChannels, dev.maxChannels);
     }
     for (auto& dev : engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT))
     {
-        fprintf(stderr, "Output audio device: %s\n", (const char*)dev.name.ToUTF8());
+        fprintf(stderr, "Output audio device: %s (ID %d, sample rate %d, valid channels: %d-%d)\n", (const char*)dev.name.ToUTF8(), dev.deviceId,  dev.defaultSampleRate, dev.minChannels, dev.maxChannels);
     }
     engine->stop();
 
