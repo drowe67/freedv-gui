@@ -140,6 +140,7 @@ jobs:
   
     - name: Start Windows Audio Service
       run: |
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
           net start audiosrv
   
     - name: List audio devices
@@ -147,27 +148,27 @@ jobs:
       run: |
           Get-CimInstance win32_sounddevice
  
-    - name: Prep ProcDump
-      shell: pwsh
-      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
-      run: |
-          Invoke-WebRequest https://download.sysinternals.com/files/Procdump.zip -OutFile Procdump.zip
-          Expand-Archive -Path Procdump.zip -DestinationPath Procdump
-          mkdir dumps
+    #- name: Prep ProcDump
+    #  shell: pwsh
+    #  working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+    #  run: |
+    #      Invoke-WebRequest https://download.sysinternals.com/files/Procdump.zip -OutFile Procdump.zip
+    #      Expand-Archive -Path Procdump.zip -DestinationPath Procdump
+    #      mkdir dumps
  
     - name: Test 700D
       shell: pwsh
       working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
       run: |
-          .\Procdump\procdump64.exe -accepteula -mp -e 1 -at 120 -w freedv.exe &
+          #.\Procdump\procdump64.exe -accepteula -mp -e 1 -at 120 -w freedv.exe &
           .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest 700D -NumberOfRuns 1
-          Start-Sleep -Seconds 10
+          #Start-Sleep -Seconds 10
       timeout-minutes: 5
-      continue-on-error: true
+      #continue-on-error: true
 
-    - name: Upload crash dump
-      #if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: CrashDump
-        path: ${{github.workspace}}/FreeDV-Install-Location/bin/*.dmp
+    #- name: Upload crash dump
+    #  #if: ${{ failure() }}
+    #  uses: actions/upload-artifact@v4
+    #  with:
+    #    name: CrashDump
+    #    path: ${{github.workspace}}/FreeDV-Install-Location/bin/*.dmp

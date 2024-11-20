@@ -260,7 +260,7 @@ std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(wxString deviceNam
             numChannels = std::min(numChannels, dev.maxChannels);
 
             // Create device object.
-            auto devObj = new PortAudioDevice(dev.deviceId, deviceName, direction, sampleRate, numChannels);
+            auto devObj = new PortAudioDevice(dev.deviceId, direction, sampleRate, numChannels);
             return std::shared_ptr<IAudioDevice>(devObj);
         }
     }
