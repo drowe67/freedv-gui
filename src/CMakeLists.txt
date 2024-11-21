@@ -14,6 +14,9 @@ set(FREEDV_LINK_LIBS_OSX
     "-framework AVFoundation"
 )
 
+# Configure logging
+add_definitions(-DULOG_HAVE_TIME)
+
 # Compile FreeDV components
 add_subdirectory(audio)
 add_subdirectory(config)

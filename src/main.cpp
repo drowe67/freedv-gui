@@ -47,6 +47,8 @@
 #include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/freedv_reporter.h"
 
+#include "util/logging/ulog.h"
+
 #include "rade_api.h"
 
 #define wxUSE_FILEDLG   1
@@ -197,6 +199,8 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
 
 bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 {
+    log_info("FreeDV version %s starting", FREEDV_VERSION);
+
     if (!wxApp::OnCmdLineParsed(parser))
     {
         return false;
