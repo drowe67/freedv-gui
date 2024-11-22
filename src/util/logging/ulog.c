@@ -21,6 +21,10 @@
 #include <string.h>
 #endif
 
+#if defined(_WIN32)
+#include "libfmemopen.h"
+#endif // defined(_WIN32)
+
 #define ULOG_NEW_LINE_ON true
 #define ULOG_NEW_LINE_OFF false
 #define ULOG_COLOR_ON true
