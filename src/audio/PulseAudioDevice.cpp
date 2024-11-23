@@ -139,6 +139,7 @@ void PulseAudioDevice::start()
         outputPendingLength_ = 0;
         targetOutputPendingLength_ = PULSE_FPB * getNumChannels() * 2;
         outputPendingThreadActive_ = true;
+#if 0
         if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
         {
             outputPendingThread_ = new std::thread([&]() {
@@ -194,6 +195,7 @@ void PulseAudioDevice::start()
             });
             assert(outputPendingThread_ != nullptr);
         }
+#endif
     }
 
     pa_threaded_mainloop_unlock(mainloop_);
@@ -262,6 +264,7 @@ void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *u
         memset(data, 0, sizeof(data));
 
         PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
+#if 0
         {
             std::unique_lock<std::mutex> lk(thisObj->outputPendingMutex_);
             if (thisObj->outputPendingLength_ >= numSamples)
@@ -280,7 +283,12 @@ void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *u
 
             thisObj->targetOutputPendingLength_ = std::max(thisObj->targetOutputPendingLength_, 2 * numSamples);
         }
+#endif
 
+        if (thisObj->onAudioDataFunction)
+        {
+            thisObj->onAudioDataFunction(*thisObj, data, numSamples / thisObj->getNumChannels(), thisObj->onAudioDataState);
+        } 
         pa_stream_write(s, &data[0], length, NULL, 0LL, PA_SEEK_RELATIVE);
     }
 }

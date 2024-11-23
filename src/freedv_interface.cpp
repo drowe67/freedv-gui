@@ -74,7 +74,8 @@ FreeDVInterface::FreeDVInterface() :
     lastSyncRxMode_(nullptr),
     rade_(nullptr),
     lpcnetEncState_(nullptr),
-    radeTxStep_(nullptr)
+    radeTxStep_(nullptr),
+    sync_(0)
 {
     // empty
 }
@@ -127,6 +128,7 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
 
 void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText)
 {
+    sync_ = 0;
     singleRxThread_ = singleRxThread;
 
     modemStatsList_ = new MODEM_STATS[enabledModes_.size()];
@@ -428,13 +430,7 @@ void FreeDVInterface::setSync(int val)
 
 int FreeDVInterface::getSync() const
 {
-    // Special case for RADE.
-    if (currentRxMode_ == nullptr)
-    {
-        return rade_sync(rade_);
-    }
-
-    return freedv_get_sync(currentRxMode_);
+    return sync_;
 }
 
 void FreeDVInterface::setEq(int val)
@@ -678,7 +674,7 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
     std::function<int(ParallelStep*)> modeFn = 
         [&](ParallelStep*) {
             int index = 0;
-
+            
             // Special handling for RADE.
             if (txMode_ >= FREEDV_MODE_RADE) return 0;
 
@@ -880,6 +876,8 @@ skipSyncCheck:
     {
         *state->getRxStateFn() = rade_sync(rade_);
     }
+
+    sync_ = *state->getRxStateFn();
 
     return indexWithSync;
 };
