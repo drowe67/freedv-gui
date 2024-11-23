@@ -48,7 +48,7 @@ jobs:
           export WINEPREFIX=`pwd`/wine-env
           wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
           Xvfb :99 -screen 0 1024x768x16 &
-          sleep 10
+          while [ ! -e /tmp/.X11-unix/X99 ]; do sleep 0.1; done
           export DISPLAY=:99.0
           wine ./python-3.12.7-amd64.exe /quiet /log c:\\python.log InstallAllUsers=1 Include_doc=0 Include_tcltk=0 || :
           cat $WINEPREFIX/drive_c/python.log
