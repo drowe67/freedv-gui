@@ -26,6 +26,8 @@
 #include <cassert>
 #include "OmniRigController.h"
 
+#include "../../util/logging/ulog.h"
+
 using namespace std::chrono_literals;
 
 #define OMNI_RIG_WAIT_TIME (200ms)
@@ -182,8 +184,8 @@ void OmniRigController::setFrequencyImpl_(uint64_t frequencyHz)
 {
     if (rig_ != nullptr && frequencyHz != currFreq_)
     {
-        std::cerr << "[OmniRig] set frequency to " << frequencyHz << std::endl;
-
+        log_info("Set frequency to %" PRIu64, frequencyHz);
+        
         HRESULT result = E_FAIL;
 
         // Get current VFO first and try to explicitly set that VFO.
@@ -192,28 +194,28 @@ void OmniRigController::setFrequencyImpl_(uint64_t frequencyHz)
         result = rig_->get_Vfo(&vfo);
         if (result == S_OK)
         {
-            std::cerr << "[OmniRig] got VFO = " << vfo << std::endl;
+            log_info("Got VFO = %d", (int)vfo);
 
             if (vfo == PM_UNKNOWN)
             {
-                std::cerr << "[OmniRig] forcing VFO to VFOA" << std::endl;
+                log_warn("Forcing VFO to VFOA");
                 rig_->put_Vfo(PM_VFOA);
                 vfo = PM_VFOA;
             }
 
             if (vfo == PM_VFOA || vfo == PM_VFOAA || vfo == PM_VFOAB)
             {
-                std::cerr << "[OmniRig] setting frequency on VFOA" << std::endl;
+                log_info("Setting frequency on VFOA");
                 result = rig_->put_FreqA(frequencyHz);
             }
             else if (vfo == PM_VFOB || vfo == PM_VFOBB || vfo == PM_VFOBA)
             {
-                std::cerr << "[OmniRig] setting frequency on VFOB" << std::endl;
+                log_info("Setting frequency on VFOB");
                 result = rig_->put_FreqB(frequencyHz);
             }
             else
             {
-                std::cerr << "[OmniRig] neither VFOA nor VFOB are writable" << std::endl;
+                log_error("Neither VFOA nor VFOB are writable");
                 result = E_FAIL; // force use of fallback
             }
         
@@ -225,12 +227,12 @@ void OmniRigController::setFrequencyImpl_(uint64_t frequencyHz)
                 if (vfo == PM_VFOA || vfo == PM_VFOAA || vfo == PM_VFOAB)
                 {
                     result = rig_->get_FreqA(&tmpFreq);
-                    std::cerr << "[OmniRig] got freq for VFOA: " << tmpFreq << std::endl;
+                    log_info("Got freq for VFOA: %" PRIu64, tmpFreq);
                 }
                 else if (vfo == PM_VFOB || vfo == PM_VFOBB || vfo == PM_VFOBA)
                 {
                     result = rig_->get_FreqB(&tmpFreq);
-                    std::cerr << "[OmniRig] got freq for VFOB: " << tmpFreq << std::endl;
+                    log_info("Got freq for VFOB: %" PRIu64, tmpFreq);
                 }
             }
         }
@@ -238,7 +240,7 @@ void OmniRigController::setFrequencyImpl_(uint64_t frequencyHz)
         if (result != S_OK || tmpFreq != frequencyHz)
         {
             // Try VFO-less set in case the first one didn't work.
-            std::cerr << "[OmniRig] trying frequency set fallback" << std::endl;
+            log_info("Trying frequency set fallback");
             result = rig_->put_Freq(frequencyHz);
             std::this_thread::sleep_for(OMNI_RIG_WAIT_TIME);
         }
@@ -251,7 +253,7 @@ void OmniRigController::setFrequencyImpl_(uint64_t frequencyHz)
         else
         {
             std::stringstream errMsg;
-            errMsg << "Could not change frequency to " << frequencyHz << " Hz (HRESULT = " << result << ")";
+            log_error("Could not change frequency to %" PRIu64 " Hz (HRESULT = %d)", frequencyHz, result);
             onRigError(this, errMsg.str());
         }
     }
@@ -323,7 +325,7 @@ void OmniRigController::requestCurrentFrequencyModeImpl_()
         rig_->get_Freq(&freq);
         rig_->get_Mode(&omniRigMode);
 
-        std::cerr << "[OmniRig] got frequency as " << freq << std::endl;
+        log_info("Got frequency as %ld", freq);;
 
         // Convert OmniRig mode to our mode
         IRigFrequencyController::Mode mode;

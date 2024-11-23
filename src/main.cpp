@@ -423,11 +423,11 @@ void MainFrame::test2020Mode_()
             allowed = false;
         }
     
-        std::cout << "One second of 2020 decoded in " << timeTaken.count() << " ms" << std::endl;
+        log_info("One second of 2020 decoded in %d ms", (int)timeTaken.count());
     }
 #endif // !defined(LPCNET_DISABLED)
     
-    std::cout << "2020 allowed: " << allowed << std::endl;
+    log_info("2020 allowed: %d", (int)allowed);
     
     // Save results to configuration.
     wxGetApp().appConfiguration.freedv2020Allowed = allowed;
