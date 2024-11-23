@@ -184,7 +184,7 @@ void OmniRigController::setFrequencyImpl_(uint64_t frequencyHz)
 {
     if (rig_ != nullptr && frequencyHz != currFreq_)
     {
-        log_info("Set frequency to %" PRIu64, frequencyHz);
+        log_info("Set frequency to %lld", frequencyHz);
         
         HRESULT result = E_FAIL;
 
@@ -227,12 +227,12 @@ void OmniRigController::setFrequencyImpl_(uint64_t frequencyHz)
                 if (vfo == PM_VFOA || vfo == PM_VFOAA || vfo == PM_VFOAB)
                 {
                     result = rig_->get_FreqA(&tmpFreq);
-                    log_info("Got freq for VFOA: %" PRIu64, tmpFreq);
+                    log_info("Got freq for VFOA: %lld", tmpFreq);
                 }
                 else if (vfo == PM_VFOB || vfo == PM_VFOBB || vfo == PM_VFOBA)
                 {
                     result = rig_->get_FreqB(&tmpFreq);
-                    log_info("Got freq for VFOB: %" PRIu64, tmpFreq);
+                    log_info("Got freq for VFOB: %lld", tmpFreq);
                 }
             }
         }
@@ -253,7 +253,7 @@ void OmniRigController::setFrequencyImpl_(uint64_t frequencyHz)
         else
         {
             std::stringstream errMsg;
-            log_error("Could not change frequency to %" PRIu64 " Hz (HRESULT = %d)", frequencyHz, result);
+            log_error("Could not change frequency to %lld Hz (HRESULT = %d)", frequencyHz, result);
             onRigError(this, errMsg.str());
         }
     }

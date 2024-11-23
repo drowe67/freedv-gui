@@ -22,6 +22,8 @@
 
 #include "SerialPortRigController.h"
 
+#include "../util/logging/ulog.h"
+
 SerialPortRigController::SerialPortRigController(std::string serialPort)
     : serialPortHandle_(COM_HANDLE_INVALID)
     , serialPort_(serialPort)
