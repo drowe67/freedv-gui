@@ -862,7 +862,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxTxRxThreadPriority->SetValue(wxGetApp().m_txRxThreadHighPriority);
         m_ckboxTxRxDumpTiming->SetValue(g_dump_timing);
         m_ckboxTxRxDumpFifoState->SetValue(g_dump_fifo_state);
-        m_ckboxVerbose->SetValue(g_verbose);
+        m_ckboxVerbose->SetValue(wxGetApp().appConfiguration.debugVerbose);
         m_ckboxFreeDVAPIVerbose->SetValue(g_freedv_verbose);
         
         m_experimentalFeatures->SetValue(wxGetApp().appConfiguration.experimentalFeatures);
@@ -1033,7 +1033,15 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_txRxThreadHighPriority = m_ckboxTxRxThreadPriority->GetValue();
         g_dump_timing = m_ckboxTxRxDumpTiming->GetValue();
         g_dump_fifo_state = m_ckboxTxRxDumpFifoState->GetValue();
-        g_verbose = m_ckboxVerbose->GetValue();
+        wxGetApp().appConfiguration.debugVerbose = m_ckboxVerbose->GetValue();
+        if (wxGetApp().appConfiguration.debugVerbose)
+        {
+            ulog_set_level(LOG_TRACE);
+        }
+        else
+        {
+            ulog_set_level(LOG_INFO);
+        }
         g_freedv_verbose = m_ckboxFreeDVAPIVerbose->GetValue();
 
         wxGetApp().appConfiguration.freedv700Clip = m_ckboxFreeDV700txClip->GetValue();
@@ -1085,7 +1093,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.statsResetTimeSecs = resetTime;
         
         if (storePersistent) {
-            wxGetApp().appConfiguration.debugVerbose = g_verbose;
             wxGetApp().appConfiguration.apiVerbose = g_freedv_verbose;            
             wxGetApp().appConfiguration.save(pConfig);
             

@@ -70,7 +70,6 @@ extern "C" {
 // ------------------------------------------------------------------
 
 // freedv states
-int                 g_verbose;
 int                 g_Nc;
 int                 g_mode;
 
@@ -518,7 +517,14 @@ void MainFrame::loadConfiguration_()
 
     wxGetApp().m_FreeDV700Combine = 1;
 
-    g_verbose = wxGetApp().appConfiguration.debugVerbose;
+    if (wxGetApp().appConfiguration.debugVerbose)
+    {
+        ulog_set_level(LOG_TRACE);
+    }
+    else
+    {
+        ulog_set_level(LOG_INFO);
+    }
     g_freedv_verbose = wxGetApp().appConfiguration.apiVerbose;
 
     wxGetApp().m_attn_carrier_en = 0;

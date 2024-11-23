@@ -32,8 +32,6 @@
 
 #include "util/logging/ulog.h"
 
-extern int g_verbose;
-
 HamlibRigController::RigList HamlibRigController::RigList_;
 std::mutex HamlibRigController::RigListMutex_;
 

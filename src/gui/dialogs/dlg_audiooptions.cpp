@@ -575,11 +575,8 @@ int AudioOptsDialog::ExchangeData(int inout)
             wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate = wxAtoi(sampleRate1);
             wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = wxAtoi(sampleRate2);
             
-            if (g_verbose)
-            {
-                log_debug("  m_soundCard1InSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
-                log_debug("  m_soundCard1OutSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
-            }
+            log_debug("  m_soundCard1InSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
+            log_debug("  m_soundCard1OutSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
         }
 
         if (valid_two_card_config) {
@@ -589,13 +586,10 @@ int AudioOptsDialog::ExchangeData(int inout)
             wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate = wxAtoi(sampleRate3);
             wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = wxAtoi(sampleRate4);
             
-            if (g_verbose)
-            {
-                log_debug("  m_soundCard1InSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
-                log_debug("  m_soundCard2OutSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate.get());
-                log_debug("  m_soundCard2InSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate.get());
-                log_debug("  m_soundCard1OutSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
-            }
+            log_debug("  m_soundCard1InSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
+            log_debug("  m_soundCard2OutSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate.get());
+            log_debug("  m_soundCard2InSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate.get());
+            log_debug("  m_soundCard1OutSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
         }
 
         log_debug("  g_nSoundCards: %d", g_nSoundCards);
