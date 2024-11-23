@@ -16,6 +16,7 @@ set(FREEDV_LINK_LIBS_OSX
 
 # Configure logging
 add_definitions(-DULOG_HAVE_TIME)
+add_definitions(-DULOG_NO_COLOR)
 
 # Compile FreeDV components
 add_subdirectory(audio)
