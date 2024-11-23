@@ -268,7 +268,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
             // sample these puppies at start just in case they are changed while VK running
             vk_rx_pause = wxGetApp().appConfiguration.voiceKeyerRxPause;
             vk_repeats = wxGetApp().appConfiguration.voiceKeyerRepeats;
-            if (g_verbose) fprintf(stderr, "vk_rx_pause: %d vk_repeats: %d\n", vk_rx_pause, vk_repeats);
+            log_debug("vk_rx_pause: %d vk_repeats: %d\n", vk_rx_pause, vk_repeats);
 
             vk_repeat_counter = 0;
             next_state = VoiceKeyerStartTx();
@@ -377,9 +377,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         next_state = VK_IDLE;
         g_voice_keyer_tx = false;
     }
-
-    //if ((vk_event != VK_DT) || (vk_state != next_state))
-    //    fprintf(stderr, "VoiceKeyerProcessEvent: vk_state: %d vk_event: %d next_state: %d  vk_repeat_counter: %d\n", vk_state, vk_event, next_state, vk_repeat_counter);
+    
     vk_state = next_state;
 }
 

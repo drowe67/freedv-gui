@@ -1013,7 +1013,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         long noise_snr;
         m_txtNoiseSNR->GetValue().ToLong(&noise_snr);
         wxGetApp().appConfiguration.noiseSNR = (int)noise_snr;
-        //fprintf(stderr, "noise_snr: %d\n", (int)noise_snr);
         
         wxGetApp().m_tone    = m_ckboxTone->GetValue();
         long tone_freq_hz, tone_amplitude;
@@ -1258,7 +1257,7 @@ void OptionsDlg::OnDebugConsole(wxScrollEvent& event) {
         int ret = AllocConsole();
         freopen("CONOUT$", "w", stdout); 
         freopen("CONOUT$", "w", stderr); 
-        if (g_verbose) fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().appConfiguration.debugConsoleEnabled.get());
+        log_info("AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().appConfiguration.debugConsoleEnabled.get());
     } 
 #endif
 }

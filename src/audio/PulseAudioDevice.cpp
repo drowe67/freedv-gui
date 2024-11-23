@@ -104,11 +104,7 @@ void PulseAudioDevice::start()
     int result = 0;
     if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
     {
-        time_t result = time(NULL);
-        char buf[256];
-        struct tm *p = localtime(&result);
-        strftime(buf, 256, "%c", p);
-        fprintf(stderr, "PulseAudioDevice[%s]: connecting to playback device %s\n", buf, (const char*)devName_.ToUTF8());
+        log_info("Connecting to playback device %s\n", (const char*)devName_.ToUTF8());
         
         pa_stream_set_write_callback(stream_, &PulseAudioDevice::StreamWriteCallback_, this);
         result = pa_stream_connect_playback(
@@ -117,11 +113,7 @@ void PulseAudioDevice::start()
     }
     else
     {
-        time_t result = time(NULL);
-        char buf[256];
-        struct tm *p = localtime(&result);
-        strftime(buf, 256, "%c", p);
-        fprintf(stderr, "PulseAudioDevice[%s]: connecting to record device %s\n", buf, (const char*)devName_.ToUTF8());
+        log_info("Connecting to record device %s\n", (const char*)devName_.ToUTF8());
         
         pa_stream_set_read_callback(stream_, &PulseAudioDevice::StreamReadCallback_, this);
         result = pa_stream_connect_record(
@@ -329,11 +321,7 @@ void PulseAudioDevice::StreamMovedCallback_(pa_stream *p, void *userdata)
     auto newDevName = pa_stream_get_device_name(p);
     PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
 
-    time_t result = time(NULL);
-    char buf[256];
-    struct tm *lt = localtime(&result);
-    strftime(buf, 256, "%c", lt);
-    fprintf(stderr, "PulseAudioDevice[%s]: stream named %s has been moved to %s\n", buf, (const char*)thisObj->devName_.ToUTF8(), newDevName);
+    log_info("Stream named %s has been moved to %s\n", (const char*)thisObj->devName_.ToUTF8(), newDevName);
     
     thisObj->devName_ = newDevName;
     

@@ -572,7 +572,7 @@ void ComPortsDlg::ExchangeData(int inout)
             m_cbSerialRate->GetValue().ToLong(&tmp); 
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate = tmp;
         }
-        if (g_verbose) fprintf(stderr, "serial rate: %d\n", wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get());
+        log_debug("serial rate: %d\n", wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get());
 
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType = m_cbPttMethod->GetSelection();
         
@@ -652,7 +652,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
 
         // display serial params
 
-        if (g_verbose) fprintf(stderr, "serial rate: %d\n", serial_rate);
+        log_debug("serial rate: %d\n", serial_rate);
 
         if (wxGetApp().CanAccessSerialPort((const char*)port.ToUTF8()))
         {
@@ -703,9 +703,9 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
         /* Serial PTT */       
         wxString ctrlport;
         ctrlport = m_cbCtlDevicePath->GetValue();
-        if (g_verbose) fprintf(stderr, "opening serial port: ");
+        log_debug("opening serial port: ");
         fputs(ctrlport.c_str(), stderr);            // don't escape crazy Microsoft bakslash-ified comm port names
-        if (g_verbose) fprintf(stderr,"\n");
+        log_debug("\n");
     
         if (wxGetApp().CanAccessSerialPort((const char*)ctrlport.ToUTF8()))
         {
@@ -730,7 +730,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             };
 
             serialPort->onRigConnected += [&](IRigController*) {
-                if (g_verbose) fprintf(stderr, "serial port open\n");
+                log_debug("serial port open\n");
                 cv.notify_one();
             };
 
@@ -746,9 +746,9 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                 wxSleep(1);
                 serialPort->ptt(false);
 
-                if (g_verbose) fprintf(stderr, "closing serial port\n");
+                log_debug("closing serial port\n");
                 serialPort->disconnect();
-                if (g_verbose) fprintf(stderr, "serial port closed\n");
+                log_debug("serial port closed\n");
             }
         }
     }

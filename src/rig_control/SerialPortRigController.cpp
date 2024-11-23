@@ -22,8 +22,6 @@
 
 #include "SerialPortRigController.h"
 
-extern int g_verbose;
-
 SerialPortRigController::SerialPortRigController(std::string serialPort)
     : serialPortHandle_(COM_HANDLE_INVALID)
     , serialPort_(serialPort)
@@ -153,7 +151,7 @@ void SerialPortRigController::connectImpl_()
 
         TCHAR  nameWithStrangePrefix[100];
         StringCchPrintf(nameWithStrangePrefix, 100, TEXT("\\\\.\\%hs"), serialPort_.c_str());
-        if (g_verbose) _tprintf(_T("nameWithStrangePrefix: %s\r\n"), nameWithStrangePrefix);
+        log_debug("nameWithStrangePrefix: \\\\.\\%s", serialPort_.c_str());
     
         if((serialPortHandle_=CreateFile(nameWithStrangePrefix
                                    ,GENERIC_READ | GENERIC_WRITE/* Access */
@@ -166,10 +164,10 @@ void SerialPortRigController::connectImpl_()
             StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("CreateFile"));
             goto error;
         }
-        if (g_verbose) fprintf(stderr, "CreateFileA OK\n");
+        log_debug("CreateFileA OK\n");
     
         if(GetCommTimeouts(serialPortHandle_, &timeouts)) {
-            if (g_verbose) fprintf(stderr, "GetCommTimeouts OK\n");
+            log_debug("GetCommTimeouts OK\n");
         
             timeouts.ReadIntervalTimeout=MAXDWORD;
             timeouts.ReadTotalTimeoutMultiplier=0;
@@ -180,7 +178,7 @@ void SerialPortRigController::connectImpl_()
                 StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("SetCommTimeouts"));
                 goto error;          
             }
-            if (g_verbose) fprintf(stderr, "SetCommTimeouts OK\n");
+            log_debug("SetCommTimeouts OK\n");
         } else {
             StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("GetCommTimeouts"));
             goto error;
@@ -188,7 +186,7 @@ void SerialPortRigController::connectImpl_()
 
         /* Force N-8-1 mode: */
         if(GetCommState(serialPortHandle_, &dcb)==TRUE) {
-        if (g_verbose) fprintf(stderr, "GetCommState OK\n");
+        log_debug("GetCommState OK\n");
         
             dcb.ByteSize        = 8;
             dcb.Parity            = NOPARITY;
@@ -208,7 +206,7 @@ void SerialPortRigController::connectImpl_()
                   StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("SetCommState"));
                 goto error;           
             }
-        if (g_verbose) fprintf(stderr, "SetCommState OK\n");
+        log_debug("SetCommState OK\n");
         } else {
             StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("GetCommState"));
             goto error;           
@@ -218,28 +216,25 @@ void SerialPortRigController::connectImpl_()
         return;
     
 error:
-        if (g_verbose)
-        {
 #ifdef UNICODE
-            std::vector<char> buffer;
-            std::string errFn = "[Unknown Function]";
-            int size = WideCharToMultiByte(CP_UTF8, 0, lpszFunction, -1, NULL, 0, NULL, NULL);
-            if (size > 0) 
-            {
-                buffer.resize(size);
-                WideCharToMultiByte(CP_UTF8, 0, lpszFunction, -1, static_cast<LPSTR>(&buffer[0]), buffer.size(), NULL, NULL);
-                errFn = std::string(&buffer[0]);
-            }
-            else 
-            {
-                // Error handling, probably shouldn't reach here
-            }
-            fprintf(stderr, "%s failed\n", errFn.c_str());
-#else
-            fprintf(stderr, "%s failed\n", lpszFunction);
-#endif // UNICODE
+        std::vector<char> buffer;
+        std::string errFn = "[Unknown Function]";
+        int size = WideCharToMultiByte(CP_UTF8, 0, lpszFunction, -1, NULL, 0, NULL, NULL);
+        if (size > 0) 
+        {
+            buffer.resize(size);
+            WideCharToMultiByte(CP_UTF8, 0, lpszFunction, -1, static_cast<LPSTR>(&buffer[0]), buffer.size(), NULL, NULL);
+            errFn = std::string(&buffer[0]);
         }
-    
+        else 
+        {
+            // Error handling, probably shouldn't reach here
+        }
+        log_error("%s failed\n", errFn.c_str());
+#else
+        log_error("%s failed\n", lpszFunction);
+#endif // UNICODE
+
         // Retrieve the system error message for the last-error code
 
         LPVOID lpMsgBuf;

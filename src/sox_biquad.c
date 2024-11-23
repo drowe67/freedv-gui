@@ -36,6 +36,8 @@
 
 #include "sox_biquad.h"
 
+#include "util/logging/ulog.h"
+
 
 int lsx_biquad_flow(sox_effect_t * effp, const sox_sample_t *ibuf,
                     sox_sample_t *obuf, size_t *isamp, size_t *osamp);
@@ -97,7 +99,7 @@ void *sox_biquad_create(int argc, const char *argv[])
     ret = start(e);
     if (ret != SOX_SUCCESS && ret != SOX_EFF_NULL)
     {
-        fprintf(stderr, "sox_biquad ret = %d (%s)\n", ret, sox_strerror(ret)); 
+        log_error("sox_biquad ret = %d (%s)\n", ret, sox_strerror(ret)); 
         assert(0);
     }
     else if (ret == SOX_EFF_NULL)

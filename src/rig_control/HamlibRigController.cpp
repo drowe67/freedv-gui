@@ -30,6 +30,8 @@
 
 #include "HamlibRigController.h"
 
+#include "util/logging/ulog.h"
+
 extern int g_verbose;
 
 HamlibRigController::RigList HamlibRigController::RigList_;
@@ -233,25 +235,25 @@ void HamlibRigController::connectImpl_()
     rig_ = rig_init(RigList_[rigIndex]->rig_model);
     if (!rig_) 
     {
-        if (g_verbose) fprintf(stderr, "rig_init() failed, returning\n");
+        log_debug("rig_init() failed, returning\n");
         
         std::string errMsg = "Hamlib could not initialize rig " + rigName_;
         onRigError(this, errMsg);
         return;
     }
-    if (g_verbose) fprintf(stderr, "rig_init() OK ....\n");
+    log_debug("rig_init() OK ....\n");
 
     /* Set CI-V address if necessary. */
     if (!strncmp(RigList_[rigIndex]->mfg_name, "Icom", 4))
     {
         char civAddr[5];
         snprintf(civAddr, 5, "0x%0X", civHex_);
-        if (g_verbose) fprintf(stderr, "hamlib: setting CI-V address to: %s\n", civAddr);
+        log_debug("hamlib: setting CI-V address to: %s\n", civAddr);
         rig_set_conf(rig_, rig_token_lookup(rig_, "civaddr"), civAddr);
     }
     else
     {
-        if (g_verbose) fprintf(stderr, "hamlib: ignoring CI-V configuration due to non-Icom radio\r\n");
+        log_debug("hamlib: ignoring CI-V configuration due to non-Icom radio\r\n");
     }
 
     rig_set_conf(rig_, rig_token_lookup(rig_, "rig_pathname"), serialPort_.c_str());
@@ -263,7 +265,7 @@ void HamlibRigController::connectImpl_()
     
     if (serialRate_ > 0) 
     {
-        if (g_verbose) fprintf(stderr, "hamlib: setting serial rate: %d\n", serialRate_);
+        log_debug("hamlib: setting serial rate: %d\n", serialRate_);
         std::stringstream ss;
         ss << serialRate_;
         rig_set_conf(rig_, rig_token_lookup(rig_, "serial_speed"), ss.str().c_str());
@@ -293,7 +295,7 @@ void HamlibRigController::connectImpl_()
     auto result = rig_open(rig_);
     if (result == RIG_OK) 
     {
-        if (g_verbose) fprintf(stderr, "hamlib: rig_open() OK\n");
+        log_debug("hamlib: rig_open() OK\n");
         onRigConnected(this);
         
         // Determine whether we have multiple VFOs.
@@ -314,7 +316,7 @@ void HamlibRigController::connectImpl_()
         std::string errMsg = std::string("Could not connect to radio: ") + rigerror(result);
         onRigError(this, errMsg);
     }
-    if (g_verbose) fprintf(stderr, "hamlib: rig_open() failed ...\n");
+    log_debug("hamlib: rig_open() failed ...\n");
 
     rig_cleanup(rig_);
     rig_ = nullptr;
@@ -349,7 +351,7 @@ void HamlibRigController::disconnectImpl_()
 
 void HamlibRigController::pttImpl_(bool state)
 {
-    if (g_verbose) fprintf(stderr,"Hamlib::ptt: %d\n", state);
+    log_debug("Hamlib::ptt: %d\n", state);
 
     if (rig_ == nullptr)
     {
@@ -365,7 +367,7 @@ void HamlibRigController::pttImpl_(bool state)
     }
     if (result != RIG_OK) 
     {
-        if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
+        log_debug("rig_set_ptt: error = %s \n", rigerror(result));
         
         std::string errMsg = "Cannot set PTT: " + std::string(rigerror(result));
         onRigError(this, errMsg);
@@ -406,7 +408,7 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
         {
             // If we can't stop transmitting, we shouldn't try to change the mode
             // as it'll fail on some radios.
-            if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
+            log_debug("rig_set_ptt: error = %s \n", rigerror(result));
 
             std::string errMsg = std::string("Could not disable PTT prior to frequency change: ") + rigerror(result);
             onRigError(this, errMsg);
@@ -426,7 +428,7 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
         {
             // If we can't stop transmitting, we shouldn't try to change the mode
             // as it'll fail on some radios.
-            if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
+            log_debug("rig_set_ptt: error = %s \n", rigerror(result));
             
             std::string errMsg = std::string("Could not enable PTT after frequency change: ") + rigerror(result);
             onRigError(this, errMsg);
@@ -479,7 +481,7 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
         {
             // If we can't stop transmitting, we shouldn't try to change the mode
             // as it'll fail on some radios.
-            if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
+            log_debug("rig_set_ptt: error = %s \n", rigerror(result));
             
             std::string errMsg = std::string("Could not disable PTT prior to mode change: ") + rigerror(result);
             onRigError(this, errMsg);
@@ -499,7 +501,7 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
         {
             // If we can't stop transmitting, we shouldn't try to change the mode
             // as it'll fail on some radios.
-            if (g_verbose) fprintf(stderr, "rig_set_ptt: error = %s \n", rigerror(result));
+            log_debug("rig_set_ptt: error = %s \n", rigerror(result));
             
             std::string errMsg = std::string("Could not enable PTT after mode change: ") + rigerror(result);
             onRigError(this, errMsg);
@@ -522,7 +524,7 @@ modeAttempt:
     int result = rig_get_mode(rig_, currVfo, &mode, &passband);
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
-        if (g_verbose) fprintf(stderr, "rig_get_mode: error = %s \n", rigerror(result));
+        log_debug("rig_get_mode: error = %s \n", rigerror(result));
     }
     else if (result != RIG_OK)
     {
@@ -539,7 +541,7 @@ freqAttempt:
         result = rig_get_freq(rig_, currVfo, &freq);
         if (result != RIG_OK && currVfo == RIG_VFO_CURR)
         {
-            if (g_verbose) fprintf(stderr, "rig_get_freq: error = %s \n", rigerror(result));
+            log_debug("rig_get_freq: error = %s \n", rigerror(result));
         }
         else if (result != RIG_OK)
         {
@@ -604,7 +606,7 @@ vfo_t HamlibRigController::getCurrentVfo_()
         if (result != RIG_OK && result != -RIG_ENAVAIL)
         {
             // Note: we'll still attempt operation using RIG_VFO_CURR just in case.
-            if (g_verbose) fprintf(stderr, "rig_get_vfo: error = %s \n", rigerror(result));
+            log_debug("rig_get_vfo: error = %s \n", rigerror(result));
             vfo = RIG_VFO_CURR;
         }
     }
@@ -625,7 +627,7 @@ freqAttempt:
     int result = rig_set_freq(rig_, currVfo, frequencyHz);
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
-        if (g_verbose) fprintf(stderr, "rig_set_freq: error = %s \n", rigerror(result));
+        log_debug("rig_set_freq: error = %s \n", rigerror(result));
     }
     else if (result != RIG_OK)
     {
@@ -663,7 +665,7 @@ modeAttempt:
     int result = rig_set_mode(rig_, currVfo, mode, RIG_PASSBAND_NOCHANGE);
     if (result != RIG_OK && currVfo == RIG_VFO_CURR)
     {
-        if (g_verbose) fprintf(stderr, "rig_set_mode: error = %s \n", rigerror(result));
+        log_debug("rig_set_mode: error = %s \n", rigerror(result));
     }
     else if (result != RIG_OK)
     {

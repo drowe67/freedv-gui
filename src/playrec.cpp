@@ -88,10 +88,10 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
 {
     wxUnusedVar(event);
 
-    if (g_verbose) fprintf(stderr,"OnPlayFileFromRadio:: %d\n", (int)g_playFileFromRadio);
+    log_debug("OnPlayFileFromRadio:: %d\n", (int)g_playFileFromRadio);
     if (g_playFileFromRadio)
     {
-        if (g_verbose) fprintf(stderr, "OnPlayFileFromRadio:: Stop\n");
+        log_debug("OnPlayFileFromRadio:: Stop\n");
         StopPlaybackFileFromRadio();
     }
     else
@@ -159,7 +159,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
             statusText = wxString::Format(wxT("Playing file %s as radio input"), soundFile);
         }
         SetStatusText(statusText, 0);
-        if (g_verbose) fprintf(stderr, "OnPlayFileFromRadio:: Playing File Fs = %d\n", (int)sfInfo.samplerate);
+        log_debug("OnPlayFileFromRadio:: Playing File Fs = %d\n", (int)sfInfo.samplerate);
         m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Stop Play File - From Radio...")));
         g_playFileFromRadio = true;
     }
@@ -190,7 +190,7 @@ void MainFrame::StopRecFileFromRadio()
 {
     if (g_sfRecFile != nullptr)
     {
-        if (g_verbose) fprintf(stderr, "Stopping Record....\n");
+        log_debug("Stopping Record....\n");
         g_mutexProtectingCallbackData.Lock();
         g_recFileFromRadio = false;
         g_recFileFromModulator = false;
@@ -291,9 +291,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         long secs;
         if (secsString.ToLong(&secs)) {
             wxGetApp().appConfiguration.recFileFromRadioSecs = (unsigned int)secs;
-            //printf(" secondsToRecord: %d\n",  (unsigned int)secs);
             g_recFromRadioSamples = sample_rate*(unsigned int)secs;
-            //printf("g_recFromRadioSamples: %d\n", g_recFromRadioSamples);
         }
         else {
             wxMessageBox(wxT("Invalid number of Seconds"), wxT("Record File From Radio"), wxOK);

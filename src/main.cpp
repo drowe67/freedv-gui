@@ -210,7 +210,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
     pConfig = wxConfigBase::Get();
     if (parser.Found("f", &configPath))
     {
-        fprintf(stderr, "Loading configuration from %s\n", (const char*)configPath.ToUTF8());
+        log_info("Loading configuration from %s\n", (const char*)configPath.ToUTF8());
         pConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), configPath, configPath, wxCONFIG_USE_LOCAL_FILE);
         wxConfigBase::Set(pConfig);
         
@@ -265,7 +265,7 @@ bool MainApp::OnInit()
 
     wxString ppath;
     wxGetEnv("PYTHONPATH", &ppath);
-    fprintf(stderr, "PYTHONPATH is %s\n", (const char*)ppath.ToUTF8());
+    log_info("PYTHONPATH is %s\n", (const char*)ppath.ToUTF8());
 #endif // __APPLE__
 
 #endif // _WIN32 || __APPLE__
@@ -346,7 +346,7 @@ bool MainFrame::test2020HWAllowed_()
 //-------------------------------------------------------------------------
 void MainFrame::test2020Mode_()
 {    
-    printf("Making sure your machine can handle 2020 mode:\n");
+    log_info("Making sure your machine can handle 2020 mode...");
 
     bool allowed = false;
 
@@ -356,14 +356,14 @@ void MainFrame::test2020Mode_()
 
     if (!allowed)
     {
-        std::cout << "Warning: AVX support not found!" << std::endl;
+        log_warn("Warning: AVX support not found!");
     }
     else
     {
         // Sanity check: encode 1 second of 16 kHz white noise and then try to
         // decode it. If it takes longer than 0.5 seconds, it's unlikely that 
         // 2020/2020B will work properly on this machine.
-        printf("Generating test audio...\n");
+        log_info("Generating test audio...");
         struct FIFO* inFifo = codec2_fifo_create(24000);
         assert(inFifo != nullptr);
     
@@ -398,7 +398,7 @@ void MainFrame::test2020Mode_()
             numInSamples += samplesToGenerate;        
         }
     
-        printf("Decoding modulated audio...\n");
+        log_info("Decoding modulated audio...");
     
         std::chrono::high_resolution_clock systemClock;
         auto startTime = systemClock.now();
@@ -962,12 +962,12 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         int ret = AllocConsole();
         freopen("CONOUT$", "w", stdout);
         freopen("CONOUT$", "w", stderr);
-        fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().appConfiguration.debugConsoleEnabled.get());
+        log_info("AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().appConfiguration.debugConsoleEnabled.get());
     }
 #endif
     
     // Print RADE API version. This also forces the RADE library to be linked.
-    fprintf(stderr, "Using RADE API version %d\n", rade_version());
+    log_info("Using RADE API version %d\n", rade_version());
 
 #if defined(FREEDV_MODE_2020) && !defined(LPCNET_DISABLED)
     // First time use: make sure 2020 mode will actually work on this machine.
@@ -1066,8 +1066,7 @@ MainFrame::~MainFrame()
         m_reporterDialog = nullptr;
     }
     
-    //fprintf(stderr, "MainFrame::~MainFrame()\n");
-    #ifdef FTEST
+#ifdef FTEST
     fclose(ftest);
     #endif
 
@@ -1211,7 +1210,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // show freq. and mode [UP]
         if (wxGetApp().rigFrequencyController && wxGetApp().rigFrequencyController->isConnected()) 
         {
-            if (g_verbose) fprintf(stderr, "update freq and mode ....\n"); 
+            log_debug("update freq and mode ....\n"); 
             wxGetApp().rigFrequencyController->requestCurrentFrequencyMode();
         }
      }
@@ -1346,7 +1345,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         short speechInPlotSamples[WAVEFORM_PLOT_BUF];
         if (codec2_fifo_read(g_plotSpeechInFifo, speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
             memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
-            //fprintf(stderr, "empty!\n");
         }
         m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
         m_panelSpeechIn->Refresh();
@@ -1392,8 +1390,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         char snr[15];
         snprintf(snr, 15, "%4.1f dB", g_snr);
 
-        //fprintf(stderr, "g_mode: %d snr_est: %f m_snrBeta: %f g_snr: %f snr_limited: %f\n", g_mode, g_stats.snr_est,  m_snrBeta, g_snr, snr_limited);
-
         wxString snr_string(snr);
         m_textSNR->SetLabel(snr_string);
         m_gaugeSNR->SetValue((int)(snr_limited+5));
@@ -1437,7 +1433,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // Peak Reading meter: updates peaks immediately, then slowly decays
         int maxScaled = (int)(100.0 * ((float)m_maxLevel/32767.0));
         m_gaugeLevel->SetValue(maxScaled);
-        //printf("maxScaled: %d\n", maxScaled);
         if (((float)maxScaled/100) > tooHighThresh)
             m_textLevel->SetLabel("Too High");
         else
@@ -1447,7 +1442,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         // sync LED (Colours don't work on Windows) ------------------------
 
-        //fprintf(stderr, "g_State: %d  m_rbSync->GetValue(): %d\n", g_State, m_rbSync->GetValue());
         if (m_textSync->IsEnabled())
         {
             auto oldColor = m_textSync->GetForegroundColour();
@@ -1621,8 +1615,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     if (freq > 0)
                     {
                         long long freqLongLong = freq;
-                        fprintf(
-                            stderr, 
+                        log_info(
                             "Adding callsign %s @ SNR %d, freq %lld to PSK Reporter.\n", 
                             pendingCallsign.c_str(), 
                             pendingSnr,
@@ -1763,8 +1756,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                             g_error_hist[b] += error_pattern[i];
                             g_error_histn[b]++;
                         }
-                        //if (b%2)
-                        //    printf("g_error_hist[%d]: %d\n", b/2, g_error_hist[b/2]);
                     }
 
                      /* calculate BERs and send to plot */
@@ -1782,7 +1773,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
                 if ((freedvInterface.getCurrentMode() == FREEDV_MODE_700C)) {
                     int c;
-                    //fprintf(stderr, "after g_error_pattern_fifo read 2\n");
 
                     /*
                        FreeDV 700 mapping from error pattern to bit on each carrier, see
@@ -1795,7 +1785,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     */
 
                     int hist_Nc = sz_error_pattern/4;
-                    //fprintf(stderr, "hist_Nc: %d\n", hist_Nc);
 
                     for(i=0; i<sz_error_pattern; i++) {
                         /* maps to IQ bits from each symbol to a "carrier" (actually one line for each IQ bit in carrier order) */
@@ -1804,12 +1793,10 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         m_panelTestFrameErrors->add_new_sample(c, c + 0.8*error_pattern[i]);
                         g_error_hist[c] += error_pattern[i];
                         g_error_histn[c]++;
-                        //printf("i: %d c: %d\n", i, c);
                     }
                     for(; i<2*MODEM_STATS_NC_MAX*4; i++) {
                         c = floor(i/4);
                         m_panelTestFrameErrors->add_new_sample(c, c);
-                        //printf("i: %d c: %d\n", i, c);
                     }
 
                     /* calculate BERs and send to plot */
@@ -1872,7 +1859,6 @@ void MainFrame::OnExit(wxCommandEvent& event)
 
     wxGetApp().m_reporters.clear();
     
-    //fprintf(stderr, "MainFrame::OnExit\n");
     wxUnusedVar(event);
 #ifdef _USE_TIMER
     m_plotTimer.Stop();
@@ -2014,7 +2000,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 
 void MainFrame::performFreeDVOn_()
 {
-    if (g_verbose) fprintf(stderr, "Start .....\n");
+    log_debug("Start .....\n");
     g_queueResync = false;
     endingTx = false;
     
@@ -2128,7 +2114,7 @@ void MainFrame::performFreeDVOn_()
             char temp[9];
             memset(temp, 0, 9);
             strncpy(temp, wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(), 8); // One less than the size of temp to ensure we don't overwrite the null.
-            fprintf(stderr, "Setting callsign to %s\n", temp);
+            log_info("Setting callsign to %s\n", temp);
             freedvInterface.setReliableText(temp);
         }
     
@@ -2150,8 +2136,8 @@ void MainFrame::performFreeDVOn_()
         // Init Speex pre-processor states
         // by inspecting Speex source it seems that only denoiser is on by default
 
-        if (g_verbose) fprintf(stderr, "freedv_get_n_speech_samples(tx): %d\n", freedvInterface.getTxNumSpeechSamples());
-        if (g_verbose) fprintf(stderr, "freedv_get_speech_sample_rate(tx): %d\n", freedvInterface.getTxSpeechSampleRate());
+        log_debug("freedv_get_n_speech_samples(tx): %d\n", freedvInterface.getTxNumSpeechSamples());
+        log_debug("freedv_get_speech_sample_rate(tx): %d\n", freedvInterface.getTxSpeechSampleRate());
     
         // adjust spectrum and waterfall freq scaling base on mode
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getTxModemSampleRate()/2)));
@@ -2322,7 +2308,7 @@ void MainFrame::performFreeDVOn_()
 
 void MainFrame::performFreeDVOff_()
 {
-    if (g_verbose) fprintf(stderr, "Stop .....\n");
+    log_debug("Stop .....\n");
     
     //
     // Stop Running -------------------------------------------------
@@ -2507,7 +2493,6 @@ void MainFrame::stopRxStream()
     {
         m_RxRunning = false;
 
-        //fprintf(stderr, "waiting for thread to stop\n");
         if (m_txThread)
         {
             if (txInSoundDevice)
@@ -2580,7 +2565,7 @@ void MainFrame::destroy_fifos(void)
 //-------------------------------------------------------------------------
 void MainFrame::startRxStream()
 {
-    if (g_verbose) fprintf(stderr, "startRxStream .....\n");
+    log_debug("startRxStream .....\n");
     if(!m_RxRunning) {
         m_RxRunning = true;
         
@@ -2810,11 +2795,11 @@ void MainFrame::startRxStream()
             g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
             g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
         
-            if (g_verbose) fprintf(stderr, "fifoSize_ms:  %d infifo2: %d/outfilo2: %d\n",
+            log_debug("fifoSize_ms:  %d infifo2: %d/outfilo2: %d\n",
                 wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
         }
 
-        if (g_verbose) fprintf(stderr, "fifoSize_ms: %d infifo1: %d/outfilo1 %d\n",
+        log_debug("fifoSize_ms: %d infifo1: %d/outfilo1 %d\n",
                 wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard1InFifoSizeSamples, soundCard1OutFifoSizeSamples);
 
         // reset debug stats for FIFOs
@@ -2848,7 +2833,7 @@ void MainFrame::startRxStream()
         g_rxUserdata->rxinfifo = codec2_fifo_create(rxInFifoSizeSamples);
         g_rxUserdata->rxoutfifo = codec2_fifo_create(rxOutFifoSizeSamples);
 
-        if (g_verbose) fprintf(stderr, "rxInFifoSizeSamples: %d rxOutFifoSizeSamples: %d\n", rxInFifoSizeSamples, rxOutFifoSizeSamples);
+        log_debug("rxInFifoSizeSamples: %d rxOutFifoSizeSamples: %d\n", rxInFifoSizeSamples, rxOutFifoSizeSamples);
 
         // Init Equaliser Filters ------------------------------------------------------
 
@@ -3170,7 +3155,7 @@ void MainFrame::startRxStream()
             wxLogError(wxT("Can't start RX thread!"));
         }
 
-        if (g_verbose) fprintf(stderr, "starting tx/rx processing thread\n");
+        log_debug("starting tx/rx processing thread\n");
 
         // Work around an issue where the buttons stay disabled even if there
         // is an error opening one or more audio device(s).

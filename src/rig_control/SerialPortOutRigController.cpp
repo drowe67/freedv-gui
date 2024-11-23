@@ -63,14 +63,12 @@ void SerialPortOutRigController::pttImpl_(bool state)
     if (serialPortHandle_ != COM_HANDLE_INVALID) 
     {
         if (useRTS_) {
-            //fprintf(stderr, "g_tx: %d m_boolRTSPos: %d serialLine: %d\n", g_tx, wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS, g_tx == wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS);
             if (state == rtsPos_)
                 raiseRTS_();
             else
                 lowerRTS_();
         }
         if (useDTR_) {
-            //fprintf(stderr, "g_tx: %d m_boolDTRPos: %d serialLine: %d\n", g_tx, wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR, g_tx == wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR);
             if (state == dtrPos_)
                 raiseDTR_();
             else
