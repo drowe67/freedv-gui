@@ -88,10 +88,10 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
 {
     wxUnusedVar(event);
 
-    log_debug("OnPlayFileFromRadio:: %d\n", (int)g_playFileFromRadio);
+    log_debug("OnPlayFileFromRadio:: %d", (int)g_playFileFromRadio);
     if (g_playFileFromRadio)
     {
-        log_debug("OnPlayFileFromRadio:: Stop\n");
+        log_debug("OnPlayFileFromRadio:: Stop");
         StopPlaybackFileFromRadio();
     }
     else
@@ -159,7 +159,7 @@ void MainFrame::OnPlayFileFromRadio(wxCommandEvent& event)
             statusText = wxString::Format(wxT("Playing file %s as radio input"), soundFile);
         }
         SetStatusText(statusText, 0);
-        log_debug("OnPlayFileFromRadio:: Playing File Fs = %d\n", (int)sfInfo.samplerate);
+        log_debug("OnPlayFileFromRadio:: Playing File Fs = %d", (int)sfInfo.samplerate);
         m_menuItemPlayFileFromRadio->SetItemLabel(wxString(_("Stop Play File - From Radio...")));
         g_playFileFromRadio = true;
     }
@@ -190,7 +190,7 @@ void MainFrame::StopRecFileFromRadio()
 {
     if (g_sfRecFile != nullptr)
     {
-        log_debug("Stopping Record....\n");
+        log_debug("Stopping Record....");
         g_mutexProtectingCallbackData.Lock();
         g_recFileFromRadio = false;
         g_recFileFromModulator = false;

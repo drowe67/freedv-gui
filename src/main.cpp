@@ -210,7 +210,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
     pConfig = wxConfigBase::Get();
     if (parser.Found("f", &configPath))
     {
-        log_info("Loading configuration from %s\n", (const char*)configPath.ToUTF8());
+        log_info("Loading configuration from %s", (const char*)configPath.ToUTF8());
         pConfig = new wxFileConfig(wxT("FreeDV"), wxT("CODEC2-Project"), configPath, configPath, wxCONFIG_USE_LOCAL_FILE);
         wxConfigBase::Set(pConfig);
         
@@ -265,7 +265,7 @@ bool MainApp::OnInit()
 
     wxString ppath;
     wxGetEnv("PYTHONPATH", &ppath);
-    log_info("PYTHONPATH is %s\n", (const char*)ppath.ToUTF8());
+    log_info("PYTHONPATH is %s", (const char*)ppath.ToUTF8());
 #endif // __APPLE__
 
 #endif // _WIN32 || __APPLE__
@@ -962,12 +962,12 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
         int ret = AllocConsole();
         freopen("CONOUT$", "w", stdout);
         freopen("CONOUT$", "w", stderr);
-        log_info("AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().appConfiguration.debugConsoleEnabled.get());
+        log_info("AllocConsole: %d m_debug_console: %d", ret, wxGetApp().appConfiguration.debugConsoleEnabled.get());
     }
 #endif
     
     // Print RADE API version. This also forces the RADE library to be linked.
-    log_info("Using RADE API version %d\n", rade_version());
+    log_info("Using RADE API version %d", rade_version());
 
 #if defined(FREEDV_MODE_2020) && !defined(LPCNET_DISABLED)
     // First time use: make sure 2020 mode will actually work on this machine.
@@ -1210,7 +1210,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // show freq. and mode [UP]
         if (wxGetApp().rigFrequencyController && wxGetApp().rigFrequencyController->isConnected()) 
         {
-            log_debug("update freq and mode ....\n"); 
+            log_debug("update freq and mode ...."); 
             wxGetApp().rigFrequencyController->requestCurrentFrequencyMode();
         }
      }
@@ -2000,7 +2000,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 
 void MainFrame::performFreeDVOn_()
 {
-    log_debug("Start .....\n");
+    log_debug("Start .....");
     g_queueResync = false;
     endingTx = false;
     
@@ -2114,7 +2114,7 @@ void MainFrame::performFreeDVOn_()
             char temp[9];
             memset(temp, 0, 9);
             strncpy(temp, wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToUTF8(), 8); // One less than the size of temp to ensure we don't overwrite the null.
-            log_info("Setting callsign to %s\n", temp);
+            log_info("Setting callsign to %s", temp);
             freedvInterface.setReliableText(temp);
         }
     
@@ -2136,8 +2136,8 @@ void MainFrame::performFreeDVOn_()
         // Init Speex pre-processor states
         // by inspecting Speex source it seems that only denoiser is on by default
 
-        log_debug("freedv_get_n_speech_samples(tx): %d\n", freedvInterface.getTxNumSpeechSamples());
-        log_debug("freedv_get_speech_sample_rate(tx): %d\n", freedvInterface.getTxSpeechSampleRate());
+        log_debug("freedv_get_n_speech_samples(tx): %d", freedvInterface.getTxNumSpeechSamples());
+        log_debug("freedv_get_speech_sample_rate(tx): %d", freedvInterface.getTxSpeechSampleRate());
     
         // adjust spectrum and waterfall freq scaling base on mode
         m_panelSpectrum->setFreqScale(MODEM_STATS_NSPEC*((float)MAX_F_HZ/(freedvInterface.getTxModemSampleRate()/2)));
@@ -2308,7 +2308,7 @@ void MainFrame::performFreeDVOn_()
 
 void MainFrame::performFreeDVOff_()
 {
-    log_debug("Stop .....\n");
+    log_debug("Stop .....");
     
     //
     // Stop Running -------------------------------------------------
@@ -2565,7 +2565,7 @@ void MainFrame::destroy_fifos(void)
 //-------------------------------------------------------------------------
 void MainFrame::startRxStream()
 {
-    log_debug("startRxStream .....\n");
+    log_debug("startRxStream .....");
     if(!m_RxRunning) {
         m_RxRunning = true;
         
@@ -2795,11 +2795,11 @@ void MainFrame::startRxStream()
             g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
             g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
         
-            log_debug("fifoSize_ms:  %d infifo2: %d/outfilo2: %d\n",
+            log_debug("fifoSize_ms:  %d infifo2: %d/outfilo2: %d",
                 wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
         }
 
-        log_debug("fifoSize_ms: %d infifo1: %d/outfilo1 %d\n",
+        log_debug("fifoSize_ms: %d infifo1: %d/outfilo1 %d",
                 wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard1InFifoSizeSamples, soundCard1OutFifoSizeSamples);
 
         // reset debug stats for FIFOs
@@ -2833,7 +2833,7 @@ void MainFrame::startRxStream()
         g_rxUserdata->rxinfifo = codec2_fifo_create(rxInFifoSizeSamples);
         g_rxUserdata->rxoutfifo = codec2_fifo_create(rxOutFifoSizeSamples);
 
-        log_debug("rxInFifoSizeSamples: %d rxOutFifoSizeSamples: %d\n", rxInFifoSizeSamples, rxOutFifoSizeSamples);
+        log_debug("rxInFifoSizeSamples: %d rxOutFifoSizeSamples: %d", rxInFifoSizeSamples, rxOutFifoSizeSamples);
 
         // Init Equaliser Filters ------------------------------------------------------
 
@@ -3155,7 +3155,7 @@ void MainFrame::startRxStream()
             wxLogError(wxT("Can't start RX thread!"));
         }
 
-        log_debug("starting tx/rx processing thread\n");
+        log_debug("starting tx/rx processing thread");
 
         // Work around an issue where the buttons stay disabled even if there
         // is an error opening one or more audio device(s).

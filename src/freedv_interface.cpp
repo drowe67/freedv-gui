@@ -92,7 +92,7 @@ static void callback_err_fn(void *fifo, short error_pattern[], int sz_error_patt
 
 void FreeDVInterface::OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr, int length, void* state) 
 {
-    log_info("FreeDVInterface::OnReliableTextRx_: received %s\n", txt_ptr);
+    log_info("FreeDVInterface::OnReliableTextRx_: received %s", txt_ptr);
     
     FreeDVInterface* obj = (FreeDVInterface*)state;
     assert(obj != nullptr);

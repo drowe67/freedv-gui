@@ -93,7 +93,7 @@ AudioOptsDialog::AudioOptsDialog(wxWindow* parent, wxWindowID id, const wxString
         SetTitle(wxString::Format("%s (%s)", title, wxGetApp().customConfigFileName));
     }
     
-    log_debug("pos %d %d\n", pos.x, pos.y);
+    log_debug("pos %d %d", pos.x, pos.y);
     audioEngineInit();
 
     wxBoxSizer* mainSizer;
@@ -407,7 +407,7 @@ bool AudioOptsDialog::setTextCtrlIfDevNameValid(wxTextCtrl *textCtrl, wxListCtrl
         if (listCtrl->GetItemText(i, 0).IsSameAs(devName))
         {
             textCtrl->SetValue(listCtrl->GetItemText(i, 0));
-            log_debug("setting focus of %d\n", i);
+            log_debug("setting focus of %d", i);
             listCtrl->SetItemState(i, wxLIST_STATE_FOCUSED, wxLIST_STATE_FOCUSED);
             return true;
         }
@@ -426,8 +426,8 @@ int AudioOptsDialog::ExchangeData(int inout)
         // Map sound card device numbers to tx/rx device numbers depending
         // on number of sound cards in use
 
-        log_debug("EXCHANGE_DATA_IN:\n");
-        log_debug("  g_nSoundCards: %d\n", g_nSoundCards);
+        log_debug("EXCHANGE_DATA_IN:");
+        log_debug("  g_nSoundCards: %d", g_nSoundCards);
 
         if (g_nSoundCards == 0) {
             m_textCtrlRxIn ->SetValue("none");
@@ -437,13 +437,13 @@ int AudioOptsDialog::ExchangeData(int inout)
         }
 
         if (g_nSoundCards == 1) {
-            log_debug("  m_soundCard1InSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
+            log_debug("  m_soundCard1InSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
             
             setTextCtrlIfDevNameValid(m_textCtrlRxIn, 
                                       m_listCtrlRxInDevices, 
                                       wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName);
 
-            log_debug("  m_soundCard1OutSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
+            log_debug("  m_soundCard1OutSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
             
             setTextCtrlIfDevNameValid(m_textCtrlRxOut, 
                                       m_listCtrlRxOutDevices, 
@@ -463,25 +463,25 @@ int AudioOptsDialog::ExchangeData(int inout)
         }
 
         if (g_nSoundCards == 2) {
-            log_debug("  m_soundCard1InSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
+            log_debug("  m_soundCard1InSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
             
             setTextCtrlIfDevNameValid(m_textCtrlRxIn, 
                                       m_listCtrlRxInDevices, 
                                       wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName);
             
-            log_debug("  m_soundCard2OutSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate.get());
+            log_debug("  m_soundCard2OutSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate.get());
             
             setTextCtrlIfDevNameValid(m_textCtrlRxOut, 
                                       m_listCtrlRxOutDevices, 
                                       wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName);
             
-            log_debug("  m_soundCard2InDeviceName: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate.get());
+            log_debug("  m_soundCard2InDeviceName: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate.get());
             
             setTextCtrlIfDevNameValid(m_textCtrlTxIn, 
                                       m_listCtrlTxInDevices, 
                                       wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName);
             
-            log_debug("  m_soundCard1OutSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
+            log_debug("  m_soundCard1OutSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
             
             setTextCtrlIfDevNameValid(m_textCtrlTxOut, 
                                       m_listCtrlTxOutDevices, 
@@ -557,7 +557,7 @@ int AudioOptsDialog::ExchangeData(int inout)
             sampleRate4 = m_cbSampleRateTxOut->GetValue();
         }
 
-        log_debug("  valid_one_card_config: %d  valid_two_card_config: %d\n", valid_one_card_config, valid_two_card_config);
+        log_debug("  valid_one_card_config: %d  valid_two_card_config: %d", valid_one_card_config, valid_two_card_config);
 
         if (!valid_one_card_config && !valid_two_card_config) {
             wxMessageBox(wxT("Invalid one or two sound card configuration. For RX only, both devices in 'Receive' tab must be selected. Otherwise, all devices in both 'Receive' and 'Transmit' tabs must be selected."), wxT(""), wxOK);
@@ -577,8 +577,8 @@ int AudioOptsDialog::ExchangeData(int inout)
             
             if (g_verbose)
             {
-                log_debug("  m_soundCard1InSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
-                log_debug("  m_soundCard1OutSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
+                log_debug("  m_soundCard1InSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
+                log_debug("  m_soundCard1OutSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
             }
         }
 
@@ -591,14 +591,14 @@ int AudioOptsDialog::ExchangeData(int inout)
             
             if (g_verbose)
             {
-                log_debug("  m_soundCard1InSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
-                log_debug("  m_soundCard2OutSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate.get());
-                log_debug("  m_soundCard2InSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate.get());
-                log_debug("  m_soundCard1OutSampleRate: %d\n", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
+                log_debug("  m_soundCard1InSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate.get());
+                log_debug("  m_soundCard2OutSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate.get());
+                log_debug("  m_soundCard2InSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate.get());
+                log_debug("  m_soundCard1OutSampleRate: %d", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate.get());
             }
         }
 
-        log_debug("  g_nSoundCards: %d\n", g_nSoundCards);
+        log_debug("  g_nSoundCards: %d", g_nSoundCards);
         
         assert (pConfig != NULL);
         
@@ -1171,7 +1171,7 @@ void AudioOptsDialog::OnOkAudioParameters(wxCommandEvent& event)
 
     // We only accept OK if config successful
 
-    log_debug("status: %d m_isPaInitialized: %d\n", status, m_isPaInitialized);
+    log_debug("status: %d m_isPaInitialized: %d", status, m_isPaInitialized);
     if (status == 0) {
         if(m_isPaInitialized)
         {

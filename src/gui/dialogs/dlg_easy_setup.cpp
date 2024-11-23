@@ -579,7 +579,7 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
                 m_cbSerialRate->GetValue().ToLong(&tmp); 
                 wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate = tmp;
             }
-            log_debug("serial rate: %d\n", wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get());
+            log_debug("serial rate: %d", wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get());
             
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType = m_cbPttMethod->GetSelection();
         }

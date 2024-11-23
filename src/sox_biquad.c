@@ -99,7 +99,7 @@ void *sox_biquad_create(int argc, const char *argv[])
     ret = start(e);
     if (ret != SOX_SUCCESS && ret != SOX_EFF_NULL)
     {
-        log_error("sox_biquad ret = %d (%s)\n", ret, sox_strerror(ret)); 
+        log_error("sox_biquad ret = %d (%s)", ret, sox_strerror(ret)); 
         assert(0);
     }
     else if (ret == SOX_EFF_NULL)

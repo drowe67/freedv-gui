@@ -317,13 +317,13 @@ bool PskReporter::reportCommon_()
 
     int fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if(fd < 0){
-        log_debug("cannot open PSK Reporter socket (err=%d)\n", errno);
+        log_debug("cannot open PSK Reporter socket (err=%d)", errno);
         return false;
     }
 
     if (sendto(fd, packet, dgSize, 0, res->ai_addr, res->ai_addrlen) < 0){
         delete[] packet;
-        log_debug("cannot send message to PSK Reporter (err=%d)\n", errno);
+        log_debug("cannot send message to PSK Reporter (err=%d)", errno);
         close(fd);
         return false;
     }

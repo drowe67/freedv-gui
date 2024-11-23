@@ -318,7 +318,7 @@ void TxRxThread::initializePipeline_()
                 if (g_loopPlayFileFromRadio)
                     sf_seek(g_sfPlayFileFromRadio, 0, SEEK_SET);
                 else {
-                    log_info("playFileFromRadio finished, issuing event!\n");
+                    log_info("playFileFromRadio finished, issuing event!");
                     g_parent->CallAfter(&MainFrame::StopPlaybackFileFromRadio);
                 }
             }
@@ -483,7 +483,7 @@ void* TxRxThread::Entry()
             std::unique_lock<std::mutex> lk(m_processingMutex);
             if (m_processingCondVar.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout)
             {
-                log_warn("txRxThread: timeout while waiting for CV, tx = %d\n", m_tx);
+                log_warn("txRxThread: timeout while waiting for CV, tx = %d", m_tx);
             }
         }
         if (!m_run) break;
@@ -608,7 +608,7 @@ void TxRxThread::txProcessing_()
      	if (g_dump_fifo_state) {
     	  // If this drops to zero we have a problem as we will run out of output samples
     	  // to send to the sound driver
-    	  log_debug("outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d\n",
+    	  log_debug("outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d",
                       codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
     	}
 
@@ -663,7 +663,7 @@ void TxRxThread::txProcessing_()
             auto outputSamples = pipeline_->execute(inputSamplesPtr, nsam_in_48, &nout);
             
             if (g_dump_fifo_state) {
-                log_info("  nout: %d\n", nout);
+                log_info("  nout: %d", nout);
             }
             
             if (outputSamples.get() != nullptr)
@@ -705,7 +705,7 @@ void TxRxThread::rxProcessing_()
     
     if (g_queueResync)
     {
-        log_debug("Unsyncing per user request.\n");
+        log_debug("Unsyncing per user request.");
         g_queueResync = false;
         freedvInterface.setSync(FREEDV_SYNC_UNSYNC);
         g_resyncs++;

@@ -572,7 +572,7 @@ void ComPortsDlg::ExchangeData(int inout)
             m_cbSerialRate->GetValue().ToLong(&tmp); 
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate = tmp;
         }
-        log_debug("serial rate: %d\n", wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get());
+        log_debug("serial rate: %d", wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get());
 
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType = m_cbPttMethod->GetSelection();
         
@@ -652,7 +652,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
 
         // display serial params
 
-        log_debug("serial rate: %d\n", serial_rate);
+        log_debug("serial rate: %d", serial_rate);
 
         if (wxGetApp().CanAccessSerialPort((const char*)port.ToUTF8()))
         {
@@ -730,7 +730,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             };
 
             serialPort->onRigConnected += [&](IRigController*) {
-                log_debug("serial port open\n");
+                log_debug("serial port open");
                 cv.notify_one();
             };
 
@@ -746,9 +746,9 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                 wxSleep(1);
                 serialPort->ptt(false);
 
-                log_debug("closing serial port\n");
+                log_debug("closing serial port");
                 serialPort->disconnect();
-                log_debug("serial port closed\n");
+                log_debug("serial port closed");
             }
         }
     }

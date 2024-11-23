@@ -58,7 +58,7 @@ static int resample_step(SRC_STATE *src,
     ret = src_process(src, &src_data);
     if (ret != 0)
     {
-        log_warn("Resampling failed: %s\n", src_strerror(ret));
+        log_warn("Resampling failed: %s", src_strerror(ret));
     }
     assert(ret == 0);
 

@@ -879,7 +879,7 @@ void MainFrame::togglePTT(void) {
     {
         // Sleep for long enough that we get the remaining [blocksize] ms of audio.
         int msSleep = (1000 * freedvInterface.getTxNumSpeechSamples()) / freedvInterface.getTxSpeechSampleRate();
-        log_debug("Sleeping for %d ms prior to ending TX\n", msSleep);
+        log_debug("Sleeping for %d ms prior to ending TX", msSleep);
 
         auto before = highResClock.now();
 
@@ -1132,7 +1132,7 @@ void MainFrame::OnCallSignReset(wxCommandEvent& event)
 void MainFrame::OnReSync(wxCommandEvent& event)
 {
     if (m_RxRunning)  {
-        log_debug("OnReSync\n");
+        log_debug("OnReSync");
         
         // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
         // the next execution of the TX/RX loop.

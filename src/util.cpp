@@ -37,7 +37,7 @@ void clickTune(float freq) {
 
     g_TxFreqOffsetHz = freq - FDMDV_FCENTRE;
     g_RxFreqOffsetHz = FDMDV_FCENTRE - freq;
-    log_info("g_TxFreqOffsetHz: %f g_RxFreqOffsetHz: %f\n", g_TxFreqOffsetHz, g_RxFreqOffsetHz);
+    log_info("g_TxFreqOffsetHz: %f g_RxFreqOffsetHz: %f", g_TxFreqOffsetHz, g_RxFreqOffsetHz);
 }
 
 bool MainApp::CanAccessSerialPort(std::string portName)
@@ -179,7 +179,7 @@ void MainFrame::OpenPTTInPort(void)
 
             wxGetApp().m_pttInSerialPort->onPttChange += [&](IRigController*, bool pttState)
             {
-                log_info("PTT input state is now %d\n", pttState);
+                log_info("PTT input state is now %d", pttState);
                 GetEventHandler()->CallAfter([&]() {
                     if (pttState != m_btnTogPTT->GetValue())
                     {
@@ -277,7 +277,7 @@ int resample(SRC_STATE *src,
     ret = src_process(src, &src_data);
     if (ret != 0)
     {
-        log_warn("Resampling failed: %s\n", src_strerror(ret));
+        log_warn("Resampling failed: %s", src_strerror(ret));
     }
     assert(ret == 0);
 

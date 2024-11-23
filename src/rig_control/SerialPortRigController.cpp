@@ -164,10 +164,10 @@ void SerialPortRigController::connectImpl_()
             StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("CreateFile"));
             goto error;
         }
-        log_debug("CreateFileA OK\n");
+        log_debug("CreateFileA OK");
     
         if(GetCommTimeouts(serialPortHandle_, &timeouts)) {
-            log_debug("GetCommTimeouts OK\n");
+            log_debug("GetCommTimeouts OK");
         
             timeouts.ReadIntervalTimeout=MAXDWORD;
             timeouts.ReadTotalTimeoutMultiplier=0;
@@ -178,7 +178,7 @@ void SerialPortRigController::connectImpl_()
                 StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("SetCommTimeouts"));
                 goto error;          
             }
-            log_debug("SetCommTimeouts OK\n");
+            log_debug("SetCommTimeouts OK");
         } else {
             StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("GetCommTimeouts"));
             goto error;
@@ -186,7 +186,7 @@ void SerialPortRigController::connectImpl_()
 
         /* Force N-8-1 mode: */
         if(GetCommState(serialPortHandle_, &dcb)==TRUE) {
-        log_debug("GetCommState OK\n");
+        log_debug("GetCommState OK");
         
             dcb.ByteSize        = 8;
             dcb.Parity            = NOPARITY;
@@ -206,7 +206,7 @@ void SerialPortRigController::connectImpl_()
                   StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("SetCommState"));
                 goto error;           
             }
-        log_debug("SetCommState OK\n");
+        log_debug("SetCommState OK");
         } else {
             StringCchPrintf(lpszFunction, 100, TEXT("%s"), TEXT("GetCommState"));
             goto error;           
@@ -230,9 +230,9 @@ error:
         {
             // Error handling, probably shouldn't reach here
         }
-        log_error("%s failed\n", errFn.c_str());
+        log_error("%s failed", errFn.c_str());
 #else
-        log_error("%s failed\n", lpszFunction);
+        log_error("%s failed", lpszFunction);
 #endif // UNICODE
 
         // Retrieve the system error message for the last-error code
