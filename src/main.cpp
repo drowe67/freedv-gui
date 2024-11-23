@@ -196,6 +196,19 @@ wxString utFreeDVMode;
 
 IMPLEMENT_APP(MainApp);
 
+std::mutex logMutex;
+static void LogLockFunction_(bool lock, void *lock_arg)
+{
+    if (lock)
+    {
+        logMutex.lock();
+    }
+    else
+    {
+        logMutex.unlock();
+    }
+}
+
 void MainApp::UnitTest_()
 {
     // List audio devices
@@ -360,6 +373,8 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
 
 bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 {
+    ulog_set_lock(&LogLockFunction_, nullptr);
+        
     log_info("FreeDV version %s starting", FREEDV_VERSION);
 
     if (!wxApp::OnCmdLineParsed(parser))
