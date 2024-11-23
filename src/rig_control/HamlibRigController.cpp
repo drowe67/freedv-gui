@@ -142,19 +142,19 @@ static int LogHamlibErrors_(
     switch (debug_level)
     {
         case RIG_DEBUG_BUG:
-            log_fatal("%s", buf);
+            log_fatal("%s", msg.c_str());
             break;
         case RIG_DEBUG_ERR:
-            log_error("%s", buf);
+            log_error("%s", msg.c_str());
             break;
         case RIG_DEBUG_WARN:
-            log_warn("%s", buf);
+            log_warn("%s", msg.c_str());
             break;
         case RIG_DEBUG_VERBOSE:
-            log_debug("%s", buf);
+            log_debug("%s", msg.c_str());
             break;
         default:
-            log_trace("%s", buf);
+            log_trace("%s", msg.c_str());
             break;                
     }
     
