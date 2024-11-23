@@ -25,6 +25,8 @@
 
 #include "PulseAudioDevice.h"
 
+#include "../util/logging/ulog.h"
+
 // Optimal settings based on ones used for PortAudio.
 #define PULSE_FPB 256
 #define PULSE_TARGET_LATENCY_US 20000
