@@ -126,7 +126,19 @@ static int LogHamlibErrors_(
 {
     char buf[1024];
     vsnprintf (buf, sizeof(buf), fmt, ap);
-    
+
+    // Strip newlines from end of log messages
+    std::string msg = buf;
+    if (!msg.empty() && msg[msg.length() - 1] == '\n') 
+    {
+        msg.erase(msg.length() - 1);
+    }
+
+    if (!msg.empty() && msg[msg.length() - 1] == '\r') 
+    {
+        msg.erase(msg.length() - 1);
+    }
+
     switch (debug_level)
     {
         case RIG_DEBUG_BUG:
