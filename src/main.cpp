@@ -203,11 +203,11 @@ void MainApp::UnitTest_()
     engine->start();
     for (auto& dev : engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN))
     {
-        fprintf(stderr, "Input audio device: %s (ID %d, sample rate %d, valid channels: %d-%d)\n", (const char*)dev.name.ToUTF8(), dev.deviceId,  dev.defaultSampleRate, dev.minChannels, dev.maxChannels);
+        log_info("Input audio device: %s (ID %d, sample rate %d, valid channels: %d-%d)", (const char*)dev.name.ToUTF8(), dev.deviceId,  dev.defaultSampleRate, dev.minChannels, dev.maxChannels);
     }
     for (auto& dev : engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT))
     {
-        fprintf(stderr, "Output audio device: %s (ID %d, sample rate %d, valid channels: %d-%d)\n", (const char*)dev.name.ToUTF8(), dev.deviceId,  dev.defaultSampleRate, dev.minChannels, dev.maxChannels);
+        log_info("Output audio device: %s (ID %d, sample rate %d, valid channels: %d-%d)", (const char*)dev.name.ToUTF8(), dev.deviceId,  dev.defaultSampleRate, dev.minChannels, dev.maxChannels);
     }
     engine->stop();
 
@@ -251,7 +251,7 @@ void MainApp::UnitTest_()
     
     if (modeBtn != nullptr)
     {
-        fprintf(stderr, "Firing mode change\n");
+        log_info("Firing mode change");
         /*sim.MouseMove(modeBtn->GetScreenPosition());
         sim.MouseClick();*/
         CallAfter([&]() {
@@ -263,7 +263,7 @@ void MainApp::UnitTest_()
     }
     
     // Fire event to start FreeDV
-    fprintf(stderr, "Firing start\n");
+    log_info("Firing start");
     CallAfter([&]() {
         frame->m_togBtnOnOff->SetValue(true);
         wxCommandEvent* onEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_togBtnOnOff->GetId());
@@ -283,7 +283,7 @@ void MainApp::UnitTest_()
         // Fire event to begin TX
         //sim.MouseMove(frame->m_btnTogPTT->GetScreenPosition());
         //sim.MouseClick();
-        fprintf(stderr, "Firing PTT\n");
+        log_info("Firing PTT");
         CallAfter([&]() {
             frame->m_btnTogPTT->SetValue(true);
             wxCommandEvent* txEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
@@ -297,7 +297,7 @@ void MainApp::UnitTest_()
         std::this_thread::sleep_for(60s);
         
         // Stop transmitting
-        fprintf(stderr, "Firing PTT\n");
+        log_info("Firing PTT");
         CallAfter([&]() {
             frame->m_btnTogPTT->SetValue(false);
             wxCommandEvent* rxEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
@@ -322,14 +322,14 @@ void MainApp::UnitTest_()
             auto newSync = freedvInterface.getSync();
             if (newSync != sync)
             {
-                fprintf(stderr, "Sync changed from %d to %d\n", sync, newSync);
+                log_info("Sync changed from %d to %d", sync, newSync);
                 sync = newSync;
             }
         } 
     }
  
     // Fire event to stop FreeDV
-    fprintf(stderr, "Firing stop\n");
+    log_info("Firing stop");
     CallAfter([&]() {
         wxCommandEvent* offEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_togBtnOnOff->GetId());
         offEvent->SetEventObject(frame->m_togBtnOnOff);
@@ -383,10 +383,10 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
     
     if (parser.Found("ut", &testName))
     {
-        fprintf(stderr, "Executing test %s\n", (const char*)testName.ToUTF8());
+        log_info("Executing test %s", (const char*)testName.ToUTF8());
         if (parser.Found("utmode", &utFreeDVMode))
         {
-            fprintf(stderr, "Using mode %s for tests\n", (const char*)utFreeDVMode.ToUTF8());
+            log_info("Using mode %s for tests", (const char*)utFreeDVMode.ToUTF8());
         }
     }
     
@@ -3058,10 +3058,10 @@ void MainFrame::startRxStream()
         // Set sound card callbacks
         auto errorCallback = [&](IAudioDevice&, std::string error, void*)
         {
-            fprintf(stderr, "AUDIO ERROR: %s\n", error.c_str());
-            /*CallAfter([&, error]() {
+            log_error("%s", error.c_str());
+            CallAfter([&, error]() {
                 wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
-            });*/
+            });
         };
 
         rxInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
@@ -3069,7 +3069,6 @@ void MainFrame::startRxStream()
             short* audioData = static_cast<short*>(data);
             short  indata[size];
 
-            //fprintf(stderr, "recoded %d samples\n", size);
             for (size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
             {
                 indata[i] = audioData[0];
@@ -3077,7 +3076,7 @@ void MainFrame::startRxStream()
             
             if (codec2_fifo_write(cbData->infifo1, indata, size)) 
             {
-                fprintf(stderr, "RX FIFO full\n");
+                log_warn("RX FIFO full");
                 g_infifo1_full++;
             }
 
