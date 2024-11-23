@@ -26,9 +26,9 @@ jobs:
         sudo sh -c "curl https://dl.winehq.org/wine-builds/winehq.key | gpg --dearmor > /etc/apt/trusted.gpg.d/winehq.gpg"
         sudo sh -c "apt-add-repository \"https://dl.winehq.org/wine-builds/ubuntu\""
         sudo apt-get update
-        #echo "/opt/wine-staging/bin" >> $GITHUB_PATH
-        #sudo apt install -y --install-recommends wine-staging
-        sudo apt install -y --install-recommends wine64 #wine32
+        echo "/opt/wine-staging/bin" >> $GITHUB_PATH
+        sudo apt install -y --install-recommends wine-staging
+        #sudo apt install -y --install-recommends wine64 wine32
 
     - name: Install required packages
       shell: bash
