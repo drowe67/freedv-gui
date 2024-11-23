@@ -118,6 +118,37 @@ HamlibRigController::~HamlibRigController()
     cv.wait(lk);
 }
 
+static int LogHamlibErrors_(
+    enum rig_debug_level_e debug_level,
+    rig_ptr_t user_data,
+    const char *fmt,
+    va_list ap)
+{
+    char buf[1024];
+    vsnprintf (buf, sizeof(buf), fmt, ap);
+    
+    switch (debug_level)
+    {
+        case RIG_DEBUG_BUG:
+            log_fatal("%s", buf);
+            break;
+        case RIG_DEBUG_ERR:
+            log_error("%s", buf);
+            break;
+        case RIG_DEBUG_WARN:
+            log_warn("%s", buf);
+            break;
+        case RIG_DEBUG_VERBOSE:
+            log_debug("%s", buf);
+            break;
+        default:
+            log_trace("%s", buf);
+            break;                
+    }
+    
+    return RIG_OK;
+}
+
 void HamlibRigController::InitializeHamlibLibrary()
 {
     std::unique_lock<std::mutex> lk(RigListMutex_);
@@ -133,6 +164,9 @@ void HamlibRigController::InitializeHamlibLibrary()
 
         /* Reset debug output. */
         rig_set_debug(RIG_DEBUG_VERBOSE);
+        
+        /* Ensure that we use ulog to log hamlib messages. */
+        rig_set_debug_callback(&LogHamlibErrors_, nullptr);
     }
 }
 
