@@ -32,6 +32,16 @@ set_target_properties(rade PROPERTIES
 list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${BINARY_DIR}/src)
 set(rade_BINARY_DIR ${BINARY_DIR})
 
+add_library(opus STATIC IMPORTED)
+add_dependencies(opus build_rade)
+include_directories(
+    ${BINARY_DIR}/build_opus-prefix/src/build_opus/dnn
+    ${BINARY_DIR}/build_opus-prefix/src/build_opus/celt
+    ${BINARY_DIR}/build_opus-prefix/src/build_opus/include)
+set_target_properties(opus PROPERTIES
+    IMPORTED_LOCATION "${BINARY_DIR}/build_opus-prefix/src/build_opus/.libs/libopus${CMAKE_STATIC_LIBRARY_SUFFIX}"
+)
+
 if(WIN32)
 
 # XXX only x86_64 supported for now
