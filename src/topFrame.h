@@ -82,9 +82,7 @@ class wxListViewComboPopup;
 /// Class TopFrame
 ///////////////////////////////////////////////////////////////////////////////
 class TopFrame : public wxFrame
-{
-    private:
-        
+{        
     protected:
         wxPanel* m_panel;
         wxMenuBar* m_menubarMain;

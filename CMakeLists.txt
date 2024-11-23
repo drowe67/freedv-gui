@@ -719,3 +719,17 @@ elseif(UNIX AND NOT APPLE)
     include(CPack)
 
 endif(WIN32)
+
+if(UNITTEST)
+# The below tests are currently Linux-only due to a dependency on
+# PulseAudio/pipewire.
+macro(DefineAudioTest utName)
+    add_test(NAME fullduplex_${utName} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName}) 
+    set_tests_properties(fullduplex_${utName} PROPERTIES PASS_REGULAR_EXPRESSION "Got 1 sync changes")
+endmacro()
+
+DefineAudioTest(RADE)
+DefineAudioTest(700D)
+DefineAudioTest(700E)
+DefineAudioTest(1600)
+endif(UNITTEST)
