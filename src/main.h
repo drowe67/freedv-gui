@@ -113,7 +113,6 @@ enum {
 #define EXCHANGE_DATA_IN    0
 #define EXCHANGE_DATA_OUT   1
 
-extern int                 g_verbose;
 extern int                 g_nSoundCards;
 
 // Voice Keyer Constants

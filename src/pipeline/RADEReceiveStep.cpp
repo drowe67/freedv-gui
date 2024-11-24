@@ -91,7 +91,7 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
                 input_buf_cplx[i].imag = 0.0;
             }
 
-            // RADE processing (input signal->features)
+            // RADE processing (input signal->features).
             nout = rade_rx(dv_, features_out, input_buf_cplx);
             for (int i = 0; i < nout; i++)
             {

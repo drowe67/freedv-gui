@@ -31,13 +31,13 @@ void clickTune(float freq) {
     // exactly in the centre
 
     if (fabs(FDMDV_FCENTRE - freq) < 10.0) {
+        log_info("Requested frequency close to center, just using center.");
         freq = FDMDV_FCENTRE;
-        fprintf(stderr, "indent!\n");
     }
 
     g_TxFreqOffsetHz = freq - FDMDV_FCENTRE;
     g_RxFreqOffsetHz = FDMDV_FCENTRE - freq;
-    fprintf(stderr, "g_TxFreqOffsetHz: %f g_RxFreqOffsetHz: %f\n", g_TxFreqOffsetHz, g_RxFreqOffsetHz);
+    log_info("g_TxFreqOffsetHz: %f g_RxFreqOffsetHz: %f", g_TxFreqOffsetHz, g_RxFreqOffsetHz);
 }
 
 bool MainApp::CanAccessSerialPort(std::string portName)
@@ -179,7 +179,7 @@ void MainFrame::OpenPTTInPort(void)
 
             wxGetApp().m_pttInSerialPort->onPttChange += [&](IRigController*, bool pttState)
             {
-                fprintf(stderr, "PTT input state is now %d\n", pttState);
+                log_info("PTT input state is now %d", pttState);
                 GetEventHandler()->CallAfter([&]() {
                     if (pttState != m_btnTogPTT->GetValue())
                     {
@@ -220,13 +220,11 @@ char my_get_next_tx_char(void *callback_state) {
     short ch = 0;
 
     codec2_fifo_read(g_txDataInFifo, &ch, 1);
-    //fprintf(stderr, "get_next_tx_char: %c\n", (char)ch);
     return (char)ch;
 }
 
 void my_put_next_rx_char(void *callback_state, char c) {
     short ch = (short)((unsigned char)c);
-    //fprintf(stderr, "put_next_rx_char: %c\n", (char)c);
     codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
 }
 
@@ -279,7 +277,7 @@ int resample(SRC_STATE *src,
     ret = src_process(src, &src_data);
     if (ret != 0)
     {
-        fprintf(stderr, "WARNING: resampling failed: %s\n", src_strerror(ret));
+        log_warn("Resampling failed: %s", src_strerror(ret));
     }
     assert(ret == 0);
 

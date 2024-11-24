@@ -986,9 +986,7 @@ void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)
     wxSize buttonSize = m_togBtnVoiceKeyer->GetSize();
     vkLabelWidth = buttonSize.GetWidth() * 0.95;
     m_togBtnVoiceKeyer->GetTextExtent(filename, &filenameWidth, &tmp);
-    
-    //fprintf(stderr, "vkLabelSize = %d, filenameSize = %d\n", vkLabelWidth, filenameWidth);
-    
+        
     // Truncate filename as required to ensure button isn't made wider than needed.
     bool isTruncated = false;
     while (filename.size() > 1 && filenameWidth > vkLabelWidth)

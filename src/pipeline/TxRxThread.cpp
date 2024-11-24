@@ -47,6 +47,8 @@ using namespace std::chrono_literals;
 #include "MuteStep.h"
 #include "LinkStep.h"
 
+#include "util/logging/ulog.h"
+
 #include <wx/stopwatch.h>
 
 // External globals
@@ -57,7 +59,6 @@ extern int g_nSoundCards;
 extern bool g_half_duplex;
 extern int g_tx;
 extern int g_dump_fifo_state;
-extern int g_verbose;
 extern bool endingTx;
 extern bool g_playFileToMicIn;
 extern int g_sfTxFs;
@@ -168,7 +169,7 @@ void TxRxThread::initializePipeline_()
                 if (g_loopPlayFileToMicIn)
                     sf_seek(g_sfPlayFile, 0, SEEK_SET);
                 else {
-                    printf("playFileFromRadio finished, issuing event!\n");
+                    log_info("playFileFromRadio finished, issuing event!");
                     g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
                 }
             }
@@ -320,7 +321,7 @@ void TxRxThread::initializePipeline_()
                 if (g_loopPlayFileFromRadio)
                     sf_seek(g_sfPlayFileFromRadio, 0, SEEK_SET);
                 else {
-                    printf("playFileFromRadio finished, issuing event!\n");
+                    log_info("playFileFromRadio finished, issuing event!");
                     g_parent->CallAfter(&MainFrame::StopPlaybackFileFromRadio);
                 }
             }
@@ -486,7 +487,7 @@ void* TxRxThread::Entry()
             std::unique_lock<std::mutex> lk(m_processingMutex);
             if (m_processingCondVar.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout)
             {
-                fprintf(stderr, "txRxThread: timeout while waiting for CV, tx = %d\n", m_tx);
+                log_warn("txRxThread: timeout while waiting for CV, tx = %d", m_tx);
             }
         }
 #endif
@@ -619,7 +620,7 @@ void TxRxThread::txProcessing_()
      	if (g_dump_fifo_state) {
     	  // If this drops to zero we have a problem as we will run out of output samples
     	  // to send to the sound driver
-    	  if (g_verbose) fprintf(stderr, "outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d\n",
+    	  log_debug("outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d",
                       codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
     	}
 
@@ -674,7 +675,7 @@ void TxRxThread::txProcessing_()
             auto outputSamples = pipeline_->execute(inputSamplesPtr, nsam_in_48, &nout);
             
             if (g_dump_fifo_state) {
-                fprintf(stderr, "  nout: %d\n", nout);
+                log_info("  nout: %d", nout);
             }
             
             if (outputSamples.get() != nullptr)
@@ -696,7 +697,7 @@ void TxRxThread::txProcessing_()
     }
 
     if (g_dump_timing) {
-        fprintf(stderr, "%4ld", sw.Time());
+        log_info("%4ld", sw.Time());
     }
 }
 
@@ -716,7 +717,7 @@ void TxRxThread::rxProcessing_()
     
     if (g_queueResync)
     {
-        if (g_verbose) fprintf(stderr, "Unsyncing per user request.\n");
+        log_debug("Unsyncing per user request.");
         g_queueResync = false;
         freedvInterface.setSync(FREEDV_SYNC_UNSYNC);
         g_resyncs++;
