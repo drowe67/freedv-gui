@@ -641,7 +641,6 @@ void MainFrame::OpenOmniRig()
 //-------------------------------------------------------------------------
 void MainFrame::OnCloseFrame(wxCloseEvent& event)
 {
-    //fprintf(stderr, "MainFrame::OnCloseFrame()\n");
     auto engine = AudioEngineFactory::GetAudioEngine();
     engine->stop();
     engine->setOnEngineError(nullptr, nullptr);
@@ -791,7 +790,6 @@ void MainFrame::OnCheckSNRClick(wxCommandEvent& event)
 {
     wxGetApp().appConfiguration.snrSlow = m_ckboxSNR->GetValue();
     setsnrBeta(wxGetApp().appConfiguration.snrSlow);
-    //printf("m_snrSlow: %d\n", (int)wxGetApp().appConfiguration.snrSlow);
 }
 
 // check for space bar press (only when running)
@@ -881,7 +879,7 @@ void MainFrame::togglePTT(void) {
     {
         // Sleep for long enough that we get the remaining [blocksize] ms of audio.
         int msSleep = (1000 * freedvInterface.getTxNumSpeechSamples()) / freedvInterface.getTxSpeechSampleRate();
-        if (g_verbose) fprintf(stderr, "Sleeping for %d ms prior to ending TX\n", msSleep);
+        log_debug("Sleeping for %d ms prior to ending TX", msSleep);
 
         auto before = highResClock.now();
 
@@ -1134,7 +1132,7 @@ void MainFrame::OnCallSignReset(wxCommandEvent& event)
 void MainFrame::OnReSync(wxCommandEvent& event)
 {
     if (m_RxRunning)  {
-        if (g_verbose) fprintf(stderr,"OnReSync\n");
+        log_debug("OnReSync");
         
         // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
         // the next execution of the TX/RX loop.

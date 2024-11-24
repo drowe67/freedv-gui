@@ -1,4 +1,5 @@
 #set(BUILD_SHARED_LIBS OFF CACHE STRING "Disable shared libraries for portaudio")
+#set(PA_ENABLE_DEBUG_OUTPUT ON CACHE STRING "Enable debug output")
 
 include(FetchContent)
 FetchContent_Declare(
