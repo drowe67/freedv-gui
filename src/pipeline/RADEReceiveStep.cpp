@@ -20,10 +20,13 @@
 //
 //=========================================================================
 
+#include <mutex>
 #include <cassert>
 #include "RADEReceiveStep.h"
 #include "../defines.h"
 #include "lpcnet.h" // from Opus source tree
+
+extern std::mutex logMutex;
 
 RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan)
     : dv_(dv)
@@ -92,7 +95,9 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
             }
 
             // RADE processing (input signal->features)
+            logMutex.lock();
             nout = rade_rx(dv_, features_out, input_buf_cplx);
+            logMutex.unlock();
             for (int i = 0; i < nout; i++)
             {
                 pendingFeatures_.push_back(features_out[i]);
