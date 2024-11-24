@@ -736,6 +736,10 @@ void TxRxThread::rxProcessing_()
         (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
         (g_tx && wxGetApp().appConfiguration.monitorTxAudio) ||
         (!g_voice_keyer_tx && ((g_half_duplex && !g_tx) || !g_half_duplex));
+    if (!processInputFifo)
+    {
+        clearFifos_();
+    }
     
     // while we have enough input samples available ... 
     while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && processInputFifo) {
