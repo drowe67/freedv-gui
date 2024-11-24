@@ -544,7 +544,7 @@ static void log_to_stdout(ulog_Event *ev) {
         // Initializing the stdout callback if not set
         if (!ulog.callback_stdout.function) {
             ulog.callback_stdout = (Callback){callback_stdout,
-                                              stdout,  // we use udata to pass the file pointer
+                                              stderr,  // we use udata to pass the file pointer
                                               LOG_TRACE};
         }
         process_callback(ev, &ulog.callback_stdout);
