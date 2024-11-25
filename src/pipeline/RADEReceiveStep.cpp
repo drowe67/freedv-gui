@@ -25,7 +25,7 @@
 #include "../defines.h"
 #include "lpcnet.h" // from Opus source tree
 
-extern wxString utRxFile;
+extern wxString utRxFeatureFile;
 
 RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan)
     : dv_(dv)
@@ -42,9 +42,9 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan)
     outputSampleFifo_ = codec2_fifo_create(16000);
     assert(outputSampleFifo_ != nullptr);
 
-    if (utRxFile != "")
+    if (utRxFeatureFile != "")
     {
-        featuresFile_ = fopen("features_out.f32", "wb");
+        featuresFile_ = fopen((const char*)utRxFeatureFile.ToUTF8(), "wb");
         assert(featuresFile_ != nullptr);
     }
 }
