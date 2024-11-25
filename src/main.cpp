@@ -191,6 +191,7 @@ wxConfigBase *pConfig = NULL;
 // Unit test management
 wxString testName;
 wxString utFreeDVMode;
+wxString utRxFile;
 
 // WxWidgets - initialize the application
 
@@ -327,18 +328,36 @@ void MainApp::UnitTest_()
     }
     else
     {
-        // Receive for 60 seconds
-        auto sync = 0;
-        for (int i = 0; i < 60*10; i++)
+        if (utRxFile != "")
         {
-            std::this_thread::sleep_for(100ms);
-            auto newSync = freedvInterface.getSync();
-            if (newSync != sync)
+            // Receive until file has finished playing
+            SF_INFO     sfInfo;
+            sfInfo.format = 0;
+            g_sfPlayFileFromRadio = sf_open((const char*)utRxFile.ToUTF8(), SFM_READ, &sfInfo);
+            g_sfFs = sfInfo.samplerate;
+            g_loopPlayFileFromRadio = false;
+            g_playFileFromRadio = true;
+
+            while (g_playFileFromRadio)
             {
-                log_info("Sync changed from %d to %d", sync, newSync);
-                sync = newSync;
+                std::this_thread::sleep_for(20ms);
             }
-        } 
+        }
+        else
+        {
+            // Receive for 60 seconds
+            auto sync = 0;
+            for (int i = 0; i < 60*10; i++)
+            {
+                std::this_thread::sleep_for(100ms);
+                auto newSync = freedvInterface.getSync();
+                if (newSync != sync)
+                {
+                    log_info("Sync changed from %d to %d", sync, newSync);
+                    sync = newSync;
+                }
+            } 
+        }
     }
  
     // Fire event to stop FreeDV
@@ -369,6 +388,7 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
     parser.AddOption("f", "config", "Use different configuration file instead of the default.");
     parser.AddOption("ut", "unit_test", "Execute FreeDV in unit test mode.");
     parser.AddOption("utmode", wxEmptyString, "Switch FreeDV to the given mode before UT execution.");
+    parser.AddOption("rxfile", wxEmptyString, "In UT mode, pipes given WAV file through receive pipeline.");
 }
 
 bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
@@ -402,6 +422,11 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         if (parser.Found("utmode", &utFreeDVMode))
         {
             log_info("Using mode %s for tests", (const char*)utFreeDVMode.ToUTF8());
+        }
+
+        if (parser.Found("rxfile", &utRxFile))
+        {
+            log_info("Piping %s through RX pipeline", (const char*)utRxFile.ToUTF8());
         }
     }
     

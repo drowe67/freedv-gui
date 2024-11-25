@@ -25,11 +25,14 @@
 #include "../defines.h"
 #include "lpcnet.h" // from Opus source tree
 
+extern wxString utRxFile;
+
 RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan)
     : dv_(dv)
     , fargan_(fargan)
     , inputSampleFifo_(nullptr)
     , outputSampleFifo_(nullptr)
+    , featuresFile_(nullptr)
 {
     // Set FIFO to be 2x the number of samples per run so we don't lose anything.
     inputSampleFifo_ = codec2_fifo_create(rade_nin_max(dv_) * 2);
@@ -38,10 +41,21 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan)
     // Enough for one second of audio. Probably way overkill.
     outputSampleFifo_ = codec2_fifo_create(16000);
     assert(outputSampleFifo_ != nullptr);
+
+    if (utRxFile != "")
+    {
+        featuresFile_ = fopen("features_out.f32", "wb");
+        assert(featuresFile_ != nullptr);
+    }
 }
 
 RADEReceiveStep::~RADEReceiveStep()
 {
+    if (featuresFile_ != nullptr)
+    {
+        fclose(featuresFile_);
+    }
+
     if (inputSampleFifo_ != nullptr)
     {
         codec2_fifo_free(inputSampleFifo_);
@@ -93,6 +107,11 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
 
             // RADE processing (input signal->features).
             nout = rade_rx(dv_, features_out, input_buf_cplx);
+            if (featuresFile_)
+            {
+                fwrite(features_out, sizeof(float), nout, featuresFile_);
+            }
+
             for (int i = 0; i < nout; i++)
             {
                 pendingFeatures_.push_back(features_out[i]);
