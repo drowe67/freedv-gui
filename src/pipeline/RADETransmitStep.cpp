@@ -23,23 +23,38 @@
 #include <cstring>
 #include <cassert>
 #include <cmath>
+#include "../defines.h"
 #include "codec2_fifo.h"
 #include "RADETransmitStep.h"
+
+extern wxString utTxFeatureFile;
 
 RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
     : dv_(dv)
     , encState_(encState)
     , inputSampleFifo_(nullptr)
     , outputSampleFifo_(nullptr)
+    , featuresFile_(nullptr)
 {
     inputSampleFifo_ = codec2_fifo_create(RADE_SPEECH_SAMPLE_RATE);
     assert(inputSampleFifo_ != nullptr);
     outputSampleFifo_ = codec2_fifo_create(RADE_MODEM_SAMPLE_RATE);
     assert(outputSampleFifo_ != nullptr);
+    
+    if (utTxFeatureFile != "")
+    {
+        featuresFile_ = fopen((const char*)utTxFeatureFile.ToUTF8(), "wb");
+        assert(featuresFile_ != nullptr);
+    }
 }
 
 RADETransmitStep::~RADETransmitStep()
 {
+    if (featuresFile_ != nullptr)
+    {
+        fclose(featuresFile_);
+    }
+    
     if (inputSampleFifo_ != nullptr)
     {
         codec2_fifo_free(inputSampleFifo_);
@@ -86,6 +101,12 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
             // Feature extraction
             codec2_fifo_read(inputSampleFifo_, pcm, LPCNET_FRAME_SIZE);
             lpcnet_compute_single_frame_features(encState_, pcm, features, arch);
+            
+            if (featuresFile_)
+            {
+                fwrite(features, sizeof(float), NB_TOTAL_FEATURES, featuresFile_);
+            }
+            
             for (int index = 0; index < NB_TOTAL_FEATURES; index++)
             {
                 featureList_.push_back(features[index]);

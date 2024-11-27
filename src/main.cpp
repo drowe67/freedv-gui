@@ -192,6 +192,7 @@ wxConfigBase *pConfig = NULL;
 wxString testName;
 wxString utFreeDVMode;
 wxString utRxFile;
+wxString utTxFeatureFile;
 wxString utRxFeatureFile;
 
 // WxWidgets - initialize the application
@@ -390,7 +391,8 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
     parser.AddOption("ut", "unit_test", "Execute FreeDV in unit test mode.");
     parser.AddOption("utmode", wxEmptyString, "Switch FreeDV to the given mode before UT execution.");
     parser.AddOption("rxfile", wxEmptyString, "In UT mode, pipes given WAV file through receive pipeline.");
-    parser.AddOption("featurefile", wxEmptyString, "Capture RX features from RADE decoder into the provided file.");
+    parser.AddOption("rxfeaturefile", wxEmptyString, "Capture RX features from RADE decoder into the provided file.");
+    parser.AddOption("txfeaturefile", wxEmptyString, "Capture TX features from FARGAN encoder into the provided file.");
 }
 
 bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
@@ -430,11 +432,16 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         {
             log_info("Piping %s through RX pipeline", (const char*)utRxFile.ToUTF8());
         }
-
-        if (parser.Found("featurefile", &utRxFeatureFile))
-        {
-            log_info("Capturing RADE features into file %s", (const char*)utRxFeatureFile.ToUTF8());
-        }
+    }
+    
+    if (parser.Found("rxfeaturefile", &utRxFeatureFile))
+    {
+        log_info("Capturing RADE RX features into file %s", (const char*)utRxFeatureFile.ToUTF8());
+    }
+    
+    if (parser.Found("txfeaturefile", &utTxFeatureFile))
+    {
+        log_info("Capturing RADE TX features into file %s", (const char*)utTxFeatureFile.ToUTF8());
     }
     
     return true;

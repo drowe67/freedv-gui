@@ -23,6 +23,7 @@
 #ifndef AUDIO_PIPELINE__RADE_TRANSMIT_STEP_H
 #define AUDIO_PIPELINE__RADE_TRANSMIT_STEP_H
 
+#include <cstdio>
 #include <vector>
 #include "IPipelineStep.h"
 #include "../freedv_interface.h"
@@ -48,6 +49,8 @@ private:
     struct FIFO* inputSampleFifo_;
     struct FIFO* outputSampleFifo_;
     std::vector<float> featureList_;
+    
+    FILE* featuresFile_;
 };
 
 #endif // AUDIO_PIPELINE__RADE_TRANSMIT_STEP_H
