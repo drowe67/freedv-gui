@@ -123,7 +123,7 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
                 for (int index = 0; index < numOutputSamples; index++)
                 {
                     // We only need the real component for TX.
-                    radeOutShort[index] = radeOut[index].real * 32767;
+                    radeOutShort[index] = radeOut[index].real * 16383;
                 }
                 codec2_fifo_write(outputSampleFifo_, radeOutShort, numOutputSamples);
             }
