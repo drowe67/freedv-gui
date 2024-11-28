@@ -268,11 +268,13 @@ void TxRxThread::initializePipeline_()
         auto txAttenuationStep = new LevelAdjustStep(outputSampleRate_, []() {
             double dbLoss = g_txLevel / 10.0;
             
+#if 0
             if (freedvInterface.getTxMode() == FREEDV_MODE_RADE)
             {
                 // Attenuate by 4 dB as there's no BPF; anything louder distorts the signal
                 dbLoss -= 4.0;
             }
+#endif // 0
             
             double scaleFactor = exp(dbLoss/20.0 * log(10.0));
             return scaleFactor; 
