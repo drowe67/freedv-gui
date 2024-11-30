@@ -20,6 +20,7 @@ if(NOT soxr_POPULATED)
 endif()
 
 list(APPEND FREEDV_LINK_LIBS soxr)
+list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${soxr_BINARY_DIR}/src)
 
 target_include_directories(soxr BEFORE PRIVATE ${soxr_BINARY_DIR})
 include_directories(${soxr_SOURCE_DIR}/src)
