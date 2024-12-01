@@ -36,9 +36,8 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate)
     soxr_quality_spec_t qualSpec = soxr_quality_spec(SOXR_HQ, 0);
     soxr_runtime_spec_t runtimeSpec = soxr_runtime_spec(1);
 
-    //runtimeSpec.log2_min_dft_size = 15;
-    //runtimeSpec.log2_large_dft_size = 20;
-    
+    qualSpec.passband_end = 0.912; // experimentally determined to reduce latency to acceptable levels (default 0.913)
+ 
     resampleState_ = soxr_create(
         inputSampleRate_,
         outputSampleRate_,
