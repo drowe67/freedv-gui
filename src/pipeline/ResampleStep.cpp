@@ -36,8 +36,8 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate)
     soxr_quality_spec_t qualSpec = soxr_quality_spec(SOXR_HQ, 0);
     soxr_runtime_spec_t runtimeSpec = soxr_runtime_spec(1);
 
-    runtimeSpec.log2_min_dft_size = 8;
-    runtimeSpec.log2_large_dft_size = 12;
+    runtimeSpec.log2_min_dft_size = 15;
+    runtimeSpec.log2_large_dft_size = 20;
     
     resampleState_ = soxr_create(
         inputSampleRate_,
