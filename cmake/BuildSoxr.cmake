@@ -1,6 +1,6 @@
 set(SOXR_VERSION "0.1.3")
 
-#set(BUILD_TESTS OFF CACHE BOOL "Enable unit tests for libsoxr")
+set(BUILD_TESTS OFF CACHE BOOL "Enable unit tests for libsoxr")
 
 include(FetchContent)
 FetchContent_Declare(
