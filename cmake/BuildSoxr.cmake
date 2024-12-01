@@ -16,11 +16,10 @@ if(NOT soxr_POPULATED)
   FetchContent_Populate(soxr)
   list(APPEND CMAKE_MODULE_PATH "${soxr_SOURCE_DIR}/cmake/Modules")
   add_subdirectory(${soxr_SOURCE_DIR} ${soxr_BINARY_DIR} EXCLUDE_FROM_ALL)
-  list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${soxr_BINARY_DIR}/src)
+  list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${soxr_BINARY_DIR}/bin)
 endif()
 
 list(APPEND FREEDV_LINK_LIBS soxr)
-list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${soxr_BINARY_DIR}/src)
 
 target_include_directories(soxr BEFORE PRIVATE ${soxr_BINARY_DIR})
 include_directories(${soxr_SOURCE_DIR}/src)
