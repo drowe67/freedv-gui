@@ -48,11 +48,15 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate)
         &runtimeSpec
     );
     assert(resampleState_ != nullptr);
+
+    outputFifo_ = codec2_fifo_create(std::max(inputSampleRate_, outputSampleRate_));
+    assert(outputFifo_ != nullptr);
 }
 
 ResampleStep::~ResampleStep()
 {
     soxr_delete(resampleState_);
+    codec2_fifo_free(outputFifo_);
 }
 
 int ResampleStep::getInputSampleRate() const
@@ -68,25 +72,34 @@ int ResampleStep::getOutputSampleRate() const
 std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
     short* outputSamples = nullptr;
+    *numOutputSamples = 0;
+
     if (numInputSamples > 0)
     {
-        double scaleFactor = ((double)outputSampleRate_)/((double)inputSampleRate_);
-        int outputArraySize = std::max(numInputSamples, (int)(scaleFactor*numInputSamples));
-        assert(outputArraySize > 0);
-
-        outputSamples = new short[outputArraySize];
-        assert(outputSamples != nullptr);
-        
+        short outputBuffer[std::max(inputSampleRate_, outputSampleRate_)];
+        int expectedNumOutputSamples  = (double)numInputSamples * ((double)outputSampleRate_ / (double)inputSampleRate_);
         size_t inputUsed = 0;
         size_t outputUsed = 0;
         soxr_process(
             resampleState_, inputSamples.get(), numInputSamples, &inputUsed,
-            outputSamples, outputArraySize, &outputUsed);
-        *numOutputSamples = outputUsed;
-    }
-    else
-    {
-        *numOutputSamples = 0;
+            outputBuffer, sizeof(outputBuffer) / sizeof(short), &outputUsed);
+
+        if (outputUsed > 0)
+        {
+            codec2_fifo_write(outputFifo_, outputBuffer, outputUsed);
+        }
+
+        // Because of how soxr works, we may get outputUsed == 0 for a significant amount of time
+        // before getting a huge batch of samples at once. This logic is intended to smooth that out
+        // and improve playback further down the line.
+        if (codec2_fifo_used(outputFifo_) >= expectedNumOutputSamples)
+        {
+            outputSamples = new short[expectedNumOutputSamples];
+            assert(outputSamples != nullptr);
+
+            codec2_fifo_read(outputFifo_, outputSamples, expectedNumOutputSamples);
+            *numOutputSamples = expectedNumOutputSamples;
+        }
     }
  
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
