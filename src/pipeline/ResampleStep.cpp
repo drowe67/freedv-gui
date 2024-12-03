@@ -37,7 +37,7 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate)
     soxr_runtime_spec_t runtimeSpec = soxr_runtime_spec(1);
 
     qualSpec.passband_end = 0.912; // experimentally determined to reduce latency to acceptable levels (default 0.913)
- 
+
     resampleState_ = soxr_create(
         inputSampleRate_,
         outputSampleRate_,
@@ -77,7 +77,7 @@ std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples
     if (numInputSamples > 0)
     {
         short outputBuffer[std::max(inputSampleRate_, outputSampleRate_)];
-        int expectedNumOutputSamples  = (double)numInputSamples * ((double)outputSampleRate_ / (double)inputSampleRate_);
+        int expectedNumOutputSamples  = (double)numInputSamples * ((double)outputSampleRate_ / (double)inputSampleRate_) + 0.5;
         size_t inputUsed = 0;
         size_t outputUsed = 0;
         soxr_process(
@@ -100,6 +100,15 @@ std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples
             codec2_fifo_read(outputFifo_, outputSamples, expectedNumOutputSamples);
             *numOutputSamples = expectedNumOutputSamples;
         }
+    }
+    else if (codec2_fifo_used(outputFifo_) > 0)
+    {
+        // If we have anything in our output FIFO, go ahead and send that over now.
+        *numOutputSamples = codec2_fifo_used(outputFifo_);
+        outputSamples = new short[*numOutputSamples];
+        assert(outputSamples != nullptr);
+
+        codec2_fifo_read(outputFifo_, outputSamples, *numOutputSamples);
     }
  
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
