@@ -73,7 +73,7 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate)
     , outputSampleRate_(outputSampleRate)
 {
     int src_error;
-    resampleState_ = src_new(SRC_SINC_FASTEST, 1, &src_error);
+    resampleState_ = src_new(SRC_SINC_MEDIUM_QUALITY, 1, &src_error);
     assert(resampleState_ != nullptr);
 }
 

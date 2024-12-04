@@ -191,6 +191,10 @@ wxConfigBase *pConfig = NULL;
 // Unit test management
 wxString testName;
 wxString utFreeDVMode;
+wxString utTxFile;
+wxString utRxFile;
+wxString utTxFeatureFile;
+wxString utRxFeatureFile;
 
 // WxWidgets - initialize the application
 
@@ -306,8 +310,26 @@ void MainApp::UnitTest_()
             delete txEvent;
         });
         
-        // Transmit for 60 seconds
-        std::this_thread::sleep_for(60s);
+        if (utTxFile != "")
+        {
+            // Transmit until file has finished playing
+            SF_INFO     sfInfo;
+            sfInfo.format = 0;
+            g_sfPlayFile = sf_open((const char*)utTxFile.ToUTF8(), SFM_READ, &sfInfo);
+            g_sfTxFs = sfInfo.samplerate;
+            g_loopPlayFileToMicIn = false;
+            g_playFileToMicIn = true;
+
+            while (g_playFileToMicIn)
+            {
+                std::this_thread::sleep_for(20ms);
+            } 
+        }
+        else
+        {
+            // Transmit for 60 seconds
+            std::this_thread::sleep_for(60s);
+        }
         
         // Stop transmitting
         log_info("Firing PTT");
@@ -323,22 +345,40 @@ void MainApp::UnitTest_()
         sim.MouseClick();*/
         
         // Wait 5 seconds for FreeDV to stop
-        std::this_thread::sleep_for(5s);
+        //std::this_thread::sleep_for(5s);
     }
     else
     {
-        // Receive for 60 seconds
-        auto sync = 0;
-        for (int i = 0; i < 60*10; i++)
+        if (utRxFile != "")
         {
-            std::this_thread::sleep_for(100ms);
-            auto newSync = freedvInterface.getSync();
-            if (newSync != sync)
+            // Receive until file has finished playing
+            SF_INFO     sfInfo;
+            sfInfo.format = 0;
+            g_sfPlayFileFromRadio = sf_open((const char*)utRxFile.ToUTF8(), SFM_READ, &sfInfo);
+            g_sfFs = sfInfo.samplerate;
+            g_loopPlayFileFromRadio = false;
+            g_playFileFromRadio = true;
+
+            while (g_playFileFromRadio)
             {
-                log_info("Sync changed from %d to %d", sync, newSync);
-                sync = newSync;
+                std::this_thread::sleep_for(20ms);
             }
-        } 
+        }
+        else
+        {
+            // Receive for 60 seconds
+            auto sync = 0;
+            for (int i = 0; i < 60*10; i++)
+            {
+                std::this_thread::sleep_for(100ms);
+                auto newSync = freedvInterface.getSync();
+                if (newSync != sync)
+                {
+                    log_info("Sync changed from %d to %d", sync, newSync);
+                    sync = newSync;
+                }
+            } 
+        }
     }
  
     // Fire event to stop FreeDV
@@ -369,6 +409,10 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
     parser.AddOption("f", "config", "Use different configuration file instead of the default.");
     parser.AddOption("ut", "unit_test", "Execute FreeDV in unit test mode.");
     parser.AddOption("utmode", wxEmptyString, "Switch FreeDV to the given mode before UT execution.");
+    parser.AddOption("rxfile", wxEmptyString, "In UT mode, pipes given WAV file through receive pipeline.");
+    parser.AddOption("txfile", wxEmptyString, "In UT mode, pipes given WAV file through transmit pipeline.");
+    parser.AddOption("rxfeaturefile", wxEmptyString, "Capture RX features from RADE decoder into the provided file.");
+    parser.AddOption("txfeaturefile", wxEmptyString, "Capture TX features from FARGAN encoder into the provided file.");
 }
 
 bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
@@ -403,6 +447,26 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         {
             log_info("Using mode %s for tests", (const char*)utFreeDVMode.ToUTF8());
         }
+
+        if (parser.Found("rxfile", &utRxFile))
+        {
+            log_info("Piping %s through RX pipeline", (const char*)utRxFile.ToUTF8());
+        }
+        
+        if (parser.Found("txfile", &utTxFile))
+        {
+            log_info("Piping %s through TX pipeline", (const char*)utTxFile.ToUTF8());
+        }
+    }
+    
+    if (parser.Found("rxfeaturefile", &utRxFeatureFile))
+    {
+        log_info("Capturing RADE RX features into file %s", (const char*)utRxFeatureFile.ToUTF8());
+    }
+    
+    if (parser.Found("txfeaturefile", &utTxFeatureFile))
+    {
+        log_info("Capturing RADE TX features into file %s", (const char*)utTxFeatureFile.ToUTF8());
     }
     
     return true;
