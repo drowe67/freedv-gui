@@ -651,24 +651,25 @@ void TxRxThread::txProcessing_()
             int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);            
             if (nread != 0 && endingTx)
             {
-                if (freedvInterface.getCurrentMode() >= FREEDV_MODE_RADE && !hasEooBeenSent_)
+                if (freedvInterface.getCurrentMode() >= FREEDV_MODE_RADE)
                 {
-                    log_info("Triggering sending of EOO");
-                    
-                    // Special case for handling RADE EOT
-                    freedvInterface.restartTxVocoder();
-                    hasEooBeenSent_ = true;
+                    if (!hasEooBeenSent_)
+                    {
+                        log_info("Triggering sending of EOO");
+
+                        // Special case for handling RADE EOT
+                        freedvInterface.restartTxVocoder();
+                        hasEooBeenSent_ = true;
+                    }
 
                     short* inputSamples = new short[1];
                     auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
-                    do
+                    auto outputSamples = pipeline_->execute(inputSamplesPtr, 0, &nout);
+                    if (nout > 0 && outputSamples.get() != nullptr)
                     {
-                        auto outputSamples = pipeline_->execute(inputSamplesPtr, 0, &nout);
-                        if (nout > 0 && outputSamples.get() != nullptr)
-                        {
-                            codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
-                        }
-                    } while (nout > 0);
+                        log_info("Injecting %d samples of EOO into TX stream", nout);
+                        codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
+                    }
                 }
                 break;
             }

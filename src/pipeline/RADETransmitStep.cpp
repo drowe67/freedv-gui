@@ -80,6 +80,21 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
 {
     short* outputSamples = nullptr;
     *numOutputSamples = 0;
+
+    if (numInputSamples == 0)
+    {
+        // Special case logic for EOO -- make sure we only send 20ms worth at a time
+        *numOutputSamples = std::min(codec2_fifo_used(outputSampleFifo_), (int)(8000*.02));
+        if (*numOutputSamples > 0)
+        {
+            outputSamples = new short[*numOutputSamples];
+            assert(outputSamples != nullptr);
+
+            codec2_fifo_read(outputSampleFifo_, outputSamples, *numOutputSamples);
+        }
+
+        return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());;
+    }
     
     short* inputPtr = inputSamples.get();
     while (numInputSamples > 0 && inputPtr != nullptr)
