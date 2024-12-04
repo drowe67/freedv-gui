@@ -42,6 +42,7 @@ private:
     int inputSampleRate_;
     int outputSampleRate_;
     soxr_t resampleState_;
+    FIFO* inputFifo_;
     FIFO* outputFifo_;
 };
 

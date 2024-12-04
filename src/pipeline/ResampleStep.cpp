@@ -33,7 +33,7 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate)
     , outputSampleRate_(outputSampleRate)
 {
     soxr_io_spec_t ioSpec = soxr_io_spec(SOXR_INT16_I, SOXR_INT16_I);
-    soxr_quality_spec_t qualSpec = soxr_quality_spec(SOXR_HQ, 0);
+    soxr_quality_spec_t qualSpec = soxr_quality_spec(SOXR_HQ, SOXR_HI_PREC_CLOCK | SOXR_DOUBLE_PRECISION);
     soxr_runtime_spec_t runtimeSpec = soxr_runtime_spec(1);
 
     qualSpec.passband_end = 0.912; // experimentally determined to reduce latency to acceptable levels (default 0.913)
@@ -49,13 +49,16 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate)
     );
     assert(resampleState_ != nullptr);
 
-    outputFifo_ = codec2_fifo_create(std::max(inputSampleRate_, outputSampleRate_));
+    inputFifo_ = codec2_fifo_create(inputSampleRate_ + 1);
+    assert(inputFifo_ != nullptr);
+    outputFifo_ = codec2_fifo_create(outputSampleRate_ + 1);
     assert(outputFifo_ != nullptr);
 }
 
 ResampleStep::~ResampleStep()
 {
     soxr_delete(resampleState_);
+    codec2_fifo_free(inputFifo_);
     codec2_fifo_free(outputFifo_);
 }
 
@@ -71,34 +74,49 @@ int ResampleStep::getOutputSampleRate() const
 
 std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
+    const double NUM_SECONDS_PER_BLOCK = 0.01; // 10ms
+
     short* outputSamples = nullptr;
     *numOutputSamples = 0;
 
     if (numInputSamples > 0)
     {
-        short outputBuffer[std::max(inputSampleRate_, outputSampleRate_)];
-        int expectedNumOutputSamples  = (double)numInputSamples * ((double)outputSampleRate_ / (double)inputSampleRate_) + 0.5;
-        size_t inputUsed = 0;
-        size_t outputUsed = 0;
-        soxr_process(
-            resampleState_, inputSamples.get(), numInputSamples, &inputUsed,
-            outputBuffer, sizeof(outputBuffer) / sizeof(short), &outputUsed);
-
-        if (outputUsed > 0)
+        codec2_fifo_write(inputFifo_, inputSamples.get(), numInputSamples);
+    
+        int inputSamplesPerBlock = NUM_SECONDS_PER_BLOCK * inputSampleRate_;
+        int expectedNumOutputSamples  = (double)numInputSamples * ((double)outputSampleRate_ / (double)inputSampleRate_);
+        while (codec2_fifo_used(inputFifo_) > 0 && codec2_fifo_used(outputFifo_) < expectedNumOutputSamples)
         {
-            codec2_fifo_write(outputFifo_, outputBuffer, outputUsed);
+            short inputBuffer[inputSamplesPerBlock];
+            short outputBuffer[expectedNumOutputSamples];
+            
+            int toRead = std::min(codec2_fifo_used(inputFifo_), inputSamplesPerBlock);
+            codec2_fifo_read(inputFifo_, inputBuffer, toRead);
+
+            size_t inputUsed = 0;
+            size_t outputUsed = 0;
+            soxr_process(
+                resampleState_, inputBuffer, toRead, &inputUsed,
+                outputBuffer, expectedNumOutputSamples, &outputUsed);
+ 
+            if (outputUsed > 0)
+            {
+                codec2_fifo_write(outputFifo_, outputBuffer, outputUsed);
+            }
         }
 
         // Because of how soxr works, we may get outputUsed == 0 for a significant amount of time
         // before getting a huge batch of samples at once. This logic is intended to smooth that out
         // and improve playback further down the line.
-        if (codec2_fifo_used(outputFifo_) >= expectedNumOutputSamples)
+        //log_info("used = %d, expected = %d", codec2_fifo_used(outputFifo_), expectedNumOutputSamples);
+        //if (codec2_fifo_used(outputFifo_) >= expectedNumOutputSamples)
         {
-            outputSamples = new short[expectedNumOutputSamples];
+            *numOutputSamples = std::min(codec2_fifo_used(outputFifo_), expectedNumOutputSamples);
+            outputSamples = new short[*numOutputSamples];
             assert(outputSamples != nullptr);
 
-            codec2_fifo_read(outputFifo_, outputSamples, expectedNumOutputSamples);
-            *numOutputSamples = expectedNumOutputSamples;
+            codec2_fifo_read(outputFifo_, outputSamples, *numOutputSamples);
+            //*numOutputSamples = expectedNumOutputSamples;
         }
     }
     else if (codec2_fifo_used(outputFifo_) > 0)
