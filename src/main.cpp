@@ -106,6 +106,7 @@ int   g_tx;
 float g_snr;
 bool  g_half_duplex;
 bool  g_voice_keyer_tx;
+SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
 
 // sending and receiving Call Sign data
 struct FIFO         *g_txDataInFifo;
@@ -517,14 +518,6 @@ bool MainApp::OnInit()
 #endif // __APPLE__
 
 #endif // _WIN32 || __APPLE__
-
-#if __aarch64__
-    // For 64-bit ARM, it's safe to assume some form of SIMD is available,
-    // so make sure we enable it for soxr. (soxr will auto-enable on x86
-    // as appropriate, so no need to explicitly force on that platform).
-    wxSetEnv("SOXR_USE_SIMD32", "1");
-    wxSetEnv("SOXR_USE_SIMD64", "1");
-#endif // __aarch64__
 
 #if defined(UNOFFICIAL_RELEASE)
     // Terminate the application if the current date > expiration date

@@ -25,8 +25,7 @@
 
 #include "IPipelineStep.h"
 
-#include <soxr.h>
-#include "codec2_fifo.h"
+#include <samplerate.h>
 
 class ResampleStep : public IPipelineStep
 {
@@ -41,9 +40,7 @@ public:
 private:
     int inputSampleRate_;
     int outputSampleRate_;
-    soxr_t resampleState_;
-    FIFO* inputFifo_;
-    FIFO* outputFifo_;
+    SRC_STATE* resampleState_;
 };
 
 #endif // AUDIO_PIPELINE__RESAMPLE_STEP_H

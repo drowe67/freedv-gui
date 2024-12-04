@@ -50,6 +50,8 @@ extern "C"
     #include "lpcnet.h"
 }
 
+#include <samplerate.h>
+
 class IPipelineStep;
 class ParallelStep;
 class RADETransmitStep;

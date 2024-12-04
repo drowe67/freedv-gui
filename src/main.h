@@ -47,6 +47,8 @@
 #include <wx/regex.h>
 #include <wx/socket.h>
 
+#include <samplerate.h>
+
 #include <stdint.h>
 #include <speex/speex_preprocess.h>
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
@@ -517,6 +519,14 @@ class MainFrame : public TopFrame
 
 void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs);
 
+int resample(SRC_STATE *src,
+             short      output_short[],
+             short      input_short[],
+             int        output_sample_rate,
+             int        input_sample_rate,
+             int        length_output_short, // maximum output array length in samples
+             int        length_input_short
+             );
 void txRxProcessing();
 
 // FreeDv API calls this when there is a test frame that needs a-plottin'

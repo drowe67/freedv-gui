@@ -25,7 +25,7 @@ jobs:
       run: |
            sudo apt-get update
            sudo apt-get upgrade -y
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsoxr-dev sox git libwxgtk3.2-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity dbus-x11 at-spi2-core rtkit
+           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.2-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity dbus-x11 at-spi2-core rtkit
             
     - name: Spellcheck codebase
       shell: bash

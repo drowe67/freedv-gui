@@ -109,6 +109,15 @@ extern SNDFILE* g_sfPlayFileFromRadio;
 extern bool g_recFileFromMic;
 extern bool g_recVoiceKeyerFile;
 
+// TBD -- shouldn't be needed once we've fully converted over
+extern int resample(SRC_STATE *src,
+            short      output_short[],
+            short      input_short[],
+            int        output_sample_rate,
+            int        input_sample_rate,
+            int        length_output_short, // maximum output array length in samples
+            int        length_input_short
+            );
 #include "sox_biquad.h"
 
 void TxRxThread::initializePipeline_()
