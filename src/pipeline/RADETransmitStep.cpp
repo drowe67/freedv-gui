@@ -27,6 +27,8 @@
 #include "codec2_fifo.h"
 #include "RADETransmitStep.h"
 
+const int RADE_SCALING_FACTOR = 16383;
+
 extern wxString utTxFeatureFile;
 
 RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
@@ -84,7 +86,7 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
     if (numInputSamples == 0)
     {
         // Special case logic for EOO -- make sure we only send 20ms worth at a time
-        *numOutputSamples = std::min(codec2_fifo_used(outputSampleFifo_), (int)(8000*.02));
+        *numOutputSamples = std::min(codec2_fifo_used(outputSampleFifo_), (int)(RADE_MODEM_SAMPLE_RATE * .02));
         if (*numOutputSamples > 0)
         {
             outputSamples = new short[*numOutputSamples];
@@ -140,7 +142,7 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
                 for (int index = 0; index < numOutputSamples; index++)
                 {
                     // We only need the real component for TX.
-                    radeOutShort[index] = radeOut[index].real * 16383;
+                    radeOutShort[index] = radeOut[index].real * RADE_SCALING_FACTOR;
                 }
                 codec2_fifo_write(outputSampleFifo_, radeOutShort, numOutputSamples);
             }
@@ -170,7 +172,7 @@ void RADETransmitStep::restartVocoder()
 
     for (int index = 0; index < numEOOSamples; index++)
     {
-        eooOutShort[index] = eooOut[index].real * 32767;
+        eooOutShort[index] = eooOut[index].real * RADE_SCALING_FACTOR;
     }
 
     log_info("Queueing %d EOO samples to output FIFO", numEOOSamples);
