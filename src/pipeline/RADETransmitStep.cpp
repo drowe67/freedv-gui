@@ -91,6 +91,8 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
             assert(outputSamples != nullptr);
 
             codec2_fifo_read(outputSampleFifo_, outputSamples, *numOutputSamples);
+
+            log_info("Returning %d EOO samples (remaining in FIFO: %d)", *numOutputSamples, codec2_fifo_used(outputSampleFifo_));
         }
 
         return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());;
@@ -171,5 +173,9 @@ void RADETransmitStep::restartVocoder()
         eooOutShort[index] = eooOut[index].real * 32767;
     }
 
-    codec2_fifo_write(outputSampleFifo_, eooOutShort, numEOOSamples);
+    log_info("Queueing %d EOO samples to output FIFO", numEOOSamples);
+    if (codec2_fifo_write(outputSampleFifo_, eooOutShort, numEOOSamples) != 0)
+    {
+        log_warn("Could not queue EOO samples (remaining space in FIFO = %d)", codec2_fifo_free(outputSampleFifo_));
+    }
 }
