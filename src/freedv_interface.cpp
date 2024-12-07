@@ -171,6 +171,7 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
 
             if (usingReliableText)
             {
+                log_info("creating RADE text object");
                 radeTextPtr_ = rade_text_create();
                 assert(radeTextPtr_ != nullptr);
 
@@ -680,6 +681,7 @@ void FreeDVInterface::setReliableText(const char* callsign)
     // Special case for RADE.
     if (rade_ != nullptr && radeTextPtr_ != nullptr)
     {
+        log_info("generating RADE text string");
         float eooSyms[rade_n_eoo_bits(rade_)];
         rade_text_generate_tx_string(radeTextPtr_, callsign, strlen(callsign), eooSyms);
         rade_tx_set_eoo_bits(rade_, eooSyms);

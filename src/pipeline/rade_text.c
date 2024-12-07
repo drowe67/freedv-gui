@@ -55,6 +55,7 @@ typedef struct {
 
   _Complex float inbound_pending_syms[LDPC_TOTAL_SIZE_BITS / 2];
   float inbound_pending_amps[LDPC_TOTAL_SIZE_BITS / 2];
+  float incomingData[LDPC_TOTAL_SIZE_BITS];
 
   struct LDPC ldpc;
 } rade_text_impl_t;
@@ -141,12 +142,14 @@ static int rade_text_ldpc_decode(rade_text_impl_t* obj, char* dest) {
   assert(obj != NULL);
   assert(dest != NULL);
 
-  _Complex float deinterleavedSyms[LDPC_TOTAL_SIZE_BITS / 2];
-  float deinterleavedAmps[LDPC_TOTAL_SIZE_BITS / 2];
+  _Complex float deinterleavedSyms[LDPC_TOTAL_SIZE_BITS];
+  float deinterleavedAmps[LDPC_TOTAL_SIZE_BITS];
   float llr[LDPC_TOTAL_SIZE_BITS];
   unsigned char output[LDPC_TOTAL_SIZE_BITS];
   int parityCheckCount = 0;
 
+    //sd_to_llr(llr, obj->incomingData, LDPC_TOTAL_SIZE_BITS);
+    #if 1
   // Use soft decision for the LDPC decoder.
   int Npayloadsymsperpacket = LDPC_TOTAL_SIZE_BITS / 2;
 
@@ -173,11 +176,16 @@ static int rade_text_ldpc_decode(rade_text_impl_t* obj, char* dest) {
 
   float EsNo = 3.0;  // note: constant from freedv_700.c
   meanAmplitude /= Npayloadsymsperpacket;
-
+  //meanAmplitude = sqrt(meanAmplitude);
+  for (int index = 0; index < Npayloadsymsperpacket; index++)
+  {
+    deinterleavedAmps[index] = meanAmplitude;
+  }
   log_info("mean amplitude: %f", meanAmplitude);
 
   symbols_to_llrs(llr, (COMP*)deinterleavedSyms, deinterleavedAmps, EsNo,
                   meanAmplitude, Npayloadsymsperpacket);
+                  #endif
   run_ldpc_decoder(&obj->ldpc, output, llr, &parityCheckCount);
 
   // Data is valid if BER < 0.2
@@ -211,11 +219,19 @@ void rade_text_rx(rade_text_t ptr, float* syms)
     // Copy over symbols prior to decode.
     for (int index = 0; index < LDPC_TOTAL_SIZE_BITS / 2; index++)
     {
+        //obj->incomingData[index] = syms[index];
+        #if 1
+        /*if (index < 4)*/ log_info("RX symbol: %f, %f", syms[2 * index], syms[2 * index + 1]);
         complex float symbol = CMPLXF(syms[2 * index], syms[2 * index + 1]);
-        *(complex float*)&obj->inbound_pending_syms[index] = symbol * cmplx(ROT45);
+        *(complex float*)&obj->inbound_pending_syms[index] = symbol * CMPLXF(cosf(M_PI/4), sinf(M_PI/4));
 
-        float* sym = (float*)&obj->inbound_pending_syms[index];
-        obj->inbound_pending_amps[index] = sqrt(pow(sym[0], 2) + pow(sym[1], 2));
+        //float* sym = (float*)&obj->inbound_pending_syms[index];
+        obj->inbound_pending_amps[index] = cabsf(obj->inbound_pending_syms[index]);
+        /*if (index < 4)*/ log_info("RX symbol rotated: %f, %f, amp: %f", 
+            crealf(obj->inbound_pending_syms[index]), 
+            cimagf(obj->inbound_pending_syms[index]), 
+            obj->inbound_pending_amps[index]);
+        #endif
     }
     
     // We have all the bits we need, so we're ready to decode.
@@ -329,10 +345,14 @@ void rade_text_generate_tx_string(
                      LDPC_TOTAL_SIZE_BITS / 2);*/
 
   // Generate floats based on the bits.
+  char debugString[256];
   for (int index = 0; index < LDPC_TOTAL_SIZE_BITS; index++)
   {
     syms[index] = 2.0*impl->tx_text[index] - 1.0;
+    debugString[index] = impl->tx_text[index] ? '1' : '0';
   }
+  debugString[LDPC_TOTAL_SIZE_BITS] = 0;
+  log_info("generated bits: %s", debugString);
 }
 
 void rade_text_set_rx_callback(rade_text_t ptr, on_text_rx_t text_rx_fn, void* state)
