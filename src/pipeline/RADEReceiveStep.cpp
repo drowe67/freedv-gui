@@ -27,12 +27,13 @@
 
 extern wxString utRxFeatureFile;
 
-RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan)
+RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr)
     : dv_(dv)
     , fargan_(fargan)
     , inputSampleFifo_(nullptr)
     , outputSampleFifo_(nullptr)
     , featuresFile_(nullptr)
+    , textPtr_(textPtr)
 {
     // Set FIFO to be 2x the number of samples per run so we don't lose anything.
     inputSampleFifo_ = codec2_fifo_create(rade_nin_max(dv_) * 2);
@@ -106,43 +107,53 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
             }
 
             // RADE processing (input signal->features).
-            nout = rade_rx(dv_, features_out, input_buf_cplx);
-            if (featuresFile_)
+            int hasEooOut = 0;
+            float eooOut[rade_n_eoo_bits(dv_)];
+            nout = rade_rx(dv_, features_out, &hasEooOut, eooOut, input_buf_cplx);
+            if (hasEooOut)
             {
-                fwrite(features_out, sizeof(float), nout, featuresFile_);
+                // Handle RX of bits from EOO.
+                rade_text_rx(textPtr_, eooOut);
             }
-
-            for (int i = 0; i < nout; i++)
+            else
             {
-                pendingFeatures_.push_back(features_out[i]);
-            }
-
-            // FARGAN processing (features->analog audio)
-            while (pendingFeatures_.size() >= NB_TOTAL_FEATURES)
-            {
-                // XXX - lpcnet_demo reads NB_TOTAL_FEATURES from RADE
-                // but only processes NB_FEATURES of those for some reason.
-                float featuresIn[NB_FEATURES];
-                for (int i = 0; i < NB_FEATURES; i++)
+                if (featuresFile_)
                 {
-                    featuresIn[i] = pendingFeatures_[0];
-                    pendingFeatures_.erase(pendingFeatures_.begin());
-                }
-                for (int i = 0; i < (NB_TOTAL_FEATURES - NB_FEATURES); i++)
-                {
-                    pendingFeatures_.erase(pendingFeatures_.begin());
+                    fwrite(features_out, sizeof(float), nout, featuresFile_);
                 }
 
-                float fpcm[LPCNET_FRAME_SIZE];
-                short pcm[LPCNET_FRAME_SIZE];
-                fargan_synthesize(fargan_, fpcm, featuresIn);
-                for (int i = 0; i < LPCNET_FRAME_SIZE; i++) 
+                for (int i = 0; i < nout; i++)
                 {
-                    pcm[i] = (int)floor(.5 + MIN32(32767, MAX32(-32767, 32768.f*fpcm[i])));
+                    pendingFeatures_.push_back(features_out[i]);
                 }
 
-                *numOutputSamples += LPCNET_FRAME_SIZE;
-                codec2_fifo_write(outputSampleFifo_, pcm, LPCNET_FRAME_SIZE);
+                // FARGAN processing (features->analog audio)
+                while (pendingFeatures_.size() >= NB_TOTAL_FEATURES)
+                {
+                    // XXX - lpcnet_demo reads NB_TOTAL_FEATURES from RADE
+                    // but only processes NB_FEATURES of those for some reason.
+                    float featuresIn[NB_FEATURES];
+                    for (int i = 0; i < NB_FEATURES; i++)
+                    {
+                        featuresIn[i] = pendingFeatures_[0];
+                        pendingFeatures_.erase(pendingFeatures_.begin());
+                    }
+                    for (int i = 0; i < (NB_TOTAL_FEATURES - NB_FEATURES); i++)
+                    {
+                        pendingFeatures_.erase(pendingFeatures_.begin());
+                    }
+
+                    float fpcm[LPCNET_FRAME_SIZE];
+                    short pcm[LPCNET_FRAME_SIZE];
+                    fargan_synthesize(fargan_, fpcm, featuresIn);
+                    for (int i = 0; i < LPCNET_FRAME_SIZE; i++) 
+                    {
+                        pcm[i] = (int)floor(.5 + MIN32(32767, MAX32(-32767, 32768.f*fpcm[i])));
+                    }
+
+                    *numOutputSamples += LPCNET_FRAME_SIZE;
+                    codec2_fifo_write(outputSampleFifo_, pcm, LPCNET_FRAME_SIZE);
+                }
             }
             
             nin = rade_nin(dv_);

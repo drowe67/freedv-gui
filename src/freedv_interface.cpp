@@ -75,7 +75,8 @@ FreeDVInterface::FreeDVInterface() :
     rade_(nullptr),
     lpcnetEncState_(nullptr),
     radeTxStep_(nullptr),
-    sync_(0)
+    sync_(0),
+    radeTextPtr_(nullptr)
 {
     // empty
 }
@@ -103,6 +104,19 @@ void FreeDVInterface::OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr,
         obj->receivedReliableText_ = txt_ptr;
     }
     reliable_text_reset(rt);
+}
+
+void FreeDVInterface::OnRadeTextRx_(rade_text_t rt, const char* txt_ptr, int length, void* state) 
+{
+    log_info("FreeDVInterface::OnRadeTextRx_: received %s", txt_ptr);
+    
+    FreeDVInterface* obj = (FreeDVInterface*)state;
+    assert(obj != nullptr);
+    
+    {
+        std::unique_lock<std::mutex> lock(obj->reliableTextMutex_);
+        obj->receivedReliableText_ = txt_ptr;
+    }
 }
 
 float FreeDVInterface::GetMinimumSNR_(int mode)
@@ -154,6 +168,14 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
             modelFile[0] = 0;
             rade_ = rade_open(modelFile, RADE_USE_C_ENCODER | RADE_USE_C_DECODER);
             assert(rade_ != nullptr);
+
+            if (usingReliableText)
+            {
+                radeTextPtr_ = rade_text_create();
+                assert(radeTextPtr_ != nullptr);
+
+                rade_text_set_rx_callback(radeTextPtr_, &FreeDVInterface::OnRadeTextRx_, this);
+            }
 
             float zeros[320] = {0};
             float in_features[5*NB_TOTAL_FEATURES] = {0};
@@ -242,6 +264,12 @@ void FreeDVInterface::stop()
         reliable_text_destroy(reliableTextObj);
     }
     reliableText_.clear();
+
+    if (radeTextPtr_ != nullptr)
+    {
+        rade_text_destroy(radeTextPtr_);
+        radeTextPtr_ = nullptr;
+    }
     
     for (auto& dv : dvObjects_)
     {
@@ -649,6 +677,14 @@ const char* FreeDVInterface::getReliableText()
 
 void FreeDVInterface::setReliableText(const char* callsign)
 {
+    // Special case for RADE.
+    if (rade_ != nullptr && radeTextPtr_ != nullptr)
+    {
+        float eooSyms[rade_n_eoo_bits(rade_)];
+        rade_text_generate_tx_string(radeTextPtr_, callsign, strlen(callsign), eooSyms);
+        rade_tx_set_eoo_bits(rade_, eooSyms);
+    }
+
     for (auto& rt : reliableText_)
     {
         reliable_text_set_string(rt, callsign, strlen(callsign));
@@ -721,7 +757,7 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     if (txMode_ >= FREEDV_MODE_RADE)
     {
         // special handling for RADE
-        parallelSteps.push_back(new RADEReceiveStep(rade_, &fargan_));
+        parallelSteps.push_back(new RADEReceiveStep(rade_, &fargan_, radeTextPtr_));
 
         state->preProcessFn = [&](ParallelStep*) { return 0; };
         state->postProcessFn = std::bind(&FreeDVInterface::postProcessRxFn_, this, _1); //[&](ParallelStep*) { return 0; };

@@ -21,6 +21,7 @@ add_library(fdv_audio_pipeline STATIC
     TapStep.cpp
     ToneInterfererStep.cpp
     TxRxThread.cpp
+    rade_text.c
 )
 
 target_include_directories(fdv_audio_pipeline PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
