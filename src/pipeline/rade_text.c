@@ -171,12 +171,12 @@ static int rade_text_ldpc_decode(rade_text_impl_t* obj, char* dest) {
   {
     //float* sym = (float*)&deinterleavedSyms[index];
     //deinterleavedAmps[index] = sqrt(pow(sym[0], 2) + pow(sym[1], 2));
-    meanAmplitude += deinterleavedAmps[index];
+    meanAmplitude += pow(deinterleavedAmps[index], 2);
   }
 
   float EsNo = 3.0;  // note: constant from freedv_700.c
   meanAmplitude /= Npayloadsymsperpacket;
-  //meanAmplitude = sqrt(meanAmplitude);
+  meanAmplitude = sqrt(meanAmplitude);
   for (int index = 0; index < Npayloadsymsperpacket; index++)
   {
     deinterleavedAmps[index] = meanAmplitude;
@@ -216,6 +216,14 @@ void rade_text_rx(rade_text_t ptr, float* syms)
     rade_text_impl_t* obj = (rade_text_impl_t*)ptr;
     assert(obj != NULL);
 
+    FILE* fp = fopen("/Users/mooneer/freedv-gui/syms_orig.f32", "wb");
+    assert(fp != NULL);
+    FILE* fp2 = fopen("/Users/mooneer/freedv-gui/syms_rot.f32", "wb");
+    assert(fp2 != NULL);
+
+    fwrite(syms, sizeof(float), LDPC_TOTAL_SIZE_BITS, fp);
+    fclose(fp);
+
     // Copy over symbols prior to decode.
     for (int index = 0; index < LDPC_TOTAL_SIZE_BITS / 2; index++)
     {
@@ -233,6 +241,9 @@ void rade_text_rx(rade_text_t ptr, float* syms)
             obj->inbound_pending_amps[index]);
         #endif
     }
+
+    fwrite(obj->inbound_pending_syms, sizeof(float), LDPC_TOTAL_SIZE_BITS, fp2);
+    fclose(fp2);
     
     // We have all the bits we need, so we're ready to decode.
     char decodedStr[RADE_TEXT_MAX_RAW_LENGTH + 1];
@@ -349,6 +360,7 @@ void rade_text_generate_tx_string(
   for (int index = 0; index < LDPC_TOTAL_SIZE_BITS; index++)
   {
     syms[index] = 2.0*impl->tx_text[index] - 1.0;
+    log_info("sym[%d] = %f", index, syms[index]);
     debugString[index] = impl->tx_text[index] ? '1' : '0';
   }
   debugString[LDPC_TOTAL_SIZE_BITS] = 0;
