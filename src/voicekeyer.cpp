@@ -11,6 +11,7 @@ extern SNDFILE            *g_sfRecMicFile;
 bool                g_recVoiceKeyerFile;
 extern bool g_voice_keyer_tx;
 extern wxMutex g_mutexProtectingCallbackData;
+extern bool endingTx;
 
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
@@ -283,6 +284,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         if (vk_event == VK_SPACE_BAR) {
             m_btnTogPTT->SetValue(false); 
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
+            endingTx = true;
             togglePTT();
             m_togBtnVoiceKeyer->SetValue(false);
             m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
@@ -293,7 +295,8 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         if (vk_event == VK_PLAY_FINISHED) {
             m_btnTogPTT->SetValue(false); 
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
-            togglePTT();
+            endingTx = true;
+            CallAfter([&]() { togglePTT(); });
             vk_repeat_counter++;
             if (vk_repeat_counter > vk_repeats) {
                 m_togBtnVoiceKeyer->SetValue(false);
@@ -371,6 +374,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
         m_btnTogPTT->SetValue(false); 
         m_btnTogPTT->SetBackgroundColour(wxNullColour);
+        endingTx = true;
         togglePTT();
         m_togBtnVoiceKeyer->SetValue(false);
         m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);

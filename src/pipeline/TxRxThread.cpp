@@ -267,15 +267,6 @@ void TxRxThread::initializePipeline_()
         // TX attenuation step
         auto txAttenuationStep = new LevelAdjustStep(outputSampleRate_, []() {
             double dbLoss = g_txLevel / 10.0;
-            
-#if 0
-            if (freedvInterface.getTxMode() == FREEDV_MODE_RADE)
-            {
-                // Attenuate by 4 dB as there's no BPF; anything louder distorts the signal
-                dbLoss -= 4.0;
-            }
-#endif // 0
-            
             double scaleFactor = exp(dbLoss/20.0 * log(10.0));
             return scaleFactor; 
         });
@@ -653,21 +644,32 @@ void TxRxThread::txProcessing_()
             {
                 if (freedvInterface.getCurrentMode() >= FREEDV_MODE_RADE)
                 {
-                    // Special case for handling RADE EOT
-                    freedvInterface.restartTxVocoder();
+                    if (!hasEooBeenSent_)
+                    {
+                        log_info("Triggering sending of EOO");
+
+                        // Special case for handling RADE EOT
+                        freedvInterface.restartTxVocoder();
+                        hasEooBeenSent_ = true;
+                    }
 
                     short* inputSamples = new short[1];
                     auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
-                    do
+                    auto outputSamples = pipeline_->execute(inputSamplesPtr, 0, &nout);
+                    if (nout > 0 && outputSamples.get() != nullptr)
                     {
-                        auto outputSamples = pipeline_->execute(inputSamplesPtr, 0, &nout);
-                        if (nout > 0 && outputSamples.get() != nullptr)
+                        log_debug("Injecting %d samples of resampled EOO into TX stream", nout);
+                        if (codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout) != 0)
                         {
-                            codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
+                            log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1);
                         }
-                    } while (nout > 0);
+                    }
                 }
                 break;
+            }
+            else
+            {
+                hasEooBeenSent_ = false;
             }
             
             short* inputSamples = new short[nsam_in_48];
