@@ -24,35 +24,33 @@
 #define RADE_TEXT_H
 
 #ifdef __cplusplus
-extern "C" {
-#endif  // __cplusplus
+extern "C"
+{
+#endif // __cplusplus
 
-/* Hide internals of rade_text_t. */
-typedef void* rade_text_t;
+    /* Hide internals of rade_text_t. */
+    typedef void *rade_text_t;
 
-/* Function type for callback (when full reliable text has been received). */
-typedef void (*on_text_rx_t)(rade_text_t rt, const char* txt_ptr,
-                             int length, void* state);
+    /* Function type for callback (when full reliable text has been received). */
+    typedef void (*on_text_rx_t)(rade_text_t rt, const char *txt_ptr, int length, void *state);
 
-/* Allocate rade_text object. */
-rade_text_t rade_text_create();
+    /* Allocate rade_text object. */
+    rade_text_t rade_text_create();
 
-/* Destroy rade_text object. */
-void rade_text_destroy(rade_text_t ptr);
+    /* Destroy rade_text object. */
+    void rade_text_destroy(rade_text_t ptr);
 
-/* Generates float array for use with RADE EOO functions. */
-void rade_text_generate_tx_string(
-    rade_text_t ptr, const char* str, int strlength,
-    float* syms);
+    /* Generates float array for use with RADE EOO functions. */
+    void rade_text_generate_tx_string(rade_text_t ptr, const char *str, int strlength, float *syms);
 
-/* Set text RX callback. */
-void rade_text_set_rx_callback(rade_text_t ptr, on_text_rx_t text_rx_fn, void* state);
+    /* Set text RX callback. */
+    void rade_text_set_rx_callback(rade_text_t ptr, on_text_rx_t text_rx_fn, void *state);
 
-/* Decode received symbols from RADE decoder. */
-void rade_text_rx(rade_text_t ptr, float* syms, int symSize);
+    /* Decode received symbols from RADE decoder. */
+    void rade_text_rx(rade_text_t ptr, float *syms, int symSize);
 
 #ifdef __cplusplus
 }
-#endif  // __cplusplus
+#endif // __cplusplus
 
-#endif  // RADE_TEXT_H
+#endif // RADE_TEXT_H
