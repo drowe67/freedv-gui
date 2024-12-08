@@ -275,7 +275,7 @@ void rade_text_rx(rade_text_t ptr, float* syms, int symSize)
         log_info("rxCRC: %d, calcCRC: %d, decodedStr: %s",
            receivedCRC, calcCRC, &decodedStr[RADE_TEXT_CRC_LENGTH]);
 
-        if (receivedCRC == calcCRC) {
+        if (receivedCRC == calcCRC && obj->text_rx_callback) {
           // We got a valid string. Call assigned callback.
           obj->text_rx_callback(obj, &decodedStr[RADE_TEXT_CRC_LENGTH],
                                 strlen(&decodedStr[RADE_TEXT_CRC_LENGTH]),
