@@ -213,13 +213,13 @@ void rade_text_rx(rade_text_t ptr, float* syms, int symSize)
     rade_text_impl_t* obj = (rade_text_impl_t*)ptr;
     assert(obj != NULL);
 
-    FILE* fp = fopen("/home/parallels/freedv-gui/syms_orig.f32", "wb");
-    assert(fp != NULL);
-    FILE* fp2 = fopen("/home/parallels/freedv-gui/syms_rot.f32", "wb");
-    assert(fp2 != NULL);
+    //FILE* fp = fopen("/home/parallels/freedv-gui/syms_orig.f32", "wb");
+    //assert(fp != NULL);
+    //FILE* fp2 = fopen("/home/parallels/freedv-gui/syms_rot.f32", "wb");
+    //assert(fp2 != NULL);
 
-    fwrite(syms, sizeof(float), LDPC_TOTAL_SIZE_BITS, fp);
-    fclose(fp);
+    //fwrite(syms, sizeof(float), LDPC_TOTAL_SIZE_BITS, fp);
+    //fclose(fp);
 
     memcpy(obj->inbound_pending_syms, syms, sizeof(COMP) * LDPC_TOTAL_SIZE_BITS / 2);
     /*gp_deinterleave_comp(
@@ -251,8 +251,8 @@ void rade_text_rx(rade_text_t ptr, float* syms, int symSize)
             obj->inbound_pending_amps[index]);
     }
 
-    fwrite(obj->inbound_pending_syms, sizeof(float), LDPC_TOTAL_SIZE_BITS, fp2);
-    fclose(fp2);
+    //fwrite(obj->inbound_pending_syms, sizeof(float), LDPC_TOTAL_SIZE_BITS, fp2);
+    //fclose(fp2);
     
     // We have all the bits we need, so we're ready to decode.
     char decodedStr[RADE_TEXT_MAX_RAW_LENGTH + 1];
