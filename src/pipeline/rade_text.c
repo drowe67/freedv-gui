@@ -242,7 +242,7 @@ void rade_text_rx(rade_text_t ptr, float* syms, int symSize)
 	COMP* sym = (COMP*)&obj->inbound_pending_syms[index];
         /*if (index < 4)*/ log_info("RX symbol: %f, %f", sym->real, sym->imag);
         complex float symbol = CMPLXF(sym->real, sym->imag);
-        *(complex float*)&obj->inbound_pending_syms[index] = symbol * cmplx(-ROT45); //CMPLXF(cosf(-M_PI/4), sinf(-M_PI/4));
+        *(complex float*)&obj->inbound_pending_syms[index] = symbol * cmplx(ROT45); //CMPLXF(cosf(-M_PI/4), sinf(-M_PI/4));
 
         obj->inbound_pending_amps[index] = rms; //sqrt(obj->inbound_pending_syms[index].real * obj->inbound_pending_syms[index].real + obj->inbound_pending_syms[index].imag * obj->inbound_pending_syms[index].imag); 
         /*if (index < 4)*/ log_info("RX symbol rotated: %f, %f, amp: %f", 
