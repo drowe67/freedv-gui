@@ -195,6 +195,7 @@ wxString utTxFile;
 wxString utRxFile;
 wxString utTxFeatureFile;
 wxString utRxFeatureFile;
+int utTxTimeSeconds;
 
 // WxWidgets - initialize the application
 
@@ -327,8 +328,8 @@ void MainApp::UnitTest_()
         }
         else
         {
-            // Transmit for 60 seconds
-            std::this_thread::sleep_for(60s);
+            // Transmit for user given time period (default 60 seconds)
+            std::this_thread::sleep_for(std::chrono::seconds(utTxTimeSeconds));
         }
         
         // Stop transmitting
@@ -413,6 +414,7 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
     parser.AddOption("txfile", wxEmptyString, "In UT mode, pipes given WAV file through transmit pipeline.");
     parser.AddOption("rxfeaturefile", wxEmptyString, "Capture RX features from RADE decoder into the provided file.");
     parser.AddOption("txfeaturefile", wxEmptyString, "Capture TX features from FARGAN encoder into the provided file.");
+    parser.AddOption("txtime", "60", "In UT mode, the amount of time to transmit (default 60 seconds)", wxCMD_LINE_VAL_NUMBER);
 }
 
 bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
@@ -456,6 +458,11 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         if (parser.Found("txfile", &utTxFile))
         {
             log_info("Piping %s through TX pipeline", (const char*)utTxFile.ToUTF8());
+        }
+
+        if (parser.Found("txtime", (long*)&utTxTimeSeconds))
+        {
+            log_info("Will transmit for %d seconds", utTxTimeSeconds);
         }
     }
     
