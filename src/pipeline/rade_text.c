@@ -221,11 +221,11 @@ void rade_text_rx(rade_text_t ptr, float* syms, int symSize)
     //fwrite(syms, sizeof(float), LDPC_TOTAL_SIZE_BITS, fp);
     //fclose(fp);
 
-    memcpy(obj->inbound_pending_syms, syms, sizeof(COMP) * LDPC_TOTAL_SIZE_BITS / 2);
-    /*gp_deinterleave_comp(
+    //memcpy(obj->inbound_pending_syms, syms, sizeof(COMP) * LDPC_TOTAL_SIZE_BITS / 2);
+    gp_deinterleave_comp(
       (COMP*)obj->inbound_pending_syms,
       (COMP*)syms,
-      LDPC_TOTAL_SIZE_BITS / 2);*/
+      LDPC_TOTAL_SIZE_BITS / 2);
 
     // Calculate RMS of all symbols
     float rms = 0;
@@ -361,8 +361,8 @@ void rade_text_generate_tx_string(
 
   // Interleave the bits together to enhance fading performance.
   memcpy(impl->tx_text, tmpbits, LDPC_TOTAL_SIZE_BITS);
-  //gp_interleave_bits(&impl->tx_text[0], tmpbits,
-  //                   LDPC_TOTAL_SIZE_BITS / 2);
+  gp_interleave_bits(&impl->tx_text[0], tmpbits,
+                     LDPC_TOTAL_SIZE_BITS / 2);
 
   // Generate floats based on the bits.
   char debugString[256];
