@@ -229,12 +229,12 @@ void rade_text_rx(rade_text_t ptr, float* syms, int symSize)
 
     // Calculate RMS of all symbols
     float rms = 0;
-    for (int index = 0; index < LDPC_TOTAL_SIZE_BITS / 2; index++)
+    for (int index = 0; index < symSize; index++)
     {
         COMP* sym = (COMP*)&obj->inbound_pending_syms[index];
         rms += sym->real * sym->real + sym->imag * sym->imag;
     }
-    rms = sqrt(rms/(LDPC_TOTAL_SIZE_BITS / 2));
+    rms = sqrt(rms/symSize);
 
     // Copy over symbols prior to decode.
     for (int index = 0; index < LDPC_TOTAL_SIZE_BITS / 2; index++)
@@ -242,7 +242,7 @@ void rade_text_rx(rade_text_t ptr, float* syms, int symSize)
 	COMP* sym = (COMP*)&obj->inbound_pending_syms[index];
         /*if (index < 4)*/ log_info("RX symbol: %f, %f", sym->real, sym->imag);
         complex float symbol = CMPLXF(sym->real, sym->imag);
-        *(complex float*)&obj->inbound_pending_syms[index] = symbol * cmplx(ROT45); //CMPLXF(cosf(-M_PI/4), sinf(-M_PI/4));
+        //*(complex float*)&obj->inbound_pending_syms[index] = symbol * cmplx(-ROT45); //CMPLXF(cosf(-M_PI/4), sinf(-M_PI/4));
 
         obj->inbound_pending_amps[index] = rms; //sqrt(obj->inbound_pending_syms[index].real * obj->inbound_pending_syms[index].real + obj->inbound_pending_syms[index].imag * obj->inbound_pending_syms[index].imag); 
         /*if (index < 4)*/ log_info("RX symbol rotated: %f, %f, amp: %f", 
@@ -366,11 +366,35 @@ void rade_text_generate_tx_string(
 
   // Generate floats based on the bits.
   char debugString[256];
-  for (int index = 0; index < LDPC_TOTAL_SIZE_BITS; index++)
+  for (int index = 0; index < LDPC_TOTAL_SIZE_BITS / 2; index++)
   {
-    syms[index] = 2.0*impl->tx_text[index] - 1.0;
-    log_info("sym[%d] = %f", index, syms[index]);
-    debugString[index] = impl->tx_text[index] ? '1' : '0';
+#if 1
+    char* ptr = &impl->tx_text[2 * index];
+    if (*ptr == 0 && *(ptr + 1) == 0)
+    {
+        syms[2*index] = 1;
+        syms[2*index + 1] = 0;
+    }
+    else if (*ptr == 0 && *(ptr + 1) == 1)
+    {
+        syms[2*index] = 0;
+        syms[2*index + 1] = 1;
+    }
+    else if (*ptr == 1 && *(ptr + 1) == 0)
+    {
+        syms[2*index] = 0;
+        syms[2*index + 1] = -1;
+    }
+    else if (*ptr == 1 && *(ptr + 1) == 1)
+    {
+        syms[2*index] = -1;
+        syms[2*index + 1] = 0;
+    }
+#endif
+    //syms[index] = 2.0*impl->tx_text[index] - 1.0;
+    //log_info("sym[%d] = %f", index, syms[index]);
+    debugString[2*index] = impl->tx_text[2*index] ? '1' : '0';
+    debugString[2*index + 1] = impl->tx_text[2*index + 1] ? '1' : '0';
   }
   debugString[LDPC_TOTAL_SIZE_BITS] = 0;
   log_info("generated bits: %s", debugString);

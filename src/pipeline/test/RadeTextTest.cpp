@@ -41,7 +41,7 @@ int main()
     float txSyms[rade_n_eoo_bits(rade)];
     for (int index = 0; index < rade_n_eoo_bits(rade); index++)
     {
-        txSyms[index] = -1;
+        txSyms[index] = index % 2 ? 1 : 0;
     }
     rade_text_generate_tx_string(txt, "K6AQ", 4, txSyms);
     rade_tx_set_eoo_bits(rade, txSyms);

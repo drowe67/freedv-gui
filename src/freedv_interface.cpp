@@ -686,8 +686,8 @@ void FreeDVInterface::setReliableText(const char* callsign)
         float eooSyms[nsyms];
         for (int index = 0; index < nsyms; index++)
         {
-            // Default everything to 0 (represented by -1)
-            eooSyms[index] = -1;
+            // Default everything to 0 (represented by 1 + 0j)
+            eooSyms[index] = index % 2 ? 0 : 1;
         }
     
         rade_text_generate_tx_string(radeTextPtr_, callsign, strlen(callsign), eooSyms);
