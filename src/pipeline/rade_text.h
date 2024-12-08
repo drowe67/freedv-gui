@@ -49,7 +49,7 @@ void rade_text_generate_tx_string(
 void rade_text_set_rx_callback(rade_text_t ptr, on_text_rx_t text_rx_fn, void* state);
 
 /* Decode received symbols from RADE decoder. */
-void rade_text_rx(rade_text_t ptr, float* syms);
+void rade_text_rx(rade_text_t ptr, float* syms, int symSize);
 
 #ifdef __cplusplus
 }

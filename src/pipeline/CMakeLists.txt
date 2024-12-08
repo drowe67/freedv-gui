@@ -51,4 +51,11 @@ DefineUnitTest(LevelAdjustTest)
 DefineUnitTest(ResampleTest)
 target_link_libraries(ResampleTest PRIVATE ${FREEDV_LINK_LIBS})
 DefineUnitTest(TapTest)
+
+if(LINUX)
+# TBD - won't execute on macOS just yet.
+DefineUnitTest(RadeTextTest)
+target_link_libraries(RadeTextTest PRIVATE codec2 rade opus wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
+endif(LINUX)
+
 endif(UNITTEST)

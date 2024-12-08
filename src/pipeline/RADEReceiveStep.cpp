@@ -113,7 +113,7 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
             if (hasEooOut)
             {
                 // Handle RX of bits from EOO.
-                rade_text_rx(textPtr_, eooOut);
+                rade_text_rx(textPtr_, eooOut, rade_n_eoo_bits(dv_) / 2);
             }
             else
             {

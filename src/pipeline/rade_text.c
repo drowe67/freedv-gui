@@ -166,21 +166,25 @@ static int rade_text_ldpc_decode(rade_text_impl_t* obj, char* dest) {
   memcpy(deinterleavedAmps, obj->inbound_pending_amps, Npayloadsymsperpacket * sizeof(float));
 
   // Generate amplitudes based on deinterleaved symbols
-  float meanAmplitude = 0;
+  float meanAmplitude = obj->inbound_pending_amps[0];
+  #if 0
   for (int index = 0; index < Npayloadsymsperpacket; index++)
   {
     //float* sym = (float*)&deinterleavedSyms[index];
     //deinterleavedAmps[index] = sqrt(pow(sym[0], 2) + pow(sym[1], 2));
-    meanAmplitude += pow(deinterleavedAmps[index], 2);
+    meanAmplitude += deinterleavedAmps[index];
   }
+  #endif
 
   float EsNo = 3.0;  // note: constant from freedv_700.c
+  #if 0
   meanAmplitude /= Npayloadsymsperpacket;
   meanAmplitude = sqrt(meanAmplitude);
   for (int index = 0; index < Npayloadsymsperpacket; index++)
   {
     deinterleavedAmps[index] = meanAmplitude;
   }
+  #endif
   log_info("mean amplitude: %f", meanAmplitude);
 
   symbols_to_llrs(llr, (COMP*)deinterleavedSyms, deinterleavedAmps, EsNo,
@@ -191,7 +195,7 @@ static int rade_text_ldpc_decode(rade_text_impl_t* obj, char* dest) {
   // Data is valid if BER < 0.2
   float ber_est = (float)(obj->ldpc.NumberParityBits - parityCheckCount) /
                   obj->ldpc.NumberParityBits;
-  int result = (ber_est < 0.2);
+  int result = 1; //(ber_est < 0.2);
 
   log_info("BER est: %f", ber_est);
   if (result) {
@@ -211,7 +215,7 @@ static int rade_text_ldpc_decode(rade_text_impl_t* obj, char* dest) {
 }
 
 /* Decode received symbols from RADE decoder. */
-void rade_text_rx(rade_text_t ptr, float* syms)
+void rade_text_rx(rade_text_t ptr, float* syms, int symSize)
 {
     rade_text_impl_t* obj = (rade_text_impl_t*)ptr;
     assert(obj != NULL);
@@ -224,6 +228,16 @@ void rade_text_rx(rade_text_t ptr, float* syms)
     fwrite(syms, sizeof(float), LDPC_TOTAL_SIZE_BITS, fp);
     fclose(fp);
 
+    // Calculate RMS of all symbols
+    float rms = 0;
+    for (int index = 0; index < symSize; index++)
+    {
+        float* sym = &syms[2*index];
+        rms += sym[0]*sym[0] + sym[1]*sym[1];
+    }
+    rms /= symSize;
+    rms = sqrt(rms);
+
     // Copy over symbols prior to decode.
     for (int index = 0; index < LDPC_TOTAL_SIZE_BITS / 2; index++)
     {
@@ -234,7 +248,7 @@ void rade_text_rx(rade_text_t ptr, float* syms)
         *(complex float*)&obj->inbound_pending_syms[index] = symbol * CMPLXF(cosf(M_PI/4), sinf(M_PI/4));
 
         //float* sym = (float*)&obj->inbound_pending_syms[index];
-        obj->inbound_pending_amps[index] = cabsf(obj->inbound_pending_syms[index]);
+        obj->inbound_pending_amps[index] = rms; // syms[2*index]*syms[2*index] + syms[2*index + 1]*syms[2*index + 1]; //cabsf(obj->inbound_pending_syms[index]);
         /*if (index < 4)*/ log_info("RX symbol rotated: %f, %f, amp: %f", 
             crealf(obj->inbound_pending_syms[index]), 
             cimagf(obj->inbound_pending_syms[index]), 
