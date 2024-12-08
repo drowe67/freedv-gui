@@ -1,4 +1,5 @@
 #include <cassert>
+#include <random>
 #include <wx/string.h>
 #include "../RADEReceiveStep.h"
 #include "../RADETransmitStep.h"
@@ -9,10 +10,22 @@ bool testPassed = false;
 wxString utRxFeatureFile;
 wxString utTxFeatureFile;
 
+std::default_random_engine generator;
+std::uniform_real_distribution<double> distribution(-0.789, 0.789);
+
 void OnRadeTextRx(rade_text_t rt, const char* txt_ptr, int length, void* state) 
 {
     log_info("Callsign received: %s", txt_ptr);
     testPassed = !strncmp(txt_ptr, "K6AQ", length);
+}
+
+void addNoise(short* ptr, int size)
+{
+    for (int i = 0; i < size; i++)
+    {
+        double noise = 16384 * distribution(generator);
+        ptr[i] = (noise + ptr[i]) / 0.707;
+    }
 }
 
 int main()
@@ -62,12 +75,14 @@ int main()
     memset(inputSamples, 0, sizeof(short) * 16384);
     auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
     auto outputSamples = txStep->execute(inputSamplesPtr, 16384, &nout);
+    addNoise(outputSamples.get(), nout);
     recvStep->execute(outputSamples, nout, &noutRx);
 
     txStep->restartVocoder();
     while (nout > 0)
     {
         outputSamples = txStep->execute(inputSamplesPtr, 0, &nout);
+        addNoise(outputSamples.get(), nout);
         recvStep->execute(outputSamples, nout, &noutRx);
     }
 
