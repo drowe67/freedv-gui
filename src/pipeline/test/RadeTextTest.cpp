@@ -31,6 +31,7 @@ int main()
     // Initialize RADE
     char modelFile[1];
     modelFile[0] = 0;
+    rade_initialize();
     rade = rade_open(modelFile, RADE_USE_C_ENCODER | RADE_USE_C_DECODER);
     assert(rade != nullptr);
 
@@ -67,6 +68,11 @@ int main()
         outputSamples = txStep->execute(inputSamplesPtr, 0, &nout);
         recvStep->execute(outputSamples, nout, &noutRx);
     }
-    
+
+    // Send silence through to RX step to trigger EOO processing
+    recvStep->execute(inputSamplesPtr, 16384, &noutRx);
+
+    rade_close(rade); 
+    rade_finalize();
     return testPassed ? 0 : 1;
 }

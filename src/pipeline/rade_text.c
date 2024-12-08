@@ -53,7 +53,7 @@ typedef struct {
   int tx_text_index;
   int tx_text_length;
 
-  _Complex float inbound_pending_syms[LDPC_TOTAL_SIZE_BITS / 2];
+  COMP inbound_pending_syms[LDPC_TOTAL_SIZE_BITS / 2];
   float inbound_pending_amps[LDPC_TOTAL_SIZE_BITS / 2];
   float incomingData[LDPC_TOTAL_SIZE_BITS];
 
@@ -138,35 +138,29 @@ static char calculateCRC8_(char* input, int length) {
   return crc;
 }
 
-static int rade_text_ldpc_decode(rade_text_impl_t* obj, char* dest) {
+static int rade_text_ldpc_decode(rade_text_impl_t* obj, char* dest, float meanAmplitude) {
   assert(obj != NULL);
   assert(dest != NULL);
 
-  _Complex float deinterleavedSyms[LDPC_TOTAL_SIZE_BITS];
+  COMP deinterleavedSyms[LDPC_TOTAL_SIZE_BITS];
   float deinterleavedAmps[LDPC_TOTAL_SIZE_BITS];
   float llr[LDPC_TOTAL_SIZE_BITS];
   unsigned char output[LDPC_TOTAL_SIZE_BITS];
   int parityCheckCount = 0;
 
-    //sd_to_llr(llr, obj->incomingData, LDPC_TOTAL_SIZE_BITS);
-    #if 1
   // Use soft decision for the LDPC decoder.
   int Npayloadsymsperpacket = LDPC_TOTAL_SIZE_BITS / 2;
 
   // Deinterleave symbols
-  /*gp_deinterleave_comp(
-      (COMP*)deinterleavedSyms,
-      (COMP*)&obj->inbound_pending_syms[0],
-      Npayloadsymsperpacket);
-  gp_deinterleave_float(
+  /*gp_deinterleave_float(
       deinterleavedAmps,
       &obj->inbound_pending_amps[0],
       Npayloadsymsperpacket);*/
-  memcpy(deinterleavedSyms, obj->inbound_pending_syms, Npayloadsymsperpacket * sizeof(COMP));
-  memcpy(deinterleavedAmps, obj->inbound_pending_amps, Npayloadsymsperpacket * sizeof(float));
+  //memcpy(deinterleavedSyms, obj->inbound_pending_syms, Npayloadsymsperpacket * sizeof(COMP));
+  //memcpy(deinterleavedAmps, obj->inbound_pending_amps, Npayloadsymsperpacket * sizeof(float));
 
   // Generate amplitudes based on deinterleaved symbols
-  float meanAmplitude = obj->inbound_pending_amps[0];
+  //float meanAmplitude = obj->inbound_pending_amps[0];
   #if 0
   for (int index = 0; index < Npayloadsymsperpacket; index++)
   {
@@ -187,15 +181,14 @@ static int rade_text_ldpc_decode(rade_text_impl_t* obj, char* dest) {
   #endif
   log_info("mean amplitude: %f", meanAmplitude);
 
-  symbols_to_llrs(llr, (COMP*)deinterleavedSyms, deinterleavedAmps, EsNo,
+  symbols_to_llrs(llr, (COMP*)obj->inbound_pending_syms, obj->inbound_pending_amps, EsNo,
                   meanAmplitude, Npayloadsymsperpacket);
-                  #endif
   run_ldpc_decoder(&obj->ldpc, output, llr, &parityCheckCount);
 
   // Data is valid if BER < 0.2
   float ber_est = (float)(obj->ldpc.NumberParityBits - parityCheckCount) /
                   obj->ldpc.NumberParityBits;
-  int result = 1; //(ber_est < 0.2);
+  int result = (ber_est < 0.2);
 
   log_info("BER est: %f", ber_est);
   if (result) {
@@ -220,40 +213,42 @@ void rade_text_rx(rade_text_t ptr, float* syms, int symSize)
     rade_text_impl_t* obj = (rade_text_impl_t*)ptr;
     assert(obj != NULL);
 
-    FILE* fp = fopen("/Users/mooneer/freedv-gui/syms_orig.f32", "wb");
+    FILE* fp = fopen("/home/parallels/freedv-gui/syms_orig.f32", "wb");
     assert(fp != NULL);
-    FILE* fp2 = fopen("/Users/mooneer/freedv-gui/syms_rot.f32", "wb");
+    FILE* fp2 = fopen("/home/parallels/freedv-gui/syms_rot.f32", "wb");
     assert(fp2 != NULL);
 
     fwrite(syms, sizeof(float), LDPC_TOTAL_SIZE_BITS, fp);
     fclose(fp);
 
+    memcpy(obj->inbound_pending_syms, syms, sizeof(COMP) * LDPC_TOTAL_SIZE_BITS / 2);
+    /*gp_deinterleave_comp(
+      (COMP*)obj->inbound_pending_syms,
+      (COMP*)syms,
+      LDPC_TOTAL_SIZE_BITS / 2);*/
+
     // Calculate RMS of all symbols
     float rms = 0;
-    for (int index = 0; index < symSize; index++)
+    for (int index = 0; index < LDPC_TOTAL_SIZE_BITS / 2; index++)
     {
-        float* sym = &syms[2*index];
-        rms += sym[0]*sym[0] + sym[1]*sym[1];
+        COMP* sym = (COMP*)&obj->inbound_pending_syms[index];
+        rms += sym->real * sym->real + sym->imag * sym->imag;
     }
-    rms /= symSize;
-    rms = sqrt(rms);
+    rms = sqrt(rms/(LDPC_TOTAL_SIZE_BITS / 2));
 
     // Copy over symbols prior to decode.
     for (int index = 0; index < LDPC_TOTAL_SIZE_BITS / 2; index++)
     {
-        //obj->incomingData[index] = syms[index];
-        #if 1
-        /*if (index < 4)*/ log_info("RX symbol: %f, %f", syms[2 * index], syms[2 * index + 1]);
-        complex float symbol = CMPLXF(syms[2 * index], syms[2 * index + 1]);
-        *(complex float*)&obj->inbound_pending_syms[index] = symbol * CMPLXF(cosf(M_PI/4), sinf(M_PI/4));
+	COMP* sym = (COMP*)&obj->inbound_pending_syms[index];
+        /*if (index < 4)*/ log_info("RX symbol: %f, %f", sym->real, sym->imag);
+        complex float symbol = CMPLXF(sym->real, sym->imag);
+        *(complex float*)&obj->inbound_pending_syms[index] = symbol * cmplx(-ROT45); //CMPLXF(cosf(-M_PI/4), sinf(-M_PI/4));
 
-        //float* sym = (float*)&obj->inbound_pending_syms[index];
-        obj->inbound_pending_amps[index] = rms; // syms[2*index]*syms[2*index] + syms[2*index + 1]*syms[2*index + 1]; //cabsf(obj->inbound_pending_syms[index]);
+        obj->inbound_pending_amps[index] = rms; //sqrt(obj->inbound_pending_syms[index].real * obj->inbound_pending_syms[index].real + obj->inbound_pending_syms[index].imag * obj->inbound_pending_syms[index].imag); 
         /*if (index < 4)*/ log_info("RX symbol rotated: %f, %f, amp: %f", 
-            crealf(obj->inbound_pending_syms[index]), 
-            cimagf(obj->inbound_pending_syms[index]), 
+            obj->inbound_pending_syms[index].real, 
+            obj->inbound_pending_syms[index].imag, 
             obj->inbound_pending_amps[index]);
-        #endif
     }
 
     fwrite(obj->inbound_pending_syms, sizeof(float), LDPC_TOTAL_SIZE_BITS, fp2);
@@ -265,7 +260,7 @@ void rade_text_rx(rade_text_t ptr, float* syms, int symSize)
     memset(rawStr, 0, RADE_TEXT_MAX_RAW_LENGTH + 1);
     memset(decodedStr, 0, RADE_TEXT_MAX_RAW_LENGTH + 1);
 
-    if (rade_text_ldpc_decode(obj, rawStr) != 0) {
+    if (rade_text_ldpc_decode(obj, rawStr, rms) != 0) {
         // BER is under limits.
         convert_ota_string_to_callsign_(&rawStr[RADE_TEXT_CRC_LENGTH],
                                         &decodedStr[RADE_TEXT_CRC_LENGTH],
@@ -366,8 +361,8 @@ void rade_text_generate_tx_string(
 
   // Interleave the bits together to enhance fading performance.
   memcpy(impl->tx_text, tmpbits, LDPC_TOTAL_SIZE_BITS);
-  /*gp_interleave_bits(&impl->tx_text[0], tmpbits,
-                     LDPC_TOTAL_SIZE_BITS / 2);*/
+  //gp_interleave_bits(&impl->tx_text[0], tmpbits,
+  //                   LDPC_TOTAL_SIZE_BITS / 2);
 
   // Generate floats based on the bits.
   char debugString[256];

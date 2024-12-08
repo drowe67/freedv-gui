@@ -55,7 +55,7 @@ DefineUnitTest(TapTest)
 if(LINUX)
 # TBD - won't execute on macOS just yet.
 DefineUnitTest(RadeTextTest)
-target_link_libraries(RadeTextTest PRIVATE codec2 rade opus wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
+target_link_libraries(RadeTextTest PRIVATE ${FREEDV_LINK_LIBS} codec2 rade opus) 
 endif(LINUX)
 
 endif(UNITTEST)
