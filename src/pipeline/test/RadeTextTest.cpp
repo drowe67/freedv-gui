@@ -3,6 +3,7 @@
 #include "../RADEReceiveStep.h"
 #include "../RADETransmitStep.h"
 #include "../rade_text.h"
+#include "../../util/logging/ulog.h"
 
 bool testPassed = false;
 wxString utRxFeatureFile;
@@ -10,7 +11,7 @@ wxString utTxFeatureFile;
 
 void OnRadeTextRx(rade_text_t rt, const char* txt_ptr, int length, void* state) 
 {
-    fprintf(stderr, "Callsign received: %s", txt_ptr);
+    log_info("Callsign received: %s", txt_ptr);
     testPassed = !strncmp(txt_ptr, "K6AQ", length);
 }
 
@@ -44,6 +45,7 @@ int main()
         txSyms[index] = index % 2 ? 1 : 0;
     }
     rade_text_generate_tx_string(txt, "K6AQ", 4, txSyms);
+    rade_text_set_rx_callback(txt, OnRadeTextRx, nullptr);
     rade_tx_set_eoo_bits(rade, txSyms);
 
     // Initialize RADE steps
