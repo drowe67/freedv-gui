@@ -334,8 +334,11 @@ void MainApp::UnitTest_()
         
         // Stop transmitting
         log_info("Firing PTT");
+        endingTx = true;
+        std::this_thread::sleep_for(1s);
         CallAfter([&]() {
             frame->m_btnTogPTT->SetValue(false);
+            endingTx = true;
             wxCommandEvent* rxEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
             rxEvent->SetEventObject(frame->m_btnTogPTT);
             frame->OnTogBtnPTT(*rxEvent);
@@ -346,7 +349,7 @@ void MainApp::UnitTest_()
         sim.MouseClick();*/
         
         // Wait 5 seconds for FreeDV to stop
-        //std::this_thread::sleep_for(5s);
+        std::this_thread::sleep_for(5s);
     }
     else
     {
