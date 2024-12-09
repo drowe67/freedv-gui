@@ -78,6 +78,12 @@ FDV_PID=$!
 # Stop recording, play back in RX mode
 kill $RECORD_PID
 
+if [ "$1" == "noise" ]; then
+    # Add noise to recording to test performance
+    sox $(pwd)/test.wav -p synth whitenoise vol 0.395 | sox -m $(pwd)/test.wav - $(pwd)/testwithnoise.wav
+    mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
+fi
+
 $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADE -rxfile $(pwd)/test.wav
 
 # Clean up PulseAudio virtual devices
