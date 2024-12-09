@@ -731,4 +731,8 @@ DefineAudioTest(RADE)
 DefineAudioTest(700D)
 DefineAudioTest(700E)
 DefineAudioTest(1600)
+
+add_test(NAME rade_reporting COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh)
+set_tests_properties(rade_reporting PROPERTIES PASS_REGULAR_EXPRESSION "Adding callsign ZZ0ZZZ @ SNR")
+
 endif(UNITTEST)
