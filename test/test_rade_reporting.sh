@@ -78,9 +78,9 @@ FDV_PID=$!
 # Stop recording, play back in RX mode
 kill $RECORD_PID
 
-if [ "$1" == "noise" ]; then
+if [ "$1" != "" ]; then
     # Add noise to recording to test performance
-    sox $(pwd)/test.wav -p synth whitenoise vol 0.395 | sox -m $(pwd)/test.wav - $(pwd)/testwithnoise.wav
+    sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -18 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
     mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
 fi
 
