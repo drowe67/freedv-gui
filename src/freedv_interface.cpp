@@ -34,6 +34,9 @@
 
 using namespace std::placeholders;
 
+#include <wx/string.h>
+extern wxString utFreeDVMode;
+
 static const char* GetCurrentModeStrImpl_(int mode)
 {
     switch(mode)
@@ -176,6 +179,11 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
                 assert(radeTextPtr_ != nullptr);
 
                 rade_text_set_rx_callback(radeTextPtr_, &FreeDVInterface::OnRadeTextRx_, this);
+
+                if (utFreeDVMode != "")
+                {
+                    rade_text_enable_stats_output(radeTextPtr_, true);
+                }
             }
 
             float zeros[320] = {0};

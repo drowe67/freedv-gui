@@ -43,6 +43,8 @@
 /* Two bytes of text/CRC equal four bytes of LDPC(112,56). */
 #define RADE_TEXT_BYTES_PER_ENCODED_SEGMENT (8)
 
+static char LastEncodedLDPC[LDPC_TOTAL_SIZE_BITS];
+
 /* Internal definition of rade_text_t. */
 typedef struct
 {
@@ -58,6 +60,7 @@ typedef struct
     float incomingData[LDPC_TOTAL_SIZE_BITS];
 
     struct LDPC ldpc;
+    int enableStats;
 } rade_text_impl_t;
 
 // 6 bit character set for text field use:
@@ -183,7 +186,37 @@ static int rade_text_ldpc_decode(rade_text_impl_t *obj, char *dest, float meanAm
     float ber_est = (float)(obj->ldpc.NumberParityBits - parityCheckCount) / obj->ldpc.NumberParityBits;
     int result = (ber_est < 0.2);
 
-    log_info("BER est: %f", ber_est);
+    log_info("Estimated BER: %f", ber_est);
+
+    // Calculate raw/coded BER
+    if (obj->enableStats)
+    {
+        int bitsRaw = 0;
+        int bitsCoded = 0;
+        int errorsRaw = 0;
+        int errorsCoded = 0;
+        for (int index = 0; index < LDPC_TOTAL_SIZE_BITS; index++)
+        {
+            bitsRaw++;
+            if (index < (LDPC_TOTAL_SIZE_BITS / 2))
+            {
+                bitsCoded++;
+            }
+            if (output[index] != LastEncodedLDPC[index])
+            {
+                errorsRaw++;
+                if (index < (LDPC_TOTAL_SIZE_BITS / 2))
+                {
+                    errorsCoded++;
+                }
+            }
+        }
+
+        log_info("Raw Tbits:   %6d Terr: %6d BER: %4.3f", bitsRaw, errorsRaw, (float)errorsRaw / (bitsRaw + 1E-12));
+        float coded_ber = (float)errorsCoded / (bitsCoded + 1E-12);
+        log_info("Coded Tbits: %6d Terr: %6d BER: %4.3f", bitsCoded, errorsCoded, coded_ber);
+    }
+
     if (result)
     {
         memset(dest, 0, RADE_TEXT_BYTES_PER_ENCODED_SEGMENT);
@@ -337,6 +370,7 @@ void rade_text_generate_tx_string(rade_text_t ptr, const char *str, int strlengt
 
     // Interleave the bits together to enhance fading performance.
     memcpy(impl->tx_text, tmpbits, LDPC_TOTAL_SIZE_BITS);
+    memcpy(LastEncodedLDPC, tmpbits, LDPC_TOTAL_SIZE_BITS);
     gp_interleave_bits(&impl->tx_text[0], tmpbits, LDPC_TOTAL_SIZE_BITS / 2);
 
     // Generate floats based on the bits.
@@ -378,4 +412,12 @@ void rade_text_set_rx_callback(rade_text_t ptr, on_text_rx_t text_rx_fn, void *s
 
     impl->text_rx_callback = text_rx_fn;
     impl->callback_state = state;
+}
+
+void rade_text_enable_stats_output(rade_text_t ptr, int enable)
+{
+    rade_text_impl_t *impl = (rade_text_impl_t *)ptr;
+    assert(impl != NULL);
+
+    impl->enableStats = enable;
 }

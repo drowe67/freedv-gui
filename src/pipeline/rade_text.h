@@ -49,6 +49,9 @@ extern "C"
     /* Decode received symbols from RADE decoder. */
     void rade_text_rx(rade_text_t ptr, float *syms, int symSize);
 
+    /* Whether to enable output of stats (i.e. BER). */
+    void rade_text_enable_stats_output(rade_text_t ptr, int enable);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
