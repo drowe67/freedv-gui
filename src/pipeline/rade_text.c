@@ -371,7 +371,7 @@ void rade_text_generate_tx_string(rade_text_t ptr, const char *str, int strlengt
 
     // Interleave the bits together to enhance fading performance.
     memcpy(impl->tx_text, tmpbits, LDPC_TOTAL_SIZE_BITS);
-    for (int index = 0; index < LDPC_TOTAL_SIZE_BITS; index++)
+    for (int index = 0; index < LDPC_TOTAL_SIZE_BITS / 2; index++)
     {
         char *ptr = &impl->tx_text[2 * index];
         if (*ptr == 0 && *(ptr + 1) == 0)
