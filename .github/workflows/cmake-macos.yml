@@ -23,7 +23,7 @@ jobs:
     - name: Install packages
       shell: bash
       working-directory: ${{github.workspace}}
-      run: brew install automake libtool numpy sox
+      run: brew install automake libtool numpy sox octave
 
     - name: Install virtual audio devices
       shell: bash
