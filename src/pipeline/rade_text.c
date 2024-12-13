@@ -43,7 +43,7 @@
 /* Two bytes of text/CRC equal four bytes of LDPC(112,56). */
 #define RADE_TEXT_BYTES_PER_ENCODED_SEGMENT (8)
 
-static char LastEncodedLDPC[LDPC_TOTAL_SIZE_BITS];
+static float LastEncodedLDPC[LDPC_TOTAL_SIZE_BITS];
 
 /* Internal definition of rade_text_t. */
 typedef struct
@@ -202,7 +202,8 @@ static int rade_text_ldpc_decode(rade_text_impl_t *obj, char *dest, float meanAm
             {
                 bitsCoded++;
             }
-            if (output[index] != LastEncodedLDPC[index])
+            int err = (LastEncodedLDPC[index] * *((float*)obj->inbound_pending_syms + index)) < 0;
+            if (err)
             {
                 errorsRaw++;
                 if (index < (LDPC_TOTAL_SIZE_BITS / 2))
@@ -370,7 +371,31 @@ void rade_text_generate_tx_string(rade_text_t ptr, const char *str, int strlengt
 
     // Interleave the bits together to enhance fading performance.
     memcpy(impl->tx_text, tmpbits, LDPC_TOTAL_SIZE_BITS);
-    memcpy(LastEncodedLDPC, tmpbits, LDPC_TOTAL_SIZE_BITS);
+    for (int index = 0; index < LDPC_TOTAL_SIZE_BITS; index++)
+    {
+        char *ptr = &impl->tx_text[2 * index];
+        if (*ptr == 0 && *(ptr + 1) == 0)
+        {
+            LastEncodedLDPC[2 * index] = 1;
+            LastEncodedLDPC[2 * index + 1] = 0;
+        }
+        else if (*ptr == 0 && *(ptr + 1) == 1)
+        {
+            LastEncodedLDPC[2 * index] = 0;
+            LastEncodedLDPC[2 * index + 1] = 1;
+        }
+        else if (*ptr == 1 && *(ptr + 1) == 0)
+        {
+            LastEncodedLDPC[2 * index] = 0;
+            LastEncodedLDPC[2 * index + 1] = -1;
+        }
+        else if (*ptr == 1 && *(ptr + 1) == 1)
+        {
+            LastEncodedLDPC[2 * index] = -1;
+            LastEncodedLDPC[2 * index + 1] = 0;
+        }
+    }
+
     gp_interleave_bits(&impl->tx_text[0], tmpbits, LDPC_TOTAL_SIZE_BITS / 2);
 
     // Generate floats based on the bits.
