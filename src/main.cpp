@@ -196,6 +196,7 @@ wxString utRxFile;
 wxString utTxFeatureFile;
 wxString utRxFeatureFile;
 int utTxTimeSeconds;
+int utTxAttempts;
 
 // WxWidgets - initialize the application
 
@@ -297,59 +298,62 @@ void MainApp::UnitTest_()
     std::this_thread::sleep_for(5s);
     
     if (testName == "tx")
-    {        
-        // Fire event to begin TX
-        //sim.MouseMove(frame->m_btnTogPTT->GetScreenPosition());
-        //sim.MouseClick();
-        log_info("Firing PTT");
-        CallAfter([&]() {
-            frame->m_btnTogPTT->SetValue(true);
-            wxCommandEvent* txEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
-            txEvent->SetEventObject(frame->m_btnTogPTT);
-            //QueueEvent(txEvent);
-            frame->OnTogBtnPTT(*txEvent);
-            delete txEvent;
-        });
-        
-        if (utTxFile != "")
+    {
+        for (int numTimes = 0; numTimes < utTxAttempts; numTimes++)
         {
-            // Transmit until file has finished playing
-            SF_INFO     sfInfo;
-            sfInfo.format = 0;
-            g_sfPlayFile = sf_open((const char*)utTxFile.ToUTF8(), SFM_READ, &sfInfo);
-            g_sfTxFs = sfInfo.samplerate;
-            g_loopPlayFileToMicIn = false;
-            g_playFileToMicIn = true;
-
-            while (g_playFileToMicIn)
+            // Fire event to begin TX
+            //sim.MouseMove(frame->m_btnTogPTT->GetScreenPosition());
+            //sim.MouseClick();
+            log_info("Firing PTT");
+            CallAfter([&]() {
+                frame->m_btnTogPTT->SetValue(true);
+                wxCommandEvent* txEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
+                txEvent->SetEventObject(frame->m_btnTogPTT);
+                //QueueEvent(txEvent);
+                frame->OnTogBtnPTT(*txEvent);
+                delete txEvent;
+            });
+            
+            if (utTxFile != "")
             {
-                std::this_thread::sleep_for(20ms);
-            } 
-        }
-        else
-        {
-            // Transmit for user given time period (default 60 seconds)
-            std::this_thread::sleep_for(std::chrono::seconds(utTxTimeSeconds));
-        }
-        
-        // Stop transmitting
-        log_info("Firing PTT");
-        endingTx = true;
-        std::this_thread::sleep_for(1s);
-        CallAfter([&]() {
-            frame->m_btnTogPTT->SetValue(false);
+                // Transmit until file has finished playing
+                SF_INFO     sfInfo;
+                sfInfo.format = 0;
+                g_sfPlayFile = sf_open((const char*)utTxFile.ToUTF8(), SFM_READ, &sfInfo);
+                g_sfTxFs = sfInfo.samplerate;
+                g_loopPlayFileToMicIn = false;
+                g_playFileToMicIn = true;
+
+                while (g_playFileToMicIn)
+                {
+                    std::this_thread::sleep_for(20ms);
+                } 
+            }
+            else
+            {
+                // Transmit for user given time period (default 60 seconds)
+                std::this_thread::sleep_for(std::chrono::seconds(utTxTimeSeconds));
+            }
+            
+            // Stop transmitting
+            log_info("Firing PTT");
             endingTx = true;
-            wxCommandEvent* rxEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
-            rxEvent->SetEventObject(frame->m_btnTogPTT);
-            frame->OnTogBtnPTT(*rxEvent);
-            delete rxEvent;
-            //QueueEvent(rxEvent);
-        });
-        /*sim.MouseMove(frame->m_btnTogPTT->GetScreenPosition());
-        sim.MouseClick();*/
-        
-        // Wait 5 seconds for FreeDV to stop
-        std::this_thread::sleep_for(5s);
+            std::this_thread::sleep_for(1s);
+            CallAfter([&]() {
+                frame->m_btnTogPTT->SetValue(false);
+                endingTx = true;
+                wxCommandEvent* rxEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_btnTogPTT->GetId());
+                rxEvent->SetEventObject(frame->m_btnTogPTT);
+                frame->OnTogBtnPTT(*rxEvent);
+                delete rxEvent;
+                //QueueEvent(rxEvent);
+            });
+            /*sim.MouseMove(frame->m_btnTogPTT->GetScreenPosition());
+            sim.MouseClick();*/
+            
+            // Wait 5 seconds for FreeDV to stop
+            std::this_thread::sleep_for(5s);
+        }
     }
     else
     {
@@ -418,6 +422,7 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
     parser.AddOption("rxfeaturefile", wxEmptyString, "Capture RX features from RADE decoder into the provided file.");
     parser.AddOption("txfeaturefile", wxEmptyString, "Capture TX features from FARGAN encoder into the provided file.");
     parser.AddOption("txtime", "60", "In UT mode, the amount of time to transmit (default 60 seconds)", wxCMD_LINE_VAL_NUMBER);
+    parser.AddOption("txattempts", "1", "In UT mode, the number of times to transmit (default 1)", wxCMD_LINE_VAL_NUMBER);
 }
 
 bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
@@ -466,6 +471,11 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         if (parser.Found("txtime", (long*)&utTxTimeSeconds))
         {
             log_info("Will transmit for %d seconds", utTxTimeSeconds);
+        }
+
+        if (parser.Found("txattempts", (long*)&utTxAttempts))
+        {
+            log_info("Will transmit %d time(s)", utTxAttempts);
         }
     }
     

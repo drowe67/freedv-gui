@@ -66,7 +66,12 @@ fi
 RECORD_PID=$!
 
 # Start FreeDV in test mode to record TX
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADE -txtime 5 2>&1 | tee tmp.log
+if [ "$1" != "" ]; then
+    TX_ARGS="-txtime 1 -txattempts 4 "
+else
+    TX_ARGS="-txtime 5 "
+fi
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADE $TX_ARGS 2>&1 | tee tmp.log
 
 FDV_PID=$!
 #sleep 30 
@@ -79,8 +84,14 @@ FDV_PID=$!
 kill $RECORD_PID
 
 if [ "$1" != "" ]; then
+    FADING_DIR="$(pwd)/fading"
+    if [ ! -d "$FADING_DIR" ]; then
+        mkdir $FADING_DIR
+        (cd $1/../unittest && ./fading_files.sh $FADING_DIR)
+    fi
     # Add noise to recording to test performance
-    sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -18 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+    sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -24 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+    #sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -16 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
     mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
 fi
 
