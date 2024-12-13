@@ -34,8 +34,6 @@ int main()
     LPCNetEncState *encState;
     FARGANState fargan;
 
-    ulog_set_lock(nullptr, nullptr);
-
     // Initialize FARGAN
     float zeros[320] = {0};
     float in_features[5*NB_TOTAL_FEATURES] = {0};
