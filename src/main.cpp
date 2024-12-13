@@ -299,6 +299,7 @@ void MainApp::UnitTest_()
     
     if (testName == "tx")
     {
+        log_info("Transmitting %d times", utTxAttempts);
         for (int numTimes = 0; numTimes < utTxAttempts; numTimes++)
         {
             // Fire event to begin TX
@@ -472,11 +473,19 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         {
             log_info("Will transmit for %d seconds", utTxTimeSeconds);
         }
+	else
+	{
+            utTxTimeSeconds = 60;
+	}
 
         if (parser.Found("txattempts", (long*)&utTxAttempts))
         {
             log_info("Will transmit %d time(s)", utTxAttempts);
         }
+	else
+	{
+            utTxAttempts = 1;
+	}
     }
     
     if (parser.Found("rxfeaturefile", &utRxFeatureFile))
