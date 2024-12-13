@@ -66,8 +66,8 @@ fi
 RECORD_PID=$!
 
 # Start FreeDV in test mode to record TX
-if [ "$1" != "" ]; then
-    TX_ARGS="-txtime 1 -txattempts 4 "
+if [ "$2" == "mpp" ]; then
+    TX_ARGS="-txtime 1 -txattempts 6 "
 else
     TX_ARGS="-txtime 5 "
 fi
@@ -90,8 +90,11 @@ if [ "$1" != "" ]; then
         (cd $1/../unittest && ./fading_files.sh $FADING_DIR)
     fi
     # Add noise to recording to test performance
-    sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -24 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
-    #sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -16 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+    if [ "$2" == "mpp" ]; then
+        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -24 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+    elif [ "$2" == "awgn" ]; then
+        sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -18 | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
+    fi
     mv $(pwd)/testwithnoise.wav $(pwd)/test.wav
 fi
 
