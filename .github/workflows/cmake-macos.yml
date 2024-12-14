@@ -25,6 +25,11 @@ jobs:
       working-directory: ${{github.workspace}}
       run: brew install automake libtool numpy sox octave
 
+    - name: Install octave-signal
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: octave-cli --eval "pkg install signal"
+
     - name: Install virtual audio devices
       shell: bash
       working-directory: ${{github.workspace}}
