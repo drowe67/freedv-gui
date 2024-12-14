@@ -27,6 +27,8 @@
 #include "codec2_fifo.h"
 #include "RADETransmitStep.h"
 
+const int RADE_SCALING_FACTOR = 16383;
+
 extern wxString utTxFeatureFile;
 
 RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
@@ -80,6 +82,23 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
 {
     short* outputSamples = nullptr;
     *numOutputSamples = 0;
+
+    if (numInputSamples == 0)
+    {
+        // Special case logic for EOO -- make sure we only send 20ms worth at a time
+        *numOutputSamples = std::min(codec2_fifo_used(outputSampleFifo_), (int)(RADE_MODEM_SAMPLE_RATE * .02));
+        if (*numOutputSamples > 0)
+        {
+            outputSamples = new short[*numOutputSamples];
+            assert(outputSamples != nullptr);
+
+            codec2_fifo_read(outputSampleFifo_, outputSamples, *numOutputSamples);
+
+            log_info("Returning %d EOO samples (remaining in FIFO: %d)", *numOutputSamples, codec2_fifo_used(outputSampleFifo_));
+        }
+
+        return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());;
+    }
     
     short* inputPtr = inputSamples.get();
     while (numInputSamples > 0 && inputPtr != nullptr)
@@ -123,7 +142,7 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
                 for (int index = 0; index < numOutputSamples; index++)
                 {
                     // We only need the real component for TX.
-                    radeOutShort[index] = radeOut[index].real * 16383;
+                    radeOutShort[index] = radeOut[index].real * RADE_SCALING_FACTOR;
                 }
                 codec2_fifo_write(outputSampleFifo_, radeOutShort, numOutputSamples);
             }
@@ -153,8 +172,12 @@ void RADETransmitStep::restartVocoder()
 
     for (int index = 0; index < numEOOSamples; index++)
     {
-        eooOutShort[index] = eooOut[index].real * 32767;
+        eooOutShort[index] = eooOut[index].real * RADE_SCALING_FACTOR;
     }
 
-    codec2_fifo_write(outputSampleFifo_, eooOutShort, numEOOSamples);
+    log_info("Queueing %d EOO samples to output FIFO", numEOOSamples);
+    if (codec2_fifo_write(outputSampleFifo_, eooOutShort, numEOOSamples) != 0)
+    {
+        log_warn("Could not queue EOO samples (remaining space in FIFO = %d)", codec2_fifo_free(outputSampleFifo_));
+    }
 }

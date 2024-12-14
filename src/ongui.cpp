@@ -907,6 +907,7 @@ void MainFrame::togglePTT(void) {
             auto diff = highResClock.now() - before;
             if (diff >= std::chrono::milliseconds(1000) || (g_outfifo1_empty != sample))
             {
+                log_info("All TX finished, going out of PTT");
                 break;
             }
 
