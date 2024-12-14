@@ -31,7 +31,9 @@ jobs:
       run: |
         # make sure gfortran is available
         sudo ln -s /usr/local/bin/gfortran-14 /usr/local/bin/gfortran
+        ls /usr/locla/bin/gfortran*
         sudo mkdir /usr/local/gfortran
+        ls /usr/local/Cellar
         sudo ln -s /usr/local/Cellar/gcc@14/*/lib/gcc/14 /usr/local/gfortran/lib
         gfortran --version
         octave-cli --eval "pkg install -forge control; pkg install -forge signal"
