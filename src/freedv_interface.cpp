@@ -152,7 +152,7 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
             // TBD - modelFile may be used by RADE in the future!
             char modelFile[1];
             modelFile[0] = 0;
-            rade_ = rade_open(modelFile, RADE_USE_C_ENCODER | RADE_USE_C_DECODER);
+            rade_ = rade_open(modelFile, RADE_USE_C_ENCODER | RADE_USE_C_DECODER | (wxGetApp().appConfiguration.debugVerbose ? 0 : RADE_VERBOSE_0));
             assert(rade_ != nullptr);
 
             float zeros[320] = {0};
