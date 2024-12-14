@@ -143,6 +143,10 @@ if(APPLE)
         set(LPCNET_DYLIBBUNDLER_ARG -s ${LPCNET_BUILD_DIR}/src)
     endif(NOT LPCNET_DISABLE)
 
+    if(NOT MACOS_CODESIGN_IDENTITY)
+        set(MACOS_CODESIGN_IDENTITY -)
+    endif(NOT MACOS_CODESIGN_IDENTITY)
+
     add_custom_command(
         TARGET FreeDV
         POST_BUILD
@@ -151,25 +155,38 @@ if(APPLE)
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/freedv.icns FreeDV.app/Contents/Resources
         COMMAND rm ARGS -rf FreeDV.app/Contents/Frameworks
         COMMAND mkdir ARGS FreeDV.app/Contents/Frameworks
-        COMMAND cp ARGS -r ${Python3_ROOT_DIR}/../../../Python.framework FreeDV.app/Contents/Frameworks
+        COMMAND cp ARGS -a ${Python3_ROOT_DIR}/../../../Python.framework FreeDV.app/Contents/Frameworks
         COMMAND install_name_tool ARGS -add_rpath @loader_path/../Frameworks/Python.framework FreeDV.app/Contents/libs/librade*.dylib
         COMMAND cp ARGS ../rade_src/radae_*e.py FreeDV.app/Contents/Resources
-        COMMAND cp ARGS -r ../rade_src/radae FreeDV.app/Contents/Resources
-        COMMAND cp ARGS -r ../rade_src/model19_check3 FreeDV.app/Contents/Resources
+        COMMAND cp ARGS -a ../rade_src/radae FreeDV.app/Contents/Resources
+        COMMAND cp ARGS -a ../rade_src/model19_check3 FreeDV.app/Contents/Resources
         
         # Precompile Python code to improve startup time
         COMMAND cd FreeDV.app/Contents/Resources && ../Frameworks/Python.framework/Versions/Current/bin/python3 -c "import radae_txe\; import radae_rxe\;" && cd ../../..
         
         # Codesign binary so that it can execute
-        COMMAND codesign --force --options runtime --timestamp --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/entitlements.plist --sign - ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app
+        COMMAND codesign --force --options runtime --timestamp --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/entitlements.plist --sign ${MACOS_CODESIGN_IDENTITY} ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app `find ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app -name '*.so' -o -name '*.dylib'` `find ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/Versions/3.12/bin -name 'Python' -o -name 'python3.12*'` `find ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/ -name 'Python'` ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/MacOS/FreeDV ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/torch/bin/* ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/Versions/3.12/Python
     )
-    
-    add_custom_target(dmg
-        COMMAND mkdir dist_tmp
-        COMMAND cp -r FreeDV.app dist_tmp 
-        COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO -fs HFS+ ./FreeDV.dmg
-        COMMAND rm -rf dist_tmp
-        DEPENDS FreeDV)
+
+    if (MACOS_CODESIGN_KEYCHAIN_PROFILE)
+        add_custom_target(release
+            COMMAND /usr/bin/ditto -c -k --keepParent ./FreeDV.app FreeDV-appbundle.zip
+            COMMAND xcrun notarytool submit ./FreeDV-appbundle.zip --keychain-profile ${MACOS_CODESIGN_KEYCHAIN_PROFILE} --wait 
+            COMMAND rm -rf FreeDV-appbundle.zip
+            COMMAND xcrun stapler staple ./FreeDV.app
+            COMMAND mkdir dist_tmp
+            COMMAND cp -r FreeDV.app dist_tmp 
+            COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO -fs HFS+ ./FreeDV.dmg
+            COMMAND rm -rf dist_tmp
+            DEPENDS FreeDV)
+    else(MACOS_CODESIGN_KEYCHAIN_PROFILE)
+        add_custom_target(release
+            COMMAND mkdir dist_tmp
+            COMMAND cp -r FreeDV.app dist_tmp 
+            COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO -fs HFS+ ./FreeDV.dmg
+            COMMAND rm -rf dist_tmp
+            DEPENDS FreeDV)
+    endif (MACOS_CODESIGN_KEYCHAIN_PROFILE)
 endif(APPLE)
 
 # Custom commands for signing Windows binaries
