@@ -28,7 +28,7 @@ jobs:
     - name: Install octave-signal
       shell: bash
       working-directory: ${{github.workspace}}
-      run: octave-cli --eval "pkg install signal"
+      run: octave-cli --eval "pkg install -forge signal"
 
     - name: Install virtual audio devices
       shell: bash
