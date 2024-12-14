@@ -23,7 +23,7 @@ jobs:
     - name: Install packages
       shell: bash
       working-directory: ${{github.workspace}}
-      run: brew install automake libtool numpy sox octave
+      run: brew install automake libtool numpy sox octave gcc
 
     - name: Install octave-signal
       shell: bash
