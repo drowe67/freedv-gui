@@ -44,6 +44,7 @@
 #define RADE_TEXT_BYTES_PER_ENCODED_SEGMENT (8)
 
 static float LastEncodedLDPC[LDPC_TOTAL_SIZE_BITS];
+static char LastLDPCAsBits[LDPC_TOTAL_SIZE_BITS];
 
 /* Internal definition of rade_text_t. */
 typedef struct
@@ -198,18 +199,20 @@ static int rade_text_ldpc_decode(rade_text_impl_t *obj, char *dest, float meanAm
         for (int index = 0; index < LDPC_TOTAL_SIZE_BITS; index++)
         {
             bitsRaw++;
-            if (index < (LDPC_TOTAL_SIZE_BITS / 2))
-            {
-                bitsCoded++;
-            }
-            int err = (LastEncodedLDPC[index] * *((float*)obj->inbound_pending_syms + index)) < 0;
+            int err = (LastEncodedLDPC[index] * (*((float*)obj->inbound_pending_syms + index))) < 0;
             if (err)
             {
                 errorsRaw++;
-                if (index < (LDPC_TOTAL_SIZE_BITS / 2))
+            }
+
+            if (index < LDPC_TOTAL_SIZE_BITS / 2)
+            {
+                bitsCoded++;
+                err = LastLDPCAsBits[index] != output[index];
+                if (err)
                 {
                     errorsCoded++;
-                }
+                } 
             }
         }
 
@@ -368,6 +371,7 @@ void rade_text_generate_tx_string(rade_text_t ptr, const char *str, int strlengt
     memset(impl->tx_text, 0, LDPC_TOTAL_SIZE_BITS);
     memcpy(&tmpbits[0], &ibits[0], LDPC_TOTAL_SIZE_BITS / 2);
     memcpy(&tmpbits[LDPC_TOTAL_SIZE_BITS / 2], &pbits[0], LDPC_TOTAL_SIZE_BITS / 2);
+    memcpy(LastLDPCAsBits, tmpbits, LDPC_TOTAL_SIZE_BITS);
 
     // Interleave the bits together to enhance fading performance.
     memcpy(impl->tx_text, tmpbits, LDPC_TOTAL_SIZE_BITS);
