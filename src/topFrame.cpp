@@ -671,7 +671,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     modeBox = new wxStaticBox(m_panel, wxID_ANY, _("&Mode"), wxDefaultPosition, wxSize(100,-1));
     sbSizer_mode = new wxStaticBoxSizer(modeBox, wxVERTICAL);
 
-    m_rbRADE = new wxRadioButton( modeBox, wxID_ANY, wxT("RADE"), wxDefaultPosition, wxDefaultSize,  wxRB_GROUP);
+    m_rbRADE = new wxRadioButton( modeBox, wxID_ANY, wxT("RADEV1"), wxDefaultPosition, wxDefaultSize,  wxRB_GROUP);
     sbSizer_mode->Add(m_rbRADE, 0, wxALIGN_LEFT|wxALL, 1); 
     m_rb700d = new wxRadioButton( modeBox, wxID_ANY, wxT("700D"), wxDefaultPosition, wxDefaultSize,  0);
     sbSizer_mode->Add(m_rb700d, 0, wxALIGN_LEFT|wxALL, 1);
