@@ -44,11 +44,11 @@ param (
     # The sound device to emit TX audio to.
     $ComputerToRadioDevice,
     
-    [ValidateSet("RADE", "700D", "700E", "1600")]
+    [ValidateSet("RADEV1", "700D", "700E", "1600")]
     [ValidateNotNullOrEmpty()]
     [string]
     # The FreeDV mode to use for testing.
-    $ModeToTest="RADE", 
+    $ModeToTest="RADEV1", 
 
     [int] 
     # The number of times to execute the test.
