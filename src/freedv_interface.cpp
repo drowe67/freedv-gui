@@ -58,7 +58,7 @@ static const char* GetCurrentModeStrImpl_(int mode)
         case FREEDV_MODE_800XA:
             return "800XA";
         case FREEDV_MODE_RADE:
-            return "RADE";
+            return "RADEV1";
         default:
             return "unk";
     }

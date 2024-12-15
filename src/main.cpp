@@ -243,7 +243,7 @@ void MainApp::UnitTest_()
 
     // Select FreeDV mode. Note, 2020 is deprecated so not testable here.
     wxRadioButton* modeBtn = nullptr;
-    if (utFreeDVMode == "RADE")
+    if (utFreeDVMode == "RADEV1")
     {
         modeBtn = frame->m_rbRADE;
     }
@@ -2203,7 +2203,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     if (eventObject != nullptr)
     {
         std::string label = (const char*)eventObject->GetLabel().ToUTF8();
-        if (label == "700D" || label == "700E" || label == "1600" || label == "RADE")
+        if (label == "700D" || label == "700E" || label == "1600" || label == "RADEV1")
         {
             hiddenModeToSet = m_hiddenMode2;
         } 
