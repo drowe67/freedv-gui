@@ -1908,7 +1908,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     {
                         long long freqLongLong = freq;
                         log_info(
-                            "Adding callsign %s @ SNR %d, freq %lld to PSK Reporter.\n", 
+                            "Reporting callsign %s @ SNR %d, freq %lld to reporting services.\n", 
                             pendingCallsign.c_str(), 
                             pendingSnr,
                             freqLongLong);
