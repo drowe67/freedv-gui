@@ -174,6 +174,33 @@ static int rade_text_ldpc_decode(rade_text_impl_t *obj, char *dest, float meanAm
     unsigned char output[LDPC_TOTAL_SIZE_BITS];
     int parityCheckCount = 0;
 
+    // Calculate raw BER.
+    int bitsRaw = 0;
+    int errorsRaw = 0;
+    if (obj->enableStats)
+    {
+        /*FILE* fp = fopen("tx_bits.f32", "wb");
+        assert(fp != NULL);
+        fwrite(LastEncodedLDPC, sizeof(float), LDPC_TOTAL_SIZE_BITS, fp);
+        fclose(fp);
+        fp = fopen("rx_bits.f32", "wb");
+        assert(fp != NULL);
+        fwrite(obj->inbound_pending_syms, sizeof(float), LDPC_TOTAL_SIZE_BITS, fp);
+        fclose(fp);*/
+
+        for (int index = 0; index < LDPC_TOTAL_SIZE_BITS; index++)
+        {
+            bitsRaw++;
+            float* pendingFloats = (float*)obj->inbound_pending_syms;
+            //log_info("LastEncodedLDPC[%d] = %f, pendingFloats[%d] = %f", index, LastEncodedLDPC[index], index, pendingFloats[index]);
+            int err = (LastEncodedLDPC[index] * pendingFloats[index]) < 0;
+            if (err)
+            {
+                errorsRaw++;
+            }
+        }
+    }
+
     // Use soft decision for the LDPC decoder.
     int Npayloadsymsperpacket = LDPC_TOTAL_SIZE_BITS / 2;
     float EsNo = 3.0; // note: constant from freedv_700.c
@@ -189,31 +216,19 @@ static int rade_text_ldpc_decode(rade_text_impl_t *obj, char *dest, float meanAm
 
     log_info("Estimated BER: %f", ber_est);
 
-    // Calculate raw/coded BER
     if (obj->enableStats)
     {
-        int bitsRaw = 0;
+        // Calculate coded BER.
         int bitsCoded = 0;
-        int errorsRaw = 0;
         int errorsCoded = 0;
-        for (int index = 0; index < LDPC_TOTAL_SIZE_BITS; index++)
+        for (int index = 0; index < LDPC_TOTAL_SIZE_BITS / 2; index++)
         {
-            bitsRaw++;
-            int err = (LastEncodedLDPC[index] * (*((float*)obj->inbound_pending_syms + index))) < 0;
+            bitsCoded++;
+            int err = LastLDPCAsBits[index] != output[index];
             if (err)
             {
-                errorsRaw++;
-            }
-
-            if (index < LDPC_TOTAL_SIZE_BITS / 2)
-            {
-                bitsCoded++;
-                err = LastLDPCAsBits[index] != output[index];
-                if (err)
-                {
-                    errorsCoded++;
-                } 
-            }
+                errorsCoded++;
+            } 
         }
 
         log_info("Raw Tbits:   %6d Terr: %6d BER: %4.3f", bitsRaw, errorsRaw, (float)errorsRaw / (bitsRaw + 1E-12));
