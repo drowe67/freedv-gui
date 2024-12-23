@@ -41,7 +41,7 @@ extern "C"
     void rade_text_destroy(rade_text_t ptr);
 
     /* Generates float array for use with RADE EOO functions. */
-    void rade_text_generate_tx_string(rade_text_t ptr, const char *str, int strlength, float *syms);
+    void rade_text_generate_tx_string(rade_text_t ptr, const char *str, int strlength, float *syms, int symSize);
 
     /* Set text RX callback. */
     void rade_text_set_rx_callback(rade_text_t ptr, on_text_rx_t text_rx_fn, void *state);

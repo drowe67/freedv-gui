@@ -330,7 +330,7 @@ void rade_text_destroy(rade_text_t ptr)
     free(ptr);
 }
 
-void rade_text_generate_tx_string(rade_text_t ptr, const char *str, int strlength, float *syms)
+void rade_text_generate_tx_string(rade_text_t ptr, const char *str, int strlength, float *syms, int symSize)
 {
     rade_text_impl_t *impl = (rade_text_impl_t *)ptr;
     assert(impl != NULL);
@@ -447,6 +447,17 @@ void rade_text_generate_tx_string(rade_text_t ptr, const char *str, int strlengt
     }
     debugString[LDPC_TOTAL_SIZE_BITS] = 0;
     log_debug("generated bits: %s", debugString);
+
+    if (symSize > LDPC_TOTAL_SIZE_BITS)
+    {
+        // Stuff the remaining space in the EOO with a known sequence
+        // as anything else (i.e. zeros) will cause problems with decode.
+        for (int index = LDPC_TOTAL_SIZE_BITS; index < symSize; index++)
+        {
+            // Default everything to 0 (represented by 1 + 0j)
+            syms[index] = index % 2 ? 0 : 1;
+        }
+    }
 }
 
 void rade_text_set_rx_callback(rade_text_t ptr, on_text_rx_t text_rx_fn, void *state)

@@ -52,12 +52,9 @@ int main()
     // Initialize RADE text
     rade_text_t txt = rade_text_create();
     assert(txt != nullptr);
-    float txSyms[rade_n_eoo_bits(rade)];
-    for (int index = 0; index < rade_n_eoo_bits(rade); index++)
-    {
-        txSyms[index] = index % 2 ? 1 : 0;
-    }
-    rade_text_generate_tx_string(txt, "K6AQ", 4, txSyms);
+    int nsyms = rade_n_eoo_bits(rade);
+    float txSyms[nsyms];
+    rade_text_generate_tx_string(txt, "K6AQ", 4, txSyms, nsyms);
     rade_text_set_rx_callback(txt, OnRadeTextRx, nullptr);
     rade_tx_set_eoo_bits(rade, txSyms);
 
