@@ -62,6 +62,9 @@ typedef struct
 
     struct LDPC ldpc;
     int enableStats;
+
+    int unusedEooBitCount;
+    int unusedEooErrCount;
 } rade_text_impl_t;
 
 // 6 bit character set for text field use:
@@ -231,6 +234,8 @@ static int rade_text_ldpc_decode(rade_text_impl_t *obj, char *dest, float meanAm
             } 
         }
 
+        log_info("EOO Tbits:   %6d Terr: %6d BER: %4.3f", bitsRaw + obj->unusedEooBitCount, errorsRaw + obj->unusedEooErrCount, 
+            (float)(errorsRaw + obj->unusedEooErrCount) / (bitsRaw + obj->unusedEooBitCount + 1E-12));
         log_info("Raw Tbits:   %6d Terr: %6d BER: %4.3f", bitsRaw, errorsRaw, (float)errorsRaw / (bitsRaw + 1E-12));
         float coded_ber = (float)errorsCoded / (bitsCoded + 1E-12);
         log_info("Coded Tbits: %6d Terr: %6d BER: %4.3f", bitsCoded, errorsCoded, coded_ber);
@@ -266,10 +271,32 @@ void rade_text_rx(rade_text_t ptr, float *syms, int symSize)
 
     // Calculate RMS of all symbols
     float rms = 0;
+    obj->unusedEooBitCount = 0;
+    obj->unusedEooErrCount = 0;
     for (int index = 0; index < symSize; index++)
     {
-        COMP *sym = (COMP *)&obj->inbound_pending_syms[index];
-        rms += sym->real * sym->real + sym->imag * sym->imag;
+        if (index < (LDPC_TOTAL_SIZE_BITS / 2))
+        {
+            COMP *sym = (COMP *)&obj->inbound_pending_syms[index];
+            rms += sym->real * sym->real + sym->imag * sym->imag;
+        }
+        else
+        {
+            // This is the unused part of the EOO that was filled with a known sequence.
+            float* sym = &syms[2 * index];
+            //rms += sym[0] * sym[0] + sym[1] * sym[1];
+
+            if (obj->enableStats)
+            {
+                obj->unusedEooBitCount += 2;
+
+                // Note: the expected sym[1] should always be 0, so
+                // the EOO formula (expected * real < 0) won't take it
+                // into consideration.
+                int err = sym[0] < 0;
+                if (err) obj->unusedEooErrCount++;
+            }
+        }
     }
     rms = sqrt(rms / symSize);
 
