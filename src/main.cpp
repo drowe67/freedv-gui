@@ -294,8 +294,17 @@ void MainApp::UnitTest_()
     /*sim.MouseMove(frame->m_togBtnOnOff->GetScreenPosition());
     sim.MouseClick();*/
     
-    // Wait 5 seconds for FreeDV to start
-    std::this_thread::sleep_for(5s);
+    // Wait for FreeDV to start
+    std::this_thread::sleep_for(1s);
+    while (true)
+    {
+        bool isRunning = false;
+        frame->executeOnUiThreadAndWait_([&]() {
+            isRunning = frame->m_togBtnOnOff->IsEnabled();
+        });
+        if (isRunning) break;
+        std::this_thread::sleep_for(20ms);
+    }
     
     if (testName == "tx")
     {
