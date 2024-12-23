@@ -22,7 +22,7 @@
 
 #include <cstring>
 #include <cstdio>
-
+#include <chrono>
 #include "PulseAudioDevice.h"
 
 #include "../util/logging/ulog.h"
@@ -30,6 +30,8 @@
 // Optimal settings based on ones used for PortAudio.
 #define PULSE_FPB 256
 #define PULSE_TARGET_LATENCY_US 20000
+
+using namespace std::chrono_literals;
 
 PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : context_(context)
@@ -205,6 +207,18 @@ void PulseAudioDevice::stop()
 {
     if (stream_ != nullptr)
     {
+        outputPendingThreadActive_ = false;
+        if (outputPendingThread_ != nullptr)
+        {
+            delete[] outputPending_;
+            outputPending_ = nullptr;
+            outputPendingLength_ = 0;
+
+            outputPendingThread_->join();
+            delete outputPendingThread_;
+            outputPendingThread_ = nullptr;
+        }
+
         std::unique_lock<std::mutex> lk(streamStateMutex_);
 
         pa_threaded_mainloop_lock(mainloop_);
@@ -216,42 +230,60 @@ void PulseAudioDevice::stop()
         pa_stream_unref(stream_);
 
         stream_ = nullptr;
-
-        outputPendingThreadActive_ = false;
-        if (outputPendingThread_ != nullptr)
-        {
-            outputPendingThread_->join();
-
-            delete[] outputPending_;
-            outputPending_ = nullptr;
-            outputPendingLength_ = 0;
-
-            delete outputPendingThread_;
-            outputPendingThread_ = nullptr;
-        }
     }
 }
 
 void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *userdata)
 {
-    const void* data = nullptr;
     PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
 
-    do
+    if (thisObj->outputPendingThread_ && thisObj->outputPendingThread_->joinable())
     {
-        pa_stream_peek(s, &data, &length);
-        if (!data || length == 0) 
-        {
-            break;
-        }
+        // We still have the read thread running, don't start another one.
+        return;
+    }
 
-        if (thisObj->onAudioDataFunction)
-        {
-            thisObj->onAudioDataFunction(*thisObj, (void*)data, length / thisObj->getNumChannels() / sizeof(short), thisObj->onAudioDataState);
-        }
+    if (thisObj->outputPendingThread_)
+    {
+        delete thisObj->outputPendingThread_;
+    }
 
-        pa_stream_drop(s);
-    } while (pa_stream_readable_size(s) > 0);
+    thisObj->outputPendingThreadActive_ = true;
+    thisObj->outputPendingThread_ = new std::thread([s, length, thisObj]() {
+        size_t readableSize = length;
+        do
+        {
+	    auto currentTime = std::chrono::steady_clock::now();
+
+            if (readableSize > 0) 
+            {
+                size_t len = length;
+                const void* data = nullptr;
+                pa_stream_peek(s, &data, &len);
+                if (!data || len == 0) 
+                {
+                    break;
+                }
+
+                int samples = len / thisObj->getNumChannels() / sizeof(short);
+                if (thisObj->onAudioDataFunction)
+                {
+                    thisObj->onAudioDataFunction(*thisObj, (void*)data, samples, thisObj->onAudioDataState);
+                }
+
+                pa_stream_drop(s);
+
+                int timeToSleep = (double)samples / (double)thisObj->sampleRate_ * 1000;
+                std::this_thread::sleep_until(currentTime + std::chrono::milliseconds(timeToSleep));
+            }
+            else
+            {
+                // Default to a 20ms sleep time if we currently aren't able to RX samples
+                std::this_thread::sleep_until(currentTime + 20ms);
+            }
+            readableSize = pa_stream_readable_size(s);
+        } while (thisObj->outputPendingThreadActive_);
+    });
 }
 
 void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *userdata)
