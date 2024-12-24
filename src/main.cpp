@@ -1941,7 +1941,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 freedvInterface.getCurrentMode() == FREEDV_MODE_RADE && 
                 freedvInterface.getSync())
             {               
-                // Special case for RADE--report 'unk' for callsign so we can
+                // Special case for RADE--report '--' for callsign so we can
                 // at least report that we're receiving *something*.
                 int64_t freq = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
 
@@ -1954,7 +1954,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                     if (!g_playFileFromRadio)
                     {                
                         wxGetApp().m_sharedReporterObject->addReceiveRecord(
-                            "unk",
+                            "",
                             freedvInterface.getCurrentModeStr(),
                             freq,
                             0
