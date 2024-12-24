@@ -259,9 +259,11 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
             {
                 size_t len = length;
                 const void* data = nullptr;
+                pa_threaded_mainloop_lock(thisObj->mainloop_);
                 pa_stream_peek(s, &data, &len);
                 if (!data || len == 0) 
                 {
+                    pa_threaded_mainloop_unlock(thisObj->mainloop_);
                     break;
                 }
 
@@ -272,6 +274,7 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
                 }
 
                 pa_stream_drop(s);
+                pa_threaded_mainloop_unlock(thisObj->mainloop_);
 
                 int timeToSleep = (double)samples / (double)thisObj->sampleRate_ * 1000;
                 std::this_thread::sleep_until(currentTime + std::chrono::milliseconds(timeToSleep));
@@ -281,7 +284,10 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
                 // Default to a 20ms sleep time if we currently aren't able to RX samples
                 std::this_thread::sleep_until(currentTime + 20ms);
             }
+
+            pa_threaded_mainloop_lock(thisObj->mainloop_);
             readableSize = pa_stream_readable_size(s);
+            pa_threaded_mainloop_unlock(thisObj->mainloop_);
         } while (thisObj->outputPendingThreadActive_);
     });
 }
