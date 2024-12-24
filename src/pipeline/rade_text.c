@@ -267,6 +267,7 @@ void rade_text_rx(rade_text_t ptr, float *syms, int symSize)
     rade_text_impl_t *obj = (rade_text_impl_t *)ptr;
     assert(obj != NULL);
 
+    // Deinterleave received bits.
     gp_deinterleave_comp((COMP *)obj->inbound_pending_syms, (COMP *)syms, LDPC_TOTAL_SIZE_BITS / 2);
 
     // Calculate RMS of all symbols
@@ -278,6 +279,8 @@ void rade_text_rx(rade_text_t ptr, float *syms, int symSize)
         if (index < (LDPC_TOTAL_SIZE_BITS / 2))
         {
             COMP *sym = (COMP *)&obj->inbound_pending_syms[index];
+            //sym->real = syms[2 * index];
+            //sym->imag = syms[2 * index + 1];
             rms += sym->real * sym->real + sym->imag * sym->imag;
         }
         else
@@ -290,10 +293,10 @@ void rade_text_rx(rade_text_t ptr, float *syms, int symSize)
             {
                 obj->unusedEooBitCount += 2;
 
-                // Note: the expected sym[1] should always be 0, so
+                // Note: the expected sym[0] should always be 0, so
                 // the EOO formula (expected * real < 0) won't take it
                 // into consideration.
-                int err = sym[0] < 0;
+                int err = sym[1] < 0;
                 if (err) obj->unusedEooErrCount++;
             }
         }
@@ -414,35 +417,11 @@ void rade_text_generate_tx_string(rade_text_t ptr, const char *str, int strlengt
     memcpy(&tmpbits[0], &ibits[0], LDPC_TOTAL_SIZE_BITS / 2);
     memcpy(&tmpbits[LDPC_TOTAL_SIZE_BITS / 2], &pbits[0], LDPC_TOTAL_SIZE_BITS / 2);
     memcpy(LastLDPCAsBits, tmpbits, LDPC_TOTAL_SIZE_BITS);
+    memcpy(impl->tx_text, tmpbits, LDPC_TOTAL_SIZE_BITS);
 
     // Interleave the bits together to enhance fading performance.
-    memcpy(impl->tx_text, tmpbits, LDPC_TOTAL_SIZE_BITS);
-    for (int index = 0; index < LDPC_TOTAL_SIZE_BITS / 2; index++)
-    {
-        char *ptr = &impl->tx_text[2 * index];
-        if (*ptr == 0 && *(ptr + 1) == 0)
-        {
-            LastEncodedLDPC[2 * index] = 1;
-            LastEncodedLDPC[2 * index + 1] = 0;
-        }
-        else if (*ptr == 0 && *(ptr + 1) == 1)
-        {
-            LastEncodedLDPC[2 * index] = 0;
-            LastEncodedLDPC[2 * index + 1] = 1;
-        }
-        else if (*ptr == 1 && *(ptr + 1) == 0)
-        {
-            LastEncodedLDPC[2 * index] = 0;
-            LastEncodedLDPC[2 * index + 1] = -1;
-        }
-        else if (*ptr == 1 && *(ptr + 1) == 1)
-        {
-            LastEncodedLDPC[2 * index] = -1;
-            LastEncodedLDPC[2 * index + 1] = 0;
-        }
-    }
-
     gp_interleave_bits(&impl->tx_text[0], tmpbits, LDPC_TOTAL_SIZE_BITS / 2);
+    //memcpy(impl->tx_text, tmpbits, LDPC_TOTAL_SIZE_BITS);
 
     // Generate floats based on the bits.
     char debugString[256];
@@ -472,6 +451,13 @@ void rade_text_generate_tx_string(rade_text_t ptr, const char *str, int strlengt
         debugString[2 * index] = impl->tx_text[2 * index] ? '1' : '0';
         debugString[2 * index + 1] = impl->tx_text[2 * index + 1] ? '1' : '0';
     }
+
+    if (impl->enableStats)
+    {
+        // Copy floats into memory so we can compare them later (for BER calc).
+        memcpy(LastEncodedLDPC, syms, LDPC_TOTAL_SIZE_BITS * sizeof(float));
+    }
+
     debugString[LDPC_TOTAL_SIZE_BITS] = 0;
     log_debug("generated bits: %s", debugString);
 
