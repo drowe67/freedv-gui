@@ -51,7 +51,8 @@ extern FreeDVInterface freedvInterface;
 #define NUM_COLS (LAST_UPDATE_DATE_COL + 1)
 #endif // defined(WIN32)
 #define RX_ONLY_STATUS "RX Only"
-#define RX_COLORING_TIMEOUT_SEC (20)
+#define RX_COLORING_LONG_TIMEOUT_SEC (20)
+#define RX_COLORING_SHORT_TIMEOUT_SEC (2)
 #define MSG_COLORING_TIMEOUT_SEC (5)
 #define STATUS_MESSAGE_MRU_MAX_SIZE (10)
 #define MESSAGE_COLUMN_ID (6)
@@ -756,9 +757,14 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
         auto reportData = allReporterData_[*sidPtr];
         
         bool isTransmitting = reportData->transmitting;
-        bool isReceiving = 
+        bool isReceivingValidCallsign = 
             reportData->lastRxDate.IsValid() && 
-            reportData->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_TIMEOUT_SEC));
+            reportData->lastRxCallsign != "" &&
+            reportData->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_LONG_TIMEOUT_SEC));
+        bool isReceivingNotValidCallsign = 
+            reportData->lastRxDate.IsValid() && 
+            reportData->lastRxCallsign == "" &&
+            reportData->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_SHORT_TIMEOUT_SEC));
         bool isMessaging = 
             reportData->lastUpdateUserMessage.IsValid() && 
             reportData->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC));
@@ -777,7 +783,7 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
             backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
             foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
         }
-        else if (isReceiving)
+        else if (isReceivingValidCallsign || isReceivingNotValidCallsign)
         {
             backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
             foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
@@ -2027,7 +2033,9 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
         backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
         foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
     }
-    else if (data->lastRxDate.IsValid() && data->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_TIMEOUT_SEC)))
+    else if (data->lastRxDate.IsValid() && 
+        ((data->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_SHORT_TIMEOUT_SEC)) && data->lastRxCallsign == "") ||
+         (data->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_LONG_TIMEOUT_SEC)) && data->lastRxCallsign != "")))
     {
         backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
         foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);

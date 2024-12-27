@@ -41,6 +41,7 @@
 
 // RADE required include files
 #include "rade_api.h"
+#include "pipeline/rade_text.h"
 
 // TBD - need to wrap in "extern C" to avoid linker errors
 extern "C" 
@@ -154,6 +155,7 @@ private:
     
     static void FreeDVTextRxFn_(void *callback_state, char c);
     static void OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr, int length, void* state);
+    static void OnRadeTextRx_(rade_text_t rt, const char* txt_ptr, int length, void* state);
     
     static float GetMinimumSNR_(int mode);
     
@@ -192,6 +194,7 @@ private:
     LPCNetEncState *lpcnetEncState_; 
     RADETransmitStep *radeTxStep_;
     int sync_;
+    rade_text_t radeTextPtr_;
     
     int preProcessRxFn_(ParallelStep* ps);
     int postProcessRxFn_(ParallelStep* ps);

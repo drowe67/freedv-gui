@@ -23,7 +23,20 @@ jobs:
     - name: Install packages
       shell: bash
       working-directory: ${{github.workspace}}
-      run: brew install automake libtool numpy sox
+      run: brew install automake libtool numpy sox octave
+
+    - name: Install octave-signal
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+        # make sure gfortran is available
+        sudo ln -s /opt/homebrew/bin/gfortran-14 /opt/homebrew/bin/gfortran
+        ls /opt/homebrew/bin/gfortran*
+        #sudo mkdir /usr/local/gfortran
+        #ls /usr/local/Cellar
+        #sudo ln -s /usr/local/Cellar/gcc@14/*/lib/gcc/14 /usr/local/gfortran/lib
+        gfortran --version
+        octave-cli --eval "pkg install -forge control; pkg install -forge signal"
 
     - name: Install virtual audio devices
       shell: bash
