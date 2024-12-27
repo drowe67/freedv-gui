@@ -21,6 +21,7 @@ add_library(fdv_audio_pipeline STATIC
     TapStep.cpp
     ToneInterfererStep.cpp
     TxRxThread.cpp
+    rade_text.c
 )
 
 target_include_directories(fdv_audio_pipeline PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
@@ -50,4 +51,11 @@ DefineUnitTest(LevelAdjustTest)
 DefineUnitTest(ResampleTest)
 target_link_libraries(ResampleTest PRIVATE ${FREEDV_LINK_LIBS})
 DefineUnitTest(TapTest)
+
+if(LINUX)
+# TBD - won't execute on macOS just yet.
+DefineUnitTest(RadeTextTest)
+target_link_libraries(RadeTextTest PRIVATE ${FREEDV_LINK_LIBS} codec2 rade opus) 
+endif(LINUX)
+
 endif(UNITTEST)
