@@ -904,6 +904,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * If provided by user, add config file to titlebar. (PR #738)
     * Minor adjustments to spectrum/waterfall tooltips. (PR #743)
     * Implement new logging framework. (PR #773)
+    * Windows: Detect whether microphone permissions have been granted and display error if not. (PR #790)
 3. Build system:
     * Allow overrriding the version tag when building. (PR #727)
     * Update wxWidgets to 3.2.6. (PR #748)
