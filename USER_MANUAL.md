@@ -889,11 +889,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V1.9.10 TBD 2024
+## V2.0.0 TBD 2024
 
 1. Bugfixes:
     * Fix bug preventing saving of the previously used path when playing back files. (PR #729)
+    * Fix bug preventing proper time display in FreeDV Reporter on macOS. (PR #748)
     * Set timeout for Hamlib comms to avoid GUI getting stuck. (PR #746)
+    * Fix various audio dropout issues, especially on Linux. (PR #761)
 2. Enhancements:
     * Show green line indicating RX frequency. (PR #725)
     * Update configuration of the Voice Keyer feature based on user feedback. (PR #730, #746)
@@ -901,10 +903,12 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Avoid modifying the audio device configuration without the user explicitly doing so. (PR #735)
     * If provided by user, add config file to titlebar. (PR #738)
     * Minor adjustments to spectrum/waterfall tooltips. (PR #743)
+    * Implement new logging framework. (PR #773)
+    * Windows: Detect whether microphone permissions have been granted and display error if not. (PR #790)
 3. Build system:
     * Allow overrriding the version tag when building. (PR #727)
-    * Update wxWidgets to 3.2.5. (PR #731)
-4. Miscallenous:
+    * Update wxWidgets to 3.2.6. (PR #748)
+4. Miscellaneous:
     * Add issue template for SW bugs. (PR #759)
 
 ## V1.9.9.2 June 2024

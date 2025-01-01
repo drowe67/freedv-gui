@@ -25,6 +25,8 @@
 
 #include "PulseAudioDevice.h"
 
+#include "../util/logging/ulog.h"
+
 // Optimal settings based on ones used for PortAudio.
 #define PULSE_FPB 256
 #define PULSE_TARGET_LATENCY_US 20000
@@ -104,11 +106,7 @@ void PulseAudioDevice::start()
     int result = 0;
     if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
     {
-        time_t result = time(NULL);
-        char buf[256];
-        struct tm *p = localtime(&result);
-        strftime(buf, 256, "%c", p);
-        fprintf(stderr, "PulseAudioDevice[%s]: connecting to playback device %s\n", buf, (const char*)devName_.ToUTF8());
+        log_info("Connecting to playback device %s", (const char*)devName_.ToUTF8());
         
         pa_stream_set_write_callback(stream_, &PulseAudioDevice::StreamWriteCallback_, this);
         result = pa_stream_connect_playback(
@@ -117,11 +115,7 @@ void PulseAudioDevice::start()
     }
     else
     {
-        time_t result = time(NULL);
-        char buf[256];
-        struct tm *p = localtime(&result);
-        strftime(buf, 256, "%c", p);
-        fprintf(stderr, "PulseAudioDevice[%s]: connecting to record device %s\n", buf, (const char*)devName_.ToUTF8());
+        log_info("Connecting to record device %s", (const char*)devName_.ToUTF8());
         
         pa_stream_set_read_callback(stream_, &PulseAudioDevice::StreamReadCallback_, this);
         result = pa_stream_connect_record(
@@ -145,6 +139,7 @@ void PulseAudioDevice::start()
         outputPendingLength_ = 0;
         targetOutputPendingLength_ = PULSE_FPB * getNumChannels() * 2;
         outputPendingThreadActive_ = true;
+#if 0
         if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
         {
             outputPendingThread_ = new std::thread([&]() {
@@ -200,6 +195,7 @@ void PulseAudioDevice::start()
             });
             assert(outputPendingThread_ != nullptr);
         }
+#endif
     }
 
     pa_threaded_mainloop_unlock(mainloop_);
@@ -268,6 +264,7 @@ void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *u
         memset(data, 0, sizeof(data));
 
         PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
+#if 0
         {
             std::unique_lock<std::mutex> lk(thisObj->outputPendingMutex_);
             if (thisObj->outputPendingLength_ >= numSamples)
@@ -286,7 +283,12 @@ void PulseAudioDevice::StreamWriteCallback_(pa_stream *s, size_t length, void *u
 
             thisObj->targetOutputPendingLength_ = std::max(thisObj->targetOutputPendingLength_, 2 * numSamples);
         }
+#endif
 
+        if (thisObj->onAudioDataFunction)
+        {
+            thisObj->onAudioDataFunction(*thisObj, data, numSamples / thisObj->getNumChannels(), thisObj->onAudioDataState);
+        } 
         pa_stream_write(s, &data[0], length, NULL, 0LL, PA_SEEK_RELATIVE);
     }
 }
@@ -329,11 +331,7 @@ void PulseAudioDevice::StreamMovedCallback_(pa_stream *p, void *userdata)
     auto newDevName = pa_stream_get_device_name(p);
     PulseAudioDevice* thisObj = static_cast<PulseAudioDevice*>(userdata);
 
-    time_t result = time(NULL);
-    char buf[256];
-    struct tm *lt = localtime(&result);
-    strftime(buf, 256, "%c", lt);
-    fprintf(stderr, "PulseAudioDevice[%s]: stream named %s has been moved to %s\n", buf, (const char*)thisObj->devName_.ToUTF8(), newDevName);
+    log_info("Stream named %s has been moved to %s", (const char*)thisObj->devName_.ToUTF8(), newDevName);
     
     thisObj->devName_ = newDevName;
     

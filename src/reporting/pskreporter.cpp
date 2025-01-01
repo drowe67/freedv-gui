@@ -59,7 +59,7 @@
 #define PSK_REPORTER_PORT "4739"
 #endif // PSK_REPORTER_TEST
 
-extern int g_verbose;
+#include "../util/logging/ulog.h"
 
 // RX record:
 /* For receiverCallsign, receiverLocator, decodingSoftware use */
@@ -311,19 +311,19 @@ bool PskReporter::reportCommon_()
     struct addrinfo* res = NULL;
     int err = getaddrinfo(PSK_REPORTER_HOSTNAME, PSK_REPORTER_PORT, &hints, &res);
     if (err != 0) {
-        if (g_verbose) fprintf(stderr, "cannot resolve %s (err=%d)", PSK_REPORTER_HOSTNAME, err);
+        log_debug("cannot resolve %s (err=%d)", PSK_REPORTER_HOSTNAME, err);
         return false;
     }
 
     int fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if(fd < 0){
-        if (g_verbose) fprintf(stderr, "cannot open PSK Reporter socket (err=%d)\n", errno);
+        log_debug("cannot open PSK Reporter socket (err=%d)", errno);
         return false;
     }
 
     if (sendto(fd, packet, dgSize, 0, res->ai_addr, res->ai_addrlen) < 0){
         delete[] packet;
-        if (g_verbose) fprintf(stderr, "cannot send message to PSK Reporter (err=%d)\n", errno);
+        log_debug("cannot send message to PSK Reporter (err=%d)", errno);
         close(fd);
         return false;
     }

@@ -15,33 +15,64 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Install packages
       shell: bash
       run: |
            sudo apt-get update
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.0-gtk3-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev
+           sudo apt-get upgrade -y
+           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.2-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity dbus-x11 at-spi2-core rtkit octave octave-signal
             
     - name: Spellcheck codebase
       shell: bash
-      run: codespell --ignore-words-list=inout,nin,ontop,parm,tthe,ue `find src -name '*.c*' -o -name '*.h' -o -name '*.mm'`
+      run: codespell --ignore-words-list=caf,radae,rade,inout,nin,ontop,parm,tthe,ue `find src -name '*.c*' -o -name '*.h' -o -name '*.mm'`
+
+    - name: Install Python required modules
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          python3 -m venv rade-venv
+          . ./rade-venv/bin/activate
+          pip3 install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip3 install matplotlib
 
     - name: Build freedv-gui using PortAudio
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=1 ./build_linux.sh portaudio
+      run: |
+          . ./rade-venv/bin/activate
+          UT_ENABLE=1 ./build_linux.sh portaudio
 
     - name: Build freedv-gui using PulseAudio
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=1 ./build_linux.sh pulseaudio
+      run: |
+          . ./rade-venv/bin/activate
+          UT_ENABLE=1 ./build_linux.sh pulseaudio
 
     - name: Execute unit tests
       shell: bash
       working-directory: ${{github.workspace}}/build_linux
-      run: make test
+      run: |
+          sudo systemctl enable rtkit-daemon
+          sudo systemctl start rtkit-daemon
+          Xvfb :99 -screen 0 1024x768x16 &
+          sleep 5
+          export DISPLAY=:99.0
+          export XDG_RUNTIME_DIR=/run/user/$(id -u)
+          mkdir -p $XDG_RUNTIME_DIR
+          chmod 700 $XDG_RUNTIME_DIR
+          eval "$(dbus-launch --sh-syntax --exit-with-x11)"
+          pipewire &
+          pipewire-pulse &
+          wireplumber &
+          metacity --sm-disable --replace &
+          sleep 5
+          ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
+          . ../rade-venv/bin/activate
+          PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V
       

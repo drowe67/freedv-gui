@@ -47,6 +47,7 @@ public:
         , inputSampleRate_(inputSampleRate)
         , outputSampleRate_(outputSampleRate)
         , equalizedMicAudioLink_(micAudioLink)
+        , hasEooBeenSent_(false)
     { 
         assert(inputSampleRate_ > 0);
         assert(outputSampleRate_ > 0);
@@ -72,6 +73,7 @@ private:
     int inputSampleRate_;
     int outputSampleRate_;
     LinkStep* equalizedMicAudioLink_;
+    bool hasEooBeenSent_;
     
     void initializePipeline_();
     void txProcessing_();

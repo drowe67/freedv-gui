@@ -12,10 +12,10 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
 	cmake_policy(SET CMP0135 NEW)
 endif()
 
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum OS X deployment version")
 
 set(PROJECT_NAME FreeDV)
-set(PROJECT_VERSION 1.9.10)
+set(PROJECT_VERSION 2.0.0)
 set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
 set(PROJECT_HOMEPAGE_URL "https://freedv.org")
 
@@ -50,6 +50,7 @@ endif(APPLE)
 # for official release builds.
 if(NOT DEFINED FREEDV_VERSION_TAG)
 set(FREEDV_VERSION_TAG "devel")
+add_definitions(-DUNOFFICIAL_RELEASE)
 endif(NOT DEFINED FREEDV_VERSION_TAG)
 
 # Prevent in-source builds to protect automake/autoconf config.
@@ -74,6 +75,7 @@ endif(BUILD_OSX_UNIVERSAL)
 # Return the date (yyyy-mm-dd)
 string(TIMESTAMP DATE_RESULT "%Y-%m-%d" UTC)
 message(STATUS "Compilation date = XX${DATE_RESULT}XX")
+add_definitions(-DFREEDV_BUILD_DATE="${DATE_RESULT}")
 
 #
 # generate src/version.h
@@ -322,6 +324,10 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/soxconfig.h.in"
 find_package(Threads REQUIRED)
 message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 
+#
+# Build RADE. 
+# (TBD - allow override with own build, similar to Codec2)
+include(cmake/BuildRADE.cmake)
 
 #
 # Find codec2 and lpcnetfreedv
@@ -664,7 +670,7 @@ if(WIN32)
     set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_NSIS_MENU_LINKS
         "http://freedv.org" "FreeDV Homepage")
-    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "DeleteRegKey HKLM 'SOFTWARE\\\\CODEC2-Project\\\\FreeDV'")
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "${CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS}\r\nDeleteRegKey HKLM 'SOFTWARE\\\\CODEC2-Project\\\\FreeDV'")
     set(CPACK_NSIS_MENU_LINKS "share/freedv-gui/USER_MANUAL.pdf" "FreeDV User Manual")
 
     set(CPACK_WIN_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_VER_TWEAK}")
@@ -712,3 +718,27 @@ elseif(UNIX AND NOT APPLE)
     include(CPack)
 
 endif(WIN32)
+
+if(UNITTEST)
+# The below tests are currently Linux-only due to a dependency on
+# PulseAudio/pipewire.
+macro(DefineAudioTest utName)
+    add_test(NAME fullduplex_${utName} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName}) 
+    set_tests_properties(fullduplex_${utName} PROPERTIES PASS_REGULAR_EXPRESSION "Got 1 sync changes")
+endmacro()
+
+DefineAudioTest(RADEV1)
+DefineAudioTest(700D)
+DefineAudioTest(700E)
+DefineAudioTest(1600)
+
+add_test(NAME rade_reporting_clean COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh)
+set_tests_properties(rade_reporting_clean PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
+
+add_test(NAME rade_reporting_awgn COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CODEC2_BUILD_DIR} awgn)
+set_tests_properties(rade_reporting_awgn PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
+
+add_test(NAME rade_reporting_mpp COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CODEC2_BUILD_DIR} mpp)
+set_tests_properties(rade_reporting_mpp PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
+
+endif(UNITTEST)

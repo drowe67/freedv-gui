@@ -113,7 +113,6 @@ enum {
 #define EXCHANGE_DATA_IN    0
 #define EXCHANGE_DATA_OUT   1
 
-extern int                 g_verbose;
 extern int                 g_nSoundCards;
 
 // Voice Keyer Constants
@@ -222,7 +221,11 @@ class MainApp : public wxApp
         std::shared_ptr<LinkStep> linkStep;
 
         wxLocale m_locale;
+
+        int m_reportCounter;
     protected:
+    private:
+        void UnitTest_();
 };
 
 // declare global static function wxGetApp()
@@ -440,6 +443,8 @@ class MainFrame : public TopFrame
         void OnSetMonitorTxAudioVol( wxCommandEvent& event );
         
     private:
+        friend class MainApp; // needed for unit tests
+        
         std::shared_ptr<IAudioDevice> rxInSoundDevice;
         std::shared_ptr<IAudioDevice> rxOutSoundDevice;
         std::shared_ptr<IAudioDevice> txInSoundDevice;
