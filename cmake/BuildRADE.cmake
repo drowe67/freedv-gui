@@ -149,6 +149,6 @@ set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS
 
 # Make sure we fully clean up after Python on uninstall.
 set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
-    "${CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS}\r\nRMDir /r /REBOOTOK '\$INSTDIR\\\\bin\\\\Lib'\r\nRMDir /r /REBOOTOK '\$INSTDIR\\\\bin\\\\scripts'\r\nRMDir /r /REBOOTOK '\$INSTDIR\\\\bin\\\\share'")
+    "${CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS}\r\nRMDir /r /REBOOTOK '\$INSTDIR\\\\bin\\\\Lib'\r\nRMDir /r /REBOOTOK '\$INSTDIR\\\\bin\\\\scripts'\r\nRMDir /r /REBOOTOK '\$INSTDIR\\\\bin\\\\share'\r\nRMDir /r /REBOOTOK '\$INSTDIR\\\\bin\\\\__pycache__'\r\nRMDir /r /REBOOTOK '\$INSTDIR\\\\bin\\\\radae\\\\__pycache__'")
 
 endif(WIN32)
