@@ -16,7 +16,7 @@ endif(MINGW AND CMAKE_CROSSCOMPILING)
 
 include(ExternalProject)
 ExternalProject_Add(build_hamlib
-    URL https://github.com/Hamlib/Hamlib/archive/refs/heads/Hamlib-4.5.5.zip
+    URL https://github.com/Hamlib/Hamlib/archive/refs/tags/4.6.zip
     BUILD_IN_SOURCE 1
     INSTALL_DIR external/dist
     PATCH_COMMAND ${HAMLIB_PATCH_CMD}
