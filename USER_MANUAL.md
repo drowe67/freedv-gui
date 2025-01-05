@@ -908,6 +908,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 3. Build system:
     * Allow overrriding the version tag when building. (PR #727)
     * Update wxWidgets to 3.2.6. (PR #748)
+    * Update Hamlib to 4.6. (PR #795)
 4. Miscellaneous:
     * Add issue template for SW bugs. (PR #759)
 
