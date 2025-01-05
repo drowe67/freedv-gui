@@ -1,0 +1,22 @@
+--- hamlib-4.5.5/rigs/dummy/flrig.c	2023-04-05 05:31:23.000000000 -0700
++++ build_hamlib/rigs/dummy/flrig.c	2023-05-18 18:59:19.584095384 -0700
+@@ -76,7 +76,7 @@
+ static int flrig_set_vfo(RIG *rig, vfo_t vfo);
+ static int flrig_set_ptt(RIG *rig, vfo_t vfo, ptt_t ptt);
+ static int flrig_get_ptt(RIG *rig, vfo_t vfo, ptt_t *ptt);
+-static int flrig_set_func(RIG *rig, vfo_t vfo, setting_t setting, int status);
++HAMLIB_EXPORT(int) flrig_set_func(RIG *rig, vfo_t vfo, setting_t setting, int status);
+ static int flrig_set_split_freq(RIG *rig, vfo_t vfo, freq_t tx_freq);
+ static int flrig_get_split_freq(RIG *rig, vfo_t vfo, freq_t *tx_freq);
+ static int flrig_set_split_vfo(RIG *rig, vfo_t vfo, split_t split,
+--- hamlib-4.5.5/configure.ac	2023-04-05 05:31:23.000000000 -0700
++++ build_hamlib/configure.ac	2023-05-18 19:11:32.454634661 -0700
+@@ -281,7 +281,7 @@
+ 	AC_SUBST([OSXLDFLAGS])],
+ 
+     [mingw* | pw32* | cygwin*], [
+-	WINLDFLAGS="-Wl,--output-def,libhamlib.def -Wl,--add-stdcall-alias"
++	WINLDFLAGS="-Wl,--output-def,libhamlib.def"
+ 	AC_SUBST([WINLDFLAGS])
+ 
+ 	# Enable ld's "auto import" for executables

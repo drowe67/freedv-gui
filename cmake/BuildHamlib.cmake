@@ -1,6 +1,6 @@
-set(HAMLIB_PATCH_CMD "")
 if(MINGW AND CMAKE_CROSSCOMPILING)
     set(CONFIGURE_COMMAND ./configure --host=${HOST} --target=${HOST} --without-cxx-binding --enable-shared --prefix=${CMAKE_BINARY_DIR}/external/dist --without-libusb CFLAGS=-g\ -O2\ -fstack-protector CXXFLAGS=-g\ -O2\ -fstack-protector)
+    set(HAMLIB_PATCH_CMD patch -p1 < ${CMAKE_SOURCE_DIR}/cmake/hamlib-windows.patch)
 else(MINGW AND CMAKE_CROSSCOMPILING)
     set(HAMLIB_PATCH_CMD "")
 if(APPLE)
