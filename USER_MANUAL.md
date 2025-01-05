@@ -898,7 +898,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix various audio dropout issues, especially on Linux. (PR #761)
 2. Enhancements:
     * Show green line indicating RX frequency. (PR #725)
-    * Update configuration of the Voice Keyer feature based on user feedback. (PR #730, #746)
+    * Update configuration of the Voice Keyer feature based on user feedback. (PR #730, #746, #793)
     * Add monitor volume adjustment. (PR #733)
     * Avoid modifying the audio device configuration without the user explicitly doing so. (PR #735)
     * If provided by user, add config file to titlebar. (PR #738)
