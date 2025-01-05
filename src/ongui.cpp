@@ -221,12 +221,13 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         }
         
         // Update voice keyer file if different
-        auto newVkFile = wxGetApp().appConfiguration.voiceKeyerWaveFilePath->mb_str();
-        if (vkFileName_ != newVkFile)
+        wxFileName fullVKPath(wxGetApp().appConfiguration.voiceKeyerWaveFilePath, wxGetApp().appConfiguration.voiceKeyerWaveFile);
+        if (vkFileName_ != fullVKPath.GetFullPath().mb_str())
         {
             // Clear filename to force reselection next time VK is triggered.
             vkFileName_ = "";
             wxGetApp().appConfiguration.voiceKeyerWaveFile = "";
+            setVoiceKeyerButtonLabel_("");
         }
         
         // Adjust frequency labels on main window
