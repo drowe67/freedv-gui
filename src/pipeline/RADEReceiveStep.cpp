@@ -110,12 +110,12 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
             int hasEooOut = 0;
             float eooOut[rade_n_eoo_bits(dv_)];
             nout = rade_rx(dv_, features_out, &hasEooOut, eooOut, input_buf_cplx);
-            if (hasEooOut)
+            if (hasEooOut && textPtr_ != nullptr)
             {
                 // Handle RX of bits from EOO.
                 rade_text_rx(textPtr_, eooOut, rade_n_eoo_bits(dv_) / 2);
             }
-            else
+            else if (!hasEooOut)
             {
                 if (featuresFile_)
                 {
