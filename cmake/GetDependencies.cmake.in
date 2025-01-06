@@ -94,6 +94,7 @@ set( _windlls
     OLEACC.dll
     msvcrt.dll
     bcrypt.dll
+    IPHLPAPI.DLL
 
     # The below are additional DLLs required when compiled
     # using the LLVM version of MinGW.
