@@ -27,6 +27,7 @@
 #include "topFrame.h"
 #include "gui/util/NameOverrideAccessible.h"
 #include "gui/util/LabelOverrideAccessible.h"
+#include "util/logging/ulog.h"
 
 extern int g_playFileToMicInEventId;
 extern int g_recFileFromRadioEventId;
@@ -997,5 +998,30 @@ void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)
         wxString tmpString = filename + _("...");
         m_togBtnVoiceKeyer->GetTextExtent(tmpString, &filenameWidth, &tmp);
     }
-    m_togBtnVoiceKeyer->SetLabel(vkLabel + _("\n") + filename + (isTruncated ? _("...") : _("")));
+    
+    if (filename.size() > 0)
+    {
+        m_togBtnVoiceKeyer->SetLabel(vkLabel + _("\n") + filename + (isTruncated ? _("...") : _("")));
+    }
+    else
+    {
+        m_togBtnVoiceKeyer->SetLabel(vkLabel);
+    }
+    
+    // Resize button height as needed.
+    wxSize currentSize = m_togBtnVoiceKeyer->GetSize();
+    wxSize bestSize = m_togBtnVoiceKeyer->GetBestSize();
+    currentSize.SetHeight(bestSize.GetHeight());
+    m_togBtnVoiceKeyer->SetSize(currentSize);
+    m_togBtnVoiceKeyer->Refresh();
+    
+    // XXX - wxWidgets doesn't handle button height changes properly until the user resizes 
+    // the window (even if only by a pixel or two). As a really hacky workaround, we 
+    // emulate this behavior when changing the button height.
+    wxSize winSize = GetSize();
+    SetSize(winSize.GetWidth(), winSize.GetHeight());
+    SetSize(winSize.GetWidth(), winSize.GetHeight() - 1);
+    SetSize(winSize.GetWidth(), winSize.GetHeight());
+        
+    log_info("Set voice keyer button label to %s", (const char*)m_togBtnVoiceKeyer->GetLabel().ToUTF8());
 }
