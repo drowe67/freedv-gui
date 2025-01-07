@@ -1682,8 +1682,9 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
         float snr_limited;
         // some APIs pass us invalid values, so lets trap it rather than bombing
-        if (!(isnan(freedvInterface.getCurrentRxModemStats()->snr_est) || isinf(freedvInterface.getCurrentRxModemStats()->snr_est))) {
-            g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*freedvInterface.getCurrentRxModemStats()->snr_est;
+        float snrEstimate = freedvInterface.getSNREstimate();
+        if (!(isnan(snrEstimate) || isinf(snrEstimate))) {
+            g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*snrEstimate;
         }
         snr_limited = g_snr;
         if (snr_limited < -5.0) snr_limited = -5.0;
@@ -1855,6 +1856,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             wxString wxCallsign = text;
             delete[] text;
         
+            auto pendingSnr = (int)(g_snr + 0.5);
             if (wxCallsign.Length() > 0)
             {
                 freedvInterface.resetReliableText();
@@ -1864,7 +1866,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 {
                     wxString rxCallsign = callsignFormat.GetMatch(wxCallsign, 1);
                     std::string pendingCallsign = rxCallsign.ToStdString();
-                    auto pendingSnr = (int)(g_snr + 0.5);
 
                     wxString freqString;
                     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
@@ -1957,7 +1958,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                             "",
                             freedvInterface.getCurrentModeStr(),
                             freq,
-                            0
+                            pendingSnr
                         );
                     }
                 }
