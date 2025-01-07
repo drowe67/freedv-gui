@@ -1692,7 +1692,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         char snr[15];
         snprintf(snr, 15, "%4.1f dB", g_snr);
 
-        if (freedvInterface.getSync() || freedvInterface.getCurrentMode() < FREEDV_MODE_RADE)
+        if (freedvInterface.getSync())
         {
             wxString snr_string(snr);
             m_textSNR->SetLabel(snr_string);
