@@ -1692,10 +1692,17 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         char snr[15];
         snprintf(snr, 15, "%4.1f dB", g_snr);
 
-        wxString snr_string(snr);
-        m_textSNR->SetLabel(snr_string);
-        m_gaugeSNR->SetValue((int)(snr_limited+5));
-
+        if (freedvInterface.getSync() || freedvInterface.getCurrentMode() < FREEDV_MODE_RADE)
+        {
+            wxString snr_string(snr);
+            m_textSNR->SetLabel(snr_string);
+            m_gaugeSNR->SetValue((int)(snr_limited+5));
+        }
+        else
+        {
+            m_textSNR->SetLabel("--");
+            m_gaugeSNR->SetValue(0);
+        }
 
         // Level Gauge -----------------------------------------------------------------------
 
