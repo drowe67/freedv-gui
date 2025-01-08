@@ -119,6 +119,7 @@ void PulseAudioDevice::start()
         result = pa_stream_connect_playback(
             stream_, devName_.c_str(), &buffer_attr, 
             flags, NULL, NULL);
+        if (result == 0) pa_stream_trigger(stream_, nullptr, nullptr);
     }
     else
     {
