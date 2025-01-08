@@ -71,7 +71,7 @@ if [ "$2" == "mpp" ]; then
 else
     TX_ARGS="-txtime 5 "
 fi
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADE $TX_ARGS 2>&1 | tee tmp.log
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADE $TX_ARGS >tmp.log 2>&1
 
 FDV_PID=$!
 #sleep 30 
