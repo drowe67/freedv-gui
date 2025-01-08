@@ -55,6 +55,8 @@ extern SNDFILE            *g_sfRecMicFile;
 
 extern wxMutex g_mutexProtectingCallbackData;
 
+bool g_eoo_enqueued;
+
 void clickTune(float frequency); // callback to pass new click freq
 
 //-------------------------------------------------------------------------
@@ -899,16 +901,28 @@ void MainFrame::togglePTT(void) {
         // Trigger end of TX processing. This causes us to wait for the remaining samples
         // to flow through the system before toggling PTT.  Note that there is a 1000ms 
         // timeout as backup.
-        int sample = g_outfifo1_empty;
+        log_info("Waiting for EOO to be queued");
         endingTx = true;
+        while(true)
+        {
+            if (g_eoo_enqueued)
+            {
+                log_info("Detected that EOO has been enqueued");
+                break;
+            }
+ 
+            wxThread::Sleep(1);
+            wxGetApp().Yield(true);
+        }
 
+        int sample = g_outfifo1_empty;
         before = highResClock.now();
         while(true)
         {
             auto diff = highResClock.now() - before;
             if (diff >= std::chrono::milliseconds(1000) || (g_outfifo1_empty != sample))
             {
-                log_info("All TX finished, going out of PTT");
+                log_info("All TX finished (diff = %d ms, fifo_empty = %d, sample = %d), going out of PTT", (int)std::chrono::duration_cast<std::chrono::milliseconds>(diff).count(), g_outfifo1_empty, sample);
                 break;
             }
 

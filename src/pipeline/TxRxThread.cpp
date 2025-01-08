@@ -87,6 +87,7 @@ extern int g_channel_noise;
 extern float g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
 extern bool g_voice_keyer_tx;
+extern bool g_eoo_enqueued;
 
 #include <speex/speex_preprocess.h>
 
@@ -664,11 +665,16 @@ void TxRxThread::txProcessing_()
                             log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1);
                         }
                     }
+                    else
+                    {
+                        g_eoo_enqueued = true;
+                    }
                 }
                 break;
             }
             else
             {
+                g_eoo_enqueued = false;
                 hasEooBeenSent_ = false;
             }
             
