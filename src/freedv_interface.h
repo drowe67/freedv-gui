@@ -135,6 +135,8 @@ public:
 
     void restartTxVocoder();
  
+    float getSNREstimate();
+    
 private:
     struct ReceivePipelineState
     {
