@@ -702,6 +702,19 @@ void FreeDVInterface::setReliableText(const char* callsign)
     }
 }
 
+float FreeDVInterface::getSNREstimate()
+{
+    if (txMode_ >= FREEDV_MODE_RADE)
+    {
+        // Special handling for RADE
+        return (getSync() ? rade_snrdB_3k_est(rade_) : 0);
+    }
+    else
+    {
+        return getCurrentRxModemStats()->snr_est;
+    }
+}
+
 IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int outputSampleRate, std::function<float()> getFreqOffsetFn)
 {
     std::vector<IPipelineStep*> parallelSteps;
