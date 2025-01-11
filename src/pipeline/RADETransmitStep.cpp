@@ -164,7 +164,7 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
 void RADETransmitStep::restartVocoder()
 {
     // Queues up EOO for return on the next call to this pipeline step.
-    const int NUM_SAMPLES_SILENCE = 20 * getOutputSampleRate() / 1000;
+    const int NUM_SAMPLES_SILENCE = 60 * getOutputSampleRate() / 1000;
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
     RADE_COMP eooOut[numEOOSamples];
     short eooOutShort[numEOOSamples];
