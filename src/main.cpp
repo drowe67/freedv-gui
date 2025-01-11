@@ -347,7 +347,6 @@ void MainApp::UnitTest_()
             
             // Stop transmitting
             log_info("Firing PTT");
-            //endingTx = true;
             std::this_thread::sleep_for(1s);
             CallAfter([&]() {
                 frame->m_btnTogPTT->SetValue(false);
