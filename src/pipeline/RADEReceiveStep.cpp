@@ -102,7 +102,7 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
             // demod per frame processing
             for(int i=0; i<nin; i++) 
             {
-                input_buf_cplx[i].real = (float)input_buf[i] / 32767.0;
+                input_buf_cplx[i].real = input_buf[i] / 32767.0;
                 input_buf_cplx[i].imag = 0.0;
             }
 
