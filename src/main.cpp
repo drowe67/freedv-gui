@@ -3669,7 +3669,8 @@ void MainFrame::initializeFreeDVReporter_()
         wxString fullMessage = wxString::Format(wxString(fmtMsg), callsign, frequencyReadable);
         int dialogStyle = wxOK | wxICON_INFORMATION | wxCENTRE;
         
-        if (wxGetApp().rigFrequencyController != nullptr && wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+        if (wxGetApp().rigFrequencyController != nullptr && 
+            (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
         {
             fullMessage = wxString::Format(_("%s Would you like to change to that frequency now?"), fullMessage);
             dialogStyle = wxYES_NO | wxICON_QUESTION | wxCENTRE;

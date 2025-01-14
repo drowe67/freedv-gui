@@ -59,7 +59,7 @@ bool HamlibRigController::RigCompare_(const struct rig_caps *rig1, const struct 
     return rig1->rig_model < rig2->rig_model;
 }
 
-HamlibRigController::HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect)
+HamlibRigController::HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect, bool freqOnly)
     : rigName_(rigName)
     , serialPort_(serialPort)
     , serialRate_(serialRate)
@@ -74,12 +74,13 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     , restoreOnDisconnect_(restoreFreqModeOnDisconnect)
     , origFreq_(0)
     , origMode_(RIG_MODE_NONE)
+    , freqOnly_(freqOnly)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
 }
 
-HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect)
+HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex, const PttType pttType, std::string pttSerialPort, bool restoreFreqModeOnDisconnect, bool freqOnly)
     : rigName_(RigIndexToName(rigIndex))
     , serialPort_(serialPort)
     , serialRate_(serialRate)
@@ -94,6 +95,7 @@ HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, c
     , restoreOnDisconnect_(restoreFreqModeOnDisconnect)
     , origFreq_(0)
     , origMode_(RIG_MODE_NONE)
+    , freqOnly_(freqOnly)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -381,7 +383,10 @@ void HamlibRigController::disconnectImpl_()
         {
             vfo_t currVfo = getCurrentVfo_(); 
             setFrequencyHelper_(currVfo, origFreq_);
-            setModeHelper_(currVfo, origMode_);
+            if (!freqOnly_)
+            {
+                setModeHelper_(currVfo, origMode_);
+            }
         }
         
         origFreq_ = 0;

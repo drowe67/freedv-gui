@@ -24,6 +24,7 @@
 RigControlConfiguration::RigControlConfiguration()
     : hamlibUseForPTT("/Hamlib/UseForPTT", false)
     , hamlibEnableFreqModeChanges("/Hamlib/EnableFreqModeChanges", true)
+    , hamlibEnableFreqChangesOnly("/Hamlib/EnableFreqChangesOnly", false)
     , hamlibUseAnalogModes("/Hamlib/UseAnalogModes", false)
     , hamlibIcomCIVAddress("/Hamlib/IcomCIVHex", 0)
     , hamlibRigName("/Hamlib/RigNameStr", "")
