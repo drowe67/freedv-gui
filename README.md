@@ -7,7 +7,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   * http://freedv.org - introduction, documentation, downloads
   * [FreeDV GUI User Manual](USER_MANUAL.md)
   
-## Building on Ubuntu Linux
+## Building on Ubuntu Linux without RADE
 
   ```
   $ sudo apt install libspeexdsp-dev libsamplerate0-dev sox git \
@@ -34,7 +34,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   
   Note this builds all libraries locally, nothing is installed on your machine.  ```make install``` is not required.
 
-## Building on Fedora Linux
+## Building on Fedora Linux without RADE
   ```
   $ sudo dnf groupinstall "Development Tools"
   $ sudo dnf install cmake wxGTK3-devel libsamplerate-devel \
@@ -64,43 +64,64 @@ RADE is a new FreeDV mode that uses machine learning to improve voice quality an
 We are currently focused on Windows and macOS for initial development, but it is possible to run on 
 Linux by following these steps:
 
-1. Install PyTorch, TorchAudio and matplotlib Python packages. Some distros have packages for one or more of these,
-   but you can also use pip in a Python virtual environment (recommended to ensure the latest versions):
+1. Follow the instructions above for Ubuntu or Fedora to install the libraries but do not run build_linux.
 
    ```
-   $ cd freedv-gui
-   $ python3 -m venv rade-venv
-   $ . ./rade-venv/bin/activate
-   (rade-venv) $ pip3 install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
-   (rade-venv) $ pip3 install matplotlib
+   Ubuntu: $ sudo apt install...
+   Fedora: $ sudo dnf install...
+   ...
    ```
 
-   *Note: you may need to install `python3-venv` or your distro's equivalent package in order to create Python virtual environments. Python 3.9+ is also required for PyTorch to work.*
+2. Obtain the FreeDV-GUI source code for version 2.0.0 or later. The location and version is likely to change frequently.
+Currently (January 2025) there are releases at https://github.com/drowe67/freedv-gui/releases.
+Download the version 2.x.x tar.gz file, and extract it to your PC. Change to that directory.
+You could also clone the github site https://github.com/drowe67/freedv-gui but you will have to choose a version 2.x.x branch. 
 
-2. Build FreeDV to make sure the correct dependencies are linked in (namely numpy):
+3. Make sure you have the python3-venv package. On Ubuntu you will need to install this from your package manager.
+Make sure your Python is version 3.9 or higher.
 
-   ```
-   (rade-venv) $ pwd
-   /home/<user>/freedv-gui
-   (rade-venv) $ ./build_linux.sh
-   ```
-
-3. Make sure FreeDV can find the ML model:
-
-   ```
-   (rade-venv) $ pwd
-   /home/<user>/freedv-gui
-   (rade-venv) $ cd build_linux
-   (rade-venv) $ ln -s $(pwd)/rade_src/model19_check3 model19_check3
-   ```
-
-4. Execute FreeDV:
+4. Install the PyTorch, TorchAudio, numpy and matplotlib Python packages.
+You will need to use a Python virtual environment unless your Linux has all required Python packages.
+A virtual environment is recommended to get the latest versions.
 
    ```
-   (rade-venv) $ pwd
-   /home/<user>/freedv-gui/build_linux
-   (rade-venv) $ PYTHONPATH="$(pwd)/rade_src:$PYTHONPATH" src/freedv
+   The current directory is freedv-gui.
+
+   <..>/freedv-gui $ python3 -m venv rade-venv
+   <..>/freedv-gui $ source rade-venv/bin/activate
+
+   The current directory is freedv-gui and the virtual environment is activated.
+
+   (rade-venv) <..>/freedv-gui $ pip3 install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+   (rade-venv) <..>/freedv-gui $ pip3 install numpy
+   (rade-venv) <..>/freedv-gui $ pip3 install matplotlib
    ```
+
+5. Build FreeDV:
+
+   ```
+   (rade-venv) <..>/freedv-gui $ ./build_linux.sh
+   ```
+
+6. Make sure FreeDV can find the ML model:
+
+   ```
+   (rade-venv) <..>/freedv-gui $ cd build_linux
+   (rade-venv) <..>/freedv-gui/build_linux  $ ln -s rade_src/model19_check3 model19_check3
+   ```
+
+7. Execute FreeDV:
+
+   ```
+   The current directory is freedv-gui/build_linux and the virtual environment is activated.
+
+   (rade-venv) <..>/freedv-gui/build_linux $ PYTHONPATH="$(pwd)/rade_src:$PYTHONPATH" src/freedv
+   ```
+   There is a convenient FreeDV-GUI laucher Python script in freedv-gui/config to use instead:
+```
+   python3 <path to freedv-gui/contrib>/launch_linux_rade.py
+```
+   The RADE mode is under active development and it is best to run FreeDV-GUI directly from freedv-gui instead of installing it.
 
 ## Building without LPCNet
 
