@@ -573,7 +573,7 @@ void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
 
         // Update status message
         auto statusMsg = m_statusMessage->GetValue();
-        reporter_->updateMessage(statusMsg.ToStdString());
+        reporter_->updateMessage(statusMsg.utf8_string());
     }
     else
     {
@@ -649,7 +649,7 @@ void FreeDVReporterDialog::OnSendQSY(wxCommandEvent& event)
 
 void FreeDVReporterDialog::OnOpenWebsite(wxCommandEvent& event)
 {
-    std::string url = "https://" + wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString() + "/";
+    std::string url = "https://" + wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->utf8_string() + "/";
     wxLaunchDefaultBrowser(url);
 }
 
@@ -954,7 +954,7 @@ void FreeDVReporterDialog::OnStatusTextSend(wxCommandEvent& event)
 
     if (reporter_)
     {
-        reporter_->updateMessage(statusMsg.ToStdString());
+        reporter_->updateMessage(statusMsg.utf8_string());
     }
 
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText = statusMsg;
