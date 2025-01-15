@@ -838,7 +838,7 @@ void FreeDVReporterDialog::OnDoubleClick(wxMouseEvent& event)
 {
     auto selectedIndex = m_listSpots->GetFirstSelected();
     if (selectedIndex >= 0 && wxGetApp().rigFrequencyController && 
-        wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+        (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
     {
         std::string* sidPtr = (std::string*)m_listSpots->GetItemData(selectedIndex);
         

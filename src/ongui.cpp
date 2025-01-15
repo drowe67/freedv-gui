@@ -396,7 +396,8 @@ bool MainFrame::OpenHamlibRig() {
         auto tmp = std::make_shared<HamlibRigController>(
             rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress, 
             pttType, pttType == HamlibRigController::PTT_VIA_CAT || pttType == HamlibRigController::PTT_VIA_NONE ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8),
-            wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
+            (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly),
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly);
 
         // Hamlib also controls PTT.
         firstFreqUpdateOnConnect_ = false;
@@ -413,7 +414,7 @@ bool MainFrame::OpenHamlibRig() {
 
         wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController*) {
             if (wxGetApp().rigFrequencyController && 
-                wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges &&
+                (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly) &&
                 wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
             {
                 // Suppress the frequency update message that will occur immediately after
@@ -422,7 +423,11 @@ bool MainFrame::OpenHamlibRig() {
 
                 // Set frequency/mode to the one pre-selected by the user before start.
                 wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-                wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+                
+                if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+                {
+                    wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+                }
             }
         };
 
@@ -530,7 +535,8 @@ void MainFrame::OpenOmniRig()
 {
     auto tmp = std::make_shared<OmniRigController>(
         wxGetApp().appConfiguration.rigControlConfiguration.omniRigRigId,
-        wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
+        (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly),
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly);
 
     // OmniRig also controls PTT.
     wxGetApp().rigFrequencyController = tmp;
@@ -548,10 +554,13 @@ void MainFrame::OpenOmniRig()
     };
 
     wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController*) {
-        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly)
         {
             wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-            wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+            if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+            {
+                wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+            }
         }
     };
 
@@ -1248,11 +1257,14 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     {      
         if (wxGetApp().rigFrequencyController != nullptr && 
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 && 
-            wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+            (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
         {
             // Request frequency/mode change on the radio side
             wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-            wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+            if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+            {
+                wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+            }
         }
     }
 

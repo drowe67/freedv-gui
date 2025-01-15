@@ -89,11 +89,13 @@ class OptionsDlg : public wxDialog
         wxNotebookPage *m_debugTab; // Debug
         
         /* Hamlib options */
-        wxCheckBox   *m_ckboxUseAnalogModes;
-        wxCheckBox   *m_ckboxEnableFreqModeChanges;
-        wxCheckBox   *m_ckboxEnableSpacebarForPTT;
-        wxTextCtrl   *m_txtTxRxDelayMilliseconds;
-        wxCheckBox   *m_ckboxFrequencyEntryAsKHz;
+        wxCheckBox    *m_ckboxUseAnalogModes;
+        wxRadioButton *m_ckboxEnableFreqModeChanges;
+        wxRadioButton *m_ckboxEnableFreqChangesOnly;
+        wxRadioButton *m_ckboxNoFreqModeChanges;
+        wxCheckBox    *m_ckboxEnableSpacebarForPTT;
+        wxTextCtrl    *m_txtTxRxDelayMilliseconds;
+        wxCheckBox    *m_ckboxFrequencyEntryAsKHz;
         
         /* Waterfall color */
         wxRadioButton *m_waterfallColorScheme1; // Multicolored

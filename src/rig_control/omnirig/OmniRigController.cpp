@@ -32,7 +32,7 @@ using namespace std::chrono_literals;
 
 #define OMNI_RIG_WAIT_TIME (200ms)
 
-OmniRigController::OmniRigController(int rigId, bool restoreOnDisconnect)
+OmniRigController::OmniRigController(int rigId, bool restoreOnDisconnect, bool freqOnly)
     : rigId_(rigId)
     , omniRig_(nullptr)
     , rig_(nullptr)
@@ -42,6 +42,7 @@ OmniRigController::OmniRigController(int rigId, bool restoreOnDisconnect)
     , currMode_(UNKNOWN)
     , restoreOnDisconnect_(restoreOnDisconnect)
     , writableParams_(0)
+    , freqOnly_(freqOnly)
 {
     // empty
 }
@@ -156,9 +157,13 @@ void OmniRigController::disconnectImpl_()
         if (restoreOnDisconnect_)
         {
             setFrequencyImpl_(origFreq_);
-            rig_->put_Mode(origMode_);
+            
+            if (!freqOnly_)
+            {
+                rig_->put_Mode(origMode_);
+            }
         }
-
+        
         rig_->Release();
         omniRig_->Release();
         omniRig_ = nullptr;
