@@ -910,18 +910,21 @@ void MainFrame::togglePTT(void) {
         // Trigger end of TX processing. This causes us to wait for the remaining samples
         // to flow through the system before toggling PTT.  Note that there is a 1000ms 
         // timeout as backup.
-        log_info("Waiting for EOO to be queued");
-        endingTx = true;
-        while(true)
+        if (freedvInterface.getCurrentMode() == FREEDV_MODE_RADE)
         {
-            if (g_eoo_enqueued)
+            log_info("Waiting for EOO to be queued");
+            endingTx = true;
+            while(true)
             {
-                log_info("Detected that EOO has been enqueued");
-                break;
-            }
+                if (g_eoo_enqueued)
+                {
+                    log_info("Detected that EOO has been enqueued");
+                    break;
+                }
  
-            wxThread::Sleep(1);
-            wxGetApp().Yield(true);
+                wxThread::Sleep(1);
+                wxGetApp().Yield(true);
+            }
         }
 
         int sample = g_outfifo1_empty;
