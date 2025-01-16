@@ -1777,7 +1777,7 @@ void FreeDVReporterDialog::onMessageUpdateFn_(std::string sid, std::string lastU
             }
             else
             {
-                iter->second->userMessage = message;
+                iter->second->userMessage = wxString::FromUTF8(message);
             }
             
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
