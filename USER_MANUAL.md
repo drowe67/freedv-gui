@@ -896,6 +896,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix bug preventing proper time display in FreeDV Reporter on macOS. (PR #748)
     * Set timeout for Hamlib comms to avoid GUI getting stuck. (PR #746)
     * Fix various audio dropout issues, especially on Linux. (PR #761)
+    * Fix issue preventing non-ASCII text from appearing properly in FreeDV Reporter messages. (PR #812)
 2. Enhancements:
     * Show green line indicating RX frequency. (PR #725)
     * Update configuration of the Voice Keyer feature based on user feedback. (PR #730, #746, #793)
