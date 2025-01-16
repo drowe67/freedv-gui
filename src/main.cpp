@@ -1424,6 +1424,7 @@ MainFrame::~MainFrame()
     if (m_RxRunning)
     {
         stopRxStream();
+        freedvInterface.stop();
     } 
     sox_biquad_finish();
 
