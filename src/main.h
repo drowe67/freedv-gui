@@ -349,6 +349,7 @@ class MainFrame : public TopFrame
 
         // protected event handlers
         virtual void topFrame_OnSize( wxSizeEvent& event ) override;
+        virtual void topFrame_OnClose( wxCloseEvent& event ) override;
         virtual void OnCloseFrame(wxCloseEvent& event);
         void OnExitClick(wxCommandEvent& event);
         

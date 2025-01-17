@@ -2148,12 +2148,48 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 }
 #endif
 
+void MainFrame::topFrame_OnClose( wxCloseEvent& event )
+{
+    if (m_RxRunning)
+    {
+        if (m_btnTogPTT->GetValue())
+        {
+            // Stop PTT first
+            togglePTT();
+        }
+        
+        // Stop execution.
+        wxCommandEvent* offEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, m_togBtnOnOff->GetId());
+        offEvent->SetEventObject(m_togBtnOnOff);
+        m_togBtnOnOff->SetValue(false);
+        OnTogBtnOnOff(*offEvent);
+        delete offEvent;
+    } 
+    
+    TopFrame::topFrame_OnClose(event);
+}
 
 //-------------------------------------------------------------------------
 // OnExit()
 //-------------------------------------------------------------------------
 void MainFrame::OnExit(wxCommandEvent& event)
 {
+    if (m_RxRunning)
+    {
+        if (m_btnTogPTT->GetValue())
+        {
+            // Stop PTT first
+            togglePTT();
+        }
+        
+        // Stop execution.
+        wxCommandEvent* offEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, m_togBtnOnOff->GetId());
+        offEvent->SetEventObject(m_togBtnOnOff);
+        m_togBtnOnOff->SetValue(false);
+        OnTogBtnOnOff(*offEvent);
+        delete offEvent;
+    } 
+    
     if (wxGetApp().rigFrequencyController)
     {
         wxGetApp().rigFrequencyController->disconnect();
@@ -2183,11 +2219,6 @@ void MainFrame::OnExit(wxCommandEvent& event)
         sf_close(g_sfRecFile);
         g_sfRecFile = NULL;
     }
-    if(m_RxRunning)
-    {
-        stopRxStream();
-    }
-    m_togBtnAnalog->Disable();
 
     auto engine = AudioEngineFactory::GetAudioEngine();
     engine->stop();
