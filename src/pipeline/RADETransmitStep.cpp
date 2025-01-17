@@ -167,7 +167,7 @@ void RADETransmitStep::restartVocoder()
     const int NUM_SAMPLES_SILENCE = 60 * getOutputSampleRate() / 1000;
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
     RADE_COMP eooOut[numEOOSamples];
-    short eooOutShort[numEOOSamples + NUM_SAMPLES_SILENCE];
+    short eooOutShort[numEOOSamples];
 
     rade_tx_eoo(dv_, eooOut);
 
