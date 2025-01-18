@@ -1470,6 +1470,10 @@ MainFrame::~MainFrame()
 
     // Clean up RADE.
     rade_finalize();
+    
+    auto engine = AudioEngineFactory::GetAudioEngine();
+    engine->stop();
+    engine->setOnEngineError(nullptr, nullptr);
 }
 
 
@@ -2220,10 +2224,6 @@ void MainFrame::OnExit(wxCommandEvent& event)
         g_sfRecFile = NULL;
     }
 
-    auto engine = AudioEngineFactory::GetAudioEngine();
-    engine->stop();
-    engine->setOnEngineError(nullptr, nullptr);
-    
     Destroy();
 }
 
