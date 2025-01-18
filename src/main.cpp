@@ -1012,6 +1012,8 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     pthread_setname_np(pthread_self(), "FreeDV GUI");
 #endif // defined(__linux__)
 
+    terminating_ = false;
+
     // Add config file name to title bar if provided at the command line.
     if (wxGetApp().customConfigFileName != "")
     {
@@ -2163,6 +2165,7 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
         }
         
         // Stop execution.
+        terminating_ = true;
         wxCommandEvent* offEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, m_togBtnOnOff->GetId());
         offEvent->SetEventObject(m_togBtnOnOff);
         m_togBtnOnOff->SetValue(false);
@@ -2187,44 +2190,17 @@ void MainFrame::OnExit(wxCommandEvent& event)
         }
         
         // Stop execution.
+        terminating_ = true;
         wxCommandEvent* offEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, m_togBtnOnOff->GetId());
         offEvent->SetEventObject(m_togBtnOnOff);
         m_togBtnOnOff->SetValue(false);
         OnTogBtnOnOff(*offEvent);
         delete offEvent;
     } 
-    
-    if (wxGetApp().rigFrequencyController)
+    else
     {
-        wxGetApp().rigFrequencyController->disconnect();
-        wxGetApp().rigFrequencyController = nullptr;
+        Destroy();
     }
-    
-    if (wxGetApp().rigPttController)
-    {
-        wxGetApp().rigPttController->disconnect();
-        wxGetApp().rigPttController = nullptr;
-    }
-
-    wxGetApp().m_reporters.clear();
-    
-    wxUnusedVar(event);
-#ifdef _USE_TIMER
-    m_plotTimer.Stop();
-    m_pskReporterTimer.Stop();
-#endif // _USE_TIMER
-    if(g_sfPlayFile != NULL)
-    {
-        sf_close(g_sfPlayFile);
-        g_sfPlayFile = NULL;
-    }
-    if(g_sfRecFile != NULL)
-    {
-        sf_close(g_sfRecFile);
-        g_sfRecFile = NULL;
-    }
-
-    Destroy();
 }
 
 void MainFrame::OnChangeTxMode( wxCommandEvent& event )
@@ -2814,6 +2790,11 @@ void MainFrame::OnTogBtnOnOff(wxCommandEvent& event)
                 m_togBtnOnOff->SetValue(m_RxRunning);
                 m_togBtnOnOff->SetLabel(wxT("&Start"));
                 m_togBtnOnOff->Enable(true);
+
+                if (terminating_)
+                {
+                    CallAfter([&]() { Destroy(); });
+                }
             });
         });
         onOffExec.detach();

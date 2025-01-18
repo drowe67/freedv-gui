@@ -494,6 +494,8 @@ class MainFrame : public TopFrame
         wxMenuItem* adjustMonitorVKVolMenuItem_;
         wxMenuItem* chooseVKFileMenuItem_;
         wxMenuItem* recordNewVoiceKeyerFileMenuItem_;
+
+        bool terminating_; // used for terminating FreeDV
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
