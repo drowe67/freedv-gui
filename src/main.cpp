@@ -2172,8 +2172,10 @@ void MainFrame::topFrame_OnClose( wxCloseEvent& event )
         OnTogBtnOnOff(*offEvent);
         delete offEvent;
     } 
-    
-    TopFrame::topFrame_OnClose(event);
+    else
+    {
+        TopFrame::topFrame_OnClose(event);
+    }
 }
 
 //-------------------------------------------------------------------------
