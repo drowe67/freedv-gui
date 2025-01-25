@@ -103,8 +103,9 @@ Linux by following these steps:
    ```
 
 Alternatively, you can use [this script](https://github.com/barjac/freedv-rade-build) developed by 
-Barry Jackson G4MKT to automate the above steps. The FreeDV project thanks him for his contribution
-to helping users more easily get on the air with FreeDV.
+Barry Jackson G4MKT to automate the above steps. While the FreeDV project thanks him for his contribution
+to helping Linux users more easily get on the air with FreeDV, the FreeDV development team will not provide 
+support. All support inquiries regarding this script should be directed to the linked repo.
 
 ## Building without LPCNet
 
