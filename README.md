@@ -102,6 +102,10 @@ Linux by following these steps:
    (rade-venv) $ PYTHONPATH="$(pwd)/rade_src:$PYTHONPATH" src/freedv
    ```
 
+Alternatively, you can use [this script](https://github.com/barjac/freedv-rade-build) developed by 
+Barry Jackson G4MKT to automate the above steps. The FreeDV project thanks him for his contribution
+to helping users more easily get on the air with FreeDV.
+
 ## Building without LPCNet
 
 In preparation for possible future deprecation of FreeDV 2020 and 2020B modes, it is
