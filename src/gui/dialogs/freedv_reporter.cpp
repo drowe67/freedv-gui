@@ -869,6 +869,7 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
             std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
             tempUserMessage_ = allReporterData_[*sidPtr]->userMessage;
             wxString userMessageTruncated = m_listSpots->GetItemText(index, desiredCol);
+            userMessageTruncated = userMessageTruncated.SubString(1, userMessageTruncated.size() - 1);
         
             if (tipWindow_ == nullptr && tempUserMessage_ != userMessageTruncated)
             {
