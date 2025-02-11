@@ -897,6 +897,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Set timeout for Hamlib comms to avoid GUI getting stuck. (PR #746)
     * Fix various audio dropout issues, especially on Linux. (PR #761)
     * Fix issue preventing non-ASCII text from appearing properly in FreeDV Reporter messages. (PR #812)
+    * Fix issue preventing suppression of the Msg tooltip for non-truncated messages. (PR #829)
 2. Enhancements:
     * Show green line indicating RX frequency. (PR #725)
     * Update configuration of the Voice Keyer feature based on user feedback. (PR #730, #746, #793)
