@@ -32,9 +32,6 @@ void VerifyMicrophonePermissions(std::promise<bool>& micPromise)
     // General Microphone enable/disable (applies to all users)
     wxRegKey localMachineMicrophoneKey(wxRegKey::HKLM, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\microphone");
 
-    // "Let desktop apps access your microphone" (applies on a per-user basis, requires above to be enabled)
-    wxRegKey currentUserNonPackagedKey(wxRegKey::HKCU, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\microphone\\NonPackaged");
-    
     bool localMachineMicrophoneAllowed = false;
     if (localMachineMicrophoneKey.Exists())
     {
@@ -43,15 +40,7 @@ void VerifyMicrophonePermissions(std::promise<bool>& micPromise)
         localMachineMicrophoneAllowed = regValue == "Allow";
     }
     
-    bool currentUserNonPackagedAllowed = false;
-    if (currentUserNonPackagedKey.Exists())
-    {
-        wxString regValue;
-        currentUserNonPackagedKey.QueryValue("Value", regValue, true);
-        currentUserNonPackagedAllowed = regValue == "Allow";
-    }
-    
-    microphonePermissionsGranted = localMachineMicrophoneAllowed && currentUserNonPackagedAllowed;
+    microphonePermissionsGranted = localMachineMicrophoneAllowed;
     micPromise.set_value(microphonePermissionsGranted);
 }
 
