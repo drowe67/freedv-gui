@@ -1598,6 +1598,11 @@ void FreeDVReporterDialog::onConnectionSuccessfulFn_()
 
 void FreeDVReporterDialog::resizeAllColumns_()
 {
+    int userMsgCol = USER_MESSAGE_COL;
+#if defined(WIN32)
+    userMsgCol++;
+#endif // defined(WIN32)
+    
     std::map<int, int> newMaxSizes;
     std::map<int, int> colResizeList;
     for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
@@ -1606,12 +1611,15 @@ void FreeDVReporterDialog::resizeAllColumns_()
         {
             wxString colText = m_listSpots->GetItemText(index, i);
             auto newSize = std::max(getSizeForTableCellString_(colText), DefaultColumnWidths_[i]);
-            if (newSize > newMaxSizes[i])
+            if (i != userMsgCol)
             {
-                newMaxSizes[i] = newSize;
-            }
+                if (newSize > newMaxSizes[i])
+                {
+                    newMaxSizes[i] = newSize;
+                }
 
-            colResizeList[i] = 1;
+                colResizeList[i] = 1;
+            }
         }
     }
 
@@ -2072,6 +2080,11 @@ int FreeDVReporterDialog::getSizeForTableCellString_(wxString str)
 
 bool FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val, std::map<int, int>& colResizeList)
 {
+    int userMsgCol = USER_MESSAGE_COL;
+#if defined(WIN32)
+    userMsgCol++;
+#endif // defined(WIN32)
+    
     bool result = false;
     auto oldText = m_listSpots->GetItemText(row, col);
     
@@ -2083,7 +2096,7 @@ bool FreeDVReporterDialog::setColumnForRow_(int row, int col, wxString val, std:
         int textWidth = std::max(getSizeForTableCellString_(val), DefaultColumnWidths_[col]);
 
         // Resize column if not big enough.
-        if (textWidth > columnLengths_[col])
+        if (textWidth > columnLengths_[col] && col != userMsgCol)
         {
             columnLengths_[col] = textWidth;
             colResizeList[col]++;
