@@ -695,7 +695,7 @@ void FreeDVReporterDialog::AdjustMsgColWidth(wxListEvent& event)
     for (int index = 0; index < m_listSpots->GetItemCount(); index++)
     {
         std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
-        wxString tempUserMessage = _(" ") + allReporterData_[*sidPtr]->userMessage;
+        wxString tempUserMessage = _(" ") + allReporterData_[*sidPtr]->userMessage;  // note: extra space at beginning is to provide extra space from previous col
         
         textWidth = getSizeForTableCellString_(tempUserMessage);
         int tmpLength = allReporterData_[*sidPtr]->userMessage.Length() - 1;
@@ -1987,7 +1987,7 @@ void FreeDVReporterDialog::addOrUpdateListIfNotFiltered_(ReporterData* data, std
     int textWidth = 0;
     int currentColWidth = m_listSpots->GetColumnWidth(col);
     
-    wxString userMessageTruncated = _(" ") + data->userMessage;
+    wxString userMessageTruncated = _(" ") + data->userMessage; // note: extra space at beginning is to provide extra space from previous col
     textWidth = getSizeForTableCellString_(userMessageTruncated);
     int tmpLength = data->userMessage.Length() - 1;
     while (textWidth > currentColWidth && tmpLength > 0)
