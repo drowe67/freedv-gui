@@ -431,7 +431,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // Box for S/N ratio (Numeric)
     //------------------------------
-    m_textSNR = new wxStaticText(snrBox, wxID_ANY, wxT(" 0.0 dB"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
+    m_textSNR = new wxStaticText(snrBox, wxID_ANY, wxT("--"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
     m_textSNR->SetMinSize(wxSize(70,-1));
     snrSizer->Add(m_textSNR, 0, wxALIGN_CENTER_HORIZONTAL, 1);
 
