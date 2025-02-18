@@ -33,6 +33,7 @@
 #include "util/logging/ulog.h"
 
 HamlibRigController::RigList HamlibRigController::RigList_;
+HamlibRigController::RigNameList HamlibRigController::RigNameList_;
 std::mutex HamlibRigController::RigListMutex_;
 
 #if RIGCAPS_NOT_CONST
@@ -41,6 +42,7 @@ int HamlibRigController::BuildRigList_(struct rig_caps *rig, rig_ptr_t rigList) 
 int HamlibRigController::BuildRigList_(const struct rig_caps *rig, rig_ptr_t rigList) {    
 #endif // RIGCAPS_NOT_CONST
     ((HamlibRigController::RigList *)rigList)->push_back(rig); 
+    RigNameList_.push_back(std::string(rig->mfg_name) + std::string(" ") + std::string(rig->model_name));
     return 1;
 }
 
@@ -175,6 +177,7 @@ void HamlibRigController::InitializeHamlibLibrary()
         rig_load_all_backends();
         rig_list_foreach(&HamlibRigController::BuildRigList_, &RigList_);
         std::sort(RigList_.begin(), RigList_.end(), &HamlibRigController::RigCompare_);
+        std::sort(RigNameList_.begin(), RigNameList_.end());
 
         /* Reset debug output. */
         rig_set_debug(RIG_DEBUG_VERBOSE);
@@ -224,12 +227,9 @@ int HamlibRigController::RigNameToIndex(std::string rigName)
     InitializeHamlibLibrary();
 
     int index = 0;
-    for (auto& entry : RigList_)
+    for (auto& entry : RigNameList_)
     {
-        char name[128];
-        snprintf(name, 128, "%s %s", entry->mfg_name, entry->model_name); 
-        
-        if (rigName == std::string(name))
+        if (rigName == entry)
         {
             return index;
         }
@@ -243,10 +243,7 @@ int HamlibRigController::RigNameToIndex(std::string rigName)
 std::string HamlibRigController::RigIndexToName(unsigned int rigIndex)
 {
     InitializeHamlibLibrary();
-
-    char name[128];
-    snprintf(name, 128, "%s %s", RigList_[rigIndex]->mfg_name, RigList_[rigIndex]->model_name); 
-    return name;
+    return RigNameList_[rigIndex];
 }
 
 int HamlibRigController::GetNumberSupportedRadios()
