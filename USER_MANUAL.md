@@ -899,6 +899,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix issue preventing non-ASCII text from appearing properly in FreeDV Reporter messages. (PR #812)
     * Don't adjust Msg column width when user disconnects. (PR #828)
     * Fix issue preventing suppression of the Msg tooltip for non-truncated messages. (PR #829)
+    * Preserve Hamlib rig names on startup to guard against changes by Hamlib during execution. (PR #834)
 2. Enhancements:
     * Show green line indicating RX frequency. (PR #725)
     * Update configuration of the Voice Keyer feature based on user feedback. (PR #730, #746, #793)
@@ -913,7 +914,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 3. Build system:
     * Allow overrriding the version tag when building. (PR #727)
     * Update wxWidgets to 3.2.6. (PR #748)
-    * Update Hamlib to 4.6. (PR #795)
+    * Update Hamlib to 4.6.2. (PR #834)
 4. Miscellaneous:
     * Add issue template for SW bugs. (PR #759)
 
