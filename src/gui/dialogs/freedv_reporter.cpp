@@ -52,7 +52,7 @@ extern FreeDVInterface freedvInterface;
 #endif // defined(WIN32)
 #define RX_ONLY_STATUS "RX Only"
 #define RX_COLORING_LONG_TIMEOUT_SEC (20)
-#define RX_COLORING_SHORT_TIMEOUT_SEC (2)
+#define RX_COLORING_SHORT_TIMEOUT_SEC (5)
 #define MSG_COLORING_TIMEOUT_SEC (5)
 #define STATUS_MESSAGE_MRU_MAX_SIZE (10)
 #define MESSAGE_COLUMN_ID (6)
