@@ -10,8 +10,7 @@ if(APPLE)
     ExternalProject_Add(build_sioclient
        SOURCE_DIR sioclient_src
        BINARY_DIR sioclient_build
-       GIT_REPOSITORY https://github.com/socketio/socket.io-client-cpp.git
-       GIT_TAG master
+       URL ${CMAKE_SOURCE_DIR}/src/3rdparty/socket.io-client-cpp.zip
        CMAKE_ARGS ${SIO_CMAKE_ARGS}
        CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET} -DCMAKE_OSX_ARCHITECTURES:STRING=${CMAKE_OSX_ARCHITECTURES}
        INSTALL_COMMAND ""
@@ -20,8 +19,7 @@ else(APPLE)
     ExternalProject_Add(build_sioclient
        SOURCE_DIR sioclient_src
        BINARY_DIR sioclient_build
-       GIT_REPOSITORY https://github.com/socketio/socket.io-client-cpp.git
-       GIT_TAG master
+       URL ${CMAKE_SOURCE_DIR}/src/3rdparty/socket.io-client-cpp.zip
        CMAKE_ARGS ${SIO_CMAKE_ARGS}
        INSTALL_COMMAND ""
     )
