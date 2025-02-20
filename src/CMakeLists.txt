@@ -19,9 +19,6 @@ add_definitions(-DULOG_HAVE_TIME)
 add_definitions(-DULOG_NO_COLOR)
 
 # Compile FreeDV components
-add_subdirectory(3rdparty)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/socket.io-client-cpp/src)
-
 add_subdirectory(audio)
 add_subdirectory(config)
 add_subdirectory(gui)

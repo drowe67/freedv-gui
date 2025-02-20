@@ -5,5 +5,6 @@ add_library(fdv_reporting STATIC
     FreeDVReporter.h
 )
 
+if(SIOCLIENT_ADD_DEPENDENCY)
 add_dependencies(fdv_reporting sioclient)
-target_link_libraries(fdv_reporting PRIVATE sioclient)
+endif(SIOCLIENT_ADD_DEPENDENCY)
