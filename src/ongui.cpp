@@ -451,18 +451,27 @@ bool MainFrame::OpenHamlibRig() {
                 switch(mode)
                 {
                     case IRigFrequencyController::USB:
-                    case IRigFrequencyController::DIGU:
                         m_txtModeStatus->SetLabel(wxT("USB"));
                         m_txtModeStatus->Enable(true);
                         break;
+                    case IRigFrequencyController::DIGU:
+                        m_txtModeStatus->SetLabel(wxT("USB-D"));
+                        m_txtModeStatus->Enable(true);
+                        break;
                     case IRigFrequencyController::LSB:
-                    case IRigFrequencyController::DIGL:
                         m_txtModeStatus->SetLabel(wxT("LSB"));
                         m_txtModeStatus->Enable(true);
                         break;
+                    case IRigFrequencyController::DIGL:
+                        m_txtModeStatus->SetLabel(wxT("LSB-D"));
+                        m_txtModeStatus->Enable(true);
+                        break;
                     case IRigFrequencyController::FM:
-                    case IRigFrequencyController::DIGFM:
                         m_txtModeStatus->SetLabel(wxT("FM"));
+                        m_txtModeStatus->Enable(true);
+                        break;
+                    case IRigFrequencyController::DIGFM:
+                        m_txtModeStatus->SetLabel(wxT("FM-D"));
                         m_txtModeStatus->Enable(true);
                         break;
                     case IRigFrequencyController::AM:
@@ -578,18 +587,27 @@ void MainFrame::OpenOmniRig()
             switch(mode)
             {
                 case IRigFrequencyController::USB:
-                case IRigFrequencyController::DIGU:
                     m_txtModeStatus->SetLabel(wxT("USB"));
                     m_txtModeStatus->Enable(true);
                     break;
+                case IRigFrequencyController::DIGU:
+                    m_txtModeStatus->SetLabel(wxT("USB-D"));
+                    m_txtModeStatus->Enable(true);
+                    break;
                 case IRigFrequencyController::LSB:
-                case IRigFrequencyController::DIGL:
                     m_txtModeStatus->SetLabel(wxT("LSB"));
                     m_txtModeStatus->Enable(true);
                     break;
+                case IRigFrequencyController::DIGL:
+                    m_txtModeStatus->SetLabel(wxT("LSB-D"));
+                    m_txtModeStatus->Enable(true);
+                    break;
                 case IRigFrequencyController::FM:
-                case IRigFrequencyController::DIGFM:
                     m_txtModeStatus->SetLabel(wxT("FM"));
+                    m_txtModeStatus->Enable(true);
+                    break;
+                case IRigFrequencyController::DIGFM:
+                    m_txtModeStatus->SetLabel(wxT("FM-D"));
                     m_txtModeStatus->Enable(true);
                     break;
                 case IRigFrequencyController::AM:

@@ -66,6 +66,7 @@ public:
 
 private:
     using RigList = std::vector<const struct rig_caps *>;
+    using RigNameList = std::vector<std::string>;
     
     std::string rigName_;
     std::string serialPort_;
@@ -96,6 +97,7 @@ private:
     void requestCurrentFrequencyModeImpl_();
     
     static RigList RigList_;
+    static RigNameList RigNameList_;
     static std::mutex RigListMutex_;
 
     static bool RigCompare_(const struct rig_caps *rig1, const struct rig_caps *rig2);
