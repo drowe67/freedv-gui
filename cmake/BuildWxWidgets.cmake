@@ -19,6 +19,10 @@ set(wxUSE_LIBSDL OFF CACHE STRING "use SDL for audio on Unix")
 set(wxUSE_LIBMSPACK OFF CACHE STRING "use libmspack (CHM help files loading)")
 set(wxUSE_LIBICONV OFF CACHE STRING "disable use of libiconv")
 
+if(WIN32)
+set(wxUSE_GRAPHICS_DIRECT2D ON CACHE STRING "use Direct2D graphics context")
+endif(WIN32)
+
 include(FetchContent)
 FetchContent_Declare(
     wxWidgets
@@ -26,6 +30,8 @@ FetchContent_Declare(
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
     GIT_TAG        v${WXWIDGETS_VERSION}
+    PATCH_COMMAND  git apply ${CMAKE_SOURCE_DIR}/cmake/wxWidgets-Direct2D-color-font.patch
+    UPDATE_DISCONNECTED 1
 )
 
 FetchContent_GetProperties(wxWidgets)
