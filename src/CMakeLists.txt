@@ -18,6 +18,9 @@ set(FREEDV_LINK_LIBS_OSX
 add_definitions(-DULOG_HAVE_TIME)
 add_definitions(-DULOG_NO_COLOR)
 
+# Include third party headers
+include_directories(3rdparty)
+
 # Compile FreeDV components
 add_subdirectory(audio)
 add_subdirectory(config)
