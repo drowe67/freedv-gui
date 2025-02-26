@@ -4,6 +4,7 @@ endif(WIN32)
 
 add_library(fdv_util STATIC
     ThreadedObject.cpp
+    ThreadedTimer.cpp
     logging/ulog.c
     ${UTIL_WIN32_FILES}
 )
