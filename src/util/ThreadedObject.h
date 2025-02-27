@@ -43,8 +43,8 @@ private:
     bool isDestroying_;
     std::thread objectThread_;
     std::vector<std::function<void()> > eventQueue_;
-    std::mutex eventQueueMutex_;
-    std::condition_variable eventQueueCV_;
+    std::recursive_mutex eventQueueMutex_;
+    std::condition_variable_any eventQueueCV_;
 
     void eventLoop_();
 };
