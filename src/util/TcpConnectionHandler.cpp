@@ -176,13 +176,18 @@ void TcpConnectionHandler::connectImpl_()
         whichIndex = 1;
     }
 
+#if !defined(WIN32)
     int flags = 0;
+#endif // !defined(WIN32)
     std::vector<int> pendingSockets;
     
     while (results[0] || results[1])
     {
         struct addrinfo* current = results[whichIndex];
         int ret = 0;
+#if defined(WIN32)
+        u_long mode = 1;  // 1 to enable non-blocking socket
+#endif // defined(WIN32)
         
         log_info("TcpConnectionHandler: create socket");
         int fd = socket(current->ai_family, current->ai_socktype, current->ai_protocol);
@@ -197,7 +202,6 @@ void TcpConnectionHandler::connectImpl_()
         // Set socket as non-blocking. Required to enable Happy Eyeballs behavior. 
         log_info("TcpConnectionHandler: set socket non-blocking");           
 #if defined(WIN32)
-        u_long mode = 1;  // 1 to enable non-blocking socket
         ioctlsocket(fd, FIONBIO, &mode);
 #else
         flags = fcntl(fd, F_GETFL, 0);
@@ -413,7 +417,11 @@ void TcpConnectionHandler::checkConnections_(std::vector<int>& sockets)
         {
             if (FD_ISSET(sock, &writeSet))
             {
+#if defined(WIN32)
+                auto sockOptError = getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&sockErrCode, &resultLength);
+#else
                 auto sockOptError = getsockopt(sock, SOL_SOCKET, SO_ERROR, &sockErrCode, &resultLength);
+#endif // defined(WIN32)
                 if (sockOptError < 0)
                 {
                     err = errno;
