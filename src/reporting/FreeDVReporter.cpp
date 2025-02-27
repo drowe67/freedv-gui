@@ -21,7 +21,7 @@
 //=========================================================================
 
 #include "FreeDVReporter.h"
-#include "sio_client.h"
+#include "../util/SocketIoClient.h"
 #include "../os/os_interface.h"
 
 using namespace std::chrono_literals;
@@ -45,7 +45,7 @@ FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::
         hostname_ = FREEDV_REPORTER_DEFAULT_HOSTNAME;
     }
 
-    sioClient_ = new sio::client();
+    sioClient_ = new SocketIoClient();
     assert(sioClient_ != nullptr);
 }
 
@@ -80,14 +80,13 @@ void FreeDVReporter::requestQSY(std::string sid, uint64_t frequencyHz, std::stri
 {
     if (isValidForReporting())
     {
-        sio::message::ptr qsyPtr = sio::object_message::create();
-        auto qsyData = (sio::object_message*)qsyPtr.get();
+        nlohmann::json qsyMsg = {
+            {"dest_sid", sid},
+            {"message", message},
+            {"frequency", frequencyHz}
+        };
 
-        qsyData->insert("dest_sid", sid);
-        qsyData->insert("message", message);
-        qsyData->insert("frequency", sio::int_message::create(frequencyHz));
-
-        sioClient_->socket()->emit("qsy_request", qsyPtr);
+        sioClient_->emit("qsy_request", qsyMsg);
     }
 }
 
@@ -164,14 +163,13 @@ void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, ui
     {
         std::unique_lock<std::mutex> lk(fnQueueMutex_);
         fnQueue_.push_back([&, mode, snr, callsign]() {
-            sio::message::ptr rxDataPtr = sio::object_message::create();
-            auto rxData = (sio::object_message*)rxDataPtr.get();
+            nlohmann::json rxData = {
+                {"callsign", callsign},
+                {"mode", mode},
+                {"snr", (int)snr}
+            };
         
-            rxData->insert("callsign", callsign);
-            rxData->insert("mode", mode);
-            rxData->insert("snr", sio::int_message::create(snr));
-        
-            sioClient_->socket()->emit("rx_report", rxDataPtr);
+            sioClient_->emit("rx_report", rxData);
         });
         fnQueueConditionVariable_.notify_one();
     }
@@ -245,25 +243,28 @@ bool FreeDVReporter::isValidForReporting()
 void FreeDVReporter::connect_()
 {        
     // Connect and send initial info.
-    sio::message::ptr authPtr = sio::object_message::create();
-    auto auth = (sio::object_message*)authPtr.get();
+    nlohmann::json authData;
     if (!isValidForReporting())
     {
-        auth->insert("role", "view");
+        authData = {
+            {"role", "view"}
+        };
     }
     else
     {
-        auth->insert("role", "report");
-        auth->insert("callsign", callsign_);
-        auth->insert("grid_square", gridSquare_);
-        auth->insert("version", software_);
-        auth->insert("rx_only", sio::bool_message::create(rxOnly_));
-        auth->insert("os", GetOperatingSystemString());
+        authData = {
+            {"role", "report"},
+            {"callsign", callsign_},
+            {"grid_square", gridSquare_},
+            {"version", software_},
+            {"rx_only", rxOnly_},
+            {"os", GetOperatingSystemString()}
+        };
     }
 
     // Reconnect listener should re-report frequency so that "unknown"
     // doesn't appear.
-    sioClient_->set_socket_open_listener([&](std::string)
+    sioClient_->setOnConnectFn([&]()
     {
         isConnecting_ = false;
         
@@ -279,37 +280,7 @@ void FreeDVReporter::connect_()
         }
     });
     
-    sioClient_->set_reconnect_listener([&](unsigned, unsigned)
-    {
-        isConnecting_ = false;
-        
-        if (onReporterDisconnectFn_)
-        {
-            onReporterDisconnectFn_();
-        }
-        
-        if (onReporterConnectFn_)
-        {
-            onReporterConnectFn_();
-        }
-        
-        if (hidden_)
-        {
-            hideFromView();
-        }
-        else
-        {
-            freqChangeImpl_(lastFrequency_);
-            transmitImpl_(mode_, tx_);
-            sendMessageImpl_(message_);
-        }
-    });
-    
-    sioClient_->set_fail_listener([&]() {
-        isConnecting_ = false;
-    });
-    
-    sioClient_->set_close_listener([&](sio::client::close_reason const&) {
+    sioClient_->setOnDisconnectFn([&]() {
         isConnecting_ = false;
         
         if (onReporterDisconnectFn_)
@@ -319,17 +290,28 @@ void FreeDVReporter::connect_()
     });
     
     isConnecting_ = true;
-    sioClient_->connect(std::string("http://") + hostname_ + "/", authPtr);
+    
+    std::stringstream ss;
+    ss << hostname_;
+    
+    std::string host;
+    std::string portStr;
+    int port = 80;
+    std::getline(ss, host, ':');
+    std::getline(ss, portStr, ':');
+    if (portStr != "")
+    {
+        port = atoi(portStr.c_str());
+    }
+    sioClient_->setAuthDictionary(authData);
+    sioClient_->connect(host.c_str(), port, true);
     
     if (onReporterConnectFn_)
     {
         onReporterConnectFn_();
     }
     
-    sioClient_->socket()->off("new_connection");
-    sioClient_->socket()->on("new_connection", [&](sio::event& ev) {
-        auto msgParams = ev.get_message()->get_map();
-
+    sioClient_->on("new_connection", [&](nlohmann::json msgParams) {
         if (onUserConnectFn_)
         {
             auto sid = msgParams["sid"];
@@ -341,37 +323,33 @@ void FreeDVReporter::connect_()
             
             // Only call event handler if we received the correct data types
             // for the items in the message.
-            if (sid->get_flag() == sio::message::flag_string &&
-                lastUpdate->get_flag() == sio::message::flag_string &&
-                callsign->get_flag() == sio::message::flag_string &&
-                gridSquare->get_flag() == sio::message::flag_string &&
-                version->get_flag() == sio::message::flag_string &&
-                rxOnly->get_flag() == sio::message::flag_boolean)
+            if (sid.is_string() &&
+                lastUpdate.is_string() &&
+                callsign.is_string() &&
+                gridSquare.is_string() &&
+                version.is_string() &&
+                rxOnly.is_boolean())
             {
                 onUserConnectFn_(
-                    sid->get_string(),
-                    lastUpdate->get_string(),
-                    callsign->get_string(),
-                    gridSquare->get_string(),
-                    version->get_string(),
-                    rxOnly->get_bool()
+                    sid.template get<std::string>(),
+                    lastUpdate.template get<std::string>(),
+                    callsign.template get<std::string>(),
+                    gridSquare.template get<std::string>(),
+                    version.template get<std::string>(),
+                    rxOnly.template get<bool>()
                 );
             }
         }
     });
 
-    sioClient_->socket()->off("connection_successful");
-    sioClient_->socket()->on("connection_successful", [&](sio::event& ev) {
+    sioClient_->on("connection_successful", [&](nlohmann::json) {
         if (onConnectionSuccessfulFn_)
         {
             onConnectionSuccessfulFn_();
         }
     });
 
-    sioClient_->socket()->off("remove_connection");
-    sioClient_->socket()->on("remove_connection", [&](sio::event& ev) {
-        auto msgParams = ev.get_message()->get_map();
-
+    sioClient_->on("remove_connection", [&](nlohmann::json msgParams) {
         if (onUserDisconnectFn_)
         {
             auto sid = msgParams["sid"];
@@ -383,29 +361,26 @@ void FreeDVReporter::connect_()
             
             // Only call event handler if we received the correct data types
             // for the items in the message.
-            if (sid->get_flag() == sio::message::flag_string &&
-                lastUpdate->get_flag() == sio::message::flag_string &&
-                callsign->get_flag() == sio::message::flag_string &&
-                gridSquare->get_flag() == sio::message::flag_string &&
-                version->get_flag() == sio::message::flag_string &&
-                rxOnly->get_flag() == sio::message::flag_boolean)
+            if (sid.is_string() &&
+                lastUpdate.is_string() &&
+                callsign.is_string() &&
+                gridSquare.is_string() &&
+                version.is_string() &&
+                rxOnly.is_boolean())
             {
                 onUserDisconnectFn_(
-                    sid->get_string(),
-                    lastUpdate->get_string(),
-                    callsign->get_string(),
-                    gridSquare->get_string(),
-                    version->get_string(),
-                    rxOnly->get_bool()
+                    sid.template get<std::string>(),
+                    lastUpdate.template get<std::string>(),
+                    callsign.template get<std::string>(),
+                    gridSquare.template get<std::string>(),
+                    version.template get<std::string>(),
+                    rxOnly.template get<bool>()
                 );
             }
         }
     });
 
-    sioClient_->socket()->off("tx_report");
-    sioClient_->socket()->on("tx_report", [&](sio::event& ev) {
-        auto msgParams = ev.get_message()->get_map();
-
+    sioClient_->on("tx_report", [&](nlohmann::json msgParams) {
         if (onTransmitUpdateFn_)
         {
             auto sid = msgParams["sid"];
@@ -418,30 +393,27 @@ void FreeDVReporter::connect_()
             
             // Only call event handler if we received the correct data types
             // for the items in the message.
-            if (sid->get_flag() == sio::message::flag_string &&
-                lastUpdate->get_flag() == sio::message::flag_string &&
-                callsign->get_flag() == sio::message::flag_string &&
-                gridSquare->get_flag() == sio::message::flag_string &&
-                mode->get_flag() == sio::message::flag_string &&
-                transmitting->get_flag() == sio::message::flag_boolean)
+            if (sid.is_string() &&
+                lastUpdate.is_string() &&
+                callsign.is_string() &&
+                gridSquare.is_string() &&
+                mode.is_string() &&
+                transmitting.is_boolean())
             {
                 onTransmitUpdateFn_(
-                    sid->get_string(),
-                    lastUpdate->get_string(),
-                    callsign->get_string(),
-                    gridSquare->get_string(),
-                    mode->get_string(),
-                    transmitting->get_bool(),
-                    lastTx->get_flag() == sio::message::flag_null ? "" : lastTx->get_string()
+                    sid.template get<std::string>(),
+                    lastUpdate.template get<std::string>(),
+                    callsign.template get<std::string>(),
+                    gridSquare.template get<std::string>(),
+                    mode.template get<std::string>(),
+                    transmitting.template get<bool>(),
+                    lastTx.is_null() ? "" : lastTx.template get<std::string>()
                 );
             }
         }
     });
 
-    sioClient_->socket()->off("rx_report");
-    sioClient_->socket()->on("rx_report", [&](sio::event& ev) {
-        auto msgParams = ev.get_message()->get_map();
-        
+    sioClient_->on("rx_report", [&](nlohmann::json msgParams) {    
         auto sid = msgParams["sid"];
         auto lastUpdate = msgParams["last_update"];
         auto receiverCallsign = msgParams["receiver_callsign"];
@@ -452,47 +424,44 @@ void FreeDVReporter::connect_()
         
         if (onReceiveUpdateFn_)
         {
-            bool snrInteger =  snr->get_flag() == sio::message::flag_integer;
-            bool snrFloat =  snr->get_flag() == sio::message::flag_double;
+            bool snrInteger =  snr.is_number_integer();
+            bool snrFloat =  snr.is_number_float();
             bool snrValid = snrInteger || snrFloat;
 
             float snrVal = 0;
             if (snrInteger)
             {
-                snrVal = snr->get_int();
+                snrVal = snr.template get<int>();
             }
             else if (snrFloat)
             {
-                snrVal = snr->get_double();
+                snrVal = snr.template get<double>();
             }
 
             // Only call event handler if we received the correct data types
             // for the items in the message.
-            if (sid->get_flag() == sio::message::flag_string &&
-                lastUpdate->get_flag() == sio::message::flag_string &&
-                callsign->get_flag() == sio::message::flag_string &&
-                receiverCallsign->get_flag() == sio::message::flag_string &&
-                receiverGridSquare->get_flag() == sio::message::flag_string &&
-                mode->get_flag() == sio::message::flag_string &&
+            if (sid.is_string() &&
+                lastUpdate.is_string() &&
+                callsign.is_string() &&
+                receiverCallsign.is_string() &&
+                receiverGridSquare.is_string() &&
+                mode.is_string() &&
                 snrValid)
             {
                 onReceiveUpdateFn_(
-                    sid->get_string(),
-                    lastUpdate->get_string(),
-                    receiverCallsign->get_string(),
-                    receiverGridSquare->get_string(),
-                    callsign->get_string(),
+                    sid.template get<std::string>(),
+                    lastUpdate.template get<std::string>(),
+                    receiverCallsign.template get<std::string>(),
+                    receiverGridSquare.template get<std::string>(),
+                    callsign.template get<std::string>(),
                     snrVal,
-                    mode->get_string()
+                    mode.template get<std::string>()
                 );
             }
         }
     });
 
-    sioClient_->socket()->off("freq_change");
-    sioClient_->socket()->on("freq_change", [&](sio::event& ev) {
-        auto msgParams = ev.get_message()->get_map();
-
+    sioClient_->on("freq_change", [&](nlohmann::json msgParams) {
         if (onFrequencyChangeFn_)
         {
             auto sid = msgParams["sid"];
@@ -503,27 +472,24 @@ void FreeDVReporter::connect_()
             
             // Only call event handler if we received the correct data types
             // for the items in the message.
-            if (sid->get_flag() == sio::message::flag_string &&
-                lastUpdate->get_flag() == sio::message::flag_string &&
-                callsign->get_flag() == sio::message::flag_string &&
-                gridSquare->get_flag() == sio::message::flag_string &&
-                frequency->get_flag() == sio::message::flag_integer)
+            if (sid.is_string() &&
+                lastUpdate.is_string() &&
+                callsign.is_string() &&
+                gridSquare.is_string() &&
+                frequency.is_number())
             {
                 onFrequencyChangeFn_(
-                    sid->get_string(),
-                    lastUpdate->get_string(),
-                    callsign->get_string(),
-                    gridSquare->get_string(),
-                    frequency->get_int()
+                    sid.template get<std::string>(),
+                    lastUpdate.template get<std::string>(),
+                    callsign.template get<std::string>(),
+                    gridSquare.template get<std::string>(),
+                    frequency.template get<uint64_t>()
                 );
             }
         }
     });
 
-    sioClient_->socket()->off("message_update");
-    sioClient_->socket()->on("message_update", [&](sio::event& ev) {    
-        auto msgParams = ev.get_message()->get_map();
-
+    sioClient_->on("message_update", [&](nlohmann::json msgParams) {    
         if (onMessageUpdateFn_)
         {
             auto sid = msgParams["sid"];
@@ -532,23 +498,20 @@ void FreeDVReporter::connect_()
 
             // Only call event handler if we received the correct data types
             // for the items in the message.
-            if (sid->get_flag() == sio::message::flag_string &&
-                lastUpdate->get_flag() == sio::message::flag_string &&
-                message->get_flag() == sio::message::flag_string)
+            if (sid.is_string() &&
+                lastUpdate.is_string()&&
+                message.is_string())
             {
                 onMessageUpdateFn_(
-                    sid->get_string(),
-                    lastUpdate->get_string(),
-                    message->get_string()
+                    sid.template get<std::string>(),
+                    lastUpdate.template get<std::string>(),
+                    message.template get<std::string>()
                 );
             }
         }
     });
     
-    sioClient_->socket()->off("qsy_request");
-    sioClient_->socket()->on("qsy_request", [&](sio::event& ev) {
-        auto msgParams = ev.get_message()->get_map();
-        
+    sioClient_->on("qsy_request", [&](nlohmann::json msgParams) {    
         auto callsign = msgParams["callsign"];
         auto frequency = msgParams["frequency"];
         auto message = msgParams["message"];
@@ -557,14 +520,14 @@ void FreeDVReporter::connect_()
         {
             // Only call event handler if we received the correct data types
             // for the items in the message.
-            if (callsign->get_flag() == sio::message::flag_string &&
-                frequency->get_flag() == sio::message::flag_integer &&
-                message->get_flag() == sio::message::flag_string)
+            if (callsign.is_string() &&
+                frequency.is_number() &&
+                message.is_string())
             {
                 onQsyRequestFn_(
-                    callsign->get_string(),
-                    frequency->get_int(),
-                    message->get_string()
+                    callsign.template get<std::string>(),
+                    frequency.template get<uint64_t>(),
+                    message.template get<std::string>()
                 );
             }
         }
@@ -598,10 +561,10 @@ void FreeDVReporter::threadEntryPoint_()
 
 void FreeDVReporter::freqChangeImpl_(uint64_t frequency)
 {
-    sio::message::ptr freqDataPtr = sio::object_message::create();
-    auto freqData = (sio::object_message*)freqDataPtr.get();
-    freqData->insert("freq", sio::int_message::create(frequency));
-    sioClient_->socket()->emit("freq_change", freqDataPtr);
+    nlohmann::json freqData = {
+        {"freq", frequency}
+    };
+    sioClient_->emit("freq_change", freqData);
 
     // Save last frequency in case we need to reconnect.
     lastFrequency_ = frequency;
@@ -609,11 +572,11 @@ void FreeDVReporter::freqChangeImpl_(uint64_t frequency)
 
 void FreeDVReporter::transmitImpl_(std::string mode, bool tx)
 {
-    sio::message::ptr txDataPtr = sio::object_message::create();
-    auto txData = (sio::object_message*)txDataPtr.get();
-    txData->insert("mode", mode);
-    txData->insert("transmitting", sio::bool_message::create(tx));
-    sioClient_->socket()->emit("tx_report", txDataPtr);
+    nlohmann::json txData = {
+        {"mode", mode},
+        {"transmitting", tx}
+    };
+    sioClient_->emit("tx_report", txData);
 
     // Save last mode and TX state in case we have to reconnect.
     mode_ = mode;
@@ -622,10 +585,10 @@ void FreeDVReporter::transmitImpl_(std::string mode, bool tx)
 
 void FreeDVReporter::sendMessageImpl_(std::string message)
 {
-    sio::message::ptr txDataPtr = sio::object_message::create();
-    auto txData = (sio::object_message*)txDataPtr.get();
-    txData->insert("message", message);
-    sioClient_->socket()->emit("message_update", txDataPtr);
+    nlohmann::json txData = {
+        {"message", message}
+    };
+    sioClient_->emit("message_update", txData);
 
     // Save last mode and TX state in case we have to reconnect.
     message_ = message;
@@ -633,7 +596,7 @@ void FreeDVReporter::sendMessageImpl_(std::string message)
 
 void FreeDVReporter::hideFromViewImpl_()
 {
-    sioClient_->socket()->emit("hide_self");
+    sioClient_->emit("hide_self", {});
     hidden_ = true;
 }
 
@@ -644,6 +607,6 @@ void FreeDVReporter::showOurselvesImpl_()
         onAboutToShowSelfFn_();
     }
     
-    sioClient_->socket()->emit("show_self");
+    sioClient_->emit("show_self", {});
     hidden_ = false;
 }

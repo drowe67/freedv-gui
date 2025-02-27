@@ -130,6 +130,14 @@ void SocketIoClient::emitImpl_(std::string eventName, nlohmann::json params)
     connection_->send(msgToSend);
 }
 
+void SocketIoClient::handleWebsocketRequest_(WebSocketClient* s, websocketpp::connection_hdl hdl, message_ptr msg)
+{
+    if (msg->get_opcode() == websocketpp::frame::opcode::text)
+    {
+        std::string body = msg->get_payload();
+        handleEngineIoMessage_((char*)body.c_str(), body.size());
+    }
+}
 
 void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
 {

@@ -72,7 +72,7 @@ TcpConnectionHandler::~TcpConnectionHandler()
     fut.wait();
 }
 
-std::future<void> TcpConnectionHandler::connect(char* host, int port, bool enableReconnect)
+std::future<void> TcpConnectionHandler::connect(const char* host, int port, bool enableReconnect)
 {
     host_ = host;
     port_ = port;

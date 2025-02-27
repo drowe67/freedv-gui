@@ -35,7 +35,7 @@ public:
     TcpConnectionHandler();
     virtual ~TcpConnectionHandler();
     
-    std::future<void> connect(char* host, int port, bool enableReconnect);
+    std::future<void> connect(const char* host, int port, bool enableReconnect);
     std::future<void> disconnect();
     
     std::future<void> send(const char* buf, int length);
