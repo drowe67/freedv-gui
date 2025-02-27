@@ -31,8 +31,13 @@ using websocketpp::lib::placeholders::_2;
 using websocketpp::lib::bind;
 
 #define SOCKET_IO_TX_PREFIX "42"
+#define DEFAULT_PING_TIMER_INTERVAL_MS (30000)
 
 SocketIoClient::SocketIoClient()
+    : pingTimer_(DEFAULT_PING_TIMER_INTERVAL_MS, [&](ThreadedTimer&) {
+        log_warn("SocketIoClient: did not receive ping from server in time");
+        disconnect();
+    }, true)
 {
     // empty
 }
@@ -122,6 +127,7 @@ void SocketIoClient::onConnect_()
 void SocketIoClient::onDisconnect_()
 {
     connection_->eof();
+    pingTimer_.stop();
     
     if (onDisconnectFn_)
     {
@@ -168,7 +174,13 @@ void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
             log_info("SocketIoClient: engine.io open");
 
             // "open" -- ready to receive socket.io messages
-
+            // Grab ping timings and start ping timer
+            nlohmann::json sessionInfo = nlohmann::json::parse(ptr + 1);
+            pingTimer_.setTimeout(
+                sessionInfo["pingInterval"].template get<int>() + 
+                sessionInfo["pingTimeout"].template get<int>());
+            pingTimer_.start();
+            
             break;
         }
         case '1':
@@ -181,10 +193,12 @@ void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
         }
         case '2':
         {
-            log_info("SocketIoClient: engine.io ping");
+            //log_info("SocketIoClient: engine.io ping");
 
             // "ping" -- send pong
             connection_->send("3");
+            pingTimer_.stop();
+            pingTimer_.start();
             break;
         }
         case '4':

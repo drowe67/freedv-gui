@@ -341,8 +341,27 @@ void TcpConnectionHandler::sendImpl_(const char* buf, int length)
             if (rv > 0)
             {
                 int numWritten = write(socket_, buf, length);
-                buf += numWritten;
-                length -= numWritten;
+                if (numWritten > 0)
+                {
+                    buf += numWritten;
+                    length -= numWritten;
+                }
+                else if (numWritten == 0)
+                {
+                    log_warn("TcpConnectionHandler: write failed without error");
+                    enqueue_([&]() {
+                        disconnectImpl_();
+                    });
+                    break;
+                }
+                else if (numWritten < 0)
+                {
+                    log_warn("TcpConnectionHandler: write failed (errno=%d)", errno);
+                    enqueue_([&]() {
+                        disconnectImpl_();
+                    });
+                    break;
+                }
             }
             else if (rv < 0)
             {
@@ -371,21 +390,38 @@ again:
         {
             int numRead = read(socket_, buf, 1024);
             
-            // Queue RX handler
-            char* allocBuf = new char[numRead];
-            assert(allocBuf != nullptr);
-            memcpy(allocBuf, buf, numRead);
-            enqueue_([&, allocBuf, numRead]() {
-                onReceive_(allocBuf, numRead);
-                delete[] allocBuf;
-            });
+            if (numRead > 0)
+            {
+                // Queue RX handler
+                char* allocBuf = new char[numRead];
+                assert(allocBuf != nullptr);
+                memcpy(allocBuf, buf, numRead);
+                enqueue_([&, allocBuf, numRead]() {
+                    onReceive_(allocBuf, numRead);
+                    delete[] allocBuf;
+                });
             
-            // See if there's any other data waiting to be read.
-            goto again;
+                // See if there's any other data waiting to be read.
+                goto again;
+            } 
+            else if (numRead == 0)
+            {
+                log_warn("TcpConnectionHandler: EOF received");
+                enqueue_([&]() {
+                    disconnectImpl_();
+                });
+            }
+            else if (numRead < 0)
+            {
+                log_warn("TcpConnectionHandler: read failed (errno=%d)", errno);
+                enqueue_([&]() {
+                    disconnectImpl_();
+                });
+            }
         }
         else if (rv < 0)
         {
-            log_warn("TcpConnectionHandler: write failed (errno=%d)", errno);
+            log_warn("TcpConnectionHandler: read failed (errno=%d)", errno);
             enqueue_([&]() {
                 disconnectImpl_();
             });

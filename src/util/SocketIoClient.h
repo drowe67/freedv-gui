@@ -62,6 +62,7 @@ private:
     std::map<std::string, SioMessageReceivedFn> eventFnMap_;
     OnConnectionStateChangeFn onConnectFn_;
     OnConnectionStateChangeFn onDisconnectFn_;
+    ThreadedTimer pingTimer_;
     
     void emitImpl_(std::string eventName, nlohmann::json params);
     void emitImpl_(std::string eventName);
