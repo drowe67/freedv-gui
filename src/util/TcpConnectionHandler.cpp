@@ -355,7 +355,8 @@ void TcpConnectionHandler::receiveImpl_()
         fd_set readSet;
         FD_ZERO(&readSet);
         FD_SET(socket_, &readSet);
-        
+
+again:        
         int rv = select(socket_ + 1, &readSet, nullptr, nullptr, &tv);
         if (rv > 0)
         {
@@ -369,6 +370,9 @@ void TcpConnectionHandler::receiveImpl_()
                 onReceive_(allocBuf, numRead);
                 delete[] allocBuf;
             });
+            
+            // See if there's any other data waiting to be read.
+            goto again;
         }
         else if (rv < 0)
         {
