@@ -59,6 +59,13 @@ void SocketIoClient::emit(std::string eventName, nlohmann::json params)
     });
 }
 
+void SocketIoClient::emit(std::string eventName)
+{
+    enqueue_([&, eventName]() {
+        emitImpl_(eventName);
+    });
+}
+
 void SocketIoClient::setOnConnectFn(OnConnectionStateChangeFn fn)
 {
     onConnectFn_ = fn;
@@ -126,6 +133,13 @@ void SocketIoClient::onReceive_(char* buf, int length)
 void SocketIoClient::emitImpl_(std::string eventName, nlohmann::json params)
 {
     nlohmann::json msgEmit = {eventName, params};
+    std::string msgToSend = SOCKET_IO_TX_PREFIX + msgEmit.dump();
+    connection_->send(msgToSend);
+}
+
+void SocketIoClient::emitImpl_(std::string eventName)
+{
+    nlohmann::json msgEmit = {eventName};
     std::string msgToSend = SOCKET_IO_TX_PREFIX + msgEmit.dump();
     connection_->send(msgToSend);
 }

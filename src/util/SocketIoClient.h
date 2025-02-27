@@ -42,6 +42,7 @@ public:
     void setAuthDictionary(nlohmann::json authJson);
     void on(std::string eventName, SioMessageReceivedFn fn);
     void emit(std::string eventName, nlohmann::json params);
+    void emit(std::string eventName);
     
     void setOnConnectFn(OnConnectionStateChangeFn fn);
     void setOnDisconnectFn(OnConnectionStateChangeFn fn);
@@ -63,6 +64,7 @@ private:
     OnConnectionStateChangeFn onDisconnectFn_;
     
     void emitImpl_(std::string eventName, nlohmann::json params);
+    void emitImpl_(std::string eventName);
     
     void handleWebsocketRequest_(WebSocketClient* s, websocketpp::connection_hdl hdl, message_ptr msg);
     void handleSocketIoMessage_(char* ptr, int length);

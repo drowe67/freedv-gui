@@ -596,7 +596,7 @@ void FreeDVReporter::sendMessageImpl_(std::string message)
 
 void FreeDVReporter::hideFromViewImpl_()
 {
-    sioClient_->emit("hide_self", {});
+    sioClient_->emit("hide_self");
     hidden_ = true;
 }
 
@@ -607,6 +607,6 @@ void FreeDVReporter::showOurselvesImpl_()
         onAboutToShowSelfFn_();
     }
     
-    sioClient_->emit("show_self", {});
+    sioClient_->emit("show_self");
     hidden_ = false;
 }
