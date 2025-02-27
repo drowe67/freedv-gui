@@ -29,6 +29,8 @@
 #include <cstring>
 #include <errno.h>
 #include <unistd.h>
+#include <algorithm>
+#include <sstream>
 
 #if defined(WIN32) || defined(__MINGW32__)
 
