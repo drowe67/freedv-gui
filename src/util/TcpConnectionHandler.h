@@ -43,6 +43,7 @@ public:
 protected:
     std::string host_;
     int port_;
+    bool enableReconnect_;
     
     virtual void onConnect_() = 0;
     virtual void onDisconnect_() = 0;
@@ -52,7 +53,6 @@ private:
     ThreadedTimer recvTimer_;
     ThreadedTimer reconnectTimer_;
     int socket_;
-    bool enableReconnect_;
     
     void connectImpl_();
     void disconnectImpl_();

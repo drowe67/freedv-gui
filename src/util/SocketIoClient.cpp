@@ -39,7 +39,11 @@ SocketIoClient::SocketIoClient()
 
 SocketIoClient::~SocketIoClient()
 {
-    
+    // Note: not currently done in the underlying object due to
+    // "pure virtual" function exceptions.
+    enableReconnect_ = false;
+    auto fut = disconnect();
+    fut.wait();
 }
 
 void SocketIoClient::setAuthDictionary(nlohmann::json authJson)

@@ -54,14 +54,14 @@ using namespace std::chrono_literals;
 #define RECONNECT_INTERVAL_MS (5000)
 
 TcpConnectionHandler::TcpConnectionHandler()
-    : recvTimer_(RX_ATTEMPT_INTERVAL_MS, [&](ThreadedTimer&) {
+    : enableReconnect_(false)
+    , recvTimer_(RX_ATTEMPT_INTERVAL_MS, [&](ThreadedTimer&) {
         enqueue_(std::bind(&TcpConnectionHandler::receiveImpl_, this));
     }, true)
     , reconnectTimer_(RECONNECT_INTERVAL_MS, [&](ThreadedTimer&) {
         enqueue_(std::bind(&TcpConnectionHandler::connectImpl_, this));
     }, false)
     , socket_(-1)
-    , enableReconnect_(false)
 {
     // empty
 }
@@ -70,8 +70,10 @@ TcpConnectionHandler::~TcpConnectionHandler()
 {
     // Make sure we're disconnected before destroying.
     enableReconnect_ = false;
+#if 0
     auto fut = disconnect();
     fut.wait();
+#endif // 0
 }
 
 std::future<void> TcpConnectionHandler::connect(const char* host, int port, bool enableReconnect)
@@ -308,7 +310,8 @@ void TcpConnectionHandler::disconnectImpl_()
     {
         recvTimer_.stop();
         close(socket_);
-        enqueue_(std::bind(&TcpConnectionHandler::onDisconnect_, this));
+        
+        onDisconnect_();
         
         if (enableReconnect_)
         {
