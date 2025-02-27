@@ -68,6 +68,8 @@ bool ThreadedTimer::isRunning()
     
 void ThreadedTimer::start()
 {
+    stop();
+    
     isDestroying_ = false;
     objectThread_ = std::thread(std::bind(&ThreadedTimer::eventLoop_, this));
 }

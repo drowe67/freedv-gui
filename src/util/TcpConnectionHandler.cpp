@@ -78,38 +78,43 @@ std::future<void> TcpConnectionHandler::connect(const char* host, int port, bool
     port_ = port;
     enableReconnect_ = enableReconnect;
     
-    std::promise<void> prom;
-    enqueue_([&]() {
+    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
+    auto fut = prom->get_future();
+    
+    enqueue_([&, prom]() {
         connectImpl_();
-        prom.set_value();
+        prom->set_value();
     });
-    return prom.get_future();
+    return fut;
 }
 
 std::future<void> TcpConnectionHandler::disconnect()
 {
-    std::promise<void> prom;
-    enqueue_([&]() {
+    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
+    auto fut = prom->get_future();
+    
+    enqueue_([&, prom]() {
         disconnectImpl_();
-        prom.set_value();
+        prom->set_value();
     });
-    return prom.get_future();
+    return fut;
 }
 
 std::future<void> TcpConnectionHandler::send(const char* buf, int length)
 {
-    std::promise<void> prom;
+    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
+    auto fut = prom->get_future();
     
     char* allocBuf = new char[length];
     assert(allocBuf != nullptr);
     memcpy(allocBuf, buf, length);
     
-    enqueue_([&, allocBuf, length]() {
+    enqueue_([&, prom, allocBuf, length]() {
         sendImpl_(allocBuf, length);
         delete[] allocBuf;
-        prom.set_value();
+        prom->set_value();
     });
-    return prom.get_future();
+    return fut;
 }
 
 void TcpConnectionHandler::connectImpl_()
@@ -141,17 +146,32 @@ void TcpConnectionHandler::connectImpl_()
         ipv4Complete = true;
     });
     
-    while (!ipv4Complete && !ipv6Complete)
+    log_info("TcpConnectionHandler: waiting for DNS");
+    
+    while (ipv4Complete == false && ipv6Complete == false)
     {
         std::this_thread::sleep_for(1ms);
     }
     
-    if (!ipv6Complete || results[0] == nullptr)
+    log_info("TcpConnectionHandler: some DNS results are available (v4 = %d, v6 = %d)", (bool)ipv4Complete, (bool)ipv6Complete);
+    
+    if (ipv6Complete == false || results[0] == nullptr)
     {
+        log_info("TcpConnectionHandler: waiting additional time for IPv6 DNS results");
         std::this_thread::sleep_for(50ms);
     }
     
     int whichIndex = 0;
+    if (ipv6Complete == true && results[0] != nullptr)
+    {
+        log_info("TcpConnectionHandler: starting with IPv6 connection");
+    }
+    else if (ipv4Complete == true && results[1] != nullptr)
+    {
+        log_info("TcpConnectionHandler: starting with IPv4 connection");
+        whichIndex = 1;
+    }
+
     int flags = 0;
     std::vector<int> pendingSockets;
     
@@ -160,6 +180,7 @@ void TcpConnectionHandler::connectImpl_()
         struct addrinfo* current = results[whichIndex];
         int ret = 0;
         
+        log_info("TcpConnectionHandler: create socket");
         int fd = socket(current->ai_family, current->ai_socktype, current->ai_protocol);
         if(fd < 0)
         {
@@ -169,7 +190,8 @@ void TcpConnectionHandler::connectImpl_()
 
         pendingSockets.push_back(fd);
             
-        // Set socket as non-blocking. Required to enable Happy Eyeballs behavior.            
+        // Set socket as non-blocking. Required to enable Happy Eyeballs behavior. 
+        log_info("TcpConnectionHandler: set socket non-blocking");           
 #if defined(WIN32)
         u_long mode = 1;  // 1 to enable non-blocking socket
         ioctlsocket(fd, FIONBIO, &mode);
@@ -194,6 +216,7 @@ void TcpConnectionHandler::connectImpl_()
 #endif // defined(WIN32)
         
         // Start connection attempt
+        log_info("TcpConnectionHandler: attempt connection");
         ret = ::connect(fd, current->ai_addr, current->ai_addrlen);
         if (ret == 0)
         {
@@ -201,9 +224,9 @@ void TcpConnectionHandler::connectImpl_()
             socket_ = fd;
             break;
         }
-        else if (ret == -1 && errno != EAGAIN)
+        else if (ret == -1 && errno != EINPROGRESS)
         {
-            log_warn("TcpConnectionHandler: cannot start connection (err=%d)", errno);
+            log_warn("TcpConnectionHandler: cannot start connection (err=%d: %s)", errno, strerror(errno));
             close(fd);
             pendingSockets.pop_back();
             goto next_fd;
@@ -217,6 +240,7 @@ void TcpConnectionHandler::connectImpl_()
         }
         
 next_fd:
+        results[whichIndex] = results[whichIndex]->ai_next;
         whichIndex = (whichIndex + 1) % 2;
         if (results[whichIndex] == nullptr)
         {
@@ -251,6 +275,7 @@ next_fd:
     else if (enableReconnect_)
     {
         // Attempt reconnect
+        log_warn("TcpConnectionHandler: connection failed, waiting to reconnect");
         reconnectTimer_.start();
     }
     
@@ -413,6 +438,7 @@ socket_error:
 
 void TcpConnectionHandler::resolveAddresses_(int addressFamily, const char* host, const char* port, struct addrinfo** result, struct addrinfo** head)
 {
+    log_info("TcpConnectionHandler: attempting to resolve %s:%s using family %d", host, port, addressFamily);
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = addressFamily;
@@ -426,8 +452,9 @@ void TcpConnectionHandler::resolveAddresses_(int addressFamily, const char* host
     int err = getaddrinfo(host, port, &hints, head);
     if (err != 0) 
     {
-        log_debug("TcpConnectionHandler: cannot resolve %s using family %d (err=%d)", host, addressFamily, err);
+        log_debug("TcpConnectionHandler: cannot resolve %s:%s using family %d (err=%d)", host, port, addressFamily, err);
     }
     
-    result = head;
+    *result = *head;
+    log_info("TcpConnectionHandler: resolution of %s:%s using family %d complete", host, port, addressFamily);
 }
