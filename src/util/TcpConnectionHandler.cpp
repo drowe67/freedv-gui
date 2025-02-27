@@ -135,42 +135,43 @@ void TcpConnectionHandler::connectImpl_()
     //                         Else: wait 50 ms for IPv6 DNS to come back before attempting IPv4
     //     * Start new connection every 250ms until one succeeds or all fail.
     // Ref: https://datatracker.ietf.org/doc/html/rfc8305
-    std::atomic<bool> ipv4Complete;
-    std::atomic<bool> ipv6Complete;
     struct addrinfo* results[] = {nullptr, nullptr}; // [0] = IPv6, [1] = IPv4
     struct addrinfo* heads[] = {nullptr, nullptr};
     
+    ipv4Complete_ = false;
+    ipv6Complete_ = false;
+    
     std::thread ipv6ResolveThread([&]() {
         resolveAddresses_(AF_INET6, host_.c_str(), portStream.str().c_str(), &results[0], &heads[0]);
-        ipv6Complete = true;
+        ipv6Complete_ = true;
     });
     
     std::thread ipv4ResolveThread([&]() {
         resolveAddresses_(AF_INET, host_.c_str(), portStream.str().c_str(), &results[1], &heads[1]);
-        ipv4Complete = true;
+        ipv4Complete_ = true;
     });
     
     log_info("TcpConnectionHandler: waiting for DNS");
     
-    while (ipv4Complete == false && ipv6Complete == false)
+    while (ipv4Complete_ == false && ipv6Complete_ == false)
     {
         std::this_thread::sleep_for(1ms);
     }
     
-    log_info("TcpConnectionHandler: some DNS results are available (v4 = %d, v6 = %d)", (bool)ipv4Complete, (bool)ipv6Complete);
+    log_info("TcpConnectionHandler: some DNS results are available (v4 = %d, v6 = %d)", (bool)ipv4Complete_, (bool)ipv6Complete_);
     
-    if (ipv6Complete == false || results[0] == nullptr)
+    if (ipv6Complete_ == false || results[0] == nullptr)
     {
         log_info("TcpConnectionHandler: waiting additional time for IPv6 DNS results");
         std::this_thread::sleep_for(50ms);
     }
     
     int whichIndex = 0;
-    if (ipv6Complete == true && results[0] != nullptr)
+    if (ipv6Complete_ == true && results[0] != nullptr)
     {
         log_info("TcpConnectionHandler: starting with IPv6 connection");
     }
-    else if (ipv4Complete == true && results[1] != nullptr)
+    else if (ipv4Complete_ == true && results[1] != nullptr)
     {
         log_info("TcpConnectionHandler: starting with IPv4 connection");
         whichIndex = 1;
@@ -291,7 +292,7 @@ next_fd:
     ipv6ResolveThread.detach();
     ipv4ResolveThread.detach();
     std::thread cleanupThread([&, heads]() {
-        while (!ipv4Complete || !ipv6Complete)
+        while (!ipv4Complete_ || !ipv6Complete_)
         {
             std::this_thread::sleep_for(1ms);
         }

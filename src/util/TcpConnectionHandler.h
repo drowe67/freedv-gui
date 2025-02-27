@@ -53,6 +53,8 @@ private:
     ThreadedTimer recvTimer_;
     ThreadedTimer reconnectTimer_;
     int socket_;
+    std::atomic<bool> ipv4Complete_;
+    std::atomic<bool> ipv6Complete_;
     
     void connectImpl_();
     void disconnectImpl_();
