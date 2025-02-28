@@ -138,6 +138,17 @@ PskReporter::PskReporter(std::string callsign, std::string gridSquare, std::stri
 {
     srand(time(0));
     randomIdentifier_ = rand();
+
+#if defined(WIN32)
+    // Initialize Winsock in case it hasn't already been done.
+    WSADATA wsaData;
+    int result = 0;
+    result = WSAStartup(MAKEWORD(2,2), &wsaData);
+    if (result != 0)
+    {
+        log_warn("Winsock could not be initialized: %d", result);
+    }
+#endif // defined(WIN32)
 }
 
 PskReporter::~PskReporter()
@@ -146,6 +157,10 @@ PskReporter::~PskReporter()
     {
         reportCommon_();
     }
+
+#if defined(WIN32)
+    WSACleanup();
+#endif // defined(WIN32)
 }
 
 void PskReporter::addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, char snr)

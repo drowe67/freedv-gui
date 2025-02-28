@@ -61,7 +61,7 @@ private:
     void sendImpl_(const char* buf, int length);
     void receiveImpl_();
     
-    void resolveAddresses_(int addressFamily, const char* host, const char* port, struct addrinfo** result, struct addrinfo** head);
+    void resolveAddresses_(int addressFamily, const char* host, const char* port, struct addrinfo** result);
     void checkConnections_(std::vector<int>& sockets);
 };
 
