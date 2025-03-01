@@ -97,7 +97,7 @@ struct custom_config {
     typedef websocketpp::random::random_device::int_generator<uint32_t,
         concurrency_type> rng_type;
 
-    /// Controls compile time enabling/disabling of thread syncronization code
+    /// Controls compile time enabling/disabling of thread synchronization code
     /// Disabling can provide a minor performance improvement to single threaded
     /// applications
     static bool const enable_multithreading = true;
@@ -109,7 +109,7 @@ struct custom_config {
         typedef type::request_type request_type;
         typedef type::response_type response_type;
 
-        /// Controls compile time enabling/disabling of thread syncronization
+        /// Controls compile time enabling/disabling of thread synchronization
         /// code Disabling can provide a minor performance improvement to single
         /// threaded applications
         static bool const enable_multithreading = true;
