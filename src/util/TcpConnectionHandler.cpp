@@ -304,7 +304,8 @@ void TcpConnectionHandler::connectImpl_()
 #if defined(WIN32)
         else if (WSAGetLastError() != WSAEWOULDBLOCK)
         {
-            log_warn("cannot start connection (err=%d)", WSAGetLastError());
+            int lastErr = WSAGetLastError();
+            log_warn("cannot start connection to %s (err=%d)", buf, lastErr);
             closesocket(fd);
             pendingSockets.pop_back();
             goto next_fd;
@@ -312,7 +313,8 @@ void TcpConnectionHandler::connectImpl_()
 #else
         else if (ret == -1 && errno != EINPROGRESS)
         {
-            log_warn("cannot start connection (err=%d: %s)", errno, strerror(errno));
+            int err = errno;
+            log_warn("cannot start connection to %s (err=%d: %s)", buf, err, strerror(err));
             close(fd);
             pendingSockets.pop_back();
             goto next_fd;
