@@ -24,7 +24,7 @@
 #define SOCKET_IO_CLIENT_H
 
 #include <map>
-#include <websocketpp/config/core_client.hpp>
+#include "websocketpp_config.h"
 #include <websocketpp/client.hpp>
 
 #include "TcpConnectionHandler.h"
@@ -53,7 +53,7 @@ protected:
     virtual void onReceive_(char* buf, int length) override;
     
 private:
-    using WebSocketClient = websocketpp::client<websocketpp::config::core_client>;
+    using WebSocketClient = websocketpp::client<websocketpp::config::custom_config>;
     using message_ptr = WebSocketClient::message_ptr;
     
     nlohmann::json jsonAuthObj_;
