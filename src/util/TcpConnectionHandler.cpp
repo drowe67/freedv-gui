@@ -374,9 +374,25 @@ next_fd:
         // Call connect handler (defined by child class).
         char buf[256];
         struct sockaddr_storage addr;
-        socklen_t len;
-        getpeername(socket_, (struct sockaddr*)&addr, &len);
-        getnameinfo((struct sockaddr*)&addr, len, buf, sizeof(buf), nullptr, 0, NI_NUMERICHOST);
+        socklen_t len = sizeof(addr);
+        if (getpeername(socket_, (struct sockaddr*)&addr, &len) != 0)
+        {
+#if defined(WIN32)
+            int err = WSAGetLastError();
+#else
+            int err = errno;
+#endif // defined(WIN32)
+            log_warn("could not get IP address of socket (err=%d)", err);
+        }
+        int nameErr = 0;
+        if ((nameErr = getnameinfo((struct sockaddr*)&addr, len, buf, sizeof(buf), nullptr, 0, NI_NUMERICHOST)) != 0)
+        {
+#if defined(WIN32)
+            nameErr = WSAGetLastError();
+#endif // defined(WIN32)
+            log_warn("could not get string representation of IP address (err=%d)", nameErr);
+        }
+
         log_info("connection succeeded to %s", buf);
         enqueue_(std::bind(&TcpConnectionHandler::onConnect_, this));
         
