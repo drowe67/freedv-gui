@@ -35,7 +35,7 @@ using websocketpp::lib::bind;
 
 SocketIoClient::SocketIoClient()
     : pingTimer_(DEFAULT_PING_TIMER_INTERVAL_MS, [&](ThreadedTimer&) {
-        log_warn("SocketIoClient: did not receive ping from server in time");
+        log_warn("did not receive ping from server in time");
         disconnect();
     }, true)
 {
@@ -165,13 +165,13 @@ void SocketIoClient::handleWebsocketRequest_(WebSocketClient* s, websocketpp::co
 
 void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
 {
-    log_debug("SocketIoClient: got engine.io message %c of length %d", ptr[0], length);
+    log_debug("got engine.io message %c of length %d", ptr[0], length);
 
     switch(ptr[0])
     {
         case '0':
         {
-            log_info("SocketIoClient: engine.io open");
+            log_info("engine.io open");
 
             // "open" -- ready to receive socket.io messages
             // Grab ping timings and start ping timer
@@ -185,7 +185,7 @@ void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
         }
         case '1':
         {
-            log_info("SocketIoClient: engine.io close");
+            log_info("engine.io close");
 
             // "close" -- we're being closed.
             disconnect();
@@ -193,7 +193,7 @@ void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
         }
         case '2':
         {
-            //log_info("SocketIoClient: engine.io ping");
+            //log_info("engine.io ping");
 
             // "ping" -- send pong
             connection_->send("3");
@@ -212,7 +212,7 @@ void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
             // something invalid, we should treat it as a disconnection.
             if (!isdigit(ptr[0]))
             {
-                log_info("SocketIoClient: invalid data received from engine.io -- reconnecting");
+                log_warn("invalid data received from engine.io -- reconnecting");
 
                 // "close" -- we're being closed
                 disconnect();
@@ -227,7 +227,7 @@ void SocketIoClient::handleSocketIoMessage_(char* ptr, int length)
     {
         case '0':
         {
-            log_info("SocketIoClient: socket.io connect");
+            log_info("socket.io connect");
 
             // connection successful
             if (onConnectFn_)

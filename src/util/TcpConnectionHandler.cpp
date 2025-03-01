@@ -139,7 +139,7 @@ void TcpConnectionHandler::connectImpl_()
     std::stringstream portStream;
     portStream << port_;
     
-    log_info("TcpConnectionHandler: Attempting connection to %s port %d", host_.c_str(), port_);
+    log_info("Attempting connection to %s port %d", host_.c_str(), port_);
     
     // Happy Eyeballs v2.0:
     //     * Begin asynchronous DNS requests (IPv6 followed by IPv4)
@@ -174,14 +174,14 @@ void TcpConnectionHandler::connectImpl_()
         ipv4Complete_ = true;
     });
     
-    log_info("TcpConnectionHandler: waiting for DNS");
+    log_info("waiting for DNS");
     
     while (ipv4Complete_ == false && ipv6Complete_ == false)
     {
         std::this_thread::sleep_for(1ms);
     }
     
-    log_info("TcpConnectionHandler: some DNS results are available (v4 = %d, v6 = %d)", (bool)ipv4Complete_, (bool)ipv6Complete_);
+    log_info("some DNS results are available (v4 = %d, v6 = %d)", (bool)ipv4Complete_, (bool)ipv6Complete_);
 
     if (ipv6Complete_ == true)
     {
@@ -197,7 +197,7 @@ void TcpConnectionHandler::connectImpl_()
 
     if (ipv6Complete_ == false)
     {
-        log_info("TcpConnectionHandler: waiting additional time for IPv6 DNS results");
+        log_info("waiting additional time for IPv6 DNS results");
         std::this_thread::sleep_for(50ms);
         if (ipv6Complete_ == true)
         {
@@ -207,7 +207,7 @@ void TcpConnectionHandler::connectImpl_()
     }
     if (ipv4Complete_ == false && ipv6Complete_ == true && results[0] == nullptr)
     {
-        log_info("TcpConnectionHandler: no valid IPv6 results, need to wait for IPv4 before continuing.");
+        log_info("no valid IPv6 results, need to wait for IPv4 before continuing.");
         while (ipv4Complete_ == false)
         {
             std::this_thread::sleep_for(1ms);
@@ -219,11 +219,11 @@ void TcpConnectionHandler::connectImpl_()
     int whichIndex = 0;
     if (ipv6Complete_ == true && results[0] != nullptr)
     {
-        log_info("TcpConnectionHandler: starting with IPv6 connection");
+        log_info("starting with IPv6 connection");
     }
     else if (ipv4Complete_ == true && results[1] != nullptr)
     {
-        log_info("TcpConnectionHandler: starting with IPv4 connection");
+        log_info("starting with IPv4 connection");
         whichIndex = 1;
     }
 
@@ -240,19 +240,19 @@ void TcpConnectionHandler::connectImpl_()
         u_long mode = 1;  // 1 to enable non-blocking socket
 #endif // defined(WIN32)
         
-        log_info("TcpConnectionHandler: create socket");
+        log_debug("create socket");
 #if defined(WIN32)
         SOCKET fd = socket(current->ai_family, current->ai_socktype, current->ai_protocol);
         if (fd == INVALID_SOCKET)
         {
-            log_warn("TcpConnectionHandler: cannot open socket (err=%d)", WSAGetLastError());
+            log_warn("cannot open socket (err=%d)", WSAGetLastError());
             goto next_fd;
         }
 #else
         int fd = socket(current->ai_family, current->ai_socktype, current->ai_protocol);
         if(fd < 0)
         {
-            log_warn("TcpConnectionHandler: cannot open socket (err=%d)", errno);
+            log_warn("cannot open socket (err=%d)", errno);
             goto next_fd;
         }
 #endif // defined(WIN32)
@@ -260,11 +260,11 @@ void TcpConnectionHandler::connectImpl_()
         pendingSockets.push_back(fd);
             
         // Set socket as non-blocking. Required to enable Happy Eyeballs behavior. 
-        log_info("TcpConnectionHandler: set socket non-blocking");           
+        log_debug("set socket non-blocking"); 
 #if defined(WIN32)
         if (ioctlsocket(fd, FIONBIO, &mode) != 0)
         {
-            log_warn("TcpConnectionHandler: cannot set socket as nonblocking (err=%d)", WSAGetLastError());
+            log_warn("cannot set socket as nonblocking (err=%d)", WSAGetLastError());
             closesocket(fd);
             pendingSockets.pop_back();
             goto next_fd;
@@ -273,7 +273,7 @@ void TcpConnectionHandler::connectImpl_()
         flags = fcntl(fd, F_GETFL, 0);
         if (flags == -1)
         {
-            log_warn("TcpConnectionHandler: cannot get socket flags (err=%d)", errno);
+            log_warn("cannot get socket flags (err=%d)", errno);
             close(fd);
             pendingSockets.pop_back();
             goto next_fd;
@@ -282,7 +282,7 @@ void TcpConnectionHandler::connectImpl_()
         flags |= O_NONBLOCK;
         if (fcntl(fd, F_SETFL, flags) != 0)
         {
-            log_warn("TcpConnectionHandler: cannot set socket as non-blocking (err=%d)", errno);
+            log_warn("cannot set socket as non-blocking (err=%d)", errno);
             close(fd);
             pendingSockets.pop_back();
             goto next_fd;
@@ -290,7 +290,10 @@ void TcpConnectionHandler::connectImpl_()
 #endif // defined(WIN32)
         
         // Start connection attempt
-        log_info("TcpConnectionHandler: attempt connection");
+        char buf[256];
+        getnameinfo(current->ai_addr, current->ai_addrlen, buf, sizeof(buf), nullptr, 0, NI_NUMERICHOST);
+
+        log_info("attempting connection to %s", buf);
         ret = ::connect(fd, current->ai_addr, current->ai_addrlen);
         if (ret == 0)
         {
@@ -301,7 +304,7 @@ void TcpConnectionHandler::connectImpl_()
 #if defined(WIN32)
         else if (WSAGetLastError() != WSAEWOULDBLOCK)
         {
-            log_warn("TcpConnectionHandler: cannot start connection (err=%d)", WSAGetLastError());
+            log_warn("cannot start connection (err=%d)", WSAGetLastError());
             closesocket(fd);
             pendingSockets.pop_back();
             goto next_fd;
@@ -309,7 +312,7 @@ void TcpConnectionHandler::connectImpl_()
 #else
         else if (ret == -1 && errno != EINPROGRESS)
         {
-            log_warn("TcpConnectionHandler: cannot start connection (err=%d: %s)", errno, strerror(errno));
+            log_warn("cannot start connection (err=%d: %s)", errno, strerror(errno));
             close(fd);
             pendingSockets.pop_back();
             goto next_fd;
@@ -367,7 +370,12 @@ next_fd:
     if (socket_ != -1)
     {
         // Call connect handler (defined by child class).
-        log_info("TcpConnectionHandler: connection succeeded");
+        char buf[256];
+        struct sockaddr_storage addr;
+        socklen_t len;
+        getpeername(socket_, (struct sockaddr*)&addr, &len);
+        getnameinfo((struct sockaddr*)&addr, len, buf, sizeof(buf), nullptr, 0, NI_NUMERICHOST);
+        log_info("connection succeeded to %s", buf);
         enqueue_(std::bind(&TcpConnectionHandler::onConnect_, this));
         
         // Start receive timer.
@@ -376,7 +384,7 @@ next_fd:
     else if (enableReconnect_)
     {
         // Attempt reconnect
-        log_warn("TcpConnectionHandler: connection failed, waiting to reconnect");
+        log_warn("connection failed, waiting to reconnect");
         reconnectTimer_.start();
     }
     
@@ -454,7 +462,7 @@ void TcpConnectionHandler::sendImpl_(const char* buf, int length)
                 }
                 else if (numWritten == 0)
                 {
-                    log_warn("TcpConnectionHandler: write failed without error");
+                    log_warn("write failed without error");
                     enqueue_([&]() {
                         disconnectImpl_();
                     });
@@ -463,9 +471,9 @@ void TcpConnectionHandler::sendImpl_(const char* buf, int length)
                 else if (numWritten < 0)
                 {
 #if defined(WIN32)
-                    log_warn("TcpConnectionHandler: write failed (errno=%d)", WSAGetLastError());
+                    log_warn("write failed (errno=%d)", WSAGetLastError());
 #else
-                    log_warn("TcpConnectionHandler: write failed (errno=%d)", errno);
+                    log_warn("write failed (errno=%d)", errno);
 #endif // defined(WIN32)
                     enqueue_([&]() {
                         disconnectImpl_();
@@ -476,9 +484,9 @@ void TcpConnectionHandler::sendImpl_(const char* buf, int length)
             else if (rv < 0)
             {
 #if defined(WIN32)
-                log_warn("TcpConnectionHandler: write failed (errno=%d)", WSAGetLastError());
+                log_warn("write failed (errno=%d)", WSAGetLastError());
 #else
-                log_warn("TcpConnectionHandler: write failed (errno=%d)", errno);
+                log_warn("write failed (errno=%d)", errno);
 #endif // defined(WIN32)
                 enqueue_([&]() {
                     disconnectImpl_();
@@ -524,7 +532,7 @@ again:
             } 
             else if (numRead == 0)
             {
-                log_warn("TcpConnectionHandler: EOF received");
+                log_warn("EOF received");
                 enqueue_([&]() {
                     disconnectImpl_();
                 });
@@ -532,9 +540,9 @@ again:
             else if (numRead < 0)
             {
 #if defined(WIN32)
-                log_warn("TcpConnectionHandler: read failed (errno=%d)", WSAGetLastError());
+                log_warn("read failed (errno=%d)", WSAGetLastError());
 #else
-                log_warn("TcpConnectionHandler: read failed (errno=%d)", errno);
+                log_warn("read failed (errno=%d)", errno);
 #endif // defined(WIN32)
                 enqueue_([&]() {
                     disconnectImpl_();
@@ -544,9 +552,9 @@ again:
         else if (rv < 0)
         {
 #if defined(WIN32)
-            log_warn("TcpConnectionHandler: read failed (errno=%d)", WSAGetLastError());
+            log_warn("read failed (errno=%d)", WSAGetLastError());
 #else
-            log_warn("TcpConnectionHandler: read failed (errno=%d)", errno);
+            log_warn("read failed (errno=%d)", errno);
 #endif // defined(WIN32)
             enqueue_([&]() {
                 disconnectImpl_();
@@ -607,7 +615,7 @@ void TcpConnectionHandler::checkConnections_(std::vector<int>& sockets)
                 }
                 
 socket_error:
-                log_warn("TcpConnectionHandler: Got socket error %d (%s) while connecting", err, strerror(err));
+                log_warn("Got socket error %d (%s) while connecting", err, strerror(err));
 #if defined(WIN32)
                 closesocket(sock);
 #else
@@ -626,7 +634,7 @@ socket_error:
 
 void TcpConnectionHandler::resolveAddresses_(int addressFamily, const char* host, const char* port, struct addrinfo** result)
 {
-    log_info("TcpConnectionHandler: attempting to resolve %s:%s using family %d", host, port, addressFamily);
+    log_info("attempting to resolve %s:%s using family %d", host, port, addressFamily);
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = addressFamily;
@@ -640,8 +648,8 @@ void TcpConnectionHandler::resolveAddresses_(int addressFamily, const char* host
     int err = getaddrinfo(host, port, &hints, result);
     if (err != 0) 
     {
-        log_debug("TcpConnectionHandler: cannot resolve %s:%s using family %d (err=%d)", host, port, addressFamily, err);
+        log_debug("cannot resolve %s:%s using family %d (err=%d)", host, port, addressFamily, err);
     }
     
-    log_info("TcpConnectionHandler: resolution of %s:%s using family %d complete", host, port, addressFamily);
+    log_info("resolution of %s:%s using family %d complete", host, port, addressFamily);
 }
