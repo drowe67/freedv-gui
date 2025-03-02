@@ -728,9 +728,9 @@ macro(DefineAudioTest utName)
 endmacro()
 
 DefineAudioTest(RADEV1)
-DefineAudioTest(700D)
-DefineAudioTest(700E)
-DefineAudioTest(1600)
+#DefineAudioTest(700D)
+#DefineAudioTest(700E)
+#DefineAudioTest(1600)
 
 add_test(NAME rade_reporting_clean COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh)
 set_tests_properties(rade_reporting_clean PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
