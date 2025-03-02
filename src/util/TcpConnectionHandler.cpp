@@ -347,6 +347,33 @@ next_fd:
         if (results[whichIndex] == nullptr)
         {
             whichIndex = (whichIndex + 1) % 2;
+            
+            if (results[whichIndex] == nullptr && (ipv4Complete_ == false || ipv6Complete_ == false))
+            {
+                // No more addresses to go through, so we *really* need to make sure
+                // we're done with DNS before exiting the loop.
+                log_info("ran out of addresses to check but DNS requests are still pending");
+                while (ipv4Complete_ == false || ipv6Complete_ == false)
+                {
+                    std::this_thread::sleep_for(1ms);
+                }
+                
+                if (ipv6ResultFuture.valid())
+                {
+                    heads[0] = ipv6ResultFuture.get();
+                    results[0] = heads[0];
+                    if (results[0] != nullptr)
+                    {
+                        // Prioritize IPv6 over IPv4 if we finally got results for the former.
+                        whichIndex = 0;
+                    }
+                }
+                if (ipv4ResultFuture.valid())
+                {
+                    heads[1] = ipv4ResultFuture.get();
+                    results[1] = heads[1];
+                }
+            }
         }
     }
     
