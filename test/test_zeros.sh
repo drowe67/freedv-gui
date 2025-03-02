@@ -93,7 +93,7 @@ if [ "$FREEDV_TEST" == "tx" ]; then
 fi
 
 # Start FreeDV in test mode
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE -txtime 300 2>&1 | tee tmp.log
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE -txtime 600 2>&1 | tee tmp.log
 
 FDV_PID=$!
 #sleep 30 

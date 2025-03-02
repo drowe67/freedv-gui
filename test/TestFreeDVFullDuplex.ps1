@@ -88,7 +88,7 @@ function Test-FreeDV {
     $psi.FileName = "$current_loc\freedv.exe"
     $psi.WorkingDirectory = $current_loc
     $quoted_tmp_filename = "`"" + $tmp_file.FullName + "`""
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut txrx /utmode $ModeToTest /txtime 300")
+    $psi.Arguments = @("/f $quoted_tmp_filename /ut txrx /utmode $ModeToTest /txtime 600")
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
