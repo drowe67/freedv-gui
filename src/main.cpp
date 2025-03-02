@@ -383,9 +383,9 @@ void MainApp::UnitTest_()
         }
         else
         {
-            // Receive for 60 seconds
+            // Receive for txtime seconds
             auto sync = 0;
-            for (int i = 0; i < 60*10; i++)
+            for (int i = 0; i < utTxTimeSeconds*10; i++)
             {
                 std::this_thread::sleep_for(100ms);
                 auto newSync = freedvInterface.getSync();
