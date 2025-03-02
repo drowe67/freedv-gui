@@ -358,6 +358,13 @@ next_fd:
                     std::this_thread::sleep_for(1ms);
                 }
                 
+                if (ipv4ResultFuture.valid())
+                {
+                    heads[1] = ipv4ResultFuture.get();
+                    results[1] = heads[1];
+                    whichIndex = 1;
+                }
+                
                 if (ipv6ResultFuture.valid())
                 {
                     heads[0] = ipv6ResultFuture.get();
@@ -367,11 +374,6 @@ next_fd:
                         // Prioritize IPv6 over IPv4 if we finally got results for the former.
                         whichIndex = 0;
                     }
-                }
-                if (ipv4ResultFuture.valid())
-                {
-                    heads[1] = ipv4ResultFuture.get();
-                    results[1] = heads[1];
                 }
             }
         }
