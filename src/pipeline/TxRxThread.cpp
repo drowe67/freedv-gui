@@ -492,7 +492,7 @@ void* TxRxThread::Entry()
         if (m_tx) txProcessing_();
         else rxProcessing_();
 
-        std::this_thread::sleep_until(currentTime + 10ms);
+        std::this_thread::sleep_until(currentTime + 20ms);
     }
     
     // Force pipeline to delete itself when we're done with the thread.
