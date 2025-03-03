@@ -85,7 +85,8 @@ void PortAudioDevice::start()
     streamParameters.device = deviceId_;
     streamParameters.channelCount = numChannels_;
     streamParameters.sampleFormat = paInt16;
-    streamParameters.suggestedLatency = deviceInfo->defaultHighInputLatency;
+    streamParameters.suggestedLatency = 
+        IAudioEngine::AUDIO_ENGINE_IN ? deviceInfo->defaultLowInputLatency : deviceInfo->defaultLowOutputLatency;
 
 #if defined(WIN32)
     PaWasapiStreamInfo wasapiInfo;
