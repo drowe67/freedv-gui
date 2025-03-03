@@ -25,18 +25,24 @@
 #include <cstring>
 #include "PortAudioDevice.h"
 #include "portaudio.h"
+#if defined(WIN32)
+#include "pa_win_wasapi.h"
+#elif defined(__APPLE__)
+#include "pa_mac_core.h"
+#endif // defined(WIN32)
 
 // Brought over from previous implementation. "Optimal" value of 0 (per PA
 // documentation) causes occasional audio pops/cracks on start for macOS.
 #define PA_FPB 256
 
-PortAudioDevice::PortAudioDevice(std::shared_ptr<PortAudioInterface> library, int deviceId, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
+PortAudioDevice::PortAudioDevice(std::shared_ptr<PortAudioInterface> library, int deviceId, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels, bool exclusive)
     : deviceId_(deviceId)
     , direction_(direction)
     , sampleRate_(sampleRate)
     , numChannels_(numChannels)
     , deviceStream_(nullptr)
     , portAudioLibrary_(library)
+    , isExclusive_(exclusive)
 {
     auto deviceInfo = portAudioLibrary_->GetDeviceInfo(deviceId_).get();
     std::string hostApiName = portAudioLibrary_->GetHostApiInfo(deviceInfo->hostApi).get()->name;
@@ -80,7 +86,25 @@ void PortAudioDevice::start()
     streamParameters.channelCount = numChannels_;
     streamParameters.sampleFormat = paInt16;
     streamParameters.suggestedLatency = deviceInfo->defaultHighInputLatency;
+
+#if defined(WIN32)
+    PaWasapiStreamInfo wasapiInfo;
+    wasapiInfo.size = sizeof(PaWasapiStreamInfo);
+    wasapiInfo.hostApiType = paWASAPI;
+    wasapiInfo.version = 1;
+    wasapiInfo.flags = isExclusive_ ? paWinWasapiExclusive : 0;
+    wasapiInfo.channelMask = NULL;
+    wasapiInfo.hostProcessorOutput = NULL;
+    wasapiInfo.hostProcessorInput = NULL;
+    wasapiInfo.threadPriority = eThreadPriorityProAudio;
+    streamParameters.hostApiSpecificStreamInfo = &wasapiInfo;
+#elif defined(__APPLE__)
+    PaMacCoreStreamInfo macInfo;
+    PaMacCore_SetupStreamInfo(&macInfo, paMacCorePro);
+    streamParameters.hostApiSpecificStreamInfo = &macInfo;
+#else
     streamParameters.hostApiSpecificStreamInfo = NULL;
+#endif // defined(WIN32)
     
     auto error = portAudioLibrary_->OpenStream(
         &deviceStream_,

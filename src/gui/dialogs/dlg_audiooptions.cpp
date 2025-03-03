@@ -860,7 +860,8 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
                     devInfo.name, 
                     IAudioEngine::AUDIO_ENGINE_IN, 
                     sampleRate,
-                    1);
+                    1,
+                    false);
                 
                 if (device)
                 {
@@ -985,7 +986,8 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
                     devInfo.name, 
                     IAudioEngine::AUDIO_ENGINE_OUT, 
                     sampleRate,
-                    1);
+                    1,
+                    false);
                 
                 if (device)
                 {

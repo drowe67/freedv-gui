@@ -231,7 +231,7 @@ AudioDeviceSpecification PortAudioEngine::getDefaultAudioDevice(AudioDirection d
     return AudioDeviceSpecification::GetInvalidDevice();
 }
 
-std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels)
+std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels, bool exclusive)
 {
     auto deviceList = getAudioDeviceList(direction);
     
@@ -262,7 +262,7 @@ std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(wxString deviceNam
             numChannels = std::min(numChannels, dev.maxChannels);
 
             // Create device object.
-            auto devObj = new PortAudioDevice(portAudioLibrary_, dev.deviceId, direction, sampleRate, numChannels);
+            auto devObj = new PortAudioDevice(portAudioLibrary_, dev.deviceId, direction, sampleRate, numChannels, exclusive);
             return std::shared_ptr<IAudioDevice>(devObj);
         }
     }
