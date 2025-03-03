@@ -723,7 +723,9 @@ if(UNITTEST)
 # The below tests are currently Linux-only due to a dependency on
 # PulseAudio/pipewire.
 macro(DefineAudioTest utName)
-    add_test(NAME fullduplex_${utName} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName}) 
+    add_test(NAME fullduplex_${utName} 
+             COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName} && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName} && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName} && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName} && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName} && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName} && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName} && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName} && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName} && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName}
+    ) 
     set_tests_properties(fullduplex_${utName} PROPERTIES PASS_REGULAR_EXPRESSION "Got 1 sync changes")
 endmacro()
 
