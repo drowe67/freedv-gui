@@ -93,7 +93,7 @@ void PortAudioDevice::start()
     wasapiInfo.size = sizeof(PaWasapiStreamInfo);
     wasapiInfo.hostApiType = paWASAPI;
     wasapiInfo.version = 1;
-    wasapiInfo.flags = /*(isExclusive_ ? paWinWasapiExclusive : 0) |*/ paWinWasapiThreadPriority;
+    wasapiInfo.flags = (isExclusive_ ? paWinWasapiExclusive : 0) | paWinWasapiThreadPriority;
     wasapiInfo.channelMask = NULL;
     wasapiInfo.hostProcessorOutput = NULL;
     wasapiInfo.hostProcessorInput = NULL;
