@@ -101,7 +101,7 @@ function Test-FreeDV {
 
     Write-Host "$err_output"
 
-    $syncs = $err_output.Split([Environment]::NewLine) | Where { $_.Contains("Sync changed") }
+    $syncs = ($err_output -split "`r?`n") | Where { $_.Contains("Sync changed") }
     if ($syncs.Count -eq 1) {
         return $true
     }
