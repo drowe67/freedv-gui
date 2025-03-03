@@ -29,7 +29,7 @@
 PortAudioEngine::PortAudioEngine()
     : initialized_(false)
 {
-    // empty
+    portAudioLibrary_ = std::make_shared<PortAudioInterface>();
 }
 
 PortAudioEngine::~PortAudioEngine()
@@ -42,14 +42,14 @@ PortAudioEngine::~PortAudioEngine()
 
 void PortAudioEngine::start()
 {
-    auto error = Pa_Initialize();
+    auto error = portAudioLibrary_->Initialize().get();
     if (error != paNoError)
     {
-        std::string errText = Pa_GetErrorText(error);
+        std::string errText = portAudioLibrary_->GetErrorText(error).get();
         if (error == paUnanticipatedHostError)
         {
             std::stringstream ss;
-            auto errInfo = Pa_GetLastHostErrorInfo();
+            auto errInfo = portAudioLibrary_->GetLastHostErrorInfo().get();
             ss << " (error code " << std::hex << errInfo->errorCode << " - " << std::string(errInfo->errorText) << ")";
             errText += ss.str();
         }
@@ -67,20 +67,20 @@ void PortAudioEngine::start()
 
 void PortAudioEngine::stop()
 {
-    Pa_Terminate();
+    portAudioLibrary_->Terminate().wait();
     initialized_ = false;
 }
 
 std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioDirection direction)
 {
-    int numDevices = Pa_GetDeviceCount();
+    int numDevices = portAudioLibrary_->GetDeviceCount().get();
     std::vector<AudioDeviceSpecification> result;
     
     for (int index = 0; index < numDevices; index++)
     {
-        const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(index);
+        const PaDeviceInfo *deviceInfo = portAudioLibrary_->GetDeviceInfo(index).get();
         
-        std::string hostApiName = Pa_GetHostApiInfo(deviceInfo->hostApi)->name;
+        std::string hostApiName = portAudioLibrary_->GetHostApiInfo(deviceInfo->hostApi).get()->name;
         if (hostApiName.find("DirectSound") != std::string::npos ||
             hostApiName.find("surround") != std::string::npos ||
             //hostApiName.find("Windows WASAPI") != std::string::npos ||
@@ -104,7 +104,7 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
             streamParameters.device = index;
             streamParameters.channelCount = 1; 
             streamParameters.sampleFormat = paInt16;
-            streamParameters.suggestedLatency = Pa_GetDeviceInfo(index)->defaultHighInputLatency;
+            streamParameters.suggestedLatency = portAudioLibrary_->GetDeviceInfo(index).get()->defaultHighInputLatency;
             streamParameters.hostApiSpecificStreamInfo = NULL;
 
             // On Linux, the below logic causes the device lookup process to take MUCH	
@@ -117,10 +117,10 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
             {
                 while (streamParameters.channelCount < maxChannels)
                 {
-                    PaError err = Pa_IsFormatSupported(
+                    PaError err = portAudioLibrary_->IsFormatSupported(
                         direction == AUDIO_ENGINE_IN ? &streamParameters : NULL, 
                         direction == AUDIO_ENGINE_OUT ? &streamParameters : NULL, 
-                        deviceInfo->defaultSampleRate);
+                        deviceInfo->defaultSampleRate).get();
                 
                     if (err == paFormatIsSupported)
                     {
@@ -171,7 +171,7 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, A
             streamParameters.device = device.deviceId;
             streamParameters.channelCount = device.minChannels;
             streamParameters.sampleFormat = paInt16;
-            streamParameters.suggestedLatency = Pa_GetDeviceInfo(device.deviceId)->defaultHighInputLatency;
+            streamParameters.suggestedLatency = portAudioLibrary_->GetDeviceInfo(device.deviceId).get()->defaultHighInputLatency;
             streamParameters.hostApiSpecificStreamInfo = NULL;
             
             int rateIndex = 0;
@@ -182,10 +182,10 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, A
                 bool isDeviceWithKnownMinimum = IsDeviceWhitelisted_(deviceName);
                 if (!isDeviceWithKnownMinimum)
                 {
-                    err = Pa_IsFormatSupported(
+                    err = portAudioLibrary_->IsFormatSupported(
                         direction == AUDIO_ENGINE_IN ? &streamParameters : NULL, 
                         direction == AUDIO_ENGINE_OUT ? &streamParameters : NULL, 
-                        IAudioEngine::StandardSampleRates[rateIndex]);
+                        IAudioEngine::StandardSampleRates[rateIndex]).get();
                 }
 
                 if (err == paFormatIsSupported)
@@ -213,7 +213,9 @@ AudioDeviceSpecification PortAudioEngine::getDefaultAudioDevice(AudioDirection d
 {
     auto devices = getAudioDeviceList(direction);
     PaDeviceIndex defaultDeviceIndex = 
-        direction == AUDIO_ENGINE_IN ? Pa_GetDefaultInputDevice() : Pa_GetDefaultOutputDevice();
+        (direction == AUDIO_ENGINE_IN ? 
+            portAudioLibrary_->GetDefaultInputDevice() : 
+            portAudioLibrary_->GetDefaultOutputDevice()).get();
     
     if (defaultDeviceIndex != paNoDevice)
     {
@@ -260,7 +262,7 @@ std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(wxString deviceNam
             numChannels = std::min(numChannels, dev.maxChannels);
 
             // Create device object.
-            auto devObj = new PortAudioDevice(dev.deviceId, direction, sampleRate, numChannels);
+            auto devObj = new PortAudioDevice(portAudioLibrary_, dev.deviceId, direction, sampleRate, numChannels);
             return std::shared_ptr<IAudioDevice>(devObj);
         }
     }

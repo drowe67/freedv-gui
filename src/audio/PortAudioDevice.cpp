@@ -30,15 +30,16 @@
 // documentation) causes occasional audio pops/cracks on start for macOS.
 #define PA_FPB 256
 
-PortAudioDevice::PortAudioDevice(int deviceId, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
+PortAudioDevice::PortAudioDevice(std::shared_ptr<PortAudioInterface> library, int deviceId, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : deviceId_(deviceId)
     , direction_(direction)
     , sampleRate_(sampleRate)
     , numChannels_(numChannels)
     , deviceStream_(nullptr)
+    , portAudioLibrary_(library)
 {
-    auto deviceInfo = Pa_GetDeviceInfo(deviceId_);
-    std::string hostApiName = Pa_GetHostApiInfo(deviceInfo->hostApi)->name;
+    auto deviceInfo = portAudioLibrary_->GetDeviceInfo(deviceId_).get();
+    std::string hostApiName = portAudioLibrary_->GetHostApiInfo(deviceInfo->hostApi).get()->name;
 
     // Windows only: we are switching from MME to WASAPI. A side effect
     // of this is that we really only support one sample rate. Instead
@@ -73,7 +74,7 @@ bool PortAudioDevice::isRunning()
 void PortAudioDevice::start()
 {
     PaStreamParameters streamParameters;
-    auto deviceInfo = Pa_GetDeviceInfo(deviceId_);
+    auto deviceInfo = portAudioLibrary_->GetDeviceInfo(deviceId_).get();
 
     streamParameters.device = deviceId_;
     streamParameters.channelCount = numChannels_;
@@ -81,7 +82,7 @@ void PortAudioDevice::start()
     streamParameters.suggestedLatency = deviceInfo->defaultHighInputLatency;
     streamParameters.hostApiSpecificStreamInfo = NULL;
     
-    auto error = Pa_OpenStream(
+    auto error = portAudioLibrary_->OpenStream(
         &deviceStream_,
         direction_ == IAudioEngine::AUDIO_ENGINE_IN ? &streamParameters : nullptr,
         direction_ == IAudioEngine::AUDIO_ENGINE_OUT ? &streamParameters : nullptr,
@@ -90,18 +91,18 @@ void PortAudioDevice::start()
         paClipOff,
         &OnPortAudioStreamCallback_,
         this
-    );
+    ).get();
         
     if (error == paNoError)
     {
-        error = Pa_StartStream(deviceStream_);
+        error = portAudioLibrary_->StartStream(deviceStream_).get();
         if (error != paNoError)
         {
-            std::string errText = Pa_GetErrorText(error);
+            std::string errText = portAudioLibrary_->GetErrorText(error).get();
             if (error == paUnanticipatedHostError)
             {
                 std::stringstream ss;
-                auto errInfo = Pa_GetLastHostErrorInfo();
+                auto errInfo = portAudioLibrary_->GetLastHostErrorInfo().get();
                 ss << " (error code " << std::hex << errInfo->errorCode << " - " << std::string(errInfo->errorText) << ")";
                 errText += ss.str();
             }
@@ -111,17 +112,17 @@ void PortAudioDevice::start()
                 onAudioErrorFunction(*this, errText, onAudioErrorState);
             }
             
-            Pa_CloseStream(deviceStream_);
+            portAudioLibrary_->CloseStream(deviceStream_).wait();
             deviceStream_ = nullptr;
         }
     }
     else
     {
-        std::string errText = Pa_GetErrorText(error);
+        std::string errText = portAudioLibrary_->GetErrorText(error).get();
         if (error == paUnanticipatedHostError)
         {
             std::stringstream ss;
-            auto errInfo = Pa_GetLastHostErrorInfo();
+            auto errInfo = portAudioLibrary_->GetLastHostErrorInfo().get();
             ss << " (error code " << std::hex << errInfo->errorCode << " - " << std::string(errInfo->errorText) << ")";
             errText += ss.str();
         }
@@ -138,8 +139,8 @@ void PortAudioDevice::stop()
 {
     if (deviceStream_ != nullptr)
     {
-        Pa_StopStream(deviceStream_);
-        Pa_CloseStream(deviceStream_);
+        portAudioLibrary_->StopStream(deviceStream_).wait();
+        portAudioLibrary_->CloseStream(deviceStream_).wait();
         deviceStream_ = nullptr;
     }
 }

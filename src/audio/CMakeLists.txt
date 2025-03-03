@@ -8,6 +8,7 @@ else(USE_PULSEAUDIO AND LINUX)
 set(AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES
     PortAudioDevice.cpp
     PortAudioEngine.cpp
+    PortAudioInterface.cpp
     )
 
 endif(USE_PULSEAUDIO AND LINUX)
