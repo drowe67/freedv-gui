@@ -31,9 +31,7 @@
 #include "pa_mac_core.h"
 #endif // defined(WIN32)
 
-// Brought over from previous implementation. "Optimal" value of 0 (per PA
-// documentation) causes occasional audio pops/cracks on start for macOS.
-#define PA_FPB 256
+#define PA_FPB 0
 
 PortAudioDevice::PortAudioDevice(std::shared_ptr<PortAudioInterface> library, int deviceId, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels, bool exclusive)
     : deviceId_(deviceId)
