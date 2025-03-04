@@ -30,9 +30,8 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
         # make sure gfortran is available
-        which gfortran-14
-        sudo ln -s /opt/homebrew/bin/gfortran-14 /opt/homebrew/bin/gfortran
-        ls /opt/homebrew/bin/gfortran*
+        sudo ln -s /usr/local/bin/gfortran-14 /usr/local/bin/gfortran
+        #ls /opt/homebrew/bin/gfortran*
         #sudo mkdir /usr/local/gfortran
         #ls /usr/local/Cellar
         #sudo ln -s /usr/local/Cellar/gcc@14/*/lib/gcc/14 /usr/local/gfortran/lib
