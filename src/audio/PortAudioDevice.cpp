@@ -99,7 +99,7 @@ void PortAudioDevice::start()
     streamParameters.hostApiSpecificStreamInfo = &wasapiInfo;
 #elif defined(__APPLE__)
     PaMacCoreStreamInfo macInfo;
-    PaMacCore_SetupStreamInfo(&macInfo, paMacCorePro);
+    PaMacCore_SetupStreamInfo(&macInfo, paMacCoreMinimizeCPU);
     streamParameters.hostApiSpecificStreamInfo = &macInfo;
 #else
     streamParameters.hostApiSpecificStreamInfo = NULL;
