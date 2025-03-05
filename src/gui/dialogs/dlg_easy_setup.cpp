@@ -883,7 +883,7 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                 auto audioEngine = AudioEngineFactory::GetAudioEngine();
                 audioEngine->start();
 
-                txTestAudioDevice_ = audioEngine->getAudioDevice(radioOutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, radioOutSampleRate, 1, false);
+                txTestAudioDevice_ = audioEngine->getAudioDevice(radioOutDeviceName, IAudioEngine::AUDIO_ENGINE_OUT, radioOutSampleRate, 1);
 
                 if (txTestAudioDevice_ == nullptr)
                 {

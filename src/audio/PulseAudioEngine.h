@@ -36,7 +36,7 @@ public:
     virtual void stop();
     virtual std::vector<AudioDeviceSpecification> getAudioDeviceList(AudioDirection direction);
     virtual AudioDeviceSpecification getDefaultAudioDevice(AudioDirection direction);
-    virtual std::shared_ptr<IAudioDevice> getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels, bool exclusive);
+    virtual std::shared_ptr<IAudioDevice> getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels);
     virtual std::vector<int> getSupportedSampleRates(wxString deviceName, AudioDirection direction);
     
 private:

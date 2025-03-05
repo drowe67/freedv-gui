@@ -45,7 +45,7 @@ protected:
     // PortAudioDevice cannot be created directly, only via PortAudioEngine.
     friend class PortAudioEngine;
     
-    PortAudioDevice(std::shared_ptr<PortAudioInterface> library, int deviceId, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels, bool exclusive);
+    PortAudioDevice(std::shared_ptr<PortAudioInterface> library, int deviceId, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
     
 private:
     int deviceId_;
@@ -54,7 +54,6 @@ private:
     int numChannels_;
     PaStream* deviceStream_;
     std::shared_ptr<PortAudioInterface> portAudioLibrary_;
-    bool isExclusive_;
     
     static int OnPortAudioStreamCallback_(const void *input, void *output, unsigned long frameCount, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData);
 };

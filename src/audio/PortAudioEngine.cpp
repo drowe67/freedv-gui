@@ -104,7 +104,7 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
             streamParameters.device = index;
             streamParameters.channelCount = 1; 
             streamParameters.sampleFormat = paInt16;
-            streamParameters.suggestedLatency = portAudioLibrary_->GetDeviceInfo(index).get()->defaultHighInputLatency;
+            streamParameters.suggestedLatency = portAudioLibrary_->GetDeviceInfo(index).get()->defaultLowInputLatency;
             streamParameters.hostApiSpecificStreamInfo = NULL;
 
             // On Linux, the below logic causes the device lookup process to take MUCH	
@@ -171,7 +171,7 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, A
             streamParameters.device = device.deviceId;
             streamParameters.channelCount = device.minChannels;
             streamParameters.sampleFormat = paInt16;
-            streamParameters.suggestedLatency = portAudioLibrary_->GetDeviceInfo(device.deviceId).get()->defaultHighInputLatency;
+            streamParameters.suggestedLatency = portAudioLibrary_->GetDeviceInfo(device.deviceId).get()->defaultLowInputLatency;
             streamParameters.hostApiSpecificStreamInfo = NULL;
             
             int rateIndex = 0;
@@ -231,7 +231,7 @@ AudioDeviceSpecification PortAudioEngine::getDefaultAudioDevice(AudioDirection d
     return AudioDeviceSpecification::GetInvalidDevice();
 }
 
-std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels, bool exclusive)
+std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels)
 {
     auto deviceList = getAudioDeviceList(direction);
     
@@ -262,7 +262,7 @@ std::shared_ptr<IAudioDevice> PortAudioEngine::getAudioDevice(wxString deviceNam
             numChannels = std::min(numChannels, dev.maxChannels);
 
             // Create device object.
-            auto devObj = new PortAudioDevice(portAudioLibrary_, dev.deviceId, direction, sampleRate, numChannels, false);
+            auto devObj = new PortAudioDevice(portAudioLibrary_, dev.deviceId, direction, sampleRate, numChannels);
             return std::shared_ptr<IAudioDevice>(devObj);
         }
     }

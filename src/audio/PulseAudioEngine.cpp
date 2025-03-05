@@ -271,7 +271,7 @@ AudioDeviceSpecification PulseAudioEngine::getDefaultAudioDevice(AudioDirection 
     return AudioDeviceSpecification::GetInvalidDevice();
 }
 
-std::shared_ptr<IAudioDevice> PulseAudioEngine::getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels, bool exclusive)
+std::shared_ptr<IAudioDevice> PulseAudioEngine::getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels)
 {
     auto deviceList = getAudioDeviceList(direction);
     

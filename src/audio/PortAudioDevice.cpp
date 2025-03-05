@@ -33,14 +33,13 @@
 
 #define PA_FPB 0
 
-PortAudioDevice::PortAudioDevice(std::shared_ptr<PortAudioInterface> library, int deviceId, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels, bool exclusive)
+PortAudioDevice::PortAudioDevice(std::shared_ptr<PortAudioInterface> library, int deviceId, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : deviceId_(deviceId)
     , direction_(direction)
     , sampleRate_(sampleRate)
     , numChannels_(numChannels)
     , deviceStream_(nullptr)
     , portAudioLibrary_(library)
-    , isExclusive_(exclusive)
 {
     auto deviceInfo = portAudioLibrary_->GetDeviceInfo(deviceId_).get();
     std::string hostApiName = portAudioLibrary_->GetHostApiInfo(deviceInfo->hostApi).get()->name;
@@ -91,7 +90,7 @@ void PortAudioDevice::start()
     wasapiInfo.size = sizeof(PaWasapiStreamInfo);
     wasapiInfo.hostApiType = paWASAPI;
     wasapiInfo.version = 1;
-    wasapiInfo.flags = (isExclusive_ ? paWinWasapiExclusive : 0) | paWinWasapiThreadPriority;
+    wasapiInfo.flags = paWinWasapiThreadPriority;
     wasapiInfo.channelMask = NULL;
     wasapiInfo.hostProcessorOutput = NULL;
     wasapiInfo.hostProcessorInput = NULL;

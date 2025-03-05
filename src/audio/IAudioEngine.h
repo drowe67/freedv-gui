@@ -42,7 +42,7 @@ public:
     virtual void stop() = 0;
     virtual std::vector<AudioDeviceSpecification> getAudioDeviceList(AudioDirection direction) = 0;
     virtual AudioDeviceSpecification getDefaultAudioDevice(AudioDirection direction) = 0;
-    virtual std::shared_ptr<IAudioDevice> getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels, bool exclusive) = 0;
+    virtual std::shared_ptr<IAudioDevice> getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels) = 0;
     virtual std::vector<int> getSupportedSampleRates(wxString deviceName, AudioDirection direction) = 0;
     
     // Set error callback.
