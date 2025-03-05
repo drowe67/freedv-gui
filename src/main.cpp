@@ -863,38 +863,46 @@ void MainFrame::loadConfiguration_()
     int mode = wxGetApp().appConfiguration.currentFreeDVMode;
 setDefaultMode:
     if (mode == 0)
-        m_rb1600->SetValue(1);
-    if (mode == 3)
-        m_rb700c->SetValue(1);
-    if (mode == 4)
-        m_rb700d->SetValue(1);
-    if (mode == 5)
-        m_rb700e->SetValue(1);
-    if (mode == 6)
-        m_rb800xa->SetValue(1);
-    // mode 7 was the former 2400B mode, now removed.
-    if ((mode == 9) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
-        m_rb2020->SetValue(1);
-    else if (mode == 9)
     {
-        // Default to 700D otherwise
-        mode = defaultMode;
-        goto setDefaultMode;
+        m_rb1600->SetValue(1);
     }
-    if (mode == FREEDV_MODE_RADE)
+    else if (mode == 3)
+    {
+        m_rb700c->SetValue(1);
+    }
+    else if (mode == 4)
+    {
+        m_rb700d->SetValue(1);
+    }
+    else if (mode == 5)
+    {
+        m_rb700e->SetValue(1);
+    }
+    else if (mode == 6)
+    {
+        m_rb800xa->SetValue(1);
+    }
+    // mode 7 was the former 2400B mode, now removed.
+    else if ((mode == 9) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
+    {
+        m_rb2020->SetValue(1);
+    }
+    else if (mode == FREEDV_MODE_RADE)
     {
         m_rbRADE->SetValue(1);
     }
 #if defined(FREEDV_MODE_2020B)
-    if ((mode == 10) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
-        m_rb2020b->SetValue(1);
-    else if (mode == 10)
+    else if ((mode == 10) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
     {
-        // Default to 700D otherwise
+        m_rb2020b->SetValue(1);
+    }
+#endif // defined(FREEDV_MODE_2020B)
+    else
+    {
+        // Default to RADE otherwise
         mode = defaultMode;
         goto setDefaultMode;
     }
-#endif // defined(FREEDV_MODE_2020B)
     pConfig->SetPath(wxT("/"));
     
     // Set initial state of additional modes.
