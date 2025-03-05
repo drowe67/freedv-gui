@@ -729,9 +729,12 @@ macro(DefineAudioTest utName)
 endmacro()
 
 DefineAudioTest(RADEV1)
+
 add_test(NAME fullduplex_RADEV1_repeated
          COMMAND sh -c " ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1")
-    set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES FAIL_REGULAR_EXPRESSION "Sync changed from 1 to 0")
+set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES FAIL_REGULAR_EXPRESSION "Sync changed from 1 to 0")
+set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES LABELS stress_test)
+
 DefineAudioTest(700D)
 DefineAudioTest(700E)
 DefineAudioTest(1600)
