@@ -3306,35 +3306,27 @@ void MainFrame::startRxStream()
                 short  outdata[size];
 
                 int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
-                if (result == 0) {
-
-                    // write signal to all channels if the device can support 2+ channels.
-                    // Otherwise, we assume we're only dealing with one channel and write
-                    // only to that channel.
-                    if (dev.getNumChannels() >= 2)
+                if (result == 0) 
+                {
+                    // write signal to all channels to start. This is so that
+                    // the compiler can optimize for the most common case.
+                    for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels()) 
                     {
-                        for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels()) 
+                        for (auto j = 0; j < dev.getNumChannels(); j++)
                         {
-                            if (cbData->leftChannelVoxTone)
-                            {
-                                cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
-                                cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-                                audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
-                            }
-                            else
-                                audioData[0] = outdata[i];
-
-                            for (auto j = 1; j < dev.getNumChannels(); j++)
-                            {
-                                audioData[j] = outdata[i];
-                            }
+                            audioData[j] = outdata[i];
                         }
                     }
-                    else
+                    
+                    // If VOX tone is enabled, go back through and add the VOX tone
+                    // on the left channel.
+                    if (cbData->leftChannelVoxTone)
                     {
-                        for(size_t i = 0; i < size; i++, audioData++) 
+                        for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
                         {
-                            audioData[0] = outdata[i];
+                            cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
+                            cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+                            audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
                         }
                     }
                 }
