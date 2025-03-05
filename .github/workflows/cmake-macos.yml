@@ -38,7 +38,13 @@ jobs:
         gfortran --version
         octave-cli --eval "pkg install -forge control; pkg install -forge signal"
 
-    - name: Install virtual audio devices
+    - name: Install VB-Cable
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          brew install vb-cable
+
+    - name: Install other virtual audio devices
       shell: bash
       working-directory: ${{github.workspace}}
       run: ./build_macos_sound_drivers.sh
@@ -57,7 +63,7 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}/build_osx
       run: |
-          FREEDV_COMPUTER_TO_RADIO_DEVICE="BlackHoleRadio 2ch" FREEDV_RADIO_TO_COMPUTER_DEVICE="BlackHoleRadio 2ch 2" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ctest -V
+          FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ctest -V
 
     - name: Package executable
       working-directory: ${{github.workspace}}/build_osx
