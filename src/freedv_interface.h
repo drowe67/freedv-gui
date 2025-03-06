@@ -32,6 +32,7 @@
 #include <chrono>
 #include <queue>
 #include <future>
+#include <atomic>
 
 // Codec2 required include files.
 #include "codec2.h"
@@ -195,7 +196,7 @@ private:
     FARGANState fargan_;
     LPCNetEncState *lpcnetEncState_; 
     RADETransmitStep *radeTxStep_;
-    int sync_;
+    std::atomic<int> sync_;
     rade_text_t radeTextPtr_;
     
     int preProcessRxFn_(ParallelStep* ps);
