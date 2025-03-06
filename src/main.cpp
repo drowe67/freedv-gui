@@ -383,9 +383,9 @@ void MainApp::UnitTest_()
         }
         else
         {
-            // Receive for 60 seconds
+            // Receive for txtime seconds
             auto sync = 0;
-            for (int i = 0; i < 60*10; i++)
+            for (int i = 0; i < utTxTimeSeconds*10; i++)
             {
                 std::this_thread::sleep_for(100ms);
                 auto newSync = freedvInterface.getSync();
@@ -863,38 +863,46 @@ void MainFrame::loadConfiguration_()
     int mode = wxGetApp().appConfiguration.currentFreeDVMode;
 setDefaultMode:
     if (mode == 0)
-        m_rb1600->SetValue(1);
-    if (mode == 3)
-        m_rb700c->SetValue(1);
-    if (mode == 4)
-        m_rb700d->SetValue(1);
-    if (mode == 5)
-        m_rb700e->SetValue(1);
-    if (mode == 6)
-        m_rb800xa->SetValue(1);
-    // mode 7 was the former 2400B mode, now removed.
-    if ((mode == 9) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
-        m_rb2020->SetValue(1);
-    else if (mode == 9)
     {
-        // Default to 700D otherwise
-        mode = defaultMode;
-        goto setDefaultMode;
+        m_rb1600->SetValue(1);
     }
-    if (mode == FREEDV_MODE_RADE)
+    else if (mode == 3)
+    {
+        m_rb700c->SetValue(1);
+    }
+    else if (mode == 4)
+    {
+        m_rb700d->SetValue(1);
+    }
+    else if (mode == 5)
+    {
+        m_rb700e->SetValue(1);
+    }
+    else if (mode == 6)
+    {
+        m_rb800xa->SetValue(1);
+    }
+    // mode 7 was the former 2400B mode, now removed.
+    else if ((mode == 9) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
+    {
+        m_rb2020->SetValue(1);
+    }
+    else if (mode == FREEDV_MODE_RADE)
     {
         m_rbRADE->SetValue(1);
     }
 #if defined(FREEDV_MODE_2020B)
-    if ((mode == 10) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
-        m_rb2020b->SetValue(1);
-    else if (mode == 10)
+    else if ((mode == 10) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
     {
-        // Default to 700D otherwise
+        m_rb2020b->SetValue(1);
+    }
+#endif // defined(FREEDV_MODE_2020B)
+    else
+    {
+        // Default to RADE otherwise
         mode = defaultMode;
         goto setDefaultMode;
     }
-#endif // defined(FREEDV_MODE_2020B)
     pConfig->SetPath(wxT("/"));
     
     // Set initial state of additional modes.
@@ -3306,35 +3314,27 @@ void MainFrame::startRxStream()
                 short  outdata[size];
 
                 int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
-                if (result == 0) {
-
-                    // write signal to all channels if the device can support 2+ channels.
-                    // Otherwise, we assume we're only dealing with one channel and write
-                    // only to that channel.
-                    if (dev.getNumChannels() >= 2)
+                if (result == 0) 
+                {
+                    // write signal to all channels to start. This is so that
+                    // the compiler can optimize for the most common case.
+                    for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels()) 
                     {
-                        for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels()) 
+                        for (auto j = 0; j < dev.getNumChannels(); j++)
                         {
-                            if (cbData->leftChannelVoxTone)
-                            {
-                                cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
-                                cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-                                audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
-                            }
-                            else
-                                audioData[0] = outdata[i];
-
-                            for (auto j = 1; j < dev.getNumChannels(); j++)
-                            {
-                                audioData[j] = outdata[i];
-                            }
+                            audioData[j] = outdata[i];
                         }
                     }
-                    else
+                    
+                    // If VOX tone is enabled, go back through and add the VOX tone
+                    // on the left channel.
+                    if (cbData->leftChannelVoxTone)
                     {
-                        for(size_t i = 0; i < size; i++, audioData++) 
+                        for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
                         {
-                            audioData[0] = outdata[i];
+                            cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
+                            cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+                            audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
                         }
                     }
                 }

@@ -900,6 +900,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Don't adjust Msg column width when user disconnects. (PR #828)
     * Fix issue preventing suppression of the Msg tooltip for non-truncated messages. (PR #829)
     * Preserve Hamlib rig names on startup to guard against changes by Hamlib during execution. (PR #834)
+    * Fix dropouts related to virtual audio cables. (PR #840)
 2. Enhancements:
     * Show green line indicating RX frequency. (PR #725)
     * Update configuration of the Voice Keyer feature based on user feedback. (PR #730, #746, #793)

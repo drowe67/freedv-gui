@@ -720,14 +720,22 @@ elseif(UNIX AND NOT APPLE)
 endif(WIN32)
 
 if(UNITTEST)
-# The below tests are currently Linux-only due to a dependency on
-# PulseAudio/pipewire.
+# The below tests are currently Linux/macOS-only. A PowerShell version of fullduplex_* 
+# for Windows is implemented in tests/TestFreeDVFullDuplex.ps1.
 macro(DefineAudioTest utName)
-    add_test(NAME fullduplex_${utName} COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName}) 
-    set_tests_properties(fullduplex_${utName} PROPERTIES PASS_REGULAR_EXPRESSION "Got 1 sync changes")
+    add_test(NAME fullduplex_${utName} 
+             COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName}") 
+    set_tests_properties(fullduplex_${utName} PROPERTIES FAIL_REGULAR_EXPRESSION "Sync changed from 1 to 0")
 endmacro()
 
 DefineAudioTest(RADEV1)
+
+add_test(NAME fullduplex_RADEV1_repeated
+         COMMAND sh -c " ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1")
+set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES FAIL_REGULAR_EXPRESSION "Sync changed from 1 to 0")
+set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES DISABLED TRUE)
+set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES LABELS stress_test)
+
 DefineAudioTest(700D)
 DefineAudioTest(700E)
 DefineAudioTest(1600)
