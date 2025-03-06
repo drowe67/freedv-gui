@@ -569,7 +569,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     modeStatusSizer = new wxBoxSizer(wxVERTICAL);
     m_txtModeStatus = new wxStaticText(m_panel, wxID_ANY, wxT("unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_txtModeStatus->Enable(false); // enabled only if Hamlib is turned on
-    m_txtModeStatus->SetMinSize(wxSize(40,-1));
+    m_txtModeStatus->SetMinSize(wxSize(60,-1));
     modeStatusSizer->Add(m_txtModeStatus, 0, wxALL|wxEXPAND, 1);
     lowerSizer->Add(modeStatusSizer, 0, wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
