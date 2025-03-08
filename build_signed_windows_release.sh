@@ -43,7 +43,7 @@ for arch in x86_64; do
 
     # Kick off new build with the given architecture
     cmake -DLPCNET_DISABLE=1 -DPython3_ROOT_DIR=`pwd`/../wine-env/drive_c/Program\ Files/Python312 -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_CERTIFICATE_FILE=$CERT_URL_FILE -DPKCS11_KEY_FILE=$KEY_URL_FILE -DINTERMEDIATE_CERT_FILE=$INTERMEDIATE_CERT_FILE -DCMAKE_TOOLCHAIN_FILE=$SCRIPT_DIR/cross-compile/freedv-mingw-llvm-$arch.cmake $SCRIPT_DIR
-    make -j6 package
+    make -j package
     cp FreeDV-*.exe $WIN_BUILD_DIR
     cd $WIN_BUILD_DIR
 done
