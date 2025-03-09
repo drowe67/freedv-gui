@@ -73,7 +73,7 @@ jobs:
       working-directory: ${{github.workspace}}/build_windows
       run: |
         export PATH=${{github.workspace}}/llvm-mingw-20230320-ucrt-ubuntu-18.04-x86_64/bin:$PATH
-        make -j6 package
+        make -j$(nproc) package
 
     - name: Rename installer
       shell: bash
