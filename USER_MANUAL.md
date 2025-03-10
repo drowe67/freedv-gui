@@ -912,6 +912,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Windows: Detect whether microphone permissions have been granted and display error if not. (PR #790)
     * Add rig control option to prevent auto-adjustment of the radio's current mode. (PR #809)
     * Update default 80 and 160m calling frequencies. (PR #831)
+    * Shorten PulseAudio/pipewire app name. (PR #843)
 3. Build system:
     * Allow overrriding the version tag when building. (PR #727)
     * Update wxWidgets to 3.2.6. (PR #748)
