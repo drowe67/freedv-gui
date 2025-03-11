@@ -35,7 +35,7 @@ if [ $LPCNET_DISABLE == 0 ]; then
     mkdir  -p build_linux && cd build_linux && rm -Rf *
     cmake ..
     if [ $? == 0 ]; then
-        make
+        make -j$(nproc)
         if [ $? == 0 ]; then
             # sanity check test
             cd src && sox ../../wav/wia.wav -t raw -r 16000 - | ./lpcnet_enc -s | ./lpcnet_dec -s > /dev/null
@@ -59,7 +59,7 @@ if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2.git
 fi
 cd codec2 && git switch main && git pull && git checkout $CODEC2_BRANCH
-mkdir -p build_linux && cd build_linux && rm -Rf * && cmake $LPCNET_CMAKE_CMD .. && make VERBOSE=1
+mkdir -p build_linux && cd build_linux && rm -Rf * && cmake $LPCNET_CMAKE_CMD .. && make VERBOSE=1 -j$(nproc)
 if [ $LPCNET_DISABLE == 0 ]; then
     # sanity check test
     cd src
@@ -79,4 +79,4 @@ else
     PULSEAUDIO_PARAM="-DUSE_PULSEAUDIO=0"
 fi
 cmake $PULSEAUDIO_PARAM -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux $LPCNET_CMAKE_CMD ..
-make VERBOSE=1
+make VERBOSE=1 -j$(nproc)
