@@ -36,7 +36,7 @@ jobs:
     - name: Prep gfortran for octave-signal install
       shell: bash
       working-directory: ${{github.workspace}}
-      if: matrix.os == "macos-13"
+      if: matrix.os == 'macos-13'
       run: |
         # make sure gfortran is available
         sudo ln -s /usr/local/bin/gfortran-14 /usr/local/bin/gfortran
@@ -45,7 +45,7 @@ jobs:
     - name: Prep gfortran for octave-signal install
       shell: bash
       working-directory: ${{github.workspace}}
-      if: matrix.os == "macos-latest"
+      if: matrix.os == 'macos-latest'
       run: |
         # make sure gfortran is available
         sudo ln -s /opt/homebrew/bin/gfortran-14 /opt/homebrew/bin/gfortran
