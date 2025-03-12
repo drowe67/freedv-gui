@@ -15,16 +15,7 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-13, macos-latest]   # x86_64, ARM64
-        univ-build: [0, 1]
-        exclude:
-          - os: macos-latest
-            univ-build: 1
-
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-13
 
     steps:
     - uses: actions/checkout@v4
@@ -34,28 +25,17 @@ jobs:
       working-directory: ${{github.workspace}}
       run: brew install automake libtool numpy sox octave
 
-    - name: Prep gfortran for octave-signal install
-      shell: bash
-      working-directory: ${{github.workspace}}
-      if: matrix.os == 'macos-13'
-      run: |
-        # make sure gfortran is available
-        sudo ln -s /usr/local/bin/gfortran-14 /usr/local/bin/gfortran
-        gfortran --version
-
-    - name: Prep gfortran for octave-signal install
-      shell: bash
-      working-directory: ${{github.workspace}}
-      if: matrix.os == 'macos-latest'
-      run: |
-        # make sure gfortran is available
-        sudo ln -s /opt/homebrew/bin/gfortran-14 /opt/homebrew/bin/gfortran
-        gfortran --version
-
     - name: Install octave-signal
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
+        # make sure gfortran is available
+        sudo ln -s /usr/local/bin/gfortran-14 /usr/local/bin/gfortran
+        #ls /opt/homebrew/bin/gfortran*
+        #sudo mkdir /usr/local/gfortran
+        #ls /usr/local/Cellar
+        #sudo ln -s /usr/local/Cellar/gcc@14/*/lib/gcc/14 /usr/local/gfortran/lib
+        gfortran --version
         octave-cli --eval "pkg install -forge control; pkg install -forge signal"
 
     - name: Install VB-Cable
@@ -72,19 +52,12 @@ jobs:
     - name: Build freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=1 UNIV_BUILD=${{ matrix.univ-build }} ./build_osx.sh 
+      run: UT_ENABLE=1 ./build_osx.sh 
 
     - name: Workaround macOS permission issues
-      if: matrix.os == 'macos-13'
       run: |
           sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159);"
           sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159);"
-
-    - name: Workaround macOS permission issues
-      if: matrix.os == 'macos-latest'
-      run: |
-          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159);"
-          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159);"
 
     - name: Execute unit tests
       shell: bash
@@ -94,13 +67,11 @@ jobs:
 
     - name: Package executable
       working-directory: ${{github.workspace}}/build_osx
-      if: matrix.univ-build == 1
       run: |
           make release
 
     - name: Stash disk image
       uses: actions/upload-artifact@v4
-      if: matrix.univ-build == 1
       with:
         name: FreeDV
         path: ${{github.workspace}}/build_osx/src/FreeDV.dmg
