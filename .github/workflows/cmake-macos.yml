@@ -19,9 +19,9 @@ jobs:
       matrix:
         os: [macos-13, macos-latest]   # x86_64, ARM64
         univ-build: [0, 1]
-      exclude:
-        - os: macos-latest
-          univ-build: 1
+        exclude:
+          - os: macos-latest
+            univ-build: 1
 
     runs-on: ${{ matrix.os }}
 
