@@ -56,6 +56,8 @@ set_target_properties(opus PROPERTIES
     IMPORTED_LOCATION "${BINARY_DIR}/build_opus-prefix/src/build_opus/.libs/libopus${CMAKE_STATIC_LIBRARY_SUFFIX}"
 )
 set(FARGAN_CONFIG_H_FILE "${BINARY_DIR}/build_opus-prefix/src/build_opus/config.h")
+set(FARGAN_ARM_CONFIG_H_FILE "${FARGAN_CONFIG_H_FILE}")
+set(FARGAN_X86_CONFIG_H_FILE "${FARGAN_CONFIG_H_FILE}")
 endif(APPLE AND BUILD_OSX_UNIVERSAL)
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/fargan_config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/fargan_config.h")
