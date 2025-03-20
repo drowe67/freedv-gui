@@ -130,7 +130,7 @@ std::vector<AudioDeviceSpecification> MacAudioEngine::getAudioDeviceList(AudioDi
         if (status != noErr)
         {
             // Use fallback SR if we can't retrieve it for some reason.
-            sampleRate = 48000;
+            sampleRate = 44100;
         }
         
         // Get number of input and output channels
