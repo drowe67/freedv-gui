@@ -27,7 +27,7 @@
 
 void MacAudioEngine::start()
 {
-    // empty - no initialiation needed.
+    // empty - no initialization needed.
 }
 
 void MacAudioEngine::stop()
