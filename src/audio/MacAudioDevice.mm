@@ -1,0 +1,297 @@
+//=========================================================================
+// Name:            MacAudioDevice.mm
+// Purpose:         Defines the interface to a Core Audio device.
+//
+// Authors:         Mooneer Salem
+// License:
+//
+//  All rights reserved.
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License version 2.1,
+//  as published by the Free Software Foundation.  This program is
+//  distributed in the hope that it will be useful, but WITHOUT ANY
+//  WARRANTY; without even the implied warranty of MERCHANTABILITY or
+//  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+//  License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program; if not, see <http://www.gnu.org/licenses/>.
+//
+//=========================================================================
+
+#include "MacAudioDevice.h"
+#include "../util/logging/ulog.h"
+
+#include <future>
+#import <AVFoundation/AVFoundation.h>
+
+MacAudioDevice::MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate)
+    : coreAudioId_(coreAudioId)
+    , direction_(direction)
+    , numChannels_(numChannels)
+    , sampleRate_(sampleRate)
+    , engine_(nil)
+    , player_(nil)
+    , audioConverter_(nil)
+{
+    log_info("Create MacAudioDevice with ID %d, channels %d and sample rate %d", coreAudioId, numChannels, sampleRate);
+}
+
+MacAudioDevice::~MacAudioDevice()
+{
+    if (engine_ != nil)
+    {
+        stop();
+    }
+}
+    
+int MacAudioDevice::getNumChannels()
+{
+    return numChannels_;
+}
+
+int MacAudioDevice::getSampleRate() const
+{
+    return sampleRate_;
+}
+    
+void MacAudioDevice::start()
+{
+    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
+    auto fut = prom->get_future();
+    enqueue_([&, prom]() {
+        // Initialize audio engine.
+        AVAudioEngine* engine = [[AVAudioEngine alloc] init];
+    
+        // Set input or output node to the selected device.
+        // Need to also get a mixer node so that the objects get
+        // created in the right order.
+        AVAudioMixerNode* mixer = 
+            (direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ?
+            [engine mainMixerNode] :
+            nil;
+    
+        AudioUnit audioUnit = 
+            (direction_ == IAudioEngine::AUDIO_ENGINE_IN) ?
+            [[engine inputNode] audioUnit] :
+            [[engine outputNode] audioUnit];
+        
+        OSStatus error = AudioUnitSetProperty(audioUnit,
+                                              kAudioOutputUnitProperty_CurrentDevice,
+                                              kAudioUnitScope_Global,
+                                              0,
+                                              &coreAudioId_,
+                                              sizeof(coreAudioId_));
+        if (error != noErr)
+        {
+            if (onAudioErrorFunction)
+            {
+                onAudioErrorFunction(*this, "Could not assign device to AVAudioEngine", onAudioErrorState);
+            }
+            [engine release];
+            return;
+        }
+    
+        // Create sample rate converter
+        AVAudioFormat* nativeFormat =
+            (direction_ == IAudioEngine::AUDIO_ENGINE_IN) ?
+            [[engine inputNode] outputFormatForBus:0] :
+            [[engine outputNode] inputFormatForBus:0];
+        AVAudioFormat* audioFormat = 
+            [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatInt16
+                                   sampleRate:sampleRate_
+                                   channels:numChannels_
+                                   interleaved:YES];
+        AVAudioConverter* converter = nil;
+    
+        if (direction_ == IAudioEngine::AUDIO_ENGINE_IN)
+        {
+            converter = [[AVAudioConverter alloc] initFromFormat:nativeFormat toFormat:audioFormat];
+        }
+        else
+        {
+            converter = [[AVAudioConverter alloc] initFromFormat:audioFormat toFormat:nativeFormat];
+        }
+        audioConverter_ = converter;
+    
+        // Create nodes and links
+        AVAudioPlayerNode *player = nil;
+        if (direction_ == IAudioEngine::AUDIO_ENGINE_IN)
+        {
+            log_info("Create mixer node for input device %d", coreAudioId_);
+        
+            AVAudioInputNode* inNode = [engine inputNode];
+            const int NUM_FRAMES = FRAME_TIME_SEC_ * sampleRate_;
+            [inNode installTapOnBus:0 
+                    bufferSize:NUM_FRAMES 
+                    format:nativeFormat
+                    block:^(AVAudioPCMBuffer *buffer, AVAudioTime *when) {
+                // Call callback with audio data
+                if (onAudioDataFunction)
+                {
+                    AVAudioPCMBuffer* outputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter outputFormat] frameCapacity:buffer.frameLength];
+                    NSError* err = nil;
+                    auto result = [converter convertToBuffer:outputBuffer error:&err withInputFromBlock:^(unsigned int, enum AVAudioConverterInputStatus *status) {
+                        *status = AVAudioConverterInputStatus_HaveData;
+                        return buffer;
+                    }];
+                    if (result == AVAudioConverterOutputStatus_Error)
+                    {
+                        NSString* errorDesc = [err localizedDescription];
+                        log_error("Could not perform sample rate conversion for device %d (err %s)", coreAudioId_, [errorDesc cStringUsingEncoding:NSUTF8StringEncoding]);
+                    }
+                
+                    short *const * channelData = [outputBuffer int16ChannelData];
+                    onAudioDataFunction(*this, (void*)channelData[0], outputBuffer.frameLength, onAudioDataState);
+                    [outputBuffer release];
+                }
+            }];
+        }
+        else
+        {
+            log_info("Create player node for output device %d", coreAudioId_);
+        
+            player = [[AVAudioPlayerNode alloc] init]; 
+            [engine attachNode:player];
+            player_ = player;
+        
+            [engine connect:player to:mixer format:nativeFormat]; 
+        
+            // Queue initial audio
+            log_info("Queue initial audio for output device %d", coreAudioId_);
+            queueNextAudioPlayback_();
+        }
+    
+        log_info("Start engine for device %d", coreAudioId_);
+    
+        NSError *nse = nil;
+        [engine prepare];
+        if (![engine startAndReturnError:&nse])
+        {
+            if (onAudioErrorFunction)
+            {
+                NSString* errorDesc = [nse localizedDescription];
+                std::string err = std::string("Could not start AVAudioEngine: ") + [errorDesc cStringUsingEncoding:NSUTF8StringEncoding];
+                onAudioErrorFunction(*this, err, onAudioErrorState);
+            }
+            [engine release];
+            return;
+        }
+        engine_ = engine;
+    
+        if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
+        {
+            // Begin playback.
+            log_info("Start playback for output device %d", coreAudioId_);
+            [player play];
+        }
+        
+        prom->set_value();
+    });
+    fut.wait();
+}
+
+void MacAudioDevice::stop()
+{
+    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
+    auto fut = prom->get_future();
+    enqueue_([&, prom]() {
+        if (engine_ != nil)
+        {
+            AVAudioPlayerNode* player = (AVAudioPlayerNode*)player_;
+            if (player != nil)
+            {
+                log_info("Stopping player for output device %d", coreAudioId_);
+                [player stop];
+            }
+        
+            log_info("Stopping engine for device %d", coreAudioId_);
+            AVAudioEngine* engine = (AVAudioEngine*)engine_;
+            [engine stop];
+            [engine release];
+        
+            log_info("Releasing audio converter for device %d", coreAudioId_);
+            AVAudioConverter* converter = (AVAudioConverter*)audioConverter_;
+            if (converter != nil)
+            {
+                [converter release];
+            }
+        }
+        engine_ = nil;
+        player_ = nil;
+        audioConverter_ = nil;
+        
+        prom->set_value();
+    });
+    
+    fut.wait();
+}
+
+bool MacAudioDevice::isRunning()
+{
+    return engine_ != nil;
+}
+
+void MacAudioDevice::queueNextAudioPlayback_()
+{
+    AVAudioPlayerNode* playerNode = (AVAudioPlayerNode*)player_;
+    
+    if (playerNode != nil)
+    {    
+        // 10ms of samples per run
+        const int NUM_FRAMES = FRAME_TIME_SEC_ * sampleRate_;
+        
+        AVAudioConverter* converter = (AVAudioConverter*)audioConverter_;
+    
+        // Get 2x 10ms frames (20ms of audio). The first schedule has a completion handler that
+        // causes this method to be called again once we're halfway done playing.
+        AVAudioPCMBuffer* tempBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter inputFormat] frameCapacity:NUM_FRAMES];
+        AVAudioPCMBuffer* firstBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter outputFormat] frameCapacity:NUM_FRAMES];
+        short *const * channelData = [tempBuffer int16ChannelData];
+        if (onAudioDataFunction)
+        {
+            tempBuffer.frameLength = NUM_FRAMES;
+            onAudioDataFunction(*this, (void*)channelData[0], NUM_FRAMES, onAudioDataState);
+        }
+    
+        NSError* err = nil;
+        auto result = [converter convertToBuffer:firstBuffer error:&err withInputFromBlock:^(unsigned int, enum AVAudioConverterInputStatus *status) {
+            *status = AVAudioConverterInputStatus_HaveData;
+            return tempBuffer;
+        }];
+        if (result == AVAudioConverterOutputStatus_Error)
+        {
+            NSString* errorDesc = [err localizedDescription];
+            log_error("Could not perform sample rate conversion for device %d (err %s)", coreAudioId_, [errorDesc cStringUsingEncoding:NSUTF8StringEncoding]);
+        }
+    
+        [playerNode scheduleBuffer:firstBuffer atTime:nil options:0 completionHandler:^() {
+            enqueue_([&]() {
+                queueNextAudioPlayback_();
+            });
+        }];
+    
+        AVAudioPCMBuffer* secondBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter outputFormat] frameCapacity:NUM_FRAMES];
+        if (onAudioDataFunction)
+        {
+            tempBuffer.frameLength = NUM_FRAMES;
+            onAudioDataFunction(*this, (void*)channelData[0], NUM_FRAMES, onAudioDataState);
+        }
+        result = [converter convertToBuffer:secondBuffer error:&err withInputFromBlock:^(unsigned int, enum AVAudioConverterInputStatus *status) {
+            *status = AVAudioConverterInputStatus_HaveData;
+            return tempBuffer;
+        }];
+        if (result == AVAudioConverterOutputStatus_Error)
+        {
+            NSString* errorDesc = [err localizedDescription];
+            log_error("Could not perform sample rate conversion for device %d (err %s)", coreAudioId_, [errorDesc cStringUsingEncoding:NSUTF8StringEncoding]);
+        }
+        
+        [playerNode scheduleBuffer:secondBuffer atTime:nil options:0 completionHandler:nil];
+        
+        [firstBuffer release];
+        [secondBuffer release];
+        [tempBuffer release];
+    }
+}

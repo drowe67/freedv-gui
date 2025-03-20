@@ -1,3 +1,12 @@
+if(APPLE)
+
+set(AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES
+    MacAudioEngine.cpp
+    MacAudioDevice.mm
+)
+
+else(APPLE)
+    
 if(USE_PULSEAUDIO AND LINUX)
 set(AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES
     PulseAudioDevice.cpp
@@ -12,6 +21,7 @@ set(AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES
     )
 
 endif(USE_PULSEAUDIO AND LINUX)
+endif(APPLE)
 
 add_library(fdv_audio STATIC
     AudioDeviceSpecification.cpp
@@ -20,6 +30,11 @@ add_library(fdv_audio STATIC
     IAudioEngine.cpp
     ${AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES}
 )
+
+if(APPLE)
+    target_link_libraries(fdv_audio
+        "-framework AVFoundation")
+endif(APPLE)
 
 if(BOOTSTRAP_WXWIDGETS)
     add_dependencies(fdv_audio wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)

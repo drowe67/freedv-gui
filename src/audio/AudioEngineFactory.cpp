@@ -23,6 +23,8 @@
 #include "AudioEngineFactory.h"
 #if defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
 #include "PulseAudioEngine.h"
+#elif __APPLE__
+#include "MacAudioEngine.h"
 #else
 #include "PortAudioEngine.h"
 #endif // defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
@@ -35,6 +37,8 @@ std::shared_ptr<IAudioEngine> AudioEngineFactory::GetAudioEngine()
     {
 #if defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
         SystemEngine_ = std::shared_ptr<IAudioEngine>(new PulseAudioEngine());
+#elif __APPLE__
+        SystemEngine_ = std::shared_ptr<IAudioEngine>(new MacAudioEngine());
 #else
         SystemEngine_ = std::shared_ptr<IAudioEngine>(new PortAudioEngine());
 #endif // defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
