@@ -90,61 +90,12 @@ std::vector<AudioDeviceSpecification> MacAudioEngine::getAudioDeviceList(AudioDi
     {
         // Get device ID
         auto deviceID = ids[index];
+        auto device = getAudioSpecification_(deviceID, direction);
         
-        // Get device name
-        propertyAddress.mSelector = kAudioDevicePropertyDeviceNameCFString;
-        propertySize = sizeof(CFStringRef);
-        CFStringRef name = nullptr;
-        status = AudioObjectGetPropertyData(
-            deviceID,
-            &propertyAddress,
-            0,
-            nullptr,
-            &propertySize,
-            &name
-        );
-        if (status != noErr)
+        if (device.isValid())
         {
-            if (onAudioErrorFunction)
-            {
-                onAudioErrorFunction(*this, "Could not get audio device name", onAudioErrorState);
-            }
-            return result;
+            result.push_back(device);
         }
-        
-        std::string deviceName = cfStringToStdString_(name);
-        CFRelease(name);
-        
-        // Get HW sample rate
-        double sampleRate = 0;
-        propertyAddress.mSelector = kAudioDevicePropertyNominalSampleRate;
-        propertySize = sizeof(sampleRate);
-        status = AudioObjectGetPropertyData(
-            deviceID,
-            &propertyAddress,
-            0,
-            nullptr,
-            &propertySize,
-            &sampleRate
-        );
-        if (status != noErr)
-        {
-            // Use fallback SR if we can't retrieve it for some reason.
-            sampleRate = 44100;
-        }
-        
-        // Get number of input and output channels
-        // TBD - assuming 2 for now to make sure above code works
-        
-        // Add to device list.
-        AudioDeviceSpecification device;
-        device.deviceId = deviceID;
-        device.name = deviceName;
-        device.apiName = "Core Audio";
-        device.maxChannels = 2;
-        device.minChannels = 1;
-        device.defaultSampleRate = sampleRate;
-        result.push_back(device);
     }
     
     return result;
@@ -180,6 +131,74 @@ std::vector<int> MacAudioEngine::getSupportedSampleRates(wxString deviceName, Au
     }
     
     return result;
+}
+
+AudioDeviceSpecification MacAudioEngine::getAudioSpecification_(int coreAudioId, AudioDirection direction)
+{
+    AudioObjectPropertyAddress propertyAddress = {
+        .mSelector = kAudioHardwarePropertyDevices,
+        .mScope = kAudioObjectPropertyScopeGlobal,
+        .mElement = kAudioObjectPropertyElementMain
+    };
+    
+    uint32_t propertySize = 0;
+    OSStatus status = noErr;
+    
+    // Get device name
+    propertyAddress.mSelector = kAudioDevicePropertyDeviceNameCFString;
+    propertySize = sizeof(CFStringRef);
+    CFStringRef name = nullptr;
+    status = AudioObjectGetPropertyData(
+        coreAudioId,
+        &propertyAddress,
+        0,
+        nullptr,
+        &propertySize,
+        &name
+    );
+    if (status != noErr)
+    {
+        if (onAudioErrorFunction)
+        {
+            onAudioErrorFunction(*this, "Could not get audio device name", onAudioErrorState);
+        }
+        return AudioDeviceSpecification::GetInvalidDevice();
+    }
+    
+    std::string deviceName = cfStringToStdString_(name);
+    CFRelease(name);
+    
+    // Get HW sample rate
+    double sampleRate = 0;
+    propertyAddress.mSelector = kAudioDevicePropertyNominalSampleRate;
+    propertySize = sizeof(sampleRate);
+    status = AudioObjectGetPropertyData(
+        coreAudioId,
+        &propertyAddress,
+        0,
+        nullptr,
+        &propertySize,
+        &sampleRate
+    );
+    if (status != noErr)
+    {
+        // Use fallback SR if we can't retrieve it for some reason.
+        sampleRate = 44100;
+    }
+    
+    // Get number of input and output channels
+    // TBD - assuming 2 for now to make sure above code works
+    
+    // Add to device list.
+    AudioDeviceSpecification device;
+    device.deviceId = coreAudioId;
+    device.name = deviceName;
+    device.apiName = "Core Audio";
+    device.maxChannels = 2;
+    device.minChannels = 1;
+    device.defaultSampleRate = sampleRate;
+    
+    return device;
 }
 
 /**

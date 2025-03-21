@@ -47,6 +47,8 @@ public:
     
 private:
     std::string cfStringToStdString_(CFStringRef input);
+    
+    AudioDeviceSpecification getAudioSpecification_(int coreAudioId, AudioDirection direction);
 };
 
 #endif // MAC_AUDIO_ENGINE_H
