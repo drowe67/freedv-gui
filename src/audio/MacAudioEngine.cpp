@@ -22,6 +22,7 @@
 
 #include "MacAudioEngine.h"
 #include "MacAudioDevice.h"
+#include "../util/logging/ulog.h"
 
 #include <CoreAudio/CoreAudio.h>
 
@@ -103,7 +104,7 @@ std::vector<AudioDeviceSpecification> MacAudioEngine::getAudioDeviceList(AudioDi
 
 AudioDeviceSpecification MacAudioEngine::getDefaultAudioDevice(AudioDirection direction)
 {
-    return AudioDeviceSpecification(); // TBD - stub
+    return AudioDeviceSpecification::GetInvalidDevice(); // TBD - stub
 }
 
 std::shared_ptr<IAudioDevice> MacAudioEngine::getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels)
@@ -187,18 +188,82 @@ AudioDeviceSpecification MacAudioEngine::getAudioSpecification_(int coreAudioId,
     }
     
     // Get number of input and output channels
-    // TBD - assuming 2 for now to make sure above code works
+    int numChannels = getNumChannels_(coreAudioId, direction);
+    if (numChannels == 0)
+    {
+        // problem getting number of channels or device doesn't support 
+        // given direction.
+        return AudioDeviceSpecification::GetInvalidDevice();
+    }
     
     // Add to device list.
     AudioDeviceSpecification device;
     device.deviceId = coreAudioId;
     device.name = deviceName;
     device.apiName = "Core Audio";
-    device.maxChannels = 2;
+    device.maxChannels = numChannels;
     device.minChannels = 1;
     device.defaultSampleRate = sampleRate;
     
     return device;
+}
+
+int MacAudioEngine::getNumChannels_(int coreAudioId, AudioDirection direction)
+{
+    AudioObjectPropertyAddress propertyAddress = {
+        .mSelector = kAudioHardwarePropertyDevices,
+        .mScope = kAudioObjectPropertyScopeGlobal,
+        .mElement = kAudioObjectPropertyElementMain
+    };
+    
+    uint32_t propertySize = 0;
+    OSStatus status = noErr;
+    
+    propertyAddress.mSelector = kAudioDevicePropertyStreamConfiguration;
+    propertyAddress.mScope = 
+        (direction == AUDIO_ENGINE_IN) ?
+        kAudioDevicePropertyScopeInput :
+        kAudioDevicePropertyScopeOutput;
+        
+    status = AudioObjectGetPropertyDataSize(
+        coreAudioId, 
+        &propertyAddress, 
+        0, 
+        nullptr, 
+        &propertySize);
+    if (status != noErr)
+    {
+        if (onAudioErrorFunction)
+        {
+            onAudioErrorFunction(*this, "Could not get audio stream configuration size", onAudioErrorState);
+        }
+        return 0;
+    }
+    
+    AudioBufferList bufferListPointer;
+    status = AudioObjectGetPropertyData(
+        coreAudioId, 
+        &propertyAddress, 
+        0,
+        nullptr, 
+        &propertySize, 
+        &bufferListPointer);
+    if (status != noErr)
+    {
+        if (onAudioErrorFunction)
+        {
+            onAudioErrorFunction(*this, "Could not get audio stream configuration", onAudioErrorState);
+        }
+        return 0;
+    }
+    
+    int numChannels = 0;
+    for (int index = 0; index < bufferListPointer.mNumberBuffers; index++)
+    {
+        numChannels += bufferListPointer.mBuffers[index].mNumberChannels;
+    }
+    
+    return numChannels;
 }
 
 /**
