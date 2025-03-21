@@ -104,7 +104,39 @@ std::vector<AudioDeviceSpecification> MacAudioEngine::getAudioDeviceList(AudioDi
 
 AudioDeviceSpecification MacAudioEngine::getDefaultAudioDevice(AudioDirection direction)
 {
-    return AudioDeviceSpecification::GetInvalidDevice(); // TBD - stub
+    AudioObjectPropertyAddress propertyAddress = {
+        .mSelector = kAudioHardwarePropertyDevices,
+        .mScope = kAudioObjectPropertyScopeGlobal,
+        .mElement = kAudioObjectPropertyElementMain
+    };
+    
+    AudioDeviceID deviceId = 0;
+    uint32_t propertySize = sizeof(deviceId);
+    OSStatus status = noErr;
+    
+    propertyAddress.mSelector = 
+        (direction == AUDIO_ENGINE_IN) ?
+        kAudioHardwarePropertyDefaultInputDevice :
+        kAudioHardwarePropertyDefaultOutputDevice;
+        
+    status = AudioObjectGetPropertyData(
+        kAudioObjectSystemObject,
+        &propertyAddress,
+        0,
+        nullptr,
+        &propertySize,
+        &deviceId
+    );
+    if (status != noErr)
+    {
+        if (onAudioErrorFunction)
+        {
+            onAudioErrorFunction(*this, "Could not get default audio device", onAudioErrorState);
+        }
+        return AudioDeviceSpecification::GetInvalidDevice();
+    }
+    
+    return getAudioSpecification_(deviceId, direction);
 }
 
 std::shared_ptr<IAudioDevice> MacAudioEngine::getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels)
