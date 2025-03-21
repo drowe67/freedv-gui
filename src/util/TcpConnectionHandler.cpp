@@ -471,7 +471,8 @@ void TcpConnectionHandler::disconnectImpl_()
 #else
         close(socket_);
 #endif // defined(WIN32)
-        
+        socket_ = -1;
+
         onDisconnect_();
         
         if (enableReconnect_)
