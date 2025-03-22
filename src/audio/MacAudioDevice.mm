@@ -127,6 +127,36 @@ void MacAudioDevice::start()
         
             AVAudioInputNode* inNode = [engine inputNode];
             const int NUM_FRAMES = FRAME_TIME_SEC_ * sampleRate_;
+            
+            AVAudioSinkNodeReceiverBlock block = ^(const AudioTimeStamp* timestamp, AVAudioFrameCount frameCount, const AudioBufferList* inputData) 
+            {
+                if (onAudioDataFunction)
+                {
+                    AVAudioPCMBuffer* buffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter inputFormat] bufferListNoCopy:inputData deallocator:[](const AudioBufferList * ) { }];
+                    AVAudioPCMBuffer* outputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter outputFormat] frameCapacity:buffer.frameLength];
+                    NSError* err = nil;
+                    auto result = [converter convertToBuffer:outputBuffer error:&err withInputFromBlock:^(unsigned int, enum AVAudioConverterInputStatus *status) {
+                        *status = AVAudioConverterInputStatus_HaveData;
+                        return buffer;
+                    }];
+                    if (result == AVAudioConverterOutputStatus_Error)
+                    {
+                        NSString* errorDesc = [err localizedDescription];
+                        log_error("Could not perform sample rate conversion for device %d (err %s)", coreAudioId_, [errorDesc cStringUsingEncoding:NSUTF8StringEncoding]);
+                    }
+                
+                    short *const * channelData = [outputBuffer int16ChannelData];
+                    onAudioDataFunction(*this, (void*)channelData[0], outputBuffer.frameLength, onAudioDataState);
+                    [outputBuffer release];
+                }
+                return OSStatus(noErr);
+            };
+            
+            AVAudioSinkNode* sinkNode = [[AVAudioSinkNode alloc] initWithReceiverBlock:block];
+            [engine attachNode:sinkNode];    
+            [engine connect:[engine inputNode] to:sinkNode format:nativeFormat]; 
+            
+#if 0
             [inNode installTapOnBus:0 
                     bufferSize:NUM_FRAMES 
                     format:nativeFormat
@@ -151,6 +181,7 @@ void MacAudioDevice::start()
                     [outputBuffer release];
                 }
             }];
+#endif 
         }
         else
         {
