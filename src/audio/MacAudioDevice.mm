@@ -148,6 +148,7 @@ void MacAudioDevice::start()
                     short *const * channelData = [outputBuffer int16ChannelData];
                     onAudioDataFunction(*this, (void*)channelData[0], outputBuffer.frameLength, onAudioDataState);
                     [outputBuffer release];
+                    [buffer release];
                 }
                 return OSStatus(noErr);
             };
@@ -186,7 +187,40 @@ void MacAudioDevice::start()
         else
         {
             log_info("Create player node for output device %d", coreAudioId_);
-        
+
+            AVAudioSourceNodeRenderBlock block = ^(signed char *, const struct AudioTimeStamp *, unsigned int count, struct AudioBufferList *bufList)
+            {
+                if (onAudioDataFunction)
+                {
+                    AVAudioPCMBuffer* outputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter outputFormat] bufferListNoCopy:bufList deallocator:[](const AudioBufferList * ) { }];
+                    AVAudioPCMBuffer* buffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter inputFormat] frameCapacity:count];
+                    NSError* err = nil;
+                    
+                    buffer.frameLength = count;
+                    short *const * channelData = [buffer int16ChannelData];
+                    onAudioDataFunction(*this, (void*)channelData[0], count, onAudioDataState);
+                    
+                    auto result = [converter convertToBuffer:outputBuffer error:&err withInputFromBlock:^(unsigned int, enum AVAudioConverterInputStatus *status) {
+                        *status = AVAudioConverterInputStatus_HaveData;
+                        return buffer;
+                    }];
+                    if (result == AVAudioConverterOutputStatus_Error)
+                    {
+                        NSString* errorDesc = [err localizedDescription];
+                        log_error("Could not perform sample rate conversion for device %d (err %s)", coreAudioId_, [errorDesc cStringUsingEncoding:NSUTF8StringEncoding]);
+                    }
+                    
+                    [outputBuffer release];
+                    [buffer release];
+                }
+                
+                return OSStatus(noErr);
+            };
+            
+            AVAudioSourceNode* sourceNode = [[AVAudioSourceNode alloc] initWithFormat:nativeFormat renderBlock:block];
+            [engine attachNode:sourceNode];
+            [engine connect:sourceNode to:mixer format:nativeFormat];
+#if 0
             player = [[AVAudioPlayerNode alloc] init]; 
             [engine attachNode:player];
             player_ = player;
@@ -196,6 +230,7 @@ void MacAudioDevice::start()
             // Queue initial audio
             log_info("Queue initial audio for output device %d", coreAudioId_);
             queueNextAudioPlayback_();
+#endif
         }
     
         log_info("Start engine for device %d", coreAudioId_);
