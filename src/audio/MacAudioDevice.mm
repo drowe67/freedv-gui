@@ -188,7 +188,7 @@ void MacAudioDevice::start()
         {
             log_info("Create player node for output device %d", coreAudioId_);
 
-            AVAudioSourceNodeRenderBlock block = ^(signed char *, const struct AudioTimeStamp *, unsigned int count, struct AudioBufferList *bufList)
+            AVAudioSourceNodeRenderBlock block = ^(BOOL *, const AudioTimeStamp *, AVAudioFrameCount count, AudioBufferList *bufList)
             {
                 if (onAudioDataFunction)
                 {
