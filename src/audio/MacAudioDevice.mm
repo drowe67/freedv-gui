@@ -130,25 +130,18 @@ void MacAudioDevice::start()
             
             AVAudioSinkNodeReceiverBlock block = ^(const AudioTimeStamp* timestamp, AVAudioFrameCount frameCount, const AudioBufferList* inputData) 
             {
+                short inputFrames[frameCount * numChannels_];
                 if (onAudioDataFunction)
                 {
-                    AVAudioPCMBuffer* buffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter inputFormat] bufferListNoCopy:inputData deallocator:[](const AudioBufferList * ) { }];
-                    AVAudioPCMBuffer* outputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter outputFormat] frameCapacity:buffer.frameLength];
-                    NSError* err = nil;
-                    auto result = [converter convertToBuffer:outputBuffer error:&err withInputFromBlock:^(unsigned int, enum AVAudioConverterInputStatus *status) {
-                        *status = AVAudioConverterInputStatus_HaveData;
-                        return buffer;
-                    }];
-                    if (result == AVAudioConverterOutputStatus_Error)
+                    for (int index = 0; index < frameCount; index++)
                     {
-                        NSString* errorDesc = [err localizedDescription];
-                        log_error("Could not perform sample rate conversion for device %d (err %s)", coreAudioId_, [errorDesc cStringUsingEncoding:NSUTF8StringEncoding]);
+                        for (int chan = 0; chan < inputData->mNumberBuffers; chan++)
+                        {
+                            inputFrames[numChannels_ * index + chan] = ((float*)inputData->mBuffers[chan].mData)[index] * 32767;
+                        }
                     }
-                
-                    short *const * channelData = [outputBuffer int16ChannelData];
-                    onAudioDataFunction(*this, (void*)channelData[0], outputBuffer.frameLength, onAudioDataState);
-                    [outputBuffer release];
-                    [buffer release];
+                    
+                    onAudioDataFunction(*this, inputFrames, frameCount, onAudioDataState);
                 }
                 return OSStatus(noErr);
             };
@@ -188,30 +181,20 @@ void MacAudioDevice::start()
         {
             log_info("Create player node for output device %d", coreAudioId_);
 
-            AVAudioSourceNodeRenderBlock block = ^(BOOL *, const AudioTimeStamp *, AVAudioFrameCount count, AudioBufferList *bufList)
+            AVAudioSourceNodeRenderBlock block = ^(BOOL *, const AudioTimeStamp *, AVAudioFrameCount frameCount, AudioBufferList *outputData)
             {
+                short outputFrames[frameCount * numChannels_];
                 if (onAudioDataFunction)
                 {
-                    AVAudioPCMBuffer* outputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter outputFormat] bufferListNoCopy:bufList deallocator:[](const AudioBufferList * ) { }];
-                    AVAudioPCMBuffer* buffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter inputFormat] frameCapacity:count];
-                    NSError* err = nil;
+                    onAudioDataFunction(*this, (void*)outputFrames, frameCount, onAudioDataState);
                     
-                    buffer.frameLength = count;
-                    short *const * channelData = [buffer int16ChannelData];
-                    onAudioDataFunction(*this, (void*)channelData[0], count, onAudioDataState);
-                    
-                    auto result = [converter convertToBuffer:outputBuffer error:&err withInputFromBlock:^(unsigned int, enum AVAudioConverterInputStatus *status) {
-                        *status = AVAudioConverterInputStatus_HaveData;
-                        return buffer;
-                    }];
-                    if (result == AVAudioConverterOutputStatus_Error)
+                    for (int index = 0; index < frameCount; index++)
                     {
-                        NSString* errorDesc = [err localizedDescription];
-                        log_error("Could not perform sample rate conversion for device %d (err %s)", coreAudioId_, [errorDesc cStringUsingEncoding:NSUTF8StringEncoding]);
+                        for (int chan = 0; chan < outputData->mNumberBuffers; chan++)
+                        {
+                            ((float*)outputData->mBuffers[chan].mData)[index] = outputFrames[numChannels_ * index + chan] / 32767.0;
+                        }
                     }
-                    
-                    [outputBuffer release];
-                    [buffer release];
                 }
                 
                 return OSStatus(noErr);
