@@ -23,7 +23,7 @@ jobs:
     - name: Install packages
       shell: bash
       working-directory: ${{github.workspace}}
-      run: brew install automake libtool numpy sox octave
+      run: brew install automake libtool numpy sox octave wxwidgets speexdsp portaudio libsndfile libsamplerate
 
     - name: Install octave-signal
       shell: bash
@@ -52,7 +52,7 @@ jobs:
     - name: Build freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=1 UNIV_BUILD=0 ./build_osx.sh 
+      run: UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ./build_osx.sh 
 
     - name: Workaround macOS permission issues
       run: |
