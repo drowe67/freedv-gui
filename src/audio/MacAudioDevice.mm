@@ -67,6 +67,12 @@ void MacAudioDevice::start()
             .mScope = kAudioObjectPropertyScopeGlobal,
             .mElement = kAudioObjectPropertyElementMain
         };
+        
+        propertyAddress.mScope = 
+            (direction_ == IAudioEngine::AUDIO_ENGINE_IN) ?
+            kAudioDevicePropertyScopeInput :
+            kAudioDevicePropertyScopeOutput;
+        
         Float64 sampleRateAsFloat = sampleRate_;
         OSStatus error = AudioObjectSetPropertyData(
             coreAudioId_,
