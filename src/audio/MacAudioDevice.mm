@@ -61,6 +61,29 @@ void MacAudioDevice::start()
     std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
     enqueue_([&, prom]() {
+        // Set sample rate of device.
+        AudioObjectPropertyAddress propertyAddress = {
+            .mSelector = kAudioDevicePropertyNominalSampleRate,
+            .mScope = kAudioObjectPropertyScopeGlobal,
+            .mElement = kAudioObjectPropertyElementMain
+        };
+        Float64 sampleRateAsFloat = sampleRate_;
+        OSStatus error = AudioObjectSetPropertyData(
+            coreAudioId_,
+            &propertyAddress,
+            0,
+            nil,
+            sizeof(Float64),
+            &sampleRateAsFloat);
+        if (error != noErr)
+        {
+            if (onAudioErrorFunction)
+            {
+                onAudioErrorFunction(*this, "Could not set device sample rate", onAudioErrorState);
+            }
+            return;
+        }
+        
         // Initialize audio engine.
         AVAudioEngine* engine = [[AVAudioEngine alloc] init];
     
@@ -70,12 +93,12 @@ void MacAudioDevice::start()
             [[engine inputNode] audioUnit] :
             [[engine outputNode] audioUnit];
         
-        OSStatus error = AudioUnitSetProperty(audioUnit,
-                                              kAudioOutputUnitProperty_CurrentDevice,
-                                              kAudioUnitScope_Global,
-                                              0,
-                                              &coreAudioId_,
-                                              sizeof(coreAudioId_));
+        error = AudioUnitSetProperty(audioUnit,
+                                     kAudioOutputUnitProperty_CurrentDevice,
+                                     kAudioUnitScope_Global,
+                                     0,
+                                     &coreAudioId_,
+                                     sizeof(coreAudioId_));
         if (error != noErr)
         {
             if (onAudioErrorFunction)
