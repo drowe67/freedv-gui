@@ -39,19 +39,21 @@ rm -rf pkg-tmp
 
 # Prerequisite: build hamlib
 cd $FREEDVGUIDIR
-if [ ! -d hamlib-code ]; then
-    git clone https://github.com/Hamlib/Hamlib.git hamlib-code
-fi
-cd hamlib-code && git checkout 4.6.2 && git pull
-./bootstrap
-if [ $UNIV_BUILD == 1 ]; then
-    CFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" ./configure --enable-shared --prefix $HAMLIBDIR
-else
-    CFLAGS="-g -O2 -mmacosx-version-min=10.9" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9" ./configure --enable-shared --prefix $HAMLIBDIR
-fi
+if [ $BUILD_DEPS == 1 ]; then 
+    if [ ! -d hamlib-code ]; then
+        git clone https://github.com/Hamlib/Hamlib.git hamlib-code
+    fi
+    cd hamlib-code && git checkout 4.6.2 && git pull
+    ./bootstrap
+    if [ $UNIV_BUILD == 1 ]; then
+        CFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" ./configure --enable-shared --prefix $HAMLIBDIR
+    else
+        CFLAGS="-g -O2 -mmacosx-version-min=10.9" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9" ./configure --enable-shared --prefix $HAMLIBDIR
+    fi
 
-make -j$(sysctl -n hw.logicalcpu)
-make install
+    make -j$(sysctl -n hw.logicalcpu)
+    make install
+fi
 
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
@@ -108,7 +110,7 @@ fi
 if [ $BUILD_DEPS == 1 ]; then 
     cmake -DPython3_ROOT_DIR=$PWD/../Python.framework/Versions/3.12 -DBUILD_OSX_UNIVERSAL=${UNIV_BUILD} -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug  -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_SPEEXDSP=1 -DUSE_STATIC_PORTAUDIO=1 -DUSE_STATIC_SAMPLERATE=1 -DUSE_STATIC_SNDFILE=1 -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.dylib -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx ${LPCNET_CMAKE_CMD} -DMACOS_CODESIGN_IDENTITY=${CODESIGN_IDENTITY} ${CODESIGN_KEYCHAIN_PROFILE_ARG} ..
 else
-    cmake -DPython3_ROOT_DIR=$PWD/../Python.framework/Versions/3.12 -DBUILD_OSX_UNIVERSAL=${UNIV_BUILD} -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.dylib -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx ${LPCNET_CMAKE_CMD} -DMACOS_CODESIGN_IDENTITY=${CODESIGN_IDENTITY} ${CODESIGN_KEYCHAIN_PROFILE_ARG} ..
+    cmake -DPython3_ROOT_DIR=$PWD/../Python.framework/Versions/3.12 -DBUILD_OSX_UNIVERSAL=${UNIV_BUILD} -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx ${LPCNET_CMAKE_CMD} -DMACOS_CODESIGN_IDENTITY=${CODESIGN_IDENTITY} ${CODESIGN_KEYCHAIN_PROFILE_ARG} ..
 fi
 
 make VERBOSE=1 -j$(sysctl -n hw.logicalcpu)
