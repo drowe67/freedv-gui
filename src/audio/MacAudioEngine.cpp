@@ -145,6 +145,28 @@ std::shared_ptr<IAudioDevice> MacAudioEngine::getAudioDevice(wxString deviceName
     {
         if (dev.name == deviceName)
         {
+            // Make sure provided sample rate is valid. If not valid,
+            // just use the device's default sample rate.
+            auto sampleRates = getSupportedSampleRates(deviceName, direction);
+            bool found = false;
+            for (auto& rate : sampleRates)
+            {
+                if (rate == sampleRate)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            
+            if (!found)
+            {
+                sampleRate = dev.defaultSampleRate;
+            }
+            
+            // Ensure that the passed-in number of channels is within the allowed range.
+            numChannels = std::max(numChannels, dev.minChannels);
+            numChannels = std::min(numChannels, dev.maxChannels);
+            
             auto devPtr = new MacAudioDevice(dev.deviceId, direction, numChannels, sampleRate);
             return std::shared_ptr<IAudioDevice>(devPtr);
         }
