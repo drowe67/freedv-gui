@@ -52,7 +52,7 @@ jobs:
     - name: Build freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=1 ./build_osx.sh 
+      run: UT_ENABLE=1 UNIV_BUILD=0 ./build_osx.sh 
 
     - name: Workaround macOS permission issues
       run: |
