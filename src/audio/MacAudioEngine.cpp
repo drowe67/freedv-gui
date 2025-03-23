@@ -156,11 +156,80 @@ std::vector<int> MacAudioEngine::getSupportedSampleRates(wxString deviceName, Au
 {
     std::vector<int> result;
     
-    int index = 0;
-    while (IAudioEngine::StandardSampleRates[index] != -1)
+    for (auto& dev : getAudioDeviceList(direction))
     {
-        result.push_back(IAudioEngine::StandardSampleRates[index]);
-        index++;
+        if (dev.name == deviceName)
+        {
+            AudioObjectPropertyAddress propertyAddress = {
+                .mSelector = kAudioDevicePropertyAvailableNominalSampleRates,
+                .mScope = kAudioObjectPropertyScopeGlobal,
+                .mElement = kAudioObjectPropertyElementMain
+            };
+            
+            propertyAddress.mScope = 
+                (direction == AUDIO_ENGINE_IN) ?
+                kAudioDevicePropertyScopeInput :
+                kAudioDevicePropertyScopeOutput;
+    
+            uint32_t propertySize = 0;
+            OSStatus status = noErr;
+    
+            status = AudioObjectGetPropertyDataSize(
+                dev.deviceId,
+                &propertyAddress,
+                0,
+                nullptr,
+                &propertySize
+            );
+            if (status != noErr)
+            {
+                if (onAudioErrorFunction)
+                {
+                    onAudioErrorFunction(*this, "Could not get size of sample rate list", onAudioErrorState);
+                }
+                return result;
+            }
+
+            // Get audio device IDs.
+            auto rateCount = propertySize / sizeof(AudioValueRange);
+            AudioValueRange* rates = (AudioValueRange*)malloc(propertySize);
+            if (rates == nullptr)
+            {
+                if (onAudioErrorFunction)
+                {
+                    onAudioErrorFunction(*this, "Could not allocate memory for sample rate list", onAudioErrorState);
+                }
+                return result;
+            }
+            
+            status = AudioObjectGetPropertyData(
+                dev.deviceId,
+                &propertyAddress,
+                0,
+                nullptr,
+                &propertySize,
+                rates
+            );
+            if (status != noErr)
+            {
+                if (onAudioErrorFunction)
+                {
+                    onAudioErrorFunction(*this, "Could not get supported sample rates", onAudioErrorState);
+                }
+                return result;
+            }
+            
+            for (int index = 0; index < rateCount; index++)
+            {
+                for (int rate = rates[index].mMinimum; rate <= rates[index].mMaximum; rate++)
+                {
+                    result.push_back(rate);
+                }
+            }
+            
+            free(rates);
+            break;
+        }
     }
     
     return result;
