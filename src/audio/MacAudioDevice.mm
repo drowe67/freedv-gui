@@ -33,7 +33,6 @@ MacAudioDevice::MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection dir
     , sampleRate_(sampleRate)
     , engine_(nil)
     , player_(nil)
-    , audioConverter_(nil)
 {
     log_info("Create MacAudioDevice with ID %d, channels %d and sample rate %d", coreAudioId, numChannels, sampleRate);
 }
@@ -123,18 +122,10 @@ void MacAudioDevice::start()
             nil;
             
         // Create sample rate converter
-        AVAudioFormat* nativeFormat = nil;
-        AVAudioFormat* audioFormat = 
-            [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatInt16
-                                   sampleRate:sampleRate_
-                                   channels:numChannels_
-                                   interleaved:YES];
-        AVAudioConverter* converter = nil;
-    
+        AVAudioFormat* nativeFormat = nil;    
         if (direction_ == IAudioEngine::AUDIO_ENGINE_IN)
         {
             nativeFormat = [[engine inputNode] outputFormatForBus:0];
-            converter = [[AVAudioConverter alloc] initFromFormat:nativeFormat toFormat:audioFormat];
         }
         else
         {
@@ -144,9 +135,7 @@ void MacAudioDevice::start()
                                    sampleRate:sampleRate_
                                    channels:numChannels_
                                    interleaved:NO];
-            converter = [[AVAudioConverter alloc] initFromFormat:audioFormat toFormat:nativeFormat];
         }
-        audioConverter_ = converter;
     
         // Create nodes and links
         AVAudioPlayerNode *player = nil;
@@ -178,33 +167,6 @@ void MacAudioDevice::start()
             AVAudioSinkNode* sinkNode = [[AVAudioSinkNode alloc] initWithReceiverBlock:block];
             [engine attachNode:sinkNode];    
             [engine connect:[engine inputNode] to:sinkNode format:nativeFormat]; 
-            
-#if 0
-            [inNode installTapOnBus:0 
-                    bufferSize:NUM_FRAMES 
-                    format:nativeFormat
-                    block:^(AVAudioPCMBuffer *buffer, AVAudioTime *when) {            
-                // Call callback with audio data
-                if (onAudioDataFunction)
-                {
-                    AVAudioPCMBuffer* outputBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter outputFormat] frameCapacity:buffer.frameLength];
-                    NSError* err = nil;
-                    auto result = [converter convertToBuffer:outputBuffer error:&err withInputFromBlock:^(unsigned int, enum AVAudioConverterInputStatus *status) {
-                        *status = AVAudioConverterInputStatus_HaveData;
-                        return buffer;
-                    }];
-                    if (result == AVAudioConverterOutputStatus_Error)
-                    {
-                        NSString* errorDesc = [err localizedDescription];
-                        log_error("Could not perform sample rate conversion for device %d (err %s)", coreAudioId_, [errorDesc cStringUsingEncoding:NSUTF8StringEncoding]);
-                    }
-                
-                    short *const * channelData = [outputBuffer int16ChannelData];
-                    onAudioDataFunction(*this, (void*)channelData[0], outputBuffer.frameLength, onAudioDataState);
-                    [outputBuffer release];
-                }
-            }];
-#endif 
         }
         else
         {
@@ -232,17 +194,6 @@ void MacAudioDevice::start()
             AVAudioSourceNode* sourceNode = [[AVAudioSourceNode alloc] initWithFormat:nativeFormat renderBlock:block];
             [engine attachNode:sourceNode];
             [engine connect:sourceNode to:mixer format:nativeFormat];
-#if 0
-            player = [[AVAudioPlayerNode alloc] init]; 
-            [engine attachNode:player];
-            player_ = player;
-        
-            [engine connect:player to:mixer format:nativeFormat]; 
-        
-            // Queue initial audio
-            log_info("Queue initial audio for output device %d", coreAudioId_);
-            queueNextAudioPlayback_();
-#endif
         }
     
         log_info("Start engine for device %d", coreAudioId_);
@@ -292,17 +243,9 @@ void MacAudioDevice::stop()
             AVAudioEngine* engine = (AVAudioEngine*)engine_;
             [engine stop];
             [engine release];
-        
-            log_info("Releasing audio converter for device %d", coreAudioId_);
-            AVAudioConverter* converter = (AVAudioConverter*)audioConverter_;
-            if (converter != nil)
-            {
-                [converter release];
-            }
         }
         engine_ = nil;
         player_ = nil;
-        audioConverter_ = nil;
         
         prom->set_value();
     });
@@ -313,70 +256,4 @@ void MacAudioDevice::stop()
 bool MacAudioDevice::isRunning()
 {
     return engine_ != nil;
-}
-
-void MacAudioDevice::queueNextAudioPlayback_()
-{
-    AVAudioPlayerNode* playerNode = (AVAudioPlayerNode*)player_;
-    
-    if (playerNode != nil)
-    {    
-        // 10ms of samples per run
-        AVAudioConverter* converter = (AVAudioConverter*)audioConverter_;
-        double destSampleRate = [[converter outputFormat] sampleRate];
-        double srcSampleRate = [[converter inputFormat] sampleRate];
-        int destNumFrames = FRAME_TIME_SEC_ * destSampleRate;
-        int srcNumFrames = FRAME_TIME_SEC_ * srcSampleRate;
-        
-        //log_info("device %d, src sample rate %d, dest sample rate %d", coreAudioId_, (int)srcSampleRate, (int)destSampleRate);
-        
-        // Get 2x 10ms frames (20ms of audio). The first schedule has a completion handler that
-        // causes this method to be called again once we're halfway done playing.
-        AVAudioPCMBuffer* tempBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter inputFormat] frameCapacity:srcNumFrames];
-        tempBuffer.frameLength = srcNumFrames;
-        AVAudioPCMBuffer* firstBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter outputFormat] frameCapacity:destNumFrames];
-        short *const * channelData = [tempBuffer int16ChannelData];
-        if (onAudioDataFunction)
-        {
-            onAudioDataFunction(*this, (void*)channelData[0], srcNumFrames, onAudioDataState);
-        }
-    
-        NSError* err = nil;
-        auto result = [converter convertToBuffer:firstBuffer error:&err withInputFromBlock:^(unsigned int, enum AVAudioConverterInputStatus *status) {
-            *status = AVAudioConverterInputStatus_HaveData;
-            return tempBuffer;
-        }];
-        if (result == AVAudioConverterOutputStatus_Error)
-        {
-            NSString* errorDesc = [err localizedDescription];
-            log_error("Could not perform sample rate conversion for device %d (err %s)", coreAudioId_, [errorDesc cStringUsingEncoding:NSUTF8StringEncoding]);
-        }
-    
-        [playerNode scheduleBuffer:firstBuffer atTime:nil options:0 completionHandler:^() {
-            enqueue_([&]() {
-                queueNextAudioPlayback_();
-            });
-        }];
-    
-        AVAudioPCMBuffer* secondBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:[converter outputFormat] frameCapacity:destNumFrames];
-        if (onAudioDataFunction)
-        {
-            onAudioDataFunction(*this, (void*)channelData[0], srcNumFrames, onAudioDataState);
-        }
-        result = [converter convertToBuffer:secondBuffer error:&err withInputFromBlock:^(unsigned int, enum AVAudioConverterInputStatus *status) {
-            *status = AVAudioConverterInputStatus_HaveData;
-            return tempBuffer;
-        }];
-        if (result == AVAudioConverterOutputStatus_Error)
-        {
-            NSString* errorDesc = [err localizedDescription];
-            log_error("Could not perform sample rate conversion for device %d (err %s)", coreAudioId_, [errorDesc cStringUsingEncoding:NSUTF8StringEncoding]);
-        }
-        
-        [playerNode scheduleBuffer:secondBuffer atTime:nil options:0 completionHandler:nil];
-        
-        [firstBuffer release];
-        [secondBuffer release];
-        [tempBuffer release];
-    }
 }

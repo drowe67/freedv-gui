@@ -54,9 +54,6 @@ private:
     int sampleRate_;
     void* engine_; // actually AVAudioEngine but this file is shared with C++ code
     void* player_; // actually AVAudioPlayerNode
-    void* audioConverter_; // actually AVAudioConverter
-    
-    void queueNextAudioPlayback_(); 
 };
 
 #endif // MAC_AUDIO_DEVICE_H
