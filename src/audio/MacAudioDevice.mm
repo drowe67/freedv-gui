@@ -149,6 +149,8 @@ void MacAudioDevice::start()
             AVAudioSinkNodeReceiverBlock block = ^(const AudioTimeStamp* timestamp, AVAudioFrameCount frameCount, const AudioBufferList* inputData) 
             {
                 short inputFrames[frameCount * numChannels_];
+                memset(inputFrames, 0, sizeof(inputFrames));
+                
                 if (onAudioDataFunction)
                 {
                     for (int index = 0; index < frameCount; index++)
@@ -175,6 +177,8 @@ void MacAudioDevice::start()
             AVAudioSourceNodeRenderBlock block = ^(BOOL *, const AudioTimeStamp *, AVAudioFrameCount frameCount, AudioBufferList *outputData)
             {
                 short outputFrames[frameCount * numChannels_];
+                memset(outputFrames, 0, sizeof(outputFrames));
+                
                 if (onAudioDataFunction)
                 {
                     onAudioDataFunction(*this, (void*)outputFrames, frameCount, onAudioDataState);
