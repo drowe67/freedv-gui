@@ -21,13 +21,17 @@
 //=========================================================================
 
 #include "AudioEngineFactory.h"
-#if defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
+#if defined(AUDIO_ENGINE_NATIVE_ENABLE)
+#if defined(__linux)
 #include "PulseAudioEngine.h"
 #elif __APPLE__
 #include "MacAudioEngine.h"
 #else
+#error No native audio support available for this platform
+#endif // __linux || __APPLE__
+#else
 #include "PortAudioEngine.h"
-#endif // defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
+#endif // defined(AUDIO_ENGINE_NATIVE_ENABLE)
 
 std::shared_ptr<IAudioEngine> AudioEngineFactory::SystemEngine_;
 
@@ -35,13 +39,15 @@ std::shared_ptr<IAudioEngine> AudioEngineFactory::GetAudioEngine()
 {
     if (!SystemEngine_)
     {
-#if defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
+#if defined(AUDIO_ENGINE_NATIVE_ENABLE)
+#if defined(__linux)
         SystemEngine_ = std::shared_ptr<IAudioEngine>(new PulseAudioEngine());
-#elif __APPLE__
+#elif defined(__APPLE__)
         SystemEngine_ = std::shared_ptr<IAudioEngine>(new MacAudioEngine());
+#endif // __linux || __APPLE__
 #else
         SystemEngine_ = std::shared_ptr<IAudioEngine>(new PortAudioEngine());
-#endif // defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
+#endif // defined(AUDIO_ENGINE_NATIVE_ENABLE)
     }
     
     return SystemEngine_;

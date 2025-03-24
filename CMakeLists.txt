@@ -149,8 +149,8 @@ set(USE_STATIC_SPEEXDSP FALSE CACHE BOOL
     "Download and build static speex instead of the system library.")
 set(BOOTSTRAP_WXWIDGETS FALSE CACHE BOOL
     "Download and build static wxWidgets instead of the system library.")
-set(USE_PULSEAUDIO TRUE CACHE BOOL
-    "Use PulseAudio instead of PortAudio for audio I/O.")
+set(USE_NATIVE_AUDIO TRUE CACHE BOOL
+    "Use native audio code instead of PortAudio for audio I/O. Defaults to true.")
 set(SIGN_WINDOWS_BINARIES FALSE CACHE BOOL
     "Enable signing of Windows binaries. See CODE_SIGNING.md for info.")
 
@@ -402,14 +402,23 @@ if(NOT DEFINED LINUX)
     endif((${LINUX_LOC} GREATER 0) OR (${LINUX_LOC} EQUAL 0))
 endif(NOT DEFINED LINUX)
 
-if (NOT USE_PULSEAUDIO AND LINUX)
+if (NOT USE_NATIVE_AUDIO AND LINUX)
     message(WARNING "Use of PortAudio on Linux has been deprecated and may be explicitly disallowed in a future release. It is highly recommended that you use FreeDV's built-in PulseAudio support instead as this generally gives better results, especially on distributions that now use pipewire for audio.")
-endif(NOT USE_PULSEAUDIO AND LINUX)
+endif(NOT USE_NATIVE_AUDIO AND LINUX)
+
+if (USE_NATIVE_AUDIO)
+    if (APPLE OR LINUX)
+        add_definitions(-DAUDIO_ENGINE_NATIVE_ENABLE)
+        set(NATIVE_AUDIO_AVAILABLE TRUE)
+    else (APPLE OR LINUX)
+        message(WARNING "No native audio API support for platforms other than macOS and Linux. Using PortAudio instead.")
+    endif(APPLE OR LINUX)
+endif(USE_NATIVE_AUDIO)
 
 #
 # Find or build portaudio/PulseAudio Library
 #
-if(NOT USE_STATIC_PORTAUDIO AND NOT USE_PULSEAUDIO)
+if(NOT USE_STATIC_PORTAUDIO AND NOT NATIVE_AUDIO_AVAILABLE)
     message(STATUS "Looking for portaudio...")
     find_package(portaudio-2.0 REQUIRED)
     if(PORTAUDIO_FOUND)
@@ -432,7 +441,7 @@ On Windows it's easiest to use the cmake option: USE_STATIC_PORTAUDIO"
     if(NOT ${PORTAUDIO_VERSION} EQUAL 19 AND NOT MINGW)
         message(WARNING "Portaudio versions other than 19 are known to have issues. You have been warned!")
     endif()
-elseif(USE_PULSEAUDIO AND LINUX)
+elseif(USE_NATIVE_AUDIO AND LINUX)
     message(STATUS "Finding PulseAudio...")
     find_package(PulseAudio REQUIRED)
     if(PULSEAUDIO_FOUND)
@@ -440,7 +449,6 @@ elseif(USE_PULSEAUDIO AND LINUX)
         message(STATUS "  PulseAudio headers: ${PULSEAUDIO_INCLUDE_DIR}")
         list(APPEND FREEDV_LINK_LIBS ${PULSEAUDIO_LIBRARY})
         include_directories(${PULSEAUDIO_INCLUDE_DIR})
-        add_definitions(-DAUDIO_ENGINE_PULSEAUDIO_ENABLE)
     else()
         message(FATAL_ERROR "PulseAudio library not found.
 On Linux systems try installing:
@@ -448,9 +456,13 @@ On Linux systems try installing:
     libpulse-dev           (DEB based systems)
 ")
      endif()
-else()
+elseif(USE_NATIVE_AUDIO AND APPLE)
+    message(STATUS "Using FreeDV-developed Core Audio implementation for macOS")
+elseif(NOT NATIVE_AUDIO_AVAILABLE)
     message(STATUS "Will attempt static build of portaudio.")
     include(cmake/Buildportaudio-2.0.cmake)
+else()
+    message(FATAL_ERROR "Cannot enable both native audio and PortAudio at the same time.")
 endif()
 
 #
@@ -690,11 +702,11 @@ elseif(UNIX AND NOT APPLE)
     # Linux packaging
     SET(CPACK_GENERATOR "DEB")
     SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Mooneer Salem <mooneer@gmail.com>") #required
-    if(USE_PULSEAUDIO)
+    if(USE_NATIVE_AUDIO)
     SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.1.1), lpcnet (>= 0.5.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libpulse0 (>= 14.2-2), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
-    else(USE_PULSEAUDIO)
+    else(USE_NATIVE_AUDIO)
     SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.1.1), lpcnet (>= 0.5.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libportaudio2 (>= 19.6.0-1build1), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
-    endif(USE_PULSEAUDIO)
+    endif(USE_NATIVE_AUDIO)
 
     SET(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
     include(CPack)
