@@ -22,7 +22,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   
   (if using PortAudio)
   $ sudo apt install portaudio19-dev
-  $ ./build_linux.sh portaudio
+  $ USE_NATIVE_AUDIO=0 ./build_linux.sh 
   ```
 
   (Depending on release you may need to use `libwxgtk3.0-gtk3-dev` instead of `libwxgtk3.2-dev`.)
@@ -49,7 +49,7 @@ This document describes how to build the FreeDV GUI program for various operatin
 
   (if using PortAudio)
   $ sudo dnf install portaudio-devel
-  $ ./build_linux.sh portaudio
+  $ USE_NATIVE_AUDIO=0 ./build_linux.sh
   ```
 
   Then run with:
