@@ -518,6 +518,8 @@ class MainFrame : public TopFrame
         void updateReportingFreqList_();
         
         void initializeFreeDVReporter_();
+        
+        void onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode);
 };
 
 void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs);
