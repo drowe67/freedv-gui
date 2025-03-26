@@ -486,7 +486,7 @@ void MainFrame::onRadioConnected_(IRigController* ptr)
     }
 }
 
-void MainFrame::onRadioDisconnect_(IRigController* ptr)
+void MainFrame::onRadioDisconnected_(IRigController* ptr)
 {
     CallAfter([&]() {
         m_txtModeStatus->SetLabel(wxT("unk"));
