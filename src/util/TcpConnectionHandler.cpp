@@ -669,13 +669,13 @@ socket_error:
 #else
                 close(sock);
 #endif // defined(WIN32)
-                socketsToDelete.push_back(socket_);
+                socketsToDelete.push_back(sock);
             }
         }
         
         for (auto& toDelete : socketsToDelete)
         {
-            sockets.erase(std::find(socketsToDelete.begin(), socketsToDelete.end(), toDelete));
+            sockets.erase(std::find(sockets.begin(), sockets.end(), toDelete));
         }
     }
 }
