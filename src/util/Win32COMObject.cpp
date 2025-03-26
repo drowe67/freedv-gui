@@ -30,7 +30,7 @@
 Win32COMObject::Win32COMObject()
 {
     enqueue_([&]() {
-        HRESULT res = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+        HRESULT res = CoInitializeEx(nullptr, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
         if (FAILED(res))
         {
             log_warn("Could not initialize COM (res = %d)", res);
