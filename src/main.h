@@ -521,7 +521,7 @@ class MainFrame : public TopFrame
         
         void onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode);
         void onRadioConnected_(IRigController* ptr);
-        void onRadioDisconnect_(IRigController* ptr);
+        void onRadioDisconnected_(IRigController* ptr);
 };
 
 void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs);
