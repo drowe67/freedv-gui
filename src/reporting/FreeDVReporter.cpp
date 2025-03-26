@@ -56,16 +56,6 @@ FreeDVReporter::~FreeDVReporter()
         isExiting_ = true;
         fnQueueConditionVariable_.notify_one();
         fnQueueThread_.join();
-    
-        // Workaround for race condition in sioclient.
-        // However, we shouldn't wait forever in case something goes
-        // wrong during disconnect; the loop below will only wait a 
-        // maximum of 5 seconds (250 * 20ms = 5000ms).
-        int count = 0;
-        while (isConnecting_ && count++ < 250)
-        {
-            std::this_thread::sleep_for(20ms);
-        }
     }
     
     delete sioClient_;

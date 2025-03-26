@@ -62,6 +62,7 @@ TcpConnectionHandler::TcpConnectionHandler()
         enqueue_(std::bind(&TcpConnectionHandler::connectImpl_, this));
     }, false)
     , socket_(-1)
+    , cancelConnect_(false)
 {
 #if defined(WIN32)
     // Initialize Winsock in case it hasn't already been done.
@@ -90,6 +91,7 @@ TcpConnectionHandler::~TcpConnectionHandler()
 
 std::future<void> TcpConnectionHandler::connect(const char* host, int port, bool enableReconnect)
 {
+    cancelConnect_ = false;
     host_ = host;
     port_ = port;
     enableReconnect_ = enableReconnect;
@@ -106,6 +108,9 @@ std::future<void> TcpConnectionHandler::connect(const char* host, int port, bool
 
 std::future<void> TcpConnectionHandler::disconnect()
 {
+    // Cancel any pending connections
+    cancelConnect_ = true;
+    
     std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
     
@@ -176,7 +181,7 @@ void TcpConnectionHandler::connectImpl_()
     
     log_info("waiting for DNS");
     
-    while (ipv4Complete_ == false && ipv6Complete_ == false)
+    while (!cancelConnect_ && ipv4Complete_ == false && ipv6Complete_ == false)
     {
         std::this_thread::sleep_for(1ms);
     }
@@ -232,7 +237,7 @@ void TcpConnectionHandler::connectImpl_()
 #endif // !defined(WIN32)
     std::vector<int> pendingSockets;
     
-    while (results[0] || results[1])
+    while (!cancelConnect_ && (results[0] || results[1]))
     {
         struct addrinfo* current = results[whichIndex];
         int ret = 0;
@@ -380,7 +385,7 @@ next_fd:
     }
     
     // Keep checking connections until one connects or we all time out.
-    while (pendingSockets.size() > 0 && socket_ == -1)
+    while (!cancelConnect_ && pendingSockets.size() > 0 && socket_ == -1)
     {
         checkConnections_(pendingSockets);
     }
