@@ -466,6 +466,34 @@ void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, 
     });
 }
 
+void MainFrame::onRadioConnected_(IRigController* ptr)
+{
+    if (wxGetApp().rigFrequencyController && 
+        (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly) &&
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
+    {
+        // Suppress the frequency update message that will occur immediately after
+        // connect; this will prevent overwriting of whatever's in the text box.
+        firstFreqUpdateOnConnect_ = true;
+
+        // Set frequency/mode to the one pre-selected by the user before start.
+        wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        
+        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+        {
+            wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+        }
+    }
+}
+
+void MainFrame::onRadioDisconnect_(IRigController* ptr)
+{
+    CallAfter([&]() {
+        m_txtModeStatus->SetLabel(wxT("unk"));
+        m_txtModeStatus->Enable(false);
+    });
+}
+
 // Attempt to talk to rig using Hamlib
 
 bool MainFrame::OpenHamlibRig() {
@@ -502,30 +530,12 @@ bool MainFrame::OpenHamlibRig() {
             });
         };
 
-        wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController*) {
-            if (wxGetApp().rigFrequencyController && 
-                (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly) &&
-                wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
-            {
-                // Suppress the frequency update message that will occur immediately after
-                // connect; this will prevent overwriting of whatever's in the text box.
-                firstFreqUpdateOnConnect_ = true;
-
-                // Set frequency/mode to the one pre-selected by the user before start.
-                wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-                
-                if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
-                {
-                    wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
-                }
-            }
+        wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController* ptr) {
+            onRadioConnected_(ptr);
         };
 
-        wxGetApp().rigFrequencyController->onRigDisconnected += [&](IRigController*) {
-            CallAfter([&]() {
-                m_txtModeStatus->SetLabel(wxT("unk"));
-                m_txtModeStatus->Enable(false);
-            });
+        wxGetApp().rigFrequencyController->onRigDisconnected += [&](IRigController* ptr) {
+            onRadioDisconnected_(ptr);
         };
 
         wxGetApp().rigFrequencyController->onFreqModeChange += [&](IRigFrequencyController* ptr, uint64_t freq, IRigFrequencyController::Mode mode) {
@@ -564,22 +574,12 @@ void MainFrame::OpenOmniRig()
         });
     };
 
-    wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController*) {
-        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly)
-        {
-            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-            if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
-            {
-                wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
-            }
-        }
+    wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController* ptr) {
+        onRadioConnected_(ptr);
     };
 
-    wxGetApp().rigFrequencyController->onRigDisconnected += [&](IRigController*) {
-        CallAfter([&]() {
-            m_txtModeStatus->SetLabel(wxT("unk"));
-            m_txtModeStatus->Enable(false);
-        });
+    wxGetApp().rigFrequencyController->onRigDisconnected += [&](IRigController* ptr) {
+        onRadioDisconnected_(ptr);
     };
 
     wxGetApp().rigFrequencyController->onFreqModeChange += [&](IRigFrequencyController* ptr, uint64_t freq, IRigFrequencyController::Mode mode) {
