@@ -396,6 +396,8 @@ void HamlibRigController::disconnectImpl_()
         rig_close(rig_);
         rig_cleanup(rig_);
         rig_ = nullptr;
+        
+        onRigDisconnected(this);
     }
 }
 

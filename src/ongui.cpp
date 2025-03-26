@@ -375,6 +375,124 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
     wxMessageBox(msg, wxT("About"), wxOK | wxICON_INFORMATION, this);
 }
 
+void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
+{
+    CallAfter([&, mode, freq]() {
+        if (firstFreqUpdateOnConnect_)
+        {
+            firstFreqUpdateOnConnect_ = false;
+            return;
+        }
+
+        // Update string value.
+        switch(mode)
+        {
+            case IRigFrequencyController::USB:
+                m_txtModeStatus->SetLabel(wxT("USB"));
+                m_txtModeStatus->Enable(true);
+                break;
+            case IRigFrequencyController::DIGU:
+                m_txtModeStatus->SetLabel(wxT("USB-D"));
+                m_txtModeStatus->Enable(true);
+                break;
+            case IRigFrequencyController::LSB:
+                m_txtModeStatus->SetLabel(wxT("LSB"));
+                m_txtModeStatus->Enable(true);
+                break;
+            case IRigFrequencyController::DIGL:
+                m_txtModeStatus->SetLabel(wxT("LSB-D"));
+                m_txtModeStatus->Enable(true);
+                break;
+            case IRigFrequencyController::FM:
+                m_txtModeStatus->SetLabel(wxT("FM"));
+                m_txtModeStatus->Enable(true);
+                break;
+            case IRigFrequencyController::DIGFM:
+                m_txtModeStatus->SetLabel(wxT("FM-D"));
+                m_txtModeStatus->Enable(true);
+                break;
+            case IRigFrequencyController::AM:
+                m_txtModeStatus->SetLabel(wxT("AM"));
+                m_txtModeStatus->Enable(true);
+                break;
+            default:
+                m_txtModeStatus->SetLabel(wxT("unk"));
+                m_txtModeStatus->Enable(false);
+                break;
+        }
+
+        // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
+        bool is60MeterBand = freq >= 5250000 && freq <= 5450000;
+
+        // Update color based on the mode and current frequency.
+        bool isUsbFreq = freq >= 10000000 || is60MeterBand;
+        bool isLsbFreq = freq < 10000000 && !is60MeterBand;
+
+        bool isMatchingMode = 
+            (isUsbFreq && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
+            (isLsbFreq && (mode == IRigFrequencyController::LSB || mode == IRigFrequencyController::DIGL));
+
+        if (isMatchingMode)
+        {
+            m_txtModeStatus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+        }
+        else
+        {
+            m_txtModeStatus->SetForegroundColour(wxColor(*wxRED));
+        }
+
+        // Update frequency box
+        if (!suppressFreqModeUpdates_ && (
+            !wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
+            !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting))
+        {
+            // wxString::Format() doesn't respect locale but C++ iomanip should. Use the latter instead.
+            std::stringstream ss;
+            std::locale loc("");
+            ss.imbue(loc);
+            
+            if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+            {
+                ss << std::fixed << std::setprecision(1) << (freq / 1000.0);
+            }
+            else
+            {
+                ss << std::fixed << std::setprecision(4) << (freq / 1000.0 / 1000.0);
+            }
+            
+            m_cboReportFrequency->SetValue(ss.str());
+        }
+        m_txtModeStatus->Refresh();
+    });
+}
+
+void MainFrame::onRadioConnected_(IRigController* ptr)
+{
+    if (wxGetApp().rigFrequencyController && 
+        (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly) &&
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
+    {
+        // Suppress the frequency update message that will occur immediately after
+        // connect; this will prevent overwriting of whatever's in the text box.
+        firstFreqUpdateOnConnect_ = true;
+
+        // Set frequency/mode to the one pre-selected by the user before start.
+        wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        
+        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+        {
+            wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+        }
+    }
+}
+
+void MainFrame::onRadioDisconnected_(IRigController* ptr)
+{
+    CallAfter([&]() {
+        m_txtModeStatus->SetLabel(wxT("unk"));
+        m_txtModeStatus->Enable(false);
+    });
+}
 
 // Attempt to talk to rig using Hamlib
 
@@ -412,123 +530,17 @@ bool MainFrame::OpenHamlibRig() {
             });
         };
 
-        wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController*) {
-            if (wxGetApp().rigFrequencyController && 
-                (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly) &&
-                wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
-            {
-                // Suppress the frequency update message that will occur immediately after
-                // connect; this will prevent overwriting of whatever's in the text box.
-                firstFreqUpdateOnConnect_ = true;
-
-                // Set frequency/mode to the one pre-selected by the user before start.
-                wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-                
-                if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
-                {
-                    wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
-                }
-            }
+        wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController* ptr) {
+            onRadioConnected_(ptr);
         };
 
-        wxGetApp().rigFrequencyController->onRigDisconnected += [&](IRigController*) {
-            CallAfter([&]() {
-                m_txtModeStatus->SetLabel(wxT("unk"));
-                m_txtModeStatus->Enable(false);
-            });
+        wxGetApp().rigFrequencyController->onRigDisconnected += [&](IRigController* ptr) {
+            onRadioDisconnected_(ptr);
         };
 
-        wxGetApp().rigFrequencyController->onFreqModeChange += [&](IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
-        {
-            CallAfter([&, mode, freq]() {
-                if (firstFreqUpdateOnConnect_)
-                {
-                    firstFreqUpdateOnConnect_ = false;
-                    return;
-                }
-
-                // Update string value.
-                switch(mode)
-                {
-                    case IRigFrequencyController::USB:
-                        m_txtModeStatus->SetLabel(wxT("USB"));
-                        m_txtModeStatus->Enable(true);
-                        break;
-                    case IRigFrequencyController::DIGU:
-                        m_txtModeStatus->SetLabel(wxT("USB-D"));
-                        m_txtModeStatus->Enable(true);
-                        break;
-                    case IRigFrequencyController::LSB:
-                        m_txtModeStatus->SetLabel(wxT("LSB"));
-                        m_txtModeStatus->Enable(true);
-                        break;
-                    case IRigFrequencyController::DIGL:
-                        m_txtModeStatus->SetLabel(wxT("LSB-D"));
-                        m_txtModeStatus->Enable(true);
-                        break;
-                    case IRigFrequencyController::FM:
-                        m_txtModeStatus->SetLabel(wxT("FM"));
-                        m_txtModeStatus->Enable(true);
-                        break;
-                    case IRigFrequencyController::DIGFM:
-                        m_txtModeStatus->SetLabel(wxT("FM-D"));
-                        m_txtModeStatus->Enable(true);
-                        break;
-                    case IRigFrequencyController::AM:
-                        m_txtModeStatus->SetLabel(wxT("AM"));
-                        m_txtModeStatus->Enable(true);
-                        break;
-                    default:
-                        m_txtModeStatus->SetLabel(wxT("unk"));
-                        m_txtModeStatus->Enable(false);
-                        break;
-                }
-
-                // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
-                bool is60MeterBand = freq >= 5250000 && freq <= 5450000;
-    
-                // Update color based on the mode and current frequency.
-                bool isUsbFreq = freq >= 10000000 || is60MeterBand;
-                bool isLsbFreq = freq < 10000000 && !is60MeterBand;
-    
-                bool isMatchingMode = 
-                    (isUsbFreq && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
-                    (isLsbFreq && (mode == IRigFrequencyController::LSB || mode == IRigFrequencyController::DIGL));
-    
-                if (isMatchingMode)
-                {
-                    m_txtModeStatus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-                }
-                else
-                {
-                    m_txtModeStatus->SetForegroundColour(wxColor(*wxRED));
-                }
-
-                // Update frequency box
-                if (!suppressFreqModeUpdates_ && (
-                    !wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
-                    !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting))
-                {
-                    // wxString::Format() doesn't respect locale but C++ iomanip should. Use the latter instead.
-                    std::stringstream ss;
-                    std::locale loc("");
-                    ss.imbue(loc);
-                    
-                    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-                    {
-                        ss << std::fixed << std::setprecision(1) << (freq / 1000.0);
-                    }
-                    else
-                    {
-                        ss << std::fixed << std::setprecision(4) << (freq / 1000.0 / 1000.0);
-                    }
-                    
-                    m_cboReportFrequency->SetValue(ss.str());
-                }
-                m_txtModeStatus->Refresh();
-            });
+        wxGetApp().rigFrequencyController->onFreqModeChange += [&](IRigFrequencyController* ptr, uint64_t freq, IRigFrequencyController::Mode mode) {
+            onFrequencyModeChange_(ptr, freq, mode);
         };
-
         wxGetApp().rigFrequencyController->connect();
         return true;
     }
@@ -562,102 +574,16 @@ void MainFrame::OpenOmniRig()
         });
     };
 
-    wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController*) {
-        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly)
-        {
-            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-            if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
-            {
-                wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
-            }
-        }
+    wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController* ptr) {
+        onRadioConnected_(ptr);
     };
 
-    wxGetApp().rigFrequencyController->onRigDisconnected += [&](IRigController*) {
-        CallAfter([&]() {
-            m_txtModeStatus->SetLabel(wxT("unk"));
-            m_txtModeStatus->Enable(false);
-        });
+    wxGetApp().rigFrequencyController->onRigDisconnected += [&](IRigController* ptr) {
+        onRadioDisconnected_(ptr);
     };
 
-    wxGetApp().rigFrequencyController->onFreqModeChange += [&](IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
-    {
-        CallAfter([&, mode, freq]() {
-            // Update string value.
-            switch(mode)
-            {
-                case IRigFrequencyController::USB:
-                    m_txtModeStatus->SetLabel(wxT("USB"));
-                    m_txtModeStatus->Enable(true);
-                    break;
-                case IRigFrequencyController::DIGU:
-                    m_txtModeStatus->SetLabel(wxT("USB-D"));
-                    m_txtModeStatus->Enable(true);
-                    break;
-                case IRigFrequencyController::LSB:
-                    m_txtModeStatus->SetLabel(wxT("LSB"));
-                    m_txtModeStatus->Enable(true);
-                    break;
-                case IRigFrequencyController::DIGL:
-                    m_txtModeStatus->SetLabel(wxT("LSB-D"));
-                    m_txtModeStatus->Enable(true);
-                    break;
-                case IRigFrequencyController::FM:
-                    m_txtModeStatus->SetLabel(wxT("FM"));
-                    m_txtModeStatus->Enable(true);
-                    break;
-                case IRigFrequencyController::DIGFM:
-                    m_txtModeStatus->SetLabel(wxT("FM-D"));
-                    m_txtModeStatus->Enable(true);
-                    break;
-                case IRigFrequencyController::AM:
-                    m_txtModeStatus->SetLabel(wxT("AM"));
-                    m_txtModeStatus->Enable(true);
-                    break;
-                default:
-                    m_txtModeStatus->SetLabel(wxT("unk"));
-                    m_txtModeStatus->Enable(false);
-                    break;
-            }
-
-            // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
-            bool is60MeterBand = freq >= 5250000 && freq <= 5450000;
-
-            // Update color based on the mode and current frequency.
-            bool isUsbFreq = freq >= 10000000 || is60MeterBand;
-            bool isLsbFreq = freq < 10000000 && !is60MeterBand;
-
-            bool isMatchingMode = 
-                (isUsbFreq && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
-                (isLsbFreq && (mode == IRigFrequencyController::LSB || mode == IRigFrequencyController::DIGL));
-
-            if (isMatchingMode)
-            {
-                m_txtModeStatus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-            }
-            else
-            {
-                m_txtModeStatus->SetForegroundColour(wxColor(*wxRED));
-            }
-
-            // Update frequency box
-            if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
-                !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting)
-            {
-                if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-                {
-                    m_cboReportFrequency->SetValue(wxString::Format("%.1f", freq / 1000.0));
-                }
-                else
-                {
-                    m_cboReportFrequency->SetValue(wxString::Format("%.4f", freq / 1000.0 / 1000.0));
-                }
-            }
-            m_txtModeStatus->Refresh();
-
-            // Suppress updates if the Report Frequency box has focus.
-            suppressFreqModeUpdates_ = m_cboReportFrequency->HasFocus();
-        });
+    wxGetApp().rigFrequencyController->onFreqModeChange += [&](IRigFrequencyController* ptr, uint64_t freq, IRigFrequencyController::Mode mode) {
+        onFrequencyModeChange_(ptr, freq, mode);
     };
 
     // Temporarily suppress frequency updates until we're fully connected.
