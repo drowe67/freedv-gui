@@ -228,10 +228,80 @@ AudioDeviceSpecification WASAPIAudioEngine::getDefaultAudioDevice(AudioDirection
     
 std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels)
 {
+    auto devList = getAudioDeviceList(direction);
+
+    // Make sure provided sample rate is valid. If not valid,
+    // just use the device's default sample rate.
+    auto sampleRates = getSupportedSampleRates(deviceName, direction);
+    bool found = false;
+    for (auto& rate : sampleRates)
+    {
+        if (rate == sampleRate)
+        {
+            found = true;
+            break;
+        }
+    }
+
     auto prom = std::make_shared<std::promise<std::shared_ptr<IAudioDevice> > >();
     auto fut = prom->get_future();
-    enqueue_([&]() {
-        prom->set_value(nullptr); // TBD - stub
+    enqueue_([&, devList]() {
+        std::shared_ptr<IAudioDevice> result;
+        IMMDeviceCollection* coll = 
+            (direction == AudioDirection::AUDIO_ENGINE_IN) ?
+            inputDeviceList_ :
+            outputDeviceList_;
+
+        for (auto& dev : devList)
+        {
+            if (dev.name == deviceName)
+            {
+                IMMDevice* device = nullptr;
+                IAudioClient* client = nullptr;
+
+                hr = coll->Item(index, &device);
+                if (FAILED(hr))
+                {
+                    std::stringstream ss;
+                    ss << "Could not get device " << index << " (hr = " << hr << ")";
+                    log_error(ss.str().c_str());
+                    if (onAudioErrorFunction)
+                    {
+                         onAudioErrorFunction(*this, ss.str(), onAudioErrorState); 
+                    }
+                    break;
+                }
+
+                hr = device->Activate(
+                    IID_IAudioClient, CLSCTX_ALL,
+                    nullptr, (void**)&client); 
+                if (FAILED(hr))
+                {
+                    std::stringstream ss;
+                    ss << "Could not get client for device " << index << " (hr = " << hr << ")";
+                    log_error(ss.str().c_str());
+                    if (onAudioErrorFunction)
+                    {
+                         onAudioErrorFunction(*this, ss.str(), onAudioErrorState); 
+                    }
+
+                    device->Release();
+                    break;
+                }
+
+                if (!found)
+                {
+                    sampleRate = dev.defaultSampleRate;
+                }
+
+                // Ensure that the passed-in number of channels is within the allowed range.
+                numChannels = std::max(numChannels, dev.minChannels);
+                numChannels = std::min(numChannels, dev.maxChannels);
+
+                result = std::make_shared<WASAPIAudioDevice>(client, direction, sampleRate, numChannels);
+            }
+        }
+        prom->set_value(result);
     });
     return fut.get();
 }
