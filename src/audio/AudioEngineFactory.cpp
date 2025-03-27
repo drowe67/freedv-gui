@@ -27,7 +27,7 @@
 #elif __APPLE__
 #include "MacAudioEngine.h"
 #elif _WIN32
-#include "WASPIAudioEngine.h"
+#include "WASAPIAudioEngine.h"
 #else
 #error No native audio support available for this platform
 #endif // __linux || __APPLE__ || _WIN32
@@ -47,7 +47,7 @@ std::shared_ptr<IAudioEngine> AudioEngineFactory::GetAudioEngine()
 #elif defined(__APPLE__)
         SystemEngine_ = std::shared_ptr<IAudioEngine>(new MacAudioEngine());
 #elif defined(_WIN32)
-        SystemEngine_ = std::shared_ptr<IAudioEngine>(new WASPIAudioEngine());
+        SystemEngine_ = std::shared_ptr<IAudioEngine>(new WASAPIAudioEngine());
 #endif // __linux || __APPLE__ || _WIN32
 #else
         SystemEngine_ = std::shared_ptr<IAudioEngine>(new PortAudioEngine());

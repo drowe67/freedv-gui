@@ -1,5 +1,5 @@
 //=========================================================================
-// Name:            WASPIAudioEngine.h
+// Name:            WASAPIAudioEngine.h
 // Purpose:         Defines the main interface to the Windows audio system.
 //
 // Authors:         Mooneer Salem
@@ -20,8 +20,8 @@
 //
 //=========================================================================
 
-#ifndef WASPI_AUDIO_ENGINE_H
-#define WASPI_AUDIO_ENGINE_H
+#ifndef WASAPI_AUDIO_ENGINE_H
+#define WASAPI_AUDIO_ENGINE_H
 
 #include <memory>
 #include <string>
@@ -32,11 +32,11 @@
 #include "../util/Win32COMObject.h"
 #include "IAudioEngine.h"
 
-class WASPIAudioEngine : public Win32COMObject, public IAudioEngine
+class WASAPIAudioEngine : public Win32COMObject, public IAudioEngine
 {
 public:
-    WASPIAudioEngine();
-    virtual ~WASPIAudioEngine();
+    WASAPIAudioEngine();
+    virtual ~WASAPIAudioEngine();
 
     virtual void start() override;
     virtual void stop() override;
@@ -56,4 +56,4 @@ private:
     std::string getUTF8String_(LPWSTR str);
 };
 
-#endif // WASPI_AUDIO_ENGINE_H
+#endif // WASAPI_AUDIO_ENGINE_H

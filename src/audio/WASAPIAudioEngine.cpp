@@ -1,5 +1,5 @@
 //=========================================================================
-// Name:            WASPIAudioEngine.cpp
+// Name:            WASAPIAudioEngine.cpp
 // Purpose:         Defines the main interface to the Windows audio system.
 //
 // Authors:         Mooneer Salem
@@ -29,10 +29,10 @@
 #include <functiondiscoverykeys_devpkey.h>
 #include <functiondiscoverykeys.h>
 #include <mmdeviceapi.h>
-#include "WASPIAudioEngine.h"
+#include "WASAPIAudioEngine.h"
 #include "../util/logging/ulog.h"
 
-WASPIAudioEngine::WASPIAudioEngine()
+WASAPIAudioEngine::WASAPIAudioEngine()
     : devEnumerator_(nullptr)
     , inputDeviceList_(nullptr)
     , outputDeviceList_(nullptr)
@@ -40,12 +40,12 @@ WASPIAudioEngine::WASPIAudioEngine()
     // empty
 }
 
-WASPIAudioEngine::~WASPIAudioEngine()
+WASAPIAudioEngine::~WASAPIAudioEngine()
 {
     stop();
 }
 
-void WASPIAudioEngine::start()
+void WASAPIAudioEngine::start()
 {
     auto prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
@@ -113,7 +113,7 @@ void WASPIAudioEngine::start()
     fut.wait();
 }
 
-void WASPIAudioEngine::stop()
+void WASAPIAudioEngine::stop()
 {
     auto prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
@@ -141,7 +141,7 @@ void WASPIAudioEngine::stop()
     fut.wait();
 }
 
-std::vector<AudioDeviceSpecification> WASPIAudioEngine::getAudioDeviceList(AudioDirection direction) 
+std::vector<AudioDeviceSpecification> WASAPIAudioEngine::getAudioDeviceList(AudioDirection direction) 
 {
     auto prom = std::make_shared<std::promise<std::vector<AudioDeviceSpecification> > >();
     auto fut = prom->get_future();
@@ -187,7 +187,7 @@ std::vector<AudioDeviceSpecification> WASPIAudioEngine::getAudioDeviceList(Audio
     return fut.get();
 }
 
-AudioDeviceSpecification WASPIAudioEngine::getDefaultAudioDevice(AudioDirection direction)
+AudioDeviceSpecification WASAPIAudioEngine::getDefaultAudioDevice(AudioDirection direction)
 {
     auto prom = std::make_shared<std::promise<AudioDeviceSpecification> >();
     auto fut = prom->get_future();
@@ -226,7 +226,7 @@ AudioDeviceSpecification WASPIAudioEngine::getDefaultAudioDevice(AudioDirection 
     return fut.get();
 }
     
-std::shared_ptr<IAudioDevice> WASPIAudioEngine::getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels)
+std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels)
 {
     auto prom = std::make_shared<std::promise<std::shared_ptr<IAudioDevice> > >();
     auto fut = prom->get_future();
@@ -236,11 +236,11 @@ std::shared_ptr<IAudioDevice> WASPIAudioEngine::getAudioDevice(wxString deviceNa
     return fut.get();
 }
 
-std::vector<int> WASPIAudioEngine::getSupportedSampleRates(wxString deviceName, AudioDirection direction)
+std::vector<int> WASAPIAudioEngine::getSupportedSampleRates(wxString deviceName, AudioDirection direction)
 {
     auto devList = getAudioDeviceList(direction);
 
-    // Note: WASPI only supports the device's native sample rate!
+    // Note: WASAPI only supports the device's native sample rate!
     auto prom = std::make_shared<std::promise<std::vector<int> > >();
     auto fut = prom->get_future();
     enqueue_([&, devList]() {
@@ -258,7 +258,7 @@ std::vector<int> WASPIAudioEngine::getSupportedSampleRates(wxString deviceName, 
     return fut.get();
 }
 
-AudioDeviceSpecification WASPIAudioEngine::getDeviceSpecification_(IMMDevice* device)
+AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* device)
 {
     // Get device name
     IPropertyStore* propStore = nullptr;
@@ -302,7 +302,7 @@ AudioDeviceSpecification WASPIAudioEngine::getDeviceSpecification_(IMMDevice* de
 
     AudioDeviceSpecification spec;
     spec.name = getUTF8String_(friendlyName.pwszVal);
-    spec.apiName = "Windows WASPI";
+    spec.apiName = "Windows WASAPI";
 
     // Activate IAudioClient so we can obtain format info
     IAudioClient* audioClient = nullptr;
@@ -350,7 +350,7 @@ AudioDeviceSpecification WASPIAudioEngine::getDeviceSpecification_(IMMDevice* de
     return spec; // note: deviceId needs to be filled in by caller
 }
 
-std::string WASPIAudioEngine::getUTF8String_(LPWSTR str)
+std::string WASAPIAudioEngine::getUTF8String_(LPWSTR str)
 {
     std::vector<char> buffer; 
     std::string val = "";  

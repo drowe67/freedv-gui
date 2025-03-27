@@ -6,7 +6,7 @@ if(NATIVE_AUDIO_AVAILABLE)
         )
     elseif(WIN32)
         set(AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES
-            WASPIAudioEngine.cpp
+            WASAPIAudioEngine.cpp
         )
     elseif(LINUX)
         set(AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES
