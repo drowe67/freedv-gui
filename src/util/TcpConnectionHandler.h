@@ -28,6 +28,7 @@
 
 #include <vector>
 #include <future>
+#include <atomic>
 
 class TcpConnectionHandler : public ThreadedObject
 {
@@ -55,6 +56,7 @@ private:
     int socket_;
     std::atomic<bool> ipv4Complete_;
     std::atomic<bool> ipv6Complete_;
+    std::atomic<bool> cancelConnect_;
     
     void connectImpl_();
     void disconnectImpl_();
