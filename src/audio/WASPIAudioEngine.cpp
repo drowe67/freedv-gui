@@ -33,7 +33,11 @@
 #include "../util/logging/ulog.h"
 
 WASPIAudioEngine::WASPIAudioEngine()
+    : devEnumerator_(nullptr)
+    , inputDeviceList_(nullptr)
+    , outputDeviceList_(nullptr)
 {
+    // empty
 }
 
 WASPIAudioEngine::~WASPIAudioEngine()
@@ -234,12 +238,13 @@ std::shared_ptr<IAudioDevice> WASPIAudioEngine::getAudioDevice(wxString deviceNa
 
 std::vector<int> WASPIAudioEngine::getSupportedSampleRates(wxString deviceName, AudioDirection direction)
 {
+    auto devList = getAudioDeviceList(direction);
+
     // Note: WASPI only supports the device's native sample rate!
     auto prom = std::make_shared<std::promise<std::vector<int> > >();
     auto fut = prom->get_future();
-    enqueue_([&]() {
+    enqueue_([&, devList]() {
         std::vector<int> result;
-        auto devList = getAudioDeviceList(direction);
         for (auto& spec : devList)
         {
             if (deviceName == spec.name)
