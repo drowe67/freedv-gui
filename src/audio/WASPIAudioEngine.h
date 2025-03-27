@@ -50,6 +50,9 @@ private:
     IMMDeviceEnumerator* devEnumerator_;
     IMMDeviceCollection* inputDeviceList_;
     IMMDeviceCollection* outputDeviceList_;
+
+    AudioDeviceSpecification getDeviceSpecification_(IMMDevice* device);
+    std::string getUTF8String_(LPWSTR str);
 };
 
 #endif // WASPI_AUDIO_ENGINE_H
