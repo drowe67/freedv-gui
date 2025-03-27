@@ -458,6 +458,8 @@ On Linux systems try installing:
      endif()
 elseif(USE_NATIVE_AUDIO AND APPLE)
     message(STATUS "Using FreeDV-developed Core Audio implementation for macOS")
+elseif(USE_NATIVE_AUDIO AND WIN32)
+    message(STATUS "Using FreeDV-developed Core Audio implementation for Windows")
 elseif(NOT NATIVE_AUDIO_AVAILABLE)
     message(STATUS "Will attempt static build of portaudio.")
     include(cmake/Buildportaudio-2.0.cmake)

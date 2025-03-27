@@ -27,6 +27,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <initguid.h>
 #include <mmdeviceapi.h>
 #include "../util/Win32COMObject.h"
 #include "IAudioEngine.h"

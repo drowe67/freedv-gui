@@ -34,7 +34,9 @@ if(APPLE AND NATIVE_AUDIO_AVAILABLE)
     target_link_libraries(fdv_audio
         "-framework AVFoundation"
         "-framework CoreAudio")
-endif(APPLE)
+elseif(WIN32 AND NATIVE_AUDIO_AVAILABLE)
+    target_link_libraries(fdv_audio PRIVATE uuid)
+endif()
 
 if(BOOTSTRAP_WXWIDGETS)
     add_dependencies(fdv_audio wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)

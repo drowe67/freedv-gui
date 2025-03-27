@@ -20,7 +20,15 @@
 //
 //=========================================================================
 
+#include <sstream>
 #include <future>
+#include <windows.h>
+#include <initguid.h>
+#include <mmreg.h>
+#include <audioclient.h>
+#include <functiondiscoverykeys_devpkey.h>
+#include <functiondiscoverykeys.h>
+#include <mmdeviceapi.h>
 #include "WASPIAudioEngine.h"
 #include "../util/logging/ulog.h"
 
@@ -37,7 +45,7 @@ void WASPIAudioEngine::start()
 {
     auto prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
-    enqueue([&]() {
+    enqueue_([&]() {
         // Get device enumerator
         HRESULT hr = CoCreateInstance(
            CLSID_MMDeviceEnumerator, NULL,
@@ -105,7 +113,7 @@ void WASPIAudioEngine::stop()
 {
     auto prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
-    enqueue([&]() {
+    enqueue_([&]() {
         if (inputDeviceList_ != nullptr)
         {
             inputDeviceList_->Release();
@@ -133,7 +141,7 @@ std::vector<AudioDeviceSpecification> WASPIAudioEngine::getAudioDeviceList(Audio
 {
     auto prom = std::make_shared<std::promise<std::vector<AudioDeviceSpecification> > >();
     auto fut = prom->get_future();
-    enqueue([&, direction]() {
+    enqueue_([&, direction]() {
         std::vector<AudioDeviceSpecification> result;
 
         IMMDeviceCollection* coll = 
@@ -162,7 +170,7 @@ std::vector<AudioDeviceSpecification> WASPIAudioEngine::getAudioDeviceList(Audio
             }
 
             auto devSpec = getDeviceSpecification_(device);
-            if (devSpec.IsValid())
+            if (devSpec.isValid())
             {
                 devSpec.deviceId = index;
                 result.push_back(devSpec);
@@ -179,16 +187,16 @@ AudioDeviceSpecification WASPIAudioEngine::getDefaultAudioDevice(AudioDirection 
 {
     auto prom = std::make_shared<std::promise<AudioDeviceSpecification> >();
     auto fut = prom->get_future();
-    enqueue([&, direction]() {
+    enqueue_([&, direction]() {
         IMMDevice* defaultDevice = nullptr;
         HRESULT hr = devEnumerator_->GetDefaultAudioEndpoint(
-            (direction == AudioDirection::AUDIO_DEVICE_IN) ? eCapture : eRender,
+            (direction == AudioDirection::AUDIO_ENGINE_IN) ? eCapture : eRender,
             eConsole,
-            defaultDevice);
+            &defaultDevice);
         if (FAILED(hr))
         {
             std::stringstream ss;
-            ss << "Could not get default device " << index << " (hr = " << hr << ")";
+            ss << "Could not get default device (hr = " << hr << ")";
             log_error(ss.str().c_str());
             if (onAudioErrorFunction)
             {
@@ -199,6 +207,7 @@ AudioDeviceSpecification WASPIAudioEngine::getDefaultAudioDevice(AudioDirection 
         }
 
         auto defaultSpec = getDeviceSpecification_(defaultDevice);
+        auto specList = getAudioDeviceList(direction);
         for (auto& spec : specList)
         {
             if (defaultSpec.name == spec.name)
@@ -217,7 +226,7 @@ std::shared_ptr<IAudioDevice> WASPIAudioEngine::getAudioDevice(wxString deviceNa
 {
     auto prom = std::make_shared<std::promise<std::shared_ptr<IAudioDevice> > >();
     auto fut = prom->get_future();
-    enqueue([&]() {
+    enqueue_([&]() {
         prom->set_value(nullptr); // TBD - stub
     });
     return fut.get();
@@ -228,7 +237,7 @@ std::vector<int> WASPIAudioEngine::getSupportedSampleRates(wxString deviceName, 
     // Note: WASPI only supports the device's native sample rate!
     auto prom = std::make_shared<std::promise<std::vector<int> > >();
     auto fut = prom->get_future();
-    enqueue([&]() {
+    enqueue_([&]() {
         std::vector<int> result;
         auto devList = getAudioDeviceList(direction);
         for (auto& spec : devList)
@@ -292,11 +301,11 @@ AudioDeviceSpecification WASPIAudioEngine::getDeviceSpecification_(IMMDevice* de
 
     // Activate IAudioClient so we can obtain format info
     IAudioClient* audioClient = nullptr;
-    hr = device->Activate(IID_IAudioClient, CLSCTX_ALL, null, &audioClient);
+    hr = device->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void**)&audioClient);
     if (FAILED(hr))
     {
         std::stringstream ss;
-        ss << "Could not activate IAudioClient for device " << spec.name (hr = " << hr << ")";
+        ss << "Could not activate IAudioClient for device " << spec.name << " (hr = " << hr << ")";
         log_error(ss.str().c_str());
         if (onAudioErrorFunction)
         {
@@ -312,7 +321,7 @@ AudioDeviceSpecification WASPIAudioEngine::getDeviceSpecification_(IMMDevice* de
     if (FAILED(hr))
     {
         std::stringstream ss;
-        ss << "Could not get stream format for device " << spec.name (hr = " << hr << ")";
+        ss << "Could not get stream format for device " << spec.name << " (hr = " << hr << ")";
         log_error(ss.str().c_str());
         if (onAudioErrorFunction)
         {
