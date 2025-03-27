@@ -26,9 +26,11 @@
 #include "PulseAudioEngine.h"
 #elif __APPLE__
 #include "MacAudioEngine.h"
+#elif _WIN32
+#include "WASPIAudioEngine.h"
 #else
 #error No native audio support available for this platform
-#endif // __linux || __APPLE__
+#endif // __linux || __APPLE__ || _WIN32
 #else
 #include "PortAudioEngine.h"
 #endif // defined(AUDIO_ENGINE_NATIVE_ENABLE)
@@ -44,7 +46,9 @@ std::shared_ptr<IAudioEngine> AudioEngineFactory::GetAudioEngine()
         SystemEngine_ = std::shared_ptr<IAudioEngine>(new PulseAudioEngine());
 #elif defined(__APPLE__)
         SystemEngine_ = std::shared_ptr<IAudioEngine>(new MacAudioEngine());
-#endif // __linux || __APPLE__
+#elif defined(_WIN32)
+        SystemEngine_ = std::shared_ptr<IAudioEngine>(new WASPIAudioEngine());
+#endif // __linux || __APPLE__ || _WIN32
 #else
         SystemEngine_ = std::shared_ptr<IAudioEngine>(new PortAudioEngine());
 #endif // defined(AUDIO_ENGINE_NATIVE_ENABLE)

@@ -4,6 +4,10 @@ if(NATIVE_AUDIO_AVAILABLE)
             MacAudioEngine.cpp
             MacAudioDevice.mm
         )
+    elseif(WIN32)
+        set(AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES
+            WASPIAudioEngine.cpp
+        )
     elseif(LINUX)
         set(AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES
             PulseAudioDevice.cpp

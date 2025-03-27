@@ -407,12 +407,12 @@ if (NOT USE_NATIVE_AUDIO AND LINUX)
 endif(NOT USE_NATIVE_AUDIO AND LINUX)
 
 if (USE_NATIVE_AUDIO)
-    if (APPLE OR LINUX)
+    if (APPLE OR LINUX OR WIN32)
         add_definitions(-DAUDIO_ENGINE_NATIVE_ENABLE)
         set(NATIVE_AUDIO_AVAILABLE TRUE)
-    else (APPLE OR LINUX)
-        message(WARNING "No native audio API support for platforms other than macOS and Linux. Using PortAudio instead.")
-    endif(APPLE OR LINUX)
+    else (APPLE OR LINUX OR WIN32)
+        message(WARNING "No native audio API support for platforms other than Linux, macOS and Windows. Using PortAudio instead.")
+    endif(APPLE OR LINUX OR WIN32)
 endif(USE_NATIVE_AUDIO)
 
 #
