@@ -26,6 +26,11 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <chrono>
+#include <initguid.h>
+#include <mmdeviceapi.h>
+#include <audioclient.h>
+#include "IAudioEngine.h"
 #include "IAudioDevice.h"
 #include "../util/Win32COMObject.h"
 
@@ -45,15 +50,20 @@ public:
 protected:
     friend class WASAPIAudioEngine;
 
-    WASAPIAudioDevice(IAudioClient* client, AudioDirection direction, int sampleRate, int numChannels);
+    WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
 
 private:
     IAudioClient* client_;
     IAudioRenderClient* renderClient_;
     IAudioCaptureClient* captureClient_;
-    AudioDirection direction_;
+    IAudioEngine::AudioDirection direction_;
     int sampleRate_;
     int numChannels_;
+    UINT32 bufferFrameCount_;
+    bool initialized_;
+    std::chrono::time_point<std::chrono::steady_clock> lastRenderCaptureTime_;
+    void renderAudio_();
+    void captureAudio_();
 };
 
 #endif // WASAPI_AUDIO_DEVICE_H

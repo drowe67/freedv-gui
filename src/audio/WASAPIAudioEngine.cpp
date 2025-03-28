@@ -29,6 +29,7 @@
 #include <functiondiscoverykeys_devpkey.h>
 #include <functiondiscoverykeys.h>
 #include <mmdeviceapi.h>
+#include "WASAPIAudioDevice.h"
 #include "WASAPIAudioEngine.h"
 #include "../util/logging/ulog.h"
 
@@ -189,9 +190,10 @@ std::vector<AudioDeviceSpecification> WASAPIAudioEngine::getAudioDeviceList(Audi
 
 AudioDeviceSpecification WASAPIAudioEngine::getDefaultAudioDevice(AudioDirection direction)
 {
+    auto specList = getAudioDeviceList(direction);
     auto prom = std::make_shared<std::promise<AudioDeviceSpecification> >();
     auto fut = prom->get_future();
-    enqueue_([&, direction]() {
+    enqueue_([&, specList, direction]() {
         IMMDevice* defaultDevice = nullptr;
         HRESULT hr = devEnumerator_->GetDefaultAudioEndpoint(
             (direction == AudioDirection::AUDIO_ENGINE_IN) ? eCapture : eRender,
@@ -211,7 +213,6 @@ AudioDeviceSpecification WASAPIAudioEngine::getDefaultAudioDevice(AudioDirection
         }
 
         auto defaultSpec = getDeviceSpecification_(defaultDevice);
-        auto specList = getAudioDeviceList(direction);
         for (auto& spec : specList)
         {
             if (defaultSpec.name == spec.name)
@@ -259,11 +260,11 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
                 IMMDevice* device = nullptr;
                 IAudioClient* client = nullptr;
 
-                hr = coll->Item(index, &device);
+                HRESULT hr = coll->Item(dev.deviceId, &device);
                 if (FAILED(hr))
                 {
                     std::stringstream ss;
-                    ss << "Could not get device " << index << " (hr = " << hr << ")";
+                    ss << "Could not get device " << dev.deviceId << " (hr = " << hr << ")";
                     log_error(ss.str().c_str());
                     if (onAudioErrorFunction)
                     {
@@ -278,7 +279,7 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
                 if (FAILED(hr))
                 {
                     std::stringstream ss;
-                    ss << "Could not get client for device " << index << " (hr = " << hr << ")";
+                    ss << "Could not get client for device " << dev.deviceId << " (hr = " << hr << ")";
                     log_error(ss.str().c_str());
                     if (onAudioErrorFunction)
                     {
@@ -298,7 +299,8 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
                 numChannels = std::max(numChannels, dev.minChannels);
                 numChannels = std::min(numChannels, dev.maxChannels);
 
-                result = std::make_shared<WASAPIAudioDevice>(client, direction, sampleRate, numChannels);
+                auto devPtr = new WASAPIAudioDevice(client, direction, sampleRate, numChannels);
+                result = std::shared_ptr<IAudioDevice>(devPtr);
             }
         }
         prom->set_value(result);
