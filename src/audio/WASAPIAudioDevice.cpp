@@ -36,6 +36,8 @@
     
 WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : client_(client)
+    , renderClient_(nullptr)
+    , captureClient_(nullptr)
     , direction_(direction)
     , sampleRate_(sampleRate)
     , numChannels_(numChannels)
