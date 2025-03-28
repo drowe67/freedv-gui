@@ -26,6 +26,7 @@
 #include <chrono>
 #include <thread>
 #include <future>
+#include <avrt.h>
 #include "../util/logging/ulog.h"
 
 #define BLOCK_TIME_NS (20000000)
@@ -40,6 +41,7 @@ WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDi
     , numChannels_(numChannels)
     , bufferFrameCount_(0)
     , initialized_(false)
+    , lowLatencyTask_(nullptr)
 {
     // empty
 }
@@ -209,6 +211,14 @@ void WASAPIAudioDevice::start()
             });
         }
 
+        // Temporarily raise priority of task
+        DWORD taskIndex = 0;
+        lowLatencyTask_ = AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
+        if (lowLatencyTask_ == nullptr)
+        {
+            log_warn("Could not increase thread priority");
+        }
+
         // Start render/capture
         hr = client_->Start();
         if (FAILED(hr))
@@ -229,6 +239,11 @@ void WASAPIAudioDevice::start()
             {
                 captureClient_->Release();
                 captureClient_ = nullptr;
+            }
+            if (lowLatencyTask_ != nullptr)
+            {
+                AvRevertMmThreadCharacteristics(lowLatencyTask_);
+                lowLatencyTask_ = nullptr;
             }
         }
 
@@ -256,6 +271,11 @@ void WASAPIAudioDevice::stop()
                 {
                     onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
                 }
+            }
+
+            if (lowLatencyTask_ != nullptr)
+            {
+                AvRevertMmThreadCharacteristics(lowLatencyTask_);
             }
         }
 

@@ -36,7 +36,7 @@ if(APPLE AND NATIVE_AUDIO_AVAILABLE)
         "-framework AVFoundation"
         "-framework CoreAudio")
 elseif(WIN32 AND NATIVE_AUDIO_AVAILABLE)
-    target_link_libraries(fdv_audio PRIVATE uuid)
+    target_link_libraries(fdv_audio PRIVATE uuid avrt)
 endif()
 
 if(BOOTSTRAP_WXWIDGETS)
