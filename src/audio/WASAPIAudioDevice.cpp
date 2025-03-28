@@ -75,6 +75,8 @@ int WASAPIAudioDevice::getSampleRate() const
  
 void WASAPIAudioDevice::start() 
 {
+    log_info("Starting device with direction %d, sample rate %d, num channels %d", direction_, sampleRate_, numChannels_);
+
     auto prom = std::make_shared<std::promise<void> >(); 
     auto fut = prom->get_future();
     enqueue_([&]() {
@@ -258,6 +260,8 @@ void WASAPIAudioDevice::start()
 
 void WASAPIAudioDevice::stop()
 {
+    log_info("Stopping device with direction %d, sample rate %d, num channels %d", direction_, sampleRate_, numChannels_);
+
     auto prom = std::make_shared<std::promise<void> >(); 
     auto fut = prom->get_future();
     enqueue_([&]() {

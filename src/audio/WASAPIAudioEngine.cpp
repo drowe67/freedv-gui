@@ -257,6 +257,8 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
         {
             if (dev.name == deviceName)
             {
+                log_info("Creating WASAPIAudioDevice for device %s (ID %d, direction = %d, sample rate = %d, number of channels = %d)", (const char*)deviceName.ToUTF8(), (int)dev.deviceId, (int)direction, sampleRate, numChannels);
+
                 IMMDevice* device = nullptr;
                 IAudioClient* client = nullptr;
 
