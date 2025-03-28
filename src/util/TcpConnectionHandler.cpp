@@ -701,7 +701,7 @@ void TcpConnectionHandler::resolveAddresses_(int addressFamily, const char* host
     int err = getaddrinfo(host, port, &hints, result);
     if (err != 0) 
     {
-        log_debug("cannot resolve %s:%s using family %d (err=%d)", host, port, addressFamily, err);
+        log_warn("cannot resolve %s:%s using family %d (err=%d)", host, port, addressFamily, err);
     }
     
     log_info("resolution of %s:%s using family %d complete", host, port, addressFamily);
