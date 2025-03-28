@@ -373,7 +373,7 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
     }
 
     AudioDeviceSpecification spec;
-    spec.name = getUTF8String_(friendlyName.pwszVal);
+    spec.name = wxString::FromUTF8(getUTF8String_(friendlyName.pwszVal));
     spec.apiName = "Windows WASAPI";
 
     // Activate IAudioClient so we can obtain format info
