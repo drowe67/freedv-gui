@@ -322,7 +322,7 @@ AudioDeviceSpecification MacAudioEngine::getAudioSpecification_(int coreAudioId,
     // Add to device list.
     AudioDeviceSpecification device;
     device.deviceId = coreAudioId;
-    device.name = deviceName;
+    device.name = wxString::FromUTF8(deviceName);
     device.apiName = "Core Audio";
     device.maxChannels = numChannels;
     device.minChannels = 1;
