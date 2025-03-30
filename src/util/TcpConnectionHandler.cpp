@@ -116,6 +116,7 @@ std::future<void> TcpConnectionHandler::disconnect()
     
     enqueue_([&, prom]() {
         disconnectImpl_();
+        cancelConnect_ = false;
         prom->set_value();
     });
     return fut;
