@@ -2883,12 +2883,19 @@ void MainFrame::stopRxStream()
 
 void MainFrame::destroy_fifos(void)
 {
-    codec2_fifo_destroy(g_rxUserdata->infifo1);
-    codec2_fifo_destroy(g_rxUserdata->outfifo1);
+    if (g_rxUserdata->infifo1) codec2_fifo_destroy(g_rxUserdata->infifo1);
+    if (g_rxUserdata->outfifo1) codec2_fifo_destroy(g_rxUserdata->outfifo1);
     if (g_rxUserdata->infifo2) codec2_fifo_destroy(g_rxUserdata->infifo2);
     if (g_rxUserdata->outfifo2) codec2_fifo_destroy(g_rxUserdata->outfifo2);
     codec2_fifo_destroy(g_rxUserdata->rxinfifo);
     codec2_fifo_destroy(g_rxUserdata->rxoutfifo);
+    
+    g_rxUserdata->infifo1 = nullptr;
+    g_rxUserdata->infifo2 = nullptr;
+    g_rxUserdata->outfifo1 = nullptr;
+    g_rxUserdata->outfifo2 = nullptr;
+    g_rxUserdata->rxinfifo = nullptr;
+    g_rxUserdata->rxoutfifo = nullptr;
 }
 
 //-------------------------------------------------------------------------
@@ -3116,18 +3123,25 @@ void MainFrame::startRxStream()
         int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
         int soundCard1InFifoSizeSamples = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
         int soundCard1OutFifoSizeSamples = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
-        g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
-        g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
 
         if (txInSoundDevice && txOutSoundDevice)
         {
             int soundCard2InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate / 1000;
             int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate / 1000;
-            g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
+            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
             g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
+            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
+            g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
         
             log_debug("fifoSize_ms:  %d infifo2: %d/outfilo2: %d",
                 wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
+        }
+        else
+        {
+            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
+            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
+            g_rxUserdata->infifo2 = nullptr;
+            g_rxUserdata->outfifo2 = nullptr;
         }
 
         log_debug("fifoSize_ms: %d infifo1: %d/outfilo1 %d",
