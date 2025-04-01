@@ -124,6 +124,20 @@ from being selected.
 *Note: if you don't already have Codec2 installed on your machine, you will need to pass `-DBOOTSTRAP_LPCNET=1`
 to `cmake` in order for LPCNet to also be built.*
 
+## Audio driver selection
+
+By default, FreeDV uses the native audio APIs on certain platforms. These are as follows:
+
+| Platform | Audio API |
+|---|---|
+| macOS | Core Audio |
+| Linux | pipewire (via PulseAudio library) |
+| Windows | WASAPI |
+
+On platforms not listed above, PortAudio is used instead. PortAudio can also be explicitly selected by the
+user by defining the environment variable `USE_NATIVE_AUDIO=0` before running the `build_*.sh` script
+(or specifying `-DUSE_NATIVE_AUDIO=0` to `cmake`).
+
 ## Installing on Linux
 
 You need to install the codec2 and lpcnetfreedv shared libraries, and freedv-gui:
