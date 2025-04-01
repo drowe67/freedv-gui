@@ -45,14 +45,14 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 ./build_linux.sh portaudio
+          UT_ENABLE=1 USE_NATIVE_AUDIO=0 ./build_linux.sh 
 
     - name: Build freedv-gui using PulseAudio
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 ./build_linux.sh pulseaudio
+          UT_ENABLE=1 ./build_linux.sh 
 
     - name: Execute unit tests
       shell: bash

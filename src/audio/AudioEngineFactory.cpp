@@ -21,11 +21,19 @@
 //=========================================================================
 
 #include "AudioEngineFactory.h"
-#if defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
+#if defined(AUDIO_ENGINE_NATIVE_ENABLE)
+#if defined(__linux)
 #include "PulseAudioEngine.h"
+#elif __APPLE__
+#include "MacAudioEngine.h"
+#elif _WIN32
+#include "WASAPIAudioEngine.h"
+#else
+#error No native audio support available for this platform
+#endif // __linux || __APPLE__ || _WIN32
 #else
 #include "PortAudioEngine.h"
-#endif // defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
+#endif // defined(AUDIO_ENGINE_NATIVE_ENABLE)
 
 std::shared_ptr<IAudioEngine> AudioEngineFactory::SystemEngine_;
 
@@ -33,11 +41,17 @@ std::shared_ptr<IAudioEngine> AudioEngineFactory::GetAudioEngine()
 {
     if (!SystemEngine_)
     {
-#if defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
+#if defined(AUDIO_ENGINE_NATIVE_ENABLE)
+#if defined(__linux)
         SystemEngine_ = std::shared_ptr<IAudioEngine>(new PulseAudioEngine());
+#elif defined(__APPLE__)
+        SystemEngine_ = std::shared_ptr<IAudioEngine>(new MacAudioEngine());
+#elif defined(_WIN32)
+        SystemEngine_ = std::shared_ptr<IAudioEngine>(new WASAPIAudioEngine());
+#endif // __linux || __APPLE__ || _WIN32
 #else
         SystemEngine_ = std::shared_ptr<IAudioEngine>(new PortAudioEngine());
-#endif // defined(AUDIO_ENGINE_PULSEAUDIO_ENABLE)
+#endif // defined(AUDIO_ENGINE_NATIVE_ENABLE)
     }
     
     return SystemEngine_;

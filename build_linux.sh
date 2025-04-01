@@ -9,13 +9,7 @@ set -x -e
 
 UT_ENABLE=${UT_ENABLE:-0}
 LPCNET_DISABLE=${LPCNET_DISABLE:-1}
-
-# Allow building of either PulseAudio or PortAudio variants
-FREEDV_VARIANT=${1:-pulseaudio}
-if [[ "$FREEDV_VARIANT" != "portaudio" && "$FREEDV_VARIANT" != "pulseaudio" ]]; then
-    echo "Usage: build_linux.sh [portaudio|pulseaudio]"
-    exit -1
-fi
+USE_NATIVE_AUDIO=${USE_NATIVE_AUDIO:-1}
 
 export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
@@ -73,10 +67,5 @@ if [ -d .git ]; then
      git pull
 fi
 mkdir  -p build_linux && cd build_linux && rm -Rf *
-if [[ "$FREEDV_VARIANT" == "pulseaudio" ]]; then
-    PULSEAUDIO_PARAM="-DUSE_PULSEAUDIO=1"
-else
-    PULSEAUDIO_PARAM="-DUSE_PULSEAUDIO=0"
-fi
-cmake $PULSEAUDIO_PARAM -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux $LPCNET_CMAKE_CMD ..
+cmake -DUSE_NATIVE_AUDIO=$USE_NATIVE_AUDIO -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux $LPCNET_CMAKE_CMD ..
 make VERBOSE=1 -j$(nproc)
