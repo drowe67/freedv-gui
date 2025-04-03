@@ -30,7 +30,12 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
 fi
 
 # Determine correct record device to retrieve TX data
-FREEDV_CONF_FILE=freedv-ctest-reporting.conf 
+if [ "$2" == "mpp" ]; then
+    FREEDV_CONF_FILE=freedv-ctest-reporting-mpp.conf 
+else
+    FREEDV_CONF_FILE=freedv-ctest-reporting.conf 
+fi
+
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     REC_DEVICE="$FREEDV_COMPUTER_TO_RADIO_DEVICE.monitor"
 else
