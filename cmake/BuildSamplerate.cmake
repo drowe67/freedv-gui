@@ -9,7 +9,7 @@ FetchContent_Declare(
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
     GIT_TAG        0.2.2
-    PATCH_COMMAND  patch -p1 < ${CMAKE_SOURCE_DIR}/cmake/samplerate-cmake.patch
+    PATCH_COMMAND  patch -Np1 < ${CMAKE_SOURCE_DIR}/cmake/samplerate-cmake.patch
 )
 
 FetchContent_GetProperties(samplerate)
