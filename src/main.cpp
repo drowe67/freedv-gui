@@ -397,6 +397,9 @@ void MainApp::UnitTest_()
             } 
         }
     }
+    
+    // Wait a second to make sure we're not doing any more processing
+    std::this_thread::sleep_for(1000ms);
  
     // Fire event to stop FreeDV
     log_info("Firing stop");

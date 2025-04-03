@@ -888,6 +888,12 @@ void MainFrame::togglePTT(void) {
             wxGetApp().Yield(true);
         }
         
+        // Wait for a minimum amount of time before stopping TX to ensure that
+        // remaining audio gets piped to the radio from the operating system.
+        auto latency = 80;
+        log_info("Pausing for a minimum of %d milliseconds before TX->RX", latency);
+        std::this_thread::sleep_for(std::chrono::milliseconds(latency));
+        
         // Wait an additional configured timeframe before actually clearing PTT (below)
         if (wxGetApp().appConfiguration.txRxDelayMilliseconds > 0)
         {
