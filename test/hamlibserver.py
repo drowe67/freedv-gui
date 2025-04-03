@@ -396,7 +396,7 @@ class App:
         pass
       else:
         print('Connection from', address)
-        self.hamlib_clients.append(HamlibHandler(self, conn, address, pid))
+        self.hamlib_clients.append(HamlibHandler(self, conn, address, self.pid))
       for client in self.hamlib_clients:
         ret = client.Process()
         if not ret:		# False return indicates a closed connection; remove the server

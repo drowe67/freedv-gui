@@ -65,6 +65,10 @@ else
 fi
 RECORD_PID=$!
 
+# Start "radio"
+python3 $SCRIPTPATH/hamlibserver.py $RECORD_PID &
+RADIO_PID=$!
+
 # Start FreeDV in test mode to record TX
 if [ "$2" == "mpp" ]; then
     TX_ARGS="-txtime 1 -txattempts 6 "
@@ -108,3 +112,6 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     pactl unload-module $DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO
     pactl unload-module $DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER
 fi
+
+# End radio process as it's no longer needed
+kill $RADIO_PID
