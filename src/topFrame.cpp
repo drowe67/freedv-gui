@@ -106,7 +106,7 @@ public:
         m_tabs->Refresh();
         m_tabs->Update();
 
-        wxAuiNotebookPageArray& pages = m_tabs->GetPages();
+        auto& pages = m_tabs->GetPages();
         size_t i, page_count = pages.GetCount();
 
         for (i = 0; i < page_count; ++i)

@@ -218,7 +218,7 @@ int MainFrame::VoiceKeyerStartTx(void)
     SNDFILE* tmpPlayFile = sf_open(vkFileName_.c_str(), SFM_READ, &sfInfo);
     if(tmpPlayFile == NULL) {
         wxString strErr = sf_strerror(NULL);
-        wxMessageBox(strErr, wxT("Couldn't open:") + vkFileName_, wxOK);
+        wxMessageBox(strErr, wxT("Couldn't open:") + wxString::FromUTF8(vkFileName_), wxOK);
         next_state = VK_IDLE;
         m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
         m_togBtnVoiceKeyer->SetValue(false);
@@ -237,7 +237,7 @@ int MainFrame::VoiceKeyerStartTx(void)
         
         g_sfPlayFile = tmpPlayFile;
         
-        SetStatusText(wxT("Voice Keyer: Playing file ") + vkFileName_ + wxT(" to mic input") , 0);
+        SetStatusText(wxT("Voice Keyer: Playing file ") + wxString::FromUTF8(vkFileName_) + wxT(" to mic input") , 0);
         g_loopPlayFileToMicIn = false;
         g_playFileToMicIn = true;
 

@@ -25,7 +25,8 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
-    GIT_TAG        v${WXWIDGETS_VERSION}
+    #GIT_TAG        v${WXWIDGETS_VERSION}
+    GIT_TAG 12b2997
 )
 
 FetchContent_GetProperties(wxWidgets)

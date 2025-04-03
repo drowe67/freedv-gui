@@ -224,7 +224,7 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         
         // Update voice keyer file if different
         wxFileName fullVKPath(wxGetApp().appConfiguration.voiceKeyerWaveFilePath, wxGetApp().appConfiguration.voiceKeyerWaveFile);
-        if (vkFileName_ != fullVKPath.GetFullPath().mb_str())
+        if (wxString::FromUTF8(vkFileName_) != fullVKPath.GetFullPath())
         {
             // Clear filename to force reselection next time VK is triggered.
             vkFileName_ = "";
