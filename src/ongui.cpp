@@ -891,9 +891,22 @@ void MainFrame::togglePTT(void) {
         // Wait for a minimum amount of time before stopping TX to ensure that
         // remaining audio gets piped to the radio from the operating system.
         auto latency = 80;
-        log_info("Pausing for a minimum of %d milliseconds before TX->RX", latency);
-        std::this_thread::sleep_for(std::chrono::milliseconds(latency));
-        
+        log_info("Pausing for a minimum of %d milliseconds before TX->RX to allow remaining audio to go out", latency);
+        before = highResClock.now();
+        while(true)
+        {
+            auto diff = highResClock.now() - before;
+            if (diff >= std::chrono::milliseconds(latency))
+            {
+                break;
+            }
+
+            wxThread::Sleep(1);
+
+            // Yield() used to avoid lack of UI responsiveness during delay.
+            wxGetApp().Yield(true);
+        }
+                
         // Wait an additional configured timeframe before actually clearing PTT (below)
         if (wxGetApp().appConfiguration.txRxDelayMilliseconds > 0)
         {
