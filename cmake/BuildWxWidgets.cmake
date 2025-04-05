@@ -26,7 +26,7 @@ FetchContent_Declare(
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
     #GIT_TAG        v${WXWIDGETS_VERSION}
-    GIT_TAG 12b2997
+    GIT_TAG 3.2
 )
 
 FetchContent_GetProperties(wxWidgets)
