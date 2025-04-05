@@ -263,14 +263,13 @@ if(MINGW)
     set(USE_INTERNAL_CODEC2 TRUE CACHE BOOL "Perform internal builds of codec2")
     # Setup HOST variables.
     include(cmake/MinGW.cmake)
-    # This sets up the exe icon for windows under mingw.
-    set(RES_FILES "")
 
+    # This sets up the exe icon for windows under mingw.
     set(RES_FILES "${CMAKE_BINARY_DIR}/freedv.rc")
     set(CMAKE_RC_COMPILER_INIT windres)
     enable_language(RC)
     set(CMAKE_RC_COMPILE_OBJECT
-        "<CMAKE_RC_COMPILER> <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
+        "<CMAKE_RC_COMPILER> --include-dir ${CMAKE_BINARY_DIR}/_deps/wxwidgets-src/include <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
     include(InstallRequiredSystemLibraries)
 endif(MINGW)
 
