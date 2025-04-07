@@ -172,7 +172,7 @@ int PortAudioDevice::getLatencyInMicroseconds()
     int latency = 0;
     if (deviceStream_ != nullptr)
     {
-        auto streamInfo = portAudioLibrary_->GetStreamInfo(deviceStream_);
+        auto streamInfo = portAudioLibrary_->GetStreamInfo(deviceStream_).get();
         latency = 1000000 * (direction_ == IAudioEngine::AUDIO_ENGINE_IN ? streamInfo->inputLatency : streamInfo->outputLatency);
     }
 
