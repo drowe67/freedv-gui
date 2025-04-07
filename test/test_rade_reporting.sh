@@ -66,7 +66,7 @@ mv $(pwd)/$FREEDV_CONF_FILE.tmp $(pwd)/$FREEDV_CONF_FILE
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     parecord --channels=1 --rate 8000 --file-format=wav --device "$REC_DEVICE" --latency 1 test.wav &
 else
-    sox -t $SOX_DRIVER "$REC_DEVICE" -c 1 -r 8000 -t wav test.wav &
+    sox -t $SOX_DRIVER "$REC_DEVICE" -c 1 -r 8000 -t wav test.wav >/dev/null 2>&1 &
 fi
 RECORD_PID=$!
 
@@ -80,7 +80,7 @@ if [ "$2" == "mpp" ]; then
 else
     TX_ARGS="-txtime 5 "
 fi
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADE $TX_ARGS >tmp.log 2>&1
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADE $TX_ARGS
 
 FDV_PID=$!
 #sleep 30 
