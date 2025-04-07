@@ -541,7 +541,7 @@ int FreeDVInterface::getTxNumSpeechSamples() const
 {
     if (txMode_ >= FREEDV_MODE_RADE)
     {
-        return 1920;
+        return LPCNET_FRAME_SIZE;
     }
 
     assert(currentTxMode_ != nullptr);
@@ -552,7 +552,7 @@ int FreeDVInterface::getTxNNomModemSamples() const
 {
     if (txMode_ >= FREEDV_MODE_RADE)
     {
-        return 960;
+        return rade_n_tx_out(rade_);
     }
 
     assert(currentTxMode_ != nullptr);
