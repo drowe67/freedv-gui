@@ -347,14 +347,8 @@ int MacAudioDevice::getLatencyInMicroseconds()
             }
         }
         
-        // Add additional latency if non bufferFrameSize components > bufferFrameSize.
-        // More info: https://www.mail-archive.com/coreaudio-api@lists.apple.com/msg01682.html
         auto ioLatency = streamLatency + deviceLatencyFrames + deviceSafetyOffset;
-        auto frameSize = 2 * bufferFrameSize;
-        if (ioLatency > bufferFrameSize)
-        {
-            frameSize += bufferFrameSize;
-        }
+        auto frameSize = bufferFrameSize;
         prom->set_value(1000000 * (ioLatency + frameSize) / sampleRate_);
     });
     return fut.get();

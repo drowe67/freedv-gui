@@ -890,7 +890,7 @@ void MainFrame::togglePTT(void) {
         
         // Wait for a minimum amount of time before stopping TX to ensure that
         // remaining audio gets piped to the radio from the operating system.
-        auto latency = txInSoundDevice->getLatencyInMicroseconds() + txOutSoundDevice->getLatencyInMicroseconds();
+        auto latency = txOutSoundDevice->getLatencyInMicroseconds();
         log_info("Pausing for a minimum of %d microseconds before TX->RX to allow remaining audio to go out", latency);
         before = highResClock.now();
         while(true)
