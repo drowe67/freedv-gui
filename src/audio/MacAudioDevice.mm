@@ -261,3 +261,101 @@ bool MacAudioDevice::isRunning()
 {
     return engine_ != nil;
 }
+
+int MacAudioDevice::getLatencyInMicroseconds()
+{
+    std::shared_ptr<std::promise<int>> prom = std::make_shared<std::promise<int> >();
+    auto fut = prom->get_future();
+    enqueue_([&, prom]() {        
+        // Total latency is based on the formula:
+        //     kAudioDevicePropertyLatency + kAudioDevicePropertySafetyOffset + 
+        //     kAudioDevicePropertyBufferFrameSize + kAudioStreamPropertyLatency.
+        // This is in terms of the number of samples. Divide by sample rate to get number of seconds.
+        // More info:
+        //     https://stackoverflow.com/questions/65600996/avaudioengine-reconcile-sync-input-output-timestamps-on-macos-ios
+        //     https://forum.juce.com/t/macos-round-trip-latency/45278
+        auto scope = 
+            (direction_ == IAudioEngine::AUDIO_ENGINE_IN) ? 
+            kAudioDevicePropertyScopeInput :
+            kAudioDevicePropertyScopeOutput;
+            
+        // Get audio device latency
+        AudioObjectPropertyAddress propertyAddress = {
+              kAudioDevicePropertyLatency, 
+              scope,
+              kAudioObjectPropertyElementMaster};
+        UInt32 deviceLatencyFrames = 0;
+        UInt32 size = sizeof(deviceLatencyFrames);
+        OSStatus result = AudioObjectGetPropertyData(
+                  coreAudioId_, 
+                  &propertyAddress, 
+                  0,
+                  nullptr, 
+                  &size, 
+                  &deviceLatencyFrames); // assume 0 if we can't retrieve for some reason
+         
+        UInt32 deviceSafetyOffset = 0;
+        propertyAddress.mSelector = kAudioDevicePropertySafetyOffset;
+        result = AudioObjectGetPropertyData(
+                  coreAudioId_, 
+                  &propertyAddress, 
+                  0,
+                  nullptr, 
+                  &size, 
+                  &deviceSafetyOffset);
+                  
+        UInt32 bufferFrameSize = 0;
+        propertyAddress.mSelector = kAudioDevicePropertyBufferFrameSize;
+        result = AudioObjectGetPropertyData(
+                  coreAudioId_, 
+                  &propertyAddress, 
+                  0,
+                  nullptr, 
+                  &size, 
+                  &bufferFrameSize);
+    
+        propertyAddress.mSelector = kAudioDevicePropertyStreams;
+        size = 0;
+        result = AudioObjectGetPropertyDataSize(
+                  coreAudioId_, 
+                  &propertyAddress, 
+                  0,
+                  nullptr, 
+                  &size);
+        UInt32 streamLatency = 0;
+        if (result == noErr)
+        {
+            AudioStreamID streams[size / sizeof(AudioStreamID)];
+            result = AudioObjectGetPropertyData(
+                      coreAudioId_, 
+                      &propertyAddress, 
+                      0,
+                      nullptr, 
+                      &size, 
+                      &streams);
+            if (result == noErr)
+            {
+                propertyAddress.mSelector = kAudioStreamPropertyLatency;
+                size = sizeof(streamLatency);
+                result = AudioObjectGetPropertyData(
+                          streams[0], 
+                          &propertyAddress, 
+                          0,
+                          nullptr, 
+                          &size, 
+                          &streamLatency);
+            }
+        }
+        
+        // Add additional latency if non bufferFrameSize components > bufferFrameSize.
+        // More info: https://www.mail-archive.com/coreaudio-api@lists.apple.com/msg01682.html
+        auto ioLatency = streamLatency + deviceLatencyFrames + deviceSafetyOffset;
+        auto frameSize = 2 * bufferFrameSize;
+        if (ioLatency > bufferFrameSize)
+        {
+            frameSize += bufferFrameSize;
+        }
+        prom->set_value(1000000 * (ioLatency + frameSize) / sampleRate_);
+    });
+    return fut.get();
+}

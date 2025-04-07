@@ -306,6 +306,11 @@ bool WASAPIAudioDevice::isRunning()
     return (renderClient_ != nullptr) || (captureClient_ != nullptr);
 }
 
+int WASAPIAudioDevice::getLatencyInMicroseconds()
+{
+    return 0; // TBD - stub
+}
+
 void WASAPIAudioDevice::renderAudio_()
 {
     // If client is no longer available, abort

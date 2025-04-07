@@ -167,6 +167,18 @@ void PortAudioDevice::stop()
     }
 }
 
+int PortAudioDevice::getLatencyInMicroseconds()
+{
+    int latency = 0;
+    if (deviceStream_ != nullptr)
+    {
+        auto streamInfo = portAudioLibrary_->GetStreamInfo(deviceStream_);
+        latency = 1000000 * (direction_ == IAudioEngine::AUDIO_ENGINE_IN ? streamInfo->inputLatency : streamInfo->outputLatency);
+    }
+
+    return latency;
+}
+
 int PortAudioDevice::OnPortAudioStreamCallback_(const void *input, void *output, unsigned long frameCount, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
 {
     PortAudioDevice* thisObj = static_cast<PortAudioDevice*>(userData);

@@ -39,6 +39,8 @@ public:
     virtual void stop() override;
 
     virtual bool isRunning() override;
+    
+    virtual int getLatencyInMicroseconds() override;
 
 protected:
     friend class MacAudioEngine;

@@ -173,3 +173,13 @@ std::future<PaError> PortAudioInterface::CloseStream(PaStream *stream)
     });
     return fut;
 }
+
+std::future<const PaStreamInfo*> PortAudioInterface::GetStreamInfo(PaStream* stream)
+{
+    std::shared_ptr<std::promise<const PaStreamInfo*> > prom = std::make_shared<std::promise<const PaStreamInfo*> >();
+    auto fut = prom->get_future();
+    enqueue_([=]() {
+        prom->set_value(Pa_GetStreamInfo(stream));
+    });
+    return fut;
+}

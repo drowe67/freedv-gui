@@ -51,6 +51,8 @@ public:
     std::future<PaError> StartStream(PaStream *stream); 
     std::future<PaError> StopStream(PaStream *stream);
     std::future<PaError> CloseStream(PaStream *stream);
+    
+    std::future<const PaStreamInfo*> GetStreamInfo(PaStream* stream);
 };
 
 #endif // PORT_AUDIO_INTERFACE_H

@@ -41,6 +41,8 @@ public:
 
     virtual bool isRunning() override;
     
+    virtual int getLatencyInMicroseconds() override;
+    
 protected:
     // PortAudioDevice cannot be created directly, only via PortAudioEngine.
     friend class PortAudioEngine;

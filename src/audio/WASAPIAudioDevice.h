@@ -47,6 +47,8 @@ public:
 
     virtual bool isRunning() override;
 
+    virtual int getLatencyInMicroseconds() override;
+    
 protected:
     friend class WASAPIAudioEngine;
 
