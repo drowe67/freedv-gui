@@ -135,12 +135,12 @@ function Test-FreeDV {
     $process.StartInfo = $psi
     [void]$process.Start()
     
-    # Read output second first FreeDV run
-    $err_output = $process.StandardError.ReadToEnd()
+    # Read output from second FreeDV run
+    $err_output_fdv = $process.StandardError.ReadToEnd()
     $output = $process.StandardOutput.ReadToEnd()
     $process.WaitForExit()
 
-    Write-Host "$err_output"
+    Write-Host "$err_output_fdv"
     
     # Kill mock rigctld
     $rigctlProcess.Kill()
@@ -151,7 +151,7 @@ function Test-FreeDV {
     Write-Host "$err_output"
 
     # Check for RX callsign
-    $syncs = ($err_output -split "`r?`n") | Where { $_.Contains("Reporting callsign ZZ0ZZZ @ SNR") }
+    $syncs = ($err_output_fdv -split "`r?`n") | Where { $_.Contains("Reporting callsign ZZ0ZZZ @ SNR") }
     if ($syncs.Count -eq 1) {
         return $true
     }
