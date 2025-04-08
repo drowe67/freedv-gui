@@ -72,15 +72,15 @@ function Test-FreeDV {
     $soxPsi = New-Object System.Diagnostics.ProcessStartInfo
     $soxPsi.CreateNoWindow = $true
     $soxPsi.UseShellExecute = $false
-    $soxPsi.RedirectStandardError = $true
-    $soxPsi.RedirectStandardOutput = $true
+    $soxPsi.RedirectStandardError = $false
+    $soxPsi.RedirectStandardOutput = $false
     $soxPsi.FileName = "sox.exe"
     $soxPsi.WorkingDirectory = $current_loc
-    $quoted_tmp_filename = "`"" + "hamlibserver.py" + "`""
-    $soxPsi.Arguments = @("-t $SOX_DRIVER `"$ComputerToRadioDevice`" -c 1 -r 8000 -t wav test.wav")
+    $quoted_device = "`"" + $RadioToComputerDevice + "`""
+    $soxPsi.Arguments = @("-t waveaudio $quoted_device -c 1 -r 8000 -t wav `"$current_loc\test.wav`"")
     
     $soxProcess = New-Object System.Diagnostics.Process
-    $soxProcess.StartInfo = $rigctlPsi
+    $soxProcess.StartInfo = $soxPsi
     [void]$soxProcess.Start()
     
     # Start mock rigctld
@@ -92,7 +92,7 @@ function Test-FreeDV {
     $rigctlPsi.FileName = "$current_loc\python.exe"
     $rigctlPsi.WorkingDirectory = $current_loc
     $quoted_tmp_filename = "`"" + "hamlibserver.py" + "`""
-    $rigctlPsi.Arguments = @("$quoted_tmp_filename " + $rigctlProcess.Id)
+    $rigctlPsi.Arguments = @("$quoted_tmp_filename " + $soxProcess.Id)
     
     $rigctlProcess = New-Object System.Diagnostics.Process
     $rigctlProcess.StartInfo = $rigctlPsi
@@ -121,12 +121,12 @@ function Test-FreeDV {
     Write-Host "$err_output"
     
     # Stop recording audio
-    $soxProcess.Kill()
-    $err_output = $soxProcess.StandardError.ReadToEnd();
-    $output = $soxProcess.StandardOutput.ReadToEnd();
+    try {
+        $soxProcess.Kill()
+    } catch {
+        # Ignore failure as Python could have killed sox
+    }
     $soxProcess.WaitForExit()
-
-    Write-Host "$err_output"
     
     # Restart FreeDV in RX mode
     $psi.Arguments = @("/f $quoted_tmp_filename /ut rx /utmode RADEV1 /rxfile `"$current_loc\test.wav`"")
@@ -136,15 +136,16 @@ function Test-FreeDV {
     [void]$process.Start()
     
     # Read output second first FreeDV run
-    $err_output = $process.StandardError.ReadToEnd();
-    $output = $process.StandardOutput.ReadToEnd();
+    $err_output = $process.StandardError.ReadToEnd()
+    $output = $process.StandardOutput.ReadToEnd()
     $process.WaitForExit()
 
     Write-Host "$err_output"
     
     # Kill mock rigctld
-    $err_output = $rigctlProcess.StandardError.ReadToEnd();
-    $output = $rigctlProcess.StandardOutput.ReadToEnd();
+    $rigctlProcess.Kill()
+    $err_output = $rigctlProcess.StandardError.ReadToEnd()
+    $output = $rigctlProcess.StandardOutput.ReadToEnd()
     $rigctlProcess.WaitForExit()
 
     Write-Host "$err_output"
