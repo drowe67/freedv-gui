@@ -65,6 +65,7 @@ private:
     bool initialized_;
     std::chrono::time_point<std::chrono::steady_clock> lastRenderCaptureTime_;
     HANDLE lowLatencyTask_;
+    int latencyFrames_;
 
     void renderAudio_();
     void captureAudio_();

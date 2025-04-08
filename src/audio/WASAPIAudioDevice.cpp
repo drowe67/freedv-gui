@@ -44,6 +44,7 @@ WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDi
     , bufferFrameCount_(0)
     , initialized_(false)
     , lowLatencyTask_(nullptr)
+    , latencyFrames_(0)
 {
     // empty
 }
@@ -132,6 +133,22 @@ void WASAPIAudioDevice::start()
             }
             prom->set_value();
             return;
+        }
+        
+        // Get latency
+        REFERENCE_TIME defaultPeriod = 0;
+        REFERENCE_TIME minimumPeriod = 0;
+        latencyFrames_ = bufferFrameCount_;
+        hr = client_->GetDevicePeriod(&defaultPeriod, &minimumPeriod);
+        if (FAILED(hr))
+        {
+            std::stringstream ss;
+            ss << "Could not get device period (hr = " << hr << ")";
+            log_warn(ss.str().c_str());
+        }
+        else
+        {
+            latencyFrames_ += (double)(NS_PER_REFTIME * defaultPeriod) / 1e9;
         }
 
         // Get capture/render client
@@ -308,7 +325,9 @@ bool WASAPIAudioDevice::isRunning()
 
 int WASAPIAudioDevice::getLatencyInMicroseconds()
 {
-    return 0; // TBD - stub
+    // Note: latencyFrames_ isn't expected to change, so we don't need to 
+    // wrap this call in an enqueue_() like with the other public methods.
+    return 1000000 * latencyFrames_ / sampleRate_;
 }
 
 void WASAPIAudioDevice::renderAudio_()
