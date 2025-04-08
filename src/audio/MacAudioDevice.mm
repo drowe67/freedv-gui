@@ -26,6 +26,44 @@
 #include <future>
 #import <AVFoundation/AVFoundation.h>
 
+static OSStatus GetIOBufferFrameSizeRange(AudioObjectID inDeviceID,
+                                          UInt32* outMinimum,
+                                          UInt32* outMaximum)
+{
+    AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyBufferFrameSizeRange,
+                                              kAudioObjectPropertyScopeGlobal,
+                                              kAudioObjectPropertyElementMaster };
+ 
+    AudioValueRange theRange = { 0, 0 };
+    UInt32 theDataSize = sizeof(AudioValueRange);
+    OSStatus theError = AudioObjectGetPropertyData(inDeviceID,
+                                                   &theAddress,
+                                                   0,
+                                                   NULL,
+                                                   &theDataSize,
+                                                   &theRange);
+    if(theError == 0)
+    {
+        *outMinimum = theRange.mMinimum;
+        *outMaximum = theRange.mMaximum;
+    }
+    return theError;
+}
+ 
+static OSStatus SetCurrentIOBufferFrameSize(AudioObjectID inDeviceID,
+                                            UInt32 inIOBufferFrameSize)
+{
+    AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyBufferFrameSize,
+                                              kAudioObjectPropertyScopeGlobal,
+                                              kAudioObjectPropertyElementMaster };
+ 
+    return AudioObjectSetPropertyData(inDeviceID,
+                                      &theAddress,
+                                      0,
+                                      NULL,
+                                      sizeof(UInt32), &inIOBufferFrameSize);
+}
+
 MacAudioDevice::MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate)
     : coreAudioId_(coreAudioId)
     , direction_(direction)
@@ -89,6 +127,25 @@ void MacAudioDevice::start()
             return;
         }
         
+        // Attempt to set the IO frame size to 1024 from the default 512. This mainly
+        // reduces dropouts on marginal hardware.
+        UInt32 minFrameSize = 0;
+        UInt32 maxFrameSize = 0;
+        bool setAudioUnitFrameSize = false;
+        GetIOBufferFrameSizeRange(coreAudioId_, &minFrameSize, &maxFrameSize);
+        if (minFrameSize <= 1024 && 1024 <= maxFrameSize)
+        {
+            log_info("Frame size of 1024 is supported for audio device ID %d", coreAudioId_);
+            if (SetCurrentIOBufferFrameSize(coreAudioId_, 1024) == noErr)
+            {
+                setAudioUnitFrameSize = true;
+            }
+            else
+            {
+                log_warn("Could not set IO frame size to 1024 for audio device ID %d", coreAudioId_);
+            }
+        }
+        
         // Initialize audio engine.
         AVAudioEngine* engine = [[AVAudioEngine alloc] init];
     
@@ -112,6 +169,25 @@ void MacAudioDevice::start()
             }
             [engine release];
             return;
+        }
+        
+        // If we were able to set the IO frame size above, also set kAudioUnitProperty_MaximumFramesPerSlice
+        // More info: https://developer.apple.com/library/archive/technotes/tn2321/_index.html
+        if (setAudioUnitFrameSize)
+        {
+            UInt32 bufferFrameSize = 1024;
+            error = AudioUnitSetProperty(
+                audioUnit, 
+                kAudioUnitProperty_MaximumFramesPerSlice,
+                kAudioUnitScope_Global, 
+                0, 
+                &bufferFrameSize, 
+                sizeof(bufferFrameSize));
+            if (error != noErr)
+            {
+                log_warn("Could not set max frames/slice to 1024 for audio device ID %d", coreAudioId_);
+                SetCurrentIOBufferFrameSize(coreAudioId_, 512);
+            }
         }
         
         // Need to also get a mixer node so that the objects get
