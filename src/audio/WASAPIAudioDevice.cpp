@@ -146,6 +146,7 @@ void WASAPIAudioDevice::start()
         }
         else
         {
+            log_info("REFERENCE_TIME latency is %d", latency);
             latencyFrames_ = sampleRate_ * ((double)(NS_PER_REFTIME * latency) / 1e9);
         }
 
