@@ -51,7 +51,6 @@ param (
 #>
 function Test-FreeDV {
     param (
-        $ModeToTest,
         $RadioToComputerDevice,
         $ComputerToSpeakerDevice,
         $MicrophoneToComputerDevice,
