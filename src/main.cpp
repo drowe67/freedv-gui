@@ -3329,13 +3329,15 @@ void MainFrame::startRxStream()
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
                 short  outdata[size];
+                
+                int available = std::min(codec2_fifo_used(cbData->outfifo1), (int)size);
 
-                int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
+                int result = codec2_fifo_read(cbData->outfifo1, outdata, available);
                 if (result == 0) 
                 {
                     // write signal to all channels to start. This is so that
                     // the compiler can optimize for the most common case.
-                    for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels()) 
+                    for(size_t i = 0; i < available; i++, audioData += dev.getNumChannels()) 
                     {
                         for (auto j = 0; j < dev.getNumChannels(); j++)
                         {
@@ -3353,6 +3355,11 @@ void MainFrame::startRxStream()
                             cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
                             audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
                         }
+                    }
+                    
+                    if (size != available)
+                    {
+                        g_outfifo1_empty++;
                     }
                 }
                 else 
