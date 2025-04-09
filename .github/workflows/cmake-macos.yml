@@ -17,6 +17,7 @@ jobs:
         os: [macos-13, macos-latest]  # x86_64, ARM64
 
     runs-on: ${{ matrix.os }}
+    needs: dist
 
     steps:
     - uses: actions/checkout@v4
@@ -83,7 +84,6 @@ jobs:
   # Only build and publish universal binary after making sure code works properly on both 
   # x86 and ARM. No point in doing so if there's a failure on either.
   dist:
-    needs: test
     runs-on: macos-latest
 
     steps:
