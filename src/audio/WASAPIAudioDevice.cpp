@@ -136,20 +136,7 @@ void WASAPIAudioDevice::start()
         }
         
         // Get latency
-        REFERENCE_TIME defaultPeriod = 0;
-        REFERENCE_TIME minimumPeriod = 0;
-        latencyFrames_ = 0;
-        hr = client_->GetDevicePeriod(&defaultPeriod, &minimumPeriod);
-        if (FAILED(hr))
-        {
-            std::stringstream ss;
-            ss << "Could not get device period (hr = " << hr << ")";
-            log_warn(ss.str().c_str());
-        }
-        else
-        {
-            latencyFrames_ += sampleRate_ * (double)(NS_PER_REFTIME * defaultPeriod) / 1e9;
-        }
+        latencyFrames_ = bufferFrameCount_;
                 
         REFERENCE_TIME latency = 0;
         hr = client_->GetStreamLatency(&latency);
