@@ -64,7 +64,6 @@ private:
     int numChannels_;
     UINT32 bufferFrameCount_;
     bool initialized_;
-    std::chrono::time_point<std::chrono::steady_clock> lastRenderCaptureTime_;
     HANDLE lowLatencyTask_;
     int latencyFrames_;
     std::thread renderCaptureThread_;
