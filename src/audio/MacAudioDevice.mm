@@ -26,6 +26,44 @@
 #include <future>
 #import <AVFoundation/AVFoundation.h>
 
+static OSStatus GetIOBufferFrameSizeRange(AudioObjectID inDeviceID,
+                                          UInt32* outMinimum,
+                                          UInt32* outMaximum)
+{
+    AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyBufferFrameSizeRange,
+                                              kAudioObjectPropertyScopeGlobal,
+                                              kAudioObjectPropertyElementMaster };
+
+    AudioValueRange theRange = { 0, 0 };
+    UInt32 theDataSize = sizeof(AudioValueRange);
+    OSStatus theError = AudioObjectGetPropertyData(inDeviceID,
+                                                   &theAddress,
+                                                   0,
+                                                   NULL,
+                                                   &theDataSize,
+                                                   &theRange);
+    if(theError == 0)
+    {
+        *outMinimum = theRange.mMinimum;
+        *outMaximum = theRange.mMaximum;
+    }
+    return theError;
+}
+
+static OSStatus SetCurrentIOBufferFrameSize(AudioObjectID inDeviceID,
+                                            UInt32 inIOBufferFrameSize)
+{
+    AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyBufferFrameSize,
+                                              kAudioObjectPropertyScopeGlobal,
+                                              kAudioObjectPropertyElementMaster };
+
+    return AudioObjectSetPropertyData(inDeviceID,
+                                      &theAddress,
+                                      0,
+                                      NULL,
+                                      sizeof(UInt32), &inIOBufferFrameSize);
+}
+
 MacAudioDevice::MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate)
     : coreAudioId_(coreAudioId)
     , direction_(direction)
@@ -87,6 +125,20 @@ void MacAudioDevice::start()
                 onAudioErrorFunction(*this, "Could not set device sample rate", onAudioErrorState);
             }
             return;
+        }
+        
+        // Attempt to set the IO frame size to the lowest possible from the default 512. This mainly
+        // reduces dropouts on marginal hardware.
+        UInt32 minFrameSize = 0;
+        UInt32 maxFrameSize = 0;
+        GetIOBufferFrameSizeRange(coreAudioId_, &minFrameSize, &maxFrameSize);
+        if (minFrameSize != 0 && maxFrameSize != 0)
+        {
+            log_info("Frame sizes of %d to %d are supported for audio device ID %d", minFrameSize_, maxFrameSize_, coreAudioId_);
+            if (SetCurrentIOBufferFrameSize(coreAudioId_, minFrameSize) != noErr)
+            {
+                log_warn("Could not set IO frame size to %d for audio device ID %d", minFrameSize, coreAudioId_);
+            }
         }
         
         // Initialize audio engine.
