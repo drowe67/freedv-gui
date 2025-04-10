@@ -322,7 +322,7 @@ int MacAudioDevice::getLatencyInMicroseconds()
         // Total latency is based on the formula:
         //     kAudioDevicePropertyLatency + kAudioDevicePropertySafetyOffset + 
         //     kAudioDevicePropertyBufferFrameSize + kAudioStreamPropertyLatency.
-        // This is in terms of the number of samples. Divide by sample rate to get number of seconds.
+        // This is in terms of the number of samples. Divide by sample rate and number of channels to get number of seconds.
         // More info:
         //     https://stackoverflow.com/questions/65600996/avaudioengine-reconcile-sync-input-output-timestamps-on-macos-ios
         //     https://forum.juce.com/t/macos-round-trip-latency/45278
@@ -401,7 +401,7 @@ int MacAudioDevice::getLatencyInMicroseconds()
         
         auto ioLatency = streamLatency + deviceLatencyFrames + deviceSafetyOffset;
         auto frameSize = bufferFrameSize;
-        prom->set_value(1000000 * (ioLatency + frameSize) / sampleRate_);
+        prom->set_value((1000000 * (ioLatency + frameSize) / numChannels_) / sampleRate_);
     });
     return fut.get();
 }
