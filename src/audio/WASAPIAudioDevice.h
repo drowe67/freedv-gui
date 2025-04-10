@@ -27,6 +27,7 @@
 #include <vector>
 #include <functional>
 #include <chrono>
+#include <thread>
 #include <initguid.h>
 #include <mmdeviceapi.h>
 #include <audioclient.h>
@@ -66,6 +67,9 @@ private:
     std::chrono::time_point<std::chrono::steady_clock> lastRenderCaptureTime_;
     HANDLE lowLatencyTask_;
     int latencyFrames_;
+    std::thread renderCaptureThread_;
+    HANDLE renderCaptureEvent_;
+    bool isRenderCaptureRunning_;
 
     void renderAudio_();
     void captureAudio_();
