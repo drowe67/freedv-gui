@@ -63,6 +63,8 @@ public:
     static int RigNameToIndex(std::string rigName);
     static std::string RigIndexToName(unsigned int rigIndex);
     static int GetNumberSupportedRadios();
+    
+    virtual int getRigResponseTimeMicroseconds() override;
 
 private:
     using RigList = std::vector<const struct rig_caps *>;
@@ -84,6 +86,8 @@ private:
     uint64_t origFreq_;
     rmode_t origMode_;
     bool freqOnly_;
+    
+    int rigResponseTime_;
     
     vfo_t getCurrentVfo_();
     void setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyHz);

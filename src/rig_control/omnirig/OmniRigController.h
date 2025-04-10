@@ -41,6 +41,8 @@ public:
     virtual void setFrequency(uint64_t frequency) override;
     virtual void setMode(IRigFrequencyController::Mode mode) override;
     virtual void requestCurrentFrequencyMode() override;
+    
+    virtual int getRigResponseTimeMicroseconds() override;
 
 private:
     int rigId_; // can be either 0 or 1 (Rig 1 or 2)
@@ -53,6 +55,7 @@ private:
     bool restoreOnDisconnect_;
     long writableParams_; // used to help determine VFO
     bool freqOnly_;
+    int rigResponseTime_;
 
     void connectImpl_();
     void disconnectImpl_();

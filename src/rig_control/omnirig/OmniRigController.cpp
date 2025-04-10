@@ -43,6 +43,7 @@ OmniRigController::OmniRigController(int rigId, bool restoreOnDisconnect, bool f
     , restoreOnDisconnect_(restoreOnDisconnect)
     , writableParams_(0)
     , freqOnly_(freqOnly)
+    , rigResponseTime_(0)
 {
     // empty
 }
@@ -180,7 +181,12 @@ void OmniRigController::pttImpl_(bool state)
 {
     if (rig_ != nullptr)
     {
+        auto oldTime = std::chrono::steady_clock::now();
         rig_->put_Tx(state ? PM_TX : PM_RX);
+        auto newTime = std::chrono::steady_clock::now();
+        auto totalTimeMicroseconds = (int)std::chrono::duration_cast<std::chrono::microseconds>(newTime - oldTime).count();
+        rigResponseTime_ = std::max(rigResponseTime_, totalTimeMicroseconds);
+        
         onPttChange(this, state);
     }
 }

@@ -891,6 +891,18 @@ void MainFrame::togglePTT(void) {
         // Wait for a minimum amount of time before stopping TX to ensure that
         // remaining audio gets piped to the radio from the operating system.
         auto latency = txOutSoundDevice->getLatencyInMicroseconds();
+        
+        // Also take into account any latency between the computer and radio.
+        // The only way to do this is by tracking how long it takes to respond
+        // to PTT requests (and that's not necessarily great, either). Normally
+        // this component should be a small part of the overall latency, but it
+        // could be larger when dealing with SDR radios that are on the network.
+        auto pttController = wxGetApp().rigPttController;
+        if (pttController)
+        {
+            latency += pttController->getRigResponseTimeMicroseconds();
+        }
+        
         log_info("Pausing for a minimum of %d microseconds before TX->RX to allow remaining audio to go out", latency);
         before = highResClock.now();
         while(true)
