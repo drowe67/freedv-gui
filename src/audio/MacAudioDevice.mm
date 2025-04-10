@@ -135,7 +135,7 @@ void MacAudioDevice::start()
         if (minFrameSize != 0 && maxFrameSize != 0)
         {
             log_info("Frame sizes of %d to %d are supported for audio device ID %d", minFrameSize, maxFrameSize, coreAudioId_);
-            auto desiredFrameSize = std::max(minFrameSize, (UInt32)128);
+            auto desiredFrameSize = std::max(minFrameSize, (UInt32)256);
             if (SetCurrentIOBufferFrameSize(coreAudioId_, desiredFrameSize) != noErr)
             {
                 log_warn("Could not set IO frame size to %d for audio device ID %d", desiredFrameSize, coreAudioId_);
