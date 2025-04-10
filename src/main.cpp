@@ -1707,7 +1707,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (snr_limited < -5.0) snr_limited = -5.0;
         if (snr_limited > 40.0) snr_limited = 40.0;
         char snr[15];
-        snprintf(snr, 15, "%4.0f dB", g_snr);
+        snprintf(snr, 15, "%d dB", (int)(g_snr + 0.5));
 
         if (freedvInterface.getSync())
         {
