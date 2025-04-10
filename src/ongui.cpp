@@ -897,10 +897,16 @@ void MainFrame::togglePTT(void) {
         // to PTT requests (and that's not necessarily great, either). Normally
         // this component should be a small part of the overall latency, but it
         // could be larger when dealing with SDR radios that are on the network.
+        //
+        // Note: This may not provide accurate results until after going from 
+        // TX->RX the first time, but one missed report during a session shouldn't 
+        // be a huge deal.
         auto pttController = wxGetApp().rigPttController;
         if (pttController)
         {
-            latency += pttController->getRigResponseTimeMicroseconds();
+            // We only need to worry about the time getting to the radio,
+            // not the time to get from the radio to us.
+            latency += pttController->getRigResponseTimeMicroseconds() / 2;
         }
         
         log_info("Pausing for a minimum of %d microseconds before TX->RX to allow remaining audio to go out", latency);
