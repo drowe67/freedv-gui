@@ -102,6 +102,11 @@ void OmniRigController::requestCurrentFrequencyMode()
     enqueue_(std::bind(&OmniRigController::requestCurrentFrequencyModeImpl_, this));
 }
 
+int OmniRigController::getRigResponseTimeMicroseconds()
+{
+    return rigResponseTime_;
+}
+
 void OmniRigController::connectImpl_()
 {
     // Ensure that COM is properly initialized.
