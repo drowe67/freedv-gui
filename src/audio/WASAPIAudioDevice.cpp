@@ -29,7 +29,7 @@
 #include <avrt.h>
 #include "../util/logging/ulog.h"
 
-#define BLOCK_TIME_NS (0) /* Allow Windows to assign ideal size/latency. */
+#define BLOCK_TIME_NS (40000000)
 
 // Nanoseconds per REFERENCE_TIME unit
 #define NS_PER_REFTIME (100)
@@ -167,7 +167,6 @@ void WASAPIAudioDevice::start()
             prom->set_value();
             return;
         }
-        bufferFrameCount_ /= numChannels_;
         log_info("Allocated %d frames for audio buffers", bufferFrameCount_);
         
         // Get latency

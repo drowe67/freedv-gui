@@ -131,11 +131,12 @@ void MacAudioDevice::start()
         // reduces dropouts on marginal hardware.
         UInt32 minFrameSize = 0;
         UInt32 maxFrameSize = 0;
+        UInt32 desiredFrameSize = 512;
         GetIOBufferFrameSizeRange(coreAudioId_, &minFrameSize, &maxFrameSize);
         if (minFrameSize != 0 && maxFrameSize != 0)
         {
             log_info("Frame sizes of %d to %d are supported for audio device ID %d", minFrameSize, maxFrameSize, coreAudioId_);
-            auto desiredFrameSize = std::max(minFrameSize, (UInt32)256);
+            desiredFrameSize = std::min(maxFrameSize, (UInt32)2048);
             if (SetCurrentIOBufferFrameSize(coreAudioId_, desiredFrameSize) != noErr)
             {
                 log_warn("Could not set IO frame size to %d for audio device ID %d", desiredFrameSize, coreAudioId_);
@@ -165,6 +166,24 @@ void MacAudioDevice::start()
             }
             [engine release];
             return;
+        }
+        
+        // If we were able to set the IO frame size above, also set kAudioUnitProperty_MaximumFramesPerSlice
+        // More info: https://developer.apple.com/library/archive/technotes/tn2321/_index.html
+        if (desiredFrameSize > 512)
+        {
+            error = AudioUnitSetProperty(
+                audioUnit, 
+                kAudioUnitProperty_MaximumFramesPerSlice,
+                kAudioUnitScope_Global, 
+                0, 
+                &desiredFrameSize, 
+                sizeof(desiredFrameSize));
+            if (error != noErr)
+            {
+                log_warn("Could not set max frames/slice to %d for audio device ID %d", desiredFrameSize, coreAudioId_);
+                SetCurrentIOBufferFrameSize(coreAudioId_, 512);
+            }
         }
         
         // Need to also get a mixer node so that the objects get
@@ -402,7 +421,7 @@ int MacAudioDevice::getLatencyInMicroseconds()
         
         auto ioLatency = streamLatency + deviceLatencyFrames + deviceSafetyOffset;
         auto frameSize = bufferFrameSize;
-        prom->set_value((1000000 * (ioLatency + frameSize) / numChannels_) / sampleRate_);
+        prom->set_value(1000000 * (ioLatency + frameSize) / sampleRate_);
     });
     return fut.get();
 }
