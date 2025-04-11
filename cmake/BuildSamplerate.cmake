@@ -8,8 +8,7 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/libsndfile/libsamplerate.git
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
-    GIT_TAG        0.2.2
-    PATCH_COMMAND  patch -Np1 < ${CMAKE_SOURCE_DIR}/cmake/samplerate-cmake.patch || true
+    GIT_TAG        master
 )
 
 FetchContent_GetProperties(samplerate)
