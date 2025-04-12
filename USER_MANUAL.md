@@ -902,9 +902,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * If provided by user, add config file to titlebar. (PR #738)
     * Minor adjustments to spectrum/waterfall tooltips. (PR #743)
 3. Build system:
-    * Allow overrriding the version tag when building. (PR #727)
+    * Allow overriding the version tag when building. (PR #727)
     * Update wxWidgets to 3.2.5. (PR #731)
-4. Miscallenous:
+4. Miscellaneous:
     * Add issue template for SW bugs. (PR #759)
 
 ## V1.9.9.2 June 2024

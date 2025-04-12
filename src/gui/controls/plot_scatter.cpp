@@ -247,7 +247,7 @@ void PlotScatter::add_new_samples_eye(float samples[], int n)
 
     assert(n <= PLOT_SCATTER_EYE_MAX_SAMPLES_ROW);
 
-    // eye traces are arrnaged in rows, shift memory of traces
+    // eye traces are arranged in rows, shift memory of traces
 
     for(i=0; i<SCATTER_EYE_MEM_ROWS-1; i++) {
         for(j=0; j<Ncol; j++) {
