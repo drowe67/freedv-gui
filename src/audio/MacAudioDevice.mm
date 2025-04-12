@@ -127,7 +127,7 @@ void MacAudioDevice::start()
             return;
         }
         
-        // Attempt to set the IO frame size to the lowest possible from the default. This hopefully 
+        // Attempt to set the IO frame size to an optimal value. This hopefully 
         // reduces dropouts on marginal hardware.
         UInt32 minFrameSize = 0;
         UInt32 maxFrameSize = 0;
@@ -136,7 +136,7 @@ void MacAudioDevice::start()
         if (minFrameSize != 0 && maxFrameSize != 0)
         {
             log_info("Frame sizes of %d to %d are supported for audio device ID %d", minFrameSize, maxFrameSize, coreAudioId_);
-            desiredFrameSize = std::min(maxFrameSize, (UInt32)2048);
+            desiredFrameSize = std::min(maxFrameSize, (UInt32)2048); // TBD: investigate why we need a significantly higher than default.
             if (SetCurrentIOBufferFrameSize(coreAudioId_, desiredFrameSize) != noErr)
             {
                 log_warn("Could not set IO frame size to %d for audio device ID %d", desiredFrameSize, coreAudioId_);
