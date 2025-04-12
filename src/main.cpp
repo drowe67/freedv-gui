@@ -397,6 +397,9 @@ void MainApp::UnitTest_()
             } 
         }
     }
+    
+    // Wait a second to make sure we're not doing any more processing
+    std::this_thread::sleep_for(1000ms);
  
     // Fire event to stop FreeDV
     log_info("Firing stop");
@@ -1704,7 +1707,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (snr_limited < -5.0) snr_limited = -5.0;
         if (snr_limited > 40.0) snr_limited = 40.0;
         char snr[15];
-        snprintf(snr, 15, "%4.0f dB", g_snr);
+        snprintf(snr, 15, "%d dB", (int)(g_snr + 0.5));
 
         if (freedvInterface.getSync())
         {
@@ -2883,12 +2886,19 @@ void MainFrame::stopRxStream()
 
 void MainFrame::destroy_fifos(void)
 {
-    codec2_fifo_destroy(g_rxUserdata->infifo1);
-    codec2_fifo_destroy(g_rxUserdata->outfifo1);
+    if (g_rxUserdata->infifo1) codec2_fifo_destroy(g_rxUserdata->infifo1);
+    if (g_rxUserdata->outfifo1) codec2_fifo_destroy(g_rxUserdata->outfifo1);
     if (g_rxUserdata->infifo2) codec2_fifo_destroy(g_rxUserdata->infifo2);
     if (g_rxUserdata->outfifo2) codec2_fifo_destroy(g_rxUserdata->outfifo2);
     codec2_fifo_destroy(g_rxUserdata->rxinfifo);
     codec2_fifo_destroy(g_rxUserdata->rxoutfifo);
+    
+    g_rxUserdata->infifo1 = nullptr;
+    g_rxUserdata->infifo2 = nullptr;
+    g_rxUserdata->outfifo1 = nullptr;
+    g_rxUserdata->outfifo2 = nullptr;
+    g_rxUserdata->rxinfifo = nullptr;
+    g_rxUserdata->rxoutfifo = nullptr;
 }
 
 //-------------------------------------------------------------------------
@@ -3114,20 +3124,27 @@ void MainFrame::startRxStream()
         // loop.
 
         int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
-        int soundCard1InFifoSizeSamples = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
-        int soundCard1OutFifoSizeSamples = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
-        g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
-        g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
+        int soundCard1InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate / 1000;
+        int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate / 1000;
 
         if (txInSoundDevice && txOutSoundDevice)
         {
             int soundCard2InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate / 1000;
             int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate / 1000;
-            g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
+            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
             g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
+            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
+            g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
         
             log_debug("fifoSize_ms:  %d infifo2: %d/outfilo2: %d",
                 wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
+        }
+        else
+        {
+            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
+            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
+            g_rxUserdata->infifo2 = nullptr;
+            g_rxUserdata->outfifo2 = nullptr;
         }
 
         log_debug("fifoSize_ms: %d infifo1: %d/outfilo1 %d",
@@ -3312,13 +3329,15 @@ void MainFrame::startRxStream()
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
                 short  outdata[size];
+                
+                int available = std::min(codec2_fifo_used(cbData->outfifo1), (int)size);
 
-                int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
+                int result = codec2_fifo_read(cbData->outfifo1, outdata, available);
                 if (result == 0) 
                 {
                     // write signal to all channels to start. This is so that
                     // the compiler can optimize for the most common case.
-                    for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels()) 
+                    for(size_t i = 0; i < available; i++, audioData += dev.getNumChannels()) 
                     {
                         for (auto j = 0; j < dev.getNumChannels(); j++)
                         {
@@ -3336,6 +3355,11 @@ void MainFrame::startRxStream()
                             cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
                             audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
                         }
+                    }
+                    
+                    if (size != available)
+                    {
+                        g_outfifo1_empty++;
                     }
                 }
                 else 

@@ -44,6 +44,9 @@ WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDi
     , bufferFrameCount_(0)
     , initialized_(false)
     , lowLatencyTask_(nullptr)
+    , latencyFrames_(0)
+    , renderCaptureEvent_(nullptr)
+    , isRenderCaptureRunning_(false)
 {
     // empty
 }
@@ -99,7 +102,7 @@ void WASAPIAudioDevice::start()
             // Initialize the audio client with the above format
             HRESULT hr = client_->Initialize(
                 AUDCLNT_SHAREMODE_SHARED,
-                0,
+                AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
                 BLOCK_TIME_NS / NS_PER_REFTIME, // REFERENCE_TIME is in 100ns units
                 0,
                 &streamFormat,
@@ -119,8 +122,39 @@ void WASAPIAudioDevice::start()
             initialized_ = true;
         }
 
+        // Create render/capture event
+        renderCaptureEvent_ = CreateEvent(nullptr, false, false, nullptr);
+        if (renderCaptureEvent_ == nullptr)
+        {
+            std::stringstream ss;
+            ss << "Could not create event (hr = " << GetLastError() << ")";
+            log_error(ss.str().c_str());
+            if (onAudioErrorFunction)
+            {
+                onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
+            }
+            prom->set_value();
+            return;
+        }
+
+        // Assign render/capture event
+        HRESULT hr = client_->SetEventHandle(renderCaptureEvent_);
+        if (FAILED(hr))
+        {
+            std::stringstream ss;
+            ss << "Could not assign event handle (hr = " << hr << ")";
+            log_error(ss.str().c_str());
+            if (onAudioErrorFunction)
+            {
+                onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
+            }
+            CloseHandle(renderCaptureEvent_);
+            prom->set_value();
+            return;
+        }
+
         // Get actual allocated buffer size
-        HRESULT hr = client_->GetBufferSize(&bufferFrameCount_);
+        hr = client_->GetBufferSize(&bufferFrameCount_);
         if (FAILED(hr))
         {
             std::stringstream ss;
@@ -132,6 +166,23 @@ void WASAPIAudioDevice::start()
             }
             prom->set_value();
             return;
+        }
+        log_info("Allocated %d frames for audio buffers", bufferFrameCount_);
+        
+        // Get latency
+        latencyFrames_ = bufferFrameCount_;
+                
+        REFERENCE_TIME latency = 0;
+        hr = client_->GetStreamLatency(&latency);
+        if (FAILED(hr))
+        {
+            std::stringstream ss;
+            ss << "Could not get latency (hr = " << hr << ")";
+            log_warn(ss.str().c_str());
+        }
+        else
+        {
+            latencyFrames_ += sampleRate_ * ((double)(NS_PER_REFTIME * latency) / 1e9);
         }
 
         // Get capture/render client
@@ -201,26 +252,6 @@ void WASAPIAudioDevice::start()
                 prom->set_value();
                 return;
             }
-
-            // Queue render handler
-            enqueue_([&]() {
-                renderAudio_();
-            });
-        }
-        else
-        {
-            // Queue capture handler
-            enqueue_([&]() {
-                captureAudio_();
-            });
-        }
-
-        // Temporarily raise priority of task
-        DWORD taskIndex = 0;
-        lowLatencyTask_ = AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
-        if (lowLatencyTask_ == nullptr)
-        {
-            log_warn("Could not increase thread priority");
         }
 
         // Start render/capture
@@ -244,17 +275,53 @@ void WASAPIAudioDevice::start()
                 captureClient_->Release();
                 captureClient_ = nullptr;
             }
+        }
+
+        // Start render/capture thread.
+        isRenderCaptureRunning_ = true;
+        renderCaptureThread_ = std::thread([&]() {
+            log_info("Starting render/capture thread");
+
+            HRESULT res = CoInitializeEx(nullptr, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
+            if (FAILED(res))
+            {
+                log_warn("Could not initialize COM (res = %d)", res);
+            }
+
+            // Temporarily raise priority of task
+            DWORD taskIndex = 0;
+            lowLatencyTask_ = AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
+            if (lowLatencyTask_ == nullptr)
+            {
+                log_warn("Could not increase thread priority");
+            }
+
+            while (isRenderCaptureRunning_ && WaitForSingleObject(renderCaptureEvent_, 100) == WAIT_OBJECT_0)
+            {
+                if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
+                {
+                    renderAudio_();
+                }
+                else
+                {
+                    captureAudio_();
+                }
+            }
+
+            log_info("Exiting render/capture thread");
+
             if (lowLatencyTask_ != nullptr)
             {
                 AvRevertMmThreadCharacteristics(lowLatencyTask_);
                 lowLatencyTask_ = nullptr;
             }
-        }
 
-        lastRenderCaptureTime_ = std::chrono::steady_clock::now();
- 
+            CoUninitialize();
+        });
+
         prom->set_value();
     });
+
     fut.wait();
 }
 
@@ -265,6 +332,12 @@ void WASAPIAudioDevice::stop()
     auto prom = std::make_shared<std::promise<void> >(); 
     auto fut = prom->get_future();
     enqueue_([&]() {
+        isRenderCaptureRunning_ = false;
+        if (renderCaptureThread_.joinable())
+        {
+            renderCaptureThread_.join();
+        }
+        
         if (renderClient_ != nullptr || captureClient_ != nullptr)
         {
             HRESULT hr = client_->Stop();
@@ -278,11 +351,6 @@ void WASAPIAudioDevice::stop()
                     onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
                 }
             }
-
-            if (lowLatencyTask_ != nullptr)
-            {
-                AvRevertMmThreadCharacteristics(lowLatencyTask_);
-            }
         }
 
         if (renderClient_ != nullptr)
@@ -295,7 +363,7 @@ void WASAPIAudioDevice::stop()
             captureClient_->Release();
             captureClient_ = nullptr;
         }
-        
+
         prom->set_value();
     });
     fut.wait();
@@ -306,6 +374,13 @@ bool WASAPIAudioDevice::isRunning()
     return (renderClient_ != nullptr) || (captureClient_ != nullptr);
 }
 
+int WASAPIAudioDevice::getLatencyInMicroseconds()
+{
+    // Note: latencyFrames_ isn't expected to change, so we don't need to 
+    // wrap this call in an enqueue_() like with the other public methods.
+    return 1000000 * latencyFrames_ / sampleRate_;
+}
+
 void WASAPIAudioDevice::renderAudio_()
 {
     // If client is no longer available, abort
@@ -313,10 +388,6 @@ void WASAPIAudioDevice::renderAudio_()
     {
         return;
     }
-
-    // Sleep 1/2 of the buffer duration
-    int sleepDurationInMsec = 1000 * (double)bufferFrameCount_ / sampleRate_ / 2;
-    std::this_thread::sleep_until(lastRenderCaptureTime_ + std::chrono::milliseconds(sleepDurationInMsec));
 
     // Get available buffer space
     UINT32 padding = 0;
@@ -330,7 +401,7 @@ void WASAPIAudioDevice::renderAudio_()
         std::stringstream ss;
         ss << "Could not get current padding (hr = " << hr << ")";
         log_error(ss.str().c_str());
-        goto render_again;
+        return;
     }
 
     framesAvailable = bufferFrameCount_ - padding;
@@ -342,7 +413,7 @@ void WASAPIAudioDevice::renderAudio_()
         std::stringstream ss;
         ss << "Could not get render buffer (hr = " << hr << ")";
         log_error(ss.str().c_str());
-        goto render_again;
+        return;
     }
 
     // Grab audio data from higher level code
@@ -361,15 +432,8 @@ void WASAPIAudioDevice::renderAudio_()
         std::stringstream ss;
         ss << "Could not release render buffer (hr = " << hr << ")";
         log_error(ss.str().c_str());
-        goto render_again;
+        return;
     }
-
-render_again:
-    enqueue_([&]() {
-        renderAudio_();
-    });
-
-    lastRenderCaptureTime_ = std::chrono::steady_clock::now();
 }
 
 void WASAPIAudioDevice::captureAudio_()
@@ -379,10 +443,6 @@ void WASAPIAudioDevice::captureAudio_()
     {
         return;
     }
-
-    // Sleep 1/2 of the buffer duration
-    int sleepDurationInMsec = 1000 * (double)bufferFrameCount_ / sampleRate_ / 2;
-    std::this_thread::sleep_until(lastRenderCaptureTime_ + std::chrono::milliseconds(sleepDurationInMsec));
 
     // Get packet length
     UINT32 packetLength = 0;
@@ -394,7 +454,7 @@ void WASAPIAudioDevice::captureAudio_()
         std::stringstream ss;
         ss << "Could not get packet length (hr = " << hr << ")";
         log_error(ss.str().c_str());
-        goto capture_again;
+        return;
     }
 
     while(packetLength != 0)
@@ -416,7 +476,7 @@ void WASAPIAudioDevice::captureAudio_()
             std::stringstream ss;
             ss << "Could not get capture buffer (hr = " << hr << ")";
             log_error(ss.str().c_str());
-            goto capture_again;
+            return;
         }
 
         // Fill buffer with silence if told to do so.
@@ -440,7 +500,7 @@ void WASAPIAudioDevice::captureAudio_()
             std::stringstream ss;
             ss << "Could not release capture buffer (hr = " << hr << ")";
             log_error(ss.str().c_str());
-            goto capture_again;
+            return;
         }
 
         hr = captureClient_->GetNextPacketSize(&packetLength);
@@ -451,14 +511,7 @@ void WASAPIAudioDevice::captureAudio_()
             std::stringstream ss;
             ss << "Could not get packet length (hr = " << hr << ")";
             log_error(ss.str().c_str());
-            goto capture_again;
+            return;
         }
     }
-
-capture_again:
-    enqueue_([&]() {
-        captureAudio_();
-    });
-
-    lastRenderCaptureTime_ = std::chrono::steady_clock::now();
 }

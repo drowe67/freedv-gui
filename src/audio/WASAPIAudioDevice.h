@@ -27,6 +27,7 @@
 #include <vector>
 #include <functional>
 #include <chrono>
+#include <thread>
 #include <initguid.h>
 #include <mmdeviceapi.h>
 #include <audioclient.h>
@@ -47,6 +48,8 @@ public:
 
     virtual bool isRunning() override;
 
+    virtual int getLatencyInMicroseconds() override;
+    
 protected:
     friend class WASAPIAudioEngine;
 
@@ -61,8 +64,11 @@ private:
     int numChannels_;
     UINT32 bufferFrameCount_;
     bool initialized_;
-    std::chrono::time_point<std::chrono::steady_clock> lastRenderCaptureTime_;
     HANDLE lowLatencyTask_;
+    int latencyFrames_;
+    std::thread renderCaptureThread_;
+    HANDLE renderCaptureEvent_;
+    bool isRenderCaptureRunning_;
 
     void renderAudio_();
     void captureAudio_();

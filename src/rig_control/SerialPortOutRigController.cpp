@@ -28,6 +28,7 @@ SerialPortOutRigController::SerialPortOutRigController(std::string serialPort, b
     , rtsPos_(RTSPos)
     , useDTR_(useDTR)
     , dtrPos_(DTRPos)
+    , rigResponseTime_(0)
 {
     // Ensure that PTT is disabled on successful connect.
     onRigConnected += [&](IRigController*) {
@@ -46,6 +47,11 @@ void SerialPortOutRigController::ptt(bool state)
     enqueue_(std::bind(&SerialPortOutRigController::pttImpl_, this, state));
 }
 
+int SerialPortOutRigController::getRigResponseTimeMicroseconds()
+{
+    return rigResponseTime_;
+}
+
 void SerialPortOutRigController::pttImpl_(bool state)
 {
        /*  Truth table:
@@ -62,6 +68,7 @@ void SerialPortOutRigController::pttImpl_(bool state)
 
     if (serialPortHandle_ != COM_HANDLE_INVALID) 
     {
+        auto oldTime = std::chrono::steady_clock::now();
         if (useRTS_) {
             if (state == rtsPos_)
                 raiseRTS_();
@@ -74,6 +81,9 @@ void SerialPortOutRigController::pttImpl_(bool state)
             else
                 lowerDTR_();
         }
+        auto newTime = std::chrono::steady_clock::now();
+        auto totalTimeMicroseconds = (int)std::chrono::duration_cast<std::chrono::microseconds>(newTime - oldTime).count();
+        rigResponseTime_ = std::max(rigResponseTime_, totalTimeMicroseconds);
  
         onPttChange(this, state);
     }

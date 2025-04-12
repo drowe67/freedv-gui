@@ -224,7 +224,7 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         
         // Update voice keyer file if different
         wxFileName fullVKPath(wxGetApp().appConfiguration.voiceKeyerWaveFilePath, wxGetApp().appConfiguration.voiceKeyerWaveFile);
-        if (vkFileName_ != fullVKPath.GetFullPath().mb_str())
+        if (wxString::FromUTF8(vkFileName_) != fullVKPath.GetFullPath())
         {
             // Clear filename to force reselection next time VK is triggered.
             vkFileName_ = "";
@@ -888,6 +888,43 @@ void MainFrame::togglePTT(void) {
             wxGetApp().Yield(true);
         }
         
+        // Wait for a minimum amount of time before stopping TX to ensure that
+        // remaining audio gets piped to the radio from the operating system.
+        auto latency = txOutSoundDevice->getLatencyInMicroseconds();
+        
+        // Also take into account any latency between the computer and radio.
+        // The only way to do this is by tracking how long it takes to respond
+        // to PTT requests (and that's not necessarily great, either). Normally
+        // this component should be a small part of the overall latency, but it
+        // could be larger when dealing with SDR radios that are on the network.
+        //
+        // Note: This may not provide accurate results until after going from 
+        // TX->RX the first time, but one missed report during a session shouldn't 
+        // be a huge deal.
+        auto pttController = wxGetApp().rigPttController;
+        if (pttController)
+        {
+            // We only need to worry about the time getting to the radio,
+            // not the time to get from the radio to us.
+            latency += pttController->getRigResponseTimeMicroseconds() / 2;
+        }
+        
+        log_info("Pausing for a minimum of %d microseconds before TX->RX to allow remaining audio to go out", latency);
+        before = highResClock.now();
+        while(true)
+        {
+            auto diff = highResClock.now() - before;
+            if (diff >= std::chrono::microseconds(latency))
+            {
+                break;
+            }
+
+            wxThread::Sleep(1);
+
+            // Yield() used to avoid lack of UI responsiveness during delay.
+            wxGetApp().Yield(true);
+        }
+                
         // Wait an additional configured timeframe before actually clearing PTT (below)
         if (wxGetApp().appConfiguration.txRxDelayMilliseconds > 0)
         {

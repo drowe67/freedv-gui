@@ -26,6 +26,44 @@
 #include <future>
 #import <AVFoundation/AVFoundation.h>
 
+static OSStatus GetIOBufferFrameSizeRange(AudioObjectID inDeviceID,
+                                          UInt32* outMinimum,
+                                          UInt32* outMaximum)
+{
+    AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyBufferFrameSizeRange,
+                                              kAudioObjectPropertyScopeGlobal,
+                                              kAudioObjectPropertyElementMaster };
+
+    AudioValueRange theRange = { 0, 0 };
+    UInt32 theDataSize = sizeof(AudioValueRange);
+    OSStatus theError = AudioObjectGetPropertyData(inDeviceID,
+                                                   &theAddress,
+                                                   0,
+                                                   NULL,
+                                                   &theDataSize,
+                                                   &theRange);
+    if(theError == 0)
+    {
+        *outMinimum = theRange.mMinimum;
+        *outMaximum = theRange.mMaximum;
+    }
+    return theError;
+}
+
+static OSStatus SetCurrentIOBufferFrameSize(AudioObjectID inDeviceID,
+                                            UInt32 inIOBufferFrameSize)
+{
+    AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyBufferFrameSize,
+                                              kAudioObjectPropertyScopeGlobal,
+                                              kAudioObjectPropertyElementMaster };
+
+    return AudioObjectSetPropertyData(inDeviceID,
+                                      &theAddress,
+                                      0,
+                                      NULL,
+                                      sizeof(UInt32), &inIOBufferFrameSize);
+}
+
 MacAudioDevice::MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate)
     : coreAudioId_(coreAudioId)
     , direction_(direction)
@@ -89,6 +127,22 @@ void MacAudioDevice::start()
             return;
         }
         
+        // Attempt to set the IO frame size to an optimal value. This hopefully 
+        // reduces dropouts on marginal hardware.
+        UInt32 minFrameSize = 0;
+        UInt32 maxFrameSize = 0;
+        UInt32 desiredFrameSize = 512;
+        GetIOBufferFrameSizeRange(coreAudioId_, &minFrameSize, &maxFrameSize);
+        if (minFrameSize != 0 && maxFrameSize != 0)
+        {
+            log_info("Frame sizes of %d to %d are supported for audio device ID %d", minFrameSize, maxFrameSize, coreAudioId_);
+            desiredFrameSize = std::min(maxFrameSize, (UInt32)2048); // TBD: investigate why we need a significantly higher than default.
+            if (SetCurrentIOBufferFrameSize(coreAudioId_, desiredFrameSize) != noErr)
+            {
+                log_warn("Could not set IO frame size to %d for audio device ID %d", desiredFrameSize, coreAudioId_);
+            }
+        }
+        
         // Initialize audio engine.
         AVAudioEngine* engine = [[AVAudioEngine alloc] init];
     
@@ -112,6 +166,24 @@ void MacAudioDevice::start()
             }
             [engine release];
             return;
+        }
+        
+        // If we were able to set the IO frame size above, also set kAudioUnitProperty_MaximumFramesPerSlice
+        // More info: https://developer.apple.com/library/archive/technotes/tn2321/_index.html
+        if (desiredFrameSize > 512)
+        {
+            error = AudioUnitSetProperty(
+                audioUnit, 
+                kAudioUnitProperty_MaximumFramesPerSlice,
+                kAudioUnitScope_Global, 
+                0, 
+                &desiredFrameSize, 
+                sizeof(desiredFrameSize));
+            if (error != noErr)
+            {
+                log_warn("Could not set max frames/slice to %d for audio device ID %d", desiredFrameSize, coreAudioId_);
+                SetCurrentIOBufferFrameSize(coreAudioId_, 512);
+            }
         }
         
         // Need to also get a mixer node so that the objects get
@@ -260,4 +332,96 @@ void MacAudioDevice::stop()
 bool MacAudioDevice::isRunning()
 {
     return engine_ != nil;
+}
+
+int MacAudioDevice::getLatencyInMicroseconds()
+{
+    std::shared_ptr<std::promise<int>> prom = std::make_shared<std::promise<int> >();
+    auto fut = prom->get_future();
+    enqueue_([&, prom]() {        
+        // Total latency is based on the formula:
+        //     kAudioDevicePropertyLatency + kAudioDevicePropertySafetyOffset + 
+        //     kAudioDevicePropertyBufferFrameSize + kAudioStreamPropertyLatency.
+        // This is in terms of the number of samples. Divide by sample rate and number of channels to get number of seconds.
+        // More info:
+        //     https://stackoverflow.com/questions/65600996/avaudioengine-reconcile-sync-input-output-timestamps-on-macos-ios
+        //     https://forum.juce.com/t/macos-round-trip-latency/45278
+        auto scope = 
+            (direction_ == IAudioEngine::AUDIO_ENGINE_IN) ? 
+            kAudioDevicePropertyScopeInput :
+            kAudioDevicePropertyScopeOutput;
+            
+        // Get audio device latency
+        AudioObjectPropertyAddress propertyAddress = {
+              kAudioDevicePropertyLatency, 
+              scope,
+              kAudioObjectPropertyElementMaster};
+        UInt32 deviceLatencyFrames = 0;
+        UInt32 size = sizeof(deviceLatencyFrames);
+        OSStatus result = AudioObjectGetPropertyData(
+                  coreAudioId_, 
+                  &propertyAddress, 
+                  0,
+                  nullptr, 
+                  &size, 
+                  &deviceLatencyFrames); // assume 0 if we can't retrieve for some reason
+         
+        UInt32 deviceSafetyOffset = 0;
+        propertyAddress.mSelector = kAudioDevicePropertySafetyOffset;
+        result = AudioObjectGetPropertyData(
+                  coreAudioId_, 
+                  &propertyAddress, 
+                  0,
+                  nullptr, 
+                  &size, 
+                  &deviceSafetyOffset);
+                  
+        UInt32 bufferFrameSize = 0;
+        propertyAddress.mSelector = kAudioDevicePropertyBufferFrameSize;
+        result = AudioObjectGetPropertyData(
+                  coreAudioId_, 
+                  &propertyAddress, 
+                  0,
+                  nullptr, 
+                  &size, 
+                  &bufferFrameSize);
+    
+        propertyAddress.mSelector = kAudioDevicePropertyStreams;
+        size = 0;
+        result = AudioObjectGetPropertyDataSize(
+                  coreAudioId_, 
+                  &propertyAddress, 
+                  0,
+                  nullptr, 
+                  &size);
+        UInt32 streamLatency = 0;
+        if (result == noErr)
+        {
+            AudioStreamID streams[size / sizeof(AudioStreamID)];
+            result = AudioObjectGetPropertyData(
+                      coreAudioId_, 
+                      &propertyAddress, 
+                      0,
+                      nullptr, 
+                      &size, 
+                      &streams);
+            if (result == noErr)
+            {
+                propertyAddress.mSelector = kAudioStreamPropertyLatency;
+                size = sizeof(streamLatency);
+                result = AudioObjectGetPropertyData(
+                          streams[0], 
+                          &propertyAddress, 
+                          0,
+                          nullptr, 
+                          &size, 
+                          &streamLatency);
+            }
+        }
+        
+        auto ioLatency = streamLatency + deviceLatencyFrames + deviceSafetyOffset;
+        auto frameSize = bufferFrameSize;
+        prom->set_value(1000000 * (ioLatency + frameSize) / sampleRate_);
+    });
+    return fut.get();
 }

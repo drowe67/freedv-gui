@@ -44,6 +44,8 @@ public:
 
     virtual bool isRunning() override;
     
+    virtual int getLatencyInMicroseconds() override;
+    
 protected:
     // PulseAudioDevice cannot be created directly, only via PulseAudioEngine.
     friend class PulseAudioEngine;
