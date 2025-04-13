@@ -192,22 +192,6 @@ void MacAudioDevice::start()
             (direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ?
             [engine mainMixerNode] :
             nil;
-            
-        // Create sample rate converter
-        AVAudioFormat* nativeFormat = nil;    
-        if (direction_ == IAudioEngine::AUDIO_ENGINE_IN)
-        {
-            nativeFormat = [[engine inputNode] outputFormatForBus:0];
-        }
-        else
-        {
-            // Audio nodes only accept non-interleaved float samples for some reason, but can handle sample
-            // rate conversions no problem.
-            nativeFormat = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32
-                                   sampleRate:sampleRate_
-                                   channels:numChannels_
-                                   interleaved:NO];
-        }
     
         // Create nodes and links
         AVAudioPlayerNode *player = nil;
@@ -240,7 +224,7 @@ void MacAudioDevice::start()
             
             AVAudioSinkNode* sinkNode = [[AVAudioSinkNode alloc] initWithReceiverBlock:block];
             [engine attachNode:sinkNode];    
-            [engine connect:[engine inputNode] to:sinkNode format:nativeFormat]; 
+            [engine connect:[engine inputNode] to:sinkNode format:nil]; 
         }
         else
         {
@@ -266,10 +250,17 @@ void MacAudioDevice::start()
                 
                 return OSStatus(noErr);
             };
+
+            // Audio nodes only accept non-interleaved float samples for some reason, but can handle sample
+            // rate conversions no problem.
+            AVAudioFormat* nativeFormat = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32
+                                   sampleRate:sampleRate_
+                                   channels:numChannels_
+                                   interleaved:NO];
             
             AVAudioSourceNode* sourceNode = [[AVAudioSourceNode alloc] initWithFormat:nativeFormat renderBlock:block];
             [engine attachNode:sourceNode];
-            [engine connect:sourceNode to:mixer format:nativeFormat];
+            [engine connect:sourceNode to:mixer format:nil];
         }
     
         log_info("Start engine for device %d", coreAudioId_);
