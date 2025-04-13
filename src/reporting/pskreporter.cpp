@@ -59,7 +59,7 @@
 #define PSK_REPORTER_PORT "4739"
 #endif // PSK_REPORTER_TEST
 
-extern int g_verbose;
+#include "../util/logging/ulog.h"
 
 // RX record:
 /* For receiverCallsign, receiverLocator, decodingSoftware use */
@@ -138,6 +138,17 @@ PskReporter::PskReporter(std::string callsign, std::string gridSquare, std::stri
 {
     srand(time(0));
     randomIdentifier_ = rand();
+
+#if defined(WIN32)
+    // Initialize Winsock in case it hasn't already been done.
+    WSADATA wsaData;
+    int result = 0;
+    result = WSAStartup(MAKEWORD(2,2), &wsaData);
+    if (result != 0)
+    {
+        log_warn("Winsock could not be initialized: %d", result);
+    }
+#endif // defined(WIN32)
 }
 
 PskReporter::~PskReporter()
@@ -146,6 +157,10 @@ PskReporter::~PskReporter()
     {
         reportCommon_();
     }
+
+#if defined(WIN32)
+    WSACleanup();
+#endif // defined(WIN32)
 }
 
 void PskReporter::addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, char snr)
@@ -311,19 +326,19 @@ bool PskReporter::reportCommon_()
     struct addrinfo* res = NULL;
     int err = getaddrinfo(PSK_REPORTER_HOSTNAME, PSK_REPORTER_PORT, &hints, &res);
     if (err != 0) {
-        if (g_verbose) fprintf(stderr, "cannot resolve %s (err=%d)", PSK_REPORTER_HOSTNAME, err);
+        log_debug("cannot resolve %s (err=%d)", PSK_REPORTER_HOSTNAME, err);
         return false;
     }
 
     int fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if(fd < 0){
-        if (g_verbose) fprintf(stderr, "cannot open PSK Reporter socket (err=%d)\n", errno);
+        log_debug("cannot open PSK Reporter socket (err=%d)", errno);
         return false;
     }
 
     if (sendto(fd, packet, dgSize, 0, res->ai_addr, res->ai_addrlen) < 0){
         delete[] packet;
-        if (g_verbose) fprintf(stderr, "cannot send message to PSK Reporter (err=%d)\n", errno);
+        log_debug("cannot send message to PSK Reporter (err=%d)", errno);
         close(fd);
         return false;
     }

@@ -55,6 +55,12 @@ std::shared_ptr<short> AudioPipeline::execute(std::shared_ptr<short> inputSample
     {
         if (resamplers_[index])
         {
+            if (resamplers_[index]->getOutputSampleRate() != pipelineSteps_[index]->getInputSampleRate())
+            {
+                resamplers_[index] = nullptr;
+                reloadResampler_(index);
+            }
+
             tempResult = resamplers_[index]->execute(tempInput, tempInputSamples, &tempOutputSamples);
             tempInput = tempResult;
             tempInputSamples = tempOutputSamples;

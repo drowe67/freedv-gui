@@ -20,6 +20,9 @@
 //
 //=========================================================================
 
+#include <chrono>
+using namespace std::chrono_literals;
+
 // This forces us to use freedv-gui's version rather than another one.
 // TBD -- may not be needed once we fully switch over to the audio pipeline.
 #include "../defines.h"
@@ -44,6 +47,8 @@
 #include "MuteStep.h"
 #include "LinkStep.h"
 
+#include "util/logging/ulog.h"
+
 #include <wx/stopwatch.h>
 
 // External globals
@@ -54,7 +59,6 @@ extern int g_nSoundCards;
 extern bool g_half_duplex;
 extern int g_tx;
 extern int g_dump_fifo_state;
-extern int g_verbose;
 extern bool endingTx;
 extern bool g_playFileToMicIn;
 extern int g_sfTxFs;
@@ -83,6 +87,7 @@ extern int g_channel_noise;
 extern float g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
 extern bool g_voice_keyer_tx;
+extern bool g_eoo_enqueued;
 
 #include <speex/speex_preprocess.h>
 
@@ -165,7 +170,7 @@ void TxRxThread::initializePipeline_()
                 if (g_loopPlayFileToMicIn)
                     sf_seek(g_sfPlayFile, 0, SEEK_SET);
                 else {
-                    printf("playFileFromRadio finished, issuing event!\n");
+                    log_info("playFileFromRadio finished, issuing event!");
                     g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
                 }
             }
@@ -310,7 +315,7 @@ void TxRxThread::initializePipeline_()
                 if (g_loopPlayFileFromRadio)
                     sf_seek(g_sfPlayFileFromRadio, 0, SEEK_SET);
                 else {
-                    printf("playFileFromRadio finished, issuing event!\n");
+                    log_info("playFileFromRadio finished, issuing event!");
                     g_parent->CallAfter(&MainFrame::StopPlaybackFileFromRadio);
                 }
             }
@@ -471,16 +476,23 @@ void* TxRxThread::Entry()
         pthread_setname_np(pthread_self(), threadName);
 #endif // defined(__linux__)
 
+#if 0
         {
             std::unique_lock<std::mutex> lk(m_processingMutex);
             if (m_processingCondVar.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout)
             {
-                fprintf(stderr, "txRxThread: timeout while waiting for CV, tx = %d\n", m_tx);
+                log_warn("txRxThread: timeout while waiting for CV, tx = %d", m_tx);
             }
         }
+#endif
+
+        auto currentTime = std::chrono::steady_clock::now();
+
         if (!m_run) break;
         if (m_tx) txProcessing_();
         else rxProcessing_();
+
+        std::this_thread::sleep_until(currentTime + 10ms);
     }
     
     // Force pipeline to delete itself when we're done with the thread.
@@ -502,8 +514,10 @@ void TxRxThread::terminateThread()
 
 void TxRxThread::notify()
 {
+#if 0
     std::unique_lock<std::mutex> lk(m_processingMutex);
     m_processingCondVar.notify_all();
+#endif
 }
 
 void TxRxThread::clearFifos_()
@@ -600,7 +614,7 @@ void TxRxThread::txProcessing_()
      	if (g_dump_fifo_state) {
     	  // If this drops to zero we have a problem as we will run out of output samples
     	  // to send to the sound driver
-    	  if (g_verbose) fprintf(stderr, "outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d\n",
+    	  log_debug("outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d",
                       codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
     	}
 
@@ -627,7 +641,42 @@ void TxRxThread::txProcessing_()
             // There may be recorded audio left to encode while ending TX. To handle this,
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
             int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);            
-            if (nread != 0 && endingTx) break;
+            if (nread != 0 && endingTx)
+            {
+                if (freedvInterface.getCurrentMode() >= FREEDV_MODE_RADE)
+                {
+                    if (!hasEooBeenSent_)
+                    {
+                        log_info("Triggering sending of EOO");
+
+                        // Special case for handling RADE EOT
+                        freedvInterface.restartTxVocoder();
+                        hasEooBeenSent_ = true;
+                    }
+
+                    short* inputSamples = new short[1];
+                    auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
+                    auto outputSamples = pipeline_->execute(inputSamplesPtr, 0, &nout);
+                    if (nout > 0 && outputSamples.get() != nullptr)
+                    {
+                        log_debug("Injecting %d samples of resampled EOO into TX stream", nout);
+                        if (codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout) != 0)
+                        {
+                            log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1);
+                        }
+                    }
+                    else
+                    {
+                        g_eoo_enqueued = true;
+                    }
+                }
+                break;
+            }
+            else
+            {
+                g_eoo_enqueued = false;
+                hasEooBeenSent_ = false;
+            }
             
             short* inputSamples = new short[nsam_in_48];
             memcpy(inputSamples, insound_card, nsam_in_48 * sizeof(short));
@@ -636,10 +685,13 @@ void TxRxThread::txProcessing_()
             auto outputSamples = pipeline_->execute(inputSamplesPtr, nsam_in_48, &nout);
             
             if (g_dump_fifo_state) {
-                fprintf(stderr, "  nout: %d\n", nout);
+                log_info("  nout: %d", nout);
             }
             
-            codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
+            if (outputSamples.get() != nullptr)
+            {
+                codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
+            }
         }
         
         txModeChangeMutex.Unlock();
@@ -655,7 +707,7 @@ void TxRxThread::txProcessing_()
     }
 
     if (g_dump_timing) {
-        fprintf(stderr, "%4ld", sw.Time());
+        log_info("%4ld", sw.Time());
     }
 }
 
@@ -675,7 +727,7 @@ void TxRxThread::rxProcessing_()
     
     if (g_queueResync)
     {
-        if (g_verbose) fprintf(stderr, "Unsyncing per user request.\n");
+        log_debug("Unsyncing per user request.");
         g_queueResync = false;
         freedvInterface.setSync(FREEDV_SYNC_UNSYNC);
         g_resyncs++;
@@ -694,6 +746,10 @@ void TxRxThread::rxProcessing_()
         (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
         (g_tx && wxGetApp().appConfiguration.monitorTxAudio) ||
         (!g_voice_keyer_tx && ((g_half_duplex && !g_tx) || !g_half_duplex));
+    if (!processInputFifo)
+    {
+        clearFifos_();
+    }
     
     // while we have enough input samples available ... 
     while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && processInputFifo) {
@@ -708,7 +764,7 @@ void TxRxThread::rxProcessing_()
         auto outputSamples = pipeline_->execute(inputSamplesPtr, nsam, &nout);
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
         
-        if (nout > 0)
+        if (nout > 0 && outputSamples.get() != nullptr)
         {
             codec2_fifo_write(outFifo, outputSamples.get(), nout);
         }

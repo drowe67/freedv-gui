@@ -47,8 +47,8 @@ public:
         PTT_VIA_NONE,
     };
     
-    HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex = 0, const PttType pttType = PTT_VIA_CAT, std::string pttSerialPort = std::string(), bool restoreFreqModeOnDisconnect = false);
-    HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex = 0, const PttType pttType = PTT_VIA_CAT, std::string pttSerialPort = std::string(), bool restoreFreqModeOnDisconnect = false);
+    HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex = 0, const PttType pttType = PTT_VIA_CAT, std::string pttSerialPort = std::string(), bool restoreFreqModeOnDisconnect = false, bool freqOnly = false);
+    HamlibRigController(int rigIndex, std::string serialPort, const int serialRate, const int civHex = 0, const PttType pttType = PTT_VIA_CAT, std::string pttSerialPort = std::string(), bool restoreFreqModeOnDisconnect = false, bool freqOnly = false);
     virtual ~HamlibRigController();
     
     virtual void connect() override;
@@ -63,9 +63,12 @@ public:
     static int RigNameToIndex(std::string rigName);
     static std::string RigIndexToName(unsigned int rigIndex);
     static int GetNumberSupportedRadios();
+    
+    virtual int getRigResponseTimeMicroseconds() override;
 
 private:
     using RigList = std::vector<const struct rig_caps *>;
+    using RigNameList = std::vector<std::string>;
     
     std::string rigName_;
     std::string serialPort_;
@@ -82,6 +85,9 @@ private:
     bool restoreOnDisconnect_;
     uint64_t origFreq_;
     rmode_t origMode_;
+    bool freqOnly_;
+    
+    int rigResponseTime_;
     
     vfo_t getCurrentVfo_();
     void setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyHz);
@@ -95,6 +101,7 @@ private:
     void requestCurrentFrequencyModeImpl_();
     
     static RigList RigList_;
+    static RigNameList RigNameList_;
     static std::mutex RigListMutex_;
 
     static bool RigCompare_(const struct rig_caps *rig1, const struct rig_caps *rig2);

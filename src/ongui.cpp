@@ -55,6 +55,8 @@ extern SNDFILE            *g_sfRecMicFile;
 
 extern wxMutex g_mutexProtectingCallbackData;
 
+bool g_eoo_enqueued;
+
 void clickTune(float frequency); // callback to pass new click freq
 
 //-------------------------------------------------------------------------
@@ -221,12 +223,13 @@ void MainFrame::OnToolsOptions(wxCommandEvent& event)
         }
         
         // Update voice keyer file if different
-        auto newVkFile = wxGetApp().appConfiguration.voiceKeyerWaveFilePath->mb_str();
-        if (vkFileName_ != newVkFile)
+        wxFileName fullVKPath(wxGetApp().appConfiguration.voiceKeyerWaveFilePath, wxGetApp().appConfiguration.voiceKeyerWaveFile);
+        if (wxString::FromUTF8(vkFileName_) != fullVKPath.GetFullPath())
         {
             // Clear filename to force reselection next time VK is triggered.
             vkFileName_ = "";
             wxGetApp().appConfiguration.voiceKeyerWaveFile = "";
+            setVoiceKeyerButtonLabel_("");
         }
         
         // Adjust frequency labels on main window
@@ -372,6 +375,124 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
     wxMessageBox(msg, wxT("About"), wxOK | wxICON_INFORMATION, this);
 }
 
+void MainFrame::onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
+{
+    CallAfter([&, mode, freq]() {
+        if (firstFreqUpdateOnConnect_)
+        {
+            firstFreqUpdateOnConnect_ = false;
+            return;
+        }
+
+        // Update string value.
+        switch(mode)
+        {
+            case IRigFrequencyController::USB:
+                m_txtModeStatus->SetLabel(wxT("USB"));
+                m_txtModeStatus->Enable(true);
+                break;
+            case IRigFrequencyController::DIGU:
+                m_txtModeStatus->SetLabel(wxT("USB-D"));
+                m_txtModeStatus->Enable(true);
+                break;
+            case IRigFrequencyController::LSB:
+                m_txtModeStatus->SetLabel(wxT("LSB"));
+                m_txtModeStatus->Enable(true);
+                break;
+            case IRigFrequencyController::DIGL:
+                m_txtModeStatus->SetLabel(wxT("LSB-D"));
+                m_txtModeStatus->Enable(true);
+                break;
+            case IRigFrequencyController::FM:
+                m_txtModeStatus->SetLabel(wxT("FM"));
+                m_txtModeStatus->Enable(true);
+                break;
+            case IRigFrequencyController::DIGFM:
+                m_txtModeStatus->SetLabel(wxT("FM-D"));
+                m_txtModeStatus->Enable(true);
+                break;
+            case IRigFrequencyController::AM:
+                m_txtModeStatus->SetLabel(wxT("AM"));
+                m_txtModeStatus->Enable(true);
+                break;
+            default:
+                m_txtModeStatus->SetLabel(wxT("unk"));
+                m_txtModeStatus->Enable(false);
+                break;
+        }
+
+        // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
+        bool is60MeterBand = freq >= 5250000 && freq <= 5450000;
+
+        // Update color based on the mode and current frequency.
+        bool isUsbFreq = freq >= 10000000 || is60MeterBand;
+        bool isLsbFreq = freq < 10000000 && !is60MeterBand;
+
+        bool isMatchingMode = 
+            (isUsbFreq && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
+            (isLsbFreq && (mode == IRigFrequencyController::LSB || mode == IRigFrequencyController::DIGL));
+
+        if (isMatchingMode)
+        {
+            m_txtModeStatus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+        }
+        else
+        {
+            m_txtModeStatus->SetForegroundColour(wxColor(*wxRED));
+        }
+
+        // Update frequency box
+        if (!suppressFreqModeUpdates_ && (
+            !wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
+            !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting))
+        {
+            // wxString::Format() doesn't respect locale but C++ iomanip should. Use the latter instead.
+            std::stringstream ss;
+            std::locale loc("");
+            ss.imbue(loc);
+            
+            if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+            {
+                ss << std::fixed << std::setprecision(1) << (freq / 1000.0);
+            }
+            else
+            {
+                ss << std::fixed << std::setprecision(4) << (freq / 1000.0 / 1000.0);
+            }
+            
+            m_cboReportFrequency->SetValue(ss.str());
+        }
+        m_txtModeStatus->Refresh();
+    });
+}
+
+void MainFrame::onRadioConnected_(IRigController* ptr)
+{
+    if (wxGetApp().rigFrequencyController && 
+        (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly) &&
+        wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
+    {
+        // Suppress the frequency update message that will occur immediately after
+        // connect; this will prevent overwriting of whatever's in the text box.
+        firstFreqUpdateOnConnect_ = true;
+
+        // Set frequency/mode to the one pre-selected by the user before start.
+        wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        
+        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+        {
+            wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+        }
+    }
+}
+
+void MainFrame::onRadioDisconnected_(IRigController* ptr)
+{
+    CallAfter([&]() {
+        m_txtModeStatus->SetLabel(wxT("unk"));
+        m_txtModeStatus->Enable(false);
+    });
+}
 
 // Attempt to talk to rig using Hamlib
 
@@ -393,7 +514,8 @@ bool MainFrame::OpenHamlibRig() {
         auto tmp = std::make_shared<HamlibRigController>(
             rig, (const char*)port.mb_str(wxConvUTF8), serial_rate, wxGetApp().appConfiguration.rigControlConfiguration.hamlibIcomCIVAddress, 
             pttType, pttType == HamlibRigController::PTT_VIA_CAT || pttType == HamlibRigController::PTT_VIA_NONE ? (const char*)port.mb_str(wxConvUTF8) : (const char*)pttPort.mb_str(wxConvUTF8),
-            wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
+            (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly),
+            wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly);
 
         // Hamlib also controls PTT.
         firstFreqUpdateOnConnect_ = false;
@@ -408,110 +530,17 @@ bool MainFrame::OpenHamlibRig() {
             });
         };
 
-        wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController*) {
-            if (wxGetApp().rigFrequencyController && 
-                wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges &&
-                wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0)
-            {
-                // Suppress the frequency update message that will occur immediately after
-                // connect; this will prevent overwriting of whatever's in the text box.
-                firstFreqUpdateOnConnect_ = true;
-
-                // Set frequency/mode to the one pre-selected by the user before start.
-                wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-                wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
-            }
+        wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController* ptr) {
+            onRadioConnected_(ptr);
         };
 
-        wxGetApp().rigFrequencyController->onRigDisconnected += [&](IRigController*) {
-            CallAfter([&]() {
-                m_txtModeStatus->SetLabel(wxT("unk"));
-                m_txtModeStatus->Enable(false);
-            });
+        wxGetApp().rigFrequencyController->onRigDisconnected += [&](IRigController* ptr) {
+            onRadioDisconnected_(ptr);
         };
 
-        wxGetApp().rigFrequencyController->onFreqModeChange += [&](IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
-        {
-            CallAfter([&, mode, freq]() {
-                if (firstFreqUpdateOnConnect_)
-                {
-                    firstFreqUpdateOnConnect_ = false;
-                    return;
-                }
-
-                // Update string value.
-                switch(mode)
-                {
-                    case IRigFrequencyController::USB:
-                    case IRigFrequencyController::DIGU:
-                        m_txtModeStatus->SetLabel(wxT("USB"));
-                        m_txtModeStatus->Enable(true);
-                        break;
-                    case IRigFrequencyController::LSB:
-                    case IRigFrequencyController::DIGL:
-                        m_txtModeStatus->SetLabel(wxT("LSB"));
-                        m_txtModeStatus->Enable(true);
-                        break;
-                    case IRigFrequencyController::FM:
-                    case IRigFrequencyController::DIGFM:
-                        m_txtModeStatus->SetLabel(wxT("FM"));
-                        m_txtModeStatus->Enable(true);
-                        break;
-                    case IRigFrequencyController::AM:
-                        m_txtModeStatus->SetLabel(wxT("AM"));
-                        m_txtModeStatus->Enable(true);
-                        break;
-                    default:
-                        m_txtModeStatus->SetLabel(wxT("unk"));
-                        m_txtModeStatus->Enable(false);
-                        break;
-                }
-
-                // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
-                bool is60MeterBand = freq >= 5250000 && freq <= 5450000;
-    
-                // Update color based on the mode and current frequency.
-                bool isUsbFreq = freq >= 10000000 || is60MeterBand;
-                bool isLsbFreq = freq < 10000000 && !is60MeterBand;
-    
-                bool isMatchingMode = 
-                    (isUsbFreq && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
-                    (isLsbFreq && (mode == IRigFrequencyController::LSB || mode == IRigFrequencyController::DIGL));
-    
-                if (isMatchingMode)
-                {
-                    m_txtModeStatus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-                }
-                else
-                {
-                    m_txtModeStatus->SetForegroundColour(wxColor(*wxRED));
-                }
-
-                // Update frequency box
-                if (!suppressFreqModeUpdates_ && (
-                    !wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
-                    !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting))
-                {
-                    // wxString::Format() doesn't respect locale but C++ iomanip should. Use the latter instead.
-                    std::stringstream ss;
-                    std::locale loc("");
-                    ss.imbue(loc);
-                    
-                    if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-                    {
-                        ss << std::fixed << std::setprecision(1) << (freq / 1000.0);
-                    }
-                    else
-                    {
-                        ss << std::fixed << std::setprecision(4) << (freq / 1000.0 / 1000.0);
-                    }
-                    
-                    m_cboReportFrequency->SetValue(ss.str());
-                }
-                m_txtModeStatus->Refresh();
-            });
+        wxGetApp().rigFrequencyController->onFreqModeChange += [&](IRigFrequencyController* ptr, uint64_t freq, IRigFrequencyController::Mode mode) {
+            onFrequencyModeChange_(ptr, freq, mode);
         };
-
         wxGetApp().rigFrequencyController->connect();
         return true;
     }
@@ -527,7 +556,8 @@ void MainFrame::OpenOmniRig()
 {
     auto tmp = std::make_shared<OmniRigController>(
         wxGetApp().appConfiguration.rigControlConfiguration.omniRigRigId,
-        wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
+        (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly),
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly);
 
     // OmniRig also controls PTT.
     wxGetApp().rigFrequencyController = tmp;
@@ -544,90 +574,16 @@ void MainFrame::OpenOmniRig()
         });
     };
 
-    wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController*) {
-        if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
-        {
-            wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-            wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
-        }
+    wxGetApp().rigFrequencyController->onRigConnected += [&](IRigController* ptr) {
+        onRadioConnected_(ptr);
     };
 
-    wxGetApp().rigFrequencyController->onRigDisconnected += [&](IRigController*) {
-        CallAfter([&]() {
-            m_txtModeStatus->SetLabel(wxT("unk"));
-            m_txtModeStatus->Enable(false);
-        });
+    wxGetApp().rigFrequencyController->onRigDisconnected += [&](IRigController* ptr) {
+        onRadioDisconnected_(ptr);
     };
 
-    wxGetApp().rigFrequencyController->onFreqModeChange += [&](IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode)
-    {
-        CallAfter([&, mode, freq]() {
-            // Update string value.
-            switch(mode)
-            {
-                case IRigFrequencyController::USB:
-                case IRigFrequencyController::DIGU:
-                    m_txtModeStatus->SetLabel(wxT("USB"));
-                    m_txtModeStatus->Enable(true);
-                    break;
-                case IRigFrequencyController::LSB:
-                case IRigFrequencyController::DIGL:
-                    m_txtModeStatus->SetLabel(wxT("LSB"));
-                    m_txtModeStatus->Enable(true);
-                    break;
-                case IRigFrequencyController::FM:
-                case IRigFrequencyController::DIGFM:
-                    m_txtModeStatus->SetLabel(wxT("FM"));
-                    m_txtModeStatus->Enable(true);
-                    break;
-                case IRigFrequencyController::AM:
-                    m_txtModeStatus->SetLabel(wxT("AM"));
-                    m_txtModeStatus->Enable(true);
-                    break;
-                default:
-                    m_txtModeStatus->SetLabel(wxT("unk"));
-                    m_txtModeStatus->Enable(false);
-                    break;
-            }
-
-            // Widest 60 meter allocation is 5.250-5.450 MHz per https://en.wikipedia.org/wiki/60-meter_band.
-            bool is60MeterBand = freq >= 5250000 && freq <= 5450000;
-
-            // Update color based on the mode and current frequency.
-            bool isUsbFreq = freq >= 10000000 || is60MeterBand;
-            bool isLsbFreq = freq < 10000000 && !is60MeterBand;
-
-            bool isMatchingMode = 
-                (isUsbFreq && (mode == IRigFrequencyController::USB || mode == IRigFrequencyController::DIGU)) ||
-                (isLsbFreq && (mode == IRigFrequencyController::LSB || mode == IRigFrequencyController::DIGL));
-
-            if (isMatchingMode)
-            {
-                m_txtModeStatus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-            }
-            else
-            {
-                m_txtModeStatus->SetForegroundColour(wxColor(*wxRED));
-            }
-
-            // Update frequency box
-            if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled ||
-                !wxGetApp().appConfiguration.reportingConfiguration.manualFrequencyReporting)
-            {
-                if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-                {
-                    m_cboReportFrequency->SetValue(wxString::Format("%.1f", freq / 1000.0));
-                }
-                else
-                {
-                    m_cboReportFrequency->SetValue(wxString::Format("%.4f", freq / 1000.0 / 1000.0));
-                }
-            }
-            m_txtModeStatus->Refresh();
-
-            // Suppress updates if the Report Frequency box has focus.
-            suppressFreqModeUpdates_ = m_cboReportFrequency->HasFocus();
-        });
+    wxGetApp().rigFrequencyController->onFreqModeChange += [&](IRigFrequencyController* ptr, uint64_t freq, IRigFrequencyController::Mode mode) {
+        onFrequencyModeChange_(ptr, freq, mode);
     };
 
     // Temporarily suppress frequency updates until we're fully connected.
@@ -641,7 +597,6 @@ void MainFrame::OpenOmniRig()
 //-------------------------------------------------------------------------
 void MainFrame::OnCloseFrame(wxCloseEvent& event)
 {
-    //fprintf(stderr, "MainFrame::OnCloseFrame()\n");
     auto engine = AudioEngineFactory::GetAudioEngine();
     engine->stop();
     engine->setOnEngineError(nullptr, nullptr);
@@ -791,7 +746,6 @@ void MainFrame::OnCheckSNRClick(wxCommandEvent& event)
 {
     wxGetApp().appConfiguration.snrSlow = m_ckboxSNR->GetValue();
     setsnrBeta(wxGetApp().appConfiguration.snrSlow);
-    //printf("m_snrSlow: %d\n", (int)wxGetApp().appConfiguration.snrSlow);
 }
 
 // check for space bar press (only when running)
@@ -881,7 +835,7 @@ void MainFrame::togglePTT(void) {
     {
         // Sleep for long enough that we get the remaining [blocksize] ms of audio.
         int msSleep = (1000 * freedvInterface.getTxNumSpeechSamples()) / freedvInterface.getTxSpeechSampleRate();
-        if (g_verbose) fprintf(stderr, "Sleeping for %d ms prior to ending TX\n", msSleep);
+        log_debug("Sleeping for %d ms prior to ending TX", msSleep);
 
         auto before = highResClock.now();
 
@@ -900,15 +854,31 @@ void MainFrame::togglePTT(void) {
         // Trigger end of TX processing. This causes us to wait for the remaining samples
         // to flow through the system before toggling PTT.  Note that there is a 1000ms 
         // timeout as backup.
-        int sample = g_outfifo1_empty;
-        endingTx = true;
+        if (freedvInterface.getCurrentMode() == FREEDV_MODE_RADE)
+        {
+            log_info("Waiting for EOO to be queued");
+            endingTx = true;
+            while(true)
+            {
+                if (g_eoo_enqueued)
+                {
+                    log_info("Detected that EOO has been enqueued");
+                    break;
+                }
+ 
+                wxThread::Sleep(1);
+                wxGetApp().Yield(true);
+            }
+        }
 
+        int sample = g_outfifo1_empty;
         before = highResClock.now();
         while(true)
         {
             auto diff = highResClock.now() - before;
             if (diff >= std::chrono::milliseconds(1000) || (g_outfifo1_empty != sample))
             {
+                log_info("All TX finished (diff = %d ms, fifo_empty = %d, sample = %d), going out of PTT", (int)std::chrono::duration_cast<std::chrono::milliseconds>(diff).count(), g_outfifo1_empty, sample);
                 break;
             }
 
@@ -918,6 +888,43 @@ void MainFrame::togglePTT(void) {
             wxGetApp().Yield(true);
         }
         
+        // Wait for a minimum amount of time before stopping TX to ensure that
+        // remaining audio gets piped to the radio from the operating system.
+        auto latency = txOutSoundDevice->getLatencyInMicroseconds();
+        
+        // Also take into account any latency between the computer and radio.
+        // The only way to do this is by tracking how long it takes to respond
+        // to PTT requests (and that's not necessarily great, either). Normally
+        // this component should be a small part of the overall latency, but it
+        // could be larger when dealing with SDR radios that are on the network.
+        //
+        // Note: This may not provide accurate results until after going from 
+        // TX->RX the first time, but one missed report during a session shouldn't 
+        // be a huge deal.
+        auto pttController = wxGetApp().rigPttController;
+        if (pttController)
+        {
+            // We only need to worry about the time getting to the radio,
+            // not the time to get from the radio to us.
+            latency += pttController->getRigResponseTimeMicroseconds() / 2;
+        }
+        
+        log_info("Pausing for a minimum of %d microseconds before TX->RX to allow remaining audio to go out", latency);
+        before = highResClock.now();
+        while(true)
+        {
+            auto diff = highResClock.now() - before;
+            if (diff >= std::chrono::microseconds(latency))
+            {
+                break;
+            }
+
+            wxThread::Sleep(1);
+
+            // Yield() used to avoid lack of UI responsiveness during delay.
+            wxGetApp().Yield(true);
+        }
+                
         // Wait an additional configured timeframe before actually clearing PTT (below)
         if (wxGetApp().appConfiguration.txRxDelayMilliseconds > 0)
         {
@@ -1134,7 +1141,7 @@ void MainFrame::OnCallSignReset(wxCommandEvent& event)
 void MainFrame::OnReSync(wxCommandEvent& event)
 {
     if (m_RxRunning)  {
-        if (g_verbose) fprintf(stderr,"OnReSync\n");
+        log_debug("OnReSync");
         
         // Resync must be triggered from the TX/RX thread, so pushing the button queues it until
         // the next execution of the TX/RX loop.
@@ -1231,11 +1238,14 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
     {      
         if (wxGetApp().rigFrequencyController != nullptr && 
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 && 
-            wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+            (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
         {
             // Request frequency/mode change on the radio side
             wxGetApp().rigFrequencyController->setFrequency(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-            wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+            if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges)
+            {
+                wxGetApp().rigFrequencyController->setMode(getCurrentMode_());
+            }
         }
     }
 

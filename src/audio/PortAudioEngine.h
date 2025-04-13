@@ -23,7 +23,9 @@
 #ifndef PORT_AUDIO_ENGINE_H
 #define PORT_AUDIO_ENGINE_H
 
+#include <memory>
 #include "IAudioEngine.h"
+#include "PortAudioInterface.h"
 
 class PortAudioEngine : public IAudioEngine
 {
@@ -40,6 +42,7 @@ public:
     
 private:
     bool initialized_;
+    std::shared_ptr<PortAudioInterface> portAudioLibrary_;
 
     static bool IsDeviceWhitelisted_(const char* devName);
 };

@@ -14,6 +14,13 @@ set(FREEDV_LINK_LIBS_OSX
     "-framework AVFoundation"
 )
 
+# Configure logging
+add_definitions(-DULOG_HAVE_TIME)
+add_definitions(-DULOG_NO_COLOR)
+
+# Include third party headers
+include_directories(3rdparty)
+
 # Compile FreeDV components
 add_subdirectory(audio)
 add_subdirectory(config)
@@ -54,9 +61,11 @@ set(LPCNET_LIB_NAME )
 endif(NOT LPCNET_DISABLED)
 
 if(APPLE)
-target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util ${LPCNET_LIB_NAME} codec2)
+target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util ${LPCNET_LIB_NAME} codec2 rade opus)
+add_dependencies(FreeDV build_rade)
 else(APPLE)
-target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util ${LPCNET_LIB_NAME} codec2)
+target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util ${LPCNET_LIB_NAME} codec2 rade opus)
+add_dependencies(freedv build_rade)
 endif(APPLE)
 
 # Add build dependencies for internally built external libraries.
@@ -137,18 +146,54 @@ if(APPLE)
         set(LPCNET_DYLIBBUNDLER_ARG -s ${LPCNET_BUILD_DIR}/src)
     endif(NOT LPCNET_DISABLE)
 
+    if(NOT MACOS_CODESIGN_IDENTITY)
+        set(MACOS_CODESIGN_IDENTITY -)
+    endif(NOT MACOS_CODESIGN_IDENTITY)
+
+    if (NOT USE_NATIVE_AUDIO)
+        set(PORTAUDIO_BUNDLE_ARG "-s ${portaudio_BINARY_DIR}")
+    endif(NOT USE_NATIVE_AUDIO)
+    
     add_custom_command(
         TARGET FreeDV
         POST_BUILD
         COMMAND rm -rf dist_tmp FreeDV.dmg || true
-        COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${LPCNET_DYLIBBUNDLER_PATH}${portaudio_BINARY_DIR}:${samplerate_BINARY_DIR}/src:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib ${LPCNET_DYLIBBUNDLER_ARG} -s ${CODEC2_BUILD_DIR}/src -s ${CMAKE_BINARY_DIR}/LPCNet_build/src -s ${CMAKE_BINARY_DIR}/codec2_build/src -s ${portaudio_BINARY_DIR} -s ${samplerate_BINARY_DIR}/src
+        COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${LPCNET_DYLIBBUNDLER_PATH}${portaudio_BINARY_DIR}:${samplerate_BINARY_DIR}/src:${Python3_ROOT_DIR}:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib ${LPCNET_DYLIBBUNDLER_ARG} -s ${CODEC2_BUILD_DIR}/src -s ${CMAKE_BINARY_DIR}/LPCNet_build/src -s ${CMAKE_BINARY_DIR}/codec2_build/src ${PORTAUDIO_BUNDLE_ARG} -s ${samplerate_BINARY_DIR}/src -s ${rade_BINARY_DIR}/src -s ${Python3_ROOT_DIR}
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/freedv.icns FreeDV.app/Contents/Resources
-        COMMAND codesign --force --options runtime --timestamp --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/entitlements.plist --sign - ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app
-        COMMAND mkdir dist_tmp
-        COMMAND cp -r FreeDV.app dist_tmp 
-        COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO -fs HFS+ ./FreeDV.dmg
-        COMMAND rm -rf dist_tmp
+        COMMAND rm ARGS -rf FreeDV.app/Contents/Frameworks
+        COMMAND mkdir ARGS FreeDV.app/Contents/Frameworks
+        COMMAND cp ARGS -a ${Python3_ROOT_DIR}/../../../Python.framework FreeDV.app/Contents/Frameworks
+        COMMAND install_name_tool ARGS -add_rpath @loader_path/../Frameworks/Python.framework FreeDV.app/Contents/libs/librade*.dylib
+        COMMAND cp ARGS ../rade_src/radae_*e.py FreeDV.app/Contents/Resources
+        COMMAND cp ARGS -a ../rade_src/radae FreeDV.app/Contents/Resources
+        COMMAND cp ARGS -a ../rade_src/model19_check3 FreeDV.app/Contents/Resources
+        
+        # Precompile Python code to improve startup time
+        COMMAND cd FreeDV.app/Contents/Resources && ../Frameworks/Python.framework/Versions/Current/bin/python3 -c "import radae_txe\; import radae_rxe\;" && cd ../../..
+        
+        # Codesign binary so that it can execute
+        COMMAND codesign --force --options runtime --timestamp --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/entitlements.plist --sign ${MACOS_CODESIGN_IDENTITY} ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app `find ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app -name '*.so' -o -name '*.dylib'` `find ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/Versions/3.12/bin -name 'Python' -o -name 'python3.12*'` `find ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/ -name 'Python'` ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/MacOS/FreeDV ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/torch/bin/* ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/Versions/3.12/Python
     )
+
+    if (MACOS_CODESIGN_KEYCHAIN_PROFILE)
+        add_custom_target(release
+            COMMAND /usr/bin/ditto -c -k --keepParent ./FreeDV.app FreeDV-appbundle.zip
+            COMMAND xcrun notarytool submit ./FreeDV-appbundle.zip --keychain-profile ${MACOS_CODESIGN_KEYCHAIN_PROFILE} --wait 
+            COMMAND rm -rf FreeDV-appbundle.zip
+            COMMAND xcrun stapler staple ./FreeDV.app
+            COMMAND mkdir dist_tmp
+            COMMAND cp -a FreeDV.app dist_tmp 
+            COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO -fs HFS+ ./FreeDV.dmg
+            COMMAND rm -rf dist_tmp
+            DEPENDS FreeDV)
+    else(MACOS_CODESIGN_KEYCHAIN_PROFILE)
+        add_custom_target(release
+            COMMAND mkdir dist_tmp
+            COMMAND cp -a FreeDV.app dist_tmp 
+            COMMAND hdiutil create -srcfolder dist_tmp/ -volname FreeDV -format UDZO -fs HFS+ ./FreeDV.dmg
+            COMMAND rm -rf dist_tmp
+            DEPENDS FreeDV)
+    endif (MACOS_CODESIGN_KEYCHAIN_PROFILE)
 endif(APPLE)
 
 # Custom commands for signing Windows binaries

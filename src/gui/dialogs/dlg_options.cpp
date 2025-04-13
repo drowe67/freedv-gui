@@ -200,8 +200,17 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox *sb_hamlib = new wxStaticBox(m_rigControlTab, wxID_ANY, _("Frequency/Mode Control Options"));
     sbSizer_hamlib = new wxStaticBoxSizer(sb_hamlib, wxVERTICAL);
     
-    m_ckboxEnableFreqModeChanges = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Enable frequency and mode changes"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
-    sbSizer_hamlib->Add(m_ckboxEnableFreqModeChanges, 0, wxALL | wxALIGN_LEFT, 5);
+    wxSizer* freqModeSizer = new wxBoxSizer(wxHORIZONTAL);
+    m_ckboxEnableFreqModeChanges = new wxRadioButton(m_rigControlTab, wxID_ANY, _("Enable frequency and mode changes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    freqModeSizer->Add(m_ckboxEnableFreqModeChanges, 0, wxALL | wxALIGN_LEFT, 5);
+    
+    m_ckboxEnableFreqChangesOnly = new wxRadioButton(m_rigControlTab, wxID_ANY, _("Enable frequency changes only"), wxDefaultPosition, wxDefaultSize);
+    freqModeSizer->Add(m_ckboxEnableFreqChangesOnly, 0, wxALL | wxALIGN_LEFT, 5);
+    
+    m_ckboxNoFreqModeChanges = new wxRadioButton(m_rigControlTab, wxID_ANY, _("No frequency or mode changes"), wxDefaultPosition, wxDefaultSize);
+    freqModeSizer->Add(m_ckboxNoFreqModeChanges, 0, wxALL | wxALIGN_LEFT, 5);
+    
+    sbSizer_hamlib->Add(freqModeSizer, 0, wxALL | wxALIGN_LEFT, 5);
     
     m_ckboxUseAnalogModes = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Use USB/LSB instead of DIGU/DIGL"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_hamlib->Add(m_ckboxUseAnalogModes, 0, wxALL | wxALIGN_LEFT, 5);
@@ -737,7 +746,9 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     m_ckboxMultipleRx->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
     
-    m_ckboxEnableFreqModeChanges->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
+    m_ckboxEnableFreqModeChanges->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
+    m_ckboxEnableFreqChangesOnly->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
+    m_ckboxNoFreqModeChanges->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
     
     m_freqList->Connect(wxEVT_LISTBOX, wxCommandEventHandler(OptionsDlg::OnReportingFreqSelectionChange), NULL, this);
     m_txtCtrlNewFrequency->Connect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnReportingFreqTextChange), NULL, this);
@@ -785,8 +796,10 @@ OptionsDlg::~OptionsDlg()
     
     m_ckboxMultipleRx->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnMultipleRxEnable), NULL, this);
     
-    m_ckboxEnableFreqModeChanges->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
-
+    m_ckboxEnableFreqModeChanges->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
+    m_ckboxEnableFreqChangesOnly->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
+    m_ckboxNoFreqModeChanges->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(OptionsDlg::OnFreqModeChangeEnable), NULL, this);
+    
     m_freqList->Disconnect(wxEVT_LISTBOX, wxCommandEventHandler(OptionsDlg::OnReportingFreqSelectionChange), NULL, this);
     m_txtCtrlNewFrequency->Disconnect(wxEVT_TEXT, wxCommandEventHandler(OptionsDlg::OnReportingFreqTextChange), NULL, this);
     m_freqListAdd->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(OptionsDlg::OnReportingFreqAdd), NULL, this);
@@ -830,6 +843,8 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_txtTxRxDelayMilliseconds->SetValue(wxString::Format("%d", wxGetApp().appConfiguration.txRxDelayMilliseconds.get()));
         m_ckboxUseAnalogModes->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes);
         m_ckboxEnableFreqModeChanges->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges);
+        m_ckboxEnableFreqChangesOnly->SetValue(wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly);
+        m_ckboxNoFreqModeChanges->SetValue(!wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges && !wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly);
         m_ckboxFrequencyEntryAsKHz->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz);
         
         /* Voice Keyer */
@@ -862,7 +877,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxTxRxThreadPriority->SetValue(wxGetApp().m_txRxThreadHighPriority);
         m_ckboxTxRxDumpTiming->SetValue(g_dump_timing);
         m_ckboxTxRxDumpFifoState->SetValue(g_dump_fifo_state);
-        m_ckboxVerbose->SetValue(g_verbose);
+        m_ckboxVerbose->SetValue(wxGetApp().appConfiguration.debugVerbose);
         m_ckboxFreeDVAPIVerbose->SetValue(g_freedv_verbose);
         
         m_experimentalFeatures->SetValue(wxGetApp().appConfiguration.experimentalFeatures);
@@ -988,6 +1003,7 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseAnalogModes = m_ckboxUseAnalogModes->GetValue();
         
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges = m_ckboxEnableFreqModeChanges->GetValue();
+        wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly = m_ckboxEnableFreqChangesOnly->GetValue();
         
         wxGetApp().appConfiguration.reportingConfiguration.reportingFreeTextString = m_txtCtrlCallSign->GetValue();
 
@@ -1013,7 +1029,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         long noise_snr;
         m_txtNoiseSNR->GetValue().ToLong(&noise_snr);
         wxGetApp().appConfiguration.noiseSNR = (int)noise_snr;
-        //fprintf(stderr, "noise_snr: %d\n", (int)noise_snr);
         
         wxGetApp().m_tone    = m_ckboxTone->GetValue();
         long tone_freq_hz, tone_amplitude;
@@ -1034,7 +1049,15 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().m_txRxThreadHighPriority = m_ckboxTxRxThreadPriority->GetValue();
         g_dump_timing = m_ckboxTxRxDumpTiming->GetValue();
         g_dump_fifo_state = m_ckboxTxRxDumpFifoState->GetValue();
-        g_verbose = m_ckboxVerbose->GetValue();
+        wxGetApp().appConfiguration.debugVerbose = m_ckboxVerbose->GetValue();
+        if (wxGetApp().appConfiguration.debugVerbose)
+        {
+            ulog_set_level(LOG_TRACE);
+        }
+        else
+        {
+            ulog_set_level(LOG_INFO);
+        }
         g_freedv_verbose = m_ckboxFreeDVAPIVerbose->GetValue();
 
         wxGetApp().appConfiguration.freedv700Clip = m_ckboxFreeDV700txClip->GetValue();
@@ -1086,7 +1109,6 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.statsResetTimeSecs = resetTime;
         
         if (storePersistent) {
-            wxGetApp().appConfiguration.debugVerbose = g_verbose;
             wxGetApp().appConfiguration.apiVerbose = g_freedv_verbose;            
             wxGetApp().appConfiguration.save(pConfig);
             
@@ -1258,7 +1280,7 @@ void OptionsDlg::OnDebugConsole(wxScrollEvent& event) {
         int ret = AllocConsole();
         freopen("CONOUT$", "w", stdout); 
         freopen("CONOUT$", "w", stderr); 
-        if (g_verbose) fprintf(stderr, "AllocConsole: %d m_debug_console: %d\n", ret, wxGetApp().appConfiguration.debugConsoleEnabled.get());
+        log_info("AllocConsole: %d m_debug_console: %d", ret, wxGetApp().appConfiguration.debugConsoleEnabled.get());
     } 
 #endif
 }
@@ -1359,6 +1381,8 @@ void OptionsDlg::updateRigControlState()
     if (!sessionActive_)
     {
         m_ckboxEnableFreqModeChanges->Enable(true);
+        m_ckboxEnableFreqChangesOnly->Enable(true);
+        m_ckboxNoFreqModeChanges->Enable(true);
         m_ckboxEnableSpacebarForPTT->Enable(true);
         m_txtTxRxDelayMilliseconds->Enable(true);
         m_ckboxUseAnalogModes->Enable(m_ckboxEnableFreqModeChanges->GetValue());
@@ -1368,6 +1392,8 @@ void OptionsDlg::updateRigControlState()
         // Rig control settings cannot be updated during a session.
         m_ckboxUseAnalogModes->Enable(false);
         m_ckboxEnableFreqModeChanges->Enable(false);
+        m_ckboxEnableFreqChangesOnly->Enable(false);
+        m_ckboxNoFreqModeChanges->Enable(false);
         m_ckboxEnableSpacebarForPTT->Enable(false);
         m_txtTxRxDelayMilliseconds->Enable(false);
     }

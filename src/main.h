@@ -113,7 +113,6 @@ enum {
 #define EXCHANGE_DATA_IN    0
 #define EXCHANGE_DATA_OUT   1
 
-extern int                 g_verbose;
 extern int                 g_nSoundCards;
 
 // Voice Keyer Constants
@@ -222,7 +221,11 @@ class MainApp : public wxApp
         std::shared_ptr<LinkStep> linkStep;
 
         wxLocale m_locale;
+
+        int m_reportCounter;
     protected:
+    private:
+        void UnitTest_();
 };
 
 // declare global static function wxGetApp()
@@ -346,6 +349,7 @@ class MainFrame : public TopFrame
 
         // protected event handlers
         virtual void topFrame_OnSize( wxSizeEvent& event ) override;
+        virtual void topFrame_OnClose( wxCloseEvent& event ) override;
         virtual void OnCloseFrame(wxCloseEvent& event);
         void OnExitClick(wxCommandEvent& event);
         
@@ -440,6 +444,8 @@ class MainFrame : public TopFrame
         void OnSetMonitorTxAudioVol( wxCommandEvent& event );
         
     private:
+        friend class MainApp; // needed for unit tests
+        
         std::shared_ptr<IAudioDevice> rxInSoundDevice;
         std::shared_ptr<IAudioDevice> rxOutSoundDevice;
         std::shared_ptr<IAudioDevice> txInSoundDevice;
@@ -488,6 +494,8 @@ class MainFrame : public TopFrame
         wxMenuItem* adjustMonitorVKVolMenuItem_;
         wxMenuItem* chooseVKFileMenuItem_;
         wxMenuItem* recordNewVoiceKeyerFileMenuItem_;
+
+        bool terminating_; // used for terminating FreeDV
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
@@ -510,6 +518,10 @@ class MainFrame : public TopFrame
         void updateReportingFreqList_();
         
         void initializeFreeDVReporter_();
+        
+        void onFrequencyModeChange_(IRigFrequencyController*, uint64_t freq, IRigFrequencyController::Mode mode);
+        void onRadioConnected_(IRigController* ptr);
+        void onRadioDisconnected_(IRigController* ptr);
 };
 
 void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs);

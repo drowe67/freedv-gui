@@ -22,7 +22,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   
   (if using PortAudio)
   $ sudo apt install portaudio19-dev
-  $ ./build_linux.sh portaudio
+  $ USE_NATIVE_AUDIO=0 ./build_linux.sh 
   ```
 
   (Depending on release you may need to use `libwxgtk3.0-gtk3-dev` instead of `libwxgtk3.2-dev`.)
@@ -49,7 +49,7 @@ This document describes how to build the FreeDV GUI program for various operatin
 
   (if using PortAudio)
   $ sudo dnf install portaudio-devel
-  $ ./build_linux.sh portaudio
+  $ USE_NATIVE_AUDIO=0 ./build_linux.sh
   ```
 
   Then run with:
@@ -57,6 +57,55 @@ This document describes how to build the FreeDV GUI program for various operatin
   ```
   $ ./build_linux/src/freedv
   ```
+
+## Running RADE mode on Linux
+
+RADE is a new FreeDV mode that uses machine learning to improve voice quality and decoding ability.
+We are currently focused on Windows and macOS for initial development, but it is possible to run on 
+Linux by following these steps:
+
+1. Install PyTorch, TorchAudio and matplotlib Python packages. Some distros have packages for one or more of these,
+   but you can also use pip in a Python virtual environment (recommended to ensure the latest versions):
+
+   ```
+   $ cd freedv-gui
+   $ python3 -m venv rade-venv
+   $ . ./rade-venv/bin/activate
+   (rade-venv) $ pip3 install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+   (rade-venv) $ pip3 install matplotlib
+   ```
+
+   *Note: you may need to install `python3-venv` or your distro's equivalent package in order to create Python virtual environments. Python 3.9+ is also required for PyTorch to work.*
+
+2. Build FreeDV to make sure the correct dependencies are linked in (namely numpy):
+
+   ```
+   (rade-venv) $ pwd
+   /home/<user>/freedv-gui
+   (rade-venv) $ ./build_linux.sh
+   ```
+
+3. Make sure FreeDV can find the ML model:
+
+   ```
+   (rade-venv) $ pwd
+   /home/<user>/freedv-gui
+   (rade-venv) $ cd build_linux
+   (rade-venv) $ ln -s $(pwd)/rade_src/model19_check3 model19_check3
+   ```
+
+4. Execute FreeDV:
+
+   ```
+   (rade-venv) $ pwd
+   /home/<user>/freedv-gui/build_linux
+   (rade-venv) $ PYTHONPATH="$(pwd)/rade_src:$PYTHONPATH" src/freedv
+   ```
+
+Alternatively, you can use [this script](https://github.com/barjac/freedv-rade-build) developed by 
+Barry Jackson G4MKT to automate the above steps. While the FreeDV project thanks him for his contribution
+to helping Linux users more easily get on the air with FreeDV, the FreeDV development team will not provide 
+support. All support inquiries regarding this script should be directed to the linked repo.
 
 ## Building without LPCNet
 
@@ -74,6 +123,20 @@ from being selected.
 
 *Note: if you don't already have Codec2 installed on your machine, you will need to pass `-DBOOTSTRAP_LPCNET=1`
 to `cmake` in order for LPCNet to also be built.*
+
+## Audio driver selection
+
+By default, FreeDV uses the native audio APIs on certain platforms. These are as follows:
+
+| Platform | Audio API |
+|---|---|
+| macOS | Core Audio |
+| Linux | pipewire (via PulseAudio library) |
+| Windows | WASAPI |
+
+On platforms not listed above, PortAudio is used instead. PortAudio can also be explicitly selected by the
+user by defining the environment variable `USE_NATIVE_AUDIO=0` before running the `build_*.sh` script
+(or specifying `-DUSE_NATIVE_AUDIO=0` to `cmake`).
 
 ## Installing on Linux
 

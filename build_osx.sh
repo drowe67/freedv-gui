@@ -11,25 +11,50 @@ export HAMLIBDIR=$FREEDVGUIDIR/hamlib
 export CODEC2_BRANCH=1.2.0
 export LPCNET_BRANCH=v0.5
 export UT_ENABLE=${UT_ENABLE:-0}
-LPCNET_DISABLE=${LPCNET_DISABLE:-0}
+export LPCNET_DISABLE=${LPCNET_DISABLE:-1}
+export UNIV_BUILD=${UNIV_BUILD:-1}
+export CODESIGN_IDENTITY=${CODESIGN_IDENTITY:--}
+export BUILD_DEPS=${BUILD_DEPS:-1}
+export USE_NATIVE_AUDIO=${USE_NATIVE_AUDIO:-1}
 
 # Prerequisite: build dylibbundler
 if [ ! -d macdylibbundler ]; then
     git clone https://github.com/tmiw/macdylibbundler.git
 fi
 cd macdylibbundler && git checkout main && git pull
-make -j4
+make -j$(sysctl -n hw.logicalcpu)
+cd ..
+
+# Prerequisite: Python
+if [ ! -d Python.framework ]; then
+    git clone https://github.com/gregneagle/relocatable-python.git
+    cd relocatable-python
+    ./make_relocatable_python_framework.py --python-version 3.12.7 --os-version=11 --destination $PWD/../
+    cd ..
+fi
+
+# Prerequisite: Python packages
+rm -rf pkg-tmp
+./generate-univ-pkgs.sh
+./Python.framework/Versions/Current/bin/pip3 install pkg-tmp/*.whl
 
 # Prerequisite: build hamlib
 cd $FREEDVGUIDIR
-if [ ! -d hamlib-code ]; then
-    git clone https://github.com/Hamlib/Hamlib.git hamlib-code
+if [ $BUILD_DEPS == 1 ]; then 
+    if [ ! -d hamlib-code ]; then
+        git clone https://github.com/Hamlib/Hamlib.git hamlib-code
+    fi
+    cd hamlib-code && git checkout 4.6.2 && git pull
+    ./bootstrap
+    if [ $UNIV_BUILD == 1 ]; then
+        CFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" ./configure --enable-shared --prefix $HAMLIBDIR
+    else
+        CFLAGS="-g -O2 -mmacosx-version-min=10.9" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9" ./configure --enable-shared --prefix $HAMLIBDIR
+    fi
+
+    make -j$(sysctl -n hw.logicalcpu)
+    make install
 fi
-cd hamlib-code && git checkout 4.5.5 && git pull
-./bootstrap
-CFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" CXXFLAGS="-g -O2 -mmacosx-version-min=10.9 -arch x86_64 -arch arm64" ./configure --enable-shared --prefix $HAMLIBDIR
-make -j4
-make install
 
 # OK, build and test LPCNet
 cd $FREEDVGUIDIR
@@ -39,9 +64,9 @@ if [ $LPCNET_DISABLE == 0 ]; then
     fi
     cd $LPCNETDIR && git checkout master && git pull && git checkout $LPCNET_BRANCH
     mkdir  -p build_osx && cd build_osx && rm -Rf *
-    cmake -DBUILD_OSX_UNIVERSAL=1 ..
+    cmake -DBUILD_OSX_UNIVERSAL=${UNIV_BUILD} ..
     if [ $? == 0 ]; then
-        make -j4
+        make -j$(sysctl -n hw.logicalcpu)
         if [ $? == 0 ]; then
             # sanity check test
             cd src && sox ../../wav/wia.wav -t raw -r 16000 - | ./lpcnet_enc -s | ./lpcnet_dec -s > /dev/null
@@ -65,7 +90,7 @@ if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2-new.git codec2
 fi
 cd codec2 && git switch main && git pull && git checkout $CODEC2_BRANCH
-mkdir -p build_osx && cd build_osx && rm -Rf * && cmake ${LPCNET_CMAKE_CMD} -DBUILD_OSX_UNIVERSAL=1 .. && make VERBOSE=1 -j4
+mkdir -p build_osx && cd build_osx && rm -Rf * && cmake ${LPCNET_CMAKE_CMD} -DBUILD_OSX_UNIVERSAL=${UNIV_BUILD} .. && make VERBOSE=1 -j$(sysctl -n hw.logicalcpu)
 
 # sanity check test
 cd src
@@ -78,5 +103,15 @@ if [ -d .git ]; then
     git pull
 fi
 mkdir  -p build_osx && cd build_osx && rm -Rf *
-cmake -DUNITTEST=1 -DBUILD_OSX_UNIVERSAL=1 -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug  -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_SPEEXDSP=1 -DUSE_STATIC_PORTAUDIO=1 -DUSE_STATIC_SAMPLERATE=1 -DUSE_STATIC_SNDFILE=1 -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.dylib -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx ${LPCNET_CMAKE_CMD} ..
-make VERBOSE=1 -j8
+
+if [ "$CODESIGN_KEYCHAIN_PROFILE" != "" ]; then
+    export CODESIGN_KEYCHAIN_PROFILE_ARG=-DMACOS_CODESIGN_KEYCHAIN_PROFILE=$CODESIGN_KEYCHAIN_PROFILE
+fi
+
+if [ $BUILD_DEPS == 1 ]; then 
+    cmake -DUSE_NATIVE_AUDIO=$USE_NATIVE_AUDIO -DPython3_ROOT_DIR=$PWD/../Python.framework/Versions/3.12 -DBUILD_OSX_UNIVERSAL=${UNIV_BUILD} -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug  -DBOOTSTRAP_WXWIDGETS=1 -DUSE_STATIC_SPEEXDSP=1 -DUSE_STATIC_PORTAUDIO=1 -DUSE_STATIC_SAMPLERATE=1 -DUSE_STATIC_SNDFILE=1 -DHAMLIB_INCLUDE_DIR=${HAMLIBDIR}/include -DHAMLIB_LIBRARY=${HAMLIBDIR}/lib/libhamlib.dylib -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx ${LPCNET_CMAKE_CMD} -DMACOS_CODESIGN_IDENTITY=${CODESIGN_IDENTITY} ${CODESIGN_KEYCHAIN_PROFILE_ARG} ..
+else
+    cmake -DUSE_NATIVE_AUDIO=$USE_NATIVE_AUDIO -DPython3_ROOT_DIR=$PWD/../Python.framework/Versions/3.12 -DBUILD_OSX_UNIVERSAL=${UNIV_BUILD} -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_osx ${LPCNET_CMAKE_CMD} -DMACOS_CODESIGN_IDENTITY=${CODESIGN_IDENTITY} ${CODESIGN_KEYCHAIN_PROFILE_ARG} ..
+fi
+
+make VERBOSE=1 -j$(sysctl -n hw.logicalcpu)

@@ -8,14 +8,8 @@
 set -x -e
 
 UT_ENABLE=${UT_ENABLE:-0}
-LPCNET_DISABLE=${LPCNET_DISABLE:-0}
-
-# Allow building of either PulseAudio or PortAudio variants
-FREEDV_VARIANT=${1:-pulseaudio}
-if [[ "$FREEDV_VARIANT" != "portaudio" && "$FREEDV_VARIANT" != "pulseaudio" ]]; then
-    echo "Usage: build_linux.sh [portaudio|pulseaudio]"
-    exit -1
-fi
+LPCNET_DISABLE=${LPCNET_DISABLE:-1}
+USE_NATIVE_AUDIO=${USE_NATIVE_AUDIO:-1}
 
 export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
@@ -35,7 +29,7 @@ if [ $LPCNET_DISABLE == 0 ]; then
     mkdir  -p build_linux && cd build_linux && rm -Rf *
     cmake ..
     if [ $? == 0 ]; then
-        make
+        make -j$(nproc)
         if [ $? == 0 ]; then
             # sanity check test
             cd src && sox ../../wav/wia.wav -t raw -r 16000 - | ./lpcnet_enc -s | ./lpcnet_dec -s > /dev/null
@@ -59,7 +53,7 @@ if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2.git
 fi
 cd codec2 && git switch main && git pull && git checkout $CODEC2_BRANCH
-mkdir -p build_linux && cd build_linux && rm -Rf * && cmake $LPCNET_CMAKE_CMD .. && make VERBOSE=1
+mkdir -p build_linux && cd build_linux && rm -Rf * && cmake $LPCNET_CMAKE_CMD .. && make VERBOSE=1 -j$(nproc)
 if [ $LPCNET_DISABLE == 0 ]; then
     # sanity check test
     cd src
@@ -73,10 +67,5 @@ if [ -d .git ]; then
      git pull
 fi
 mkdir  -p build_linux && cd build_linux && rm -Rf *
-if [[ "$FREEDV_VARIANT" == "pulseaudio" ]]; then
-    PULSEAUDIO_PARAM="-DUSE_PULSEAUDIO=1"
-else
-    PULSEAUDIO_PARAM="-DUSE_PULSEAUDIO=0"
-fi
-cmake $PULSEAUDIO_PARAM -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux $LPCNET_CMAKE_CMD ..
-make VERBOSE=1
+cmake -DUSE_NATIVE_AUDIO=$USE_NATIVE_AUDIO -DUNITTEST=$UT_ENABLE -DCMAKE_BUILD_TYPE=Debug -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux $LPCNET_CMAKE_CMD ..
+make VERBOSE=1 -j$(nproc)

@@ -35,6 +35,8 @@ public:
     
     virtual void ptt(bool state) = 0;
     
+    virtual int getRigResponseTimeMicroseconds() = 0;
+    
 protected:
     IRigPttController() = default;
 };

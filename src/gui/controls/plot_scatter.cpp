@@ -184,22 +184,18 @@ void PlotScatter::draw(wxGraphicsContext* ctx)
         // much as scaling varies
 
         float quant_m_filter_max_y = exp(floor(0.5+log(m_filter_max_y)));
-        //printf("min_y: %4.3f max_y: %4.3f quant_m_filter_max_y: %4.3f\n", min_y, max_y, quant_m_filter_max_y);
 
         x_scale = (float)m_rGrid.GetWidth()/Ncol;
         y_scale = (float)m_rGrid.GetHeight()/quant_m_filter_max_y;
-        //printf("GetWidth(): %d GetHeight(): %d\n", m_rGrid.GetWidth(), m_rGrid.GetHeight());
 
         // plot eye traces row by row
 
         int prev_x, prev_y;
         prev_x = prev_y = 0;
         for(i=0; i<SCATTER_EYE_MEM_ROWS; i++) {
-            //printf("row: ");
             for(j=0; j<Ncol; j++) {
                 x = x_scale * j;
                 y = m_rGrid.GetHeight()*0.75 - y_scale * eye_mem[i][j];
-               //printf("%4d,%4d  ", x, y);
                 x += PLOT_BORDER + XLEFT_OFFSET;
                 y += PLOT_BORDER;
                 
@@ -210,9 +206,7 @@ void PlotScatter::draw(wxGraphicsContext* ctx)
                 }
                 prev_x = x; prev_y = y;
             }
-            //printf("\n");
-        }
-        
+        }        
     }
 }
 

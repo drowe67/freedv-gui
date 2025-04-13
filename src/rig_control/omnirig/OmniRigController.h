@@ -31,7 +31,7 @@
 class OmniRigController : public ThreadedObject, public IRigFrequencyController, public IRigPttController
 {
 public:
-    OmniRigController(int rigId, bool restoreFreqModeOnDisconnect = false);
+    OmniRigController(int rigId, bool restoreFreqModeOnDisconnect = false, bool freqOnly = false);
     virtual ~OmniRigController();
 
     virtual void connect() override;
@@ -41,6 +41,8 @@ public:
     virtual void setFrequency(uint64_t frequency) override;
     virtual void setMode(IRigFrequencyController::Mode mode) override;
     virtual void requestCurrentFrequencyMode() override;
+    
+    virtual int getRigResponseTimeMicroseconds() override;
 
 private:
     int rigId_; // can be either 0 or 1 (Rig 1 or 2)
@@ -52,6 +54,8 @@ private:
     IRigFrequencyController::Mode currMode_;
     bool restoreOnDisconnect_;
     long writableParams_; // used to help determine VFO
+    bool freqOnly_;
+    int rigResponseTime_;
 
     void connectImpl_();
     void disconnectImpl_();
