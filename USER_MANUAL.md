@@ -921,6 +921,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Use optimal number of parallel builds during build process. (PR #842)
 4. Miscellaneous:
     * Add issue template for SW bugs. (PR #759)
+    * Fix typos in user manual and code. (PR #859; thanks @dforsi)
 
 ## V1.9.9.2 June 2024
 
