@@ -915,12 +915,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Update default 80 and 160m calling frequencies. (PR #831)
     * Shorten PulseAudio/pipewire app name. (PR #843)
 3. Build system:
-    * Allow overrriding the version tag when building. (PR #727)
+    * Allow overriding the version tag when building. (PR #727)
     * Update wxWidgets to 3.2.6. (PR #748)
     * Update Hamlib to 4.6.2. (PR #834)
     * Use optimal number of parallel builds during build process. (PR #842)
 4. Miscellaneous:
     * Add issue template for SW bugs. (PR #759)
+    * Fix typos in user manual and code. (PR #859; thanks @dforsi)
 
 ## V1.9.9.2 June 2024
 

@@ -160,7 +160,7 @@ if(SIGN_WINDOWS_BINARIES)
     endif(NOT WIN32 AND NOT MINGW)
 
     if(NOT DEFINED PKCS11_KEY_FILE OR NOT DEFINED PKCS11_CERTIFICATE_FILE OR NOT DEFINED INTERMEDIATE_CERT_FILE)
-        message(FATAL_ERROR "Must provide key and certifcate files.")
+        message(FATAL_ERROR "Must provide key and certificate files.")
     endif(NOT DEFINED PKCS11_KEY_FILE OR NOT DEFINED PKCS11_CERTIFICATE_FILE OR NOT DEFINED INTERMEDIATE_CERT_FILE)
 
     # Default PKCS#11 engine if not provided.

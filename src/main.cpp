@@ -3726,7 +3726,7 @@ void MainFrame::initializeFreeDVReporter_()
             auto answer = messageDialog.ShowModal();
             if (answer == wxID_YES)
             {
-                // This will implicitly cause Hamlib to change the frequecy and mode.
+                // This will implicitly cause Hamlib to change the frequency and mode.
                 if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
                 {
                     m_cboReportFrequency->SetValue(wxString::Format("%.1f", frequencyReadable));
