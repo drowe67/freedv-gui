@@ -112,6 +112,10 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
 
     m_listSpots = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_SINGLE);
 
+    // Associate data model.
+    spotsDataModel_ = new FreeDVReporterDataModel(this);
+    m_listSpots->AssociateModel(spotsDataModel_.get());
+
     m_listSpots->AppendTextColumn(wxT("Callsign"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
     m_listSpots->AppendTextColumn(wxT("Locator"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
     m_listSpots->AppendTextColumn(wxT("km"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_RIGHT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
@@ -128,10 +132,6 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->AppendTextColumn(wxT("Mode"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
     m_listSpots->AppendTextColumn(wxT("SNR"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_RIGHT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
     m_listSpots->AppendTextColumn(wxT("Last Update"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
-
-    // Associate data model.
-    spotsDataModel_ = new FreeDVReporterDataModel(this);
-    m_listSpots->AssociateModel(spotsDataModel_.get());
 
     sectionSizer->Add(m_listSpots, 0, wxALL | wxEXPAND, 2);
     
