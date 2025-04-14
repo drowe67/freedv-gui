@@ -310,6 +310,17 @@ void PulseAudioDevice::stop()
     }
 }
 
+int PulseAudioDevice::getLatencyInMicroseconds()
+{
+    pa_usec_t latency = 0;
+    if (stream_ != nullptr)
+    {
+        int neg = 0;
+        pa_stream_get_latency(stream_, &latency, &neg); // ignore error and assume 0
+    }
+    return (int)latency;
+}
+
 void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *userdata)
 {
     const void* data = nullptr;

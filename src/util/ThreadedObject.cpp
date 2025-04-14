@@ -39,7 +39,7 @@ ThreadedObject::~ThreadedObject()
 
 void ThreadedObject::enqueue_(std::function<void()> fn)
 {
-    std::unique_lock<std::mutex> lk(eventQueueMutex_);
+    std::unique_lock<std::recursive_mutex> lk(eventQueueMutex_);
     eventQueue_.push_back(fn);
     eventQueueCV_.notify_one();
 }
@@ -51,7 +51,7 @@ void ThreadedObject::eventLoop_()
         std::function<void()> fn;
         
         {
-            std::unique_lock<std::mutex> lk(eventQueueMutex_);
+            std::unique_lock<std::recursive_mutex> lk(eventQueueMutex_);
             eventQueueCV_.wait(lk, [&]() {
                 return isDestroying_ || eventQueue_.size() > 0;
             });

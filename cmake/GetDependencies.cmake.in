@@ -95,6 +95,9 @@ set( _windlls
     msvcrt.dll
     bcrypt.dll
     IPHLPAPI.DLL
+    AVRT.dll
+    gdiplus.dll
+    MSIMG32.dll
 
     # The below are additional DLLs required when compiled
     # using the LLVM version of MinGW.

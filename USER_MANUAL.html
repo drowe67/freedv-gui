@@ -1221,6 +1221,8 @@ FreeDV Reporter messages. (PR #812)</li>
 non-truncated messages. (PR #829)</li>
 <li>Preserve Hamlib rig names on startup to guard against changes by
 Hamlib during execution. (PR #834)</li>
+<li>Fix dropouts related to virtual audio cables. (PR #840)</li>
+<li>Report “unk” for mode on Hamlib disconnect. (PR #851)</li>
 </ul></li>
 <li>Enhancements:
 <ul>
@@ -1238,12 +1240,15 @@ display error if not. (PR #790)</li>
 <li>Add rig control option to prevent auto-adjustment of the radio’s
 current mode. (PR #809)</li>
 <li>Update default 80 and 160m calling frequencies. (PR #831)</li>
+<li>Shorten PulseAudio/pipewire app name. (PR #843)</li>
 </ul></li>
 <li>Build system:
 <ul>
 <li>Allow overrriding the version tag when building. (PR #727)</li>
 <li>Update wxWidgets to 3.2.6. (PR #748)</li>
 <li>Update Hamlib to 4.6.2. (PR #834)</li>
+<li>Use optimal number of parallel builds during build process. (PR
+#842)</li>
 </ul></li>
 <li>Miscellaneous:
 <ul>

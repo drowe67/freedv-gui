@@ -26,6 +26,7 @@
 #include <sstream>
 #include <algorithm>
 #include <cstring>
+#include <chrono>
 #include <strings.h>
 
 #include "HamlibRigController.h"
@@ -76,6 +77,7 @@ HamlibRigController::HamlibRigController(std::string rigName, std::string serial
     , origFreq_(0)
     , origMode_(RIG_MODE_NONE)
     , freqOnly_(freqOnly)
+    , rigResponseTime_(0)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -97,6 +99,7 @@ HamlibRigController::HamlibRigController(int rigIndex, std::string serialPort, c
     , origFreq_(0)
     , origMode_(RIG_MODE_NONE)
     , freqOnly_(freqOnly)
+    , rigResponseTime_(0)
 {
     // Perform initial load of rig list if this is our first time being created.
     InitializeHamlibLibrary();
@@ -224,6 +227,11 @@ void HamlibRigController::setMode(IRigFrequencyController::Mode mode)
 void HamlibRigController::requestCurrentFrequencyMode()
 {
     enqueue_(std::bind(&HamlibRigController::requestCurrentFrequencyModeImpl_, this));
+}
+
+int HamlibRigController::getRigResponseTimeMicroseconds()
+{
+    return rigResponseTime_;
 }
 
 int HamlibRigController::RigNameToIndex(std::string rigName)
@@ -396,6 +404,8 @@ void HamlibRigController::disconnectImpl_()
         rig_close(rig_);
         rig_cleanup(rig_);
         rig_ = nullptr;
+        
+        onRigDisconnected(this);
     }
 }
 
@@ -410,11 +420,16 @@ void HamlibRigController::pttImpl_(bool state)
 
     ptt_t on = state ? RIG_PTT_ON : RIG_PTT_OFF;
 
+    auto oldTime = std::chrono::steady_clock::now();
     int result = RIG_OK;
     if (pttType_ != PTT_VIA_NONE)
     {
         result = rig_set_ptt(rig_, RIG_VFO_CURR, on);
     }
+    auto newTime = std::chrono::steady_clock::now();
+    auto totalTimeMicroseconds = (int)std::chrono::duration_cast<std::chrono::microseconds>(newTime - oldTime).count();
+    rigResponseTime_ = std::max(rigResponseTime_, totalTimeMicroseconds);
+    
     if (result != RIG_OK) 
     {
         log_debug("rig_set_ptt: error = %s ", rigerror(result));

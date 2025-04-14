@@ -900,6 +900,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Don't adjust Msg column width when user disconnects. (PR #828)
     * Fix issue preventing suppression of the Msg tooltip for non-truncated messages. (PR #829)
     * Preserve Hamlib rig names on startup to guard against changes by Hamlib during execution. (PR #834)
+    * Fix dropouts related to virtual audio cables. (PR #840)
+    * Report "unk" for mode on Hamlib disconnect. (PR #851)
 2. Enhancements:
     * Show green line indicating RX frequency. (PR #725)
     * Update configuration of the Voice Keyer feature based on user feedback. (PR #730, #746, #793)
@@ -911,12 +913,15 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Windows: Detect whether microphone permissions have been granted and display error if not. (PR #790)
     * Add rig control option to prevent auto-adjustment of the radio's current mode. (PR #809)
     * Update default 80 and 160m calling frequencies. (PR #831)
+    * Shorten PulseAudio/pipewire app name. (PR #843)
 3. Build system:
-    * Allow overrriding the version tag when building. (PR #727)
+    * Allow overriding the version tag when building. (PR #727)
     * Update wxWidgets to 3.2.6. (PR #748)
     * Update Hamlib to 4.6.2. (PR #834)
+    * Use optimal number of parallel builds during build process. (PR #842)
 4. Miscellaneous:
     * Add issue template for SW bugs. (PR #759)
+    * Fix typos in user manual and code. (PR #859; thanks @dforsi)
 
 ## V1.9.9.2 June 2024
 

@@ -24,6 +24,7 @@
 
 #include "../defines.h"
 #include "FreeDVConfiguration.h"
+#include "../freedv_interface.h"
 
 FreeDVConfiguration::FreeDVConfiguration()
     /* First time configuration options */
@@ -99,7 +100,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     , waterfallColor("/Waterfall/Color", 0)
     , statsResetTimeSecs("/Stats/ResetTime", 10)
         
-    , currentFreeDVMode("/Audio/mode", 4)
+    , currentFreeDVMode("/Audio/mode", FREEDV_MODE_RADE)
         
     , currentSpectrumAveraging("/Plot/Spectrum/CurrentAveraging", 0)
     

@@ -88,7 +88,7 @@ function Test-FreeDV {
     $psi.FileName = "$current_loc\freedv.exe"
     $psi.WorkingDirectory = $current_loc
     $quoted_tmp_filename = "`"" + $tmp_file.FullName + "`""
-    $psi.Arguments = @("/f $quoted_tmp_filename /ut txrx /utmode $ModeToTest")
+    $psi.Arguments = @("/f $quoted_tmp_filename /ut txrx /utmode $ModeToTest /txtime 60")
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
@@ -101,7 +101,7 @@ function Test-FreeDV {
 
     Write-Host "$err_output"
 
-    $syncs = $err_output.Split([Environment]::NewLine) | Where { $_.Contains("Sync changed") }
+    $syncs = ($err_output -split "`r?`n") | Where { $_.Contains("Sync changed") }
     if ($syncs.Count -eq 1) {
         return $true
     }

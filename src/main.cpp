@@ -383,9 +383,9 @@ void MainApp::UnitTest_()
         }
         else
         {
-            // Receive for 60 seconds
+            // Receive for txtime seconds
             auto sync = 0;
-            for (int i = 0; i < 60*10; i++)
+            for (int i = 0; i < utTxTimeSeconds*10; i++)
             {
                 std::this_thread::sleep_for(100ms);
                 auto newSync = freedvInterface.getSync();
@@ -397,6 +397,9 @@ void MainApp::UnitTest_()
             } 
         }
     }
+    
+    // Wait a second to make sure we're not doing any more processing
+    std::this_thread::sleep_for(1000ms);
  
     // Fire event to stop FreeDV
     log_info("Firing stop");
@@ -863,38 +866,46 @@ void MainFrame::loadConfiguration_()
     int mode = wxGetApp().appConfiguration.currentFreeDVMode;
 setDefaultMode:
     if (mode == 0)
-        m_rb1600->SetValue(1);
-    if (mode == 3)
-        m_rb700c->SetValue(1);
-    if (mode == 4)
-        m_rb700d->SetValue(1);
-    if (mode == 5)
-        m_rb700e->SetValue(1);
-    if (mode == 6)
-        m_rb800xa->SetValue(1);
-    // mode 7 was the former 2400B mode, now removed.
-    if ((mode == 9) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
-        m_rb2020->SetValue(1);
-    else if (mode == 9)
     {
-        // Default to 700D otherwise
-        mode = defaultMode;
-        goto setDefaultMode;
+        m_rb1600->SetValue(1);
     }
-    if (mode == FREEDV_MODE_RADE)
+    else if (mode == 3)
+    {
+        m_rb700c->SetValue(1);
+    }
+    else if (mode == 4)
+    {
+        m_rb700d->SetValue(1);
+    }
+    else if (mode == 5)
+    {
+        m_rb700e->SetValue(1);
+    }
+    else if (mode == 6)
+    {
+        m_rb800xa->SetValue(1);
+    }
+    // mode 7 was the former 2400B mode, now removed.
+    else if ((mode == 9) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
+    {
+        m_rb2020->SetValue(1);
+    }
+    else if (mode == FREEDV_MODE_RADE)
     {
         m_rbRADE->SetValue(1);
     }
 #if defined(FREEDV_MODE_2020B)
-    if ((mode == 10) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
-        m_rb2020b->SetValue(1);
-    else if (mode == 10)
+    else if ((mode == 10) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
     {
-        // Default to 700D otherwise
+        m_rb2020b->SetValue(1);
+    }
+#endif // defined(FREEDV_MODE_2020B)
+    else
+    {
+        // Default to RADE otherwise
         mode = defaultMode;
         goto setDefaultMode;
     }
-#endif // defined(FREEDV_MODE_2020B)
     pConfig->SetPath(wxT("/"));
     
     // Set initial state of additional modes.
@@ -1696,7 +1707,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (snr_limited < -5.0) snr_limited = -5.0;
         if (snr_limited > 40.0) snr_limited = 40.0;
         char snr[15];
-        snprintf(snr, 15, "%4.0f dB", g_snr);
+        snprintf(snr, 15, "%d dB", (int)(g_snr + 0.5));
 
         if (freedvInterface.getSync())
         {
@@ -2875,12 +2886,19 @@ void MainFrame::stopRxStream()
 
 void MainFrame::destroy_fifos(void)
 {
-    codec2_fifo_destroy(g_rxUserdata->infifo1);
-    codec2_fifo_destroy(g_rxUserdata->outfifo1);
+    if (g_rxUserdata->infifo1) codec2_fifo_destroy(g_rxUserdata->infifo1);
+    if (g_rxUserdata->outfifo1) codec2_fifo_destroy(g_rxUserdata->outfifo1);
     if (g_rxUserdata->infifo2) codec2_fifo_destroy(g_rxUserdata->infifo2);
     if (g_rxUserdata->outfifo2) codec2_fifo_destroy(g_rxUserdata->outfifo2);
     codec2_fifo_destroy(g_rxUserdata->rxinfifo);
     codec2_fifo_destroy(g_rxUserdata->rxoutfifo);
+    
+    g_rxUserdata->infifo1 = nullptr;
+    g_rxUserdata->infifo2 = nullptr;
+    g_rxUserdata->outfifo1 = nullptr;
+    g_rxUserdata->outfifo2 = nullptr;
+    g_rxUserdata->rxinfifo = nullptr;
+    g_rxUserdata->rxoutfifo = nullptr;
 }
 
 //-------------------------------------------------------------------------
@@ -3106,20 +3124,27 @@ void MainFrame::startRxStream()
         // loop.
 
         int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
-        int soundCard1InFifoSizeSamples = wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
-        int soundCard1OutFifoSizeSamples = wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
-        g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
-        g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
+        int soundCard1InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate / 1000;
+        int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate / 1000;
 
         if (txInSoundDevice && txOutSoundDevice)
         {
             int soundCard2InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate / 1000;
             int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate / 1000;
-            g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
+            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
             g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
+            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
+            g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
         
             log_debug("fifoSize_ms:  %d infifo2: %d/outfilo2: %d",
                 wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
+        }
+        else
+        {
+            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
+            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
+            g_rxUserdata->infifo2 = nullptr;
+            g_rxUserdata->outfifo2 = nullptr;
         }
 
         log_debug("fifoSize_ms: %d infifo1: %d/outfilo1 %d",
@@ -3304,38 +3329,37 @@ void MainFrame::startRxStream()
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
                 short  outdata[size];
+                
+                int available = std::min(codec2_fifo_used(cbData->outfifo1), (int)size);
 
-                int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
-                if (result == 0) {
-
-                    // write signal to all channels if the device can support 2+ channels.
-                    // Otherwise, we assume we're only dealing with one channel and write
-                    // only to that channel.
-                    if (dev.getNumChannels() >= 2)
+                int result = codec2_fifo_read(cbData->outfifo1, outdata, available);
+                if (result == 0) 
+                {
+                    // write signal to all channels to start. This is so that
+                    // the compiler can optimize for the most common case.
+                    for(size_t i = 0; i < available; i++, audioData += dev.getNumChannels()) 
                     {
-                        for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels()) 
+                        for (auto j = 0; j < dev.getNumChannels(); j++)
                         {
-                            if (cbData->leftChannelVoxTone)
-                            {
-                                cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
-                                cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-                                audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
-                            }
-                            else
-                                audioData[0] = outdata[i];
-
-                            for (auto j = 1; j < dev.getNumChannels(); j++)
-                            {
-                                audioData[j] = outdata[i];
-                            }
+                            audioData[j] = outdata[i];
                         }
                     }
-                    else
+                    
+                    // If VOX tone is enabled, go back through and add the VOX tone
+                    // on the left channel.
+                    if (cbData->leftChannelVoxTone)
                     {
-                        for(size_t i = 0; i < size; i++, audioData++) 
+                        for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
                         {
-                            audioData[0] = outdata[i];
+                            cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
+                            cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+                            audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
                         }
+                    }
+                    
+                    if (size != available)
+                    {
+                        g_outfifo1_empty++;
                     }
                 }
                 else 
@@ -3702,7 +3726,7 @@ void MainFrame::initializeFreeDVReporter_()
             auto answer = messageDialog.ShowModal();
             if (answer == wxID_YES)
             {
-                // This will implicitly cause Hamlib to change the frequecy and mode.
+                // This will implicitly cause Hamlib to change the frequency and mode.
                 if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
                 {
                     m_cboReportFrequency->SetValue(wxString::Format("%.1f", frequencyReadable));

@@ -29,7 +29,7 @@ jobs:
             
     - name: Spellcheck codebase
       shell: bash
-      run: codespell --ignore-words-list=caf,radae,rade,inout,nin,ontop,parm,tthe,ue `find src -name '*.c*' -o -name '*.h' -o -name '*.mm'`
+      run: codespell --ignore-words-list=caf,radae,rade,inout,nin,ontop,parm,tthe,ue `find src -name '*.c*' -o -name '*.h' -o -name '*.mm' | grep -v 3rdparty`
 
     - name: Install Python required modules
       shell: bash
@@ -45,14 +45,14 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 ./build_linux.sh portaudio
+          UT_ENABLE=1 USE_NATIVE_AUDIO=0 ./build_linux.sh 
 
     - name: Build freedv-gui using PulseAudio
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 ./build_linux.sh pulseaudio
+          UT_ENABLE=1 ./build_linux.sh 
 
     - name: Execute unit tests
       shell: bash
