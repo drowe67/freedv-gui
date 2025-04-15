@@ -37,7 +37,12 @@ bool ReportMessageRenderer::Render(wxRect cell, wxDC *dc, int state)
         wxGraphicsContext* context = renderer->CreateContextFromUnknownDC(*dc);
         if (context != nullptr)
         {
-            context->SetFont(dc->GetFont(), dc->GetTextForeground());
+            wxColour color = dc->GetTextForeground();
+            if (state & wxDATAVIEW_CELL_SELECTED)
+            {
+                color = wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT);
+            }
+            context->SetFont(dc->GetFont(), color);
             context->DrawText(m_value, cell.x, cell.y);
             delete context;
             return true;
