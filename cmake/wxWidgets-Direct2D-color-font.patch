@@ -25,3 +25,15 @@ index 89b74102a..e2a96a760 100644
  }
  
  void wxD2DContext::EnsureInitialized()
+diff --git a/src/osx/cocoa/dataview.mm b/src/osx/cocoa/dataview.mm
+index 93554f1c7..3e879b3c1 100644
+--- a/src/osx/cocoa/dataview.mm
++++ b/src/osx/cocoa/dataview.mm
+@@ -1573,6 +1573,7 @@ -(id) init
+         [self setDraggingSourceOperationMask:NSDragOperationEvery forLocal:NO];
+         [self setDraggingSourceOperationMask:NSDragOperationEvery forLocal:YES];
+         [self setTarget:self];
++        self.intercellSpacing = NSZeroSize;
+     }
+     return self;
+ }

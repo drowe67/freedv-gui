@@ -813,6 +813,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
             foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
         }
+        else
+        {
+            // To ensure that the columns don't have a different color than the rest of the control.
+            // Needed mainly for macOS.
+            backgroundColor = wxColour(wxTransparentColour);
+        }
 
         bool isHighlightUpdated = 
             backgroundColor != reportData->backgroundColor ||
@@ -1606,22 +1612,28 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
 
 bool FreeDVReporterDialog::FreeDVReporterDataModel::GetAttr (const wxDataViewItem &item, unsigned int col, wxDataViewItemAttr &attr) const
 {
+    bool result = false;
+    
     if (item.IsOk())
     {
         std::string sid = *(std::string*)item.GetID();
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
-            if (iter->second->backgroundColor.IsOk() || iter->second->foregroundColor.IsOk())
+            if (iter->second->backgroundColor.IsOk())
             {
                 attr.SetBackgroundColour(iter->second->backgroundColor);
+                result = true;
+            }
+            if (iter->second->foregroundColor.IsOk())
+            {
                 attr.SetColour(iter->second->foregroundColor);
-                return true;
+                result = true;
             }
         }
     }
 
-    return false;
+    return result;
 }
 
 unsigned int FreeDVReporterDialog::FreeDVReporterDataModel::GetChildren (const wxDataViewItem &item, wxDataViewItemArray &children) const
