@@ -39,9 +39,10 @@ bool ReportMessageRenderer::Render(wxRect cell, wxDC *dc, int state)
     else
 #endif // defined(WIN32)
     {
+        RenderBackground(dc, cell);
         RenderText(m_value, 0, cell, dc, state);
     }
-
+    
     return true;
 }
 
