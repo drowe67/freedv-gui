@@ -186,6 +186,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     {
         colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
     }
+    colObj->SetWidth(wxGetApp().appConfiguration.reportingUserMsgColWidth);
     
     colObj = m_listSpots->AppendTextColumn(wxT("Last TX"), col++, wxDATAVIEW_CELL_INERT, wxCOL_WIDTH_AUTOSIZE, wxALIGN_LEFT, wxDATAVIEW_COL_RESIZABLE | wxDATAVIEW_COL_SORTABLE);
     colObj->GetRenderer()->DisableEllipsize();
@@ -617,6 +618,15 @@ void FreeDVReporterDialog::OnOK(wxCommandEvent& event)
             break;
         }
     }
+    
+    // Preserve Msg column width
+    int offset = 0;
+#if defined(WIN32)
+    offset++;
+#endif // defined(WIN32)
+    
+    auto userMsgCol = m_listSpots->GetColumn(offset + USER_MESSAGE_COL);
+    wxGetApp().appConfiguration.reportingUserMsgColWidth = userMsgCol->GetWidth();
 
     wxGetApp().appConfiguration.reporterWindowVisible = false;
     Hide();
@@ -654,6 +664,15 @@ void FreeDVReporterDialog::OnClose(wxCloseEvent& event)
             break;
         }
     }
+    
+    // Preserve Msg column width
+    int offset = 0;
+#if defined(WIN32)
+    offset++;
+#endif // defined(WIN32)
+    
+    auto userMsgCol = m_listSpots->GetColumn(offset + USER_MESSAGE_COL);
+    wxGetApp().appConfiguration.reportingUserMsgColWidth = userMsgCol->GetWidth();
     
     wxGetApp().appConfiguration.reporterWindowVisible = false;
     Hide();
