@@ -1,16 +1,16 @@
-diff --git a/src/msw/graphics.cpp b/src/msw/graphics.cpp
-index abca42a35..c1079fedd 100644
---- a/src/msw/graphics.cpp
-+++ b/src/msw/graphics.cpp
-@@ -2597,7 +2597,7 @@ wxGraphicsRenderer* wxGraphicsRenderer::GetGDIPlusRenderer()
+diff --git a/include/wx/msw/setup.h b/include/wx/msw/setup.h
+index b1d20d927..4f834c941 100644
+--- a/include/wx/msw/setup.h
++++ b/include/wx/msw/setup.h
+@@ -1648,7 +1648,7 @@
+ #if defined(_MSC_VER) && _MSC_VER >= 1600
+     #define wxUSE_GRAPHICS_DIRECT2D wxUSE_GRAPHICS_CONTEXT
+ #else
+-    #define wxUSE_GRAPHICS_DIRECT2D 0
++    #define wxUSE_GRAPHICS_DIRECT2D wxUSE_GRAPHICS_CONTEXT
+ #endif
  
- wxGraphicsRenderer* wxGraphicsRenderer::GetDefaultRenderer()
- {
--    return wxGraphicsRenderer::GetGDIPlusRenderer();
-+    return wxGraphicsRenderer::GetDirect2DRenderer();
- }
- 
- bool wxGDIPlusRenderer::EnsureIsLoaded()
+ // wxWebRequest backend based on WinHTTP.
 diff --git a/src/msw/graphicsd2d.cpp b/src/msw/graphicsd2d.cpp
 index 89b74102a..e2a96a760 100644
 --- a/src/msw/graphicsd2d.cpp
@@ -25,30 +25,3 @@ index 89b74102a..e2a96a760 100644
  }
  
  void wxD2DContext::EnsureInitialized()
-diff --git a/src/msw/listctrl.cpp b/src/msw/listctrl.cpp
-index 538a7af59..6d5306799 100644
---- a/src/msw/listctrl.cpp
-+++ b/src/msw/listctrl.cpp
-@@ -37,6 +37,7 @@
- 
- #include "wx/imaglist.h"
- #include "wx/vector.h"
-+#include "wx/graphics.h"
- 
- #include "wx/msw/private.h"
- #include "wx/msw/private/customdraw.h"
-@@ -3095,7 +3096,13 @@ bool HandleSubItemPrepaint(LPNMLVCUSTOMDRAW pLVCD, HFONT hfont, int colCount)
-     }
-     //else: failed to get alignment, assume it's DT_LEFT (default)
- 
--    DrawText(hdc, text, -1, &rc, fmt);
-+    wxGraphicsRenderer* renderer = wxGraphicsRenderer::GetDirect2DRenderer();
-+    wxGraphicsContext* context = renderer->CreateContextFromNativeContext(hdc);
-+    context->DrawText(text, rc.left, rc.top);
-+    delete context;
-+    fprintf(stderr, "left: %ld, top: %ld\n", rc.left, rc.top);
-+
-+    //DrawText(hdc, text, -1, &rc, fmt);
- 
-     return true;
- }
