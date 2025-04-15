@@ -22,6 +22,9 @@
 
 #include "ReportMessageRenderer.h"
 
+#include <wx/graphics.h>
+#include <wx/dc.h>
+
 ReportMessageRenderer::ReportMessageRenderer()
     : wxDataViewCustomRenderer("string", wxDATAVIEW_CELL_INERT, wxALIGN_LEFT) { }
 
@@ -29,19 +32,21 @@ bool ReportMessageRenderer::Render(wxRect cell, wxDC *dc, int state)
 {
 #if defined(WIN32)
     wxGraphicsRenderer* renderer = wxGraphicsRenderer::GetDirect2DRenderer();
-    wxGraphicsContext* context = renderer->CreateContextFromUnknownDC(*dc);
-    if (context != nullptr)
+    if (renderer != nullptr)
     {
-        context->SetFont(dc->GetFont(), dc->GetTextForeground());
-        context->DrawText(m_value, cell.x, cell.y);
-        delete context;
+        wxGraphicsContext* context = renderer->CreateContextFromUnknownDC(*dc);
+        if (context != nullptr)
+        {
+            context->SetFont(dc->GetFont(), dc->GetTextForeground());
+            context->DrawText(m_value, cell.x, cell.y);
+            delete context;
+            return true;
+        }
     }
-    else
 #endif // defined(WIN32)
-    {
-        RenderBackground(dc, cell);
-        RenderText(m_value, 0, cell, dc, state);
-    }
+
+    RenderBackground(dc, cell);
+    RenderText(m_value, 0, cell, dc, state);
     
     return true;
 }

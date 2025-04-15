@@ -45,11 +45,7 @@ extern FreeDVInterface freedvInterface;
 #define LAST_UPDATE_DATE_COL (13)
 
 #define UNKNOWN_STR ""
-#if defined(WIN32)
-#define NUM_COLS (LAST_UPDATE_DATE_COL + 2) /* Note: need empty column 0 to work around callsign truncation issue. */
-#else
 #define NUM_COLS (LAST_UPDATE_DATE_COL + 1)
-#endif // defined(WIN32)
 #define RX_ONLY_STATUS "RX Only"
 #define RX_COLORING_LONG_TIMEOUT_SEC (20)
 #define RX_COLORING_SHORT_TIMEOUT_SEC (5)
@@ -58,27 +54,6 @@ extern FreeDVInterface freedvInterface;
 #define MESSAGE_COLUMN_ID (6)
 
 using namespace std::placeholders;
-
-static int DefaultColumnWidths_[] = {
-#if defined(WIN32)
-    1,
-#endif // defined(WIN32)
-    70,
-    65,
-    60,
-    60,
-    70,
-    60,
-    65,
-    60,
-    130,
-    60,
-    65,
-    60,
-    60,
-    100,
-    1
-};
 
 FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxFrame(parent, id, title, pos, size, style)
@@ -89,13 +64,6 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
         SetTitle(wxString::Format("%s (%s)", _("FreeDV Reporter"), wxGetApp().customConfigFileName));
     }
 
-    int userMsgDefaultColWidth = wxGetApp().appConfiguration.reportingUserMsgColWidth;
-    int userColNum = USER_MESSAGE_COL;
-#if defined(WIN32)
-    userColNum++;
-#endif // defined(WIN32)
-    DefaultColumnWidths_[userColNum] = userMsgDefaultColWidth;
-
     // Create top-level of control hierarchy.
     wxFlexGridSizer* sectionSizer = new wxFlexGridSizer(2, 1, 0, 0);
     sectionSizer->AddGrowableRow(0);
@@ -104,11 +72,6 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Main list box
     // =============================
     int col = 0;
-#if defined(WIN32)
-    // In previous implementation, column 0 is hidden, so everything is shifted by 1 column.
-    // We need to keep this behavior for backwards compatibility.
-    col++;
-#endif // defined(WIN32)
 
     m_listSpots = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_SINGLE);
 
@@ -496,14 +459,7 @@ bool FreeDVReporterDialog::isTextMessageFieldInFocus()
 
 void FreeDVReporterDialog::refreshLayout()
 {
-    int colOffset = 0;
-
-#if defined(WIN32)
-    // Column 0 is hidden, so everything is shifted by 1 column.
-    colOffset++;
-#endif // defined(WIN32)
-
-    wxDataViewColumn* item = m_listSpots->GetColumn(DISTANCE_COL + colOffset);
+    wxDataViewColumn* item = m_listSpots->GetColumn(DISTANCE_COL);
 
     if (wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
     {
@@ -515,7 +471,7 @@ void FreeDVReporterDialog::refreshLayout()
     }
     
     // Refresh frequency units as appropriate.
-    item = m_listSpots->GetColumn(FREQUENCY_COL + colOffset);
+    item = m_listSpots->GetColumn(FREQUENCY_COL);
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
         item->SetTitle("kHz");
@@ -526,7 +482,7 @@ void FreeDVReporterDialog::refreshLayout()
     }
 
     // Change direction/heading column label based on preferences
-    item = m_listSpots->GetColumn(HEADING_COL + colOffset);
+    item = m_listSpots->GetColumn(HEADING_COL);
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal)
     {
         item->SetTitle("Dir");
@@ -620,12 +576,7 @@ void FreeDVReporterDialog::OnOK(wxCommandEvent& event)
     }
     
     // Preserve Msg column width
-    int offset = 0;
-#if defined(WIN32)
-    offset++;
-#endif // defined(WIN32)
-    
-    auto userMsgCol = m_listSpots->GetColumn(offset + USER_MESSAGE_COL);
+    auto userMsgCol = m_listSpots->GetColumn(USER_MESSAGE_COL);
     wxGetApp().appConfiguration.reportingUserMsgColWidth = userMsgCol->GetWidth();
 
     wxGetApp().appConfiguration.reporterWindowVisible = false;
@@ -666,12 +617,7 @@ void FreeDVReporterDialog::OnClose(wxCloseEvent& event)
     }
     
     // Preserve Msg column width
-    int offset = 0;
-#if defined(WIN32)
-    offset++;
-#endif // defined(WIN32)
-    
-    auto userMsgCol = m_listSpots->GetColumn(offset + USER_MESSAGE_COL);
+    auto userMsgCol = m_listSpots->GetColumn(USER_MESSAGE_COL);
     wxGetApp().appConfiguration.reportingUserMsgColWidth = userMsgCol->GetWidth();
     
     wxGetApp().appConfiguration.reporterWindowVisible = false;
@@ -694,71 +640,6 @@ void FreeDVReporterDialog::OnItemSelectionChanged(wxDataViewEvent& event)
         m_buttonSendQSY->Enable(false);
     }
 }
-
-#if 0
-void FreeDVReporterDialog::AdjustMsgColWidth(wxListEvent& event)
-{
-    int col = event.GetColumn();
-    int desiredCol = USER_MESSAGE_COL;
-#if defined(WIN32)
-    desiredCol++;
-#endif // defined(WIN32)
-    
-    if (col != desiredCol)
-    {
-        return;
-    }
-    
-    int currentColWidth = m_listSpots->GetColumnWidth(desiredCol);
-    int textWidth = 0;
-
-    wxGetApp().appConfiguration.reportingUserMsgColWidth = currentColWidth;
-
-    // Iterate through and re-truncate column as required.
-    for (int index = 0; index < m_listSpots->GetItemCount(); index++)
-    {
-        std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
-        wxString tempUserMessage = _(" ") + allReporterData_[*sidPtr]->userMessage;  // note: extra space at beginning is to provide extra space from previous col
-        
-        textWidth = getSizeForTableCellString_(tempUserMessage);
-        int tmpLength = allReporterData_[*sidPtr]->userMessage.Length() - 1;
-        while (textWidth > currentColWidth && tmpLength >= 0)
-        {
-            tempUserMessage = allReporterData_[*sidPtr]->userMessage.SubString(0, tmpLength--) + _("...");
-            textWidth = getSizeForTableCellString_(tempUserMessage);
-        }
-        
-        if (tmpLength > 0 && tmpLength < (allReporterData_[*sidPtr]->userMessage.Length() - 1))
-        {
-            tempUserMessage = allReporterData_[*sidPtr]->userMessage.SubString(0, tmpLength) + _("...");
-        }
-        
-        m_listSpots->SetItem(index, desiredCol, tempUserMessage);
-    }
-}
-
-void FreeDVReporterDialog::OnSortColumn(wxListEvent& event)
-{
-    int col = event.GetColumn();
-
-#if defined(WIN32)
-    // The "hidden" column 0 is new as of 1.9.7. Automatically
-    // assume the user is sorting by callsign.
-    if (col == 0)
-    {
-        col = 1;
-    }
-#endif // defined(WIN32)
-
-    if (col > (NUM_COLS - 1))
-    {
-        // Don't allow sorting by "fake" columns.
-        col = -1;
-    }
-
-    sortColumn_(col);
-}
-#endif
 
 void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
 {
@@ -896,10 +777,6 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
     
     wxRect rect;
     int desiredCol = USER_MESSAGE_COL;
-#if defined(WIN32)
-    desiredCol++;
-#endif // defined(WIN32)
-    
     for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
     {
         bool gotUserMessageColBounds = m_listSpots->GetSubItemRect(index, desiredCol, rect);
@@ -1497,11 +1374,7 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
     auto rightData = allReporterData_.find(*rightSid)->second;
 
     int result = 0;
-#if defined(WIN32)
-    switch(column - 1)
-#else
     switch(column)
-#endif // defined(WIN32)
     {
         case CALLSIGN_COL:
             result = leftData->callsign.CmpNoCase(rightData->callsign);
@@ -1674,11 +1547,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::GetValue (wxVariant &variant
         std::string sid = *(std::string*)item.GetID();
         auto row = allReporterData_.find(sid)->second;
 
-#if defined(WIN32)
-        switch (col - 1)
-#else
         switch (col)
-#endif // defined(WIN32)
         {
             case CALLSIGN_COL:
                 variant = wxVariant(row->callsign);
@@ -2015,13 +1884,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
             }
             else
             {            
-                int offset = 0;
-    #if defined(WIN32)
-                offset++;
-    #endif // defined(WIN32)
-
-                ValueChanged(dvi, offset + FREQUENCY_COL);
-                ValueChanged(dvi, offset + LAST_UPDATE_DATE_COL);
+                ValueChanged(dvi, FREQUENCY_COL);
+                ValueChanged(dvi, LAST_UPDATE_DATE_COL);
             }
         }
     });
@@ -2057,16 +1921,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             iter->second->lastUpdate = lastUpdateTime;
             
-            int offset = 0;
-#if defined(WIN32)
-            offset++;
-#endif // defined(WIN32)
-
             wxDataViewItem dvi(&iter->second->sid);
-            ValueChanged(dvi, offset + STATUS_COL);
-            ValueChanged(dvi, offset + TX_MODE_COL);
-            ValueChanged(dvi, offset + LAST_TX_DATE_COL);
-            ValueChanged(dvi, offset + LAST_UPDATE_DATE_COL);
+            ValueChanged(dvi, STATUS_COL);
+            ValueChanged(dvi, TX_MODE_COL);
+            ValueChanged(dvi, LAST_TX_DATE_COL);
+            ValueChanged(dvi, LAST_UPDATE_DATE_COL);
         }
     });
     
@@ -2102,16 +1961,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
                 iter->second->lastRxDate = iter->second->lastUpdateDate;
             }
             
-            int offset = 0;
-#if defined(WIN32)
-            offset++;
-#endif // defined(WIN32)
-
             wxDataViewItem dvi(&iter->second->sid);
-            ValueChanged(dvi, offset + LAST_RX_CALLSIGN_COL);
-            ValueChanged(dvi, offset + LAST_RX_MODE_COL);
-            ValueChanged(dvi, offset + SNR_COL);
-            ValueChanged(dvi, offset + LAST_UPDATE_DATE_COL);
+            ValueChanged(dvi, LAST_RX_CALLSIGN_COL);
+            ValueChanged(dvi, LAST_RX_MODE_COL);
+            ValueChanged(dvi, SNR_COL);
+            ValueChanged(dvi, LAST_UPDATE_DATE_COL);
         }
     });
     
@@ -2152,14 +2006,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
                 filterSelfMessageUpdates_ = false;
             }
             
-            int offset = 0;
-#if defined(WIN32)
-            offset++;
-#endif // defined(WIN32)
-
             wxDataViewItem dvi(&iter->second->sid);
-            ValueChanged(dvi, offset + USER_MESSAGE_COL);
-            ValueChanged(dvi, offset + LAST_UPDATE_DATE_COL);
+            ValueChanged(dvi, USER_MESSAGE_COL);
+            ValueChanged(dvi, LAST_UPDATE_DATE_COL);
         }
     });
     
