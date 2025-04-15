@@ -182,6 +182,11 @@ class FreeDVReporterDialog : public wxFrame
                  }
                  return "";
              }
+             
+             bool isValidForReporting()
+             {
+                 return reporter_ && reporter_->isValidForReporting();
+             }
 
              // Required overrides to implement functionality
              virtual int Compare (const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const override;

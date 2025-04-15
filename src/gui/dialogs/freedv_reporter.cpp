@@ -1100,8 +1100,7 @@ void FreeDVReporterDialog::OnStatusTextClearAll(wxCommandEvent& event)
 
 void FreeDVReporterDialog::refreshQSYButtonState()
 {
-    #if 0
-    FreeDVReporterDataModel* model = spotsDataModel_.get();
+    FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
 
     // Update filter if the frequency's changed.
     if (wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency)
@@ -1116,33 +1115,22 @@ void FreeDVReporterDialog::refreshQSYButtonState()
     }
     
     bool enabled = false;
-    auto selectedIndex = m_listSpots->GetFirstSelected();
-    if (selectedIndex >= 0)
+    auto selected = m_listSpots->GetSelection();
+    if (selected.IsOk())
     {
-        auto selectedCallsign = m_listSpots->GetItemText(selectedIndex);
+        auto selectedCallsign = model->getCallsign(selected);
     
-        if (reporter_->isValidForReporting() &&
+        if (model->isValidForReporting() &&
             selectedCallsign != wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign && 
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 &&
             freedvInterface.isRunning())
         {
-            wxString theirFreqString = m_listSpots->GetItemText(selectedIndex, 5);
-            
-            uint64_t theirFreq = 0;
-            if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
-            {
-                theirFreq = wxAtof(theirFreqString) * 1000;
-            }
-            else
-            {
-                theirFreq = wxAtof(theirFreqString) * 1000 * 1000;
-            }
+            uint64_t theirFreq = model->getFrequency(selected);
             enabled = theirFreq != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
         }
     }
     
     m_buttonSendQSY->Enable(enabled);
-    #endif
 }
 
 void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
