@@ -32,6 +32,7 @@
 #include "main.h"
 #include "defines.h"
 #include "reporting/FreeDVReporter.h"
+#include "../controls/ReportMessageRenderer.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class FreeDVReporterDialog
@@ -141,29 +142,6 @@ class FreeDVReporterDialog : public wxFrame
         wxTipWindow* tipWindow_;
         
      private:
-         class ReportMessageRenderer : public wxDataViewCustomRenderer
-         {
-         public:
-             ReportMessageRenderer();
-             virtual ~ReportMessageRenderer() = default;
-             virtual bool Render (wxRect cell, wxDC *dc, int state) override;
-
-             virtual bool SetValue( const wxVariant &value ) override
-             {
-                 m_value = value.GetString();
-                 return true;
-             }
-
-             virtual bool GetValue( wxVariant &WXUNUSED(value) ) const override { return true; }
-
-             virtual wxSize GetSize() const override {
-                 return GetTextExtent(m_value);
-             }
-
-         private:
-             wxString m_value;
-         };
-
          class FreeDVReporterDataModel : public wxDataViewModel
          {
          public:

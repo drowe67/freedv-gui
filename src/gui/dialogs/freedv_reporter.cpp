@@ -1265,29 +1265,6 @@ FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequenc
     return bandForFreq;
 }
 
-FreeDVReporterDialog::ReportMessageRenderer::ReportMessageRenderer()
-    : wxDataViewCustomRenderer("string", wxDATAVIEW_CELL_INERT, wxALIGN_LEFT) { }
-
-bool FreeDVReporterDialog::ReportMessageRenderer::Render(wxRect cell, wxDC *dc, int state)
-{
-#if defined(WIN32)
-    wxGraphicsRenderer* renderer = wxGraphicsRenderer::GetDirect2DRenderer();
-    wxGraphicsContext* context = renderer->CreateContextFromUnknownDC(*dc);
-    if (context != nullptr)
-    {
-        context->SetFont(dc->GetFont(), dc->GetTextForeground());
-        context->DrawText(m_value, cell.x, cell.y);
-        delete context;
-    }
-    else
-#endif // defined(WIN32)
-    {
-        RenderText(m_value, 0, cell, dc, state);
-    }
-
-    return true;
-}
-
 bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(uint64_t freq)
 {
     auto bandForFreq = parent_->getFilterForFrequency_(freq);
