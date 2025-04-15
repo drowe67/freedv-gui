@@ -694,12 +694,14 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
             foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
         }
+#if defined(__APPLE__)
         else
         {
             // To ensure that the columns don't have a different color than the rest of the control.
             // Needed mainly for macOS.
             backgroundColor = wxColour(wxTransparentColour);
         }
+#endif // defined(__APPLE__)
 
         bool isHighlightUpdated = 
             backgroundColor != reportData->backgroundColor ||
