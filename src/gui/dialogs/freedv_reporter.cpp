@@ -397,11 +397,9 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     this->Connect(wxEVT_SYS_COLOUR_CHANGED, wxSysColourChangedEventHandler(FreeDVReporterDialog::OnSystemColorChanged));
     
     m_listSpots->Connect(wxEVT_DATAVIEW_SELECTION_CHANGED, wxDataViewEventHandler(FreeDVReporterDialog::OnItemSelectionChanged), NULL, this);
-    //m_listSpots->Connect(wxEVT_LIST_COL_CLICK, wxListEventHandler(FreeDVReporterDialog::OnSortColumn), NULL, this);
     m_listSpots->Connect(wxEVT_DATAVIEW_ITEM_ACTIVATED, wxDataViewEventHandler(FreeDVReporterDialog::OnItemDoubleClick), NULL, this);
-    //m_listSpots->Connect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this); // TBD - may need own renderer
+    m_listSpots->Connect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);\
     m_listSpots->Connect(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler(FreeDVReporterDialog::OnItemRightClick), NULL, this);
-    //m_listSpots->Connect(wxEVT_LIST_COL_DRAGGING, wxListEventHandler(FreeDVReporterDialog::AdjustMsgColWidth), NULL, this); // TBD - might be able to just save/load msg col width on start/stop
     
     m_statusMessage->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
@@ -417,10 +415,6 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_trackFrequency->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
     m_trackFreqBand->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
     m_trackExactFreq->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
-    
-    // Trigger sorting on last sorted column
-    // TBD
-    //sortColumn_(wxGetApp().appConfiguration.reporterWindowCurrentSort, wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
     
     // Update status message and MRU list
     m_statusMessage->SetValue(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText);
@@ -461,11 +455,9 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     this->Disconnect(wxEVT_SHOW, wxShowEventHandler(FreeDVReporterDialog::OnShow));
     
     m_listSpots->Disconnect(wxEVT_DATAVIEW_SELECTION_CHANGED, wxDataViewEventHandler(FreeDVReporterDialog::OnItemSelectionChanged), NULL, this);
-    //m_listSpots->Disconnect(wxEVT_LIST_COL_CLICK, wxListEventHandler(FreeDVReporterDialog::OnSortColumn), NULL, this);
     m_listSpots->Disconnect(wxEVT_DATAVIEW_ITEM_ACTIVATED, wxDataViewEventHandler(FreeDVReporterDialog::OnItemDoubleClick), NULL, this);
-    //m_listSpots->Disconnect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this); // TBD - may need own renderer
+    m_listSpots->Disconnect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this); // TBD - may need own renderer
     m_listSpots->Disconnect(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler(FreeDVReporterDialog::OnItemRightClick), NULL, this);
-    //m_listSpots->Disconnect(wxEVT_LIST_COL_DRAGGING, wxListEventHandler(FreeDVReporterDialog::AdjustMsgColWidth), NULL, this); // TBD - might be able to just save/load msg col width on start/stop
     
     m_statusMessage->Disconnect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
@@ -798,7 +790,6 @@ void FreeDVReporterDialog::OnItemDoubleClick(wxDataViewEvent& event)
     }
 }
 
-#if 0
 void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
 {
     const wxPoint pt = wxGetMousePosition();
@@ -807,52 +798,57 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
     
     wxRect rect;
     int desiredCol = USER_MESSAGE_COL;
-    for (auto index = 0; index < m_listSpots->GetItemCount(); index++)
-    {
-        bool gotUserMessageColBounds = m_listSpots->GetSubItemRect(index, desiredCol, rect);
-        bool mouseInBounds = gotUserMessageColBounds && rect.Contains(mouseX, mouseY);
     
-        if (gotUserMessageColBounds && mouseInBounds)
+    wxDataViewItem item;
+    wxDataViewColumn* col;
+    m_listSpots->HitTest(wxPoint(mouseX, mouseY), item, col);
+    if (item.IsOk() && col->GetModelColumn() == desiredCol)
+    {
+        // Show popup corresponding to the full message.
+        FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
+        tempUserMessage_ = model->getUserMessage(item);
+    
+        auto textSize = m_listSpots->GetTextExtent(tempUserMessage_);
+        rect = m_listSpots->GetItemRect(item, col);
+        if (tipWindow_ == nullptr && textSize.GetWidth() > col->GetWidth())
         {
-            // Show popup corresponding to the full message.
-            std::string* sidPtr = (std::string*)m_listSpots->GetItemData(index);
-            tempUserMessage_ = allReporterData_[*sidPtr]->userMessage;
-            wxString userMessageTruncated = m_listSpots->GetItemText(index, desiredCol);
-            userMessageTruncated = userMessageTruncated.SubString(1, userMessageTruncated.size() - 1);
+            // Use screen coordinates to determine bounds.
+            auto pos = rect.GetPosition();
+            rect.SetPosition(ClientToScreen(pos));
         
-            if (tipWindow_ == nullptr && tempUserMessage_ != userMessageTruncated)
+            tipWindow_ = new wxTipWindow(m_listSpots, tempUserMessage_, 1000, &tipWindow_, &rect);
+            tipWindow_->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
+            tipWindow_->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
+            
+            // Make sure we actually override behavior of needed events inside the tooltip.
+            for (auto& child : tipWindow_->GetChildren())
             {
-                // Use screen coordinates to determine bounds.
-                auto pos = rect.GetPosition();
-                rect.SetPosition(ClientToScreen(pos));
-            
-                tipWindow_ = new wxTipWindow(m_listSpots, tempUserMessage_, 1000, &tipWindow_, &rect);
-                tipWindow_->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
-                tipWindow_->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
-                
-                // Make sure we actually override behavior of needed events inside the tooltip.
-                for (auto& child : tipWindow_->GetChildren())
-                {
-                    child->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
-                    child->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
-                }
+                child->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
+                child->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
             }
-            
-            break;
         }
         else
         {
             tempUserMessage_ = _("");
         }
     }
+    else
+    {
+        tempUserMessage_ = _("");
+    }
+}
+
+void FreeDVReporterDialog::OnRightClickSpotsList(wxContextMenuEvent& event)
+{
+    wxDataViewEvent contextEvent;
+    OnItemRightClick(contextEvent);
 }
 
 void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent& event)
 {
-    wxContextMenuEvent contextEvent;
-    OnRightClickSpotsList(contextEvent);
+    wxDataViewEvent contextEvent;
+    OnItemRightClick(contextEvent);
 }
-#endif
 
 void FreeDVReporterDialog::OnItemRightClick(wxDataViewEvent& event)
 {
