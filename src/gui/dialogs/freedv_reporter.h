@@ -99,16 +99,14 @@ class FreeDVReporterDialog : public wxFrame
         void OnItemDoubleClick(wxDataViewEvent& event);
         void OnItemRightClick(wxDataViewEvent& event);
 
-        //void OnSortColumn(wxListEvent& event);
         void OnTimer(wxTimerEvent& event);
         void AdjustToolTip(wxMouseEvent& event);
         void OnFilterTrackingEnable(wxCommandEvent& event);
         void OnCopyUserMessage(wxCommandEvent& event);
-        //void SkipMouseEvent(wxMouseEvent& event);
-        //void AdjustMsgColWidth(wxListEvent& event);
-        
-        void OnDoubleClick(wxMouseEvent& event);
-        
+        void SkipMouseEvent(wxMouseEvent& event);
+        void AdjustMsgColWidth(wxListEvent& event);
+        void OnRightClickSpotsList(wxContextMenuEvent& event);
+                
         // Main list box that shows spots
         wxDataViewCtrl*   m_listSpots;
         wxObjectDataPtr<wxDataViewModel> spotsDataModel_;
@@ -179,6 +177,16 @@ class FreeDVReporterDialog : public wxFrame
                  {
                      auto data = allReporterData_[*(std::string*)item.GetID()];
                      return data->callsign;
+                 }
+                 return "";
+             }
+             
+             wxString getUserMessage(wxDataViewItem& item)
+             {
+                 if (item.IsOk())
+                 {
+                     auto data = allReporterData_[*(std::string*)item.GetID()];
+                     return data->userMessage;
                  }
                  return "";
              }
