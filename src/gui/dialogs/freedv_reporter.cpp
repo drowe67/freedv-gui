@@ -1836,7 +1836,10 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         
         allReporterData_[sid] = temp;
 
-        ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(&temp->sid));
+        if (temp->isVisible)
+        {
+            ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(&temp->sid));
+        }
     });
     
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
