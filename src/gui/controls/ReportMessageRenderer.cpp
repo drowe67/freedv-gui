@@ -42,8 +42,11 @@ bool ReportMessageRenderer::Render(wxRect cell, wxDC *dc, int state)
             {
                 color = wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXTEXT);
             }
+            const wxString paintText =
+                wxControl::Ellipsize(m_value, *dc, GetEllipsizeMode(),
+                                     cell.GetWidth(), wxELLIPSIZE_FLAGS_NONE);
             context->SetFont(dc->GetFont(), color);
-            context->DrawText(m_value, cell.x, cell.y);
+            context->DrawText(paintText, cell.x, cell.y);
             delete context;
             return true;
         }
