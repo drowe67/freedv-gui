@@ -1640,10 +1640,6 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::SetValue (const wxVariant &v
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
 {
-    wxDataViewItemArray itemsAdded;
-    wxDataViewItemArray itemsRemoved;
-    wxDataViewItemArray itemsChanged;
-    
     for (auto& kvp : allReporterData_)
     {
         bool updated = false;
@@ -1687,22 +1683,18 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
             kvp.second->isVisible = newVisibility;
             if (newVisibility)
             {
-                itemsAdded.Add(wxDataViewItem(&kvp.second->sid));
+                ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(&kvp.second->sid));
             }
             else
             {
-                itemsRemoved.Add(wxDataViewItem(&kvp.second->sid));
+                ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(&kvp.second->sid));
             }
         }
         else if (updated)
         {
-            itemsChanged.Add(wxDataViewItem(&kvp.second->sid));
+            ItemChanged(wxDataViewItem(&kvp.second->sid));
         }
     }
-    
-    ItemsAdded(wxDataViewItem(nullptr), itemsAdded);
-    ItemsDeleted(wxDataViewItem(nullptr), itemsRemoved);
-    ItemsChanged(itemsChanged);
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::requestQSY(wxDataViewItem selectedItem, uint64_t frequency, wxString customText)
