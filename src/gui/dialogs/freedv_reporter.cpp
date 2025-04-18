@@ -1380,8 +1380,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
     wxDataViewItemArray itemsToDelete;
     for (auto& row : allReporterData_)
     {
-        row.second->isVisible = false;
-        itemsToDelete.Add(wxDataViewItem(&row.second->sid));
+        if (row.second->isVisible)
+        {
+            row.second->isVisible = false;
+            itemsToDelete.Add(wxDataViewItem(&row.second->sid));
+        }
     }
     ItemsDeleted(wxDataViewItem(nullptr), itemsToDelete);
     for (auto& row : allReporterData_)
@@ -1867,9 +1870,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
         {
             auto item = iter->second;
             wxDataViewItem dvi(&item->sid);
-            item->isVisible = false;
-            ItemDeleted(wxDataViewItem(nullptr), dvi);
-
+            if (item->isVisible)
+            {
+                item->isVisible = false;
+                ItemDeleted(wxDataViewItem(nullptr), dvi);
+            }
+            
             delete item;
             allReporterData_.erase(iter);
         }
