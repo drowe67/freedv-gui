@@ -506,7 +506,7 @@ void MacAudioDevice::setHelperRealTime()
     timeConstraints.constraint = kMaxTimeAllowed * ms_to_abs_time;
     timeConstraints.preemptible = 1;
     
-    result =
+    auto result =
         thread_policy_set(currentThreadId,
                           THREAD_TIME_CONSTRAINT_POLICY,
                           reinterpret_cast<thread_policy_t>(&timeConstraints),
