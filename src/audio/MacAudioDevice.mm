@@ -131,7 +131,7 @@ void MacAudioDevice::start()
         // reduces dropouts on marginal hardware.
         UInt32 minFrameSize = 0;
         UInt32 maxFrameSize = 0;
-        UInt32 desiredFrameSize = sampleRate_ * 0.005; // Ask for 5ms blocks so we're able to fill the buffer prior to being processed.
+        UInt32 desiredFrameSize = sampleRate_ * 0.011; // Ask for 11ms blocks so we're able to fill the buffer prior to being processed.
         GetIOBufferFrameSizeRange(coreAudioId_, &minFrameSize, &maxFrameSize);
         if (minFrameSize != 0 && maxFrameSize != 0)
         {
