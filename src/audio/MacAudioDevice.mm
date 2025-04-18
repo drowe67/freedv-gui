@@ -440,7 +440,7 @@ void MacAudioDevice::setHelperRealTime()
     // Get current thread ID
     auto currentThreadId = pthread_mach_thread_np(pthread_self());
     
-#if 1
+#if 0
     // Increase thread priority to real-time.
     // Please note that the thread_policy_set() calls may fail in
     // rare cases if the kernel decides the system is under heavy load
@@ -501,7 +501,7 @@ void MacAudioDevice::setHelperRealTime()
     double ms_to_abs_time =
         (static_cast<double>(tbInfo.denom) / tbInfo.numer) * 1000000;
     thread_time_constraint_policy_data_t timeConstraints;
-    timeConstraints.period = kTimeQuantum * ms_to_abs_time;
+    timeConstraints.period = 0;
     timeConstraints.computation = kAudioTimeNeeded * ms_to_abs_time;
     timeConstraints.constraint = kMaxTimeAllowed * ms_to_abs_time;
     timeConstraints.preemptible = 1;
