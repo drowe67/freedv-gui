@@ -46,6 +46,21 @@ public:
     virtual bool isRunning() = 0;
     
     virtual int getLatencyInMicroseconds() = 0;
+    
+    // Configures current thread for real-time priority. This should be
+    // called from the thread that will be operating on received audio.
+    virtual void setHelperRealTime() { /* empty */ }
+    
+    // Lets audio system know that we're beginning to do work with the
+    // received audio.
+    virtual void startRealTimeWork() { /* empty */ }
+    
+    // Lets audio system know that we're done with the work on the received
+    // audio.
+    virtual void stopRealTimeWork() { /* empty */ }
+    
+    // Reverts real-time priority for current thread.
+    virtual void clearHelperRealTime() { /* empty */ }
 
     // Sets user friendly description of device. Not used by all engines.
     void setDescription(std::string desc);

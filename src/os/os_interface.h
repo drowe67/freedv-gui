@@ -43,10 +43,4 @@ extern "C" void ResetMainWindowColorSpace();
 // This can be either "windows", "linux", "macos" or "other".
 std::string GetOperatingSystemString();
 
-// Requests real-time scheduling from the operating system. Used for audio threads.
-void RequestRealTimeScheduling();
-
-// Ends request for real-time scheduling.
-void RequestNormalScheduling();
-
 #endif // __OS_INTERFACE__

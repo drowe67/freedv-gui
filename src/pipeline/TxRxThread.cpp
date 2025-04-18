@@ -468,11 +468,8 @@ void* TxRxThread::Entry()
 {
     initializePipeline_();
     
-#if defined(__APPLE__) || defined(WIN32)
-    // Request real-time scheduling from the operating system. Needed on macOS and Windows
-    // to prevent dropouts.
-    RequestRealTimeScheduling();
-#endif // defined(__APPLE__) || defined(WIN32)
+    // Request real-time scheduling from the operating system.    
+    inputDevice_->setHelperRealTime();
     
     while (m_run)
     {
@@ -496,8 +493,13 @@ void* TxRxThread::Entry()
         auto currentTime = std::chrono::steady_clock::now();
 
         if (!m_run) break;
+        
+        inputDevice_->startRealTimeWork();
+        
         if (m_tx) txProcessing_();
         else rxProcessing_();
+        
+        inputDevice_->stopRealTimeWork();
 
         std::this_thread::sleep_until(currentTime + 10ms); 
     }
@@ -505,10 +507,8 @@ void* TxRxThread::Entry()
     // Force pipeline to delete itself when we're done with the thread.
     pipeline_ = nullptr;
     
-#if defined(__APPLE__) || defined(WIN32)
     // Return to normal scheduling
-    RequestNormalScheduling();
-#endif // defined(__APPLE__) || defined(WIN32)
+    inputDevice_->clearHelperRealTime();
     
     return NULL;
 }

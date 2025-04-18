@@ -25,6 +25,18 @@
 
 #include <future>
 #import <AVFoundation/AVFoundation.h>
+#import <AudioToolbox/AudioToolbox.h>
+
+#include <mach/mach_time.h>
+#include <mach/mach_init.h>
+#include <mach/thread_policy.h>
+#include <sched.h>
+
+// One nanosecond in seconds.
+constexpr static double kOneNanosecond = 1.0e9;
+
+// The I/O interval time in seconds.
+constexpr static double kIOIntervalTime = 0.010;
 
 static OSStatus GetIOBufferFrameSizeRange(AudioObjectID inDeviceID,
                                           UInt32* outMinimum,
@@ -71,6 +83,8 @@ MacAudioDevice::MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection dir
     , sampleRate_(sampleRate)
     , engine_(nil)
     , player_(nil)
+    , workgroup_(nullptr)
+    , joinToken_(nullptr)
 {
     log_info("Create MacAudioDevice with ID %d, channels %d and sample rate %d", coreAudioId, numChannels, sampleRate);
 }
@@ -131,7 +145,7 @@ void MacAudioDevice::start()
         // reduces dropouts on marginal hardware.
         UInt32 minFrameSize = 0;
         UInt32 maxFrameSize = 0;
-        UInt32 desiredFrameSize = 2048;
+        UInt32 desiredFrameSize = 128;
         GetIOBufferFrameSizeRange(coreAudioId_, &minFrameSize, &maxFrameSize);
         if (minFrameSize != 0 && maxFrameSize != 0)
         {
@@ -417,3 +431,157 @@ int MacAudioDevice::getLatencyInMicroseconds()
     });
     return fut.get();
 }
+
+void MacAudioDevice::setHelperRealTime()
+{
+    // Adapted from Chromium project. May need to adjust parameters
+    // depending on behavior.
+    
+    // Get current thread ID
+    auto currentThreadId = pthread_mach_thread_np(pthread_self());
+    
+#if 0
+    // Increase thread priority to real-time.
+    // Please note that the thread_policy_set() calls may fail in
+    // rare cases if the kernel decides the system is under heavy load
+    // and is unable to handle boosting the thread priority.
+    // In these cases we just return early and go on with life.
+    // Make thread fixed priority.
+    thread_extended_policy_data_t policy;
+    policy.timeshare = 0;  // Set to 1 for a non-fixed thread.
+    kern_return_t result =
+        thread_policy_set(currentThreadId,
+                          THREAD_EXTENDED_POLICY,
+                          reinterpret_cast<thread_policy_t>(&policy),
+                          THREAD_EXTENDED_POLICY_COUNT);
+    if (result != KERN_SUCCESS) 
+    {
+        log_warn("Could not set current thread to real-time: %d");
+        return;
+    }
+    
+    // Set to relatively high priority.
+    thread_precedence_policy_data_t precedence;
+    precedence.importance = 63;
+    result = thread_policy_set(currentThreadId,
+                               THREAD_PRECEDENCE_POLICY,
+                               reinterpret_cast<thread_policy_t>(&precedence),
+                               THREAD_PRECEDENCE_POLICY_COUNT);
+    if (result != KERN_SUCCESS)
+    {
+        log_warn("Could not increase thread priority");
+        return;
+    }
+    #endif // 0
+    
+    // Most important, set real-time constraints.
+    // Define the guaranteed and max fraction of time for the audio thread.
+    // These "duty cycle" values can range from 0 to 1.  A value of 0.5
+    // means the scheduler would give half the time to the thread.
+    // These values have empirically been found to yield good behavior.
+    // Good means that audio performance is high and other threads won't starve.
+    const double kGuaranteedAudioDutyCycle = 0.75;
+    const double kMaxAudioDutyCycle = 0.85;
+    
+    // Define constants determining how much time the audio thread can
+    // use in a given time quantum.  All times are in milliseconds.
+    // About 512 frames @48KHz
+    const double kTimeQuantum = 128 * 1000 / sampleRate_;
+    
+    // Time guaranteed each quantum.
+    const double kAudioTimeNeeded = kGuaranteedAudioDutyCycle * kTimeQuantum;
+    
+    // Maximum time each quantum.
+    const double kMaxTimeAllowed = kMaxAudioDutyCycle * kTimeQuantum;
+    
+    // Get the conversion factor from milliseconds to absolute time
+    // which is what the time-constraints call needs.
+    mach_timebase_info_data_t tbInfo;
+    mach_timebase_info(&tbInfo);
+    double ms_to_abs_time =
+        (static_cast<double>(tbInfo.denom) / tbInfo.numer) * 1000000;
+    thread_time_constraint_policy_data_t timeConstraints;
+    timeConstraints.period = kTimeQuantum * ms_to_abs_time;
+    timeConstraints.computation = kAudioTimeNeeded * ms_to_abs_time;
+    timeConstraints.constraint = kMaxTimeAllowed * ms_to_abs_time;
+    timeConstraints.preemptible = 1;
+    
+    kern_return_t result =
+        thread_policy_set(currentThreadId,
+                          THREAD_TIME_CONSTRAINT_POLICY,
+                          reinterpret_cast<thread_policy_t>(&timeConstraints),
+                          THREAD_TIME_CONSTRAINT_POLICY_COUNT);
+    if (result != KERN_SUCCESS)
+    {
+        log_warn("Could not set time constraint policy");
+        return;
+    }
+    
+    // Join Core Audio workgroup
+    workgroup_ = nullptr;
+    UInt32 size = sizeof(os_workgroup_t);
+    
+    AudioObjectPropertyAddress propertyAddress = {
+        .mSelector = kAudioDevicePropertyIOThreadOSWorkgroup,
+        .mScope = kAudioObjectPropertyScopeGlobal,
+        .mElement = kAudioObjectPropertyElementMain
+    };
+    
+    OSStatus osResult = AudioObjectGetPropertyData(
+              coreAudioId_, 
+              &propertyAddress, 
+              0,
+              nullptr, 
+              &size, 
+              &workgroup_);
+    if (osResult != noErr)
+    {
+        log_warn("Could not get audio workgroup");
+        return;
+    }
+      
+    os_workgroup_join((os_workgroup_t)workgroup_, (os_workgroup_join_token_s*)&joinToken_);
+}
+
+void MacAudioDevice::startRealTimeWork()
+{
+    if (workgroup_ == nullptr)
+    {
+        return;
+    }
+    
+    // Get the mach time info.
+    struct mach_timebase_info timeBaseInfo;
+    mach_timebase_info(&timeBaseInfo);
+
+    // The frequency of the clock is: (timeBaseInfo.denom / timeBaseInfo.numer) * kOneNanosecond
+    const auto nanoSecFrequency = static_cast<double>(timeBaseInfo.denom) / static_cast<double>(timeBaseInfo.numer);
+    const auto frequency = nanoSecFrequency * kOneNanosecond;
+    
+    const auto intervalMachLength = static_cast<int64_t>(kIOIntervalTime * frequency);
+    const auto currentTime = mach_absolute_time();
+    const auto deadline = currentTime + intervalMachLength;
+            
+    os_workgroup_interval_start((os_workgroup_t)workgroup_, currentTime, deadline, nullptr);
+}
+
+void MacAudioDevice::stopRealTimeWork()
+{
+    if (workgroup_ == nullptr)
+    {
+        return;
+    }
+    
+    os_workgroup_interval_finish((os_workgroup_t)workgroup_, nullptr);
+}
+
+void MacAudioDevice::clearHelperRealTime()
+{
+    if (workgroup_ != nullptr)
+    {
+        os_workgroup_leave((os_workgroup_t)workgroup_, (os_workgroup_join_token_s*)&joinToken_);
+        workgroup_ = nullptr;
+        joinToken_ = nullptr;
+    }
+}
+

@@ -41,6 +41,21 @@ public:
     virtual bool isRunning() override;
     
     virtual int getLatencyInMicroseconds() override;
+    
+    // Configures current thread for real-time priority. This should be
+    // called from the thread that will be operating on received audio.
+    virtual void setHelperRealTime() override;
+
+    // Lets audio system know that we're beginning to do work with the
+    // received audio.
+    virtual void startRealTimeWork() override;
+
+    // Lets audio system know that we're done with the work on the received
+    // audio.
+    virtual void stopRealTimeWork() override;
+
+    // Reverts real-time priority for current thread.
+    virtual void clearHelperRealTime() override;
 
 protected:
     friend class MacAudioEngine;
@@ -56,6 +71,9 @@ private:
     int sampleRate_;
     void* engine_; // actually AVAudioEngine but this file is shared with C++ code
     void* player_; // actually AVAudioPlayerNode
+    
+    void* workgroup_;
+    void* joinToken_;
 };
 
 #endif // MAC_AUDIO_DEVICE_H
