@@ -142,8 +142,8 @@ void RequestRealTimeScheduling()
     
     // Define constants determining how much time the audio thread can
     // use in a given time quantum.  All times are in milliseconds.
-    // About 128 frames @44.1KHz
-    const double kTimeQuantum = 2.9;
+    // About 512 frames @48KHz
+    const double kTimeQuantum = 10.67;
     
     // Time guaranteed each quantum.
     const double kAudioTimeNeeded = kGuaranteedAudioDutyCycle * kTimeQuantum;
