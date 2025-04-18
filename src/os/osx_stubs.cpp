@@ -40,3 +40,13 @@ std::string GetOperatingSystemString()
     return "other";
 #endif // __linux__
 }
+
+void RequestRealTimeScheduling()
+{
+    // currently no-op on Linux and other platforms
+}
+
+void RequestNormalScheduling()
+{
+    // currently no-op on Linux and other platforms
+}

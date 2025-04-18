@@ -53,3 +53,13 @@ std::string GetOperatingSystemString()
 {
     return "windows";
 }
+
+void RequestRealTimeScheduling()
+{
+    // TBD
+}
+
+void RequestNormalScheduling()
+{
+    // TBD
+}
