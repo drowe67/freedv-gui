@@ -145,7 +145,7 @@ void MacAudioDevice::start()
         // reduces dropouts on marginal hardware.
         UInt32 minFrameSize = 0;
         UInt32 maxFrameSize = 0;
-        UInt32 desiredFrameSize = 128;
+        UInt32 desiredFrameSize = pow(2, ceil(log(0.01 * sampleRate_) / log(2))); // next power of two 
         GetIOBufferFrameSizeRange(coreAudioId_, &minFrameSize, &maxFrameSize);
         if (minFrameSize != 0 && maxFrameSize != 0)
         {
@@ -440,7 +440,7 @@ void MacAudioDevice::setHelperRealTime()
     // Get current thread ID
     auto currentThreadId = pthread_mach_thread_np(pthread_self());
     
-#if 0
+#if 1
     // Increase thread priority to real-time.
     // Please note that the thread_policy_set() calls may fail in
     // rare cases if the kernel decides the system is under heavy load
@@ -480,13 +480,14 @@ void MacAudioDevice::setHelperRealTime()
     // means the scheduler would give half the time to the thread.
     // These values have empirically been found to yield good behavior.
     // Good means that audio performance is high and other threads won't starve.
-    const double kGuaranteedAudioDutyCycle = 0.75;
-    const double kMaxAudioDutyCycle = 0.85;
+    const double kGuaranteedAudioDutyCycle = 0.25;
+    const double kMaxAudioDutyCycle = 0.5;
     
     // Define constants determining how much time the audio thread can
     // use in a given time quantum.  All times are in milliseconds.
     // About 512 frames @48KHz
-    const double kTimeQuantum = 128 * 1000 / sampleRate_;
+    auto sampleBuffer = pow(2, ceil(log(0.01 * sampleRate_) / log(2))); // next power of two
+    const double kTimeQuantum = sampleBuffer * 1000 / sampleRate_;
     
     // Time guaranteed each quantum.
     const double kAudioTimeNeeded = kGuaranteedAudioDutyCycle * kTimeQuantum;
@@ -506,7 +507,7 @@ void MacAudioDevice::setHelperRealTime()
     timeConstraints.constraint = kMaxTimeAllowed * ms_to_abs_time;
     timeConstraints.preemptible = 1;
     
-    auto result =
+    result =
         thread_policy_set(currentThreadId,
                           THREAD_TIME_CONSTRAINT_POLICY,
                           reinterpret_cast<thread_policy_t>(&timeConstraints),
