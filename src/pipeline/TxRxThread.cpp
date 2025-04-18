@@ -499,9 +499,7 @@ void* TxRxThread::Entry()
         if (m_tx) txProcessing_();
         else rxProcessing_();
 
-        // 7ms is chosen here to hopefully ensure that we never execute at the same time as any other
-        // audio threads.
-        std::this_thread::sleep_until(currentTime + 7ms); 
+        std::this_thread::sleep_until(currentTime + 10ms); 
     }
     
     // Force pipeline to delete itself when we're done with the thread.
