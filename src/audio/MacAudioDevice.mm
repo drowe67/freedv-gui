@@ -440,7 +440,7 @@ void MacAudioDevice::setHelperRealTime()
     // Get current thread ID
     auto currentThreadId = pthread_mach_thread_np(pthread_self());
     
-#if 0
+#if 1
     // Increase thread priority to real-time.
     // Please note that the thread_policy_set() calls may fail in
     // rare cases if the kernel decides the system is under heavy load
@@ -506,7 +506,7 @@ void MacAudioDevice::setHelperRealTime()
     timeConstraints.constraint = kMaxTimeAllowed * ms_to_abs_time;
     timeConstraints.preemptible = 1;
     
-    kern_return_t result =
+    result =
         thread_policy_set(currentThreadId,
                           THREAD_TIME_CONSTRAINT_POLICY,
                           reinterpret_cast<thread_policy_t>(&timeConstraints),
@@ -519,69 +519,99 @@ void MacAudioDevice::setHelperRealTime()
     
     // Join Core Audio workgroup
     workgroup_ = nullptr;
-    UInt32 size = sizeof(os_workgroup_t);
+    joinToken_ = nullptr;
     
-    AudioObjectPropertyAddress propertyAddress = {
-        .mSelector = kAudioDevicePropertyIOThreadOSWorkgroup,
-        .mScope = kAudioObjectPropertyScopeGlobal,
-        .mElement = kAudioObjectPropertyElementMain
-    };
+    /*if (@available(macOS 11.0, *)) 
+    { 
+        UInt32 size = sizeof(os_workgroup_t);
     
-    OSStatus osResult = AudioObjectGetPropertyData(
-              coreAudioId_, 
-              &propertyAddress, 
-              0,
-              nullptr, 
-              &size, 
-              &workgroup_);
-    if (osResult != noErr)
-    {
-        log_warn("Could not get audio workgroup");
-        return;
-    }
+        AudioObjectPropertyAddress propertyAddress = {
+            .mSelector = kAudioDevicePropertyIOThreadOSWorkgroup,
+            .mScope = kAudioObjectPropertyScopeGlobal,
+            .mElement = kAudioObjectPropertyElementMain
+        };
+    
+        OSStatus osResult = AudioObjectGetPropertyData(
+                  coreAudioId_, 
+                  &propertyAddress, 
+                  0,
+                  nullptr, 
+                  &size, 
+                  &workgroup_);
+        if (osResult != noErr)
+        {
+            log_warn("Could not get audio workgroup");
+            return;
+        }
       
-    os_workgroup_join((os_workgroup_t)workgroup_, (os_workgroup_join_token_s*)&joinToken_);
+        auto workgroupResult = os_workgroup_join((os_workgroup_t)workgroup_, (os_workgroup_join_token_s*)&joinToken_);
+        if (workgroupResult != 0)
+        {
+            log_warn("Could not join Core Audio workgroup (err = %d)", workgroupResult);
+            workgroup_ = nullptr;
+            joinToken_ = nullptr;
+        }
+    }*/
 }
 
 void MacAudioDevice::startRealTimeWork()
 {
-    if (workgroup_ == nullptr)
-    {
-        return;
-    }
+    /*
+    if (@available(macOS 11.0, *)) 
+    { 
+        if (workgroup_ == nullptr)
+        {
+            return;
+        }
     
-    // Get the mach time info.
-    struct mach_timebase_info timeBaseInfo;
-    mach_timebase_info(&timeBaseInfo);
+        // Get the mach time info.
+        struct mach_timebase_info timeBaseInfo;
+        mach_timebase_info(&timeBaseInfo);
 
-    // The frequency of the clock is: (timeBaseInfo.denom / timeBaseInfo.numer) * kOneNanosecond
-    const auto nanoSecFrequency = static_cast<double>(timeBaseInfo.denom) / static_cast<double>(timeBaseInfo.numer);
-    const auto frequency = nanoSecFrequency * kOneNanosecond;
+        // The frequency of the clock is: (timeBaseInfo.denom / timeBaseInfo.numer) * kOneNanosecond
+        const auto nanoSecFrequency = static_cast<double>(timeBaseInfo.denom) / static_cast<double>(timeBaseInfo.numer);
+        const auto frequency = nanoSecFrequency * kOneNanosecond;
     
-    const auto intervalMachLength = static_cast<int64_t>(kIOIntervalTime * frequency);
-    const auto currentTime = mach_absolute_time();
-    const auto deadline = currentTime + intervalMachLength;
+        const auto intervalMachLength = static_cast<int64_t>(kIOIntervalTime * frequency);
+        const auto currentTime = mach_absolute_time();
+        const auto deadline = currentTime + intervalMachLength;
             
-    os_workgroup_interval_start((os_workgroup_t)workgroup_, currentTime, deadline, nullptr);
+        auto result = os_workgroup_interval_start((os_workgroup_t)workgroup_, currentTime, deadline, nullptr);
+        if (result != 0)
+        {
+            log_warn("Could not start workgroup interval (err = %d)", result);
+        }
+    }*/
 }
 
 void MacAudioDevice::stopRealTimeWork()
 {
-    if (workgroup_ == nullptr)
-    {
-        return;
-    }
+    /*
+    if (@available(macOS 11.0, *)) 
+    { 
+        if (workgroup_ == nullptr)
+        {
+            return;
+        }
     
-    os_workgroup_interval_finish((os_workgroup_t)workgroup_, nullptr);
+        auto result = os_workgroup_interval_finish((os_workgroup_t)workgroup_, nullptr);
+        if (result != 0)
+        {
+            log_warn("Could not finish workgroup interval (err = %d)", result);
+        }
+    }*/
 }
 
 void MacAudioDevice::clearHelperRealTime()
 {
-    if (workgroup_ != nullptr)
+    if (@available(macOS 11.0, *)) 
     {
-        os_workgroup_leave((os_workgroup_t)workgroup_, (os_workgroup_join_token_s*)&joinToken_);
-        workgroup_ = nullptr;
-        joinToken_ = nullptr;
+        if (workgroup_ != nullptr)
+        {
+            os_workgroup_leave((os_workgroup_t)workgroup_, (os_workgroup_join_token_s*)&joinToken_);
+            workgroup_ = nullptr;
+            joinToken_ = nullptr;
+        }
     }
 }
 
