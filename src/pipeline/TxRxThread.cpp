@@ -468,11 +468,11 @@ void* TxRxThread::Entry()
 {
     initializePipeline_();
     
-#if __APPLE__ || WIN32
+#if defined(__APPLE__) || defined(WIN32)
     // Request real-time scheduling from the operating system. Needed on macOS and Windows
     // to prevent dropouts.
     RequestRealTimeScheduling();
-#endif // __APPLE__ || WIN32
+#endif // defined(__APPLE__) || defined(WIN32)
     
     while (m_run)
     {
@@ -507,10 +507,10 @@ void* TxRxThread::Entry()
     // Force pipeline to delete itself when we're done with the thread.
     pipeline_ = nullptr;
     
-#if __APPLE__ || WIN32
+#if defined(__APPLE__) || defined(WIN32)
     // Return to normal scheduling
     RequestNormalScheduling();
-#endif // __APPLE__ || WIN32
+#endif // defined(__APPLE__) || defined(WIN32)
     
     return NULL;
 }
