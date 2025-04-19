@@ -3124,13 +3124,13 @@ void MainFrame::startRxStream()
         // loop.
 
         int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
-        int soundCard1InFifoSizeSamples = /*m_fifoSize_ms*/wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate /*/ 1000*/;
+        int soundCard1InFifoSizeSamples = m_fifoSize_mswxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate / 1000;
         int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate / 1000;
 
         if (txInSoundDevice && txOutSoundDevice)
         {
             int soundCard2InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate / 1000;
-            int soundCard2OutFifoSizeSamples = /*m_fifoSize_ms**/wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate /*/ 1000*/;
+            int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate / 1000;
             g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
             g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
             g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
