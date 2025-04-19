@@ -487,8 +487,8 @@ void MacAudioDevice::setHelperRealTime()
     // means the scheduler would give half the time to the thread.
     // These values have empirically been found to yield good behavior.
     // Good means that audio performance is high and other threads won't starve.
-    const double kGuaranteedAudioDutyCycle = 0.75;
-    const double kMaxAudioDutyCycle = 0.85;
+    const double kGuaranteedAudioDutyCycle = 0.75 / 2;
+    const double kMaxAudioDutyCycle = 0.85 / 2;
     
     // Define constants determining how much time the audio thread can
     // use in a given time quantum.  All times are in milliseconds.
