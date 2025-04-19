@@ -231,6 +231,14 @@ if(NOT BOOTSTRAP_WXWIDGETS)
         if(WX_VERSION VERSION_EQUAL ${WX_VERSION_MIN}
            OR WX_VERSION VERSION_GREATER ${WX_VERSION_MIN})
             message(STATUS "wxWidgets version: ${WX_VERSION}")
+            if(WIN32 OR APPLE)
+                message(WARNING 
+                    "On Windows and macOS, FreeDV patches wxWidgets to ensure consistent UI behavior across platforms."
+                    "It is highly recommended to allow FreeDV to build its own wxWidgets with these patches by setting "
+                    "-DBOOTSTRAP_WXWIDGETS=TRUE instead of using any version of wxWidgets already on the system. "
+                    "Alternatively, you can apply the patch in cmake/wxWidgets-Direct2D-color-font.patch to the wxWidgets "
+                    "source tree and build it yourself.")
+            endif(WIN32 OR APPLE)
         else()
             set(BOOTSTRAP_WXWIDGETS TRUE)
         endif()
