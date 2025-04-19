@@ -1574,16 +1574,27 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::GetValue (wxVariant &variant
 {
     if (item.IsOk())
     {
-        std::string sid = *(std::string*)item.GetID();
-        auto iter = allReporterData_.find(sid);
-        if (iter == allReporterData_.end())
+        // Assumption: sid is the first item in ReporterData.
+        // Due to intermittent freed memory accesses in the GTK version of wxDataViewCtrl,
+        // we need to make sure our item ID is actually still in allReporterData_ (without
+        // dereferencing) before proceeding with getting the requested column value.
+        ReporterData* row = (ReporterData*)item.GetID();
+        bool found = false;
+        for (auto& val : allReporterData_)
         {
-            // Theoretically this shouldn't happen, but just in case.
+            if (val.second == row)
+            {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            // Attempted freed memory dereference.
             variant = wxVariant("");
             return;
         }
-
-        auto row = iter->second;
 
         switch (col)
         {
