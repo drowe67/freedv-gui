@@ -494,7 +494,7 @@ void* TxRxThread::Entry()
 
         if (!m_run) break;
         
-        log_info("thread woken up: m_tx=%d", (int)m_tx));
+        log_info("thread woken up: m_tx=%d", (int)m_tx);
         inputDevice_->startRealTimeWork();
         
         if (m_tx) txProcessing_();
