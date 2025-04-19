@@ -36,7 +36,7 @@
 constexpr static double kOneNanosecond = 1.0e9;
 
 // The I/O interval time in seconds.
-constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.010;
+constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.005;
 
 static OSStatus GetIOBufferFrameSizeRange(AudioObjectID inDeviceID,
                                           UInt32* outMinimum,
@@ -447,7 +447,6 @@ void MacAudioDevice::setHelperRealTime()
     // Get current thread ID
     auto currentThreadId = pthread_mach_thread_np(pthread_self());
     
-#if 1
     // Increase thread priority to real-time.
     // Please note that the thread_policy_set() calls may fail in
     // rare cases if the kernel decides the system is under heavy load
@@ -479,7 +478,6 @@ void MacAudioDevice::setHelperRealTime()
         log_warn("Could not increase thread priority");
         return;
     }
-    #endif // 0
     
     // Most important, set real-time constraints.
     // Define the guaranteed and max fraction of time for the audio thread.
@@ -487,13 +485,13 @@ void MacAudioDevice::setHelperRealTime()
     // means the scheduler would give half the time to the thread.
     // These values have empirically been found to yield good behavior.
     // Good means that audio performance is high and other threads won't starve.
-    const double kGuaranteedAudioDutyCycle = 0.75 / 2;
-    const double kMaxAudioDutyCycle = 0.85 / 2;
+    const double kGuaranteedAudioDutyCycle = 0.75;
+    const double kMaxAudioDutyCycle = 0.85;
     
     // Define constants determining how much time the audio thread can
     // use in a given time quantum.  All times are in milliseconds.
     //auto sampleBuffer = pow(2, ceil(log(0.01 * sampleRate_) / log(2))); // next power of two
-    const double kTimeQuantum = 10; //AUDIO_SAMPLE_BLOCK_SEC * 1000; //sampleBuffer * 1000 / sampleRate_;
+    const double kTimeQuantum = AUDIO_SAMPLE_BLOCK_SEC * 1000;
     
     // Time guaranteed each quantum.
     const double kAudioTimeNeeded = kGuaranteedAudioDutyCycle * kTimeQuantum;
@@ -528,10 +526,14 @@ void MacAudioDevice::setHelperRealTime()
     workgroup_ = nullptr;
     joinToken_ = nullptr;
     
-    /*if (@available(macOS 11.0, *)) 
+    if (@available(macOS 11.0, *)) 
     { 
         UInt32 size = sizeof(os_workgroup_t);
-    
+        os_workgroup_t* wgMem = new os_workgroup_t;
+        assert(wgMem != nullptr);
+        os_workgroup_join_token_s* wgToken = new os_workgroup_join_token_s;
+        assert(wgToken != nullptr);
+        
         AudioObjectPropertyAddress propertyAddress = {
             .mSelector = kAudioDevicePropertyIOThreadOSWorkgroup,
             .mScope = kAudioObjectPropertyScopeGlobal,
@@ -544,71 +546,43 @@ void MacAudioDevice::setHelperRealTime()
                   0,
                   nullptr, 
                   &size, 
-                  &workgroup_);
+                  wgMem);
         if (osResult != noErr)
         {
             log_warn("Could not get audio workgroup");
+            workgroup_ = nullptr;
+            joinToken_ = nullptr;
+            
+            delete wgMem;
+            delete wgToken;
             return;
         }
+        else
+        {
+            workgroup_ = wgMem;
+            joinToken_ = wgToken;
+        }
       
-        auto workgroupResult = os_workgroup_join((os_workgroup_t)workgroup_, (os_workgroup_join_token_s*)&joinToken_);
+        auto workgroupResult = os_workgroup_join(*wgMem, wgToken);
         if (workgroupResult != 0)
         {
             log_warn("Could not join Core Audio workgroup (err = %d)", workgroupResult);
             workgroup_ = nullptr;
             joinToken_ = nullptr;
+            delete wgMem;
+            delete wgToken;
         }
-    }*/
+    }
 }
 
 void MacAudioDevice::startRealTimeWork()
 {
-    /*
-    if (@available(macOS 11.0, *)) 
-    { 
-        if (workgroup_ == nullptr)
-        {
-            return;
-        }
-    
-        // Get the mach time info.
-        struct mach_timebase_info timeBaseInfo;
-        mach_timebase_info(&timeBaseInfo);
-
-        // The frequency of the clock is: (timeBaseInfo.denom / timeBaseInfo.numer) * kOneNanosecond
-        const auto nanoSecFrequency = static_cast<double>(timeBaseInfo.denom) / static_cast<double>(timeBaseInfo.numer);
-        const auto frequency = nanoSecFrequency * kOneNanosecond;
-    
-        const auto intervalMachLength = static_cast<int64_t>(kIOIntervalTime * frequency);
-        const auto currentTime = mach_absolute_time();
-        const auto deadline = currentTime + intervalMachLength;
-            
-        auto result = os_workgroup_interval_start((os_workgroup_t)workgroup_, currentTime, deadline, nullptr);
-        if (result != 0)
-        {
-            log_warn("Could not start workgroup interval (err = %d)", result);
-        }
-    }*/
+    // empty
 }
 
 void MacAudioDevice::stopRealTimeWork()
 {
-    /*
-    if (@available(macOS 11.0, *)) 
-    { 
-        if (workgroup_ == nullptr)
-        {
-            return;
-        }
-    
-        auto result = os_workgroup_interval_finish((os_workgroup_t)workgroup_, nullptr);
-        if (result != 0)
-        {
-            log_warn("Could not finish workgroup interval (err = %d)", result);
-        }
-    }*/
-    
-    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, 1e7));
+    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, AUDIO_SAMPLE_BLOCK_SEC * kOneNanosecond));
 }
 
 void MacAudioDevice::clearHelperRealTime()
@@ -617,7 +591,14 @@ void MacAudioDevice::clearHelperRealTime()
     {
         if (workgroup_ != nullptr)
         {
-            os_workgroup_leave((os_workgroup_t)workgroup_, (os_workgroup_join_token_s*)&joinToken_);
+            os_workgroup_t* wgMem = (os_workgroup_t*)workgroup_;
+            os_workgroup_join_token_s* wgToken = (os_workgroup_join_token_s*)joinToken_;
+            
+            os_workgroup_leave(*wgMem, wgToken);
+            
+            delete wgMem;
+            delete wgToken;
+            
             workgroup_ = nullptr;
             joinToken_ = nullptr;
         }
