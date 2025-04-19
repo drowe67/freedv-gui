@@ -1377,21 +1377,23 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setReporter(std::shared_ptr<
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
 {
-    wxDataViewItemArray itemsToDelete;
     for (auto& row : allReporterData_)
     {
         if (row.second->isVisible)
         {
             row.second->isVisible = false;
-            itemsToDelete.Add(wxDataViewItem(&row.second->sid));
+            ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(&row.second->sid));
         }
+
+        // Defer memory deallocation until after this call finishes.
+        // This is to resolve intermittent issues in Linux where we
+        // end up referencing deallocated memory.
+        std::string sid = row.second->sid;
+        parent_->CallAfter([&, sid]() {
+            delete allReporterData_[sid];
+            allReporterData_.erase(sid);
+        });
     }
-    ItemsDeleted(wxDataViewItem(nullptr), itemsToDelete);
-    for (auto& row : allReporterData_)
-    {
-        delete row.second;
-    }
-    allReporterData_.clear();
 }
 
 int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const
@@ -1573,7 +1575,15 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::GetValue (wxVariant &variant
     if (item.IsOk())
     {
         std::string sid = *(std::string*)item.GetID();
-        auto row = allReporterData_.find(sid)->second;
+        auto iter = allReporterData_.find(sid);
+        if (iter == allReporterData_.end())
+        {
+            // Theoretically this shouldn't happen, but just in case.
+            variant = wxVariant("");
+            return;
+        }
+
+        auto row = iter->second;
 
         switch (col)
         {
@@ -1867,9 +1877,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
                 item->isVisible = false;
                 ItemDeleted(wxDataViewItem(nullptr), dvi);
             }
-            
-            delete item;
-            allReporterData_.erase(iter);
+
+            // Defer deletion of item to avoid intermittent references
+            // to deleted memory in wxWidgets.
+            parent_->CallAfter([&, item]() {
+                allReporterData_.erase(item->sid);
+                delete item;
+            });
         }
     });
     
