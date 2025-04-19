@@ -48,6 +48,7 @@ using namespace std::chrono_literals;
 #include "LinkStep.h"
 
 #include "util/logging/ulog.h"
+#include "os/os_interface.h"
 
 #include <wx/stopwatch.h>
 
@@ -467,6 +468,9 @@ void* TxRxThread::Entry()
 {
     initializePipeline_();
     
+    // Request real-time scheduling from the operating system.    
+    inputDevice_->setHelperRealTime();
+    
     while (m_run)
     {
 #if defined(__linux__)
@@ -486,17 +490,24 @@ void* TxRxThread::Entry()
         }
 #endif
 
-        auto currentTime = std::chrono::steady_clock::now();
+        auto beginTime = std::chrono::steady_clock::now();
 
         if (!m_run) break;
+        
+        //log_info("thread woken up: m_tx=%d", (int)m_tx);
+        inputDevice_->startRealTimeWork();
+        
         if (m_tx) txProcessing_();
         else rxProcessing_();
-
-        std::this_thread::sleep_until(currentTime + 10ms);
+        
+        inputDevice_->stopRealTimeWork();
     }
     
     // Force pipeline to delete itself when we're done with the thread.
     pipeline_ = nullptr;
+    
+    // Return to normal scheduling
+    inputDevice_->clearHelperRealTime();
     
     return NULL;
 }

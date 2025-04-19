@@ -17,7 +17,6 @@ jobs:
         os: [macos-13, macos-latest]  # x86_64, ARM64
 
     runs-on: ${{ matrix.os }}
-    needs: dist
 
     steps:
     - uses: actions/checkout@v4
@@ -85,6 +84,7 @@ jobs:
   # x86 and ARM. No point in doing so if there's a failure on either.
   dist:
     runs-on: macos-latest
+    needs: test
 
     steps:
     - uses: actions/checkout@v4

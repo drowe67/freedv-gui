@@ -29,7 +29,7 @@
 #include <avrt.h>
 #include "../util/logging/ulog.h"
 
-#define BLOCK_TIME_NS (40000000)
+#define BLOCK_TIME_NS (0)
 
 // Nanoseconds per REFERENCE_TIME unit
 #define NS_PER_REFTIME (100)
@@ -47,6 +47,7 @@ WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDi
     , latencyFrames_(0)
     , renderCaptureEvent_(nullptr)
     , isRenderCaptureRunning_(false)
+    , helperTask_(nullptr)
 {
     // empty
 }
@@ -379,6 +380,35 @@ int WASAPIAudioDevice::getLatencyInMicroseconds()
     // Note: latencyFrames_ isn't expected to change, so we don't need to 
     // wrap this call in an enqueue_() like with the other public methods.
     return 1000000 * latencyFrames_ / sampleRate_;
+}
+
+void WASAPIAudioDevice::setHelperRealTime()
+{
+    DWORD taskIndex = 0;
+    helperTask_ = AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
+    if (helperTask_ == nullptr)
+    {
+        log_warn("Could not increase thread priority");
+    }
+}
+
+void WASAPIAudioDevice::startRealTimeWork() 
+{
+    // empty
+}
+
+void WASAPIAudioDevice::stopRealTimeWork() 
+{
+    // empty
+}
+
+void WASAPIAudioDevice::clearHelperRealTime()
+{
+    if (helperTask_ != nullptr)
+    {
+        AvRevertMmThreadCharacteristics(helperTask_);
+        helperTask_ = nullptr;
+    }
 }
 
 void WASAPIAudioDevice::renderAudio_()
