@@ -38,7 +38,7 @@ constexpr static double kOneNanosecond = 1.0e9;
 // The I/O interval time in seconds.
 constexpr static double kIOIntervalTime = 0.010;
 
-constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.0025;
+constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.010;
 
 static OSStatus GetIOBufferFrameSizeRange(AudioObjectID inDeviceID,
                                           UInt32* outMinimum,
@@ -488,7 +488,7 @@ void MacAudioDevice::setHelperRealTime()
     // Define constants determining how much time the audio thread can
     // use in a given time quantum.  All times are in milliseconds.
     //auto sampleBuffer = pow(2, ceil(log(0.01 * sampleRate_) / log(2))); // next power of two
-    const double kTimeQuantum = AUDIO_SAMPLE_BLOCK_SEC * 1000; //sampleBuffer * 1000 / sampleRate_;
+    const double kTimeQuantum = 2.9; //AUDIO_SAMPLE_BLOCK_SEC * 1000; //sampleBuffer * 1000 / sampleRate_;
     
     // Time guaranteed each quantum.
     const double kAudioTimeNeeded = kGuaranteedAudioDutyCycle * kTimeQuantum;
