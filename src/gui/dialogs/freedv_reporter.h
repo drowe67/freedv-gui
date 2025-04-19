@@ -25,6 +25,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <mutex>
 
 #include <wx/tipwin.h>
 #include <wx/dataview.h>
@@ -250,6 +251,7 @@ class FreeDVReporterDialog : public wxFrame
             FilterFrequency currentBandFilter_;
             bool filterSelfMessageUpdates_;
             uint64_t filteredFrequency_;
+            std::recursive_mutex dataMtx_;
 
             bool isFiltered_(uint64_t freq);
 
