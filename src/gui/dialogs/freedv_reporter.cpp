@@ -1519,20 +1519,36 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::GetAttr (const wxDataViewIte
     
     if (item.IsOk())
     {
-        std::string sid = *(std::string*)item.GetID();
-        auto iter = allReporterData_.find(sid);
-        if (iter != allReporterData_.end())
+        // Assumption: sid is the first item in ReporterData.
+        // Due to intermittent freed memory accesses in the GTK version of wxDataViewCtrl,
+        // we need to make sure our item ID is actually still in allReporterData_ (without
+        // dereferencing) before proceeding with getting the requested column value.
+        ReporterData* row = (ReporterData*)item.GetID();
+        bool found = false;
+        for (auto& val : allReporterData_)
         {
-            if (iter->second->backgroundColor.IsOk())
+            if (val.second == row)
             {
-                attr.SetBackgroundColour(iter->second->backgroundColor);
-                result = true;
+                found = true;
+                break;
             }
-            if (iter->second->foregroundColor.IsOk())
-            {
-                attr.SetColour(iter->second->foregroundColor);
-                result = true;
-            }
+        }
+
+        if (!found)
+        {
+            // Attempted freed memory dereference.
+            return false;
+        }
+
+        if (row->backgroundColor.IsOk())
+        {
+            attr.SetBackgroundColour(row->backgroundColor);
+            result = true;
+        }
+        if (row->foregroundColor.IsOk())
+        {
+            attr.SetColour(row->foregroundColor);
+            result = true;
         }
     }
 
