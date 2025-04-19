@@ -501,9 +501,6 @@ void* TxRxThread::Entry()
         else rxProcessing_();
         
         inputDevice_->stopRealTimeWork();
-
-        // Sleep for the remainder of the time quantum
-        std::this_thread::sleep_until(beginTime + 10ms); 
     }
     
     // Force pipeline to delete itself when we're done with the thread.

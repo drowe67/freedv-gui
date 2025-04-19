@@ -36,7 +36,7 @@
 constexpr static double kOneNanosecond = 1.0e9;
 
 // The I/O interval time in seconds.
-constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.0025;
+constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.010;
 
 static OSStatus GetIOBufferFrameSizeRange(AudioObjectID inDeviceID,
                                           UInt32* outMinimum,
@@ -87,6 +87,8 @@ MacAudioDevice::MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection dir
     , joinToken_(nullptr)
 {
     log_info("Create MacAudioDevice with ID %d, channels %d and sample rate %d", coreAudioId, numChannels, sampleRate);
+    
+    sem_ = dispatch_semaphore_create(0);
 }
 
 MacAudioDevice::~MacAudioDevice()
@@ -95,6 +97,8 @@ MacAudioDevice::~MacAudioDevice()
     {
         stop();
     }
+    
+    dispatch_release(sem_);
 }
     
 int MacAudioDevice::getNumChannels()
@@ -234,6 +238,9 @@ void MacAudioDevice::start()
                     
                     onAudioDataFunction(*this, inputFrames, frameCount, onAudioDataState);
                 }
+                
+                dispatch_semaphore_signal(sem_);
+                
                 return OSStatus(noErr);
             };
             
@@ -600,6 +607,8 @@ void MacAudioDevice::stopRealTimeWork()
             log_warn("Could not finish workgroup interval (err = %d)", result);
         }
     }*/
+    
+    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, 1e7));
 }
 
 void MacAudioDevice::clearHelperRealTime()

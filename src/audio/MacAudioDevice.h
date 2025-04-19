@@ -23,6 +23,8 @@
 #ifndef MAC_AUDIO_DEVICE_H
 #define MAC_AUDIO_DEVICE_H
 
+#include <dispatch/dispatch.h>
+
 #include "../util/ThreadedObject.h"
 #include "IAudioEngine.h"
 #include "IAudioDevice.h"
@@ -74,6 +76,8 @@ private:
     
     void* workgroup_;
     void* joinToken_;
+    
+    dispatch_semaphore_t sem_;
 };
 
 #endif // MAC_AUDIO_DEVICE_H

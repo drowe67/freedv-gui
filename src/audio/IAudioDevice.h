@@ -26,7 +26,12 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <thread>
+#include <chrono>
+
 #include "AudioDeviceSpecification.h"
+
+using namespace std::chrono_literals;
 
 class IAudioDevice
 {
@@ -57,7 +62,7 @@ public:
     
     // Lets audio system know that we're done with the work on the received
     // audio.
-    virtual void stopRealTimeWork() { /* empty */ }
+    virtual void stopRealTimeWork() { std::this_thread::sleep_for(10ms); }
     
     // Reverts real-time priority for current thread.
     virtual void clearHelperRealTime() { /* empty */ }
