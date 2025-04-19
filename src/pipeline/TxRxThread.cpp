@@ -501,19 +501,8 @@ void* TxRxThread::Entry()
         
         inputDevice_->stopRealTimeWork();
 
-        auto endTime = std::chrono::steady_clock::now();
-        
-        if ((endTime - beginTime) >= 10ms)
-        {
-            // Sleep for 10ms if we went over the time quantum, just so the OS
-            // doesn't penalize this thread.
-            std::this_thread::sleep_for(10ms); 
-        }
-        else
-        {
-            // Sleep for the remainder of the time quantum
-            std::this_thread::sleep_until(beginTime + 10ms); 
-        }
+        // Sleep for the remainder of the time quantum
+        std::this_thread::sleep_until(beginTime + 10ms); 
     }
     
     // Force pipeline to delete itself when we're done with the thread.
