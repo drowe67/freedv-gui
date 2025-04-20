@@ -32,6 +32,9 @@
 #include <mach/thread_policy.h>
 #include <sched.h>
 
+thread_local void* MacAudioDevice::workgroup_ = nullptr;
+thread_local void* MacAudioDevice::joinToken_ = nullptr;
+    
 // One nanosecond in seconds.
 constexpr static double kOneNanosecond = 1.0e9;
 
@@ -83,8 +86,6 @@ MacAudioDevice::MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection dir
     , sampleRate_(sampleRate)
     , engine_(nil)
     , player_(nil)
-    , workgroup_(nullptr)
-    , joinToken_(nullptr)
 {
     log_info("Create MacAudioDevice with ID %d, channels %d and sample rate %d", coreAudioId, numChannels, sampleRate);
     

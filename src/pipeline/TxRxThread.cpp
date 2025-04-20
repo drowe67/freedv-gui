@@ -379,7 +379,8 @@ void TxRxThread::initializePipeline_()
             []() { return g_channel_noise; },
             []() { return wxGetApp().appConfiguration.noiseSNR; },
             []() { return g_RxFreqOffsetHz; },
-            []() { return &g_sig_pwr_av; }
+            []() { return &g_sig_pwr_av; },
+            helper_
         );
         rfDemodulationPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(rfDemodulationStep));
         
@@ -469,7 +470,7 @@ void* TxRxThread::Entry()
     initializePipeline_();
     
     // Request real-time scheduling from the operating system.    
-    inputDevice_->setHelperRealTime();
+    helper_->setHelperRealTime();
     
     while (m_run)
     {
@@ -495,19 +496,19 @@ void* TxRxThread::Entry()
         if (!m_run) break;
         
         //log_info("thread woken up: m_tx=%d", (int)m_tx);
-        inputDevice_->startRealTimeWork();
+        helper_->startRealTimeWork();
         
         if (m_tx) txProcessing_();
         else rxProcessing_();
         
-        inputDevice_->stopRealTimeWork();
+        helper_->stopRealTimeWork();
     }
     
     // Force pipeline to delete itself when we're done with the thread.
     pipeline_ = nullptr;
     
     // Return to normal scheduling
-    inputDevice_->clearHelperRealTime();
+    helper_->clearHelperRealTime();
     
     return NULL;
 }

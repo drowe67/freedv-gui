@@ -23,6 +23,7 @@
 #ifndef MAC_AUDIO_DEVICE_H
 #define MAC_AUDIO_DEVICE_H
 
+#include <thread>
 #include <dispatch/dispatch.h>
 
 #include "../util/ThreadedObject.h"
@@ -74,8 +75,8 @@ private:
     void* engine_; // actually AVAudioEngine but this file is shared with C++ code
     void* player_; // actually AVAudioPlayerNode
     
-    void* workgroup_;
-    void* joinToken_;
+    static thread_local void* workgroup_;
+    static thread_local void* joinToken_;
     
     dispatch_semaphore_t sem_;
 };

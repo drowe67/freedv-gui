@@ -32,6 +32,8 @@
 #include <queue>
 #include <map>
 
+#include "../util/IRealtimeHelper.h"
+
 class ParallelStep : public IPipelineStep
 {
 public:
@@ -41,7 +43,8 @@ public:
         std::function<int(ParallelStep*)> inputRouteFn,
         std::function<int(ParallelStep*)> outputRouteFn,
         std::vector<IPipelineStep*> parallelSteps,
-        std::shared_ptr<void> state);
+        std::shared_ptr<void> state,
+        std::shared_ptr<IRealtimeHelper> realtimeHelper);
     virtual ~ParallelStep();
     
     virtual int getInputSampleRate() const;
@@ -81,6 +84,7 @@ private:
     std::map<std::pair<int, int>, std::shared_ptr<ResampleStep>> resamplers_;
     std::vector<ThreadInfo*> threads_;
     std::shared_ptr<void> state_;
+    std::shared_ptr<IRealtimeHelper> realtimeHelper_;
 
     void executeRunnerThread_(ThreadInfo* threadState);
     std::future<TaskResult> enqueueTask_(ThreadInfo* taskQueueThread, IPipelineStep* step, std::shared_ptr<short> inputSamples, int numInputSamples);
