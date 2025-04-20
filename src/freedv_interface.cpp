@@ -146,7 +146,7 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
 void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText)
 {
     sync_ = 0;
-    singleRxThread_ = singleRxThread;
+    singleRxThread_ = enabledModes_.size() > 1 ? singleRxThread : true;
 
     modemStatsList_ = new MODEM_STATS[enabledModes_.size()];
     for (int index = 0; index < (int)enabledModes_.size(); index++)
