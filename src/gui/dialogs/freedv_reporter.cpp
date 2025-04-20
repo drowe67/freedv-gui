@@ -1394,6 +1394,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
         // end up referencing deallocated memory.
         std::string sid = row.second->sid;
         parent_->CallAfter([&, sid]() {
+            std::unique_lock<std::recursive_mutex> lk(dataMtx_);
             delete allReporterData_[sid];
             allReporterData_.erase(sid);
         });
@@ -1923,6 +1924,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
             // Defer deletion of item to avoid intermittent references
             // to deleted memory in wxWidgets.
             parent_->CallAfter([&, item]() {
+                std::unique_lock<std::recursive_mutex> lk(dataMtx_);
                 allReporterData_.erase(item->sid);
                 delete item;
             });
