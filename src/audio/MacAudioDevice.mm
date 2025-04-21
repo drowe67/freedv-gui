@@ -39,7 +39,7 @@ thread_local void* MacAudioDevice::joinToken_ = nullptr;
 constexpr static double kOneNanosecond = 1.0e9;
 
 // The I/O interval time in seconds.
-constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.005;
+constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.010;
 
 static OSStatus GetIOBufferFrameSizeRange(AudioObjectID inDeviceID,
                                           UInt32* outMinimum,
