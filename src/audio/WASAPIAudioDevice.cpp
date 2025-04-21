@@ -308,8 +308,9 @@ void WASAPIAudioDevice::start()
                 log_warn("Could not increase thread priority");
             }
 
-            while (isRenderCaptureRunning_ && WaitForSingleObject(renderCaptureEvent_, 100) == WAIT_OBJECT_0)
+            while (isRenderCaptureRunning_)
             {
+                WaitForSingleObject(renderCaptureEvent_, 100);
                 if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
                 {
                     renderAudio_();
