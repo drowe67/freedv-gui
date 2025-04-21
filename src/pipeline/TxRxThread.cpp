@@ -621,7 +621,9 @@ void TxRxThread::txProcessing_()
         int nsam_in_48 = freedvInterface.getTxNumSpeechSamples() * ((float)inputSampleRate_ / (float)freedvInterface.getTxSpeechSampleRate());
         assert(nsam_in_48 > 0);
 
-        short           insound_card[nsam_in_48];
+        short*           insound_card = new short[nsam_in_48];
+        assert(insound_card != nullptr);
+
         int             nout;
 
         
@@ -693,7 +695,8 @@ void TxRxThread::txProcessing_()
                 codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
             }
         }
-        
+       
+        delete[] insound_card; 
         txModeChangeMutex.Unlock();
     }
     else
@@ -738,7 +741,9 @@ void TxRxThread::rxProcessing_()
     int nsam = (int)(inputSampleRate_ * FRAME_DURATION);
     assert(nsam > 0);
 
-    short           insound_card[nsam];
+    short*           insound_card = new short[nsam];
+    assert(insound_card != nullptr);
+
     int             nout;
 
 
@@ -774,4 +779,6 @@ void TxRxThread::rxProcessing_()
                 (g_tx && wxGetApp().appConfiguration.monitorTxAudio) ||
                 (!g_voice_keyer_tx && ((g_half_duplex && !g_tx) || !g_half_duplex));
     }
+
+    delete[] insound_card;
 }

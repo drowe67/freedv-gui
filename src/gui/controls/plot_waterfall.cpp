@@ -381,7 +381,9 @@ void PlotWaterfall::plotPixelData()
 
     // Draw last line of blocks using latest amplitude data ------------------
     int baseRowWidthPixels = ((float)MODEM_STATS_NSPEC / (float)m_modem_stats_max_f_hz) * MAX_F_HZ;
-    unsigned char dyImageData[3 * baseRowWidthPixels];
+    unsigned char* dyImageData = new char[3 * baseRowWidthPixels];
+    assert(dyImageData != nullptr);
+
     for(px = 0; px < baseRowWidthPixels; px++)
     {
         index = px;
@@ -435,6 +437,8 @@ void PlotWaterfall::plotPixelData()
         delete tmpBmp; 
         delete tmpImage;
     }
+
+    delete[] dyImageData;
 }
 
 //-------------------------------------------------------------------------
