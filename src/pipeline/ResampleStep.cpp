@@ -40,8 +40,12 @@ static int resample_step(SRC_STATE *src,
             )
 {
     SRC_DATA src_data;
-    float    input[length_input_short];
-    float    output[length_output_short];
+    float*    input = new float[length_input_short];
+    assert(input != nullptr);
+
+    float*    output = new float[length_output_short];
+    assert(output != nullptr);
+
     int      ret;
 
     assert(src != NULL);
@@ -64,6 +68,9 @@ static int resample_step(SRC_STATE *src,
 
     assert(src_data.output_frames_gen <= length_output_short);
     src_float_to_short_array(output, output_short, src_data.output_frames_gen);
+
+    delete[] input;
+    delete[] output;
 
     return src_data.output_frames_gen;
 }

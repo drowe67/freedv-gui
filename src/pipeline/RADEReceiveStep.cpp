@@ -83,10 +83,15 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
     *numOutputSamples = 0;
     short* outputSamples = nullptr;
     
-    RADE_COMP input_buf_cplx[rade_nin_max(dv_)];
-    short input_buf[rade_nin_max(dv_)];
-    float features_out[rade_n_features_in_out(dv_)];
-    
+    RADE_COMP* input_buf_cplx = new RADE_COMP[rade_nin_max(dv_)];
+    assert(input_buf_cplx != nullptr);
+
+    short* input_buf = new short[rade_nin_max(dv_)];
+    assert(input_buf != nullptr);
+
+    float* features_out = new float[rade_n_features_in_out(dv_)];
+    assert(features_out != nullptr);
+
     short* inputPtr = inputSamples.get();
     while (numInputSamples > 0 && inputPtr != nullptr)
     {
@@ -108,7 +113,9 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
 
             // RADE processing (input signal->features).
             int hasEooOut = 0;
-            float eooOut[rade_n_eoo_bits(dv_)];
+            float* eooOut = new float[rade_n_eoo_bits(dv_)];
+            assert(eooOut != nullptr);
+
             nout = rade_rx(dv_, features_out, &hasEooOut, eooOut, input_buf_cplx);
             if (hasEooOut && textPtr_ != nullptr)
             {
@@ -155,7 +162,8 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
                     codec2_fifo_write(outputSampleFifo_, pcm, LPCNET_FRAME_SIZE);
                 }
             }
-            
+
+            delete[] eooOut;            
             nin = rade_nin(dv_);
         }
     }
@@ -167,5 +175,9 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
         codec2_fifo_read(outputSampleFifo_, outputSamples, *numOutputSamples);
     }
 
+    delete[] input_buf_cplx;
+    delete[] input_buf;
+    delete[] features_out;
+    
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
 }

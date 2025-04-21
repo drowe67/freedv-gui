@@ -55,48 +55,48 @@ namespace log {
 template <typename concurrency, typename names>
 class ulog {
 public:
-    ulog<concurrency,names>(channel_type_hint::value h =
+    ulog(channel_type_hint::value h =
         channel_type_hint::access)
       : m_static_channels(0xffffffff)
       , m_dynamic_channels(0) {}
 
-    ulog<concurrency,names>(std::ostream * out)
+    ulog(std::ostream * out)
       : m_static_channels(0xffffffff)
       , m_dynamic_channels(0) {}
 
-    ulog<concurrency,names>(level c, channel_type_hint::value h =
+    ulog(level c, channel_type_hint::value h =
         channel_type_hint::access)
       : m_static_channels(c)
       , m_dynamic_channels(0) {}
 
-    ulog<concurrency,names>(level c, std::ostream * out)
+    ulog(level c, std::ostream * out)
       : m_static_channels(c)
       , m_dynamic_channels(0) {}
 
     /// Destructor
-    ~ulog<concurrency,names>() {}
+    ~ulog() {}
 
     /// Copy constructor
-    ulog<concurrency,names>(ulog<concurrency,names> const & other)
+    ulog(ulog<concurrency,names> const & other)
      : m_static_channels(other.m_static_channels)
      , m_dynamic_channels(other.m_dynamic_channels)
     {}
     
 #ifdef _WEBSOCKETPP_DEFAULT_DELETE_FUNCTIONS_
     // no copy assignment operator because of const member variables
-    ulog<concurrency,names> & operator=(ulog<concurrency,names> const &) = delete;
+    ulog & operator=(ulog<concurrency,names> const &) = delete;
 #endif // _WEBSOCKETPP_DEFAULT_DELETE_FUNCTIONS_
 
 #ifdef _WEBSOCKETPP_MOVE_SEMANTICS_
     /// Move constructor
-    ulog<concurrency,names>(ulog<concurrency,names> && other)
+    ulog(ulog<concurrency,names> && other)
      : m_static_channels(other.m_static_channels)
      , m_dynamic_channels(other.m_dynamic_channels)
     {}
 
 #ifdef _WEBSOCKETPP_DEFAULT_DELETE_FUNCTIONS_
     // no move assignment operator because of const member variables
-    ulog<concurrency,names> & operator=(ulog<concurrency,names> &&) = delete;
+    ulog & operator=(ulog<concurrency,names> &&) = delete;
 #endif // _WEBSOCKETPP_DEFAULT_DELETE_FUNCTIONS_
 
 #endif // _WEBSOCKETPP_MOVE_SEMANTICS_

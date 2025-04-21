@@ -1637,11 +1637,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                                will be updated.
                             */
 
-                            COMP rx_symbols_copy[g_Nc/2];
+                            COMP* rx_symbols_copy = new COMP[g_Nc/2];
+                            assert(rx_symbols_copy != nullptr);
 
                             for(c=0; c<g_Nc/2; c++)
                                 rx_symbols_copy[c] = fcmult(0.5, cadd(freedvInterface.getCurrentRxModemStats()->rx_symbols[r][c], freedvInterface.getCurrentRxModemStats()->rx_symbols[r][c+g_Nc/2]));
                             m_panelScatter->add_new_samples_scatter(rx_symbols_copy);
+
+                            delete[] rx_symbols_copy;
                         }
                         else {
                             /*
@@ -3231,17 +3234,15 @@ void MainFrame::startRxStream()
         rxInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
             paCallBackData* cbData = static_cast<paCallBackData*>(state);
             short* audioData = static_cast<short*>(data);
-            short  indata[size];
 
             for (size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
             {
-                indata[i] = audioData[0];
-            }
-            
-            if (codec2_fifo_write(cbData->infifo1, indata, size)) 
-            {
-                log_warn("RX FIFO full");
-                g_infifo1_full++;
+                if (codec2_fifo_write(cbData->infifo1, &audioData[0], 1)) 
+                {
+                    log_warn("RX FIFO full");
+                    g_infifo1_full++;
+                    break;
+                }
             }
 
             m_rxThread->notify();
@@ -3265,7 +3266,8 @@ void MainFrame::startRxStream()
             rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
-                short  outdata[size];
+                short* outdata = new short[size];
+                assert(outdata != nullptr);
  
                 int result = codec2_fifo_read(cbData->outfifo2, outdata, size);
                 if (result == 0) 
@@ -3282,6 +3284,8 @@ void MainFrame::startRxStream()
                 {
                     g_outfifo2_empty++;
                 }
+
+                delete[] outdata;
             }, g_rxUserdata);
             
             rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
@@ -3297,18 +3301,15 @@ void MainFrame::startRxStream()
             txInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
-                short  indata[size];
                 
                 if (!endingTx) 
                 {
                     for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
                     {
-                        indata[i] = audioData[0];
-                    }
-                    
-                    if (codec2_fifo_write(cbData->infifo2, indata, size)) 
-                    {
-                        g_infifo2_full++;
+                        if (codec2_fifo_write(cbData->infifo2, &audioData[0], 1)) 
+                        {
+                            g_infifo2_full++;
+                        }
                     }
                 }
 
@@ -3328,9 +3329,10 @@ void MainFrame::startRxStream()
             txOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
-                short  outdata[size];
+                short* outdata = new short[size];
+                assert(outdata != nullptr);
                 
-                int available = std::min(codec2_fifo_used(cbData->outfifo1), (int)size);
+                unsigned int available = std::min(codec2_fifo_used(cbData->outfifo1), (int)size);
 
                 int result = codec2_fifo_read(cbData->outfifo1, outdata, available);
                 if (result == 0) 
@@ -3366,6 +3368,8 @@ void MainFrame::startRxStream()
                 {
                     g_outfifo1_empty++;
                 }
+
+                delete[] outdata;
             }, g_rxUserdata);
         
             txOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
@@ -3386,7 +3390,9 @@ void MainFrame::startRxStream()
             rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
-                short  outdata[size];
+
+                short* outdata = new short[size];
+                assert(outdata != nullptr);
 
                 int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
                 if (result == 0) 
@@ -3403,6 +3409,8 @@ void MainFrame::startRxStream()
                 {
                     g_outfifo1_empty++;
                 }
+
+                delete[] outdata;
             }, g_rxUserdata);
             
             rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
