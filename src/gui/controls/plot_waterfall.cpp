@@ -424,7 +424,7 @@ void PlotWaterfall::plotPixelData()
 
     if (dy > 0)
     {
-        wxImage* tmpImage = new wxImage(baseRowWidthPixels, 1, (unsigned char*)&dyImageData, true);
+        wxImage* tmpImage = new wxImage(baseRowWidthPixels, 1, (unsigned char*)dyImageData, true);
         wxBitmap* tmpBmp = new wxBitmap(*tmpImage);
         {
             wxMemoryDC fullBmpSourceDC(*m_fullBmp);
