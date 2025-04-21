@@ -48,14 +48,14 @@ protected:
     MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate);
     
 private:
-    const double FRAME_TIME_SEC_ = 0.01;
-    
     int coreAudioId_;
     IAudioEngine::AudioDirection direction_;
     int numChannels_;
     int sampleRate_;
     void* engine_; // actually AVAudioEngine but this file is shared with C++ code
     void* player_; // actually AVAudioPlayerNode
+
+    short* inputFrames_;
 };
 
 #endif // MAC_AUDIO_DEVICE_H

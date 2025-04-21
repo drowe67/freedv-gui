@@ -71,6 +71,7 @@ MacAudioDevice::MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection dir
     , sampleRate_(sampleRate)
     , engine_(nil)
     , player_(nil)
+    , inputFrames_(nullptr)
 {
     log_info("Create MacAudioDevice with ID %d, channels %d and sample rate %d", coreAudioId, numChannels, sampleRate);
 }
@@ -142,6 +143,11 @@ void MacAudioDevice::start()
                 log_warn("Could not set IO frame size to %d for audio device ID %d", desiredFrameSize, coreAudioId_);
             }
         }
+        else
+        {
+            // Set maxFrameSize to something reasonable for further down.
+            maxFrameSize = 4096;
+        }
         
         // Initialize audio engine.
         AVAudioEngine* engine = [[AVAudioEngine alloc] init];
@@ -195,29 +201,28 @@ void MacAudioDevice::start()
     
         // Create nodes and links
         AVAudioPlayerNode *player = nil;
+        inputFrames_ = new short[maxFrameSize * numChannels_];
+        assert(inputFrames_ != nullptr);
+
         if (direction_ == IAudioEngine::AUDIO_ENGINE_IN)
         {
             log_info("Create mixer node for input device %d", coreAudioId_);
         
             AVAudioInputNode* inNode = [engine inputNode];
-            const int NUM_FRAMES = FRAME_TIME_SEC_ * sampleRate_;
-            
+
             AVAudioSinkNodeReceiverBlock block = ^(const AudioTimeStamp* timestamp, AVAudioFrameCount frameCount, const AudioBufferList* inputData) 
             {
-                short inputFrames[frameCount * numChannels_];
-                memset(inputFrames, 0, sizeof(inputFrames));
-                
                 if (onAudioDataFunction)
                 {
                     for (int index = 0; index < frameCount; index++)
                     {
                         for (int chan = 0; chan < inputData->mNumberBuffers; chan++)
                         {
-                            inputFrames[numChannels_ * index + chan] = ((float*)inputData->mBuffers[chan].mData)[index] * 32767;
+                            inputFrames_[numChannels_ * index + chan] = ((float*)inputData->mBuffers[chan].mData)[index] * 32767;
                         }
                     }
                     
-                    onAudioDataFunction(*this, inputFrames, frameCount, onAudioDataState);
+                    onAudioDataFunction(*this, inputFrames_, frameCount, onAudioDataState);
                 }
                 return OSStatus(noErr);
             };
@@ -232,18 +237,17 @@ void MacAudioDevice::start()
 
             AVAudioSourceNodeRenderBlock block = ^(BOOL *, const AudioTimeStamp *, AVAudioFrameCount frameCount, AudioBufferList *outputData)
             {
-                short outputFrames[frameCount * numChannels_];
-                memset(outputFrames, 0, sizeof(outputFrames));
+                memset(inputFrames_, 0, sizeof(short) * numChannels_ * frameCount);
                 
                 if (onAudioDataFunction)
                 {
-                    onAudioDataFunction(*this, (void*)outputFrames, frameCount, onAudioDataState);
+                    onAudioDataFunction(*this, inputFrames_, frameCount, onAudioDataState);
                     
                     for (int index = 0; index < frameCount; index++)
                     {
                         for (int chan = 0; chan < outputData->mNumberBuffers; chan++)
                         {
-                            ((float*)outputData->mBuffers[chan].mData)[index] = outputFrames[numChannels_ * index + chan] / 32767.0;
+                            ((float*)outputData->mBuffers[chan].mData)[index] = inputFrames_[numChannels_ * index + chan] / 32767.0;
                         }
                     }
                 }
@@ -310,10 +314,15 @@ void MacAudioDevice::stop()
             AVAudioEngine* engine = (AVAudioEngine*)engine_;
             [engine stop];
             [engine release];
+
         }
+
         engine_ = nil;
         player_ = nil;
-        
+
+        delete[] inputFrames_;
+        inputFrames_ = nullptr;
+
         prom->set_value();
     });
     
