@@ -108,7 +108,7 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
         
         if (codec2_fifo_used(inputSampleFifo_) >= LPCNET_FRAME_SIZE)
         {
-            int numRequiredFeaturesForRADE = rade_n_features_in_out(dv_);
+            unsigned int numRequiredFeaturesForRADE = rade_n_features_in_out(dv_);
             int numOutputSamples = rade_n_tx_out(dv_);
             short pcm[LPCNET_FRAME_SIZE];
             float features[NB_TOTAL_FEATURES];
@@ -139,7 +139,7 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
             while (featureList_.size() >= numRequiredFeaturesForRADE)
             {
                 rade_tx(dv_, radeOut, &featureList_[0]);
-                for (int index = 0; index < numRequiredFeaturesForRADE; index++)
+                for (unsigned int index = 0; index < numRequiredFeaturesForRADE; index++)
                 {
                     featureList_.erase(featureList_.begin());
                 }

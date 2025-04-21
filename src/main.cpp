@@ -3332,7 +3332,7 @@ void MainFrame::startRxStream()
                 short* outdata = new short[size];
                 assert(outdata != nullptr);
                 
-                int available = std::min(codec2_fifo_used(cbData->outfifo1), (int)size);
+                unsigned int available = std::min(codec2_fifo_used(cbData->outfifo1), (int)size);
 
                 int result = codec2_fifo_read(cbData->outfifo1, outdata, available);
                 if (result == 0) 
