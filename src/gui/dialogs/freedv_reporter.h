@@ -164,8 +164,15 @@ class FreeDVReporterDialog : public wxFrame
              {
                 if (item.IsOk())
                 {
-                    auto data = allReporterData_[*(std::string*)item.GetID()];
-                    return data->frequency;
+                    auto iter = allReporterData_.find(*(std::string*)item.GetID());
+                    if (iter != allReporterData_.end())
+                    {
+                        auto data = iter->second;
+                        if (data != nullptr)
+                        {
+                            return data->frequency;
+                        }
+                    }
                 }
 
                 return 0;
@@ -176,8 +183,15 @@ class FreeDVReporterDialog : public wxFrame
              {
                  if (item.IsOk())
                  {
-                     auto data = allReporterData_[*(std::string*)item.GetID()];
-                     return data->callsign;
+                     auto iter = allReporterData_.find(*(std::string*)item.GetID());
+                     if (iter != allReporterData_.end())
+                     {
+                         auto data = iter->second;
+                         if (data != nullptr)
+                         {
+                             return data->callsign;
+                         }
+                     }
                  }
                  return "";
              }
@@ -186,8 +200,15 @@ class FreeDVReporterDialog : public wxFrame
              {
                  if (item.IsOk())
                  {
-                     auto data = allReporterData_[*(std::string*)item.GetID()];
-                     return data->userMessage;
+                     auto iter = allReporterData_.find(*(std::string*)item.GetID());
+                     if (iter != allReporterData_.end())
+                     {
+                         auto data = iter->second;
+                         if (data != nullptr)
+                         {
+                             return data->userMessage;
+                         }
+                     }
                  }
                  return "";
              }
