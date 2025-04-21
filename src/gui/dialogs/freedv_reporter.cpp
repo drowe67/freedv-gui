@@ -1390,20 +1390,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
             ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(&row.second->sid));
         }
 
-        // Defer memory deallocation until after this call finishes.
-        // This is to resolve intermittent issues in Linux where we
-        // end up referencing deallocated memory.
-        std::string sid = row.second->sid;
-        parent_->CallAfter([&, sid]() {
-            assert(wxThread::IsMain());
-            auto iter = allReporterData_.find(sid);
-            if (iter != allReporterData_.end())
-            { 
-                delete iter->second;
-                allReporterData_.erase(iter);
-            }
-        });
+        delete row.second;
     }
+    allReporterData_.clear();
 }
 
 int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const
@@ -1947,17 +1936,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
                 ItemDeleted(wxDataViewItem(nullptr), dvi);
             }
 
-            // Defer deletion of item to avoid intermittent references
-            // to deleted memory in wxWidgets.
-            parent_->CallAfter([&, sid]() {
-                assert(wxThread::IsMain());
-                auto iter = allReporterData_.find(sid);
-                if (iter != allReporterData_.end())
-                {
-                    delete iter->second;
-                    allReporterData_.erase(iter);
-                }
-            });
+            delete item;
+            allReporterData_.erase(iter);
         }
     });
     
