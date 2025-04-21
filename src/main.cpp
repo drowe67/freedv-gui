@@ -3330,7 +3330,7 @@ void MainFrame::startRxStream()
                 short* audioData = static_cast<short*>(data);
                 short  outdata[size];
                 
-                int available = std::min(codec2_fifo_used(cbData->outfifo1), (int)size);
+                unsigned int available = std::min(codec2_fifo_used(cbData->outfifo1), (int)size);
 
                 int result = codec2_fifo_read(cbData->outfifo1, outdata, available);
                 if (result == 0) 

@@ -584,7 +584,7 @@ void FreeDVReporterDialog::OnMove(wxMoveEvent& event)
 void FreeDVReporterDialog::OnOK(wxCommandEvent& event)
 {
     // Preserve sort column/ordering
-    for (auto index = 0; index < m_listSpots->GetColumnCount(); index++)
+    for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
     {
         auto colObj = m_listSpots->GetColumn(index);
         if (colObj != nullptr && colObj->IsSortKey())
@@ -625,7 +625,7 @@ void FreeDVReporterDialog::OnOpenWebsite(wxCommandEvent& event)
 void FreeDVReporterDialog::OnClose(wxCloseEvent& event)
 {
     // Preserve sort column/ordering
-    for (auto index = 0; index < m_listSpots->GetColumnCount(); index++)
+    for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
     {
         auto colObj = m_listSpots->GetColumn(index);
         if (colObj != nullptr && colObj->IsSortKey())
@@ -798,7 +798,7 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
     int mouseY = pt.y - m_listSpots->GetScreenPosition().y;
     
     wxRect rect;
-    int desiredCol = USER_MESSAGE_COL;
+    unsigned int desiredCol = USER_MESSAGE_COL;
     
     wxDataViewItem item;
     wxDataViewColumn* col;
