@@ -23,8 +23,14 @@
 #include <cstring>
 #include <cstdio>
 #include <chrono>
+#include <sched.h>
+#include <sys/resource.h>
 
 #include "PulseAudioDevice.h"
+
+#if defined(USE_RTKIT)
+#include "rtkit.h"
+#endif // defined(USE_RTKIT)
 
 #include "../util/logging/ulog.h"
 
@@ -139,6 +145,12 @@ void PulseAudioDevice::start()
     }
     else
     {
+	// Set up semaphore for signaling workers
+        if (sem_init(&sem_, 0, 0) < 0)
+	{
+            log_warn("Could not set up semaphore (errno = %d)", errno);
+        }
+
         // Start data collection thread. This thread
         // is necessary in order to ensure that we can 
         // provide data to PulseAudio at a rate expected
@@ -191,6 +203,7 @@ void PulseAudioDevice::start()
                         {
                             onAudioDataFunction(*this, data, currentLength / getNumChannels(), onAudioDataState);
                         }
+			sem_post(&sem_);
 
                         // Sleep up to the number of milliseconds corresponding to the data received
                         int numMilliseconds = 1000.0 * ((double)currentLength / getNumChannels()) / (double)getSampleRate();
@@ -307,6 +320,8 @@ void PulseAudioDevice::stop()
             delete inputPendingThread_;
             inputPendingThread_ = nullptr;
         }
+
+        sem_destroy(&sem_);
     }
 }
 
@@ -319,6 +334,74 @@ int PulseAudioDevice::getLatencyInMicroseconds()
         pa_stream_get_latency(stream_, &latency, &neg); // ignore error and assume 0
     }
     return (int)latency;
+}
+
+void PulseAudioDevice::setHelperRealTime()
+{
+    // Set RLIMIT_RTTIME, required for rtkit
+    struct rlimit rlim;
+    memset(&rlim, 0, sizeof(rlim));
+    rlim.rlim_cur = 100000ULL; // 100ms
+    rlim.rlim_max = rlim.rlim_cur;
+
+    if ((setrlimit(RLIMIT_RTTIME, &rlim) < 0))
+    {
+        log_warn("Could not set RLIMIT_RTTIME (errno = %d)", errno);
+    }
+
+    // Prerequisite: SCHED_RR and SCHED_RESET_ON_FORK need to be set.
+    struct sched_param p;
+    memset(&p, 0, sizeof(p));
+
+    p.sched_priority = 3;
+    if (sched_setscheduler(0, SCHED_RR|SCHED_RESET_ON_FORK, &p) < 0 && errno == EPERM)
+    {
+#if defined(USE_RTKIT)
+        DBusError error;
+	DBusConnection* bus = nullptr;
+        int result = 0;
+
+        dbus_error_init(&error);
+	if (!(bus = dbus_bus_get(DBUS_BUS_SYSTEM, &error)))
+	{
+            log_warn("Could not connect to system bus: %s", error.message);
+	}
+	else if ((result = rtkit_make_realtime(bus, 0, p.sched_priority)) < 0)
+	{
+	    log_warn("rtkit could not make real-time: %s", strerror(-result));
+        }
+
+	if (bus != nullptr)
+	{
+            dbus_connection_unref(bus);
+	}
+#else
+        log_warn("No permission to make real-time");
+#endif // defined(USE_RTKIT)
+    }
+}
+
+void PulseAudioDevice::stopRealTimeWork()
+{
+    struct timespec ts;
+
+    if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
+    {
+        log_warn("Could not get current time (errno = %d)", errno);
+    }
+    ts.tv_nsec += 10000000;
+    ts.tv_sec += (ts.tv_nsec / 1000000000);
+    ts.tv_nsec = ts.tv_nsec % 1000000000;
+
+    if (sem_timedwait(&sem_, &ts) < 0 && errno != ETIMEDOUT)
+    {
+        log_warn("Could not time wait on semaphore (errno = %d)", errno);
+    }
+}
+
+void PulseAudioDevice::clearHelperRealTime()
+{
+    IAudioDevice::clearHelperRealTime();
 }
 
 void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *userdata)

@@ -28,6 +28,8 @@
 #include <condition_variable>
 #include <wx/string.h>
 #include <pulse/pulseaudio.h>
+#include <semaphore.h>
+
 #include "IAudioEngine.h"
 #include "IAudioDevice.h"
 
@@ -45,7 +47,18 @@ public:
     virtual bool isRunning() override;
     
     virtual int getLatencyInMicroseconds() override;
-    
+
+    // Configures current thread for real-time priority. This should be
+    // called from the thread that will be operating on received audio.
+    virtual void setHelperRealTime() override;
+
+    // Lets audio system know that we're done with the work on the received
+    // audio.
+    virtual void stopRealTimeWork() override;
+
+    // Reverts real-time priority for current thread.
+    virtual void clearHelperRealTime() override;
+
 protected:
     // PulseAudioDevice cannot be created directly, only via PulseAudioEngine.
     friend class PulseAudioEngine;
@@ -76,6 +89,8 @@ private:
     int numChannels_;
     std::mutex streamStateMutex_;
     std::condition_variable streamStateCondVar_;
+
+    sem_t sem_;
 
     static void StreamReadCallback_(pa_stream *s, size_t length, void *userdata);
     static void StreamWriteCallback_(pa_stream *s, size_t length, void *userdata);
