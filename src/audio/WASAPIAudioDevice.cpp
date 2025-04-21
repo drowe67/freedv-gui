@@ -33,6 +33,8 @@
 
 // Nanoseconds per REFERENCE_TIME unit
 #define NS_PER_REFTIME (100)
+
+thread_local HANDLE WASAPIAudioDevice::helperTask_ = nullptr;
     
 WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : client_(client)
@@ -47,7 +49,7 @@ WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDi
     , latencyFrames_(0)
     , renderCaptureEvent_(nullptr)
     , isRenderCaptureRunning_(false)
-    , helperTask_(nullptr)
+    , semaphore_(nullptr)
 {
     // empty
 }
@@ -255,6 +257,15 @@ void WASAPIAudioDevice::start()
             }
         }
 
+        // Create semaphore
+        semaphore_ = CreateSemaphore(nullptr, 0, 1, nullptr);
+        if (semaphore_ == nullptr)
+        {
+            std::stringstream ss;
+            ss << "Could not create semaphore (err = " << GetLastError() << ")";
+            log_warn(ss.str().c_str());
+        }
+
         // Start render/capture
         hr = client_->Start();
         if (FAILED(hr))
@@ -365,6 +376,12 @@ void WASAPIAudioDevice::stop()
             captureClient_ = nullptr;
         }
 
+        if (semaphore_ != nullptr)
+        {
+            CloseHandle(semaphore_);
+            semaphore_ = nullptr;
+        }
+
         prom->set_value();
     });
     fut.wait();
@@ -399,7 +416,20 @@ void WASAPIAudioDevice::startRealTimeWork()
 
 void WASAPIAudioDevice::stopRealTimeWork() 
 {
-    // empty
+    if (semaphore_ == nullptr)
+    {
+        // Fallback to base class behavior
+        IAudioDevice::stopRealTimeWork();
+        return;
+    }
+
+    // Wait a maximum of 10ms for the semaphore to return
+    DWORD result = WaitForSingleObject(semaphore_, 10);
+
+    if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
+    {
+        log_warn("Could not wait on semaphore (err = %d)", GetLastError());
+    }
 }
 
 void WASAPIAudioDevice::clearHelperRealTime()
@@ -543,5 +573,11 @@ void WASAPIAudioDevice::captureAudio_()
             log_error(ss.str().c_str());
             return;
         }
+    }
+
+    if (semaphore_ != nullptr)
+    {
+        // Notify worker threads
+        ReleaseSemaphore(semaphore_, 1, nullptr);
     }
 }

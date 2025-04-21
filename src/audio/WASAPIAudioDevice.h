@@ -84,10 +84,12 @@ private:
     std::thread renderCaptureThread_;
     HANDLE renderCaptureEvent_;
     bool isRenderCaptureRunning_;
-    HANDLE helperTask_;
+    HANDLE semaphore_;
 
     void renderAudio_();
     void captureAudio_();
+    
+    static thread_local HANDLE helperTask_;
 };
 
 #endif // WASAPI_AUDIO_DEVICE_H
