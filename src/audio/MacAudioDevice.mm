@@ -433,7 +433,7 @@ int MacAudioDevice::getLatencyInMicroseconds()
                       0,
                       nullptr, 
                       &size, 
-                      &streams);
+                      streams);
             if (result == noErr)
             {
                 propertyAddress.mSelector = kAudioStreamPropertyLatency;
