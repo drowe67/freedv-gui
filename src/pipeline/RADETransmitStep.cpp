@@ -112,8 +112,12 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
             int numOutputSamples = rade_n_tx_out(dv_);
             short pcm[LPCNET_FRAME_SIZE];
             float features[NB_TOTAL_FEATURES];
-            RADE_COMP radeOut[numOutputSamples];
-            short radeOutShort[numOutputSamples];
+
+            RADE_COMP* radeOut = new RADE_COMP[numOutputSamples];
+            assert(radeOut != nullptr);
+
+            short* radeOutShort = new short[numOutputSamples];
+            assert(radeOutShort != nullptr);
 
             int arch = opus_select_arch();
 
@@ -146,6 +150,9 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
                 }
                 codec2_fifo_write(outputSampleFifo_, radeOutShort, numOutputSamples);
             }
+
+            delete[] radeOutShort;
+            delete[] radeOut;
         }
     }
 
@@ -166,12 +173,16 @@ void RADETransmitStep::restartVocoder()
     // Queues up EOO for return on the next call to this pipeline step.
     const int NUM_SAMPLES_SILENCE = 60 * getOutputSampleRate() / 1000;
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
-    RADE_COMP eooOut[numEOOSamples];
-    short eooOutShort[numEOOSamples + NUM_SAMPLES_SILENCE];
+
+    RADE_COMP* eooOut = new RADE_COMP[numEOOSamples];
+    assert(eooOut != nullptr);
+
+    short* eooOutShort = new short[numEOOSamples + NUM_SAMPLES_SILENCE];
+    assert(eooOutShort != nullptr);
 
     rade_tx_eoo(dv_, eooOut);
 
-    memset(eooOutShort, 0, sizeof(eooOutShort));
+    memset(eooOutShort, 0, sizeof(short) * (numEOOSamples + NUM_SAMPLES_SILENCE));
     for (int index = 0; index < numEOOSamples; index++)
     {
         eooOutShort[index] = eooOut[index].real * RADE_SCALING_FACTOR;
@@ -182,4 +193,7 @@ void RADETransmitStep::restartVocoder()
     {
         log_warn("Could not queue EOO samples (remaining space in FIFO = %d)", codec2_fifo_free(outputSampleFifo_));
     }
+
+    delete[] eooOutShort;
+    delete[] eooOut;
 }

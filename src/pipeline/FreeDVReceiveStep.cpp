@@ -1,5 +1,5 @@
 //=========================================================================
-// Name:            FreeDVReceiveStep.h
+// Name:            FreeDVReceiveStep.cpp
 // Purpose:         Describes a demodulation step in the audio pipeline.
 //
 // Authors:         Mooneer Salem
@@ -67,11 +67,18 @@ std::shared_ptr<short> FreeDVReceiveStep::execute(std::shared_ptr<short> inputSa
     *numOutputSamples = 0;
     short* outputSamples = nullptr;
     
-    short input_buf[freedv_get_n_max_modem_samples(dv_)];
-    short output_buf[freedv_get_n_speech_samples(dv_)];
-    COMP  rx_fdm[freedv_get_n_max_modem_samples(dv_)];
-    COMP  rx_fdm_offset[freedv_get_n_max_modem_samples(dv_)];
-    
+    short* input_buf = new short[freedv_get_n_max_modem_samples(dv_)];
+    assert(input_buf != nullptr);
+
+    short* output_buf = new short[freedv_get_n_speech_samples(dv_)];
+    assert(output_buf != nullptr);
+
+    COMP* rx_fdm = new COMP[freedv_get_n_max_modem_samples(dv_)];
+    assert(rx_fdm != nullptr);
+
+    COMP* rx_fdm_offset = new COMP[freedv_get_n_max_modem_samples(dv_)];
+    assert(rx_fdm_offset != nullptr);
+
     short* inputPtr = inputSamples.get();
     while (numInputSamples > 0 && inputPtr != nullptr)
     {
@@ -116,5 +123,10 @@ std::shared_ptr<short> FreeDVReceiveStep::execute(std::shared_ptr<short> inputSa
         }
     }
     
+    delete[] input_buf;
+    delete[] output_buf;
+    delete[] rx_fdm;
+    delete[] rx_fdm_offset;
+ 
     return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
 }
