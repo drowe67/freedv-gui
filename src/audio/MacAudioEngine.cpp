@@ -69,14 +69,16 @@ std::vector<AudioDeviceSpecification> MacAudioEngine::getAudioDeviceList(AudioDi
     
     // Get audio device IDs.
     auto deviceCount = propertySize / sizeof(AudioDeviceID);
-    AudioDeviceID ids[deviceCount];
+    AudioDeviceID* ids = new AudioDeviceID[deviceCount];
+    assert(ids != nullptr);
+
     status = AudioObjectGetPropertyData(
         kAudioObjectSystemObject,
         &propertyAddress,
         0,
         nullptr,
         &propertySize,
-        &ids
+        ids
     );
     if (status != noErr)
     {
@@ -84,6 +86,8 @@ std::vector<AudioDeviceSpecification> MacAudioEngine::getAudioDeviceList(AudioDi
         {
             onAudioErrorFunction(*this, "Could not get audio device IDs", onAudioErrorState);
         }
+
+        delete[] ids;
         return result;
     }
     
@@ -99,6 +103,7 @@ std::vector<AudioDeviceSpecification> MacAudioEngine::getAudioDeviceList(AudioDi
         }
     }
     
+    delete[] ids;
     return result;
 }
 
