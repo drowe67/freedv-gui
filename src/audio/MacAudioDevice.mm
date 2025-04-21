@@ -397,7 +397,9 @@ int MacAudioDevice::getLatencyInMicroseconds()
         UInt32 streamLatency = 0;
         if (result == noErr)
         {
-            AudioStreamID streams[size / sizeof(AudioStreamID)];
+            AudioStreamID* streams = new AudioStreamID[size / sizeof(AudioStreamID)];
+            assert(streams != nullptr);
+
             result = AudioObjectGetPropertyData(
                       coreAudioId_, 
                       &propertyAddress, 
@@ -417,6 +419,8 @@ int MacAudioDevice::getLatencyInMicroseconds()
                           &size, 
                           &streamLatency);
             }
+
+            delete[] streams;
         }
         
         auto ioLatency = streamLatency + deviceLatencyFrames + deviceSafetyOffset;
