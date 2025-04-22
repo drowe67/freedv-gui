@@ -33,7 +33,12 @@ PlaybackStep::PlaybackStep(
 , getSndFileFn_(getSndFileFn)
 , fileCompleteFn_(fileCompleteFn)
 {
-    // empty
+    // Pre-allocate buffers so we don't have to do so during real-time operation.
+    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    outputSamples_ = std::shared_ptr<short>(
+        new short[maxSamples], 
+        std::default_delete<short[]>());
+    assert(outputSamples_ != nullptr);
 }
 
 PlaybackStep::~PlaybackStep()
@@ -57,19 +62,15 @@ std::shared_ptr<short> PlaybackStep::execute(std::shared_ptr<short> inputSamples
     assert(playFile != nullptr);
 
     unsigned int nsf = numInputSamples * getOutputSampleRate()/getInputSampleRate();
-    short* outputSamples = nullptr;
     *numOutputSamples = 0;
     if (nsf > 0)
     {
-        outputSamples = new short[nsf];
-        assert(outputSamples != nullptr);
-    
-        *numOutputSamples = sf_read_short(playFile, outputSamples, nsf);
+        *numOutputSamples = sf_read_short(playFile, outputSamples_.get(), nsf);
         if ((unsigned)*numOutputSamples < nsf)
         {
             fileCompleteFn_();
         }
     }
 
-    return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
+    return outputSamples_;
 }

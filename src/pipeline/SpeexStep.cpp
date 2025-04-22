@@ -41,6 +41,13 @@ SpeexStep::SpeexStep(int sampleRate)
     // Set FIFO to be 2x the number of samples per run so we don't lose anything.
     inputSampleFifo_ = codec2_fifo_create(numSamplesPerSpeexRun_ * 2);
     assert(inputSampleFifo_ != nullptr);
+
+    // Pre-allocate buffers so we don't have to do so during real-time operation.
+    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    outputSamples_ = std::shared_ptr<short>(
+        new short[maxSamples], 
+        std::default_delete<short[]>());
+    assert(outputSamples_ != nullptr);
 }
 
 SpeexStep::~SpeexStep()
@@ -61,17 +68,14 @@ int SpeexStep::getOutputSampleRate() const
 
 std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    short* outputSamples = nullptr;
     *numOutputSamples = 0;
     
     int numSpeexRuns = (codec2_fifo_used(inputSampleFifo_) + numInputSamples) / numSamplesPerSpeexRun_;
     if (numSpeexRuns > 0)
     {
         *numOutputSamples = numSpeexRuns * numSamplesPerSpeexRun_;
-        outputSamples = new short[*numOutputSamples];
-        assert(outputSamples != nullptr);
         
-        short* tmpOutput = outputSamples;
+        short* tmpOutput = outputSamples_.get();
         short* tmpInput = inputSamples.get();
         
         while (numInputSamples > 0 && tmpInput != nullptr)
@@ -92,5 +96,5 @@ std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, i
         codec2_fifo_write(inputSampleFifo_, inputSamples.get(), numInputSamples);
     }
     
-    return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
+    return outputSamples_;
 }
