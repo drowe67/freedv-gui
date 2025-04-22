@@ -613,6 +613,8 @@ void FreeDVReporterDialog::OnSendQSY(wxCommandEvent& event)
         
         wxString fullMessage = wxString::Format(_("QSY request sent to %s"), model->getCallsign(selected));
         wxMessageBox(fullMessage, wxT("FreeDV Reporter"), wxOK | wxICON_INFORMATION, this);
+
+	m_listSpots->Unselect(selected);
     }
 }
 
