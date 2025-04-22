@@ -29,12 +29,17 @@ ComputeRfSpectrumStep::ComputeRfSpectrumStep(
     : modemStatsFn_(modemStatsFn)
     , getAvMagFn_(getAvMagFn)
 {
-    // empty
+    rxSpectrum_ = new float[MODEM_STATS_NSPEC];
+    assert(rxSpectrum_ != nullptr);
+
+    rxFdm_ = new COMP[FS];
+    assert(rxFdm_ != nullptr);
 }
 
 ComputeRfSpectrumStep::~ComputeRfSpectrumStep()
 {
-    // empty
+    delete[] rxSpectrum_;
+    delete[] rxFdm_;
 }
 
 int ComputeRfSpectrumStep::getInputSampleRate() const
@@ -49,29 +54,23 @@ int ComputeRfSpectrumStep::getOutputSampleRate() const
 
 std::shared_ptr<short> ComputeRfSpectrumStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    COMP*  rx_fdm = new COMP[numInputSamples];
-    assert(rx_fdm != nullptr);
-
-    float rx_spec[MODEM_STATS_NSPEC];
-    
     auto inputSamplesPtr = inputSamples.get();
     for (int i = 0; i < numInputSamples; i++)
     {
-        rx_fdm[i].real = inputSamplesPtr[i];
+        rxFdm_[i].real = inputSamplesPtr[i];
     }
     
-    modem_stats_get_rx_spectrum(modemStatsFn_(), rx_spec, rx_fdm, numInputSamples);
+    modem_stats_get_rx_spectrum(modemStatsFn_(), rxSpectrum_, rxFdm_, numInputSamples);
     
     // Average rx spectrum data using a simple IIR low pass filter
     auto avMagPtr = getAvMagFn_();
     for(int i = 0; i < MODEM_STATS_NSPEC; i++) 
     {
-        avMagPtr[i] = BETA * avMagPtr[i] + (1.0 - BETA) * rx_spec[i];
+        avMagPtr[i] = BETA * avMagPtr[i] + (1.0 - BETA) * rxSpectrum_[i];
     }
     
     // Tap only, no output.
     *numOutputSamples = 0;
-    delete[] rx_fdm;
 
     return std::shared_ptr<short>((short*)nullptr, std::default_delete<short[]>());
 }

@@ -53,6 +53,10 @@ public:
     { 
         assert(inputSampleRate_ > 0);
         assert(outputSampleRate_ > 0);
+
+        inputSamples_ = std::shared_ptr<short>(
+            new short[std::max(inputSampleRate_, outputSampleRate_)], 
+            std::default_delete<short[]>());
     }
 
     // thread execution starts here
@@ -77,6 +81,7 @@ private:
     LinkStep* equalizedMicAudioLink_;
     bool hasEooBeenSent_;
     std::shared_ptr<IRealtimeHelper> helper_;
+    std::shared_ptr<short> inputSamples_;
     
     void initializePipeline_();
     void txProcessing_();

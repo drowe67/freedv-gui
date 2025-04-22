@@ -544,19 +544,13 @@ void TxRxThread::clearFifos_()
         auto used = codec2_fifo_used(cbData->outfifo1);
         if (used > 0)
         {
-            short* temp = new short[used];
-            assert(temp != nullptr);
-            codec2_fifo_read(cbData->outfifo1, temp, used);
-            delete[] temp;
+            codec2_fifo_read(cbData->outfifo1, inputSamples_.get(), used);
         }
         
         used = codec2_fifo_used(cbData->infifo2);
         if (used > 0)
         {
-            short* temp = new short[used];
-            assert(temp != nullptr);
-            codec2_fifo_read(cbData->infifo2, temp, used);
-            delete[] temp;
+            codec2_fifo_read(cbData->infifo2, inputSamples_.get(), used);
         }
     }
     else
@@ -564,20 +558,14 @@ void TxRxThread::clearFifos_()
         auto used = codec2_fifo_used(cbData->infifo1);
         if (used > 0)
         {
-            short* temp = new short[used];
-            assert(temp != nullptr);
-            codec2_fifo_read(cbData->infifo1, temp, used);
-            delete[] temp;
+            codec2_fifo_read(cbData->infifo1, inputSamples_.get(), used);
         }
         
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
         used = codec2_fifo_used(outFifo);
         if (used > 0)
         {
-            short* temp = new short[used];
-            assert(temp != nullptr);
-            codec2_fifo_read(outFifo, temp, used);
-            delete[] temp;
+            codec2_fifo_read(outFifo, inputSamples_.get(), used);
         }
     }
 }
@@ -631,9 +619,6 @@ void TxRxThread::txProcessing_()
         int nsam_in_48 = freedvInterface.getTxNumSpeechSamples() * ((float)inputSampleRate_ / (float)freedvInterface.getTxSpeechSampleRate());
         assert(nsam_in_48 > 0);
 
-        short*           insound_card = new short[nsam_in_48];
-        assert(insound_card != nullptr);
-
         int             nout;
 
         
@@ -648,11 +633,11 @@ void TxRxThread::txProcessing_()
             // again in the decoded audio at the other end.
 
             // zero speech input just in case infifo2 underflows
-            memset(insound_card, 0, nsam_in_48*sizeof(short));
+            memset(inputSamples_.get(), 0, nsam_in_48*sizeof(short));
             
             // There may be recorded audio left to encode while ending TX. To handle this,
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
-            int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);            
+            int nread = codec2_fifo_read(cbData->infifo2, inputSamples_.get(), nsam_in_48);            
             if (nread != 0 && endingTx)
             {
                 if (freedvInterface.getCurrentMode() >= FREEDV_MODE_RADE)
@@ -666,9 +651,7 @@ void TxRxThread::txProcessing_()
                         hasEooBeenSent_ = true;
                     }
 
-                    short* inputSamples = new short[1];
-                    auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
-                    auto outputSamples = pipeline_->execute(inputSamplesPtr, 0, &nout);
+                    auto outputSamples = pipeline_->execute(inputSamples_, 0, &nout);
                     if (nout > 0 && outputSamples.get() != nullptr)
                     {
                         log_debug("Injecting %d samples of resampled EOO into TX stream", nout);
@@ -690,11 +673,7 @@ void TxRxThread::txProcessing_()
                 hasEooBeenSent_ = false;
             }
             
-            short* inputSamples = new short[nsam_in_48];
-            memcpy(inputSamples, insound_card, nsam_in_48 * sizeof(short));
-            
-            auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
-            auto outputSamples = pipeline_->execute(inputSamplesPtr, nsam_in_48, &nout);
+            auto outputSamples = pipeline_->execute(inputSamples_, nsam_in_48, &nout);
             
             if (g_dump_fifo_state) {
                 log_info("  nout: %d", nout);
@@ -706,7 +685,6 @@ void TxRxThread::txProcessing_()
             }
         }
        
-        delete[] insound_card; 
         txModeChangeMutex.Unlock();
     }
     else
@@ -751,9 +729,6 @@ void TxRxThread::rxProcessing_()
     int nsam = (int)(inputSampleRate_ * FRAME_DURATION);
     assert(nsam > 0);
 
-    short*           insound_card = new short[nsam];
-    assert(insound_card != nullptr);
-
     int             nout;
 
 
@@ -767,16 +742,12 @@ void TxRxThread::rxProcessing_()
     }
     
     // while we have enough input samples available ... 
-    while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && processInputFifo) {
+    while (codec2_fifo_read(cbData->infifo1, inputSamples_.get(), nsam) == 0 && processInputFifo) {
 
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
 
-        short* inputSamples = new short[nsam];
-        memcpy(inputSamples, insound_card, nsam * sizeof(short));
-        
-        auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
-        auto outputSamples = pipeline_->execute(inputSamplesPtr, nsam, &nout);
+        auto outputSamples = pipeline_->execute(inputSamples_, nsam, &nout);
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
         
         if (nout > 0 && outputSamples.get() != nullptr)
@@ -789,6 +760,4 @@ void TxRxThread::rxProcessing_()
                 (g_tx && wxGetApp().appConfiguration.monitorTxAudio) ||
                 (!g_voice_keyer_tx && ((g_half_duplex && !g_tx) || !g_half_duplex));
     }
-
-    delete[] insound_card;
 }
