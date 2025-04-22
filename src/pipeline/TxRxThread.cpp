@@ -491,8 +491,6 @@ void* TxRxThread::Entry()
         }
 #endif
 
-        auto beginTime = std::chrono::steady_clock::now();
-
         if (!m_run) break;
         
         //log_info("thread woken up: m_tx=%d", (int)m_tx);
