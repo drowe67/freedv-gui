@@ -31,6 +31,7 @@
 #include <mach/mach_init.h>
 #include <mach/thread_policy.h>
 #include <sched.h>
+#include <pthread.h>
 
 thread_local void* MacAudioDevice::workgroup_ = nullptr;
 thread_local void* MacAudioDevice::joinToken_ = nullptr;
@@ -459,6 +460,9 @@ int MacAudioDevice::getLatencyInMicroseconds()
 
 void MacAudioDevice::setHelperRealTime()
 {
+    // Set thread QoS to "user interactive"
+    pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
+
     // Adapted from Chromium project. May need to adjust parameters
     // depending on behavior.
     
