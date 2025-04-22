@@ -72,7 +72,9 @@ class FreeDVReporterDialog : public wxFrame
         void setBandFilter(FilterFrequency freq);
         
         bool isTextMessageFieldInFocus();
-        
+    
+        void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
+    
     protected:
 
         // Handlers for events.
