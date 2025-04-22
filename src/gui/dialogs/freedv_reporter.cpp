@@ -1391,12 +1391,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
             row.second->isVisible = false;
             wxDataViewItem dvi(&row.second->sid);
             parent_->Unselect(dvi);
-            ItemDeleted(wxDataViewItem(nullptr), dvi);
         }
 
         delete row.second;
     }
     allReporterData_.clear();
+    Cleared();
 }
 
 int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const
@@ -1937,7 +1937,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
             if (item->isVisible)
             {
                 item->isVisible = false;
-                ItemDeleted(wxDataViewItem(nullptr), dvi);
+                //ItemDeleted(wxDataViewItem(nullptr), dvi);
+		Cleared();
             }
 
             parent_->Unselect(dvi);
