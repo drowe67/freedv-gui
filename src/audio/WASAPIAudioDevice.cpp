@@ -429,7 +429,8 @@ void WASAPIAudioDevice::stopRealTimeWork()
 
     if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
     {
-        log_warn("Could not wait on semaphore (err = %d)", GetLastError());
+        // Fallback to a simple sleep.
+        IAudioDevice::stopRealTimeWork();
     }
 }
 
