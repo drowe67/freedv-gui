@@ -168,7 +168,9 @@ void PulseAudioDevice::start()
 #if defined(__linux__)
                 pthread_setname_np(pthread_self(), "FreeDV PAIn");
 #endif // defined(__linux__)
-         
+
+                setHelperRealTime();
+ 
                 while(inputPendingThreadActive_)
                 {
                     auto currentTime = std::chrono::steady_clock::now();
@@ -215,6 +217,8 @@ void PulseAudioDevice::start()
                         std::this_thread::sleep_until(currentTime + 20ms);
                     }
                 }
+ 
+                clearHelperRealTime();
             });
             assert(inputPendingThread_ != nullptr);
         }
