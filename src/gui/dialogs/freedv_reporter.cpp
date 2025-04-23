@@ -401,6 +401,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_listSpots->Connect(wxEVT_DATAVIEW_ITEM_ACTIVATED, wxDataViewEventHandler(FreeDVReporterDialog::OnItemDoubleClick), NULL, this);
     m_listSpots->Connect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);
     m_listSpots->Connect(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler(FreeDVReporterDialog::OnItemRightClick), NULL, this);
+    m_listSpots->Connect(wxEVT_DATAVIEW_COLUMN_HEADER_CLICK, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnClick), NULL, this);
 
     m_statusMessage->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
@@ -460,6 +461,7 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     m_listSpots->Disconnect(wxEVT_DATAVIEW_ITEM_ACTIVATED, wxDataViewEventHandler(FreeDVReporterDialog::OnItemDoubleClick), NULL, this);
     m_listSpots->Disconnect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);
     m_listSpots->Disconnect(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler(FreeDVReporterDialog::OnItemRightClick), NULL, this);
+    m_listSpots->Disconnect(wxEVT_DATAVIEW_COLUMN_HEADER_CLICK, wxDataViewEventHandler(FreeDVReporterDialog::OnColumnClick), NULL, this);
     
     m_statusMessage->Disconnect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
@@ -652,17 +654,25 @@ void FreeDVReporterDialog::OnOpenWebsite(wxCommandEvent& event)
 void FreeDVReporterDialog::OnClose(wxCloseEvent& event)
 {
     // Preserve sort column/ordering
+    bool found = false;
     for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
     {
         auto colObj = m_listSpots->GetColumn(index);
         if (colObj != nullptr && colObj->IsSortKey())
         {
+	    found = true;
             wxGetApp().appConfiguration.reporterWindowCurrentSort = index;
             wxGetApp().appConfiguration.reporterWindowCurrentSortDirection = colObj->IsSortOrderAscending();
             break;
         }
     }
-    
+   
+    if (!found)
+    {
+        wxGetApp().appConfiguration.reporterWindowCurrentSort = -1;
+        wxGetApp().appConfiguration.reporterWindowCurrentSortDirection = true;
+    }
+
     // Preserve Msg column width
     auto userMsgCol = m_listSpots->GetColumn(USER_MESSAGE_COL);
     wxGetApp().appConfiguration.reportingUserMsgColWidth = userMsgCol->GetWidth();
@@ -881,6 +891,31 @@ void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent& event)
 {
     wxDataViewEvent contextEvent;
     OnItemRightClick(contextEvent);
+}
+
+void FreeDVReporterDialog::OnColumnClick(wxDataViewEvent& event)
+{
+    DeselectItem();
+
+#if 0
+    auto col = event.GetDataViewColumn();
+    if (col != nullptr)
+    {
+        if (col->IsSortKey() && !col->IsSortOrderAscending())
+        {
+            col->UnsetAsSortKey();
+        }
+        else if (!col->IsSortKey())
+        {
+            col->SetSortOrder(true);
+        }
+        else
+        {
+            col->SetSortOrder(false);
+        }
+        event.StopPropagation();
+    }
+#endif // 0
 }
 
 void FreeDVReporterDialog::OnItemRightClick(wxDataViewEvent& event)
@@ -1434,6 +1469,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
     allReporterData_.clear();
 }
 
+bool FreeDVReporterDialog::FreeDVReporterDataModel::HasDefaultCompare() const
+{
+    // Will compare by connect time if nothing is selected for sorting
+    return true;
+}
+
 int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const
 {
     assert(wxThread::IsMain());
@@ -1546,6 +1587,20 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
                 result = -1;
             }
             else if (leftData->lastUpdateDate.IsValid() && !rightData->lastUpdateDate.IsValid())
+            {
+                result = 1;
+            }
+            else
+            {
+                result = 0;
+            }
+            break;
+        case (unsigned)-1:
+            if (leftData->connectTime.IsEarlierThan(rightData->connectTime))
+            {
+                result = -1;
+            }
+            else if (leftData->connectTime.IsLaterThan(rightData->connectTime))
             {
                 result = 1;
             }
@@ -1887,6 +1942,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         
         auto lastUpdateTime = makeValidTime_(lastUpdate, temp->lastUpdateDate);
         temp->lastUpdate = lastUpdateTime;
+        temp->connectTime = temp->lastUpdateDate;
         temp->isVisible = !isFiltered_(temp->frequency);
         
         allReporterData_[sid] = temp;

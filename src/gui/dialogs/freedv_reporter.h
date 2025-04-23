@@ -99,6 +99,7 @@ class FreeDVReporterDialog : public wxFrame
         void    OnSystemColorChanged(wxSysColourChangedEvent& event);
 
         void OnItemSelectionChanged(wxDataViewEvent& event);
+        void OnColumnClick(wxDataViewEvent& event);
         void OnItemDoubleClick(wxDataViewEvent& event);
         void OnItemRightClick(wxDataViewEvent& event);
 
@@ -202,6 +203,7 @@ class FreeDVReporterDialog : public wxFrame
              }
 
              // Required overrides to implement functionality
+             virtual bool HasDefaultCompare() const override;
              virtual int Compare (const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const override;
              virtual bool GetAttr (const wxDataViewItem &item, unsigned int col, wxDataViewItemAttr &attr) const override;
              virtual unsigned int GetChildren (const wxDataViewItem &item, wxDataViewItemArray &children) const override;
@@ -236,6 +238,7 @@ class FreeDVReporterDialog : public wxFrame
                 wxDateTime lastUpdateDate;
                 wxString userMessage;
                 wxDateTime lastUpdateUserMessage;
+                wxDateTime connectTime;
 
                 // Controls whether this row has been filtered
                 bool isVisible;
