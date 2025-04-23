@@ -734,7 +734,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             reportData->backgroundColor = backgroundColor;
             reportData->foregroundColor = foregroundColor;
 
-            wxDataViewItem dvi(&reportData->sid);
+            wxDataViewItem dvi(reportData);
             itemsChanged.Add(dvi);
         }
     }
@@ -1388,7 +1388,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
         if (row.second->isVisible)
         {
             row.second->isVisible = false;
-            wxDataViewItem dvi(&row.second->sid);
+            wxDataViewItem dvi(row.second);
             parent_->Unselect(dvi);
             ItemDeleted(wxDataViewItem(nullptr), dvi);
         }
@@ -1401,15 +1401,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
 int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const
 {
     assert(wxThread::IsMain());
-    std::string* leftSid = (std::string*)item1.GetID();
-    std::string* rightSid = (std::string*)item2.GetID();
-    auto leftIter = allReporterData_.find(*leftSid);
-    auto rightIter = allReporterData_.find(*rightSid);
 
-    if (leftIter == allReporterData_.end() || rightIter == allReporterData_.end())
+    if (!item1.IsOk() || !item2.IsOk())
     {
         int result = 0;
-        if (leftIter == allReporterData_.end())
+        if (!item1.IsOk())
         {
             result = 1;
         }
@@ -1422,8 +1418,8 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
         return result;
 
     }
-    auto leftData = leftIter->second;
-    auto rightData = rightIter->second;
+    auto leftData = (ReporterData*)item1.GetID();
+    auto rightData = (ReporterData*)item2.GetID();
 
     int result = 0;
     switch(column)
@@ -1542,15 +1538,7 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::GetAttr (const wxDataViewIte
     
     if (item.IsOk())
     {
-        std::string* sid = (std::string*)item.GetID();
-        auto iter = allReporterData_.find(*sid);
-        if (iter == allReporterData_.end())
-        {
-            // Doesn't actually exist. Shouldn't happen in theory but...
-            return false;
-        }
-
-        auto row = iter->second;
+        auto row = (ReporterData*)item.GetID();
         if (row->backgroundColor.IsOk())
         {
             attr.SetBackgroundColour(row->backgroundColor);
@@ -1583,7 +1571,7 @@ unsigned int FreeDVReporterDialog::FreeDVReporterDataModel::GetChildren (const w
             {
                 count++;
                 
-                wxDataViewItem newItem((void*)&row.second->sid);
+                wxDataViewItem newItem(row.second);
                 children.Add(newItem);
             }
         }
@@ -1603,22 +1591,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::GetValue (wxVariant &variant
     assert(wxThread::IsMain());
     if (item.IsOk())
     {
-        std::string* sid = (std::string*)item.GetID();
-        auto iter = allReporterData_.find(*sid);
-        if (iter == allReporterData_.end())
-        {
-            // Doesn't actually exist. Shouldn't happen in theory but...
-            variant = wxVariant("");
-	    if (col == 0)
-            {
-                parent_->CallAfter([&]() {
-                    const_cast<FreeDVReporterDialog::FreeDVReporterDataModel*>(this)->Cleared();
-                });
-            }
-            return;
-        }
-
-        auto row = iter->second;
+        auto row = (ReporterData*)item.GetID();
         switch (col)
         {
             case CALLSIGN_COL:
@@ -1732,26 +1705,26 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
             kvp.second->isVisible = newVisibility;
             if (newVisibility)
             {
-                ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(&kvp.second->sid));
+                ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(kvp.second));
             }
             else
             {
-                ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(&kvp.second->sid));
+                ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(kvp.second));
             }
         }
         else if (updated)
         {
-            ItemChanged(wxDataViewItem(&kvp.second->sid));
+            ItemChanged(wxDataViewItem(kvp.second));
         }
     }
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::requestQSY(wxDataViewItem selectedItem, uint64_t frequency, wxString customText)
 {
-    if (reporter_)
+    if (reporter_ && selectedItem.IsOk())
     {
-        std::string* sid = (std::string*)selectedItem.GetID();
-        reporter_->requestQSY(*sid, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, (const char*)customText.ToUTF8());
+        auto row = (ReporterData*)selectedItem.GetID();
+        reporter_->requestQSY(row->sid, wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency, (const char*)customText.ToUTF8());
     }
 }
 
@@ -1884,7 +1857,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
 
         if (temp->isVisible)
         {
-            ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(&temp->sid));
+            ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(temp));
         }
     });
     
@@ -1914,7 +1887,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
         if (iter != allReporterData_.end())
         {
             auto item = iter->second;
-            wxDataViewItem dvi(&item->sid);
+            wxDataViewItem dvi(item);
             if (item->isVisible)
             {
                 item->isVisible = false;
@@ -1958,7 +1931,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
             iter->second->freqString = frequencyString;
             iter->second->lastUpdate = lastUpdateTime;
 
-            wxDataViewItem dvi(&iter->second->sid);
+            wxDataViewItem dvi(iter->second);
             bool newVisibility = !isFiltered_(iter->second->frequency);
             if (newVisibility != iter->second->isVisible)
             {
@@ -2013,7 +1986,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             iter->second->lastUpdate = lastUpdateTime;
             
-            wxDataViewItem dvi(&iter->second->sid);
+            wxDataViewItem dvi(iter->second);
             ValueChanged(dvi, STATUS_COL);
             ValueChanged(dvi, TX_MODE_COL);
             ValueChanged(dvi, LAST_TX_DATE_COL);
@@ -2055,7 +2028,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
                 iter->second->lastRxDate = iter->second->lastUpdateDate;
             }
             
-            wxDataViewItem dvi(&iter->second->sid);
+            wxDataViewItem dvi(iter->second);
             ValueChanged(dvi, LAST_RX_CALLSIGN_COL);
             ValueChanged(dvi, LAST_RX_MODE_COL);
             ValueChanged(dvi, SNR_COL);
@@ -2102,7 +2075,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
                 filterSelfMessageUpdates_ = false;
             }
             
-            wxDataViewItem dvi(&iter->second->sid);
+            wxDataViewItem dvi(iter->second);
             ValueChanged(dvi, USER_MESSAGE_COL);
             ValueChanged(dvi, LAST_UPDATE_DATE_COL);
         }
