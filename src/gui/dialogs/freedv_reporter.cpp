@@ -614,7 +614,7 @@ void FreeDVReporterDialog::OnSendQSY(wxCommandEvent& event)
         wxString fullMessage = wxString::Format(_("QSY request sent to %s"), model->getCallsign(selected));
         wxMessageBox(fullMessage, wxT("FreeDV Reporter"), wxOK | wxICON_INFORMATION, this);
 
-	m_listSpots->Unselect(selected);
+        m_listSpots->Unselect(selected);
     }
 }
 
@@ -1383,7 +1383,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
 {
     assert(wxThread::IsMain());
 
-    wxDataViewItemArray itemsToDelete;
     for (auto& row : allReporterData_)
     {
         if (row.second->isVisible)
@@ -1391,12 +1390,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
             row.second->isVisible = false;
             wxDataViewItem dvi(&row.second->sid);
             parent_->Unselect(dvi);
+            ItemDeleted(wxDataViewItem(nullptr), dvi);
         }
 
         delete row.second;
     }
     allReporterData_.clear();
-    Cleared();
 }
 
 int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const
@@ -1543,27 +1542,18 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::GetAttr (const wxDataViewIte
     
     if (item.IsOk())
     {
-        // Assumption: sid is the first item in ReporterData.
-        // Due to intermittent freed memory accesses in the GTK version of wxDataViewCtrl,
-        // we need to make sure our item ID is actually still in allReporterData_ (without
-        // dereferencing) before proceeding with getting the requested column value.
-        ReporterData* row = (ReporterData*)item.GetID();
-        bool found = false;
-        for (auto& val : allReporterData_)
+        std::string* sid = (std::string*)item.GetID();
+        auto iter = allReporterData_.find(*sid);
+        if (iter == allReporterData_.end())
         {
-            if (val.second == row)
-            {
-                found = true;
-                break;
-            }
-        }
-
-        if (!found)
-        {
-            // Attempted freed memory dereference.
+            // Doesn't actually exist. Shouldn't happen in theory but...
+            parent_->CallAfter([&]() {
+                const_cast<FreeDVReporterDialog::FreeDVReporterDataModel*>(this)->Cleared();
+            });
             return false;
         }
 
+        auto row = iter->second;
         if (row->backgroundColor.IsOk())
         {
             attr.SetBackgroundColour(row->backgroundColor);
@@ -1937,8 +1927,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
             if (item->isVisible)
             {
                 item->isVisible = false;
-                //ItemDeleted(wxDataViewItem(nullptr), dvi);
-		Cleared();
+                ItemDeleted(wxDataViewItem(nullptr), dvi);
             }
 
             parent_->Unselect(dvi);
