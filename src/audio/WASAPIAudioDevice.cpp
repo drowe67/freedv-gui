@@ -424,8 +424,8 @@ void WASAPIAudioDevice::stopRealTimeWork()
         return;
     }
 
-    // Wait a maximum of 10ms for the semaphore to return
-    DWORD result = WaitForSingleObject(semaphore_, 10);
+    // Wait a maximum of (bufferSize / sampleRate) seconds for the semaphore to return
+    DWORD result = WaitForSingleObject(semaphore_, (1000 * bufferFrameCount_) / sampleRate_);
 
     if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
     {
