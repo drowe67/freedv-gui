@@ -1547,9 +1547,6 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::GetAttr (const wxDataViewIte
         if (iter == allReporterData_.end())
         {
             // Doesn't actually exist. Shouldn't happen in theory but...
-            parent_->CallAfter([&]() {
-                const_cast<FreeDVReporterDialog::FreeDVReporterDataModel*>(this)->Cleared();
-            });
             return false;
         }
 
@@ -1606,28 +1603,22 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::GetValue (wxVariant &variant
     assert(wxThread::IsMain());
     if (item.IsOk())
     {
-        // Assumption: sid is the first item in ReporterData.
-        // Due to intermittent freed memory accesses in the GTK version of wxDataViewCtrl,
-        // we need to make sure our item ID is actually still in allReporterData_ (without
-        // dereferencing) before proceeding with getting the requested column value.
-        ReporterData* row = (ReporterData*)item.GetID();
-        bool found = false;
-        for (auto& val : allReporterData_)
+        std::string* sid = (std::string*)item.GetID();
+        auto iter = allReporterData_.find(*sid);
+        if (iter == allReporterData_.end())
         {
-            if (val.second == row)
-            {
-                found = true;
-                break;
-            }
-        }
-
-        if (!found)
-        {
-            // Attempted freed memory dereference.
+            // Doesn't actually exist. Shouldn't happen in theory but...
             variant = wxVariant("");
+	    if (col == 0)
+            {
+                parent_->CallAfter([&]() {
+                    const_cast<FreeDVReporterDialog::FreeDVReporterDataModel*>(this)->Cleared();
+                });
+            }
             return;
         }
 
+        auto row = iter->second;
         switch (col)
         {
             case CALLSIGN_COL:
