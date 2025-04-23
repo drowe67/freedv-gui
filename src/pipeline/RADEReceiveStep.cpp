@@ -67,6 +67,8 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
 
     eooOut_ = new float[rade_n_eoo_bits(dv_)];
     assert(eooOut_ != nullptr);
+
+    pendingFeatures_.reserve(rade_n_features_in_out(dv_));
 }
 
 RADEReceiveStep::~RADEReceiveStep()

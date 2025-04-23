@@ -40,10 +40,35 @@ FreeDVTransmitStep::FreeDVTransmitStep(struct freedv* dv, std::function<float()>
     
     txFreqOffsetPhaseRectObj_.real = cos(0.0);
     txFreqOffsetPhaseRectObj_.imag = sin(0.0);
+
+    // Pre-allocate buffers so we don't have to do so during real-time operation.
+    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    outputSamples_ = std::shared_ptr<short>(
+        new short[maxSamples], 
+        std::default_delete<short[]>());
+    assert(outputSamples_ != nullptr);
+
+    codecInput_ = new short[maxSamples];
+    assert(codecInput_ != nullptr);
+
+    tmpOutput_ = new short[maxSamples];
+    assert(tmpOutput_ != nullptr);
+
+    int nfreedv = freedv_get_n_nom_modem_samples(dv_);
+
+    txFdm_ = new COMP[nfreedv];
+    assert(txFdm_ != nullptr);
+
+    txFdmOffset_ = new COMP[nfreedv];
+    assert(txFdmOffset_ != nullptr);
 }
 
 FreeDVTransmitStep::~FreeDVTransmitStep()
 {
+    delete[] codecInput_;
+    delete[] txFdm_;
+    delete[] txFdmOffset_;
+
     if (inputSampleFifo_ != nullptr)
     {
         codec2_fifo_free(inputSampleFifo_);
@@ -61,9 +86,7 @@ int FreeDVTransmitStep::getOutputSampleRate() const
 }
 
 std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
-{
-    short* outputSamples = nullptr;
-    
+{   
     int mode = freedv_get_mode(dv_);
     int samplesUsedForFifo = freedv_get_n_speech_samples(dv_);
     int nfreedv = freedv_get_n_nom_modem_samples(dv_);
@@ -78,54 +101,26 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
         
         if (codec2_fifo_used(inputSampleFifo_) >= samplesUsedForFifo)
         {
-            short* codecInput = new short[samplesUsedForFifo];
-            assert(codecInput != nullptr);
-
-            short* tmpOutput = new short[nfreedv];
-            assert(tmpOutput != nullptr);
-            
-            codec2_fifo_read(inputSampleFifo_, codecInput, samplesUsedForFifo);
+            codec2_fifo_read(inputSampleFifo_, codecInput_, samplesUsedForFifo);
             
             if (mode == FREEDV_MODE_800XA) 
             {
                 /* 800XA doesn't support complex output just yet */
-                freedv_tx(dv_, tmpOutput, codecInput);
+                freedv_tx(dv_, tmpOutput_, codecInput_);
             }
             else 
-            {
-                COMP* tx_fdm = new COMP[nfreedv];
-                assert(tx_fdm != nullptr);
-
-                COMP* tx_fdm_offset = new COMP[nfreedv];
-                assert(tx_fdm_offset != nullptr);
+            {                
+                freedv_comptx(dv_, txFdm_, codecInput_);
                 
-                freedv_comptx(dv_, tx_fdm, codecInput);
-                
-                freq_shift_coh(tx_fdm_offset, tx_fdm, getFreqOffsetFn_(), getOutputSampleRate(), &txFreqOffsetPhaseRectObj_, nfreedv);
+                freq_shift_coh(txFdmOffset_, txFdm_, getFreqOffsetFn_(), getOutputSampleRate(), &txFreqOffsetPhaseRectObj_, nfreedv);
                 for(int i = 0; i<nfreedv; i++)
-                    tmpOutput[i] = tx_fdm_offset[i].real;
-
-                delete[] tx_fdm_offset;
-                delete[] tx_fdm;
+                    tmpOutput_[i] = txFdmOffset_[i].real;
             }
-            
-            short* newOutputSamples = new short[*numOutputSamples + nfreedv];
-            assert(newOutputSamples != nullptr);
-        
-            if (outputSamples != nullptr)
-            {
-                memcpy(newOutputSamples, outputSamples, *numOutputSamples * sizeof(short));
-                delete[] outputSamples;
-            }
-        
-            memcpy(newOutputSamples + *numOutputSamples, tmpOutput, nfreedv * sizeof(short));
+                   
+            memcpy(outputSamples_.get() + *numOutputSamples, tmpOutput_, nfreedv * sizeof(short));
             *numOutputSamples += nfreedv;
-            outputSamples = newOutputSamples;
-
-            delete[] codecInput;
-            delete[] tmpOutput;
         }
     }
     
-    return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
+    return outputSamples_;
 }

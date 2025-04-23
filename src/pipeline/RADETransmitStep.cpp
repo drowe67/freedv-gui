@@ -72,6 +72,8 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
 
     eooOutShort_ = new short[numEOOSamples + NUM_SAMPLES_SILENCE];
     assert(eooOutShort_ != nullptr);
+
+    featureList_.reserve(rade_n_features_in_out(dv_));
 }
 
 RADETransmitStep::~RADETransmitStep()
