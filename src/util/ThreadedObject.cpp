@@ -20,7 +20,10 @@
 //
 //=========================================================================
 
+#include <chrono>
 #include "ThreadedObject.h"
+
+using namespace std::chrono_literals;
 
 ThreadedObject::ThreadedObject()
     : isDestroying_(false)
@@ -37,10 +40,41 @@ ThreadedObject::~ThreadedObject()
     objectThread_.join();
 }
 
-void ThreadedObject::enqueue_(std::function<void()> fn)
+void ThreadedObject::enqueue_(std::function<void()> fn, int timeoutMilliseconds)
 {
-    std::unique_lock<std::recursive_mutex> lk(eventQueueMutex_);
+    std::unique_lock<std::recursive_mutex> lk(eventQueueMutex_, std::defer_lock_t());
+
+    if (timeoutMilliseconds == 0)
+    {
+        lk.lock();
+    }
+    else
+    {
+        auto beginTime = std::chrono::high_resolution_clock::now();
+        auto endTime = std::chrono::high_resolution_clock::now();
+        bool locked = false;
+
+        do
+        {
+            if (lk.try_lock())
+            {
+                locked = true;
+                break;
+            }
+            std::this_thread::sleep_for(1ms);
+            endTime = std::chrono::high_resolution_clock::now();
+        } while ((endTime - beginTime) < std::chrono::milliseconds(timeoutMilliseconds));
+        
+        if (!locked)
+        {
+            // could not lock, so we're not bothering to enqueue.
+            return;
+        }
+    }
+
     eventQueue_.push_back(fn);
+    lk.unlock();
+
     eventQueueCV_.notify_one();
 }
 

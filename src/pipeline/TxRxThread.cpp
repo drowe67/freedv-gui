@@ -127,7 +127,7 @@ void TxRxThread::initializePipeline_()
     // Function definitions shared across both pipelines.
     auto callbackLockFn = []() {
         // Prevent priority inversions by bounding the time we can wait for a lock.
-        g_mutexProtectingCallbackData.LockTimeout(1);
+        g_mutexProtectingCallbackData.LockTimeout(5);
     };
     
     auto callbackUnlockFn = []() {
@@ -327,7 +327,7 @@ void TxRxThread::initializePipeline_()
         auto eitherOrPlayRadioStep = new EitherOrStep(
             []() { 
                 // Prevent priority inversions by bounding the time we can wait for a lock.
-                g_mutexProtectingCallbackData.LockTimeout(1);
+                g_mutexProtectingCallbackData.LockTimeout(5);
                 auto result = g_playFileFromRadio && (g_sfPlayFileFromRadio != NULL);
                 g_mutexProtectingCallbackData.Unlock();
                 return result;

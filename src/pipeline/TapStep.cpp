@@ -53,10 +53,13 @@ std::shared_ptr<short> TapStep::execute(std::shared_ptr<short> inputSamples, int
     
     if (operateBackground_)
     {
+        // 5 millisecond timeout to queue to background thread.
+        // Since this is likely for the UI, it's fine if the step
+        // doesn't execute.
         enqueue_([&, inputSamples, numInputSamples]() {
             int temp = 0;
             tapStep_->execute(inputSamples, numInputSamples, &temp);
-        });
+        }, 5);
     }
     else
     {
