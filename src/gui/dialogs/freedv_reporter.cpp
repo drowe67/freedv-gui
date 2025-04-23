@@ -2032,6 +2032,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
                 if (newVisibility)
                 {
                     ItemAdded(wxDataViewItem(nullptr), dvi);
+                    parent_->CallAfter([&]() { Resort(); });
                 }
                 else
                 {
@@ -2042,6 +2043,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
             {            
                 ValueChanged(dvi, FREQUENCY_COL);
                 ValueChanged(dvi, LAST_UPDATE_DATE_COL);
+                parent_->CallAfter([&]() { Resort(); });
             }
         }
     });
@@ -2084,6 +2086,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
             ValueChanged(dvi, TX_MODE_COL);
             ValueChanged(dvi, LAST_TX_DATE_COL);
             ValueChanged(dvi, LAST_UPDATE_DATE_COL);
+            parent_->CallAfter([&]() { Resort(); });
         }
     });
     
@@ -2126,6 +2129,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             ValueChanged(dvi, LAST_RX_MODE_COL);
             ValueChanged(dvi, SNR_COL);
             ValueChanged(dvi, LAST_UPDATE_DATE_COL);
+            parent_->CallAfter([&]() { Resort(); });
         }
     });
     
@@ -2171,6 +2175,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
             wxDataViewItem dvi(iter->second);
             ValueChanged(dvi, USER_MESSAGE_COL);
             ValueChanged(dvi, LAST_UPDATE_DATE_COL);
+            parent_->CallAfter([&]() { Resort(); });
         }
     });
     
