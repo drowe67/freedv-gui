@@ -1950,6 +1950,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         if (temp->isVisible)
         {
             ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(temp));
+            parent_->CallAfter([&]() { Resort(); });
         }
     });
     
