@@ -395,12 +395,13 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     this->Connect(wxEVT_MOVE, wxMoveEventHandler(FreeDVReporterDialog::OnMove));
     this->Connect(wxEVT_SHOW, wxShowEventHandler(FreeDVReporterDialog::OnShow));
     this->Connect(wxEVT_SYS_COLOUR_CHANGED, wxSysColourChangedEventHandler(FreeDVReporterDialog::OnSystemColorChanged));
+    this->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::DeselectItem), NULL, this);
     
     m_listSpots->Connect(wxEVT_DATAVIEW_SELECTION_CHANGED, wxDataViewEventHandler(FreeDVReporterDialog::OnItemSelectionChanged), NULL, this);
     m_listSpots->Connect(wxEVT_DATAVIEW_ITEM_ACTIVATED, wxDataViewEventHandler(FreeDVReporterDialog::OnItemDoubleClick), NULL, this);
     m_listSpots->Connect(wxEVT_MOTION, wxMouseEventHandler(FreeDVReporterDialog::AdjustToolTip), NULL, this);
     m_listSpots->Connect(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler(FreeDVReporterDialog::OnItemRightClick), NULL, this);
-    
+
     m_statusMessage->Connect(wxEVT_TEXT, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextChange), NULL, this);
     m_buttonSend->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnStatusTextSend), NULL, this);
     m_buttonSend->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnStatusTextSendContextMenu), NULL, this);
@@ -453,6 +454,7 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(FreeDVReporterDialog::OnClose));
     this->Disconnect(wxEVT_MOVE, wxMoveEventHandler(FreeDVReporterDialog::OnMove));
     this->Disconnect(wxEVT_SHOW, wxShowEventHandler(FreeDVReporterDialog::OnShow));
+    this->Disconnect(wxEVT_LEFT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::DeselectItem), NULL, this);
     
     m_listSpots->Disconnect(wxEVT_DATAVIEW_SELECTION_CHANGED, wxDataViewEventHandler(FreeDVReporterDialog::OnItemSelectionChanged), NULL, this);
     m_listSpots->Disconnect(wxEVT_DATAVIEW_ITEM_ACTIVATED, wxDataViewEventHandler(FreeDVReporterDialog::OnItemDoubleClick), NULL, this);
@@ -536,6 +538,22 @@ void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
     }
 }
 
+void FreeDVReporterDialog::DeselectItem(wxMouseEvent& event)
+{
+    DeselectItem();
+    event.Skip();
+}
+
+
+void FreeDVReporterDialog::DeselectItem()
+{
+    wxDataViewItem item = m_listSpots->GetSelection();
+    if (item.IsOk())
+    {
+        m_listSpots->Unselect(item);
+    }
+}
+
 void FreeDVReporterDialog::OnSystemColorChanged(wxSysColourChangedEvent& event)
 {
     // Works around issues on wxWidgets with certain controls not changing backgrounds
@@ -561,6 +579,12 @@ void FreeDVReporterDialog::OnInitDialog(wxInitDialogEvent& event)
 void FreeDVReporterDialog::OnShow(wxShowEvent& event)
 {
     wxGetApp().appConfiguration.reporterWindowVisible = true;
+
+    auto selected = m_listSpots->GetSelection();
+    if (selected.IsOk())
+    {
+        m_listSpots->Unselect(selected);
+    }
 }
 
 void FreeDVReporterDialog::OnSize(wxSizeEvent& event)
@@ -622,6 +646,7 @@ void FreeDVReporterDialog::OnOpenWebsite(wxCommandEvent& event)
 {
     std::string url = "https://" + wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->utf8_string() + "/";
     wxLaunchDefaultBrowser(url);
+    DeselectItem();
 }
 
 void FreeDVReporterDialog::OnClose(wxCloseEvent& event)
@@ -664,6 +689,8 @@ void FreeDVReporterDialog::OnItemSelectionChanged(wxDataViewEvent& event)
 
 void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
 {
+    DeselectItem();
+
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter = 
         m_bandFilter->GetSelection();
     
@@ -750,6 +777,8 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
 
 void FreeDVReporterDialog::OnFilterTrackingEnable(wxCommandEvent& event)
 {
+    DeselectItem();
+
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency
         = m_trackFrequency->GetValue();
     m_bandFilter->Enable(
@@ -790,6 +819,7 @@ void FreeDVReporterDialog::OnItemDoubleClick(wxDataViewEvent& event)
         {
             wxGetApp().rigFrequencyController->setFrequency(frequency);
         }
+        DeselectItem();
     }
 }
 
@@ -885,6 +915,7 @@ void FreeDVReporterDialog::OnCopyUserMessage(wxCommandEvent& event)
         wxTheClipboard->SetData( new wxTextDataObject(tempUserMessage_) );
         wxTheClipboard->Close();
     }
+    DeselectItem();
 }
 
 void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent& event)
@@ -923,11 +954,14 @@ void FreeDVReporterDialog::OnStatusTextSend(wxCommandEvent& event)
         {
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRecentStatusTexts->push_back(m_statusMessage->GetString(index));
         }
-    }   
+    }
+
+    DeselectItem();
 }
 
 void FreeDVReporterDialog::OnStatusTextSendContextMenu(wxContextMenuEvent& event)
 {
+    DeselectItem();
     m_buttonSend->PopupMenu(setPopupMenu_);
 }
 
@@ -976,6 +1010,8 @@ void FreeDVReporterDialog::OnStatusTextClear(wxCommandEvent& event)
 
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterStatusText = "";
     m_statusMessage->SetValue("");
+
+    DeselectItem();
 }
 
 void FreeDVReporterDialog::OnStatusTextClearContextMenu(wxContextMenuEvent& event)

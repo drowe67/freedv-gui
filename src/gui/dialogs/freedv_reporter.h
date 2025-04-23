@@ -103,6 +103,8 @@ class FreeDVReporterDialog : public wxFrame
         void OnItemRightClick(wxDataViewEvent& event);
 
         void OnTimer(wxTimerEvent& event);
+        void DeselectItem();
+        void DeselectItem(wxMouseEvent& event);
         void AdjustToolTip(wxMouseEvent& event);
         void OnFilterTrackingEnable(wxCommandEvent& event);
         void OnCopyUserMessage(wxCommandEvent& event);
