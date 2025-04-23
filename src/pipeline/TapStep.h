@@ -26,11 +26,12 @@
 #include <memory>
 
 #include "IPipelineStep.h"
+#include "util/ThreadedObject.h"
 
-class TapStep : public IPipelineStep
+class TapStep : public IPipelineStep, public ThreadedObject
 {
 public:
-    TapStep(int inputSampleRate, IPipelineStep* tapStep);
+    TapStep(int inputSampleRate, IPipelineStep* tapStep, bool operateBackground);
     virtual ~TapStep();
     
     virtual int getInputSampleRate() const;
@@ -40,6 +41,7 @@ public:
 private:
     std::shared_ptr<IPipelineStep> tapStep_;
     int sampleRate_;
+    bool operateBackground_;
 };
 
 #endif // AUDIO_PIPELINE__TAP_STEP_H

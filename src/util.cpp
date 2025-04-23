@@ -259,8 +259,12 @@ int resample(SRC_STATE *src,
             )
 {
     SRC_DATA src_data;
-    float    input[length_input_short];
-    float    output[length_output_short];
+    float*   input = new float[length_input_short];
+    assert(input != nullptr);
+
+    float*   output = new float[length_output_short];
+    assert(output != nullptr);
+
     int      ret;
 
     assert(src != NULL);
@@ -284,6 +288,9 @@ int resample(SRC_STATE *src,
     assert(src_data.output_frames_gen <= length_output_short);
     src_float_to_short_array(output, output_short, src_data.output_frames_gen);
 
+    delete[] input;
+    delete[] output;
+
     return src_data.output_frames_gen;
 }
 
@@ -298,7 +305,8 @@ void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs)
     int decimation = fs/WAVEFORM_PLOT_FS;
     int nSamples, sample;
     int i, st, en, max, min;
-    short dec_samples[length];
+    short* dec_samples = new short[length];
+    assert(dec_samples != nullptr);
 
     nSamples = length/decimation;
 
@@ -316,6 +324,7 @@ void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs)
         dec_samples[sample+1] = min;
     }
     codec2_fifo_write(plotFifo, dec_samples, nSamples);
+    delete[] dec_samples;
 }
 
 // State machine to detect sync

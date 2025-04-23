@@ -26,9 +26,15 @@
 #include <string>
 #include <vector>
 #include <functional>
-#include "AudioDeviceSpecification.h"
+#include <thread>
+#include <chrono>
 
-class IAudioDevice
+#include "AudioDeviceSpecification.h"
+#include "../util/IRealtimeHelper.h"
+
+using namespace std::chrono_literals;
+
+class IAudioDevice : public IRealtimeHelper
 {
 public:
     typedef std::function<void(IAudioDevice&, void*, size_t, void*)> AudioDataCallbackFn;
@@ -46,6 +52,21 @@ public:
     virtual bool isRunning() = 0;
     
     virtual int getLatencyInMicroseconds() = 0;
+    
+    // Configures current thread for real-time priority. This should be
+    // called from the thread that will be operating on received audio.
+    virtual void setHelperRealTime() override { /* empty */ }
+    
+    // Lets audio system know that we're beginning to do work with the
+    // received audio.
+    virtual void startRealTimeWork() override { /* empty */ }
+    
+    // Lets audio system know that we're done with the work on the received
+    // audio.
+    virtual void stopRealTimeWork() override { std::this_thread::sleep_for(10ms); }
+    
+    // Reverts real-time priority for current thread.
+    virtual void clearHelperRealTime() override { /* empty */ }
 
     // Sets user friendly description of device. Not used by all engines.
     void setDescription(std::string desc);

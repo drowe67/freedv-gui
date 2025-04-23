@@ -24,9 +24,10 @@
 
 #include <assert.h>
 
-TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
+TapStep::TapStep(int sampleRate, IPipelineStep* tapStep, bool operateBackground)
     : tapStep_(tapStep)
     , sampleRate_(sampleRate)
+    , operateBackground_(operateBackground)
 {
     // empty
 }
@@ -48,9 +49,23 @@ int TapStep::getOutputSampleRate() const
 
 std::shared_ptr<short> TapStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    int temp = 0;
     assert(tapStep_->getInputSampleRate() == sampleRate_);
-    tapStep_->execute(inputSamples, numInputSamples, &temp);
+    
+    if (operateBackground_)
+    {
+        // 5 millisecond timeout to queue to background thread.
+        // Since this is likely for the UI, it's fine if the step
+        // doesn't execute.
+        enqueue_([&, inputSamples, numInputSamples]() {
+            int temp = 0;
+            tapStep_->execute(inputSamples, numInputSamples, &temp);
+        }, 5);
+    }
+    else
+    {
+        int temp = 0;
+        tapStep_->execute(inputSamples, numInputSamples, &temp);
+    }
     
     *numOutputSamples = numInputSamples;
     return inputSamples;

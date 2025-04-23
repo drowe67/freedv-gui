@@ -32,13 +32,15 @@ ParallelStep::ParallelStep(
     std::function<int(ParallelStep*)> inputRouteFn,
     std::function<int(ParallelStep*)> outputRouteFn,
     std::vector<IPipelineStep*> parallelSteps,
-    std::shared_ptr<void> state)
+    std::shared_ptr<void> state,
+    std::shared_ptr<IRealtimeHelper> realtimeHelper)
     : inputSampleRate_(inputSampleRate)
     , outputSampleRate_(outputSampleRate)
     , runMultiThreaded_(runMultiThreaded)
     , inputRouteFn_(inputRouteFn)
     , outputRouteFn_(outputRouteFn)
     , state_(state)
+    , realtimeHelper_(realtimeHelper)
 {
     for (auto& step : parallelSteps)
     {
@@ -51,7 +53,17 @@ ParallelStep::ParallelStep(
             state->exitingThread = false;
             state->thread = std::thread([this](ThreadInfo* threadState) 
             {
+                if (realtimeHelper_)
+                {
+                    realtimeHelper_->setHelperRealTime();
+                }
+                
                 executeRunnerThread_(threadState);
+                
+                if (realtimeHelper_)
+                {
+                    realtimeHelper_->clearHelperRealTime();
+                }
             }, state);
             
             threads_.push_back(state);

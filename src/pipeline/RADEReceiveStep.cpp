@@ -48,10 +48,36 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
         featuresFile_ = fopen((const char*)utRxFeatureFile.ToUTF8(), "wb");
         assert(featuresFile_ != nullptr);
     }
+
+    // Pre-allocate buffers so we don't have to do so during real-time operation.
+    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    outputSamples_ = std::shared_ptr<short>(
+        new short[maxSamples], 
+        std::default_delete<short[]>());
+    assert(outputSamples_ != nullptr);
+
+    inputBufCplx_ = new RADE_COMP[rade_nin_max(dv_)];
+    assert(inputBufCplx_ != nullptr);
+
+    inputBuf_ = new short[rade_nin_max(dv_)];
+    assert(inputBuf_ != nullptr);
+
+    featuresOut_ = new float[rade_n_features_in_out(dv_)];
+    assert(featuresOut_ != nullptr);
+
+    eooOut_ = new float[rade_n_eoo_bits(dv_)];
+    assert(eooOut_ != nullptr);
+
+    pendingFeatures_.reserve(rade_n_features_in_out(dv_));
 }
 
 RADEReceiveStep::~RADEReceiveStep()
 {
+    delete[] inputBuf_;
+    delete[] inputBufCplx_;
+    delete[] featuresOut_;
+    delete[] eooOut_;
+
     if (featuresFile_ != nullptr)
     {
         fclose(featuresFile_);
@@ -81,11 +107,6 @@ int RADEReceiveStep::getOutputSampleRate() const
 std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
     *numOutputSamples = 0;
-    short* outputSamples = nullptr;
-    
-    RADE_COMP input_buf_cplx[rade_nin_max(dv_)];
-    short input_buf[rade_nin_max(dv_)];
-    float features_out[rade_n_features_in_out(dv_)];
     
     short* inputPtr = inputSamples.get();
     while (numInputSamples > 0 && inputPtr != nullptr)
@@ -95,36 +116,36 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
         
         int   nin = rade_nin(dv_);
         int   nout = 0;
-        while (codec2_fifo_read(inputSampleFifo_, input_buf, nin) == 0) 
+        while (codec2_fifo_read(inputSampleFifo_, inputBuf_, nin) == 0) 
         {
             assert(nin <= rade_nin_max(dv_));
 
             // demod per frame processing
             for(int i=0; i<nin; i++) 
             {
-                input_buf_cplx[i].real = input_buf[i] / 32767.0;
-                input_buf_cplx[i].imag = 0.0;
+                inputBufCplx_[i].real = inputBuf_[i] / 32767.0;
+                inputBufCplx_[i].imag = 0.0;
             }
 
             // RADE processing (input signal->features).
             int hasEooOut = 0;
-            float eooOut[rade_n_eoo_bits(dv_)];
-            nout = rade_rx(dv_, features_out, &hasEooOut, eooOut, input_buf_cplx);
+
+            nout = rade_rx(dv_, featuresOut_, &hasEooOut, eooOut_, inputBufCplx_);
             if (hasEooOut && textPtr_ != nullptr)
             {
                 // Handle RX of bits from EOO.
-                rade_text_rx(textPtr_, eooOut, rade_n_eoo_bits(dv_) / 2);
+                rade_text_rx(textPtr_, eooOut_, rade_n_eoo_bits(dv_) / 2);
             }
             else if (!hasEooOut)
             {
                 if (featuresFile_)
                 {
-                    fwrite(features_out, sizeof(float), nout, featuresFile_);
+                    fwrite(featuresOut_, sizeof(float), nout, featuresFile_);
                 }
 
                 for (int i = 0; i < nout; i++)
                 {
-                    pendingFeatures_.push_back(features_out[i]);
+                    pendingFeatures_.push_back(featuresOut_[i]);
                 }
 
                 // FARGAN processing (features->analog audio)
@@ -155,17 +176,15 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
                     codec2_fifo_write(outputSampleFifo_, pcm, LPCNET_FRAME_SIZE);
                 }
             }
-            
+
             nin = rade_nin(dv_);
         }
     }
    
     if (*numOutputSamples > 0)
     { 
-        outputSamples = new short[*numOutputSamples];
-        assert(outputSamples != nullptr);
-        codec2_fifo_read(outputSampleFifo_, outputSamples, *numOutputSamples);
+        codec2_fifo_read(outputSampleFifo_, outputSamples_.get(), *numOutputSamples);
     }
 
-    return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
+    return outputSamples_;
 }

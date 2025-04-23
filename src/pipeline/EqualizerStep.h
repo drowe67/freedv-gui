@@ -44,6 +44,7 @@ private:
     void** midFilter_;
     void** trebleFilter_;
     void** volFilter_;
+    std::shared_ptr<short> outputSamples_;
 };
 
 

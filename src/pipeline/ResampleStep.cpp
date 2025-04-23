@@ -36,20 +36,20 @@ static int resample_step(SRC_STATE *src,
             int        output_sample_rate,
             int        input_sample_rate,
             int        length_output_short, // maximum output array length in samples
-            int        length_input_short
+            int        length_input_short,
+            float     *tmpInput,
+            float     *tmpOutput
             )
 {
     SRC_DATA src_data;
-    float    input[length_input_short];
-    float    output[length_output_short];
     int      ret;
 
     assert(src != NULL);
 
-    src_short_to_float_array(input_short, input, length_input_short);
+    src_short_to_float_array(input_short, tmpInput, length_input_short);
 
-    src_data.data_in = input;
-    src_data.data_out = output;
+    src_data.data_in = tmpInput;
+    src_data.data_out = tmpOutput;
     src_data.input_frames = length_input_short;
     src_data.output_frames = length_output_short;
     src_data.end_of_input = 0;
@@ -63,7 +63,7 @@ static int resample_step(SRC_STATE *src,
     assert(ret == 0);
 
     assert(src_data.output_frames_gen <= length_output_short);
-    src_float_to_short_array(output, output_short, src_data.output_frames_gen);
+    src_float_to_short_array(tmpOutput, output_short, src_data.output_frames_gen);
 
     return src_data.output_frames_gen;
 }
@@ -75,11 +75,27 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate)
     int src_error;
     resampleState_ = src_new(SRC_SINC_MEDIUM_QUALITY, 1, &src_error);
     assert(resampleState_ != nullptr);
+
+    // Pre-allocate buffers so we don't have to do so during real-time operation.
+    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    outputSamples_ = std::shared_ptr<short>(
+        new short[maxSamples], 
+        std::default_delete<short[]>());
+    assert(outputSamples_ != nullptr);
+    
+    tempInput_ = new float[std::max(inputSampleRate, outputSampleRate)];
+    assert(tempInput_ != nullptr);
+
+    tempOutput_ = new float[std::max(inputSampleRate, outputSampleRate)];
+    assert(tempOutput_ != nullptr);
 }
 
 ResampleStep::~ResampleStep()
 {
     src_delete(resampleState_);
+
+    delete[] tempInput_;
+    delete[] tempOutput_;
 }
 
 int ResampleStep::getInputSampleRate() const
@@ -94,24 +110,20 @@ int ResampleStep::getOutputSampleRate() const
 
 std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    short* outputSamples = nullptr;
     if (numInputSamples > 0)
     {
         double scaleFactor = ((double)outputSampleRate_)/((double)inputSampleRate_);
         int outputArraySize = std::max(numInputSamples, (int)(scaleFactor*numInputSamples));
         assert(outputArraySize > 0);
 
-        outputSamples = new short[outputArraySize];
-        assert(outputSamples != nullptr);
- 
         *numOutputSamples = resample_step(
-            resampleState_, outputSamples, inputSamples.get(), outputSampleRate_, 
-            inputSampleRate_, outputArraySize, numInputSamples);
+            resampleState_, outputSamples_.get(), inputSamples.get(), outputSampleRate_, 
+            inputSampleRate_, outputArraySize, numInputSamples, tempInput_, tempOutput_);
     }
     else
     {
         *numOutputSamples = 0;
     }
  
-    return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
+    return outputSamples_;
 }

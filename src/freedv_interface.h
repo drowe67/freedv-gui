@@ -52,6 +52,8 @@ extern "C"
     #include "lpcnet.h"
 }
 
+#include "util/IRealtimeHelper.h"
+
 #include <samplerate.h>
 
 class IPipelineStep;
@@ -131,7 +133,8 @@ public:
         std::function<int()> getChannelNoiseFn,
         std::function<int()> getChannelNoiseSnrFn,
         std::function<float()> getFreqOffsetFn,
-        std::function<float*()> getSigPwrAvgFn
+        std::function<float*()> getSigPwrAvgFn,
+        std::shared_ptr<IRealtimeHelper> realtimeHelper
     );
 
     void restartTxVocoder();

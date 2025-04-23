@@ -44,6 +44,7 @@ private:
     std::function<int()> fileSampleRateFn_;
     std::function<SNDFILE*()> getSndFileFn_;
     std::function<void()> fileCompleteFn_;
+    std::shared_ptr<short> outputSamples_;
 };
 
 #endif // AUDIO_PIPELINE__PLAYBACK_STEP_H

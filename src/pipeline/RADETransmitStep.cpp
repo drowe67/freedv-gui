@@ -48,10 +48,41 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
         featuresFile_ = fopen((const char*)utTxFeatureFile.ToUTF8(), "wb");
         assert(featuresFile_ != nullptr);
     }
+
+    // Pre-allocate buffers so we don't have to do so during real-time operation.
+    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    outputSamples_ = std::shared_ptr<short>(
+        new short[maxSamples], 
+        std::default_delete<short[]>());
+    assert(outputSamples_ != nullptr);
+
+    int numOutputSamples = rade_n_tx_out(dv_);
+
+    radeOut_ = new RADE_COMP[numOutputSamples];
+    assert(radeOut_ != nullptr);
+
+    radeOutShort_ = new short[numOutputSamples];
+    assert(radeOutShort_ != nullptr);
+
+    const int NUM_SAMPLES_SILENCE = 60 * getOutputSampleRate() / 1000;
+    int numEOOSamples = rade_n_tx_eoo_out(dv_);
+
+    eooOut_ = new RADE_COMP[numEOOSamples];
+    assert(eooOut_ != nullptr);
+
+    eooOutShort_ = new short[numEOOSamples + NUM_SAMPLES_SILENCE];
+    assert(eooOutShort_ != nullptr);
+
+    featureList_.reserve(rade_n_features_in_out(dv_));
 }
 
 RADETransmitStep::~RADETransmitStep()
 {
+    delete[] radeOut_;
+    delete[] radeOutShort_;
+    delete[] eooOut_;
+    delete[] eooOutShort_;
+
     if (featuresFile_ != nullptr)
     {
         fclose(featuresFile_);
@@ -80,7 +111,6 @@ int RADETransmitStep::getOutputSampleRate() const
 
 std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    short* outputSamples = nullptr;
     *numOutputSamples = 0;
 
     if (numInputSamples == 0)
@@ -89,15 +119,12 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
         *numOutputSamples = std::min(codec2_fifo_used(outputSampleFifo_), (int)(RADE_MODEM_SAMPLE_RATE * .02));
         if (*numOutputSamples > 0)
         {
-            outputSamples = new short[*numOutputSamples];
-            assert(outputSamples != nullptr);
-
-            codec2_fifo_read(outputSampleFifo_, outputSamples, *numOutputSamples);
+            codec2_fifo_read(outputSampleFifo_, outputSamples_.get(), *numOutputSamples);
 
             log_info("Returning %d EOO samples (remaining in FIFO: %d)", *numOutputSamples, codec2_fifo_used(outputSampleFifo_));
         }
 
-        return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());;
+        return outputSamples_;
     }
     
     short* inputPtr = inputSamples.get();
@@ -108,12 +135,10 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
         
         if (codec2_fifo_used(inputSampleFifo_) >= LPCNET_FRAME_SIZE)
         {
-            int numRequiredFeaturesForRADE = rade_n_features_in_out(dv_);
+            unsigned int numRequiredFeaturesForRADE = rade_n_features_in_out(dv_);
             int numOutputSamples = rade_n_tx_out(dv_);
             short pcm[LPCNET_FRAME_SIZE];
             float features[NB_TOTAL_FEATURES];
-            RADE_COMP radeOut[numOutputSamples];
-            short radeOutShort[numOutputSamples];
 
             int arch = opus_select_arch();
 
@@ -134,17 +159,17 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
             // RADE TX handling
             while (featureList_.size() >= numRequiredFeaturesForRADE)
             {
-                rade_tx(dv_, radeOut, &featureList_[0]);
-                for (int index = 0; index < numRequiredFeaturesForRADE; index++)
+                rade_tx(dv_, radeOut_, &featureList_[0]);
+                for (unsigned int index = 0; index < numRequiredFeaturesForRADE; index++)
                 {
                     featureList_.erase(featureList_.begin());
                 }
                 for (int index = 0; index < numOutputSamples; index++)
                 {
                     // We only need the real component for TX.
-                    radeOutShort[index] = radeOut[index].real * RADE_SCALING_FACTOR;
+                    radeOutShort_[index] = radeOut_[index].real * RADE_SCALING_FACTOR;
                 }
-                codec2_fifo_write(outputSampleFifo_, radeOutShort, numOutputSamples);
+                codec2_fifo_write(outputSampleFifo_, radeOutShort_, numOutputSamples);
             }
         }
     }
@@ -152,13 +177,10 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
     *numOutputSamples = codec2_fifo_used(outputSampleFifo_);
     if (*numOutputSamples > 0)
     {
-        outputSamples = new short[*numOutputSamples];
-        assert(outputSamples != nullptr);
-
-        codec2_fifo_read(outputSampleFifo_, outputSamples, *numOutputSamples);
+        codec2_fifo_read(outputSampleFifo_, outputSamples_.get(), *numOutputSamples);
     }
     
-    return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
+    return outputSamples_;
 }
 
 void RADETransmitStep::restartVocoder()
@@ -166,19 +188,17 @@ void RADETransmitStep::restartVocoder()
     // Queues up EOO for return on the next call to this pipeline step.
     const int NUM_SAMPLES_SILENCE = 60 * getOutputSampleRate() / 1000;
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
-    RADE_COMP eooOut[numEOOSamples];
-    short eooOutShort[numEOOSamples + NUM_SAMPLES_SILENCE];
 
-    rade_tx_eoo(dv_, eooOut);
+    rade_tx_eoo(dv_, eooOut_);
 
-    memset(eooOutShort, 0, sizeof(eooOutShort));
+    memset(eooOutShort_, 0, sizeof(short) * (numEOOSamples + NUM_SAMPLES_SILENCE));
     for (int index = 0; index < numEOOSamples; index++)
     {
-        eooOutShort[index] = eooOut[index].real * RADE_SCALING_FACTOR;
+        eooOutShort_[index] = eooOut_[index].real * RADE_SCALING_FACTOR;
     }
 
     log_info("Queueing %d EOO samples to output FIFO", numEOOSamples + NUM_SAMPLES_SILENCE);
-    if (codec2_fifo_write(outputSampleFifo_, eooOutShort, numEOOSamples + NUM_SAMPLES_SILENCE) != 0)
+    if (codec2_fifo_write(outputSampleFifo_, eooOutShort_, numEOOSamples + NUM_SAMPLES_SILENCE) != 0)
     {
         log_warn("Could not queue EOO samples (remaining space in FIFO = %d)", codec2_fifo_free(outputSampleFifo_));
     }

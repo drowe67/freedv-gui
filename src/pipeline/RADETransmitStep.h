@@ -51,6 +51,12 @@ private:
     std::vector<float> featureList_;
     
     FILE* featuresFile_;
+
+    std::shared_ptr<short> outputSamples_;
+    RADE_COMP* radeOut_;
+    short* radeOutShort_;
+    RADE_COMP* eooOut_;
+    short* eooOutShort_;
 };
 
 #endif // AUDIO_PIPELINE__RADE_TRANSMIT_STEP_H

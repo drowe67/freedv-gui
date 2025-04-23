@@ -29,6 +29,7 @@
 #include <condition_variable>
 
 #include "AudioPipeline.h"
+#include "util/IRealtimeHelper.h"
 
 // Forward declarations
 class LinkStep;
@@ -39,7 +40,7 @@ class LinkStep;
 class TxRxThread : public wxThread
 {
 public:
-    TxRxThread(bool tx, int inputSampleRate, int outputSampleRate, LinkStep* micAudioLink) 
+    TxRxThread(bool tx, int inputSampleRate, int outputSampleRate, LinkStep* micAudioLink, std::shared_ptr<IRealtimeHelper> helper) 
         : wxThread(wxTHREAD_JOINABLE)
         , m_tx(tx)
         , m_run(1)
@@ -48,9 +49,14 @@ public:
         , outputSampleRate_(outputSampleRate)
         , equalizedMicAudioLink_(micAudioLink)
         , hasEooBeenSent_(false)
+        , helper_(helper)
     { 
         assert(inputSampleRate_ > 0);
         assert(outputSampleRate_ > 0);
+
+        inputSamples_ = std::shared_ptr<short>(
+            new short[std::max(inputSampleRate_, outputSampleRate_)], 
+            std::default_delete<short[]>());
     }
 
     // thread execution starts here
@@ -74,6 +80,8 @@ private:
     int outputSampleRate_;
     LinkStep* equalizedMicAudioLink_;
     bool hasEooBeenSent_;
+    std::shared_ptr<IRealtimeHelper> helper_;
+    std::shared_ptr<short> inputSamples_;
     
     void initializePipeline_();
     void txProcessing_();

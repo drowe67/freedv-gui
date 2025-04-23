@@ -50,6 +50,12 @@ private:
     std::function<float()> getFreqOffsetFn_;
     struct FIFO* inputSampleFifo_;
     COMP txFreqOffsetPhaseRectObj_;
+
+    COMP* txFdm_;
+    COMP* txFdmOffset_;
+    short* codecInput_;
+    short* tmpOutput_;
+    std::shared_ptr<short> outputSamples_;
 };
 
 #endif // AUDIO_PIPELINE__FREEDV_TRANSMIT_STEP_H
