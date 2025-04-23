@@ -206,6 +206,18 @@ if(USE_STATIC_DEPS)
 endif(USE_STATIC_DEPS)
 
 #
+# Find DBus (Linux only)--this is so that we can use
+# rtkit to request real-time scheduling for our audio 
+# threads.
+if (LINUX)
+    message(STATUS "Looking for DBus...")
+    find_package(DBus)
+    if (DBUS_FOUND)
+        message(STATUS "Found DBus, will attempt to use rtkit for real-time threading")
+    endif (DBUS_FOUND)
+endif (LINUX)
+
+#
 # Find wxWidgets
 #
 set(DARK_MODE_DISABLE "false")

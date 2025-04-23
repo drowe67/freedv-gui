@@ -25,11 +25,12 @@ jobs:
       run: |
            sudo apt-get update
            sudo apt-get upgrade -y
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.2-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity dbus-x11 at-spi2-core rtkit octave octave-signal
+           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.2-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity dbus-x11 at-spi2-core rtkit octave octave-signal libdbus-1-dev
+           sudo usermod -a -G rtkit $(whoami)
             
     - name: Spellcheck codebase
       shell: bash
-      run: codespell --ignore-words-list=caf,radae,rade,inout,nin,ontop,parm,tthe,ue `find src -name '*.c*' -o -name '*.h' -o -name '*.mm' | grep -v 3rdparty`
+      run: codespell --ignore-words-list=caf,radae,rade,inout,nin,ontop,parm,tthe,ue `find src -name '*.c*' -o -name '*.h' | grep -v 3rdparty`
 
     - name: Install Python required modules
       shell: bash

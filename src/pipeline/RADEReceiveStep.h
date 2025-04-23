@@ -57,6 +57,12 @@ private:
     std::vector<float> pendingFeatures_;
     FILE* featuresFile_;
     rade_text_t textPtr_;
+
+    RADE_COMP* inputBufCplx_;
+    short* inputBuf_;
+    float* featuresOut_;
+    float* eooOut_;
+    std::shared_ptr<short> outputSamples_;
 };
 
 #endif // AUDIO_PIPELINE__RADE_RECEIVE_STEP_H

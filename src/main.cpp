@@ -3121,10 +3121,10 @@ void MainFrame::startRxStream()
         g_rxUserdata = new paCallBackData;
                 
         // create FIFOs used to interface between IAudioEngine and txRx
-        // processing loop, which iterates about once every 20ms.
-        // Sample rate conversion, stats for spectral plots, and
-        // transmit processng are all performed in the tx/rxProcessing
-        // loop.
+        // processing loop, which iterates about once every 10-40ms
+        // (depending on platform/audio library). Sample rate conversion, 
+        // stats for spectral plots, and transmit processng are all performed 
+        // in the tx/rxProcessing loop.
 
         int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
         int soundCard1InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate / 1000;
@@ -3430,7 +3430,7 @@ void MainFrame::startRxStream()
         // start tx/rx processing thread
         if (txInSoundDevice && txOutSoundDevice)
         {
-            m_txThread = new TxRxThread(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate(), wxGetApp().linkStep.get());
+            m_txThread = new TxRxThread(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate(), wxGetApp().linkStep.get(), txInSoundDevice);
             if ( m_txThread->Create() != wxTHREAD_NO_ERROR )
             {
                 wxLogError(wxT("Can't create TX thread!"));
@@ -3469,7 +3469,7 @@ void MainFrame::startRxStream()
             }
         }
 
-        m_rxThread = new TxRxThread(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep.get());
+        m_rxThread = new TxRxThread(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep.get(), rxInSoundDevice);
         if ( m_rxThread->Create() != wxTHREAD_NO_ERROR )
         {
             wxLogError(wxT("Can't create RX thread!"));

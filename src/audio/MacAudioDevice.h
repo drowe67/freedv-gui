@@ -23,6 +23,9 @@
 #ifndef MAC_AUDIO_DEVICE_H
 #define MAC_AUDIO_DEVICE_H
 
+#include <thread>
+#include <dispatch/dispatch.h>
+
 #include "../util/ThreadedObject.h"
 #include "IAudioEngine.h"
 #include "IAudioDevice.h"
@@ -41,6 +44,21 @@ public:
     virtual bool isRunning() override;
     
     virtual int getLatencyInMicroseconds() override;
+    
+    // Configures current thread for real-time priority. This should be
+    // called from the thread that will be operating on received audio.
+    virtual void setHelperRealTime() override;
+
+    // Lets audio system know that we're beginning to do work with the
+    // received audio.
+    virtual void startRealTimeWork() override;
+
+    // Lets audio system know that we're done with the work on the received
+    // audio.
+    virtual void stopRealTimeWork() override;
+
+    // Reverts real-time priority for current thread.
+    virtual void clearHelperRealTime() override;
 
 protected:
     friend class MacAudioEngine;
@@ -56,6 +74,11 @@ private:
     void* player_; // actually AVAudioPlayerNode
 
     short* inputFrames_;
+
+    static thread_local void* workgroup_;
+    static thread_local void* joinToken_;
+    
+    dispatch_semaphore_t sem_;
 };
 
 #endif // MAC_AUDIO_DEVICE_H

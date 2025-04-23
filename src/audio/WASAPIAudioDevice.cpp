@@ -29,10 +29,12 @@
 #include <avrt.h>
 #include "../util/logging/ulog.h"
 
-#define BLOCK_TIME_NS (40000000)
+#define BLOCK_TIME_NS (0)
 
 // Nanoseconds per REFERENCE_TIME unit
 #define NS_PER_REFTIME (100)
+
+thread_local HANDLE WASAPIAudioDevice::helperTask_ = nullptr;
     
 WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : client_(client)
@@ -47,6 +49,7 @@ WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDi
     , latencyFrames_(0)
     , renderCaptureEvent_(nullptr)
     , isRenderCaptureRunning_(false)
+    , semaphore_(nullptr)
 {
     // empty
 }
@@ -254,6 +257,15 @@ void WASAPIAudioDevice::start()
             }
         }
 
+        // Create semaphore
+        semaphore_ = CreateSemaphore(nullptr, 0, 1, nullptr);
+        if (semaphore_ == nullptr)
+        {
+            std::stringstream ss;
+            ss << "Could not create semaphore (err = " << GetLastError() << ")";
+            log_warn(ss.str().c_str());
+        }
+
         // Start render/capture
         hr = client_->Start();
         if (FAILED(hr))
@@ -296,8 +308,9 @@ void WASAPIAudioDevice::start()
                 log_warn("Could not increase thread priority");
             }
 
-            while (isRenderCaptureRunning_ && WaitForSingleObject(renderCaptureEvent_, 100) == WAIT_OBJECT_0)
+            while (isRenderCaptureRunning_)
             {
+                WaitForSingleObject(renderCaptureEvent_, 100);
                 if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
                 {
                     renderAudio_();
@@ -364,6 +377,12 @@ void WASAPIAudioDevice::stop()
             captureClient_ = nullptr;
         }
 
+        if (semaphore_ != nullptr)
+        {
+            CloseHandle(semaphore_);
+            semaphore_ = nullptr;
+        }
+
         prom->set_value();
     });
     fut.wait();
@@ -379,6 +398,49 @@ int WASAPIAudioDevice::getLatencyInMicroseconds()
     // Note: latencyFrames_ isn't expected to change, so we don't need to 
     // wrap this call in an enqueue_() like with the other public methods.
     return 1000000 * latencyFrames_ / sampleRate_;
+}
+
+void WASAPIAudioDevice::setHelperRealTime()
+{
+    DWORD taskIndex = 0;
+    helperTask_ = AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
+    if (helperTask_ == nullptr)
+    {
+        log_warn("Could not increase thread priority");
+    }
+}
+
+void WASAPIAudioDevice::startRealTimeWork() 
+{
+    // empty
+}
+
+void WASAPIAudioDevice::stopRealTimeWork() 
+{
+    if (semaphore_ == nullptr)
+    {
+        // Fallback to base class behavior
+        IAudioDevice::stopRealTimeWork();
+        return;
+    }
+
+    // Wait a maximum of (bufferSize / sampleRate) seconds for the semaphore to return
+    DWORD result = WaitForSingleObject(semaphore_, (1000 * bufferFrameCount_) / sampleRate_);
+
+    if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
+    {
+        // Fallback to a simple sleep.
+        IAudioDevice::stopRealTimeWork();
+    }
+}
+
+void WASAPIAudioDevice::clearHelperRealTime()
+{
+    if (helperTask_ != nullptr)
+    {
+        AvRevertMmThreadCharacteristics(helperTask_);
+        helperTask_ = nullptr;
+    }
 }
 
 void WASAPIAudioDevice::renderAudio_()
@@ -513,5 +575,11 @@ void WASAPIAudioDevice::captureAudio_()
             log_error(ss.str().c_str());
             return;
         }
+    }
+
+    if (semaphore_ != nullptr)
+    {
+        // Notify worker threads
+        ReleaseSemaphore(semaphore_, 1, nullptr);
     }
 }

@@ -1,6 +1,6 @@
 //=========================================================================
-// Name:            LevelAdjustStep.h
-// Purpose:         Describes a level adjust step in the audio pipeline.
+// Name:            IRealtimeHelper.h
+// Purpose:         Defines the interface to a helper for real-time operation.
 //
 // Authors:         Mooneer Salem
 // License:
@@ -20,27 +20,27 @@
 //
 //=========================================================================
 
-#ifndef AUDIO_PIPELINE__LEVEL_ADJUST_STEP_H
-#define AUDIO_PIPELINE__LEVEL_ADJUST_STEP_H
 
-#include <functional>
+#ifndef I_REALTIME_HELPER_H
+#define I_REALTIME_HELPER_H
 
-#include "IPipelineStep.h"
-
-class LevelAdjustStep : public IPipelineStep
+class IRealtimeHelper
 {
 public:
-    LevelAdjustStep(int sampleRate, std::function<double()> scaleFactorFn);
-    virtual ~LevelAdjustStep();
+    // Configures current thread for real-time priority. This should be
+    // called from the thread that will be operating on received audio.
+    virtual void setHelperRealTime() = 0;
     
-    virtual int getInputSampleRate() const;
-    virtual int getOutputSampleRate() const;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
+    // Lets audio system know that we're beginning to do work with the
+    // received audio.
+    virtual void startRealTimeWork() = 0;
     
-private:
-    std::function<double()> scaleFactorFn_;
-    int sampleRate_;
-    std::shared_ptr<short> outputSamples_;
+    // Lets audio system know that we're done with the work on the received
+    // audio.
+    virtual void stopRealTimeWork() = 0;
+    
+    // Reverts real-time priority for current thread.
+    virtual void clearHelperRealTime() = 0;
 };
 
-#endif // AUDIO_PIPELINE__LEVEL_ADJUST_STEP_H
+#endif

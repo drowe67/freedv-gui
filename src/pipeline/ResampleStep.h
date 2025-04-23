@@ -41,6 +41,10 @@ private:
     int inputSampleRate_;
     int outputSampleRate_;
     SRC_STATE* resampleState_;
+
+    float* tempInput_;
+    float* tempOutput_;
+    std::shared_ptr<short> outputSamples_;
 };
 
 #endif // AUDIO_PIPELINE__RESAMPLE_STEP_H

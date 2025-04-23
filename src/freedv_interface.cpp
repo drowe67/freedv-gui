@@ -146,7 +146,7 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
 void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText)
 {
     sync_ = 0;
-    singleRxThread_ = singleRxThread;
+    singleRxThread_ = enabledModes_.size() > 1 ? singleRxThread : true;
 
     modemStatsList_ = new MODEM_STATS[enabledModes_.size()];
     for (int index = 0; index < (int)enabledModes_.size(); index++)
@@ -757,6 +757,7 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
         modeFn,
         modeFn,
         parallelSteps,
+        nullptr,
         nullptr
     );
     
@@ -769,7 +770,8 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     std::function<int()> getChannelNoiseFn,
     std::function<int()> getChannelNoiseSnrFn,
     std::function<float()> getFreqOffsetFn,
-    std::function<float*()> getSigPwrAvgFn)
+    std::function<float*()> getSigPwrAvgFn,
+    std::shared_ptr<IRealtimeHelper> realtimeHelper)
 {
     std::vector<IPipelineStep*> parallelSteps;
 
@@ -811,7 +813,8 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
         state->preProcessFn,
         state->postProcessFn,
         parallelSteps,
-        state
+        state,
+        realtimeHelper
     );
     
     return parallelStep;
