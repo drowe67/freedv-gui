@@ -387,15 +387,19 @@ void PulseAudioDevice::stopRealTimeWork()
 
     if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
     {
-        log_warn("Could not get current time (errno = %d)", errno);
+        // Fallback to simple sleep.
+        IAudioDevice::stopRealTimeWork();
+        return;
     }
+    
     ts.tv_nsec += 10000000;
     ts.tv_sec += (ts.tv_nsec / 1000000000);
     ts.tv_nsec = ts.tv_nsec % 1000000000;
 
     if (sem_timedwait(&sem_, &ts) < 0 && errno != ETIMEDOUT)
     {
-        log_warn("Could not time wait on semaphore (errno = %d)", errno);
+        // Fallback to simple sleep.
+        IAudioDevice::stopRealTimeWork();
     }
 }
 
