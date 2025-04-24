@@ -38,7 +38,7 @@ using namespace std::chrono_literals;
 
 // Optimal settings based on ones used for PortAudio.
 #define PULSE_FPB 256
-#define PULSE_TARGET_LATENCY_US 20000
+#define PULSE_TARGET_LATENCY_US 10000
 
 PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : context_(context)
@@ -163,6 +163,7 @@ void PulseAudioDevice::start()
         inputPendingLength_ = 0;
         if (direction_ == IAudioEngine::AUDIO_ENGINE_IN)
         {
+#if 0
             inputPendingThreadActive_ = true;
             inputPendingThread_ = new std::thread([&]() {
 #if defined(__linux__)
@@ -221,6 +222,7 @@ void PulseAudioDevice::start()
                 clearHelperRealTime();
             });
             assert(inputPendingThread_ != nullptr);
+#endif // 0
         }
 #if 0
         else if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
@@ -425,7 +427,13 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
             break;
         }
 
+	if (thisObj->onAudioDataFunction)
+        {
+            thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(data), length / thisObj->getNumChannels() / sizeof(short), thisObj->onAudioDataState);
+        }
+        sem_post(&thisObj->sem_);
         // Append received audio to pending block
+#if 0
         {
             std::unique_lock<std::mutex> lk(thisObj->inputPendingMutex_);
             short* temp = new short[thisObj->inputPendingLength_ + length / sizeof(short)];
@@ -441,7 +449,7 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
             thisObj->inputPending_ = temp;
             thisObj->inputPendingLength_ += length / sizeof(short);
         }
-
+#endif // 0
         pa_stream_drop(s);
     } while (pa_stream_readable_size(s) > 0);
 }
