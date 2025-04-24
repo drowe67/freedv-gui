@@ -58,6 +58,7 @@ using namespace std::placeholders;
 FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxFrame(parent, id, title, pos, size, style)
     , tipWindow_(nullptr)
+    , sortRequired_(false)
 {
     if (wxGetApp().customConfigFileName != "")
     {
@@ -336,7 +337,7 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
 
     // Set up highlight clear timer
     m_highlightClearTimer = new wxTimer(this);
-    m_highlightClearTimer->Start(1000);
+    m_highlightClearTimer->Start(100);
 
     // Create Set popup menu
     setPopupMenu_ = new wxMenu();
@@ -783,7 +784,12 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
 {
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     model->updateHighlights();
-    model->Resort();
+
+    if (sortRequired_)
+    {
+        model->Resort();
+        sortRequired_ = false;
+    }
 }
 
 void FreeDVReporterDialog::OnFilterTrackingEnable(wxCommandEvent& event)
@@ -1453,6 +1459,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setReporter(std::shared_ptr<
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
 {
+    std::unique_lock<std::recursive_mutex> lk(dataMtx_);
     assert(wxThread::IsMain());
 
     for (auto& row : allReporterData_)
@@ -1478,6 +1485,7 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::HasDefaultCompare() const
 
 int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const
 {
+    std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
     assert(wxThread::IsMain());
 
     if (!item1.IsOk() || !item2.IsOk())
@@ -1625,6 +1633,7 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
 
 bool FreeDVReporterDialog::FreeDVReporterDataModel::GetAttr (const wxDataViewItem &item, unsigned int col, wxDataViewItemAttr &attr) const
 {
+    std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
     bool result = false;
     assert(wxThread::IsMain());
     
@@ -1656,6 +1665,7 @@ unsigned int FreeDVReporterDialog::FreeDVReporterDataModel::GetChildren (const w
     }
     else
     {
+        std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
         int count = 0;
         for (auto& row : allReporterData_)
         {
@@ -1680,6 +1690,7 @@ wxDataViewItem FreeDVReporterDialog::FreeDVReporterDataModel::GetParent (const w
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::GetValue (wxVariant &variant, const wxDataViewItem &item, unsigned int col) const
 {
+    std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
     assert(wxThread::IsMain());
     if (item.IsOk())
     {
@@ -1804,6 +1815,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
         else if (updated)
         {
             ItemChanged(wxDataViewItem(kvp.second));
+            parent_->sortRequired_ = true;
         }
     }
 }
@@ -1867,6 +1879,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
     {
         std::unique_lock<std::mutex> lk(fnQueueMtx_);
         fnQueue_.push_back([&, prom, sid, lastUpdate, callsign, gridSquare, version, rxOnly]() {
+            std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
             assert(wxThread::IsMain());
     
             // Initially populate stored report data, but don't add to the viewable list just yet. 
@@ -1999,6 +2012,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
     {
         std::unique_lock<std::mutex> lk(fnQueueMtx_);
         fnQueue_.push_back([&, prom, sid]() {
+            std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
             assert(wxThread::IsMain());
             
             auto iter = allReporterData_.find(sid);
@@ -2033,6 +2047,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
     {
         std::unique_lock<std::mutex> lk(fnQueueMtx_);
         fnQueue_.push_back([&, prom, sid, frequencyHz, lastUpdate]() {
+            std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
             assert(wxThread::IsMain());
             
             auto iter = allReporterData_.find(sid);
@@ -2073,6 +2088,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
                 else
                 {            
                     ItemChanged(dvi);
+                    parent_->sortRequired_ = 
+                        parent_->m_listSpots->GetColumn(FREQUENCY_COL)->IsSortKey() ||
+                        parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
                 }
             }
             prom->set_value();
@@ -2091,6 +2109,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
     {
         std::unique_lock<std::mutex> lk(fnQueueMtx_);
         fnQueue_.push_back([&, prom, sid, txMode, transmitting, lastTxDate, lastUpdate]() {
+            std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
             assert(wxThread::IsMain());
         
             auto iter = allReporterData_.find(sid);
@@ -2118,6 +2137,10 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
             
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
+                parent_->sortRequired_ = 
+                    parent_->m_listSpots->GetColumn(STATUS_COL)->IsSortKey() ||
+                    parent_->m_listSpots->GetColumn(TX_MODE_COL)->IsSortKey() ||
+                    parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
             }
 
             prom->set_value();
@@ -2136,6 +2159,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
     {
         std::unique_lock<std::mutex> lk(fnQueueMtx_);
         fnQueue_.push_back([&, prom, sid, lastUpdate, receivedCallsign, snr, rxMode]() {
+            std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
             assert(wxThread::IsMain());
         
             auto iter = allReporterData_.find(sid);
@@ -2164,6 +2188,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
+                parent_->sortRequired_ = 
+                    parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL)->IsSortKey() ||
+                    parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL)->IsSortKey() ||
+                    parent_->m_listSpots->GetColumn(SNR_COL)->IsSortKey() ||
+                    parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
             }
 
             prom->set_value();
@@ -2182,6 +2211,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
     {
         std::unique_lock<std::mutex> lk(fnQueueMtx_);
         fnQueue_.push_back([&, prom, sid, lastUpdate, message]() {
+            std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
             assert(wxThread::IsMain());
         
             auto iter = allReporterData_.find(sid);
@@ -2215,6 +2245,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
             
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
+                parent_->sortRequired_ = 
+                    parent_->m_listSpots->GetColumn(USER_MESSAGE_COL)->IsSortKey() ||
+                    parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
             }
             prom->set_value();
         });
@@ -2238,5 +2271,4 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onAboutToShowSelfFn_()
     }
 
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
-    fut.wait();
-}
+    fut.wait();}

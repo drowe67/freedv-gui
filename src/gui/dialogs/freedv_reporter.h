@@ -252,6 +252,7 @@ class FreeDVReporterDialog : public wxFrame
             std::map<std::string, ReporterData*> allReporterData_;
             std::vector<std::function<void()> > fnQueue_;
             std::mutex fnQueueMtx_;
+            std::recursive_mutex dataMtx_;
             bool isConnected_;
             FreeDVReporterDialog* parent_;
 
@@ -288,6 +289,7 @@ class FreeDVReporterDialog : public wxFrame
         };
 
         FilterFrequency getFilterForFrequency_(uint64_t freq);
+        bool sortRequired_;
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__
