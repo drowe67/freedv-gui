@@ -783,6 +783,7 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
 {
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     model->updateHighlights();
+    model->Resort();
 }
 
 void FreeDVReporterDialog::OnFilterTrackingEnable(wxCommandEvent& event)
@@ -2072,7 +2073,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
                 else
                 {            
                     ItemChanged(dvi);
-                    Resort();
                 }
             }
             prom->set_value();
@@ -2118,7 +2118,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
             
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
-                Resort();
             }
 
             prom->set_value();
@@ -2165,7 +2164,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
-                Resort();
             }
 
             prom->set_value();
@@ -2217,7 +2215,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
             
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
-                Resort();
             }
             prom->set_value();
         });
