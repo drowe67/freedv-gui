@@ -396,7 +396,7 @@ void PulseAudioDevice::stopRealTimeWork()
         return;
     }
     
-    ts.tv_nsec += 10000000;
+    ts.tv_nsec += PULSE_TARGET_LATENCY_US * 1000;
     ts.tv_sec += (ts.tv_nsec / 1000000000);
     ts.tv_nsec = ts.tv_nsec % 1000000000;
 
