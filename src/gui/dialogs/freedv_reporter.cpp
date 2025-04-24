@@ -1748,9 +1748,6 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::SetValue (const wxVariant &v
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
 {
-    wxDataViewItemArray itemsAdded;
-    wxDataViewItemArray itemsRemoved;
-    wxDataViewItemArray itemsChanged;
     assert(wxThread::IsMain());
     
     for (auto& kvp : allReporterData_)
@@ -2011,10 +2008,10 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
                 if (item->isVisible)
                 {
                     item->isVisible = false;
+                    parent_->Unselect(dvi);
                     ItemDeleted(wxDataViewItem(nullptr), dvi);
                 }
     
-                parent_->Unselect(dvi);
                 delete item;
                 allReporterData_.erase(iter);
             }
