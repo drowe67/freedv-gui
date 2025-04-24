@@ -712,7 +712,7 @@ void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 {
-    assert(wxThread::IsMain());
+    std::unique_lock<std::recursive_mutex> lk(dataMtx_);
 
     // Iterate across all visible rows. If a row is currently highlighted
     // green and it's been more than >20 seconds, clear coloring.
@@ -1760,7 +1760,7 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::SetValue (const wxVariant &v
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
 {
-    assert(wxThread::IsMain());
+    std::unique_lock<std::recursive_mutex> lk(dataMtx_);
     
     for (auto& kvp : allReporterData_)
     {
@@ -2048,7 +2048,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
         std::unique_lock<std::mutex> lk(fnQueueMtx_);
         fnQueue_.push_back([&, prom, sid, frequencyHz, lastUpdate]() {
             std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
-            assert(wxThread::IsMain());
             
             auto iter = allReporterData_.find(sid);
             if (iter != allReporterData_.end())
@@ -2110,7 +2109,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
         std::unique_lock<std::mutex> lk(fnQueueMtx_);
         fnQueue_.push_back([&, prom, sid, txMode, transmitting, lastTxDate, lastUpdate]() {
             std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
-            assert(wxThread::IsMain());
         
             auto iter = allReporterData_.find(sid);
             if (iter != allReporterData_.end())
@@ -2160,7 +2158,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
         std::unique_lock<std::mutex> lk(fnQueueMtx_);
         fnQueue_.push_back([&, prom, sid, lastUpdate, receivedCallsign, snr, rxMode]() {
             std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
-            assert(wxThread::IsMain());
         
             auto iter = allReporterData_.find(sid);
             if (iter != allReporterData_.end())
@@ -2212,7 +2209,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
         std::unique_lock<std::mutex> lk(fnQueueMtx_);
         fnQueue_.push_back([&, prom, sid, lastUpdate, message]() {
             std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
-            assert(wxThread::IsMain());
         
             auto iter = allReporterData_.find(sid);
             if (iter != allReporterData_.end())
