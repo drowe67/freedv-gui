@@ -105,7 +105,7 @@ void PulseAudioDevice::start()
     // recommended settings, i.e. server uses sensible values
     pa_buffer_attr buffer_attr; 
     buffer_attr.tlength = pa_usec_to_bytes(PULSE_TARGET_LATENCY_US, &sample_specification);
-    buffer_attr.maxlength = (direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ? (uint32_t)-1 : (uint32_t)(buffer_attr.tlength * 10);
+    buffer_attr.maxlength = (uint32_t)-1;
     buffer_attr.prebuf = 0; // Ensure that we can recover during an underrun
     buffer_attr.minreq = (uint32_t) -1;
     buffer_attr.fragsize = buffer_attr.tlength;
@@ -131,7 +131,7 @@ void PulseAudioDevice::start()
     {
         log_info("Connecting to record device %s", (const char*)devName_.ToUTF8());
         
-        pa_stream_set_read_callback(stream_, &PulseAudioDevice::StreamReadCallback_, this);
+        //pa_stream_set_read_callback(stream_, &PulseAudioDevice::StreamReadCallback_, this);
         result = pa_stream_connect_record(
             stream_, devName_.c_str(), &buffer_attr, flags);
     }
@@ -163,7 +163,6 @@ void PulseAudioDevice::start()
         inputPendingLength_ = 0;
         if (direction_ == IAudioEngine::AUDIO_ENGINE_IN)
         {
-#if 0
             inputPendingThreadActive_ = true;
             inputPendingThread_ = new std::thread([&]() {
 #if defined(__linux__)
@@ -174,55 +173,28 @@ void PulseAudioDevice::start()
  
                 while(inputPendingThreadActive_)
                 {
-                    auto currentTime = std::chrono::steady_clock::now();
-                    int currentLength = 0;
+                    auto beginTime = std::chrono::high_resolution_clock::now();
+                    size_t currentLength = 0;
+                    const void* data = nullptr;
+                    auto sleepForMs = PULSE_TARGET_LATENCY_US  / 1000;
 
-                    {
-                        std::unique_lock<std::mutex> lk(inputPendingMutex_);
-                        currentLength = inputPendingLength_;
-                    }
-
-                    currentLength = std::min(currentLength, PULSE_FPB * getNumChannels());
-                    if (currentLength > 0)
-                    {
-                        short data[currentLength];
-                        {
-                            std::unique_lock<std::mutex> lk(inputPendingMutex_);
-                            memcpy(data, inputPending_, currentLength * sizeof(short));
-
-                            short* newInputPending = nullptr;
-                            if (inputPendingLength_ > currentLength)
-                            {
-                                newInputPending = new short[inputPendingLength_ - currentLength];
-                                assert(newInputPending != nullptr);
-                                memcpy(newInputPending, inputPending_ + currentLength, (inputPendingLength_ - currentLength) * sizeof(short));
-                            }
-                            delete[] inputPending_;
-                            inputPending_ = newInputPending;
-                            inputPendingLength_ = inputPendingLength_ - currentLength;
-                        }
-
+                    pa_stream_peek(stream_, &data, &currentLength);
+		    if (data != nullptr)
+		    {
+		        sleepForMs = 1000 * ((currentLength / sizeof(short)) / getNumChannels()) / getSampleRate();
                         if (onAudioDataFunction)
                         {
-                            onAudioDataFunction(*this, data, currentLength / getNumChannels(), onAudioDataState);
+                            onAudioDataFunction(*this, (void*)data, currentLength / sizeof(short) / getNumChannels(), onAudioDataState);
                         }
 			sem_post(&sem_);
-
-                        // Sleep up to the number of milliseconds corresponding to the data received
-                        int numMilliseconds = 1000.0 * ((double)currentLength / getNumChannels()) / (double)getSampleRate();
-                        std::this_thread::sleep_until(currentTime + std::chrono::milliseconds(numMilliseconds));
-                    }
-                    else
-                    {
-                        // Sleep up to 20ms by default if there's no data available.
-                        std::this_thread::sleep_until(currentTime + 20ms);
-                    }
+		    }
+		    if (currentLength > 0) pa_stream_drop(stream_);
+		    std::this_thread::sleep_until(beginTime + std::chrono::milliseconds(sleepForMs));
                 }
  
                 clearHelperRealTime();
             });
             assert(inputPendingThread_ != nullptr);
-#endif // 0
         }
 #if 0
         else if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
