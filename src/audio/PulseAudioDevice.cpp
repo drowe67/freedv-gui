@@ -104,8 +104,8 @@ void PulseAudioDevice::start()
 
     // recommended settings, i.e. server uses sensible values
     pa_buffer_attr buffer_attr; 
-    buffer_attr.maxlength = (uint32_t)-1;
     buffer_attr.tlength = pa_usec_to_bytes(PULSE_TARGET_LATENCY_US, &sample_specification);
+    buffer_attr.maxlength = buffer_attr.tlength * 2; //(uint32_t)-1;
     buffer_attr.prebuf = 0; // Ensure that we can recover during an underrun
     buffer_attr.minreq = (uint32_t) -1;
     buffer_attr.fragsize = buffer_attr.tlength;
