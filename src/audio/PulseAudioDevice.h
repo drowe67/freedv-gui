@@ -52,6 +52,9 @@ public:
     // called from the thread that will be operating on received audio.
     virtual void setHelperRealTime() override;
 
+    // Lets audio system know that we're starting work on received audio.
+    virtual void startRealTimeWork() override;
+
     // Lets audio system know that we're done with the work on the received
     // audio.
     virtual void stopRealTimeWork() override;
@@ -91,6 +94,8 @@ private:
     std::condition_variable streamStateCondVar_;
 
     sem_t sem_;
+    struct timespec ts_;
+    bool sleepFallback_;
 
     static void StreamReadCallback_(pa_stream *s, size_t length, void *userdata);
     static void StreamWriteCallback_(pa_stream *s, size_t length, void *userdata);

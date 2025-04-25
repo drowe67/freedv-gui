@@ -387,22 +387,34 @@ void PulseAudioDevice::setHelperRealTime()
     }
 }
 
+void PulseAudioDevice::startRealTimeWork()
+{
+    sleepFallback_ = false;
+    if (clock_gettime(CLOCK_REALTIME, &ts_) == -1)
+    {
+        sleepFallback_ = true;
+    }
+}
 void PulseAudioDevice::stopRealTimeWork()
 {
-    struct timespec ts;
-
-    if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
+    if (sleepFallback_)
     {
         // Fallback to simple sleep.
         IAudioDevice::stopRealTimeWork();
         return;
     }
-    
-    ts.tv_nsec += PULSE_TARGET_LATENCY_US * 1000;
-    ts.tv_sec += (ts.tv_nsec / 1000000000);
-    ts.tv_nsec = ts.tv_nsec % 1000000000;
 
-    if (sem_timedwait(&sem_, &ts) < 0 && errno != ETIMEDOUT)
+    auto latency = getLatencyInMicroseconds();
+    if (latency == 0)
+    {
+        latency = PULSE_TARGET_LATENCY_US;
+    }
+
+    ts_.tv_nsec += latency * 1000;
+    ts_.tv_sec += (ts_.tv_nsec / 1000000000);
+    ts_.tv_nsec = ts_.tv_nsec % 1000000000;
+
+    if (sem_timedwait(&sem_, &ts_) < 0 && errno != ETIMEDOUT)
     {
         // Fallback to simple sleep.
         IAudioDevice::stopRealTimeWork();
