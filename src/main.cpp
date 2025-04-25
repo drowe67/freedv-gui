@@ -1002,7 +1002,7 @@ setDefaultMode:
     }
 
     // Initialize FreeDV Reporter as required
-    initializeFreeDVReporter_();
+    CallAfter([&]() { initializeFreeDVReporter_(); });
     
     // If the FreeDV Reporter window was open on last execution, reopen it now.
     CallAfter([&]() {
