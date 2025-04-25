@@ -145,9 +145,9 @@ void PulseAudioDevice::start()
     }
     else
     {
-	// Set up semaphore for signaling workers
+        // Set up semaphore for signaling workers
         if (sem_init(&sem_, 0, 0) < 0)
-	{
+        {
             log_warn("Could not set up semaphore (errno = %d)", errno);
         }
 
@@ -176,20 +176,33 @@ void PulseAudioDevice::start()
                     auto beginTime = std::chrono::high_resolution_clock::now();
                     size_t currentLength = 0;
                     const void* data = nullptr;
-                    auto sleepForMs = PULSE_TARGET_LATENCY_US  / 1000;
+                    auto sleepForMs = PULSE_TARGET_LATENCY_US / 1000;
 
-                    pa_stream_peek(stream_, &data, &currentLength);
-		    if (data != nullptr)
-		    {
-		        sleepForMs = 1000 * ((currentLength / sizeof(short)) / getNumChannels()) / getSampleRate();
-                        if (onAudioDataFunction)
+                    pa_threaded_mainloop_lock(mainloop_);
+                    auto readableSize = pa_stream_readable_size(stream_);
+                    pa_threaded_mainloop_unlock(mainloop_);
+                    if (readableSize > 0)
+                    {
+                        pa_threaded_mainloop_lock(mainloop_);
+                        pa_stream_peek(stream_, &data, &currentLength);
+                        pa_threaded_mainloop_unlock(mainloop_);
+                        if (data != nullptr)
                         {
-                            onAudioDataFunction(*this, (void*)data, currentLength / sizeof(short) / getNumChannels(), onAudioDataState);
+                            sleepForMs = 1000 * ((currentLength / sizeof(short)) / getNumChannels()) / getSampleRate();
+                            if (onAudioDataFunction)
+                            {
+                                onAudioDataFunction(*this, (void*)data, currentLength / sizeof(short) / getNumChannels(), onAudioDataState);
+                            }
+                            sem_post(&sem_);
                         }
-			sem_post(&sem_);
-		    }
-		    if (currentLength > 0) pa_stream_drop(stream_);
-		    std::this_thread::sleep_until(beginTime + std::chrono::milliseconds(sleepForMs));
+                        if (data != nullptr || currentLength > 0)
+                        {
+                            pa_threaded_mainloop_lock(mainloop_);
+                            pa_stream_drop(stream_);
+                            pa_threaded_mainloop_unlock(mainloop_);
+                        }
+                    }
+                    std::this_thread::sleep_until(beginTime + std::chrono::milliseconds(sleepForMs));
                 }
  
                 clearHelperRealTime();
@@ -305,12 +318,14 @@ void PulseAudioDevice::stop()
 
 int PulseAudioDevice::getLatencyInMicroseconds()
 {
+    pa_threaded_mainloop_lock(mainloop_);
     pa_usec_t latency = 0;
     if (stream_ != nullptr)
     {
         int neg = 0;
         pa_stream_get_latency(stream_, &latency, &neg); // ignore error and assume 0
     }
+    pa_threaded_mainloop_unlock(mainloop_);
     return (int)latency;
 }
 
@@ -336,23 +351,23 @@ void PulseAudioDevice::setHelperRealTime()
     {
 #if defined(USE_RTKIT)
         DBusError error;
-	DBusConnection* bus = nullptr;
+        DBusConnection* bus = nullptr;
         int result = 0;
 
         dbus_error_init(&error);
-	if (!(bus = dbus_bus_get(DBUS_BUS_SYSTEM, &error)))
-	{
+        if (!(bus = dbus_bus_get(DBUS_BUS_SYSTEM, &error)))
+        {
             log_warn("Could not connect to system bus: %s", error.message);
-	}
-	else if ((result = rtkit_make_realtime(bus, 0, p.sched_priority)) < 0)
-	{
-	    log_warn("rtkit could not make real-time: %s", strerror(-result));
+        }
+        else if ((result = rtkit_make_realtime(bus, 0, p.sched_priority)) < 0)
+        {
+            log_warn("rtkit could not make real-time: %s", strerror(-result));
         }
 
-	if (bus != nullptr)
-	{
+        if (bus != nullptr)
+        {
             dbus_connection_unref(bus);
-	}
+        }
 #else
         log_warn("No permission to make real-time");
 #endif // defined(USE_RTKIT)
@@ -383,8 +398,11 @@ void PulseAudioDevice::stopRealTimeWork()
     }
 
     ts_.tv_nsec += latency * 1000;
-    ts_.tv_sec += (ts_.tv_nsec / 1000000000);
-    ts_.tv_nsec = ts_.tv_nsec % 1000000000;
+    if (ts_.tv_nsec >= 1000000000)
+    {
+        ts_.tv_sec++;
+        ts_.tv_nsec -= 1000000000;
+    }
 
     if (sem_timedwait(&sem_, &ts_) < 0 && errno != ETIMEDOUT)
     {
@@ -411,7 +429,7 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
             break;
         }
 
-	if (thisObj->onAudioDataFunction)
+        if (thisObj->onAudioDataFunction)
         {
             thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(data), length / thisObj->getNumChannels() / sizeof(short), thisObj->onAudioDataState);
         }
