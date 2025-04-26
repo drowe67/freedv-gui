@@ -3266,26 +3266,22 @@ void MainFrame::startRxStream()
             rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
-                short* outdata = new short[size];
-                assert(outdata != nullptr);
- 
-                int result = codec2_fifo_read(cbData->outfifo2, outdata, size);
-                if (result == 0) 
-                {
-                    for (size_t i = 0; i < size; i++)
-                    {
-                        for (int j = 0; j < dev.getNumChannels(); j++)
-                        {
-                            *audioData++ = outdata[i];
-                        }
-                    }
-                }
-                else 
+		short outdata = 0;
+
+                if ((size_t)codec2_fifo_used(cbData->outfifo2) < size)
                 {
                     g_outfifo2_empty++;
+                    return;
                 }
 
-                delete[] outdata;
+                for (; size > 0; size--)
+                {
+                    codec2_fifo_read(cbData->outfifo2, &outdata, 1);
+                    for (int j = 0; j < dev.getNumChannels(); j++)
+                    {
+                        *audioData++ = outdata;
+                    }
+                }
             }, g_rxUserdata);
             
             rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
@@ -3329,47 +3325,34 @@ void MainFrame::startRxStream()
             txOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
-                short* outdata = new short[size];
-                assert(outdata != nullptr);
-                
-                unsigned int available = std::min(codec2_fifo_used(cbData->outfifo1), (int)size);
+                short outdata = 0;
+               
+	        if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
+		{
+                    g_outfifo1_empty++;
+		    return;
+		}
 
-                int result = codec2_fifo_read(cbData->outfifo1, outdata, available);
-                if (result == 0) 
-                {
+		for (; size > 0; size--, audioData += dev.getNumChannels())
+		{
+                    codec2_fifo_read(cbData->outfifo1, &outdata, 1);
+
                     // write signal to all channels to start. This is so that
                     // the compiler can optimize for the most common case.
-                    for(size_t i = 0; i < available; i++, audioData += dev.getNumChannels()) 
+                    for (auto j = 0; j < dev.getNumChannels(); j++)
                     {
-                        for (auto j = 0; j < dev.getNumChannels(); j++)
-                        {
-                            audioData[j] = outdata[i];
-                        }
+                        audioData[j] = outdata;
                     }
                     
                     // If VOX tone is enabled, go back through and add the VOX tone
                     // on the left channel.
                     if (cbData->leftChannelVoxTone)
                     {
-                        for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
-                        {
-                            cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
-                            cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-                            audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
-                        }
-                    }
-                    
-                    if (size != available)
-                    {
-                        g_outfifo1_empty++;
+                        cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
+                        cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+                        audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
                     }
                 }
-                else 
-                {
-                    g_outfifo1_empty++;
-                }
-
-                delete[] outdata;
             }, g_rxUserdata);
         
             txOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
@@ -3390,27 +3373,22 @@ void MainFrame::startRxStream()
             rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
+                short outdata = 0;
 
-                short* outdata = new short[size];
-                assert(outdata != nullptr);
+		if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
+		{
+                    g_outfifo1_empty++;
+		    return;
+		}
 
-                int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
-                if (result == 0) 
-                {
-                    for (size_t i = 0; i < size; i++)
+		for (; size > 0; size--)
+		{
+                    codec2_fifo_read(cbData->outfifo1, &outdata, 1);
+                    for (int j = 0; j < dev.getNumChannels(); j++)
                     {
-                        for (int j = 0; j < dev.getNumChannels(); j++)
-                        {
-                            *audioData++ = outdata[i];
-                        }
+                        *audioData++ = outdata;
                     }
                 }
-                else 
-                {
-                    g_outfifo1_empty++;
-                }
-
-                delete[] outdata;
             }, g_rxUserdata);
             
             rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
