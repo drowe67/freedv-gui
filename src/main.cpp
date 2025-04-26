@@ -484,19 +484,19 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         {
             log_info("Will transmit for %d seconds", utTxTimeSeconds);
         }
-	else
-	{
+        else
+        {
             utTxTimeSeconds = 60;
-	}
+        }
 
         if (parser.Found("txattempts", (long*)&utTxAttempts))
         {
             log_info("Will transmit %d time(s)", utTxAttempts);
         }
-	else
-	{
+        else
+        {
             utTxAttempts = 1;
-	}
+        }
     }
     
     if (parser.Found("rxfeaturefile", &utRxFeatureFile))
@@ -1814,7 +1814,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (oldColor != newColor)
             {
                 m_textSync->SetForegroundColour(newColor);
-        	    m_textSync->SetLabel("Modem");
+                    m_textSync->SetLabel("Modem");
                 m_textSync->Refresh();
             }
         }
@@ -3266,7 +3266,7 @@ void MainFrame::startRxStream()
             rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
-		short outdata = 0;
+                short outdata = 0;
 
                 if ((size_t)codec2_fifo_used(cbData->outfifo2) < size)
                 {
@@ -3327,14 +3327,14 @@ void MainFrame::startRxStream()
                 short* audioData = static_cast<short*>(data);
                 short outdata = 0;
                
-	        if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
-		{
+                if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
+                {
                     g_outfifo1_empty++;
-		    return;
-		}
+                    return;
+                }
 
-		for (; size > 0; size--, audioData += dev.getNumChannels())
-		{
+                for (; size > 0; size--, audioData += dev.getNumChannels())
+                {
                     codec2_fifo_read(cbData->outfifo1, &outdata, 1);
 
                     // write signal to all channels to start. This is so that
@@ -3375,14 +3375,14 @@ void MainFrame::startRxStream()
                 short* audioData = static_cast<short*>(data);
                 short outdata = 0;
 
-		if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
-		{
+                if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
+                {
                     g_outfifo1_empty++;
-		    return;
-		}
+                    return;
+                }
 
-		for (; size > 0; size--)
-		{
+                for (; size > 0; size--)
+                {
                     codec2_fifo_read(cbData->outfifo1, &outdata, 1);
                     for (int j = 0; j < dev.getNumChannels(); j++)
                     {
