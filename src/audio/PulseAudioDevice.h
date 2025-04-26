@@ -80,7 +80,7 @@ private:
     std::mutex streamStateMutex_;
     std::condition_variable streamStateCondVar_;
     
-    thread_local std::chrono::high_resolution_clock::time_point StartTime_;
+    thread_local static std::chrono::high_resolution_clock::time_point StartTime_;
 
     sem_t sem_;
     struct timespec ts_;
