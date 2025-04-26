@@ -73,19 +73,6 @@ private:
     pa_threaded_mainloop* mainloop_;
     pa_stream* stream_;
 
-    short* outputPending_;
-    int outputPendingLength_;
-    bool outputPendingThreadActive_;
-    std::mutex outputPendingMutex_;
-    std::thread* outputPendingThread_;
-    int targetOutputPendingLength_;
-
-    short* inputPending_;
-    int inputPendingLength_;
-    bool inputPendingThreadActive_;
-    std::mutex inputPendingMutex_;
-    std::thread* inputPendingThread_;
-
     wxString devName_;
     IAudioEngine::AudioDirection direction_;
     int sampleRate_;
