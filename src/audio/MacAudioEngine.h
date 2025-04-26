@@ -45,9 +45,7 @@ public:
     virtual std::shared_ptr<IAudioDevice> getAudioDevice(wxString deviceName, AudioDirection direction, int sampleRate, int numChannels) override;
     virtual std::vector<int> getSupportedSampleRates(wxString deviceName, AudioDirection direction) override;
     
-private:
-    std::string cfStringToStdString_(CFStringRef input);
-    
+private:    
     AudioDeviceSpecification getAudioSpecification_(int coreAudioId, AudioDirection direction);
     int getNumChannels_(int coreAudioId, AudioDirection direction);
 };
