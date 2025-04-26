@@ -872,7 +872,7 @@ void MainFrame::togglePTT(void) {
                 wxGetApp().Yield(true);
 
                 auto endTime = std::chrono::high_resolution_clock::now();
-                if ((endTime - beginTime) < std::chrono::seconds(2))
+                if ((endTime - beginTime) >= std::chrono::seconds(2))
                 {
                     log_warn("Timed out waiting for EOO to be enqueued");
                     break;
