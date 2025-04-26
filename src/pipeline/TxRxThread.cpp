@@ -744,7 +744,12 @@ void TxRxThread::rxProcessing_()
     }
     
     // while we have enough input samples available ... 
-    while (codec2_fifo_read(cbData->infifo1, inputSamples_.get(), nsam) == 0 && processInputFifo) {
+    auto count = 0;
+    while (count < 10 && codec2_fifo_read(cbData->infifo1, inputSamples_.get(), nsam) == 0 && processInputFifo) {
+        // Loop through up to ten times. This is so that we don't end up monopolizing the CPU
+        // and thus makes it less likely we're killed by the operating system. With RADE,
+        // this should correspond to ~100ms of audio from the radio.
+        count++;
 
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
