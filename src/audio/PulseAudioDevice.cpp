@@ -187,7 +187,7 @@ void PulseAudioDevice::setHelperRealTime()
     // Set RLIMIT_RTTIME, required for rtkit
     struct rlimit rlim;
     memset(&rlim, 0, sizeof(rlim));
-    rlim.rlim_cur = 50000ULL; // 200ms
+    rlim.rlim_cur = 10000ULL; // 10ms
     rlim.rlim_max = 200000ULL; // 200ms
 
     if ((setrlimit(RLIMIT_RTTIME, &rlim) < 0))
