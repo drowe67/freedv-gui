@@ -184,6 +184,14 @@ int PulseAudioDevice::getLatencyInMicroseconds()
 
 void PulseAudioDevice::setHelperRealTime()
 {
+    // XXX: We can't currently enable RT scheduling on Linux
+    // due to unreliable behavior surrounding how long it takes to
+    // go through a single RX or TX cycle. This unreliability is 
+    // likely due to the use of Python for some parts of RADE. Since
+    // timing is so unreliable and due to the fact that Linux actually
+    // kills processes that it deems as using "too much" CPU while in
+    // real-time, it's better just to use normal scheduling for now.
+#if 0
     // Set RLIMIT_RTTIME, required for rtkit
     struct rlimit rlim;
     memset(&rlim, 0, sizeof(rlim));
@@ -236,6 +244,7 @@ void PulseAudioDevice::setHelperRealTime()
     sigemptyset(&signal_set);
     sigaddset(&signal_set, SIGXCPU);
     sigprocmask(SIG_UNBLOCK, &signal_set, NULL);
+#endif // 0
 }
 
 void PulseAudioDevice::startRealTimeWork()
