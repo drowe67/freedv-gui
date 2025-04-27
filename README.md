@@ -189,13 +189,13 @@ for 2020 mode (on systems fast enough to acceptably decode it).
 Using MacPorts, most of the appropriate dependencies can be installed by:
 
 ```
-$ sudo port install automake git libtool sox +universal cmake
+$ sudo port install automake git libtool sox +universal cmake octave
 ```
 
 and on Homebrew:
 
 ```
-$ brew install automake libtool git sox cmake
+$ brew install automake libtool git sox cmake octave
 ```
 
 Once the dependencies are installed, you can then run the `build_osx.sh` script inside the source tree to build
