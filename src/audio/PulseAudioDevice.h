@@ -62,6 +62,10 @@ public:
     // Reverts real-time priority for current thread.
     virtual void clearHelperRealTime() override;
 
+    // Returns true if real-time thread MUST sleep ASAP. Failure to do so
+    // may result in SIGKILL being sent to the process by the kernel.
+    virtual bool mustStopWork() override;
+
 protected:
     // PulseAudioDevice cannot be created directly, only via PulseAudioEngine.
     friend class PulseAudioEngine;
@@ -81,6 +85,7 @@ private:
     std::condition_variable streamStateCondVar_;
     
     thread_local static std::chrono::high_resolution_clock::time_point StartTime_;
+    thread_local static bool MustStopWork_;
 
     sem_t sem_;
     struct timespec ts_;
@@ -95,6 +100,8 @@ private:
 #if 0
     static void StreamLatencyCallback_(pa_stream *p, void *userdata);
 #endif // 0
+
+    static void HandleXCPU_(int signum, siginfo_t *info, void *extra);
 };
 
 #endif // PULSE_AUDIO_DEVICE_H

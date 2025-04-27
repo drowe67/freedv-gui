@@ -624,7 +624,7 @@ void TxRxThread::txProcessing_()
         int             nout;
 
         
-        while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {        
+        while(!helper_->mustStopWork() && (unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {        
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
 
@@ -744,13 +744,7 @@ void TxRxThread::rxProcessing_()
     }
     
     // while we have enough input samples available ... 
-    auto count = 0;
-    while (count < 10 && codec2_fifo_read(cbData->infifo1, inputSamples_.get(), nsam) == 0 && processInputFifo) {
-        // Loop through up to ten times. This is so that we don't end up monopolizing the CPU
-        // and thus makes it less likely we're killed by the operating system. With RADE,
-        // this should correspond to ~100ms of audio from the radio.
-        count++;
-
+    while (!helper_->mustStopWork() && codec2_fifo_read(cbData->infifo1, inputSamples_.get(), nsam) == 0 && processInputFifo) {
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
 

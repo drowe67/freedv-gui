@@ -25,6 +25,7 @@
 #include <chrono>
 #include <sched.h>
 #include <sys/resource.h>
+#include <signal.h>
 
 #include "PulseAudioDevice.h"
 
@@ -41,6 +42,7 @@ using namespace std::chrono_literals;
 #define PULSE_TARGET_LATENCY_US 10000
 
 thread_local std::chrono::high_resolution_clock::time_point PulseAudioDevice::StartTime_;
+thread_local bool PulseAudioDevice::MustStopWork_ = false;
 
 PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : context_(context)
@@ -223,6 +225,17 @@ void PulseAudioDevice::setHelperRealTime()
         log_warn("No permission to make real-time");
 #endif // defined(USE_RTKIT)
     }
+
+    // Set up signal handling for SIGXCPU
+    struct sigaction action;
+    action.sa_flags = SA_SIGINFO;     
+    action.sa_sigaction = HandleXCPU_;
+    sigaction(SIGXCPU, &action, NULL);
+
+    sigset_t signal_set;
+    sigemptyset(&signal_set);
+    sigaddset(&signal_set, SIGXCPU);
+    sigprocmask(SIG_UNBLOCK, &signal_set, NULL);
 }
 
 void PulseAudioDevice::startRealTimeWork()
@@ -271,11 +284,18 @@ void PulseAudioDevice::stopRealTimeWork()
             std::this_thread::sleep_for(std::chrono::microseconds(PULSE_TARGET_LATENCY_US));
         }
     }
+
+    MustStopWork_ = false;
 }
 
 void PulseAudioDevice::clearHelperRealTime()
 {
     IAudioDevice::clearHelperRealTime();
+}
+
+bool PulseAudioDevice::mustStopWork()
+{
+    return MustStopWork_;
 }
 
 void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *userdata)
@@ -379,3 +399,10 @@ void PulseAudioDevice::StreamLatencyCallback_(pa_stream *p, void *userdata)
     fprintf(stderr, "Current target buffer size for %s: %d\n", (const char*)thisObj->devName_.ToUTF8(), thisObj->targetOutputPendingLength_);
 }
 #endif // 0
+
+void PulseAudioDevice::HandleXCPU_(int signum, siginfo_t *info, void *extra)
+{
+    // Notify thread that it has to stop work immediately and sleep.
+    log_warn("Taking too much CPU handling real-time tasks, pausing for a bit");
+    MustStopWork_ = true;
+}
