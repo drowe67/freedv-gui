@@ -99,7 +99,7 @@ MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, i
     , parent_(parent)
     , deviceName_(deviceName)
 {
-    log_info("Create MacAudioDevice with ID %d, channels %d and sample rate %d", coreAudioId, numChannels, sampleRate);
+    log_info("Create MacAudioDevice \"%s\" with ID %d, channels %d and sample rate %d", deviceName_.c_str(), coreAudioId, numChannels, sampleRate);
     
     sem_ = dispatch_semaphore_create(0);
 }
@@ -151,9 +151,11 @@ void MacAudioDevice::start()
             &sampleRateAsFloat);
         if (error != noErr)
         {
+            std::stringstream ss;
+            ss << "Could not set sample rate for device \"" << deviceName_ << "\" (err " << error << ")";
             if (onAudioErrorFunction)
             {
-                onAudioErrorFunction(*this, "Could not set device sample rate", onAudioErrorState);
+                onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
             }
             return;
         }
@@ -197,9 +199,11 @@ void MacAudioDevice::start()
                                      sizeof(coreAudioId_));
         if (error != noErr)
         {
+            std::stringstream ss;
+            ss << "Could not assign device \"" << deviceName_ << "\" to AVAudioEngine (err " << error << ")";
             if (onAudioErrorFunction)
             {
-                onAudioErrorFunction(*this, "Could not assign device to AVAudioEngine", onAudioErrorState);
+                onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
             }
             [engine release];
             return;
@@ -310,7 +314,9 @@ void MacAudioDevice::start()
             if (onAudioErrorFunction)
             {
                 NSString* errorDesc = [nse localizedDescription];
-                std::string err = std::string("Could not start AVAudioEngine: ") + [errorDesc cStringUsingEncoding:NSUTF8StringEncoding];
+                std::string err = 
+                    std::string("Could not start AVAudioEngine for device \"") + deviceName_ + 
+                    std::string("\": ") + [errorDesc cStringUsingEncoding:NSUTF8StringEncoding];
                 onAudioErrorFunction(*this, err, onAudioErrorState);
             }
             [engine release];
