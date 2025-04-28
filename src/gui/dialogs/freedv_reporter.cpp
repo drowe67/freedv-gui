@@ -1971,6 +1971,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
             temp->connectTime = temp->lastUpdateDate;
             temp->isVisible = !isFiltered_(temp->frequency);
             
+            if (allReporterData_.find(sid) != allReporterData_.end() && !isConnected_)
+            {
+                log_warn("Received duplicate user during connection process");
+                prom->set_value();
+                return;
+            }
+
             allReporterData_[sid] = temp;
     
             if (temp->isVisible)
@@ -2015,6 +2022,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
             std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
             assert(wxThread::IsMain());
             
+            if (!isConnected_)
+            {
+                log_warn("Received user disconnect prior to being fully connected, ignoring");
+                prom->set_value();
+                return;
+            }
+
             auto iter = allReporterData_.find(sid);
             if (iter != allReporterData_.end())
             {
