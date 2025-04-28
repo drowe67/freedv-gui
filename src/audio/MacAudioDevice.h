@@ -25,10 +25,13 @@
 
 #include <thread>
 #include <dispatch/dispatch.h>
+#include <CoreAudio/CoreAudio.h>
 
 #include "../util/ThreadedObject.h"
 #include "IAudioEngine.h"
 #include "IAudioDevice.h"
+
+class MacAudioEngine;
 
 class MacAudioDevice : public ThreadedObject, public IAudioDevice
 {
@@ -63,7 +66,7 @@ public:
 protected:
     friend class MacAudioEngine;
     
-    MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate);
+    MacAudioDevice(MacAudioEngine* parent, int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate);
     
 private:
     int coreAudioId_;
@@ -79,6 +82,14 @@ private:
     static thread_local void* joinToken_;
     
     dispatch_semaphore_t sem_;
+    bool isDefaultDevice_;
+    MacAudioEngine* parent_;
+
+    static int DeviceIsAliveCallback_(
+        AudioObjectID                       inObjectID,
+        UInt32                              inNumberAddresses,
+        const AudioObjectPropertyAddress    inAddresses[],
+        void*                               inClientData);
 };
 
 #endif // MAC_AUDIO_DEVICE_H

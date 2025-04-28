@@ -46,10 +46,19 @@ public:
     virtual std::vector<int> getSupportedSampleRates(wxString deviceName, AudioDirection direction) override;
     
 private:
-    std::string cfStringToStdString_(CFStringRef input);
+    friend class MacAudioDevice;
     
+    std::string cfStringToStdString_(CFStringRef input);
+
     AudioDeviceSpecification getAudioSpecification_(int coreAudioId, AudioDirection direction);
     int getNumChannels_(int coreAudioId, AudioDirection direction);
+
+    void requestRestart_();
+    void register_(IAudioDevice* device);
+    void unregister_(IAudioDevice* device);
+
+    std::vector<IAudioDevice*> activeDevices_;
+    std::recursive_mutex activeDeviceMutex_;
 };
 
 #endif // MAC_AUDIO_ENGINE_H

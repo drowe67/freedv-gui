@@ -28,7 +28,19 @@
 
 void MacAudioEngine::start()
 {
-    // empty - no initialization needed.
+    CFRunLoopRef theRunLoop = NULL;
+    AudioObjectPropertyAddress property = { 
+        kAudioHardwarePropertyRunLoop,
+        kAudioObjectPropertyScopeGlobal,
+        kAudioObjectPropertyElementMaster 
+    };
+    OSStatus result = AudioObjectSetPropertyData( 
+        kAudioObjectSystemObject, &property, 0, NULL, 
+        sizeof(CFRunLoopRef), &theRunLoop);
+    if (result != noErr)
+    {
+        log_warn("Could not set run loop -- audio device changes by system may break things");
+    }
 }
 
 void MacAudioEngine::stop()
@@ -172,7 +184,7 @@ std::shared_ptr<IAudioDevice> MacAudioEngine::getAudioDevice(wxString deviceName
             numChannels = std::max(numChannels, dev.minChannels);
             numChannels = std::min(numChannels, dev.maxChannels);
             
-            auto devPtr = new MacAudioDevice(dev.deviceId, direction, numChannels, sampleRate);
+            auto devPtr = new MacAudioDevice(this, dev.deviceId, direction, numChannels, sampleRate);
             return std::shared_ptr<IAudioDevice>(devPtr);
         }
     }
@@ -422,4 +434,33 @@ std::string MacAudioEngine::cfStringToStdString_(CFStringRef input)
         return localBuffer.data();
 
     return {};
+}
+
+void MacAudioEngine::requestRestart_()
+{
+    std::unique_lock<std::recursive_mutex> lk(activeDeviceMutex_);
+    for (auto& dev : activeDevices_)
+    {
+        std::thread tmpThread = std::thread([dev]() {
+            dev->stop();
+            dev->start();
+        });
+        tmpThread.detach();
+    }
+}
+
+void MacAudioEngine::register_(IAudioDevice* device)
+{
+    std::unique_lock<std::recursive_mutex> lk(activeDeviceMutex_);
+    activeDevices_.push_back(device);
+}
+
+void MacAudioEngine::unregister_(IAudioDevice* device)
+{
+    std::unique_lock<std::recursive_mutex> lk(activeDeviceMutex_);
+    auto iter = std::find(activeDevices_.begin(), activeDevices_.end(), device);
+    if (iter != activeDevices_.end())
+    {
+        activeDevices_.erase(iter);
+    }
 }

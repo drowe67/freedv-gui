@@ -21,6 +21,7 @@
 //=========================================================================
 
 #include "MacAudioDevice.h"
+#include "MacAudioEngine.h"
 #include "../util/logging/ulog.h"
 
 #include <future>
@@ -84,7 +85,7 @@ static OSStatus SetCurrentIOBufferFrameSize(AudioObjectID inDeviceID,
                                       sizeof(UInt32), &inIOBufferFrameSize);
 }
 
-MacAudioDevice::MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate)
+MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate)
     : coreAudioId_(coreAudioId)
     , direction_(direction)
     , numChannels_(numChannels)
@@ -92,6 +93,8 @@ MacAudioDevice::MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection dir
     , engine_(nil)
     , player_(nil)
     , inputFrames_(nullptr)
+    , isDefaultDevice_(false)
+    , parent_(parent)
 {
     log_info("Create MacAudioDevice with ID %d, channels %d and sample rate %d", coreAudioId, numChannels, sampleRate);
     
@@ -318,7 +321,42 @@ void MacAudioDevice::start()
             log_info("Start playback for output device %d", coreAudioId_);
             [player play];
         }
-        
+
+        // Listen for audio device changes. If this is a default device, we want to
+        // switch over to the new default device.
+        // add listener for detecting when a device is removed
+        const AudioObjectPropertyAddress aliveAddress =
+        {
+            kAudioDevicePropertyDeviceIsAlive,
+            kAudioObjectPropertyScopeGlobal,
+            kAudioObjectPropertyElementMaster
+        };
+        AudioObjectAddPropertyListener(coreAudioId_, &aliveAddress, DeviceIsAliveCallback_, this);
+
+        // See if we're the default audio device. If we are and we're disconnected, we want to
+        // switch to the *new* default audio device.
+        AudioDeviceID defaultDevice = 0;
+        UInt32 defaultSize = sizeof(AudioDeviceID);
+
+        const AudioObjectPropertyAddress defaultAddr = {
+            (direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ? kAudioHardwarePropertyDefaultOutputDevice : kAudioHardwarePropertyDefaultInputDevice,
+            kAudioObjectPropertyScopeGlobal,
+            kAudioObjectPropertyElementMaster
+        };
+
+        AudioObjectGetPropertyData(kAudioObjectSystemObject, &defaultAddr, 0, NULL, &defaultSize, &defaultDevice); 
+        if (defaultDevice == coreAudioId_)
+        {
+            isDefaultDevice_ = true;
+        }
+        else
+        {
+            isDefaultDevice_ = false;
+        }
+
+        // Register with parent
+        parent_->register_(this);
+
         prom->set_value();
     });
     fut.wait();
@@ -329,6 +367,14 @@ void MacAudioDevice::stop()
     std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
     enqueue_([&, prom]() {
+        const AudioObjectPropertyAddress aliveAddress =
+        {
+            kAudioDevicePropertyDeviceIsAlive,
+            kAudioObjectPropertyScopeGlobal,
+            kAudioObjectPropertyElementMaster
+        };
+        AudioObjectRemovePropertyListener(coreAudioId_, &aliveAddress, DeviceIsAliveCallback_, this);
+
         if (engine_ != nil)
         {
             AVAudioPlayerNode* player = (AVAudioPlayerNode*)player_;
@@ -350,6 +396,8 @@ void MacAudioDevice::stop()
 
         delete[] inputFrames_;
         inputFrames_ = nullptr;
+
+        parent_->unregister_(this);
 
         prom->set_value();
     });
@@ -627,3 +675,41 @@ void MacAudioDevice::clearHelperRealTime()
     }
 }
 
+int MacAudioDevice::DeviceIsAliveCallback_(
+        AudioObjectID                       inObjectID,
+        UInt32                              inNumberAddresses,
+        const AudioObjectPropertyAddress    inAddresses[],
+        void*                               inClientData)
+{
+    MacAudioDevice* thisObj = (MacAudioDevice*)inClientData;
+    log_warn("Lost device ID %d", thisObj->coreAudioId_);
+
+    if (thisObj->isDefaultDevice_)
+    {
+        // Get new default device ID
+        AudioDeviceID defaultDevice = 0;
+        UInt32 defaultSize = sizeof(AudioDeviceID);
+
+        const AudioObjectPropertyAddress defaultAddr = {
+            (thisObj->direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ? kAudioHardwarePropertyDefaultOutputDevice : kAudioHardwarePropertyDefaultInputDevice,
+            kAudioObjectPropertyScopeGlobal,
+            kAudioObjectPropertyElementMaster
+        };
+
+        AudioObjectGetPropertyData(kAudioObjectSystemObject, &defaultAddr, 0, NULL, &defaultSize, &defaultDevice); 
+
+        // Stop/start device with new ID in a separate thread to avoid deadlocks
+        log_info("Temporarily switching from default device %d to %d", thisObj->coreAudioId_, defaultDevice);
+        std::thread tmpThread = std::thread([thisObj, defaultDevice]() {
+            thisObj->stop();
+            thisObj->coreAudioId_ = defaultDevice;
+            
+            // Restart all other devices, followed by us.
+            thisObj->parent_->requestRestart_();
+            thisObj->start();
+        });
+        tmpThread.detach();
+    }
+
+    return noErr;
+}
