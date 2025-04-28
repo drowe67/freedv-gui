@@ -398,13 +398,12 @@ void MacAudioDevice::stop()
             [engine stop];
             [engine release];
 
+            delete[] inputFrames_;
+            inputFrames_ = nullptr;
         }
 
         engine_ = nil;
         player_ = nil;
-
-        delete[] inputFrames_;
-        inputFrames_ = nullptr;
 
         parent_->unregister_(this);
 

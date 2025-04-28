@@ -28,6 +28,8 @@
 
 void MacAudioEngine::start()
 {
+    // "Undocumented" call that's supposedly required for queries/changes to properly
+    // occur. Might not actually be needed but doesn't hurt to keep it.
     CFRunLoopRef theRunLoop = NULL;
     AudioObjectPropertyAddress property = { 
         kAudioHardwarePropertyRunLoop,
@@ -41,11 +43,27 @@ void MacAudioEngine::start()
     {
         log_warn("Could not set run loop -- audio device changes by system may break things");
     }
+
+    // Add listener for device configuration changes. This is so that we can restart
+    // devices and keep things working. 
+    property.mSelector = kAudioHardwarePropertyDevices;
+    result = AudioObjectAddPropertyListener(kAudioObjectSystemObject, &property, OnDeviceListChange_, this);
+    if (result != noErr)
+    {
+        std::stringstream ss;
+        ss << "Could not set device configuration listener (err " << result << ")";
+        log_warn(ss.str().c_str());
+    }
 }
 
 void MacAudioEngine::stop()
 {
-    // empty - no teardown needed.
+    AudioObjectPropertyAddress property = { 
+        kAudioHardwarePropertyDevices,
+        kAudioObjectPropertyScopeGlobal,
+        kAudioObjectPropertyElementMaster 
+    };
+    AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &property, OnDeviceListChange_, this);
 }
 
 std::vector<AudioDeviceSpecification> MacAudioEngine::getAudioDeviceList(AudioDirection direction)
@@ -463,4 +481,16 @@ void MacAudioEngine::unregister_(IAudioDevice* device)
     {
         activeDevices_.erase(iter);
     }
+}
+
+int MacAudioEngine::OnDeviceListChange_(
+    AudioObjectID                       inObjectID,
+    UInt32                              inNumberAddresses,
+    const AudioObjectPropertyAddress    inAddresses[],
+    void*                               inClientData)
+{
+    MacAudioEngine* thisObj = (MacAudioEngine*)inClientData;
+    log_info("Detected device list change--restarting devices to keep audio flowing");
+    //thisObj->requestRestart_();
+    return noErr;
 }

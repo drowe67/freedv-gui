@@ -28,6 +28,7 @@
 #include <vector>
 #include <functional>
 #include <CoreFoundation/CoreFoundation.h>
+#include <CoreAudio/CoreAudio.h>
 #include "IAudioEngine.h"
 
 class IAudioDevice;
@@ -59,6 +60,12 @@ private:
 
     std::vector<IAudioDevice*> activeDevices_;
     std::recursive_mutex activeDeviceMutex_;
+
+    static int OnDeviceListChange_(
+        AudioObjectID                       inObjectID,
+        UInt32                              inNumberAddresses,
+        const AudioObjectPropertyAddress    inAddresses[],
+        void*                               inClientData);
 };
 
 #endif // MAC_AUDIO_ENGINE_H
