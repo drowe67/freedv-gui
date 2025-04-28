@@ -25,6 +25,8 @@
 #include "../util/logging/ulog.h"
 
 #include <future>
+#include <sstream>
+
 #import <AVFoundation/AVFoundation.h>
 #import <AudioToolbox/AudioToolbox.h>
 
@@ -85,7 +87,7 @@ static OSStatus SetCurrentIOBufferFrameSize(AudioObjectID inDeviceID,
                                       sizeof(UInt32), &inIOBufferFrameSize);
 }
 
-MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate)
+MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate)
     : coreAudioId_(coreAudioId)
     , direction_(direction)
     , numChannels_(numChannels)
@@ -95,6 +97,7 @@ MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, int coreAudioId, IAudioEn
     , inputFrames_(nullptr)
     , isDefaultDevice_(false)
     , parent_(parent)
+    , deviceName_(deviceName)
 {
     log_info("Create MacAudioDevice with ID %d, channels %d and sample rate %d", coreAudioId, numChannels, sampleRate);
     
@@ -709,6 +712,15 @@ int MacAudioDevice::DeviceIsAliveCallback_(
             thisObj->start();
         });
         tmpThread.detach();
+    } 
+    else 
+    {
+        std::stringstream ss;
+        ss << "The device " << thisObj->deviceName_ << " may have been removed from the system. Press 'Stop' and then verify your audio settings.";
+        if (thisObj->onAudioErrorFunction)
+        {
+            thisObj->onAudioErrorFunction(*thisObj, ss.str(), thisObj->onAudioErrorState);
+        }
     }
 
     return noErr;

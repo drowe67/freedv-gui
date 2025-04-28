@@ -66,7 +66,7 @@ public:
 protected:
     friend class MacAudioEngine;
     
-    MacAudioDevice(MacAudioEngine* parent, int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate);
+    MacAudioDevice(MacAudioEngine* parent, std::string deviceName, int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate);
     
 private:
     int coreAudioId_;
@@ -75,6 +75,7 @@ private:
     int sampleRate_;
     void* engine_; // actually AVAudioEngine but this file is shared with C++ code
     void* player_; // actually AVAudioPlayerNode
+    std::string deviceName_;
 
     short* inputFrames_;
 

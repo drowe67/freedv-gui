@@ -184,7 +184,7 @@ std::shared_ptr<IAudioDevice> MacAudioEngine::getAudioDevice(wxString deviceName
             numChannels = std::max(numChannels, dev.minChannels);
             numChannels = std::min(numChannels, dev.maxChannels);
             
-            auto devPtr = new MacAudioDevice(this, dev.deviceId, direction, numChannels, sampleRate);
+            auto devPtr = new MacAudioDevice(this, (const char*)dev.name.ToUTF8(), dev.deviceId, direction, numChannels, sampleRate);
             return std::shared_ptr<IAudioDevice>(devPtr);
         }
     }
