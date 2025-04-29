@@ -2008,7 +2008,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
             wxDataViewItemArray itemsToAdd;
             for (auto& item : allReporterData_)
             {
-                itemsToAdd.Add(wxDataViewItem(item.second));
+                if (item.second->isVisible) itemsToAdd.Add(wxDataViewItem(item.second));
             }
             ItemsAdded(wxDataViewItem(nullptr), itemsToAdd);
             prom->set_value();
