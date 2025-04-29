@@ -1656,7 +1656,7 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::GetAttr (const wxDataViewIte
 unsigned int FreeDVReporterDialog::FreeDVReporterDataModel::GetChildren (const wxDataViewItem &item, wxDataViewItemArray &children) const
 {
     assert(wxThread::IsMain());
-    if (item.IsOk())
+    if (item.IsOk() || !isConnected_)
     {
         // No children.
         return 0;
@@ -2005,12 +2005,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
             isConnected_ = true;
 
             // NOW we can display what we received
-            wxDataViewItemArray itemsToAdd;
-            for (auto& item : allReporterData_)
-            {
-                if (item.second->isVisible) itemsToAdd.Add(wxDataViewItem(item.second));
-            }
-            ItemsAdded(wxDataViewItem(nullptr), itemsToAdd);
+            Cleared();
+            
             prom->set_value();
         });
     }
