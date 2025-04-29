@@ -1467,14 +1467,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
         if (row.second->isVisible)
         {
             row.second->isVisible = false;
-            wxDataViewItem dvi(row.second);
-            parent_->Unselect(dvi);
-            ItemDeleted(wxDataViewItem(nullptr), dvi);
         }
 
         delete row.second;
     }
     allReporterData_.clear();
+    Cleared();
 }
 
 bool FreeDVReporterDialog::FreeDVReporterDataModel::HasDefaultCompare() const
@@ -1980,7 +1978,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
 
             allReporterData_[sid] = temp;
     
-            if (temp->isVisible)
+            if (temp->isVisible && isConnected_)
             {
                 ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(temp));
             }
@@ -2003,6 +2001,14 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
         fnQueue_.push_back([&, prom]() {
             // Enable highlighting now that we're fully connected.
             isConnected_ = true;
+
+            // NOW we can display what we received
+            wxDataViewItemArray itemsToAdd;
+            for (auto& item : allReporterData_)
+            {
+                itemsToAdd.Add(wxDataViewItem(item.second));
+            }
+            ItemsAdded(wxDataViewItem(nullptr), itemsToAdd);
             prom->set_value();
         });
     }
@@ -2021,20 +2027,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
         fnQueue_.push_back([&, prom, sid]() {
             std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
             assert(wxThread::IsMain());
-            
-            if (!isConnected_)
-            {
-                log_warn("Received user disconnect prior to being fully connected, ignoring");
-                prom->set_value();
-                return;
-            }
 
             auto iter = allReporterData_.find(sid);
             if (iter != allReporterData_.end())
             {
                 auto item = iter->second;
                 wxDataViewItem dvi(item);
-                if (item->isVisible)
+                if (item->isVisible && isConnected_)
                 {
                     item->isVisible = false;
                     parent_->Unselect(dvi);
@@ -2100,7 +2099,10 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
                 }
                 else
                 {            
-                    ItemChanged(dvi);
+                    if (isConnected_) 
+                    {
+                        ItemChanged(dvi);
+                    }
                     parent_->sortRequired_ = 
                         parent_->m_listSpots->GetColumn(FREQUENCY_COL)->IsSortKey() ||
                         parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
@@ -2148,7 +2150,10 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
                 iter->second->lastUpdate = lastUpdateTime;
             
                 wxDataViewItem dvi(iter->second);
-                ItemChanged(dvi);
+                if (isConnected_) 
+                {
+                    ItemChanged(dvi);
+                }
                 parent_->sortRequired_ = 
                     parent_->m_listSpots->GetColumn(STATUS_COL)->IsSortKey() ||
                     parent_->m_listSpots->GetColumn(TX_MODE_COL)->IsSortKey() ||
@@ -2198,7 +2203,10 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
                 }
             
                 wxDataViewItem dvi(iter->second);
-                ItemChanged(dvi);
+                if (isConnected_) 
+                {
+                    ItemChanged(dvi);
+                }
                 parent_->sortRequired_ = 
                     parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL)->IsSortKey() ||
                     parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL)->IsSortKey() ||
@@ -2254,7 +2262,10 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
                 }
             
                 wxDataViewItem dvi(iter->second);
-                ItemChanged(dvi);
+                if (isConnected_) 
+                {
+                    ItemChanged(dvi);
+                }
                 parent_->sortRequired_ = 
                     parent_->m_listSpots->GetColumn(USER_MESSAGE_COL)->IsSortKey() ||
                     parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
