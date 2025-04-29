@@ -1999,6 +1999,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
     {
         std::unique_lock<std::mutex> lk(fnQueueMtx_);
         fnQueue_.push_back([&, prom]() {
+            std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
+
             // Enable highlighting now that we're fully connected.
             isConnected_ = true;
 
