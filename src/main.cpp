@@ -1703,7 +1703,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         float snr_limited;
         // some APIs pass us invalid values, so lets trap it rather than bombing
         float snrEstimate = freedvInterface.getSNREstimate();
-        if (!(isnan(snrEstimate) || isinf(snrEstimate))) {
+        if (!(isnan(snrEstimate) || isinf(snrEstimate)) && freedvInterface.getSync()) {
             g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*snrEstimate;
         }
         snr_limited = g_snr;
