@@ -489,8 +489,10 @@ int MacAudioEngine::OnDeviceListChange_(
     const AudioObjectPropertyAddress    inAddresses[],
     void*                               inClientData)
 {
+    #if 0
     MacAudioEngine* thisObj = (MacAudioEngine*)inClientData;
     log_info("Detected device list change--restarting devices to keep audio flowing");
-    //thisObj->requestRestart_();
+    thisObj->requestRestart_();
+    #endif // 0
     return noErr;
 }
