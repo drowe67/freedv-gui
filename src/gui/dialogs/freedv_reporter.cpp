@@ -1840,7 +1840,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReporterConnect_()
     {
         std::unique_lock<std::mutex> lk(fnQueueMtx_);
         fnQueue_.push_back([&, prom]() {
-            log_info("Connected to server");
+            log_debug("Connected to server");
             filterSelfMessageUpdates_ = false;
             clearAllEntries_();
             prom->set_value();
@@ -1859,7 +1859,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReporterDisconnect_()
     {
         std::unique_lock<std::mutex> lk(fnQueueMtx_);
         fnQueue_.push_back([&, prom]() {
-            log_info("Disconnected from server");
+            log_debug("Disconnected from server");
             isConnected_ = false;
             filterSelfMessageUpdates_ = false;
             clearAllEntries_();
@@ -1882,7 +1882,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
             std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
             assert(wxThread::IsMain());
 
-            log_info("User connected: %s (%s) with SID %s", callsign.c_str(), gridSquare.c_str(), sid.c_str());
+            log_debug("User connected: %s (%s) with SID %s", callsign.c_str(), gridSquare.c_str(), sid.c_str());
 
             // Initially populate stored report data, but don't add to the viewable list just yet. 
             // We only add on frequency update and only if the filters check out.
@@ -2005,7 +2005,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
         fnQueue_.push_back([&, prom]() {
             std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
 
-            log_info("Fully connected to server");
+            log_debug("Fully connected to server");
 
             // Enable highlighting now that we're fully connected.
             isConnected_ = true;
@@ -2032,7 +2032,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
             std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
             assert(wxThread::IsMain());
 
-            log_info("User with SID %s disconnected", sid.c_str());
+            log_debug("User with SID %s disconnected", sid.c_str());
 
             auto iter = allReporterData_.find(sid);
             if (iter != allReporterData_.end())
