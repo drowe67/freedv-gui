@@ -484,19 +484,19 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         {
             log_info("Will transmit for %d seconds", utTxTimeSeconds);
         }
-	else
-	{
+        else
+        {
             utTxTimeSeconds = 60;
-	}
+        }
 
         if (parser.Found("txattempts", (long*)&utTxAttempts))
         {
             log_info("Will transmit %d time(s)", utTxAttempts);
         }
-	else
-	{
+        else
+        {
             utTxAttempts = 1;
-	}
+        }
     }
     
     if (parser.Found("rxfeaturefile", &utRxFeatureFile))
@@ -1002,7 +1002,7 @@ setDefaultMode:
     }
 
     // Initialize FreeDV Reporter as required
-    initializeFreeDVReporter_();
+    CallAfter([&]() { initializeFreeDVReporter_(); });
     
     // If the FreeDV Reporter window was open on last execution, reopen it now.
     CallAfter([&]() {
@@ -1106,17 +1106,17 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Add Demod Input window
     m_panelDemodIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelDemodIn, _("Frm Radio"), true, wxNullBitmap);
-    g_plotDemodInFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
+    g_plotDemodInFifo = codec2_fifo_create(10*WAVEFORM_PLOT_FS);
 
     // Add Speech Input window
     m_panelSpeechIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelSpeechIn, _("Frm Mic"), true, wxNullBitmap);
-    g_plotSpeechInFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
+    g_plotSpeechInFifo = codec2_fifo_create(10*WAVEFORM_PLOT_FS);
 
     // Add Speech Output window
     m_panelSpeechOut = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("To Spkr/Hdphns"), true, wxNullBitmap);
-    g_plotSpeechOutFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
+    g_plotSpeechOutFifo = codec2_fifo_create(10*WAVEFORM_PLOT_FS);
 
     // Add Timing Offset window
     m_panelTimeOffset = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 5.0, DT, -0.5, 0.5, 1, 0.1, "%2.1f", 0);
@@ -1703,7 +1703,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         float snr_limited;
         // some APIs pass us invalid values, so lets trap it rather than bombing
         float snrEstimate = freedvInterface.getSNREstimate();
-        if (!(isnan(snrEstimate) || isinf(snrEstimate))) {
+        if (!(isnan(snrEstimate) || isinf(snrEstimate)) && freedvInterface.getSync()) {
             g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*snrEstimate;
         }
         snr_limited = g_snr;
@@ -1814,7 +1814,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             if (oldColor != newColor)
             {
                 m_textSync->SetForegroundColour(newColor);
-        	    m_textSync->SetLabel("Modem");
+                    m_textSync->SetLabel("Modem");
                 m_textSync->Refresh();
             }
         }
@@ -3125,9 +3125,16 @@ void MainFrame::startRxStream()
         // (depending on platform/audio library). Sample rate conversion, 
         // stats for spectral plots, and transmit processng are all performed 
         // in the tx/rxProcessing loop.
-
+        //
+        // Note that soundCard1InFifoSizeSamples is significantly larger than
+        // the other FIFO sizes. This is to better handle PulseAudio/pipewire
+        // behavior on some devices, where the system sends multiple *seconds*
+        // of audio samples at once followed by long periods with no samples at
+        // all. Without a very large FIFO size (or a way to dynamically change
+        // FIFO sizes, which isn't recommended for real-time operation), we will
+        // definitely lose audio.
         int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
-        int soundCard1InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate / 1000;
+        int soundCard1InFifoSizeSamples = 10 * wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
         int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate / 1000;
 
         if (txInSoundDevice && txOutSoundDevice)
@@ -3266,26 +3273,22 @@ void MainFrame::startRxStream()
             rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
-                short* outdata = new short[size];
-                assert(outdata != nullptr);
- 
-                int result = codec2_fifo_read(cbData->outfifo2, outdata, size);
-                if (result == 0) 
-                {
-                    for (size_t i = 0; i < size; i++)
-                    {
-                        for (int j = 0; j < dev.getNumChannels(); j++)
-                        {
-                            *audioData++ = outdata[i];
-                        }
-                    }
-                }
-                else 
+                short outdata = 0;
+
+                if ((size_t)codec2_fifo_used(cbData->outfifo2) < size)
                 {
                     g_outfifo2_empty++;
+                    return;
                 }
 
-                delete[] outdata;
+                for (; size > 0; size--)
+                {
+                    codec2_fifo_read(cbData->outfifo2, &outdata, 1);
+                    for (int j = 0; j < dev.getNumChannels(); j++)
+                    {
+                        *audioData++ = outdata;
+                    }
+                }
             }, g_rxUserdata);
             
             rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
@@ -3329,47 +3332,34 @@ void MainFrame::startRxStream()
             txOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
-                short* outdata = new short[size];
-                assert(outdata != nullptr);
-                
-                unsigned int available = std::min(codec2_fifo_used(cbData->outfifo1), (int)size);
-
-                int result = codec2_fifo_read(cbData->outfifo1, outdata, available);
-                if (result == 0) 
+                short outdata = 0;
+               
+                if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
                 {
+                    g_outfifo1_empty++;
+                    return;
+                }
+
+                for (; size > 0; size--, audioData += dev.getNumChannels())
+                {
+                    codec2_fifo_read(cbData->outfifo1, &outdata, 1);
+
                     // write signal to all channels to start. This is so that
                     // the compiler can optimize for the most common case.
-                    for(size_t i = 0; i < available; i++, audioData += dev.getNumChannels()) 
+                    for (auto j = 0; j < dev.getNumChannels(); j++)
                     {
-                        for (auto j = 0; j < dev.getNumChannels(); j++)
-                        {
-                            audioData[j] = outdata[i];
-                        }
+                        audioData[j] = outdata;
                     }
                     
                     // If VOX tone is enabled, go back through and add the VOX tone
                     // on the left channel.
                     if (cbData->leftChannelVoxTone)
                     {
-                        for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
-                        {
-                            cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
-                            cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-                            audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
-                        }
-                    }
-                    
-                    if (size != available)
-                    {
-                        g_outfifo1_empty++;
+                        cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
+                        cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+                        audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
                     }
                 }
-                else 
-                {
-                    g_outfifo1_empty++;
-                }
-
-                delete[] outdata;
             }, g_rxUserdata);
         
             txOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
@@ -3390,27 +3380,22 @@ void MainFrame::startRxStream()
             rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
+                short outdata = 0;
 
-                short* outdata = new short[size];
-                assert(outdata != nullptr);
-
-                int result = codec2_fifo_read(cbData->outfifo1, outdata, size);
-                if (result == 0) 
-                {
-                    for (size_t i = 0; i < size; i++)
-                    {
-                        for (int j = 0; j < dev.getNumChannels(); j++)
-                        {
-                            *audioData++ = outdata[i];
-                        }
-                    }
-                }
-                else 
+                if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
                 {
                     g_outfifo1_empty++;
+                    return;
                 }
 
-                delete[] outdata;
+                for (; size > 0; size--)
+                {
+                    codec2_fifo_read(cbData->outfifo1, &outdata, 1);
+                    for (int j = 0; j < dev.getNumChannels(); j++)
+                    {
+                        *audioData++ = outdata;
+                    }
+                }
             }, g_rxUserdata);
             
             rxOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)

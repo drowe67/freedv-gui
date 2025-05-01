@@ -624,7 +624,7 @@ void TxRxThread::txProcessing_()
         int             nout;
 
         
-        while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {        
+        while(!helper_->mustStopWork() && (unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {        
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
 
@@ -742,15 +742,16 @@ void TxRxThread::rxProcessing_()
     {
         clearFifos_();
     }
-    
-    // while we have enough input samples available ... 
-    while (codec2_fifo_read(cbData->infifo1, inputSamples_.get(), nsam) == 0 && processInputFifo) {
 
+    int nsam_one_speech_frame = freedvInterface.getRxNumSpeechSamples() * ((float)outputSampleRate_ / (float)freedvInterface.getRxSpeechSampleRate());
+    auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
+
+    // while we have enough input samples available and enough space in the output FIFO ... 
+    while (!helper_->mustStopWork() && codec2_fifo_free(outFifo) >= nsam_one_speech_frame && codec2_fifo_read(cbData->infifo1, inputSamples_.get(), nsam) == 0 && processInputFifo) {
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
 
         auto outputSamples = pipeline_->execute(inputSamples_, nsam, &nout);
-        auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
         
         if (nout > 0 && outputSamples.get() != nullptr)
         {

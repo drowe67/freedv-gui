@@ -41,6 +41,10 @@ public:
     
     // Reverts real-time priority for current thread.
     virtual void clearHelperRealTime() = 0;
+
+    // Returns true if real-time thread MUST sleep ASAP. Failure to do so
+    // may result in SIGKILL being sent to the process by the kernel.
+    virtual bool mustStopWork() = 0;
 };
 
 #endif

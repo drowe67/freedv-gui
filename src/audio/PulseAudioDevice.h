@@ -52,12 +52,19 @@ public:
     // called from the thread that will be operating on received audio.
     virtual void setHelperRealTime() override;
 
+    // Lets audio system know that we're starting work on received audio.
+    virtual void startRealTimeWork() override;
+
     // Lets audio system know that we're done with the work on the received
     // audio.
     virtual void stopRealTimeWork() override;
 
     // Reverts real-time priority for current thread.
     virtual void clearHelperRealTime() override;
+
+    // Returns true if real-time thread MUST sleep ASAP. Failure to do so
+    // may result in SIGKILL being sent to the process by the kernel.
+    virtual bool mustStopWork() override;
 
 protected:
     // PulseAudioDevice cannot be created directly, only via PulseAudioEngine.
@@ -70,27 +77,19 @@ private:
     pa_threaded_mainloop* mainloop_;
     pa_stream* stream_;
 
-    short* outputPending_;
-    int outputPendingLength_;
-    bool outputPendingThreadActive_;
-    std::mutex outputPendingMutex_;
-    std::thread* outputPendingThread_;
-    int targetOutputPendingLength_;
-
-    short* inputPending_;
-    int inputPendingLength_;
-    bool inputPendingThreadActive_;
-    std::mutex inputPendingMutex_;
-    std::thread* inputPendingThread_;
-
     wxString devName_;
     IAudioEngine::AudioDirection direction_;
     int sampleRate_;
     int numChannels_;
     std::mutex streamStateMutex_;
     std::condition_variable streamStateCondVar_;
+    
+    thread_local static std::chrono::high_resolution_clock::time_point StartTime_;
+    thread_local static bool MustStopWork_;
 
     sem_t sem_;
+    struct timespec ts_;
+    bool sleepFallback_;
 
     static void StreamReadCallback_(pa_stream *s, size_t length, void *userdata);
     static void StreamWriteCallback_(pa_stream *s, size_t length, void *userdata);
@@ -101,6 +100,8 @@ private:
 #if 0
     static void StreamLatencyCallback_(pa_stream *p, void *userdata);
 #endif // 0
+
+    static void HandleXCPU_(int signum, siginfo_t *info, void *extra);
 };
 
 #endif // PULSE_AUDIO_DEVICE_H

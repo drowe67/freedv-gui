@@ -142,6 +142,8 @@ void MacAudioDevice::start()
             kAudioDevicePropertyScopeOutput;
         
         Float64 sampleRateAsFloat = sampleRate_;
+
+        log_info("Attempting to set sample rate to %f for device %d", sampleRateAsFloat, coreAudioId_);
         OSStatus error = AudioObjectSetPropertyData(
             coreAudioId_,
             &propertyAddress,
@@ -265,9 +267,10 @@ void MacAudioDevice::start()
                 return OSStatus(noErr);
             };
             
+            AVAudioFormat* inputFormat = [inNode inputFormatForBus:0];
             AVAudioSinkNode* sinkNode = [[AVAudioSinkNode alloc] initWithReceiverBlock:block];
             [engine attachNode:sinkNode];    
-            [engine connect:[engine inputNode] to:sinkNode format:nil]; 
+            [engine connect:inNode to:sinkNode format:inputFormat]; 
         }
         else
         {
@@ -311,6 +314,10 @@ void MacAudioDevice::start()
         [engine prepare];
         if (![engine startAndReturnError:&nse])
         {
+            NSString* errorDesc = [nse localizedDescription];
+            std::string err = std::string("Could not start AVAudioEngine: ") + [errorDesc cStringUsingEncoding:NSUTF8StringEncoding];
+            log_error(err.c_str());
+
             if (onAudioErrorFunction)
             {
                 NSString* errorDesc = [nse localizedDescription];

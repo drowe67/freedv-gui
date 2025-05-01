@@ -23,6 +23,7 @@
 #include "TapStep.h"
 
 #include <assert.h>
+#include <future>
 
 TapStep::TapStep(int sampleRate, IPipelineStep* tapStep, bool operateBackground)
     : tapStep_(tapStep)
@@ -34,7 +35,15 @@ TapStep::TapStep(int sampleRate, IPipelineStep* tapStep, bool operateBackground)
 
 TapStep::~TapStep()
 {
-    // empty
+    // Make sure we clear everything remaining in queue before
+    // deallocating. This isn't done in the base class as tapStep_
+    // could be deallocated by the time we call that class' destructor.
+    auto prom = std::make_shared<std::promise<void>>();
+    auto fut = prom->get_future();
+    enqueue_([&]() {
+        prom->set_value();
+    });
+    fut.wait();
 }
 
 int TapStep::getInputSampleRate() const
