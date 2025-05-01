@@ -1656,7 +1656,7 @@ bool FreeDVReporterDialog::FreeDVReporterDataModel::GetAttr (const wxDataViewIte
 unsigned int FreeDVReporterDialog::FreeDVReporterDataModel::GetChildren (const wxDataViewItem &item, wxDataViewItemArray &children) const
 {
     assert(wxThread::IsMain());
-    if (item.IsOk() || !isConnected_)
+    if (item.IsOk())
     {
         // No children.
         return 0;
@@ -1982,7 +1982,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
 
             allReporterData_[sid] = temp;
     
-            if (temp->isVisible && isConnected_)
+            if (temp->isVisible)
             {
                 ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(temp));
             }
@@ -2011,7 +2011,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
             isConnected_ = true;
 
             // NOW we can display what we received
-            Cleared();
             
             prom->set_value();
         });
@@ -2039,7 +2038,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
             {
                 auto item = iter->second;
                 wxDataViewItem dvi(item);
-                if (item->isVisible && isConnected_)
+                if (item->isVisible)
                 {
                     item->isVisible = false;
                     parent_->Unselect(dvi);
@@ -2105,10 +2104,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
                 }
                 else
                 {            
-                    if (isConnected_) 
-                    {
-                        ItemChanged(dvi);
-                    }
+                    ItemChanged(dvi);
                     parent_->sortRequired_ = 
                         parent_->m_listSpots->GetColumn(FREQUENCY_COL)->IsSortKey() ||
                         parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
@@ -2156,10 +2152,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
                 iter->second->lastUpdate = lastUpdateTime;
             
                 wxDataViewItem dvi(iter->second);
-                if (isConnected_) 
-                {
-                    ItemChanged(dvi);
-                }
+                ItemChanged(dvi);
                 parent_->sortRequired_ = 
                     parent_->m_listSpots->GetColumn(STATUS_COL)->IsSortKey() ||
                     parent_->m_listSpots->GetColumn(TX_MODE_COL)->IsSortKey() ||
@@ -2209,10 +2202,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
                 }
             
                 wxDataViewItem dvi(iter->second);
-                if (isConnected_) 
-                {
-                    ItemChanged(dvi);
-                }
+                ItemChanged(dvi);
                 parent_->sortRequired_ = 
                     parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL)->IsSortKey() ||
                     parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL)->IsSortKey() ||
@@ -2257,7 +2247,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
                 bool ourCallsign = iter->second->callsign == wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign;
                 bool filteringSelf = ourCallsign && filterSelfMessageUpdates_;
             
-                if (message.size() > 0 && isConnected_ && !filteringSelf)
+                if (message.size() > 0 && !filteringSelf)
                 {
                     iter->second->lastUpdateUserMessage = iter->second->lastUpdateDate;
                 }
@@ -2268,10 +2258,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
                 }
             
                 wxDataViewItem dvi(iter->second);
-                if (isConnected_) 
-                {
-                    ItemChanged(dvi);
-                }
+                ItemChanged(dvi);
                 parent_->sortRequired_ = 
                     parent_->m_listSpots->GetColumn(USER_MESSAGE_COL)->IsSortKey() ||
                     parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
