@@ -427,35 +427,6 @@ int MacAudioEngine::getNumChannels_(int coreAudioId, AudioDirection direction)
     return numChannels;
 }
 
-void MacAudioEngine::requestRestart_()
-{
-    std::unique_lock<std::recursive_mutex> lk(activeDeviceMutex_);
-    for (auto& dev : activeDevices_)
-    {
-        std::thread tmpThread = std::thread([dev]() {
-            dev->stop();
-            dev->start();
-        });
-        tmpThread.detach();
-    }
-}
-
-void MacAudioEngine::register_(IAudioDevice* device)
-{
-    std::unique_lock<std::recursive_mutex> lk(activeDeviceMutex_);
-    activeDevices_.push_back(device);
-}
-
-void MacAudioEngine::unregister_(IAudioDevice* device)
-{
-    std::unique_lock<std::recursive_mutex> lk(activeDeviceMutex_);
-    auto iter = std::find(activeDevices_.begin(), activeDevices_.end(), device);
-    if (iter != activeDevices_.end())
-    {
-        activeDevices_.erase(iter);
-    }
-}
-
 int MacAudioEngine::OnDeviceListChange_(
     AudioObjectID                       inObjectID,
     UInt32                              inNumberAddresses,

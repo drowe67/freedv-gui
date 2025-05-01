@@ -369,9 +369,12 @@ void MacAudioDevice::start()
         {
             isDefaultDevice_ = false;
         }
-
-        // Register with parent
-        parent_->register_(this);
+        
+        OSStatus oss = AudioUnitAddPropertyListener(audioUnit, kAudioOutputUnitProperty_IsRunning, OnAudioUnitStartStop_, (void*)this);
+        if (oss != 0)
+        {
+            log_warn("Could not set up running listener (err %d)", oss);
+        }
 
         prom->set_value();
     });
@@ -393,6 +396,13 @@ void MacAudioDevice::stop()
 
         if (engine_ != nil)
         {
+            AVAudioEngine* engine = (AVAudioEngine*)engine_;
+            AudioUnit audioUnit = 
+                (direction_ == IAudioEngine::AUDIO_ENGINE_IN) ?
+                [[engine inputNode] audioUnit] :
+                [[engine outputNode] audioUnit];
+            AudioUnitRemovePropertyListenerWithUserData(audioUnit, kAudioOutputUnitProperty_IsRunning, OnAudioUnitStartStop_, (void*)this);
+            
             AVAudioPlayerNode* player = (AVAudioPlayerNode*)player_;
             if (player != nil)
             {
@@ -401,7 +411,6 @@ void MacAudioDevice::stop()
             }
         
             log_info("Stopping engine for device %d", coreAudioId_);
-            AVAudioEngine* engine = (AVAudioEngine*)engine_;
             [engine stop];
             [engine release];
 
@@ -411,8 +420,6 @@ void MacAudioDevice::stop()
 
         engine_ = nil;
         player_ = nil;
-
-        parent_->unregister_(this);
 
         prom->set_value();
     });
@@ -718,9 +725,6 @@ int MacAudioDevice::DeviceIsAliveCallback_(
         std::thread tmpThread = std::thread([thisObj, defaultDevice]() {
             thisObj->stop();
             thisObj->coreAudioId_ = defaultDevice;
-            
-            // Restart all other devices, followed by us.
-            thisObj->parent_->requestRestart_();
             thisObj->start();
         });
         tmpThread.detach();
@@ -736,4 +740,37 @@ int MacAudioDevice::DeviceIsAliveCallback_(
     }
 
     return noErr;
+}
+
+void MacAudioDevice::OnAudioUnitStartStop_(
+    void* inRefCon,
+    AudioUnit audioUnit,
+    AudioUnitPropertyID propertyID,
+    AudioUnitScope scope,
+    AudioUnitElement element
+)
+{
+    MacAudioDevice* thisObj = (MacAudioDevice*)inRefCon;
+    
+    log_info("called OnAudioUnitStartStop_");
+    UInt32 isRunning = 0;
+    UInt32 size = sizeof(isRunning);
+    
+    OSStatus result = AudioUnitGetProperty(audioUnit, kAudioOutputUnitProperty_IsRunning, scope, element, &isRunning, &size);
+    if (result == 0)
+    {
+        log_info("Audio unit running status changed to %d for device %d", isRunning, thisObj->coreAudioId_);
+        if (!isRunning && !thisObj->isDefaultDevice_)
+        {
+            // We shouldn't actually be stopping, try to restart. This typically happens
+            // when a default device goes away (or a formerly-default device comes back).
+            // Note: default devices are handled elsewhere (DeviceIsAliveCallback_)
+            log_info("Attempting restart of device %d", thisObj->coreAudioId_);
+            std::thread tmpThread = std::thread([thisObj]() {
+                thisObj->stop();
+                thisObj->start();
+            });
+            tmpThread.detach();
+        }
+    }
 }

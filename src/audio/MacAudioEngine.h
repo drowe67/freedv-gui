@@ -47,17 +47,8 @@ public:
     virtual std::vector<int> getSupportedSampleRates(wxString deviceName, AudioDirection direction) override;
     
 private:    
-    friend class MacAudioDevice;
-
     AudioDeviceSpecification getAudioSpecification_(int coreAudioId, AudioDirection direction);
     int getNumChannels_(int coreAudioId, AudioDirection direction);
-
-    void requestRestart_();
-    void register_(IAudioDevice* device);
-    void unregister_(IAudioDevice* device);
-
-    std::vector<IAudioDevice*> activeDevices_;
-    std::recursive_mutex activeDeviceMutex_;
 
     static int OnDeviceListChange_(
         AudioObjectID                       inObjectID,

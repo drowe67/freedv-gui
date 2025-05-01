@@ -26,6 +26,7 @@
 #include <thread>
 #include <dispatch/dispatch.h>
 #include <CoreAudio/CoreAudio.h>
+#include <AudioUnit/AudioUnit.h>
 
 #include "../util/ThreadedObject.h"
 #include "IAudioEngine.h"
@@ -91,6 +92,14 @@ private:
         UInt32                              inNumberAddresses,
         const AudioObjectPropertyAddress    inAddresses[],
         void*                               inClientData);
+        
+    static void OnAudioUnitStartStop_(
+        void* inRefCon,
+        AudioUnit audioUnit,
+        AudioUnitPropertyID propertyID,
+        AudioUnitScope scope,
+        AudioUnitElement element
+    );
 };
 
 #endif // MAC_AUDIO_DEVICE_H
