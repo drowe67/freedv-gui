@@ -1,4 +1,4 @@
-set(WXWIDGETS_VERSION "3.2.7")
+set(WXWIDGETS_VERSION "3.2.8")
 
 # Ensure that the wxWidgets library is staticly built.
 set(wxBUILD_SHARED OFF CACHE BOOL "Build wx libraries as shared libs")
@@ -29,8 +29,7 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/wxWidgets/wxWidgets.git
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
-    #GIT_TAG        v${WXWIDGETS_VERSION}
-    GIT_TAG        3.2
+    GIT_TAG        v${WXWIDGETS_VERSION}
     PATCH_COMMAND  git apply ${CMAKE_SOURCE_DIR}/cmake/wxWidgets-Direct2D-color-font.patch
     UPDATE_DISCONNECTED 1
 )
