@@ -852,29 +852,32 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
     wxDataViewItem item;
     wxDataViewColumn* col;
     m_listSpots->HitTest(wxPoint(mouseX, mouseY), item, col);
-    if (item.IsOk() && col->GetModelColumn() == desiredCol)
+    if (item.IsOk())
     {
         // Show popup corresponding to the full message.
         FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
         tempUserMessage_ = model->getUserMessage(item);
     
-        auto textSize = m_listSpots->GetTextExtent(tempUserMessage_);
-        rect = m_listSpots->GetItemRect(item, col);
-        if (tipWindow_ == nullptr && textSize.GetWidth() > col->GetWidth())
+        if (col->GetModelColumn() == desiredCol)
         {
-            // Use screen coordinates to determine bounds.
-            auto pos = rect.GetPosition();
-            rect.SetPosition(ClientToScreen(pos));
-        
-            tipWindow_ = new wxTipWindow(m_listSpots, tempUserMessage_, 1000, &tipWindow_, &rect);
-            tipWindow_->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
-            tipWindow_->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
-            
-            // Make sure we actually override behavior of needed events inside the tooltip.
-            for (auto& child : tipWindow_->GetChildren())
+            auto textSize = m_listSpots->GetTextExtent(tempUserMessage_);
+            rect = m_listSpots->GetItemRect(item, col);
+            if (tipWindow_ == nullptr && textSize.GetWidth() > col->GetWidth())
             {
-                child->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
-                child->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
+                // Use screen coordinates to determine bounds.
+                auto pos = rect.GetPosition();
+                rect.SetPosition(ClientToScreen(pos));
+        
+                tipWindow_ = new wxTipWindow(m_listSpots, tempUserMessage_, 1000, &tipWindow_, &rect);
+                tipWindow_->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
+                tipWindow_->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
+            
+                // Make sure we actually override behavior of needed events inside the tooltip.
+                for (auto& child : tipWindow_->GetChildren())
+                {
+                    child->Connect(wxEVT_RIGHT_DOWN, wxMouseEventHandler(FreeDVReporterDialog::SkipMouseEvent), NULL, this);
+                    child->Connect(wxEVT_CONTEXT_MENU, wxContextMenuEventHandler(FreeDVReporterDialog::OnRightClickSpotsList), NULL, this);
+                }
             }
         }
         else
