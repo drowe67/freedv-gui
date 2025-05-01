@@ -931,6 +931,10 @@ void FreeDVReporterDialog::OnColumnClick(wxDataViewEvent& event)
 
 void FreeDVReporterDialog::OnItemRightClick(wxDataViewEvent& event)
 {
+    // Make sure item's deselected as it should only be selected on
+    // left-click.
+    DeselectItem();
+
     if (tipWindow_ != nullptr)
     {
         tipWindow_->Close();
