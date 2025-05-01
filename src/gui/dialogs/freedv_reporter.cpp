@@ -906,6 +906,7 @@ void FreeDVReporterDialog::SkipMouseEvent(wxMouseEvent& event)
 void FreeDVReporterDialog::OnColumnClick(wxDataViewEvent& event)
 {
     DeselectItem();
+    event.Skip();
 
 #if 0
     auto col = event.GetDataViewColumn();
