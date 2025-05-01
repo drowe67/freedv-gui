@@ -858,6 +858,8 @@ void MainFrame::togglePTT(void) {
         {
             log_info("Waiting for EOO to be queued");
             endingTx = true;
+            
+            auto beginTime = std::chrono::high_resolution_clock::now();
             while(true)
             {
                 if (g_eoo_enqueued)
@@ -868,6 +870,13 @@ void MainFrame::togglePTT(void) {
  
                 wxThread::Sleep(1);
                 wxGetApp().Yield(true);
+
+                auto endTime = std::chrono::high_resolution_clock::now();
+                if ((endTime - beginTime) >= std::chrono::seconds(2))
+                {
+                    log_warn("Timed out waiting for EOO to be enqueued");
+                    break;
+                }
             }
         }
 

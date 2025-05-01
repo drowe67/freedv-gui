@@ -20,13 +20,19 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install packages
+    - name: Install rtkit for RT threading
       shell: bash
       run: |
            sudo apt-get update
            sudo apt-get upgrade -y
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.2-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity dbus-x11 at-spi2-core rtkit octave octave-signal libdbus-1-dev
-           sudo usermod -a -G rtkit $(whoami)
+           sudo apt-get install dbus-x11 rtkit libdbus-1-dev polkitd
+           sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy 
+           sudo systemctl restart polkit
+
+    - name: Install packages
+      shell: bash
+      run: |
+           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.2-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity at-spi2-core octave octave-signal
             
     - name: Spellcheck codebase
       shell: bash

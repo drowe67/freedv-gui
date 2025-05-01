@@ -25,13 +25,15 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <mutex>
 
-#include <wx/imaglist.h>
 #include <wx/tipwin.h>
+#include <wx/dataview.h>
 
 #include "main.h"
 #include "defines.h"
 #include "reporting/FreeDVReporter.h"
+#include "../controls/ReportMessageRenderer.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class FreeDVReporterDialog
@@ -70,7 +72,9 @@ class FreeDVReporterDialog : public wxFrame
         void setBandFilter(FilterFrequency freq);
         
         bool isTextMessageFieldInFocus();
-        
+    
+        void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
+    
     protected:
 
         // Handlers for events.
@@ -94,24 +98,24 @@ class FreeDVReporterDialog : public wxFrame
         void    OnStatusTextChange(wxCommandEvent& event);
         void    OnSystemColorChanged(wxSysColourChangedEvent& event);
 
-        void OnItemSelected(wxListEvent& event);
-        void OnItemDeselected(wxListEvent& event);
-        void OnSortColumn(wxListEvent& event);
+        void OnItemSelectionChanged(wxDataViewEvent& event);
+        void OnColumnClick(wxDataViewEvent& event);
+        void OnItemDoubleClick(wxDataViewEvent& event);
+        void OnItemRightClick(wxDataViewEvent& event);
+
         void OnTimer(wxTimerEvent& event);
+        void DeselectItem();
+        void DeselectItem(wxMouseEvent& event);
         void AdjustToolTip(wxMouseEvent& event);
         void OnFilterTrackingEnable(wxCommandEvent& event);
-        void OnRightClickSpotsList(wxContextMenuEvent& event);
         void OnCopyUserMessage(wxCommandEvent& event);
         void SkipMouseEvent(wxMouseEvent& event);
         void AdjustMsgColWidth(wxListEvent& event);
-        
-        void OnDoubleClick(wxMouseEvent& event);
-        
+        void OnRightClickSpotsList(wxContextMenuEvent& event);
+                
         // Main list box that shows spots
-        wxListView*   m_listSpots;
-        wxImageList*  m_sortIcons;
-        int upIconIndex_;
-        int downIconIndex_;
+        wxDataViewCtrl*   m_listSpots;
+        wxObjectDataPtr<wxDataViewModel> spotsDataModel_;
         wxMenu* spotsPopupMenu_;
         wxString tempUserMessage_; // to store the currently hovering message prior to going on the clipboard
 
@@ -138,87 +142,154 @@ class FreeDVReporterDialog : public wxFrame
         
         // Timer to unhighlight RX rows after 10s (like with web-based Reporter)
         wxTimer* m_highlightClearTimer;
-        
-        std::vector<std::function<void()> > fnQueue_;
-        std::mutex fnQueueMtx_;
 
         wxTipWindow* tipWindow_;
         
      private:
-         struct ReporterData
+         class FreeDVReporterDataModel : public wxDataViewModel
          {
-             std::string sid;
-             wxString callsign;
-             wxString gridSquare;
-             double distanceVal;
-             wxString distance;
-             double headingVal;
-             wxString heading;
-             wxString version;
-             uint64_t frequency;
-             wxString freqString;
-             wxString status;
-             wxString txMode;
-             bool transmitting;
-             wxString lastTx;
-             wxDateTime lastTxDate;
-             wxDateTime lastRxDate;
-             wxString lastRxCallsign;
-             wxString lastRxMode;
-             wxString snr;
-             wxString lastUpdate;
-             wxDateTime lastUpdateDate;
-             wxString userMessage;
-             wxDateTime lastUpdateUserMessage;
-         };
-         
-         std::shared_ptr<FreeDVReporter> reporter_;
-         std::map<int, int> columnLengths_;
-         std::map<std::string, ReporterData*> allReporterData_;
-         FilterFrequency currentBandFilter_;
-         int currentSortColumn_;
-         bool sortAscending_;
-         bool isConnected_;
-         bool filterSelfMessageUpdates_;
-         uint64_t filteredFrequency_;
-         
-         void clearAllEntries_(bool clearForAllBands);
-         void onReporterConnect_();
-         void onReporterDisconnect_();
-         void onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly);
-         void onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly);
-         void onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz);
-         void onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate);
-         void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
-         void onMessageUpdateFn_(std::string sid, std::string lastUpdate, std::string message);
-         void onConnectionSuccessfulFn_();
-         void onAboutToShowSelfFn_();
+         public:
+             FreeDVReporterDataModel(FreeDVReporterDialog* parent);
+             virtual ~FreeDVReporterDataModel();
 
-         wxString makeValidTime_(std::string timeStr, wxDateTime& timeObj);
-         
-         void addOrUpdateListIfNotFiltered_(ReporterData* data, std::map<int, int>& colResizeList);
-         FilterFrequency getFilterForFrequency_(uint64_t freq);
-         bool isFiltered_(uint64_t freq);
-         
-         bool setColumnForRow_(int row, int col, wxString val, std::map<int, int>& colResizeList);
-         void resizeChangedColumns_(std::map<int, int>& colResizeList);
+             void setReporter(std::shared_ptr<FreeDVReporter> reporter);
+             void setBandFilter(FilterFrequency freq);
+             void refreshAllRows();
+             void requestQSY(wxDataViewItem selectedItem, uint64_t frequency, wxString customText);
+             void updateHighlights();
+             void updateMessage(wxString statusMsg)
+             {
+                 if (reporter_)
+                 {
+                     reporter_->updateMessage(statusMsg.utf8_string());
+                 }
+             }
 
-         void sortColumn_(int col);
-         void sortColumn_(int col, bool direction);
-         
-         double calculateDistance_(wxString gridSquare1, wxString gridSquare2);
-         double calculateBearingInDegrees_(wxString gridSquare1, wxString gridSquare2);
-         void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);
-         
-         void execQueuedAction_();
+             uint64_t getFrequency(wxDataViewItem item)
+             {
+                if (item.IsOk())
+                {
+                    auto data = (ReporterData*)item.GetID();
+                    return data->frequency;
+                }
 
-         void resizeAllColumns_();
-         int getSizeForTableCellString_(wxString string);
+                return 0;
+             }
 
-         static wxCALLBACK int ListCompareFn_(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
-         static double DegreesToRadians_(double degrees);
-         static double RadiansToDegrees_(double radians);
-         static wxString GetCardinalDirection_(int degrees);
+             FilterFrequency getCurrentBandFilter() const { return currentBandFilter_; }
+             wxString getCallsign(wxDataViewItem& item)
+             {
+                 if (item.IsOk())
+                 {
+                     auto data = (ReporterData*)item.GetID();
+                     return data->callsign;
+                 }
+                 return "";
+             }
+             
+             wxString getUserMessage(wxDataViewItem& item)
+             {
+                 if (item.IsOk())
+                 {
+                     auto data = (ReporterData*)item.GetID();
+                     return data->userMessage;
+                 }
+                 return "";
+             }
+             
+             bool isValidForReporting()
+             {
+                 return reporter_ && reporter_->isValidForReporting();
+             }
+
+             // Required overrides to implement functionality
+             virtual bool HasDefaultCompare() const override;
+             virtual int Compare (const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const override;
+             virtual bool GetAttr (const wxDataViewItem &item, unsigned int col, wxDataViewItemAttr &attr) const override;
+             virtual unsigned int GetChildren (const wxDataViewItem &item, wxDataViewItemArray &children) const override;
+             virtual wxDataViewItem GetParent (const wxDataViewItem &item) const override;
+             virtual void GetValue (wxVariant &variant, const wxDataViewItem &item, unsigned int col) const override;
+             virtual bool IsContainer (const wxDataViewItem &item) const override;
+             virtual bool SetValue (const wxVariant &variant, const wxDataViewItem &item, unsigned int col) override;
+
+         private:
+             struct ReporterData
+             {
+                std::string sid;
+                wxString callsign;
+                wxString gridSquare;
+                double distanceVal;
+                wxString distance;
+                double headingVal;
+                wxString heading;
+                wxString version;
+                uint64_t frequency;
+                wxString freqString;
+                wxString status;
+                wxString txMode;
+                bool transmitting;
+                wxString lastTx;
+                wxDateTime lastTxDate;
+                wxDateTime lastRxDate;
+                wxString lastRxCallsign;
+                wxString lastRxMode;
+                wxString snr;
+                wxString lastUpdate;
+                wxDateTime lastUpdateDate;
+                wxString userMessage;
+                wxDateTime lastUpdateUserMessage;
+                wxDateTime connectTime;
+
+                // Controls whether this row has been filtered
+                bool isVisible;
+
+                // Controls the current highlight color
+                wxColour foregroundColor;
+                wxColour backgroundColor;
+            };
+
+            std::shared_ptr<FreeDVReporter> reporter_;
+            std::map<std::string, ReporterData*> allReporterData_;
+            std::vector<std::function<void()> > fnQueue_;
+            std::mutex fnQueueMtx_;
+            std::recursive_mutex dataMtx_;
+            bool isConnected_;
+            FreeDVReporterDialog* parent_;
+
+            FilterFrequency currentBandFilter_;
+            bool filterSelfMessageUpdates_;
+            uint64_t filteredFrequency_;
+
+            bool isFiltered_(uint64_t freq);
+
+            void clearAllEntries_();
+
+            void onReporterConnect_();
+            void onReporterDisconnect_();
+            void onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly);
+            void onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly);
+            void onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz);
+            void onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate);
+            void onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode);
+            void onMessageUpdateFn_(std::string sid, std::string lastUpdate, std::string message);
+
+            void onConnectionSuccessfulFn_();
+            void onAboutToShowSelfFn_();
+
+            void execQueuedAction_();
+
+            wxString makeValidTime_(std::string timeStr, wxDateTime& timeObj);
+            double calculateDistance_(wxString gridSquare1, wxString gridSquare2);
+            double calculateBearingInDegrees_(wxString gridSquare1, wxString gridSquare2);
+            void calculateLatLonFromGridSquare_(wxString gridSquare, double& lat, double& lon);
+
+            static double DegreesToRadians_(double degrees);
+            static double RadiansToDegrees_(double radians);
+            static wxString GetCardinalDirection_(int degrees);
+        };
+
+        FilterFrequency getFilterForFrequency_(uint64_t freq);
+        bool sortRequired_;
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__
