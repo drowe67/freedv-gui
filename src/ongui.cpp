@@ -900,7 +900,8 @@ void MainFrame::togglePTT(void) {
         // Wait for a minimum amount of time before stopping TX to ensure that
         // remaining audio gets piped to the radio from the operating system.
         auto latency = txOutSoundDevice->getLatencyInMicroseconds();
-        
+        auto pttResponseTime = 0;
+
         // Also take into account any latency between the computer and radio.
         // The only way to do this is by tracking how long it takes to respond
         // to PTT requests (and that's not necessarily great, either). Normally
@@ -915,15 +916,18 @@ void MainFrame::togglePTT(void) {
         {
             // We only need to worry about the time getting to the radio,
             // not the time to get from the radio to us.
-            latency += pttController->getRigResponseTimeMicroseconds() / 2;
+            pttResponseTime = pttController->getRigResponseTimeMicroseconds() / 2;
         }
         
-        log_info("Pausing for a minimum of %d microseconds before TX->RX to allow remaining audio to go out", latency);
+        auto totalPauseTime = latency + pttResponseTime;
+        log_info(
+            "Pausing for a minimum of %d us (%d us latency + %d us PTT response time) before TX->RX to allow remaining audio to go out", 
+            totalPauseTime, latency, pttResponseTime);
         before = highResClock.now();
         while(true)
         {
             auto diff = highResClock.now() - before;
-            if (diff >= std::chrono::microseconds(latency))
+            if (diff >= std::chrono::microseconds(totalPauseTime))
             {
                 break;
             }
