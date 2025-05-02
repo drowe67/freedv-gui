@@ -29,6 +29,7 @@
 #include <AudioUnit/AudioUnit.h>
 
 #include "../util/ThreadedObject.h"
+#include "../util/ThreadedTimer.h"
 #include "IAudioEngine.h"
 #include "IAudioDevice.h"
 
@@ -77,6 +78,7 @@ private:
     void* engine_; // actually AVAudioEngine but this file is shared with C++ code
     void* player_; // actually AVAudioPlayerNode
     std::string deviceName_;
+    ThreadedTimer restartTimer_;
 
     short* inputFrames_;
 
@@ -87,6 +89,8 @@ private:
     bool isDefaultDevice_;
     MacAudioEngine* parent_;
 
+    void onRestart_(ThreadedTimer& timer);
+    
     static int DeviceIsAliveCallback_(
         AudioObjectID                       inObjectID,
         UInt32                              inNumberAddresses,

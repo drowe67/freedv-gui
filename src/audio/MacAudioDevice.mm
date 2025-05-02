@@ -36,6 +36,8 @@
 #include <sched.h>
 #include <pthread.h>
 
+using namespace std::placeholders;
+
 thread_local void* MacAudioDevice::workgroup_ = nullptr;
 thread_local void* MacAudioDevice::joinToken_ = nullptr;
     
@@ -98,6 +100,7 @@ MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, i
     , isDefaultDevice_(false)
     , parent_(parent)
     , deviceName_(deviceName)
+    , restartTimer_(250, std::bind(&MacAudioDevice::onRestart_, this, _1), false)
 {
     log_info("Create MacAudioDevice \"%s\" with ID %d, channels %d and sample rate %d", deviceName_.c_str(), coreAudioId, numChannels, sampleRate);
     
@@ -705,6 +708,9 @@ int MacAudioDevice::DeviceIsAliveCallback_(
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inClientData;
     log_warn("Lost device ID %d", thisObj->coreAudioId_);
+    
+    // If the restart timer is running, make sure we stop that first.
+    thisObj->restartTimer_.stop();
 
     if (thisObj->isDefaultDevice_)
     {
@@ -760,17 +766,25 @@ void MacAudioDevice::OnAudioUnitStartStop_(
     if (result == 0)
     {
         log_info("Audio unit running status changed to %d for device %d", isRunning, thisObj->coreAudioId_);
-        if (!isRunning && !thisObj->isDefaultDevice_)
+        if (!isRunning)
         {
-            // We shouldn't actually be stopping, try to restart. This typically happens
-            // when a default device goes away (or a formerly-default device comes back).
-            // Note: default devices are handled elsewhere (DeviceIsAliveCallback_)
-            log_info("Attempting restart of device %d", thisObj->coreAudioId_);
-            std::thread tmpThread = std::thread([thisObj]() {
-                thisObj->stop();
-                thisObj->start();
-            });
-            tmpThread.detach();
+            // It's possible that we went away but we don't know that yet. However, if we just restart,
+            // the user might get a bunch of errors that don't explain what's going on. This defers restart
+            // unless DeviceIsAliveCallback_() handles the event first.
+            thisObj->restartTimer_.start();
+        }
+        else
+        {
+            // Might have been restarted by someone else. Ignore.
+            thisObj->restartTimer_.stop();
         }
     }
+}
+
+void MacAudioDevice::onRestart_(ThreadedTimer& timer)
+{
+    // Note: runs on timer thread.
+    log_info("Attempting restart of device %d", coreAudioId_);
+    stop();
+    start();
 }
