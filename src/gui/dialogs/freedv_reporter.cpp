@@ -1842,455 +1842,378 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::requestQSY(wxDataViewItem se
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onReporterConnect_()
 {
-    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
-    auto fut = prom->get_future();
-
-    {
-        std::unique_lock<std::mutex> lk(fnQueueMtx_);
-        fnQueue_.push_back([&, prom]() {
-            log_debug("Connected to server");
-            filterSelfMessageUpdates_ = false;
-            clearAllEntries_();
-            prom->set_value();
-        });
-    }
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    fnQueue_.push_back([&]() {
+        log_debug("Connected to server");
+        filterSelfMessageUpdates_ = false;
+        clearAllEntries_();
+    });
 
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
-    fut.wait();
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onReporterDisconnect_()
 {
-    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
-    auto fut = prom->get_future();
-
-    {
-        std::unique_lock<std::mutex> lk(fnQueueMtx_);
-        fnQueue_.push_back([&, prom]() {
-            log_debug("Disconnected from server");
-            isConnected_ = false;
-            filterSelfMessageUpdates_ = false;
-            clearAllEntries_();
-            prom->set_value();
-        });
-    }
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    fnQueue_.push_back([&]() {
+        log_debug("Disconnected from server");
+        isConnected_ = false;
+        filterSelfMessageUpdates_ = false;
+        clearAllEntries_();
+    });
 
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
-    fut.wait();
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
 {
-    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
-    auto fut = prom->get_future();
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    fnQueue_.push_back([&, sid, lastUpdate, callsign, gridSquare, version, rxOnly]() {
+        std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
+        assert(wxThread::IsMain());
 
-    {
-        std::unique_lock<std::mutex> lk(fnQueueMtx_);
-        fnQueue_.push_back([&, prom, sid, lastUpdate, callsign, gridSquare, version, rxOnly]() {
-            std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
-            assert(wxThread::IsMain());
+        log_debug("User connected: %s (%s) with SID %s", callsign.c_str(), gridSquare.c_str(), sid.c_str());
 
-            log_debug("User connected: %s (%s) with SID %s", callsign.c_str(), gridSquare.c_str(), sid.c_str());
+        // Initially populate stored report data, but don't add to the viewable list just yet. 
+        // We only add on frequency update and only if the filters check out.
+        ReporterData* temp = new ReporterData;
+        assert(temp != nullptr);
+        
+        // Limit grid square display to six characters.
+        wxString gridSquareWxString = wxString(gridSquare).Left(6);
+        
+        temp->sid = sid;
+        temp->callsign = wxString(callsign).Upper();
+        temp->gridSquare = gridSquareWxString.Left(2).Upper() + gridSquareWxString.Mid(2, 2);
 
-            // Initially populate stored report data, but don't add to the viewable list just yet. 
-            // We only add on frequency update and only if the filters check out.
-            ReporterData* temp = new ReporterData;
-            assert(temp != nullptr);
-            
-            // Limit grid square display to six characters.
-            wxString gridSquareWxString = wxString(gridSquare).Left(6);
-            
-            temp->sid = sid;
-            temp->callsign = wxString(callsign).Upper();
-            temp->gridSquare = gridSquareWxString.Left(2).Upper() + gridSquareWxString.Mid(2, 2);
-    
-            // Lowercase final letters of grid square per standard.
-            if (gridSquareWxString.Length() >= 6)
+        // Lowercase final letters of grid square per standard.
+        if (gridSquareWxString.Length() >= 6)
+        {
+            temp->gridSquare += gridSquareWxString.Mid(4, 2).Lower();
+        }
+
+        wxRegEx gridSquareRegex(_("^[A-Za-z]{2}[0-9]{2}"));
+        bool validCharactersInGridSquare = gridSquareRegex.Matches(temp->gridSquare);
+
+        if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare == "" ||
+            !validCharactersInGridSquare)
+        {
+            // Invalid grid square means we can't calculate a distance.
+            temp->distance = UNKNOWN_STR;
+            temp->distanceVal = 0;
+            temp->heading = UNKNOWN_STR;
+            temp->headingVal = 0;
+        }
+        else
+        {
+            temp->distanceVal = calculateDistance_(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, gridSquareWxString);
+
+            if (!wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
             {
-                temp->gridSquare += gridSquareWxString.Mid(4, 2).Lower();
+                // Convert to miles for those who prefer it
+                // (calculateDistance_() returns distance in km).
+                temp->distanceVal *= 0.621371;
             }
-    
-            wxRegEx gridSquareRegex(_("^[A-Za-z]{2}[0-9]{2}"));
-            bool validCharactersInGridSquare = gridSquareRegex.Matches(temp->gridSquare);
-    
-            if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare == "" ||
-                !validCharactersInGridSquare)
+
+            temp->distance = wxString::Format("%.0f", temp->distanceVal);
+
+            if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare == gridSquareWxString)
             {
-                // Invalid grid square means we can't calculate a distance.
-                temp->distance = UNKNOWN_STR;
-                temp->distanceVal = 0;
-                temp->heading = UNKNOWN_STR;
                 temp->headingVal = 0;
+                temp->heading = UNKNOWN_STR;
             }
             else
             {
-                temp->distanceVal = calculateDistance_(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, gridSquareWxString);
-    
-                if (!wxGetApp().appConfiguration.reportingConfiguration.useMetricDistances)
+                temp->headingVal = calculateBearingInDegrees_(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, gridSquareWxString);
+                if (wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal)
                 {
-                    // Convert to miles for those who prefer it
-                    // (calculateDistance_() returns distance in km).
-                    temp->distanceVal *= 0.621371;
-                }
-    
-                temp->distance = wxString::Format("%.0f", temp->distanceVal);
-    
-                if (wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare == gridSquareWxString)
-                {
-                    temp->headingVal = 0;
-                    temp->heading = UNKNOWN_STR;
+                    temp->heading = GetCardinalDirection_(temp->headingVal);
                 }
                 else
                 {
-                    temp->headingVal = calculateBearingInDegrees_(wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare, gridSquareWxString);
-                    if (wxGetApp().appConfiguration.reportingConfiguration.reportingDirectionAsCardinal)
-                    {
-                        temp->heading = GetCardinalDirection_(temp->headingVal);
-                    }
-                    else
-                    {
-                        temp->heading = wxString::Format("%.0f", temp->headingVal);
-                    }
+                    temp->heading = wxString::Format("%.0f", temp->headingVal);
                 }
             }
-    
-            temp->version = version;
-            temp->freqString = UNKNOWN_STR;
-            temp->userMessage = UNKNOWN_STR;
-            temp->transmitting = false;
-            
-            if (rxOnly)
-            {
-                temp->status = RX_ONLY_STATUS;
-                temp->txMode = UNKNOWN_STR;
-                temp->lastTx = UNKNOWN_STR;
-            }
-            else
-            {
-                temp->status = UNKNOWN_STR;
-                temp->txMode = UNKNOWN_STR;
-                temp->lastTx = UNKNOWN_STR;
-            }
-            
-            temp->lastRxCallsign = UNKNOWN_STR;
-            temp->lastRxMode = UNKNOWN_STR;
-            temp->snr = UNKNOWN_STR;
-            
-            auto lastUpdateTime = makeValidTime_(lastUpdate, temp->lastUpdateDate);
-            temp->lastUpdate = lastUpdateTime;
-            temp->connectTime = temp->lastUpdateDate;
-            temp->isVisible = !isFiltered_(temp->frequency);
-            
-            if (allReporterData_.find(sid) != allReporterData_.end() && !isConnected_)
-            {
-                log_warn("Received duplicate user during connection process");
-                prom->set_value();
-                return;
-            }
+        }
 
-            allReporterData_[sid] = temp;
-    
-            if (temp->isVisible)
-            {
-                ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(temp));
-            }
-    
-            prom->set_value();
-        });
-    }
+        temp->version = version;
+        temp->freqString = UNKNOWN_STR;
+        temp->userMessage = UNKNOWN_STR;
+        temp->transmitting = false;
+        
+        if (rxOnly)
+        {
+            temp->status = RX_ONLY_STATUS;
+            temp->txMode = UNKNOWN_STR;
+            temp->lastTx = UNKNOWN_STR;
+        }
+        else
+        {
+            temp->status = UNKNOWN_STR;
+            temp->txMode = UNKNOWN_STR;
+            temp->lastTx = UNKNOWN_STR;
+        }
+        
+        temp->lastRxCallsign = UNKNOWN_STR;
+        temp->lastRxMode = UNKNOWN_STR;
+        temp->snr = UNKNOWN_STR;
+        
+        auto lastUpdateTime = makeValidTime_(lastUpdate, temp->lastUpdateDate);
+        temp->lastUpdate = lastUpdateTime;
+        temp->connectTime = temp->lastUpdateDate;
+        temp->isVisible = !isFiltered_(temp->frequency);
+        
+        if (allReporterData_.find(sid) != allReporterData_.end() && !isConnected_)
+        {
+            log_warn("Received duplicate user during connection process");
+            return;
+        }
+
+        allReporterData_[sid] = temp;
+
+        if (temp->isVisible)
+        {
+            ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(temp));
+        }
+    });
 
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
-    fut.wait();
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onConnectionSuccessfulFn_()
 {
-    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
-    auto fut = prom->get_future();
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    fnQueue_.push_back([&]() {
+        std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
 
-    {
-        std::unique_lock<std::mutex> lk(fnQueueMtx_);
-        fnQueue_.push_back([&, prom]() {
-            std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
+        log_debug("Fully connected to server");
 
-            log_debug("Fully connected to server");
-
-            // Enable highlighting now that we're fully connected.
-            isConnected_ = true;
-
-            // NOW we can display what we received
-            
-            prom->set_value();
-        });
-    }
+        // Enable highlighting now that we're fully connected.
+        isConnected_ = true;
+    });
 
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
-    fut.wait();
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string version, bool rxOnly)
 {
-    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
-    auto fut = prom->get_future();
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    fnQueue_.push_back([&, sid]() {
+        std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
+        assert(wxThread::IsMain());
 
-    {
-        std::unique_lock<std::mutex> lk(fnQueueMtx_);
-        fnQueue_.push_back([&, prom, sid]() {
-            std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
-            assert(wxThread::IsMain());
+        log_debug("User with SID %s disconnected", sid.c_str());
 
-            log_debug("User with SID %s disconnected", sid.c_str());
-
-            auto iter = allReporterData_.find(sid);
-            if (iter != allReporterData_.end())
+        auto iter = allReporterData_.find(sid);
+        if (iter != allReporterData_.end())
+        {
+            auto item = iter->second;
+            wxDataViewItem dvi(item);
+            if (item->isVisible)
             {
-                auto item = iter->second;
-                wxDataViewItem dvi(item);
-                if (item->isVisible)
-                {
-                    item->isVisible = false;
-                    parent_->Unselect(dvi);
-                    ItemDeleted(wxDataViewItem(nullptr), dvi);
-                }
-    
-                delete item;
-                allReporterData_.erase(iter);
+                item->isVisible = false;
+                parent_->Unselect(dvi);
+                ItemDeleted(wxDataViewItem(nullptr), dvi);
             }
-    
-            prom->set_value();
-        });
-    }
+
+            delete item;
+            allReporterData_.erase(iter);
+        }
+    });
 
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
-    fut.wait();
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, uint64_t frequencyHz)
 {
-    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
-    auto fut = prom->get_future();
-
-    {
-        std::unique_lock<std::mutex> lk(fnQueueMtx_);
-        fnQueue_.push_back([&, prom, sid, frequencyHz, lastUpdate]() {
-            std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    fnQueue_.push_back([&, sid, frequencyHz, lastUpdate]() {
+        std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
+        
+        auto iter = allReporterData_.find(sid);
+        if (iter != allReporterData_.end())
+        {
+            double frequencyUserReadable = frequencyHz / 1000.0;
+            wxString frequencyString;
             
-            auto iter = allReporterData_.find(sid);
-            if (iter != allReporterData_.end())
+            if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
             {
-                double frequencyUserReadable = frequencyHz / 1000.0;
-                wxString frequencyString;
-                
-                if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
+                frequencyString = wxString::Format(_("%.01f"), frequencyUserReadable);
+            }
+            else
+            {
+                frequencyUserReadable /= 1000.0;
+                frequencyString = wxString::Format(_("%.04f"), frequencyUserReadable);
+            }
+            auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
+            
+            iter->second->frequency = frequencyHz;
+            iter->second->freqString = frequencyString;
+            iter->second->lastUpdate = lastUpdateTime;
+
+            wxDataViewItem dvi(iter->second);
+            bool newVisibility = !isFiltered_(iter->second->frequency);
+            if (newVisibility != iter->second->isVisible)
+            {
+                iter->second->isVisible = newVisibility;
+                if (newVisibility)
                 {
-                    frequencyString = wxString::Format(_("%.01f"), frequencyUserReadable);
+                    ItemAdded(wxDataViewItem(nullptr), dvi);
                 }
                 else
                 {
-                    frequencyUserReadable /= 1000.0;
-                    frequencyString = wxString::Format(_("%.04f"), frequencyUserReadable);
-                }
-                auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
-                
-                iter->second->frequency = frequencyHz;
-                iter->second->freqString = frequencyString;
-                iter->second->lastUpdate = lastUpdateTime;
-    
-                wxDataViewItem dvi(iter->second);
-                bool newVisibility = !isFiltered_(iter->second->frequency);
-                if (newVisibility != iter->second->isVisible)
-                {
-                    iter->second->isVisible = newVisibility;
-                    if (newVisibility)
-                    {
-                        ItemAdded(wxDataViewItem(nullptr), dvi);
-                    }
-                    else
-                    {
-                        ItemDeleted(wxDataViewItem(nullptr), dvi);
-                    }
-                }
-                else
-                {            
-                    ItemChanged(dvi);
-                    parent_->sortRequired_ = 
-                        parent_->m_listSpots->GetColumn(FREQUENCY_COL)->IsSortKey() ||
-                        parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
+                    ItemDeleted(wxDataViewItem(nullptr), dvi);
                 }
             }
-            prom->set_value();
-        });
-    }
+            else
+            {            
+                ItemChanged(dvi);
+                parent_->sortRequired_ = 
+                    parent_->m_listSpots->GetColumn(FREQUENCY_COL)->IsSortKey() ||
+                    parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
+            }
+        }
+    });
 
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
-    fut.wait();
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string txMode, bool transmitting, std::string lastTxDate)
 {
-    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
-    auto fut = prom->get_future();
-
-    {
-        std::unique_lock<std::mutex> lk(fnQueueMtx_);
-        fnQueue_.push_back([&, prom, sid, txMode, transmitting, lastTxDate, lastUpdate]() {
-            std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    fnQueue_.push_back([&, sid, txMode, transmitting, lastTxDate, lastUpdate]() {
+        std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
+    
+        auto iter = allReporterData_.find(sid);
+        if (iter != allReporterData_.end())
+        {
+            iter->second->transmitting = transmitting;
         
-            auto iter = allReporterData_.find(sid);
-            if (iter != allReporterData_.end())
+            std::string txStatus = "RX";
+            if (transmitting)
             {
-                iter->second->transmitting = transmitting;
-            
-                std::string txStatus = "RX";
-                if (transmitting)
-                {
-                    txStatus = "TX";
-                }
-            
-                if (iter->second->status != _(RX_ONLY_STATUS))
-                {
-                    iter->second->status = txStatus;
-                    iter->second->txMode = txMode;
-                
-                    auto lastTxTime = makeValidTime_(lastTxDate, iter->second->lastTxDate);
-                    iter->second->lastTx = lastTxTime;
-                }
-            
-                auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
-                iter->second->lastUpdate = lastUpdateTime;
-            
-                wxDataViewItem dvi(iter->second);
-                ItemChanged(dvi);
-                parent_->sortRequired_ = 
-                    parent_->m_listSpots->GetColumn(STATUS_COL)->IsSortKey() ||
-                    parent_->m_listSpots->GetColumn(TX_MODE_COL)->IsSortKey() ||
-                    parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
+                txStatus = "TX";
             }
-
-            prom->set_value();
-        });
-    }
+        
+            if (iter->second->status != _(RX_ONLY_STATUS))
+            {
+                iter->second->status = txStatus;
+                iter->second->txMode = txMode;
+            
+                auto lastTxTime = makeValidTime_(lastTxDate, iter->second->lastTxDate);
+                iter->second->lastTx = lastTxTime;
+            }
+        
+            auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
+            iter->second->lastUpdate = lastUpdateTime;
+        
+            wxDataViewItem dvi(iter->second);
+            ItemChanged(dvi);
+            parent_->sortRequired_ = 
+                parent_->m_listSpots->GetColumn(STATUS_COL)->IsSortKey() ||
+                parent_->m_listSpots->GetColumn(TX_MODE_COL)->IsSortKey() ||
+                parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
+        }
+    });
 
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
-    fut.wait();
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::string sid, std::string lastUpdate, std::string callsign, std::string gridSquare, std::string receivedCallsign, float snr, std::string rxMode)
 {
-    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
-    auto fut = prom->get_future();
-
-    {
-        std::unique_lock<std::mutex> lk(fnQueueMtx_);
-        fnQueue_.push_back([&, prom, sid, lastUpdate, receivedCallsign, snr, rxMode]() {
-            std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    fnQueue_.push_back([&, sid, lastUpdate, receivedCallsign, snr, rxMode]() {
+        std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
+    
+        auto iter = allReporterData_.find(sid);
+        if (iter != allReporterData_.end())
+        {
+            iter->second->lastRxCallsign = receivedCallsign;
+            iter->second->lastRxMode = rxMode;
         
-            auto iter = allReporterData_.find(sid);
-            if (iter != allReporterData_.end())
+            auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
+            iter->second->lastUpdate = lastUpdateTime;
+        
+            wxString snrString = wxString::Format(_("%.01f"), snr);
+            if (receivedCallsign == "" && rxMode == "")
             {
-                iter->second->lastRxCallsign = receivedCallsign;
-                iter->second->lastRxMode = rxMode;
-            
-                auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
-                iter->second->lastUpdate = lastUpdateTime;
-            
-                wxString snrString = wxString::Format(_("%.01f"), snr);
-                if (receivedCallsign == "" && rxMode == "")
-                {
-                    // Frequency change--blank out SNR too.
-                    iter->second->lastRxCallsign = UNKNOWN_STR;
-                    iter->second->lastRxMode = UNKNOWN_STR;
-                    iter->second->snr = UNKNOWN_STR;
-                    iter->second->lastRxDate = wxDateTime();
-                }
-                else
-                {
-                    iter->second->snr = snrString;
-                    iter->second->lastRxDate = iter->second->lastUpdateDate;
-                }
-            
-                wxDataViewItem dvi(iter->second);
-                ItemChanged(dvi);
-                parent_->sortRequired_ = 
-                    parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL)->IsSortKey() ||
-                    parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL)->IsSortKey() ||
-                    parent_->m_listSpots->GetColumn(SNR_COL)->IsSortKey() ||
-                    parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
+                // Frequency change--blank out SNR too.
+                iter->second->lastRxCallsign = UNKNOWN_STR;
+                iter->second->lastRxMode = UNKNOWN_STR;
+                iter->second->snr = UNKNOWN_STR;
+                iter->second->lastRxDate = wxDateTime();
             }
-
-            prom->set_value();
-        });
-    }
+            else
+            {
+                iter->second->snr = snrString;
+                iter->second->lastRxDate = iter->second->lastUpdateDate;
+            }
+        
+            wxDataViewItem dvi(iter->second);
+            ItemChanged(dvi);
+            parent_->sortRequired_ = 
+                parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL)->IsSortKey() ||
+                parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL)->IsSortKey() ||
+                parent_->m_listSpots->GetColumn(SNR_COL)->IsSortKey() ||
+                parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
+        }
+    });
 
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
-    fut.wait();
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::string sid, std::string lastUpdate, std::string message)
 {
-    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
-    auto fut = prom->get_future();
-
-    {
-        std::unique_lock<std::mutex> lk(fnQueueMtx_);
-        fnQueue_.push_back([&, prom, sid, lastUpdate, message]() {
-            std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
-        
-            auto iter = allReporterData_.find(sid);
-            if (iter != allReporterData_.end())
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    fnQueue_.push_back([&, sid, lastUpdate, message]() {
+        std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
+    
+        auto iter = allReporterData_.find(sid);
+        if (iter != allReporterData_.end())
+        {
+            if (message.size() == 0)
             {
-                if (message.size() == 0)
-                {
-                    iter->second->userMessage = UNKNOWN_STR;
-                }
-                else
-                {
-                    iter->second->userMessage = wxString::FromUTF8(message);
-                }
-            
-                auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
-                iter->second->lastUpdate = lastUpdateTime;
-
-                // Only highlight on non-empty messages.
-                bool ourCallsign = iter->second->callsign == wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign;
-                bool filteringSelf = ourCallsign && filterSelfMessageUpdates_;
-            
-                if (message.size() > 0 && !filteringSelf)
-                {
-                    iter->second->lastUpdateUserMessage = iter->second->lastUpdateDate;
-                }
-                else if (ourCallsign && filteringSelf)
-                {
-                    // Filter only until we show up again, then return to normal behavior.
-                    filterSelfMessageUpdates_ = false;
-                }
-            
-                wxDataViewItem dvi(iter->second);
-                ItemChanged(dvi);
-                parent_->sortRequired_ = 
-                    parent_->m_listSpots->GetColumn(USER_MESSAGE_COL)->IsSortKey() ||
-                    parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
+                iter->second->userMessage = UNKNOWN_STR;
             }
-            prom->set_value();
-        });
-    }
+            else
+            {
+                iter->second->userMessage = wxString::FromUTF8(message);
+            }
+        
+            auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
+            iter->second->lastUpdate = lastUpdateTime;
+
+            // Only highlight on non-empty messages.
+            bool ourCallsign = iter->second->callsign == wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign;
+            bool filteringSelf = ourCallsign && filterSelfMessageUpdates_;
+        
+            if (message.size() > 0 && !filteringSelf)
+            {
+                iter->second->lastUpdateUserMessage = iter->second->lastUpdateDate;
+            }
+            else if (ourCallsign && filteringSelf)
+            {
+                // Filter only until we show up again, then return to normal behavior.
+                filterSelfMessageUpdates_ = false;
+            }
+        
+            wxDataViewItem dvi(iter->second);
+            ItemChanged(dvi);
+            parent_->sortRequired_ = 
+                parent_->m_listSpots->GetColumn(USER_MESSAGE_COL)->IsSortKey() ||
+                parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
+        }
+    });
 
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
-    fut.wait();
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::onAboutToShowSelfFn_()
 {
-    std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void>>();
-    auto fut = prom->get_future();
-
-    {
-        std::unique_lock<std::mutex> lk(fnQueueMtx_);
-        fnQueue_.push_back([&, prom]() {
-            filterSelfMessageUpdates_ = true;
-            prom->set_value();
-        });
-    }
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    fnQueue_.push_back([&]() {
+        filterSelfMessageUpdates_ = true;
+    });
 
     parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
-    fut.wait();}
+}
