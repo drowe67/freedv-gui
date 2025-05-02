@@ -78,7 +78,7 @@ private:
     void* engine_; // actually AVAudioEngine but this file is shared with C++ code
     void* player_; // actually AVAudioPlayerNode
     std::string deviceName_;
-    ThreadedTimer restartTimer_;
+    void* observer_;
 
     short* inputFrames_;
 
@@ -88,22 +88,12 @@ private:
     dispatch_semaphore_t sem_;
     bool isDefaultDevice_;
     MacAudioEngine* parent_;
-
-    void onRestart_(ThreadedTimer& timer);
     
     static int DeviceIsAliveCallback_(
         AudioObjectID                       inObjectID,
         UInt32                              inNumberAddresses,
         const AudioObjectPropertyAddress    inAddresses[],
         void*                               inClientData);
-        
-    static void OnAudioUnitStartStop_(
-        void* inRefCon,
-        AudioUnit audioUnit,
-        AudioUnitPropertyID propertyID,
-        AudioUnitScope scope,
-        AudioUnitElement element
-    );
 };
 
 #endif // MAC_AUDIO_DEVICE_H

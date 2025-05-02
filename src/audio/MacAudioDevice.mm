@@ -100,7 +100,6 @@ MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, i
     , isDefaultDevice_(false)
     , parent_(parent)
     , deviceName_(deviceName)
-    , restartTimer_(250, std::bind(&MacAudioDevice::onRestart_, this, _1), false)
 {
     log_info("Create MacAudioDevice \"%s\" with ID %d, channels %d and sample rate %d", deviceName_.c_str(), coreAudioId, numChannels, sampleRate);
     
@@ -343,6 +342,21 @@ void MacAudioDevice::start()
 
         // Listen for audio device changes. If this is a default device, we want to
         // switch over to the new default device.
+        observer_ = [[NSNotificationCenter defaultCenter] addObserverForName:AVAudioEngineConfigurationChangeNotification object:engine queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification *note) {
+            log_info("Device %d: AVAudioEngine detected a configuration change", coreAudioId_);
+
+            if (!engine.running)
+            {
+                // Restart engine to get audio flowing again
+                std::thread tmpThread = std::thread([&]() {
+                    log_info("Device %d: restarting AVAudioEngine", coreAudioId_);
+                    stop();
+                    start();
+                });
+                tmpThread.detach();
+            }
+        }];
+
         // add listener for detecting when a device is removed
         const AudioObjectPropertyAddress aliveAddress =
         {
@@ -372,12 +386,6 @@ void MacAudioDevice::start()
         {
             isDefaultDevice_ = false;
         }
-        
-        OSStatus oss = AudioUnitAddPropertyListener(audioUnit, kAudioOutputUnitProperty_IsRunning, OnAudioUnitStartStop_, (void*)this);
-        if (oss != 0)
-        {
-            log_warn("Could not set up running listener (err %d)", oss);
-        }
 
         prom->set_value();
     });
@@ -400,11 +408,7 @@ void MacAudioDevice::stop()
         if (engine_ != nil)
         {
             AVAudioEngine* engine = (AVAudioEngine*)engine_;
-            AudioUnit audioUnit = 
-                (direction_ == IAudioEngine::AUDIO_ENGINE_IN) ?
-                [[engine inputNode] audioUnit] :
-                [[engine outputNode] audioUnit];
-            AudioUnitRemovePropertyListenerWithUserData(audioUnit, kAudioOutputUnitProperty_IsRunning, OnAudioUnitStartStop_, (void*)this);
+            [[NSNotificationCenter defaultCenter] removeObserver:(id)observer_];
             
             AVAudioPlayerNode* player = (AVAudioPlayerNode*)player_;
             if (player != nil)
@@ -708,9 +712,6 @@ int MacAudioDevice::DeviceIsAliveCallback_(
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inClientData;
     log_warn("Lost device ID %d", thisObj->coreAudioId_);
-    
-    // If the restart timer is running, make sure we stop that first.
-    thisObj->restartTimer_.stop();
 
     if (thisObj->isDefaultDevice_)
     {
@@ -746,45 +747,4 @@ int MacAudioDevice::DeviceIsAliveCallback_(
     }
 
     return noErr;
-}
-
-void MacAudioDevice::OnAudioUnitStartStop_(
-    void* inRefCon,
-    AudioUnit audioUnit,
-    AudioUnitPropertyID propertyID,
-    AudioUnitScope scope,
-    AudioUnitElement element
-)
-{
-    MacAudioDevice* thisObj = (MacAudioDevice*)inRefCon;
-    
-    log_info("called OnAudioUnitStartStop_");
-    UInt32 isRunning = 0;
-    UInt32 size = sizeof(isRunning);
-    
-    OSStatus result = AudioUnitGetProperty(audioUnit, kAudioOutputUnitProperty_IsRunning, scope, element, &isRunning, &size);
-    if (result == 0)
-    {
-        log_info("Audio unit running status changed to %d for device %d", isRunning, thisObj->coreAudioId_);
-        if (!isRunning)
-        {
-            // It's possible that we went away but we don't know that yet. However, if we just restart,
-            // the user might get a bunch of errors that don't explain what's going on. This defers restart
-            // unless DeviceIsAliveCallback_() handles the event first.
-            thisObj->restartTimer_.start();
-        }
-        else
-        {
-            // Might have been restarted by someone else. Ignore.
-            thisObj->restartTimer_.stop();
-        }
-    }
-}
-
-void MacAudioDevice::onRestart_(ThreadedTimer& timer)
-{
-    // Note: runs on timer thread.
-    log_info("Attempting restart of device %d", coreAudioId_);
-    stop();
-    start();
 }
