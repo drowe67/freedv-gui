@@ -46,11 +46,7 @@ thread_local int MacAudioDevice::CurrentCoreAudioId_ = 0;
 constexpr static double kOneNanosecond = 1.0e9;
 
 // The I/O interval time in seconds.
-//#if __aarch64__
 constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.010;
-//#else
-//constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.020;
-//#endif // __aarch64__
 
 static OSStatus GetIOBufferFrameSizeRange(AudioObjectID inDeviceID,
                                           UInt32* outMinimum,
