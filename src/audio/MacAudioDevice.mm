@@ -38,9 +38,10 @@
 
 using namespace std::placeholders;
 
-thread_local void* MacAudioDevice::workgroup_ = nullptr;
-thread_local void* MacAudioDevice::joinToken_ = nullptr;
-    
+thread_local void* MacAudioDevice::Workgroup_ = nullptr;
+thread_local void* MacAudioDevice::JoinToken_ = nullptr;
+thread_local int MacAudioDevice::CurrentCoreAudioId_ = 0;
+
 // One nanosecond in seconds.
 constexpr static double kOneNanosecond = 1.0e9;
 
@@ -621,9 +622,14 @@ void MacAudioDevice::setHelperRealTime()
         return;
     }
     
+    joinWorkgroup_();
+}
+
+void MacAudioDevice::joinWorkgroup_()
+{
     // Join Core Audio workgroup
-    workgroup_ = nullptr;
-    joinToken_ = nullptr;
+    Workgroup_ = nullptr;
+    JoinToken_ = nullptr;
     
     if (@available(macOS 11.0, *)) 
     { 
@@ -649,25 +655,28 @@ void MacAudioDevice::setHelperRealTime()
         if (osResult != noErr)
         {
             log_warn("Could not get audio workgroup");
-            workgroup_ = nullptr;
-            joinToken_ = nullptr;
-            
+            Workgroup_ = nullptr;
+            JoinToken_ = nullptr;
+            CurrentCoreAudioId_ = 0;
+
             delete wgMem;
             delete wgToken;
             return;
         }
         else
         {
-            workgroup_ = wgMem;
-            joinToken_ = wgToken;
+            Workgroup_ = wgMem;
+            JoinToken_ = wgToken;
+            CurrentCoreAudioId_ = coreAudioId_;
         }
       
         auto workgroupResult = os_workgroup_join(*wgMem, wgToken);
         if (workgroupResult != 0)
         {
             log_warn("Could not join Core Audio workgroup (err = %d)", workgroupResult);
-            workgroup_ = nullptr;
-            joinToken_ = nullptr;
+            Workgroup_ = nullptr;
+            JoinToken_ = nullptr;
+            CurrentCoreAudioId_ = 0;
             delete wgMem;
             delete wgToken;
         }
@@ -676,7 +685,13 @@ void MacAudioDevice::setHelperRealTime()
 
 void MacAudioDevice::startRealTimeWork()
 {
-    // empty
+    // If the audio ID changes on us, join the new workgroup
+    if (CurrentCoreAudioId_ != 0 && CurrentCoreAudioId_ != coreAudioId_)
+    {
+        log_info("Switching audio workgroups");
+        leaveWorkgroup_();
+        joinWorkgroup_();
+    }
 }
 
 void MacAudioDevice::stopRealTimeWork()
@@ -686,20 +701,26 @@ void MacAudioDevice::stopRealTimeWork()
 
 void MacAudioDevice::clearHelperRealTime()
 {
+    leaveWorkgroup_();
+}
+
+void MacAudioDevice::leaveWorkgroup_()
+{
     if (@available(macOS 11.0, *)) 
     {
-        if (workgroup_ != nullptr)
+        if (Workgroup_ != nullptr)
         {
-            os_workgroup_t* wgMem = (os_workgroup_t*)workgroup_;
-            os_workgroup_join_token_s* wgToken = (os_workgroup_join_token_s*)joinToken_;
+            os_workgroup_t* wgMem = (os_workgroup_t*)Workgroup_;
+            os_workgroup_join_token_s* wgToken = (os_workgroup_join_token_s*)JoinToken_;
             
             os_workgroup_leave(*wgMem, wgToken);
             
             delete wgMem;
             delete wgToken;
             
-            workgroup_ = nullptr;
-            joinToken_ = nullptr;
+            Workgroup_ = nullptr;
+            JoinToken_ = nullptr;
+            CurrentCoreAudioId_ = 0;
         }
     }
 }

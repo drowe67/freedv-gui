@@ -82,8 +82,12 @@ private:
 
     short* inputFrames_;
 
-    static thread_local void* workgroup_;
-    static thread_local void* joinToken_;
+    void joinWorkgroup_();
+    void leaveWorkgroup_();
+
+    static thread_local void* Workgroup_;
+    static thread_local void* JoinToken_;
+    static thread_local int CurrentCoreAudioId_;
     
     dispatch_semaphore_t sem_;
     bool isDefaultDevice_;
