@@ -20,6 +20,8 @@
 //
 //=========================================================================
 
+#include <sstream>
+
 #include "MacAudioEngine.h"
 #include "MacAudioDevice.h"
 #include "../util/logging/ulog.h"
