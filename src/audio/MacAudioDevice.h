@@ -79,8 +79,10 @@ private:
     void* player_; // actually AVAudioPlayerNode
     std::string deviceName_;
     void* observer_;
-
     short* inputFrames_;
+    dispatch_semaphore_t sem_;
+    bool isDefaultDevice_;
+    MacAudioEngine* parent_;
 
     void joinWorkgroup_();
     void leaveWorkgroup_();
@@ -88,11 +90,7 @@ private:
     static thread_local void* Workgroup_;
     static thread_local void* JoinToken_;
     static thread_local int CurrentCoreAudioId_;
-    
-    dispatch_semaphore_t sem_;
-    bool isDefaultDevice_;
-    MacAudioEngine* parent_;
-    
+
     static int DeviceIsAliveCallback_(
         AudioObjectID                       inObjectID,
         UInt32                              inNumberAddresses,
