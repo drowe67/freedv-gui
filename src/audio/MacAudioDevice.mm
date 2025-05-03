@@ -634,8 +634,11 @@ void MacAudioDevice::setHelperRealTime()
         log_warn("Could not set time constraint policy");
         return;
     }
-    
-    joinWorkgroup_();
+    else
+    {
+        // Going real-time is a prerequisite for joining workgroups
+        joinWorkgroup_();
+    }
 }
 
 void MacAudioDevice::joinWorkgroup_()
@@ -667,7 +670,6 @@ void MacAudioDevice::joinWorkgroup_()
                   wgMem);
         if (osResult != noErr)
         {
-            log_warn("Could not get audio workgroup");
             Workgroup_ = nullptr;
             JoinToken_ = nullptr;
             CurrentCoreAudioId_ = 0;
@@ -686,7 +688,6 @@ void MacAudioDevice::joinWorkgroup_()
         auto workgroupResult = os_workgroup_join(*wgMem, wgToken);
         if (workgroupResult != 0)
         {
-            log_warn("Could not join Core Audio workgroup (err = %d)", workgroupResult);
             Workgroup_ = nullptr;
             JoinToken_ = nullptr;
             CurrentCoreAudioId_ = 0;
@@ -699,9 +700,8 @@ void MacAudioDevice::joinWorkgroup_()
 void MacAudioDevice::startRealTimeWork()
 {
     // If the audio ID changes on us, join the new workgroup
-    if (CurrentCoreAudioId_ != 0 && CurrentCoreAudioId_ != coreAudioId_)
+    if (CurrentCoreAudioId_ != 0 && CurrentCoreAudioId_ != coreAudioId_ && Workgroup_ != nullptr)
     {
-        log_info("Switching audio workgroups");
         leaveWorkgroup_();
         joinWorkgroup_();
     }
@@ -745,8 +745,6 @@ int MacAudioDevice::DeviceIsAliveCallback_(
         void*                               inClientData)
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inClientData;
-    log_warn("Lost device ID %d", thisObj->coreAudioId_);
-
     if (thisObj->isDefaultDevice_)
     {
         // Get new default device ID
@@ -762,7 +760,6 @@ int MacAudioDevice::DeviceIsAliveCallback_(
         AudioObjectGetPropertyData(kAudioObjectSystemObject, &defaultAddr, 0, NULL, &defaultSize, &defaultDevice); 
 
         // Stop/start device with new ID in a separate thread to avoid deadlocks
-        log_info("Temporarily switching from default device %d to %d", thisObj->coreAudioId_, defaultDevice);
         std::thread tmpThread = std::thread([thisObj, defaultDevice]() {
             thisObj->stop();
             thisObj->coreAudioId_ = defaultDevice;
@@ -772,12 +769,16 @@ int MacAudioDevice::DeviceIsAliveCallback_(
     } 
     else 
     {
-        std::stringstream ss;
-        ss << "The device " << thisObj->deviceName_ << " may have been removed from the system. Press 'Stop' and then verify your audio settings.";
-        if (thisObj->onAudioErrorFunction)
-        {
-            thisObj->onAudioErrorFunction(*thisObj, ss.str(), thisObj->onAudioErrorState);
-        }
+        // Possible GUI stuff really shouldn't be happening on the audio thread.
+        std::thread tmpThread = std::thread([thisObj]() {
+            std::stringstream ss;
+            ss << "The device " << thisObj->deviceName_ << " may have been removed from the system. Press 'Stop' and then verify your audio settings.";
+            if (thisObj->onAudioErrorFunction)
+            {
+                thisObj->onAudioErrorFunction(*thisObj, ss.str(), thisObj->onAudioErrorState);
+            }
+        });
+        tmpThread.detach();
     }
 
     return noErr;
@@ -790,11 +791,15 @@ int MacAudioDevice::DeviceOverloadCallback_(
         void*                               inClientData)
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inClientData;
-    log_warn("Device %d: hardware overload detected", thisObj->coreAudioId_);
 
-    if (thisObj->onAudioUnderflowFunction)
-    {
-        thisObj->onAudioUnderflowFunction(*thisObj, thisObj->onAudioUnderflowState);
-    }
+    // Possible GUI stuff really shouldn't be happening on the audio thread.
+    std::thread tmpThread = std::thread([thisObj]() {
+        if (thisObj->onAudioUnderflowFunction)
+        {
+            thisObj->onAudioUnderflowFunction(*thisObj, thisObj->onAudioUnderflowState);
+        }
+    });
+    tmpThread.detach();
+
     return noErr;
 }
