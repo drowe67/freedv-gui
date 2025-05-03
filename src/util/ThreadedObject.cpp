@@ -42,13 +42,6 @@ ThreadedObject::~ThreadedObject()
 
 void ThreadedObject::enqueue_(std::function<void()> fn, int timeoutMilliseconds)
 {
-    if (std::this_thread::get_id() == objectThread_.get_id())
-    {
-        // Immediately execute the function. Otherwise we end up deadlocked!
-        fn();
-        return;
-    }
-
     std::unique_lock<std::recursive_mutex> lk(eventQueueMutex_, std::defer_lock_t());
 
     if (timeoutMilliseconds == 0)
