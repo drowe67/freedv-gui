@@ -86,13 +86,19 @@ void ThreadedObject::eventLoop_()
         
         {
             std::unique_lock<std::recursive_mutex> lk(eventQueueMutex_);
-            eventQueueCV_.wait(lk, [&]() {
+            eventQueueCV_.wait_for(lk, 10ms, [&]() {
                 return isDestroying_ || eventQueue_.size() > 0;
             });
             
             if (isDestroying_)
             {
                 break;
+            }
+
+            if (eventQueue_.size() == 0)
+            {
+                // Start over and wait again if nothing's in the queue.
+                continue;
             }
             
             fn = eventQueue_[0];
