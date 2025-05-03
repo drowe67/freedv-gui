@@ -363,6 +363,15 @@ void MacAudioDevice::start()
         };
         AudioObjectAddPropertyListener(coreAudioId_, &aliveAddress, DeviceIsAliveCallback_, this);
 
+        // Add listener for processor overloads
+        const AudioObjectPropertyAddress overloadAddress =
+        {
+            kAudioDeviceProcessorOverload,
+            (direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ? kAudioDevicePropertyScopeOutput : kAudioDevicePropertyScopeInput,
+            0
+        };
+        AudioObjectAddPropertyListener(coreAudioId_, &overloadAddress, DeviceOverloadCallback_, this);
+
         // See if we're the default audio device. If we are and we're disconnected, we want to
         // switch to the *new* default audio device.
         AudioDeviceID defaultDevice = 0;
@@ -401,6 +410,14 @@ void MacAudioDevice::stop()
             kAudioObjectPropertyElementMaster
         };
         AudioObjectRemovePropertyListener(coreAudioId_, &aliveAddress, DeviceIsAliveCallback_, this);
+
+        const AudioObjectPropertyAddress overloadAddress =
+        {
+            kAudioDeviceProcessorOverload,
+            (direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ? kAudioDevicePropertyScopeOutput : kAudioDevicePropertyScopeInput,
+            0
+        };
+        AudioObjectRemovePropertyListener(coreAudioId_, &overloadAddress, DeviceOverloadCallback_, this);
 
         if (engine_ != nil)
         {
@@ -763,5 +780,21 @@ int MacAudioDevice::DeviceIsAliveCallback_(
         }
     }
 
+    return noErr;
+}
+
+int MacAudioDevice::DeviceOverloadCallback_(
+        AudioObjectID                       inObjectID,
+        UInt32                              inNumberAddresses,
+        const AudioObjectPropertyAddress    inAddresses[],
+        void*                               inClientData)
+{
+    MacAudioDevice* thisObj = (MacAudioDevice*)inClientData;
+    log_warn("Device %d: hardware overload detected", thisObj->coreAudioId_);
+
+    if (thisObj->onAudioUnderflowFunction)
+    {
+        thisObj->onAudioUnderflowFunction(*thisObj, thisObj->onAudioUnderflowState);
+    }
     return noErr;
 }

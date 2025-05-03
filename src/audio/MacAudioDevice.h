@@ -96,6 +96,12 @@ private:
         UInt32                              inNumberAddresses,
         const AudioObjectPropertyAddress    inAddresses[],
         void*                               inClientData);
+
+    static int DeviceOverloadCallback_(
+        AudioObjectID                       inObjectID,
+        UInt32                              inNumberAddresses,
+        const AudioObjectPropertyAddress    inAddresses[],
+        void*                               inClientData);
 };
 
 #endif // MAC_AUDIO_DEVICE_H
