@@ -29,7 +29,6 @@
 #include <AudioUnit/AudioUnit.h>
 
 #include "../util/ThreadedObject.h"
-#include "../util/ThreadedTimer.h"
 #include "IAudioEngine.h"
 #include "IAudioDevice.h"
 
