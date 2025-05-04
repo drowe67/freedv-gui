@@ -19,7 +19,7 @@ public:
 bool tapDataEqual()
 {
     PassThroughStep* step = new PassThroughStep;
-    TapStep tapStep(8000, step, false);
+    TapStep tapStep(8000, step);
     
     int outputSamples = 0;
     short* pData = new short[1];
