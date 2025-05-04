@@ -1818,7 +1818,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
                 ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(kvp.second));
             }
         }
-        else if (updated)
+        else if (updated && kvp.second->isVisible)
         {
             ItemChanged(wxDataViewItem(kvp.second));
             parent_->sortRequired_ = true;
@@ -2065,7 +2065,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
                     ItemDeleted(wxDataViewItem(nullptr), dvi);
                 }
             }
-            else
+            else if (newVisibility)
             {            
                 ItemChanged(dvi);
                 parent_->sortRequired_ = 
@@ -2106,13 +2106,16 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
         
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
             iter->second->lastUpdate = lastUpdateTime;
-        
-            wxDataViewItem dvi(iter->second);
-            ItemChanged(dvi);
-            parent_->sortRequired_ = 
-                parent_->m_listSpots->GetColumn(STATUS_COL)->IsSortKey() ||
-                parent_->m_listSpots->GetColumn(TX_MODE_COL)->IsSortKey() ||
-                parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
+
+            if (iter->second->isVisible)
+            { 
+                wxDataViewItem dvi(iter->second);
+                ItemChanged(dvi);
+                parent_->sortRequired_ = 
+                    parent_->m_listSpots->GetColumn(STATUS_COL)->IsSortKey() ||
+                    parent_->m_listSpots->GetColumn(TX_MODE_COL)->IsSortKey() ||
+                    parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
+            }
         }
     });
 
@@ -2148,14 +2151,17 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
                 iter->second->snr = snrString;
                 iter->second->lastRxDate = iter->second->lastUpdateDate;
             }
-        
-            wxDataViewItem dvi(iter->second);
-            ItemChanged(dvi);
-            parent_->sortRequired_ = 
-                parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL)->IsSortKey() ||
-                parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL)->IsSortKey() ||
-                parent_->m_listSpots->GetColumn(SNR_COL)->IsSortKey() ||
-                parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
+       
+            if (iter->second->isVisible)
+            { 
+                wxDataViewItem dvi(iter->second);
+                ItemChanged(dvi);
+                parent_->sortRequired_ = 
+                    parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL)->IsSortKey() ||
+                    parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL)->IsSortKey() ||
+                    parent_->m_listSpots->GetColumn(SNR_COL)->IsSortKey() ||
+                    parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
+            }
         }
     });
 
@@ -2196,12 +2202,15 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
                 // Filter only until we show up again, then return to normal behavior.
                 filterSelfMessageUpdates_ = false;
             }
-        
-            wxDataViewItem dvi(iter->second);
-            ItemChanged(dvi);
-            parent_->sortRequired_ = 
-                parent_->m_listSpots->GetColumn(USER_MESSAGE_COL)->IsSortKey() ||
-                parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
+       
+            if (iter->second->isVisible)
+            { 
+                wxDataViewItem dvi(iter->second);
+                ItemChanged(dvi);
+                parent_->sortRequired_ = 
+                    parent_->m_listSpots->GetColumn(USER_MESSAGE_COL)->IsSortKey() ||
+                    parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
+            }
         }
     });
 
