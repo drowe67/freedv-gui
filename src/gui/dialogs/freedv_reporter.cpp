@@ -772,8 +772,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             reportData->backgroundColor = backgroundColor;
             reportData->foregroundColor = foregroundColor;
 
-            wxDataViewItem dvi(reportData);
-            itemsChanged.Add(dvi);
+            if (reportData->isVisible)
+            {
+                wxDataViewItem dvi(reportData);
+                itemsChanged.Add(dvi);
+            }
         }
     }
 
