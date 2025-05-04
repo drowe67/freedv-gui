@@ -795,7 +795,7 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
     }
     
     // Update minimum column widths to reduce "moving" effect
-    for (auto index = 0; index < m_listSpots->GetColumnCount(); index++)
+    for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
     {
         if (index == USER_MESSAGE_COL) continue;
         auto col = m_listSpots->GetColumn(index);
