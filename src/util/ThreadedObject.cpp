@@ -84,30 +84,37 @@ void ThreadedObject::eventLoop_()
     {
         std::function<void()> fn;
         
+        int count = 0;
+
+        do
         {
-            std::unique_lock<std::recursive_mutex> lk(eventQueueMutex_);
-            eventQueueCV_.wait_for(lk, 10ms, [&]() {
-                return isDestroying_ || eventQueue_.size() > 0;
-            });
-            
-            if (isDestroying_)
             {
-                break;
+                std::unique_lock<std::recursive_mutex> lk(eventQueueMutex_);
+
+                if (count == 0)
+                {
+                    eventQueueCV_.wait_for(lk, 100ms, [&]() {
+                        return isDestroying_ || eventQueue_.size() > 0;
+                    });
+                    
+                    count = eventQueue_.size();
+                }
+
+                if (isDestroying_ || count == 0)
+                {
+                    break;
+                }
+                
+                fn = eventQueue_[0];
+                eventQueue_.erase(eventQueue_.begin());
+            }
+        
+            if (fn)
+            {
+                fn();
             }
 
-            if (eventQueue_.size() == 0)
-            {
-                // Start over and wait again if nothing's in the queue.
-                continue;
-            }
-            
-            fn = eventQueue_[0];
-            eventQueue_.erase(eventQueue_.begin());
-        }
-        
-        if (fn)
-        {
-            fn();
-        }
+            count--;
+        } while (count > 0);
     }
 }
