@@ -43,6 +43,7 @@ extern FreeDVInterface freedvInterface;
 #define LAST_RX_MODE_COL (11)
 #define SNR_COL (12)
 #define LAST_UPDATE_DATE_COL (13)
+#define RIGHTMOST_COL (LAST_UPDATE_DATE_COL + 1)
 
 #define UNKNOWN_STR ""
 #define NUM_COLS (LAST_UPDATE_DATE_COL + 1)
@@ -214,6 +215,8 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     {
         colObj->SetSortOrder(wxGetApp().appConfiguration.reporterWindowCurrentSortDirection);
     }
+
+    m_listSpots->AppendTextColumn(wxT(" "), col++, wxDATAVIEW_CELL_INERT, 1, wxALIGN_CENTER, wxDATAVIEW_COL_RESIZABLE);
 
     sectionSizer->Add(m_listSpots, 0, wxALL | wxEXPAND, 2);
     
@@ -1755,6 +1758,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::GetValue (wxVariant &variant
                 break;
             case TX_MODE_COL:
                 variant = wxVariant(row->txMode);
+                break;
+            case RIGHTMOST_COL:
+                variant = wxVariant("");
                 break;
             default:
                 variant = wxVariant("NOT VALID");
