@@ -796,14 +796,6 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
         model->Resort();
         sortRequired_ = false;
     }
-    
-    // Update minimum column widths to reduce "moving" effect
-    for (unsigned int index = 0; index < m_listSpots->GetColumnCount(); index++)
-    {
-        if (index == USER_MESSAGE_COL) continue;
-        auto col = m_listSpots->GetColumn(index);
-        col->SetMinWidth(col->GetWidth());
-    }
 }
 
 void FreeDVReporterDialog::OnFilterTrackingEnable(wxCommandEvent& event)
