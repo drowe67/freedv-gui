@@ -2046,7 +2046,30 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         char 
             mode[STR_LENGTH], bits[STR_LENGTH], errors[STR_LENGTH], ber[STR_LENGTH], 
             resyncs[STR_LENGTH], clockoffset[STR_LENGTH], freqoffset[STR_LENGTH], syncmetric[STR_LENGTH];
-        snprintf(mode, STR_LENGTH, "Mode: %s", freedvInterface.getCurrentModeStr()); wxString modeString(mode); m_textCurrentDecodeMode->SetLabel(modeString);
+        snprintf(mode, STR_LENGTH, "Mode: %s", freedvInterface.getCurrentModeStr()); wxString modeString(mode); 
+        bool relayout = m_textCurrentDecodeMode->GetLabel() != modeString;
+        m_textCurrentDecodeMode->SetLabel(modeString);
+        if (relayout)
+        {
+            // XXX - force resize events to make mode string re-center itself.
+            wxSize minSize = GetSize();
+            auto w = minSize.GetWidth();
+            auto h = minSize.GetHeight();
+
+            CallAfter([=]()
+            {
+                SetSize(w, h);
+            });
+            CallAfter([=]()
+            {
+                SetSize(w, h - 1);
+            });
+            CallAfter([=]()
+            {
+                SetSize(w, h);
+            });
+        }
+
         snprintf(bits, STR_LENGTH, "Bits: %d", freedvInterface.getTotalBits()); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
         snprintf(errors, STR_LENGTH, "Errs: %d", freedvInterface.getTotalBitErrors()); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
         float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
