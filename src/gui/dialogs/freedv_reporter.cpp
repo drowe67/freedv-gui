@@ -1635,11 +1635,6 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
             break;
     }
 
-    if (!ascending)
-    {
-        result = -result;
-    }
-    
     if (result == 0 && column != (unsigned)-1)
     {
         // Also compare by connect time to ensure that we have a sort that
@@ -1658,6 +1653,20 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
         }
     }
 
+    if (result == 0)
+    {
+        // As a last-ditch effort to prevent returning 0, use the pointer
+        // values. Recommended by wxWidgets documentation.
+        wxUIntPtr id1 = wxPtrToUInt(item1.GetID());
+        wxUIntPtr id2 = wxPtrToUInt(item2.GetID());
+        result = (ascending == (id1 > id2)) ? 1 : -1;
+    }
+
+    if (!ascending)
+    {
+        result = -result;
+    }
+    
     return result;
 }
 
