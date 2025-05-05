@@ -479,10 +479,13 @@ void WASAPIAudioDevice::renderAudio_()
     }
 
     // Grab audio data from higher level code
-    memset(data, 0, framesAvailable * numChannels_ * sizeof(short));
-    if (onAudioDataFunction)
+    if (framesAvailable > 0 && data != nullptr)
     {
-        onAudioDataFunction(*this, (short*)data, framesAvailable, onAudioDataState);
+        memset(data, 0, framesAvailable * numChannels_ * sizeof(short));
+        if (onAudioDataFunction)
+        {
+            onAudioDataFunction(*this, (short*)data, framesAvailable, onAudioDataState);
+        }
     }
 
     // Release render buffer
@@ -541,16 +544,19 @@ void WASAPIAudioDevice::captureAudio_()
             return;
         }
 
-        // Fill buffer with silence if told to do so.
-        if (flags & AUDCLNT_BUFFERFLAGS_SILENT)
+        if (numFramesAvailable > 0 && data != nullptr)
         {
-            memset(data, 0, numFramesAvailable * numChannels_ * sizeof(short));
-        }
+            // Fill buffer with silence if told to do so.
+            if (flags & AUDCLNT_BUFFERFLAGS_SILENT)
+            {
+                memset(data, 0, numFramesAvailable * numChannels_ * sizeof(short));
+            }
 
-        // Pass data to higher level code
-        if (onAudioDataFunction)
-        {
-            onAudioDataFunction(*this, (short*)data, numFramesAvailable, onAudioDataState);
+            // Pass data to higher level code
+            if (onAudioDataFunction)
+            {
+                onAudioDataFunction(*this, (short*)data, numFramesAvailable, onAudioDataState);
+            }
         }
 
         // Release buffer
