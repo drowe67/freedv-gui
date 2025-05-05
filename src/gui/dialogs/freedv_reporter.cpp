@@ -1639,6 +1639,24 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
     {
         result = -result;
     }
+    
+    if (result == 0 && column != (unsigned)-1)
+    {
+        // Also compare by connect time to ensure that we have a sort that
+        // appears stable.
+        if (leftData->connectTime.IsEarlierThan(rightData->connectTime))
+        {
+            result = -1;
+        }
+        else if (leftData->connectTime.IsLaterThan(rightData->connectTime))
+        {
+            result = 1;
+        }
+        else
+        {
+            result = 0;
+        }
+    }
 
     return result;
 }
