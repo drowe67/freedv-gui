@@ -899,7 +899,12 @@ void MainFrame::togglePTT(void) {
         
         // Wait for a minimum amount of time before stopping TX to ensure that
         // remaining audio gets piped to the radio from the operating system.
-        auto latency = txOutSoundDevice->getLatencyInMicroseconds();
+        auto outDevice = txOutSoundDevice;
+        auto latency = 0;
+        if (outDevice)
+        {
+            latency = outDevice->getLatencyInMicroseconds();
+        }
         auto pttResponseTime = 0;
 
         // Also take into account any latency between the computer and radio.
