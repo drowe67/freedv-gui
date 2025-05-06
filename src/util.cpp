@@ -309,13 +309,14 @@ void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs)
     assert(dec_samples != nullptr);
 
     nSamples = length/decimation;
+    if (nSamples % 2) nSamples++; // dec_samples is populated in groups of two
 
     for(sample = 0; sample < nSamples; sample += 2)
     {
         st = decimation*sample;
         en = decimation*(sample+2);
         max = min = 0;
-        for(i=st; i<en; i++ )
+        for(i=st; i<en && i<length; i++ )
         {
             if (max < buf[i]) max = buf[i];
             if (min > buf[i]) min = buf[i];
