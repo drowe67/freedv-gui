@@ -821,6 +821,14 @@ void MainFrame::OnTogBtnPTT (wxCommandEvent& event)
     }
     else
     {
+        // wxWidgets should already be doing the below logic,
+        // but for some reason this intermittently doesn't happen
+        // on Windows. Just to be sure, we force the correct state
+        // here (similar to what's already done for ending TX while
+        // using the voice keyer).
+        m_btnTogPTT->SetValue(!g_tx);
+        m_btnTogPTT->SetBackgroundColour(m_btnTogPTT->GetValue() ? *wxRED : wxNullColour);
+        
         togglePTT();
     }
     event.Skip();
