@@ -703,14 +703,15 @@ void FreeDVReporterDialog::OnItemSelectionChanged(wxDataViewEvent& event)
 
 void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
 {
-    DeselectItem();
-
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter = 
         m_bandFilter->GetSelection();
     
     FilterFrequency freq = 
         (FilterFrequency)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilter.get();
     setBandFilter(freq);
+
+    // Defer deselection until after UI updates
+    CallAfter([&]() { DeselectItem(); });
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
@@ -800,8 +801,6 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
 
 void FreeDVReporterDialog::OnFilterTrackingEnable(wxCommandEvent& event)
 {
-    DeselectItem();
-
     wxGetApp().appConfiguration.reportingConfiguration.freedvReporterBandFilterTracksFrequency
         = m_trackFrequency->GetValue();
     m_bandFilter->Enable(
@@ -828,6 +827,9 @@ void FreeDVReporterDialog::OnFilterTrackingEnable(wxCommandEvent& event)
     }
 
     setBandFilter(freq);
+
+    // Defer deselection until after UI updates
+    CallAfter([&]() { DeselectItem(); });
 }
 
 void FreeDVReporterDialog::OnItemDoubleClick(wxDataViewEvent& event)
