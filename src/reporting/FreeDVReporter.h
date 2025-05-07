@@ -122,6 +122,7 @@ private:
     bool rxOnly_;
     bool hidden_;
     std::string message_;
+    bool fullyConnected_;
     
     ReporterConnectionFn onReporterConnectFn_;
     ReporterConnectionFn onReporterDisconnectFn_;
