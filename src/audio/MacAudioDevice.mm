@@ -21,9 +21,12 @@
 //=========================================================================
 
 #include "MacAudioDevice.h"
+#include "MacAudioEngine.h"
 #include "../util/logging/ulog.h"
 
 #include <future>
+#include <sstream>
+
 #import <AVFoundation/AVFoundation.h>
 #import <AudioToolbox/AudioToolbox.h>
 
@@ -33,18 +36,17 @@
 #include <sched.h>
 #include <pthread.h>
 
-thread_local void* MacAudioDevice::workgroup_ = nullptr;
-thread_local void* MacAudioDevice::joinToken_ = nullptr;
-    
+using namespace std::placeholders;
+
+thread_local void* MacAudioDevice::Workgroup_ = nullptr;
+thread_local void* MacAudioDevice::JoinToken_ = nullptr;
+thread_local int MacAudioDevice::CurrentCoreAudioId_ = 0;
+
 // One nanosecond in seconds.
 constexpr static double kOneNanosecond = 1.0e9;
 
 // The I/O interval time in seconds.
-//#if __aarch64__
 constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.010;
-//#else
-//constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.020;
-//#endif // __aarch64__
 
 static OSStatus GetIOBufferFrameSizeRange(AudioObjectID inDeviceID,
                                           UInt32* outMinimum,
@@ -84,7 +86,7 @@ static OSStatus SetCurrentIOBufferFrameSize(AudioObjectID inDeviceID,
                                       sizeof(UInt32), &inIOBufferFrameSize);
 }
 
-MacAudioDevice::MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate)
+MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate)
     : coreAudioId_(coreAudioId)
     , direction_(direction)
     , numChannels_(numChannels)
@@ -92,8 +94,11 @@ MacAudioDevice::MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection dir
     , engine_(nil)
     , player_(nil)
     , inputFrames_(nullptr)
+    , isDefaultDevice_(false)
+    , parent_(parent)
+    , deviceName_(deviceName)
 {
-    log_info("Create MacAudioDevice with ID %d, channels %d and sample rate %d", coreAudioId, numChannels, sampleRate);
+    log_info("Create MacAudioDevice \"%s\" with ID %d, channels %d and sample rate %d", deviceName_.c_str(), coreAudioId, numChannels, sampleRate);
     
     sem_ = dispatch_semaphore_create(0);
 }
@@ -147,9 +152,11 @@ void MacAudioDevice::start()
             &sampleRateAsFloat);
         if (error != noErr)
         {
+            std::stringstream ss;
+            ss << "Could not set sample rate for device \"" << deviceName_ << "\" (err " << error << ")";
             if (onAudioErrorFunction)
             {
-                onAudioErrorFunction(*this, "Could not set device sample rate", onAudioErrorState);
+                onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
             }
             return;
         }
@@ -193,9 +200,11 @@ void MacAudioDevice::start()
                                      sizeof(coreAudioId_));
         if (error != noErr)
         {
+            std::stringstream ss;
+            ss << "Could not assign device \"" << deviceName_ << "\" to AVAudioEngine (err " << error << ")";
             if (onAudioErrorFunction)
             {
-                onAudioErrorFunction(*this, "Could not assign device to AVAudioEngine", onAudioErrorState);
+                onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
             }
             [engine release];
             return;
@@ -310,6 +319,10 @@ void MacAudioDevice::start()
 
             if (onAudioErrorFunction)
             {
+                NSString* errorDesc = [nse localizedDescription];
+                std::string err = 
+                    std::string("Could not start AVAudioEngine for device \"") + deviceName_ + 
+                    std::string("\": ") + [errorDesc cStringUsingEncoding:NSUTF8StringEncoding];
                 onAudioErrorFunction(*this, err, onAudioErrorState);
             }
             [engine release];
@@ -323,7 +336,63 @@ void MacAudioDevice::start()
             log_info("Start playback for output device %d", coreAudioId_);
             [player play];
         }
-        
+
+        // Listen for audio device changes. If this is a default device, we want to
+        // switch over to the new default device.
+        observer_ = [[NSNotificationCenter defaultCenter] addObserverForName:AVAudioEngineConfigurationChangeNotification object:engine queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification *note) {
+            log_info("Device %d: AVAudioEngine detected a configuration change", coreAudioId_);
+
+            if (!engine.running)
+            {
+                // Restart engine to get audio flowing again
+                std::thread tmpThread = std::thread([&]() {
+                    log_info("Device %d: restarting AVAudioEngine", coreAudioId_);
+                    stop();
+                    start();
+                });
+                tmpThread.detach();
+            }
+        }];
+
+        // add listener for detecting when a device is removed
+        const AudioObjectPropertyAddress aliveAddress =
+        {
+            kAudioDevicePropertyDeviceIsAlive,
+            kAudioObjectPropertyScopeGlobal,
+            kAudioObjectPropertyElementMaster
+        };
+        AudioObjectAddPropertyListener(coreAudioId_, &aliveAddress, DeviceIsAliveCallback_, this);
+
+        // Add listener for processor overloads
+        const AudioObjectPropertyAddress overloadAddress =
+        {
+            kAudioDeviceProcessorOverload,
+            (direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ? kAudioDevicePropertyScopeOutput : kAudioDevicePropertyScopeInput,
+            0
+        };
+        AudioObjectAddPropertyListener(coreAudioId_, &overloadAddress, DeviceOverloadCallback_, this);
+
+        // See if we're the default audio device. If we are and we're disconnected, we want to
+        // switch to the *new* default audio device.
+        AudioDeviceID defaultDevice = 0;
+        UInt32 defaultSize = sizeof(AudioDeviceID);
+
+        const AudioObjectPropertyAddress defaultAddr = {
+            (direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ? kAudioHardwarePropertyDefaultOutputDevice : kAudioHardwarePropertyDefaultInputDevice,
+            kAudioObjectPropertyScopeGlobal,
+            kAudioObjectPropertyElementMaster
+        };
+
+        AudioObjectGetPropertyData(kAudioObjectSystemObject, &defaultAddr, 0, NULL, &defaultSize, &defaultDevice); 
+        if (defaultDevice == coreAudioId_)
+        {
+            isDefaultDevice_ = true;
+        }
+        else
+        {
+            isDefaultDevice_ = false;
+        }
+
         prom->set_value();
     });
     fut.wait();
@@ -334,8 +403,27 @@ void MacAudioDevice::stop()
     std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
     enqueue_([&, prom]() {
+        const AudioObjectPropertyAddress aliveAddress =
+        {
+            kAudioDevicePropertyDeviceIsAlive,
+            kAudioObjectPropertyScopeGlobal,
+            kAudioObjectPropertyElementMaster
+        };
+        AudioObjectRemovePropertyListener(coreAudioId_, &aliveAddress, DeviceIsAliveCallback_, this);
+
+        const AudioObjectPropertyAddress overloadAddress =
+        {
+            kAudioDeviceProcessorOverload,
+            (direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ? kAudioDevicePropertyScopeOutput : kAudioDevicePropertyScopeInput,
+            0
+        };
+        AudioObjectRemovePropertyListener(coreAudioId_, &overloadAddress, DeviceOverloadCallback_, this);
+
         if (engine_ != nil)
         {
+            AVAudioEngine* engine = (AVAudioEngine*)engine_;
+            [[NSNotificationCenter defaultCenter] removeObserver:(id)observer_];
+            
             AVAudioPlayerNode* player = (AVAudioPlayerNode*)player_;
             if (player != nil)
             {
@@ -344,17 +432,15 @@ void MacAudioDevice::stop()
             }
         
             log_info("Stopping engine for device %d", coreAudioId_);
-            AVAudioEngine* engine = (AVAudioEngine*)engine_;
             [engine stop];
             [engine release];
 
+            delete[] inputFrames_;
+            inputFrames_ = nullptr;
         }
 
         engine_ = nil;
         player_ = nil;
-
-        delete[] inputFrames_;
-        inputFrames_ = nullptr;
 
         prom->set_value();
     });
@@ -548,10 +634,18 @@ void MacAudioDevice::setHelperRealTime()
         log_warn("Could not set time constraint policy");
         return;
     }
-    
+    else
+    {
+        // Going real-time is a prerequisite for joining workgroups
+        joinWorkgroup_();
+    }
+}
+
+void MacAudioDevice::joinWorkgroup_()
+{
     // Join Core Audio workgroup
-    workgroup_ = nullptr;
-    joinToken_ = nullptr;
+    Workgroup_ = nullptr;
+    JoinToken_ = nullptr;
     
     if (@available(macOS 11.0, *)) 
     { 
@@ -576,26 +670,27 @@ void MacAudioDevice::setHelperRealTime()
                   wgMem);
         if (osResult != noErr)
         {
-            log_warn("Could not get audio workgroup");
-            workgroup_ = nullptr;
-            joinToken_ = nullptr;
-            
+            Workgroup_ = nullptr;
+            JoinToken_ = nullptr;
+            CurrentCoreAudioId_ = 0;
+
             delete wgMem;
             delete wgToken;
             return;
         }
         else
         {
-            workgroup_ = wgMem;
-            joinToken_ = wgToken;
+            Workgroup_ = wgMem;
+            JoinToken_ = wgToken;
+            CurrentCoreAudioId_ = coreAudioId_;
         }
       
         auto workgroupResult = os_workgroup_join(*wgMem, wgToken);
         if (workgroupResult != 0)
         {
-            log_warn("Could not join Core Audio workgroup (err = %d)", workgroupResult);
-            workgroup_ = nullptr;
-            joinToken_ = nullptr;
+            Workgroup_ = nullptr;
+            JoinToken_ = nullptr;
+            CurrentCoreAudioId_ = 0;
             delete wgMem;
             delete wgToken;
         }
@@ -604,7 +699,12 @@ void MacAudioDevice::setHelperRealTime()
 
 void MacAudioDevice::startRealTimeWork()
 {
-    // empty
+    // If the audio ID changes on us, join the new workgroup
+    if (CurrentCoreAudioId_ != 0 && CurrentCoreAudioId_ != coreAudioId_ && Workgroup_ != nullptr)
+    {
+        leaveWorkgroup_();
+        joinWorkgroup_();
+    }
 }
 
 void MacAudioDevice::stopRealTimeWork()
@@ -614,21 +714,92 @@ void MacAudioDevice::stopRealTimeWork()
 
 void MacAudioDevice::clearHelperRealTime()
 {
+    leaveWorkgroup_();
+}
+
+void MacAudioDevice::leaveWorkgroup_()
+{
     if (@available(macOS 11.0, *)) 
     {
-        if (workgroup_ != nullptr)
+        if (Workgroup_ != nullptr)
         {
-            os_workgroup_t* wgMem = (os_workgroup_t*)workgroup_;
-            os_workgroup_join_token_s* wgToken = (os_workgroup_join_token_s*)joinToken_;
+            os_workgroup_t* wgMem = (os_workgroup_t*)Workgroup_;
+            os_workgroup_join_token_s* wgToken = (os_workgroup_join_token_s*)JoinToken_;
             
             os_workgroup_leave(*wgMem, wgToken);
             
             delete wgMem;
             delete wgToken;
             
-            workgroup_ = nullptr;
-            joinToken_ = nullptr;
+            Workgroup_ = nullptr;
+            JoinToken_ = nullptr;
+            CurrentCoreAudioId_ = 0;
         }
     }
 }
 
+int MacAudioDevice::DeviceIsAliveCallback_(
+        AudioObjectID                       inObjectID,
+        UInt32                              inNumberAddresses,
+        const AudioObjectPropertyAddress    inAddresses[],
+        void*                               inClientData)
+{
+    MacAudioDevice* thisObj = (MacAudioDevice*)inClientData;
+    if (thisObj->isDefaultDevice_)
+    {
+        // Get new default device ID
+        AudioDeviceID defaultDevice = 0;
+        UInt32 defaultSize = sizeof(AudioDeviceID);
+
+        const AudioObjectPropertyAddress defaultAddr = {
+            (thisObj->direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ? kAudioHardwarePropertyDefaultOutputDevice : kAudioHardwarePropertyDefaultInputDevice,
+            kAudioObjectPropertyScopeGlobal,
+            kAudioObjectPropertyElementMaster
+        };
+
+        AudioObjectGetPropertyData(kAudioObjectSystemObject, &defaultAddr, 0, NULL, &defaultSize, &defaultDevice); 
+
+        // Stop/start device with new ID in a separate thread to avoid deadlocks
+        std::thread tmpThread = std::thread([thisObj, defaultDevice]() {
+            thisObj->stop();
+            thisObj->coreAudioId_ = defaultDevice;
+            thisObj->start();
+        });
+        tmpThread.detach();
+    } 
+    else 
+    {
+        // Possible GUI stuff really shouldn't be happening on the audio thread.
+        std::thread tmpThread = std::thread([thisObj]() {
+            std::stringstream ss;
+            ss << "The device " << thisObj->deviceName_ << " may have been removed from the system. Press 'Stop' and then verify your audio settings.";
+            if (thisObj->onAudioErrorFunction)
+            {
+                thisObj->onAudioErrorFunction(*thisObj, ss.str(), thisObj->onAudioErrorState);
+            }
+        });
+        tmpThread.detach();
+    }
+
+    return noErr;
+}
+
+int MacAudioDevice::DeviceOverloadCallback_(
+        AudioObjectID                       inObjectID,
+        UInt32                              inNumberAddresses,
+        const AudioObjectPropertyAddress    inAddresses[],
+        void*                               inClientData)
+{
+    MacAudioDevice* thisObj = (MacAudioDevice*)inClientData;
+
+    // Possible GUI stuff really shouldn't be happening on the audio thread.
+    std::thread tmpThread = std::thread([thisObj]() {
+        if (thisObj->onAudioUnderflowFunction)
+        {
+            thisObj->onAudioUnderflowFunction(*thisObj, thisObj->onAudioUnderflowState);
+        }
+    });
+    tmpThread.detach();
+
+    return noErr;
+}

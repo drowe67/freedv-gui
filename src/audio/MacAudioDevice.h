@@ -25,10 +25,14 @@
 
 #include <thread>
 #include <dispatch/dispatch.h>
+#include <CoreAudio/CoreAudio.h>
+#include <AudioUnit/AudioUnit.h>
 
 #include "../util/ThreadedObject.h"
 #include "IAudioEngine.h"
 #include "IAudioDevice.h"
+
+class MacAudioEngine;
 
 class MacAudioDevice : public ThreadedObject, public IAudioDevice
 {
@@ -63,7 +67,7 @@ public:
 protected:
     friend class MacAudioEngine;
     
-    MacAudioDevice(int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate);
+    MacAudioDevice(MacAudioEngine* parent, std::string deviceName, int coreAudioId, IAudioEngine::AudioDirection direction, int numChannels, int sampleRate);
     
 private:
     int coreAudioId_;
@@ -72,13 +76,31 @@ private:
     int sampleRate_;
     void* engine_; // actually AVAudioEngine but this file is shared with C++ code
     void* player_; // actually AVAudioPlayerNode
-
+    std::string deviceName_;
+    void* observer_;
     short* inputFrames_;
-
-    static thread_local void* workgroup_;
-    static thread_local void* joinToken_;
-    
     dispatch_semaphore_t sem_;
+    bool isDefaultDevice_;
+    MacAudioEngine* parent_;
+
+    void joinWorkgroup_();
+    void leaveWorkgroup_();
+
+    static thread_local void* Workgroup_;
+    static thread_local void* JoinToken_;
+    static thread_local int CurrentCoreAudioId_;
+
+    static int DeviceIsAliveCallback_(
+        AudioObjectID                       inObjectID,
+        UInt32                              inNumberAddresses,
+        const AudioObjectPropertyAddress    inAddresses[],
+        void*                               inClientData);
+
+    static int DeviceOverloadCallback_(
+        AudioObjectID                       inObjectID,
+        UInt32                              inNumberAddresses,
+        const AudioObjectPropertyAddress    inAddresses[],
+        void*                               inClientData);
 };
 
 #endif // MAC_AUDIO_DEVICE_H

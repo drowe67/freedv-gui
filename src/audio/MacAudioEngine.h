@@ -28,6 +28,7 @@
 #include <vector>
 #include <functional>
 #include <CoreFoundation/CoreFoundation.h>
+#include <CoreAudio/CoreAudio.h>
 #include "IAudioEngine.h"
 
 class IAudioDevice;
@@ -48,6 +49,12 @@ public:
 private:    
     AudioDeviceSpecification getAudioSpecification_(int coreAudioId, AudioDirection direction);
     int getNumChannels_(int coreAudioId, AudioDirection direction);
+
+    static int OnDeviceListChange_(
+        AudioObjectID                       inObjectID,
+        UInt32                              inNumberAddresses,
+        const AudioObjectPropertyAddress    inAddresses[],
+        void*                               inClientData);
 };
 
 #endif // MAC_AUDIO_ENGINE_H

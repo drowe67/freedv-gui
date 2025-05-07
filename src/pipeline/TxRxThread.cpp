@@ -150,7 +150,7 @@ void TxRxThread::initializePipeline_()
         auto recordMicPipeline = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         recordMicPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordMicStep));
         
-        auto recordMicTap = new TapStep(inputSampleRate_, recordMicPipeline, false);
+        auto recordMicTap = new TapStep(inputSampleRate_, recordMicPipeline);
         auto bypassRecordMic = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         
         auto eitherOrRecordMic = new EitherOrStep(
@@ -217,7 +217,7 @@ void TxRxThread::initializePipeline_()
             auto micAudioPipeline = new AudioPipeline(inputSampleRate_, equalizedMicAudioLink_->getSampleRate());
             micAudioPipeline->appendPipelineStep(equalizedMicAudioLink_->getInputPipelineStep());
         
-            auto micAudioTap = std::make_shared<TapStep>(inputSampleRate_, micAudioPipeline, false);
+            auto micAudioTap = std::make_shared<TapStep>(inputSampleRate_, micAudioPipeline);
             pipeline_->appendPipelineStep(micAudioTap);
         }
                 
@@ -226,7 +226,7 @@ void TxRxThread::initializePipeline_()
         auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
         resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotStep));
 
-        auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline, true);
+        auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotTap));
         
         // FreeDV TX step (analog leg)
@@ -254,7 +254,7 @@ void TxRxThread::initializePipeline_()
         auto recordModulatedPipeline = new AudioPipeline(outputSampleRate_, recordModulatedStep->getOutputSampleRate());
         recordModulatedPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedStep));
         
-        auto recordModulatedTap = new TapStep(outputSampleRate_, recordModulatedPipeline, false);
+        auto recordModulatedTap = new TapStep(outputSampleRate_, recordModulatedPipeline);
         auto recordModulatedTapPipeline = new AudioPipeline(outputSampleRate_, outputSampleRate_);
         recordModulatedTapPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedTap));
         
@@ -295,7 +295,7 @@ void TxRxThread::initializePipeline_()
         auto recordRadioPipeline = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         recordRadioPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordRadioStep));
         
-        auto recordRadioTap = new TapStep(inputSampleRate_, recordRadioPipeline, false);
+        auto recordRadioTap = new TapStep(inputSampleRate_, recordRadioPipeline);
         auto bypassRecordRadio = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         
         auto eitherOrRecordRadio = new EitherOrStep(
@@ -342,7 +342,7 @@ void TxRxThread::initializePipeline_()
         auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
         resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotStep));
 
-        auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline, true);
+        auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotTap));
         
         // Tone interferer step (optional)
@@ -369,7 +369,7 @@ void TxRxThread::initializePipeline_()
             inputSampleRate_, computeRfSpectrumStep->getOutputSampleRate());
         computeRfSpectrumPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(computeRfSpectrumStep));
         
-        auto computeRfSpectrumTap = new TapStep(inputSampleRate_, computeRfSpectrumPipeline, true);
+        auto computeRfSpectrumTap = new TapStep(inputSampleRate_, computeRfSpectrumPipeline);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(computeRfSpectrumTap));
         
         // RX demodulation step
@@ -459,7 +459,7 @@ void TxRxThread::initializePipeline_()
         auto resampleForPlotOutPipeline = new AudioPipeline(outputSampleRate_, resampleForPlotOutStep->getOutputSampleRate());
         resampleForPlotOutPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutStep));
 
-        auto resampleForPlotOutTap = new TapStep(outputSampleRate_, resampleForPlotOutPipeline, true);
+        auto resampleForPlotOutTap = new TapStep(outputSampleRate_, resampleForPlotOutPipeline);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutTap));
         
         // Clear anything in the FIFO before resuming decode.

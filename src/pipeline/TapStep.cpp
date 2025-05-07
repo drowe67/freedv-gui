@@ -25,25 +25,16 @@
 #include <assert.h>
 #include <future>
 
-TapStep::TapStep(int sampleRate, IPipelineStep* tapStep, bool operateBackground)
+TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
     : tapStep_(tapStep)
     , sampleRate_(sampleRate)
-    , operateBackground_(operateBackground)
 {
     // empty
 }
 
 TapStep::~TapStep()
 {
-    // Make sure we clear everything remaining in queue before
-    // deallocating. This isn't done in the base class as tapStep_
-    // could be deallocated by the time we call that class' destructor.
-    auto prom = std::make_shared<std::promise<void>>();
-    auto fut = prom->get_future();
-    enqueue_([&]() {
-        prom->set_value();
-    });
-    fut.wait();
+    // empty
 }
 
 int TapStep::getInputSampleRate() const
@@ -60,21 +51,8 @@ std::shared_ptr<short> TapStep::execute(std::shared_ptr<short> inputSamples, int
 {
     assert(tapStep_->getInputSampleRate() == sampleRate_);
     
-    if (operateBackground_)
-    {
-        // 5 millisecond timeout to queue to background thread.
-        // Since this is likely for the UI, it's fine if the step
-        // doesn't execute.
-        enqueue_([&, inputSamples, numInputSamples]() {
-            int temp = 0;
-            tapStep_->execute(inputSamples, numInputSamples, &temp);
-        }, 5);
-    }
-    else
-    {
-        int temp = 0;
-        tapStep_->execute(inputSamples, numInputSamples, &temp);
-    }
+    int temp = 0;
+    tapStep_->execute(inputSamples, numInputSamples, &temp);
     
     *numOutputSamples = numInputSamples;
     return inputSamples;

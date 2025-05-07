@@ -257,17 +257,6 @@ void FreeDVReporter::connect_()
     sioClient_->setOnConnectFn([&]()
     {
         isConnecting_ = false;
-        
-        if (hidden_)
-        {
-            hideFromView();
-        }
-        else
-        {
-            freqChangeImpl_(lastFrequency_);
-            transmitImpl_(mode_, tx_);
-            sendMessageImpl_(message_);
-        }
     });
     
     sioClient_->setOnDisconnectFn([&]() {
@@ -336,6 +325,21 @@ void FreeDVReporter::connect_()
         if (onConnectionSuccessfulFn_)
         {
             onConnectionSuccessfulFn_();
+        }
+       
+        // Send initial data now that we're fully connected to the server.
+        // This was originally done right on socket.io connect, but on some
+        // machines this caused the built-in FreeDV Reporter client to be
+        // unhappy. 	
+        if (hidden_)
+        {
+            hideFromView();
+        }
+        else
+        {
+            freqChangeImpl_(lastFrequency_);
+            transmitImpl_(mode_, tx_);
+            sendMessageImpl_(message_);
         }
     });
 
