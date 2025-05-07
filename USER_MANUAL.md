@@ -902,6 +902,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Preserve Hamlib rig names on startup to guard against changes by Hamlib during execution. (PR #834)
     * Fix dropouts related to virtual audio cables. (PR #840)
     * Report "unk" for mode on Hamlib disconnect. (PR #851)
+    * Fix deadlocks and crashes while using Play/Record buttons in Audio Options window. (PR #871)
+    * Fix issue causing PTT button to remain active after pushing it. (PR #871)
+    * Fix rendering issue causing random spikes in From Mic plot. (PR #871)
 2. Enhancements:
     * Show green line indicating RX frequency. (PR #725)
     * Update configuration of the Voice Keyer feature based on user feedback. (PR #730, #746, #793)
