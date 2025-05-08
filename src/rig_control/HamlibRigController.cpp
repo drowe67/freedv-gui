@@ -264,6 +264,8 @@ int HamlibRigController::GetNumberSupportedRadios()
 
 void HamlibRigController::connectImpl_()
 {
+    bool setTimeouts = true;
+
     if (rig_ != nullptr)
     {
         std::string errMsg = "Already connected to radio.";
@@ -282,7 +284,8 @@ void HamlibRigController::connectImpl_()
     /* Initialise, configure and open. */
     origFreq_ = 0;
     origMode_ = RIG_MODE_NONE;
-    
+
+reattempt_connection:
     rig_ = rig_init(RigList_[rigIndex]->rig_model);
     if (!rig_) 
     {
@@ -339,10 +342,13 @@ void HamlibRigController::connectImpl_()
             break;
     }
     
-    rig_set_conf(rig_, rig_token_lookup(rig_, "timeout"), "1000");
-    rig_set_conf(rig_, rig_token_lookup(rig_, "retry"), "1");
-    rig_set_conf(rig_, rig_token_lookup(rig_, "timeout_retry"), "1");
-    
+    if (setTimeouts)
+    {
+        rig_set_conf(rig_, rig_token_lookup(rig_, "timeout"), "1000");
+        rig_set_conf(rig_, rig_token_lookup(rig_, "retry"), "1");
+        rig_set_conf(rig_, rig_token_lookup(rig_, "timeout_retry"), "1");
+    }
+
     auto result = rig_open(rig_);
     if (result == RIG_OK) 
     {
@@ -361,6 +367,14 @@ void HamlibRigController::connectImpl_()
         // revert on close.
         requestCurrentFrequencyModeImpl_();
         return;
+    }
+    else if (setTimeouts)
+    {
+        // On some radios, timeouts don't really work. Reattempt connection without
+        // setting them.
+        setTimeouts = false;
+        rig_cleanup(rig_);
+        goto reattempt_connection;
     }
     else
     {
