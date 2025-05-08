@@ -1470,6 +1470,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setReporter(std::shared_ptr<
     else
     {
         // Spot list no longer valid, delete the items currently on there
+        log_debug("Reporter object set to null");
         clearAllEntries_();
     }
 }
@@ -1489,6 +1490,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
         delete row.second;
     }
     allReporterData_.clear();
+    
+    log_debug("About to clear all entries");
     Cleared();
 }
 
