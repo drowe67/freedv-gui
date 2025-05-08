@@ -778,7 +778,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 
             if (reportData->isVisible)
             {
-                log_debug("About to report item changed for SID %s (%s / %s)", reportData->sid.c_str(), (const char*)reportData->callsign.ToUTF8(), (const char*)reportData->gridSquare.ToUTF8());
                 wxDataViewItem dvi(reportData);
                 itemsChanged.Add(dvi);
             }
@@ -1491,7 +1490,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
     }
     allReporterData_.clear();
     
-    log_debug("About to clear all entries");
     Cleared();
 }
 
@@ -1853,18 +1851,15 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
             kvp.second->isVisible = newVisibility;
             if (newVisibility)
             {
-                log_debug("About to report item added for SID %s (%s / %s)", kvp.second->sid.c_str(), (const char*)kvp.second->callsign.ToUTF8(), (const char*)kvp.second->gridSquare.ToUTF8());
                 ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(kvp.second));
             }
             else
             {
-                log_debug("About to report item deleted for SID %s (%s / %s)", kvp.second->sid.c_str(), (const char*)kvp.second->callsign.ToUTF8(), (const char*)kvp.second->gridSquare.ToUTF8());
                 ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(kvp.second));
             }
         }
         else if (updated && kvp.second->isVisible)
         {
-            log_debug("About to report item changed for SID %s (%s / %s)", kvp.second->sid.c_str(), (const char*)kvp.second->callsign.ToUTF8(), (const char*)kvp.second->gridSquare.ToUTF8());
             ItemChanged(wxDataViewItem(kvp.second));
             parent_->sortRequired_ = true;
         }
@@ -2018,7 +2013,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
 
         if (temp->isVisible)
         {
-            log_debug("About to report item added for SID %s (%s / %s)", temp->sid.c_str(), (const char*)temp->callsign.ToUTF8(), (const char*)temp->gridSquare.ToUTF8());
             ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(temp));
         }
     });
@@ -2057,8 +2051,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
             wxDataViewItem dvi(item);
             if (item->isVisible)
             {
-                log_debug("About to report item deleted for SID %s (%s / %s)", iter->second->sid.c_str(), (const char*)iter->second->callsign.ToUTF8(), (const char*)iter->second->gridSquare.ToUTF8());
-                
                 item->isVisible = false;
                 parent_->Unselect(dvi);
                 ItemDeleted(wxDataViewItem(nullptr), dvi);
@@ -2106,19 +2098,15 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
                 iter->second->isVisible = newVisibility;
                 if (newVisibility)
                 {
-                    log_debug("About to report item added for SID %s (%s / %s)", iter->second->sid.c_str(), (const char*)iter->second->callsign.ToUTF8(), (const char*)iter->second->gridSquare.ToUTF8());
                     ItemAdded(wxDataViewItem(nullptr), dvi);
                 }
                 else
                 {
-                    log_debug("About to report item deleted for SID %s (%s / %s)", iter->second->sid.c_str(), (const char*)iter->second->callsign.ToUTF8(), (const char*)iter->second->gridSquare.ToUTF8());
                     ItemDeleted(wxDataViewItem(nullptr), dvi);
                 }
             }
             else if (newVisibility)
             {            
-                log_debug("About to report item changed for SID %s (%s / %s)", iter->second->sid.c_str(), (const char*)iter->second->callsign.ToUTF8(), (const char*)iter->second->gridSquare.ToUTF8());
-                
                 ItemChanged(dvi);
                 parent_->sortRequired_ = 
                     parent_->m_listSpots->GetColumn(FREQUENCY_COL)->IsSortKey() ||
@@ -2161,8 +2149,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
 
             if (iter->second->isVisible)
             { 
-                log_debug("About to report item chsanged for SID %s (%s / %s)", iter->second->sid.c_str(), (const char*)iter->second->callsign.ToUTF8(), (const char*)iter->second->gridSquare.ToUTF8());
-                
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
                 parent_->sortRequired_ = 
@@ -2208,8 +2194,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
        
             if (iter->second->isVisible)
             { 
-                log_debug("About to report item changed for SID %s (%s / %s)", iter->second->sid.c_str(), (const char*)iter->second->callsign.ToUTF8(), (const char*)iter->second->gridSquare.ToUTF8());
-                
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
                 parent_->sortRequired_ = 
@@ -2261,8 +2245,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
        
             if (iter->second->isVisible)
             {
-                log_debug("About to report item changed for SID %s (%s / %s)", iter->second->sid.c_str(), (const char*)iter->second->callsign.ToUTF8(), (const char*)iter->second->gridSquare.ToUTF8());
-                
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
                 parent_->sortRequired_ = 
