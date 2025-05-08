@@ -37,7 +37,6 @@ FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::
     , tx_(false)
     , rxOnly_(rxOnly)
     , hidden_(false)
-    , fullyConnected_(false)
 {
     if (hostname_ == "")
     {
@@ -258,12 +257,10 @@ void FreeDVReporter::connect_()
     sioClient_->setOnConnectFn([&]()
     {
         isConnecting_ = false;
-        fullyConnected_ = false;
     });
     
     sioClient_->setOnDisconnectFn([&]() {
         isConnecting_ = false;
-        fullyConnected_ = false;
         
         if (onReporterDisconnectFn_)
         {
@@ -325,8 +322,6 @@ void FreeDVReporter::connect_()
     });
 
     sioClient_->on("connection_successful", [&](nlohmann::json) {
-        fullyConnected_ = true;
-        
         if (onConnectionSuccessfulFn_)
         {
             onConnectionSuccessfulFn_();
@@ -595,14 +590,7 @@ void FreeDVReporter::sendMessageImpl_(std::string message)
 
 void FreeDVReporter::hideFromViewImpl_()
 {
-    // The FreeDV Reporter connection isn't actually valid until we get
-    // the "connection successful" message. Thus, we defer sending hide_self
-    // until we get that message, but we record what state we should be
-    // in the meantime.
-    if (fullyConnected_)
-    {
-        sioClient_->emit("hide_self");
-    }
+    sioClient_->emit("hide_self");
     hidden_ = true;
 }
 
@@ -613,14 +601,6 @@ void FreeDVReporter::showOurselvesImpl_()
         onAboutToShowSelfFn_();
     }
     
-    // The FreeDV Reporter connection isn't actually valid until we get
-    // the "connection successful" message. Thus, we defer sending show_self
-    // until we get that message, but we record what state we should be
-    // in the meantime.
-    if (fullyConnected_)
-    {
-        sioClient_->emit("show_self");
-    }
-    
+    sioClient_->emit("show_self");
     hidden_ = false;
 }
