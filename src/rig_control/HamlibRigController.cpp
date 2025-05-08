@@ -372,6 +372,7 @@ reattempt_connection:
     {
         // On some radios, timeouts don't really work. Reattempt connection without
         // setting them.
+        log_debug("Reattempting connection to radio without timeouts");
         setTimeouts = false;
         rig_cleanup(rig_);
         goto reattempt_connection;
@@ -381,7 +382,7 @@ reattempt_connection:
         std::string errMsg = std::string("Could not connect to radio: ") + rigerror(result);
         onRigError(this, errMsg);
     }
-    log_debug("hamlib: rig_open() failed ...");
+    log_debug("hamlib: rig_open() failed: %s", rigerror(result));
 
     rig_cleanup(rig_);
     rig_ = nullptr;
