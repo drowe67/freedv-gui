@@ -1797,7 +1797,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::GetValue (wxVariant &variant
 bool FreeDVReporterDialog::FreeDVReporterDataModel::IsContainer (const wxDataViewItem &item) const
 {
     // Single-level (i.e. no children)
-    return false;
+    return !item.IsOk();
 }
 
 bool FreeDVReporterDialog::FreeDVReporterDataModel::SetValue (const wxVariant &variant, const wxDataViewItem &item, unsigned int col)
