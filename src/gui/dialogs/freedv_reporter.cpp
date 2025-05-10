@@ -1852,6 +1852,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
             if (newVisibility)
             {
                 ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(kvp.second));
+                parent_->sortRequired_ = true;
             }
             else
             {
@@ -2014,6 +2015,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         if (temp->isVisible)
         {
             ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(temp));
+            parent_->sortRequired_ = true;
         }
     });
 
@@ -2099,6 +2101,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
                 if (newVisibility)
                 {
                     ItemAdded(wxDataViewItem(nullptr), dvi);
+                    parent_->sortRequired_ = true;
                 }
                 else
                 {
