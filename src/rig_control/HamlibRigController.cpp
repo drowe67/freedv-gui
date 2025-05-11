@@ -282,7 +282,7 @@ void HamlibRigController::connectImpl_()
     /* Initialise, configure and open. */
     origFreq_ = 0;
     origMode_ = RIG_MODE_NONE;
-    
+
     rig_ = rig_init(RigList_[rigIndex]->rig_model);
     if (!rig_) 
     {
@@ -309,9 +309,16 @@ void HamlibRigController::connectImpl_()
 
     rig_set_conf(rig_, rig_token_lookup(rig_, "rig_pathname"), serialPort_.c_str());
 
-    if (pttSerialPort_.size() > 0)
+    if (pttSerialPort_.size() > 0 && 
+        pttSerialPort_ != serialPort_ &&
+        (pttType_ == PTT_VIA_RTS || pttType_ == PTT_VIA_DTR))
     {
-        rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_pathname"), pttSerialPort_.c_str());
+        std::string fixedPttSerialPort = pttSerialPort_;
+#if defined(WIN32)
+        // WSJT-X logic, not sure it's needed here.
+        fixedPttSerialPort = std::string("\\\\.\\") + fixedPttSerialPort;
+#endif // defined(WIN32)
+        rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_pathname"), fixedPttSerialPort.c_str());
     }
     
     if (serialRate_ > 0) 
@@ -326,23 +333,31 @@ void HamlibRigController::connectImpl_()
     switch(pttType_)
     {
         case PTT_VIA_RTS:
-            rig_->state.pttport.type.ptt = RIG_PTT_SERIAL_RTS;
+            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "RTS");
             break;
         case PTT_VIA_DTR:
-            rig_->state.pttport.type.ptt = RIG_PTT_SERIAL_DTR;
+            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "DTR");
             break;
         case PTT_VIA_NONE:
-            rig_->state.pttport.type.ptt = RIG_PTT_NONE;
+            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "None");
             break;
         case PTT_VIA_CAT:
+        case PTT_VIA_CAT_DATA:
+            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "RIG");
+            break;
         default:
             break;
     }
     
-    rig_set_conf(rig_, rig_token_lookup(rig_, "timeout"), "1000");
-    rig_set_conf(rig_, rig_token_lookup(rig_, "retry"), "1");
-    rig_set_conf(rig_, rig_token_lookup(rig_, "timeout_retry"), "1");
+    if (pttType_ == PTT_VIA_RTS || pttType_ == PTT_VIA_DTR)
+    {
+        rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_share"), "1");
+    }
     
+    // Icom workaround from WSJT-X. Not sure it's needed here as
+    // FreeDV doesn't do split.
+    rig_set_conf(rig_, rig_token_lookup(rig_, "no_xchg"), "1");
+
     auto result = rig_open(rig_);
     if (result == RIG_OK) 
     {
@@ -367,7 +382,7 @@ void HamlibRigController::connectImpl_()
         std::string errMsg = std::string("Could not connect to radio: ") + rigerror(result);
         onRigError(this, errMsg);
     }
-    log_debug("hamlib: rig_open() failed ...");
+    log_debug("hamlib: rig_open() failed: %s", rigerror(result));
 
     rig_cleanup(rig_);
     rig_ = nullptr;
@@ -415,7 +430,11 @@ void HamlibRigController::pttImpl_(bool state)
     }
 
     ptt_t on = state ? RIG_PTT_ON : RIG_PTT_OFF;
-
+    if (pttType_ == PTT_VIA_CAT_DATA && on != RIG_PTT_OFF)
+    {
+        on = RIG_PTT_ON_DATA;
+    }
+    
     auto oldTime = std::chrono::steady_clock::now();
     int result = RIG_OK;
     if (pttType_ != PTT_VIA_NONE)
@@ -484,7 +503,7 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
     if (pttSet_)
     {
         // If transmitting, temporarily stop transmitting so we can change the mode.
-        int result = rig_set_ptt(rig_, RIG_VFO_CURR, RIG_PTT_ON);
+        int result = rig_set_ptt(rig_, RIG_VFO_CURR, pttType_ == PTT_VIA_CAT_DATA ? RIG_PTT_ON_DATA : RIG_PTT_ON);
         if (result != RIG_OK) 
         {
             // If we can't stop transmitting, we shouldn't try to change the mode
@@ -557,7 +576,7 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
     if (pttSet_)
     {
         // If transmitting, temporarily stop transmitting so we can change the mode.
-        int result = rig_set_ptt(rig_, RIG_VFO_CURR, RIG_PTT_ON);
+        int result = rig_set_ptt(rig_, RIG_VFO_CURR, pttType_ == PTT_VIA_CAT_DATA ? RIG_PTT_ON_DATA : RIG_PTT_ON);
         if (result != RIG_OK) 
         {
             // If we can't stop transmitting, we shouldn't try to change the mode

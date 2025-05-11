@@ -45,6 +45,7 @@ public:
         PTT_VIA_RTS,
         PTT_VIA_DTR,
         PTT_VIA_NONE,
+        PTT_VIA_CAT_DATA,
     };
     
     HamlibRigController(std::string rigName, std::string serialPort, const int serialRate, const int civHex = 0, const PttType pttType = PTT_VIA_CAT, std::string pttSerialPort = std::string(), bool restoreFreqModeOnDisconnect = false, bool freqOnly = false);

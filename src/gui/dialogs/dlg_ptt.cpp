@@ -142,6 +142,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     m_cbPttMethod->Append(wxT("RTS"));
     m_cbPttMethod->Append(wxT("DTR"));
     m_cbPttMethod->Append(wxT("None"));
+    m_cbPttMethod->Append(wxT("CAT via Data port"));
     
     mainSizer->Add(staticBoxSizer18, 0, wxEXPAND, 5);
 
