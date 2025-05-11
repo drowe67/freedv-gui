@@ -1469,6 +1469,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::setReporter(std::shared_ptr<
     else
     {
         // Spot list no longer valid, delete the items currently on there
+        log_debug("Reporter object set to null");
         clearAllEntries_();
     }
 }
@@ -1488,6 +1489,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
         delete row.second;
     }
     allReporterData_.clear();
+    
     Cleared();
 }
 
@@ -1793,7 +1795,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::GetValue (wxVariant &variant
 bool FreeDVReporterDialog::FreeDVReporterDataModel::IsContainer (const wxDataViewItem &item) const
 {
     // Single-level (i.e. no children)
-    return false;
+    return !item.IsOk();
 }
 
 bool FreeDVReporterDialog::FreeDVReporterDataModel::SetValue (const wxVariant &variant, const wxDataViewItem &item, unsigned int col)
@@ -2242,7 +2244,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
             }
        
             if (iter->second->isVisible)
-            { 
+            {
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
                 parent_->sortRequired_ = 

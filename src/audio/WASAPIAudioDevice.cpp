@@ -311,13 +311,16 @@ void WASAPIAudioDevice::start()
             while (isRenderCaptureRunning_)
             {
                 WaitForSingleObject(renderCaptureEvent_, 100);
-                if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
+                if (isRenderCaptureRunning_)
                 {
-                    renderAudio_();
-                }
-                else
-                {
-                    captureAudio_();
+                    if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
+                    {
+                        renderAudio_();
+                    }
+                    else
+                    {
+                        captureAudio_();
+                    }
                 }
             }
 
@@ -379,8 +382,14 @@ void WASAPIAudioDevice::stop()
 
         if (semaphore_ != nullptr)
         {
-            CloseHandle(semaphore_);
+            // Set semaphore_ to nullptr first in case someone could be potentially
+            // using it. Then for those currently waiting, release the semaphore 
+            // to get them unstuck. THEN we can close it. Otherwise, heap corruption
+            // occurs!
+            auto tmpSem = semaphore_;
             semaphore_ = nullptr;
+            ReleaseSemaphore(tmpSem, 1, nullptr);
+            CloseHandle(tmpSem);
         }
 
         prom->set_value();
