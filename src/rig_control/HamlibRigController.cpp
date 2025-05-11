@@ -342,6 +342,8 @@ void HamlibRigController::connectImpl_()
             rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "None");
             break;
         case PTT_VIA_CAT:
+            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "RIG");
+            break;
         default:
             break;
     }
