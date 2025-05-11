@@ -894,7 +894,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * Fix bug preventing saving of the previously used path when playing back files. (PR #729)
     * Fix bug preventing proper time display in FreeDV Reporter on macOS. (PR #748)
-    * Set timeout for Hamlib comms to avoid GUI getting stuck. (PR #746)
+    * Hamlib: Improve behavior with Icom rigs, serial port PTT. (PR #875)
     * Fix various audio dropout issues, especially on Linux. (PR #761)
     * Fix issue preventing non-ASCII text from appearing properly in FreeDV Reporter messages. (PR #812)
     * Don't adjust Msg column width when user disconnects. (PR #828)
