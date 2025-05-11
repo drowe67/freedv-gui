@@ -792,7 +792,7 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     model->updateHighlights();
 
-    if (sortRequired_)
+    //if (sortRequired_)
     {
         model->Resort();
         sortRequired_ = false;
