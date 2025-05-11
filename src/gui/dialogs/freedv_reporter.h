@@ -289,7 +289,6 @@ class FreeDVReporterDialog : public wxFrame
         };
 
         FilterFrequency getFilterForFrequency_(uint64_t freq);
-        bool sortRequired_;
 };
 
 #endif // __FREEDV_REPORTER_DIALOG__
