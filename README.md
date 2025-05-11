@@ -12,8 +12,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   ```
   $ sudo apt install libspeexdsp-dev libsamplerate0-dev sox git \
   libwxgtk3.2-dev libhamlib-dev libasound2-dev libao-dev \
-  libgsm1-dev libsndfile1-dev cmake module-assistant build-essential \
-  octave octave-signal
+  libgsm1-dev libsndfile1-dev cmake module-assistant build-essential
   $ git clone https://github.com/drowe67/freedv-gui.git
   $ cd freedv-gui
 
@@ -40,7 +39,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   $ sudo dnf groupinstall "Development Tools"
   $ sudo dnf install cmake wxGTK3-devel libsamplerate-devel \
     libsndfile-devel speexdsp-devel hamlib-devel alsa-lib-devel libao-devel \
-    gsm-devel gcc-c++ sox octave octave-signal
+    gsm-devel gcc-c++ sox
   $ git clone https://github.com/drowe67/freedv-gui.git
   $ cd freedv-gui
 
@@ -190,13 +189,13 @@ for 2020 mode (on systems fast enough to acceptably decode it).
 Using MacPorts, most of the appropriate dependencies can be installed by:
 
 ```
-$ sudo port install automake git libtool sox +universal cmake octave
+$ sudo port install automake git libtool sox +universal cmake
 ```
 
 and on Homebrew:
 
 ```
-$ brew install automake libtool git sox cmake octave
+$ brew install automake libtool git sox cmake
 ```
 
 Once the dependencies are installed, you can then run the `build_osx.sh` script inside the source tree to build
