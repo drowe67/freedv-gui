@@ -264,8 +264,6 @@ int HamlibRigController::GetNumberSupportedRadios()
 
 void HamlibRigController::connectImpl_()
 {
-    bool setTimeouts = true;
-
     if (rig_ != nullptr)
     {
         std::string errMsg = "Already connected to radio.";
