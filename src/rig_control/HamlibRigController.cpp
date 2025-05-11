@@ -315,7 +315,12 @@ void HamlibRigController::connectImpl_()
         pttSerialPort_ != serialPort_ &&
         (pttType_ == PTT_VIA_RTS || pttType_ == PTT_VIA_DTR))
     {
-        rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_pathname"), pttSerialPort_.c_str());
+        std::string fixedPttSerialPort = pttSerialPort_;
+#if defined(WIN32)
+        // WSJT-X logic, not sure it's needed here.
+        fixedPttSerialPort = std::string("\\\\.\\") + fixedPttSerialPort;
+#endif // defined(WIN32)
+        rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_pathname"), fixedPttSerialPort.c_str());
     }
     
     if (serialRate_ > 0) 
@@ -330,18 +335,27 @@ void HamlibRigController::connectImpl_()
     switch(pttType_)
     {
         case PTT_VIA_RTS:
-            rig_->state.pttport.type.ptt = RIG_PTT_SERIAL_RTS;
+            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "RTS");
             break;
         case PTT_VIA_DTR:
-            rig_->state.pttport.type.ptt = RIG_PTT_SERIAL_DTR;
+            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "DTR");
             break;
         case PTT_VIA_NONE:
-            rig_->state.pttport.type.ptt = RIG_PTT_NONE;
+            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "None");
             break;
         case PTT_VIA_CAT:
         default:
             break;
     }
+    
+    if (pttType_ == PTT_VIA_RTS || pttType_ == PTT_VIA_DTR)
+    {
+        rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_share"), "1");
+    }
+    
+    // Icom workaround from WSJT-X. Not sure it's needed here as
+    // FreeDV doesn't do split.
+    rig_set_conf(rig_, rig_token_lookup(rig_, "no_xchg"), "1");
 
     auto result = rig_open(rig_);
     if (result == RIG_OK) 
