@@ -342,6 +342,7 @@ void HamlibRigController::connectImpl_()
             rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "None");
             break;
         case PTT_VIA_CAT:
+        case PTT_VIA_CAT_DATA:
             rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "RIG");
             break;
         default:
@@ -429,7 +430,11 @@ void HamlibRigController::pttImpl_(bool state)
     }
 
     ptt_t on = state ? RIG_PTT_ON : RIG_PTT_OFF;
-
+    if (pttType_ == PTT_VIA_CAT_DATA && on != RIG_PTT_OFF)
+    {
+        on = RIG_PTT_ON_DATA;
+    }
+    
     auto oldTime = std::chrono::steady_clock::now();
     int result = RIG_OK;
     if (pttType_ != PTT_VIA_NONE)
@@ -498,7 +503,7 @@ void HamlibRigController::setFrequencyImpl_(uint64_t frequencyHz)
     if (pttSet_)
     {
         // If transmitting, temporarily stop transmitting so we can change the mode.
-        int result = rig_set_ptt(rig_, RIG_VFO_CURR, RIG_PTT_ON);
+        int result = rig_set_ptt(rig_, RIG_VFO_CURR, pttType_ == PTT_VIA_CAT_DATA ? RIG_PTT_ON_DATA : RIG_PTT_ON);
         if (result != RIG_OK) 
         {
             // If we can't stop transmitting, we shouldn't try to change the mode
@@ -571,7 +576,7 @@ void HamlibRigController::setModeImpl_(IRigFrequencyController::Mode mode)
     if (pttSet_)
     {
         // If transmitting, temporarily stop transmitting so we can change the mode.
-        int result = rig_set_ptt(rig_, RIG_VFO_CURR, RIG_PTT_ON);
+        int result = rig_set_ptt(rig_, RIG_VFO_CURR, pttType_ == PTT_VIA_CAT_DATA ? RIG_PTT_ON_DATA : RIG_PTT_ON);
         if (result != RIG_OK) 
         {
             // If we can't stop transmitting, we shouldn't try to change the mode
