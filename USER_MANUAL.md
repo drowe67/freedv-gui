@@ -140,7 +140,7 @@ your radio:
 + Hamlib: support for many different radios via the Hamlib library and a serial port (or via TCP/IP for some devices, e.g. SDRs or FLrig/rigctld).
 + Serial Port: direct access to the serial port pins
 
-You may also optionally configure a second serial port for PTT input.
+You may also optionally configure an additional serial port for PTT input.
 This can be useful for interfacing devices like foot switches to 
 FreeDV. If configured, FreeDV will switch into transmit mode (including
 sending the needed Hamlib or serial commands to initiate PTT) when it
@@ -917,6 +917,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add rig control option to prevent auto-adjustment of the radio's current mode. (PR #809)
     * Update default 80 and 160m calling frequencies. (PR #831)
     * Shorten PulseAudio/pipewire app name. (PR #843)
+    * Hamlib: support CAT PTT via the Data port instead of Mic (needed for some older radios). (PR #875)
 3. Build system:
     * Allow overriding the version tag when building. (PR #727)
     * Update wxWidgets to 3.2.8. (PR #861)
