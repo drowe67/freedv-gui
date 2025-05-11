@@ -311,7 +311,9 @@ void HamlibRigController::connectImpl_()
 
     rig_set_conf(rig_, rig_token_lookup(rig_, "rig_pathname"), serialPort_.c_str());
 
-    if (pttSerialPort_.size() > 0)
+    if (pttSerialPort_.size() > 0 && 
+        pttSerialPort_ != serialPort_ &&
+        (pttType_ == PTT_VIA_RTS || pttType_ == PTT_VIA_DTR))
     {
         rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_pathname"), pttSerialPort_.c_str());
     }
