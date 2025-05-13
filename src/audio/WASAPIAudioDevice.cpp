@@ -382,6 +382,12 @@ void WASAPIAudioDevice::stop()
             }
         }
 
+        if (renderCaptureEvent_ != nullptr)
+        {
+            CloseHandle(renderCaptureEvent_);
+            renderCaptureEvent_ = nullptr;
+        }
+        
         if (renderClient_ != nullptr)
         {
             renderClient_->Release();
