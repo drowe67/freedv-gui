@@ -58,6 +58,12 @@ public:
             new short[std::max(inputSampleRate_, outputSampleRate_)], 
             std::default_delete<short[]>());
     }
+    
+    virtual ~TxRxThread()
+    {
+        // Free allocated buffer
+        inputSamples_ = nullptr;
+    }
 
     // thread execution starts here
     void *Entry();

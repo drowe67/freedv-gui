@@ -515,7 +515,8 @@ void* TxRxThread::Entry()
 
 void TxRxThread::OnExit() 
 { 
-    // No actions required for exit.
+    // Free allocated buffer.
+    inputSamples_ = nullptr; 
 }
 
 void TxRxThread::terminateThread()
