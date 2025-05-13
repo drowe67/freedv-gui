@@ -218,6 +218,7 @@ AudioDeviceSpecification WASAPIAudioEngine::getDefaultAudioDevice(AudioDirection
             if (defaultSpec.name == spec.name)
             {
                 prom->set_value(spec);
+                defaultDevice->Release();
                 return;
             }
         }
@@ -398,7 +399,7 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
         return AudioDeviceSpecification::GetInvalidDevice();
     }
 
-    WAVEFORMATEX* streamFormat;
+    WAVEFORMATEX* streamFormat = nullptr;
     hr = audioClient->GetMixFormat(&streamFormat);
     if (FAILED(hr))
     {
