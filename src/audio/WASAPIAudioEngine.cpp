@@ -303,6 +303,9 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
 
                 auto devPtr = new WASAPIAudioDevice(client, direction, sampleRate, numChannels);
                 result = std::shared_ptr<IAudioDevice>(devPtr);
+                
+                client->Release();
+                device->Release();
             }
         }
         prom->set_value(result);

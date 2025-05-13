@@ -50,7 +50,7 @@ WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDi
     , isRenderCaptureRunning_(false)
     , semaphore_(nullptr)
 {
-    // empty
+    client_->AddRef();
 }
 
 WASAPIAudioDevice::~WASAPIAudioDevice()
@@ -298,7 +298,19 @@ void WASAPIAudioDevice::start()
             {
                 log_warn("Could not initialize COM (res = %d)", res);
             }
-
+            
+            // Increment refcounts of COM objects used by thread
+            // to avoid instability during stop/restart.
+            client_->AddRef();
+            if (renderClient_ != nullptr)
+            {
+                renderClient_->AddRef();
+            }
+            if (captureClient_ != nullptr)
+            {
+                captureClient_->AddRef();
+            }
+            
             // Temporarily raise priority of task
             setHelperRealTime();
 
@@ -320,7 +332,19 @@ void WASAPIAudioDevice::start()
 
             log_info("Exiting render/capture thread");
 
-            clearHelperRealTime();
+            clearHelperRealTime();     
+            
+            // Decrement refcounts prior to exit.
+            client_->Release();
+            if (renderClient_ != nullptr)
+            {
+                renderClient_->Release();
+            }
+            if (captureClient_ != nullptr)
+            {
+                captureClient_->Release();
+            }
+                   
             CoUninitialize();
         });
 
