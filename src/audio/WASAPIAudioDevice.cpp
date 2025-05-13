@@ -290,7 +290,7 @@ void WASAPIAudioDevice::start()
 
         // Start render/capture thread.
         isRenderCaptureRunning_ = true;
-        renderCaptureThread_ = std::thread([&]() {
+        renderCaptureThread_ = std::thread([this]() {
             log_info("Starting render/capture thread");
 
             HRESULT res = CoInitializeEx(nullptr, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
