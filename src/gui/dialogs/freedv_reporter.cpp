@@ -59,7 +59,6 @@ using namespace std::placeholders;
 FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) 
     : wxFrame(parent, id, title, pos, size, style)
     , tipWindow_(nullptr)
-    , sortRequired_(false)
 {
     if (wxGetApp().customConfigFileName != "")
     {
@@ -791,12 +790,7 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
 {
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     model->updateHighlights();
-
-    if (sortRequired_)
-    {
-        model->Resort();
-        sortRequired_ = false;
-    }
+    model->Resort();
 }
 
 void FreeDVReporterDialog::OnFilterTrackingEnable(wxCommandEvent& event)
@@ -1861,7 +1855,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
         else if (updated && kvp.second->isVisible)
         {
             ItemChanged(wxDataViewItem(kvp.second));
-            parent_->sortRequired_ = true;
         }
     }
 }
@@ -2108,9 +2101,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
             else if (newVisibility)
             {            
                 ItemChanged(dvi);
-                parent_->sortRequired_ = 
-                    parent_->m_listSpots->GetColumn(FREQUENCY_COL)->IsSortKey() ||
-                    parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
             }
         }
     });
@@ -2151,10 +2141,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
             { 
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
-                parent_->sortRequired_ = 
-                    parent_->m_listSpots->GetColumn(STATUS_COL)->IsSortKey() ||
-                    parent_->m_listSpots->GetColumn(TX_MODE_COL)->IsSortKey() ||
-                    parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
             }
         }
     });
@@ -2196,11 +2182,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             { 
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
-                parent_->sortRequired_ = 
-                    parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL)->IsSortKey() ||
-                    parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL)->IsSortKey() ||
-                    parent_->m_listSpots->GetColumn(SNR_COL)->IsSortKey() ||
-                    parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
             }
         }
     });
@@ -2247,9 +2228,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
             {
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
-                parent_->sortRequired_ = 
-                    parent_->m_listSpots->GetColumn(USER_MESSAGE_COL)->IsSortKey() ||
-                    parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL)->IsSortKey();
             }
         }
     });
