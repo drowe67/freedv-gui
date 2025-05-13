@@ -34,7 +34,7 @@
 // Nanoseconds per REFERENCE_TIME unit
 #define NS_PER_REFTIME (100)
 
-thread_local HANDLE WASAPIAudioDevice::helperTask_ = nullptr;
+thread_local HANDLE WASAPIAudioDevice::HelperTask_ = nullptr;
     
 WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : client_(client)
@@ -45,7 +45,6 @@ WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDi
     , numChannels_(numChannels)
     , bufferFrameCount_(0)
     , initialized_(false)
-    , lowLatencyTask_(nullptr)
     , latencyFrames_(0)
     , renderCaptureEvent_(nullptr)
     , isRenderCaptureRunning_(false)
@@ -301,12 +300,7 @@ void WASAPIAudioDevice::start()
             }
 
             // Temporarily raise priority of task
-            DWORD taskIndex = 0;
-            lowLatencyTask_ = AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
-            if (lowLatencyTask_ == nullptr)
-            {
-                log_warn("Could not increase thread priority");
-            }
+            setHelperRealTime();
 
             while (isRenderCaptureRunning_)
             {
@@ -326,12 +320,7 @@ void WASAPIAudioDevice::start()
 
             log_info("Exiting render/capture thread");
 
-            if (lowLatencyTask_ != nullptr)
-            {
-                AvRevertMmThreadCharacteristics(lowLatencyTask_);
-                lowLatencyTask_ = nullptr;
-            }
-
+            clearHelperRealTime();
             CoUninitialize();
         });
 
@@ -412,8 +401,8 @@ int WASAPIAudioDevice::getLatencyInMicroseconds()
 void WASAPIAudioDevice::setHelperRealTime()
 {
     DWORD taskIndex = 0;
-    helperTask_ = AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
-    if (helperTask_ == nullptr)
+    HelperTask_ = AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
+    if (HelperTask_ == nullptr)
     {
         log_warn("Could not increase thread priority");
     }
@@ -445,10 +434,10 @@ void WASAPIAudioDevice::stopRealTimeWork()
 
 void WASAPIAudioDevice::clearHelperRealTime()
 {
-    if (helperTask_ != nullptr)
+    if (HelperTask_ != nullptr)
     {
-        AvRevertMmThreadCharacteristics(helperTask_);
-        helperTask_ = nullptr;
+        AvRevertMmThreadCharacteristics(HelperTask_);
+        HelperTask_ = nullptr;
     }
 }
 
