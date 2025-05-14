@@ -2855,6 +2855,9 @@ void MainFrame::stopRxStream()
 
         if (m_txThread)
         {
+            m_txThread->terminateThread();
+            m_txThread->Wait();
+            
             if (txInSoundDevice)
             {
                 txInSoundDevice->stop();
@@ -2867,15 +2870,15 @@ void MainFrame::stopRxStream()
                 txOutSoundDevice.reset();
             }
             
-            m_txThread->terminateThread();
-            m_txThread->Wait();
-            
             delete m_txThread;
             m_txThread = nullptr;
         }
 
         if (m_rxThread)
         {
+            m_rxThread->terminateThread();
+            m_rxThread->Wait();
+            
             if (rxInSoundDevice)
             {
                 rxInSoundDevice->stop();
@@ -2887,9 +2890,6 @@ void MainFrame::stopRxStream()
                 rxOutSoundDevice->stop();
                 rxOutSoundDevice.reset();
             }
-            
-            m_rxThread->terminateThread();
-            m_rxThread->Wait();
             
             delete m_txThread;
             m_rxThread = nullptr;
@@ -3157,7 +3157,7 @@ void MainFrame::startRxStream()
         // FIFO sizes, which isn't recommended for real-time operation), we will
         // definitely lose audio.
         int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
-        int soundCard1InFifoSizeSamples = 10 * wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
+        int soundCard1InFifoSizeSamples = 30 * wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
         int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate / 1000;
 
         if (txInSoundDevice && txOutSoundDevice)

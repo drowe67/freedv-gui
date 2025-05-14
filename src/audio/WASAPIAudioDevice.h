@@ -79,7 +79,6 @@ private:
     int numChannels_;
     UINT32 bufferFrameCount_;
     bool initialized_;
-    HANDLE lowLatencyTask_;
     int latencyFrames_;
     std::thread renderCaptureThread_;
     HANDLE renderCaptureEvent_;
@@ -89,7 +88,7 @@ private:
     void renderAudio_();
     void captureAudio_();
     
-    static thread_local HANDLE helperTask_;
+    static thread_local HANDLE HelperTask_;
 };
 
 #endif // WASAPI_AUDIO_DEVICE_H

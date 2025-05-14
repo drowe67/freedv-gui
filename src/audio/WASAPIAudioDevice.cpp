@@ -34,7 +34,7 @@
 // Nanoseconds per REFERENCE_TIME unit
 #define NS_PER_REFTIME (100)
 
-thread_local HANDLE WASAPIAudioDevice::helperTask_ = nullptr;
+thread_local HANDLE WASAPIAudioDevice::HelperTask_ = nullptr;
     
 WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : client_(client)
@@ -45,13 +45,12 @@ WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDi
     , numChannels_(numChannels)
     , bufferFrameCount_(0)
     , initialized_(false)
-    , lowLatencyTask_(nullptr)
     , latencyFrames_(0)
     , renderCaptureEvent_(nullptr)
     , isRenderCaptureRunning_(false)
     , semaphore_(nullptr)
 {
-    // empty
+    client_->AddRef();
 }
 
 WASAPIAudioDevice::~WASAPIAudioDevice()
@@ -291,7 +290,7 @@ void WASAPIAudioDevice::start()
 
         // Start render/capture thread.
         isRenderCaptureRunning_ = true;
-        renderCaptureThread_ = std::thread([&]() {
+        renderCaptureThread_ = std::thread([this]() {
             log_info("Starting render/capture thread");
 
             HRESULT res = CoInitializeEx(nullptr, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
@@ -299,36 +298,53 @@ void WASAPIAudioDevice::start()
             {
                 log_warn("Could not initialize COM (res = %d)", res);
             }
-
-            // Temporarily raise priority of task
-            DWORD taskIndex = 0;
-            lowLatencyTask_ = AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
-            if (lowLatencyTask_ == nullptr)
+            
+            // Increment refcounts of COM objects used by thread
+            // to avoid instability during stop/restart.
+            client_->AddRef();
+            if (renderClient_ != nullptr)
             {
-                log_warn("Could not increase thread priority");
+                renderClient_->AddRef();
             }
+            if (captureClient_ != nullptr)
+            {
+                captureClient_->AddRef();
+            }
+            
+            // Temporarily raise priority of task
+            setHelperRealTime();
 
             while (isRenderCaptureRunning_)
             {
                 WaitForSingleObject(renderCaptureEvent_, 100);
-                if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
+                if (isRenderCaptureRunning_)
                 {
-                    renderAudio_();
-                }
-                else
-                {
-                    captureAudio_();
+                    if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
+                    {
+                        renderAudio_();
+                    }
+                    else
+                    {
+                        captureAudio_();
+                    }
                 }
             }
 
             log_info("Exiting render/capture thread");
 
-            if (lowLatencyTask_ != nullptr)
+            clearHelperRealTime();     
+            
+            // Decrement refcounts prior to exit.
+            client_->Release();
+            if (renderClient_ != nullptr)
             {
-                AvRevertMmThreadCharacteristics(lowLatencyTask_);
-                lowLatencyTask_ = nullptr;
+                renderClient_->Release();
             }
-
+            if (captureClient_ != nullptr)
+            {
+                captureClient_->Release();
+            }
+                   
             CoUninitialize();
         });
 
@@ -366,6 +382,12 @@ void WASAPIAudioDevice::stop()
             }
         }
 
+        if (renderCaptureEvent_ != nullptr)
+        {
+            CloseHandle(renderCaptureEvent_);
+            renderCaptureEvent_ = nullptr;
+        }
+        
         if (renderClient_ != nullptr)
         {
             renderClient_->Release();
@@ -379,8 +401,14 @@ void WASAPIAudioDevice::stop()
 
         if (semaphore_ != nullptr)
         {
-            CloseHandle(semaphore_);
+            // Set semaphore_ to nullptr first in case someone could be potentially
+            // using it. Then for those currently waiting, release the semaphore 
+            // to get them unstuck. THEN we can close it. Otherwise, heap corruption
+            // occurs!
+            auto tmpSem = semaphore_;
             semaphore_ = nullptr;
+            ReleaseSemaphore(tmpSem, 1, nullptr);
+            CloseHandle(tmpSem);
         }
 
         prom->set_value();
@@ -403,8 +431,8 @@ int WASAPIAudioDevice::getLatencyInMicroseconds()
 void WASAPIAudioDevice::setHelperRealTime()
 {
     DWORD taskIndex = 0;
-    helperTask_ = AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
-    if (helperTask_ == nullptr)
+    HelperTask_ = AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
+    if (HelperTask_ == nullptr)
     {
         log_warn("Could not increase thread priority");
     }
@@ -436,10 +464,10 @@ void WASAPIAudioDevice::stopRealTimeWork()
 
 void WASAPIAudioDevice::clearHelperRealTime()
 {
-    if (helperTask_ != nullptr)
+    if (HelperTask_ != nullptr)
     {
-        AvRevertMmThreadCharacteristics(helperTask_);
-        helperTask_ = nullptr;
+        AvRevertMmThreadCharacteristics(HelperTask_);
+        HelperTask_ = nullptr;
     }
 }
 

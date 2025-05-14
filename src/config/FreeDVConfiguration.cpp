@@ -50,7 +50,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     , reporterWindowWidth("/Windows/FreeDVReporter/width", -1)
     , reporterWindowHeight("/Windows/FreeDVReporter/height", -1)
     , reporterWindowVisible("/Windows/FreeDVReporter/visible", false)
-    , reporterWindowCurrentSort("/Windows/FreeDVReporter/currentSort", -1)
+    , reporterWindowCurrentSort("/Windows/FreeDVReporter/currentSort", 5) /* FREQUENCY_COL */
     , reporterWindowCurrentSortDirection("/Windows/FreeDVReporter/currentSortDirection", true)
         
     /* Current tab view */
