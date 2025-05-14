@@ -118,6 +118,9 @@ set( _windlls
 
     # Filter Python DLLs as they're already included via install()
     python312.dll
+
+    # Additional DLLs needed by Address Sanitizer
+    api-ms-win-core-synch-l1-2-0.dll
 )
 list(REMOVE_ITEM _deps ${_windlls})
 

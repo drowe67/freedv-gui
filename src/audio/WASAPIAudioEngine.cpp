@@ -218,6 +218,7 @@ AudioDeviceSpecification WASAPIAudioEngine::getDefaultAudioDevice(AudioDirection
             if (defaultSpec.name == spec.name)
             {
                 prom->set_value(spec);
+                defaultDevice->Release();
                 return;
             }
         }
@@ -303,6 +304,9 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
 
                 auto devPtr = new WASAPIAudioDevice(client, direction, sampleRate, numChannels);
                 result = std::shared_ptr<IAudioDevice>(devPtr);
+                
+                client->Release();
+                device->Release();
             }
         }
         prom->set_value(result);
@@ -395,7 +399,7 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
         return AudioDeviceSpecification::GetInvalidDevice();
     }
 
-    WAVEFORMATEX* streamFormat;
+    WAVEFORMATEX* streamFormat = nullptr;
     hr = audioClient->GetMixFormat(&streamFormat);
     if (FAILED(hr))
     {
