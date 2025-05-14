@@ -342,8 +342,11 @@ void HamlibRigController::connectImpl_()
             rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "None");
             break;
         case PTT_VIA_CAT:
-        case PTT_VIA_CAT_DATA:
             rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "RIG");
+            break;
+        case PTT_VIA_CAT_DATA:
+            // Need to explicitly use RIGMICDATA in order for RIG_PTT_ON_DATA to work.
+            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "RIGMICDATA");
             break;
         default:
             break;
