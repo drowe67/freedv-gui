@@ -197,8 +197,7 @@ void TxRxThread::initializePipeline_()
             []() { return wxGetApp().appConfiguration.filterConfiguration.speexppEnable; },
             std::shared_ptr<IPipelineStep>(eitherOrProcessSpeex),
             std::shared_ptr<IPipelineStep>(eitherOrBypassSpeex));
-        auto speexLockStep = new ExclusiveAccessStep(eitherOrSpeexStep, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(speexLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrSpeexStep));
         
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
