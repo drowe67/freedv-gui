@@ -342,8 +342,11 @@ void HamlibRigController::connectImpl_()
             rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "None");
             break;
         case PTT_VIA_CAT:
-        case PTT_VIA_CAT_DATA:
             rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "RIG");
+            break;
+        case PTT_VIA_CAT_DATA:
+            // Need to explicitly use RIGMICDATA in order for RIG_PTT_ON_DATA to work.
+            rig_set_conf(rig_, rig_token_lookup(rig_, "ptt_type"), "RIGMICDATA");
             break;
         default:
             break;
@@ -698,7 +701,8 @@ void HamlibRigController::setFrequencyHelper_(vfo_t currVfo, uint64_t frequencyH
 {
     bool setOkay = false;
 
-    if (currFreq_ == frequencyHz)
+    // Avoid setting invalid frequencies as hamlib sometimes doesn't handle this well.
+    if (currFreq_ == frequencyHz || frequencyHz == 0)
     {
         return;
     }
@@ -736,7 +740,8 @@ void HamlibRigController::setModeHelper_(vfo_t currVfo, rmode_t mode)
 {
     bool setOkay = false;
     
-    if (currMode_ == mode)
+    // Avoid setting invalid mode as hamlib sometimes doesn't handle this well.
+    if (currMode_ == mode || mode == RIG_MODE_NONE)
     {
         return;
     }
