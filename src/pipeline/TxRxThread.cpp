@@ -207,8 +207,7 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqMicInMid,
             &g_rxUserdata->sbqMicInTreble,
             &g_rxUserdata->sbqMicInVol);
-        auto equalizerLockStep = new ExclusiveAccessStep(equalizerStep, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerStep));
         
         // Take TX audio post-equalizer and send it to RX for possible monitoring use.
         if (equalizedMicAudioLink_ != nullptr)
@@ -450,8 +449,7 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqSpkOutMid,
             &g_rxUserdata->sbqSpkOutTreble,
             &g_rxUserdata->sbqSpkOutVol);
-        auto equalizerLockStep = new ExclusiveAccessStep(equalizerStep, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerStep));
         
         // Resample for plot step (speech out)
         auto resampleForPlotOutStep = new ResampleForPlotStep(g_plotSpeechOutFifo);
