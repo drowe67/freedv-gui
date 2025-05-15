@@ -772,7 +772,7 @@ void MainFrame::loadConfiguration_()
     });
     CallAfter([=]()
     {
-        SetSize(w, h - 1);
+        SetSize(w + 1, h + 1);
     });
     CallAfter([=]()
     {
@@ -2062,7 +2062,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             });
             CallAfter([=]()
             {
-                SetSize(w, h - 1);
+                SetSize(w + 1, h + 1);
             });
             CallAfter([=]()
             {
