@@ -129,7 +129,6 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     wxStaticBoxSizer* hamlibBoxSizer = new wxStaticBoxSizer(m_hamlibBox, wxVERTICAL);
     wxGridSizer* gridSizerhl = new wxGridSizer(5, 2, 0, 0);
     hamlibBoxSizer->Add(gridSizerhl);
-    setupCatControlBoxSizer->Add(hamlibBoxSizer);
 
     /* Hamlib Rig Type combobox. */
 
@@ -176,6 +175,8 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     m_cbPttMethod->Append(wxT("None"));
     m_cbPttMethod->Append(wxT("CAT via Data port"));
     m_cbPttMethod->SetSelection(0);
+    
+    setupCatControlBoxSizer->Add(hamlibBoxSizer, 0, wxALL | wxEXPAND, 2);
 
     /* Serial port box */
     m_serialBox = new wxStaticBox(setupCatControlBox, wxID_ANY, _("Serial PTT"));
