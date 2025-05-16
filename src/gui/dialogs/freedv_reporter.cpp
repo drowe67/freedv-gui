@@ -2175,7 +2175,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             else
             {
                 iter->second->snr = snrString;
-                iter->second->lastRxDate = iter->second->lastUpdateDate;
+                iter->second->lastRxDate = wxDateTime::Now();
             }
        
             if (iter->second->isVisible)
