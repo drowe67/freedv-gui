@@ -440,6 +440,10 @@ void MainApp::OnInitCmdLine(wxCmdLineParser& parser)
 bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
 {
     ulog_set_lock(&LogLockFunction_, nullptr);
+    ulog_set_prefix_fn([](ulog_Event *ev, char *prefix, size_t prefix_size) {
+        static unsigned int counter = 0;
+        snprintf(prefix, prefix_size, " [%u]", ++counter);
+    });
         
     log_info("FreeDV version %s starting", FREEDV_VERSION);
 

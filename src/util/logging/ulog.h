@@ -43,6 +43,8 @@ extern "C" {
 
 ============================================================================ */
 
+#define ULOG_CUSTOM_PREFIX_SIZE (128)
+
 #ifdef ULOG_HAVE_TIME
 #define FEATURE_TIME true
 #else
