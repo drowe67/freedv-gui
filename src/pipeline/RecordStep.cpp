@@ -22,19 +22,36 @@
 
 #include "RecordStep.h"
 
+#include <chrono>
+#include "wx/thread.h"
+
+extern wxMutex g_mutexProtectingCallbackData;
+
+using namespace std::chrono_literals;
+
 RecordStep::RecordStep(
     int inputSampleRate, std::function<SNDFILE*()> getSndFileFn, 
     std::function<void(int)> isFileCompleteFn)
-: inputSampleRate_(inputSampleRate)
-, getSndFileFn_(getSndFileFn)
-, isFileCompleteFn_(isFileCompleteFn)
+    : inputSampleRate_(inputSampleRate)
+    , getSndFileFn_(getSndFileFn)
+    , isFileCompleteFn_(isFileCompleteFn)
+    , fileIoThreadEnding_(false)
 {
-    // empty
+    inputFifo_ = codec2_fifo_create(inputSampleRate_);
+    assert(inputFifo_ != nullptr);
+    
+    fileIoThread_ = std::thread(std::bind(&RecordStep::fileIoThreadEntry_, this));
 }
 
 RecordStep::~RecordStep()
 {
-    // empty
+    fileIoThreadEnding_ = true;
+    if (fileIoThread_.joinable())
+    {
+        fileIoThread_.join();
+    }
+    
+    codec2_fifo_destroy(inputFifo_);
 }
 
 int RecordStep::getInputSampleRate() const
@@ -48,12 +65,34 @@ int RecordStep::getOutputSampleRate() const
 }
 
 std::shared_ptr<short> RecordStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
-{
-    auto recordFile = getSndFileFn_();
-    sf_write_short(recordFile, inputSamples.get(), numInputSamples);
-    
-    isFileCompleteFn_(numInputSamples);
+{    
+    codec2_fifo_write(inputFifo_, inputSamples.get(), numInputSamples);
     
     *numOutputSamples = 0;    
     return std::shared_ptr<short>((short*)nullptr, std::default_delete<short[]>());
+}
+
+void RecordStep::fileIoThreadEntry_()
+{
+    short* buf = new short[inputSampleRate_];
+    assert(buf != nullptr);
+    
+    while (!fileIoThreadEnding_)
+    {
+        g_mutexProtectingCallbackData.Lock();
+        auto recordFile = getSndFileFn_();
+        if (recordFile != nullptr)
+        {
+            int numInputSamples = codec2_fifo_used(inputFifo_);
+            codec2_fifo_read(inputFifo_, buf, numInputSamples);
+            
+            sf_write_short(recordFile, buf, numInputSamples);
+            isFileCompleteFn_(numInputSamples);
+        }
+        g_mutexProtectingCallbackData.Unlock();
+        
+        std::this_thread::sleep_for(100ms);
+    }
+    
+    delete[] buf;
 }
