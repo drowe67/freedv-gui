@@ -183,8 +183,7 @@ void TxRxThread::initializePipeline_()
             []() { return g_playFileToMicIn && (g_sfPlayFile != NULL); },
             std::shared_ptr<IPipelineStep>(eitherOrPlayMicIn),
             std::shared_ptr<IPipelineStep>(eitherOrBypassPlay));
-        auto playMicLockStep = new ExclusiveAccessStep(eitherOrPlayStep, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(playMicLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrPlayStep));
         
         // Speex step (optional)
         auto eitherOrProcessSpeex = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -332,8 +331,7 @@ void TxRxThread::initializePipeline_()
             },
             std::shared_ptr<IPipelineStep>(eitherOrPlayRadio),
             std::shared_ptr<IPipelineStep>(eitherOrBypassPlayRadio));
-        auto playRadioLockStep = new ExclusiveAccessStep(eitherOrPlayRadioStep, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(playRadioLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrPlayRadioStep));
         
         // Resample for plot step (demod in)
         auto resampleForPlotStep = new ResampleForPlotStep(g_plotDemodInFifo);
