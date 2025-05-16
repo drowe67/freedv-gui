@@ -596,7 +596,7 @@ void TxRxThread::txProcessing_()
                       codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
     	}
 
-        int nsam_in_48 = (int)(inputSampleRate_ * FRAME_DURATION);
+        int nsam_in_48 = freedvInterface.getTxNumSpeechSamples() * ((float)inputSampleRate_ / (float)freedvInterface.getTxSpeechSampleRate());
         assert(nsam_in_48 > 0);
 
         int             nout;
@@ -704,7 +704,7 @@ void TxRxThread::rxProcessing_()
         g_resyncs++;
     }
     
-    // Attempt to read one processing frame (about 10ms) of receive samples,  we 
+    // Attempt to read one processing frame (about 20ms) of receive samples,  we 
     // keep this frame duration constant across modes and sound card sample rates
     int nsam = (int)(inputSampleRate_ * FRAME_DURATION);
     assert(nsam > 0);
