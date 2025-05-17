@@ -27,7 +27,7 @@
 #include "../sox_biquad.h"
 #include <assert.h>
 
-EqualizerStep::EqualizerStep(int sampleRate, bool* enableFilter, void** bassFilter, void** midFilter, void** trebleFilter, void** volFilter)
+EqualizerStep::EqualizerStep(int sampleRate, bool* enableFilter, std::shared_ptr<void>* bassFilter, std::shared_ptr<void>* midFilter, std::shared_ptr<void>* trebleFilter, std::shared_ptr<void>* volFilter)
     : sampleRate_(sampleRate)
     , enableFilter_(enableFilter)
     , bassFilter_(bassFilter)
@@ -64,21 +64,25 @@ std::shared_ptr<short> EqualizerStep::execute(std::shared_ptr<short> inputSample
     
     if (*enableFilter_)
     {
-        if (*bassFilter_)
+        std::shared_ptr<void> tmpBassFilter = *bassFilter_;
+        std::shared_ptr<void> tmpTrebleFilter = *trebleFilter_;
+        std::shared_ptr<void> tmpMidFilter = *midFilter_;
+        std::shared_ptr<void> tmpVolFilter = *volFilter_;
+        if (tmpBassFilter != nullptr)
         {
-            sox_biquad_filter(*bassFilter_, outputSamples_.get(), outputSamples_.get(), numInputSamples);
+            sox_biquad_filter(tmpBassFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
         }
-        if (*trebleFilter_)
+        if (tmpTrebleFilter != nullptr)
         {
-            sox_biquad_filter(*trebleFilter_, outputSamples_.get(), outputSamples_.get(), numInputSamples);
+            sox_biquad_filter(tmpTrebleFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
         }
-        if (*midFilter_)
+        if (tmpMidFilter != nullptr)
         {
-            sox_biquad_filter(*midFilter_, outputSamples_.get(), outputSamples_.get(), numInputSamples);
+            sox_biquad_filter(tmpMidFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
         }
-        if (*volFilter_)
+        if (tmpVolFilter != nullptr)
         {
-            sox_biquad_filter(*volFilter_, outputSamples_.get(), outputSamples_.get(), numInputSamples);
+            sox_biquad_filter(tmpVolFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
         }
     }
     

@@ -473,7 +473,7 @@ class MainFrame : public TopFrame
         bool        m_newMicInFilter;
         bool        m_newSpkOutFilter;
 
-        void*       designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q = 0.0, int sampleRate = 8000);
+        std::shared_ptr<void>       designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q = 0.0, int sampleRate = 8000);
         void        designEQFilters(paCallBackData *cb, int rxSampleRate, int txSampleRate);
         void        deleteEQFilters(paCallBackData *cb);
 
