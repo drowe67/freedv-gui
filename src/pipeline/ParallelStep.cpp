@@ -157,13 +157,15 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
 void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
 {
     int samplesIn = 0.01 * inputSampleRate_;
-    if (codec2_fifo_read(threadState->inputFifo, threadState->tempInput.get(), samplesIn) == 0)
+    int samplesOut = 0;
+    if (codec2_fifo_read(threadState->inputFifo, threadState->tempInput.get(), samplesIn) != 0)
     {
-        int samplesOut = 0;
-        auto output = threadState->step->execute(threadState->tempInput, samplesIn, &samplesOut);
-        if (samplesOut > 0)
-        {
-            codec2_fifo_write(threadState->outputFifo, output.get(), samplesOut);
-        }
+        samplesIn = 0;
+    }
+
+    auto output = threadState->step->execute(threadState->tempInput, samplesIn, &samplesOut);
+    if (samplesOut > 0)
+    {
+        codec2_fifo_write(threadState->outputFifo, output.get(), samplesOut);
     }
 }
