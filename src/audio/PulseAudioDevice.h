@@ -25,6 +25,7 @@
 
 #include <mutex>
 #include <thread>
+#include <atomic>
 #include <condition_variable>
 #include <wx/string.h>
 #include <pulse/pulseaudio.h>

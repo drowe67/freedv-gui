@@ -327,7 +327,7 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
             thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(data), length / thisObj->getNumChannels() / sizeof(short), thisObj->onAudioDataState);
         }
         
-        for (auto count = 0; count < numRealTimeThreads_; count++)
+        for (auto count = 0; count < thisObj->numRealTimeThreads_; count++)
         {
             sem_post(&thisObj->sem_);
         }
