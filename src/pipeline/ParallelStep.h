@@ -32,6 +32,14 @@
 #include <queue>
 #include <map>
 
+#if defined(_WIN32)
+#include <windows.h>
+#elif defined(__APPLE__)
+#include <dispatch/dispatch.h>
+#else
+#include <semaphore.h>
+#endif // defined(_WIN32) || defined(__APPLE__)
+
 #include "../util/IRealtimeHelper.h"
 #include "codec2_fifo.h"
 
@@ -66,6 +74,14 @@ private:
         FIFO* outputFifo;
         std::shared_ptr<short> tempInput;
         std::shared_ptr<short> tempOutput;
+        
+#if defined(_WIN32)
+        HANDLE sem;
+#elif defined(__APPLE__)
+        dispatch_semaphore_t sem;
+#else
+        sem_t sem;
+#endif // defined(_WIN32) || defined(__APPLE__)
     };
     
     int inputSampleRate_;

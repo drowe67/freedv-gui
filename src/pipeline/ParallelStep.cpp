@@ -72,6 +72,24 @@ ParallelStep::ParallelStep(
         threadState->exitingThread = false;
         if (runMultiThreaded)
         {
+            // Initialize semaphore
+#if defined(_WIN32)
+            threadState->sem = CreateSemaphore(nullptr, 0, 1, nullptr);
+            if (threadState->sem == nullptr)
+            {
+                std::stringstream ss;
+                ss << "Could not create semaphore (err = " << GetLastError() << ")";
+                log_warn(ss.str().c_str());
+            }
+#elif defined(__APPLE__)
+            threadState->sem = dispatch_semaphore_create(0);
+#else
+            if (sem_init(&threadState->sem, 0, 0) < 0)
+            {
+                log_warn("Could not set up semaphore (errno = %d)", errno);
+            }
+#endif // defined(_WIN32) || defined(__APPLE__)
+            
             threadState->thread = std::thread([this](ThreadInfo* s) 
             {
                 if (realtimeHelper_)
@@ -81,9 +99,53 @@ ParallelStep::ParallelStep(
             
                 while(!s->exitingThread)
                 {
+                    bool fallbackToSleep = false;
                     auto beginTime = std::chrono::high_resolution_clock::now();
+                    
+#if defined(_WIN32) || defined(__APPLE__)
+                    fallbackToSleep = s->sem != nullptr;
+#else
+                    struct timespec ts;
+                    if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
+                    {
+                        fallbackToSleep = true;
+                    }
+                    else
+                    {
+                        ts.tv_nsec += latency * 1000;
+                        if (ts.tv_nsec >= 1000000000)
+                        {
+                            ts.tv_sec++;
+                            ts.tv_nsec -= 1000000000;
+                        }
+                    }
+#endif // defined(_WIN32) || defined(__APPLE__)
+                    
                     executeRunnerThread_(s);
-                    std::this_thread::sleep_until(beginTime + 10ms);
+                   
+                    if (!fallbackToSleep)
+                    {
+#if defined(_WIN32)
+                        DWORD result = WaitForSingleObject(s->sem, 10);
+                        if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
+                        {
+                            fallbackToSleep = true;
+                        }
+#elif defined(__APPLE__)
+                        constexpr static double kOneNanosecond = 1.0e9;
+                        dispatch_semaphore_wait(s->sem, dispatch_time(DISPATCH_TIME_NOW, 0.01 * kOneNanosecond));
+#else
+                        if (sem_timedwait(&s->sem, &ts) < 0 && errno != ETIMEDOUT)
+                        {
+                            fallbackToSleep = true;
+                        }
+#endif // defined(_WIN32) || defined(__APPLE__)
+                    }
+                    
+                    if (fallbackToSleep)
+                    {
+                        std::this_thread::sleep_until(beginTime + 10ms);
+                    }
                 }
                 
                 if (realtimeHelper_)
@@ -99,13 +161,28 @@ ParallelStep::~ParallelStep()
 {
     // Exit all spawned threads, if any.
     for (auto& taskThread : threads_)
-    {
+    {        
         taskThread->exitingThread = true;
         if (taskThread->thread.joinable())
         {
             taskThread->thread.join();
-        }
         
+            // Destroy semaphore
+#if defined(_WIN32)
+            if (taskThread->sem != nullptr)
+            {
+                auto tmpSem = taskThread->sem;
+                taskThread->sem = nullptr;
+                ReleaseSemaphore(tmpSem, 1, nullptr);
+                CloseHandle(tmpSem);
+            }
+#elif defined(__APPLE__)
+            dispatch_release(taskThread->sem);
+#else
+            sem_destroy(&taskThread->sem);
+#endif // defined(_WIN32) || defined(__APPLE__)
+        }
+                
         codec2_fifo_destroy(taskThread->inputFifo);
         codec2_fifo_destroy(taskThread->outputFifo);
         delete taskThread;
