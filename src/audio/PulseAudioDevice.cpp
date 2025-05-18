@@ -245,7 +245,6 @@ void PulseAudioDevice::setHelperRealTime()
     sigaddset(&signal_set, SIGXCPU);
     sigprocmask(SIG_UNBLOCK, &signal_set, NULL);
 #endif // 0
-    numRealTimeThreads_++;
 }
 
 void PulseAudioDevice::startRealTimeWork()
@@ -301,7 +300,6 @@ void PulseAudioDevice::stopRealTimeWork()
 void PulseAudioDevice::clearHelperRealTime()
 {
     IAudioDevice::clearHelperRealTime();
-    numRealTimeThreads_--;
 }
 
 bool PulseAudioDevice::mustStopWork()
@@ -326,11 +324,7 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
         {
             thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(data), length / thisObj->getNumChannels() / sizeof(short), thisObj->onAudioDataState);
         }
-        
-        for (auto count = 0; count < thisObj->numRealTimeThreads_; count++)
-        {
-            sem_post(&thisObj->sem_);
-        }
+        sem_post(&thisObj->sem_);
         pa_stream_drop(s);
     } while (pa_stream_readable_size(s) > 0);
 }

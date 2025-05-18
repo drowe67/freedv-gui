@@ -257,7 +257,7 @@ void WASAPIAudioDevice::start()
         }
 
         // Create semaphore
-        semaphore_ = CreateSemaphore(nullptr, 0, 1000, nullptr);
+        semaphore_ = CreateSemaphore(nullptr, 0, 1, nullptr);
         if (semaphore_ == nullptr)
         {
             std::stringstream ss;
@@ -407,10 +407,7 @@ void WASAPIAudioDevice::stop()
             // occurs!
             auto tmpSem = semaphore_;
             semaphore_ = nullptr;
-            for (auto count = 0; count < numRealTimeThreads_; count++)
-            {
-                ReleaseSemaphore(tmpSem, 1, nullptr);
-            }
+            ReleaseSemaphore(tmpSem, 1, nullptr);
             CloseHandle(tmpSem);
         }
 
@@ -439,8 +436,6 @@ void WASAPIAudioDevice::setHelperRealTime()
     {
         log_warn("Could not increase thread priority");
     }
-    
-    numRealTimeThreads_++;
 }
 
 void WASAPIAudioDevice::startRealTimeWork() 
@@ -469,8 +464,6 @@ void WASAPIAudioDevice::stopRealTimeWork()
 
 void WASAPIAudioDevice::clearHelperRealTime()
 {
-    numRealTimeThreads_--;
-    
     if (HelperTask_ != nullptr)
     {
         AvRevertMmThreadCharacteristics(HelperTask_);
@@ -621,9 +614,6 @@ void WASAPIAudioDevice::captureAudio_()
     if (semaphore_ != nullptr)
     {
         // Notify worker threads
-        for (auto count = 0; count < numRealTimeThreads_; count++)
-        {
-            ReleaseSemaphore(semaphore_, 1, nullptr);
-        }
+        ReleaseSemaphore(semaphore_, 1, nullptr);
     }
 }
