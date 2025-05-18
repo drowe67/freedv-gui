@@ -22,6 +22,7 @@
 
 #include <chrono>
 #include <cassert>
+#include <cstring>
 #include "ParallelStep.h"
 #include "AudioPipeline.h"
 #include "../util/logging/ulog.h"
@@ -136,7 +137,7 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
         
         if (index == (size_t)stepToExecute || stepToExecute == -1)
         {
-            auto res = codec2_fifo_write(threadInfo->inputFifo, inputSamples.get(), numInputSamples);
+            codec2_fifo_write(threadInfo->inputFifo, inputSamples.get(), numInputSamples);
             if (!runMultiThreaded_)
             {
                 executeRunnerThread_(threadInfo);
