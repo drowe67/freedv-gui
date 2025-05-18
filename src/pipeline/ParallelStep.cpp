@@ -23,6 +23,8 @@
 #include <chrono>
 #include <cassert>
 #include "ParallelStep.h"
+#include "AudioPipeline.h"
+#include "../util/logging/ulog.h"
 
 using namespace std::chrono_literals;
 
@@ -39,34 +41,55 @@ ParallelStep::ParallelStep(
     , runMultiThreaded_(runMultiThreaded)
     , inputRouteFn_(inputRouteFn)
     , outputRouteFn_(outputRouteFn)
-    , state_(state)
     , realtimeHelper_(realtimeHelper)
+    , state_(state)
 {
     for (auto& step : parallelSteps)
     {
-        parallelSteps_.push_back(std::shared_ptr<IPipelineStep>(step));
+        auto sharedStep = std::shared_ptr<IPipelineStep>(step);
+        parallelSteps_.push_back(sharedStep);
+        auto pipeline = std::make_shared<AudioPipeline>(inputSampleRate, outputSampleRate);
+        pipeline->appendPipelineStep(sharedStep);
+        
+        auto threadState = new ThreadInfo();
+        assert(threadState != nullptr);
+        threads_.push_back(threadState);
+        
+        threadState->step = pipeline;
+        threadState->inputFifo = codec2_fifo_create(inputSampleRate);
+        assert(threadState->inputFifo != nullptr);
+        threadState->outputFifo = codec2_fifo_create(outputSampleRate);
+        assert(threadState->outputFifo != nullptr);
+        
+        threadState->tempOutput = std::shared_ptr<short>(
+            new short[outputSampleRate],
+            std::default_delete<short[]>());
+        threadState->tempInput = std::shared_ptr<short>(
+            new short[inputSampleRate],
+            std::default_delete<short[]>());
+         
+        threadState->exitingThread = false;
         if (runMultiThreaded)
         {
-            auto state = new ThreadInfo();
-            assert(state != nullptr);
-            
-            state->exitingThread = false;
-            state->thread = std::thread([this](ThreadInfo* threadState) 
+            threadState->thread = std::thread([this](ThreadInfo* s) 
             {
                 if (realtimeHelper_)
                 {
                     realtimeHelper_->setHelperRealTime();
                 }
-                
-                executeRunnerThread_(threadState);
+            
+                while(!s->exitingThread)
+                {
+                    auto beginTime = std::chrono::high_resolution_clock::now();
+                    executeRunnerThread_(s);
+                    std::this_thread::sleep_until(beginTime + 10ms);
+                }
                 
                 if (realtimeHelper_)
                 {
                     realtimeHelper_->clearHelperRealTime();
                 }
-            }, state);
-            
-            threads_.push_back(state);
+            }, threadState);
         }
     }
 }
@@ -77,9 +100,13 @@ ParallelStep::~ParallelStep()
     for (auto& taskThread : threads_)
     {
         taskThread->exitingThread = true;
-        taskThread->queueCV.notify_one();
-        taskThread->thread.join();
+        if (taskThread->thread.joinable())
+        {
+            taskThread->thread.join();
+        }
         
+        codec2_fifo_destroy(taskThread->inputFifo);
+        codec2_fifo_destroy(taskThread->outputFifo);
         delete taskThread;
     }
 }
@@ -96,153 +123,46 @@ int ParallelStep::getOutputSampleRate() const
 
 std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    // Step 0: determine what steps to execute.
+    // Step 1: determine what steps to execute.
     auto stepToExecute = inputRouteFn_(this);
-    assert(stepToExecute == -1 || (stepToExecute >= 0 && (size_t)stepToExecute < parallelSteps_.size()));
-    
-    // Step 1: resample inputs as needed
-    std::map<int, std::future<TaskResult>> resampledInputFutures;
-    std::map<int, TaskResult> resampledInputs;
-    for (size_t index = 0; index < parallelSteps_.size(); index++)
-    {
-        if (index == (size_t)stepToExecute || stepToExecute == -1)
-        {
-            int destinationSampleRate = parallelSteps_[index]->getInputSampleRate();
-            if (destinationSampleRate != inputSampleRate_)
-            {
-                ThreadInfo* threadInfo = nullptr;
-                if (runMultiThreaded_)
-                {
-                    threadInfo = threads_[index];
-                }
-                
-                if (resampledInputFutures.find(destinationSampleRate) == resampledInputFutures.end())
-                {
-                    if (resamplers_.find(std::pair<int, int>(inputSampleRate_, destinationSampleRate)) == resamplers_.end())
-                    {
-                        auto tmpStep = std::make_shared<ResampleStep>(inputSampleRate_, destinationSampleRate);
-                        resamplers_[std::pair<int, int>(inputSampleRate_, destinationSampleRate)] = tmpStep;
-                    }
-                    
-                    resampledInputFutures[destinationSampleRate] = enqueueTask_(threadInfo, resamplers_[std::pair<int, int>(inputSampleRate_, destinationSampleRate)].get(), inputSamples, numInputSamples);
-                }
-            }
-            else
-            {
-                resampledInputs[inputSampleRate_] = TaskResult(inputSamples, numInputSamples);
-            }
-        }
-    }
-    
-    for (auto& fut : resampledInputFutures)
-    {
-        resampledInputs[fut.first] = fut.second.get();
-    }
+    assert(stepToExecute == -1 || (stepToExecute >= 0 && (size_t)stepToExecute < threads_.size()));
     
     // Step 2: execute steps
-    std::vector<std::future<TaskResult>> executedResultFutures;
-    std::vector<TaskResult> executedResults;
-    for (size_t index = 0; index < parallelSteps_.size(); index++)
+    *numOutputSamples = numInputSamples * outputSampleRate_ / inputSampleRate_;
+    for (size_t index = 0; index < threads_.size(); index++)
     {
+        ThreadInfo* threadInfo = threads_[index];
+        memset(threadInfo->tempOutput.get(), 0, sizeof(short) * outputSampleRate_);
+        
         if (index == (size_t)stepToExecute || stepToExecute == -1)
         {
-            ThreadInfo* threadInfo = nullptr;
-            if (runMultiThreaded_)
+            auto res = codec2_fifo_write(threadInfo->inputFifo, inputSamples.get(), numInputSamples);
+            if (!runMultiThreaded_)
             {
-                threadInfo = threads_[index];
+                executeRunnerThread_(threadInfo);
             }
-            
-            int destinationSampleRate = parallelSteps_[index]->getInputSampleRate();
-            auto resampledInput = resampledInputs[destinationSampleRate];
-            executedResultFutures.push_back(enqueueTask_(threadInfo, parallelSteps_[index].get(), resampledInput.first, resampledInput.second));
+            codec2_fifo_read(threadInfo->outputFifo, threadInfo->tempOutput.get(), *numOutputSamples);
         }
-        else
-        {
-            std::promise<TaskResult> tempPromise;
-            tempPromise.set_value(TaskResult(nullptr, 0));
-            
-            std::future<TaskResult> tempFuture = tempPromise.get_future();
-            executedResultFutures.push_back(std::move(tempFuture));
-        }
-    }
-    
-    for (auto& fut : executedResultFutures)
-    {
-        executedResults.push_back(fut.get());
     }
     
     // Step 3: determine which output to return
-    auto stepToOutput = outputRouteFn_(this);
+    auto stepToOutput = outputRouteFn_(this);    
+    assert(stepToOutput >= 0 && (size_t)stepToOutput < parallelSteps_.size());
     
-    assert(stepToOutput >= 0 && (size_t)stepToOutput < executedResults.size());
-    
-    TaskResult output = executedResults[stepToOutput];
-    
-    // Step 4: resample to destination rate
-    int sourceRate = parallelSteps_[stepToOutput]->getOutputSampleRate();
-    if (sourceRate == outputSampleRate_)
-    {
-        *numOutputSamples = output.second;
-        return output.first;
-    }
-    else
-    {
-        if (resamplers_.find(std::pair<int, int>(sourceRate, outputSampleRate_)) == resamplers_.end())
-        {
-            auto tmpStep = std::make_shared<ResampleStep>(sourceRate, outputSampleRate_);
-            resamplers_[std::pair<int, int>(sourceRate, outputSampleRate_)] = tmpStep;
-        }
-    
-        return resamplers_[std::pair<int, int>(sourceRate, outputSampleRate_)]->execute(output.first, output.second, numOutputSamples);
-    }
+    ThreadInfo* outputTask = threads_[stepToOutput];
+    return outputTask->tempOutput;
 }
 
 void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
 {
-#if defined(__linux__)
-    pthread_setname_np(pthread_self(), "FreeDV PS");
-#endif // defined(__linux__)
-
-    while(!threadState->exitingThread)
+    int samplesIn = 0.01 * inputSampleRate_;
+    if (codec2_fifo_read(threadState->inputFifo, threadState->tempInput.get(), samplesIn) == 0)
     {
-        std::unique_lock<std::mutex> lock(threadState->queueMutex);
-        threadState->queueCV.wait_for(lock, 20ms);
-        if (!threadState->exitingThread && threadState->tasks.size() > 0)
+        int samplesOut = 0;
+        auto output = threadState->step->execute(threadState->tempInput, samplesIn, &samplesOut);
+        if (samplesOut > 0)
         {
-            auto& taskEntry = threadState->tasks.front();
-            lock.unlock();
-            taskEntry.task(taskEntry.inputSamples, taskEntry.numInputSamples);
-            lock.lock();
-            threadState->tasks.pop();
+            codec2_fifo_write(threadState->outputFifo, output.get(), samplesOut);
         }
     }
-}
-
-std::future<ParallelStep::TaskResult> ParallelStep::enqueueTask_(ThreadInfo* taskQueueThread, IPipelineStep* step, std::shared_ptr<short> inputSamples, int numInputSamples)
-{
-    TaskEntry taskEntry;
-    taskEntry.task = ThreadTask([step](std::shared_ptr<short> inSamples, int numSamples)
-    {
-        int numOutputSamples = 0;
-        auto result = step->execute(inSamples, numSamples, &numOutputSamples);
-        return TaskResult(result, numOutputSamples);
-    });
-    
-    taskEntry.inputSamples = inputSamples;
-    taskEntry.numInputSamples = numInputSamples;
-    
-    auto theFuture = taskEntry.task.get_future();
-    if (taskQueueThread != nullptr)
-    {
-        std::unique_lock<std::mutex> lock(taskQueueThread->queueMutex);
-        taskQueueThread->tasks.push(std::move(taskEntry));
-        taskQueueThread->queueCV.notify_one();
-    }
-    else
-    {
-        // Execute the task immediately as there's no thread to post it to.
-        taskEntry.task(inputSamples, numInputSamples);
-    }
-    
-    return theFuture;
 }
