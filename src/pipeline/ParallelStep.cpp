@@ -129,7 +129,6 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
     assert(stepToExecute == -1 || (stepToExecute >= 0 && (size_t)stepToExecute < threads_.size()));
     
     // Step 2: execute steps
-    *numOutputSamples = numInputSamples * outputSampleRate_ / inputSampleRate_;
     for (size_t index = 0; index < threads_.size(); index++)
     {
         ThreadInfo* threadInfo = threads_[index];
@@ -142,7 +141,8 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
             {
                 executeRunnerThread_(threadInfo);
             }
-            codec2_fifo_read(threadInfo->outputFifo, threadInfo->tempOutput.get(), *numOutputSamples);
+            
+            if (stepToExecute != -1) break;
         }
     }
     
@@ -151,12 +151,15 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
     assert(stepToOutput >= 0 && (size_t)stepToOutput < parallelSteps_.size());
     
     ThreadInfo* outputTask = threads_[stepToOutput];
+
+    *numOutputSamples = codec2_fifo_used(outputTask->outputFifo);
+    codec2_fifo_read(outputTask->outputFifo, outputTask->tempOutput.get(), *numOutputSamples);    
     return outputTask->tempOutput;
 }
 
 void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
 {
-    int samplesIn = 0.01 * inputSampleRate_;
+    int samplesIn = codec2_fifo_used(threadState->inputFifo);
     int samplesOut = 0;
     if (codec2_fifo_read(threadState->inputFifo, threadState->tempInput.get(), samplesIn) != 0)
     {
