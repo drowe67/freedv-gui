@@ -261,7 +261,10 @@ void MacAudioDevice::start()
                     onAudioDataFunction(*this, inputFrames_, frameCount, onAudioDataState);
                 }
                 
-                dispatch_semaphore_signal(sem_);
+                for (auto count = 0; count < numRealTimeThreads_; count++)
+                {
+                    dispatch_semaphore_signal(sem_);
+                }
                 
                 return OSStatus(noErr);
             };
@@ -635,6 +638,8 @@ void MacAudioDevice::setHelperRealTime()
     }
     else
     {
+        numRealTimeThreads_++;
+        
         // Going real-time is a prerequisite for joining workgroups
         joinWorkgroup_();
     }
@@ -714,6 +719,7 @@ void MacAudioDevice::stopRealTimeWork()
 void MacAudioDevice::clearHelperRealTime()
 {
     leaveWorkgroup_();
+    numRealTimeThreads_--;
 }
 
 void MacAudioDevice::leaveWorkgroup_()

@@ -84,6 +84,7 @@ private:
     HANDLE renderCaptureEvent_;
     bool isRenderCaptureRunning_;
     HANDLE semaphore_;
+    std::atomic<int> numRealTimeThreads_;
 
     void renderAudio_();
     void captureAudio_();

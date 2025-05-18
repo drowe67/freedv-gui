@@ -89,6 +89,7 @@ private:
     static thread_local void* Workgroup_;
     static thread_local void* JoinToken_;
     static thread_local int CurrentCoreAudioId_;
+    std::atomic<int> numRealTimeThreads_;
 
     static int DeviceIsAliveCallback_(
         AudioObjectID                       inObjectID,
