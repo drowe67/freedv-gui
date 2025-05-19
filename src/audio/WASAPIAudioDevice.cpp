@@ -29,7 +29,7 @@
 #include <avrt.h>
 #include "../util/logging/ulog.h"
 
-#define BLOCK_TIME_NS (20000000)
+#define BLOCK_TIME_NS (10000000)
 
 // Nanoseconds per REFERENCE_TIME unit
 #define NS_PER_REFTIME (100)
