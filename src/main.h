@@ -504,11 +504,6 @@ class MainFrame : public TopFrame
         void resetStats_();
 
         HamlibRigController::Mode getCurrentMode_();
-
-#if defined(FREEDV_MODE_2020)
-        void test2020Mode_();
-        bool test2020HWAllowed_();
-#endif // defined(FREEDV_MODE_2020)
         
         void performFreeDVOn_();
         void performFreeDVOff_();

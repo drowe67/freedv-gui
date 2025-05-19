@@ -241,7 +241,7 @@ void MainApp::UnitTest_()
     // Wait 100ms for FreeDV to come to foreground
     std::this_thread::sleep_for(100ms);
 
-    // Select FreeDV mode. Note, 2020 is deprecated so not testable here.
+    // Select FreeDV mode.
     wxRadioButton* modeBtn = nullptr;
     if (utFreeDVMode == "RADEV1")
     {
@@ -606,126 +606,6 @@ int MainApp::OnExit()
 {
     return 0;
 }
-
-#if defined(FREEDV_MODE_2020)
-bool MainFrame::test2020HWAllowed_()
-{
-    bool allowed = true;
-
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
-    // AVX checking code on x86 is here due to LPCNet in binary builds being
-    // compiled to use it. Running the sanity check below could potentially 
-    // cause crashes.
-    uint32_t eax, ebx, ecx, edx;
-    eax = ebx = ecx = edx = 0;
-    __cpuid(1, eax, ebx, ecx, edx);
-    
-    if (ecx & (1<<27) && ecx & (1<<28)) {
-        // CPU supports XSAVE and AVX
-        uint32_t xcr0, xcr0_high;
-        asm("xgetbv" : "=a" (xcr0), "=d" (xcr0_high) : "c" (0));
-        allowed = (xcr0 & 6) == 6;    // AVX state saving enabled?
-    } else {
-        allowed = false;
-    }
-#endif // defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
-
-    return allowed;
-}
-
-//-------------------------------------------------------------------------
-// test2020Mode_(): Makes sure that 2020 mode will work 
-//-------------------------------------------------------------------------
-void MainFrame::test2020Mode_()
-{    
-    log_info("Making sure your machine can handle 2020 mode...");
-
-    bool allowed = false;
-
-#if !defined(LPCNET_DISABLED)
-    allowed = test2020HWAllowed_();
-    wxGetApp().appConfiguration.freedvAVXSupported = allowed;
-
-    if (!allowed)
-    {
-        log_warn("Warning: AVX support not found!");
-    }
-    else
-    {
-        // Sanity check: encode 1 second of 16 kHz white noise and then try to
-        // decode it. If it takes longer than 0.5 seconds, it's unlikely that 
-        // 2020/2020B will work properly on this machine.
-        log_info("Generating test audio...");
-        struct FIFO* inFifo = codec2_fifo_create(24000);
-        assert(inFifo != nullptr);
-    
-        struct freedv* fdv = freedv_open(FREEDV_MODE_2020);
-        assert(fdv != nullptr);
-    
-        int numInSamples = 0;
-        int samplesToGenerate = freedv_get_n_speech_samples(fdv);
-        int samplesGenerated = freedv_get_n_nom_modem_samples(fdv);
-    
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> distrib(SHRT_MIN, SHRT_MAX);
-    
-        while (numInSamples < 16000)
-        {
-            short inSamples[samplesToGenerate];
-            COMP outSamples[samplesGenerated];
-            for (int index = 0; index < samplesToGenerate; index++)
-            {
-                inSamples[index] = distrib(gen);
-            }
-        
-            freedv_comptx(fdv, outSamples, inSamples);
-        
-            for (int index = 0; index < samplesGenerated; index++)
-            {
-                short realVal = outSamples[index].real;
-                codec2_fifo_write(inFifo, &realVal, 1);
-            }
-        
-            numInSamples += samplesToGenerate;        
-        }
-    
-        log_info("Decoding modulated audio...");
-    
-        std::chrono::high_resolution_clock systemClock;
-        auto startTime = systemClock.now();
-    
-        int nin = freedv_nin(fdv);
-        short inputBuf[freedv_get_n_max_modem_samples(fdv)];
-        short outputBuf[freedv_get_n_speech_samples(fdv)];
-        COMP  rx_fdm[freedv_get_n_max_modem_samples(fdv)];
-        while(codec2_fifo_read(inFifo, inputBuf, nin) == 0)
-        {
-            for(int i=0; i<nin; i++) 
-            {
-                rx_fdm[i].real = (float)inputBuf[i];
-                rx_fdm[i].imag = 0.0;
-            }
-        
-            freedv_comprx(fdv, outputBuf, rx_fdm);
-        }
-        auto endTime = systemClock.now();
-        auto timeTaken = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-        if (timeTaken > std::chrono::milliseconds(600))
-        {
-            allowed = false;
-        }
-    
-        log_info("One second of 2020 decoded in %d ms", (int)timeTaken.count());
-    }
-#endif // !defined(LPCNET_DISABLED)
-    
-    log_info("2020 allowed: %d", (int)allowed);
-    
-    // Save results to configuration.
-    wxGetApp().appConfiguration.freedv2020Allowed = allowed;
-}
-#endif // defined(FREEDV_MODE_2020)
 
 //-------------------------------------------------------------------------
 // loadConfiguration_(): Loads or sets default configuration options.
@@ -1243,21 +1123,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     
     // Print RADE API version. This also forces the RADE library to be linked.
     log_info("Using RADE API version %d", rade_version());
-
-#if defined(FREEDV_MODE_2020) && !defined(LPCNET_DISABLED)
-    // First time use: make sure 2020 mode will actually work on this machine.
-    if (wxGetApp().appConfiguration.firstTimeUse)
-    {
-        test2020Mode_();
-    }
-    else
-    {
-        wxGetApp().appConfiguration.freedvAVXSupported = test2020HWAllowed_();
-    }
-#else
-    // Disable LPCNet if not compiled in.
-    wxGetApp().appConfiguration.freedv2020Allowed = false;
-#endif // defined(FREEDV_MODE_2020) && !defined(LPCNET_DISABLED)
 
     if (wxGetApp().appConfiguration.firstTimeUse)
     {
