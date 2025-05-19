@@ -105,21 +105,6 @@ ParallelStep::ParallelStep(
                     
 #if defined(_WIN32) || defined(__APPLE__)
                     fallbackToSleep = s->sem != nullptr;
-#else
-                    struct timespec ts;
-                    if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
-                    {
-                        fallbackToSleep = true;
-                    }
-                    else
-                    {
-                        ts.tv_nsec += 1e7;
-                        if (ts.tv_nsec >= 1000000000)
-                        {
-                            ts.tv_sec++;
-                            ts.tv_nsec -= 1000000000;
-                        }
-                    }
 #endif // defined(_WIN32) || defined(__APPLE__)
                     
                     executeRunnerThread_(s);
@@ -127,16 +112,15 @@ ParallelStep::ParallelStep(
                     if (!fallbackToSleep)
                     {
 #if defined(_WIN32)
-                        DWORD result = WaitForSingleObject(s->sem, 10);
+                        DWORD result = WaitForSingleObject(s->sem, INFINITE);
                         if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
                         {
                             fallbackToSleep = true;
                         }
 #elif defined(__APPLE__)
-                        constexpr static double kOneNanosecond = 1.0e9;
-                        dispatch_semaphore_wait(s->sem, dispatch_time(DISPATCH_TIME_NOW, 0.01 * kOneNanosecond));
+                        dispatch_semaphore_wait(s->sem, DISPATCH_TIME_FOREVER);
 #else
-                        if (sem_timedwait(&s->sem, &ts) < 0 && errno != ETIMEDOUT)
+                        if (sem_wait(&s->sem, &ts) < 0)
                         {
                             fallbackToSleep = true;
                         }
@@ -166,8 +150,6 @@ ParallelStep::~ParallelStep()
         taskThread->exitingThread = true;
         if (taskThread->thread.joinable())
         {
-            taskThread->thread.join();
-        
             // Destroy semaphore
 #if defined(_WIN32)
             if (taskThread->sem != nullptr)
@@ -178,10 +160,15 @@ ParallelStep::~ParallelStep()
                 CloseHandle(tmpSem);
             }
 #elif defined(__APPLE__)
+            dispatch_semaphore_signal(taskThread->sem);
             dispatch_release(taskThread->sem);
 #else
+            sem_post(&taskThread->sem);
             sem_destroy(&taskThread->sem);
 #endif // defined(_WIN32) || defined(__APPLE__)
+            
+            // Join thread
+            taskThread->thread.join();
         }
                 
         codec2_fifo_destroy(taskThread->inputFifo);
