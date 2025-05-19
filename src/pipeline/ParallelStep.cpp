@@ -219,6 +219,23 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
             {
                 executeRunnerThread_(threadInfo);
             }
+            else
+            {
+                // Wake up thread
+#if defined(_WIN32)
+                if (threadInfo->sem != nullptr)
+                {
+                    ReleaseSemaphore(threadInfo->sem, 1, nullptr);
+                }
+#elif defined(__APPLE__)
+                if (threadInfo->sem != nullptr)
+                {
+                    dispatch_semaphore_signal(threadInfo->sem);
+                }
+#else
+                sem_post(&threadInfo->sem);
+#endif // defined(_WIN32) || defined(__APPLE__)
+            }
             
             if (stepToExecute != -1) break;
         }
