@@ -43,7 +43,6 @@ using namespace std::chrono_literals;
 #include "ToneInterfererStep.h"
 #include "ComputeRfSpectrumStep.h"
 #include "FreeDVReceiveStep.h"
-#include "ExclusiveAccessStep.h"
 #include "MuteStep.h"
 #include "LinkStep.h"
 
@@ -98,7 +97,6 @@ extern FreeDVInterface freedvInterface;
 #include <wx/wx.h>
 #include "../main.h"
 extern wxMutex txModeChangeMutex;
-extern wxMutex g_mutexProtectingCallbackData;
 extern wxWindow* g_parent;
 
 #include <sndfile.h>
@@ -124,16 +122,6 @@ extern int resample(SRC_STATE *src,
 
 void TxRxThread::initializePipeline_()
 {
-    // Function definitions shared across both pipelines.
-    auto callbackLockFn = []() {
-        // Prevent priority inversions by bounding the time we can wait for a lock.
-        g_mutexProtectingCallbackData.LockTimeout(5);
-    };
-    
-    auto callbackUnlockFn = []() {
-        g_mutexProtectingCallbackData.Unlock();
-    };
-    
     if (m_tx)
     {
         pipeline_ = std::shared_ptr<AudioPipeline>(new AudioPipeline(inputSampleRate_, outputSampleRate_));
@@ -158,8 +146,7 @@ void TxRxThread::initializePipeline_()
             std::shared_ptr<IPipelineStep>(recordMicTap),
             std::shared_ptr<IPipelineStep>(bypassRecordMic)
         );
-        auto recordMicLockStep = new ExclusiveAccessStep(eitherOrRecordMic, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordMicLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRecordMic));
         
         // Mic In playback step (optional)
         auto eitherOrBypassPlay = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -183,8 +170,7 @@ void TxRxThread::initializePipeline_()
             []() { return g_playFileToMicIn && (g_sfPlayFile != NULL); },
             std::shared_ptr<IPipelineStep>(eitherOrPlayMicIn),
             std::shared_ptr<IPipelineStep>(eitherOrBypassPlay));
-        auto playMicLockStep = new ExclusiveAccessStep(eitherOrPlayStep, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(playMicLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrPlayStep));
         
         // Speex step (optional)
         auto eitherOrProcessSpeex = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -197,8 +183,7 @@ void TxRxThread::initializePipeline_()
             []() { return wxGetApp().appConfiguration.filterConfiguration.speexppEnable; },
             std::shared_ptr<IPipelineStep>(eitherOrProcessSpeex),
             std::shared_ptr<IPipelineStep>(eitherOrBypassSpeex));
-        auto speexLockStep = new ExclusiveAccessStep(eitherOrSpeexStep, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(speexLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrSpeexStep));
         
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
@@ -208,8 +193,7 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqMicInMid,
             &g_rxUserdata->sbqMicInTreble,
             &g_rxUserdata->sbqMicInVol);
-        auto equalizerLockStep = new ExclusiveAccessStep(equalizerStep, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerStep));
         
         // Take TX audio post-equalizer and send it to RX for possible monitoring use.
         if (equalizedMicAudioLink_ != nullptr)
@@ -264,8 +248,7 @@ void TxRxThread::initializePipeline_()
             []() { return g_recFileFromModulator && (g_sfRecFileFromModulator != NULL); },
             std::shared_ptr<IPipelineStep>(recordModulatedTapPipeline),
             std::shared_ptr<IPipelineStep>(bypassRecordModulated));
-        auto recordModulatedLockStep = new ExclusiveAccessStep(eitherOrRecordModulated, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRecordModulated));
         
         // TX attenuation step
         auto txAttenuationStep = new LevelAdjustStep(outputSampleRate_, []() {
@@ -303,8 +286,7 @@ void TxRxThread::initializePipeline_()
             std::shared_ptr<IPipelineStep>(recordRadioTap),
             std::shared_ptr<IPipelineStep>(bypassRecordRadio)
         );
-        auto recordRadioLockStep = new ExclusiveAccessStep(eitherOrRecordRadio, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordRadioLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRecordRadio));
         
         // Play from radio step (optional)
         auto eitherOrBypassPlayRadio = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -326,16 +308,12 @@ void TxRxThread::initializePipeline_()
         
         auto eitherOrPlayRadioStep = new EitherOrStep(
             []() { 
-                // Prevent priority inversions by bounding the time we can wait for a lock.
-                g_mutexProtectingCallbackData.LockTimeout(5);
                 auto result = g_playFileFromRadio && (g_sfPlayFileFromRadio != NULL);
-                g_mutexProtectingCallbackData.Unlock();
                 return result;
             },
             std::shared_ptr<IPipelineStep>(eitherOrPlayRadio),
             std::shared_ptr<IPipelineStep>(eitherOrBypassPlayRadio));
-        auto playRadioLockStep = new ExclusiveAccessStep(eitherOrPlayRadioStep, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(playRadioLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrPlayRadioStep));
         
         // Resample for plot step (demod in)
         auto resampleForPlotStep = new ResampleForPlotStep(g_plotDemodInFifo);
@@ -451,8 +429,7 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqSpkOutMid,
             &g_rxUserdata->sbqSpkOutTreble,
             &g_rxUserdata->sbqSpkOutVol);
-        auto equalizerLockStep = new ExclusiveAccessStep(equalizerStep, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerStep));
         
         // Resample for plot step (speech out)
         auto resampleForPlotOutStep = new ResampleForPlotStep(g_plotSpeechOutFifo);

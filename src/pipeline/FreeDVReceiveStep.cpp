@@ -37,7 +37,7 @@ FreeDVReceiveStep::FreeDVReceiveStep(struct freedv* dv)
     , freqOffsetHz_(0)
 {
     // Set FIFO to be 2x the number of samples per run so we don't lose anything.
-    inputSampleFifo_ = codec2_fifo_create(freedv_get_n_max_modem_samples(dv_) * 2);
+    inputSampleFifo_ = codec2_fifo_create(freedv_get_modem_sample_rate(dv_));
     assert(inputSampleFifo_ != nullptr);
     
     rxFreqOffsetPhaseRectObjs_.real = cos(0.0);
