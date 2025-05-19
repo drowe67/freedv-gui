@@ -23,6 +23,7 @@
 #include <chrono>
 #include <cassert>
 #include <cstring>
+#include <sstream>
 #include "ParallelStep.h"
 #include "AudioPipeline.h"
 #include "../util/logging/ulog.h"
@@ -112,7 +113,7 @@ ParallelStep::ParallelStep(
                     }
                     else
                     {
-                        ts.tv_nsec += latency * 1000;
+                        ts.tv_nsec += 1e7;
                         if (ts.tv_nsec >= 1000000000)
                         {
                             ts.tv_sec++;
