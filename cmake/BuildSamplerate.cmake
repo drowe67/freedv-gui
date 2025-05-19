@@ -16,6 +16,7 @@ if(NOT samplerate_POPULATED)
   FetchContent_Populate(samplerate)
   add_subdirectory(${samplerate_SOURCE_DIR} ${samplerate_BINARY_DIR} EXCLUDE_FROM_ALL)
   list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${samplerate_BINARY_DIR}/src)
+  target_compile_options(samplerate PUBLIC -g -O2) # Ensure that samplerate is built with optimizations
 endif()
 
 list(APPEND FREEDV_LINK_LIBS samplerate)
