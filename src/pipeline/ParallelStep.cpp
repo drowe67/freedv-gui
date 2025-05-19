@@ -132,7 +132,7 @@ ParallelStep::ParallelStep(
                     
                     if (fallbackToSleep)
                     {
-                        std::this_thread::sleep_until(beginTime + 10ms);
+                        std::this_thread::sleep_until(beginTime + 20ms);
                     }
                 }
                 
