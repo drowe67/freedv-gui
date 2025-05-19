@@ -59,7 +59,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 ./build_linux.sh 
+          BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 ./build_linux.sh 
 
     - name: Execute unit tests
       shell: bash
