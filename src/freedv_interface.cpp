@@ -41,22 +41,12 @@ static const char* GetCurrentModeStrImpl_(int mode)
 {
     switch(mode)
     {
-        case FREEDV_MODE_700C:
-            return "700C";
         case FREEDV_MODE_700D:
             return "700D";
         case FREEDV_MODE_700E:
             return "700E";
         case FREEDV_MODE_1600:
             return "1600";
-        case FREEDV_MODE_2020:
-            return "2020";
-#if defined(FREEDV_MODE_2020B)
-        case FREEDV_MODE_2020B:
-            return "2020B";
-#endif // FREEDV_MODE_2020B
-        case FREEDV_MODE_800XA:
-            return "800XA";
         case FREEDV_MODE_RADE:
             return "RADEV1";
         default:
@@ -126,18 +116,12 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
 {
     switch(mode)
     {
-        case FREEDV_MODE_700C:
-            return 2.0;
         case FREEDV_MODE_700D:
             return -2.0f;
         case FREEDV_MODE_700E:
             return 1.0f;
         case FREEDV_MODE_1600:
             return 4.0f;
-        case FREEDV_MODE_2020:
-            return 2.0f;
-        case FREEDV_MODE_800XA:
-            return 2.0f;
         default:
             return 0.0f;
     }

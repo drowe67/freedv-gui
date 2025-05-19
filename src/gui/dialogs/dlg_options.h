@@ -63,9 +63,7 @@ class OptionsDlg : public wxDialog
  
         void    OnTestFrame(wxScrollEvent& event);
         void    OnChannelNoise(wxScrollEvent& event);
-        void    OnAttnCarrierEn(wxScrollEvent& event);
         void    OnFreeDV700txClip(wxScrollEvent& event);
-        void    OnFreeDV700Combine(wxScrollEvent& event);
         void    OnDebugConsole(wxScrollEvent& event);
 
         void    OnFifoReset(wxCommandEvent& event);
@@ -135,7 +133,6 @@ class OptionsDlg : public wxDialog
 
         wxCheckBox   *m_ckboxFreeDV700txClip;
         wxCheckBox   *m_ckboxFreeDV700txBPF;
-        wxCheckBox   *m_ckboxFreeDV700Combine;
 
         wxRadioButton *m_rb_textEncoding1;
         wxRadioButton *m_rb_textEncoding2;
