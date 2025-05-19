@@ -120,7 +120,7 @@ ParallelStep::ParallelStep(
 #elif defined(__APPLE__)
                         dispatch_semaphore_wait(s->sem, DISPATCH_TIME_FOREVER);
 #else
-                        if (sem_wait(&s->sem, &ts) < 0)
+                        if (sem_wait(&s->sem) < 0)
                         {
                             fallbackToSleep = true;
                         }
