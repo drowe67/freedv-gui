@@ -24,8 +24,11 @@
 #define AUDIO_PIPELINE__RECORD_STEP_H
 
 #include "IPipelineStep.h"
+
 #include <functional>
 #include <sndfile.h>
+#include <thread>
+#include "codec2_fifo.h"
 
 class RecordStep : public IPipelineStep
 {
@@ -43,6 +46,11 @@ private:
     std::function<int()> fileSampleRateFn_;
     std::function<SNDFILE*()> getSndFileFn_;
     std::function<void(int)> isFileCompleteFn_;
+    std::thread fileIoThread_;
+    FIFO* inputFifo_;
+    bool fileIoThreadEnding_;
+    
+    void fileIoThreadEntry_();
 };
 
 #endif // AUDIO_PIPELINE__RECORD_STEP_H

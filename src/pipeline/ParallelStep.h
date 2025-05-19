@@ -32,7 +32,16 @@
 #include <queue>
 #include <map>
 
+#if defined(_WIN32)
+#include <windows.h>
+#elif defined(__APPLE__)
+#include <dispatch/dispatch.h>
+#else
+#include <semaphore.h>
+#endif // defined(_WIN32) || defined(__APPLE__)
+
 #include "../util/IRealtimeHelper.h"
+#include "codec2_fifo.h"
 
 class ParallelStep : public IPipelineStep
 {
@@ -52,27 +61,27 @@ public:
     virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
     
     const std::vector<std::shared_ptr<IPipelineStep>> getParallelSteps() const { return parallelSteps_; }
-
+    
     std::shared_ptr<void> getState() { return state_; }
-        
-private:
-    typedef std::pair<std::shared_ptr<short>, int> TaskResult;
-    typedef std::packaged_task<TaskResult(std::shared_ptr<short>, int)> ThreadTask;
     
-    struct TaskEntry
-    {
-        ThreadTask task;
-        std::shared_ptr<short> inputSamples;
-        int numInputSamples;
-    };
-    
+private:    
     struct ThreadInfo
     {
         std::thread thread;
-        std::mutex queueMutex;
-        std::condition_variable queueCV;
-        std::queue<TaskEntry> tasks;
         bool exitingThread;
+        std::shared_ptr<IPipelineStep> step;
+        FIFO* inputFifo;
+        FIFO* outputFifo;
+        std::shared_ptr<short> tempInput;
+        std::shared_ptr<short> tempOutput;
+        
+#if defined(_WIN32)
+        HANDLE sem;
+#elif defined(__APPLE__)
+        dispatch_semaphore_t sem;
+#else
+        sem_t sem;
+#endif // defined(_WIN32) || defined(__APPLE__)
     };
     
     int inputSampleRate_;
@@ -80,14 +89,12 @@ private:
     bool runMultiThreaded_;
     std::function<int(ParallelStep*)> inputRouteFn_;
     std::function<int(ParallelStep*)> outputRouteFn_;
-    std::vector<std::shared_ptr<IPipelineStep>> parallelSteps_;
-    std::map<std::pair<int, int>, std::shared_ptr<ResampleStep>> resamplers_;
     std::vector<ThreadInfo*> threads_;
-    std::shared_ptr<void> state_;
     std::shared_ptr<IRealtimeHelper> realtimeHelper_;
+    std::shared_ptr<void> state_;
+    std::vector<std::shared_ptr<IPipelineStep>> parallelSteps_;
 
     void executeRunnerThread_(ThreadInfo* threadState);
-    std::future<TaskResult> enqueueTask_(ThreadInfo* taskQueueThread, IPipelineStep* step, std::shared_ptr<short> inputSamples, int numInputSamples);
 };
 
 #endif // AUDIO_PIPELINE__PARALLEL_STEP_H

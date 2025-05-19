@@ -72,12 +72,13 @@ void VerifyMicrophonePermissions(std::promise<bool>& microphonePromise)
 
 void ResetMainWindowColorSpace()
 {
-    NSWindow* win = [NSApp mainWindow];
-    CGColorSpaceRef cs = CGColorSpaceCreateWithName( kCGColorSpaceSRGB );
-    [win setColorSpace:[[[NSColorSpace alloc]initWithCGColorSpace:cs] autorelease]];
+    [NSApp enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack usingBlock:^(NSWindow *win, BOOL *stop) {
+        CGColorSpaceRef cs = CGColorSpaceCreateWithName( kCGColorSpaceSRGB );
+        [win setColorSpace:[[[NSColorSpace alloc]initWithCGColorSpace:cs] autorelease]];
     
-    assert(cs != nullptr);
-    CGColorSpaceRelease(cs);
+        assert(cs != nullptr);
+        CGColorSpaceRelease(cs);
+    }];
 }
 
 std::string GetOperatingSystemString()

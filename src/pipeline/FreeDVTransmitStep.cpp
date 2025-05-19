@@ -35,7 +35,7 @@ FreeDVTransmitStep::FreeDVTransmitStep(struct freedv* dv, std::function<float()>
     , inputSampleFifo_(nullptr)
 {
     // Set FIFO to be 2x the number of samples per run so we don't lose anything.
-    inputSampleFifo_ = codec2_fifo_create(freedv_get_n_speech_samples(dv_) * 2);
+    inputSampleFifo_ = codec2_fifo_create(freedv_get_speech_sample_rate(dv_));
     assert(inputSampleFifo_ != nullptr);
     
     txFreqOffsetPhaseRectObj_.real = cos(0.0);
