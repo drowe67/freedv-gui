@@ -118,7 +118,10 @@ ParallelStep::ParallelStep(
                             fallbackToSleep = true;
                         }
 #elif defined(__APPLE__)
-                        dispatch_semaphore_wait(s->sem, DISPATCH_TIME_FOREVER);
+                        if (s->sem != nullptr)
+                        {
+                            dispatch_semaphore_wait(s->sem, DISPATCH_TIME_FOREVER);
+                        }
 #else
                         if (sem_wait(&s->sem) < 0)
                         {
@@ -160,8 +163,11 @@ ParallelStep::~ParallelStep()
                 CloseHandle(tmpSem);
             }
 #elif defined(__APPLE__)
-            dispatch_semaphore_signal(taskThread->sem);
-            dispatch_release(taskThread->sem);
+            if (taskThread->sem != nullptr)
+            {
+                dispatch_semaphore_signal(taskThread->sem);
+                dispatch_release(taskThread->sem);
+            }
 #else
             sem_post(&taskThread->sem);
             sem_destroy(&taskThread->sem);
