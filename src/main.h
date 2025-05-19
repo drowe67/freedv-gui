@@ -496,6 +496,7 @@ class MainFrame : public TopFrame
         wxMenuItem* recordNewVoiceKeyerFileMenuItem_;
 
         bool terminating_; // used for terminating FreeDV
+        bool realigned_; // used to inhibit resize hack once already done
         
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
