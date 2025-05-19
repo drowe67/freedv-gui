@@ -135,8 +135,6 @@ set(CMAKE_VERBOSE_MAKEFILE TRUE CACHE BOOL "Verbose makefile.")
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE CACHE BOOL "Enable IDE features.")
 set(USE_INTERNAL_CODEC2 FALSE CACHE BOOL
     "Download and build codec2  instead of using the system library.")
-set(BOOTSTRAP_LPCNET FALSE CACHE BOOL
-    "Download and build LPCNet instead of using the system library.")
 set(USE_STATIC_DEPS FALSE CACHE BOOL
     "Download and build static libraries instead of system libraries.")
 set(USE_STATIC_PORTAUDIO FALSE CACHE BOOL
@@ -349,7 +347,7 @@ message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 include(cmake/BuildRADE.cmake)
 
 #
-# Find codec2 and lpcnetfreedv
+# Find codec2
 #
 if(CODEC2_BUILD_DIR)
     if(USE_INTERNAL_CODEC2)
@@ -369,20 +367,8 @@ if(CODEC2_BUILD_DIR)
         CONFIGS codec2.cmake
     )
     get_target_property(CODEC2_INCLUDE_DIRS codec2 INTERFACE_INCLUDE_DIRECTORIES)
-    if(LPCNET_BUILD_DIR)
-        message(STATUS "Using LPCNet from build directory...")
-        set(lpcnet_DIR ${LPCNET_BUILD_DIR})
-        find_package(lpcnet REQUIRED
-            NO_DEFAULT_PATH
-            PATHS ${LPCNET_BUILD_DIR}
-            CONFIGS lpcnetfreedv.cmake
-        )
-    else()
-        set(LPCNET_DISABLED YES)
-        add_definitions(-DLPCNET_DISABLED)
-    endif()
 elseif(USE_INTERNAL_CODEC2)
-    message(STATUS "Will attempt internal build of codec2 and lpcnetfreedv.")
+    message(STATUS "Will attempt internal build of codec2.")
     include(cmake/BuildCodec2.cmake)
 else(CODEC2_BUILD_DIR)
     message(STATUS "Looking for codec2...")
@@ -394,7 +380,6 @@ else(CODEC2_BUILD_DIR)
         get_target_property(CODEC2_INCLUDE_DIRS codec2 INTERFACE_INCLUDE_DIRECTORIES)
         message(STATUS "  codec2 library: ${CODEC2_LIBRARY}")
         message(STATUS "  codec2 headers: ${CODEC2_INCLUDE_DIRS}")
-        find_package(lpcnetfreedv REQUIRED)
     else()
         # Try to find manually
         find_path(CODEC2_INCLUDE_DIRS codec2.h
@@ -406,7 +391,7 @@ else(CODEC2_BUILD_DIR)
             list(APPEND FREEDV_LINK_LIBS ${CODEC2_LIBRARY})
             include_directories(${CODEC2_INCLUDE_DIRS})
         else()
-            message(STATUS "Will attempt internal build of codec2 and lpcnetfreedv.")
+            message(STATUS "Will attempt internal build of codec2.")
             include(cmake/BuildCodec2.cmake)
         endif()
     endif()
@@ -724,9 +709,9 @@ elseif(UNIX AND NOT APPLE)
     SET(CPACK_GENERATOR "DEB")
     SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Mooneer Salem <mooneer@gmail.com>") #required
     if(USE_NATIVE_AUDIO)
-    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.1.1), lpcnet (>= 0.5.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libpulse0 (>= 14.2-2), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
+    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.1.1), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libpulse0 (>= 14.2-2), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
     else(USE_NATIVE_AUDIO)
-    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.1.1), lpcnet (>= 0.5.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libportaudio2 (>= 19.6.0-1build1), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
+    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.1.1), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libportaudio2 (>= 19.6.0-1build1), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
     endif(USE_NATIVE_AUDIO)
 
     SET(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
