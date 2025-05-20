@@ -96,7 +96,6 @@ extern FreeDVInterface freedvInterface;
 
 #include <wx/wx.h>
 #include "../main.h"
-extern wxMutex txModeChangeMutex;
 extern wxWindow* g_parent;
 
 #include <sndfile.h>
@@ -570,8 +569,6 @@ void TxRxThread::txProcessing_()
 
     if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_tx || g_recVoiceKeyerFile || g_recFileFromMic))) {
         // Lock the mode mutex so that TX state doesn't change on us during processing.
-        txModeChangeMutex.Lock();
-        
         if (pipeline_ == nullptr)
         {
             initializePipeline_();
@@ -664,8 +661,6 @@ void TxRxThread::txProcessing_()
                 codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
             }
         }
-       
-        txModeChangeMutex.Unlock();
     }
     else
     {
