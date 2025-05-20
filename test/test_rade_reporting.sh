@@ -80,14 +80,19 @@ if [ "$2" == "mpp" ]; then
 else
     TX_ARGS="-txtime 5 "
 fi
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADE $TX_ARGS
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADE $TX_ARGS >tmp.log 2>&1 &
 
 FDV_PID=$!
+
+if [ "$OPERATING_SYSTEM" != "Linux" ]; then
+    xctrace record --template "Audio System Trace" --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
+fi
+
 #sleep 30 
 #screencapture ../screenshot.png
 #wpctl status
 #pw-top -b -n 5
-#wait $FDV_PID
+wait $FDV_PID
 
 # Stop recording, play back in RX mode
 kill $RECORD_PID
