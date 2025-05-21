@@ -97,9 +97,9 @@ $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE
 
 FDV_PID=$!
 
-if [ "$OPERATING_SYSTEM" != "Linux" ]; then
-    xctrace record --window 2m --template "Audio System Trace" --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
-fi
+#if [ "$OPERATING_SYSTEM" != "Linux" ]; then
+#    xctrace record --window 2m --template "Audio System Trace" --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
+#fi
 
 #sleep 30 
 #screencapture ../screenshot.png

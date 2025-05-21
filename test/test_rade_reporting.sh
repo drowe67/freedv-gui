@@ -84,9 +84,9 @@ $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADE $TX_ARGS >tmp.log
 
 FDV_PID=$!
 
-if [ "$OPERATING_SYSTEM" != "Linux" ]; then
-    xctrace record --template "Audio System Trace" --window 2m --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
-fi
+#if [ "$OPERATING_SYSTEM" != "Linux" ]; then
+#    xctrace record --template "Audio System Trace" --window 2m --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
+#fi
 
 #sleep 30 
 #screencapture ../screenshot.png
@@ -116,9 +116,9 @@ fi
 $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADE -rxfile $(pwd)/test.wav >tmp.log 2>&1 &
 FDV_PID=$!
 
-if [ "$OPERATING_SYSTEM" != "Linux" ]; then
-    xctrace record --template "Audio System Trace" --window 2m --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
-fi
+#if [ "$OPERATING_SYSTEM" != "Linux" ]; then
+#    xctrace record --template "Audio System Trace" --window 2m --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
+#fi
 wait $FDV_PID
 cat tmp.log
 
