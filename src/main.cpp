@@ -2777,7 +2777,7 @@ void MainFrame::startRxStream()
         // stats for spectral plots, and transmit processng are all performed 
         // in the tx/rxProcessing loop.
         //
-        // Note that soundCard1InFifoSizeSamples is significantly larger than
+        // Note that soundCard[12]InFifoSizeSamples are significantly larger than
         // the other FIFO sizes. This is to better handle PulseAudio/pipewire
         // behavior on some devices, where the system sends multiple *seconds*
         // of audio samples at once followed by long periods with no samples at
@@ -2790,7 +2790,7 @@ void MainFrame::startRxStream()
 
         if (txInSoundDevice && txOutSoundDevice)
         {
-            int soundCard2InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate / 1000;
+            int soundCard2InFifoSizeSamples = 30*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate / 1000;
             int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate / 1000;
             g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
             g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
