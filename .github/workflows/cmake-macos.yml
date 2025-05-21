@@ -86,13 +86,13 @@ jobs:
       working-directory: ${{github.workspace}}/build_osx
       if: ${{ !cancelled() }}
       run: |
-          zip InstrumentsTraces.zip instruments_trace_*
+          zip -r InstrumentsTraces.zip instruments_trace_*
 
     - name: Stash instrumented results
       uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
-        name: InstrumentsTraces
+        name: InstrumentsTraces-${{matrix.os}}
         path: ${{github.workspace}}/build_osx/InstrumentsTraces.zip
 
   # Only build and publish universal binary after making sure code works properly on both 
