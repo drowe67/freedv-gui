@@ -297,7 +297,23 @@ void MainApp::UnitTest_()
         if (isRunning) break;
         std::this_thread::sleep_for(20ms);
     }
-    
+
+    // Hide main window temporarily if requested. This is for CI use cases
+    // where we don't necessarily have access to what the GUI looks like.
+    wxString envVarName = "UT_HIDE_WINDOW";
+    wxString envVarVal;
+    bool hideWindow = false;
+    if (wxGetEnv(envVarName, &envVarVal))
+    {
+        hideWindow = envVarVal == "1";
+    }
+    if (hideWindow)
+    {
+        CallAfter([&]() {
+            frame->Hide();
+        });
+    }
+
     if (testName == "tx")
     {
         log_info("Transmitting %d times", utTxAttempts);
@@ -392,6 +408,14 @@ void MainApp::UnitTest_()
     
     // Wait a second to make sure we're not doing any more processing
     std::this_thread::sleep_for(1000ms);
+
+    // Re-show window if hidden
+    if (hideWindow)
+    {
+        CallAfter([&]() {
+            frame->Show();
+        });
+    }
  
     // Fire event to stop FreeDV
     log_info("Firing stop");
