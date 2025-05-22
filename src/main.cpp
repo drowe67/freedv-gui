@@ -564,6 +564,11 @@ bool MainApp::OnInit()
     wxString appPath(f.GetPath());
     wxSetWorkingDirectory(appPath);
 
+    // Make sure PYTHONHOME is not set. If it is, it may use the user's
+    // local Python installation for stuff like torch/torchaudio, causing
+    // problems running RADE.
+    wxUnsetEnv("PYTHONHOME");
+
 #if __APPLE__
     // Set PYTHONPATH accordingly. We mainly want to be able to access
     // the model (,pth) as well as the RADE Python code.
