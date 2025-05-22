@@ -176,8 +176,7 @@ int PulseAudioDevice::getLatencyInMicroseconds()
     pa_usec_t latency = 0;
     if (stream_ != nullptr)
     {
-        int neg = 0;
-        pa_stream_get_latency(stream_, &latency, &neg); // ignore error and assume 0
+        pa_stream_get_latency(stream_, &latency, nullptr); // ignore error and assume 0
     }
     pa_threaded_mainloop_unlock(mainloop_);
     return (int)latency;
