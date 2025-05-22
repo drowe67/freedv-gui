@@ -154,17 +154,18 @@ void PulseAudioDevice::stop()
 {
     if (stream_ != nullptr)
     {
-        std::unique_lock<std::mutex> lk(streamStateMutex_);
-
         pa_threaded_mainloop_lock(mainloop_);
+
+        // Disconnect stream and wait for response from mainloop.
         pa_stream_disconnect(stream_);
+        pa_threaded_mainloop_wait(mainloop_);
+
+        // Deallocate stream.
+        pa_stream_unref(stream_);
+        stream_ = nullptr;
+
         pa_threaded_mainloop_unlock(mainloop_);
 
-        streamStateCondVar_.wait(lk);
-
-        pa_stream_unref(stream_);
-
-        stream_ = nullptr;
         sem_destroy(&sem_);
     }
 }
@@ -175,8 +176,7 @@ int PulseAudioDevice::getLatencyInMicroseconds()
     pa_usec_t latency = 0;
     if (stream_ != nullptr)
     {
-        int neg = 0;
-        pa_stream_get_latency(stream_, &latency, &neg); // ignore error and assume 0
+        pa_stream_get_latency(stream_, &latency, nullptr); // ignore error and assume 0
     }
     pa_threaded_mainloop_unlock(mainloop_);
     return (int)latency;
@@ -356,8 +356,7 @@ void PulseAudioDevice::StreamStateCallback_(pa_stream *p, void *userdata)
     // does not accidentally refer to already freed memory.
     if (pa_stream_get_state(p) == PA_STREAM_TERMINATED)
     {
-        std::unique_lock<std::mutex> lk(thisObj->streamStateMutex_);
-        thisObj->streamStateCondVar_.notify_all();
+        pa_threaded_mainloop_signal(thisObj->mainloop_, 0);
     }    
 }
 
