@@ -248,7 +248,7 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     rigControlConfiguration.save(config);
     reportingConfiguration.save(config);
     
-    save_(config, firstTimeUse);\
+    save_(config, firstTimeUse);
     
     save_(config, mainWindowLeft);
     save_(config, mainWindowTop);
