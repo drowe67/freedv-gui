@@ -723,10 +723,11 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
         [&](ParallelStep*) {
             int index = 0;
 
-            auto currentTxMode = txMode_;
-            
+            auto currentTxMode = currentTxMode_;
+            auto txModeInt = txMode_; 
+
             // Special handling for RADE.
-            if (currentTxMode >= FREEDV_MODE_RADE) return 0;
+            if (txModeInt >= FREEDV_MODE_RADE) return 0;
 
             for (auto& dv : dvObjects_)
             {
