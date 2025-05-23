@@ -740,7 +740,7 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
     auto parallelStep = new ParallelStep(
         inputSampleRate,
         outputSampleRate,
-        !singleRxThread_,
+        false,
         modeFn,
         modeFn,
         parallelSteps,
