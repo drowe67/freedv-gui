@@ -107,8 +107,11 @@ ParallelStep::ParallelStep(
                     fallbackToSleep = s->sem != nullptr;
 #endif // defined(_WIN32) || defined(__APPLE__)
                     
-                    executeRunnerThread_(s);
-                   
+                    while (!s->exitingThread && codec2_fifo_used(s->inputFifo) > 0)
+                    {
+                        executeRunnerThread_(s);
+                    }
+                    
                     if (!fallbackToSleep)
                     {
 #if defined(_WIN32)
