@@ -82,6 +82,7 @@ RADETransmitStep::~RADETransmitStep()
     delete[] radeOutShort_;
     delete[] eooOut_;
     delete[] eooOutShort_;
+    outputSamples_ = nullptr;
 
     if (featuresFile_ != nullptr)
     {
@@ -90,12 +91,12 @@ RADETransmitStep::~RADETransmitStep()
     
     if (inputSampleFifo_ != nullptr)
     {
-        codec2_fifo_free(inputSampleFifo_);
+        codec2_fifo_destroy(inputSampleFifo_);
     }
 
     if (outputSampleFifo_ != nullptr)
     {
-        codec2_fifo_free(inputSampleFifo_);
+        codec2_fifo_destroy(outputSampleFifo_);
     }
 }
 

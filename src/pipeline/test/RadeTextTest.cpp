@@ -15,7 +15,7 @@ std::uniform_real_distribution<double> distribution(-0.789, 0.789);
 
 void OnRadeTextRx(rade_text_t rt, const char* txt_ptr, int length, void* state) 
 {
-    log_info("Callsign received: %s", txt_ptr);
+    log_info("Callsign received: %s, length = %d", txt_ptr, length);
     testPassed = !strncmp(txt_ptr, "K6AQ", length);
 }
 
@@ -86,7 +86,14 @@ int main()
     // Send silence through to RX step to trigger EOO processing
     recvStep->execute(inputSamplesPtr, 16384, &noutRx);
 
+    delete recvStep;
+    delete txStep;
+
     rade_close(rade); 
     rade_finalize();
+
+    rade_text_destroy(txt);
+    lpcnet_encoder_destroy(encState);
+
     return testPassed ? 0 : 1;
 }

@@ -186,8 +186,14 @@ ParallelStep::~ParallelStep()
                 
         codec2_fifo_destroy(taskThread->inputFifo);
         codec2_fifo_destroy(taskThread->outputFifo);
+        taskThread->step = nullptr;
+        taskThread->tempInput = nullptr;
+        taskThread->tempOutput = nullptr;
         delete taskThread;
     }
+
+    // Force immediate memory clear
+    parallelSteps_.clear();
 }
 
 int ParallelStep::getInputSampleRate() const
