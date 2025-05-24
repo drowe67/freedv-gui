@@ -75,9 +75,6 @@ public:
     void terminateThread();
     void notify();
 
-    std::mutex m_processingMutex;
-    std::condition_variable m_processingCondVar;
-
 private:
     bool  m_tx;
     bool  m_run;

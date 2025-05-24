@@ -463,16 +463,6 @@ void* TxRxThread::Entry()
         pthread_setname_np(pthread_self(), threadName);
 #endif // defined(__linux__)
 
-#if 0
-        {
-            std::unique_lock<std::mutex> lk(m_processingMutex);
-            if (m_processingCondVar.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout)
-            {
-                log_warn("txRxThread: timeout while waiting for CV, tx = %d", m_tx);
-            }
-        }
-#endif
-
         if (!m_run) break;
         
         //log_info("thread woken up: m_tx=%d", (int)m_tx);
@@ -507,10 +497,7 @@ void TxRxThread::terminateThread()
 
 void TxRxThread::notify()
 {
-#if 0
-    std::unique_lock<std::mutex> lk(m_processingMutex);
-    m_processingCondVar.notify_all();
-#endif
+    // empty
 }
 
 void TxRxThread::clearFifos_()
