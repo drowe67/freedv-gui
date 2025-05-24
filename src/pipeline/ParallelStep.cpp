@@ -24,6 +24,7 @@
 #include <cassert>
 #include <cstring>
 #include <sstream>
+#include "../defines.h"
 #include "ParallelStep.h"
 #include "AudioPipeline.h"
 #include "../util/logging/ulog.h"
@@ -213,7 +214,10 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
             codec2_fifo_write(threadInfo->inputFifo, inputSamples.get(), numInputSamples);
             if (!runMultiThreaded_)
             {
-                executeRunnerThread_(threadInfo);
+                do
+                {
+                    executeRunnerThread_(threadInfo);
+                } while (codec2_fifo_used(threadInfo->inputFifo) > 0);
             }
             else
             {
@@ -256,7 +260,7 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
 
 void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
 {
-    int samplesIn = codec2_fifo_used(threadState->inputFifo);
+    int samplesIn = std::min(codec2_fifo_used(threadState->inputFifo), (int)(inputSampleRate_ * FRAME_DURATION));
     int samplesOut = 0;
     if (codec2_fifo_read(threadState->inputFifo, threadState->tempInput.get(), samplesIn) != 0)
     {
