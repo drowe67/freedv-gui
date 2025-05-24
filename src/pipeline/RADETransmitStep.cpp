@@ -118,8 +118,8 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
 
     if (numInputSamples == 0)
     {
-        // Special case logic for EOO
-        *numOutputSamples = codec2_fifo_used(outputSampleFifo_);
+        // Special case logic for EOO -- make sure we only send FRAME_DURATION ms worth at a time
+        *numOutputSamples = std::min(codec2_fifo_used(outputSampleFifo_), (int)(RADE_MODEM_SAMPLE_RATE * FRAME_DURATION));
         if (*numOutputSamples > 0)
         {
             codec2_fifo_read(outputSampleFifo_, outputSamples_.get(), *numOutputSamples);
