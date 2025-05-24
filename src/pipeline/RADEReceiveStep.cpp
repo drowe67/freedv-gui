@@ -106,10 +106,11 @@ int RADEReceiveStep::getOutputSampleRate() const
 
 std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
+    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     *numOutputSamples = 0;
     
     short* inputPtr = inputSamples.get();
-    while (numInputSamples > 0 && inputPtr != nullptr)
+    while (numInputSamples > 0 && inputPtr != nullptr && (*numOutputSamples + LPCNET_FRAME_SIZE) < maxSamples)
     {
         codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
         numInputSamples--;

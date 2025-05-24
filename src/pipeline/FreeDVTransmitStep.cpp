@@ -87,6 +87,7 @@ int FreeDVTransmitStep::getOutputSampleRate() const
 
 std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {   
+    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     int mode = freedv_get_mode(dv_);
     int samplesUsedForFifo = freedv_get_n_speech_samples(dv_);
     int nfreedv = freedv_get_n_nom_modem_samples(dv_);
@@ -94,7 +95,7 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
     *numOutputSamples = 0;
     
     short* inputPtr = inputSamples.get();
-    while (numInputSamples > 0 && inputPtr)
+    while (numInputSamples > 0 && inputPtr && (*numOutputSamples + nfreedv) < maxSamples)
     {
         codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
         numInputSamples--;
