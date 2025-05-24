@@ -252,15 +252,7 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
     assert(stepToOutput >= 0 && (size_t)stepToOutput < parallelSteps_.size());
     
     ThreadInfo* outputTask = threads_[stepToOutput];
-    if (numInputSamples > 0)
-    {
-        // Don't return more than 4x what was passed to us.
-        *numOutputSamples = std::min(codec2_fifo_used(outputTask->outputFifo), 4 * numInputSamples * outputSampleRate_ / inputSampleRate_);
-    }
-    else
-    {
-        *numOutputSamples = codec2_fifo_used(outputTask->outputFifo);
-    }
+    *numOutputSamples = codec2_fifo_used(outputTask->outputFifo);
     codec2_fifo_read(outputTask->outputFifo, outputTask->tempOutput.get(), *numOutputSamples);    
     return outputTask->tempOutput;
 }
