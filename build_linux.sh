@@ -10,6 +10,7 @@ set -x -e
 UT_ENABLE=${UT_ENABLE:-0}
 USE_NATIVE_AUDIO=${USE_NATIVE_AUDIO:-1}
 BUILD_TYPE=${BUILD_TYPE:-Debug}
+WITH_ASAN=${WITH_ASAN:-0}
 
 export FREEDVGUIDIR=${PWD}
 export CODEC2DIR=$FREEDVGUIDIR/codec2
@@ -31,5 +32,9 @@ if [ -d .git ]; then
      git pull
 fi
 mkdir  -p build_linux && cd build_linux && rm -Rf *
-cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DUSE_NATIVE_AUDIO=$USE_NATIVE_AUDIO -DUNITTEST=$UT_ENABLE -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux ..
+if [ $WITH_ASAN == 1 ]; then
+    cmake -DCMAKE_C_FLAGS=-fsanitize=address -DCMAKE_CXX_FLAGS=-fsanitize=address -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DUSE_NATIVE_AUDIO=$USE_NATIVE_AUDIO -DUNITTEST=$UT_ENABLE -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux ..
+else
+    cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DUSE_NATIVE_AUDIO=$USE_NATIVE_AUDIO -DUNITTEST=$UT_ENABLE -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux ..
+fi
 make VERBOSE=1 -j$(nproc)
