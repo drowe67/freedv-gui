@@ -108,9 +108,12 @@ ParallelStep::ParallelStep(
                     fallbackToSleep = s->sem != nullptr;
 #endif // defined(_WIN32) || defined(__APPLE__)
                     
-                    while (!s->exitingThread && codec2_fifo_used(s->inputFifo) > 0)
+                    if (codec2_fifo_free(s->outputFifo) >= outputSampleRate_ / 4)
                     {
-                        executeRunnerThread_(s);
+                        do
+                        {
+                            executeRunnerThread_(s);
+                        } while (!s->exitingThread && codec2_fifo_used(s->inputFifo) > 0 && codec2_fifo_free(s->outputFifo) >= outputSampleRate_ / 4);
                     }
                     
                     if (!fallbackToSleep)
@@ -214,10 +217,13 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
             codec2_fifo_write(threadInfo->inputFifo, inputSamples.get(), numInputSamples);
             if (!runMultiThreaded_)
             {
-                do
+                if (codec2_fifo_free(threadInfo->outputFifo) >= outputSampleRate_ / 4)
                 {
-                    executeRunnerThread_(threadInfo);
-                } while (codec2_fifo_used(threadInfo->inputFifo) > 0);
+                    do
+                    {
+                        executeRunnerThread_(threadInfo);
+                    } while (codec2_fifo_used(threadInfo->inputFifo) > 0 && codec2_fifo_free(threadInfo->outputFifo) >= outputSampleRate_ / 4);
+                }
             }
             else
             {
