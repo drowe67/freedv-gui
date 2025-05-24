@@ -359,11 +359,7 @@ void TxRxThread::initializePipeline_()
             []() { return wxGetApp().appConfiguration.noiseSNR; },
             []() { return g_RxFreqOffsetHz; },
             []() { return &g_sig_pwr_av; },
-#if 0
             helper_
-#else
-            nullptr
-#endif // 0
         );
         rfDemodulationPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(rfDemodulationStep));
         
