@@ -68,10 +68,11 @@ FreeDVTransmitStep::~FreeDVTransmitStep()
     delete[] codecInput_;
     delete[] txFdm_;
     delete[] txFdmOffset_;
+    delete[] tmpOutput_;
 
     if (inputSampleFifo_ != nullptr)
     {
-        codec2_fifo_free(inputSampleFifo_);
+        codec2_fifo_destroy(inputSampleFifo_);
     }
 }
 

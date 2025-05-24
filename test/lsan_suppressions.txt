@@ -5,3 +5,4 @@ leak:gtk_
 leak:g_
 leak:Py
 leak:torch
+leak:wx

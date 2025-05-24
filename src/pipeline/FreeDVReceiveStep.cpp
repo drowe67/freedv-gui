@@ -65,10 +65,11 @@ FreeDVReceiveStep::~FreeDVReceiveStep()
     delete[] inputBuf_;
     delete[] rxFdm_;
     delete[] rxFdmOffset_;
+    outputSamples_ = nullptr;
 
     if (inputSampleFifo_ != nullptr)
     {
-        codec2_fifo_free(inputSampleFifo_);
+        codec2_fifo_destroy(inputSampleFifo_);
     }
 }
 
