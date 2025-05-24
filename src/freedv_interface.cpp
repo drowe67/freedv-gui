@@ -703,7 +703,11 @@ float FreeDVInterface::getSNREstimate()
     }
 }
 
-IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int outputSampleRate, std::function<float()> getFreqOffsetFn)
+IPipelineStep* FreeDVInterface::createTransmitPipeline(
+    int inputSampleRate, 
+    int outputSampleRate, 
+    std::function<float()> getFreqOffsetFn,
+    std::shared_ptr<IRealtimeHelper> realtimeHelper)
 {
     std::vector<IPipelineStep*> parallelSteps;
 
@@ -745,7 +749,7 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
         modeFn,
         parallelSteps,
         nullptr,
-        nullptr
+        realtimeHelper
     );
     
     return parallelStep;
