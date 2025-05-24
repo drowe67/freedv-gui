@@ -110,14 +110,14 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
     *numOutputSamples = 0;
     
     short* inputPtr = inputSamples.get();
-    while (numInputSamples > 0 && inputPtr != nullptr && (*numOutputSamples + LPCNET_FRAME_SIZE) < maxSamples)
+    while (numInputSamples > 0 && inputPtr != nullptr)
     {
         codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
         numInputSamples--;
         
         int   nin = rade_nin(dv_);
         int   nout = 0;
-        while (codec2_fifo_read(inputSampleFifo_, inputBuf_, nin) == 0) 
+        while ((*numOutputSamples + LPCNET_FRAME_SIZE) < maxSamples && codec2_fifo_read(inputSampleFifo_, inputBuf_, nin) == 0) 
         {
             assert(nin <= rade_nin_max(dv_));
 

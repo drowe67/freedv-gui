@@ -131,12 +131,12 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
     }
     
     short* inputPtr = inputSamples.get();
-    while (numInputSamples > 0 && inputPtr != nullptr && (*numOutputSamples + numSamplesPerTx) < maxSamples)
+    while (numInputSamples > 0 && inputPtr != nullptr)
     {
         codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
         numInputSamples--;
         
-        if (codec2_fifo_used(inputSampleFifo_) >= LPCNET_FRAME_SIZE)
+        if ((*numOutputSamples + numSamplesPerTx) < maxSamples && codec2_fifo_used(inputSampleFifo_) >= LPCNET_FRAME_SIZE)
         {
             unsigned int numRequiredFeaturesForRADE = rade_n_features_in_out(dv_);
             short pcm[LPCNET_FRAME_SIZE];

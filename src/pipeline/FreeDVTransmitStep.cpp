@@ -95,12 +95,12 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
     *numOutputSamples = 0;
     
     short* inputPtr = inputSamples.get();
-    while (numInputSamples > 0 && inputPtr && (*numOutputSamples + nfreedv) < maxSamples)
+    while (numInputSamples > 0 && inputPtr)
     {
         codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
         numInputSamples--;
         
-        if (codec2_fifo_used(inputSampleFifo_) >= samplesUsedForFifo)
+        if ((*numOutputSamples + nfreedv) < maxSamples && codec2_fifo_used(inputSampleFifo_) >= samplesUsedForFifo)
         {
             codec2_fifo_read(inputSampleFifo_, codecInput_, samplesUsedForFifo);
             

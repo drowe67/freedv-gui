@@ -89,14 +89,14 @@ std::shared_ptr<short> FreeDVReceiveStep::execute(std::shared_ptr<short> inputSa
     *numOutputSamples = 0;
 
     short* inputPtr = inputSamples.get();
-    while (numInputSamples > 0 && inputPtr != nullptr && (*numOutputSamples + maxSpeechSamples) < maxSamples)
+    while (numInputSamples > 0 && inputPtr != nullptr)
     {
         codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
         numInputSamples--;
         
         int   nin = freedv_nin(dv_);
         int   nout = 0;
-        while (codec2_fifo_read(inputSampleFifo_, inputBuf_, nin) == 0) 
+        while ((*numOutputSamples + maxSpeechSamples) < maxSamples && codec2_fifo_read(inputSampleFifo_, inputBuf_, nin) == 0) 
         {
             assert(nin <= freedv_get_n_max_modem_samples(dv_));
 
