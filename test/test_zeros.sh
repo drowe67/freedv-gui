@@ -106,6 +106,7 @@ FDV_PID=$!
 #wpctl status
 #pw-top -b -n 5
 wait $FDV_PID
+FREEDV_EXIT_STATUS=$?
 cat tmp.log
 
 # Stop recording/playback and process data
@@ -127,3 +128,5 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     pactl unload-module $DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO
     pactl unload-module $DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER
 fi
+
+exit $FREEDV_EXIT_STATUS

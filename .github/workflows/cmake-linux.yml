@@ -59,7 +59,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
-          BUILD_TYPE=RelWithDebInfo WITH_ASAN=1 UT_ENABLE=1 ./build_linux.sh 
+          BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 ./build_linux.sh 
 
     - name: Execute unit tests
       shell: bash
@@ -81,5 +81,18 @@ jobs:
           sleep 5
           ln -s ${{github.workspace}}/build_linux/rade_src/model19_check3 model19_check3
           . ../rade-venv/bin/activate
-          ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V
+          PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V
       
+    - name: Instrument AddressSanitizer
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          . ./rade-venv/bin/activate
+          BUILD_TYPE=RelWithDebInfo WITH_ASAN=1 UT_ENABLE=1 ./build_linux.sh 
+
+    - name: Check for memory leaks
+      shell: bash
+      working-directory: ${{github.workspace}}/build_linux
+      run: |
+          . ../rade-venv/bin/activate
+          ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V

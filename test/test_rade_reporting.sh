@@ -120,6 +120,7 @@ FDV_PID=$!
 #    xctrace record --template "Audio System Trace" --window 2m --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
 #fi
 wait $FDV_PID
+FREEDV_EXIT_CODE=$?
 cat tmp.log
 
 # Clean up PulseAudio virtual devices
@@ -133,3 +134,5 @@ fi
 
 # End radio process as it's no longer needed
 kill $RADIO_PID
+
+exit $FREEDV_EXIT_CODE
