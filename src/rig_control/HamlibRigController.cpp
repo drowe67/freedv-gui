@@ -368,7 +368,7 @@ void HamlibRigController::connectImpl_()
         onRigConnected(this);
         
         // Set timeouts so that we don't wait an extremely long time to begin TX.
-        rig_set_conf(rig_, rig_token_lookup(rig_, "timeout"), "50");
+        rig_set_conf(rig_, rig_token_lookup(rig_, "timeout"), "100");
         rig_set_conf(rig_, rig_token_lookup(rig_, "retry"), "0");
         rig_set_conf(rig_, rig_token_lookup(rig_, "timeout_retry"), "0");
             
