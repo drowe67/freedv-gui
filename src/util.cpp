@@ -180,7 +180,7 @@ void MainFrame::OpenPTTInPort(void)
             wxGetApp().m_pttInSerialPort->onPttChange += [&](IRigController*, bool pttState)
             {
                 log_info("PTT input state is now %d", pttState);
-                GetEventHandler()->CallAfter([&]() {
+                GetEventHandler()->CallAfter([this, pttState]() {
                     if (pttState != m_btnTogPTT->GetValue())
                     {
                         m_btnTogPTT->SetValue(pttState); 
