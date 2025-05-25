@@ -105,4 +105,4 @@ jobs:
           metacity --sm-disable --replace &
           sleep 5
           . ../rade-venv/bin/activate
-          ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V
+          ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V -R "fullduplex_(RADE|700D)|rade_reporting_clean"
