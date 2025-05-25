@@ -108,12 +108,13 @@ ParallelStep::ParallelStep(
                     fallbackToSleep = s->sem != nullptr;
 #endif // defined(_WIN32) || defined(__APPLE__)
                     
-                    if (codec2_fifo_free(s->outputFifo) >= outputSampleRate_ / 4)
+                    int minFree = outputSampleRate_ * 0.15;
+                    if (codec2_fifo_free(s->outputFifo) >= minFree)
                     {
                         do
                         {
                             executeRunnerThread_(s);
-                        } while (!s->exitingThread && codec2_fifo_used(s->inputFifo) > 0 && codec2_fifo_free(s->outputFifo) >= outputSampleRate_ / 4);
+                        } while (!s->exitingThread && codec2_fifo_used(s->inputFifo) > 0 && codec2_fifo_free(s->outputFifo) >= minFree);
                     }
                     
                     if (!fallbackToSleep)
@@ -223,12 +224,13 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
             codec2_fifo_write(threadInfo->inputFifo, inputSamples.get(), numInputSamples);
             if (!runMultiThreaded_)
             {
-                if (codec2_fifo_free(threadInfo->outputFifo) >= outputSampleRate_ / 4)
+                int minFree = outputSampleRate_ * 0.15;
+                if (codec2_fifo_free(threadInfo->outputFifo) >= minFree)
                 {
                     do
                     {
                         executeRunnerThread_(threadInfo);
-                    } while (codec2_fifo_used(threadInfo->inputFifo) > 0 && codec2_fifo_free(threadInfo->outputFifo) >= outputSampleRate_ / 4);
+                    } while (codec2_fifo_used(threadInfo->inputFifo) > 0 && codec2_fifo_free(threadInfo->outputFifo) >= minFree);
                 }
             }
             else
@@ -259,6 +261,10 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
     
     ThreadInfo* outputTask = threads_[stepToOutput];
     *numOutputSamples = codec2_fifo_used(outputTask->outputFifo);
+    if (numInputSamples > 0)
+    {
+        *numOutputSamples = std::min(*numOutputSamples, (int)(numInputSamples * ((float)outputSampleRate_ / inputSampleRate_)));
+    }
     codec2_fifo_read(outputTask->outputFifo, outputTask->tempOutput.get(), *numOutputSamples);    
     return outputTask->tempOutput;
 }
