@@ -245,6 +245,35 @@ void PulseAudioDevice::setHelperRealTime()
     sigaddset(&signal_set, SIGXCPU);
     sigprocmask(SIG_UNBLOCK, &signal_set, NULL);
 #endif // 0
+
+#if defined(USE_RTKIT)
+    DBusError error;
+    DBusConnection* bus = nullptr;
+    int result = 0;
+
+    dbus_error_init(&error);
+    if (!(bus = dbus_bus_get(DBUS_BUS_SYSTEM, &error)))
+    {
+        log_warn("Could not connect to system bus: %s", error.message);
+    }
+    else
+    {
+        int minNiceLevel = 0;
+        if ((result = rtkit_get_min_nice_level(bus, &minNiceLevel)) < 0)
+        {
+            log_warn("rtkit could not get minimum nice level: %s", strerror(-result));
+        }
+        else if ((result = rtkit_make_high_priority(bus, 0, minNiceLevel)) < 0)
+        {
+            log_warn("rtkit could not make high priority: %s", strerror(-result));
+        }
+    }
+    
+    if (bus != nullptr)
+    {
+        dbus_connection_unref(bus);
+    }
+#endif // defined(USE_RTKIT)
 }
 
 void PulseAudioDevice::startRealTimeWork()
