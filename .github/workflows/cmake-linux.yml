@@ -94,15 +94,7 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}/build_linux
       run: |
-          Xvfb :99 -screen 0 1024x768x16 &
-          sleep 5
           export DISPLAY=:99.0
           export XDG_RUNTIME_DIR=/run/user/$(id -u)
-          eval "$(dbus-launch --sh-syntax --exit-with-x11)"
-          pipewire &
-          pipewire-pulse &
-          wireplumber &
-          metacity --sm-disable --replace &
-          sleep 5
           . ../rade-venv/bin/activate
           ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V -R "fullduplex_(RADE|700D)|rade_reporting_clean"
