@@ -510,31 +510,27 @@ void TxRxThread::clearFifos_()
     
     if (m_tx)
     {
-        auto used = codec2_fifo_used(cbData->outfifo1);
-        if (used > 0)
+        while (codec2_fifo_used(cbData->outfifo1) > 0)
         {
-            codec2_fifo_read(cbData->outfifo1, inputSamples_.get(), used);
+            codec2_fifo_read(cbData->outfifo1, inputSamples_.get(), 1);
         }
         
-        used = codec2_fifo_used(cbData->infifo2);
-        if (used > 0)
+        while (codec2_fifo_used(cbData->infifo2) > 0)
         {
-            codec2_fifo_read(cbData->infifo2, inputSamples_.get(), used);
+            codec2_fifo_read(cbData->infifo2, inputSamples_.get(), 1);
         }
     }
     else
     {
-        auto used = codec2_fifo_used(cbData->infifo1);
-        if (used > 0)
+        while (codec2_fifo_used(cbData->infifo1) > 0)
         {
-            codec2_fifo_read(cbData->infifo1, inputSamples_.get(), used);
+            codec2_fifo_read(cbData->infifo1, inputSamples_.get(), 1);
         }
         
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
-        used = codec2_fifo_used(outFifo);
-        if (used > 0)
+        while (codec2_fifo_used(outFifo) > 0)
         {
-            codec2_fifo_read(outFifo, inputSamples_.get(), used);
+            codec2_fifo_read(outFifo, inputSamples_.get(), 1);
         }
     }
 }

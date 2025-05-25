@@ -47,11 +47,12 @@ LinkStep::~LinkStep()
 }
 
 void LinkStep::clearFifo()
-{
-    int numUsed = codec2_fifo_used(fifo_);
-    
+{    
     // Read data and then promptly throw it out.
-    codec2_fifo_read(fifo_, tmpBuffer_, numUsed);
+    while (codec2_fifo_used(fifo_) > 0)
+    {
+        codec2_fifo_read(fifo_, tmpBuffer_, 1);
+    }
 }
 
 std::shared_ptr<short> LinkStep::InputStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
