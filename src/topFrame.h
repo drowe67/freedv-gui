@@ -130,22 +130,12 @@ class TopFrame : public wxFrame
         wxToggleButton      *m_audioRecord;
 
         wxRadioButton *m_rbRADE;
-        wxRadioButton *m_rb700c;
         wxRadioButton *m_rb700d;
         wxRadioButton *m_rb700e;
-        wxRadioButton *m_rb800xa;
         wxRadioButton *m_rb1600;
-        wxRadioButton *m_rb2020;
-#if defined(FREEDV_MODE_2020B)
-        wxRadioButton *m_rb2020b;
-#endif // FREEDV_MODE_2020B
-
-        wxRadioButton* m_hiddenMode1;
-        wxRadioButton* m_hiddenMode2;
 
         wxSizer* rightSizer;
         
-        wxCollapsiblePane *m_collpane;
         wxStaticBox* modeBox;
         wxStaticBoxSizer* sbSizer_mode;
         
@@ -216,9 +206,7 @@ class TopFrame : public wxFrame
         
         virtual void OnChangeReportFrequency( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnChangeReportFrequencyVerify( wxCommandEvent& event ) { event.Skip(); }
-        
-        virtual void OnChangeCollapseState(wxCollapsiblePaneEvent& event);
-        
+                
         virtual void OnReportFrequencySetFocus(wxFocusEvent& event) { event.Skip(); }
         virtual void OnReportFrequencyKillFocus(wxFocusEvent& event) { event.Skip(); }
 

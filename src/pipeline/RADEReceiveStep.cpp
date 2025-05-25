@@ -77,6 +77,7 @@ RADEReceiveStep::~RADEReceiveStep()
     delete[] inputBufCplx_;
     delete[] featuresOut_;
     delete[] eooOut_;
+    outputSamples_ = nullptr;
 
     if (featuresFile_ != nullptr)
     {
@@ -85,12 +86,12 @@ RADEReceiveStep::~RADEReceiveStep()
 
     if (inputSampleFifo_ != nullptr)
     {
-        codec2_fifo_free(inputSampleFifo_);
+        codec2_fifo_destroy(inputSampleFifo_);
     }
 
     if (outputSampleFifo_ != nullptr)
     {
-        codec2_fifo_free(outputSampleFifo_);
+        codec2_fifo_destroy(outputSampleFifo_);
     }
 }
 
@@ -106,6 +107,7 @@ int RADEReceiveStep::getOutputSampleRate() const
 
 std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
+    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     *numOutputSamples = 0;
     
     short* inputPtr = inputSamples.get();
@@ -116,7 +118,7 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
         
         int   nin = rade_nin(dv_);
         int   nout = 0;
-        while (codec2_fifo_read(inputSampleFifo_, inputBuf_, nin) == 0) 
+        while ((*numOutputSamples + LPCNET_FRAME_SIZE) < maxSamples && codec2_fifo_read(inputSampleFifo_, inputBuf_, nin) == 0) 
         {
             assert(nin <= rade_nin_max(dv_));
 

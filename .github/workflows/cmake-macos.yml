@@ -61,7 +61,7 @@ jobs:
     - name: Build freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ./build_osx.sh 
+      run: BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ./build_osx.sh 
 
     - name: Workaround macOS permission issues
       if: ${{ matrix.os == 'macos-13' }} 
@@ -80,6 +80,20 @@ jobs:
       working-directory: ${{github.workspace}}/build_osx
       run: |
           FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ctest -V
+
+    #- name: Zip up traces
+    #  shell: bash
+    #  working-directory: ${{github.workspace}}/build_osx
+    #  if: ${{ !cancelled() }}
+    #  run: |
+    #      zip -r InstrumentsTraces.zip instruments_trace_*
+
+    #- name: Stash instrumented results
+    #  uses: actions/upload-artifact@v4
+    #  if: ${{ !cancelled() }}
+    #  with:
+    #    name: InstrumentsTraces-${{matrix.os}}
+    #    path: ${{github.workspace}}/build_osx/InstrumentsTraces.zip
 
   # Only build and publish universal binary after making sure code works properly on both 
   # x86 and ARM. No point in doing so if there's a failure on either.

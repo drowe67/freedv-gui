@@ -42,12 +42,6 @@ public:
     ReportingConfiguration reportingConfiguration;
     
     ConfigurationDataElement<bool> firstTimeUse;
-    ConfigurationDataElement<bool> freedv2020Allowed;
-
-    // Note: this isn't loaded/saved in persistent storage since it's 
-    // possible for the hardware to change since the first run (i.e. if
-    // the hard drive is moved to a new machine or a previous backup is restored.)
-    ConfigurationDataElement<bool> freedvAVXSupported;
     
     ConfigurationDataElement<long> mainWindowLeft;
     ConfigurationDataElement<long> mainWindowTop;

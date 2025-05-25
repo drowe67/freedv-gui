@@ -65,10 +65,11 @@ FreeDVReceiveStep::~FreeDVReceiveStep()
     delete[] inputBuf_;
     delete[] rxFdm_;
     delete[] rxFdmOffset_;
+    outputSamples_ = nullptr;
 
     if (inputSampleFifo_ != nullptr)
     {
-        codec2_fifo_free(inputSampleFifo_);
+        codec2_fifo_destroy(inputSampleFifo_);
     }
 }
 
@@ -84,6 +85,8 @@ int FreeDVReceiveStep::getOutputSampleRate() const
 
 std::shared_ptr<short> FreeDVReceiveStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
+    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    auto maxSpeechSamples = freedv_get_n_max_speech_samples(dv_);
     *numOutputSamples = 0;
 
     short* inputPtr = inputSamples.get();
@@ -94,7 +97,7 @@ std::shared_ptr<short> FreeDVReceiveStep::execute(std::shared_ptr<short> inputSa
         
         int   nin = freedv_nin(dv_);
         int   nout = 0;
-        while (codec2_fifo_read(inputSampleFifo_, inputBuf_, nin) == 0) 
+        while ((*numOutputSamples + maxSpeechSamples) < maxSamples && codec2_fifo_read(inputSampleFifo_, inputBuf_, nin) == 0) 
         {
             assert(nin <= freedv_get_n_max_modem_samples(dv_));
 
