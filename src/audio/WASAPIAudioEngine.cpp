@@ -419,6 +419,26 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
     spec.defaultSampleRate = streamFormat->nSamplesPerSec;
     spec.maxChannels = streamFormat->nChannels;
     spec.minChannels = streamFormat->nChannels;
+    
+    // Determine minimum number of channels supported.
+    for (int channel = spec.maxChannels - 1; channel >= 1; channel--)
+    {
+        WAVEFORMATEX* closestFormat = nullptr;
+        streamFormat->nChannels = channel;
+        if (audioClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, streamFormat, &closestFormat) == S_OK)
+        {
+            spec.minChannels = channel;
+        }
+        if (closestFormat != nullptr)
+        {
+            CoTaskMemFree(closestFormat);
+        }
+        
+        if (spec.minChannels != channel)
+        {
+            break;
+        }
+    }
 
     CoTaskMemFree(streamFormat);
     audioClient->Release();
