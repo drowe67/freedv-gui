@@ -108,14 +108,7 @@ ParallelStep::ParallelStep(
                     fallbackToSleep = s->sem != nullptr;
 #endif // defined(_WIN32) || defined(__APPLE__)
                     
-                    int minFree = outputSampleRate_ * 0.15;
-                    if (codec2_fifo_free(s->outputFifo) >= minFree)
-                    {
-                        do
-                        {
-                            executeRunnerThread_(s);
-                        } while (!s->exitingThread && codec2_fifo_used(s->inputFifo) > 0 && codec2_fifo_free(s->outputFifo) >= minFree);
-                    }
+                    executeRunnerThread_(s);
                     
                     if (!fallbackToSleep)
                     {
@@ -224,14 +217,7 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
             codec2_fifo_write(threadInfo->inputFifo, inputSamples.get(), numInputSamples);
             if (!runMultiThreaded_)
             {
-                int minFree = outputSampleRate_ * 0.15;
-                if (codec2_fifo_free(threadInfo->outputFifo) >= minFree)
-                {
-                    do
-                    {
-                        executeRunnerThread_(threadInfo);
-                    } while (codec2_fifo_used(threadInfo->inputFifo) > 0 && codec2_fifo_free(threadInfo->outputFifo) >= minFree);
-                }
+                executeRunnerThread_(threadInfo);
             }
             else
             {
@@ -261,17 +247,13 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
     
     ThreadInfo* outputTask = threads_[stepToOutput];
     *numOutputSamples = codec2_fifo_used(outputTask->outputFifo);
-    if (numInputSamples > 0)
-    {
-        *numOutputSamples = std::min(*numOutputSamples, (int)(numInputSamples * ((float)outputSampleRate_ / inputSampleRate_)));
-    }
     codec2_fifo_read(outputTask->outputFifo, outputTask->tempOutput.get(), *numOutputSamples);    
     return outputTask->tempOutput;
 }
 
 void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
 {
-    int samplesIn = std::min(codec2_fifo_used(threadState->inputFifo), (int)(inputSampleRate_ * FRAME_DURATION));
+    int samplesIn = codec2_fifo_used(threadState->inputFifo);
     int samplesOut = 0;
     if (codec2_fifo_read(threadState->inputFifo, threadState->tempInput.get(), samplesIn) != 0)
     {
