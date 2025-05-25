@@ -536,7 +536,8 @@ int FreeDVInterface::getTxNNomModemSamples() const
 {
     if (txMode_ >= FREEDV_MODE_RADE)
     {
-        return std::max(rade_n_tx_out(rade_), rade_n_tx_eoo_out(rade_));
+        const int NUM_SAMPLES_SILENCE = 60 * RADE_MODEM_SAMPLE_RATE / 1000;
+        return std::max(rade_n_tx_out(rade_), rade_n_tx_eoo_out(rade_) + NUM_SAMPLES_SILENCE);
     }
 
     assert(currentTxMode_ != nullptr);

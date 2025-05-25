@@ -188,18 +188,19 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
 void RADETransmitStep::restartVocoder()
 {
     // Queues up EOO for return on the next call to this pipeline step.
+    const int NUM_SAMPLES_SILENCE = 60 * getOutputSampleRate() / 1000;
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
 
     rade_tx_eoo(dv_, eooOut_);
 
-    memset(eooOutShort_, 0, sizeof(short) * numEOOSamples);
+    memset(eooOutShort_, 0, sizeof(short) * (numEOOSamples + NUM_SAMPLES_SILENCE));
     for (int index = 0; index < numEOOSamples; index++)
     {
         eooOutShort_[index] = eooOut_[index].real * RADE_SCALING_FACTOR;
     }
 
-    log_info("Queueing %d EOO samples to output FIFO", numEOOSamples);
-    if (codec2_fifo_write(outputSampleFifo_, eooOutShort_, numEOOSamples) != 0)
+    log_info("Queueing %d EOO samples to output FIFO", numEOOSamples + NUM_SAMPLES_SILENCE);
+    if (codec2_fifo_write(outputSampleFifo_, eooOutShort_, numEOOSamples + NUM_SAMPLES_SILENCE) != 0)
     {
         log_warn("Could not queue EOO samples (remaining space in FIFO = %d)", codec2_fifo_free(outputSampleFifo_));
     }
