@@ -367,6 +367,11 @@ void HamlibRigController::connectImpl_()
         log_debug("hamlib: rig_open() OK");
         onRigConnected(this);
         
+        // Set timeouts so that we don't wait an extremely long time to begin TX.
+        rig_set_conf(rig_, rig_token_lookup(rig_, "timeout"), "50");
+        rig_set_conf(rig_, rig_token_lookup(rig_, "retry"), "0");
+        rig_set_conf(rig_, rig_token_lookup(rig_, "timeout_retry"), "0");
+            
         // Determine whether we have multiple VFOs.
         multipleVfos_ = false;
         vfo_t vfo;
