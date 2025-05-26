@@ -139,8 +139,6 @@ set(CMAKE_VERBOSE_MAKEFILE TRUE CACHE BOOL "Verbose makefile.")
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE CACHE BOOL "Enable IDE features.")
 set(USE_INTERNAL_CODEC2 FALSE CACHE BOOL
     "Download and build codec2  instead of using the system library.")
-set(BOOTSTRAP_LPCNET FALSE CACHE BOOL
-    "Download and build LPCNet instead of using the system library.")
 set(USE_STATIC_DEPS FALSE CACHE BOOL
     "Download and build static libraries instead of system libraries.")
 set(USE_STATIC_PORTAUDIO FALSE CACHE BOOL
@@ -157,6 +155,14 @@ set(USE_NATIVE_AUDIO TRUE CACHE BOOL
     "Use native audio code instead of PortAudio for audio I/O. Defaults to true.")
 set(SIGN_WINDOWS_BINARIES FALSE CACHE BOOL
     "Enable signing of Windows binaries. See CODE_SIGNING.md for info.")
+set(ENABLE_ASAN FALSE CACHE BOOL
+    "Instruments the build with AddressSanitizer for memory checks.")
+
+if(ENABLE_ASAN)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+    set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fsanitize=address")
+endif(ENABLE_ASAN)
 
 if(SIGN_WINDOWS_BINARIES)
     if(NOT WIN32 AND NOT MINGW)
@@ -353,7 +359,7 @@ message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 include(cmake/BuildRADE.cmake)
 
 #
-# Find codec2 and lpcnetfreedv
+# Find codec2
 #
 if(CODEC2_BUILD_DIR)
     if(USE_INTERNAL_CODEC2)
@@ -373,20 +379,8 @@ if(CODEC2_BUILD_DIR)
         CONFIGS codec2.cmake
     )
     get_target_property(CODEC2_INCLUDE_DIRS codec2 INTERFACE_INCLUDE_DIRECTORIES)
-    if(LPCNET_BUILD_DIR)
-        message(STATUS "Using LPCNet from build directory...")
-        set(lpcnet_DIR ${LPCNET_BUILD_DIR})
-        find_package(lpcnet REQUIRED
-            NO_DEFAULT_PATH
-            PATHS ${LPCNET_BUILD_DIR}
-            CONFIGS lpcnetfreedv.cmake
-        )
-    else()
-        set(LPCNET_DISABLED YES)
-        add_definitions(-DLPCNET_DISABLED)
-    endif()
 elseif(USE_INTERNAL_CODEC2)
-    message(STATUS "Will attempt internal build of codec2 and lpcnetfreedv.")
+    message(STATUS "Will attempt internal build of codec2.")
     include(cmake/BuildCodec2.cmake)
 else(CODEC2_BUILD_DIR)
     message(STATUS "Looking for codec2...")
@@ -398,7 +392,6 @@ else(CODEC2_BUILD_DIR)
         get_target_property(CODEC2_INCLUDE_DIRS codec2 INTERFACE_INCLUDE_DIRECTORIES)
         message(STATUS "  codec2 library: ${CODEC2_LIBRARY}")
         message(STATUS "  codec2 headers: ${CODEC2_INCLUDE_DIRS}")
-        find_package(lpcnetfreedv REQUIRED)
     else()
         # Try to find manually
         find_path(CODEC2_INCLUDE_DIRS codec2.h
@@ -410,7 +403,7 @@ else(CODEC2_BUILD_DIR)
             list(APPEND FREEDV_LINK_LIBS ${CODEC2_LIBRARY})
             include_directories(${CODEC2_INCLUDE_DIRS})
         else()
-            message(STATUS "Will attempt internal build of codec2 and lpcnetfreedv.")
+            message(STATUS "Will attempt internal build of codec2.")
             include(cmake/BuildCodec2.cmake)
         endif()
     endif()
@@ -728,9 +721,9 @@ elseif(UNIX AND NOT APPLE)
     SET(CPACK_GENERATOR "DEB")
     SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Mooneer Salem <mooneer@gmail.com>") #required
     if(USE_NATIVE_AUDIO)
-    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.1.1), lpcnet (>= 0.5.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libpulse0 (>= 14.2-2), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
+    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.1.1), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libpulse0 (>= 14.2-2), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
     else(USE_NATIVE_AUDIO)
-    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.1.1), lpcnet (>= 0.5.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libportaudio2 (>= 19.6.0-1build1), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
+    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.1.1), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libportaudio2 (>= 19.6.0-1build1), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
     endif(USE_NATIVE_AUDIO)
 
     SET(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
@@ -744,14 +737,18 @@ if(UNITTEST)
 macro(DefineAudioTest utName)
     add_test(NAME fullduplex_${utName} 
              COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName}") 
+    if(NOT ENABLE_ASAN)
     set_tests_properties(fullduplex_${utName} PROPERTIES FAIL_REGULAR_EXPRESSION "Sync changed from 1 to 0")
+    endif(NOT ENABLE_ASAN)
 endmacro()
 
 DefineAudioTest(RADEV1)
 
 add_test(NAME fullduplex_RADEV1_repeated
          COMMAND sh -c " ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1")
-set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES FAIL_REGULAR_EXPRESSION "Sync changed from 1 to 0")
+if(NOT ENABLE_ASAN)
+    set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES FAIL_REGULAR_EXPRESSION "Sync changed from 1 to 0")
+endif(NOT ENABLE_ASAN)
 set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES DISABLED TRUE)
 set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES LABELS stress_test)
 
@@ -760,12 +757,18 @@ DefineAudioTest(700E)
 DefineAudioTest(1600)
 
 add_test(NAME rade_reporting_clean COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh)
+if(NOT ENABLE_ASAN)
 set_tests_properties(rade_reporting_clean PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
+endif(NOT ENABLE_ASAN)
 
 add_test(NAME rade_reporting_awgn COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CODEC2_BUILD_DIR} awgn)
+if(NOT ENABLE_ASAN)
 set_tests_properties(rade_reporting_awgn PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
+endif(NOT ENABLE_ASAN)
 
 add_test(NAME rade_reporting_mpp COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CODEC2_BUILD_DIR} mpp)
+if(NOT ENABLE_ASAN)
 set_tests_properties(rade_reporting_mpp PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
+endif(NOT ENABLE_ASAN)
 
 endif(UNITTEST)

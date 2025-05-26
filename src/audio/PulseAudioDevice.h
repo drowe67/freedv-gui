@@ -81,8 +81,6 @@ private:
     IAudioEngine::AudioDirection direction_;
     int sampleRate_;
     int numChannels_;
-    std::mutex streamStateMutex_;
-    std::condition_variable streamStateCondVar_;
     
     thread_local static std::chrono::high_resolution_clock::time_point StartTime_;
     thread_local static bool MustStopWork_;

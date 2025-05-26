@@ -41,22 +41,12 @@ static const char* GetCurrentModeStrImpl_(int mode)
 {
     switch(mode)
     {
-        case FREEDV_MODE_700C:
-            return "700C";
         case FREEDV_MODE_700D:
             return "700D";
         case FREEDV_MODE_700E:
             return "700E";
         case FREEDV_MODE_1600:
             return "1600";
-        case FREEDV_MODE_2020:
-            return "2020";
-#if defined(FREEDV_MODE_2020B)
-        case FREEDV_MODE_2020B:
-            return "2020B";
-#endif // FREEDV_MODE_2020B
-        case FREEDV_MODE_800XA:
-            return "800XA";
         case FREEDV_MODE_RADE:
             return "RADEV1";
         default:
@@ -126,18 +116,12 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
 {
     switch(mode)
     {
-        case FREEDV_MODE_700C:
-            return 2.0;
         case FREEDV_MODE_700D:
             return -2.0f;
         case FREEDV_MODE_700E:
             return 1.0f;
         case FREEDV_MODE_1600:
             return 4.0f;
-        case FREEDV_MODE_2020:
-            return 2.0f;
-        case FREEDV_MODE_800XA:
-            return 2.0f;
         default:
             return 0.0f;
     }
@@ -552,7 +536,8 @@ int FreeDVInterface::getTxNNomModemSamples() const
 {
     if (txMode_ >= FREEDV_MODE_RADE)
     {
-        return rade_n_tx_out(rade_);
+        const int NUM_SAMPLES_SILENCE = 60 * RADE_MODEM_SAMPLE_RATE / 1000;
+        return std::max(rade_n_tx_out(rade_), rade_n_tx_eoo_out(rade_) + NUM_SAMPLES_SILENCE);
     }
 
     assert(currentTxMode_ != nullptr);
@@ -719,7 +704,11 @@ float FreeDVInterface::getSNREstimate()
     }
 }
 
-IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int outputSampleRate, std::function<float()> getFreqOffsetFn)
+IPipelineStep* FreeDVInterface::createTransmitPipeline(
+    int inputSampleRate, 
+    int outputSampleRate, 
+    std::function<float()> getFreqOffsetFn,
+    std::shared_ptr<IRealtimeHelper> realtimeHelper)
 {
     std::vector<IPipelineStep*> parallelSteps;
 
@@ -738,13 +727,16 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
     std::function<int(ParallelStep*)> modeFn = 
         [&](ParallelStep*) {
             int index = 0;
-            
+
+            auto currentTxMode = currentTxMode_;
+            auto txModeInt = txMode_; 
+
             // Special handling for RADE.
-            if (txMode_ >= FREEDV_MODE_RADE) return 0;
+            if (txModeInt >= FREEDV_MODE_RADE) return 0;
 
             for (auto& dv : dvObjects_)
             {
-                if (dv == currentTxMode_) return index;
+                if (dv == currentTxMode) return index;
                 index++;
             }
             return -1;
@@ -758,7 +750,7 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
         modeFn,
         parallelSteps,
         nullptr,
-        nullptr
+        realtimeHelper
     );
     
     return parallelStep;

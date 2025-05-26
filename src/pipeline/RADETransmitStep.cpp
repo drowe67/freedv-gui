@@ -82,6 +82,7 @@ RADETransmitStep::~RADETransmitStep()
     delete[] radeOutShort_;
     delete[] eooOut_;
     delete[] eooOutShort_;
+    outputSamples_ = nullptr;
 
     if (featuresFile_ != nullptr)
     {
@@ -90,12 +91,12 @@ RADETransmitStep::~RADETransmitStep()
     
     if (inputSampleFifo_ != nullptr)
     {
-        codec2_fifo_free(inputSampleFifo_);
+        codec2_fifo_destroy(inputSampleFifo_);
     }
 
     if (outputSampleFifo_ != nullptr)
     {
-        codec2_fifo_free(inputSampleFifo_);
+        codec2_fifo_destroy(outputSampleFifo_);
     }
 }
 
@@ -111,16 +112,18 @@ int RADETransmitStep::getOutputSampleRate() const
 
 std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
+    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    int numSamplesPerTx = rade_n_tx_out(dv_);
+    
     *numOutputSamples = 0;
 
     if (numInputSamples == 0)
     {
-        // Special case logic for EOO -- make sure we only send 20ms worth at a time
-        *numOutputSamples = std::min(codec2_fifo_used(outputSampleFifo_), (int)(RADE_MODEM_SAMPLE_RATE * .02));
+        // Special case logic for EOO
+        *numOutputSamples = codec2_fifo_used(outputSampleFifo_);
         if (*numOutputSamples > 0)
         {
             codec2_fifo_read(outputSampleFifo_, outputSamples_.get(), *numOutputSamples);
-
             log_info("Returning %d EOO samples (remaining in FIFO: %d)", *numOutputSamples, codec2_fifo_used(outputSampleFifo_));
         }
 
@@ -133,10 +136,9 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
         codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
         numInputSamples--;
         
-        if (codec2_fifo_used(inputSampleFifo_) >= LPCNET_FRAME_SIZE)
+        if ((*numOutputSamples + numSamplesPerTx) < maxSamples && codec2_fifo_used(inputSampleFifo_) >= LPCNET_FRAME_SIZE)
         {
             unsigned int numRequiredFeaturesForRADE = rade_n_features_in_out(dv_);
-            int numOutputSamples = rade_n_tx_out(dv_);
             short pcm[LPCNET_FRAME_SIZE];
             float features[NB_TOTAL_FEATURES];
 
@@ -164,12 +166,12 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
                 {
                     featureList_.erase(featureList_.begin());
                 }
-                for (int index = 0; index < numOutputSamples; index++)
+                for (int index = 0; index < numSamplesPerTx; index++)
                 {
                     // We only need the real component for TX.
                     radeOutShort_[index] = radeOut_[index].real * RADE_SCALING_FACTOR;
                 }
-                codec2_fifo_write(outputSampleFifo_, radeOutShort_, numOutputSamples);
+                codec2_fifo_write(outputSampleFifo_, radeOutShort_, numSamplesPerTx);
             }
         }
     }

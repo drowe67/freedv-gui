@@ -96,7 +96,6 @@ extern FreeDVInterface freedvInterface;
 
 #include <wx/wx.h>
 #include "../main.h"
-extern wxMutex txModeChangeMutex;
 extern wxWindow* g_parent;
 
 #include <sndfile.h>
@@ -218,7 +217,11 @@ void TxRxThread::initializePipeline_()
         auto analogTxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
         analogTxPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(doubleLevelStep));
         
-        auto digitalTxStep = freedvInterface.createTransmitPipeline(inputSampleRate_, outputSampleRate_, []() { return g_TxFreqOffsetHz; });
+        auto digitalTxStep = freedvInterface.createTransmitPipeline(
+            inputSampleRate_, 
+            outputSampleRate_, 
+            []() { return g_TxFreqOffsetHz; },
+            helper_);
         auto digitalTxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_); 
         digitalTxPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(digitalTxStep));
         
@@ -460,16 +463,6 @@ void* TxRxThread::Entry()
         pthread_setname_np(pthread_self(), threadName);
 #endif // defined(__linux__)
 
-#if 0
-        {
-            std::unique_lock<std::mutex> lk(m_processingMutex);
-            if (m_processingCondVar.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout)
-            {
-                log_warn("txRxThread: timeout while waiting for CV, tx = %d", m_tx);
-            }
-        }
-#endif
-
         if (!m_run) break;
         
         //log_info("thread woken up: m_tx=%d", (int)m_tx);
@@ -492,8 +485,7 @@ void* TxRxThread::Entry()
 
 void TxRxThread::OnExit() 
 { 
-    // Free allocated buffer.
-    inputSamples_ = nullptr; 
+    // empty
 }
 
 void TxRxThread::terminateThread()
@@ -504,10 +496,7 @@ void TxRxThread::terminateThread()
 
 void TxRxThread::notify()
 {
-#if 0
-    std::unique_lock<std::mutex> lk(m_processingMutex);
-    m_processingCondVar.notify_all();
-#endif
+    // empty
 }
 
 void TxRxThread::clearFifos_()
@@ -521,31 +510,27 @@ void TxRxThread::clearFifos_()
     
     if (m_tx)
     {
-        auto used = codec2_fifo_used(cbData->outfifo1);
-        if (used > 0)
+        while (codec2_fifo_used(cbData->outfifo1) > 0)
         {
-            codec2_fifo_read(cbData->outfifo1, inputSamples_.get(), used);
+            codec2_fifo_read(cbData->outfifo1, inputSamples_.get(), 1);
         }
         
-        used = codec2_fifo_used(cbData->infifo2);
-        if (used > 0)
+        while (codec2_fifo_used(cbData->infifo2) > 0)
         {
-            codec2_fifo_read(cbData->infifo2, inputSamples_.get(), used);
+            codec2_fifo_read(cbData->infifo2, inputSamples_.get(), 1);
         }
     }
     else
     {
-        auto used = codec2_fifo_used(cbData->infifo1);
-        if (used > 0)
+        while (codec2_fifo_used(cbData->infifo1) > 0)
         {
-            codec2_fifo_read(cbData->infifo1, inputSamples_.get(), used);
+            codec2_fifo_read(cbData->infifo1, inputSamples_.get(), 1);
         }
         
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
-        used = codec2_fifo_used(outFifo);
-        if (used > 0)
+        while (codec2_fifo_used(outFifo) > 0)
         {
-            codec2_fifo_read(outFifo, inputSamples_.get(), used);
+            codec2_fifo_read(outFifo, inputSamples_.get(), 1);
         }
     }
 }
@@ -569,9 +554,6 @@ void TxRxThread::txProcessing_()
     //
 
     if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_tx || g_recVoiceKeyerFile || g_recFileFromMic))) {
-        // Lock the mode mutex so that TX state doesn't change on us during processing.
-        txModeChangeMutex.Lock();
-        
         if (pipeline_ == nullptr)
         {
             initializePipeline_();
@@ -637,7 +619,7 @@ void TxRxThread::txProcessing_()
                         log_debug("Injecting %d samples of resampled EOO into TX stream", nout);
                         if (codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout) != 0)
                         {
-                            log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1);
+                            log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", codec2_fifo_free(cbData->outfifo1));
                         }
                     }
                     else
@@ -664,8 +646,6 @@ void TxRxThread::txProcessing_()
                 codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
             }
         }
-       
-        txModeChangeMutex.Unlock();
     }
     else
     {
