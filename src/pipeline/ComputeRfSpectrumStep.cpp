@@ -72,5 +72,5 @@ std::shared_ptr<short> ComputeRfSpectrumStep::execute(std::shared_ptr<short> inp
     // Tap only, no output.
     *numOutputSamples = 0;
 
-    return std::shared_ptr<short>((short*)nullptr, std::default_delete<short[]>());
+    return std::shared_ptr<short>(nullptr);
 }
