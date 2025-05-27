@@ -1,5 +1,256 @@
 # Changes in older releases
 
+## V1.9.9.2 June 2024
+
+1. Bugfixes:
+    * Remove TX attenuation and squelch tooltips. (PR #717)
+    * Disable 800XA radio button when in RX Only mode. (PR #716)
+
+## V1.9.9.1 April 2024
+
+1. Bugfixes:
+    * Revert PR #689 and reimplement fix for original startup delay issue. (PR #712)
+2. Enhancements:
+    * Allow "Msg" column to be resized by the user. (PR #721)
+
+## V1.9.9 April 2024
+
+1. Bugfixes:
+    * Cache PortAudio sound info to improve startup performance. (PR #689)
+    * Fix typo in cardinal directions list. (PR #688)
+    * Shrink size of callsign list to prevent it from disappearing off the screen. (PR #692)
+    * Clean up memory leak in FreeDV Reporter window. (PR #705)
+    * Fix issue causing delayed filter updates when going from tracking band to frequency. (PR #710)
+    * Fix hanging issue with footswitch configured. (PR #707)
+2. Enhancements:
+    * Add additional error reporting in case of PortAudio failures. (PR #695)
+    * Allow longer length user messages. (PR #694)
+    * Add context menu for copying messages to the clipboard. (PR #694)
+3. Documentation:
+    * Remove broken links in README. (PR #709)
+4. Build system:
+    * Add ability to build without LPCNet in preparation for potential future deprecation of 2020/2020B. (PR #711)
+
+## V1.9.8 February 2024
+
+1. Bugfixes:
+    * Prevent unnecessary recreation of resamplers in analog mode. (PR #661)
+    * Better handle high sample rate audio devices and those with >2 channels. (PR #668)
+    * Fix issue preventing errors from being displayed for issues involving the FreeDV->Speaker sound device. (PR #668)
+    * Fix issue resulting in incorrect audio device usage after validation failure if no valid default exists. (PR #668)
+    * Fix bug where PTT button background color doesn't change when toggling PTT via space bar. (PR #669)
+    * Fix bug where FreeDV crashes if only RX sound devices are configured with mic filters turned on. (PR #673)
+    * Fix Windows-specific off by one issue in FreeDV Reporter sorting code. (PR #681)
+2. Enhancements:
+    * Add Frequency column to RX drop-down. (PR #663)
+    * Update tooltip for the free form text field to indicate that it's not covered by FEC. (PR #665)
+    * Enable use of space bar for PTT when in the FreeDV Reporter window. (PR #666)
+    * Move TX Mode column to left of Status in FreeDV Reporter window. (PR #670)
+    * Add heading column to FreeDV Reporter window. (PR #672, #675)
+    * Prevent FreeDV Reporter window from being above the main window. (PR #679)
+    * Add support for displaying cardinal directions instead of headings. (PR #685)
+3. Code cleanup:
+    * Move FreeDV Reporter dialog code to dialogs section of codebase. (PR #664)
+
+## V1.9.7.2 January 2024
+
+1. Bugfixes:
+    * Another attempt at fixing the crash previously thought to have been fixed by 1.9.7.1. (PR #659)
+
+## V1.9.7.1 January 2024
+
+1. Bugfixes:
+    * Fix issue causing intermittent crashes when filters are enabled while running. (PR #656)
+
+## V1.9.7 January 2024
+
+1. Bugfixes:
+    * Use double precision instead of float for loading frequency list. (PR #627)
+    * Improve validation of frequencies in Options dialog. (PR #628)
+    * Fix typo resulting in TX device sample rate being used for filter initialization. (PR #630)
+    * Fix intermittent crash resulting from object thread starting before object is fully initialized. (PR #630)
+    * Prevent creation of filters if not enabled. (PR #631)
+    * Fix issue preventing Start button from re-enabling itself on audio device errors. (PR #636)
+    * Fix issue preventing proper FreeDV Reporter column sizing on Windows. (PR #638)
+    * Fix flicker in FreeDV Reporter window when tracking by frequency. (PR #637)
+    * Update Filter dialog to better handle resizing. (PR #641)
+    * Fix capitalization of distance units in FreeDV Reporter window. (PR #642)
+    * Rename KHz to kHz in documentation and UI. (PR #643)
+    * Avoid calculating distances in FreeDV Reporter window for those with invalid grid squares. (PR #646, #649)
+    * Fix display bugs in FreeDV Reporter window when switching between dark and light mode. (PR #646)
+    * Add guard code to prevent FreeDV Reporter window from being off screen on startup. (PR #650)
+    * Fix issue preventing FreeDV startup on macOS <= 10.13. (PR #652)
+    * On startup, only jiggle height and not width. (PR #653)
+    * Fix issue preventing FreeDV from being linked with older versions of Xcode. (PR #654)
+    * Fix issue preventing TX audio from resuming after going from TX->RX in full duplex mode. (PR #655)
+2. Enhancements:
+    * Allow user to refresh status message even if it hasn't been changed. (PR #632)
+    * Increase priority of status message highlight. (PR #632)
+    * Adjust FreeDV Reporter data display to better match accepted UX standards. (PR #644)
+    * Further reduce required space for each column in FreeDV Reporter window. (PR #646)
+    * Provide an option Do save only certain FreeDV Reporter messages sent to the server. (PR #647)
+3. Build system:
+    * Include PDB debugging file for FreeDV. (PR #633)
+    * End support for 32 bit ARM on Windows. (PR #651)
+    * Begin performing CI builds for macOS. (PR #654)
+4. Documentation:
+    * Fix spelling, etc. mistakes in the documentation. (PR #640)
+    * Update README to reflect latest state of codebase. (PR #654)
+    * Move older changelog from user manual to separate file. (PR #654)
+5. Code cleanup:
+    * Move GUI related files into their own folder. (PR #654)
+    * Move build scripts into cmake folder. (PR #654)
+    * Remove no longer used scripts and patch files. (PR #654)
+
+## V1.9.6 December 2023
+
+1. Bugfixes:
+    * Use SetSize/GetSize instead of SetClientSize/GetClientSize to work around startup sizing issue. (PR #611)
+    * Check for RIGCAPS_NOT_CONST in Hamlib 4.6. (PR #615)
+    * Make main screen gauges horizontal to work around sizing/layout issues. (PR #613)
+    * Fix compiler issue with certain versions of MinGW. (PR #622)
+    * Suppress use of space bar when in RX Only mode. (PR #623)
+    * Fix Windows-specific issue preventing entry of very high frequencies. (PR #624)
+2. Enhancements:
+    * Add option to add a delay after starting TX and before ending TX. (PR #618)
+    * Allow serial PTT to be enabled along with OmniRig. (PR #619)
+    * Add 800XA to multi-RX list. (PR #617)
+    * Add logic to report status message to FreeDV Reporter. (PR #620)
+    * Allow display and entry of frequencies in kHz. (PR #621)
+    * Add 5368.5 kHz to the default frequency list. (PR #626)
+
+## V1.9.5 November 2023
+
+1. Bugfixes:
+    * Fix bug preventing frequency updates from being properly suppressed when frequency control is in focus. (PR #585)
+    * Fix bug preventing 60 meter frequencies from using USB with DIGU/DIGL disabled. (PR #589)
+    * Additional fix for PR #561 to parse/format frequencies using current locale. (PR #595)
+    * Add entitlements to work around macOS Sonoma permissions bug. (PR #598)
+    * Fix bug preventing FreeDV Reporter window from closing after resetting configuration to defaults. (PR #593)
+    * Fix bug preventing reload of manually entered frequency on start. (PR #608)
+2. Enhancements:
+    * FreeDV Reporter: Add support for filtering the exact frequency. (PR #596)
+    * Add confirmation dialog box before actually resetting configuration to defaults. (PR #593)
+    * Add ability to double-click FreeDV Reporter entries to change the radio's frequency. (PR #592)
+    * FreeDV Reporter: Add ability to force RX Only reporting in Tools->Options. (PR #599)
+    * Add new 160m/80m/40m calling frequencies for IARU R2. (PR #601)
+    * Add Help button to allow users to get help more easily. (PR #607)
+3. Build system:
+    * Upgrade wxWidgets to 3.2.4. (PR #607)
+4. Other:
+    * Report OS usage to FreeDV Reporter. (PR #606)
+
+## V1.9.4 October 2023
+
+1. Bugfixes:
+    * Fix issue causing hanging while testing serial port PTT. (PR #577)
+    * Fix issue causing improper RX Only reporting when Hamlib is disabled. (PR #579)
+    * Fix compiler error on some Linux installations. (PR #578)
+    * Fix issue causing error on startup after testing setup with Easy Setup. (PR #575)
+    * Fix issue preventing PSK Reporter from being enabled by default. (PR #575)
+2. Enhancements:
+    * Add experimental support for OmniRig to FreeDV. (PR #575)
+        * *Note: This is only available on Windows.*
+
+## V1.9.3 October 2023
+
+1. Bugfixes:
+    * FreeDV Reporter:
+        * Fix regression preventing proper display of "RX Only" stations. (PR #542)
+        * Fix issue causing duplicate entries when filtering is enabled and users disconnect/reconnect. (PR #557)
+    * Default to the audio from the current TX mode if no modes decode (works around Codec2 bug with 1600 mode). (PR #544)
+    * Fix bug preventing proper restore of selected tabs. (PR #548)
+    * Properly handle frequency entry based on user's current location. (PR #561)
+    * Improve labeling of PTT/CAT control options. (PR #550)
+    * Clarify behavior of "On Top" menu option. (PR #549)
+    * Work around Xcode issue preventing FreeDV from starting on macOS < 12. (PR #553)
+    * Fix issue preventing selection of FreeDV Reporter users during band tracking. (PR #555)
+    * Work around issue preventing consistent switchover to 'From Mic' tab on voice keyer TX. (PR #563)
+    * Fix rounding error when changing reporting frequency. (PR #562)
+    * Fix issue causing multiple macOS microphone permissions popups to appear. (PR #566, 567)
+    * macOS: Fix crash on start when using Rosetta. (PR #569)
+2. Enhancements:
+    * Add configuration for background/foreground colors in FreeDV Reporter. (PR #545)
+    * Always connect to FreeDV Reporter (in view only mode if necessary), regardless of valid configuration. (PR #542, #547)
+    * Add None as a valid PTT method and make it report RX Only. (PR #556)
+    * Increase RX coloring timeout in FreeDV Reporter to 20 seconds. (PR #558)
+3. Build system:
+    * Upgrade wxWidgets on binary builds to 3.2.3. (PR #565)
+4. Documentation:
+    * Add information about multiple audio devices and macOS. (PR #554)
+    * Fix Registry and config file paths in documentation. (PR #571, #572)
+5. Cleanup:
+    * Refactor rig control handling to improve performance and maintainability. (PR #564)
+
+## V1.9.2 September 2023
+
+1. Bugfixes:
+    * Initialize locale so that times appear correctly. (PR #509)
+    * Fix issue with Voice Keyer button turning blue even if file doesn't exist. (PR #511)
+    * Fix issue with Voice Keyer file changes via Tools->Options not taking effect until restart. (PR #511)
+    * Eliminate mutex errors during Visual Studio debugging. (PR #512)
+    * Add timeout during deletion of FreeDVReporter object. (PR #515)
+    * Fixes bug preventing display of reporting UI if enabled on first start. (PR #520)
+    * Adjust vertical tick lengths on waterfall to prevent text overlap. (PR #518)
+    * Adjust coloring of text and ticks on spectrum plot to improve visibility when in dark mode. (PR #518)
+    * Resolve issue preventing proper device name display in Easy Setup for non-English versions of Windows. (PR #524)
+    * Fix intermittent crash on exit due to improperly closing stderr. (PR #526)
+2. Enhancements:
+    * Add tooltip to Record button to claify its behavior. (PR #511)
+    * Add highlighting for RX rows in FreeDV Reporter (to match web version). (PR #519)
+    * Add Distance column in FreeDV Reporter window. (PR #519)
+    * Add support for sorting columns in FreeDV Reporter window. (PR #519, #537)
+    * Allow use of FreeDV Reporter without having a session running. (PR #529, #535)
+    * Adds support for saving and restoring tab state. (PR #497)
+        * *NOTE: Requires 'Enable Experimental Features' to be turned on, see below.*
+    * Adds configuration item allowing optional use of experimental features. (PR #497)
+        * This option is called "Enable Experimental Features" in Tools->Options->Debugging.
+    * Add FreeDV Reporter option to have the band filter track the current frequency. (PR #534)
+3. Build system:
+    * Upgrade wxWidgets on binary builds to 3.2.2.1. (PR #531)
+    * Fix issue preventing proper generation of unsigned Windows installers. (PR #528)
+    * Update code signing documentation and defaults to use certificate provider's token instead of our own. (PR #533)
+4. Cleanup:
+    * Remove unneeded 2400B and 2020B sample files. (PR #521)
+
+## V1.9.1 August 2023
+
+1. Bugfixes:
+    * Revert BETA back to prior 1.9.0 value for waterfall. (PR #503)
+    * Optimize FreeDV Reporter window logic to reduce likelihood of waterfall stuttering. (PR #505)
+    * Fix intermittent crash during FreeDV Reporter updates. (PR #505)
+    * Fix intermittent crash on exit due to Hamlib related UI update code executing after deletion. (PR #506)
+    * Fix serial port contention issue while testing PTT multiple times. (PR #506)
+2. Enhancements:
+    * Add support for monitoring voice keyer and regular TX audio. (PR #500)
+    * Add background coloring to indicate that the voice keyer is active. (PR #500)
+
+## V1.9.0 August 2023
+
+1. Bugfixes:
+    * Fix bug preventing proper Options window sizing on Windows. (PR #478)
+    * Fix various screen reader accessibility issues. (PR #481)
+    * Use separate maximums for each slider type on the Filter dialog. (PR #485)
+    * Fix minor UI issues with the Easy Setup dialog. (PR #484)
+    * Adjust waterfall settings to better visualize 2 Hz fading. (PR #487)
+    * Fix issue causing the waterfall to not scroll at the expected rate. (PR #487)
+    * Resolve bug preventing certain radios' serial ports from being listed on macOS. (PR #496)
+2. Enhancements
+    * Allow users to configure PTT port separately from CAT if Hamlib is enabled. (PR #488)
+    * Add ability to average spectrum plot across 1-3 samples. (PR #487, 492)
+    * Adjust sizing of main page tabs for better readability. (PR #487)
+    * Add ability to sign Windows binaries for official releases. (PR #486)
+    * Allow use of a different voice keyer file by right-clicking on the Voice Keyer button. (PR #493)
+    * Include TX audio in recorded audio files to enable recording a full QSO. (PR #493)
+    * Add band filtering in the FreeDV Reporter dialog. (PR #490, #494)
+    * Add ability to record new voice keyer files by right-clicking on the Voice Keyer button. (PR #493)
+3. Build system:
+    * Update Codec2 to v1.2.0. (PR #483)
+    * Deprecate PortAudio support on Linux. (PR #489, #491)
+4. Cleanup:
+    * Remove 2400B mode from the UI. (PR #479)
+    * Remove rarely-used "Record File - From Modulator" and "Play File - Mic In" menu options. (PR #493)
+
 ## V1.8.12 July 2023
 
 1. Bugfixes:
