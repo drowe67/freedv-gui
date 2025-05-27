@@ -60,7 +60,7 @@ public:
     virtual int getOutputSampleRate() const;
     virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
     
-    const std::vector<std::shared_ptr<IPipelineStep>> getParallelSteps() const { return parallelSteps_; }
+    const std::vector<std::shared_ptr<IPipelineStep>>& getParallelSteps() const { return parallelSteps_; }
     
     std::shared_ptr<void> getState() { return state_; }
     

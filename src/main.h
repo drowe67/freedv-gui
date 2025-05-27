@@ -520,7 +520,7 @@ class MainFrame : public TopFrame
         void onRadioDisconnected_(IRigController* ptr);
 };
 
-void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs);
+void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs);
 
 int resample(SRC_STATE *src,
              short      output_short[],
