@@ -1141,14 +1141,10 @@ void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::setBandFilter(FilterFrequency freq)
 {
-    if (filteredFrequency_ != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency ||
-        currentBandFilter_ != freq)
-    {
-        filteredFrequency_ = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
-        currentBandFilter_ = freq;
+    filteredFrequency_ = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+    currentBandFilter_ = freq;
 
-        refreshAllRows();
-    }
+    refreshAllRows();
 }
 
 wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::string timeStr, wxDateTime& timeObj)
