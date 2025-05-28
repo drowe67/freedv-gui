@@ -898,8 +898,11 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
                         }
                     
                         int n8k = resample(src, in8k_short, in48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
-                        resample_for_plot(fifo, in8k_short, n8k, FS);
-    
+                        short* tmp = new short[n8k];
+                        assert(tmp != nullptr);
+                        resample_for_plot(fifo, in8k_short, tmp, n8k, FS);
+                        delete[] tmp;
+ 
                         short plotSamples[TEST_WAVEFORM_PLOT_BUF];
                         if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
                         {
@@ -1033,8 +1036,11 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
                         }
                     
                         int n8k = resample(src, out8k_short, out48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
-                        resample_for_plot(fifo, out8k_short, n8k, FS);
-    
+                        short* tmp = new short[n8k];
+                        assert(tmp != nullptr);
+                        resample_for_plot(fifo, out8k_short, tmp, n8k, FS);
+                        delete[] tmp;
+ 
                         short plotSamples[TEST_WAVEFORM_PLOT_BUF];
                         if (codec2_fifo_read(fifo, plotSamples, TEST_WAVEFORM_PLOT_BUF))
                         {

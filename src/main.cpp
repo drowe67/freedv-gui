@@ -241,16 +241,12 @@ void MainApp::UnitTest_()
     // Wait 100ms for FreeDV to come to foreground
     std::this_thread::sleep_for(100ms);
 
-    // Select FreeDV mode. Note, 2020 is deprecated so not testable here.
+    // Select FreeDV mode.
     wxRadioButton* modeBtn = nullptr;
     if (utFreeDVMode == "RADEV1")
     {
         modeBtn = frame->m_rbRADE;
     }
-    /*else if (utFreeDVMode == "700C")
-    {
-        modeBtn = frame->m_rb700c;
-    }*/
     else if (utFreeDVMode == "700D")
     {
         modeBtn = frame->m_rb700d;
@@ -259,10 +255,6 @@ void MainApp::UnitTest_()
     {
         modeBtn = frame->m_rb700e;
     }
-    /*else if (utFreeDVMode == "800XA")
-    {
-        modeBtn = frame->m_rb800xa;
-    }*/
     else if (utFreeDVMode == "1600")
     {
         modeBtn = frame->m_rb1600;
@@ -548,6 +540,11 @@ bool MainApp::OnInit()
     wxString appPath(f.GetPath());
     wxSetWorkingDirectory(appPath);
 
+    // Make sure PYTHONHOME is not set. If it is, it may use the user's
+    // local Python installation for stuff like torch/torchaudio, causing
+    // problems running RADE.
+    wxUnsetEnv("PYTHONHOME");
+
 #if __APPLE__
     // Set PYTHONPATH accordingly. We mainly want to be able to access
     // the model (,pth) as well as the RADE Python code.
@@ -614,126 +611,6 @@ int MainApp::OnExit()
 {
     return 0;
 }
-
-#if defined(FREEDV_MODE_2020)
-bool MainFrame::test2020HWAllowed_()
-{
-    bool allowed = true;
-
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
-    // AVX checking code on x86 is here due to LPCNet in binary builds being
-    // compiled to use it. Running the sanity check below could potentially 
-    // cause crashes.
-    uint32_t eax, ebx, ecx, edx;
-    eax = ebx = ecx = edx = 0;
-    __cpuid(1, eax, ebx, ecx, edx);
-    
-    if (ecx & (1<<27) && ecx & (1<<28)) {
-        // CPU supports XSAVE and AVX
-        uint32_t xcr0, xcr0_high;
-        asm("xgetbv" : "=a" (xcr0), "=d" (xcr0_high) : "c" (0));
-        allowed = (xcr0 & 6) == 6;    // AVX state saving enabled?
-    } else {
-        allowed = false;
-    }
-#endif // defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
-
-    return allowed;
-}
-
-//-------------------------------------------------------------------------
-// test2020Mode_(): Makes sure that 2020 mode will work 
-//-------------------------------------------------------------------------
-void MainFrame::test2020Mode_()
-{    
-    log_info("Making sure your machine can handle 2020 mode...");
-
-    bool allowed = false;
-
-#if !defined(LPCNET_DISABLED)
-    allowed = test2020HWAllowed_();
-    wxGetApp().appConfiguration.freedvAVXSupported = allowed;
-
-    if (!allowed)
-    {
-        log_warn("Warning: AVX support not found!");
-    }
-    else
-    {
-        // Sanity check: encode 1 second of 16 kHz white noise and then try to
-        // decode it. If it takes longer than 0.5 seconds, it's unlikely that 
-        // 2020/2020B will work properly on this machine.
-        log_info("Generating test audio...");
-        struct FIFO* inFifo = codec2_fifo_create(24000);
-        assert(inFifo != nullptr);
-    
-        struct freedv* fdv = freedv_open(FREEDV_MODE_2020);
-        assert(fdv != nullptr);
-    
-        int numInSamples = 0;
-        int samplesToGenerate = freedv_get_n_speech_samples(fdv);
-        int samplesGenerated = freedv_get_n_nom_modem_samples(fdv);
-    
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> distrib(SHRT_MIN, SHRT_MAX);
-    
-        while (numInSamples < 16000)
-        {
-            short inSamples[samplesToGenerate];
-            COMP outSamples[samplesGenerated];
-            for (int index = 0; index < samplesToGenerate; index++)
-            {
-                inSamples[index] = distrib(gen);
-            }
-        
-            freedv_comptx(fdv, outSamples, inSamples);
-        
-            for (int index = 0; index < samplesGenerated; index++)
-            {
-                short realVal = outSamples[index].real;
-                codec2_fifo_write(inFifo, &realVal, 1);
-            }
-        
-            numInSamples += samplesToGenerate;        
-        }
-    
-        log_info("Decoding modulated audio...");
-    
-        std::chrono::high_resolution_clock systemClock;
-        auto startTime = systemClock.now();
-    
-        int nin = freedv_nin(fdv);
-        short inputBuf[freedv_get_n_max_modem_samples(fdv)];
-        short outputBuf[freedv_get_n_speech_samples(fdv)];
-        COMP  rx_fdm[freedv_get_n_max_modem_samples(fdv)];
-        while(codec2_fifo_read(inFifo, inputBuf, nin) == 0)
-        {
-            for(int i=0; i<nin; i++) 
-            {
-                rx_fdm[i].real = (float)inputBuf[i];
-                rx_fdm[i].imag = 0.0;
-            }
-        
-            freedv_comprx(fdv, outputBuf, rx_fdm);
-        }
-        auto endTime = systemClock.now();
-        auto timeTaken = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-        if (timeTaken > std::chrono::milliseconds(600))
-        {
-            allowed = false;
-        }
-    
-        log_info("One second of 2020 decoded in %d ms", (int)timeTaken.count());
-    }
-#endif // !defined(LPCNET_DISABLED)
-    
-    log_info("2020 allowed: %d", (int)allowed);
-    
-    // Save results to configuration.
-    wxGetApp().appConfiguration.freedv2020Allowed = allowed;
-}
-#endif // defined(FREEDV_MODE_2020)
 
 //-------------------------------------------------------------------------
 // loadConfiguration_(): Loads or sets default configuration options.
@@ -873,10 +750,6 @@ setDefaultMode:
     {
         m_rb1600->SetValue(1);
     }
-    else if (mode == 3)
-    {
-        m_rb700c->SetValue(1);
-    }
     else if (mode == 4)
     {
         m_rb700d->SetValue(1);
@@ -885,25 +758,10 @@ setDefaultMode:
     {
         m_rb700e->SetValue(1);
     }
-    else if (mode == 6)
-    {
-        m_rb800xa->SetValue(1);
-    }
-    // mode 7 was the former 2400B mode, now removed.
-    else if ((mode == 9) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
-    {
-        m_rb2020->SetValue(1);
-    }
     else if (mode == FREEDV_MODE_RADE)
     {
         m_rbRADE->SetValue(1);
     }
-#if defined(FREEDV_MODE_2020B)
-    else if ((mode == 10) && wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
-    {
-        m_rb2020b->SetValue(1);
-    }
-#endif // defined(FREEDV_MODE_2020B)
     else
     {
         // Default to RADE otherwise
@@ -911,21 +769,6 @@ setDefaultMode:
         goto setDefaultMode;
     }
     pConfig->SetPath(wxT("/"));
-    
-    // Set initial state of additional modes.
-    switch(mode)
-    {
-        case 0:
-        case 4:
-        case 5:
-            // 700D/E and 1600; don't expand additional modes
-            break;
-        default:
-            m_collpane->Collapse(false);
-            wxCollapsiblePaneEvent evt;
-            OnChangeCollapseState(evt);
-            break;
-    }
     
     m_togBtnAnalog->Disable();
     m_btnTogPTT->Disable();
@@ -1287,29 +1130,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Print RADE API version. This also forces the RADE library to be linked.
     log_info("Using RADE API version %d", rade_version());
 
-#if defined(FREEDV_MODE_2020) && !defined(LPCNET_DISABLED)
-    // First time use: make sure 2020 mode will actually work on this machine.
-    if (wxGetApp().appConfiguration.firstTimeUse)
-    {
-        test2020Mode_();
-    }
-    else
-    {
-        wxGetApp().appConfiguration.freedvAVXSupported = test2020HWAllowed_();
-    }
-#else
-    // Disable LPCNet if not compiled in.
-    wxGetApp().appConfiguration.freedv2020Allowed = false;
-#endif // defined(FREEDV_MODE_2020) && !defined(LPCNET_DISABLED)
-    
-    if(!wxGetApp().appConfiguration.freedv2020Allowed || !wxGetApp().appConfiguration.freedvAVXSupported)
-    {
-        m_rb2020->Disable();
-#if defined(FREEDV_MODE_2020B)
-        m_rb2020b->Disable();
-#endif // FREEDV_MODE_2020B
-    }
-
     if (wxGetApp().appConfiguration.firstTimeUse)
     {
         // Initial setup. Display Easy Setup dialog.
@@ -1415,22 +1235,12 @@ MainFrame::~MainFrame()
     int mode;
     if (m_rb1600->GetValue())
         mode = 0;
-    if (m_rb700c->GetValue())
-        mode = 3;
     if (m_rb700d->GetValue())
         mode = 4;
     if (m_rb700e->GetValue())
         mode = 5;
-    if (m_rb800xa->GetValue())
-        mode = 6;
-    if (m_rb2020->GetValue())
-        mode = 9;
     if (m_rbRADE->GetValue())
         mode = FREEDV_MODE_RADE;
-#if defined(FREEDV_MODE_2020B)
-    if (m_rb2020b->GetValue())
-        mode = 10;
-#endif // defined(FREEDV_MODE_2020B)
     
     wxGetApp().appConfiguration.currentFreeDVMode = mode;
     wxGetApp().appConfiguration.save(pConfig);
@@ -1539,7 +1349,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      }
      else
      {         
-        int r,c;
+        int r;
 
         if (m_panelWaterfall->checkDT()) {
             m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
@@ -1575,92 +1385,30 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             }
             wxGetApp().m_prevMode = currentMode;
         
-            if (currentMode == FREEDV_MODE_800XA) {
-
-                /* FSK Mode - eye diagram ---------------------------------------------------------*/
-
-                /* add samples row by row */
-
-                int i;
-                for (i=0; i<freedvInterface.getCurrentRxModemStats()->neyetr; i++) {
-                    m_panelScatter->add_new_samples_eye(&freedvInterface.getCurrentRxModemStats()->rx_eye[i][0], freedvInterface.getCurrentRxModemStats()->neyesamp);
-                }
+            // Reset g_Nc accordingly.
+            switch(currentMode)
+            {
+                case FREEDV_MODE_1600:
+                    g_Nc = 16;
+                    m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
+                    break;
+                case FREEDV_MODE_700D:
+                case FREEDV_MODE_700E:
+                    g_Nc = 17; 
+                    m_panelScatter->setNc(g_Nc);
+                    break;
             }
-            else {
-                // Reset g_Nc accordingly.
-                switch(currentMode)
-                {
-                    case FREEDV_MODE_1600:
-                        g_Nc = 16;
-                        m_panelScatter->setNc(g_Nc+1);  /* +1 for BPSK pilot */
-                        break;
-                    case FREEDV_MODE_700C:
-                        /* m_FreeDV700Combine may have changed at run time */
-                        g_Nc = 14;
-                        if (wxGetApp().m_FreeDV700Combine) {
-                            m_panelScatter->setNc(g_Nc/2);  /* diversity combnation */
-                        }
-                        else {
-                            m_panelScatter->setNc(g_Nc);
-                        }
-                        break;
-                    case FREEDV_MODE_700D:
-                    case FREEDV_MODE_700E:
-                        g_Nc = 17; 
-                        m_panelScatter->setNc(g_Nc);
-                        break;
-                    case FREEDV_MODE_2020:
-    #if defined(FREEDV_MODE_2020B)
-                    case FREEDV_MODE_2020B:
-    #endif // FREEDV_MODE_2020B
-                        g_Nc = 31;
-                        m_panelScatter->setNc(g_Nc);
-                        break;
+        
+            /* PSK Modes - scatter plot -------------------------------------------------------*/
+            for (r=0; r<freedvInterface.getCurrentRxModemStats()->nr; r++) {
+
+                if ((currentMode == FREEDV_MODE_1600) ||
+                    (currentMode == FREEDV_MODE_700D) ||
+                    (currentMode == FREEDV_MODE_700E)
+                ) {
+                    m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
                 }
-            
-                /* PSK Modes - scatter plot -------------------------------------------------------*/
-                for (r=0; r<freedvInterface.getCurrentRxModemStats()->nr; r++) {
 
-                    if ((currentMode == FREEDV_MODE_1600) ||
-                        (currentMode == FREEDV_MODE_700D) ||
-                        (currentMode == FREEDV_MODE_700E) ||
-                        (currentMode == FREEDV_MODE_2020) 
-    #if defined(FREEDV_MODE_2020B)
-                    ||  (currentMode == FREEDV_MODE_2020B)
-    #endif // FREEDV_MODE_2020B
-                    ) {
-                        m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
-                    }
-                    else if (currentMode == FREEDV_MODE_700C) {
-
-                        if (wxGetApp().m_FreeDV700Combine) {
-                            /*
-                               FreeDV 700C uses diversity, so optionally combine
-                               symbols for scatter plot, as combined symbols are
-                               used for demodulation.  Note we need to use a copy
-                               of the symbols, as we are not sure when the stats
-                               will be updated.
-                            */
-
-                            COMP* rx_symbols_copy = new COMP[g_Nc/2];
-                            assert(rx_symbols_copy != nullptr);
-
-                            for(c=0; c<g_Nc/2; c++)
-                                rx_symbols_copy[c] = fcmult(0.5, cadd(freedvInterface.getCurrentRxModemStats()->rx_symbols[r][c], freedvInterface.getCurrentRxModemStats()->rx_symbols[r][c+g_Nc/2]));
-                            m_panelScatter->add_new_samples_scatter(rx_symbols_copy);
-
-                            delete[] rx_symbols_copy;
-                        }
-                        else {
-                            /*
-                              Sometimes useful to plot carriers separately, e.g. to determine if tx carrier power is constant
-                              across carriers.
-                            */
-                            m_panelScatter->add_new_samples_scatter(&freedvInterface.getCurrentRxModemStats()->rx_symbols[r][0]);
-                        }
-                    }
-
-                }
             }
         }
 
@@ -2090,7 +1838,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         snprintf(syncmetric, STR_LENGTH, "Sync: %3.2f", freedvInterface.getCurrentRxModemStats()->sync_metric);
         wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
 
-        // Codec 2 700C/D/E & 800XA VQ "auto EQ" equaliser variance
+        // Codec 2 700D/E "auto EQ" equaliser variance
         auto var = freedvInterface.getVariance();
         char var_str[STR_LENGTH]; snprintf(var_str, STR_LENGTH, "Var: %4.1f", var);
         wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
@@ -2129,47 +1877,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                         ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
                     }
                     assert(g_Nc*2 <= 2*MODEM_STATS_NC_MAX);
-                    m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
-                }
-
-                if ((freedvInterface.getCurrentMode() == FREEDV_MODE_700C)) {
-                    int c;
-
-                    /*
-                       FreeDV 700 mapping from error pattern to bit on each carrier, see
-                       data bit to carrier mapping in:
-
-                          codec2-dev/octave/cohpsk_frame_design.ods
-
-                       We can plot a histogram of the errors/carrier before or after diversity
-                       recombination.  Actually one bar for each IQ bit in carrier order.
-                    */
-
-                    int hist_Nc = sz_error_pattern/4;
-
-                    for(i=0; i<sz_error_pattern; i++) {
-                        /* maps to IQ bits from each symbol to a "carrier" (actually one line for each IQ bit in carrier order) */
-                        c = floor(i/4);
-                        /* this will clock in 4 bits/carrier to plot */
-                        m_panelTestFrameErrors->add_new_sample(c, c + 0.8*error_pattern[i]);
-                        g_error_hist[c] += error_pattern[i];
-                        g_error_histn[c]++;
-                    }
-                    for(; i<2*MODEM_STATS_NC_MAX*4; i++) {
-                        c = floor(i/4);
-                        m_panelTestFrameErrors->add_new_sample(c, c);
-                    }
-
-                    /* calculate BERs and send to plot */
-
-                    float ber[2*MODEM_STATS_NC_MAX];
-                    for(b=0; b<2*MODEM_STATS_NC_MAX; b++) {
-                        ber[b] = 0.0;
-                    }
-                    for(b=0; b<hist_Nc; b++) {
-                        ber[b+1] = (float)g_error_hist[b]/g_error_histn[b];
-                    }
-                    assert(hist_Nc <= 2*MODEM_STATS_NC_MAX);
                     m_panelTestFrameErrorsHist->add_new_samples(0, ber, 2*MODEM_STATS_NC_MAX);
                 }
 
@@ -2253,49 +1960,12 @@ void MainFrame::OnExit(wxCommandEvent& event)
 
 void MainFrame::OnChangeTxMode( wxCommandEvent& event )
 {
-    wxRadioButton* hiddenModeToSet = nullptr;
-    std::vector<wxRadioButton*> buttonsToClear 
-    {
-        m_hiddenMode1,
-        m_hiddenMode2,
-
-        m_rbRADE,
-        m_rb700c,
-        m_rb700d,
-        m_rb700e,
-        m_rb800xa,
-        m_rb1600,
-        m_rb2020,
-#if defined(FREEDV_MODE_2020B)
-        m_rb2020b,
-#endif // FREEDV_MODE_2020B
-    };
-
     auto eventObject = (wxRadioButton*)event.GetEventObject();
-    if (eventObject != nullptr)
-    {
-        std::string label = (const char*)eventObject->GetLabel().ToUTF8();
-        if (label == "700D" || label == "700E" || label == "1600" || label == "RADEV1")
-        {
-            hiddenModeToSet = m_hiddenMode2;
-        } 
-        else
-        {
-            hiddenModeToSet = m_hiddenMode1;
-        } 
- 
-        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), (wxRadioButton*)eventObject));
-    }
-
     txModeChangeMutex.Lock();
     
     if (eventObject == m_rb1600 || (eventObject == nullptr && m_rb1600->GetValue())) 
     {
         g_mode = FREEDV_MODE_1600;
-    }
-    else if (eventObject == m_rb700c || (eventObject == nullptr && m_rb700c->GetValue())) 
-    {
-        g_mode = FREEDV_MODE_700C;
     }
     else if (eventObject == m_rbRADE || (eventObject == nullptr && m_rbRADE->GetValue())) 
     {
@@ -2309,24 +1979,6 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     {
         g_mode = FREEDV_MODE_700E;
     }
-    else if (eventObject == m_rb800xa || (eventObject == nullptr && m_rb800xa->GetValue())) 
-    {
-        g_mode = FREEDV_MODE_800XA;
-    }
-    else if (eventObject == m_rb2020 || (eventObject == nullptr && m_rb2020->GetValue())) 
-    {
-        assert(wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported);
-        
-        g_mode = FREEDV_MODE_2020;
-    }
-#if defined(FREEDV_MODE_2020B)
-    else if (eventObject == m_rb2020b || (eventObject == nullptr && m_rb2020b->GetValue())) 
-    {
-        assert(wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported);
-        
-        g_mode = FREEDV_MODE_2020B;
-    }
-#endif // FREEDV_MODE_2020B
     
     if (freedvInterface.isRunning())
     {
@@ -2339,21 +1991,6 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     m_newSpkOutFilter = true;
     
     txModeChangeMutex.Unlock();
-    
-    // Manually implement mutually exclusive behavior as
-    // we can't rely on wxWidgets doing it on account of
-    // how we're splitting the modes.
-    if (eventObject != nullptr)
-    {
-        buttonsToClear.erase(std::find(buttonsToClear.begin(), buttonsToClear.end(), hiddenModeToSet));
-
-        for (auto& var : buttonsToClear)
-        {
-            var->SetValue(false);
-        }
-
-        hiddenModeToSet->SetValue(true);
-    }
     
     // Report TX change to registered reporters
     for (auto& obj : wxGetApp().m_reporters)
@@ -2404,34 +2041,18 @@ void MainFrame::performFreeDVOn_()
         {
             m_rb1600->Disable();
             m_rbRADE->Disable();
-            m_rb700c->Disable();
             m_rb700d->Disable();
             m_rb700e->Disable();
-            m_rb800xa->Disable();
-            m_rb2020->Disable();
-    #if defined(FREEDV_MODE_2020B)
-            m_rb2020b->Disable();
-    #endif // FREEDV_MODE_2020B
             freedvInterface.addRxMode(g_mode);
         }
         else
         {
             m_rbRADE->Disable();
-            
-            if(wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
-            {
-                freedvInterface.addRxMode(FREEDV_MODE_2020);
-    #if defined(FREEDV_MODE_2020B)
-                freedvInterface.addRxMode(FREEDV_MODE_2020B);
-    #endif // FREEDV_MODE_2020B
-            }
-        
+                    
             int rxModes[] = {
                 FREEDV_MODE_1600,
                 FREEDV_MODE_700E,
-                FREEDV_MODE_700C,
                 FREEDV_MODE_700D,
-                FREEDV_MODE_800XA
             };
 
             for (auto& mode : rxModes)
@@ -2444,14 +2065,8 @@ void MainFrame::performFreeDVOn_()
             {
                 m_rb1600->Disable();
                 m_rbRADE->Disable();
-                m_rb700c->Disable();
                 m_rb700d->Disable();
                 m_rb700e->Disable();
-                m_rb800xa->Disable();
-                m_rb2020->Disable();
-        #if defined(FREEDV_MODE_2020B)
-                m_rb2020b->Disable();
-        #endif // FREEDV_MODE_2020B
             }
         }
         
@@ -2511,13 +2126,7 @@ void MainFrame::performFreeDVOn_()
         if (!wxGetApp().appConfiguration.reportingConfiguration.reportingEnabled)
             freedvInterface.setTextVaricodeNum(1);
 
-        // scatter plot (PSK) or Eye (FSK) mode
-        if (g_mode == FREEDV_MODE_800XA) {
-            m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_EYE);
-        }
-        else {
-            m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
-        }
+        m_panelScatter->setEyeScatter(PLOT_SCATTER_MODE_SCATTER);
     });
 
     g_State = g_prev_State = 0;
@@ -2738,17 +2347,8 @@ void MainFrame::performFreeDVOff_()
     
         m_rbRADE->Enable();
         m_rb1600->Enable();
-        m_rb700c->Enable();
         m_rb700d->Enable();
         m_rb700e->Enable();
-        m_rb800xa->Enable();
-        if(wxGetApp().appConfiguration.freedv2020Allowed && wxGetApp().appConfiguration.freedvAVXSupported)
-        {
-            m_rb2020->Enable();
-    #if defined(FREEDV_MODE_2020B)
-            m_rb2020b->Enable();
-    #endif // FREEDV_MODE_2020B
-        }
         
         // Make sure QSY button becomes disabled after stop.
         if (m_reporterDialog != nullptr)
@@ -3158,7 +2758,7 @@ void MainFrame::startRxStream()
         // stats for spectral plots, and transmit processng are all performed 
         // in the tx/rxProcessing loop.
         //
-        // Note that soundCard1InFifoSizeSamples is significantly larger than
+        // Note that soundCard[12]InFifoSizeSamples are significantly larger than
         // the other FIFO sizes. This is to better handle PulseAudio/pipewire
         // behavior on some devices, where the system sends multiple *seconds*
         // of audio samples at once followed by long periods with no samples at
@@ -3171,7 +2771,7 @@ void MainFrame::startRxStream()
 
         if (txInSoundDevice && txOutSoundDevice)
         {
-            int soundCard2InFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate / 1000;
+            int soundCard2InFifoSizeSamples = 30*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
             int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate / 1000;
             g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
             g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
@@ -3447,7 +3047,7 @@ void MainFrame::startRxStream()
         // start tx/rx processing thread
         if (txInSoundDevice && txOutSoundDevice)
         {
-            m_txThread = new TxRxThread(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate(), wxGetApp().linkStep.get(), txInSoundDevice);
+            m_txThread = new TxRxThread(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate(), wxGetApp().linkStep, txInSoundDevice);
             if ( m_txThread->Create() != wxTHREAD_NO_ERROR )
             {
                 wxLogError(wxT("Can't create TX thread!"));
@@ -3486,7 +3086,7 @@ void MainFrame::startRxStream()
             }
         }
 
-        m_rxThread = new TxRxThread(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep.get(), rxInSoundDevice);
+        m_rxThread = new TxRxThread(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep, rxInSoundDevice);
         if ( m_rxThread->Create() != wxTHREAD_NO_ERROR )
         {
             wxLogError(wxT("Can't create RX thread!"));

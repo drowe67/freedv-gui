@@ -927,6 +927,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 4. Miscellaneous:
     * Add issue template for SW bugs. (PR #759)
     * Fix typos in user manual and code. (PR #859; thanks @dforsi)
+    * Removed deprecated modes: 700C, 800XA, 2020, 2020B (PR #889)
 
 ## V1.9.9.2 June 2024
 

@@ -52,8 +52,9 @@ SpeexStep::SpeexStep(int sampleRate)
 
 SpeexStep::~SpeexStep()
 {
+    outputSamples_ = nullptr;
     speex_preprocess_state_destroy(speexStateObj_);
-    codec2_fifo_free(inputSampleFifo_);
+    codec2_fifo_destroy(inputSampleFifo_);
 }
 
 int SpeexStep::getInputSampleRate() const

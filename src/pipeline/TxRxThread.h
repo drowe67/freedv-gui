@@ -40,7 +40,7 @@ class LinkStep;
 class TxRxThread : public wxThread
 {
 public:
-    TxRxThread(bool tx, int inputSampleRate, int outputSampleRate, LinkStep* micAudioLink, std::shared_ptr<IRealtimeHelper> helper) 
+    TxRxThread(bool tx, int inputSampleRate, int outputSampleRate, std::shared_ptr<LinkStep> micAudioLink, std::shared_ptr<IRealtimeHelper> helper) 
         : wxThread(wxTHREAD_JOINABLE)
         , m_tx(tx)
         , m_run(1)
@@ -75,16 +75,13 @@ public:
     void terminateThread();
     void notify();
 
-    std::mutex m_processingMutex;
-    std::condition_variable m_processingCondVar;
-
 private:
     bool  m_tx;
     bool  m_run;
     std::shared_ptr<AudioPipeline> pipeline_;
     int inputSampleRate_;
     int outputSampleRate_;
-    LinkStep* equalizedMicAudioLink_;
+    std::shared_ptr<LinkStep> equalizedMicAudioLink_;
     bool hasEooBeenSent_;
     std::shared_ptr<IRealtimeHelper> helper_;
     std::shared_ptr<short> inputSamples_;

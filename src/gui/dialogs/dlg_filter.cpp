@@ -104,9 +104,9 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     sbSizer_speexpp->Add(m_ckboxSpeexpp, 0, wxALL | wxALIGN_LEFT, 5);
     m_ckboxSpeexpp->SetToolTip(_("Enable noise suppression, dereverberation, AGC of mic signal"));
 
-    m_ckbox700C_EQ = new wxCheckBox(sb_speexpp, wxID_ANY, _("700C/700D/700E/800XA Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckbox700C_EQ = new wxCheckBox(sb_speexpp, wxID_ANY, _("700D/700E Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_speexpp->Add(m_ckbox700C_EQ, 0, wxALL | wxALIGN_LEFT, 5);
-    m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700C/700D/700E Codec input audio"));
+    m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700D/700E Codec input audio"));
 
     bSizer30->Add(sbSizer_speexpp, 0, wxALL | wxEXPAND, 5);   
 

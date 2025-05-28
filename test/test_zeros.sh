@@ -93,14 +93,21 @@ if [ "$FREEDV_TEST" == "tx" ]; then
 fi
 
 # Start FreeDV in test mode
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE 2>&1 | tee tmp.log
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE >tmp.log 2>&1 & #| tee tmp.log
 
 FDV_PID=$!
+
+#if [ "$OPERATING_SYSTEM" != "Linux" ]; then
+#    xctrace record --window 2m --template "Audio System Trace" --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
+#fi
+
 #sleep 30 
 #screencapture ../screenshot.png
 #wpctl status
 #pw-top -b -n 5
-#wait $FDV_PID
+wait $FDV_PID
+FREEDV_EXIT_STATUS=$?
+cat tmp.log
 
 # Stop recording/playback and process data
 if [ "$FREEDV_TEST" == "rx" ]; then
@@ -121,3 +128,5 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     pactl unload-module $DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO
     pactl unload-module $DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER
 fi
+
+exit $FREEDV_EXIT_STATUS

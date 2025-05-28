@@ -154,17 +154,18 @@ void PulseAudioDevice::stop()
 {
     if (stream_ != nullptr)
     {
-        std::unique_lock<std::mutex> lk(streamStateMutex_);
-
         pa_threaded_mainloop_lock(mainloop_);
+
+        // Disconnect stream and wait for response from mainloop.
         pa_stream_disconnect(stream_);
+        pa_threaded_mainloop_wait(mainloop_);
+
+        // Deallocate stream.
+        pa_stream_unref(stream_);
+        stream_ = nullptr;
+
         pa_threaded_mainloop_unlock(mainloop_);
 
-        streamStateCondVar_.wait(lk);
-
-        pa_stream_unref(stream_);
-
-        stream_ = nullptr;
         sem_destroy(&sem_);
     }
 }
@@ -175,8 +176,7 @@ int PulseAudioDevice::getLatencyInMicroseconds()
     pa_usec_t latency = 0;
     if (stream_ != nullptr)
     {
-        int neg = 0;
-        pa_stream_get_latency(stream_, &latency, &neg); // ignore error and assume 0
+        pa_stream_get_latency(stream_, &latency, nullptr); // ignore error and assume 0
     }
     pa_threaded_mainloop_unlock(mainloop_);
     return (int)latency;
@@ -245,6 +245,35 @@ void PulseAudioDevice::setHelperRealTime()
     sigaddset(&signal_set, SIGXCPU);
     sigprocmask(SIG_UNBLOCK, &signal_set, NULL);
 #endif // 0
+
+#if defined(USE_RTKIT)
+    DBusError error;
+    DBusConnection* bus = nullptr;
+    int result = 0;
+
+    dbus_error_init(&error);
+    if (!(bus = dbus_bus_get(DBUS_BUS_SYSTEM, &error)))
+    {
+        log_warn("Could not connect to system bus: %s", error.message);
+    }
+    else
+    {
+        int minNiceLevel = 0;
+        if ((result = rtkit_get_min_nice_level(bus, &minNiceLevel)) < 0)
+        {
+            log_warn("rtkit could not get minimum nice level: %s", strerror(-result));
+        }
+        else if ((result = rtkit_make_high_priority(bus, 0, minNiceLevel)) < 0)
+        {
+            log_warn("rtkit could not make high priority: %s", strerror(-result));
+        }
+    }
+    
+    if (bus != nullptr)
+    {
+        dbus_connection_unref(bus);
+    }
+#endif // defined(USE_RTKIT)
 }
 
 void PulseAudioDevice::startRealTimeWork()
@@ -356,8 +385,7 @@ void PulseAudioDevice::StreamStateCallback_(pa_stream *p, void *userdata)
     // does not accidentally refer to already freed memory.
     if (pa_stream_get_state(p) == PA_STREAM_TERMINATED)
     {
-        std::unique_lock<std::mutex> lk(thisObj->streamStateMutex_);
-        thisObj->streamStateCondVar_.notify_all();
+        pa_threaded_mainloop_signal(thisObj->mainloop_, 0);
     }    
 }
 

@@ -180,7 +180,7 @@ void MainFrame::OpenPTTInPort(void)
             wxGetApp().m_pttInSerialPort->onPttChange += [&](IRigController*, bool pttState)
             {
                 log_info("PTT input state is now %d", pttState);
-                GetEventHandler()->CallAfter([&]() {
+                GetEventHandler()->CallAfter([this, pttState]() {
                     if (pttState != m_btnTogPTT->GetValue())
                     {
                         m_btnTogPTT->SetValue(pttState); 
@@ -300,13 +300,11 @@ int resample(SRC_STATE *src,
 // we don't hammer the graphics system too hard.  Saves decimated data
 // to a fifo for plotting on screen.
 
-void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs)
+void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs)
 {
     int decimation = fs/WAVEFORM_PLOT_FS;
     int nSamples, sample;
     int i, st, en, max, min;
-    short* dec_samples = new short[length];
-    assert(dec_samples != nullptr);
 
     nSamples = length/decimation;
     if (nSamples % 2) nSamples++; // dec_samples is populated in groups of two
@@ -325,7 +323,6 @@ void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs)
         dec_samples[sample+1] = min;
     }
     codec2_fifo_write(plotFifo, dec_samples, nSamples);
-    delete[] dec_samples;
 }
 
 // State machine to detect sync

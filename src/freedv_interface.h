@@ -126,7 +126,11 @@ public:
     const char* getReliableText();
     void setReliableText(const char* callsign);
     
-    IPipelineStep* createTransmitPipeline(int inputSampleRate, int outputSampleRate, std::function<float()> getFreqOffsetFn);
+    IPipelineStep* createTransmitPipeline(
+        int inputSampleRate, 
+        int outputSampleRate, 
+        std::function<float()> getFreqOffsetFn,
+        std::shared_ptr<IRealtimeHelper> realtimeHelper);
     IPipelineStep* createReceivePipeline(
         int inputSampleRate, int outputSampleRate,
         std::function<int*()> getRxStateFn,

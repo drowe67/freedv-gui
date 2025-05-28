@@ -24,6 +24,7 @@
 #include <cassert>
 #include <cstring>
 #include <sstream>
+#include "../defines.h"
 #include "ParallelStep.h"
 #include "AudioPipeline.h"
 #include "../util/logging/ulog.h"
@@ -108,7 +109,7 @@ ParallelStep::ParallelStep(
 #endif // defined(_WIN32) || defined(__APPLE__)
                     
                     executeRunnerThread_(s);
-                   
+                    
                     if (!fallbackToSleep)
                     {
 #if defined(_WIN32)
@@ -132,7 +133,7 @@ ParallelStep::ParallelStep(
                     
                     if (fallbackToSleep)
                     {
-                        std::this_thread::sleep_until(beginTime + 10ms);
+                        std::this_thread::sleep_until(beginTime + std::chrono::milliseconds((int)(1000 * FRAME_DURATION)));
                     }
                 }
                 
@@ -179,8 +180,14 @@ ParallelStep::~ParallelStep()
                 
         codec2_fifo_destroy(taskThread->inputFifo);
         codec2_fifo_destroy(taskThread->outputFifo);
+        taskThread->step = nullptr;
+        taskThread->tempInput = nullptr;
+        taskThread->tempOutput = nullptr;
         delete taskThread;
     }
+
+    // Force immediate memory clear
+    parallelSteps_.clear();
 }
 
 int ParallelStep::getInputSampleRate() const
@@ -239,7 +246,6 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
     assert(stepToOutput >= 0 && (size_t)stepToOutput < parallelSteps_.size());
     
     ThreadInfo* outputTask = threads_[stepToOutput];
-
     *numOutputSamples = codec2_fifo_used(outputTask->outputFifo);
     codec2_fifo_read(outputTask->outputFifo, outputTask->tempOutput.get(), *numOutputSamples);    
     return outputTask->tempOutput;

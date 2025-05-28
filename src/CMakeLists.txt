@@ -53,18 +53,11 @@ else()
     add_executable(freedv WIN32 ${FREEDV_SOURCES} ${RES_FILES})
 endif(APPLE)
 
-# Link imported or build tree targets.
-if(NOT LPCNET_DISABLED)
-set(LPCNET_LIB_NAME lpcnetfreedv)
-else(NOT LPCNET_DISABLED)
-set(LPCNET_LIB_NAME )
-endif(NOT LPCNET_DISABLED)
-
 if(APPLE)
-target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util ${LPCNET_LIB_NAME} codec2 rade opus)
+target_link_libraries(FreeDV fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util codec2 rade opus)
 add_dependencies(FreeDV build_rade)
 else(APPLE)
-target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util ${LPCNET_LIB_NAME} codec2 rade opus)
+target_link_libraries(freedv fdv_audio fdv_audio_pipeline fdv_config fdv_gui_controls fdv_gui_dialogs fdv_gui_util fdv_os_wrapper fdv_rig_control fdv_reporting fdv_sox fdv_util codec2 rade opus)
 add_dependencies(freedv build_rade)
 endif(APPLE)
 
@@ -141,11 +134,6 @@ endif(APPLE)
 
 # Custom commands to build OSX images.
 if(APPLE)
-    if(NOT LPCNET_DISABLE)
-        set(LPCNET_DYLIBBUNDLER_PATH ${LPCNET_BUILD_DIR}/src:)
-        set(LPCNET_DYLIBBUNDLER_ARG -s ${LPCNET_BUILD_DIR}/src)
-    endif(NOT LPCNET_DISABLE)
-
     if(NOT MACOS_CODESIGN_IDENTITY)
         set(MACOS_CODESIGN_IDENTITY -)
     endif(NOT MACOS_CODESIGN_IDENTITY)
@@ -158,7 +146,7 @@ if(APPLE)
         TARGET FreeDV
         POST_BUILD
         COMMAND rm -rf dist_tmp FreeDV.dmg || true
-        COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${LPCNET_DYLIBBUNDLER_PATH}${portaudio_BINARY_DIR}:${samplerate_BINARY_DIR}/src:${Python3_ROOT_DIR}:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib ${LPCNET_DYLIBBUNDLER_ARG} -s ${CODEC2_BUILD_DIR}/src -s ${CMAKE_BINARY_DIR}/LPCNet_build/src -s ${CMAKE_BINARY_DIR}/codec2_build/src ${PORTAUDIO_BUNDLE_ARG} -s ${samplerate_BINARY_DIR}/src -s ${rade_BINARY_DIR}/src -s ${Python3_ROOT_DIR}
+        COMMAND DYLD_LIBRARY_PATH=${CODEC2_BUILD_DIR}/src:${portaudio_BINARY_DIR}:${samplerate_BINARY_DIR}/src:${Python3_ROOT_DIR}:${DYLD_LIBRARY_PATH} ${CMAKE_SOURCE_DIR}/macdylibbundler/dylibbundler ARGS -od -b -x FreeDV.app/Contents/MacOS/FreeDV -d FreeDV.app/Contents/libs -p @loader_path/../libs/ -i /usr/lib -s ${CODEC2_BUILD_DIR}/src -s ${CMAKE_BINARY_DIR}/codec2_build/src ${PORTAUDIO_BUNDLE_ARG} -s ${samplerate_BINARY_DIR}/src -s ${rade_BINARY_DIR}/src -s ${Python3_ROOT_DIR}
         COMMAND cp ARGS ${CMAKE_CURRENT_SOURCE_DIR}/freedv.icns FreeDV.app/Contents/Resources
         COMMAND rm ARGS -rf FreeDV.app/Contents/Frameworks
         COMMAND mkdir ARGS FreeDV.app/Contents/Frameworks

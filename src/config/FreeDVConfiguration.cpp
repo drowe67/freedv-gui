@@ -29,8 +29,6 @@
 FreeDVConfiguration::FreeDVConfiguration()
     /* First time configuration options */
     : firstTimeUse("/FirstTimeUse", true)
-    , freedv2020Allowed("/FreeDV2020/Allowed", false)
-    , freedvAVXSupported("/FreeDV2020/AVXSupported", false)
         
     /* Position and size of main window */
     , mainWindowLeft("/MainFrame/left", 20)
@@ -127,7 +125,6 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     reportingConfiguration.load(config);
     
     load_(config, firstTimeUse);
-    load_(config, freedv2020Allowed);
     
     load_(config, mainWindowLeft);
     load_(config, mainWindowTop);
@@ -252,7 +249,6 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     reportingConfiguration.save(config);
     
     save_(config, firstTimeUse);
-    save_(config, freedv2020Allowed);
     
     save_(config, mainWindowLeft);
     save_(config, mainWindowTop);
