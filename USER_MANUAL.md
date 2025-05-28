@@ -925,6 +925,7 @@ low as -2dB in a bandwidth of 1500 Hz. More information about Radio Autoencoder 
     * Shorten PulseAudio/pipewire app name. (PR #843)
     * Hamlib: support CAT PTT via the Data port instead of Mic (needed for some older radios). (PR #875)
     * macOS: Show /dev/tty.* devices in CAT/PTT options. (PR #883)
+    * Remove pre-PTT interrogation of frequency/mode to improve TX/RX switching time. (PR #898)
 3. Build system:
     * Allow overriding the version tag when building. (PR #727)
     * Update wxWidgets to 3.2.8. (PR #861)
