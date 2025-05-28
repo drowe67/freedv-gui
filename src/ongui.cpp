@@ -1003,13 +1003,6 @@ void MainFrame::togglePTT(void) {
         m_togBtnOnOff->Enable(false);
     }
 
-    if (wxGetApp().appConfiguration.rigControlConfiguration.hamlibUseForPTT) {
-        if (wxGetApp().rigFrequencyController != nullptr && wxGetApp().rigFrequencyController->isConnected()) {
-            // Update mode display on the bottom of the main UI.
-            wxGetApp().rigFrequencyController->requestCurrentFrequencyMode();
-        }
-    }
-
     auto newTx = m_btnTogPTT->GetValue();
     if (wxGetApp().rigPttController != nullptr && wxGetApp().rigPttController->isConnected()) 
     {
