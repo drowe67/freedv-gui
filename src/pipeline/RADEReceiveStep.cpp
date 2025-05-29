@@ -20,9 +20,11 @@
 //
 //=========================================================================
 
+#if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 #include <sanitizer/rtsan_interface.h>
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
 
 #include <cassert>
 #include "RADEReceiveStep.h"
@@ -136,15 +138,19 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
             // RADE processing (input signal->features).
             int hasEooOut = 0;
 
+#if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
             __rtsan_disable();
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
 
             nout = rade_rx(dv_, featuresOut_, &hasEooOut, eooOut_, inputBufCplx_);
 
+#if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
             __rtsan_enable();
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
 
             if (hasEooOut && textPtr_ != nullptr)
             {

@@ -20,9 +20,11 @@
 //
 //=========================================================================
 
+#if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 #include <sanitizer/rtsan_interface.h>
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
 
 #include <cstring>
 #include <cassert>
@@ -109,9 +111,11 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
         {
             codec2_fifo_read(inputSampleFifo_, codecInput_, samplesUsedForFifo);
         
+#if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
             __rtsan_disable();
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
     
             if (mode == FREEDV_MODE_800XA) 
             {
@@ -127,9 +131,11 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
                     tmpOutput_[i] = txFdmOffset_[i].real;
             }
                        
+#if defined(__clang__)
             #if defined(__has_feature) && __has_feature(realtime_sanitizer)
                 __rtsan_disable();
             #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
                    
             memcpy(outputSamples_.get() + *numOutputSamples, tmpOutput_, nfreedv * sizeof(short));
             *numOutputSamples += nfreedv;
