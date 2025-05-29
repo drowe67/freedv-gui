@@ -157,12 +157,20 @@ set(SIGN_WINDOWS_BINARIES FALSE CACHE BOOL
     "Enable signing of Windows binaries. See CODE_SIGNING.md for info.")
 set(ENABLE_ASAN FALSE CACHE BOOL
     "Instruments the build with AddressSanitizer for memory checks.")
+set(ENABLE_RTSAN FALSE CACHE BOOL
+    "Instruments the build with RealtimeSanitizer for RT safety checks.")
 
 if(ENABLE_ASAN)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
     set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fsanitize=address")
 endif(ENABLE_ASAN)
+
+if(ENABLE_RTSAN)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=realtime")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=realtime")
+    set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fsanitize=realtime")
+endif(ENABLE_RTSAN)
 
 if(SIGN_WINDOWS_BINARIES)
     if(NOT WIN32 AND NOT MINGW)
@@ -737,18 +745,18 @@ if(UNITTEST)
 macro(DefineAudioTest utName)
     add_test(NAME fullduplex_${utName} 
              COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName}") 
-    if(NOT ENABLE_ASAN)
+    if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
     set_tests_properties(fullduplex_${utName} PROPERTIES PASS_REGULAR_EXPRESSION "Got 1 sync changes")
-    endif(NOT ENABLE_ASAN)
+    endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
 endmacro()
 
 DefineAudioTest(RADEV1)
 
 add_test(NAME fullduplex_RADEV1_repeated
          COMMAND sh -c " ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1")
-if(NOT ENABLE_ASAN)
+if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
     set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES PASS_REGULAR_EXPRESSION "Got 1 sync changes")
-endif(NOT ENABLE_ASAN)
+endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
 set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES DISABLED TRUE)
 set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES LABELS stress_test)
 
@@ -757,18 +765,18 @@ DefineAudioTest(700E)
 DefineAudioTest(1600)
 
 add_test(NAME rade_reporting_clean COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh)
-if(NOT ENABLE_ASAN)
+if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
 set_tests_properties(rade_reporting_clean PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT ENABLE_ASAN)
+endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
 
 add_test(NAME rade_reporting_awgn COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CODEC2_BUILD_DIR} awgn)
-if(NOT ENABLE_ASAN)
+if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
 set_tests_properties(rade_reporting_awgn PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT ENABLE_ASAN)
+endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
 
 add_test(NAME rade_reporting_mpp COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CODEC2_BUILD_DIR} mpp)
-if(NOT ENABLE_ASAN)
+if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
 set_tests_properties(rade_reporting_mpp PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
-endif(NOT ENABLE_ASAN)
+endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
 
 endif(UNITTEST)
