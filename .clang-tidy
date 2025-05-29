@@ -1,0 +1,6 @@
+---
+Checks: "bugprone*,
+"
+WarningsAsErrors: '*'
+HeaderFilterRegex: ''
+FormatStyle:     none
