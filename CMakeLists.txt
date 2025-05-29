@@ -22,6 +22,26 @@ set(PROJECT_HOMEPAGE_URL "https://freedv.org")
 # Makes FreeDV overridden CMake platform available for ARM MinGW builds.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
+# Enable clang-tidy execution if program exists on user's machine.
+if(ENABLE_CLANG_TIDY)
+find_program(
+    CLANG_TIDY_COMMAND
+    NAMES
+        clang-tidy
+    NO_CACHE
+)
+if (CLANG_TIDY_COMMAND)
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+    set(CLANG_TIDY_COMMAND_LINE ${CLANG_TIDY_COMMAND} -p ${CMAKE_BINARY_DIR}/compile_commands.json)
+
+    set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY_COMMAND_LINE})
+    set(CMAKE_C_CLANG_TIDY ${CLANG_TIDY_COMMAND_LINE})
+    if(APPLE)
+        set(CMAKE_OBJCXX_CLANG_TIDY ${CLANG_TIDY_COMMAND_LINE})
+    endif(APPLE)
+endif (CLANG_TIDY_COMMAND)
+endif(ENABLE_CLANG_TIDY)
+
 if(APPLE)
     project(
         ${PROJECT_NAME}
