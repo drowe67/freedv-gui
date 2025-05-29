@@ -101,13 +101,20 @@ jobs:
 
     - name: Install LLVM/Clang >=20.0 (Required for RTSan)
       uses: MorganCaron/latest-clang-action@master
-    - name: Check for RT-unsafe function calls
+
+    - name: Instrument RealtimeSanitizer
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          export DISPLAY=:99.0
-          export XDG_RUNTIME_DIR=/run/user/$(id -u)
           . ./rade-venv/bin/activate
           BUILD_TYPE=RelWithDebInfo WITH_RTSAN=1 UT_ENABLE=1 CC=clang CXX=clang++ ./build_linux.sh 
+          
+    - name: Check for RT-unsafe function calls
+      shell: bash
+      working-directory: ${{github.workspace}}/build_linux
+      run: |
+          export DISPLAY=:99.0
+          export XDG_RUNTIME_DIR=/run/user/$(id -u)
+          . ../rade-venv/bin/activate
           PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V -R "fullduplex_(RADE|700D)|rade_reporting_clean"
 
