@@ -99,19 +99,14 @@ jobs:
           . ../rade-venv/bin/activate
           ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V -R "fullduplex_(RADE|700D)|rade_reporting_clean"
 
-    - name: Install LLVM/Clang 20.0 (Required for RTSan)
-      uses: KyleMayes/install-llvm-action@v2
-      with:
-        version: "20.0"
-        directory: ${{github.workspace}}/llvm 
-
+    - name: Install LLVM/Clang >=20.0 (Required for RTSan)
+      uses: MorganCaron/latest-clang-action@master
     - name: Check for RT-unsafe function calls
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
           export DISPLAY=:99.0
           export XDG_RUNTIME_DIR=/run/user/$(id -u)
-          export PATH=${{github.workspace}}/llvm/bin:$PATH
           . ./rade-venv/bin/activate
           BUILD_TYPE=RelWithDebInfo WITH_RTSAN=1 UT_ENABLE=1 CC=clang CXX=clang++ ./build_linux.sh 
           PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V -R "fullduplex_(RADE|700D)|rade_reporting_clean"
