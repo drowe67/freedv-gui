@@ -738,7 +738,7 @@ macro(DefineAudioTest utName)
     add_test(NAME fullduplex_${utName} 
              COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName}") 
     if(NOT ENABLE_ASAN)
-    set_tests_properties(fullduplex_${utName} PROPERTIES FAIL_REGULAR_EXPRESSION "Sync changed from 1 to 0")
+    set_tests_properties(fullduplex_${utName} PROPERTIES PASS_REGULAR_EXPRESSION "Got 1 sync changes")
     endif(NOT ENABLE_ASAN)
 endmacro()
 
@@ -747,7 +747,7 @@ DefineAudioTest(RADEV1)
 add_test(NAME fullduplex_RADEV1_repeated
          COMMAND sh -c " ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1")
 if(NOT ENABLE_ASAN)
-    set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES FAIL_REGULAR_EXPRESSION "Sync changed from 1 to 0")
+    set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES PASS_REGULAR_EXPRESSION "Got 1 sync changes")
 endif(NOT ENABLE_ASAN)
 set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES DISABLED TRUE)
 set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES LABELS stress_test)

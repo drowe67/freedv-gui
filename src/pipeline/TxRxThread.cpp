@@ -540,6 +540,9 @@ void TxRxThread::clearFifos_()
 //---------------------------------------------------------------------------------------------
 
 void TxRxThread::txProcessing_()
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+[[clang::nonblocking]]
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 {
     wxStopWatch sw;
     paCallBackData  *cbData = g_rxUserdata;
@@ -663,6 +666,9 @@ void TxRxThread::txProcessing_()
 }
 
 void TxRxThread::rxProcessing_()
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+[[clang::nonblocking]]
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 {
     wxStopWatch sw;
     paCallBackData  *cbData = g_rxUserdata;

@@ -20,6 +20,10 @@
 //
 //=========================================================================
 
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+#include <sanitizer/rtsan_interface.h>
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+
 #include <cstring>
 #include <cassert>
 #include <cmath>
@@ -161,7 +165,16 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
             // RADE TX handling
             while (featureList_.size() >= numRequiredFeaturesForRADE)
             {
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+                __rtsan_disable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+
                 rade_tx(dv_, radeOut_, &featureList_[0]);
+
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+                __rtsan_enable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+
                 for (unsigned int index = 0; index < numRequiredFeaturesForRADE; index++)
                 {
                     featureList_.erase(featureList_.begin());

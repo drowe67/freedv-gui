@@ -19,6 +19,10 @@
 //
 //==========================================================================
 
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+#include <sanitizer/rtsan_interface.h>
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+
 #include <future>
 #include "main.h"
 #include "codec2_fdmdv.h"
@@ -933,7 +937,16 @@ skipSyncCheck:
     }
     else
     {
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+        __rtsan_disable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+
         *state->getRxStateFn() = rade_sync(rade_);
+
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+        __rtsan_enable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+
     }
 
     sync_ = *state->getRxStateFn();
