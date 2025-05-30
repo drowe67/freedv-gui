@@ -20,6 +20,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install LLVM/Clang >=20.0 (Required for RTSan)
+      uses: MorganCaron/latest-clang-action@master
+
     - name: Install rtkit for RT threading
       shell: bash
       run: |
@@ -98,9 +101,6 @@ jobs:
           export XDG_RUNTIME_DIR=/run/user/$(id -u)
           . ../rade-venv/bin/activate
           ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V -R "fullduplex_(RADE|700D)|rade_reporting_clean"
-
-    - name: Install LLVM/Clang >=20.0 (Required for RTSan)
-      uses: MorganCaron/latest-clang-action@master
 
     - name: Instrument RealtimeSanitizer
       shell: bash
