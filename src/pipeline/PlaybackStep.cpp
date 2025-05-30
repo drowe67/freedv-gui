@@ -38,6 +38,7 @@ PlaybackStep::PlaybackStep(
     , getSndFileFn_(getSndFileFn)
     , fileCompleteFn_(fileCompleteFn)
     , nonRtThreadEnding_(false)
+    , playbackResampler_(nullptr)
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
@@ -62,6 +63,11 @@ PlaybackStep::~PlaybackStep()
         nonRtThread_.join();
     }
     
+    if (playbackResampler_ != nullptr)
+    {
+        delete playbackResampler_;
+    }
+
     codec2_fifo_destroy(outputFifo_);
 }
 
@@ -72,7 +78,7 @@ int PlaybackStep::getInputSampleRate() const
 
 int PlaybackStep::getOutputSampleRate() const
 {
-    return fileSampleRateFn_();
+    return inputSampleRate_;
 }
 
 std::shared_ptr<short> PlaybackStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
@@ -91,7 +97,9 @@ std::shared_ptr<short> PlaybackStep::execute(std::shared_ptr<short> inputSamples
 void PlaybackStep::nonRtThreadEntry_()
 {
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    short* buf = new short[maxSamples];
+    auto buf = std::shared_ptr<short>(
+        new short[maxSamples],
+        std::default_delete<short[]>());
     assert(buf != nullptr);
     
     while (!nonRtThreadEnding_)
@@ -100,22 +108,34 @@ void PlaybackStep::nonRtThreadEntry_()
         auto playFile = getSndFileFn_();
         if (playFile != nullptr)
         {
+            auto fileSampleRate = fileSampleRateFn_();
+            if (playbackResampler_ == nullptr || playbackResampler_->getInputSampleRate() != fileSampleRate)
+            {
+                if (playbackResampler_ != nullptr)
+                {
+                    delete playbackResampler_;
+                }
+                playbackResampler_ = new ResampleStep(fileSampleRate, inputSampleRate_);
+                assert(playbackResampler_ != nullptr);
+            }
+
             unsigned int nsf = codec2_fifo_free(outputFifo_);
             if (nsf > 0)
             {
-                unsigned int numRead = sf_read_short(playFile, buf, nsf);
-                if (numRead < nsf && codec2_fifo_used(outputFifo_) == 0)
+                auto samplesAtSourceRate = nsf * inputSampleRate_ / fileSampleRate;
+                unsigned int numRead = sf_read_short(playFile, buf.get(), samplesAtSourceRate);
+                if (numRead < samplesAtSourceRate && codec2_fifo_used(outputFifo_) == 0)
                 {
                     fileCompleteFn_();
                 }
-            
-                codec2_fifo_write(outputFifo_, buf, numRead);
+         
+                int outSamples = 0; 
+                auto outBuf = playbackResampler_->execute(buf, samplesAtSourceRate, &outSamples);
+                codec2_fifo_write(outputFifo_, outBuf.get(), outSamples);
             }
         }
         g_mutexProtectingCallbackData.Unlock();
         
         std::this_thread::sleep_for(100ms);
     }
-    
-    delete[] buf;
 }

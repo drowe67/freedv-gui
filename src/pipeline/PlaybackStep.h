@@ -24,6 +24,7 @@
 #define AUDIO_PIPELINE__PLAYBACK_STEP_H
 
 #include "IPipelineStep.h"
+#include "ResampleStep.h"
 
 #include <functional>
 #include <thread>
@@ -51,6 +52,8 @@ private:
     std::thread nonRtThread_;
     bool nonRtThreadEnding_;
     FIFO* outputFifo_;
+
+    ResampleStep* playbackResampler_;
     
     void nonRtThreadEntry_();
 };
