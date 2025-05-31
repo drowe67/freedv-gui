@@ -130,7 +130,6 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
         if (*numOutputSamples > 0)
         {
             codec2_fifo_read(outputSampleFifo_, outputSamples_.get(), *numOutputSamples);
-            log_info("Returning %d EOO samples (remaining in FIFO: %d)", *numOutputSamples, codec2_fifo_used(outputSampleFifo_));
         }
 
         return outputSamples_;
@@ -210,7 +209,19 @@ void RADETransmitStep::restartVocoder()
     const int NUM_SAMPLES_SILENCE = 60 * getOutputSampleRate() / 1000;
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
 
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+    __rtsan_disable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
     rade_tx_eoo(dv_, eooOut_);
+
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+    __rtsan_enable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
 
     memset(eooOutShort_, 0, sizeof(short) * (numEOOSamples + NUM_SAMPLES_SILENCE));
     for (int index = 0; index < numEOOSamples; index++)
@@ -218,7 +229,6 @@ void RADETransmitStep::restartVocoder()
         eooOutShort_[index] = eooOut_[index].real * RADE_SCALING_FACTOR;
     }
 
-    log_info("Queueing %d EOO samples to output FIFO", numEOOSamples + NUM_SAMPLES_SILENCE);
     if (codec2_fifo_write(outputSampleFifo_, eooOutShort_, numEOOSamples + NUM_SAMPLES_SILENCE) != 0)
     {
         log_warn("Could not queue EOO samples (remaining space in FIFO = %d)", codec2_fifo_free(outputSampleFifo_));
