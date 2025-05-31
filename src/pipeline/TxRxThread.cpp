@@ -606,8 +606,6 @@ void TxRxThread::txProcessing_()
                 {
                     if (!hasEooBeenSent_)
                     {
-                        log_info("Triggering sending of EOO");
-
                         // Special case for handling RADE EOT
                         freedvInterface.restartTxVocoder();
                         hasEooBeenSent_ = true;
@@ -616,7 +614,6 @@ void TxRxThread::txProcessing_()
                     auto outputSamples = pipeline_->execute(inputSamples_, 0, &nout);
                     if (nout > 0 && outputSamples.get() != nullptr)
                     {
-                        log_debug("Injecting %d samples of resampled EOO into TX stream", nout);
                         if (codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout) != 0)
                         {
                             log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", codec2_fifo_free(cbData->outfifo1));
