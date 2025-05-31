@@ -154,8 +154,21 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
 
             if (hasEooOut && textPtr_ != nullptr)
             {
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+                __rtsan_disable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
                 // Handle RX of bits from EOO.
                 rade_text_rx(textPtr_, eooOut_, rade_n_eoo_bits(dv_) / 2);
+
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+                __rtsan_enable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
             }
             else if (!hasEooOut)
             {
