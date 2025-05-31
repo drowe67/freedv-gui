@@ -20,6 +20,12 @@
 //
 //=========================================================================
 
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+#include <sanitizer/rtsan_interface.h>
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
 #include <cassert>
 #include "FreeDVReceiveStep.h"
 #include "freedv_api.h"
@@ -112,14 +118,36 @@ std::shared_ptr<short> FreeDVReceiveStep::execute(std::shared_ptr<short> inputSa
                 fdmdv_simulate_channel(&sigPwrAvg_, rxFdm_, nin, channelNoiseSnr_);
             }
 
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+            __rtsan_disable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
             // Optional frequency shifting
             freq_shift_coh(rxFdmOffset_, rxFdm_, freqOffsetHz_, freedv_get_modem_sample_rate(dv_), &rxFreqOffsetPhaseRectObjs_, nin);
             nout = freedv_comprx(dv_, outputSamples_.get() + *numOutputSamples, rxFdmOffset_);
             *numOutputSamples += nout;
             
             nin = freedv_nin(dv_);
+
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+            __rtsan_enable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
         }
     }
 
     return outputSamples_;
+}
+
+void FreeDVReceiveStep::reset()
+{
+    while (codec2_fifo_used(inputSampleFifo_) > 0)
+    {
+        short tmp;
+        codec2_fifo_read(inputSampleFifo_, &tmp, 1);
+    }
 }

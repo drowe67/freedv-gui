@@ -20,6 +20,12 @@
 //
 //=========================================================================
 
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+#include <sanitizer/rtsan_interface.h>
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
 #include <cstring>
 #include <cassert>
 #include <cmath>
@@ -104,7 +110,13 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
         if ((*numOutputSamples + nfreedv) < maxSamples && codec2_fifo_used(inputSampleFifo_) >= samplesUsedForFifo)
         {
             codec2_fifo_read(inputSampleFifo_, codecInput_, samplesUsedForFifo);
-            
+        
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+            __rtsan_disable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+    
             if (mode == FREEDV_MODE_800XA) 
             {
                 /* 800XA doesn't support complex output just yet */
@@ -118,6 +130,12 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
                 for(int i = 0; i<nfreedv; i++)
                     tmpOutput_[i] = txFdmOffset_[i].real;
             }
+                       
+#if defined(__clang__)
+            #if defined(__has_feature) && __has_feature(realtime_sanitizer)
+                __rtsan_disable();
+            #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
                    
             memcpy(outputSamples_.get() + *numOutputSamples, tmpOutput_, nfreedv * sizeof(short));
             *numOutputSamples += nfreedv;
@@ -125,4 +143,13 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
     }
     
     return outputSamples_;
+}
+
+void FreeDVTransmitStep::reset()
+{
+    while (codec2_fifo_used(inputSampleFifo_) > 0)
+    {
+        short tmp;
+        codec2_fifo_read(inputSampleFifo_, &tmp, 1);
+    }
 }

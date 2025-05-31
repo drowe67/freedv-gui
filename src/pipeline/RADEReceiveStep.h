@@ -43,9 +43,10 @@ public:
     RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr);
     virtual ~RADEReceiveStep();
     
-    virtual int getInputSampleRate() const;
-    virtual int getOutputSampleRate() const;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
+    virtual int getInputSampleRate() const override;
+    virtual int getOutputSampleRate() const override;
+    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual void reset() override;
     
     int getSync() const { return rade_sync(dv_); }
     

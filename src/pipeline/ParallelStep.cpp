@@ -266,3 +266,22 @@ void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
         codec2_fifo_write(threadState->outputFifo, output.get(), samplesOut);
     }
 }
+
+void ParallelStep::reset()
+{
+    for (size_t index = 0; index < threads_.size(); index++)
+    {
+        auto fifo = threads_[index]->inputFifo;
+        short buf;
+        
+        while (codec2_fifo_used(fifo) > 0)
+        {
+            codec2_fifo_read(fifo, &buf, 1);
+        }
+        fifo = threads_[index]->outputFifo;
+        while (codec2_fifo_used(fifo) > 0)
+        {
+            codec2_fifo_read(fifo, &buf, 1);
+        }
+    }
+}

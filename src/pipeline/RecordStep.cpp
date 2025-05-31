@@ -72,6 +72,15 @@ std::shared_ptr<short> RecordStep::execute(std::shared_ptr<short> inputSamples, 
     return std::shared_ptr<short>((short*)nullptr, std::default_delete<short[]>());
 }
 
+void RecordStep::reset()
+{
+    short buf;
+    while (codec2_fifo_used(inputFifo_) > 0)
+    {
+        codec2_fifo_read(inputFifo_, &buf, 1);
+    }
+}
+
 void RecordStep::fileIoThreadEntry_()
 {
     short* buf = new short[inputSampleRate_];

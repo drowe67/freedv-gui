@@ -20,6 +20,12 @@
 //
 //=========================================================================
 
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+#include <sanitizer/rtsan_interface.h>
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
 #include <cstring>
 #include <cassert>
 #include <cmath>
@@ -124,7 +130,6 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
         if (*numOutputSamples > 0)
         {
             codec2_fifo_read(outputSampleFifo_, outputSamples_.get(), *numOutputSamples);
-            log_info("Returning %d EOO samples (remaining in FIFO: %d)", *numOutputSamples, codec2_fifo_used(outputSampleFifo_));
         }
 
         return outputSamples_;
@@ -161,7 +166,20 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
             // RADE TX handling
             while (featureList_.size() >= numRequiredFeaturesForRADE)
             {
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+                __rtsan_disable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
                 rade_tx(dv_, radeOut_, &featureList_[0]);
+
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+                __rtsan_enable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
                 for (unsigned int index = 0; index < numRequiredFeaturesForRADE; index++)
                 {
                     featureList_.erase(featureList_.begin());
@@ -191,7 +209,19 @@ void RADETransmitStep::restartVocoder()
     const int NUM_SAMPLES_SILENCE = 60 * getOutputSampleRate() / 1000;
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
 
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+    __rtsan_disable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
     rade_tx_eoo(dv_, eooOut_);
+
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+    __rtsan_enable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
 
     memset(eooOutShort_, 0, sizeof(short) * (numEOOSamples + NUM_SAMPLES_SILENCE));
     for (int index = 0; index < numEOOSamples; index++)
@@ -199,9 +229,22 @@ void RADETransmitStep::restartVocoder()
         eooOutShort_[index] = eooOut_[index].real * RADE_SCALING_FACTOR;
     }
 
-    log_info("Queueing %d EOO samples to output FIFO", numEOOSamples + NUM_SAMPLES_SILENCE);
     if (codec2_fifo_write(outputSampleFifo_, eooOutShort_, numEOOSamples + NUM_SAMPLES_SILENCE) != 0)
     {
         log_warn("Could not queue EOO samples (remaining space in FIFO = %d)", codec2_fifo_free(outputSampleFifo_));
     }
+}
+
+void RADETransmitStep::reset()
+{
+    short buf;
+    while (codec2_fifo_used(inputSampleFifo_) > 0)
+    {
+        codec2_fifo_read(inputSampleFifo_, &buf, 1);
+    }
+    while (codec2_fifo_used(outputSampleFifo_) > 0)
+    {
+        codec2_fifo_read(outputSampleFifo_, &buf, 1);
+    }
+    featureList_.clear();
 }

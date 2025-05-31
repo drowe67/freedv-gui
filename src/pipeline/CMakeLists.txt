@@ -3,7 +3,6 @@ add_library(fdv_audio_pipeline STATIC
     ComputeRfSpectrumStep.cpp
     EitherOrStep.cpp
     EqualizerStep.cpp
-    ExclusiveAccessStep.cpp
     FreeDVReceiveStep.cpp
     FreeDVTransmitStep.cpp
     IPipelineStep.cpp
@@ -46,7 +45,6 @@ endmacro()
 DefineUnitTest(AudioPipelineTest)
 target_link_libraries(AudioPipelineTest PRIVATE ${FREEDV_LINK_LIBS})
 DefineUnitTest(EitherOrTest)
-DefineUnitTest(ExclusiveAccessTest)
 DefineUnitTest(LevelAdjustTest)
 DefineUnitTest(ResampleTest)
 target_link_libraries(ResampleTest PRIVATE ${FREEDV_LINK_LIBS})

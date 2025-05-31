@@ -540,6 +540,11 @@ void TxRxThread::clearFifos_()
 //---------------------------------------------------------------------------------------------
 
 void TxRxThread::txProcessing_()
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+[[clang::nonblocking]]
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
 {
     wxStopWatch sw;
     paCallBackData  *cbData = g_rxUserdata;
@@ -553,12 +558,7 @@ void TxRxThread::txProcessing_()
     //  TX side processing --------------------------------------------
     //
 
-    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_tx || g_recVoiceKeyerFile || g_recFileFromMic))) {
-        if (pipeline_ == nullptr)
-        {
-            initializePipeline_();
-        }
-        
+    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_tx || g_recVoiceKeyerFile || g_recFileFromMic))) {        
         // This while loop locks the modulator to the sample rate of
         // the input sound card.  We want to make sure that modulator samples
         // are uninterrupted by differences in sample rate between
@@ -606,8 +606,6 @@ void TxRxThread::txProcessing_()
                 {
                     if (!hasEooBeenSent_)
                     {
-                        log_info("Triggering sending of EOO");
-
                         // Special case for handling RADE EOT
                         freedvInterface.restartTxVocoder();
                         hasEooBeenSent_ = true;
@@ -616,7 +614,6 @@ void TxRxThread::txProcessing_()
                     auto outputSamples = pipeline_->execute(inputSamples_, 0, &nout);
                     if (nout > 0 && outputSamples.get() != nullptr)
                     {
-                        log_debug("Injecting %d samples of resampled EOO into TX stream", nout);
                         if (codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout) != 0)
                         {
                             log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", codec2_fifo_free(cbData->outfifo1));
@@ -649,9 +646,8 @@ void TxRxThread::txProcessing_()
     }
     else
     {
-        // Deallocates TX pipeline when not in use. This is needed to reset the state of
-        // certain TX pipeline steps (such as Speex).
-        pipeline_ = nullptr;
+        // Reset the pipeline state.
+        pipeline_->reset();
         
         // Wipe anything added in the FIFO to prevent pops on next TX.
         clearFifos_();
@@ -663,6 +659,11 @@ void TxRxThread::txProcessing_()
 }
 
 void TxRxThread::rxProcessing_()
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+[[clang::nonblocking]]
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
 {
     wxStopWatch sw;
     paCallBackData  *cbData = g_rxUserdata;
