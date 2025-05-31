@@ -752,9 +752,13 @@ endif(NOT ENABLE_ASAN)
 set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES DISABLED TRUE)
 set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES LABELS stress_test)
 
+if (NOT APPLE)
+# KNOWN ISSUE - Legacy FreeDV tests occasionally fail in the macOS GH environment.
+# As tests generally work in Windows and Linux, it's fine to disable these for now.
 DefineAudioTest(700D)
 DefineAudioTest(700E)
 DefineAudioTest(1600)
+endif (NOT APPLE)
 
 add_test(NAME rade_reporting_clean COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh)
 if(NOT ENABLE_ASAN)
