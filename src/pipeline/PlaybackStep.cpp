@@ -161,3 +161,12 @@ void PlaybackStep::nonRtThreadEntry_()
         std::this_thread::sleep_for(100ms);
     }
 }
+
+void PlaybackStep::reset()
+{
+    short buf;
+    while (codec2_fifo_used(outputFifo_) > 0)
+    {
+        codec2_fifo_read(outputFifo_, &buf, 1);
+    }
+}

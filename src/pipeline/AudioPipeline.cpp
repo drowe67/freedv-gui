@@ -158,3 +158,21 @@ void AudioPipeline::reloadResultResampler_()
         }
     }
 }
+
+void AudioPipeline::reset()
+{
+    for (auto& step : pipelineSteps_)
+    {
+        step->reset();
+    }
+    
+    for (auto& step : resamplers_)
+    {
+        step->reset();
+    }
+    
+    if (resultSampler_ != nullptr)
+    {
+        resultSampler_->reset();
+    }
+}

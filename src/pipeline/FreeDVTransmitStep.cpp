@@ -144,3 +144,12 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
     
     return outputSamples_;
 }
+
+void FreeDVTransmitStep::reset()
+{
+    while (codec2_fifo_used(inputSampleFifo_) > 0)
+    {
+        short tmp;
+        codec2_fifo_read(inputSampleFifo_, &tmp, 1);
+    }
+}

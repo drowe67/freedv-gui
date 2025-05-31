@@ -558,12 +558,7 @@ void TxRxThread::txProcessing_()
     //  TX side processing --------------------------------------------
     //
 
-    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_tx || g_recVoiceKeyerFile || g_recFileFromMic))) {
-        if (pipeline_ == nullptr)
-        {
-            initializePipeline_();
-        }
-        
+    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_tx || g_recVoiceKeyerFile || g_recFileFromMic))) {        
         // This while loop locks the modulator to the sample rate of
         // the input sound card.  We want to make sure that modulator samples
         // are uninterrupted by differences in sample rate between
@@ -654,9 +649,8 @@ void TxRxThread::txProcessing_()
     }
     else
     {
-        // Deallocates TX pipeline when not in use. This is needed to reset the state of
-        // certain TX pipeline steps (such as Speex).
-        pipeline_ = nullptr;
+        // Reset the pipeline state.
+        pipeline_->reset();
         
         // Wipe anything added in the FIFO to prevent pops on next TX.
         clearFifos_();

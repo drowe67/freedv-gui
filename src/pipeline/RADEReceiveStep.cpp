@@ -209,3 +209,17 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
 
     return outputSamples_;
 }
+
+void RADEReceiveStep::reset()
+{
+    short buf;
+    while (codec2_fifo_used(inputSampleFifo_) > 0)
+    {
+        codec2_fifo_read(inputSampleFifo_, &buf, 1);
+    }
+    while (codec2_fifo_used(outputSampleFifo_) > 0)
+    {
+        codec2_fifo_read(outputSampleFifo_, &buf, 1);
+    }
+    pendingFeatures_.clear();
+}

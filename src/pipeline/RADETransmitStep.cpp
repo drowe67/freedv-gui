@@ -224,3 +224,17 @@ void RADETransmitStep::restartVocoder()
         log_warn("Could not queue EOO samples (remaining space in FIFO = %d)", codec2_fifo_free(outputSampleFifo_));
     }
 }
+
+void RADETransmitStep::reset()
+{
+    short buf;
+    while (codec2_fifo_used(inputSampleFifo_) > 0)
+    {
+        codec2_fifo_read(inputSampleFifo_, &buf, 1);
+    }
+    while (codec2_fifo_used(outputSampleFifo_) > 0)
+    {
+        codec2_fifo_read(outputSampleFifo_, &buf, 1);
+    }
+    featureList_.clear();
+}
