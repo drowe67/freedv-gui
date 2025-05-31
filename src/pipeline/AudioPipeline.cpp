@@ -168,9 +168,12 @@ void AudioPipeline::reset()
     
     for (auto& step : resamplers_)
     {
-        step->reset();
+        if (step != nullptr)
+        {
+            step->reset();
+        }
     }
-    
+ 
     if (resultSampler_ != nullptr)
     {
         resultSampler_->reset();
