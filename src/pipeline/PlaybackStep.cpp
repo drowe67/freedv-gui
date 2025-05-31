@@ -135,7 +135,7 @@ void PlaybackStep::nonRtThreadEntry_()
                 //log_info("samplesAtSource = %d, numRead = %u", samplesAtSourceRate, numRead);
                 if (numRead > 0)
                 {
-                    if (playbackResampler_ != nullptr && playbackResampler_->getInputSampleRate() != fileSampleRate)
+                    if (playbackResampler_ != nullptr)
                     {
                         int outSamples = 0; 
                         auto outBuf = playbackResampler_->execute(buf, numRead, &outSamples);
