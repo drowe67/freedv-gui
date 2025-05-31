@@ -130,7 +130,7 @@ void PlaybackStep::nonRtThreadEntry_()
                     if (playbackResampler_->getInputSampleRate() != fileSampleRate)
                     {
                         int outSamples = 0; 
-                        auto outBuf = playbackResampler_->execute(buf, samplesAtSourceRate, &outSamples);
+                        auto outBuf = playbackResampler_->execute(buf, numRead, &outSamples);
                         codec2_fifo_write(outputFifo_, outBuf.get(), outSamples);
                     }
                     else
