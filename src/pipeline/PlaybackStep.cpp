@@ -124,10 +124,6 @@ void PlaybackStep::nonRtThreadEntry_()
             {
                 auto samplesAtSourceRate = nsf * fileSampleRate / inputSampleRate_;
                 unsigned int numRead = sf_read_short(playFile, buf.get(), samplesAtSourceRate);
-                if (numRead < samplesAtSourceRate && codec2_fifo_used(outputFifo_) == 0)
-                {
-                    fileCompleteFn_();
-                }
          
                 if (numRead > 0)
                 {
@@ -141,6 +137,11 @@ void PlaybackStep::nonRtThreadEntry_()
                     {
                         codec2_fifo_write(outputFifo_, buf.get(), numRead);
                     }
+                }
+
+                if (numRead < samplesAtSourceRate && codec2_fifo_used(outputFifo_) == 0)
+                {
+                    fileCompleteFn_();
                 }
             }
         }
