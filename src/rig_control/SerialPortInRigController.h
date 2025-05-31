@@ -34,6 +34,7 @@ public:
     virtual ~SerialPortInRigController();
 
     virtual void ptt(bool state) override { /* does not support output */ }
+    virtual int getRigResponseTimeMicroseconds() override { return 0; /* no support for output */ }
 
 private:
     std::thread pollThread_;

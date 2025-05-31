@@ -52,7 +52,7 @@ void PulseAudioEngine::start()
     }
     
     mainloopApi_ = pa_threaded_mainloop_get_api(mainloop_);
-    context_ = pa_context_new(mainloopApi_, "FreeDV HF Digital Voice");
+    context_ = pa_context_new(mainloopApi_, "FreeDV");
     
     if (context_ == nullptr)
     {

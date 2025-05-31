@@ -37,14 +37,16 @@ public:
 protected:
     ThreadedObject();
     
-    void enqueue_(std::function<void()> fn);
+    // Enqueues some code to run on a different thread.
+    // @param timeoutMilliseconds Timeout to wait for lock. Note: if we can't get a lock within the timeout, the function doesn't run!
+    void enqueue_(std::function<void()> fn, int timeoutMilliseconds = 0);
     
 private:
     bool isDestroying_;
     std::thread objectThread_;
     std::vector<std::function<void()> > eventQueue_;
-    std::mutex eventQueueMutex_;
-    std::condition_variable eventQueueCV_;
+    std::recursive_mutex eventQueueMutex_;
+    std::condition_variable_any eventQueueCV_;
 
     void eventLoop_();
 };

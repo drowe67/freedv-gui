@@ -24,7 +24,16 @@ WIN_BUILD_DIR=$SCRIPT_DIR/build_windows
 mkdir $WIN_BUILD_DIR
 cd $WIN_BUILD_DIR
 
-for arch in x86_64 i686 aarch64; do
+# Install Wine environment
+export WINEPREFIX=`pwd`/wine-env
+WINEARCH=win64 DISPLAY= winecfg /v win10
+wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
+Xvfb :99 -screen 0 1024x768x16 &
+DISPLAY=:99.0 wine ./python-3.12.7-amd64.exe /quiet /log c:\\python.log InstallAllUsers=1 Include_doc=0 Include_tcltk=0
+DISPLAY=:99.0 wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
+killall Xvfb
+
+for arch in x86_64; do
     BUILD_ARCH_DIR="$WIN_BUILD_DIR/build_win_$arch"
 
     # Clear existing build
@@ -33,8 +42,8 @@ for arch in x86_64 i686 aarch64; do
     cd $BUILD_ARCH_DIR
 
     # Kick off new build with the given architecture
-    cmake -DBOOTSTRAP_LPCNET=1 -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_CERTIFICATE_FILE=$CERT_URL_FILE -DPKCS11_KEY_FILE=$KEY_URL_FILE -DINTERMEDIATE_CERT_FILE=$INTERMEDIATE_CERT_FILE -DCMAKE_TOOLCHAIN_FILE=$SCRIPT_DIR/cross-compile/freedv-mingw-llvm-$arch.cmake $SCRIPT_DIR
-    make -j6 package
+    cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPython3_ROOT_DIR=`pwd`/../wine-env/drive_c/Program\ Files/Python312 -DSIGN_WINDOWS_BINARIES=1 -DPKCS11_CERTIFICATE_FILE=$CERT_URL_FILE -DPKCS11_KEY_FILE=$KEY_URL_FILE -DINTERMEDIATE_CERT_FILE=$INTERMEDIATE_CERT_FILE -DCMAKE_TOOLCHAIN_FILE=$SCRIPT_DIR/cross-compile/freedv-mingw-llvm-$arch.cmake $SCRIPT_DIR
+    make -j$(nproc) package
     cp FreeDV-*.exe $WIN_BUILD_DIR
     cd $WIN_BUILD_DIR
 done

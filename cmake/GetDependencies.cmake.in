@@ -12,10 +12,8 @@ set(CMAKE_SYSTEM_LIBRARY_PATH @CMAKE_SYSTEM_LIBRARY_PATH@)
 set(CMAKE_FIND_ROOT_PATH @CMAKE_FIND_ROOT_PATH@)
 if(USE_INTERNAL_CODEC2)
     set(CODEC2_BUILD_DIR ${CMAKE_BINARY_DIR}/codec2_build)
-    set(LPCNET_BUILD_DIR ${CMAKE_BINARY_DIR}/LPCNet_build)
 else()
     set(CODEC2_BUILD_DIR @CODEC2_BUILD_DIR@)
-    set(LPCNET_BUILD_DIR @LPCNET_BUILD_DIR@)
 endif()
 
 
@@ -89,6 +87,10 @@ set( _windlls
     OLEACC.dll
     msvcrt.dll
     bcrypt.dll
+    IPHLPAPI.DLL
+    AVRT.dll
+    gdiplus.dll
+    MSIMG32.dll
 
     # The below are additional DLLs required when compiled
     # using the LLVM version of MinGW.
@@ -106,6 +108,12 @@ set( _windlls
     api-ms-win-crt-heap-l1-1-0.dll
     api-ms-win-crt-convert-l1-1-0.dll
     api-ms-win-crt-multibyte-l1-1-0.dll
+
+    # Filter Python DLLs as they're already included via install()
+    python312.dll
+
+    # Additional DLLs needed by Address Sanitizer
+    api-ms-win-core-synch-l1-2-0.dll
 )
 list(REMOVE_ITEM _deps ${_windlls})
 
@@ -124,17 +132,6 @@ if(CODEC2_BUILD_DIR)
     #    TYPE EXECUTABLE FILES ${CODEC2_FINAL})
 
     freedv_sign_dependency(${CODEC2_FINAL} ${CMAKE_INSTALL_PREFIX}/bin/libcodec2.dll)
-endif()
-if(LPCNET_BUILD_DIR)
-    list(REMOVE_ITEM _deps liblpcnetfreedv.dll)
-    find_library(LPCNET lpcnetfreedv NO_DEFAULT_PATH PATHS ${LPCNET_BUILD_DIR}/src REQUIRED)
-    string(REPLACE ".a" "" LPCNET_FINAL ${LPCNET})
-
-    message("Found: liblpcnetfreedv.dll")
-    #file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
-    #    TYPE EXECUTABLE FILES ${LPCNET_FINAL})
-
-    freedv_sign_dependency(${LPCNET_FINAL} ${CMAKE_INSTALL_PREFIX}/bin/liblpcnetfreedv.dll)
 endif()
 
 if(FREEDV_USING_LLVM_MINGW)

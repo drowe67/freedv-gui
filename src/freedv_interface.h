@@ -19,8 +19,8 @@
 //
 //==========================================================================
 
-#ifndef CODEC2_INTERFACE_H
-#define CODEC2_INTERFACE_H
+#ifndef FREEDV_INTERFACE_H
+#define FREEDV_INTERFACE_H
 
 #include <pthread.h>
 
@@ -32,6 +32,7 @@
 #include <chrono>
 #include <queue>
 #include <future>
+#include <atomic>
 
 // Codec2 required include files.
 #include "codec2.h"
@@ -39,10 +40,29 @@
 #include "modem_stats.h"
 #include "reliable_text.h"
 
+// RADE required include files
+#include "rade_api.h"
+#include "pipeline/rade_text.h"
+
+// TBD - need to wrap in "extern C" to avoid linker errors
+extern "C" 
+{
+    #include "fargan_config.h"
+    #include "fargan.h"
+    #include "lpcnet.h"
+}
+
+#include "util/IRealtimeHelper.h"
+
 #include <samplerate.h>
 
 class IPipelineStep;
 class ParallelStep;
+class RADETransmitStep;
+
+// Anything above 255 is a RADE mode. There's only one right now,
+// this is just for future expansion.
+#define FREEDV_MODE_RADE ((1 << 8) + 1)
 
 class FreeDVInterface
 {
@@ -54,7 +74,7 @@ public:
     void stop();
     void changeTxMode(int txMode);
     int getTxMode() const { return txMode_; }
-    bool isRunning() const { return dvObjects_.size() > 0; }
+    bool isRunning() const { return rade_ != nullptr || dvObjects_.size() > 0; }
     bool isModeActive(int mode) const { return std::find(enabledModes_.begin(), enabledModes_.end(), mode) != enabledModes_.end(); }
     void setRunTimeOptions(bool clip, bool bpf);
     
@@ -106,16 +126,25 @@ public:
     const char* getReliableText();
     void setReliableText(const char* callsign);
     
-    IPipelineStep* createTransmitPipeline(int inputSampleRate, int outputSampleRate, std::function<float()> getFreqOffsetFn);
+    IPipelineStep* createTransmitPipeline(
+        int inputSampleRate, 
+        int outputSampleRate, 
+        std::function<float()> getFreqOffsetFn,
+        std::shared_ptr<IRealtimeHelper> realtimeHelper);
     IPipelineStep* createReceivePipeline(
         int inputSampleRate, int outputSampleRate,
         std::function<int*()> getRxStateFn,
         std::function<int()> getChannelNoiseFn,
         std::function<int()> getChannelNoiseSnrFn,
         std::function<float()> getFreqOffsetFn,
-        std::function<float*()> getSigPwrAvgFn
+        std::function<float*()> getSigPwrAvgFn,
+        std::shared_ptr<IRealtimeHelper> realtimeHelper
     );
-        
+
+    void restartTxVocoder();
+ 
+    float getSNREstimate();
+    
 private:
     struct ReceivePipelineState
     {
@@ -136,6 +165,7 @@ private:
     
     static void FreeDVTextRxFn_(void *callback_state, char c);
     static void OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr, int length, void* state);
+    static void OnRadeTextRx_(rade_text_t rt, const char* txt_ptr, int length, void* state);
     
     static float GetMinimumSNR_(int mode);
     
@@ -168,9 +198,16 @@ private:
     std::deque<reliable_text_t> reliableText_;
     std::string receivedReliableText_;
     std::mutex reliableTextMutex_;
+   
+    struct rade* rade_;
+    FARGANState fargan_;
+    LPCNetEncState *lpcnetEncState_; 
+    RADETransmitStep *radeTxStep_;
+    std::atomic<int> sync_;
+    rade_text_t radeTextPtr_;
     
     int preProcessRxFn_(ParallelStep* ps);
     int postProcessRxFn_(ParallelStep* ps);
 };
 
-#endif // CODEC2_INTERFACE_H
+#endif // FREEDV_INTERFACE_H

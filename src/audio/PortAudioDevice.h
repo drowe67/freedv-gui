@@ -26,6 +26,7 @@
 #include "portaudio.h"
 #include "IAudioEngine.h"
 #include "IAudioDevice.h"
+#include "PortAudioInterface.h"
 
 class PortAudioDevice : public IAudioDevice
 {
@@ -40,11 +41,13 @@ public:
 
     virtual bool isRunning() override;
     
+    virtual int getLatencyInMicroseconds() override;
+    
 protected:
     // PortAudioDevice cannot be created directly, only via PortAudioEngine.
     friend class PortAudioEngine;
     
-    PortAudioDevice(int deviceId, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
+    PortAudioDevice(std::shared_ptr<PortAudioInterface> library, int deviceId, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
     
 private:
     int deviceId_;
@@ -52,6 +55,7 @@ private:
     int sampleRate_;
     int numChannels_;
     PaStream* deviceStream_;
+    std::shared_ptr<PortAudioInterface> portAudioLibrary_;
     
     static int OnPortAudioStreamCallback_(const void *input, void *output, unsigned long frameCount, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData);
 };

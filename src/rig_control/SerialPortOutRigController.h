@@ -33,12 +33,15 @@ public:
     virtual ~SerialPortOutRigController();
 
     virtual void ptt(bool state) override;
+    
+    virtual int getRigResponseTimeMicroseconds() override;
 
 private:
     bool useRTS_;
     bool rtsPos_;
     bool useDTR_;
     bool dtrPos_;
+    int rigResponseTime_;
 
     void pttImpl_(bool state);
 };

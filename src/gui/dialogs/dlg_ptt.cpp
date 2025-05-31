@@ -142,6 +142,7 @@ ComPortsDlg::ComPortsDlg(wxWindow* parent, wxWindowID id, const wxString& title,
     m_cbPttMethod->Append(wxT("RTS"));
     m_cbPttMethod->Append(wxT("DTR"));
     m_cbPttMethod->Append(wxT("None"));
+    m_cbPttMethod->Append(wxT("CAT via Data port"));
     
     mainSizer->Add(staticBoxSizer18, 0, wxEXPAND, 5);
 
@@ -394,11 +395,12 @@ void ComPortsDlg::populatePortList()
 
 #if defined(__FreeBSD__) || defined(__WXOSX__)
     glob_t    gl;
-#ifdef __FreeBSD__
-    if(glob("/dev/tty*", GLOB_MARK, NULL, &gl)==0) {
+#if defined(__FreeBSD__)
+    if(glob("/dev/tty*", GLOB_MARK, NULL, &gl)==0 ||
 #else
-    if(glob("/dev/cu.*", GLOB_MARK, NULL, &gl)==0) {
-#endif
+    if(glob("/dev/tty.*", GLOB_MARK, NULL, &gl)==0 ||
+#endif // defined(__FreeBSD__)
+       glob("/dev/cu.*", GLOB_MARK, NULL, &gl)==0) {
         for(unsigned int i=0; i<gl.gl_pathc; i++) {
             if(gl.gl_pathv[i][strlen(gl.gl_pathv[i])-1]=='/')
                 continue;
@@ -572,7 +574,7 @@ void ComPortsDlg::ExchangeData(int inout)
             m_cbSerialRate->GetValue().ToLong(&tmp); 
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate = tmp;
         }
-        if (g_verbose) fprintf(stderr, "serial rate: %d\n", wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get());
+        log_debug("serial rate: %d", wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get());
 
         wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType = m_cbPttMethod->GetSelection();
         
@@ -652,7 +654,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
 
         // display serial params
 
-        if (g_verbose) fprintf(stderr, "serial rate: %d\n", serial_rate);
+        log_debug("serial rate: %d", serial_rate);
 
         if (wxGetApp().CanAccessSerialPort((const char*)port.ToUTF8()))
         {
@@ -703,9 +705,9 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
         /* Serial PTT */       
         wxString ctrlport;
         ctrlport = m_cbCtlDevicePath->GetValue();
-        if (g_verbose) fprintf(stderr, "opening serial port: ");
+        log_debug("opening serial port: ");
         fputs(ctrlport.c_str(), stderr);            // don't escape crazy Microsoft bakslash-ified comm port names
-        if (g_verbose) fprintf(stderr,"\n");
+        log_debug("\n");
     
         if (wxGetApp().CanAccessSerialPort((const char*)ctrlport.ToUTF8()))
         {
@@ -730,7 +732,7 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
             };
 
             serialPort->onRigConnected += [&](IRigController*) {
-                if (g_verbose) fprintf(stderr, "serial port open\n");
+                log_debug("serial port open");
                 cv.notify_one();
             };
 
@@ -746,9 +748,9 @@ void ComPortsDlg::OnTest(wxCommandEvent& event) {
                 wxSleep(1);
                 serialPort->ptt(false);
 
-                if (g_verbose) fprintf(stderr, "closing serial port\n");
+                log_debug("closing serial port");
                 serialPort->disconnect();
-                if (g_verbose) fprintf(stderr, "serial port closed\n");
+                log_debug("serial port closed");
             }
         }
     }

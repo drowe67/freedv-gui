@@ -28,7 +28,12 @@ LevelAdjustStep::LevelAdjustStep(int sampleRate, std::function<double()> scaleFa
     : scaleFactorFn_(scaleFactorFn)
     , sampleRate_(sampleRate)
 {
-    // empty
+    // Pre-allocate buffers so we don't have to do so during real-time operation.
+    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    outputSamples_ = std::shared_ptr<short>(
+        new short[maxSamples], 
+        std::default_delete<short[]>());
+    assert(outputSamples_ != nullptr);
 }
 
 LevelAdjustStep::~LevelAdjustStep()
@@ -48,14 +53,13 @@ int LevelAdjustStep::getOutputSampleRate() const
 
 std::shared_ptr<short> LevelAdjustStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    short* outputSamples = new short[numInputSamples];
     double scaleFactor = scaleFactorFn_();
 
     for (int index = 0; index < numInputSamples; index++)
     {
-        outputSamples[index] = inputSamples.get()[index] * scaleFactor;
+        outputSamples_.get()[index] = inputSamples.get()[index] * scaleFactor;
     }
     
     *numOutputSamples = numInputSamples;
-    return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
+    return outputSamples_;
 }

@@ -24,6 +24,7 @@
 RigControlConfiguration::RigControlConfiguration()
     : hamlibUseForPTT("/Hamlib/UseForPTT", false)
     , hamlibEnableFreqModeChanges("/Hamlib/EnableFreqModeChanges", true)
+    , hamlibEnableFreqChangesOnly("/Hamlib/EnableFreqChangesOnly", false)
     , hamlibUseAnalogModes("/Hamlib/UseAnalogModes", false)
     , hamlibIcomCIVAddress("/Hamlib/IcomCIVHex", 0)
     , hamlibRigName("/Hamlib/RigNameStr", "")
@@ -57,6 +58,7 @@ void RigControlConfiguration::load(wxConfigBase* config)
 {
     load_(config, hamlibUseForPTT);
     load_(config, hamlibEnableFreqModeChanges);
+    load_(config, hamlibEnableFreqChangesOnly);
     load_(config, hamlibUseAnalogModes);
     load_(config, hamlibIcomCIVAddress);
     load_(config, hamlibRigName);
@@ -93,6 +95,7 @@ void RigControlConfiguration::save(wxConfigBase* config)
 {
     save_(config, hamlibUseForPTT);
     save_(config, hamlibEnableFreqModeChanges);
+    save_(config, hamlibEnableFreqChangesOnly);
     save_(config, hamlibUseAnalogModes);
     save_(config, hamlibIcomCIVAddress);
     save_(config, hamlibRigName);

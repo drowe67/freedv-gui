@@ -35,10 +35,8 @@
 // FreeDV Reporter default hostname
 #define FREEDV_REPORTER_DEFAULT_HOSTNAME "qso.freedv.org"
 
-namespace sio
-{
-    class client; // forward declaration
-}
+// forward declaration
+class SocketIoClient;
 
 class FreeDVReporter : public IReporter
 {
@@ -113,7 +111,7 @@ private:
     std::thread fnQueueThread_;
     bool isConnecting_;
     
-    sio::client* sioClient_;
+    SocketIoClient* sioClient_;
     std::string hostname_;
     std::string callsign_;
     std::string gridSquare_;

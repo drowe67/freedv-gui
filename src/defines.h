@@ -22,6 +22,7 @@
 #define __FDMDV2_DEFINES__
 
 #include "wx/wx.h"
+#include "util/logging/ulog.h"
 #include "freedv_api.h"
 #include "modem_stats.h"
 

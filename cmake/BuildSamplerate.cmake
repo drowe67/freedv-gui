@@ -8,7 +8,7 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/libsndfile/libsamplerate.git
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
-    GIT_TAG        0.2.2
+    GIT_TAG        master
 )
 
 FetchContent_GetProperties(samplerate)
@@ -16,6 +16,7 @@ if(NOT samplerate_POPULATED)
   FetchContent_Populate(samplerate)
   add_subdirectory(${samplerate_SOURCE_DIR} ${samplerate_BINARY_DIR} EXCLUDE_FROM_ALL)
   list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${samplerate_BINARY_DIR}/src)
+  target_compile_options(samplerate PRIVATE -g -O2) # Ensure that samplerate is built with optimizations
 endif()
 
 list(APPEND FREEDV_LINK_LIBS samplerate)

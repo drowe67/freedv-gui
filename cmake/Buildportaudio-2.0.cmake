@@ -1,4 +1,5 @@
 #set(BUILD_SHARED_LIBS OFF CACHE STRING "Disable shared libraries for portaudio")
+#set(PA_ENABLE_DEBUG_OUTPUT ON CACHE STRING "Enable debug output")
 
 include(FetchContent)
 FetchContent_Declare(
@@ -16,7 +17,7 @@ if(NOT portaudio_POPULATED)
   list(APPEND FREEDV_PACKAGE_SEARCH_PATHS ${portaudio_BINARY_DIR})
 endif()
 
-list(APPEND FREEDV_LINK_LIBS PortAudio)
-list(APPEND FREEDV_STATIC_DEPS PortAudio)
+list(APPEND FREEDV_LINK_LIBS portaudio)
+list(APPEND FREEDV_STATIC_DEPS portaudio)
 
 include_directories(${portaudio_SOURCE_DIR}/include)

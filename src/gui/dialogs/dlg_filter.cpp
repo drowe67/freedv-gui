@@ -104,9 +104,9 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     sbSizer_speexpp->Add(m_ckboxSpeexpp, 0, wxALL | wxALIGN_LEFT, 5);
     m_ckboxSpeexpp->SetToolTip(_("Enable noise suppression, dereverberation, AGC of mic signal"));
 
-    m_ckbox700C_EQ = new wxCheckBox(sb_speexpp, wxID_ANY, _("700C/700D/700E/800XA Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckbox700C_EQ = new wxCheckBox(sb_speexpp, wxID_ANY, _("700D/700E Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_speexpp->Add(m_ckbox700C_EQ, 0, wxALL | wxALIGN_LEFT, 5);
-    m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700C/700D/700E Codec input audio"));
+    m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700D/700E Codec input audio"));
 
     bSizer30->Add(sbSizer_speexpp, 0, wxALL | wxEXPAND, 5);   
 
@@ -644,7 +644,6 @@ void FilterDlg::OnSpkOutDefault(wxCommandEvent& event)
 //-------------------------------------------------------------------------
 void FilterDlg::OnOK(wxCommandEvent& event)
 {
-    //printf("FilterDlg::OnOK\n");
     Close();
 }
 
@@ -664,9 +663,7 @@ void FilterDlg::OnClose(wxCloseEvent& event)
 //-------------------------------------------------------------------------
 void FilterDlg::OnInitDialog(wxInitDialogEvent& event)
 {
-    //printf("FilterDlg::OnInitDialog\n");
     ExchangeData(EXCHANGE_DATA_IN);
-    //printf("m_beta: %f\n", m_beta);
 }
 
 void FilterDlg::setBeta(void) {
@@ -812,7 +809,6 @@ void FilterDlg::sliderToGain(EQ *eq, bool micIn)
     float range = MAX_GAIN-MIN_GAIN;
 
     eq->gaindB = MIN_GAIN + range*((float)eq->sliderGain->GetValue()/SLIDER_MAX_GAIN);
-    //printf("gaindB: %f\n", eq->gaindB);
     setGain(eq);
     if (micIn) {
         plotMicInFilterSpectrum();
@@ -844,7 +840,6 @@ void FilterDlg::sliderToQ(EQ *eq, bool micIn)
     float sliderNorm = (float)eq->sliderQ->GetValue()/SLIDER_MAX_Q;
     float log10Q =  MIN_LOG10_Q + sliderNorm*(log10_range);
     eq->Q = pow(10.0, log10Q);
-    //printf("log10Q: %f eq->Q: %f\n", log10Q, eq->Q);
     setQ(eq);
     if (micIn) {
         plotMicInFilterSpectrum();
@@ -959,15 +954,11 @@ void FilterDlg::calcFilterSpectrum(float magdB[], int argc, char *argv[]) {
         in[i] = 0;
     in[0] = IMP_AMP;
 
-    //printf("argv[0]: %s argv[1]: %s\n", argv[0], argv[1]);
     sbq = sox_biquad_create(argc, (const char **)argv);
 
     if (sbq != NULL)
     {
         sox_biquad_filter(sbq, out, in, NIMP);
-        //for(i=0; i<NIMP; i++)
-        //    printf("%d\n", out[i]);
-
         sox_biquad_destroy(sbq);
     }
     else
@@ -992,6 +983,5 @@ void FilterDlg::calcFilterSpectrum(float magdB[], int argc, char *argv[]) {
             X[i].imag -= ((float)out[k]/IMP_AMP) * sin(w*k);
         }
         magdB[i] = 10.0*log10(X[i].real* X[i].real + X[i].imag*X[i].imag + 1E-12);
-        //printf("f: %f X[%d] = %f %f magdB = %f\n", f, i, X[i].real, X[i].imag,  magdB[i]);
     }
 }

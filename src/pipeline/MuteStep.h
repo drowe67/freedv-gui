@@ -47,6 +47,7 @@ public:
 
 private:
     int sampleRate_;
+    std::shared_ptr<short> outputSamples_;
 };
 
 #endif // AUDIO_PIPELINE__MUTE_STEP_H

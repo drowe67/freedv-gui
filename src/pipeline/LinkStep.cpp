@@ -33,28 +33,37 @@ LinkStep::LinkStep(int outputSampleRate, size_t numSamples)
     // Create pipeline steps
     inputPipelineStep_ = std::make_shared<InputStep>(this);
     outputPipelineStep_ = std::make_shared<OutputStep>(this);
+
+    tmpBuffer_ = new short[numSamples];
+    assert(tmpBuffer_ != nullptr);
 }
 
 LinkStep::~LinkStep()
 {
     codec2_fifo_destroy(fifo_);
     fifo_ = nullptr;
+
+    delete[] tmpBuffer_;
 }
 
 void LinkStep::clearFifo()
-{
-    int numUsed = codec2_fifo_used(fifo_);
-    short tmp[numUsed];
-    
+{    
     // Read data and then promptly throw it out.
-    codec2_fifo_read(fifo_, tmp, numUsed);
+    while (codec2_fifo_used(fifo_) > 0)
+    {
+        codec2_fifo_read(fifo_, tmpBuffer_, 1);
+    }
 }
 
 std::shared_ptr<short> LinkStep::InputStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
     auto fifo = parent_->getFifo();
-    codec2_fifo_write(fifo, inputSamples.get(), numInputSamples);
-    
+    auto samplePtr = inputSamples.get();
+    if (numInputSamples > 0 && samplePtr != nullptr)
+    {
+        codec2_fifo_write(fifo, samplePtr, numInputSamples);
+    }
+
     // Since we short circuited to the output step, don't return any samples here.
     *numOutputSamples = 0;
     return nullptr;
@@ -67,11 +76,8 @@ std::shared_ptr<short> LinkStep::OutputStep::execute(std::shared_ptr<short> inpu
     
     if (*numOutputSamples > 0)
     {
-        short* outputSamples = new short[*numOutputSamples];
-        assert(outputSamples != nullptr);
-    
-        codec2_fifo_read(fifo, outputSamples, *numOutputSamples);
-        return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
+        codec2_fifo_read(fifo, outputSamples_.get(), *numOutputSamples);
+        return outputSamples_;
     }
     else
     {

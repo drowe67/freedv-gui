@@ -24,8 +24,11 @@
 #define AUDIO_PIPELINE__PLAYBACK_STEP_H
 
 #include "IPipelineStep.h"
+
 #include <functional>
+#include <thread>
 #include <sndfile.h>
+#include "codec2_fifo.h"
 
 class PlaybackStep : public IPipelineStep
 {
@@ -44,6 +47,12 @@ private:
     std::function<int()> fileSampleRateFn_;
     std::function<SNDFILE*()> getSndFileFn_;
     std::function<void()> fileCompleteFn_;
+    std::shared_ptr<short> outputSamples_;
+    std::thread nonRtThread_;
+    bool nonRtThreadEnding_;
+    FIFO* outputFifo_;
+    
+    void nonRtThreadEntry_();
 };
 
 #endif // AUDIO_PIPELINE__PLAYBACK_STEP_H

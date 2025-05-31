@@ -31,13 +31,13 @@ void clickTune(float freq) {
     // exactly in the centre
 
     if (fabs(FDMDV_FCENTRE - freq) < 10.0) {
+        log_info("Requested frequency close to center, just using center.");
         freq = FDMDV_FCENTRE;
-        fprintf(stderr, "indent!\n");
     }
 
     g_TxFreqOffsetHz = freq - FDMDV_FCENTRE;
     g_RxFreqOffsetHz = FDMDV_FCENTRE - freq;
-    fprintf(stderr, "g_TxFreqOffsetHz: %f g_RxFreqOffsetHz: %f\n", g_TxFreqOffsetHz, g_RxFreqOffsetHz);
+    log_info("g_TxFreqOffsetHz: %f g_RxFreqOffsetHz: %f", g_TxFreqOffsetHz, g_RxFreqOffsetHz);
 }
 
 bool MainApp::CanAccessSerialPort(std::string portName)
@@ -179,8 +179,8 @@ void MainFrame::OpenPTTInPort(void)
 
             wxGetApp().m_pttInSerialPort->onPttChange += [&](IRigController*, bool pttState)
             {
-                fprintf(stderr, "PTT input state is now %d\n", pttState);
-                GetEventHandler()->CallAfter([&]() {
+                log_info("PTT input state is now %d", pttState);
+                GetEventHandler()->CallAfter([this, pttState]() {
                     if (pttState != m_btnTogPTT->GetValue())
                     {
                         m_btnTogPTT->SetValue(pttState); 
@@ -220,13 +220,11 @@ char my_get_next_tx_char(void *callback_state) {
     short ch = 0;
 
     codec2_fifo_read(g_txDataInFifo, &ch, 1);
-    //fprintf(stderr, "get_next_tx_char: %c\n", (char)ch);
     return (char)ch;
 }
 
 void my_put_next_rx_char(void *callback_state, char c) {
     short ch = (short)((unsigned char)c);
-    //fprintf(stderr, "put_next_rx_char: %c\n", (char)c);
     codec2_fifo_write(g_rxDataOutFifo, &ch, 1);
 }
 
@@ -261,8 +259,12 @@ int resample(SRC_STATE *src,
             )
 {
     SRC_DATA src_data;
-    float    input[length_input_short];
-    float    output[length_output_short];
+    float*   input = new float[length_input_short];
+    assert(input != nullptr);
+
+    float*   output = new float[length_output_short];
+    assert(output != nullptr);
+
     int      ret;
 
     assert(src != NULL);
@@ -279,12 +281,15 @@ int resample(SRC_STATE *src,
     ret = src_process(src, &src_data);
     if (ret != 0)
     {
-        fprintf(stderr, "WARNING: resampling failed: %s\n", src_strerror(ret));
+        log_warn("Resampling failed: %s", src_strerror(ret));
     }
     assert(ret == 0);
 
     assert(src_data.output_frames_gen <= length_output_short);
     src_float_to_short_array(output, output_short, src_data.output_frames_gen);
+
+    delete[] input;
+    delete[] output;
 
     return src_data.output_frames_gen;
 }
@@ -295,21 +300,21 @@ int resample(SRC_STATE *src,
 // we don't hammer the graphics system too hard.  Saves decimated data
 // to a fifo for plotting on screen.
 
-void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs)
+void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs)
 {
     int decimation = fs/WAVEFORM_PLOT_FS;
     int nSamples, sample;
     int i, st, en, max, min;
-    short dec_samples[length];
 
     nSamples = length/decimation;
+    if (nSamples % 2) nSamples++; // dec_samples is populated in groups of two
 
     for(sample = 0; sample < nSamples; sample += 2)
     {
         st = decimation*sample;
         en = decimation*(sample+2);
         max = min = 0;
-        for(i=st; i<en; i++ )
+        for(i=st; i<en && i<length; i++ )
         {
             if (max < buf[i]) max = buf[i];
             if (min > buf[i]) min = buf[i];

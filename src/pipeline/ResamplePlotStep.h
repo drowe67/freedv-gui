@@ -41,6 +41,7 @@ public:
     
 private:
     struct FIFO* fifo_;
+    short* decSamples_;
 };
 
 #endif // AUDIO_PIPELINE__RESAMPLE_PLOT_STEP_H

@@ -22,11 +22,12 @@
 
 #include "EqualizerStep.h"
 
+#include <algorithm>
 #include <cstring>
 #include "../sox_biquad.h"
 #include <assert.h>
 
-EqualizerStep::EqualizerStep(int sampleRate, bool* enableFilter, void** bassFilter, void** midFilter, void** trebleFilter, void** volFilter)
+EqualizerStep::EqualizerStep(int sampleRate, bool* enableFilter, std::shared_ptr<void>* bassFilter, std::shared_ptr<void>* midFilter, std::shared_ptr<void>* trebleFilter, std::shared_ptr<void>* volFilter)
     : sampleRate_(sampleRate)
     , enableFilter_(enableFilter)
     , bassFilter_(bassFilter)
@@ -34,7 +35,12 @@ EqualizerStep::EqualizerStep(int sampleRate, bool* enableFilter, void** bassFilt
     , trebleFilter_(trebleFilter)
     , volFilter_(volFilter)
 {
-    // empty
+    // Pre-allocate buffers so we don't have to do so during real-time operation.
+    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    outputSamples_ = std::shared_ptr<short>(
+        new short[maxSamples], 
+        std::default_delete<short[]>());
+    assert(outputSamples_ != nullptr);
 }
 
 EqualizerStep::~EqualizerStep()
@@ -54,31 +60,32 @@ int EqualizerStep::getOutputSampleRate() const
 
 std::shared_ptr<short> EqualizerStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    short* outputSamples = new short[numInputSamples];
-    assert(outputSamples != nullptr);
-    
-    memcpy(outputSamples, inputSamples.get(), sizeof(short)*numInputSamples);
+    memcpy(outputSamples_.get(), inputSamples.get(), sizeof(short)*numInputSamples);
     
     if (*enableFilter_)
     {
-        if (*bassFilter_)
+        std::shared_ptr<void> tmpBassFilter = *bassFilter_;
+        std::shared_ptr<void> tmpTrebleFilter = *trebleFilter_;
+        std::shared_ptr<void> tmpMidFilter = *midFilter_;
+        std::shared_ptr<void> tmpVolFilter = *volFilter_;
+        if (tmpBassFilter != nullptr)
         {
-            sox_biquad_filter(*bassFilter_, outputSamples, outputSamples, numInputSamples);
+            sox_biquad_filter(tmpBassFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
         }
-        if (*trebleFilter_)
+        if (tmpTrebleFilter != nullptr)
         {
-            sox_biquad_filter(*trebleFilter_, outputSamples, outputSamples, numInputSamples);
+            sox_biquad_filter(tmpTrebleFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
         }
-        if (*midFilter_)
+        if (tmpMidFilter != nullptr)
         {
-            sox_biquad_filter(*midFilter_, outputSamples, outputSamples, numInputSamples);
+            sox_biquad_filter(tmpMidFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
         }
-        if (*volFilter_)
+        if (tmpVolFilter != nullptr)
         {
-            sox_biquad_filter(*volFilter_, outputSamples, outputSamples, numInputSamples);
+            sox_biquad_filter(tmpVolFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
         }
     }
     
     *numOutputSamples = numInputSamples;
-    return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
+    return outputSamples_;
 }

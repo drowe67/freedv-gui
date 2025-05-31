@@ -9,6 +9,8 @@ add_library(fdv_gui_dialogs STATIC
 
 target_include_directories(fdv_gui_dialogs PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../.. ${CMAKE_CURRENT_BINARY_DIR}/../..)
 
+add_dependencies(fdv_gui_dialogs rade opus)
+
 if(BOOTSTRAP_WXWIDGETS)
     add_dependencies(fdv_gui_dialogs wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
     target_compile_definitions(fdv_gui_dialogs PRIVATE ${WXBUILD_BUILD_DEFS})

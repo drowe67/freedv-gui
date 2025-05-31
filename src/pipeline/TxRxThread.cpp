@@ -20,6 +20,9 @@
 //
 //=========================================================================
 
+#include <chrono>
+using namespace std::chrono_literals;
+
 // This forces us to use freedv-gui's version rather than another one.
 // TBD -- may not be needed once we fully switch over to the audio pipeline.
 #include "../defines.h"
@@ -40,9 +43,11 @@
 #include "ToneInterfererStep.h"
 #include "ComputeRfSpectrumStep.h"
 #include "FreeDVReceiveStep.h"
-#include "ExclusiveAccessStep.h"
 #include "MuteStep.h"
 #include "LinkStep.h"
+
+#include "util/logging/ulog.h"
+#include "os/os_interface.h"
 
 #include <wx/stopwatch.h>
 
@@ -54,7 +59,6 @@ extern int g_nSoundCards;
 extern bool g_half_duplex;
 extern int g_tx;
 extern int g_dump_fifo_state;
-extern int g_verbose;
 extern bool endingTx;
 extern bool g_playFileToMicIn;
 extern int g_sfTxFs;
@@ -83,6 +87,7 @@ extern int g_channel_noise;
 extern float g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
 extern bool g_voice_keyer_tx;
+extern bool g_eoo_enqueued;
 
 #include <speex/speex_preprocess.h>
 
@@ -91,8 +96,6 @@ extern FreeDVInterface freedvInterface;
 
 #include <wx/wx.h>
 #include "../main.h"
-extern wxMutex txModeChangeMutex;
-extern wxMutex g_mutexProtectingCallbackData;
 extern wxWindow* g_parent;
 
 #include <sndfile.h>
@@ -118,15 +121,6 @@ extern int resample(SRC_STATE *src,
 
 void TxRxThread::initializePipeline_()
 {
-    // Function definitions shared across both pipelines.
-    auto callbackLockFn = []() {
-        g_mutexProtectingCallbackData.Lock();
-    };
-    
-    auto callbackUnlockFn = []() {
-        g_mutexProtectingCallbackData.Unlock();
-    };
-    
     if (m_tx)
     {
         pipeline_ = std::shared_ptr<AudioPipeline>(new AudioPipeline(inputSampleRate_, outputSampleRate_));
@@ -151,8 +145,7 @@ void TxRxThread::initializePipeline_()
             std::shared_ptr<IPipelineStep>(recordMicTap),
             std::shared_ptr<IPipelineStep>(bypassRecordMic)
         );
-        auto recordMicLockStep = new ExclusiveAccessStep(eitherOrRecordMic, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordMicLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRecordMic));
         
         // Mic In playback step (optional)
         auto eitherOrBypassPlay = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -165,7 +158,7 @@ void TxRxThread::initializePipeline_()
                 if (g_loopPlayFileToMicIn)
                     sf_seek(g_sfPlayFile, 0, SEEK_SET);
                 else {
-                    printf("playFileFromRadio finished, issuing event!\n");
+                    log_info("playFileFromRadio finished, issuing event!");
                     g_parent->CallAfter(&MainFrame::StopPlayFileToMicIn);
                 }
             }
@@ -176,8 +169,7 @@ void TxRxThread::initializePipeline_()
             []() { return g_playFileToMicIn && (g_sfPlayFile != NULL); },
             std::shared_ptr<IPipelineStep>(eitherOrPlayMicIn),
             std::shared_ptr<IPipelineStep>(eitherOrBypassPlay));
-        auto playMicLockStep = new ExclusiveAccessStep(eitherOrPlayStep, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(playMicLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrPlayStep));
         
         // Speex step (optional)
         auto eitherOrProcessSpeex = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -190,8 +182,7 @@ void TxRxThread::initializePipeline_()
             []() { return wxGetApp().appConfiguration.filterConfiguration.speexppEnable; },
             std::shared_ptr<IPipelineStep>(eitherOrProcessSpeex),
             std::shared_ptr<IPipelineStep>(eitherOrBypassSpeex));
-        auto speexLockStep = new ExclusiveAccessStep(eitherOrSpeexStep, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(speexLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrSpeexStep));
         
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
@@ -201,8 +192,7 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqMicInMid,
             &g_rxUserdata->sbqMicInTreble,
             &g_rxUserdata->sbqMicInVol);
-        auto equalizerLockStep = new ExclusiveAccessStep(equalizerStep, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerStep));
         
         // Take TX audio post-equalizer and send it to RX for possible monitoring use.
         if (equalizedMicAudioLink_ != nullptr)
@@ -227,7 +217,11 @@ void TxRxThread::initializePipeline_()
         auto analogTxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
         analogTxPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(doubleLevelStep));
         
-        auto digitalTxStep = freedvInterface.createTransmitPipeline(inputSampleRate_, outputSampleRate_, []() { return g_TxFreqOffsetHz; });
+        auto digitalTxStep = freedvInterface.createTransmitPipeline(
+            inputSampleRate_, 
+            outputSampleRate_, 
+            []() { return g_TxFreqOffsetHz; },
+            helper_);
         auto digitalTxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_); 
         digitalTxPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(digitalTxStep));
         
@@ -257,8 +251,7 @@ void TxRxThread::initializePipeline_()
             []() { return g_recFileFromModulator && (g_sfRecFileFromModulator != NULL); },
             std::shared_ptr<IPipelineStep>(recordModulatedTapPipeline),
             std::shared_ptr<IPipelineStep>(bypassRecordModulated));
-        auto recordModulatedLockStep = new ExclusiveAccessStep(eitherOrRecordModulated, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRecordModulated));
         
         // TX attenuation step
         auto txAttenuationStep = new LevelAdjustStep(outputSampleRate_, []() {
@@ -296,8 +289,7 @@ void TxRxThread::initializePipeline_()
             std::shared_ptr<IPipelineStep>(recordRadioTap),
             std::shared_ptr<IPipelineStep>(bypassRecordRadio)
         );
-        auto recordRadioLockStep = new ExclusiveAccessStep(eitherOrRecordRadio, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordRadioLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRecordRadio));
         
         // Play from radio step (optional)
         auto eitherOrBypassPlayRadio = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -310,7 +302,7 @@ void TxRxThread::initializePipeline_()
                 if (g_loopPlayFileFromRadio)
                     sf_seek(g_sfPlayFileFromRadio, 0, SEEK_SET);
                 else {
-                    printf("playFileFromRadio finished, issuing event!\n");
+                    log_info("playFileFromRadio finished, issuing event!");
                     g_parent->CallAfter(&MainFrame::StopPlaybackFileFromRadio);
                 }
             }
@@ -319,15 +311,12 @@ void TxRxThread::initializePipeline_()
         
         auto eitherOrPlayRadioStep = new EitherOrStep(
             []() { 
-                g_mutexProtectingCallbackData.Lock();
                 auto result = g_playFileFromRadio && (g_sfPlayFileFromRadio != NULL);
-                g_mutexProtectingCallbackData.Unlock();
                 return result;
             },
             std::shared_ptr<IPipelineStep>(eitherOrPlayRadio),
             std::shared_ptr<IPipelineStep>(eitherOrBypassPlayRadio));
-        auto playRadioLockStep = new ExclusiveAccessStep(eitherOrPlayRadioStep, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(playRadioLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrPlayRadioStep));
         
         // Resample for plot step (demod in)
         auto resampleForPlotStep = new ResampleForPlotStep(g_plotDemodInFifo);
@@ -373,7 +362,8 @@ void TxRxThread::initializePipeline_()
             []() { return g_channel_noise; },
             []() { return wxGetApp().appConfiguration.noiseSNR; },
             []() { return g_RxFreqOffsetHz; },
-            []() { return &g_sig_pwr_av; }
+            []() { return &g_sig_pwr_av; },
+            helper_
         );
         rfDemodulationPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(rfDemodulationStep));
         
@@ -442,8 +432,7 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqSpkOutMid,
             &g_rxUserdata->sbqSpkOutTreble,
             &g_rxUserdata->sbqSpkOutVol);
-        auto equalizerLockStep = new ExclusiveAccessStep(equalizerStep, callbackLockFn, callbackUnlockFn);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerLockStep));
+        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerStep));
         
         // Resample for plot step (speech out)
         auto resampleForPlotOutStep = new ResampleForPlotStep(g_plotSpeechOutFifo);
@@ -462,6 +451,9 @@ void* TxRxThread::Entry()
 {
     initializePipeline_();
     
+    // Request real-time scheduling from the operating system.    
+    helper_->setHelperRealTime();
+    
     while (m_run)
     {
 #if defined(__linux__)
@@ -471,27 +463,29 @@ void* TxRxThread::Entry()
         pthread_setname_np(pthread_self(), threadName);
 #endif // defined(__linux__)
 
-        {
-            std::unique_lock<std::mutex> lk(m_processingMutex);
-            if (m_processingCondVar.wait_for(lk, std::chrono::milliseconds(100)) == std::cv_status::timeout)
-            {
-                fprintf(stderr, "txRxThread: timeout while waiting for CV, tx = %d\n", m_tx);
-            }
-        }
         if (!m_run) break;
+        
+        //log_info("thread woken up: m_tx=%d", (int)m_tx);
+        helper_->startRealTimeWork();
+        
         if (m_tx) txProcessing_();
         else rxProcessing_();
+        
+        helper_->stopRealTimeWork();
     }
     
     // Force pipeline to delete itself when we're done with the thread.
     pipeline_ = nullptr;
+    
+    // Return to normal scheduling
+    helper_->clearHelperRealTime();
     
     return NULL;
 }
 
 void TxRxThread::OnExit() 
 { 
-    // No actions required for exit.
+    // empty
 }
 
 void TxRxThread::terminateThread()
@@ -502,8 +496,7 @@ void TxRxThread::terminateThread()
 
 void TxRxThread::notify()
 {
-    std::unique_lock<std::mutex> lk(m_processingMutex);
-    m_processingCondVar.notify_all();
+    // empty
 }
 
 void TxRxThread::clearFifos_()
@@ -517,43 +510,27 @@ void TxRxThread::clearFifos_()
     
     if (m_tx)
     {
-        auto used = codec2_fifo_used(cbData->outfifo1);
-        if (used > 0)
+        while (codec2_fifo_used(cbData->outfifo1) > 0)
         {
-            short* temp = new short[used];
-            assert(temp != nullptr);
-            codec2_fifo_read(cbData->outfifo1, temp, used);
-            delete[] temp;
+            codec2_fifo_read(cbData->outfifo1, inputSamples_.get(), 1);
         }
         
-        used = codec2_fifo_used(cbData->infifo2);
-        if (used > 0)
+        while (codec2_fifo_used(cbData->infifo2) > 0)
         {
-            short* temp = new short[used];
-            assert(temp != nullptr);
-            codec2_fifo_read(cbData->infifo2, temp, used);
-            delete[] temp;
+            codec2_fifo_read(cbData->infifo2, inputSamples_.get(), 1);
         }
     }
     else
     {
-        auto used = codec2_fifo_used(cbData->infifo1);
-        if (used > 0)
+        while (codec2_fifo_used(cbData->infifo1) > 0)
         {
-            short* temp = new short[used];
-            assert(temp != nullptr);
-            codec2_fifo_read(cbData->infifo1, temp, used);
-            delete[] temp;
+            codec2_fifo_read(cbData->infifo1, inputSamples_.get(), 1);
         }
         
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
-        used = codec2_fifo_used(outFifo);
-        if (used > 0)
+        while (codec2_fifo_used(outFifo) > 0)
         {
-            short* temp = new short[used];
-            assert(temp != nullptr);
-            codec2_fifo_read(outFifo, temp, used);
-            delete[] temp;
+            codec2_fifo_read(outFifo, inputSamples_.get(), 1);
         }
     }
 }
@@ -577,9 +554,6 @@ void TxRxThread::txProcessing_()
     //
 
     if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_tx || g_recVoiceKeyerFile || g_recFileFromMic))) {
-        // Lock the mode mutex so that TX state doesn't change on us during processing.
-        txModeChangeMutex.Lock();
-        
         if (pipeline_ == nullptr)
         {
             initializePipeline_();
@@ -600,18 +574,17 @@ void TxRxThread::txProcessing_()
      	if (g_dump_fifo_state) {
     	  // If this drops to zero we have a problem as we will run out of output samples
     	  // to send to the sound driver
-    	  if (g_verbose) fprintf(stderr, "outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d\n",
+    	  log_debug("outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d",
                       codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
     	}
 
         int nsam_in_48 = freedvInterface.getTxNumSpeechSamples() * ((float)inputSampleRate_ / (float)freedvInterface.getTxSpeechSampleRate());
         assert(nsam_in_48 > 0);
 
-        short           insound_card[nsam_in_48];
         int             nout;
 
         
-        while((unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {        
+        while(!helper_->mustStopWork() && (unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {        
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
 
@@ -622,27 +595,57 @@ void TxRxThread::txProcessing_()
             // again in the decoded audio at the other end.
 
             // zero speech input just in case infifo2 underflows
-            memset(insound_card, 0, nsam_in_48*sizeof(short));
+            memset(inputSamples_.get(), 0, nsam_in_48*sizeof(short));
             
             // There may be recorded audio left to encode while ending TX. To handle this,
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
-            int nread = codec2_fifo_read(cbData->infifo2, insound_card, nsam_in_48);            
-            if (nread != 0 && endingTx) break;
-            
-            short* inputSamples = new short[nsam_in_48];
-            memcpy(inputSamples, insound_card, nsam_in_48 * sizeof(short));
-            
-            auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
-            auto outputSamples = pipeline_->execute(inputSamplesPtr, nsam_in_48, &nout);
-            
-            if (g_dump_fifo_state) {
-                fprintf(stderr, "  nout: %d\n", nout);
+            int nread = codec2_fifo_read(cbData->infifo2, inputSamples_.get(), nsam_in_48);            
+            if (nread != 0 && endingTx)
+            {
+                if (freedvInterface.getCurrentMode() >= FREEDV_MODE_RADE)
+                {
+                    if (!hasEooBeenSent_)
+                    {
+                        log_info("Triggering sending of EOO");
+
+                        // Special case for handling RADE EOT
+                        freedvInterface.restartTxVocoder();
+                        hasEooBeenSent_ = true;
+                    }
+
+                    auto outputSamples = pipeline_->execute(inputSamples_, 0, &nout);
+                    if (nout > 0 && outputSamples.get() != nullptr)
+                    {
+                        log_debug("Injecting %d samples of resampled EOO into TX stream", nout);
+                        if (codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout) != 0)
+                        {
+                            log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", codec2_fifo_free(cbData->outfifo1));
+                        }
+                    }
+                    else
+                    {
+                        g_eoo_enqueued = true;
+                    }
+                }
+                break;
+            }
+            else
+            {
+                g_eoo_enqueued = false;
+                hasEooBeenSent_ = false;
             }
             
-            codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
+            auto outputSamples = pipeline_->execute(inputSamples_, nsam_in_48, &nout);
+            
+            if (g_dump_fifo_state) {
+                log_info("  nout: %d", nout);
+            }
+            
+            if (outputSamples.get() != nullptr)
+            {
+                codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
+            }
         }
-        
-        txModeChangeMutex.Unlock();
     }
     else
     {
@@ -655,7 +658,7 @@ void TxRxThread::txProcessing_()
     }
 
     if (g_dump_timing) {
-        fprintf(stderr, "%4ld", sw.Time());
+        log_info("%4ld", sw.Time());
     }
 }
 
@@ -675,7 +678,7 @@ void TxRxThread::rxProcessing_()
     
     if (g_queueResync)
     {
-        if (g_verbose) fprintf(stderr, "Unsyncing per user request.\n");
+        log_debug("Unsyncing per user request.");
         g_queueResync = false;
         freedvInterface.setSync(FREEDV_SYNC_UNSYNC);
         g_resyncs++;
@@ -686,7 +689,6 @@ void TxRxThread::rxProcessing_()
     int nsam = (int)(inputSampleRate_ * FRAME_DURATION);
     assert(nsam > 0);
 
-    short           insound_card[nsam];
     int             nout;
 
 
@@ -694,21 +696,22 @@ void TxRxThread::rxProcessing_()
         (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
         (g_tx && wxGetApp().appConfiguration.monitorTxAudio) ||
         (!g_voice_keyer_tx && ((g_half_duplex && !g_tx) || !g_half_duplex));
-    
-    // while we have enough input samples available ... 
-    while (codec2_fifo_read(cbData->infifo1, insound_card, nsam) == 0 && processInputFifo) {
+    if (!processInputFifo)
+    {
+        clearFifos_();
+    }
 
+    int nsam_one_speech_frame = freedvInterface.getRxNumSpeechSamples() * ((float)outputSampleRate_ / (float)freedvInterface.getRxSpeechSampleRate());
+    auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
+
+    // while we have enough input samples available and enough space in the output FIFO ... 
+    while (!helper_->mustStopWork() && codec2_fifo_free(outFifo) >= nsam_one_speech_frame && codec2_fifo_read(cbData->infifo1, inputSamples_.get(), nsam) == 0 && processInputFifo) {
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
 
-        short* inputSamples = new short[nsam];
-        memcpy(inputSamples, insound_card, nsam * sizeof(short));
+        auto outputSamples = pipeline_->execute(inputSamples_, nsam, &nout);
         
-        auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
-        auto outputSamples = pipeline_->execute(inputSamplesPtr, nsam, &nout);
-        auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
-        
-        if (nout > 0)
+        if (nout > 0 && outputSamples.get() != nullptr)
         {
             codec2_fifo_write(outFifo, outputSamples.get(), nout);
         }

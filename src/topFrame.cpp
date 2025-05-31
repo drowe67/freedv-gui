@@ -27,6 +27,7 @@
 #include "topFrame.h"
 #include "gui/util/NameOverrideAccessible.h"
 #include "gui/util/LabelOverrideAccessible.h"
+#include "util/logging/ulog.h"
 
 extern int g_playFileToMicInEventId;
 extern int g_recFileFromRadioEventId;
@@ -105,7 +106,7 @@ public:
         m_tabs->Refresh();
         m_tabs->Update();
 
-        wxAuiNotebookPageArray& pages = m_tabs->GetPages();
+        auto& pages = m_tabs->GetPages();
         size_t i, page_count = pages.GetCount();
 
         for (i = 0; i < page_count; ++i)
@@ -423,14 +424,14 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //------------------------------
     // S/N ratio Gauge (vert. bargraph)
     //------------------------------
-    m_gaugeSNR = new wxGauge(snrBox, wxID_ANY, 25, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
+    m_gaugeSNR = new wxGauge(snrBox, wxID_ANY, 45, wxDefaultPosition, wxSize(135,15), wxGA_SMOOTH);
     m_gaugeSNR->SetToolTip(_("Displays signal to noise ratio in dB."));
     snrSizer->Add(m_gaugeSNR, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 10);
 
     //------------------------------
     // Box for S/N ratio (Numeric)
     //------------------------------
-    m_textSNR = new wxStaticText(snrBox, wxID_ANY, wxT(" 0.0 dB"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
+    m_textSNR = new wxStaticText(snrBox, wxID_ANY, wxT("--"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
     m_textSNR->SetMinSize(wxSize(70,-1));
     snrSizer->Add(m_textSNR, 0, wxALIGN_CENTER_HORIZONTAL, 1);
 
@@ -471,7 +472,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     sbSizer3_33->Add(m_textSync, 0, wxALIGN_CENTER_HORIZONTAL, 1);
     m_textSync->Disable();
 
-    m_textCurrentDecodeMode = new wxStaticText(syncBox, wxID_ANY, wxT("Mode: unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textCurrentDecodeMode = new wxStaticText(syncBox, wxID_ANY, wxT("Mode: unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE);
     sbSizer3_33->Add(m_textCurrentDecodeMode, 0, wxALIGN_CENTER_HORIZONTAL, 1);
     m_textCurrentDecodeMode->Disable();
     
@@ -481,7 +482,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnCenterRx = new wxButton(syncBox, wxID_ANY, _("C&enter RX"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer3_33->Add(m_btnCenterRx, 0, wxALL | wxALIGN_CENTRE, 5);
     
-    leftSizer->Add(sbSizer3_33,0, wxALL|wxEXPAND, 2);
+    leftSizer->Add(sbSizer3_33,0, wxALL|wxEXPAND|wxFIXED_MINSIZE, 2);
 
     //------------------------------
     // Audio Recording/Playback
@@ -568,7 +569,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     modeStatusSizer = new wxBoxSizer(wxVERTICAL);
     m_txtModeStatus = new wxStaticText(m_panel, wxID_ANY, wxT("unk"), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     m_txtModeStatus->Enable(false); // enabled only if Hamlib is turned on
-    m_txtModeStatus->SetMinSize(wxSize(40,-1));
+    m_txtModeStatus->SetMinSize(wxSize(80,-1));
     modeStatusSizer->Add(m_txtModeStatus, 0, wxALL|wxEXPAND, 1);
     lowerSizer->Add(modeStatusSizer, 0, wxALIGN_CENTER_VERTICAL|wxALL, 1);
 
@@ -671,42 +672,14 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     modeBox = new wxStaticBox(m_panel, wxID_ANY, _("&Mode"), wxDefaultPosition, wxSize(100,-1));
     sbSizer_mode = new wxStaticBoxSizer(modeBox, wxVERTICAL);
 
-    m_rb700d = new wxRadioButton( modeBox, wxID_ANY, wxT("700D"), wxDefaultPosition, wxDefaultSize,  wxRB_GROUP);
+    m_rbRADE = new wxRadioButton( modeBox, wxID_ANY, wxT("RADEV1"), wxDefaultPosition, wxDefaultSize,  wxRB_GROUP);
+    sbSizer_mode->Add(m_rbRADE, 0, wxALIGN_LEFT|wxALL, 1); 
+    m_rb700d = new wxRadioButton( modeBox, wxID_ANY, wxT("700D"), wxDefaultPosition, wxDefaultSize,  0);
     sbSizer_mode->Add(m_rb700d, 0, wxALIGN_LEFT|wxALL, 1);
     m_rb700e = new wxRadioButton( modeBox, wxID_ANY, wxT("700E"), wxDefaultPosition, wxDefaultSize,  0);
     sbSizer_mode->Add(m_rb700e, 0, wxALIGN_LEFT|wxALL, 1);
     m_rb1600 = new wxRadioButton( modeBox, wxID_ANY, wxT("1600"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_mode->Add(m_rb1600, 0, wxALIGN_LEFT|wxALL, 1);
-    m_hiddenMode1 = new wxRadioButton( modeBox, wxID_ANY, wxT("hidden2"), wxDefaultPosition, wxDefaultSize, 0);
-    sbSizer_mode->Add(m_hiddenMode1, 0, wxALIGN_LEFT|wxALL, 1);
-    m_hiddenMode1->Show(false);
-    
-    m_collpane = new wxCollapsiblePane(modeBox, ID_MODE_COLLAPSE, "Others:");
-    sbSizer_mode->Add(m_collpane, 0, wxGROW|wxALL, 5);
-    
-    wxWindow *otherModeWin = m_collpane->GetPane();
-    wxSizer *otherModeSizer = new wxBoxSizer(wxVERTICAL);
-    
-    m_rb700c = new wxRadioButton( otherModeWin, wxID_ANY, wxT("700C"), wxDefaultPosition, wxDefaultSize,  0);
-    otherModeSizer->Add(m_rb700c, 1, wxALIGN_LEFT|wxALL|wxEXPAND, 1);
-    m_rb800xa = new wxRadioButton( otherModeWin, wxID_ANY, wxT("800XA"), wxDefaultPosition, wxDefaultSize, 0);
-    otherModeSizer->Add(m_rb800xa, 1, wxALIGN_LEFT|wxALL|wxEXPAND, 1);
-    m_rb2020 = new wxRadioButton( otherModeWin, wxID_ANY, wxT("2020"), wxDefaultPosition, wxDefaultSize,  0);
-    otherModeSizer->Add(m_rb2020, 1, wxALIGN_LEFT|wxALL|wxEXPAND, 1);
-#if defined(FREEDV_MODE_2020B)
-    m_rb2020b = new wxRadioButton( otherModeWin, wxID_ANY, wxT("2020B"), wxDefaultPosition, wxDefaultSize,  0);
-    otherModeSizer->Add(m_rb2020b, 1, wxALIGN_LEFT|wxALL|wxEXPAND, 1);
-#endif // FREEDV_MODE_2020B
-    m_hiddenMode2 = new wxRadioButton( otherModeWin, wxID_ANY, wxT("hidden2"), wxDefaultPosition, wxDefaultSize, 0);
-    otherModeSizer->Add(m_hiddenMode2, 0, wxALIGN_LEFT|wxALL, 1);
-    m_hiddenMode2->Show(false);
-
-    m_hiddenMode1->SetValue(true);
-    m_hiddenMode2->SetValue(true);
-
-    sbSizer_mode->SetMinSize(wxSize(75,225));
-    otherModeWin->SetSizer(otherModeSizer);
-    otherModeSizer->SetSizeHints(otherModeWin);
 
     rightSizer->Add(sbSizer_mode,0, wxALL | wxEXPAND, 2);
 
@@ -780,14 +753,10 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //-------------------
     m_auiNbookCtrl->MoveBeforeInTabOrder(m_BtnCallSignReset);
     m_sliderSQ->MoveBeforeInTabOrder(m_ckboxSQ);
+    m_rbRADE->MoveBeforeInTabOrder(m_rb700d);
     m_rb700d->MoveBeforeInTabOrder(m_rb700e);
     m_rb700e->MoveBeforeInTabOrder(m_rb1600);
     
-    m_rb700c->MoveBeforeInTabOrder(m_rb800xa);
-    m_rb800xa->MoveBeforeInTabOrder(m_rb2020);
-#if defined(FREEDV_MODE_2020B)
-    m_rb2020->MoveBeforeInTabOrder(m_rb2020b);
-#endif // FREEDV_MODE_2020B
     m_togBtnOnOff->MoveBeforeInTabOrder(m_togBtnAnalog);
     m_togBtnAnalog->MoveBeforeInTabOrder(m_togBtnVoiceKeyer);
     m_togBtnVoiceKeyer->MoveBeforeInTabOrder(m_btnTogPTT);
@@ -849,19 +818,12 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_BtnBerReset->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnBerReset), NULL, this);
     m_BtnReSync->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnReSync), NULL, this);
     m_btnCenterRx->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnCenterRx), NULL, this);
-    
-    m_rb700c->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
+   
+    m_rbRADE->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this); 
+    m_rb1600->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb700d->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb700e->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
-    m_rb800xa->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
-    m_rb1600->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
-    m_rb2020->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
-#if defined(FREEDV_MODE_2020B)
-    m_rb2020b->Connect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
-#endif // FREEDV_MODE_2020B
-    
-    m_collpane->Connect(wxEVT_COLLAPSIBLEPANE_CHANGED, wxCollapsiblePaneEventHandler(TopFrame::OnChangeCollapseState), NULL, this);
-    
+        
     m_sliderTxLevel->Connect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Connect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Connect(wxEVT_SCROLL_LINEUP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
@@ -933,18 +895,11 @@ TopFrame::~TopFrame()
 
     m_audioRecord->Disconnect(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TopFrame::OnTogBtnRecord), NULL, this);
 
-    m_rb700c->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
+    m_rbRADE->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
+    m_rb1600->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb700d->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
     m_rb700e->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
-    m_rb800xa->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
-    m_rb1600->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
-    m_rb2020->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
-#if defined(FREEDV_MODE_2020B)
-    m_rb2020b->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(TopFrame::OnChangeTxMode), NULL, this);
-#endif // FREEDV_MODE_2020B
-    
-    m_collpane->Disconnect(wxEVT_COLLAPSIBLEPANE_CHANGED, wxCollapsiblePaneEventHandler(TopFrame::OnChangeCollapseState), NULL, this);
-    
+        
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_TOP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_BOTTOM, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
     m_sliderTxLevel->Disconnect(wxEVT_SCROLL_LINEUP, wxScrollEventHandler(TopFrame::OnChangeTxLevel), NULL, this);
@@ -963,15 +918,6 @@ TopFrame::~TopFrame()
     m_cboReportFrequency->Disconnect(wxEVT_KILL_FOCUS, wxFocusEventHandler(TopFrame::OnReportFrequencyKillFocus), NULL, this);
 }
 
-void TopFrame::OnChangeCollapseState(wxCollapsiblePaneEvent& event)
-{
-    auto bestSize = modeBox->GetBestSize();
-    auto curSize = modeBox->GetSize();
-
-    modeBox->SetSize(wxSize(curSize.GetWidth(), bestSize.GetHeight()));
-    rightSizer->Layout();
-}
-
 void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)
 {
     wxString vkLabel = _("Voice Keyer");
@@ -982,9 +928,7 @@ void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)
     wxSize buttonSize = m_togBtnVoiceKeyer->GetSize();
     vkLabelWidth = buttonSize.GetWidth() * 0.95;
     m_togBtnVoiceKeyer->GetTextExtent(filename, &filenameWidth, &tmp);
-    
-    //fprintf(stderr, "vkLabelSize = %d, filenameSize = %d\n", vkLabelWidth, filenameWidth);
-    
+        
     // Truncate filename as required to ensure button isn't made wider than needed.
     bool isTruncated = false;
     while (filename.size() > 1 && filenameWidth > vkLabelWidth)
@@ -995,5 +939,30 @@ void TopFrame::setVoiceKeyerButtonLabel_(wxString filename)
         wxString tmpString = filename + _("...");
         m_togBtnVoiceKeyer->GetTextExtent(tmpString, &filenameWidth, &tmp);
     }
-    m_togBtnVoiceKeyer->SetLabel(vkLabel + _("\n") + filename + (isTruncated ? _("...") : _("")));
+    
+    if (filename.size() > 0)
+    {
+        m_togBtnVoiceKeyer->SetLabel(vkLabel + _("\n") + filename + (isTruncated ? _("...") : _("")));
+    }
+    else
+    {
+        m_togBtnVoiceKeyer->SetLabel(vkLabel);
+    }
+    
+    // Resize button height as needed.
+    wxSize currentSize = m_togBtnVoiceKeyer->GetSize();
+    wxSize bestSize = m_togBtnVoiceKeyer->GetBestSize();
+    currentSize.SetHeight(bestSize.GetHeight());
+    m_togBtnVoiceKeyer->SetSize(currentSize);
+    m_togBtnVoiceKeyer->Refresh();
+    
+    // XXX - wxWidgets doesn't handle button height changes properly until the user resizes 
+    // the window (even if only by a pixel or two). As a really hacky workaround, we 
+    // emulate this behavior when changing the button height.
+    wxSize winSize = GetSize();
+    SetSize(winSize.GetWidth(), winSize.GetHeight());
+    SetSize(winSize.GetWidth(), winSize.GetHeight() - 1);
+    SetSize(winSize.GetWidth(), winSize.GetHeight());
+        
+    log_info("Set voice keyer button label to %s", (const char*)m_togBtnVoiceKeyer->GetLabel().ToUTF8());
 }

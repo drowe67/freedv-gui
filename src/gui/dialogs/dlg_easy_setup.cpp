@@ -129,7 +129,6 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     wxStaticBoxSizer* hamlibBoxSizer = new wxStaticBoxSizer(m_hamlibBox, wxVERTICAL);
     wxGridSizer* gridSizerhl = new wxGridSizer(5, 2, 0, 0);
     hamlibBoxSizer->Add(gridSizerhl);
-    setupCatControlBoxSizer->Add(hamlibBoxSizer);
 
     /* Hamlib Rig Type combobox. */
 
@@ -174,7 +173,10 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     m_cbPttMethod->Append(wxT("RTS"));
     m_cbPttMethod->Append(wxT("DTR"));
     m_cbPttMethod->Append(wxT("None"));
+    m_cbPttMethod->Append(wxT("CAT via Data port"));
     m_cbPttMethod->SetSelection(0);
+    
+    setupCatControlBoxSizer->Add(hamlibBoxSizer, 0, wxALL | wxEXPAND, 2);
 
     /* Serial port box */
     m_serialBox = new wxStaticBox(setupCatControlBox, wxID_ANY, _("Serial PTT"));
@@ -579,7 +581,7 @@ void EasySetupDialog::ExchangePttDeviceData(int inout)
                 m_cbSerialRate->GetValue().ToLong(&tmp); 
                 wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate = tmp;
             }
-            if (g_verbose) fprintf(stderr, "serial rate: %d\n", wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get());
+            log_debug("serial rate: %d", wxGetApp().appConfiguration.rigControlConfiguration.hamlibSerialRate.get());
             
             wxGetApp().appConfiguration.rigControlConfiguration.hamlibPTTType = m_cbPttMethod->GetSelection();
         }
@@ -909,13 +911,13 @@ void EasySetupDialog::OnTest(wxCommandEvent& event)
                 }
             
                 sineWaveSampleNumber_ = 0;
-                txTestAudioDevice_->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
+                txTestAudioDevice_->setOnAudioData([&, radioOutSampleRate](IAudioDevice& dev, void* data, size_t size, void* state) {
                     short* audioData = static_cast<short*>(data);
     
                     for (unsigned long index = 0; index < size; index++)
                     {
-                        *audioData++ = (SHRT_MAX) * sin(2 * PI * (1500) * sineWaveSampleNumber_ / 48000);
-                        sineWaveSampleNumber_ = (sineWaveSampleNumber_ + 1) % 48000;
+                        *audioData++ = (SHRT_MAX) * sin(2 * PI * (1500) * sineWaveSampleNumber_ / radioOutSampleRate);
+                        sineWaveSampleNumber_ = (sineWaveSampleNumber_ + 1) % radioOutSampleRate;
                     }
 
                 }, this);
@@ -1037,11 +1039,12 @@ void EasySetupDialog::updateHamlibDevices_()
 
 #if defined(__FreeBSD__) || defined(__WXOSX__)
     glob_t    gl;
-#ifdef __FreeBSD__
-    if(glob("/dev/tty*", GLOB_MARK, NULL, &gl)==0) {
+#if defined(__FreeBSD__)
+    if(glob("/dev/tty*", GLOB_MARK, NULL, &gl)==0 ||
 #else
-    if(glob("/dev/cu.*", GLOB_MARK, NULL, &gl)==0) {
-#endif
+    if(glob("/dev/tty.*", GLOB_MARK, NULL, &gl)==0 ||
+#endif // defined(__FreeBSD__)
+       glob("/dev/cu.*", GLOB_MARK, NULL, &gl)==0) {
         for(unsigned int i=0; i<gl.gl_pathc; i++) {
             if(gl.gl_pathv[i][strlen(gl.gl_pathv[i])-1]=='/')
                 continue;

@@ -36,9 +36,7 @@ std::string GetOperatingSystemString()
 {
 #ifdef __linux__
     return "linux";
-#elif _WIN32
-    return "windows";
 #else
     return "other";
-#endif // __linux__ || _WIN32
+#endif // __linux__
 }

@@ -63,9 +63,7 @@ class OptionsDlg : public wxDialog
  
         void    OnTestFrame(wxScrollEvent& event);
         void    OnChannelNoise(wxScrollEvent& event);
-        void    OnAttnCarrierEn(wxScrollEvent& event);
         void    OnFreeDV700txClip(wxScrollEvent& event);
-        void    OnFreeDV700Combine(wxScrollEvent& event);
         void    OnDebugConsole(wxScrollEvent& event);
 
         void    OnFifoReset(wxCommandEvent& event);
@@ -89,11 +87,13 @@ class OptionsDlg : public wxDialog
         wxNotebookPage *m_debugTab; // Debug
         
         /* Hamlib options */
-        wxCheckBox   *m_ckboxUseAnalogModes;
-        wxCheckBox   *m_ckboxEnableFreqModeChanges;
-        wxCheckBox   *m_ckboxEnableSpacebarForPTT;
-        wxTextCtrl   *m_txtTxRxDelayMilliseconds;
-        wxCheckBox   *m_ckboxFrequencyEntryAsKHz;
+        wxCheckBox    *m_ckboxUseAnalogModes;
+        wxRadioButton *m_ckboxEnableFreqModeChanges;
+        wxRadioButton *m_ckboxEnableFreqChangesOnly;
+        wxRadioButton *m_ckboxNoFreqModeChanges;
+        wxCheckBox    *m_ckboxEnableSpacebarForPTT;
+        wxTextCtrl    *m_txtTxRxDelayMilliseconds;
+        wxCheckBox    *m_ckboxFrequencyEntryAsKHz;
         
         /* Waterfall color */
         wxRadioButton *m_waterfallColorScheme1; // Multicolored
@@ -133,7 +133,6 @@ class OptionsDlg : public wxDialog
 
         wxCheckBox   *m_ckboxFreeDV700txClip;
         wxCheckBox   *m_ckboxFreeDV700txBPF;
-        wxCheckBox   *m_ckboxFreeDV700Combine;
 
         wxRadioButton *m_rb_textEncoding1;
         wxRadioButton *m_rb_textEncoding2;

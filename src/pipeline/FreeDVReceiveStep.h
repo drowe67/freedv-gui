@@ -63,6 +63,11 @@ private:
     bool channelNoiseEnabled_;
     int channelNoiseSnr_;
     float freqOffsetHz_;
+
+    std::shared_ptr<short> outputSamples_;
+    short* inputBuf_;
+    COMP* rxFdm_;
+    COMP* rxFdmOffset_;
 };
 
 #endif // AUDIO_PIPELINE__FREEDV_RECEIVE_STEP_H
