@@ -109,7 +109,7 @@ void PlaybackStep::nonRtThreadEntry_()
         if (playFile != nullptr)
         {
             auto fileSampleRate = fileSampleRateFn_();
-            if (playbackResampler_ == nullptr || playbackResampler_->getInputSampleRate() != fileSampleRate)
+            if (getInputSampleRate() != fileSampleRate)
             {
                 if (playbackResampler_ != nullptr)
                 {
@@ -129,9 +129,19 @@ void PlaybackStep::nonRtThreadEntry_()
                     fileCompleteFn_();
                 }
          
-                int outSamples = 0; 
-                auto outBuf = playbackResampler_->execute(buf, samplesAtSourceRate, &outSamples);
-                codec2_fifo_write(outputFifo_, outBuf.get(), outSamples);
+                if (numRead > 0)
+                {
+                    if (playbackResampler_->getInputSampleRate() != fileSampleRate)
+                    {
+                        int outSamples = 0; 
+                        auto outBuf = playbackResampler_->execute(buf, samplesAtSourceRate, &outSamples);
+                        codec2_fifo_write(outputFifo_, outBuf.get(), outSamples);
+                    }
+                    else
+                    {
+                        codec2_fifo_write(outputFifo_, buf.get(), numRead);
+                    }
+                }
             }
         }
         g_mutexProtectingCallbackData.Unlock();
