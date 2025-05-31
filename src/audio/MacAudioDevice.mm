@@ -591,8 +591,7 @@ void MacAudioDevice::setHelperRealTime()
         log_warn("Could not increase thread priority");
         return;
     }
-   
-#if 0 
+    
     // Most important, set real-time constraints.
     // Define the guaranteed and max fraction of time for the audio thread.
     // These "duty cycle" values can range from 0 to 1.  A value of 0.5
@@ -639,7 +638,6 @@ void MacAudioDevice::setHelperRealTime()
         // Going real-time is a prerequisite for joining workgroups
         joinWorkgroup_();
     }
-#endif // 0
 }
 
 void MacAudioDevice::joinWorkgroup_()
@@ -700,14 +698,12 @@ void MacAudioDevice::joinWorkgroup_()
 
 void MacAudioDevice::startRealTimeWork()
 {
-#if 0
     // If the audio ID changes on us, join the new workgroup
     if (CurrentCoreAudioId_ != 0 && CurrentCoreAudioId_ != coreAudioId_ && Workgroup_ != nullptr)
     {
         leaveWorkgroup_();
         joinWorkgroup_();
     }
-#endif // 0
 }
 
 void MacAudioDevice::stopRealTimeWork()
