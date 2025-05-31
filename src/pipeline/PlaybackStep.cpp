@@ -26,6 +26,8 @@
 #include <chrono>
 #include "wx/thread.h"
 
+#include "../util/logging/ulog.h"
+
 extern wxMutex g_mutexProtectingCallbackData;
 
 using namespace std::chrono_literals;
@@ -109,8 +111,12 @@ void PlaybackStep::nonRtThreadEntry_()
         if (playFile != nullptr)
         {
             auto fileSampleRate = fileSampleRateFn_();
-            if (getInputSampleRate() != fileSampleRate)
+            if (getInputSampleRate() != fileSampleRate && (
+                playbackResampler_ == nullptr || 
+                playbackResampler_->getInputSampleRate() != fileSampleRate ||
+                playbackResampler_->getOutputSampleRate() != getInputSampleRate()))
             {
+                //log_info("Create SR (in = %d, out = %d)", fileSampleRate, inputSampleRate_);
                 if (playbackResampler_ != nullptr)
                 {
                     delete playbackResampler_;
@@ -120,27 +126,32 @@ void PlaybackStep::nonRtThreadEntry_()
             }
 
             unsigned int nsf = codec2_fifo_free(outputFifo_);
+            //log_info("nsf = %d", (int)nsf);
             if (nsf > 0)
             {
-                auto samplesAtSourceRate = nsf * fileSampleRate / inputSampleRate_;
+                int samplesAtSourceRate = nsf * fileSampleRate / inputSampleRate_;
                 unsigned int numRead = sf_read_short(playFile, buf.get(), samplesAtSourceRate);
          
+                //log_info("samplesAtSource = %d, numRead = %u", samplesAtSourceRate, numRead);
                 if (numRead > 0)
                 {
-                    if (playbackResampler_->getInputSampleRate() != fileSampleRate)
+                    if (playbackResampler_ != nullptr && playbackResampler_->getInputSampleRate() != fileSampleRate)
                     {
                         int outSamples = 0; 
                         auto outBuf = playbackResampler_->execute(buf, numRead, &outSamples);
+                        //log_info("Resampled %u samples and created %d samples", numRead, outSamples);
                         codec2_fifo_write(outputFifo_, outBuf.get(), outSamples);
                     }
                     else
                     {
+                        //log_info("Writing %u samples to FIFO", numRead);
                         codec2_fifo_write(outputFifo_, buf.get(), numRead);
                     }
                 }
 
                 if (numRead < samplesAtSourceRate && codec2_fifo_used(outputFifo_) == 0)
                 {
+                    //log_info("file read complete");
                     fileCompleteFn_();
                 }
             }
