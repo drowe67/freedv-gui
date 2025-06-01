@@ -7,7 +7,7 @@ This document describes how to build the FreeDV GUI program for various operatin
   * http://freedv.org - introduction, documentation, downloads
   * [FreeDV GUI User Manual](USER_MANUAL.md)
   
-## Building on Ubuntu Linux
+## Installing prerequisites on Ubuntu Linux
 
   ```
   $ sudo apt install libspeexdsp-dev libsamplerate0-dev sox git \
@@ -18,23 +18,15 @@ This document describes how to build the FreeDV GUI program for various operatin
 
   (if using pipewire/PulseAudio -- recommended and the default) 
   $ sudo apt install libpulse-dev
-  $ ./build_linux.sh
   
   (if using PortAudio)
   $ sudo apt install portaudio19-dev
-  $ USE_NATIVE_AUDIO=0 ./build_linux.sh 
   ```
 
   (Depending on release you may need to use `libwxgtk3.0-gtk3-dev` instead of `libwxgtk3.2-dev`.)
   
-  Then run with:
-  ```
-  $ ./build_linux/src/freedv
-  ```
-  
-  Note this builds all libraries locally, nothing is installed on your machine.  ```make install``` is not required.
+## Installing prerequisites on Fedora Linux
 
-## Building on Fedora Linux
   ```
   $ sudo dnf groupinstall "Development Tools"
   $ sudo dnf install cmake wxGTK3-devel libsamplerate-devel \
@@ -45,24 +37,12 @@ This document describes how to build the FreeDV GUI program for various operatin
 
   (if using pipewire/PulseAudio -- default and recommended)
   $ sudo dnf install pulseaudio-libs-devel
-  $ ./build_linux.sh
 
   (if using PortAudio)
   $ sudo dnf install portaudio-devel
-  $ USE_NATIVE_AUDIO=0 ./build_linux.sh
   ```
 
-  Then run with:
-
-  ```
-  $ ./build_linux/src/freedv
-  ```
-
-## Running RADE mode on Linux
-
-RADE is a new FreeDV mode that uses machine learning to improve voice quality and decoding ability.
-We are currently focused on Windows and macOS for initial development, but it is possible to run on 
-Linux by following these steps:
+## Running FreeDV on Linux
 
 1. Install PyTorch, TorchAudio and matplotlib Python packages. Some distros have packages for one or more of these,
    but you can also use pip in a Python virtual environment (recommended to ensure the latest versions):
@@ -139,8 +119,7 @@ The ```wav``` directory contains test files of modulated audio that you can use 
 ## Building for Windows
 
 Windows releases are built using the LLVM version of MinGW. This allows
-one to build FreeDV for ARM as well as for Intel Windows systems, including support
-for 2020 mode (on systems fast enough to acceptably decode it).
+one to build FreeDV for ARM as well as for Intel Windows systems.
 
 ### Prerequisites
 
@@ -159,11 +138,6 @@ for 2020 mode (on systems fast enough to acceptably decode it).
    * Valid architectures are: aarch64 (64 bit ARM), i686 (32 bit Intel/AMD), x86_64 (64 bit Intel/AMD)
 6. Build FreeDV as normal: `make` (You can also add `-j[num]` to the end of this command to use multiple cores and shorten the build time.)
 7. Create FreeDV installer: `make package`
-
-### Known Issues
-
-* NSIS-related issues:
-    * ARM installers will not properly register in Windows despite installing properly. You can still run the application manually by navigating to C:\Program Files\FreeDV \[version\]\ using File Explorer and double-clicking on `freedv.exe`.
 
 ## Building and installing on macOS
 
