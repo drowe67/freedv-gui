@@ -32,7 +32,6 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
         # make sure gfortran is available
-        sudo ln -s /usr/local/bin/gfortran-14 /usr/local/bin/gfortran
         gfortran --version
         octave-cli --eval "pkg install -forge control; pkg install -forge signal"
 
