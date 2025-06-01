@@ -891,10 +891,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 ## V2.0.0 TBD 2025
 
-This version contains the first official release of the RADEV1 mode previously trialled over several 
+This version contains the first official release of the RADE V1 mode previously trialled over several 
 preview releases. Radio Autoencoder (RADE) technology is a new approach to sending speech over HF radio. 
-It combines Machine Learning (ML) with classical DSP to send high quality speech over HF radio at SNRs as 
-low as -2dB in a bandwidth of 1500 Hz. More information about Radio Autoencoder can be found at 
+It combines Machine Learning (ML) with classical DSP to send high quality speech over HF radio at SNRs 
+as low as -2dB in a bandwidth of 1500 Hz. More information about Radio Autoencoder can be found at 
 [https://freedv.org/radio-autoencoder/](https://freedv.org/radio-autoencoder/).
 
 1. Bugfixes:
