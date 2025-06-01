@@ -22,10 +22,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install packages
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: brew install automake libtool numpy sox octave wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib
+    - uses: gerlero/brew-install@v1
+      with:
+        packages: automake libtool numpy sox octave wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib
 
     - name: Install octave-signal
       if: ${{ matrix.os == 'macos-13' }}
@@ -103,10 +102,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install packages
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: brew install automake libtool numpy sox 
+    - uses: gerlero/brew-install@v1
+      with:
+        packages: automake libtool numpy sox 
 
     - name: Build universal freedv-gui
       shell: bash
