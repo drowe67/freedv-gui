@@ -270,11 +270,9 @@ For reference, the channel widths of the currently supported modes are below:
 | Mode | Width (kHz) |
 | --- | --- |
 | 1600 | 1.125 |
-| 700C | 1.500 |
 | 700D | 1.000 |
 | 700E | 1.500 |
-| 2020 | 1.600 |
-| 2020B | 2.100 |
+| RADEV1 | 1.500 |
 
 # Voice Keyer
 
@@ -387,12 +385,11 @@ of receipt (i.e. the most recently received callsign will appear at the top of t
 
 FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
 
-* 2020/2020B
-* 700C/D/E
+* 700D/E
 * 1600
-* 800XA
+* RADEV1
 
-In addition, FreeDV can allow the user to switch between the above modes for transmit without having to push "Stop" first. 
+In addition, FreeDV can allow the user to switch between the above modes with the exception of RADEV1 for transmit without having to push "Stop" first. 
 These features can be enabled by going to Tools->Options->Modem and checking the "Simultaneously Decode All HF Modes" option. Note that
 this may consume significant additional CPU resources, which can cause decode problems. 
 
@@ -405,6 +402,8 @@ Additionally, the squelch setting with simultaneous decode enabled is relative t
 difference between the "Min SNR" of 700D and the mode in question; see "FreeDV Modes" below). For example, the squelch for 700E
 when the squelch slider is set to -2.0 becomes 1.0dB. This is designed to reduce undesired pops and clicks due to false decodes.
 
+RADEV1 does not use the squelch and when this mode is enabled the Squelch is disabled and the slider setting is ignored.
+
 # FreeDV Modes
 
 The following table is a guide to the different modes, using
@@ -414,10 +413,9 @@ Mode | Min SNR | Fading | Latency | Speech Bandwidth | Speech Quality
 --- | :---: | :---: | :---: | :---: | :---:
 SSB | 0 | 8/10 | low | 2600 | 5/10
 1600 | 4 | 3/10 | low | 4000 | 4/10
-700C | 2  | 6/10 | low |  4000 | 3/10
 700D | -2 | 4/10 | high | 4000 | 3/10
 700E | 1 | 7/10 | medium | 4000 | 3/10
-2020 | 4  | 4/10 | high | 8000 | 7/10
+RADEV1 | -2 | 8/10 | medium | 8000 | 8/10
 Skype | - |- | medium | 8000 | 8/10
 
 The Min SNR is roughly the SNR where you cannot converse without
@@ -436,7 +434,7 @@ sync at the start of an over, especially in fading channels.
 
 In mid 2018 FreeDV 700D was released, with a new OFDM modem, powerful
 Forward Error Correction (FEC) and optional interleaving.  It uses the
-same 700 bit/s speech codec at 700C. It operates at SNRs as low as
+same 700 bit/s speech codec as the deprecated 700C mode. It operates at SNRs as low as
 -2dB, and has good HF channel performance.  It is around 10dB better
 than FreeDV 1600 on fading channels, and is competitive with SSB at
 low SNRs.  The FEC provides some protection from urban HF noise.
@@ -448,7 +446,7 @@ skill and practice when used with older, VFO based radios.
 
 ## FreeDV 700E
 
-FreeDV 700E was developed in December 2020 using lessons learned from on air operation of 700C and 700D.  A variant of 700D, it uses a shorter frame size (80ms) to reduce latency and sync time.  It is optimized for fast fading channels channels with up to 4Hz Doppler spread and 6ms delay spread.  FreeDV 7000E uses the same 700 bit/s codec as FreeDV 700C and 700D.  It requires about 3dB more power than 700D, but can operate reliably on fast fading channels.
+FreeDV 700E was developed in December 2020 using lessons learned from on air operation of 700C and 700D.  A variant of 700D, it uses a shorter frame size (80ms) to reduce latency and sync time.  It is optimized for fast fading channels channels with up to 4Hz Doppler spread and 6ms delay spread.  FreeDV 7000E uses the same 700 bit/s codec as FreeDV 700D.  It requires about 3dB more power than 700D, but can operate reliably on fast fading channels.
 
 The 700E release also includes optional compression (clipping) of the 700D and 700E transmit waveforms to reduce the Peak to Average Power Ratio to about 4dB.  For example a 100W PEP transmitter can be driven to about 40W RMS.  This is an improvement of 6dB over previous releases of FreeDV 700D. Before enabling the clipper make sure your transmitter is capable of handling sustained high average power without damage.  
 
@@ -456,49 +454,11 @@ Clipping can be enabled via Tools-Options.
 
 On good channels with high SNR clipping may actually reduce the SNR of the received signal.  This is intentional - we are adding some pre-distortion in order to increase the RMS power.  Forward error correction (FEC) will clean up any errors introduced by clipping, and on poor channels the benefits of increased signal power outweigh the slight reduction in SNR on good channels.
 
-## FreeDV 2020
+## FreeDV RADEV1
 
-FreeDV 2020 was developed in 2019.  It uses an experimental codec
-based on the LPCNet neural net (deep learning) synthesis engine
-developed by Jean-Marc Valin.  It offers 8 kHz audio bandwidth in an
-RF bandwidth of just 1600 Hz.  FreeDV 2020 employs the same OFDM modem
-and FEC as 700D.
+RADE is a new mode with state-of-the-art performance, it is a contraction of Radio AutoencoDEr so-named because the modulation encoding uses a Machine-Learning method where the modulation and demodulation are achieved by training on a large number of speech samples over a modelled radio channel with typical propagation disturbances in phase and amplitude as found in HF radio. The speech is synthesised using the FARGAN neural vocoder (Frame-wise Auto-Regressive GAN) where GAN is a Generative Adversarial Network).
 
-The purpose of FreeDV 2020 is to test neural net speech coding over HF
-radio.  It is highly experimental, and possibly the first use of
-neural net vocoders in a real world, over the air system.
-
-FreeDV 2020 is designed for slow fading HF channels with a SNR of 10dB
-or better.  It is not designed for fast fading or very low SNRs like
-700D.  It is designed to be a high quality alternative to SSB in
-channels where SSB is already an "arm-chair" copy.  On an AWGN (non-
-fading channel), it will deliver reasonable speech quality down to 2dB
-SNR.
-
-FreeDV 2020 Tips:
-
-1. It requires a modern (post 2010) Intel CPU with AVX support.  If you
-   don't have AVX the FreeDV 2020 mode button will be grayed out.
-1. Some voices may sound very rough.  In early testing
-   about 90% of speakers tested work well.
-1. Like 700D, you must tune within -/+ 60Hz for FreeDV 2020 to sync.
-1. With significant fading, sync may take a few seconds.
-1. There is a 2 second end-to-end latency.  You are welcome to try tuning
-   this (Tools - Options - FIFO size, also see Sound Card Debug
-   section below).
-
-## FreeDV 2020B
-
-Experimental mode developed in February 2022.  The goal of this mode is to improve the performance of FreeDV 2020 over HF channels.
-
-Here are the three main innovations, and the theoretical improvements:
-
-1. Compression (clipping) of the 2020x modem waveforms has been added, which is worth about 4dB. This should also improve the original FreeDV 2020 mode.  The Clipping checkbox is located on Tools-Options-Modem.  As per the other warnings in this manual please make sure you transmitter can handle the higher RMS power.
-1. 2020B is like 700E to 700D - it works with fast fading but requires a few more dB of SNR. This will make it usable in European Winter (or over the South Pole Argentina to Australia) type channels - if you have enough SNR. The challenge with this mode is squeezing all the information we need (enough pilots symbols for fast fading, LPCNet, FEC bits) into a 2100 Hz channel - we are pushing up again the edges of many SSB filters. It also uses unequal FEC, just the most important 11 bits are protected.
-
-This modes is under development and may change at any time.  If you experience comparability issues with another operator - check your Git Hash values on the Help-about menu to ensure you are running the same versions of LPCNet and codec2.
-
-It is recommended that multi-RX be disabled when using 2020B. This mode is not supported by multi-RX, you will need to manually coordinate the mode with other stations.
+Unlike the previous FreeDV modes which all use QPSK modulation, the RADEV1 modulation produces an analog phase-amplitude output without defined constellation points. It has been chosen as it offers a combination of high speech quality together with reduced RF bandwidth and good resistance to fading and multipath HF radio channels.
 
 # Tools Menu
 
@@ -509,7 +469,7 @@ This section describes features on Tools-Filter.
 Control | Description
  -------------------------- | ------------------------------------------------------------------------ |
 Noise Suppression | Enable noise suppression, de-reverberation, AGC of mic signal using the Speex pre-processor
-700C/700D Auto EQ | Automatic equalization for FreeDV 700C and FreeDV 700D Codec input audio
+700D Auto EQ | Automatic equalization for FreeDV 700D/E Codec input audio
 
 Auto EQ (Automatic Equalization) adjusts the input speech spectrum to best fit the speech codec. It can remove annoying bass artifacts and make the codec speech easier to understand.
 
@@ -527,7 +487,6 @@ this window as well.
 Control | Description
  ------------------------------ | ----------------------------------------------------------------------------- |
 Clipping | Increases the average power. Ensure your transmitter can handle high RMS powers before using!
-700C Diversity Combine | Combining of two sets of 700C carriers for better fading channel performance
 TX Band Pass Filter | Reduces TX spectrum bandwidth
 
 # Helping Improve FreeDV
@@ -571,8 +530,8 @@ Errs | Number of bit errors detected
 Resyncs | Number of times the demodulator has resynced
 ClkOff | Estimated sample clock offset in parts per million
 FreqOff | Estimated frequency offset in Hz
-Sync | Sync metric (OFDM modes like 700D and 2020)
-Var | Speech encoder distortion for 700C/700D (see Auto EQ)
+Sync | Sync metric (OFDM modes like 700D/E)
+Var | Speech encoder distortion for 700D (see Auto EQ)
 
 The sample clock offset is the estimated difference between the
 modulator (TX) and demodulator (RX) sample clocks.  For example if the
@@ -637,39 +596,6 @@ If the PortAudio counters are incrementing on receive try:
   will break up and the RX will lose sync.  TX audio break up will
   also occur if you see "outfifo1" being incremented on the "Fifo"
   line during TX.  Try increasing the FifoSize.
-
-## Test Frame Histogram
-
-This feature was developed for testing FreeDV 700C.  Select the Test
-Frame Histogram tab on Front Page
-
-Displays BER of each carrier when in "test frame" mode.  As each QPSK
-carrier has 2 bits there are 2*Nc histogram points.
-
-Ideally all carriers will have about the same BER (+/- 20% after 5000
-total bit errors), however problems can occur with filtering in the
-TX path.  If one carrier has less power, then it will have a higher
-BER.  The errors in this carrier will tend to dominate overall
-BER. For example if one carrier is attenuated due to SSB filter ripple
-in the TX path then the BER on that carrier will be higher.  This is
-bad news for DV.
-
-Suggested usage:
-
-1. Transmit FreeDV in test frame mode.  Use a 2nd RX (or
-get a friend) to monitor your RX signal with FreeDV in test frame
-mode.  
-
-1.  Adjust your RX SNR to get a BER of a few % (e.g. reduce TX
-power, use a short antenna for the RX, point your beam away, adjust RX
-RF gain).  
-
-1. Monitor the error histogram for a few minutes, until you have say
-5000 total bit errors.  You have a problem if the BER of any carrier
-is more than 20% different from the rest.
-
-1. A typical issue will be one carrier at 1.0 and the others at 0.5,
-indicating the poorer carrier BER is twice the larger.
 
 ## Full Duplex Testing with loopback
 
@@ -811,31 +737,6 @@ for instructions on doing so in Windows 10. For Windows 8:
 1. Click on where it says "Change device installation settings".
 1. Select the "No, let me choose what to do" option.
 1. Check the "automatically get the device app" option, then click Save changes to save the settings you just chose.
-
-## FreeDV 2020 mode is grayed out
-
-In order to use FreeDV 2020 mode, you must have both of the following:
-
-1. If using an Intel based CPU, it must have AVX support. A Microsoft utility called [coreinfo](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo)
-can be used to determine if your CPU supports AVX.  A * means you have 
-AVX, a - means no AVX:
-
-```
-AES             -       Supports AES extensions
-AVX             *       Supports AVX instruction extensions
-FMA             -       Supports FMA extensions using YMM state
-```
-
-On Linux, you can check for `avx` in the **flags** section of `/proc/cpuinfo`
-or the output of the `lscpu` command:
-```
-lscpu | grep -o "avx[^ ]*"
-```
-will display `avx` (or `avx2`) if your CPU supports the instructions.
-
-2. Your computer must be able to decode 2020 at a minimum of 2x real time (i.e. < 0.5 seconds for 1 second of encoded audio). A Mac with an ARM processor (e.g. 2020 Mac Mini or later) is an example of such a device.
-
-If your system does not meet either (1) or (2), the 2020 option will be grayed out.
 
 ## I installed a new version and FreeDV stopped working
 
