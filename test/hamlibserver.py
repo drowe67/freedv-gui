@@ -322,9 +322,9 @@ class HamlibHandler:
       self.ErrParam()
     else:
       if (not x) and self.app.ptt:
-          # Sleep for 20ms to match typical SDR behavior.
+          # Sleep for 20ms to match typical SDR behavior + 5ms to account for varying system load.
           # Example: Flex 6000/8000 (https://community.flexradio.com/discussion/8028104/question-regarding-tx-delay)
-          time.sleep(20 / 1000)
+          time.sleep(25 / 1000)
           os.kill(self.pid, signal.SIGTERM)
       if x:
         self.app.ptt = 1
