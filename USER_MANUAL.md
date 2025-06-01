@@ -402,7 +402,7 @@ Additionally, the squelch setting with simultaneous decode enabled is relative t
 difference between the "Min SNR" of 700D and the mode in question; see "FreeDV Modes" below). For example, the squelch for 700E
 when the squelch slider is set to -2.0 becomes 1.0dB. This is designed to reduce undesired pops and clicks due to false decodes.
 
-RADEV1 does not use the squelch and when this mode is enabled the Squelch is disabled and the slider setting is ignored.
+When using RADEV1, the squelch settings in the main window are ignored. Instead, FreeDV only passes decoded audio if it's able to synchronize with the incoming signal.
 
 # FreeDV Modes
 
