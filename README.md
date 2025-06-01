@@ -107,23 +107,6 @@ Barry Jackson G4MKT to automate the above steps. While the FreeDV project thanks
 to helping Linux users more easily get on the air with FreeDV, the FreeDV development team will not provide 
 support. All support inquiries regarding this script should be directed to the linked repo.
 
-## Building without LPCNet
-
-In preparation for possible future deprecation of FreeDV 2020 and 2020B modes, it is
-possible to build without requiring the [LPCNet](https://github.com/drowe67/LPCNet.git) library.
-To do this, pass `LPCNET_DISABLE=1` as an environment variable to the build script, i.e.
-
-```
-$ LPCNET_DISABLE=1 ./build_linux.sh
-```
-
-or alternatively, do not pass in `LPCNET_BUILD_DIR` to `cmake` if manually executing the build.
-This also has the side effect of disabling 2020 and 2020B in the user interface, preventing either 
-from being selected.
-
-*Note: if you don't already have Codec2 installed on your machine, you will need to pass `-DBOOTSTRAP_LPCNET=1`
-to `cmake` in order for LPCNet to also be built.*
-
 ## Audio driver selection
 
 By default, FreeDV uses the native audio APIs on certain platforms. These are as follows:
@@ -140,11 +123,9 @@ user by defining the environment variable `USE_NATIVE_AUDIO=0` before running th
 
 ## Installing on Linux
 
-You need to install the codec2 and lpcnetfreedv shared libraries, and freedv-gui:
+You need to install the codec2 shared libraries, and freedv-gui:
   ```
   $ cd ~/freedv-gui/codec2/build_linux
-  $ sudo make install
-  $ cd ~/freedv-gui/LPCNet/build_linux
   $ sudo make install
   $ cd ~/freedv-gui/build_linux
   $ sudo make install
@@ -199,5 +180,5 @@ $ brew install automake libtool git sox cmake
 ```
 
 Once the dependencies are installed, you can then run the `build_osx.sh` script inside the source tree to build
-FreeDV and associated libraries (codec2, LPCNet, hamlib). A FreeDV.app app bundle will be created inside the build_osx/src
+FreeDV and associated libraries (codec2, hamlib). A FreeDV.app app bundle will be created inside the build_osx/src
 folder which can be copied to your system's Applications folder.
