@@ -37,7 +37,11 @@ HamlibRigController::RigList HamlibRigController::RigList_;
 HamlibRigController::RigNameList HamlibRigController::RigNameList_;
 std::mutex HamlibRigController::RigListMutex_;
 
+#if RIGCAPS_NOT_CONST
+int HamlibRigController::BuildRigList_(struct rig_caps *rig, rig_ptr_t rigList) {
+#else
 int HamlibRigController::BuildRigList_(const struct rig_caps *rig, rig_ptr_t rigList) {    
+#endif // RIGCAPS_NOT_CONST
     ((HamlibRigController::RigList *)rigList)->push_back(rig); 
     return 1;
 }
