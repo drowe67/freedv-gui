@@ -81,7 +81,7 @@ index fb10d28..6c3e12c 100644
  add_executable(freedv_data_tx freedv_data_tx.c)
 diff --git a/src/codec2_alloc.cpp b/src/codec2_alloc.cpp
 new file mode 100644
-index 0000000..c7f74b8
+index 0000000..37b7e67
 --- /dev/null
 +++ b/src/codec2_alloc.cpp
 @@ -0,0 +1,58 @@
@@ -102,7 +102,7 @@ index 0000000..c7f74b8
 +void codec2_initialize_realtime(size_t heapSize)
 +{
 +#if defined(WIN32)
-+    Heap_ = (void*)_aligned_alloc(O1HEAP_ALIGNMENT, heapSize);
++    Heap_ = (void*)_aligned_malloc(O1HEAP_ALIGNMENT, heapSize);
 +#else
 +    Heap_ = (void*)aligned_alloc(O1HEAP_ALIGNMENT, heapSize);
 +#endif // defined(WIN32)
