@@ -28,6 +28,7 @@
 #include "ParallelStep.h"
 #include "AudioPipeline.h"
 #include "../util/logging/ulog.h"
+#include "codec2_alloc.h"
 
 using namespace std::chrono_literals;
 
@@ -94,6 +95,10 @@ ParallelStep::ParallelStep(
             
             threadState->thread = std::thread([this](ThreadInfo* s) 
             {
+                // Ensure that O(1) memory allocator is used for Codec2
+                // instead of standard malloc().
+                codec2_initialize_realtime(CODEC2_REAL_TIME_MEMORY_SIZE);
+                
                 if (realtimeHelper_)
                 {
                     realtimeHelper_->setHelperRealTime();
@@ -141,6 +146,7 @@ ParallelStep::ParallelStep(
                 {
                     realtimeHelper_->clearHelperRealTime();
                 }
+                codec2_disable_realtime();
             }, threadState);
         }
     }

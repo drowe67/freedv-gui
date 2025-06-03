@@ -15,6 +15,7 @@ ExternalProject_Add(build_codec2
    BINARY_DIR codec2_build
    GIT_REPOSITORY https://github.com/drowe67/codec2.git
    GIT_TAG 1.2.0
+   PATCH_COMMAND git apply ${CMAKE_SOURCE_DIR}/codec2-rt-heap.patch
    CMAKE_ARGS ${CODEC2_CMAKE_ARGS}
    CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET}
    INSTALL_COMMAND ""

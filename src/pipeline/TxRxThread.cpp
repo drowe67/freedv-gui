@@ -49,6 +49,8 @@ using namespace std::chrono_literals;
 #include "util/logging/ulog.h"
 #include "os/os_interface.h"
 
+#include "codec2_alloc.h"
+
 #include <wx/stopwatch.h>
 
 // External globals
@@ -449,6 +451,10 @@ void TxRxThread::initializePipeline_()
 
 void* TxRxThread::Entry()
 {
+    // Ensure that O(1) memory allocator is used for Codec2
+    // instead of standard malloc().
+    codec2_initialize_realtime(CODEC2_REAL_TIME_MEMORY_SIZE);
+    
     initializePipeline_();
     
     // Request real-time scheduling from the operating system.    
@@ -479,6 +485,8 @@ void* TxRxThread::Entry()
     
     // Return to normal scheduling
     helper_->clearHelperRealTime();
+    
+    codec2_disable_realtime();
     
     return NULL;
 }

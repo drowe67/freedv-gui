@@ -25,6 +25,7 @@ if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2.git
 fi
 cd codec2 && git switch main && git pull && git checkout $CODEC2_BRANCH
+patch -N -p1 <../codec2-rt-heap.patch
 mkdir -p build_linux && cd build_linux && rm -Rf * && cmake .. && make VERBOSE=1 -j$(nproc)
 
 # Finally, build freedv-gui
