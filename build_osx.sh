@@ -59,8 +59,8 @@ cd $FREEDVGUIDIR
 if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2-new.git codec2
 fi
-cd codec2 && git switch main && git pull && git checkout $CODEC2_BRANCH
-patch -N -p1 <../codec2-rt-heap.patch
+cd codec2 && git reset --hard && git switch main && git pull && git checkout $CODEC2_BRANCH
+git apply ../codec2-rt-heap.patch
 mkdir -p build_osx && cd build_osx && rm -Rf * && cmake -DBUILD_OSX_UNIVERSAL=${UNIV_BUILD} .. && make VERBOSE=1 -j$(sysctl -n hw.logicalcpu)
 
 # Finally, build freedv-gui
