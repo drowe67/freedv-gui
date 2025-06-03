@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index e62c58a..1dc0178 100644
+index e62c58a..7475925 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -16,7 +16,7 @@ project(CODEC2
@@ -11,6 +11,17 @@ index e62c58a..1dc0178 100644
    )
  
  include(GNUInstallDirs)
+@@ -50,6 +50,10 @@ set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
+ endif(BUILD_OSX_UNIVERSAL)
+ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X deployment version")
+ 
++# Require C++14
++set(CMAKE_CXX_STANDARD 14)
++set(CMAKE_CXX_STANDARD_REQUIRED ON)
++
+ #
+ # Find the git hash if this is a working copy.
+ #
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
 index fb10d28..6c3e12c 100644
 --- a/src/CMakeLists.txt
