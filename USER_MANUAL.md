@@ -415,7 +415,7 @@ SSB | 0 | 8/10 | low | 2600 | 5/10
 1600 | 4 | 3/10 | low | 4000 | 4/10
 700D | -2 | 4/10 | high | 4000 | 3/10
 700E | 1 | 7/10 | medium | 4000 | 3/10
-RADEV1 | -2 | 8/10 | medium | 8000 | 8/10
+RADEV1 | -2 | 8/10 | medium | 8000 | 7/10
 Skype | - |- | medium | 8000 | 8/10
 
 The Min SNR is roughly the SNR where you cannot converse without
