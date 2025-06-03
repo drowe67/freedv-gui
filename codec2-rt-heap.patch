@@ -1,8 +1,16 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index e62c58a..7475925 100644
+index e62c58a..c3fc596 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -16,7 +16,7 @@ project(CODEC2
+@@ -9,14 +9,14 @@
+ # Note: this has to be at the beginning of the file in order for CMake to 
+ # actually recognize this override (vs. simply telling the macOS build toolchain
+ # to mandate the current release).
+-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X deployment version")
++set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum OS X deployment version")
+ 
+ cmake_minimum_required(VERSION 3.13)
+ project(CODEC2
    VERSION 1.2.0
    DESCRIPTION "Next-Generation Digital Voice for Two-Way Radio"
    HOMEPAGE_URL "https://www.rowetel.com/codec2.html"
@@ -11,13 +19,15 @@ index e62c58a..7475925 100644
    )
  
  include(GNUInstallDirs)
-@@ -50,6 +50,10 @@ set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
+@@ -50,6 +50,12 @@ set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
  endif(BUILD_OSX_UNIVERSAL)
  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X deployment version")
  
-+# Require C++14
++# Require C++14 and C11
 +set(CMAKE_CXX_STANDARD 14)
 +set(CMAKE_CXX_STANDARD_REQUIRED ON)
++set(CMAKE_C_STANDARD 11)
++set(CMAKE_C_STANDARD_REQUIRED ON)
 +
  #
  # Find the git hash if this is a working copy.
@@ -71,7 +81,7 @@ index fb10d28..6c3e12c 100644
  add_executable(freedv_data_tx freedv_data_tx.c)
 diff --git a/src/codec2_alloc.cpp b/src/codec2_alloc.cpp
 new file mode 100644
-index 0000000..5f1a23a
+index 0000000..9eef095
 --- /dev/null
 +++ b/src/codec2_alloc.cpp
 @@ -0,0 +1,50 @@
@@ -91,7 +101,7 @@ index 0000000..5f1a23a
 +
 +void codec2_initialize_realtime(size_t heapSize)
 +{
-+    Heap_ = (void*)malloc(heapSize);
++    Heap_ = (void*)aligned_alloc(O1HEAP_ALIGNMENT, heapSize);
 +    assert(Heap_ != NULL);
 +
 +    Instance_ = o1heapInit(Heap_, heapSize);
