@@ -790,7 +790,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V2.0.0 TBD 2025
+## V2.0.0 June 2025
 
 This version contains the first official release of the RADE V1 mode previously trialled over several 
 preview releases. Radio Autoencoder (RADE) technology is a new approach to sending speech over HF radio. 
