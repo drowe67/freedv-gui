@@ -21,10 +21,11 @@ CODEC2_BRANCH=1.2.0
 
 # First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
 cd $FREEDVGUIDIR
+rm -rf codec2
 if [ ! -d codec2 ]; then
     git clone https://github.com/drowe67/codec2.git
 fi
-cd codec2 && git reset --hard && git switch main && git pull && git checkout $CODEC2_BRANCH
+cd codec2 && git switch main && git pull && git checkout $CODEC2_BRANCH
 git apply ../codec2-rt-heap.patch
 mkdir -p build_linux && cd build_linux && rm -Rf * && cmake .. && make VERBOSE=1 -j$(nproc)
 
