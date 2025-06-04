@@ -15,11 +15,13 @@ static thread_local O1HeapInstance* Instance_ = NULL;
 void codec2_initialize_realtime(size_t heapSize)
 {
 #if defined(WIN32)
-    Heap_ = (void*)_aligned_malloc(O1HEAP_ALIGNMENT, heapSize);
+    Heap_ = (void*)_aligned_malloc(heapSize, O1HEAP_ALIGNMENT);
 #else
     Heap_ = (void*)aligned_alloc(O1HEAP_ALIGNMENT, heapSize);
 #endif // defined(WIN32)
     assert(Heap_ != NULL);
+
+    memset(Heap_, 0, heapSize);
 
     Instance_ = o1heapInit(Heap_, heapSize);
     assert(Instance_ != NULL);
