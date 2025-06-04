@@ -24,12 +24,11 @@
 
 #include "../defines.h"
 #include "FreeDVConfiguration.h"
+#include "../freedv_interface.h"
 
 FreeDVConfiguration::FreeDVConfiguration()
     /* First time configuration options */
     : firstTimeUse("/FirstTimeUse", true)
-    , freedv2020Allowed("/FreeDV2020/Allowed", false)
-    , freedvAVXSupported("/FreeDV2020/AVXSupported", false)
         
     /* Position and size of main window */
     , mainWindowLeft("/MainFrame/left", 20)
@@ -49,7 +48,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     , reporterWindowWidth("/Windows/FreeDVReporter/width", -1)
     , reporterWindowHeight("/Windows/FreeDVReporter/height", -1)
     , reporterWindowVisible("/Windows/FreeDVReporter/visible", false)
-    , reporterWindowCurrentSort("/Windows/FreeDVReporter/currentSort", -1)
+    , reporterWindowCurrentSort("/Windows/FreeDVReporter/currentSort", 5) /* FREQUENCY_COL */
     , reporterWindowCurrentSortDirection("/Windows/FreeDVReporter/currentSortDirection", true)
         
     /* Current tab view */
@@ -99,7 +98,7 @@ FreeDVConfiguration::FreeDVConfiguration()
     , waterfallColor("/Waterfall/Color", 0)
     , statsResetTimeSecs("/Stats/ResetTime", 10)
         
-    , currentFreeDVMode("/Audio/mode", 4)
+    , currentFreeDVMode("/Audio/mode", FREEDV_MODE_RADE)
         
     , currentSpectrumAveraging("/Plot/Spectrum/CurrentAveraging", 0)
     
@@ -126,7 +125,6 @@ void FreeDVConfiguration::load(wxConfigBase* config)
     reportingConfiguration.load(config);
     
     load_(config, firstTimeUse);
-    load_(config, freedv2020Allowed);
     
     load_(config, mainWindowLeft);
     load_(config, mainWindowTop);
@@ -251,7 +249,6 @@ void FreeDVConfiguration::save(wxConfigBase* config)
     reportingConfiguration.save(config);
     
     save_(config, firstTimeUse);
-    save_(config, freedv2020Allowed);
     
     save_(config, mainWindowLeft);
     save_(config, mainWindowTop);

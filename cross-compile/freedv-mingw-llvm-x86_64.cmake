@@ -12,9 +12,9 @@ set(CMAKE_AR ${triple}-ar)
 set(CMAKE_RANLIB ${triple}-ranlib)
 set(CMAKE_RC_COMPILER ${triple}-windres)
 
-set(CMAKE_C_FLAGS "-Wno-unused-command-line-argument -gcodeview")
-set(CMAKE_CXX_FLAGS "-Wno-unused-command-line-argument -gcodeview")
-set(CMAKE_EXE_LINKER_FLAGS -Wl,--pdb=)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-command-line-argument -gcodeview")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument -gcodeview")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--pdb=")
 
 # For make package use.
 set(CMAKE_OBJDUMP ${triple}-objdump)

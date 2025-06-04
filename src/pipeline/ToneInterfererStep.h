@@ -45,6 +45,7 @@ private:
     std::function<float()> toneFrequencyFn_;
     std::function<float()> toneAmplitudeFn_;
     std::function<float*()> tonePhaseFn_;
+    std::shared_ptr<short> outputSamples_;
 };
 
 #endif // AUDIO_PIPELINE__TONE_INTERFERER_STEP_H

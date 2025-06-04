@@ -46,6 +46,8 @@ public:
 private:
     std::function<struct MODEM_STATS*()> modemStatsFn_;
     std::function<float*()> getAvMagFn_;
+    float* rxSpectrum_;
+    COMP* rxFdm_;
 };
 
 #endif // AUDIO_PIPELINE__COMPUTE_RF_SPECTRUM_STEP_H

@@ -23,6 +23,7 @@
 #include "TapStep.h"
 
 #include <assert.h>
+#include <future>
 
 TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
     : tapStep_(tapStep)
@@ -48,8 +49,9 @@ int TapStep::getOutputSampleRate() const
 
 std::shared_ptr<short> TapStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    int temp = 0;
     assert(tapStep_->getInputSampleRate() == sampleRate_);
+    
+    int temp = 0;
     tapStep_->execute(inputSamples, numInputSamples, &temp);
     
     *numOutputSamples = numInputSamples;

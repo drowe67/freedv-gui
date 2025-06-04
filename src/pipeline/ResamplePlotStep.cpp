@@ -24,17 +24,18 @@
 #include "ResamplePlotStep.h"
 
 // TBD - maybe include code for function here?
-extern void resample_for_plot(struct FIFO *plotFifo, short buf[], int length, int fs);
+extern void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, int length, int fs);
 
 ResampleForPlotStep::ResampleForPlotStep(struct FIFO* fifo)
     : fifo_(fifo)
 {
-    // empty
+    decSamples_ = new short[FS];
+    assert(decSamples_ != nullptr);
 }
 
 ResampleForPlotStep::~ResampleForPlotStep()
 {
-    // empty
+    delete[] decSamples_;
 }
 
 int ResampleForPlotStep::getInputSampleRate() const
@@ -49,8 +50,8 @@ int ResampleForPlotStep::getOutputSampleRate() const
 
 std::shared_ptr<short> ResampleForPlotStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    resample_for_plot(fifo_, inputSamples.get(), numInputSamples, FS);
+    resample_for_plot(fifo_, inputSamples.get(), decSamples_, numInputSamples, FS);
     
     *numOutputSamples = 0;    
-    return std::shared_ptr<short>((short*)nullptr, std::default_delete<short[]>());
+    return std::shared_ptr<short>(nullptr);
 }

@@ -12,10 +12,10 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
 	cmake_policy(SET CMP0135 NEW)
 endif()
 
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum OS X deployment version")
 
 set(PROJECT_NAME FreeDV)
-set(PROJECT_VERSION 1.9.10)
+set(PROJECT_VERSION 2.0.0)
 set(PROJECT_DESCRIPTION "HF Digital Voice for Radio Amateurs")
 set(PROJECT_HOMEPAGE_URL "https://freedv.org")
 
@@ -49,7 +49,12 @@ endif(APPLE)
 # Adds a tag to the end of the version string. Leave empty
 # for official release builds.
 if(NOT DEFINED FREEDV_VERSION_TAG)
-set(FREEDV_VERSION_TAG "devel")
+set(FREEDV_VERSION_TAG "")
+
+# Uncomment the below definition to cause the build to expire
+# six months from the day it was built. This should be commented
+# for official releases.
+#add_definitions(-DUNOFFICIAL_RELEASE)
 endif(NOT DEFINED FREEDV_VERSION_TAG)
 
 # Prevent in-source builds to protect automake/autoconf config.
@@ -74,6 +79,7 @@ endif(BUILD_OSX_UNIVERSAL)
 # Return the date (yyyy-mm-dd)
 string(TIMESTAMP DATE_RESULT "%Y-%m-%d" UTC)
 message(STATUS "Compilation date = XX${DATE_RESULT}XX")
+add_definitions(-DFREEDV_BUILD_DATE="${DATE_RESULT}")
 
 #
 # generate src/version.h
@@ -99,7 +105,7 @@ if(EXISTS ${CMAKE_SOURCE_DIR}/.git)
     find_package(Git QUIET)
     if(Git_FOUND)
         execute_process(
-            COMMAND "${GIT_EXECUTABLE}" describe --always HEAD
+            COMMAND "${GIT_EXECUTABLE}" describe --abbrev=4 --always HEAD
             WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
             RESULT_VARIABLE res
             OUTPUT_VARIABLE FREEDV_HASH
@@ -133,8 +139,6 @@ set(CMAKE_VERBOSE_MAKEFILE TRUE CACHE BOOL "Verbose makefile.")
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE CACHE BOOL "Enable IDE features.")
 set(USE_INTERNAL_CODEC2 FALSE CACHE BOOL
     "Download and build codec2  instead of using the system library.")
-set(BOOTSTRAP_LPCNET FALSE CACHE BOOL
-    "Download and build LPCNet instead of using the system library.")
 set(USE_STATIC_DEPS FALSE CACHE BOOL
     "Download and build static libraries instead of system libraries.")
 set(USE_STATIC_PORTAUDIO FALSE CACHE BOOL
@@ -147,10 +151,18 @@ set(USE_STATIC_SPEEXDSP FALSE CACHE BOOL
     "Download and build static speex instead of the system library.")
 set(BOOTSTRAP_WXWIDGETS FALSE CACHE BOOL
     "Download and build static wxWidgets instead of the system library.")
-set(USE_PULSEAUDIO TRUE CACHE BOOL
-    "Use PulseAudio instead of PortAudio for audio I/O.")
+set(USE_NATIVE_AUDIO TRUE CACHE BOOL
+    "Use native audio code instead of PortAudio for audio I/O. Defaults to true.")
 set(SIGN_WINDOWS_BINARIES FALSE CACHE BOOL
     "Enable signing of Windows binaries. See CODE_SIGNING.md for info.")
+set(ENABLE_ASAN FALSE CACHE BOOL
+    "Instruments the build with AddressSanitizer for memory checks.")
+
+if(ENABLE_ASAN)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+    set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fsanitize=address")
+endif(ENABLE_ASAN)
 
 if(SIGN_WINDOWS_BINARIES)
     if(NOT WIN32 AND NOT MINGW)
@@ -158,7 +170,7 @@ if(SIGN_WINDOWS_BINARIES)
     endif(NOT WIN32 AND NOT MINGW)
 
     if(NOT DEFINED PKCS11_KEY_FILE OR NOT DEFINED PKCS11_CERTIFICATE_FILE OR NOT DEFINED INTERMEDIATE_CERT_FILE)
-        message(FATAL_ERROR "Must provide key and certifcate files.")
+        message(FATAL_ERROR "Must provide key and certificate files.")
     endif(NOT DEFINED PKCS11_KEY_FILE OR NOT DEFINED PKCS11_CERTIFICATE_FILE OR NOT DEFINED INTERMEDIATE_CERT_FILE)
 
     # Default PKCS#11 engine if not provided.
@@ -204,6 +216,18 @@ if(USE_STATIC_DEPS)
 endif(USE_STATIC_DEPS)
 
 #
+# Find DBus (Linux only)--this is so that we can use
+# rtkit to request real-time scheduling for our audio 
+# threads.
+if (LINUX)
+    message(STATUS "Looking for DBus...")
+    find_package(DBus)
+    if (DBUS_FOUND)
+        message(STATUS "Found DBus, will attempt to use rtkit for real-time threading")
+    endif (DBUS_FOUND)
+endif (LINUX)
+
+#
 # Find wxWidgets
 #
 set(DARK_MODE_DISABLE "false")
@@ -229,6 +253,14 @@ if(NOT BOOTSTRAP_WXWIDGETS)
         if(WX_VERSION VERSION_EQUAL ${WX_VERSION_MIN}
            OR WX_VERSION VERSION_GREATER ${WX_VERSION_MIN})
             message(STATUS "wxWidgets version: ${WX_VERSION}")
+            if(WIN32 OR APPLE)
+                message(WARNING 
+                    "On Windows and macOS, FreeDV patches wxWidgets to ensure consistent UI behavior across platforms."
+                    "It is highly recommended to allow FreeDV to build its own wxWidgets with these patches by setting "
+                    "-DBOOTSTRAP_WXWIDGETS=TRUE instead of using any version of wxWidgets already on the system. "
+                    "Alternatively, you can apply the patch in cmake/wxWidgets-Direct2D-color-font.patch to the wxWidgets "
+                    "source tree and build it yourself.")
+            endif(WIN32 OR APPLE)
         else()
             set(BOOTSTRAP_WXWIDGETS TRUE)
         endif()
@@ -261,14 +293,13 @@ if(MINGW)
     set(USE_INTERNAL_CODEC2 TRUE CACHE BOOL "Perform internal builds of codec2")
     # Setup HOST variables.
     include(cmake/MinGW.cmake)
-    # This sets up the exe icon for windows under mingw.
-    set(RES_FILES "")
 
+    # This sets up the exe icon for windows under mingw.
     set(RES_FILES "${CMAKE_BINARY_DIR}/freedv.rc")
     set(CMAKE_RC_COMPILER_INIT windres)
     enable_language(RC)
     set(CMAKE_RC_COMPILE_OBJECT
-        "<CMAKE_RC_COMPILER> <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
+        "<CMAKE_RC_COMPILER> --include-dir ${CMAKE_BINARY_DIR}/_deps/wxwidgets-src/include <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
     include(InstallRequiredSystemLibraries)
 endif(MINGW)
 
@@ -322,9 +353,13 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/soxconfig.h.in"
 find_package(Threads REQUIRED)
 message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 
+#
+# Build RADE. 
+# (TBD - allow override with own build, similar to Codec2)
+include(cmake/BuildRADE.cmake)
 
 #
-# Find codec2 and lpcnetfreedv
+# Find codec2
 #
 if(CODEC2_BUILD_DIR)
     if(USE_INTERNAL_CODEC2)
@@ -344,20 +379,8 @@ if(CODEC2_BUILD_DIR)
         CONFIGS codec2.cmake
     )
     get_target_property(CODEC2_INCLUDE_DIRS codec2 INTERFACE_INCLUDE_DIRECTORIES)
-    if(LPCNET_BUILD_DIR)
-        message(STATUS "Using LPCNet from build directory...")
-        set(lpcnet_DIR ${LPCNET_BUILD_DIR})
-        find_package(lpcnet REQUIRED
-            NO_DEFAULT_PATH
-            PATHS ${LPCNET_BUILD_DIR}
-            CONFIGS lpcnetfreedv.cmake
-        )
-    else()
-        set(LPCNET_DISABLED YES)
-        add_definitions(-DLPCNET_DISABLED)
-    endif()
 elseif(USE_INTERNAL_CODEC2)
-    message(STATUS "Will attempt internal build of codec2 and lpcnetfreedv.")
+    message(STATUS "Will attempt internal build of codec2.")
     include(cmake/BuildCodec2.cmake)
 else(CODEC2_BUILD_DIR)
     message(STATUS "Looking for codec2...")
@@ -369,7 +392,6 @@ else(CODEC2_BUILD_DIR)
         get_target_property(CODEC2_INCLUDE_DIRS codec2 INTERFACE_INCLUDE_DIRECTORIES)
         message(STATUS "  codec2 library: ${CODEC2_LIBRARY}")
         message(STATUS "  codec2 headers: ${CODEC2_INCLUDE_DIRS}")
-        find_package(lpcnetfreedv REQUIRED)
     else()
         # Try to find manually
         find_path(CODEC2_INCLUDE_DIRS codec2.h
@@ -381,7 +403,7 @@ else(CODEC2_BUILD_DIR)
             list(APPEND FREEDV_LINK_LIBS ${CODEC2_LIBRARY})
             include_directories(${CODEC2_INCLUDE_DIRS})
         else()
-            message(STATUS "Will attempt internal build of codec2 and lpcnetfreedv.")
+            message(STATUS "Will attempt internal build of codec2.")
             include(cmake/BuildCodec2.cmake)
         endif()
     endif()
@@ -396,14 +418,23 @@ if(NOT DEFINED LINUX)
     endif((${LINUX_LOC} GREATER 0) OR (${LINUX_LOC} EQUAL 0))
 endif(NOT DEFINED LINUX)
 
-if (NOT USE_PULSEAUDIO AND LINUX)
+if (NOT USE_NATIVE_AUDIO AND LINUX)
     message(WARNING "Use of PortAudio on Linux has been deprecated and may be explicitly disallowed in a future release. It is highly recommended that you use FreeDV's built-in PulseAudio support instead as this generally gives better results, especially on distributions that now use pipewire for audio.")
-endif(NOT USE_PULSEAUDIO AND LINUX)
+endif(NOT USE_NATIVE_AUDIO AND LINUX)
+
+if (USE_NATIVE_AUDIO)
+    if (APPLE OR LINUX OR WIN32)
+        add_definitions(-DAUDIO_ENGINE_NATIVE_ENABLE)
+        set(NATIVE_AUDIO_AVAILABLE TRUE)
+    else (APPLE OR LINUX OR WIN32)
+        message(WARNING "No native audio API support for platforms other than Linux, macOS and Windows. Using PortAudio instead.")
+    endif(APPLE OR LINUX OR WIN32)
+endif(USE_NATIVE_AUDIO)
 
 #
 # Find or build portaudio/PulseAudio Library
 #
-if(NOT USE_STATIC_PORTAUDIO AND NOT USE_PULSEAUDIO)
+if(NOT USE_STATIC_PORTAUDIO AND NOT NATIVE_AUDIO_AVAILABLE)
     message(STATUS "Looking for portaudio...")
     find_package(portaudio-2.0 REQUIRED)
     if(PORTAUDIO_FOUND)
@@ -426,7 +457,7 @@ On Windows it's easiest to use the cmake option: USE_STATIC_PORTAUDIO"
     if(NOT ${PORTAUDIO_VERSION} EQUAL 19 AND NOT MINGW)
         message(WARNING "Portaudio versions other than 19 are known to have issues. You have been warned!")
     endif()
-elseif(USE_PULSEAUDIO AND LINUX)
+elseif(USE_NATIVE_AUDIO AND LINUX)
     message(STATUS "Finding PulseAudio...")
     find_package(PulseAudio REQUIRED)
     if(PULSEAUDIO_FOUND)
@@ -434,7 +465,6 @@ elseif(USE_PULSEAUDIO AND LINUX)
         message(STATUS "  PulseAudio headers: ${PULSEAUDIO_INCLUDE_DIR}")
         list(APPEND FREEDV_LINK_LIBS ${PULSEAUDIO_LIBRARY})
         include_directories(${PULSEAUDIO_INCLUDE_DIR})
-        add_definitions(-DAUDIO_ENGINE_PULSEAUDIO_ENABLE)
     else()
         message(FATAL_ERROR "PulseAudio library not found.
 On Linux systems try installing:
@@ -442,9 +472,15 @@ On Linux systems try installing:
     libpulse-dev           (DEB based systems)
 ")
      endif()
-else()
+elseif(USE_NATIVE_AUDIO AND APPLE)
+    message(STATUS "Using FreeDV-developed Core Audio implementation for macOS")
+elseif(USE_NATIVE_AUDIO AND WIN32)
+    message(STATUS "Using FreeDV-developed WASAPI implementation for Windows")
+elseif(NOT NATIVE_AUDIO_AVAILABLE)
     message(STATUS "Will attempt static build of portaudio.")
     include(cmake/Buildportaudio-2.0.cmake)
+else()
+    message(FATAL_ERROR "Cannot enable both native audio and PortAudio at the same time.")
 endif()
 
 #
@@ -464,24 +500,6 @@ else(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
     include(cmake/BuildHamlib.cmake)
 endif(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
 
-
-# sioclient library
-message(STATUS "Looking for sioclient...")
-find_path(SIOCLIENT_INCLUDE_DIR sio_client.h)
-find_library(SIOCLIENT_LIBRARY sioclient)
-message(STATUS "  Socket.io library: ${SIOCLIENT_LIBRARY}")
-message(STATUS "  Socket.io headers: ${SIOCLIENT_INCLUDE_DIR}")
-if(SIOCLIENT_LIBRARY AND SIOCLIENT_INCLUDE_DIR)
-    message(STATUS "Socket.io library found.")
-    include_directories(${SIOCLIENT_INCLUDE_DIR})
-    list(APPEND FREEDV_LINK_LIBS ${SIOCLIENT_LIBRARY})
-else(SIOCLIENT_LIBRARY AND SIOCLIENT_INCLUDE_DIR)
-    message(STATUS "Using static sioclient build")
-    include(cmake/BuildSocketIo.cmake)
-endif(SIOCLIENT_LIBRARY AND SIOCLIENT_INCLUDE_DIR)
-
-
-#
 # Samplerate Library
 #
 if(NOT USE_STATIC_SAMPLERATE)
@@ -664,7 +682,7 @@ if(WIN32)
     set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_NSIS_MENU_LINKS
         "http://freedv.org" "FreeDV Homepage")
-    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "DeleteRegKey HKLM 'SOFTWARE\\\\CODEC2-Project\\\\FreeDV'")
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "${CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS}\r\nDeleteRegKey HKLM 'SOFTWARE\\\\CODEC2-Project\\\\FreeDV'")
     set(CPACK_NSIS_MENU_LINKS "share/freedv-gui/USER_MANUAL.pdf" "FreeDV User Manual")
 
     set(CPACK_WIN_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_VER_TWEAK}")
@@ -702,13 +720,55 @@ elseif(UNIX AND NOT APPLE)
     # Linux packaging
     SET(CPACK_GENERATOR "DEB")
     SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Mooneer Salem <mooneer@gmail.com>") #required
-    if(USE_PULSEAUDIO)
-    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.1.1), lpcnet (>= 0.5.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libpulse0 (>= 14.2-2), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
-    else(USE_PULSEAUDIO)
-    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.1.1), lpcnet (>= 0.5.0), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libportaudio2 (>= 19.6.0-1build1), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
-    endif(USE_PULSEAUDIO)
+    if(USE_NATIVE_AUDIO)
+    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.1.1), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libpulse0 (>= 14.2-2), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
+    else(USE_NATIVE_AUDIO)
+    SET(CPACK_DEBIAN_PACKAGE_DEPENDS "codec2 (>= 1.1.1), libspeexdsp1 (>= 1.2~rc1.2-1+b2), libsamplerate0 (>= 0.1.9-2), libwxgtk3.0-gtk3-0v5  (>= 3.0.4+dfsg-3), libportaudio2 (>= 19.6.0-1build1), libhamlib2 (>= 3.3-10build1), libasound2 (>= 1.1.8-1), libao4 (>= 1.2.2+20180113-1), libgsm1 (>= 1.0.18-2), libsndfile1 (>= 1.0.28-6)")
+    endif(USE_NATIVE_AUDIO)
 
     SET(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
     include(CPack)
 
 endif(WIN32)
+
+if(UNITTEST)
+# The below tests are currently Linux/macOS-only. A PowerShell version of fullduplex_* 
+# for Windows is implemented in tests/TestFreeDVFullDuplex.ps1.
+macro(DefineAudioTest utName)
+    add_test(NAME fullduplex_${utName} 
+             COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx ${utName}") 
+    if(NOT ENABLE_ASAN)
+    set_tests_properties(fullduplex_${utName} PROPERTIES FAIL_REGULAR_EXPRESSION "Sync changed from 1 to 0")
+    endif(NOT ENABLE_ASAN)
+endmacro()
+
+DefineAudioTest(RADEV1)
+
+add_test(NAME fullduplex_RADEV1_repeated
+         COMMAND sh -c " ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1")
+if(NOT ENABLE_ASAN)
+    set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES FAIL_REGULAR_EXPRESSION "Sync changed from 1 to 0")
+endif(NOT ENABLE_ASAN)
+set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES DISABLED TRUE)
+set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES LABELS stress_test)
+
+DefineAudioTest(700D)
+DefineAudioTest(700E)
+DefineAudioTest(1600)
+
+add_test(NAME rade_reporting_clean COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh)
+if(NOT ENABLE_ASAN)
+set_tests_properties(rade_reporting_clean PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
+endif(NOT ENABLE_ASAN)
+
+add_test(NAME rade_reporting_awgn COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CODEC2_BUILD_DIR} awgn)
+if(NOT ENABLE_ASAN)
+set_tests_properties(rade_reporting_awgn PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
+endif(NOT ENABLE_ASAN)
+
+add_test(NAME rade_reporting_mpp COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CODEC2_BUILD_DIR} mpp)
+if(NOT ENABLE_ASAN)
+set_tests_properties(rade_reporting_mpp PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
+endif(NOT ENABLE_ASAN)
+
+endif(UNITTEST)

@@ -22,32 +22,33 @@
 #include <future>
 #include "main.h"
 #include "codec2_fdmdv.h"
+#include "lpcnet.h"
 #include "pipeline/ParallelStep.h"
 #include "pipeline/FreeDVTransmitStep.h"
 #include "pipeline/FreeDVReceiveStep.h"
+#include "pipeline/RADEReceiveStep.h"
+#include "pipeline/RADETransmitStep.h"
+#include "pipeline/AudioPipeline.h"
+
+#include "util/logging/ulog.h"
 
 using namespace std::placeholders;
+
+#include <wx/string.h>
+extern wxString utFreeDVMode;
 
 static const char* GetCurrentModeStrImpl_(int mode)
 {
     switch(mode)
     {
-        case FREEDV_MODE_700C:
-            return "700C";
         case FREEDV_MODE_700D:
             return "700D";
         case FREEDV_MODE_700E:
             return "700E";
         case FREEDV_MODE_1600:
             return "1600";
-        case FREEDV_MODE_2020:
-            return "2020";
-#if defined(FREEDV_MODE_2020B)
-        case FREEDV_MODE_2020B:
-            return "2020B";
-#endif // FREEDV_MODE_2020B
-        case FREEDV_MODE_800XA:
-            return "800XA";
+        case FREEDV_MODE_RADE:
+            return "RADEV1";
         default:
             return "unk";
     }
@@ -63,7 +64,12 @@ FreeDVInterface::FreeDVInterface() :
     modemStatsIndex_(0),
     currentTxMode_(nullptr),
     currentRxMode_(nullptr),
-    lastSyncRxMode_(nullptr)
+    lastSyncRxMode_(nullptr),
+    rade_(nullptr),
+    lpcnetEncState_(nullptr),
+    radeTxStep_(nullptr),
+    sync_(0),
+    radeTextPtr_(nullptr)
 {
     // empty
 }
@@ -81,7 +87,7 @@ static void callback_err_fn(void *fifo, short error_pattern[], int sz_error_patt
 
 void FreeDVInterface::OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr, int length, void* state) 
 {
-    fprintf(stderr, "FreeDVInterface::OnReliableTextRx_: received %s\n", txt_ptr);
+    log_info("FreeDVInterface::OnReliableTextRx_: received %s", txt_ptr);
     
     FreeDVInterface* obj = (FreeDVInterface*)state;
     assert(obj != nullptr);
@@ -93,22 +99,29 @@ void FreeDVInterface::OnReliableTextRx_(reliable_text_t rt, const char* txt_ptr,
     reliable_text_reset(rt);
 }
 
+void FreeDVInterface::OnRadeTextRx_(rade_text_t rt, const char* txt_ptr, int length, void* state) 
+{
+    log_info("FreeDVInterface::OnRadeTextRx_: received %s", txt_ptr);
+    
+    FreeDVInterface* obj = (FreeDVInterface*)state;
+    assert(obj != nullptr);
+    
+    {
+        std::unique_lock<std::mutex> lock(obj->reliableTextMutex_);
+        obj->receivedReliableText_ = txt_ptr;
+    }
+}
+
 float FreeDVInterface::GetMinimumSNR_(int mode)
 {
     switch(mode)
     {
-        case FREEDV_MODE_700C:
-            return 2.0;
         case FREEDV_MODE_700D:
             return -2.0f;
         case FREEDV_MODE_700E:
             return 1.0f;
         case FREEDV_MODE_1600:
             return 4.0f;
-        case FREEDV_MODE_2020:
-            return 2.0f;
-        case FREEDV_MODE_800XA:
-            return 2.0f;
         default:
             return 0.0f;
     }
@@ -116,7 +129,8 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
 
 void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText)
 {
-    singleRxThread_ = singleRxThread;
+    sync_ = 0;
+    singleRxThread_ = enabledModes_.size() > 1 ? singleRxThread : true;
 
     modemStatsList_ = new MODEM_STATS[enabledModes_.size()];
     for (int index = 0; index < (int)enabledModes_.size(); index++)
@@ -127,6 +141,46 @@ void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, boo
     float minimumSnr = 999.0f;
     for (auto& mode : enabledModes_)
     {
+        if (mode >= FREEDV_MODE_RADE)
+        {
+            // Special case for RADE.
+            // Note: multi-RX not currently supported.
+            rxMode_ = mode;
+            txMode_ = mode;
+            modemStatsIndex_ = 0;
+
+            // Suppress const string warning.
+            // TBD - modelFile may be used by RADE in the future!
+            char modelFile[1];
+            modelFile[0] = 0;
+            rade_ = rade_open(modelFile, RADE_USE_C_ENCODER | RADE_USE_C_DECODER | (wxGetApp().appConfiguration.debugVerbose ? 0 : RADE_VERBOSE_0));
+            assert(rade_ != nullptr);
+
+            if (usingReliableText)
+            {
+                log_info("creating RADE text object");
+                radeTextPtr_ = rade_text_create();
+                assert(radeTextPtr_ != nullptr);
+
+                rade_text_set_rx_callback(radeTextPtr_, &FreeDVInterface::OnRadeTextRx_, this);
+
+                if (utFreeDVMode != "")
+                {
+                    rade_text_enable_stats_output(radeTextPtr_, true);
+                }
+            }
+
+            float zeros[320] = {0};
+            float in_features[5*NB_TOTAL_FEATURES] = {0};
+            fargan_init(&fargan_);
+            fargan_cont(&fargan_, zeros, in_features);
+
+            lpcnetEncState_ = lpcnet_encoder_create();
+            assert(lpcnetEncState_ != nullptr);
+            
+            continue;
+        }
+
         struct freedv* dv = freedv_open(mode);
         assert(dv != nullptr);
         
@@ -203,6 +257,12 @@ void FreeDVInterface::stop()
         reliable_text_destroy(reliableTextObj);
     }
     reliableText_.clear();
+
+    if (radeTextPtr_ != nullptr)
+    {
+        rade_text_destroy(radeTextPtr_);
+        radeTextPtr_ = nullptr;
+    }
     
     for (auto& dv : dvObjects_)
     {
@@ -224,6 +284,19 @@ void FreeDVInterface::stop()
     modemStatsIndex_ = 0;
     txMode_ = 0;
     rxMode_ = 0;
+
+    if (rade_ != nullptr)
+    {
+        rade_close(rade_);
+    }
+    rade_ = nullptr;
+
+    if (lpcnetEncState_ != nullptr)
+    {
+        lpcnet_encoder_destroy(lpcnetEncState_);
+    }
+    lpcnetEncState_ = nullptr;
+    radeTxStep_ = nullptr;
 }
 
 void FreeDVInterface::setRunTimeOptions(bool clip, bool bpf)
@@ -274,16 +347,25 @@ void FreeDVInterface::setTestFrames(bool testFrames, bool combine)
 
 int FreeDVInterface::getTotalBits()
 {
+    // Special case for RADE.
+    if (currentRxMode_ == nullptr) return 1;
+
     return freedv_get_total_bits(currentRxMode_);
 }
 
 int FreeDVInterface::getTotalBitErrors()
 {
+    // Special case for RADE.
+    if (currentRxMode_ == nullptr) return 0;
+
     return freedv_get_total_bit_errors(currentRxMode_);
 }
 
 float FreeDVInterface::getVariance() const
 {
+    // Special case for RADE.
+    if (currentRxMode_ == nullptr) return 0.0;
+
     struct CODEC2 *c2 = freedv_get_codec2(currentRxMode_);
     if (c2 != NULL)
         return codec2_get_var(c2);
@@ -293,6 +375,9 @@ float FreeDVInterface::getVariance() const
 
 int FreeDVInterface::getErrorPattern(short** outputPattern)
 {
+    // Special case for RADE.
+    if (currentRxMode_ == nullptr) return 0;
+
     int size = freedv_get_sz_error_pattern(currentRxMode_);
     if (size > 0)
     {
@@ -320,30 +405,22 @@ int FreeDVInterface::getErrorPattern(short** outputPattern)
 
 const char* FreeDVInterface::getCurrentModeStr() const
 {
-    if (currentRxMode_ == nullptr)
-    {
-        return "unk";
-    }
-    else
-    {
-        return GetCurrentModeStrImpl_(rxMode_);
-    }
+    return GetCurrentModeStrImpl_(rxMode_);
 }
 
 const char* FreeDVInterface::getCurrentTxModeStr() const
 {
-    if (currentTxMode_ == nullptr)
-    {
-        return "unk";
-    }
-    else
-    {
-        return GetCurrentModeStrImpl_(txMode_);
-    }
+    return GetCurrentModeStrImpl_(txMode_);
 }
 
 void FreeDVInterface::changeTxMode(int txMode)
 {
+    if (txMode >= FREEDV_MODE_RADE)
+    {
+        txMode_ = txMode;
+        return;
+    }
+
     int index = 0;
     for (auto& mode : enabledModes_)
     {
@@ -362,6 +439,9 @@ void FreeDVInterface::changeTxMode(int txMode)
 
 void FreeDVInterface::setSync(int val)
 {
+    // Special case for RADE.
+    if (currentRxMode_ == nullptr) return;
+
     for (auto& dv : dvObjects_)
     {
         // TBD: do it only for 700*.
@@ -371,7 +451,7 @@ void FreeDVInterface::setSync(int val)
 
 int FreeDVInterface::getSync() const
 {
-    return freedv_get_sync(currentRxMode_);
+    return sync_;
 }
 
 void FreeDVInterface::setEq(int val)
@@ -421,24 +501,45 @@ void FreeDVInterface::setTextCallbackFn(void (*rxFunc)(void *, char), char (*txF
 
 int FreeDVInterface::getTxModemSampleRate() const
 {
+    if (txMode_ >= FREEDV_MODE_RADE)
+    {
+        return RADE_MODEM_SAMPLE_RATE;
+    }
+
     assert(currentTxMode_ != nullptr);
     return freedv_get_modem_sample_rate(currentTxMode_);
 }
 
 int FreeDVInterface::getTxSpeechSampleRate() const
 {
+    if (txMode_ >= FREEDV_MODE_RADE)
+    {
+        return RADE_SPEECH_SAMPLE_RATE;
+    }
+
     assert(currentTxMode_ != nullptr);
     return freedv_get_speech_sample_rate(currentTxMode_);
 }
 
 int FreeDVInterface::getTxNumSpeechSamples() const
 {
+    if (txMode_ >= FREEDV_MODE_RADE)
+    {
+        return LPCNET_FRAME_SIZE;
+    }
+
     assert(currentTxMode_ != nullptr);
     return freedv_get_n_speech_samples(currentTxMode_);   
 }
 
 int FreeDVInterface::getTxNNomModemSamples() const
 {
+    if (txMode_ >= FREEDV_MODE_RADE)
+    {
+        const int NUM_SAMPLES_SILENCE = 60 * RADE_MODEM_SAMPLE_RATE / 1000;
+        return std::max(rade_n_tx_out(rade_), rade_n_tx_eoo_out(rade_) + NUM_SAMPLES_SILENCE);
+    }
+
     assert(currentTxMode_ != nullptr);
     return freedv_get_n_nom_modem_samples(currentTxMode_);   
 }
@@ -465,6 +566,11 @@ void FreeDVInterface::setTextVaricodeNum(int num)
 
 int FreeDVInterface::getRxModemSampleRate() const
 {
+    if (rxMode_ >= FREEDV_MODE_RADE)
+    {
+        return RADE_MODEM_SAMPLE_RATE;
+    }
+
     int result = 0;
     for (auto& dv : dvObjects_)
     {
@@ -476,6 +582,11 @@ int FreeDVInterface::getRxModemSampleRate() const
 
 int FreeDVInterface::getRxNumModemSamples() const
 {
+    if (rxMode_ >= FREEDV_MODE_RADE)
+    {
+        return 960;
+    }
+
     int result = 0;
     for (auto& dv : dvObjects_)
     {
@@ -487,6 +598,11 @@ int FreeDVInterface::getRxNumModemSamples() const
 
 int FreeDVInterface::getRxNumSpeechSamples() const
 {
+    if (rxMode_ >= FREEDV_MODE_RADE)
+    {
+        return 1920;
+    }
+
     int result = 0;
     for (auto& dv : dvObjects_)
     {
@@ -498,6 +614,11 @@ int FreeDVInterface::getRxNumSpeechSamples() const
 
 int FreeDVInterface::getRxSpeechSampleRate() const
 {
+    if (rxMode_ >= FREEDV_MODE_RADE)
+    {
+        return RADE_SPEECH_SAMPLE_RATE;
+    }
+
     int result = 0;
     for (auto& dv : dvObjects_)
     {
@@ -550,16 +671,54 @@ const char* FreeDVInterface::getReliableText()
 
 void FreeDVInterface::setReliableText(const char* callsign)
 {
+    // Special case for RADE.
+    if (rade_ != nullptr && radeTextPtr_ != nullptr)
+    {
+        log_info("generating RADE text string");
+        int nsyms = rade_n_eoo_bits(rade_);
+        float* eooSyms = new float[nsyms];
+        assert(eooSyms);
+
+        rade_text_generate_tx_string(radeTextPtr_, callsign, strlen(callsign), eooSyms, nsyms);
+        rade_tx_set_eoo_bits(rade_, eooSyms);
+
+        delete[] eooSyms;
+    }
+
     for (auto& rt : reliableText_)
     {
         reliable_text_set_string(rt, callsign, strlen(callsign));
     }
 }
 
-IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int outputSampleRate, std::function<float()> getFreqOffsetFn)
+float FreeDVInterface::getSNREstimate()
+{
+    if (txMode_ >= FREEDV_MODE_RADE)
+    {
+        // Special handling for RADE
+        return (getSync() ? rade_snrdB_3k_est(rade_) : 0);
+    }
+    else
+    {
+        return getCurrentRxModemStats()->snr_est;
+    }
+}
+
+IPipelineStep* FreeDVInterface::createTransmitPipeline(
+    int inputSampleRate, 
+    int outputSampleRate, 
+    std::function<float()> getFreqOffsetFn,
+    std::shared_ptr<IRealtimeHelper> realtimeHelper)
 {
     std::vector<IPipelineStep*> parallelSteps;
-    
+
+    if (txMode_ >= FREEDV_MODE_RADE)
+    {
+        // Special handling for RADE
+        radeTxStep_ = new RADETransmitStep(rade_, lpcnetEncState_);
+        parallelSteps.push_back(radeTxStep_);
+    }
+ 
     for (auto& dv : dvObjects_)
     {
         parallelSteps.push_back(new FreeDVTransmitStep(dv, getFreqOffsetFn));
@@ -568,9 +727,16 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
     std::function<int(ParallelStep*)> modeFn = 
         [&](ParallelStep*) {
             int index = 0;
+
+            auto currentTxMode = currentTxMode_;
+            auto txModeInt = txMode_; 
+
+            // Special handling for RADE.
+            if (txModeInt >= FREEDV_MODE_RADE) return 0;
+
             for (auto& dv : dvObjects_)
             {
-                if (dv == currentTxMode_) return index;
+                if (dv == currentTxMode) return index;
                 index++;
             }
             return -1;
@@ -583,7 +749,8 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(int inputSampleRate, int 
         modeFn,
         modeFn,
         parallelSteps,
-        nullptr
+        nullptr,
+        realtimeHelper
     );
     
     return parallelStep;
@@ -595,7 +762,8 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     std::function<int()> getChannelNoiseFn,
     std::function<int()> getChannelNoiseSnrFn,
     std::function<float()> getFreqOffsetFn,
-    std::function<float*()> getSigPwrAvgFn)
+    std::function<float*()> getSigPwrAvgFn,
+    std::shared_ptr<IRealtimeHelper> realtimeHelper)
 {
     std::vector<IPipelineStep*> parallelSteps;
 
@@ -607,29 +775,46 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     state->getChannelNoiseSnrFn = getChannelNoiseSnrFn;
     state->getFreqOffsetFn = getFreqOffsetFn;
     state->getSigPwrAvgFn = getSigPwrAvgFn;
-    
-    for (auto& dv : dvObjects_)
+   
+    if (txMode_ >= FREEDV_MODE_RADE)
     {
-        auto recvStep = new FreeDVReceiveStep(dv);
-        assert(recvStep != nullptr);
-        
-        parallelSteps.push_back(recvStep);
+        // special handling for RADE
+        parallelSteps.push_back(new RADEReceiveStep(rade_, &fargan_, radeTextPtr_));
+
+        state->preProcessFn = [&](ParallelStep*) { return 0; };
+        state->postProcessFn = std::bind(&FreeDVInterface::postProcessRxFn_, this, _1); //[&](ParallelStep*) { return 0; };
     }
-    
-    state->preProcessFn = std::bind(&FreeDVInterface::preProcessRxFn_, this, _1);
-    state->postProcessFn = std::bind(&FreeDVInterface::postProcessRxFn_, this, _1);
+    else
+    { 
+        for (auto& dv : dvObjects_)
+        {
+            auto recvStep = new FreeDVReceiveStep(dv);
+            assert(recvStep != nullptr);
+        
+            parallelSteps.push_back(recvStep);
+        }
+
+        state->preProcessFn = std::bind(&FreeDVInterface::preProcessRxFn_, this, _1);
+        state->postProcessFn = std::bind(&FreeDVInterface::postProcessRxFn_, this, _1);
+    } 
         
     auto parallelStep = new ParallelStep(
         inputSampleRate,
         outputSampleRate,
-        !singleRxThread_,
+        !singleRxThread_ && parallelSteps.size() > 1,
         state->preProcessFn,
         state->postProcessFn,
         parallelSteps,
-        state
+        state,
+        realtimeHelper
     );
     
     return parallelStep;
+}
+
+void FreeDVInterface::restartTxVocoder() 
+{ 
+    radeTxStep_->restartVocoder(); 
 }
 
 int FreeDVInterface::preProcessRxFn_(ParallelStep* stepObj)
@@ -670,6 +855,8 @@ int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj)
     int indexWithSync = 0;
     int maxSyncFound = -25;
     struct freedv* dvWithSync = nullptr;
+
+    if (dvObjects_.size() == 0) goto skipSyncCheck;
 
     for (auto& dv : dvObjects_)
     {
@@ -726,21 +913,30 @@ int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj)
 
 skipSyncCheck:        
     struct MODEM_STATS* stats = getCurrentRxModemStats();
-    
-    // grab extended stats so we can plot spectrum, scatter diagram etc
-    freedv_get_modem_extended_stats(dvWithSync, stats);
 
-    // Update sync as it may have gone stale during decode
-    *state->getRxStateFn() = stats->sync != 0;
+    if (dvWithSync != nullptr)
+    {    
+        // grab extended stats so we can plot spectrum, scatter diagram etc
+        freedv_get_modem_extended_stats(dvWithSync, stats);
+
+        // Update sync as it may have gone stale during decode
+        *state->getRxStateFn() = stats->sync != 0;
             
-    if (*state->getRxStateFn())
-    {
-        rxMode_ = enabledModes_[indexWithSync];  
-        currentRxMode_ = dvWithSync;
-        lastSyncRxMode_ = currentRxMode_;
-    } 
+        if (*state->getRxStateFn())
+        {
+            rxMode_ = enabledModes_[indexWithSync];  
+            currentRxMode_ = dvWithSync;
+            lastSyncRxMode_ = currentRxMode_;
+        } 
 
-    *state->getSigPwrAvgFn() = ((FreeDVReceiveStep*)stepObj->getParallelSteps()[indexWithSync].get())->getSigPwrAvg();
-    
+        *state->getSigPwrAvgFn() = ((FreeDVReceiveStep*)stepObj->getParallelSteps()[indexWithSync].get())->getSigPwrAvg();
+    }
+    else
+    {
+        *state->getRxStateFn() = rade_sync(rade_);
+    }
+
+    sync_ = *state->getRxStateFn();
+
     return indexWithSync;
 };

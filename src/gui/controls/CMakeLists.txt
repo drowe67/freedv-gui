@@ -3,7 +3,8 @@ add_library(fdv_gui_controls STATIC
     plot_scalar.cpp
     plot_scatter.cpp
     plot_spectrum.cpp
-    plot_waterfall.cpp)
+    plot_waterfall.cpp
+    ReportMessageRenderer.cpp)
 
 target_include_directories(fdv_gui_controls PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../.. ${CMAKE_CURRENT_BINARY_DIR}/../..)
 

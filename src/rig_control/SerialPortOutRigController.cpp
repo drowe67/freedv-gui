@@ -28,6 +28,7 @@ SerialPortOutRigController::SerialPortOutRigController(std::string serialPort, b
     , rtsPos_(RTSPos)
     , useDTR_(useDTR)
     , dtrPos_(DTRPos)
+    , rigResponseTime_(0)
 {
     // Ensure that PTT is disabled on successful connect.
     onRigConnected += [&](IRigController*) {
@@ -46,6 +47,11 @@ void SerialPortOutRigController::ptt(bool state)
     enqueue_(std::bind(&SerialPortOutRigController::pttImpl_, this, state));
 }
 
+int SerialPortOutRigController::getRigResponseTimeMicroseconds()
+{
+    return rigResponseTime_;
+}
+
 void SerialPortOutRigController::pttImpl_(bool state)
 {
        /*  Truth table:
@@ -62,20 +68,22 @@ void SerialPortOutRigController::pttImpl_(bool state)
 
     if (serialPortHandle_ != COM_HANDLE_INVALID) 
     {
+        auto oldTime = std::chrono::steady_clock::now();
         if (useRTS_) {
-            //fprintf(stderr, "g_tx: %d m_boolRTSPos: %d serialLine: %d\n", g_tx, wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS, g_tx == wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityRTS);
             if (state == rtsPos_)
                 raiseRTS_();
             else
                 lowerRTS_();
         }
         if (useDTR_) {
-            //fprintf(stderr, "g_tx: %d m_boolDTRPos: %d serialLine: %d\n", g_tx, wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR, g_tx == wxGetApp().appConfiguration.rigControlConfiguration.serialPTTPolarityDTR);
             if (state == dtrPos_)
                 raiseDTR_();
             else
                 lowerDTR_();
         }
+        auto newTime = std::chrono::steady_clock::now();
+        auto totalTimeMicroseconds = (int)std::chrono::duration_cast<std::chrono::microseconds>(newTime - oldTime).count();
+        rigResponseTime_ = std::max(rigResponseTime_, totalTimeMicroseconds);
  
         onPttChange(this, state);
     }

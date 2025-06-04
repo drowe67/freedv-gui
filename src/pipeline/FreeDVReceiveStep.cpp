@@ -1,5 +1,5 @@
 //=========================================================================
-// Name:            FreeDVReceiveStep.h
+// Name:            FreeDVReceiveStep.cpp
 // Purpose:         Describes a demodulation step in the audio pipeline.
 //
 // Authors:         Mooneer Salem
@@ -37,18 +37,39 @@ FreeDVReceiveStep::FreeDVReceiveStep(struct freedv* dv)
     , freqOffsetHz_(0)
 {
     // Set FIFO to be 2x the number of samples per run so we don't lose anything.
-    inputSampleFifo_ = codec2_fifo_create(freedv_get_n_max_modem_samples(dv_) * 2);
+    inputSampleFifo_ = codec2_fifo_create(freedv_get_modem_sample_rate(dv_));
     assert(inputSampleFifo_ != nullptr);
     
     rxFreqOffsetPhaseRectObjs_.real = cos(0.0);
     rxFreqOffsetPhaseRectObjs_.imag = sin(0.0);
+
+    // Pre-allocate buffers so we don't have to do so during real-time operation.
+    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    outputSamples_ = std::shared_ptr<short>(
+        new short[maxSamples], 
+        std::default_delete<short[]>());
+    assert(outputSamples_ != nullptr);
+
+    inputBuf_ = new short[freedv_get_n_max_modem_samples(dv_)];
+    assert(inputBuf_ != nullptr);
+
+    rxFdm_ = new COMP[freedv_get_n_max_modem_samples(dv_)];
+    assert(rxFdm_ != nullptr);
+
+    rxFdmOffset_ = new COMP[freedv_get_n_max_modem_samples(dv_)];
+    assert(rxFdmOffset_ != nullptr);
 }
 
 FreeDVReceiveStep::~FreeDVReceiveStep()
 {
+    delete[] inputBuf_;
+    delete[] rxFdm_;
+    delete[] rxFdmOffset_;
+    outputSamples_ = nullptr;
+
     if (inputSampleFifo_ != nullptr)
     {
-        codec2_fifo_free(inputSampleFifo_);
+        codec2_fifo_destroy(inputSampleFifo_);
     }
 }
 
@@ -64,57 +85,41 @@ int FreeDVReceiveStep::getOutputSampleRate() const
 
 std::shared_ptr<short> FreeDVReceiveStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
+    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
+    auto maxSpeechSamples = freedv_get_n_max_speech_samples(dv_);
     *numOutputSamples = 0;
-    short* outputSamples = nullptr;
-    
-    short input_buf[freedv_get_n_max_modem_samples(dv_)];
-    short output_buf[freedv_get_n_speech_samples(dv_)];
-    COMP  rx_fdm[freedv_get_n_max_modem_samples(dv_)];
-    COMP  rx_fdm_offset[freedv_get_n_max_modem_samples(dv_)];
-    
+
     short* inputPtr = inputSamples.get();
-    while (numInputSamples > 0)
+    while (numInputSamples > 0 && inputPtr != nullptr)
     {
         codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
         numInputSamples--;
         
         int   nin = freedv_nin(dv_);
         int   nout = 0;
-        while (codec2_fifo_read(inputSampleFifo_, input_buf, nin) == 0) 
+        while ((*numOutputSamples + maxSpeechSamples) < maxSamples && codec2_fifo_read(inputSampleFifo_, inputBuf_, nin) == 0) 
         {
             assert(nin <= freedv_get_n_max_modem_samples(dv_));
 
             // demod per frame processing
             for(int i=0; i<nin; i++) {
-                rx_fdm[i].real = (float)input_buf[i];
-                rx_fdm[i].imag = 0.0;
+                rxFdm_[i].real = (float)inputBuf_[i];
+                rxFdm_[i].imag = 0.0;
             }
 
             // Optional channel noise
             if (channelNoiseEnabled_) {
-                fdmdv_simulate_channel(&sigPwrAvg_, rx_fdm, nin, channelNoiseSnr_);
+                fdmdv_simulate_channel(&sigPwrAvg_, rxFdm_, nin, channelNoiseSnr_);
             }
 
             // Optional frequency shifting
-            freq_shift_coh(rx_fdm_offset, rx_fdm, freqOffsetHz_, freedv_get_modem_sample_rate(dv_), &rxFreqOffsetPhaseRectObjs_, nin);
-            nout = freedv_comprx(dv_, output_buf, rx_fdm_offset);
-    
-            short* newOutputSamples = new short[*numOutputSamples + nout];
-            assert(newOutputSamples != nullptr);
-        
-            if (outputSamples != nullptr)
-            {
-                memcpy(newOutputSamples, outputSamples, *numOutputSamples * sizeof(short));
-                delete[] outputSamples;
-            }
-        
-            memcpy(newOutputSamples + *numOutputSamples, output_buf, nout * sizeof(short));
+            freq_shift_coh(rxFdmOffset_, rxFdm_, freqOffsetHz_, freedv_get_modem_sample_rate(dv_), &rxFreqOffsetPhaseRectObjs_, nin);
+            nout = freedv_comprx(dv_, outputSamples_.get() + *numOutputSamples, rxFdmOffset_);
             *numOutputSamples += nout;
-            outputSamples = newOutputSamples;
             
             nin = freedv_nin(dv_);
         }
     }
-    
-    return std::shared_ptr<short>(outputSamples, std::default_delete<short[]>());
+
+    return outputSamples_;
 }

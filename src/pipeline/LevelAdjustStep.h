@@ -40,6 +40,7 @@ public:
 private:
     std::function<double()> scaleFactorFn_;
     int sampleRate_;
+    std::shared_ptr<short> outputSamples_;
 };
 
 #endif // AUDIO_PIPELINE__LEVEL_ADJUST_STEP_H

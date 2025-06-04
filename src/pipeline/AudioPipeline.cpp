@@ -53,8 +53,14 @@ std::shared_ptr<short> AudioPipeline::execute(std::shared_ptr<short> inputSample
     
     for (size_t index = 0; index < pipelineSteps_.size(); index++)
     {
-        if (resamplers_[index])
+        if (resamplers_[index] != nullptr)
         {
+            if (resamplers_[index]->getOutputSampleRate() != pipelineSteps_[index]->getInputSampleRate())
+            {
+                resamplers_[index] = nullptr;
+                reloadResampler_(index);
+            }
+
             tempResult = resamplers_[index]->execute(tempInput, tempInputSamples, &tempOutputSamples);
             tempInput = tempResult;
             tempInputSamples = tempOutputSamples;
@@ -78,7 +84,7 @@ std::shared_ptr<short> AudioPipeline::execute(std::shared_ptr<short> inputSample
 void AudioPipeline::appendPipelineStep(std::shared_ptr<IPipelineStep> pipelineStep)
 {
     pipelineSteps_.push_back(pipelineStep);
-    resamplers_.push_back(nullptr); // will be updated by reloadResampler_() below.
+    resamplers_.resize(pipelineSteps_.size(), nullptr); // will be updated by reloadResampler_() below.
     reloadResampler_(pipelineSteps_.size() - 1);
 }
 

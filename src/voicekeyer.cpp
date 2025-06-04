@@ -11,6 +11,7 @@ extern SNDFILE            *g_sfRecMicFile;
 bool                g_recVoiceKeyerFile;
 extern bool g_voice_keyer_tx;
 extern wxMutex g_mutexProtectingCallbackData;
+extern bool endingTx;
 
 void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
 {
@@ -35,6 +36,22 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
     {
         if (vk_state == VK_IDLE)
         {
+            // Check if VK file exists. If it doesn't, force the user to select another one.
+            if (vkFileName_ == "" || !wxFile::Exists(vkFileName_))
+            {
+                vkFileName_ = "";
+                wxCommandEvent tmpEvent;
+                OnChooseAlternateVoiceKeyerFile(tmpEvent);
+        
+                if (vkFileName_ == "")
+                {
+                    // Cancel VK if user refuses to choose a new file.
+                    m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+                    m_togBtnVoiceKeyer->SetValue(false);
+                    goto end_handling;
+                }
+            }
+            
             m_togBtnVoiceKeyer->SetValue(true);
             VoiceKeyerProcessEvent(VK_START);
         }
@@ -42,6 +59,7 @@ void MainFrame::OnTogBtnVoiceKeyerClick (wxCommandEvent& event)
             VoiceKeyerProcessEvent(VK_SPACE_BAR);
     }
 
+end_handling:
     event.Skip();
 }
 
@@ -191,23 +209,6 @@ extern int g_sfTxFs;
 int MainFrame::VoiceKeyerStartTx(void)
 {
     int next_state;
-    
-    // Check if VK file exists. If it doesn't, force the user to select another one.
-    if (vkFileName_ == "" || !wxFile::Exists(vkFileName_))
-    {
-        vkFileName_ = "";
-        wxCommandEvent tmpEvent;
-        OnChooseAlternateVoiceKeyerFile(tmpEvent);
-        
-        if (vkFileName_ == "")
-        {
-            // Cancel VK if user refuses to choose a new file.
-            next_state = VK_IDLE;
-            m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
-            m_togBtnVoiceKeyer->SetValue(false);
-            return next_state;
-        }
-    }
 
     // start playing wave file or die trying
 
@@ -217,16 +218,26 @@ int MainFrame::VoiceKeyerStartTx(void)
     SNDFILE* tmpPlayFile = sf_open(vkFileName_.c_str(), SFM_READ, &sfInfo);
     if(tmpPlayFile == NULL) {
         wxString strErr = sf_strerror(NULL);
-        wxMessageBox(strErr, wxT("Couldn't open:") + vkFileName_, wxOK);
+        wxMessageBox(strErr, wxT("Couldn't open:") + wxString::FromUTF8(vkFileName_), wxOK);
         next_state = VK_IDLE;
         m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
         m_togBtnVoiceKeyer->SetValue(false);
     }
     else {
         g_sfTxFs = sfInfo.samplerate;
+        
+        if (g_sfTxFs < 16000)
+        {
+            wxMessageBox(wxT("The selected voice keyer file does not have a high enough sample rate to guarantee acceptable audio quality. Please ensure that your file's sample rate is 16 kHz or greater."), wxT("Sample Rate Too Low"), wxOK);
+            sf_close(tmpPlayFile);
+            m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
+            m_togBtnVoiceKeyer->SetValue(false);
+            return VK_IDLE;
+        }
+        
         g_sfPlayFile = tmpPlayFile;
         
-        SetStatusText(wxT("Voice Keyer: Playing file ") + vkFileName_ + wxT(" to mic input") , 0);
+        SetStatusText(wxT("Voice Keyer: Playing file ") + wxString::FromUTF8(vkFileName_) + wxT(" to mic input") , 0);
         g_loopPlayFileToMicIn = false;
         g_playFileToMicIn = true;
 
@@ -258,7 +269,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
             // sample these puppies at start just in case they are changed while VK running
             vk_rx_pause = wxGetApp().appConfiguration.voiceKeyerRxPause;
             vk_repeats = wxGetApp().appConfiguration.voiceKeyerRepeats;
-            if (g_verbose) fprintf(stderr, "vk_rx_pause: %d vk_repeats: %d\n", vk_rx_pause, vk_repeats);
+            log_debug("vk_rx_pause: %d vk_repeats: %d", vk_rx_pause, vk_repeats);
 
             vk_repeat_counter = 0;
             next_state = VoiceKeyerStartTx();
@@ -273,6 +284,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         if (vk_event == VK_SPACE_BAR) {
             m_btnTogPTT->SetValue(false); 
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
+            endingTx = true;
             togglePTT();
             m_togBtnVoiceKeyer->SetValue(false);
             m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
@@ -283,7 +295,8 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         if (vk_event == VK_PLAY_FINISHED) {
             m_btnTogPTT->SetValue(false); 
             m_btnTogPTT->SetBackgroundColour(wxNullColour);
-            togglePTT();
+            endingTx = true;
+            CallAfter([&]() { togglePTT(); });
             vk_repeat_counter++;
             if (vk_repeat_counter > vk_repeats) {
                 m_togBtnVoiceKeyer->SetValue(false);
@@ -361,15 +374,14 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
 
         m_btnTogPTT->SetValue(false); 
         m_btnTogPTT->SetBackgroundColour(wxNullColour);
+        endingTx = true;
         togglePTT();
         m_togBtnVoiceKeyer->SetValue(false);
         m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
         next_state = VK_IDLE;
         g_voice_keyer_tx = false;
     }
-
-    //if ((vk_event != VK_DT) || (vk_state != next_state))
-    //    fprintf(stderr, "VoiceKeyerProcessEvent: vk_state: %d vk_event: %d next_state: %d  vk_repeat_counter: %d\n", vk_state, vk_event, next_state, vk_repeat_counter);
+    
     vk_state = next_state;
 }
 

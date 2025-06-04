@@ -45,14 +45,14 @@ typedef struct paCallBackData
     struct FIFO    *rxoutfifo;
 
     // EQ filter states
-    void           *sbqMicInBass;
-    void           *sbqMicInTreble;
-    void           *sbqMicInMid;
-    void           *sbqMicInVol;
-    void           *sbqSpkOutBass;
-    void           *sbqSpkOutTreble;
-    void           *sbqSpkOutMid;
-    void           *sbqSpkOutVol;
+    std::shared_ptr<void> sbqMicInBass;
+    std::shared_ptr<void> sbqMicInTreble;
+    std::shared_ptr<void> sbqMicInMid;
+    std::shared_ptr<void> sbqMicInVol;
+    std::shared_ptr<void> sbqSpkOutBass;
+    std::shared_ptr<void> sbqSpkOutTreble;
+    std::shared_ptr<void> sbqSpkOutMid;
+    std::shared_ptr<void> sbqSpkOutVol;
 
     bool            micInEQEnable;
     bool            spkOutEQEnable;

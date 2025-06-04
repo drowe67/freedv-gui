@@ -15,35 +15,184 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
+
+    - name: Install WINE
+      run: |
+        sudo dpkg --add-architecture i386
+        sudo sh -c "curl https://dl.winehq.org/wine-builds/winehq.key | gpg --dearmor > /etc/apt/trusted.gpg.d/winehq.gpg"
+        sudo sh -c "apt-add-repository \"https://dl.winehq.org/wine-builds/ubuntu\""
+        sudo apt-get update
+        #echo "/opt/wine-staging/bin" >> $GITHUB_PATH
+        sudo apt install -y --install-recommends winehq-staging
+        #sudo apt install -y --install-recommends wine64 wine32
 
     - name: Install required packages
       shell: bash
       working-directory: ${{github.workspace}}
       run: sudo apt-get install nsis
 
+    - name: Configure WINE
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          WINEPREFIX=`pwd`/wine-env WINEARCH=win64 DISPLAY= winecfg /v win10
+
+    - name: Create Windows Python environment for build
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          export WINEPREFIX=`pwd`/wine-env
+          wget https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe
+          xvfb-run -a -e /dev/stdout --server-args="-screen 0 1024x768x24" wine ./python-3.12.7-amd64.exe /quiet /log c:\\python.log InstallAllUsers=1 Include_doc=0 Include_tcltk=0 || :
+          cat $WINEPREFIX/drive_c/python.log
+          DISPLAY= wine c:\\Program\ Files\\Python312\\Scripts\\pip.exe install numpy
+
     - name: Download MinGW LLVM
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-        wget https://github.com/mstorsjo/llvm-mingw/releases/download/20230320/llvm-mingw-20230320-ucrt-ubuntu-18.04-x86_64.tar.xz 
-        tar xvf llvm-mingw-20230320-ucrt-ubuntu-18.04-x86_64.tar.xz
+        wget https://github.com/mstorsjo/llvm-mingw/releases/download/20250430/llvm-mingw-20250430-ucrt-ubuntu-22.04-x86_64.tar.xz
+        tar xvf llvm-mingw-20250430-ucrt-ubuntu-22.04-x86_64.tar.xz
 
     - name: Configure freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-        export PATH=${{github.workspace}}/llvm-mingw-20230320-ucrt-ubuntu-18.04-x86_64/bin:$PATH
+        export WINEPREFIX=`pwd`/wine-env
+        export PATH=${{github.workspace}}/llvm-mingw-20250430-ucrt-ubuntu-22.04-x86_64/bin:$PATH
         mkdir build_windows
         cd build_windows
-        cmake -DBOOTSTRAP_LPCNET=1 -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake ..
+        cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/cross-compile/freedv-mingw-llvm-x86_64.cmake -DPython3_ROOT_DIR=$WINEPREFIX/drive_c/Program\ Files/Python312 ..
 
     - name: Build freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}/build_windows
       run: |
-        export PATH=${{github.workspace}}/llvm-mingw-20230320-ucrt-ubuntu-18.04-x86_64/bin:$PATH
-        make -j6 package
+        export PATH=${{github.workspace}}/llvm-mingw-20250430-ucrt-ubuntu-22.04-x86_64/bin:$PATH
+        make -j$(nproc) package
+
+    - name: Rename installer
+      shell: bash
+      working-directory: ${{github.workspace}}/build_windows
+      run: |
+        mv FreeDV*.exe FreeDV.exe
+    
+    - name: Stash for next step
+      uses: actions/upload-artifact@v4
+      with:
+        name: FreeDVSetupProgram
+        path: ${{github.workspace}}/build_windows/FreeDV.exe
+
+  test:
+    runs-on: windows-2022
+    needs: build
+    env:
+      RADIO_TO_COMPUTER_DEVICE: "CABLE Output (VB-Audio Virtual Cable)"
+      COMPUTER_TO_RADIO_DEVICE: "Speakers (VB-Audio Virtual Cable)"
+      MICROPHONE_TO_COMPUTER_DEVICE: "Line 1 (Virtual Audio Cable)" 
+      COMPUTER_TO_SPEAKER_DEVICE: "Line 1 (Virtual Audio Cable)" 
+    steps: 
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4
+      with:
+        name: FreeDVSetupProgram
+        path: ${{github.workspace}}
+  
+    - uses: ilammy/msvc-dev-cmd@v1
+ 
+    - name: Install FreeDV on hard drive
+      shell: pwsh
+      run: |
+          .\FreeDV.exe /S /D=${{github.workspace}}\FreeDV-Install-Location | Out-Null
+  
+    - name: Copy test scripts to install folder
+      shell: pwsh
+      run: |
+          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVFullDuplex.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-fullduplex.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          Copy-Item -Path ${{github.workspace}}/test/TestFreeDVReporting.ps1 -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          Copy-Item -Path ${{github.workspace}}/test/freedv-ctest-reporting.conf.tmpl -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+          Copy-Item -Path ${{github.workspace}}/test/hamlibserver.py -Destination ${{github.workspace}}\FreeDV-Install-Location\bin
+ 
+    - name: Install SoX
+      shell: pwsh
+      run: |
+           choco install sox.portable
+ 
+    - name: Install VB-Cable ("Radio" sound device)
+      uses: LABSN/sound-ci-helpers@v1
+  
+    - run: 'Invoke-WebRequest https://software.muzychenko.net/trials/vac464.zip -OutFile vac464.zip'
+    - run: 'Expand-Archive -Path vac464.zip -DestinationPath vac464'
+    - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac464.cer -CertStoreLocation Cert:\LocalMachine\root'
+    - run: 'Import-Certificate -FilePath ${{github.workspace}}\test\vac464.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher'
+    - name: Install driver
+      shell: pwsh
+      run: |
+          .\vac464\setup64.exe -s -k 30570681-0a8b-46e5-8cb2-d835f43af0c5 | Out-Null
+          Start-Sleep -Seconds 10
+      # For convenience, make sure we fail fast if for whatever reason the install gets blocked on some GUI prompt.
+      timeout-minutes: 5
+
+    - name: Grant FreeDV access to the microphone 
+      run: |
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
+          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -Value Allow
+          New-Item -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\" -Name "NonPackaged" -Force
+          Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged" -Name Value -Value Allow
+          New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\" -Name "AppPrivacy" -Force
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" -Name LetAppsAccessMicrophone -Value 0
+
+    - name: Start Windows Audio Service
+      run: |
+          net start audiosrv
+
+    - name: List audio devices
+      shell: pwsh
+      run: |
+          Get-CimInstance win32_sounddevice
+
+    - name: Test RADE
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      if: ${{ !cancelled() }}
+      run: |
+          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest RADEV1 -NumberOfRuns 1
+      timeout-minutes: 10
+
+    - name: Test RADE Reporting
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      if: ${{ !cancelled() }}
+      run: |
+          .\TestFreeDVReporting.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}"
+      timeout-minutes: 10
+
+    - name: Test 700D
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      if: ${{ !cancelled() }}
+      run: |
+          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest 700D -NumberOfRuns 1
+      timeout-minutes: 10
+
+    - name: Test 700E
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      if: ${{ !cancelled() }}
+      run: |
+          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest 700E -NumberOfRuns 1
+      timeout-minutes: 10
+
+    - name: Test 1600
+      shell: pwsh
+      working-directory: ${{github.workspace}}\FreeDV-Install-Location\bin
+      if: ${{ !cancelled() }}
+      run: |
+          .\TestFreeDVFullDuplex.ps1 -RadioToComputerDevice "${{env.RADIO_TO_COMPUTER_DEVICE}}" -ComputerToRadioDevice "${{env.COMPUTER_TO_RADIO_DEVICE}}" -MicrophoneToComputerDevice "${{env.MICROPHONE_TO_COMPUTER_DEVICE}}" -ComputerToSpeakerDevice "${{env.COMPUTER_TO_SPEAKER_DEVICE}}" -ModeToTest 1600 -NumberOfRuns 1
+      timeout-minutes: 10
+ 

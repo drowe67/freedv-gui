@@ -6,11 +6,14 @@
     
 #include "main.h"
 
+#include <functional>
+using namespace std::placeholders;
+
 extern int g_nSoundCards;
 
 #define SBQ_MAX_ARGS 5
 
-void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q, int sampleRate)
+std::shared_ptr<void> MainFrame::designAnEQFilter(const char filterType[], float freqHz, float gaindB, float Q, int sampleRate)
 {
     const int STR_LENGTH = 80;
     
@@ -55,7 +58,7 @@ void *MainFrame::designAnEQFilter(const char filterType[], float freqHz, float g
 
     assert(argc <= SBQ_MAX_ARGS);
     // Note - the argc count doesn't include the command!
-    return sox_biquad_create(argc-1, (const char **)arg);
+    return std::shared_ptr<void>(sox_biquad_create(argc-1, (const char **)arg), [](void* p) { if (p != nullptr) sox_biquad_destroy(p); });
 }
 
 void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSampleRate)
@@ -91,52 +94,13 @@ void  MainFrame::designEQFilters(paCallBackData *cb, int rxSampleRate, int txSam
 
 void  MainFrame::deleteEQFilters(paCallBackData *cb)
 {
-    if (cb->sbqMicInBass != nullptr)
-    {
-        sox_biquad_destroy(cb->sbqMicInBass);
-    }
     cb->sbqMicInBass = nullptr;
-    
-    if (cb->sbqMicInTreble != nullptr)
-    {
-        sox_biquad_destroy(cb->sbqMicInTreble);
-    }
     cb->sbqMicInTreble = nullptr;
-    
-    if (cb->sbqMicInMid != nullptr)
-    {
-        sox_biquad_destroy(cb->sbqMicInMid);
-    }
     cb->sbqMicInMid = nullptr;
-    
-    if (cb->sbqMicInVol != nullptr)
-    {
-        sox_biquad_destroy(cb->sbqMicInVol);
-    }
     cb->sbqMicInVol = nullptr;
-    
-    if (cb->sbqSpkOutBass != nullptr)
-    {
-        sox_biquad_destroy(cb->sbqSpkOutBass);    
-    }
     cb->sbqSpkOutBass = nullptr;
-
-    if (cb->sbqSpkOutTreble != nullptr)
-    {
-        sox_biquad_destroy(cb->sbqSpkOutTreble);
-    }
     cb->sbqSpkOutTreble = nullptr;
-
-    if (cb->sbqSpkOutMid != nullptr)
-    {
-        sox_biquad_destroy(cb->sbqSpkOutMid);
-    }
     cb->sbqSpkOutMid = nullptr;
-    
-    if (cb->sbqSpkOutVol != nullptr)
-    {
-        sox_biquad_destroy(cb->sbqSpkOutVol);
-    }
     cb->sbqSpkOutVol = nullptr;
 }
 

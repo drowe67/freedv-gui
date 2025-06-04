@@ -22,7 +22,12 @@
 
 #include <chrono>
 #include <cassert>
+#include <cstring>
+#include <sstream>
+#include "../defines.h"
 #include "ParallelStep.h"
+#include "AudioPipeline.h"
+#include "../util/logging/ulog.h"
 
 using namespace std::chrono_literals;
 
@@ -32,29 +37,111 @@ ParallelStep::ParallelStep(
     std::function<int(ParallelStep*)> inputRouteFn,
     std::function<int(ParallelStep*)> outputRouteFn,
     std::vector<IPipelineStep*> parallelSteps,
-    std::shared_ptr<void> state)
+    std::shared_ptr<void> state,
+    std::shared_ptr<IRealtimeHelper> realtimeHelper)
     : inputSampleRate_(inputSampleRate)
     , outputSampleRate_(outputSampleRate)
     , runMultiThreaded_(runMultiThreaded)
     , inputRouteFn_(inputRouteFn)
     , outputRouteFn_(outputRouteFn)
+    , realtimeHelper_(realtimeHelper)
     , state_(state)
 {
     for (auto& step : parallelSteps)
     {
-        parallelSteps_.push_back(std::shared_ptr<IPipelineStep>(step));
+        auto sharedStep = std::shared_ptr<IPipelineStep>(step);
+        parallelSteps_.push_back(sharedStep);
+        auto pipeline = std::make_shared<AudioPipeline>(inputSampleRate, outputSampleRate);
+        pipeline->appendPipelineStep(sharedStep);
+        
+        auto threadState = new ThreadInfo();
+        assert(threadState != nullptr);
+        threads_.push_back(threadState);
+        
+        threadState->step = pipeline;
+        threadState->inputFifo = codec2_fifo_create(inputSampleRate);
+        assert(threadState->inputFifo != nullptr);
+        threadState->outputFifo = codec2_fifo_create(outputSampleRate);
+        assert(threadState->outputFifo != nullptr);
+        
+        threadState->tempOutput = std::shared_ptr<short>(
+            new short[outputSampleRate],
+            std::default_delete<short[]>());
+        threadState->tempInput = std::shared_ptr<short>(
+            new short[inputSampleRate],
+            std::default_delete<short[]>());
+         
+        threadState->exitingThread = false;
         if (runMultiThreaded)
         {
-            auto state = new ThreadInfo();
-            assert(state != nullptr);
-            
-            state->exitingThread = false;
-            state->thread = std::thread([this](ThreadInfo* threadState) 
+            // Initialize semaphore
+#if defined(_WIN32)
+            threadState->sem = CreateSemaphore(nullptr, 0, 1, nullptr);
+            if (threadState->sem == nullptr)
             {
-                executeRunnerThread_(threadState);
-            }, state);
+                std::stringstream ss;
+                ss << "Could not create semaphore (err = " << GetLastError() << ")";
+                log_warn(ss.str().c_str());
+            }
+#elif defined(__APPLE__)
+            threadState->sem = dispatch_semaphore_create(0);
+#else
+            if (sem_init(&threadState->sem, 0, 0) < 0)
+            {
+                log_warn("Could not set up semaphore (errno = %d)", errno);
+            }
+#endif // defined(_WIN32) || defined(__APPLE__)
             
-            threads_.push_back(state);
+            threadState->thread = std::thread([this](ThreadInfo* s) 
+            {
+                if (realtimeHelper_)
+                {
+                    realtimeHelper_->setHelperRealTime();
+                }
+            
+                while(!s->exitingThread)
+                {
+                    bool fallbackToSleep = false;
+                    auto beginTime = std::chrono::high_resolution_clock::now();
+                    
+#if defined(_WIN32) || defined(__APPLE__)
+                    fallbackToSleep = s->sem != nullptr;
+#endif // defined(_WIN32) || defined(__APPLE__)
+                    
+                    executeRunnerThread_(s);
+                    
+                    if (!fallbackToSleep)
+                    {
+#if defined(_WIN32)
+                        DWORD result = WaitForSingleObject(s->sem, INFINITE);
+                        if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
+                        {
+                            fallbackToSleep = true;
+                        }
+#elif defined(__APPLE__)
+                        if (s->sem != nullptr)
+                        {
+                            dispatch_semaphore_wait(s->sem, DISPATCH_TIME_FOREVER);
+                        }
+#else
+                        if (sem_wait(&s->sem) < 0)
+                        {
+                            fallbackToSleep = true;
+                        }
+#endif // defined(_WIN32) || defined(__APPLE__)
+                    }
+                    
+                    if (fallbackToSleep)
+                    {
+                        std::this_thread::sleep_until(beginTime + std::chrono::milliseconds((int)(1000 * FRAME_DURATION)));
+                    }
+                }
+                
+                if (realtimeHelper_)
+                {
+                    realtimeHelper_->clearHelperRealTime();
+                }
+            }, threadState);
         }
     }
 }
@@ -63,13 +150,44 @@ ParallelStep::~ParallelStep()
 {
     // Exit all spawned threads, if any.
     for (auto& taskThread : threads_)
-    {
+    {        
         taskThread->exitingThread = true;
-        taskThread->queueCV.notify_one();
-        taskThread->thread.join();
-        
+        if (taskThread->thread.joinable())
+        {
+            // Destroy semaphore
+#if defined(_WIN32)
+            if (taskThread->sem != nullptr)
+            {
+                auto tmpSem = taskThread->sem;
+                taskThread->sem = nullptr;
+                ReleaseSemaphore(tmpSem, 1, nullptr);
+                CloseHandle(tmpSem);
+            }
+#elif defined(__APPLE__)
+            if (taskThread->sem != nullptr)
+            {
+                dispatch_semaphore_signal(taskThread->sem);
+                dispatch_release(taskThread->sem);
+            }
+#else
+            sem_post(&taskThread->sem);
+            sem_destroy(&taskThread->sem);
+#endif // defined(_WIN32) || defined(__APPLE__)
+            
+            // Join thread
+            taskThread->thread.join();
+        }
+                
+        codec2_fifo_destroy(taskThread->inputFifo);
+        codec2_fifo_destroy(taskThread->outputFifo);
+        taskThread->step = nullptr;
+        taskThread->tempInput = nullptr;
+        taskThread->tempOutput = nullptr;
         delete taskThread;
     }
+
+    // Force immediate memory clear
+    parallelSteps_.clear();
 }
 
 int ParallelStep::getInputSampleRate() const
@@ -84,153 +202,67 @@ int ParallelStep::getOutputSampleRate() const
 
 std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    // Step 0: determine what steps to execute.
+    // Step 1: determine what steps to execute.
     auto stepToExecute = inputRouteFn_(this);
-    assert(stepToExecute == -1 || (stepToExecute >= 0 && (size_t)stepToExecute < parallelSteps_.size()));
+    assert(stepToExecute == -1 || (stepToExecute >= 0 && (size_t)stepToExecute < threads_.size()));
     
-    // Step 1: resample inputs as needed
-    std::map<int, std::future<TaskResult>> resampledInputFutures;
-    std::map<int, TaskResult> resampledInputs;
-    for (size_t index = 0; index < parallelSteps_.size(); index++)
+    // Step 2: execute steps
+    for (size_t index = 0; index < threads_.size(); index++)
     {
+        ThreadInfo* threadInfo = threads_[index];
+        memset(threadInfo->tempOutput.get(), 0, sizeof(short) * outputSampleRate_);
+        
         if (index == (size_t)stepToExecute || stepToExecute == -1)
         {
-            int destinationSampleRate = parallelSteps_[index]->getInputSampleRate();
-            if (destinationSampleRate != inputSampleRate_)
+            codec2_fifo_write(threadInfo->inputFifo, inputSamples.get(), numInputSamples);
+            if (!runMultiThreaded_)
             {
-                ThreadInfo* threadInfo = nullptr;
-                if (runMultiThreaded_)
-                {
-                    threadInfo = threads_[index];
-                }
-                
-                if (resampledInputFutures.find(destinationSampleRate) == resampledInputFutures.end())
-                {
-                    if (resamplers_.find(std::pair<int, int>(inputSampleRate_, destinationSampleRate)) == resamplers_.end())
-                    {
-                        auto tmpStep = std::make_shared<ResampleStep>(inputSampleRate_, destinationSampleRate);
-                        resamplers_[std::pair<int, int>(inputSampleRate_, destinationSampleRate)] = tmpStep;
-                    }
-                    
-                    resampledInputFutures[destinationSampleRate] = enqueueTask_(threadInfo, resamplers_[std::pair<int, int>(inputSampleRate_, destinationSampleRate)].get(), inputSamples, numInputSamples);
-                }
+                executeRunnerThread_(threadInfo);
             }
             else
             {
-                resampledInputs[inputSampleRate_] = TaskResult(inputSamples, numInputSamples);
-            }
-        }
-    }
-    
-    for (auto& fut : resampledInputFutures)
-    {
-        resampledInputs[fut.first] = fut.second.get();
-    }
-    
-    // Step 2: execute steps
-    std::vector<std::future<TaskResult>> executedResultFutures;
-    std::vector<TaskResult> executedResults;
-    for (size_t index = 0; index < parallelSteps_.size(); index++)
-    {
-        if (index == (size_t)stepToExecute || stepToExecute == -1)
-        {
-            ThreadInfo* threadInfo = nullptr;
-            if (runMultiThreaded_)
-            {
-                threadInfo = threads_[index];
+                // Wake up thread
+#if defined(_WIN32)
+                if (threadInfo->sem != nullptr)
+                {
+                    ReleaseSemaphore(threadInfo->sem, 1, nullptr);
+                }
+#elif defined(__APPLE__)
+                if (threadInfo->sem != nullptr)
+                {
+                    dispatch_semaphore_signal(threadInfo->sem);
+                }
+#else
+                sem_post(&threadInfo->sem);
+#endif // defined(_WIN32) || defined(__APPLE__)
             }
             
-            int destinationSampleRate = parallelSteps_[index]->getInputSampleRate();
-            auto resampledInput = resampledInputs[destinationSampleRate];
-            executedResultFutures.push_back(enqueueTask_(threadInfo, parallelSteps_[index].get(), resampledInput.first, resampledInput.second));
+            if (stepToExecute != -1) break;
         }
-        else
-        {
-            std::promise<TaskResult> tempPromise;
-            tempPromise.set_value(TaskResult(nullptr, 0));
-            
-            std::future<TaskResult> tempFuture = tempPromise.get_future();
-            executedResultFutures.push_back(std::move(tempFuture));
-        }
-    }
-    
-    for (auto& fut : executedResultFutures)
-    {
-        executedResults.push_back(fut.get());
     }
     
     // Step 3: determine which output to return
-    auto stepToOutput = outputRouteFn_(this);
+    auto stepToOutput = outputRouteFn_(this);    
+    assert(stepToOutput >= 0 && (size_t)stepToOutput < parallelSteps_.size());
     
-    assert(stepToOutput >= 0 && (size_t)stepToOutput < executedResults.size());
-    
-    TaskResult output = executedResults[stepToOutput];
-    
-    // Step 4: resample to destination rate
-    int sourceRate = parallelSteps_[stepToOutput]->getOutputSampleRate();
-    if (sourceRate == outputSampleRate_)
-    {
-        *numOutputSamples = output.second;
-        return output.first;
-    }
-    else
-    {
-        if (resamplers_.find(std::pair<int, int>(sourceRate, outputSampleRate_)) == resamplers_.end())
-        {
-            auto tmpStep = std::make_shared<ResampleStep>(sourceRate, outputSampleRate_);
-            resamplers_[std::pair<int, int>(sourceRate, outputSampleRate_)] = tmpStep;
-        }
-    
-        return resamplers_[std::pair<int, int>(sourceRate, outputSampleRate_)]->execute(output.first, output.second, numOutputSamples);
-    }
+    ThreadInfo* outputTask = threads_[stepToOutput];
+    *numOutputSamples = codec2_fifo_used(outputTask->outputFifo);
+    codec2_fifo_read(outputTask->outputFifo, outputTask->tempOutput.get(), *numOutputSamples);    
+    return outputTask->tempOutput;
 }
 
 void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
 {
-#if defined(__linux__)
-    pthread_setname_np(pthread_self(), "FreeDV PS");
-#endif // defined(__linux__)
+    int samplesIn = codec2_fifo_used(threadState->inputFifo);
+    int samplesOut = 0;
+    if (codec2_fifo_read(threadState->inputFifo, threadState->tempInput.get(), samplesIn) != 0)
+    {
+        samplesIn = 0;
+    }
 
-    while(!threadState->exitingThread)
+    auto output = threadState->step->execute(threadState->tempInput, samplesIn, &samplesOut);
+    if (samplesOut > 0)
     {
-        std::unique_lock<std::mutex> lock(threadState->queueMutex);
-        threadState->queueCV.wait_for(lock, 20ms);
-        if (!threadState->exitingThread && threadState->tasks.size() > 0)
-        {
-            auto& taskEntry = threadState->tasks.front();
-            lock.unlock();
-            taskEntry.task(taskEntry.inputSamples, taskEntry.numInputSamples);
-            lock.lock();
-            threadState->tasks.pop();
-        }
+        codec2_fifo_write(threadState->outputFifo, output.get(), samplesOut);
     }
-}
-
-std::future<ParallelStep::TaskResult> ParallelStep::enqueueTask_(ThreadInfo* taskQueueThread, IPipelineStep* step, std::shared_ptr<short> inputSamples, int numInputSamples)
-{
-    TaskEntry taskEntry;
-    taskEntry.task = ThreadTask([step](std::shared_ptr<short> inSamples, int numSamples)
-    {
-        int numOutputSamples = 0;
-        auto result = step->execute(inSamples, numSamples, &numOutputSamples);
-        return TaskResult(result, numOutputSamples);
-    });
-    
-    taskEntry.inputSamples = inputSamples;
-    taskEntry.numInputSamples = numInputSamples;
-    
-    auto theFuture = taskEntry.task.get_future();
-    if (taskQueueThread != nullptr)
-    {
-        std::unique_lock<std::mutex> lock(taskQueueThread->queueMutex);
-        taskQueueThread->tasks.push(std::move(taskEntry));
-        taskQueueThread->queueCV.notify_one();
-    }
-    else
-    {
-        // Execute the task immediately as there's no thread to post it to.
-        taskEntry.task(inputSamples, numInputSamples);
-    }
-    
-    return theFuture;
 }

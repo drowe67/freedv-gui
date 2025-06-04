@@ -10,28 +10,113 @@ env:
   BUILD_TYPE: Debug
 
 jobs:
-  build:
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: macos-latest
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-13, macos-latest]  # x86_64, ARM64
+
+    runs-on: ${{ matrix.os }}
+    needs: dist
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
-    - name: Install packages
+    - uses: gerlero/brew-install@v1
+      with:
+        packages: automake libtool numpy sox octave wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib
+
+    - name: Install octave-signal
+      if: ${{ matrix.os == 'macos-13' }}
       shell: bash
       working-directory: ${{github.workspace}}
-      run: brew install automake libtool
+      run: |
+        # make sure gfortran is available
+        gfortran --version
+        octave-cli --eval "pkg install -forge control; pkg install -forge signal"
+
+    - name: Install octave-signal
+      if: ${{ matrix.os == 'macos-latest' }}
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+        # make sure gfortran is available
+        sudo ln -s /opt/homebrew/bin/gfortran-14 /usr/local/bin/gfortran
+        gfortran --version
+        octave-cli --eval "pkg install -forge control; pkg install -forge signal"
+
+    - name: Install VB-Cable
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          brew install vb-cable
+
+    - name: Install other virtual audio devices
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: ./build_macos_sound_drivers.sh
 
     - name: Build freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=1 ./build_osx.sh 
+      run: BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ./build_osx.sh 
+
+    - name: Workaround macOS permission issues
+      if: ${{ matrix.os == 'macos-13' }} 
+      run: |
+          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159);"
+          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159);"
+
+    - name: Workaround macOS permission issues
+      if: ${{ matrix.os == 'macos-latest' }}
+      run: |
+          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159);"
+          sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159);"
 
     - name: Execute unit tests
       shell: bash
       working-directory: ${{github.workspace}}/build_osx
-      run: make test
-      
+      run: |
+          FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ctest -V
+
+    #- name: Zip up traces
+    #  shell: bash
+    #  working-directory: ${{github.workspace}}/build_osx
+    #  if: ${{ !cancelled() }}
+    #  run: |
+    #      zip -r InstrumentsTraces.zip instruments_trace_*
+
+    #- name: Stash instrumented results
+    #  uses: actions/upload-artifact@v4
+    #  if: ${{ !cancelled() }}
+    #  with:
+    #    name: InstrumentsTraces-${{matrix.os}}
+    #    path: ${{github.workspace}}/build_osx/InstrumentsTraces.zip
+
+  # Only build and publish universal binary after making sure code works properly on both 
+  # x86 and ARM. No point in doing so if there's a failure on either.
+  dist:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: gerlero/brew-install@v1
+      with:
+        packages: automake libtool numpy sox 
+
+    - name: Build universal freedv-gui
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: UT_ENABLE=0 UNIV_BUILD=1 BUILD_DEPS=1 ./build_osx.sh 
+
+    - name: Package executable
+      working-directory: ${{github.workspace}}/build_osx
+      run: |
+          make release
+
+    - name: Stash disk image
+      uses: actions/upload-artifact@v4
+      with:
+        name: FreeDV
+        path: ${{github.workspace}}/build_osx/src/FreeDV.dmg

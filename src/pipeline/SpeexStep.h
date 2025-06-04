@@ -50,6 +50,8 @@ private:
     SpeexPreprocessState* speexStateObj_;
     int numSamplesPerSpeexRun_;
     struct FIFO* inputSampleFifo_;
+
+    std::shared_ptr<short> outputSamples_;
 };
 
 
