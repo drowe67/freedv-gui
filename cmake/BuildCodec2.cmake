@@ -8,14 +8,12 @@ if(BUILD_OSX_UNIVERSAL)
     set(CODEC2_CMAKE_ARGS ${CODEC2_CMAKE_ARGS} -DBUILD_OSX_UNIVERSAL=1)
 endif(BUILD_OSX_UNIVERSAL)
 
-# Build codec2 library with lpcnetfreedv
+# Build codec2 library 
 include(ExternalProject)
 ExternalProject_Add(build_codec2
    SOURCE_DIR codec2_src
    BINARY_DIR codec2_build
-   GIT_REPOSITORY https://github.com/drowe67/codec2.git
-   GIT_TAG 1.2.0
-   PATCH_COMMAND git apply ${CMAKE_SOURCE_DIR}/codec2-rt-heap.patch
+   URL ${CMAKE_SOURCE_DIR}/codec2-1.2.0
    CMAKE_ARGS ${CODEC2_CMAKE_ARGS}
    CMAKE_CACHE_ARGS -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${CMAKE_OSX_DEPLOYMENT_TARGET}
    INSTALL_COMMAND ""
@@ -23,10 +21,10 @@ ExternalProject_Add(build_codec2
 
 ExternalProject_Get_Property(build_codec2 BINARY_DIR)
 ExternalProject_Get_Property(build_codec2 SOURCE_DIR)
-add_library(codec2 SHARED IMPORTED)
+add_library(codec2 STATIC IMPORTED)
 
 set_target_properties(codec2 PROPERTIES
-    IMPORTED_LOCATION "${BINARY_DIR}/src/libcodec2${CMAKE_SHARED_LIBRARY_SUFFIX}"
+    IMPORTED_LOCATION "${BINARY_DIR}/src/libcodec2${CMAKE_STATIC_LIBRARY_SUFFIX}"
     IMPORTED_IMPLIB   "${BINARY_DIR}/src/libcodec2${CMAKE_IMPORT_LIBRARY_SUFFIX}"
 )
 

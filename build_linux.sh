@@ -14,20 +14,6 @@ WITH_ASAN=${WITH_ASAN:-0}
 WITH_RTSAN=${WITH_RTSAN:-0}
 
 export FREEDVGUIDIR=${PWD}
-export CODEC2DIR=$FREEDVGUIDIR/codec2
-
-# change this when working on combined codec2/freedv-gui changes
-CODEC2_BRANCH=1.2.0
-
-# First build and install vanilla codec2 as we need -lcodec2 to build LPCNet
-cd $FREEDVGUIDIR
-rm -rf codec2
-if [ ! -d codec2 ]; then
-    git clone https://github.com/drowe67/codec2.git
-fi
-cd codec2 && git switch main && git pull && git checkout $CODEC2_BRANCH
-git apply ../codec2-rt-heap.patch
-mkdir -p build_linux && cd build_linux && rm -Rf * && cmake .. && make VERBOSE=1 -j$(nproc)
 
 # Finally, build freedv-gui
 cd $FREEDVGUIDIR
@@ -35,5 +21,5 @@ if [ -d .git ]; then
      git pull
 fi
 mkdir  -p build_linux && cd build_linux && rm -Rf *
-cmake -DENABLE_RTSAN=${WITH_RTSAN} -DENABLE_ASAN=${WITH_ASAN} -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DUSE_NATIVE_AUDIO=$USE_NATIVE_AUDIO -DUNITTEST=$UT_ENABLE -DCODEC2_BUILD_DIR=$CODEC2DIR/build_linux ..
+cmake -DENABLE_RTSAN=${WITH_RTSAN} -DENABLE_ASAN=${WITH_ASAN} -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DUSE_NATIVE_AUDIO=$USE_NATIVE_AUDIO -DUNITTEST=$UT_ENABLE ..
 make VERBOSE=1 -j$(nproc)

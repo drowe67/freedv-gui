@@ -137,8 +137,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 #
 set(CMAKE_VERBOSE_MAKEFILE TRUE CACHE BOOL "Verbose makefile.")
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE CACHE BOOL "Enable IDE features.")
-set(USE_INTERNAL_CODEC2 FALSE CACHE BOOL
-    "Download and build codec2  instead of using the system library.")
 set(USE_STATIC_DEPS FALSE CACHE BOOL
     "Download and build static libraries instead of system libraries.")
 set(USE_STATIC_PORTAUDIO FALSE CACHE BOOL
@@ -297,8 +295,6 @@ if(MINGW)
     # Default to static build of portaudio until I can figure out why the
     # shared DLL doesn't work.
     set(USE_STATIC_PORTAUDIO TRUE)
-    unset(USE_INTERNAL_CODEC2 CACHE)
-    set(USE_INTERNAL_CODEC2 TRUE CACHE BOOL "Perform internal builds of codec2")
     # Setup HOST variables.
     include(cmake/MinGW.cmake)
 
@@ -367,55 +363,9 @@ message(STATUS "Threads library flags: ${CMAKE_THREAD_LIBS_INIT}")
 include(cmake/BuildRADE.cmake)
 
 #
-# Find codec2
+# Build codec2
 #
-if(CODEC2_BUILD_DIR)
-    if(USE_INTERNAL_CODEC2)
-        set(USE_INTERNAL_CODEC2 FALSE)
-        message(WARNING "Use of build directories and internal builds are mutually exclusive. Forcing internal builds off.")
-    endif()
-    set(USE_INTERNAL_CODEC2 OFF CACHE BOOL "" FORCE)
-    message(STATUS "Using codec2 from build directory...")
-
-    # Theoretically this isn't needed due to the PATHS argument below, but 
-    # Fedora 37 (inside the Docker container) can't find Codec2 without it.
-    set(codec2_DIR ${CODEC2_BUILD_DIR})
-
-    find_package(codec2 REQUIRED
-        NO_DEFAULT_PATH
-        PATHS ${CODEC2_BUILD_DIR}
-        CONFIGS codec2.cmake
-    )
-    get_target_property(CODEC2_INCLUDE_DIRS codec2 INTERFACE_INCLUDE_DIRECTORIES)
-elseif(USE_INTERNAL_CODEC2)
-    message(STATUS "Will attempt internal build of codec2.")
-    include(cmake/BuildCodec2.cmake)
-else(CODEC2_BUILD_DIR)
-    message(STATUS "Looking for codec2...")
-    # 'CONFIG' removed due to incompatibility with cmake version
-    # in Ubuntu 12.04 (Precise) -- Stuart Longland
-    find_package(codec2 QUIET)
-    if(codec2_FOUND)
-        get_target_property(CODEC2_LIBRARY codec2 LOCATION)
-        get_target_property(CODEC2_INCLUDE_DIRS codec2 INTERFACE_INCLUDE_DIRECTORIES)
-        message(STATUS "  codec2 library: ${CODEC2_LIBRARY}")
-        message(STATUS "  codec2 headers: ${CODEC2_INCLUDE_DIRS}")
-    else()
-        # Try to find manually
-        find_path(CODEC2_INCLUDE_DIRS codec2.h
-                  PATH_SUFFIXES codec2)
-        find_library(CODEC2_LIBRARY NAMES codec2)
-        if(CODEC2_LIBRARY AND CODEC2_INCLUDE_DIRS)
-            message(STATUS "  codec2 library: ${CODEC2_LIBRARY}")
-            message(STATUS "  codec2 headers: ${CODEC2_INCLUDE_DIRS}")
-            list(APPEND FREEDV_LINK_LIBS ${CODEC2_LIBRARY})
-            include_directories(${CODEC2_INCLUDE_DIRS})
-        else()
-            message(STATUS "Will attempt internal build of codec2.")
-            include(cmake/BuildCodec2.cmake)
-        endif()
-    endif()
-endif(CODEC2_BUILD_DIR)
+include(cmake/BuildCodec2.cmake)
 
 if(NOT DEFINED LINUX)
     string(FIND ${CMAKE_SYSTEM_NAME} "Linux" LINUX_LOC)
@@ -769,12 +719,12 @@ if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
 set_tests_properties(rade_reporting_clean PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
 endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
 
-add_test(NAME rade_reporting_awgn COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CODEC2_BUILD_DIR} awgn)
+add_test(NAME rade_reporting_awgn COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CMAKE_BINARY_DIR}/codec2_build awgn)
 if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
 set_tests_properties(rade_reporting_awgn PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
 endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
 
-add_test(NAME rade_reporting_mpp COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CODEC2_BUILD_DIR} mpp)
+add_test(NAME rade_reporting_mpp COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_reporting.sh ${CMAKE_BINARY_DIR}/codec2_build mpp)
 if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
 set_tests_properties(rade_reporting_mpp PROPERTIES PASS_REGULAR_EXPRESSION "Reporting callsign ZZ0ZZZ @ SNR")
 endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
