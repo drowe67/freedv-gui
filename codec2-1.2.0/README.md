@@ -1,3 +1,7 @@
+(Note: This is Codec2 1.2.0 patched to use o1heap, a O(1) dynamic allocator. This is to ensure
+that there are no audio dropouts when using the legacy FreeDV modes. Code is otherwise equivalent
+to the version in the GitHub repo: https://github.com/drowe67/codec2)
+
 # Codec 2 README
 
 Codec 2 is an open source (LGPL 2.1) low bit rate speech codec: http://rowetel.com/codec2.html
