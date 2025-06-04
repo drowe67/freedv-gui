@@ -258,6 +258,11 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
 }
 
 void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+[[clang::nonblocking]]
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
 {
     int samplesIn = codec2_fifo_used(threadState->inputFifo);
     int samplesOut = 0;
