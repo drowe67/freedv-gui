@@ -70,7 +70,6 @@ private:
     {
         std::thread thread;
         bool exitingThread;
-        bool resettingThread;
         std::shared_ptr<IPipelineStep> step;
         FIFO* inputFifo;
         FIFO* outputFifo;
