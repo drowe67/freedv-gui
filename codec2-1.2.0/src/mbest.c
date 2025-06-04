@@ -14,7 +14,7 @@
 
   All rights reserved.
 
-  This program is free software; you can redistribute it and/or modify
+  This program is FREE software; you can redistribute it and/or modify
   it under the terms of the GNU Lesser General Public License version 2.1, as
   published by the Free Software Foundation.  This program is
   distributed in the hope that it will be useful, but WITHOUT ANY
@@ -27,6 +27,7 @@
 
 */
 
+#include "debug_alloc.h"
 #include "mbest.h"
 
 #include <assert.h>
@@ -40,12 +41,12 @@ struct MBEST *mbest_create(int entries) {
   struct MBEST *mbest;
 
   assert(entries > 0);
-  mbest = (struct MBEST *)malloc(sizeof(struct MBEST));
+  mbest = (struct MBEST *)MALLOC(sizeof(struct MBEST));
   assert(mbest != NULL);
 
   mbest->entries = entries;
   mbest->list =
-      (struct MBEST_LIST *)malloc(entries * sizeof(struct MBEST_LIST));
+      (struct MBEST_LIST *)MALLOC(entries * sizeof(struct MBEST_LIST));
   assert(mbest->list != NULL);
 
   for (i = 0; i < mbest->entries; i++) {
@@ -58,8 +59,8 @@ struct MBEST *mbest_create(int entries) {
 
 void mbest_destroy(struct MBEST *mbest) {
   assert(mbest != NULL);
-  free(mbest->list);
-  free(mbest);
+  FREE(mbest->list);
+  FREE(mbest);
 }
 
 /* apply weighting to VQ for efficient VQ search */
