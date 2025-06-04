@@ -740,8 +740,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             reportData->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC));
 
         // Messaging notifications take highest priority.
-        wxColour backgroundColor;
-        wxColour foregroundColor;
+        wxColour backgroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+        wxColour foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
         
         if (isMessaging)
         {
@@ -1987,6 +1987,18 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         temp->lastRxMode = UNKNOWN_STR;
         temp->snr = UNKNOWN_STR;
         
+        // Default to sane colors for rows. If we need to highlight, the timer will change
+        // these later. 
+        //
+#if defined(__APPLE__)
+        // To ensure that the columns don't have a different color than the rest of the control.
+        // Needed mainly for macOS.
+        temp->backgroundColor = wxColour(wxTransparentColour);
+#else
+        temp->backgroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+#endif // defined(__APPLE__)
+        temp->foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+
         auto lastUpdateTime = makeValidTime_(lastUpdate, temp->lastUpdateDate);
         temp->lastUpdate = lastUpdateTime;
         temp->connectTime = temp->lastUpdateDate;
