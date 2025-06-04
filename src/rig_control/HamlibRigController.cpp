@@ -37,7 +37,11 @@ HamlibRigController::RigList HamlibRigController::RigList_;
 HamlibRigController::RigNameList HamlibRigController::RigNameList_;
 std::mutex HamlibRigController::RigListMutex_;
 
+#if RIGCAPS_NOT_CONST
+int HamlibRigController::BuildRigList_(struct rig_caps *rig, rig_ptr_t rigList) {
+#else
 int HamlibRigController::BuildRigList_(const struct rig_caps *rig, rig_ptr_t rigList) {    
+#endif // RIGCAPS_NOT_CONST
     ((HamlibRigController::RigList *)rigList)->push_back(rig); 
     return 1;
 }
@@ -367,6 +371,11 @@ void HamlibRigController::connectImpl_()
         log_debug("hamlib: rig_open() OK");
         onRigConnected(this);
         
+        // Set timeouts so that we don't wait an extremely long time to begin TX.
+        rig_set_conf(rig_, rig_token_lookup(rig_, "timeout"), "500");
+        rig_set_conf(rig_, rig_token_lookup(rig_, "retry"), "0");
+        rig_set_conf(rig_, rig_token_lookup(rig_, "timeout_retry"), "0");
+            
         // Determine whether we have multiple VFOs.
         multipleVfos_ = false;
         vfo_t vfo;
