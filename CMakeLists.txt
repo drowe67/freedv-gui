@@ -49,12 +49,12 @@ endif(APPLE)
 # Adds a tag to the end of the version string. Leave empty
 # for official release builds.
 if(NOT DEFINED FREEDV_VERSION_TAG)
-set(FREEDV_VERSION_TAG "rc")
+set(FREEDV_VERSION_TAG "")
 
 # Uncomment the below definition to cause the build to expire
 # six months from the day it was built. This should be commented
 # for official releases.
-add_definitions(-DUNOFFICIAL_RELEASE)
+#add_definitions(-DUNOFFICIAL_RELEASE)
 endif(NOT DEFINED FREEDV_VERSION_TAG)
 
 # Prevent in-source builds to protect automake/autoconf config.

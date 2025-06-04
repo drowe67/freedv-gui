@@ -161,7 +161,7 @@ class FreeDVReporterDialog : public wxFrame
              {
                  if (reporter_)
                  {
-                     reporter_->updateMessage(statusMsg.utf8_string());
+                     reporter_->updateMessage((const char*)statusMsg.utf8_str());
                  }
              }
 

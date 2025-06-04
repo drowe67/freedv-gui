@@ -270,11 +270,9 @@ For reference, the channel widths of the currently supported modes are below:
 | Mode | Width (kHz) |
 | --- | --- |
 | 1600 | 1.125 |
-| 700C | 1.500 |
 | 700D | 1.000 |
 | 700E | 1.500 |
-| 2020 | 1.600 |
-| 2020B | 2.100 |
+| RADEV1 | 1.500 |
 
 # Voice Keyer
 
@@ -387,12 +385,11 @@ of receipt (i.e. the most recently received callsign will appear at the top of t
 
 FreeDV can simultaneously decode the following modes when selected prior to pushing "Start":
 
-* 2020/2020B
-* 700C/D/E
+* 700D/E
 * 1600
-* 800XA
+* RADEV1
 
-In addition, FreeDV can allow the user to switch between the above modes for transmit without having to push "Stop" first. 
+In addition, FreeDV can allow the user to switch between the above modes with the exception of RADEV1 for transmit without having to push "Stop" first. 
 These features can be enabled by going to Tools->Options->Modem and checking the "Simultaneously Decode All HF Modes" option. Note that
 this may consume significant additional CPU resources, which can cause decode problems. 
 
@@ -405,6 +402,8 @@ Additionally, the squelch setting with simultaneous decode enabled is relative t
 difference between the "Min SNR" of 700D and the mode in question; see "FreeDV Modes" below). For example, the squelch for 700E
 when the squelch slider is set to -2.0 becomes 1.0dB. This is designed to reduce undesired pops and clicks due to false decodes.
 
+When using RADEV1, the squelch settings in the main window are ignored. Instead, FreeDV only passes decoded audio if it's able to synchronize with the incoming signal.
+
 # FreeDV Modes
 
 The following table is a guide to the different modes, using
@@ -414,10 +413,9 @@ Mode | Min SNR | Fading | Latency | Speech Bandwidth | Speech Quality
 --- | :---: | :---: | :---: | :---: | :---:
 SSB | 0 | 8/10 | low | 2600 | 5/10
 1600 | 4 | 3/10 | low | 4000 | 4/10
-700C | 2  | 6/10 | low |  4000 | 3/10
 700D | -2 | 4/10 | high | 4000 | 3/10
 700E | 1 | 7/10 | medium | 4000 | 3/10
-2020 | 4  | 4/10 | high | 8000 | 7/10
+RADEV1 | -2 | 8/10 | medium | 8000 | 7/10
 Skype | - |- | medium | 8000 | 8/10
 
 The Min SNR is roughly the SNR where you cannot converse without
@@ -436,7 +434,7 @@ sync at the start of an over, especially in fading channels.
 
 In mid 2018 FreeDV 700D was released, with a new OFDM modem, powerful
 Forward Error Correction (FEC) and optional interleaving.  It uses the
-same 700 bit/s speech codec at 700C. It operates at SNRs as low as
+same 700 bit/s speech codec as the deprecated 700C mode. It operates at SNRs as low as
 -2dB, and has good HF channel performance.  It is around 10dB better
 than FreeDV 1600 on fading channels, and is competitive with SSB at
 low SNRs.  The FEC provides some protection from urban HF noise.
@@ -448,7 +446,7 @@ skill and practice when used with older, VFO based radios.
 
 ## FreeDV 700E
 
-FreeDV 700E was developed in December 2020 using lessons learned from on air operation of 700C and 700D.  A variant of 700D, it uses a shorter frame size (80ms) to reduce latency and sync time.  It is optimized for fast fading channels channels with up to 4Hz Doppler spread and 6ms delay spread.  FreeDV 7000E uses the same 700 bit/s codec as FreeDV 700C and 700D.  It requires about 3dB more power than 700D, but can operate reliably on fast fading channels.
+FreeDV 700E was developed in December 2020 using lessons learned from on air operation of 700C and 700D.  A variant of 700D, it uses a shorter frame size (80ms) to reduce latency and sync time.  It is optimized for fast fading channels channels with up to 4Hz Doppler spread and 6ms delay spread.  FreeDV 7000E uses the same 700 bit/s codec as FreeDV 700D.  It requires about 3dB more power than 700D, but can operate reliably on fast fading channels.
 
 The 700E release also includes optional compression (clipping) of the 700D and 700E transmit waveforms to reduce the Peak to Average Power Ratio to about 4dB.  For example a 100W PEP transmitter can be driven to about 40W RMS.  This is an improvement of 6dB over previous releases of FreeDV 700D. Before enabling the clipper make sure your transmitter is capable of handling sustained high average power without damage.  
 
@@ -456,49 +454,11 @@ Clipping can be enabled via Tools-Options.
 
 On good channels with high SNR clipping may actually reduce the SNR of the received signal.  This is intentional - we are adding some pre-distortion in order to increase the RMS power.  Forward error correction (FEC) will clean up any errors introduced by clipping, and on poor channels the benefits of increased signal power outweigh the slight reduction in SNR on good channels.
 
-## FreeDV 2020
+## FreeDV RADEV1
 
-FreeDV 2020 was developed in 2019.  It uses an experimental codec
-based on the LPCNet neural net (deep learning) synthesis engine
-developed by Jean-Marc Valin.  It offers 8 kHz audio bandwidth in an
-RF bandwidth of just 1600 Hz.  FreeDV 2020 employs the same OFDM modem
-and FEC as 700D.
+RADE is a new mode with state-of-the-art performance, it is a contraction of Radio AutoencoDEr so-named because the modulation encoding uses a Machine-Learning method where the modulation and demodulation are achieved by training on a large number of speech samples over a modelled radio channel with typical propagation disturbances in phase and amplitude as found in HF radio. The speech is synthesised using the FARGAN neural vocoder (Frame-wise Auto-Regressive GAN) where GAN is a Generative Adversarial Network).
 
-The purpose of FreeDV 2020 is to test neural net speech coding over HF
-radio.  It is highly experimental, and possibly the first use of
-neural net vocoders in a real world, over the air system.
-
-FreeDV 2020 is designed for slow fading HF channels with a SNR of 10dB
-or better.  It is not designed for fast fading or very low SNRs like
-700D.  It is designed to be a high quality alternative to SSB in
-channels where SSB is already an "arm-chair" copy.  On an AWGN (non-
-fading channel), it will deliver reasonable speech quality down to 2dB
-SNR.
-
-FreeDV 2020 Tips:
-
-1. It requires a modern (post 2010) Intel CPU with AVX support.  If you
-   don't have AVX the FreeDV 2020 mode button will be grayed out.
-1. Some voices may sound very rough.  In early testing
-   about 90% of speakers tested work well.
-1. Like 700D, you must tune within -/+ 60Hz for FreeDV 2020 to sync.
-1. With significant fading, sync may take a few seconds.
-1. There is a 2 second end-to-end latency.  You are welcome to try tuning
-   this (Tools - Options - FIFO size, also see Sound Card Debug
-   section below).
-
-## FreeDV 2020B
-
-Experimental mode developed in February 2022.  The goal of this mode is to improve the performance of FreeDV 2020 over HF channels.
-
-Here are the three main innovations, and the theoretical improvements:
-
-1. Compression (clipping) of the 2020x modem waveforms has been added, which is worth about 4dB. This should also improve the original FreeDV 2020 mode.  The Clipping checkbox is located on Tools-Options-Modem.  As per the other warnings in this manual please make sure you transmitter can handle the higher RMS power.
-1. 2020B is like 700E to 700D - it works with fast fading but requires a few more dB of SNR. This will make it usable in European Winter (or over the South Pole Argentina to Australia) type channels - if you have enough SNR. The challenge with this mode is squeezing all the information we need (enough pilots symbols for fast fading, LPCNet, FEC bits) into a 2100 Hz channel - we are pushing up again the edges of many SSB filters. It also uses unequal FEC, just the most important 11 bits are protected.
-
-This modes is under development and may change at any time.  If you experience comparability issues with another operator - check your Git Hash values on the Help-about menu to ensure you are running the same versions of LPCNet and codec2.
-
-It is recommended that multi-RX be disabled when using 2020B. This mode is not supported by multi-RX, you will need to manually coordinate the mode with other stations.
+Unlike the previous FreeDV modes which all use QPSK modulation, the RADEV1 modulation produces an analog phase-amplitude output without defined constellation points. It has been chosen as it offers a combination of high speech quality together with reduced RF bandwidth and good resistance to fading and multipath HF radio channels.
 
 # Tools Menu
 
@@ -509,7 +469,7 @@ This section describes features on Tools-Filter.
 Control | Description
  -------------------------- | ------------------------------------------------------------------------ |
 Noise Suppression | Enable noise suppression, de-reverberation, AGC of mic signal using the Speex pre-processor
-700C/700D Auto EQ | Automatic equalization for FreeDV 700C and FreeDV 700D Codec input audio
+700D Auto EQ | Automatic equalization for FreeDV 700D/E Codec input audio
 
 Auto EQ (Automatic Equalization) adjusts the input speech spectrum to best fit the speech codec. It can remove annoying bass artifacts and make the codec speech easier to understand.
 
@@ -527,7 +487,6 @@ this window as well.
 Control | Description
  ------------------------------ | ----------------------------------------------------------------------------- |
 Clipping | Increases the average power. Ensure your transmitter can handle high RMS powers before using!
-700C Diversity Combine | Combining of two sets of 700C carriers for better fading channel performance
 TX Band Pass Filter | Reduces TX spectrum bandwidth
 
 # Helping Improve FreeDV
@@ -571,8 +530,8 @@ Errs | Number of bit errors detected
 Resyncs | Number of times the demodulator has resynced
 ClkOff | Estimated sample clock offset in parts per million
 FreqOff | Estimated frequency offset in Hz
-Sync | Sync metric (OFDM modes like 700D and 2020)
-Var | Speech encoder distortion for 700C/700D (see Auto EQ)
+Sync | Sync metric (OFDM modes like 700D/E)
+Var | Speech encoder distortion for 700D (see Auto EQ)
 
 The sample clock offset is the estimated difference between the
 modulator (TX) and demodulator (RX) sample clocks.  For example if the
@@ -637,39 +596,6 @@ If the PortAudio counters are incrementing on receive try:
   will break up and the RX will lose sync.  TX audio break up will
   also occur if you see "outfifo1" being incremented on the "Fifo"
   line during TX.  Try increasing the FifoSize.
-
-## Test Frame Histogram
-
-This feature was developed for testing FreeDV 700C.  Select the Test
-Frame Histogram tab on Front Page
-
-Displays BER of each carrier when in "test frame" mode.  As each QPSK
-carrier has 2 bits there are 2*Nc histogram points.
-
-Ideally all carriers will have about the same BER (+/- 20% after 5000
-total bit errors), however problems can occur with filtering in the
-TX path.  If one carrier has less power, then it will have a higher
-BER.  The errors in this carrier will tend to dominate overall
-BER. For example if one carrier is attenuated due to SSB filter ripple
-in the TX path then the BER on that carrier will be higher.  This is
-bad news for DV.
-
-Suggested usage:
-
-1. Transmit FreeDV in test frame mode.  Use a 2nd RX (or
-get a friend) to monitor your RX signal with FreeDV in test frame
-mode.  
-
-1.  Adjust your RX SNR to get a BER of a few % (e.g. reduce TX
-power, use a short antenna for the RX, point your beam away, adjust RX
-RF gain).  
-
-1. Monitor the error histogram for a few minutes, until you have say
-5000 total bit errors.  You have a problem if the BER of any carrier
-is more than 20% different from the rest.
-
-1. A typical issue will be one carrier at 1.0 and the others at 0.5,
-indicating the poorer carrier BER is twice the larger.
 
 ## Full Duplex Testing with loopback
 
@@ -812,31 +738,6 @@ for instructions on doing so in Windows 10. For Windows 8:
 1. Select the "No, let me choose what to do" option.
 1. Check the "automatically get the device app" option, then click Save changes to save the settings you just chose.
 
-## FreeDV 2020 mode is grayed out
-
-In order to use FreeDV 2020 mode, you must have both of the following:
-
-1. If using an Intel based CPU, it must have AVX support. A Microsoft utility called [coreinfo](https://docs.microsoft.com/en-us/sysinternals/downloads/coreinfo)
-can be used to determine if your CPU supports AVX.  A * means you have 
-AVX, a - means no AVX:
-
-```
-AES             -       Supports AES extensions
-AVX             *       Supports AVX instruction extensions
-FMA             -       Supports FMA extensions using YMM state
-```
-
-On Linux, you can check for `avx` in the **flags** section of `/proc/cpuinfo`
-or the output of the `lscpu` command:
-```
-lscpu | grep -o "avx[^ ]*"
-```
-will display `avx` (or `avx2`) if your CPU supports the instructions.
-
-2. Your computer must be able to decode 2020 at a minimum of 2x real time (i.e. < 0.5 seconds for 1 second of encoded audio). A Mac with an ARM processor (e.g. 2020 Mac Mini or later) is an example of such a device.
-
-If your system does not meet either (1) or (2), the 2020 option will be grayed out.
-
 ## I installed a new version and FreeDV stopped working
 
 You may need to clean out the previous configuration.  Try Tools - Restore Defaults.  Set up your sound cards again with Tools - Audio Config.
@@ -889,7 +790,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V2.0.0 TBD 2025
+## V2.0.0 June 2025
+
+This version contains the first official release of the RADE V1 mode previously trialled over several 
+preview releases. Radio Autoencoder (RADE) technology is a new approach to sending speech over HF radio. 
+It combines Machine Learning (ML) with classical DSP to send high quality speech over HF radio at SNRs 
+as low as -2dB in a bandwidth of 1500 Hz. More information about Radio Autoencoder can be found at 
+[https://freedv.org/radio-autoencoder/](https://freedv.org/radio-autoencoder/).
 
 1. Bugfixes:
     * Fix bug preventing saving of the previously used path when playing back files. (PR #729)
@@ -919,6 +826,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Shorten PulseAudio/pipewire app name. (PR #843)
     * Hamlib: support CAT PTT via the Data port instead of Mic (needed for some older radios). (PR #875)
     * macOS: Show /dev/tty.* devices in CAT/PTT options. (PR #883)
+    * Remove pre-PTT interrogation of frequency/mode to improve TX/RX switching time. (PR #898)
 3. Build system:
     * Allow overriding the version tag when building. (PR #727)
     * Update wxWidgets to 3.2.8. (PR #861)
@@ -929,260 +837,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix typos in user manual and code. (PR #859; thanks @dforsi)
     * Removed deprecated modes: 700C, 800XA, 2020, 2020B (PR #889)
 
-## V1.9.9.2 June 2024
-
-1. Bugfixes:
-    * Remove TX attenuation and squelch tooltips. (PR #717)
-    * Disable 800XA radio button when in RX Only mode. (PR #716)
-
-## V1.9.9.1 April 2024
-
-1. Bugfixes:
-    * Revert PR #689 and reimplement fix for original startup delay issue. (PR #712)
-2. Enhancements:
-    * Allow "Msg" column to be resized by the user. (PR #721)
-
-## V1.9.9 April 2024
-
-1. Bugfixes:
-    * Cache PortAudio sound info to improve startup performance. (PR #689)
-    * Fix typo in cardinal directions list. (PR #688)
-    * Shrink size of callsign list to prevent it from disappearing off the screen. (PR #692)
-    * Clean up memory leak in FreeDV Reporter window. (PR #705)
-    * Fix issue causing delayed filter updates when going from tracking band to frequency. (PR #710)
-    * Fix hanging issue with footswitch configured. (PR #707)
-2. Enhancements:
-    * Add additional error reporting in case of PortAudio failures. (PR #695)
-    * Allow longer length user messages. (PR #694)
-    * Add context menu for copying messages to the clipboard. (PR #694)
-3. Documentation:
-    * Remove broken links in README. (PR #709)
-4. Build system:
-    * Add ability to build without LPCNet in preparation for potential future deprecation of 2020/2020B. (PR #711)
-
-## V1.9.8 February 2024
-
-1. Bugfixes:
-    * Prevent unnecessary recreation of resamplers in analog mode. (PR #661)
-    * Better handle high sample rate audio devices and those with >2 channels. (PR #668)
-    * Fix issue preventing errors from being displayed for issues involving the FreeDV->Speaker sound device. (PR #668)
-    * Fix issue resulting in incorrect audio device usage after validation failure if no valid default exists. (PR #668)
-    * Fix bug where PTT button background color doesn't change when toggling PTT via space bar. (PR #669)
-    * Fix bug where FreeDV crashes if only RX sound devices are configured with mic filters turned on. (PR #673)
-    * Fix Windows-specific off by one issue in FreeDV Reporter sorting code. (PR #681)
-2. Enhancements:
-    * Add Frequency column to RX drop-down. (PR #663)
-    * Update tooltip for the free form text field to indicate that it's not covered by FEC. (PR #665)
-    * Enable use of space bar for PTT when in the FreeDV Reporter window. (PR #666)
-    * Move TX Mode column to left of Status in FreeDV Reporter window. (PR #670)
-    * Add heading column to FreeDV Reporter window. (PR #672, #675)
-    * Prevent FreeDV Reporter window from being above the main window. (PR #679)
-    * Add support for displaying cardinal directions instead of headings. (PR #685)
-3. Code cleanup:
-    * Move FreeDV Reporter dialog code to dialogs section of codebase. (PR #664)
-
-## V1.9.7.2 January 2024
-
-1. Bugfixes:
-    * Another attempt at fixing the crash previously thought to have been fixed by 1.9.7.1. (PR #659)
-
-## V1.9.7.1 January 2024
-
-1. Bugfixes:
-    * Fix issue causing intermittent crashes when filters are enabled while running. (PR #656)
-
-## V1.9.7 January 2024
-
-1. Bugfixes:
-    * Use double precision instead of float for loading frequency list. (PR #627)
-    * Improve validation of frequencies in Options dialog. (PR #628)
-    * Fix typo resulting in TX device sample rate being used for filter initialization. (PR #630)
-    * Fix intermittent crash resulting from object thread starting before object is fully initialized. (PR #630)
-    * Prevent creation of filters if not enabled. (PR #631)
-    * Fix issue preventing Start button from re-enabling itself on audio device errors. (PR #636)
-    * Fix issue preventing proper FreeDV Reporter column sizing on Windows. (PR #638)
-    * Fix flicker in FreeDV Reporter window when tracking by frequency. (PR #637)
-    * Update Filter dialog to better handle resizing. (PR #641)
-    * Fix capitalization of distance units in FreeDV Reporter window. (PR #642)
-    * Rename KHz to kHz in documentation and UI. (PR #643)
-    * Avoid calculating distances in FreeDV Reporter window for those with invalid grid squares. (PR #646, #649)
-    * Fix display bugs in FreeDV Reporter window when switching between dark and light mode. (PR #646)
-    * Add guard code to prevent FreeDV Reporter window from being off screen on startup. (PR #650)
-    * Fix issue preventing FreeDV startup on macOS <= 10.13. (PR #652)
-    * On startup, only jiggle height and not width. (PR #653)
-    * Fix issue preventing FreeDV from being linked with older versions of Xcode. (PR #654)
-    * Fix issue preventing TX audio from resuming after going from TX->RX in full duplex mode. (PR #655)
-2. Enhancements:
-    * Allow user to refresh status message even if it hasn't been changed. (PR #632)
-    * Increase priority of status message highlight. (PR #632)
-    * Adjust FreeDV Reporter data display to better match accepted UX standards. (PR #644)
-    * Further reduce required space for each column in FreeDV Reporter window. (PR #646)
-    * Provide an option Do save only certain FreeDV Reporter messages sent to the server. (PR #647)
-3. Build system:
-    * Include PDB debugging file for FreeDV. (PR #633)
-    * End support for 32 bit ARM on Windows. (PR #651)
-    * Begin performing CI builds for macOS. (PR #654)
-4. Documentation:
-    * Fix spelling, etc. mistakes in the documentation. (PR #640)
-    * Update README to reflect latest state of codebase. (PR #654)
-    * Move older changelog from user manual to separate file. (PR #654)
-5. Code cleanup:
-    * Move GUI related files into their own folder. (PR #654)
-    * Move build scripts into cmake folder. (PR #654)
-    * Remove no longer used scripts and patch files. (PR #654)
-
-## V1.9.6 December 2023
-
-1. Bugfixes:
-    * Use SetSize/GetSize instead of SetClientSize/GetClientSize to work around startup sizing issue. (PR #611)
-    * Check for RIGCAPS_NOT_CONST in Hamlib 4.6. (PR #615)
-    * Make main screen gauges horizontal to work around sizing/layout issues. (PR #613)
-    * Fix compiler issue with certain versions of MinGW. (PR #622)
-    * Suppress use of space bar when in RX Only mode. (PR #623)
-    * Fix Windows-specific issue preventing entry of very high frequencies. (PR #624)
-2. Enhancements:
-    * Add option to add a delay after starting TX and before ending TX. (PR #618)
-    * Allow serial PTT to be enabled along with OmniRig. (PR #619)
-    * Add 800XA to multi-RX list. (PR #617)
-    * Add logic to report status message to FreeDV Reporter. (PR #620)
-    * Allow display and entry of frequencies in kHz. (PR #621)
-    * Add 5368.5 kHz to the default frequency list. (PR #626)
-
-## V1.9.5 November 2023
-
-1. Bugfixes:
-    * Fix bug preventing frequency updates from being properly suppressed when frequency control is in focus. (PR #585)
-    * Fix bug preventing 60 meter frequencies from using USB with DIGU/DIGL disabled. (PR #589)
-    * Additional fix for PR #561 to parse/format frequencies using current locale. (PR #595)
-    * Add entitlements to work around macOS Sonoma permissions bug. (PR #598)
-    * Fix bug preventing FreeDV Reporter window from closing after resetting configuration to defaults. (PR #593)
-    * Fix bug preventing reload of manually entered frequency on start. (PR #608)
-2. Enhancements:
-    * FreeDV Reporter: Add support for filtering the exact frequency. (PR #596)
-    * Add confirmation dialog box before actually resetting configuration to defaults. (PR #593)
-    * Add ability to double-click FreeDV Reporter entries to change the radio's frequency. (PR #592)
-    * FreeDV Reporter: Add ability to force RX Only reporting in Tools->Options. (PR #599)
-    * Add new 160m/80m/40m calling frequencies for IARU R2. (PR #601)
-    * Add Help button to allow users to get help more easily. (PR #607)
-3. Build system:
-    * Upgrade wxWidgets to 3.2.4. (PR #607)
-4. Other:
-    * Report OS usage to FreeDV Reporter. (PR #606)
-
-## V1.9.4 October 2023
-
-1. Bugfixes:
-    * Fix issue causing hanging while testing serial port PTT. (PR #577)
-    * Fix issue causing improper RX Only reporting when Hamlib is disabled. (PR #579)
-    * Fix compiler error on some Linux installations. (PR #578)
-    * Fix issue causing error on startup after testing setup with Easy Setup. (PR #575)
-    * Fix issue preventing PSK Reporter from being enabled by default. (PR #575)
-2. Enhancements:
-    * Add experimental support for OmniRig to FreeDV. (PR #575)
-        * *Note: This is only available on Windows.*
-
-## V1.9.3 October 2023
-
-1. Bugfixes:
-    * FreeDV Reporter:
-        * Fix regression preventing proper display of "RX Only" stations. (PR #542)
-        * Fix issue causing duplicate entries when filtering is enabled and users disconnect/reconnect. (PR #557)
-    * Default to the audio from the current TX mode if no modes decode (works around Codec2 bug with 1600 mode). (PR #544)
-    * Fix bug preventing proper restore of selected tabs. (PR #548)
-    * Properly handle frequency entry based on user's current location. (PR #561)
-    * Improve labeling of PTT/CAT control options. (PR #550)
-    * Clarify behavior of "On Top" menu option. (PR #549)
-    * Work around Xcode issue preventing FreeDV from starting on macOS < 12. (PR #553)
-    * Fix issue preventing selection of FreeDV Reporter users during band tracking. (PR #555)
-    * Work around issue preventing consistent switchover to 'From Mic' tab on voice keyer TX. (PR #563)
-    * Fix rounding error when changing reporting frequency. (PR #562)
-    * Fix issue causing multiple macOS microphone permissions popups to appear. (PR #566, 567)
-    * macOS: Fix crash on start when using Rosetta. (PR #569)
-2. Enhancements:
-    * Add configuration for background/foreground colors in FreeDV Reporter. (PR #545)
-    * Always connect to FreeDV Reporter (in view only mode if necessary), regardless of valid configuration. (PR #542, #547)
-    * Add None as a valid PTT method and make it report RX Only. (PR #556)
-    * Increase RX coloring timeout in FreeDV Reporter to 20 seconds. (PR #558)
-3. Build system:
-    * Upgrade wxWidgets on binary builds to 3.2.3. (PR #565)
-4. Documentation:
-    * Add information about multiple audio devices and macOS. (PR #554)
-    * Fix Registry and config file paths in documentation. (PR #571, #572)
-5. Cleanup:
-    * Refactor rig control handling to improve performance and maintainability. (PR #564)
-
-## V1.9.2 September 2023
-
-1. Bugfixes:
-    * Initialize locale so that times appear correctly. (PR #509)
-    * Fix issue with Voice Keyer button turning blue even if file doesn't exist. (PR #511)
-    * Fix issue with Voice Keyer file changes via Tools->Options not taking effect until restart. (PR #511)
-    * Eliminate mutex errors during Visual Studio debugging. (PR #512)
-    * Add timeout during deletion of FreeDVReporter object. (PR #515)
-    * Fixes bug preventing display of reporting UI if enabled on first start. (PR #520)
-    * Adjust vertical tick lengths on waterfall to prevent text overlap. (PR #518)
-    * Adjust coloring of text and ticks on spectrum plot to improve visibility when in dark mode. (PR #518)
-    * Resolve issue preventing proper device name display in Easy Setup for non-English versions of Windows. (PR #524)
-    * Fix intermittent crash on exit due to improperly closing stderr. (PR #526)
-2. Enhancements:
-    * Add tooltip to Record button to claify its behavior. (PR #511)
-    * Add highlighting for RX rows in FreeDV Reporter (to match web version). (PR #519)
-    * Add Distance column in FreeDV Reporter window. (PR #519)
-    * Add support for sorting columns in FreeDV Reporter window. (PR #519, #537)
-    * Allow use of FreeDV Reporter without having a session running. (PR #529, #535)
-    * Adds support for saving and restoring tab state. (PR #497)
-        * *NOTE: Requires 'Enable Experimental Features' to be turned on, see below.*
-    * Adds configuration item allowing optional use of experimental features. (PR #497)
-        * This option is called "Enable Experimental Features" in Tools->Options->Debugging.
-    * Add FreeDV Reporter option to have the band filter track the current frequency. (PR #534)
-3. Build system:
-    * Upgrade wxWidgets on binary builds to 3.2.2.1. (PR #531)
-    * Fix issue preventing proper generation of unsigned Windows installers. (PR #528)
-    * Update code signing documentation and defaults to use certificate provider's token instead of our own. (PR #533)
-4. Cleanup:
-    * Remove unneeded 2400B and 2020B sample files. (PR #521)
-
-## V1.9.1 August 2023
-
-1. Bugfixes:
-    * Revert BETA back to prior 1.9.0 value for waterfall. (PR #503)
-    * Optimize FreeDV Reporter window logic to reduce likelihood of waterfall stuttering. (PR #505)
-    * Fix intermittent crash during FreeDV Reporter updates. (PR #505)
-    * Fix intermittent crash on exit due to Hamlib related UI update code executing after deletion. (PR #506)
-    * Fix serial port contention issue while testing PTT multiple times. (PR #506)
-2. Enhancements:
-    * Add support for monitoring voice keyer and regular TX audio. (PR #500)
-    * Add background coloring to indicate that the voice keyer is active. (PR #500)
-
-## V1.9.0 August 2023
-
-1. Bugfixes:
-    * Fix bug preventing proper Options window sizing on Windows. (PR #478)
-    * Fix various screen reader accessibility issues. (PR #481)
-    * Use separate maximums for each slider type on the Filter dialog. (PR #485)
-    * Fix minor UI issues with the Easy Setup dialog. (PR #484)
-    * Adjust waterfall settings to better visualize 2 Hz fading. (PR #487)
-    * Fix issue causing the waterfall to not scroll at the expected rate. (PR #487)
-    * Resolve bug preventing certain radios' serial ports from being listed on macOS. (PR #496)
-2. Enhancements
-    * Allow users to configure PTT port separately from CAT if Hamlib is enabled. (PR #488)
-    * Add ability to average spectrum plot across 1-3 samples. (PR #487, 492)
-    * Adjust sizing of main page tabs for better readability. (PR #487)
-    * Add ability to sign Windows binaries for official releases. (PR #486)
-    * Allow use of a different voice keyer file by right-clicking on the Voice Keyer button. (PR #493)
-    * Include TX audio in recorded audio files to enable recording a full QSO. (PR #493)
-    * Add band filtering in the FreeDV Reporter dialog. (PR #490, #494)
-    * Add ability to record new voice keyer files by right-clicking on the Voice Keyer button. (PR #493)
-3. Build system:
-    * Update Codec2 to v1.2.0. (PR #483)
-    * Deprecate PortAudio support on Linux. (PR #489, #491)
-4. Cleanup:
-    * Remove 2400B mode from the UI. (PR #479)
-    * Remove rarely-used "Record File - From Modulator" and "Play File - Mic In" menu options. (PR #493)
-
 *Note: Official Windows releases are now signed using Software Freedom Conservancy's code certificate. To validate that the installers and binary files are properly signed, right-click on the file, choose Properties and go to the 'Digital Signatures' tab.*
 
-## Earlier than V1.9.0
+## Earlier than V2.0.0
 
 See [this](https://github.com/drowe67/codec2/blob/master/CHANGELOG_OLD.md) for more information about changes in versions prior to v1.9.0.
 

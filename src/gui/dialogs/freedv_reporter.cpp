@@ -539,7 +539,7 @@ void FreeDVReporterDialog::setReporter(std::shared_ptr<FreeDVReporter> reporter)
     {
         // Update status message
         auto statusMsg = m_statusMessage->GetValue();
-        reporter->updateMessage(statusMsg.utf8_string());
+        reporter->updateMessage((const char*)statusMsg.utf8_str());
     }
 }
 
@@ -649,7 +649,7 @@ void FreeDVReporterDialog::OnSendQSY(wxCommandEvent& event)
 
 void FreeDVReporterDialog::OnOpenWebsite(wxCommandEvent& event)
 {
-    std::string url = "https://" + wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->utf8_string() + "/";
+    std::string url = std::string("https://") + (const char*)wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->utf8_str() + "/";
     wxLaunchDefaultBrowser(url);
     DeselectItem();
 }
@@ -1141,14 +1141,10 @@ void FreeDVReporterDialog::setBandFilter(FilterFrequency freq)
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::setBandFilter(FilterFrequency freq)
 {
-    if (filteredFrequency_ != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency ||
-        currentBandFilter_ != freq)
-    {
-        filteredFrequency_ = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
-        currentBandFilter_ = freq;
+    filteredFrequency_ = wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency;
+    currentBandFilter_ = freq;
 
-        refreshAllRows();
-    }
+    refreshAllRows();
 }
 
 wxString FreeDVReporterDialog::FreeDVReporterDataModel::makeValidTime_(std::string timeStr, wxDateTime& timeObj)
