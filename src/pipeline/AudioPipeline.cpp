@@ -26,7 +26,7 @@ AudioPipeline::AudioPipeline(int inputSampleRate, int outputSampleRate)
     : inputSampleRate_(inputSampleRate)
     , outputSampleRate_(outputSampleRate)
 {
-    // empty
+    reloadResultResampler_();
 }
 
 AudioPipeline::~AudioPipeline()
