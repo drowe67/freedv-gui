@@ -2260,7 +2260,7 @@ void MainFrame::performFreeDVOn_()
                 {
         #ifdef _USE_TIMER
                     m_plotTimer.Start(_REFRESH_TIMER_PERIOD, wxTIMER_CONTINUOUS);
-                    m_updFreqStatusTimer.Start(5*1000); // every 5 seconds[UP]
+                    m_updFreqStatusTimer.Start(1000); // every 1 second[UP]
         #endif // _USE_TIMER
                 });
             }

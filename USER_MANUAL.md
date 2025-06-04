@@ -790,6 +790,11 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
+## V2.0.1 TBD 2025
+
+1. Bugfixes:
+    * Reduce latency when going between TX->RX with Hamlib configured. (PR #893)
+
 ## V2.0.0 June 2025
 
 This version contains the first official release of the RADE V1 mode previously trialled over several 
