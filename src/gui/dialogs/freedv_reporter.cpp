@@ -790,7 +790,12 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
 {
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     model->updateHighlights();
-    model->Resort();
+    
+    if (model->sortOnNextTimerInterval)
+    {
+        model->Resort();
+        model->sortOnNextTimerInterval = false;
+    }
 }
 
 void FreeDVReporterDialog::OnFilterTrackingEnable(wxCommandEvent& event)
@@ -1412,6 +1417,7 @@ FreeDVReporterDialog::FreeDVReporterDataModel::FreeDVReporterDataModel(FreeDVRep
     , currentBandFilter_(FreeDVReporterDialog::BAND_ALL)
     , filterSelfMessageUpdates_(false)
     , filteredFrequency_(0)
+    , sortOnNextTimerInterval(false)
 {
     // empty
 }
@@ -1847,6 +1853,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
             {
                 ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(kvp.second));
             }
+            sortOnNextTimerInterval = true;
         }
         else if (updated && kvp.second->isVisible)
         {
@@ -2003,6 +2010,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         if (temp->isVisible)
         {
             ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(temp));
+            sortOnNextTimerInterval = true;
         }
     });
 
@@ -2093,10 +2101,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
                 {
                     ItemDeleted(wxDataViewItem(nullptr), dvi);
                 }
+                sortOnNextTimerInterval = true;
             }
             else if (newVisibility)
             {            
                 ItemChanged(dvi);
+                sortOnNextTimerInterval = true;
             }
         }
     });
@@ -2137,6 +2147,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
             { 
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
+                sortOnNextTimerInterval = true;
             }
         }
     });
@@ -2178,6 +2189,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             { 
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
+                sortOnNextTimerInterval = true;
             }
         }
     });
@@ -2224,6 +2236,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
             {
                 wxDataViewItem dvi(iter->second);
                 ItemChanged(dvi);
+                sortOnNextTimerInterval = true;
             }
         }
     });
