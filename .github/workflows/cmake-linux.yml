@@ -11,16 +11,18 @@ env:
 
 jobs:
   build:
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-24.04, ubuntu-22.04]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v4
 
     - name: Install LLVM/Clang >=20.0 (Required for RTSan)
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       uses: MorganCaron/latest-clang-action@master
 
     - name: Install rtkit for RT threading
@@ -32,12 +34,25 @@ jobs:
            sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy 
            sudo systemctl restart polkit
 
-    - name: Install packages
+    - name: Install common packages
       shell: bash
       run: |
-           sudo apt-get install codespell libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git libwxgtk3.2-dev portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity at-spi2-core octave octave-signal
+           sudo apt-get install libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity at-spi2-core octave octave-signal
+
+    - name: Install version-specific packages
+      if: ${{ matrix.os == 'ubuntu-22.04' }}
+      shell: bash
+      run: |
+           sudo apt-get install libwxgtk3.0-dev
+
+    - name: Install version-specific packages
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
+      shell: bash
+      run: |
+           sudo apt-get install codespell libwxgtk3.2-dev
             
     - name: Spellcheck codebase
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       shell: bash
       run: codespell --ignore-words-list=caf,radae,rade,inout,nin,ontop,parm,tthe,ue `find src -name '*.c*' -o -name '*.h' | grep -v 3rdparty`
 
@@ -66,6 +81,7 @@ jobs:
 
     - name: Execute unit tests
       shell: bash
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       working-directory: ${{github.workspace}}/build_linux
       run: |
           sudo systemctl enable rtkit-daemon
@@ -88,6 +104,7 @@ jobs:
       
     - name: Instrument AddressSanitizer
       shell: bash
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
@@ -95,6 +112,7 @@ jobs:
 
     - name: Check for memory leaks
       shell: bash
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       working-directory: ${{github.workspace}}/build_linux
       run: |
           export DISPLAY=:99.0
@@ -104,6 +122,7 @@ jobs:
 
     - name: Instrument RealtimeSanitizer
       shell: bash
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
@@ -111,6 +130,7 @@ jobs:
           
     - name: Check for RT-unsafe function calls
       shell: bash
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       working-directory: ${{github.workspace}}/build_linux
       run: |
           export DISPLAY=:99.0
