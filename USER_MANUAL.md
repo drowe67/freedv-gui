@@ -795,6 +795,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 1. Bugfixes:
     * Reduce latency when going between TX->RX with Hamlib configured. (PR #893)
     * Reduce usage of non-real time safe code. (PR #900)
+    * FreeDV Reporter: Force explicit background color (avoids unwanted mouseover highlights on Linux). (PR #911)
 
 ## V2.0.0 June 2025
 
