@@ -86,6 +86,10 @@ ParallelStep::ParallelStep(
             }
 #elif defined(__APPLE__)
             threadState->sem = dispatch_semaphore_create(0);
+            if (threadState->sem == nullptr)
+            {
+                log_warn("Could not set up semaphore");
+            }
 #else
             if (sem_init(&threadState->sem, 0, 0) < 0)
             {
@@ -110,7 +114,7 @@ ParallelStep::ParallelStep(
                     auto beginTime = std::chrono::high_resolution_clock::now();
                     
 #if defined(_WIN32) || defined(__APPLE__)
-                    fallbackToSleep = s->sem != nullptr;
+                    fallbackToSleep = s->sem == nullptr;
 #endif // defined(_WIN32) || defined(__APPLE__)
                     
                     executeRunnerThread_(s);
