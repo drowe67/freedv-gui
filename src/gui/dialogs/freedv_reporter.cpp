@@ -1721,6 +1721,20 @@ wxDataViewItem FreeDVReporterDialog::FreeDVReporterDataModel::GetParent (const w
     return wxDataViewItem(nullptr);
 }
 
+#if !wxCHECK_VERSION(3,2,0)
+unsigned int FreeDVReporterDialog::FreeDVReporterDataModel::GetColumnCount () const
+{
+    return RIGHTMOST_COL;
+}
+
+wxString FreeDVReporterDialog::FreeDVReporterDataModel::GetColumnType (unsigned int col) const
+{
+    wxVariant tmp("");
+    return tmp.GetType();   
+}
+#endif // !wxCHECK_VERSION(3,2,0)
+
+
 void FreeDVReporterDialog::FreeDVReporterDataModel::GetValue (wxVariant &variant, const wxDataViewItem &item, unsigned int col) const
 {
     std::unique_lock<std::recursive_mutex> lk(const_cast<std::recursive_mutex&>(dataMtx_));
@@ -2200,7 +2214,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
             }
             else
             {
-                iter->second->userMessage = wxString::FromUTF8(message);
+                iter->second->userMessage = wxString::FromUTF8(message.c_str());
             }
         
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
