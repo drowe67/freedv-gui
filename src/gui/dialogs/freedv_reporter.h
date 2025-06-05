@@ -212,7 +212,13 @@ class FreeDVReporterDialog : public wxFrame
              virtual bool IsContainer (const wxDataViewItem &item) const override;
              virtual bool SetValue (const wxVariant &variant, const wxDataViewItem &item, unsigned int col) override;
 
+#if !wxCHECK_VERSION(3,2,0)
+             virtual unsigned int GetColumnCount () const override;
+             virtual wxString GetColumnType (unsigned int col) const override;
+#endif // !wxCHECK_VERSION(3,2,0)
+
              bool sortOnNextTimerInterval;
+
          private:
              struct ReporterData
              {

@@ -4,6 +4,10 @@ on:
   push:
     branches-ignore:
     - 'dr-render-manual'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
+  cancel-in-progress: true
     
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
