@@ -20,6 +20,12 @@
 //
 //=========================================================================
 
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+#include <sanitizer/rtsan_interface.h>
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
 #include <cassert>
 #include "RADEReceiveStep.h"
 #include "../defines.h"
@@ -132,11 +138,37 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
             // RADE processing (input signal->features).
             int hasEooOut = 0;
 
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+            __rtsan_disable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
             nout = rade_rx(dv_, featuresOut_, &hasEooOut, eooOut_, inputBufCplx_);
+
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+            __rtsan_enable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
             if (hasEooOut && textPtr_ != nullptr)
             {
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+                __rtsan_disable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
                 // Handle RX of bits from EOO.
                 rade_text_rx(textPtr_, eooOut_, rade_n_eoo_bits(dv_) / 2);
+
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+                __rtsan_enable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
             }
             else if (!hasEooOut)
             {
@@ -189,4 +221,18 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
     }
 
     return outputSamples_;
+}
+
+void RADEReceiveStep::reset()
+{
+    short buf;
+    while (codec2_fifo_used(inputSampleFifo_) > 0)
+    {
+        codec2_fifo_read(inputSampleFifo_, &buf, 1);
+    }
+    while (codec2_fifo_used(outputSampleFifo_) > 0)
+    {
+        codec2_fifo_read(outputSampleFifo_, &buf, 1);
+    }
+    pendingFeatures_.clear();
 }

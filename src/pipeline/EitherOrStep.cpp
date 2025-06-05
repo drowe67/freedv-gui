@@ -60,3 +60,9 @@ std::shared_ptr<short> EitherOrStep::execute(std::shared_ptr<short> inputSamples
         return falseStep_->execute(inputSamples, numInputSamples, numOutputSamples);
     }
 }
+
+void EitherOrStep::reset()
+{
+    trueStep_->reset();
+    falseStep_->reset();
+}

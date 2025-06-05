@@ -104,7 +104,7 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
         if ((*numOutputSamples + nfreedv) < maxSamples && codec2_fifo_used(inputSampleFifo_) >= samplesUsedForFifo)
         {
             codec2_fifo_read(inputSampleFifo_, codecInput_, samplesUsedForFifo);
-            
+        
             if (mode == FREEDV_MODE_800XA) 
             {
                 /* 800XA doesn't support complex output just yet */
@@ -118,11 +118,20 @@ std::shared_ptr<short> FreeDVTransmitStep::execute(std::shared_ptr<short> inputS
                 for(int i = 0; i<nfreedv; i++)
                     tmpOutput_[i] = txFdmOffset_[i].real;
             }
-                   
+                       
             memcpy(outputSamples_.get() + *numOutputSamples, tmpOutput_, nfreedv * sizeof(short));
             *numOutputSamples += nfreedv;
         }
     }
     
     return outputSamples_;
+}
+
+void FreeDVTransmitStep::reset()
+{
+    while (codec2_fifo_used(inputSampleFifo_) > 0)
+    {
+        short tmp;
+        codec2_fifo_read(inputSampleFifo_, &tmp, 1);
+    }
 }

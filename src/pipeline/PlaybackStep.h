@@ -24,6 +24,7 @@
 #define AUDIO_PIPELINE__PLAYBACK_STEP_H
 
 #include "IPipelineStep.h"
+#include "ResampleStep.h"
 
 #include <functional>
 #include <thread>
@@ -38,9 +39,10 @@ public:
         std::function<SNDFILE*()> getSndFileFn, std::function<void()> fileCompleteFn);
     virtual ~PlaybackStep();
     
-    virtual int getInputSampleRate() const;
-    virtual int getOutputSampleRate() const;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples);
+    virtual int getInputSampleRate() const override;
+    virtual int getOutputSampleRate() const override;
+    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual void reset() override;
     
 private:
     int inputSampleRate_;
@@ -51,6 +53,8 @@ private:
     std::thread nonRtThread_;
     bool nonRtThreadEnding_;
     FIFO* outputFifo_;
+
+    ResampleStep* playbackResampler_;
     
     void nonRtThreadEntry_();
 };
