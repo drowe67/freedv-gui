@@ -102,7 +102,7 @@ if [ "$1" != "" ]; then
     FADING_DIR="$(pwd)/fading"
     if [ ! -d "$FADING_DIR" ]; then
         mkdir $FADING_DIR
-        (cd $1/../unittest && ./fading_files.sh $FADING_DIR)
+        (cd $1/../codec2_src/unittest && ./fading_files.sh $FADING_DIR)
     fi
     # Add noise to recording to test performance
     if [ "$2" == "mpp" ]; then

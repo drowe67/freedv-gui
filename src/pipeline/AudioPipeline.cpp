@@ -26,7 +26,7 @@ AudioPipeline::AudioPipeline(int inputSampleRate, int outputSampleRate)
     : inputSampleRate_(inputSampleRate)
     , outputSampleRate_(outputSampleRate)
 {
-    // empty
+    if (inputSampleRate_ != outputSampleRate_) reloadResultResampler_();
 }
 
 AudioPipeline::~AudioPipeline()
@@ -71,7 +71,6 @@ std::shared_ptr<short> AudioPipeline::execute(std::shared_ptr<short> inputSample
         tempInputSamples = tempOutputSamples;        
     }
     
-    reloadResultResampler_();
     if (resultSampler_ != nullptr)
     {
         tempResult = resultSampler_->execute(tempInput, tempInputSamples, &tempOutputSamples);
@@ -86,6 +85,7 @@ void AudioPipeline::appendPipelineStep(std::shared_ptr<IPipelineStep> pipelineSt
     pipelineSteps_.push_back(pipelineStep);
     resamplers_.resize(pipelineSteps_.size(), nullptr); // will be updated by reloadResampler_() below.
     reloadResampler_(pipelineSteps_.size() - 1);
+    reloadResultResampler_();
 }
 
 void AudioPipeline::reloadResampler_(int index)
@@ -155,5 +155,26 @@ void AudioPipeline::reloadResultResampler_()
         {
             resultSampler_ = nullptr;
         }
+    }
+}
+
+void AudioPipeline::reset()
+{
+    for (auto& step : pipelineSteps_)
+    {
+        step->reset();
+    }
+    
+    for (auto& step : resamplers_)
+    {
+        if (step != nullptr)
+        {
+            step->reset();
+        }
+    }
+ 
+    if (resultSampler_ != nullptr)
+    {
+        resultSampler_->reset();
     }
 }
