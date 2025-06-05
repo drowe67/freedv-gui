@@ -797,6 +797,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Reduce usage of non-real time safe code. (PR #900)
     * FreeDV Reporter: Force explicit background color (avoids unwanted mouseover highlights on Linux). (PR #911)
     * Fix compiler errors when using wxWidgets 3.0. (PR #914)
+    * Unit tests: Increase sleep time before killing recording to resolve macOS test failures. (PR #917)
 
 ## V2.0.0 June 2025
 
