@@ -123,3 +123,12 @@ std::shared_ptr<short> FreeDVReceiveStep::execute(std::shared_ptr<short> inputSa
 
     return outputSamples_;
 }
+
+void FreeDVReceiveStep::reset()
+{
+    while (codec2_fifo_used(inputSampleFifo_) > 0)
+    {
+        short tmp;
+        codec2_fifo_read(inputSampleFifo_, &tmp, 1);
+    }
+}

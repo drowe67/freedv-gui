@@ -84,6 +84,9 @@
 
 // Text messaging Data
 #define MAX_CALLSIGN         80
+
+// Real-time memory block size
+#define CODEC2_REAL_TIME_MEMORY_SIZE (512*1024)
    
 enum
 {

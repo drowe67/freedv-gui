@@ -28,6 +28,7 @@
 #include "ParallelStep.h"
 #include "AudioPipeline.h"
 #include "../util/logging/ulog.h"
+#include "codec2_alloc.h"
 
 using namespace std::chrono_literals;
 
@@ -85,6 +86,10 @@ ParallelStep::ParallelStep(
             }
 #elif defined(__APPLE__)
             threadState->sem = dispatch_semaphore_create(0);
+            if (threadState->sem == nullptr)
+            {
+                log_warn("Could not set up semaphore");
+            }
 #else
             if (sem_init(&threadState->sem, 0, 0) < 0)
             {
@@ -94,6 +99,10 @@ ParallelStep::ParallelStep(
             
             threadState->thread = std::thread([this](ThreadInfo* s) 
             {
+                // Ensure that O(1) memory allocator is used for Codec2
+                // instead of standard malloc().
+                codec2_initialize_realtime(CODEC2_REAL_TIME_MEMORY_SIZE);
+                
                 if (realtimeHelper_)
                 {
                     realtimeHelper_->setHelperRealTime();
@@ -105,7 +114,7 @@ ParallelStep::ParallelStep(
                     auto beginTime = std::chrono::high_resolution_clock::now();
                     
 #if defined(_WIN32) || defined(__APPLE__)
-                    fallbackToSleep = s->sem != nullptr;
+                    fallbackToSleep = s->sem == nullptr;
 #endif // defined(_WIN32) || defined(__APPLE__)
                     
                     executeRunnerThread_(s);
@@ -141,6 +150,7 @@ ParallelStep::ParallelStep(
                 {
                     realtimeHelper_->clearHelperRealTime();
                 }
+                codec2_disable_realtime();
             }, threadState);
         }
     }
@@ -252,6 +262,11 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
 }
 
 void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+[[clang::nonblocking]]
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
 {
     int samplesIn = codec2_fifo_used(threadState->inputFifo);
     int samplesOut = 0;
@@ -264,5 +279,24 @@ void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
     if (samplesOut > 0)
     {
         codec2_fifo_write(threadState->outputFifo, output.get(), samplesOut);
+    }
+}
+
+void ParallelStep::reset()
+{
+    for (size_t index = 0; index < threads_.size(); index++)
+    {
+        auto fifo = threads_[index]->inputFifo;
+        short buf;
+        
+        while (codec2_fifo_used(fifo) > 0)
+        {
+            codec2_fifo_read(fifo, &buf, 1);
+        }
+        fifo = threads_[index]->outputFifo;
+        while (codec2_fifo_used(fifo) > 0)
+        {
+            codec2_fifo_read(fifo, &buf, 1);
+        }
     }
 }

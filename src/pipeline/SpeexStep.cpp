@@ -99,3 +99,12 @@ std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, i
     
     return outputSamples_;
 }
+
+void SpeexStep::reset()
+{
+    short buf;
+    while (codec2_fifo_used(inputSampleFifo_) > 0)
+    {
+        codec2_fifo_read(inputSampleFifo_, &buf, 1);
+    }
+}
