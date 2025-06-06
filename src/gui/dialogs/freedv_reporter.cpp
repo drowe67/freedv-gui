@@ -337,10 +337,13 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     wxGetApp().appConfiguration.reporterWindowTop = actualPos.y;
     SetPosition(actualPos);
 
-    // Set up highlight clear timer
+    // Set up timers. Highlight clear timer has a slightly longer interval
+    // to reduce CPU usage.
     m_highlightClearTimer = new wxTimer(this);
-    m_highlightClearTimer->Start(100);
-
+    m_highlightClearTimer->Start(250);
+    m_resortTimer = new wxTimer(this);
+    m_resortTimer->Start(100);
+    
     // Create Set popup menu
     setPopupMenu_ = new wxMenu();
     assert(setPopupMenu_ != nullptr);
@@ -789,12 +792,17 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
 {
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
-    model->updateHighlights();
-    
-    if (model->sortOnNextTimerInterval)
+    if (event.GetTimer().GetId() == m_highlightClearTimer->GetId())
     {
-        model->Resort();
-        model->sortOnNextTimerInterval = false;
+        model->updateHighlights();
+    }
+    else
+    {
+        if (model->sortOnNextTimerInterval)
+        {
+            model->Resort();
+            model->sortOnNextTimerInterval = false;
+        }
     }
 }
 

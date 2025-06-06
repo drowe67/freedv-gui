@@ -141,6 +141,7 @@ class FreeDVReporterDialog : public wxFrame
         wxButton* m_buttonDisplayWebpage;
         
         // Timer to unhighlight RX rows after 10s (like with web-based Reporter)
+        wxTimer* m_resortTimer;
         wxTimer* m_highlightClearTimer;
 
         wxTipWindow* tipWindow_;
