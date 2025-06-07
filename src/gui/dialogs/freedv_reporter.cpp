@@ -2234,7 +2234,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
                     (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != UNKNOWN_STR) ||
                     (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL) && iter->second->lastRxMode != UNKNOWN_STR) ||
                     (sortingColumn == parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != UNKNOWN_STR) ||
-                    iter->second->lastRxDate != wxDateTime();
+                    iter->second->lastRxDate.IsValid();
                     
                 iter->second->lastRxCallsign = UNKNOWN_STR;
                 iter->second->lastRxMode = UNKNOWN_STR;
