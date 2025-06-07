@@ -2500,7 +2500,7 @@ void MainFrame::stopRxStream()
                 rxOutSoundDevice.reset();
             }
             
-            delete m_txThread;
+            delete m_rxThread;
             m_rxThread = nullptr;
         }
 
