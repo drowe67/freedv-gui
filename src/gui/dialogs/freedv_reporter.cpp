@@ -450,6 +450,9 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
 {
     m_highlightClearTimer->Stop();
     delete m_highlightClearTimer;
+    
+    m_resortTimer->Stop();
+    delete m_resortTimer;
 
     m_trackFrequency->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
     m_trackFreqBand->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
