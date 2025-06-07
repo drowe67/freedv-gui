@@ -2117,11 +2117,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
                 frequencyString = wxString::Format(_("%.04f"), frequencyUserReadable);
             }
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
-            
+
+            auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             bool isChanged = 
-                iter->second->frequency != frequencyHz ||
-                iter->second->freqString != frequencyString ||
-                iter->second->lastUpdate != lastUpdateTime;
+                (sortingColumn == parent_->m_listSpots->GetColumn(FREQUENCY_COL) && iter->second->frequency != frequencyHz) ||
+                (sortingColumn == parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
             
             iter->second->frequency = frequencyHz;
             iter->second->freqString = frequencyString;
@@ -2165,6 +2165,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
             bool isChanged = iter->second->transmitting != transmitting;
             iter->second->transmitting = transmitting;
         
+            auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             std::string txStatus = "RX";
             if (transmitting)
             {
@@ -2174,19 +2175,19 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
             if (iter->second->status != _(RX_ONLY_STATUS))
             {
                 isChanged |=
-                    iter->second->status != txStatus ||
-                    iter->second->txMode != txMode;
+                    (sortingColumn != parent_->m_listSpots->GetColumn(STATUS_COL) && iter->second->status != txStatus) ||
+                    (sortingColumn != parent_->m_listSpots->GetColumn(TX_MODE_COL) && iter->second->txMode != txMode);
                     
                 iter->second->status = txStatus;
                 iter->second->txMode = txMode;
             
                 auto lastTxTime = makeValidTime_(lastTxDate, iter->second->lastTxDate);
-                isChanged |= iter->second->lastTx != lastTxTime;
+                isChanged |= (sortingColumn != parent_->m_listSpots->GetColumn(LAST_TX_DATE_COL) && iter->second->lastTx != lastTxTime);
                 iter->second->lastTx = lastTxTime;
             }
         
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
-            isChanged |= iter->second->lastUpdate != lastUpdateTime;
+            isChanged |= (sortingColumn != parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
             iter->second->lastUpdate = lastUpdateTime;
 
             if (iter->second->isVisible)
@@ -2209,16 +2210,17 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
     
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
-        {
+        {            
+            auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             bool isChanged = 
-                iter->second->lastRxCallsign != receivedCallsign ||
-                iter->second->lastRxMode != rxMode;
+                (sortingColumn != parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != receivedCallsign) ||
+                (sortingColumn != parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL) && iter->second->lastRxMode != rxMode);
                 
             iter->second->lastRxCallsign = receivedCallsign;
             iter->second->lastRxMode = rxMode;
         
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
-            isChanged |= iter->second->lastUpdate != lastUpdateTime;
+            isChanged |= (sortingColumn != parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
             iter->second->lastUpdate = lastUpdateTime;
         
             wxString snrString = wxString::Format(_("%.01f"), snr);
@@ -2226,9 +2228,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             {
                 // Frequency change--blank out SNR too.
                 isChanged |=
-                    iter->second->lastRxCallsign != UNKNOWN_STR ||
-                    iter->second->lastRxMode != UNKNOWN_STR ||
-                    iter->second->snr != UNKNOWN_STR ||
+                    (sortingColumn != parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != UNKNOWN_STR) ||
+                    (sortingColumn != parent_->m_listSpots->GetColumn(LAST_RX_MODE_COL) && iter->second->lastRxMode != UNKNOWN_STR) ||
+                    (sortingColumn != parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != UNKNOWN_STR) ||
                     iter->second->lastRxDate != wxDateTime();
                     
                 iter->second->lastRxCallsign = UNKNOWN_STR;
@@ -2239,7 +2241,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             else
             {
                 isChanged |=
-                    iter->second->snr != snrString ||
+                    (sortingColumn != parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != snrString) ||
                     iter->second->lastRxDate != wxDateTime::Now();
                 iter->second->snr = snrString;
                 iter->second->lastRxDate = wxDateTime::Now();
@@ -2265,21 +2267,22 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
     
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
-        {
+        {        
+            auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             bool isChanged = false;
             if (message.size() == 0)
             {
-                isChanged |= iter->second->userMessage != UNKNOWN_STR;
+                isChanged |= (sortingColumn != parent_->m_listSpots->GetColumn(USER_MESSAGE_COL) && iter->second->userMessage != UNKNOWN_STR);
                 iter->second->userMessage = UNKNOWN_STR;
             }
             else
             {
-                isChanged |= iter->second->userMessage != wxString::FromUTF8(message.c_str());
+                isChanged |= (sortingColumn != parent_->m_listSpots->GetColumn(USER_MESSAGE_COL) && iter->second->userMessage != wxString::FromUTF8(message.c_str()));
                 iter->second->userMessage = wxString::FromUTF8(message.c_str());
             }
         
             auto lastUpdateTime = makeValidTime_(lastUpdate, iter->second->lastUpdateDate);
-            isChanged |= iter->second->lastUpdate != lastUpdateTime;
+            isChanged |= (sortingColumn != parent_->m_listSpots->GetColumn(LAST_UPDATE_DATE_COL) && iter->second->lastUpdate != lastUpdateTime);
             iter->second->lastUpdate = lastUpdateTime;
 
             // Only highlight on non-empty messages.
