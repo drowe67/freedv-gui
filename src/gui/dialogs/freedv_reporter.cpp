@@ -2244,8 +2244,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             else
             {
                 isChanged |=
-                    (sortingColumn == parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != snrString) ||
-                    iter->second->lastRxDate != wxDateTime::Now();
+                    (sortingColumn == parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != snrString);
                 iter->second->snr = snrString;
                 iter->second->lastRxDate = wxDateTime::Now();
             }
@@ -2294,7 +2293,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
         
             if (message.size() > 0 && !filteringSelf)
             {
-                isChanged |= iter->second->lastUpdateUserMessage != iter->second->lastUpdateDate;
                 iter->second->lastUpdateUserMessage = iter->second->lastUpdateDate;
             }
             else if (ourCallsign && filteringSelf)
