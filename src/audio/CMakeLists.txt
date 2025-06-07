@@ -41,7 +41,7 @@ if(APPLE AND NATIVE_AUDIO_AVAILABLE)
         "-framework AVFoundation"
         "-framework CoreAudio")
 elseif(WIN32 AND NATIVE_AUDIO_AVAILABLE)
-    target_link_libraries(fdv_audio PRIVATE uuid avrt)
+    target_link_libraries(fdv_audio PRIVATE uuid avrt winmm ksuser)
 elseif(LINUX AND NATIVE_AUDIO_AVAILABLE AND DBUS_FOUND)
     target_include_directories(fdv_audio PRIVATE ${DBUS_INCLUDE_DIRS})
     target_compile_definitions(fdv_audio PRIVATE -DUSE_RTKIT)
