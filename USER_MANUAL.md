@@ -800,6 +800,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Unit tests: Increase sleep time before killing recording to resolve macOS test failures. (PR #917)
     * Fix typo causing RX radio device to remain open. (PR #918)
     * Fix WASAPI errors on some machines by supporting audio mix formats other than 16-bit integer. (PR #919)
+    * Reduce CPU usage of FreeDV Reporter window by only re-sorting if we actually get new data from the server. (PR #915)
 
 ## V2.0.0 June 2025
 
