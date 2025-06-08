@@ -49,6 +49,7 @@ WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDi
     , renderCaptureEvent_(nullptr)
     , isRenderCaptureRunning_(false)
     , semaphore_(nullptr)
+    , tmpBuf_(nullptr)
 {
     client_->AddRef();
 }
@@ -85,30 +86,116 @@ void WASAPIAudioDevice::start()
     auto prom = std::make_shared<std::promise<void> >(); 
     auto fut = prom->get_future();
     enqueue_([&]() {
+        WAVEFORMATEX* streamFormatPtr = nullptr;
         WAVEFORMATEX streamFormat;
+        bool freeStreamFormat = false;
 
         // Populate stream format based on requested sample
         // rate/number of channels.
         // NOTE: this should already have been determined valid
         // by the audio engine!
-        streamFormat.wFormatTag = WAVE_FORMAT_PCM;
-        streamFormat.nChannels = numChannels_;
-        streamFormat.nSamplesPerSec = sampleRate_;
-        streamFormat.wBitsPerSample = 16;
-        streamFormat.nBlockAlign = (numChannels_ * streamFormat.wBitsPerSample) / 8;
-        streamFormat.nAvgBytesPerSec = streamFormat.nSamplesPerSec * streamFormat.nBlockAlign;
-        streamFormat.cbSize = 0;
+        HRESULT hr = client_->GetMixFormat(&streamFormatPtr);
+        if (SUCCEEDED(hr))
+        {
+            freeStreamFormat = true;
+            streamFormatPtr->nChannels = numChannels_;
+            streamFormatPtr->nSamplesPerSec = sampleRate_;
+            streamFormatPtr->nBlockAlign = (numChannels_ * streamFormatPtr->wBitsPerSample) / 8;
+            streamFormatPtr->nAvgBytesPerSec = streamFormatPtr->nSamplesPerSec * streamFormatPtr->nBlockAlign;
+        }
+        else
+        {
+            streamFormatPtr = &streamFormat;
+            streamFormat.wFormatTag = WAVE_FORMAT_PCM;
+            streamFormat.wBitsPerSample = 16;
+            streamFormat.nChannels = numChannels_;
+            streamFormat.nSamplesPerSec = sampleRate_;
+            streamFormat.nBlockAlign = (numChannels_ * streamFormat.wBitsPerSample) / 8;
+            streamFormat.nAvgBytesPerSec = streamFormat.nSamplesPerSec * streamFormat.nBlockAlign;
+            streamFormat.cbSize = 0;
+        }
+
+        // Set up for conversion to mix format
+        if (streamFormatPtr->wFormatTag == WAVE_FORMAT_PCM)
+        {
+            containerBits_ = streamFormatPtr->wBitsPerSample;
+            validBits_ = streamFormatPtr->wBitsPerSample;
+            isFloatingPoint_ = false;
+
+            log_info("Mix format is integer (container bits: %d, valid bits: %d)", containerBits_, validBits_);
+        }
+        else if (streamFormatPtr->wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
+        {
+            containerBits_ = streamFormatPtr->wBitsPerSample;
+            validBits_ = streamFormatPtr->wBitsPerSample;
+            isFloatingPoint_ = true;
+            log_info("Mix format is floating point (container bits: %d, valid bits: %d)", containerBits_, validBits_);
+        }
+        else if (streamFormatPtr->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
+        {
+            WAVEFORMATEXTENSIBLE* extFormat = (WAVEFORMATEXTENSIBLE*)streamFormatPtr;
+            containerBits_ = streamFormatPtr->wBitsPerSample;
+            validBits_ = extFormat->Samples.wValidBitsPerSample;
+            if (extFormat->SubFormat == KSDATAFORMAT_SUBTYPE_PCM)
+            {
+                isFloatingPoint_ = false;
+                log_info("Mix format is integer (container bits: %d, valid bits: %d)", containerBits_, validBits_);
+            }
+            else if (extFormat->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT)
+            {
+                isFloatingPoint_ = true;
+                log_info("Mix format is floating point (container bits: %d, valid bits: %d)", containerBits_, validBits_);
+            }
+            else
+            {
+                std::stringstream ss;
+                ss << "Unknown mix format found: " << GuidToString_(&extFormat->SubFormat);
+                log_error(ss.str().c_str());
+                if (onAudioErrorFunction)
+                {
+                    onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
+                }
+                if (freeStreamFormat)
+                {
+                    CoTaskMemFree(streamFormatPtr);
+                }
+                prom->set_value();
+                return;
+            }
+        }
+        else
+        {
+            std::stringstream ss;
+            ss << "Unknown mix format found: " << streamFormatPtr->wFormatTag;
+            log_error(ss.str().c_str());
+            if (onAudioErrorFunction)
+            {
+                onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
+            }
+            if (freeStreamFormat)
+            {
+                CoTaskMemFree(streamFormatPtr);
+            }
+            prom->set_value();
+            return;
+        }
 
         if (!initialized_)
         {
             // Initialize the audio client with the above format
-            HRESULT hr = client_->Initialize(
+            hr = client_->Initialize(
                 AUDCLNT_SHAREMODE_SHARED,
-                AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+                AUDCLNT_STREAMFLAGS_EVENTCALLBACK | 
+                    AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM |
+                    AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY,
                 BLOCK_TIME_NS / NS_PER_REFTIME, // REFERENCE_TIME is in 100ns units
                 0,
-                &streamFormat,
+                streamFormatPtr,
                 nullptr);
+            if (freeStreamFormat)
+            {
+                CoTaskMemFree(streamFormatPtr);
+            }
             if (FAILED(hr))
             {
                 std::stringstream ss;
@@ -122,6 +209,10 @@ void WASAPIAudioDevice::start()
                 return;
             }
             initialized_ = true;
+        }
+        else if (freeStreamFormat)
+        {
+            CoTaskMemFree(streamFormatPtr);
         }
 
         // Create render/capture event
@@ -140,7 +231,7 @@ void WASAPIAudioDevice::start()
         }
 
         // Assign render/capture event
-        HRESULT hr = client_->SetEventHandle(renderCaptureEvent_);
+        hr = client_->SetEventHandle(renderCaptureEvent_);
         if (FAILED(hr))
         {
             std::stringstream ss;
@@ -213,6 +304,10 @@ void WASAPIAudioDevice::start()
             return;
         }
 
+        // Allocate temporary buffer
+        tmpBuf_ = new short[sampleRate_];
+        assert(tmpBuf_ != nullptr);
+
         if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
         {
             // Perform initial population of audio buffer
@@ -229,15 +324,21 @@ void WASAPIAudioDevice::start()
                 }
                 renderClient_->Release();
                 renderClient_ = nullptr;
+
+                delete[] tmpBuf_;
+                tmpBuf_ = nullptr;
+
                 prom->set_value();
                 return;
             }
 
-            memset(data, 0, bufferFrameCount_ * numChannels_ * sizeof(short));
+            memset(tmpBuf_, 0, bufferFrameCount_ * numChannels_ * sizeof(short));
             if (onAudioDataFunction)
             {
-                onAudioDataFunction(*this, (short*)data, bufferFrameCount_, onAudioDataState);
+                onAudioDataFunction(*this, tmpBuf_, bufferFrameCount_, onAudioDataState);
             }
+
+            copyToWindowsBuffer_(data, bufferFrameCount_);
 
             hr = renderClient_->ReleaseBuffer(bufferFrameCount_, 0);
             if (FAILED(hr))
@@ -251,6 +352,10 @@ void WASAPIAudioDevice::start()
                 }
                 renderClient_->Release();
                 renderClient_ = nullptr;
+
+                delete[] tmpBuf_;
+                tmpBuf_ = nullptr;
+
                 prom->set_value();
                 return;
             }
@@ -286,6 +391,12 @@ void WASAPIAudioDevice::start()
                 captureClient_->Release();
                 captureClient_ = nullptr;
             }
+
+            delete[] tmpBuf_;
+            tmpBuf_ = nullptr;
+
+            prom->set_value();
+            return;
         }
 
         // Start render/capture thread.
@@ -411,6 +522,12 @@ void WASAPIAudioDevice::stop()
             CloseHandle(tmpSem);
         }
 
+        if (tmpBuf_ != nullptr)
+        {
+            delete[] tmpBuf_;
+            tmpBuf_ = nullptr;
+        }
+
         prom->set_value();
     });
     fut.wait();
@@ -509,11 +626,12 @@ void WASAPIAudioDevice::renderAudio_()
     // Grab audio data from higher level code
     if (framesAvailable > 0 && data != nullptr)
     {
-        memset(data, 0, framesAvailable * numChannels_ * sizeof(short));
+        memset(tmpBuf_, 0, framesAvailable * numChannels_ * sizeof(short));
         if (onAudioDataFunction)
         {
-            onAudioDataFunction(*this, (short*)data, framesAvailable, onAudioDataState);
+            onAudioDataFunction(*this, tmpBuf_, framesAvailable, onAudioDataState);
         }
+        copyToWindowsBuffer_(data, framesAvailable);
     }
 
     // Release render buffer
@@ -577,13 +695,17 @@ void WASAPIAudioDevice::captureAudio_()
             // Fill buffer with silence if told to do so.
             if (flags & AUDCLNT_BUFFERFLAGS_SILENT)
             {
-                memset(data, 0, numFramesAvailable * numChannels_ * sizeof(short));
+                memset(tmpBuf_, 0, numFramesAvailable * numChannels_ * sizeof(short));
+            }
+            else
+            {
+                copyFromWindowsBuffer_(data, numFramesAvailable);
             }
 
             // Pass data to higher level code
             if (onAudioDataFunction)
             {
-                onAudioDataFunction(*this, (short*)data, numFramesAvailable, onAudioDataState);
+                onAudioDataFunction(*this, tmpBuf_, numFramesAvailable, onAudioDataState);
             }
         }
 
@@ -616,4 +738,87 @@ void WASAPIAudioDevice::captureAudio_()
         // Notify worker threads
         ReleaseSemaphore(semaphore_, 1, nullptr);
     }
+}
+
+void WASAPIAudioDevice::copyFromWindowsBuffer_(void* buf, int numFrames)
+{
+    if (isFloatingPoint_)
+    {
+        if (validBits_ == sizeof(float) * 8)
+        {
+            copyFloatToShort_<float>((float*)buf, numFrames);
+        }
+        else if (validBits_ == sizeof(double) * 8)
+        {
+            copyFloatToShort_<double>((double*)buf, numFrames);
+        }
+    }
+    else
+    {
+        if (containerBits_ == 8)
+        {
+            copyIntToShort_<char>((char*)buf, numFrames);
+        }
+        else if (containerBits_ == 16 && validBits_ == 16)
+        {
+            // Shortcut -- can just memcpy into tmpBuf_.
+            memcpy(tmpBuf_, buf, numFrames * numChannels_ * sizeof(short));
+        }
+        else if (containerBits_ == 16)
+        {
+            copyIntToShort_<short>((short*)buf, numFrames);
+        }
+        else if (containerBits_ == 32)
+        {
+            copyIntToShort_<int32_t>((int32_t*)buf, numFrames);
+        }
+    }
+}
+
+void WASAPIAudioDevice::copyToWindowsBuffer_(void* buf, int numFrames)
+{
+    if (isFloatingPoint_)
+    {
+        if (validBits_ == sizeof(float) * 8)
+        {
+            copyShortToFloat_<float>((float*)buf, numFrames);
+        }
+        else if (validBits_ == sizeof(double) * 8)
+        {
+            copyShortToFloat_<double>((double*)buf, numFrames);
+        }
+    }
+    else
+    {
+        if (containerBits_ == 8)
+        {
+            copyShortToInt_<char>((char*)buf, numFrames);
+        }
+        else if (containerBits_ == 16 && validBits_ == 16)
+        {
+            // Shortcut -- can just memcpy from tmpBuf_.
+            memcpy(buf, tmpBuf_, numFrames * numChannels_ * sizeof(short));
+        }
+        else if (containerBits_ == 16)
+        {
+            copyShortToInt_<short>((short*)buf, numFrames);
+        }
+        else if (containerBits_ == 32)
+        {
+            copyShortToInt_<int32_t>((int32_t*)buf, numFrames);
+        }
+    }
+}
+
+std::string WASAPIAudioDevice::GuidToString_(GUID *guid)
+{
+    char guid_string[37]; // 32 hex chars + 4 hyphens + null terminator
+    snprintf(
+          guid_string, sizeof(guid_string),
+          "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+          (unsigned int)guid->Data1, (unsigned int)guid->Data2, (unsigned int)guid->Data3,
+          guid->Data4[0], guid->Data4[1], guid->Data4[2],
+          guid->Data4[3], guid->Data4[4], guid->Data4[5],
+          guid->Data4[6], guid->Data4[7]);
+    return guid_string;
 }
