@@ -799,6 +799,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix compiler errors when using wxWidgets 3.0. (PR #914)
     * Unit tests: Increase sleep time before killing recording to resolve macOS test failures. (PR #917)
     * Fix typo causing RX radio device to remain open. (PR #918)
+    * Fix WASAPI errors on some machines by supporting audio mix formats other than 16-bit integer. (PR #919)
 
 ## V2.0.0 June 2025
 
