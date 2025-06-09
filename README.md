@@ -144,7 +144,7 @@ one to build FreeDV for ARM as well as for Intel Windows systems.
 Using MacPorts, most of the appropriate dependencies can be installed by:
 
 ```
-$ sudo port install automake git libtool sox +universal cmake
+$ sudo port install automake git libtool sox +universal cmake wget
 ```
 
 and on Homebrew:
