@@ -150,7 +150,7 @@ $ sudo port install automake git libtool sox +universal cmake
 and on Homebrew:
 
 ```
-$ brew install automake libtool git sox cmake
+$ brew install automake libtool git sox cmake wget
 ```
 
 Once the dependencies are installed, you can then run the `build_osx.sh` script inside the source tree to build
