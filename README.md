@@ -79,8 +79,13 @@ This document describes how to build the FreeDV GUI program for various operatin
    ```
    (rade-venv) $ pwd
    /home/<user>/freedv-gui/build_linux
+   (rade-venv) $ export GDK_BACKEND=x11 # optional, see (*) below
    (rade-venv) $ PYTHONPATH="$(pwd)/rade_src:$PYTHONPATH" src/freedv
    ```
+
+(*) If your Linux distribution and/or desktop environment uses Wayland, FreeDV will always open in the middle 
+of the screen, regardless of where you positioned it before. You can avoid this by having FreeDV run as an 
+X11 application instead using XWayland (`GDK_BACKEND=x11`).
 
 Alternatively, you can use [this script](https://github.com/barjac/freedv-rade-build) developed by 
 Barry Jackson G4MKT to automate the above steps. While the FreeDV project thanks him for his contribution
