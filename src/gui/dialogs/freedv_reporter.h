@@ -141,6 +141,7 @@ class FreeDVReporterDialog : public wxFrame
         wxButton* m_buttonDisplayWebpage;
         
         // Timer to unhighlight RX rows after 10s (like with web-based Reporter)
+        wxTimer* m_resortTimer;
         wxTimer* m_highlightClearTimer;
 
         wxTipWindow* tipWindow_;
@@ -216,6 +217,8 @@ class FreeDVReporterDialog : public wxFrame
              virtual unsigned int GetColumnCount () const override;
              virtual wxString GetColumnType (unsigned int col) const override;
 #endif // !wxCHECK_VERSION(3,2,0)
+
+             bool sortOnNextTimerInterval;
 
          private:
              struct ReporterData

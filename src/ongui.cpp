@@ -1237,15 +1237,15 @@ void MainFrame::OnChangeReportFrequency( wxCommandEvent& event )
         wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency = 0;
         m_cboReportFrequency->SetForegroundColour(wxColor(*wxRED));
     }
-  
-    // Report current frequency to reporters
-    for (auto& ptr : wxGetApp().m_reporters)
-    {
-        ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
-    }
 
     if (oldFreq != wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency)
     {      
+        // Report current frequency to reporters
+        for (auto& ptr : wxGetApp().m_reporters)
+        {
+            ptr->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
+        }
+        
         if (wxGetApp().rigFrequencyController != nullptr && 
             wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency > 0 && 
             (wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges || wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly))
