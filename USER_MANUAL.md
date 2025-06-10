@@ -801,6 +801,9 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix typo causing RX radio device to remain open. (PR #918)
     * Fix WASAPI errors on some machines by supporting audio mix formats other than 16-bit integer. (PR #919)
     * FreeDV Reporter: Fix issue with first column not being aligned properly with other columns. (PR #922)
+2. Documentation:
+    * Add missing dependency for macOS builds to README. (PR #925; thanks @relistan!)
+    * Add note about using XWayland on Linux. (PR #926)
 
 ## V2.0.0 June 2025
 

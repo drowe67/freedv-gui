@@ -79,8 +79,13 @@ This document describes how to build the FreeDV GUI program for various operatin
    ```
    (rade-venv) $ pwd
    /home/<user>/freedv-gui/build_linux
+   (rade-venv) $ export GDK_BACKEND=x11 # optional, see (*) below
    (rade-venv) $ PYTHONPATH="$(pwd)/rade_src:$PYTHONPATH" src/freedv
    ```
+
+(*) If your Linux distribution and/or desktop environment uses Wayland, FreeDV will always open in the middle 
+of the screen, regardless of where you positioned it before. You can avoid this by having FreeDV run as an 
+X11 application instead using XWayland (`GDK_BACKEND=x11`).
 
 Alternatively, you can use [this script](https://github.com/barjac/freedv-rade-build) developed by 
 Barry Jackson G4MKT to automate the above steps. While the FreeDV project thanks him for his contribution
@@ -144,13 +149,13 @@ one to build FreeDV for ARM as well as for Intel Windows systems.
 Using MacPorts, most of the appropriate dependencies can be installed by:
 
 ```
-$ sudo port install automake git libtool sox +universal cmake
+$ sudo port install automake git libtool sox +universal cmake wget
 ```
 
 and on Homebrew:
 
 ```
-$ brew install automake libtool git sox cmake
+$ brew install automake libtool git sox cmake wget
 ```
 
 Once the dependencies are installed, you can then run the `build_osx.sh` script inside the source tree to build
