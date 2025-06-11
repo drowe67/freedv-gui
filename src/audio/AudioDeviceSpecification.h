@@ -29,10 +29,8 @@
 struct AudioDeviceSpecification
 {
     int deviceId;
-    wxString name;     // Display/config name of device
-    wxString cardName; // Name of the audio device
-    wxString portName; // Name of the port from the above audio device (e.g. "Speakers" on Windows). Optional
-    wxString apiName;  // Name of the active audio API
+    wxString name;
+    wxString apiName;
     int defaultSampleRate;
     int maxChannels;
     int minChannels;
