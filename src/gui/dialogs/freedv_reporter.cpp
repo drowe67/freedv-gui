@@ -1340,9 +1340,24 @@ double FreeDVReporterDialog::FreeDVReporterDataModel::RadiansToDegrees_(double r
 void FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_()
 {
     // This ensures that we handle server events in the order they're received.
-    std::unique_lock<std::mutex> lk(fnQueueMtx_);
-    fnQueue_[0]();
-    fnQueue_.erase(fnQueue_.begin());
+    std::unique_lock<std::mutex> lk(fnQueueMtx_, std::defer_lock_t());
+    lk.lock();
+    auto size = fnQueue_.size();
+    lk.unlock();
+
+    while(size > 0)
+    {
+        lk.lock();
+        auto fn = fnQueue_[0];
+        lk.unlock();
+
+        fn();
+
+        lk.lock();
+        fnQueue_.erase(fnQueue_.begin());
+        size = fnQueue_.size();
+        lk.unlock();
+    }
 }
 
 FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequency_(uint64_t freq)
