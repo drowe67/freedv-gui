@@ -802,6 +802,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix WASAPI errors on some machines by supporting audio mix formats other than 16-bit integer. (PR #919)
     * Reduce CPU usage of FreeDV Reporter window by only re-sorting if we actually get new data from the server. (PR #915)
     * FreeDV Reporter: Fix issue with first column not being aligned properly with other columns. (PR #922)
+    * Fix GTK+ assertion after FreeDV Reporter has been open for a long time. (PR #929)
 2. Documentation:
     * Add missing dependency for macOS builds to README. (PR #925; thanks @relistan!)
     * Add note about using XWayland on Linux. (PR #926)
