@@ -23,6 +23,8 @@
 #include "PulseAudioDevice.h"
 #include "PulseAudioEngine.h"
 
+#include <map>
+
 PulseAudioEngine::PulseAudioEngine()
     : initialized_(false)
 {
@@ -140,6 +142,7 @@ void PulseAudioEngine::stop()
 struct PulseAudioDeviceListTemp
 {
     std::vector<AudioDeviceSpecification> result;
+    std::map<int, std::string> cardResult;
     PulseAudioEngine* thisPtr;
 };
 
@@ -207,10 +210,9 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
     pa_operation_unref(op);
     
     // Get list of cards
-    std::map<int, std::string> cards;
     op = pa_context_get_card_info_list(context_, [](pa_context *c, const pa_card_info *i, int eol, void *userdata)
     {
-        std::map<int, wxString>* tempObj = static_cast<std::map<int, wxString>*>(userdata);
+        PulseAudioDeviceListTemp* tempObj = static_cast<PulseAudioDeviceListTemp*>(userdata);
         
         if (eol)
         {
@@ -218,8 +220,8 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
             return;
         }
         
-        (*tempObj)[i->index] = i->name;
-    }, &cards);
+        tempObj->cardResult[i->index] = i->name;
+    }, &tempObj);
     
     // Wait for the operation to complete
     for(;;) 
@@ -235,9 +237,9 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
     // Iterate over result and populate cardName
     for (auto& obj : tempObj.result)
     {
-        if (cards.find(obj.deviceId) != cards.end())
+        if (tempObj.cardResult.find(obj.deviceId) != tempObj.cardResult.end())
         {
-            obj.cardName = wxString::FromUTF8(cards[obj.deviceId].c_str());
+            obj.cardName = wxString::FromUTF8(tempObj.cardResult[obj.deviceId].c_str());
         }
     }
     
