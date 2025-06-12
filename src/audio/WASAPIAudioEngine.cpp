@@ -381,7 +381,58 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
     AudioDeviceSpecification spec;
     spec.name = wxString::FromUTF8(getUTF8String_(friendlyName.pwszVal));
     spec.apiName = "Windows WASAPI";
+    
+    // Get card and port info
+    hr = propStore->GetValue(PKEY_DeviceInterface_FriendlyName, &friendlyName);
+    if (FAILED(hr))
+    {
+        std::stringstream ss;
+        ss << "Could not get card name (hr = " << hr << ")";
+        log_error(ss.str().c_str());
+        if (onAudioErrorFunction)
+        {
+            onAudioErrorFunction(*this, ss.str(), onAudioErrorState); 
+        }
+        PropVariantClear(&friendlyName);
+        propStore->Release();
+        return AudioDeviceSpecification::GetInvalidDevice();
+    }
 
+    if (friendlyName.vt == VT_EMPTY)
+    {
+        log_warn("Device does not have a card name!");
+        PropVariantClear(&friendlyName);
+        propStore->Release();
+        return AudioDeviceSpecification::GetInvalidDevice();
+    }
+    
+    spec.cardName = wxString::FromUTF8(getUTF8String_(friendlyName.pwszVal));
+
+    hr = propStore->GetValue(PKEY_Device_DeviceDesc, &friendlyName);
+    if (FAILED(hr))
+    {
+        std::stringstream ss;
+        ss << "Could not get port name (hr = " << hr << ")";
+        log_error(ss.str().c_str());
+        if (onAudioErrorFunction)
+        {
+            onAudioErrorFunction(*this, ss.str(), onAudioErrorState); 
+        }
+        PropVariantClear(&friendlyName);
+        propStore->Release();
+        return AudioDeviceSpecification::GetInvalidDevice();
+    }
+
+    if (friendlyName.vt == VT_EMPTY)
+    {
+        log_warn("Device does not have a port name!");
+        PropVariantClear(&friendlyName);
+        propStore->Release();
+        return AudioDeviceSpecification::GetInvalidDevice();
+    }
+    
+    spec.portName = wxString::FromUTF8(getUTF8String_(friendlyName.pwszVal));
+    
     // Activate IAudioClient so we can obtain format info
     IAudioClient* audioClient = nullptr;
     hr = device->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void**)&audioClient);
