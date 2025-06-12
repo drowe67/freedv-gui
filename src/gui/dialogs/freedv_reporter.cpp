@@ -1035,6 +1035,7 @@ void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent& event)
             {
                 // Strip tag characters and beginning
                 statusMsg = statusMsg.SubString(0, index - 1) + statusMsg.Mid(endIndex + 1);
+                insertPoint = index;
                 log_debug("status msg is now %s", (const char*)statusMsg.ToUTF8());
             }
             else
