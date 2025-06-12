@@ -1151,14 +1151,14 @@ void EasySetupDialog::updateAudioDevices_()
     
     for (auto& dev : inputDevices)
     {
-        if (dev.name.Find(_("Microsoft Sound Mapper")) != -1 ||
-            dev.name.Find(_(" [Loopback]")) != -1)
+        if (dev.cardName.Find(_("Microsoft Sound Mapper")) != -1 ||
+            dev.cardName.Find(_(" [Loopback]")) != -1)
         {
             // Sound mapper and loopback devices should be skipped.
             continue;
         }
 
-        wxString cleanedDeviceName = dev.name;
+        wxString cleanedDeviceName = dev.cardName;
         
         SoundDeviceData* soundData = new SoundDeviceData();
         assert(soundData != nullptr);
@@ -1187,13 +1187,15 @@ void EasySetupDialog::updateAudioDevices_()
 
     for (auto& dev : outputDevices)
     {
-        if (dev.name.Find(_("Microsoft Sound Mapper")) != -1 ||
-            dev.name.Find(_(" [Loopback]")) != -1)
+        if (dev.cardName.Find(_("Microsoft Sound Mapper")) != -1 ||
+            dev.cardName.Find(_(" [Loopback]")) != -1)
         {
             // Sound mapper and loopback devices should be skipped.
             continue;
         }
 
+        wxString cleanedDeviceName = dev.cardName;
+#if 0
         // For Windows, some devices have a designator at the beginning
         // (e.g. "Microphone (USB Audio CODEC)" and "Speakers (USB Audio CODEC)".
         // We need to be able to strip the designator without affecting
@@ -1202,8 +1204,7 @@ void EasySetupDialog::updateAudioDevices_()
         // device in the current list with the same suffix. If we do find
         // such a device, then we use this suffix as the device name to show
         // in the list instead.
-        wxString cleanedDeviceName = dev.name;
-        if (finalRadioDeviceList.find(dev.name) == finalRadioDeviceList.end())
+        if (finalRadioDeviceList.find(dev.cardName) == finalRadioDeviceList.end())
         {
             SoundDeviceData* foundItem = nullptr;
             wxString oldDeviceName;
@@ -1255,6 +1256,7 @@ void EasySetupDialog::updateAudioDevices_()
                 finalRadioDeviceList[cleanedDeviceName] = foundItem;
             }
         }
+#endif // 0
 
         SoundDeviceData* soundData = finalRadioDeviceList[cleanedDeviceName];
         if (soundData == nullptr)
