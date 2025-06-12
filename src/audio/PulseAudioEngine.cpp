@@ -24,6 +24,7 @@
 #include "PulseAudioEngine.h"
 
 #include <map>
+#include "../util/logging/ulog.h"
 
 PulseAudioEngine::PulseAudioEngine()
     : initialized_(false)
@@ -168,6 +169,7 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
             AudioDeviceSpecification device;
             device.deviceId = i->index;
             device.name = wxString::FromUTF8(i->name);
+            device.cardIndex = i->card;
             device.apiName = "PulseAudio";
             device.maxChannels = i->sample_spec.channels;
             device.minChannels = 1; // TBD: can minimum be >1 on PulseAudio or pipewire?
@@ -191,6 +193,7 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
             AudioDeviceSpecification device;
             device.deviceId = i->index;
             device.name = wxString::FromUTF8(i->name);
+            device.cardIndex = i->card;
             device.apiName = "PulseAudio";
             device.maxChannels = i->sample_spec.channels;
             device.minChannels = 1; // TBD: can minimum be >1 on PulseAudio or pipewire?
@@ -231,15 +234,14 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
     }
 
     pa_operation_unref(op);
-    
     pa_threaded_mainloop_unlock(mainloop_);
-    
+
     // Iterate over result and populate cardName
     for (auto& obj : tempObj.result)
     {
-        if (tempObj.cardResult.find(obj.deviceId) != tempObj.cardResult.end())
+        if (tempObj.cardResult.find(obj.cardIndex) != tempObj.cardResult.end())
         {
-            obj.cardName = wxString::FromUTF8(tempObj.cardResult[obj.deviceId].c_str());
+            obj.cardName = wxString::FromUTF8(tempObj.cardResult[obj.cardIndex].c_str());
         }
     }
     
