@@ -989,11 +989,76 @@ void FreeDVReporterDialog::OnCopyUserMessage(wxCommandEvent& event)
 void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent& event)
 {
     auto statusMsg = m_statusMessage->GetValue();
+    int insertPoint = m_statusMessage->GetInsertionPoint();
 
-    // Prevent entry of text longer than the character limit.
+    log_debug("Status message currently %s", (const char*)statusMsg.ToUTF8());
+
+    // Linux workaround: it's possible for some emoji flags to backspace
+    // and not fully remove the flag. This logic scans the current value
+    // of statusMsg for the appropriate Unicode sequence 
+    // (U+1F3F4 + ... + U+E007F). If the beginning character is there
+    // but not the end character, the intermediate tag characters are
+    // removed along with the beginng.
+    //
+    // Note: it still takes a couple of backspaces before the delete process
+    // begins so this is not a full workaround. Still, this significantly
+    // reduces the number of times one must backspace in order to completely
+    // remove the flag.
+    int index = 0;
+    while (index < statusMsg.Length())
+    {
+        auto chr = statusMsg.GetChar(index);
+        if (chr.GetValue() == 0x1F3F4)
+        {
+            log_debug("Found start char at index %d", index);
+            auto endIndex = index + 1;
+            bool foundEnd = false;
+            while (endIndex < statusMsg.Length())
+            {
+                auto endChar = statusMsg.GetChar(endIndex).GetValue();
+                if (endChar == 0xE007F)
+                {
+                    foundEnd = true;
+                    break;
+                }
+                else if (!(endChar >= 0xE0061 && endChar <= 0xE007A))
+                {
+                    // Not lowercase tag characters; missing end character.
+                    endIndex--;
+                    break;
+                }
+                endIndex++;
+            }
+            log_debug("Found end at %d", endIndex);
+
+            if (!foundEnd && endIndex != index)
+            {
+                // Strip tag characters and beginning
+                statusMsg = statusMsg.SubString(0, index - 1) + statusMsg.Mid(endIndex + 1);
+                insertPoint = index;
+                log_debug("status msg is now %s", (const char*)statusMsg.ToUTF8());
+            }
+            else
+            {
+                index = endIndex;
+            }
+        }
+        else if (chr.GetValue() >= 0xE0000 && chr.GetValue() <= 0xE007F)
+        {
+            // Remove any stray tag characters that might still remain.
+            statusMsg.Remove(index, 1);
+            continue;
+        }
+
+        index++;
+    }
+
     if (statusMsg != m_statusMessage->GetValue())
     {
         m_statusMessage->SetValue(statusMsg);
+
+        // Reset cursor position to end of new character
+        m_statusMessage->SetInsertionPoint(insertPoint);
     }
 }
 
