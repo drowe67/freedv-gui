@@ -44,7 +44,7 @@ void codec2_initialize_realtime(size_t heapSize)
 void codec2_disable_realtime()
 {
 #if defined(WIN32)
-    VirtualLock(Heap_, HeapSize_);
+    VirtualUnlock(Heap_, HeapSize_);
     _aligned_free(Heap_);
 #else
     munlock(Heap_, HeapSize_);
