@@ -179,6 +179,7 @@ std::vector<AudioDeviceSpecification> WASAPIAudioEngine::getAudioDeviceList(Audi
             {
                 devSpec.deviceId = index;
                 result.push_back(devSpec);
+                log_debug("Found device %s (card = %s, port = %s)", (const char*)devSpec.name.ToUTF8(), (const char*)devSpec.cardName.ToUTF8(), (const char*)devSpec.portName.ToUTF8());
             }
             device->Release();
         }
@@ -432,7 +433,23 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
     }
     
     spec.portName = wxString::FromUTF8(getUTF8String_(friendlyName.pwszVal));
-    
+    bool noPortName = spec.portName.Length() == 0 && spec.cardName != spec.name;
+    bool isFlexRadio = spec.cardName.StartsWith("FlexRadio");
+
+    if (noPortName)
+    {
+        // If there's no port name, just use the same name for cardName
+        // as the card's full name. 
+        spec.cardName = spec.name;
+    }
+    else if (isFlexRadio)
+    {
+        // We also have a carveout for FlexRadio virtual audio devices 
+        // so that Easy Setup can automatically group the RX and TX 
+        // devices together.
+        spec.cardName = spec.portName;
+    }
+
     // Activate IAudioClient so we can obtain format info
     IAudioClient* audioClient = nullptr;
     hr = device->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void**)&audioClient);
