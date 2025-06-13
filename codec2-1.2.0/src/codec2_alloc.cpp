@@ -9,7 +9,14 @@ extern "C" {
 #include "o1heap.h"
 #include "codec2_alloc.h"
 
+#if !defined(WIN32)
+#include <sys/mman.h>
+#else
+#include <memoryapi.h>
+#endif // !defined(WIN32)
+
 static thread_local void* Heap_ = NULL;
+static thread_local int HeapSize_ = 0;
 static thread_local O1HeapInstance* Instance_ = NULL;
 
 void codec2_initialize_realtime(size_t heapSize)
@@ -20,6 +27,13 @@ void codec2_initialize_realtime(size_t heapSize)
     Heap_ = (void*)aligned_alloc(O1HEAP_ALIGNMENT, heapSize);
 #endif // defined(WIN32)
     assert(Heap_ != NULL);
+    
+    HeapSize_ = heapSize;
+#if defined(WIN32)
+    VirtualLock(Heap_, heapsize);
+#else
+    mlock(Heap_, heapSize);
+#endif // defined(WIN32)
 
     memset(Heap_, 0, heapSize);
 
@@ -30,11 +44,14 @@ void codec2_initialize_realtime(size_t heapSize)
 void codec2_disable_realtime()
 {
 #if defined(WIN32)
+    VirtualLock(Heap_, HeapSize_);
     _aligned_free(Heap_);
 #else
+    munlock(Heap_, HeapSize_);
     free(Heap_);
 #endif // defined(WIN32)
     Heap_ = NULL;
+    HeapSize_ = 0;
     Instance_ = NULL; // no need to deallocate per o1heap docs
 }
 
