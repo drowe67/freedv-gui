@@ -30,14 +30,14 @@ void codec2_initialize_realtime(size_t heapSize)
     
     HeapSize_ = heapSize;
 #if defined(WIN32)
-    VirtualLock(Heap_, heapsize);
+    VirtualLock(Heap_, HeapSize_);
 #else
-    mlock(Heap_, heapSize);
+    mlock(Heap_, HeapSize_);
 #endif // defined(WIN32)
 
-    memset(Heap_, 0, heapSize);
+    memset(Heap_, 0, HeapSize_);
 
-    Instance_ = o1heapInit(Heap_, heapSize);
+    Instance_ = o1heapInit(Heap_, HeapSize_);
     assert(Instance_ != NULL);
 }
 
