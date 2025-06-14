@@ -23,6 +23,9 @@
 #include "PulseAudioDevice.h"
 #include "PulseAudioEngine.h"
 
+#include <map>
+#include "../util/logging/ulog.h"
+
 PulseAudioEngine::PulseAudioEngine()
     : initialized_(false)
 {
@@ -140,6 +143,7 @@ void PulseAudioEngine::stop()
 struct PulseAudioDeviceListTemp
 {
     std::vector<AudioDeviceSpecification> result;
+    std::map<int, std::string> cardResult;
     PulseAudioEngine* thisPtr;
 };
 
@@ -164,7 +168,8 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
 
             AudioDeviceSpecification device;
             device.deviceId = i->index;
-            device.name = i->name;
+            device.name = wxString::FromUTF8(i->name);
+            device.cardIndex = i->card;
             device.apiName = "PulseAudio";
             device.maxChannels = i->sample_spec.channels;
             device.minChannels = 1; // TBD: can minimum be >1 on PulseAudio or pipewire?
@@ -187,7 +192,8 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
 
             AudioDeviceSpecification device;
             device.deviceId = i->index;
-            device.name = i->name;
+            device.name = wxString::FromUTF8(i->name);
+            device.cardIndex = i->card;
             device.apiName = "PulseAudio";
             device.maxChannels = i->sample_spec.channels;
             device.minChannels = 1; // TBD: can minimum be >1 on PulseAudio or pipewire?
@@ -204,8 +210,40 @@ std::vector<AudioDeviceSpecification> PulseAudioEngine::getAudioDeviceList(Audio
         pa_threaded_mainloop_wait(mainloop_);
     }
 
-    pa_operation_unref(op);    
+    pa_operation_unref(op);
+    
+    // Get list of cards
+    op = pa_context_get_card_info_list(context_, [](pa_context *c, const pa_card_info *i, int eol, void *userdata)
+    {
+        PulseAudioDeviceListTemp* tempObj = static_cast<PulseAudioDeviceListTemp*>(userdata);
+        
+        if (eol)
+        {
+            pa_threaded_mainloop_signal(tempObj->thisPtr->mainloop_, 0);
+            return;
+        }
+        
+        tempObj->cardResult[i->index] = i->name;
+    }, &tempObj);
+    
+    // Wait for the operation to complete
+    for(;;) 
+    {
+        if (pa_operation_get_state(op) != PA_OPERATION_RUNNING) break;
+        pa_threaded_mainloop_wait(mainloop_);
+    }
+
+    pa_operation_unref(op);
     pa_threaded_mainloop_unlock(mainloop_);
+
+    // Iterate over result and populate cardName
+    for (auto& obj : tempObj.result)
+    {
+        if (tempObj.cardResult.find(obj.cardIndex) != tempObj.cardResult.end())
+        {
+            obj.cardName = wxString::FromUTF8(tempObj.cardResult[obj.cardIndex].c_str());
+        }
+    }
     
     return tempObj.result;
 }
