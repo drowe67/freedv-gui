@@ -23,6 +23,8 @@
 #include "IPipelineStep.h"
 
 #if defined(SANITIZER_EMABLED)
+#include <cstdlib>
+
 #define codec2_malloc(sz) (malloc(sz))
 #define codec2_free(ptr) (free(ptr))
 #else
