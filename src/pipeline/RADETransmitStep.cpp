@@ -58,25 +58,25 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+        AllocRealtime_<short>(maxSamples), 
+        RealtimeDeleter<short>());
     assert(outputSamples_ != nullptr);
 
     int numOutputSamples = rade_n_tx_out(dv_);
 
-    radeOut_ = new RADE_COMP[numOutputSamples];
+    radeOut_ = AllocRealtime_<RADE_COMP>(numOutputSamples);
     assert(radeOut_ != nullptr);
 
-    radeOutShort_ = new short[numOutputSamples];
+    radeOutShort_ = AllocRealtime_<short>(numOutputSamples);
     assert(radeOutShort_ != nullptr);
 
     const int NUM_SAMPLES_SILENCE = 60 * getOutputSampleRate() / 1000;
     int numEOOSamples = rade_n_tx_eoo_out(dv_);
 
-    eooOut_ = new RADE_COMP[numEOOSamples];
+    eooOut_ = AllocRealtime_<RADE_COMP>(numEOOSamples);
     assert(eooOut_ != nullptr);
 
-    eooOutShort_ = new short[numEOOSamples + NUM_SAMPLES_SILENCE];
+    eooOutShort_ = AllocRealtime_<short>(numEOOSamples + NUM_SAMPLES_SILENCE);
     assert(eooOutShort_ != nullptr);
 
     featureList_.reserve(rade_n_features_in_out(dv_));
@@ -84,10 +84,10 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
 
 RADETransmitStep::~RADETransmitStep()
 {
-    delete[] radeOut_;
-    delete[] radeOutShort_;
-    delete[] eooOut_;
-    delete[] eooOutShort_;
+    FreeRealtime_(radeOut_);
+    FreeRealtime_(radeOutShort_);
+    FreeRealtime_(eooOut_);
+    FreeRealtime_(eooOutShort_);
     outputSamples_ = nullptr;
 
     if (featuresFile_ != nullptr)

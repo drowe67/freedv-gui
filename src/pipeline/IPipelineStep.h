@@ -71,6 +71,33 @@ protected:
         }
     };
     
+    template<typename T>
+    struct RealtimeAllocator
+    {
+        typedef T value_type;
+        RealtimeAllocator() noexcept { }
+    
+        template<class U> RealtimeAllocator(const RealtimeAllocator<U>&) noexcept {}
+        template<class U> bool operator==(const RealtimeAllocator<U>&) const noexcept
+        {
+            return true;
+        }
+        template<class U> bool operator!=(const RealtimeAllocator<U>&) const noexcept
+        {
+            return false;
+        }
+    
+        T* allocate(const size_t n) const noexcept
+        {
+            return AllocRealtime_<T>(n);
+        }
+    
+        void deallocate(T* const p, size_t) const noexcept
+        {
+            FreeRealtime_(p);
+        }
+    };
+    
 private:
     static void* AllocRealtimeGeneric_(int size) noexcept;
     static void FreeRealtimeGeneric_(void* ptr) noexcept;

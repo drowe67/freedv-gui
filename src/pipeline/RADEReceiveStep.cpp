@@ -58,20 +58,20 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+        AllocRealtime_<short>(maxSamples), 
+        RealtimeDeleter<short>());
     assert(outputSamples_ != nullptr);
 
-    inputBufCplx_ = new RADE_COMP[rade_nin_max(dv_)];
+    inputBufCplx_ = AllocRealtime_<RADE_COMP>(rade_nin_max(dv_));
     assert(inputBufCplx_ != nullptr);
 
-    inputBuf_ = new short[rade_nin_max(dv_)];
+    inputBuf_ = AllocRealtime_<short>(rade_nin_max(dv_));
     assert(inputBuf_ != nullptr);
 
-    featuresOut_ = new float[rade_n_features_in_out(dv_)];
+    featuresOut_ = AllocRealtime_<float>(rade_n_features_in_out(dv_));
     assert(featuresOut_ != nullptr);
 
-    eooOut_ = new float[rade_n_eoo_bits(dv_)];
+    eooOut_ = AllocRealtime_<float>(rade_n_eoo_bits(dv_));
     assert(eooOut_ != nullptr);
 
     pendingFeatures_.reserve(rade_n_features_in_out(dv_));
@@ -79,10 +79,10 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
 
 RADEReceiveStep::~RADEReceiveStep()
 {
-    delete[] inputBuf_;
-    delete[] inputBufCplx_;
-    delete[] featuresOut_;
-    delete[] eooOut_;
+    FreeRealtime_(inputBuf_);
+    FreeRealtime_(inputBufCplx_);
+    FreeRealtime_(featuresOut_);
+    FreeRealtime_(eooOut_);
     outputSamples_ = nullptr;
 
     if (featuresFile_ != nullptr)

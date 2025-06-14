@@ -55,7 +55,7 @@ private:
     FARGANState* fargan_;
     struct FIFO* inputSampleFifo_;
     struct FIFO* outputSampleFifo_;
-    std::vector<float> pendingFeatures_;
+    std::vector<float, RealtimeAllocator<float> > pendingFeatures_;
     FILE* featuresFile_;
     rade_text_t textPtr_;
 
