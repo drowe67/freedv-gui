@@ -14,6 +14,7 @@ extern "C" {
 #include <unistd.h>
 #else
 #include <memoryapi.h>
+#include <sysinfoapi.h>
 #endif // !defined(WIN32)
 
 static thread_local void* Heap_ = NULL;
