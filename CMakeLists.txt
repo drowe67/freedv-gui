@@ -169,7 +169,6 @@ if(ENABLE_RTSAN)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=realtime")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=realtime")
     set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fsanitize=realtime")
-    add_definitions(-DSANITIZER_EMABLED)
 endif(ENABLE_RTSAN)
 
 if(SIGN_WINDOWS_BINARIES)
