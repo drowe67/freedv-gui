@@ -95,7 +95,13 @@ private:
     std::shared_ptr<void> state_;
     std::vector<std::shared_ptr<IPipelineStep>> parallelSteps_;
 
-    void executeRunnerThread_(ThreadInfo* threadState) noexcept;
+    void executeRunnerThread_(ThreadInfo* threadState) noexcept
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+[[clang::nonblocking]]
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+    ;
 };
 
 #endif // AUDIO_PIPELINE__PARALLEL_STEP_H
