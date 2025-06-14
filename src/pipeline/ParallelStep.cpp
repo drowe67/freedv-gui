@@ -66,11 +66,11 @@ ParallelStep::ParallelStep(
         assert(threadState->outputFifo != nullptr);
         
         threadState->tempOutput = std::shared_ptr<short>(
-            new short[outputSampleRate],
-            std::default_delete<short[]>());
+            AllocRealtime_<short>(outputSampleRate), 
+            RealtimeDeleter<short>());
         threadState->tempInput = std::shared_ptr<short>(
-            new short[inputSampleRate],
-            std::default_delete<short[]>());
+            AllocRealtime_<short>(inputSampleRate), 
+            RealtimeDeleter<short>());
          
         threadState->exitingThread = false;
         if (runMultiThreaded)
@@ -261,7 +261,7 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
     return outputTask->tempOutput;
 }
 
-void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
+void ParallelStep::executeRunnerThread_(ThreadInfo* threadState) noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]

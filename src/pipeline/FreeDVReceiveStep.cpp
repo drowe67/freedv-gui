@@ -46,25 +46,25 @@ FreeDVReceiveStep::FreeDVReceiveStep(struct freedv* dv)
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+        AllocRealtime_<short>(maxSamples), 
+        RealtimeDeleter<short>());
     assert(outputSamples_ != nullptr);
 
-    inputBuf_ = new short[freedv_get_n_max_modem_samples(dv_)];
+    inputBuf_ = AllocRealtime_<short>(freedv_get_n_max_modem_samples(dv_));
     assert(inputBuf_ != nullptr);
 
-    rxFdm_ = new COMP[freedv_get_n_max_modem_samples(dv_)];
+    rxFdm_ = AllocRealtime_<COMP>(freedv_get_n_max_modem_samples(dv_));
     assert(rxFdm_ != nullptr);
 
-    rxFdmOffset_ = new COMP[freedv_get_n_max_modem_samples(dv_)];
+    rxFdmOffset_ = AllocRealtime_<COMP>(freedv_get_n_max_modem_samples(dv_));
     assert(rxFdmOffset_ != nullptr);
 }
 
 FreeDVReceiveStep::~FreeDVReceiveStep()
 {
-    delete[] inputBuf_;
-    delete[] rxFdm_;
-    delete[] rxFdmOffset_;
+    FreeRealtime_(inputBuf_);
+    FreeRealtime_(rxFdm_);
+    FreeRealtime_(rxFdmOffset_);
     outputSamples_ = nullptr;
 
     if (inputSampleFifo_ != nullptr)

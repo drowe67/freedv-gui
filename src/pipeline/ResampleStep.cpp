@@ -79,14 +79,14 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate)
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+        AllocRealtime_<short>(maxSamples), 
+        RealtimeDeleter<short>());
     assert(outputSamples_ != nullptr);
     
-    tempInput_ = new float[std::max(inputSampleRate, outputSampleRate)];
+    tempInput_ = AllocRealtime_<float>(std::max(inputSampleRate, outputSampleRate));
     assert(tempInput_ != nullptr);
 
-    tempOutput_ = new float[std::max(inputSampleRate, outputSampleRate)];
+    tempOutput_ = AllocRealtime_<float>(std::max(inputSampleRate, outputSampleRate));
     assert(tempOutput_ != nullptr);
 }
 
@@ -94,8 +94,9 @@ ResampleStep::~ResampleStep()
 {
     src_delete(resampleState_);
 
-    delete[] tempInput_;
-    delete[] tempOutput_;
+    FreeRealtime_(tempInput_);
+    FreeRealtime_(tempOutput_);
+    outputSamples_ = nullptr;
 }
 
 int ResampleStep::getInputSampleRate() const

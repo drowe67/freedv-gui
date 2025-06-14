@@ -29,17 +29,17 @@ ComputeRfSpectrumStep::ComputeRfSpectrumStep(
     : modemStatsFn_(modemStatsFn)
     , getAvMagFn_(getAvMagFn)
 {
-    rxSpectrum_ = new float[MODEM_STATS_NSPEC];
+    rxSpectrum_ = AllocRealtime_<float>(MODEM_STATS_NSPEC);
     assert(rxSpectrum_ != nullptr);
 
-    rxFdm_ = new COMP[FS];
+    rxFdm_ = AllocRealtime_<COMP>(FS);
     assert(rxFdm_ != nullptr);
 }
 
 ComputeRfSpectrumStep::~ComputeRfSpectrumStep()
 {
-    delete[] rxSpectrum_;
-    delete[] rxFdm_;
+    FreeRealtime_(rxSpectrum_);
+    FreeRealtime_(rxFdm_);
 }
 
 int ComputeRfSpectrumStep::getInputSampleRate() const

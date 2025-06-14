@@ -195,8 +195,8 @@ wxString utTxFile;
 wxString utRxFile;
 wxString utTxFeatureFile;
 wxString utRxFeatureFile;
-int utTxTimeSeconds;
-int utTxAttempts;
+long utTxTimeSeconds;
+long utTxAttempts;
 
 // WxWidgets - initialize the application
 
@@ -476,7 +476,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
             log_info("Piping %s through TX pipeline", (const char*)utTxFile.ToUTF8());
         }
 
-        if (parser.Found("txtime", (long*)&utTxTimeSeconds))
+        if (parser.Found("txtime", &utTxTimeSeconds))
         {
             log_info("Will transmit for %d seconds", utTxTimeSeconds);
         }
@@ -485,7 +485,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
             utTxTimeSeconds = 60;
         }
 
-        if (parser.Found("txattempts", (long*)&utTxAttempts))
+        if (parser.Found("txattempts", &utTxAttempts))
         {
             log_info("Will transmit %d time(s)", utTxAttempts);
         }

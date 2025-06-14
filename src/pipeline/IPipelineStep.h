@@ -46,7 +46,73 @@ public:
     
     // Resets internal state of the pipeline step.
     virtual void reset() { /* empty */ }
+    
+    // Operator overrides to ensure we use real-time O(1) allocator
+    void* operator new(std::size_t sz);
+    void* operator new[](std::size_t sz);
+    void operator delete(void* ptr) noexcept;
+    void operator delete(void* ptr, std::size_t size) noexcept;
+    void operator delete[](void* ptr) noexcept;
+    void operator delete[](void* ptr, std::size_t size) noexcept;
+    
+protected:
+    template<typename T>
+    static T* AllocRealtime_(int numElements) noexcept;
+    
+    template<typename T>
+    static void FreeRealtime_(T* ptr) noexcept;
+    
+    template<typename T>
+    struct RealtimeDeleter
+    {
+        void operator()(T* ptr) const
+        {
+            FreeRealtime_(ptr);
+        }
+    };
+    
+    template<typename T>
+    struct RealtimeAllocator
+    {
+        typedef T value_type;
+        RealtimeAllocator() noexcept { }
+    
+        template<class U> RealtimeAllocator(const RealtimeAllocator<U>&) noexcept {}
+        template<class U> bool operator==(const RealtimeAllocator<U>&) const noexcept
+        {
+            return true;
+        }
+        template<class U> bool operator!=(const RealtimeAllocator<U>&) const noexcept
+        {
+            return false;
+        }
+    
+        T* allocate(const size_t n) const noexcept
+        {
+            return AllocRealtime_<T>(n);
+        }
+    
+        void deallocate(T* const p, size_t) const noexcept
+        {
+            FreeRealtime_(p);
+        }
+    };
+    
+private:
+    static void* AllocRealtimeGeneric_(int size) noexcept;
+    static void FreeRealtimeGeneric_(void* ptr) noexcept;
 };
 
+template<typename T>
+T* IPipelineStep::AllocRealtime_(int numElements) noexcept
+{
+    return (T*)AllocRealtimeGeneric_(sizeof(T) * numElements);
+}
+
+template<typename T>
+void IPipelineStep::FreeRealtime_(T* ptr) noexcept
+{
+    FreeRealtimeGeneric_(ptr);
+}
 
 #endif // AUDIO_PIPELINE__I_PIPELINE_STEP_H

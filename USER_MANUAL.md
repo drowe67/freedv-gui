@@ -805,6 +805,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * FreeDV Reporter: Work around Linux bug preventing some flag emojis from being fully deleted on backspace. (PR #931)
     * Fix GTK+ assertion after FreeDV Reporter has been open for a long time. (PR #929)
     * Easy Setup: Use card names instead of device names for generating device list. (PR #932)
+    * Prevent real-time memory from being swapped by OS to reduce audio dropouts. (PR #933)
 2. Documentation:
     * Add missing dependency for macOS builds to README. (PR #925; thanks @relistan!)
     * Add note about using XWayland on Linux. (PR #926)
