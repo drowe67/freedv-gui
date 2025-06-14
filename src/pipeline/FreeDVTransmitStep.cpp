@@ -44,32 +44,33 @@ FreeDVTransmitStep::FreeDVTransmitStep(struct freedv* dv, std::function<float()>
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+        AllocRealtime_<short>(maxSamples), 
+        RealtimeDeleter<short>());
     assert(outputSamples_ != nullptr);
 
-    codecInput_ = new short[maxSamples];
+    codecInput_ = AllocRealtime_<short>(maxSamples);
     assert(codecInput_ != nullptr);
 
-    tmpOutput_ = new short[maxSamples];
+    tmpOutput_ = AllocRealtime_<short>(maxSamples);
     assert(tmpOutput_ != nullptr);
 
     int nfreedv = freedv_get_n_nom_modem_samples(dv_);
 
-    txFdm_ = new COMP[nfreedv];
+    txFdm_ = AllocRealtime_<COMP>(nfreedv);
     assert(txFdm_ != nullptr);
 
-    txFdmOffset_ = new COMP[nfreedv];
+    txFdmOffset_ = AllocRealtime_<COMP>(nfreedv);
     assert(txFdmOffset_ != nullptr);
 }
 
 FreeDVTransmitStep::~FreeDVTransmitStep()
 {
-    delete[] codecInput_;
-    delete[] txFdm_;
-    delete[] txFdmOffset_;
-    delete[] tmpOutput_;
-
+    FreeRealtime_(codecInput_);
+    FreeRealtime_(txFdm_);
+    FreeRealtime_(txFdmOffset_);
+    FreeRealtime_(tmpOutput_);
+    outputSamples_ = nullptr;
+    
     if (inputSampleFifo_ != nullptr)
     {
         codec2_fifo_destroy(inputSampleFifo_);

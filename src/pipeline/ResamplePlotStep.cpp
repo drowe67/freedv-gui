@@ -29,13 +29,13 @@ extern void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_sam
 ResampleForPlotStep::ResampleForPlotStep(struct FIFO* fifo)
     : fifo_(fifo)
 {
-    decSamples_ = new short[FS];
+    decSamples_ = AllocRealtime_<short>(FS);
     assert(decSamples_ != nullptr);
 }
 
 ResampleForPlotStep::~ResampleForPlotStep()
 {
-    delete[] decSamples_;
+    FreeRealtime_(decSamples_);
 }
 
 int ResampleForPlotStep::getInputSampleRate() const

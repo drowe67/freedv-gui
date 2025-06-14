@@ -43,12 +43,15 @@ macro(DefineUnitTest utName)
 endmacro()
 
 DefineUnitTest(AudioPipelineTest)
-target_link_libraries(AudioPipelineTest PRIVATE ${FREEDV_LINK_LIBS})
+target_link_libraries(AudioPipelineTest PRIVATE ${FREEDV_LINK_LIBS} codec2)
 DefineUnitTest(EitherOrTest)
+target_link_libraries(EitherOrTest PRIVATE ${FREEDV_LINK_LIBS} codec2)
 DefineUnitTest(LevelAdjustTest)
+target_link_libraries(LevelAdjustTest PRIVATE ${FREEDV_LINK_LIBS} codec2)
 DefineUnitTest(ResampleTest)
-target_link_libraries(ResampleTest PRIVATE ${FREEDV_LINK_LIBS})
+target_link_libraries(ResampleTest PRIVATE ${FREEDV_LINK_LIBS} codec2)
 DefineUnitTest(TapTest)
+target_link_libraries(TapTest PRIVATE ${FREEDV_LINK_LIBS} codec2)
 
 if(LINUX)
 # TBD - won't execute on macOS just yet.

@@ -66,11 +66,11 @@ ParallelStep::ParallelStep(
         assert(threadState->outputFifo != nullptr);
         
         threadState->tempOutput = std::shared_ptr<short>(
-            new short[outputSampleRate],
-            std::default_delete<short[]>());
+            AllocRealtime_<short>(outputSampleRate), 
+            RealtimeDeleter<short>());
         threadState->tempInput = std::shared_ptr<short>(
-            new short[inputSampleRate],
-            std::default_delete<short[]>());
+            AllocRealtime_<short>(inputSampleRate), 
+            RealtimeDeleter<short>());
          
         threadState->exitingThread = false;
         if (runMultiThreaded)

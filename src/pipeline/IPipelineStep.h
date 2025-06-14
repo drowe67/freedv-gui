@@ -46,7 +46,46 @@ public:
     
     // Resets internal state of the pipeline step.
     virtual void reset() { /* empty */ }
+    
+    // Operator overrides to ensure we use real-time O(1) allocator
+    void* operator new(std::size_t sz);
+    void* operator new[](std::size_t sz);
+    void operator delete(void* ptr) noexcept;
+    void operator delete(void* ptr, std::size_t size) noexcept;
+    void operator delete[](void* ptr) noexcept;
+    void operator delete[](void* ptr, std::size_t size) noexcept;
+    
+protected:
+    template<typename T>
+    static T* AllocRealtime_(int numElements) noexcept;
+    
+    template<typename T>
+    static void FreeRealtime_(T* ptr) noexcept;
+    
+    template<typename T>
+    struct RealtimeDeleter
+    {
+        void operator()(T* ptr) const
+        {
+            FreeRealtime_(ptr);
+        }
+    };
+    
+private:
+    static void* AllocRealtimeGeneric_(int size) noexcept;
+    static void FreeRealtimeGeneric_(void* ptr) noexcept;
 };
 
+template<typename T>
+T* IPipelineStep::AllocRealtime_(int numElements) noexcept
+{
+    return (T*)AllocRealtimeGeneric_(sizeof(T) * numElements);
+}
+
+template<typename T>
+void IPipelineStep::FreeRealtime_(T* ptr) noexcept
+{
+    FreeRealtimeGeneric_(ptr);
+}
 
 #endif // AUDIO_PIPELINE__I_PIPELINE_STEP_H
