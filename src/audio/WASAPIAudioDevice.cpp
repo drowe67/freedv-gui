@@ -575,6 +575,7 @@ void WASAPIAudioDevice::stopRealTimeWork()
     if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
     {
         // Fallback to a simple sleep.
+        log_warn("[%p] Got error %d from WaitForSingleObject", client_, result);
         IAudioDevice::stopRealTimeWork();
     }
 }
@@ -632,6 +633,10 @@ void WASAPIAudioDevice::renderAudio_()
             onAudioDataFunction(*this, tmpBuf_, framesAvailable, onAudioDataState);
         }
         copyToWindowsBuffer_(data, framesAvailable);
+    }
+    else
+    {
+        log_warn("[%p] No room in buffer for audio data!", client_);
     }
 
     // Release render buffer
@@ -707,6 +712,10 @@ void WASAPIAudioDevice::captureAudio_()
             {
                 onAudioDataFunction(*this, tmpBuf_, numFramesAvailable, onAudioDataState);
             }
+        }
+        else
+        {
+            log_warn("[%p] No frames available for processing", client_);
         }
 
         // Release buffer
