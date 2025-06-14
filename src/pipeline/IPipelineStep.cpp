@@ -21,11 +21,15 @@
 //=========================================================================
 
 #include "IPipelineStep.h"
-#include "codec2_alloc.h"
 
+#if defined(SANITIZER_EMABLED)
+#define codec2_malloc(sz) (malloc(sz))
+#define codec2_free(ptr) (free(ptr))
+#else
 extern "C" {
     #include "debug_alloc.h"
 }
+#endif // defined(SANITIZER_EMABLED)
 
 IPipelineStep::~IPipelineStep()
 {
