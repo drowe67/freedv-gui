@@ -29,8 +29,11 @@
 struct AudioDeviceSpecification
 {
     int deviceId;
-    wxString name;
-    wxString apiName;
+    wxString name;     // Display/config name of device
+    wxString cardName; // Name of the audio device
+    int cardIndex;     // TBD - internal data for PulseAudio to look up cardName
+    wxString portName; // Name of the port from the above audio device (e.g. "Speakers" on Windows). Optional.
+    wxString apiName;  // Name of the active audio API
     int defaultSampleRate;
     int maxChannels;
     int minChannels;

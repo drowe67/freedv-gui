@@ -135,6 +135,7 @@ std::vector<AudioDeviceSpecification> PortAudioEngine::getAudioDeviceList(AudioD
             AudioDeviceSpecification device;
             device.deviceId = index;
             device.name = wxString::FromUTF8(deviceInfo->name);
+            device.cardName = device.name;
             device.apiName = hostApiName;
 
             // For "whitelisted" devices, also assume channel counts

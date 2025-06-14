@@ -1151,14 +1151,14 @@ void EasySetupDialog::updateAudioDevices_()
     
     for (auto& dev : inputDevices)
     {
-        if (dev.name.Find(_("Microsoft Sound Mapper")) != -1 ||
-            dev.name.Find(_(" [Loopback]")) != -1)
+        if (dev.cardName.Find(_("Microsoft Sound Mapper")) != -1 ||
+            dev.cardName.Find(_(" [Loopback]")) != -1)
         {
             // Sound mapper and loopback devices should be skipped.
             continue;
         }
 
-        wxString cleanedDeviceName = dev.name;
+        wxString cleanedDeviceName = dev.cardName;
         
         SoundDeviceData* soundData = new SoundDeviceData();
         assert(soundData != nullptr);
@@ -1187,74 +1187,14 @@ void EasySetupDialog::updateAudioDevices_()
 
     for (auto& dev : outputDevices)
     {
-        if (dev.name.Find(_("Microsoft Sound Mapper")) != -1 ||
-            dev.name.Find(_(" [Loopback]")) != -1)
+        if (dev.cardName.Find(_("Microsoft Sound Mapper")) != -1 ||
+            dev.cardName.Find(_(" [Loopback]")) != -1)
         {
             // Sound mapper and loopback devices should be skipped.
             continue;
         }
 
-        // For Windows, some devices have a designator at the beginning
-        // (e.g. "Microphone (USB Audio CODEC)" and "Speakers (USB Audio CODEC)".
-        // We need to be able to strip the designator without affecting
-        // the actual name of the device. To do this, we remove a character
-        // at a time from the beginning of the device name until we find a
-        // device in the current list with the same suffix. If we do find
-        // such a device, then we use this suffix as the device name to show
-        // in the list instead.
-        wxString cleanedDeviceName = dev.name;
-        if (finalRadioDeviceList.find(dev.name) == finalRadioDeviceList.end())
-        {
-            SoundDeviceData* foundItem = nullptr;
-            wxString oldDeviceName;
-            do
-            {
-                for (auto& kvp : finalRadioDeviceList)
-                {
-                    if (kvp.first.Find("DAX") == 0)
-                    {
-                        // FlexRadio devices are treated differently
-                        // so we shouldn't consider them here.
-                        continue;
-                    }
-
-                    auto suffix = kvp.first.Mid(kvp.first.size() - cleanedDeviceName.size());
-                    if (suffix == cleanedDeviceName)
-                    {
-                        foundItem = kvp.second;
-                        oldDeviceName = kvp.first;
-                        break;
-                    }
-                }
-                if (foundItem == nullptr)
-                {
-                    cleanedDeviceName = cleanedDeviceName.Mid(1);
-                }
-            } while (cleanedDeviceName.Length() > 5 && foundItem == nullptr);
-
-            if (foundItem == nullptr)
-            {
-                cleanedDeviceName = dev.name;
-            }
-            else
-            {
-                // Rename device in device list to "cleaned up" name.
-                cleanedDeviceName.Trim(false);
-                cleanedDeviceName.Trim(true);
-                auto parenthesisLoc = cleanedDeviceName.Find(_("("));
-                if (parenthesisLoc >= 0)
-                {
-                    cleanedDeviceName = cleanedDeviceName.Mid(parenthesisLoc + 1);
-                    if (cleanedDeviceName.Right(1) == _(")"))
-                    {
-                        cleanedDeviceName.RemoveLast(1);
-                    }
-                }
-
-                finalRadioDeviceList.erase(oldDeviceName);
-                finalRadioDeviceList[cleanedDeviceName] = foundItem;
-            }
-        }
+        wxString cleanedDeviceName = dev.cardName;
 
         SoundDeviceData* soundData = finalRadioDeviceList[cleanedDeviceName];
         if (soundData == nullptr)
