@@ -11,6 +11,7 @@ extern "C" {
 
 #if !defined(WIN32)
 #include <sys/mman.h>
+#include <unistd.h>
 #else
 #include <memoryapi.h>
 #endif // !defined(WIN32)
@@ -22,9 +23,13 @@ static thread_local O1HeapInstance* Instance_ = NULL;
 void codec2_initialize_realtime(size_t heapSize)
 {
 #if defined(WIN32)
-    Heap_ = (void*)_aligned_malloc(heapSize, O1HEAP_ALIGNMENT);
+    // Get page size.
+    SYSTEM_INFO sysInfo;
+    GetSystemInfo(&sysInfo);
+    
+    Heap_ = (void*)_aligned_malloc(heapSize, sysInfo.dwPageSize);
 #else
-    Heap_ = (void*)aligned_alloc(O1HEAP_ALIGNMENT, heapSize);
+    Heap_ = (void*)aligned_alloc(sysconf(_SC_PAGESIZE), heapSize);
 #endif // defined(WIN32)
     assert(Heap_ != NULL);
     
