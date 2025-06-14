@@ -95,7 +95,7 @@ private:
     std::shared_ptr<void> state_;
     std::vector<std::shared_ptr<IPipelineStep>> parallelSteps_;
 
-    void executeRunnerThread_(ThreadInfo* threadState);
+    void executeRunnerThread_(ThreadInfo* threadState) noexcept;
 };
 
 #endif // AUDIO_PIPELINE__PARALLEL_STEP_H

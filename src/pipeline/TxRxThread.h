@@ -87,8 +87,8 @@ private:
     std::shared_ptr<short> inputSamples_;
     
     void initializePipeline_();
-    void txProcessing_();
-    void rxProcessing_();
+    void txProcessing_() noexcept;
+    void rxProcessing_() noexcept;
     void clearFifos_();
 };
 

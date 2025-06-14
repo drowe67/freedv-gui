@@ -547,7 +547,7 @@ void TxRxThread::clearFifos_()
 // Main real time processing for tx and rx of FreeDV signals, run in its own threads
 //---------------------------------------------------------------------------------------------
 
-void TxRxThread::txProcessing_()
+void TxRxThread::txProcessing_() noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]
@@ -666,7 +666,7 @@ void TxRxThread::txProcessing_()
     }
 }
 
-void TxRxThread::rxProcessing_()
+void TxRxThread::rxProcessing_() noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]
