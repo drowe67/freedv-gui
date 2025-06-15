@@ -83,10 +83,10 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate)
         RealtimeDeleter<short>());
     assert(outputSamples_ != nullptr);
     
-    tempInput_ = AllocRealtime_<float>(std::max(inputSampleRate, outputSampleRate));
+    tempInput_ = AllocRealtime_<float>(inputSampleRate);
     assert(tempInput_ != nullptr);
 
-    tempOutput_ = AllocRealtime_<float>(std::max(inputSampleRate, outputSampleRate));
+    tempOutput_ = AllocRealtime_<float>(outputSampleRate);
     assert(tempOutput_ != nullptr);
 }
 
