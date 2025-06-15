@@ -70,6 +70,8 @@ function(CheckGitSetup)
         -Dpre_configure_dir=${pre_configure_dir}
         -Dpost_configure_file=${post_configure_dir}
         -DGIT_HASH_CACHE=${GIT_HASH_CACHE}
+        -DFreeDV_VERSION=${FreeDV_VERSION}
+        -DFREEDV_VERSION_TAG=${FREEDV_VERSION_TAG}
         -P ${CURRENT_LIST_DIR}/CheckGit.cmake
         BYPRODUCTS ${post_configure_file}
         )
