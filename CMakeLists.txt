@@ -81,11 +81,6 @@ string(TIMESTAMP DATE_RESULT "%Y-%m-%d" UTC)
 message(STATUS "Compilation date = XX${DATE_RESULT}XX")
 add_definitions(-DFREEDV_BUILD_DATE="${DATE_RESULT}")
 
-#
-# generate src/version.h
-#
-configure_file(cmake/version.h.in src/version.h @ONLY)
-
 # Generate custom CTest config
 configure_file(cmake/CTestCustom.cmake ${CMAKE_BINARY_DIR})
 
@@ -101,25 +96,8 @@ endif(NOT CMAKE_BUILD_TYPE)
 #
 # Find the git hash if this is a working copy.
 #
-if(EXISTS ${CMAKE_SOURCE_DIR}/.git)
-    find_package(Git QUIET)
-    if(Git_FOUND)
-        execute_process(
-            COMMAND "${GIT_EXECUTABLE}" describe --abbrev=4 --always HEAD
-            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-            RESULT_VARIABLE res
-            OUTPUT_VARIABLE FREEDV_HASH
-            ERROR_QUIET
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
-        message(STATUS "freedv-gui current git hash: ${FREEDV_HASH}")
-        add_definitions(-DGIT_HASH="${FREEDV_HASH}")
-    else()
-        message(WARNING "Git not found. Can not determine current commit hash.")
-        add_definitions(-DGIT_HASH="Unknown")
-    endif()
-else()
-        add_definitions(-DGIT_HASH="None")
-endif()
+include(cmake/CheckGit.cmake)
+CheckGitSetup()
 
 # Set default build flags.
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")

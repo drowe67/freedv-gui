@@ -811,6 +811,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add note about using XWayland on Linux. (PR #926)
 3. Build system:
     * Update Hamlib to 4.6.3 (macOS/Windows). (PR #930)
+    * Reload current Git hash every time it changes. (PR #935)
 
 ## V2.0.0 June 2025
 
