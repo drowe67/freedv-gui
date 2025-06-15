@@ -1,0 +1,24 @@
+#include <string>
+#include "git_version.h"
+
+const char *FREEDV_GIT_HASH = "@GIT_HASH@";
+
+#if 0
+#define FREEDV_VERSION_MAJOR @FreeDV_VERSION_MAJOR@
+#define FREEDV_VERSION_MINOR @FreeDV_VERSION_MINOR@
+#define FREEDV_VERSION_PATCH @FreeDV_VERSION_PATCH@
+#define FREEDV_VERSION_SUFFIX @FreeDV_VERSION_TWEAK@
+#define FREEDV_VERSION_TAG @FREEDV_VERSION_TAG@
+
+#if FREEDV_VERSION_TAG
+#define FREEDV_VERSION ("@FreeDV_VERSION@-" FREEDV_VERSION_TAG "-" "@GIT_HASH@")
+//#define FREEDV_VERSION ("@FreeDV_VERSION@-" FREEDV_VERSION_TAG)
+#else
+#define FREEDV_VERSION ("@FreeDV_VERSION@")
+#endif // FREEDV_VERSION_TAG
+#endif
+
+std::string GetFreeDVVersion()
+{
+    return "@FREEDV_VERSION@";
+}

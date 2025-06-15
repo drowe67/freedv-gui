@@ -10,6 +10,7 @@
 
 #include "main.h"
 
+#include "git_version.h"
 #include "gui/dialogs/dlg_easy_setup.h"
 #include "gui/dialogs/dlg_filter.h"
 #include "gui/dialogs/dlg_audiooptions.h"
@@ -351,6 +352,8 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
 {
     wxUnusedVar(event);
     wxString msg;
+    wxString version = wxString::FromUTF8(GetFreeDVVersion().c_str());
+
     msg.Printf( wxT("FreeDV GUI %s\n\n")
                 wxT("For Help and Support visit: http://freedv.org\n\n")
 
@@ -360,7 +363,7 @@ void MainFrame::OnHelpAbout(wxCommandEvent& event)
                 wxT("freedv-gui version: %s\n")
                 wxT("freedv-gui git hash: %s\n")
                 wxT("codec2 git hash: %s\n")
-                , FREEDV_VERSION, FREEDV_VERSION, GIT_HASH, freedv_get_hash()
+                , version, version, FREEDV_GIT_HASH, freedv_get_hash()
                 );
 
     wxMessageBox(msg, wxT("About"), wxOK | wxICON_INFORMATION, this);
