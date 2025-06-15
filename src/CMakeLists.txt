@@ -21,6 +21,9 @@ add_definitions(-DULOG_NO_COLOR)
 # Include third party headers
 include_directories(3rdparty)
 
+# Include generated headers
+include_directories(${CMAKE_BINARY_DIR}/generated)
+
 # Compile FreeDV components
 add_subdirectory(audio)
 add_subdirectory(config)
