@@ -30,7 +30,9 @@ void codec2_initialize_realtime(size_t heapSize)
     
     Heap_ = (void*)_aligned_malloc(heapSize, sysInfo.dwPageSize);
 #else
-    Heap_ = (void*)aligned_alloc(sysconf(_SC_PAGESIZE), heapSize);
+    auto pageSize = sysconf(_SC_PAGESIZE);
+    if (pageSize < O1HEAP_ALIGNMENT) pageSize = O1HEAP_ALIGNMENT;
+    Heap_ = (void*)aligned_alloc(pageSize, heapSize);
 #endif // defined(WIN32)
     assert(Heap_ != NULL);
     
