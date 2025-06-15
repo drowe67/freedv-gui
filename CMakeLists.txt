@@ -454,6 +454,27 @@ if(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
     message(STATUS "Hamlib library found.")
     include_directories(${HAMLIB_INCLUDE_DIR})
     list(APPEND FREEDV_LINK_LIBS ${HAMLIB_LIBRARY})
+
+    # Special-case to determine whether the user is using Hamlib >=4.6.
+    # In 4.6, RIGCAPS_NO_CONST is no longer defined and causes compiler 
+    # errors during build without special logic to handle this. This may
+    # also be true in 4.7 as the test script below prints 4.7~git on Fedora
+    # 42 as of 2025-06-15.
+    if (NOT CMAKE_CROSSCOMPILING)
+        try_run(HAMLIB_RUN_RESULT HAMLIB_COMPILE_RESULT
+            SOURCES ${CMAKE_SOURCE_DIR}/cmake/hamlib-test.c
+            CMAKE_FLAGS -DINCLUDE_DIRECTORIES=${HAMLIB_INCLUDE_DIR}
+            LINK_LIBRARIES ${HAMLIB_LIBRARY}
+            RUN_OUTPUT_VARIABLE HAMLIB_VERSION)
+        if (NOT HAMLIB_COMPILE_RESULT OR NOT HAMLIB_RUN_RESULT OR NOT HAMLIB_VERSION)
+            message(FATAL_ERROR "Could not determine Hamlib version.")
+        else()
+            if (NOT HAMLIB_VERSION STRLESS "Hamlib 4.6")
+                message(STATUS "Enabling Hamlib 4.6 compile workaround.")
+                add_definitions(-DHAMLIB_CONST_WORKAROUND)
+            endif (HAMLIB_VERSION STRLESS "Hamlib 4.6")
+        endif (NOT HAMLIB_COMPILE_RESULT OR NOT HAMLIB_RUN_RESULT OR NOT HAMLIB_VERSION)
+    endif (NOT CMAKE_CROSSCOMPILING)
 else(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
     message(STATUS "Using own Hamlib build")
     include(cmake/BuildHamlib.cmake)
