@@ -45,8 +45,8 @@ SpeexStep::SpeexStep(int sampleRate)
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+        AllocRealtime_<short>(maxSamples), 
+        RealtimeDeleter<short>());
     assert(outputSamples_ != nullptr);
 }
 

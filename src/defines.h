@@ -86,7 +86,8 @@
 #define MAX_CALLSIGN         80
 
 // Real-time memory block size
-#define CODEC2_REAL_TIME_MEMORY_SIZE (8192*1024)
+#define TX_RX_THREAD_REAL_TIME_MEMORY_SIZE (8192*1024)
+#define CODEC2_REAL_TIME_MEMORY_SIZE (256*1024)
    
 enum
 {

@@ -453,7 +453,7 @@ void* TxRxThread::Entry()
 {
     // Ensure that O(1) memory allocator is used for Codec2
     // instead of standard malloc().
-    codec2_initialize_realtime(CODEC2_REAL_TIME_MEMORY_SIZE);
+    codec2_initialize_realtime(TX_RX_THREAD_REAL_TIME_MEMORY_SIZE);
     
     initializePipeline_();
     
