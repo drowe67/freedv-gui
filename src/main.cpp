@@ -33,7 +33,7 @@
 #include <wx/stdpaths.h>
 #include <wx/uiaction.h>
 
-#include "version.h"
+#include "git_version.h"
 #include "main.h"
 #include "os/os_interface.h"
 #include "freedv_interface.h"
@@ -437,7 +437,7 @@ bool MainApp::OnCmdLineParsed(wxCmdLineParser& parser)
         snprintf(prefix, prefix_size, " [%u]", ++counter);
     });
         
-    log_info("FreeDV version %s starting", FREEDV_VERSION);
+    log_info("FreeDV version %s starting", GetFreeDVVersion().c_str());
 
     if (!wxApp::OnCmdLineParsed(parser))
     {
@@ -864,7 +864,7 @@ setDefaultMode:
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class MainFrame(wxFrame* pa->ent) : TopFrame(parent)
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ") + _(FREEDV_VERSION))
+MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str()))
 {
 #if defined(__linux__)
     pthread_setname_np(pthread_self(), "FreeDV GUI");
@@ -876,7 +876,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Add config file name to title bar if provided at the command line.
     if (wxGetApp().customConfigFileName != "")
     {
-        SetTitle(wxString::Format("%s (%s)", _("FreeDV ") + _(FREEDV_VERSION), wxGetApp().customConfigFileName));
+        SetTitle(wxString::Format("%s (%s)", _("FreeDV ") + wxString::FromUTF8(GetFreeDVVersion().c_str()), wxGetApp().customConfigFileName));
     }
     
 #if defined(UNOFFICIAL_RELEASE)
@@ -2212,7 +2212,7 @@ void MainFrame::performFreeDVOn_()
                                 std::make_shared<PskReporter>(
                                     wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
                                     wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
-                                    std::string("FreeDV ") + FREEDV_VERSION);
+                                    std::string("FreeDV ") + GetFreeDVVersion());
                             assert(pskReporter != nullptr);
                             wxGetApp().m_reporters.push_back(pskReporter);
                         }
@@ -3291,7 +3291,7 @@ void MainFrame::initializeFreeDVReporter_()
             wxGetApp().appConfiguration.reportingConfiguration.freedvReporterHostname->ToStdString(),
             wxGetApp().appConfiguration.reportingConfiguration.reportingCallsign->ToStdString(), 
             wxGetApp().appConfiguration.reportingConfiguration.reportingGridSquare->ToStdString(),
-            std::string("FreeDV ") + FREEDV_VERSION,
+            std::string("FreeDV ") + GetFreeDVVersion(),
             receiveOnly);
     assert(wxGetApp().m_sharedReporterObject);
     

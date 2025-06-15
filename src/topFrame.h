@@ -22,7 +22,7 @@
 #ifndef __TOPFRAME_H__
 #define __TOPFRAME_H__
 
-#include "version.h"
+#include "git_version.h"
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
 #include <wx/intl.h>
