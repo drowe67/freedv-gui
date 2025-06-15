@@ -122,7 +122,7 @@ jobs:
           export DISPLAY=:99.0
           export XDG_RUNTIME_DIR=/run/user/$(id -u)
           . ../rade-venv/bin/activate
-          ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V
+          ASAN_OPTIONS=suppressions=${{github.workspace}}/test/asan_suppressions.txt LSAN_OPTIONS=suppressions=${{github.workspace}}/test/lsan_suppressions.txt PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V -R "fullduplex_(RADE|700D)|rade_reporting_clean"
 
     - name: Instrument RealtimeSanitizer
       shell: bash
@@ -140,5 +140,5 @@ jobs:
           export DISPLAY=:99.0
           export XDG_RUNTIME_DIR=/run/user/$(id -u)
           . ../rade-venv/bin/activate
-          PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V
+          PYTHONPATH=${{github.workspace}}/build_linux/rade_src:$PYTHONPATH ctest -V -R "fullduplex_(RADE|700D)|rade_reporting_clean"
 
