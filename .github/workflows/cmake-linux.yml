@@ -14,13 +14,53 @@ env:
   BUILD_TYPE: Debug
 
 jobs:
-  build:
+  dist:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install required packages
+      shell: bash
+      run: |
+           sudo apt-get install libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity at-spi2-core octave octave-signal libwxgtk3.2-dev libdbus-1-dev
+
+    - name: Install Python required modules
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          python3 -m venv rade-venv
+          . ./rade-venv/bin/activate
+          pip3 install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip3 install matplotlib
+
+    - name: Build freedv-gui using PulseAudio
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          . ./rade-venv/bin/activate
+          BUILD_TYPE=RelWithDebInfo ./build_linux.sh 
+
+    - name: Build AppImage
+      shell: bash
+      working-directory: ${{github.workspace}}/appimage
+      run: |
+          ./make-appimage.sh 
+
+    - name: Upload AppImage
+      uses: actions/upload-artifact@v4
+      with:
+        name: FreeDV-x86_64.AppImage
+        path: ${{github.workspace}}/appimage/FreeDV-x86_64.AppImage
+
+  test:
     strategy:
       fail-fast: true
       matrix:
         os: [ubuntu-24.04, ubuntu-22.04]
 
     runs-on: ${{ matrix.os }}
+
+    needs: dist
 
     steps:
     - uses: actions/checkout@v4
