@@ -22,7 +22,7 @@ else
     chmod +x linuxdeploy-x86_64.AppImage
 fi
 
-NO_STRIP=true ./linuxdeploy-x86_64.AppImage \
+./linuxdeploy-x86_64.AppImage \
 --executable /usr/bin/python3 \
 --executable ../build_linux/src/freedv \
 --appdir "$APPDIR" \
