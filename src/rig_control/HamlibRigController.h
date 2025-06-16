@@ -107,11 +107,11 @@ private:
 
     static bool RigCompare_(const struct rig_caps *rig1, const struct rig_caps *rig2);
 
-#if RIGCAPS_NOT_CONST    
+#if RIGCAPS_NOT_CONST && !HAMLIB_CONST_WORKAROUND
     static int BuildRigList_(struct rig_caps *rig, rig_ptr_t);
 #else
     static int BuildRigList_(const struct rig_caps *rig, rig_ptr_t);
-#endif // RIGCAPS_NOT_CONST
+#endif // RIGCAPS_NOT_CONST && !HAMLIB_CONST_WORKAROUND
 };
 
 #endif // HAMLIB_RIG_CONTROLLER_H
