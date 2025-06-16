@@ -49,7 +49,7 @@ private:
     LPCNetEncState* encState_;
     struct FIFO* inputSampleFifo_;
     struct FIFO* outputSampleFifo_;
-    std::vector<float> featureList_;
+    std::vector<float, RealtimeAllocator<float> > featureList_;
     
     FILE* featuresFile_;
 

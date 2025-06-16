@@ -38,14 +38,14 @@ EqualizerStep::EqualizerStep(int sampleRate, bool* enableFilter, std::shared_ptr
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+        AllocRealtime_<short>(maxSamples), 
+        RealtimeDeleter<short>());
     assert(outputSamples_ != nullptr);
 }
 
 EqualizerStep::~EqualizerStep()
 {
-    // empty
+    outputSamples_ = nullptr;
 }
 
 int EqualizerStep::getInputSampleRate() const

@@ -45,8 +45,8 @@ PlaybackStep::PlaybackStep(
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+        AllocRealtime_<short>(maxSamples), 
+        RealtimeDeleter<short>());
     assert(outputSamples_ != nullptr);
     
     // Create output FIFO
@@ -64,13 +64,9 @@ PlaybackStep::~PlaybackStep()
     {
         nonRtThread_.join();
     }
-    
-    if (playbackResampler_ != nullptr)
-    {
-        delete playbackResampler_;
-    }
 
     codec2_fifo_destroy(outputFifo_);
+    outputSamples_ = nullptr;
 }
 
 int PlaybackStep::getInputSampleRate() const
@@ -159,6 +155,12 @@ void PlaybackStep::nonRtThreadEntry_()
         g_mutexProtectingCallbackData.Unlock();
         
         std::this_thread::sleep_for(100ms);
+    }
+    
+    if (playbackResampler_ != nullptr)
+    {
+        delete playbackResampler_;
+        playbackResampler_ = nullptr;
     }
 }
 

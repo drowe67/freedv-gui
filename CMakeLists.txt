@@ -140,6 +140,7 @@ if(ENABLE_ASAN)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
     set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -fsanitize=address")
+    add_definitions(-DSANITIZER_EMABLED)
 endif(ENABLE_ASAN)
 
 if(ENABLE_RTSAN)

@@ -24,6 +24,10 @@
 #include <algorithm>
 #include "LinkStep.h"
 
+extern "C" {
+    #include "debug_alloc.h"
+}
+
 LinkStep::LinkStep(int outputSampleRate, size_t numSamples)
     : sampleRate_(outputSampleRate)
 {
@@ -34,7 +38,7 @@ LinkStep::LinkStep(int outputSampleRate, size_t numSamples)
     inputPipelineStep_ = std::make_shared<InputStep>(this);
     outputPipelineStep_ = std::make_shared<OutputStep>(this);
 
-    tmpBuffer_ = new short[numSamples];
+    tmpBuffer_ = (short*)codec2_malloc(sizeof(short) * numSamples);
     assert(tmpBuffer_ != nullptr);
 }
 
@@ -43,7 +47,7 @@ LinkStep::~LinkStep()
     codec2_fifo_destroy(fifo_);
     fifo_ = nullptr;
 
-    delete[] tmpBuffer_;
+    codec2_free(tmpBuffer_);
 }
 
 void LinkStep::clearFifo()

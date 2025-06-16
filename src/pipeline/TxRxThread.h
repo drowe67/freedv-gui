@@ -87,8 +87,22 @@ private:
     std::shared_ptr<short> inputSamples_;
     
     void initializePipeline_();
-    void txProcessing_();
-    void rxProcessing_();
+    void txProcessing_() noexcept
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+[[clang::nonblocking]]
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+    ;
+
+    void rxProcessing_() noexcept
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+[[clang::nonblocking]]
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+    ;
+
     void clearFifos_();
 };
 

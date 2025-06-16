@@ -69,7 +69,7 @@ std::shared_ptr<short> RecordStep::execute(std::shared_ptr<short> inputSamples, 
     codec2_fifo_write(inputFifo_, inputSamples.get(), numInputSamples);
     
     *numOutputSamples = 0;    
-    return std::shared_ptr<short>((short*)nullptr, std::default_delete<short[]>());
+    return std::shared_ptr<short>((short*)nullptr);
 }
 
 void RecordStep::reset()

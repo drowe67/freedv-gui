@@ -9,32 +9,57 @@ extern "C" {
 #include "o1heap.h"
 #include "codec2_alloc.h"
 
+#if !defined(WIN32)
+#include <sys/mman.h>
+#include <unistd.h>
+#else
+#include <memoryapi.h>
+#include <sysinfoapi.h>
+#endif // !defined(WIN32)
+
 static thread_local void* Heap_ = NULL;
+static thread_local int HeapSize_ = 0;
 static thread_local O1HeapInstance* Instance_ = NULL;
 
 void codec2_initialize_realtime(size_t heapSize)
 {
 #if defined(WIN32)
-    Heap_ = (void*)_aligned_malloc(heapSize, O1HEAP_ALIGNMENT);
+    // Get page size.
+    SYSTEM_INFO sysInfo;
+    GetSystemInfo(&sysInfo);
+    
+    Heap_ = (void*)_aligned_malloc(heapSize, sysInfo.dwPageSize);
 #else
-    Heap_ = (void*)aligned_alloc(O1HEAP_ALIGNMENT, heapSize);
+    auto pageSize = sysconf(_SC_PAGESIZE);
+    if (pageSize < O1HEAP_ALIGNMENT) pageSize = O1HEAP_ALIGNMENT;
+    Heap_ = (void*)aligned_alloc(pageSize, heapSize);
 #endif // defined(WIN32)
     assert(Heap_ != NULL);
+    
+    HeapSize_ = heapSize;
+#if defined(WIN32)
+    VirtualLock(Heap_, HeapSize_);
+#else
+    mlock(Heap_, HeapSize_);
+#endif // defined(WIN32)
 
-    memset(Heap_, 0, heapSize);
+    memset(Heap_, 0, HeapSize_);
 
-    Instance_ = o1heapInit(Heap_, heapSize);
+    Instance_ = o1heapInit(Heap_, HeapSize_);
     assert(Instance_ != NULL);
 }
 
 void codec2_disable_realtime()
 {
 #if defined(WIN32)
+    VirtualUnlock(Heap_, HeapSize_);
     _aligned_free(Heap_);
 #else
+    munlock(Heap_, HeapSize_);
     free(Heap_);
 #endif // defined(WIN32)
     Heap_ = NULL;
+    HeapSize_ = 0;
     Instance_ = NULL; // no need to deallocate per o1heap docs
 }
 

@@ -453,7 +453,7 @@ void* TxRxThread::Entry()
 {
     // Ensure that O(1) memory allocator is used for Codec2
     // instead of standard malloc().
-    codec2_initialize_realtime(CODEC2_REAL_TIME_MEMORY_SIZE);
+    codec2_initialize_realtime(TX_RX_THREAD_REAL_TIME_MEMORY_SIZE);
     
     initializePipeline_();
     
@@ -547,7 +547,7 @@ void TxRxThread::clearFifos_()
 // Main real time processing for tx and rx of FreeDV signals, run in its own threads
 //---------------------------------------------------------------------------------------------
 
-void TxRxThread::txProcessing_()
+void TxRxThread::txProcessing_() noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]
@@ -666,7 +666,7 @@ void TxRxThread::txProcessing_()
     }
 }
 
-void TxRxThread::rxProcessing_()
+void TxRxThread::rxProcessing_() noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]
