@@ -50,13 +50,13 @@ cd "$APPDIR/rade-venv/bin"
 echo "Now in $(pwd)"
 ln -s -f ../../usr/bin/python3 python
 ln -s -f ../../usr/bin/python3 python3
-ln -s -f ../../usr/bin/python3 python3.12
+ln -s -f ../../usr/bin/python3 python3.10
 cd - # back to the previous directory
 echo "### Now in $(pwd)"
 
-# Copy /usr/lib/python3.12 to image
+# Copy /usr/lib/python3.10 to image
 cd $APPDIR/usr
-cp -a /usr/lib/python3.12 lib/
+cp -a /usr/lib/python3.10 lib/
 cd -
 
 # Copy the models and symlink
