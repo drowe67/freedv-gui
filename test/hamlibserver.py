@@ -322,11 +322,11 @@ class HamlibHandler:
       self.ErrParam()
     else:
       if (not x) and self.app.ptt:
-          # Sleep for 20ms to match typical SDR behavior + 30ms to account for varying system load/virtual audio latency.
+          # Sleep for 20ms to match typical SDR behavior + 60ms to account for varying system load/virtual audio latency.
           # References:
-          #   Virtual audio latency: https://vb-audio.com/Cable/VBCABLE_ReferenceManual.pdf (assuming 10ms/512 sample buffer size @ 48 kHz)
+          #   Virtual audio latency: https://vb-audio.com/Cable/VBCABLE_ReferenceManual.pdf (assuming 20ms/1024 sample buffer size @ 48 kHz)
           #   Example TX->RX switching time: Flex 6000/8000 (https://community.flexradio.com/discussion/8028104/question-regarding-tx-delay)
-          time.sleep(50 / 1000)
+          time.sleep(80 / 1000)
           os.kill(self.pid, signal.SIGTERM)
       if x:
         self.app.ptt = 1

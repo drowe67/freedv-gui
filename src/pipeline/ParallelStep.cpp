@@ -220,7 +220,6 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
     for (size_t index = 0; index < threads_.size(); index++)
     {
         ThreadInfo* threadInfo = threads_[index];
-        memset(threadInfo->tempOutput.get(), 0, sizeof(short) * outputSampleRate_);
         
         if (index == (size_t)stepToExecute || stepToExecute == -1)
         {
@@ -257,11 +256,15 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
     
     ThreadInfo* outputTask = threads_[stepToOutput];
     *numOutputSamples = codec2_fifo_used(outputTask->outputFifo);
+    if (*numOutputSamples == 0)
+    {
+        memset(outputTask->tempOutput.get(), 0, sizeof(short) * outputSampleRate_);
+    }
     codec2_fifo_read(outputTask->outputFifo, outputTask->tempOutput.get(), *numOutputSamples);    
     return outputTask->tempOutput;
 }
 
-void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
+void ParallelStep::executeRunnerThread_(ThreadInfo* threadState) noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]

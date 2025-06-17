@@ -65,11 +65,6 @@ PlaybackStep::~PlaybackStep()
         nonRtThread_.join();
     }
     
-    if (playbackResampler_ != nullptr)
-    {
-        delete playbackResampler_;
-    }
-
     codec2_fifo_destroy(outputFifo_);
 }
 
@@ -159,6 +154,11 @@ void PlaybackStep::nonRtThreadEntry_()
         g_mutexProtectingCallbackData.Unlock();
         
         std::this_thread::sleep_for(100ms);
+    }
+
+    if (playbackResampler_ != nullptr)
+    {
+        delete playbackResampler_;
     }
 }
 
