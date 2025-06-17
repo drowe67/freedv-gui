@@ -261,7 +261,7 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
     return outputTask->tempOutput;
 }
 
-void ParallelStep::executeRunnerThread_(ThreadInfo* threadState)
+void ParallelStep::executeRunnerThread_(ThreadInfo* threadState) noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]
