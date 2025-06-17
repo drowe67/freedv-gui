@@ -52,15 +52,35 @@ jobs:
         name: FreeDV-x86_64.AppImage
         path: ${{github.workspace}}/appimage/FreeDV-x86_64.AppImage
 
-  test:
+  test-appimage:
     strategy:
       fail-fast: true
       matrix:
         os: [ubuntu-24.04, ubuntu-22.04]
 
     runs-on: ${{ matrix.os }}
-
     needs: dist
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/download-artifact@v4
+      with:
+        name: FreeDV-x86_64.AppImage
+        path: ${{github.workspace}}
+
+    - name: Sanity check RADE
+      shell: bash
+      working-directory: ${{github.workspace}}
+      run: |
+          chmod +x FreeDV-x86_64.AppImage
+          FREEDV_BINARY=./FreeDV-x86_64.AppImage ./test/test_zeros.sh txrx RADEV1
+  lint:
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-24.04, ubuntu-22.04]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v4
