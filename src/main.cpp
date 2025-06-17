@@ -558,7 +558,16 @@ bool MainApp::OnInit()
     log_info("PYTHONPATH is %s", (const char*)ppath.ToUTF8());
 #endif // __APPLE__
 
-#endif // _WIN32 || __APPLE__
+#elif __linux__
+    wxString appPath;
+    if (wxGetEnv(_("APPDIR"), &appPath))
+    {
+        // Executing inside AppImage. Make sure PYTHONHOME and PYTHONPATH
+        // are set to our internal Python so RADE modules can be found.
+        wxSetEnv("PYTHONHOME", appPath + _("/usr/lib/python3.12"));
+        wxSetEnv("PYTHONPATH", appPath + _("/rade_src:") + appPath + _("rade-venv/lib/python3.12/site-packages"));
+    }
+#endif // _WIN32 || __APPLE__ || __linux__
 
 #if defined(UNOFFICIAL_RELEASE)
     // Terminate the application if the current date > expiration date
