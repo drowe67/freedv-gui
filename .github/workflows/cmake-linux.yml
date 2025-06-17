@@ -192,7 +192,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           . ./rade-venv/bin/activate
-          UT_ENABLE=1 CC=clang CXX=clang++ ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          BUILD_TYPE=Debug UT_ENABLE=1 CC=clang CXX=clang++ ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - name: Execute unit tests
       shell: bash
