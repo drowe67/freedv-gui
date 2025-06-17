@@ -54,6 +54,11 @@ ln -s -f ../../usr/bin/python3 python3.12
 cd - # back to the previous directory
 echo "### Now in $(pwd)"
 
+# Copy /usr/lib/python3.12 to image
+cd $APPDIR/usr
+cp -a /usr/lib/python3.12 lib/
+cd -
+
 # Copy the models and symlink
 echo "Copying rade_src..."
 # ls freedv-rade/freedv-gui/build_linux/rade_src/model
