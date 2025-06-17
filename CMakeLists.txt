@@ -438,8 +438,18 @@ if(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
     # also be true in 4.7 as the test script below prints 4.7~git on Fedora
     # 42 as of 2025-06-15.
     if (NOT CMAKE_CROSSCOMPILING)
+        if (CMAKE_VERSION VERSION_LESS 3.23)
+            set(_HAMLIB_TRY_RUN_BINDIR "${CMAKE_CURRENT_BINARY_DIR}/HamlibTryRun")
+            set(_HAMLIB_TRY_RUN_SOURCE_ARGS "${CMAKE_SOURCE_DIR}/cmake/hamlib-test.c")
+            message(STATUS "Using old try_run syntax for CMake ${CMAKE_VERSION}")
+        else()
+            set(_HAMLIB_TRY_RUN_BINDIR "")
+            set(_HAMLIB_TRY_RUN_SOURCE_ARGS "SOURCES ${CMAKE_SOURCE_DIR}/cmake/hamlib-test.c")
+            message(STATUS "Using new try_run syntax for CMake ${CMAKE_VERSION}")
+        endif(CMAKE_VERSION VERSION_LESS 3.23)
         try_run(HAMLIB_RUN_RESULT HAMLIB_COMPILE_RESULT
-            SOURCES ${CMAKE_SOURCE_DIR}/cmake/hamlib-test.c
+            ${_HAMLIB_TRY_RUN_BINDIR}
+            ${_HAMLIB_TRY_RUN_SOURCE_ARGS}
             CMAKE_FLAGS -DINCLUDE_DIRECTORIES=${HAMLIB_INCLUDE_DIR}
             LINK_LIBRARIES ${HAMLIB_LIBRARY}
             RUN_OUTPUT_VARIABLE HAMLIB_VERSION)
@@ -449,6 +459,8 @@ if(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
             if (NOT HAMLIB_VERSION STRLESS "Hamlib 4.6")
                 message(STATUS "Enabling Hamlib 4.6 compile workaround.")
                 add_definitions(-DHAMLIB_CONST_WORKAROUND)
+            else()
+                message(STATUS "Found ${HAMLIB_VERSION} - NOT enabling Hamlib 4.6 compile workaround.")
             endif (NOT HAMLIB_VERSION STRLESS "Hamlib 4.6")
         endif (NOT HAMLIB_COMPILE_RESULT OR NOT HAMLIB_RUN_RESULT OR NOT HAMLIB_VERSION)
     endif (NOT CMAKE_CROSSCOMPILING)
