@@ -24,7 +24,7 @@ jobs:
       run: |
            sudo apt-get update
            sudo apt-get upgrade -y
-           sudo apt-get codespell
+           sudo apt-get install codespell
 
     - name: Spellcheck codebase
       shell: bash
@@ -32,7 +32,8 @@ jobs:
 
   dist:
     runs-on: ubuntu-22.04
-    
+    needs: lint
+
     steps:
     - uses: actions/checkout@v4
 
