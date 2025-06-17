@@ -15,14 +15,14 @@ env:
 
 jobs:
   dist:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
 
     - name: Install required packages
       shell: bash
       run: |
-           sudo apt-get install libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity at-spi2-core octave octave-signal libwxgtk3.2-dev libdbus-1-dev
+           sudo apt-get install libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity at-spi2-core octave octave-signal libdbus-1-dev
 
     - name: Install Python required modules
       shell: bash
