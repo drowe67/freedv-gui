@@ -564,7 +564,7 @@ bool MainApp::OnInit()
     {
         // Executing inside AppImage. Make sure PYTHONHOME and PYTHONPATH
         // are set to our internal Python so RADE modules can be found.
-        wxSetEnv("PYTHONHOME", appPath + _("/usr/lib/python3.12"));
+        wxSetEnv("PYTHONHOME", appPath + _("/usr"));
         wxSetEnv("PYTHONPATH", appPath + _("/rade_src:") + appPath + _("rade-venv/lib/python3.12/site-packages"));
     }
 #endif // _WIN32 || __APPLE__ || __linux__
