@@ -68,12 +68,41 @@ jobs:
         name: FreeDV-x86_64.AppImage
         path: ${{github.workspace}}
 
+    - name: Install rtkit for RT threading
+      shell: bash
+      run: |
+           sudo apt-get update
+           sudo apt-get upgrade -y
+           sudo apt-get install dbus-x11 rtkit libdbus-1-dev polkitd
+           sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy 
+           sudo systemctl restart polkit
+
+    - name: Install required packages for audio/display
+      shell: bash
+      run: |
+           sudo apt-get install sox xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity
+
     - name: Sanity check RADE
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
+          sudo systemctl enable rtkit-daemon
+          sudo systemctl start rtkit-daemon
+          Xvfb :99 -screen 0 1024x768x16 &
+          sleep 5
+          export DISPLAY=:99.0
+          export XDG_RUNTIME_DIR=/run/user/$(id -u)
+          mkdir -p $XDG_RUNTIME_DIR
+          chmod 700 $XDG_RUNTIME_DIR
+          eval "$(dbus-launch --sh-syntax --exit-with-x11)"
+          pipewire &
+          pipewire-pulse &
+          wireplumber &
+          metacity --sm-disable --replace &
+          sleep 5
           chmod +x FreeDV-x86_64.AppImage
           FREEDV_BINARY=./FreeDV-x86_64.AppImage ./test/test_zeros.sh txrx RADEV1
+
   lint:
     strategy:
       fail-fast: true
