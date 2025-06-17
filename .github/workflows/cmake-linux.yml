@@ -190,9 +190,18 @@ jobs:
     - name: Build freedv-gui 
       shell: bash
       working-directory: ${{github.workspace}}
+      if: ${{ matrix.sanitizer == 'WITH_RTSAN=1' }}
       run: |
           . ./rade-venv/bin/activate
-          BUILD_TYPE=Debug UT_ENABLE=1 CC=clang CXX=clang++ ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+          UT_ENABLE=1 CC=clang CXX=clang++ ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
+
+    - name: Build freedv-gui 
+      shell: bash
+      working-directory: ${{github.workspace}}
+      if: ${{ matrix.sanitizer != 'WITH_RTSAN=1' }}
+      run: |
+          . ./rade-venv/bin/activate
+          UT_ENABLE=1 ${{matrix.native-audio}} ${{matrix.sanitizer}} ./build_linux.sh 
 
     - name: Execute unit tests
       shell: bash
