@@ -81,7 +81,7 @@ jobs:
       with:
         name: ${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }}
         path: ${{github.workspace}}/appimage/${{ steps.appimage-filename.outputs.APPIMAGE_FILENAME }}
-        compression-ratio: 0
+        compression-level: 0
 
   test-appimage:
     strategy:
@@ -137,7 +137,7 @@ jobs:
           eval "$(dbus-launch --sh-syntax --exit-with-x11)"
           metacity --sm-disable --replace &
           sleep 5
-          chmod +x FreeDV-x86_64.AppImage
+          chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
           FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_zeros.sh txrx RADEV1
 
     - name: Sanity check RADE
