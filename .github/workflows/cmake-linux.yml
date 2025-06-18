@@ -159,8 +159,8 @@ jobs:
           wireplumber &
           metacity --sm-disable --replace &
           sleep 5
-          chmod +x FreeDV-x86_64.AppImage
-          FREEDV_BINARY=./FreeDV-x86_64.AppImage ./test/test_zeros.sh txrx RADEV1
+          chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
+          FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_zeros.sh txrx RADEV1
 
   build:
     strategy:
