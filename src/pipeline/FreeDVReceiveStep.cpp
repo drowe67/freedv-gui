@@ -36,6 +36,8 @@ FreeDVReceiveStep::FreeDVReceiveStep(struct freedv* dv)
     , channelNoiseSnr_(0)
     , freqOffsetHz_(0)
 {
+    assert(syncState_.is_lock_free());
+
     // Set FIFO to be 2x the number of samples per run so we don't lose anything.
     inputSampleFifo_ = codec2_fifo_create(freedv_get_modem_sample_rate(dv_));
     assert(inputSampleFifo_ != nullptr);
@@ -121,6 +123,7 @@ std::shared_ptr<short> FreeDVReceiveStep::execute(std::shared_ptr<short> inputSa
         }
     }
 
+    syncState_ = freedv_get_sync(dv_);
     return outputSamples_;
 }
 

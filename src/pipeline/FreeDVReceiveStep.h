@@ -23,6 +23,7 @@
 #ifndef AUDIO_PIPELINE__FREEDV_RECEIVE_STEP_H
 #define AUDIO_PIPELINE__FREEDV_RECEIVE_STEP_H
 
+#include <atomic>
 #include <functional>
 #include "IPipelineStep.h"
 #include "../freedv_interface.h"
@@ -48,15 +49,16 @@ public:
     
     void setSigPwrAvg(float newVal) { sigPwrAvg_ = newVal; }
     float getSigPwrAvg() const { return sigPwrAvg_; }
-    int getSync() const { return freedv_get_sync(dv_); }
+    int getSync() const { return syncState_.load(); }
     void setChannelNoiseEnable(bool enabled, int snr) 
     { 
         channelNoiseEnabled_ = enabled; 
         channelNoiseSnr_ = snr;
     }
     void setFreqOffset(float freq) { freqOffsetHz_ = freq; }
-    
+
 private:
+    std::atomic<int> syncState_;
     struct freedv* dv_;
     struct FIFO* inputSampleFifo_;
     COMP rxFreqOffsetPhaseRectObjs_;
