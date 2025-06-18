@@ -138,7 +138,8 @@ jobs:
           metacity --sm-disable --replace &
           sleep 5
           chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
-          FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_zeros.sh txrx RADEV1
+          FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_zeros.sh txrx RADEV1 | tee tmp.log
+          grep "Got 1 sync changes" tmp.log
 
     - name: Sanity check RADE
       shell: bash
@@ -161,6 +162,7 @@ jobs:
           sleep 5
           chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
           FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_zeros.sh txrx RADEV1
+          grep "Got 1 sync changes" tmp.log
 
   build:
     strategy:
