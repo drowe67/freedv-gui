@@ -23,6 +23,7 @@
 #ifndef AUDIO_PIPELINE__RADE_RECEIVE_STEP_H
 #define AUDIO_PIPELINE__RADE_RECEIVE_STEP_H
 
+#include <atomic>
 #include <cstdio>
 #include <vector>
 #include "IPipelineStep.h"
@@ -48,9 +49,10 @@ public:
     virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
-    int getSync() const { return rade_sync(dv_); }
+    int getSync() const { return syncState_.load(); }
     
 private:
+    std::atomic<int> syncState_;
     struct rade* dv_;
     FARGANState* fargan_;
     struct FIFO* inputSampleFifo_;
