@@ -41,6 +41,8 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
     , featuresFile_(nullptr)
     , textPtr_(textPtr)
 {
+    assert(syncState_.is_lock_free());
+
     // Set FIFO to be 2x the number of samples per run so we don't lose anything.
     inputSampleFifo_ = codec2_fifo_create(rade_nin_max(dv_) * 2);
     assert(inputSampleFifo_ != nullptr);
@@ -219,6 +221,20 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
     { 
         codec2_fifo_read(outputSampleFifo_, outputSamples_.get(), *numOutputSamples);
     }
+
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+    __rtsan_disable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
+    syncState_ = rade_sync(dv_);
+
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+    __rtsan_enable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
 
     return outputSamples_;
 }

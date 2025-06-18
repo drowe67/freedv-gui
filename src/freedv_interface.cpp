@@ -828,8 +828,15 @@ int FreeDVInterface::preProcessRxFn_(ParallelStep* stepObj)
     int rxIndex = 0;
     std::shared_ptr<ReceivePipelineState> state = std::static_pointer_cast<ReceivePipelineState>(stepObj->getState());
 
+    if (txMode_ >= FREEDV_MODE_RADE)
+    {
+        // special handling for RADE
+        return 0;
+    }
+
     // Set initial state for each step prior to execution.
-    for (auto& step : stepObj->getParallelSteps())
+    auto& parallelSteps = stepObj->getParallelSteps();
+    for (auto& step : parallelSteps)
     {
         assert(step != nullptr);
         
@@ -842,7 +849,8 @@ int FreeDVInterface::preProcessRxFn_(ParallelStep* stepObj)
     // If the current RX mode is still sync'd, only process through that one.
     for (auto& dv : dvObjects_)
     {
-        if (dv == currentRxMode_ && freedv_get_sync(currentRxMode_))
+        FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)parallelSteps[rxIndex].get();
+        if (dv == currentRxMode_ && castedStep->getSync())
         {
             return rxIndex;
         }
@@ -855,6 +863,7 @@ int FreeDVInterface::preProcessRxFn_(ParallelStep* stepObj)
 int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj)
 {
     std::shared_ptr<ReceivePipelineState> state = std::static_pointer_cast<ReceivePipelineState>(stepObj->getState());
+    auto& parallelSteps = stepObj->getParallelSteps();
 
     // If the current RX mode is still sync'd, only let that one out.
     int rxIndex = 0;
@@ -862,11 +871,12 @@ int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj)
     int maxSyncFound = -25;
     struct freedv* dvWithSync = nullptr;
 
-    if (dvObjects_.size() == 0) goto skipSyncCheck;
+    if (dvObjects_.size() == 0 || txMode_ >= FREEDV_MODE_RADE) goto skipSyncCheck;
 
     for (auto& dv : dvObjects_)
     {
-        if (dv == currentRxMode_ && freedv_get_sync(currentRxMode_))
+        FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)parallelSteps[rxIndex].get();
+        if (dv == currentRxMode_ && castedStep->getSync())
         {
             dvWithSync = dv;
             indexWithSync = rxIndex;
@@ -890,7 +900,8 @@ int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj)
         bool canUnsquelch = !squelchEnabled_ ||
             (squelchEnabled_ && snr >= squelchVals_[rxIndex]);
         
-        if (snr > maxSyncFound && tmpStats->sync != 0 && canUnsquelch)
+        FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)parallelSteps[rxIndex].get();
+        if (snr > maxSyncFound && castedStep->getSync() != 0 && canUnsquelch)
         {
             maxSyncFound = snr;
             indexWithSync = rxIndex;
@@ -920,42 +931,34 @@ int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj)
 skipSyncCheck:        
     struct MODEM_STATS* stats = getCurrentRxModemStats();
 
+    int finalSync = 0;
     if (dvWithSync != nullptr)
     {    
+        FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)parallelSteps[indexWithSync].get();
+
         // grab extended stats so we can plot spectrum, scatter diagram etc
         freedv_get_modem_extended_stats(dvWithSync, stats);
 
         // Update sync as it may have gone stale during decode
-        *state->getRxStateFn() = stats->sync != 0;
+        finalSync = castedStep->getSync() != 0;
             
-        if (*state->getRxStateFn())
+        if (finalSync)
         {
             rxMode_ = enabledModes_[indexWithSync];  
             currentRxMode_ = dvWithSync;
             lastSyncRxMode_ = currentRxMode_;
         } 
 
-        *state->getSigPwrAvgFn() = ((FreeDVReceiveStep*)stepObj->getParallelSteps()[indexWithSync].get())->getSigPwrAvg();
+        *state->getSigPwrAvgFn() = castedStep->getSigPwrAvg();
     }
     else
     {
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-        __rtsan_disable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
-        *state->getRxStateFn() = rade_sync(rade_);
-
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-        __rtsan_enable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
+        RADEReceiveStep* castedStep = (RADEReceiveStep*)parallelSteps[0].get();
+        finalSync = castedStep->getSync();
     }
 
-    sync_ = *state->getRxStateFn();
+    *state->getRxStateFn() = finalSync;
+    sync_ = finalSync;
 
     return indexWithSync;
 };
