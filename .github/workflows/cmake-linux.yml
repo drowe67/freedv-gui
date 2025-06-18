@@ -44,7 +44,7 @@ jobs:
       run: |
            sudo apt-get update
            sudo apt-get upgrade -y
-           sudo apt-get install libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity at-spi2-core octave octave-signal libdbus-1-dev libgtk-3-dev
+           sudo apt-get install libpulse-dev sox git libasound2-dev libao-dev libgsm1-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity at-spi2-core octave octave-signal libdbus-1-dev libgtk-3-dev
 
     - name: Install Python required modules
       shell: bash
