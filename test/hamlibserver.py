@@ -321,7 +321,7 @@ class HamlibHandler:
     except:
       self.ErrParam()
     else:
-      if (not x) and self.app.ptt:
+      if (not x) and self.app.ptt and self.app.timesBeforeKill == 0:
           # Sleep for 20ms to match typical SDR behavior + 60ms to account for varying system load/virtual audio latency.
           # References:
           #   Virtual audio latency: https://vb-audio.com/Cable/VBCABLE_ReferenceManual.pdf (assuming 20ms/1024 sample buffer size @ 48 kHz)
@@ -332,6 +332,7 @@ class HamlibHandler:
         self.app.ptt = 1
       else:
         self.app.ptt = 0
+        self.app.timesBeforeKill = self.app.timesBeforeKill - 1
   def GetSplitVfo(self):
     self.Reply('SPLIT', self.app.splitenable, 'TXVFO',  self.app.txvfo, 0)
   def SetSplitVfo(self):
@@ -369,8 +370,9 @@ class HamlibHandler:
 
 class App:
   """This is the main application class.  It listens for connectons from clients and creates a server for each one."""
-  def __init__(self, pid):
+  def __init__(self, pid, timesBeforeKill):
     self.pid = pid
+    self.timesBeforeKill = timesBeforeKill
     self.hamlib_clients = []
     self.hamlib_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -412,8 +414,12 @@ class App:
 
 if __name__ == "__main__":
   try:
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         raise RuntimeError("A PID for the process to kill on TX->RX is required")
-    App(int(sys.argv[1])).Run()
+    if len(sys.argv) != 3:
+        timesBeforeKill = 100
+    else:
+        timesBeforeKill = int(sys.argv[2])
+    App(int(sys.argv[1]), timesBeforeKill).Run()
   except KeyboardInterrupt:
     sys.exit(0)

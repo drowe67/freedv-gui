@@ -71,14 +71,19 @@ fi
 RECORD_PID=$!
 
 # Start "radio"
-python3 $SCRIPTPATH/hamlibserver.py $RECORD_PID &
+if [ "$2" == "mpp" ]; then
+    TIMES_BEFORE_KILL=5
+else
+    TIMES_BEFORE_KILL=1
+fi
+python3 $SCRIPTPATH/hamlibserver.py $RECORD_PID $TIMES_BEFORE_KILL &
 RADIO_PID=$!
 
 # Start FreeDV in test mode to record TX
 if [ "$2" == "mpp" ]; then
     TX_ARGS="-txtime 1 -txattempts 6 "
 else
-    TX_ARGS="-txtime 5 "
+    TX_ARGS="-txtime 1 -txattempts 2 "
 fi
 $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADE $TX_ARGS >tmp.log 2>&1 &
 
