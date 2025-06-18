@@ -828,6 +828,12 @@ int FreeDVInterface::preProcessRxFn_(ParallelStep* stepObj)
     int rxIndex = 0;
     std::shared_ptr<ReceivePipelineState> state = std::static_pointer_cast<ReceivePipelineState>(stepObj->getState());
 
+    if (txMode_ >= FREEDV_MODE_RADE)
+    {
+        // special handling for RADE
+        return 0;
+    }
+
     // Set initial state for each step prior to execution.
     auto& parallelSteps = stepObj->getParallelSteps();
     for (auto& step : parallelSteps)
@@ -865,7 +871,7 @@ int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj)
     int maxSyncFound = -25;
     struct freedv* dvWithSync = nullptr;
 
-    if (dvObjects_.size() == 0) goto skipSyncCheck;
+    if (dvObjects_.size() == 0 || txMode_ >= FREEDV_MODE_RADE) goto skipSyncCheck;
 
     for (auto& dv : dvObjects_)
     {
@@ -947,20 +953,8 @@ skipSyncCheck:
     }
     else
     {
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-        __rtsan_disable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
-        finalSync = rade_sync(rade_);
-
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-        __rtsan_enable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
+        RADEReceiveStep* castedStep = (RADEReceiveStep*)parallelSteps[0].get();
+        finalSync = castedStep->getSync();
     }
 
     *state->getRxStateFn() = finalSync;
