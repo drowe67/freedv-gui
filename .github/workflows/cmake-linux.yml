@@ -74,7 +74,7 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           export FREEDV_VERSION=`cat build_linux/freedv-version.txt`
-          echo "APPIMAGE_FILENAME=FreeDV-${{FREEDV_VERSION}}-x86_64.AppImage" >> "$GITHUB_OUTPUT"
+          echo "APPIMAGE_FILENAME=FreeDV-${FREEDV_VERSION}-x86_64.AppImage" >> "$GITHUB_OUTPUT"
 
     - name: Upload AppImage
       uses: actions/upload-artifact@v4
