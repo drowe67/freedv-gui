@@ -73,4 +73,8 @@ cd -
 --appdir "$APPDIR" \
 --output appimage
 
+# Include version number in AppImage filename
+FREEDV_VERSION=`cat ../build_linux/freedv-version.txt`
+mv FreeDV-x86_64.AppImage FreeDV-$FREEDV_VERSION-x86_64.AppImage
+
 echo "Done"
