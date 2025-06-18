@@ -9,6 +9,17 @@ This is a live document.  Notes on new FreeDV features are being added as they a
 
 This section contains instructions to help you get started.
 
+## System Requirements
+
+FreeDV is officially supported on the following operating systems and versions:
+
+* Windows: Windows 10 and later
+* macOS: macOS Big Sur (11.0) and later (ARM and Intel)
+* Linux: Ubuntu 22.04 LTS and later, Fedora 42 and later, Mageia 9 and later
+
+Support for other platforms and distributions from the development team is limited, 
+so we encourage pull requests to address issues on platforms not officially supported.
+
 ## Easy Setup
 
 Upon starting FreeDV for the first time, the Easy Setup dialog will appear. This
