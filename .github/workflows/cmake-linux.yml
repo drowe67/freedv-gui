@@ -86,7 +86,6 @@ jobs:
   test-appimage-fedora:
     runs-on: ubuntu-24.04
     needs: [build, dist]
-
     steps:
     - uses: actions/checkout@v4
     
