@@ -107,7 +107,7 @@ jobs:
     - name: Install required packages for audio/display
       shell: bash
       run:
-          sudo dnf -y install sox xorg-x11-server-Xvfb pipewire pipewire-pulseaudio pulseaudio-libs-devel pulseaudio-utils wireplumber metacity fuse fuse-libs
+          sudo dnf -y install sox xorg-x11-server-Xvfb pipewire pipewire-pulseaudio pulseaudio-libs-devel pulseaudio-utils wireplumber metacity
 
     - name: Sanity check RADE
       shell: bash
@@ -126,7 +126,7 @@ jobs:
           metacity --sm-disable --replace &
           sleep 5
           chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
-          FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} ./test/test_zeros.sh txrx RADEV1 | tee tmp.log
+          FREEDV_BINARY="./${{needs.dist.outputs.APPIMAGE_FILENAME}} --appimage-extract-and-run" ./test/test_zeros.sh txrx RADEV1 | tee tmp.log
           grep "Got 1 sync changes" tmp.log
 
   test-appimage-ubuntu:
