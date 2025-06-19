@@ -103,7 +103,6 @@ jobs:
     - name: Install rtkit for RT threading
       shell: bash
       run: |
-          ps auxf
           sudo dnf -y update 
           sudo dnf -y install dbus rtkit dbus-devel polkit
           sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy
