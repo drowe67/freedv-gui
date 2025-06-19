@@ -281,7 +281,7 @@ void PulseAudioDevice::startRealTimeWork()
     StartTime_ = std::chrono::high_resolution_clock::now();
 
     sleepFallback_ = false;
-    if (clock_gettime(CLOCK_REALTIME, &ts_) == -1)
+    if (clock_gettime(CLOCK_MONOTONIC, &ts_) == -1)
     {
         sleepFallback_ = true;
     }
