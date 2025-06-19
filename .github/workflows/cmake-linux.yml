@@ -86,7 +86,7 @@ jobs:
   test-appimage-fedora:
     runs-on: ubuntu-24.04
     needs: [build, dist]
-    container: fedora:42
+    container: antmelekhin/docker-systemd:fedora-41
     steps:
     - uses: actions/checkout@v4
     
@@ -95,14 +95,13 @@ jobs:
         name: ${{needs.dist.outputs.APPIMAGE_FILENAME}}
         path: ${{github.workspace}}
 
-    # XXX - Docker containers don't run systemd as init so we can't run rtkit
-    #- name: Install rtkit for RT threading
-    #  shell: bash
-    #  run: |
-    #      sudo dnf -y update 
-    #      sudo dnf -y install dbus rtkit dbus-devel polkit
-    #      sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy
-    #      sudo systemctl restart polkit
+    - name: Install rtkit for RT threading
+      shell: bash
+      run: |
+          sudo dnf -y update 
+          sudo dnf -y install dbus rtkit dbus-devel polkit
+          sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy
+          sudo systemctl restart polkit
 
     - name: Install required packages for audio/display
       shell: bash
@@ -113,6 +112,8 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
+          sudo systemctl enable rtkit-daemon
+          sudo systemctl start rtkit-daemon
           Xvfb :99 -screen 0 1024x768x16 &
           sleep 5
           export DISPLAY=:99.0
