@@ -95,13 +95,14 @@ jobs:
         name: ${{needs.dist.outputs.APPIMAGE_FILENAME}}
         path: ${{github.workspace}}
 
-    - name: Install rtkit for RT threading
-      shell: bash
-      run: |
-          sudo dnf -y update 
-          sudo dnf -y install dbus rtkit dbus-devel polkit
-          sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy
-          sudo systemctl restart polkit
+    # XXX - Docker containers don't run systemd as init so we can't run rtkit
+    #- name: Install rtkit for RT threading
+    #  shell: bash
+    #  run: |
+    #      sudo dnf -y update 
+    #      sudo dnf -y install dbus rtkit dbus-devel polkit
+    #      sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy
+    #      sudo systemctl restart polkit
 
     - name: Install required packages for audio/display
       shell: bash
