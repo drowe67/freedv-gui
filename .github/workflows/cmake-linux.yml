@@ -86,7 +86,12 @@ jobs:
   test-appimage-fedora:
     runs-on: ubuntu-24.04
     needs: [build, dist]
-    container: antmelekhin/docker-systemd:fedora-41
+    container: 
+      image: fedora:42
+      volumes:
+      - /sys/fs/cgroup/:/sys/fs/cgroup
+      options: --init --cap-add SYS_ADMIN
+
     steps:
     - uses: actions/checkout@v4
     
