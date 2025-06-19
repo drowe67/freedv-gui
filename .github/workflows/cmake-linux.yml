@@ -103,7 +103,7 @@ jobs:
       shell: bash
       run: |
           podman exec fedora-test sudo dnf -y update 
-          podman exec fedora-test sudo dnf -y install dbus rtkit dbus-devel polkit
+          podman exec fedora-test sudo dnf -y install dbus dbus-x11 dbus-tools rtkit dbus-devel polkit
           podman exec fedora-test sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy
           podman exec fedora-test sudo systemctl restart polkit
           podman exec fedora-test sudo systemctl enable rtkit-daemon
