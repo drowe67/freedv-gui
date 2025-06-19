@@ -86,11 +86,6 @@ jobs:
   test-appimage-fedora:
     runs-on: ubuntu-24.04
     needs: [build, dist]
-    container: 
-      image: fedora:42
-      volumes:
-      - /sys/fs/cgroup/:/sys/fs/cgroup
-      options: --init --cap-add SYS_ADMIN
 
     steps:
     - uses: actions/checkout@v4
@@ -100,39 +95,32 @@ jobs:
         name: ${{needs.dist.outputs.APPIMAGE_FILENAME}}
         path: ${{github.workspace}}
 
+    - name: Start Fedora container
+      shell: bash
+      run: |
+          podman run -d --name fedora-test --systemd=always --privileged -v ${{github.workspace}}:/workspace docker.io/jrei/systemd-fedora:42
+
     - name: Install rtkit for RT threading
       shell: bash
       run: |
-          sudo dnf -y update 
-          sudo dnf -y install dbus rtkit dbus-devel polkit
-          sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy
-          sudo systemctl restart polkit
+          podman exec fedora-test sudo dnf -y update 
+          podman exec fedora-test sudo dnf -y install dbus rtkit dbus-devel polkit
+          podman exec fedora-test sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy
+          podman exec fedora-test sudo systemctl restart polkit
+          podman exec fedora-test sudo systemctl enable rtkit-daemon
+          podman exec fedora-test sudo systemctl start rtkit-daemon
 
     - name: Install required packages for audio/display
       shell: bash
       run:
-          sudo dnf -y install sox xorg-x11-server-Xvfb pipewire pipewire-pulseaudio pulseaudio-libs-devel pulseaudio-utils wireplumber metacity
+          podman exec fedora-test sudo dnf -y install sox xorg-x11-server-Xvfb pipewire pipewire-pulseaudio pulseaudio-libs-devel pulseaudio-utils wireplumber metacity
 
     - name: Sanity check RADE
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          sudo systemctl enable rtkit-daemon
-          sudo systemctl start rtkit-daemon
-          Xvfb :99 -screen 0 1024x768x16 &
-          sleep 5
-          export DISPLAY=:99.0
-          export XDG_RUNTIME_DIR=/run/user/$(id -u)
-          mkdir -p $XDG_RUNTIME_DIR
-          chmod 700 $XDG_RUNTIME_DIR
-          eval "$(dbus-launch --sh-syntax --exit-with-x11)"
-          pipewire &
-          pipewire-pulse &
-          wireplumber &
-          metacity --sm-disable --replace &
-          sleep 5
           chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
-          FREEDV_BINARY="./${{needs.dist.outputs.APPIMAGE_FILENAME}} --appimage-extract-and-run" ./test/test_zeros.sh txrx RADEV1 | tee tmp.log
+          FREEDV_BINARY="./${{needs.dist.outputs.APPIMAGE_FILENAME}} --appimage-extract-and-run" podman exec -e FREEDV_BINARY fedora-test /workspace/appimage/container-test.sh | tee tmp.log
           grep "Got 1 sync changes" tmp.log
 
   test-appimage-ubuntu:
