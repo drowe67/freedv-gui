@@ -42,6 +42,8 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
     , encState_(encState)
     , inputSampleFifo_(nullptr)
     , outputSampleFifo_(nullptr)
+    , featureList_(nullptr)
+    , featureListIdx_(0)
     , featuresFile_(nullptr)
 {
     inputSampleFifo_ = codec2_fifo_create(RADE_SPEECH_SAMPLE_RATE);
@@ -79,7 +81,8 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
     eooOutShort_ = new short[numEOOSamples + NUM_SAMPLES_SILENCE];
     assert(eooOutShort_ != nullptr);
 
-    featureList_.reserve(rade_n_features_in_out(dv_));
+    featureList_ = new float[rade_n_features_in_out(dv_)];
+    assert(featureList_ != nullptr);
 }
 
 RADETransmitStep::~RADETransmitStep()
@@ -88,6 +91,7 @@ RADETransmitStep::~RADETransmitStep()
     delete[] radeOutShort_;
     delete[] eooOut_;
     delete[] eooOutShort_;
+    delete[] featureList_;
     outputSamples_ = nullptr;
 
     if (featuresFile_ != nullptr)
@@ -160,36 +164,33 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
             
             for (int index = 0; index < NB_TOTAL_FEATURES; index++)
             {
-                featureList_.push_back(features[index]);
-            }
+                featureList_[featureListIdx_++] = features[index];
+                if (featureListIdx_ == numRequiredFeaturesForRADE)
+                {
+                    featureListIdx_ = 0;
 
-            // RADE TX handling
-            while (featureList_.size() >= numRequiredFeaturesForRADE)
-            {
+                    // RADE TX handling
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
-                __rtsan_disable();
+                    __rtsan_disable();
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 #endif // defined(__clang__)
 
-                rade_tx(dv_, radeOut_, &featureList_[0]);
+                    rade_tx(dv_, radeOut_, &featureList_[0]);
 
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
-                __rtsan_enable();
+                    __rtsan_enable();
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 #endif // defined(__clang__)
 
-                for (unsigned int index = 0; index < numRequiredFeaturesForRADE; index++)
-                {
-                    featureList_.erase(featureList_.begin());
+                    for (int index = 0; index < numSamplesPerTx; index++)
+                    {
+                        // We only need the real component for TX.
+                        radeOutShort_[index] = radeOut_[index].real * RADE_SCALING_FACTOR;
+                    }
+                    codec2_fifo_write(outputSampleFifo_, radeOutShort_, numSamplesPerTx);
                 }
-                for (int index = 0; index < numSamplesPerTx; index++)
-                {
-                    // We only need the real component for TX.
-                    radeOutShort_[index] = radeOut_[index].real * RADE_SCALING_FACTOR;
-                }
-                codec2_fifo_write(outputSampleFifo_, radeOutShort_, numSamplesPerTx);
             }
         }
     }
@@ -246,5 +247,5 @@ void RADETransmitStep::reset()
     {
         codec2_fifo_read(outputSampleFifo_, &buf, 1);
     }
-    featureList_.clear();
+    featureListIdx_ = 0;
 }
