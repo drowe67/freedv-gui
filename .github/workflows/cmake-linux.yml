@@ -113,8 +113,6 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
-          sudo systemctl enable rtkit-daemon
-          sudo systemctl start rtkit-daemon
           Xvfb :99 -screen 0 1024x768x16 &
           sleep 5
           export DISPLAY=:99.0
