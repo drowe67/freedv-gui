@@ -7,7 +7,7 @@ export DISPLAY=:99.0
 export XDG_RUNTIME_DIR=/run/user/$(id -u)
 mkdir -p $XDG_RUNTIME_DIR
 chmod 700 $XDG_RUNTIME_DIR
-eval "$(dbus-launch --sh-syntax --exit-with-x11)
+eval "$(dbus-launch --sh-syntax --exit-with-x11)"
 sudo systemctl restart polkit
 sudo systemctl enable rtkit-daemon
 sudo systemctl start rtkit-daemon
