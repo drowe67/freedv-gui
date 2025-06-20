@@ -116,7 +116,8 @@ jobs:
       working-directory: ${{github.workspace}}
       run: |
           chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
-          FREEDV_BINARY="./${{needs.dist.outputs.APPIMAGE_FILENAME}} --appimage-extract-and-run" sudo podman exec -e FREEDV_BINARY fedora-test /workspace/appimage/container-test.sh | tee tmp.log
+          echo "FREEDV_BINARY=./${{needs.dist.outputs.APPIMAGE_FILENAME}} --appimage-extract-and-run" > tmp.env
+          sudo podman exec --env-file ./tmp.env fedora-test /workspace/appimage/container-test.sh | tee tmp.log
           grep "Got 1 sync changes" tmp.log
 
   test-appimage-ubuntu:
