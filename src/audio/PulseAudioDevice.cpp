@@ -306,7 +306,7 @@ void PulseAudioDevice::stopRealTimeWork()
     ts_ = timespec_normalise(ts_);
 
     int rv = 0;
-    while (sem_timedwait(&sem_, &ts_) == -1 && errno == EINTR)
+    while ((rv = sem_timedwait(&sem_, &ts_)) == -1 && errno == EINTR)
     {
         // empty
     }
