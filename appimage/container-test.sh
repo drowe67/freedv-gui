@@ -8,8 +8,9 @@ export XDG_RUNTIME_DIR=/run/user/$(id -u)
 mkdir -p $XDG_RUNTIME_DIR
 chmod 700 $XDG_RUNTIME_DIR
 eval "$(dbus-launch --sh-syntax --exit-with-x11)"
-systemctl --user --now enable pipewire.service pipewire-pulse.service wireplumber.service
-systemctl --user start pipewire.service pipewire-pulse.service wireplumber.service
+pipewire &
+pipewire-pulse &
+wireplumber &
 metacity --sm-disable --replace &
 sleep 5
 ./test/test_zeros.sh txrx RADEV1
