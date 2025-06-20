@@ -97,29 +97,26 @@ jobs:
     - name: Start Fedora container
       shell: bash
       run: |
-          podman run -d --name fedora-test --systemd=always --privileged -v ${{github.workspace}}:/workspace docker.io/jrei/systemd-fedora:42
+          sudo podman run -d --name fedora-test --systemd=always --privileged -v ${{github.workspace}}:/workspace docker.io/jrei/systemd-fedora:42
 
     - name: Install rtkit for RT threading
       shell: bash
       run: |
-          podman exec fedora-test sudo dnf -y update 
-          podman exec fedora-test sudo dnf -y install dbus dbus-x11 dbus-tools rtkit dbus-devel polkit
-          podman exec fedora-test sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy
-          podman exec fedora-test sudo systemctl restart polkit
-          podman exec fedora-test sudo systemctl enable rtkit-daemon
-          podman exec fedora-test sudo systemctl start rtkit-daemon
+          sudo podman exec fedora-test sudo dnf -y update 
+          sudo podman exec fedora-test sudo dnf -y install dbus dbus-x11 dbus-tools rtkit dbus-devel polkit
+          sudo podman exec fedora-test sudo sed -i 's/no/yes/g' /usr/share/polkit-1/actions/org.freedesktop.RealtimeKit1.policy
 
     - name: Install required packages for audio/display
       shell: bash
       run: |
-          podman exec fedora-test sudo dnf -y install sox xorg-x11-server-Xvfb pipewire pipewire-pulseaudio pulseaudio-libs-devel pulseaudio-utils wireplumber metacity
+          sudo podman exec fedora-test sudo dnf -y install sox xorg-x11-server-Xvfb pipewire pipewire-pulseaudio pulseaudio-libs-devel pulseaudio-utils wireplumber metacity
 
     - name: Sanity check RADE
       shell: bash
       working-directory: ${{github.workspace}}
       run: |
           chmod +x ${{needs.dist.outputs.APPIMAGE_FILENAME}}
-          FREEDV_BINARY="./${{needs.dist.outputs.APPIMAGE_FILENAME}} --appimage-extract-and-run" podman exec -e FREEDV_BINARY fedora-test /workspace/appimage/container-test.sh | tee tmp.log
+          FREEDV_BINARY="./${{needs.dist.outputs.APPIMAGE_FILENAME}} --appimage-extract-and-run" sudo podman exec -e FREEDV_BINARY fedora-test /workspace/appimage/container-test.sh | tee tmp.log
           grep "Got 1 sync changes" tmp.log
 
   test-appimage-ubuntu:
