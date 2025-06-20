@@ -111,8 +111,9 @@ jobs:
 
     - name: Install required packages for audio/display
       shell: bash
-      run:
+      run: |
           podman exec fedora-test sudo dnf -y install sox xorg-x11-server-Xvfb pipewire pipewire-pulseaudio pulseaudio-libs-devel pulseaudio-utils wireplumber metacity
+          podman exec fedora-test systemctl --user --now enable pipewire.service pipewire-pulse.service wireplumber.service
 
     - name: Sanity check RADE
       shell: bash
