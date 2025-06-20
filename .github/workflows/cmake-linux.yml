@@ -85,12 +85,7 @@ jobs:
 
   test-appimage-fedora:
     runs-on: ubuntu-24.04
-    needs: [dist]
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [41, 42]
-        
+    needs: [build, dist]
     steps:
     - uses: actions/checkout@v4
     
@@ -102,7 +97,7 @@ jobs:
     - name: Start Fedora container
       shell: bash
       run: |
-          sudo podman run -d --name fedora-test --systemd=always --privileged -v ${{github.workspace}}:/workspace docker.io/jrei/systemd-fedora:${{ matrix.os }}
+          sudo podman run -d --name fedora-test --systemd=always --privileged -v ${{github.workspace}}:/workspace docker.io/jrei/systemd-fedora:42
 
     - name: Install rtkit for RT threading
       shell: bash
