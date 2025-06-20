@@ -28,6 +28,7 @@
 #include <signal.h>
 
 #include "PulseAudioDevice.h"
+#include "../util/timespec.h"
 
 #if defined(USE_RTKIT)
 #include "rtkit.h"
@@ -302,18 +303,20 @@ void PulseAudioDevice::stopRealTimeWork()
     }
 
     ts_.tv_nsec += latency * 1000;
-    if (ts_.tv_nsec >= 1000000000)
-    {
-        ts_.tv_sec++;
-        ts_.tv_nsec -= 1000000000;
-    }
+    ts_ = timespec_normalise(ts_);
 
-    if (sem_timedwait(&sem_, &ts_) < 0 && errno != ETIMEDOUT)
+    int rv = 0;
+    while (sem_timedwait(&sem_, &ts_) == -1 && errno == EINTR)
+    {
+        // empty
+    }
+    if (rv == -1 && errno != ETIMEDOUT)
     {
         // Fallback to simple sleep.
+        sleepFallback_ = true;
         IAudioDevice::stopRealTimeWork();
     }
-    else if (errno == ETIMEDOUT)
+    else if (rv == -1 && errno == ETIMEDOUT)
     {
         auto endTime = std::chrono::high_resolution_clock::now();
         if ((endTime - StartTime_) >= std::chrono::microseconds(PULSE_TARGET_LATENCY_US * 10))
