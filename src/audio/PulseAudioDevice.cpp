@@ -285,7 +285,7 @@ void PulseAudioDevice::startRealTimeWork()
 
     // Note: CLOCK_REALTIME is required here as sem_timedwait()
     // also uses it as the basis for timing out.
-    if (clock_gettime(CLOCK_REALTIME, &ts_) == -1)
+    if (clock_gettime(CLOCK_MONOTONIC, &ts_) == -1)
     {
         sleepFallback_ = true;
     }
@@ -309,7 +309,7 @@ void PulseAudioDevice::stopRealTimeWork()
     ts_ = timespec_normalise(ts_);
 
     int rv = 0;
-    while ((rv = sem_timedwait(&sem_, &ts_)) == -1 && errno == EINTR)
+    while ((rv = sem_clockwait(&sem_, CLOCK_MONOTONIC, &ts_)) == -1 && errno == EINTR)
     {
         // empty
     }
