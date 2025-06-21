@@ -280,8 +280,6 @@ void PulseAudioDevice::startRealTimeWork()
 {
     sleepFallback_ = false;
 
-    // Note: CLOCK_REALTIME is required here as sem_timedwait()
-    // also uses it as the basis for timing out.
     if (clock_gettime(CLOCK_MONOTONIC, &ts_) == -1)
     {
         sleepFallback_ = true;
