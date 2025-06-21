@@ -24,7 +24,6 @@
 #define AUDIO_PIPELINE__RADE_TRANSMIT_STEP_H
 
 #include <cstdio>
-#include <vector>
 #include "IPipelineStep.h"
 #include "../freedv_interface.h"
 #include "rade_api.h"
@@ -49,7 +48,8 @@ private:
     LPCNetEncState* encState_;
     struct FIFO* inputSampleFifo_;
     struct FIFO* outputSampleFifo_;
-    std::vector<float> featureList_;
+    float* featureList_;
+    int featureListIdx_;
     
     FILE* featuresFile_;
 

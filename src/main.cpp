@@ -558,7 +558,7 @@ bool MainApp::OnInit()
     log_info("PYTHONPATH is %s", (const char*)ppath.ToUTF8());
 #endif // __APPLE__
 
-#endif // _WIN32 || __APPLE__
+#endif // _WIN32 || __APPLE__ 
 
 #if defined(UNOFFICIAL_RELEASE)
     // Terminate the application if the current date > expiration date

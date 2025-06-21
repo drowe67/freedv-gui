@@ -11,3 +11,5 @@ a.out
 *.make
 *.log
 *.marks
+*.AppDir
+*.AppImage

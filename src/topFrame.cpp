@@ -537,7 +537,12 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnHelp->SetToolTip(_("Get help with FreeDV."));
     helpSizer->Add(m_btnHelp, 0, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5);
     leftSizer->SetMinSize(wxSize(-1, 375));
+    
+#if !wxCHECK_VERSION(3,2,0)
+    leftOuterSizer->Add(leftSizer, 0, wxALL | wxEXPAND | wxFIXED_MINSIZE, 1);
+#else
     leftOuterSizer->Add(leftSizer, 2, wxALL | wxEXPAND | wxFIXED_MINSIZE, 1);
+#endif // !wxCHECK_VERSION(3,2,0)
     leftOuterSizer->Add(helpSizer, 0, wxFIXED_MINSIZE | wxALL | wxEXPAND, 1);
 
     bSizer1->Add(leftOuterSizer, 0, wxALL|wxEXPAND, 5);

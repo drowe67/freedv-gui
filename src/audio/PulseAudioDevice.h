@@ -82,7 +82,6 @@ private:
     int sampleRate_;
     int numChannels_;
     
-    thread_local static std::chrono::high_resolution_clock::time_point StartTime_;
     thread_local static bool MustStopWork_;
 
     sem_t sem_;
