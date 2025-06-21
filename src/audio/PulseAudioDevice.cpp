@@ -42,7 +42,6 @@ using namespace std::chrono_literals;
 // TX audio to reach the radio.
 #define PULSE_TARGET_LATENCY_US 20000
 
-thread_local std::chrono::high_resolution_clock::time_point PulseAudioDevice::StartTime_;
 thread_local bool PulseAudioDevice::MustStopWork_ = false;
 
 PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
@@ -279,8 +278,6 @@ void PulseAudioDevice::setHelperRealTime()
 
 void PulseAudioDevice::startRealTimeWork()
 {
-    StartTime_ = std::chrono::high_resolution_clock::now();
-
     sleepFallback_ = false;
 
     // Note: CLOCK_REALTIME is required here as sem_timedwait()
@@ -318,15 +315,6 @@ void PulseAudioDevice::stopRealTimeWork()
         // Fallback to simple sleep.
         sleepFallback_ = true;
         IAudioDevice::stopRealTimeWork();
-    }
-    else if (rv == -1 && errno == ETIMEDOUT)
-    {
-        auto endTime = std::chrono::high_resolution_clock::now();
-        if ((endTime - StartTime_) >= std::chrono::microseconds(PULSE_TARGET_LATENCY_US * 10))
-        {
-            // Took a lot longer than expected. Force a sleep so we don't get killed by rtkit.
-            std::this_thread::sleep_for(std::chrono::microseconds(PULSE_TARGET_LATENCY_US));
-        }
     }
 
     MustStopWork_ = false;
