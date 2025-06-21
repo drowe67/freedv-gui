@@ -245,11 +245,17 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
             break;
         }
     }
+    
+    if (!found && sampleRates.size() > 0)
+    {
+        sampleRate = sampleRates[0];
+    }
 
     auto prom = std::make_shared<std::promise<std::shared_ptr<IAudioDevice> > >();
     auto fut = prom->get_future();
-    enqueue_([&, devList]() {
+    enqueue_([&, devList, deviceName, direction, sampleRate, numChannels]() {
         std::shared_ptr<IAudioDevice> result;
+        int finalSampleRate = sampleRate;
         IMMDeviceCollection* coll = 
             (direction == AudioDirection::AUDIO_ENGINE_IN) ?
             inputDeviceList_ :
@@ -296,14 +302,14 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
 
                 if (!found)
                 {
-                    sampleRate = dev.defaultSampleRate;
+                    finalSampleRate = dev.defaultSampleRate;
                 }
 
                 // Ensure that the passed-in number of channels is within the allowed range.
-                numChannels = std::max(numChannels, dev.minChannels);
-                numChannels = std::min(numChannels, dev.maxChannels);
+                int finalNumChannels = std::max(numChannels, dev.minChannels);
+                finalNumChannels = std::min(finalNumChannels, dev.maxChannels);
 
-                auto devPtr = new WASAPIAudioDevice(client, direction, sampleRate, numChannels);
+                auto devPtr = new WASAPIAudioDevice(client, direction, finalSampleRate, finalNumChannels);
                 result = std::shared_ptr<IAudioDevice>(devPtr);
                 
                 client->Release();
@@ -322,7 +328,7 @@ std::vector<int> WASAPIAudioEngine::getSupportedSampleRates(wxString deviceName,
     // Note: WASAPI only supports the device's native sample rate!
     auto prom = std::make_shared<std::promise<std::vector<int> > >();
     auto fut = prom->get_future();
-    enqueue_([&, devList]() {
+    enqueue_([&, devList, deviceName]() {
         std::vector<int> result;
         for (auto& spec : devList)
         {

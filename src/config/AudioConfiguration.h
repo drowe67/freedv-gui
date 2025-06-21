@@ -68,6 +68,7 @@ template<int DeviceId, AudioConfiguration::Direction AudioDirection>
 const char* AudioConfiguration::AudioDeviceConfigName<DeviceId, AudioDirection>::GetDeviceNameConfigName()
 {
     assert(0);
+    return nullptr;
 }
 
 template<>
@@ -86,6 +87,7 @@ template<int DeviceId, AudioConfiguration::Direction AudioDirection>
 const char* AudioConfiguration::AudioDeviceConfigName<DeviceId, AudioDirection>::GetSampleRateConfigName()
 {
     assert(0);
+    return nullptr;
 }
 
 template<>

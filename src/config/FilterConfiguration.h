@@ -35,25 +35,25 @@ public:
     class FilterChannelConfigName
     {
     public:
-        static const char* GetBassFreqHzConfigName() { assert(0); }
-        static const char* GetBassGaindBConfigName() { assert(0); }
-        static const char* GetTrebleFreqHzConfigName() { assert(0); }
-        static const char* GetTrebleGaindBConfigName() { assert(0); }
-        static const char* GetMidFreqHzConfigName() { assert(0); }
-        static const char* GetMidGaindBConfigName() { assert(0); }
-        static const char* GetMidQConfigName() { assert(0); }
-        static const char* GetVolInDBConfigName() { assert(0); }
-        static const char* GetEQEnableConfigName() { assert(0); }
+        static const char* GetBassFreqHzConfigName() { assert(0); return nullptr; }
+        static const char* GetBassGaindBConfigName() { assert(0); return nullptr; }
+        static const char* GetTrebleFreqHzConfigName() { assert(0); return nullptr; }
+        static const char* GetTrebleGaindBConfigName() { assert(0); return nullptr; }
+        static const char* GetMidFreqHzConfigName() { assert(0); return nullptr; }
+        static const char* GetMidGaindBConfigName() { assert(0); return nullptr; }
+        static const char* GetMidQConfigName() { assert(0); return nullptr; }
+        static const char* GetVolInDBConfigName() { assert(0); return nullptr; }
+        static const char* GetEQEnableConfigName() { assert(0); return nullptr; }
         
-        static const char* GetOldBassFreqHzConfigName() { assert(0); }
-        static const char* GetOldBassGaindBConfigName() { assert(0); }
-        static const char* GetOldTrebleFreqHzConfigName() { assert(0); }
-        static const char* GetOldTrebleGaindBConfigName() { assert(0); }
-        static const char* GetOldMidFreqHzConfigName() { assert(0); }
-        static const char* GetOldMidGaindBConfigName() { assert(0); }
-        static const char* GetOldMidQConfigName() { assert(0); }
-        static const char* GetOldVolInDBConfigName() { assert(0); }
-        static const char* GetOldEQEnableConfigName() { assert(0); }
+        static const char* GetOldBassFreqHzConfigName() { assert(0); return nullptr; }
+        static const char* GetOldBassGaindBConfigName() { assert(0); return nullptr; }
+        static const char* GetOldTrebleFreqHzConfigName() { assert(0); return nullptr; }
+        static const char* GetOldTrebleGaindBConfigName() { assert(0); return nullptr; }
+        static const char* GetOldMidFreqHzConfigName() { assert(0); return nullptr; }
+        static const char* GetOldMidGaindBConfigName() { assert(0); return nullptr; }
+        static const char* GetOldMidQConfigName() { assert(0); return nullptr; }
+        static const char* GetOldVolInDBConfigName() { assert(0); return nullptr; }
+        static const char* GetOldEQEnableConfigName() { assert(0); return nullptr; }
     };
     
     template<FilterConfiguration::Channel ChannelId>
