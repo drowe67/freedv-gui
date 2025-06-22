@@ -63,7 +63,7 @@ public:
     
     // Lets audio system know that we're done with the work on the received
     // audio.
-    virtual void stopRealTimeWork() override { std::this_thread::sleep_for(10ms); }
+    virtual void stopRealTimeWork(bool fastMode = false) override { std::this_thread::sleep_for(10ms); }
     
     // Reverts real-time priority for current thread.
     virtual void clearHelperRealTime() override { /* empty */ }

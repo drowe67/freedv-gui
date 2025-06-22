@@ -476,8 +476,18 @@ void* TxRxThread::Entry()
         
         if (m_tx) txProcessing_();
         else rxProcessing_();
-        
-        helper_->stopRealTimeWork();
+
+        // Determine whether we need to pause for a shorter amount
+        // of time to avoid dropouts.
+        paCallBackData  *cbData = g_rxUserdata;
+        struct FIFO* outFifo = cbData->outfifo1;
+        if (!m_tx)
+        {
+            outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
+        }
+        auto totalFifoCapacity = codec2_fifo_used(outFifo) + codec2_fifo_free(outFifo);
+        auto fifoUsed = codec2_fifo_used(outFifo);
+        helper_->stopRealTimeWork(fifoUsed < totalFifoCapacity / 2);
     }
     
     // Force pipeline to delete itself when we're done with the thread.

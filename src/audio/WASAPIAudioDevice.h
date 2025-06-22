@@ -60,7 +60,7 @@ public:
 
     // Lets audio system know that we're done with the work on the received
     // audio.
-    virtual void stopRealTimeWork() override;
+    virtual void stopRealTimeWork(bool fastMode = false) override;
 
     // Reverts real-time priority for current thread.
     virtual void clearHelperRealTime() override;

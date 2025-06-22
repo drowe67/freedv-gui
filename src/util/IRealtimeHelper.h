@@ -36,8 +36,9 @@ public:
     virtual void startRealTimeWork() = 0;
     
     // Lets audio system know that we're done with the work on the received
-    // audio.
-    virtual void stopRealTimeWork() = 0;
+    // audio. fastMode is an optional argument that indicates whether we
+    // need to reduce timeouts due to buffers running empty.
+    virtual void stopRealTimeWork(bool fastMode = false) = 0;
     
     // Reverts real-time priority for current thread.
     virtual void clearHelperRealTime() = 0;

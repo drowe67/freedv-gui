@@ -285,12 +285,12 @@ void PulseAudioDevice::startRealTimeWork()
         sleepFallback_ = true;
     }
 }
-void PulseAudioDevice::stopRealTimeWork()
+void PulseAudioDevice::stopRealTimeWork(bool fastMode)
 {
     if (sleepFallback_)
     {
         // Fallback to simple sleep.
-        IAudioDevice::stopRealTimeWork();
+        IAudioDevice::stopRealTimeWork(fastMode);
         return;
     }
 
@@ -299,6 +299,7 @@ void PulseAudioDevice::stopRealTimeWork()
     {
         latency = PULSE_TARGET_LATENCY_US;
     }
+    latency >>= fastMode ? 1 : 0;
 
     ts_.tv_nsec += latency * 1000;
     ts_ = timespec_normalise(ts_);
