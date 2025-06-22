@@ -719,77 +719,90 @@ void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
     CallAfter([&]() { DeselectItem(); });
 }
 
+void FreeDVReporterDialog::FreeDVReporterDataModel::triggerResort()
+{
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    fnQueue_.push_back([&]() {
+        Resort();
+    });
+    parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
+}
+
 void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
 {
-    std::unique_lock<std::recursive_mutex> lk(dataMtx_);
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    fnQueue_.push_back([&]() {
+        std::unique_lock<std::recursive_mutex> lk(dataMtx_);
 
-    // Iterate across all visible rows. If a row is currently highlighted
-    // green and it's been more than >20 seconds, clear coloring.
-    auto curDate = wxDateTime::Now().ToUTC();
+        // Iterate across all visible rows. If a row is currently highlighted
+        // green and it's been more than >20 seconds, clear coloring.
+        auto curDate = wxDateTime::Now().ToUTC();
 
-    wxDataViewItemArray itemsChanged;
-    for (auto& item : allReporterData_)
-    {
-        auto reportData = item.second;
+        wxDataViewItemArray itemsChanged;
+        for (auto& item : allReporterData_)
+        {
+            auto reportData = item.second;
 
-        bool isTransmitting = reportData->transmitting;
-        bool isReceivingValidCallsign = 
-            reportData->lastRxDate.IsValid() && 
-            reportData->lastRxCallsign != "" &&
-            reportData->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_LONG_TIMEOUT_SEC));
-        bool isReceivingNotValidCallsign = 
-            reportData->lastRxDate.IsValid() && 
-            reportData->lastRxCallsign == "" &&
-            reportData->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_SHORT_TIMEOUT_SEC));
-        bool isMessaging = 
-            reportData->lastUpdateUserMessage.IsValid() && 
-            reportData->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC));
+            bool isTransmitting = reportData->transmitting;
+            bool isReceivingValidCallsign = 
+                reportData->lastRxDate.IsValid() && 
+                reportData->lastRxCallsign != "" &&
+                reportData->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_LONG_TIMEOUT_SEC));
+            bool isReceivingNotValidCallsign = 
+                reportData->lastRxDate.IsValid() && 
+                reportData->lastRxCallsign == "" &&
+                reportData->lastRxDate.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, RX_COLORING_SHORT_TIMEOUT_SEC));
+            bool isMessaging = 
+                reportData->lastUpdateUserMessage.IsValid() && 
+                reportData->lastUpdateUserMessage.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, MSG_COLORING_TIMEOUT_SEC));
 
-        // Messaging notifications take highest priority.
-        wxColour backgroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
-        wxColour foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+            // Messaging notifications take highest priority.
+            wxColour backgroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+            wxColour foregroundColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
         
-        if (isMessaging)
-        {
-            backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor);
-            foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor);
-        }
-        else if (isTransmitting)
-        {
-            backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
-            foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
-        }
-        else if (isReceivingValidCallsign || isReceivingNotValidCallsign)
-        {
-            backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
-            foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
-        }
-#if defined(__APPLE__)
-        else
-        {
-            // To ensure that the columns don't have a different color than the rest of the control.
-            // Needed mainly for macOS.
-            backgroundColor = wxColour(wxTransparentColour);
-        }
-#endif // defined(__APPLE__)
-
-        bool isHighlightUpdated = 
-            backgroundColor != reportData->backgroundColor ||
-            foregroundColor != reportData->foregroundColor;
-        if (isHighlightUpdated)
-        {
-            reportData->backgroundColor = backgroundColor;
-            reportData->foregroundColor = foregroundColor;
-
-            if (reportData->isVisible)
+            if (isMessaging)
             {
-                wxDataViewItem dvi(reportData);
-                itemsChanged.Add(dvi);
+                backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowBackgroundColor);
+                foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterMsgRowForegroundColor);
+            }
+            else if (isTransmitting)
+            {
+                backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowBackgroundColor);
+                foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterTxRowForegroundColor);
+            }
+            else if (isReceivingValidCallsign || isReceivingNotValidCallsign)
+            {
+                backgroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowBackgroundColor);
+                foregroundColor = wxColour(wxGetApp().appConfiguration.reportingConfiguration.freedvReporterRxRowForegroundColor);
+            }
+    #if defined(__APPLE__)
+            else
+            {
+                // To ensure that the columns don't have a different color than the rest of the control.
+                // Needed mainly for macOS.
+                backgroundColor = wxColour(wxTransparentColour);
+            }
+    #endif // defined(__APPLE__)
+
+            bool isHighlightUpdated = 
+                backgroundColor != reportData->backgroundColor ||
+                foregroundColor != reportData->foregroundColor;
+            if (isHighlightUpdated)
+            {
+                reportData->backgroundColor = backgroundColor;
+                reportData->foregroundColor = foregroundColor;
+
+                if (reportData->isVisible)
+                {
+                    wxDataViewItem dvi(reportData);
+                    itemsChanged.Add(dvi);
+                }
             }
         }
-    }
 
-    ItemsChanged(itemsChanged);
+        ItemsChanged(itemsChanged);
+    });
+    parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
 }
 
 void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
@@ -803,7 +816,7 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
     {
         if (model->sortOnNextTimerInterval)
         {
-            model->Resort();
+            model->triggerResort();
             model->sortOnNextTimerInterval = false;
         }
     }

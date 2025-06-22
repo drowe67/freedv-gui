@@ -158,6 +158,7 @@ class FreeDVReporterDialog : public wxFrame
              void refreshAllRows();
              void requestQSY(wxDataViewItem selectedItem, uint64_t frequency, wxString customText);
              void updateHighlights();
+             void triggerResort();
              void updateMessage(wxString statusMsg)
              {
                  if (reporter_)
