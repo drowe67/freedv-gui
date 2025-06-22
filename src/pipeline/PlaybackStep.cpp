@@ -144,7 +144,7 @@ void PlaybackStep::nonRtThreadEntry_()
                     }
                 }
 
-                if (numRead < samplesAtSourceRate && codec2_fifo_used(outputFifo_) == 0)
+                if ((int)numRead < samplesAtSourceRate && codec2_fifo_used(outputFifo_) == 0)
                 {
                     //log_info("file read complete");
                     fileCompleteFn_();
