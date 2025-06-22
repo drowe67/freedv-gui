@@ -1516,6 +1516,12 @@ FreeDVReporterDialog::FreeDVReporterDataModel::FreeDVReporterDataModel(FreeDVRep
 FreeDVReporterDialog::FreeDVReporterDataModel::~FreeDVReporterDataModel()
 {
     setReporter(nullptr);
+    
+    for (auto& kvp : allReporterData_)
+    {
+        delete kvp.second;
+    }
+    allReporterData_.clear();
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::setReporter(std::shared_ptr<FreeDVReporter> reporter)
