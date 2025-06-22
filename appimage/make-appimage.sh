@@ -18,8 +18,9 @@ echo "Bundle dependencies..."
 if test -f linuxdeploy-x86_64.AppImage; then
   echo "linuxdeploy exists"
 else
+    wget -c "https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh"
     wget https://github.com/linuxdeploy/linuxdeploy/releases/latest/download/linuxdeploy-x86_64.AppImage
-    chmod +x linuxdeploy-x86_64.AppImage
+    chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-gtk.sh
 fi
 
 ./linuxdeploy-x86_64.AppImage \
@@ -71,6 +72,7 @@ cd -
 # Create the output
 ./linuxdeploy-x86_64.AppImage \
 --appdir "$APPDIR" \
+--plugin gtk \
 --output appimage
 
 # Include version number in AppImage filename
