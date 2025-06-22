@@ -803,7 +803,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Reduce CPU usage of FreeDV Reporter window by only re-sorting if we actually get new data from the server. (PR #915)
     * FreeDV Reporter: Fix issue with first column not being aligned properly with other columns. (PR #922)
     * FreeDV Reporter: Work around Linux bug preventing some flag emojis from being fully deleted on backspace. (PR #931)
-    * Fix GTK+ assertion after FreeDV Reporter has been open for a long time. (PR #929)
+    * Fix GTK+ assertion after FreeDV Reporter has been open for a long time. (PR #929, #945)
     * Easy Setup: Use card names instead of device names for generating device list. (PR #932)
     * Fix compiler error on Fedora 42 when using Hamlib packages. (PR #936, #940; thanks @jaspejavier!)
     * Legacy FreeDV modes: ensure that sync is obtained in an atomic manner. (PR #939)
