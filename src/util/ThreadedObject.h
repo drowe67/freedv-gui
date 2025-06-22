@@ -26,7 +26,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-#include <vector>
+#include <deque>
 #include <functional>
 
 class ThreadedObject
@@ -44,7 +44,7 @@ protected:
 private:
     bool isDestroying_;
     std::thread objectThread_;
-    std::vector<std::function<void()> > eventQueue_;
+    std::deque<std::function<void()> > eventQueue_;
     std::recursive_mutex eventQueueMutex_;
     std::condition_variable_any eventQueueCV_;
 

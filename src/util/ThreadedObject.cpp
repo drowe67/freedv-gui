@@ -106,7 +106,7 @@ void ThreadedObject::eventLoop_()
                 }
                 
                 fn = eventQueue_[0];
-                eventQueue_.erase(eventQueue_.begin());
+                eventQueue_.pop_front();
             }
         
             if (fn)

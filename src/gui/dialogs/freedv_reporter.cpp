@@ -1419,7 +1419,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_()
         fn();
 
         lk.lock();
-        fnQueue_.erase(fnQueue_.begin());
+        fnQueue_.pop_front();
         size = fnQueue_.size();
         lk.unlock();
     }
