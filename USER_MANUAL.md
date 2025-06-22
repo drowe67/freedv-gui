@@ -17,7 +17,11 @@ FreeDV is officially supported on the following operating systems and versions:
 * macOS: macOS Big Sur (11.0) and later (ARM and Intel)
 * Linux: Ubuntu 22.04 LTS and later, Fedora 42 and later
 
-Support for other platforms and distributions from the development team is limited.
+While it may be possible to execute FreeDV on additional platforms and distributions 
+(especially ones similar to ones currently supported), this is not guaranteed. Any 
+bugfixes required for an unsupported platform may be deferred or rejected, especially 
+if there is impact to supported platforms. Requests for official support of new platforms 
+should go through our existing [Feature Request process](https://github.com/drowe67/freedv-gui/issues/new?template=feature_request.yml).
 
 ## Easy Setup
 
