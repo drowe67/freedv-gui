@@ -21,7 +21,6 @@ jobs:
         os: [macos-13, macos-latest]  # x86_64, ARM64
 
     runs-on: ${{ matrix.os }}
-    needs: dist
 
     steps:
     - uses: actions/checkout@v4
