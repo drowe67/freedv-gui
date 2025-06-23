@@ -104,11 +104,8 @@ cat tmp.log
 kill $RECORD_PID
 
 if [ "$1" != "" ]; then
-    FADING_DIR="$(pwd)/fading"
-    if [ ! -d "$FADING_DIR" ]; then
-        mkdir $FADING_DIR
-        (cd $1/../codec2_src/unittest && ./fading_files.sh $FADING_DIR)
-    fi
+    FADING_DIR="$SCRIPTPATH/fading"
+
     # Add noise to recording to test performance
     if [ "$2" == "mpp" ]; then
         sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -24 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav
