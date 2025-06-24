@@ -343,6 +343,8 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     m_highlightClearTimer->Start(250);
     m_resortTimer = new wxTimer(this);
     m_resortTimer->Start(100);
+    m_deleteTimer = new wxTimer(this);
+    m_deleteTimer->Start(1000);
     
     // Create Set popup menu
     setPopupMenu_ = new wxMenu();
@@ -453,6 +455,9 @@ FreeDVReporterDialog::~FreeDVReporterDialog()
     
     m_resortTimer->Stop();
     delete m_resortTimer;
+    
+    m_deleteTimer->Stop();
+    delete m_deleteTimer;
 
     m_trackFrequency->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
     m_trackFreqBand->Disconnect(wxEVT_RADIOBUTTON, wxCommandEventHandler(FreeDVReporterDialog::OnFilterTrackingEnable), NULL, this);
@@ -719,6 +724,30 @@ void FreeDVReporterDialog::OnBandFilterChange(wxCommandEvent& event)
     CallAfter([&]() { DeselectItem(); });
 }
 
+void FreeDVReporterDialog::FreeDVReporterDataModel::deallocateRemovedItems()
+{
+    std::unique_lock<std::mutex> lk(fnQueueMtx_);
+    fnQueue_.push_back([&]() {
+        std::unique_lock<std::recursive_mutex> lk(dataMtx_);
+        
+        std::vector<std::string> keysToRemove;
+        for (auto& item : allReporterData_)
+        {
+            if (item.second->isPendingDelete)
+            {
+                keysToRemove.push_back(item.first);
+                delete item.second;
+            }
+        }
+        
+        for (auto& key : keysToRemove)
+        {
+            allReporterData_.erase(key);
+        }
+    });
+    parent_->CallAfter(std::bind(&FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_, this));
+}
+
 void FreeDVReporterDialog::FreeDVReporterDataModel::triggerResort()
 {
     std::unique_lock<std::mutex> lk(fnQueueMtx_);
@@ -811,6 +840,10 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
     if (event.GetTimer().GetId() == m_highlightClearTimer->GetId())
     {
         model->updateHighlights();
+    }
+    else if (event.GetTimer().GetId() == m_deleteTimer->GetId())
+    {
+        model->deallocateRemovedItems();
     }
     else
     {
@@ -2140,7 +2173,8 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
             log_warn("Received duplicate user during connection process");
             return;
         }
-
+        
+        temp->isPendingDelete = false;
         allReporterData_[sid] = temp;
 
         if (temp->isVisible)
@@ -2189,8 +2223,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
                 ItemDeleted(wxDataViewItem(nullptr), dvi);
             }
 
-            delete item;
-            allReporterData_.erase(iter);
+            item->isPendingDelete = true;
         }
     });
 
