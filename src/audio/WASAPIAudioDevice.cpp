@@ -560,7 +560,7 @@ void WASAPIAudioDevice::startRealTimeWork()
     // empty
 }
 
-void WASAPIAudioDevice::stopRealTimeWork() 
+void WASAPIAudioDevice::stopRealTimeWork(bool fastMode) 
 {
     if (semaphore_ == nullptr)
     {
@@ -570,12 +570,12 @@ void WASAPIAudioDevice::stopRealTimeWork()
     }
 
     // Wait a maximum of (bufferSize / sampleRate) seconds for the semaphore to return
-    DWORD result = WaitForSingleObject(semaphore_, (1000 * bufferFrameCount_) / sampleRate_);
+    DWORD result = WaitForSingleObject(semaphore_, ((1000 * bufferFrameCount_) / sampleRate_) >> (fastMode ? 1 : 0));
 
     if (result != WAIT_TIMEOUT && result != WAIT_OBJECT_0)
     {
         // Fallback to a simple sleep.
-        IAudioDevice::stopRealTimeWork();
+        IAudioDevice::stopRealTimeWork(fastMode);
     }
 }
 

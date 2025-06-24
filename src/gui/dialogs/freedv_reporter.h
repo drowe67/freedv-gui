@@ -24,7 +24,7 @@
 
 #include <string>
 #include <map>
-#include <vector>
+#include <deque>
 #include <mutex>
 
 #include <wx/tipwin.h>
@@ -259,7 +259,7 @@ class FreeDVReporterDialog : public wxFrame
 
             std::shared_ptr<FreeDVReporter> reporter_;
             std::map<std::string, ReporterData*> allReporterData_;
-            std::vector<std::function<void()> > fnQueue_;
+            std::deque<std::function<void()> > fnQueue_;
             std::mutex fnQueueMtx_;
             std::recursive_mutex dataMtx_;
             bool isConnected_;

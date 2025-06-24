@@ -706,9 +706,9 @@ void MacAudioDevice::startRealTimeWork()
     }
 }
 
-void MacAudioDevice::stopRealTimeWork()
+void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, AUDIO_SAMPLE_BLOCK_SEC * kOneNanosecond));
+    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, (int)(AUDIO_SAMPLE_BLOCK_SEC * kOneNanosecond) >> (fastMode ? 1 : 0)));
 }
 
 void MacAudioDevice::clearHelperRealTime()

@@ -57,7 +57,7 @@ public:
 
     // Lets audio system know that we're done with the work on the received
     // audio.
-    virtual void stopRealTimeWork() override;
+    virtual void stopRealTimeWork(bool fastMode = false) override;
 
     // Reverts real-time priority for current thread.
     virtual void clearHelperRealTime() override;
@@ -82,7 +82,6 @@ private:
     int sampleRate_;
     int numChannels_;
     
-    thread_local static std::chrono::high_resolution_clock::time_point StartTime_;
     thread_local static bool MustStopWork_;
 
     sem_t sem_;

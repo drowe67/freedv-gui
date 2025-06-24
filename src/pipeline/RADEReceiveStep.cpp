@@ -38,6 +38,8 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
     , fargan_(fargan)
     , inputSampleFifo_(nullptr)
     , outputSampleFifo_(nullptr)
+    , pendingFeatures_(nullptr)
+    , pendingFeaturesIdx_(0)
     , featuresFile_(nullptr)
     , textPtr_(textPtr)
 {
@@ -76,7 +78,8 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
     eooOut_ = new float[rade_n_eoo_bits(dv_)];
     assert(eooOut_ != nullptr);
 
-    pendingFeatures_.reserve(rade_n_features_in_out(dv_));
+    pendingFeatures_ = new float[NB_TOTAL_FEATURES];
+    assert(pendingFeatures_ != nullptr);
 }
 
 RADEReceiveStep::~RADEReceiveStep()
@@ -85,6 +88,7 @@ RADEReceiveStep::~RADEReceiveStep()
     delete[] inputBufCplx_;
     delete[] featuresOut_;
     delete[] eooOut_;
+    delete[] pendingFeatures_;
     outputSamples_ = nullptr;
 
     if (featuresFile_ != nullptr)
@@ -181,35 +185,23 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
 
                 for (int i = 0; i < nout; i++)
                 {
-                    pendingFeatures_.push_back(featuresOut_[i]);
-                }
-
-                // FARGAN processing (features->analog audio)
-                while (pendingFeatures_.size() >= NB_TOTAL_FEATURES)
-                {
-                    // XXX - lpcnet_demo reads NB_TOTAL_FEATURES from RADE
-                    // but only processes NB_FEATURES of those for some reason.
-                    float featuresIn[NB_FEATURES];
-                    for (int i = 0; i < NB_FEATURES; i++)
+                    pendingFeatures_[pendingFeaturesIdx_++] = featuresOut_[i];
+                    if (pendingFeaturesIdx_ == NB_TOTAL_FEATURES)
                     {
-                        featuresIn[i] = pendingFeatures_[0];
-                        pendingFeatures_.erase(pendingFeatures_.begin());
-                    }
-                    for (int i = 0; i < (NB_TOTAL_FEATURES - NB_FEATURES); i++)
-                    {
-                        pendingFeatures_.erase(pendingFeatures_.begin());
-                    }
+                        pendingFeaturesIdx_ = 0;
 
-                    float fpcm[LPCNET_FRAME_SIZE];
-                    short pcm[LPCNET_FRAME_SIZE];
-                    fargan_synthesize(fargan_, fpcm, featuresIn);
-                    for (int i = 0; i < LPCNET_FRAME_SIZE; i++) 
-                    {
-                        pcm[i] = (int)floor(.5 + MIN32(32767, MAX32(-32767, 32768.f*fpcm[i])));
-                    }
+                        // FARGAN processing (features->analog audio)
+                        float fpcm[LPCNET_FRAME_SIZE];
+                        short pcm[LPCNET_FRAME_SIZE];
+                        fargan_synthesize(fargan_, fpcm, pendingFeatures_);
+                        for (int i = 0; i < LPCNET_FRAME_SIZE; i++) 
+                        {
+                            pcm[i] = (int)floor(.5 + MIN32(32767, MAX32(-32767, 32768.f*fpcm[i])));
+                        }
 
-                    *numOutputSamples += LPCNET_FRAME_SIZE;
-                    codec2_fifo_write(outputSampleFifo_, pcm, LPCNET_FRAME_SIZE);
+                        *numOutputSamples += LPCNET_FRAME_SIZE;
+                        codec2_fifo_write(outputSampleFifo_, pcm, LPCNET_FRAME_SIZE);
+                    }
                 }
             }
 
@@ -250,5 +242,5 @@ void RADEReceiveStep::reset()
     {
         codec2_fifo_read(outputSampleFifo_, &buf, 1);
     }
-    pendingFeatures_.clear();
+    pendingFeaturesIdx_ = 0;
 }

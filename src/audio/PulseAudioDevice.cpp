@@ -28,6 +28,7 @@
 #include <signal.h>
 
 #include "PulseAudioDevice.h"
+#include "../util/timespec.h"
 
 #if defined(USE_RTKIT)
 #include "rtkit.h"
@@ -41,7 +42,6 @@ using namespace std::chrono_literals;
 // TX audio to reach the radio.
 #define PULSE_TARGET_LATENCY_US 20000
 
-thread_local std::chrono::high_resolution_clock::time_point PulseAudioDevice::StartTime_;
 thread_local bool PulseAudioDevice::MustStopWork_ = false;
 
 PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
@@ -278,20 +278,19 @@ void PulseAudioDevice::setHelperRealTime()
 
 void PulseAudioDevice::startRealTimeWork()
 {
-    StartTime_ = std::chrono::high_resolution_clock::now();
-
     sleepFallback_ = false;
-    if (clock_gettime(CLOCK_REALTIME, &ts_) == -1)
+
+    if (clock_gettime(CLOCK_MONOTONIC, &ts_) == -1)
     {
         sleepFallback_ = true;
     }
 }
-void PulseAudioDevice::stopRealTimeWork()
+void PulseAudioDevice::stopRealTimeWork(bool fastMode)
 {
     if (sleepFallback_)
     {
         // Fallback to simple sleep.
-        IAudioDevice::stopRealTimeWork();
+        IAudioDevice::stopRealTimeWork(fastMode);
         return;
     }
 
@@ -300,27 +299,21 @@ void PulseAudioDevice::stopRealTimeWork()
     {
         latency = PULSE_TARGET_LATENCY_US;
     }
+    latency >>= fastMode ? 1 : 0;
 
     ts_.tv_nsec += latency * 1000;
-    if (ts_.tv_nsec >= 1000000000)
-    {
-        ts_.tv_sec++;
-        ts_.tv_nsec -= 1000000000;
-    }
+    ts_ = timespec_normalise(ts_);
 
-    if (sem_timedwait(&sem_, &ts_) < 0 && errno != ETIMEDOUT)
+    int rv = 0;
+    while ((rv = sem_clockwait(&sem_, CLOCK_MONOTONIC, &ts_)) == -1 && errno == EINTR)
+    {
+        // empty
+    }
+    if (rv == -1 && errno != ETIMEDOUT)
     {
         // Fallback to simple sleep.
+        sleepFallback_ = true;
         IAudioDevice::stopRealTimeWork();
-    }
-    else if (errno == ETIMEDOUT)
-    {
-        auto endTime = std::chrono::high_resolution_clock::now();
-        if ((endTime - StartTime_) >= std::chrono::microseconds(PULSE_TARGET_LATENCY_US * 10))
-        {
-            // Took a lot longer than expected. Force a sleep so we don't get killed by rtkit.
-            std::this_thread::sleep_for(std::chrono::microseconds(PULSE_TARGET_LATENCY_US));
-        }
     }
 
     MustStopWork_ = false;

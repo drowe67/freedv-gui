@@ -162,6 +162,7 @@ void PlotSpectrum::draw(wxGraphicsContext* ctx)
                 break;
             default:
                 assert(0);
+                mag = m_magdB[index]; // assume m_numSampleAveraging = 1
                 break;
         }
         

@@ -7,7 +7,7 @@ FREEDV_RX_FILE=$3
 # Determine sox driver to use for recording/playback
 OPERATING_SYSTEM=`uname`
 SOX_DRIVER=alsa
-FREEDV_BINARY=src/freedv
+FREEDV_BINARY=${FREEDV_BINARY:-src/freedv}
 if [ "$OPERATING_SYSTEM" == "Darwin" ]; then
     SOX_DRIVER=coreaudio
     FREEDV_BINARY=src/FreeDV.app/Contents/MacOS/freedv

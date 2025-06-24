@@ -11,7 +11,7 @@ fi
 
 createVirtualAudioCable () {
     CABLE_NAME=$1
-    pactl load-module module-null-sink sink_name=$CABLE_NAME sink_properties=device.description=$CABLE_NAME latency_msec=1
+    pactl load-module module-null-sink sink_name=$CABLE_NAME sink_properties=device.description=$CABLE_NAME 
 }
 
 FREEDV_RADIO_TO_COMPUTER_DEVICE="${FREEDV_RADIO_TO_COMPUTER_DEVICE:-FreeDV_Radio_To_Computer}"
@@ -26,7 +26,7 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     DRIVER_INDEX_FREEDV_COMPUTER_TO_SPEAKER=$(createVirtualAudioCable FreeDV_Computer_To_Speaker)
     DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER=$(createVirtualAudioCable FreeDV_Microphone_To_Computer)
     DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO=$(createVirtualAudioCable FreeDV_Computer_To_Radio)
-    DRIVER_INDEX_LOOPBACK=`pactl load-module module-loopback source="FreeDV_Computer_To_Radio.monitor" sink="FreeDV_Radio_To_Computer" latency_msec=1`
+    DRIVER_INDEX_LOOPBACK=`pactl load-module module-loopback source="FreeDV_Computer_To_Radio.monitor" sink="FreeDV_Radio_To_Computer"`
 fi
 
 # Determine correct record device to retrieve TX data
@@ -71,14 +71,19 @@ fi
 RECORD_PID=$!
 
 # Start "radio"
-python3 $SCRIPTPATH/hamlibserver.py $RECORD_PID &
+if [ "$2" == "mpp" ]; then
+    TIMES_BEFORE_KILL=5
+else
+    TIMES_BEFORE_KILL=1
+fi
+python3 $SCRIPTPATH/hamlibserver.py $RECORD_PID $TIMES_BEFORE_KILL &
 RADIO_PID=$!
 
 # Start FreeDV in test mode to record TX
 if [ "$2" == "mpp" ]; then
     TX_ARGS="-txtime 1 -txattempts 6 "
 else
-    TX_ARGS="-txtime 5 "
+    TX_ARGS="-txtime 1 -txattempts 2 "
 fi
 $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADE $TX_ARGS >tmp.log 2>&1 &
 
@@ -99,11 +104,8 @@ cat tmp.log
 kill $RECORD_PID
 
 if [ "$1" != "" ]; then
-    FADING_DIR="$(pwd)/fading"
-    if [ ! -d "$FADING_DIR" ]; then
-        mkdir $FADING_DIR
-        (cd $1/../codec2_src/unittest && ./fading_files.sh $FADING_DIR)
-    fi
+    FADING_DIR="$SCRIPTPATH/fading"
+
     # Add noise to recording to test performance
     if [ "$2" == "mpp" ]; then
         sox $(pwd)/test.wav -t raw -r 8000 -c 1 -e signed-integer -b 16 - | $1/src/ch - - --No -24 --mpp --fading_dir $FADING_DIR | sox -t raw -r 8000 -c 1 -e signed-integer -b 16 - -t wav $(pwd)/testwithnoise.wav

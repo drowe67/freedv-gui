@@ -9,6 +9,20 @@ This is a live document.  Notes on new FreeDV features are being added as they a
 
 This section contains instructions to help you get started.
 
+## System Requirements
+
+FreeDV is officially supported on the following operating systems and versions:
+
+* Windows: Windows 10 and later
+* macOS: macOS Big Sur (11.0) and later (ARM and Intel)
+* Linux: Ubuntu 22.04 LTS and later, Fedora 42 and later
+
+While it may be possible to execute FreeDV on additional platforms and distributions 
+(especially ones similar to ones currently supported), this is not guaranteed. Any 
+bugfixes required for an unsupported platform may be deferred or rejected, especially 
+if there is impact to supported platforms. Requests for official support of new platforms 
+should go through our existing [Feature Request process](https://github.com/drowe67/freedv-gui/issues/new?template=feature_request.yml).
+
 ## Easy Setup
 
 Upon starting FreeDV for the first time, the Easy Setup dialog will appear. This
@@ -814,6 +828,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 3. Build system:
     * Update Hamlib to 4.6.3 (macOS/Windows). (PR #930)
     * Reload current Git hash every time it changes. (PR #935)
+    * Add infrastructure for generating AppImage builds. (PR #937)
 
 ## V2.0.0 June 2025
 

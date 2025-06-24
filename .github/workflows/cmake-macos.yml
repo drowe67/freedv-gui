@@ -21,33 +21,13 @@ jobs:
         os: [macos-13, macos-latest]  # x86_64, ARM64
 
     runs-on: ${{ matrix.os }}
-    needs: dist
 
     steps:
     - uses: actions/checkout@v4
 
     - uses: gerlero/brew-install@v1
       with:
-        packages: automake libtool numpy sox octave wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib
-
-    - name: Install octave-signal
-      if: ${{ matrix.os == 'macos-13' }}
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-        # make sure gfortran is available
-        gfortran --version
-        octave-cli --eval "pkg install -forge control; pkg install -forge signal"
-
-    - name: Install octave-signal
-      if: ${{ matrix.os == 'macos-latest' }}
-      shell: bash
-      working-directory: ${{github.workspace}}
-      run: |
-        # make sure gfortran is available
-        sudo ln -s /opt/homebrew/bin/gfortran-14 /usr/local/bin/gfortran
-        gfortran --version
-        octave-cli --eval "pkg install -forge control; pkg install -forge signal"
+        packages: automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib
 
     - name: Install VB-Cable
       shell: bash

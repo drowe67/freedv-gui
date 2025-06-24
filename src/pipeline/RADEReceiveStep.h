@@ -25,7 +25,6 @@
 
 #include <atomic>
 #include <cstdio>
-#include <vector>
 #include "IPipelineStep.h"
 #include "../freedv_interface.h"
 #include "rade_api.h"
@@ -57,7 +56,8 @@ private:
     FARGANState* fargan_;
     struct FIFO* inputSampleFifo_;
     struct FIFO* outputSampleFifo_;
-    std::vector<float> pendingFeatures_;
+    float* pendingFeatures_;
+    int pendingFeaturesIdx_;
     FILE* featuresFile_;
     rade_text_t textPtr_;
 

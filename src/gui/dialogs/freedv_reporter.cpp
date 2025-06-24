@@ -1018,7 +1018,7 @@ void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent& event)
     // reduces the number of times one must backspace in order to completely
     // remove the flag.
     int index = 0;
-    while (index < statusMsg.Length())
+    while (index < (int)statusMsg.Length())
     {
         auto chr = statusMsg.GetChar(index);
         if (chr.GetValue() == 0x1F3F4)
@@ -1026,7 +1026,7 @@ void FreeDVReporterDialog::OnStatusTextChange(wxCommandEvent& event)
             log_debug("Found start char at index %d", index);
             auto endIndex = index + 1;
             bool foundEnd = false;
-            while (endIndex < statusMsg.Length())
+            while (endIndex < (int)statusMsg.Length())
             {
                 auto endChar = statusMsg.GetChar(endIndex).GetValue();
                 if (endChar == 0xE007F)
@@ -1432,7 +1432,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::execQueuedAction_()
         fn();
 
         lk.lock();
-        fnQueue_.erase(fnQueue_.begin());
+        fnQueue_.pop_front();
         size = fnQueue_.size();
         lk.unlock();
     }
@@ -1529,6 +1529,12 @@ FreeDVReporterDialog::FreeDVReporterDataModel::FreeDVReporterDataModel(FreeDVRep
 FreeDVReporterDialog::FreeDVReporterDataModel::~FreeDVReporterDataModel()
 {
     setReporter(nullptr);
+    
+    for (auto& kvp : allReporterData_)
+    {
+        delete kvp.second;
+    }
+    allReporterData_.clear();
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::setReporter(std::shared_ptr<FreeDVReporter> reporter)
