@@ -2251,6 +2251,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onFrequencyChangeFn_(std::st
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
+            if (iter->second->isPendingDelete)
+            {
+                log_warn("Got frequency change for user pending deletion (%s/%s, SID %s)", (const char*)iter->second->callsign.ToUTF8(), (const char*)iter->second->gridSquare.ToUTF8(), iter->second->sid.c_str());
+                return;
+            }
+
             double frequencyUserReadable = frequencyHz / 1000.0;
             wxString frequencyString;
             
@@ -2309,6 +2315,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onTransmitUpdateFn_(std::str
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {
+            if (iter->second->isPendingDelete)
+            {
+                log_warn("Got TX change for user pending deletion (%s/%s, SID %s)", (const char*)iter->second->callsign.ToUTF8(), (const char*)iter->second->gridSquare.ToUTF8(), iter->second->sid.c_str());
+                return;
+            }
+
             bool isChanged = iter->second->transmitting != transmitting;
             iter->second->transmitting = transmitting;
         
@@ -2358,6 +2370,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {            
+            if (iter->second->isPendingDelete)
+            {
+                log_warn("Got RX change for user pending deletion (%s/%s, SID %s)", (const char*)iter->second->callsign.ToUTF8(), (const char*)iter->second->gridSquare.ToUTF8(), iter->second->sid.c_str());
+                return;
+            }
+
             auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             bool isChanged = 
                 (sortingColumn == parent_->m_listSpots->GetColumn(LAST_RX_CALLSIGN_COL) && iter->second->lastRxCallsign != receivedCallsign) ||
@@ -2414,6 +2432,12 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onMessageUpdateFn_(std::stri
         auto iter = allReporterData_.find(sid);
         if (iter != allReporterData_.end())
         {        
+            if (iter->second->isPendingDelete)
+            {
+                log_warn("Got message change for user pending deletion (%s/%s, SID %s)", (const char*)iter->second->callsign.ToUTF8(), (const char*)iter->second->gridSquare.ToUTF8(), iter->second->sid.c_str());
+                return;
+            }
+
             auto sortingColumn = parent_->m_listSpots->GetSortingColumn();
             bool isChanged = false;
             if (message.size() == 0)
