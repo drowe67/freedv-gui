@@ -256,6 +256,7 @@ class FreeDVReporterDialog : public wxFrame
                 
                 // Controls whether this row is pending deletion
                 bool isPendingDelete;
+                wxDateTime deleteTime;
 
                 // Controls the current highlight color
                 wxColour foregroundColor;

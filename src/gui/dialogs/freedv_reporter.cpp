@@ -731,9 +731,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::deallocateRemovedItems()
         std::unique_lock<std::recursive_mutex> lk(dataMtx_);
         
         std::vector<std::string> keysToRemove;
+        auto curDate = wxDateTime::Now().ToUTC();
+        
         for (auto& item : allReporterData_)
         {
-            if (item.second->isPendingDelete)
+            if (
+                item.second->isPendingDelete &&
+                !item.second->deleteTime.ToUTC().IsEqualUpTo(curDate, wxTimeSpan(0, 0, 1)))
             {
                 keysToRemove.push_back(item.first);
                 delete item.second;
@@ -1625,9 +1629,9 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::clearAllEntries_()
             row.second->isVisible = false;
         }
 
-        delete row.second;
+        row.second->isPendingDelete = true;
+        row.second->deleteTime = wxDateTime::Now();
     }
-    allReporterData_.clear();
     
     Cleared();
 }
@@ -2175,6 +2179,13 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         }
         
         temp->isPendingDelete = false;
+        
+        auto existsIter = allReporterData_.find(sid);
+        if (existsIter != allReporterData_.end())
+        {
+            // Pending deletion prior to reconnect, so go ahead and delete now.
+            delete existsIter->second;
+        }
         allReporterData_[sid] = temp;
 
         if (temp->isVisible)
@@ -2224,6 +2235,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
             }
 
             item->isPendingDelete = true;
+            item->deleteTime = wxDateTime::Now();
         }
     });
 
