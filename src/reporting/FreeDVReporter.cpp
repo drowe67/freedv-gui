@@ -617,4 +617,8 @@ void FreeDVReporter::showOurselvesImpl_()
     
     sioClient_->emit("show_self");
     hidden_ = false;
+    
+    freqChangeImpl_(lastFrequency_);
+    transmitImpl_(mode_, tx_);
+    sendMessageImpl_(message_);
 }
