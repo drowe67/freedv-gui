@@ -1855,7 +1855,7 @@ unsigned int FreeDVReporterDialog::FreeDVReporterDataModel::GetChildren (const w
         int count = 0;
         for (auto& row : allReporterData_)
         {
-            if (row.second->isVisible)
+            if (row.second->isVisible && !row.second->isPendingDelete)
             {
                 count++;
                 
