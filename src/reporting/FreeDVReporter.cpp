@@ -149,7 +149,7 @@ void FreeDVReporter::showOurselves()
     
 void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, char snr)
 {
-    if (isValidForReporting())
+    if (isValidForReporting() && isFullyConnected_)
     {
         std::unique_lock<std::mutex> lk(fnQueueMutex_);
         fnQueue_.push_back([&, mode, snr, callsign]() {
@@ -257,10 +257,12 @@ void FreeDVReporter::connect_()
     sioClient_->setOnConnectFn([&]()
     {
         isConnecting_ = false;
+        isFullyConnected_ = false;
     });
     
     sioClient_->setOnDisconnectFn([&]() {
         isConnecting_ = false;
+        isFullyConnected_ = false;
         
         if (onReporterDisconnectFn_)
         {
@@ -269,6 +271,7 @@ void FreeDVReporter::connect_()
     });
     
     isConnecting_ = true;
+    isFullyConnected_ = false;
     
     std::stringstream ss;
     ss << hostname_;
@@ -322,6 +325,8 @@ void FreeDVReporter::connect_()
     });
 
     sioClient_->on("connection_successful", [&](nlohmann::json) {
+        isFullyConnected_ = true;
+        
         if (onConnectionSuccessfulFn_)
         {
             onConnectionSuccessfulFn_();
@@ -555,23 +560,29 @@ void FreeDVReporter::threadEntryPoint_()
 
 void FreeDVReporter::freqChangeImpl_(uint64_t frequency)
 {
-    nlohmann::json freqData = {
-        {"freq", frequency}
-    };
-    sioClient_->emit("freq_change", freqData);
-
+    if (isFullyConnected_)
+    {
+        nlohmann::json freqData = {
+            {"freq", frequency}
+        };
+        sioClient_->emit("freq_change", freqData);
+    }
+    
     // Save last frequency in case we need to reconnect.
     lastFrequency_ = frequency;
 }
 
 void FreeDVReporter::transmitImpl_(std::string mode, bool tx)
 {
-    nlohmann::json txData = {
-        {"mode", mode},
-        {"transmitting", tx}
-    };
-    sioClient_->emit("tx_report", txData);
-
+    if (isFullyConnected_)
+    {
+        nlohmann::json txData = {
+            {"mode", mode},
+            {"transmitting", tx}
+        };
+        sioClient_->emit("tx_report", txData);
+    }
+    
     // Save last mode and TX state in case we have to reconnect.
     mode_ = mode;
     tx_ = tx;
@@ -579,11 +590,14 @@ void FreeDVReporter::transmitImpl_(std::string mode, bool tx)
 
 void FreeDVReporter::sendMessageImpl_(std::string message)
 {
-    nlohmann::json txData = {
-        {"message", message}
-    };
-    sioClient_->emit("message_update", txData);
-
+    if (isFullyConnected_)
+    {
+        nlohmann::json txData = {
+            {"message", message}
+        };
+        sioClient_->emit("message_update", txData);
+    }
+    
     // Save last mode and TX state in case we have to reconnect.
     message_ = message;
 }
