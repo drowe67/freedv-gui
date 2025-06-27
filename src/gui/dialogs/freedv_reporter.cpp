@@ -1967,6 +1967,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     
     for (auto& kvp : allReporterData_)
     {
+	if (kvp.second->isPendingDelete)
+	{
+	    continue;
+	}
+
         bool updated = false;
         double frequencyUserReadable = kvp.second->frequency / 1000.0;
         wxString frequencyString;

@@ -257,7 +257,6 @@ void FreeDVReporter::connect_()
     sioClient_->setOnConnectFn([&]()
     {
         isConnecting_ = false;
-        isFullyConnected_ = false;
     });
     
     sioClient_->setOnDisconnectFn([&]() {
