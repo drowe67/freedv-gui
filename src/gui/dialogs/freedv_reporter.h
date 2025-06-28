@@ -143,6 +143,7 @@ class FreeDVReporterDialog : public wxFrame
         // Timer to unhighlight RX rows after 10s (like with web-based Reporter)
         wxTimer* m_resortTimer;
         wxTimer* m_highlightClearTimer;
+        wxTimer* m_deleteTimer;
 
         wxTipWindow* tipWindow_;
         
@@ -159,6 +160,7 @@ class FreeDVReporterDialog : public wxFrame
              void requestQSY(wxDataViewItem selectedItem, uint64_t frequency, wxString customText);
              void updateHighlights();
              void triggerResort();
+             void deallocateRemovedItems();
              void updateMessage(wxString statusMsg)
              {
                  if (reporter_)
@@ -251,6 +253,10 @@ class FreeDVReporterDialog : public wxFrame
 
                 // Controls whether this row has been filtered
                 bool isVisible;
+                
+                // Controls whether this row is pending deletion
+                bool isPendingDelete;
+                wxDateTime deleteTime;
 
                 // Controls the current highlight color
                 wxColour foregroundColor;

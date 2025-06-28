@@ -23,6 +23,7 @@
 //
 //=========================================================================
 
+#include <atomic>
 #include <functional>
 #include <vector>
 #include <mutex>
@@ -110,6 +111,7 @@ private:
     bool isExiting_;
     std::thread fnQueueThread_;
     bool isConnecting_;
+    std::atomic<bool> isFullyConnected_;
     
     SocketIoClient* sioClient_;
     std::string hostname_;

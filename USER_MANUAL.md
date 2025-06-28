@@ -822,12 +822,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Fix compiler error on Fedora 42 when using Hamlib packages. (PR #936, #940; thanks @jaspejavier!)
     * Legacy FreeDV modes: ensure that sync is obtained in an atomic manner. (PR #939)
     * Fix intermittent crash on Windows when pushing Start. (PR #943)
+    * FreeDV Reporter: Defer deallocation of disconnected users. (PR #948)
 2. Documentation:
     * Add missing dependency for macOS builds to README. (PR #925; thanks @relistan!)
     * Add note about using XWayland on Linux. (PR #926)
 3. Build system:
     * Update Hamlib to 4.6.3 (macOS/Windows). (PR #930)
-    * Reload current Git hash every time it changes. (PR #935)
+    * Reload current Git hash every time it changes. (PR #935, #951)
     * Add infrastructure for generating AppImage builds. (PR #937)
 
 ## V2.0.0 June 2025
