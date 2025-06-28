@@ -591,11 +591,11 @@ else(FreeDV_VERSION_TWEAK)
 endif(FreeDV_VERSION_TWEAK)
     
 if(FREEDV_VERSION_TAG)
-    if(FREEDV_HASH)
-        set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}-${FREEDV_VERSION_TAG}-${DATE_RESULT}-${FREEDV_HASH}")
-    else(FREEDV_HASH)
+    if(GIT_HASH)
+        set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}-${FREEDV_VERSION_TAG}-${DATE_RESULT}-${GIT_HASH}")
+    else(GIT_HASH)
         set(CPACK_PACKAGE_VERSION_PATCH "${CPACK_PACKAGE_VERSION_PATCH}-${FREEDV_VERSION_TAG}-${DATE_RESULT}")
-    endif(FREEDV_HASH)
+    endif(GIT_HASH)
     message(STATUS "package name = ${CPACK_PACKAGE_VERSION_PATCH}")
 endif()
 
@@ -664,7 +664,7 @@ VIAddVersionKey \\\"Company\\\" \\\"FreeDV\\\"
 VIAddVersionKey \\\"LegalCopyright\\\" \\\"Copyright (c) ${COPYRIGHT_YEAR} FreeDV\\\"
 VIAddVersionKey \\\"FileDescription\\\" \\\"FreeDV - ${PROJECT_DESCRIPTION}\\\"
 VIAddVersionKey \\\"FileVersion\\\" \\\"${CPACK_WIN_VERSION}\\\"
-VIAddVersionKey \\\"GitHash\\\" \\\"${FREEDV_HASH}\\\"
+VIAddVersionKey \\\"GitHash\\\" \\\"${GIT_HASH}\\\"
     ")
 
     # Ensures that we don't need to constantly update the rc file on every new release.
