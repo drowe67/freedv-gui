@@ -59,10 +59,7 @@ PulseAudioDevice::PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* c
 
 PulseAudioDevice::~PulseAudioDevice()
 {
-    if (stream_ != nullptr)
-    {
-        stop();
-    }
+    stop();
 }
 
 bool PulseAudioDevice::isRunning()
@@ -72,6 +69,8 @@ bool PulseAudioDevice::isRunning()
 
 void PulseAudioDevice::start()
 {
+    std::unique_lock<std::mutex> lk(objLock_);
+
     pa_sample_spec sample_specification;
     sample_specification.format = PA_SAMPLE_S16LE;
     sample_specification.rate = sampleRate_;
@@ -152,6 +151,7 @@ void PulseAudioDevice::start()
 
 void PulseAudioDevice::stop()
 {
+    std::unique_lock<std::mutex> lk(objLock_);
     if (stream_ != nullptr)
     {
         pa_threaded_mainloop_lock(mainloop_);

@@ -73,6 +73,7 @@ protected:
     PulseAudioDevice(pa_threaded_mainloop *mainloop, pa_context* context, wxString devName, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
     
 private:
+    std::mutex objLock_;
     pa_context* context_;
     pa_threaded_mainloop* mainloop_;
     pa_stream* stream_;
