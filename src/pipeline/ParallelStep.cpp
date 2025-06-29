@@ -275,7 +275,7 @@ void ParallelStep::executeRunnerThread_(ThreadInfo* threadState) noexcept
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 #endif // defined(__clang__)
 {
-    int samplesIn = codec2_fifo_used(threadState->inputFifo);
+    int samplesIn = std::min((int)(inputSampleRate_ * FRAME_DURATION), codec2_fifo_used(threadState->inputFifo));
     do
     {
         int samplesOut = 0;
@@ -289,7 +289,7 @@ void ParallelStep::executeRunnerThread_(ThreadInfo* threadState) noexcept
         {
             codec2_fifo_write(threadState->outputFifo, output.get(), samplesOut);
         }
-        samplesIn = codec2_fifo_used(threadState->inputFifo);
+        samplesIn = std::min((int)(inputSampleRate_ * FRAME_DURATION), codec2_fifo_used(threadState->inputFifo));
     } while (samplesIn > 0);
 }
 
