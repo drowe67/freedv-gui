@@ -290,7 +290,7 @@ void ParallelStep::executeRunnerThread_(ThreadInfo* threadState) noexcept
             codec2_fifo_write(threadState->outputFifo, output.get(), samplesOut);
         }
         samplesIn = std::min((int)(inputSampleRate_ * FRAME_DURATION), codec2_fifo_used(threadState->inputFifo));
-    } while (samplesIn > 0);
+    } while (samplesIn > 0 && !threadState->exitingThread);
 }
 
 void ParallelStep::reset()
