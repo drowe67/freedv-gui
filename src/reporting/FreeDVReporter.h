@@ -81,7 +81,7 @@ public:
     
     virtual void inAnalogMode(bool inAnalog) override;
     
-    virtual void addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, char snr) override;
+    virtual void addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, signed char snr) override;
     virtual void send() override;
     
     void setOnReporterConnectFn(ReporterConnectionFn fn);

@@ -147,7 +147,7 @@ void FreeDVReporter::showOurselves()
     }
 }
     
-void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, char snr)
+void FreeDVReporter::addReceiveRecord(std::string callsign, std::string mode, uint64_t frequency, signed char snr)
 {
     if (isValidForReporting() && isFullyConnected_)
     {
