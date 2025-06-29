@@ -616,8 +616,8 @@ void TxRxThread::txProcessing_() noexcept
 
         int             nout;
 
-        
-        while(!helper_->mustStopWork() && (unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {        
+        int count = 0;
+        while(!helper_->mustStopWork() && count < 3 && (unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {        
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
 
@@ -675,6 +675,7 @@ void TxRxThread::txProcessing_() noexcept
             {
                 codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
             }
+            count++;
         }
     }
     else
@@ -739,7 +740,8 @@ void TxRxThread::rxProcessing_() noexcept
     auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
 
     // while we have enough input samples available and enough space in the output FIFO ... 
-    while (!helper_->mustStopWork() && codec2_fifo_free(outFifo) >= nsam_one_speech_frame && codec2_fifo_read(cbData->infifo1, inputSamples_.get(), nsam) == 0 && processInputFifo) {
+    int count = 0;
+    while (!helper_->mustStopWork() && processInputFifo && codec2_fifo_free(outFifo) >= nsam_one_speech_frame && codec2_fifo_read(cbData->infifo1, inputSamples_.get(), nsam) == 0) {
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
 
@@ -751,8 +753,9 @@ void TxRxThread::rxProcessing_() noexcept
         }
         
         processInputFifo = 
-                (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
-                (g_tx && wxGetApp().appConfiguration.monitorTxAudio) ||
-                (!g_voice_keyer_tx && ((g_half_duplex && !g_tx) || !g_half_duplex));
+            (++count) < 3 &&
+            ((g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
+            (g_tx && wxGetApp().appConfiguration.monitorTxAudio) ||
+            (!g_voice_keyer_tx && ((g_half_duplex && !g_tx) || !g_half_duplex)));
     }
 }
