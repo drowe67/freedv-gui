@@ -78,7 +78,7 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool forPl
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     outputSamples_ = std::shared_ptr<short>(
-        new short[outputSampleRate / 2], 
+        new short[outputSampleRate], 
         std::default_delete<short[]>());
     assert(outputSamples_ != nullptr);
     
