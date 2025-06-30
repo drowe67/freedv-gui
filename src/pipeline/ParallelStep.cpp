@@ -256,6 +256,10 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
     
     ThreadInfo* outputTask = threads_[stepToOutput];
     *numOutputSamples = codec2_fifo_used(outputTask->outputFifo);
+    if (numInputSamples > 0)
+    {
+        *numOutputSamples = std::min(*numOutputSamples, numInputSamples);
+    }
     if (*numOutputSamples == 0)
     {
         memset(outputTask->tempOutput.get(), 0, sizeof(short) * outputSampleRate_);
@@ -271,18 +275,22 @@ void ParallelStep::executeRunnerThread_(ThreadInfo* threadState) noexcept
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 #endif // defined(__clang__)
 {
-    int samplesIn = codec2_fifo_used(threadState->inputFifo);
-    int samplesOut = 0;
-    if (codec2_fifo_read(threadState->inputFifo, threadState->tempInput.get(), samplesIn) != 0)
+    int samplesIn = std::min((int)(inputSampleRate_ * FRAME_DURATION), codec2_fifo_used(threadState->inputFifo));
+    do
     {
-        samplesIn = 0;
-    }
+        int samplesOut = 0;
+        if (codec2_fifo_read(threadState->inputFifo, threadState->tempInput.get(), samplesIn) != 0)
+        {
+            samplesIn = 0;
+        }
 
-    auto output = threadState->step->execute(threadState->tempInput, samplesIn, &samplesOut);
-    if (samplesOut > 0)
-    {
-        codec2_fifo_write(threadState->outputFifo, output.get(), samplesOut);
-    }
+        auto output = threadState->step->execute(threadState->tempInput, samplesIn, &samplesOut);
+        if (samplesOut > 0)
+        {
+            codec2_fifo_write(threadState->outputFifo, output.get(), samplesOut);
+        }
+        samplesIn = std::min((int)(inputSampleRate_ * FRAME_DURATION), codec2_fifo_used(threadState->inputFifo));
+    } while (samplesIn > 0 && !threadState->exitingThread);
 }
 
 void ParallelStep::reset()

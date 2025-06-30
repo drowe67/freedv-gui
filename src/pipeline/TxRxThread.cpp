@@ -126,7 +126,6 @@ void TxRxThread::initializePipeline_()
     if (m_tx)
     {
         pipeline_ = std::shared_ptr<AudioPipeline>(new AudioPipeline(inputSampleRate_, outputSampleRate_));
-        
         // Record from mic step (optional)
         auto recordMicStep = new RecordStep(
             inputSampleRate_, 
@@ -185,7 +184,7 @@ void TxRxThread::initializePipeline_()
             std::shared_ptr<IPipelineStep>(eitherOrProcessSpeex),
             std::shared_ptr<IPipelineStep>(eitherOrBypassSpeex));
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrSpeexStep));
-        
+       
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
             inputSampleRate_, 
@@ -209,6 +208,8 @@ void TxRxThread::initializePipeline_()
         // Resample for plot step
         auto resampleForPlotStep = new ResampleForPlotStep(g_plotSpeechInFifo);
         auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
+        auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotResampler));
         resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotStep));
 
         auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline);
@@ -266,7 +267,6 @@ void TxRxThread::initializePipeline_()
     else
     {
         pipeline_ = std::shared_ptr<AudioPipeline>(new AudioPipeline(inputSampleRate_, outputSampleRate_));
-        
         // Record from radio step (optional)
         auto recordRadioStep = new RecordStep(
             inputSampleRate_, 
@@ -323,11 +323,13 @@ void TxRxThread::initializePipeline_()
         // Resample for plot step (demod in)
         auto resampleForPlotStep = new ResampleForPlotStep(g_plotDemodInFifo);
         auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
+        auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotResampler));
         resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotStep));
 
         auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline);
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotTap));
-        
+
         // Tone interferer step (optional)
         auto bypassToneInterferer = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         auto toneInterfererStep = new ToneInterfererStep(
@@ -350,6 +352,8 @@ void TxRxThread::initializePipeline_()
         );
         auto computeRfSpectrumPipeline = new AudioPipeline(
             inputSampleRate_, computeRfSpectrumStep->getOutputSampleRate());
+        auto resampleForRfSpectrum = new ResampleStep(inputSampleRate_, computeRfSpectrumStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        computeRfSpectrumPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForRfSpectrum));
         computeRfSpectrumPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(computeRfSpectrumStep));
         
         auto computeRfSpectrumTap = new TapStep(inputSampleRate_, computeRfSpectrumPipeline);
@@ -439,6 +443,8 @@ void TxRxThread::initializePipeline_()
         // Resample for plot step (speech out)
         auto resampleForPlotOutStep = new ResampleForPlotStep(g_plotSpeechOutFifo);
         auto resampleForPlotOutPipeline = new AudioPipeline(outputSampleRate_, resampleForPlotOutStep->getOutputSampleRate());
+        auto resampleForPlotOutResampler = new ResampleStep(outputSampleRate_, resampleForPlotOutStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        resampleForPlotOutPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutResampler));
         resampleForPlotOutPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutStep));
 
         auto resampleForPlotOutTap = new TapStep(outputSampleRate_, resampleForPlotOutPipeline);
@@ -459,7 +465,12 @@ void* TxRxThread::Entry()
     
     // Request real-time scheduling from the operating system.    
     helper_->setHelperRealTime();
-    
+   
+    int numTimeSamples = 0;
+    double minDuration = 1e9;
+    double maxDuration = 0;
+    double sumDuration = 0;
+    double sumDoubleDuration = 0; 
     while (m_run)
     {
 #if defined(__linux__)
@@ -473,10 +484,16 @@ void* TxRxThread::Entry()
         
         //log_info("thread woken up: m_tx=%d", (int)m_tx);
         helper_->startRealTimeWork();
-        
+ 
+        auto b = std::chrono::high_resolution_clock::now();
         if (m_tx) txProcessing_();
         else rxProcessing_();
-
+        auto e = std::chrono::high_resolution_clock::now();
+        auto d = std::chrono::duration_cast<std::chrono::nanoseconds>(e - b).count();
+        numTimeSamples++; 
+        if (d < minDuration) minDuration = d;
+        if (d > maxDuration) maxDuration = d;
+        sumDuration += d; sumDoubleDuration += pow(d, 2);
         // Determine whether we need to pause for a shorter amount
         // of time to avoid dropouts.
         paCallBackData  *cbData = g_rxUserdata;
@@ -489,7 +506,7 @@ void* TxRxThread::Entry()
         auto fifoUsed = codec2_fifo_used(outFifo);
         helper_->stopRealTimeWork(fifoUsed < totalFifoCapacity / 2);
     }
-    
+    log_info("m_tx = %d, min = %f ns, max = %f ns, mean = %f ns, stdev = %f ns", m_tx, minDuration, maxDuration, sumDuration / numTimeSamples, sqrt((sumDoubleDuration - pow(sumDuration, 2)/numTimeSamples) / (numTimeSamples - 1)));
     // Force pipeline to delete itself when we're done with the thread.
     pipeline_ = nullptr;
     
@@ -596,12 +613,11 @@ void TxRxThread::txProcessing_() noexcept
                       codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
     	}
 
-        int nsam_in_48 = freedvInterface.getTxNumSpeechSamples() * ((float)inputSampleRate_ / (float)freedvInterface.getTxSpeechSampleRate());
+        int nsam_in_48 = (int)(inputSampleRate_ * FRAME_DURATION); //freedvInterface.getTxNumSpeechSamples() * ((float)inputSampleRate_ / (float)freedvInterface.getTxSpeechSampleRate());
         assert(nsam_in_48 > 0);
 
         int             nout;
 
-        
         while(!helper_->mustStopWork() && (unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {        
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
@@ -724,7 +740,7 @@ void TxRxThread::rxProcessing_() noexcept
     auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
 
     // while we have enough input samples available and enough space in the output FIFO ... 
-    while (!helper_->mustStopWork() && codec2_fifo_free(outFifo) >= nsam_one_speech_frame && codec2_fifo_read(cbData->infifo1, inputSamples_.get(), nsam) == 0 && processInputFifo) {
+    while (!helper_->mustStopWork() && processInputFifo && codec2_fifo_free(outFifo) >= nsam_one_speech_frame && codec2_fifo_read(cbData->infifo1, inputSamples_.get(), nsam) == 0) {
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
 
@@ -736,8 +752,8 @@ void TxRxThread::rxProcessing_() noexcept
         }
         
         processInputFifo = 
-                (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
-                (g_tx && wxGetApp().appConfiguration.monitorTxAudio) ||
-                (!g_voice_keyer_tx && ((g_half_duplex && !g_tx) || !g_half_duplex));
+            (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
+            (g_tx && wxGetApp().appConfiguration.monitorTxAudio) ||
+            (!g_voice_keyer_tx && ((g_half_duplex && !g_tx) || !g_half_duplex));
     }
 }
