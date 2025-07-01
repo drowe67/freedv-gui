@@ -40,7 +40,7 @@ using namespace std::chrono_literals;
 
 // Target latency. This controls e.g. how long it takes for
 // TX audio to reach the radio.
-#define PULSE_TARGET_LATENCY_US 25000
+#define PULSE_TARGET_LATENCY_US 20000
 
 thread_local bool PulseAudioDevice::MustStopWork_ = false;
 
