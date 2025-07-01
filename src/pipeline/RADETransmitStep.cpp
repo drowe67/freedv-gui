@@ -83,6 +83,8 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
 
     featureList_ = new float[rade_n_features_in_out(dv_)];
     assert(featureList_ != nullptr);
+
+    arch_ = opus_select_arch();
 }
 
 RADETransmitStep::~RADETransmitStep()
@@ -151,11 +153,9 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
             short pcm[LPCNET_FRAME_SIZE];
             float features[NB_TOTAL_FEATURES];
 
-            int arch = opus_select_arch();
-
             // Feature extraction
             codec2_fifo_read(inputSampleFifo_, pcm, LPCNET_FRAME_SIZE);
-            lpcnet_compute_single_frame_features(encState_, pcm, features, arch);
+            lpcnet_compute_single_frame_features(encState_, pcm, features, arch_);
             
             if (featuresFile_)
             {
