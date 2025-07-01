@@ -46,6 +46,15 @@ else(APPLE)
     )
 endif(APPLE)    
 
+if(NOT DEFINED LINUX)
+    string(FIND ${CMAKE_SYSTEM_NAME} "Linux" LINUX_LOC)
+    if((${LINUX_LOC} GREATER 0) OR (${LINUX_LOC} EQUAL 0))
+        set(LINUX ON)
+    else((${LINUX_LOC} GREATER 0) OR (${LINUX_LOC} EQUAL 0))
+        set(LINUX OFF)
+    endif((${LINUX_LOC} GREATER 0) OR (${LINUX_LOC} EQUAL 0))
+endif(NOT DEFINED LINUX)
+
 # Adds a tag to the end of the version string. Leave empty
 # for official release builds.
 if(NOT DEFINED FREEDV_VERSION_TAG)
@@ -344,15 +353,6 @@ include(cmake/BuildRADE.cmake)
 # Build codec2
 #
 include(cmake/BuildCodec2.cmake)
-
-if(NOT DEFINED LINUX)
-    string(FIND ${CMAKE_SYSTEM_NAME} "Linux" LINUX_LOC)
-    if((${LINUX_LOC} GREATER 0) OR (${LINUX_LOC} EQUAL 0))
-        set(LINUX ON)
-    else((${LINUX_LOC} GREATER 0) OR (${LINUX_LOC} EQUAL 0))
-        set(LINUX OFF)
-    endif((${LINUX_LOC} GREATER 0) OR (${LINUX_LOC} EQUAL 0))
-endif(NOT DEFINED LINUX)
 
 if (NOT USE_NATIVE_AUDIO AND LINUX)
     message(WARNING "Use of PortAudio on Linux has been deprecated and may be explicitly disallowed in a future release. It is highly recommended that you use FreeDV's built-in PulseAudio support instead as this generally gives better results, especially on distributions that now use pipewire for audio.")
