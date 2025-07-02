@@ -823,6 +823,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Legacy FreeDV modes: ensure that sync is obtained in an atomic manner. (PR #939)
     * Fix intermittent crash on Windows when pushing Start. (PR #943)
     * FreeDV Reporter: Defer deallocation of disconnected users. (PR #948)
+    * Fix issue preventing rtkit from being compiled-in on Ubuntu 22.04. (PR #954)
 2. Documentation:
     * Add missing dependency for macOS builds to README. (PR #925; thanks @relistan!)
     * Add note about using XWayland on Linux. (PR #926)
