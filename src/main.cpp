@@ -238,7 +238,7 @@ void MainApp::UnitTest_()
         frame->SetFocus();
         frame->Raise();
         frame->Show(true);
-        std::this_thread::sleep_for(5000ms);
+        std::this_thread::sleep_for(1000ms);
         prom.set_value();
     });
  
