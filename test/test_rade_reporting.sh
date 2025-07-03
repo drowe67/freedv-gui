@@ -11,7 +11,7 @@ fi
 
 createVirtualAudioCable () {
     CABLE_NAME=$1
-    pactl load-module module-null-sink sink_name=$CABLE_NAME sink_properties=device.description=$CABLE_NAME 
+    pactl load-module module-null-sink rate=48000 sink_name=$CABLE_NAME sink_properties=device.description=$CABLE_NAME 
 }
 
 FREEDV_RADIO_TO_COMPUTER_DEVICE="${FREEDV_RADIO_TO_COMPUTER_DEVICE:-FreeDV_Radio_To_Computer}"
