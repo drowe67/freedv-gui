@@ -230,21 +230,16 @@ void MainApp::UnitTest_()
     }
     engine->stop();
 
-    std::this_thread::sleep_for(1s);
-
     // Bring window to the front
-    std::promise<void> prom1;
-    auto fut1 = prom1.get_future();
     CallAfter([&]() {
         frame->Iconize(false);
         frame->SetFocus();
         frame->Raise();
         frame->Show(true);
-        prom1.set_value();
     });
     
-    // Wait for FreeDV to come to foreground
-    fut1.wait();
+    // Wait 100ms for FreeDV to come to foreground
+    std::this_thread::sleep_for(100ms);
 
     // Select FreeDV mode.
     wxRadioButton* modeBtn = nullptr;
@@ -280,32 +275,29 @@ void MainApp::UnitTest_()
     
     // Fire event to start FreeDV
     log_info("Firing start");
-    std::promise<void> prom2;
-    auto fut2 = prom2.get_future();
     CallAfter([&]() {
         frame->m_togBtnOnOff->SetValue(true);
         wxCommandEvent* onEvent = new wxCommandEvent(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, frame->m_togBtnOnOff->GetId());
         onEvent->SetEventObject(frame->m_togBtnOnOff);
         frame->OnTogBtnOnOff(*onEvent);
         delete onEvent;
-        prom2.set_value();
         //QueueEvent(onEvent);
     });
     /*sim.MouseMove(frame->m_togBtnOnOff->GetScreenPosition());
     sim.MouseClick();*/
     
     // Wait for FreeDV to start
-    fut2.wait();
+    std::this_thread::sleep_for(1s);
     while (true)
     {
         bool isRunning = false;
         frame->executeOnUiThreadAndWait_([&]() {
-            isRunning = frame->m_rxThread != nullptr && frame->m_rxThread->IsRunning(); //frame->m_togBtnOnOff->IsEnabled();
+            isRunning = frame->m_togBtnOnOff->IsEnabled();
         });
         if (isRunning) break;
         std::this_thread::sleep_for(20ms);
     }
-
+    
     if (testName == "tx")
     {
         log_info("Transmitting %d times", utTxAttempts);
