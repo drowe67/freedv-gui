@@ -239,7 +239,7 @@ void MainApp::UnitTest_()
     });
     
     // Wait 100ms for FreeDV to come to foreground
-    std::this_thread::sleep_for(100ms);
+    std::this_thread::sleep_for(5000ms);
 
     // Select FreeDV mode.
     wxRadioButton* modeBtn = nullptr;
