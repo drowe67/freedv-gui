@@ -231,19 +231,15 @@ void MainApp::UnitTest_()
     engine->stop();
 
     // Bring window to the front
-    std::promise<void> prom;
-    auto fut = prom.get_future();
     CallAfter([&]() {
         frame->Iconize(false);
         frame->SetFocus();
         frame->Raise();
         frame->Show(true);
-        std::this_thread::sleep_for(1000ms);
-        prom.set_value();
     });
- 
-    // Wait for FreeDV to come to foreground
-    fut.wait();
+    
+    // Wait 100ms for FreeDV to come to foreground
+    std::this_thread::sleep_for(100ms);
 
     // Select FreeDV mode.
     wxRadioButton* modeBtn = nullptr;
