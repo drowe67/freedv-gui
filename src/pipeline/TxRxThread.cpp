@@ -58,8 +58,8 @@ using namespace std::chrono_literals;
 extern paCallBackData* g_rxUserdata;
 extern int g_analog;
 extern int g_nSoundCards;
-extern bool g_half_duplex;
-extern int g_tx;
+extern std::atomic<bool> g_half_duplex;
+extern std::atomic<int> g_tx;
 extern int g_dump_fifo_state;
 extern bool endingTx;
 extern bool g_playFileToMicIn;
@@ -88,7 +88,7 @@ extern int g_State;
 extern int g_channel_noise;
 extern float g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
-extern bool g_voice_keyer_tx;
+extern std::atomic<bool> g_voice_keyer_tx;
 extern bool g_eoo_enqueued;
 
 #include <speex/speex_preprocess.h>

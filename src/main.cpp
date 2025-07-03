@@ -102,10 +102,10 @@ int g_txLevel = 0;
 int   g_SquelchActive;
 float g_SquelchLevel;
 int   g_analog;
-int   g_tx;
+std::atomic<int>   g_tx;
 float g_snr;
-bool  g_half_duplex;
-bool  g_voice_keyer_tx;
+std::atomic<bool>  g_half_duplex;
+std::atomic<bool>  g_voice_keyer_tx;
 SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
 
 // sending and receiving Call Sign data

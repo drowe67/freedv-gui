@@ -9,7 +9,7 @@
 
 extern SNDFILE            *g_sfRecMicFile;
 bool                g_recVoiceKeyerFile;
-extern bool g_voice_keyer_tx;
+extern std::atomic<bool> g_voice_keyer_tx;
 extern wxMutex g_mutexProtectingCallbackData;
 extern bool endingTx;
 
