@@ -230,7 +230,7 @@ void MainApp::UnitTest_()
     }
     engine->stop();
 
-    std::this_thread::sleep_for(5s);
+    std::this_thread::sleep_for(1s);
 
     // Bring window to the front
     std::promise<void> prom1;
