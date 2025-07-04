@@ -208,8 +208,8 @@ void TxRxThread::initializePipeline_()
         // Resample for plot step
         auto resampleForPlotStep = new ResampleForPlotStep(g_plotSpeechInFifo);
         auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
-        auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotResampler));
+        //auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        //resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotResampler));
         resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotStep));
 
         auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline);
@@ -323,8 +323,8 @@ void TxRxThread::initializePipeline_()
         // Resample for plot step (demod in)
         auto resampleForPlotStep = new ResampleForPlotStep(g_plotDemodInFifo);
         auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
-        auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotResampler));
+        //auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        //resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotResampler));
         resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotStep));
 
         auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline);
@@ -352,8 +352,8 @@ void TxRxThread::initializePipeline_()
         );
         auto computeRfSpectrumPipeline = new AudioPipeline(
             inputSampleRate_, computeRfSpectrumStep->getOutputSampleRate());
-        auto resampleForRfSpectrum = new ResampleStep(inputSampleRate_, computeRfSpectrumStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        computeRfSpectrumPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForRfSpectrum));
+        //auto resampleForRfSpectrum = new ResampleStep(inputSampleRate_, computeRfSpectrumStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        //computeRfSpectrumPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForRfSpectrum));
         computeRfSpectrumPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(computeRfSpectrumStep));
         
         auto computeRfSpectrumTap = new TapStep(inputSampleRate_, computeRfSpectrumPipeline);
@@ -443,8 +443,8 @@ void TxRxThread::initializePipeline_()
         // Resample for plot step (speech out)
         auto resampleForPlotOutStep = new ResampleForPlotStep(g_plotSpeechOutFifo);
         auto resampleForPlotOutPipeline = new AudioPipeline(outputSampleRate_, resampleForPlotOutStep->getOutputSampleRate());
-        auto resampleForPlotOutResampler = new ResampleStep(outputSampleRate_, resampleForPlotOutStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        resampleForPlotOutPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutResampler));
+        //auto resampleForPlotOutResampler = new ResampleStep(outputSampleRate_, resampleForPlotOutStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        //resampleForPlotOutPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutResampler));
         resampleForPlotOutPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutStep));
 
         auto resampleForPlotOutTap = new TapStep(outputSampleRate_, resampleForPlotOutPipeline);
@@ -465,12 +465,15 @@ void* TxRxThread::Entry()
     
     // Request real-time scheduling from the operating system.    
     helper_->setHelperRealTime();
-   
+
+#if 0 
     int numTimeSamples = 0;
     double minDuration = 1e9;
     double maxDuration = 0;
     double sumDuration = 0;
     double sumDoubleDuration = 0; 
+#endif // 0
+
     while (m_run)
     {
 #if defined(__linux__)
@@ -484,16 +487,23 @@ void* TxRxThread::Entry()
         
         //log_info("thread woken up: m_tx=%d", (int)m_tx);
         helper_->startRealTimeWork();
- 
+
+#if 0 
         auto b = std::chrono::high_resolution_clock::now();
+#endif // 0
+
         if (m_tx) txProcessing_();
         else rxProcessing_();
+
+#if 0
         auto e = std::chrono::high_resolution_clock::now();
         auto d = std::chrono::duration_cast<std::chrono::nanoseconds>(e - b).count();
         numTimeSamples++; 
         if (d < minDuration) minDuration = d;
         if (d > maxDuration) maxDuration = d;
         sumDuration += d; sumDoubleDuration += pow(d, 2);
+#endif // 0
+
         // Determine whether we need to pause for a shorter amount
         // of time to avoid dropouts.
         paCallBackData  *cbData = g_rxUserdata;
@@ -506,7 +516,11 @@ void* TxRxThread::Entry()
         auto fifoUsed = codec2_fifo_used(outFifo);
         helper_->stopRealTimeWork(fifoUsed < totalFifoCapacity / 2);
     }
+
+#if 0
     log_info("m_tx = %d, min = %f ns, max = %f ns, mean = %f ns, stdev = %f ns", m_tx, minDuration, maxDuration, sumDuration / numTimeSamples, sqrt((sumDoubleDuration - pow(sumDuration, 2)/numTimeSamples) / (numTimeSamples - 1)));
+#endif // 0
+
     // Force pipeline to delete itself when we're done with the thread.
     pipeline_ = nullptr;
     
@@ -613,7 +627,7 @@ void TxRxThread::txProcessing_() noexcept
                       codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
     	}
 
-        int nsam_in_48 = (int)(inputSampleRate_ * FRAME_DURATION); //freedvInterface.getTxNumSpeechSamples() * ((float)inputSampleRate_ / (float)freedvInterface.getTxSpeechSampleRate());
+        int nsam_in_48 = (int)(inputSampleRate_ * FRAME_DURATION);
         assert(nsam_in_48 > 0);
 
         int             nout;
