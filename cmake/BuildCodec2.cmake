@@ -22,6 +22,7 @@ ExternalProject_Add(build_codec2
 ExternalProject_Get_Property(build_codec2 BINARY_DIR)
 ExternalProject_Get_Property(build_codec2 SOURCE_DIR)
 add_library(codec2 STATIC IMPORTED)
+add_dependencies(codec2 build_codec2)
 
 set_target_properties(codec2 PROPERTIES
     IMPORTED_LOCATION "${BINARY_DIR}/src/libcodec2${CMAKE_STATIC_LIBRARY_SUFFIX}"
