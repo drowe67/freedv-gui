@@ -140,27 +140,6 @@ void MacAudioDevice::start()
             kAudioDevicePropertyScopeInput :
             kAudioDevicePropertyScopeOutput;
         
-        Float64 sampleRateAsFloat = sampleRate_;
-
-        log_info("Attempting to set sample rate to %f for device %d", sampleRateAsFloat, coreAudioId_);
-        OSStatus error = AudioObjectSetPropertyData(
-            coreAudioId_,
-            &propertyAddress,
-            0,
-            nil,
-            sizeof(Float64),
-            &sampleRateAsFloat);
-        if (error != noErr)
-        {
-            std::stringstream ss;
-            ss << "Could not set sample rate for device \"" << deviceName_ << "\" (err " << error << ")";
-            if (onAudioErrorFunction)
-            {
-                onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
-            }
-            return;
-        }
-        
         // Attempt to set the IO frame size to an optimal value. This hopefully 
         // reduces dropouts on marginal hardware.
         UInt32 minFrameSize = 0;
@@ -192,7 +171,7 @@ void MacAudioDevice::start()
             [[engine inputNode] audioUnit] :
             [[engine outputNode] audioUnit];
         
-        error = AudioUnitSetProperty(audioUnit,
+        OSStatus error = AudioUnitSetProperty(audioUnit,
                                      kAudioOutputUnitProperty_CurrentDevice,
                                      kAudioUnitScope_Global,
                                      0,
@@ -233,16 +212,27 @@ void MacAudioDevice::start()
         AVAudioMixerNode* mixer = 
             (direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ?
             [engine mainMixerNode] :
-            nil;
+            nil;;
     
-        // Create nodes and links
+        // Create nodes and links. Note that we allocate maxFrameSize + 1 as there
+        // are certain devices/scenarios where AVAudioSinkNode and AVAudioSourceNode
+        // pass in greater than desiredFrameSize (for example, when using ZoomAudioDevice
+        // as a microphone).
         AVAudioPlayerNode *player = nil;
-        inputFrames_ = new short[maxFrameSize * numChannels_];
+        inputFrames_ = new short[(maxFrameSize + 1) * numChannels_];
         assert(inputFrames_ != nullptr);
+        
+        // Audio nodes only accept non-interleaved float samples for some reason, but can handle sample
+        // rate conversions no problem.
+        AVAudioFormat* nativeFormat = 
+            [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32
+                                   sampleRate:sampleRate_
+                                   channels:numChannels_
+                                   interleaved:NO];
 
         if (direction_ == IAudioEngine::AUDIO_ENGINE_IN)
         {
-            log_info("Create mixer node for input device %d", coreAudioId_);
+            log_info("Create record node for input device %d", coreAudioId_);
         
             AVAudioInputNode* inNode = [engine inputNode];
 
@@ -268,8 +258,11 @@ void MacAudioDevice::start()
             
             AVAudioFormat* inputFormat = [inNode inputFormatForBus:0];
             AVAudioSinkNode* sinkNode = [[AVAudioSinkNode alloc] initWithReceiverBlock:block];
+            AVAudioMixerNode* mixNode = [[AVAudioMixerNode alloc] init];
             [engine attachNode:sinkNode];    
-            [engine connect:inNode to:sinkNode format:inputFormat]; 
+            [engine attachNode:mixNode];
+            [engine connect:inNode to:mixNode format:inputFormat];
+            [engine connect:mixNode to:sinkNode format:nativeFormat];
         }
         else
         {
@@ -294,17 +287,10 @@ void MacAudioDevice::start()
                 
                 return OSStatus(noErr);
             };
-
-            // Audio nodes only accept non-interleaved float samples for some reason, but can handle sample
-            // rate conversions no problem.
-            AVAudioFormat* nativeFormat = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32
-                                   sampleRate:sampleRate_
-                                   channels:numChannels_
-                                   interleaved:NO];
             
             AVAudioSourceNode* sourceNode = [[AVAudioSourceNode alloc] initWithFormat:nativeFormat renderBlock:block];
             [engine attachNode:sourceNode];
-            [engine connect:sourceNode to:mixer format:nil];
+            [engine connect:sourceNode to:mixer format:nativeFormat];
         }
     
         log_info("Start engine for device %d", coreAudioId_);
@@ -353,7 +339,7 @@ void MacAudioDevice::start()
                 tmpThread.detach();
             }
         }];
-
+        
         // add listener for detecting when a device is removed
         const AudioObjectPropertyAddress aliveAddress =
         {
