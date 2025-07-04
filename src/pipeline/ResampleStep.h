@@ -30,7 +30,7 @@
 class ResampleStep : public IPipelineStep
 {
 public:
-    ResampleStep(int inputSampleRate, int outputSampleRate);
+    ResampleStep(int inputSampleRate, int outputSampleRate, bool forPlotsOnly = false);
     virtual ~ResampleStep();
     
     virtual int getInputSampleRate() const override;
