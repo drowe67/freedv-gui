@@ -53,6 +53,18 @@ using namespace std::chrono_literals;
 
 #include <wx/stopwatch.h>
 
+// Experimental options for potential future release:
+//
+// * ENABLE_FASTER_PLOTS: This uses a faster resampling algorithm to reduce the CPU
+//   usage required to generate various plots in the user interface. Currently disabled
+//   due to unknown effects on visual quality. (Tech note: When enabled, libsamplerate is 
+//   directed to use linear interpolation instead of sinc for the plot resampling.)
+// * ENABLE_PROCESSING_STATS: This causes execution statistics to be collected for RX and TX
+//   processing and output in the log after the user pushes Stop. 
+
+//#define ENABLE_FASTER_PLOTS
+//#define ENABLE_PROCESSING_STATS
+
 // External globals
 // TBD -- work on fully removing the need for these.
 extern paCallBackData* g_rxUserdata;
@@ -208,8 +220,10 @@ void TxRxThread::initializePipeline_()
         // Resample for plot step
         auto resampleForPlotStep = new ResampleForPlotStep(g_plotSpeechInFifo);
         auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
-        //auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        //resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotResampler));
+#if defined(ENABLE_FASTER_PLOTS)
+        auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotResampler));
+#endif // defined(ENABLE_FASTER_PLOTS)
         resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotStep));
 
         auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline);
@@ -323,8 +337,10 @@ void TxRxThread::initializePipeline_()
         // Resample for plot step (demod in)
         auto resampleForPlotStep = new ResampleForPlotStep(g_plotDemodInFifo);
         auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
-        //auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        //resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotResampler));
+#if defined(ENABLE_FASTER_PLOTS)
+        auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotResampler));
+#endif // defined(ENABLE_FASTER_PLOTS)
         resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotStep));
 
         auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline);
@@ -352,8 +368,10 @@ void TxRxThread::initializePipeline_()
         );
         auto computeRfSpectrumPipeline = new AudioPipeline(
             inputSampleRate_, computeRfSpectrumStep->getOutputSampleRate());
-        //auto resampleForRfSpectrum = new ResampleStep(inputSampleRate_, computeRfSpectrumStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        //computeRfSpectrumPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForRfSpectrum));
+#if defined(ENABLE_FASTER_PLOTS)
+        auto resampleForRfSpectrum = new ResampleStep(inputSampleRate_, computeRfSpectrumStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        computeRfSpectrumPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForRfSpectrum));
+#endif // defined(ENABLE_FASTER_PLOTS)
         computeRfSpectrumPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(computeRfSpectrumStep));
         
         auto computeRfSpectrumTap = new TapStep(inputSampleRate_, computeRfSpectrumPipeline);
@@ -443,8 +461,10 @@ void TxRxThread::initializePipeline_()
         // Resample for plot step (speech out)
         auto resampleForPlotOutStep = new ResampleForPlotStep(g_plotSpeechOutFifo);
         auto resampleForPlotOutPipeline = new AudioPipeline(outputSampleRate_, resampleForPlotOutStep->getOutputSampleRate());
-        //auto resampleForPlotOutResampler = new ResampleStep(outputSampleRate_, resampleForPlotOutStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        //resampleForPlotOutPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutResampler));
+#if defined(ENABLE_FASTER_PLOTS)
+        auto resampleForPlotOutResampler = new ResampleStep(outputSampleRate_, resampleForPlotOutStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
+        resampleForPlotOutPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutResampler));
+#endif // defined(ENABLE_FASTER_PLOTS)
         resampleForPlotOutPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutStep));
 
         auto resampleForPlotOutTap = new TapStep(outputSampleRate_, resampleForPlotOutPipeline);
@@ -466,13 +486,13 @@ void* TxRxThread::Entry()
     // Request real-time scheduling from the operating system.    
     helper_->setHelperRealTime();
 
-#if 0 
+#if defined(ENABLE_PROCESSING_STATS)
     int numTimeSamples = 0;
     double minDuration = 1e9;
     double maxDuration = 0;
     double sumDuration = 0;
     double sumDoubleDuration = 0; 
-#endif // 0
+#endif // defined(ENABLE_PROCESSING_STATS)
 
     while (m_run)
     {
@@ -488,21 +508,21 @@ void* TxRxThread::Entry()
         //log_info("thread woken up: m_tx=%d", (int)m_tx);
         helper_->startRealTimeWork();
 
-#if 0 
+#if defined(ENABLE_PROCESSING_STATS)
         auto b = std::chrono::high_resolution_clock::now();
-#endif // 0
+#endif // defined(ENABLE_PROCESSING_STATS)
 
         if (m_tx) txProcessing_();
         else rxProcessing_();
 
-#if 0
+#if defined(ENABLE_PROCESSING_STATS)
         auto e = std::chrono::high_resolution_clock::now();
         auto d = std::chrono::duration_cast<std::chrono::nanoseconds>(e - b).count();
         numTimeSamples++; 
         if (d < minDuration) minDuration = d;
         if (d > maxDuration) maxDuration = d;
         sumDuration += d; sumDoubleDuration += pow(d, 2);
-#endif // 0
+#endif // defined(ENABLE_PROCESSING_STATS)
 
         // Determine whether we need to pause for a shorter amount
         // of time to avoid dropouts.
@@ -517,9 +537,9 @@ void* TxRxThread::Entry()
         helper_->stopRealTimeWork(fifoUsed < totalFifoCapacity / 2);
     }
 
-#if 0
+#if defined(ENABLE_PROCESSING_STATS)
     log_info("m_tx = %d, min = %f ns, max = %f ns, mean = %f ns, stdev = %f ns", m_tx, minDuration, maxDuration, sumDuration / numTimeSamples, sqrt((sumDoubleDuration - pow(sumDuration, 2)/numTimeSamples) / (numTimeSamples - 1)));
-#endif // 0
+#endif // defined(ENABLE_PROCESSING_STATS)
 
     // Force pipeline to delete itself when we're done with the thread.
     pipeline_ = nullptr;
