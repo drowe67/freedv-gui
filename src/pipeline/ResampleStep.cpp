@@ -68,12 +68,12 @@ static int resample_step(SRC_STATE *src,
     return src_data.output_frames_gen;
 }
 
-ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate)
+ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool forPlotsOnly)
     : inputSampleRate_(inputSampleRate)
     , outputSampleRate_(outputSampleRate)
 {
     int src_error;
-    resampleState_ = src_new(SRC_SINC_MEDIUM_QUALITY, 1, &src_error);
+    resampleState_ = src_new(forPlotsOnly ? SRC_LINEAR : SRC_SINC_MEDIUM_QUALITY, 1, &src_error);
     assert(resampleState_ != nullptr);
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
@@ -82,10 +82,10 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate)
         std::default_delete<short[]>());
     assert(outputSamples_ != nullptr);
     
-    tempInput_ = new float[std::max(inputSampleRate, outputSampleRate)];
+    tempInput_ = new float[inputSampleRate * 10 / 1000];
     assert(tempInput_ != nullptr);
 
-    tempOutput_ = new float[std::max(inputSampleRate, outputSampleRate)];
+    tempOutput_ = new float[outputSampleRate * 10 / 1000];
     assert(tempOutput_ != nullptr);
 }
 
@@ -109,19 +109,23 @@ int ResampleStep::getOutputSampleRate() const
 
 std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    if (numInputSamples > 0)
-    {
-        double scaleFactor = ((double)outputSampleRate_)/((double)inputSampleRate_);
-        int outputArraySize = std::max(numInputSamples, (int)(scaleFactor*numInputSamples));
-        assert(outputArraySize > 0);
+    *numOutputSamples = 0;
 
-        *numOutputSamples = resample_step(
-            resampleState_, outputSamples_.get(), inputSamples.get(), outputSampleRate_, 
-            inputSampleRate_, outputArraySize, numInputSamples, tempInput_, tempOutput_);
-    }
-    else
+    auto inputPtr = inputSamples.get();
+    auto outputPtr = outputSamples_.get();
+    while (numInputSamples > 0)
     {
-        *numOutputSamples = 0;
+        int inputSize = std::min(numInputSamples, inputSampleRate_ * 10 / 1000);
+        int outputSize = ((float)outputSampleRate_ / inputSampleRate_) * inputSize;
+
+        auto numSamples = resample_step(
+            resampleState_, outputPtr, inputPtr, outputSampleRate_, 
+            inputSampleRate_, outputSize, inputSize,
+            tempInput_, tempOutput_);
+        outputPtr += numSamples;
+        inputPtr += inputSize;
+        numInputSamples -= inputSize;
+        *numOutputSamples += numSamples;
     }
  
     return outputSamples_;

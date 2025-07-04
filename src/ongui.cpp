@@ -30,7 +30,7 @@ extern int g_mode;
 extern int   g_SquelchActive;
 extern float g_SquelchLevel;
 extern int   g_analog;
-extern int   g_tx;
+extern std::atomic<int>   g_tx;
 extern int   g_State, g_prev_State;
 extern FreeDVInterface freedvInterface;
 extern bool g_queueResync;
@@ -41,7 +41,7 @@ extern int g_txLevel;
 extern wxConfigBase *pConfig;
 extern bool endingTx;
 extern int g_outfifo1_empty;
-extern bool g_voice_keyer_tx;
+extern std::atomic<bool> g_voice_keyer_tx;
 extern paCallBackData* g_rxUserdata;
 
 extern SNDFILE            *g_sfRecFileFromModulator;

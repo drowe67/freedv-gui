@@ -34,7 +34,7 @@ int                 g_recFromModulatorSamples;
 int                 g_recFileFromModulatorEventId;
 
 extern FreeDVInterface freedvInterface;
-extern bool g_tx;
+extern std::atomic<bool> g_tx;
 
 // extra panel added to file open dialog to add loop checkbox
 MyExtraPlayFilePanel::MyExtraPlayFilePanel(wxWindow *parent): wxPanel(parent)

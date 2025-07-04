@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-13, macos-latest]  # x86_64, ARM64
+        os: [macos-13, macos-14, macos-15]  # x86_64, ARM64, ARM64
 
     runs-on: ${{ matrix.os }}
 

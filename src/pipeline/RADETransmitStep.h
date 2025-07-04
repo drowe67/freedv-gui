@@ -50,7 +50,8 @@ private:
     struct FIFO* outputSampleFifo_;
     float* featureList_;
     int featureListIdx_;
-    
+    int arch_;
+
     FILE* featuresFile_;
 
     std::shared_ptr<short> outputSamples_;
