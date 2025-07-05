@@ -73,6 +73,7 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool forPl
     , outputSampleRate_(outputSampleRate)
 {
     int src_error;
+    
     resampleState_ = src_new(forPlotsOnly ? SRC_LINEAR : SRC_SINC_MEDIUM_QUALITY, 1, &src_error);
     assert(resampleState_ != nullptr);
 

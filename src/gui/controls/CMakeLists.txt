@@ -7,6 +7,7 @@ add_library(fdv_gui_controls STATIC
     ReportMessageRenderer.cpp)
 
 target_include_directories(fdv_gui_controls PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../.. ${CMAKE_CURRENT_BINARY_DIR}/../..)
+add_dependencies(fdv_gui_controls codec2)
 
 if(BOOTSTRAP_WXWIDGETS)
     add_dependencies(fdv_gui_controls wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
