@@ -25,7 +25,7 @@ add_library(fdv_audio_pipeline STATIC
 
 target_include_directories(fdv_audio_pipeline PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
 
-add_dependencies(fdv_audio_pipeline rade opus codec2 samplerate)
+add_dependencies(fdv_audio_pipeline rade opus codec2 samplerate sndfile)
 
 if(BOOTSTRAP_WXWIDGETS)
     add_dependencies(fdv_audio_pipeline wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
