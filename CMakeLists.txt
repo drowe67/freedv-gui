@@ -55,13 +55,6 @@ if(NOT DEFINED LINUX)
     endif((${LINUX_LOC} GREATER 0) OR (${LINUX_LOC} EQUAL 0))
 endif(NOT DEFINED LINUX)
 
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    # Enable LTO
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto")
-    set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -flto")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -flto")
-endif(CMAKE_BUILD_TYPE STREQUAL "Release")
-
 # Adds a tag to the end of the version string. Leave empty
 # for official release builds.
 if(NOT DEFINED FREEDV_VERSION_TAG)
