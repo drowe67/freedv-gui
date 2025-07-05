@@ -28,6 +28,7 @@ ExternalProject_Add(build_hamlib
 ExternalProject_Get_Property(build_hamlib BINARY_DIR)
 ExternalProject_Get_Property(build_hamlib SOURCE_DIR)
 add_library(hamlib SHARED IMPORTED)
+add_dependencies(hamlib build_hamlib)
 
 set_target_properties(hamlib PROPERTIES
     IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/external/dist/lib/libhamlib${CMAKE_SHARED_LIBRARY_SUFFIX}"
