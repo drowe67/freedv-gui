@@ -62,7 +62,7 @@ using namespace std::chrono_literals;
 //   processing and output in the log after the user pushes Stop. 
 
 #define ENABLE_FASTER_PLOTS
-//#define ENABLE_PROCESSING_STATS
+#define ENABLE_PROCESSING_STATS
 
 // External globals
 // TBD -- work on fully removing the need for these.
