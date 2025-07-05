@@ -57,7 +57,7 @@ using namespace std::chrono_literals;
 //
 // * ENABLE_FASTER_PLOTS: This uses a faster resampling algorithm to reduce the CPU
 //   usage required to generate various plots in the user interface. (Tech note: When 
-//   enabled, libsamplerate is directed to use SRC_SINC_FASTEST for the plot resampling.)
+//   enabled, libsamplerate is directed to use SRC_LINEAR for the plot resampling.)
 // * ENABLE_PROCESSING_STATS: This causes execution statistics to be collected for RX and TX
 //   processing and output in the log after the user pushes Stop. 
 
