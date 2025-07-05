@@ -11,7 +11,7 @@ concurrency:
     
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
+  BUILD_TYPE: Debug
 
 jobs:
   test:
@@ -43,7 +43,7 @@ jobs:
     - name: Build freedv-gui
       shell: bash
       working-directory: ${{github.workspace}}
-      run: UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ./build_osx.sh 
+      run: BUILD_TYPE=RelWithDebInfo UT_ENABLE=1 UNIV_BUILD=0 BUILD_DEPS=0 ./build_osx.sh 
 
     - name: Workaround macOS permission issues
       if: ${{ matrix.os == 'macos-13' }} 
