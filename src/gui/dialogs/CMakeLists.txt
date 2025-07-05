@@ -11,6 +11,10 @@ target_include_directories(fdv_gui_dialogs PRIVATE ${CODEC2_INCLUDE_DIRS} ${CMAK
 
 add_dependencies(fdv_gui_dialogs rade opus codec2)
 
+if(HAMLIB_ADD_DEPENDENCY)
+add_dependencies(fdv_gui_dialogs hamlib)
+endif(HAMLIB_ADD_DEPENDENCY)
+
 if(BOOTSTRAP_WXWIDGETS)
     add_dependencies(fdv_gui_dialogs wx::core wx::base wx::aui wx::html wx::net wx::adv wx::propgrid wx::xrc)
     target_compile_definitions(fdv_gui_dialogs PRIVATE ${WXBUILD_BUILD_DEFS})
