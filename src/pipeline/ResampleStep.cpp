@@ -76,7 +76,7 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool forPl
     
     // SRC_LINEAR for plots is fastest but only saves a few additional % of CPU overall
     // at the expense of possible poorer plot quality.
-    resampleState_ = src_new(forPlotsOnly ? SRC_SINC_FASTEST : SRC_SINC_MEDIUM_QUALITY, 1, &src_error);
+    resampleState_ = src_new(forPlotsOnly ? SRC_LINEAR : SRC_SINC_MEDIUM_QUALITY, 1, &src_error);
     assert(resampleState_ != nullptr);
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
