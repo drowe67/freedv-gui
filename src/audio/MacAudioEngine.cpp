@@ -221,6 +221,7 @@ std::vector<int> MacAudioEngine::getSupportedSampleRates(wxString deviceName, Au
     {
         if (dev.name == deviceName)
         {
+#if 0
             AudioObjectPropertyAddress propertyAddress = {
                 .mSelector = kAudioDevicePropertyAvailableNominalSampleRates,
                 .mScope = kAudioObjectPropertyScopeGlobal,
@@ -289,6 +290,8 @@ std::vector<int> MacAudioEngine::getSupportedSampleRates(wxString deviceName, Au
             }
             
             free(rates);
+#endif // 0
+            result.push_back(dev.defaultSampleRate);
             break;
         }
     }
