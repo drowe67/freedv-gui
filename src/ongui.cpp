@@ -1293,6 +1293,28 @@ void MainFrame::OnSystemColorChanged(wxSysColourChangedEvent& event)
     TopFrame::OnSystemColorChanged(event);
 }
 
+void MainFrame::OnNotebookPageChanging(wxAuiNotebookEvent& event)
+{
+    if (m_rbRADE->GetValue())
+    {
+        auto newSelection = event.GetSelection();
+        auto page = m_auiNbookCtrl->GetPage(newSelection);
+        
+        // Prevent selection of tabs not yet supported by RADE.
+        if (page == m_panelScatter || 
+            page == m_panelTimeOffset || 
+            page == m_panelFreqOffset || 
+            page == m_panelTestFrameErrors ||
+            page == m_panelTestFrameErrorsHist)
+        {
+            log_info("Veto attempt at viewing tab %d not supported by RADE", newSelection);
+            event.Veto();
+        }
+    }
+    
+    TopFrame::OnNotebookPageChanging(event);
+}
+
 void MainFrame::OnCenterRx(wxCommandEvent& event)
 {
     clickTune(FDMDV_FCENTRE);
