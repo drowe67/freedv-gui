@@ -23,6 +23,8 @@
 #ifndef PULSE_AUDIO_ENGINE_H
 #define PULSE_AUDIO_ENGINE_H
 
+#include <mutex>
+
 #include <pulse/pulseaudio.h>
 #include "IAudioEngine.h"
 
@@ -44,6 +46,7 @@ private:
     pa_threaded_mainloop *mainloop_;
     pa_mainloop_api *mainloopApi_;
     pa_context* context_;
+    std::mutex startStopMtx_;
 };
 
 #endif // PULSE_AUDIO_ENGINE_H

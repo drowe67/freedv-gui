@@ -42,6 +42,8 @@ PulseAudioEngine::~PulseAudioEngine()
 
 void PulseAudioEngine::start()
 {
+    std::unique_lock<std::mutex> lk(startStopMtx_);
+
     // Allocate PA main loop and context.
     mainloop_ = pa_threaded_mainloop_new();
     
@@ -123,6 +125,8 @@ void PulseAudioEngine::start()
 
 void PulseAudioEngine::stop()
 {
+    std::unique_lock<std::mutex> lk(startStopMtx_);
+
     if (initialized_)
     {
         pa_threaded_mainloop_lock(mainloop_);
