@@ -1371,15 +1371,29 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         int r;
 
         if (m_panelWaterfall->checkDT()) {
-            m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+            if (g_mode == FREEDV_MODE_RADE)
+            {
+                m_panelWaterfall->setRxFreq(0);
+            }
+            else
+            {
+                m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+            }
             m_panelWaterfall->m_newdata = true;
             m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
             m_panelWaterfall->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
             m_panelWaterfall->setSync(freedvInterface.getSync() ? true : false);
             m_panelWaterfall->Refresh();
         }
-
-        m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+        
+        if (g_mode == FREEDV_MODE_RADE)
+        {
+            m_panelSpectrum->setRxFreq(0);
+        }
+        else
+        {
+            m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+        }
         
         // Note: each element in this combo box is a numeric value starting from 1,
         // so just incrementing the selected index should get us the correct results.
