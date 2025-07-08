@@ -964,42 +964,42 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     spectrumPanelSizer->Add(spectrumPanelControlSizer, 0, wxALL | wxEXPAND, 5);
     spectrumPanel->SetSizerAndFit(spectrumPanelSizer);
     
-    m_auiNbookCtrl->AddPage(spectrumPanel, _("Spectrum"), true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(spectrumPanel, _("Spectrum"), false, wxNullBitmap);
 
     // Add Scatter Plot window
     m_panelScatter = new PlotScatter((wxFrame*) m_auiNbookCtrl);
-    m_auiNbookCtrl->AddPage(m_panelScatter, _("Scatter"), true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelScatter, _("Scatter"), false, wxNullBitmap);
 
     // Add Demod Input window
     m_panelDemodIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
-    m_auiNbookCtrl->AddPage(m_panelDemodIn, _("Frm Radio"), true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelDemodIn, _("Frm Radio"), false, wxNullBitmap);
     g_plotDemodInFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
 
     // Add Speech Input window
     m_panelSpeechIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
-    m_auiNbookCtrl->AddPage(m_panelSpeechIn, _("Frm Mic"), true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelSpeechIn, _("Frm Mic"), false, wxNullBitmap);
     g_plotSpeechInFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
 
     // Add Speech Output window
     m_panelSpeechOut = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
-    m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("To Spkr/Hdphns"), true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("To Spkr/Hdphns"), false, wxNullBitmap);
     g_plotSpeechOutFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
 
     // Add Timing Offset window
     m_panelTimeOffset = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 5.0, DT, -0.5, 0.5, 1, 0.1, "%2.1f", 0);
-    m_auiNbookCtrl->AddPage(m_panelTimeOffset, L"Timing \u0394", true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelTimeOffset, L"Timing \u0394", false, wxNullBitmap);
 
     // Add Frequency Offset window
     m_panelFreqOffset = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 5.0, DT, -200, 200, 1, 50, "%3.0fHz", 0);
-    m_auiNbookCtrl->AddPage(m_panelFreqOffset, L"Frequency \u0394", true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelFreqOffset, L"Frequency \u0394", false, wxNullBitmap);
 
     // Add Test Frame Errors window
     m_panelTestFrameErrors = new PlotScalar((wxFrame*) m_auiNbookCtrl, 2*MODEM_STATS_NC_MAX, 30.0, DT, 0, 2*MODEM_STATS_NC_MAX+2, 1, 1, "", 1);
-    m_auiNbookCtrl->AddPage(m_panelTestFrameErrors, L"Test Frame Errors", true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelTestFrameErrors, L"Test Frame Errors", false, wxNullBitmap);
 
     // Add Test Frame Histogram window.  1 column for every bit, 2 bits per carrier
     m_panelTestFrameErrorsHist = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 1.0, 1.0/(2*MODEM_STATS_NC_MAX), 0.001, 0.1, 1.0/MODEM_STATS_NC_MAX, 0.1, "%0.0E", 0);
-    m_auiNbookCtrl->AddPage(m_panelTestFrameErrorsHist, L"Test Frame Histogram", true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelTestFrameErrorsHist, L"Test Frame Histogram", false, wxNullBitmap);
     m_panelTestFrameErrorsHist->setBarGraph(1);
     m_panelTestFrameErrorsHist->setLogY(1);
 

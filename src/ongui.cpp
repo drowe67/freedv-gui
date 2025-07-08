@@ -1309,6 +1309,11 @@ void MainFrame::OnNotebookPageChanging(wxAuiNotebookEvent& event)
         {
             log_info("Veto attempt at viewing tab %d not supported by RADE", newSelection);
             event.Veto();
+
+            // Display message box indicating that the tab isn't clickable.
+            wxMessageBox("The following tabs are not currently supported for RADE: Scatter, Time/Frequency Offset, Test Frame Errors/Histogram.");
+
+            return;
         }
     }
     
