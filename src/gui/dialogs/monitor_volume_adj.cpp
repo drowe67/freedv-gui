@@ -30,6 +30,10 @@ MonitorVolumeAdjPopup::MonitorVolumeAdjPopup( wxWindow* parent, ConfigurationDat
     : wxPopupTransientWindow(parent)
     , configVal_(configVal)
 {
+    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
+    // for e.g. numbers. Thus, we only need to override layout direction.
+    SetLayoutDirection(wxLayout_LeftToRight);
+    
     wxStaticBoxSizer* mainSizer = new wxStaticBoxSizer(wxVERTICAL, this, _("Monitor volume (dB)"));
     
     volumeSlider_ = new wxSlider(mainSizer->GetStaticBox(), wxID_ANY, configVal, -40, 0, wxDefaultPosition, wxSize(250, -1), wxSL_AUTOTICKS | wxSL_LABELS);

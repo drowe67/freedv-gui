@@ -49,6 +49,10 @@ PlotScalar::PlotScalar(wxWindow* parent,
                        const char* plotName)
     : PlotPanel(parent, plotName)
 {
+    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
+    // for e.g. numbers. Thus, we only need to override layout direction.
+    SetLayoutDirection(wxLayout_LeftToRight);
+    
     int i;
 
     m_rCtrl = GetClientRect();

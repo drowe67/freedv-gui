@@ -53,6 +53,10 @@ END_EVENT_TABLE()
 PlotSpectrum::PlotSpectrum(wxWindow* parent, float *magdB, int n_magdB, 
                            float min_mag_db, float max_mag_db, bool clickTune): PlotPanel(parent)
 {
+    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
+    // for e.g. numbers. Thus, we only need to override layout direction.
+    SetLayoutDirection(wxLayout_LeftToRight);
+    
     m_greyscale     = 0;
     m_Bufsz         = GetMaxClientSize();
     m_newdata       = false;

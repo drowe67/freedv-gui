@@ -165,7 +165,12 @@ public:
     int m_tabCtrlHeight;
 };
  
-TabFreeAuiNotebook::TabFreeAuiNotebook() : wxAuiNotebook() { }
+TabFreeAuiNotebook::TabFreeAuiNotebook() : wxAuiNotebook() 
+{ 
+    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
+    // for e.g. numbers. Thus, we only need to override layout direction.
+    SetLayoutDirection(wxLayout_LeftToRight);
+}
 TabFreeAuiNotebook::TabFreeAuiNotebook(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style)
         : wxAuiNotebook(parent, id, pos, size, style) { }
     
@@ -311,6 +316,10 @@ bool TabFreeAuiNotebook::LoadPerspective(const wxString& layout) {
 //=========================================================================
 TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(parent, id, title, pos, size, style)
 {
+    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
+    // for e.g. numbers. Thus, we only need to override layout direction.
+    SetLayoutDirection(wxLayout_LeftToRight);
+    
 #if wxUSE_ACCESSIBILITY
     // Initialize accessibility logic
     SetAccessible(new NameOverrideAccessible([&]() {

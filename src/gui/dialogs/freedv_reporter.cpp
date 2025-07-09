@@ -60,6 +60,10 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     : wxFrame(parent, id, title, pos, size, style)
     , tipWindow_(nullptr)
 {
+    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
+    // for e.g. numbers. Thus, we only need to override layout direction.
+    SetLayoutDirection(wxLayout_LeftToRight);
+    
     if (wxGetApp().customConfigFileName != "")
     {
         SetTitle(wxString::Format("%s (%s)", _("FreeDV Reporter"), wxGetApp().customConfigFileName));
