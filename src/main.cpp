@@ -966,10 +966,6 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     
     m_auiNbookCtrl->AddPage(spectrumPanel, _("Spectrum"), false, wxNullBitmap);
 
-    // Add Scatter Plot window
-    m_panelScatter = new PlotScatter((wxFrame*) m_auiNbookCtrl);
-    m_auiNbookCtrl->AddPage(m_panelScatter, _("Scatter"), false, wxNullBitmap);
-
     // Add Demod Input window
     m_panelDemodIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelDemodIn, _("Frm Radio"), false, wxNullBitmap);
@@ -984,6 +980,10 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     m_panelSpeechOut = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
     m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("To Spkr/Hdphns"), false, wxNullBitmap);
     g_plotSpeechOutFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
+    
+    // Add Scatter Plot window
+    m_panelScatter = new PlotScatter((wxFrame*) m_auiNbookCtrl);
+    m_auiNbookCtrl->AddPage(m_panelScatter, _("Scatter"), false, wxNullBitmap);
 
     // Add Timing Offset window
     m_panelTimeOffset = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 5.0, DT, -0.5, 0.5, 1, 0.1, "%2.1f", 0);
