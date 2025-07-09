@@ -256,6 +256,7 @@ std::vector<int> PulseAudioEngine::getSupportedSampleRates(wxString deviceName, 
 {
     std::vector<int> result;
     
+#if 0
     int index = 0;
     while (IAudioEngine::StandardSampleRates[index] != -1)
     {
@@ -264,6 +265,17 @@ std::vector<int> PulseAudioEngine::getSupportedSampleRates(wxString deviceName, 
             result.push_back(IAudioEngine::StandardSampleRates[index]);
         }
         index++;
+    }
+#endif
+    
+    auto devList = getAudioDeviceList(direction);
+    for (auto& dev : devList)
+    {
+        if (dev.name == deviceName)
+        {
+            result.push_back(dev.defaultSampleRate);
+            break;
+        }
     }
     
     return result;
