@@ -718,6 +718,13 @@ endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
 set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES DISABLED TRUE)
 set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES LABELS stress_test)
 
+if(NOT ENABLE_RTSAN)
+# Note: loading/saving feature files is currently not RT-safe
+add_test(NAME rade_loss
+         COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_loss.sh")
+set_tests_properties(rade_loss PROPERTIES PASS_REGULAR_EXPRESSION "PASS")
+endif(NOT ENABLE_RTSAN)
+
 DefineAudioTest(700D)
 DefineAudioTest(700E)
 DefineAudioTest(1600)
