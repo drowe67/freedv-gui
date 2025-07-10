@@ -112,7 +112,7 @@ cat tmp.log
 kill $PLAY_PID
 
 # Run feature files through loss tool
-$PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15 --acq_time_test 0.5
+$PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15
 
 # Clean up PulseAudio virtual devices
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
