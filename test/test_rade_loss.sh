@@ -4,9 +4,11 @@
 OPERATING_SYSTEM=`uname`
 SOX_DRIVER=alsa
 FREEDV_BINARY=src/freedv
+PYTHON_BINARY=python3
 if [ "$OPERATING_SYSTEM" == "Darwin" ]; then
     SOX_DRIVER=coreaudio
     FREEDV_BINARY=src/FreeDV.app/Contents/MacOS/freedv
+    PYTHON_BINARY=src/FreeDV.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3
 fi
 
 createVirtualAudioCable () {
@@ -95,7 +97,7 @@ kill $RECORD_PID
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     paplay --channels=1 --rate 8000 --file-format=wav --device "$PLAY_DEVICE" --latency 1 test.wav &
 else
-    sox -t $SOX_DRIVER "$PLAY_DEVICE" -c 1 -r 8000 -t wav test.wav >/dev/null 2>&1 &
+    sox -t wav test.wav -t $SOX_DRIVER "$PLAY_DEVICE" >/dev/null 2>&1 &
 fi
 PLAY_PID=$!
 $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADE -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
@@ -110,7 +112,7 @@ cat tmp.log
 kill $PLAY_PID
 
 # Run feature files through loss tool
-python3 $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15 --acq_time_test 0.5
+$PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15 --acq_time_test 0.5
 
 # Clean up PulseAudio virtual devices
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
