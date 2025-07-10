@@ -710,14 +710,6 @@ endmacro()
 
 DefineAudioTest(RADEV1)
 
-add_test(NAME fullduplex_RADEV1_repeated
-         COMMAND sh -c " ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1 && ${CMAKE_CURRENT_SOURCE_DIR}/test/test_zeros.sh txrx RADEV1")
-if(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
-    set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES PASS_REGULAR_EXPRESSION "Got 1 sync changes")
-endif(NOT ENABLE_ASAN AND NOT ENABLE_RTSAN)
-set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES DISABLED TRUE)
-set_tests_properties(fullduplex_RADEV1_repeated PROPERTIES LABELS stress_test)
-
 if(NOT ENABLE_RTSAN)
 # Note: loading/saving feature files is currently not RT-safe
 add_test(NAME rade_loss
