@@ -689,19 +689,9 @@ Some Linux distributions come with pre-installed software that may try to use
 serial ports that your radio creates. You may have problems initialising your radio
 or CAT control via hamlib may seem unreliable or time out.
 
-*ModemManager* is on some Ubuntu based distributions and it will try to reset a modem
-by sending AT commands which will upset your radio.
-
 *Brltty* is software that looks on serial ports for a Braille device which will also
-upset your radio.
-
-Stop ModemManager as follows:
-
-```
-sudo systemctl stop ModemManager
-sudo systemctl disable ModemManager
-sudo systemctl mask ModemManager
-```
+upset CAT communication with your radio. Typically this is seen as a timeout error windw
+from hamlib.
 
 Stop BRLTTY as follows:
 
@@ -709,6 +699,20 @@ Stop BRLTTY as follows:
 sudo systemctl stop brltty-udev.service
 sudo systemctl disable brltty.service
 sudo systemctl mask brltty-udev.service
+```
+
+BRLTTY is the most common cause of communication problems but it's also been reported
+that in some cases ModemManager can give trouble.
+
+*ModemManager* is on some Ubuntu based distributions and it will try to reset a modem
+by sending AT commands which will upset your radio.
+
+Stop ModemManager as follows:
+
+```
+sudo systemctl stop ModemManager
+sudo systemctl disable ModemManager
+sudo systemctl mask ModemManager
 ```
 
 ## I need help with my radio or rig interface
