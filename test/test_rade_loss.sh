@@ -1,21 +1,19 @@
 #!/bin/bash
 
-FREEDV_TEST=$1
-FREEDV_MODE=$2
-FREEDV_RX_FILE=$3
-
 # Determine sox driver to use for recording/playback
 OPERATING_SYSTEM=`uname`
 SOX_DRIVER=alsa
-FREEDV_BINARY=${FREEDV_BINARY:-src/freedv}
+FREEDV_BINARY=src/freedv
+PYTHON_BINARY=python3
 if [ "$OPERATING_SYSTEM" == "Darwin" ]; then
     SOX_DRIVER=coreaudio
     FREEDV_BINARY=src/FreeDV.app/Contents/MacOS/freedv
+    PYTHON_BINARY=src/FreeDV.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3
 fi
 
 createVirtualAudioCable () {
     CABLE_NAME=$1
-    pactl load-module module-null-sink sink_name=$CABLE_NAME sink_properties=device.description=$CABLE_NAME
+    pactl load-module module-null-sink sink_name=$CABLE_NAME sink_properties=device.description=$CABLE_NAME 
 }
 
 FREEDV_RADIO_TO_COMPUTER_DEVICE="${FREEDV_RADIO_TO_COMPUTER_DEVICE:-FreeDV_Radio_To_Computer}"
@@ -33,33 +31,14 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     DRIVER_INDEX_LOOPBACK=`pactl load-module module-loopback source="FreeDV_Computer_To_Radio.monitor" sink="FreeDV_Radio_To_Computer"`
 fi
 
-# For debugging--list sink info
-#pactl list sinks
-# If full duplex test, use correct config file and assume "rx" mode.  
-FREEDV_CONF_FILE=freedv-ctest.conf 
-if [ "$FREEDV_TEST" == "txrx" ]; then 
-    FREEDV_TEST=rx 
-    FREEDV_CONF_FILE=freedv-ctest-fullduplex.conf
-    REC_DEVICE="$FREEDV_COMPUTER_TO_SPEAKER_DEVICE"
+# Determine correct record device to retrieve TX data
+FREEDV_CONF_FILE=freedv-ctest-reporting.conf 
 
-    # Generate sine wave for input
-    if [ "$OPERATING_SYSTEM" == "Linux" ]; then
-        sox -r 48000 -n -b 16 -c 1 -t wav - synth 120 sin 1000 vol -10dB | paplay -d "$FREEDV_MICROPHONE_TO_COMPUTER_DEVICE" &
-    else
-        sox -r 48000 -n -b 16 -c 1 -t $SOX_DRIVER "$FREEDV_MICROPHONE_TO_COMPUTER_DEVICE" - synth 120 sin 1000 vol -10dB &
-    fi
-    PLAY_PID=$!
-elif [ "$FREEDV_TEST" == "rx" ]; then
-    # Start playback if RX
-    if [ "$OPERATING_SYSTEM" == "Linux" ]; then
-        paplay -d "$FREEDV_RADIO_TO_COMPUTER_DEVICE" $FREEDV_RX_FILE &
-    else
-        sox $FREEDV_RX_FILE -t $SOX_DRIVER "$FREEDV_RADIO_TO_COMPUTER_DEVICE" &
-    fi
-    PLAY_PID=$!
-    REC_DEVICE="$FREEDV_COMPUTER_TO_SPEAKER_DEVICE.monitor"
-else
+PLAY_DEVICE="$FREEDV_RADIO_TO_COMPUTER_DEVICE"
+if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     REC_DEVICE="$FREEDV_COMPUTER_TO_RADIO_DEVICE.monitor"
+else
+    REC_DEVICE="$FREEDV_COMPUTER_TO_RADIO_DEVICE"
 fi
 
 # Generate config file
@@ -83,22 +62,26 @@ fi
 mv $(pwd)/$FREEDV_CONF_FILE.tmp $(pwd)/$FREEDV_CONF_FILE
 
 # Start recording
-if [ "$FREEDV_TEST" == "tx" ]; then
-    if [ "$OPERATING_SYSTEM" == "Linux" ]; then
-        parecord --channels=1 --file-format=wav --device "$REC_DEVICE" test.wav &
-    else
-        sox -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav test.wav &
-    fi
-    RECORD_PID=$!
+if [ "$OPERATING_SYSTEM" == "Linux" ]; then
+    parecord --channels=1 --file-format=wav --device "$REC_DEVICE" test.wav &
+else
+    sox -t $SOX_DRIVER "$REC_DEVICE" -c 1 -t wav test.wav >/dev/null 2>&1 &
 fi
+RECORD_PID=$!
 
-# Start FreeDV in test mode
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut $FREEDV_TEST -utmode $FREEDV_MODE >tmp.log 2>&1 & #| tee tmp.log
+# Start "radio"
+TIMES_BEFORE_KILL=1
+python3 $SCRIPTPATH/hamlibserver.py $RECORD_PID $TIMES_BEFORE_KILL &
+RADIO_PID=$!
+
+# Start FreeDV in test mode to record TX
+TX_ARGS="-txfile $(pwd)/rade_src/wav/all.wav -txfeaturefile $(pwd)/txfeatures.f32 "
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADE $TX_ARGS >tmp.log 2>&1 &
 
 FDV_PID=$!
 
 #if [ "$OPERATING_SYSTEM" != "Linux" ]; then
-#    xctrace record --window 2m --template "Audio System Trace" --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
+#    xctrace record --template "Audio System Trace" --window 2m --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
 #fi
 
 #sleep 30 
@@ -106,19 +89,30 @@ FDV_PID=$!
 #wpctl status
 #pw-top -b -n 5
 wait $FDV_PID
-FREEDV_EXIT_STATUS=$?
 cat tmp.log
 
-# Stop recording/playback and process data
-if [ "$FREEDV_TEST" == "rx" ]; then
-    kill $PLAY_PID || echo "Already done playing"
-    NUM_RESYNCS=`grep "Sync changed" tmp.log | wc -l | xargs`
-    echo "Got $NUM_RESYNCS sync changes"
+# Stop recording, play back in RX mode
+kill $RECORD_PID
+
+if [ "$OPERATING_SYSTEM" == "Linux" ]; then
+    paplay --file-format=wav --device "$PLAY_DEVICE" test.wav &
 else
-    kill $RECORD_PID
-    sox test.wav -t raw -r 8k -c 1 -b 16 -e signed-integer test.raw silence 1 0.1 0.1% reverse silence 1 0.1 0.1% reverse
-    python3 $SCRIPTPATH/check-for-zeros.py test.raw
+    sox -t wav test.wav -t $SOX_DRIVER "$PLAY_DEVICE" >/dev/null 2>&1 &
 fi
+PLAY_PID=$!
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADE -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
+FDV_PID=$!
+
+#if [ "$OPERATING_SYSTEM" != "Linux" ]; then
+#    xctrace record --template "Audio System Trace" --window 2m --output "instruments_trace_${FDV_PID}.trace" --attach $FDV_PID
+#fi
+wait $FDV_PID
+FREEDV_EXIT_CODE=$?
+cat tmp.log
+kill $PLAY_PID
+
+# Run feature files through loss tool
+$PYTHON_BINARY $(pwd)/rade_src/loss.py txfeatures.f32 rxfeatures.f32 --loss_test 0.15
 
 # Clean up PulseAudio virtual devices
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
@@ -129,4 +123,7 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     pactl unload-module $DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER
 fi
 
-exit $FREEDV_EXIT_STATUS
+# End radio process as it's no longer needed
+kill $RADIO_PID
+
+exit $FREEDV_EXIT_CODE

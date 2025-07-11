@@ -834,11 +834,13 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Add note about using XWayland on Linux. (PR #926)
 3. Enhancements:
     * General improvements to backend audio processing to further reduce dropouts. (PR #949, #957)
+    * Disable UI controls not supported by RADE to avoid user confusion. (PR #962)
 4. Build system:
     * Update Hamlib to 4.6.3 (macOS/Windows). (PR #930)
     * Reload current Git hash every time it changes. (PR #935, #951)
     * Add infrastructure for generating AppImage builds. (PR #937)
     * Make explicit various dependencies to avoid compile race condition. (PR #957, #959)
+    * Add additional RADE loss tests. (PR #969)
 
 ## V2.0.0 June 2025
 

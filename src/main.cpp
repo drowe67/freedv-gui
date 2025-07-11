@@ -768,6 +768,25 @@ setDefaultMode:
         mode = defaultMode;
         goto setDefaultMode;
     }
+    
+    // Disable controls not supported by RADE.
+    bool isEnabled = mode != FREEDV_MODE_RADE;
+    m_sliderSQ->Enable(isEnabled);
+    m_ckboxSQ->Enable(isEnabled);
+    m_textSQ->Enable(isEnabled);
+    m_btnCenterRx->Enable(isEnabled);
+    
+    if (!isEnabled)
+    {
+        m_textBits->SetLabel("Bits: unk");
+        m_textErrors->SetLabel("Errs: unk");
+        m_textBER->SetLabel("BER: unk");
+        m_textFreqOffset->SetLabel("FrqOff: unk");
+        m_textSyncMetric->SetLabel("Sync: unk");
+        m_textCodec2Var->SetLabel("Var: unk");
+        m_textClockOffset->SetLabel("ClkOff: unk");
+    }
+    
     pConfig->SetPath(wxT("/"));
     
     m_togBtnAnalog->Disable();
@@ -945,42 +964,42 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     spectrumPanelSizer->Add(spectrumPanelControlSizer, 0, wxALL | wxEXPAND, 5);
     spectrumPanel->SetSizerAndFit(spectrumPanelSizer);
     
-    m_auiNbookCtrl->AddPage(spectrumPanel, _("Spectrum"), true, wxNullBitmap);
-
-    // Add Scatter Plot window
-    m_panelScatter = new PlotScatter((wxFrame*) m_auiNbookCtrl);
-    m_auiNbookCtrl->AddPage(m_panelScatter, _("Scatter"), true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(spectrumPanel, _("Spectrum"), false, wxNullBitmap);
 
     // Add Demod Input window
     m_panelDemodIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
-    m_auiNbookCtrl->AddPage(m_panelDemodIn, _("Frm Radio"), true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelDemodIn, _("Frm Radio"), false, wxNullBitmap);
     g_plotDemodInFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
 
     // Add Speech Input window
     m_panelSpeechIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
-    m_auiNbookCtrl->AddPage(m_panelSpeechIn, _("Frm Mic"), true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelSpeechIn, _("Frm Mic"), false, wxNullBitmap);
     g_plotSpeechInFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
 
     // Add Speech Output window
     m_panelSpeechOut = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
-    m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("To Spkr/Hdphns"), true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelSpeechOut, _("To Spkr/Hdphns"), false, wxNullBitmap);
     g_plotSpeechOutFifo = codec2_fifo_create(4*WAVEFORM_PLOT_BUF);
+    
+    // Add Scatter Plot window
+    m_panelScatter = new PlotScatter((wxFrame*) m_auiNbookCtrl);
+    m_auiNbookCtrl->AddPage(m_panelScatter, _("Scatter"), false, wxNullBitmap);
 
     // Add Timing Offset window
     m_panelTimeOffset = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 5.0, DT, -0.5, 0.5, 1, 0.1, "%2.1f", 0);
-    m_auiNbookCtrl->AddPage(m_panelTimeOffset, L"Timing \u0394", true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelTimeOffset, L"Timing \u0394", false, wxNullBitmap);
 
     // Add Frequency Offset window
     m_panelFreqOffset = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 5.0, DT, -200, 200, 1, 50, "%3.0fHz", 0);
-    m_auiNbookCtrl->AddPage(m_panelFreqOffset, L"Frequency \u0394", true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelFreqOffset, L"Frequency \u0394", false, wxNullBitmap);
 
     // Add Test Frame Errors window
     m_panelTestFrameErrors = new PlotScalar((wxFrame*) m_auiNbookCtrl, 2*MODEM_STATS_NC_MAX, 30.0, DT, 0, 2*MODEM_STATS_NC_MAX+2, 1, 1, "", 1);
-    m_auiNbookCtrl->AddPage(m_panelTestFrameErrors, L"Test Frame Errors", true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelTestFrameErrors, L"Test Frame Errors", false, wxNullBitmap);
 
     // Add Test Frame Histogram window.  1 column for every bit, 2 bits per carrier
     m_panelTestFrameErrorsHist = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, 1.0, 1.0/(2*MODEM_STATS_NC_MAX), 0.001, 0.1, 1.0/MODEM_STATS_NC_MAX, 0.1, "%0.0E", 0);
-    m_auiNbookCtrl->AddPage(m_panelTestFrameErrorsHist, L"Test Frame Histogram", true, wxNullBitmap);
+    m_auiNbookCtrl->AddPage(m_panelTestFrameErrorsHist, L"Test Frame Histogram", false, wxNullBitmap);
     m_panelTestFrameErrorsHist->setBarGraph(1);
     m_panelTestFrameErrorsHist->setLogY(1);
 
@@ -1352,15 +1371,29 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         int r;
 
         if (m_panelWaterfall->checkDT()) {
-            m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+            if (g_mode == FREEDV_MODE_RADE)
+            {
+                m_panelWaterfall->setRxFreq(0);
+            }
+            else
+            {
+                m_panelWaterfall->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+            }
             m_panelWaterfall->m_newdata = true;
             m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
             m_panelWaterfall->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
             m_panelWaterfall->setSync(freedvInterface.getSync() ? true : false);
             m_panelWaterfall->Refresh();
         }
-
-        m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+        
+        if (g_mode == FREEDV_MODE_RADE)
+        {
+            m_panelSpectrum->setRxFreq(0);
+        }
+        else
+        {
+            m_panelSpectrum->setRxFreq(FDMDV_FCENTRE - g_RxFreqOffsetHz);
+        }
         
         // Note: each element in this combo box is a numeric value starting from 1,
         // so just incrementing the selected index should get us the correct results.
@@ -1827,27 +1860,46 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             realigned_ = true;
         }
 
-        snprintf(bits, STR_LENGTH, "Bits: %d", freedvInterface.getTotalBits()); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
-        snprintf(errors, STR_LENGTH, "Errs: %d", freedvInterface.getTotalBitErrors()); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
-        float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
-        snprintf(ber, STR_LENGTH, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
-        snprintf(resyncs, STR_LENGTH, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
+        if (g_mode == FREEDV_MODE_RADE)
+        {
+            m_textBits->SetLabel("Bits: unk");
+            m_textErrors->SetLabel("Errs: unk");
+            m_textBER->SetLabel("BER: unk");
+            m_textFreqOffset->SetLabel("FrqOff: unk");
+            m_textSyncMetric->SetLabel("Sync: unk");
+            m_textCodec2Var->SetLabel("Var: unk");
+        }
+        else
+        {
+            snprintf(bits, STR_LENGTH, "Bits: %d", freedvInterface.getTotalBits()); wxString bits_string(bits); m_textBits->SetLabel(bits_string);
+            snprintf(errors, STR_LENGTH, "Errs: %d", freedvInterface.getTotalBitErrors()); wxString errors_string(errors); m_textErrors->SetLabel(errors_string);
+            float b = (float)freedvInterface.getTotalBitErrors()/(1E-6+freedvInterface.getTotalBits());
+            snprintf(ber, STR_LENGTH, "BER: %4.3f", b); wxString ber_string(ber); m_textBER->SetLabel(ber_string);
+            snprintf(resyncs, STR_LENGTH, "Resyncs: %d", g_resyncs); wxString resyncs_string(resyncs); m_textResyncs->SetLabel(resyncs_string);
 
-        snprintf(freqoffset, STR_LENGTH, "FrqOff: %3.1f", freedvInterface.getCurrentRxModemStats()->foff);
-        wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
-        snprintf(syncmetric, STR_LENGTH, "Sync: %3.2f", freedvInterface.getCurrentRxModemStats()->sync_metric);
-        wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
+            snprintf(freqoffset, STR_LENGTH, "FrqOff: %3.1f", freedvInterface.getCurrentRxModemStats()->foff);
+            wxString freqoffset_string(freqoffset); m_textFreqOffset->SetLabel(freqoffset_string);
+            snprintf(syncmetric, STR_LENGTH, "Sync: %3.2f", freedvInterface.getCurrentRxModemStats()->sync_metric);
+            wxString syncmetric_string(syncmetric); m_textSyncMetric->SetLabel(syncmetric_string);
 
-        // Codec 2 700D/E "auto EQ" equaliser variance
-        auto var = freedvInterface.getVariance();
-        char var_str[STR_LENGTH]; snprintf(var_str, STR_LENGTH, "Var: %4.1f", var);
-        wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
+            // Codec 2 700D/E "auto EQ" equaliser variance
+            auto var = freedvInterface.getVariance();
+            char var_str[STR_LENGTH]; snprintf(var_str, STR_LENGTH, "Var: %4.1f", var);
+            wxString var_string(var_str); m_textCodec2Var->SetLabel(var_string);
+        }
 
         if (g_State) {
 
-            snprintf(clockoffset, STR_LENGTH, "ClkOff: %+-d", (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
-            wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
-
+            if (g_mode == FREEDV_MODE_RADE)
+            {
+                m_textClockOffset->SetLabel("ClkOff: unk");
+            }
+            else
+            {
+                snprintf(clockoffset, STR_LENGTH, "ClkOff: %+-d", (int)round(freedvInterface.getCurrentRxModemStats()->clock_offset*1E6) % 10000);
+                wxString clockoffset_string(clockoffset); m_textClockOffset->SetLabel(clockoffset_string);
+            }
+            
             // update error pattern plots if supported
             short* error_pattern = nullptr;
             int sz_error_pattern = freedvInterface.getErrorPattern(&error_pattern);
@@ -1997,6 +2049,13 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     {
         obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
     }
+    
+    // Disable controls not supported by RADE
+    bool isEnabled = g_mode != FREEDV_MODE_RADE;
+    m_sliderSQ->Enable(isEnabled);
+    m_ckboxSQ->Enable(isEnabled);
+    m_textSQ->Enable(isEnabled);
+    m_btnCenterRx->Enable(isEnabled);
 }
 
 void MainFrame::performFreeDVOn_()
