@@ -839,6 +839,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Reload current Git hash every time it changes. (PR #935, #951)
     * Add infrastructure for generating AppImage builds. (PR #937)
     * Make explicit various dependencies to avoid compile race condition. (PR #957, #959)
+    * Add additional RADE loss tests. (PR #969)
 
 ## V2.0.0 June 2025
 
