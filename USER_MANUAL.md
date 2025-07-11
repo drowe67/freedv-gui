@@ -860,6 +860,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * PulseAudio: Make sure we can only do one stop() at a time. (PR #955, #961)
     * macOS: Fix audio-related crash with certain devices. (PR #958, #960)
     * PulseAudio/PortAudio: Only support default sample rate. (PR #964)
+    * Force left-to-right rendering of UI elements. (PR #966)
 2. Documentation:
     * Add missing dependency for macOS builds to README. (PR #925; thanks @relistan!)
     * Add note about using XWayland on Linux. (PR #926)
@@ -871,6 +872,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Reload current Git hash every time it changes. (PR #935, #951)
     * Add infrastructure for generating AppImage builds. (PR #937)
     * Make explicit various dependencies to avoid compile race condition. (PR #957, #959)
+    * Add additional RADE loss tests. (PR #969)
 
 ## V2.0.0 June 2025
 
