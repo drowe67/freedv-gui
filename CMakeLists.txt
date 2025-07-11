@@ -714,7 +714,11 @@ if(NOT ENABLE_RTSAN)
 # Note: loading/saving feature files is currently not RT-safe
 add_test(NAME rade_loss
          COMMAND sh -c "${CMAKE_CURRENT_SOURCE_DIR}/test/test_rade_loss.sh")
+
+# For AddressSanitizer, we're just seeing if there are any memory leaks or crashes.
+if(NOT ENABLE_ASAN)
 set_tests_properties(rade_loss PROPERTIES PASS_REGULAR_EXPRESSION "PASS")
+endif(NOT ENABLE_ASAN)
 endif(NOT ENABLE_RTSAN)
 
 DefineAudioTest(700D)

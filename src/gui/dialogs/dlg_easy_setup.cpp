@@ -55,6 +55,10 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     , serialPortTestObject_(nullptr)
     , hasAppliedChanges_(false)
 {    
+    // XXX - FreeDV only supports English but makes a best effort to at least use regional formatting
+    // for e.g. numbers. Thus, we only need to override layout direction.
+    SetLayoutDirection(wxLayout_LeftToRight);
+    
     if (wxGetApp().customConfigFileName != "")
     {
         SetTitle(wxString::Format("%s (%s)", title, wxGetApp().customConfigFileName));
