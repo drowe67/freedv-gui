@@ -303,7 +303,9 @@ AudioDeviceSpecification MacAudioEngine::getAudioSpecification_(int coreAudioId,
 {
     AudioObjectPropertyAddress propertyAddress = {
         .mSelector = kAudioHardwarePropertyDevices,
-        .mScope = kAudioObjectPropertyScopeGlobal,
+        .mScope = (direction == AUDIO_ENGINE_IN) ?
+            kAudioDevicePropertyScopeInput :
+            kAudioDevicePropertyScopeOutput,
         .mElement = kAudioObjectPropertyElementMain
     };
     
@@ -352,6 +354,8 @@ AudioDeviceSpecification MacAudioEngine::getAudioSpecification_(int coreAudioId,
         // Use fallback SR if we can't retrieve it for some reason.
         sampleRate = 44100;
     }
+    
+    propertyAddress.mScope = kAudioObjectPropertyScopeGlobal;
     
     // Get number of input and output channels
     int numChannels = getNumChannels_(coreAudioId, direction);
