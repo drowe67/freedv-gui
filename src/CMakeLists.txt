@@ -131,7 +131,7 @@ if(APPLE)
     endif(NOT MACOS_CODESIGN_IDENTITY)
 
     if (NOT USE_NATIVE_AUDIO)
-        set(PORTAUDIO_BUNDLE_ARG "-s ${portaudio_BINARY_DIR}")
+        set(PORTAUDIO_BUNDLE_ARG -s ${portaudio_BINARY_DIR})
     endif(NOT USE_NATIVE_AUDIO)
     
     add_custom_command(
