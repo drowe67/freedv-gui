@@ -40,6 +40,7 @@ public:
     
     void appendPipelineStep(std::shared_ptr<IPipelineStep> pipelineStep);
     
+    void dumpSetup() const;
 private:
     int inputSampleRate_;
     int outputSampleRate_;
