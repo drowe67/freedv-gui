@@ -683,6 +683,38 @@ address.
 On newer radios (e.g. 7300, 7610), you may also need to set "CI-V USB Echo Back" 
 to ON as this may be set to OFF by default.
 
+## Hamlib seems not reliable on my Linux machine
+
+Some Linux distributions come with pre-installed software that may try to use
+serial ports that your radio creates. You may have problems initialising your radio
+or CAT control via hamlib may seem unreliable or time out.
+
+*Brltty* is software that looks on serial ports for a Braille device which will also
+upset CAT communication with your radio. Typically this is seen as a timeout error windw
+from hamlib.
+
+Stop BRLTTY as follows:
+
+```
+sudo systemctl stop brltty-udev.service
+sudo systemctl disable brltty.service
+sudo systemctl mask brltty-udev.service
+```
+
+BRLTTY is the most common cause of communication problems but it's also been reported
+that in some cases ModemManager can give trouble.
+
+*ModemManager* is on some Ubuntu based distributions and it will try to reset a modem
+by sending AT commands which will upset your radio.
+
+Stop ModemManager as follows:
+
+```
+sudo systemctl stop ModemManager
+sudo systemctl disable ModemManager
+sudo systemctl mask ModemManager
+```
+
 ## I need help with my radio or rig interface
 
 There are many radios, many computers, and many sound cards.  It is
@@ -832,6 +864,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Documentation:
     * Add missing dependency for macOS builds to README. (PR #925; thanks @relistan!)
     * Add note about using XWayland on Linux. (PR #926)
+    * Add notes for Linux users having trouble with Hamlib. (PR #968)
 3. Enhancements:
     * General improvements to backend audio processing to further reduce dropouts. (PR #949, #957)
     * Disable UI controls not supported by RADE to avoid user confusion. (PR #962)
