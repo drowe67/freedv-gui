@@ -789,14 +789,11 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
    
     if (txMode_ >= FREEDV_MODE_RADE)
     {
-        // Special handling for RADE. Note that ParallelStep is not being used
-        // as it has known issues with Bluetooth and macOS (but only with RADE;
-        // analog and legacy modes appear to function properly).
-        radeTxStep_ = new RADETransmitStep(rade_, lpcnetEncState_);
-        
-        auto pipeline = new AudioPipeline(inputSampleRate, outputSampleRate);
-        pipeline->appendPipelineStep(std::make_shared<RADEReceiveStep>(rade_, &fargan_, radeTextPtr_));
-        return pipeline;
+        // special handling for RADE
+        parallelSteps.push_back(new RADEReceiveStep(rade_, &fargan_, radeTextPtr_));
+
+        state->preProcessFn = [&](ParallelStep*) { return 0; };
+        state->postProcessFn = std::bind(&FreeDVInterface::postProcessRxFn_, this, _1); //[&](ParallelStep*) { return 0; };
     }
     else
     { 
