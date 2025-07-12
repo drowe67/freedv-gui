@@ -128,29 +128,67 @@ void MacAudioDevice::start()
     std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
     enqueue_([&, prom]() {
+#if 0
         // Set sample rate of device.
         AudioObjectPropertyAddress propertyAddress = {
             .mSelector = kAudioDevicePropertyNominalSampleRate,
             .mScope = kAudioObjectPropertyScopeGlobal,
             .mElement = kAudioObjectPropertyElementMain
         };
-        
+
         propertyAddress.mScope = 
             (direction_ == IAudioEngine::AUDIO_ENGINE_IN) ?
             kAudioDevicePropertyScopeInput :
             kAudioDevicePropertyScopeOutput;
+
+        Float64 sampleRateAsFloat = sampleRate_;
+
+        log_info("Attempting to set sample rate to %f for device %d", sampleRateAsFloat, coreAudioId_);
+        OSStatus error = AudioObjectSetPropertyData(
+            coreAudioId_,
+            &propertyAddress,
+            0,
+            nil,
+            sizeof(Float64),
+            &sampleRateAsFloat);
+        if (error != noErr)
+        {
+            std::stringstream ss;
+            ss << "Could not set sample rate for device \"" << deviceName_ << "\" (err " << error << ")";
+            if (onAudioErrorFunction)
+            {
+                onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
+            }
+            prom->set_value();
+            return;
+        }
+#endif
         
         // Attempt to set the IO frame size to an optimal value. This hopefully 
         // reduces dropouts on marginal hardware.
         UInt32 minFrameSize = 0;
         UInt32 maxFrameSize = 0;
-        UInt32 desiredFrameSize = pow(2, ceil(log(AUDIO_SAMPLE_BLOCK_SEC * sampleRate_) / log(2))); // next power of two 
+        UInt32 desiredFrameSize = AUDIO_SAMPLE_BLOCK_SEC * sampleRate_;
+        
+        // Calculate next power of two above desiredFrameSize if not already power of two
+        if ((desiredFrameSize & (desiredFrameSize - 1)) != 0)
+        {
+            desiredFrameSize--;
+            desiredFrameSize |= desiredFrameSize >> 1;
+            desiredFrameSize |= desiredFrameSize >> 2;
+            desiredFrameSize |= desiredFrameSize >> 4;
+            desiredFrameSize |= desiredFrameSize >> 8;
+            desiredFrameSize |= desiredFrameSize >> 16;
+            desiredFrameSize++;
+        }
+        
         GetIOBufferFrameSizeRange(coreAudioId_, &minFrameSize, &maxFrameSize);
         if (minFrameSize != 0 && maxFrameSize != 0)
         {
             log_info("Frame sizes of %d to %d are supported for audio device ID %d", minFrameSize, maxFrameSize, coreAudioId_);
             desiredFrameSize = std::min(maxFrameSize, desiredFrameSize);
             desiredFrameSize = std::max(minFrameSize, desiredFrameSize);
+            log_info("Set frame size for device %d to %d", coreAudioId_, desiredFrameSize);
             if (SetCurrentIOBufferFrameSize(coreAudioId_, desiredFrameSize) != noErr)
             {
                 log_warn("Could not set IO frame size to %d for audio device ID %d", desiredFrameSize, coreAudioId_);
@@ -186,6 +224,7 @@ void MacAudioDevice::start()
                 onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
             }
             [engine release];
+            prom->set_value();
             return;
         }
         
@@ -209,10 +248,10 @@ void MacAudioDevice::start()
         
         // Need to also get a mixer node so that the objects get
         // created in the right order.
-        AVAudioMixerNode* mixer = 
+        AVAudioMixerNode* mixer = nil; /*
             (direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ?
             [engine mainMixerNode] :
-            nil;;
+            nil;*/
     
         // Create nodes and links. Note that we allocate maxFrameSize + 1 as there
         // are certain devices/scenarios where AVAudioSinkNode and AVAudioSourceNode
@@ -230,6 +269,8 @@ void MacAudioDevice::start()
                                    channels:numChannels_
                                    interleaved:NO];
 
+        AVAudioSinkNode* sinkNode = nil;
+        AVAudioSourceNode* sourceNode = nil;
         if (direction_ == IAudioEngine::AUDIO_ENGINE_IN)
         {
             log_info("Create record node for input device %d", coreAudioId_);
@@ -257,12 +298,12 @@ void MacAudioDevice::start()
             };
             
             AVAudioFormat* inputFormat = [inNode inputFormatForBus:0];
-            AVAudioSinkNode* sinkNode = [[AVAudioSinkNode alloc] initWithReceiverBlock:block];
-            AVAudioMixerNode* mixNode = [[AVAudioMixerNode alloc] init];
+            sinkNode = [[AVAudioSinkNode alloc] initWithReceiverBlock:block];
+            //AVAudioMixerNode* mixNode = [[AVAudioMixerNode alloc] init];
             [engine attachNode:sinkNode];    
-            [engine attachNode:mixNode];
-            [engine connect:inNode to:mixNode format:inputFormat];
-            [engine connect:mixNode to:sinkNode format:nativeFormat];
+            //[engine attachNode:mixNode];
+            [engine connect:inNode to:sinkNode format:inputFormat];
+            //[engine connect:mixer to:sinkNode format:nativeFormat];
         }
         else
         {
@@ -289,8 +330,10 @@ void MacAudioDevice::start()
             };
             
             AVAudioSourceNode* sourceNode = [[AVAudioSourceNode alloc] initWithFormat:nativeFormat renderBlock:block];
+            mixer = [engine mainMixerNode];
             [engine attachNode:sourceNode];
-            [engine connect:sourceNode to:mixer format:nativeFormat];
+            [engine connect:sourceNode to:mixer format:nativeFormat]; // note: mainMixerNode attaches to output by default
+            //[engine connect:mixer to:[engine outputNode] format:nil];
         }
     
         log_info("Start engine for device %d", coreAudioId_);
@@ -312,6 +355,7 @@ void MacAudioDevice::start()
                 onAudioErrorFunction(*this, err, onAudioErrorState);
             }
             [engine release];
+            prom->set_value();
             return;
         }
         engine_ = engine;
@@ -377,6 +421,46 @@ void MacAudioDevice::start()
         else
         {
             isDefaultDevice_ = false;
+        }
+        
+        if (direction_ == IAudioEngine::AUDIO_ENGINE_IN)
+        {
+            AVAudioNode* inNode = [engine inputNode];
+            AVAudioFormat* inputFormat = [inNode inputFormatForBus:0];
+            AVAudioFormat* outputFormat = [inNode outputFormatForBus:0];
+            AVAudioFormat* sinkInputFormat = [sinkNode inputFormatForBus:0];
+            AVAudioFormat* sinkOutputFormat = [sinkNode outputFormatForBus:0];
+            
+            log_info("Device %d:   inNode[in ] SR = %f, nchan = %d", coreAudioId_, inputFormat.sampleRate, inputFormat.channelCount);
+            log_info("Device %d:   inNode[out] SR = %f, nchan = %d", coreAudioId_, outputFormat.sampleRate, outputFormat.channelCount);
+            log_info("Device %d: sinkNode[in ] SR = %f, nchan = %d", coreAudioId_, sinkInputFormat.sampleRate, sinkInputFormat.channelCount);
+            log_info("Device %d: sinkNode[out] SR = %f, nchan = %d", coreAudioId_, sinkOutputFormat.sampleRate, sinkOutputFormat.channelCount);
+        }
+        else
+        {
+            AVAudioNode* outNode = [engine outputNode];
+            AVAudioFormat* inputFormat = [outNode inputFormatForBus:0];
+            AVAudioFormat* outputFormat = [outNode outputFormatForBus:0];
+            AVAudioFormat* srcInputFormat = [mixer inputFormatForBus:0];
+            AVAudioFormat* srcOutputFormat = [mixer outputFormatForBus:0];
+            
+            log_info("Device %d: outNode[in ] SR = %f, nchan = %d", coreAudioId_, inputFormat.sampleRate, inputFormat.channelCount);
+            log_info("Device %d: outNode[out] SR = %f, nchan = %d", coreAudioId_, outputFormat.sampleRate, outputFormat.channelCount);
+            
+            for (UInt32 index = 0; index < mixer.numberOfInputs; index++)
+            {
+                AVAudioFormat* mixInputFormat = [mixer inputFormatForBus:index];
+                log_info("Device %d: mixNode[in :%d] SR = %f, nchan = %d", coreAudioId_, index, mixInputFormat.sampleRate, mixInputFormat.channelCount);
+            }
+            
+            for (UInt32 index = 0; index < mixer.numberOfOutputs; index++)
+            {
+                AVAudioFormat* mixOutputFormat = [mixer outputFormatForBus:index];
+                log_info("Device %d: mixNode[out:%d] SR = %f, nchan = %d", coreAudioId_, index, mixOutputFormat.sampleRate, mixOutputFormat.channelCount);
+            }
+            
+            log_info("Device %d: srcNode[in ] SR = %f, nchan = %d", coreAudioId_, srcInputFormat.sampleRate, srcInputFormat.channelCount);
+            log_info("Device %d: srcNode[out] SR = %f, nchan = %d", coreAudioId_, srcOutputFormat.sampleRate, srcOutputFormat.channelCount);
         }
 
         prom->set_value();
