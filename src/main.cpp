@@ -2613,6 +2613,58 @@ void MainFrame::startRxStream()
             });
         }, nullptr);
         engine->start();
+        
+        auto errorCallback = [&](IAudioDevice&, std::string error, void*)
+        {
+            log_error("%s", error.c_str());
+            CallAfter([&, error]() {
+                wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
+            });
+        };
+        
+        // Init call back data structure ----------------------------------------------
+
+        g_rxUserdata = new paCallBackData;
+                
+        // create FIFOs used to interface between IAudioEngine and txRx
+        // processing loop, which iterates about once every 10-40ms
+        // (depending on platform/audio library). Sample rate conversion, 
+        // stats for spectral plots, and transmit processng are all performed 
+        // in the tx/rxProcessing loop.
+        //
+        // Note that soundCard[12]InFifoSizeSamples are significantly larger than
+        // the other FIFO sizes. This is to better handle PulseAudio/pipewire
+        // behavior on some devices, where the system sends multiple *seconds*
+        // of audio samples at once followed by long periods with no samples at
+        // all. Without a very large FIFO size (or a way to dynamically change
+        // FIFO sizes, which isn't recommended for real-time operation), we will
+        // definitely lose audio.
+        int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
+        int soundCard1InFifoSizeSamples = 30 * wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
+        int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate / 1000;
+
+        if (g_nSoundCards == 2)
+        {
+            int soundCard2InFifoSizeSamples = 30*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
+            int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate / 1000;
+            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
+            g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
+            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
+            g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
+        
+            log_debug("fifoSize_ms:  %d infifo2: %d/outfilo2: %d",
+                wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
+        }
+        else
+        {
+            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
+            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
+            g_rxUserdata->infifo2 = nullptr;
+            g_rxUserdata->outfifo2 = nullptr;
+        }
+
+        log_debug("fifoSize_ms: %d infifo1: %d/outfilo1 %d",
+                wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard1InFifoSizeSamples, soundCard1OutFifoSizeSamples);
 
         if (g_nSoundCards == 0) 
         {
@@ -2624,7 +2676,7 @@ void MainFrame::startRxStream()
             
             engine->stop();
             engine->setOnEngineError(nullptr, nullptr);
-            
+            delete g_rxUserdata;
             return;
         }
         else if (g_nSoundCards == 1)
@@ -2682,7 +2734,7 @@ void MainFrame::startRxStream()
             
                 engine->stop();
                 engine->setOnEngineError(nullptr, nullptr);
-            
+                delete g_rxUserdata;
                 return;
             }
             else
@@ -2697,6 +2749,124 @@ void MainFrame::startRxStream()
         {
             // RX + TX setup
             // Same note as above re: number of channels.
+            // Note: TX devices are started here as RX device sample rates could change as a result (e.g. Bluetooth on macOS).
+            bool failed = false;
+            
+            txInSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate, 2);
+            txInSoundDevice->setDescription("Mic to FreeDV");
+            txInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                CallAfter([&, newDeviceName]() {
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    wxGetApp().appConfiguration.save(pConfig);
+                });
+            }, nullptr);
+            
+            if (!txInSoundDevice)
+            {
+                executeOnUiThreadAndWait_([&]() {
+                    wxMessageBox(wxString::Format("Could not find TX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get()), wxT("Error"), wxOK);
+                });
+                failed = true;
+            }
+            else
+            {
+                txInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
+                    paCallBackData* cbData = static_cast<paCallBackData*>(state);
+                    short* audioData = static_cast<short*>(data);
+                
+                    if (!endingTx) 
+                    {
+                        for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
+                        {
+                            if (codec2_fifo_write(cbData->infifo2, &audioData[0], 1)) 
+                            {
+                                g_infifo2_full++;
+                            }
+                        }
+                    }
+
+                    m_txThread->notify();
+                }, g_rxUserdata);
+        
+                txInSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
+                {
+                    g_AEstatus2[1]++;
+                }, nullptr);
+        
+                txInSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
+                {
+                    g_AEstatus2[0]++;
+                }, nullptr);
+                
+                txInSoundDevice->setOnAudioError(errorCallback, nullptr);                
+                txInSoundDevice->start();
+            }
+
+            txOutSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 2);
+            txOutSoundDevice->setDescription("FreeDV to Radio");
+            txOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                CallAfter([&, newDeviceName]() {
+                    wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
+                    wxGetApp().appConfiguration.save(pConfig);
+                });
+            }, nullptr);
+            
+            if (!txOutSoundDevice && !failed)
+            {
+                executeOnUiThreadAndWait_([&]() {
+                    wxMessageBox(wxString::Format("Could not find TX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Error"), wxOK);
+                });
+                failed = true;
+            }
+            else if (!failed)
+            {
+                txOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
+                    paCallBackData* cbData = static_cast<paCallBackData*>(state);
+                    short* audioData = static_cast<short*>(data);
+                    short outdata = 0;
+               
+                    if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
+                    {
+                        g_outfifo1_empty++;
+                        return;
+                    }
+
+                    for (; size > 0; size--, audioData += dev.getNumChannels())
+                    {
+                        codec2_fifo_read(cbData->outfifo1, &outdata, 1);
+
+                        // write signal to all channels to start. This is so that
+                        // the compiler can optimize for the most common case.
+                        for (auto j = 0; j < dev.getNumChannels(); j++)
+                        {
+                            audioData[j] = outdata;
+                        }
+                    
+                        // If VOX tone is enabled, go back through and add the VOX tone
+                        // on the left channel.
+                        if (cbData->leftChannelVoxTone)
+                        {
+                            cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
+                            cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
+                            audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
+                        }
+                    }
+                }, g_rxUserdata);
+        
+                txOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
+                {
+                    g_AEstatus1[3]++;
+                }, nullptr);
+        
+                txOutSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
+                {
+                    g_AEstatus1[2]++;
+                }, nullptr);
+            
+                txOutSoundDevice->setOnAudioError(errorCallback, nullptr);
+                txOutSoundDevice->start();
+            }
+            
             rxInSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate, 2);
             rxInSoundDevice->setDescription("Radio to FreeDV");
             rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
@@ -2714,26 +2884,8 @@ void MainFrame::startRxStream()
                     wxGetApp().appConfiguration.save(pConfig);
                 });
             }, nullptr);
-
-            txInSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate, 2);
-            txInSoundDevice->setDescription("Mic to FreeDV");
-            txInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                CallAfter([&, newDeviceName]() {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    wxGetApp().appConfiguration.save(pConfig);
-                });
-            }, nullptr);
-
-            txOutSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 2);
-            txOutSoundDevice->setDescription("FreeDV to Radio");
-            txOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                CallAfter([&, newDeviceName]() {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    wxGetApp().appConfiguration.save(pConfig);
-                });
-            }, nullptr);
             
-            bool failed = false;
+            
             if (!rxInSoundDevice)
             {
                 executeOnUiThreadAndWait_([&]() {
@@ -2746,22 +2898,6 @@ void MainFrame::startRxStream()
             {
                 executeOnUiThreadAndWait_([&]() {
                     wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get()), wxT("Error"), wxOK);
-                });
-                failed = true;
-            }
-            
-            if (!txInSoundDevice)
-            {
-                executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format("Could not find TX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName.get()), wxT("Error"), wxOK);
-                });
-                failed = true;
-            }
-            
-            if (!txOutSoundDevice)
-            {
-                executeOnUiThreadAndWait_([&]() {
-                    wxMessageBox(wxString::Format("Could not find TX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
@@ -2780,11 +2916,13 @@ void MainFrame::startRxStream()
                 
                 if (txInSoundDevice)
                 {
+                    txInSoundDevice->stop();
                     txInSoundDevice.reset();
                 }
                 
                 if (txOutSoundDevice)
                 {
+                    txOutSoundDevice->stop();
                     txOutSoundDevice.reset();
                 }
                 
@@ -2792,7 +2930,7 @@ void MainFrame::startRxStream()
             
                 engine->stop();
                 engine->setOnEngineError(nullptr, nullptr);
-            
+                delete g_rxUserdata;
                 return;
             }
             else
@@ -2806,50 +2944,6 @@ void MainFrame::startRxStream()
                 wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate = txOutSoundDevice->getSampleRate();
             }
         }
-
-        // Init call back data structure ----------------------------------------------
-
-        g_rxUserdata = new paCallBackData;
-                
-        // create FIFOs used to interface between IAudioEngine and txRx
-        // processing loop, which iterates about once every 10-40ms
-        // (depending on platform/audio library). Sample rate conversion, 
-        // stats for spectral plots, and transmit processng are all performed 
-        // in the tx/rxProcessing loop.
-        //
-        // Note that soundCard[12]InFifoSizeSamples are significantly larger than
-        // the other FIFO sizes. This is to better handle PulseAudio/pipewire
-        // behavior on some devices, where the system sends multiple *seconds*
-        // of audio samples at once followed by long periods with no samples at
-        // all. Without a very large FIFO size (or a way to dynamically change
-        // FIFO sizes, which isn't recommended for real-time operation), we will
-        // definitely lose audio.
-        int m_fifoSize_ms = wxGetApp().appConfiguration.fifoSizeMs;
-        int soundCard1InFifoSizeSamples = 30 * wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate;
-        int soundCard1OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate / 1000;
-
-        if (txInSoundDevice && txOutSoundDevice)
-        {
-            int soundCard2InFifoSizeSamples = 30*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
-            int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate / 1000;
-            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
-            g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
-            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
-            g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
-        
-            log_debug("fifoSize_ms:  %d infifo2: %d/outfilo2: %d",
-                wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
-        }
-        else
-        {
-            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
-            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
-            g_rxUserdata->infifo2 = nullptr;
-            g_rxUserdata->outfifo2 = nullptr;
-        }
-
-        log_debug("fifoSize_ms: %d infifo1: %d/outfilo1 %d",
-                wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard1InFifoSizeSamples, soundCard1OutFifoSizeSamples);
 
         // reset debug stats for FIFOs
 
@@ -2921,14 +3015,6 @@ void MainFrame::startRxStream()
         g_rxUserdata->voxTonePhase = 0;
 
         // Set sound card callbacks
-        auto errorCallback = [&](IAudioDevice&, std::string error, void*)
-        {
-            log_error("%s", error.c_str());
-            CallAfter([&, error]() {
-                wxMessageBox(wxString::Format("Error encountered while processing audio: %s", error), wxT("Error"), wxOK);
-            });
-        };
-
         rxInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
             paCallBackData* cbData = static_cast<paCallBackData*>(state);
             short* audioData = static_cast<short*>(data);
@@ -2991,80 +3077,6 @@ void MainFrame::startRxStream()
             {
                 g_AEstatus2[2]++;
             }, nullptr);
-            
-            txInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
-                paCallBackData* cbData = static_cast<paCallBackData*>(state);
-                short* audioData = static_cast<short*>(data);
-                
-                if (!endingTx) 
-                {
-                    for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
-                    {
-                        if (codec2_fifo_write(cbData->infifo2, &audioData[0], 1)) 
-                        {
-                            g_infifo2_full++;
-                        }
-                    }
-                }
-
-                m_txThread->notify();
-            }, g_rxUserdata);
-        
-            txInSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
-            {
-                g_AEstatus2[1]++;
-            }, nullptr);
-        
-            txInSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
-            {
-                g_AEstatus2[0]++;
-            }, nullptr);
-            
-            txOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
-                paCallBackData* cbData = static_cast<paCallBackData*>(state);
-                short* audioData = static_cast<short*>(data);
-                short outdata = 0;
-               
-                if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
-                {
-                    g_outfifo1_empty++;
-                    return;
-                }
-
-                for (; size > 0; size--, audioData += dev.getNumChannels())
-                {
-                    codec2_fifo_read(cbData->outfifo1, &outdata, 1);
-
-                    // write signal to all channels to start. This is so that
-                    // the compiler can optimize for the most common case.
-                    for (auto j = 0; j < dev.getNumChannels(); j++)
-                    {
-                        audioData[j] = outdata;
-                    }
-                    
-                    // If VOX tone is enabled, go back through and add the VOX tone
-                    // on the left channel.
-                    if (cbData->leftChannelVoxTone)
-                    {
-                        cbData->voxTonePhase += 2.0*M_PI*VOX_TONE_FREQ/wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate;
-                        cbData->voxTonePhase -= 2.0*M_PI*floor(cbData->voxTonePhase/(2.0*M_PI));
-                        audioData[0] = VOX_TONE_AMP*cos(cbData->voxTonePhase);
-                    }
-                }
-            }, g_rxUserdata);
-        
-            txOutSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
-            {
-                g_AEstatus1[3]++;
-            }, nullptr);
-        
-            txOutSoundDevice->setOnAudioUnderflow([](IAudioDevice& dev, void* state)
-            {
-                g_AEstatus1[2]++;
-            }, nullptr);
-            
-            txInSoundDevice->setOnAudioError(errorCallback, nullptr);
-            txOutSoundDevice->setOnAudioError(errorCallback, nullptr);
         }
         else
         {
@@ -3115,7 +3127,6 @@ void MainFrame::startRxStream()
                 m_txThread->SetPriority(WXTHREAD_MAX_PRIORITY);
             }
             
-            txInSoundDevice->start();
             if (!txInSoundDevice->isRunning())
             {
                 rxInSoundDevice.reset();
@@ -3126,7 +3137,6 @@ void MainFrame::startRxStream()
                 return;
             }
 
-            txOutSoundDevice->start();
             if (!txOutSoundDevice->isRunning())
             {
                 txInSoundDevice->stop();
