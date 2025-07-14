@@ -55,11 +55,11 @@ int main()
     int nsyms = rade_n_eoo_bits(rade);
     float txSyms[nsyms];
     rade_text_generate_tx_string(txt, "K6AQ", 4, txSyms, nsyms);
-    rade_text_set_rx_callback(txt, OnRadeTextRx, nullptr, [](RADEReceiveStep*) { });
+    rade_text_set_rx_callback(txt, OnRadeTextRx, nullptr);
     rade_tx_set_eoo_bits(rade, txSyms);
 
     // Initialize RADE steps
-    RADEReceiveStep* recvStep = new RADEReceiveStep(rade, &fargan, txt);
+    RADEReceiveStep* recvStep = new RADEReceiveStep(rade, &fargan, txt, [](RADEReceiveStep*) { });
     assert(recvStep != nullptr);
     RADETransmitStep* txStep = new RADETransmitStep(rade, encState);
     assert(txStep != nullptr);
