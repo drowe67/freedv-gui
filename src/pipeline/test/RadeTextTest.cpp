@@ -55,7 +55,7 @@ int main()
     int nsyms = rade_n_eoo_bits(rade);
     float txSyms[nsyms];
     rade_text_generate_tx_string(txt, "K6AQ", 4, txSyms, nsyms);
-    rade_text_set_rx_callback(txt, OnRadeTextRx, nullptr);
+    rade_text_set_rx_callback(txt, OnRadeTextRx, nullptr, [](RADEReceiveStep*) { });
     rade_tx_set_eoo_bits(rade, txSyms);
 
     // Initialize RADE steps
