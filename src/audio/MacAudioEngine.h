@@ -50,6 +50,8 @@ private:
     AudioDeviceSpecification getAudioSpecification_(int coreAudioId, AudioDirection direction);
     int getNumChannels_(int coreAudioId, AudioDirection direction);
 
+    std::string cfStringToStdString_(CFStringRef input);
+    
     static int OnDeviceListChange_(
         AudioObjectID                       inObjectID,
         UInt32                              inNumberAddresses,

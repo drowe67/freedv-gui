@@ -335,6 +335,39 @@ AudioDeviceSpecification MacAudioEngine::getAudioSpecification_(int coreAudioId,
     
     std::string deviceName = name;
     
+    if (deviceName == "")
+    {
+        // Get device name via backup mechanism.
+        propertyAddress.mSelector = kAudioDevicePropertyDeviceNameCFString;
+        propertySize = sizeof(CFStringRef);
+        CFStringRef name = nullptr;
+        status = AudioObjectGetPropertyData(
+            coreAudioId,
+            &propertyAddress,
+            0,
+            nullptr,
+            &propertySize,
+            &name
+        );
+        if (status != noErr)
+        {
+            if (onAudioErrorFunction)
+            {
+                onAudioErrorFunction(*this, "Could not get audio device name", onAudioErrorState);
+            }
+            return AudioDeviceSpecification::GetInvalidDevice();
+        }
+
+        deviceName = cfStringToStdString_(name);
+        CFRelease(name);
+        
+        if (deviceName == "")
+        {
+            log_warn("Device %d: Could not get usable device name after multiple attempts", coreAudioId);
+            return AudioDeviceSpecification::GetInvalidDevice();
+        }
+    }
+    
     // Get HW sample rate
     double sampleRate = 0;
     propertyAddress.mSelector = kAudioDevicePropertyNominalSampleRate;
@@ -445,4 +478,34 @@ int MacAudioEngine::OnDeviceListChange_(
     thisObj->requestRestart_();
     #endif // 0
     return noErr;
+}
+
+/**
+ * Converts a CFString to a UTF-8 std::string if possible.
+ *
+ * @param input A reference to the CFString to convert.
+ * @return Returns a std::string containing the contents of CFString converted to UTF-8. Returns
+ *  an empty string if the input reference is null or conversion is not possible.
+ */
+std::string MacAudioEngine::cfStringToStdString_(CFStringRef input)
+{
+    if (!input)
+        return {};
+
+    // Attempt to access the underlying buffer directly. This only works if no conversion or
+    //  internal allocation is required.
+    auto originalBuffer{ CFStringGetCStringPtr(input, kCFStringEncodingUTF8) };
+    if (originalBuffer)
+        return originalBuffer;
+
+    // Copy the data out to a local buffer.
+    auto lengthInUtf16{ CFStringGetLength(input) };
+    auto maxLengthInUtf8{ CFStringGetMaximumSizeForEncoding(lengthInUtf16,
+        kCFStringEncodingUTF8) + 1 }; // <-- leave room for null terminator
+    std::vector<char> localBuffer(maxLengthInUtf8);
+
+    if (CFStringGetCString(input, localBuffer.data(), maxLengthInUtf8, maxLengthInUtf8))
+        return localBuffer.data();
+
+    return {};
 }
