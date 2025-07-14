@@ -790,10 +790,15 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
     if (txMode_ >= FREEDV_MODE_RADE)
     {
         // special handling for RADE
-        parallelSteps.push_back(new RADEReceiveStep(rade_, &fargan_, radeTextPtr_));
-
-        state->preProcessFn = [&](ParallelStep*) { return 0; };
-        state->postProcessFn = std::bind(&FreeDVInterface::postProcessRxFn_, this, _1); //[&](ParallelStep*) { return 0; };
+        auto rxStep = new RADEReceiveStep(rade_, &fargan_, radeTextPtr_, [&, getRxStateFn](RADEReceiveStep* s) {
+            auto finalSync = s->getSync();
+            *getRxStateFn() = finalSync;
+            sync_ = finalSync;
+        });
+        
+        auto pipeline = new AudioPipeline(inputSampleRate, outputSampleRate);
+        pipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(rxStep));
+        return pipeline;
     }
     else
     { 

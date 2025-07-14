@@ -33,7 +33,7 @@
 
 extern wxString utRxFeatureFile;
 
-RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr)
+RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, std::function<void(RADEReceiveStep*)> syncFn)
     : dv_(dv)
     , fargan_(fargan)
     , inputSampleFifo_(nullptr)
@@ -42,6 +42,7 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
     , pendingFeaturesIdx_(0)
     , featuresFile_(nullptr)
     , textPtr_(textPtr)
+    , syncFn_(syncFn)
 {
     assert(syncState_.is_lock_free());
 
@@ -227,6 +228,8 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
     __rtsan_enable();
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 #endif // defined(__clang__)
+    
+    syncFn_(this);
 
     return outputSamples_;
 }

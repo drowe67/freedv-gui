@@ -40,7 +40,7 @@ extern "C"
 class RADEReceiveStep : public IPipelineStep
 {
 public:
-    RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr);
+    RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, std::function<void(RADEReceiveStep*)> syncFn);
     virtual ~RADEReceiveStep();
     
     virtual int getInputSampleRate() const override;
@@ -60,6 +60,7 @@ private:
     int pendingFeaturesIdx_;
     FILE* featuresFile_;
     rade_text_t textPtr_;
+    std::function<void(RADEReceiveStep*)> syncFn_;
 
     RADE_COMP* inputBufCplx_;
     short* inputBuf_;
