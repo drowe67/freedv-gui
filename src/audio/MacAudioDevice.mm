@@ -42,12 +42,13 @@ thread_local void* MacAudioDevice::Workgroup_ = nullptr;
 thread_local void* MacAudioDevice::JoinToken_ = nullptr;
 thread_local int MacAudioDevice::CurrentCoreAudioId_ = 0;
 
-// One nanosecond in seconds.
-constexpr static double kOneNanosecond = 1.0e9;
+// Conversion factors.
+constexpr static int MS_TO_SEC = 1000;
+constexpr static int MS_TO_NSEC = 1000000;
 
 // The I/O interval time in seconds.
-constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.020;
-constexpr static double AUDIO_SAMPLE_BLOCK_WIRELESS_SEC = 0.100;
+constexpr static int AUDIO_SAMPLE_BLOCK_MSEC = 20;
+constexpr static int AUDIO_SAMPLE_BLOCK_WIRELESS_MSEC = 100;
 
 static OSStatus GetIsWirelessDevice(AudioObjectID inDeviceID, bool *isWireless)
 {
@@ -194,7 +195,7 @@ void MacAudioDevice::start()
         // reduces dropouts on marginal hardware.
         UInt32 minFrameSize = 0;
         UInt32 maxFrameSize = 0;
-        UInt32 desiredFrameSize = AUDIO_SAMPLE_BLOCK_SEC * sampleRate_;
+        UInt32 desiredFrameSize = AUDIO_SAMPLE_BLOCK_MSEC * sampleRate_ / MS_TO_SEC;
         
         // Calculate next power of two above desiredFrameSize if not already power of two
         desiredFrameSize = nextPowerOfTwo_(desiredFrameSize);
@@ -211,7 +212,7 @@ void MacAudioDevice::start()
             bool isWireless = false;
             if (GetIsWirelessDevice(coreAudioId_, &isWireless) == noErr && isWireless)
             {
-                desiredFrameSize = sampleRate_ * AUDIO_SAMPLE_BLOCK_WIRELESS_SEC;
+                desiredFrameSize = sampleRate_ * AUDIO_SAMPLE_BLOCK_WIRELESS_MSEC / MS_TO_SEC;
                 desiredFrameSize = nextPowerOfTwo_(desiredFrameSize);
                 desiredFrameSize = std::min(maxFrameSize, desiredFrameSize);
                 desiredFrameSize = std::max(minFrameSize, desiredFrameSize);
@@ -873,7 +874,7 @@ void MacAudioDevice::startRealTimeWork()
 
 void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, (int)(AUDIO_SAMPLE_BLOCK_SEC * kOneNanosecond) >> (fastMode ? 1 : 0)));
+    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, (AUDIO_SAMPLE_BLOCK_MSEC * MS_TO_NSEC) >> (fastMode ? 1 : 0)));
 }
 
 void MacAudioDevice::clearHelperRealTime()
