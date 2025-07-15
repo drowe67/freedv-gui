@@ -46,7 +46,7 @@ constexpr static int MS_TO_NSEC = 1000000;
 
 // The I/O interval time in seconds.
 constexpr static int AUDIO_SAMPLE_BLOCK_MSEC = 20;
-constexpr static int AUDIO_SAMPLE_BLOCK_WIRELESS_MSEC = 100;
+constexpr static int AUDIO_SAMPLE_BLOCK_WIRELESS_MSEC = 40;
 
 static OSStatus GetIsWirelessDevice(AudioObjectID inDeviceID, bool *isWireless)
 {
@@ -202,6 +202,7 @@ void MacAudioDevice::start()
             log_info("Frame sizes of %d to %d are supported for audio device ID %d", minFrameSize, maxFrameSize, coreAudioId_);
             desiredFrameSize = std::min(maxFrameSize, desiredFrameSize);
             desiredFrameSize = std::max(minFrameSize, desiredFrameSize);
+            log_info("Device %d: calculated frame size of %d", coreAudioId_, desiredFrameSize);
             
             // Detect whether this is a Bluetooth device. If so, automatically use the maxFrameSize
             // to avoid dropouts.
