@@ -1218,6 +1218,7 @@ MainFrame::~MainFrame()
         wxGetApp().appConfiguration.reporterWindowTop = pos.y;
 
         m_reporterDialog->setReporter(nullptr);
+        wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
         m_reporterDialog->Close();
         m_reporterDialog->Destroy();
         m_reporterDialog = nullptr;
@@ -1961,6 +1962,18 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
 
 void MainFrame::topFrame_OnClose( wxCloseEvent& event )
 {
+    // wxWidgets doesn't fire wxEVT_MOVE events on Linux for some
+    // reason, so we need to grab and save the current position again.
+    auto pos = m_reporterDialog->GetPosition();
+    wxGetApp().appConfiguration.reporterWindowLeft = pos.x;
+    wxGetApp().appConfiguration.reporterWindowTop = pos.y;
+    
+    m_reporterDialog->setReporter(nullptr);
+    wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
+    m_reporterDialog->Close();
+    m_reporterDialog->Destroy();
+    m_reporterDialog = nullptr;
+    
     if (m_RxRunning)
     {
         if (m_btnTogPTT->GetValue())
