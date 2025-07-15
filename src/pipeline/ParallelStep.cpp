@@ -142,7 +142,7 @@ ParallelStep::ParallelStep(
                     
                     if (fallbackToSleep)
                     {
-                        std::this_thread::sleep_until(beginTime + std::chrono::milliseconds((int)(1000 * FRAME_DURATION)));
+                        std::this_thread::sleep_until(beginTime + std::chrono::milliseconds(1000 * FRAME_DURATION_MS));
                     }
                 }
                 
@@ -275,7 +275,7 @@ void ParallelStep::executeRunnerThread_(ThreadInfo* threadState) noexcept
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 #endif // defined(__clang__)
 {
-    int samplesIn = std::min((int)(inputSampleRate_ * FRAME_DURATION), codec2_fifo_used(threadState->inputFifo));
+    int samplesIn = std::min((inputSampleRate_ * FRAME_DURATION_MS) / MS_TO_SEC, codec2_fifo_used(threadState->inputFifo));
     do
     {
         int samplesOut = 0;
@@ -289,7 +289,7 @@ void ParallelStep::executeRunnerThread_(ThreadInfo* threadState) noexcept
         {
             codec2_fifo_write(threadState->outputFifo, output.get(), samplesOut);
         }
-        samplesIn = std::min((int)(inputSampleRate_ * FRAME_DURATION), codec2_fifo_used(threadState->inputFifo));
+        samplesIn = std::min((inputSampleRate_ * FRAME_DURATION_MS) / MS_TO_SEC, codec2_fifo_used(threadState->inputFifo));
     } while (samplesIn > 0 && !threadState->exitingThread);
 }
 

@@ -30,7 +30,7 @@
 SpeexStep::SpeexStep(int sampleRate)
     : sampleRate_(sampleRate)
 {
-    numSamplesPerSpeexRun_ = FRAME_DURATION * sampleRate_;
+    numSamplesPerSpeexRun_ = (FRAME_DURATION_MS * sampleRate_) / MS_TO_SEC;
     assert(numSamplesPerSpeexRun_ > 0);
     
     speexStateObj_ = speex_preprocess_state_init(
