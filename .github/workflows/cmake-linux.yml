@@ -28,7 +28,7 @@ jobs:
 
     - name: Spellcheck codebase
       shell: bash
-      run: codespell --ignore-words-list=caf,radae,rade,inout,nin,ontop,parm,tthe,ue `find src -name '*.c*' -o -name '*.h' | grep -v 3rdparty`
+      run: codespell --ignore-words-list=numer,caf,radae,rade,inout,nin,ontop,parm,tthe,ue `find src -name '*.c*' -o -name '*.h' | grep -v 3rdparty`
 
   dist:
     runs-on: ubuntu-22.04
