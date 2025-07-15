@@ -2,7 +2,7 @@ if(NATIVE_AUDIO_AVAILABLE)
     if(APPLE)
         set(AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES
             MacAudioEngine.cpp
-            MacAudioDevice.mm
+            MacAudioDevice.cpp
         )
     elseif(WIN32)
         set(AUDIO_ENGINE_LIBRARY_SPECIFIC_FILES

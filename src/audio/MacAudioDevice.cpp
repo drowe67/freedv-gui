@@ -27,9 +27,7 @@
 #include <future>
 #include <sstream>
 
-#import <AVFoundation/AVFoundation.h>
-#import <AudioToolbox/AudioToolbox.h>
-
+#include <mach/mach.h>
 #include <mach/mach_time.h>
 #include <mach/mach_init.h>
 #include <mach/thread_policy.h>
@@ -117,12 +115,10 @@ MacAudioDevice::MacAudioDevice(MacAudioEngine* parent, std::string deviceName, i
     , direction_(direction)
     , numChannels_(numChannels)
     , sampleRate_(sampleRate)
-    //, engine_(nil)
-    //, player_(nil)
+    , deviceName_(deviceName)
     , inputFrames_(nullptr)
     , isDefaultDevice_(false)
     , parent_(parent)
-    , deviceName_(deviceName)
     , running_(false)
 {
     log_info("Create MacAudioDevice \"%s\" with ID %d, channels %d and sample rate %d", deviceName_.c_str(), coreAudioId, numChannels, sampleRate);
@@ -328,7 +324,6 @@ void MacAudioDevice::start()
         deviceFormat.mBytesPerPacket = deviceFormat.mBytesPerFrame;
 
         // Get the device's format
-        auto getScope = (direction_ == IAudioEngine::AUDIO_ENGINE_IN) ? kAudioUnitScope_Input : kAudioUnitScope_Output;
         auto setScope = (direction_ == IAudioEngine::AUDIO_ENGINE_OUT) ? kAudioUnitScope_Input : kAudioUnitScope_Output;
         auto bus = (direction_ == IAudioEngine::AUDIO_ENGINE_IN) ? 1 : 0;
         
@@ -812,53 +807,50 @@ void MacAudioDevice::joinWorkgroup_()
     Workgroup_ = nullptr;
     JoinToken_ = nullptr;
     
-    if (@available(macOS 11.0, *)) 
-    { 
-        UInt32 size = sizeof(os_workgroup_t);
-        os_workgroup_t* wgMem = new os_workgroup_t;
-        assert(wgMem != nullptr);
-        os_workgroup_join_token_s* wgToken = new os_workgroup_join_token_s;
-        assert(wgToken != nullptr);
-        
-        AudioObjectPropertyAddress propertyAddress = {
-            .mSelector = kAudioDevicePropertyIOThreadOSWorkgroup,
-            .mScope = kAudioObjectPropertyScopeGlobal,
-            .mElement = kAudioObjectPropertyElementMain
-        };
+    UInt32 size = sizeof(os_workgroup_t);
+    os_workgroup_t* wgMem = new os_workgroup_t;
+    assert(wgMem != nullptr);
+    os_workgroup_join_token_s* wgToken = new os_workgroup_join_token_s;
+    assert(wgToken != nullptr);
     
-        OSStatus osResult = AudioObjectGetPropertyData(
-                  coreAudioId_, 
-                  &propertyAddress, 
-                  0,
-                  nullptr, 
-                  &size, 
-                  wgMem);
-        if (osResult != noErr)
-        {
-            Workgroup_ = nullptr;
-            JoinToken_ = nullptr;
-            CurrentCoreAudioId_ = 0;
+    AudioObjectPropertyAddress propertyAddress = {
+        .mSelector = kAudioDevicePropertyIOThreadOSWorkgroup,
+        .mScope = kAudioObjectPropertyScopeGlobal,
+        .mElement = kAudioObjectPropertyElementMain
+    };
 
-            delete wgMem;
-            delete wgToken;
-            return;
-        }
-        else
-        {
-            Workgroup_ = wgMem;
-            JoinToken_ = wgToken;
-            CurrentCoreAudioId_ = coreAudioId_;
-        }
-      
-        auto workgroupResult = os_workgroup_join(*wgMem, wgToken);
-        if (workgroupResult != 0)
-        {
-            Workgroup_ = nullptr;
-            JoinToken_ = nullptr;
-            CurrentCoreAudioId_ = 0;
-            delete wgMem;
-            delete wgToken;
-        }
+    OSStatus osResult = AudioObjectGetPropertyData(
+              coreAudioId_, 
+              &propertyAddress, 
+              0,
+              nullptr, 
+              &size, 
+              wgMem);
+    if (osResult != noErr)
+    {
+        Workgroup_ = nullptr;
+        JoinToken_ = nullptr;
+        CurrentCoreAudioId_ = 0;
+
+        delete wgMem;
+        delete wgToken;
+        return;
+    }
+    else
+    {
+        Workgroup_ = wgMem;
+        JoinToken_ = wgToken;
+        CurrentCoreAudioId_ = coreAudioId_;
+    }
+  
+    auto workgroupResult = os_workgroup_join(*wgMem, wgToken);
+    if (workgroupResult != 0)
+    {
+        Workgroup_ = nullptr;
+        JoinToken_ = nullptr;
+        CurrentCoreAudioId_ = 0;
+        delete wgMem;
+        delete wgToken;
     }
 }
 
@@ -884,22 +876,19 @@ void MacAudioDevice::clearHelperRealTime()
 
 void MacAudioDevice::leaveWorkgroup_()
 {
-    if (@available(macOS 11.0, *)) 
+    if (Workgroup_ != nullptr)
     {
-        if (Workgroup_ != nullptr)
-        {
-            os_workgroup_t* wgMem = (os_workgroup_t*)Workgroup_;
-            os_workgroup_join_token_s* wgToken = (os_workgroup_join_token_s*)JoinToken_;
-            
-            os_workgroup_leave(*wgMem, wgToken);
-            
-            delete wgMem;
-            delete wgToken;
-            
-            Workgroup_ = nullptr;
-            JoinToken_ = nullptr;
-            CurrentCoreAudioId_ = 0;
-        }
+        os_workgroup_t* wgMem = (os_workgroup_t*)Workgroup_;
+        os_workgroup_join_token_s* wgToken = (os_workgroup_join_token_s*)JoinToken_;
+        
+        os_workgroup_leave(*wgMem, wgToken);
+        
+        delete wgMem;
+        delete wgToken;
+        
+        Workgroup_ = nullptr;
+        JoinToken_ = nullptr;
+        CurrentCoreAudioId_ = 0;
     }
 }
 
