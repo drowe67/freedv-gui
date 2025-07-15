@@ -46,8 +46,8 @@ thread_local int MacAudioDevice::CurrentCoreAudioId_ = 0;
 constexpr static double kOneNanosecond = 1.0e9;
 
 // The I/O interval time in seconds.
-constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.030;
-constexpr static double AUDIO_SAMPLE_BLOCK_WIRELESS_SEC = 0.120;
+constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.020;
+constexpr static double AUDIO_SAMPLE_BLOCK_WIRELESS_SEC = 0.100;
 
 static OSStatus GetIsWirelessDevice(AudioObjectID inDeviceID, bool *isWireless)
 {
