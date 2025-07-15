@@ -47,6 +47,31 @@ constexpr static double kOneNanosecond = 1.0e9;
 
 // The I/O interval time in seconds.
 constexpr static double AUDIO_SAMPLE_BLOCK_SEC = 0.020;
+constexpr static double AUDIO_SAMPLE_BLOCK_WIRELESS_SEC = 0.100;
+
+static OSStatus GetIsWirelessDevice(AudioObjectID inDeviceID, bool *isWireless)
+{
+    AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyTransportType,
+                                              kAudioObjectPropertyScopeGlobal,
+                                              kAudioObjectPropertyElementMaster };
+
+    UInt32 transportType = 0;
+    UInt32 theDataSize = sizeof(transportType);
+    OSStatus theError = AudioObjectGetPropertyData(inDeviceID,
+                                                   &theAddress,
+                                                   0,
+                                                   NULL,
+                                                   &theDataSize,
+                                                   &transportType);
+    if(theError == 0)
+    {
+        *isWireless = 
+            transportType == kAudioDeviceTransportTypeAirPlay ||
+            transportType == kAudioDeviceTransportTypeBluetooth ||
+            transportType == kAudioDeviceTransportTypeBluetoothLE;
+    }
+    return theError;
+}
 
 static OSStatus GetIOBufferFrameSizeRange(AudioObjectID inDeviceID,
                                           UInt32* outMinimum,
@@ -123,7 +148,7 @@ int MacAudioDevice::getSampleRate() const
 {
     return sampleRate_;
 }
-    
+
 void MacAudioDevice::start()
 {
     std::shared_ptr<std::promise<void>> prom = std::make_shared<std::promise<void> >();
@@ -172,16 +197,7 @@ void MacAudioDevice::start()
         UInt32 desiredFrameSize = AUDIO_SAMPLE_BLOCK_SEC * sampleRate_;
         
         // Calculate next power of two above desiredFrameSize if not already power of two
-        if ((desiredFrameSize & (desiredFrameSize - 1)) != 0)
-        {
-            desiredFrameSize--;
-            desiredFrameSize |= desiredFrameSize >> 1;
-            desiredFrameSize |= desiredFrameSize >> 2;
-            desiredFrameSize |= desiredFrameSize >> 4;
-            desiredFrameSize |= desiredFrameSize >> 8;
-            desiredFrameSize |= desiredFrameSize >> 16;
-            desiredFrameSize++;
-        }
+        desiredFrameSize = nextPowerOfTwo_(desiredFrameSize);
         
         GetIOBufferFrameSizeRange(coreAudioId_, &minFrameSize, &maxFrameSize);
         if (minFrameSize != 0 && maxFrameSize != 0)
@@ -189,6 +205,20 @@ void MacAudioDevice::start()
             log_info("Frame sizes of %d to %d are supported for audio device ID %d", minFrameSize, maxFrameSize, coreAudioId_);
             desiredFrameSize = std::min(maxFrameSize, desiredFrameSize);
             desiredFrameSize = std::max(minFrameSize, desiredFrameSize);
+            
+            // Detect whether this is a Bluetooth device. If so, automatically use the maxFrameSize
+            // to avoid dropouts.
+            bool isWireless = false;
+            if (GetIsWirelessDevice(coreAudioId_, &isWireless) == noErr && isWireless)
+            {
+                desiredFrameSize = sampleRate_ * AUDIO_SAMPLE_BLOCK_WIRELESS_SEC;
+                desiredFrameSize = nextPowerOfTwo_(desiredFrameSize);
+                desiredFrameSize = std::min(maxFrameSize, desiredFrameSize);
+                desiredFrameSize = std::max(minFrameSize, desiredFrameSize);
+                
+                log_info("Device %d: detected wireless device, using frame size of %d instead", coreAudioId_, desiredFrameSize);
+            }
+            
             log_info("Set frame size for device %d to %d", coreAudioId_, desiredFrameSize);
             if (SetCurrentIOBufferFrameSize(coreAudioId_, desiredFrameSize) != noErr)
             {
@@ -758,6 +788,21 @@ OSStatus MacAudioDevice::OutputProc_(
     }
     
     return OSStatus(noErr);
+}
+
+UInt32 MacAudioDevice::nextPowerOfTwo_(UInt32 val)
+{
+    if ((val & (val - 1)) != 0)
+    {
+        val--;
+        val |= val >> 1;
+        val |= val >> 2;
+        val |= val >> 4;
+        val |= val >> 8;
+        val |= val >> 16;
+        val++;
+    }
+    return val;
 }
 
 void MacAudioDevice::joinWorkgroup_()

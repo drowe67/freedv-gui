@@ -86,6 +86,8 @@ private:
     
     void joinWorkgroup_();
     void leaveWorkgroup_();
+    
+    UInt32 nextPowerOfTwo_(UInt32 val);
 
     static thread_local void* Workgroup_;
     static thread_local void* JoinToken_;
