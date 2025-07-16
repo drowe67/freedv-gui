@@ -21,6 +21,7 @@
 //=========================================================================
 
 #include "AudioPipeline.h"
+#include "../util/logging/ulog.h"
 
 AudioPipeline::AudioPipeline(int inputSampleRate, int outputSampleRate)
     : inputSampleRate_(inputSampleRate)
@@ -42,6 +43,30 @@ int AudioPipeline::getInputSampleRate() const
 int AudioPipeline::getOutputSampleRate() const
 {
     return outputSampleRate_;
+}
+
+void AudioPipeline::dumpSetup() const
+{
+    auto stepSize = pipelineSteps_.size();
+    log_debug("Start at SR %d", getInputSampleRate());
+    log_debug("Number of pipeline steps: %d", stepSize);
+    for (size_t index = 0; index < stepSize; index++)
+    {
+        if (resamplers_[index] != nullptr)
+        {
+            log_debug("  Step %d: resample %d to %d", index, resamplers_[index]->getInputSampleRate(), resamplers_[index]->getOutputSampleRate());
+        }
+        else
+        {
+            log_debug("  Step %d: no resampler");
+        }
+        log_debug("  Step %d: input SR %d, output SR %d", index, pipelineSteps_[index]->getInputSampleRate(), pipelineSteps_[index]->getOutputSampleRate());
+    }
+    if (resultSampler_ != nullptr)
+    {
+        log_debug("  Result: resample %d to %d", resultSampler_->getInputSampleRate(), resultSampler_->getOutputSampleRate());
+    }
+    log_debug("End at SR %d", getOutputSampleRate());
 }
 
 std::shared_ptr<short> AudioPipeline::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)

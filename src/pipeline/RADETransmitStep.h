@@ -24,10 +24,13 @@
 #define AUDIO_PIPELINE__RADE_TRANSMIT_STEP_H
 
 #include <cstdio>
+#include <thread>
+
 #include "IPipelineStep.h"
 #include "../freedv_interface.h"
 #include "rade_api.h"
 #include "lpcnet.h"
+#include "../util/GenericFIFO.h"
 
 class RADETransmitStep : public IPipelineStep
 {
@@ -59,6 +62,10 @@ private:
     short* radeOutShort_;
     RADE_COMP* eooOut_;
     short* eooOutShort_;
+    
+    GenericFIFO<float> utFeatures_;
+    std::thread utFeatureThread_;
+    bool exitingFeatureThread_;
 };
 
 #endif // AUDIO_PIPELINE__RADE_TRANSMIT_STEP_H

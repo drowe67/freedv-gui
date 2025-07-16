@@ -31,9 +31,13 @@
 #include "../defines.h"
 #include "lpcnet.h" // from Opus source tree
 
+using namespace std::chrono_literals;
+
 extern wxString utRxFeatureFile;
 
-RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr)
+#define FEATURE_FIFO_SIZE (2048)
+
+RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, std::function<void(RADEReceiveStep*)> syncFn)
     : dv_(dv)
     , fargan_(fargan)
     , inputSampleFifo_(nullptr)
@@ -42,6 +46,9 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
     , pendingFeaturesIdx_(0)
     , featuresFile_(nullptr)
     , textPtr_(textPtr)
+    , syncFn_(syncFn)
+    , utFeatures_(FEATURE_FIFO_SIZE)
+    , exitingFeatureThread_(false)
 {
     assert(syncState_.is_lock_free());
 
@@ -57,6 +64,26 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
     {
         featuresFile_ = fopen((const char*)utRxFeatureFile.ToUTF8(), "wb");
         assert(featuresFile_ != nullptr);
+        
+        utFeatureThread_ = std::thread([&]() {
+            float* fifoRead = new float[FEATURE_FIFO_SIZE];
+            assert(fifoRead != nullptr);
+            
+            while (!exitingFeatureThread_)
+            {
+                auto numToRead = std::min(utFeatures_.numUsed(), FEATURE_FIFO_SIZE);
+                while (numToRead > 0)
+                {
+                    utFeatures_.read(fifoRead, numToRead);
+                    fwrite(fifoRead, sizeof(float), numToRead, featuresFile_);
+                    numToRead = std::min(utFeatures_.numUsed(), FEATURE_FIFO_SIZE);
+                }
+                
+                std::this_thread::sleep_for(10ms);
+            }
+            
+            delete[] fifoRead;
+        });
     }
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
@@ -93,6 +120,8 @@ RADEReceiveStep::~RADEReceiveStep()
 
     if (featuresFile_ != nullptr)
     {
+        exitingFeatureThread_ = true;
+        utFeatureThread_.join();
         fclose(featuresFile_);
     }
 
@@ -180,7 +209,7 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
             {
                 if (featuresFile_)
                 {
-                    fwrite(featuresOut_, sizeof(float), nout, featuresFile_);
+                    utFeatures_.write(featuresOut_, nout);
                 }
 
                 for (int i = 0; i < nout; i++)
@@ -227,6 +256,8 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
     __rtsan_enable();
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 #endif // defined(__clang__)
+    
+    syncFn_(this);
 
     return outputSamples_;
 }

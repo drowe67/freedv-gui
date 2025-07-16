@@ -110,6 +110,13 @@ int ResampleStep::getOutputSampleRate() const
 
 std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
+    if (inputSampleRate_ == outputSampleRate_)
+    {
+        // shortcut - just return what we got.
+        *numOutputSamples = numInputSamples;
+        return inputSamples;
+    }
+    
     *numOutputSamples = 0;
 
     auto inputPtr = inputSamples.get();

@@ -25,11 +25,14 @@
 
 #include <atomic>
 #include <cstdio>
+#include <thread>
+
 #include "IPipelineStep.h"
 #include "../freedv_interface.h"
 #include "rade_api.h"
 #include "codec2_fifo.h"
 #include "rade_text.h"
+#include "../util/GenericFIFO.h"
 
 // TBD - need to wrap in "extern C" to avoid linker errors
 extern "C" 
@@ -40,7 +43,7 @@ extern "C"
 class RADEReceiveStep : public IPipelineStep
 {
 public:
-    RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr);
+    RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, std::function<void(RADEReceiveStep*)> syncFn);
     virtual ~RADEReceiveStep();
     
     virtual int getInputSampleRate() const override;
@@ -60,12 +63,17 @@ private:
     int pendingFeaturesIdx_;
     FILE* featuresFile_;
     rade_text_t textPtr_;
+    std::function<void(RADEReceiveStep*)> syncFn_;
 
     RADE_COMP* inputBufCplx_;
     short* inputBuf_;
     float* featuresOut_;
     float* eooOut_;
     std::shared_ptr<short> outputSamples_;
+    
+    GenericFIFO<float> utFeatures_;
+    std::thread utFeatureThread_;
+    bool exitingFeatureThread_;
 };
 
 #endif // AUDIO_PIPELINE__RADE_RECEIVE_STEP_H

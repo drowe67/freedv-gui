@@ -33,6 +33,10 @@
 #include "codec2_fifo.h"
 #include "RADETransmitStep.h"
 
+using namespace std::chrono_literals;
+
+#define FEATURE_FIFO_SIZE (2048)
+
 const int RADE_SCALING_FACTOR = 16383;
 
 extern wxString utTxFeatureFile;
@@ -45,6 +49,8 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
     , featureList_(nullptr)
     , featureListIdx_(0)
     , featuresFile_(nullptr)
+    , utFeatures_(FEATURE_FIFO_SIZE)
+    , exitingFeatureThread_(false)
 {
     inputSampleFifo_ = codec2_fifo_create(RADE_SPEECH_SAMPLE_RATE);
     assert(inputSampleFifo_ != nullptr);
@@ -55,6 +61,26 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
     {
         featuresFile_ = fopen((const char*)utTxFeatureFile.ToUTF8(), "wb");
         assert(featuresFile_ != nullptr);
+        
+        utFeatureThread_ = std::thread([&]() {
+            float* fifoRead = new float[FEATURE_FIFO_SIZE];
+            assert(fifoRead != nullptr);
+            
+            while (!exitingFeatureThread_)
+            {
+                auto numToRead = std::min(utFeatures_.numUsed(), FEATURE_FIFO_SIZE);
+                while (numToRead > 0)
+                {
+                    utFeatures_.read(fifoRead, numToRead);
+                    fwrite(fifoRead, sizeof(float), numToRead, featuresFile_);
+                    numToRead = std::min(utFeatures_.numUsed(), FEATURE_FIFO_SIZE);
+                }
+                
+                std::this_thread::sleep_for(10ms);
+            }
+            
+            delete[] fifoRead;
+        });
     }
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
@@ -98,6 +124,8 @@ RADETransmitStep::~RADETransmitStep()
 
     if (featuresFile_ != nullptr)
     {
+        exitingFeatureThread_ = true;
+        utFeatureThread_.join();
         fclose(featuresFile_);
     }
     
@@ -132,7 +160,7 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
     if (numInputSamples == 0)
     {
         // Special case logic for EOO
-        *numOutputSamples = std::min(codec2_fifo_used(outputSampleFifo_), (int)(FRAME_DURATION * getOutputSampleRate()));
+        *numOutputSamples = std::min(codec2_fifo_used(outputSampleFifo_), (FRAME_DURATION_MS * getOutputSampleRate()) / MS_TO_SEC);
         if (*numOutputSamples > 0)
         {
             codec2_fifo_read(outputSampleFifo_, outputSamples_.get(), *numOutputSamples);
@@ -147,7 +175,7 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
         codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
         numInputSamples--;
         
-        if ((*numOutputSamples + numSamplesPerTx) < maxSamples && codec2_fifo_used(inputSampleFifo_) >= LPCNET_FRAME_SIZE)
+        while ((*numOutputSamples + numSamplesPerTx) < maxSamples && codec2_fifo_used(inputSampleFifo_) >= LPCNET_FRAME_SIZE)
         {
             int numRequiredFeaturesForRADE = rade_n_features_in_out(dv_);
             short pcm[LPCNET_FRAME_SIZE];
@@ -159,7 +187,7 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
             
             if (featuresFile_)
             {
-                fwrite(features, sizeof(float), NB_TOTAL_FEATURES, featuresFile_);
+                utFeatures_.write(features, NB_TOTAL_FEATURES);
             }
             
             for (int index = 0; index < NB_TOTAL_FEATURES; index++)
@@ -192,10 +220,11 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
                     codec2_fifo_write(outputSampleFifo_, radeOutShort_, numSamplesPerTx);
                 }
             }
+
+            *numOutputSamples = codec2_fifo_used(outputSampleFifo_);
         }
     }
 
-    *numOutputSamples = codec2_fifo_used(outputSampleFifo_);
     if (*numOutputSamples > 0)
     {
         codec2_fifo_read(outputSampleFifo_, outputSamples_.get(), *numOutputSamples);

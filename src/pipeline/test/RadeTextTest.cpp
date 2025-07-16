@@ -59,7 +59,7 @@ int main()
     rade_tx_set_eoo_bits(rade, txSyms);
 
     // Initialize RADE steps
-    RADEReceiveStep* recvStep = new RADEReceiveStep(rade, &fargan, txt);
+    RADEReceiveStep* recvStep = new RADEReceiveStep(rade, &fargan, txt, [](RADEReceiveStep*) { });
     assert(recvStep != nullptr);
     RADETransmitStep* txStep = new RADETransmitStep(rade, encState);
     assert(txStep != nullptr);

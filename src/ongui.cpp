@@ -641,6 +641,7 @@ void MainFrame::OnDeleteConfig(wxCommandEvent&)
             if (m_reporterDialog != nullptr)
             {
                 m_reporterDialog->setReporter(nullptr);
+                wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
                 m_reporterDialog->Close();
                 m_reporterDialog->Destroy();
                 m_reporterDialog = nullptr;

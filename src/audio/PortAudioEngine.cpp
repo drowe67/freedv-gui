@@ -167,7 +167,6 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, A
     {
         if (device.name.IsSameAs(deviceName))
         {
-#if 0
             PaStreamParameters streamParameters;
             
             streamParameters.device = device.deviceId;
@@ -205,8 +204,6 @@ std::vector<int> PortAudioEngine::getSupportedSampleRates(wxString deviceName, A
             {
                 result.push_back(device.defaultSampleRate);
             }
-#endif // 0
-            result.push_back(device.defaultSampleRate);
             break;
         }
     }
