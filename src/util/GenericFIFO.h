@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cassert>
+#include <algorithm>
 
 template<typename T>
 class GenericFIFO
@@ -103,24 +104,23 @@ GenericFIFO<T>::GenericFIFO(GenericFIFO<T>&& rhs)
 template<typename T>
 int GenericFIFO<T>::write(T* data, int len) noexcept
 {
-    int i;
-    T *pdata;
-    T *ppin = pin;
-
     assert(data != NULL);
 
     if (len > numFree()) {
       return -1;
     } else {
-      /* This could be made more efficient with block copies
-         using memcpy */
-
-      pdata = data;
-      for (i = 0; i < len; i++) {
-        *ppin++ = *pdata++;
-        if (ppin == (buf + nelem)) ppin = buf;
-      }
-      pin = ppin;
+        auto copyLength = std::min(len, (int)((buf + nelem) - pin));
+        memcpy(pin, data, copyLength * sizeof(T));
+        len -= copyLength;
+        if (len > 0)
+        {
+            memcpy(buf, data + copyLength, len * sizeof(T));
+            pin = buf + len;
+        }
+        else
+        {
+            pin += copyLength;
+        }
     }
 
     return 0;
@@ -129,24 +129,23 @@ int GenericFIFO<T>::write(T* data, int len) noexcept
 template<typename T>
 int GenericFIFO<T>::read(T* result, int len) noexcept
 {
-    int i;
-    T *pdata;
-    T *ppout = pout;
-
     assert(result != NULL);
 
     if (len > numUsed()) {
       return -1;
     } else {
-      /* This could be made more efficient with block copies
-         using memcpy */
-
-      pdata = result;
-      for (i = 0; i < len; i++) {
-        *pdata++ = *ppout++;
-        if (ppout == (buf + nelem)) ppout = buf;
-      }
-      pout = ppout;
+        auto copyLength = std::min(len, (int)((buf + nelem) - pout));
+        memcpy(result, pout, copyLength * sizeof(T));
+        len -= copyLength;
+        if (len > 0)
+        {
+            memcpy(result + copyLength, buf, len * sizeof(T));
+            pout = buf + len;
+        }
+        else
+        {
+            pout += copyLength;
+        }
     }
 
     return 0;
