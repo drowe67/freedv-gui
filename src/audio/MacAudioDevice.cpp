@@ -45,8 +45,8 @@ constexpr static int MS_TO_SEC = 1000;
 constexpr static int MS_TO_NSEC = 1000000;
 
 // The I/O interval time in seconds.
-constexpr static int AUDIO_SAMPLE_BLOCK_MSEC = 25;
-constexpr static int AUDIO_SAMPLE_BLOCK_WIRELESS_MSEC = 50;
+constexpr static int AUDIO_SAMPLE_BLOCK_MSEC = 20;
+constexpr static int AUDIO_SAMPLE_BLOCK_WIRELESS_MSEC = 40;
 
 static OSStatus GetIsWirelessDevice(AudioObjectID inDeviceID, bool *isWireless)
 {
