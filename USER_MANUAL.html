@@ -949,8 +949,32 @@ respond to requests directed to that address.</p>
 <p>On newer radios (e.g. 7300, 7610), you may also need to set “CI-V USB
 Echo Back” to ON as this may be set to OFF by default.</p>
 <h2 data-number="15.5"
+id="hamlib-seems-not-reliable-on-my-linux-machine"><span
+class="header-section-number">15.5</span> Hamlib seems not reliable on
+my Linux machine</h2>
+<p>Some Linux distributions come with pre-installed software that may
+try to use serial ports that your radio creates. You may have problems
+initialising your radio or CAT control via hamlib may seem unreliable or
+time out.</p>
+<p><em>Brltty</em> is software that looks on serial ports for a Braille
+device which will also upset CAT communication with your radio.
+Typically this is seen as a timeout error windw from hamlib.</p>
+<p>Stop BRLTTY as follows:</p>
+<pre><code>sudo systemctl stop brltty-udev.service
+sudo systemctl disable brltty.service
+sudo systemctl mask brltty-udev.service</code></pre>
+<p>BRLTTY is the most common cause of communication problems but it’s
+also been reported that in some cases ModemManager can give trouble.</p>
+<p><em>ModemManager</em> is on some Ubuntu based distributions and it
+will try to reset a modem by sending AT commands which will upset your
+radio.</p>
+<p>Stop ModemManager as follows:</p>
+<pre><code>sudo systemctl stop ModemManager
+sudo systemctl disable ModemManager
+sudo systemctl mask ModemManager</code></pre>
+<h2 data-number="15.6"
 id="i-need-help-with-my-radio-or-rig-interface"><span
-class="header-section-number">15.5</span> I need help with my radio or
+class="header-section-number">15.6</span> I need help with my radio or
 rig interface</h2>
 <p>There are many radios, many computers, and many sound cards. It is
 impossible to test them all. Many radios have intricate menus with
@@ -958,8 +982,8 @@ custom settings. It is unreasonable to expect the authors of FreeDV to
 have special knowledge of your exact hardware.</p>
 <p>However someone may have worked through the same problem as you. Ask
 on the digital voice mailing list.</p>
-<h2 data-number="15.6" id="cant-hear-anything-on-receive"><span
-class="header-section-number">15.6</span> Can’t hear anything on
+<h2 data-number="15.7" id="cant-hear-anything-on-receive"><span
+class="header-section-number">15.7</span> Can’t hear anything on
 receive</h2>
 <p>Many FreeDV modes will not play any audio if there is no valid
 signal. You may also have squelch set too high. In some modes the
@@ -967,23 +991,23 @@ signal. You may also have squelch set too high. In some modes the
 from the SSB radio.</p>
 <p>Try the Test Wave Files above to get a feel for what a FreeDV signal
 looks and sounds like.</p>
-<h2 data-number="15.7"
+<h2 data-number="15.8"
 id="the-signal-is-strong-but-freedv-wont-get-sync-and-decode"><span
-class="header-section-number">15.7</span> The signal is strong but
+class="header-section-number">15.8</span> The signal is strong but
 FreeDV won’t get sync and decode</h2>
 <p>Do you have the correct sideband? See USB or LSB section.</p>
 <p>Is it a FreeDV signal? SSTV uses similar frequencies. To understand
 what FreeDV sounds like, see the Test Wave Files section.</p>
-<h2 data-number="15.8" id="trouble-getting-sync-with-700d"><span
-class="header-section-number">15.8</span> Trouble getting Sync with
+<h2 data-number="15.9" id="trouble-getting-sync-with-700d"><span
+class="header-section-number">15.9</span> Trouble getting Sync with
 700D</h2>
 <p>You need to be within +/- 60 Hz on the transmit signal. It helps if
 both the TX and RX stations tune to known, exact frequencies such as
 exactly 7.177MHz. On channels with fast fading sync may take a few
 seconds.</p>
-<h2 data-number="15.9"
+<h2 data-number="15.10"
 id="ptt-doesnt-work.-it-works-with-fldigi-and-other-hamlib-applications."><span
-class="header-section-number">15.9</span> PTT doesn’t work. It works
+class="header-section-number">15.10</span> PTT doesn’t work. It works
 with Fldigi and other Hamlib applications.</h2>
 <p>Many people struggle with initial CAT control and PTT setup:</p>
 <ol type="1">
@@ -999,9 +1023,9 @@ you a member of the <code>dialout</code> group?</p></li>
 hardware, what you have tried, and the exact nature of the
 problem.</p></li>
 </ol>
-<h2 data-number="15.10"
+<h2 data-number="15.11"
 id="im-on-windows-and-serial-port-ptt-doesnt-work-with-my-usb-to-serial-adapter."><span
-class="header-section-number">15.10</span> I’m on Windows and serial
+class="header-section-number">15.11</span> I’m on Windows and serial
 port PTT doesn’t work with my USB to serial adapter.</h2>
 <p>Please verify that you are running the correct drivers for the USB to
 serial adapter that you’re using. Information and download links for the
@@ -1021,22 +1045,22 @@ for instructions on doing so in Windows 10. For Windows 8:</p>
 <li>Check the “automatically get the device app” option, then click Save
 changes to save the settings you just chose.</li>
 </ol>
-<h2 data-number="15.11"
+<h2 data-number="15.12"
 id="i-installed-a-new-version-and-freedv-stopped-working"><span
-class="header-section-number">15.11</span> I installed a new version and
+class="header-section-number">15.12</span> I installed a new version and
 FreeDV stopped working</h2>
 <p>You may need to clean out the previous configuration. Try Tools -
 Restore Defaults. Set up your sound cards again with Tools - Audio
 Config.</p>
-<h2 data-number="15.12" id="freedv-crashes-when-i-press-start"><span
-class="header-section-number">15.12</span> FreeDV crashes when I press
+<h2 data-number="15.13" id="freedv-crashes-when-i-press-start"><span
+class="header-section-number">15.13</span> FreeDV crashes when I press
 Start</h2>
 <p>Have you removed/changed USB audio devices? If you remove/change USB
 audio devices without pressing Tools - Audio Config, FreeDV may crash.
 See Changing Audio Devices above.</p>
-<h2 data-number="15.13"
+<h2 data-number="15.14"
 id="freedv-cant-be-opened-on-macos-because-the-developer-cannot-be-verified"><span
-class="header-section-number">15.13</span> FreeDV can’t be opened on
+class="header-section-number">15.14</span> FreeDV can’t be opened on
 macOS because the developer cannot be verified</h2>
 <p>From January 2020 Apple is enforcing notarization for all macOS
 applications. The FreeDV developers do not wish to operate within the
@@ -1058,9 +1082,9 @@ Apple ecosystem due to the cost/intrusiveness of this requirement.</p>
 <pre><code>xattr -d com.apple.quarantine FreeDV.app</code></pre>
 <p>or</p>
 <pre><code>xattr -d -r com.apple.quarantine FreeDV.app</code></pre>
-<h2 data-number="15.14"
+<h2 data-number="15.15"
 id="im-on-a-mac-and-my-preferred-audio-device-isnt-appearing"><span
-class="header-section-number">15.14</span> I’m on a Mac and my preferred
+class="header-section-number">15.15</span> I’m on a Mac and my preferred
 audio device isn’t appearing</h2>
 <p>macOS has a longstanding issue that prevents certain audio devices
 from appearing. More info <a
@@ -1148,12 +1172,14 @@ reporting. (PR #953)</li>
 <li>PulseAudio/PortAudio: Only support default sample rate. (PR
 #964)</li>
 <li>Force left-to-right rendering of UI elements. (PR #966)</li>
+<li>macOS: improve behavior with Bluetooth devices. (PR #971)</li>
 </ul></li>
 <li>Documentation:
 <ul>
 <li>Add missing dependency for macOS builds to README. (PR #925; thanks
 <span class="citation" data-cites="relistan">@relistan</span>!)</li>
 <li>Add note about using XWayland on Linux. (PR #926)</li>
+<li>Add notes for Linux users having trouble with Hamlib. (PR #968)</li>
 </ul></li>
 <li>Enhancements:
 <ul>
