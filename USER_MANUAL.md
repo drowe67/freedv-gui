@@ -853,7 +853,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Easy Setup: Use card names instead of device names for generating device list. (PR #932)
     * Fix compiler error on Fedora 42 when using Hamlib packages. (PR #936, #940; thanks @jaspejavier!)
     * Legacy FreeDV modes: ensure that sync is obtained in an atomic manner. (PR #939)
-    * Fix intermittent crash on Windows when pushing Start. (PR #943)
+    * Fix intermittent crash on Windows when pushing Start. (PR #943, #972)
     * FreeDV Reporter: Defer deallocation of disconnected users. (PR #948)
     * FreeDV Reporter: Be explicit about the use of signed char for reporting. (PR #953)
     * Fix issue preventing rtkit from being compiled-in on Ubuntu 22.04. (PR #954)

@@ -35,7 +35,7 @@
 
 using namespace std::chrono_literals;
 
-#define FEATURE_FIFO_SIZE (2048)
+#define FEATURE_FIFO_SIZE (4096)
 
 const int RADE_SCALING_FACTOR = 16383;
 

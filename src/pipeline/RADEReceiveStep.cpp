@@ -35,7 +35,7 @@ using namespace std::chrono_literals;
 
 extern wxString utRxFeatureFile;
 
-#define FEATURE_FIFO_SIZE (2048)
+#define FEATURE_FIFO_SIZE (4096)
 
 RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, std::function<void(RADEReceiveStep*)> syncFn)
     : dv_(dv)

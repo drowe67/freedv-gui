@@ -113,13 +113,13 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticText* labelPskCallsign = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Callsign:"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizerReportingGeneral->Add(labelPskCallsign, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    m_txt_callsign = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    m_txt_callsign = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(180,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
     sbSizerReportingGeneral->Add(m_txt_callsign, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     wxStaticText* labelPskGridSquare = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Grid Square/Locator:"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizerReportingGeneral->Add(labelPskGridSquare, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    m_txt_grid_square = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(70,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    m_txt_grid_square = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(180,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
     sbSizerReportingGeneral->Add(m_txt_grid_square, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     sbSizerReportingRows->Add(sbSizerReportingGeneral, 0, wxALL | wxEXPAND, 5);
@@ -358,7 +358,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticText *m_staticText28b = new wxStaticText(m_keyerTab, wxID_ANY, _("File location: "), wxDefaultPosition, wxDefaultSize, 0);
     voiceKeyerSizer1->Add(m_staticText28b, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtCtrlVoiceKeyerWaveFilePath = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
+    m_txtCtrlVoiceKeyerWaveFilePath = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(450,-1), 0);
     m_txtCtrlVoiceKeyerWaveFilePath->SetToolTip(_("Path to Voice Keyer audio files"));
     voiceKeyerSizer1->Add(m_txtCtrlVoiceKeyerWaveFilePath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
@@ -369,14 +369,14 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticText *m_staticText28c = new wxStaticText(m_keyerTab, wxID_ANY, _("Rx Pause:"), wxDefaultPosition, wxDefaultSize, 0);
     voiceKeyerSizer2->Add(m_staticText28c, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtCtrlVoiceKeyerRxPause = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
+    m_txtCtrlVoiceKeyerRxPause = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0);
     m_txtCtrlVoiceKeyerRxPause->SetToolTip(_("How long to wait in Rx mode before repeat"));
     voiceKeyerSizer2->Add(m_txtCtrlVoiceKeyerRxPause, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     wxStaticText *m_staticText28d = new wxStaticText(m_keyerTab, wxID_ANY, _("Repeats:"), wxDefaultPosition, wxDefaultSize, 0);
     voiceKeyerSizer2->Add(m_staticText28d, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtCtrlVoiceKeyerRepeats = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(40,-1), 0);
+    m_txtCtrlVoiceKeyerRepeats = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0);
     m_txtCtrlVoiceKeyerRepeats->SetToolTip(_("How long to wait in Rx mode before repeat"));
     voiceKeyerSizer2->Add(m_txtCtrlVoiceKeyerRepeats, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
@@ -398,7 +398,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticText *staticTextQRPath = new wxStaticText(m_keyerTab, wxID_ANY, _("Location to save recordings: "), wxDefaultPosition, wxDefaultSize, 0);
     quickRecordSizer->Add(staticTextQRPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtCtrlQuickRecordPath = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(300,-1), 0);
+    m_txtCtrlQuickRecordPath = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(450,-1), 0);
     m_txtCtrlQuickRecordPath->SetToolTip(_("Location which to save recordings started via the Record button in the main window."));
     quickRecordSizer->Add(m_txtCtrlQuickRecordPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
@@ -497,7 +497,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticText *channelNoiseDbLabel = new wxStaticText(m_simulationTab, wxID_ANY, _("SNR (dB):"), wxDefaultPosition, wxDefaultSize, 0);
     channelNoiseSizer->Add(channelNoiseDbLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtNoiseSNR = new wxTextCtrl(m_simulationTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_NUMERIC));
+    m_txtNoiseSNR = new wxTextCtrl(m_simulationTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_NUMERIC));
     channelNoiseSizer->Add(m_txtNoiseSNR, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     sbSizer_testFrames->Add(channelNoiseSizer);
@@ -510,7 +510,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticText *carrierLabel = new wxStaticText(m_simulationTab, wxID_ANY, _("Carrier:"), wxDefaultPosition, wxDefaultSize, 0);
     attnCarrierSizer->Add(carrierLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    m_txtAttnCarrier = new wxTextCtrl(m_simulationTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(30,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtAttnCarrier = new wxTextCtrl(m_simulationTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     attnCarrierSizer->Add(m_txtAttnCarrier, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     sbSizer_testFrames->Add(attnCarrierSizer);
@@ -531,13 +531,13 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticText *toneFreqLabel = new wxStaticText(m_simulationTab, wxID_ANY, _("Freq (Hz):"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_tone->Add(toneFreqLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtToneFreqHz = new wxTextCtrl(m_simulationTab, wxID_ANY,  "1000", wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtToneFreqHz = new wxTextCtrl(m_simulationTab, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_tone->Add(m_txtToneFreqHz, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     wxStaticText *m_staticTextta = new wxStaticText(m_simulationTab, wxID_ANY, _("Amplitude (pk): "), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_tone->Add(m_staticTextta, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtToneAmplitude = new wxTextCtrl(m_simulationTab, wxID_ANY,  "1000", wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtToneAmplitude = new wxTextCtrl(m_simulationTab, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_tone->Add(m_txtToneAmplitude, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     sizerSimulation->Add(sbSizer_tone,0, wxALL|wxEXPAND, 5);
@@ -576,7 +576,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     wxStaticText *m_staticTextFifo1 = new wxStaticText(m_debugTab, wxID_ANY, _("Fifo Size (ms):"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_fifo1->Add(m_staticTextFifo1, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    m_txtCtrlFifoSize = new wxTextCtrl(m_debugTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0);
+    m_txtCtrlFifoSize = new wxTextCtrl(m_debugTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(80,-1), 0);
     sbSizer_fifo1->Add(m_txtCtrlFifoSize, 0, wxALL, 5);
 
     // Reset stats button

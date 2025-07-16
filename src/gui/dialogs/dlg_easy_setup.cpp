@@ -253,13 +253,13 @@ EasySetupDialog::EasySetupDialog(wxWindow* parent, wxWindowID id, const wxString
     wxStaticText* labelPskCallsign = new wxStaticText(setupPskReporterBox, wxID_ANY, wxT("Callsign: "), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_psk->Add(labelPskCallsign, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
-    m_txt_callsign = new wxTextCtrl(setupPskReporterBox, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    m_txt_callsign = new wxTextCtrl(setupPskReporterBox, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(180,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
     sbSizer_psk->Add(m_txt_callsign, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
     wxStaticText* labelPskGridSquare = new wxStaticText(setupPskReporterBox, wxID_ANY, wxT("Grid Square/Locator: "), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_psk->Add(labelPskGridSquare, 0, wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
-    m_txt_grid_square = new wxTextCtrl(setupPskReporterBox, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(80,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    m_txt_grid_square = new wxTextCtrl(setupPskReporterBox, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(180,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
     sbSizer_psk->Add(m_txt_grid_square, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 2);
     
     sectionSizer->Add(sbSizer_psk, 0, wxALL | wxEXPAND, 2);
