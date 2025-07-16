@@ -153,6 +153,7 @@ std::vector<AudioDeviceSpecification> WASAPIAudioEngine::getAudioDeviceList(Audi
             (direction == AudioDirection::AUDIO_ENGINE_IN) ?
             inputDeviceList_ :
             outputDeviceList_;
+        coll->AddRef();
 
         UINT deviceCount = 0;
         HRESULT hr = coll->GetCount(&deviceCount);
@@ -170,6 +171,7 @@ std::vector<AudioDeviceSpecification> WASAPIAudioEngine::getAudioDeviceList(Audi
                 {
                     onAudioErrorFunction(*this, ss.str(), onAudioErrorState); 
                 }
+                coll->Release();
                 prom->set_value(result);
                 return;
             }
@@ -184,6 +186,7 @@ std::vector<AudioDeviceSpecification> WASAPIAudioEngine::getAudioDeviceList(Audi
             device->Release();
         }
 
+        coll->Release();
         prom->set_value(result);
     });
     return fut.get();
@@ -218,12 +221,13 @@ AudioDeviceSpecification WASAPIAudioEngine::getDefaultAudioDevice(AudioDirection
         {
             if (defaultSpec.name == spec.name)
             {
-                prom->set_value(spec);
                 defaultDevice->Release();
+                prom->set_value(spec);
                 return;
             }
         }
         log_warn("Could not get device ID for default audio device");
+        defaultDevice->Release();
         prom->set_value(AudioDeviceSpecification::GetInvalidDevice());
     });
     return fut.get();
@@ -260,6 +264,7 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
             (direction == AudioDirection::AUDIO_ENGINE_IN) ?
             inputDeviceList_ :
             outputDeviceList_;
+        coll->AddRef();
 
         for (auto& dev : devList)
         {
@@ -316,6 +321,7 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
                 device->Release();
             }
         }
+        coll->Release();
         prom->set_value(result);
     });
     return fut.get();

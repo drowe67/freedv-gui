@@ -2697,22 +2697,7 @@ void MainFrame::startRxStream()
             // RX-only setup.
             // Note: we assume 2 channels, but IAudioEngine will automatically downgrade to 1 channel if needed.
             rxInSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate, 2);
-            rxInSoundDevice->setDescription("Radio to FreeDV");
-            rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                CallAfter([&, newDeviceName]() {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    wxGetApp().appConfiguration.save(pConfig);
-                });
-            }, nullptr);
-            
             rxOutSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 2);
-            rxOutSoundDevice->setDescription("FreeDV to Speaker");
-            rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                CallAfter([&, newDeviceName]() {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    wxGetApp().appConfiguration.save(pConfig);
-                });
-            }, nullptr);
             
             bool failed = false;
             if (!rxInSoundDevice)
@@ -2722,15 +2707,35 @@ void MainFrame::startRxStream()
                 });
                 failed = true;
             }
+            else
+            {
+                rxInSoundDevice->setDescription("Radio to FreeDV");
+                rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                    CallAfter([&, newDeviceName]() {
+                        wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
+                        wxGetApp().appConfiguration.save(pConfig);
+                    });
+                }, nullptr);
+            }
             
-            if (!rxOutSoundDevice)
+            if (!rxOutSoundDevice && !failed)
             {
                 executeOnUiThreadAndWait_([&]() {
                     wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
-            
+            else if (!failed)
+            {
+                rxOutSoundDevice->setDescription("FreeDV to Speaker");
+                rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                    CallAfter([&, newDeviceName]() {
+                        wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
+                        wxGetApp().appConfiguration.save(pConfig);
+                    });
+                }, nullptr);
+            }
+ 
             if (failed)
             {
                 if (rxInSoundDevice)
@@ -2766,13 +2771,6 @@ void MainFrame::startRxStream()
             bool failed = false;
             
             txInSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate, 2);
-            txInSoundDevice->setDescription("Mic to FreeDV");
-            txInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                CallAfter([&, newDeviceName]() {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    wxGetApp().appConfiguration.save(pConfig);
-                });
-            }, nullptr);
             
             if (!txInSoundDevice)
             {
@@ -2783,6 +2781,13 @@ void MainFrame::startRxStream()
             }
             else
             {
+                txInSoundDevice->setDescription("Mic to FreeDV");
+                txInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                    CallAfter([&, newDeviceName]() {
+                        wxGetApp().appConfiguration.audioConfiguration.soundCard2In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
+                        wxGetApp().appConfiguration.save(pConfig);
+                    });
+                }, nullptr);
                 txInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
                     paCallBackData* cbData = static_cast<paCallBackData*>(state);
                     short* audioData = static_cast<short*>(data);
@@ -2816,13 +2821,6 @@ void MainFrame::startRxStream()
             }
 
             txOutSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.sampleRate, 2);
-            txOutSoundDevice->setDescription("FreeDV to Radio");
-            txOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                CallAfter([&, newDeviceName]() {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    wxGetApp().appConfiguration.save(pConfig);
-                });
-            }, nullptr);
             
             if (!txOutSoundDevice && !failed)
             {
@@ -2833,6 +2831,13 @@ void MainFrame::startRxStream()
             }
             else if (!failed)
             {
+                txOutSoundDevice->setDescription("FreeDV to Radio");
+                txOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                    CallAfter([&, newDeviceName]() {
+                        wxGetApp().appConfiguration.audioConfiguration.soundCard1Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
+                        wxGetApp().appConfiguration.save(pConfig);
+                    });
+                }, nullptr);
                 txOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
                     paCallBackData* cbData = static_cast<paCallBackData*>(state);
                     short* audioData = static_cast<short*>(data);
@@ -2881,40 +2886,45 @@ void MainFrame::startRxStream()
             }
             
             rxInSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName, IAudioEngine::AUDIO_ENGINE_IN, wxGetApp().appConfiguration.audioConfiguration.soundCard1In.sampleRate, 2);
-            rxInSoundDevice->setDescription("Radio to FreeDV");
-            rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                CallAfter([&, newDeviceName]() {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    wxGetApp().appConfiguration.save(pConfig);
-                });
-            }, nullptr);
 
             rxOutSoundDevice = engine->getAudioDevice(wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName, IAudioEngine::AUDIO_ENGINE_OUT, wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate, 2);
-            rxOutSoundDevice->setDescription("FreeDV to Speaker");
-            rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
-                CallAfter([&, newDeviceName]() {
-                    wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
-                    wxGetApp().appConfiguration.save(pConfig);
-                });
-            }, nullptr);
             
-            
-            if (!rxInSoundDevice)
+            if (!rxInSoundDevice && !failed)
             {
                 executeOnUiThreadAndWait_([&]() {
                     wxMessageBox(wxString::Format("Could not find RX input sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
-            
-            if (!rxOutSoundDevice)
+            else if (!failed)
+            {
+                rxInSoundDevice->setDescription("Radio to FreeDV");
+                rxInSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                    CallAfter([&, newDeviceName]() {
+                        wxGetApp().appConfiguration.audioConfiguration.soundCard1In.deviceName = wxString::FromUTF8(newDeviceName.c_str());
+                        wxGetApp().appConfiguration.save(pConfig);
+                    });
+                }, nullptr);
+            }
+ 
+            if (!rxOutSoundDevice && !failed)
             {
                 executeOnUiThreadAndWait_([&]() {
                     wxMessageBox(wxString::Format("Could not find RX output sound device '%s'. Please check settings and try again.", wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName.get()), wxT("Error"), wxOK);
                 });
                 failed = true;
             }
-            
+            else if (!failed)
+            {
+                rxOutSoundDevice->setDescription("FreeDV to Speaker");
+                rxOutSoundDevice->setOnAudioDeviceChanged([&](IAudioDevice&, std::string newDeviceName, void*) {
+                    CallAfter([&, newDeviceName]() {
+                        wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.deviceName = wxString::FromUTF8(newDeviceName.c_str());
+                        wxGetApp().appConfiguration.save(pConfig);
+                    });
+                }, nullptr);
+            }
+ 
             if (failed)
             {
                 if (rxInSoundDevice)
