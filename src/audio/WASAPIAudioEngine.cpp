@@ -326,7 +326,7 @@ std::vector<int> WASAPIAudioEngine::getSupportedSampleRates(wxString deviceName,
     return fut.get();
 }
 
-AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* device)
+AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(ComPtr<IMMDevice> device)
 {
     // Get device name
     ComPtr<IPropertyStore> propStore = nullptr;

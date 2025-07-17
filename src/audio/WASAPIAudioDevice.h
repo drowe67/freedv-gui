@@ -34,7 +34,7 @@
 #include "IAudioEngine.h"
 #include "IAudioDevice.h"
 #include "../util/Win32COMObject.h"
-#include "../util/Win32ComPointer.h"
+#include "../util/Win32COMPointer.h"
 
 class WASAPIAudioDevice : public Win32COMObject, public IAudioDevice
 {

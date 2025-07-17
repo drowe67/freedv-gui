@@ -24,6 +24,8 @@
 #ifndef WIN32_COM_POINTER_H
 #define WIN32_COM_POINTER_H
 
+#include <cassert>
+
 template <typename Interface>
 class ComPtr
 {
@@ -31,11 +33,16 @@ public:
     // Hide AddRef and Release to prevent overriding ComPtr counting
     class RemoveAddRefRelease : public Interface
     {
+    private:
         ULONG __stdcall AddRef();
         ULONG __stdcall Release();
     };
     
     ComPtr() noexcept = default;
+    ComPtr(std::nullptr_t) noexcept
+        : m_ptr(nullptr)
+    { }
+
     ComPtr(ComPtr const & other) noexcept :
       m_ptr(other.m_ptr)
     {
@@ -67,9 +74,9 @@ public:
       InternalRelease();
     }
   
-    RemoveAddRefRelease<Interface> * operator->() const noexcept
+    RemoveAddRefRelease* operator->() const noexcept
     {
-        return static_cast<RemoveAddRefRelease<Interface> *>(m_ptr);
+        return static_cast<RemoveAddRefRelease*>(m_ptr);
     }
     
     ComPtr & operator=(ComPtr const & other) noexcept
@@ -99,9 +106,9 @@ public:
       other.m_ptr = temp;
     }
     
-    template <typename Interface>
+    template <typename Interface2>
     void swap(ComPtr<Interface> & left, 
-      ComPtr<Interface> & right) noexcept
+      ComPtr<Interface2> & right) noexcept
     {
       left.Swap(right);
     }
@@ -141,7 +148,7 @@ public:
     
     Interface ** GetAddressOf() noexcept
     {
-      ASSERT(m_ptr == nullptr);
+      assert(m_ptr == nullptr);
       return &m_ptr;
     }
     

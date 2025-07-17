@@ -451,7 +451,7 @@ void WASAPIAudioDevice::stop()
             renderCaptureThread_.join();
         }
         
-        if (renderClient_ != nullptr || captureClient_ != nullptr)
+        if (renderClient_ || captureClient_)
         {
             HRESULT hr = client_->Stop();
             if (FAILED(hr))
@@ -500,7 +500,7 @@ void WASAPIAudioDevice::stop()
 
 bool WASAPIAudioDevice::isRunning()
 {
-    return (renderClient_ != nullptr) || (captureClient_ != nullptr);
+    return (renderClient_) || (captureClient_);
 }
 
 int WASAPIAudioDevice::getLatencyInMicroseconds()
@@ -556,7 +556,7 @@ void WASAPIAudioDevice::clearHelperRealTime()
 void WASAPIAudioDevice::renderAudio_(ComPtr<IAudioRenderClient> renderClient)
 {
     // If client is no longer available, abort
-    if (renderClient == nullptr)
+    if (!renderClient)
     {
         return;
     }
@@ -615,7 +615,7 @@ void WASAPIAudioDevice::renderAudio_(ComPtr<IAudioRenderClient> renderClient)
 void WASAPIAudioDevice::captureAudio_(ComPtr<IAudioCaptureClient> captureClient)
 {
     // If client is no longer available, abort
-    if (captureClient == nullptr)
+    if (!captureClient)
     {
         return;
     }
