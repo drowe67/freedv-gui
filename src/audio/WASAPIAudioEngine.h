@@ -30,6 +30,7 @@
 #include <initguid.h>
 #include <mmdeviceapi.h>
 #include "../util/Win32COMObject.h"
+#include "../util/Win32COMPointer.h"
 #include "IAudioEngine.h"
 
 class WASAPIAudioEngine : public Win32COMObject, public IAudioEngine
@@ -48,11 +49,11 @@ public:
 protected:
 
 private:
-    IMMDeviceEnumerator* devEnumerator_;
-    IMMDeviceCollection* inputDeviceList_;
-    IMMDeviceCollection* outputDeviceList_;
+    ComPtr<IMMDeviceEnumerator> devEnumerator_;
+    ComPtr<IMMDeviceCollection> inputDeviceList_;
+    ComPtr<IMMDeviceCollection> outputDeviceList_;
 
-    AudioDeviceSpecification getDeviceSpecification_(IMMDevice* device);
+    AudioDeviceSpecification getDeviceSpecification_(ComPtr<IMMDevice> device);
     std::string getUTF8String_(LPWSTR str);
 };
 

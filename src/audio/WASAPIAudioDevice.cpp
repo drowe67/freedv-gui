@@ -36,7 +36,7 @@
 
 thread_local HANDLE WASAPIAudioDevice::HelperTask_ = nullptr;
     
-WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
+WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient> client, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : client_(client)
     , renderClient_(nullptr)
     , captureClient_(nullptr)
@@ -51,7 +51,7 @@ WASAPIAudioDevice::WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDi
     , semaphore_(nullptr)
     , tmpBuf_(nullptr)
 {
-    client_->AddRef();
+    // empty
 }
 
 WASAPIAudioDevice::~WASAPIAudioDevice()
@@ -63,7 +63,9 @@ WASAPIAudioDevice::~WASAPIAudioDevice()
     auto prom = std::make_shared<std::promise<void> >(); 
     auto fut = prom->get_future();
     enqueue_([&]() {
-        client_->Release();
+        client_ = nullptr;
+        renderClient_ = nullptr;
+        captureClient_ = nullptr;
         prom->set_value();
     });
     fut.wait(); 
@@ -283,13 +285,13 @@ void WASAPIAudioDevice::start()
         {
             hr = client_->GetService(
                 IID_IAudioCaptureClient,
-                (void**)&captureClient_);
+                (void**)captureClient_.GetAddressOf());
         }
         else
         {
             hr = client_->GetService(
                 IID_IAudioRenderClient,
-                (void**)&renderClient_);
+                (void**)renderClient_.GetAddressOf());
         }
         if (FAILED(hr))
         {
@@ -322,7 +324,6 @@ void WASAPIAudioDevice::start()
                 {
                     onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
                 }
-                renderClient_->Release();
                 renderClient_ = nullptr;
 
                 delete[] tmpBuf_;
@@ -350,7 +351,6 @@ void WASAPIAudioDevice::start()
                 {
                     onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
                 }
-                renderClient_->Release();
                 renderClient_ = nullptr;
 
                 delete[] tmpBuf_;
@@ -381,16 +381,8 @@ void WASAPIAudioDevice::start()
             {
                 onAudioErrorFunction(*this, ss.str(), onAudioErrorState);
             }
-            if (renderClient_ != nullptr)
-            {
-                renderClient_->Release();
-                renderClient_ = nullptr;
-            }
-            if (captureClient_ != nullptr)
-            {
-                captureClient_->Release();
-                captureClient_ = nullptr;
-            }
+            renderClient_ = nullptr;
+            captureClient_ = nullptr;
 
             delete[] tmpBuf_;
             tmpBuf_ = nullptr;
@@ -403,23 +395,16 @@ void WASAPIAudioDevice::start()
         isRenderCaptureRunning_ = true;
         renderCaptureThread_ = std::thread([this]() {
             log_info("Starting render/capture thread");
+            
+            // Capture references for use by this thread.
+            ComPtr<IAudioRenderClient> renderClientRef = renderClient_;
+            ComPtr<IAudioCaptureClient> captureClientRef = captureClient_;
+            ComPtr<IAudioClient> clientRef = client_;
 
             HRESULT res = CoInitializeEx(nullptr, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
             if (FAILED(res))
             {
                 log_warn("Could not initialize COM (res = %d)", res);
-            }
-            
-            // Increment refcounts of COM objects used by thread
-            // to avoid instability during stop/restart.
-            client_->AddRef();
-            if (renderClient_ != nullptr)
-            {
-                renderClient_->AddRef();
-            }
-            if (captureClient_ != nullptr)
-            {
-                captureClient_->AddRef();
             }
             
             // Temporarily raise priority of task
@@ -432,30 +417,18 @@ void WASAPIAudioDevice::start()
                 {
                     if (direction_ == IAudioEngine::AUDIO_ENGINE_OUT)
                     {
-                        renderAudio_();
+                        renderAudio_(renderClientRef);
                     }
                     else
                     {
-                        captureAudio_();
+                        captureAudio_(captureClientRef);
                     }
                 }
             }
 
             log_info("Exiting render/capture thread");
 
-            clearHelperRealTime();     
-            
-            // Decrement refcounts prior to exit.
-            client_->Release();
-            if (renderClient_ != nullptr)
-            {
-                renderClient_->Release();
-            }
-            if (captureClient_ != nullptr)
-            {
-                captureClient_->Release();
-            }
-                   
+            clearHelperRealTime();                  
             CoUninitialize();
         });
 
@@ -492,6 +465,9 @@ void WASAPIAudioDevice::stop()
                 }
             }
         }
+        
+        renderClient_ = nullptr;
+        captureClient_ = nullptr;
 
         if (renderCaptureEvent_ != nullptr)
         {
@@ -499,17 +475,6 @@ void WASAPIAudioDevice::stop()
             renderCaptureEvent_ = nullptr;
         }
         
-        if (renderClient_ != nullptr)
-        {
-            renderClient_->Release();
-            renderClient_ = nullptr;
-        }
-        if (captureClient_ != nullptr)
-        {
-            captureClient_->Release();
-            captureClient_ = nullptr;
-        }
-
         if (semaphore_ != nullptr)
         {
             // Set semaphore_ to nullptr first in case someone could be potentially
@@ -588,10 +553,10 @@ void WASAPIAudioDevice::clearHelperRealTime()
     }
 }
 
-void WASAPIAudioDevice::renderAudio_()
+void WASAPIAudioDevice::renderAudio_(ComPtr<IAudioRenderClient> renderClient)
 {
     // If client is no longer available, abort
-    if (renderClient_ == nullptr)
+    if (renderClient == nullptr)
     {
         return;
     }
@@ -612,7 +577,7 @@ void WASAPIAudioDevice::renderAudio_()
     }
 
     framesAvailable = bufferFrameCount_ - padding;
-    hr = renderClient_->GetBuffer(framesAvailable, &data);
+    hr = renderClient->GetBuffer(framesAvailable, &data);
     if (FAILED(hr))
     {
         // Note: don't call to event handler to avoid annoying the user
@@ -635,7 +600,7 @@ void WASAPIAudioDevice::renderAudio_()
     }
 
     // Release render buffer
-    hr = renderClient_->ReleaseBuffer(framesAvailable, 0);
+    hr = renderClient->ReleaseBuffer(framesAvailable, 0);
     if (FAILED(hr))
     {
         // Note: don't call to event handler to avoid annoying the user
@@ -647,17 +612,17 @@ void WASAPIAudioDevice::renderAudio_()
     }
 }
 
-void WASAPIAudioDevice::captureAudio_()
+void WASAPIAudioDevice::captureAudio_(ComPtr<IAudioCaptureClient> captureClient)
 {
     // If client is no longer available, abort
-    if (captureClient_ == nullptr)
+    if (captureClient == nullptr)
     {
         return;
     }
 
     // Get packet length
     UINT32 packetLength = 0;
-    HRESULT hr = captureClient_->GetNextPacketSize(&packetLength);
+    HRESULT hr = captureClient->GetNextPacketSize(&packetLength);
     if (FAILED(hr))
     {
         // Note: don't call to event handler to avoid annoying the user
@@ -674,7 +639,7 @@ void WASAPIAudioDevice::captureAudio_()
         UINT32 numFramesAvailable = 0;
         DWORD flags = 0;
 
-        hr = captureClient_->GetBuffer(
+        hr = captureClient->GetBuffer(
             &data,
             &numFramesAvailable,
             &flags,
@@ -710,7 +675,7 @@ void WASAPIAudioDevice::captureAudio_()
         }
 
         // Release buffer
-        hr = captureClient_->ReleaseBuffer(numFramesAvailable);
+        hr = captureClient->ReleaseBuffer(numFramesAvailable);
         if (FAILED(hr))
         {
             // Note: don't call to event handler to avoid annoying the user
@@ -721,7 +686,7 @@ void WASAPIAudioDevice::captureAudio_()
             return;
         }
 
-        hr = captureClient_->GetNextPacketSize(&packetLength);
+        hr = captureClient->GetNextPacketSize(&packetLength);
         if (FAILED(hr))
         {
             // Note: don't call to event handler to avoid annoying the user

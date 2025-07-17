@@ -34,6 +34,7 @@
 #include "IAudioEngine.h"
 #include "IAudioDevice.h"
 #include "../util/Win32COMObject.h"
+#include "../util/Win32ComPointer.h"
 
 class WASAPIAudioDevice : public Win32COMObject, public IAudioDevice
 {
@@ -68,12 +69,12 @@ public:
 protected:
     friend class WASAPIAudioEngine;
 
-    WASAPIAudioDevice(IAudioClient* client, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
+    WASAPIAudioDevice(ComPtr<IAudioClient> client, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels);
 
 private:
-    IAudioClient* client_;
-    IAudioRenderClient* renderClient_;
-    IAudioCaptureClient* captureClient_;
+    ComPtr<IAudioClient> client_;
+    ComPtr<IAudioRenderClient> renderClient_;
+    ComPtr<IAudioCaptureClient> captureClient_;
     IAudioEngine::AudioDirection direction_;
     int sampleRate_;
     int numChannels_;
@@ -91,8 +92,8 @@ private:
     bool isFloatingPoint_;
     short* tmpBuf_;
 
-    void renderAudio_();
-    void captureAudio_();
+    void renderAudio_(ComPtr<IAudioRenderClient> renderClient);
+    void captureAudio_(ComPtr<IAudioCaptureClient> captureClient);
     void copyFromWindowsBuffer_(void* buf, int numFrames);
     void copyToWindowsBuffer_(void* buf, int numFrames);
 
