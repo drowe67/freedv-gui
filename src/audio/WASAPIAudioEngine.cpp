@@ -127,6 +127,11 @@ void WASAPIAudioEngine::stop()
         devEnumerator_ = nullptr;
         inputDeviceList_ = nullptr;
         outputDeviceList_ = nullptr;
+        
+        // Invalidate cached devices.
+        cachedInputDeviceList.clear();
+        cachedOutputDeviceList.clear();
+        
         prom->set_value();
     });
     fut.wait();
@@ -139,6 +144,18 @@ std::vector<AudioDeviceSpecification> WASAPIAudioEngine::getAudioDeviceList(Audi
     enqueue_([&, direction]() {
         std::vector<AudioDeviceSpecification> result;
 
+        // Just used the cached results if they exist, no need to call into Windows again.
+        if (direction == AudioDirection::AUDIO_ENGINE_IN && cachedInputDeviceList_.size() > 0)
+        {
+            prom->set_value(cachedInputDeviceList_);
+            return;
+        }
+        else if (cachedOutputDeviceList_.size() > 0)
+        {
+            prom->set_value(cachedOutputDeviceList_);
+            return;
+        }
+        
         ComPtr<IMMDeviceCollection> coll = 
             (direction == AudioDirection::AUDIO_ENGINE_IN) ?
             inputDeviceList_ :
@@ -173,6 +190,15 @@ std::vector<AudioDeviceSpecification> WASAPIAudioEngine::getAudioDeviceList(Audi
             }
         }
 
+        if (direction == AudioDirection::AUDIO_ENGINE_IN)
+        {
+            cachedInputDeviceList_ = result;
+        }
+        else
+        {
+            cachedOutputDeviceList_ = result;
+        }
+        
         prom->set_value(result);
     });
     return fut.get();

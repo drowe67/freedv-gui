@@ -52,6 +52,9 @@ private:
     ComPtr<IMMDeviceEnumerator> devEnumerator_;
     ComPtr<IMMDeviceCollection> inputDeviceList_;
     ComPtr<IMMDeviceCollection> outputDeviceList_;
+    
+    std::vector<AudioDeviceSpecification> cachedInputDeviceList_;
+    std::vector<AudioDeviceSpecification> cachedOutputDeviceList_;
 
     AudioDeviceSpecification getDeviceSpecification_(ComPtr<IMMDevice> device);
     std::string getUTF8String_(LPWSTR str);
