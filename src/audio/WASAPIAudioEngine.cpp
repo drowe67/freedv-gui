@@ -129,8 +129,8 @@ void WASAPIAudioEngine::stop()
         outputDeviceList_ = nullptr;
         
         // Invalidate cached devices.
-        cachedInputDeviceList.clear();
-        cachedOutputDeviceList.clear();
+        cachedInputDeviceList_.clear();
+        cachedOutputDeviceList_.clear();
         
         prom->set_value();
     });
