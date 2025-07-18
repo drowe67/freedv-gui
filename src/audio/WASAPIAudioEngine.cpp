@@ -124,9 +124,9 @@ void WASAPIAudioEngine::stop()
     auto prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
     enqueue_([&]() {
+        devEnumerator_ = nullptr;
         inputDeviceList_ = nullptr;
         outputDeviceList_ = nullptr;
-        devEnumerator_ = nullptr;
         prom->set_value();
     });
     fut.wait();
@@ -295,7 +295,7 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
                 int finalNumChannels = std::max(numChannels, dev.minChannels);
                 finalNumChannels = std::min(finalNumChannels, dev.maxChannels);
 
-                auto devPtr = new WASAPIAudioDevice(client, direction, finalSampleRate, finalNumChannels);
+                auto devPtr = new WASAPIAudioDevice(client, device, direction, finalSampleRate, finalNumChannels);
                 result = std::shared_ptr<IAudioDevice>(devPtr);
             }
         }

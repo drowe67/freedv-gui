@@ -36,8 +36,9 @@
 
 thread_local HANDLE WASAPIAudioDevice::HelperTask_ = nullptr;
     
-WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient> client, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
+WASAPIAudioDevice::WASAPIAudioDevice(ComPtr<IAudioClient> client, ComPtr<IMMDevice> device, IAudioEngine::AudioDirection direction, int sampleRate, int numChannels)
     : client_(client)
+    , device_(device)
     , renderClient_(nullptr)
     , captureClient_(nullptr)
     , direction_(direction)
@@ -63,9 +64,10 @@ WASAPIAudioDevice::~WASAPIAudioDevice()
     auto prom = std::make_shared<std::promise<void> >(); 
     auto fut = prom->get_future();
     enqueue_([&]() {
-        client_ = nullptr;
         renderClient_ = nullptr;
         captureClient_ = nullptr;
+        client_ = nullptr;
+        device_ = nullptr;
         prom->set_value();
     });
     fut.wait(); 
