@@ -496,14 +496,15 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(ComPtr<IMMDe
 
 std::string WASAPIAudioEngine::getUTF8String_(LPWSTR str)
 {
-    std::vector<char> buffer; 
     std::string val = "";  
     int size = WideCharToMultiByte(CP_UTF8, 0, str, -1, NULL, 0, NULL, NULL);
     if (size > 0) 
     {
-        buffer.resize(size);
-        WideCharToMultiByte(CP_UTF8, 0, str, -1, static_cast<LPSTR>(&buffer[0]), buffer.size(), NULL, NULL);
-        val = std::string(&buffer[0]);
+        char* tmp = new char[size];
+        assert(tmp != nullptr);
+        WideCharToMultiByte(CP_UTF8, 0, str, -1, tmp, size, NULL, NULL);
+        val = tmp;
+        delete[] tmp;
     }
     return val;
 }
