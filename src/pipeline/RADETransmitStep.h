@@ -49,8 +49,8 @@ public:
 private:
     struct rade* dv_;
     LPCNetEncState* encState_;
-    struct FIFO* inputSampleFifo_;
-    struct FIFO* outputSampleFifo_;
+    GenericFIFO<short> inputSampleFifo_;
+    GenericFIFO<short> outputSampleFifo_;
     float* featureList_;
     int featureListIdx_;
     int arch_;

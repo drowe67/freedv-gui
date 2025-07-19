@@ -25,12 +25,12 @@
 #include "../defines.h"
 
 #include <assert.h>
-#include "codec2_fifo.h"
 
 SpeexStep::SpeexStep(int sampleRate)
     : sampleRate_(sampleRate)
+    , numSamplesPerSpeexRun_((FRAME_DURATION_MS * sampleRate_) / MS_TO_SEC)
+    , inputSampleFifo_(numSamplesPerSpeexRun_)
 {
-    numSamplesPerSpeexRun_ = (FRAME_DURATION_MS * sampleRate_) / MS_TO_SEC;
     assert(numSamplesPerSpeexRun_ > 0);
     
     speexStateObj_ = speex_preprocess_state_init(
@@ -38,10 +38,6 @@ SpeexStep::SpeexStep(int sampleRate)
                 sampleRate_);
     assert(speexStateObj_ != nullptr);
     
-    // Set FIFO to be 2x the number of samples per run so we don't lose anything.
-    inputSampleFifo_ = codec2_fifo_create(numSamplesPerSpeexRun_ * 2);
-    assert(inputSampleFifo_ != nullptr);
-
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     outputSamples_ = std::shared_ptr<short>(
@@ -54,7 +50,6 @@ SpeexStep::~SpeexStep()
 {
     outputSamples_ = nullptr;
     speex_preprocess_state_destroy(speexStateObj_);
-    codec2_fifo_destroy(inputSampleFifo_);
 }
 
 int SpeexStep::getInputSampleRate() const
@@ -71,7 +66,7 @@ std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, i
 {
     *numOutputSamples = 0;
     
-    int numSpeexRuns = (codec2_fifo_used(inputSampleFifo_) + numInputSamples) / numSamplesPerSpeexRun_;
+    int numSpeexRuns = (inputSampleFifo_.numUsed() + numInputSamples) / numSamplesPerSpeexRun_;
     if (numSpeexRuns > 0)
     {
         *numOutputSamples = numSpeexRuns * numSamplesPerSpeexRun_;
@@ -81,12 +76,12 @@ std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, i
         
         while (numInputSamples > 0 && tmpInput != nullptr)
         {
-            codec2_fifo_write(inputSampleFifo_, tmpInput++, 1);
+            inputSampleFifo_.write(tmpInput++, 1);
             numInputSamples--;
             
-            if (codec2_fifo_used(inputSampleFifo_) >= numSamplesPerSpeexRun_)
+            if (inputSampleFifo_.numUsed() >= numSamplesPerSpeexRun_)
             {
-                codec2_fifo_read(inputSampleFifo_, tmpOutput, numSamplesPerSpeexRun_);
+                inputSampleFifo_.read(tmpOutput, numSamplesPerSpeexRun_);
                 speex_preprocess_run(speexStateObj_, tmpOutput);
                 tmpOutput += numSamplesPerSpeexRun_;
             }
@@ -94,7 +89,7 @@ std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, i
     }
     else if (numInputSamples > 0 && inputSamples.get() != nullptr)
     {
-        codec2_fifo_write(inputSampleFifo_, inputSamples.get(), numInputSamples);
+        inputSampleFifo_.write(inputSamples.get(), numInputSamples);
     }
     
     return outputSamples_;
@@ -102,9 +97,5 @@ std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, i
 
 void SpeexStep::reset()
 {
-    short buf;
-    while (codec2_fifo_used(inputSampleFifo_) > 0)
-    {
-        codec2_fifo_read(inputSampleFifo_, &buf, 1);
-    }
+    inputSampleFifo_.reset();
 }

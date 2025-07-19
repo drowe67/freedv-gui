@@ -40,8 +40,8 @@ extern wxString utRxFeatureFile;
 RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, std::function<void(RADEReceiveStep*)> syncFn)
     : dv_(dv)
     , fargan_(fargan)
-    , inputSampleFifo_(nullptr)
-    , outputSampleFifo_(nullptr)
+    , inputSampleFifo_(rade_nin_max(dv_) * 2)
+    , outputSampleFifo_(16000)
     , pendingFeatures_(nullptr)
     , pendingFeaturesIdx_(0)
     , featuresFile_(nullptr)
@@ -51,14 +51,6 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
     , exitingFeatureThread_(false)
 {
     assert(syncState_.is_lock_free());
-
-    // Set FIFO to be 2x the number of samples per run so we don't lose anything.
-    inputSampleFifo_ = codec2_fifo_create(rade_nin_max(dv_) * 2);
-    assert(inputSampleFifo_ != nullptr);
-
-    // Enough for one second of audio. Probably way overkill.
-    outputSampleFifo_ = codec2_fifo_create(16000);
-    assert(outputSampleFifo_ != nullptr);
 
     if (utRxFeatureFile != "")
     {
@@ -124,16 +116,6 @@ RADEReceiveStep::~RADEReceiveStep()
         utFeatureThread_.join();
         fclose(featuresFile_);
     }
-
-    if (inputSampleFifo_ != nullptr)
-    {
-        codec2_fifo_destroy(inputSampleFifo_);
-    }
-
-    if (outputSampleFifo_ != nullptr)
-    {
-        codec2_fifo_destroy(outputSampleFifo_);
-    }
 }
 
 int RADEReceiveStep::getInputSampleRate() const
@@ -154,12 +136,12 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
     short* inputPtr = inputSamples.get();
     while (numInputSamples > 0 && inputPtr != nullptr)
     {
-        codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
+        inputSampleFifo_.write(inputPtr++, 1);
         numInputSamples--;
         
         int   nin = rade_nin(dv_);
         int   nout = 0;
-        while ((*numOutputSamples + LPCNET_FRAME_SIZE) < maxSamples && codec2_fifo_read(inputSampleFifo_, inputBuf_, nin) == 0) 
+        while ((*numOutputSamples + LPCNET_FRAME_SIZE) < maxSamples && inputSampleFifo_.read(inputBuf_, nin) == 0) 
         {
             assert(nin <= rade_nin_max(dv_));
 
@@ -229,7 +211,7 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
                         }
 
                         *numOutputSamples += LPCNET_FRAME_SIZE;
-                        codec2_fifo_write(outputSampleFifo_, pcm, LPCNET_FRAME_SIZE);
+                        outputSampleFifo_.write(pcm, LPCNET_FRAME_SIZE);
                     }
                 }
             }
@@ -240,7 +222,7 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
    
     if (*numOutputSamples > 0)
     { 
-        codec2_fifo_read(outputSampleFifo_, outputSamples_.get(), *numOutputSamples);
+        outputSampleFifo_.read(outputSamples_.get(), *numOutputSamples);
     }
 
 #if defined(__clang__)
@@ -264,14 +246,7 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
 
 void RADEReceiveStep::reset()
 {
-    short buf;
-    while (codec2_fifo_used(inputSampleFifo_) > 0)
-    {
-        codec2_fifo_read(inputSampleFifo_, &buf, 1);
-    }
-    while (codec2_fifo_used(outputSampleFifo_) > 0)
-    {
-        codec2_fifo_read(outputSampleFifo_, &buf, 1);
-    }
+    inputSampleFifo_.reset();
+    outputSampleFifo_.reset();
     pendingFeaturesIdx_ = 0;
 }
