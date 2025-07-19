@@ -862,6 +862,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * PulseAudio/PortAudio: Only support default sample rate. (PR #964)
     * Force left-to-right rendering of UI elements. (PR #966)
     * macOS: improve behavior with Bluetooth devices. (PR #971)
+    * Windows: Fix intermittent disappearance of audio devices. (PR #974)
 2. Documentation:
     * Add missing dependency for macOS builds to README. (PR #925; thanks @relistan!)
     * Add note about using XWayland on Linux. (PR #926)

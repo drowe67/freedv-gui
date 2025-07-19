@@ -44,6 +44,17 @@ WASAPIAudioEngine::WASAPIAudioEngine()
 WASAPIAudioEngine::~WASAPIAudioEngine()
 {
     stop();
+    
+    // Release COM pointers before object fully goes away.
+    auto prom = std::make_shared<std::promise<void> >(); 
+    auto fut = prom->get_future();
+    enqueue_([&]() {
+        devEnumerator_ = nullptr;
+        inputDeviceList_ = nullptr;
+        outputDeviceList_ = nullptr;
+        prom->set_value();
+    });
+    fut.wait(); 
 }
 
 void WASAPIAudioEngine::start()
@@ -55,7 +66,7 @@ void WASAPIAudioEngine::start()
         HRESULT hr = CoCreateInstance(
            CLSID_MMDeviceEnumerator, NULL,
            CLSCTX_ALL, IID_IMMDeviceEnumerator,
-           (void**)&devEnumerator_);
+           (void**)devEnumerator_.GetAddressOf());
         if (FAILED(hr))
         {
             std::stringstream ss;
@@ -70,7 +81,7 @@ void WASAPIAudioEngine::start()
         }
 
         // Get input and output device collections
-        hr = devEnumerator_->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &outputDeviceList_);
+        hr = devEnumerator_->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, outputDeviceList_.GetAddressOf());
         if (FAILED(hr))
         {
             std::stringstream ss;
@@ -81,14 +92,12 @@ void WASAPIAudioEngine::start()
                 onAudioErrorFunction(*this, ss.str(), onAudioErrorState); 
             }
 
-            devEnumerator_->Release();
             devEnumerator_ = nullptr;
-
             prom->set_value();
             return;
         }
 
-        hr = devEnumerator_->EnumAudioEndpoints(eCapture, DEVICE_STATE_ACTIVE, &inputDeviceList_);
+        hr = devEnumerator_->EnumAudioEndpoints(eCapture, DEVICE_STATE_ACTIVE, inputDeviceList_.GetAddressOf());
         if (FAILED(hr))
         {
             std::stringstream ss;
@@ -99,12 +108,8 @@ void WASAPIAudioEngine::start()
                 onAudioErrorFunction(*this, ss.str(), onAudioErrorState); 
             }
 
-            outputDeviceList_->Release();
             outputDeviceList_ = nullptr;
-
-            devEnumerator_->Release();
             devEnumerator_ = nullptr;
-
             prom->set_value();
             return;
         }
@@ -119,24 +124,14 @@ void WASAPIAudioEngine::stop()
     auto prom = std::make_shared<std::promise<void> >();
     auto fut = prom->get_future();
     enqueue_([&]() {
-        if (inputDeviceList_ != nullptr)
-        {
-            inputDeviceList_->Release();
-            inputDeviceList_ = nullptr;
-        }
-
-        if (outputDeviceList_ != nullptr)
-        {
-            outputDeviceList_->Release();
-            outputDeviceList_ = nullptr;
-        }
-
-        if (devEnumerator_ != nullptr)
-        {
-            devEnumerator_->Release();
-            devEnumerator_ = nullptr;
-        }
-
+        devEnumerator_ = nullptr;
+        inputDeviceList_ = nullptr;
+        outputDeviceList_ = nullptr;
+        
+        // Invalidate cached devices.
+        cachedInputDeviceList_.clear();
+        cachedOutputDeviceList_.clear();
+        
         prom->set_value();
     });
     fut.wait();
@@ -149,19 +144,30 @@ std::vector<AudioDeviceSpecification> WASAPIAudioEngine::getAudioDeviceList(Audi
     enqueue_([&, direction]() {
         std::vector<AudioDeviceSpecification> result;
 
-        IMMDeviceCollection* coll = 
+        // Just used the cached results if they exist, no need to call into Windows again.
+        if (direction == AudioDirection::AUDIO_ENGINE_IN && cachedInputDeviceList_.size() > 0)
+        {
+            prom->set_value(cachedInputDeviceList_);
+            return;
+        }
+        else if (cachedOutputDeviceList_.size() > 0)
+        {
+            prom->set_value(cachedOutputDeviceList_);
+            return;
+        }
+        
+        ComPtr<IMMDeviceCollection> coll = 
             (direction == AudioDirection::AUDIO_ENGINE_IN) ?
             inputDeviceList_ :
             outputDeviceList_;
-        coll->AddRef();
 
         UINT deviceCount = 0;
         HRESULT hr = coll->GetCount(&deviceCount);
 
         for (UINT index = 0; index < deviceCount; index++)
         {
-            IMMDevice* device = nullptr;
-            hr = coll->Item(index, &device);
+            ComPtr<IMMDevice> device = nullptr;
+            hr = coll->Item(index, device.GetAddressOf());
             if (FAILED(hr))
             {
                 std::stringstream ss;
@@ -171,7 +177,6 @@ std::vector<AudioDeviceSpecification> WASAPIAudioEngine::getAudioDeviceList(Audi
                 {
                     onAudioErrorFunction(*this, ss.str(), onAudioErrorState); 
                 }
-                coll->Release();
                 prom->set_value(result);
                 return;
             }
@@ -183,10 +188,17 @@ std::vector<AudioDeviceSpecification> WASAPIAudioEngine::getAudioDeviceList(Audi
                 result.push_back(devSpec);
                 log_debug("Found device %s (card = %s, port = %s)", (const char*)devSpec.name.ToUTF8(), (const char*)devSpec.cardName.ToUTF8(), (const char*)devSpec.portName.ToUTF8());
             }
-            device->Release();
         }
 
-        coll->Release();
+        if (direction == AudioDirection::AUDIO_ENGINE_IN)
+        {
+            cachedInputDeviceList_ = result;
+        }
+        else
+        {
+            cachedOutputDeviceList_ = result;
+        }
+        
         prom->set_value(result);
     });
     return fut.get();
@@ -198,11 +210,11 @@ AudioDeviceSpecification WASAPIAudioEngine::getDefaultAudioDevice(AudioDirection
     auto prom = std::make_shared<std::promise<AudioDeviceSpecification> >();
     auto fut = prom->get_future();
     enqueue_([&, specList, direction]() {
-        IMMDevice* defaultDevice = nullptr;
+        ComPtr<IMMDevice> defaultDevice = nullptr;
         HRESULT hr = devEnumerator_->GetDefaultAudioEndpoint(
             (direction == AudioDirection::AUDIO_ENGINE_IN) ? eCapture : eRender,
             eConsole,
-            &defaultDevice);
+            defaultDevice.GetAddressOf());
         if (FAILED(hr))
         {
             std::stringstream ss;
@@ -221,13 +233,11 @@ AudioDeviceSpecification WASAPIAudioEngine::getDefaultAudioDevice(AudioDirection
         {
             if (defaultSpec.name == spec.name)
             {
-                defaultDevice->Release();
                 prom->set_value(spec);
                 return;
             }
         }
         log_warn("Could not get device ID for default audio device");
-        defaultDevice->Release();
         prom->set_value(AudioDeviceSpecification::GetInvalidDevice());
     });
     return fut.get();
@@ -260,11 +270,10 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
     enqueue_([&, devList, deviceName, direction, sampleRate, numChannels]() {
         std::shared_ptr<IAudioDevice> result;
         int finalSampleRate = sampleRate;
-        IMMDeviceCollection* coll = 
+        ComPtr<IMMDeviceCollection> coll = 
             (direction == AudioDirection::AUDIO_ENGINE_IN) ?
             inputDeviceList_ :
             outputDeviceList_;
-        coll->AddRef();
 
         for (auto& dev : devList)
         {
@@ -272,10 +281,10 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
             {
                 log_info("Creating WASAPIAudioDevice for device %s (ID %d, direction = %d, sample rate = %d, number of channels = %d)", (const char*)deviceName.ToUTF8(), (int)dev.deviceId, (int)direction, sampleRate, numChannels);
 
-                IMMDevice* device = nullptr;
-                IAudioClient* client = nullptr;
+                ComPtr<IMMDevice> device = nullptr;
+                ComPtr<IAudioClient> client = nullptr;
 
-                HRESULT hr = coll->Item(dev.deviceId, &device);
+                HRESULT hr = coll->Item(dev.deviceId, device.GetAddressOf());
                 if (FAILED(hr))
                 {
                     std::stringstream ss;
@@ -290,7 +299,7 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
 
                 hr = device->Activate(
                     IID_IAudioClient, CLSCTX_ALL,
-                    nullptr, (void**)&client); 
+                    nullptr, (void**)client.GetAddressOf()); 
                 if (FAILED(hr))
                 {
                     std::stringstream ss;
@@ -300,8 +309,6 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
                     {
                          onAudioErrorFunction(*this, ss.str(), onAudioErrorState); 
                     }
-
-                    device->Release();
                     break;
                 }
 
@@ -314,14 +321,10 @@ std::shared_ptr<IAudioDevice> WASAPIAudioEngine::getAudioDevice(wxString deviceN
                 int finalNumChannels = std::max(numChannels, dev.minChannels);
                 finalNumChannels = std::min(finalNumChannels, dev.maxChannels);
 
-                auto devPtr = new WASAPIAudioDevice(client, direction, finalSampleRate, finalNumChannels);
+                auto devPtr = new WASAPIAudioDevice(client, device, direction, finalSampleRate, finalNumChannels);
                 result = std::shared_ptr<IAudioDevice>(devPtr);
-                
-                client->Release();
-                device->Release();
             }
         }
-        coll->Release();
         prom->set_value(result);
     });
     return fut.get();
@@ -349,11 +352,11 @@ std::vector<int> WASAPIAudioEngine::getSupportedSampleRates(wxString deviceName,
     return fut.get();
 }
 
-AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* device)
+AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(ComPtr<IMMDevice> device)
 {
     // Get device name
-    IPropertyStore* propStore = nullptr;
-    HRESULT hr = device->OpenPropertyStore(STGM_READ, &propStore);
+    ComPtr<IPropertyStore> propStore = nullptr;
+    HRESULT hr = device->OpenPropertyStore(STGM_READ, propStore.GetAddressOf());
     if (FAILED(hr))
     {
         std::stringstream ss;
@@ -379,7 +382,6 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
             onAudioErrorFunction(*this, ss.str(), onAudioErrorState); 
         }
         PropVariantClear(&friendlyName);
-        propStore->Release();
         return AudioDeviceSpecification::GetInvalidDevice();
     }
 
@@ -387,7 +389,6 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
     {
         log_warn("Device does not have a friendly name!");
         PropVariantClear(&friendlyName);
-        propStore->Release();
         return AudioDeviceSpecification::GetInvalidDevice();
     }
 
@@ -407,7 +408,6 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
             onAudioErrorFunction(*this, ss.str(), onAudioErrorState); 
         }
         PropVariantClear(&friendlyName);
-        propStore->Release();
         return AudioDeviceSpecification::GetInvalidDevice();
     }
 
@@ -415,7 +415,6 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
     {
         log_warn("Device does not have a card name!");
         PropVariantClear(&friendlyName);
-        propStore->Release();
         return AudioDeviceSpecification::GetInvalidDevice();
     }
     
@@ -432,7 +431,6 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
             onAudioErrorFunction(*this, ss.str(), onAudioErrorState); 
         }
         PropVariantClear(&friendlyName);
-        propStore->Release();
         return AudioDeviceSpecification::GetInvalidDevice();
     }
 
@@ -440,7 +438,6 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
     {
         log_warn("Device does not have a port name!");
         PropVariantClear(&friendlyName);
-        propStore->Release();
         return AudioDeviceSpecification::GetInvalidDevice();
     }
     
@@ -463,8 +460,8 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
     }
 
     // Activate IAudioClient so we can obtain format info
-    IAudioClient* audioClient = nullptr;
-    hr = device->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void**)&audioClient);
+    ComPtr<IAudioClient> audioClient = nullptr;
+    hr = device->Activate(IID_IAudioClient, CLSCTX_ALL, nullptr, (void**)audioClient.GetAddressOf());
     if (FAILED(hr))
     {
         std::stringstream ss;
@@ -475,7 +472,6 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
             onAudioErrorFunction(*this, ss.str(), onAudioErrorState); 
         }
         PropVariantClear(&friendlyName);
-        propStore->Release();
         return AudioDeviceSpecification::GetInvalidDevice();
     }
 
@@ -490,9 +486,7 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
         {
             onAudioErrorFunction(*this, ss.str(), onAudioErrorState); 
         }
-        audioClient->Release();
         PropVariantClear(&friendlyName);
-        propStore->Release();
         return AudioDeviceSpecification::GetInvalidDevice();
     }
 
@@ -521,23 +515,22 @@ AudioDeviceSpecification WASAPIAudioEngine::getDeviceSpecification_(IMMDevice* d
     }
 
     CoTaskMemFree(streamFormat);
-    audioClient->Release();
     PropVariantClear(&friendlyName);
-    propStore->Release();
 
     return spec; // note: deviceId needs to be filled in by caller
 }
 
 std::string WASAPIAudioEngine::getUTF8String_(LPWSTR str)
 {
-    std::vector<char> buffer; 
     std::string val = "";  
     int size = WideCharToMultiByte(CP_UTF8, 0, str, -1, NULL, 0, NULL, NULL);
     if (size > 0) 
     {
-        buffer.resize(size);
-        WideCharToMultiByte(CP_UTF8, 0, str, -1, static_cast<LPSTR>(&buffer[0]), buffer.size(), NULL, NULL);
-        val = std::string(&buffer[0]);
+        char* tmp = new char[size];
+        assert(tmp != nullptr);
+        WideCharToMultiByte(CP_UTF8, 0, str, -1, tmp, size, NULL, NULL);
+        val = tmp;
+        delete[] tmp;
     }
     return val;
 }
