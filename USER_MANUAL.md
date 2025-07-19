@@ -836,7 +836,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 # Release Notes
 
-## V2.0.1 TBD 2025
+## V2.0.1 July 2025
 
 1. Bugfixes:
     * Reduce latency when going between TX->RX with Hamlib configured. (PR #893)
