@@ -30,7 +30,6 @@
 #include "IPipelineStep.h"
 #include "../freedv_interface.h"
 #include "rade_api.h"
-#include "codec2_fifo.h"
 #include "rade_text.h"
 #include "../util/GenericFIFO.h"
 
@@ -57,8 +56,8 @@ private:
     std::atomic<int> syncState_;
     struct rade* dv_;
     FARGANState* fargan_;
-    struct FIFO* inputSampleFifo_;
-    struct FIFO* outputSampleFifo_;
+    GenericFIFO<short> inputSampleFifo_;
+    GenericFIFO<short> outputSampleFifo_;
     float* pendingFeatures_;
     int pendingFeaturesIdx_;
     FILE* featuresFile_;

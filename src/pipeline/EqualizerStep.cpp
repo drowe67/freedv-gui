@@ -60,10 +60,11 @@ int EqualizerStep::getOutputSampleRate() const
 
 std::shared_ptr<short> EqualizerStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    memcpy(outputSamples_.get(), inputSamples.get(), sizeof(short)*numInputSamples);
-    
+    *numOutputSamples = numInputSamples;
     if (*enableFilter_)
     {
+        memcpy(outputSamples_.get(), inputSamples.get(), sizeof(short)*numInputSamples);
+
         std::shared_ptr<void> tmpBassFilter = *bassFilter_;
         std::shared_ptr<void> tmpTrebleFilter = *trebleFilter_;
         std::shared_ptr<void> tmpMidFilter = *midFilter_;
@@ -84,8 +85,11 @@ std::shared_ptr<short> EqualizerStep::execute(std::shared_ptr<short> inputSample
         {
             sox_biquad_filter(tmpVolFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
         }
-    }
     
-    *numOutputSamples = numInputSamples;
-    return outputSamples_;
+        return outputSamples_;
+    }
+    else
+    {
+        return inputSamples;
+    }
 }
