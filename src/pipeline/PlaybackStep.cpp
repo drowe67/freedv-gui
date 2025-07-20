@@ -93,12 +93,8 @@ std::shared_ptr<short> PlaybackStep::execute(std::shared_ptr<short> inputSamples
 
 void PlaybackStep::nonRtThreadEntry_()
 {
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    auto buf = std::shared_ptr<short>(
-        new short[maxSamples],
-        std::default_delete<short[]>());
-    assert(buf != nullptr);
-    
+    std::shared_ptr<short> buf = nullptr;
+
     while (!nonRtThreadEnding_)
     {
         g_mutexProtectingCallbackData.Lock();
@@ -120,6 +116,14 @@ void PlaybackStep::nonRtThreadEntry_()
                 assert(playbackResampler_ != nullptr);
             }
 
+            if (buf == nullptr)
+            {
+                buf = std::shared_ptr<short>(
+                    new short[fileSampleRate],
+                    std::default_delete<short[]>());
+                assert(buf != nullptr);
+            } 
+
             unsigned int nsf = codec2_fifo_free(outputFifo_);
             //log_info("nsf = %d", (int)nsf);
             if (nsf > 0)
@@ -132,21 +136,28 @@ void PlaybackStep::nonRtThreadEntry_()
                 {
                     if (playbackResampler_ != nullptr)
                     {
-                        int outSamples = 0; 
+                        int outSamples = 0;
                         auto outBuf = playbackResampler_->execute(buf, numRead, &outSamples);
                         //log_info("Resampled %u samples and created %d samples", numRead, outSamples);
-                        codec2_fifo_write(outputFifo_, outBuf.get(), outSamples);
+                        if (codec2_fifo_write(outputFifo_, outBuf.get(), outSamples) != 0)
+                        {
+                            log_warn("Could not write %d samples to buffer, dropping", outSamples);
+                        }
                     }
                     else
                     {
                         //log_info("Writing %u samples to FIFO", numRead);
-                        codec2_fifo_write(outputFifo_, buf.get(), numRead);
+                        if (codec2_fifo_write(outputFifo_, buf.get(), numRead) != 0)
+                        {
+                            log_warn("Could not write %d samples to buffer, dropping", numRead);
+                        }
                     }
                 }
 
                 if ((int)numRead < samplesAtSourceRate && codec2_fifo_used(outputFifo_) == 0)
                 {
                     //log_info("file read complete");
+                    buf = nullptr;
                     fileCompleteFn_();
                 }
             }
