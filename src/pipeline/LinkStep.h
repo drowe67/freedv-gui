@@ -24,7 +24,7 @@
 #define AUDIO_PIPELINE__LINK_STEP_H
 
 #include "IPipelineStep.h"
-#include "codec2_fifo.h"
+#include "../util/GenericFIFO.h"
 
 class LinkStep
 {
@@ -44,7 +44,7 @@ public:
     }
     
     int getSampleRate() const { return sampleRate_; }
-    FIFO* getFifo() { return fifo_; }
+    GenericFIFO<short>& getFifo() { return fifo_; }
     
     void clearFifo();
     
@@ -116,7 +116,7 @@ private:
     int sampleRate_;
     std::shared_ptr<IPipelineStep> inputPipelineStep_;
     std::shared_ptr<IPipelineStep> outputPipelineStep_;
-    FIFO* fifo_;
+    GenericFIFO<short> fifo_;
 
     short* tmpBuffer_;
 };

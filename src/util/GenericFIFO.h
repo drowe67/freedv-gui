@@ -42,6 +42,7 @@ public:
     
     int numUsed() const noexcept;
     int numFree() const noexcept;
+    int capacity() const noexcept;
 
     void reset() noexcept;
     
@@ -182,6 +183,12 @@ int GenericFIFO<T>::numFree() const noexcept
     // is reserved for empty rather than full
 
     return nelem - numUsed() - 1;
+}
+
+template<typename T>
+int GenericFIFO<T>::capacity() const noexcept
+{
+    return nelem - 1;
 }
 
 #endif // GENERIC_FIFO_H

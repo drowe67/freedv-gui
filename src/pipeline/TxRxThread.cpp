@@ -526,13 +526,13 @@ void* TxRxThread::Entry()
         // Determine whether we need to pause for a shorter amount
         // of time to avoid dropouts.
         paCallBackData  *cbData = g_rxUserdata;
-        struct FIFO* outFifo = cbData->outfifo1;
+        auto outFifo = cbData->outfifo1;
         if (!m_tx)
         {
             outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
         }
-        auto totalFifoCapacity = codec2_fifo_used(outFifo) + codec2_fifo_free(outFifo);
-        auto fifoUsed = codec2_fifo_used(outFifo);
+        auto totalFifoCapacity = outFifo->capacity();
+        auto fifoUsed = outFifo->numUsed();
         helper_->stopRealTimeWork(fifoUsed < totalFifoCapacity / 2);
     }
 
@@ -578,28 +578,15 @@ void TxRxThread::clearFifos_()
     
     if (m_tx)
     {
-        while (codec2_fifo_used(cbData->outfifo1) > 0)
-        {
-            codec2_fifo_read(cbData->outfifo1, inputSamples_.get(), 1);
-        }
-        
-        while (codec2_fifo_used(cbData->infifo2) > 0)
-        {
-            codec2_fifo_read(cbData->infifo2, inputSamples_.get(), 1);
-        }
+        cbData->outfifo1->reset();
+        cbData->infifo2->reset();
     }
     else
     {
-        while (codec2_fifo_used(cbData->infifo1) > 0)
-        {
-            codec2_fifo_read(cbData->infifo1, inputSamples_.get(), 1);
-        }
-        
+        cbData->infifo1->reset();
+
         auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
-        while (codec2_fifo_used(outFifo) > 0)
-        {
-            codec2_fifo_read(outFifo, inputSamples_.get(), 1);
-        }
+        outFifo->reset();
     }
 }
 
@@ -643,7 +630,7 @@ void TxRxThread::txProcessing_() noexcept
     	  // If this drops to zero we have a problem as we will run out of output samples
     	  // to send to the sound driver
     	  log_debug("outfifo1 used: %6d free: %6d nsam_one_modem_frame: %d",
-                      codec2_fifo_used(cbData->outfifo1), codec2_fifo_free(cbData->outfifo1), nsam_one_modem_frame);
+                      cbData->outfifo1->numUsed(), cbData->outfifo1->numFree(), nsam_one_modem_frame);
     	}
 
         int nsam_in_48 = (inputSampleRate_ * FRAME_DURATION_MS) / MS_TO_SEC;
@@ -651,7 +638,7 @@ void TxRxThread::txProcessing_() noexcept
 
         int             nout;
 
-        while(!helper_->mustStopWork() && (unsigned)codec2_fifo_free(cbData->outfifo1) >= nsam_one_modem_frame) {        
+        while(!helper_->mustStopWork() && (unsigned)cbData->outfifo1->numFree() >= nsam_one_modem_frame) {        
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
 
@@ -666,7 +653,7 @@ void TxRxThread::txProcessing_() noexcept
             
             // There may be recorded audio left to encode while ending TX. To handle this,
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
-            int nread = codec2_fifo_read(cbData->infifo2, inputSamples_.get(), nsam_in_48);            
+            int nread = cbData->infifo2->read(inputSamples_.get(), nsam_in_48);            
             if (nread != 0 && endingTx)
             {
                 if (freedvInterface.getCurrentMode() >= FREEDV_MODE_RADE)
@@ -681,9 +668,9 @@ void TxRxThread::txProcessing_() noexcept
                     auto outputSamples = pipeline_->execute(inputSamples_, 0, &nout);
                     if (nout > 0 && outputSamples.get() != nullptr)
                     {
-                        if (codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout) != 0)
+                        if (cbData->outfifo1->write(outputSamples.get(), nout) != 0)
                         {
-                            log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", codec2_fifo_free(cbData->outfifo1));
+                            log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1->numFree());
                         }
                     }
                     else
@@ -707,7 +694,7 @@ void TxRxThread::txProcessing_() noexcept
             
             if (outputSamples.get() != nullptr)
             {
-                codec2_fifo_write(cbData->outfifo1, outputSamples.get(), nout);
+                cbData->outfifo1->write(outputSamples.get(), nout);
             }
         }
     }
@@ -773,7 +760,7 @@ void TxRxThread::rxProcessing_() noexcept
     auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
 
     // while we have enough input samples available and enough space in the output FIFO ... 
-    while (!helper_->mustStopWork() && processInputFifo && codec2_fifo_free(outFifo) >= nsam_one_speech_frame && codec2_fifo_read(cbData->infifo1, inputSamples_.get(), nsam) == 0) {
+    while (!helper_->mustStopWork() && processInputFifo && outFifo->numFree() >= nsam_one_speech_frame && cbData->infifo1->read(inputSamples_.get(), nsam) == 0) {
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
 
@@ -781,7 +768,7 @@ void TxRxThread::rxProcessing_() noexcept
         
         if (nout > 0 && outputSamples.get() != nullptr)
         {
-            codec2_fifo_write(outFifo, outputSamples.get(), nout);
+            outFifo->write(outputSamples.get(), nout);
         }
         
         processInputFifo = 

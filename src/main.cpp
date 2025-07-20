@@ -2593,19 +2593,15 @@ void MainFrame::stopRxStream()
 
 void MainFrame::destroy_fifos(void)
 {
-    if (g_rxUserdata->infifo1) codec2_fifo_destroy(g_rxUserdata->infifo1);
-    if (g_rxUserdata->outfifo1) codec2_fifo_destroy(g_rxUserdata->outfifo1);
-    if (g_rxUserdata->infifo2) codec2_fifo_destroy(g_rxUserdata->infifo2);
-    if (g_rxUserdata->outfifo2) codec2_fifo_destroy(g_rxUserdata->outfifo2);
-    codec2_fifo_destroy(g_rxUserdata->rxinfifo);
-    codec2_fifo_destroy(g_rxUserdata->rxoutfifo);
+    if (g_rxUserdata->infifo1) delete g_rxUserdata->infifo1;
+    if (g_rxUserdata->outfifo1) delete g_rxUserdata->outfifo1;
+    if (g_rxUserdata->infifo2) delete g_rxUserdata->infifo2;
+    if (g_rxUserdata->outfifo2) delete g_rxUserdata->outfifo2;
     
     g_rxUserdata->infifo1 = nullptr;
     g_rxUserdata->infifo2 = nullptr;
     g_rxUserdata->outfifo1 = nullptr;
     g_rxUserdata->outfifo2 = nullptr;
-    g_rxUserdata->rxinfifo = nullptr;
-    g_rxUserdata->rxoutfifo = nullptr;
 }
 
 //-------------------------------------------------------------------------
@@ -2660,18 +2656,18 @@ void MainFrame::startRxStream()
         {
             int soundCard2InFifoSizeSamples = 30*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
             int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate / 1000;
-            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
-            g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
-            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
-            g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
+            g_rxUserdata->outfifo1 = new GenericFIFO<short>(soundCard1OutFifoSizeSamples);
+            g_rxUserdata->infifo2 = new GenericFIFO<short>(soundCard2InFifoSizeSamples);
+            g_rxUserdata->infifo1 = new GenericFIFO<short>(soundCard1InFifoSizeSamples);
+            g_rxUserdata->outfifo2 = new GenericFIFO<short>(soundCard2OutFifoSizeSamples);
         
             log_debug("fifoSize_ms:  %d infifo2: %d/outfilo2: %d",
                 wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
         }
         else
         {
-            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
-            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
+            g_rxUserdata->infifo1 = new GenericFIFO<short>(soundCard1InFifoSizeSamples);
+            g_rxUserdata->outfifo1 = new GenericFIFO<short>(soundCard1OutFifoSizeSamples);
             g_rxUserdata->infifo2 = nullptr;
             g_rxUserdata->outfifo2 = nullptr;
         }
@@ -2796,7 +2792,7 @@ void MainFrame::startRxStream()
                     {
                         for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
                         {
-                            if (codec2_fifo_write(cbData->infifo2, &audioData[0], 1)) 
+                            if (cbData->infifo2->write(&audioData[0], 1)) 
                             {
                                 g_infifo2_full++;
                             }
@@ -2843,7 +2839,7 @@ void MainFrame::startRxStream()
                     short* audioData = static_cast<short*>(data);
                     short outdata = 0;
                
-                    if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
+                    if ((size_t)cbData->outfifo1->numUsed() < size)
                     {
                         g_outfifo1_empty++;
                         return;
@@ -2851,7 +2847,7 @@ void MainFrame::startRxStream()
 
                     for (; size > 0; size--, audioData += dev.getNumChannels())
                     {
-                        codec2_fifo_read(cbData->outfifo1, &outdata, 1);
+                        cbData->outfifo1->read(&outdata, 1);
 
                         // write signal to all channels to start. This is so that
                         // the compiler can optimize for the most common case.
@@ -2996,9 +2992,6 @@ void MainFrame::startRxStream()
         rxInFifoSizeSamples += 0.04*modem_samplerate;
         rxOutFifoSizeSamples += 0.04*modem_samplerate;
 
-        g_rxUserdata->rxinfifo = codec2_fifo_create(rxInFifoSizeSamples);
-        g_rxUserdata->rxoutfifo = codec2_fifo_create(rxOutFifoSizeSamples);
-
         log_debug("rxInFifoSizeSamples: %d rxOutFifoSizeSamples: %d", rxInFifoSizeSamples, rxOutFifoSizeSamples);
 
         // Init Equaliser Filters ------------------------------------------------------
@@ -3044,7 +3037,7 @@ void MainFrame::startRxStream()
 
             for (size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
             {
-                if (codec2_fifo_write(cbData->infifo1, &audioData[0], 1)) 
+                if (cbData->infifo1->write(&audioData[0], 1)) 
                 {
                     log_warn("RX FIFO full");
                     g_infifo1_full++;
@@ -3075,7 +3068,7 @@ void MainFrame::startRxStream()
                 short* audioData = static_cast<short*>(data);
                 short outdata = 0;
 
-                if ((size_t)codec2_fifo_used(cbData->outfifo2) < size)
+                if ((size_t)cbData->outfifo2->numUsed() < size)
                 {
                     g_outfifo2_empty++;
                     return;
@@ -3083,7 +3076,7 @@ void MainFrame::startRxStream()
 
                 for (; size > 0; size--)
                 {
-                    codec2_fifo_read(cbData->outfifo2, &outdata, 1);
+                    cbData->outfifo2->read(&outdata, 1);
                     for (int j = 0; j < dev.getNumChannels(); j++)
                     {
                         *audioData++ = outdata;
@@ -3108,7 +3101,7 @@ void MainFrame::startRxStream()
                 short* audioData = static_cast<short*>(data);
                 short outdata = 0;
 
-                if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
+                if ((size_t)cbData->outfifo1->numUsed() < size)
                 {
                     g_outfifo1_empty++;
                     return;
@@ -3116,7 +3109,7 @@ void MainFrame::startRxStream()
 
                 for (; size > 0; size--)
                 {
-                    codec2_fifo_read(cbData->outfifo1, &outdata, 1);
+                    cbData->outfifo1->read(&outdata, 1);
                     for (int j = 0; j < dev.getNumChannels(); j++)
                     {
                         *audioData++ = outdata;
