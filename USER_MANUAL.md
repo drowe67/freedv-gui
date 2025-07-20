@@ -863,6 +863,7 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
     * Force left-to-right rendering of UI elements. (PR #966)
     * macOS: improve behavior with Bluetooth devices. (PR #971)
     * Windows: Fix intermittent disappearance of audio devices. (PR #974)
+    * Fix crash when playing back files with higher sample rates than configured. (PR #977)
 2. Documentation:
     * Add missing dependency for macOS builds to README. (PR #925; thanks @relistan!)
     * Add note about using XWayland on Linux. (PR #926)
