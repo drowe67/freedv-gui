@@ -35,13 +35,13 @@ using namespace std::chrono_literals;
 
 extern wxString utRxFeatureFile;
 
-#define FEATURE_FIFO_SIZE (4096)
+#define FEATURE_FIFO_SIZE ((RADE_SPEECH_SAMPLE_RATE / LPCNET_FRAME_SIZE) * rade_n_features_in_out(dv_))
 
 RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, std::function<void(RADEReceiveStep*)> syncFn)
     : dv_(dv)
     , fargan_(fargan)
-    , inputSampleFifo_(rade_nin_max(dv_) * 2)
-    , outputSampleFifo_(16000)
+    , inputSampleFifo_(RADE_MODEM_SAMPLE_RATE)
+    , outputSampleFifo_(RADE_SPEECH_SAMPLE_RATE)
     , pendingFeatures_(nullptr)
     , pendingFeaturesIdx_(0)
     , featuresFile_(nullptr)
