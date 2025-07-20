@@ -45,6 +45,7 @@ extern FreeDVInterface freedvInterface;
 #define LAST_UPDATE_DATE_COL (13)
 #define RIGHTMOST_COL (LAST_UPDATE_DATE_COL + 1)
 
+#define UNKNOWN_SNR_VAL (-99)
 #define UNKNOWN_STR ""
 #define NUM_COLS (LAST_UPDATE_DATE_COL + 1)
 #define RX_ONLY_STATUS "RX Only"
@@ -1747,7 +1748,7 @@ int FreeDVReporterDialog::FreeDVReporterDataModel::Compare (const wxDataViewItem
             result = leftData->lastRxMode.CmpNoCase(rightData->lastRxMode);
             break;
         case SNR_COL:
-            result = leftData->snr.CmpNoCase(rightData->snr);
+            result = leftData->snrVal - rightData->snrVal;
             break;
         case LAST_UPDATE_DATE_COL:
             if (leftData->lastUpdateDate.IsValid() && rightData->lastUpdateDate.IsValid())
@@ -2173,6 +2174,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserConnectFn_(std::string
         
         temp->lastRxCallsign = UNKNOWN_STR;
         temp->lastRxMode = UNKNOWN_STR;
+        temp->snrVal = UNKNOWN_SNR_VAL;
         temp->snr = UNKNOWN_STR;
         
         // Default to sane colors for rows. If we need to highlight, the timer will change
@@ -2420,6 +2422,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
                     
                 iter->second->lastRxCallsign = UNKNOWN_STR;
                 iter->second->lastRxMode = UNKNOWN_STR;
+                iter->second->snrVal = UNKNOWN_SNR_VAL;
                 iter->second->snr = UNKNOWN_STR;
                 iter->second->lastRxDate = wxDateTime();
             }
@@ -2427,6 +2430,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onReceiveUpdateFn_(std::stri
             {
                 isChanged |=
                     (sortingColumn == parent_->m_listSpots->GetColumn(SNR_COL) && iter->second->snr != snrString);
+                iter->second->snrVal = snr;
                 iter->second->snr = snrString;
                 iter->second->lastRxDate = wxDateTime::Now();
             }
