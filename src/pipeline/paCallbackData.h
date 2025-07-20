@@ -2,7 +2,7 @@
 #define AUDIO_PIPELINE_PA_CALLBACK_DATA_H
 
 #include <samplerate.h>
-#include "codec2_fifo.h"
+#include "../util/GenericFIFO.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // paCallBackData
@@ -14,8 +14,6 @@ typedef struct paCallBackData
         , outfifo1(nullptr)
         , infifo2(nullptr)
         , outfifo2(nullptr)
-        , rxinfifo(nullptr)
-        , rxoutfifo(nullptr)
         , sbqMicInBass(nullptr)
         , sbqMicInTreble(nullptr)
         , sbqMicInMid(nullptr)
@@ -33,16 +31,12 @@ typedef struct paCallBackData
     }
 
     // FIFOs attached to first sound card
-    struct FIFO    *infifo1;
-    struct FIFO    *outfifo1;
+    struct GenericFIFO<short>    *infifo1;
+    struct GenericFIFO<short>    *outfifo1;
 
     // FIFOs attached to second sound card
-    struct FIFO    *infifo2;
-    struct FIFO    *outfifo2;
-
-    // FIFOs for rx process
-    struct FIFO    *rxinfifo;
-    struct FIFO    *rxoutfifo;
+    struct GenericFIFO<short>    *infifo2;
+    struct GenericFIFO<short>    *outfifo2;
 
     // EQ filter states
     std::shared_ptr<void> sbqMicInBass;
