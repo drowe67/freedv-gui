@@ -106,6 +106,8 @@ class TopFrame : public wxFrame
 
         wxStaticText* m_txtTxLevelNum;
         wxSlider* m_sliderTxLevel;
+        wxSlider* m_sliderMicSpkrLevel;
+        wxStaticText* m_txtMicSpkrLevelNum;
         
         wxSlider* m_sliderSQ;        
         wxCheckBox* m_ckboxSQ;
@@ -203,6 +205,8 @@ class TopFrame : public wxFrame
         virtual void OnChangeTxMode( wxCommandEvent& event ) { event.Skip(); }
         
         virtual void OnChangeTxLevel( wxScrollEvent& event ) { event.Skip(); }
+        
+        virtual void OnChangeMicSpkrLevel( wxScrollEvent& event ) { event.Skip(); }
         
         virtual void OnChangeReportFrequency( wxCommandEvent& event ) { event.Skip(); }
         virtual void OnChangeReportFrequencyVerify( wxCommandEvent& event ) { event.Skip(); }

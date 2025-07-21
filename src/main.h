@@ -426,6 +426,8 @@ class MainFrame : public TopFrame
         
         void OnChangeTxLevel( wxScrollEvent& event ) override;
         
+        void OnChangeMicSpkrLevel( wxScrollEvent& event ) override;
+        
         void OnChangeReportFrequency( wxCommandEvent& event ) override;
         void OnChangeReportFrequencyVerify( wxCommandEvent& event ) override;
         

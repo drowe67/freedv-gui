@@ -442,6 +442,17 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
     return eq;
 }
 
+void FilterDlg::syncVolumes()
+{
+    m_MicInVol.gaindB = wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB;
+    m_MicInVol.gaindB = limit(m_MicInVol.gaindB, MIN_GAIN, MAX_GAIN);
+    setGain(&m_MicInVol);
+    
+    m_SpkOutVol.gaindB = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
+    m_SpkOutVol.gaindB = limit(m_SpkOutVol.gaindB, MIN_GAIN, MAX_GAIN);
+    setGain(&m_SpkOutVol);
+}
+
 //-------------------------------------------------------------------------
 // ExchangeData()
 //-------------------------------------------------------------------------
@@ -743,7 +754,7 @@ void FilterDlg::updateControlState()
     m_MicInTreble.sliderFreq->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
     m_MicInTreble.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
     
-    m_MicInVol.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
+    m_MicInVol.sliderGain->Enable(true);
     
     m_MicInDefault->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
     
@@ -757,7 +768,7 @@ void FilterDlg::updateControlState()
     m_SpkOutTreble.sliderFreq->Enable(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable);
     m_SpkOutTreble.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable);
     
-    m_SpkOutVol.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable);
+    m_SpkOutVol.sliderGain->Enable(true);
     
     m_SpkOutDefault->Enable(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.eqEnable);
     

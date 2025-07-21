@@ -245,6 +245,7 @@ class FreeDVReporterDialog : public wxFrame
                 wxString lastRxCallsign;
                 wxString lastRxMode;
                 wxString snr;
+                int snrVal;
                 wxString lastUpdate;
                 wxDateTime lastUpdateDate;
                 wxString userMessage;
