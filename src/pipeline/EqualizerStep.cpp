@@ -62,12 +62,17 @@ std::shared_ptr<short> EqualizerStep::execute(std::shared_ptr<short> inputSample
 {
     memcpy(outputSamples_.get(), inputSamples.get(), sizeof(short)*numInputSamples);
     
+    std::shared_ptr<void> tmpVolFilter = *volFilter_;
+    if (tmpVolFilter != nullptr)
+    {
+        sox_biquad_filter(tmpVolFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
+    }
+    
     if (*enableFilter_)
     {
         std::shared_ptr<void> tmpBassFilter = *bassFilter_;
         std::shared_ptr<void> tmpTrebleFilter = *trebleFilter_;
         std::shared_ptr<void> tmpMidFilter = *midFilter_;
-        std::shared_ptr<void> tmpVolFilter = *volFilter_;
         if (tmpBassFilter != nullptr)
         {
             sox_biquad_filter(tmpBassFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
@@ -79,10 +84,6 @@ std::shared_ptr<short> EqualizerStep::execute(std::shared_ptr<short> inputSample
         if (tmpMidFilter != nullptr)
         {
             sox_biquad_filter(tmpMidFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
-        }
-        if (tmpVolFilter != nullptr)
-        {
-            sox_biquad_filter(tmpVolFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
         }
     }
     

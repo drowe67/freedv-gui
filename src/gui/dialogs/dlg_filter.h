@@ -59,6 +59,8 @@ class FilterDlg : public wxDialog
         ~FilterDlg();
 
         void    ExchangeData(int inout);
+        
+        void syncVolumes();
 
     protected:
         // Handlers for events.
