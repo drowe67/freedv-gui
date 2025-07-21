@@ -31,12 +31,12 @@ typedef struct paCallBackData
     }
 
     // FIFOs attached to first sound card
-    struct GenericFIFO<short>    *infifo1;
-    struct GenericFIFO<short>    *outfifo1;
+    GenericFIFO<short>    *infifo1;
+    GenericFIFO<short>    *outfifo1;
 
     // FIFOs attached to second sound card
-    struct GenericFIFO<short>    *infifo2;
-    struct GenericFIFO<short>    *outfifo2;
+    GenericFIFO<short>    *infifo2;
+    GenericFIFO<short>    *outfifo2;
 
     // EQ filter states
     std::shared_ptr<void> sbqMicInBass;

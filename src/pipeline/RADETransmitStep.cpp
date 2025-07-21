@@ -35,7 +35,7 @@
 
 using namespace std::chrono_literals;
 
-#define FEATURE_FIFO_SIZE (4096)
+#define FEATURE_FIFO_SIZE ((RADE_SPEECH_SAMPLE_RATE / LPCNET_FRAME_SIZE) * rade_n_features_in_out(dv_))
 
 const int RADE_SCALING_FACTOR = 16383;
 
@@ -58,20 +58,31 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
         assert(featuresFile_ != nullptr);
         
         utFeatureThread_ = std::thread([&]() {
-            float* fifoRead = new float[FEATURE_FIFO_SIZE];
+            float* fifoRead = new float[utFeatures_.capacity()];
             assert(fifoRead != nullptr);
             
             while (!exitingFeatureThread_)
             {
-                auto numToRead = std::min(utFeatures_.numUsed(), FEATURE_FIFO_SIZE);
-                while (numToRead > 0)
+                auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
+                if (utFeatures_.numFree() < (utFeatures_.capacity() / 4))
                 {
-                    utFeatures_.read(fifoRead, numToRead);
-                    fwrite(fifoRead, sizeof(float), numToRead, featuresFile_);
-                    numToRead = std::min(utFeatures_.numUsed(), FEATURE_FIFO_SIZE);
+                    while (numToRead > 0)
+                    {
+                        utFeatures_.read(fifoRead, numToRead);
+                        fwrite(fifoRead, sizeof(float), numToRead, featuresFile_);
+                        numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
+                    }
                 }
                 
-                std::this_thread::sleep_for(10ms);
+                std::this_thread::sleep_for(100ms);
+            }
+            
+            auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
+            while (numToRead > 0)
+            {
+                utFeatures_.read(fifoRead, numToRead);
+                fwrite(fifoRead, sizeof(float), numToRead, featuresFile_);
+                numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
             }
             
             delete[] fifoRead;
