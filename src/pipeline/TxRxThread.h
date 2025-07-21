@@ -50,6 +50,7 @@ public:
         , equalizedMicAudioLink_(micAudioLink)
         , hasEooBeenSent_(false)
         , helper_(helper)
+        , deferReset_(false)
     { 
         assert(inputSampleRate_ > 0);
         assert(outputSampleRate_ > 0);
@@ -85,6 +86,7 @@ private:
     bool hasEooBeenSent_;
     std::shared_ptr<IRealtimeHelper> helper_;
     std::shared_ptr<short> inputSamples_;
+    bool deferReset_;
     
     void initializePipeline_();
     void txProcessing_() noexcept

@@ -614,6 +614,15 @@ void TxRxThread::txProcessing_() noexcept
     //
 
     if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx) || !g_half_duplex || g_voice_keyer_tx || g_recVoiceKeyerFile || g_recFileFromMic))) {        
+        if (deferReset_)
+        {
+            // We just entered TX from RX.
+            // Reset pipeline and wipe anything in the FIFO.
+            deferReset_ = false;
+            pipeline_->reset();
+            clearFifos_();
+        }
+
         // This while loop locks the modulator to the sample rate of
         // the input sound card.  We want to make sure that modulator samples
         // are uninterrupted by differences in sample rate between
@@ -700,11 +709,8 @@ void TxRxThread::txProcessing_() noexcept
     }
     else
     {
-        // Reset the pipeline state.
-        pipeline_->reset();
-        
-        // Wipe anything added in the FIFO to prevent pops on next TX.
-        clearFifos_();
+        // Defer reset until next time we go into TX.
+        deferReset_ = true;
     }
 
     if (g_dump_timing) {
