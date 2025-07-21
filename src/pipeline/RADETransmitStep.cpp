@@ -69,7 +69,7 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
                     while (numToRead > 0)
                     {
                         utFeatures_.read(fifoRead, numToRead);
-                        fwrite(fifoRead, sizeof(float), numToRead, featuresFile_);
+                        fwrite(fifoRead, sizeof(float) * numToRead, 1, featuresFile_);
                         numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
                     }
                 }
@@ -81,7 +81,7 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
             while (numToRead > 0)
             {
                 utFeatures_.read(fifoRead, numToRead);
-                fwrite(fifoRead, sizeof(float), numToRead, featuresFile_);
+                fwrite(fifoRead, sizeof(float) * numToRead, 1, featuresFile_);
                 numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
             }
             
