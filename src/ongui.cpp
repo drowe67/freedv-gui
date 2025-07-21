@@ -699,12 +699,38 @@ void MainFrame::OnCmdSliderScroll(wxScrollEvent& event)
 void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
 {
     char fmt[15];
+    
     g_txLevel = m_sliderTxLevel->GetValue();
     snprintf(fmt, 15, "%0.1f dB", (double)(g_txLevel)/10.0);
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);
     
     wxGetApp().appConfiguration.transmitLevel = g_txLevel;
+}
+
+//-------------------------------------------------------------------------
+// OnChangeMicSpkrLevel()
+//-------------------------------------------------------------------------
+void MainFrame::OnChangeMicSpkrLevel( wxScrollEvent& event )
+{
+    char fmt[15];
+    
+    auto sliderLevel = (double)m_sliderMicSpkrLevel->GetValue() / 10.0;
+    
+    if (g_tx)
+    {
+        wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB = sliderLevel;
+        m_newMicInFilter = true;
+    }
+    else
+    {
+        wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB = sliderLevel;
+        m_newSpkOutFilter = true;
+    }
+    
+    snprintf(fmt, 15, "%0.1f dB", (double)(sliderLevel));
+    wxString fmtString(fmt);
+    m_txtMicSpkrLevelNum->SetLabel(fmtString);
 }
 
 //-------------------------------------------------------------------------
@@ -967,6 +993,12 @@ void MainFrame::togglePTT(void) {
         g_tx = false;
         endingTx = false;
 
+        char fmt[16];
+        m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB * 10);
+        snprintf(fmt, 15, "%0.1f dB", (double)wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB);
+        wxString fmtString(fmt);
+        m_txtMicSpkrLevelNum->SetLabel(fmtString);
+        
         // tx-> rx transition, swap to the page we were on for last rx
         m_auiNbookCtrl->ChangeSelection(wxGetApp().appConfiguration.currentNotebookTab);
         
@@ -1068,6 +1100,12 @@ void MainFrame::togglePTT(void) {
         // g_tx governs when audio actually goes out during TX, so don't set to true until
         // after the delay occurs.
         g_tx = true;
+        
+        char fmt[16];
+        m_sliderMicSpkrLevel->SetValue(wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB * 10);
+        snprintf(fmt, 15, "%0.1f dB", (double)wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB);
+        wxString fmtString(fmt);
+        m_txtMicSpkrLevelNum->SetLabel(fmtString);
     }
 }
 
