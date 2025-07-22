@@ -1980,9 +1980,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     
         // Voice Keyer state machine
         VoiceKeyerProcessEvent(VK_DT);
-
-        // Detect Sync state machine
-        DetectSyncProcessEvent();
     }
 }
 #endif

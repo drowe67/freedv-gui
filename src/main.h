@@ -331,12 +331,6 @@ class MainFrame : public TopFrame
     int                     vk_state;
     void VoiceKeyerProcessEvent(int vk_event);
 
-    // Detect Sync state machine
-
-    int                     ds_state;
-    float                   ds_rx_time;
-    void DetectSyncProcessEvent(void);
-
         void StopPlayFileToMicIn(void);
         void StopPlaybackFileFromRadio();
         void StopRecFileFromRadio();
