@@ -93,7 +93,7 @@ cat tmp.log
 
 # Stop recording, play back in RX mode
 kill $RECORD_PID
-cp $(pwd)/gmon.out $(pwd)/gmon.out.tx
+#cp $(pwd)/gmon.out $(pwd)/gmon.out.tx
 
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     paplay --file-format=wav --device "$PLAY_DEVICE" test.wav &
