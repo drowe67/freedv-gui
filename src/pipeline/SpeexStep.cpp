@@ -40,9 +40,7 @@ SpeexStep::SpeexStep(int sampleRate)
     
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+    outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
 }
 
@@ -62,17 +60,19 @@ int SpeexStep::getOutputSampleRate() const
     return sampleRate_;
 }
 
-std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* SpeexStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     *numOutputSamples = 0;
-    
+
+    short* outputSamples = outputSamples_.get();
+
     int numSpeexRuns = (inputSampleFifo_.numUsed() + numInputSamples) / numSamplesPerSpeexRun_;
     if (numSpeexRuns > 0)
     {
         *numOutputSamples = numSpeexRuns * numSamplesPerSpeexRun_;
         
-        short* tmpOutput = outputSamples_.get();
-        short* tmpInput = inputSamples.get();
+        short* tmpOutput = outputSamples;
+        short* tmpInput = inputSamples;
         
         while (numInputSamples > 0 && tmpInput != nullptr)
         {
@@ -87,12 +87,12 @@ std::shared_ptr<short> SpeexStep::execute(std::shared_ptr<short> inputSamples, i
             }
         }
     }
-    else if (numInputSamples > 0 && inputSamples.get() != nullptr)
+    else if (numInputSamples > 0 && inputSamples != nullptr)
     {
-        inputSampleFifo_.write(inputSamples.get(), numInputSamples);
+        inputSampleFifo_.write(inputSamples, numInputSamples);
     }
     
-    return outputSamples_;
+    return outputSamples;
 }
 
 void SpeexStep::reset()

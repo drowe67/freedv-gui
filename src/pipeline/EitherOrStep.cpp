@@ -48,7 +48,7 @@ int EitherOrStep::getOutputSampleRate() const
     return trueStep_->getOutputSampleRate();
 }
 
-std::shared_ptr<short> EitherOrStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* EitherOrStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     bool condResult = conditionalFn_();
     if (condResult)

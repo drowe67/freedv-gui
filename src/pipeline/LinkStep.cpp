@@ -47,10 +47,10 @@ void LinkStep::clearFifo()
     fifo_.reset();
 }
 
-std::shared_ptr<short> LinkStep::InputStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* LinkStep::InputStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     auto fifo = parent_->getFifo();
-    auto samplePtr = inputSamples.get();
+    auto samplePtr = inputSamples;
     if (numInputSamples > 0 && samplePtr != nullptr)
     {
         fifo.write(samplePtr, numInputSamples);
@@ -61,7 +61,7 @@ std::shared_ptr<short> LinkStep::InputStep::execute(std::shared_ptr<short> input
     return nullptr;
 }
 
-std::shared_ptr<short> LinkStep::OutputStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* LinkStep::OutputStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     auto fifo = parent_->getFifo();
     *numOutputSamples = std::min(fifo.numUsed(), numInputSamples);
@@ -69,7 +69,7 @@ std::shared_ptr<short> LinkStep::OutputStep::execute(std::shared_ptr<short> inpu
     if (*numOutputSamples > 0)
     {
         fifo.read(outputSamples_.get(), *numOutputSamples);
-        return outputSamples_;
+        return outputSamples_.get();
     }
     else
     {

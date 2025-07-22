@@ -70,21 +70,21 @@ int main()
     short* inputSamples = new short[16384];
     assert(inputSamples != nullptr);
     memset(inputSamples, 0, sizeof(short) * 16384);
-    auto inputSamplesPtr = std::shared_ptr<short>(inputSamples, std::default_delete<short[]>());
-    auto outputSamples = txStep->execute(inputSamplesPtr, 16384, &nout);
-    addNoise(outputSamples.get(), nout);
+    auto inputSamplesPtr = std::unique_ptr<short[]>(inputSamples);
+    auto outputSamples = txStep->execute(inputSamplesPtr.get(), 16384, &nout);
+    addNoise(outputSamples, nout);
     recvStep->execute(outputSamples, nout, &noutRx);
 
     txStep->restartVocoder();
     while (nout > 0)
     {
-        outputSamples = txStep->execute(inputSamplesPtr, 0, &nout);
-        addNoise(outputSamples.get(), nout);
+        outputSamples = txStep->execute(inputSamplesPtr.get(), 0, &nout);
+        addNoise(outputSamples, nout);
         recvStep->execute(outputSamples, nout, &noutRx);
     }
 
     // Send silence through to RX step to trigger EOO processing
-    recvStep->execute(inputSamplesPtr, 16384, &noutRx);
+    recvStep->execute(inputSamplesPtr.get(), 16384, &noutRx);
 
     delete recvStep;
     delete txStep;

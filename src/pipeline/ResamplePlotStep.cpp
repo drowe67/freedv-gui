@@ -48,10 +48,10 @@ int ResampleForPlotStep::getOutputSampleRate() const
     return FS;
 }
 
-std::shared_ptr<short> ResampleForPlotStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* ResampleForPlotStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    resample_for_plot(fifo_, inputSamples.get(), decSamples_, numInputSamples, FS);
+    resample_for_plot(fifo_, inputSamples, decSamples_, numInputSamples, FS);
     
     *numOutputSamples = 0;    
-    return std::shared_ptr<short>(nullptr);
+    return nullptr;
 }

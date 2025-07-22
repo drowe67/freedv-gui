@@ -91,9 +91,7 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+    outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
 
     int numOutputSamples = rade_n_tx_out(dv_);
@@ -146,7 +144,7 @@ int RADETransmitStep::getOutputSampleRate() const
     return RADE_MODEM_SAMPLE_RATE;
 }
 
-std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     int numSamplesPerTx = rade_n_tx_out(dv_);
@@ -162,10 +160,10 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
             outputSampleFifo_.read(outputSamples_.get(), *numOutputSamples);
         }
 
-        return outputSamples_;
+        return outputSamples_.get();
     }
     
-    short* inputPtr = inputSamples.get();
+    short* inputPtr = inputSamples;
     while (numInputSamples > 0 && inputPtr != nullptr)
     {
         inputSampleFifo_.write(inputPtr++, 1);
@@ -226,7 +224,7 @@ std::shared_ptr<short> RADETransmitStep::execute(std::shared_ptr<short> inputSam
         outputSampleFifo_.read(outputSamples_.get(), *numOutputSamples);
     }
     
-    return outputSamples_;
+    return outputSamples_.get();
 }
 
 void RADETransmitStep::restartVocoder()

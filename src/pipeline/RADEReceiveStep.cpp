@@ -91,9 +91,7 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+    outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
 
     inputBufCplx_ = new RADE_COMP[rade_nin_max(dv_)];
@@ -139,12 +137,12 @@ int RADEReceiveStep::getOutputSampleRate() const
     return RADE_SPEECH_SAMPLE_RATE;
 }
 
-std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     *numOutputSamples = 0;
     
-    short* inputPtr = inputSamples.get();
+    short* inputPtr = inputSamples;
     while (numInputSamples > 0 && inputPtr != nullptr)
     {
         inputSampleFifo_.write(inputPtr++, 1);
@@ -252,7 +250,7 @@ std::shared_ptr<short> RADEReceiveStep::execute(std::shared_ptr<short> inputSamp
     
     syncFn_(this);
 
-    return outputSamples_;
+    return outputSamples_.get();
 }
 
 void RADEReceiveStep::reset()

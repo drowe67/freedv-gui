@@ -65,12 +65,8 @@ ParallelStep::ParallelStep(
         threadState->outputFifo = codec2_fifo_create(outputSampleRate);
         assert(threadState->outputFifo != nullptr);
         
-        threadState->tempOutput = std::shared_ptr<short>(
-            new short[outputSampleRate],
-            std::default_delete<short[]>());
-        threadState->tempInput = std::shared_ptr<short>(
-            new short[inputSampleRate],
-            std::default_delete<short[]>());
+        threadState->tempOutput = std::make_unique<short[]>(outputSampleRate);
+        threadState->tempInput = std::make_unique<short[]>(inputSampleRate);
          
         threadState->exitingThread = false;
         if (runMultiThreaded)
@@ -210,7 +206,7 @@ int ParallelStep::getOutputSampleRate() const
     return outputSampleRate_;
 }
 
-std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* ParallelStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     // Step 1: determine what steps to execute.
     auto stepToExecute = inputRouteFn_(this);
@@ -223,7 +219,7 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
         
         if (index == (size_t)stepToExecute || stepToExecute == -1)
         {
-            codec2_fifo_write(threadInfo->inputFifo, inputSamples.get(), numInputSamples);
+            codec2_fifo_write(threadInfo->inputFifo, inputSamples, numInputSamples);
             if (!runMultiThreaded_)
             {
                 executeRunnerThread_(threadInfo);
@@ -265,7 +261,7 @@ std::shared_ptr<short> ParallelStep::execute(std::shared_ptr<short> inputSamples
         memset(outputTask->tempOutput.get(), 0, sizeof(short) * outputSampleRate_);
     }
     codec2_fifo_read(outputTask->outputFifo, outputTask->tempOutput.get(), *numOutputSamples);    
-    return outputTask->tempOutput;
+    return outputTask->tempOutput.get();
 }
 
 void ParallelStep::executeRunnerThread_(ThreadInfo* threadState) noexcept
@@ -284,10 +280,10 @@ void ParallelStep::executeRunnerThread_(ThreadInfo* threadState) noexcept
             samplesIn = 0;
         }
 
-        auto output = threadState->step->execute(threadState->tempInput, samplesIn, &samplesOut);
+        auto output = threadState->step->execute(threadState->tempInput.get(), samplesIn, &samplesOut);
         if (samplesOut > 0)
         {
-            codec2_fifo_write(threadState->outputFifo, output.get(), samplesOut);
+            codec2_fifo_write(threadState->outputFifo, output, samplesOut);
         }
         samplesIn = std::min((inputSampleRate_ * FRAME_DURATION_MS) / MS_TO_SEC, codec2_fifo_used(threadState->inputFifo));
     } while (samplesIn > 0 && !threadState->exitingThread);

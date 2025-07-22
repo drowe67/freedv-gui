@@ -5,10 +5,10 @@
 static bool passthroughCommon(int inputSampleRate, int outputSampleRate)
 {
     AudioPipeline pipeline(inputSampleRate, outputSampleRate);
-    auto sineWave = std::shared_ptr<short>(generateOneSecondSineWave(2000, inputSampleRate), std::default_delete<short[]>());
+    auto sineWave = std::unique_ptr<short[]>(generateOneSecondSineWave(2000, inputSampleRate));
     
     int outputSamples = 0;
-    auto result = pipeline.execute(sineWave, inputSampleRate, &outputSamples);
+    auto result = pipeline.execute(sineWave.get(), inputSampleRate, &outputSamples);
     
     auto minOutputSamples = outputSampleRate * 0.9;
     auto maxOutputSamples = outputSampleRate * 1.1;
@@ -45,9 +45,9 @@ bool resampleBeforeStepCommon(int inputSampleRate, int stepSampleRate, int outpu
     
     pipeline.appendPipelineStep(std::shared_ptr<IPipelineStep>(levelAdjustStep));
     
-    auto sineWave = std::shared_ptr<short>(generateOneSecondSineWave(2000, inputSampleRate), std::default_delete<short[]>());
+    auto sineWave = std::unique_ptr<short[]>(generateOneSecondSineWave(2000, inputSampleRate));
     int numOutputSamples = 0;
-    auto result = pipeline.execute(sineWave, inputSampleRate, &numOutputSamples);
+    auto result = pipeline.execute(sineWave.get(), inputSampleRate, &numOutputSamples);
     
     auto minOutputSamples = outputSampleRate * 0.9;
     auto maxOutputSamples = outputSampleRate * 1.1;

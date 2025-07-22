@@ -674,10 +674,10 @@ void TxRxThread::txProcessing_() noexcept
                         hasEooBeenSent_ = true;
                     }
 
-                    auto outputSamples = pipeline_->execute(inputSamples_, 0, &nout);
-                    if (nout > 0 && outputSamples.get() != nullptr)
+                    auto outputSamples = pipeline_->execute(inputSamples_.get(), 0, &nout);
+                    if (nout > 0 && outputSamples != nullptr)
                     {
-                        if (cbData->outfifo1->write(outputSamples.get(), nout) != 0)
+                        if (cbData->outfifo1->write(outputSamples, nout) != 0)
                         {
                             log_warn("Could not inject resampled EOO samples (space remaining in FIFO = %d)", cbData->outfifo1->numFree());
                         }
@@ -695,15 +695,15 @@ void TxRxThread::txProcessing_() noexcept
                 hasEooBeenSent_ = false;
             }
             
-            auto outputSamples = pipeline_->execute(inputSamples_, nsam_in_48, &nout);
+            auto outputSamples = pipeline_->execute(inputSamples_.get(), nsam_in_48, &nout);
             
             if (g_dump_fifo_state) {
                 log_info("  nout: %d", nout);
             }
             
-            if (outputSamples.get() != nullptr)
+            if (outputSamples != nullptr)
             {
-                cbData->outfifo1->write(outputSamples.get(), nout);
+                cbData->outfifo1->write(outputSamples, nout);
             }
         }
     }
@@ -770,11 +770,11 @@ void TxRxThread::rxProcessing_() noexcept
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
 
-        auto outputSamples = pipeline_->execute(inputSamples_, nsam, &nout);
+        auto outputSamples = pipeline_->execute(inputSamples_.get(), nsam, &nout);
         
-        if (nout > 0 && outputSamples.get() != nullptr)
+        if (nout > 0 && outputSamples != nullptr)
         {
-            outFifo->write(outputSamples.get(), nout);
+            outFifo->write(outputSamples, nout);
         }
         
         processInputFifo = 

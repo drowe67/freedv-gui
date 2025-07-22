@@ -58,7 +58,7 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
     const std::vector<std::shared_ptr<IPipelineStep>>& getParallelSteps() const { return parallelSteps_; }
@@ -73,8 +73,8 @@ private:
         std::shared_ptr<IPipelineStep> step;
         FIFO* inputFifo;
         FIFO* outputFifo;
-        std::shared_ptr<short> tempInput;
-        std::shared_ptr<short> tempOutput;
+        std::unique_ptr<short[]> tempInput;
+        std::unique_ptr<short[]> tempOutput;
         
 #if defined(_WIN32)
         HANDLE sem;

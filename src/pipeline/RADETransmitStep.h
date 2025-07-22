@@ -40,7 +40,7 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
     // For triggering EOO
@@ -57,7 +57,7 @@ private:
 
     FILE* featuresFile_;
 
-    std::shared_ptr<short> outputSamples_;
+    std::unique_ptr<short[]> outputSamples_;
     RADE_COMP* radeOut_;
     short* radeOutShort_;
     RADE_COMP* eooOut_;

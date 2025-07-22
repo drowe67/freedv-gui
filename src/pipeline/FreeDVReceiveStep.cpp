@@ -47,9 +47,7 @@ FreeDVReceiveStep::FreeDVReceiveStep(struct freedv* dv)
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+    outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
 
     inputBuf_ = new short[freedv_get_n_max_modem_samples(dv_)];
@@ -85,13 +83,13 @@ int FreeDVReceiveStep::getOutputSampleRate() const
     return freedv_get_speech_sample_rate(dv_);
 }
 
-std::shared_ptr<short> FreeDVReceiveStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* FreeDVReceiveStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     auto maxSpeechSamples = freedv_get_n_max_speech_samples(dv_);
     *numOutputSamples = 0;
 
-    short* inputPtr = inputSamples.get();
+    short* inputPtr = inputSamples;
     while (numInputSamples > 0 && inputPtr != nullptr)
     {
         codec2_fifo_write(inputSampleFifo_, inputPtr++, 1);
@@ -124,7 +122,7 @@ std::shared_ptr<short> FreeDVReceiveStep::execute(std::shared_ptr<short> inputSa
     }
 
     syncState_ = freedv_get_sync(dv_);
-    return outputSamples_;
+    return outputSamples_.get();
 }
 
 void FreeDVReceiveStep::reset()

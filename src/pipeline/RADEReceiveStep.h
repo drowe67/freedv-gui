@@ -47,7 +47,7 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
     int getSync() const { return syncState_.load(); }
@@ -68,7 +68,7 @@ private:
     short* inputBuf_;
     float* featuresOut_;
     float* eooOut_;
-    std::shared_ptr<short> outputSamples_;
+    std::unique_ptr<short[]> outputSamples_;
     
     GenericFIFO<float> utFeatures_;
     std::thread utFeatureThread_;

@@ -24,6 +24,7 @@
 #define AUDIO_PIPELINE__LEVEL_ADJUST_STEP_H
 
 #include <functional>
+#include <memory>
 
 #include "IPipelineStep.h"
 
@@ -35,12 +36,12 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     
 private:
     std::function<double()> scaleFactorFn_;
     int sampleRate_;
-    std::shared_ptr<short> outputSamples_;
+    std::unique_ptr<short[]> outputSamples_;
 };
 
 #endif // AUDIO_PIPELINE__LEVEL_ADJUST_STEP_H

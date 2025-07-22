@@ -55,9 +55,8 @@ public:
         assert(inputSampleRate_ > 0);
         assert(outputSampleRate_ > 0);
 
-        inputSamples_ = std::shared_ptr<short>(
-            new short[std::max(inputSampleRate_, outputSampleRate_)], 
-            std::default_delete<short[]>());
+        inputSamples_ = std::make_unique<short[]>(std::max(inputSampleRate_, outputSampleRate_)); 
+        assert(inputSamples_ != nullptr);
     }
     
     virtual ~TxRxThread()
@@ -85,7 +84,7 @@ private:
     std::shared_ptr<LinkStep> equalizedMicAudioLink_;
     bool hasEooBeenSent_;
     std::shared_ptr<IRealtimeHelper> helper_;
-    std::shared_ptr<short> inputSamples_;
+    std::unique_ptr<short[]> inputSamples_;
     bool deferReset_;
     
     void initializePipeline_();

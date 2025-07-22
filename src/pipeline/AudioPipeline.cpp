@@ -69,10 +69,10 @@ void AudioPipeline::dumpSetup() const
     log_debug("End at SR %d", getOutputSampleRate());
 }
 
-std::shared_ptr<short> AudioPipeline::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* AudioPipeline::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    std::shared_ptr<short> tempInput = inputSamples;
-    std::shared_ptr<short> tempResult = inputSamples;
+    short* tempInput = inputSamples;
+    short* tempResult = inputSamples;
     int tempInputSamples = numInputSamples;
     int tempOutputSamples = tempInputSamples;
     
