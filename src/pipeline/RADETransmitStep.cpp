@@ -163,60 +163,54 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
         return outputSamples_.get();
     }
     
-    short* inputPtr = inputSamples;
-    while (numInputSamples > 0 && inputPtr != nullptr)
+    inputSampleFifo_.write(inputSamples, numInputSamples);
+    while ((*numOutputSamples + numSamplesPerTx) < maxSamples && inputSampleFifo_.numUsed() >= LPCNET_FRAME_SIZE)
     {
-        inputSampleFifo_.write(inputPtr++, 1);
-        numInputSamples--;
-        
-        while ((*numOutputSamples + numSamplesPerTx) < maxSamples && inputSampleFifo_.numUsed() >= LPCNET_FRAME_SIZE)
+        int numRequiredFeaturesForRADE = rade_n_features_in_out(dv_);
+        short pcm[LPCNET_FRAME_SIZE];
+        float features[NB_TOTAL_FEATURES];
+
+        // Feature extraction
+        inputSampleFifo_.read(pcm, LPCNET_FRAME_SIZE);
+        lpcnet_compute_single_frame_features(encState_, pcm, features, arch_);
+            
+        if (featuresFile_)
         {
-            int numRequiredFeaturesForRADE = rade_n_features_in_out(dv_);
-            short pcm[LPCNET_FRAME_SIZE];
-            float features[NB_TOTAL_FEATURES];
-
-            // Feature extraction
-            inputSampleFifo_.read(pcm, LPCNET_FRAME_SIZE);
-            lpcnet_compute_single_frame_features(encState_, pcm, features, arch_);
-            
-            if (featuresFile_)
-            {
-                utFeatures_.write(features, NB_TOTAL_FEATURES);
-            }
-            
-            for (int index = 0; index < NB_TOTAL_FEATURES; index++)
-            {
-                featureList_[featureListIdx_++] = features[index];
-                if (featureListIdx_ == numRequiredFeaturesForRADE)
-                {
-                    featureListIdx_ = 0;
-
-                    // RADE TX handling
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-                    __rtsan_disable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
-                    rade_tx(dv_, radeOut_, &featureList_[0]);
-
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-                    __rtsan_enable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
-                    for (int index = 0; index < numSamplesPerTx; index++)
-                    {
-                        // We only need the real component for TX.
-                        radeOutShort_[index] = radeOut_[index].real * RADE_SCALING_FACTOR;
-                    }
-                    outputSampleFifo_.write(radeOutShort_, numSamplesPerTx);
-                }
-            }
-
-            *numOutputSamples = outputSampleFifo_.numUsed();
+            utFeatures_.write(features, NB_TOTAL_FEATURES);
         }
+            
+        for (int index = 0; index < NB_TOTAL_FEATURES; index++)
+        {
+            featureList_[featureListIdx_++] = features[index];
+            if (featureListIdx_ == numRequiredFeaturesForRADE)
+            {
+                featureListIdx_ = 0;
+
+                // RADE TX handling
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+                __rtsan_disable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
+                rade_tx(dv_, radeOut_, &featureList_[0]);
+
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+                __rtsan_enable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
+                for (int index = 0; index < numSamplesPerTx; index++)
+                {
+                    // We only need the real component for TX.
+                    radeOutShort_[index] = radeOut_[index].real * RADE_SCALING_FACTOR;
+                }
+                outputSampleFifo_.write(radeOutShort_, numSamplesPerTx);
+            }
+        }
+
+        *numOutputSamples = outputSampleFifo_.numUsed();
     }
 
     if (*numOutputSamples > 0)

@@ -142,35 +142,48 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     *numOutputSamples = 0;
     
-    short* inputPtr = inputSamples;
-    while (numInputSamples > 0 && inputPtr != nullptr)
-    {
-        inputSampleFifo_.write(inputPtr++, 1);
-        numInputSamples--;
+    inputSampleFifo_.write(inputSamples, numInputSamples);
         
-        int   nin = rade_nin(dv_);
-        int   nout = 0;
-        while ((*numOutputSamples + LPCNET_FRAME_SIZE) < maxSamples && inputSampleFifo_.read(inputBuf_, nin) == 0) 
+    int   nin = rade_nin(dv_);
+    int   nout = 0;
+    while ((*numOutputSamples + LPCNET_FRAME_SIZE) < maxSamples && inputSampleFifo_.read(inputBuf_, nin) == 0) 
+    {
+        assert(nin <= rade_nin_max(dv_));
+
+        // demod per frame processing
+        for(int i=0; i<nin; i++) 
         {
-            assert(nin <= rade_nin_max(dv_));
+            inputBufCplx_[i].real = inputBuf_[i] / 32767.0;
+            inputBufCplx_[i].imag = 0.0;
+        }
 
-            // demod per frame processing
-            for(int i=0; i<nin; i++) 
-            {
-                inputBufCplx_[i].real = inputBuf_[i] / 32767.0;
-                inputBufCplx_[i].imag = 0.0;
-            }
+        // RADE processing (input signal->features).
+        int hasEooOut = 0;
 
-            // RADE processing (input signal->features).
-            int hasEooOut = 0;
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+        __rtsan_disable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
 
+        nout = rade_rx(dv_, featuresOut_, &hasEooOut, eooOut_, inputBufCplx_);
+
+#if defined(__clang__)
+#if defined(__has_feature) && __has_feature(realtime_sanitizer)
+        __rtsan_enable();
+#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
+#endif // defined(__clang__)
+
+        if (hasEooOut && textPtr_ != nullptr)
+        {
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
             __rtsan_disable();
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 #endif // defined(__clang__)
 
-            nout = rade_rx(dv_, featuresOut_, &hasEooOut, eooOut_, inputBufCplx_);
+            // Handle RX of bits from EOO.
+            rade_text_rx(textPtr_, eooOut_, rade_n_eoo_bits(dv_) / 2);
 
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
@@ -178,55 +191,37 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 #endif // defined(__clang__)
 
-            if (hasEooOut && textPtr_ != nullptr)
-            {
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-                __rtsan_disable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
-                // Handle RX of bits from EOO.
-                rade_text_rx(textPtr_, eooOut_, rade_n_eoo_bits(dv_) / 2);
-
-#if defined(__clang__)
-#if defined(__has_feature) && __has_feature(realtime_sanitizer)
-                __rtsan_enable();
-#endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
-#endif // defined(__clang__)
-
-            }
-            else if (!hasEooOut)
-            {
-                if (featuresFile_)
-                {
-                    utFeatures_.write(featuresOut_, nout);
-                }
-
-                for (int i = 0; i < nout; i++)
-                {
-                    pendingFeatures_[pendingFeaturesIdx_++] = featuresOut_[i];
-                    if (pendingFeaturesIdx_ == NB_TOTAL_FEATURES)
-                    {
-                        pendingFeaturesIdx_ = 0;
-
-                        // FARGAN processing (features->analog audio)
-                        float fpcm[LPCNET_FRAME_SIZE];
-                        short pcm[LPCNET_FRAME_SIZE];
-                        fargan_synthesize(fargan_, fpcm, pendingFeatures_);
-                        for (int i = 0; i < LPCNET_FRAME_SIZE; i++) 
-                        {
-                            pcm[i] = (int)floor(.5 + MIN32(32767, MAX32(-32767, 32768.f*fpcm[i])));
-                        }
-
-                        *numOutputSamples += LPCNET_FRAME_SIZE;
-                        outputSampleFifo_.write(pcm, LPCNET_FRAME_SIZE);
-                    }
-                }
-            }
-
-            nin = rade_nin(dv_);
         }
+        else if (!hasEooOut)
+        {
+            if (featuresFile_)
+            {
+                utFeatures_.write(featuresOut_, nout);
+            }
+
+            for (int i = 0; i < nout; i++)
+            {
+                pendingFeatures_[pendingFeaturesIdx_++] = featuresOut_[i];
+                if (pendingFeaturesIdx_ == NB_TOTAL_FEATURES)
+                {
+                    pendingFeaturesIdx_ = 0;
+
+                    // FARGAN processing (features->analog audio)
+                    float fpcm[LPCNET_FRAME_SIZE];
+                    short pcm[LPCNET_FRAME_SIZE];
+                    fargan_synthesize(fargan_, fpcm, pendingFeatures_);
+                    for (int i = 0; i < LPCNET_FRAME_SIZE; i++) 
+                    {
+                        pcm[i] = (int)floor(.5 + MIN32(32767, MAX32(-32767, 32768.f*fpcm[i])));
+                    }
+
+                    *numOutputSamples += LPCNET_FRAME_SIZE;
+                    outputSampleFifo_.write(pcm, LPCNET_FRAME_SIZE);
+                }
+            }
+        }
+
+        nin = rade_nin(dv_);
     }
    
     if (*numOutputSamples > 0)

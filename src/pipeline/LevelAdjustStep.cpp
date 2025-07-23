@@ -51,7 +51,7 @@ int LevelAdjustStep::getOutputSampleRate() const
 
 short* LevelAdjustStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    double scaleFactor = scaleFactorFn_();
+    float scaleFactor = (float)scaleFactorFn_();
     short* outPtr = outputSamples_.get();
 
     for (int index = 0; index < numInputSamples; index++)
