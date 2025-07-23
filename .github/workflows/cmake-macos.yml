@@ -63,25 +63,30 @@ jobs:
           sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/usr/local/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159);"
           sqlite3 $HOME/Library/Application\ Support/com.apple.TCC/TCC.db "INSERT OR IGNORE INTO access VALUES ('kTCCServiceMicrophone','/opt/off/opt/runner/provisioner/provisioner',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,1687786159,NULL,NULL,'UNUSED',1687786159);"
 
+    - name: Sleep 5 minutes (debug)
+      shell: bash
+      run: |
+          sleep 600
+
     - name: Execute unit tests
       shell: bash
       working-directory: ${{github.workspace}}/build_osx
       run: |
           FREEDV_COMPUTER_TO_RADIO_DEVICE="VB-Cable" FREEDV_RADIO_TO_COMPUTER_DEVICE="VB-Cable" FREEDV_COMPUTER_TO_SPEAKER_DEVICE="BlackHole1 2ch" FREEDV_MICROPHONE_TO_COMPUTER_DEVICE="BlackHole2 2ch" ctest -V
 
-    #- name: Zip up traces
-    #  shell: bash
-    #  working-directory: ${{github.workspace}}/build_osx
-    #  if: ${{ !cancelled() }}
-    #  run: |
-    #      zip -r InstrumentsTraces.zip instruments_trace_*
+    - name: Zip up traces
+      shell: bash
+      working-directory: ${{github.workspace}}/build_osx
+      if: ${{ !cancelled() }}
+      run: |
+          zip -r InstrumentsTraces.zip instruments_trace_*
 
-    #- name: Stash instrumented results
-    #  uses: actions/upload-artifact@v4
-    #  if: ${{ !cancelled() }}
-    #  with:
-    #    name: InstrumentsTraces-${{matrix.os}}
-    #    path: ${{github.workspace}}/build_osx/InstrumentsTraces.zip
+    - name: Stash instrumented results
+      uses: actions/upload-artifact@v4
+      if: ${{ !cancelled() }}
+      with:
+        name: InstrumentsTraces-${{matrix.os}}
+        path: ${{github.workspace}}/build_osx/InstrumentsTraces.zip
 
   # Only build and publish universal binary after making sure code works properly on both 
   # x86 and ARM. No point in doing so if there's a failure on either.
