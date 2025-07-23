@@ -67,24 +67,28 @@ int main()
     // "Transmit" ~1 second of audio (including EOO) and immediately receive it.
     int nout = 0;
     int noutRx = 0;
-    short* inputSamples = new short[16384];
+    constexpr int SAMPLES_PER_TX = 1638; // 100ms @ 16 kHz sample rate
+    short* inputSamples = new short[SAMPLES_PER_TX];
     assert(inputSamples != nullptr);
-    memset(inputSamples, 0, sizeof(short) * 16384);
+    memset(inputSamples, 0, sizeof(short) * SAMPLES_PER_TX);
     auto inputSamplesPtr = std::unique_ptr<short[]>(inputSamples);
-    auto outputSamples = txStep->execute(inputSamplesPtr.get(), 16384, &nout);
-    addNoise(outputSamples, nout);
-    recvStep->execute(outputSamples, nout, &noutRx);
+    for (int count = 0; count < 11; count++)
+    {
+        auto outputSamples = txStep->execute(inputSamplesPtr.get(), SAMPLES_PER_TX, &nout);
+        addNoise(outputSamples, nout);
+        recvStep->execute(outputSamples, nout, &noutRx);
+    }
 
     txStep->restartVocoder();
     while (nout > 0)
     {
-        outputSamples = txStep->execute(inputSamplesPtr.get(), 0, &nout);
+        auto outputSamples = txStep->execute(inputSamplesPtr.get(), 0, &nout);
         addNoise(outputSamples, nout);
         recvStep->execute(outputSamples, nout, &noutRx);
     }
 
     // Send silence through to RX step to trigger EOO processing
-    recvStep->execute(inputSamplesPtr.get(), 16384, &noutRx);
+    recvStep->execute(inputSamplesPtr.get(), SAMPLES_PER_TX, &noutRx);
 
     delete recvStep;
     delete txStep;
