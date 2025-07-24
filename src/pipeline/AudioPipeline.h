@@ -46,8 +46,8 @@ private:
     int outputSampleRate_;
     
     std::vector<std::shared_ptr<IPipelineStep>> pipelineSteps_;
-    std::vector<std::shared_ptr<ResampleStep>> resamplers_;
-    std::shared_ptr<ResampleStep> resultSampler_;
+    std::vector<std::unique_ptr<ResampleStep>> resamplers_;
+    std::unique_ptr<ResampleStep> resultSampler_;
     
     void reloadResampler_(int pipelineStepIndex);
     void reloadResultResampler_();
