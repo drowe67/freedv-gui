@@ -72,19 +72,13 @@ short* SpeexStep::execute(short* inputSamples, int numInputSamples, int* numOutp
         *numOutputSamples = numSpeexRuns * numSamplesPerSpeexRun_;
         
         short* tmpOutput = outputSamples;
-        short* tmpInput = inputSamples;
         
-        while (numInputSamples > 0 && tmpInput != nullptr)
+        inputSampleFifo_.write(inputSamples, numInputSamples);
+        while (inputSampleFifo_.numUsed() >= numSamplesPerSpeexRun_)
         {
-            inputSampleFifo_.write(tmpInput++, 1);
-            numInputSamples--;
-            
-            if (inputSampleFifo_.numUsed() >= numSamplesPerSpeexRun_)
-            {
-                inputSampleFifo_.read(tmpOutput, numSamplesPerSpeexRun_);
-                speex_preprocess_run(speexStateObj_, tmpOutput);
-                tmpOutput += numSamplesPerSpeexRun_;
-            }
+            inputSampleFifo_.read(tmpOutput, numSamplesPerSpeexRun_);
+            speex_preprocess_run(speexStateObj_, tmpOutput);
+            tmpOutput += numSamplesPerSpeexRun_;
         }
     }
     else if (numInputSamples > 0 && inputSamples != nullptr)

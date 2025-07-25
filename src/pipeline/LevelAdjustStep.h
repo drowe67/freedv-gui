@@ -31,7 +31,7 @@
 class LevelAdjustStep : public IPipelineStep
 {
 public:
-    LevelAdjustStep(int sampleRate, std::function<double()> scaleFactorFn);
+    LevelAdjustStep(int sampleRate, std::function<float()> scaleFactorFn);
     virtual ~LevelAdjustStep();
     
     virtual int getInputSampleRate() const override;
@@ -39,7 +39,7 @@ public:
     virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     
 private:
-    std::function<double()> scaleFactorFn_;
+    std::function<float()> scaleFactorFn_;
     int sampleRate_;
     std::unique_ptr<short[]> outputSamples_;
 };

@@ -24,7 +24,7 @@
 
 #include <assert.h>
 
-LevelAdjustStep::LevelAdjustStep(int sampleRate, std::function<double()> scaleFactorFn)
+LevelAdjustStep::LevelAdjustStep(int sampleRate, std::function<float()> scaleFactorFn)
     : scaleFactorFn_(scaleFactorFn)
     , sampleRate_(sampleRate)
 {
@@ -51,7 +51,7 @@ int LevelAdjustStep::getOutputSampleRate() const
 
 short* LevelAdjustStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    float scaleFactor = (float)scaleFactorFn_();
+    float scaleFactor = scaleFactorFn_();
     short* outPtr = outputSamples_.get();
 
     for (int index = 0; index < numInputSamples; index++)

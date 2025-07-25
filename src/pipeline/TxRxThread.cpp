@@ -271,8 +271,8 @@ void TxRxThread::initializePipeline_()
         
         // TX attenuation step
         auto txAttenuationStep = new LevelAdjustStep(outputSampleRate_, []() {
-            double dbLoss = g_txLevel / 10.0;
-            double scaleFactor = exp(dbLoss/20.0 * log(10.0));
+            float dbLoss = g_txLevel / 10.0;
+            float scaleFactor = exp(dbLoss/20.0 * log(10.0));
             return scaleFactor; 
         });
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(txAttenuationStep));
@@ -400,7 +400,7 @@ void TxRxThread::initializePipeline_()
             monitorPipeline->appendPipelineStep(equalizedMicAudioLink_->getOutputPipelineStep());
             
             auto monitorLevelStep = std::make_shared<LevelAdjustStep>(outputSampleRate_, [&]() {
-                double volInDb = 0;
+                float volInDb = 0;
                 if (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio)
                 {
                     volInDb = wxGetApp().appConfiguration.monitorVoiceKeyerAudioVol;
