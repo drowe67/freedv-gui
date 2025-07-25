@@ -32,7 +32,7 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
 fi
 
 # Determine correct record device to retrieve TX data
-FREEDV_CONF_FILE=freedv-ctest-reporting.conf 
+FREEDV_CONF_FILE=freedv-ctest-fullduplex.conf 
 
 PLAY_DEVICE="$FREEDV_RADIO_TO_COMPUTER_DEVICE"
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
