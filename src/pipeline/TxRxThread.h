@@ -88,7 +88,7 @@ private:
     bool deferReset_;
     
     void initializePipeline_();
-    void txProcessing_() noexcept
+    void txProcessing_(IRealtimeHelper* helper) noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]
@@ -96,7 +96,7 @@ private:
 #endif // defined(__clang__)
     ;
 
-    void rxProcessing_() noexcept
+    void rxProcessing_(IRealtimeHelper* helper) noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]

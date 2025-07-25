@@ -476,14 +476,18 @@ void TxRxThread::initializePipeline_()
 
 void* TxRxThread::Entry()
 {
+    // Get raw pointer so we don't need to constantly access the shared_ptr
+    // and thus constantly increment/decrement refcounts.
+    IRealtimeHelper* helper = helper_.get();
+
     // Ensure that O(1) memory allocator is used for Codec2
     // instead of standard malloc().
     codec2_initialize_realtime(CODEC2_REAL_TIME_MEMORY_SIZE);
     
     initializePipeline_();
     
-    // Request real-time scheduling from the operating system.    
-    helper_->setHelperRealTime();
+    // Request real-time scheduling from the operating system.
+    helper->setHelperRealTime();
 
 #if defined(ENABLE_PROCESSING_STATS)
     int numTimeSamples = 0;
@@ -505,14 +509,14 @@ void* TxRxThread::Entry()
         if (!m_run) break;
         
         //log_info("thread woken up: m_tx=%d", (int)m_tx);
-        helper_->startRealTimeWork();
+        helper->startRealTimeWork();
 
 #if defined(ENABLE_PROCESSING_STATS)
         auto b = std::chrono::high_resolution_clock::now();
 #endif // defined(ENABLE_PROCESSING_STATS)
 
-        if (m_tx) txProcessing_();
-        else rxProcessing_();
+        if (m_tx) txProcessing_(helper);
+        else rxProcessing_(helper);
 
 #if defined(ENABLE_PROCESSING_STATS)
         auto e = std::chrono::high_resolution_clock::now();
@@ -533,7 +537,7 @@ void* TxRxThread::Entry()
         }
         auto totalFifoCapacity = outFifo->capacity();
         auto fifoUsed = outFifo->numUsed();
-        helper_->stopRealTimeWork(fifoUsed < totalFifoCapacity / 2);
+        helper->stopRealTimeWork(fifoUsed < totalFifoCapacity / 2);
     }
 
 #if defined(ENABLE_PROCESSING_STATS)
@@ -544,7 +548,7 @@ void* TxRxThread::Entry()
     pipeline_ = nullptr;
     
     // Return to normal scheduling
-    helper_->clearHelperRealTime();
+    helper->clearHelperRealTime();
     
     codec2_disable_realtime();
     
@@ -594,7 +598,7 @@ void TxRxThread::clearFifos_()
 // Main real time processing for tx and rx of FreeDV signals, run in its own threads
 //---------------------------------------------------------------------------------------------
 
-void TxRxThread::txProcessing_() noexcept
+void TxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]
@@ -647,7 +651,7 @@ void TxRxThread::txProcessing_() noexcept
 
         int             nout;
 
-        while(!helper_->mustStopWork() && (unsigned)cbData->outfifo1->numFree() >= nsam_one_modem_frame) {        
+        while(!helper->mustStopWork() && (unsigned)cbData->outfifo1->numFree() >= nsam_one_modem_frame) {        
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
 
@@ -718,7 +722,7 @@ void TxRxThread::txProcessing_() noexcept
     }
 }
 
-void TxRxThread::rxProcessing_() noexcept
+void TxRxThread::rxProcessing_(IRealtimeHelper* helper) noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]
@@ -767,7 +771,7 @@ void TxRxThread::rxProcessing_() noexcept
     auto outFifo = (g_nSoundCards == 1) ? cbData->outfifo1 : cbData->outfifo2;
 
     // while we have enough input samples available and enough space in the output FIFO ... 
-    while (!helper_->mustStopWork() && processInputFifo && outFifo->numFree() >= nsam_one_speech_frame && cbData->infifo1->read(inputSamples_.get(), nsam) == 0) {
+    while (!helper->mustStopWork() && processInputFifo && outFifo->numFree() >= nsam_one_speech_frame && cbData->infifo1->read(inputSamples_.get(), nsam) == 0) {
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
 
