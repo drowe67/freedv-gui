@@ -1117,7 +1117,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     g_TxFreqOffsetHz = 0.0;
 
-    g_tx = 0;
+    g_tx.store(false, std::memory_order_release);
 
     // data states
     g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
@@ -1376,7 +1376,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      {
          // Synchronize changes with Filter dialog
          auto sliderVal = 0.0;
-         if (g_tx)
+         if (g_tx.load(std::memory_order_acquire))
          {
              sliderVal = wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB;
          }
@@ -1541,7 +1541,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // Level Gauge -----------------------------------------------------------------------
 
         float tooHighThresh;
-        if (!g_tx && m_RxRunning)
+        if (!g_tx.load(std::memory_order_acquire) && m_RxRunning)
         {
             // receive mode - display From Radio peaks
             // peak from this DT sampling period
@@ -2084,7 +2084,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     // Report TX change to registered reporters
     for (auto& obj : wxGetApp().m_reporters)
     {
-        obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+        obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx.load(std::memory_order_acquire));
     }
     
     // Disable controls not supported by RADE
@@ -2337,7 +2337,7 @@ void MainFrame::performFreeDVOn_()
                         // Immediately transmit selected TX mode and frequency to avoid UI glitches.
                         for (auto& obj : wxGetApp().m_reporters)
                         {
-                            obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+                            obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx.load(std::memory_order_acquire));
                             obj->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
                         }
                     }
@@ -3480,7 +3480,7 @@ void MainFrame::initializeFreeDVReporter_()
     }
     else
     {
-        wxGetApp().m_sharedReporterObject->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+        wxGetApp().m_sharedReporterObject->transmit(freedvInterface.getCurrentTxModeStr(), g_tx.load(std::memory_order_acquire));
         wxGetApp().m_sharedReporterObject->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
     }
 }
