@@ -50,7 +50,7 @@ body:
     - type: dropdown
       id: feature-legal
       attributes:
-          label: Non-standard compiler
+          label: Legal worldwide
           description: Is the feature legal for Amateur Radio worldwide? Export Control regulations in many countries limit speech coding to a minimum of 700 bit/s and forbids encryption.
           options:
               - "Yes"
