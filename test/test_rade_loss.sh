@@ -32,7 +32,7 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
 fi
 
 # Determine correct record device to retrieve TX data
-FREEDV_CONF_FILE=freedv-ctest-reporting.conf 
+FREEDV_CONF_FILE=freedv-ctest-loss.conf 
 
 PLAY_DEVICE="$FREEDV_RADIO_TO_COMPUTER_DEVICE"
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
@@ -76,13 +76,13 @@ RADIO_PID=$!
 
 # Start FreeDV in test mode to record TX
 TX_ARGS="-txfile $(pwd)/rade_src/wav/all.wav -txfeaturefile $(pwd)/txfeatures.f32 "
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADE $TX_ARGS >tmp.log 2>&1 &
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS >tmp.log 2>&1 &
 
 FDV_PID=$!
 
-#if [ "$OPERATING_SYSTEM" != "Linux" ]; then
-#    xctrace record --template "Audio System Trace" --window 2m --output "instruments_trace_tx_${FDV_PID}.trace" --attach $FDV_PID
-#fi
+if [ "$OPERATING_SYSTEM" != "Linux" ]; then
+    xctrace record --template "Audio System Trace" --window 3m --output "instruments_trace_tx_${FDV_PID}.trace" --attach $FDV_PID
+fi
 
 #sleep 30 
 #screencapture ../screenshot.png
@@ -101,12 +101,12 @@ else
     sox -t wav test.wav -t $SOX_DRIVER "$PLAY_DEVICE" >/dev/null 2>&1 &
 fi
 PLAY_PID=$!
-$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADE -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
+$FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfeaturefile $(pwd)/rxfeatures.f32 >tmp.log 2>&1 &
 FDV_PID=$!
 
-#if [ "$OPERATING_SYSTEM" != "Linux" ]; then
-#    xctrace record --template "Audio System Trace" --window 2m --output "instruments_trace_rx_${FDV_PID}.trace" --attach $FDV_PID
-#fi
+if [ "$OPERATING_SYSTEM" != "Linux" ]; then
+    xctrace record --template "Audio System Trace" --window 3m --output "instruments_trace_rx_${FDV_PID}.trace" --attach $FDV_PID
+fi
 wait $FDV_PID
 FREEDV_EXIT_CODE=$?
 cat tmp.log
