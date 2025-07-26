@@ -43,7 +43,7 @@ bool resampleBeforeStepCommon(int inputSampleRate, int stepSampleRate, int outpu
     auto levelAdjustStep = new LevelAdjustStep(stepSampleRate, []() { return 1.0; });
     assert(levelAdjustStep != nullptr);
     
-    pipeline.appendPipelineStep(std::shared_ptr<IPipelineStep>(levelAdjustStep));
+    pipeline.appendPipelineStep(levelAdjustStep);
     
     auto sineWave = std::unique_ptr<short[]>(generateOneSecondSineWave(2000, inputSampleRate));
     int numOutputSamples = 0;

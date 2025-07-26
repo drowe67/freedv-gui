@@ -105,9 +105,9 @@ short* AudioPipeline::execute(short* inputSamples, int numInputSamples, int* num
     return tempResult;
 }
 
-void AudioPipeline::appendPipelineStep(std::shared_ptr<IPipelineStep> pipelineStep)
+void AudioPipeline::appendPipelineStep(IPipelineStep* pipelineStep)
 {
-    pipelineSteps_.push_back(pipelineStep);
+    pipelineSteps_.push_back(std::unique_ptr<IPipelineStep>(pipelineStep)); // take ownership of pointer
     resamplers_.push_back(nullptr); // will be updated by reloadResampler_() below.
     reloadResampler_(pipelineSteps_.size() - 1);
     reloadResultResampler_();

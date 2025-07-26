@@ -35,14 +35,14 @@ public:
     virtual ~LinkStep();
     
     // Get the constituent pipeline steps.
-    std::shared_ptr<IPipelineStep> getInputPipelineStep()
+    IPipelineStep* getInputPipelineStep()
     {
-        return inputPipelineStep_;
+        return new InputStep(this);
     }
     
-    std::shared_ptr<IPipelineStep> getOutputPipelineStep()
+    IPipelineStep* getOutputPipelineStep()
     {
-        return outputPipelineStep_;
+        return new OutputStep(this);
     }
     
     int getSampleRate() const { return sampleRate_; }
@@ -114,8 +114,6 @@ private:
     };
     
     int sampleRate_;
-    std::shared_ptr<IPipelineStep> inputPipelineStep_;
-    std::shared_ptr<IPipelineStep> outputPipelineStep_;
     GenericFIFO<short> fifo_;
 
     short* tmpBuffer_;

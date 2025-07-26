@@ -47,8 +47,7 @@ bool eitherOrCommon(bool val)
 {
     EitherOrStep eitherOrStep([&]() {
         return val;
-    }, std::shared_ptr<IPipelineStep>(new TrueStep()),
-    std::shared_ptr<IPipelineStep>(new FalseStep()));
+    }, new TrueStep(), new FalseStep());
     
     int outputSamples = 0;
     auto result = eitherOrStep.execute(nullptr, 0, &outputSamples);

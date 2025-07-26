@@ -38,14 +38,14 @@ public:
     virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
-    void appendPipelineStep(std::shared_ptr<IPipelineStep> pipelineStep);
+    void appendPipelineStep(IPipelineStep* pipelineStep);
     
     void dumpSetup() const;
 private:
     int inputSampleRate_;
     int outputSampleRate_;
     
-    std::vector<std::shared_ptr<IPipelineStep>> pipelineSteps_;
+    std::vector<std::unique_ptr<IPipelineStep>> pipelineSteps_;
     std::vector<std::unique_ptr<ResampleStep>> resamplers_;
     std::unique_ptr<ResampleStep> resultSampler_;
     

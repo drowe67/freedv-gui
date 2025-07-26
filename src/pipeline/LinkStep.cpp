@@ -28,10 +28,6 @@ LinkStep::LinkStep(int outputSampleRate, size_t numSamples)
     : sampleRate_(outputSampleRate)
     , fifo_(numSamples)
 {
-    // Create pipeline steps
-    inputPipelineStep_ = std::make_shared<InputStep>(this);
-    outputPipelineStep_ = std::make_shared<OutputStep>(this);
-
     tmpBuffer_ = new short[numSamples];
     assert(tmpBuffer_ != nullptr);
 }

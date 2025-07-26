@@ -61,7 +61,7 @@ public:
     virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
-    const std::vector<std::shared_ptr<IPipelineStep>>& getParallelSteps() const { return parallelSteps_; }
+    const std::vector<IPipelineStep*>& getParallelSteps() const { return parallelSteps_; }
     
     std::shared_ptr<void> getState() { return state_; }
     
@@ -70,7 +70,7 @@ private:
     {
         std::thread thread;
         bool exitingThread;
-        std::shared_ptr<IPipelineStep> step;
+        std::unique_ptr<IPipelineStep> step;
         FIFO* inputFifo;
         FIFO* outputFifo;
         std::unique_ptr<short[]> tempInput;
@@ -93,7 +93,7 @@ private:
     std::vector<ThreadInfo*> threads_;
     std::shared_ptr<IRealtimeHelper> realtimeHelper_;
     std::shared_ptr<void> state_;
-    std::vector<std::shared_ptr<IPipelineStep>> parallelSteps_;
+    std::vector<IPipelineStep*> parallelSteps_;
 
     void executeRunnerThread_(ThreadInfo* threadState) noexcept
 #if defined(__clang__)

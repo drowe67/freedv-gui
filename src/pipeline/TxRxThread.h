@@ -78,7 +78,7 @@ public:
 private:
     bool  m_tx;
     bool  m_run;
-    std::shared_ptr<AudioPipeline> pipeline_;
+    std::unique_ptr<AudioPipeline> pipeline_;
     int inputSampleRate_;
     int outputSampleRate_;
     std::shared_ptr<LinkStep> equalizedMicAudioLink_;

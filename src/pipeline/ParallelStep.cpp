@@ -50,16 +50,15 @@ ParallelStep::ParallelStep(
 {
     for (auto& step : parallelSteps)
     {
-        auto sharedStep = std::shared_ptr<IPipelineStep>(step);
-        parallelSteps_.push_back(sharedStep);
-        auto pipeline = std::make_shared<AudioPipeline>(inputSampleRate, outputSampleRate);
-        pipeline->appendPipelineStep(sharedStep);
+        parallelSteps_.push_back(step);
+        auto pipeline = new AudioPipeline(inputSampleRate, outputSampleRate);
+        pipeline->appendPipelineStep(step);
         
         auto threadState = new ThreadInfo();
         assert(threadState != nullptr);
         threads_.push_back(threadState);
         
-        threadState->step = pipeline;
+        threadState->step = std::unique_ptr<IPipelineStep>(pipeline);
         threadState->inputFifo = codec2_fifo_create(inputSampleRate);
         assert(threadState->inputFifo != nullptr);
         threadState->outputFifo = codec2_fifo_create(outputSampleRate);

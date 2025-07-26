@@ -137,7 +137,7 @@ void TxRxThread::initializePipeline_()
 {
     if (m_tx)
     {
-        pipeline_ = std::shared_ptr<AudioPipeline>(new AudioPipeline(inputSampleRate_, outputSampleRate_));
+        pipeline_ = std::make_unique<AudioPipeline>(inputSampleRate_, outputSampleRate_);
 
         // Record from mic step (optional)
         auto recordMicStep = new RecordStep(
@@ -149,17 +149,17 @@ void TxRxThread::initializePipeline_()
             }
         );
         auto recordMicPipeline = new AudioPipeline(inputSampleRate_, inputSampleRate_);
-        recordMicPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordMicStep));
+        recordMicPipeline->appendPipelineStep(recordMicStep);
         
         auto recordMicTap = new TapStep(inputSampleRate_, recordMicPipeline);
         auto bypassRecordMic = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         
         auto eitherOrRecordMic = new EitherOrStep(
             []() { return (g_recVoiceKeyerFile || g_recFileFromMic) && (g_sfRecMicFile != NULL); },
-            std::shared_ptr<IPipelineStep>(recordMicTap),
-            std::shared_ptr<IPipelineStep>(bypassRecordMic)
+            recordMicTap,
+            bypassRecordMic
         );
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRecordMic));
+        pipeline_->appendPipelineStep(eitherOrRecordMic);
         
         // Mic In playback step (optional)
         auto eitherOrBypassPlay = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -177,26 +177,26 @@ void TxRxThread::initializePipeline_()
                 }
             }
             );
-        eitherOrPlayMicIn->appendPipelineStep(std::shared_ptr<IPipelineStep>(playMicIn));
+        eitherOrPlayMicIn->appendPipelineStep(playMicIn);
         
         auto eitherOrPlayStep = new EitherOrStep(
             []() { return g_playFileToMicIn && (g_sfPlayFile != NULL); },
-            std::shared_ptr<IPipelineStep>(eitherOrPlayMicIn),
-            std::shared_ptr<IPipelineStep>(eitherOrBypassPlay));
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrPlayStep));
+            eitherOrPlayMicIn,
+            eitherOrBypassPlay);
+        pipeline_->appendPipelineStep(eitherOrPlayStep);
         
         // Speex step (optional)
         auto eitherOrProcessSpeex = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         auto eitherOrBypassSpeex = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         
         auto speexStep = new SpeexStep(inputSampleRate_);
-        eitherOrProcessSpeex->appendPipelineStep(std::shared_ptr<IPipelineStep>(speexStep));
+        eitherOrProcessSpeex->appendPipelineStep(speexStep);
         
         auto eitherOrSpeexStep = new EitherOrStep(
             []() { return wxGetApp().appConfiguration.filterConfiguration.speexppEnable; },
-            std::shared_ptr<IPipelineStep>(eitherOrProcessSpeex),
-            std::shared_ptr<IPipelineStep>(eitherOrBypassSpeex));
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrSpeexStep));
+            eitherOrProcessSpeex,
+            eitherOrBypassSpeex);
+        pipeline_->appendPipelineStep(eitherOrSpeexStep);
        
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
@@ -206,7 +206,7 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqMicInMid,
             &g_rxUserdata->sbqMicInTreble,
             &g_rxUserdata->sbqMicInVol);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerStep));
+        pipeline_->appendPipelineStep(equalizerStep);
         
         // Take TX audio post-equalizer and send it to RX for possible monitoring use.
         if (equalizedMicAudioLink_ != nullptr)
@@ -214,7 +214,7 @@ void TxRxThread::initializePipeline_()
             auto micAudioPipeline = new AudioPipeline(inputSampleRate_, equalizedMicAudioLink_->getSampleRate());
             micAudioPipeline->appendPipelineStep(equalizedMicAudioLink_->getInputPipelineStep());
         
-            auto micAudioTap = std::make_shared<TapStep>(inputSampleRate_, micAudioPipeline);
+            auto micAudioTap = new TapStep(inputSampleRate_, micAudioPipeline);
             pipeline_->appendPipelineStep(micAudioTap);
         }
                 
@@ -223,17 +223,17 @@ void TxRxThread::initializePipeline_()
         auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
 #if defined(ENABLE_FASTER_PLOTS)
         auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotResampler));
+        resampleForPlotPipeline->appendPipelineStep(resampleForPlotResampler);
 #endif // defined(ENABLE_FASTER_PLOTS)
-        resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotStep));
+        resampleForPlotPipeline->appendPipelineStep(resampleForPlotStep);
 
         auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotTap));
-        
+        pipeline_->appendPipelineStep(resampleForPlotTap);
+      
         // FreeDV TX step (analog leg)
         auto doubleLevelStep = new LevelAdjustStep(inputSampleRate_, []() { return 2.0; });
         auto analogTxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
-        analogTxPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(doubleLevelStep));
+        analogTxPipeline->appendPipelineStep(doubleLevelStep);
         
         auto digitalTxStep = freedvInterface.createTransmitPipeline(
             inputSampleRate_, 
@@ -241,13 +241,13 @@ void TxRxThread::initializePipeline_()
             []() { return g_TxFreqOffsetHz; },
             helper_);
         auto digitalTxPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_); 
-        digitalTxPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(digitalTxStep));
+        digitalTxPipeline->appendPipelineStep(digitalTxStep);
         
         auto eitherOrDigitalAnalog = new EitherOrStep(
             []() { return g_analog; },
-            std::shared_ptr<IPipelineStep>(analogTxPipeline),
-            std::shared_ptr<IPipelineStep>(digitalTxPipeline));
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrDigitalAnalog));
+            analogTxPipeline,
+            digitalTxPipeline);
+        pipeline_->appendPipelineStep(eitherOrDigitalAnalog);
 
         // Record modulated output (optional)
         auto recordModulatedStep = new RecordStep(
@@ -257,29 +257,29 @@ void TxRxThread::initializePipeline_()
                 // empty
             });
         auto recordModulatedPipeline = new AudioPipeline(outputSampleRate_, recordModulatedStep->getOutputSampleRate());
-        recordModulatedPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedStep));
+        recordModulatedPipeline->appendPipelineStep(recordModulatedStep);
         
         auto recordModulatedTap = new TapStep(outputSampleRate_, recordModulatedPipeline);
         auto recordModulatedTapPipeline = new AudioPipeline(outputSampleRate_, outputSampleRate_);
-        recordModulatedTapPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordModulatedTap));
+        recordModulatedTapPipeline->appendPipelineStep(recordModulatedTap);
         
         auto bypassRecordModulated = new AudioPipeline(outputSampleRate_, outputSampleRate_);
         
         auto eitherOrRecordModulated = new EitherOrStep(
             []() { return g_recFileFromModulator && (g_sfRecFileFromModulator != NULL); },
-            std::shared_ptr<IPipelineStep>(recordModulatedTapPipeline),
-            std::shared_ptr<IPipelineStep>(bypassRecordModulated));
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRecordModulated));
+            recordModulatedTapPipeline,
+            bypassRecordModulated);
+        pipeline_->appendPipelineStep(eitherOrRecordModulated);
         
         // TX attenuation step
         auto txAttenuationStep = new LevelAdjustStep(outputSampleRate_, []() {
             return g_txLevelScale.load(std::memory_order_acquire);
         });
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(txAttenuationStep));
+        pipeline_->appendPipelineStep(txAttenuationStep);
     }
     else
     {
-        pipeline_ = std::shared_ptr<AudioPipeline>(new AudioPipeline(inputSampleRate_, outputSampleRate_));
+        pipeline_ = std::make_unique<AudioPipeline>(inputSampleRate_, outputSampleRate_);
         // Record from radio step (optional)
         auto recordRadioStep = new RecordStep(
             inputSampleRate_, 
@@ -294,17 +294,17 @@ void TxRxThread::initializePipeline_()
             }
         );
         auto recordRadioPipeline = new AudioPipeline(inputSampleRate_, inputSampleRate_);
-        recordRadioPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(recordRadioStep));
+        recordRadioPipeline->appendPipelineStep(recordRadioStep);
         
         auto recordRadioTap = new TapStep(inputSampleRate_, recordRadioPipeline);
         auto bypassRecordRadio = new AudioPipeline(inputSampleRate_, inputSampleRate_);
         
         auto eitherOrRecordRadio = new EitherOrStep(
             []() { return g_recFileFromRadio && (g_sfRecFile != NULL); },
-            std::shared_ptr<IPipelineStep>(recordRadioTap),
-            std::shared_ptr<IPipelineStep>(bypassRecordRadio)
+            recordRadioTap,
+            bypassRecordRadio
         );
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRecordRadio));
+        pipeline_->appendPipelineStep(eitherOrRecordRadio);
         
         // Play from radio step (optional)
         auto eitherOrBypassPlayRadio = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -322,28 +322,28 @@ void TxRxThread::initializePipeline_()
                 }
             }
         );
-        eitherOrPlayRadio->appendPipelineStep(std::shared_ptr<IPipelineStep>(playRadio));
+        eitherOrPlayRadio->appendPipelineStep(playRadio);
         
         auto eitherOrPlayRadioStep = new EitherOrStep(
             []() { 
                 auto result = g_playFileFromRadio && (g_sfPlayFileFromRadio != NULL);
                 return result;
             },
-            std::shared_ptr<IPipelineStep>(eitherOrPlayRadio),
-            std::shared_ptr<IPipelineStep>(eitherOrBypassPlayRadio));
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrPlayRadioStep));
+            eitherOrPlayRadio,
+            eitherOrBypassPlayRadio);
+        pipeline_->appendPipelineStep(eitherOrPlayRadioStep);
         
         // Resample for plot step (demod in)
         auto resampleForPlotStep = new ResampleForPlotStep(g_plotDemodInFifo);
         auto resampleForPlotPipeline = new AudioPipeline(inputSampleRate_, resampleForPlotStep->getOutputSampleRate());
 #if defined(ENABLE_FASTER_PLOTS)
         auto resampleForPlotResampler = new ResampleStep(inputSampleRate_, resampleForPlotStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotResampler));
+        resampleForPlotPipeline->appendPipelineStep(resampleForPlotResampler);
 #endif // defined(ENABLE_FASTER_PLOTS)
-        resampleForPlotPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotStep));
+        resampleForPlotPipeline->appendPipelineStep(resampleForPlotStep);
 
         auto resampleForPlotTap = new TapStep(inputSampleRate_, resampleForPlotPipeline);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotTap));
+        pipeline_->appendPipelineStep(resampleForPlotTap);
 
         // Tone interferer step (optional)
         auto bypassToneInterferer = new AudioPipeline(inputSampleRate_, inputSampleRate_);
@@ -355,10 +355,10 @@ void TxRxThread::initializePipeline_()
         );
         auto eitherOrToneInterferer = new EitherOrStep(
             []() { return wxGetApp().m_tone; },
-            std::shared_ptr<IPipelineStep>(toneInterfererStep),
-            std::shared_ptr<IPipelineStep>(bypassToneInterferer)
+            toneInterfererStep,
+            bypassToneInterferer
         );
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrToneInterferer));
+        pipeline_->appendPipelineStep(eitherOrToneInterferer);
         
         // RF spectrum computation step
         auto computeRfSpectrumStep = new ComputeRfSpectrumStep(
@@ -369,12 +369,12 @@ void TxRxThread::initializePipeline_()
             inputSampleRate_, computeRfSpectrumStep->getOutputSampleRate());
 #if defined(ENABLE_FASTER_PLOTS)
         auto resampleForRfSpectrum = new ResampleStep(inputSampleRate_, computeRfSpectrumStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        computeRfSpectrumPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForRfSpectrum));
+        computeRfSpectrumPipeline->appendPipelineStep(resampleForRfSpectrum);
 #endif // defined(ENABLE_FASTER_PLOTS)
-        computeRfSpectrumPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(computeRfSpectrumStep));
+        computeRfSpectrumPipeline->appendPipelineStep(computeRfSpectrumStep);
         
         auto computeRfSpectrumTap = new TapStep(inputSampleRate_, computeRfSpectrumPipeline);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(computeRfSpectrumTap));
+        pipeline_->appendPipelineStep(computeRfSpectrumTap);
         
         // RX demodulation step
         auto bypassRfDemodulationPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
@@ -388,7 +388,7 @@ void TxRxThread::initializePipeline_()
             []() { return &g_sig_pwr_av; },
             helper_
         );
-        rfDemodulationPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(rfDemodulationStep));
+        rfDemodulationPipeline->appendPipelineStep(rfDemodulationStep);
         
         // Replace received audio with microphone audio if we're monitoring TX/voice keyer recording.
         if (equalizedMicAudioLink_ != nullptr)
@@ -399,7 +399,7 @@ void TxRxThread::initializePipeline_()
             auto monitorPipeline = new AudioPipeline(inputSampleRate_, outputSampleRate_);
             monitorPipeline->appendPipelineStep(equalizedMicAudioLink_->getOutputPipelineStep());
             
-            auto monitorLevelStep = std::make_shared<LevelAdjustStep>(outputSampleRate_, [&]() {
+            auto monitorLevelStep = new LevelAdjustStep(outputSampleRate_, [&]() {
                 float volInDb = 0;
                 if (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio)
                 {
@@ -416,22 +416,22 @@ void TxRxThread::initializePipeline_()
 
             auto muteStep = new MuteStep(outputSampleRate_);
             
-            mutePipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(muteStep));
+            mutePipeline->appendPipelineStep(muteStep);
             
             auto eitherOrMuteStep = new EitherOrStep(
                 []() { return g_recVoiceKeyerFile; },
-                std::shared_ptr<IPipelineStep>(mutePipeline),
-                std::shared_ptr<IPipelineStep>(bypassMonitorAudio)
+                mutePipeline,
+                bypassMonitorAudio
             );
 
             auto eitherOrMicMonitorStep = new EitherOrStep(
                 []() { return 
                     (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
                     (g_tx.load(std::memory_order_acquire) && wxGetApp().appConfiguration.monitorTxAudio); },
-                std::shared_ptr<IPipelineStep>(monitorPipeline),
-                std::shared_ptr<IPipelineStep>(eitherOrMuteStep)
+                monitorPipeline,
+                eitherOrMuteStep
             );
-            bypassRfDemodulationPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrMicMonitorStep));
+            bypassRfDemodulationPipeline->appendPipelineStep(eitherOrMicMonitorStep);
         }
         
         auto eitherOrRfDemodulationStep = new EitherOrStep(
@@ -441,11 +441,11 @@ void TxRxThread::initializePipeline_()
                     (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
                     (g_tx.load(std::memory_order_acquire) && wxGetApp().appConfiguration.monitorTxAudio)
                 )); },
-            std::shared_ptr<IPipelineStep>(bypassRfDemodulationPipeline),
-            std::shared_ptr<IPipelineStep>(rfDemodulationPipeline)
+            bypassRfDemodulationPipeline,
+            rfDemodulationPipeline
         );
 
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrRfDemodulationStep));
+        pipeline_->appendPipelineStep(eitherOrRfDemodulationStep);
 
         // Equalizer step (optional based on filter state)
         auto equalizerStep = new EqualizerStep(
@@ -455,19 +455,19 @@ void TxRxThread::initializePipeline_()
             &g_rxUserdata->sbqSpkOutMid,
             &g_rxUserdata->sbqSpkOutTreble,
             &g_rxUserdata->sbqSpkOutVol);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(equalizerStep));
+        pipeline_->appendPipelineStep(equalizerStep);
         
         // Resample for plot step (speech out)
         auto resampleForPlotOutStep = new ResampleForPlotStep(g_plotSpeechOutFifo);
         auto resampleForPlotOutPipeline = new AudioPipeline(outputSampleRate_, resampleForPlotOutStep->getOutputSampleRate());
 #if defined(ENABLE_FASTER_PLOTS)
         auto resampleForPlotOutResampler = new ResampleStep(outputSampleRate_, resampleForPlotOutStep->getInputSampleRate(), true); // need to create manually to get access to "plot only" optimizations
-        resampleForPlotOutPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutResampler));
+        resampleForPlotOutPipeline->appendPipelineStep(resampleForPlotOutResampler);
 #endif // defined(ENABLE_FASTER_PLOTS)
-        resampleForPlotOutPipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutStep));
+        resampleForPlotOutPipeline->appendPipelineStep(resampleForPlotOutStep);
 
         auto resampleForPlotOutTap = new TapStep(outputSampleRate_, resampleForPlotOutPipeline);
-        pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(resampleForPlotOutTap));
+        pipeline_->appendPipelineStep(resampleForPlotOutTap);
         
         // Clear anything in the FIFO before resuming decode.
         clearFifos_();
