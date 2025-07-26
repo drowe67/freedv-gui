@@ -38,6 +38,8 @@ extern short *g_error_hist, *g_error_histn;
 extern int g_resyncs;
 extern int g_Nc;
 extern int g_txLevel;
+extern std::atomic<float> g_txLevelScale;
+
 extern wxConfigBase *pConfig;
 extern bool endingTx;
 extern int g_outfifo1_empty;
@@ -701,6 +703,10 @@ void MainFrame::OnChangeTxLevel( wxScrollEvent& event )
     char fmt[15];
     
     g_txLevel = m_sliderTxLevel->GetValue();
+    float dbLoss = g_txLevel / 10.0;
+    float scaleFactor = exp(dbLoss/20.0 * log(10.0));
+    g_txLevelScale.store(scaleFactor, std::memory_order_release);
+
     snprintf(fmt, 15, "%0.1f dB", (double)(g_txLevel)/10.0);
     wxString fmtString(fmt);
     m_txtTxLevelNum->SetLabel(fmtString);

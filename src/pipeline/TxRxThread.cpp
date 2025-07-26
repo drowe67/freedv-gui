@@ -83,6 +83,7 @@ extern struct FIFO* g_plotSpeechOutFifo;
 extern int g_mode;
 extern bool g_recFileFromModulator;
 extern int g_txLevel;
+extern std::atomic<float> g_txLevelScale;
 extern int g_dump_timing;
 extern bool g_queueResync;
 extern int g_resyncs;
@@ -137,6 +138,7 @@ void TxRxThread::initializePipeline_()
     if (m_tx)
     {
         pipeline_ = std::shared_ptr<AudioPipeline>(new AudioPipeline(inputSampleRate_, outputSampleRate_));
+
         // Record from mic step (optional)
         auto recordMicStep = new RecordStep(
             inputSampleRate_, 
@@ -246,7 +248,7 @@ void TxRxThread::initializePipeline_()
             std::shared_ptr<IPipelineStep>(analogTxPipeline),
             std::shared_ptr<IPipelineStep>(digitalTxPipeline));
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(eitherOrDigitalAnalog));
-        
+
         // Record modulated output (optional)
         auto recordModulatedStep = new RecordStep(
             outputSampleRate_, 
@@ -271,9 +273,7 @@ void TxRxThread::initializePipeline_()
         
         // TX attenuation step
         auto txAttenuationStep = new LevelAdjustStep(outputSampleRate_, []() {
-            float dbLoss = g_txLevel / 10.0;
-            float scaleFactor = exp(dbLoss/20.0 * log(10.0));
-            return scaleFactor; 
+            return g_txLevelScale.load(std::memory_order_acquire);
         });
         pipeline_->appendPipelineStep(std::shared_ptr<IPipelineStep>(txAttenuationStep));
     }

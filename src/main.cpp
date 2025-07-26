@@ -97,6 +97,7 @@ float               g_avmag[MODEM_STATS_NSPEC];
 
 // TX level for attenuation
 int g_txLevel = 0;
+std::atomic<float> g_txLevelScale;
 
 // GUI controls that affect rx and tx processes
 int   g_SquelchActive;
@@ -661,6 +662,10 @@ void MainFrame::loadConfiguration_()
     });
     
     g_txLevel = wxGetApp().appConfiguration.transmitLevel;
+    float dbLoss = g_txLevel / 10.0;
+    float scaleFactor = exp(dbLoss/20.0 * log(10.0));
+    g_txLevelScale.store(scaleFactor, std::memory_order_release);
+
     char fmt[15];
     m_sliderTxLevel->SetValue(g_txLevel);
     snprintf(fmt, 15, "%0.1f dB", (double)g_txLevel / 10.0);
