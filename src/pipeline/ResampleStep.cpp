@@ -78,9 +78,7 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool forPl
     assert(resampleState_ != nullptr);
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    outputSamples_ = std::shared_ptr<short>(
-        new short[outputSampleRate], 
-        std::default_delete<short[]>());
+    outputSamples_ = std::make_unique<short[]>(outputSampleRate);
     assert(outputSamples_ != nullptr);
     
     tempInput_ = new float[inputSampleRate * 10 / 1000];
@@ -108,7 +106,7 @@ int ResampleStep::getOutputSampleRate() const
     return outputSampleRate_;
 }
 
-std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* ResampleStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     if (inputSampleRate_ == outputSampleRate_)
     {
@@ -119,7 +117,7 @@ std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples
     
     *numOutputSamples = 0;
 
-    auto inputPtr = inputSamples.get();
+    auto inputPtr = inputSamples;
     auto outputPtr = outputSamples_.get();
     while (numInputSamples > 0)
     {
@@ -136,5 +134,5 @@ std::shared_ptr<short> ResampleStep::execute(std::shared_ptr<short> inputSamples
         *numOutputSamples += numSamples;
     }
  
-    return outputSamples_;
+    return outputSamples_.get();
 }

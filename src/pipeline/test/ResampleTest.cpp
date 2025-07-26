@@ -4,11 +4,11 @@
 bool resampleTestCaseCommon(int inputSampleRate, int outputSampleRate)
 {
     ResampleStep resampleStep(inputSampleRate, outputSampleRate);
-    auto inputSineWave = std::shared_ptr<short>(generateOneSecondSineWave(2000, inputSampleRate), std::default_delete<short[]>());
-    auto outputSineWave = std::shared_ptr<short>(generateOneSecondSineWave(2000, outputSampleRate), std::default_delete<short[]>());
+    auto inputSineWave = std::unique_ptr<short[]>(generateOneSecondSineWave(2000, inputSampleRate), std::default_delete<short[]>());
+    auto outputSineWave = std::unique_ptr<short[]>(generateOneSecondSineWave(2000, outputSampleRate), std::default_delete<short[]>());
     
     int numOutputSamples = 0;
-    auto result = resampleStep.execute(inputSineWave, inputSampleRate, &numOutputSamples);
+    auto result = resampleStep.execute(inputSineWave.get(), inputSampleRate, &numOutputSamples);
     
     // Allowed output samples are +/- 10% of the theoretical max.
     int minOutputSamples = outputSampleRate * 0.9;

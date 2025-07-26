@@ -42,6 +42,9 @@ public:
     
     int numUsed() const noexcept;
     int numFree() const noexcept;
+    int capacity() const noexcept;
+
+    void reset() noexcept;
     
 private:
     T *buf;
@@ -99,6 +102,13 @@ GenericFIFO<T>::GenericFIFO(GenericFIFO<T>&& rhs)
     rhs.pin = nullptr;
     rhs.pout = nullptr;
     rhs.nelem = 0;
+}
+
+template<typename T>
+void GenericFIFO<T>::reset() noexcept
+{
+    pin = buf;
+    pout = buf;
 }
 
 template<typename T>
@@ -173,6 +183,12 @@ int GenericFIFO<T>::numFree() const noexcept
     // is reserved for empty rather than full
 
     return nelem - numUsed() - 1;
+}
+
+template<typename T>
+int GenericFIFO<T>::capacity() const noexcept
+{
+    return nelem - 1;
 }
 
 #endif // GENERIC_FIFO_H

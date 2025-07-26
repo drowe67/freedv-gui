@@ -51,7 +51,7 @@ This document describes how to build the FreeDV GUI program for various operatin
    $ cd freedv-gui
    $ python3 -m venv rade-venv
    $ . ./rade-venv/bin/activate
-   (rade-venv) $ pip3 install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+   (rade-venv) $ pip3 install torch --index-url https://download.pytorch.org/whl/cpu
    (rade-venv) $ pip3 install matplotlib
    ```
 

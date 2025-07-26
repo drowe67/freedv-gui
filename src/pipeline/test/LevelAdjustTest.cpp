@@ -6,10 +6,10 @@ bool levelAdjustCommon(float val)
     LevelAdjustStep levelAdjustStep(8000, [val]() { return val; });
     
     int outputSamples = 0;
-    short* pData = new short[1];
+    std::unique_ptr<short[]> pData = std::make_unique<short[]>(1);
     pData[0] = 10000;
     
-    auto result = levelAdjustStep.execute(std::shared_ptr<short>(pData, std::default_delete<short[]>()), 1, &outputSamples);
+    auto result = levelAdjustStep.execute(pData.get(), 1, &outputSamples);
     if (outputSamples != 1)
     {
         std::cerr << "[outputSamples[" << outputSamples << "] != 1]...";
@@ -17,9 +17,9 @@ bool levelAdjustCommon(float val)
     }
     
     auto expectedVal = 10000 * val;
-    if (result.get()[0] != expectedVal)
+    if (result[0] != expectedVal)
     {
-        std::cerr << "[result[" << result.get()[0] << "] != " << expectedVal << "]...";
+        std::cerr << "[result[" << result[0] << "] != " << expectedVal << "]...";
         return false;
     }
     

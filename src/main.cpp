@@ -97,6 +97,7 @@ float               g_avmag[MODEM_STATS_NSPEC];
 
 // TX level for attenuation
 int g_txLevel = 0;
+std::atomic<float> g_txLevelScale;
 
 // GUI controls that affect rx and tx processes
 int   g_SquelchActive;
@@ -661,6 +662,10 @@ void MainFrame::loadConfiguration_()
     });
     
     g_txLevel = wxGetApp().appConfiguration.transmitLevel;
+    float dbLoss = g_txLevel / 10.0;
+    float scaleFactor = exp(dbLoss/20.0 * log(10.0));
+    g_txLevelScale.store(scaleFactor, std::memory_order_release);
+
     char fmt[15];
     m_sliderTxLevel->SetValue(g_txLevel);
     snprintf(fmt, 15, "%0.1f dB", (double)g_txLevel / 10.0);
@@ -1117,7 +1122,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     g_TxFreqOffsetHz = 0.0;
 
-    g_tx = 0;
+    g_tx.store(false, std::memory_order_release);
 
     // data states
     g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
@@ -1376,7 +1381,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      {
          // Synchronize changes with Filter dialog
          auto sliderVal = 0.0;
-         if (g_tx)
+         if (g_tx.load(std::memory_order_acquire))
          {
              sliderVal = wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB;
          }
@@ -1541,7 +1546,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // Level Gauge -----------------------------------------------------------------------
 
         float tooHighThresh;
-        if (!g_tx && m_RxRunning)
+        if (!g_tx.load(std::memory_order_acquire) && m_RxRunning)
         {
             // receive mode - display From Radio peaks
             // peak from this DT sampling period
@@ -1980,9 +1985,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     
         // Voice Keyer state machine
         VoiceKeyerProcessEvent(VK_DT);
-
-        // Detect Sync state machine
-        DetectSyncProcessEvent();
     }
 }
 #endif
@@ -2087,7 +2089,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     // Report TX change to registered reporters
     for (auto& obj : wxGetApp().m_reporters)
     {
-        obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+        obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx.load(std::memory_order_acquire));
     }
     
     // Disable controls not supported by RADE
@@ -2340,7 +2342,7 @@ void MainFrame::performFreeDVOn_()
                         // Immediately transmit selected TX mode and frequency to avoid UI glitches.
                         for (auto& obj : wxGetApp().m_reporters)
                         {
-                            obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+                            obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx.load(std::memory_order_acquire));
                             obj->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
                         }
                     }
@@ -2620,19 +2622,15 @@ void MainFrame::stopRxStream()
 
 void MainFrame::destroy_fifos(void)
 {
-    if (g_rxUserdata->infifo1) codec2_fifo_destroy(g_rxUserdata->infifo1);
-    if (g_rxUserdata->outfifo1) codec2_fifo_destroy(g_rxUserdata->outfifo1);
-    if (g_rxUserdata->infifo2) codec2_fifo_destroy(g_rxUserdata->infifo2);
-    if (g_rxUserdata->outfifo2) codec2_fifo_destroy(g_rxUserdata->outfifo2);
-    codec2_fifo_destroy(g_rxUserdata->rxinfifo);
-    codec2_fifo_destroy(g_rxUserdata->rxoutfifo);
+    if (g_rxUserdata->infifo1) delete g_rxUserdata->infifo1;
+    if (g_rxUserdata->outfifo1) delete g_rxUserdata->outfifo1;
+    if (g_rxUserdata->infifo2) delete g_rxUserdata->infifo2;
+    if (g_rxUserdata->outfifo2) delete g_rxUserdata->outfifo2;
     
     g_rxUserdata->infifo1 = nullptr;
     g_rxUserdata->infifo2 = nullptr;
     g_rxUserdata->outfifo1 = nullptr;
     g_rxUserdata->outfifo2 = nullptr;
-    g_rxUserdata->rxinfifo = nullptr;
-    g_rxUserdata->rxoutfifo = nullptr;
 }
 
 //-------------------------------------------------------------------------
@@ -2687,18 +2685,18 @@ void MainFrame::startRxStream()
         {
             int soundCard2InFifoSizeSamples = 30*wxGetApp().appConfiguration.audioConfiguration.soundCard2In.sampleRate;
             int soundCard2OutFifoSizeSamples = m_fifoSize_ms*wxGetApp().appConfiguration.audioConfiguration.soundCard2Out.sampleRate / 1000;
-            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
-            g_rxUserdata->infifo2 = codec2_fifo_create(soundCard2InFifoSizeSamples);
-            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
-            g_rxUserdata->outfifo2 = codec2_fifo_create(soundCard2OutFifoSizeSamples);
+            g_rxUserdata->outfifo1 = new GenericFIFO<short>(soundCard1OutFifoSizeSamples);
+            g_rxUserdata->infifo2 = new GenericFIFO<short>(soundCard2InFifoSizeSamples);
+            g_rxUserdata->infifo1 = new GenericFIFO<short>(soundCard1InFifoSizeSamples);
+            g_rxUserdata->outfifo2 = new GenericFIFO<short>(soundCard2OutFifoSizeSamples);
         
             log_debug("fifoSize_ms:  %d infifo2: %d/outfilo2: %d",
                 wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
         }
         else
         {
-            g_rxUserdata->infifo1 = codec2_fifo_create(soundCard1InFifoSizeSamples);
-            g_rxUserdata->outfifo1 = codec2_fifo_create(soundCard1OutFifoSizeSamples);
+            g_rxUserdata->infifo1 = new GenericFIFO<short>(soundCard1InFifoSizeSamples);
+            g_rxUserdata->outfifo1 = new GenericFIFO<short>(soundCard1OutFifoSizeSamples);
             g_rxUserdata->infifo2 = nullptr;
             g_rxUserdata->outfifo2 = nullptr;
         }
@@ -2823,7 +2821,7 @@ void MainFrame::startRxStream()
                     {
                         for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
                         {
-                            if (codec2_fifo_write(cbData->infifo2, &audioData[0], 1)) 
+                            if (cbData->infifo2->write(&audioData[0], 1)) 
                             {
                                 g_infifo2_full++;
                             }
@@ -2870,7 +2868,7 @@ void MainFrame::startRxStream()
                     short* audioData = static_cast<short*>(data);
                     short outdata = 0;
                
-                    if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
+                    if ((size_t)cbData->outfifo1->numUsed() < size)
                     {
                         g_outfifo1_empty++;
                         return;
@@ -2878,7 +2876,7 @@ void MainFrame::startRxStream()
 
                     for (; size > 0; size--, audioData += dev.getNumChannels())
                     {
-                        codec2_fifo_read(cbData->outfifo1, &outdata, 1);
+                        cbData->outfifo1->read(&outdata, 1);
 
                         // write signal to all channels to start. This is so that
                         // the compiler can optimize for the most common case.
@@ -3023,9 +3021,6 @@ void MainFrame::startRxStream()
         rxInFifoSizeSamples += 0.04*modem_samplerate;
         rxOutFifoSizeSamples += 0.04*modem_samplerate;
 
-        g_rxUserdata->rxinfifo = codec2_fifo_create(rxInFifoSizeSamples);
-        g_rxUserdata->rxoutfifo = codec2_fifo_create(rxOutFifoSizeSamples);
-
         log_debug("rxInFifoSizeSamples: %d rxOutFifoSizeSamples: %d", rxInFifoSizeSamples, rxOutFifoSizeSamples);
 
         // Init Equaliser Filters ------------------------------------------------------
@@ -3071,7 +3066,7 @@ void MainFrame::startRxStream()
 
             for (size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
             {
-                if (codec2_fifo_write(cbData->infifo1, &audioData[0], 1)) 
+                if (cbData->infifo1->write(&audioData[0], 1)) 
                 {
                     log_warn("RX FIFO full");
                     g_infifo1_full++;
@@ -3102,7 +3097,7 @@ void MainFrame::startRxStream()
                 short* audioData = static_cast<short*>(data);
                 short outdata = 0;
 
-                if ((size_t)codec2_fifo_used(cbData->outfifo2) < size)
+                if ((size_t)cbData->outfifo2->numUsed() < size)
                 {
                     g_outfifo2_empty++;
                     return;
@@ -3110,7 +3105,7 @@ void MainFrame::startRxStream()
 
                 for (; size > 0; size--)
                 {
-                    codec2_fifo_read(cbData->outfifo2, &outdata, 1);
+                    cbData->outfifo2->read(&outdata, 1);
                     for (int j = 0; j < dev.getNumChannels(); j++)
                     {
                         *audioData++ = outdata;
@@ -3135,7 +3130,7 @@ void MainFrame::startRxStream()
                 short* audioData = static_cast<short*>(data);
                 short outdata = 0;
 
-                if ((size_t)codec2_fifo_used(cbData->outfifo1) < size)
+                if ((size_t)cbData->outfifo1->numUsed() < size)
                 {
                     g_outfifo1_empty++;
                     return;
@@ -3143,7 +3138,7 @@ void MainFrame::startRxStream()
 
                 for (; size > 0; size--)
                 {
-                    codec2_fifo_read(cbData->outfifo1, &outdata, 1);
+                    cbData->outfifo1->read(&outdata, 1);
                     for (int j = 0; j < dev.getNumChannels(); j++)
                     {
                         *audioData++ = outdata;
@@ -3490,7 +3485,7 @@ void MainFrame::initializeFreeDVReporter_()
     }
     else
     {
-        wxGetApp().m_sharedReporterObject->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+        wxGetApp().m_sharedReporterObject->transmit(freedvInterface.getCurrentTxModeStr(), g_tx.load(std::memory_order_acquire));
         wxGetApp().m_sharedReporterObject->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
     }
 }

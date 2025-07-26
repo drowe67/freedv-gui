@@ -64,12 +64,12 @@ int RecordStep::getOutputSampleRate() const
     return inputSampleRate_;
 }
 
-std::shared_ptr<short> RecordStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* RecordStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {    
-    codec2_fifo_write(inputFifo_, inputSamples.get(), numInputSamples);
+    codec2_fifo_write(inputFifo_, inputSamples, numInputSamples);
     
-    *numOutputSamples = 0;    
-    return std::shared_ptr<short>((short*)nullptr);
+    *numOutputSamples = 0;
+    return nullptr;
 }
 
 void RecordStep::reset()

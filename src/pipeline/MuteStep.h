@@ -23,6 +23,7 @@
 #ifndef AUDIO_PIPELINE__MUTE_STEP_H
 #define AUDIO_PIPELINE__MUTE_STEP_H
 
+#include <memory>
 #include "IPipelineStep.h"
 
 class MuteStep : public IPipelineStep
@@ -43,11 +44,11 @@ public:
     //     numInputSamples: Number of samples in the input array.
     //     numOutputSamples: Location to store number of output samples.
     // Returns: Array of int16 values corresponding to result audio.
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
 
 private:
     int sampleRate_;
-    std::shared_ptr<short> outputSamples_;
+    std::unique_ptr<short[]> outputSamples_;
 };
 
 #endif // AUDIO_PIPELINE__MUTE_STEP_H

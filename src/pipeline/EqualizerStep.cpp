@@ -37,9 +37,7 @@ EqualizerStep::EqualizerStep(int sampleRate, bool* enableFilter, std::shared_ptr
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+    outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
 }
 
@@ -58,18 +56,26 @@ int EqualizerStep::getOutputSampleRate() const
     return sampleRate_;
 }
 
-std::shared_ptr<short> EqualizerStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* EqualizerStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    memcpy(outputSamples_.get(), inputSamples.get(), sizeof(short)*numInputSamples);
-    
+    bool copiedToOutput = false;
     std::shared_ptr<void> tmpVolFilter = *volFilter_;
+
     if (tmpVolFilter != nullptr)
     {
+        memcpy(outputSamples_.get(), inputSamples, sizeof(short)*numInputSamples);
+        copiedToOutput = true;
+        *numOutputSamples = numInputSamples;
         sox_biquad_filter(tmpVolFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
     }
     
     if (*enableFilter_)
     {
+        if (!copiedToOutput)
+        {
+            memcpy(outputSamples_.get(), inputSamples, sizeof(short)*numInputSamples);
+        }
+
         std::shared_ptr<void> tmpBassFilter = *bassFilter_;
         std::shared_ptr<void> tmpTrebleFilter = *trebleFilter_;
         std::shared_ptr<void> tmpMidFilter = *midFilter_;
@@ -85,8 +91,11 @@ std::shared_ptr<short> EqualizerStep::execute(std::shared_ptr<short> inputSample
         {
             sox_biquad_filter(tmpMidFilter.get(), outputSamples_.get(), outputSamples_.get(), numInputSamples);
         }
+    } 
+    else if (!copiedToOutput)
+    {
+        return inputSamples;
     }
-    
-    *numOutputSamples = numInputSamples;
-    return outputSamples_;
+
+    return outputSamples_.get();
 }

@@ -50,13 +50,13 @@ public:
         , equalizedMicAudioLink_(micAudioLink)
         , hasEooBeenSent_(false)
         , helper_(helper)
+        , deferReset_(false)
     { 
         assert(inputSampleRate_ > 0);
         assert(outputSampleRate_ > 0);
 
-        inputSamples_ = std::shared_ptr<short>(
-            new short[std::max(inputSampleRate_, outputSampleRate_)], 
-            std::default_delete<short[]>());
+        inputSamples_ = std::make_unique<short[]>(std::max(inputSampleRate_, outputSampleRate_)); 
+        assert(inputSamples_ != nullptr);
     }
     
     virtual ~TxRxThread()
@@ -78,16 +78,17 @@ public:
 private:
     bool  m_tx;
     bool  m_run;
-    std::shared_ptr<AudioPipeline> pipeline_;
+    std::unique_ptr<AudioPipeline> pipeline_;
     int inputSampleRate_;
     int outputSampleRate_;
     std::shared_ptr<LinkStep> equalizedMicAudioLink_;
     bool hasEooBeenSent_;
     std::shared_ptr<IRealtimeHelper> helper_;
-    std::shared_ptr<short> inputSamples_;
+    std::unique_ptr<short[]> inputSamples_;
+    bool deferReset_;
     
     void initializePipeline_();
-    void txProcessing_() noexcept
+    void txProcessing_(IRealtimeHelper* helper) noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]
@@ -95,7 +96,7 @@ private:
 #endif // defined(__clang__)
     ;
 
-    void rxProcessing_() noexcept
+    void rxProcessing_(IRealtimeHelper* helper) noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]

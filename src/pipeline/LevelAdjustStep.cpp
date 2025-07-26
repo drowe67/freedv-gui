@@ -24,15 +24,13 @@
 
 #include <assert.h>
 
-LevelAdjustStep::LevelAdjustStep(int sampleRate, std::function<double()> scaleFactorFn)
+LevelAdjustStep::LevelAdjustStep(int sampleRate, std::function<float()> scaleFactorFn)
     : scaleFactorFn_(scaleFactorFn)
     , sampleRate_(sampleRate)
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+    outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
 }
 
@@ -51,15 +49,16 @@ int LevelAdjustStep::getOutputSampleRate() const
     return sampleRate_;
 }
 
-std::shared_ptr<short> LevelAdjustStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* LevelAdjustStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    double scaleFactor = scaleFactorFn_();
+    float scaleFactor = scaleFactorFn_();
+    short* outPtr = outputSamples_.get();
 
     for (int index = 0; index < numInputSamples; index++)
     {
-        outputSamples_.get()[index] = inputSamples.get()[index] * scaleFactor;
+        outPtr[index] = inputSamples[index] * scaleFactor;
     }
     
     *numOutputSamples = numInputSamples;
-    return outputSamples_;
+    return outPtr;
 }

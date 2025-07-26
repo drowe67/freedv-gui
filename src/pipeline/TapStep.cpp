@@ -47,7 +47,7 @@ int TapStep::getOutputSampleRate() const
     return sampleRate_;
 }
 
-std::shared_ptr<short> TapStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* TapStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     assert(tapStep_->getInputSampleRate() == sampleRate_);
     
