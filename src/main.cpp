@@ -409,7 +409,16 @@ void MainApp::UnitTest_()
     
     // Wait 5 seconds for FreeDV to stop
     std::this_thread::sleep_for(5s);
+
+    // Close main window to trigger FreeDV Reporter cleanup.
+    // This is to avoid spurious libasan leak warnings.
+    CallAfter([&]() {
+        frame->Close();
+    });
     
+    // Wait 5 seconds for FreeDV to close
+    std::this_thread::sleep_for(5s);
+
     // Destroy main window to exit application. Must be done in UI thread to avoid problems.
     CallAfter([&]() {
         frame->Destroy();
