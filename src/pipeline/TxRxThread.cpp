@@ -573,8 +573,16 @@ void TxRxThread::endTimer_()
     auto e = std::chrono::high_resolution_clock::now();
     auto d = std::chrono::duration_cast<std::chrono::nanoseconds>(e - timeStart_).count();
     numTimeSamples_++; 
-    if (d < minDuration_) minDuration_ = d;
-    if (d > maxDuration_) maxDuration_ = d;
+    if (d < minDuration_)
+    {
+        minDuration_ = d;
+        minTime_ = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    }
+    if (d > maxDuration_)
+    {
+        maxDuration_ = d;
+        maxTime_ = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    }
     sumDuration_ += d; sumDoubleDuration_ += pow(d, 2);
 }
 
@@ -582,7 +590,14 @@ void TxRxThread::reportStats_()
 {
     if (numTimeSamples_ > 0)
     {
-        log_info("m_tx = %d, min = %f ns, max = %f ns, mean = %f ns, stdev = %f ns (n = %d)", m_tx, minDuration_, maxDuration_, sumDuration_ / numTimeSamples_, sqrt((sumDoubleDuration_ - pow(sumDuration_, 2)/numTimeSamples_) / (numTimeSamples_ - 1)), numTimeSamples_);
+        std::tm * minTm = std::localtime(&minTime_);
+        std::tm * maxTm = std::localtime(&maxTime_);
+        char bufMin[32];
+        char bufMax[32];
+        std::strftime(bufMin, 32, "%H:%M:%S", minTm);
+        std::strftime(bufMax, 32, "%H:%M:%S", maxTm);
+        
+        log_info("m_tx = %d, min = %f ns [%s], max = %f ns [%s], mean = %f ns, stdev = %f ns (n = %d)", m_tx, minDuration_, bufMin, maxDuration_, bufMax, sumDuration_ / numTimeSamples_, sqrt((sumDoubleDuration_ - pow(sumDuration_, 2)/numTimeSamples_) / (numTimeSamples_ - 1)), numTimeSamples_);
     }
 }
 #endif // defined(ENABLE_PROCESSING_STATS)

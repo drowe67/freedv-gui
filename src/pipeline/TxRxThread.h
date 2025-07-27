@@ -92,7 +92,9 @@ private:
 #if defined(ENABLE_PROCESSING_STATS)
     int numTimeSamples_;
     double minDuration_;
+    std::time_t minTime_;
     double maxDuration_;
+    std::time_t maxTime_;
     double sumDuration_;
     double sumDoubleDuration_;
     std::chrono::time_point<std::chrono::high_resolution_clock> timeStart_;
