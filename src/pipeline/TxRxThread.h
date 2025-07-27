@@ -34,6 +34,8 @@
 // Forward declarations
 class LinkStep;
 
+#define ENABLE_PROCESSING_STATS
+
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // class txRxThread - experimental tx/rx processing thread
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -86,6 +88,20 @@ private:
     std::shared_ptr<IRealtimeHelper> helper_;
     std::unique_ptr<short[]> inputSamples_;
     bool deferReset_;
+
+#if defined(ENABLE_PROCESSING_STATS)
+    int numTimeSamples_;
+    double minDuration_;
+    double maxDuration_;
+    double sumDuration_;
+    double sumDoubleDuration_;
+    std::chrono::time_point<std::chrono::high_resolution_clock> timeStart_;
+    
+    void resetStats_();
+    void startTimer_();
+    void endTimer_();
+    void reportStats_();    
+#endif // defined(ENABLE_PROCESSING_STATS)
     
     void initializePipeline_();
     void txProcessing_(IRealtimeHelper* helper) noexcept

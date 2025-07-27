@@ -59,10 +59,9 @@ using namespace std::chrono_literals;
 //   usage required to generate various plots in the user interface. (Tech note: When 
 //   enabled, libsamplerate is directed to use SRC_LINEAR for the plot resampling.)
 // * ENABLE_PROCESSING_STATS: This causes execution statistics to be collected for RX and TX
-//   processing and output in the log after the user pushes Stop. 
+//   processing and output in the log after the user pushes Stop. (Define in .h file.)
 
 #define ENABLE_FASTER_PLOTS
-#define ENABLE_PROCESSING_STATS
 
 // External globals
 // TBD -- work on fully removing the need for these.
@@ -490,11 +489,7 @@ void* TxRxThread::Entry()
     helper->setHelperRealTime();
 
 #if defined(ENABLE_PROCESSING_STATS)
-    int numTimeSamples = 0;
-    double minDuration = 1e9;
-    double maxDuration = 0;
-    double sumDuration = 0;
-    double sumDoubleDuration = 0; 
+    resetStats_();
 #endif // defined(ENABLE_PROCESSING_STATS)
 
     while (m_run)
@@ -511,21 +506,8 @@ void* TxRxThread::Entry()
         //log_info("thread woken up: m_tx=%d", (int)m_tx);
         helper->startRealTimeWork();
 
-#if defined(ENABLE_PROCESSING_STATS)
-        auto b = std::chrono::high_resolution_clock::now();
-#endif // defined(ENABLE_PROCESSING_STATS)
-
         if (m_tx) txProcessing_(helper);
         else rxProcessing_(helper);
-
-#if defined(ENABLE_PROCESSING_STATS)
-        auto e = std::chrono::high_resolution_clock::now();
-        auto d = std::chrono::duration_cast<std::chrono::nanoseconds>(e - b).count();
-        numTimeSamples++; 
-        if (d < minDuration) minDuration = d;
-        if (d > maxDuration) maxDuration = d;
-        sumDuration += d; sumDoubleDuration += pow(d, 2);
-#endif // defined(ENABLE_PROCESSING_STATS)
 
         // Determine whether we need to pause for a shorter amount
         // of time to avoid dropouts.
@@ -541,7 +523,7 @@ void* TxRxThread::Entry()
     }
 
 #if defined(ENABLE_PROCESSING_STATS)
-    log_info("m_tx = %d, min = %f ns, max = %f ns, mean = %f ns, stdev = %f ns", m_tx, minDuration, maxDuration, sumDuration / numTimeSamples, sqrt((sumDoubleDuration - pow(sumDuration, 2)/numTimeSamples) / (numTimeSamples - 1)));
+    reportStats_();
 #endif // defined(ENABLE_PROCESSING_STATS)
 
     // Force pipeline to delete itself when we're done with the thread.
@@ -570,6 +552,37 @@ void TxRxThread::notify()
 {
     // empty
 }
+
+#if defined(ENABLE_PROCESSING_STATS)
+void TxRxThread::resetStats_()
+{
+    numTimeSamples_ = 0;
+    minDuration_ = 1e9;
+    maxDuration_ = 0;
+    sumDuration_ = 0;
+    sumDoubleDuration_ = 0; 
+}
+
+void TxRxThread::startTimer_()
+{
+    timeStart_ = std::chrono::high_resolution_clock::now();
+}
+
+void TxRxThread::endTimer_()
+{
+    auto e = std::chrono::high_resolution_clock::now();
+    auto d = std::chrono::duration_cast<std::chrono::nanoseconds>(e - timeStart_).count();
+    numTimeSamples_++; 
+    if (d < minDuration_) minDuration_ = d;
+    if (d > maxDuration_) maxDuration_ = d;
+    sumDuration_ += d; sumDoubleDuration_ += pow(d, 2);
+}
+
+void TxRxThread::reportStats_()
+{
+    log_info("m_tx = %d, min = %f ns, max = %f ns, mean = %f ns, stdev = %f ns", m_tx, minDuration_, maxDuration_, sumDuration_ / numTimeSamples_, sqrt((sumDoubleDuration_ - pow(sumDuration_, 2)/numTimeSamples_) / (numTimeSamples_ - 1)));
+}
+#endif // defined(ENABLE_PROCESSING_STATS)
 
 void TxRxThread::clearFifos_()
 {
@@ -654,6 +667,10 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
         while(!helper->mustStopWork() && (unsigned)cbData->outfifo1->numFree() >= nsam_one_modem_frame) {        
             // OK to generate a frame of modem output samples we need
             // an input frame of speech samples from the microphone.
+            
+#if defined(ENABLE_PROCESSING_STATS)
+            startTimer_();
+#endif // defined(ENABLE_PROCESSING_STATS)
 
             // infifo2 is written to by another sound card so it may
             // over or underflow, but we don't really care.  It will
@@ -709,6 +726,10 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
             {
                 cbData->outfifo1->write(outputSamples, nout);
             }
+            
+#if defined(ENABLE_PROCESSING_STATS)
+            endTimer_();
+#endif // defined(ENABLE_PROCESSING_STATS)
         }
     }
     else
@@ -772,6 +793,11 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) noexcept
 
     // while we have enough input samples available and enough space in the output FIFO ... 
     while (!helper->mustStopWork() && processInputFifo && outFifo->numFree() >= nsam_one_speech_frame && cbData->infifo1->read(inputSamples_.get(), nsam) == 0) {
+        
+#if defined(ENABLE_PROCESSING_STATS)
+        startTimer_();
+#endif // defined(ENABLE_PROCESSING_STATS)
+        
         // send latest squelch level to FreeDV API, as it handles squelch internally
         freedvInterface.setSquelch(g_SquelchActive, g_SquelchLevel);
 
@@ -787,5 +813,9 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) noexcept
             (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
             (tmpTx && wxGetApp().appConfiguration.monitorTxAudio) ||
             (!g_voice_keyer_tx && ((g_half_duplex && !tmpTx) || !g_half_duplex));
+        
+#if defined(ENABLE_PROCESSING_STATS)
+        endTimer_();
+#endif // defined(ENABLE_PROCESSING_STATS)
     }
 }
