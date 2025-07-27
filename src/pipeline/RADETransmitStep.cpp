@@ -60,18 +60,20 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
         utFeatureThread_ = std::thread([&]() {
             float* fifoRead = new float[utFeatures_.capacity()];
             assert(fifoRead != nullptr);
-            
+           
+            std::vector<float> tmpFeatures; 
             while (!exitingFeatureThread_)
             {
                 auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
-                if (utFeatures_.numFree() < (utFeatures_.capacity() / 4))
+                while (numToRead > 0)
                 {
-                    while (numToRead > 0)
+                    utFeatures_.read(fifoRead, numToRead);
+                    tmpFeatures.reserve(tmpFeatures.size() + numToRead);
+                    for (int index = 0; index < numToRead; index++)
                     {
-                        utFeatures_.read(fifoRead, numToRead);
-                        fwrite(fifoRead, sizeof(float) * numToRead, 1, featuresFile_);
-                        numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
+                        tmpFeatures.push_back(fifoRead[index]);
                     }
+                    numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
                 }
                 
                 std::this_thread::sleep_for(100ms);
@@ -81,9 +83,14 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
             while (numToRead > 0)
             {
                 utFeatures_.read(fifoRead, numToRead);
-                fwrite(fifoRead, sizeof(float) * numToRead, 1, featuresFile_);
+                tmpFeatures.reserve(tmpFeatures.size() + numToRead);
+                for (int index = 0; index < numToRead; index++)
+                {
+                    tmpFeatures.push_back(fifoRead[index]);
+                }
                 numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
             }
+            fwrite(&tmpFeatures[0], tmpFeatures.size() * sizeof(float), 1, featuresFile_);
             
             delete[] fifoRead;
         });

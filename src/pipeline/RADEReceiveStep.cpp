@@ -60,18 +60,20 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
         utFeatureThread_ = std::thread([&]() {
             float* fifoRead = new float[utFeatures_.capacity()];
             assert(fifoRead != nullptr);
-            
+           
+            std::vector<float> featuresToWrite; 
             while (!exitingFeatureThread_)
             {
                 auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
-                if (utFeatures_.numFree() < (utFeatures_.capacity() / 4))
+                while (numToRead > 0)
                 {
-                    while (numToRead > 0)
+                    utFeatures_.read(fifoRead, numToRead);
+                    featuresToWrite.reserve(featuresToWrite.size() + numToRead);
+                    for (int index = 0; index < numToRead; index++)
                     {
-                        utFeatures_.read(fifoRead, numToRead);
-                        fwrite(fifoRead, sizeof(float) * numToRead, 1, featuresFile_);
-                        numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
+                        featuresToWrite.push_back(fifoRead[index]);
                     }
+                    numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
                 }
                                 
                 std::this_thread::sleep_for(100ms);
@@ -81,9 +83,14 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
             while (numToRead > 0)
             {
                 utFeatures_.read(fifoRead, numToRead);
-                fwrite(fifoRead, sizeof(float) * numToRead, 1, featuresFile_);
+                featuresToWrite.reserve(featuresToWrite.size() + numToRead);
+                for (int index = 0; index < numToRead; index++)
+                {
+                    featuresToWrite.push_back(fifoRead[index]);
+                }
                 numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
             }
+            fwrite(&featuresToWrite[0], sizeof(float) * featuresToWrite.size(), 1, featuresFile_);
             
             delete[] fifoRead;
         });
