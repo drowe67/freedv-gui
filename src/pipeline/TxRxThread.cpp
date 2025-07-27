@@ -580,7 +580,10 @@ void TxRxThread::endTimer_()
 
 void TxRxThread::reportStats_()
 {
-    log_info("m_tx = %d, min = %f ns, max = %f ns, mean = %f ns, stdev = %f ns", m_tx, minDuration_, maxDuration_, sumDuration_ / numTimeSamples_, sqrt((sumDoubleDuration_ - pow(sumDuration_, 2)/numTimeSamples_) / (numTimeSamples_ - 1)));
+    if (numTimeSamples_ > 0)
+    {
+        log_info("m_tx = %d, min = %f ns, max = %f ns, mean = %f ns, stdev = %f ns (n = %d)", m_tx, minDuration_, maxDuration_, sumDuration_ / numTimeSamples_, sqrt((sumDoubleDuration_ - pow(sumDuration_, 2)/numTimeSamples_) / (numTimeSamples_ - 1)), numTimeSamples_);
+    }
 }
 #endif // defined(ENABLE_PROCESSING_STATS)
 
