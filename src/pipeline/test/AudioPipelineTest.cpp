@@ -8,7 +8,7 @@ static bool passthroughCommon(int inputSampleRate, int outputSampleRate)
     auto sineWave = std::unique_ptr<short[]>(generateOneSecondSineWave(2000, inputSampleRate));
     
     int outputSamples = 0;
-    auto result = pipeline.execute(sineWave.get(), inputSampleRate, &outputSamples);
+    pipeline.execute(sineWave.get(), inputSampleRate, &outputSamples);
     
     auto minOutputSamples = outputSampleRate * 0.9;
     auto maxOutputSamples = outputSampleRate * 1.1;
@@ -47,7 +47,7 @@ bool resampleBeforeStepCommon(int inputSampleRate, int stepSampleRate, int outpu
     
     auto sineWave = std::unique_ptr<short[]>(generateOneSecondSineWave(2000, inputSampleRate));
     int numOutputSamples = 0;
-    auto result = pipeline.execute(sineWave.get(), inputSampleRate, &numOutputSamples);
+    pipeline.execute(sineWave.get(), inputSampleRate, &numOutputSamples);
     
     auto minOutputSamples = outputSampleRate * 0.9;
     auto maxOutputSamples = outputSampleRate * 1.1;
