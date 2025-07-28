@@ -410,6 +410,17 @@ void MainApp::UnitTest_()
     // Wait 5 seconds for FreeDV to stop
     std::this_thread::sleep_for(5s);
     
+    if (frame->m_reporterDialog)
+    {
+        // Force deletion of FreeDV Reporter linkage to avoid spurious asan errors.
+        CallAfter([&]() {
+            frame->m_reporterDialog->setReporter(nullptr);
+            wxGetApp().SafeYield(nullptr, false); // make sure we handle any remaining Reporter messages before dispose
+        });
+        
+        std::this_thread::sleep_for(5s);
+    }
+    
     // Destroy main window to exit application. Must be done in UI thread to avoid problems.
     CallAfter([&]() {
         frame->Destroy();

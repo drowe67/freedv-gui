@@ -37,12 +37,12 @@ cp ../delocating.py.patched pkg-venv/lib/python3.12/site-packages/delocate/deloc
 
 mkdir arm64
 pip3 download --platform macosx_11_0_arm64 --python-version 3.12 --only-binary=:all: filelock typing-extensions setuptools sympy networkx jinja2 fsspec optree opt-einsum numpy matplotlib
-wget -O arm64/torch-2.7.1a0+gite2d141d-cp312-cp312-macosx_11_0_arm64.whl https://k6aq.net/freedv-build/torch-2.7.1a0+gite2d141d-cp312-cp312-macosx_11_0_arm64.whl
+wget -O arm64/torch-2.7.1a0+gite2d141d-cp312-cp312-macosx_11_0_arm64.whl https://github.com/tmiw/pytorch-macos-packages/releases/download/v2.7.1-20250728/torch-2.7.1a0+gite2d141d-cp312-cp312-macosx_11_0_arm64.whl
 mv *arm64.whl arm64
 
 mkdir x86_64
 pip3 download --platform macosx_11_0_x86_64 --python-version 3.12 --only-binary=:all: filelock typing-extensions setuptools sympy networkx jinja2 fsspec optree opt-einsum numpy matplotlib
-wget -O x86_64/torch-2.7.1a0+gite2d141d-cp312-cp312-macosx_11_0_x86_64.whl https://k6aq.net/freedv-build/torch-2.7.1a0+gite2d141d-cp312-cp312-macosx_11_0_x86_64.whl
+wget -O x86_64/torch-2.7.1a0+gite2d141d-cp312-cp312-macosx_11_0_x86_64.whl https://github.com/tmiw/pytorch-macos-packages/releases/download/v2.7.1-20250728/torch-2.7.1a0+gite2d141d-cp312-cp312-macosx_11_0_x86_64.whl
 mv *x86_64.whl x86_64
 
 delete_pkg_if_universal2_downloaded "x86_64"
