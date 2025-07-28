@@ -108,6 +108,13 @@ int ResampleStep::getOutputSampleRate() const
 
 short* ResampleStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
+    if (numInputSamples == 0)
+    {
+        // Not generating any samples if we haven't gotten any.
+        *numOutputSamples = 0;
+        return inputSamples;
+    }
+
     if (inputSampleRate_ == outputSampleRate_)
     {
         // shortcut - just return what we got.
@@ -133,6 +140,6 @@ short* ResampleStep::execute(short* inputSamples, int numInputSamples, int* numO
         numInputSamples -= inputSize;
         *numOutputSamples += numSamples;
     }
- 
+
     return outputSamples_.get();
 }

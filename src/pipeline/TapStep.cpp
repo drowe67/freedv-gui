@@ -24,17 +24,40 @@
 
 #include <assert.h>
 #include <future>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
     : tapStep_(tapStep)
     , sampleRate_(sampleRate)
+    , endingTapThread_(false)
+    , tapThreadInput_(sampleRate)
 {
-    // empty
+    tapThread_ = std::thread([&]() {
+        const int SAMPLE_RATE_AT_10MS = sampleRate_ / 100;
+        short* fifoInput = new short[SAMPLE_RATE_AT_10MS];
+        assert(fifoInput != nullptr);
+
+        while (!endingTapThread_)
+        {
+            while (tapThreadInput_.numUsed() >= SAMPLE_RATE_AT_10MS)
+            {
+                int temp = 0;
+                tapThreadInput_.read(fifoInput, SAMPLE_RATE_AT_10MS);
+                tapStep_->execute(fifoInput, SAMPLE_RATE_AT_10MS, &temp);
+            }
+            std::this_thread::sleep_for(10ms);
+        }
+
+        delete[] fifoInput;
+    });
 }
 
 TapStep::~TapStep()
 {
-    // empty
+    endingTapThread_ = true;
+    tapThread_.join();
 }
 
 int TapStep::getInputSampleRate() const
@@ -51,9 +74,7 @@ short* TapStep::execute(short* inputSamples, int numInputSamples, int* numOutput
 {
     assert(tapStep_->getInputSampleRate() == sampleRate_);
     
-    int temp = 0;
-    tapStep_->execute(inputSamples, numInputSamples, &temp);
-    
+    tapThreadInput_.write(inputSamples, numInputSamples);
     *numOutputSamples = numInputSamples;
     return inputSamples;
 }
