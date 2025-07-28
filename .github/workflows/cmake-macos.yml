@@ -29,10 +29,10 @@ jobs:
     - name: Collect Workflow Telemetry
       uses: catchpoint/workflow-telemetry-action@v2
 
-    - name: Disable content caching
+    - name: Print current sysctl values (debug)
       shell: bash
       run: |
-          sudo AssetCacheManagerUtil deactivate
+          sysctl -a
 
     - uses: actions/checkout@v4
 
