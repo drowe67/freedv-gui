@@ -24,6 +24,8 @@
 #define AUDIO_PIPELINE__TAP_STEP_H
 
 #include <memory>
+#include <thread>
+#include "../util/GenericFIFO.h"
 
 #include "IPipelineStep.h"
 
@@ -40,6 +42,9 @@ public:
 private:
     std::shared_ptr<IPipelineStep> tapStep_;
     int sampleRate_;
+    std::thread tapThread_;
+    bool endingTapThread_;
+    GenericFIFO<short> tapThreadInput_;
 };
 
 #endif // AUDIO_PIPELINE__TAP_STEP_H
