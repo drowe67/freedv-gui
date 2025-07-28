@@ -160,7 +160,7 @@ void PlaybackStep::nonRtThreadEntry_()
         }
         g_mutexProtectingCallbackData.Unlock();
         
-        std::this_thread::sleep_for(250ms);
+        std::this_thread::sleep_for(100ms);
     }
 
     if (playbackResampler_ != nullptr)
