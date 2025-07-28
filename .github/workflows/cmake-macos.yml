@@ -29,6 +29,11 @@ jobs:
     - name: Collect Workflow Telemetry
       uses: catchpoint/workflow-telemetry-action@v2
 
+    - name: Disable content caching
+      shell: bash
+      run: |
+          sudo AssetCacheManagerUtil deactivate
+
     - uses: actions/checkout@v4
 
     - uses: gerlero/brew-install@v1
