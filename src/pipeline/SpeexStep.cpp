@@ -29,7 +29,7 @@
 SpeexStep::SpeexStep(int sampleRate)
     : sampleRate_(sampleRate)
     , numSamplesPerSpeexRun_((FRAME_DURATION_MS * sampleRate_) / MS_TO_SEC)
-    , inputSampleFifo_(numSamplesPerSpeexRun_)
+    , inputSampleFifo_(std::max(getInputSampleRate(), getOutputSampleRate()))
 {
     assert(numSamplesPerSpeexRun_ > 0);
     
