@@ -204,6 +204,7 @@ private:
     LPCNetEncState *lpcnetEncState_; 
     RADETransmitStep *radeTxStep_;
     std::atomic<int> sync_;
+    std::atomic<int> radeSnr_;
     rade_text_t radeTextPtr_;
     
     int preProcessRxFn_(ParallelStep* ps);

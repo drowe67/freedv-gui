@@ -702,7 +702,7 @@ float FreeDVInterface::getSNREstimate()
     if (txMode_ >= FREEDV_MODE_RADE)
     {
         // Special handling for RADE
-        return (getSync() ? rade_snrdB_3k_est(rade_) : 0);
+        return (getSync() ? radeSnr_.load(std::memory_order_acquire) : 0);
     }
     else
     {
@@ -794,6 +794,7 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
             auto finalSync = s->getSync();
             *getRxStateFn() = finalSync;
             sync_.store(finalSync, std::memory_order_release);
+            radeSnr_.store(s->getSnr(), std::memory_order_release);
         });
         
         auto pipeline = new AudioPipeline(inputSampleRate, outputSampleRate);

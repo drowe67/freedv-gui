@@ -50,10 +50,12 @@ public:
     virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
-    int getSync() const { return syncState_.load(); }
+    int getSync() const { return syncState_.load(std::memory_order_acquire); }
+    int getSnr() const { return snr_.load(std::memory_order_acquire); }
     
 private:
     std::atomic<int> syncState_;
+    std::atomic<int> snr_;
     struct rade* dv_;
     FARGANState* fargan_;
     GenericFIFO<short> inputSampleFifo_;
