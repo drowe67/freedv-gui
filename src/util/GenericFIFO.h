@@ -33,7 +33,7 @@ class GenericFIFO
 {
 public:
     GenericFIFO(int len);
-    GenericFIFO(const GenericFIFO<T>& rhs);
+    GenericFIFO(const GenericFIFO<T>& rhs) = delete;
     GenericFIFO(GenericFIFO<T>&& rhs);
     virtual ~GenericFIFO();
     
@@ -74,21 +74,6 @@ GenericFIFO<T>::~GenericFIFO()
     {
         delete[] buf;
     }
-}
-
-template<typename T>
-GenericFIFO<T>::GenericFIFO(const GenericFIFO<T>& rhs)
-    : buf(nullptr)
-    , pin(nullptr)
-    , pout(nullptr)
-    , nelem(rhs.nelem)
-{
-    buf = new T[nelem];
-    assert(buf != nullptr);
-    
-    memcpy(buf, rhs.buf, sizeof(T) * nelem);
-    pin = buf + (rhs.pin - rhs.buf);
-    pout = buf + (rhs.pout - rhs.buf);
 }
 
 template<typename T>

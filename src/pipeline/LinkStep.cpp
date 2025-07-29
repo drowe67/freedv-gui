@@ -39,14 +39,14 @@ LinkStep::~LinkStep()
 
 void LinkStep::clearFifo()
 {    
-    // Read data and then promptly throw it out.
     fifo_.reset();
 }
 
 short* LinkStep::InputStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    auto fifo = parent_->getFifo();
+    auto& fifo = parent_->getFifo();
     auto samplePtr = inputSamples;
+    
     if (numInputSamples > 0 && samplePtr != nullptr)
     {
         fifo.write(samplePtr, numInputSamples);
@@ -59,8 +59,8 @@ short* LinkStep::InputStep::execute(short* inputSamples, int numInputSamples, in
 
 short* LinkStep::OutputStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    auto fifo = parent_->getFifo();
-    *numOutputSamples = std::min(fifo.numUsed(), numInputSamples);
+    auto& fifo = parent_->getFifo();
+    *numOutputSamples = numInputSamples > 0 ? std::min(fifo.numUsed(), numInputSamples) : fifo.numUsed();
     
     if (*numOutputSamples > 0)
     {
