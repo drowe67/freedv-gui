@@ -68,11 +68,9 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
                 while (numToRead > 0)
                 {
                     utFeatures_.read(fifoRead, numToRead);
-                    featuresToWrite.reserve(featuresToWrite.size() + numToRead);
-                    for (int index = 0; index < numToRead; index++)
-                    {
-                        featuresToWrite.push_back(fifoRead[index]);
-                    }
+                    auto oldSize = featuresToWrite.size();
+                    featuresToWrite.resize(oldSize + numToRead);
+                    memcpy(&featuresToWrite[oldSize], fifoRead, sizeof(float) * numToRead);
                     numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
                 }
                                 
@@ -83,11 +81,9 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
             while (numToRead > 0)
             {
                 utFeatures_.read(fifoRead, numToRead);
-                featuresToWrite.reserve(featuresToWrite.size() + numToRead);
-                for (int index = 0; index < numToRead; index++)
-                {
-                    featuresToWrite.push_back(fifoRead[index]);
-                }
+                auto oldSize = featuresToWrite.size();
+                featuresToWrite.resize(oldSize + numToRead);
+                memcpy(&featuresToWrite[oldSize], fifoRead, sizeof(float) * numToRead);
                 numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
             }
             fwrite(&featuresToWrite[0], sizeof(float) * featuresToWrite.size(), 1, featuresFile_);

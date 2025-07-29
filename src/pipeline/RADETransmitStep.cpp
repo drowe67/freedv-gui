@@ -68,11 +68,9 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
                 while (numToRead > 0)
                 {
                     utFeatures_.read(fifoRead, numToRead);
-                    tmpFeatures.reserve(tmpFeatures.size() + numToRead);
-                    for (int index = 0; index < numToRead; index++)
-                    {
-                        tmpFeatures.push_back(fifoRead[index]);
-                    }
+                    auto oldSize = tmpFeatures.size();
+                    tmpFeatures.resize(oldSize + numToRead);
+                    memcpy(&tmpFeatures[oldSize], fifoRead, sizeof(float) * numToRead);
                     numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
                 }
                 
@@ -83,11 +81,9 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
             while (numToRead > 0)
             {
                 utFeatures_.read(fifoRead, numToRead);
-                tmpFeatures.reserve(tmpFeatures.size() + numToRead);
-                for (int index = 0; index < numToRead; index++)
-                {
-                    tmpFeatures.push_back(fifoRead[index]);
-                }
+                auto oldSize = tmpFeatures.size();
+                tmpFeatures.resize(oldSize + numToRead);
+                memcpy(&tmpFeatures[oldSize], fifoRead, sizeof(float) * numToRead);
                 numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
             }
             fwrite(&tmpFeatures[0], tmpFeatures.size() * sizeof(float), 1, featuresFile_);
