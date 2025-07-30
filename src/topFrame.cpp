@@ -424,7 +424,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     // Left side
     //=====================================================
     wxSizer* leftOuterSizer = new wxBoxSizer(wxVERTICAL);
-    wxSizer* leftSizer = new wxWrapSizer(wxVERTICAL);
+    wxSizer* leftSizer = new wxWrapSizer(wxVERTICAL, wxREMOVE_LEADING_SPACES);
 
     wxStaticBoxSizer* snrSizer;
     wxStaticBox* snrBox = new wxStaticBox(m_panel, wxID_ANY, _("SNR"), wxDefaultPosition, wxSize(100,-1));
@@ -451,7 +451,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_ckboxSNR->SetToolTip(_("Smooth but slow SNR estimation"));
     snrSizer->Add(m_ckboxSNR, 0, wxALIGN_CENTER_HORIZONTAL, 5);
 
-    leftSizer->Add(snrSizer, 2, wxEXPAND|wxALL, 2);
+    leftSizer->Add(snrSizer, 0, wxEXPAND|wxALL, 2);
 
     //------------------------------
     // Signal Level(vert. bargraph)
@@ -468,7 +468,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_gaugeLevel->SetToolTip(_("Peak of From Radio in Rx, or peak of From Mic in Tx mode.  If Red you should reduce your levels"));
     levelSizer->Add(m_gaugeLevel, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 10);
 
-    leftSizer->Add(levelSizer, 2, wxALL|wxEXPAND, 2);
+    leftSizer->Add(levelSizer, 0, wxALL|wxEXPAND, 2);
     
     //------------------------------
     // Sync  Indicator box
@@ -619,7 +619,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //=====================================================
     // Right side
     //=====================================================
-    rightSizer = new wxWrapSizer(wxVERTICAL);
+    rightSizer = new wxWrapSizer(wxVERTICAL, wxREMOVE_LEADING_SPACES);
 
     //=====================================================
     // Squelch Slider Control
@@ -654,7 +654,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_ckboxSQ = new wxCheckBox(squelchBox, wxID_ANY, _("Enable"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
 
     sbSizer3->Add(m_ckboxSQ, 0, wxALIGN_CENTER_HORIZONTAL, 0);
-    rightSizer->Add(sbSizer3, 2, wxALL | wxEXPAND, 2);
+    rightSizer->Add(sbSizer3, 0, wxALL | wxEXPAND, 2);
 
     // Transmit Level slider
     wxStaticBox* txLevelBox = new wxStaticBox(m_panel, wxID_ANY, _("TX &Attenuation"), wxDefaultPosition, wxSize(100,-1));
@@ -677,7 +677,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_txtTxLevelNum->SetMinSize(wxSize(100,-1));
     txLevelSizer->Add(m_txtTxLevelNum, 0, wxALIGN_CENTER_HORIZONTAL, 0);
     
-    rightSizer->Add(txLevelSizer, 2, wxALL | wxEXPAND, 2);
+    rightSizer->Add(txLevelSizer, 0, wxALL | wxEXPAND, 2);
     
     // Mic/Speaker Level slider
     wxStaticBox* micSpeakerBox = new wxStaticBox(m_panel, wxID_ANY, _("Mic/Spkr &Level"), wxDefaultPosition, wxSize(100,-1));
@@ -700,7 +700,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_txtMicSpkrLevelNum->SetMinSize(wxSize(100,-1));
     micSpeakerLevelSizer->Add(m_txtMicSpkrLevelNum, 0, wxALIGN_CENTER_HORIZONTAL, 0);
     
-    rightSizer->Add(micSpeakerLevelSizer, 2, wxALL | wxEXPAND, 2);
+    rightSizer->Add(micSpeakerLevelSizer, 0, wxALL | wxEXPAND, 2);
     
     /* new --- */
 
@@ -756,7 +756,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     m_btnTogPTT->SetToolTip(_("Push to Talk - Switch between Receive and Transmit. Right-click for additional options."));
     sbSizer5->Add(m_btnTogPTT, 0, wxALL | wxEXPAND, 5);
 
-    rightSizer->Add(sbSizer5, 2, wxALL|wxEXPAND, 2);
+    rightSizer->Add(sbSizer5, 0, wxALL|wxEXPAND, 2);
 
     // Frequency text field (PSK Reporter)
     m_freqBox = new wxStaticBox(m_panel, wxID_ANY, _("Report Freq. (MHz)"), wxDefaultPosition, wxSize(100,-1));
@@ -774,7 +774,7 @@ TopFrame::TopFrame(wxWindow* parent, wxWindowID id, const wxString& title, const
     //reportFrequencySizer->Add(reportFrequencyUnits, 0, wxALIGN_CENTER_VERTICAL, 1);
     
     rightSizer->Add(reportFrequencySizer, 0, wxALL, 2);
-    
+        
     bSizer1->Add(rightSizer, 0, wxALL|wxEXPAND, 3);
     
     m_panel->SetSizerAndFit(bSizer1);
