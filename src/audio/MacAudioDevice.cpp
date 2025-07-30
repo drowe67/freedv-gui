@@ -681,7 +681,7 @@ void MacAudioDevice::setHelperRealTime()
     
     // Define constants determining how much time the audio thread can
     // use in a given time quantum.  All times are in milliseconds.
-    const double kTimeQuantum = 60; // 60ms, 1/2 of a RADEV1 block and confirmed to be sufficient with Instruments analysis.
+    const double kTimeQuantum = 20; // 60ms, 1/2 of a RADEV1 block and confirmed to be sufficient with Instruments analysis.
     
     // Time guaranteed each quantum.
     const double kAudioTimeNeeded = kGuaranteedAudioDutyCycle * kTimeQuantum;
@@ -869,7 +869,7 @@ void MacAudioDevice::startRealTimeWork()
 
 void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, MS_TO_NSEC * (((chosenFrameSize_ * 1000) / sampleRate_) >> (fastMode ? 1 : 0))));
+    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, MS_TO_NSEC * (((getLatencyInMicroseconds() / 1000) / sampleRate_) >> (fastMode ? 1 : 0))));
 }
 
 void MacAudioDevice::clearHelperRealTime()
