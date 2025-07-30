@@ -229,6 +229,8 @@ void MacAudioDevice::start()
             maxFrameSize = 4096;
         }
         
+        chosenFrameSize_ = desiredFrameSize;
+        
         // Create AUHAL object
         AudioComponent comp;
         AudioComponentDescription desc;
@@ -867,7 +869,7 @@ void MacAudioDevice::startRealTimeWork()
 
 void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, (AUDIO_SAMPLE_BLOCK_MSEC * MS_TO_NSEC) >> (fastMode ? 1 : 0)));
+    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, MS_TO_NSEC * (((chosenFrameSize_ * 1000) / sampleRate_) >> (fastMode ? 1 : 0))));
 }
 
 void MacAudioDevice::clearHelperRealTime()
