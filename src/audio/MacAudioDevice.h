@@ -84,7 +84,8 @@ private:
     AudioBufferList* bufferList_;
     bool running_;
     int chosenFrameSize_;
-    
+    dispatch_time_t waitTime_;
+
     void joinWorkgroup_();
     void leaveWorkgroup_();
     

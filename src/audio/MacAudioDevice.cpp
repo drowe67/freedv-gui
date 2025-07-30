@@ -865,11 +865,14 @@ void MacAudioDevice::startRealTimeWork()
         leaveWorkgroup_();
         joinWorkgroup_();
     }
+
+    // Record current time. We'll wait up to (latency) ms after this.
+    waitTime_ = dispatch_time(DISPATCH_TIME_NOW, 0);
 }
 
 void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, MS_TO_NSEC * (((getLatencyInMicroseconds() / 1000) / sampleRate_) >> (fastMode ? 1 : 0))));
+    dispatch_semaphore_wait(sem_, dispatch_time(waitTime_, MS_TO_NSEC * (((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0))));
 }
 
 void MacAudioDevice::clearHelperRealTime()
