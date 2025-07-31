@@ -630,6 +630,8 @@ int MacAudioDevice::getLatencyInMicroseconds()
 
 void MacAudioDevice::setHelperRealTime()
 {
+    numRealTimeWorkers_++;
+
     // Set thread QoS to "user interactive"
     pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
 
@@ -682,7 +684,7 @@ void MacAudioDevice::setHelperRealTime()
     
     // Define constants determining how much time the audio thread can
     // use in a given time quantum.  All times are in milliseconds.
-    const double kTimeQuantum = 2.9; // 60ms, 1/2 of a RADEV1 block and confirmed to be sufficient with Instruments analysis.
+    const double kTimeQuantum = 60; // 60ms, 1/2 of a RADEV1 block and confirmed to be sufficient with Instruments analysis.
     
     // Time guaranteed each quantum.
     const double kAudioTimeNeeded = kGuaranteedAudioDutyCycle * kTimeQuantum;
@@ -751,8 +753,12 @@ OSStatus MacAudioDevice::InputProc_(
             
             thisObj->onAudioDataFunction(*thisObj, thisObj->inputFrames_, inNumberFrames, thisObj->onAudioDataState);
         }
-        
-        dispatch_semaphore_signal(thisObj->sem_);
+       
+        auto numWorkers = numRealTimeWorkers_.load() + 1; // extra wakeup to avoid brief dropouts
+        for (; numWorkers > 0; numWorkers--)
+        { 
+            dispatch_semaphore_signal(thisObj->sem_);
+        }
     }
     else
     {
@@ -890,6 +896,7 @@ void MacAudioDevice::stopRealTimeWork(bool fastMode)
 
 void MacAudioDevice::clearHelperRealTime()
 {
+    numRealTimeWorkers_--;
     leaveWorkgroup_();
 }
 
