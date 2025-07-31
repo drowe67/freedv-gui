@@ -1,9 +1,9 @@
 diff --git a/include/wx/msw/setup.h b/include/wx/msw/setup.h
-index b1d20d927..4f834c941 100644
+index a1c003d00..6be2b0e4e 100644
 --- a/include/wx/msw/setup.h
 +++ b/include/wx/msw/setup.h
-@@ -1648,7 +1648,7 @@
- #if defined(_MSC_VER) && _MSC_VER >= 1600
+@@ -1545,7 +1545,7 @@
+ #if defined(_MSC_VER)
      #define wxUSE_GRAPHICS_DIRECT2D wxUSE_GRAPHICS_CONTEXT
  #else
 -    #define wxUSE_GRAPHICS_DIRECT2D 0
@@ -12,10 +12,10 @@ index b1d20d927..4f834c941 100644
  
  // wxWebRequest backend based on WinHTTP.
 diff --git a/src/generic/tipwin.cpp b/src/generic/tipwin.cpp
-index f8ac37f5f..c95371d06 100644
+index 6cb9def89..f28d026f7 100644
 --- a/src/generic/tipwin.cpp
 +++ b/src/generic/tipwin.cpp
-@@ -33,6 +33,10 @@
+@@ -32,6 +32,10 @@
  #include "wx/display.h"
  #include "wx/vector.h"
  
@@ -26,7 +26,7 @@ index f8ac37f5f..c95371d06 100644
  // ----------------------------------------------------------------------------
  // constants
  // ----------------------------------------------------------------------------
-@@ -298,15 +302,38 @@ void wxTipWindowView::OnPaint(wxPaintEvent& WXUNUSED(event))
+@@ -296,22 +300,65 @@ void wxTipWindowView::OnPaint(wxPaintEvent& WXUNUSED(event))
      rect.width = size.x;
      rect.height = size.y;
  
@@ -47,11 +47,7 @@ index f8ac37f5f..c95371d06 100644
 +            context->SetBrush(wxBrush(GetBackgroundColour(), wxBRUSHSTYLE_SOLID));
 +            context->SetPen(wxPen(GetForegroundColour(), 1, wxPENSTYLE_SOLID));
 +            context->DrawRectangle(0, 0, rect.width - 1, rect.height - 1);
- 
--    // and then draw the text line by line
--    dc.SetTextBackground(GetBackgroundColour());
--    dc.SetTextForeground(GetForegroundColour());
--    dc.SetFont(GetFont());
++
 +            // and then draw the text line by line
 +            context->SetFont(GetFont(), GetForegroundColour());
 +        }
@@ -71,9 +67,10 @@ index f8ac37f5f..c95371d06 100644
 +        dc.SetFont(GetFont());
 +    }
  
+-    // and then draw the text line by line
      wxPoint pt;
      pt.x = TEXT_MARGIN_X;
-@@ -314,10 +341,26 @@ void wxTipWindowView::OnPaint(wxPaintEvent& WXUNUSED(event))
+     pt.y = TEXT_MARGIN_Y;
      const size_t count = m_textLines.size();
      for ( size_t n = 0; n < count; n++ )
      {
@@ -102,10 +99,10 @@ index f8ac37f5f..c95371d06 100644
  
  void wxTipWindowView::OnMouseClick(wxMouseEvent& WXUNUSED(event))
 diff --git a/src/msw/graphicsd2d.cpp b/src/msw/graphicsd2d.cpp
-index 89b74102a..e2a96a760 100644
+index 6faaa4e6d..3debdd80c 100644
 --- a/src/msw/graphicsd2d.cpp
 +++ b/src/msw/graphicsd2d.cpp
-@@ -4767,7 +4767,8 @@ void wxD2DContext::DoDrawText(const wxString& str, wxDouble x, wxDouble y)
+@@ -4797,7 +4797,8 @@ void wxD2DContext::DoDrawText(const wxString& str, wxDouble x, wxDouble y)
      GetRenderTarget()->DrawTextLayout(
          D2D1::Point2F(x, y),
          textLayout,
@@ -116,10 +113,10 @@ index 89b74102a..e2a96a760 100644
  
  void wxD2DContext::EnsureInitialized()
 diff --git a/src/osx/cocoa/dataview.mm b/src/osx/cocoa/dataview.mm
-index 93554f1c7..3e879b3c1 100644
+index c491289c3..3754fc9c5 100644
 --- a/src/osx/cocoa/dataview.mm
 +++ b/src/osx/cocoa/dataview.mm
-@@ -1573,6 +1573,7 @@ outlineView:(NSOutlineView*)outlineView
+@@ -1570,6 +1570,7 @@ -(id) init
          [self setDraggingSourceOperationMask:NSDragOperationEvery forLocal:NO];
          [self setDraggingSourceOperationMask:NSDragOperationEvery forLocal:YES];
          [self setTarget:self];

@@ -1,4 +1,4 @@
-set(WXWIDGETS_VERSION "3.2.8")
+set(WXWIDGETS_VERSION "3.3.1")
 
 # Ensure that the wxWidgets library is staticly built.
 set(wxBUILD_SHARED OFF CACHE BOOL "Build wx libraries as shared libs")
