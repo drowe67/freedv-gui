@@ -34,7 +34,7 @@
 // Forward declarations
 class LinkStep;
 
-#define ENABLE_PROCESSING_STATS
+//#define ENABLE_PROCESSING_STATS
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // class txRxThread - experimental tx/rx processing thread
