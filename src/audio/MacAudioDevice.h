@@ -94,6 +94,7 @@ private:
     static thread_local void* Workgroup_;
     static thread_local void* JoinToken_;
     static thread_local int CurrentCoreAudioId_;
+    static thread_local int64_t AddedWaitDuration_;
 
     static int DeviceIsAliveCallback_(
         AudioObjectID                       inObjectID,
