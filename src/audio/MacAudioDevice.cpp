@@ -684,7 +684,7 @@ void MacAudioDevice::setHelperRealTime()
     
     // Define constants determining how much time the audio thread can
     // use in a given time quantum.  All times are in milliseconds.
-    const double kTimeQuantum = 2.9;
+    const double kTimeQuantum = std::min(50.0, (chosenFrameSize_ / sampleRate_) * 1000.0);
     
     // Time guaranteed each quantum.
     const double kAudioTimeNeeded = kGuaranteedAudioDutyCycle * kTimeQuantum;
