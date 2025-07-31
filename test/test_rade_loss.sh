@@ -69,11 +69,6 @@ else
 fi
 RECORD_PID=$!
 
-# Start "radio"
-TIMES_BEFORE_KILL=1
-python3 $SCRIPTPATH/hamlibserver.py $RECORD_PID $TIMES_BEFORE_KILL &
-RADIO_PID=$!
-
 # Start FreeDV in test mode to record TX
 TX_ARGS="-txfile $(pwd)/rade_src/wav/all.wav -txfeaturefile $(pwd)/txfeatures.f32 "
 $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS >tmp.log 2>&1 &
@@ -123,8 +118,5 @@ if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     pactl unload-module $DRIVER_INDEX_FREEDV_COMPUTER_TO_RADIO
     pactl unload-module $DRIVER_INDEX_FREEDV_MICROPHONE_TO_COMPUTER
 fi
-
-# End radio process as it's no longer needed
-kill $RADIO_PID
 
 exit $FREEDV_EXIT_CODE
