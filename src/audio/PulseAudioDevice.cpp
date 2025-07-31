@@ -280,8 +280,12 @@ void PulseAudioDevice::setHelperRealTime()
 
 void PulseAudioDevice::startRealTimeWork()
 {
-    //sleepFallback_ = false;
+    sleepFallback_ = false;
     
+    if (clock_gettime(CLOCK_MONOTONIC, &ts_) == -1)
+    {
+        sleepFallback_ = true;
+    }
 }
 
 void PulseAudioDevice::stopRealTimeWork(bool fastMode)
@@ -300,10 +304,6 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
     }
     latency >>= fastMode ? 1 : 0;
 
-    if (clock_gettime(CLOCK_MONOTONIC, &ts_) == -1)
-    {
-        sleepFallback_ = true;
-    }
     ts_.tv_nsec += latency * 1000;
     ts_ = timespec_normalise(ts_);
 

@@ -630,7 +630,7 @@ int MacAudioDevice::getLatencyInMicroseconds()
 
 void MacAudioDevice::setHelperRealTime()
 {
-    numRealTimeWorkers_++;
+    numRealTimeWorkers_.fetch_add(1, std::memory_order_release);
 
     // Set thread QoS to "user interactive"
     pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
@@ -754,7 +754,7 @@ OSStatus MacAudioDevice::InputProc_(
             thisObj->onAudioDataFunction(*thisObj, thisObj->inputFrames_, inNumberFrames, thisObj->onAudioDataState);
         }
        
-        auto numWorkers = thisObj->numRealTimeWorkers_.load() + 1; // extra wakeup to avoid brief dropouts
+        auto numWorkers = thisObj->numRealTimeWorkers_.load(std::memory_order_acquire);
         for (; numWorkers > 0; numWorkers--)
         { 
             dispatch_semaphore_signal(thisObj->sem_);
@@ -896,7 +896,7 @@ void MacAudioDevice::stopRealTimeWork(bool fastMode)
 
 void MacAudioDevice::clearHelperRealTime()
 {
-    numRealTimeWorkers_--;
+    numRealTimeWorkers_.fetch_sub(1, std::memory_order_release);
     leaveWorkgroup_();
 }
 
