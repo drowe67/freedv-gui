@@ -393,7 +393,7 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
     if (enableFreq)
     {
         wxSizer* sizerFreq = new wxBoxSizer(wxVERTICAL);
-        newEQControl(parent, &eq.sliderFreq, &eq.valueFreq, sizerFreq, "Freq", maxSliderFreq);
+        newEQControl(eq.eqBox, &eq.sliderFreq, &eq.valueFreq, sizerFreq, "Freq", maxSliderFreq);
         bsEQ->Add(sizerFreq, 1, wxEXPAND);
         eq.maxFreqHz = maxFreqHz;
         eq.sliderFreqId = eq.sliderFreq->GetId();
@@ -411,7 +411,7 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
     }
     
     wxSizer* sizerGain = new wxBoxSizer(wxVERTICAL);
-    newEQControl(parent, &eq.sliderGain, &eq.valueGain, sizerGain, "Gain", SLIDER_MAX_GAIN);
+    newEQControl(eq.eqBox, &eq.sliderGain, &eq.valueGain, sizerGain, "Gain", SLIDER_MAX_GAIN);
     bsEQ->Add(sizerGain, 1, wxEXPAND);
     
 #if wxUSE_ACCESSIBILITY
@@ -424,7 +424,7 @@ EQ FilterDlg::newEQ(wxWindow* parent, wxSizer *bs, wxString eqName, float maxFre
     if (enableQ)
     {
         wxSizer* sizerQ = new wxBoxSizer(wxVERTICAL);
-        newEQControl(parent, &eq.sliderQ, &eq.valueQ, sizerQ, "Q", SLIDER_MAX_Q);
+        newEQControl(eq.eqBox, &eq.sliderQ, &eq.valueQ, sizerQ, "Q", SLIDER_MAX_Q);
         bsEQ->Add(sizerQ, 1, wxEXPAND);
 
 #if wxUSE_ACCESSIBILITY

@@ -91,7 +91,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox *sb_textMsg = new wxStaticBox(m_reportingTab, wxID_ANY, _("Txt Msg"));
     sbSizer_callSign = new wxStaticBoxSizer(sb_textMsg, wxVERTICAL);
 
-    m_txtCtrlCallSign = new wxTextCtrl(m_reportingTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+    m_txtCtrlCallSign = new wxTextCtrl(sb_textMsg, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
     m_txtCtrlCallSign->SetToolTip(_("Text message that you can send along with your voice. Note that this does not have error correction and thus is not guaranteed to arrive at the receiving station."));
     sbSizer_callSign->Add(m_txtCtrlCallSign, 0, wxALL | wxEXPAND, 5);
 
@@ -107,37 +107,37 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox* sbReporting = new wxStaticBox(m_reportingTab, wxID_ANY, _("Reporting"));
     
     sbSizerReportingRows = new wxStaticBoxSizer(sbReporting, wxVERTICAL);
-    m_ckboxReportingEnable = new wxCheckBox(m_reportingTab, wxID_ANY, _("Enable Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxReportingEnable = new wxCheckBox(sbReporting, wxID_ANY, _("Enable Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizerReportingGeneral->Add(m_ckboxReportingEnable, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    wxStaticText* labelPskCallsign = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Callsign:"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelPskCallsign = new wxStaticText(sbReporting, wxID_ANY, wxT("Callsign:"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizerReportingGeneral->Add(labelPskCallsign, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    m_txt_callsign = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(180,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    m_txt_callsign = new wxTextCtrl(sbReporting, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(180,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
     sbSizerReportingGeneral->Add(m_txt_callsign, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    wxStaticText* labelPskGridSquare = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Grid Square/Locator:"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelPskGridSquare = new wxStaticText(sbReporting, wxID_ANY, wxT("Grid Square/Locator:"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizerReportingGeneral->Add(labelPskGridSquare, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    m_txt_grid_square = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(180,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
+    m_txt_grid_square = new wxTextCtrl(sbReporting, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(180,-1), 0, wxTextValidator(wxFILTER_ALPHANUMERIC));
     sbSizerReportingGeneral->Add(m_txt_grid_square, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     sbSizerReportingRows->Add(sbSizerReportingGeneral, 0, wxALL | wxEXPAND, 5);
     
     wxBoxSizer* sbSizerReportingManualFrequency = new wxBoxSizer(wxHORIZONTAL);
-    m_ckboxManualFrequencyReporting = new wxCheckBox(m_reportingTab, wxID_ANY, _("Manual Frequency Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxManualFrequencyReporting = new wxCheckBox(sbReporting, wxID_ANY, _("Manual Frequency Reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizerReportingManualFrequency->Add(m_ckboxManualFrequencyReporting, 0, wxALL | wxEXPAND, 5);
     sbSizerReportingRows->Add(sbSizerReportingManualFrequency, 0, wxALL | wxEXPAND, 5);
     
     // PSK Reporter options
     wxBoxSizer* sbSizerReportingPSK = new wxBoxSizer(wxHORIZONTAL);
-    m_ckboxPskReporterEnable = new wxCheckBox(m_reportingTab, wxID_ANY, _("Report to PSK Reporter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxPskReporterEnable = new wxCheckBox(sbReporting, wxID_ANY, _("Report to PSK Reporter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizerReportingPSK->Add(m_ckboxPskReporterEnable, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     sbSizerReportingRows->Add(sbSizerReportingPSK, 0, wxALL | wxEXPAND, 5);
     
     // FreeDV Reporter options
     wxBoxSizer* sbSizerReportingFreeDV = new wxBoxSizer(wxHORIZONTAL);
-    m_ckboxFreeDVReporterEnable = new wxCheckBox(m_reportingTab, wxID_ANY, _("Report to FreeDV Reporter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDVReporterEnable = new wxCheckBox(sbReporting, wxID_ANY, _("Report to FreeDV Reporter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizerReportingFreeDV->Add(m_ckboxFreeDVReporterEnable, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     sbSizerReportingRows->Add(sbSizerReportingFreeDV, 0, wxALL | wxEXPAND, 5);
     
@@ -147,18 +147,18 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox* sbReportingFreeDV = new wxStaticBox(m_reportingTab, wxID_ANY, _("FreeDV Reporter"));
     wxStaticBoxSizer* sbSizerReportingFreeDVNoCall = new wxStaticBoxSizer(sbReportingFreeDV, wxHORIZONTAL);
 
-    wxStaticText* labelFreeDVHostName = new wxStaticText(m_reportingTab, wxID_ANY, wxT("Hostname:"), wxDefaultPosition, wxDefaultSize, 0);
-    m_freedvReporterHostname = new wxTextCtrl(m_reportingTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0);
+    wxStaticText* labelFreeDVHostName = new wxStaticText(sbReportingFreeDV, wxID_ANY, wxT("Hostname:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_freedvReporterHostname = new wxTextCtrl(sbReportingFreeDV, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(250, -1), 0);
     sbSizerReportingFreeDVNoCall->Add(labelFreeDVHostName, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     sbSizerReportingFreeDVNoCall->Add(m_freedvReporterHostname, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    m_useMetricDistances = new wxCheckBox(m_reportingTab, wxID_ANY, _("Distances in km"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_useMetricDistances = new wxCheckBox(sbReportingFreeDV, wxID_ANY, _("Distances in km"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizerReportingFreeDVNoCall->Add(m_useMetricDistances, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_useCardinalDirections = new wxCheckBox(m_reportingTab, wxID_ANY, _("Show cardinal directions"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_useCardinalDirections = new wxCheckBox(sbReportingFreeDV, wxID_ANY, _("Show cardinal directions"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizerReportingFreeDVNoCall->Add(m_useCardinalDirections, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_ckboxFreeDVReporterForceReceiveOnly = new wxCheckBox(m_reportingTab, wxID_ANY, _("Force RX Only reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDVReporterForceReceiveOnly = new wxCheckBox(sbReportingFreeDV, wxID_ANY, _("Force RX Only reporting"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizerReportingFreeDVNoCall->Add(m_ckboxFreeDVReporterForceReceiveOnly, 0,  wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     sizerReporting->Add(sbSizerReportingFreeDVNoCall, 0, wxALL | wxEXPAND, 5);
@@ -167,7 +167,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBoxSizer* sbSizer_callsign_list;
     wxStaticBox* sb_callsignList = new wxStaticBox(m_reportingTab, wxID_ANY, _("Callsign List"));
     sbSizer_callsign_list = new wxStaticBoxSizer(sb_callsignList, wxHORIZONTAL);
-    m_ckbox_use_utc_time = new wxCheckBox(m_reportingTab, wxID_ANY, _("Use UTC Time"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckbox_use_utc_time = new wxCheckBox(sb_callsignList, wxID_ANY, _("Use UTC Time"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_callsign_list->Add(m_ckbox_use_utc_time, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     sizerReporting->Add(sbSizer_callsign_list,0, wxALL | wxEXPAND, 5);
@@ -185,15 +185,15 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox *sb_ptt = new wxStaticBox(m_rigControlTab, wxID_ANY, _("PTT Options"));
     sbSizer_ptt = new wxStaticBoxSizer(sb_ptt, wxVERTICAL);
     
-    m_ckboxEnableSpacebarForPTT = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Enable Space key for PTT"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxEnableSpacebarForPTT = new wxCheckBox(sb_ptt, wxID_ANY, _("Enable Space key for PTT"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_ptt->Add(m_ckboxEnableSpacebarForPTT, 0, wxALL | wxALIGN_LEFT, 5);
 
     wxSizer* txRxDelaySizer = new wxBoxSizer(wxHORIZONTAL);
     
-    auto txRxDelayLabel = new wxStaticText(m_rigControlTab, wxID_ANY, _("TX/RX Delay (milliseconds): "));
+    auto txRxDelayLabel = new wxStaticText(sb_ptt, wxID_ANY, _("TX/RX Delay (milliseconds): "));
     txRxDelaySizer->Add(txRxDelayLabel, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtTxRxDelayMilliseconds = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(80,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtTxRxDelayMilliseconds = new wxTextCtrl(sb_ptt, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(80,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     m_txtTxRxDelayMilliseconds->SetToolTip(_("The amount of time to wait between toggling PTT and stopping/starting TX audio in milliseconds."));
     txRxDelaySizer->Add(m_txtTxRxDelayMilliseconds, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
@@ -205,21 +205,21 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     sbSizer_hamlib = new wxStaticBoxSizer(sb_hamlib, wxVERTICAL);
     
     wxSizer* freqModeSizer = new wxBoxSizer(wxHORIZONTAL);
-    m_ckboxEnableFreqModeChanges = new wxRadioButton(m_rigControlTab, wxID_ANY, _("Enable frequency and mode changes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    m_ckboxEnableFreqModeChanges = new wxRadioButton(sb_hamlib, wxID_ANY, _("Enable frequency and mode changes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
     freqModeSizer->Add(m_ckboxEnableFreqModeChanges, 0, wxALL | wxALIGN_LEFT, 5);
     
-    m_ckboxEnableFreqChangesOnly = new wxRadioButton(m_rigControlTab, wxID_ANY, _("Enable frequency changes only"), wxDefaultPosition, wxDefaultSize);
+    m_ckboxEnableFreqChangesOnly = new wxRadioButton(sb_hamlib, wxID_ANY, _("Enable frequency changes only"), wxDefaultPosition, wxDefaultSize);
     freqModeSizer->Add(m_ckboxEnableFreqChangesOnly, 0, wxALL | wxALIGN_LEFT, 5);
     
-    m_ckboxNoFreqModeChanges = new wxRadioButton(m_rigControlTab, wxID_ANY, _("No frequency or mode changes"), wxDefaultPosition, wxDefaultSize);
+    m_ckboxNoFreqModeChanges = new wxRadioButton(sb_hamlib, wxID_ANY, _("No frequency or mode changes"), wxDefaultPosition, wxDefaultSize);
     freqModeSizer->Add(m_ckboxNoFreqModeChanges, 0, wxALL | wxALIGN_LEFT, 5);
     
     sbSizer_hamlib->Add(freqModeSizer, 0, wxALL | wxALIGN_LEFT, 5);
     
-    m_ckboxUseAnalogModes = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Use USB/LSB instead of DIGU/DIGL"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxUseAnalogModes = new wxCheckBox(sb_hamlib, wxID_ANY, _("Use USB/LSB instead of DIGU/DIGL"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_hamlib->Add(m_ckboxUseAnalogModes, 0, wxALL | wxALIGN_LEFT, 5);
     
-    m_ckboxFrequencyEntryAsKHz = new wxCheckBox(m_rigControlTab, wxID_ANY, _("Frequency entry in kHz"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFrequencyEntryAsKHz = new wxCheckBox(sb_hamlib, wxID_ANY, _("Frequency entry in kHz"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_hamlib->Add(m_ckboxFrequencyEntryAsKHz, 0, wxALL | wxALIGN_LEFT, 5);
 
     sizerRigControl->Add(sbSizer_hamlib,0, wxALL | wxEXPAND, 5);
@@ -230,31 +230,31 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     
     wxGridBagSizer* gridSizer = new wxGridBagSizer(5, 5);
     
-    m_freqList = new wxListBox(m_rigControlTab, wxID_ANY, wxDefaultPosition, wxSize(350,150), 0, NULL, wxLB_SINGLE | wxLB_NEEDED_SB);
+    m_freqList = new wxListBox(sb_freqList, wxID_ANY, wxDefaultPosition, wxSize(350,150), 0, NULL, wxLB_SINGLE | wxLB_NEEDED_SB);
     gridSizer->Add(m_freqList, wxGBPosition(0, 0), wxGBSpan(5, 2), wxEXPAND);
 
     const int FREQ_LIST_BUTTON_WIDTH = 100; 
     const int FREQ_LIST_BUTTON_HEIGHT = -1;
-    m_freqListAdd = new wxButton(m_rigControlTab, wxID_ANY, _("Add"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
+    m_freqListAdd = new wxButton(sb_freqList, wxID_ANY, _("Add"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
     gridSizer->Add(m_freqListAdd, wxGBPosition(0, 2), wxDefaultSpan, wxEXPAND);
-    m_freqListRemove = new wxButton(m_rigControlTab, wxID_ANY, _("Remove"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
+    m_freqListRemove = new wxButton(sb_freqList, wxID_ANY, _("Remove"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
     gridSizer->Add(m_freqListRemove, wxGBPosition(1, 2), wxDefaultSpan, wxEXPAND);
-    m_freqListMoveUp = new wxButton(m_rigControlTab, wxID_ANY, _("Move Up"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
+    m_freqListMoveUp = new wxButton(sb_freqList, wxID_ANY, _("Move Up"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
     gridSizer->Add(m_freqListMoveUp, wxGBPosition(2, 2), wxDefaultSpan, wxEXPAND);
-    m_freqListMoveDown = new wxButton(m_rigControlTab, wxID_ANY, _("Move Down"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
+    m_freqListMoveDown = new wxButton(sb_freqList, wxID_ANY, _("Move Down"), wxDefaultPosition, wxSize(FREQ_LIST_BUTTON_WIDTH,FREQ_LIST_BUTTON_HEIGHT), 0);
     gridSizer->Add(m_freqListMoveDown, wxGBPosition(3, 2), wxDefaultSpan, wxEXPAND);
     
     if (wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz)
     {
-        m_labelEnterFreq = new wxStaticText(m_rigControlTab, wxID_ANY, wxT("Enter frequency (kHz):"), wxDefaultPosition, wxDefaultSize, 0);
+        m_labelEnterFreq = new wxStaticText(sb_freqList, wxID_ANY, wxT("Enter frequency (kHz):"), wxDefaultPosition, wxDefaultSize, 0);
     }
     else
     {
-        m_labelEnterFreq = new wxStaticText(m_rigControlTab, wxID_ANY, wxT("Enter frequency (MHz):"), wxDefaultPosition, wxDefaultSize, 0);
+        m_labelEnterFreq = new wxStaticText(sb_freqList, wxID_ANY, wxT("Enter frequency (MHz):"), wxDefaultPosition, wxDefaultSize, 0);
     }
     gridSizer->Add(m_labelEnterFreq, wxGBPosition(5, 0), wxDefaultSpan, wxALIGN_CENTER_VERTICAL);
     
-    m_txtCtrlNewFrequency = new wxTextCtrl(m_rigControlTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+    m_txtCtrlNewFrequency = new wxTextCtrl(sb_freqList, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
     gridSizer->Add(m_txtCtrlNewFrequency, wxGBPosition(5, 1), wxGBSpan(1, 2), wxEXPAND);
     
     sbSizer_freqList->Add(gridSizer, 0, wxALL, 5);
@@ -272,11 +272,11 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox* sb_waterfall = new wxStaticBox(m_displayTab, wxID_ANY, _("Waterfall Style"));
     wxStaticBoxSizer* sbSizer_waterfallColor =  new wxStaticBoxSizer(sb_waterfall, wxHORIZONTAL);
     
-    m_waterfallColorScheme1 = new wxRadioButton(m_displayTab, wxID_ANY, _("Multicolor"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    m_waterfallColorScheme1 = new wxRadioButton(sb_waterfall, wxID_ANY, _("Multicolor"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
     sbSizer_waterfallColor->Add(m_waterfallColorScheme1, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    m_waterfallColorScheme2 = new wxRadioButton(m_displayTab, wxID_ANY, _("Black && White"), wxDefaultPosition, wxDefaultSize);
+    m_waterfallColorScheme2 = new wxRadioButton(sb_waterfall, wxID_ANY, _("Black && White"), wxDefaultPosition, wxDefaultSize);
     sbSizer_waterfallColor->Add(m_waterfallColorScheme2, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    m_waterfallColorScheme3 = new wxRadioButton(m_displayTab, wxID_ANY, _("Blue Tint"), wxDefaultPosition, wxDefaultSize);
+    m_waterfallColorScheme3 = new wxRadioButton(sb_waterfall, wxID_ANY, _("Blue Tint"), wxDefaultPosition, wxDefaultSize);
     sbSizer_waterfallColor->Add(m_waterfallColorScheme3, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
     sizerDisplay->Add(sbSizer_waterfallColor, 0, wxALL | wxEXPAND, 5);
@@ -290,51 +290,51 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxFlexGridSizer* reporterColorSizer = new wxFlexGridSizer(5, wxSize(5, 5));
 
     // TX colors
-    wxStaticText* labelReporterTxStation = new wxStaticText(m_displayTab, wxID_ANY, wxT("TX Stations:"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelReporterTxStation = new wxStaticText(sb_reporterColor, wxID_ANY, wxT("TX Stations:"), wxDefaultPosition, wxDefaultSize, 0);
     reporterColorSizer->Add(labelReporterTxStation, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    wxStaticText* labelReporterTxBackgroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Background"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelReporterTxBackgroundColor = new wxStaticText(sb_reporterColor, wxID_ANY, wxT("Background"), wxDefaultPosition, wxDefaultSize, 0);
     reporterColorSizer->Add(labelReporterTxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_freedvReporterTxBackgroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
+    m_freedvReporterTxBackgroundColor = new wxColourPickerCtrl(sb_reporterColor, wxID_ANY);
     reporterColorSizer->Add(m_freedvReporterTxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    wxStaticText* labelReporterTxForegroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Foreground"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelReporterTxForegroundColor = new wxStaticText(sb_reporterColor, wxID_ANY, wxT("Foreground"), wxDefaultPosition, wxDefaultSize, 0);
     reporterColorSizer->Add(labelReporterTxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_freedvReporterTxForegroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
+    m_freedvReporterTxForegroundColor = new wxColourPickerCtrl(sb_reporterColor, wxID_ANY);
     reporterColorSizer->Add(m_freedvReporterTxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     // RX colors
-    wxStaticText* labelReporterRxStation = new wxStaticText(m_displayTab, wxID_ANY, wxT("RX Stations:"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelReporterRxStation = new wxStaticText(sb_reporterColor, wxID_ANY, wxT("RX Stations:"), wxDefaultPosition, wxDefaultSize, 0);
     reporterColorSizer->Add(labelReporterRxStation, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    wxStaticText* labelReporterRxBackgroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Background"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelReporterRxBackgroundColor = new wxStaticText(sb_reporterColor, wxID_ANY, wxT("Background"), wxDefaultPosition, wxDefaultSize, 0);
     reporterColorSizer->Add(labelReporterRxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_freedvReporterRxBackgroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
+    m_freedvReporterRxBackgroundColor = new wxColourPickerCtrl(sb_reporterColor, wxID_ANY);
     reporterColorSizer->Add(m_freedvReporterRxBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    wxStaticText* labelReporterRxForegroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Foreground"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelReporterRxForegroundColor = new wxStaticText(sb_reporterColor, wxID_ANY, wxT("Foreground"), wxDefaultPosition, wxDefaultSize, 0);
     reporterColorSizer->Add(labelReporterRxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_freedvReporterRxForegroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
+    m_freedvReporterRxForegroundColor = new wxColourPickerCtrl(sb_reporterColor, wxID_ANY);
     reporterColorSizer->Add(m_freedvReporterRxForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     // Message colors
-    wxStaticText* labelReporterMsgStation = new wxStaticText(m_displayTab, wxID_ANY, wxT("Message updates:"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelReporterMsgStation = new wxStaticText(sb_reporterColor, wxID_ANY, wxT("Message updates:"), wxDefaultPosition, wxDefaultSize, 0);
     reporterColorSizer->Add(labelReporterMsgStation, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    wxStaticText* labelReporterMsgBackgroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Background"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelReporterMsgBackgroundColor = new wxStaticText(sb_reporterColor, wxID_ANY, wxT("Background"), wxDefaultPosition, wxDefaultSize, 0);
     reporterColorSizer->Add(labelReporterMsgBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_freedvReporterMsgBackgroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
+    m_freedvReporterMsgBackgroundColor = new wxColourPickerCtrl(sb_reporterColor, wxID_ANY);
     reporterColorSizer->Add(m_freedvReporterMsgBackgroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    wxStaticText* labelReporterMsgForegroundColor = new wxStaticText(m_displayTab, wxID_ANY, wxT("Foreground"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText* labelReporterMsgForegroundColor = new wxStaticText(sb_reporterColor, wxID_ANY, wxT("Foreground"), wxDefaultPosition, wxDefaultSize, 0);
     reporterColorSizer->Add(labelReporterMsgForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_freedvReporterMsgForegroundColor = new wxColourPickerCtrl(m_displayTab, wxID_ANY);
+    m_freedvReporterMsgForegroundColor = new wxColourPickerCtrl(sb_reporterColor, wxID_ANY);
     reporterColorSizer->Add(m_freedvReporterMsgForegroundColor, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     sbSizer_reporterColor->Add(reporterColorSizer, 0, wxALL, 5);
@@ -350,33 +350,34 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // Voice Keyer 
     //----------------------------------------------------------------------
 
-    wxStaticBoxSizer* staticBoxSizer28a = new wxStaticBoxSizer( new wxStaticBox(m_keyerTab, wxID_ANY, _("Voice Keyer")), wxVERTICAL);
+    wxStaticBox* voiceKeyerBox = new wxStaticBox(m_keyerTab, wxID_ANY, _("Voice Keyer"));
+    wxStaticBoxSizer* staticBoxSizer28a = new wxStaticBoxSizer(voiceKeyerBox, wxVERTICAL);
 
     wxBoxSizer* voiceKeyerSizer1 = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer* voiceKeyerSizer2 = new wxBoxSizer(wxHORIZONTAL);
 
-    wxStaticText *m_staticText28b = new wxStaticText(m_keyerTab, wxID_ANY, _("File location: "), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticText28b = new wxStaticText(voiceKeyerBox, wxID_ANY, _("File location: "), wxDefaultPosition, wxDefaultSize, 0);
     voiceKeyerSizer1->Add(m_staticText28b, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtCtrlVoiceKeyerWaveFilePath = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(450,-1), 0);
+    m_txtCtrlVoiceKeyerWaveFilePath = new wxTextCtrl(voiceKeyerBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(450,-1), 0);
     m_txtCtrlVoiceKeyerWaveFilePath->SetToolTip(_("Path to Voice Keyer audio files"));
     voiceKeyerSizer1->Add(m_txtCtrlVoiceKeyerWaveFilePath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_buttonChooseVoiceKeyerWaveFilePath = new wxButton(m_keyerTab, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_buttonChooseVoiceKeyerWaveFilePath = new wxButton(voiceKeyerBox, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
     m_buttonChooseVoiceKeyerWaveFilePath->SetMinSize(wxSize(120, -1));
     voiceKeyerSizer1->Add(m_buttonChooseVoiceKeyerWaveFilePath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    wxStaticText *m_staticText28c = new wxStaticText(m_keyerTab, wxID_ANY, _("Rx Pause:"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticText28c = new wxStaticText(voiceKeyerBox, wxID_ANY, _("Rx Pause:"), wxDefaultPosition, wxDefaultSize, 0);
     voiceKeyerSizer2->Add(m_staticText28c, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtCtrlVoiceKeyerRxPause = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0);
+    m_txtCtrlVoiceKeyerRxPause = new wxTextCtrl(voiceKeyerBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0);
     m_txtCtrlVoiceKeyerRxPause->SetToolTip(_("How long to wait in Rx mode before repeat"));
     voiceKeyerSizer2->Add(m_txtCtrlVoiceKeyerRxPause, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    wxStaticText *m_staticText28d = new wxStaticText(m_keyerTab, wxID_ANY, _("Repeats:"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticText28d = new wxStaticText(voiceKeyerBox, wxID_ANY, _("Repeats:"), wxDefaultPosition, wxDefaultSize, 0);
     voiceKeyerSizer2->Add(m_staticText28d, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtCtrlVoiceKeyerRepeats = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0);
+    m_txtCtrlVoiceKeyerRepeats = new wxTextCtrl(voiceKeyerBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0);
     m_txtCtrlVoiceKeyerRepeats->SetToolTip(_("How long to wait in Rx mode before repeat"));
     voiceKeyerSizer2->Add(m_txtCtrlVoiceKeyerRepeats, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
@@ -391,18 +392,19 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     // Quick Record
     //------------------------------
     
-    wxStaticBoxSizer* sbsQuickRecord = new wxStaticBoxSizer( new wxStaticBox(m_keyerTab, wxID_ANY, _("Quick Record")), wxVERTICAL);
+    wxStaticBox* quickRecordBox = new wxStaticBox(m_keyerTab, wxID_ANY, _("Quick Record"));
+    wxStaticBoxSizer* sbsQuickRecord = new wxStaticBoxSizer(quickRecordBox, wxVERTICAL);
 
     wxBoxSizer* quickRecordSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    wxStaticText *staticTextQRPath = new wxStaticText(m_keyerTab, wxID_ANY, _("Location to save recordings: "), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *staticTextQRPath = new wxStaticText(quickRecordBox, wxID_ANY, _("Location to save recordings: "), wxDefaultPosition, wxDefaultSize, 0);
     quickRecordSizer->Add(staticTextQRPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtCtrlQuickRecordPath = new wxTextCtrl(m_keyerTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(450,-1), 0);
+    m_txtCtrlQuickRecordPath = new wxTextCtrl(quickRecordBox, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(450,-1), 0);
     m_txtCtrlQuickRecordPath->SetToolTip(_("Location which to save recordings started via the Record button in the main window."));
     quickRecordSizer->Add(m_txtCtrlQuickRecordPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_buttonChooseQuickRecordPath = new wxButton(m_keyerTab, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_buttonChooseQuickRecordPath = new wxButton(quickRecordBox, wxID_APPLY, _("Choose"), wxDefaultPosition, wxSize(-1,-1), 0);
     m_buttonChooseQuickRecordPath->SetMinSize(wxSize(120, -1));
     quickRecordSizer->Add(m_buttonChooseQuickRecordPath, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
@@ -421,10 +423,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox *sb_freedv700 = new wxStaticBox(m_modemTab, wxID_ANY, _("Modem Options"));
     sbSizer_freedv700 = new wxStaticBoxSizer(sb_freedv700, wxHORIZONTAL);
 
-    m_ckboxFreeDV700txClip = new wxCheckBox(m_modemTab, wxID_ANY, _("Clipping"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDV700txClip = new wxCheckBox(sb_freedv700, wxID_ANY, _("Clipping"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700txClip, 0, wxALL | wxALIGN_LEFT, 5);
 
-    m_ckboxFreeDV700txBPF = new wxCheckBox(m_modemTab, wxID_ANY, _("TX Band Pass Filter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDV700txBPF = new wxCheckBox(sb_freedv700, wxID_ANY, _("TX Band Pass Filter"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_freedv700->Add(m_ckboxFreeDV700txBPF, 0, wxALL | wxALIGN_LEFT, 5);
 
     sizerModem->Add(sbSizer_freedv700, 0, wxALL|wxEXPAND, 5);
@@ -436,7 +438,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox *sb_duplex = new wxStaticBox(m_modemTab, wxID_ANY, _("Half/Full Duplex Operation"));
     wxStaticBoxSizer* sbSizer_duplex = new wxStaticBoxSizer(sb_duplex, wxHORIZONTAL);
 
-    m_ckHalfDuplex = new wxCheckBox(m_modemTab, wxID_ANY, _("Half Duplex"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckHalfDuplex = new wxCheckBox(sb_duplex, wxID_ANY, _("Half Duplex"), wxDefaultPosition, wxSize(-1,-1), 0);
     sbSizer_duplex->Add(m_ckHalfDuplex, 0, wxALL | wxALIGN_LEFT|wxALIGN_CENTER_VERTICAL, 5);
 
     sizerModem->Add(sbSizer_duplex,0, wxALL | wxEXPAND, 5);
@@ -448,12 +450,12 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBoxSizer* sbSizer_multirx = new wxStaticBoxSizer(sb_multirx, wxVERTICAL);
 
     wxBoxSizer* sbSizer_simultaneousDecode = new wxBoxSizer(wxHORIZONTAL);
-    m_ckboxMultipleRx = new wxCheckBox(m_modemTab, wxID_ANY, _("Simultaneously Decode All HF Modes"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckboxMultipleRx = new wxCheckBox(sb_multirx, wxID_ANY, _("Simultaneously Decode All HF Modes"), wxDefaultPosition, wxSize(-1,-1), 0);
     sbSizer_simultaneousDecode->Add(m_ckboxMultipleRx, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     sbSizer_multirx->Add(sbSizer_simultaneousDecode, 0, wxALIGN_LEFT, 0);
     
     wxBoxSizer* sbSizer_singleThread = new wxBoxSizer(wxHORIZONTAL);
-    m_ckboxSingleRxThread = new wxCheckBox(m_modemTab, wxID_ANY, _("Use single thread for multiple RX operation"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_ckboxSingleRxThread = new wxCheckBox(sb_multirx, wxID_ANY, _("Use single thread for multiple RX operation"), wxDefaultPosition, wxSize(-1,-1), 0);
     sbSizer_singleThread->Add(m_ckboxSingleRxThread, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     sbSizer_multirx->Add(sbSizer_singleThread, 0, wxALIGN_LEFT, 0);
     
@@ -463,10 +465,10 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBoxSizer* sbSizer_modemstats = new wxStaticBoxSizer(sb_modemstats, wxVERTICAL);
 
     wxBoxSizer* sbSizer_statsResetTime = new wxBoxSizer(wxHORIZONTAL);
-    wxStaticText *m_staticTextResetTime = new wxStaticText(m_modemTab, wxID_ANY, _("Time before resetting stats (in seconds):"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticTextResetTime = new wxStaticText(sb_modemstats, wxID_ANY, _("Time before resetting stats (in seconds):"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_statsResetTime->Add(m_staticTextResetTime, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_statsResetTime = new wxTextCtrl(m_modemTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_statsResetTime = new wxTextCtrl(sb_modemstats, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(50,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_statsResetTime->Add(m_statsResetTime, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     sbSizer_modemstats->Add(sbSizer_statsResetTime, 0, wxALIGN_LEFT, 0);
@@ -486,31 +488,31 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox *sb_testFrames = new wxStaticBox(m_simulationTab, wxID_ANY, _("Testing and Channel Simulation"));
     sbSizer_testFrames = new wxStaticBoxSizer(sb_testFrames, wxVERTICAL);
 
-    m_ckboxTestFrame = new wxCheckBox(m_simulationTab, wxID_ANY, _("Test Frames"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxTestFrame = new wxCheckBox(sb_testFrames, wxID_ANY, _("Test Frames"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_testFrames->Add(m_ckboxTestFrame, 0, wxALL | wxALIGN_LEFT, 5);
 
     wxBoxSizer* channelNoiseSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    m_ckboxChannelNoise = new wxCheckBox(m_simulationTab, wxID_ANY, _("Channel Noise"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxChannelNoise = new wxCheckBox(sb_testFrames, wxID_ANY, _("Channel Noise"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     channelNoiseSizer->Add(m_ckboxChannelNoise, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    wxStaticText *channelNoiseDbLabel = new wxStaticText(m_simulationTab, wxID_ANY, _("SNR (dB):"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *channelNoiseDbLabel = new wxStaticText(sb_testFrames, wxID_ANY, _("SNR (dB):"), wxDefaultPosition, wxDefaultSize, 0);
     channelNoiseSizer->Add(channelNoiseDbLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtNoiseSNR = new wxTextCtrl(m_simulationTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_NUMERIC));
+    m_txtNoiseSNR = new wxTextCtrl(sb_testFrames, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_NUMERIC));
     channelNoiseSizer->Add(m_txtNoiseSNR, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     sbSizer_testFrames->Add(channelNoiseSizer);
 
     wxBoxSizer* attnCarrierSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    m_ckboxAttnCarrierEn = new wxCheckBox(m_simulationTab, wxID_ANY, _("Attn Carrier"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxAttnCarrierEn = new wxCheckBox(sb_testFrames, wxID_ANY, _("Attn Carrier"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     attnCarrierSizer->Add(m_ckboxAttnCarrierEn, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    wxStaticText *carrierLabel = new wxStaticText(m_simulationTab, wxID_ANY, _("Carrier:"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *carrierLabel = new wxStaticText(sb_testFrames, wxID_ANY, _("Carrier:"), wxDefaultPosition, wxDefaultSize, 0);
     attnCarrierSizer->Add(carrierLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
     
-    m_txtAttnCarrier = new wxTextCtrl(m_simulationTab, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtAttnCarrier = new wxTextCtrl(sb_testFrames, wxID_ANY,  wxEmptyString, wxDefaultPosition, wxSize(60,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     attnCarrierSizer->Add(m_txtAttnCarrier, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     sbSizer_testFrames->Add(attnCarrierSizer);
@@ -525,19 +527,19 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox *sb_tone = new wxStaticBox(m_simulationTab, wxID_ANY, _("Simulated Interference Tone"));
     sbSizer_tone = new wxStaticBoxSizer(sb_tone, wxHORIZONTAL);
 
-    m_ckboxTone = new wxCheckBox(m_simulationTab, wxID_ANY, _("Tone"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxTone = new wxCheckBox(sb_tone, wxID_ANY, _("Tone"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_tone->Add(m_ckboxTone, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    wxStaticText *toneFreqLabel = new wxStaticText(m_simulationTab, wxID_ANY, _("Freq (Hz):"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *toneFreqLabel = new wxStaticText(sb_tone, wxID_ANY, _("Freq (Hz):"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_tone->Add(toneFreqLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtToneFreqHz = new wxTextCtrl(m_simulationTab, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtToneFreqHz = new wxTextCtrl(sb_tone, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_tone->Add(m_txtToneFreqHz, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
-    wxStaticText *m_staticTextta = new wxStaticText(m_simulationTab, wxID_ANY, _("Amplitude (pk): "), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticTextta = new wxStaticText(sb_tone, wxID_ANY, _("Amplitude (pk): "), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_tone->Add(m_staticTextta, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_txtToneAmplitude = new wxTextCtrl(m_simulationTab, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
+    m_txtToneAmplitude = new wxTextCtrl(sb_tone, wxID_ANY,  "1000", wxDefaultPosition, wxSize(90,-1), 0, wxTextValidator(wxFILTER_DIGITS));
     sbSizer_tone->Add(m_txtToneAmplitude, 0, wxALL | wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
 
     sizerSimulation->Add(sbSizer_tone,0, wxALL|wxEXPAND, 5);
@@ -556,7 +558,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxStaticBox *sb_console = new wxStaticBox(m_debugTab, wxID_ANY, _("Debug: Windows"));
     sbSizer_console = new wxStaticBoxSizer(sb_console, wxHORIZONTAL);
 
-    m_ckboxDebugConsole = new wxCheckBox(m_debugTab, wxID_ANY, _("Show Console"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxDebugConsole = new wxCheckBox(sb_console, wxID_ANY, _("Show Console"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_console->Add(m_ckboxDebugConsole, 0, wxALIGN_LEFT, 5);
 
     sizerDebug->Add(sbSizer_console,0, wxALL|wxEXPAND, 5);
@@ -574,25 +576,25 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     // FIFO size in ms
 
-    wxStaticText *m_staticTextFifo1 = new wxStaticText(m_debugTab, wxID_ANY, _("Fifo Size (ms):"), wxDefaultPosition, wxDefaultSize, 0);
+    wxStaticText *m_staticTextFifo1 = new wxStaticText(sb_fifo, wxID_ANY, _("Fifo Size (ms):"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_fifo1->Add(m_staticTextFifo1, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    m_txtCtrlFifoSize = new wxTextCtrl(m_debugTab, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(80,-1), 0);
+    m_txtCtrlFifoSize = new wxTextCtrl(sb_fifo, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(80,-1), 0);
     sbSizer_fifo1->Add(m_txtCtrlFifoSize, 0, wxALL, 5);
 
     // Reset stats button
     
-    m_BtnFifoReset = new wxButton(m_debugTab, wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
+    m_BtnFifoReset = new wxButton(sb_fifo, wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
     sbSizer_fifo1->Add(m_BtnFifoReset, 0,  wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 5);
     sbSizer_fifo->Add(sbSizer_fifo1);
 
     // text lines with fifo counters
     
-    m_textPA1 = new wxStaticText(m_debugTab, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textPA1 = new wxStaticText(sb_fifo, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_fifo->Add(m_textPA1, 0, wxALIGN_LEFT, 1);
-    m_textPA2 = new wxStaticText(m_debugTab, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textPA2 = new wxStaticText(sb_fifo, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_fifo->Add(m_textPA2, 0, wxALIGN_LEFT, 1);
 
-    m_textFifos = new wxStaticText(m_debugTab, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
+    m_textFifos = new wxStaticText(sb_fifo, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT);
     sbSizer_fifo->Add(m_textFifos, 0, wxALIGN_LEFT, 1);
 
     // 2nd line
@@ -604,18 +606,18 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     wxBoxSizer* sbDebugOptionsSizer2 = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer* sbDebugOptionsSizer3 = new wxBoxSizer(wxHORIZONTAL);
 
-    m_ckboxVerbose = new wxCheckBox(m_debugTab, wxID_ANY, _("Verbose"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxVerbose = new wxCheckBox(sb_fifo2, wxID_ANY, _("Verbose"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer->Add(m_ckboxVerbose, 0, wxALL | wxALIGN_LEFT, 5);   
-    m_ckboxTxRxThreadPriority = new wxCheckBox(m_debugTab, wxID_ANY, _("txRxThreadPriority"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxTxRxThreadPriority = new wxCheckBox(sb_fifo2, wxID_ANY, _("txRxThreadPriority"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer->Add(m_ckboxTxRxThreadPriority, 0, wxALL | wxALIGN_LEFT, 5);
-    m_ckboxTxRxDumpTiming = new wxCheckBox(m_debugTab, wxID_ANY, _("txRxDumpTiming"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxTxRxDumpTiming = new wxCheckBox(sb_fifo2, wxID_ANY, _("txRxDumpTiming"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer->Add(m_ckboxTxRxDumpTiming, 0, wxALL | wxALIGN_LEFT, 5);
-    m_ckboxTxRxDumpFifoState = new wxCheckBox(m_debugTab, wxID_ANY, _("txRxDumpFifoState"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxTxRxDumpFifoState = new wxCheckBox(sb_fifo2, wxID_ANY, _("txRxDumpFifoState"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer2->Add(m_ckboxTxRxDumpFifoState, 0, wxALL | wxALIGN_LEFT, 5);   
-    m_ckboxFreeDVAPIVerbose = new wxCheckBox(m_debugTab, wxID_ANY, _("APiVerbose"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_ckboxFreeDVAPIVerbose = new wxCheckBox(sb_fifo2, wxID_ANY, _("APiVerbose"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer2->Add(m_ckboxFreeDVAPIVerbose, 0, wxALL | wxALIGN_LEFT, 5);   
     
-    m_experimentalFeatures = new wxCheckBox(m_debugTab, wxID_ANY, _("Enable Experimental Features"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    m_experimentalFeatures = new wxCheckBox(sb_fifo2, wxID_ANY, _("Enable Experimental Features"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbDebugOptionsSizer3->Add(m_experimentalFeatures, 0, wxALL | wxALIGN_LEFT, 5);   
 
     sbSizer_fifo2->Add(sbDebugOptionsSizer, 0, wxALL | wxEXPAND | 0);
@@ -656,6 +658,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     //-------------------
     // Tab ordering for accessibility
     //-------------------
+#if 0
     m_txtCtrlCallSign->MoveBeforeInTabOrder(m_ckboxReportingEnable);
     m_ckboxReportingEnable->MoveBeforeInTabOrder(m_txt_callsign);
     m_txt_callsign->MoveBeforeInTabOrder(m_txt_grid_square);
@@ -714,6 +717,7 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
     m_notebook->MoveBeforeInTabOrder(m_sdbSizer5OK);
     m_sdbSizer5OK->MoveBeforeInTabOrder(m_sdbSizer5Cancel);
     m_sdbSizer5Cancel->MoveBeforeInTabOrder(m_sdbSizer5Apply);
+#endif
     
     // Connect Events -------------------------------------------------------
 
