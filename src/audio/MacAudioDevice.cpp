@@ -754,7 +754,7 @@ OSStatus MacAudioDevice::InputProc_(
             thisObj->onAudioDataFunction(*thisObj, thisObj->inputFrames_, inNumberFrames, thisObj->onAudioDataState);
         }
        
-        auto numWorkers = numRealTimeWorkers_.load() + 1; // extra wakeup to avoid brief dropouts
+        auto numWorkers = thisObj->numRealTimeWorkers_.load() + 1; // extra wakeup to avoid brief dropouts
         for (; numWorkers > 0; numWorkers--)
         { 
             dispatch_semaphore_signal(thisObj->sem_);
