@@ -184,7 +184,7 @@ int PulseAudioDevice::getLatencyInMicroseconds()
 
 void PulseAudioDevice::setHelperRealTime()
 {
-    numRealTimeWorkers_++;
+    numRealTimeWorkers_.fetch_add(1, std::memory_order_relaxed);
 
     // XXX: We can't currently enable RT scheduling on Linux
     // due to unreliable behavior surrounding how long it takes to
@@ -326,7 +326,7 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
 void PulseAudioDevice::clearHelperRealTime()
 {
     IAudioDevice::clearHelperRealTime();
-    numRealTimeWorkers_--;
+    numRealTimeWorkers_.fetch_sub(1, std::memory_order_relaxed);
 }
 
 bool PulseAudioDevice::mustStopWork()
@@ -351,7 +351,7 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
         {
             thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(data), length / thisObj->getNumChannels() / sizeof(short), thisObj->onAudioDataState);
         }
-        auto numWorkers = thisObj->numRealTimeWorkers_.load() + 1; // bonus wakeup to avoid slight drops
+        auto numWorkers = thisObj->numRealTimeWorkers_.load();
         for (; numWorkers > 0; numWorkers--)
         {
             sem_post(&thisObj->sem_);
