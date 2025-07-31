@@ -39,6 +39,7 @@ using namespace std::placeholders;
 thread_local void* MacAudioDevice::Workgroup_ = nullptr;
 thread_local void* MacAudioDevice::JoinToken_ = nullptr;
 thread_local int MacAudioDevice::CurrentCoreAudioId_ = 0;
+thread_local int64_t MacAudioDevice::AddedWaitDuration_ = 0;
 
 // Conversion factors.
 constexpr static int MS_TO_SEC = 1000;
@@ -872,7 +873,22 @@ void MacAudioDevice::startRealTimeWork()
 
 void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    dispatch_semaphore_wait(sem_, dispatch_time(waitTime_, MS_TO_NSEC * (((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0))));
+    auto timeToWaitMilliseconds = (((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0)));
+    timeToWaitMilliseconds -= AddedWaitDuration_;
+
+    auto waitStart = std::chrono::high_resolution_clock::now();
+    dispatch_semaphore_wait(sem_, dispatch_time(waitTime_, MS_TO_NSEC * timeToWaitMilliseconds);
+    auto waitEnd = std::chrono::high_resolution_clock::now();
+    auto waitDurationMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(waitEnd - waitStart).count();
+
+    if (waitDurationMilliseconds > timeToWaitMilliseconds)
+    {
+        AddedWaitDuration_ += waitDurationMilliseconds - timeToWaitMilliseconds;
+    }
+    else
+    {
+        AddedWaitDuration_ = 0;
+    }
 }
 
 void MacAudioDevice::clearHelperRealTime()
