@@ -85,7 +85,6 @@ private:
     int numChannels_;
     
     thread_local static bool MustStopWork_;
-    thread_local static int64_t AddedWaitDuration_;
 
     sem_t sem_;
     struct timespec ts_;
