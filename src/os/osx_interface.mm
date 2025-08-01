@@ -86,7 +86,7 @@ void ResetMainWindowColorSpace()
 
 void StartLowLatencyActivity()
 {
-    NSActivityOptions options = NSActivityBackground | NSActivityIdleSystemSleepDisabled | NSActivityLatencyCritical;
+    NSActivityOptions options = NSActivityUserInitiated | NSActivityIdleSystemSleepDisabled | NSActivityLatencyCritical;
 
     Activity = [[NSProcessInfo processInfo] beginActivityWithOptions: options reason:@"FreeDV provides low latency audio processing and should not be inturrupted by system throttling."];
     [Activity retain];
