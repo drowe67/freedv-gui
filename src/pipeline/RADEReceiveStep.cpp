@@ -31,6 +31,10 @@
 #include "../defines.h"
 #include "lpcnet.h" // from Opus source tree
 
+#if defined(__APPLE__)
+#include <pthread.h>
+#endif // defined(__APPLE__)
+
 using namespace std::chrono_literals;
 
 extern wxString utRxFeatureFile;
@@ -58,6 +62,11 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
         assert(featuresFile_ != nullptr);
         
         utFeatureThread_ = std::thread([&]() {
+#if defined(__APPLE__)
+    // Downgrade thread QoS to Utility to avoid thread contention issues.
+    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY,0);
+#endif // defined(__APPLE__)
+
             float* fifoRead = new float[utFeatures_.capacity()];
             assert(fifoRead != nullptr);
            

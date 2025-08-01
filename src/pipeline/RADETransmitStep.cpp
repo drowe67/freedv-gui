@@ -33,6 +33,10 @@
 #include "codec2_fifo.h"
 #include "RADETransmitStep.h"
 
+#if defined(__APPLE__)
+#include <pthread.h>
+#endif // defined(__APPLE__)
+
 using namespace std::chrono_literals;
 
 #define FEATURE_FIFO_SIZE ((RADE_SPEECH_SAMPLE_RATE / LPCNET_FRAME_SIZE) * rade_n_features_in_out(dv_))
@@ -58,6 +62,11 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
         assert(featuresFile_ != nullptr);
         
         utFeatureThread_ = std::thread([&]() {
+#if defined(__APPLE__)
+    // Downgrade thread QoS to Utility to avoid thread contention issues.
+    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY,0);
+#endif // defined(__APPLE__)
+
             float* fifoRead = new float[utFeatures_.capacity()];
             assert(fifoRead != nullptr);
            

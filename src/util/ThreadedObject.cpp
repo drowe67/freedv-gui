@@ -80,6 +80,11 @@ void ThreadedObject::enqueue_(std::function<void()> fn, int timeoutMilliseconds)
 
 void ThreadedObject::eventLoop_()
 {
+#if defined(__APPLE__)
+    // Downgrade thread QoS to Utility to avoid thread contention issues.
+    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY,0);
+#endif // defined(__APPLE__)
+
     while (!isDestroying_)
     {
         std::function<void()> fn;
