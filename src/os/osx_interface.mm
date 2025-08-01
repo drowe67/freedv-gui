@@ -25,7 +25,7 @@
 #import <AppKit/AppKit.h>
 #include "os_interface.h"
 
-static CActivityId *PActivity = nil;
+static id<NSObject> Activity = nil;
 
 void VerifyMicrophonePermissions(std::promise<bool>& microphonePromise)
 {
@@ -86,21 +86,17 @@ void ResetMainWindowColorSpace()
 
 void StartLowLatencyActivity()
 {
-    PActivity = new CActivityId();
-
     NSActivityOptions options = NSActivityBackground | NSActivityIdleSystemSleepDisabled | NSActivityLatencyCritical;
 
-    PActivity->activityId = [[NSProcessInfo processInfo] beginActivityWithOptions: options reason:@"FreeDV provides low latency audio processing and should not be inturrupted by system throttling."];
+    Activity = [[NSProcessInfo processInfo] beginActivityWithOptions: options reason:@"FreeDV provides low latency audio processing and should not be inturrupted by system throttling."];
 }
 
 void StopLowLatencyActivity()
 {
-    if (PActivity)
+    if (Activity)
     {
-        [[NSProcessInfo processInfo] endActivity: PActivity->activityId];
-        PActivity->activityId = nil;
-        delete PActivity;
-        PActivity = nil;
+        [[NSProcessInfo processInfo] endActivity: Activity];
+        Activity = nil;
     }
 }
 
