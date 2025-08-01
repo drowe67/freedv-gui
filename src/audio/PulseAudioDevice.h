@@ -23,7 +23,6 @@
 #ifndef PULSE_AUDIO_DEVICE_H
 #define PULSE_AUDIO_DEVICE_H
 
-#include <atomic>
 #include <mutex>
 #include <thread>
 #include <condition_variable>
@@ -89,7 +88,6 @@ private:
     sem_t sem_;
     struct timespec ts_;
     bool sleepFallback_;
-    std::atomic<int> numRealTimeWorkers_;
 
     static void StreamReadCallback_(pa_stream *s, size_t length, void *userdata);
     static void StreamWriteCallback_(pa_stream *s, size_t length, void *userdata);

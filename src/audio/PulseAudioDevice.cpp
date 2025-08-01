@@ -184,8 +184,6 @@ int PulseAudioDevice::getLatencyInMicroseconds()
 
 void PulseAudioDevice::setHelperRealTime()
 {
-    numRealTimeWorkers_.fetch_add(1, std::memory_order_relaxed);
-
     // XXX: We can't currently enable RT scheduling on Linux
     // due to unreliable behavior surrounding how long it takes to
     // go through a single RX or TX cycle. This unreliability is 
@@ -281,13 +279,12 @@ void PulseAudioDevice::setHelperRealTime()
 void PulseAudioDevice::startRealTimeWork()
 {
     sleepFallback_ = false;
-    
+
     if (clock_gettime(CLOCK_MONOTONIC, &ts_) == -1)
     {
         sleepFallback_ = true;
     }
 }
-
 void PulseAudioDevice::stopRealTimeWork(bool fastMode)
 {
     if (sleepFallback_)
@@ -312,7 +309,6 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
     {
         // empty
     }
-
     if (rv == -1 && errno != ETIMEDOUT)
     {
         // Fallback to simple sleep.
@@ -326,7 +322,6 @@ void PulseAudioDevice::stopRealTimeWork(bool fastMode)
 void PulseAudioDevice::clearHelperRealTime()
 {
     IAudioDevice::clearHelperRealTime();
-    numRealTimeWorkers_.fetch_sub(1, std::memory_order_relaxed);
 }
 
 bool PulseAudioDevice::mustStopWork()
@@ -351,11 +346,7 @@ void PulseAudioDevice::StreamReadCallback_(pa_stream *s, size_t length, void *us
         {
             thisObj->onAudioDataFunction(*thisObj, const_cast<void*>(data), length / thisObj->getNumChannels() / sizeof(short), thisObj->onAudioDataState);
         }
-        auto numWorkers = thisObj->numRealTimeWorkers_.load();
-        for (; numWorkers > 0; numWorkers--)
-        {
-            sem_post(&thisObj->sem_);
-        }
+        sem_post(&thisObj->sem_);
         pa_stream_drop(s);
     } while (pa_stream_readable_size(s) > 0);
 }
