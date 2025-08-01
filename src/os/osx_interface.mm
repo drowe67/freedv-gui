@@ -89,6 +89,7 @@ void StartLowLatencyActivity()
     NSActivityOptions options = NSActivityBackground | NSActivityIdleSystemSleepDisabled | NSActivityLatencyCritical;
 
     Activity = [[NSProcessInfo processInfo] beginActivityWithOptions: options reason:@"FreeDV provides low latency audio processing and should not be inturrupted by system throttling."];
+    [Activity retain];
 }
 
 void StopLowLatencyActivity()
@@ -96,6 +97,7 @@ void StopLowLatencyActivity()
     if (Activity)
     {
         [[NSProcessInfo processInfo] endActivity: Activity];
+        [Activity release];
         Activity = nil;
     }
 }
