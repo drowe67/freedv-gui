@@ -696,12 +696,14 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
             // to codec2_enc, possibly making a click every now and
             // again in the decoded audio at the other end.
 
-            // zero speech input just in case infifo2 underflows
-            memset(inputSamples_.get(), 0, nsam_in_48*sizeof(short));
-            
             // There may be recorded audio left to encode while ending TX. To handle this,
             // we keep reading from the FIFO until we have less than nsam_in_48 samples available.
-            int nread = cbData->infifo2->read(inputSamples_.get(), nsam_in_48);            
+            auto inputPtr = inputSamples_.get();
+            int nread = cbData->infifo2->read(inputPtr, nsam_in_48);            
+            if (nread != 0)
+            {
+                inputPtr = inputSamplesZeros_.get();
+            }
             if (nread != 0 && endingTx)
             {
                 if (freedvInterface.getCurrentMode() >= FREEDV_MODE_RADE)
@@ -713,7 +715,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
                         hasEooBeenSent_ = true;
                     }
 
-                    auto outputSamples = pipeline_->execute(inputSamples_.get(), 0, &nout);
+                    auto outputSamples = pipeline_->execute(inputPtr, 0, &nout);
                     if (nout > 0 && outputSamples != nullptr)
                     {
                         if (cbData->outfifo1->write(outputSamples, nout) != 0)
@@ -734,7 +736,7 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
                 hasEooBeenSent_ = false;
             }
             
-            auto outputSamples = pipeline_->execute(inputSamples_.get(), nsam_in_48, &nout);
+            auto outputSamples = pipeline_->execute(inputPtr, nsam_in_48, &nout);
             
             if (g_dump_fifo_state) {
                 log_info("  nout: %d", nout);

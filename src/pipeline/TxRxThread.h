@@ -57,8 +57,12 @@ public:
         assert(inputSampleRate_ > 0);
         assert(outputSampleRate_ > 0);
 
-        inputSamples_ = std::make_unique<short[]>(std::max(inputSampleRate_, outputSampleRate_)); 
+        auto numSamples = std::max(inputSampleRate_, outputSampleRate_);
+        inputSamples_ = std::make_unique<short[]>(numSamples);
         assert(inputSamples_ != nullptr);
+        inputSamplesZeros_ = std::make_unique<short[]>(numSamples);
+        assert(inputSamplesZeros_ != nullptr);
+        memset(inputSamplesZeros_.get(), 0, numSamples * sizeof(short));
     }
     
     virtual ~TxRxThread()
@@ -87,6 +91,7 @@ private:
     bool hasEooBeenSent_;
     std::shared_ptr<IRealtimeHelper> helper_;
     std::unique_ptr<short[]> inputSamples_;
+    std::unique_ptr<short[]> inputSamplesZeros_;
     bool deferReset_;
 
 #if defined(ENABLE_PROCESSING_STATS)
