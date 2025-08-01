@@ -879,7 +879,7 @@ void MacAudioDevice::startRealTimeWork()
 
 void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    auto timeToWaitMilliseconds = (((1000 * chosenFrameSize_) / sampleRate_) >> 1; //(fastMode ? 1 : 0));
+    auto timeToWaitMilliseconds = ((1000 * chosenFrameSize_) / sampleRate_) >> 1; //(fastMode ? 1 : 0);
     timeToWaitMilliseconds -= AddedWaitDuration_;
 
     auto waitStart = std::chrono::high_resolution_clock::now();

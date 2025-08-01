@@ -47,7 +47,7 @@ TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
                 tapThreadInput_.read(fifoInput, SAMPLE_RATE_AT_10MS);
                 tapStep_->execute(fifoInput, SAMPLE_RATE_AT_10MS, &temp);
             }
-            std::this_thread::sleep_for(10ms);
+            std::this_thread::sleep_for(11ms); // using prime number to reduce likelihood of scheduler contention
         }
 
         delete[] fifoInput;

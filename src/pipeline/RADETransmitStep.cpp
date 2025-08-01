@@ -71,7 +71,7 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
                     numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
                 }
                 
-                std::this_thread::sleep_for(100ms);
+                std::this_thread::sleep_for(101ms); // prime number used to avoid scheduler contention
             }
             
             auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());

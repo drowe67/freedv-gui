@@ -100,7 +100,7 @@ void RecordStep::fileIoThreadEntry_()
         }
         g_mutexProtectingCallbackData.Unlock();
         
-        std::this_thread::sleep_for(100ms);
+        std::this_thread::sleep_for(101ms); // using prime number to reduce likelihood of contention
     }
     
     delete[] buf;

@@ -72,7 +72,7 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
                     numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
                 }
                                 
-                std::this_thread::sleep_for(100ms);
+                std::this_thread::sleep_for(101ms); // prime number used to avoid contention
             }
             
             auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
