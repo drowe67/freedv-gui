@@ -879,21 +879,12 @@ void MacAudioDevice::startRealTimeWork()
 
 void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    auto timeToWaitMilliseconds = (((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0));
+    auto timeToWaitMilliseconds = (((1000 * chosenFrameSize_) / sampleRate_) >> 1; //(fastMode ? 1 : 0));
     timeToWaitMilliseconds -= AddedWaitDuration_;
 
     auto waitStart = std::chrono::high_resolution_clock::now();
+    dispatch_semaphore_wait(sem_, dispatch_time(waitTime_, MS_TO_NSEC * timeToWaitMilliseconds));
     auto waitEnd = std::chrono::high_resolution_clock::now();
-    bool signalled = false;
-    int count = 0;
-    while (!signalled && (waitEnd - waitStart) < std::chrono::milliseconds(timeToWaitMilliseconds))
-    {
-        signalled = 
-            dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, MS_TO_NSEC * count)) == 0;
-        if (count == 0) count = 1;
-        waitEnd = std::chrono::high_resolution_clock::now();
-    }
-
     auto waitDurationMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(waitEnd - waitStart).count();
 
     AddedWaitDuration_ += waitDurationMilliseconds - timeToWaitMilliseconds;
