@@ -98,9 +98,7 @@ void ThreadedObject::eventLoop_()
 
                 if (count == 0)
                 {
-                    // Using 101ms instead of 100ms to avoid scheduler contention
-                    // (as there may be a lot of threads generated).
-                    eventQueueCV_.wait_for(lk, 101ms, [&]() {
+                    eventQueueCV_.wait(lk, [&]() {
                         return isDestroying_ || eventQueue_.size() > 0;
                     });
                     
