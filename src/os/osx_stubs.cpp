@@ -32,6 +32,16 @@ void ResetMainWindowColorSpace()
     // empty
 }
 
+void StartLowLatencyActivity()
+{
+    // empty
+}
+
+void StopLowLatencyActivity()
+{
+    // empty
+}
+
 std::string GetOperatingSystemString()
 {
 #ifdef __linux__

@@ -24,6 +24,10 @@
 #include "../util/SocketIoClient.h"
 #include "../os/os_interface.h"
 
+#if defined(__APPLE__)
+#include <pthread.h>
+#endif // defined(__APPLE__)
+
 using namespace std::chrono_literals;
 
 FreeDVReporter::FreeDVReporter(std::string hostname, std::string callsign, std::string gridSquare, std::string software, bool rxOnly)
@@ -533,15 +537,19 @@ void FreeDVReporter::connect_()
 }
 
 void FreeDVReporter::threadEntryPoint_()
-{    
+{ 
+#if defined(__APPLE__)
+    // Downgrade thread QoS to Utility to avoid thread contention issues.
+    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY,0);
+#endif // defined(__APPLE__)
+
     connect_();
     
     while (!isExiting_)
     {
         std::unique_lock<std::mutex> lk(fnQueueMutex_);
-        fnQueueConditionVariable_.wait_for(
+        fnQueueConditionVariable_.wait(
             lk, 
-            100ms,
             [&]() { return isExiting_ || (!isConnecting_ && fnQueue_.size() > 0); });
         
         // Execute queued method

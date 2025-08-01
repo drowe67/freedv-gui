@@ -2572,6 +2572,8 @@ void MainFrame::stopRxStream()
 
     if(m_RxRunning)
     {
+        StopLowLatencyActivity();
+
         m_RxRunning = false;
 
         if (m_txThread)
@@ -3266,6 +3268,11 @@ void MainFrame::startRxStream()
             (rxInSoundDevice && rxInSoundDevice->isRunning()) &&
             (rxOutSoundDevice && rxOutSoundDevice->isRunning());
         m_RxRunning = txDevicesRunning && rxDevicesRunning;
+    }
+
+    if (m_RxRunning)
+    {
+        StartLowLatencyActivity();
     }
 }
 
