@@ -135,7 +135,7 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
 
 void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText)
 {
-    sync_ = 0;
+    sync_.store(0, std::memory_order_release);
     singleRxThread_ = enabledModes_.size() > 1 ? singleRxThread : true;
 
     modemStatsList_ = new MODEM_STATS[enabledModes_.size()];
@@ -457,7 +457,7 @@ void FreeDVInterface::setSync(int val)
 
 int FreeDVInterface::getSync() const
 {
-    return sync_;
+    return sync_.load(std::memory_order_acquire);
 }
 
 void FreeDVInterface::setEq(int val)
@@ -702,7 +702,7 @@ float FreeDVInterface::getSNREstimate()
     if (txMode_ >= FREEDV_MODE_RADE)
     {
         // Special handling for RADE
-        return (getSync() ? rade_snrdB_3k_est(rade_) : 0);
+        return (getSync() ? radeSnr_.load(std::memory_order_acquire) : 0);
     }
     else
     {
@@ -726,7 +726,7 @@ IPipelineStep* FreeDVInterface::createTransmitPipeline(
         radeTxStep_ = new RADETransmitStep(rade_, lpcnetEncState_);
         
         auto pipeline = new AudioPipeline(inputSampleRate, outputSampleRate);
-        pipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(radeTxStep_));
+        pipeline->appendPipelineStep(radeTxStep_);
         return pipeline;
     }
  
@@ -793,11 +793,12 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
         auto rxStep = new RADEReceiveStep(rade_, &fargan_, radeTextPtr_, [&, getRxStateFn](RADEReceiveStep* s) {
             auto finalSync = s->getSync();
             *getRxStateFn() = finalSync;
-            sync_ = finalSync;
+            sync_.store(finalSync, std::memory_order_release);
+            radeSnr_.store(s->getSnr(), std::memory_order_release);
         });
         
         auto pipeline = new AudioPipeline(inputSampleRate, outputSampleRate);
-        pipeline->appendPipelineStep(std::shared_ptr<IPipelineStep>(rxStep));
+        pipeline->appendPipelineStep(rxStep);
         return pipeline;
     }
     else
@@ -850,7 +851,7 @@ int FreeDVInterface::preProcessRxFn_(ParallelStep* stepObj)
     {
         assert(step != nullptr);
         
-        FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)step.get();
+        FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)step;
         castedStep->setSigPwrAvg(*state->getSigPwrAvgFn());
         castedStep->setChannelNoiseEnable(state->getChannelNoiseFn(), state->getChannelNoiseSnrFn());
         castedStep->setFreqOffset(state->getFreqOffsetFn());
@@ -859,7 +860,7 @@ int FreeDVInterface::preProcessRxFn_(ParallelStep* stepObj)
     // If the current RX mode is still sync'd, only process through that one.
     for (auto& dv : dvObjects_)
     {
-        FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)parallelSteps[rxIndex].get();
+        FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)parallelSteps[rxIndex];
         if (dv == currentRxMode_ && castedStep->getSync())
         {
             return rxIndex;
@@ -885,7 +886,7 @@ int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj)
 
     for (auto& dv : dvObjects_)
     {
-        FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)parallelSteps[rxIndex].get();
+        FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)parallelSteps[rxIndex];
         if (dv == currentRxMode_ && castedStep->getSync())
         {
             dvWithSync = dv;
@@ -910,7 +911,7 @@ int FreeDVInterface::postProcessRxFn_(ParallelStep* stepObj)
         bool canUnsquelch = !squelchEnabled_ ||
             (squelchEnabled_ && snr >= squelchVals_[rxIndex]);
         
-        FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)parallelSteps[rxIndex].get();
+        FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)parallelSteps[rxIndex];
         if (snr > maxSyncFound && castedStep->getSync() != 0 && canUnsquelch)
         {
             maxSyncFound = snr;
@@ -944,7 +945,7 @@ skipSyncCheck:
     int finalSync = 0;
     if (dvWithSync != nullptr)
     {    
-        FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)parallelSteps[indexWithSync].get();
+        FreeDVReceiveStep* castedStep = (FreeDVReceiveStep*)parallelSteps[indexWithSync];
 
         // grab extended stats so we can plot spectrum, scatter diagram etc
         freedv_get_modem_extended_stats(dvWithSync, stats);
@@ -963,12 +964,12 @@ skipSyncCheck:
     }
     else
     {
-        RADEReceiveStep* castedStep = (RADEReceiveStep*)parallelSteps[0].get();
+        RADEReceiveStep* castedStep = (RADEReceiveStep*)parallelSteps[0];
         finalSync = castedStep->getSync();
     }
 
     *state->getRxStateFn() = finalSync;
-    sync_ = finalSync;
+    sync_.store(finalSync, std::memory_order_release);
 
     return indexWithSync;
 };

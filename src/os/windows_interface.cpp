@@ -49,6 +49,16 @@ void ResetMainWindowColorSpace()
     // empty
 }
 
+void StartLowLatencyActivity()
+{
+    // empty
+}
+
+void StopLowLatencyActivity()
+{
+    // empty
+}
+
 std::string GetOperatingSystemString()
 {
     return "windows";

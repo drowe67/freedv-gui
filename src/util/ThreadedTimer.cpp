@@ -22,6 +22,10 @@
 
 #include "ThreadedTimer.h"
 
+#if defined(__APPLE__)
+#include <pthread.h>
+#endif // defined(__APPLE__)
+
 ThreadedTimer::ThreadedTimer()
     : isDestroying_(false)
     , repeat_(false)
@@ -86,6 +90,11 @@ void ThreadedTimer::stop()
 
 void ThreadedTimer::eventLoop_()
 {
+#if defined(__APPLE__)
+    // Downgrade thread QoS to Utility to avoid thread contention issues.
+    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY,0);
+#endif // defined(__APPLE__)
+
     do
     {
         std::unique_lock<std::mutex> lk(timerMutex_);

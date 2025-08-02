@@ -30,7 +30,6 @@
 #include "IPipelineStep.h"
 #include "../freedv_interface.h"
 #include "rade_api.h"
-#include "codec2_fifo.h"
 #include "rade_text.h"
 #include "../util/GenericFIFO.h"
 
@@ -48,17 +47,19 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
-    int getSync() const { return syncState_.load(); }
+    int getSync() const { return syncState_.load(std::memory_order_acquire); }
+    int getSnr() const { return snr_.load(std::memory_order_acquire); }
     
 private:
     std::atomic<int> syncState_;
+    std::atomic<int> snr_;
     struct rade* dv_;
     FARGANState* fargan_;
-    struct FIFO* inputSampleFifo_;
-    struct FIFO* outputSampleFifo_;
+    GenericFIFO<short> inputSampleFifo_;
+    GenericFIFO<short> outputSampleFifo_;
     float* pendingFeatures_;
     int pendingFeaturesIdx_;
     FILE* featuresFile_;
@@ -69,7 +70,7 @@ private:
     short* inputBuf_;
     float* featuresOut_;
     float* eooOut_;
-    std::shared_ptr<short> outputSamples_;
+    std::unique_ptr<short[]> outputSamples_;
     
     GenericFIFO<float> utFeatures_;
     std::thread utFeatureThread_;

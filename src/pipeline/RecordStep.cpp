@@ -64,12 +64,12 @@ int RecordStep::getOutputSampleRate() const
     return inputSampleRate_;
 }
 
-std::shared_ptr<short> RecordStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* RecordStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {    
-    codec2_fifo_write(inputFifo_, inputSamples.get(), numInputSamples);
+    codec2_fifo_write(inputFifo_, inputSamples, numInputSamples);
     
-    *numOutputSamples = 0;    
-    return std::shared_ptr<short>((short*)nullptr);
+    *numOutputSamples = 0;
+    return nullptr;
 }
 
 void RecordStep::reset()
@@ -100,7 +100,7 @@ void RecordStep::fileIoThreadEntry_()
         }
         g_mutexProtectingCallbackData.Unlock();
         
-        std::this_thread::sleep_for(100ms);
+        std::this_thread::sleep_for(101ms); // using prime number to reduce likelihood of contention
     }
     
     delete[] buf;

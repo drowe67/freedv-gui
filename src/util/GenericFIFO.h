@@ -33,7 +33,7 @@ class GenericFIFO
 {
 public:
     GenericFIFO(int len);
-    GenericFIFO(const GenericFIFO<T>& rhs);
+    GenericFIFO(const GenericFIFO<T>& rhs) = delete;
     GenericFIFO(GenericFIFO<T>&& rhs);
     virtual ~GenericFIFO();
     
@@ -42,6 +42,9 @@ public:
     
     int numUsed() const noexcept;
     int numFree() const noexcept;
+    int capacity() const noexcept;
+
+    void reset() noexcept;
     
 private:
     T *buf;
@@ -74,21 +77,6 @@ GenericFIFO<T>::~GenericFIFO()
 }
 
 template<typename T>
-GenericFIFO<T>::GenericFIFO(const GenericFIFO<T>& rhs)
-    : buf(nullptr)
-    , pin(nullptr)
-    , pout(nullptr)
-    , nelem(rhs.nelem)
-{
-    buf = new T[nelem];
-    assert(buf != nullptr);
-    
-    memcpy(buf, rhs.buf, sizeof(T) * nelem);
-    pin = buf + (rhs.pin - rhs.buf);
-    pout = buf + (rhs.pout - rhs.buf);
-}
-
-template<typename T>
 GenericFIFO<T>::GenericFIFO(GenericFIFO<T>&& rhs)
     : buf(rhs.buf)
     , pin(rhs.pin)
@@ -99,6 +87,13 @@ GenericFIFO<T>::GenericFIFO(GenericFIFO<T>&& rhs)
     rhs.pin = nullptr;
     rhs.pout = nullptr;
     rhs.nelem = 0;
+}
+
+template<typename T>
+void GenericFIFO<T>::reset() noexcept
+{
+    pin = buf;
+    pout = buf;
 }
 
 template<typename T>
@@ -173,6 +168,12 @@ int GenericFIFO<T>::numFree() const noexcept
     // is reserved for empty rather than full
 
     return nelem - numUsed() - 1;
+}
+
+template<typename T>
+int GenericFIFO<T>::capacity() const noexcept
+{
+    return nelem - 1;
 }
 
 #endif // GENERIC_FIFO_H

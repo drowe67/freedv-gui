@@ -39,6 +39,7 @@ using namespace std::placeholders;
 thread_local void* MacAudioDevice::Workgroup_ = nullptr;
 thread_local void* MacAudioDevice::JoinToken_ = nullptr;
 thread_local int MacAudioDevice::CurrentCoreAudioId_ = 0;
+thread_local int64_t MacAudioDevice::AddedWaitDuration_ = 0;
 
 // Conversion factors.
 constexpr static int MS_TO_SEC = 1000;
@@ -228,6 +229,8 @@ void MacAudioDevice::start()
             // Set maxFrameSize to something reasonable for further down.
             maxFrameSize = 4096;
         }
+        
+        chosenFrameSize_ = desiredFrameSize;
         
         // Create AUHAL object
         AudioComponent comp;
@@ -627,6 +630,8 @@ int MacAudioDevice::getLatencyInMicroseconds()
 
 void MacAudioDevice::setHelperRealTime()
 {
+    numRealTimeWorkers_.fetch_add(1, std::memory_order_release);
+
     // Set thread QoS to "user interactive"
     pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
 
@@ -668,6 +673,9 @@ void MacAudioDevice::setHelperRealTime()
         return;
     }
     
+    // The below code is disabled because RADE is not currently real-time
+    // safe (i.e. no system calls, dynamic allocation, etc.)    
+#if 0
     // Most important, set real-time constraints.
     // Define the guaranteed and max fraction of time for the audio thread.
     // These "duty cycle" values can range from 0 to 1.  A value of 0.5
@@ -679,7 +687,7 @@ void MacAudioDevice::setHelperRealTime()
     
     // Define constants determining how much time the audio thread can
     // use in a given time quantum.  All times are in milliseconds.
-    const double kTimeQuantum = 60; // 60ms, 1/2 of a RADEV1 block and confirmed to be sufficient with Instruments analysis.
+    const double kTimeQuantum = std::min(50.0, ((double)chosenFrameSize_ / (double)sampleRate_) * 1000.0);
     
     // Time guaranteed each quantum.
     const double kAudioTimeNeeded = kGuaranteedAudioDutyCycle * kTimeQuantum;
@@ -714,6 +722,7 @@ void MacAudioDevice::setHelperRealTime()
         // Going real-time is a prerequisite for joining workgroups
         joinWorkgroup_();
     }
+#endif // 0
 }
 
 OSStatus MacAudioDevice::InputProc_(
@@ -748,8 +757,12 @@ OSStatus MacAudioDevice::InputProc_(
             
             thisObj->onAudioDataFunction(*thisObj, thisObj->inputFrames_, inNumberFrames, thisObj->onAudioDataState);
         }
-        
-        dispatch_semaphore_signal(thisObj->sem_);
+       
+        auto numWorkers = thisObj->numRealTimeWorkers_.load(std::memory_order_acquire);
+        for (; numWorkers > 0; numWorkers--)
+        { 
+            dispatch_semaphore_signal(thisObj->sem_);
+        }
     }
     else
     {
@@ -804,6 +817,7 @@ UInt32 MacAudioDevice::nextPowerOfTwo_(UInt32 val)
 
 void MacAudioDevice::joinWorkgroup_()
 {
+#if 0
     // Join Core Audio workgroup
     Workgroup_ = nullptr;
     JoinToken_ = nullptr;
@@ -853,30 +867,52 @@ void MacAudioDevice::joinWorkgroup_()
         delete wgMem;
         delete wgToken;
     }
+#endif // 0
 }
 
 void MacAudioDevice::startRealTimeWork()
 {
+#if 0
     // If the audio ID changes on us, join the new workgroup
     if (CurrentCoreAudioId_ != 0 && CurrentCoreAudioId_ != coreAudioId_ && Workgroup_ != nullptr)
     {
         leaveWorkgroup_();
         joinWorkgroup_();
     }
+#endif // 0
+
+    // Record current time. We'll wait up to (latency) ms after this.
+    waitTime_ = dispatch_time(DISPATCH_TIME_NOW, 0);
 }
 
 void MacAudioDevice::stopRealTimeWork(bool fastMode)
 {
-    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, (AUDIO_SAMPLE_BLOCK_MSEC * MS_TO_NSEC) >> (fastMode ? 1 : 0)));
+    auto timeToWaitMilliseconds = ((1000 * chosenFrameSize_) / sampleRate_) >> (fastMode ? 1 : 0);
+    timeToWaitMilliseconds -= AddedWaitDuration_;
+
+    auto waitStart = std::chrono::high_resolution_clock::now();
+    dispatch_semaphore_wait(sem_, dispatch_time(waitTime_, MS_TO_NSEC * timeToWaitMilliseconds));
+    auto waitEnd = std::chrono::high_resolution_clock::now();
+    auto waitDurationMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(waitEnd - waitStart).count();
+
+    AddedWaitDuration_ += waitDurationMilliseconds - timeToWaitMilliseconds;
+    if (AddedWaitDuration_ < 0)
+    {
+        AddedWaitDuration_ = 0;
+    }
 }
 
 void MacAudioDevice::clearHelperRealTime()
 {
+    numRealTimeWorkers_.fetch_sub(1, std::memory_order_release);
+#if 0
     leaveWorkgroup_();
+#endif // 0
 }
 
 void MacAudioDevice::leaveWorkgroup_()
 {
+#if 0
     if (Workgroup_ != nullptr)
     {
         os_workgroup_t* wgMem = (os_workgroup_t*)Workgroup_;
@@ -891,6 +927,7 @@ void MacAudioDevice::leaveWorkgroup_()
         JoinToken_ = nullptr;
         CurrentCoreAudioId_ = 0;
     }
+#endif // 0
 }
 
 int MacAudioDevice::DeviceIsAliveCallback_(

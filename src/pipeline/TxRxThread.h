@@ -34,6 +34,8 @@
 // Forward declarations
 class LinkStep;
 
+//#define ENABLE_PROCESSING_STATS
+
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // class txRxThread - experimental tx/rx processing thread
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -50,13 +52,17 @@ public:
         , equalizedMicAudioLink_(micAudioLink)
         , hasEooBeenSent_(false)
         , helper_(helper)
+        , deferReset_(false)
     { 
         assert(inputSampleRate_ > 0);
         assert(outputSampleRate_ > 0);
 
-        inputSamples_ = std::shared_ptr<short>(
-            new short[std::max(inputSampleRate_, outputSampleRate_)], 
-            std::default_delete<short[]>());
+        auto numSamples = std::max(inputSampleRate_, outputSampleRate_);
+        inputSamples_ = std::make_unique<short[]>(numSamples);
+        assert(inputSamples_ != nullptr);
+        inputSamplesZeros_ = std::make_unique<short[]>(numSamples);
+        assert(inputSamplesZeros_ != nullptr);
+        memset(inputSamplesZeros_.get(), 0, numSamples * sizeof(short));
     }
     
     virtual ~TxRxThread()
@@ -78,16 +84,34 @@ public:
 private:
     bool  m_tx;
     bool  m_run;
-    std::shared_ptr<AudioPipeline> pipeline_;
+    std::unique_ptr<AudioPipeline> pipeline_;
     int inputSampleRate_;
     int outputSampleRate_;
     std::shared_ptr<LinkStep> equalizedMicAudioLink_;
     bool hasEooBeenSent_;
     std::shared_ptr<IRealtimeHelper> helper_;
-    std::shared_ptr<short> inputSamples_;
+    std::unique_ptr<short[]> inputSamples_;
+    std::unique_ptr<short[]> inputSamplesZeros_;
+    bool deferReset_;
+
+#if defined(ENABLE_PROCESSING_STATS)
+    int numTimeSamples_;
+    double minDuration_;
+    std::time_t minTime_;
+    double maxDuration_;
+    std::time_t maxTime_;
+    double sumDuration_;
+    double sumDoubleDuration_;
+    std::chrono::time_point<std::chrono::high_resolution_clock> timeStart_;
+    
+    void resetStats_();
+    void startTimer_();
+    void endTimer_();
+    void reportStats_();    
+#endif // defined(ENABLE_PROCESSING_STATS)
     
     void initializePipeline_();
-    void txProcessing_() noexcept
+    void txProcessing_(IRealtimeHelper* helper) noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]
@@ -95,7 +119,7 @@ private:
 #endif // defined(__clang__)
     ;
 
-    void rxProcessing_() noexcept
+    void rxProcessing_(IRealtimeHelper* helper) noexcept
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)
 [[clang::nonblocking]]

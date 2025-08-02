@@ -52,9 +52,9 @@ int ComputeRfSpectrumStep::getOutputSampleRate() const
     return FS;
 }
 
-std::shared_ptr<short> ComputeRfSpectrumStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* ComputeRfSpectrumStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
-    auto inputSamplesPtr = inputSamples.get();
+    auto inputSamplesPtr = inputSamples;
     for (int i = 0; i < numInputSamples; i++)
     {
         rxFdm_[i].real = inputSamplesPtr[i];
@@ -72,5 +72,5 @@ std::shared_ptr<short> ComputeRfSpectrumStep::execute(std::shared_ptr<short> inp
     // Tap only, no output.
     *numOutputSamples = 0;
 
-    return std::shared_ptr<short>(nullptr);
+    return nullptr;
 }

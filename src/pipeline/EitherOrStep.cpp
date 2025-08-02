@@ -23,10 +23,10 @@
 #include <assert.h>
 #include "EitherOrStep.h"
 
-EitherOrStep::EitherOrStep(std::function<bool()> conditionalFn, std::shared_ptr<IPipelineStep> trueStep, std::shared_ptr<IPipelineStep> falseStep)
+EitherOrStep::EitherOrStep(std::function<bool()> conditionalFn, IPipelineStep* trueStep, IPipelineStep* falseStep)
     : conditionalFn_(conditionalFn)
-    , falseStep_(falseStep)
-    , trueStep_(trueStep)
+    , falseStep_(std::unique_ptr<IPipelineStep>(falseStep))
+    , trueStep_(std::unique_ptr<IPipelineStep>(trueStep))
 {
     // empty
 }
@@ -48,7 +48,7 @@ int EitherOrStep::getOutputSampleRate() const
     return trueStep_->getOutputSampleRate();
 }
 
-std::shared_ptr<short> EitherOrStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* EitherOrStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     bool condResult = conditionalFn_();
     if (condResult)

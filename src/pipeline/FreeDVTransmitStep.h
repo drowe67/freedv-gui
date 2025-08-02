@@ -43,7 +43,7 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
 private:
@@ -56,7 +56,7 @@ private:
     COMP* txFdmOffset_;
     short* codecInput_;
     short* tmpOutput_;
-    std::shared_ptr<short> outputSamples_;
+    std::unique_ptr<short[]> outputSamples_;
 };
 
 #endif // AUDIO_PIPELINE__FREEDV_TRANSMIT_STEP_H

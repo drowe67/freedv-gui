@@ -40,7 +40,7 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
     // For triggering EOO
@@ -49,15 +49,15 @@ public:
 private:
     struct rade* dv_;
     LPCNetEncState* encState_;
-    struct FIFO* inputSampleFifo_;
-    struct FIFO* outputSampleFifo_;
+    GenericFIFO<short> inputSampleFifo_;
+    GenericFIFO<short> outputSampleFifo_;
     float* featureList_;
     int featureListIdx_;
     int arch_;
 
     FILE* featuresFile_;
 
-    std::shared_ptr<short> outputSamples_;
+    std::unique_ptr<short[]> outputSamples_;
     RADE_COMP* radeOut_;
     short* radeOutShort_;
     RADE_COMP* eooOut_;
