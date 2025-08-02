@@ -38,7 +38,7 @@ jobs:
 
     - uses: gerlero/brew-install@v1
       with:
-        packages: automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsamplerate hamlib
+        packages: automake libtool numpy sox wxwidgets speexdsp portaudio libsndfile libsoxr hamlib
 
     - name: Install VB-Cable
       shell: bash
