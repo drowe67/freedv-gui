@@ -64,38 +64,50 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
         
         utFeatureThread_ = std::thread([&]() {
 #if defined(__APPLE__)
-    // Downgrade thread QoS to Utility to avoid thread contention issues.
-    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+            // Downgrade thread QoS to Utility to avoid thread contention issues.
+            pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
     
-    // Make sure other I/O can throttle us.
-    setiopolicy_np(IOPOL_TYPE_DISK, IOPOL_SCOPE_THREAD, IOPOL_THROTTLE);
+            // Make sure other I/O can throttle us.
+            setiopolicy_np(IOPOL_TYPE_DISK, IOPOL_SCOPE_THREAD, IOPOL_THROTTLE);
 #endif // defined(__APPLE__)
 
-            float* fifoRead = new float[utFeatures_.capacity()];
-            assert(fifoRead != nullptr);
-           
+            std::vector<float*> featureList;
+            std::vector<int> featureCnt;
             while (!exitingFeatureThread_)
             {
                 auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
                 while (numToRead > 0)
                 {
+                    float* fifoRead = new float[numToRead];
+                    assert(fifoRead != nullptr);
+        
                     utFeatures_.read(fifoRead, numToRead);
-                    fwrite(fifoRead, numToRead * sizeof(float), 1, featuresFile_);
+                    featureList.push_back(fifoRead);
+                    featureCnt.push_back(numToRead);
                     numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
                 }
-                
-                std::this_thread::sleep_for(101ms); // prime number used to avoid scheduler contention
+                    
+                std::this_thread::sleep_for(101ms); // prime number used to avoid contention
             }
-            
+
             auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
             while (numToRead > 0)
             {
+                float* fifoRead = new float[numToRead];
+                assert(fifoRead != nullptr);
+    
                 utFeatures_.read(fifoRead, numToRead);
-                fwrite(fifoRead, numToRead * sizeof(float), 1, featuresFile_);
+                featureList.push_back(fifoRead);
+                featureCnt.push_back(numToRead);
                 numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
             }
-            
-            delete[] fifoRead;
+
+            int index = 0;
+            for (auto& feature : featureList)
+            {
+                fwrite(feature, sizeof(float) * featureCnt[index++], 1, featuresFile_);
+                delete[] feature;
+            }
         });
     }
 
