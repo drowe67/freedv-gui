@@ -570,6 +570,9 @@ bool MainApp::OnInit()
     log_info("PYTHONPATH is %s", (const char*)ppath.ToUTF8());
 #endif // __APPLE__
 
+    // Turn on optimization for Python code
+    wxSetEnv("PYTHONOPTIMIZE", "1");
+
 #endif // _WIN32 || __APPLE__ 
 
 #if defined(UNOFFICIAL_RELEASE)
