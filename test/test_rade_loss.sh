@@ -61,6 +61,9 @@ else
 fi
 mv $(pwd)/$FREEDV_CONF_FILE.tmp $(pwd)/$FREEDV_CONF_FILE
 
+# Resample test file to 48 kHz. Needed for CI environment to reduce CPU usage.
+sox $(pwd)/rade_src/wav/all.wav -r 48000 $(pwd)/tx_in.wav
+
 # Start recording
 if [ "$OPERATING_SYSTEM" == "Linux" ]; then
     parecord --channels=1 --file-format=wav --device "$REC_DEVICE" test.wav &
@@ -70,7 +73,7 @@ fi
 RECORD_PID=$!
 
 # Start FreeDV in test mode to record TX
-TX_ARGS="-txfile $(pwd)/rade_src/wav/all.wav -txfeaturefile $(pwd)/txfeatures.f32 "
+TX_ARGS="-txfile $(pwd)/tx_in.wav -txfeaturefile $(pwd)/txfeatures.f32 "
 $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS >tmp.log 2>&1 &
 
 FDV_PID=$!
