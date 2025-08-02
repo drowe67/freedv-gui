@@ -33,6 +33,7 @@
 
 #if defined(__APPLE__)
 #include <pthread.h>
+#include <sys/resource.h>
 #endif // defined(__APPLE__)
 
 using namespace std::chrono_literals;
@@ -64,7 +65,10 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
         utFeatureThread_ = std::thread([&]() {
 #if defined(__APPLE__)
     // Downgrade thread QoS to Utility to avoid thread contention issues.
-    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY,0);
+    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+    
+    // Make sure other I/O can throttle us.
+    setiopolicy_np(IOPOL_TYPE_DISK, IOPOL_SCOPE_THREAD, IOPOL_THROTTLE);
 #endif // defined(__APPLE__)
 
             float* fifoRead = new float[utFeatures_.capacity()];
