@@ -91,7 +91,6 @@ set( _windlls
     AVRT.dll
     gdiplus.dll
     MSIMG32.dll
-    PSAPI.DLL
 
     # The below are additional DLLs required when compiled
     # using the LLVM version of MinGW.

@@ -26,7 +26,7 @@
 #include "IPipelineStep.h"
 
 #include <memory>
-#include <soxr.h>
+#include <samplerate.h>
 
 class ResampleStep : public IPipelineStep
 {
@@ -41,7 +41,7 @@ public:
 private:
     int inputSampleRate_;
     int outputSampleRate_;
-    soxr_t resampleState_;
+    SRC_STATE* resampleState_;
 
     float* tempInput_;
     float* tempOutput_;
