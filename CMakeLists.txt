@@ -130,8 +130,8 @@ set(USE_STATIC_PORTAUDIO FALSE CACHE BOOL
     "Download and build static portaudio instead of the system library.")
 set(USE_STATIC_SNDFILE FALSE CACHE BOOL
     "Download and build static sndfile instead of the system library.")
-set(USE_STATIC_SAMPLERATE FALSE CACHE BOOL
-    "Download and build static samplerate instead of the system library.")
+set(USE_STATIC_SOXR FALSE CACHE BOOL
+    "Download and build static soxr instead of the system library.")
 set(USE_STATIC_SPEEXDSP FALSE CACHE BOOL
     "Download and build static speex instead of the system library.")
 set(BOOTSTRAP_WXWIDGETS FALSE CACHE BOOL
@@ -204,7 +204,7 @@ endif(SIGN_WINDOWS_BINARIES)
 if(USE_STATIC_DEPS)
     set(USE_STATIC_PORTAUDIO TRUE FORCE)
     set(USE_STATIC_SNDFILE TRUE FORCE)
-    set(USE_STATIC_SAMPLERATE TRUE FORCE)
+    set(USE_STATIC_SOXR TRUE FORCE)
     set(USE_STATIC_SPEEXDSP TRUE FORCE)
 endif(USE_STATIC_DEPS)
 
@@ -466,25 +466,26 @@ else(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
     include(cmake/BuildHamlib.cmake)
 endif(HAMLIB_LIBRARY AND HAMLIB_INCLUDE_DIR)
 
-# Samplerate Library
 #
-if(NOT USE_STATIC_SAMPLERATE)
-    message(STATUS "Looking for samplerate...")
-    find_library(LIBSAMPLERATE samplerate)
-    find_path(LIBSAMPLERATE_INCLUDE_DIR samplerate.h)
-    message(STATUS "  samplerate library: ${LIBSAMPLERATE}")
-    message(STATUS "  samplerate headers: ${LIBSAMPLERATE_INCLUDE_DIR}")
-    if(LIBSAMPLERATE AND LIBSAMPLERATE_INCLUDE_DIR)
-        list(APPEND FREEDV_LINK_LIBS ${LIBSAMPLERATE})
-        include_directories(${LIBSAMPLERATE_INCLUDE_DIR})
-    else(LIBSTAMPLERATE AND LIBSAMPLERATE_INCLUDE_DIR)
-        message(STATUS "Will attempt static build of samplerate.")
-        include(cmake/BuildSamplerate.cmake)
-    endif(LIBSAMPLERATE AND LIBSAMPLERATE_INCLUDE_DIR)
-else(NOT USE_STATIC_SAMPLERATE)
-    message(STATUS "Will attempt static build of samplerate.")
-    include(cmake/BuildSamplerate.cmake)
-endif(NOT USE_STATIC_SAMPLERATE)
+# Soxr Library
+#
+if(NOT USE_STATIC_SOXR)
+    message(STATUS "Looking for soxr...")
+    find_library(LIBSOXR soxr)
+    find_path(LIBSOXR_INCLUDE_DIR soxr.h)
+    message(STATUS "  soxr library: ${LIBSOXR}")
+    message(STATUS "  soxr headers: ${LIBSOXR_INCLUDE_DIR}")
+    if(LIBSOXR AND LIBSOXR_INCLUDE_DIR)
+        list(APPEND FREEDV_LINK_LIBS ${LIBSOXR})
+        include_directories(${LIBSOXR_INCLUDE_DIR})
+    else(LIBSOXR AND LIBSOXR_INCLUDE_DIR)
+        message(STATUS "Will attempt static build of soxr.")
+        include(cmake/BuildSoxr.cmake)
+    endif(LIBSOXR AND LIBSOXR_INCLUDE_DIR)
+else(NOT USE_STATIC_SOXR)
+    message(STATUS "Will attempt static build of soxr.")
+    include(cmake/BuildSoxr.cmake)
+endif(NOT USE_STATIC_SOXR)
 
 #
 # sndfile Library

@@ -1,7 +1,6 @@
 #ifndef AUDIO_PIPELINE_PA_CALLBACK_DATA_H
 #define AUDIO_PIPELINE_PA_CALLBACK_DATA_H
 
-#include <samplerate.h>
 #include "../util/GenericFIFO.h"
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=

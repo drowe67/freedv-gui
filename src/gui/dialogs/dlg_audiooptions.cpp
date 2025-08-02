@@ -25,6 +25,8 @@
 #include <wx/app.h>
 #include <wx/confbase.h>
 
+#include <soxr.h>
+
 #include "dlg_audiooptions.h"
 
 #include "audio/AudioEngineFactory.h"
@@ -839,9 +841,8 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
     m_audioPlotThread = new std::thread([&](wxString devName, PlotScalar* ps) {
         std::mutex callbackFifoMutex;
         std::condition_variable callbackFifoCV;
-        SRC_STATE          *src;
         FIFO               *fifo, *callbackFifo;
-        int src_error;
+        soxr_t src = nullptr;
         
         // Reset plot before starting.
         CallAfter([&]() {
@@ -850,7 +851,6 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
         });
         
         fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
-        src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
         
         auto engine = AudioEngineFactory::GetAudioEngine();
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_IN);
@@ -860,6 +860,19 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
             {
                 int sampleCount = 0;
                 int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
+
+                soxr_io_spec_t ioSpec = soxr_io_spec(SOXR_INT16_I, SOXR_INT16_I);
+                src = soxr_create(
+                    sampleRate,
+                    8000,
+                    1,
+                    nullptr,
+                    &ioSpec,
+                    nullptr, // soxr_quality_spec(SOXR_HQ, 0)
+                    nullptr  // soxr_runtime_spec(1)
+                );
+                assert(src != NULL);
+
                 auto device = engine->getAudioDevice(
                     devInfo.name, 
                     IAudioEngine::AUDIO_ENGINE_IN, 
@@ -901,7 +914,12 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
                             }
                         }
                     
-                        int n8k = resample(src, in8k_short, in48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
+                        size_t inputUsed = 0;
+                        size_t n8k = 0;
+                        soxr_process(
+                            src, in48k_short, TEST_BUF_SIZE, &inputUsed,
+                            in8k_short, TEST_BUF_SIZE, &n8k);
+
                         short* tmp = new short[n8k];
                         assert(tmp != nullptr);
                         resample_for_plot(fifo, in8k_short, tmp, n8k, FS);
@@ -939,7 +957,10 @@ void AudioOptsDialog::plotDeviceInputForAFewSecs(wxString devName, PlotScalar *p
         }
 
         codec2_fifo_destroy(fifo);
-        src_delete(src);
+        if (src != nullptr)
+        {
+            soxr_delete(src);
+        }
 
         CallAfter([&]() {
             m_audioPlotThread->join();
@@ -969,9 +990,9 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
     m_btnTxOutTest->Enable(false);
     
     m_audioPlotThread = new std::thread([&](wxString devName, PlotScalar* ps) {
-        SRC_STATE          *src;
         FIFO               *fifo, *callbackFifo;
-        int src_error, n = 0;
+        int n = 0;
+        soxr_t src = nullptr;
         
         // Reset plot before starting.
         CallAfter([&]() {
@@ -980,7 +1001,6 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
         });
         
         fifo = codec2_fifo_create((int)(DT*TEST_WAVEFORM_PLOT_FS*2)); assert(fifo != NULL);
-        src = src_new(SRC_SINC_FASTEST, 1, &src_error); assert(src != NULL);
         
         auto engine = AudioEngineFactory::GetAudioEngine();
         auto devList = engine->getAudioDeviceList(IAudioEngine::AUDIO_ENGINE_OUT);
@@ -990,6 +1010,19 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
             {
                 int sampleCount = 0;
                 int sampleRate = wxAtoi(m_cbSampleRateRxIn->GetValue());
+
+                soxr_io_spec_t ioSpec = soxr_io_spec(SOXR_INT16_I, SOXR_INT16_I);
+                src = soxr_create(
+                    sampleRate,
+                    8000,
+                    1,
+                    nullptr,
+                    &ioSpec,
+                    nullptr, // soxr_quality_spec(SOXR_HQ, 0)
+                    nullptr  // soxr_runtime_spec(1)
+                );
+                assert(src != NULL);
+
                 auto device = engine->getAudioDevice(
                     devInfo.name, 
                     IAudioEngine::AUDIO_ENGINE_OUT, 
@@ -1039,7 +1072,12 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
                             }
                         }
                     
-                        int n8k = resample(src, out8k_short, out48k_short, 8000, sampleRate, TEST_BUF_SIZE, TEST_BUF_SIZE);
+                        size_t inputUsed = 0;
+                        size_t n8k = 0;
+                        soxr_process(
+                            src, out48k_short, TEST_BUF_SIZE, &inputUsed,
+                            out8k_short, TEST_BUF_SIZE, &n8k);
+
                         short* tmp = new short[n8k];
                         assert(tmp != nullptr);
                         resample_for_plot(fifo, out8k_short, tmp, n8k, FS);
@@ -1077,7 +1115,10 @@ void AudioOptsDialog::plotDeviceOutputForAFewSecs(wxString devName, PlotScalar *
         }
         
         codec2_fifo_destroy(fifo);
-        src_delete(src);
+        if (src != nullptr)
+        {
+            soxr_delete(src);
+        }
         
         CallAfter([&]() {
             m_audioPlotThread->join();

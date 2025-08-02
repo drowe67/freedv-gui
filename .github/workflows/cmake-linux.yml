@@ -248,7 +248,7 @@ jobs:
     - name: Install common packages
       shell: bash
       run: |
-           sudo apt-get install libpulse-dev libspeexdsp-dev libsamplerate0-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity at-spi2-core
+           sudo apt-get install libpulse-dev libspeexdsp-dev libsoxr-dev sox git portaudio19-dev libhamlib-dev libasound2-dev libao-dev libgsm1-dev libsndfile-dev xvfb pipewire pulseaudio-utils pipewire-pulse wireplumber metacity at-spi2-core
 
     - name: Install version-specific packages
       if: ${{ matrix.os == 'ubuntu-22.04' }}
