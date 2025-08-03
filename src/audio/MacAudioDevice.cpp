@@ -782,8 +782,6 @@ OSStatus MacAudioDevice::OutputProc_(
 {
     MacAudioDevice* thisObj = (MacAudioDevice*)inRefCon;
 
-    memset(thisObj->inputFrames_, 0, sizeof(short) * thisObj->numChannels_ * inNumberFrames);
-    
     if (thisObj->onAudioDataFunction)
     {
         thisObj->onAudioDataFunction(*thisObj, thisObj->inputFrames_, inNumberFrames, thisObj->onAudioDataState);
