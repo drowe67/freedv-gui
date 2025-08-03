@@ -544,7 +544,10 @@ bool MainApp::OnInit()
     // improving performance.
     wxSetEnv("OMP_NUM_THREADS", "1");
     wxSetEnv("OPENBLAS_NUM_THREADS", "1");
-  
+ 
+    // Enable maximum optimization for Python.
+    wxSetEnv("PYTHONOPTIMIZE", "2");
+ 
 #if _WIN32 || __APPLE__
     // Change current folder to the folder containing freedv.exe.
     // This is needed so that Python can find RADE properly. 
@@ -2899,7 +2902,7 @@ void MainFrame::startRxStream()
                     }
 
                     cbData->outfifo1->read(tmpOutput, size);
-                    for (int count = 0; count < size; count++, audioData += dev.getNumChannels())
+                    for (size_t count = 0; count < size; count++, audioData += dev.getNumChannels())
                     {
                         // write signal to all channels to start. This is so that
                         // the compiler can optimize for the most common case.
@@ -3129,7 +3132,7 @@ void MainFrame::startRxStream()
                 }
 
                 cbData->outfifo2->read(tmpOutput, size);
-                for (int count = 0; count < size; count++)
+                for (size_t count = 0; count < size; count++)
                 {
                     for (int j = 0; j < dev.getNumChannels(); j++)
                     {
@@ -3162,7 +3165,7 @@ void MainFrame::startRxStream()
                 }
 
                 cbData->outfifo1->read(tmpOutput, size);
-                for (int count = 0; count < size; count++)
+                for (size_t count = 0; count < size; count++)
                 {
                     for (int j = 0; j < dev.getNumChannels(); j++)
                     {
