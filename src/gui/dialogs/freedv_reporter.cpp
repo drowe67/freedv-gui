@@ -779,6 +779,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
         wxDataViewItemArray itemsChanged;
         for (auto& item : allReporterData_)
         {
+            if (item.second->isPendingDelete)
+            {
+                continue;
+                
+            }
             auto reportData = item.second;
 
             bool isTransmitting = reportData->transmitting;
@@ -1983,10 +1988,10 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     
     for (auto& kvp : allReporterData_)
     {
-	if (kvp.second->isPendingDelete)
-	{
-	    continue;
-	}
+    	if (kvp.second->isPendingDelete)
+    	{
+    	    continue;
+    	}
 
         bool updated = false;
         double frequencyUserReadable = kvp.second->frequency / 1000.0;
