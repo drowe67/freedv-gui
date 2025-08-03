@@ -571,7 +571,7 @@ bool MainApp::OnInit()
 #endif // __APPLE__
 
     // Turn on optimization for Python code
-    wxSetEnv("PYTHONOPTIMIZE", "1");
+    wxSetEnv("PYTHONOPTIMIZE", "2");
 
 #endif // _WIN32 || __APPLE__ 
 
@@ -2708,6 +2708,9 @@ void MainFrame::startRxStream()
         
             log_debug("fifoSize_ms:  %d infifo2: %d/outfilo2: %d",
                 wxGetApp().appConfiguration.fifoSizeMs.get(), soundCard2InFifoSizeSamples, soundCard2OutFifoSizeSamples);
+
+            g_rxUserdata->tmpReadBuffer_ = std::make_unique<short[]>(std::max(soundCard1InFifoSizeSamples, soundCard2InFifoSizeSamples));
+            g_rxUserdata->tmpWriteBuffer_ = std::make_unique<short[]>(std::max(soundCard1OutFifoSizeSamples, soundCard2OutFifoSizeSamples));
         }
         else
         {
@@ -2715,6 +2718,9 @@ void MainFrame::startRxStream()
             g_rxUserdata->outfifo1 = new GenericFIFO<short>(soundCard1OutFifoSizeSamples);
             g_rxUserdata->infifo2 = nullptr;
             g_rxUserdata->outfifo2 = nullptr;
+
+            g_rxUserdata->tmpReadBuffer_ = std::make_unique<short[]>(soundCard1InFifoSizeSamples);
+            g_rxUserdata->tmpWriteBuffer_ = std::make_unique<short[]>(soundCard1OutFifoSizeSamples);
         }
 
         log_debug("fifoSize_ms: %d infifo1: %d/outfilo1 %d",
@@ -2832,15 +2838,17 @@ void MainFrame::startRxStream()
                 txInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
                     paCallBackData* cbData = static_cast<paCallBackData*>(state);
                     short* audioData = static_cast<short*>(data);
-                
+                    short* tmpInput = cbData->tmpReadBuffer_.get();
+
                     if (!endingTx) 
                     {
                         for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
                         {
-                            if (cbData->infifo2->write(&audioData[0], 1)) 
-                            {
-                                g_infifo2_full++;
-                            }
+                            tmpInput[i] = audioData[0];
+                        }
+                        if (cbData->infifo2->write(tmpInput, size)) 
+                        {
+                            g_infifo2_full++;
                         }
                     }
 
@@ -2882,7 +2890,7 @@ void MainFrame::startRxStream()
                 txOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
                     paCallBackData* cbData = static_cast<paCallBackData*>(state);
                     short* audioData = static_cast<short*>(data);
-                    short outdata = 0;
+                    short* tmpOutput = cbData->tmpWriteBuffer_.get();
                
                     if ((size_t)cbData->outfifo1->numUsed() < size)
                     {
@@ -2890,15 +2898,14 @@ void MainFrame::startRxStream()
                         return;
                     }
 
-                    for (; size > 0; size--, audioData += dev.getNumChannels())
+                    cbData->outfifo1->read(tmpOutput, size);
+                    for (int count = 0; count < size; count++, audioData += dev.getNumChannels())
                     {
-                        cbData->outfifo1->read(&outdata, 1);
-
                         // write signal to all channels to start. This is so that
                         // the compiler can optimize for the most common case.
                         for (auto j = 0; j < dev.getNumChannels(); j++)
                         {
-                            audioData[j] = outdata;
+                            audioData[j] = tmpOutput[count];
                         }
                     
                         // If VOX tone is enabled, go back through and add the VOX tone
@@ -3079,15 +3086,17 @@ void MainFrame::startRxStream()
         rxInSoundDevice->setOnAudioData([&](IAudioDevice& dev, void* data, size_t size, void* state) {
             paCallBackData* cbData = static_cast<paCallBackData*>(state);
             short* audioData = static_cast<short*>(data);
+            short* tmpInput = cbData->tmpReadBuffer_.get();
 
             for (size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
             {
-                if (cbData->infifo1->write(&audioData[0], 1)) 
-                {
-                    log_warn("RX FIFO full");
-                    g_infifo1_full++;
-                    break;
-                }
+                tmpInput[i] = audioData[0];
+            }
+            if (cbData->infifo1->write(tmpInput, size)) 
+            {
+                log_warn("RX FIFO full");
+                g_infifo1_full++;
+                return;
             }
 
             m_rxThread->notify();
@@ -3111,7 +3120,7 @@ void MainFrame::startRxStream()
             rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
-                short outdata = 0;
+                short* tmpOutput = cbData->tmpWriteBuffer_.get();
 
                 if ((size_t)cbData->outfifo2->numUsed() < size)
                 {
@@ -3119,12 +3128,12 @@ void MainFrame::startRxStream()
                     return;
                 }
 
-                for (; size > 0; size--)
+                cbData->outfifo2->read(tmpOutput, size);
+                for (int count = 0; count < size; count++)
                 {
-                    cbData->outfifo2->read(&outdata, 1);
                     for (int j = 0; j < dev.getNumChannels(); j++)
                     {
-                        *audioData++ = outdata;
+                        *audioData++ = tmpOutput[count];
                     }
                 }
             }, g_rxUserdata);
@@ -3144,7 +3153,7 @@ void MainFrame::startRxStream()
             rxOutSoundDevice->setOnAudioData([](IAudioDevice& dev, void* data, size_t size, void* state) {
                 paCallBackData* cbData = static_cast<paCallBackData*>(state);
                 short* audioData = static_cast<short*>(data);
-                short outdata = 0;
+                short* tmpOutput = cbData->tmpWriteBuffer_.get();
 
                 if ((size_t)cbData->outfifo1->numUsed() < size)
                 {
@@ -3152,12 +3161,12 @@ void MainFrame::startRxStream()
                     return;
                 }
 
-                for (; size > 0; size--)
+                cbData->outfifo1->read(tmpOutput, size);
+                for (int count = 0; count < size; count++)
                 {
-                    cbData->outfifo1->read(&outdata, 1);
                     for (int j = 0; j < dev.getNumChannels(); j++)
                     {
-                        *audioData++ = outdata;
+                        *audioData++ = tmpOutput[count];
                     }
                 }
             }, g_rxUserdata);
