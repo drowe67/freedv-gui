@@ -3483,7 +3483,7 @@ void MainFrame::initializeFreeDVReporter_()
         });
     });
     
-    wxGetApp().m_sharedReporterObject->connect();
+    auto txStatus = g_tx.load(std::memory_order_acquire);
     if (!freedvInterface.isRunning())
     {
         wxGetApp().m_sharedReporterObject->hideFromView();
@@ -3493,4 +3493,5 @@ void MainFrame::initializeFreeDVReporter_()
         wxGetApp().m_sharedReporterObject->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
         wxGetApp().m_sharedReporterObject->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
     }
+    wxGetApp().m_sharedReporterObject->connect();
 }
