@@ -2258,7 +2258,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
             {
                 item->isVisible = false;
                 parent_->Unselect(dvi);
-                ItemDeleted(wxDataViewItem(nullptr), dvi);
+                Cleared(); // Note: ItemDeleted() causes spurious errors on macOS.
             }
 
             item->isPendingDelete = true;
