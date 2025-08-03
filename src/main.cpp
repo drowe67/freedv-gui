@@ -2845,7 +2845,8 @@ void MainFrame::startRxStream()
 
                     if (!endingTx) 
                     {
-                        for(size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
+                        auto numChannels = dev.getNumChannels();
+                        for(size_t i = 0; i < size; i++, audioData += numChannels)
                         {
                             tmpInput[i] = audioData[0];
                         }
@@ -2894,21 +2895,24 @@ void MainFrame::startRxStream()
                     paCallBackData* cbData = static_cast<paCallBackData*>(state);
                     short* audioData = static_cast<short*>(data);
                     short* tmpOutput = cbData->tmpWriteBuffer_.get();
-               
-                    if ((size_t)cbData->outfifo1->numUsed() < size)
+
+                    auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
+                    if (toRead < size)
                     {
                         g_outfifo1_empty++;
-                        return;
                     }
 
-                    cbData->outfifo1->read(tmpOutput, size);
-                    for (size_t count = 0; count < size; count++, audioData += dev.getNumChannels())
+                    cbData->outfifo1->read(tmpOutput, toRead);
+                    auto numChannels = dev.getNumChannels();
+                    for (size_t count = 0; count < size; count++, audioData += numChannels)
                     {
+                        auto output = (count < toRead) ? tmpOutput[count] : 0;
+
                         // write signal to all channels to start. This is so that
                         // the compiler can optimize for the most common case.
-                        for (auto j = 0; j < dev.getNumChannels(); j++)
+                        for (auto j = 0; j < numChannels; j++)
                         {
-                            audioData[j] = tmpOutput[count];
+                            audioData[j] = output;
                         }
                     
                         // If VOX tone is enabled, go back through and add the VOX tone
@@ -3091,7 +3095,8 @@ void MainFrame::startRxStream()
             short* audioData = static_cast<short*>(data);
             short* tmpInput = cbData->tmpReadBuffer_.get();
 
-            for (size_t i = 0; i < size; i++, audioData += dev.getNumChannels())
+            auto numChannels = dev.getNumChannels();
+            for (size_t i = 0; i < size; i++, audioData += numChannels)
             {
                 tmpInput[i] = audioData[0];
             }
@@ -3125,18 +3130,19 @@ void MainFrame::startRxStream()
                 short* audioData = static_cast<short*>(data);
                 short* tmpOutput = cbData->tmpWriteBuffer_.get();
 
-                if ((size_t)cbData->outfifo2->numUsed() < size)
+                auto toRead = std::min((size_t)cbData->outfifo2->numUsed(), size);
+                if (toRead < size)
                 {
                     g_outfifo2_empty++;
-                    return;
                 }
 
-                cbData->outfifo2->read(tmpOutput, size);
+                cbData->outfifo2->read(tmpOutput, toRead);
+                auto numChannels = dev.getNumChannels();
                 for (size_t count = 0; count < size; count++)
                 {
-                    for (int j = 0; j < dev.getNumChannels(); j++)
+                    for (int j = 0; j < numChannels; j++)
                     {
-                        *audioData++ = tmpOutput[count];
+                        *audioData++ = (count < toRead) ? tmpOutput[count] : 0;
                     }
                 }
             }, g_rxUserdata);
@@ -3158,18 +3164,19 @@ void MainFrame::startRxStream()
                 short* audioData = static_cast<short*>(data);
                 short* tmpOutput = cbData->tmpWriteBuffer_.get();
 
-                if ((size_t)cbData->outfifo1->numUsed() < size)
+                auto toRead = std::min((size_t)cbData->outfifo1->numUsed(), size);
+                if (toRead < size)
                 {
                     g_outfifo1_empty++;
-                    return;
                 }
 
-                cbData->outfifo1->read(tmpOutput, size);
+                cbData->outfifo1->read(tmpOutput, toRead);
+                auto numChannels = dev.getNumChannels();
                 for (size_t count = 0; count < size; count++)
                 {
-                    for (int j = 0; j < dev.getNumChannels(); j++)
+                    for (int j = 0; j < numChannels; j++)
                     {
-                        *audioData++ = tmpOutput[count];
+                        *audioData++ = (count < toRead) ? tmpOutput[count] : 0;
                     }
                 }
             }, g_rxUserdata);
