@@ -844,6 +844,8 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 2. Enhancements:
     * Add Mic/Speaker volume control to main window. (PR #980)
     * Further audio performance improvements. (PR #975)
+3. Build system:
+    * Update Hamlib to v4.6.4. (PR #989)
 
 ## V2.0.1 July 2025
 
