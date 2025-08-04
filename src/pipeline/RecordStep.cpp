@@ -25,6 +25,10 @@
 #include <chrono>
 #include "wx/thread.h"
 
+#if defined(__APPLE__)
+#include <pthread.h>
+#endif // defined(__APPLE__)
+
 extern wxMutex g_mutexProtectingCallbackData;
 
 using namespace std::chrono_literals;
@@ -85,7 +89,12 @@ void RecordStep::fileIoThreadEntry_()
 {
     short* buf = new short[inputSampleRate_];
     assert(buf != nullptr);
-    
+
+#if defined(__APPLE__)
+    // Downgrade thread QoS to Utility to avoid thread contention issues.        
+    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+#endif // defined(__APPLE__)
+
     while (!fileIoThreadEnding_)
     {
         g_mutexProtectingCallbackData.Lock();

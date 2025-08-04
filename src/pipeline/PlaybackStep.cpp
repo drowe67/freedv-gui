@@ -28,6 +28,10 @@
 
 #include "../util/logging/ulog.h"
 
+#if defined(__APPLE__)
+#include <pthread.h>
+#endif // defined(__APPLE__)
+
 extern wxMutex g_mutexProtectingCallbackData;
 
 using namespace std::chrono_literals;
@@ -92,6 +96,11 @@ short* PlaybackStep::execute(short* inputSamples, int numInputSamples, int* numO
 void PlaybackStep::nonRtThreadEntry_()
 {
     std::unique_ptr<short[]> buf = nullptr;
+
+#if defined(__APPLE__)
+    // Downgrade thread QoS to Utility to avoid thread contention issues. 
+    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+#endif // defined(__APPLE__)
 
     while (!nonRtThreadEnding_)
     {

@@ -26,6 +26,10 @@
 #include <future>
 #include <chrono>
 
+#if defined(__APPLE__)
+#include <pthread.h>
+#endif // defined(__APPLE__)
+
 using namespace std::chrono_literals;
 
 TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
@@ -38,6 +42,11 @@ TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
         const int SAMPLE_RATE_AT_10MS = sampleRate_ / 100;
         short* fifoInput = new short[SAMPLE_RATE_AT_10MS];
         assert(fifoInput != nullptr);
+
+#if defined(__APPLE__)
+        // Downgrade thread QoS to Utility to avoid thread contention issues.        
+        pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+#endif // defined(__APPLE__)
 
         while (!endingTapThread_)
         {
