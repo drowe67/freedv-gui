@@ -63,7 +63,7 @@ private:
     RADE_COMP* eooOut_;
     short* eooOutShort_;
     
-    PreAllocatedFIFO<float, 4096> utFeatures_;
+    PreAllocatedFIFO<float, 2048> utFeatures_;
     std::thread utFeatureThread_;
     bool exitingFeatureThread_;
 };
