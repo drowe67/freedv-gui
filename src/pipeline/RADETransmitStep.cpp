@@ -49,12 +49,9 @@ extern wxString utTxFeatureFile;
 RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
     : dv_(dv)
     , encState_(encState)
-    , inputSampleFifo_(RADE_SPEECH_SAMPLE_RATE)
-    , outputSampleFifo_(RADE_MODEM_SAMPLE_RATE)
     , featureList_(nullptr)
     , featureListIdx_(0)
     , featuresFile_(nullptr)
-    //, utFeatures_(FEATURE_FIFO_SIZE)
     , exitingFeatureThread_(false)
 {
     if (utTxFeatureFile != "")
