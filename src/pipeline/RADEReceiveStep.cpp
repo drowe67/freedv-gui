@@ -45,14 +45,11 @@ extern wxString utRxFeatureFile;
 RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text_t textPtr, std::function<void(RADEReceiveStep*)> syncFn)
     : dv_(dv)
     , fargan_(fargan)
-    , inputSampleFifo_(RADE_MODEM_SAMPLE_RATE)
-    , outputSampleFifo_(RADE_SPEECH_SAMPLE_RATE)
     , pendingFeatures_(nullptr)
     , pendingFeaturesIdx_(0)
     , featuresFile_(nullptr)
     , textPtr_(textPtr)
     , syncFn_(syncFn)
-    //, utFeatures_(FEATURE_FIFO_SIZE)
     , exitingFeatureThread_(false)
 {
     assert(syncState_.is_lock_free());

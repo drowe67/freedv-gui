@@ -49,8 +49,8 @@ public:
 private:
     struct rade* dv_;
     LPCNetEncState* encState_;
-    GenericFIFO<short> inputSampleFifo_;
-    GenericFIFO<short> outputSampleFifo_;
+    PreAllocatedFIFO<short, RADE_SPEECH_SAMPLE_RATE> inputSampleFifo_;
+    PreAllocatedFIFO<short, RADE_MODEM_SAMPLE_RATE> outputSampleFifo_;
     float* featureList_;
     int featureListIdx_;
     int arch_;
@@ -63,7 +63,7 @@ private:
     RADE_COMP* eooOut_;
     short* eooOutShort_;
     
-    PreAllocatedFIFO<float, 4096> utFeatures_;
+    PreAllocatedFIFO<float, 8192> utFeatures_;
     std::thread utFeatureThread_;
     bool exitingFeatureThread_;
 };
