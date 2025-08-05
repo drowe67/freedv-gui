@@ -3490,7 +3490,7 @@ void MainFrame::initializeFreeDVReporter_()
     }
     else
     {
-        wxGetApp().m_sharedReporterObject->transmit(freedvInterface.getCurrentTxModeStr(), g_tx);
+        wxGetApp().m_sharedReporterObject->transmit(freedvInterface.getCurrentTxModeStr(), txStatus);
         wxGetApp().m_sharedReporterObject->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
     }
     wxGetApp().m_sharedReporterObject->connect();

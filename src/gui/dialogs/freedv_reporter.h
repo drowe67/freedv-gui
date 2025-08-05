@@ -276,6 +276,8 @@ class FreeDVReporterDialog : public wxFrame
             bool filterSelfMessageUpdates_;
             uint64_t filteredFrequency_;
 
+            bool deselectOnRefresh_;
+
             bool isFiltered_(uint64_t freq);
 
             void clearAllEntries_();
