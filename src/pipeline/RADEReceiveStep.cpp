@@ -52,7 +52,7 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
     , featuresFile_(nullptr)
     , textPtr_(textPtr)
     , syncFn_(syncFn)
-    , utFeatures_(FEATURE_FIFO_SIZE)
+    //, utFeatures_(FEATURE_FIFO_SIZE)
     , exitingFeatureThread_(false)
 {
     assert(syncState_.is_lock_free());

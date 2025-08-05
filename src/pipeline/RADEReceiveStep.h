@@ -72,7 +72,7 @@ private:
     float* eooOut_;
     std::unique_ptr<short[]> outputSamples_;
     
-    GenericFIFO<float> utFeatures_;
+    PreAllocatedFIFO<float, 4096> utFeatures_;
     std::thread utFeatureThread_;
     bool exitingFeatureThread_;
 };

@@ -54,7 +54,7 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
     , featureList_(nullptr)
     , featureListIdx_(0)
     , featuresFile_(nullptr)
-    , utFeatures_(FEATURE_FIFO_SIZE)
+    //, utFeatures_(FEATURE_FIFO_SIZE)
     , exitingFeatureThread_(false)
 {
     if (utTxFeatureFile != "")
