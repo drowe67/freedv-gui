@@ -149,7 +149,7 @@ if(APPLE)
         COMMAND cp ARGS -a ../rade_src/model19_check3 FreeDV.app/Contents/Resources
         
         # Precompile Python code to improve startup time
-        COMMAND cd FreeDV.app/Contents/Resources && ../Frameworks/Python.framework/Versions/Current/bin/python3 -c "import radae_txe\; import radae_rxe\;" && cd ../../..
+        COMMAND cd FreeDV.app/Contents/Resources && ../Frameworks/Python.framework/Versions/Current/bin/pip3 install intel-openmp && cp ../Frameworks/Python.framework/Versions/Current/lib/libiomp*.dylib ../Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/torch/lib && ../Frameworks/Python.framework/Versions/Current/bin/python3 -c "import radae_txe\; import radae_rxe\;" && cd ../../..
         
         # Codesign binary so that it can execute
         COMMAND codesign --force --options runtime --timestamp --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/entitlements.plist --sign ${MACOS_CODESIGN_IDENTITY} ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app `find ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app -name '*.so' -o -name '*.dylib'` `find ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/Versions/3.12/bin -name 'Python' -o -name 'python3.12*'` `find ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/ -name 'Python'` ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/MacOS/FreeDV ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/torch/bin/* ${CMAKE_CURRENT_BINARY_DIR}/FreeDV.app/Contents/Frameworks/Python.framework/Versions/3.12/Python
