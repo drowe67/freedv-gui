@@ -197,7 +197,7 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
         if (featuresFile_)
         {
             utFeatures_.write(features, NB_TOTAL_FEATURES);
-            if (utFeatures_.numUsed() > ((3 * utFeatures_.capacity()) / 4))
+            if (utFeatures_.numUsed() > (0.1 * utFeatures_.capacity()))
             {
                 featuresAvailableSem_.signal();
             }
