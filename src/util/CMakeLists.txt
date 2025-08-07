@@ -7,6 +7,7 @@ if(LINUX)
 endif(LINUX)
 
 add_library(fdv_util STATIC
+    Semaphore.cpp
     SocketIoClient.cpp
     ThreadedObject.cpp
     ThreadedTimer.cpp

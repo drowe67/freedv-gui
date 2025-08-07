@@ -56,7 +56,7 @@ TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
                 tapThreadInput_.read(fifoInput, SAMPLE_RATE_AT_10MS);
                 tapStep_->execute(fifoInput, SAMPLE_RATE_AT_10MS, &temp);
             }
-            std::this_thread::sleep_for(11ms); // using prime number to reduce likelihood of scheduler contention
+            sem_.wait();
         }
 
         delete[] fifoInput;
@@ -66,6 +66,7 @@ TapStep::TapStep(int sampleRate, IPipelineStep* tapStep)
 TapStep::~TapStep()
 {
     endingTapThread_ = true;
+    sem_.signal();
     tapThread_.join();
 }
 
@@ -84,6 +85,8 @@ short* TapStep::execute(short* inputSamples, int numInputSamples, int* numOutput
     assert(tapStep_->getInputSampleRate() == sampleRate_);
     
     tapThreadInput_.write(inputSamples, numInputSamples);
+    sem_.signal();
+    
     *numOutputSamples = numInputSamples;
     return inputSamples;
 }

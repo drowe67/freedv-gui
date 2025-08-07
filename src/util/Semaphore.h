@@ -1,6 +1,6 @@
 //=========================================================================
-// Name:            TapStep.h
-// Purpose:         Describes a tap step in the audio pipeline.
+// Name:            Semaphore.h
+// Purpose:         Implements a semaphore.
 //
 // Authors:         Mooneer Salem
 // License:
@@ -20,33 +20,34 @@
 //
 //=========================================================================
 
-#ifndef AUDIO_PIPELINE__TAP_STEP_H
-#define AUDIO_PIPELINE__TAP_STEP_H
+#ifndef UTIL_SEMAPHORE_H
+#define UTIL_SEMAPHORE_H
 
-#include <memory>
-#include <thread>
-#include "../util/GenericFIFO.h"
-#include "../util/Semaphore.h"
+#if defined(_WIN32)
+#include <windows.h>
+#elif defined(__APPLE__)
+#include <dispatch/dispatch.h>
+#else
+#include <semaphore.h>
+#endif // defined(_WIN32) || defined(__APPLE__)
 
-#include "IPipelineStep.h"
-
-class TapStep : public IPipelineStep
+class Semaphore
 {
 public:
-    TapStep(int inputSampleRate, IPipelineStep* tapStep);
-    virtual ~TapStep();
+    Semaphore();
+    virtual ~Semaphore();
     
-    virtual int getInputSampleRate() const override;
-    virtual int getOutputSampleRate() const override;
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
+    void wait();
+    void signal();
     
 private:
-    std::shared_ptr<IPipelineStep> tapStep_;
-    int sampleRate_;
-    std::thread tapThread_;
-    bool endingTapThread_;
-    GenericFIFO<short> tapThreadInput_;
-    Semaphore sem_;
+#if defined(_WIN32)
+    HANDLE sem_;
+#elif defined(__APPLE__)
+    dispatch_semaphore_t sem_;
+#else
+    sem_t sem_;
+#endif // defined(_WIN32) || defined(__APPLE__)
 };
 
-#endif // AUDIO_PIPELINE__TAP_STEP_H
+#endif // UTIL_SEMAPHORE_H
