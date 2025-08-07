@@ -85,8 +85,11 @@ short* TapStep::execute(short* inputSamples, int numInputSamples, int* numOutput
     assert(tapStep_->getInputSampleRate() == sampleRate_);
     
     tapThreadInput_.write(inputSamples, numInputSamples);
-    sem_.signal();
-    
+    if (tapThreadInput_.numUsed() > (100 * sampleRate_ / 1000))
+    {
+        sem_.signal();
+    }
+ 
     *numOutputSamples = numInputSamples;
     return inputSamples;
 }
