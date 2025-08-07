@@ -1574,7 +1574,6 @@ FreeDVReporterDialog::FreeDVReporterDataModel::FreeDVReporterDataModel(FreeDVRep
     , currentBandFilter_(FreeDVReporterDialog::BAND_ALL)
     , filterSelfMessageUpdates_(false)
     , filteredFrequency_(0)
-    , deselectOnRefresh_(false)
 {
     // empty
 }
@@ -2053,12 +2052,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
             ItemChanged(wxDataViewItem(kvp.second));
         }
     }
-
-    if (deselectOnRefresh_)
-    {
-        parent_->DeselectItem();
-        deselectOnRefresh_ = false;
-    }
 }
 
 void FreeDVReporterDialog::FreeDVReporterDataModel::requestQSY(wxDataViewItem selectedItem, uint64_t frequency, wxString customText)
@@ -2271,11 +2264,6 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
                 item->isVisible = false;
                 parent_->Unselect(dvi);
                 Cleared(); // Note: ItemDeleted() causes spurious errors on macOS.
-
-                // Note: on Linux, rows may occasionally be improperly selected as a result of 
-                // removing this row. We want to make sure nothing gets selected once the table
-                // is redrawn.
-                deselectOnRefresh_ = true;
             }
 
             item->isPendingDelete = true;
