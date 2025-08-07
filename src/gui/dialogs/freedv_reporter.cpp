@@ -702,7 +702,7 @@ void FreeDVReporterDialog::OnClose(wxCloseEvent& event)
 
 void FreeDVReporterDialog::OnItemSelectionChanged(wxDataViewEvent& event)
 {
-    if (event.GetItem().IsOk())
+    if (event.GetItem().IsOk() && isSelectionPossible_)
     {
         refreshQSYButtonState();
 
@@ -713,6 +713,7 @@ void FreeDVReporterDialog::OnItemSelectionChanged(wxDataViewEvent& event)
     else
     {
         m_buttonSendQSY->Enable(false);
+        DeselectItem();
     }
 }
 
@@ -932,6 +933,9 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
     m_listSpots->HitTest(wxPoint(mouseX, mouseY), item, col);
     if (item.IsOk())
     {
+        // Linux workaround to avoid inadvertent selections.
+        isSelectionPossible_ = true;
+
         // Show popup corresponding to the full message.
         FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
         tempUserMessage_ = model->getUserMessage(item);
@@ -965,6 +969,7 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
     }
     else
     {
+        isSelectionPossible_ = false;
         tempUserMessage_ = _("");
     }
 }

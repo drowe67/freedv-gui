@@ -306,6 +306,8 @@ class FreeDVReporterDialog : public wxFrame
             static wxString GetCardinalDirection_(int degrees);
         };
 
+        bool isSelectionPossible_;
+
         FilterFrequency getFilterForFrequency_(uint64_t freq);
 };
 
