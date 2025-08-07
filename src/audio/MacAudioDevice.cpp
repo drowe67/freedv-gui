@@ -675,7 +675,7 @@ void MacAudioDevice::setHelperRealTime()
     
     // The below code is disabled because RADE is not currently real-time
     // safe (i.e. no system calls, dynamic allocation, etc.)    
-#if 0
+#if 1
     // Most important, set real-time constraints.
     // Define the guaranteed and max fraction of time for the audio thread.
     // These "duty cycle" values can range from 0 to 1.  A value of 0.5
@@ -815,7 +815,7 @@ UInt32 MacAudioDevice::nextPowerOfTwo_(UInt32 val)
 
 void MacAudioDevice::joinWorkgroup_()
 {
-#if 0
+#if 1
     // Join Core Audio workgroup
     Workgroup_ = nullptr;
     JoinToken_ = nullptr;
@@ -870,7 +870,7 @@ void MacAudioDevice::joinWorkgroup_()
 
 void MacAudioDevice::startRealTimeWork()
 {
-#if 0
+#if 1
     // If the audio ID changes on us, join the new workgroup
     if (CurrentCoreAudioId_ != 0 && CurrentCoreAudioId_ != coreAudioId_ && Workgroup_ != nullptr)
     {
@@ -903,14 +903,14 @@ void MacAudioDevice::stopRealTimeWork(bool fastMode)
 void MacAudioDevice::clearHelperRealTime()
 {
     numRealTimeWorkers_.fetch_sub(1, std::memory_order_release);
-#if 0
+#if 1
     leaveWorkgroup_();
 #endif // 0
 }
 
 void MacAudioDevice::leaveWorkgroup_()
 {
-#if 0
+#if 1
     if (Workgroup_ != nullptr)
     {
         os_workgroup_t* wgMem = (os_workgroup_t*)Workgroup_;
