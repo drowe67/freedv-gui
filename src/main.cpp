@@ -3279,6 +3279,20 @@ void MainFrame::startRxStream()
             wxLogError(wxT("Can't start RX thread!"));
         }
 
+        // Logic to ensure that both TX/RX threads start work at the 
+        // same time. This makes sure there are no dropouts at the beginning
+        // of full duplex TX.
+        m_rxThread->waitForReady();
+        if (m_txThread != nullptr)
+        {
+            m_txThread->waitForReady();
+        }
+        m_rxThread->signalToStart();
+        if (m_txThread != nullptr)
+        {
+            m_txThread->signalToStart();
+        }
+    
         log_debug("starting tx/rx processing thread");
 
         // Work around an issue where the buttons stay disabled even if there

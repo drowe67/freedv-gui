@@ -30,6 +30,7 @@
 
 #include "AudioPipeline.h"
 #include "util/IRealtimeHelper.h"
+#include "util/Semaphore.h"
 
 // Forward declarations
 class LinkStep;
@@ -81,6 +82,9 @@ public:
     void terminateThread();
     void notify();
 
+    void waitForReady() { readySem_.wait(); }
+    void signalToStart() { startSem_.signal(); }
+
 private:
     bool  m_tx;
     bool  m_run;
@@ -93,6 +97,9 @@ private:
     std::unique_ptr<short[]> inputSamples_;
     std::unique_ptr<short[]> inputSamplesZeros_;
     bool deferReset_;
+
+    Semaphore readySem_;
+    Semaphore startSem_;
 
 #if defined(ENABLE_PROCESSING_STATS)
     int numTimeSamples_;

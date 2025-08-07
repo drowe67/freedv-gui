@@ -492,15 +492,21 @@ void* TxRxThread::Entry()
     resetStats_();
 #endif // defined(ENABLE_PROCESSING_STATS)
 
-    while (m_run)
-    {
 #if defined(__linux__)
-        const char* threadName = nullptr;
-        if (m_tx) threadName = "FreeDV txThread";
-        else threadName = "FreeDV rxThread";
-        pthread_setname_np(pthread_self(), threadName);
+    const char* threadName = nullptr;
+    if (m_tx) threadName = "FreeDV txThread";
+    else threadName = "FreeDV rxThread";
+    pthread_setname_np(pthread_self(), threadName);
 #endif // defined(__linux__)
 
+    // Make sure we don't start processing until
+    // the main thread is ready.
+    readySem_.signal();
+    startSem_.wait();
+    clearFifos_();
+
+    while (m_run)
+    {
         if (!m_run) break;
         
         //log_info("thread woken up: m_tx=%d", (int)m_tx);
