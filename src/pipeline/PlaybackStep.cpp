@@ -62,6 +62,7 @@ PlaybackStep::PlaybackStep(
 PlaybackStep::~PlaybackStep()
 {
     nonRtThreadEnding_ = true;
+    fileIoThreadSem_.signal();
     if (nonRtThread_.joinable())
     {
         nonRtThread_.join();
@@ -89,6 +90,8 @@ short* PlaybackStep::execute(short* inputSamples, int numInputSamples, int* numO
     {
         codec2_fifo_read(outputFifo_, outputSamples_.get(), *numOutputSamples);
     }
+    
+    fileIoThreadSem_.signal();
 
     return outputSamples_.get();
 }
@@ -169,7 +172,7 @@ void PlaybackStep::nonRtThreadEntry_()
         }
         g_mutexProtectingCallbackData.Unlock();
         
-        std::this_thread::sleep_for(101ms); // using prime number to reduce likelihood of contention
+        fileIoThreadSem_.wait();
     }
 
     if (playbackResampler_ != nullptr)

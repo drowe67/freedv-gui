@@ -83,8 +83,8 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
                     featureCnt.push_back(numToRead);
                     numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
                 }
-                                
-                std::this_thread::sleep_for(101ms); // prime number used to avoid contention
+                
+                featuresAvailableSem_.wait();
             }
             
             auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
@@ -141,6 +141,7 @@ RADEReceiveStep::~RADEReceiveStep()
     if (featuresFile_ != nullptr)
     {
         exitingFeatureThread_ = true;
+        featuresAvailableSem_.signal();
         utFeatureThread_.join();
         fclose(featuresFile_);
     }
@@ -216,6 +217,10 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
             if (featuresFile_)
             {
                 utFeatures_.write(featuresOut_, nout);
+                if (featuresOut_.numUsed() > ((3 * featuresOut_.capacity()) / 2))
+                {
+                    featuresAvailableSem_.signal();
+                }
             }
 
             for (int i = 0; i < nout; i++)

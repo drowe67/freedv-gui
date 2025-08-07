@@ -83,8 +83,8 @@ RADETransmitStep::RADETransmitStep(struct rade* dv, LPCNetEncState* encState)
                     featureCnt.push_back(numToRead);
                     numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
                 }
-                    
-                std::this_thread::sleep_for(101ms); // prime number used to avoid contention
+                
+                featuresAvailableSem_.wait();
             }
 
             auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
@@ -148,6 +148,7 @@ RADETransmitStep::~RADETransmitStep()
     if (featuresFile_ != nullptr)
     {
         exitingFeatureThread_ = true;
+        featuresAvailableSem_.signal();
         utFeatureThread_.join();
         fclose(featuresFile_);
     }
@@ -196,6 +197,10 @@ short* RADETransmitStep::execute(short* inputSamples, int numInputSamples, int* 
         if (featuresFile_)
         {
             utFeatures_.write(features, NB_TOTAL_FEATURES);
+            if (utFeatures_.numUsed() > ((3 * utFeatures_.capacity()) / 4))
+            {
+                featuresAvailableSem_.signal();
+            }
         }
             
         for (int index = 0; index < NB_TOTAL_FEATURES; index++)

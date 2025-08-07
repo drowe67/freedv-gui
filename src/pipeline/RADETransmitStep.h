@@ -31,6 +31,7 @@
 #include "rade_api.h"
 #include "lpcnet.h"
 #include "../util/GenericFIFO.h"
+#include "../util/Semaphore.h"
 
 class RADETransmitStep : public IPipelineStep
 {
@@ -66,6 +67,7 @@ private:
     PreAllocatedFIFO<float, 8192> utFeatures_;
     std::thread utFeatureThread_;
     bool exitingFeatureThread_;
+    Semaphore featuresAvailableSem_;
 };
 
 #endif // AUDIO_PIPELINE__RADE_TRANSMIT_STEP_H

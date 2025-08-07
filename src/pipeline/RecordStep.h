@@ -29,6 +29,7 @@
 #include <sndfile.h>
 #include <thread>
 #include "codec2_fifo.h"
+#include "../util/Semaphore.h"
 
 class RecordStep : public IPipelineStep
 {
@@ -50,6 +51,7 @@ private:
     std::thread fileIoThread_;
     FIFO* inputFifo_;
     bool fileIoThreadEnding_;
+    Semaphore fileIoThreadSem_;
     
     void fileIoThreadEntry_();
 };

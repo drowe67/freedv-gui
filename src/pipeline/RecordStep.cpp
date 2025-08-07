@@ -50,6 +50,7 @@ RecordStep::RecordStep(
 RecordStep::~RecordStep()
 {
     fileIoThreadEnding_ = true;
+    fileIoThreadSem_.signal();
     if (fileIoThread_.joinable())
     {
         fileIoThread_.join();
@@ -71,6 +72,7 @@ int RecordStep::getOutputSampleRate() const
 short* RecordStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {    
     codec2_fifo_write(inputFifo_, inputSamples, numInputSamples);
+    fileIoThreadSem_.signal();
     
     *numOutputSamples = 0;
     return nullptr;
@@ -109,7 +111,7 @@ void RecordStep::fileIoThreadEntry_()
         }
         g_mutexProtectingCallbackData.Unlock();
         
-        std::this_thread::sleep_for(101ms); // using prime number to reduce likelihood of contention
+        fileIoThreadSem_.wait();
     }
     
     delete[] buf;

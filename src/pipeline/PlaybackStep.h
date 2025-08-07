@@ -30,6 +30,7 @@
 #include <thread>
 #include <sndfile.h>
 #include "codec2_fifo.h"
+#include "../util/Semaphore.h"
 
 class PlaybackStep : public IPipelineStep
 {
@@ -53,6 +54,7 @@ private:
     std::thread nonRtThread_;
     bool nonRtThreadEnding_;
     FIFO* outputFifo_;
+    Semaphore fileIoThreadSem_;
 
     ResampleStep* playbackResampler_;
     
