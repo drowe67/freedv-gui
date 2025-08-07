@@ -702,7 +702,11 @@ void FreeDVReporterDialog::OnClose(wxCloseEvent& event)
 
 void FreeDVReporterDialog::OnItemSelectionChanged(wxDataViewEvent& event)
 {
-    if (event.GetItem().IsOk() && isSelectionPossible_)
+    if (event.GetItem().IsOk() 
+#if !(defined(WIN32) || defined(__APPLE__))
+&& isSelectionPossible_
+#endif // !(defined(WIN32) || defined(__APPLE__)
+        )
     {
         refreshQSYButtonState();
 
