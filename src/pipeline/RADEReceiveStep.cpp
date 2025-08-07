@@ -217,7 +217,7 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
             if (featuresFile_)
             {
                 utFeatures_.write(featuresOut_, nout);
-                if (featuresOut_.numUsed() > ((3 * featuresOut_.capacity()) / 2))
+                if (utFeatures_.numUsed() > ((3 * utFeatures_.capacity()) / 2))
                 {
                     featuresAvailableSem_.signal();
                 }
