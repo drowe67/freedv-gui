@@ -1396,9 +1396,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      }
      else
      {
+         bool txState = g_tx.load(std::memory_order_acquire);
+
          // Synchronize changes with Filter dialog
          auto sliderVal = 0.0;
-         if (g_tx.load(std::memory_order_acquire))
+         if (txState)
          {
              sliderVal = wxGetApp().appConfiguration.filterConfiguration.micInChannel.volInDB;
          }
@@ -1563,7 +1565,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // Level Gauge -----------------------------------------------------------------------
 
         float tooHighThresh;
-        if (!g_tx.load(std::memory_order_acquire) && m_RxRunning)
+        if (!txState && m_RxRunning)
         {
             // receive mode - display From Radio peaks
             // peak from this DT sampling period
