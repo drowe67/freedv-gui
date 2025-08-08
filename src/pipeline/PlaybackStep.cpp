@@ -105,11 +105,12 @@ void PlaybackStep::nonRtThreadEntry_()
     pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
 #endif // defined(__APPLE__)
 
+    bool readComplete = false;
     while (!nonRtThreadEnding_)
     {
         g_mutexProtectingCallbackData.Lock();
         auto playFile = getSndFileFn_();
-        if (playFile != nullptr)
+        if (playFile != nullptr && !readComplete)
         {
             auto fileSampleRate = fileSampleRateFn_();
             if (getInputSampleRate() != fileSampleRate && (
@@ -162,13 +163,18 @@ void PlaybackStep::nonRtThreadEntry_()
                     }
                 }
 
-                if ((int)numRead < samplesAtSourceRate && codec2_fifo_used(outputFifo_) == 0)
+                if ((int)numRead == 0 && codec2_fifo_used(outputFifo_) == 0)
                 {
                     //log_info("file read complete");
                     buf = nullptr;
                     fileCompleteFn_();
+                    readComplete = true;
                 }
             }
+        }
+        else
+        {
+            readComplete = false;
         }
         g_mutexProtectingCallbackData.Unlock();
         
