@@ -27,6 +27,7 @@
 #endif // defined(__clang__)
 
 #include <cassert>
+#include <functional>
 #include "RADEReceiveStep.h"
 #include "../defines.h"
 #include "lpcnet.h" // from Opus source tree

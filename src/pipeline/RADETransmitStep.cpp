@@ -29,6 +29,7 @@
 #include <cstring>
 #include <cassert>
 #include <cmath>
+#include <functional>
 #include "../defines.h"
 #include "codec2_fifo.h"
 #include "RADETransmitStep.h"
