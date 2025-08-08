@@ -41,7 +41,7 @@ public:
     virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     
 private:
-    std::shared_ptr<IPipelineStep> tapStep_;
+    std::unique_ptr<IPipelineStep> tapStep_;
     int sampleRate_;
     std::thread tapThread_;
     bool endingTapThread_;
