@@ -77,6 +77,8 @@ private:
     std::thread utFeatureThread_;
     bool exitingFeatureThread_;
     Semaphore featuresAvailableSem_;
+    
+    void utFeatureThreadEntry_();
 };
 
 #endif // AUDIO_PIPELINE__RADE_RECEIVE_STEP_H

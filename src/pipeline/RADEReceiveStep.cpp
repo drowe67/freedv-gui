@@ -59,53 +59,7 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
         featuresFile_ = fopen((const char*)utRxFeatureFile.ToUTF8(), "wb");
         assert(featuresFile_ != nullptr);
         
-        utFeatureThread_ = std::thread([&]() {
-#if defined(__APPLE__)
-            // Downgrade thread QoS to Utility to avoid thread contention issues.
-            pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
-    
-            // Make sure other I/O can throttle us.
-            setiopolicy_np(IOPOL_TYPE_DISK, IOPOL_SCOPE_THREAD, IOPOL_THROTTLE);
-#endif // defined(__APPLE__)
-
-            std::vector<float*> featureList;
-            std::vector<int> featureCnt;
-            while (!exitingFeatureThread_)
-            {
-                auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
-                while (numToRead > 0)
-                {
-                    float* fifoRead = new float[numToRead];
-                    assert(fifoRead != nullptr);
-                    
-                    utFeatures_.read(fifoRead, numToRead);
-                    featureList.push_back(fifoRead);
-                    featureCnt.push_back(numToRead);
-                    numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
-                }
-                
-                featuresAvailableSem_.wait();
-            }
-            
-            auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
-            while (numToRead > 0)
-            {
-                float* fifoRead = new float[numToRead];
-                assert(fifoRead != nullptr);
-                
-                utFeatures_.read(fifoRead, numToRead);
-                featureList.push_back(fifoRead);
-                featureCnt.push_back(numToRead);
-                numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
-            }
-            
-            int index = 0;
-            for (auto& feature : featureList)
-            {
-                fwrite(feature, sizeof(float) * featureCnt[index++], 1, featuresFile_);
-                delete[] feature;
-            }
-        });
+        utFeatureThread_ = std::thread(std::bind(&RADEReceiveStep::utFeatureThreadEntry_, this));
     }
 
     // Pre-allocate buffers so we don't have to do so during real-time operation.
@@ -278,4 +232,53 @@ void RADEReceiveStep::reset()
     inputSampleFifo_.reset();
     outputSampleFifo_.reset();
     pendingFeaturesIdx_ = 0;
+}
+
+void RADEReceiveStep::utFeatureThreadEntry_()
+{
+#if defined(__APPLE__)
+    // Downgrade thread QoS to Utility to avoid thread contention issues.
+    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+    
+    // Make sure other I/O can throttle us.
+    setiopolicy_np(IOPOL_TYPE_DISK, IOPOL_SCOPE_THREAD, IOPOL_THROTTLE);
+#endif // defined(__APPLE__)
+
+    std::vector<float*> featureList;
+    std::vector<int> featureCnt;
+    while (!exitingFeatureThread_)
+    {
+        auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
+        while (numToRead > 0)
+        {
+            float* fifoRead = new float[numToRead];
+            assert(fifoRead != nullptr);
+            
+            utFeatures_.read(fifoRead, numToRead);
+            featureList.push_back(fifoRead);
+            featureCnt.push_back(numToRead);
+            numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
+        }
+        
+        featuresAvailableSem_.wait();
+    }
+    
+    auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
+    while (numToRead > 0)
+    {
+        float* fifoRead = new float[numToRead];
+        assert(fifoRead != nullptr);
+        
+        utFeatures_.read(fifoRead, numToRead);
+        featureList.push_back(fifoRead);
+        featureCnt.push_back(numToRead);
+        numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
+    }
+    
+    int index = 0;
+    for (auto& feature : featureList)
+    {
+        fwrite(feature, sizeof(float) * featureCnt[index++], 1, featuresFile_);
+        delete[] feature;
+    }
 }

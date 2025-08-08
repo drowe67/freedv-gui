@@ -75,23 +75,26 @@ short* AudioPipeline::execute(short* inputSamples, int numInputSamples, int* num
     short* tempResult = inputSamples;
     int tempInputSamples = numInputSamples;
     int tempOutputSamples = tempInputSamples;
-    
-    for (size_t index = 0; index < pipelineSteps_.size(); index++)
+
+    auto numSteps = pipelineSteps_.size();
+    for (size_t index = 0; index < numSteps; index++)
     {
-        if (resamplers_[index] != nullptr)
+        auto& resampler = resamplers_[index];
+        auto& step = pipelineSteps_[index];
+        if (resampler != nullptr)
         {
-            if (resamplers_[index]->getOutputSampleRate() != pipelineSteps_[index]->getInputSampleRate())
+            if (resampler->getOutputSampleRate() != step->getInputSampleRate())
             {
-                resamplers_[index] = nullptr;
+                resampler = nullptr;
                 reloadResampler_(index);
             }
 
-            tempResult = resamplers_[index]->execute(tempInput, tempInputSamples, &tempOutputSamples);
+            tempResult = resampler->execute(tempInput, tempInputSamples, &tempOutputSamples);
             tempInput = tempResult;
             tempInputSamples = tempOutputSamples;
         }
         
-        tempResult = pipelineSteps_[index]->execute(tempInput, tempInputSamples, &tempOutputSamples);
+        tempResult = step->execute(tempInput, tempInputSamples, &tempOutputSamples);
         tempInput = tempResult;
         tempInputSamples = tempOutputSamples;        
     }
