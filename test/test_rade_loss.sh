@@ -79,7 +79,7 @@ $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut tx -utmode RADEV1 $TX_ARGS >tmp.l
 FDV_PID=$!
 
 if [ "$OPERATING_SYSTEM" != "Linux" ]; then
-    xctrace record --template "Audio System Trace" --window 3m --output "instruments_trace_tx_${FDV_PID}.trace" --attach $FDV_PID
+    xctrace record --template "Time Profiler" --window 3m --output "instruments_trace_tx_${FDV_PID}.trace" --attach $FDV_PID
 fi
 
 #sleep 30 
@@ -103,7 +103,7 @@ $FREEDV_BINARY -f $(pwd)/$FREEDV_CONF_FILE -ut rx -utmode RADEV1 -rxfeaturefile 
 FDV_PID=$!
 
 if [ "$OPERATING_SYSTEM" != "Linux" ]; then
-    xctrace record --template "Audio System Trace" --window 3m --output "instruments_trace_rx_${FDV_PID}.trace" --attach $FDV_PID
+    xctrace record --template "Time Profiler" --window 3m --output "instruments_trace_rx_${FDV_PID}.trace" --attach $FDV_PID
 fi
 wait $FDV_PID
 FREEDV_EXIT_CODE=$?
