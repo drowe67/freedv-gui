@@ -400,7 +400,7 @@ void TxRxThread::initializePipeline_()
             
             auto monitorLevelStep = new LevelAdjustStep(outputSampleRate_, [&]() {
                 float volInDb = 0;
-                if (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio)
+                if (g_voice_keyer_tx.load(std::memory_order_acquire) && wxGetApp().appConfiguration.monitorVoiceKeyerAudio)
                 {
                     volInDb = wxGetApp().appConfiguration.monitorVoiceKeyerAudioVol;
                 }
@@ -425,7 +425,7 @@ void TxRxThread::initializePipeline_()
 
             auto eitherOrMicMonitorStep = new EitherOrStep(
                 []() { return 
-                    (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
+                    (g_voice_keyer_tx.load(std::memory_order_acquire) && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
                     (g_tx.load(std::memory_order_acquire) && wxGetApp().appConfiguration.monitorTxAudio); },
                 monitorPipeline,
                 eitherOrMuteStep
@@ -437,7 +437,7 @@ void TxRxThread::initializePipeline_()
             [this]() { return g_analog ||
                 (equalizedMicAudioLink_ != nullptr && (
                     (g_recVoiceKeyerFile) ||
-                    (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
+                    (g_voice_keyer_tx.load(std::memory_order_acquire) && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) || 
                     (g_tx.load(std::memory_order_acquire) && wxGetApp().appConfiguration.monitorTxAudio)
                 )); },
             bypassRfDemodulationPipeline,
@@ -654,7 +654,8 @@ void TxRxThread::txProcessing_(IRealtimeHelper* helper) noexcept
     //  TX side processing --------------------------------------------
     //
 
-    if (((g_nSoundCards == 2) && ((g_half_duplex && g_tx.load(std::memory_order_acquire)) || !g_half_duplex || g_voice_keyer_tx || g_recVoiceKeyerFile || g_recFileFromMic))) {        
+    bool tmpHalfDuplex = g_half_duplex.load(std::memory_order_acquire);
+    if (((g_nSoundCards == 2) && ((tmpHalfDuplex && g_tx.load(std::memory_order_acquire)) || !tmpHalfDuplex || g_voice_keyer_tx.load(std::memory_order_acquire) || g_recVoiceKeyerFile || g_recFileFromMic))) {        
         if (deferReset_)
         {
             // We just entered TX from RX.
@@ -805,10 +806,12 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) noexcept
 
 
     bool tmpTx = g_tx.load(std::memory_order_acquire);
+    bool tmpVkTx = g_voice_keyer_tx.load(std::memory_order_acquire);
+    bool tmpHalfDuplex = g_half_duplex.load(std::memory_order_acquire);
     bool processInputFifo = 
-        (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
+        (tmpVkTx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
         (tmpTx && wxGetApp().appConfiguration.monitorTxAudio) ||
-        (!g_voice_keyer_tx && ((g_half_duplex && !tmpTx) || !g_half_duplex));
+        (!tmpVkTx && ((tmpHalfDuplex && !tmpTx) || !tmpHalfDuplex));
     if (!processInputFifo)
     {
         clearFifos_();
@@ -835,10 +838,12 @@ void TxRxThread::rxProcessing_(IRealtimeHelper* helper) noexcept
         }
         
         tmpTx = g_tx.load(std::memory_order_acquire);
+        tmpVkTx = g_voice_keyer_tx.load(std::memory_order_acquire);
+        tmpHalfDuplex = g_half_duplex.load(std::memory_order_acquire);
         processInputFifo = 
-            (g_voice_keyer_tx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
+            (tmpVkTx && wxGetApp().appConfiguration.monitorVoiceKeyerAudio) ||
             (tmpTx && wxGetApp().appConfiguration.monitorTxAudio) ||
-            (!g_voice_keyer_tx && ((g_half_duplex && !tmpTx) || !g_half_duplex));
+            (!tmpVkTx && ((tmpHalfDuplex && !tmpTx) || !tmpHalfDuplex));
         
 #if defined(ENABLE_PROCESSING_STATS)
         endTimer_();

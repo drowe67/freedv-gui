@@ -2249,7 +2249,7 @@ void MainFrame::performFreeDVOn_()
 
     g_State = g_prev_State = 0;
     g_snr = 0.0;
-    g_half_duplex = wxGetApp().appConfiguration.halfDuplexMode;
+    g_half_duplex.store(wxGetApp().appConfiguration.halfDuplexMode, std::memory_order_release);
 
     m_pcallsign = m_callsign;
     memset(m_callsign, 0, sizeof(m_callsign));
