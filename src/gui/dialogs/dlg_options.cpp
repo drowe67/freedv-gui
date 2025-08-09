@@ -341,6 +341,30 @@ OptionsDlg::OptionsDlg(wxWindow* parent, wxWindowID id, const wxString& title, c
 
     sizerDisplay->Add(sbSizer_reporterColor, 0, wxALL | wxEXPAND, 5);
     
+    // Plot settings
+    wxStaticBox* sb_PlotSettings = new wxStaticBox(m_displayTab, wxID_ANY, _("Plot settings"));
+    wxStaticBoxSizer* sbSizer_PlotSettings =  new wxStaticBoxSizer(sb_PlotSettings, wxVERTICAL);
+
+    wxBoxSizer* spectrumPanelControlSizer = new wxBoxSizer(wxHORIZONTAL);
+    
+    wxStaticText* labelAveraging = new wxStaticText(sb_PlotSettings, wxID_ANY, wxT("Average spectrum plot across"), wxDefaultPosition, wxDefaultSize, 0);
+    spectrumPanelControlSizer->Add(labelAveraging, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    wxString samplingChoices[] = {
+        "1",
+        "2",
+        "3"
+    };
+    m_cbxNumSpectrumAveraging = new wxComboBox(sb_PlotSettings, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 3, samplingChoices, wxCB_DROPDOWN | wxCB_READONLY);
+    m_cbxNumSpectrumAveraging->SetSelection(wxGetApp().appConfiguration.currentSpectrumAveraging);
+    spectrumPanelControlSizer->Add(m_cbxNumSpectrumAveraging, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    wxStaticText* labelSamples = new wxStaticText(sb_PlotSettings, wxID_ANY, wxT("sample(s)"), wxDefaultPosition, wxDefaultSize, 0);
+    spectrumPanelControlSizer->Add(labelSamples, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    
+    sbSizer_PlotSettings->Add(spectrumPanelControlSizer, 0, wxALL | wxEXPAND, 5);
+    sizerDisplay->Add(sbSizer_PlotSettings, 0, wxALL | wxEXPAND, 5);
+    
     m_displayTab->SetSizer(sizerDisplay);
     
     // Voice Keyer tab
@@ -847,6 +871,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         m_ckboxNoFreqModeChanges->SetValue(!wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqModeChanges && !wxGetApp().appConfiguration.rigControlConfiguration.hamlibEnableFreqChangesOnly);
         m_ckboxFrequencyEntryAsKHz->SetValue(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequencyAsKhz);
         
+        /* Plot settings */
+        m_cbxNumSpectrumAveraging->SetSelection(wxGetApp().appConfiguration.currentSpectrumAveraging);
+         
         /* Voice Keyer */
 
         m_txtCtrlVoiceKeyerWaveFilePath->SetValue(wxGetApp().appConfiguration.voiceKeyerWaveFilePath);
@@ -1009,6 +1036,9 @@ void OptionsDlg::ExchangeData(int inout, bool storePersistent)
         wxGetApp().appConfiguration.halfDuplexMode = m_ckHalfDuplex->GetValue();
         wxGetApp().appConfiguration.multipleReceiveEnabled = m_ckboxMultipleRx->GetValue();
         wxGetApp().appConfiguration.multipleReceiveOnSingleThread = m_ckboxSingleRxThread->GetValue();
+        
+        /* Plot settings */
+        wxGetApp().appConfiguration.currentSpectrumAveraging = m_cbxNumSpectrumAveraging->GetSelection();
         
         /* Voice Keyer */
 

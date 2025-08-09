@@ -295,7 +295,6 @@ class MainFrame : public TopFrame
         PlotScalar*             m_panelDemodIn;
         PlotScalar*             m_panelTestFrameErrors;
         PlotScalar*             m_panelTestFrameErrorsHist;
-        wxComboBox*             m_cbxNumSpectrumAveraging;
 
         bool                    m_RxRunning;
 
@@ -352,8 +351,6 @@ class MainFrame : public TopFrame
         virtual void topFrame_OnClose( wxCloseEvent& event ) override;
         virtual void OnCloseFrame(wxCloseEvent& event);
         void OnExitClick(wxCommandEvent& event);
-        
-        void OnAveragingChange(wxCommandEvent& event);
 
         void startTxStream();
         void startRxStream();
