@@ -29,6 +29,7 @@
 #include <sndfile.h>
 #include <thread>
 #include "codec2_fifo.h"
+#include "../util/Semaphore.h"
 
 class RecordStep : public IPipelineStep
 {
@@ -39,7 +40,7 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
 private:
@@ -50,6 +51,7 @@ private:
     std::thread fileIoThread_;
     FIFO* inputFifo_;
     bool fileIoThreadEnding_;
+    Semaphore fileIoThreadSem_;
     
     void fileIoThreadEntry_();
 };

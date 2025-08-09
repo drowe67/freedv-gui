@@ -43,4 +43,11 @@ extern "C" void ResetMainWindowColorSpace();
 // This can be either "windows", "linux", "macos" or "other".
 std::string GetOperatingSystemString();
 
+// Tells the operating system that we need the lowest latency available.
+// Note: only implemented on macOS.
+void StartLowLatencyActivity();
+
+// Tells the operating system that we no longer need low latency.
+void StopLowLatencyActivity();
+
 #endif // __OS_INTERFACE__

@@ -35,19 +35,19 @@ public:
     
     virtual int getInputSampleRate() const override;
     virtual int getOutputSampleRate() const override;
-    virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
-    void appendPipelineStep(std::shared_ptr<IPipelineStep> pipelineStep);
+    void appendPipelineStep(IPipelineStep* pipelineStep);
     
     void dumpSetup() const;
 private:
     int inputSampleRate_;
     int outputSampleRate_;
     
-    std::vector<std::shared_ptr<IPipelineStep>> pipelineSteps_;
-    std::vector<std::shared_ptr<ResampleStep>> resamplers_;
-    std::shared_ptr<ResampleStep> resultSampler_;
+    std::vector<std::unique_ptr<IPipelineStep>> pipelineSteps_;
+    std::vector<std::unique_ptr<ResampleStep>> resamplers_;
+    std::unique_ptr<ResampleStep> resultSampler_;
     
     void reloadResampler_(int pipelineStepIndex);
     void reloadResultResampler_();

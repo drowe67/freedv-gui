@@ -23,8 +23,10 @@
 #ifndef AUDIO_PIPELINE__LINK_STEP_H
 #define AUDIO_PIPELINE__LINK_STEP_H
 
+#include <memory>
+
 #include "IPipelineStep.h"
-#include "codec2_fifo.h"
+#include "../util/GenericFIFO.h"
 
 class LinkStep
 {
@@ -33,18 +35,18 @@ public:
     virtual ~LinkStep();
     
     // Get the constituent pipeline steps.
-    std::shared_ptr<IPipelineStep> getInputPipelineStep()
+    IPipelineStep* getInputPipelineStep()
     {
-        return inputPipelineStep_;
+        return new InputStep(this);
     }
     
-    std::shared_ptr<IPipelineStep> getOutputPipelineStep()
+    IPipelineStep* getOutputPipelineStep()
     {
-        return outputPipelineStep_;
+        return new OutputStep(this);
     }
     
     int getSampleRate() const { return sampleRate_; }
-    FIFO* getFifo() { return fifo_; }
+    GenericFIFO<short>& getFifo() { return fifo_; }
     
     void clearFifo();
     
@@ -72,7 +74,7 @@ private:
         //     numInputSamples: Number of samples in the input array.
         //     numOutputSamples: Location to store number of output samples.
         // Returns: Array of int16 values corresponding to result audio.
-        virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+        virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
         
     private:
         LinkStep* parent_;
@@ -86,9 +88,7 @@ private:
         {
             // Pre-allocate buffers so we don't have to do so during real-time operation.
             auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-            outputSamples_ = std::shared_ptr<short>(
-                new short[maxSamples], 
-                std::default_delete<short[]>());
+            outputSamples_ = std::make_unique<short[]>(maxSamples);
             assert(outputSamples_ != nullptr);
         }
         
@@ -106,17 +106,15 @@ private:
         //     numInputSamples: Number of samples in the input array.
         //     numOutputSamples: Location to store number of output samples.
         // Returns: Array of int16 values corresponding to result audio.
-        virtual std::shared_ptr<short> execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples) override;
+        virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
         
     private:
         LinkStep* parent_;
-        std::shared_ptr<short> outputSamples_;
+        std::unique_ptr<short[]> outputSamples_;
     };
     
     int sampleRate_;
-    std::shared_ptr<IPipelineStep> inputPipelineStep_;
-    std::shared_ptr<IPipelineStep> outputPipelineStep_;
-    FIFO* fifo_;
+    GenericFIFO<short> fifo_;
 
     short* tmpBuffer_;
 };

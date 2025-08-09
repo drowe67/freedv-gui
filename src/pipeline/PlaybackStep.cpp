@@ -28,6 +28,10 @@
 
 #include "../util/logging/ulog.h"
 
+#if defined(__APPLE__)
+#include <pthread.h>
+#endif // defined(__APPLE__)
+
 extern wxMutex g_mutexProtectingCallbackData;
 
 using namespace std::chrono_literals;
@@ -44,9 +48,7 @@ PlaybackStep::PlaybackStep(
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::shared_ptr<short>(
-        new short[maxSamples], 
-        std::default_delete<short[]>());
+    outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
     
     // Create output FIFO
@@ -60,6 +62,7 @@ PlaybackStep::PlaybackStep(
 PlaybackStep::~PlaybackStep()
 {
     nonRtThreadEnding_ = true;
+    fileIoThreadSem_.signal();
     if (nonRtThread_.joinable())
     {
         nonRtThread_.join();
@@ -78,7 +81,7 @@ int PlaybackStep::getOutputSampleRate() const
     return inputSampleRate_;
 }
 
-std::shared_ptr<short> PlaybackStep::execute(std::shared_ptr<short> inputSamples, int numInputSamples, int* numOutputSamples)
+short* PlaybackStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     unsigned int nsf = numInputSamples * getOutputSampleRate()/getInputSampleRate();
     *numOutputSamples = std::min((unsigned int)codec2_fifo_used(outputFifo_), nsf);
@@ -87,19 +90,27 @@ std::shared_ptr<short> PlaybackStep::execute(std::shared_ptr<short> inputSamples
     {
         codec2_fifo_read(outputFifo_, outputSamples_.get(), *numOutputSamples);
     }
+    
+    fileIoThreadSem_.signal();
 
-    return outputSamples_;
+    return outputSamples_.get();
 }
 
 void PlaybackStep::nonRtThreadEntry_()
 {
-    std::shared_ptr<short> buf = nullptr;
+    std::unique_ptr<short[]> buf = nullptr;
 
+#if defined(__APPLE__)
+    // Downgrade thread QoS to Utility to avoid thread contention issues. 
+    pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+#endif // defined(__APPLE__)
+
+    bool readComplete = false;
     while (!nonRtThreadEnding_)
     {
         g_mutexProtectingCallbackData.Lock();
         auto playFile = getSndFileFn_();
-        if (playFile != nullptr)
+        if (playFile != nullptr && !readComplete)
         {
             auto fileSampleRate = fileSampleRateFn_();
             if (getInputSampleRate() != fileSampleRate && (
@@ -118,9 +129,7 @@ void PlaybackStep::nonRtThreadEntry_()
 
             if (buf == nullptr)
             {
-                buf = std::shared_ptr<short>(
-                    new short[fileSampleRate],
-                    std::default_delete<short[]>());
+                buf = std::make_unique<short[]>(fileSampleRate);
                 assert(buf != nullptr);
             } 
 
@@ -137,9 +146,9 @@ void PlaybackStep::nonRtThreadEntry_()
                     if (playbackResampler_ != nullptr)
                     {
                         int outSamples = 0;
-                        auto outBuf = playbackResampler_->execute(buf, numRead, &outSamples);
+                        auto outBuf = playbackResampler_->execute(buf.get(), numRead, &outSamples);
                         //log_info("Resampled %u samples and created %d samples", numRead, outSamples);
-                        if (codec2_fifo_write(outputFifo_, outBuf.get(), outSamples) != 0)
+                        if (codec2_fifo_write(outputFifo_, outBuf, outSamples) != 0)
                         {
                             log_warn("Could not write %d samples to buffer, dropping", outSamples);
                         }
@@ -154,17 +163,22 @@ void PlaybackStep::nonRtThreadEntry_()
                     }
                 }
 
-                if ((int)numRead < samplesAtSourceRate && codec2_fifo_used(outputFifo_) == 0)
+                if ((int)numRead == 0 && codec2_fifo_used(outputFifo_) == 0)
                 {
                     //log_info("file read complete");
                     buf = nullptr;
                     fileCompleteFn_();
+                    readComplete = true;
                 }
             }
         }
+        else
+        {
+            readComplete = false;
+        }
         g_mutexProtectingCallbackData.Unlock();
         
-        std::this_thread::sleep_for(100ms);
+        fileIoThreadSem_.wait();
     }
 
     if (playbackResampler_ != nullptr)

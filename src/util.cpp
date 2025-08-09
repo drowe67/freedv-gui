@@ -325,60 +325,6 @@ void resample_for_plot(struct FIFO *plotFifo, short buf[], short* dec_samples, i
     codec2_fifo_write(plotFifo, dec_samples, nSamples);
 }
 
-// State machine to detect sync
-
-void MainFrame::DetectSyncProcessEvent(void) {
-    int next_state = ds_state;
-
-    switch(ds_state) {
-
-    case DS_IDLE:
-        if (freedvInterface.getSync() == 1) {
-            next_state = DS_SYNC_WAIT;
-            ds_rx_time = 0;
-        }
-        break;
-
-    case DS_SYNC_WAIT:
-
-        // In this state we wait for a few seconds of valid sync.
-
-        if (freedvInterface.getSync() == 0) {
-            next_state = DS_IDLE;
-        } else {
-            ds_rx_time += DT;
-        }
-
-        if (ds_rx_time >= DS_SYNC_WAIT_TIME) {
-            ds_rx_time = 0;
-            next_state = DS_UNSYNC_WAIT;
-        }
-        break;
-
-    case DS_UNSYNC_WAIT:
-
-        // In this state we wait for sync to end
-
-        if (freedvInterface.getSync() == 0) {
-            ds_rx_time += DT;
-            if (ds_rx_time >= DS_SYNC_WAIT_TIME) {
-                next_state = DS_IDLE;
-            }
-        } else {
-            ds_rx_time = 0;
-        }
-        break;
-
-    default:
-        // catch anything we missed
-
-        next_state = DS_IDLE;
-    }
-
-    ds_state = next_state;
-}
-
-
 void MainFrame::executeOnUiThreadAndWait_(std::function<void()> fn)
 {
     std::mutex funcMutex;

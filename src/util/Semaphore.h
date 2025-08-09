@@ -1,6 +1,6 @@
 //=========================================================================
-// Name:            ResampeStep.h
-// Purpose:         Describes a resampling step in the audio pipeline.
+// Name:            Semaphore.h
+// Purpose:         Implements a semaphore.
 //
 // Authors:         Mooneer Salem
 // License:
@@ -20,32 +20,34 @@
 //
 //=========================================================================
 
-#ifndef AUDIO_PIPELINE__RESAMPLE_STEP_H
-#define AUDIO_PIPELINE__RESAMPLE_STEP_H
+#ifndef UTIL_SEMAPHORE_H
+#define UTIL_SEMAPHORE_H
 
-#include "IPipelineStep.h"
+#if defined(_WIN32)
+#include <windows.h>
+#elif defined(__APPLE__)
+#include <dispatch/dispatch.h>
+#else
+#include <semaphore.h>
+#endif // defined(_WIN32) || defined(__APPLE__)
 
-#include <memory>
-#include <samplerate.h>
-
-class ResampleStep : public IPipelineStep
+class Semaphore
 {
 public:
-    ResampleStep(int inputSampleRate, int outputSampleRate, bool forPlotsOnly = false);
-    virtual ~ResampleStep();
+    Semaphore();
+    virtual ~Semaphore();
     
-    virtual int getInputSampleRate() const override;
-    virtual int getOutputSampleRate() const override;
-    virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
+    void wait();
+    void signal();
     
 private:
-    int inputSampleRate_;
-    int outputSampleRate_;
-    SRC_STATE* resampleState_;
-
-    float* tempInput_;
-    float* tempOutput_;
-    std::unique_ptr<short[]> outputSamples_;
+#if defined(_WIN32)
+    HANDLE sem_;
+#elif defined(__APPLE__)
+    dispatch_semaphore_t sem_;
+#else
+    sem_t sem_;
+#endif // defined(_WIN32) || defined(__APPLE__)
 };
 
-#endif // AUDIO_PIPELINE__RESAMPLE_STEP_H
+#endif // UTIL_SEMAPHORE_H
