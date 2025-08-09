@@ -702,7 +702,11 @@ void FreeDVReporterDialog::OnClose(wxCloseEvent& event)
 
 void FreeDVReporterDialog::OnItemSelectionChanged(wxDataViewEvent& event)
 {
-    if (event.GetItem().IsOk())
+    if (event.GetItem().IsOk() 
+#if !(defined(WIN32) || defined(__APPLE__))
+&& isSelectionPossible_
+#endif // !(defined(WIN32) || defined(__APPLE__)
+        )
     {
         refreshQSYButtonState();
 
@@ -713,6 +717,7 @@ void FreeDVReporterDialog::OnItemSelectionChanged(wxDataViewEvent& event)
     else
     {
         m_buttonSendQSY->Enable(false);
+        DeselectItem();
     }
 }
 
@@ -779,6 +784,11 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
         wxDataViewItemArray itemsChanged;
         for (auto& item : allReporterData_)
         {
+            if (item.second->isPendingDelete)
+            {
+                continue;
+                
+            }
             auto reportData = item.second;
 
             bool isTransmitting = reportData->transmitting;
@@ -927,6 +937,9 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
     m_listSpots->HitTest(wxPoint(mouseX, mouseY), item, col);
     if (item.IsOk())
     {
+        // Linux workaround to avoid inadvertent selections.
+        isSelectionPossible_ = true;
+
         // Show popup corresponding to the full message.
         FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
         tempUserMessage_ = model->getUserMessage(item);
@@ -960,6 +973,7 @@ void FreeDVReporterDialog::AdjustToolTip(wxMouseEvent& event)
     }
     else
     {
+        isSelectionPossible_ = false;
         tempUserMessage_ = _("");
     }
 }
@@ -1983,10 +1997,10 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::refreshAllRows()
     
     for (auto& kvp : allReporterData_)
     {
-	if (kvp.second->isPendingDelete)
-	{
-	    continue;
-	}
+    	if (kvp.second->isPendingDelete)
+    	{
+    	    continue;
+    	}
 
         bool updated = false;
         double frequencyUserReadable = kvp.second->frequency / 1000.0;
@@ -2253,7 +2267,7 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::onUserDisconnectFn_(std::str
             {
                 item->isVisible = false;
                 parent_->Unselect(dvi);
-                ItemDeleted(wxDataViewItem(nullptr), dvi);
+                Cleared(); // Note: ItemDeleted() causes spurious errors on macOS.
             }
 
             item->isPendingDelete = true;
