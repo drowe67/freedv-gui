@@ -1506,8 +1506,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (codec2_fifo_read(g_plotSpeechInFifo, speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
             memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
         }
-        m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-        m_panelSpeechIn->Refresh();
+        //m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+        //m_panelSpeechIn->Refresh();
 
         short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
         if (codec2_fifo_read(g_plotSpeechOutFifo, speechOutPlotSamples, WAVEFORM_PLOT_BUF))
