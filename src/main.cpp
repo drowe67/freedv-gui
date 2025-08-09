@@ -2587,8 +2587,7 @@ void MainFrame::stopRxStream()
 
         if (m_txThread)
         {
-            m_txThread->terminateThread();
-            m_txThread->Wait();
+            m_txThread->stop();
             
             if (txInSoundDevice)
             {
@@ -2608,8 +2607,7 @@ void MainFrame::stopRxStream()
 
         if (m_rxThread)
         {
-            m_rxThread->terminateThread();
-            m_rxThread->Wait();
+            m_rxThread->stop();
             
             if (rxInSoundDevice)
             {
@@ -2858,8 +2856,6 @@ void MainFrame::startRxStream()
                             g_infifo2_full++;
                         }
                     }
-
-                    m_txThread->notify();
                 }, g_rxUserdata);
         
                 txInSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
@@ -3109,8 +3105,6 @@ void MainFrame::startRxStream()
                 g_infifo1_full++;
                 return;
             }
-
-            m_rxThread->notify();
         }, g_rxUserdata);
         
         rxInSoundDevice->setOnAudioOverflow([](IAudioDevice& dev, void* state)
@@ -3202,13 +3196,6 @@ void MainFrame::startRxStream()
         if (txInSoundDevice && txOutSoundDevice)
         {
             m_txThread = new TxRxThread(true, txInSoundDevice->getSampleRate(), txOutSoundDevice->getSampleRate(), wxGetApp().linkStep, txInSoundDevice);
-            if ( m_txThread->Create() != wxTHREAD_NO_ERROR )
-            {
-                wxLogError(wxT("Can't create TX thread!"));
-            }
-            if (wxGetApp().m_txRxThreadHighPriority) {
-                m_txThread->SetPriority(WXTHREAD_MAX_PRIORITY);
-            }
             
             if (!txInSoundDevice->isRunning())
             {
@@ -3231,22 +3218,11 @@ void MainFrame::startRxStream()
                 m_RxRunning = false;
                 return;
             }
-            
-            if ( m_txThread->Run() != wxTHREAD_NO_ERROR )
-            {
-                wxLogError(wxT("Can't start TX thread!"));
-            }
+
+            m_txThread->start();
         }
 
         m_rxThread = new TxRxThread(false, rxInSoundDevice->getSampleRate(), rxOutSoundDevice->getSampleRate(), wxGetApp().linkStep, rxInSoundDevice);
-        if ( m_rxThread->Create() != wxTHREAD_NO_ERROR )
-        {
-            wxLogError(wxT("Can't create RX thread!"));
-        }
-
-        if (wxGetApp().m_txRxThreadHighPriority) {
-            m_rxThread->SetPriority(WXTHREAD_MAX_PRIORITY);
-        }
 
         rxInSoundDevice->start();
         if (!rxInSoundDevice->isRunning())
@@ -3277,10 +3253,7 @@ void MainFrame::startRxStream()
             return;
         }
 
-        if ( m_rxThread->Run() != wxTHREAD_NO_ERROR )
-        {
-            wxLogError(wxT("Can't start RX thread!"));
-        }
+        m_rxThread->start();
 
         // Logic to ensure that both TX/RX threads start work at the 
         // same time. This makes sure there are no dropouts at the beginning

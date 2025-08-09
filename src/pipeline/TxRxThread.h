@@ -24,7 +24,8 @@
 #define AUDIO_PIPELINE__TX_RX_THREAD_H
 
 #include <assert.h>
-#include <wx/thread.h>
+#include <functional>
+#include <thread>
 #include <mutex>
 #include <condition_variable>
 
@@ -38,14 +39,13 @@ class LinkStep;
 //#define ENABLE_PROCESSING_STATS
 
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-// class txRxThread - experimental tx/rx processing thread
+// class txRxThread - tx/rx processing thread
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
-class TxRxThread : public wxThread
+class TxRxThread
 {
 public:
     TxRxThread(bool tx, int inputSampleRate, int outputSampleRate, std::shared_ptr<LinkStep> micAudioLink, std::shared_ptr<IRealtimeHelper> helper) 
-        : wxThread(wxTHREAD_JOINABLE)
-        , m_tx(tx)
+        : m_tx(tx)
         , m_run(1)
         , pipeline_(nullptr)
         , inputSampleRate_(inputSampleRate)
@@ -72,15 +72,22 @@ public:
         inputSamples_ = nullptr;
     }
 
+    void start()
+    {
+        thread_ = std::thread(std::bind(&TxRxThread::Entry, this));
+    }
+
+    void stop()
+    {
+        m_run = false;
+        if (thread_.joinable())
+        {
+            thread_.join();
+        }
+    }
+
     // thread execution starts here
     void *Entry();
-
-    // called when the thread exits - whether it terminates normally or is
-    // stopped with Delete() (but not when it is Kill()ed!)
-    void OnExit();
-
-    void terminateThread();
-    void notify();
 
     void waitForReady() { readySem_.wait(); }
     void signalToStart() { startSem_.signal(); }
@@ -97,6 +104,7 @@ private:
     std::unique_ptr<short[]> inputSamples_;
     std::unique_ptr<short[]> inputSamplesZeros_;
     bool deferReset_;
+    std::thread thread_;
 
     Semaphore readySem_;
     Semaphore startSem_;

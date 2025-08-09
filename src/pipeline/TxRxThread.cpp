@@ -543,22 +543,6 @@ void* TxRxThread::Entry()
     return NULL;
 }
 
-void TxRxThread::OnExit() 
-{ 
-    // empty
-}
-
-void TxRxThread::terminateThread()
-{
-    m_run = 0;
-    notify();
-}
-
-void TxRxThread::notify()
-{
-    // empty
-}
-
 #if defined(ENABLE_PROCESSING_STATS)
 void TxRxThread::resetStats_()
 {
