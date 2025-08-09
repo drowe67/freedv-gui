@@ -51,8 +51,8 @@ public:
     virtual short* execute(short* inputSamples, int numInputSamples, int* numOutputSamples) override;
     virtual void reset() override;
     
-    int getSync() const { return syncState_.load(std::memory_order_acquire); }
-    int getSnr() const { return snr_.load(std::memory_order_acquire); }
+    int getSync() const { return syncState_.load(std::memory_order_relaxed); }
+    int getSnr() const { return snr_.load(std::memory_order_relaxed); }
     
 private:
     std::atomic<int> syncState_;

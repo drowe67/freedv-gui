@@ -214,8 +214,8 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
 #endif // defined(__has_feature) && __has_feature(realtime_sanitizer)
 #endif // defined(__clang__)
 
-    syncState_.store(rade_sync(dv_), std::memory_order_release);
-    snr_.store(rade_snrdB_3k_est(dv_), std::memory_order_release);
+    syncState_.store(rade_sync(dv_), std::memory_order_relaxed);
+    snr_.store(rade_snrdB_3k_est(dv_), std::memory_order_relaxed);
 
 #if defined(__clang__)
 #if defined(__has_feature) && __has_feature(realtime_sanitizer)

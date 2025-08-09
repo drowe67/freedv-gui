@@ -121,7 +121,7 @@ short* FreeDVReceiveStep::execute(short* inputSamples, int numInputSamples, int*
         }
     }
 
-    syncState_.store(freedv_get_sync(dv_), std::memory_order_release);
+    syncState_.store(freedv_get_sync(dv_), std::memory_order_relaxed);
     return outputSamples_.get();
 }
 

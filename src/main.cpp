@@ -681,7 +681,7 @@ void MainFrame::loadConfiguration_()
     g_txLevel = wxGetApp().appConfiguration.transmitLevel;
     float dbLoss = g_txLevel / 10.0;
     float scaleFactor = exp(dbLoss/20.0 * log(10.0));
-    g_txLevelScale.store(scaleFactor, std::memory_order_release);
+    g_txLevelScale.store(scaleFactor, std::memory_order_relaxed);
 
     char fmt[15];
     m_sliderTxLevel->SetValue(g_txLevel);
@@ -1139,7 +1139,7 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
 
     g_TxFreqOffsetHz = 0.0;
 
-    g_tx.store(false, std::memory_order_release);
+    g_tx.store(false, std::memory_order_relaxed);
 
     // data states
     g_txDataInFifo = codec2_fifo_create(MAX_CALLSIGN*FREEDV_VARICODE_MAX_BITS);
@@ -1506,21 +1506,21 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         if (codec2_fifo_read(g_plotSpeechInFifo, speechInPlotSamples, WAVEFORM_PLOT_BUF)) {
             memset(speechInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
         }
-        m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-        m_panelSpeechIn->Refresh();
+        //m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+        //m_panelSpeechIn->Refresh();
 
         short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
         if (codec2_fifo_read(g_plotSpeechOutFifo, speechOutPlotSamples, WAVEFORM_PLOT_BUF))
             memset(speechOutPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
-        m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-        m_panelSpeechOut->Refresh();
+        //m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+        //m_panelSpeechOut->Refresh();
 
         short demodInPlotSamples[WAVEFORM_PLOT_BUF];
         if (codec2_fifo_read(g_plotDemodInFifo, demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
             memset(demodInPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
         }
-        m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
-        m_panelDemodIn->Refresh();
+        //m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
+        //m_panelDemodIn->Refresh();
 
         // Demod states -----------------------------------------------------------------------
 
@@ -2109,7 +2109,7 @@ void MainFrame::OnChangeTxMode( wxCommandEvent& event )
     // Report TX change to registered reporters
     for (auto& obj : wxGetApp().m_reporters)
     {
-        obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx.load(std::memory_order_acquire));
+        obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx.load(std::memory_order_relaxed));
     }
     
     // Disable controls not supported by RADE
@@ -2252,7 +2252,7 @@ void MainFrame::performFreeDVOn_()
 
     g_State = g_prev_State = 0;
     g_snr = 0.0;
-    g_half_duplex.store(wxGetApp().appConfiguration.halfDuplexMode, std::memory_order_release);
+    g_half_duplex.store(wxGetApp().appConfiguration.halfDuplexMode, std::memory_order_relaxed);
 
     m_pcallsign = m_callsign;
     memset(m_callsign, 0, sizeof(m_callsign));
@@ -2362,7 +2362,7 @@ void MainFrame::performFreeDVOn_()
                         // Immediately transmit selected TX mode and frequency to avoid UI glitches.
                         for (auto& obj : wxGetApp().m_reporters)
                         {
-                            obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx.load(std::memory_order_acquire));
+                            obj->transmit(freedvInterface.getCurrentTxModeStr(), g_tx.load(std::memory_order_relaxed));
                             obj->freqChange(wxGetApp().appConfiguration.reportingConfiguration.reportingFrequency);
                         }
                     }
@@ -3508,7 +3508,7 @@ void MainFrame::initializeFreeDVReporter_()
         });
     });
     
-    auto txStatus = g_tx.load(std::memory_order_acquire);
+    auto txStatus = g_tx.load(std::memory_order_relaxed);
     if (!freedvInterface.isRunning())
     {
         wxGetApp().m_sharedReporterObject->hideFromView();
