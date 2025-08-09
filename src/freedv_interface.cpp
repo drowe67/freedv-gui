@@ -135,7 +135,7 @@ float FreeDVInterface::GetMinimumSNR_(int mode)
 
 void FreeDVInterface::start(int txMode, int fifoSizeMs, bool singleRxThread, bool usingReliableText)
 {
-    sync_.store(0, std::memory_order_relaxed);
+    sync_.store(0, std::memory_order_release);
     singleRxThread_ = enabledModes_.size() > 1 ? singleRxThread : true;
 
     modemStatsList_ = new MODEM_STATS[enabledModes_.size()];
@@ -702,7 +702,7 @@ float FreeDVInterface::getSNREstimate()
     if (txMode_ >= FREEDV_MODE_RADE)
     {
         // Special handling for RADE
-        return (getSync() ? radeSnr_.load(std::memory_order_relaxed) : 0);
+        return (getSync() ? radeSnr_.load(std::memory_order_acquire) : 0);
     }
     else
     {
@@ -793,8 +793,8 @@ IPipelineStep* FreeDVInterface::createReceivePipeline(
         auto rxStep = new RADEReceiveStep(rade_, &fargan_, radeTextPtr_, [&, getRxStateFn](RADEReceiveStep* s) {
             auto finalSync = s->getSync();
             *getRxStateFn() = finalSync;
-            sync_.store(finalSync, std::memory_order_relaxed);
-            radeSnr_.store(s->getSnr(), std::memory_order_relaxed);
+            sync_.store(finalSync, std::memory_order_release);
+            radeSnr_.store(s->getSnr(), std::memory_order_release);
         });
         
         auto pipeline = new AudioPipeline(inputSampleRate, outputSampleRate);
@@ -969,7 +969,7 @@ skipSyncCheck:
     }
 
     *state->getRxStateFn() = finalSync;
-    sync_.store(finalSync, std::memory_order_relaxed);
+    sync_.store(finalSync, std::memory_order_release);
 
     return indexWithSync;
 };

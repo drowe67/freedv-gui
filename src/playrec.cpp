@@ -314,7 +314,7 @@ void MainFrame::OnRecFileFromRadio(wxCommandEvent& event)
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Stop Record File - From Radio...")));
         g_sfRecFileFromModulator = g_sfRecFile;
         
-        if (!g_tx.load(std::memory_order_relaxed))
+        if (!g_tx.load(std::memory_order_acquire))
         {
             g_recFileFromModulator = false;
             g_recFileFromRadio = true;
@@ -361,7 +361,7 @@ void MainFrame::OnTogBtnRecord( wxCommandEvent& event )
         m_menuItemRecFileFromRadio->SetItemLabel(wxString(_("Stop Record File - From Radio...")));
         g_sfRecFileFromModulator = g_sfRecFile;
         
-        if (!g_tx.load(std::memory_order_relaxed))
+        if (!g_tx.load(std::memory_order_acquire))
         {
             g_recFileFromModulator = false;
             g_recFileFromRadio = true;

@@ -249,7 +249,7 @@ int MainFrame::VoiceKeyerStartTx(void)
 
         if (wxGetApp().appConfiguration.monitorVoiceKeyerAudio)
         {
-            g_voice_keyer_tx.store(true, std::memory_order_relaxed);
+            g_voice_keyer_tx.store(true, std::memory_order_release);
         }
     }
 
@@ -263,7 +263,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
     switch(vk_state) {
 
     case VK_IDLE:
-        g_voice_keyer_tx.store(false, std::memory_order_relaxed);
+        g_voice_keyer_tx.store(false, std::memory_order_release);
 
         if (vk_event == VK_START) {
             // sample these puppies at start just in case they are changed while VK running
@@ -312,7 +312,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         break;
 
      case VK_RX:
-        g_voice_keyer_tx.store(false, std::memory_order_relaxed);
+        g_voice_keyer_tx.store(false, std::memory_order_release);
 
         // in this state we are receiving and waiting for
         // delay timer or valid sync
@@ -339,7 +339,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         break;
 
      case VK_SYNC_WAIT:
-        g_voice_keyer_tx.store(false, std::memory_order_relaxed);
+        g_voice_keyer_tx.store(false, std::memory_order_release);
 
         // In this state we wait for valid sync to last
         // VK_SYNC_WAIT_TIME seconds
@@ -379,7 +379,7 @@ void MainFrame::VoiceKeyerProcessEvent(int vk_event) {
         m_togBtnVoiceKeyer->SetValue(false);
         m_togBtnVoiceKeyer->SetBackgroundColour(wxNullColour);
         next_state = VK_IDLE;
-        g_voice_keyer_tx.store(false, std::memory_order_relaxed);
+        g_voice_keyer_tx.store(false, std::memory_order_release);
     }
     
     vk_state = next_state;
