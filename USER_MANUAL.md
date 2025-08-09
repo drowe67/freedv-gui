@@ -840,7 +840,10 @@ LDPC | Low Density Parity Check Codes - a family of powerful FEC codes
 
 1. Bugfixes:
     * FreeDV Reporter: Use numeric sort for SNR. (PR #979)
-    * Fix compile failure when compiling from tarball. (PR #985)
+    * FreeDV Reporter: Fix issue causing users to be logged in even when not decoding. (PR #993)
+    * FreeDV Reporter/Linux: Fix issue causing random rows to be highlighted. (PR #993)
+    * FreeDV Reporter/macOS: Fix issue causing entire table to be redrawn on user disconnect. (PR #993)
+    * Fix compile failure when compiling from tarball.(PR #985)
 2. Enhancements:
     * Add Mic/Speaker volume control to main window. (PR #980)
     * Further audio performance improvements. (PR #975)
