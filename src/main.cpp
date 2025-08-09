@@ -1396,7 +1396,8 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      }
      else
      {
-         bool txState = g_tx.load(std::memory_order_acquire);
+         bool txState = g_tx.load(std::memory_order_relaxed);
+         int syncState = freedvInterface.getSync();
 
          // Synchronize changes with Filter dialog
          auto sliderVal = 0.0;
@@ -1434,7 +1435,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_panelWaterfall->m_newdata = true;
             m_panelWaterfall->setColor(wxGetApp().appConfiguration.waterfallColor);
             m_panelWaterfall->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
-            m_panelWaterfall->setSync(freedvInterface.getSync() ? true : false);
+            m_panelWaterfall->setSync(syncState ? true : false);
             m_panelWaterfall->Refresh();
         }
         
@@ -1451,7 +1452,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // so just incrementing the selected index should get us the correct results.
         m_panelSpectrum->setNumAveraging(m_cbxNumSpectrumAveraging->GetSelection() + 1);
         m_panelSpectrum->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
-        m_panelSpectrum->setSync(freedvInterface.getSync() ? true : false);
+        m_panelSpectrum->setSync(syncState ? true : false);
         m_panelSpectrum->m_newdata = true;
         m_panelSpectrum->Refresh();
 
@@ -1541,7 +1542,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         float snr_limited;
         // some APIs pass us invalid values, so lets trap it rather than bombing
         float snrEstimate = freedvInterface.getSNREstimate();
-        if (!(isnan(snrEstimate) || isinf(snrEstimate)) && freedvInterface.getSync()) {
+        if (!(isnan(snrEstimate) || isinf(snrEstimate)) && syncState) {
             g_snr = m_snrBeta*g_snr + (1.0 - m_snrBeta)*snrEstimate;
         }
         snr_limited = g_snr;
@@ -1550,7 +1551,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         char snr[15];
         snprintf(snr, 15, "%d dB", (int)(g_snr + 0.5));
 
-        if (freedvInterface.getSync())
+        if (syncState)
         {
             wxString snr_string(snr);
             m_textSNR->SetLabel(snr_string);
@@ -1805,7 +1806,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             else if (
                 wxGetApp().m_sharedReporterObject && 
                 freedvInterface.getCurrentMode() == FREEDV_MODE_RADE && 
-                freedvInterface.getSync())
+                syncState)
             {               
                 // Special case for RADE--report '--' for callsign so we can
                 // at least report that we're receiving *something*.
