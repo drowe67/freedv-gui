@@ -457,7 +457,7 @@ void FreeDVInterface::setSync(int val)
 
 int FreeDVInterface::getSync() const
 {
-    return sync_.load(std::memory_order_acquire);
+    return sync_.load(std::memory_order_relaxed);
 }
 
 void FreeDVInterface::setEq(int val)
