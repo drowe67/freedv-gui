@@ -23,6 +23,8 @@
 #include <wx/wx.h>
 #include <wx/graphics.h>
 
+#include <map>
+
 #include "plot_scalar.h"
 
 BEGIN_EVENT_TABLE(PlotScalar, PlotPanel)
@@ -148,7 +150,6 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
     float index_to_px;
     float a_to_py;
     int   i;
-    int   prev_x, prev_y;
     float a;
 
     m_rCtrl = GetClientRect();
@@ -180,11 +181,11 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
     pen.SetWidth(1);
     ctx->SetPen(pen);
     
-    // draw all samples
-
-    prev_x = prev_y = 0; // stop warning
-
     // plot each channel     
+
+    // x -> (y1, y2)
+    std::map<int, std::pair<int, int>> lineMap;
+
     int offset, x, y;
     for(offset=0; offset<m_channels*m_samples; offset+=m_samples) {
 
@@ -243,16 +244,26 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
             else {
                 if (i)
                 {
-                    wxGraphicsPath path = ctx->CreatePath();
-                    path.MoveToPoint(x, y);
-                    path.AddLineToPoint(prev_x, prev_y);
-                    ctx->StrokePath(path);
+                    auto iter = lineMap.find(x);
+                    if (iter == lineMap.end())
+                    {
+                        lineMap[x] = std::pair<int, int>(INT_MAX, INT_MIN);
+                        iter = lineMap.find(x);
+                    }
+                    iter->second.first = std::min(iter->second.first, y);
+                    iter->second.second = std::max(iter->second.second, y);
                 }
-                prev_x = x; prev_y = y;
             }
         }
     }
-    
+   
+    if (lineMap.size() > 0)
+    {
+        for (auto& iter : lineMap)
+        {
+            ctx->StrokeLine(iter.first, iter.second.first, iter.first, iter.second.second);
+        }
+    } 
     drawGraticule(ctx);
 }
 
