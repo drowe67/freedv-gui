@@ -937,39 +937,11 @@ MainFrame::MainFrame(wxWindow *parent) : TopFrame(parent, wxID_ANY, _("FreeDV ")
     // Add Spectrum Plot window
     wxPanel* spectrumPanel = new wxPanel(m_auiNbookCtrl);
     
-    wxFlexGridSizer* spectrumPanelSizer = new wxFlexGridSizer(2, 1, 5, 5);
-    wxBoxSizer* spectrumPanelControlSizer = new wxBoxSizer(wxHORIZONTAL);
-    spectrumPanelSizer->AddGrowableRow(0);
-    spectrumPanelSizer->AddGrowableCol(0);
-    
     // Actual Spectrum plot
     m_panelSpectrum = new PlotSpectrum(spectrumPanel, g_avmag,
                                        MODEM_STATS_NSPEC*((float)MAX_F_HZ/MODEM_STATS_MAX_F_HZ));
-    m_panelSpectrum->SetToolTip(_("Double click to tune, middle click to re-center"));
-    spectrumPanelSizer->Add(m_panelSpectrum, 0, wxALL | wxEXPAND, 5);
-    
-    // Spectrum plot control interface
-    wxStaticText* labelAveraging = new wxStaticText(spectrumPanel, wxID_ANY, wxT("Average across"), wxDefaultPosition, wxDefaultSize, 0);
-    spectrumPanelControlSizer->Add(labelAveraging, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    
-    wxString samplingChoices[] = {
-        "1",
-        "2",
-        "3"
-    };
-    m_cbxNumSpectrumAveraging = new wxComboBox(spectrumPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 3, samplingChoices, wxCB_DROPDOWN | wxCB_READONLY);
-    m_cbxNumSpectrumAveraging->SetSelection(wxGetApp().appConfiguration.currentSpectrumAveraging);
-    spectrumPanelControlSizer->Add(m_cbxNumSpectrumAveraging, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    
-    m_cbxNumSpectrumAveraging->Connect(wxEVT_TEXT, wxCommandEventHandler(MainFrame::OnAveragingChange), NULL, this);
-    
-    wxStaticText* labelSamples = new wxStaticText(spectrumPanel, wxID_ANY, wxT("sample(s)"), wxDefaultPosition, wxDefaultSize, 0);
-    spectrumPanelControlSizer->Add(labelSamples, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-    
-    spectrumPanelSizer->Add(spectrumPanelControlSizer, 0, wxALL | wxEXPAND, 5);
-    spectrumPanel->SetSizerAndFit(spectrumPanelSizer);
-    
-    m_auiNbookCtrl->AddPage(spectrumPanel, _("Spectrum"), false, wxNullBitmap);
+    m_panelSpectrum->SetToolTip(_("Double click to tune, middle click to re-center"));    
+    m_auiNbookCtrl->AddPage(m_panelSpectrum, _("Spectrum"), false, wxNullBitmap);
 
     // Add Demod Input window
     m_panelDemodIn = new PlotScalar((wxFrame*) m_auiNbookCtrl, 1, WAVEFORM_PLOT_TIME, 1.0/WAVEFORM_PLOT_FS, -1, 1, 1, 0.2, "%2.1f", 0);
@@ -1270,7 +1242,6 @@ MainFrame::~MainFrame()
     wxGetApp().appConfiguration.currentFreeDVMode = mode;
     wxGetApp().appConfiguration.save(pConfig);
 
-    m_cbxNumSpectrumAveraging->Disconnect(wxEVT_TEXT, wxCommandEventHandler(MainFrame::OnAveragingChange), NULL, this);
     m_togBtnOnOff->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnOnOffUI), NULL, this);
     m_togBtnAnalog->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(MainFrame::OnTogBtnAnalogClickUI), NULL, this);
 
@@ -1334,11 +1305,6 @@ MainFrame::~MainFrame()
 void MainFrame::OnIdle(wxIdleEvent &evt) {
 }
 #endif
-
-void MainFrame::OnAveragingChange(wxCommandEvent& event)
-{
-    wxGetApp().appConfiguration.currentSpectrumAveraging = m_cbxNumSpectrumAveraging->GetSelection();
-}
 
 #ifdef _USE_TIMER
 //----------------------------------------------------------------
@@ -1425,7 +1391,7 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         
         // Note: each element in this combo box is a numeric value starting from 1,
         // so just incrementing the selected index should get us the correct results.
-        m_panelSpectrum->setNumAveraging(m_cbxNumSpectrumAveraging->GetSelection() + 1);
+        m_panelSpectrum->setNumAveraging(wxGetApp().appConfiguration.currentSpectrumAveraging + 1);
         m_panelSpectrum->addOffset(freedvInterface.getCurrentRxModemStats()->foff);
         m_panelSpectrum->setSync(freedvInterface.getSync() ? true : false);
         m_panelSpectrum->m_newdata = true;
