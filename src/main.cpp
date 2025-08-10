@@ -109,6 +109,23 @@ std::atomic<bool>  g_half_duplex;
 std::atomic<bool>  g_voice_keyer_tx;
 SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
 
+// XXX - When using RADE, audio dropouts are more common than expected.
+// This is most easily duplicated using the rade_loss ctest and macOS, 
+// but is also possible on other platforms and in real-world use. 
+// Analysis using the Instruments tool on macOS indicates that during the
+// dropout scenario, the operating system is executing the main UI thread
+// and either causing the relevant semaphores in the audio/pipeline layers
+// to sleep longer than wanted (or inhibited from executing entirely during
+// the UI redrawing process). This atomic here is to allow the pipeline layer
+// to inhibit the UI timer while it's executing; we're okay with minor hiccups
+// in the UI if it means no audio dropouts.
+//
+// Semantics:
+//     * When zero, it's safe for the UI layer to execute.
+//     * Pipeline code increments when beginning an execution cycle and 
+//       decrements when done. Note: this can be a max of 2 if using full duplex.
+std::atomic<int> g_uiInhibit;
+
 // sending and receiving Call Sign data
 struct FIFO         *g_txDataInFifo;
 struct FIFO         *g_rxDataOutFifo;
@@ -1362,6 +1379,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      }
      else
      {
+        // Wait for pipeline threads to finish. See comments in definition for 
+        // g_uiInhibit above.
+        int expected = 0;
+        while (g_uiInhibit.compare_exchange_weak(expected, 0, std::memory_order_acquire, std::memory_order_relaxed) == false)
+        {
+            std::this_thread::yield();
+        }
+
          bool txState = g_tx.load(std::memory_order_relaxed);
          int syncState = freedvInterface.getSync();
 

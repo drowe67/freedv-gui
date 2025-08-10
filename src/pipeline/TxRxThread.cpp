@@ -101,6 +101,7 @@ extern float g_RxFreqOffsetHz;
 extern float g_sig_pwr_av;
 extern std::atomic<bool> g_voice_keyer_tx;
 extern bool g_eoo_enqueued;
+extern std::atomic<int> g_uiInhibit;
 
 #include <speex/speex_preprocess.h>
 
@@ -511,6 +512,7 @@ void* TxRxThread::Entry()
         
         //log_info("thread woken up: m_tx=%d", (int)m_tx);
         helper->startRealTimeWork();
+        g_uiInhibit.fetch_add(1, std::memory_order_release);
 
         if (m_tx) txProcessing_(helper);
         else rxProcessing_(helper);
@@ -525,6 +527,8 @@ void* TxRxThread::Entry()
         }
         auto totalFifoCapacity = outFifo->capacity();
         auto fifoUsed = outFifo->numUsed();
+
+        g_uiInhibit.fetch_sub(1, std::memory_order_release);
         helper->stopRealTimeWork(fifoUsed < totalFifoCapacity / 2);
     }
 
