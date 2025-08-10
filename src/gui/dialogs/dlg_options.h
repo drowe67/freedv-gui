@@ -107,6 +107,9 @@ class OptionsDlg : public wxDialog
         wxColourPickerCtrl* m_freedvReporterRxForegroundColor;
         wxColourPickerCtrl* m_freedvReporterMsgBackgroundColor;
         wxColourPickerCtrl* m_freedvReporterMsgForegroundColor;
+        
+        /* Spectrum plot averaging */
+        wxComboBox*             m_cbxNumSpectrumAveraging;
 
         /* Voice Keyer */
 
