@@ -888,7 +888,7 @@ void MacAudioDevice::stopRealTimeWork(bool fastMode)
     //timeToWaitMilliseconds -= AddedWaitDuration_;
 
     //auto waitStart = std::chrono::high_resolution_clock::now();
-    dispatch_semaphore_wait(sem_, dispatch_time(DISPATCH_TIME_NOW, MS_TO_NSEC * timeToWaitMilliseconds));
+    dispatch_semaphore_wait(sem_, DISPATCH_TIME_FOREVER); //dispatch_time(DISPATCH_TIME_NOW, MS_TO_NSEC * timeToWaitMilliseconds));
     //auto waitEnd = std::chrono::high_resolution_clock::now();
     //auto waitDurationMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(waitEnd - waitStart).count();
 
