@@ -1094,6 +1094,26 @@ void EasySetupDialog::updateHamlibDevices_()
         }
         globfree(&gl);
     }
+
+    // Support /dev/serial as well
+    if (glob("/dev/serial/by-id/*", GLOB_MARK, NULL, &gl) == 0)
+    {
+        for(unsigned int i=0; i<gl.gl_pathc; i++)   
+        {
+            wxString path = gl.gl_pathv[i];
+            portList.push_back(path);
+        }
+        globfree(&gl);
+    }
+    if (glob("/dev/serial/by-path/*", GLOB_MARK, NULL, &gl) == 0)
+    {
+        for(unsigned int i=0; i<gl.gl_pathc; i++)
+        {
+            wxString path = gl.gl_pathv[i];
+            portList.push_back(path);
+        }
+        globfree(&gl);
+    }
 #endif
 #endif
 
