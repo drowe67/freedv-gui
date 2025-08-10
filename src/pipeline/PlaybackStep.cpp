@@ -36,6 +36,8 @@ extern wxMutex g_mutexProtectingCallbackData;
 
 using namespace std::chrono_literals;
 
+#define NUM_SECONDS_TO_READ 1
+
 PlaybackStep::PlaybackStep(
     int inputSampleRate, std::function<int()> fileSampleRateFn, 
     std::function<SNDFILE*()> getSndFileFn, std::function<void()> fileCompleteFn)
@@ -45,15 +47,12 @@ PlaybackStep::PlaybackStep(
     , fileCompleteFn_(fileCompleteFn)
     , nonRtThreadEnding_(false)
     , playbackResampler_(nullptr)
+    , outputFifo_(inputSampleRate * NUM_SECONDS_TO_READ)
 {
     // Pre-allocate buffers so we don't have to do so during real-time operation.
     auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
     outputSamples_ = std::make_unique<short[]>(maxSamples);
     assert(outputSamples_ != nullptr);
-    
-    // Create output FIFO
-    outputFifo_ = codec2_fifo_create(maxSamples);
-    assert(outputFifo_ != nullptr);
     
     // Create non-RT thread to perform audio I/O
     nonRtThread_ = std::thread(std::bind(&PlaybackStep::nonRtThreadEntry_, this));
@@ -67,8 +66,6 @@ PlaybackStep::~PlaybackStep()
     {
         nonRtThread_.join();
     }
-    
-    codec2_fifo_destroy(outputFifo_);
 }
 
 int PlaybackStep::getInputSampleRate() const
@@ -84,11 +81,11 @@ int PlaybackStep::getOutputSampleRate() const
 short* PlaybackStep::execute(short* inputSamples, int numInputSamples, int* numOutputSamples)
 {
     unsigned int nsf = numInputSamples * getOutputSampleRate()/getInputSampleRate();
-    *numOutputSamples = std::min((unsigned int)codec2_fifo_used(outputFifo_), nsf);
+    *numOutputSamples = std::min((unsigned int)outputFifo_.numUsed(), nsf);
     
     if (*numOutputSamples > 0)
     {
-        codec2_fifo_read(outputFifo_, outputSamples_.get(), *numOutputSamples);
+        outputFifo_.read(outputSamples_.get(), *numOutputSamples);
     }
     
     fileIoThreadSem_.signal();
@@ -129,11 +126,11 @@ void PlaybackStep::nonRtThreadEntry_()
 
             if (buf == nullptr)
             {
-                buf = std::make_unique<short[]>(fileSampleRate);
+                buf = std::make_unique<short[]>(fileSampleRate * NUM_SECONDS_TO_READ);
                 assert(buf != nullptr);
             } 
 
-            unsigned int nsf = codec2_fifo_free(outputFifo_);
+            unsigned int nsf = outputFifo_.numFree();
             //log_info("nsf = %d", (int)nsf);
             if (nsf > 0)
             {
@@ -148,7 +145,7 @@ void PlaybackStep::nonRtThreadEntry_()
                         int outSamples = 0;
                         auto outBuf = playbackResampler_->execute(buf.get(), numRead, &outSamples);
                         //log_info("Resampled %u samples and created %d samples", numRead, outSamples);
-                        if (codec2_fifo_write(outputFifo_, outBuf, outSamples) != 0)
+                        if (outputFifo_.write(outBuf, outSamples) != 0)
                         {
                             log_warn("Could not write %d samples to buffer, dropping", outSamples);
                         }
@@ -156,14 +153,14 @@ void PlaybackStep::nonRtThreadEntry_()
                     else
                     {
                         //log_info("Writing %u samples to FIFO", numRead);
-                        if (codec2_fifo_write(outputFifo_, buf.get(), numRead) != 0)
+                        if (outputFifo_.write(buf.get(), numRead) != 0)
                         {
                             log_warn("Could not write %d samples to buffer, dropping", numRead);
                         }
                     }
                 }
 
-                if ((int)numRead == 0 && codec2_fifo_used(outputFifo_) == 0)
+                if ((int)numRead == 0 && outputFifo_.numUsed() == 0)
                 {
                     //log_info("file read complete");
                     buf = nullptr;
@@ -172,7 +169,7 @@ void PlaybackStep::nonRtThreadEntry_()
                 }
             }
         }
-        else
+        else if (playFile == nullptr)
         {
             readComplete = false;
         }
@@ -189,9 +186,5 @@ void PlaybackStep::nonRtThreadEntry_()
 
 void PlaybackStep::reset()
 {
-    short buf;
-    while (codec2_fifo_used(outputFifo_) > 0)
-    {
-        codec2_fifo_read(outputFifo_, &buf, 1);
-    }
+    outputFifo_.reset();
 }
