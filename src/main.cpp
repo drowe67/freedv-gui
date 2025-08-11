@@ -109,23 +109,6 @@ std::atomic<bool>  g_half_duplex;
 std::atomic<bool>  g_voice_keyer_tx;
 SRC_STATE  *g_spec_src;  // sample rate converter for spectrum
 
-// XXX - When using RADE, audio dropouts are more common than expected.
-// This is most easily duplicated using the rade_loss ctest and macOS, 
-// but is also possible on other platforms and in real-world use. 
-// Analysis using the Instruments tool on macOS indicates that during the
-// dropout scenario, the operating system is executing the main UI thread
-// and either causing the relevant semaphores in the audio/pipeline layers
-// to sleep longer than wanted (or inhibited from executing entirely during
-// the UI redrawing process). This atomic here is to allow the pipeline layer
-// to inhibit the UI timer while it's executing; we're okay with minor hiccups
-// in the UI if it means no audio dropouts.
-//
-// Semantics:
-//     * When zero, it's safe for the UI layer to execute.
-//     * Pipeline code increments when beginning an execution cycle and 
-//       decrements when done. Note: this can be a max of 2 if using full duplex.
-std::atomic<int> g_uiInhibit;
-
 // sending and receiving Call Sign data
 struct FIFO         *g_txDataInFifo;
 struct FIFO         *g_rxDataOutFifo;
@@ -1345,23 +1328,6 @@ void MainFrame::OnIdle(wxIdleEvent &evt) {
 }
 #endif
 
-void MainFrame::waitForPipeline_()
-{
-    // Wait for pipeline threads to finish. See comments in definition for 
-    // g_uiInhibit above.
-    int expected = 0;
-    bool firstMsg = true;
-    while (g_uiInhibit.compare_exchange_weak(expected, 0, std::memory_order_acquire, std::memory_order_relaxed) == false)
-    {
-        if (firstMsg)
-        {
-            firstMsg = false;
-            //log_warn("Waiting for pipeline to complete");
-        }
-        std::this_thread::sleep_for(10ms);
-    }
-}
-
 #ifdef _USE_TIMER
 //----------------------------------------------------------------
 // OnTimer()
@@ -1396,8 +1362,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
      }
      else
      {
-         waitForPipeline_();
-
          bool txState = g_tx.load(std::memory_order_relaxed);
          int syncState = freedvInterface.getSync();
 
@@ -1423,8 +1387,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
              m_filterDialog->syncVolumes();
          }
          
-         waitForPipeline_();
-         
         int r;
 
         if (m_panelWaterfall->checkDT()) {
@@ -1442,8 +1404,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_panelWaterfall->setSync(syncState ? true : false);
             m_panelWaterfall->Refresh();
         }
-        
-        waitForPipeline_();
         
         if (g_mode == FREEDV_MODE_RADE)
         {
@@ -1463,8 +1423,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         m_panelSpectrum->Refresh();
 
         /* update scatter/eye plot ------------------------------------------------------------*/
-        
-        waitForPipeline_();
 
         if (freedvInterface.isRunning()) {
             int currentMode = freedvInterface.getCurrentMode();
@@ -1507,8 +1465,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
 
         m_panelScatter->Refresh();
-        
-        waitForPipeline_();
 
         // Oscilloscope type speech plots -------------------------------------------------------
 
@@ -1518,16 +1474,12 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
         m_panelSpeechIn->add_new_short_samples(0, speechInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
         m_panelSpeechIn->Refresh();
-        
-        waitForPipeline_();
 
         short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
         if (codec2_fifo_read(g_plotSpeechOutFifo, speechOutPlotSamples, WAVEFORM_PLOT_BUF))
             memset(speechOutPlotSamples, 0, WAVEFORM_PLOT_BUF*sizeof(short));
         m_panelSpeechOut->add_new_short_samples(0, speechOutPlotSamples, WAVEFORM_PLOT_BUF, 32767);
         m_panelSpeechOut->Refresh();
-        
-        waitForPipeline_();
 
         short demodInPlotSamples[WAVEFORM_PLOT_BUF];
         if (codec2_fifo_read(g_plotDemodInFifo, demodInPlotSamples, WAVEFORM_PLOT_BUF)) {
@@ -1535,20 +1487,14 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         }
         m_panelDemodIn->add_new_short_samples(0,demodInPlotSamples, WAVEFORM_PLOT_BUF, 32767);
         m_panelDemodIn->Refresh();
-        
-        waitForPipeline_();
 
         // Demod states -----------------------------------------------------------------------
 
         m_panelTimeOffset->add_new_sample(0, (float)freedvInterface.getCurrentRxModemStats()->rx_timing/FDMDV_NOM_SAMPLES_PER_FRAME);
         m_panelTimeOffset->Refresh();
-        
-        waitForPipeline_();
 
         m_panelFreqOffset->add_new_sample(0, freedvInterface.getCurrentRxModemStats()->foff);
         m_panelFreqOffset->Refresh();
-        
-        waitForPipeline_();
 
         // SNR text box and gauge ------------------------------------------------------------
 
@@ -1582,8 +1528,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_textSNR->SetLabel("--");
             m_gaugeSNR->SetValue(0);
         }
-        
-        waitForPipeline_();
 
         // Level Gauge -----------------------------------------------------------------------
 
@@ -1629,8 +1573,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_textLevel->SetLabel("");
 
         m_maxLevel *= LEVEL_BETA;
-        
-        waitForPipeline_();
 
         // sync LED (Colours don't work on Windows) ------------------------
 
@@ -1682,8 +1624,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             }
         }
         g_prev_State = g_State;
-        
-        waitForPipeline_();
 
         // send Callsign ----------------------------------------------------
 
@@ -1735,8 +1675,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 m_txtCtrlCallSign->SetValue(m_callsign);
             }
         }
-        
-        waitForPipeline_();
 
         // We should only report to reporters when all of the following are true:
         // a) The callsign encoder indicates a valid callsign has been received.
@@ -1858,8 +1796,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
                 }
             }
         }
-        
-        waitForPipeline_();
     
         // Run time update of EQ filters -----------------------------------
 
@@ -1892,8 +1828,6 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
             m_newMicInFilter = m_newSpkOutFilter = false;
         }
         g_mutexProtectingCallbackData.Unlock();
-        
-        waitForPipeline_();
     
         // set some run time options (if applicable)
         freedvInterface.setRunTimeOptions(
