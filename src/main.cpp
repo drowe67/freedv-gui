@@ -1356,9 +1356,9 @@ void MainFrame::waitForPipeline_()
         if (firstMsg)
         {
             firstMsg = false;
-            log_warn("Waiting for pipeline to complete");
+            //log_warn("Waiting for pipeline to complete");
         }
-        std::this_thread::yield();
+        std::this_thread::sleep_for(10ms);
     }
 }
 
