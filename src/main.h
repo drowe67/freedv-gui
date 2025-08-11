@@ -503,6 +503,7 @@ class MainFrame : public TopFrame
         
         void performFreeDVOn_();
         void performFreeDVOff_();
+        void waitForPipeline_();
         
         void executeOnUiThreadAndWait_(std::function<void()> fn);
         
