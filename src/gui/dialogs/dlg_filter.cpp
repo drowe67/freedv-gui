@@ -19,6 +19,8 @@
 //
 //==========================================================================
 
+#include <atomic>
+
 #include "dlg_filter.h"
 #include "gui/util/LabelOverrideAccessible.h"
 
@@ -52,7 +54,8 @@
 extern FreeDVInterface freedvInterface;
 extern wxConfigBase *pConfig;
 extern wxMutex g_mutexProtectingCallbackData;
-    
+extern std::atomic<bool> g_agcEnabled;
+
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
 // Class FilterDlg
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=
@@ -107,7 +110,11 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_ckboxSpeexpp = new wxCheckBox(sb_speexpp, wxID_ANY, _("Speex Noise Suppression"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_speexpp->Add(m_ckboxSpeexpp, 0, wxALL | wxALIGN_LEFT, 5);
     m_ckboxSpeexpp->SetToolTip(_("Enable noise suppression, dereverberation, AGC of mic signal"));
-
+    
+    m_ckboxAgcEnabled = new wxCheckBox(sb_speexpp, wxID_ANY, _("AGC"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
+    sbSizer_speexpp->Add(m_ckboxAgcEnabled, 0, wxALL | wxALIGN_LEFT, 5);
+    m_ckboxAgcEnabled->SetToolTip(_("Automatic gain control for microphone"));
+    
     m_ckbox700C_EQ = new wxCheckBox(sb_speexpp, wxID_ANY, _("700D/700E Auto EQ"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     sbSizer_speexpp->Add(m_ckbox700C_EQ, 0, wxALL | wxALIGN_LEFT, 5);
     m_ckbox700C_EQ->SetToolTip(_("Automatic equalisation for FreeDV 700D/700E Codec input audio"));
@@ -248,6 +255,7 @@ FilterDlg::FilterDlg(wxWindow* parent, bool running, bool *newMicInFilter, bool 
     m_LPCPostFilterDefault->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnLPCPostFilterDefault), NULL, this);
 
     m_ckboxSpeexpp->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpeexppEnable), NULL, this);
+    m_ckboxAgcEnabled->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnAgcEnable), NULL, this);
     m_ckbox700C_EQ->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::On700C_EQ), NULL, this);
 
     int events[] = {
@@ -307,6 +315,7 @@ FilterDlg::~FilterDlg()
     m_LPCPostFilterDefault->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FilterDlg::OnLPCPostFilterDefault), NULL, this);
 
     m_ckboxSpeexpp->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnSpeexppEnable), NULL, this);
+    m_ckboxAgcEnabled->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxScrollEventHandler(FilterDlg::OnAgcEnable), NULL, this);
     
     int events[] = {
         wxEVT_SCROLL_TOP, wxEVT_SCROLL_BOTTOM, wxEVT_SCROLL_LINEUP, wxEVT_SCROLL_LINEDOWN, wxEVT_SCROLL_PAGEUP, 
@@ -470,6 +479,9 @@ void FilterDlg::ExchangeData(int inout)
         // Speex Pre-Processor
 
         m_ckboxSpeexpp->SetValue(wxGetApp().appConfiguration.filterConfiguration.speexppEnable);
+        
+        // AGC
+        m_ckboxAgcEnabled->SetValue(wxGetApp().appConfiguration.filterConfiguration.agcEnabled);
 
         // Codec 2 700C EQ
         m_ckbox700C_EQ->SetValue(wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer);
@@ -555,6 +567,9 @@ void FilterDlg::ExchangeData(int inout)
 
         // Speex Pre-Processor
         wxGetApp().appConfiguration.filterConfiguration.speexppEnable = m_ckboxSpeexpp->GetValue();
+        
+        // AGC
+        wxGetApp().appConfiguration.filterConfiguration.agcEnabled = m_ckboxAgcEnabled->GetValue();
 
         // Codec 2 700C EQ
         wxGetApp().appConfiguration.filterConfiguration.enable700CEqualizer = m_ckbox700C_EQ->GetValue();
@@ -732,6 +747,13 @@ void FilterDlg::OnGammaScroll(wxScrollEvent& event) {
 void FilterDlg::OnSpeexppEnable(wxScrollEvent& event) {
     wxGetApp().appConfiguration.filterConfiguration.speexppEnable = m_ckboxSpeexpp->GetValue();
     ExchangeData(EXCHANGE_DATA_OUT);
+    updateControlState();
+}
+
+void FilterDlg::OnAgcEnable(wxScrollEvent& event) {
+    wxGetApp().appConfiguration.filterConfiguration.agcEnabled = m_ckboxAgcEnabled->GetValue();
+    g_agcEnabled = wxGetApp().appConfiguration.filterConfiguration.agcEnabled; // forces immediate change at pipeline level
+    ExchangeData(EXCHANGE_DATA_OUT);
 }
 
 void FilterDlg::On700C_EQ(wxScrollEvent& event) {
@@ -744,6 +766,9 @@ void FilterDlg::On700C_EQ(wxScrollEvent& event) {
 
 void FilterDlg::updateControlState()
 {
+    // AGC currently requires Speex.
+    m_ckboxAgcEnabled->Enable(wxGetApp().appConfiguration.filterConfiguration.speexppEnable);
+    
     m_MicInBass.sliderFreq->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
     m_MicInBass.sliderGain->Enable(wxGetApp().appConfiguration.filterConfiguration.micInChannel.eqEnable);
     
