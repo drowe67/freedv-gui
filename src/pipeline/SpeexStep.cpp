@@ -121,12 +121,11 @@ void SpeexStep::updateAgcState_()
     int32_t newAgcState = g_agcEnabled ? 1 : 0;
     
     speex_preprocess_ctl(speexStateObj_, SPEEX_PREPROCESS_SET_AGC, &newAgcState);
-#if 0
     if (newAgcState)
     {
-        // TBD: default per libspeexdsp code. Adjust?
-        float newAgcLevel = 8000;
+        // Experimentally determined to be such that normal speaking creates peaks +/- ~0.4.
+        // Used MacBook Pro built-in microphone for tests.
+        float newAgcLevel = 21000;
         speex_preprocess_ctl(speexStateObj_, SPEEX_PREPROCESS_SET_AGC_LEVEL, &newAgcLevel);
     }
-#endif // 0
 }
