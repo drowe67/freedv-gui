@@ -232,8 +232,7 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
         plotPixelData();
     } 
            
-    wxGraphicsBitmap tmpBmp = gc->CreateBitmap(*m_fullBmp);
-    gc->DrawBitmap(tmpBmp, PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+    gc->DrawBitmap(*m_fullBmp, PLOT_BORDER + XLEFT_OFFSET, PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
     m_dT = DT;
 
     drawGraticule(gc);
