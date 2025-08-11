@@ -172,7 +172,7 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
             if (featuresFile_)
             {
                 utFeatures_.write(featuresOut_, nout);
-                if (utFeatures_.numUsed() > (0.1 * utFeatures_.capacity()))
+                if (utFeatures_.numUsed() > (0.75 * utFeatures_.capacity()))
                 {
                     featuresAvailableSem_.signal();
                 }
@@ -245,19 +245,16 @@ void RADEReceiveStep::utFeatureThreadEntry_()
     setiopolicy_np(IOPOL_TYPE_DISK, IOPOL_SCOPE_THREAD, IOPOL_THROTTLE);
 #endif // defined(__APPLE__)
 
-    std::vector<float*> featureList;
-    std::vector<int> featureCnt;
+    float* featureBuf = new float[utFeatures_.capacity()];
+    assert(featureBuf != nullptr);
+
     while (!exitingFeatureThread_)
     {
         auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
         while (numToRead > 0)
         {
-            float* fifoRead = new float[numToRead];
-            assert(fifoRead != nullptr);
-            
-            utFeatures_.read(fifoRead, numToRead);
-            featureList.push_back(fifoRead);
-            featureCnt.push_back(numToRead);
+            utFeatures_.read(featureBuf, numToRead);
+            fwrite(featureBuf, sizeof(float) * numToRead, 1, featuresFile_);
             numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
         }
         
@@ -267,19 +264,10 @@ void RADEReceiveStep::utFeatureThreadEntry_()
     auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
     while (numToRead > 0)
     {
-        float* fifoRead = new float[numToRead];
-        assert(fifoRead != nullptr);
-        
-        utFeatures_.read(fifoRead, numToRead);
-        featureList.push_back(fifoRead);
-        featureCnt.push_back(numToRead);
+        utFeatures_.read(featureBuf, numToRead);
+        fwrite(featureBuf, sizeof(float) * numToRead, 1, featuresFile_);
         numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
     }
     
-    int index = 0;
-    for (auto& feature : featureList)
-    {
-        fwrite(feature, sizeof(float) * featureCnt[index++], 1, featuresFile_);
-        delete[] feature;
-    }
+    delete[] featureBuf;
 }

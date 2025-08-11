@@ -33,6 +33,11 @@
 #include "../util/GenericFIFO.h"
 #include "../util/Semaphore.h"
 
+// Number of features to store. This is set to be close to the 
+// typical size for RX/TX features for the rade_loss ctest to
+// avoid contention with normal RADE operation.
+#define NUM_FEATURES_TO_STORE (256 * 1024)
+
 class RADETransmitStep : public IPipelineStep
 {
 public:
@@ -64,7 +69,7 @@ private:
     RADE_COMP* eooOut_;
     short* eooOutShort_;
     
-    PreAllocatedFIFO<float, 8192> utFeatures_;
+    PreAllocatedFIFO<float, NUM_FEATURES_TO_STORE> utFeatures_;
     std::thread utFeatureThread_;
     bool exitingFeatureThread_;
     Semaphore featuresAvailableSem_;
