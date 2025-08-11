@@ -24,7 +24,7 @@
 
 #include <string>
 #include <map>
-#include <deque>
+#include <vector>
 #include <mutex>
 
 #include <wx/tipwin.h>
@@ -72,9 +72,7 @@ class FreeDVReporterDialog : public wxFrame
         void setBandFilter(FilterFrequency freq);
         
         bool isTextMessageFieldInFocus();
-    
-        void Unselect(wxDataViewItem& dvi) { m_listSpots->Unselect(dvi); }
-    
+        
     protected:
 
         // Handlers for events.
@@ -99,13 +97,10 @@ class FreeDVReporterDialog : public wxFrame
         void    OnSystemColorChanged(wxSysColourChangedEvent& event);
 
         void OnItemSelectionChanged(wxDataViewEvent& event);
-        void OnColumnClick(wxDataViewEvent& event);
         void OnItemDoubleClick(wxDataViewEvent& event);
         void OnItemRightClick(wxDataViewEvent& event);
 
         void OnTimer(wxTimerEvent& event);
-        void DeselectItem();
-        void DeselectItem(wxMouseEvent& event);
         void AdjustToolTip(wxMouseEvent& event);
         void OnFilterTrackingEnable(wxCommandEvent& event);
         void OnCopyUserMessage(wxCommandEvent& event);
@@ -141,9 +136,7 @@ class FreeDVReporterDialog : public wxFrame
         wxButton* m_buttonDisplayWebpage;
         
         // Timer to unhighlight RX rows after 10s (like with web-based Reporter)
-        wxTimer* m_resortTimer;
         wxTimer* m_highlightClearTimer;
-        wxTimer* m_deleteTimer;
 
         wxTipWindow* tipWindow_;
         
@@ -159,13 +152,11 @@ class FreeDVReporterDialog : public wxFrame
              void refreshAllRows();
              void requestQSY(wxDataViewItem selectedItem, uint64_t frequency, wxString customText);
              void updateHighlights();
-             void triggerResort();
-             void deallocateRemovedItems();
              void updateMessage(wxString statusMsg)
              {
                  if (reporter_)
                  {
-                     reporter_->updateMessage((const char*)statusMsg.utf8_str());
+                     reporter_->updateMessage(statusMsg.utf8_string());
                  }
              }
 
@@ -173,7 +164,7 @@ class FreeDVReporterDialog : public wxFrame
              {
                 if (item.IsOk())
                 {
-                    auto data = (ReporterData*)item.GetID();
+                    auto data = allReporterData_[*(std::string*)item.GetID()];
                     return data->frequency;
                 }
 
@@ -185,7 +176,7 @@ class FreeDVReporterDialog : public wxFrame
              {
                  if (item.IsOk())
                  {
-                     auto data = (ReporterData*)item.GetID();
+                     auto data = allReporterData_[*(std::string*)item.GetID()];
                      return data->callsign;
                  }
                  return "";
@@ -195,7 +186,7 @@ class FreeDVReporterDialog : public wxFrame
              {
                  if (item.IsOk())
                  {
-                     auto data = (ReporterData*)item.GetID();
+                     auto data = allReporterData_[*(std::string*)item.GetID()];
                      return data->userMessage;
                  }
                  return "";
@@ -207,7 +198,6 @@ class FreeDVReporterDialog : public wxFrame
              }
 
              // Required overrides to implement functionality
-             virtual bool HasDefaultCompare() const override;
              virtual int Compare (const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const override;
              virtual bool GetAttr (const wxDataViewItem &item, unsigned int col, wxDataViewItemAttr &attr) const override;
              virtual unsigned int GetChildren (const wxDataViewItem &item, wxDataViewItemArray &children) const override;
@@ -215,13 +205,6 @@ class FreeDVReporterDialog : public wxFrame
              virtual void GetValue (wxVariant &variant, const wxDataViewItem &item, unsigned int col) const override;
              virtual bool IsContainer (const wxDataViewItem &item) const override;
              virtual bool SetValue (const wxVariant &variant, const wxDataViewItem &item, unsigned int col) override;
-
-#if !wxCHECK_VERSION(3,2,0)
-             virtual unsigned int GetColumnCount () const override;
-             virtual wxString GetColumnType (unsigned int col) const override;
-#endif // !wxCHECK_VERSION(3,2,0)
-
-             bool sortOnNextTimerInterval;
 
          private:
              struct ReporterData
@@ -245,22 +228,13 @@ class FreeDVReporterDialog : public wxFrame
                 wxString lastRxCallsign;
                 wxString lastRxMode;
                 wxString snr;
-                int snrVal;
                 wxString lastUpdate;
                 wxDateTime lastUpdateDate;
                 wxString userMessage;
                 wxDateTime lastUpdateUserMessage;
-                wxDateTime connectTime;
 
                 // Controls whether this row has been filtered
                 bool isVisible;
-                
-                // Controls whether this row is pending deletion
-                bool isPendingDelete;
-                wxDateTime deleteTime;
-
-                // Controls whether this row is pending update
-                bool isPendingUpdate;
 
                 // Controls the current highlight color
                 wxColour foregroundColor;
@@ -269,15 +243,15 @@ class FreeDVReporterDialog : public wxFrame
 
             std::shared_ptr<FreeDVReporter> reporter_;
             std::map<std::string, ReporterData*> allReporterData_;
-            std::deque<std::function<void()> > fnQueue_;
+            std::vector<std::function<void()> > fnQueue_;
             std::mutex fnQueueMtx_;
-            std::recursive_mutex dataMtx_;
             bool isConnected_;
             FreeDVReporterDialog* parent_;
 
             FilterFrequency currentBandFilter_;
             bool filterSelfMessageUpdates_;
             uint64_t filteredFrequency_;
+            std::recursive_mutex dataMtx_;
 
             bool isFiltered_(uint64_t freq);
 
@@ -306,8 +280,6 @@ class FreeDVReporterDialog : public wxFrame
             static double RadiansToDegrees_(double radians);
             static wxString GetCardinalDirection_(int degrees);
         };
-
-        bool isSelectionPossible_;
 
         FilterFrequency getFilterForFrequency_(uint64_t freq);
 };
