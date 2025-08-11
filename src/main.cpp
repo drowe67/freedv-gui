@@ -1358,8 +1358,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     short speechInPlotSamples[WAVEFORM_PLOT_BUF];
     short speechOutPlotSamples[WAVEFORM_PLOT_BUF];
     short demodInPlotSamples[WAVEFORM_PLOT_BUF];
-    bool txState = g_tx.load(std::memory_order_relaxed);
-    int syncState = freedvInterface.getSync();
+    bool txState = false;
+    int syncState = 0;
+
+    // Most plots don't need TX/sync state.
+    if (evt.GetTimer().GetId() == ID_TIMER_UPDATE_OTHER)
+    {
+        txState = g_tx.load(std::memory_order_relaxed);
+        syncState_ = freedvInterface.getSync();
+    }
+    syncState = syncState_;
 
     if (!m_RxRunning)
     {

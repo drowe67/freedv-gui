@@ -507,7 +507,8 @@ class MainFrame : public TopFrame
 
         bool terminating_; // used for terminating FreeDV
         bool realigned_; // used to inhibit resize hack once already done
-        
+        bool syncState_; // GUI copy of current sync state
+
         int         getSoundCardIDFromName(wxString& name, bool input);
         bool        validateSoundCardSetup();
         
