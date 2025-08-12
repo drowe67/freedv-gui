@@ -194,6 +194,7 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
     // we want a bit map the size of m_rGrid
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
     
+    float px_per_sec = (float)m_rGrid.GetHeight() / WATERFALL_SECS_Y; 
     float dy = m_dT * px_per_sec;
     if (dy > 0 && waterfallSlices_.size() < (m_imgHeight / dy))
     {
