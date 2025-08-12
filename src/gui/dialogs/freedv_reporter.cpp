@@ -860,6 +860,7 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     if (event.GetTimer().GetId() == m_highlightClearTimer->GetId())
     {
+        if (!IsShownOnScreen()) return;
         model->updateHighlights();
     }
     else if (event.GetTimer().GetId() == m_deleteTimer->GetId())
@@ -868,6 +869,7 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
     }
     else
     {
+        if (!IsShownOnScreen()) return;
         if (model->sortOnNextTimerInterval)
         {
             model->triggerResort();
@@ -1550,6 +1552,11 @@ FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequenc
 
 bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(uint64_t freq)
 {
+    if (!parent_->IsShownOnScreen())
+    {
+        return false;
+    }
+
     auto bandForFreq = parent_->getFilterForFrequency_(freq);
     
     if (currentBandFilter_ == FilterFrequency::BAND_ALL)
