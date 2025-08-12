@@ -345,11 +345,11 @@ FreeDVReporterDialog::FreeDVReporterDialog(wxWindow* parent, wxWindowID id, cons
     // Set up timers. Highlight clear timer has a slightly longer interval
     // to reduce CPU usage.
     m_highlightClearTimer = new wxTimer(this);
-    m_highlightClearTimer->Start(250);
+    m_highlightClearTimer->Start(251);
     m_resortTimer = new wxTimer(this);
-    m_resortTimer->Start(100);
+    m_resortTimer->Start(101);
     m_deleteTimer = new wxTimer(this);
-    m_deleteTimer->Start(1000);
+    m_deleteTimer->Start(1009);
     
     // Create Set popup menu
     setPopupMenu_ = new wxMenu();
