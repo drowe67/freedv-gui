@@ -194,7 +194,8 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
     // we want a bit map the size of m_rGrid
     wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
     
-    if (waterfallSlices_.size() == 0)
+    float dy = m_dT * px_per_sec;
+    if (dy > 0 && waterfallSlices_.size() < (m_imgHeight / dy))
     {
         // Reset waterfall to black
         wxBrush ltGraphBkgBrush = wxBrush(BLACK_COLOR);
@@ -212,7 +213,7 @@ void PlotWaterfall::draw(wxGraphicsContext* gc)
     int yOffset = 0;
     for (auto& bmp : waterfallSlices_)
     {
-        gc->DrawBitmap(*bmp, PLOT_BORDER + XLEFT_OFFSET, yOffset + PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, m_imgHeight);
+        gc->DrawBitmap(*bmp, PLOT_BORDER + XLEFT_OFFSET, yOffset + PLOT_BORDER + YBOTTOM_OFFSET, m_imgWidth, bmp->GetHeight());
         yOffset += bmp->GetHeight();
     }    
 
@@ -367,7 +368,7 @@ void PlotWaterfall::plotPixelData()
 
     // Draw last line of blocks using latest amplitude data ------------------
     int baseRowWidthPixels = ((float)MODEM_STATS_NSPEC / (float)m_modem_stats_max_f_hz) * MAX_F_HZ;
-    unsigned char* dyImageData = new unsigned char[3 * baseRowWidthPixels];
+    unsigned char* dyImageData = new unsigned char[(dy > 0 ? dy : 1) * 3 * baseRowWidthPixels];
     assert(dyImageData != nullptr);
 
     for(px = 0; px < baseRowWidthPixels; px++)
@@ -404,13 +405,18 @@ void PlotWaterfall::plotPixelData()
         }
     }
     
+    for (int row = 1; row < dy; row++)
+    {
+        memcpy(&dyImageData[row * 3 * baseRowWidthPixels], &dyImageData[0], 3 * baseRowWidthPixels);
+    }
+    
     // Force main window's color space to be the same as what wxWidgets uses. This only has an effect
     // on macOS due to how it handles color spaces.
     ResetMainWindowColorSpace();
 
     if (dy > 0)
     {
-        wxImage* tmpImage = new wxImage(baseRowWidthPixels, 1, (unsigned char*)dyImageData, true);
+        wxImage* tmpImage = new wxImage(baseRowWidthPixels, dy, (unsigned char*)dyImageData, true);
         wxBitmap* tmpBmp = nullptr;
         wxBitmap* destBmp = nullptr;
         if (waterfallSlices_.size() >= (m_imgHeight / dy))
@@ -425,7 +431,7 @@ void PlotWaterfall::plotPixelData()
             sourceDC.SelectObjectAsSource(*tmpBmp);
             wxMemoryDC destDC(*destBmp);
             
-            destDC.StretchBlit(0, 0, m_imgWidth, tmpBmp.GetHeight(), &sourceDC, 0, 0, baseRowWidthPixels, 1);
+            destDC.StretchBlit(0, 0, m_imgWidth, tmpBmp->GetHeight(), &sourceDC, 0, 0, baseRowWidthPixels, tmpBmp->GetHeight());
         }
         else
         {
