@@ -835,17 +835,20 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             bool isHighlightUpdated = 
                 backgroundColor != reportData->backgroundColor ||
                 foregroundColor != reportData->foregroundColor;
-            if (isHighlightUpdated || reportData->isPendingUpdate)
+            if (parent_->IsShownOnScreen())
             {
-                reportData->backgroundColor = backgroundColor;
-                reportData->foregroundColor = foregroundColor;
-
-                if (reportData->isVisible)
+                if (isHighlightUpdated || reportData->isPendingUpdate)
                 {
-                    reportData->isPendingUpdate = false;
+                    reportData->backgroundColor = backgroundColor;
+                    reportData->foregroundColor = foregroundColor;
 
-                    wxDataViewItem dvi(reportData);
-                    itemsChanged.Add(dvi);
+                    if (reportData->isVisible)
+                    {
+                        reportData->isPendingUpdate = false;
+
+                        wxDataViewItem dvi(reportData);
+                        itemsChanged.Add(dvi);
+                    }
                 }
             }
         }
@@ -860,7 +863,6 @@ void FreeDVReporterDialog::OnTimer(wxTimerEvent& event)
     FreeDVReporterDataModel* model = (FreeDVReporterDataModel*)spotsDataModel_.get();
     if (event.GetTimer().GetId() == m_highlightClearTimer->GetId())
     {
-        if (!IsShownOnScreen()) return;
         model->updateHighlights();
     }
     else if (event.GetTimer().GetId() == m_deleteTimer->GetId())
@@ -1552,11 +1554,6 @@ FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequenc
 
 bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(uint64_t freq)
 {
-    if (!parent_->IsShownOnScreen())
-    {
-        return false;
-    }
-
     auto bandForFreq = parent_->getFilterForFrequency_(freq);
     
     if (currentBandFilter_ == FilterFrequency::BAND_ALL)
