@@ -184,7 +184,14 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
     // plot each channel     
 
     // x -> (y1, y2)
-    std::map<int, std::pair<int, int>> lineMap;
+    MinMaxPoints* lineMap = new MinMaxPoints[plotWidth];
+    assert(lineMap != nullptr);
+
+    for (int index = 0; index < plotWidth; index++)
+    {
+        lineMap[index].y1 = INT_MAX;
+        lineMap[index].y2 = INT_MIN;
+    }
 
     int offset, x, y;
     for(offset=0; offset<m_channels*m_samples; offset+=m_samples) {
@@ -244,26 +251,24 @@ void PlotScalar::draw(wxGraphicsContext* ctx)
             else {
                 if (i)
                 {
-                    auto iter = lineMap.find(x);
-                    if (iter == lineMap.end())
-                    {
-                        lineMap[x] = std::pair<int, int>(INT_MAX, INT_MIN);
-                        iter = lineMap.find(x);
-                    }
-                    iter->second.first = std::min(iter->second.first, y);
-                    iter->second.second = std::max(iter->second.second, y);
+                    auto& item = lineMap[x - (PLOT_BORDER + XLEFT_OFFSET)];
+                    item.y1 = std::min(item.y1, y);
+                    item.y2 = std::max(item.y2, y);
                 }
             }
         }
     }
    
-    if (lineMap.size() > 0)
+    if (!m_bar_graph)
     {
-        for (auto& iter : lineMap)
+        for (int index = 0; index < plotWidth; index++)
         {
-            ctx->StrokeLine(iter.first, iter.second.first, iter.first, iter.second.second);
+            int x = index + PLOT_BORDER + XLEFT_OFFSET;
+            ctx->StrokeLine(x, lineMap[index].y1, x, lineMap[index].y2);
         }
     } 
+    delete[] lineMap;
+
     drawGraticule(ctx);
 }
 
