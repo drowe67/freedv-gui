@@ -23,10 +23,15 @@
 #ifndef THREADED_OBJECT_H
 #define THREADED_OBJECT_H
 
+#if defined(__APPLE__)
+#include <dispatch/dispatch.h>
+#else
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <deque>
+#endif // defined(__APPLE__)
+
 #include <functional>
 
 class ThreadedObject
@@ -43,6 +48,10 @@ protected:
     
 private:
     ThreadedObject* parent_;
+    
+#if defined(__APPLE__)
+    dispatch_queue_t queue_;
+#else
     bool isDestroying_;
     std::thread objectThread_;
     std::deque<std::function<void()> > eventQueue_;
@@ -50,6 +59,7 @@ private:
     std::condition_variable_any eventQueueCV_;
 
     void eventLoop_();
+#endif // defined(__APPLE__)
 };
 
 #endif // THREADED_OBJECT_H
