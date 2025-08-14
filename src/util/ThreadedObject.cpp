@@ -25,57 +25,71 @@
 
 using namespace std::chrono_literals;
 
-ThreadedObject::ThreadedObject()
-    : isDestroying_(false)
+ThreadedObject::ThreadedObject(ThreadedObject* parent)
+    : parent_(parent)
+    , isDestroying_(false)
 {
     // Instantiate thread here rather than the initializer since otherwise
     // we might not be able to guarantee that the mutex is initialized first.
-    objectThread_ = std::thread(std::bind(&ThreadedObject::eventLoop_, this));
+    if (parent_ == nullptr)
+    {
+        objectThread_ = std::thread(std::bind(&ThreadedObject::eventLoop_, this));
+    }
 }
 
 ThreadedObject::~ThreadedObject()
 {
-    isDestroying_ = true;
-    eventQueueCV_.notify_one();
-    objectThread_.join();
+    if (objectThread_.joinable())
+    {
+        isDestroying_ = true;
+        eventQueueCV_.notify_one();
+        objectThread_.join();
+    }
 }
 
 void ThreadedObject::enqueue_(std::function<void()> fn, int timeoutMilliseconds)
 {
-    std::unique_lock<std::recursive_mutex> lk(eventQueueMutex_, std::defer_lock_t());
-
-    if (timeoutMilliseconds == 0)
+    if (parent_ != nullptr)
     {
-        lk.lock();
+        parent_->enqueue_(fn, timeoutMilliseconds);
     }
     else
     {
-        auto beginTime = std::chrono::high_resolution_clock::now();
-        auto endTime = std::chrono::high_resolution_clock::now();
-        bool locked = false;
+        std::unique_lock<std::recursive_mutex> lk(eventQueueMutex_, std::defer_lock_t());
 
-        do
+        if (timeoutMilliseconds == 0)
         {
-            if (lk.try_lock())
-            {
-                locked = true;
-                break;
-            }
-            std::this_thread::sleep_for(1ms);
-            endTime = std::chrono::high_resolution_clock::now();
-        } while ((endTime - beginTime) < std::chrono::milliseconds(timeoutMilliseconds));
-        
-        if (!locked)
-        {
-            // could not lock, so we're not bothering to enqueue.
-            return;
+            lk.lock();
         }
+        else
+        {
+            auto beginTime = std::chrono::high_resolution_clock::now();
+            auto endTime = std::chrono::high_resolution_clock::now();
+            bool locked = false;
+
+            do
+            {
+                if (lk.try_lock())
+                {
+                    locked = true;
+                    break;
+                }
+                std::this_thread::sleep_for(1ms);
+                endTime = std::chrono::high_resolution_clock::now();
+            } while ((endTime - beginTime) < std::chrono::milliseconds(timeoutMilliseconds));
+        
+            if (!locked)
+            {
+                // could not lock, so we're not bothering to enqueue.
+                return;
+            }
+        }
+
+        eventQueue_.push_back(fn);
+        lk.unlock();
+
+        eventQueueCV_.notify_one();
     }
-
-    eventQueue_.push_back(fn);
-    lk.unlock();
-
-    eventQueueCV_.notify_one();
 }
 
 void ThreadedObject::eventLoop_()

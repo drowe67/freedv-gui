@@ -35,13 +35,14 @@ public:
     virtual ~ThreadedObject();
 
 protected:
-    ThreadedObject();
+    ThreadedObject(ThreadedObject* parent = nullptr);
     
     // Enqueues some code to run on a different thread.
     // @param timeoutMilliseconds Timeout to wait for lock. Note: if we can't get a lock within the timeout, the function doesn't run!
     void enqueue_(std::function<void()> fn, int timeoutMilliseconds = 0);
     
 private:
+    ThreadedObject* parent_;
     bool isDestroying_;
     std::thread objectThread_;
     std::deque<std::function<void()> > eventQueue_;
