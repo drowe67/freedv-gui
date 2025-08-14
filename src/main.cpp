@@ -329,7 +329,7 @@ void MainApp::UnitTest_()
 
                 while (g_playFileToMicIn)
                 {
-                    std::this_thread::sleep_for(20ms);
+                    std::this_thread::sleep_for(100ms);
                 } 
             }
             else
@@ -371,7 +371,7 @@ void MainApp::UnitTest_()
 
             while (g_playFileFromRadio)
             {
-                std::this_thread::sleep_for(20ms);
+                std::this_thread::sleep_for(100ms);
             }
         }
         else
@@ -1516,22 +1516,17 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
          {
              sliderVal = wxGetApp().appConfiguration.filterConfiguration.spkOutChannel.volInDB;
          }
+         char fmt[16];
+         m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
+         snprintf(fmt, 15, "%0.1f dB", (double)sliderVal);
+         wxString fmtString(fmt);
+         m_txtMicSpkrLevelNum->SetLabel(fmtString);
          
-         // Only update the main window if the configured volume was actually modified.
-         if ((sliderVal * 10) != m_sliderMicSpkrLevel->GetValue())
+         if (m_filterDialog != nullptr)
          {
-             char fmt[16];
-             m_sliderMicSpkrLevel->SetValue(sliderVal * 10);
-             snprintf(fmt, 15, "%0.1f dB", (double)sliderVal);
-             wxString fmtString(fmt);
-             m_txtMicSpkrLevelNum->SetLabel(fmtString);
-         
-             if (m_filterDialog != nullptr)
-             {
-                 // Sync Filter dialog as well
-                 m_filterDialog->syncVolumes();
-             }
-        }
+             // Sync Filter dialog as well
+             m_filterDialog->syncVolumes();
+         }
          
         // SNR text box and gauge ------------------------------------------------------------
 
