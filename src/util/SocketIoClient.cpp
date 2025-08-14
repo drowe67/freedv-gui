@@ -197,8 +197,7 @@ void SocketIoClient::handleEngineIoMessage_(char* ptr, int length)
 
             // "ping" -- send pong
             connection_->send("3");
-            pingTimer_.stop();
-            pingTimer_.start();
+            pingTimer_.restart();
             break;
         }
         case '4':
