@@ -329,7 +329,7 @@ void MainApp::UnitTest_()
 
                 while (g_playFileToMicIn)
                 {
-                    std::this_thread::sleep_for(20ms);
+                    std::this_thread::sleep_for(100ms);
                 } 
             }
             else
@@ -371,7 +371,7 @@ void MainApp::UnitTest_()
 
             while (g_playFileFromRadio)
             {
-                std::this_thread::sleep_for(20ms);
+                std::this_thread::sleep_for(100ms);
             }
         }
         else
