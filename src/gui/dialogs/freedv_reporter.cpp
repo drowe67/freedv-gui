@@ -835,19 +835,39 @@ void FreeDVReporterDialog::FreeDVReporterDataModel::updateHighlights()
             bool isHighlightUpdated = 
                 backgroundColor != reportData->backgroundColor ||
                 foregroundColor != reportData->foregroundColor;
+            if (isHighlightUpdated)
+            {
+                reportData->backgroundColor = backgroundColor;
+                reportData->foregroundColor = foregroundColor;
+            }
+
             if (parent_->IsShownOnScreen())
             {
-                if (isHighlightUpdated || reportData->isPendingUpdate)
+                bool newVisibility = !isFiltered_(reportData->frequency);
+                if (newVisibility != reportData->isVisible)
                 {
-                    reportData->backgroundColor = backgroundColor;
-                    reportData->foregroundColor = foregroundColor;
-
-                    if (reportData->isVisible)
+                    reportData->isVisible = newVisibility;
+                    if (newVisibility)
                     {
-                        reportData->isPendingUpdate = false;
+                        ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(reportData));
+                    }
+                    else
+                    {
+                        ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(reportData));
+                    }
+                    sortOnNextTimerInterval = true;
+                }
+                else
+                {
+                    if (isHighlightUpdated || reportData->isPendingUpdate)
+                    {
+                        if (reportData->isVisible)
+                        {
+                            reportData->isPendingUpdate = false;
 
-                        wxDataViewItem dvi(reportData);
-                        itemsChanged.Add(dvi);
+                            wxDataViewItem dvi(reportData);
+                            itemsChanged.Add(dvi);
+                        }
                     }
                 }
             }
@@ -1555,7 +1575,12 @@ FreeDVReporterDialog::FilterFrequency FreeDVReporterDialog::getFilterForFrequenc
 bool FreeDVReporterDialog::FreeDVReporterDataModel::isFiltered_(uint64_t freq)
 {
     auto bandForFreq = parent_->getFilterForFrequency_(freq);
-    
+   
+    if (!parent_->IsShownOnScreen())
+    {
+        return true;
+    }
+
     if (currentBandFilter_ == FilterFrequency::BAND_ALL)
     {
         return false;
