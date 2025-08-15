@@ -26,14 +26,17 @@
 #include <memory>
 #include <thread>
 #include "../util/GenericFIFO.h"
-#include "../util/Semaphore.h"
+#include "../util/ThreadedObject.h"
 
 #include "IPipelineStep.h"
 
 // Creates a separate thread for each TapStep instance if uncommented.
-//#define TAP_STEP_USE_THREADING
+#define TAP_STEP_USE_THREADING
 
 class TapStep : public IPipelineStep
+#if defined(TAP_STEP_USE_THREADING) && defined(__APPLE__)
+              , public ThreadedObject
+#endif // defined(TAP_STEP_USE_THREADING) && defined(__APPLE__)
 {
 public:
     TapStep(int inputSampleRate, IPipelineStep* tapStep);
@@ -47,11 +50,13 @@ private:
     std::unique_ptr<IPipelineStep> tapStep_;
     int sampleRate_;
 
-#if defined(TAP_STEP_USE_THREADING)
+#if defined(TAP_STEP_USE_THREADING) 
+    GenericFIFO<short> tapThreadInput_;
+#if !defined(__APPLE__)
     std::thread tapThread_;
     bool endingTapThread_;
-    GenericFIFO<short> tapThreadInput_;
     Semaphore sem_;
+#endif // !defined(__APPLE__)
 #endif // defined(TAP_STEP_USE_THREADING)
 };
 
