@@ -31,7 +31,7 @@
 #include "IPipelineStep.h"
 
 // Creates a separate thread for each TapStep instance if uncommented.
-//#define TAP_STEP_USE_THREADING
+#define TAP_STEP_USE_THREADING
 
 class TapStep : public IPipelineStep
 {
