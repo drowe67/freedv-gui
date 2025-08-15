@@ -57,6 +57,9 @@ RADEReceiveStep::RADEReceiveStep(struct rade* dv, FARGANState* fargan, rade_text
 
     if (utRxFeatureFile != "")
     {
+        utFeatures_ = new PreAllocatedFIFO<float, NUM_FEATURES_TO_STORE>();
+        assert(utFeatures_ != nullptr);
+
         featuresFile_ = fopen((const char*)utRxFeatureFile.ToUTF8(), "wb");
         assert(featuresFile_ != nullptr);
         
@@ -99,6 +102,8 @@ RADEReceiveStep::~RADEReceiveStep()
         featuresAvailableSem_.signal();
         utFeatureThread_.join();
         fclose(featuresFile_);
+
+        delete utFeatures_;
     }
 }
 
@@ -171,8 +176,8 @@ short* RADEReceiveStep::execute(short* inputSamples, int numInputSamples, int* n
         {
             if (featuresFile_)
             {
-                utFeatures_.write(featuresOut_, nout);
-                if (utFeatures_.numUsed() > (0.75 * utFeatures_.capacity()))
+                utFeatures_->write(featuresOut_, nout);
+                if (utFeatures_->numUsed() > (0.75 * utFeatures_->capacity()))
                 {
                     featuresAvailableSem_.signal();
                 }
@@ -245,28 +250,28 @@ void RADEReceiveStep::utFeatureThreadEntry_()
     setiopolicy_np(IOPOL_TYPE_DISK, IOPOL_SCOPE_THREAD, IOPOL_THROTTLE);
 #endif // defined(__APPLE__)
 
-    float* featureBuf = new float[utFeatures_.capacity()];
+    float* featureBuf = new float[utFeatures_->capacity()];
     assert(featureBuf != nullptr);
 
     while (!exitingFeatureThread_)
     {
-        auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
+        auto numToRead = std::min(utFeatures_->numUsed(), utFeatures_->capacity());
         while (numToRead > 0)
         {
-            utFeatures_.read(featureBuf, numToRead);
+            utFeatures_->read(featureBuf, numToRead);
             fwrite(featureBuf, sizeof(float) * numToRead, 1, featuresFile_);
-            numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
+            numToRead = std::min(utFeatures_->numUsed(), utFeatures_->capacity());
         }
         
         featuresAvailableSem_.wait();
     }
     
-    auto numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
+    auto numToRead = std::min(utFeatures_->numUsed(), utFeatures_->capacity());
     while (numToRead > 0)
     {
-        utFeatures_.read(featureBuf, numToRead);
+        utFeatures_->read(featureBuf, numToRead);
         fwrite(featureBuf, sizeof(float) * numToRead, 1, featuresFile_);
-        numToRead = std::min(utFeatures_.numUsed(), utFeatures_.capacity());
+        numToRead = std::min(utFeatures_->numUsed(), utFeatures_->capacity());
     }
     
     delete[] featureBuf;
