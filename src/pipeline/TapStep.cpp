@@ -113,8 +113,8 @@ short* TapStep::execute(short* inputSamples, int numInputSamples, int* numOutput
             
             delete[] fifoInput;
         });
-    }
 #endif // !defined(__APPLE__)
+    }
 #else
     int temp = 0;
     tapStep_->execute(inputSamples, numInputSamples, &temp);

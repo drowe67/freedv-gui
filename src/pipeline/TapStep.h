@@ -33,6 +33,10 @@
 // Creates a separate thread for each TapStep instance if uncommented.
 #define TAP_STEP_USE_THREADING
 
+#if defined(TAP_STEP_USE_THREADING)
+#include "../util/Semaphore.h"
+#endif // defined(TAP_STEP_USE_THREADING)
+
 class TapStep : public IPipelineStep
 #if defined(TAP_STEP_USE_THREADING) && defined(__APPLE__)
               , public ThreadedObject
