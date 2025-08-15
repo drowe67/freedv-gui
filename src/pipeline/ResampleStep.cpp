@@ -82,7 +82,7 @@ ResampleStep::ResampleStep(int inputSampleRate, int outputSampleRate, bool forPl
     assert(resampleState_ != nullptr);
     
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    outputSamples_ = std::make_unique<short[]>(outputSampleRate / 2);
+    outputSamples_ = std::make_unique<short[]>(outputSampleRate);
     assert(outputSamples_ != nullptr);
     
     tempInput_ = new float[inputSampleRate * 10 / 1000];
