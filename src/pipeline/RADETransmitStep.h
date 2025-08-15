@@ -55,8 +55,8 @@ public:
 private:
     struct rade* dv_;
     LPCNetEncState* encState_;
-    PreAllocatedFIFO<short, RADE_SPEECH_SAMPLE_RATE> inputSampleFifo_;
-    PreAllocatedFIFO<short, RADE_MODEM_SAMPLE_RATE> outputSampleFifo_;
+    PreAllocatedFIFO<short, RADE_SPEECH_SAMPLE_RATE / 2> inputSampleFifo_;
+    PreAllocatedFIFO<short, RADE_MODEM_SAMPLE_RATE / 2> outputSampleFifo_;
     float* featureList_;
     int featureListIdx_;
     int arch_;

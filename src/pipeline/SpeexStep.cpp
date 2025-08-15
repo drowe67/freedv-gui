@@ -29,7 +29,7 @@
 SpeexStep::SpeexStep(int sampleRate)
     : sampleRate_(sampleRate)
     , numSamplesPerSpeexRun_((FRAME_DURATION_MS * sampleRate_) / MS_TO_SEC)
-    , inputSampleFifo_(std::max(getInputSampleRate(), getOutputSampleRate()))
+    , inputSampleFifo_(sampleRate / 4)
 {
     assert(numSamplesPerSpeexRun_ > 0);
     
@@ -39,8 +39,7 @@ SpeexStep::SpeexStep(int sampleRate)
     assert(speexStateObj_ != nullptr);
     
     // Pre-allocate buffers so we don't have to do so during real-time operation.
-    auto maxSamples = std::max(getInputSampleRate(), getOutputSampleRate());
-    outputSamples_ = std::make_unique<short[]>(maxSamples);
+    outputSamples_ = std::make_unique<short[]>(sampleRate / 4);
     assert(outputSamples_ != nullptr);
 }
 
